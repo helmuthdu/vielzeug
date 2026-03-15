@@ -3,21 +3,7 @@
     <div class="reference-header">
       <h3>{{ selectedLibrary === 'toolkit' ? 'Available Functions' : 'Available Exports' }}</h3>
       <div class="search-container">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="search-icon">
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
-        <input v-model="localSearchQuery" type="text" placeholder="Search exports..." class="search-input" />
+        <bit-input :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput"> </bit-input>
       </div>
     </div>
     <div class="function-categories">
@@ -28,28 +14,31 @@
         class="category">
         <h4>{{ category.name }} ({{ category.functions.length }} functions)</h4>
         <div class="function-list">
-          <code
+          <bit-chip
             v-for="fn in category.functions"
             :key="fn"
+            mode="action"
+            size="sm"
+            variant="outline"
             @click="emit('insert-function', fn)"
-            class="clickable-fn"
-            :class="{ 'is-match': isMatch(fn) }"
             title="Click to insert"
-            >{{ fn }}</code
+            >{{ fn }}</bit-chip
           >
         </div>
       </div>
       <div v-else class="category">
         <h4>Exports ({{ filteredExports.length }} available)</h4>
         <div class="function-list">
-          <code
+          <bit-chip
             v-for="ex in filteredExports"
             :key="ex"
+            mode="static"
+            size="sm"
+            :color="isMatch(ex) ? 'primary' : undefined"
+            style="cursor: pointer"
             @click="emit('insert-function', ex)"
-            class="clickable-fn"
-            :class="{ 'is-match': isMatch(ex) }"
             title="Click to insert"
-            >{{ ex }}</code
+            >{{ ex }}</bit-chip
           >
         </div>
       </div>
@@ -87,6 +76,11 @@ const emit = defineEmits<{
 // ============================================================================
 
 const localSearchQuery = ref('');
+
+const handleSearchInput = (e: Event) => {
+  const detail = (e as CustomEvent<{ value: string }>).detail;
+  localSearchQuery.value = detail?.value ?? '';
+};
 
 // ============================================================================
 // Computed Properties
@@ -159,34 +153,9 @@ const isMatch = (fn: string) => {
 }
 
 .search-container {
-  position: relative;
+  min-width: 240px;
   display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 0.75rem;
-  color: var(--vp-c-text-3);
-  pointer-events: none;
-}
-
-.search-input {
-  padding: 0.5rem 1rem 0.5rem 2.5rem;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  background: var(--vp-c-bg);
-  color: var(--vp-c-text-1);
-  font-size: 0.9rem;
-  width: 240px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.search-input:focus {
-  border-color: var(--vp-c-brand-1);
-  outline: none;
-  width: 320px;
-  box-shadow: 0 0 0 3px var(--vp-c-brand-soft);
+  justify-content: flex-end;
 }
 
 .function-categories {
@@ -224,36 +193,6 @@ const isMatch = (fn: string) => {
   line-height: 1.6;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-.function-list code {
-  background: var(--vp-c-bg-soft);
-  color: var(--vp-c-text-1);
-  padding: 0.25rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  border: 1px solid var(--vp-c-divider);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.clickable-fn {
-  cursor: pointer;
-}
-
-.clickable-fn:hover,
-.clickable-fn.is-match {
-  background: var(--vp-c-brand-soft);
-  color: var(--vp-c-brand-1);
-  border-color: var(--vp-c-brand-1);
-}
-
-.clickable-fn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.clickable-fn.is-match {
-  font-weight: 600;
+  gap: 0.5rem;
 }
 </style>

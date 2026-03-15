@@ -1,0 +1,127 @@
+@layer buildit.base {
+  :host {
+    --_star-size: var(--rating-star-size, var(--size-7));
+    --_color-empty: var(--rating-color-empty, var(--color-contrast-200));
+    --_color-filled: var(--rating-color-filled, var(--_theme-base, var(--color-warning)));
+    --_gap: var(--rating-gap, var(--size-0_5));
+
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .stars {
+    position: relative;
+    display: flex;
+    gap: var(--_gap);
+    align-items: center;
+  }
+
+  .sparkle-layer {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .sparkle {
+    position: absolute;
+    pointer-events: none;
+    background: var(--_color-filled);
+    border-radius: 50%;
+    animation: var(--_motion-animation, sparkle-fly var(--_dur, 500ms) ease-out forwards);
+  }
+
+  @keyframes sparkle-fly {
+    from {
+      opacity: 0.9;
+      transform: translate(-50%, -50%) rotate(var(--_angle)) translateY(0) scale(1);
+    }
+
+    to {
+      opacity: 0;
+      transform: translate(-50%, -50%) rotate(var(--_angle)) translateY(calc(-1 * var(--_dist))) scale(0);
+    }
+  }
+
+  .star-btn {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--_star-size);
+    min-width: var(--_touch-target);
+    height: var(--_star-size);
+    min-height: var(--_touch-target);
+    color: var(--_color-empty);
+    cursor: pointer;
+    border-radius: var(--rounded-sm);
+    transition:
+      color var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  .star-btn[data-filled] {
+    color: var(--_color-filled);
+  }
+
+  .star-btn:hover:not([disabled]),
+  .star-btn:focus-visible:not([disabled]) {
+    transform: scale(1.15);
+  }
+
+  .star-btn:focus-visible {
+    outline: var(--border-2) solid var(--_color-filled);
+    outline-offset: var(--border-2);
+  }
+
+  .star-btn[disabled] {
+    cursor: default;
+  }
+
+  :host([readonly]) .star-btn,
+  :host([disabled]) .star-btn {
+    pointer-events: none;
+  }
+
+  :host([disabled]) {
+    opacity: 0.5;
+  }
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@layer buildit.utilities {
+  :host([size='sm']) {
+    --_star-size: var(--size-5);
+  }
+
+  :host([size='lg']) {
+    --_star-size: var(--size-9);
+  }
+
+  @media (forced-colors: active) {
+    /* Distinguish filled vs unfilled stars with system button colors */
+    .star-btn {
+      color: ButtonText;
+    }
+
+    .star-btn[data-filled] {
+      color: Highlight;
+      forced-color-adjust: none;
+    }
+
+    .star-btn:focus-visible {
+      outline: 2px solid Highlight;
+      box-shadow: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sparkle {
+    display: none;
+  }
+}

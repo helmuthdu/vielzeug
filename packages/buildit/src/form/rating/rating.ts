@@ -1,167 +1,47 @@
-import { computed, css, define, defineEmits, defineField, defineProps, html, inject, signal } from '@vielzeug/craftit';
+import { computed, define, defineEmits, defineField, defineProps, html, inject, signal } from '@vielzeug/craftit';
 
-import type { AddEventListeners, DisablableProps, FormValidityMethods, SizableProps, ThemableProps } from '../../types';
+import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
-import { mountFormContextSync } from '../_common/use-text-field';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+import { mountFormContextSync } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
-
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_star-size: var(--rating-star-size, var(--size-7));
-      --_color-empty: var(--rating-color-empty, var(--color-contrast-200));
-      --_color-filled: var(--rating-color-filled, var(--_theme-base, var(--color-warning)));
-      --_gap: var(--rating-gap, var(--size-0_5));
-
-      display: inline-flex;
-      align-items: center;
-    }
-
-    .stars {
-      display: flex;
-      align-items: center;
-      gap: var(--_gap);
-      position: relative;
-    }
-
-    .sparkle-layer {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      overflow: visible;
-    }
-
-    .sparkle {
-      position: absolute;
-      background: var(--_color-filled);
-      border-radius: 50%;
-      pointer-events: none;
-      animation: var(--_motion-animation, sparkle-fly var(--_dur, 500ms) ease-out forwards);
-    }
-
-    @keyframes sparkle-fly {
-      from {
-        transform: translate(-50%, -50%) rotate(var(--_angle)) translateY(0) scale(1);
-        opacity: 0.9;
-      }
-      to {
-        transform: translate(-50%, -50%) rotate(var(--_angle)) translateY(calc(-1 * var(--_dist))) scale(0);
-        opacity: 0;
-      }
-    }
-
-    .star-btn {
-      all: unset;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: var(--_star-size);
-      height: var(--_star-size);
-      min-height: var(--_touch-target);
-      min-width: var(--_touch-target);
-      color: var(--_color-empty);
-      transition:
-        color var(--transition-fast),
-        transform var(--transition-fast);
-      border-radius: var(--rounded-sm);
-    }
-
-    .star-btn[data-filled] {
-      color: var(--_color-filled);
-    }
-
-    .star-btn:hover:not([disabled]),
-    .star-btn:focus-visible:not([disabled]) {
-      transform: scale(1.15);
-    }
-
-    .star-btn:focus-visible {
-      outline: var(--border-2) solid var(--_color-filled);
-      outline-offset: var(--border-2);
-    }
-
-    .star-btn[disabled] {
-      cursor: default;
-    }
-
-    :host([readonly]) .star-btn,
-    :host([disabled]) .star-btn {
-      pointer-events: none;
-    }
-
-    :host([disabled]) {
-      opacity: 0.5;
-    }
-
-    svg {
-      width: 100%;
-      height: 100%;
-    }
-  }
-
-  @layer buildit.utilities {
-    :host([size='sm']) {
-      --_star-size: var(--size-5);
-    }
-    :host([size='lg']) {
-      --_star-size: var(--size-9);
-    }
-
-    @media (forced-colors: active) {
-      /* Distinguish filled vs unfilled stars with system button colors */
-      .star-btn {
-        color: ButtonText;
-      }
-      .star-btn[data-filled] {
-        color: Highlight;
-        forced-color-adjust: none;
-      }
-      .star-btn:focus-visible {
-        outline: 2px solid Highlight;
-        box-shadow: none;
-      }
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .sparkle {
-      display: none;
-    }
-  }
-`;
+import styles from './rating.css?inline';
 
 const FULL_STAR_PATH = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
 
 function starIcon(filled: boolean) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"
+  return html`<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    aria-hidden="true"
     fill="${filled ? 'currentColor' : 'none'}"
     stroke="currentColor"
     stroke-width="${filled ? 0 : 1.5}"
     stroke-linecap="round"
-    stroke-linejoin="round"
-  ><path d="${FULL_STAR_PATH}"/></svg>`;
+    stroke-linejoin="round">
+    <path d="${FULL_STAR_PATH}" />
+  </svg>`;
 }
 
-/** Rating events */
-export interface BitRatingEvents {
-  change: CustomEvent<{ value: number }>;
-}
+export type BitRatingEvents = {
+  change: { value: number };
+};
 
 /** Rating props */
-export interface RatingProps extends ThemableProps, SizableProps, DisablableProps {
-  /** Current rating value */
-  value?: number;
-  /** Maximum rating (number of stars) */
-  max?: number;
-  /** Make rating read-only */
-  readonly?: boolean;
-  /** Accessible group label */
-  label?: string;
-  /** Form field name */
-  name?: string;
-}
+export type BitRatingProps = ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    /** Accessible group label */
+    label?: string;
+    /** Maximum rating (number of stars) */
+    max?: number;
+    /** Form field name */
+    name?: string;
+    /** Make rating read-only */
+    readonly?: boolean;
+    /** Current rating value */
+    value?: number;
+  };
 
 /**
  * A star rating input.
@@ -189,10 +69,10 @@ export interface RatingProps extends ThemableProps, SizableProps, DisablableProp
  * <bit-rating value="3" max="5" color="warning"></bit-rating>
  * ```
  */
-export const TAG = define(
+export const RATING_TAG = define(
   'bit-rating',
   ({ host }) => {
-    const props = defineProps<RatingProps>({
+    const props = defineProps<BitRatingProps>({
       color: { default: undefined },
       disabled: { default: false },
       label: { default: 'Rating' },
@@ -203,7 +83,7 @@ export const TAG = define(
       value: { default: 0 },
     });
 
-    const emit = defineEmits<{ change: { value: number } }>();
+    const emit = defineEmits<BitRatingEvents>();
 
     const formCtx = inject(FORM_CTX);
 
@@ -329,8 +209,9 @@ export const TAG = define(
                 @mouseleave="${() => {
                   hovered.value = null;
                 }}"
-                @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}"
-                .innerHTML="${starIcon(star <= displayValue.value)}"></button>`;
+                @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
+                ${starIcon(filled)}
+              </button>`;
             })}
           <div class="sparkle-layer"></div>
         </div>
@@ -339,9 +220,3 @@ export const TAG = define(
   },
   { formAssociated: true },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-rating': HTMLElement & RatingProps & FormValidityMethods & AddEventListeners<BitRatingEvents>;
-  }
-}

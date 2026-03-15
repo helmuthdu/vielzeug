@@ -5,6 +5,7 @@
  */
 
 import { computed, define, html, signal } from '..';
+import { each } from '../directives/each';
 import { mount } from '../test';
 
 describe('Regression Tests', () => {
@@ -20,7 +21,7 @@ describe('Regression Tests', () => {
           'test-no-duplication',
           () => html`
             <div class="container">
-              ${html.each(
+              ${each(
                 items,
                 (item) => item.id,
                 (item) => html`<div class="item">${item.value}</div>`,
@@ -55,7 +56,7 @@ describe('Regression Tests', () => {
           'test-reuse-nodes',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (item) => item.id,
                 (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
@@ -97,7 +98,7 @@ describe('Regression Tests', () => {
           'test-remove-nodes',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (item) => item.id,
                 (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
@@ -133,7 +134,7 @@ describe('Regression Tests', () => {
           'test-reorder',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (item) => item.id,
                 (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`,
@@ -166,7 +167,7 @@ describe('Regression Tests', () => {
           'test-prepend',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (item) => item.id,
                 (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`,
@@ -196,7 +197,7 @@ describe('Regression Tests', () => {
           'test-empty-to-populated',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (item) => item.id,
                 (item) => html`<div class="item">${item.text}</div>`,
@@ -227,7 +228,7 @@ describe('Regression Tests', () => {
           'test-populated-to-empty',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (item) => item.id,
                 (item) => html`<div class="item">${item.text}</div>`,
@@ -252,7 +253,7 @@ describe('Regression Tests', () => {
           'test-single-item',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (item) => item.id,
                 (item) => html`<div class="item">${item.text}</div>`,
@@ -277,7 +278,7 @@ describe('Regression Tests', () => {
           'test-fallback-empty',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (i) => i,
                 (item) => html`<div class="item">${item}</div>`,
@@ -300,7 +301,7 @@ describe('Regression Tests', () => {
           'test-fallback-hidden',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (i) => i,
                 (item) => html`<div class="item">${item}</div>`,
@@ -323,7 +324,7 @@ describe('Regression Tests', () => {
           'test-fallback-toggle',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 items,
                 (i) => i,
                 (item) => html`<div class="item">${item}</div>`,
@@ -733,7 +734,7 @@ describe('Regression Tests', () => {
             <button class="all" @click=${() => (filter.value = 'all')}>All</button>
             <button class="active" @click=${() => (filter.value = 'active')}>Active</button>
             <button class="completed" @click=${() => (filter.value = 'completed')}>Completed</button>
-            ${html.each(
+            ${each(
               filtered,
               (item) => item.id,
               (item) => html`<div class="item">${item.text}</div>`,
@@ -771,7 +772,7 @@ describe('Regression Tests', () => {
         'test-filter-update',
         () => html`
           <div>
-            ${html.each(
+            ${each(
               filtered,
               (item) => item.id,
               (item) => html`<div class="item">${item.id}</div>`,
@@ -807,7 +808,7 @@ describe('Regression Tests', () => {
           'test-toggle',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 todos,
                 (t) => t.id,
                 (t) => html`
@@ -852,7 +853,7 @@ describe('Regression Tests', () => {
           'test-multi-toggle',
           () => html`
             <div>
-              ${html.each(
+              ${each(
                 todos,
                 (t) => t.id,
                 (t) => html`<input type="checkbox" checked=${t.completed} @change=${() => toggle(t.id)} />`,

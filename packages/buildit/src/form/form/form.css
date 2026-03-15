@@ -1,0 +1,19 @@
+@layer buildit.base {
+  :host {
+    display: block;
+  }
+
+  form {
+    display: grid;
+    gap: var(--form-gap, var(--size-4, 1rem));
+    align-items: start;
+  }
+}
+
+@layer buildit.orientation {
+  :host([orientation='horizontal']) form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+}

@@ -1,6 +1,6 @@
 ---
 title: Formit — Form state management for TypeScript
-description: Lightweight framework-agnostic form state management with typed values, per-field rules, async validators, and fine-grained subscriptions.
+description: Lightweight framework-agnostic form state management with typed values, per-field validators, async validation, and fine-grained subscriptions.
 ---
 
 <PackageBadges package="formit" />
@@ -9,7 +9,7 @@ description: Lightweight framework-agnostic form state management with typed val
 
 # Formit
 
-**Formit** is a lightweight, framework-agnostic form controller with typed field values, per-field rules, form-level validators, async support, and fine-grained subscriptions.
+**Formit** is a lightweight, framework-agnostic form controller with typed field values, per-field validators, form-level validators, async support, array field utilities, and fine-grained subscriptions.
 
 ## Installation
 
@@ -39,7 +39,7 @@ const form = createForm({
     name: '',
     email: '',
   },
-  rules: {
+  validators: {
     name: (v) => (!v || String(v).trim() === '' ? 'Name is required' : undefined),
     email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
   },
@@ -49,6 +49,9 @@ const form = createForm({
 form.subscribe((state) => {
   // re-render or update UI with state.errors, state.isDirty, etc.
 });
+
+// Validate — returns { valid, errors }
+const { valid, errors } = await form.validate();
 
 // Submit
 try {
@@ -68,15 +71,19 @@ try {
 - **Typed values** — field values stay typed (`number`, `boolean`, `File`) — no string coercion
 - **Nested values** — plain objects in `defaultValues` are auto-flattened; access fields with `form.get('user.name')`
 - **Deep partial patch** — `form.patch({ user: { name: 'Bob' } })` merges nested objects without replacing siblings
-- **Field rules** — per-field `rules` option with a single validator or an array (first failure wins)
+- **Field validators** — per-field `validators` option with a single validator or an array (first failure wins)
 - **Form validators** — cross-field validation via `validator` returning an error record (runs only on full validation)
 - **Async validators** — validators can return `Promise<string | undefined>`
 - **Partial validation** — `validate({ fields: [...] })` or `validate({ onlyTouched: true })` updates only the scoped fields' errors; preserves the rest; skips form validator
 - **AbortSignal support** — cancel in-flight async validators
+- **Shorthand field getters** — `form.getError(name)`, `form.isFieldDirty(name)`, `form.isFieldTouched(name)` without allocating a full snapshot
+- **Untouch** — `form.untouch(name)` / `form.untouchAll()` for multi-step form flows
+- **Array field utilities** — `appendField`, `removeField`, `moveField` for dynamic list fields
 - **Convenience getters** — `form.isValid`, `form.isDirty`, `form.isTouched`, `form.errors` directly on the instance
 - **Fine-grained subscriptions** — `watch(name, fn)` fires only when that field changes
-- **Bind helper** — `form.bind('email')` returns `{ name, value, error, touched, dirty, onChange, onBlur }` with live getters
+- **Bind helper** — `form.bind('email')` returns a memoized object with live getters and `onChange`/`onBlur` handlers
 - **Single-field reset** — `form.resetField('name')` restores one field without touching the rest
+- **Schema adapter** — `fromSchema(schema)` connects any Zod/Valibot-compatible `safeParse` schema as the form validator
 - **Zero dependencies** — <PackageInfo package="formit" type="size" /> gzipped
 
 ## Next Steps

@@ -19,9 +19,9 @@ These are copy-paste ready recipes. See the [Usage Guide](./usage.md) for detail
 import { createContainer, createToken } from '@vielzeug/wireit';
 
 // tokens.ts
-const ConfigToken  = createToken<AppConfig>('AppConfig');
-const DbToken      = createToken<IDatabase>('Database');
-const LoggerToken  = createToken<ILogger>('Logger');
+const ConfigToken = createToken<AppConfig>('AppConfig');
+const DbToken = createToken<IDatabase>('Database');
+const LoggerToken = createToken<ILogger>('Logger');
 const ServiceToken = createToken<UserService>('UserService');
 
 // container.ts
@@ -79,15 +79,19 @@ console.log(child1.get(RequestContextToken) === child2.get(RequestContextToken))
 ```ts
 const DbToken = createToken<IDatabase>('Database');
 
-container.factory(DbToken, async (config) => {
-  const db = new PostgresClient({ connectionString: config.dbUrl });
-  await db.connect();
-  return db;
-}, {
-  deps: [ConfigToken],
-  lifetime: 'singleton',
-  dispose: (db) => db.end(),
-});
+container.factory(
+  DbToken,
+  async (config) => {
+    const db = new PostgresClient({ connectionString: config.dbUrl });
+    await db.connect();
+    return db;
+  },
+  {
+    deps: [ConfigToken],
+    lifetime: 'singleton',
+    dispose: (db) => db.end(),
+  },
+);
 
 // Must use getAsync for async providers
 const db = await container.getAsync(DbToken);
@@ -99,11 +103,15 @@ const db = await container.getAsync(DbToken);
 async function bootstrap() {
   await using container = createContainer();
 
-  container.factory(DbToken, async () => {
-    const db = new Database(env.DB_URL);
-    await db.connect();
-    return db;
-  }, { dispose: (db) => db.close() });
+  container.factory(
+    DbToken,
+    async () => {
+      const db = new Database(env.DB_URL);
+      await db.connect();
+      return db;
+    },
+    { dispose: (db) => db.close() },
+  );
 
   const app = container.get(AppToken);
   await app.start();
@@ -117,7 +125,7 @@ async function bootstrap() {
 
 ```ts
 const RequestToken = createToken<Request>('Request');
-const UserToken    = createToken<User>('User');
+const UserToken = createToken<User>('User');
 const HandlerToken = createToken<RequestHandler>('RequestHandler');
 
 // Root — shared across all requests
@@ -210,11 +218,7 @@ async function bootstrap() {
 
   const [db, cache, queue] = await container.getAllAsync([DbToken, CacheToken, QueueToken]);
 
-  await Promise.all([
-    db.migrate(),
-    cache.warm(),
-    queue.start(),
-  ]);
+  await Promise.all([db.migrate(), cache.warm(), queue.start()]);
 
   return container.get(AppToken);
 }
@@ -229,6 +233,7 @@ import { createTestContainer } from '@vielzeug/wireit';
 
 describe('UserService', () => {
   let container: Container;
+  let dispose: () => Promise<void>;
   const mockDb = {
     users: {
       findById: vi.fn(),
@@ -237,11 +242,11 @@ describe('UserService', () => {
   };
 
   beforeEach(() => {
-    container = createTestContainer(appContainer);
+    ({ container, dispose } = createTestContainer(appContainer));
     container.value(DbToken, mockDb, { overwrite: true });
   });
 
-  afterEach(() => container.dispose());
+  afterEach(() => dispose());
 
   it('returns a user by id', async () => {
     mockDb.users.findById.mockResolvedValue({ id: '1', name: 'Alice' });
@@ -287,10 +292,19 @@ it('connects to the database on first get', async () => {
   const mockConnect = vi.fn().mockResolvedValue(undefined);
   const fakeDb = { connect: mockConnect, query: vi.fn() };
 
-  await container.mock(DbToken, { useFactory: async () => { await fakeDb.connect(); return fakeDb; } }, async () => {
-    const db = await container.getAsync(DbToken);
-    expect(mockConnect).toHaveBeenCalledOnce();
-  });
+  await container.mock(
+    DbToken,
+    {
+      useFactory: async () => {
+        await fakeDb.connect();
+        return fakeDb;
+      },
+    },
+    async () => {
+      const db = await container.getAsync(DbToken);
+      expect(mockConnect).toHaveBeenCalledOnce();
+    },
+  );
 });
 ```
 
@@ -302,11 +316,15 @@ it('connects to the database on first get', async () => {
 const container = createContainer();
 
 container
-  .factory(DbToken, async () => {
-    const db = new Database(env.DB_URL);
-    await db.connect();
-    return db;
-  }, { dispose: (db) => db.close() })
+  .factory(
+    DbToken,
+    async () => {
+      const db = new Database(env.DB_URL);
+      await db.connect();
+      return db;
+    },
+    { dispose: (db) => db.close() },
+  )
   .factory(CacheToken, () => new RedisCache(env.REDIS_URL), {
     dispose: (cache) => cache.quit(),
   })
@@ -347,7 +365,7 @@ container.bind(ServiceToken, UserService, { deps: [DbToken] });
 container.alias(IUserServiceToken, ServiceToken);
 
 const { tokens, aliases } = container.debug();
-console.log(tokens);  // ['AppConfig', 'UserService']
+console.log(tokens); // ['AppConfig', 'UserService']
 console.log(aliases); // [['IUserService', 'UserService']]
 ```
 

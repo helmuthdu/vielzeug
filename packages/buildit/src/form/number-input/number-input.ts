@@ -1,90 +1,51 @@
-import { computed, css, define, defineEmits, defineField, defineProps, html, signal, watch } from '@vielzeug/craftit';
+import { computed, define, defineEmits, defineField, defineProps, html, signal, watch } from '@vielzeug/craftit';
 
-import type {
-  AddEventListeners,
-  DisablableProps,
-  FormValidityMethods,
-  SizableProps,
-  ThemableProps,
-  VisualVariant,
-} from '../../types';
+import type { DisablableProps, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
+import { minusIcon, plusIcon } from '../../icons';
 import { disabledStateMixin } from '../../styles';
 // Ensure child components are registered
 import '../../actions/button/button';
 import '../input/input';
+import styles from './number-input.css?inline';
 
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: inline-flex;
-      width: fit-content;
-    }
-
-    :host([fullwidth]) {
-      width: 100%;
-    }
-
-    .wrapper {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--size-1);
-      width: 100%;
-    }
-
-    /* Style the inner <input> through bit-input's exported part */
-    bit-input::part(input) {
-      text-align: center;
-    }
-
-    bit-input {
-      width: var(--size-20);
-    }
-
-    :host([fullwidth]) bit-input {
-      flex: 1;
-      min-width: 0;
-      width: auto;
-    }
-  }
-`;
-
-/** Number Input events */
-export interface BitNumberInputEvents {
-  change: CustomEvent<{ value: number | null }>;
-  input: CustomEvent<{ value: number | null }>;
-}
+export type BitNumberInputEvents = {
+  change: { value: number | null };
+  input: { value: number | null };
+};
 
 /** Number Input props */
-export interface NumberInputProps extends ThemableProps, SizableProps, DisablableProps {
-  /** Current numeric value */
-  value?: number;
-  /** Minimum allowed value */
-  min?: number;
-  /** Maximum allowed value */
-  max?: number;
-  /** Step size for increment/decrement */
-  step?: number;
-  /** Large step (for Page Up/Down, default: 10 × step) */
-  'large-step'?: number;
-  /** Make the input read-only */
-  readonly?: boolean;
-  /** Visible label */
-  label?: string;
-  /** Label placement: 'inset' renders the label inside the control box, 'outside' renders it above */
-  'label-placement'?: 'inset' | 'outside';
-  /** Form field name */
+export type BitNumberInputProps = ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    /** Stretch to full width of container */
+    fullwidth?: boolean;
+    /** Visible label */
+    label?: string;
+    /** Label placement: 'inset' renders the label inside the control box, 'outside' renders it above */
+    'label-placement'?: 'inset' | 'outside';
+    /** Large step (for Page Up/Down, default: 10 × step) */
+    'large-step'?: number;
+    /** Maximum allowed value */
+    max?: number;
+    /** Minimum allowed value */
+    min?: number;
+    name?: string;
+    /** Allow null/empty value */
+    nullable?: boolean;
+    /** Form field name */
 
-  name?: string;
-  /** Visual variant */
-  variant?: VisualVariant;
-  /** Placeholder text */
-  placeholder?: string;
-  /** Allow null/empty value */
-  nullable?: boolean;
-  /** Stretch to full width of container */
-  fullwidth?: boolean;
-}
+    /** Placeholder text */
+    placeholder?: string;
+    /** Make the input read-only */
+    readonly?: boolean;
+    /** Step size for increment/decrement */
+    step?: number;
+    /** Current numeric value */
+    value?: number;
+    /** Visual variant */
+    variant?: VisualVariant;
+  };
 
 /**
  * A numeric spin-button input with +/− controls, min/max clamping, and full keyboard support.
@@ -118,10 +79,10 @@ export interface NumberInputProps extends ThemableProps, SizableProps, Disablabl
  * <bit-number-input label="Quantity" value="1" min="1" max="99" step="1"></bit-number-input>
  * ```
  */
-export const TAG = define(
+export const NUMBER_INPUT_TAG = define(
   'bit-number-input',
   ({ host }) => {
-    const props = defineProps<NumberInputProps>({
+    const props = defineProps<BitNumberInputProps>({
       color: { default: undefined },
       disabled: { default: false },
       fullwidth: { default: false },
@@ -140,7 +101,7 @@ export const TAG = define(
       variant: { default: undefined },
     });
 
-    const emit = defineEmits<{ change: { value: number | null }; input: { value: number | null } }>();
+    const emit = defineEmits<BitNumberInputEvents>();
 
     const inputValue = signal<string>(props.value.value != null ? String(props.value.value) : '');
 
@@ -273,18 +234,8 @@ export const TAG = define(
             :color="${() => props.color.value || null}"
             ?disabled="${() => props.disabled.value || props.readonly.value || atMin.value}"
             @click="${() => increment(-(Number(props.step.value) || 1))}"
-            ><svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              aria-hidden="true">
-              <line x1="5" y1="12" x2="19" y2="12" /></svg
-          ></bit-button>
+            >${minusIcon}</bit-button
+          >
           <bit-input
             part="input"
             type="text"
@@ -325,28 +276,11 @@ export const TAG = define(
             :color="${() => props.color.value || null}"
             ?disabled="${() => props.disabled.value || props.readonly.value || atMax.value}"
             @click="${() => increment(Number(props.step.value) || 1)}"
-            ><svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" /></svg
-          ></bit-button>
+            >${plusIcon}</bit-button
+          >
         </div>
       `,
     };
   },
   { formAssociated: true },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-number-input': HTMLElement & NumberInputProps & FormValidityMethods & AddEventListeners<BitNumberInputEvents>;
-  }
-}

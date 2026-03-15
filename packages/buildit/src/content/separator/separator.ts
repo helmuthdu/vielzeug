@@ -1,82 +1,21 @@
-import { css, define, defineProps, html } from '@vielzeug/craftit';
+import { define, defineProps, html } from '@vielzeug/craftit';
 
 import type { ThemeColor } from '../../types';
 
 import { colorThemeMixin } from '../../styles';
-
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_color: var(--separator-color, var(--color-contrast-300));
-      --_size: var(--separator-size, var(--border));
-      --_spacing: var(--separator-spacing, 0);
-
-      display: block;
-    }
-
-    .separator {
-      all: unset;
-      display: block;
-      box-sizing: border-box;
-      margin: var(--_spacing) 0;
-    }
-
-    :host([orientation='horizontal']),
-    :host(:not([orientation='vertical'])) {
-      width: 100%;
-    }
-
-    :host([orientation='horizontal']) .separator,
-    :host(:not([orientation='vertical'])) .separator {
-      border-top: var(--_size) solid var(--_color);
-      width: 100%;
-    }
-
-    :host([orientation='vertical']) {
-      display: inline-block;
-      align-self: stretch;
-    }
-
-    :host([orientation='vertical']) .separator {
-      border-inline-start: var(--_size) solid var(--_color);
-      height: 100%;
-    }
-
-    :host([color]) {
-      --_color: var(--_theme-base);
-    }
-
-    /* Labelled separator */
-    .separator-wrapper {
-      align-items: center;
-      display: flex;
-      gap: var(--size-3);
-    }
-
-    .separator-wrapper .separator {
-      flex: 1;
-    }
-
-    .separator-label {
-      color: var(--_color);
-      font-size: var(--text-xs);
-      font-weight: var(--font-medium);
-      white-space: nowrap;
-    }
-  }
-`;
+import componentStyles from './separator.css?inline';
 
 /** Separator component properties */
-export interface SeparatorProps {
-  /** Orientation of the separator */
-  orientation?: 'horizontal' | 'vertical';
+export type BitSeparatorProps = {
+  /** Theme color tint */
+  color?: ThemeColor;
   /** Decorative only (default true) — set to false for semantic separators */
   decorative?: boolean;
   /** Optional label text centered on the separator */
   label?: string;
-  /** Theme color tint */
-  color?: ThemeColor;
-}
+  /** Orientation of the separator */
+  orientation?: 'horizontal' | 'vertical';
+};
 
 /**
  * A simple visual divider between sections of content.
@@ -99,8 +38,8 @@ export interface SeparatorProps {
  * <bit-separator orientation="vertical"></bit-separator>
  * ```
  */
-export const TAG = define('bit-separator', () => {
-  const props = defineProps<SeparatorProps>({
+export const SEPARATOR_TAG = define('bit-separator', () => {
+  const props = defineProps<BitSeparatorProps>({
     color: { default: undefined },
     decorative: { default: true, type: Boolean },
     label: { default: undefined },
@@ -139,9 +78,3 @@ export const TAG = define('bit-separator', () => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-separator': HTMLElement & SeparatorProps;
-  }
-}

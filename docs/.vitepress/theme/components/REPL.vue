@@ -2,25 +2,26 @@
 <template>
   <div id="repl-container" class="repl-container" :class="{ 'is-expanded': isExpanded }">
     <!-- Library Selector Card Grid -->
-    <div v-if="!isExpanded" class="library-grid">
-      <div
+    <bit-grid v-if="!isExpanded" responsive gap="md" min-col-width="280px" style="margin-bottom: 2rem;">
+      <bit-card
         v-for="(desc, lib) in libraryDescriptions"
         :key="lib"
-        class="library-card"
-        :class="{ active: selectedLibrary === lib }"
-        @click="
-          selectedLibrary = lib;
-          switchLibrary();
-        ">
-        <div class="card-icon">
-          <img :src="withBase(`/logo-${lib}.svg`)" :alt="`${lib} logo`" class="lib-logo" />
+        interactive
+        variant="flat"
+        padding="md"
+        :color="selectedLibrary === lib ? 'primary' : undefined"
+        @click="selectedLibrary = lib; switchLibrary();">
+        <div class="lib-card-body">
+          <div class="card-icon">
+            <img :src="withBase(`/logo-${lib}.svg`)" :alt="`${lib} logo`" class="lib-logo" />
+          </div>
+          <div class="card-info">
+            <span class="card-title">@vielzeug/{{ lib }}</span>
+            <p class="card-desc">{{ desc }}</p>
+          </div>
         </div>
-        <div class="card-info">
-          <span class="card-title">@vielzeug/{{ lib }}</span>
-          <p class="card-desc">{{ desc }}</p>
-        </div>
-      </div>
-    </div>
+      </bit-card>
+    </bit-grid>
 
     <!-- Editor and Output Component -->
     <REPLEditor
@@ -65,23 +66,31 @@ const STORAGE_PREFIX = 'vielzeug-repl-code-';
 
 const LIBRARY_DESCRIPTIONS = {
   craftit: 'Lightweight, type-safe web components with reactive state.',
-  deposit: 'Type-safe local storage with schemas, expiration, and query building.',
-  fetchit: 'Advanced HTTP client with caching, retries, and deduplication.',
-  formit: 'Type-safe form state and validation with reactive fields.',
+  deposit: 'Storage with schemas, TTL, and query building.',
+  dragit: 'Framework-agnostic drag-and-drop primitives with file filtering and more.',
+  eventit: 'Publish/Subscribe event bus with async support.',
+  fetchit: 'Advanced HTTP client with caching, retries, mutations, and more.',
+  floatit: 'Lightweight floating-element positioning for elements.',
+  formit: 'Form state management with reactive fields and async validation.',
   i18nit: 'Internationalization library with TypeScript support.',
   logit: 'Beautiful console logging with styling and remote logging support.',
   permit: 'Role-based access control (RBAC) system for permissions.',
   routeit: 'Client-side routing library with nested routes and middleware support.',
-  stateit: 'State management with reactive subscriptions.',
+  stateit: 'Reactive state based on signals, with stores, derived state, and more.',
   toolkit: 'Utility library with functions for arrays, objects, and more.',
   validit: 'Type-safe schema validation with advanced error handling.',
+  virtualit: 'Virtual list engine for performant rendering of large datasets.',
   wireit: 'Lightweight dependency injection container with IoC principles.',
+  workit: 'Web Worker pool abstraction with queuing, timeout, and more.',
 } as const;
 
 const LIBRARY_LOADERS = {
   craftit: () => import('@vielzeug/craftit'),
   deposit: () => import('@vielzeug/deposit'),
+  dragit: () => import('@vielzeug/dragit'),
+  eventit: () => import('@vielzeug/eventit'),
   fetchit: () => import('@vielzeug/fetchit'),
+  floatit: () => import('@vielzeug/floatit'),
   formit: () => import('@vielzeug/formit'),
   i18nit: () => import('@vielzeug/i18nit'),
   logit: () => import('@vielzeug/logit'),
@@ -90,7 +99,9 @@ const LIBRARY_LOADERS = {
   stateit: () => import('@vielzeug/stateit'),
   toolkit: () => import('@vielzeug/toolkit'),
   validit: () => import('@vielzeug/validit'),
+  virtualit: () => import('@vielzeug/virtualit'),
   wireit: () => import('@vielzeug/wireit'),
+  workit: () => import('@vielzeug/workit'),
 } as const;
 
 const LIBRARY_EXPORTS = {
@@ -124,26 +135,50 @@ const LIBRARY_EXPORTS = {
     'aria',
     'field',
   ],
-  deposit: ['createDeposit'],
-  fetchit: ['createHttp', 'createQuery'],
-  formit: ['createForm'],
+  deposit: ['createLocalStorage', 'createIndexedDB', 'defineSchema', 'ttl', 'storeField'],
+  dragit: ['createDropZone', 'createSortable'],
+  eventit: ['createBus', 'BusDisposedError'],
+  fetchit: ['createApi', 'createQuery', 'createMutation', 'HttpError', 'serializeKey'],
+  floatit: ['positionFloat', 'computePosition', 'autoUpdate', 'offset', 'flip', 'shift', 'size'],
+  formit: ['createForm', 'fromSchema', 'toFormData', 'FormValidationError', 'SubmitError'],
   i18nit: ['createI18n'],
   logit: ['Logit'],
   permit: ['createPermit', 'Permit', 'WILDCARD', 'ANONYMOUS'],
   routeit: ['createRouter', 'Router'],
-  stateit: ['createStore', 'createTestState', 'withStateMock', 'shallowEqual', 'shallowMerge'],
+  stateit: [
+    'signal',
+    'computed',
+    'effect',
+    'watch',
+    'batch',
+    'untrack',
+    'store',
+    'derived',
+    'writable',
+    'readonly',
+    'isSignal',
+    'isStore',
+    'toValue',
+    'nextValue',
+    'shallowEqual',
+    'onCleanup',
+    'configureStateit',
+  ],
   toolkit: [],
-  validit: ['v'],
+  validit: ['v', 'ValidationError', 'ErrorCode'],
+  virtualit: ['createVirtualizer', 'Virtualizer'],
   wireit: [
     'createContainer',
     'createToken',
     'createTestContainer',
-    'withMock',
     'Container',
     'CircularDependencyError',
     'ProviderNotFoundError',
     'AsyncProviderError',
+    'AliasCycleError',
+    'ContainerDisposedError',
   ],
+  workit: ['createWorker', 'WorkerError', 'TaskTimeoutError', 'TerminatedError', 'TaskError'],
 } as const;
 
 const TOOLKIT_CATEGORIES = [
@@ -402,49 +437,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Library Grid */
-.library-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.library-card {
+/* Card body layout inside bit-card */
+.lib-card-body {
   display: flex;
   align-items: flex-start;
   gap: 1.25rem;
-  padding: 1.25rem;
-  border-radius: 16px;
-  background: var(--vp-c-bg-soft);
-  border: 1px solid var(--vp-c-divider);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.library-card:hover,
-.library-card.active {
-  background: var(--vp-c-bg-soft);
-  border-color: var(--vp-c-brand-1);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
-}
-
-.library-card:hover {
-  transform: translateY(-4px);
-}
-
-.library-card.active::after {
-  content: '';
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--vp-c-brand-1);
-  box-shadow: 0 0 8px var(--vp-c-brand-1);
 }
 
 .card-icon {
@@ -454,12 +451,11 @@ onMounted(() => {
   width: 48px;
   height: 48px;
   min-width: 48px;
+  flex-shrink: 0;
   border-radius: 12px;
   background: var(--color-contrast-50);
   padding: 8px;
   border: 1px solid var(--vp-c-divider);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .lib-logo {
@@ -468,19 +464,11 @@ onMounted(() => {
   object-fit: contain;
 }
 
-.library-card:hover .card-icon {
-  border-color: var(--vp-c-brand-1);
-  transform: scale(1.1) rotate(5deg);
-}
-
-.library-card.active .card-icon {
-  border-color: var(--vp-c-brand-1);
-}
-
 .card-info {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .card-title {

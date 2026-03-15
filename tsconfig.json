@@ -5,7 +5,7 @@
     "module": "ESNext",
     "lib": ["ES2024", "DOM", "DOM.Iterable", "ESNext.Disposable"],
     "skipLibCheck": true,
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "vite/client"],
     /* Bundler mode */
     "isolatedModules": true,
     "moduleResolution": "bundler",

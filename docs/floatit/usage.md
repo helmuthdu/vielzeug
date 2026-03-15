@@ -11,6 +11,41 @@ Start with the [Overview](./index.md) for a quick introduction, then come back h
 
 [[toc]]
 
+## Why Floatit?
+
+Manual floating-element positioning with `getBoundingClientRect` breaks at viewport edges — there is no built-in overflow detection, flip logic, or automatic repositioning on scroll or resize.
+
+```ts
+// Before — manual positioning (no overflow handling)
+function position(ref: Element, float: HTMLElement) {
+  const rect = ref.getBoundingClientRect();
+  float.style.top  = `${rect.bottom + 8}px`;
+  float.style.left = `${rect.left}px`;
+  // Clips at viewport edges, never flips, breaks on scroll
+}
+
+// After — Floatit
+import { positionFloat, offset, flip, shift } from '@vielzeug/floatit';
+await positionFloat(reference, floating, {
+  placement: 'bottom',
+  middleware: [offset(8), flip(), shift({ padding: 6 })],
+});
+```
+
+| Feature           | Floatit                                       | Floating UI | Popper.js |
+| ----------------- | --------------------------------------------- | ----------- | --------- |
+| Bundle size       | <PackageInfo package="floatit" type="size" /> | ~7 kB       | ~8 kB     |
+| One-call API      | ✅ `positionFloat`                            | ❌ Manual   | ❌ Manual |
+| Flip middleware   | ✅                                            | ✅          | ✅        |
+| Shift middleware  | ✅                                            | ✅          | ✅        |
+| Size middleware   | ✅                                            | ✅          | ✅        |
+| autoUpdate        | ✅                                            | ✅          | ✅        |
+| Zero dependencies | ✅                                            | ✅          | ✅        |
+
+**Use Floatit when** you need a lightweight positioning engine for tooltips, dropdowns, and popovers that integrates cleanly into the Vielzeug component system.
+
+**Consider Floating UI** if you need its framework adapters (React, Vue, Svelte) or virtual element reference support.
+
 ## Import
 
 ```ts

@@ -1,7 +1,6 @@
-import { css, define, defineEmits, defineProps, html, signal, watch } from '@vielzeug/craftit';
+import { computed, define, defineEmits, defineProps, html, signal, type Signal, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
-import type { AddEventListeners, BitChipEvents, ChipChangeDetail, ChipRemoveDetail } from '../../types/events';
 
 import {
   colorThemeMixin,
@@ -10,209 +9,30 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-
-export type { BitChipEvents } from '../../types/events';
-
 // ============================================
 // Styles
 // ============================================
+import componentStyles from './chip.css?inline';
 
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_bg: var(--chip-bg, var(--color-contrast-150, var(--color-contrast-100)));
-      --_color: var(--chip-color, var(--color-contrast-800));
-      --_border-color: var(--chip-border-color, transparent);
-      --_radius: var(--chip-radius, var(--rounded-full));
-      --_font-size: var(--chip-font-size, var(--text-sm));
-      --_font-weight: var(--chip-font-weight, var(--font-medium));
-      --_padding-x: var(--chip-padding-x, var(--size-2-5));
-      --_padding-y: var(--chip-padding-y, var(--size-0-5));
-      --_gap: var(--chip-gap, var(--size-1));
+// ============================================
+// Icons
+// ============================================
 
-      display: inline-flex;
-      align-items: center;
-      max-width: 100%;
-      vertical-align: middle;
-    }
-
-    .chip {
-      align-items: center;
-      background: var(--_bg);
-      border: var(--border) solid var(--_border-color);
-      border-radius: var(--_radius);
-      box-sizing: border-box;
-      color: var(--_color);
-      display: inline-flex;
-      font-size: var(--_font-size);
-      font-weight: var(--_font-weight);
-      gap: var(--_gap);
-      line-height: 1.2;
-      max-width: 100%;
-      padding: var(--_padding-y) var(--_padding-x);
-      position: relative;
-      transition:
-        background var(--transition-fast),
-        border-color var(--transition-fast),
-        color var(--transition-fast);
-      white-space: nowrap;
-    }
-
-    .label {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* ========================================
-       Remove Button
-       ======================================== */
-
-    .remove-btn {
-      align-items: center;
-      background: color-mix(in srgb, currentColor 12%, transparent);
-      border: none;
-      border-radius: var(--_radius);
-      color: inherit;
-      cursor: pointer;
-      display: inline-flex;
-      flex-shrink: 0;
-      height: 1.35em;
-      justify-content: center;
-      margin-inline-end: calc(var(--size-2) * -1);
-      margin-inline-start: var(--size-0-5);
-      opacity: 0.7;
-      padding: 0;
-      transition:
-        background var(--transition-fast),
-        opacity var(--transition-fast);
-      width: 1.35em;
-    }
-
-    .remove-btn:hover {
-      background: color-mix(in srgb, currentColor 28%, transparent);
-      opacity: 1;
-    }
-
-    .remove-btn:focus-visible {
-      opacity: 1;
-      outline: 2px solid currentColor;
-      outline-offset: 1px;
-    }
-
-    /* ========================================
-       Icon slot
-       ======================================== */
-
-    ::slotted([slot='icon']) {
-      align-items: center;
-      display: inline-flex;
-      flex-shrink: 0;
-      height: 1em;
-      justify-content: center;
-      width: 1em;
-    }
-    .chip-btn {
-      background: none;
-      border: none;
-      color: inherit;
-      cursor: pointer;
-      display: inline-flex;
-      font: inherit;
-      margin: 0;
-      padding: 0;
-      text-align: inherit;
-      width: 100%;
-    }
-
-    .chip-btn:disabled {
-      cursor: not-allowed;
-    }
-
-    :host([mode='selectable'][checked]) .chip {
-      outline: var(--border-2) solid var(--_theme-base, currentColor);
-      outline-offset: -2px;
-    }
-
-    :host([mode='selectable']:not([disabled])) .chip {
-      cursor: pointer;
-    }
-
-    .chip-btn:focus-visible .chip {
-      outline: 2px solid var(--_theme-base, currentColor);
-      outline-offset: 2px;
-    }
-  }
-
-  @layer buildit.variants {
-    /* Solid (Default) — full theme color fill */
-    :host(:not([variant])) .chip,
-    :host([variant='solid']) .chip {
-      background: var(--_theme-base, var(--color-contrast-700));
-      border-color: transparent;
-      color: var(--_theme-contrast, var(--color-contrast-50));
-    }
-
-    /* Flat — subtle tint */
-    :host([variant='flat']) .chip {
-      background: color-mix(in srgb, var(--_theme-backdrop, var(--color-contrast-200)) 55%, transparent);
-      border-color: transparent;
-      color: var(--_theme-base, var(--color-contrast-800));
-    }
-
-    /* Bordered — backdrop fill with themed border */
-    :host([variant='bordered']) .chip {
-      background: var(--_theme-backdrop, var(--color-contrast-50));
-      border-color: var(--_theme-border, var(--color-contrast-300));
-      color: var(--_theme-base, var(--color-contrast-900));
-    }
-
-    :host([variant='bordered']) .remove-btn {
-      background: var(--_theme-focus, var(--color-contrast-700));
-      border: var(--border) solid var(--_theme-focus, var(--color-contrast-700));
-      color: var(--_theme-backdrop, var(--color-contrast-50));
-    }
-
-    :host([variant='bordered']) .remove-btn:hover {
-      background: color-mix(in srgb, var(--_theme-focus, var(--color-contrast-700)) 80%, black);
-      opacity: 1;
-    }
-
-    /* Outline — transparent with colored border */
-    :host([variant='outline']) .chip {
-      background: transparent;
-      border-color: var(--_theme-base, var(--color-contrast-400));
-      color: var(--_theme-base, var(--color-contrast-900));
-    }
-
-    :host([variant='outline']) .remove-btn {
-      background: var(--_theme-focus, var(--color-contrast-700));
-      border: var(--border) solid var(--_theme-focus, var(--color-contrast-700));
-      color: var(--_theme-backdrop, var(--color-contrast-50));
-    }
-
-    :host([variant='outline']) .remove-btn:hover {
-      background: color-mix(in srgb, var(--_theme-focus, var(--color-contrast-700)) 80%, black);
-      opacity: 1;
-    }
-
-    /* Ghost — transparent, no border */
-    :host([variant='ghost']) .chip {
-      background: transparent;
-      border-color: transparent;
-      color: var(--_theme-base, var(--color-contrast-900));
-    }
-
-    :host([variant='ghost']) .remove-btn {
-      border: var(--border) solid var(--_theme-focus, var(--color-contrast-400));
-    }
-
-    :host([variant='ghost']) .remove-btn:hover {
-      background: color-mix(in srgb, currentColor 15%, transparent);
-    }
-  }
+// Small close icon for remove button (relative sizing for chip)
+const CHIP_CLOSE_ICON = html`
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    width="0.75em"
+    height="0.75em"
+    aria-hidden="true">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </svg>
 `;
 
 // ============================================
@@ -220,41 +40,55 @@ const componentStyles = /* css */ css`
 // ============================================
 
 /** Chip component properties */
-interface ChipBaseProps {
+type ChipBaseProps = {
+  /** Accessible label (required for icon-only chips) */
+  'aria-label'?: string;
   /** Theme color */
   color?: ThemeColor;
-  /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
-  /** Component size */
-  size?: ComponentSize;
-  /** Border radius override */
-  rounded?: RoundedSize | '';
   /** Disable interactions */
   disabled?: boolean;
+  /** Border radius override */
+  rounded?: RoundedSize | '';
+  /** Component size */
+  size?: ComponentSize;
   /** Value associated with this chip — included in emitted event detail */
   value?: string;
-}
+  /** Visual style variant */
+  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
+};
 
 /** Read-only presentation chip */
-interface StaticChipProps {
+type StaticChipProps = {
   mode?: 'static';
-}
+};
 
 /** Removable chip mode */
-interface RemovableChipProps {
+type RemovableChipProps = {
   mode: 'removable';
-}
+};
 
 /** Selectable chip mode */
-interface SelectableChipProps {
-  mode: 'selectable';
+type SelectableChipProps = {
   /** Controlled checked state for `mode="selectable"` */
   checked?: boolean | undefined;
   /** Initial checked state for uncontrolled `mode="selectable"` */
   'default-checked'?: boolean;
-}
+  mode: 'selectable';
+};
 
-export type ChipProps = ChipBaseProps & (StaticChipProps | RemovableChipProps | SelectableChipProps);
+/** Action chip mode — behaves like a button, fires a click event without maintaining state */
+type ActionChipProps = {
+  mode: 'action';
+};
+
+export type BitChipEvents = {
+  change: { checked: boolean; originalEvent: Event; value: string | undefined };
+  click: { originalEvent: MouseEvent; value: string | undefined };
+  remove: { originalEvent: MouseEvent; value: string | undefined };
+};
+
+export type BitChipProps = ChipBaseProps &
+  (StaticChipProps | RemovableChipProps | SelectableChipProps | ActionChipProps);
 
 /**
  * A compact, styled label element. Supports icons, a remove button, colors, sizes, and variants.
@@ -262,11 +96,12 @@ export type ChipProps = ChipBaseProps & (StaticChipProps | RemovableChipProps | 
  *
  * @element bit-chip
  *
+ * @attr {string}  aria-label - Accessible label (required for icon-only chips)
  * @attr {string}  color     - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string}  variant   - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
  * @attr {string}  size      - Component size: 'sm' | 'md' | 'lg'
  * @attr {string}  rounded   - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
- * @attr {string}  mode      - Interaction mode: 'static' | 'removable' | 'selectable'
+ * @attr {string}  mode      - Interaction mode: 'static' | 'removable' | 'selectable' | 'action'
  * @attr {boolean} disabled  - Disable the chip
  * @attr {string}  value     - Value included in emitted event detail
  * @attr {boolean} checked   - Controlled checked state for selectable chips
@@ -275,8 +110,9 @@ export type ChipProps = ChipBaseProps & (StaticChipProps | RemovableChipProps | 
  * @slot         - Chip label text
  * @slot icon    - Leading icon or decoration
  *
- * @fires remove - Fired when the remove button is clicked, with `detail.value` and `detail.originalEvent`
- * @fires change - Fired when a selectable chip toggles, with `detail.checked`, `detail.value`, and `detail.originalEvent`
+ * @event remove - Fired when the remove button is clicked, with `detail.value` and `detail.originalEvent`
+ * @event change - Fired when a selectable chip toggles, with `detail.checked`, `detail.value`, and `detail.originalEvent`
+ * @event click  - Fired when an action chip is clicked, with `detail.value` and `detail.originalEvent`
  *
  * @cssprop --chip-bg           - Background color
  * @cssprop --chip-color        - Text color
@@ -290,21 +126,43 @@ export type ChipProps = ChipBaseProps & (StaticChipProps | RemovableChipProps | 
  *
  * @example
  * ```html
+ * <!-- Static chip (read-only) -->
  * <bit-chip color="primary">Design</bit-chip>
- * <bit-chip color="success" variant="flat" mode="removable" value="ts">TypeScript</bit-chip>
- * <bit-chip color="info" variant="flat" mode="selectable" default-checked value="ui">UI</bit-chip>
- * <bit-chip color="warning" variant="bordered">
+ *
+ * <!-- Removable chip -->
+ * <bit-chip color="success" variant="flat" mode="removable" value="ts">
+ *   TypeScript
+ * </bit-chip>
+ *
+ * <!-- Selectable chip (controlled) -->
+ * <bit-chip color="info" variant="flat" mode="selectable" checked value="ui">
+ *   UI
+ * </bit-chip>
+ *
+ * <!-- Selectable chip (uncontrolled) -->
+ * <bit-chip color="info" variant="flat" mode="selectable" default-checked value="ui">
+ *   UI
+ * </bit-chip>
+ *
+ * <!-- Action chip (acts like a button) -->
+ * <bit-chip color="warning" mode="action" value="add">
  *   <svg slot="icon" ...></svg>
- *   Beta
+ *   Add Item
+ * </bit-chip>
+ *
+ * <!-- Icon-only chip -->
+ * <bit-chip color="error" mode="action" aria-label="Delete">
+ *   <svg slot="icon" ...></svg>
  * </bit-chip>
  * ```
  */
-export const TAG = define('bit-chip', ({ host }) => {
-  const props = defineProps<ChipProps>({
+export const CHIP_TAG = define('bit-chip', ({ host }) => {
+  const props = defineProps<BitChipProps>({
+    'aria-label': { default: undefined },
     checked: { default: undefined },
     color: { default: undefined },
-    'default-checked': { default: false },
-    disabled: { default: false },
+    'default-checked': { default: false, type: Boolean },
+    disabled: { default: false, type: Boolean },
     mode: { default: 'static' },
     rounded: { default: undefined },
     size: { default: undefined },
@@ -312,80 +170,136 @@ export const TAG = define('bit-chip', ({ host }) => {
     variant: { default: undefined },
   });
 
-  const emit = defineEmits<{
-    change: ChipChangeDetail;
-    remove: ChipRemoveDetail;
-  }>();
+  const emit = defineEmits<BitChipEvents>();
 
-  const isSelectableMode = () => props.mode.value === 'selectable';
-  const internalChecked = signal(false);
-  const controlled = signal(false);
+  // ============================================
+  // State Management
+  // ============================================
 
-  const isControlled = () => controlled.value;
+  // Capture controlled mode at setup-time — once controlled, always controlled.
+  // If the `checked` attribute is present in the initial HTML, the consumer drives state.
+  const isControlled = host.hasAttribute('checked');
 
-  const currentChecked = () => {
-    if (!isSelectableMode()) return false;
+  // Internal tracking for uncontrolled selectable chips; seeded from default-checked.
+  const checkedState = signal(!isControlled && host.hasAttribute('default-checked'));
 
-    return isControlled() ? host.hasAttribute('checked') : internalChecked.value;
-  };
+  // Effective checked value — reactive to props.checked attribute changes in controlled mode.
+  const isChecked = computed(() => {
+    if (props.mode.value !== 'selectable') return false;
 
+    if (isControlled) {
+      void checkedProp.value; // subscribe so we re-evaluate when the attribute changes
+
+      return host.hasAttribute('checked');
+    }
+
+    return checkedState.value;
+  });
+
+  // Sync the [checked] attribute for CSS selectors in uncontrolled mode.
+  // Controlled chips have the attribute managed externally by the consumer.
   watch(
-    [props.mode],
+    [isChecked, props.mode],
     () => {
-      if (!isSelectableMode()) return;
-
-      controlled.value = host.hasAttribute('checked');
-
-      if (!controlled.value) {
-        internalChecked.value = host.hasAttribute('default-checked');
+      if (!isControlled) {
+        host.toggleAttribute('checked', props.mode.value === 'selectable' && isChecked.value);
       }
     },
     { immediate: true },
   );
 
-  const syncCheckedAttr = () => {
-    const mode = props.mode.value;
-
-    if (mode !== 'selectable') {
-      if (host.hasAttribute('checked')) host.removeAttribute('checked');
-
-      return;
-    }
-
-    const effectiveChecked = currentChecked();
-    const hasCheckedAttr = host.hasAttribute('checked');
-
-    // Controlled selectable chips are source-of-truth via host checked attribute.
-    if (isControlled()) return;
-
-    if (effectiveChecked && !hasCheckedAttr) {
-      host.setAttribute('checked', '');
-    } else if (!effectiveChecked && hasCheckedAttr) {
-      host.removeAttribute('checked');
-    }
-  };
-
-  watch([props.mode, internalChecked], syncCheckedAttr, { immediate: true });
+  // ============================================
+  // Event Handlers
+  // ============================================
 
   function handleRemove(e: MouseEvent) {
     e.stopPropagation();
-
-    if (props.mode.value !== 'removable' || props.disabled.value) return;
-
+    // Button's disabled attribute prevents this from firing when disabled
     emit('remove', { originalEvent: e, value: props.value.value });
   }
 
   function handleSelectableActivate(e: MouseEvent) {
-    if (props.mode.value !== 'selectable' || props.disabled.value) return;
+    e.stopPropagation();
 
-    const nextChecked = !currentChecked();
+    const nextChecked = !isChecked.value;
 
-    if (!isControlled()) {
-      internalChecked.value = nextChecked;
+    if (!isControlled) {
+      checkedState.value = nextChecked;
     }
 
     emit('change', { checked: nextChecked, originalEvent: e, value: props.value.value });
   }
+
+  function handleActionClick(e: MouseEvent) {
+    e.stopPropagation();
+    emit('click', { originalEvent: e, value: props.value.value });
+  }
+
+  // ============================================
+  // Template Helpers
+  // ============================================
+
+  const renderChipContent = () => html`
+    <slot name="icon"></slot>
+    <span class="label"><slot></slot></span>
+  `;
+
+  // Typed accessor for aria-label — hyphenated key falls outside the union's keyof.
+  const ariaLabelProp = (props as Record<'aria-label', Signal<string | undefined>>)['aria-label'];
+  // Typed accessor for checked — only present on SelectableChipProps, not in the full union keyof.
+  const checkedProp = (props as Record<'checked', Signal<boolean | undefined>>)['checked'];
+
+  const renderRemoveButton = () => html`
+    <button
+      class="remove-btn"
+      part="remove-btn"
+      type="button"
+      :aria-label="${() => {
+        const label = ariaLabelProp.value || props.value.value;
+
+        return label ? `Remove ${label}` : 'Remove';
+      }}"
+      :disabled="${() => props.disabled.value}"
+      @click="${handleRemove}">
+      ${CHIP_CLOSE_ICON}
+    </button>
+  `;
+
+  const renderSelectableChip = () => html`
+    <button
+      class="chip-btn"
+      part="chip-btn"
+      type="button"
+      role="checkbox"
+      :aria-checked="${() => String(isChecked.value)}"
+      :aria-label="${() => ariaLabelProp.value}"
+      :disabled="${() => props.disabled.value}"
+      @click="${handleSelectableActivate}">
+      <span class="chip" part="chip"> ${renderChipContent()} </span>
+    </button>
+  `;
+
+  const renderActionChip = () => html`
+    <button
+      class="chip-btn"
+      part="chip-btn"
+      type="button"
+      :aria-label="${() => ariaLabelProp.value}"
+      :disabled="${() => props.disabled.value}"
+      @click="${handleActionClick}">
+      <span class="chip" part="chip"> ${renderChipContent()} </span>
+    </button>
+  `;
+
+  const renderStaticChip = () => html`
+    <span class="chip" part="chip">
+      ${renderChipContent()} ${() => (props.mode.value === 'removable' ? renderRemoveButton() : '')}
+    </span>
+  `;
+
+  // ============================================
+  // Render
+  // ============================================
 
   return {
     styles: [
@@ -410,57 +324,15 @@ export const TAG = define('bit-chip', ({ host }) => {
       componentStyles,
     ],
     template: html`
-      ${() =>
-        props.mode.value === 'selectable'
-          ? html`
-              <button
-                class="chip-btn"
-                part="chip-btn"
-                type="button"
-                role="checkbox"
-                :aria-checked="${() => String(currentChecked())}"
-                :disabled="${() => props.disabled.value}"
-                @click="${handleSelectableActivate}">
-                <span class="chip" part="chip">
-                  <slot name="icon"></slot>
-                  <span class="label"><slot></slot></span>
-                </span>
-              </button>
-            `
-          : html`
-              <span class="chip" part="chip">
-                <slot name="icon"></slot>
-                <span class="label"><slot></slot></span>
-                <button
-                  class="remove-btn"
-                  part="remove-btn"
-                  type="button"
-                  aria-label="Remove"
-                  ?hidden="${() => props.mode.value !== 'removable'}"
-                  :disabled="${() => props.disabled.value}"
-                  @click="${handleRemove}">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    width="0.75em"
-                    height="0.75em"
-                    aria-hidden="true">
-                    <path d="M18 6 6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </span>
-            `}
+      ${() => {
+        const mode = props.mode.value;
+
+        if (mode === 'selectable') return renderSelectableChip();
+
+        if (mode === 'action') return renderActionChip();
+
+        return renderStaticChip();
+      }}
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-chip': HTMLElement & ChipProps & AddEventListeners<BitChipEvents>;
-  }
-}

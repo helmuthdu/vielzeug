@@ -1,4 +1,6 @@
-import { createForm, FormValidationError, SubmitError, toFormData } from './formit';
+import { createForm, FormValidationError, fromSchema, SubmitError, toFormData } from './formit';
+
+const nextTick = () => new Promise<void>((r) => queueMicrotask(r));
 
 // ---------------------------------------------------------------------------
 // Values — storage, typing, and shape
@@ -84,7 +86,7 @@ describe('set / patch', () => {
 
     form.subscribe((s) => snapshots.push(s.isDirty ? 1 : 0));
     form.set('count', 42);
-    await new Promise((r) => setTimeout(r, 10));
+    await nextTick();
 
     expect(form.get('count')).toBe(42);
     expect(snapshots.at(-1)).toBe(1);
@@ -161,6 +163,16 @@ describe('reset', () => {
     // but resetting back to 99 should clear dirty
     form.set('x', 99);
     expect(form.field('x').dirty).toBe(false);
+  });
+
+  test('reset(newValues) sets new baseline; subsequent reset() returns to that baseline', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    form.reset({ x: 50 });
+    // construction-time default is no longer the anchor — 50 is the new baseline
+    form.set('x', 99);
+    form.reset();
+    expect(form.values()).toEqual({ x: 50 });
   });
 
   test('reset clears dirty, touched, and error state', () => {
@@ -250,24 +262,47 @@ describe('dirty & touched', () => {
     expect(form.state.isDirty).toBe(false);
 
     form.set('a', 99);
-    await new Promise((r) => setTimeout(r, 10));
+    await nextTick();
     expect(form.state.isDirty).toBe(true);
 
     form.touch('b');
-    await new Promise((r) => setTimeout(r, 10));
+    await nextTick();
     expect(form.state.isTouched).toBe(true);
   });
 
   test('touchAll marks every known field as touched', () => {
     const form = createForm({
       defaultValues: { a: 1, b: 2 },
-      rules: { c: () => undefined },
+      validators: { c: () => undefined },
     });
 
     form.touchAll();
     expect(form.field('a').touched).toBe(true);
     expect(form.field('b').touched).toBe(true);
     expect(form.field('c').touched).toBe(true);
+  });
+
+  test('untouch removes touched state from a single field without resetting its value', () => {
+    const form = createForm({ defaultValues: { a: 1, b: 2 } });
+
+    form.touch('a');
+    form.touch('b');
+    form.untouch('a');
+    expect(form.field('a').touched).toBe(false);
+    expect(form.field('b').touched).toBe(true);
+    expect(form.get('a')).toBe(1);
+  });
+
+  test('untouchAll removes touched state from all fields without resetting values', () => {
+    const form = createForm({ defaultValues: { a: 1, b: 2 } });
+
+    form.set('a', 99);
+    form.touchAll();
+    form.untouchAll();
+    expect(form.isTouched).toBe(false);
+    // values and dirty state are preserved
+    expect(form.get('a')).toBe(99);
+    expect(form.field('a').dirty).toBe(true);
   });
 
   test('top-level isValid / isDirty / isTouched getters mirror state flags', () => {
@@ -380,17 +415,27 @@ describe('errors', () => {
     expect(Object.keys(form.state.errors)).toHaveLength(0);
   });
 
+  test('clearErrors() is a shorthand for setErrors({})', () => {
+    const form = createForm({});
+
+    form.setError('a', 'Err A');
+    form.setError('b', 'Err B');
+    form.clearErrors();
+    expect(Object.keys(form.state.errors)).toHaveLength(0);
+    expect(form.isValid).toBe(true);
+  });
+
   test('isValid reflects whether the error map is empty', async () => {
     const form = createForm({ defaultValues: { name: 'Alice' } });
 
     expect(form.state.isValid).toBe(true);
 
     form.setError('name', 'Too short');
-    await new Promise((r) => setTimeout(r, 10));
+    await nextTick();
     expect(form.state.isValid).toBe(false);
 
     form.setErrors({});
-    await new Promise((r) => setTimeout(r, 10));
+    await nextTick();
     expect(form.state.isValid).toBe(true);
   });
 });
@@ -400,9 +445,9 @@ describe('errors', () => {
 // ---------------------------------------------------------------------------
 
 describe('validation', () => {
-  test('validateField runs per-field rules and returns the error message', async () => {
+  test('validateField runs per-field validators and returns the error message', async () => {
     const form = createForm({
-      rules: { email: (v) => (!String(v).includes('@') ? 'Invalid format' : undefined) },
+      validators: { email: (v) => (!String(v).includes('@') ? 'Invalid format' : undefined) },
     });
 
     form.set('email', 'notanemail');
@@ -411,16 +456,16 @@ describe('validation', () => {
 
   test('validateField returns undefined when the field is valid', async () => {
     const form = createForm({
-      rules: { email: (v) => (!String(v).includes('@') ? 'Invalid' : undefined) },
+      validators: { email: (v) => (!String(v).includes('@') ? 'Invalid' : undefined) },
     });
 
     form.set('email', 'a@b.com');
     expect(await form.validateField('email')).toBeUndefined();
   });
 
-  test('rules are run in order; first failing rule wins', async () => {
+  test('validators are run in order; first failing rule wins', async () => {
     const form = createForm({
-      rules: {
+      validators: {
         pw: [(v) => (!v ? 'Required' : undefined), (v) => (String(v).length < 8 ? 'Too short' : undefined)],
       },
     });
@@ -432,22 +477,23 @@ describe('validation', () => {
     expect(await form.validateField('pw')).toBe('Too short');
   });
 
-  test('validate() runs every field rule and the form-level validator', async () => {
+  test('validate() runs every field validator and the form-level validator', async () => {
     const form = createForm({
       defaultValues: { confirm: 'xyz', password: '' },
-      rules: { password: (v) => (!v ? 'Required' : undefined) },
       validator: (vals) => (vals.password !== vals.confirm ? { confirm: 'Must match' } : undefined),
+      validators: { password: (v) => (!v ? 'Required' : undefined) },
     });
 
-    const errors = await form.validate();
+    const { errors, valid } = await form.validate();
 
+    expect(valid).toBe(false);
     expect(errors.password).toBe('Required');
     expect(errors.confirm).toBe('Must match');
   });
 
   test('validate({ onlyTouched }) skips untouched fields', async () => {
     const form = createForm({
-      rules: {
+      validators: {
         email: (v) => (!v ? 'Required' : undefined),
         name: (v) => (!v ? 'Required' : undefined),
       },
@@ -455,7 +501,7 @@ describe('validation', () => {
 
     form.touch('name');
 
-    const errors = await form.validate({ onlyTouched: true });
+    const { errors } = await form.validate({ onlyTouched: true });
 
     expect(errors.name).toBe('Required');
     expect(errors.email).toBeUndefined();
@@ -463,24 +509,25 @@ describe('validation', () => {
 
   test('validate({ fields:[] }) validates nothing (empty partial)', async () => {
     const form = createForm({
-      rules: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v) => (!v ? 'Required' : undefined) },
     });
-    const errors = await form.validate({ fields: [] });
+    const { errors, valid } = await form.validate({ fields: [] });
 
+    expect(valid).toBe(true);
     expect(Object.keys(errors)).toHaveLength(0);
     expect(form.field('name').error).toBeUndefined();
   });
 
   test('validate({ fields }) validates only those fields', async () => {
     const form = createForm({
-      rules: {
+      validators: {
         age: (v) => (!v ? 'Age required' : undefined),
         email: (v) => (!v ? 'Email required' : undefined),
         name: (v) => (!v ? 'Name required' : undefined),
       },
     });
 
-    const errors = await form.validate({ fields: ['name', 'email'] });
+    const { errors } = await form.validate({ fields: ['name', 'email'] });
 
     expect(errors.name).toBe('Name required');
     expect(errors.email).toBe('Email required');
@@ -489,7 +536,7 @@ describe('validation', () => {
 
   test('validateField stores the result in the error map', async () => {
     const form = createForm({
-      rules: { x: (v) => (v !== 1 ? 'Must be 1' : undefined) },
+      validators: { x: (v) => (v !== 1 ? 'Must be 1' : undefined) },
     });
 
     form.set('x', 2);
@@ -504,7 +551,7 @@ describe('validation', () => {
   test('validate() sets isValidating during async validation', async () => {
     let seenTrue = false;
     const form = createForm({
-      rules: {
+      validators: {
         slow: () => new Promise<string | undefined>((r) => setTimeout(() => r(undefined), 20)),
       },
     });
@@ -520,7 +567,7 @@ describe('validation', () => {
   test('validateField() sets isValidating during async validation', async () => {
     let seenTrue = false;
     const form = createForm({
-      rules: {
+      validators: {
         slow: () => new Promise<string | undefined>((r) => setTimeout(() => r(undefined), 20)),
       },
     });
@@ -542,7 +589,7 @@ describe('submit', () => {
   test('calls onSubmit with the typed values when valid', async () => {
     const form = createForm({
       defaultValues: { age: 30, name: 'Alice' },
-      rules: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v) => (!v ? 'Required' : undefined) },
     });
 
     const received: unknown[] = [];
@@ -564,7 +611,7 @@ describe('submit', () => {
   test('throws FormValidationError and marks all fields touched on validation failure', async () => {
     const form = createForm({
       defaultValues: { name: '' },
-      rules: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v) => (!v ? 'Required' : undefined) },
     });
 
     await expect(form.submit(async () => {})).rejects.toBeInstanceOf(FormValidationError);
@@ -573,7 +620,7 @@ describe('submit', () => {
 
   test('FormValidationError carries the field-level error map', async () => {
     const form = createForm({
-      rules: { email: (v) => (!v ? 'Required' : undefined) },
+      validators: { email: (v) => (!v ? 'Required' : undefined) },
     });
 
     try {
@@ -587,7 +634,7 @@ describe('submit', () => {
 
   test('skipValidation:true skips validation and touchAll; calls onSubmit regardless of errors', async () => {
     const form = createForm({
-      rules: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v) => (!v ? 'Required' : undefined) },
     });
     let called = false;
 
@@ -609,17 +656,19 @@ describe('submit', () => {
     await p1;
   });
 
-  test('submit touches all fields before validating, so onlyTouched:true validates everything', async () => {
+  test('submit validates all fields and marks them touched', async () => {
     const form = createForm({
-      rules: {
+      validators: {
         email: (v) => (!v ? 'Email required' : undefined),
         name: (v) => (!v ? 'Name required' : undefined),
       },
     });
 
-    await expect(form.submit(async () => {}, { onlyTouched: true })).rejects.toBeInstanceOf(FormValidationError);
+    await expect(form.submit(async () => {})).rejects.toBeInstanceOf(FormValidationError);
     expect(form.field('name').error).toBe('Name required');
+    expect(form.field('name').touched).toBe(true);
     expect(form.field('email').error).toBe('Email required');
+    expect(form.field('email').touched).toBe(true);
   });
 
   test('isSubmitting is true during and false after submission', async () => {
@@ -668,7 +717,7 @@ describe('subscribe', () => {
 
     form.subscribe((s) => counts.push(s.isDirty ? 1 : 0));
     form.set('x', 2);
-    await new Promise((r) => setTimeout(r, 10));
+    await nextTick();
     expect(counts.length).toBeGreaterThan(1);
   });
 
@@ -692,6 +741,20 @@ describe('subscribe', () => {
       payload = p;
     });
     expect((payload as { value: unknown }).value).toBe('Alice');
+  });
+
+  test('watch with immediate:false does not fire on registration', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+    let count = 0;
+
+    form.watch(
+      'x',
+      () => {
+        count++;
+      },
+      { immediate: false },
+    );
+    expect(count).toBe(0);
   });
 
   test('watch only fires when the subscribed field changes', async () => {
@@ -798,7 +861,7 @@ describe('bind', () => {
   test('error getter returns the current error for the field', async () => {
     const form = createForm({
       defaultValues: { name: '' },
-      rules: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v) => (!v ? 'Required' : undefined) },
     });
 
     await form.validateField('name');
@@ -831,6 +894,22 @@ describe('bind', () => {
 
     form.bind('name').onBlur();
     expect(form.field('name').touched).toBe(true);
+  });
+
+  test('bind() returns the same object reference on repeated calls with same args', () => {
+    const form = createForm({ defaultValues: { name: '' } });
+    const b1 = form.bind('name');
+    const b2 = form.bind('name');
+
+    expect(b1).toBe(b2);
+  });
+
+  test('bind() with different configs returns distinct cached objects', () => {
+    const form = createForm({ defaultValues: { name: '' } });
+    const b1 = form.bind('name', { validateOnBlur: true });
+    const b2 = form.bind('name', { validateOnBlur: false });
+
+    expect(b1).not.toBe(b2);
   });
 
   test('touchOnBlur:false prevents onBlur from marking touched', () => {
@@ -999,5 +1078,169 @@ describe('dispose', () => {
     expect(() => form.set('x', 2)).toThrow('Cannot modify a disposed form');
     expect(formCount).toBe(initForm);
     expect(fieldCount).toBe(initField);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// field shorthand getters
+// ---------------------------------------------------------------------------
+
+describe('field shorthand getters', () => {
+  test('getError returns the current field error', () => {
+    const form = createForm({});
+
+    form.setError('email', 'Invalid');
+    expect(form.getError('email')).toBe('Invalid');
+    form.setError('email', undefined);
+    expect(form.getError('email')).toBeUndefined();
+  });
+
+  test('isFieldDirty returns whether a field differs from baseline', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    expect(form.isFieldDirty('x')).toBe(false);
+    form.set('x', 2);
+    expect(form.isFieldDirty('x')).toBe(true);
+    form.set('x', 1);
+    expect(form.isFieldDirty('x')).toBe(false);
+  });
+
+  test('isFieldTouched returns whether a field has been touched', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    expect(form.isFieldTouched('x')).toBe(false);
+    form.touch('x');
+    expect(form.isFieldTouched('x')).toBe(true);
+    form.untouch('x');
+    expect(form.isFieldTouched('x')).toBe(false);
+  });
+
+  test('shorthand getters return same values as field()', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    form.setError('x', 'Bad');
+    form.touch('x');
+    form.set('x', 2);
+    expect(form.getError('x')).toBe(form.field('x').error);
+    expect(form.isFieldTouched('x')).toBe(form.field('x').touched);
+    expect(form.isFieldDirty('x')).toBe(form.field('x').dirty);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// array field utilities
+// ---------------------------------------------------------------------------
+
+describe('array field utilities', () => {
+  test('appendField adds an item to an existing array field', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b'] } });
+
+    form.appendField('tags', 'c');
+    expect(form.get('tags')).toEqual(['a', 'b', 'c']);
+  });
+
+  test('appendField creates the array when the field is not yet set', () => {
+    const form = createForm<Record<string, unknown>>({});
+
+    form.appendField('tags', 'first');
+    expect(form.get('tags')).toEqual(['first']);
+  });
+
+  test('appendField marks the field dirty', () => {
+    const form = createForm({ defaultValues: { tags: ['a'] } });
+
+    form.appendField('tags', 'b');
+    expect(form.isFieldDirty('tags')).toBe(true);
+  });
+
+  test('removeField removes the item at the given index', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b', 'c'] } });
+
+    form.removeField('tags', 1);
+    expect(form.get('tags')).toEqual(['a', 'c']);
+  });
+
+  test('removeField is a no-op when the field is not an array', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    expect(() => form.removeField('x', 0)).not.toThrow();
+    expect(form.get('x')).toBe(1);
+  });
+
+  test('moveField reorders items in an array field', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b', 'c', 'd'] } });
+
+    form.moveField('tags', 0, 2);
+    expect(form.get('tags')).toEqual(['b', 'c', 'a', 'd']);
+  });
+
+  test('moveField is a no-op when the field is not an array', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    expect(() => form.moveField('x', 0, 1)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fromSchema
+// ---------------------------------------------------------------------------
+
+describe('fromSchema', () => {
+  const mockSchema = {
+    safeParse: (data: unknown) => {
+      const v = data as { age: number; email: string };
+      const issues: { message: string; path: string[] }[] = [];
+
+      if (!String(v.email ?? '').includes('@')) issues.push({ message: 'Invalid email', path: ['email'] });
+
+      if ((v.age ?? 0) < 18) issues.push({ message: 'Must be 18+', path: ['age'] });
+
+      if (issues.length) return { error: { issues }, success: false as const };
+
+      return { success: true as const };
+    },
+  };
+
+  test('converts a safeParse-compatible schema into a validator option', async () => {
+    const form = createForm({
+      defaultValues: { age: 15, email: 'notvalid' },
+      ...fromSchema(mockSchema),
+    });
+
+    const { errors, valid } = await form.validate();
+
+    expect(valid).toBe(false);
+    expect(errors.email).toBe('Invalid email');
+    expect(errors.age).toBe('Must be 18+');
+  });
+
+  test('returns undefined (no errors) when schema validation passes', async () => {
+    const form = createForm({
+      defaultValues: { age: 25, email: 'alice@example.com' },
+      ...fromSchema(mockSchema),
+    });
+
+    const { errors, valid } = await form.validate();
+
+    expect(valid).toBe(true);
+    expect(Object.keys(errors)).toHaveLength(0);
+  });
+
+  test('first issue per path wins when schema reports multiple issues', async () => {
+    const multiSchema = {
+      safeParse: (_: unknown) => ({
+        error: {
+          issues: [
+            { message: 'First', path: ['email'] },
+            { message: 'Second', path: ['email'] },
+          ],
+        },
+        success: false as const,
+      }),
+    };
+    const form = createForm({ defaultValues: { email: '' }, ...fromSchema(multiSchema) });
+    const { errors } = await form.validate();
+
+    expect(errors.email).toBe('First');
   });
 });

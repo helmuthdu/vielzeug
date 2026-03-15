@@ -176,7 +176,7 @@ describe('fetchit', () => {
         expect(fetchMock).toHaveBeenCalledWith(
           expect.any(String),
           expect.objectContaining({
-            headers: expect.objectContaining({ Authorization: 'Bearer token', 'x-app': 'test' }),
+            headers: expect.objectContaining({ authorization: 'Bearer token', 'x-app': 'test' }),
           }),
         );
       });
@@ -189,7 +189,7 @@ describe('fetchit', () => {
 
         await http.get('/test');
 
-        expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer new');
+        expect(fetchMock.mock.calls[0][1].headers.authorization).toBe('Bearer new');
         expect(fetchMock.mock.calls[0][1].headers['x-trace']).toBeUndefined();
       });
     });
@@ -568,6 +568,90 @@ describe('fetchit', () => {
         const r2 = await qc.query({ enabled: false, fn: async () => ({ id: 0 }), key: ['x'] });
 
         expect(r2).toEqual({ id: 99 });
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Callbacks
+    // -----------------------------------------------------------------------
+
+    describe('Callbacks', () => {
+      it('onSuccess fires with fetched data after a successful query', async () => {
+        const qc = createQuery();
+        const onSuccess = vi.fn();
+
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], onSuccess });
+
+        expect(onSuccess).toHaveBeenCalledWith({ id: 1 });
+      });
+
+      it('onError fires with the error when the query fails', async () => {
+        const qc = createQuery();
+        const onError = vi.fn();
+
+        await qc
+          .query({
+            fn: async () => {
+              throw new Error('boom');
+            },
+            key: ['fail'],
+            onError,
+            retry: false,
+          })
+          .catch(() => {});
+
+        expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'boom' }));
+      });
+
+      it('onSettled fires with data and null error on success', async () => {
+        const qc = createQuery();
+        const onSettled = vi.fn();
+
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['x'], onSettled });
+
+        expect(onSettled).toHaveBeenCalledWith({ id: 1 }, null);
+      });
+
+      it('onSettled fires with undefined and error on failure', async () => {
+        const qc = createQuery();
+        const onSettled = vi.fn();
+
+        await qc
+          .query({
+            fn: async () => {
+              throw new Error('boom');
+            },
+            key: ['fail'],
+            onSettled,
+            retry: false,
+          })
+          .catch(() => {});
+
+        expect(onSettled).toHaveBeenCalledWith(undefined, expect.objectContaining({ message: 'boom' }));
+      });
+
+      it('callbacks do not fire when the query is served from cache', async () => {
+        const qc = createQuery();
+        const onSuccess = vi.fn();
+
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], staleTime: 10_000 });
+        await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], onSuccess, staleTime: 10_000 });
+
+        expect(onSuccess).not.toHaveBeenCalled();
+      });
+
+      it('only the triggering call fires callbacks — concurrent callers reuse the inflight promise', async () => {
+        const qc = createQuery();
+        const onSuccess1 = vi.fn();
+        const onSuccess2 = vi.fn();
+
+        await Promise.all([
+          qc.query({ fn: async () => ({ id: 1 }), key: ['x'], onSuccess: onSuccess1 }),
+          qc.query({ fn: async () => ({ id: 1 }), key: ['x'], onSuccess: onSuccess2 }),
+        ]);
+
+        expect(onSuccess1).toHaveBeenCalledTimes(1);
+        expect(onSuccess2).not.toHaveBeenCalled();
       });
     });
 

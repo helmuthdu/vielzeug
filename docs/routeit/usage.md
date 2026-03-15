@@ -34,6 +34,21 @@ router
   .start();
 ```
 
+| Feature              | Routeit                                        | page.js | Navigo  |
+| -------------------- | ---------------------------------------------- | ------- | ------- |
+| Bundle size          | <PackageInfo package="routeit" type="size" />  | ~1 kB   | ~5 kB   |
+| History + hash modes | ✅                                             | ✅      | ✅      |
+| Typed path params    | ✅                                             | ❌      | ❌      |
+| Named routes         | ✅                                             | ❌      | Partial |
+| Middleware           | ✅                                             | ✅      | ✅      |
+| Route groups         | ✅                                             | ❌      | ❌      |
+| View Transition API  | ✅                                             | ❌      | ❌      |
+| Zero dependencies    | ✅                                             | ✅      | ✅      |
+
+**Use Routeit when** you need typed path params, named routes, and middleware in a lightweight, framework-agnostic client-side router.
+
+**Consider React Router or TanStack Router** if you are building a React app that needs deep framework integration, file-based routing, or data loaders.
+
 ## Import
 
 ```ts
@@ -46,6 +61,7 @@ import type {
   RouteHandler,
   RouteOptions,
   RouteGroup,
+  GroupOptions,
   RouteState,
   RouteParams,
   QueryParams,
@@ -75,10 +91,10 @@ With options:
 
 ```ts
 const router = createRouter({
-  mode: 'history',    // or 'hash'
-  base: '/app',       // prefix for all history-mode routes
+  mode: 'history', // or 'hash'
+  base: '/app', // prefix for all history-mode routes
   viewTransition: true, // use the View Transitions API when available
-  autoStart: true,    // start immediately, no separate start() call needed
+  autoStart: true, // start immediately, no separate start() call needed
 });
 ```
 
@@ -113,14 +129,14 @@ Every handler and middleware receives a `RouteContext`:
 
 ```ts
 router.on('/users/:id', (ctx) => {
-  ctx.params.id;    // typed dynamic segment — e.g. '123'
-  ctx.query.page;   // query param — e.g. '?page=2' → '2'
-  ctx.query.tags;   // repeated key — e.g. '?tags=a&tags=b' → ['a', 'b']
-  ctx.pathname;     // current pathname — '/users/123'
-  ctx.hash;         // URL hash without '#'
-  ctx.meta;         // static metadata from the route definition
-  ctx.locals;       // mutable bag — pass data between middleware
-  ctx.navigate;     // programmatic navigation from inside the handler
+  ctx.params.id; // typed dynamic segment — e.g. '123'
+  ctx.query.page; // query param — e.g. '?page=2' → '2'
+  ctx.query.tags; // repeated key — e.g. '?tags=a&tags=b' → ['a', 'b']
+  ctx.pathname; // current pathname — '/users/123'
+  ctx.hash; // URL hash without '#'
+  ctx.meta; // static metadata from the route definition
+  ctx.locals; // mutable bag — pass data between middleware
+  ctx.navigate; // programmatic navigation from inside the handler
 });
 ```
 
@@ -128,7 +144,7 @@ router.on('/users/:id', (ctx) => {
 
 ```ts
 router.start(); // attach popstate/hashchange listener, handle current URL
-router.stop();  // detach listener
+router.stop(); // detach listener
 router.dispose(); // stop + clear all subscribers
 
 // autoStart skips the explicit start() call
@@ -145,31 +161,72 @@ router.on('/', () => renderHome()).start();
 Group routes that share a path prefix and optional middleware:
 
 ```ts
-router.group('/admin', (r) => {
-  r.on('/dashboard', () => renderDashboard());
-  r.on('/users',     () => renderUsers());
-  r.on('/users/:id', ({ params }) => renderUser(params.id));
-}, { middleware: requireAuth });
+router.group(
+  '/admin',
+  (r) => {
+    r.on('/dashboard', () => renderDashboard());
+    r.on('/users', () => renderUsers());
+    r.on('/users/:id', ({ params }) => renderUser(params.id));
+  },
+  { middleware: requireAuth },
+);
 ```
 
 Groups are nestable:
 
 ```ts
-router.group('/admin', (r) => {
-  r.group('/reports', (inner) => {
-    inner.on('/monthly', () => renderMonthly());
-    inner.on('/yearly',  () => renderYearly());
-  }, { middleware: requireSuperAdmin });
-  r.on('/dashboard', () => renderDashboard());
-}, { middleware: requireAuth });
+router.group(
+  '/admin',
+  (r) => {
+    r.group(
+      '/reports',
+      (inner) => {
+        inner.on('/monthly', () => renderMonthly());
+        inner.on('/yearly', () => renderYearly());
+      },
+      { middleware: requireSuperAdmin },
+    );
+    r.on('/dashboard', () => renderDashboard());
+  },
+  { middleware: requireAuth },
+);
 ```
 
 The `on()` overloads available inside `group()` match those on the router:
 
 ```ts
 router.group('/api', (r) => {
-  r.on('/users',  fetchUsers);           // handler route
-  r.on('/hook',   { middleware: log });  // middleware-only route
+  r.on('/users', fetchUsers); // handler route
+  r.on('/hook', { middleware: log }); // middleware-only route
+});
+```
+
+### Typed Prefix Params
+
+When the group prefix contains path params, they are automatically typed inside `on()` handlers via the `RouteGroup<Prefix>` generic:
+
+```ts
+router.group('/projects/:projectId', (r) => {
+  // r is RouteGroup<'/projects/:projectId'>
+  r.on('/tasks/:taskId', ({ params }) => {
+    params.projectId; // ✓ string — from the prefix
+    params.taskId; // ✓ string — from this route
+    // params.missing // ✗ TypeScript error
+  });
+});
+```
+
+Nesting compounds the prefix, so deeply nested handlers get all ancestor params:
+
+```ts
+router.group('/orgs/:orgId', (r) => {
+  r.group('/projects/:projectId', (inner) => {
+    inner.on('/tasks/:taskId', ({ params }) => {
+      params.orgId; // ✓ typed
+      params.projectId; // ✓ typed
+      params.taskId; // ✓ typed
+    });
+  });
 });
 ```
 
@@ -215,10 +272,14 @@ const loadUser: Middleware = async (ctx, next) => {
   await next();
 };
 
-router.on('/users/:id', (ctx) => {
-  const user = ctx.locals.user as User; // already loaded by middleware
-  renderUser(user);
-}, { middleware: loadUser });
+router.on(
+  '/users/:id',
+  (ctx) => {
+    const user = ctx.locals.user as User; // already loaded by middleware
+    renderUser(user);
+  },
+  { middleware: loadUser },
+);
 ```
 
 ### Global Middleware
@@ -265,7 +326,7 @@ try {
 By default, navigating to the current URL in history mode is a no-op — no new history entry is pushed and no handler re-runs. Override with `{ force: true }`:
 
 ```ts
-await router.navigate('/current-page');                   // no-op
+await router.navigate('/current-page'); // no-op
 await router.navigate('/current-page', { force: true }); // re-runs handler
 ```
 
@@ -274,13 +335,17 @@ await router.navigate('/current-page', { force: true }); // re-runs handler
 Navigate from inside a handler or middleware using `ctx.navigate`:
 
 ```ts
-router.on('/profile', async (ctx) => {
-  if (!ctx.locals.user) {
-    await ctx.navigate('/login', { replace: true });
-    return;
-  }
-  renderProfile(ctx.locals.user);
-}, { middleware: requireAuth });
+router.on(
+  '/profile',
+  async (ctx) => {
+    if (!ctx.locals.user) {
+      await ctx.navigate('/login', { replace: true });
+      return;
+    }
+    renderProfile(ctx.locals.user);
+  },
+  { middleware: requireAuth },
+);
 ```
 
 ## Named Routes
@@ -300,10 +365,10 @@ await router.navigate({ name: 'userDetail', params: { id: '42' } });
 await router.navigate({ name: 'userPost', params: { id: '1', postId: '99' } });
 
 // Build URLs
-router.url('userDetail', { id: '42' });              // '/users/42'
-router.url('userList', undefined, { page: '2' });    // '/users?page=2'
-router.isActive('userDetail');                       // exact match by name
-router.isActive('userList', false);                  // prefix match by name
+router.url('userDetail', { id: '42' }); // '/users/42'
+router.url('userList', undefined, { page: '2' }); // '/users?page=2'
+router.isActive('userDetail'); // exact match by name
+router.isActive('userList', false); // prefix match by name
 ```
 
 ## URL Builder
@@ -314,9 +379,9 @@ router.isActive('userList', false);                  // prefix match by name
 const router = createRouter({ base: '/app' });
 router.on('/users/:id', () => {}, { name: 'userDetail' }).start();
 
-router.url('/users/:id', { id: '42' });              // '/app/users/42'
-router.url('userDetail', { id: '42' });              // '/app/users/42'
-router.url('/search', undefined, { q: 'ts' });       // '/app/search?q=ts'
+router.url('/users/:id', { id: '42' }); // '/app/users/42'
+router.url('userDetail', { id: '42' }); // '/app/users/42'
+router.url('/search', undefined, { q: 'ts' }); // '/app/search?q=ts'
 router.url('/docs/:rest*', { rest: 'guide/intro' }); // '/app/docs/guide/intro'
 router.url('/products', undefined, { tags: ['a', 'b'] }); // '/app/products?tags=a&tags=b'
 ```
@@ -327,12 +392,12 @@ Check whether a path pattern or named route matches the current URL:
 
 ```ts
 // Exact match (default)
-router.isActive('/users/:id');   // true when pathname is exactly '/users/42'
-router.isActive('userDetail');   // same, but by route name
+router.isActive('/users/:id'); // true when pathname is exactly '/users/42'
+router.isActive('userDetail'); // same, but by route name
 
 // Prefix match — useful for nav highlighting on parent items
-router.isActive('/admin', false);      // true for '/admin', '/admin/users', etc.
-router.isActive('adminGroup', false);  // same, by route name
+router.isActive('/admin', false); // true for '/admin', '/admin/users', etc.
+router.isActive('adminGroup', false); // same, by route name
 ```
 
 ## Route Metadata
@@ -396,10 +461,10 @@ Called immediately with the current state, then after every navigation:
 ```ts
 const unsubscribe = router.subscribe((state) => {
   state.pathname; // '/users/42'
-  state.params;   // { id: '42' }
-  state.query;    // { page: '2' }
-  state.name;     // 'userDetail'
-  state.meta;     // { title: 'User' }
+  state.params; // { id: '42' }
+  state.query; // { page: '2' }
+  state.name; // 'userDetail'
+  state.meta; // { title: 'User' }
 });
 
 unsubscribe(); // stop listening

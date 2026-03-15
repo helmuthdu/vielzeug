@@ -24,6 +24,10 @@ Buildit provides a comprehensive set of design tokens organized into categories:
 - **Shadows & Effects**: Elevation and visual depth
 - **Border Radii**: Consistent corner rounding
 
+## Color Palette
+
+<ColorPalette />
+
 ### Theme Reference
 
 ::: details View theme.css
@@ -60,63 +64,58 @@ All text color values (500-900) meet or exceed WCAG AA standards, with 700-900 a
 
 ## Dark Mode
 
-Buildit automatically detects system color scheme preferences using `prefers-color-scheme`. You can also manually control the theme:
+Buildit uses the CSS [`light-dark()`](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/light-dark) function to define every color once with both a light and dark value. `color-scheme: light dark` on `:root` means the OS preference is respected automatically — no `@media` block required.
+
+### How it works
+
+Every color variable in the theme is defined like:
+
+```css
+--color-primary: light-dark(hsl(260deg 85% 65%), hsl(260deg 85% 70%));
+```
+
+Two rules on `<html>` override the OS preference when needed:
+
+```css
+html.dark {
+  color-scheme: dark;
+} /* force dark  */
+html:not(.dark) {
+  color-scheme: light;
+} /* force light */
+```
 
 ### VitePress Integration
 
-VitePress automatically adds a `.dark` class to the `<html>` element. Buildit's theme responds to this automatically.
+VitePress automatically adds `.dark` to `<html>` when the user toggles the theme. Buildit responds to this automatically — no extra configuration needed.
 
 ### Manual Control
 
-For other frameworks, you can control the theme by adding the `dark` class:
-
-```html
-<!-- Forced Dark Theme -->
-<html class="dark">
-  ...
-</html>
-
-<!-- Forced Light Theme -->
-<html class="light">
-  ...
-</html>
-```
-
-### Programmatic Theme Switching
+For other frameworks, toggle the `.dark` class on `<html>`:
 
 ```javascript
-// Toggle theme
-document.documentElement.classList.toggle('dark');
-
-// Set specific theme
+// Switch to dark
 document.documentElement.classList.add('dark');
+
+// Switch to light (remove .dark — falls back to OS preference)
 document.documentElement.classList.remove('dark');
+
+// Toggle
+document.documentElement.classList.toggle('dark');
 ```
 
 ## Global Customization
 
-You can override the default theme by setting global CSS variables in your root stylesheet:
+You can override the default theme by setting CSS variables in your root stylesheet. A plain value always wins over `light-dark()` — use `light-dark()` yourself when you want the override to stay mode-aware:
 
 ```css
 :root {
-  /* Override semantic colors */
-  --color-primary: #3b82f6;
-  --color-success: #10b981;
-  --color-error: #ef4444;
+  /* Mode-aware override — adapts to light/dark automatically */
+  --color-primary: light-dark(hsl(200deg 100% 45%), hsl(200deg 100% 60%));
 
-  /* Override contrast scale */
-  --color-contrast-50: hsl(240deg 5% 99%);
-  --color-contrast-100: hsl(240deg 5% 97%);
-
-  /* Override typography */
-  --text-color-heading: var(--color-contrast-900);
-  --text-color-body: var(--color-contrast-800);
-
-  /* Override spacing */
-  --size-4: 1.2rem;
-
-  /* Override border radius */
+  /* Static override — same in both modes */
   --rounded-md: 0.5rem;
+  --size-4: 1.2rem;
 }
 ```
 
@@ -149,11 +148,11 @@ Components use scoped CSS variables with descriptive names:
 --button-padding
 
 /* Input variables */
---_theme-bg
---_theme-color
---_theme-border-color
---_theme-placeholder-color
---_theme-radius
+--input-bg
+--input-color
+--input-border-color
+--input-placeholder-color
+--input-radius
 
 /* Checkbox variables */
 --checkbox-size
@@ -262,7 +261,8 @@ When customizing colors, ensure proper contrast ratios:
 ## Next Steps
 
 ::: tip Continue Learning
+
 - [API Reference](./api.md) — Complete list of CSS custom properties per component
 - [Components](./components/button.md) — Component-specific theming options
 - [Examples](./examples.md) — Real-world theming examples and recipes
-:::
+  :::

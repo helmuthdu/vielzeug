@@ -1,116 +1,12 @@
-import { computed, css, define, defineProps, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
+import { computed, define, defineProps, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
-
 // ============================================
 // Styles
 // ============================================
-
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_bg: var(--avatar-bg, var(--_theme-backdrop, var(--color-contrast-200)));
-      --_color: var(--avatar-color, var(--_theme-base, var(--color-contrast-700)));
-      --_radius: var(--avatar-radius, var(--rounded-full));
-      --_font-weight: var(--avatar-font-weight, var(--font-semibold));
-      --_border: var(--avatar-border, none);
-      --_border-color: var(--avatar-border-color, var(--color-canvas));
-      --_size: var(--avatar-size, var(--size-10));
-      --_font-size: var(--avatar-font-size, var(--text-sm));
-
-      display: inline-flex;
-      flex-shrink: 0;
-      position: relative;
-    }
-
-    .avatar {
-      align-items: center;
-      background: var(--_bg);
-      border: var(--_border);
-      border-color: var(--_border-color);
-      border-radius: var(--_radius);
-      box-sizing: border-box;
-      color: var(--_color);
-      display: inline-flex;
-      font-size: var(--_font-size);
-      font-weight: var(--_font-weight);
-      height: var(--_size);
-      justify-content: center;
-      line-height: 1;
-      overflow: hidden;
-      text-transform: uppercase;
-      user-select: none;
-      width: var(--_size);
-    }
-
-    img {
-      display: block;
-      height: 100%;
-      object-fit: cover;
-      width: 100%;
-    }
-
-    img[hidden] {
-      display: none;
-    }
-
-    .initials {
-      align-items: center;
-      display: inline-flex;
-      justify-content: center;
-      height: 100%;
-      width: 100%;
-    }
-
-    .icon-fallback {
-      align-items: center;
-      color: var(--_color);
-      display: inline-flex;
-      justify-content: center;
-      height: 100%;
-      width: 100%;
-      opacity: 0.6;
-    }
-
-    .status {
-      border: 2px solid var(--_border-color, var(--color-canvas));
-      border-radius: var(--rounded-full);
-      bottom: 0;
-      height: 0.75em;
-      position: absolute;
-      inset-inline-end: 0;
-      width: 0.75em;
-    }
-
-    .status[data-status='online'] {
-      background: var(--color-success);
-    }
-    .status[data-status='offline'] {
-      background: var(--color-contrast-400);
-    }
-    .status[data-status='busy'] {
-      background: var(--color-error);
-    }
-    .status[data-status='away'] {
-      background: var(--color-warning);
-    }
-  }
-
-  /* forcedColorsMixin targets :host; avatar needs the border on .avatar (different geometry),
-     so forced-color rules are kept inline and unlayered to match mixin convention. */
-  @media (forced-colors: active) {
-    .avatar {
-      border: 1px solid ButtonText;
-      forced-color-adjust: none;
-    }
-    .status {
-      border: 2px solid ButtonText;
-      background: Highlight;
-    }
-  }
-`;
+import componentStyles from './avatar.css?inline';
 
 // ============================================
 // Types
@@ -126,22 +22,22 @@ const STATUS_LABELS: Record<AvatarStatus, string> = {
 };
 
 /** Avatar component properties */
-export interface AvatarProps {
-  /** Image source URL */
-  src?: string;
+export type BitAvatarProps = {
   /** Alt text for the image; also used to derive initials when no `initials` prop is given */
   alt?: string;
-  /** Explicit initials to display when no image is available (e.g. "JD") */
-  initials?: string;
   /** Theme color (used for initials background) */
   color?: ThemeColor;
-  /** Component size */
-  size?: ComponentSize;
+  /** Explicit initials to display when no image is available (e.g. "JD") */
+  initials?: string;
   /** Border radius */
   rounded?: RoundedSize | '';
+  /** Component size */
+  size?: ComponentSize;
+  /** Image source URL */
+  src?: string;
   /** Online presence indicator */
   status?: AvatarStatus;
-}
+};
 
 // ============================================
 // Component
@@ -174,8 +70,8 @@ export interface AvatarProps {
  * <bit-avatar alt="John Smith" status="online"></bit-avatar>
  * ```
  */
-export const TAG = define('bit-avatar', () => {
-  const props = defineProps<AvatarProps>({
+export const AVATAR_TAG = define('bit-avatar', () => {
+  const props = defineProps<BitAvatarProps>({
     alt: { default: undefined },
     color: { default: undefined },
     initials: { default: undefined },
@@ -297,55 +193,15 @@ export const TAG = define('bit-avatar', () => {
 // AvatarGroup
 // ============================================
 
-const groupStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: inline-flex;
-      flex-direction: row;
-    }
-
-    /* Overlap avatars, latest first */
-    ::slotted(bit-avatar) {
-      --avatar-border: var(--border-2) solid var(--color-canvas);
-      margin-inline-start: calc(var(--avatar-group-overlap, -0.75rem));
-    }
-
-    ::slotted(bit-avatar:first-child) {
-      margin-inline-start: 0;
-    }
-
-    ::slotted(bit-avatar[data-avatar-group-hidden]) {
-      display: none;
-    }
-
-    .overflow-badge {
-      --_size: var(--avatar-size, var(--size-10));
-      align-items: center;
-      background: var(--color-contrast-200);
-      border: var(--border-2) solid var(--color-canvas);
-      border-radius: var(--rounded-full);
-      box-sizing: border-box;
-      color: var(--color-contrast-700);
-      display: inline-flex;
-      flex-shrink: 0;
-      font-size: var(--text-xs);
-      font-weight: var(--font-semibold);
-      height: var(--_size);
-      justify-content: center;
-      margin-inline-start: calc(var(--avatar-group-overlap, -0.75rem));
-      user-select: none;
-      width: var(--_size);
-    }
-  }
-`;
+import groupStyles from './avatar-group.css?inline';
 
 /** AvatarGroup component properties */
-export interface AvatarGroupProps {
+export type BitAvatarGroupProps = {
   /** Maximum number of avatars to show before showing a +N badge */
   max?: number;
   /** Total count shown in the overflow badge (defaults to the actual hidden count) */
   total?: number;
-}
+};
 
 /**
  * Groups multiple `bit-avatar` elements in a stacked, overlapping row.
@@ -369,8 +225,8 @@ export interface AvatarGroupProps {
  * </bit-avatar-group>
  * ```
  */
-export const GROUP_TAG = define('bit-avatar-group', ({ host }) => {
-  const props = defineProps<AvatarGroupProps>({
+export const AVATAR_GROUP_TAG = define('bit-avatar-group', ({ host }) => {
+  const props = defineProps<BitAvatarGroupProps>({
     max: { default: 5 },
     total: { default: undefined },
   });
@@ -406,10 +262,3 @@ export const GROUP_TAG = define('bit-avatar-group', ({ host }) => {
     `,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-avatar': HTMLElement & AvatarProps;
-    'bit-avatar-group': HTMLElement & AvatarGroupProps;
-  }
-}

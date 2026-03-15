@@ -85,7 +85,7 @@ npm install @vielzeug/eventit
 
 [📖 Documentation](https://vielzeug.dev/eventit/) • [Examples](https://vielzeug.dev/eventit/examples)
 
----
+### [@vielzeug/deposit](packages/deposit) – Browser Storage
 
 Powerful, type-safe browser storage utility with unified API for IndexedDB and LocalStorage.
 
@@ -221,22 +221,22 @@ npm install @vielzeug/routeit
 
 ---
 
-### [@vielzeug/storeit](packages/storeit) – State Management
+### [@vielzeug/stateit](packages/stateit) – Reactive State
 
-Simple, reactive state management for modern web apps.
+Fine-grained reactive state with signals, computed values, effects, and batch updates.
 
 ```bash
-npm install @vielzeug/storeit
+npm install @vielzeug/stateit
 ```
 
 **Key Features:**
 
-- Reactive subscriptions with selective updates
-- Scoped stores and isolated contexts
-- Async state updates
-- Custom equality checks (2.4 KB gzipped)
+- Fine-grained signals with `computed()`, `effect()`, and `batch()`
+- `store()` for reactive objects with deep update tracking
+- `watch()` helper for side-effect-free subscriptions
+- Zero dependencies
 
-[📖 Documentation](https://vielzeug.dev/storeit/) • [Examples](https://vielzeug.dev/storeit/examples)
+- [📖 Documentation](https://vielzeug.dev/stateit/) • [Examples](https://vielzeug.dev/stateit/examples)
 
 ---
 
@@ -336,53 +336,39 @@ yarn add @vielzeug/formit @vielzeug/fetchit
 
 ```tsx
 import { createForm } from '@vielzeug/formit';
-import { createHttp, createQuery } from '@vielzeug/fetchit';
+import { createApi, createMutation } from '@vielzeug/fetchit';
 import { Logit } from '@vielzeug/logit';
 
-// Setup HTTP client
-const http = createHttp({
+// Setup API client
+const api = createApi({
   baseUrl: 'https://api.example.com',
 });
 
-// Setup query client for caching
-const queryClient = createQuery({
-  staleTime: 5000,
-});
+// Create mutation for login
+const loginMutation = createMutation(
+  (values: { email: string; password: string }) =>
+    api.post('/auth/login', { body: values }).then((r) => r.json()),
+  {
+    onSuccess: (user) => Logit.success('Login successful!', user),
+    onError: (error) => Logit.error('Login failed:', error),
+  },
+);
 
 // Create form with validation
 const form = createForm({
-  initialValues: { email: '', password: '' },
-  fields: {
-    email: {
-      validators: (value) => {
-        if (!value.includes('@')) return 'Invalid email';
-      },
+  defaultValues: { email: '', password: '' },
+  validators: {
+    email: (value) => {
+      if (!value.includes('@')) return 'Invalid email';
     },
-    password: {
-      validators: (value) => {
-        if (value.length < 8) return 'Password too short';
-      },
+    password: (value) => {
+      if (value.length < 8) return 'Password too short';
     },
   },
 });
 
-// Submit with logging and caching
-form.submit(async (values) => {
-  try {
-    const user = await queryClient.mutate(
-      {
-        mutationFn: () => http.post('/auth/login', { body: values }),
-        onSuccess: () => queryClient.invalidate(['user']),
-      },
-      values
-    );
-    Logit.success('Login successful!', user);
-    return user;
-  } catch (error) {
-    Logit.error('Login failed:', error);
-    throw error;
-  }
-});
+// Submit
+form.submit((values) => loginMutation.mutate(values));
 ```
 
 ## 🏗️ Development
@@ -427,7 +413,7 @@ vielzeug/
 │   ├── logit/         # Structured logging
 │   ├── permit/        # Permission & RBAC management
 │   ├── routeit/       # Client-side routing
-│   ├── storeit/       # Reactive state management
+│   ├── stateit/       # Reactive state (signals)
 │   ├── toolkit/       # Utility functions
 │   ├── validit/       # Schema validation
 │   ├── wireit/        # Dependency injection
@@ -463,7 +449,7 @@ All sizes are measured as **minified + gzipped** production builds:
 | @vielzeug/logit   | **6.8 KB**                 | **2.7 KB**    | 0            |
 | @vielzeug/permit  | **5.9 KB**                 | **2.0 KB**    | 1\*          |
 | @vielzeug/routeit | **9.0 KB**                 | **3.1 KB**    | 0            |
-| @vielzeug/storeit | **7.0 KB**                 | **2.4 KB**    | 0            |
+| @vielzeug/stateit | **7.0 KB**                 | **2.4 KB**    | 0            |
 | @vielzeug/toolkit | **0.1-1.0 KB** per utility | **0.1-0.5 KB**| 0-1\*        |
 | @vielzeug/validit | **14 KB**                  | **2.8 KB**    | 0            |
 | @vielzeug/wireit  | **8.0 KB**                 | **2.1 KB**    | 0            |

@@ -9,8 +9,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   mergeConfig(getConfig(__dirname, { name: 'deposit' }), {
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         external: ['@vielzeug/toolkit'],
+        output: {
+          minify: true,
+        },
       },
     },
   }),

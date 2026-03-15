@@ -33,9 +33,9 @@ describe('bit-checkbox-group', () => {
       expect(fixture.query('.checkbox-group-items')).toBeTruthy();
     });
 
-    it('syncs checked state to slotted checkboxes from value attribute', async () => {
+    it('syncs checked state to slotted checkboxes from values attribute', async () => {
       fixture = await mount('bit-checkbox-group', {
-        attrs: { value: 'a,c' },
+        attrs: { values: 'a,c' },
         html: checkboxHtml,
       });
       await fixture.flush();
@@ -117,7 +117,7 @@ describe('bit-checkbox-group', () => {
 
     it('toggles value off if already checked', async () => {
       fixture = await mount('bit-checkbox-group', {
-        attrs: { value: 'a,b' },
+        attrs: { values: 'a,b' },
         html: checkboxHtml,
       });
       await fixture.flush();

@@ -10,6 +10,7 @@ export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
       entry: {
+        'directives/index': resolve(__dirname, 'src/directives/index.ts'),
         index: resolve(__dirname, 'src/index.ts'),
         test: resolve(__dirname, 'src/test/index.ts'),
       },
@@ -17,8 +18,11 @@ export default defineConfig(
     }),
     {
       build: {
-        rollupOptions: {
+        rolldownOptions: {
           external: ['@vielzeug/stateit'],
+          output: {
+            minify: true,
+          },
         },
       },
     },

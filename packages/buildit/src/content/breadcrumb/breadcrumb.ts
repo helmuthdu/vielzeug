@@ -1,92 +1,25 @@
-import { css, define, defineProps, effect, html, onMount, onSlotChange } from '@vielzeug/craftit';
+import { define, defineProps, effect, html, onMount, onSlotChange } from '@vielzeug/craftit';
 
 // ============================================
 // Types
 // ============================================
 
-export interface BreadcrumbProps {
+export type BitBreadcrumbProps = {
   label?: string;
   separator?: string;
-}
+};
 
-export interface BreadcrumbItemProps {
-  href?: string;
+export type BitBreadcrumbItemProps = {
   active?: boolean;
+  href?: string;
   separator?: string;
-}
+};
 
 // ============================================
 // Breadcrumb Item Component
 // ============================================
 
-const itemStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      align-items: center;
-      display: inline-flex;
-    }
-
-    .item {
-      align-items: center;
-      display: inline-flex;
-    }
-
-    .separator {
-      color: var(--color-contrast-400);
-      display: none;
-      font-size: var(--text-sm);
-      font-weight: var(--font-normal);
-      padding-inline: var(--size-2);
-    }
-
-    :host([data-show-separator]) .separator {
-      display: inline-block;
-    }
-
-    .link {
-      align-items: center;
-      border-radius: var(--rounded-sm);
-      color: var(--color-contrast-600);
-      display: inline-flex;
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      gap: var(--size-1);
-      outline-offset: 2px;
-      text-decoration: none;
-      transition: color var(--transition-fast);
-    }
-
-    .link:hover {
-      color: var(--color-contrast-900);
-      text-decoration: underline;
-    }
-
-    .link:focus-visible {
-      outline: var(--border-2) solid currentColor;
-      outline-offset: var(--border-2);
-    }
-
-    :host([active]) .link {
-      color: var(--color-contrast-900);
-      font-weight: var(--font-semibold);
-      pointer-events: none;
-      text-decoration: none;
-    }
-
-    /* Icon slot */
-    .icon {
-      display: contents;
-    }
-
-    .label {
-      max-width: var(--breadcrumb-item-max-width, 20ch);
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
-`;
+import itemStyles from './breadcrumb-item.css?inline';
 
 /**
  * `bit-breadcrumb-item` — A single crumb within a `<bit-breadcrumb>` list.
@@ -97,8 +30,8 @@ const itemStyles = /* css */ css`
  * <bit-breadcrumb-item active>Current Page</bit-breadcrumb-item>
  * ```
  */
-export const ITEM_TAG = define('bit-breadcrumb-item', () => {
-  const props = defineProps<BreadcrumbItemProps>({
+export const BREADCRUMB_ITEM_TAG = define('bit-breadcrumb-item', () => {
+  const props = defineProps<BitBreadcrumbItemProps>({
     active: { default: false },
     href: { default: '' },
     separator: { default: '/' },
@@ -127,27 +60,7 @@ export const ITEM_TAG = define('bit-breadcrumb-item', () => {
 // Breadcrumb Component
 // ============================================
 
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: block;
-    }
-
-    nav {
-      display: block;
-    }
-
-    ol {
-      align-items: center;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0;
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-  }
-`;
+import componentStyles from './breadcrumb.css?inline';
 
 /**
  * `bit-breadcrumb` — Accessible navigation breadcrumb.
@@ -164,8 +77,8 @@ const componentStyles = /* css */ css`
  * </bit-breadcrumb>
  * ```
  */
-export const TAG = define('bit-breadcrumb', ({ host }) => {
-  const props = defineProps<BreadcrumbProps>({
+export const BREADCRUMB_TAG = define('bit-breadcrumb', ({ host }) => {
+  const props = defineProps<BitBreadcrumbProps>({
     label: { default: 'Breadcrumb' },
     separator: { default: '' },
   });

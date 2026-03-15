@@ -19,7 +19,7 @@ pnpm add @vielzeug/wireit
 ```typescript
 import { createContainer, createToken } from '@vielzeug/wireit';
 
-const DbToken      = createToken<Database>('Database');
+const DbToken = createToken<Database>('Database');
 const ServiceToken = createToken<UserService>('UserService');
 
 const container = createContainer();
@@ -58,8 +58,8 @@ Every dependency is identified by a typed token, not a string or class reference
 ```typescript
 import { createToken } from '@vielzeug/wireit';
 
-const ConfigToken  = createToken<AppConfig>('AppConfig');
-const DbToken      = createToken<Database>('Database');
+const ConfigToken = createToken<AppConfig>('AppConfig');
+const DbToken = createToken<Database>('Database');
 const ServiceToken = createToken<UserService>('UserService');
 ```
 
@@ -103,11 +103,11 @@ container.register(ServiceToken, { useClass: UserService, deps: [DbToken], lifet
 
 ### Lifetimes
 
-| Lifetime | Behaviour |
-|---|---|
-| `singleton` (default) | One instance per container — created on first `get()` |
-| `transient` | New instance on every `get()` |
-| `scoped` | One instance per child container; singletons in the root |
+| Lifetime              | Behaviour                                                |
+| --------------------- | -------------------------------------------------------- |
+| `singleton` (default) | One instance per container — created on first `get()`    |
+| `transient`           | New instance on every `get()`                            |
+| `scoped`              | One instance per child container; singletons in the root |
 
 ```typescript
 container.factory(RequestId, () => crypto.randomUUID(), { lifetime: 'transient' });
@@ -191,15 +191,15 @@ await container.dispose(); // calls db.close() on the cached singleton
 
 #### createTestContainer
 
-`createTestContainer(base?)` returns a container that is automatically cleared after each test scope:
+`createTestContainer(base?)` returns `{ container, dispose }` — an isolated child container for test overrides and a cleanup function:
 
 ```typescript
 import { createTestContainer, createToken } from '@vielzeug/wireit';
 
-const container = createTestContainer(appContainer);
+const { container, dispose } = createTestContainer(appContainer);
 container.value(DbToken, mockDb, { overwrite: true });
 
-afterEach(() => container.dispose());
+afterEach(() => dispose());
 ```
 
 #### container.mock
@@ -230,85 +230,85 @@ container.restore(snap);
 
 **Factory functions**
 
-| Export | Description |
-|---|---|
-| `createToken<T>(description)` | Create a typed dependency injection token |
-| `createContainer()` | Create a new root container |
-| `createTestContainer(base?)` | Create a test container (auto-clears, no dispose hooks) |
+| Export                        | Description                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `createToken<T>(description)` | Create a typed dependency injection token                                      |
+| `createContainer()`           | Create a new root container                                                    |
+| `createTestContainer(base?)`  | Returns `{ container, dispose }` — isolated child container for test overrides |
 
 **Container registration**
 
-| Method | Description |
-|---|---|
-| `register(token, provider, opts?)` | Register a full `Provider<T>` |
-| `value(token, val, opts?)` | Register a plain value |
-| `factory(token, fn, opts?)` | Register a factory function |
-| `bind(token, cls, opts?)` | Bind a class to a token |
-| `alias(token, source)` | Map `token` to `source` |
-| `unregister(token)` | Remove a registration |
-| `clear()` | Clear all registrations (no dispose hooks) |
+| Method                             | Description                                |
+| ---------------------------------- | ------------------------------------------ |
+| `register(token, provider, opts?)` | Register a full `Provider<T>`              |
+| `value(token, val, opts?)`         | Register a plain value                     |
+| `factory(token, fn, opts?)`        | Register a factory function                |
+| `bind(token, cls, opts?)`          | Bind a class to a token                    |
+| `alias(token, source)`             | Map `token` to `source`                    |
+| `unregister(token)`                | Remove a registration                      |
+| `clear()`                          | Clear all registrations (no dispose hooks) |
 
 **Container resolution**
 
-| Method | Description |
-|---|---|
-| `get<T>(token)` | Resolve synchronously — throws if async |
-| `getAsync<T>(token)` | Resolve asynchronously |
-| `getAll(tokens)` | Resolve a tuple of tokens synchronously |
-| `getAllAsync(tokens)` | Resolve a tuple of tokens asynchronously |
-| `getOptional<T>(token)` | Resolve or return `undefined` |
-| `getOptionalAsync<T>(token)` | Resolve async or return `undefined` |
-| `has(token)` | Check if a token is registered |
+| Method                       | Description                              |
+| ---------------------------- | ---------------------------------------- |
+| `get<T>(token)`              | Resolve synchronously — throws if async  |
+| `getAsync<T>(token)`         | Resolve asynchronously                   |
+| `getAll(tokens)`             | Resolve a tuple of tokens synchronously  |
+| `getAllAsync(tokens)`        | Resolve a tuple of tokens asynchronously |
+| `getOptional<T>(token)`      | Resolve or return `undefined`            |
+| `getOptionalAsync<T>(token)` | Resolve async or return `undefined`      |
+| `has(token)`                 | Check if a token is registered           |
 
 **Container lifecycle**
 
-| Method / Property | Description |
-|---|---|
-| `createChild()` | Create a child container |
-| `runInScope(fn)` | Run `fn` in an auto-disposed child |
-| `dispose()` | Run dispose hooks and clear registrations |
-| `disposed` | Whether the container has been disposed |
-| `[Symbol.asyncDispose]` | `await using` support |
+| Method / Property       | Description                               |
+| ----------------------- | ----------------------------------------- |
+| `createChild()`         | Create a child container                  |
+| `runInScope(fn)`        | Run `fn` in an auto-disposed child        |
+| `dispose()`             | Run dispose hooks and clear registrations |
+| `disposed`              | Whether the container has been disposed   |
+| `[Symbol.asyncDispose]` | `await using` support                     |
 
 **Container testing**
 
-| Method | Description |
-|---|---|
-| `mock(token, mock, fn)` | Temporarily replace a token; restore after `fn` |
-| `snapshot()` | Capture current registrations |
-| `restore(snap)` | Restore a previous snapshot |
-| `debug()` | List all tokens and aliases (including inherited) |
+| Method                  | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `mock(token, mock, fn)` | Temporarily replace a token; restore after `fn`   |
+| `snapshot()`            | Capture current registrations                     |
+| `restore(snap)`         | Restore a previous snapshot                       |
+| `debug()`               | List all tokens and aliases (including inherited) |
 
 **Exported types**
 
-| Type | Description |
-|---|---|
-| `Token<T>` | Typed injection token |
-| `Lifetime` | `'singleton' \| 'transient' \| 'scoped'` |
-| `Provider<T>` | Union of `ValueProvider`, `ClassProvider`, `FactoryProvider` |
-| `ProviderOptions<T, Deps>` | Options for `factory()` and `bind()` |
-| `TokenValues<T>` | Extracts value types from a tuple of tokens |
-| `Snapshot` | Opaque snapshot handle |
+| Type                       | Description                                                  |
+| -------------------------- | ------------------------------------------------------------ |
+| `Token<T>`                 | Typed injection token                                        |
+| `Lifetime`                 | `'singleton' \| 'transient' \| 'scoped'`                     |
+| `Provider<T>`              | Union of `ValueProvider`, `ClassProvider`, `FactoryProvider` |
+| `ProviderOptions<T, Deps>` | Options for `factory()` and `bind()`                         |
+| `TokenValues<T>`           | Extracts value types from a tuple of tokens                  |
+| `Snapshot`                 | Opaque snapshot handle                                       |
 
 **Exported errors**
 
-| Error | Thrown when |
-|---|---|
-| `ProviderNotFoundError` | No provider is registered for a token |
-| `CircularDependencyError` | A dependency graph cycle is detected |
-| `AsyncProviderError` | An async provider is resolved with `get()` |
-| `AliasCycleError` | Alias definitions form a cycle |
-| `ContainerDisposedError` | Any method is called on a disposed container |
+| Error                     | Thrown when                                  |
+| ------------------------- | -------------------------------------------- |
+| `ProviderNotFoundError`   | No provider is registered for a token        |
+| `CircularDependencyError` | A dependency graph cycle is detected         |
+| `AsyncProviderError`      | An async provider is resolved with `get()`   |
+| `AliasCycleError`         | Alias definitions form a cycle               |
+| `ContainerDisposedError`  | Any method is called on a disposed container |
 
 ## Documentation
 
 Full docs at **[vielzeug.dev/wireit](https://vielzeug.dev/wireit)**
 
-| | |
-|---|---|
+|                                                  |                                         |
+| ------------------------------------------------ | --------------------------------------- |
 | [Usage Guide](https://vielzeug.dev/wireit/usage) | Registration, lifetimes, async, testing |
-| [API Reference](https://vielzeug.dev/wireit/api) | Complete type signatures |
-| [Examples](https://vielzeug.dev/wireit/examples) | Real-world DI patterns |
+| [API Reference](https://vielzeug.dev/wireit/api) | Complete type signatures                |
+| [Examples](https://vielzeug.dev/wireit/examples) | Real-world DI patterns                  |
 
 ## License
 

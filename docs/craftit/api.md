@@ -20,17 +20,23 @@ Define and register a custom element with a setup function.
 
 **DefineOptions:**
 
-- `formAssociated?: boolean` – Enable form-associated custom element (required for `defineField()`)
-- `target?: string | HTMLElement` – Render the shadow root into this selector or element (portal)
+- `formAssociated?: boolean` — Enable form-associated custom element (required for `defineField()`)
+- `shadow?: Omit<ShadowRootInit, 'mode'>` — Shadow root init options, e.g. `{ delegatesFocus: true }`
+- `target?: string | HTMLElement` — Render the shadow root into this selector or element (portal)
+
+**SetupContext:**
+
+- `host: HTMLElement` — The host element instance
+- `shadow: ShadowRoot` — The component's open shadow root (`host.shadowRoot`)
 
 **Returns:** `string` (the registered element tag name)
 **Example:**
 
 ```ts
 import { define, signal, html } from '@vielzeug/craftit';
-define('my-button', () => {
+define('my-button', ({ host }) => {
   const count = signal(0);
-  return html` <button @click=${() => count.value++}>Clicked ${count} times</button> `;
+  return html`<button @click=${() => count.value++}>Clicked ${count} times</button>`;
 });
 ```
 
@@ -157,27 +163,26 @@ cleanup();
 
 ### `watch(source, callback, options?)`
 
-Watch signals for changes with explicit callback.
+Watch signals for changes. When called inside a component setup or `onMount`, the watcher is automatically cleaned up on unmount — no manual cleanup needed.
+
 **Signatures:**
 
 ```ts
 // Watch single signal — callback receives (newValue, prevValue)
-function watch<T>(source: Signal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions): CleanupFn;
-// Watch multiple signals — callback takes no arguments; read .value inside
-function watch(
-  sources: ReadonlyArray<ReadonlySignal<unknown>>,
-  cb: () => void,
-  options?: WatchOptions,
-): CleanupFn;
+watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;
+// Watch with selector — callback receives the selected slice only
+watch<T, U>(source: ReadonlySignal<T>, selector: (state: T) => U, cb: (value: U, prev: U) => void, options?: WatchOptions<U>): Subscription;
+// Watch array of signals — callback is called (no arguments) when any changes
+watch(sources: ReadonlyArray<ReadonlySignal<unknown>>, cb: () => void, options?: WatchOptions): Subscription;
 ```
 
-**Parameters:**
+**WatchOptions:**
 
-- `source` – Signal or array of signals to watch
-- `cb` – Callback function
-- `options.immediate?: boolean` – Run immediately
-  **Returns:** `CleanupFn`
-  **Example:**
+- `immediate?: boolean` — Run the callback immediately on subscription
+- `once?: boolean` — Unsubscribe after the first change
+
+**Returns:** `Subscription`
+**Example:**
 
 ```ts
 const count = signal(0);
@@ -185,19 +190,20 @@ const count = signal(0);
 watch(count, (newValue, oldValue) => {
   console.log(`Changed from ${oldValue} to ${newValue}`);
 });
+// Watch with selector — fires only when the selected slice changes
+const user = signal({ name: 'Alice', age: 30 });
+watch(
+  user,
+  (u) => u.age,
+  (age) => console.log('age changed:', age),
+);
 // Watch multiple — read .value inside callback; no values are passed
 const name = signal('Alice');
 watch([count, name], () => {
   console.log(`Count: ${count.value}, Name: ${name.value}`);
 });
 // With immediate
-watch(
-  count,
-  (value) => {
-    console.log(value);
-  },
-  { immediate: true },
-);
+watch(count, (value) => console.log(value), { immediate: true });
 ```
 
 ---
@@ -359,12 +365,10 @@ Conditional rendering — inserts/removes DOM based on truthiness.
 
 ```ts
 // Two-branch form
-html.when(condition, then: () => V, else?: () => V): V | (() => V);
-// Multi-branch else-if chain
-html.when([cond, fn], ...[cond, fn], fallback?: () => V): V | (() => V);
+html.when(condition, () => V, (() => V)?): V | WhenDirective | string;
 ```
 
-**Returns:** `V | (() => V)` (reactive when `condition` is a Signal or function)
+**Returns:** `V | WhenDirective | string` (reactive when `condition` is a Signal or function)
 **Example:**
 
 ```ts
@@ -379,10 +383,25 @@ html`
     () => html`<p>Please log in</p>`,
   )}
 `;
-// Multi-branch
+```
+
+::: tip Multi-branch chains
+For else-if chains, use [`match()`](#match) instead of nesting `html.when()`.
+:::
+
+---
+
+### `match(...branches, fallback?)`
+
+Multi-branch conditional rendering. Accepts any number of `[condition, templateFn]` tuples, with an optional trailing fallback function. Reactive when any condition is a Signal or getter function.
+**Returns:** `V | WhenDirective | string`
+**Example:**
+
+```ts
+import { match } from '@vielzeug/craftit';
 const role = signal('guest');
 html`
-  ${html.when(
+  ${match(
     [() => role.value === 'admin', () => html`<admin-panel />`],
     [() => role.value === 'editor', () => html`<editor-panel />`],
     () => html`<guest-panel />`,
@@ -392,35 +411,61 @@ html`
 
 ---
 
-### `html.show(condition, template)`
+### `show(condition, template)` — from `@vielzeug/craftit/directives`
 
-Toggle **visibility** (`display:none`) without unmounting. Prefer over `html.when` when the child has expensive setup or stateful input.
-**Parameters:**
+Toggle **visibility** (`hidden` attribute) without unmounting. The template is rendered once and stays in the DOM. Prefer over `when()` when the child has expensive setup or stateful input.
 
-- `condition: unknown | Signal<unknown>` – When falsy the element is hidden
-- `template: () => string | HTMLResult` – Content (mounted once, never destroyed)
-  **Returns:** `string | HTMLResult`
-  **Example:**
+**Signature:**
 
 ```ts
+function show(
+  condition: unknown | Signal<unknown> | (() => unknown),
+  template: () => string | HTMLResult,
+): ShowDirective | HTMLResult | string;
+```
+
+**Parameters:**
+
+- `condition` – Signal, getter function, or static value. When falsy the wrapper is hidden
+- `template` – Content factory (called once)
+
+**Returns:** `ShowDirective` (reactive), `HTMLResult` (static true), or `''` (static false)
+
+**Example:**
+
+```ts
+import { show } from '@vielzeug/craftit/directives';
+
 const open = signal(false);
-html`${html.show(open, () => html`<heavy-chart></heavy-chart>`)}`;
+html`${show(open, () => html`<heavy-chart></heavy-chart>`)}`;
 ```
 
 ---
 
-### `html.bind(signal)`
+### `bind(signal)` — from `@vielzeug/craftit/directives`
 
-Two-way input binding — attaches `:value` + `input`/`change` listener in one step.
-**Parameters:**
+Two-way input binding — attaches reactive `:value` + `input` listener in one step.
+Use in spread position on any `<input>`, `<textarea>`, or `<select>` element.
 
-- `signal: Signal<T>` – Signal to bind
-  **Returns:** binding descriptor (`{ __model: Signal<T> }`)
-  **Example:**
+**Signature:**
 
 ```ts
+function bind<T>(signal: Signal<T>): ModelDescriptor<T>;
+```
+
+**Parameters:**
+
+- `signal: Signal<T>` – Writable signal to bind
+
+**Returns:** `ModelDescriptor<T>` (spread descriptor consumed by the html engine)
+
+**Example:**
+
+```ts
+import { bind } from '@vielzeug/craftit/directives';
+
 const name = signal('');
-html`<input ${html.bind(name)} />`; // equivalent to :value + @input
+html`<input ${bind(name)} />`; // equivalent to :value=${name} @input=${e => name.value = e.target.value}
 ```
 
 ---
@@ -544,53 +589,61 @@ html`
 
 ---
 
-### `html.style(styles)`
+### `style(map)` — from `@vielzeug/craftit/directives`
 
-Generate dynamic inline styles.
-**Parameters:**
+Build a dynamic inline style string from an object map of CSS properties to values.
+CamelCase property names are auto-converted to kebab-case. Number values get a `px` suffix except for unitless properties (`opacity`, `zIndex`, etc.).
+When any value is a reactive `Signal` or getter function the return is a `ReadonlySignal<string>` — no arrow-function wrapper needed.
 
-- `styles: Partial<CSSStyleDeclaration> | Record<string, string | number>` – Style object
-  **Returns:** `string`
-  **Example:**
+**Signature:**
 
 ```ts
+function style(
+  map: Record<string, string | number | Signal<string | number> | (() => string | number | null)>,
+): string | ReadonlySignal<string>;
+```
+
+**Example:**
+
+```ts
+import { style } from '@vielzeug/craftit/directives';
+
 const fontSize = signal(16);
-html`
-  <div
-    style=${html.style({
-      fontSize: fontSize.value, // Auto-adds 'px'
-      color: 'red',
-      padding: '1rem',
-      fontWeight: 'bold',
-    })}>
-    Styled
-  </div>
-`;
+// Reactive — pass signals directly:
+html`<div style=${style({ fontSize, color: 'red', padding: '1rem' })}>Styled</div>`;
+// Static:
+html`<div style=${style({ fontWeight: 'bold', opacity: 0.5 })}>Styled</div>`;
 ```
 
 ---
 
-### `html.classes(classes)`
+### `classes(map)` — from `@vielzeug/craftit/directives`
 
-Generate dynamic class strings.
+Build a dynamic class string from an object map of class names to conditions.
+When any condition is a `Signal` or getter function the return value is a `ReadonlySignal<string>` that updates automatically — no arrow-function wrapper needed.
+
+**Signature:**
+
+```ts
+function classes(
+  map: Record<string, boolean | undefined | null | Signal<boolean> | (() => boolean)>,
+): string | ReadonlySignal<string>;
+```
+
 **Parameters:**
 
-- `classes: Record<string, boolean | Signal<boolean> | (() => boolean) | undefined>` – Object map of class names to conditions (reactive signals and getter functions supported)
-  **Returns:** `string | ReadonlySignal<string>` (signal when any condition is reactive)
-  **Example:**
+- `map: Record<string, ClassValue>` – Object map of class names to conditions (static booleans, reactive Signals, or getter functions)
 
-````ts
+**Returns:** `string` when all values are static; `ReadonlySignal<string>` when any value is reactive
+
+**Example:**
+
+```ts
+import { classes } from '@vielzeug/craftit/directives';
+
 const isActive = signal(true);
-// Wrap in arrow function for reactivity
-html`
-  <div
-    class=${() =>
-      html.classes({
-        active: isActive.value,
-        disabled: false,
-        'btn-primary': true,
-      })}></div>
-`;
+// Pass signals directly — no arrow function needed
+html`<div class=${classes({ active: isActive, disabled: false, 'btn-primary': true })}></div>`;
 ```
 
 ## Styling
@@ -702,18 +755,18 @@ onUnmount(() => {
 
 ---
 
-### `onUpdated(fn)`
+### `onRendered(fn)`
 
-Register a function to run after each component update.
+Runs **once** after the component's initial render completes and all `onMount` hooks have finished. Use for measuring DOM or initialising third-party libraries that need a fully-painted DOM.
 **Parameters:**
 
-- `fn: () => void` – Update callback
+- `fn: () => void` – Callback
   **Returns:** `void`
   **Example:**
 
 ```ts
-onUpdated(() => {
-  console.log('Component updated!');
+onRendered(() => {
+  console.log('Initial render complete — DOM is ready to measure');
 });
 ```
 
@@ -826,7 +879,7 @@ define('custom-checkbox', () => {
 
 ## Props & Context
 
-### `defineField(options)`
+### `defineField(options, callbacks?)`
 
 Create a form-associated custom element using ElementInternals API.
 
@@ -837,6 +890,7 @@ The component must be defined with `{ formAssociated: true }` option to use `def
 **Parameters:**
 
 - `options: FormFieldOptions<T>` – Configuration object
+- `callbacks?: FormFieldCallbacks` – Optional form lifecycle callbacks
 
 **FormFieldOptions:**
 
@@ -844,13 +898,22 @@ The component must be defined with `{ formAssociated: true }` option to use `def
 - `disabled?: Signal<boolean>` – Optional signal for disabled state
 - `toFormValue?: (value: T) => File | FormData | string | null` – Custom form value transformation
 
+**FormFieldCallbacks:**
+
+- `onAssociated?: (form: HTMLFormElement | null) => void`
+- `onDisabled?: (disabled: boolean) => void`
+- `onReset?: () => void`
+- `onStateRestore?: (state: unknown, mode: 'autocomplete' | 'restore') => void`
+
 **Returns:** `FormFieldHandle`
 
 **FormFieldHandle:**
 
-- `internals: ElementInternals | null` – ElementInternals instance (null if not supported)
-- `setValidity: ElementInternals['setValidity']` – Set validation state
-- `reportValidity: () => boolean` – Report validity to user
+- `internals: ElementInternals` – ElementInternals instance
+- `checkValidity: () => boolean` – Check without displaying to user
+- `reportValidity: () => boolean` – Check and display validation message to user
+- `setCustomValidity: (message: string) => void` – Set/clear custom error message
+- `setValidity: ElementInternals['setValidity']` – Set granular validity flags
 
 **Example:**
 
@@ -860,8 +923,14 @@ define(
   () => {
     const value = signal('');
 
-    // Basic usage
-    const formField = field({ value });
+    const formField = defineField(
+      { value },
+      {
+        onReset: () => {
+          value.value = '';
+        },
+      },
+    );
 
     return html` <input :value=${value} @input=${(e) => (value.value = e.target.value)} /> `;
   },
@@ -876,15 +945,15 @@ define(
   'email-input',
   () => {
     const value = signal('');
-    const formField = field({ value });
+    const formField = defineField({ value });
 
     const isValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value));
 
     watch(value, () => {
       if (!isValid.value && value.value) {
-        formField.setValidity({ typeMismatch: true }, 'Please enter a valid email');
+        formField.setCustomValidity('Please enter a valid email');
       } else {
-        formField.setValidity({}, '');
+        formField.setCustomValidity('');
       }
     });
 
@@ -902,9 +971,9 @@ define(
   () => {
     const rating = signal(0);
 
-    const formField = field({
+    const formField = defineField({
       value: rating,
-      toFormValue: (v) => String(v), // Convert number to string
+      toFormValue: (v) => String(v),
     });
 
     return html`
@@ -924,7 +993,7 @@ define(
     const value = signal('');
     const disabled = signal(false);
 
-    const formField = field({
+    const formField = defineField({
       value,
       disabled, // Syncs with internals.states
     });
@@ -1090,8 +1159,6 @@ define('themed-button', () => {
 });
 ```
 
-## Advanced Features
-
 ## Utilities
 
 ### `createId(prefix?)`
@@ -1100,7 +1167,7 @@ Creates a unique, stable ID string — suitable for `aria-labelledby`, `aria-des
 
 **Parameters:**
 
-- `prefix?: string` – Optional prefix for the generated ID
+- `prefix?: string` – Optional prefix (default: `'cft'`)
 
 **Returns:** `string`
 
@@ -1108,14 +1175,62 @@ Creates a unique, stable ID string — suitable for `aria-labelledby`, `aria-des
 
 ```ts
 define('labeled-input', () => {
-  const inputRef = ref<HTMLInputElement>();
-  onMount(() => {
-    const host = inputRef.value?.getRootNode()?.host as HTMLElement;
-    const labelId = createId('input-label');
-    // labelId → 'input-label-1' (stable, unique per instance)
-    host.setAttribute('aria-labelledby', labelId);
-  });
-  return html`<input ref=${inputRef} />`;
+  const id = createId('input');
+  // id → 'input-1' (stable, unique per instance)
+  return html`
+    <label for=${id}>Name</label>
+    <input id=${id} />
+  `;
+});
+```
+
+---
+
+### `createFormIds(prefix, name)`
+
+Generates a stable set of ARIA-related IDs for a form control. Call after `defineProps()` so `name.value` already reflects any HTML attribute.
+
+**Parameters:**
+
+- `prefix: string` – Element type prefix (e.g. `'input'`, `'select'`)
+- `name: string | ReadonlySignal<string>` – The field name (from `props.name` or a plain string)
+
+**Returns:** `{ fieldId, labelId, helperId, errorId }` (all `string`)
+
+**Example:**
+
+```ts
+define('text-field', () => {
+  const props = defineProps({ name: { default: '' } });
+  const { fieldId, labelId, helperId, errorId } = createFormIds('input', props.name);
+  return html`
+    <label id=${labelId} for=${fieldId}>Email</label>
+    <input id=${fieldId} aria-labelledby=${labelId} aria-describedby=${helperId} />
+    <span id=${helperId}>Enter your email address</span>
+  `;
+});
+```
+
+---
+
+### `typed<T>(defaultValue, options?)`
+
+Creates a typed `PropDef` with an explicit type parameter. Use when TypeScript cannot infer the signal type from the default value alone.
+
+**Parameters:**
+
+- `defaultValue: T` – Default value
+- `options?: Omit<PropDef<T>, 'default'>` – Additional prop options
+
+**Returns:** `PropDef<T>`
+
+**Example:**
+
+```ts
+type Color = 'primary' | 'secondary' | 'danger';
+const props = defineProps<ButtonProps>({
+  color: typed<Color>('primary'),
+  disabled: { default: false },
 });
 ```
 
@@ -1163,9 +1278,9 @@ Access slotted content from the host element. Must be called inside a `define` s
 
 **SlotsAPI methods:**
 
-- `has(name): boolean` – Returns `true` if the named slot has assigned nodes
+- `has(name): ReadonlySignal<boolean>` – Reactive signal that is `true` when the named slot has assigned nodes
 
-Slot content is rendered using `<slot>` HTML elements in the template. `defineSlots()` is primarily used with `has()` to conditionally render slot wrappers.
+Slot content is rendered using `<slot>` HTML elements in the template. Use `html.when(slots.has('name'), ...)` or interpolate the signal directly to reactively toggle slot wrappers.
 
 **Example:**
 
@@ -1175,7 +1290,7 @@ define('card-component', () => {
   return html`
     <div class="card">
       <div class="body"><slot></slot></div>
-      ${s.has('footer') ? html`<footer><slot name="footer"></slot></footer>` : ''}
+      ${html.when(s.has('footer'), () => html`<footer><slot name="footer"></slot></footer>`)}
     </div>
   `;
 });
@@ -1234,7 +1349,7 @@ define(
   'custom-input',
   () => {
     const value = signal('');
-    const formField = field({ value });
+    const formField = defineField({ value });
 
     onFormReset(() => {
       value.value = '';
@@ -1245,6 +1360,181 @@ define(
   },
   { formAssociated: true },
 );
+```
+
+---
+
+### `onSlotChange(slotName, callback)`
+
+Observes a named slot (or the default slot when `slotName` is `'default'`) and calls `callback` with assigned elements whenever the slot's content changes. Must be called inside `onMount`.
+
+**Parameters:**
+
+- `slotName: string` – Named slot or `'default'` / `''` for the default slot
+- `callback: (elements: Element[]) => void`
+
+**Example:**
+
+```ts
+onMount(() => {
+  onSlotChange('icon', (nodes) => {
+    hasIcon.value = nodes.length > 0;
+  });
+  onSlotChange('default', (nodes) => {
+    console.log('Default slot has', nodes.length, 'elements');
+  });
+});
+```
+
+---
+
+## Accessibility & Focus
+
+### `useFocusTrap(container)`
+
+Traps keyboard focus inside `container`. Tab cycles forward; Shift+Tab cycles backward. Focus loops when the boundary is reached. Must be called inside `onMount`.
+
+**Parameters:**
+
+- `container: HTMLElement | (() => HTMLElement | null)` – The container element or a getter function
+
+**Example:**
+
+```ts
+onMount(() => {
+  useFocusTrap(dialogRef.value!);
+});
+```
+
+---
+
+### `getFocusableElements(root)`
+
+Returns all keyboard-focusable descendants of `root` in DOM order. Excludes `inert` and `display:none` elements.
+
+**Parameters:**
+
+- `root: Element` – Container to search
+
+**Returns:** `HTMLElement[]`
+
+---
+
+## Platform Observers
+
+### `observeResize(el)`
+
+Observes an element's content-box size via `ResizeObserver`. Returns a `ReadonlySignal` that updates whenever the dimensions change. Must be called inside `onMount`.
+
+**Parameters:**
+
+- `el: Element` – Element to observe
+
+**Returns:** `ReadonlySignal<{ width: number; height: number }>`
+
+**Example:**
+
+```ts
+onMount(() => {
+  const size = observeResize(containerRef.value!);
+  effect(() => console.log(size.value.width, size.value.height));
+});
+```
+
+---
+
+### `observeIntersection(el, options?)`
+
+Observes an element's intersection with its root via `IntersectionObserver`. Returns a `ReadonlySignal` that updates on each intersection change. Must be called inside `onMount`.
+
+**Parameters:**
+
+- `el: Element` – Element to observe
+- `options?: IntersectionObserverInit` – Standard `IntersectionObserver` options
+
+**Returns:** `ReadonlySignal<IntersectionObserverEntry | null>`
+
+**Example:**
+
+```ts
+onMount(() => {
+  const entry = observeIntersection(lazyRef.value!, { threshold: 0.1 });
+  effect(() => {
+    if (entry.value?.isIntersecting) loadContent();
+  });
+});
+```
+
+---
+
+### `observeMedia(query)`
+
+Reactively tracks a CSS media query match state via `window.matchMedia`. Returns a `ReadonlySignal<boolean>` that updates when the match changes. May be called at the top level for global queries or inside `onMount` for component-scoped cleanup.
+
+**Parameters:**
+
+- `query: string` – CSS media query string
+
+**Returns:** `ReadonlySignal<boolean>`
+
+**Example:**
+
+```ts
+onMount(() => {
+  const dark = observeMedia('(prefers-color-scheme: dark)');
+  effect(() => document.body.classList.toggle('dark', dark.value));
+});
+```
+
+---
+
+## Context Helpers
+
+### `syncContextProps(ctx, props, keys)`
+
+Reactively inherits prop values from a context object provided by an ancestor component. For each key, when the context value is not `undefined`, it is written into the matching prop signal. The effect is automatically cleaned up on unmount.
+
+**Parameters:**
+
+- `ctx: Ctx | undefined` – Context object (usually from `inject()`)
+- `props: Props` – The component’s props object from `defineProps()`
+- `keys: K[]` – The prop keys to sync from context into props
+
+**Example:**
+
+```ts
+const BUTTON_GROUP_CTX = createContext<{ size: ReadonlySignal<string>; variant: ReadonlySignal<string> }>();
+
+define('my-button', () => {
+  const props = defineProps({ size: { default: 'md' }, variant: { default: 'primary' } });
+  // Inherit size/variant from a parent <button-group> if available
+  syncContextProps(inject(BUTTON_GROUP_CTX), props, ['size', 'variant']);
+  return html`<button class=${() => `btn-${props.variant.value} btn-${props.size.value}`}><slot /></button>`;
+});
+```
+
+---
+
+### `syncDOMProps(el, map)`
+
+Reactively synchronises Signal or getter values onto DOM element properties. A single tracked effect is created and its cleanup registered automatically. Must be called inside `onMount`.
+
+**Parameters:**
+
+- `el: E extends Element` – Target DOM element
+- `map: Record<string, ReadonlySignal<unknown> | (() => unknown)>` – Property name to signal/getter map
+
+**Example:**
+
+```ts
+onMount(() => {
+  syncDOMProps(inputRef.value!, {
+    disabled: props.disabled,
+    readOnly: props.readonly,
+    name: props.name,
+    type: () => validateType(props.type.value),
+  });
+});
 ```
 
 ## Testing Utilities
@@ -1437,7 +1727,7 @@ install(afterEach);
 ### Signal Types
 
 ```ts
-class Signal<T> {
+interface Signal<T> {
   value: T;
   peek(): T;
   update(fn: (current: T) => T): void;
@@ -1445,12 +1735,11 @@ class Signal<T> {
   derive<U>(fn: (value: T) => U): Signal<U>;
   map<U>(fn: (item: T extends (infer I)[] ? I : never, index: number) => U): Signal<U[]>;
   subscribe(cb: (value: T, prev: T) => void): CleanupFn;
-  debugName?: string;
 }
-// `computed()` and `writable()` return Signal<T> — there is no separate ComputedSignal type.
-type ReadonlySignal<T> = Omit<Signal<T>, 'update' | 'assign'> & { readonly value: T };
+// `computed()` and `writable()` return ReadonlySignal<T>.
+type ReadonlySignal<T> = Omit<Signal<T>, 'value'> & { readonly value: T };
 type CleanupFn = () => void;
-type EffectFn = () => CleanupFn | void;
+type Subscription = CleanupFn & { dispose: CleanupFn; [Symbol.dispose]: CleanupFn };
 ```
 
 ### Template Types
@@ -1480,6 +1769,9 @@ interface RefList<T extends Element = Element> {
 }
 // Preferred over raw Symbol() for injection keys
 type InjectionKey<T> = symbol & { readonly __craftit_injection_key?: T };
+
+type SetupContext = { host: HTMLElement; shadow: ShadowRoot };
+
 type SetupResult =
   | string
   | HTMLResult
@@ -1490,7 +1782,9 @@ type SetupResult =
 
 type DefineOptions = {
   formAssociated?: boolean;
-  /** Render the element's shadow root into this selector or element instead of itself */
+  /** Shadow root init options — mode is always 'open' */
+  shadow?: Omit<ShadowRootInit, 'mode'>;
+  /** Render the element's shadow root into this selector or element (portal) */
   target?: string | HTMLElement;
 };
 ```
@@ -1499,15 +1793,24 @@ type DefineOptions = {
 
 ```ts
 interface FormFieldOptions<T> {
-  value: Signal<T>;
-  disabled?: Signal<boolean>;
+  value: Signal<T> | ReadonlySignal<T>;
+  disabled?: Signal<boolean> | ReadonlySignal<boolean>;
   toFormValue?: (value: T) => File | FormData | string | null;
 }
 
+interface FormFieldCallbacks {
+  onAssociated?: (form: HTMLFormElement | null) => void;
+  onDisabled?: (disabled: boolean) => void;
+  onReset?: () => void;
+  onStateRestore?: (state: unknown, mode: 'autocomplete' | 'restore') => void;
+}
+
 interface FormFieldHandle {
-  readonly internals: ElementInternals | null;
-  setValidity: ElementInternals['setValidity'];
+  readonly internals: ElementInternals;
+  checkValidity: () => boolean;
   reportValidity: () => boolean;
+  setCustomValidity: (message: string) => void;
+  setValidity: ElementInternals['setValidity'];
 }
 ```
 

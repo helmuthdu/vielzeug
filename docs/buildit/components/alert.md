@@ -11,7 +11,7 @@ A feedback banner for surface-level status messages — errors, warnings, succes
 - 🖼️ **Icon Slot**: prepend any SVG or icon font glyph
 - 🏷️ **Heading**: optional bold heading above the message
 - 🕐 **Meta Slot**: timestamp or secondary info alongside the heading
-- 🔘 **Actions Slot**: call-to-action buttons below the message (or inline)
+- 🔘 **Actions Slot**: call-to-action buttons below the message (or horizontal)
 - 🎯 **Accented**: left accent border for flat and bordered variants
 - ♿ **Accessible**: `role="alert"` + smart `aria-live`, labelled close button
 
@@ -180,21 +180,21 @@ Use the `actions` slot to add call-to-action buttons below the message.
 
 </ComponentPreview>
 
-### Inline Actions
+### Horizontal Actions
 
-Add `inline` to move the actions to the right side of the content instead of below it. Best suited for short, single-line messages without a heading.
+Add `horizontal` to move the actions to the right side of the content instead of below it. Best suited for short, single-line messages without a heading.
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-alert color="info" inline>
+<bit-alert color="info" horizontal>
   You have 3 unread notifications.
   <div slot="actions">
     <bit-button size="sm" color="info">View all</bit-button>
   </div>
 </bit-alert>
 
-<bit-alert color="success" variant="bordered" inline>
+<bit-alert color="success" variant="bordered" horizontal>
   Your backup completed successfully.
   <div slot="actions" style="display: flex; gap: var(--size-2);">
     <bit-button size="sm" color="success" variant="ghost">Details</bit-button>
@@ -206,7 +206,7 @@ Add `inline` to move the actions to the right side of the content instead of bel
 </ComponentPreview>
 
 ::: tip
-Avoid combining `inline` with `heading` — it makes the layout feel cramped.
+Avoid combining `horizontal` with `heading` — it makes the layout feel cramped.
 :::
 
 ## Accented
@@ -252,16 +252,16 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 | `heading`     | `string`                                                                  | `''`     | Bold heading above the message body              |
 | `dismissible` | `boolean`                                                                 | `false`  | Show a close (×) button                          |
 | `accented`    | `boolean`                                                                 | `false`  | Left accent border (flat/bordered variants only) |
-| `inline`      | `boolean`                                                                 | `false`  | Place action buttons beside the content          |
+| `horizontal`  | `boolean`                                                                 | `false`  | Place action buttons beside the content          |
 
 ### Slots
 
-| Slot      | Description                                                            |
-| --------- | ---------------------------------------------------------------------- |
-| (default) | Alert message content                                                  |
-| `icon`    | Icon on the leading edge. Hidden when empty — no reserved space.       |
-| `meta`    | Secondary info alongside the heading (lighter, right-aligned, smaller) |
-| `actions` | Action buttons below the message, or beside it when `inline` is set    |
+| Slot      | Description                                                             |
+| --------- | ----------------------------------------------------------------------- |
+| (default) | Alert message content                                                   |
+| `icon`    | Icon on the leading edge. Hidden when empty — no reserved space.        |
+| `meta`    | Secondary info alongside the heading (lighter, right-aligned, smaller)  |
+| `actions` | Action buttons below the message, or beside it when `horizontal` is set |
 
 ### Events
 
@@ -328,5 +328,5 @@ Alerts injected into the DOM are announced automatically via `role="alert"`. Avo
 **Don't:**
 
 - Use `bit-alert` for short, transient notifications — use a toast/notification system instead.
-- Combine `inline` with `heading` — the layout becomes cramped.
+- Combine `horizontal` with `heading` — the layout becomes cramped.
 - Nest complex interactive controls in the default slot; keep alerts primarily informational.

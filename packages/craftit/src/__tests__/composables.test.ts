@@ -12,15 +12,18 @@ import {
   defineSlots,
   guard,
   html,
-  type InjectionKey,
   inject,
+  observeIntersection,
+  observeMedia,
+  observeResize,
+  onMount,
   prop,
   provide,
   ref,
-  refs,
   signal,
+  type InjectionKey,
 } from '..';
-import { fire, mount, waitForEvent } from '../test';
+import { mount, waitForEvent } from '../test';
 
 describe('Composables', () => {
   describe('ref()', () => {
@@ -43,17 +46,6 @@ describe('Composables', () => {
         return html`<div ref=${divRef}>Test</div>`;
       });
       expect(divRef.value).not.toBeNull();
-    });
-
-    it('should support refs list', async () => {
-      await mount(() => {
-        const items = signal([1, 2, 3]);
-        const itemRefs = refs<HTMLLIElement>();
-
-        return html`<ul>
-          ${html.each(items, (item) => html`<li ref=${itemRefs}>${item}</li>`)}
-        </ul>`;
-      });
     });
   });
 
@@ -79,6 +71,36 @@ describe('Composables', () => {
       );
 
       expect(query('div')?.textContent).toBe('Alice');
+    });
+
+    it('should treat boolean prop as false when attribute is the string "false"', async () => {
+      // Simulates framework bindings (e.g. Vue :loading="false") that set the attribute
+      // to the string "false" instead of removing it when the bound value is false.
+      let loadingProp!: ReturnType<typeof prop<boolean>>;
+      const { element, flush } = await mount(() => {
+        loadingProp = prop('loading', false);
+
+        return html`<div>${() => String(loadingProp.value)}</div>`;
+      });
+
+      element.setAttribute('loading', 'false');
+      await flush();
+
+      expect(loadingProp.value).toBe(false);
+    });
+
+    it('should treat boolean prop as true when attribute is the string "true"', async () => {
+      let loadingProp!: ReturnType<typeof prop<boolean>>;
+      const { element, flush } = await mount(() => {
+        loadingProp = prop('loading', false);
+
+        return html`<div>${() => String(loadingProp.value)}</div>`;
+      });
+
+      element.setAttribute('loading', 'true');
+      await flush();
+
+      expect(loadingProp.value).toBe(true);
     });
   });
 
@@ -185,53 +207,6 @@ describe('Composables', () => {
     });
   });
 
-  describe('bind()', () => {
-    it('should support bind() for input', async () => {
-      const { flush, query } = await mount(() => {
-        const text = signal('initial');
-
-        html.bind(text);
-
-        return html`<input
-          value=${text}
-          @input=${(e: Event) => {
-            text.value = (e.target as HTMLInputElement).value;
-          }} />`;
-      });
-      const input = query('input') as HTMLInputElement;
-
-      expect(input.value).toBe('initial');
-
-      input.value = 'updated';
-      fire.input(input);
-      await flush();
-      expect(input.value).toBe('updated');
-    });
-
-    it('should support bind() for checkbox', async () => {
-      const { flush, query } = await mount(() => {
-        const checked = signal(false);
-
-        html.bind(checked);
-
-        return html`<input
-          type="checkbox"
-          ?checked=${checked}
-          @change=${(e: Event) => {
-            checked.value = (e.target as HTMLInputElement).checked;
-          }} />`;
-      });
-      const checkbox = query('input') as HTMLInputElement;
-
-      expect(checkbox.checked).toBe(false);
-
-      checkbox.checked = true;
-      fire.change(checkbox);
-      await flush();
-      expect(checkbox.checked).toBe(true);
-    });
-  });
-
   describe('createId()', () => {
     it('should generate unique IDs', () => {
       const id1 = createId();
@@ -315,6 +290,169 @@ describe('Composables', () => {
       const event = await waitForEvent<CustomEvent>(element, 'value');
 
       expect(event.detail.value).toBe('test-value');
+    });
+  });
+
+  describe('Platform Observer Composables', () => {
+    describe('observeResize()', () => {
+      it('should return a signal initialised to { height: 0, width: 0 }', async () => {
+        let capturedSize!: ReturnType<typeof observeResize>;
+
+        await mount(() => {
+          const divRef = ref<HTMLDivElement>();
+
+          onMount(() => {
+            capturedSize = observeResize(divRef.value!);
+          });
+
+          return html`<div ref=${divRef}></div>`;
+        });
+
+        expect(capturedSize.value).toEqual({ height: 0, width: 0 });
+      });
+
+      it('should update the signal when ResizeObserver fires', async () => {
+        let capturedCb!: ResizeObserverCallback;
+        const origRO = globalThis.ResizeObserver;
+
+        globalThis.ResizeObserver = class {
+          observe = vi.fn();
+          disconnect = vi.fn();
+          constructor(cb: ResizeObserverCallback) {
+            capturedCb = cb;
+          }
+        } as unknown as typeof ResizeObserver;
+
+        try {
+          let capturedSize!: ReturnType<typeof observeResize>;
+
+          await mount(() => {
+            const divRef = ref<HTMLDivElement>();
+
+            onMount(() => {
+              capturedSize = observeResize(divRef.value!);
+            });
+
+            return html`<div ref=${divRef}></div>`;
+          });
+
+          capturedCb(
+            [{ contentBoxSize: [{ blockSize: 42, inlineSize: 100 }] }] as unknown as ResizeObserverEntry[],
+            {} as ResizeObserver,
+          );
+
+          expect(capturedSize.value).toEqual({ height: 42, width: 100 });
+        } finally {
+          globalThis.ResizeObserver = origRO;
+        }
+      });
+    });
+
+    describe('observeIntersection()', () => {
+      it('should return a signal initialised to null', async () => {
+        let capturedEntry!: ReturnType<typeof observeIntersection>;
+
+        await mount(() => {
+          const divRef = ref<HTMLDivElement>();
+
+          onMount(() => {
+            capturedEntry = observeIntersection(divRef.value!);
+          });
+
+          return html`<div ref=${divRef}></div>`;
+        });
+
+        expect(capturedEntry.value).toBeNull();
+      });
+
+      it('should update the signal when IntersectionObserver fires', async () => {
+        let capturedCb!: IntersectionObserverCallback;
+        const origIO = globalThis.IntersectionObserver;
+
+        globalThis.IntersectionObserver = class {
+          observe = vi.fn();
+          disconnect = vi.fn();
+          constructor(cb: IntersectionObserverCallback) {
+            capturedCb = cb;
+          }
+        } as unknown as typeof IntersectionObserver;
+
+        try {
+          let capturedEntry!: ReturnType<typeof observeIntersection>;
+
+          await mount(() => {
+            const divRef = ref<HTMLDivElement>();
+
+            onMount(() => {
+              capturedEntry = observeIntersection(divRef.value!);
+            });
+
+            return html`<div ref=${divRef}></div>`;
+          });
+
+          const fakeEntry = { intersectionRatio: 1, isIntersecting: true } as IntersectionObserverEntry;
+
+          capturedCb([fakeEntry], {} as IntersectionObserver);
+
+          expect(capturedEntry.value).toBe(fakeEntry);
+          expect(capturedEntry.value?.isIntersecting).toBe(true);
+        } finally {
+          globalThis.IntersectionObserver = origIO;
+        }
+      });
+    });
+
+    describe('observeMedia()', () => {
+      it('should return a signal reflecting the initial match state', async () => {
+        let capturedMatches!: ReturnType<typeof observeMedia>;
+        const mockMql = { addEventListener: vi.fn(), matches: true, removeEventListener: vi.fn() };
+        const origMatchMedia = window.matchMedia;
+
+        window.matchMedia = vi.fn().mockReturnValue(mockMql);
+
+        await mount(() => {
+          onMount(() => {
+            capturedMatches = observeMedia('(prefers-color-scheme: dark)');
+          });
+
+          return html`<div></div>`;
+        });
+
+        expect(capturedMatches.value).toBe(true);
+
+        window.matchMedia = origMatchMedia;
+      });
+
+      it('should update the signal when the media query changes', async () => {
+        let capturedMatches!: ReturnType<typeof observeMedia>;
+        let capturedHandler!: (e: MediaQueryListEvent) => void;
+        const mockMql = {
+          addEventListener: vi.fn((_: string, cb: (e: MediaQueryListEvent) => void) => {
+            capturedHandler = cb;
+          }),
+          matches: false,
+          removeEventListener: vi.fn(),
+        };
+        const origMatchMedia = window.matchMedia;
+
+        window.matchMedia = vi.fn().mockReturnValue(mockMql);
+
+        await mount(() => {
+          onMount(() => {
+            capturedMatches = observeMedia('(max-width: 768px)');
+          });
+
+          return html`<div></div>`;
+        });
+
+        expect(capturedMatches.value).toBe(false);
+
+        capturedHandler({ matches: true } as MediaQueryListEvent);
+
+        expect(capturedMatches.value).toBe(true);
+
+        window.matchMedia = origMatchMedia;
+      });
     });
   });
 

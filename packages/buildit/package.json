@@ -22,6 +22,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./types": {
+      "source": "./src/types/index.ts",
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
     "./styles": "./src/styles/styles.css",
     "./styles/animation.css": "./src/styles/animation.css",
     "./styles/layers.css": "./src/styles/layers.css",
@@ -42,10 +47,20 @@
       "import": "./dist/alert.js",
       "require": "./dist/alert.cjs"
     },
+    "./avatar": {
+      "types": "./dist/avatar.d.ts",
+      "import": "./dist/avatar.js",
+      "require": "./dist/avatar.cjs"
+    },
     "./badge": {
       "types": "./dist/badge.d.ts",
       "import": "./dist/badge.js",
       "require": "./dist/badge.cjs"
+    },
+    "./box": {
+      "types": "./dist/box.d.ts",
+      "import": "./dist/box.js",
+      "require": "./dist/box.cjs"
     },
     "./breadcrumb": {
       "types": "./dist/breadcrumb.d.ts",
@@ -92,6 +107,11 @@
       "import": "./dist/dialog.js",
       "require": "./dist/dialog.cjs"
     },
+    "./drawer": {
+      "types": "./dist/drawer.d.ts",
+      "import": "./dist/drawer.js",
+      "require": "./dist/drawer.cjs"
+    },
     "./file-input": {
       "types": "./dist/file-input.d.ts",
       "import": "./dist/file-input.js",
@@ -102,6 +122,16 @@
       "import": "./dist/form.js",
       "require": "./dist/form.cjs"
     },
+    "./grid": {
+      "types": "./dist/grid.d.ts",
+      "import": "./dist/grid.js",
+      "require": "./dist/grid.cjs"
+    },
+    "./grid-item": {
+      "types": "./dist/grid-item.d.ts",
+      "import": "./dist/grid-item.js",
+      "require": "./dist/grid-item.cjs"
+    },
     "./input": {
       "types": "./dist/input.d.ts",
       "import": "./dist/input.js",
@@ -111,6 +141,26 @@
       "types": "./dist/menu.d.ts",
       "import": "./dist/menu.js",
       "require": "./dist/menu.cjs"
+    },
+    "./number-input": {
+      "types": "./dist/number-input.d.ts",
+      "import": "./dist/number-input.js",
+      "require": "./dist/number-input.cjs"
+    },
+    "./otp-input": {
+      "types": "./dist/otp-input.d.ts",
+      "import": "./dist/otp-input.js",
+      "require": "./dist/otp-input.cjs"
+    },
+    "./pagination": {
+      "types": "./dist/pagination.d.ts",
+      "import": "./dist/pagination.js",
+      "require": "./dist/pagination.cjs"
+    },
+    "./popover": {
+      "types": "./dist/popover.d.ts",
+      "import": "./dist/popover.js",
+      "require": "./dist/popover.cjs"
     },
     "./progress": {
       "types": "./dist/progress.d.ts",
@@ -127,10 +177,25 @@
       "import": "./dist/radio-group.js",
       "require": "./dist/radio-group.cjs"
     },
+    "./rating": {
+      "types": "./dist/rating.d.ts",
+      "import": "./dist/rating.js",
+      "require": "./dist/rating.cjs"
+    },
     "./select": {
       "types": "./dist/select.d.ts",
       "import": "./dist/select.js",
       "require": "./dist/select.cjs"
+    },
+    "./separator": {
+      "types": "./dist/separator.d.ts",
+      "import": "./dist/separator.js",
+      "require": "./dist/separator.cjs"
+    },
+    "./sidebar": {
+      "types": "./dist/sidebar.d.ts",
+      "import": "./dist/sidebar.js",
+      "require": "./dist/sidebar.cjs"
     },
     "./skeleton": {
       "types": "./dist/skeleton.d.ts",
@@ -146,6 +211,26 @@
       "types": "./dist/switch.d.ts",
       "import": "./dist/switch.js",
       "require": "./dist/switch.cjs"
+    },
+    "./tab-item": {
+      "types": "./dist/tab-item.d.ts",
+      "import": "./dist/tab-item.js",
+      "require": "./dist/tab-item.cjs"
+    },
+    "./tab-panel": {
+      "types": "./dist/tab-panel.d.ts",
+      "import": "./dist/tab-panel.js",
+      "require": "./dist/tab-panel.cjs"
+    },
+    "./table": {
+      "types": "./dist/table.d.ts",
+      "import": "./dist/table.js",
+      "require": "./dist/table.cjs"
+    },
+    "./tabs": {
+      "types": "./dist/tabs.d.ts",
+      "import": "./dist/tabs.js",
+      "require": "./dist/tabs.cjs"
     },
     "./text": {
       "types": "./dist/text.d.ts",
@@ -170,7 +255,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && cp -r src/styles/*.css dist/styles && pnpm run analyze",
+    "build": "tsc && vite build && cp -r src/styles/*.css dist/styles  && tsc -p tsconfig.declarations.json && pnpm run analyze",
     "analyze": "custom-elements-manifest analyze --config custom-elements-manifest.config.mjs",
     "preview": "vite preview",
     "test": "vitest"
@@ -186,10 +271,9 @@
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "axe-core": "^4.11.1",
     "browserslist": "^4.28.1",
-    "lightningcss": "^1.31.1",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.0.18"
+    "lightningcss": "^1.32.0",
+    "typescript": "~5.8.2",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
   }
 }

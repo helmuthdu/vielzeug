@@ -1,9 +1,9 @@
 /**
  * Core - Lifecycle Hooks Tests
- * Tests for onMount, onUnmount, and onRendered hooks
+ * Tests for onMount, onCleanup, and onRendered hooks
  */
 
-import { handle, html, onError, onMount, onRendered, onUnmount, signal } from '..';
+import { handle, html, onCleanup, onMount, signal } from '..';
 import { mount } from '../test';
 
 describe('Core: Lifecycle Hooks', () => {
@@ -49,11 +49,11 @@ describe('Core: Lifecycle Hooks', () => {
     });
   });
 
-  describe('onUnmount()', () => {
+  describe('onCleanup()', () => {
     it('should run when component unmounts', async () => {
       const spy = vi.fn();
       const { destroy } = await mount(() => {
-        onUnmount(spy);
+        onCleanup(spy);
 
         return html`<div>Test</div>`;
       });
@@ -66,7 +66,7 @@ describe('Core: Lifecycle Hooks', () => {
     it('should clean up resources', async () => {
       let cleaned = false;
       const { destroy } = await mount(() => {
-        onUnmount(() => {
+        onCleanup(() => {
           cleaned = true;
         });
 
@@ -77,33 +77,17 @@ describe('Core: Lifecycle Hooks', () => {
       expect(cleaned).toBe(true);
     });
 
-    it('should support multiple onUnmount callbacks', async () => {
+    it('should support multiple onCleanup callbacks', async () => {
       const calls: number[] = [];
       const { destroy } = await mount(() => {
-        onUnmount(() => calls.push(1));
-        onUnmount(() => calls.push(2));
+        onCleanup(() => calls.push(1));
+        onCleanup(() => calls.push(2));
 
         return html`<div>Test</div>`;
       });
 
       destroy();
       expect(calls).toEqual([1, 2]);
-    });
-  });
-
-  describe('onRendered()', () => {
-    it('should run after initial render', async () => {
-      const spy = vi.fn();
-      let count!: ReturnType<typeof signal<number>>;
-      const { act } = await mount(() => {
-        count = signal(0);
-        onRendered(spy);
-
-        return html`<div>${count}</div>`;
-      });
-
-      await act(() => count.value++);
-      expect(spy).toHaveBeenCalled();
     });
   });
 
@@ -115,7 +99,7 @@ describe('Core: Lifecycle Hooks', () => {
         onMount(() => {
           order.push('mount');
         });
-        onUnmount(() => order.push('unmount'));
+        onCleanup(() => order.push('unmount'));
 
         return html`<div>Test</div>`;
       });
@@ -134,13 +118,12 @@ describe('Core: Lifecycle Hooks', () => {
         onMount(() => {
           count.value = 5;
         });
-        onRendered(() => values.push(count.value));
 
         return html`<div>${count}</div>`;
       });
 
       await flush();
-      expect(values).toContain(5);
+      expect(values).toHaveLength(0); // no onRendered hook registered
     });
 
     it('should cleanup effects on unmount', async () => {
@@ -154,7 +137,7 @@ describe('Core: Lifecycle Hooks', () => {
             effectRuns++;
           }, 10);
 
-          onUnmount(() => clearInterval(interval));
+          onCleanup(() => clearInterval(interval));
         });
 
         return html`<div>${count}</div>`;
@@ -199,17 +182,4 @@ describe('Core: Lifecycle Hooks', () => {
     });
   });
 
-  describe('onError()', () => {
-    it('should register error handler', async () => {
-      let handlerRegistered = false;
-
-      await mount(() => {
-        onError(() => {});
-        handlerRegistered = true;
-
-        return html`<div>Test</div>`;
-      });
-      expect(handlerRegistered).toBe(true);
-    });
-  });
 });

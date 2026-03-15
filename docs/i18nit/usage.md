@@ -1,6 +1,6 @@
 ---
 title: I18nit — Usage Guide
-description: Messages, interpolation, pluralisation, async loading, scoping, formatting, and subscriptions for i18nit.
+description: Messages, interpolation, pluralisation, async loading, batching, scoping, formatting, and subscriptions for i18nit.
 ---
 
 ## I18nit Usage Guide
@@ -10,6 +10,45 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 :::
 
 [[toc]]
+
+## Why I18nit?
+
+Rolling your own i18n means hard-coded string lookups, no pluralisation, no type safety on translation keys, and no lazy loading for large locale bundles.
+
+```ts
+// Before — manual locale map (no type safety, no pluralisation)
+const messages = {
+  en: { greeting: 'Hello, {name}!', items: '{count} items' },
+  de: { greeting: 'Hallo, {name}!' },
+};
+let locale = 'en';
+function t(key: string, vars?: Record<string, unknown>) {
+  let msg = (messages as any)[locale]?.[key] ?? key; // no type safety
+  if (vars) msg = msg.replace(/{(\w+)}/g, (_: string, k: string) => String(vars[k] ?? k));
+  return msg;
+}
+
+// After — I18nit
+import { createI18n } from '@vielzeug/i18nit';
+const i18n = createI18n<typeof messages.en>({ locale: 'en', messages });
+i18n.t('greeting', { name: 'Alice' }); // typed key, typed vars
+i18n.t('items', { count: 3 });         // typed + pluralised
+```
+
+| Feature              | I18nit                                       | i18next    | typesafe-i18n |
+| -------------------- | -------------------------------------------- | ---------- | ------------- |
+| Bundle size          | <PackageInfo package="i18nit" type="size" /> | ~15 kB     | ~1 kB         |
+| Type-safe keys       | ✅                                           | ❌         | ✅            |
+| No code generation   | ✅                                           | ✅         | ❌            |
+| Pluralisation        | ✅ Intl.PluralRules                          | ✅         | ✅            |
+| Formatting helpers   | ✅ Intl-backed                               | ✅ Plugins | ❌            |
+| BCP47 locale cascade | ✅                                           | ✅         | ❌            |
+| Async loaders        | ✅                                           | ✅         | ✅            |
+| Zero dependencies    | ✅                                           | ❌         | ✅            |
+
+**Use I18nit when** you want type-safe translation keys with full TypeScript inference, pluralisation, and Intl-based formatting — without a code generation step.
+
+**Consider i18next** if you need its large plugin ecosystem (react-i18next, backend adapters) or are migrating an existing project.
 
 ## Import
 
@@ -28,6 +67,10 @@ import type {
   Vars,
   Unsubscribe,
   TranslationKey,
+  TranslationKeyParam,
+  LocaleChangeListener,
+  DiagnosticEvent,
+  NamespaceKeys,
   I18nOptions,
 } from '@vielzeug/i18nit';
 ```
@@ -165,22 +208,26 @@ The correct form is selected by `Intl.PluralRules` using the `count` variable. T
 
 When a key is not found in the active locale, i18nit walks a resolution chain:
 
-1. Active locale (`'en-US'`)
-2. Language root (`'en'`)
-3. Declared fallback(s) (`fallback: 'fr'` or `fallback: ['fr', 'de']`)
+1. Active locale (e.g. `'sr-Latn-RS'`)
+2. Each BCP47 ancestor tag, truncating one segment at a time (`'sr-Latn'`, then `'sr'`)
+3. Declared fallback(s) (`fallback: 'en'` or `fallback: ['fr', 'de']`)
 
 ```ts
 const i18n = createI18n({
-  locale: 'en-US',
+  locale: 'sr-Latn-RS',
   fallback: 'en',
   messages: {
-    en: { greeting: 'Hello!' },
-    'en-US': { farewell: 'Goodbye!' },
+    en:          { greeting: 'Hello!' },
+    'sr':        { common: 'Serbian' },
+    'sr-Latn':   { script: 'Latin script' },
+    'sr-Latn-RS': { regional: 'Serbia regional' },
   },
 });
 
-i18n.t('farewell'); // "Goodbye!" — found in en-US
-i18n.t('greeting'); // "Hello!" — falls back to en
+i18n.t('regional'); // "Serbia regional" — exact match
+i18n.t('script');   // "Latin script"    — sr-Latn ancestor
+i18n.t('common');   // "Serbian"         — sr root
+i18n.t('greeting'); // "Hello!"          — declared fallback
 ```
 
 ## Message Management
@@ -195,18 +242,44 @@ i18n.add('en', { nav: { settings: 'Settings' } });
 
 ### `replace(locale, messages)` — Full Swap
 
-Replaces the entire catalog for a locale with a shallow copy of the given messages.
+Replaces the entire catalog for a locale with a shallow copy of the given messages. All previous entries for that locale are discarded.
 
 ```ts
 i18n.replace('en', await fetch('/api/messages/en').then(r => r.json()));
 ```
 
-### `has(key, locale?)` and `hasLocale(locale)`
+### `reload(locale)` — Force-Refresh
+
+Clears the catalog for `locale` and re-invokes its registered loader. Unlike `load()`, which is a no-op when the catalog is already populated, `reload()` always fetches fresh content. Useful for hot-reload scenarios or forcing bundle refreshes after a deployment.
 
 ```ts
-i18n.has('nav.home');        // check in active locale
-i18n.has('nav.home', 'de');  // check in specific locale
-i18n.hasLocale('de');        // check if 'de' catalog is loaded
+// Re-fetches the 'en' bundle even though it was already loaded
+await i18n.reload('en');
+```
+
+### `batch(fn)` — Bulk Update
+
+Executes `fn` while deferring all subscriber notifications to a single notification fired when `fn` completes. Nested `batch()` calls are supported — the notification fires when the outermost batch exits.
+
+```ts
+// Three add() calls — subscribers notified exactly once
+i18n.batch(() => {
+  i18n.add('en', moduleA);
+  i18n.add('en', moduleB);
+  i18n.add('en', moduleC);
+});
+```
+
+### `has(key)` and `hasOwn(key)` and `hasLocale(locale)`
+
+`has(key)` checks whether a key resolves in the **active locale**, walking the fallback chain. `hasOwn(key)` checks only the active locale itself — no fallback. Use `withLocale(locale).has(key)` or `withLocale(locale).hasOwn(key)` to check a specific locale.
+
+```ts
+// Active locale is 'fr', fallback is 'en'
+i18n.has('greeting');                   // true (found via fallback)
+i18n.hasOwn('greeting');                // false (not in 'fr' itself)
+i18n.withLocale('en').hasOwn('greeting'); // true
+i18n.hasLocale('de');                   // true if 'de' catalog is loaded
 ```
 
 ### `locales` — All Loaded Locales
@@ -316,30 +389,45 @@ i18n.list(['Alice', 'Bob', 'Charlie'], 'or');       // "Alice, Bob, or Charlie"
 Subscribe to locale changes to trigger re-renders or side effects:
 
 ```ts
-const unsub = i18n.subscribe((locale) => {
-  console.log('Active locale:', locale);
+const unsub = i18n.subscribe(({ locale, reason }) => {
+  console.log(`Locale: ${locale}, reason: ${reason}`);
   rerender();
 });
 
 // Fire immediately with the current locale
-const unsub2 = i18n.subscribe((locale) => init(locale), true);
+const unsub2 = i18n.subscribe(({ locale }) => init(locale), true);
 
 // Unsubscribe
 unsub();
 unsub2();
 
-// Remove all subscribers at once
+// Release all resources explicitly
 i18n.dispose();
+
+// Or deterministically with `using`
+{
+  using i18n = createI18n({ locale: 'en', messages: { en } });
+  // ... use i18n
+} // dispose() called automatically
+
+// Or with `await using` to drain in-flight loaders first
+{
+  await using i18n = createI18n({ locale: 'en', loaders: { fr: loadFr } });
+  // ... use i18n
+} // awaits any pending loads, then disposes
 ```
 
 ## Best Practices
 
 - **Provide a `fallback` locale** in production to ensure graceful degradation when a key is missing.
 - **Use `setLocale()` over `i18n.locale =`** when the target locale has a registered loader — it prevents a flash of untranslated content.
+- **Use `batch()` when hydrating multiple chunks** at startup to avoid triggering a re-render per `add()` call.
 - **Use `scope(ns)` in components** to avoid repeating the namespace prefix.
 - **Use `withLocale(locale)` on the server** to translate responses for multiple users without changing the global active locale.
+- **Use `withLocale(locale).has(key)` / `withLocale(locale).hasOwn(key)`** to query a specific locale — `has()` and `hasOwn()` always operate on the active locale.
 - **Register loaders at startup** via `loaders` in `createI18n()` rather than calling `registerLoader()` later, so the loader map is complete before any locale switch.
 - **Keep `onMissing` quiet in development** — log the key — and throw (or track) in CI to catch missing translations early.
+- **Use `onDiagnostic` instead of `try/catch` around loaders** — it receives typed `DiagnosticEvent` with the failing `locale` for `loader-error` events.
 
 ## Next Steps
 

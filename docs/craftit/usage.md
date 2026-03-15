@@ -36,15 +36,19 @@ define('my-counter', () => {
 });
 ```
 
-| Feature           | Craftit                                       | Lit          | Stencil           |
-| ----------------- | --------------------------------------------- | ------------ | ----------------- |
-| Bundle size       | <PackageInfo package="craftit" type="size" /> | ~7 kB        | ~50 kB (compiler) |
-| Signals           | ✅ Built-in                                   | ✅ @lit-labs | ❌                |
-| Decorators        | ❌                                            | ✅           | ✅                |
-| SSR               | ❌                                            | ✅           | ✅                |
-| Zero dependencies | ✅                                            | ✅           | ❌                |
+| Feature            | Craftit                                       | Lit          | Stencil           |
+| ------------------ | --------------------------------------------- | ------------ | ----------------- |
+| Bundle size        | <PackageInfo package="craftit" type="size" /> | ~7 kB        | ~50 kB (compiler) |
+| Signals            | ✅ Built-in                                   | ✅ @lit-labs | ❌                |
+| SSR                | ❌                                            | ✅           | ✅                |
+| Form-associated    | ✅ Built-in                                   | ⚠️ Manual    | ⚠️ Limited        |
+| Context / DI       | ✅ Built-in                                   | ✅ @lit-labs | ✅ @stencil       |
+| Reactive observers | ✅ Built-in                                   | ❌           | ❌                |
 
-**Use Craftit when** you want signals-based web components without decorators or a build compiler step.
+**Use Craftit when** you want signals-based web components with built-in form association, context/DI, and reactive observers — without decorators or a compiler step.
+
+**Consider Lit** if you need SSR, a larger community ecosystem, or React/Vue-style architecture with decorator-based components.
+**Consider Stencil** if you need a compiler-optimised output targeting multiple framework outputs (React wrappers, Angular wrappers) from a single codebase.
 
 ## Import
 
@@ -65,18 +69,30 @@ import {
   raw,
   rawHtml,
   css,
+  match,
   suspense,
   escapeHtml,
   createId,
-  guard,
+  createFormIds,
+  memo,
   handle,
+  syncDOMProps,
+  syncContextProps,
   onMount,
   onUnmount,
-  onUpdated,
+  onRendered,
   onCleanup,
   onError,
+  onSlotChange,
+  onFormAssociated,
+  onFormDisabled,
+  onFormReset,
+  onFormStateRestore,
+  aria,
   prop,
   defineProps,
+  typed,
+  defineField,
   ref,
   refs,
   provide,
@@ -84,7 +100,11 @@ import {
   createContext,
   defineSlots,
   defineEmits,
-  field,
+  useFocusTrap,
+  getFocusableElements,
+  observeResize,
+  observeIntersection,
+  observeMedia,
 } from '@vielzeug/craftit';
 // Optional: Import types
 import type {
@@ -96,6 +116,7 @@ import type {
   HTMLResult,
   CSSResult,
   FormFieldHandle,
+  SetupContext,
 } from '@vielzeug/craftit';
 ```
 
@@ -608,7 +629,7 @@ html`<p>${() => count.value}</p>`;
 
 ## Control Flow
 
-### Conditional Rendering (`html.when`)
+### Conditional Rendering (`html.when` and `match`)
 
 Removes/inserts DOM nodes based on a condition.
 
@@ -624,16 +645,25 @@ html`
     () => html`<p>Please log in</p>`,
   )}
 `;
-// Multi-branch else-if chain (each arg is a [condition, fn] tuple)
+```
+
+### Multi-branch conditionals (`match`)
+
+Use `match()` instead of nesting `html.when()` for else-if chains:
+
+```ts
+import { match } from '@vielzeug/craftit';
 const role = signal('guest');
 html`
-  ${html.when(
+  ${match(
     [() => role.value === 'admin', () => html`<admin-panel />`],
     [() => role.value === 'editor', () => html`<editor-panel />`],
     () => html`<guest-panel />`,
   )}
 `;
 ```
+
+The last argument is the fallback. All branches are reactive whenever any condition is a Signal or getter function.
 
 ### Visibility Toggle (`html.show`)
 
@@ -794,37 +824,38 @@ html`
 `;
 ```
 
-### Dynamic Classes (html.classes)
+### Dynamic Classes
 
-Use `html.classes()` to build dynamic class names. Wrap in an arrow function for reactivity:
+Use `classes()` from `@vielzeug/craftit/directives` to build dynamic class strings.
+Pass signals directly — no arrow-function wrapper needed; the directive returns a reactive signal automatically when any value is reactive:
 
 ```ts
+import { classes } from '@vielzeug/craftit/directives';
+
 const isActive = signal(true);
 const isDisabled = signal(false);
 
-// Wrap in arrow function for reactivity
 html`
   <div
-    class=${() =>
-      html.classes({
-        active: isActive.value,
-        disabled: isDisabled.value,
-        'button-primary': true,
-      })}>
+    class=${classes({
+      active: isActive,
+      disabled: isDisabled,
+      'button-primary': true,
+    })}>
     Styled
   </div>
 `;
 ```
 
-::: tip Reactivity Pattern
-**Always wrap `html.classes()` in an arrow function when using signal values:**
+::: tip Getter functions for expressions
+For compound boolean expressions that aren't a plain signal, pass a getter function:
 
 ```ts
-// ✅ Reactive - updates when priority changes
-class=${() => html.classes({ active: priority.value === 'high' })}
+// ✅ Getter for a compound expression
+class=${classes({ active: () => priority.value === 'high' })}
 
-// ❌ Static - evaluated once with current value
-class=${html.classes({ active: priority.value === 'high' })}
+// ✅ Signal passed directly
+class=${classes({ active: isActive })}
 ```
 
 :::
@@ -863,15 +894,20 @@ onUnmount(() => {
 });
 ```
 
-### onUpdated
+### onRendered
 
-Runs after each reactive update:
+Runs **once** after the component's initial render completes and all `onMount` hooks have finished:
 
 ```ts
-onUpdated(() => {
-  console.log('Component updated!');
+onRendered(() => {
+  console.log('Initial render complete');
+  // DOM is fully ready; safe to measure or initialise third-party libraries
 });
 ```
+
+::: tip
+`onRendered` fires only once per component mount. It is not a post-update hook. Use `effect()` or `watch()` to react to signal changes.
+:::
 
 ### onCleanup
 
@@ -918,12 +954,128 @@ define('safe-component', () => {
 });
 ```
 
+## ARIA & Accessibility
+
+### aria()
+
+Reactively set ARIA attributes on the host element (setup time) or any element (`onMount`):
+
+```ts
+define('custom-checkbox', () => {
+  const checked = signal(false);
+
+  // Target host — must be called synchronously during setup
+  aria({
+    role: 'checkbox',
+    checked: () => checked.value, // getter → reactive
+    label: 'Toggle option', // plain value → set once
+  });
+
+  return html`<div @click=${() => (checked.value = !checked.value)}><slot></slot></div>`;
+});
+```
+
+Target any inner element from `onMount` by passing the element as the first argument:
+
+```ts
+onMount(() => {
+  return aria(inputRef.value!, {
+    invalid: () => !!props.error.value,
+    describedby: () => (props.error.value ? errorId : helperId),
+  });
+  // returning the cleanup function is sufficient
+});
+```
+
+### createId / createFormIds
+
+Generate stable IDs for accessibility linkage:
+
+```ts
+define('labeled-input', () => {
+  const { fieldId, labelId, helperId, errorId } = createFormIds('input', 'email');
+  // fieldId → 'input-email', labelId → 'label-input-email', etc.
+
+  return html`
+    <label id=${labelId} for=${fieldId}>Email</label>
+    <input id=${fieldId} aria-labelledby=${labelId} aria-describedby=${helperId} />
+    <span id=${helperId}>Enter your email address</span>
+  `;
+});
+```
+
+### useFocusTrap / getFocusableElements
+
+Trap focus inside a container, e.g. inside a dialog. Must be called inside `onMount`:
+
+```ts
+define('my-dialog', () => {
+  const dialogRef = ref<HTMLDialogElement>();
+
+  onMount(() => {
+    useFocusTrap(dialogRef.value!);
+    // Tab / Shift+Tab cycles within the dialog
+  });
+
+  return html`<dialog ref=${dialogRef}><slot></slot></dialog>`;
+});
+```
+
+`getFocusableElements(root)` returns all keyboard-focusable descendants in DOM order.
+
+## syncDOMProps
+
+Reactively synchronise Signal or getter values onto DOM element properties. A single tracked effect is created and cleaned up automatically:
+
+```ts
+onMount(() => {
+  syncDOMProps(inputRef.value!, {
+    disabled: props.disabled,
+    name: props.name,
+    type: () => validateInputType(props.type.value),
+  });
+});
+```
+
+## Platform Observers
+
+All three observers must be called inside `onMount` for correct cleanup:
+
+### observeResize
+
+```ts
+onMount(() => {
+  const size = observeResize(containerRef.value!);
+  effect(() => console.log(size.value.width, size.value.height));
+});
+```
+
+### observeIntersection
+
+```ts
+onMount(() => {
+  const entry = observeIntersection(el, { threshold: 0.5 });
+  effect(() => {
+    if (entry.value?.isIntersecting) loadContent();
+  });
+});
+```
+
+### observeMedia
+
+```ts
+onMount(() => {
+  const dark = observeMedia('(prefers-color-scheme: dark)');
+  effect(() => document.body.classList.toggle('dark', dark.value));
+});
+```
+
 ## Form Integration
 
-Craftit provides native form integration through the `field()` helper, which uses the [ElementInternals API](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals) to create custom form controls that work seamlessly with native HTML forms.
+Craftit provides native form integration through the `defineField()` helper, which uses the [ElementInternals API](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals) to create custom form controls that work seamlessly with native HTML forms.
 
 ::: warning Important
-To use `field()`, you must define your component with the `formAssociated: true` option:
+To use `defineField()`, you must define your component with the `formAssociated: true` option:
 
 ```ts
 define(
@@ -942,7 +1094,7 @@ define(
 Create a custom input that participates in form submission:
 
 ```ts
-import { define, signal, html, field } from '@vielzeug/craftit';
+import { define, signal, html, defineField } from '@vielzeug/craftit';
 
 define(
   'custom-input',
@@ -950,7 +1102,7 @@ define(
     const value = signal('');
 
     // Register as a form field
-    const formField = field({
+    const formField = defineField({
       value: value,
     });
 
@@ -977,7 +1129,7 @@ define(
   () => {
     const value = signal(0);
 
-    const formField = field({
+    const formField = defineField({
       value: value,
       toFormValue: (v) => String(v), // Convert number to string
     });
@@ -993,14 +1145,14 @@ define(
 Use ElementInternals validation API:
 
 ```ts
-import { define, signal, computed, html, field } from '@vielzeug/craftit';
+import { define, signal, computed, watch, html, defineField } from '@vielzeug/craftit';
 
 define(
   'email-input',
   () => {
     const value = signal('');
 
-    const formField = field({ value });
+    const formField = defineField({ value });
 
     const isValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value));
 
@@ -1009,11 +1161,11 @@ define(
       value,
       () => {
         if (!value.value) {
-          formField.setValidity({}, ''); // Clear validation
+          formField.setCustomValidity(''); // Clear validation
         } else if (!isValid.value) {
-          formField.setValidity({ typeMismatch: true }, 'Please enter a valid email address');
+          formField.setCustomValidity('Please enter a valid email address');
         } else {
-          formField.setValidity({}, ''); // Valid
+          formField.setCustomValidity(''); // Valid
         }
       },
       { immediate: true },
@@ -1042,7 +1194,7 @@ define(
     const value = signal('');
     const disabled = signal(false);
 
-    const formField = field({
+    const formField = defineField({
       value: value,
       disabled: disabled, // Automatically syncs with internals.states
     });
@@ -1071,7 +1223,7 @@ define(
       parse: (v) => v !== null,
     });
 
-    const formField = field({
+    const formField = defineField({
       value: rating,
       toFormValue: (v) => String(v),
     });
@@ -1117,10 +1269,10 @@ define(
 
 ### Form Field Handle
 
-The `field()` function returns a handle with useful methods:
+The `defineField()` function returns a handle with useful methods:
 
 ```ts
-const formField = field({ value });
+const formField = defineField({ value });
 
 // Access ElementInternals (or null if not supported)
 formField.internals; // ElementInternals | null
@@ -1140,7 +1292,7 @@ define(
   () => {
     const files = signal<FileList | null>(null);
 
-    const formField = field({
+    const formField = defineField({
       value: files,
       toFormValue: (fileList) => {
         if (!fileList?.length) return null;
@@ -1167,7 +1319,7 @@ define(
 
 ### Browser Support
 
-The `field()` helper gracefully degrades in browsers without ElementInternals support. It returns a no-op handle that won't cause errors but won't provide form integration.
+The `defineField()` helper uses the standard `ElementInternals` API, available in all modern browsers (Chrome 77+, Firefox 98+, Safari 16+). It will throw in environments without support, so polyfills may be needed for legacy targets.
 
 ## Props and Attributes
 
@@ -1248,10 +1400,11 @@ Render named or default slots with optional fallback content:
 import { define, defineSlots, html } from '@vielzeug/craftit';
 define('card-component', () => {
   const s = defineSlots<{ default: unknown; footer: unknown }>();
+  // s.has('footer') returns ReadonlySignal<boolean> — use html.when for reactivity
   return html`
     <div class="card">
       <div class="body"><slot></slot></div>
-      ${s.has('footer') ? html`<div class="footer"><slot name="footer"></slot></div>` : ''}
+      ${html.when(s.has('footer'), () => html`<div class="footer"><slot name="footer"></slot></div>`)}
     </div>
   `;
 });
@@ -1436,8 +1589,8 @@ await fixture.attr('disabled', true);
 await fixture.attrs({ label: 'Save', disabled: false });
 
 // Access the element
-fixture.element;  // HTMLElement
-fixture.shadow;   // ShadowRoot
+fixture.element; // HTMLElement
+fixture.shadow; // ShadowRoot
 
 // Remove from DOM
 fixture.destroy();
@@ -1460,7 +1613,7 @@ Higher-level async interactions that mirror real browser behavior:
 
 ```ts
 await user.click(button);
-await user.type(input, 'Hello');        // appends character-by-character
+await user.type(input, 'Hello'); // appends character-by-character
 await user.fill(input, 'replacement'); // clear then type
 await user.clear(input);
 await user.select(select, 'option1');

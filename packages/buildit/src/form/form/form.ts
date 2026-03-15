@@ -1,26 +1,35 @@
-import { createContext, css, define, defineEmits, defineProps, effect, html, provide, signal } from '@vielzeug/craftit';
+import {
+  computed,
+  createContext,
+  define,
+  defineEmits,
+  defineProps,
+  html,
+  provide,
+  type ReadonlySignal,
+} from '@vielzeug/craftit';
 
-import type { AddEventListeners, ComponentSize, VisualVariant } from '../../types';
+import type { ComponentSize, VisualVariant } from '../../types';
 
 // ============================================
 // Context
 // ============================================
 
-export interface FormContext {
+export type FormContext = {
   /** Whether all child fields are disabled */
-  disabled: { readonly value: boolean };
+  disabled: ReadonlySignal<boolean>;
   /** Default size propagated to all child form fields */
-  size: { readonly value: ComponentSize | undefined };
-  /** Default variant propagated to all child form fields */
-  variant: { readonly value: Exclude<VisualVariant, 'glass' | 'frost' | 'text'> | undefined };
+  size: ReadonlySignal<ComponentSize | undefined>;
   /**
    * When to validate child form controls:
    * - `'submit'` (default): only on form submit
    * - `'blur'`: validate each field when it loses focus
    * - `'change'`: validate on every value change
    */
-  validateOn: { readonly value: 'submit' | 'blur' | 'change' };
-}
+  validateOn: ReadonlySignal<'submit' | 'blur' | 'change'>;
+  /** Default variant propagated to all child form fields */
+  variant: ReadonlySignal<Exclude<VisualVariant, 'glass' | 'frost' | 'text'> | undefined>;
+};
 
 export const FORM_CTX = createContext<FormContext>();
 
@@ -28,43 +37,26 @@ export const FORM_CTX = createContext<FormContext>();
 // Styles
 // ============================================
 
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: block;
-    }
-
-    form {
-      display: grid;
-      gap: var(--form-gap, var(--size-4, 1rem));
-      align-items: start;
-    }
-  }
-
-  @layer buildit.orientation {
-    :host([orientation='horizontal']) form {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-  }
-`;
+import componentStyles from './form.css?inline';
 
 // ============================================
 // Types
 // ============================================
 
-export interface FormProps {
+export type BitFormEvents = {
+  reset: { originalEvent: Event };
+  submit: { formData: FormData; originalEvent: SubmitEvent };
+};
+
+export type BitFormProps = {
   /** Disable all child form fields */
   disabled?: boolean;
-  /** Default size for all child fields */
-  size?: ComponentSize;
-  /** Default variant for all child fields */
-  variant?: Exclude<VisualVariant, 'glass' | 'frost' | 'text'>;
-  /** Form layout orientation */
-  orientation?: 'vertical' | 'horizontal';
   /** Native form novalidate */
   novalidate?: boolean;
+  /** Form layout orientation */
+  orientation?: 'vertical' | 'horizontal';
+  /** Default size for all child fields */
+  size?: ComponentSize;
   /**
    * When to validate child form controls.
    * - `'submit'` (default): validate only when the form is submitted
@@ -72,12 +64,9 @@ export interface FormProps {
    * - `'change'`: validate on every value change (most immediate feedback)
    */
   validateOn?: 'submit' | 'blur' | 'change';
-}
-
-export interface BitFormEvents {
-  submit: CustomEvent<{ formData: FormData; originalEvent: SubmitEvent }>;
-  reset: CustomEvent<{ originalEvent: Event }>;
-}
+  /** Default variant for all child fields */
+  variant?: Exclude<VisualVariant, 'glass' | 'frost' | 'text'>;
+};
 
 /**
  * `bit-form` — Native `<form>` wrapper that propagates `disabled`, `size`, and `variant`
@@ -109,10 +98,10 @@ export interface BitFormEvents {
  * </bit-form>
  * ```
  */
-export const TAG = define(
+export const FORM_TAG = define(
   'bit-form',
   ({ host }) => {
-    const props = defineProps<FormProps>({
+    const props = defineProps<BitFormProps>({
       disabled: { default: false },
       novalidate: { default: false },
       orientation: { default: 'vertical' },
@@ -121,44 +110,14 @@ export const TAG = define(
       variant: { default: undefined },
     });
 
-    const emit = defineEmits<{
-      reset: { originalEvent: Event };
-      submit: { formData: FormData; originalEvent: SubmitEvent };
-    }>();
+    const emit = defineEmits<BitFormEvents>();
 
     // Provide context to all child bit-* form fields
     provide(FORM_CTX, {
-      disabled: {
-        get value() {
-          return Boolean(props.disabled.value);
-        },
-      },
-      size: {
-        get value() {
-          return props.size.value;
-        },
-      },
-      validateOn: {
-        get value() {
-          return props.validateOn.value ?? 'submit';
-        },
-      },
-      variant: {
-        get value() {
-          return props.variant.value;
-        },
-      },
-    });
-
-    // Internal signals so the template can subscribe reactively
-    const isDisabled = signal(false);
-    const novalidate = signal(false);
-
-    effect(() => {
-      isDisabled.value = Boolean(props.disabled.value);
-    });
-    effect(() => {
-      novalidate.value = Boolean(props.novalidate.value);
+      disabled: computed(() => Boolean(props.disabled.value)),
+      size: props.size,
+      validateOn: computed(() => props.validateOn.value ?? 'submit'),
+      variant: props.variant,
     });
 
     // ── Event handlers ────────────────────────────────────────────────────────
@@ -185,8 +144,8 @@ export const TAG = define(
       template: html`
         <form
           part="form"
-          :novalidate="${() => novalidate.value}"
-          :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+          :novalidate="${() => props.novalidate.value || null}"
+          :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
           @submit="${handleSubmit}"
           @reset="${handleReset}">
           <slot></slot>
@@ -196,9 +155,3 @@ export const TAG = define(
   },
   { shadow: { delegatesFocus: false } },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-form': HTMLElement & FormProps & AddEventListeners<BitFormEvents>;
-  }
-}

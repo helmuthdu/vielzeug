@@ -1,10 +1,10 @@
 # @vielzeug/formit
 
-> Framework-agnostic form state management with typed field values, per-field rules, async validators, and fine-grained subscriptions
+> Framework-agnostic form state management with typed field values, per-field validators, async validation, and fine-grained subscriptions
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/formit)](https://www.npmjs.com/package/@vielzeug/formit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Formit** is a framework-agnostic form controller: it tracks typed field values, errors, dirty and touched state — with synchronous and asynchronous validators, fine-grained field subscriptions, and full TypeScript inference for dot-notation field paths.
+**Formit** is a framework-agnostic form controller: it tracks typed field values, errors, dirty and touched state — with synchronous and asynchronous validators, fine-grained field subscriptions, array field utilities, and full TypeScript inference for dot-notation field paths.
 
 ## Installation
 
@@ -21,7 +21,7 @@ import { createForm, FormValidationError } from '@vielzeug/formit';
 
 const form = createForm({
   defaultValues: { email: '', age: 0 },
-  rules: {
+  validators: {
     email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
     age: (v) => ((v as number) < 18 ? 'Must be 18+' : undefined),
   },
@@ -35,8 +35,8 @@ form.set('age', 25); // ✅ number
 const email = form.get('email'); // type: string
 const age = form.get('age'); // type: number
 
-// Validate all fields
-const errors = await form.validate();
+// Validate all fields — returns { valid, errors }
+const { valid, errors } = await form.validate();
 
 // Submit — touches all fields, validates, throws FormValidationError on failure
 try {
@@ -62,16 +62,20 @@ form.dispose();
 - ✅ **Typed values** — field values stay typed (`number`, `boolean`, `File`) — no string coercion
 - ✅ **Nested field access** — plain objects in `defaultValues` are auto-flattened; access with `form.get('user.name')`
 - ✅ **Deep partial patch** — `form.patch({ user: { name: 'Bob' } })` merges nested objects without replacing siblings
-- ✅ **Field rules** — per-field validators via the `rules` option (single or array; first failure wins)
+- ✅ **Field validators** — per-field `validators` option (single or array; first failure wins)
 - ✅ **Cross-field validation** — `validator` option for form-level errors (runs only on full validation)
 - ✅ **Async validators** — validators can return `Promise<string | undefined>`
 - ✅ **AbortSignal support** — cancel in-flight async validators
 - ✅ **Partial validation** — `validate({ fields: [...] })` updates only those fields' errors without touching the rest
 - ✅ **Dirty & touched tracking** — know what the user has changed and interacted with
+- ✅ **Shorthand field getters** — `form.getError(name)`, `form.isFieldDirty(name)`, `form.isFieldTouched(name)` without allocating a full snapshot
+- ✅ **Untouch** — `form.untouch(name)` / `form.untouchAll()` for multi-step form flows
+- ✅ **Array field utilities** — `appendField`, `removeField`, `moveField` for dynamic lists
 - ✅ **Convenience getters** — `form.isValid`, `form.isDirty`, `form.isTouched`, `form.errors` on the instance
 - ✅ **Fine-grained subscriptions** — `watch(name, fn)` fires only for the changed field
-- ✅ **Bind helper** — `form.bind('email')` returns `{ name, value, error, touched, dirty, onChange, onBlur }`
+- ✅ **Bind helper** — `form.bind('email')` returns a memoized object with live getters and `onChange`/`onBlur` handlers
 - ✅ **Single-field reset** — `form.resetField('name')` restores one field without touching the rest
+- ✅ **Schema adapter** — `fromSchema(schema)` connects any Zod/Valibot-compatible `safeParse` schema as the form validator
 - ✅ **Zero dependencies** — framework-agnostic, works with any UI library
 
 ## Usage
@@ -98,7 +102,7 @@ form.get('user.role'); // 'admin' | 'viewer'
 
 form.set('age', 25); // ✅ number
 form.set('user.role', 'admin'); // ✅ 'admin' | 'viewer'
-// form.set('age', 'hello');            // ❌ type error
+// form.set('age', 'hello');       // ❌ type error
 ```
 
 ### Nested Values and Deep Partial Patch
@@ -129,28 +133,23 @@ form.values();
 ### Validation
 
 ```typescript
-// Single-field validation — sets isValidating, updates the error map
+// Single-field validation — returns error string or undefined; updates the error map
 const err = await form.validateField('email');
 
-// Full validation — replaces ALL errors, runs the form-level validator
-const errors = await form.validate();
+// Full validation — returns { valid, errors }; runs the form-level validator
+const { valid, errors } = await form.validate();
 
 // Partial validation — updates only the listed fields; preserves all other errors
-const errors = await form.validate({ fields: ['email', 'password'] });
+const { errors } = await form.validate({ fields: ['email', 'password'] });
 
 // Only validate fields the user has touched
-const errors = await form.validate({ onlyTouched: true });
+await form.validate({ onlyTouched: true });
 
-// With cancellation
-const controller = new AbortController();
-const errors = await form.validate({ signal: controller.signal });
-controller.abort();
-
-// Set errors manually
+// Set or clear individual errors manually
 form.setError('email', 'This email is taken');
 form.setError('email'); // clear
 form.setErrors({ email: 'Taken', password: 'Too short' });
-form.setErrors({}); // clear all
+form.clearErrors(); // clear all
 ```
 
 ### Submission
@@ -167,12 +166,11 @@ try {
   });
 } catch (error) {
   if (error instanceof FormValidationError) {
-    // error.errors is Record<string, string>
+    console.log(error.errors); // Record<string, string>
   }
 }
 
-// File uploads — use the instance method or standalone toFormData helper
-import { toFormData } from '@vielzeug/formit';
+// File uploads
 await form.submit(async () => {
   await fetch('/api/upload', { method: 'POST', body: form.toFormData() });
 });
@@ -184,21 +182,62 @@ await form.submit(saveDraft, { skipValidation: true });
 ### Dirty and Touched State
 
 ```typescript
-// field() returns a full snapshot: { value, error, touched, dirty }
+// Full field snapshot: { value, error, touched, dirty }
 const { value, error, touched, dirty } = form.field('email');
 
-// Touch fields individually or all at once
+// Shorthand — no object allocation
+form.getError('email'); // string | undefined
+form.isFieldDirty('email'); // boolean
+form.isFieldTouched('email'); // boolean
+
+// Touch fields
 form.touch('email');
-form.touch('email', 'password');
 form.touchAll();
 
-// Reset a single field (value + error + touched + dirty) without touching others
-form.resetField('email');
+// Un-touch (useful in multi-step forms)
+form.untouch('email');
+form.untouchAll();
 
-// Top-level convenience getters
+// Top-level aggregate getters
 form.isValid; // true when no errors
-form.isDirty; // true when any field differs from initial
+form.isDirty; // true when any field differs from baseline
 form.isTouched; // true when any field has been touched
+```
+
+### Array Field Utilities
+
+```typescript
+const form = createForm({ defaultValues: { tags: ['js'] } });
+
+form.appendField('tags', 'ts'); // ['js', 'ts']
+form.removeField('tags', 0); // ['ts']
+form.moveField('tags', 0, 1); // reorder
+
+// Useful for dynamic line-item lists:
+form.appendField('items', { name: '', qty: 1 });
+form.removeField('items', 2);
+form.moveField('items', 0, 3); // drag-and-drop reorder
+```
+
+### Schema Adapter
+
+Connect any Zod/Valibot-compatible schema as the form-level validator:
+
+```typescript
+import { z } from 'zod';
+import { createForm, fromSchema } from '@vielzeug/formit';
+
+const schema = z.object({
+  email: z.string().email('Invalid email'),
+  age: z.number().min(18, 'Must be 18+'),
+});
+
+const form = createForm({
+  defaultValues: { email: '', age: 0 },
+  ...fromSchema(schema),
+});
+
+const { valid, errors } = await form.validate();
 ```
 
 ### Subscriptions
@@ -211,28 +250,29 @@ const unsub = form.subscribe(({ isValid, isDirty, errors }) => {
 
 // Field-level — fires only when that field changes
 const unsub = form.watch('email', ({ value, error, touched }) => {
-  emailError.textContent = touched ? (error ?? '') : '';
+  errorSpan.textContent = touched ? (error ?? '') : '';
 });
+
+// Skip the immediate fire
+form.watch('email', handler, { immediate: false });
 
 unsub(); // cleanup
 ```
 
 ### Bind
 
-Spread onto any input — `value` and `error` are live getters:
+`bind()` is memoized — same args return the same object. All state properties are live getters:
 
 ```typescript
 // Plain HTML
 const b = form.bind('email');
-// → { name: 'email', value, error, touched, dirty, onChange, onBlur }
+// → { name, value, error, touched, dirty, onChange, onBlur }
 
 // React
 <input {...form.bind('email')} type="email" />
 
 // Custom event extractor
-const b = form.bind('rating', {
-  valueExtractor: (e) => (e as CustomEvent).detail.value,
-});
+form.bind('rating', { valueExtractor: (e) => (e as CustomEvent).detail.value });
 ```
 
 ## API
@@ -242,7 +282,7 @@ const b = form.bind('rating', {
 | Option          | Type                                                 | Description                                                         |
 | --------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
 | `defaultValues` | `TValues`                                            | Initial field values (plain objects auto-flattened to dot-notation) |
-| `rules`         | `Record<string, FieldValidator \| FieldValidator[]>` | Per-field validators                                                |
+| `validators`    | `Record<string, FieldValidator \| FieldValidator[]>` | Per-field validators                                                |
 | `validator`     | `FormValidator<TValues>`                             | Form-level (cross-field) validator                                  |
 
 ### Form Instance
@@ -261,23 +301,37 @@ const b = form.bind('rating', {
 | Method/Getter              | Description                                             |
 | -------------------------- | ------------------------------------------------------- |
 | `field(name)`              | Full field snapshot: `{ value, error, touched, dirty }` |
+| `getError(name)`           | Current error string without allocating a snapshot      |
+| `isFieldDirty(name)`       | Whether the field differs from its baseline value       |
+| `isFieldTouched(name)`     | Whether the field has been touched                      |
 | `errors`                   | Getter — current error map (`Record<string, string>`)   |
 | `setError(name, message?)` | Set or clear a single field error                       |
 | `setErrors(nextErrors)`    | Replace the entire error map                            |
+| `clearErrors()`            | Clear all errors (shorthand for `setErrors({})`)        |
 
 **Touch**
 
-| Method                  | Description                        |
-| ----------------------- | ---------------------------------- |
-| `touch(first, ...rest)` | Mark one or more fields as touched |
-| `touchAll()`            | Mark all known fields as touched   |
+| Method                  | Description                          |
+| ----------------------- | ------------------------------------ |
+| `touch(first, ...rest)` | Mark one or more fields as touched   |
+| `touchAll()`            | Mark all known fields as touched     |
+| `untouch(name)`         | Remove touched state from one field  |
+| `untouchAll()`          | Remove touched state from all fields |
+
+**Array Utilities**
+
+| Method                      | Description                                    |
+| --------------------------- | ---------------------------------------------- |
+| `appendField(name, value)`  | Append an item to an array field               |
+| `removeField(name, index)`  | Remove the item at `index` from an array field |
+| `moveField(name, from, to)` | Move an item to a new index (drag-and-drop)    |
 
 **Validation**
 
-| Method                        | Description                                   |
-| ----------------------------- | --------------------------------------------- |
-| `validateField(name, signal?)` | Validate a single field (sets `isValidating`) |
-| `validate(options?)`          | Validate all or a subset of fields            |
+| Method                         | Description                                        |
+| ------------------------------ | -------------------------------------------------- |
+| `validateField(name, signal?)` | Validate a single field (sets `isValidating`)      |
+| `validate(options?)`           | Validate all or a subset; returns `ValidateResult` |
 
 **Submit**
 
@@ -287,11 +341,11 @@ const b = form.bind('rating', {
 
 **Subscriptions**
 
-| Method                          | Description                                      |
-| ------------------------------- | ------------------------------------------------ |
-| `subscribe(listener, options?)` | Subscribe to form state; returns unsubscribe     |
-| `watch(name, listener)`         | Subscribe to a single field; returns unsubscribe |
-| `bind(name, config?)`           | Input binding object with live getters           |
+| Method                            | Description                                      |
+| --------------------------------- | ------------------------------------------------ |
+| `subscribe(listener, options?)`   | Subscribe to form state; returns unsubscribe     |
+| `watch(name, listener, options?)` | Subscribe to a single field; returns unsubscribe |
+| `bind(name, config?)`             | Memoized input binding object with live getters  |
 
 **Reset**
 
@@ -329,10 +383,11 @@ const b = form.bind('rating', {
 
 ### Standalone Exports
 
-| Export               | Description                            |
-| -------------------- | -------------------------------------- |
-| `createForm(init?)`  | Create a new form instance             |
-| `toFormData(values)` | Convert any plain object to `FormData` |
+| Export               | Description                                                                    |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `createForm(init?)`  | Create a new form instance                                                     |
+| `toFormData(values)` | Convert any plain object to `FormData`                                         |
+| `fromSchema(schema)` | Adapt a `safeParse`-compatible schema (Zod, Valibot) as a form-level validator |
 
 ## Documentation
 

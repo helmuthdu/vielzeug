@@ -315,14 +315,16 @@ Scores.parse({ alice: 95, bob: 87 }); // { alice: 95, bob: 87 }
 ### Unions
 
 ```ts
-// v.union: first-match — tries each schema in order, returns first success
+// v.union: first-match — tries each schema in order, returns the output of the first success
+// Branch coercions and transforms are preserved
 v.union('light', 'dark'); // 'light' | 'dark'
 v.union(v.string(), v.number()); // string | number
+v.union(v.coerce.number(), v.string()).parse('42'); // → 42 (number, not '42')
 
 // v.intersect: all schemas must pass (intersection / mixin)
 v.intersect(v.object({ id: v.number() }), v.object({ name: v.string() }));
 
-// v.variant: discriminated union — dictionary API, O(1) dispatch by the discriminator key
+// v.variant: discriminated union — dictionary API, fast O(1) dispatch by the discriminator key
 // The key in the map IS the discriminating value (no v.literal() needed in each branch)
 v.variant('type', {
   success: v.object({ data: v.string() }),
@@ -497,6 +499,19 @@ v.number().nullish(); // number | null | undefined
 v.object({
   bio: v.string().nullish(), // present, absent, or explicitly null
 });
+```
+
+### required()
+
+Removes `undefined` from the output type. Reverses `.optional()`. Also available as a factory shorthand `v.required(schema)`.
+
+```ts
+// On any schema
+v.string().optional().required(); // string (not string | undefined)
+
+// On objects — removes optional from every field
+v.object({ name: v.string().optional() }).required();
+// { name: string }  (field is now required)
 ```
 
 ### default()
@@ -754,6 +769,22 @@ const FileSchema = v.object({
 FileSchema.parse({ file: new File('photo.png', 2048), label: 'Profile picture' });
 ```
 
+
+## Factory Shorthands
+
+`v.optional()`, `v.nullable()`, and `v.nullish()` are convenience factory functions:
+
+```ts
+v.optional(v.string()); // same as v.string().optional()
+v.nullable(v.string()); // same as v.string().nullable()
+v.nullish(v.string());  // same as v.string().nullish()
+```
+
+These are particularly useful when composing schemas inline:
+
+```ts
+const fields = [v.optional(v.string()), v.nullable(v.number())];
+```
 
 ## Best Practices
 

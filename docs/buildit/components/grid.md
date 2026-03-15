@@ -462,6 +462,7 @@ Use `responsive` for fluid layouts where column count depends on available space
 | `flow`          | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'` | `grid-auto-flow` direction                        |
 | `responsive`    | `boolean`                                                 | `false` | Enable `auto-fit` mode                            |
 | `min-col-width` | `string`                                                  | `250px` | Minimum column width in `responsive` mode         |
+| `fullwidth`     | `boolean`                                                 | `false` | Stretch the grid to fill its container's width    |
 | `areas`         | `string`                                                  | -       | CSS `grid-template-areas` value                   |
 | `areas-sm`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 640px  |
 | `areas-md`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 768px  |

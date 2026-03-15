@@ -14,7 +14,7 @@ type Logger = {
 /** @internal Phantom symbol — carries the original record type through the Schema wrapper. Not present at runtime. */
 declare const _r: unique symbol;
 
-export type Schema<S = Record<string, Record<string, unknown>>> = {
+export type Schema<S> = {
   [K in keyof S]: {
     /** @internal */
     readonly [_r]?: S[K];
@@ -28,14 +28,14 @@ export type MigrationFn = (
   oldVersion: number,
   newVersion: number | null,
   transaction: IDBTransaction,
-) => void | Promise<void>;
+) => void;
 
 // NonNullable strips the `| undefined` introduced by the optional phantom property (`?`).
 // Intersecting with Record<string, unknown> satisfies the constraint required by QueryBuilder<T>.
-type RecordType<S extends Schema, K extends keyof S> = NonNullable<S[K][typeof _r]> & Record<string, unknown>;
+type RecordType<S extends Schema<any>, K extends keyof S> = NonNullable<S[K][typeof _r]> & Record<string, unknown>;
 
 // Extracts the value-type of the key field using the phantom record type.
-type KeyType<S extends Schema, K extends keyof S> = S[K] extends {
+type KeyType<S extends Schema<any>, K extends keyof S> = S[K] extends {
   [_r]?: infer R;
   key: infer KF;
 }
@@ -44,18 +44,24 @@ type KeyType<S extends Schema, K extends keyof S> = S[K] extends {
     : never
   : never;
 
-export type LocalStorageOptions<S extends Record<string, Record<string, unknown>>> = {
+/** Extract the record type for a given table from a schema. */
+export type RecordOf<S extends Schema<any>, K extends keyof S> = NonNullable<S[K][typeof _r]>;
+
+/** Extract the key type for a given table from a schema. */
+export type KeyOf<S extends Schema<any>, K extends keyof S> = KeyType<S, K>;
+
+type AdapterOptions<S extends Record<string, Record<string, unknown>>> = {
   dbName: string;
   logger?: Logger;
   schema: Schema<S>;
 };
 
-export type IndexedDBOptions<S extends Record<string, Record<string, unknown>>> = {
-  dbName: string;
-  logger?: Logger;
+export type LocalStorageOptions<S extends Record<string, Record<string, unknown>>> = AdapterOptions<S>;
+
+export type IndexedDBOptions<S extends Record<string, Record<string, unknown>>> = AdapterOptions<S> & {
   migrationFn?: MigrationFn;
-  schema: Schema<S>;
-  version?: number;
+  /** Increment to trigger `migrationFn` on next open. */
+  version: number;
 };
 
 /* -------------------- Transaction context for IndexedDB -------------------- */
@@ -64,52 +70,61 @@ export type IndexedDBOptions<S extends Record<string, Record<string, unknown>>> 
  * A subset of `Adapter` scoped to a single IDB transaction.
  * The transaction commits atomically when the async callback resolves, or rolls back if it throws.
  *
- * Methods intentionally absent (not supported within IDB transactions):
- * `getMany`, `count`, `has`, `getOrPut`, `from`.
+ * Method absent by design: `getOrPut` — the read-then-conditionally-write pattern is not
+ * safely atomic within an existing transaction's scope.
+ *
+ * Note: `count()` returns the native IDB record count (includes TTL-expired records).
+ * Use `(await tx.getAll(table)).length` for a TTL-accurate count.
  */
-export type TransactionContext<S extends Schema, K extends keyof S> = {
+export type TransactionContext<S extends Schema<any>, K extends keyof S> = {
+  count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyType<S, T>): Promise<void>;
+  deleteAll<T extends K>(table: T): Promise<void>;
+  deleteMany<T extends K>(table: T, keys: KeyType<S, T>[]): Promise<void>;
+  from<T extends K>(table: T): QueryBuilder<RecordType<S, T>>;
   get<T extends K>(table: T, key: KeyType<S, T>): Promise<RecordType<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordType<S, T>[]>;
+  getMany<T extends K>(table: T, keys: KeyType<S, T>[]): Promise<RecordType<S, T>[]>;
+  getOr<T extends K>(table: T, key: KeyType<S, T>, defaultValue: RecordType<S, T>): Promise<RecordType<S, T>>;
+  has<T extends K>(table: T, key: KeyType<S, T>): Promise<boolean>;
   patch<T extends K>(
     table: T,
     key: KeyType<S, T>,
     partial: Partial<RecordType<S, T>>,
   ): Promise<RecordType<S, T> | undefined>;
   put<T extends K>(table: T, value: RecordType<S, T>, ttl?: number): Promise<void>;
+  putMany<T extends K>(table: T, values: RecordType<S, T>[], ttl?: number): Promise<void>;
 };
 
 /* -------------------- Adapter Interface -------------------- */
 
-export interface Adapter<S extends Schema> {
-  get<K extends keyof S>(table: K, key: KeyType<S, K>, defaultValue: RecordType<S, K>): Promise<RecordType<S, K>>;
-  get<K extends keyof S>(
-    table: K,
-    key: KeyType<S, K>,
-    defaultValue?: RecordType<S, K>,
-  ): Promise<RecordType<S, K> | undefined>;
+export interface Adapter<S extends Schema<any>> {
+  count<K extends keyof S>(table: K): Promise<number>;
+  delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void>;
+  deleteAll<K extends keyof S>(table: K): Promise<void>;
+  deleteMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>;
+  from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>>;
+  get<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<RecordType<S, K> | undefined>;
   getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]>;
   getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<S, K>[]>;
-  put<K extends keyof S>(table: K, value: RecordType<S, K> | RecordType<S, K>[], ttl?: number): Promise<void>;
-  delete<K extends keyof S>(table: K, key: KeyType<S, K> | KeyType<S, K>[]): Promise<void>;
-  patch<K extends keyof S>(
-    table: K,
-    key: KeyType<S, K>,
-    partial: Partial<RecordType<S, K>>,
-  ): Promise<RecordType<S, K> | undefined>;
-  deleteAll<K extends keyof S>(table: K): Promise<void>;
-  count<K extends keyof S>(table: K): Promise<number>;
-  has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean>;
+  getOr<K extends keyof S>(table: K, key: KeyType<S, K>, defaultValue: RecordType<S, K>): Promise<RecordType<S, K>>;
   getOrPut<K extends keyof S>(
     table: K,
     key: KeyType<S, K>,
     factory: () => RecordType<S, K> | Promise<RecordType<S, K>>,
     ttl?: number,
   ): Promise<RecordType<S, K>>;
-  from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>>;
+  has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean>;
+  patch<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    partial: Partial<RecordType<S, K>>,
+  ): Promise<RecordType<S, K> | undefined>;
+  put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void>;
+  putMany<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void>;
 }
 
-export interface IndexedDBHandle<S extends Schema> extends Adapter<S> {
+export interface IndexedDBHandle<S extends Schema<any>> extends Adapter<S> {
   transaction<K extends keyof S>(tables: K[], fn: (tx: TransactionContext<S, K>) => Promise<void>): Promise<void>;
   close(): void;
 }
@@ -143,13 +158,7 @@ export function createLocalStorage<S extends Record<string, Record<string, unkno
 export function createIndexedDB<S extends Record<string, Record<string, unknown>>>(
   options: IndexedDBOptions<S>,
 ): IndexedDBHandle<Schema<S>> {
-  return new IndexedDBAdapter(
-    options.dbName,
-    options.version ?? 1,
-    options.schema,
-    options.migrationFn,
-    options.logger,
-  );
+  return new IndexedDBAdapter(options.dbName, options.version, options.schema, options.migrationFn, options.logger);
 }
 
 /**
@@ -172,6 +181,23 @@ export function storeField(field: string): string {
   return `v.${field}`;
 }
 
+/* -------------------- Duration helpers -------------------- */
+
+/**
+ * Convenience helpers for expressing TTL values as named durations.
+ * @example
+ * ```ts
+ * db.put('sessions', session, ttl.minutes(30));
+ * db.put('cache', data, ttl.hours(1));
+ * ```
+ */
+export const ttl = {
+  hours: (n: number) => n * 3_600_000,
+  minutes: (n: number) => n * 60_000,
+  ms: (n: number) => n,
+  seconds: (n: number) => n * 1000,
+} as const;
+
 /* -------------------- TTL Envelope (storage-layer only) -------------------- */
 
 type Envelope<T> = { exp?: number; v: T };
@@ -186,6 +212,12 @@ function unwrap<T>(env: Envelope<T>): T | undefined {
 
 function isEnvelope(value: unknown): value is Envelope<unknown> {
   return typeof value === 'object' && value !== null && 'v' in value;
+}
+
+function readEnvelope<T>(raw: unknown): T | undefined {
+  if (!raw || !isEnvelope(raw)) return undefined;
+
+  return unwrap(raw as Envelope<T>);
 }
 
 /* -------------------- ProjectedQuery -------------------- */
@@ -353,6 +385,10 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     );
   }
 
+  async reduce<A>(fn: (acc: A, record: T) => A, initial: A): Promise<A> {
+    return (await this.toArray()).reduce(fn, initial);
+  }
+
   /**
    * Returns the number of records after all pipeline operations are applied.
    * Note: `limit`, `offset`, and `page` affect this count — use them after calling `count()`
@@ -387,7 +423,7 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 
 /* -------------------- LocalStorageAdapter -------------------- */
 
-class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
+class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
   private readonly schema: S;
   private readonly logger: Logger;
   private readonly prefixCache: Map<string, string>;
@@ -421,20 +457,18 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
     return new QueryBuilder<RecordType<S, K>>(this, String(table));
   }
 
-  get<K extends keyof S>(table: K, key: KeyType<S, K>, defaultValue: RecordType<S, K>): Promise<RecordType<S, K>>;
-  get<K extends keyof S>(
-    table: K,
-    key: KeyType<S, K>,
-    defaultValue?: RecordType<S, K>,
-  ): Promise<RecordType<S, K> | undefined>;
-  async get<K extends keyof S>(
-    table: K,
-    key: KeyType<S, K>,
-    defaultValue?: RecordType<S, K>,
-  ): Promise<RecordType<S, K> | undefined> {
+  async get<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<RecordType<S, K> | undefined> {
     this.checkStorage();
 
-    return this.readEntry<RecordType<S, K>>(this.storageKey(table, String(key)), String(key)) ?? defaultValue;
+    return this.readEntry<RecordType<S, K>>(this.storageKey(table, String(key)), String(key));
+  }
+
+  async getOr<K extends keyof S>(
+    table: K,
+    key: KeyType<S, K>,
+    defaultValue: RecordType<S, K>,
+  ): Promise<RecordType<S, K>> {
+    return (await this.get(table, key)) ?? defaultValue;
   }
 
   async getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]> {
@@ -455,6 +489,8 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
   }
 
   async getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<S, K>[]> {
+    this.checkStorage();
+
     const results: RecordType<S, K>[] = [];
 
     for (const k of keys) {
@@ -466,22 +502,36 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
     return results;
   }
 
-  async put<K extends keyof S>(table: K, value: RecordType<S, K> | RecordType<S, K>[], ttl?: number): Promise<void> {
+  async put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void> {
     this.checkStorage();
 
-    const values = Array.isArray(value) ? value : [value];
+    const key = this.recordKey(value, table);
 
-    for (const v of values) {
-      const key = this.recordKey(v, table);
+    try {
+      localStorage.setItem(this.storageKey(table, String(key)), JSON.stringify(wrap(value, ttl)));
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+        throw new Error(`deposit: localStorage quota exceeded while writing to "${String(table)}"`, { cause: err });
+      }
 
-      localStorage.setItem(this.storageKey(table, String(key)), JSON.stringify(wrap(v, ttl)));
+      throw err;
     }
   }
 
-  async delete<K extends keyof S>(table: K, key: KeyType<S, K> | KeyType<S, K>[]): Promise<void> {
+  async putMany<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void> {
+    for (const v of values) {
+      await this.put(table, v, ttl);
+    }
+  }
+
+  async delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> {
     this.checkStorage();
 
-    const keys = Array.isArray(key) ? key : [key];
+    localStorage.removeItem(this.storageKey(table, String(key)));
+  }
+
+  async deleteMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> {
+    this.checkStorage();
 
     for (const k of keys) {
       localStorage.removeItem(this.storageKey(table, String(k)));
@@ -493,6 +543,8 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
     key: KeyType<S, K>,
     partial: Partial<RecordType<S, K>>,
   ): Promise<RecordType<S, K> | undefined> {
+    this.checkStorage();
+
     const storageKey = this.storageKey(table, String(key));
     const raw = localStorage.getItem(storageKey);
 
@@ -554,25 +606,14 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
     }
   }
 
-  /**
-   * Returns the number of live (non-expired) records in the given table.
-   * Note: scans all matching keys to exclude TTL-expired entries — O(n).
-   */
   async count<K extends keyof S>(table: K): Promise<number> {
-    this.checkStorage();
-
-    const prefix = this.tablePrefix(table);
-    let n = 0;
-
-    for (const k of Object.keys(localStorage)) {
-      if (k.startsWith(prefix) && this.readEntry(k) !== undefined) n++;
-    }
-
-    return n;
+    return (await this.getAll(table)).length;
   }
 
   async has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean> {
-    return (await this.get(table, key)) !== undefined;
+    this.checkStorage();
+
+    return this.readEntry(this.storageKey(table, String(key))) !== undefined;
   }
 
   private readEntry<T>(storageKey: string, keyHint?: string): T | undefined {
@@ -636,9 +677,10 @@ class LocalStorageAdapter<S extends Schema> implements Adapter<S> {
 
 /* -------------------- IndexedDBAdapter -------------------- */
 
-class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
+class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
   private db: IDBDatabase | null = null;
   private connectPromise: Promise<void> | null = null;
+  private closed = false;
   private readonly dbName: string;
   private readonly schema: S;
   private readonly version: number;
@@ -658,81 +700,73 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
   }
 
   close(): void {
+    this.closed = true;
     this.db?.close();
     this.db = null;
     this.connectPromise = null;
   }
 
   private connect(): Promise<void> {
-    this.connectPromise ??= new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.version);
+    if (!this.connectPromise) {
+      this.closed = false;
+      this.connectPromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(this.dbName, this.version);
 
-      request.onupgradeneeded = (event) => {
-        const db = request.result;
-        const tx = request.transaction!;
+        request.onupgradeneeded = (event) => {
+          const db = request.result;
+          const tx = request.transaction!;
 
-        this.createObjectStores(db, tx);
+          this.createObjectStores(db, tx);
 
-        if (this.migrationFn) {
-          const handleError = (err: unknown) => {
+          if (this.migrationFn) {
             try {
-              tx.abort();
-            } catch {
-              /* ignore */
+              this.migrationFn(db, event.oldVersion, (event as IDBVersionChangeEvent).newVersion ?? null, tx);
+            } catch (err) {
+              try {
+                tx.abort();
+              } catch {
+                /* ignore */
+              }
+
+              reject(new Error(`deposit: migration failed for "${this.dbName}"`, { cause: err }));
             }
-
-            reject(new Error(`deposit: migration failed for "${this.dbName}"`, { cause: err }));
-          };
-
-          try {
-            const result = this.migrationFn(
-              db,
-              event.oldVersion,
-              (event as IDBVersionChangeEvent).newVersion ?? null,
-              tx,
-            );
-
-            Promise.resolve(result).catch(handleError);
-          } catch (err) {
-            handleError(err);
           }
-        }
-      };
+        };
 
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
+        request.onsuccess = () => {
+          if (this.closed) {
+            request.result.close();
+            resolve();
 
-      request.onerror = () => {
-        this.connectPromise = null;
-        reject(new Error(`deposit: failed to open "${this.dbName}" (IndexedDB)`));
-      };
-    });
+            return;
+          }
 
-    return this.connectPromise;
+          this.db = request.result;
+          resolve();
+        };
+
+        request.onerror = () => {
+          this.connectPromise = null;
+          reject(new Error(`deposit: failed to open "${this.dbName}" (IndexedDB)`));
+        };
+      });
+    }
+
+    return this.connectPromise!;
   }
 
-  get<K extends keyof S>(table: K, key: KeyType<S, K>, defaultValue: RecordType<S, K>): Promise<RecordType<S, K>>;
-  get<K extends keyof S>(
+  async get<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<RecordType<S, K> | undefined> {
+    return this.withStore(table, 'readonly', async (store) =>
+      readEnvelope<RecordType<S, K>>(await this.idbRequest<unknown>(store.get(key as IDBValidKey))),
+    );
+  }
+
+  async getOr<K extends keyof S>(
     table: K,
     key: KeyType<S, K>,
-    defaultValue?: RecordType<S, K>,
-  ): Promise<RecordType<S, K> | undefined>;
-  async get<K extends keyof S>(
-    table: K,
-    key: KeyType<S, K>,
-    defaultValue?: RecordType<S, K>,
-  ): Promise<RecordType<S, K> | undefined> {
-    return this.withStore(table, 'readonly', async (store) => {
-      const env = await this.idbRequest<Envelope<RecordType<S, K>>>(store.get(key as IDBValidKey));
-
-      if (!env || !isEnvelope(env)) return defaultValue;
-
-      const value = unwrap(env);
-
-      return value !== undefined ? value : defaultValue;
-    });
+    defaultValue: RecordType<S, K>,
+  ): Promise<RecordType<S, K>> {
+    return (await this.get(table, key)) ?? defaultValue;
   }
 
   async getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]> {
@@ -757,7 +791,9 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
       if (expiredKeys.length > 0) {
         void this.withStore(table, 'readwrite', (s) =>
           Promise.all(expiredKeys.map((k) => this.idbRequest(s.delete(k)))).then(() => undefined),
-        );
+        ).catch((err) => {
+          this.logger.warn('deposit: failed to evict expired records', err);
+        });
       }
 
       return records;
@@ -766,27 +802,29 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
 
   async getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<S, K>[]> {
     return this.withStore(table, 'readonly', async (store) => {
-      const envs = await Promise.all(
-        keys.map((k) => this.idbRequest<Envelope<RecordType<S, K>>>(store.get(k as IDBValidKey))),
-      );
+      const raws = await Promise.all(keys.map((k) => this.idbRequest<unknown>(store.get(k as IDBValidKey))));
 
-      return envs
-        .map((env) => (env && isEnvelope(env) ? unwrap(env) : undefined))
+      return raws
+        .map((raw) => readEnvelope<RecordType<S, K>>(raw))
         .filter((v): v is RecordType<S, K> => v !== undefined);
     });
   }
 
-  async put<K extends keyof S>(table: K, value: RecordType<S, K> | RecordType<S, K>[], ttl?: number): Promise<void> {
-    const values = Array.isArray(value) ? value : [value];
+  async put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void> {
+    await this.withStore(table, 'readwrite', (store) => this.idbRequest(store.put(wrap(value, ttl))));
+  }
 
+  async putMany<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void> {
     await this.withStore(table, 'readwrite', async (store) => {
       await Promise.all(values.map((v) => this.idbRequest(store.put(wrap(v, ttl)))));
     });
   }
 
-  async delete<K extends keyof S>(table: K, key: KeyType<S, K> | KeyType<S, K>[]): Promise<void> {
-    const keys = Array.isArray(key) ? key : [key];
+  async delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> {
+    await this.withStore(table, 'readwrite', (store) => this.idbRequest(store.delete(key as IDBValidKey)));
+  }
 
+  async deleteMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> {
     await this.withStore(table, 'readwrite', async (store) => {
       await Promise.all(keys.map((k) => this.idbRequest(store.delete(k as IDBValidKey))));
     });
@@ -798,17 +836,17 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
     partial: Partial<RecordType<S, K>>,
   ): Promise<RecordType<S, K> | undefined> {
     return this.withStore(table, 'readwrite', async (store) => {
-      const env = await this.idbRequest<Envelope<RecordType<S, K>>>(store.get(key as IDBValidKey));
+      const raw = await this.idbRequest<unknown>(store.get(key as IDBValidKey));
 
-      if (!env || !isEnvelope(env)) return undefined;
+      if (!raw || !isEnvelope(raw)) return undefined;
 
-      const current = unwrap(env);
+      const current = unwrap(raw as Envelope<RecordType<S, K>>);
 
       if (current === undefined) return undefined;
 
       const merged = { ...current, ...partial } as RecordType<S, K>;
 
-      await this.idbRequest(store.put({ ...env, v: merged }));
+      await this.idbRequest(store.put({ ...(raw as Envelope<RecordType<S, K>>), v: merged }));
 
       return merged;
     });
@@ -821,13 +859,9 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
     ttl?: number,
   ): Promise<RecordType<S, K>> {
     return this.withStore(table, 'readwrite', async (store) => {
-      const env = await this.idbRequest<Envelope<RecordType<S, K>>>(store.get(key as IDBValidKey));
+      const existing = readEnvelope<RecordType<S, K>>(await this.idbRequest<unknown>(store.get(key as IDBValidKey)));
 
-      if (env && isEnvelope(env)) {
-        const value = unwrap(env);
-
-        if (value !== undefined) return value;
-      }
+      if (existing !== undefined) return existing;
 
       const value = await factory();
 
@@ -841,20 +875,17 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
     await this.withStore(table, 'readwrite', (store) => this.idbRequest<undefined>(store.clear()));
   }
 
-  /**
-   * Returns the number of live (non-expired) records in the given table.
-   * Note: fetches all records to exclude TTL-expired entries — O(n).
-   */
   async count<K extends keyof S>(table: K): Promise<number> {
-    return this.withStore(table, 'readonly', async (store) => {
-      const envs = await this.idbRequest<Envelope<RecordType<S, K>>[]>(store.getAll());
-
-      return envs.filter((e) => isEnvelope(e) && unwrap(e) !== undefined).length;
-    });
+    return (await this.getAll(table)).length;
   }
 
   async has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean> {
-    return (await this.get(table, key)) !== undefined;
+    return this.withStore(
+      table,
+      'readonly',
+      async (store) =>
+        readEnvelope<RecordType<S, K>>(await this.idbRequest<unknown>(store.get(key as IDBValidKey))) !== undefined,
+    );
   }
 
   async transaction<K extends keyof S>(
@@ -872,34 +903,58 @@ class IndexedDBAdapter<S extends Schema> implements IndexedDBHandle<S> {
       let callbackError: unknown;
 
       const ctx: TransactionContext<S, K> = {
+        count: (table) => this.idbRequest<number>(idbTx.objectStore(String(table)).count()),
         delete: (table, key) => this.idbRequest(idbTx.objectStore(String(table)).delete(key as IDBValidKey)),
+        deleteAll: (table) =>
+          this.idbRequest<undefined>(idbTx.objectStore(String(table)).clear()).then(() => undefined),
+        deleteMany: (table, keys) =>
+          Promise.all(keys.map((k) => this.idbRequest(idbTx.objectStore(String(table)).delete(k as IDBValidKey)))).then(
+            () => undefined,
+          ),
+        from: (table) => new QueryBuilder<RecordType<S, K>>({ getAll: (t) => ctx.getAll(t as K) }, String(table)),
         get: (table, key) =>
-          this.idbRequest<Envelope<RecordType<S, K>>>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then(
-            (env) => (env && isEnvelope(env) ? (unwrap(env) ?? undefined) : undefined),
+          this.idbRequest<unknown>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then((raw) =>
+            readEnvelope<RecordType<S, K>>(raw),
           ),
         getAll: (table) =>
-          this.idbRequest<Envelope<RecordType<S, K>>[]>(idbTx.objectStore(String(table)).getAll()).then((results) =>
-            results
-              .filter(isEnvelope)
-              .map((env) => unwrap(env))
+          this.idbRequest<unknown[]>(idbTx.objectStore(String(table)).getAll()).then((raws) =>
+            raws
+              .map((raw) => readEnvelope<RecordType<S, K>>(raw))
               .filter((v): v is RecordType<S, K> => v !== undefined),
           ),
-        patch: (table, key, partial) =>
-          this.idbRequest<Envelope<RecordType<S, K>>>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then(
-            (env) => {
-              if (!env || !isEnvelope(env)) return undefined;
-
-              const current = unwrap(env);
-
-              if (current === undefined) return undefined;
-
-              const merged = { ...current, ...partial } as RecordType<S, K>;
-
-              return this.idbRequest(idbTx.objectStore(String(table)).put({ ...env, v: merged })).then(() => merged);
-            },
+        getMany: (table, keys) =>
+          Promise.all(
+            keys.map((k) => this.idbRequest<unknown>(idbTx.objectStore(String(table)).get(k as IDBValidKey))),
+          ).then((raws) =>
+            raws
+              .map((raw) => readEnvelope<RecordType<S, K>>(raw))
+              .filter((v): v is RecordType<S, K> => v !== undefined),
           ),
+        getOr: (table, key, defaultValue) => ctx.get(table, key).then((v) => v ?? defaultValue),
+        has: (table, key) =>
+          this.idbRequest<unknown>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then(
+            (raw) => readEnvelope<RecordType<S, K>>(raw) !== undefined,
+          ),
+        patch: (table, key, partial) =>
+          this.idbRequest<unknown>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then((raw) => {
+            if (!raw || !isEnvelope(raw)) return undefined;
+
+            const current = unwrap(raw as Envelope<RecordType<S, K>>);
+
+            if (current === undefined) return undefined;
+
+            const merged = { ...current, ...partial } as RecordType<S, K>;
+
+            return this.idbRequest(
+              idbTx.objectStore(String(table)).put({ ...(raw as Envelope<RecordType<S, K>>), v: merged }),
+            ).then(() => merged);
+          }),
         put: (table, value, ttl) =>
           this.idbRequest(idbTx.objectStore(String(table)).put(wrap(value, ttl))).then(() => undefined),
+        putMany: (table, values, ttl) =>
+          Promise.all(values.map((v) => this.idbRequest(idbTx.objectStore(String(table)).put(wrap(v, ttl))))).then(
+            () => undefined,
+          ),
       };
 
       fn(ctx).catch((err) => {

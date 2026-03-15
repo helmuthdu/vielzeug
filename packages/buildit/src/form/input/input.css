@@ -1,0 +1,400 @@
+@layer buildit.base {
+  /* ========================================
+       Base Styles & Defaults
+       ======================================== */
+
+  :host {
+    --_font-size: var(--input-font-size, var(--text-sm));
+    --_gap: var(--input-gap, var(--size-2));
+    --_field-height: var(--input-height, var(--size-10));
+    --_padding: var(--input-padding, var(--size-1-5) var(--size-3));
+    --_radius: var(--input-radius, var(--rounded-md));
+    --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
+    --_bg: var(--input-bg, var(--color-contrast-100));
+    --_border-color: var(--input-border-color, var(--color-contrast-300));
+
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1-5);
+    width: 100%;
+  }
+
+  .field {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: stretch;
+    justify-content: center;
+    height: var(--_field-height);
+    min-height: var(--_field-height);
+    padding: var(--_padding);
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--_shadow, var(--shadow-2xs));
+    transition: var(
+      --_motion-transition,
+      background var(--transition-fast),
+      backdrop-filter var(--transition-slow),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast)
+    );
+  }
+
+  /* Expand height to fit inset label + input row */
+  .field:has(.label-inset:not([hidden])) {
+    height: auto;
+  }
+
+  .input-row {
+    display: flex;
+    flex: 1;
+    gap: var(--_gap);
+    align-items: center;
+  }
+
+  /* ========================================
+       Label Styles
+       ======================================== */
+
+  .label-inset,
+  .label-outside,
+  label.label-inset,
+  label.label-outside {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: var(--font-medium);
+    color: var(--color-contrast-500);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: var(--_motion-transition, color var(--transition-fast));
+  }
+
+  .label-inset,
+  label.label-inset {
+    margin-bottom: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+  }
+
+  .label-outside,
+  label.label-outside {
+    font-size: var(--text-sm);
+    line-height: var(--leading-none);
+  }
+
+  /* ========================================
+       Helper Text
+       ======================================== */
+
+  .helper-text {
+    padding-inline: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+    overflow-wrap: anywhere;
+  }
+
+  /* ========================================
+       Slotted Prefix/Suffix Icons
+       ======================================== */
+
+  ::slotted([slot='prefix']),
+  ::slotted([slot='suffix']) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--size-4);
+    color: var(--color-contrast-500);
+    user-select: none;
+    opacity: 0.8;
+    transition: var(--_motion-transition, color var(--transition-fast));
+  }
+
+  /* ========================================
+       Input Element
+       ======================================== */
+
+  input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: var(--_font-size);
+    line-height: var(--leading-normal);
+
+    /* No all: unset needed - reset layer handles it */
+    color: var(--_theme-content);
+    outline: none;
+    background: transparent;
+    border: none;
+  }
+
+  input::placeholder {
+    color: var(--_placeholder);
+    transition: color var(--transition-fast);
+  }
+
+  input:focus-visible {
+    outline: none;
+  }
+
+  /* ========================================
+       Hover & Focus States
+       ======================================== */
+
+  :host(:not([disabled], [variant='bordered'], [variant='flat'])) .field:hover {
+    border-color: var(--color-contrast-400);
+  }
+
+  :host(:not([disabled], [variant='text'], [variant='flat'])) .field:focus-within {
+    background: var(--color-canvas);
+    border-color: var(--_theme-focus);
+    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+    transform: translateY(-1px);
+  }
+
+  :host(:not([disabled])) .field:focus-within .label-inset,
+  :host(:not([disabled])) .field:focus-within .label-outside {
+    color: var(--_theme-focus);
+  }
+
+  :host(:not([disabled])) .field:focus-within ::slotted([slot='prefix']),
+  :host(:not([disabled])) .field:focus-within ::slotted([slot='suffix']) {
+    color: var(--_theme-focus);
+  }
+
+  /* ========================================
+       Clear button
+       ======================================== */
+
+  .clear-btn {
+    display: none;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-5);
+    min-width: var(--_touch-target);
+    height: var(--size-5);
+    min-height: var(--_touch-target);
+    padding: 0;
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-sm);
+    transition: var(--_motion-transition, color var(--transition-fast));
+  }
+
+  .clear-btn:hover {
+    color: var(--color-contrast-900);
+  }
+
+  .clear-btn:focus-visible {
+    outline: var(--border-2) solid var(--_theme-focus);
+    outline-offset: var(--border);
+  }
+
+  :host([clearable]) .clear-btn {
+    display: flex;
+  }
+
+  :host([clearable]:not([has-value])) .clear-btn {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* ========================================
+       Password visibility toggle
+       ======================================== */
+
+  .pwd-toggle-btn {
+    display: none;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-5);
+    min-width: var(--_touch-target);
+    height: var(--size-5);
+    min-height: var(--_touch-target);
+    padding: 0;
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-sm);
+    transition: var(--_motion-transition, color var(--transition-fast));
+  }
+
+  .pwd-toggle-btn:hover {
+    color: var(--color-contrast-900);
+  }
+
+  .pwd-toggle-btn:focus-visible {
+    outline: var(--border-2) solid var(--_theme-focus);
+    outline-offset: var(--border);
+  }
+
+  :host([type='password']) .pwd-toggle-btn {
+    display: flex;
+  }
+
+  /* ========================================
+       Character counter
+       ======================================== */
+
+  .char-counter {
+    padding-inline: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-400);
+    text-align: end;
+    white-space: nowrap;
+  }
+
+  .char-counter[data-near-limit] {
+    color: var(--color-warning, #f59e0b);
+  }
+
+  .char-counter[data-at-limit] {
+    color: var(--color-error);
+  }
+
+  /* ========================================
+       Error State
+       ======================================== */
+
+  :host([error]) .field {
+    border-color: var(--color-error);
+  }
+
+  :host([error]) .field:focus-within {
+    border-color: var(--color-error);
+    box-shadow: var(--color-error-focus-shadow);
+  }
+
+  :host([error]) .label-inset,
+  :host([error]) .label-outside {
+    color: var(--color-error);
+  }
+
+  .helper-text[role='alert'] {
+    color: var(--color-error);
+  }
+}
+
+@layer buildit.variants {
+  /* ========================================
+       Visual Variants
+       ======================================== */
+
+  /* Solid (Default) - Standard input with background */
+  :host(:not([variant])) .field,
+  :host([variant='solid']) .field {
+    background: var(--color-contrast-50);
+    border-color: var(--color-contrast-300);
+    box-shadow: var(--shadow-2xs);
+  }
+
+  :host(:not([variant], [disabled])) .field:focus-within,
+  :host([variant='solid']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Flat - Minimal with subtle color hint */
+  :host([variant='flat']) .field {
+    border-color: var(--_theme-border);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  :host([variant='flat']) .field:hover {
+    background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
+    border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
+  }
+
+  :host([variant='flat']) .field:focus-within {
+    background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
+    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Bordered - Filled with theme color */
+  :host([variant='bordered']) .field {
+    background: var(--_theme-backdrop);
+    border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
+  }
+
+  :host([variant='bordered']) input {
+    color: var(--_theme-content);
+  }
+
+  :host([variant='bordered'][color='secondary']) input {
+    color: var(--_theme-base);
+  }
+
+  :host([variant='bordered']) input::placeholder {
+    color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
+  }
+
+  :host([variant='bordered'][color='secondary']) input::placeholder {
+    color: color-mix(in srgb, var(--_theme-base) 45%, transparent);
+  }
+
+  :host([variant='bordered']) .field:hover {
+    border-color: var(--_theme-focus);
+  }
+
+  /* Outline - Transparent background */
+  :host([variant='outline']) .field {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :host([variant='outline']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Ghost - Transparent until hover */
+  :host([variant='ghost']) .field {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  :host([variant='ghost']) .field:hover {
+    background: var(--color-contrast-100);
+  }
+
+  :host([variant='ghost']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Text - Underline style */
+  :host([variant='text']) .field {
+    background: transparent;
+    border: none;
+    border-bottom: var(--border) solid var(--_border-color);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  :host([variant='text']) .field:focus-within {
+    border-bottom: var(--border-2) solid var(--_theme-focus);
+    transform: none;
+  }
+}
+
+@layer buildit.utilities {
+  /* Full width */
+  :host([fullwidth]) {
+    width: 100%;
+  }
+}

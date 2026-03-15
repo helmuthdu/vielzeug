@@ -1,0 +1,41 @@
+@layer buildit.base {
+  :host {
+    display: inline-flex;
+    flex-direction: row;
+  }
+
+  /* Overlap avatars, latest first */
+  ::slotted(bit-avatar) {
+    --avatar-border: var(--border-2) solid var(--color-canvas);
+
+    margin-inline-start: calc(var(--avatar-group-overlap, -0.75rem));
+  }
+
+  ::slotted(bit-avatar:first-child) {
+    margin-inline-start: 0;
+  }
+
+  ::slotted(bit-avatar[data-avatar-group-hidden]) {
+    display: none;
+  }
+
+  .overflow-badge {
+    --_size: var(--avatar-size, var(--size-10));
+
+    box-sizing: border-box;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--_size);
+    height: var(--_size);
+    margin-inline-start: calc(var(--avatar-group-overlap, -0.75rem));
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: var(--color-contrast-700);
+    user-select: none;
+    background: var(--color-contrast-200);
+    border: var(--border-2) solid var(--color-canvas);
+    border-radius: var(--rounded-full);
+  }
+}

@@ -73,10 +73,10 @@ const schema = defineSchema<{ products: Product }>({
 const db = createIndexedDB({ dbName: 'catalogue', version: 1, schema });
 
 // Seed data
-await db.put('products', [
-  { id: 1, name: 'Keyboard', category: 'peripherals', price: 79,  inStock: true },
-  { id: 2, name: 'Monitor',  category: 'displays',    price: 349, inStock: true },
-  { id: 3, name: 'Webcam',   category: 'peripherals', price: 59,  inStock: false },
+await db.putMany('products', [
+  { id: 1, name: 'Keyboard', category: 'peripherals', price: 79, inStock: true },
+  { id: 2, name: 'Monitor', category: 'displays', price: 349, inStock: true },
+  { id: 3, name: 'Webcam', category: 'peripherals', price: 59, inStock: false },
 ]);
 
 // Query peripherals under €100, sorted by price
@@ -105,7 +105,7 @@ db.close();
 Cache authentication data with automatic expiry. No manual expiry checks needed.
 
 ```ts
-import { createLocalStorage, defineSchema } from '@vielzeug/deposit';
+import { createLocalStorage, defineSchema, ttl } from '@vielzeug/deposit';
 
 interface Session {
   id: string;
@@ -117,14 +117,17 @@ interface Session {
 const schema = defineSchema<{ sessions: Session }>({ sessions: { key: 'id' } });
 const cache = createLocalStorage({ dbName: 'auth', schema });
 
-const ONE_HOUR = 3_600_000;
-
 async function getOrRefreshSession(id: string): Promise<Session> {
-  return cache.getOrPut('sessions', id, async () => {
-    const res  = await fetch('/api/auth/refresh');
-    const data = await res.json() as Session;
-    return data;
-  }, ONE_HOUR);
+  return cache.getOrPut(
+    'sessions',
+    id,
+    async () => {
+      const res = await fetch('/api/auth/refresh');
+      const data = (await res.json()) as Session;
+      return data;
+    },
+    ttl.hours(1),
+  );
 }
 
 // Invalidate on logout
@@ -142,12 +145,22 @@ An order is updated and a related audit log entry is created in a single atomic 
 ```ts
 import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
 
-interface Order    { id: number; userId: number; status: 'pending' | 'shipped' | 'delivered'; total: number }
-interface AuditLog { id: number; orderId: number; action: string; at: number }
+interface Order {
+  id: number;
+  userId: number;
+  status: 'pending' | 'shipped' | 'delivered';
+  total: number;
+}
+interface AuditLog {
+  id: number;
+  orderId: number;
+  action: string;
+  at: number;
+}
 
 const schema = defineSchema<{ orders: Order; audit: AuditLog }>({
   orders: { key: 'id' },
-  audit:  { key: 'id', indexes: ['orderId'] },
+  audit: { key: 'id', indexes: ['orderId'] },
 });
 
 const db = createIndexedDB({ dbName: 'shop', version: 1, schema });
@@ -160,6 +173,10 @@ async function shipOrder(orderId: number, auditId: number): Promise<void> {
 
     await tx.patch('orders', orderId, { status: 'shipped' });
     await tx.put('audit', { id: auditId, orderId, action: 'shipped', at: Date.now() });
+
+    // reads also work inside the transaction
+    const total = await tx.count('orders');
+    const recent = await tx.from('audit').orderBy('at', 'desc').limit(5).toArray();
   });
   // Either both writes happened, or neither did
 }
@@ -174,7 +191,12 @@ Import, delete, and query records in bulk.
 ```ts
 import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
 
-interface Contact { id: number; name: string; email: string; group: string }
+interface Contact {
+  id: number;
+  name: string;
+  email: string;
+  group: string;
+}
 
 const schema = defineSchema<{ contacts: Contact }>({
   contacts: { key: 'id', indexes: ['group'] },
@@ -183,15 +205,22 @@ const schema = defineSchema<{ contacts: Contact }>({
 const db = createIndexedDB({ dbName: 'crm', version: 1, schema });
 
 // Bulk import
-const imported: Contact[] = await fetch('/api/contacts').then(r => r.json());
-await db.put('contacts', imported);
+const imported: Contact[] = await fetch('/api/contacts').then((r) => r.json());
+await db.putMany('contacts', imported);
 
 // Fetch specific records by ID
 const selected = await db.getMany('contacts', [1, 7, 42]);
 
 // Bulk delete stale records
-const staleIds = (await db.from('contacts').equals('group', 'archived').toArray()).map(c => c.id);
-await db.delete('contacts', staleIds);
+const staleIds = (await db.from('contacts').equals('group', 'archived').toArray()).map((c) => c.id);
+await db.deleteMany('contacts', staleIds);
+
+// Numeric aggregation with reduce
+const totalCount = await db.from('contacts').count();
+const activeCount = await db
+  .from('contacts')
+  .filter((c) => c.group !== 'archived')
+  .count();
 
 // Find contacts by name substring
 const smiths = await db.from('contacts').contains('smith', ['name']).toArray();
@@ -208,12 +237,20 @@ Add an index and a table when upgrading from v1 to v3.
 ```ts
 import { createIndexedDB, defineSchema, type MigrationFn, storeField } from '@vielzeug/deposit';
 
-interface User { id: number; name: string; email: string; role: string }
-interface Tag  { id: number; label: string }
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
+interface Tag {
+  id: number;
+  label: string;
+}
 
 const schema = defineSchema<{ users: User; tags: Tag }>({
   users: { key: 'id', indexes: ['email', 'role'] },
-  tags:  { key: 'id' },
+  tags: { key: 'id' },
 });
 
 const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {

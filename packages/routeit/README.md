@@ -34,7 +34,7 @@ router
 - ✅ **Typed path params** — `PathParams<'/users/:id'>` inferred from the path literal at compile time
 - ✅ **Named wildcard params** — `/docs/:rest*` captures multi-segment paths as a single param
 - ✅ **Middleware** — global, per-group, and per-route; `ctx.locals` for passing data down the chain
-- ✅ **Route groups** — `group(prefix, definer, { middleware? })` for shared prefixes and middleware
+- ✅ **Route groups** — `group(prefix, definer, { middleware? })` with typed prefix params propagated to handlers
 - ✅ **Named routes** — navigate and build URLs by name, never hard-code paths
 - ✅ **URL builder** — `url(nameOrPattern, params?, query?)` with base-path awareness
 - ✅ **Async navigation** — `navigate()` returns a `Promise`; errors become rejections
@@ -72,14 +72,27 @@ router.start();
 
 ### Route Groups
 
-Share a path prefix and optional middleware across multiple routes:
+Share a path prefix and optional middleware across multiple routes. Path params in the prefix are **typed through** to every `on()` handler in the group:
 
 ```typescript
-router.group('/admin', (r) => {
-  r.on('/dashboard', () => renderDashboard());
-  r.on('/users',     () => renderUsers());
-  r.on('/users/:id', ({ params }) => renderUser(params.id));
-}, { middleware: requireAuth });
+// Simple prefix + middleware
+router.group(
+  '/admin',
+  (r) => {
+    r.on('/dashboard', () => renderDashboard());
+    r.on('/users', () => renderUsers());
+    r.on('/users/:id', ({ params }) => renderUser(params.id));
+  },
+  { middleware: requireAuth },
+);
+
+// Prefix params are typed inside the callback
+router.group('/projects/:projectId', (r) => {
+  r.on('/tasks/:taskId', ({ params }) => {
+    params.projectId; // ✓ string — inferred from group prefix
+    params.taskId; // ✓ string — inferred from on() path
+  });
+});
 ```
 
 ### Route Context
@@ -88,13 +101,13 @@ Every handler and middleware receives a `RouteContext`:
 
 ```typescript
 router.on('/users/:id', (ctx) => {
-  ctx.params.id;    // typed dynamic segment → e.g. '123'
-  ctx.query.page;   // query param → e.g. '?page=2' → '2'
-  ctx.pathname;     // current pathname string
-  ctx.hash;         // URL hash without '#'
-  ctx.meta;         // static metadata from the route definition
-  ctx.locals;       // mutable bag — pass data between middleware
-  ctx.navigate;     // navigate programmatically from the handler
+  ctx.params.id; // typed dynamic segment → e.g. '123'
+  ctx.query.page; // query param → e.g. '?page=2' → '2'
+  ctx.pathname; // current pathname string
+  ctx.hash; // URL hash without '#'
+  ctx.meta; // static metadata from the route definition
+  ctx.locals; // mutable bag — pass data between middleware
+  ctx.navigate; // navigate programmatically from the handler
 });
 ```
 
@@ -147,19 +160,19 @@ try {
 ### URL Builder
 
 ```typescript
-router.url('/users/:id', { id: '42' });                      // '/users/42'
-router.url('userDetail', { id: '42' });                      // '/app/users/42' (respects base)
+router.url('/users/:id', { id: '42' }); // '/users/42'
+router.url('userDetail', { id: '42' }); // '/app/users/42' (respects base)
 router.url('/search', undefined, { q: 'hello', page: '2' }); // '/search?q=hello&page=2'
-router.url('/docs/:rest*', { rest: 'guide/intro' });         // '/docs/guide/intro'
+router.url('/docs/:rest*', { rest: 'guide/intro' }); // '/docs/guide/intro'
 ```
 
 ### `isActive`
 
 ```typescript
-router.isActive('/users/:id');           // exact match (default)
-router.isActive('userDetail');           // by route name
-router.isActive('/admin', false);        // prefix match — true when inside /admin/*
-router.isActive('adminGroup', false);    // named route prefix match
+router.isActive('/users/:id'); // exact match (default)
+router.isActive('userDetail'); // by route name
+router.isActive('/admin', false); // prefix match — true when inside /admin/*
+router.isActive('adminGroup', false); // named route prefix match
 ```
 
 ### Subscriptions & State
@@ -167,10 +180,10 @@ router.isActive('adminGroup', false);    // named route prefix match
 ```typescript
 const unsubscribe = router.subscribe((state) => {
   state.pathname; // '/users/42'
-  state.params;   // { id: '42' }
-  state.query;    // { page: '2' }
-  state.name;     // 'userDetail'
-  state.meta;     // { title: 'User' }
+  state.params; // { id: '42' }
+  state.query; // { page: '2' }
+  state.name; // 'userDetail'
+  state.meta; // { title: 'User' }
 });
 
 // Stop later
@@ -194,7 +207,7 @@ const match = router.resolve('/users/42');
 const router = createRouter({ autoStart: true }); // starts immediately
 
 router.start(); // idempotent — safe to call twice
-router.stop();  // remove event listeners
+router.stop(); // remove event listeners
 router.dispose(); // stop + clear all subscribers
 
 // Or with `using` (ES2022 Explicit Resource Management)
@@ -217,62 +230,62 @@ const router = createRouter({
 
 ### `createRouter(options?)`
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `mode` | `'history' \| 'hash'` | `'history'` | Routing mode |
-| `base` | `string` | `'/'` | Base path prefix for history mode |
-| `onNotFound` | `RouteHandler` | — | Handler for unmatched routes |
-| `onError` | `(error, ctx) => void` | — | Handler for errors thrown in handlers or middleware |
-| `middleware` | `Middleware \| Middleware[]` | `[]` | Global middleware applied before every route |
-| `viewTransition` | `boolean` | `false` | Wrap navigations in the View Transition API |
-| `autoStart` | `boolean` | `false` | Start immediately after construction |
+| Option           | Type                         | Default     | Description                                         |
+| ---------------- | ---------------------------- | ----------- | --------------------------------------------------- |
+| `mode`           | `'history' \| 'hash'`        | `'history'` | Routing mode                                        |
+| `base`           | `string`                     | `'/'`       | Base path prefix for history mode                   |
+| `onNotFound`     | `RouteHandler`               | —           | Handler for unmatched routes                        |
+| `onError`        | `(error, ctx) => void`       | —           | Handler for errors thrown in handlers or middleware |
+| `middleware`     | `Middleware \| Middleware[]` | `[]`        | Global middleware applied before every route        |
+| `viewTransition` | `boolean`                    | `false`     | Wrap navigations in the View Transition API         |
+| `autoStart`      | `boolean`                    | `false`     | Start immediately after construction                |
 
 ### Router Methods
 
-| Method | Returns | Description |
-|---|---|---|
-| `on(path, handler, opts?)` | `this` | Register a route with a typed handler |
-| `on(path, opts?)` | `this` | Register a middleware-only route (no handler) |
-| `group(prefix, definer, opts?)` | `this` | Register routes under a shared prefix |
-| `use(...middleware)` | `this` | Add global middleware after construction |
-| `start()` | `this` | Start listening for navigation events |
-| `stop()` | `this` | Stop listening and remove event listeners |
-| `dispose()` | `void` | Stop and clear all subscribers |
-| `navigate(target, opts?)` | `Promise<void>` | Navigate to a path or named route |
-| `url(nameOrPattern, params?, query?)` | `string` | Build a URL from a path pattern or named route |
-| `isActive(nameOrPattern, exact?)` | `boolean` | Check if a pattern or name matches the current path |
-| `resolve(pathname)` | `ResolvedRoute \| null` | Resolve a pathname without navigating |
-| `state` | `RouteState` | Current route state (shallow copy) |
-| `subscribe(listener)` | `() => void` | Subscribe to route changes; returns an unsubscribe function |
+| Method                                | Returns                 | Description                                                 |
+| ------------------------------------- | ----------------------- | ----------------------------------------------------------- |
+| `on(path, handler, opts?)`            | `this`                  | Register a route with a typed handler                       |
+| `on(path, opts?)`                     | `this`                  | Register a middleware-only route (no handler)               |
+| `group(prefix, definer, opts?)`       | `this`                  | Register routes under a shared prefix                       |
+| `use(...middleware)`                  | `this`                  | Add global middleware after construction                    |
+| `start()`                             | `this`                  | Start listening for navigation events                       |
+| `stop()`                              | `this`                  | Stop listening and remove event listeners                   |
+| `dispose()`                           | `void`                  | Stop and clear all subscribers                              |
+| `navigate(target, opts?)`             | `Promise<void>`         | Navigate to a path or named route                           |
+| `url(nameOrPattern, params?, query?)` | `string`                | Build a URL from a path pattern or named route              |
+| `isActive(nameOrPattern, exact?)`     | `boolean`               | Check if a pattern or name matches the current path         |
+| `resolve(pathname)`                   | `ResolvedRoute \| null` | Resolve a pathname without navigating                       |
+| `state`                               | `RouteState`            | Current route state (shallow copy)                          |
+| `subscribe(listener)`                 | `() => void`            | Subscribe to route changes; returns an unsubscribe function |
 
 ### `RouteOptions<Meta>`
 
 Passed as the last argument to `on()`:
 
-| Option | Type | Description |
-|---|---|---|
-| `name` | `string` | Route name for programmatic navigation and `url()`/`isActive()` |
-| `meta` | `Meta` | Static metadata attached to the route context |
-| `middleware` | `Middleware \| Middleware[]` | Route-specific middleware |
+| Option       | Type                         | Description                                                     |
+| ------------ | ---------------------------- | --------------------------------------------------------------- |
+| `name`       | `string`                     | Route name for programmatic navigation and `url()`/`isActive()` |
+| `meta`       | `Meta`                       | Static metadata attached to the route context                   |
+| `middleware` | `Middleware \| Middleware[]` | Route-specific middleware                                       |
 
 ### `NavigateOptions`
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `replace` | `boolean` | `false` | Replace the current history entry |
-| `state` | `unknown` | — | State stored with the history entry |
-| `viewTransition` | `boolean` | — | Override the router-level setting for this navigation |
-| `force` | `boolean` | `false` | Navigate even if the destination URL matches the current |
+| Option           | Type      | Default | Description                                              |
+| ---------------- | --------- | ------- | -------------------------------------------------------- |
+| `replace`        | `boolean` | `false` | Replace the current history entry                        |
+| `state`          | `unknown` | —       | State stored with the history entry                      |
+| `viewTransition` | `boolean` | —       | Override the router-level setting for this navigation    |
+| `force`          | `boolean` | `false` | Navigate even if the destination URL matches the current |
 
 ## Documentation
 
 Full docs at **[vielzeug.dev/routeit](https://vielzeug.dev/routeit)**
 
-| | |
-|---|---|
+|                                                   |                                            |
+| ------------------------------------------------- | ------------------------------------------ |
 | [Usage Guide](https://vielzeug.dev/routeit/usage) | Routes, navigation, middleware, and groups |
-| [API Reference](https://vielzeug.dev/routeit/api) | Complete type signatures |
-| [Examples](https://vielzeug.dev/routeit/examples) | Real-world routing patterns |
+| [API Reference](https://vielzeug.dev/routeit/api) | Complete type signatures                   |
+| [Examples](https://vielzeug.dev/routeit/examples) | Real-world routing patterns                |
 
 ## License
 

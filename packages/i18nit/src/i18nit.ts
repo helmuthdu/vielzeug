@@ -29,7 +29,10 @@ export type DeepPartialMessages<T extends Messages> = {
       : MessageValue;
 };
 
-/** Recursive type that extracts all dot-notation keys from a Messages shape for type-safe translation. */
+/**
+ * Recursive type that extracts all dot-notation keys from a Messages shape for type-safe translation.
+ * Type-safe resolution is provided up to 8 levels of nesting; deeper paths resolve to `string`.
+ */
 export type TranslationKey<
   T extends Messages,
   P extends string = '',
@@ -46,6 +49,11 @@ export type TranslationKey<
           : never;
     }[keyof T & string];
 
+/** The `key` parameter type for `t()` — enforces known dot-notation paths when `T` is concrete, allows any string otherwise. */
+export type TranslationKeyParam<T extends Messages> = [TranslationKey<T>] extends [never]
+  ? string
+  : TranslationKey<T> | (string & {});
+
 export type Loader = (locale: Locale) => Promise<Messages>;
 
 /** The reason a `subscribe()` listener was notified. */
@@ -53,6 +61,25 @@ export type LocaleChangeReason = 'locale-change' | 'catalog-update';
 
 /** Payload passed to every `subscribe()` listener. */
 export type LocaleChangeEvent = { locale: Locale; reason: LocaleChangeReason };
+
+/** Type alias for a `subscribe()` listener function. */
+export type LocaleChangeListener = (event: LocaleChangeEvent) => void;
+
+/**
+ * Diagnostic event passed to `onDiagnostic`. Each `kind` carries relevant context:
+ * - `'subscriber-error'` — a subscriber callback threw; treat as a programming error.
+ * - `'loader-error'` — a locale loader rejected; treat as a recoverable I/O failure.
+ */
+export type DiagnosticEvent =
+  | { error: unknown; kind: 'subscriber-error' }
+  | { error: unknown; kind: 'loader-error'; locale: Locale };
+
+/** Keys of `T` whose values are nested `Messages` objects (i.e. valid scope targets). */
+export type NamespaceKeys<T extends Messages> = string extends keyof T
+  ? string
+  : {
+      [K in keyof T & string]: T[K] extends Messages ? K : never;
+    }[keyof T & string];
 
 export type I18nOptions<T extends Messages = Messages> = {
   fallback?: Locale | Locale[];
@@ -63,9 +90,14 @@ export type I18nOptions<T extends Messages = Messages> = {
    * For a partial secondary locale, annotate it with `DeepPartialMessages<M>` to get compile-time
    * checks that the subset matches the primary locale's shape.
    */
-  messages?: Record<string, T>;
-  /** Called for subscriber errors and loader failures. Defaults to `console.error`/`console.warn`. */
-  onError?: (err: unknown, context: 'subscriber' | 'loader') => void;
+  messages?: Record<string, T | DeepPartialMessages<T>>;
+  /**
+   * Receives diagnostic events for both subscriber errors and loader failures.
+   * `'subscriber-error'` events indicate a programming error in a listener.
+   * `'loader-error'` events are recoverable I/O failures and include the failing `locale`.
+   * Defaults to `console.error` for subscriber errors and `console.warn` for loader errors.
+   */
+  onDiagnostic?: (event: DiagnosticEvent) => void;
   onMissing?: (key: string, locale: Locale) => string | undefined;
 };
 
@@ -79,8 +111,9 @@ export type BoundI18n<T extends Messages = Messages> = {
   readonly locale: Locale;
   number(value: number, options?: Intl.NumberFormatOptions): string;
   relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
-  scope<K extends keyof T & string>(ns: K): T[K] extends Messages ? BoundI18n<T[K]> : BoundI18n<Messages>;
-  t(key: [TranslationKey<T>] extends [never] ? string : TranslationKey<T> | (string & {}), vars?: Vars): string;
+  /** Returns a translator scoped to a namespace key. Only keys whose values are nested message objects are valid. */
+  scope<K extends NamespaceKeys<T>>(ns: K): BoundI18n<T[K] & Messages>;
+  t(key: TranslationKeyParam<T>, vars?: Vars): string;
   withLocale(locale: Locale): BoundI18n<T>;
 };
 
@@ -134,11 +167,13 @@ function isMessageValue(value: unknown): value is MessageValue {
 
   const obj = value as Record<string, unknown>;
 
-  return (
-    'other' in obj &&
-    Object.keys(obj).every((k) => PLURAL_FORMS.has(k)) &&
-    Object.values(obj).every((v) => typeof v === 'string')
-  );
+  if (!('other' in obj)) return false;
+
+  const keys = Object.keys(obj);
+
+  if (keys.length > PLURAL_FORMS.size) return false;
+
+  return keys.every((k) => PLURAL_FORMS.has(k)) && Object.values(obj).every((v) => typeof v === 'string');
 }
 
 function deepMerge(target: Messages, source: Messages): Messages {
@@ -150,7 +185,8 @@ function deepMerge(target: Messages, source: Messages): Messages {
     if (!isMessageValue(val) && !isMessageValue(existing) && typeof existing === 'object' && existing !== null) {
       result[key] = deepMerge(existing as Messages, val as Messages);
     } else {
-      result[key] = val;
+      // Clone PluralMessages objects to prevent external mutations from corrupting the catalog.
+      result[key] = typeof val === 'object' && val !== null ? ({ ...(val as object) } as MessageValue) : val;
     }
   }
 
@@ -166,12 +202,23 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
   #loaders = new Map<Locale, Loader>();
   #loading = new Map<Locale, Promise<void>>();
   #subscribers = new Set<(event: LocaleChangeEvent) => void>();
-  // #chainCache is safe to cache permanently — #fallbacks is immutable after construction.
+  /**
+   * #chainCache is safe to cache permanently — #fallbacks is immutable after construction.
+   * Note: in long-lived SSR singletons, entries accumulate for every distinct locale string
+   * ever passed to withLocale(). The set of distinct locales is normally bounded,
+   * but if locales are derived from arbitrary user input, prefer a fresh I18n instance per
+   * request or use withLocale() only with known locale tags.
+   */
   #chainCache = new Map<Locale, Locale[]>();
   #onMissing?: (key: string, locale: Locale) => string | undefined;
-  #onError?: (err: unknown, context: 'subscriber' | 'loader') => void;
+  #onDiagnostic?: (event: DiagnosticEvent) => void;
   #localesCache: Locale[] | null = null;
   #loadersCache: Locale[] | null = null;
+  #disposed = false;
+  #batchDepth = 0;
+  #pendingNotify: LocaleChangeReason | null = null;
+
+  #core!: any; // typed as I18nCore — defined later in this module; initialized in constructor
 
   // Instance-scoped Intl caches — GC'd with the instance (important for SSR with many locales).
   readonly #pluralRulesCache = new Map<string, Intl.PluralRules>();
@@ -180,11 +227,11 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
   readonly #dateFormatCache = new Map<string, Intl.DateTimeFormat>();
   readonly #relativeTimeFormatCache = new Map<string, Intl.RelativeTimeFormat>();
 
-  constructor({ fallback, loaders, locale = 'en', messages, onError, onMissing }: I18nOptions<T> = {}) {
+  constructor({ fallback, loaders, locale = 'en', messages, onDiagnostic, onMissing }: I18nOptions<T> = {}) {
     this.#locale = locale;
     this.#fallbacks = Array.isArray(fallback) ? fallback : fallback ? [fallback] : [];
     this.#onMissing = onMissing;
-    this.#onError = onError;
+    this.#onDiagnostic = onDiagnostic;
 
     if (messages) {
       for (const [l, m] of Object.entries(messages)) {
@@ -194,6 +241,32 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
     }
 
     if (loaders) for (const [l, fn] of Object.entries(loaders)) this.#loaders.set(l, fn);
+
+    this.#core = {
+      checkOwn: (key: string, locale: Locale) => {
+        const catalog = this.#catalogs.get(locale);
+
+        if (!catalog) return false;
+
+        const value = resolvePath(catalog, key);
+
+        return value !== undefined && isMessageValue(value);
+      },
+      findMessage: (key: string, locale: Locale) => this.#findMessage(key, locale),
+      formatDate: (value: Date | number, options: Intl.DateTimeFormatOptions | undefined, locale: Locale) =>
+        this.#date(value, options, locale),
+      formatList: (items: unknown[], locale: string, type: 'and' | 'or') => this.#formatList(items, locale, type),
+      formatNumber: (value: number, options: Intl.NumberFormatOptions | undefined, locale: Locale) =>
+        this.#number(value, options, locale),
+      formatRelative: (
+        value: number,
+        unit: Intl.RelativeTimeFormatUnit,
+        options: Intl.RelativeTimeFormatOptions | undefined,
+        locale: Locale,
+      ) => this.#relative(value, unit, options, locale),
+      getLocale: () => this.#locale,
+      translate: (key: string, vars: Vars | undefined, locale: Locale) => this.#translate(key, vars, locale),
+    };
   }
 
   /* -------------------- Locale -------------------- */
@@ -210,6 +283,13 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   set locale(value: Locale) {
     if (this.#locale === value) return;
+
+    if (import.meta.env?.DEV && !this.#catalogs.has(value) && this.#loaders.has(value)) {
+      console.warn(
+        `[i18nit] locale "${value}" has a registered loader but is not loaded. ` +
+          'Use setLocale() to load and switch atomically.',
+      );
+    }
 
     this.#locale = value;
     this.#notify('locale-change');
@@ -234,21 +314,21 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
     if (this.#getLocaleChain(this.#locale).includes(locale)) this.#notify('catalog-update');
   }
 
-  /** Replaces the entire locale catalog with a deep clone of `messages` to prevent external mutation. */
+  /** Replaces the entire locale catalog for `locale` with a shallow copy of `messages`. */
   replace(locale: Locale, messages: Messages): void {
-    this.#catalogs.set(locale, structuredClone(messages));
+    this.#catalogs.set(locale, { ...messages });
     this.#localesCache = null;
 
     if (this.#getLocaleChain(this.#locale).includes(locale)) this.#notify('catalog-update');
   }
 
-  has(key: string, locale?: Locale): boolean {
-    return this.#findMessage(key, locale ?? this.#locale) !== undefined;
+  has(key: string): boolean {
+    return this.#findMessage(key, this.#locale) !== undefined;
   }
 
   /** Like `has()`, but only checks the exact locale without walking the fallback chain. */
-  hasOwn(key: string, locale?: Locale): boolean {
-    const catalog = this.#catalogs.get(locale ?? this.#locale);
+  hasOwn(key: string): boolean {
+    const catalog = this.#catalogs.get(this.#locale);
 
     if (!catalog) return false;
 
@@ -265,6 +345,13 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   async load(...locales: Locale[]): Promise<void> {
     await Promise.all(locales.map((locale) => this.#loadOne(locale)));
+  }
+
+  /** Force-reloads a locale catalog even if already populated. Useful for hot-reload and forced bundle refresh. */
+  async reload(locale: Locale): Promise<void> {
+    this.#catalogs.delete(locale);
+    this.#localesCache = null;
+    await this.#loadOne(locale);
   }
 
   registerLoader(locale: Locale, loader: Loader): void {
@@ -286,8 +373,8 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
    * Locale must be loaded first via `load()` or provided via `messages` in config.
    * For a per-call locale override use `withLocale(locale).t(key, vars)`.
    */
-  t(key: [TranslationKey<T>] extends [never] ? string : TranslationKey<T> | (string & {}), vars?: Vars): string {
-    return this.#translate(key, vars, this.#locale);
+  t(key: TranslationKeyParam<T>, vars?: Vars): string {
+    return this.#translate(key as string, vars, this.#locale);
   }
 
   /* -------------------- Formatting Helpers -------------------- */
@@ -320,19 +407,43 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
    * multi-locale rendering in a single pass.
    */
   withLocale(locale: Locale): BoundI18n<T> {
-    return this.#makeBound(locale) as BoundI18n<T>;
+    return new BoundView<T>(this.#core, locale);
   }
 
   /**
    * Returns a translator scoped to a key namespace prefix. Reacts to locale changes on the
    * instance. When `T` is a concrete message type, the returned `BoundI18n` is narrowed to
    * the subtree type so `t()` autocomplete works within the scope.
+   * Only keys whose values are nested message objects are valid scope targets.
    */
-  scope<K extends keyof T & string>(ns: K): T[K] extends Messages ? BoundI18n<T[K]> : BoundI18n<Messages> {
-    return this.#makeBound(null, ns) as T[K] extends Messages ? BoundI18n<T[K]> : BoundI18n<Messages>;
+  scope<K extends NamespaceKeys<T>>(ns: K): BoundI18n<T[K] & Messages> {
+    return new BoundView(this.#core, null, ns) as BoundI18n<T[K] & Messages>;
   }
 
   /* -------------------- Subscriptions -------------------- */
+
+  /**
+   * Executes `fn` while deferring subscriber notifications. A single notification fires
+   * after `fn` completes, collapsing any number of `add()` / `replace()` calls made within.
+   * Nested `batch()` calls are supported; notification fires when the outermost batch exits.
+   * If both a locale change and a catalog update are triggered, `'locale-change'` takes priority.
+   */
+  batch(fn: () => void): void {
+    this.#batchDepth++;
+
+    try {
+      fn();
+    } finally {
+      this.#batchDepth--;
+
+      if (this.#batchDepth === 0 && this.#pendingNotify !== null) {
+        const reason = this.#pendingNotify;
+
+        this.#pendingNotify = null;
+        this.#notify(reason);
+      }
+    }
+  }
 
   subscribe(listener: (event: LocaleChangeEvent) => void, immediate?: boolean): Unsubscribe {
     this.#subscribers.add(listener);
@@ -341,7 +452,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
       try {
         listener({ locale: this.#locale, reason: 'locale-change' });
       } catch (err) {
-        this.#handleError(err, 'subscriber');
+        this.#diagnoseSubscriber(err);
       }
     }
 
@@ -350,6 +461,7 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
 
   /** Releases all resources held by this instance. */
   dispose(): void {
+    this.#disposed = true;
     this.#subscribers.clear();
     this.#catalogs.clear();
     this.#loaders.clear();
@@ -364,46 +476,48 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
     this.dispose();
   }
 
-  /* -------------------- Private -------------------- */
-
-  #makeBound(locale: Locale | null, prefix?: string): BoundI18n<Messages> {
-    const loc = (): Locale => locale ?? this.#locale;
-
-    return {
-      currency: (value, cur, options) => this.#number(value, { ...options, currency: cur, style: 'currency' }, loc()),
-      date: (value, options) => this.#date(value, options, loc()),
-      has: (key) => this.has(prefix ? `${prefix}.${key}` : key, loc()),
-      hasOwn: (key) => this.hasOwn(prefix ? `${prefix}.${key}` : key, loc()),
-      list: (items, type) => this.#formatList(items, loc(), type ?? 'and'),
-      get locale() {
-        return loc();
-      },
-      number: (value, options) => this.#number(value, options, loc()),
-      relative: (value, unit, options) => this.#relative(value, unit, options, loc()),
-      scope: (ns) => this.#makeBound(locale, prefix ? `${prefix}.${ns}` : ns),
-      t: (key, vars) => this.#translate(prefix ? `${prefix}.${key}` : key, vars, loc()),
-      withLocale: (l) => this.#makeBound(l, prefix),
-    };
+  /**
+   * Awaits any in-flight `load()` calls and then releases all resources.
+   * Enables `await using i18n = createI18n(...)` in environments that support `Symbol.asyncDispose`.
+   */
+  async [Symbol.asyncDispose](): Promise<void> {
+    await Promise.allSettled([...this.#loading.values()]);
+    this.dispose();
   }
 
-  #handleError(err: unknown, context: 'subscriber' | 'loader'): void {
-    if (this.#onError) {
-      this.#onError(err, context);
-    } else if (context === 'loader') {
-      console.warn('[i18nit] Loader error:', err);
+  /* -------------------- Private -------------------- */
+
+  #diagnoseSubscriber(error: unknown): void {
+    if (this.#onDiagnostic) {
+      this.#onDiagnostic({ error, kind: 'subscriber-error' });
     } else {
-      console.error('[i18nit] Subscriber threw:', err);
+      console.error('[i18nit] Subscriber threw:', error);
+    }
+  }
+
+  #diagnoseLoader(error: unknown, locale: Locale): void {
+    if (this.#onDiagnostic) {
+      this.#onDiagnostic({ error, kind: 'loader-error', locale });
+    } else {
+      console.warn('[i18nit] Loader error:', error);
     }
   }
 
   #notify(reason: LocaleChangeReason): void {
+    if (this.#batchDepth > 0) {
+      // 'locale-change' takes priority over 'catalog-update' if both occur in one batch
+      if (this.#pendingNotify !== 'locale-change') this.#pendingNotify = reason;
+
+      return;
+    }
+
     const event: LocaleChangeEvent = { locale: this.#locale, reason };
 
     for (const listener of this.#subscribers) {
       try {
         listener(event);
       } catch (err) {
-        this.#handleError(err, 'subscriber');
+        this.#diagnoseSubscriber(err);
       }
     }
   }
@@ -431,9 +545,11 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
     const push = (l: Locale) => {
       seen.add(l);
 
-      const lang = l.split('-')[0];
+      const parts = l.split('-');
 
-      if (lang !== l) seen.add(lang);
+      for (let i = parts.length - 1; i > 0; i--) {
+        seen.add(parts.slice(0, i).join('-'));
+      }
     };
 
     push(locale);
@@ -454,6 +570,11 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
     if (typeof message === 'string') return this.#interpolate(message, vars ?? {}, locale);
 
     const v = vars ?? {};
+
+    if (import.meta.env?.DEV && v.count === undefined) {
+      console.warn(`[i18nit] Key "${key}" is a plural message but vars.count is missing. Defaulting to 0.`);
+    }
+
     const count = Number(v.count ?? 0);
     const form = count === 0 && message.zero !== undefined ? 'zero' : this.#getPluralForm(locale, count);
 
@@ -588,9 +709,9 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
       try {
         const messages = await loader(locale);
 
-        this.add(locale, messages);
+        if (!this.#disposed) this.add(locale, messages);
       } catch (error) {
-        this.#handleError(error, 'loader');
+        this.#diagnoseLoader(error, locale);
         throw error;
       } finally {
         this.#loading.delete(locale);
@@ -600,6 +721,96 @@ export class I18n<T extends Messages = Messages> implements BoundI18n<T> {
     this.#loading.set(locale, promise);
 
     return promise;
+  }
+}
+
+/* -------------------- Internal Core + BoundView -------------------- */
+
+/**
+ * Module-private interface given to every `BoundView` — exposes only the operations views need.
+ * Created once per `I18n` instance so `scope()` / `withLocale()` allocate no closures per call.
+ */
+type I18nCore = {
+  checkOwn(key: string, locale: Locale): boolean;
+  findMessage(key: string, locale: Locale): MessageValue | undefined;
+  formatDate(value: Date | number, options: Intl.DateTimeFormatOptions | undefined, locale: Locale): string;
+  formatList(items: unknown[], locale: string, type: 'and' | 'or'): string;
+  formatNumber(value: number, options: Intl.NumberFormatOptions | undefined, locale: Locale): string;
+  formatRelative(
+    value: number,
+    unit: Intl.RelativeTimeFormatUnit,
+    options: Intl.RelativeTimeFormatOptions | undefined,
+    locale: Locale,
+  ): string;
+  getLocale(): Locale;
+  translate(key: string, vars: Vars | undefined, locale: Locale): string;
+};
+
+/**
+ * Lightweight view over an `I18n` instance, fixed to a locale and/or key namespace prefix.
+ * All methods live on the prototype — no closures are allocated per `scope()` / `withLocale()` call.
+ */
+class BoundView<T extends Messages = Messages> implements BoundI18n<T> {
+  readonly #core: I18nCore;
+  readonly #fixedLocale: Locale | null;
+  readonly #prefix: string | undefined;
+
+  constructor(core: I18nCore, fixedLocale: Locale | null, prefix?: string) {
+    this.#core = core;
+    this.#fixedLocale = fixedLocale;
+    this.#prefix = prefix;
+  }
+
+  get locale(): Locale {
+    return this.#fixedLocale ?? this.#core.getLocale();
+  }
+
+  #key(key: string): string {
+    return this.#prefix ? `${this.#prefix}.${key}` : key;
+  }
+
+  t(key: TranslationKeyParam<T>, vars?: Vars): string {
+    return this.#core.translate(this.#key(key as string), vars, this.locale);
+  }
+
+  has(key: string): boolean {
+    return this.#core.findMessage(this.#key(key), this.locale) !== undefined;
+  }
+
+  hasOwn(key: string): boolean {
+    return this.#core.checkOwn(this.#key(key), this.locale);
+  }
+
+  number(value: number, options?: Intl.NumberFormatOptions): string {
+    return this.#core.formatNumber(value, options, this.locale);
+  }
+
+  date(value: Date | number, options?: Intl.DateTimeFormatOptions): string {
+    return this.#core.formatDate(value, options, this.locale);
+  }
+
+  list(items: unknown[], type: 'and' | 'or' = 'and'): string {
+    return this.#core.formatList(items, this.locale, type);
+  }
+
+  relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string {
+    return this.#core.formatRelative(value, unit, options, this.locale);
+  }
+
+  currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'style' | 'currency'>): string {
+    return this.#core.formatNumber(value, { ...options, currency, style: 'currency' }, this.locale);
+  }
+
+  scope<K extends NamespaceKeys<T>>(ns: K): BoundI18n<T[K] & Messages> {
+    return new BoundView(
+      this.#core,
+      this.#fixedLocale,
+      this.#prefix ? `${this.#prefix}.${String(ns)}` : String(ns),
+    ) as BoundI18n<T[K] & Messages>;
+  }
+
+  withLocale(locale: Locale): BoundI18n<T> {
+    return new BoundView<T>(this.#core, locale, this.#prefix);
   }
 }
 

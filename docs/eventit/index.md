@@ -32,11 +32,12 @@ yarn add @vielzeug/eventit
 ## Quick Start
 
 ```ts
-import { createBus } from '@vielzeug/eventit';
+import { createBus, BusDisposedError } from '@vielzeug/eventit';
+import type { Bus, BusOptions, EventMap, EventKey, Listener, Unsubscribe } from '@vielzeug/eventit';
 
 type AppEvents = {
-  'user:login':   { userId: string; email: string };
-  'user:logout':  void;
+  'user:login': { userId: string; email: string };
+  'user:logout': void;
   'cart:updated': { items: CartItem[]; total: number };
 };
 
@@ -72,16 +73,18 @@ for await (const { items } of bus.events('cart:updated')) {
 - **Void events** — emit signal events cleanly: `bus.emit('refresh')`
 - **`once`** — auto-unsubscribing one-shot listeners
 - **`wait`** — `await bus.wait('event')` resolves on the next emit
-- **`events`** — async generator for pull-based streaming of all future emits
+- **`events`** — async generator for pull-based streaming; terminates cleanly on dispose or abort
 - **AbortSignal** — pass any `AbortSignal` to `on`, `once`, `wait`, or `events` for lifecycle-driven cleanup
 - **`[Symbol.dispose]`** — supports the `using` keyword for automatic teardown
-- **Error isolation** — optional `onError` keeps a failing listener from crashing others
+- **Error isolation** — optional `onError` keeps a failing listener from crashing others; `event` and `payload` are fully typed
+- **`listenerCount`** — query active listener counts per-event or globally
+- **`BusDisposedError`** — typed error class for `instanceof`-safe rejection handling
 - **Zero dependencies** — <PackageInfo package="eventit" type="size" /> gzipped, <PackageInfo package="eventit" type="dependencies" /> dependencies
 
 ## Next Steps
 
-| | |
-| --- | --- |
+|                           |                                                   |
+| ------------------------- | ------------------------------------------------- |
 | [Usage Guide](./usage.md) | Subscribing, async patterns, AbortSignal, testing |
 | [API Reference](./api.md) | Complete type signatures and method documentation |
-| [Examples](./examples.md) | Real-world event bus patterns and recipes |
+| [Examples](./examples.md) | Real-world event bus patterns and recipes         |

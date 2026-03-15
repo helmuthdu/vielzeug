@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/permit",
+      "comment": "Major release: role-based access control (RBAC) with typed user and permission data generics; per-role, per-resource action permissions (create/read/update/delete) supporting static boolean or dynamic predicate functions receiving the user and optional resource data; wildcard (*) role for universal grants; ANONYMOUS role constant for unauthenticated users; hasRole() for case-insensitive role membership checks; set(), remove(), and clear() for runtime permission management",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/permit"
+}

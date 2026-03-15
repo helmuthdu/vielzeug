@@ -1,5 +1,4 @@
 import { resolve } from 'node:path';
-import dts from 'vite-plugin-dts';
 
 type LibraryEntry = string | Record<string, string>;
 
@@ -32,7 +31,7 @@ export const getConfig = (
         formats: ['es', 'cjs'],
         name,
       },
-      rollupOptions: {
+      rolldownOptions: {
         output: {
           preserveModules,
           ...(preserveModules && { preserveModulesRoot: resolve(__dirname, 'src') }),
@@ -40,7 +39,6 @@ export const getConfig = (
       },
       sourcemap: true,
     },
-    plugins: [dts({ include: [resolve(__dirname, 'src')], insertTypesEntry: true, rollupTypes: true })],
   };
 
   return config;

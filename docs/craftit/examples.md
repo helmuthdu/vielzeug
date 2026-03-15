@@ -71,6 +71,7 @@ Dynamic list with add/remove functionality using signals and html.each.
 
 ```ts
 import { define, signal, html } from '@vielzeug/craftit';
+import { classes } from '@vielzeug/craftit/directives';
 define('todo-list', () => {
   const todos = signal<Array<{ id: number; text: string; done: boolean }>>([
     { id: 1, text: 'Learn Craftit', done: false },
@@ -107,7 +108,7 @@ define('todo-list', () => {
           todos,
           (todo) => todo.id,
           (todo) => html`
-            <li class=${() => html.classes({ done: todo.done })}>
+            <li class=${classes({ done: todo.done })}>
               <input type="checkbox" ?checked=${todo.done} @change=${() => toggleTodo(todo.id)} />
               <span>${todo.text}</span>
               <button @click=${() => removeTodo(todo.id)}>×</button>
@@ -127,7 +128,7 @@ define('todo-list', () => {
 Basic custom input with form integration using ElementInternals.
 
 ```ts
-import { define, signal, html, css, field } from '@vielzeug/craftit';
+import { define, signal, html, css, defineField } from '@vielzeug/craftit';
 
 define(
   'custom-input',
@@ -136,7 +137,7 @@ define(
     const placeholder = prop('placeholder', '');
 
     // Register as form field
-    const formField = field({ value });
+    const formField = defineField({ value });
 
     const styles = css`
       input {
@@ -183,7 +184,7 @@ Usage in a form:
 Email input with built-in validation using ElementInternals.
 
 ```ts
-import { define, signal, computed, watch, html, css, field } from '@vielzeug/craftit';
+import { define, signal, computed, watch, html, css, defineField } from '@vielzeug/craftit';
 
 define(
   'email-input',
@@ -193,7 +194,7 @@ define(
       parse: (v) => v !== null,
     });
 
-    const formField = field({ value });
+    const formField = defineField({ value });
 
     const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value));
 
@@ -247,7 +248,10 @@ define(
             :value=${value}
             @input=${(e) => (value.value = e.target.value)}
             placeholder="email@example.com" />
-          ${html.when(() => value.value && !emailValid.value, () => html` <div class="error">Please enter a valid email</div> `)}
+          ${html.when(
+            () => value.value && !emailValid.value,
+            () => html` <div class="error">Please enter a valid email</div> `,
+          )}
         </div>
       `,
       styles: [styles.content],
@@ -262,7 +266,8 @@ define(
 Star rating component with form integration.
 
 ```ts
-import { define, signal, watch, html, css, field, prop } from '@vielzeug/craftit';
+import { define, signal, watch, html, css, defineField, prop } from '@vielzeug/craftit';
+import { classes } from '@vielzeug/craftit/directives';
 
 define(
   'star-rating',
@@ -275,7 +280,7 @@ define(
       parse: (v) => v !== null,
     });
 
-    const formField = field({
+    const formField = defineField({
       value: rating,
       toFormValue: (v) => String(v),
     });
@@ -327,7 +332,7 @@ define(
             (star) => html`
               <button
                 type="button"
-                class=${() => html.classes({ active: rating.value >= star })}
+                class=${classes({ active: () => rating.value >= star })}
                 @click=${() => (rating.value = star)}
                 aria-label="${star} star${star > 1 ? 's' : ''}"
                 role="radio"
@@ -360,7 +365,7 @@ Usage:
 Custom multi-select with form integration.
 
 ```ts
-import { define, signal, html, css, field } from '@vielzeug/craftit';
+import { define, signal, html, css, defineField } from '@vielzeug/craftit';
 
 type Option = { value: string; label: string };
 
@@ -376,7 +381,7 @@ define(
 
     const selected = signal<string[]>([]);
 
-    const formField = field({
+    const formField = defineField({
       value: selected,
       toFormValue: (values) => {
         // Send as comma-separated string or FormData
@@ -455,7 +460,7 @@ define(
 Custom file uploader with preview and form integration.
 
 ```ts
-import { define, signal, html, css, field } from '@vielzeug/craftit';
+import { define, signal, html, css, defineField } from '@vielzeug/craftit';
 
 define(
   'file-upload',
@@ -465,7 +470,7 @@ define(
       parse: (v) => v !== null,
     });
 
-    const formField = field({
+    const formField = defineField({
       value: files,
       toFormValue: (fileList) => {
         if (!fileList || fileList.length === 0) return null;
@@ -702,6 +707,7 @@ Component with props and styled presentation.
 
 ```ts
 import { define, prop, html, css } from '@vielzeug/craftit';
+import { classes } from '@vielzeug/craftit/directives';
 define('user-card', () => {
   const name = prop('name', 'Guest');
   const role = prop('role', 'User');
@@ -757,13 +763,7 @@ define('user-card', () => {
       <div class="card">
         <div class="avatar">
           ${html.when(avatar, () => html` <img src="${avatar.value}" alt="${name.value}" /> `)}
-          <div
-            class=${() =>
-              html.classes({
-                status: true,
-                online: online.value,
-                offline: !online.value,
-              })}></div>
+          <div class=${classes({ status: true, online, offline: () => !online.value })}></div>
         </div>
         <div class="info">
           <h3>${name}</h3>
@@ -979,6 +979,7 @@ Tab interface with slots and state management.
 
 ```ts
 import { define, signal, html, css, onMount } from '@vielzeug/craftit';
+import { classes } from '@vielzeug/craftit/directives';
 define('tab-group', () => {
   const activeTab = signal(0);
   const styles = css`
@@ -1019,29 +1020,29 @@ define('tab-group', () => {
     template: html`
       <div class="tabs">
         <button
-          class=${() => html.classes({ tab: true, active: activeTab.value === 0 })}
+          class=${classes({ tab: true, active: () => activeTab.value === 0 })}
           @click=${() => (activeTab.value = 0)}>
           Tab 1
         </button>
         <button
-          class=${() => html.classes({ tab: true, active: activeTab.value === 1 })}
+          class=${classes({ tab: true, active: () => activeTab.value === 1 })}
           @click=${() => (activeTab.value = 1)}>
           Tab 2
         </button>
         <button
-          class=${() => html.classes({ tab: true, active: activeTab.value === 2 })}
+          class=${classes({ tab: true, active: () => activeTab.value === 2 })}
           @click=${() => (activeTab.value = 2)}>
           Tab 3
         </button>
       </div>
       <div class="tab-panels">
-        <div class=${() => html.classes({ 'tab-panel': true, active: activeTab.value === 0 })}>
+        <div class=${classes({ 'tab-panel': true, active: () => activeTab.value === 0 })}>
           <slot name="tab-1">Panel 1 content</slot>
         </div>
-        <div class=${() => html.classes({ 'tab-panel': true, active: activeTab.value === 1 })}>
+        <div class=${classes({ 'tab-panel': true, active: () => activeTab.value === 1 })}>
           <slot name="tab-2">Panel 2 content</slot>
         </div>
-        <div class=${() => html.classes({ 'tab-panel': true, active: activeTab.value === 2 })}>
+        <div class=${classes({ 'tab-panel': true, active: () => activeTab.value === 2 })}>
           <slot name="tab-3">Panel 3 content</slot>
         </div>
       </div>

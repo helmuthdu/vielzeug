@@ -1,10 +1,10 @@
-import { createBus } from './eventit';
+import { BusDisposedError, createBus } from './eventit';
 import { createTestBus } from './test';
 
 type TestEvents = {
   count: number;
   greet: { name: string };
-  toggle: undefined;
+  toggle: void;
 };
 
 /** -------------------- on -------------------- **/
@@ -218,7 +218,7 @@ describe('wait', () => {
     const bus = createBus<TestEvents>();
 
     bus.dispose();
-    await expect(bus.wait('count')).rejects.toThrow('Bus is disposed');
+    await expect(bus.wait('count')).rejects.toBeInstanceOf(BusDisposedError);
   });
 
   it('rejects a pending wait when the bus is disposed mid-flight', async () => {
@@ -226,7 +226,7 @@ describe('wait', () => {
     const p = bus.wait('count');
 
     bus.dispose();
-    await expect(p).rejects.toThrow('Bus is disposed');
+    await expect(p).rejects.toBeInstanceOf(BusDisposedError);
   });
 
   it('rejects immediately when signal is already aborted', async () => {
@@ -282,8 +282,8 @@ describe('dispose', () => {
     const p2 = bus.wait('greet');
 
     bus.dispose();
-    await expect(p1).rejects.toThrow('Bus is disposed');
-    await expect(p2).rejects.toThrow('Bus is disposed');
+    await expect(p1).rejects.toBeInstanceOf(BusDisposedError);
+    await expect(p2).rejects.toBeInstanceOf(BusDisposedError);
   });
 
   it('is idempotent — safe to call multiple times', () => {
@@ -331,15 +331,26 @@ describe('events', () => {
     gen.return(undefined); // clean up
   });
 
+  it('terminates cleanly when the signal aborts', async () => {
+    const bus = createBus<TestEvents>();
+    const controller = new AbortController();
+    const results: number[] = [];
+    const done = (async () => {
+      for await (const val of bus.events('count', controller.signal)) results.push(val);
+    })();
+
+    bus.emit('count', 1);
+    await new Promise((r) => setTimeout(r, 0));
+    controller.abort();
+    await done;
+    expect(results).toEqual([1]);
+  });
+
   it('terminates when the bus is disposed', async () => {
     const bus = createBus<TestEvents>();
     const results: number[] = [];
     const done = (async () => {
-      try {
-        for await (const val of bus.events('count')) results.push(val);
-      } catch {
-        // dispose rejects the pending wait — iterator terminates
-      }
+      for await (const val of bus.events('count')) results.push(val);
     })();
 
     bus.emit('count', 10);
@@ -347,6 +358,51 @@ describe('events', () => {
     bus.dispose();
     await done;
     expect(results).toEqual([10]);
+  });
+});
+
+/** -------------------- listenerCount -------------------- **/
+
+describe('listenerCount', () => {
+  it('returns 0 for an event with no listeners', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(bus.listenerCount('count')).toBe(0);
+  });
+
+  it('counts active listeners per event', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.on('count', vi.fn());
+    bus.on('greet', vi.fn());
+    expect(bus.listenerCount('count')).toBe(2);
+    expect(bus.listenerCount('greet')).toBe(1);
+  });
+
+  it('returns total across all events when called without argument', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.on('greet', vi.fn());
+    expect(bus.listenerCount()).toBe(2);
+  });
+
+  it('decrements when a listener unsubscribes', () => {
+    const bus = createBus<TestEvents>();
+    const unsub = bus.on('count', vi.fn());
+
+    expect(bus.listenerCount('count')).toBe(1);
+    unsub();
+    expect(bus.listenerCount('count')).toBe(0);
+  });
+
+  it('returns 0 after dispose', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.dispose();
+    expect(bus.listenerCount()).toBe(0);
   });
 });
 

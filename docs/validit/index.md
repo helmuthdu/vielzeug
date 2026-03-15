@@ -65,11 +65,13 @@ if (result.success) {
 - **Message functions** — every message parameter accepts `string | (({ value, ...ctx }) => string)` for typed, context-aware error messages
 - **Sync validation** — `.refine(fn, message)` for sync custom validators; throws at definition time if given an async function
 - **Async validation** — `.refineAsync(fn, message)` + `parseAsync()` and `safeParseAsync()` for async refinements
-- **Coercion** — `v.coerce.string/number/boolean/date()` for form data and URL params
+- **Coercion** — `v.coerce.string/number/boolean/date()` for form data and URL params; `coerce.boolean()` handles `'true'`, `'false'`, `'1'`, `'0'`, `1`, `0`
 - **Discriminated unions** — `v.variant(discriminator, { tag: schema })` dictionary API with O(1) runtime dispatch and compile-time inference
-- **String helpers** — `.regex()`, `.email()`, `.url()`, `.uuid()`, `.date()`, `.datetime()`, `.includes()`, `.trim()`, `.lowercase()`, `.uppercase()`, and more
-- **Object helpers** — `.partial()`, `.partial(...keys)`, `.required()`, `.pick()`, `.omit()`, `.extend()`, `.strict()` — all preserve `.refine()` chains
-- **Modifiers** — `.optional()`, `.nullable()`, `.nullish()`, `.default(val)`, `.catch(fallback)`
+- **Union branch output** — `v.union()` returns the **output** of the first matching branch; coercions and transforms in branches are fully applied
+- **String helpers** — `.regex()`, `.email()`, `.url()`, `.uuid()`, `.date()`, `.datetime()`, `.includes()`, `.trim()`, `.lowercase()`, `.uppercase()`, and more; all emit typed `params` on errors
+- **Object helpers** — `.partial()`, `.partial(...keys)`, `.required()`, `.pick()`, `.omit()`, `.extend()`, `.strict()` — all preserve full schema metadata
+- **Modifiers** — `.optional()`, `.nullable()`, `.nullish()`, `.default(val)`, `.catch(fallback)`, `.required()`
+- **Factory shorthands** — `v.optional(s)`, `v.nullable(s)`, `v.nullish(s)` as alternatives to chained modifiers
 - **Transforms** — `.transform(fn)` for data shaping after validation
 - **Recursive schemas** — `v.lazy(() => schema)` for circular/self-referencing types
 - **Class validation** — `v.instanceof(SomeClass)` for custom class checks

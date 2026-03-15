@@ -1,0 +1,200 @@
+@layer buildit.base {
+  :host {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+
+    --tabs-transition: var(--transition-normal);
+    --tabs-radius: var(--rounded-lg);
+  }
+
+  .tablist-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  [role='tablist'] {
+    position: relative;
+    display: flex;
+    gap: var(--tabs-tab-gap, var(--size-1));
+    align-items: stretch;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  [role='tablist']::-webkit-scrollbar {
+    display: none;
+  }
+
+  .indicator {
+    position: absolute;
+    bottom: 0;
+    height: 2px;
+    pointer-events: none;
+    background: var(--tabs-indicator-color, var(--_theme-base));
+    border-radius: var(--rounded-full);
+    transition:
+      left var(--tabs-transition),
+      width var(--tabs-transition);
+  }
+
+  .panels {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
+@layer buildit.orientation {
+  /* ─── vertical orientation ─── */
+  :host([orientation='vertical']) {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  :host([orientation='vertical']) .tablist-wrapper {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  :host([orientation='vertical']) [role='tablist'] {
+    flex-direction: column;
+    width: max-content;
+    overflow-x: unset;
+    overflow-y: auto;
+  }
+
+  :host([orientation='vertical']) .indicator {
+    inset-inline-start: 0;
+
+    /* Reposition indicator to inline-start side for vertical */
+    bottom: unset;
+    width: 2px;
+    height: unset;
+    transition:
+      top var(--tabs-transition),
+      height var(--tabs-transition);
+  }
+}
+
+@layer buildit.variants {
+  /* ─── solid (default) ─── */
+  :host,
+  :host([variant='solid']) {
+    --tabs-tab-gap: var(--size-1);
+  }
+
+  :host [role='tablist'],
+  :host([variant='solid']) [role='tablist'] {
+    padding: var(--size-1);
+    background: var(--color-contrast-100);
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--tabs-radius);
+  }
+
+  :host .indicator,
+  :host([variant='solid']) .indicator {
+    display: none;
+  }
+
+  /* ─── flat ─── */
+  :host([variant='flat']) {
+    overflow: hidden;
+    background: var(--color-contrast-100);
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--tabs-radius);
+    box-shadow: var(--inset-shadow-xs), var(--shadow-2xs);
+  }
+
+  :host([variant='flat']) [role='tablist'] {
+    gap: var(--size-1);
+    padding: var(--size-1);
+    background: transparent;
+    border: none;
+    border-bottom: var(--border) solid var(--color-contrast-200);
+    border-radius: 0;
+  }
+
+  :host([variant='flat']) .indicator {
+    display: none;
+  }
+
+  /* ─── bordered ─── */
+  :host([variant='bordered']) [role='tablist'] {
+    gap: var(--size-1);
+    padding: var(--size-1);
+    background: transparent;
+    border: var(--border) solid var(--color-contrast-200);
+    border-bottom: none;
+    border-radius: var(--tabs-radius) var(--tabs-radius) 0 0;
+  }
+
+  :host([variant='bordered']) .indicator {
+    display: none;
+  }
+
+  :host([variant='bordered']) .panels {
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: 0 0 var(--tabs-radius) var(--tabs-radius);
+  }
+
+  /* ─── ghost ─── */
+  :host([variant='ghost']) [role='tablist'] {
+    gap: var(--size-1);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+  }
+
+  :host([variant='ghost']) .indicator {
+    display: none;
+  }
+
+  /* ─── glass ─── */
+  :host([variant='glass']) [role='tablist'] {
+    padding: var(--size-1);
+    background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
+    border: var(--border) solid color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent);
+    border-radius: var(--tabs-radius);
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+  }
+
+  :host([variant='glass']) .indicator {
+    display: none;
+  }
+
+  /* ─── frost ─── */
+  :host([variant='frost']) [role='tablist'] {
+    padding: var(--size-1);
+    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    border: var(--border) solid color-mix(in srgb, var(--color-contrast-300) 50%, transparent);
+    border-radius: var(--tabs-radius);
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+  }
+
+  :host([variant='frost']) .indicator {
+    display: none;
+  }
+
+  /* ─── size variants ─── */
+  :host([size='sm']) {
+    --tabs-tab-size: var(--text-xs);
+    --tabs-tab-padding: var(--size-1) var(--size-3);
+  }
+
+  :host(:not([size])),
+  :host([size='md']) {
+    --tabs-tab-size: var(--text-sm);
+    --tabs-tab-padding: var(--size-1-5) var(--size-4);
+  }
+
+  :host([size='lg']) {
+    --tabs-tab-size: var(--text-base);
+    --tabs-tab-padding: var(--size-2) var(--size-5);
+  }
+}

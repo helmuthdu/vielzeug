@@ -1,0 +1,138 @@
+@layer buildit.base {
+  :host {
+    --_sidebar-width: var(--sidebar-width, 16rem);
+    --_sidebar-collapsed-width: var(--sidebar-collapsed-width, 3.5rem);
+    --_sidebar-bg: var(--sidebar-bg, var(--color-canvas));
+    --_sidebar-border: var(--sidebar-border-color, var(--color-contrast-200));
+    --_sidebar-transition: var(--transition-normal);
+
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-width: var(--size-2xs);
+    max-width: var(--_sidebar-width);
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--_sidebar-bg);
+    border-inline-end: var(--border) solid var(--_sidebar-border);
+    transition: var(--_motion-transition, width var(--_sidebar-transition), min-width var(--_sidebar-transition));
+  }
+
+  :host > nav {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  :host([collapsed]) {
+    width: var(--_sidebar-collapsed-width);
+    min-width: var(--_sidebar-collapsed-width);
+    max-width: var(--_sidebar-collapsed-width);
+  }
+
+  .sidebar-header {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-2);
+    align-items: center;
+    min-height: var(--size-14);
+    padding: var(--size-3) var(--size-4);
+    overflow: hidden;
+    border-bottom: var(--border) solid var(--_sidebar-border);
+  }
+
+  .sidebar-header slot {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .sidebar-content {
+    display: grid;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--size-1);
+    align-content: start;
+    min-width: 0;
+    padding: var(--size-2);
+    overflow: clip auto;
+    scrollbar-width: thin;
+  }
+
+  .sidebar-footer {
+    flex-shrink: 0;
+    padding: var(--size-3) var(--size-4);
+    border-top: var(--border) solid var(--_sidebar-border);
+  }
+
+  .toggle-btn {
+    all: unset;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--_touch-target);
+    min-height: var(--_touch-target);
+    padding: var(--size-1);
+    margin-inline-start: auto;
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    border-radius: var(--rounded-sm);
+    transition:
+      color var(--transition-fast),
+      background var(--transition-fast);
+  }
+
+  .toggle-btn:hover {
+    color: var(--color-contrast-900);
+    background: var(--color-contrast-100);
+  }
+
+  .toggle-btn:focus-visible {
+    outline: var(--focus-ring);
+  }
+
+  .toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--_motion-transition, transform var(--_sidebar-transition));
+  }
+
+  :host([collapsed]) .toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  :host(:not([dir='rtl'])[collapsed]) .toggle-icon,
+  :host(:dir(ltr)[collapsed]) .toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  :host(:dir(rtl)) .toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  :host(:dir(rtl)[collapsed]) .toggle-icon {
+    transform: rotate(0deg);
+  }
+}
+
+@layer buildit.variants {
+  /* ── floating ── */
+  :host([variant='floating']) {
+    height: calc(100% - var(--size-4));
+    margin: var(--size-2);
+    border-inline-end: none;
+    border-radius: var(--rounded-lg);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* ── inset ── */
+  :host([variant='inset']) {
+    --_sidebar-bg: var(--color-contrast-50);
+
+    border-inline-end-color: transparent;
+  }
+}

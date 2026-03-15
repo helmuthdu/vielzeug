@@ -285,6 +285,21 @@ describe('i18nit', () => {
       expect(i18n.t('greeting')).toBe('Howdy!'); // exact match
       expect(i18n.t('hello')).toBe('Hello (en)'); // root fallback
     });
+
+    test('cascades through all BCP47 subtags: sr-Latn-RS → sr-Latn → sr', () => {
+      const i18n = createI18n({
+        locale: 'sr-Latn-RS',
+        messages: {
+          sr: { common: 'Serbian' },
+          'sr-Latn': { script: 'Latin script' },
+          'sr-Latn-RS': { regional: 'Serbia regional' },
+        },
+      });
+
+      expect(i18n.t('regional')).toBe('Serbia regional'); // exact match
+      expect(i18n.t('script')).toBe('Latin script'); // sr-Latn fallback
+      expect(i18n.t('common')).toBe('Serbian'); // sr root fallback
+    });
   });
 
   // ----------------------------------------------------------------
@@ -332,8 +347,8 @@ describe('i18nit', () => {
       expect(i18n.hasLocale('en')).toBe(true);
       expect(i18n.hasLocale('de')).toBe(false);
       expect(i18n.has('hello')).toBe(true);
-      expect(i18n.has('hello', 'fr')).toBe(false); // key exists in en, not fr
-      expect(i18n.has('bonjour', 'fr')).toBe(true);
+      expect(i18n.withLocale('fr').has('hello')).toBe(false); // key exists in en, not fr
+      expect(i18n.withLocale('fr').has('bonjour')).toBe(true);
       expect(i18n.has('missing')).toBe(false);
     });
   });
@@ -767,7 +782,7 @@ describe('i18nit', () => {
 
       expect(i18n.has('hello')).toBe(true); // found via fallback
       expect(i18n.hasOwn('hello')).toBe(false); // not in 'fr' itself
-      expect(i18n.hasOwn('hello', 'en')).toBe(true); // explicitly checking 'en'
+      expect(i18n.withLocale('en').hasOwn('hello')).toBe(true); // explicitly checking 'en'
     });
 
     test('BoundI18n.hasOwn() checks the namespace-prefixed key without fallback', () => {
@@ -806,12 +821,12 @@ describe('i18nit', () => {
   });
 
   // ----------------------------------------------------------------
-  // onError option
+  // onDiagnostic option
   // ----------------------------------------------------------------
-  describe('onError option', () => {
-    test('onError is called instead of console.error when a subscriber throws', () => {
-      const onError = vi.fn();
-      const i18n = createI18n({ onError });
+  describe('onDiagnostic option', () => {
+    test('onDiagnostic receives a subscriber-error event when a subscriber throws', () => {
+      const onDiagnostic = vi.fn();
+      const i18n = createI18n({ onDiagnostic });
       const error = new Error('boom');
 
       i18n.subscribe(() => {
@@ -819,32 +834,32 @@ describe('i18nit', () => {
       });
       i18n.locale = 'fr';
 
-      expect(onError).toHaveBeenCalledWith(error, 'subscriber');
+      expect(onDiagnostic).toHaveBeenCalledWith({ error, kind: 'subscriber-error' });
     });
 
-    test('onError is called for subscriber errors during immediate subscribe', () => {
-      const onError = vi.fn();
-      const i18n = createI18n({ locale: 'en', onError });
+    test('onDiagnostic receives a subscriber-error event during immediate subscribe', () => {
+      const onDiagnostic = vi.fn();
+      const i18n = createI18n({ locale: 'en', onDiagnostic });
       const error = new Error('immediate');
 
       i18n.subscribe(() => {
         throw error;
       }, true);
 
-      expect(onError).toHaveBeenCalledWith(error, 'subscriber');
+      expect(onDiagnostic).toHaveBeenCalledWith({ error, kind: 'subscriber-error' });
     });
 
-    test('onError is called with context "loader" when a loader rejects', async () => {
-      const onError = vi.fn();
+    test('onDiagnostic receives a loader-error event with the failing locale when a loader rejects', async () => {
+      const onDiagnostic = vi.fn();
       const loaderError = new Error('fetch failed');
       const i18n = createI18n({
         loaders: { fr: () => Promise.reject(loaderError) },
-        onError,
+        onDiagnostic,
       });
 
-      // load() still rejects — onError acts as a side-channel for notification/logging
+      // load() still rejects — onDiagnostic acts as a side-channel for notification/logging
       await expect(i18n.load('fr')).rejects.toThrow('fetch failed');
-      expect(onError).toHaveBeenCalledWith(loaderError, 'loader');
+      expect(onDiagnostic).toHaveBeenCalledWith({ error: loaderError, kind: 'loader-error', locale: 'fr' });
     });
   });
 
@@ -949,7 +964,7 @@ describe('i18nit', () => {
         locale: 'fr',
         messages: {
           en: { greeting: 'Hello', nav: { about: 'About', home: 'Home' } },
-          fr: partial as M,
+          fr: partial,
         },
       });
 
@@ -1049,6 +1064,126 @@ describe('i18nit', () => {
 
       expect(before).not.toBe(after);
       expect(after).toContain('de');
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // batch()
+  // ----------------------------------------------------------------
+  describe('batch()', () => {
+    test('collapses multiple add() calls into a single notification', () => {
+      const i18n = createI18n({ locale: 'en' });
+      const handler = vi.fn();
+
+      i18n.subscribe(handler);
+      handler.mockClear();
+
+      i18n.batch(() => {
+        i18n.add('en', { a: 'A' });
+        i18n.add('en', { b: 'B' });
+        i18n.add('en', { c: 'C' });
+      });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith({ locale: 'en', reason: 'catalog-update' });
+      expect(i18n.t('a')).toBe('A');
+      expect(i18n.t('b')).toBe('B');
+      expect(i18n.t('c')).toBe('C');
+    });
+
+    test('does not notify when nothing inside the batch triggers a notification', () => {
+      const i18n = createI18n({ locale: 'en' });
+      const handler = vi.fn();
+
+      i18n.subscribe(handler);
+      handler.mockClear();
+
+      i18n.batch(() => {
+        /* no-op */
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('nested batch() calls fire exactly one notification when the outermost batch completes', () => {
+      const i18n = createI18n({ locale: 'en' });
+      const handler = vi.fn();
+
+      i18n.subscribe(handler);
+      handler.mockClear();
+
+      i18n.batch(() => {
+        i18n.batch(() => {
+          i18n.add('en', { x: 'X' });
+        });
+        i18n.add('en', { y: 'Y' });
+      });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(i18n.t('x')).toBe('X');
+      expect(i18n.t('y')).toBe('Y');
+    });
+
+    test('add() to an inactive locale inside batch() does not trigger a notification', () => {
+      const i18n = createI18n({ locale: 'en' });
+      const handler = vi.fn();
+
+      i18n.subscribe(handler);
+      handler.mockClear();
+
+      i18n.batch(() => {
+        i18n.add('fr', { bonjour: 'Bonjour' }); // inactive locale
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // reload()
+  // ----------------------------------------------------------------
+  describe('reload()', () => {
+    test('force-reloads a locale even when the catalog is already populated', async () => {
+      let calls = 0;
+      const i18n = createI18n({
+        loaders: {
+          en: async () => {
+            calls++;
+
+            return { hello: 'Reloaded' };
+          },
+        },
+        messages: { en: { hello: 'Hello' } },
+      });
+
+      expect(i18n.t('hello')).toBe('Hello'); // pre-loaded value
+      await i18n.reload('en');
+      expect(calls).toBe(1); // loader was actually called
+      expect(i18n.t('hello')).toBe('Reloaded');
+    });
+
+    test('reload() notifies subscribers after the catalog is refreshed', async () => {
+      const handler = vi.fn();
+      const i18n = createI18n({
+        loaders: { en: async () => ({ hello: 'Fresh' }) },
+        messages: { en: { hello: 'Stale' } },
+      });
+
+      i18n.subscribe(handler);
+      handler.mockClear();
+
+      await i18n.reload('en');
+
+      expect(handler).toHaveBeenCalledWith({ locale: 'en', reason: 'catalog-update' });
+      expect(i18n.t('hello')).toBe('Fresh');
+    });
+
+    test('reload() on a locale with no loader clears the catalog and leaves it empty', async () => {
+      const i18n = createI18n({ messages: { en: { hello: 'Hello' } } });
+
+      await i18n.reload('en');
+
+      expect(i18n.t('hello')).toBe('hello'); // catalog cleared, no loader to repopulate it
     });
   });
 });

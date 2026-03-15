@@ -1,0 +1,288 @@
+@layer buildit.base {
+  :host {
+    --_bg: var(--button-bg, var(--color-contrast-50));
+    --_color: var(--button-color, var(--color-contrast-900));
+    --_border: var(--button-border, var(--border));
+    --_border-color: var(--button-border-color, var(--color-contrast-200));
+    --_radius: var(--button-radius, var(--rounded-md));
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  :host([disabled]) {
+    cursor: not-allowed;
+  }
+
+  /* Link mode: mixin covers <button> but not <a> */
+  :host([disabled]) a,
+  :host([loading]) a {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  :host([loading]) a {
+    cursor: wait;
+  }
+
+  button,
+  a {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--_gap, var(--size-2));
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    height: var(--_height, var(--size-10));
+    min-height: var(--_touch-target);
+    padding: var(--_padding, var(--size-2) var(--size-4));
+    font-size: var(--_font-size, var(--text-sm));
+    font-weight: var(--font-medium);
+    line-height: var(--_line-height, var(--leading-normal));
+    color: var(--_color);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    background: var(--_bg);
+    border: var(--_border) solid var(--_border-color);
+    border-block-start-width: var(--button-border-top, var(--_border));
+    border-block-end-width: var(--button-border-bottom, var(--_border));
+    border-inline-start-width: var(--button-border-start, var(--_border));
+    border-inline-end-width: var(--button-border-end, var(--_border));
+    border-radius: var(--_radius);
+    transition: var(
+      --_motion-transition,
+      background var(--transition-normal),
+      border-color var(--transition-normal),
+      box-shadow var(--transition-normal),
+      color var(--transition-normal),
+      opacity var(--transition-normal),
+      transform var(--transition-fast)
+    );
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  button:focus-visible,
+  a:focus-visible {
+    outline: none;
+  }
+
+  .content {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  ::slotted([slot='prefix']),
+  ::slotted([slot='suffix']) {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  ::slotted(svg) {
+    flex-shrink: 0;
+    width: var(--_icon-size, var(--size-5));
+    height: var(--_icon-size, var(--size-5));
+  }
+}
+
+@layer buildit.overrides {
+  :host([fullwidth]) {
+    display: flex;
+    width: 100%;
+  }
+}
+
+@layer buildit.variants {
+  :host([icon-only]) :is(button, a) {
+    aspect-ratio: 1;
+    padding: 0;
+  }
+
+  /* Solid (Default) - Full theme color background */
+  :host(:not([variant])) :is(button, a),
+  :host([variant='solid']) :is(button, a) {
+    color: var(--_theme-contrast);
+    background: var(--_theme-base);
+    border-color: var(--_theme-base);
+  }
+
+  :host(:not([variant])) :is(button, a):hover,
+  :host([variant='solid']) :is(button, a):hover {
+    background: var(--_theme-focus);
+  }
+
+  :host(:not([variant])) :is(button, a):active,
+  :host([variant='solid']) :is(button, a):active {
+    background: var(--_theme-content);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  /* Flat - Subtle background with theme color text */
+  :host([variant='flat']) :is(button, a) {
+    color: var(--_theme-base);
+    background: color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100));
+    border-color: color-mix(in srgb, var(--_theme-focus) 20%, transparent);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  :host([variant='flat']) :is(button, a):hover {
+    color: var(--_theme-contrast);
+    background: var(--_theme-focus);
+    box-shadow: var(--inset-shadow-xs);
+  }
+
+  :host([variant='flat']) :is(button, a):active {
+    color: var(--_theme-contrast);
+    background: var(--_theme-content);
+    box-shadow: var(--inset-shadow-sm);
+  }
+
+  /* Bordered - Outlined with filled background */
+  :host([variant='bordered']) :is(button, a) {
+    color: var(--_theme-base);
+    background: var(--_theme-backdrop);
+    border-color: var(--_theme-border);
+    box-shadow: var(--inset-shadow-xs);
+  }
+
+  :host([variant='bordered']) :is(button, a):hover {
+    color: var(--_theme-contrast);
+    background: var(--_theme-focus);
+    border-color: var(--_theme-focus);
+    box-shadow: var(--inset-shadow-xs);
+  }
+
+  :host([variant='bordered']) :is(button, a):active {
+    color: var(--_theme-contrast);
+    background: var(--_theme-content);
+    box-shadow: var(--inset-shadow-sm);
+  }
+
+  /* Outline - Transparent with colored border */
+  :host([variant='outline']) :is(button, a) {
+    color: var(--_theme-base);
+    background: transparent;
+    border-color: var(--_theme-base);
+  }
+
+  :host([variant='outline']) :is(button, a):hover {
+    background: var(--_theme-backdrop);
+    border-color: var(--_theme-focus);
+  }
+
+  :host([variant='outline']) :is(button, a):active {
+    color: var(--_theme-contrast);
+    background: var(--_theme-base);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  /* Ghost - Transparent until interaction */
+  :host([variant='ghost']) :is(button, a) {
+    color: var(--_theme-base);
+    background: transparent;
+    border-color: transparent;
+    border-width: 0;
+  }
+
+  :host([variant='ghost']) :is(button, a):hover {
+    background: var(--_theme-backdrop);
+  }
+
+  :host([variant='ghost']) :is(button, a):active {
+    color: var(--_theme-contrast);
+    background: var(--_theme-base);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  /* Text - Minimal styling, color on hover */
+  :host([variant='text']) :is(button, a) {
+    color: var(--_theme-base);
+    background: transparent;
+    border-color: transparent;
+    border-width: 0;
+  }
+
+  :host([variant='text']) :is(button, a):hover {
+    color: var(--_theme-focus);
+  }
+
+  :host([variant='text']) :is(button, a):active {
+    color: var(--_theme-content);
+  }
+
+  /* Additional button-specific frost active states */
+  :host([variant='frost']:not([color])) :is(button, a):active {
+    background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+    border-color: color-mix(in srgb, var(--theme-focus) 40%, transparent);
+  }
+
+  :host([variant='frost'][color]) :is(button, a):active {
+    background: color-mix(in srgb, var(--_theme-backdrop) 50%, var(--_theme-base) 50%);
+    border-color: color-mix(in srgb, var(--_theme-focus) 65%, transparent);
+  }
+}
+
+/* ========================================
+     Other Variants & States
+     ======================================== */
+
+@layer buildit.overrides {
+  /* Icon-only always uses perfect circle */
+  :host([rounded][icon-only]) :is(button, a) {
+    border-radius: 50%;
+  }
+
+  :host([loading]) .content {
+    visibility: hidden;
+  }
+}
+
+/* ========================================
+     Loading Spinner (unlayered for easy override)
+     ======================================== */
+
+.loader {
+  position: absolute;
+  width: 1em;
+  height: 1em;
+  border: var(--border-2) solid currentcolor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: var(--_motion-animation, spin 0.6s linear infinite);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Focus ring & hover halo — unlayered so it wins over all @layer variant rules */
+button:focus-visible,
+a:focus-visible,
+button:hover,
+a:hover {
+  outline: none;
+  box-shadow: var(--_theme-shadow);
+}
+
+/* Text variant: no halo on hover or focus */
+:host([variant='text']) button:hover,
+:host([variant='text']) a:hover {
+  box-shadow: none;
+}

@@ -16,8 +16,10 @@ export default defineConfig(
     }),
     {
       build: {
-        rollupOptions: {
-          external: ['@floating-ui/dom', '@floating-ui/core', '@floating-ui/utils'],
+        rolldownOptions: {
+          output: {
+            minify: true,
+          },
         },
       },
     },

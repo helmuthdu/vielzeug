@@ -11,29 +11,23 @@ export type Unsubscribe = () => void;
 
 export type QueryStatus = 'idle' | 'pending' | 'success' | 'error';
 
-export type QueryState<T = unknown> = {
+type StateBase<T, TPendingData> = {
   readonly isError: boolean;
   readonly isIdle: boolean;
   readonly isPending: boolean;
   readonly isSuccess: boolean;
 } & (
   | { data: undefined; error: null; status: 'idle'; updatedAt: number }
-  | { data: T | undefined; error: null; status: 'pending'; updatedAt: number }
+  | { data: TPendingData; error: null; status: 'pending'; updatedAt: number }
   | { data: T; error: null; status: 'success'; updatedAt: number }
   | { data: T | undefined; error: Error; status: 'error'; updatedAt: number }
 );
 
-export type MutationState<TData = unknown> = {
-  readonly isError: boolean;
-  readonly isIdle: boolean;
-  readonly isPending: boolean;
-  readonly isSuccess: boolean;
-} & (
-  | { data: undefined; error: null; status: 'idle'; updatedAt: number }
-  | { data: undefined; error: null; status: 'pending'; updatedAt: number }
-  | { data: TData; error: null; status: 'success'; updatedAt: number }
-  | { data: undefined; error: Error; status: 'error'; updatedAt: number }
-);
+/** Full state snapshot for a query — pending may carry stale data. */
+export type QueryState<T = unknown> = StateBase<T, T | undefined>;
+
+/** Full state snapshot for a mutation — pending never carries data. */
+export type MutationState<TData = unknown> = StateBase<TData, undefined>;
 
 export type RetryOptions = {
   retry?: number | false;
@@ -43,6 +37,11 @@ export type RetryOptions = {
    * Defaults to exponential backoff: 1 s → 2 s → … capped at 30 s.
    */
   retryDelay?: number | ((attempt: number) => number);
+  /**
+   * Return `false` to skip retrying for a specific error (e.g. 4xx HTTP errors).
+   * `attempt` is 0-based (0 = deciding whether to retry after the 1st failure).
+   */
+  shouldRetry?: (error: unknown, attempt: number) => boolean;
 };
 
 export type MutationOptions<TData = unknown, TVariables = unknown> = RetryOptions & {
@@ -62,6 +61,9 @@ export type QueryOptions<T> = {
   fn: (ctx: QueryFnContext) => Promise<T>;
   gcTime?: number;
   key: QueryKey;
+  onError?: (error: Error) => void;
+  onSettled?: (data: T | undefined, error: Error | null) => void;
+  onSuccess?: (data: T) => void;
   staleTime?: number;
 } & RetryOptions;
 
@@ -109,6 +111,8 @@ const DEFAULT_TIMEOUT = 30_000;
 const DEFAULT_RETRY = 1;
 const CONTENT_TYPE_JSON = 'application/json';
 const HEADER_CONTENT_TYPE = 'content-type';
+// DELETE is HTTP-idempotent (repeating it produces the same server state), so it
+// is included in auto-dedup by default. Pass `dedupe: false` per-request to opt out.
 const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'DELETE']);
 
 /* -------------------- Errors -------------------- */
@@ -147,6 +151,23 @@ export class HttpError extends Error {
     this.isAborted = causeName === 'AbortError';
   }
 
+  static fromResponse(res: Response, data: unknown, method: string, url: string): HttpError {
+    return new HttpError({
+      data,
+      message: res.statusText || 'Non-OK response',
+      method,
+      response: res,
+      status: res.status,
+      url,
+    });
+  }
+
+  static fromCause(cause: unknown, method: string, url: string): HttpError {
+    const message = cause instanceof Error ? cause.message : String(cause);
+
+    return new HttpError({ cause, message, method, url });
+  }
+
   static is(err: unknown, status?: number): err is HttpError {
     return err instanceof HttpError && (status === undefined || err.status === status);
   }
@@ -174,10 +195,11 @@ function buildUrl(base: string, path: string, params?: Params, query?: Params) {
 
   if (!query) return url;
 
-  const qs = Object.entries(query)
-    .filter(([, v]) => v !== undefined)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
-    .join('&');
+  const qs = new URLSearchParams(
+    Object.entries(query)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, String(v)]),
+  ).toString();
 
   return qs ? `${url}${url.includes('?') ? '&' : '?'}${qs}` : url;
 }
@@ -198,9 +220,23 @@ function stableStringify(value: unknown): string {
 
   if (value === null) return 'null';
 
+  if (typeof value === 'bigint') return `BigInt:${value}`;
+
   if (typeof value !== 'object') return JSON.stringify(value);
 
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+
+  if (value instanceof Date) return `"Date:${value.toISOString()}"`;
+
+  if (value instanceof RegExp) return `"RegExp:${value.toString()}"`;
+
+  if (value instanceof Set) return `Set:[${[...value].map(stableStringify).join(',')}]`;
+
+  if (value instanceof Map)
+    return `Map:{${[...value.entries()]
+      .map(([k, v]) => `${stableStringify(k)}:${stableStringify(v)}`)
+      .sort()
+      .join(',')}}`;
 
   const rec = value as Record<string, unknown>;
   const keys = Object.keys(rec)
@@ -213,7 +249,9 @@ function stableStringify(value: unknown): string {
 function serializeBodyKey(body: unknown): string {
   if (body === undefined || body === null) return 'null';
 
-  if (body instanceof FormData) return '[FormData]';
+  // Note: FormData can't be consistently serialized; bodies with the same entry count
+  // will collide. Pass `dedupe: false` per-request to opt out.
+  if (body instanceof FormData) return `[FormData:${[...body.keys()].length}]`;
 
   if (body instanceof Blob) return `[Blob:${body.size}:${body.type}]`;
 
@@ -228,7 +266,8 @@ function serializeBodyKey(body: unknown): string {
   try {
     return stableStringify(body);
   } catch {
-    // Circular / unserializable — fall through so JSON.stringify raises the real error
+    // Circular or unserializable reference — use fallback for dedup purposes.
+    // JSON.stringify(body) in request() will throw the real TypeError.
     return '[Object]';
   }
 }
@@ -261,15 +300,20 @@ async function parseResponse(res: Response): Promise<unknown> {
 
 /* -------------------- Retry Config -------------------- */
 
-function getRetryConfig(retryCount: number | false, userDelay: number | ((attempt: number) => number) | undefined) {
+function getRetryConfig(
+  retryCount: number | false,
+  userDelay: number | ((attempt: number) => number) | undefined,
+  shouldRetry?: (error: unknown, attempt: number) => boolean,
+) {
   const times = retryCount === false ? 1 : retryCount + 1;
+  const base = { shouldRetry, times };
 
-  if (typeof userDelay === 'function') return { retryDelay: userDelay, times };
+  if (typeof userDelay === 'function') return { ...base, retryDelay: userDelay };
 
-  if (typeof userDelay === 'number') return { delay: userDelay, times };
+  if (typeof userDelay === 'number') return { ...base, delay: userDelay };
 
   // Default: exponential backoff 1 s → 2 s → … capped at 30 s
-  return { backoff: (_a: number, cur: number) => Math.min(cur * 2, 30_000), delay: 1000, times };
+  return { ...base, backoff: (_a: number, cur: number) => Math.min(cur * 2, 30_000), delay: 1000 };
 }
 
 /* -------------------- HTTP / API Client -------------------- */
@@ -277,10 +321,13 @@ function getRetryConfig(retryCount: number | false, userDelay: number | ((attemp
 export function createApi(opts: ApiClientOptions = {}) {
   const { baseUrl = '', dedupe = false, headers: initialHeaders = {}, logger, timeout = DEFAULT_TIMEOUT } = opts;
 
-  const globalHeaders: Record<string, string> = { ...initialHeaders };
+  const globalHeaders: Record<string, string> = Object.fromEntries(
+    Object.entries(initialHeaders).map(([k, v]) => [k.toLowerCase(), v]),
+  );
   const inFlight = new Map<string, Promise<unknown>>();
   const interceptors: Interceptor[] = [];
   let pipeline: ((ctx: FetchContext) => Promise<Response>) | null = null;
+  let _disposed = false;
 
   function use(interceptor: Interceptor): () => void {
     interceptors.push(interceptor);
@@ -318,14 +365,7 @@ export function createApi(opts: ApiClientOptions = {}) {
 
     if (!res.ok) {
       logger?.(res.status >= 500 ? 'error' : 'warn', `${m} ${full} - ${res.status}`);
-      throw new HttpError({
-        data: parsed,
-        message: res.statusText || 'Non-OK response',
-        method: m,
-        response: res,
-        status: res.status,
-        url: full,
-      });
+      throw HttpError.fromResponse(res, parsed, m, full);
     }
 
     logger?.('info', `${m} ${full} - ${res.status} (${Date.now() - start}ms)`, { res: parsed });
@@ -344,7 +384,7 @@ export function createApi(opts: ApiClientOptions = {}) {
       if (err instanceof HttpError) throw err;
 
       logger?.('error', `${m} ${full} - ERROR`, err);
-      throw new HttpError({ cause: err, message: toError(err).message, method: m, url: full });
+      throw HttpError.fromCause(err, m, full);
     } finally {
       if (dedupeKey) inFlight.delete(dedupeKey);
     }
@@ -363,17 +403,20 @@ export function createApi(opts: ApiClientOptions = {}) {
       body,
       dedupe: cfgDedupe,
       headers,
-      params,
-      query,
+      params, // excluded from ...rest — already consumed by buildUrl above
+      query, // excluded from ...rest — already consumed by buildUrl above
       signal: extSignal,
       timeout: cfgTimeout,
-      ...rest
+      ...rest // clean RequestInit passthrough
     } = config as HttpRequestConfig;
 
     // Dedupe idempotent methods by default; non-idempotent only when explicitly opted in
     const shouldDedupe = cfgDedupe === true || (cfgDedupe !== false && (dedupe || IDEMPOTENT_METHODS.has(m)));
 
-    const mergedHeaders = { ...globalHeaders, ...(headers as Record<string, string> | undefined) };
+    const perRequestHeaders = headers
+      ? Object.fromEntries(Object.entries(headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v]))
+      : undefined;
+    const mergedHeaders = { ...globalHeaders, ...perRequestHeaders };
     const dedupeKey = shouldDedupe
       ? `${m}:${full}:${stableStringify(mergedHeaders)}:${serializeBodyKey(body)}`
       : undefined;
@@ -407,8 +450,6 @@ export function createApi(opts: ApiClientOptions = {}) {
     return p as Promise<T>;
   }
 
-  let _disposed = false;
-
   return {
     delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
     dispose(): void {
@@ -423,8 +464,10 @@ export function createApi(opts: ApiClientOptions = {}) {
     get: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('GET', url, cfg),
     headers(updates: Record<string, string | undefined>) {
       for (const [key, value] of Object.entries(updates)) {
-        if (value === undefined) delete globalHeaders[key];
-        else globalHeaders[key] = value;
+        const k = key.toLowerCase();
+
+        if (value === undefined) delete globalHeaders[k];
+        else globalHeaders[k] = value;
       }
     },
     patch: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PATCH', url, cfg),
@@ -486,6 +529,8 @@ export function createQuery(opts?: QueryClientOptions) {
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
   const retryDefault = opts?.retry ?? DEFAULT_RETRY;
   const retryDelayDefault = opts?.retryDelay;
+  const shouldRetryDefault = opts?.shouldRetry;
+  let _disposed = false;
 
   const cache = new Map<string, CacheEntry>();
 
@@ -560,8 +605,12 @@ export function createQuery(opts?: QueryClientOptions) {
       fn: queryFn,
       gcTime = gcTimeDefault,
       key: queryKey,
+      onError,
+      onSettled,
+      onSuccess,
       retry: retryCount = retryDefault,
       retryDelay = retryDelayDefault,
+      shouldRetry = shouldRetryDefault,
       staleTime = staleTimeDefault,
     } = options;
 
@@ -581,7 +630,7 @@ export function createQuery(opts?: QueryClientOptions) {
     entry.status = 'pending';
     notify(entry);
 
-    const retryOpts = getRetryConfig(retryCount, retryDelay);
+    const retryOpts = getRetryConfig(retryCount, retryDelay, shouldRetry);
 
     const p = (async () => {
       try {
@@ -597,11 +646,16 @@ export function createQuery(opts?: QueryClientOptions) {
         entry.inflight = null;
         scheduleGc(id, entry, gcTime);
         notify(entry);
+        onSuccess?.(data);
+        onSettled?.(data, null);
 
         return data;
       } catch (err) {
         const error = toError(err);
         const isAborted = controller.signal.aborted || error.name === 'AbortError';
+
+        // cancel() already nulled entry.inflight and set the terminal state — don't override it
+        if (isAborted && entry.inflight === null) throw error;
 
         if (isAborted) {
           entry.status = 'idle';
@@ -614,6 +668,12 @@ export function createQuery(opts?: QueryClientOptions) {
 
         entry.inflight = null;
         notify(entry);
+
+        if (!isAborted) {
+          onError?.(error);
+          onSettled?.(undefined, error);
+        }
+
         throw error;
       }
     })();
@@ -715,8 +775,6 @@ export function createQuery(opts?: QueryClientOptions) {
     }
   }
 
-  let _disposed = false;
-
   return {
     cancel,
     clear: clearCache,
@@ -747,43 +805,51 @@ export function createMutation<TData, TVariables = void>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   mutOpts?: MutationOptions<TData, TVariables>,
 ) {
-  const retryConfig = getRetryConfig(mutOpts?.retry ?? false, mutOpts?.retryDelay);
   let snap: { data: TData | undefined; error: Error | null; status: QueryStatus; updatedAt: number } = {
     data: undefined,
     error: null,
     status: 'idle',
     updatedAt: 0,
   };
+  let currentAc: AbortController | null = null;
   const observers = new Set<(state: MutationState<TData>) => void>();
 
   function notify() {
-    dispatch(observers, makeState(snap) as unknown as MutationState<TData>);
+    dispatch(observers, makeState(snap) as MutationState<TData>);
   }
 
   return {
-    getState(): MutationState<TData> {
-      return makeState(snap) as unknown as MutationState<TData>;
+    cancel() {
+      currentAc?.abort();
+      currentAc = null;
     },
 
-    async mutate(
-      variables: TVariables,
-      callOpts?: { retry?: number | false; retryDelay?: number | ((attempt: number) => number); signal?: AbortSignal },
-    ): Promise<TData> {
+    getState(): MutationState<TData> {
+      return makeState(snap) as MutationState<TData>;
+    },
+
+    async mutate(variables: TVariables, callOpts?: RetryOptions & { signal?: AbortSignal }): Promise<TData> {
       if (snap.status === 'pending') {
         throw new Error('[fetchit] mutation already in flight — await the previous call or call reset() first');
       }
 
-      const retryOpts =
-        callOpts?.retry !== undefined || callOpts?.retryDelay !== undefined
-          ? getRetryConfig(callOpts.retry ?? mutOpts?.retry ?? false, callOpts.retryDelay ?? mutOpts?.retryDelay)
-          : retryConfig;
+      const retryOpts = getRetryConfig(
+        callOpts?.retry ?? mutOpts?.retry ?? false,
+        callOpts?.retryDelay ?? mutOpts?.retryDelay,
+        callOpts?.shouldRetry ?? mutOpts?.shouldRetry,
+      );
+
+      currentAc = new AbortController();
+
+      const signal = callOpts?.signal ? AbortSignal.any([currentAc.signal, callOpts.signal]) : currentAc.signal;
 
       snap = { data: undefined, error: null, status: 'pending', updatedAt: 0 };
       notify();
 
       try {
-        const data = await retry(() => mutationFn(variables), { ...retryOpts, signal: callOpts?.signal });
+        const data = await retry(() => mutationFn(variables), { ...retryOpts, signal });
 
+        currentAc = null;
         snap = { data, error: null, status: 'success', updatedAt: Date.now() };
         notify();
         mutOpts?.onSuccess?.(data, variables);
@@ -791,6 +857,8 @@ export function createMutation<TData, TVariables = void>(
 
         return data;
       } catch (err) {
+        currentAc = null;
+
         const error = toError(err);
 
         snap = { data: undefined, error, status: 'error', updatedAt: Date.now() };
@@ -808,7 +876,7 @@ export function createMutation<TData, TVariables = void>(
 
     subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe {
       observers.add(listener);
-      listener(makeState(snap) as unknown as MutationState<TData>);
+      listener(makeState(snap) as MutationState<TData>);
 
       return () => observers.delete(listener);
     },

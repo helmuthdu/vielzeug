@@ -17,11 +17,12 @@ pnpm add @vielzeug/eventit
 ## Quick Start
 
 ```typescript
-import { createBus } from '@vielzeug/eventit';
+import { createBus, BusDisposedError } from '@vielzeug/eventit';
+import type { Bus, BusOptions, EventMap, EventKey, Listener, Unsubscribe } from '@vielzeug/eventit';
 
 type AppEvents = {
-  'user:login':   { userId: string; email: string };
-  'user:logout':  void;
+  'user:login': { userId: string; email: string };
+  'user:logout': void;
   'cart:updated': { items: CartItem[]; total: number };
 };
 
@@ -61,6 +62,8 @@ for await (const { items } of bus.events('cart:updated')) {
 - ✅ **`[Symbol.dispose]`** — supports the `using` keyword for automatic teardown
 - ✅ **Error isolation** — optional `onError` keeps a failing listener from crashing others
 - ✅ **Emit hook** — optional `onEmit` intercepts every emission for logging or tracing
+- ✅ **`listenerCount`** — query active listener counts per-event or globally
+- ✅ **`BusDisposedError`** — typed error class for `instanceof` checks on rejection
 - ✅ **Test utilities** — `createTestBus` records every emitted payload for assertion
 - ✅ **Zero dependencies** — works anywhere TypeScript runs
 
@@ -71,7 +74,7 @@ for await (const { items } of bus.events('cart:updated')) {
 ```typescript
 type AppEvents = {
   // events with payloads
-  'user:login':  { userId: string };
+  'user:login': { userId: string };
   'data:loaded': { count: number; items: unknown[] };
   // signal events — no payload needed
   'session:expired': void;
@@ -102,7 +105,7 @@ controller.abort(); // listener removed, no manual unsub needed
 
 ```typescript
 bus.emit('user:login', { userId: '42' }); // typed payload required
-bus.emit('session:expired');              // void — no payload
+bus.emit('session:expired'); // void — no payload
 ```
 
 ### Await
@@ -138,18 +141,31 @@ for await (const payload of bus.events('data:loaded', controller.signal)) {
 // With onError, errors are captured and remaining listeners still run.
 const bus = createBus<AppEvents>({
   onError: (err, event, payload) => {
-    logger.error(`[eventit] Error in "${event}" listener`, err);
+    logger.error(`[eventit] Error in "${event}" listener`, err, payload);
+    //                                                             ^^^^^^^
+    //  payload is typed to T[K] for the specific event — no cast needed
   },
 });
+
+// Distinguish disposal from other rejections
+try {
+  const payload = await bus.wait('user:login');
+} catch (err) {
+  if (err instanceof BusDisposedError) {
+    /* bus was torn down */
+  } else {
+    throw err;
+  }
+}
 ```
 
 ### Emit Hook
 
 ```typescript
-// onEmit fires before listeners on every emission — useful for tracing.
+// onEmit is generic — event and payload are both fully typed.
 const bus = createBus<AppEvents>({
   onEmit: (event, payload) => {
-    console.debug(`[bus] ${event}`, payload);
+    console.debug(`[bus] ${event}`, payload); // payload typed to T[K]
   },
 });
 ```
@@ -158,7 +174,11 @@ const bus = createBus<AppEvents>({
 
 ```typescript
 bus.dispose(); // permanently tear down — listeners cleared, pending waits rejected
-bus.disposed;  // true after dispose() — idempotent, safe to call multiple times
+bus.disposed; // true after dispose() — idempotent, safe to call multiple times
+
+// Query listener counts
+bus.listenerCount('user:login'); // number of listeners on a specific event
+bus.listenerCount(); // total across all events
 
 // `using` keyword for automatic dispose at block exit
 {
@@ -178,12 +198,9 @@ bus.emit('user:login', { userId: '1' });
 bus.emit('user:login', { userId: '2' });
 
 // emitted() returns a typed snapshot of all payloads for that event
-expect(bus.emitted('user:login')).toEqual([
-  { userId: '1' },
-  { userId: '2' },
-]);
+expect(bus.emitted('user:login')).toEqual([{ userId: '1' }, { userId: '2' }]);
 
-bus.reset();   // clear recorded payloads, keep listeners
+bus.reset(); // clear recorded payloads, keep listeners
 bus.dispose(); // clear listeners and recorded payloads
 ```
 
@@ -191,44 +208,45 @@ bus.dispose(); // clear listeners and recorded payloads
 
 ### `createBus<T>(options?)`
 
-| Option | Type | Description |
-|---|---|---|
-| `onError` | `(err, event, payload) => void` | Capture listener errors instead of re-throwing |
-| `onEmit` | `(event, payload) => void` | Called before listeners on every emission |
+| Option    | Type                                        | Description                                    |
+| --------- | ------------------------------------------- | ---------------------------------------------- |
+| `onError` | `<K>(err, event: K, payload: T[K]) => void` | Capture listener errors instead of re-throwing |
+| `onEmit`  | `<K>(event: K, payload: T[K]) => void`      | Called before listeners on every emission      |
 
 Returns a `Bus<T>`.
 
 ### `Bus<T>` Members
 
-| Member | Description |
-|---|---|
-| `disposed` | `readonly boolean` — `true` after `dispose()` |
-| `on(event, listener, signal?)` | Persistent subscription — returns `Unsubscribe` |
-| `once(event, listener, signal?)` | One-shot subscription, auto-removes after first emit |
-| `wait(event, signal?)` | Returns `Promise<T[K]>` — resolves on next emit, rejects on dispose or abort |
-| `events(event, signal?)` | Returns `AsyncGenerator<T[K]>` — yields every future emit |
-| `emit(event, payload?)` | Emit synchronously to all listeners |
-| `dispose()` | Permanently tear down — idempotent |
-| `[Symbol.dispose]()` | Alias for `dispose()` — enables the `using` keyword |
+| Member                           | Description                                                                                                                 |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `disposed`                       | `readonly boolean` — `true` after `dispose()`                                                                               |
+| `on(event, listener, signal?)`   | Persistent subscription — returns `Unsubscribe`                                                                             |
+| `once(event, listener, signal?)` | One-shot subscription, auto-removes after first emit                                                                        |
+| `wait(event, signal?)`           | Returns `Promise<T[K]>` — resolves on next emit, rejects with `BusDisposedError` on dispose or abort reason on signal abort |
+| `events(event, signal?)`         | Returns `AsyncGenerator<T[K]>` — yields every future emit, terminates cleanly on dispose or abort                           |
+| `emit(event, payload?)`          | Emit synchronously to all listeners                                                                                         |
+| `listenerCount(event?)`          | Active listener count for a given event, or total across all events                                                         |
+| `dispose()`                      | Permanently tear down — idempotent                                                                                          |
+| `[Symbol.dispose]()`             | Alias for `dispose()` — enables the `using` keyword                                                                         |
 
 ### `createTestBus<T>(options?)`
 
-Like `createBus` but records every emitted payload. Returns a `TestBus<T>` — a full `Bus<T>` plus:
+Like `createBus` but records every emitted payload. Accepts the full `BusOptions<T>` including `onEmit`. Returns a `TestBus<T>` — a full `Bus<T>` plus:
 
-| Member | Description |
-|---|---|
+| Member           | Description                                               |
+| ---------------- | --------------------------------------------------------- |
 | `emitted(event)` | Snapshot of all payloads emitted for that event, in order |
-| `reset()` | Clear recorded history without disposing the bus |
+| `reset()`        | Clear recorded history without disposing the bus          |
 
 ## Documentation
 
 Full docs at **[vielzeug.dev/eventit](https://vielzeug.dev/eventit)**
 
-| | |
-|---|---|
+|                                                   |                                                    |
+| ------------------------------------------------- | -------------------------------------------------- |
 | [Usage Guide](https://vielzeug.dev/eventit/usage) | Event maps, subscribing, async, streaming, testing |
-| [API Reference](https://vielzeug.dev/eventit/api) | Complete type signatures |
-| [Examples](https://vielzeug.dev/eventit/examples) | Real-world event bus patterns |
+| [API Reference](https://vielzeug.dev/eventit/api) | Complete type signatures                           |
+| [Examples](https://vielzeug.dev/eventit/examples) | Real-world event bus patterns                      |
 
 ## License
 

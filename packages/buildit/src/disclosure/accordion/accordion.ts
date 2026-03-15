@@ -1,7 +1,6 @@
 import {
   computed,
   createContext,
-  css,
   define,
   defineEmits,
   defineProps,
@@ -12,7 +11,7 @@ import {
   type ReadonlySignal,
 } from '@vielzeug/craftit';
 
-import type { AddEventListeners, BitAccordionEvents, ComponentSize, VisualVariant } from '../../types';
+import type { ComponentSize, VisualVariant } from '../../types';
 
 /** Context provided by bit-accordion to its bit-accordion-item children. */
 export type AccordionContext = {
@@ -24,101 +23,15 @@ export type AccordionContext = {
 /** Injection key for the accordion context. */
 export const ACCORDION_CTX = createContext<AccordionContext>();
 
-const styles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      display: flex;
-      flex-direction: column;
-      gap: var(--size-2);
-      width: 100%;
-    }
-
-    ::slotted(bit-accordion-item) {
-      width: 100%;
-    }
-  }
-
-  @layer buildit.variants {
-    /* ========================================
-       Visual Variants
-       ======================================== */
-
-    /* Bordered variant */
-    :host([variant='bordered']) {
-      gap: var(--size-2);
-    }
-
-    /* Text variant - borderless with dividers */
-    :host([variant='text']) {
-      gap: 0;
-    }
-
-    :host([variant='text']) ::slotted(bit-accordion-item:not(:last-child)) {
-      border-bottom: 1px solid var(--color-contrast-200);
-    }
-
-    /* Contained variants - grouped appearance */
-    :host([variant='solid']),
-    :host([variant='flat']),
-    :host([variant='glass']),
-    :host([variant='frost']) {
-      border-radius: var(--rounded-md);
-      gap: 0;
-      padding: var(--size-2);
-    }
-
-    /* Solid variant (default) */
-    :host([variant='solid']) {
-      background: var(--color-contrast-50);
-      border: var(--border) solid var(--color-contrast-200);
-      box-shadow: var(--shadow-xs);
-    }
-
-    /* Flat variant */
-    :host([variant='flat']) {
-      background: var(--color-contrast-100);
-      border: var(--border) solid var(--color-contrast-200);
-      box-shadow: var(--inset-shadow-xs);
-    }
-
-    /* Glass & Frost - Shared styles */
-    :host([variant='glass']),
-    :host([variant='frost']) {
-      backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-      box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-    }
-
-    /* Glass variant - translucent with blur */
-    :host([variant='glass']) {
-      background: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
-    }
-
-    /* Frost variant - canvas-based transparency */
-    :host([variant='frost']) {
-      background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    }
-
-    /* Nested item border radius for glass and frost variants */
-    :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item) {
-      border-radius: 0;
-    }
-
-    :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:first-child) {
-      border-radius: var(--rounded-md) var(--rounded-md) 0 0;
-    }
-
-    :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:last-child) {
-      border-radius: 0 0 var(--rounded-md) var(--rounded-md);
-    }
-
-    :host(:is([variant='glass'], [variant='frost'])) ::slotted(bit-accordion-item:only-child) {
-      border-radius: var(--rounded-md);
-    }
-  }
-`;
+import styles from './accordion.css?inline';
 
 /** Accordion component properties */
-export type AccordionProps = {
+
+export type BitAccordionEvents = {
+  change: { expandedItem: HTMLElement };
+};
+
+export type BitAccordionProps = {
   /** Selection mode (single = only one opens, multiple = multiple can be open) */
   selectionMode?: 'single' | 'multiple';
   /** Size for all items (propagated via context) */
@@ -148,14 +61,14 @@ export type AccordionProps = {
  * ```
  */
 
-export const TAG = define('bit-accordion', ({ host }) => {
-  const props = defineProps<AccordionProps>({
+export const ACCORDION_TAG = define('bit-accordion', ({ host }) => {
+  const props = defineProps<BitAccordionProps>({
     selectionMode: { default: undefined },
     size: { default: undefined },
     variant: { default: undefined },
   });
 
-  const emit = defineEmits<{ change: { expandedItem: HTMLElement } }>();
+  const emit = defineEmits<BitAccordionEvents>();
 
   const notifyExpand = (expandedItem: HTMLElement) => {
     if (props.selectionMode.value === 'single') {
@@ -216,9 +129,3 @@ export const TAG = define('bit-accordion', ({ host }) => {
     template: html`<slot></slot>`,
   };
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-accordion': HTMLElement & AccordionProps & AddEventListeners<BitAccordionEvents>;
-  }
-}

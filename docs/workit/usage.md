@@ -11,6 +11,39 @@ New to Workit? Start with the [Overview](./index.md) for a quick introduction.
 
 [[toc]]
 
+## Why Workit?
+
+Raw Web Workers require blob-URL boilerplate, untyped `postMessage`/`onmessage` pairs, and no built-in pooling, timeouts, or cancellation.
+
+```ts
+// Before — raw Web Worker
+const blob = new Blob([`onmessage = (e) => postMessage(e.data * 2);`]);
+const worker = new Worker(URL.createObjectURL(blob));
+worker.postMessage(21);
+worker.onmessage = (e) => console.log(e.data); // 42 — untyped, no await, no error handling
+
+// After — Workit
+import { createWorker } from '@vielzeug/workit';
+const worker = createWorker<number, number>((n) => n * 2);
+console.log(await worker.run(21)); // 42 — typed, awaitable, error-safe
+worker.dispose();
+```
+
+| Feature           | Workit                                       | Comlink | workerpool   |
+| ----------------- | -------------------------------------------- | ------- | ------------ |
+| Bundle size       | <PackageInfo package="workit" type="size" /> | ~2 kB   | ~10 kB       |
+| Worker pools      | ✅                                           | ❌      | ✅           |
+| Typed payloads    | ✅                                           | Partial | ❌           |
+| Graceful fallback | ✅ Main-thread                               | ❌      | ✅ (Node.js) |
+| Timeout support   | ✅                                           | ❌      | ✅           |
+| AbortSignal       | ✅                                           | ❌      | ❌           |
+| Testing utilities | ✅                                           | ❌      | ❌           |
+| Zero dependencies | ✅                                           | ✅      | ❌           |
+
+**Use Workit when** you need typed, awaitable Web Workers with pooling, cancellation, and a graceful fallback for environments where Workers are unavailable.
+
+**Consider Comlink** if you only need a simple typed RPC proxy over a single Worker without pooling or timeout requirements.
+
 ## Task Functions
 
 A task function receives a single typed input and returns a value (synchronously or as a Promise). Because the function is serialized via `.toString()` and executed in a separate global scope, it **must be entirely self-contained** — it cannot close over variables from the surrounding module.
@@ -23,7 +56,9 @@ import type { TaskFn } from '@vielzeug/workit';
 const worker = createWorker<number, number>((n) => n * 2);
 
 // Named function reference — also fine
-function double(n: number): number { return n * 2; }
+function double(n: number): number {
+  return n * 2;
+}
 const worker2 = createWorker<number, number>(double);
 
 // Type alias for reuse
@@ -61,7 +96,9 @@ import { createWorker } from '@vielzeug/workit';
 // Fixed pool of 4
 const pool = createWorker<number, number>(
   (n) => {
-    function fib(x: number): number { return x <= 1 ? x : fib(x - 1) + fib(x - 2); }
+    function fib(x: number): number {
+      return x <= 1 ? x : fib(x - 1) + fib(x - 2);
+    }
     return fib(n);
   },
   { size: 4 },
@@ -83,10 +120,9 @@ Set `timeout` (in milliseconds) to automatically reject tasks that run too long.
 ```ts
 import { createWorker, TaskTimeoutError } from '@vielzeug/workit';
 
-const worker = createWorker<number, number>(
-  (ms) => new Promise((resolve) => setTimeout(() => resolve(ms), ms)),
-  { timeout: 1000 },
-);
+const worker = createWorker<number, number>((ms) => new Promise((resolve) => setTimeout(() => resolve(ms), ms)), {
+  timeout: 1000,
+});
 
 try {
   await worker.run(5000); // will reject after 1 s
@@ -113,7 +149,7 @@ const ac = new AbortController();
 // Queue multiple tasks
 const p1 = worker.run('first');
 const p2 = worker.run('second', { signal: ac.signal });
-const p3 = worker.run('third',  { signal: ac.signal });
+const p3 = worker.run('third', { signal: ac.signal });
 
 // Cancel the queued tasks
 ac.abort(); // p2 and p3 reject with DOMException (AbortError)
@@ -161,10 +197,10 @@ Once a buffer is transferred it is detached (length = 0) in the sending context.
 
 The `status` property reflects the current state of the worker handle:
 
-| Value | Meaning |
-|---|---|
-| `'idle'` | All slots are free and waiting for tasks |
-| `'running'` | One or more slots are executing a task |
+| Value          | Meaning                                      |
+| -------------- | -------------------------------------------- |
+| `'idle'`       | All slots are free and waiting for tasks     |
+| `'running'`    | One or more slots are executing a task       |
 | `'terminated'` | `dispose()` was called — `run()` will reject |
 
 ```ts
@@ -222,12 +258,9 @@ Use `scripts` to load CDN libraries inside the Worker via `importScripts()`. The
 ```ts
 import { createWorker } from '@vielzeug/workit';
 
-const worker = createWorker<string, string>(
-  (text) => (window as any)._ ? (window as any)._.kebabCase(text) : text,
-  {
-    scripts: ['https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js'],
-  },
-);
+const worker = createWorker<string, string>((text) => ((window as any)._ ? (window as any)._.kebabCase(text) : text), {
+  scripts: ['https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js'],
+});
 
 console.log(await worker.run('Hello World')); // 'hello-world'
 worker.dispose();
@@ -237,6 +270,40 @@ worker.dispose();
 Script URLs must be accessible from the Worker origin. For local development, host scripts via your dev server or use a CORS-enabled CDN.
 :::
 
+## `Symbol.dispose` / `using` Declarations
+
+`WorkerHandle` implements `[Symbol.dispose]` as an alias for `dispose()`, enabling the TC39 [explicit resource management](https://github.com/tc39/proposal-explicit-resource-management) `using` keyword (TypeScript ≥ 5.2 with `"lib": ["es2025"]`):
+
+```ts
+import { createWorker } from '@vielzeug/workit';
+
+{
+  using worker = createWorker<number, number>((n) => n * 2);
+  const result = await worker.run(21); // 42
+} // worker.dispose() is called automatically here
+```
+
+This also works with worker pools:
+
+```ts
+{
+  using pool = createWorker<string, string>((text) => text.toUpperCase(), { size: 4 });
+  const results = await Promise.all(['hello', 'world'].map((s) => pool.run(s)));
+  // ['HELLO', 'WORLD']
+} // all 4 slots terminated automatically
+```
+
+`createTestWorker` supports `[Symbol.dispose]` as well:
+
+```ts
+import { createTestWorker } from '@vielzeug/workit/test';
+
+{
+  using worker = createTestWorker<number, number>((n) => n * 3);
+  const result = await worker.run(7); // 21
+} // disposed automatically
+```
+
 ## Testing
 
 Use `createTestWorker` from the `/test` subpath to run tasks in-process with call recording. Workers never spawn, so tests run in any environment (Node, jsdom, etc.) without additional setup.
@@ -245,7 +312,7 @@ Use `createTestWorker` from the `/test` subpath to run tasks in-process with cal
 import { createTestWorker } from '@vielzeug/workit/test';
 import { describe, expect, it } from 'vitest';
 
-type Input  = { a: number; b: number };
+type Input = { a: number; b: number };
 type Output = number;
 
 describe('add worker', () => {

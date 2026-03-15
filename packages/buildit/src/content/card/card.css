@@ -1,0 +1,227 @@
+@layer buildit.base {
+  :host {
+    --_bg: var(--card-bg, var(--color-canvas));
+    --_color: var(--card-color, var(--color-contrast-900));
+    --_border: var(--card-border, var(--border));
+    --_border-color: var(--card-border-color, var(--color-contrast-300));
+    --_radius: var(--card-radius, var(--rounded-md));
+    --_padding: var(--card-padding, var(--size-4));
+    --_shadow: var(--card-shadow, var(--shadow-sm));
+    --_hover-shadow: var(--card-hover-shadow, var(--shadow-md));
+
+    position: relative;
+    display: block;
+  }
+
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--_color);
+    background: var(--_bg);
+    border-radius: var(--_radius);
+    transition: var(
+      --_motion-transition,
+      backdrop-filter var(--transition-slow),
+      box-shadow var(--transition-normal),
+      transform var(--transition-normal),
+      background var(--transition-normal),
+      border-color var(--transition-normal),
+      opacity var(--transition-normal)
+    );
+  }
+
+  /* ── Card Structure ───────────────────────── */
+
+  .card-media {
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .card-media img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+
+  .card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .card-header,
+  .card-content,
+  .card-footer {
+    padding: var(--_padding);
+  }
+
+  .card-header {
+    padding-bottom: calc(var(--_padding) / 2);
+  }
+
+  .card-footer {
+    padding-top: calc(var(--_padding) / 2);
+  }
+
+  .card-content {
+    flex: 1;
+  }
+
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2);
+    align-items: center;
+    padding: var(--_padding);
+    padding-top: calc(var(--_padding) / 2);
+  }
+
+  [hidden] {
+    display: none;
+  }
+}
+
+@layer buildit.variants {
+  /* Default (no variant) */
+  :host(:not([variant], [color])) .card {
+    border: var(--_border) solid var(--_border-color);
+    box-shadow: var(--_shadow);
+  }
+
+  :host(:not([variant])[color]) .card {
+    background: var(--_theme-backdrop);
+    border: var(--_border) solid var(--_theme-border);
+  }
+
+  :host(:not([variant])[color]:hover) .card {
+    background: color-mix(in srgb, var(--_theme-base) 16%, var(--color-contrast-50));
+    border-color: var(--_theme-focus);
+  }
+
+  /* Solid */
+  :host([variant='solid']) .card {
+    color: var(--_theme-contrast);
+    background: var(--_theme-base);
+    border: var(--_border) solid var(--_theme-base);
+    box-shadow: var(--_shadow);
+  }
+
+  /* Flat */
+  :host([variant='flat']) .card {
+    background: var(--_theme-backdrop);
+    border: var(--_border) solid color-mix(in srgb, var(--_theme-border) 50%, transparent);
+  }
+
+  /* Glass */
+  :host([variant='glass']) .card {
+    text-shadow: var(--text-shadow-xs);
+    border: var(--_border) solid var(--_border-color);
+    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
+  }
+
+  :host([variant='glass']:hover) .card {
+    box-shadow: var(--shadow-xl), var(--inset-shadow-sm);
+    backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
+  }
+
+  :host([variant='glass'][interactive]:hover) .card {
+    box-shadow: var(--shadow-2xl), var(--inset-shadow-sm);
+  }
+}
+
+@layer buildit.overrides {
+  /* ── Loading bar ──────────────────────────── */
+
+  /* Bar lives inside .card which already has overflow:hidden,
+       so translateX can sweep freely without any overflow. */
+  .loading-bar {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    display: none;
+    width: 65%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 0%, var(--_theme-base, var(--color-primary)) 50%, transparent 100%);
+  }
+
+  :host([loading]) .loading-bar {
+    display: block;
+    animation: var(--_motion-animation, loading-bar 1.4s ease-in-out infinite);
+  }
+
+  /* In RTL the loading bar sweeps right-to-left */
+  :host(:dir(rtl)[loading]) .loading-bar {
+    animation-direction: reverse;
+  }
+
+  /* ── Disabled ─────────────────────────────── */
+
+  :host([disabled]) {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  :host([disabled][interactive]) .card {
+    cursor: not-allowed;
+  }
+
+  /* ── Interactive hover/active ─────────────── */
+
+  :host([interactive]:not([disabled]):hover) .card {
+    box-shadow: var(--_hover-shadow);
+    transform: translateY(calc(-1 * var(--size-1))) scale(1.01);
+    will-change: box-shadow, transform;
+  }
+
+  :host([interactive]) .card {
+    cursor: pointer;
+  }
+
+  :host([interactive]:not([disabled]):active) .card {
+    box-shadow: var(--_shadow);
+    transform: translateY(0) scale(0.99);
+    transition: var(--_motion-transition, box-shadow var(--transition-fast), transform var(--transition-fast));
+  }
+
+  :host([interactive]:focus-visible) .card {
+    outline: var(--border-2) solid var(--_theme-focus, var(--color-primary));
+    outline-offset: var(--border-2);
+  }
+
+  /* ── Horizontal orientation ───────────────── */
+
+  :host([orientation='horizontal']) .card {
+    flex-direction: row;
+  }
+
+  :host([orientation='horizontal']) .card-media {
+    width: 30%;
+    min-width: 192px;
+    max-width: 320px;
+  }
+
+  :host([orientation='horizontal']) .card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  :host([orientation='horizontal']) .card-body {
+    flex: 1;
+  }
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
+}

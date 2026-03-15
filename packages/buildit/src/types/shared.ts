@@ -14,7 +14,7 @@
  * Mirrors the constraint validation API so form libraries (React Hook Form,
  * etc.) and native `<form>` can interact with bit-* form controls directly.
  */
-export interface FormValidityMethods {
+export type FormValidityMethods = {
   /** Returns true if the element's value satisfies all constraints. */
   checkValidity(): boolean;
   /** Same as checkValidity() but also fires an invalid event and shows the
@@ -22,7 +22,7 @@ export interface FormValidityMethods {
   reportValidity(): boolean;
   /** Sets a custom validation message. Pass an empty string to clear. */
   setCustomValidity(message: string): void;
-}
+};
 
 /**
  * Component size variants
@@ -35,11 +35,6 @@ export type ComponentSize = 'sm' | 'md' | 'lg';
  * Semantic colors used across the design system
  */
 export type ThemeColor = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-
-/**
- * All available colors (including neutral)
- */
-export type AllColors = ThemeColor;
 
 /**
  * Visual variant types
@@ -96,186 +91,81 @@ export type InputType =
   | 'month'
   | 'week';
 
-// ============================================
-// Base Component Prop Interfaces
-// ============================================
-
-/**
- * Base props for all components
- */
-export interface BaseComponentProps {
-  /** Custom CSS class name */
-  class?: string;
-  /** Inline styles */
-  style?: string;
-}
-
 /**
  * Props for components that support theming
  */
-export interface ThemableProps {
+export type ThemableProps = {
   /** Theme color */
   color?: ThemeColor;
-}
-
-/**
- * Props for components with variants
- */
-export interface VariantProps {
-  /** Visual variant */
-  variant?: VisualVariant;
-}
+};
 
 /**
  * Props for components with size variants
  */
-export interface SizableProps {
+export type SizableProps = {
   /** Component size */
   size?: ComponentSize;
-}
+};
 
 /**
  * Props for interactive components that can be disabled
  */
-export interface DisablableProps {
+export type DisablableProps = {
   /** Disable interaction */
   disabled?: boolean;
-}
+};
 
 /**
  * Props for components with loading state
  */
-export interface LoadableProps {
+export type LoadableProps = {
   /** Loading state */
   loading?: boolean;
-}
-
-/**
- * Props for components with rounded corners
- */
-export interface RoundableProps {
-  /** Border radius */
-  rounded?: RoundedSize;
-}
-
-/**
- * Props for components with elevation
- */
-export interface ElevatableProps {
-  /** Shadow elevation level */
-  elevation?: ElevationLevel;
-}
-
-/**
- * Props for components with padding
- */
-export interface PaddableProps {
-  /** Internal padding */
-  padding?: PaddingSize;
-}
+};
 
 /**
  * Props for form elements
  */
-export interface FormElementProps {
+export type FormElementProps = {
   /** Form field name */
   name?: string;
   /** Field value */
   value?: string;
-}
+};
 
 /**
  * Props for checkable elements (checkbox, radio)
  */
-export interface CheckableProps extends FormElementProps {
+export type CheckableProps = FormElementProps & {
   /** Checked state */
   checked?: boolean;
-}
+};
 
 // ============================================
-// Utility Types
-// ============================================
-
-/**
- * Make specific properties required
- */
-export type RequireProps<T, K extends keyof T> = T & Required<Pick<T, K>>;
-
-/**
- * Make all properties optional
- */
-export type PartialProps<T> = Partial<T>;
-
-/**
- * Extract keys that match a specific type
- */
-export type KeysOfType<T, V> = {
-  [K in keyof T]: T[K] extends V ? K : never;
-}[keyof T];
-
-/**
- * Boolean attributes (presence = true)
- */
-export type BooleanAttribute = boolean | '';
-
-/**
- * Nullable type
- */
-export type Nullable<T> = T | null;
-
-/**
- * Optional type
- */
-export type Optional<T> = T | undefined;
-
-// ============================================
-// Component-Specific Composed Props
+// Event Helper
 // ============================================
 
 /**
- * Standard interactive component props
- * Combines common traits for buttons, inputs, etc.
+ * Adds type-safe `addEventListener` / `removeEventListener` overloads to a custom element type.
+ *
+ * The event map `T` uses plain detail shapes (the same type passed to `defineEmits`):
+ * ```ts
+ * export interface BitInputEvents {
+ *   change: { value: string; originalEvent: Event };
+ *   input:  { value: string; originalEvent: Event };
+ * }
+ * ```
+ * Each entry is automatically wrapped in `CustomEvent<Detail>` for the listener signature.
  */
-export interface InteractiveComponentProps
-  extends BaseComponentProps, ThemableProps, VariantProps, SizableProps, DisablableProps {}
-
-/**
- * Standard form control props
- * For checkbox, radio, switch, slider
- */
-export interface FormControlProps extends InteractiveComponentProps, FormElementProps {}
-
-/**
- * Standard container props
- * For box, card, etc.
- */
-export interface ContainerProps
-  extends BaseComponentProps, ThemableProps, VariantProps, RoundableProps, ElevatableProps, PaddableProps {}
-
-// ============================================
-// Type Guards
-// ============================================
-
-/**
- * Check if a value is a valid theme color
- */
-export function isThemeColor(value: unknown): value is ThemeColor {
-  return typeof value === 'string' && ['primary', 'secondary', 'info', 'success', 'warning', 'error'].includes(value);
-}
-
-/**
- * Check if a value is a valid component size
- */
-export function isComponentSize(value: unknown): value is ComponentSize {
-  return typeof value === 'string' && ['sm', 'md', 'lg'].includes(value);
-}
-
-/**
- * Check if a value is a valid visual variant
- */
-export function isVisualVariant(value: unknown): value is VisualVariant {
-  return (
-    typeof value === 'string' &&
-    ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost', 'glass'].includes(value)
-  );
-}
+export type AddEventListeners<T> = {
+  addEventListener<K extends keyof T & string>(
+    type: K,
+    listener: (this: HTMLElement, ev: CustomEvent<T[K]>) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void;
+  removeEventListener<K extends keyof T & string>(
+    type: K,
+    listener: (this: HTMLElement, ev: CustomEvent<T[K]>) => void,
+    options?: boolean | EventListenerOptions,
+  ): void;
+};

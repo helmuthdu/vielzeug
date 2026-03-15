@@ -9,8 +9,9 @@ A compact, styled label for tags, filters, and selected values. Supports a leadi
 - 📏 **3 Sizes**: sm, md, lg
 - ❌ **Removable**: optional × button that fires `remove`
 - ✅ **Selectable**: toggle chip state with `mode="selectable"` and the `change` event
+- ⚡ **Action**: stateless button-like chip that fires a `click` event
 - 🖼️ **Icon Slot**: prepend an icon or decoration
-- ♿ **Accessible**: remove button has `aria-label="Remove"`
+- ♿ **Accessible**: remove button has a contextual `aria-label` including the chip value
 
 ## Source Code
 
@@ -116,6 +117,58 @@ Set `mode="selectable"` to make the chip behave like a checkbox-like toggle. Use
 document.querySelectorAll('bit-chip[mode="selectable"]').forEach((chip) => {
   chip.addEventListener('change', (e) => {
     console.log('checked:', e.detail.checked, 'value:', e.detail.value, 'source:', e.detail.originalEvent?.type);
+  });
+});
+```
+
+## Action
+
+Set `mode="action"` to make the chip behave like a button — it fires a `click` event but holds no internal state. Use it for quick actions, command triggers, or suggestion pills.
+
+<ComponentPreview center>
+
+```html
+<bit-chip mode="action" value="add">Add Tag</bit-chip>
+<bit-chip mode="action" color="primary" variant="flat" value="star">
+  <svg
+    slot="icon"
+    xmlns="http://www.w3.org/2000/svg"
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+  Favourite
+</bit-chip>
+<bit-chip mode="action" color="error" variant="ghost" value="delete" aria-label="Delete item">
+  <svg
+    slot="icon"
+    xmlns="http://www.w3.org/2000/svg"
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round">
+    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+  </svg>
+  Remove
+</bit-chip>
+```
+
+</ComponentPreview>
+
+```js
+document.querySelectorAll('bit-chip[mode="action"]').forEach((chip) => {
+  chip.addEventListener('click', (e) => {
+    console.log('action:', e.detail.value, 'source:', e.detail.originalEvent?.type);
   });
 });
 ```
@@ -233,17 +286,17 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 
 ### Attributes
 
-| Attribute         | Type                                                                      | Default    | Description                                             |
-| ----------------- | ------------------------------------------------------------------------- | ---------- | ------------------------------------------------------- |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Color theme                                             |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`  | Visual style variant                                    |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Chip size                                               |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | —          | Border radius override                                  |
-| `mode`            | `'static' \| 'removable' \| 'selectable'`                                 | `'static'` | Interaction mode                                        |
-| `disabled`        | `boolean`                                                                 | `false`    | Disable the chip (remove button becomes non-functional) |
-| `value`           | `string`                                                                  | —          | Value passed in the `remove` and `change` event detail  |
-| `checked`         | `boolean`                                                                 | —          | Controlled checked state for selectable chips           |
-| `default-checked` | `boolean`                                                                 | `false`    | Initial checked state in uncontrolled selectable mode   |
+| Attribute         | Type                                                                      | Default    | Description                                                      |
+| ----------------- | ------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Color theme                                                      |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`  | Visual style variant                                             |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Chip size                                                        |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | —          | Border radius override                                           |
+| `mode`            | `'static' \| 'removable' \| 'selectable' \| 'action'`                     | `'static'` | Interaction mode                                                 |
+| `disabled`        | `boolean`                                                                 | `false`    | Disable the chip (remove button becomes non-functional)          |
+| `value`           | `string`                                                                  | —          | Value passed in the `remove`, `change`, and `click` event detail |
+| `checked`         | `boolean`                                                                 | —          | Controlled checked state for selectable chips                    |
+| `default-checked` | `boolean`                                                                 | `false`    | Initial checked state in uncontrolled selectable mode            |
 
 ### Slots
 
@@ -254,10 +307,11 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 
 ### Events
 
-| Event    | Detail                                                                    | Description                             |
-| -------- | ------------------------------------------------------------------------- | --------------------------------------- |
-| `remove` | `{ value: string \| undefined, originalEvent?: Event }`                   | Fired when the remove button is clicked |
-| `change` | `{ value: string \| undefined, checked: boolean, originalEvent?: Event }` | Fired when a selectable chip toggles    |
+| Event    | Detail                                                                        | Description                             |
+| -------- | ----------------------------------------------------------------------------- | --------------------------------------- |
+| `remove` | `{ value: string \| undefined, originalEvent: MouseEvent }`                   | Fired when the remove button is clicked |
+| `change` | `{ value: string \| undefined, checked: boolean, originalEvent: MouseEvent }` | Fired when a selectable chip toggles    |
+| `click`  | `{ value: string \| undefined, originalEvent: MouseEvent }`                   | Fired when an action chip is clicked    |
 
 ### CSS Custom Properties
 
@@ -286,6 +340,7 @@ The chip component follows WAI-ARIA best practices.
 
 ✅ **Screen Readers**
 
-- The remove button has `aria-label="Remove"`.
+- The remove button has a contextual `aria-label`: `"Remove {value}"` when `value` is set, `"Remove"` otherwise.
 - Selectable chips use `role="checkbox"` and `aria-checked` while preserving the visible label as the accessible name.
-- Use `value` to identify which chip was removed in a list.
+- Action chips render as a `<button>` element; supply `aria-label` for icon-only chips.
+- Use `value` to identify which chip triggered an event in a list.

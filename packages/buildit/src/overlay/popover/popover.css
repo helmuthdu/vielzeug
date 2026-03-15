@@ -1,0 +1,43 @@
+@layer buildit.base {
+  :host {
+    position: relative;
+    display: inline-block;
+  }
+
+  .panel {
+    position: fixed;
+
+    /* Popover UA resets */
+    inset: unset;
+    box-sizing: border-box;
+    min-width: var(--popover-min-width, 12rem);
+    max-width: var(--popover-max-width, 24rem);
+    max-height: var(--popover-max-height, min(70vh, 32rem));
+    padding: 0;
+    margin: 0;
+    overflow: auto;
+    word-break: auto-phrase;
+    overflow-wrap: anywhere;
+    background: var(--color-canvas);
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--rounded-lg);
+    box-shadow: var(--shadow-lg);
+
+    /* Hidden by default */
+    opacity: 0;
+    transition: var(
+      --_motion-transition,
+      opacity var(--transition-fast),
+      display var(--transition-fast) allow-discrete,
+      overlay var(--transition-fast) allow-discrete
+    );
+  }
+
+  .panel:popover-open {
+    opacity: 1;
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+}

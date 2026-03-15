@@ -1,7 +1,6 @@
 import {
   computed,
   createId,
-  css,
   define,
   defineEmits,
   defineField,
@@ -14,18 +13,12 @@ import {
   ref,
   signal,
 } from '@vielzeug/craftit';
+import { each } from '@vielzeug/craftit/directives';
 import { createDropZone } from '@vielzeug/dragit';
 
-import type {
-  AddEventListeners,
-  BitFileInputEvents,
-  ComponentSize,
-  FormValidityMethods,
-  RoundedSize,
-  ThemeColor,
-  VisualVariant,
-} from '../../types';
+import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
+import { clearIcon, fileIcon, uploadIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 
 // ============================================
@@ -69,317 +62,20 @@ function isFileSizeAllowed(file: File, maxBytes: number): boolean {
 // Component Styles
 // ============================================
 
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_font-size: var(--file-input-font-size, var(--text-sm));
-      --_radius: var(--file-input-radius, var(--rounded-md));
-      --_bg: var(--file-input-bg, var(--color-contrast-100));
-      --_border-color: var(--file-input-border-color, var(--color-contrast-300));
-      --_min-height: var(--file-input-min-height, var(--size-36));
-
-      align-items: stretch;
-      display: inline-flex;
-      flex-direction: column;
-    }
-
-    .file-input-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: var(--size-1-5);
-      width: 100%;
-    }
-
-    /* ========================================
-       Label
-       ======================================== */
-
-    .label-outside {
-      color: var(--color-contrast-500);
-      cursor: default;
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      line-height: var(--leading-none);
-      transition: color var(--transition-fast);
-      user-select: none;
-    }
-
-    /* ========================================
-       Dropzone
-       ======================================== */
-
-    .dropzone {
-      align-items: center;
-      background: var(--_bg);
-      border-radius: var(--_radius);
-      border: var(--border-2) dashed var(--_border-color);
-      box-sizing: border-box;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: var(--size-2);
-      justify-content: center;
-      min-height: var(--_min-height);
-      outline: none;
-      padding: var(--size-6) var(--size-4);
-      position: relative;
-      text-align: center;
-      transition:
-        background var(--transition-fast),
-        border-color var(--transition-fast),
-        box-shadow var(--transition-fast);
-    }
-
-    .dropzone-content {
-      align-items: center;
-      display: flex;
-      flex-direction: column;
-      gap: var(--size-2);
-      pointer-events: none;
-    }
-
-    .dropzone-icon {
-      align-items: center;
-      color: var(--color-contrast-400);
-      display: flex;
-      justify-content: center;
-      transition:
-        color var(--transition-fast),
-        transform var(--transition-fast);
-    }
-
-    .dropzone-title {
-      color: var(--color-contrast-700);
-      font-size: var(--_font-size);
-      font-weight: var(--font-medium);
-      line-height: var(--leading-snug);
-    }
-
-    .dropzone-title u {
-      color: var(--_theme-focus, var(--color-primary));
-      text-decoration: underline;
-      text-decoration-color: transparent;
-      text-underline-offset: 2px;
-      transition: text-decoration-color var(--transition-fast);
-    }
-
-    .dropzone-hint {
-      color: var(--color-contrast-400);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-    }
-
-    /* ========================================
-       Helper Text
-       ======================================== */
-
-    .helper-text {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      padding-inline: 2px;
-    }
-
-    /* ========================================
-       File List
-       ======================================== */
-
-    .file-list {
-      display: flex;
-      flex-direction: column;
-      gap: var(--size-1);
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-
-    .file-item {
-      align-items: center;
-      background: var(--color-contrast-50);
-      border-radius: var(--_radius);
-      border: var(--border) solid var(--color-contrast-200);
-      box-sizing: border-box;
-      display: flex;
-      gap: var(--size-3);
-      padding: var(--size-2) var(--size-3);
-      transition: background var(--transition-fast);
-    }
-
-    .file-item:hover {
-      background: var(--color-contrast-100);
-    }
-
-    .file-icon {
-      color: var(--_theme-focus, var(--color-primary));
-      flex-shrink: 0;
-    }
-
-    .file-meta {
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      gap: var(--size-0-5);
-      min-width: 0;
-    }
-
-    .file-name {
-      color: var(--color-contrast-700);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .file-size {
-      color: var(--color-contrast-400);
-      font-size: var(--text-xs);
-    }
-
-    .file-remove {
-      align-items: center;
-      background: transparent;
-      border-radius: var(--rounded-sm);
-      border: none;
-      color: var(--color-contrast-400);
-      cursor: pointer;
-      display: flex;
-      flex-shrink: 0;
-      justify-content: center;
-      padding: var(--size-1);
-      transition:
-        color var(--transition-fast),
-        background var(--transition-fast);
-    }
-
-    .file-remove:hover {
-      background: var(--color-error-backdrop, color-mix(in srgb, var(--color-error) 12%, transparent));
-      color: var(--color-error);
-    }
-
-    /* ========================================
-       Hover & Focus
-       ======================================== */
-
-    :host(:not([disabled])) .dropzone:hover {
-      border-color: var(--color-contrast-400);
-    }
-
-    :host(:not([disabled])) .dropzone:hover .dropzone-title u {
-      text-decoration-color: var(--_theme-focus, var(--color-primary));
-    }
-
-    :host(:not([disabled])) .dropzone:focus-visible {
-      border-color: var(--_theme-focus, var(--color-primary));
-      box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
-    }
-
-    :host(:not([disabled])) .dropzone:hover .dropzone-icon,
-    :host(:not([disabled])) .dropzone:focus-visible .dropzone-icon {
-      color: var(--_theme-focus, var(--color-primary));
-      transform: translateY(-2px);
-    }
-
-    /* ========================================
-       Drag-Over State
-       ======================================== */
-
-    :host([drag-over]) .dropzone {
-      background: color-mix(in srgb, var(--_theme-base, var(--color-primary)) 8%, var(--color-canvas));
-      border-color: var(--_theme-focus, var(--color-primary));
-      box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
-    }
-
-    :host([drag-over]) .dropzone .dropzone-icon {
-      color: var(--_theme-focus, var(--color-primary));
-      transform: translateY(-4px) scale(1.1);
-    }
-
-    /* ========================================
-       Error State
-       ======================================== */
-
-    :host([invalid]) .dropzone {
-      border-color: var(--color-error);
-    }
-
-    :host([invalid]) .label-outside {
-      color: var(--color-error);
-    }
-
-    /* ========================================
-       Error Text
-       ======================================== */
-
-    .helper-text--error {
-      color: var(--color-error);
-    }
-  }
-
-  @layer buildit.variants {
-    /* Solid (Default) */
-    :host(:not([variant])) .dropzone,
-    :host([variant='solid']) .dropzone {
-      background: var(--color-contrast-50);
-      border-color: var(--color-contrast-300);
-    }
-
-    /* Flat */
-    :host([variant='flat']) .dropzone {
-      border-color: var(--_theme-border);
-    }
-
-    :host([variant='flat']) .dropzone:hover {
-      background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
-      border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
-    }
-
-    :host([variant='flat']) .dropzone:focus-visible,
-    :host([variant='flat'][drag-over]) .dropzone {
-      background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
-      border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Bordered */
-    :host([variant='bordered']) .dropzone {
-      background: var(--_theme-backdrop);
-      border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
-    }
-
-    :host([variant='bordered']) .dropzone:hover {
-      border-color: var(--_theme-focus);
-    }
-
-    /* Outline */
-    :host([variant='outline']) .dropzone {
-      background: transparent;
-    }
-
-    /* Ghost */
-    :host([variant='ghost']) .dropzone {
-      background: transparent;
-      border-color: var(--color-contrast-200);
-    }
-
-    :host([variant='ghost']) .dropzone:hover {
-      background: var(--color-contrast-100);
-    }
-  }
-
-  @layer buildit.utilities {
-    :host([fullwidth]) {
-      width: 100%;
-    }
-  }
-`;
+import componentStyles from './file-input.css?inline';
 
 // ============================================
 // Types
 // ============================================
 
 /** FileInput component properties */
-export type FileInputProps = {
+
+export type BitFileInputEvents = {
+  change: { files: File[]; originalEvent?: Event };
+  remove: { file: File; files: File[] };
+};
+
+export type BitFileInputProps = {
   /** Accepted file types (MIME types or extensions, comma-separated) */
   accept?: string;
   /** Theme color */
@@ -461,15 +157,12 @@ export type FileInputProps = {
  * <bit-file-input variant="bordered" color="primary" />
  * ```
  */
-export const TAG = define(
+export const FILE_INPUT_TAG = define(
   'bit-file-input',
   ({ host }) => {
-    const emit = defineEmits<{
-      change: { files: File[]; originalEvent?: Event };
-      remove: { file: File; files: File[] };
-    }>();
+    const emit = defineEmits<BitFileInputEvents>();
 
-    const props = defineProps<FileInputProps>({
+    const props = defineProps<BitFileInputProps>({
       accept: { default: '' },
       color: { default: undefined },
       disabled: { default: false },
@@ -602,9 +295,7 @@ export const TAG = define(
     }
 
     function removeFile(file: File): void {
-      const updated = files.value.filter((f) => f !== file);
-
-      files.value = updated;
+      files.value = files.value.filter((f) => f !== file);
       emit('remove', { file, files: files.value });
       emit('change', { files: files.value });
     }
@@ -698,47 +389,17 @@ export const TAG = define(
               inert
               tabindex="-1" />
             <div class="dropzone-content">
-              <span class="dropzone-icon" aria-hidden="true">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="36"
-                  height="36"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round">
-                  <polyline points="16 16 12 12 8 16" />
-                  <line x1="12" y1="12" x2="12" y2="21" />
-                  <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-                </svg>
-              </span>
+              <span class="dropzone-icon" aria-hidden="true"> ${uploadIcon} </span>
               <span class="dropzone-title">Drop files here or <u>click to browse</u></span>
               <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
             </div>
           </div>
           <ul class="file-list" role="list" aria-label="Selected files" ?hidden=${() => files.value.length === 0}>
-            ${html.each(
+            ${each(
               files,
-              (file) => `${file.name}:${file.size}:${file.lastModified}`,
-              (file) => html`
+              (file: File) => html`
                 <li class="file-item">
-                  <span class="file-icon" aria-hidden="true">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.75"
-                      stroke-linecap="round"
-                      stroke-linejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                  </span>
+                  <span class="file-icon" aria-hidden="true"> ${fileIcon} </span>
                   <span class="file-meta">
                     <span class="file-name" :title=${() => file.name}>${() => file.name}</span>
                     <span class="file-size">${() => formatBytes(file.size)}</span>
@@ -748,22 +409,14 @@ export const TAG = define(
                     type="button"
                     :aria-label=${() => `Remove ${file.name}`}
                     @click=${() => removeFile(file)}>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
+                    ${clearIcon}
                   </button>
                 </li>
               `,
+              undefined,
+              {
+                key: (file: File) => `${file.name}:${file.size}:${file.lastModified}`,
+              },
             )}
           </ul>
           <div
@@ -774,7 +427,7 @@ export const TAG = define(
             ${() => props.helper.value}
           </div>
           <div
-            class="helper-text helper-text--error"
+            class="helper-text helper-text-error"
             id="${errorId}"
             role="alert"
             part="error"
@@ -787,9 +440,3 @@ export const TAG = define(
   },
   { formAssociated: true, shadow: { delegatesFocus: true } },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-file-input': HTMLElement & FileInputProps & FormValidityMethods & AddEventListeners<BitFileInputEvents>;
-  }
-}

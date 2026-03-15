@@ -65,14 +65,14 @@ describe('bit-dialog', () => {
       expect(fixture.query('dialog')?.getAttribute('aria-label')).toBe('Confirm action');
     });
 
-    it('renders close button when dismissable', async () => {
-      fixture = await mount('bit-dialog', { attrs: { dismissable: '', open: '' } });
+    it('renders close button when dismissible', async () => {
+      fixture = await mount('bit-dialog', { attrs: { dismissible: '', open: '' } });
 
       expect(fixture.query('.close, [aria-label="Close dialog"]')).toBeTruthy();
     });
 
     it('close button has accessible label', async () => {
-      fixture = await mount('bit-dialog', { attrs: { dismissable: '', open: '' } });
+      fixture = await mount('bit-dialog', { attrs: { dismissible: '', open: '' } });
 
       expect(fixture.query('[aria-label="Close dialog"]')).toBeTruthy();
     });
@@ -117,7 +117,7 @@ describe('bit-dialog', () => {
     });
 
     it('fires close event when dismiss button clicked', async () => {
-      fixture = await mount('bit-dialog', { attrs: { dismissable: '', open: '' } });
+      fixture = await mount('bit-dialog', { attrs: { dismissible: '', open: '' } });
 
       const handler = vi.fn();
 
@@ -176,7 +176,7 @@ describe('bit-dialog accessibility', () => {
 
   describe('Close Button', () => {
     it('close button has aria-label Close dialog', async () => {
-      fixture = await mount('bit-dialog', { attrs: { dismissable: '', open: '' } });
+      fixture = await mount('bit-dialog', { attrs: { dismissible: '', open: '' } });
 
       expect(fixture.query('[aria-label="Close dialog"]')).toBeTruthy();
     });

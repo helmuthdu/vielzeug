@@ -93,4 +93,64 @@ describe('bit-skeleton', () => {
       expect(fixture.element.shadowRoot?.querySelectorAll('.bone').length).toBe(2);
     });
   });
+
+  describe('Intersection-based animation pausing', () => {
+    it('does not set data-paused when IntersectionObserver has not fired yet', async () => {
+      fixture = await mount('bit-skeleton');
+
+      // IntersectionObserver stub never fires — data-paused should be absent
+      expect(fixture.element.hasAttribute('data-paused')).toBe(false);
+    });
+
+    it('sets data-paused when element is not intersecting', async () => {
+      let capturedCb!: IntersectionObserverCallback;
+      const origIO = (globalThis as any).IntersectionObserver;
+
+      (globalThis as any).IntersectionObserver = class {
+        observe = vi.fn();
+        disconnect = vi.fn();
+        constructor(cb: IntersectionObserverCallback) {
+          capturedCb = cb;
+        }
+      };
+
+      try {
+        fixture = await mount('bit-skeleton');
+
+        capturedCb(
+          [{ isIntersecting: false } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
+
+        expect(fixture.element.hasAttribute('data-paused')).toBe(true);
+      } finally {
+        (globalThis as any).IntersectionObserver = origIO;
+      }
+    });
+
+    it('removes data-paused when element becomes visible', async () => {
+      let capturedCb!: IntersectionObserverCallback;
+      const origIO = (globalThis as any).IntersectionObserver;
+
+      (globalThis as any).IntersectionObserver = class {
+        observe = vi.fn();
+        disconnect = vi.fn();
+        constructor(cb: IntersectionObserverCallback) {
+          capturedCb = cb;
+        }
+      };
+
+      try {
+        fixture = await mount('bit-skeleton');
+
+        capturedCb([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+        expect(fixture.element.hasAttribute('data-paused')).toBe(true);
+
+        capturedCb([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+        expect(fixture.element.hasAttribute('data-paused')).toBe(false);
+      } finally {
+        (globalThis as any).IntersectionObserver = origIO;
+      }
+    });
+  });
 });

@@ -236,22 +236,50 @@ export function size(options: SizeOptions = {}): Middleware {
 
 // ─── autoUpdate ───────────────────────────────────────────────────────────────
 
+export interface AutoUpdateOptions {
+  /**
+   * Whether to observe size changes on the floating element itself.
+   * Set to `false` for virtual-scroll dropdowns whose outer dimensions are
+   * managed entirely by the caller (e.g. width set via `size()` middleware),
+   * to avoid a ResizeObserver feedback loop.
+   * Defaults to `true`.
+   */
+  observeFloating?: boolean;
+}
+
 /**
  * Automatically calls `update` whenever the floating element's position may have
  * changed (viewport resize, scroll events, or reference / floating element resize).
  * Returns a cleanup function.
  */
-export function autoUpdate(reference: Element, floating: HTMLElement, update: () => void): () => void {
-  window.addEventListener('scroll', update, { capture: true, passive: true });
+export function autoUpdate(
+  reference: Element,
+  floating: HTMLElement,
+  update: () => void,
+  { observeFloating = true }: AutoUpdateOptions = {},
+): () => void {
+  // Scroll events inside the floating element itself (e.g. a dropdown scrolling
+  // its own options list) must never trigger repositioning.
+  // Use composedPath() instead of e.target — shadow DOM retargets e.target to
+  // the shadow host at the window listener boundary, so contains(e.target) would
+  // miss scrolls that originated inside a shadow root.
+  const scrollHandler = (e: Event) => {
+    if (e.composedPath().includes(floating)) return;
+
+    update();
+  };
+
+  window.addEventListener('scroll', scrollHandler, { capture: true, passive: true });
   window.addEventListener('resize', update, { passive: true });
 
   const ro = new ResizeObserver(update);
 
   ro.observe(reference);
-  ro.observe(floating);
+
+  if (observeFloating) ro.observe(floating);
 
   return () => {
-    window.removeEventListener('scroll', update, { capture: true } as EventListenerOptions);
+    window.removeEventListener('scroll', scrollHandler, { capture: true } as EventListenerOptions);
     window.removeEventListener('resize', update);
     ro.disconnect();
   };

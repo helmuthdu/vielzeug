@@ -17,525 +17,70 @@ import {
   watch,
 } from '@vielzeug/craftit';
 import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
-import { createVirtualizer } from '@vielzeug/virtualit';
+import { createVirtualizer, type VirtualItem } from '@vielzeug/virtualit';
 
 import type {
   AddEventListeners,
-  BitComboboxEvents,
-  ComboboxChangeDetail,
   DisablableProps,
-  FormValidityMethods,
   RoundedSize,
   SizableProps,
   ThemableProps,
   VisualVariant,
 } from '../../types';
 
-import { mountFormContextSync, mountLabelSyncStandalone } from '../_common/use-text-field';
-import { TAG as CHIP_TAG } from '../../feedback/chip/chip';
+import { CHIP_TAG } from '../../feedback/chip/chip';
+import { checkIconHTML, chevronDownIcon, clearIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import { mountFormContextSync, mountLabelSyncStandalone } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
 
 // ============================================
 // Types
 // ============================================
 
-export interface ComboboxProps extends ThemableProps, SizableProps, DisablableProps {
-  value?: string;
-  placeholder?: string;
-  name?: string;
-  label?: string;
-  'label-placement'?: 'inset' | 'outside';
-  error?: string;
-  helper?: string;
-  clearable?: boolean;
-  /** Allow typing a new value to create a new option */
-  creatable?: boolean;
-  'no-filter'?: boolean;
-  /** Show loading state in the dropdown */
-  loading?: boolean;
-  multiple?: boolean;
-  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
-  rounded?: RoundedSize | '';
-  fullwidth?: boolean;
-}
+export type BitComboboxEvents = {
+  change: { label: string; originalEvent?: Event; value: string; values: string[] };
+  search: { query: string };
+};
+
+export type BitComboboxProps = ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    clearable?: boolean;
+    /** Allow typing a new value to create a new option */
+    creatable?: boolean;
+    error?: string;
+    fullwidth?: boolean;
+    helper?: string;
+    label?: string;
+    'label-placement'?: 'inset' | 'outside';
+    /** Show loading state in the dropdown */
+    loading?: boolean;
+    multiple?: boolean;
+    name?: string;
+    'no-filter'?: boolean;
+    placeholder?: string;
+    rounded?: RoundedSize | '';
+    value?: string;
+    variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
+  };
 
 // ============================================
 // Styles
 // ============================================
 
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_font-size: var(--combobox-font-size, var(--text-sm));
-      --_gap: var(--combobox-gap, var(--size-2));
-      --_field-height: var(--combobox-height, var(--size-10));
-      --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
-      --_padding: var(--combobox-padding, var(--size-1-5) var(--size-3));
-      --_radius: var(--combobox-radius, var(--rounded-md));
-      --_bg: var(--combobox-bg, var(--color-contrast-100));
-      --_border-color: var(--combobox-border-color, var(--color-contrast-300));
-
-      align-items: stretch;
-      display: inline-flex;
-      flex-direction: column;
-      min-width: 12rem;
-    }
-
-    :host([fullwidth]) {
-      width: 100%;
-    }
-
-    .combobox-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: var(--size-1-5);
-      width: 100%;
-    }
-
-    /* ========================================
-       Label
-       ======================================== */
-
-    .label-inset {
-      color: var(--color-contrast-500);
-      cursor: pointer;
-      font-size: var(--text-xs);
-      font-weight: var(--font-medium);
-      line-height: var(--leading-tight);
-      margin-bottom: 2px;
-      transition: color var(--transition-fast);
-      user-select: none;
-    }
-
-    .label-outside {
-      color: var(--color-contrast-500);
-      cursor: pointer;
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      line-height: var(--leading-none);
-      transition: color var(--transition-fast);
-      user-select: none;
-    }
-
-    /* ========================================
-       Field / Input
-       ======================================== */
-
-    .field {
-      background: var(--_bg);
-      border-radius: var(--_radius);
-      border: var(--border) solid var(--_border-color);
-      box-shadow: var(--shadow-2xs);
-      box-sizing: border-box;
-      cursor: text;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0;
-      justify-content: center;
-      height: var(--_field-height);
-      min-height: max(var(--_field-height), var(--_touch-target, 0px));
-      padding: var(--_padding);
-      padding-inline-end: var(--size-8);
-      position: relative;
-      transition: var(
-        --_motion-transition,
-        background var(--transition-fast),
-        border-color var(--transition-fast),
-        box-shadow var(--transition-fast),
-        transform var(--transition-fast)
-      );
-    }
-
-    /* Expand height for multi-select chips or inset label */
-    :host([multiple]) .field,
-    .field:has(.label-inset:not([hidden])) {
-      height: auto;
-    }
-
-    .field-row {
-      align-items: center;
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--_gap);
-      min-height: var(--_row-min-height);
-      row-gap: var(--size-1);
-    }
-
-    .chips-row {
-      align-items: center;
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--size-1);
-      flex: 1;
-      min-width: 0;
-    }
-
-    .input {
-      background: transparent;
-      border: 0;
-      color: var(--_theme-content);
-      flex: 1 1 4rem;
-      font-family: inherit;
-      font-size: var(--_font-size);
-      height: var(--_row-min-height);
-      line-height: 1;
-      min-width: 4rem;
-      outline: none;
-      padding: 0;
-    }
-
-    .input::placeholder {
-      color: var(--_placeholder);
-    }
-
-    .chevron {
-      align-items: center;
-      color: var(--color-contrast-500);
-      display: inline-flex;
-      flex-shrink: 0;
-      inset-inline-end: var(--size-2-5);
-      pointer-events: none;
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      transition: var(--_motion-transition, transform var(--transition-fast), color var(--transition-fast));
-    }
-
-    :host([open]) .chevron {
-      color: var(--_theme-focus, var(--color-primary));
-      transform: translateY(-50%) rotate(180deg);
-    }
-
-    .chevron .loader {
-      animation: var(--_motion-animation, bit-combobox-spin 0.6s linear infinite);
-      border-radius: 50%;
-      border: 2px solid currentColor;
-      border-inline-end-color: transparent;
-      display: none;
-      flex-shrink: 0;
-      height: 1em;
-      width: 1em;
-    }
-
-    :host([loading]) .chevron .loader {
-      display: inline-block;
-    }
-
-    :host([loading]) .chevron svg {
-      display: none;
-    }
-
-    @keyframes bit-combobox-spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .clear-btn {
-      align-items: center;
-      background: none;
-      border: 0;
-      color: var(--color-contrast-400);
-      cursor: pointer;
-      display: inline-flex;
-      flex-shrink: 0;
-      padding: 0;
-      visibility: hidden;
-    }
-
-    .clear-btn:hover {
-      color: var(--color-contrast-600);
-    }
-
-    :host([clearable]) .clear-btn:not([hidden]) {
-      visibility: visible;
-    }
-
-    /* ========================================
-       Dropdown / Listbox
-       ======================================== */
-
-    .dropdown {
-      background: var(--color-canvas);
-      border-radius: var(--_radius);
-      border: var(--border) solid var(--color-contrast-200);
-      box-shadow: var(--shadow-lg);
-      box-sizing: border-box;
-      inset-inline-start: 0;
-      margin: 0;
-      max-height: min(16rem, 50dvh);
-      opacity: 0;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      padding: var(--size-1);
-      pointer-events: none;
-      position: fixed;
-      scrollbar-width: thin;
-      top: 0;
-      transform: translateY(-4px);
-      transition: var(
-        --_motion-transition,
-        opacity var(--transition-fast),
-        transform var(--transition-fast),
-        visibility var(--transition-fast)
-      );
-      visibility: hidden;
-      z-index: calc(var(--z-popover, 1000) + 1);
-    }
-
-    .dropdown[data-open] {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(0);
-      visibility: visible;
-    }
-
-    /* ========================================
-       Option Items
-       ======================================== */
-
-    .option {
-      align-items: center;
-      border-radius: var(--rounded-sm);
-      cursor: pointer;
-      display: flex;
-      font-size: var(--_font-size);
-      gap: var(--size-2);
-      line-height: var(--leading-normal);
-      padding: var(--size-1-5) var(--size-2-5);
-      transition:
-        background var(--transition-fast),
-        color var(--transition-fast);
-    }
-
-    .option:hover:not([data-disabled]) {
-      background: var(--color-contrast-100);
-    }
-
-    .option[data-focused]:not([data-disabled]) {
-      background: color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100));
-      color: var(--_theme-base);
-    }
-
-    .option[data-selected] {
-      background: color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50));
-      color: var(--_theme-base);
-      font-weight: var(--font-medium);
-    }
-
-    .option[data-selected][data-focused] {
-      background: color-mix(in srgb, var(--_theme-base) 20%, var(--color-contrast-100));
-    }
-
-    .option[data-disabled] {
-      color: var(--color-contrast-400);
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-
-    .option-check {
-      color: var(--_theme-base);
-      display: inline-flex;
-      flex-shrink: 0;
-      margin-inline-start: auto;
-      opacity: 0;
-      transition: opacity var(--transition-fast);
-    }
-
-    .option[data-selected] .option-check {
-      opacity: 1;
-    }
-
-    .no-results,
-    .no-results-create,
-    .dropdown-loading {
-      color: var(--color-contrast-400);
-      font-size: var(--_font-size);
-      padding: var(--size-3) var(--size-2-5);
-      text-align: center;
-    }
-
-    .no-results-create {
-      align-items: center;
-      background: none;
-      border: 0;
-      border-radius: var(--rounded-sm);
-      color: var(--_theme-base, var(--color-primary));
-      cursor: pointer;
-      display: flex;
-      font-size: var(--_font-size);
-      gap: var(--size-1-5);
-      padding: var(--size-1-5) var(--size-2-5);
-      text-align: start;
-      width: 100%;
-    }
-
-    .no-results-create:hover,
-    .no-results-create[data-focused] {
-      background: color-mix(in srgb, var(--_theme-base, var(--color-primary)) 10%, transparent);
-    }
-
-    /* ========================================
-       Option Icon
-       ======================================== */
-
-    .option-icon {
-      align-items: center;
-      display: inline-flex;
-      flex-shrink: 0;
-    }
-
-    /* ========================================
-       Slotted option elements (hidden data nodes)
-       ======================================== */
-
-    ::slotted(bit-combobox-option) {
-      display: none;
-    }
-
-    /* ========================================
-       Helper / Error Text
-       ======================================== */
-
-    .helper-text {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      padding-inline: 2px;
-    }
-
-    /* ========================================
-       Focus / Hover States
-       ======================================== */
-
-    :host(:not([disabled]):not([variant='bordered']):not([variant='flat'])) .field:hover {
-      border-color: var(--color-contrast-400);
-    }
-
-    :host(:not([disabled]):not([variant='flat'])) .field:focus-within,
-    :host([open]:not([disabled]):not([variant='flat'])) .field {
-      background: var(--color-canvas);
-      border-color: var(--_theme-focus);
-      box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
-      transform: translateY(-1px);
-    }
-
-    :host(:not([disabled])) .field:focus-within .label-inset,
-    :host(:not([disabled])) .field:focus-within .label-outside,
-    :host([open]:not([disabled])) .label-inset {
-      color: var(--_theme-focus);
-    }
-
-    :host([error]:not([error=''])) .field {
-      border-color: var(--color-error);
-    }
-
-    :host([error]:not([error=''])) .field:focus-within {
-      border-color: var(--color-error);
-      box-shadow: var(--color-error-focus-shadow);
-    }
-
-    :host([error]:not([error=''])) .label-inset,
-    :host([error]:not([error=''])) .label-outside {
-      color: var(--color-error);
-    }
-  }
-
-  @layer buildit.variants {
-    /* Solid (Default) */
-    :host(:not([variant])) .field,
-    :host([variant='solid']) .field {
-      background: var(--color-contrast-50);
-      border-color: var(--color-contrast-300);
-      box-shadow: var(--shadow-2xs);
-    }
-
-    :host(:not([variant]):not([disabled])) .field:focus-within,
-    :host([variant='solid']:not([disabled])) .field:focus-within {
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Flat */
-    :host([variant='flat']) .field {
-      border-color: var(--_theme-border);
-      box-shadow: var(--inset-shadow-2xs);
-    }
-
-    :host([variant='flat']) .field:hover {
-      background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
-      border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
-    }
-
-    :host([variant='flat']) .field:focus-within {
-      background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
-      border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Bordered */
-    :host([variant='bordered']) .field {
-      background: var(--_theme-backdrop);
-      border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
-    }
-
-    :host([variant='bordered']) .input {
-      color: var(--_theme-content);
-    }
-
-    :host([variant='bordered']) .input::placeholder {
-      color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
-    }
-
-    :host([variant='bordered']) .field:hover {
-      border-color: var(--_theme-focus);
-    }
-
-    /* Outline */
-    :host([variant='outline']) .field {
-      background: transparent;
-      box-shadow: none;
-    }
-
-    :host([variant='outline']:not([disabled])) .field:focus-within {
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Ghost */
-    :host([variant='ghost']) .field {
-      background: transparent;
-      border-color: transparent;
-      box-shadow: none;
-    }
-
-    :host([variant='ghost']) .field:hover {
-      background: var(--color-contrast-100);
-    }
-
-    :host([variant='ghost']:not([disabled])) .field:focus-within {
-      box-shadow: var(--_theme-shadow);
-    }
-  }
-
-  @layer buildit.utilities {
-    :host([fullwidth]) {
-      display: flex;
-      width: 100%;
-    }
-  }
-`;
+import componentStyles from './combobox.css?inline';
 
 // ============================================
 // ComboboxOption Component
 // ============================================
 
-export interface ComboboxOptionProps {
-  value?: string;
+export type BitComboboxOptionProps = {
+  disabled?: boolean;
   /** Explicit label text; falls back to the element's text content. */
   label?: string;
-  disabled?: boolean;
-}
+  value?: string;
+};
 
 /**
  * `bit-combobox-option` — A child element of `<bit-combobox>` that represents one option.
@@ -543,7 +88,7 @@ export interface ComboboxOptionProps {
  * @slot         - Label text for the option.
  * @slot icon    - Optional leading icon or decoration.
  */
-export const OPTION_TAG = define('bit-combobox-option', () => {
+export const COMBOBOX_OPTION_TAG = define('bit-combobox-option', () => {
   const optionStyles = /* css */ css`
     @layer buildit.base {
       :host {
@@ -576,10 +121,10 @@ export const OPTION_TAG = define('bit-combobox-option', () => {
  * </bit-combobox>
  * ```
  */
-export const TAG = define(
+export const COMBOBOX_TAG = define(
   'bit-combobox',
   ({ host }) => {
-    const props = defineProps<ComboboxProps>({
+    const props = defineProps<BitComboboxProps>({
       clearable: { default: false },
       color: { default: undefined },
       creatable: { default: false },
@@ -600,10 +145,7 @@ export const TAG = define(
       variant: { default: undefined },
     });
 
-    const emit = defineEmits<{
-      change: ComboboxChangeDetail;
-      search: { query: string };
-    }>();
+    const emit = defineEmits<BitComboboxEvents>();
 
     const { fieldId: comboId, helperId, labelId } = createFormIds('combobox', props.name);
 
@@ -672,14 +214,15 @@ export const TAG = define(
     const hasLabel = computed(() => !!props.label.value);
 
     let inputEl: HTMLInputElement | null = null;
+    let fieldEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
     let chipsRowEl: HTMLElement | null = null;
     let listboxEl: HTMLElement | null = null;
+    let helperEl: HTMLElement | null = null;
+    let clearBtn: HTMLElement | null = null;
     let autoUpdateCleanup: (() => void) | null = null;
 
     // ── Options ──────────────────────────────────────────────────────────────
-
-    // ── Internal option data ──────────────────────────────────────────────────
 
     type ComboboxOptionItem = {
       disabled: boolean;
@@ -690,7 +233,7 @@ export const TAG = define(
 
     const slottedOptions = signal<ComboboxOptionItem[]>([]);
     const jsPropOptions = signal<ComboboxOptionItem[] | null>(null);
-    const isLoading = signal(false);
+    const isLoading = computed(() => Boolean(props.loading.value));
 
     // Merged options: JS property overrides slotted options
     const allOptions = computed<ComboboxOptionItem[]>(() => {
@@ -764,19 +307,14 @@ export const TAG = define(
       return exact ? '' : q;
     });
 
-    // Sync loading signal from prop
-    effect(() => {
-      isLoading.value = Boolean(props.loading.value);
-    });
-
     // ── Positioning ──────────────────────────────────────────────────────────
 
     function updateDropdownPosition() {
-      if (!dropdownEl || !inputEl) return;
+      if (!dropdownEl || !fieldEl) return;
 
-      const referenceWidth = (inputEl.closest('.field') as HTMLElement | null)?.getBoundingClientRect().width ?? 0;
+      const referenceWidth = fieldEl.getBoundingClientRect().width;
 
-      positionFloat(inputEl.closest('.field') as HTMLElement, dropdownEl, {
+      positionFloat(fieldEl, dropdownEl, {
         middleware: [
           flip({ padding: 6 }),
           shift({ padding: 6 }),
@@ -801,11 +339,9 @@ export const TAG = define(
       isOpen.value = true;
       host.setAttribute('open', '');
 
-      const fieldEl = inputEl?.closest('.field') as HTMLElement | null;
-
       if (fieldEl && dropdownEl) {
         autoUpdateCleanup?.();
-        autoUpdateCleanup = autoUpdate(fieldEl, dropdownEl, updateDropdownPosition);
+        autoUpdateCleanup = autoUpdate(fieldEl, dropdownEl, updateDropdownPosition, { observeFloating: false });
       }
 
       requestAnimationFrame(() => updateDropdownPosition());
@@ -988,95 +524,143 @@ export const TAG = define(
     // ── Virtualizer ──────────────────────────────────────────────────────────
 
     let virtualizer: ReturnType<typeof createVirtualizer> | null = null;
+    let currentOpts: typeof filteredOptions.value = [];
+
+    // Cached raw DOM ref — set once in setupVirtualizer so renderVirtualItems
+    // never reads from signal refs (which would make the calling effect re-subscribe).
+    let listboxElCached: HTMLElement | null = null;
+
+    // Standalone render function — called only from the virtualizer's onChange
+    // (scroll-driven). Signal reads use .peek() so this function is never tracked
+    // by any reactive effect, preventing the "hover → full re-render" loop.
+    function renderVirtualItems(virtualItems: VirtualItem[]) {
+      if (!listboxElCached) return;
+
+      // Clear only virtual-rendered option items (keep loading / no-results state nodes)
+      for (const el of Array.from(listboxElCached.querySelectorAll('.option'))) el.remove();
+
+      const focused = focusedIndex.peek();
+
+      for (const item of virtualItems) {
+        const opt = currentOpts[item.index];
+
+        if (!opt) continue;
+
+        const isSelected = props.multiple.peek()
+          ? selectedValues.peek().some((s) => s.value === opt.value)
+          : opt.value === selectedValue.peek();
+
+        const optionEl = document.createElement('div');
+
+        optionEl.className = 'option';
+        optionEl.setAttribute('role', 'option');
+        optionEl.id = `${comboId}-opt-${item.index}`;
+        optionEl.setAttribute('aria-selected', String(isSelected));
+        optionEl.setAttribute('aria-disabled', String(!!opt.disabled));
+        optionEl.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
+
+        if (focused === item.index) optionEl.setAttribute('data-focused', '');
+
+        if (isSelected) optionEl.setAttribute('data-selected', '');
+
+        if (opt.disabled) optionEl.setAttribute('data-disabled', '');
+
+        if (opt.iconEl) {
+          const iconWrapper = document.createElement('span');
+
+          iconWrapper.className = 'option-icon';
+          iconWrapper.setAttribute('aria-hidden', 'true');
+
+          const iconClone = opt.iconEl.cloneNode(true) as Element;
+
+          iconClone.removeAttribute('slot');
+          iconWrapper.appendChild(iconClone);
+          optionEl.appendChild(iconWrapper);
+        }
+
+        const labelSpan = document.createElement('span');
+
+        labelSpan.textContent = opt.label;
+        optionEl.appendChild(labelSpan);
+
+        const check = document.createElement('span');
+
+        check.className = 'option-check';
+        check.setAttribute('aria-hidden', 'true');
+        check.innerHTML = checkIconHTML;
+        optionEl.appendChild(check);
+
+        optionEl.addEventListener('click', (e: MouseEvent) => {
+          e.stopPropagation();
+          selectOption(opt, e);
+        });
+        optionEl.addEventListener('mouseenter', () => {
+          focusedIndex.value = item.index;
+          // Update focused state in-place — no full re-render needed.
+          for (const el of listboxElCached!.querySelectorAll<HTMLElement>('[data-focused]')) {
+            el.removeAttribute('data-focused');
+          }
+          optionEl.setAttribute('data-focused', '');
+        });
+        listboxElCached.appendChild(optionEl);
+      }
+    }
+
+    // Refreshes focused/selected data-attributes on already-rendered items without
+    // clearing the DOM. Called from the reactive effect so signal changes (hover,
+    // selection) update styling without triggering a full scroll re-render.
+    function updateRenderedItemState() {
+      if (!listboxElCached) return;
+
+      const focused = focusedIndex.peek();
+      const isMultiple = props.multiple.peek();
+
+      for (const el of listboxElCached.querySelectorAll<HTMLElement>('.option')) {
+        const idx = Number(el.id.replace(`${comboId}-opt-`, ''));
+        const opt = currentOpts[idx];
+
+        if (!opt) continue;
+
+        const isSelected = isMultiple
+          ? selectedValues.peek().some((s) => s.value === opt.value)
+          : opt.value === selectedValue.peek();
+
+        el.toggleAttribute('data-focused', idx === focused);
+        el.toggleAttribute('data-selected', isSelected);
+        el.setAttribute('aria-selected', String(isSelected));
+      }
+    }
 
     function setupVirtualizer() {
       virtualizer?.destroy();
 
-      if (!listboxEl) return;
+      listboxElCached = listboxEl;
 
-      const opts = filteredOptions.value;
+      if (!listboxElCached || !dropdownEl) return;
 
-      if (opts.length === 0) {
+      currentOpts = filteredOptions.value;
+
+      if (currentOpts.length === 0) {
         virtualizer = null;
 
         return;
       }
 
-      virtualizer = createVirtualizer({
-        count: opts.length,
+      virtualizer = createVirtualizer(dropdownEl, {
+        count: currentOpts.length,
         estimateSize: () => 36,
-        getScrollElement: () => dropdownEl,
-        onChange: (virtualItems, totalSize) => {
-          if (!listboxEl) return;
-
-          listboxEl.style.height = `${totalSize}px`;
-          listboxEl.style.position = 'relative';
-
-          // Clear only virtual-rendered items (keep no-results / loading nodes)
-          for (const el of Array.from(listboxEl.querySelectorAll('.option'))) el.remove();
-
-          for (const item of virtualItems) {
-            const opt = opts[item.index];
-
-            if (!opt) continue;
-
-            const isFocused = item.index === focusedIndex.value;
-            const isSelected = props.multiple.value
-              ? selectedValues.value.some((s) => s.value === opt.value)
-              : opt.value === selectedValue.value;
-
-            const optionEl = document.createElement('div');
-
-            optionEl.className = 'option';
-            optionEl.setAttribute('role', 'option');
-            optionEl.id = `${comboId}-opt-${item.index}`;
-            optionEl.setAttribute('aria-selected', String(isSelected));
-            optionEl.setAttribute('aria-disabled', String(!!opt.disabled));
-            optionEl.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
-
-            if (isFocused) optionEl.setAttribute('data-focused', '');
-
-            if (isSelected) optionEl.setAttribute('data-selected', '');
-
-            if (opt.disabled) optionEl.setAttribute('data-disabled', '');
-
-            if (opt.iconEl) {
-              const iconWrapper = document.createElement('span');
-
-              iconWrapper.className = 'option-icon';
-              iconWrapper.setAttribute('aria-hidden', 'true');
-
-              const iconClone = opt.iconEl.cloneNode(true) as Element;
-
-              iconClone.removeAttribute('slot');
-              iconWrapper.appendChild(iconClone);
-              optionEl.appendChild(iconWrapper);
-            }
-
-            const labelSpan = document.createElement('span');
-
-            labelSpan.textContent = opt.label;
-            optionEl.appendChild(labelSpan);
-
-            const check = document.createElement('span');
-
-            check.className = 'option-check';
-            check.setAttribute('aria-hidden', 'true');
-            check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
-            optionEl.appendChild(check);
-
-            optionEl.addEventListener('click', (e: MouseEvent) => {
-              e.stopPropagation();
-              selectOption(opt, e);
-            });
-            optionEl.addEventListener('mouseenter', () => {
-              focusedIndex.value = item.index;
-            });
-            listboxEl.appendChild(optionEl);
-          }
-        },
+        onChange: (virtualItems) => renderVirtualItems(virtualItems),
         overscan: 4,
       });
+
+      // Set the listbox height once — it equals the total height of all items
+      // and never changes during scrolling. Setting it inside onChange would
+      // trigger the virtualizer's own ResizeObserver and cause a render loop.
+      listboxElCached.style.height = `${virtualizer.getTotalSize()}px`;
+      listboxElCached.style.position = 'relative';
+      // Stop item transforms from leaking into the dropdown's scrollable overflow
+      // area (which would cause the scrollbar thumb to resize during scroll).
+      listboxElCached.style.contain = 'layout';
     }
 
     // ── Create option ────────────────────────────────────────────────────────
@@ -1095,9 +679,14 @@ export const TAG = define(
 
     onMount(() => {
       inputEl = host.shadowRoot?.querySelector<HTMLInputElement>('.input') ?? null;
+      fieldEl = inputEl?.closest('.field') as HTMLElement | null;
       dropdownEl = host.shadowRoot?.querySelector<HTMLElement>('.dropdown') ?? null;
       listboxEl = host.shadowRoot?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
       chipsRowEl = host.shadowRoot?.querySelector<HTMLElement>('.chips-row') ?? null;
+      helperEl = host.shadowRoot?.querySelector<HTMLElement>('.helper-text') ?? null;
+      clearBtn = host.shadowRoot?.querySelector<HTMLElement>('.clear-btn') ?? null;
+
+      if (helperEl) helperEl.id = helperId;
 
       if (inputEl) {
         aria(inputEl, {
@@ -1163,6 +752,7 @@ export const TAG = define(
               const chip = document.createElement(CHIP_TAG) as HTMLElement & { mode?: string; value?: string };
 
               chip.setAttribute('value', sel.value);
+              chip.setAttribute('aria-label', sel.label);
               chip.setAttribute('mode', 'removable');
               chip.setAttribute('variant', 'flat');
               chip.setAttribute('size', 'sm');
@@ -1192,21 +782,14 @@ export const TAG = define(
         }
 
         // Update helper / error text
-        const helperEl = host.shadowRoot?.querySelector<HTMLElement>('.helper-text');
-
         if (helperEl) {
           helperEl.textContent = props.error.value || props.helper.value;
           helperEl.hidden = !props.error.value && !props.helper.value;
-          helperEl.id = helperId;
           helperEl.style.color = props.error.value ? 'var(--color-error)' : '';
         }
 
         // Clear button visibility
-        const clearBtn = host.shadowRoot?.querySelector<HTMLElement>('.clear-btn');
-
-        if (clearBtn) {
-          clearBtn.hidden = !hasValue.value;
-        }
+        if (clearBtn) clearBtn.hidden = !hasValue.value;
 
         // Dropdown open state
         if (dropdownEl) {
@@ -1255,8 +838,9 @@ export const TAG = define(
             }
           }
 
-          // Trigger virtualizer re-render for focused/selected changes
-          virtualizer?.measure();
+          // Update focused/selected state on already-rendered items without touching
+          // the DOM structure. The virtualizer owns full re-renders via onChange.
+          updateRenderedItemState();
         }
       });
 
@@ -1354,33 +938,10 @@ export const TAG = define(
                 aria-label="Clear"
                 tabindex="-1"
                 @click="${clearValue}">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
+                ${clearIcon}
               </button>
               <span class="chevron" aria-hidden="true">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round">
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
+                ${chevronDownIcon}
                 <span class="loader" aria-label="Loading"></span>
               </span>
             </div>
@@ -1400,10 +961,3 @@ export const TAG = define(
   },
   { formAssociated: true, shadow: { delegatesFocus: true } },
 ) as unknown as AddEventListeners<BitComboboxEvents>;
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-combobox': HTMLElement & ComboboxProps & FormValidityMethods & AddEventListeners<BitComboboxEvents>;
-    'bit-combobox-option': HTMLElement & ComboboxOptionProps;
-  }
-}

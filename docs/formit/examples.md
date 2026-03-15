@@ -39,7 +39,7 @@ function LoginForm() {
       email: '',
       password: '',
     },
-    rules: {
+    validators: {
       email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
       password: (v) => (String(v).length < 8 ? 'Min 8 characters' : undefined),
     },
@@ -103,7 +103,7 @@ const { form, state } = useForm({
     email: '',
     password: '',
   },
-  rules: {
+  validators: {
     email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
     password: (v) => (String(v).length < 8 ? 'Min 8 characters' : undefined),
   },
@@ -155,7 +155,7 @@ const form = createForm({
     email: '',
     password: '',
   },
-  rules: {
+  validators: {
     email: (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
     password: (v) => (String(v).length < 8 ? 'Min 8 characters' : undefined),
   },
@@ -215,7 +215,7 @@ const loginForm = createForm({
     password: '',
     rememberMe: false,
   },
-  rules: {
+  validators: {
     email: [
       (v) => (!v ? 'Email is required' : undefined),
       (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
@@ -275,7 +275,7 @@ const registrationForm = createForm({
     password: '',
     confirmPassword: '',
   },
-  rules: {
+  validators: {
     username: [
       (v) => (!v ? 'Username is required' : undefined),
       (v) => (v && String(v).length < 3 ? 'Username must be at least 3 characters' : undefined),
@@ -334,7 +334,7 @@ const contactForm = createForm({
     message: '',
     attachment: null as File | null,
   },
-  rules: {
+  validators: {
     name: (v) => (!v ? 'Name is required' : undefined),
     email: [
       (v) => (!v ? 'Email is required' : undefined),
@@ -397,7 +397,7 @@ const wizardForm = createForm({
     expiryDate: '',
     cvv: '',
   },
-  rules: {
+  validators: {
     firstName: (v) => (!v ? 'First name is required' : undefined),
     lastName: (v) => (!v ? 'Last name is required' : undefined),
     email: [
@@ -433,8 +433,8 @@ let currentStep = 0;
 
 // Validate current step
 async function validateCurrentStep() {
-  const errors = await wizardForm.validate({ fields: steps[currentStep].fields });
-  return Object.keys(errors).length === 0;
+  const { valid } = await wizardForm.validate({ fields: steps[currentStep].fields });
+  return valid;
 }
 
 // Navigate to next step
@@ -484,7 +484,7 @@ const dynamicForm = createForm({
     teamName: '',
     members: [] as TeamMember[],
   },
-  rules: {
+  validators: {
     teamName: (v) => (!v ? 'Team name is required' : undefined),
   },
 });
@@ -590,7 +590,7 @@ const profileForm = createForm({
     vatNumber: '',
     businessEmail: '',
   },
-  rules: {
+  validators: {
     name: (v) => (!v ? 'Name is required' : undefined),
     email: [
       (v) => (!v ? 'Email is required' : undefined),
@@ -656,6 +656,44 @@ async function submitProfile() {
 ```
 
 ## Best Practices
+
+### 0. Schema-Validated Form (Zod / Valibot)
+
+Use `fromSchema()` to connect any `safeParse`-compatible schema:
+
+```ts
+import { z } from 'zod';
+import { createForm, fromSchema, FormValidationError } from '@vielzeug/formit';
+
+const registrationSchema = z.object({
+  email: z.string().email('Invalid email'),
+  password: z.string().min(8, 'Min 8 characters'),
+  age: z.number().min(18, 'Must be 18 or older'),
+});
+
+const form = createForm({
+  defaultValues: { email: '', password: '', age: 0 },
+  ...fromSchema(registrationSchema),
+  // Per-field validators run on every validateField() call
+  validators: {
+    email: (v) => (!v ? 'Email is required' : undefined),
+  },
+});
+
+try {
+  await form.submit(async (values) => {
+    await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    });
+  });
+} catch (err) {
+  if (err instanceof FormValidationError) {
+    console.log(err.errors); // { email: '...', age: '...' }
+  }
+}
+```
 
 ### 1. Always Clean Up Subscriptions
 

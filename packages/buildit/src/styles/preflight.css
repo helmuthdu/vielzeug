@@ -1,3 +1,13 @@
+/*
+ * Suppress flash of unstyled content (FOUC) for custom elements.
+ * :not(:defined) only matches custom elements that have not yet been upgraded —
+ * standard HTML elements are always :defined, so this rule is safe globally.
+ * The rule is removed automatically once customElements.define() runs.
+ */
+:not(:defined) {
+  visibility: hidden;
+}
+
 *,
 ::after,
 ::before,
@@ -6,7 +16,6 @@
   box-sizing: border-box;
   padding: 0;
   margin: 0;
-  border: 0 solid;
 }
 
 html,

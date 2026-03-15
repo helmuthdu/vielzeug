@@ -1,7 +1,6 @@
 import {
   aria,
   computed,
-  css,
   define,
   defineEmits,
   defineProps,
@@ -13,315 +12,57 @@ import {
   syncDOMProps,
 } from '@vielzeug/craftit';
 
-import type {
-  AddEventListeners,
-  BitTextareaEvents,
-  DisablableProps,
-  FormValidityMethods,
-  RoundedSize,
-  SizableProps,
-  ThemableProps,
-  VisualVariant,
-} from '../../types';
+import type { DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
-import { mountFormContextSync, useTextField } from '../_common/use-text-field';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_font-size: var(--textarea-font-size, var(--text-sm));
-      --_gap: var(--textarea-gap, var(--size-2));
-      --_padding: var(--textarea-padding, var(--size-2) var(--size-3));
-      --_radius: var(--textarea-radius, var(--rounded-md));
-      --_placeholder: var(--textarea-placeholder-color, var(--color-contrast-500));
-      --_bg: var(--textarea-bg, var(--color-contrast-100));
-      --_border-color: var(--textarea-border-color, var(--color-contrast-300));
-      --_min-height: var(--textarea-min-height, var(--size-24));
-      --_max-height: var(--textarea-max-height, none);
-      --_resize: var(--textarea-resize, vertical);
-
-      align-items: stretch;
-      display: inline-flex;
-      flex-direction: column;
-      min-width: 12rem;
-    }
-
-    .textarea-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: var(--size-1-5);
-      min-width: 0; /* Allow shrinking below content size */
-    }
-
-    .field {
-      background: var(--_bg);
-      border-radius: var(--_radius);
-      border: var(--border) solid var(--_border-color);
-      box-shadow: var(--shadow-2xs);
-      box-sizing: border-box;
-      display: grid; /* Grid automatically sizes to content */
-      min-width: 0; /* Allow shrinking */
-      padding: var(--_padding);
-      transition:
-        background var(--transition-fast),
-        backdrop-filter var(--transition-slow),
-        border-color var(--transition-fast),
-        box-shadow var(--transition-fast),
-        transform var(--transition-fast);
-    }
-
-    /* ========================================
-       Label Styles
-       ======================================== */
-
-    .label-inset,
-    .label-outside,
-    label.label-inset,
-    label.label-outside {
-      color: var(--color-contrast-500);
-      cursor: pointer;
-      font-weight: var(--font-medium);
-      transition: color var(--transition-fast);
-      user-select: none;
-    }
-
-    .label-inset,
-    label.label-inset {
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      margin-bottom: 2px;
-    }
-
-    .label-outside,
-    label.label-outside {
-      font-size: var(--text-sm);
-      line-height: var(--leading-none);
-    }
-
-    /* ========================================
-       Helper / Error Text
-       ======================================== */
-
-    .helper-text {
-      color: var(--color-contrast-500);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      padding-inline: 2px;
-    }
-
-    /* ========================================
-       Textarea Element
-       ======================================== */
-
-    textarea {
-      background: transparent;
-      border: none;
-      box-sizing: border-box;
-      color: var(--_theme-content);
-      font: inherit;
-      font-size: var(--_font-size);
-      line-height: var(--leading-relaxed);
-      min-height: var(--_min-height);
-      max-height: var(--_max-height);
-      min-width: 12rem; /* Match :host min-width to prevent resize below minimum */
-      outline: none;
-      padding: 0;
-      resize: vertical; /* Default resize, can be overridden by inline style */
-    }
-
-    textarea::placeholder {
-      color: var(--_placeholder);
-      transition: color var(--transition-fast);
-    }
-
-    textarea:focus-visible {
-      outline: none;
-    }
-
-    /* ========================================
-       Character Counter
-       ======================================== */
-
-    .counter {
-      align-self: flex-end;
-      color: var(--color-contrast-400);
-      font-size: var(--text-xs);
-      line-height: var(--leading-tight);
-      margin-top: var(--size-1);
-      padding-inline: 2px;
-      transition: color var(--transition-fast);
-    }
-
-    .counter.near-limit {
-      color: var(--color-warning);
-    }
-
-    .counter.at-limit {
-      color: var(--color-error);
-    }
-
-    /* ========================================
-       Hover & Focus States
-       ======================================== */
-
-    :host(:not([disabled]):not([variant='bordered']):not([variant='flat'])) .field:hover {
-      border-color: var(--color-contrast-400);
-    }
-
-    :host(:not([disabled]):not([variant='text']):not([variant='flat'])) .field:focus-within {
-      background: var(--color-canvas);
-      border-color: var(--_theme-focus);
-      box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
-      transform: translateY(-1px);
-    }
-
-    :host(:not([disabled])) .field:focus-within .label-inset,
-    :host(:not([disabled])) .field:focus-within .label-outside {
-      color: var(--_theme-focus);
-    }
-
-    /* Error State */
-    :host([error]) .field {
-      border-color: var(--color-error);
-    }
-
-    :host([error]) .field:focus-within {
-      border-color: var(--color-error);
-      box-shadow: var(--color-error-focus-shadow);
-    }
-
-    :host([error]) .label-inset,
-    :host([error]) .label-outside {
-      color: var(--color-error);
-    }
-  }
-
-  @layer buildit.variants {
-    /* Solid (Default) */
-    :host(:not([variant])) .field,
-    :host([variant='solid']) .field {
-      background: var(--color-contrast-50);
-      border-color: var(--color-contrast-300);
-      box-shadow: var(--shadow-2xs);
-    }
-
-    :host(:not([variant]):not([disabled])) .field:focus-within,
-    :host([variant='solid']:not([disabled])) .field:focus-within {
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Flat */
-    :host([variant='flat']) .field {
-      border-color: var(--_theme-border);
-      box-shadow: var(--inset-shadow-2xs);
-    }
-
-    :host([variant='flat']) .field:hover {
-      background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
-      border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
-    }
-
-    :host([variant='flat']) .field:focus-within {
-      background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
-      border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Bordered */
-    :host([variant='bordered']) .field {
-      background: var(--_theme-backdrop);
-      border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
-    }
-
-    :host([variant='bordered']) textarea {
-      color: var(--_theme-content);
-    }
-
-    :host([variant='bordered']) textarea::placeholder {
-      color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
-    }
-
-    :host([variant='bordered']) .field:hover {
-      border-color: var(--_theme-focus);
-    }
-
-    /* Outline */
-    :host([variant='outline']) .field {
-      background: transparent;
-      box-shadow: none;
-    }
-
-    :host([variant='outline']:not([disabled])) .field:focus-within {
-      box-shadow: var(--_theme-shadow);
-    }
-
-    /* Ghost */
-    :host([variant='ghost']) .field {
-      background: transparent;
-      border-color: transparent;
-      box-shadow: none;
-    }
-
-    :host([variant='ghost']) .field:hover {
-      background: var(--color-contrast-100);
-    }
-
-    :host([variant='ghost']:not([disabled])) .field:focus-within {
-      box-shadow: var(--_theme-shadow);
-    }
-  }
-
-  @layer buildit.utilities {
-    /* Auto-resize hides overflow */
-    :host([auto-resize]) textarea {
-      overflow: hidden;
-    }
-
-    /* Full width */
-    :host([fullwidth]) {
-      width: 100%;
-    }
-  }
-`;
+import { mountFormContextSync, useTextField } from '../../utils/use-text-field';
+import componentStyles from './textarea.css?inline';
 
 /** Textarea component properties */
-export interface TextareaProps extends ThemableProps, SizableProps, DisablableProps {
-  /** Label text */
-  label?: string;
-  /** Label placement */
-  'label-placement'?: 'inset' | 'outside';
-  /** Helper text displayed below the textarea */
-  helper?: string;
-  /** Error message (marks field as invalid) */
-  error?: string;
-  /** Form field name */
-  name?: string;
-  /** Placeholder text */
-  placeholder?: string;
-  /** Make the textarea read-only */
-  readonly?: boolean;
-  /** Mark the field as required */
-  required?: boolean;
-  /** Border radius size */
-  rounded?: RoundedSize | '';
-  /** Current value */
-  value?: string;
-  /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'frost' | 'text'>;
-  /** Maximum character count; shows a counter when set */
-  maxlength?: number;
-  /** Number of visible text rows */
-  rows?: number;
-  /** Disable manual resize handle */
-  'no-resize'?: boolean;
-  /** Allow auto-grow with content */
-  'auto-resize'?: boolean;
-  /** Resize direction override */
-  resize?: 'none' | 'horizontal' | 'both' | 'vertical';
-  /** Full width mode (100% of container) */
-  fullwidth?: boolean;
-}
+
+export type BitTextareaEvents = {
+  change: { originalEvent: Event; value: string };
+  input: { originalEvent: Event; value: string };
+};
+
+export type BitTextareaProps = ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    /** Allow auto-grow with content */
+    'auto-resize'?: boolean;
+    /** Error message (marks field as invalid) */
+    error?: string;
+    /** Full width mode (100% of container) */
+    fullwidth?: boolean;
+    /** Helper text displayed below the textarea */
+    helper?: string;
+    /** Label text */
+    label?: string;
+    /** Label placement */
+    'label-placement'?: 'inset' | 'outside';
+    /** Maximum character count; shows a counter when set */
+    maxlength?: number;
+    /** Form field name */
+    name?: string;
+    /** Disable manual resize handle */
+    'no-resize'?: boolean;
+    /** Placeholder text */
+    placeholder?: string;
+    /** Make the textarea read-only */
+    readonly?: boolean;
+    /** Mark the field as required */
+    required?: boolean;
+    /** Resize direction override */
+    resize?: 'none' | 'horizontal' | 'both' | 'vertical';
+    /** Border radius size */
+    rounded?: RoundedSize | '';
+    /** Number of visible text rows */
+    rows?: number;
+    /** Current value */
+    value?: string;
+    /** Visual style variant */
+    variant?: Exclude<VisualVariant, 'glass' | 'frost' | 'text'>;
+  };
 
 /**
  * A multi-line text input with label, helper text, character counter, and auto-resize.
@@ -370,15 +111,12 @@ export interface TextareaProps extends ThemableProps, SizableProps, DisablablePr
  * <bit-textarea label="Notes" variant="flat" color="primary" rows="6" />
  * ```
  */
-export const TAG = define(
+export const TEXTAREA_TAG = define(
   'bit-textarea',
   ({ host }) => {
-    const emit = defineEmits<{
-      change: { originalEvent: Event; value: string };
-      input: { originalEvent: Event; value: string };
-    }>();
+    const emit = defineEmits<BitTextareaEvents>();
 
-    const props = defineProps<TextareaProps>({
+    const props = defineProps<BitTextareaProps>({
       'auto-resize': { default: false },
       color: { default: undefined },
       disabled: { default: false },
@@ -554,8 +292,3 @@ export const TAG = define(
   },
   { formAssociated: true, shadow: { delegatesFocus: true } },
 );
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-textarea': HTMLElement & TextareaProps & FormValidityMethods & AddEventListeners<BitTextareaEvents>;
-  }
-}

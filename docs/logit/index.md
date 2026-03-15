@@ -67,7 +67,7 @@ Logit.setConfig({
 
 ## Features
 
-- **Log levels** — `debug`, `trace`, `info`, `success`, `warn`, `error`; filter with `config({ logLevel })`
+- **Log levels** — `debug`, `trace`, `info`, `success`, `warn`, `error`; filter with `setConfig({ logLevel })`
 - **Level query** — `enabled(type)` checks whether a level passes the current filter
 - **Scoped loggers** — `scope(name)` and `child(overrides?)` return isolated instances that never mutate the parent
 - **Styled output** — browser CSS badges with `symbol`, `icon`, or `text` variants

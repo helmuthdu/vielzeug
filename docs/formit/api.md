@@ -22,10 +22,8 @@ interface FormOptions<TValues> {
   /** Initial field values. Nested objects are auto-flattened to dot-notation keys. */
   defaultValues?: Partial<TValues>;
 
-  /** Per-field validators. A field may have one or an array of validators. */
-  rules?: {
-    [K in keyof TValues]?: FieldValidator<TValues[K]> | FieldValidator<TValues[K]>[];
-  };
+  /** Per-field validators. A field may have one or an array of validators (first failure wins). */
+  validators?: Record<string, FieldValidator | FieldValidator[]>;
 
   /** Cross-field validator — runs on full validate() and submit() only. */
   validator?: FormValidator<TValues>;
@@ -80,20 +78,43 @@ Returns a snapshot of all current values, reconstructing any nested shape from f
 ### `field(name)`
 
 ```ts
-field<K extends keyof TValues>(name: K): FieldState<TValues[K]>
 field(name: string): FieldState<unknown>
 ```
 
 Returns a live state snapshot for one field.
 
 ```ts
-interface FieldState<V> {
+interface FieldState<V = unknown> {
   value: V;
   error: string | undefined;
   touched: boolean;
   dirty: boolean;
 }
 ```
+
+### `getError(name)`
+
+```ts
+getError(name: string): string | undefined
+```
+
+Returns the current error for a specific field without allocating a full `FieldState` snapshot.
+
+### `isFieldDirty(name)`
+
+```ts
+isFieldDirty(name: string): boolean
+```
+
+Returns `true` if the field's current value differs from its baseline value.
+
+### `isFieldTouched(name)`
+
+```ts
+isFieldTouched(name: string): boolean
+```
+
+Returns `true` if the field has been marked as touched.
 
 ### `errors`
 
@@ -119,6 +140,14 @@ setErrors(nextErrors: Record<string, string>): void
 
 Replace all errors at once with the provided map.
 
+### `clearErrors()`
+
+```ts
+clearErrors(): void
+```
+
+Clears all field errors. Shorthand for `setErrors({})`.
+
 ## Touch
 
 ### `touch(first, ...rest)`
@@ -137,6 +166,48 @@ touchAll(): void
 
 Mark every field as touched. Useful before submit to surface all errors to the user.
 
+### `untouch(name)`
+
+```ts
+untouch(name: string): void
+```
+
+Remove the touched state from a single field. Useful in multi-step forms when moving between steps.
+
+### `untouchAll()`
+
+```ts
+untouchAll(): void
+```
+
+Remove the touched state from all fields.
+
+## Array Fields
+
+### `appendField(name, value)`
+
+```ts
+appendField(name: string, value: unknown): void
+```
+
+Appends an item to the end of an array field.
+
+### `removeField(name, index)`
+
+```ts
+removeField(name: string, index: number): void
+```
+
+Removes the item at `index` from an array field.
+
+### `moveField(name, from, to)`
+
+```ts
+moveField(name: string, from: number, to: number): void
+```
+
+Moves an array item from one index to another. Useful for drag-and-drop reordering.
+
 ## Validation
 
 ### `validateField(name, signal?)`
@@ -150,13 +221,23 @@ Runs all field-level validators for the given field. Sets `isValidating` while r
 ### `validate(options?)`
 
 ```ts
-validate(options?: ValidateOptions): Promise<Record<string, string>>
+validate(options?: ValidateOptions<TValues>): Promise<ValidateResult>
 ```
 
-Validates the form and returns all errors.
+Validates the form and returns a `ValidateResult`.
 
 ```ts
-interface ValidateOptions {
+/** Result returned by form.validate(). */
+interface ValidateResult {
+  /** Whether the entire error map is empty after this run. */
+  valid: boolean;
+  /** Full current error map (all fields, not only the ones validated in this run). */
+  errors: Record<string, string>;
+}
+```
+
+```ts
+interface ValidateOptions<TValues extends Record<string, unknown> = Record<string, unknown>> {
   /** Cancel the validation run. */
   signal?: AbortSignal;
   /**
@@ -170,7 +251,7 @@ interface ValidateOptions {
    * Errors on other fields are left unchanged.
    * Pass an empty array to validate nothing.
    */
-  fields?: string[];
+  fields?: FlatKeyOf<TValues>[];
 }
 ```
 
@@ -193,7 +274,11 @@ submit<R>(
 Validates the form (unless `skipValidation` is set), then calls `handler` with the current values. Returns the handler's result.
 
 ```ts
-interface SubmitOptions extends ValidateOptions {
+interface SubmitOptions<TValues extends Record<string, unknown> = Record<string, unknown>> {
+  /** Restrict validation to these fields. */
+  fields?: FlatKeyOf<TValues>[];
+  /** Cancel the operation. */
+  signal?: AbortSignal;
   /** Skip validation before calling the handler. */
   skipValidation?: boolean;
 }
@@ -203,7 +288,7 @@ interface SubmitOptions extends ValidateOptions {
 
 1. If `isSubmitting` is already `true`, throws `SubmitError` (double-submit guard).
 2. Sets `isSubmitting = true`, increments `submitCount`.
-3. If `skipValidation` is not set, runs validation. Throws `FormValidationError` on failure.
+3. If `skipValidation` is not set, runs `touchAll()` then validates. Throws `FormValidationError` on failure.
 4. Calls `handler(values)` and awaits the result.
 5. Resets `isSubmitting = false` when done (success or error).
 
@@ -212,19 +297,17 @@ interface SubmitOptions extends ValidateOptions {
 ### `bind(name, config?)`
 
 ```ts
-bind<K extends keyof TValues>(name: K, config?: BindConfig): BindResult
 bind(name: string, config?: BindConfig): BindResult
 ```
 
-Returns a live descriptor for wiring a field to a DOM input or framework component. The `value`, `error`, `touched`, and `dirty` properties are getters — they read the current value fresh each time.
+Returns a memoized live descriptor for wiring a field to a DOM input or framework component. The `value`, `error`, `touched`, and `dirty` properties are getters — they read the current value fresh each time. Same arguments always return the same object.
 
 ```ts
-// Returned shape
-{
-  name: string;
-  onBlur: (event: Event) => void;
-  onChange: (event: Event) => void;
-  readonly value: TValues[K];
+interface BindResult<V = unknown, K extends string = string> {
+  readonly name: K;
+  onBlur(): void;
+  onChange(event: unknown): void;
+  readonly value: V;
   readonly error: string | undefined;
   readonly touched: boolean;
   readonly dirty: boolean;
@@ -237,12 +320,13 @@ interface BindConfig {
    * Custom extractor for the value from a change event.
    * Default: `(e) => (e.target as HTMLInputElement).value`
    */
-  valueExtractor?: (event: Event) => unknown;
-  /**
-   * Whether to call `touch(name)` on blur.
-   * Default: true
-   */
+  valueExtractor?: (event: unknown) => unknown;
+  /** Whether to call `touch(name)` on blur. Default: true */
   touchOnBlur?: boolean;
+  /** Whether to call `validateField(name)` on blur. Default: false */
+  validateOnBlur?: boolean;
+  /** Whether to call `validateField(name)` on every change. Default: false */
+  validateOnChange?: boolean;
 }
 ```
 
@@ -277,7 +361,7 @@ readonly state: FormState
 Returns a snapshot of the complete form state. A new snapshot object is created each time a field changes.
 
 ```ts
-interface FormState {
+interface FormState<TValues extends Record<string, unknown> = Record<string, unknown>> {
   isValid: boolean;
   isDirty: boolean;
   isTouched: boolean;
@@ -285,23 +369,23 @@ interface FormState {
   isSubmitting: boolean;
   submitCount: number;
   errors: Record<string, string>;
-  /** Flat dot-notation keys of all fields that differ from their default value. */
-  dirtyFields: string[];
+  /** Flat dot-notation keys of all fields that currently differ from their baseline value. */
+  dirtyFields: FlatKeyOf<TValues>[];
 }
 ```
 
 ### Individual getters
 
-| Getter         | Type                     | Description                                 |
-| -------------- | ------------------------ | ------------------------------------------- |
-| `isValid`      | `boolean`                | No errors currently present                 |
-| `isDirty`      | `boolean`                | At least one field differs from its default |
-| `isTouched`    | `boolean`                | At least one field has been touched         |
+| Getter         | Type                     | Description                                         |
+| -------------- | ------------------------ | --------------------------------------------------- |
+| `isValid`      | `boolean`                | No errors currently present                         |
+| `isDirty`      | `boolean`                | At least one field differs from its default         |
+| `isTouched`    | `boolean`                | At least one field has been touched                 |
 | `isValidating` | `boolean`                | A `validateField` or `validate` call is in progress |
-| `isSubmitting` | `boolean`                | A `submit` handler is running               |
-| `submitCount`  | `number`                 | Number of times `submit` has been called    |
-| `errors`       | `Record<string, string>` | All current field errors                    |
-| `disposed`     | `boolean`                | Whether `dispose()` has been called         |
+| `isSubmitting` | `boolean`                | A `submit` handler is running                       |
+| `submitCount`  | `number`                 | Number of times `submit` has been called            |
+| `errors`       | `Record<string, string>` | All current field errors                            |
+| `disposed`     | `boolean`                | Whether `dispose()` has been called                 |
 
 ## Subscriptions
 
@@ -317,21 +401,17 @@ Registers a callback that fires with the latest `FormState` snapshot whenever an
 type Unsubscribe = () => void;
 ```
 
-### `watch(name, listener)`
+### `watch(name, listener, options?)`
 
 ```ts
-watch<K extends keyof TValues>(
-  name: K,
-  listener: (state: FieldState<TValues[K]>) => void,
-): Unsubscribe
-
 watch(
   name: string,
-  listener: (state: FieldState<unknown>) => void,
+  listener: (state: FieldState) => void,
+  options?: { immediate?: boolean },
 ): Unsubscribe
 ```
 
-Registers a callback that fires with the latest `FieldState` snapshot whenever **only that field** changes. More efficient than `subscribe` when you only care about one field.
+Registers a callback that fires with the latest `FieldState` snapshot whenever **only that field** changes. More efficient than `subscribe` when you only care about one field. Fires immediately on registration unless `immediate: false` is set.
 
 ## Lifecycle
 
@@ -367,29 +447,6 @@ class SubmitError extends Error {
 }
 ```
 
-## Exported Types
-
-```ts
-// Core
-export type { Form }; // The full form instance interface
-export type { FormOptions }; // createForm() init options
-export type { FormState }; // Snapshot returned by form.state / subscribe
-export type { FieldState }; // Snapshot returned by form.field / watch
-
-// Validators
-export type { FieldValidator }; // (value: V, signal?: AbortSignal) => string | undefined | Promise<...>
-export type { FormValidator }; // (values: TValues, signal: AbortSignal) => Record<string, string> | Promise<...>
-
-// Options
-export type { ValidateOptions };
-export type { SetOptions };
-export type { SubmitOptions };
-export type { BindConfig };
-
-// Utility
-export type { Unsubscribe }; // () => void
-```
-
 ## Standalone Utilities
 
 ### `toFormData(values)`
@@ -401,3 +458,60 @@ function toFormData(values: Record<string, unknown>): FormData;
 Converts a plain values object into a `FormData` instance. `File` and `Blob` values are appended as-is. `null` and `undefined` values are omitted. All other values are converted to strings via `.toString()`.
 
 The same functionality is available as an instance method (`form.toFormData()`) which uses the current `form.values()` snapshot.
+
+### `fromSchema(schema)`
+
+```ts
+function fromSchema<TValues>(schema: SafeParseSchema): Pick<FormOptions<TValues>, 'validator'>;
+```
+
+Adapts any `safeParse`-compatible schema (Zod, Valibot, or custom) as a form-level validator. Returns `{ validator: ... }` which you spread into `createForm()` options.
+
+```ts
+/** Structural type for any safeParse-compatible schema. */
+interface SafeParseSchema {
+  safeParse(
+    data: unknown,
+  ): { success: true } | { success: false; error: { issues: { path: (string | number)[]; message: string }[] } };
+}
+```
+
+```ts
+import { z } from 'zod';
+const schema = z.object({ email: z.string().email(), age: z.number().min(18) });
+
+const form = createForm({
+  defaultValues: { email: '', age: 0 },
+  ...fromSchema(schema),
+});
+```
+
+## Exported Types
+
+```ts
+// Instance
+export type { Form }; // Full form interface
+export type { FormOptions }; // createForm() init options
+export type { FormState }; // Snapshot from form.state / subscribe
+
+// Field
+export type { FieldState }; // Snapshot from form.field() / watch()
+export type { BindResult }; // Returned by form.bind()
+
+// Validators
+export type { FieldValidator }; // (value: V, signal: AbortSignal) => string | undefined | Promise<...>
+export type { FormValidator }; // (values: TValues, signal: AbortSignal) => Record<string, string> | Promise<...>
+export type { SafeParseSchema }; // Structural type for safeParse-compatible schemas
+
+// Operation results and options
+export type { ValidateResult };
+export type { ValidateOptions };
+export type { SetOptions };
+export type { SubmitOptions };
+export type { BindConfig };
+
+// Utility types
+export type { FlatKeyOf }; // Recursive dot-notation key union of a TValues shape
+export type { TypeAtPath }; // Value type at a dot-notation path
+export type { Unsubscribe }; // () => void
+```

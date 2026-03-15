@@ -1,0 +1,160 @@
+@layer buildit.base {
+  :host {
+    /* ── Public API tokens ──────────────────────────────────────────────── */
+    --_radius: var(--table-radius, var(--rounded-md));
+    --_shadow: var(--table-shadow, none);
+    --_border: var(--table-border, 1px solid var(--color-contrast-300));
+
+    /* ── Tokens consumed by native th/td in the shadow table ────────────── */
+    --_cell-padding: var(--table-cell-padding, var(--size-3) var(--size-4));
+    --_cell-font-size: var(--table-cell-font-size, var(--text-sm));
+    --_cell-color: var(--table-cell-color, var(--color-contrast-900));
+    --_th-bg: var(--table-header-bg, var(--color-contrast-100));
+    --_th-color: var(--table-header-color, var(--color-contrast-600));
+    --_row-hover-bg: var(--table-row-hover-bg, var(--color-contrast-200));
+    --_stripe-bg: transparent;
+
+    display: block;
+    width: 100%;
+    border-radius: var(--_radius);
+    box-shadow: var(--_shadow);
+  }
+
+  /* ── Scroll container ────────────────────────────────────────────────── */
+
+  .scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Native table ─────────────────────────────────────────────────────── */
+
+  table {
+    width: 100%;
+    table-layout: auto;
+    border-spacing: 0;
+    border-collapse: collapse;
+    background: var(--table-bg, var(--color-canvas));
+  }
+
+  /* ── Caption ─────────────────────────────────────────────────────────── */
+
+  caption {
+    padding: var(--size-2) var(--size-4);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-contrast-600);
+    text-align: start;
+    caption-side: top;
+  }
+
+  /* ── Native cells (live in shadow DOM — all styling goes here) ────────── */
+
+  th,
+  td {
+    padding: var(--_cell-padding);
+    font-size: var(--_cell-font-size);
+    font-weight: normal;
+    vertical-align: middle;
+    color: var(--_cell-color);
+    text-align: start;
+    background: transparent;
+    border-bottom: var(--_border);
+    transition: background 120ms ease;
+  }
+
+  /* Last row in each section — remove separator */
+  tr:last-child th,
+  tr:last-child td { border-bottom: none; }
+
+  /* ── Header / footer rows ─────────────────────────────────────────────── */
+
+  thead th,
+  thead td,
+  tfoot th,
+  tfoot td {
+    font-weight: var(--font-medium, 500);
+    color: var(--_th-color);
+    background: var(--_th-bg);
+  }
+
+  /* ── Row hover (body only) ────────────────────────────────────────────── */
+
+  tbody tr:hover th,
+  tbody tr:hover td { background: var(--_row-hover-bg); }
+
+  /* ── Striped rows ─────────────────────────────────────────────────────── */
+
+  tbody tr:nth-child(even) th,
+  tbody tr:nth-child(even) td { background: var(--_stripe-bg); }
+
+  tbody tr:nth-child(even):hover th,
+  tbody tr:nth-child(even):hover td { background: var(--_row-hover-bg); }
+}
+
+/* ── Loading state ───────────────────────────────────────────────────────── */
+
+@layer buildit.states {
+  :host([loading]) {
+    cursor: wait;
+  }
+
+  :host([loading]) table {
+    pointer-events: none;
+    opacity: 0.5;
+    transition: var(--_motion-transition, opacity var(--transition-fast));
+  }
+}
+
+/* ── Variants ────────────────────────────────────────────────────────────── */
+
+@layer buildit.variants {
+  /* Striped: flip --_stripe-bg token on */
+  :host([striped]) {
+    --_stripe-bg: var(--table-stripe-bg, var(--color-contrast-100));
+  }
+
+  /* Bordered: border and radius on the host itself; overflow:hidden on the
+     scroll-container would block position:sticky so we avoid it there. */
+  :host([bordered]) {
+    overflow: hidden;
+    border: var(--_border);
+    border-radius: var(--_radius);
+  }
+
+  /* Color theme: remap header tokens from the theme mixin's --_theme-* vars */
+  :host([color]) {
+    --_th-bg: var(--_theme-backdrop, var(--color-contrast-50));
+    --_th-color: var(--_theme-base, inherit);
+  }
+
+  /* Sticky: clamp height and let the single scroll container handle both axes.
+     position:sticky on thead th works correctly when the scrolling ancestor
+     is the same element in both x and y — two nested overflow containers break it. */
+  :host([sticky]) .scroll-container {
+    max-height: var(--table-sticky-max-height, 24rem);
+    overflow-y: auto;
+  }
+
+  /* Pin thead cells to the top of the scroll container */
+  :host([sticky]) thead th,
+  :host([sticky]) thead td {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+}
+
+/* ── Size utilities ──────────────────────────────────────────────────────── */
+
+@layer buildit.utilities {
+  :host([size='sm']) {
+    --_cell-padding: var(--size-1-5) var(--size-3);
+    --_cell-font-size: var(--text-xs);
+  }
+
+  :host([size='lg']) {
+    --_cell-padding: var(--size-4) var(--size-6);
+    --_cell-font-size: var(--text-base);
+  }
+}

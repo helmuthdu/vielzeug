@@ -26,6 +26,9 @@ features:
   - title: '@vielzeug/deposit'
     details: "<img src='/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
     link: /deposit/
+  - title: '@vielzeug/dragit'
+    details: "<img src='/logo-dragit.svg' class='logo-highlight-smaller' alt='Dragit Logo' width='72'/>File drop zones with MIME filtering and sortable lists."
+    link: /dragit/
   - title: '@vielzeug/eventit'
     details: "<img src='/logo-eventit.svg' class='logo-highlight-smaller' alt='Eventit Logo' width='72'/>Typed event bus for decoupled, reactive inter-module communication."
     link: /eventit/
@@ -59,11 +62,14 @@ features:
   - title: '@vielzeug/validit'
     details: "<img src='/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
     link: /validit/
+  - title: '@vielzeug/virtualit'
+    details: "<img src='/logo-virtualit.svg' class='logo-highlight-smaller' alt='Virtualit Logo' width='72'/>Lightweight virtual list engine to renders only visible items."
+    link: /virtualit/
   - title: '@vielzeug/wireit'
     details: "<img src='/logo-wireit.svg' class='logo-highlight-smaller' alt='Wireit Logo' width='72'/>Lightweight dependency injection container with IoC principles."
     link: /wireit/
   - title: '@vielzeug/workit'
-    details: "<img src='/logo-workit.svg' class='logo-highlight-smaller' alt='Workit Logo' width='72'/>Typed Web Worker abstraction with pooling, queuing, timeouts, and graceful fallback."
+    details: "<img src='/logo-workit.svg' class='logo-highlight-smaller' alt='Workit Logo' width='72'/>Web Worker abstraction with pooling, queuing, timeouts, and more."
     link: /workit/
 ---
 

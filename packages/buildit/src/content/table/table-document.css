@@ -1,0 +1,17 @@
+/*
+ * Table sub-component display roles — document cascade only.
+ *
+ * bit-tr, bit-th, bit-td are light-DOM source nodes that bit-table mirrors
+ * into a fully-native shadow <table>. They must be hidden from the document
+ * flow while remaining accessible as DOM nodes for the MutationObserver.
+ *
+ * All visual styling (borders, colors, hover, sticky, striping) lives in
+ * table.css (the bit-table shadow stylesheet) where it has access to the
+ * real <thead>/<tbody>/<tfoot>/<tr>/<th>/<td> elements.
+ */
+
+bit-tr,
+bit-th,
+bit-td {
+  display: none;
+}

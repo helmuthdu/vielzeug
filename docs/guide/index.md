@@ -93,8 +93,8 @@ import { createForm } from '@vielzeug/formit';
 import { v } from '@vielzeug/validit';
 
 const form = createForm({
-  values: { email: '', age: 0 },
-  rules: {
+  defaultValues: { email: '', age: 0 },
+  validators: {
     email: (val) => {
       const r = v.string().email().safeParse(val);
       return r.success ? undefined : r.error.message;
@@ -141,20 +141,20 @@ if (!result.success) console.log(result.error.issues);
 A modern HTTP client with request deduplication, smart caching, retries, and a query layer.
 
 ```typescript
-import { createHttp, createQuery } from '@vielzeug/fetchit';
+import { createApi, createQuery } from '@vielzeug/fetchit';
 
-const http = createHttp({ baseUrl: '/api' });
-const query = createQuery({ staleTime: 5_000 });
+const api = createApi({ baseUrl: '/api' });
+const queryClient = createQuery({ staleTime: 5_000 });
 
 // Concurrent calls share one in-flight request
-const user = await query.fetch({
+const user = await queryClient.query({
   key: ['user', id],
-  fn: () => http.get<User>(`/users/${id}`),
+  queryFn: () => api.get<User>(`/users/${id}`).then((r) => r.json()),
 });
 
 // Invalidate after a mutation
-await http.patch(`/users/${id}`, { body: { name: 'Alice' } });
-query.invalidate(['user', id]);
+await api.patch(`/users/${id}`, { body: { name: 'Alice' } });
+queryClient.invalidate(['user', id]);
 ```
 
 **Start here if** you want caching and deduplication without pulling in a full server-state library.
@@ -166,15 +166,15 @@ query.invalidate(['user', id]);
 Type-safe LocalStorage and IndexedDB with schemas, TTL expiration, and a query builder.
 
 ```typescript
-import { createDeposit, defineSchema } from '@vielzeug/deposit';
+import { createLocalStorage, defineSchema } from '@vielzeug/deposit';
 
 type User = { id: string; name: string; role: string };
 
 const schema = defineSchema<{ users: User }>({ users: { key: 'id', indexes: ['role'] } });
-const db = createDeposit({ type: 'indexedDB', dbName: 'myapp', schema });
+const db = createLocalStorage({ dbName: 'myapp', schema });
 
 await db.put('users', { id: '1', name: 'Alice', role: 'admin' });
-const admins = await db.query('users').equals('role', 'admin').toArray();
+const admins = await db.from('users').equals('role', 'admin').toArray();
 ```
 
 **Start here if** you need structured, queryable storage that survives page reloads.
@@ -251,12 +251,12 @@ const api = container.get(ApiToken);
 Over 100 tree-shakeable utilities — array, object, string, math, async, date helpers. Nothing you don't import, nothing you pay for.
 
 ```typescript
-import { debounce, group, clamp, deepEqual } from '@vielzeug/toolkit';
+import { debounce, group, clamp, isEqual } from '@vielzeug/toolkit';
 
 const search = debounce(fetchResults, 300);
-const byRole = group(users, 'role'); // { admin: [...], user: [...] }
+const byRole = group(users, (u) => u.role); // { admin: [...], user: [...] }
 const clamped = clamp(value, 0, 100);
-const unchanged = deepEqual(prev, next);
+const unchanged = isEqual(prev, next);
 ```
 
 **Start here if** you want to stop copying utility snippets between projects.

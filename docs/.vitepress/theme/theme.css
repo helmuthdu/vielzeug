@@ -11,18 +11,18 @@
   --vp-home-hero-name-background: linear-gradient(120deg, var(--color-error) 20%, var(--color-primary));
   --vp-home-hero-image-background-image: linear-gradient(-90deg, var(--color-primary) 50%, var(--color-error) 50%);
   --vp-home-hero-image-filter: blur(75px);
-  --vp-custom-navbar-color: hsla(240, 4%, 93%, 0.97);
+  --vp-custom-navbar-color: hsl(240deg 4% 93% / 97%);
 }
 
 .dark {
-  --vp-custom-navbar-color: hsla(240, 4%, 9%, 0.97);
+  --vp-custom-navbar-color: hsl(240deg 4% 9% / 97%);
 }
 
 .VPNavBar,
 .VPNavBar.fill {
   background: var(--vp-custom-navbar-color);
-  backdrop-filter: saturate(50%) blur(24px);
   border-bottom: 1px solid var(--vp-c-divider);
+  backdrop-filter: saturate(50%) blur(24px);
 }
 
 .VPNavBar.fill .content-body,
@@ -46,29 +46,30 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 0.5rem;
-  list-style: none !important;
   padding: 0 !important;
+  list-style: none !important;
 }
+
 .grid-links li {
   margin: 0 !important;
 }
 
 .logo-highlight {
-  background: var(--color-contrast-100);
-  border-radius: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--vp-c-divider);
   float: left;
+  padding: 1rem;
   margin: 0.5rem 1.5rem 0.5rem 0;
+  background: var(--color-contrast-100);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 1rem;
 }
 
 .logo-highlight-smaller {
-  background: var(--color-contrast-50);
-  border-radius: 0 12px 0;
-  padding: 1rem;
-  border: 1px solid var(--vp-c-divider);
   float: right;
+  padding: 1rem;
   margin: -57px -25px 0 0;
+  background: var(--color-contrast-50);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 0 12px;
 }
 
 .VPFeature:hover img {

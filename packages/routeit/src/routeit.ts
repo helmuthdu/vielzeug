@@ -18,13 +18,14 @@ export type PathParams<T extends string> = [ParseParams<T>] extends [never]
 export type RouteParams = Record<string, string>;
 export type QueryParams = Record<string, string | string[]>;
 
+/** Handler may be sync or async — async return values are implicitly awaited by the router. */
 export type RouteHandler<Params extends RouteParams = RouteParams, Meta = unknown> = (
   context: RouteContext<Params, Meta>,
 ) => void;
 
 /** Middleware function. Call `next()` to continue the chain; return without calling it to block navigation. */
-export type Middleware<Params extends RouteParams = RouteParams, Meta = unknown> = (
-  context: RouteContext<Params, Meta>,
+export type Middleware<Meta = unknown> = (
+  context: RouteContext<RouteParams, Meta>,
   next: () => Promise<void>,
 ) => void | Promise<void>;
 
@@ -33,7 +34,7 @@ export type RouteContext<Params extends RouteParams = RouteParams, Meta = unknow
   /** Mutable bag for passing data between middlewares */
   locals: Record<string, unknown>;
   readonly meta?: Meta;
-  navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
+  readonly navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
   readonly params: Params;
   readonly pathname: string;
   readonly query: QueryParams;
@@ -44,7 +45,7 @@ export type RouteOptions<Meta = unknown> = {
   /** Static metadata passed to the route context */
   meta?: Meta;
   /** Route-specific middleware executed before the handler */
-  middleware?: Middleware<RouteParams, Meta> | Middleware<RouteParams, Meta>[];
+  middleware?: Middleware<Meta> | Middleware<Meta>[];
   /** Optional name for programmatic navigation and url()/isActive() lookups */
   name?: string;
 };
@@ -91,6 +92,8 @@ export type RouterOptions = {
   viewTransition?: boolean;
 };
 
+export type GroupOptions = { middleware?: Middleware | Middleware[] };
+
 export type RouteState = {
   readonly hash: string;
   readonly meta?: unknown;
@@ -107,18 +110,18 @@ export type ResolvedRoute = {
 };
 
 /** Route registration interface provided to group() callbacks */
-export type RouteGroup = {
-  group(
-    prefix: string,
-    definer: (r: RouteGroup) => void,
-    options?: { middleware?: Middleware | Middleware[] },
-  ): RouteGroup;
+export type RouteGroup<Prefix extends string = ''> = {
+  group<P extends string>(
+    prefix: P,
+    definer: (r: RouteGroup<`${Prefix}/${P}`>) => void,
+    options?: GroupOptions,
+  ): RouteGroup<Prefix>;
   on<Path extends string, Meta = unknown>(
     path: Path,
-    handler: RouteHandler<PathParams<Path>, Meta>,
+    handler: RouteHandler<PathParams<`${Prefix}/${Path}`>, Meta>,
     options?: RouteOptions<Meta>,
-  ): RouteGroup;
-  on<Path extends string, Meta = unknown>(path: Path, options?: RouteOptions<Meta>): RouteGroup;
+  ): RouteGroup<Prefix>;
+  on<Path extends string, Meta = unknown>(path: Path, options?: RouteOptions<Meta>): RouteGroup<Prefix>;
 };
 
 /** -------------------- Internal Types -------------------- **/
@@ -134,7 +137,7 @@ type RouteRecord = {
   name?: string;
   paramNames: string[];
   path: string;
-  prefixRegex?: RegExp;
+  prefixRegex: RegExp;
   regex: RegExp;
 };
 
@@ -148,7 +151,7 @@ function normalizePath(path: string): string {
   return normalized !== '/' && normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
 }
 
-function compilePattern(pattern: string, exact = true): { paramNames: string[]; regex: RegExp } {
+function buildRegexStr(pattern: string): { paramNames: string[]; regexStr: string } {
   const paramNames: string[] = [];
   const regexStr = pattern
     .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
@@ -168,6 +171,12 @@ function compilePattern(pattern: string, exact = true): { paramNames: string[]; 
 
       return '([^/]+)';
     });
+
+  return { paramNames, regexStr };
+}
+
+function compilePattern(pattern: string, exact = true): { paramNames: string[]; regex: RegExp } {
+  const { paramNames, regexStr } = buildRegexStr(pattern);
   // Wildcard patterns never need a $ anchor; exact patterns do; prefix patterns use (/.*)?$
   const anchor = pattern.endsWith('*') ? '' : exact ? '$' : '(/.*)?$';
 
@@ -236,6 +245,7 @@ export class Router {
   readonly #base: string;
   readonly #records: RouteRecord[] = [];
   readonly #routesByName = new Map<string, RouteRecord>();
+  readonly #routesByPath = new Map<string, RouteRecord>();
   readonly #onNotFound?: RouteHandler;
   readonly #onError?: (error: unknown, context: RouteContext) => void;
   readonly #globalMiddleware: Middleware[];
@@ -243,11 +253,16 @@ export class Router {
   readonly #listeners = new Set<(state: RouteState) => void>();
   #isStarted = false;
   #lastHref = '';
+  #navId = 0;
+  #pendingViewTransition: boolean | undefined;
   #currentState: RouteState = { hash: '', params: {}, pathname: '/', query: {} };
+  readonly #navigate: RouteContext['navigate'] = (target, options) => this.navigate(target, options);
   readonly #onPopState = (): void => {
-    if (this.#mode === 'history') this.#lastHref = window.location.pathname + window.location.search;
+    this.#lastHref =
+      this.#mode === 'history' ? window.location.pathname + window.location.search : window.location.hash.slice(1);
 
-    void this.#handleRoute();
+    void this.#handleRoute(this.#pendingViewTransition);
+    this.#pendingViewTransition = undefined;
   };
 
   constructor(options: RouterOptions = {}) {
@@ -256,7 +271,7 @@ export class Router {
     this.#onNotFound = options.onNotFound;
     this.#onError = options.onError;
     this.#useViewTransition = options.viewTransition ?? false;
-    this.#globalMiddleware = [options.middleware ?? []].flat() as Middleware[];
+    this.#globalMiddleware = ([] as Middleware[]).concat(options.middleware ?? []);
 
     if (options.autoStart) queueMicrotask(() => this.start());
   }
@@ -296,42 +311,30 @@ export class Router {
   }
 
   /** Registers a group of routes sharing a common path prefix and optional middleware. */
-  group(prefix: string, definer: (r: RouteGroup) => void, options?: { middleware?: Middleware | Middleware[] }): this {
-    this.#buildGroup(normalizePath(prefix), [options?.middleware ?? []].flat() as Middleware[], definer);
+  group<Prefix extends string>(prefix: Prefix, definer: (r: RouteGroup<Prefix>) => void, options?: GroupOptions): this {
+    this.#buildGroup(normalizePath(prefix), ([] as Middleware[]).concat(options?.middleware ?? []), definer);
 
     return this;
   }
 
-  #buildGroup(prefix: string, inherited: Middleware[], definer: (r: RouteGroup) => void): void {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
-    const r: RouteGroup = {
-      group(nestedPrefix, nestedDefiner, nestedOptions) {
+  #buildGroup(prefix: string, inherited: Middleware[], definer: (r: RouteGroup<string>) => void): void {
+    const r: RouteGroup<string> = {
+      group: (nestedPrefix, nestedDefiner, nestedOptions) => {
         const fullPrefix = normalizePath(`${prefix}/${nestedPrefix}`);
-        const nestedMiddleware = [...inherited, ...([nestedOptions?.middleware ?? []].flat() as Middleware[])];
+        const nestedMiddleware = [...inherited, ...([] as Middleware[]).concat(nestedOptions?.middleware ?? [])];
 
-        self.#buildGroup(fullPrefix, nestedMiddleware, nestedDefiner);
+        this.#buildGroup(fullPrefix, nestedMiddleware, nestedDefiner);
 
-        return this;
+        return r;
       },
-      on(path, handlerOrOptions?, opts?) {
+      on: (path, handlerOrOptions?, opts?) => {
         if (typeof handlerOrOptions === 'function') {
-          self.#register(
-            normalizePath(`${prefix}/${path}`),
-            handlerOrOptions as RouteHandler,
-            opts as RouteOptions,
-            inherited,
-          );
+          this.#register(`${prefix}/${path}`, handlerOrOptions as RouteHandler, opts as RouteOptions, inherited);
         } else {
-          self.#register(
-            normalizePath(`${prefix}/${path}`),
-            undefined,
-            (handlerOrOptions ?? opts) as RouteOptions,
-            inherited,
-          );
+          this.#register(`${prefix}/${path}`, undefined, (handlerOrOptions ?? opts) as RouteOptions, inherited);
         }
 
-        return this;
+        return r;
       },
     };
 
@@ -345,8 +348,9 @@ export class Router {
     inherited: Middleware[] = [],
   ): void {
     const fullPath = normalizePath(path);
-    const { paramNames, regex } = compilePattern(fullPath);
-    const routeMiddleware = [options?.middleware ?? []].flat() as Middleware[];
+    const isWildcard = fullPath.endsWith('*');
+    const { paramNames, regexStr } = buildRegexStr(fullPath);
+    const routeMiddleware = ([] as Middleware[]).concat(options?.middleware ?? []);
     const record: RouteRecord = {
       handler,
       meta: options?.meta,
@@ -354,12 +358,20 @@ export class Router {
       name: options?.name,
       paramNames,
       path: fullPath,
-      regex,
+      prefixRegex: new RegExp(`^${regexStr}${isWildcard ? '' : '(/.*)?$'}`),
+      regex: new RegExp(`^${regexStr}${isWildcard ? '' : '$'}`),
     };
 
     this.#records.push(record);
+    this.#routesByPath.set(fullPath, record);
 
-    if (options?.name) this.#routesByName.set(options.name, record);
+    if (options?.name) {
+      if (this.#routesByName.has(options.name)) {
+        console.warn(`${E} Duplicate route name "${options.name}" — overwriting previous registration.`);
+      }
+
+      this.#routesByName.set(options.name, record);
+    }
   }
 
   /** -------------------- Lifecycle -------------------- **/
@@ -368,7 +380,8 @@ export class Router {
     if (this.#isStarted) return this;
 
     this.#isStarted = true;
-    this.#lastHref = window.location.pathname + window.location.search;
+    this.#lastHref =
+      this.#mode === 'history' ? window.location.pathname + window.location.search : window.location.hash.slice(1);
     window.addEventListener(this.#mode === 'history' ? 'popstate' : 'hashchange', this.#onPopState);
     void this.#handleRoute();
 
@@ -404,36 +417,25 @@ export class Router {
    * router.navigate('/about', { replace: true })
    */
   async navigate(target: NavigationTarget, options: NavigateOptions = {}): Promise<void> {
-    let rawPath: string;
-    let hashFragment = '';
-
-    if (typeof target === 'string') {
-      rawPath = target;
-    } else {
-      const record = this.#routesByName.get(target.name);
-
-      if (!record) throw new Error(`${E} Route "${target.name}" not found`);
-
-      rawPath = buildUrl('/', record.path, target.params, target.query);
-
-      if (target.hash) hashFragment = `#${target.hash.replace(/^#/, '')}`;
-    }
-
-    const path = `${rawPath}${hashFragment}`;
-
+    const path = this.#resolvePath(target);
     const destination = this.#mode === 'history' ? joinPaths(this.#base, path) : normalizePath(path);
 
-    if (this.#mode === 'history' && !options.force && destination === this.#lastHref) return;
+    if (!options.force && destination === this.#lastHref) return;
+
+    this.#lastHref = destination;
 
     if (this.#mode === 'history') {
-      this.#lastHref = destination;
       window.history[options.replace ? 'replaceState' : 'pushState'](options.state ?? null, '', destination);
+
+      return this.#handleRoute(options.viewTransition);
     } else {
+      // Let the hashchange event drive dispatch — setting location.hash fires it automatically.
+      // Store pending viewTransition so #onPopState can forward it.
+      this.#pendingViewTransition = options.viewTransition;
+
       if (options.replace) window.location.replace(`#${destination}`);
       else window.location.hash = destination;
     }
-
-    return this.#handleRoute(options.viewTransition);
   }
 
   /** -------------------- State -------------------- **/
@@ -485,13 +487,10 @@ export class Router {
    */
   isActive(nameOrPattern: string, exact = true): boolean {
     const { pathname } = this.#readLocation();
-    const record =
-      this.#routesByName.get(nameOrPattern) ?? this.#records.find((r) => r.path === normalizePath(nameOrPattern));
+    const record = this.#routesByName.get(nameOrPattern) ?? this.#routesByPath.get(normalizePath(nameOrPattern));
 
     if (record) {
       if (exact) return record.regex.test(pathname);
-
-      record.prefixRegex ??= compilePattern(record.path, false).regex;
 
       return record.prefixRegex.test(pathname);
     }
@@ -516,6 +515,18 @@ export class Router {
   }
 
   /** -------------------- Private -------------------- **/
+
+  #resolvePath(target: NavigationTarget): string {
+    if (typeof target === 'string') return target;
+
+    const record = this.#routesByName.get(target.name);
+
+    if (!record) throw new Error(`${E} Route "${target.name}" not found`);
+
+    const path = buildUrl('/', record.path, target.params, target.query);
+
+    return target.hash ? `${path}#${target.hash.replace(/^#/, '')}` : path;
+  }
 
   #stripBase(path: string): string {
     return this.#base !== '/' && path.startsWith(this.#base)
@@ -544,6 +555,7 @@ export class Router {
   }
 
   async #handleRoute(useTransition?: boolean): Promise<void> {
+    const id = ++this.#navId;
     const { hash, pathname, query } = this.#readLocation();
 
     let matchedRecord: RouteRecord | undefined;
@@ -569,6 +581,8 @@ export class Router {
     };
 
     const run = async (): Promise<void> => {
+      if (this.#navId !== id) return;
+
       if (!matchedRecord) {
         if (this.#onNotFound) await this.#onNotFound(this.#ctx({ hash, meta: undefined, params: {}, pathname, query }));
       } else {
@@ -594,20 +608,28 @@ export class Router {
         console.error(`${E} Route handling error:`, error);
       }
     } finally {
-      this.#notifyListeners();
+      if (this.#navId === id) this.#notifyListeners();
     }
   }
 
   #ctx(loc: { hash: string; meta: unknown; params: RouteParams; pathname: string; query: QueryParams }): RouteContext {
-    return { ...loc, locals: {}, navigate: (t, o) => this.navigate(t, o) };
+    return { ...loc, locals: {}, navigate: this.#navigate };
   }
 
   async #runMiddleware(context: RouteContext, record: RouteRecord): Promise<void> {
-    const chain = [...this.#globalMiddleware, ...record.middleware];
+    const globals = this.#globalMiddleware;
+    const local = record.middleware;
     let i = 0;
+
     const next = async (): Promise<void> => {
-      if (i < chain.length) await chain[i++](context, next);
-      else if (record.handler) await record.handler(context);
+      if (i < globals.length) {
+        await globals[i++](context, next);
+      } else {
+        const li = i++ - globals.length;
+
+        if (li < local.length) await local[li](context, next);
+        else if (record.handler) await record.handler(context);
+      }
     };
 
     await next();

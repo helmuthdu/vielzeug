@@ -1,16 +1,7 @@
-import {
-  computed,
-  css,
-  define,
-  defineField,
-  defineProps,
-  handle,
-  html,
-  inject,
-  syncContextProps,
-} from '@vielzeug/craftit';
+import { computed, define, defineField, defineProps, html, inject, syncContextProps } from '@vielzeug/craftit';
+import { when } from '@vielzeug/craftit/directives';
 
-import type { ButtonType, ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import type { ButtonType, DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
 import {
   disabledLoadingMixin,
@@ -21,363 +12,35 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { BUTTON_GROUP_CTX } from '../button-group/button-group';
-
-const componentStyles = /* css */ css`
-  @layer buildit.base {
-    :host {
-      --_bg: var(--button-bg, var(--color-contrast-50));
-      --_color: var(--button-color, var(--color-contrast-900));
-      --_border: var(--button-border, var(--border));
-      --_border-color: var(--button-border-color, var(--color-contrast-200));
-      --_radius: var(--button-radius, var(--rounded-md));
-
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    :host([disabled]) {
-      cursor: not-allowed;
-    }
-
-    /* Link mode: mixin covers <button> but not <a> */
-    :host([disabled]) a,
-    :host([loading]) a {
-      opacity: 0.5;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-
-    :host([loading]) a {
-      cursor: wait;
-    }
-
-    button {
-      box-sizing: border-box;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: var(--_height, var(--size-10));
-      padding: var(--_padding, var(--size-2) var(--size-4));
-      gap: var(--_gap, var(--size-2));
-
-      background: var(--_bg);
-      color: var(--_color);
-      border: var(--_border) solid var(--_border-color);
-      border-radius: var(--_radius);
-
-      font-size: var(--_font-size, var(--text-sm));
-      font-weight: var(--font-medium);
-      line-height: var(--_line-height, var(--leading-normal));
-      white-space: nowrap;
-      user-select: none;
-      cursor: pointer;
-      min-height: var(--_touch-target);
-
-      transition: var(
-        --_motion-transition,
-        background var(--transition-normal),
-        border-color var(--transition-normal),
-        box-shadow var(--transition-normal),
-        color var(--transition-normal),
-        opacity var(--transition-normal),
-        transform var(--transition-fast)
-      );
-    }
-
-    a {
-      box-sizing: border-box;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: var(--_height, var(--size-10));
-      padding: var(--_padding, var(--size-2) var(--size-4));
-      gap: var(--_gap, var(--size-2));
-      text-decoration: none;
-
-      background: var(--_bg);
-      color: var(--_color);
-      border: var(--_border) solid var(--_border-color);
-      border-radius: var(--_radius);
-
-      font-size: var(--_font-size, var(--text-sm));
-      font-weight: var(--font-medium);
-      line-height: var(--_line-height, var(--leading-normal));
-      white-space: nowrap;
-      user-select: none;
-      cursor: pointer;
-      min-height: var(--_touch-target);
-
-      transition: var(
-        --_motion-transition,
-        background var(--transition-normal),
-        border-color var(--transition-normal),
-        box-shadow var(--transition-normal),
-        color var(--transition-normal),
-        opacity var(--transition-normal),
-        transform var(--transition-fast)
-      );
-    }
-
-    button:focus-visible,
-    a:focus-visible {
-      outline: none;
-    }
-
-    button,
-    a {
-      min-width: 0;
-    }
-
-    .content {
-      display: inline-flex;
-      align-items: center;
-      min-width: 0;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      vertical-align: middle;
-    }
-
-    ::slotted([slot='prefix']),
-    ::slotted([slot='suffix']) {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    ::slotted(svg) {
-      width: var(--_icon-size, var(--size-5));
-      height: var(--_icon-size, var(--size-5));
-      flex-shrink: 0;
-    }
-  }
-
-  @layer buildit.overrides {
-    :host([fullwidth]) {
-      display: flex;
-      width: 100%;
-    }
-  }
-
-  @layer buildit.variants {
-    :host([icon-only]) :is(button, a) {
-      padding: 0;
-      aspect-ratio: 1;
-    }
-
-    /* Solid (Default) - Full theme color background */
-    :host(:not([variant])) :is(button, a),
-    :host([variant='solid']) :is(button, a) {
-      background: var(--_theme-base);
-      color: var(--_theme-contrast);
-      border-color: var(--_theme-base);
-    }
-
-    :host(:not([variant])) :is(button, a):hover,
-    :host([variant='solid']) :is(button, a):hover {
-      background: var(--_theme-focus);
-    }
-
-    :host(:not([variant])) :is(button, a):active,
-    :host([variant='solid']) :is(button, a):active {
-      background: var(--_theme-content);
-      box-shadow: var(--inset-shadow-2xs);
-    }
-
-    /* Flat - Subtle background with theme color text */
-    :host([variant='flat']) :is(button, a) {
-      background: color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100));
-      color: var(--_theme-base);
-      border-color: color-mix(in srgb, var(--_theme-focus) 20%, transparent);
-      box-shadow: var(--inset-shadow-2xs);
-    }
-
-    :host([variant='flat']) :is(button, a):hover {
-      background: var(--_theme-focus);
-      color: var(--_theme-contrast);
-      box-shadow: var(--inset-shadow-xs);
-    }
-
-    :host([variant='flat']) :is(button, a):active {
-      background: var(--_theme-content);
-      color: var(--_theme-contrast);
-      box-shadow: var(--inset-shadow-sm);
-    }
-
-    /* Bordered - Outlined with filled background */
-    :host([variant='bordered']) :is(button, a) {
-      background: var(--_theme-backdrop);
-      color: var(--_theme-base);
-      border-color: var(--_theme-border);
-      box-shadow: var(--inset-shadow-xs);
-    }
-
-    :host([variant='bordered']) :is(button, a):hover {
-      background: var(--_theme-focus);
-      color: var(--_theme-contrast);
-      border-color: var(--_theme-focus);
-      box-shadow: var(--inset-shadow-xs);
-    }
-
-    :host([variant='bordered']) :is(button, a):active {
-      background: var(--_theme-content);
-      color: var(--_theme-contrast);
-      box-shadow: var(--inset-shadow-sm);
-    }
-
-    /* Outline - Transparent with colored border */
-    :host([variant='outline']) :is(button, a) {
-      background: transparent;
-      color: var(--_theme-base);
-      border-color: var(--_theme-base);
-    }
-
-    :host([variant='outline']) :is(button, a):hover {
-      background: var(--_theme-backdrop);
-      border-color: var(--_theme-focus);
-    }
-
-    :host([variant='outline']) :is(button, a):active {
-      background: var(--_theme-base);
-      color: var(--_theme-contrast);
-      box-shadow: var(--inset-shadow-2xs);
-    }
-
-    /* Ghost - Transparent until interaction */
-    :host([variant='ghost']) :is(button, a) {
-      background: transparent;
-      color: var(--_theme-base);
-      border-color: transparent;
-      border-width: 0;
-    }
-
-    :host([variant='ghost']) :is(button, a):hover {
-      background: var(--_theme-backdrop);
-    }
-
-    :host([variant='ghost']) :is(button, a):active {
-      background: var(--_theme-base);
-      color: var(--_theme-contrast);
-      box-shadow: var(--inset-shadow-2xs);
-    }
-
-    /* Text - Minimal styling, color on hover */
-    :host([variant='text']) :is(button, a) {
-      background: transparent;
-      color: var(--_theme-base);
-      border-color: transparent;
-      border-width: 0;
-    }
-
-    :host([variant='text']) :is(button, a):hover {
-      color: var(--_theme-focus);
-    }
-
-    :host([variant='text']) :is(button, a):active {
-      color: var(--_theme-content);
-    }
-
-    /* Additional button-specific frost active states */
-    :host([variant='frost']:not([color])) :is(button, a):active {
-      background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
-      border-color: color-mix(in srgb, var(--theme-focus) 40%, transparent);
-    }
-
-    :host([variant='frost'][color]) :is(button, a):active {
-      background: color-mix(in srgb, var(--_theme-backdrop) 50%, var(--_theme-base) 50%);
-      border-color: color-mix(in srgb, var(--_theme-focus) 65%, transparent);
-    }
-  }
-
-  /* ========================================
-     Other Variants & States
-     ======================================== */
-
-  @layer buildit.overrides {
-    /* Icon-only always uses perfect circle */
-    :host([rounded][icon-only]) :is(button, a) {
-      border-radius: 50%;
-    }
-
-    :host([loading]) .content {
-      visibility: hidden;
-    }
-  }
-
-  /* ========================================
-     Loading Spinner (unlayered for easy override)
-     ======================================== */
-
-  .loader {
-    position: absolute;
-    width: 1em;
-    height: 1em;
-    border: var(--border-2) solid currentColor;
-    border-inline-end-color: transparent;
-    border-radius: 50%;
-    animation: var(--_motion-animation, spin 0.6s linear infinite);
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  /* Focus ring & hover halo — unlayered so it wins over all @layer variant rules */
-  button:focus-visible,
-  a:focus-visible,
-  button:hover,
-  a:hover {
-    outline: none;
-    box-shadow: var(--_theme-shadow);
-  }
-
-  /* Text variant: no halo on hover or focus */
-  :host([variant='text']) button:hover,
-  :host([variant='text']) a:hover {
-    box-shadow: none;
-  }
-`;
+import componentStyles from './button.css?inline';
 
 /** Button component properties */
-export type ButtonProps = {
-  /** Theme color */
-  color?: ThemeColor;
-  /** Disable button interaction */
-  disabled?: boolean;
-  /** Full width button (100% of container) */
-  fullwidth?: boolean;
-  /** When set, renders an `<a>` instead of `<button>` */
-  href?: string;
-  /** Icon-only mode (square aspect ratio, no padding) */
-  iconOnly?: boolean;
-  /** Accessible label for the inner button — required for icon-only buttons */
-  label?: string;
-  /** Show loading state with spinner */
-  loading?: boolean;
-  /** Enable animated rainbow border effect */
-  rainbow?: boolean;
-  /** Link rel attribute (requires href) */
-  rel?: string;
-  /** Border radius size */
-  rounded?: RoundedSize;
-  /** Button size */
-  size?: ComponentSize;
-  /** Link target (requires href) */
-  target?: '_blank' | '_self' | '_parent' | '_top';
-  /** HTML button type attribute */
-  type?: ButtonType;
-  /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'glass'>;
-};
+export type BitButtonProps = ThemableProps &
+  SizableProps &
+  DisablableProps & {
+    /** Full width button (100% of container) */
+    fullwidth?: boolean;
+    /** When set, renders an `<a>` instead of `<button>` */
+    href?: string;
+    /** Icon-only mode (square aspect ratio, no padding) */
+    iconOnly?: boolean;
+    /** Accessible label for the inner button — required for icon-only buttons */
+    label?: string;
+    /** Show loading state with spinner */
+    loading?: boolean;
+    /** Enable animated rainbow border effect */
+    rainbow?: boolean;
+    /** Link rel attribute (requires href) */
+    rel?: string;
+    /** Border radius size */
+    rounded?: RoundedSize;
+    /** Link target (requires href) */
+    target?: '_blank' | '_self' | '_parent' | '_top';
+    /** HTML button type attribute */
+    type?: ButtonType;
+    /** Visual style variant */
+    variant?: Exclude<VisualVariant, 'glass'>;
+  };
 
 /**
  * A customizable button component with multiple variants, sizes, and states.
@@ -424,10 +87,10 @@ export type ButtonProps = {
  * <bit-button variant="frost" rainbow>Special Button</bit-button>
  * ```
  */
-export const TAG = define(
+export const BUTTON_TAG = define(
   'bit-button',
   ({ host }) => {
-    const props = defineProps<ButtonProps>({
+    const props = defineProps<BitButtonProps>({
       color: { default: undefined },
       disabled: { default: false },
       fullwidth: { default: false },
@@ -478,22 +141,18 @@ export const TAG = define(
     const handleButtonClick = (e: MouseEvent) => {
       if (isDisabled.value) return;
 
-      // Relay to host as a proper MouseEvent. stopPropagation prevents double-dispatch in
-      // browsers where shadow DOM already retargets the event to the host.
+      // Relay to host, handle form submission, and stop inner bubble in one place.
       e.stopPropagation();
-      host.dispatchEvent(new MouseEvent(e.type, e));
-    };
-
-    handle(host, 'click', () => {
-      if (isDisabled.value || isLink.value) return;
 
       const form = field.internals.form;
 
-      if (!form) return;
+      if (form) {
+        if (props.type.value === 'submit') form.requestSubmit();
+        else if (props.type.value === 'reset') form.reset();
+      }
 
-      if (props.type.value === 'submit') form.requestSubmit();
-      else if (props.type.value === 'reset') form.reset();
-    });
+      host.dispatchEvent(new MouseEvent(e.type, e));
+    };
 
     return {
       styles: [
@@ -523,44 +182,41 @@ export const TAG = define(
         componentStyles,
       ],
       template: html`
-        ${() =>
-          isLink.value
-            ? html`<a
-                part="button"
-                :href="${() => props.href.value ?? null}"
-                :target="${() => props.target.value ?? null}"
-                :rel="${() => props.rel.value ?? null}"
-                :aria-label="${() => props.label.value ?? null}"
-                :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-                :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-                role="button"
-                @click="${handleLinkClick}">
-                <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-                <slot name="prefix"></slot>
-                <span class="content" part="content"><slot></slot></span>
-                <slot name="suffix"></slot>
-              </a>`
-            : html`<button
-                part="button"
-                type="button"
-                ?disabled=${isDisabled}
-                :aria-label="${() => props.label.value ?? null}"
-                :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-                :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-                @click="${handleButtonClick}">
-                <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-                <slot name="prefix"></slot>
-                <span class="content" part="content"><slot></slot></span>
-                <slot name="suffix"></slot>
-              </button>`}
+        ${when(
+          isLink,
+          () =>
+            html`<a
+              part="button"
+              :href="${() => props.href.value ?? null}"
+              :target="${() => props.target.value ?? null}"
+              :rel="${() => props.rel.value ?? null}"
+              :aria-label="${() => props.label.value ?? null}"
+              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+              role="button"
+              @click="${handleLinkClick}">
+              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+              <slot name="prefix"></slot>
+              <span class="content" part="content"><slot></slot></span>
+              <slot name="suffix"></slot>
+            </a>`,
+          () =>
+            html`<button
+              part="button"
+              type="button"
+              ?disabled=${isDisabled}
+              :aria-label="${() => props.label.value ?? null}"
+              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+              @click="${handleButtonClick}">
+              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+              <slot name="prefix"></slot>
+              <span class="content" part="content"><slot></slot></span>
+              <slot name="suffix"></slot>
+            </button>`,
+        )}
       `,
     };
   },
   { formAssociated: true, shadow: { delegatesFocus: true } },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'bit-button': HTMLElement & ButtonProps;
-  }
-}

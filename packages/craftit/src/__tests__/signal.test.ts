@@ -206,34 +206,6 @@ describe('Core: Signal System', () => {
       expect(fires).toBe(1);
     });
 
-    it('selector form: fires only when the selected slice changes', () => {
-      const s = signal({ count: 0, name: 'Alice' });
-      const pairs: [number, number][] = [];
-
-      watch(
-        s,
-        (v) => v.count,
-        (next, prev) => pairs.push([next, prev]),
-      );
-      s.value = { count: 5, name: 'Alice' };
-      expect(pairs).toEqual([[5, 0]]);
-      s.value = { count: 5, name: 'Bob' }; // count unchanged — suppressed
-      expect(pairs).toHaveLength(1);
-    });
-
-    it('selector form: { immediate } fires with current selected value', () => {
-      const s = signal({ count: 3, name: 'Alice' });
-      const values: number[] = [];
-
-      watch(
-        s,
-        (v) => v.count,
-        (val) => values.push(val),
-        { immediate: true },
-      );
-      expect(values).toEqual([3]);
-    });
-
     it('{ equals } suppresses notification for semantically equal values', () => {
       const s = signal([1, 2, 3]);
       let fires = 0;
