@@ -37,26 +37,36 @@ Every project needs UI primitives. Buildit provides accessible web components th
 
 ## Import
 
-Always import the global styles **first**, then import the components you need:
+Always import the global styles **first**, then register the components you need via their side-effect entry points:
 
 ```ts
 // 1. Global styles — required
 import '@vielzeug/buildit/styles';
 
-// 2. Individual components (tree-shakeable)
+// 2. Individual component registration (tree-shakeable)
 import '@vielzeug/buildit/button';
 import '@vielzeug/buildit/checkbox';
 import '@vielzeug/buildit/input';
 
-// Or import everything at once
+// 3. Optional: register everything at once
 import '@vielzeug/buildit';
 ```
+
+The root package mostly re-exports shared symbols and types. For runtime registration, prefer subpath imports such as `@vielzeug/buildit/dialog` or `@vielzeug/buildit/select`.
+
+### Package entry points
+
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/buildit` | Register all components |
+| `@vielzeug/buildit/styles` | Global tokens and base styles |
+| `@vielzeug/buildit/types` | Shared TypeScript types |
 
 ## Basic Usage
 
 ### Using Components
 
-Once imported, components are available as custom elements:
+Once registered, components are available as custom elements:
 
 ```html
 <bit-button>Click me</bit-button>
@@ -72,7 +82,7 @@ Set attributes directly on the custom element:
 
 ### Event Handling
 
-Components emit custom events. You can listen to them using standard `addEventListener`.
+Components emit DOM events. You can listen to them using standard `addEventListener`.
 
 ```javascript
 const button = document.querySelector('bit-button');
@@ -82,7 +92,7 @@ button.addEventListener('click', (event) => {
 });
 ```
 
-Check the **[Framework Integration](./frameworks.md)** guide for specific instructions on using Buildit with React, Vue, Svelte, or Angular.
+Check the **[Framework Integration](./frameworks.md)** guide for framework-specific interop details.
 
 ## Slots
 
@@ -126,7 +136,7 @@ Many interactive components (e.g., `bit-button`, `bit-input`) expose `icon` slot
 </bit-input>
 ```
 
-Slot availability per component is listed in the **[Component Docs](./components/)** and the **[API Reference](./api.md)**.
+Slot availability varies by component; see the component pages in the Buildit sidebar and the **[API Reference](./api.md)** for the currently published surface.
 
 ## Accessibility
 
@@ -162,7 +172,7 @@ Components manage their ARIA roles and states automatically. You can override sp
 
 - All interactive components participate in the native tab order.
 - Use `disabled` to remove a component from the tab order. Disabled elements are not focusable.
-- Modals and overlays (`bit-tooltip`) trap or restore focus automatically.
+- Modal-style overlays such as `bit-dialog` and `bit-drawer` manage focus entry and restoration automatically.
 
 ### Screen Readers
 
@@ -183,16 +193,16 @@ Use component variants to tune visual intensity without rebuilding layouts:
 
 ### 1. Import Global Styles First
 
-Always import `@vielzeug/buildit/styles` before any component. Without it, components will render without design tokens.
+Always import `@vielzeug/buildit/styles` before any component registration. Without it, components still render, but they will miss the intended token and base-style layer.
 
 ### 2. Use Named Component Imports for Tree-Shaking
 
 ```ts
-// ✅ imports only what you use
+// ✅ registers only what you use
 import '@vielzeug/buildit/button';
 import '@vielzeug/buildit/input';
 
-// ❌ imports all components — increases bundle size
+// ❌ registers all components — larger bundle
 import '@vielzeug/buildit';
 ```
 

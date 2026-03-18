@@ -1,4 +1,14 @@
-import { computed, define, defineEmits, defineField, defineProps, html, inject, signal } from '@vielzeug/craftit';
+import {
+  computed,
+  define,
+  typed,
+  defineField,
+  html,
+  useInject,
+  signal,
+  defineProps,
+  defineEmits,
+} from '@vielzeug/craftit';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
@@ -73,19 +83,18 @@ export const RATING_TAG = define(
   'bit-rating',
   ({ host }) => {
     const props = defineProps<BitRatingProps>({
-      color: { default: undefined },
-      disabled: { default: false },
-      label: { default: 'Rating' },
-      max: { default: 5 },
-      name: { default: undefined },
-      readonly: { default: false },
-      size: { default: undefined },
-      value: { default: 0 },
+      color: typed<BitRatingProps['color']>(undefined),
+      disabled: typed<boolean>(false),
+      label: typed<string>('Rating'),
+      max: typed<number>(5),
+      name: typed<string | undefined>(undefined),
+      readonly: typed<boolean>(false),
+      size: typed<BitRatingProps['size']>(undefined),
+      value: typed<number>(0),
     });
-
     const emit = defineEmits<BitRatingEvents>();
 
-    const formCtx = inject(FORM_CTX);
+    const formCtx = useInject(FORM_CTX, undefined);
 
     mountFormContextSync(host, formCtx, props);
 
@@ -106,7 +115,6 @@ export const RATING_TAG = define(
     }
 
     const hovered = signal<number | null>(null);
-
     // eslint-disable-next-line no-constant-binary-expression
     const displayValue = computed(() => hovered.value ?? Number(props.value.value) ?? 0);
 
@@ -138,12 +146,10 @@ export const RATING_TAG = define(
           `--_dur:${dur}ms`,
           `animation-delay:${Math.random() * 60}ms`,
         ].join(';');
-
         layer.appendChild(p);
         p.addEventListener('animationend', () => p.remove(), { once: true });
       }
     }
-
     function select(star: number) {
       if (props.readonly.value || props.disabled.value) return;
 
@@ -152,7 +158,6 @@ export const RATING_TAG = define(
       triggerValidation('change');
       spawnSparkles(star);
     }
-
     function handleKeydown(e: KeyboardEvent, star: number) {
       const max = Number(props.max.value) || 5;
 
@@ -179,44 +184,44 @@ export const RATING_TAG = define(
       return Array.from({ length: max }, (_, i) => i + 1);
     });
 
-    return {
-      styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, styles],
-      template: html`
-        <div
-          class="stars"
-          part="stars"
-          role="radiogroup"
-          :aria-label="${() => props.label.value}"
-          :aria-required="${() => null}">
-          ${() =>
-            stars.value.map((star) => {
-              const filled = star <= displayValue.value;
+    return html`
+      <div
+        class="stars"
+        part="stars"
+        role="radiogroup"
+        :aria-label="${() => props.label.value}"
+        :aria-required="${() => null}">
+        ${() =>
+          stars.value.map((star) => {
+            const filled = star <= displayValue.value;
 
-              return html`<button
-                class="star-btn"
-                part="star"
-                type="button"
-                role="radio"
-                :aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
-                :aria-checked="${() => String(star === (Number(props.value.value) || 0))}"
-                :data-star="${star}"
-                ?data-filled="${() => filled}"
-                :disabled="${() => props.disabled.value || props.readonly.value || null}"
-                @click="${() => select(star)}"
-                @mouseenter="${() => {
-                  if (!props.readonly.value && !props.disabled.value) hovered.value = star;
-                }}"
-                @mouseleave="${() => {
-                  hovered.value = null;
-                }}"
-                @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
-                ${starIcon(filled)}
-              </button>`;
-            })}
-          <div class="sparkle-layer"></div>
-        </div>
-      `,
-    };
+            return html`<button
+              class="star-btn"
+              part="star"
+              type="button"
+              role="radio"
+              :aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
+              :aria-checked="${() => String(star === (Number(props.value.value) || 0))}"
+              :data-star="${star}"
+              ?data-filled="${() => filled}"
+              :disabled="${() => props.disabled.value || props.readonly.value || null}"
+              @click="${() => select(star)}"
+              @mouseenter="${() => {
+                if (!props.readonly.value && !props.disabled.value) hovered.value = star;
+              }}"
+              @mouseleave="${() => {
+                hovered.value = null;
+              }}"
+              @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
+              ${starIcon(filled)}
+            </button>`;
+          })}
+        <div class="sparkle-layer"></div>
+      </div>
+    `;
   },
-  { formAssociated: true },
+  {
+    formAssociated: true,
+    styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, styles],
+  },
 );

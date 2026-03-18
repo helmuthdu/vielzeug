@@ -1,4 +1,4 @@
-import { define, defineProps, effect, html, observeResize, onMount } from '@vielzeug/craftit';
+import { define, effect, html, observeResize, onMount, defineProps } from '@vielzeug/craftit';
 
 const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
   ['cols2xl', '--size-screen-2xl'],
@@ -137,125 +137,124 @@ export type BitGridProps = {
  *   <main style="grid-area: main">Main</main>
  * </bit-grid>
  */
-export const GRID_TAG = define('bit-grid', ({ host }) => {
-  const props = defineProps<BitGridProps>({
-    align: { default: undefined },
-    areas: { default: '' },
-    areas2xl: { default: '' },
-    areasLg: { default: '' },
-    areasMd: { default: '' },
-    areasSm: { default: '' },
-    areasXl: { default: '' },
-    cols: { default: undefined },
-    cols2xl: { default: undefined },
-    colsLg: { default: undefined },
-    colsMd: { default: undefined },
-    colsSm: { default: undefined },
-    colsXl: { default: undefined },
-    flow: { default: undefined },
-    fullwidth: { default: false },
-    gap: { default: undefined },
-    justify: { default: undefined },
-    minColWidth: { default: '' },
-    responsive: { default: false },
-    rows: { default: undefined },
-  });
+export const GRID_TAG = define(
+  'bit-grid',
+  ({ host }) => {
+    const props = defineProps<BitGridProps>({
+      align: { default: undefined },
+      areas: { default: '' },
+      areas2xl: { default: '' },
+      areasLg: { default: '' },
+      areasMd: { default: '' },
+      areasSm: { default: '' },
+      areasXl: { default: '' },
+      cols: { default: undefined },
+      cols2xl: { default: undefined },
+      colsLg: { default: undefined },
+      colsMd: { default: undefined },
+      colsSm: { default: undefined },
+      colsXl: { default: undefined },
+      flow: { default: undefined },
+      fullwidth: { default: false },
+      gap: { default: undefined },
+      justify: { default: undefined },
+      minColWidth: { default: '' },
+      responsive: { default: false },
+      rows: { default: undefined },
+    });
 
-  const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
-    if (activeCols === 'auto' || (!activeCols && responsive)) {
-      return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;
-    }
-
-    return activeCols ? `repeat(${activeCols}, 1fr)` : null;
-  };
-
-  const updateCols = () => {
-    const w = host.offsetWidth;
-    const responsive = props.responsive.value;
-    const minW = props.minColWidth.value;
-
-    let activeCols: string | undefined;
-
-    for (const [key, cssVar] of BREAKPOINTS) {
-      if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
-        activeCols = props[key].value!;
-        break;
+    const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
+      if (activeCols === 'auto' || (!activeCols && responsive)) {
+        return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;
       }
-    }
-    activeCols ||= props.cols.value || undefined;
 
-    const colsValue = computeCols(activeCols, responsive, minW);
+      return activeCols ? `repeat(${activeCols}, 1fr)` : null;
+    };
+    const updateCols = () => {
+      const w = host.offsetWidth;
+      const responsive = Boolean(props.responsive.value);
+      const minW = props.minColWidth.value ?? '';
+      let activeCols: string | undefined;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    colsValue ? host.style.setProperty('--_cols', colsValue) : host.style.removeProperty('--_cols');
-  };
-
-  // Re-run cols whenever any responsive prop changes
-  effect(() => {
-    void [
-      props.cols.value,
-      props.colsSm.value,
-      props.colsMd.value,
-      props.colsLg.value,
-      props.colsXl.value,
-      props.cols2xl.value,
-      props.responsive.value,
-      props.minColWidth.value,
-    ];
-    updateCols();
-  });
-
-  const updateAreas = () => {
-    const w = host.offsetWidth;
-    let active = '';
-
-    for (const [key, cssVar] of AREAS_BREAKPOINTS) {
-      if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
-        active = props[key].value!;
-        break;
+      for (const [key, cssVar] of BREAKPOINTS) {
+        if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
+          activeCols = props[key].value!;
+          break;
+        }
       }
-    }
-    active ||= props.areas.value || '';
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    active ? host.style.setProperty('grid-template-areas', active) : host.style.removeProperty('grid-template-areas');
-  };
+      activeCols ||= props.cols.value || undefined;
 
-  // Also, update on element resize (drives breakpoint switching)
-  onMount(() => {
-    const size = observeResize(host);
+      const colsValue = computeCols(activeCols, responsive, minW);
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      colsValue ? host.style.setProperty('--_cols', colsValue) : host.style.removeProperty('--_cols');
+    };
+
+    // Re-run cols whenever any responsive prop changes
     effect(() => {
-      void size.value;
+      void [
+        props.cols.value,
+        props.colsSm.value,
+        props.colsMd.value,
+        props.colsLg.value,
+        props.colsXl.value,
+        props.cols2xl.value,
+        props.responsive.value,
+        props.minColWidth.value,
+      ];
       updateCols();
+    });
+
+    const updateAreas = () => {
+      const w = host.offsetWidth;
+      let active = '';
+
+      for (const [key, cssVar] of AREAS_BREAKPOINTS) {
+        if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
+          active = props[key].value!;
+          break;
+        }
+      }
+      active ||= props.areas.value || '';
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      active ? host.style.setProperty('grid-template-areas', active) : host.style.removeProperty('grid-template-areas');
+    };
+
+    // Also, update on element resize (drives breakpoint switching)
+    onMount(() => {
+      const size = observeResize(host);
+
+      effect(() => {
+        void size.value;
+        updateCols();
+        updateAreas();
+      });
+    });
+    // Rows
+    effect(() => {
+      const rows = props.rows.value;
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      rows && rows !== 'auto'
+        ? host.style.setProperty('--_rows', `repeat(${rows}, 1fr)`)
+        : host.style.removeProperty('--_rows');
+    });
+    // Grid template areas (responsive)
+    effect(() => {
+      void [
+        props.areas.value,
+        props.areasSm.value,
+        props.areasMd.value,
+        props.areasLg.value,
+        props.areasXl.value,
+        props.areas2xl.value,
+      ];
       updateAreas();
     });
-  });
 
-  // Rows
-  effect(() => {
-    const rows = props.rows.value;
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    rows && rows !== 'auto'
-      ? host.style.setProperty('--_rows', `repeat(${rows}, 1fr)`)
-      : host.style.removeProperty('--_rows');
-  });
-
-  // Grid template areas (responsive)
-  effect(() => {
-    void [
-      props.areas.value,
-      props.areasSm.value,
-      props.areasMd.value,
-      props.areasLg.value,
-      props.areasXl.value,
-      props.areas2xl.value,
-    ];
-    updateAreas();
-  });
-
-  return {
+    return html`<slot></slot>`;
+  },
+  {
     styles: [styles],
-    template: html`<slot></slot>`,
-  };
-});
+  },
+);

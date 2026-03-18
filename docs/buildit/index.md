@@ -9,7 +9,7 @@ description: Accessible, customizable web components built with Craftit. Works w
 
 # Buildit
 
-**Buildit** is a collection of accessible, customizable web components built with [@vielzeug/craftit](../craftit/). Works with React, Vue, Svelte, Angular, or vanilla JS.
+**Buildit** is the Vielzeug component library: accessible, themeable web components built with [@vielzeug/craftit](/craftit/). It works with vanilla DOM and framework apps alike through standards-based custom elements and tree-shakeable registration entry points.
 
 ## Installation
 
@@ -31,43 +31,64 @@ yarn add @vielzeug/buildit
 
 ## Quick Start
 
-```html
-<!-- Register all components -->
-<script type="module">
-  import '@vielzeug/buildit';
-</script>
+```ts
+// 1. Import global styles once
+import '@vielzeug/buildit/styles';
 
-<!-- Use them in HTML -->
-<bit-button variant="primary" @click="handleClick">Save</bit-button>
+// 2. Register only the elements you need
+import '@vielzeug/buildit/button';
+import '@vielzeug/buildit/input';
+import '@vielzeug/buildit/card';
+```
+
+```html
+<bit-button variant="solid" color="primary">Save</bit-button>
 <bit-input label="Email" type="email" required></bit-input>
-<bit-card>
-  <bit-text slot="header">Card Title</bit-text>
+<bit-card padding="lg">
+  <span slot="header">Account</span>
   <p>Card content goes here.</p>
 </bit-card>
 ```
 
 ```ts
-// Or register individually
-import { BdtButton, BdtInput } from '@vielzeug/buildit';
+// Or register everything at once
+import '@vielzeug/buildit/styles';
+import '@vielzeug/buildit';
 ```
+
+## Package Entry Points
+
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/buildit` | Register all published components |
+| `@vielzeug/buildit/styles` | Global tokens and shared component styles |
+| `@vielzeug/buildit/types` | Shared TypeScript types |
+
+Component registration happens through side-effect imports such as `@vielzeug/buildit/button` and `@vielzeug/buildit/dialog`.
 
 ## Components
 
-**Base:** `bit-button`, `bit-button-group`, `bit-card`, `bit-text`, `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`, `bit-badge`, `bit-alert`, `bit-tooltip`, `bit-dialog`
+**Actions:** `bit-button`, `bit-button-group`
 
-**Form:** `bit-checkbox`, `bit-combobox`, `bit-file-input`, `bit-form`, `bit-input`, `bit-radio`, `bit-radio-group`, `bit-select`, `bit-slider`, `bit-switch`, `bit-textarea`
+**Content:** `bit-avatar`, `bit-breadcrumb`, `bit-card`, `bit-pagination`, `bit-separator`, `bit-table`, `bit-text`
+
+**Disclosure:** `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`
 
 **Feedback:** `bit-alert`, `bit-badge`, `bit-chip`, `bit-progress`, `bit-skeleton`, `bit-toast`
 
-**Layout:** `bit-box`, `bit-grid`, `bit-grid-item`
+**Form:** `bit-checkbox`, `bit-checkbox-group`, `bit-combobox`, `bit-file-input`, `bit-form`, `bit-input`, `bit-number-input`, `bit-otp-input`, `bit-radio`, `bit-radio-group`, `bit-rating`, `bit-select`, `bit-slider`, `bit-switch`, `bit-textarea`
+
+**Layout:** `bit-box`, `bit-grid`, `bit-grid-item`, `bit-sidebar`
+
+**Overlay:** `bit-dialog`, `bit-drawer`, `bit-menu`, `bit-popover`, `bit-tooltip`
 
 ## Features
 
-- **Accessible** — WCAG 2.1 AA with keyboard navigation and screen reader support
-- **Customizable** — CSS custom properties for complete styling control
-- **Theme support** — built-in light/dark mode
+- **Accessible** — keyboard navigation, ARIA wiring, and focus management across interactive components
+- **Themeable** — global tokens plus component-level CSS custom properties
 - **Framework agnostic** — works anywhere HTML can be rendered
-- **Tree-shakeable** — import only the components you need
+- **Tree-shakeable** — import only the component entry points you register
+- **Comprehensive surface** — actions, content, disclosure, feedback, form, layout, and overlay primitives
 - **Zero runtime deps** — <PackageInfo package="buildit" type="size" /> gzipped
 
 ## Next Steps

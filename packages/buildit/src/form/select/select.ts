@@ -3,28 +3,37 @@ import {
   computed,
   createFormIds,
   define,
-  defineEmits,
   defineField,
-  defineProps,
   effect,
   html,
-  inject,
+  useInject,
   onMount,
   onSlotChange,
   ref,
   signal,
+  typed,
   watch,
+  defineProps,
+  defineEmits,
 } from '@vielzeug/craftit';
+import { each } from '@vielzeug/craftit/directives';
 import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
 import { createVirtualizer, type VirtualItem } from '@vielzeug/virtualit';
 
 import type { DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
-import { CHIP_TAG } from '../../feedback/chip/chip';
+import '../../feedback/chip/chip';
 import { checkIconHTML, chevronDownIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync, mountLabelSyncStandalone } from '../../utils/use-text-field';
+import {
+  mountFormContextSync,
+  mountLabelSyncStandalone,
+  resolveMergedAssistiveText,
+  stringifyCsvValues,
+  triggerValidationOnEvent,
+} from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
+import { computeControlledCsvState, removeStringValue, toggleStringValue } from '../shared/form-utils';
 
 // ============================================
 // Types
@@ -141,9 +150,7 @@ export type BitSelectProps = ThemableProps &
 export const SELECT_TAG = define(
   'bit-select',
   ({ host }) => {
-    const emit = defineEmits<BitSelectEvents>();
-
-    const props = defineProps<Omit<BitSelectProps, 'options'>>({
+    const props = defineProps<BitSelectProps>({
       // 'options' is a JS-only prop handled via Object.defineProperty
       color: { default: undefined },
       disabled: { default: false },
@@ -155,6 +162,7 @@ export const SELECT_TAG = define(
       loading: { default: false },
       multiple: { default: false },
       name: { default: '' },
+      options: typed<OptionItem[] | undefined>(undefined),
       placeholder: { default: '' },
       required: { default: false },
       rounded: { default: undefined },
@@ -162,28 +170,29 @@ export const SELECT_TAG = define(
       value: { default: '' },
       variant: { default: undefined },
     });
+    const emit = defineEmits<BitSelectEvents>();
 
     // ============================================
     // State
     // ============================================
-
     const selectedValues = signal<string[]>([]);
     const slottedOptions = signal<OptionItem[]>([]);
     const isOpen = signal(false);
     const focusedIndex = signal(-1);
     const isLoading = computed(() => Boolean(props.loading.value));
-
     // Merged options: JS prop overrides slotted options
     const options = computed(() => {
-      const jsProp = (host as unknown as { _optionsProp?: OptionItem[] })._optionsProp;
+      const jsProp = (
+        host as unknown as {
+          _optionsProp?: OptionItem[];
+        }
+      )._optionsProp;
 
       return jsProp && jsProp.length > 0 ? jsProp : slottedOptions.value;
     });
-
-    const formCtx = inject(FORM_CTX);
-
+    const formCtx = useInject(FORM_CTX, undefined);
     // Form-associated value (comma-separated for multiple)
-    const formValue = computed(() => selectedValues.value.join(','));
+    const formValue = computed(() => stringifyCsvValues(selectedValues.value));
     const fd = defineField(
       { disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)), value: formValue },
       {
@@ -194,45 +203,34 @@ export const SELECT_TAG = define(
     );
 
     function triggerValidation(on: 'blur' | 'change'): void {
-      if (formCtx?.validateOn.value === on) fd.reportValidity();
+      triggerValidationOnEvent(formCtx, fd, on);
     }
-
     // Sync open attribute on host
     watch(isOpen, (v) => host.toggleAttribute('open', v), { immediate: true });
-
     // Sync has-error attribute on host (error is a string prop, needs boolean attribute for CSS)
     watch(props.error, (v) => host.toggleAttribute('has-error', Boolean(v)), { immediate: true });
 
     // Accessibility IDs
-    const { fieldId: selectId, labelId } = createFormIds('select', props.name);
+    const { fieldId: selectId, labelId } = createFormIds('select', props.name.value);
     const listboxId = `listbox-${selectId}`;
-
     // DOM refs
     let triggerEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
-
     // Refs for dynamic content
     const labelOutsideRef = ref<HTMLSpanElement>();
     const labelInsetRef = ref<HTMLSpanElement>();
-    const helperRef = ref<HTMLDivElement>();
-    const triggerValueRef = ref<HTMLSpanElement>();
-    const chipsRowRef = ref<HTMLDivElement>();
     const dropdownContentRef = ref<HTMLDivElement>();
     const dropdownSpacerRef = ref<HTMLDivElement>();
-    const dropdownLoadingRef = ref<HTMLDivElement>();
-    const dropdownEmptyRef = ref<HTMLDivElement>();
 
     // ============================================
     // Option reading from slot
     // ============================================
-
     function readOptions() {
       const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
 
       if (!slot) return;
 
       const assigned = slot.assignedElements({ flatten: true });
-
       const items: OptionItem[] = [];
 
       for (const el of assigned) {
@@ -253,24 +251,21 @@ export const SELECT_TAG = define(
       }
       slottedOptions.value = items;
     }
-
     // Initialize selectedValues from prop
     effect(() => {
-      if (props.value.value) {
-        selectedValues.value = props.value.value
-          .split(',')
-          .map((v) => v.trim())
-          .filter(Boolean);
-      }
+      selectedValues.value = computeControlledCsvState(props.value.value).values;
     });
-
     // Expose JS options property setter
     Object.defineProperty(host, 'options', {
       get() {
         return options.value;
       },
       set(val: OptionItem[]) {
-        (host as unknown as { _optionsProp?: OptionItem[] })._optionsProp = val;
+        (
+          host as unknown as {
+            _optionsProp?: OptionItem[];
+          }
+        )._optionsProp = val;
         slottedOptions.value = [...slottedOptions.value]; // trigger recompute
       },
     });
@@ -278,7 +273,6 @@ export const SELECT_TAG = define(
     // ============================================
     // Display value
     // ============================================
-
     const displayLabel = computed(() => {
       if (selectedValues.value.length === 0) return '';
 
@@ -290,13 +284,32 @@ export const SELECT_TAG = define(
 
       return options.value.find((o) => o.value === first)?.label ?? first;
     });
-
+    const selectedChipItems = computed(() =>
+      selectedValues.value.map((value) => ({
+        label: options.value.find((o) => o.value === value)?.label ?? value,
+        value,
+      })),
+    );
+    const assistiveText = computed(() => resolveMergedAssistiveText(props.error.value, props.helper.value));
+    const showChips = computed(() => props.multiple.value && selectedValues.value.length > 0);
+    const triggerText = computed(() => displayLabel.value || props.placeholder.value || '');
     const hasLabel = computed(() => !!props.label.value);
+
+    function removeChip(event: Event): void {
+      event.stopPropagation();
+
+      const value = (event as CustomEvent<{ value?: string }>).detail?.value;
+
+      if (value === undefined) return;
+
+      selectedValues.value = removeStringValue(selectedValues.value, value);
+      emit('change', { value: formValue.value, values: selectedValues.value });
+      triggerValidation('change');
+    }
 
     // ============================================
     // Dropdown positioning
     // ============================================
-
     let autoUpdateCleanup: (() => void) | null = null;
 
     function updateDropdownPosition() {
@@ -318,11 +331,9 @@ export const SELECT_TAG = define(
         placement: 'bottom-start',
       });
     }
-
     // ============================================
     // Open / Close
     // ============================================
-
     function open() {
       if (props.disabled.value) return;
 
@@ -341,7 +352,6 @@ export const SELECT_TAG = define(
         scrollFocusedIntoView();
       });
     }
-
     function close() {
       autoUpdateCleanup?.();
       autoUpdateCleanup = null;
@@ -350,32 +360,25 @@ export const SELECT_TAG = define(
       triggerEl?.focus();
       triggerValidation('blur');
     }
-
     // ============================================
     // Selection
     // ============================================
-
     function selectOption(opt: OptionItem, e?: Event) {
       if (opt.disabled) return;
 
       if (props.multiple.value) {
-        const idx = selectedValues.value.indexOf(opt.value);
-
-        selectedValues.value =
-          idx >= 0 ? selectedValues.value.filter((v) => v !== opt.value) : [...selectedValues.value, opt.value];
+        selectedValues.value = toggleStringValue(selectedValues.value, opt.value);
       } else {
         selectedValues.value = [opt.value];
         close();
       }
 
-      emit('change', { originalEvent: e, value: formValue.value, values: [...selectedValues.value] });
+      emit('change', { originalEvent: e, value: formValue.value, values: selectedValues.value });
       triggerValidation('change');
     }
-
     // ============================================
     // Keyboard navigation
     // ============================================
-
     function scrollFocusedIntoView() {
       const idx = focusedIndex.value;
 
@@ -393,7 +396,6 @@ export const SELECT_TAG = define(
 
       focusedEl?.scrollIntoView({ block: 'nearest' });
     }
-
     function handleTriggerKeydown(e: KeyboardEvent) {
       if (props.disabled.value) return;
 
@@ -472,16 +474,32 @@ export const SELECT_TAG = define(
           break;
       }
     }
-
     // ============================================
     // Virtualizer
     // ============================================
-
     // Flatten options to a linear renderable list (group headers + options)
-    function buildFlatList(
-      opts: OptionItem[],
-    ): Array<{ idx: number; opt: OptionItem; type: 'option' } | { label: string; type: 'group' }> {
-      const flat: Array<{ idx: number; opt: OptionItem; type: 'option' } | { label: string; type: 'group' }> = [];
+    function buildFlatList(opts: OptionItem[]): Array<
+      | {
+          idx: number;
+          opt: OptionItem;
+          type: 'option';
+        }
+      | {
+          label: string;
+          type: 'group';
+        }
+    > {
+      const flat: Array<
+        | {
+            idx: number;
+            opt: OptionItem;
+            type: 'option';
+          }
+        | {
+            label: string;
+            type: 'group';
+          }
+      > = [];
       const groups = new Map<string | undefined, OptionItem[]>();
 
       for (const opt of opts) {
@@ -513,7 +531,6 @@ export const SELECT_TAG = define(
       if (!containerEl) return;
 
       containerEl.innerHTML = '';
-
       for (const item of virtualItems) {
         const row = currentFlatList[item.index];
 
@@ -529,12 +546,13 @@ export const SELECT_TAG = define(
           containerEl.appendChild(groupHeader);
         } else {
           const { idx, opt } = row;
-
           const optionEl = document.createElement('div');
 
           optionEl.className = 'option';
           optionEl.setAttribute('role', 'option');
           optionEl.id = `${selectId}-opt-${idx}`;
+          optionEl.dataset.optionIndex = String(idx);
+          optionEl.dataset.optionValue = opt.value;
           optionEl.setAttribute('aria-selected', String(selectedValues.peek().includes(opt.value)));
           optionEl.setAttribute('aria-disabled', String(opt.disabled));
           optionEl.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
@@ -556,7 +574,6 @@ export const SELECT_TAG = define(
           check.setAttribute('aria-hidden', 'true');
           check.innerHTML = checkIconHTML;
           optionEl.appendChild(check);
-
           optionEl.addEventListener('click', (e: MouseEvent) => {
             e.stopPropagation();
             selectOption(opt, e);
@@ -573,7 +590,6 @@ export const SELECT_TAG = define(
         }
       }
     }
-
     // Refreshes only the selected/focused data-attributes on already-rendered
     // items without clearing the DOM. Called when selection changes while the
     // dropdown is open (e.g. programmatic value update).
@@ -584,17 +600,15 @@ export const SELECT_TAG = define(
       const selected = selectedValues.peek();
 
       for (const el of containerEl.querySelectorAll<HTMLElement>('.option')) {
-        const idx = Number(el.id.replace(`${selectId}-opt-`, ''));
-
-        const row = currentFlatList[idx];
-        const isSelected = row?.type === 'option' && selected.includes(row.opt.value);
+        const idx = Number(el.dataset.optionIndex ?? '-1');
+        const value = el.dataset.optionValue ?? '';
+        const isSelected = value !== '' && selected.includes(value);
 
         el.toggleAttribute('data-focused', idx === focused);
         el.toggleAttribute('data-selected', isSelected);
         el.setAttribute('aria-selected', String(isSelected));
       }
     }
-
     function setupVirtualizer() {
       virtualizer?.destroy();
 
@@ -605,7 +619,6 @@ export const SELECT_TAG = define(
       if (!scrollEl || !containerEl) return;
 
       currentFlatList = buildFlatList(options.value);
-
       virtualizer = createVirtualizer(scrollEl, {
         count: currentFlatList.length,
         estimateSize: (i) => (currentFlatList[i]?.type === 'group' ? 28 : 36),
@@ -626,10 +639,8 @@ export const SELECT_TAG = define(
         dropdownSpacerRef.value.style.contain = 'layout';
       }
     }
-
     onMount(() => {
       onSlotChange('default', readOptions);
-
       // Rebuild virtualizer when options list changes
       effect(() => {
         // Access options & isOpen to re-create virtualizer when either changes
@@ -643,98 +654,15 @@ export const SELECT_TAG = define(
           virtualizer = null;
         }
       });
-
       mountLabelSyncStandalone(labelInsetRef, labelOutsideRef, props);
-
       // Effect to manage dynamic content and visibility
       effect(() => {
-        // Helper / error
-        if (helperRef.value) {
-          helperRef.value.textContent = props.error.value || props.helper.value;
-          helperRef.value.hidden = !props.error.value && !props.helper.value;
-          helperRef.value.style.color = props.error.value ? 'var(--color-error)' : '';
-        }
-
-        // Trigger value / chips
-        if (triggerValueRef.value && chipsRowRef.value) {
-          if (props.multiple.value && selectedValues.value.length > 0) {
-            // Multiple mode: render chips
-            triggerValueRef.value.hidden = true;
-            chipsRowRef.value.style.display = 'flex';
-            // Re-build chips
-            chipsRowRef.value.innerHTML = '';
-            for (const val of selectedValues.value) {
-              const optLabel = options.value.find((o) => o.value === val)?.label ?? val;
-              const chip = document.createElement(CHIP_TAG) as HTMLElement & { mode?: string; value?: string };
-
-              chip.setAttribute('value', val);
-              chip.setAttribute('aria-label', optLabel);
-              chip.setAttribute('mode', 'removable');
-              chip.setAttribute('variant', 'flat');
-              chip.setAttribute('size', 'sm');
-
-              if (props.color.value) chip.setAttribute('color', props.color.value);
-
-              chip.textContent = optLabel;
-              chip.addEventListener('remove', (e: Event) => {
-                e.stopPropagation();
-
-                const detail = (e as CustomEvent<{ value: string | undefined }>).detail;
-
-                if (detail.value !== undefined) {
-                  selectedValues.value = selectedValues.value.filter((v) => v !== detail.value);
-                  emit('change', { value: formValue.value, values: [...selectedValues.value] });
-                  triggerValidation('change');
-                }
-              });
-              chipsRowRef.value.appendChild(chip);
-            }
-          } else {
-            // Single mode (or multiple with no selection)
-            chipsRowRef.value.style.display = '';
-            triggerValueRef.value.hidden = false;
-
-            const display = displayLabel.value || props.placeholder.value || '';
-
-            triggerValueRef.value.textContent = display;
-            triggerValueRef.value.className = displayLabel.value
-              ? 'trigger-value'
-              : 'trigger-value trigger-placeholder';
-          }
-        } else if (triggerValueRef.value) {
-          const display = displayLabel.value || props.placeholder.value || '';
-
-          triggerValueRef.value.textContent = display;
-          triggerValueRef.value.className = displayLabel.value ? 'trigger-value' : 'trigger-value trigger-placeholder';
-        }
-
-        // Loading / empty states
-        if (dropdownLoadingRef.value) dropdownLoadingRef.value.hidden = !isLoading.value;
-
-        if (dropdownEmptyRef.value) dropdownEmptyRef.value.hidden = isLoading.value || options.value.length > 0;
-
-        // Spacer + virtual container visibility
-        if (dropdownContentRef.value) dropdownContentRef.value.hidden = isLoading.value;
-
-        if (dropdownSpacerRef.value) dropdownSpacerRef.value.hidden = isLoading.value;
+        void selectedValues.value;
+        void focusedIndex.value;
 
         // Update focused/selected state on already-rendered items without touching
         // the DOM structure. The virtualizer owns full re-renders via onChange.
         updateRenderedItemState();
-
-        // Dropdown open state
-        if (dropdownEl) {
-          if (isOpen.value) {
-            dropdownEl.setAttribute('data-open', '');
-          } else {
-            dropdownEl.removeAttribute('data-open');
-          }
-        }
-
-        // Field tabindex
-        if (triggerEl) {
-          triggerEl.setAttribute('tabindex', props.disabled.value ? '-1' : '0');
-        }
       });
 
       if (triggerEl) {
@@ -757,7 +685,6 @@ export const SELECT_TAG = define(
       };
 
       document.addEventListener('click', handleOutsideClick, true);
-
       // Propagate form context size/variant/disabled to host
       mountFormContextSync(host, formCtx, props);
 
@@ -769,74 +696,105 @@ export const SELECT_TAG = define(
       };
     });
 
-    return {
-      styles: [
-        sizeVariantMixin({
-          lg: {
-            '--_field-height': 'var(--size-12)',
-            '--_padding': 'var(--size-2-5) var(--size-3-5)',
-            fontSize: 'var(--text-base)',
-            gap: 'var(--size-2-5)',
-          },
-          sm: {
-            '--_field-height': 'var(--size-8)',
-            '--_padding': 'var(--size-1) var(--size-2)',
-            fontSize: 'var(--text-xs)',
-            gap: 'var(--size-1-5)',
-          },
-        }),
-        ...formFieldMixins,
-        disabledLoadingMixin(),
-        forcedColorsFocusMixin('.field'),
-        componentStyles,
-      ],
-      template: html`<slot style="display:none"></slot>
-        <div class="select-wrapper">
-          <label class="label-outside" id="${labelId}" ref=${labelOutsideRef} hidden></label>
-          <div
-            class="field"
-            ref=${(el: HTMLElement) => {
-              triggerEl = el;
-            }}
-            role="combobox"
-            tabindex="0"
-            aria-controls="${listboxId}"
-            aria-expanded="false"
-            aria-labelledby="${labelId}"
-            @click=${(e: MouseEvent) => {
-              e.stopPropagation();
+    return html`<slot style="display:none"></slot>
+      <div class="select-wrapper">
+        <label class="label-outside" id="${labelId}" ref=${labelOutsideRef} hidden></label>
+        <div
+          class="field"
+          ref=${(el: HTMLElement) => {
+            triggerEl = el;
+          }}
+          role="combobox"
+          tabindex=${() => (props.disabled.value ? '-1' : '0')}
+          aria-controls="${listboxId}"
+          aria-expanded="false"
+          aria-labelledby="${labelId}"
+          @click=${(e: MouseEvent) => {
+            e.stopPropagation();
 
-              if (isOpen.value) close();
-              else open();
-            }}
-            @keydown=${handleTriggerKeydown}>
-            <label class="label-inset" id="${labelId}" ref=${labelInsetRef} hidden></label>
-            <div class="trigger-row">
-              <div class="chips-row" ref=${chipsRowRef}></div>
-              <span class="trigger-value" ref=${triggerValueRef}></span>
+            if (isOpen.value) close();
+            else open();
+          }}
+          @keydown=${handleTriggerKeydown}>
+          <label class="label-inset" id="${labelId}" ref=${labelInsetRef} hidden></label>
+          <div class="trigger-row">
+            <div class="chips-row" ?hidden=${() => !showChips.value}>
+              ${each(
+                () => selectedChipItems.value,
+                (item) => html`
+                  <bit-chip
+                    value=${item.value}
+                    aria-label=${item.label}
+                    mode="removable"
+                    variant="flat"
+                    size="sm"
+                    color=${() => props.color.value}
+                    @remove=${removeChip}>
+                    ${item.label}
+                  </bit-chip>
+                `,
+              )}
             </div>
-            <span class="trigger-icon" aria-hidden="true">
-              ${chevronDownIcon}
-              <span class="loader" aria-label="Loading"></span>
-            </span>
+            <span
+              class="trigger-value ${() => (displayLabel.value ? '' : 'trigger-placeholder')}"
+              ?hidden=${() => showChips.value}
+              >${() => triggerText.value}</span
+            >
           </div>
-          <div class="helper-text" aria-live="polite" ref=${helperRef} hidden></div>
+          <span class="trigger-icon" aria-hidden="true">
+            ${chevronDownIcon}
+            <span class="loader" aria-label="Loading"></span>
+          </span>
         </div>
         <div
-          class="dropdown"
-          role="listbox"
-          id="${listboxId}"
-          aria-label="Options"
-          ref=${(el: HTMLElement) => {
-            dropdownEl = el;
-          }}>
-          <div ref=${dropdownLoadingRef} class="dropdown-loading" hidden>Loading…</div>
-          <div ref=${dropdownEmptyRef} class="dropdown-empty" hidden>No options</div>
-          <div style="position:relative" ref=${dropdownSpacerRef}>
-            <div ref=${dropdownContentRef} style="position:absolute;top:0;left:0;right:0"></div>
-          </div>
-        </div>`,
-    };
+          class="helper-text"
+          aria-live="polite"
+          ?hidden=${() => assistiveText.value.hidden}
+          style=${() => (assistiveText.value.isError ? 'color: var(--color-error);' : '')}>
+          ${() => assistiveText.value.text}
+        </div>
+      </div>
+      <div
+        class="dropdown"
+        ?data-open=${() => isOpen.value}
+        role="listbox"
+        id="${listboxId}"
+        aria-label="Options"
+        ref=${(el: HTMLElement) => {
+          dropdownEl = el;
+        }}>
+        <div class="dropdown-loading" ?hidden=${() => !isLoading.value}>Loading…</div>
+        <div class="dropdown-empty" ?hidden=${() => isLoading.value || options.value.length > 0}>No options</div>
+        <div style="position:relative" ref=${dropdownSpacerRef} ?hidden=${() => isLoading.value}>
+          <div
+            ref=${dropdownContentRef}
+            style="position:absolute;top:0;left:0;right:0"
+            ?hidden=${() => isLoading.value}></div>
+        </div>
+      </div>`;
   },
-  { formAssociated: true, shadow: { delegatesFocus: true } },
+  {
+    formAssociated: true,
+    shadow: { delegatesFocus: true },
+    styles: [
+      sizeVariantMixin({
+        lg: {
+          '--_field-height': 'var(--size-12)',
+          '--_padding': 'var(--size-2-5) var(--size-3-5)',
+          fontSize: 'var(--text-base)',
+          gap: 'var(--size-2-5)',
+        },
+        sm: {
+          '--_field-height': 'var(--size-8)',
+          '--_padding': 'var(--size-1) var(--size-2)',
+          fontSize: 'var(--text-xs)',
+          gap: 'var(--size-1-5)',
+        },
+      }),
+      ...formFieldMixins,
+      disabledLoadingMixin(),
+      forcedColorsFocusMixin('.field'),
+      componentStyles,
+    ],
+  },
 );

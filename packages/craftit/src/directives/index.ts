@@ -7,6 +7,7 @@ export { match } from './match';
 export { memo } from './memo';
 export { on } from './on';
 export { raw } from './raw';
+export { spread } from './spread';
 export { style } from './style';
 export { until } from './until';
 export { when } from './when';

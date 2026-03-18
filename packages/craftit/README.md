@@ -42,7 +42,7 @@ define('my-counter', () => {
 - ✅ **Watch** — `watch(source, callback)` for derived reactions
 - ✅ **Batched updates** — `batch(fn)` to group multiple signal writes
 - ✅ **Props, slots, emits** — `defineProps`, `defineSlots`, `defineEmits`
-- ✅ **Context / DI** — `provide()`, `inject()`, `createContext()` for cross-component data sharing
+- ✅ **Context / DI** — `useProvide()`, `useInject()`, `createContext()` for cross-component data sharing
 - ✅ **Form-associated** — `defineField()` for custom form controls with native validation
 - ✅ **Accessibility** — `aria()`, `createId()`, `createFormIds()`, `useFocusTrap()`
 - ✅ **Lifecycle** — `onMount`, `onUnmount`, `onRendered`, `onCleanup`, `onError`
@@ -79,10 +79,11 @@ batch(() => {
 ### Defining a Component
 
 ```typescript
-import { define, prop, effect, html, ref } from '@vielzeug/craftit';
+import { define, html, defineProps, ref, effect } from '@vielzeug/craftit';
 
 define('user-card', () => {
-  const name = prop('name', 'Guest');
+  const props = defineProps({ name: 'Guest' });
+  const name = props.name; // reactive prop from attributes
   const containerRef = ref<HTMLDivElement>();
 
   effect(() => console.log('name is:', name.value));
@@ -99,16 +100,23 @@ define('user-card', () => {
 ### Props, Slots, and Emits
 
 ```typescript
+import { define, defineProps, defineEmits, defineSlots, html } from '@vielzeug/craftit';
+
 define('my-input', () => {
   const props = defineProps({
-    label: { default: '' },
-    disabled: typed<boolean>(false),
+    label: '',
+    disabled: false,
   });
   const emit = defineEmits<{ change: string }>();
+  const slots = defineSlots();
 
   return html`
     <label>${props.label}</label>
-    <input ?disabled=${props.disabled} @input=${(e: Event) => emit('change', (e.target as HTMLInputElement).value)} />
+    <input
+      ?disabled=${props.disabled}
+      @input=${(e: Event) => emit('change', (e.target as HTMLInputElement).value)}
+    />
+    <p>Has content: ${() => String(slots.has('default').value)}</p>
     <slot></slot>
   `;
 });
@@ -137,18 +145,18 @@ toValue(42); // 42 (plain values pass through)
 
 | Export                               | Description                                                |
 | ------------------------------------ | ---------------------------------------------------------- |
-| `define(name, setup, options?)`      | Register a custom element                                  |
+| `define(name, setup, options?)`      | Register a custom element. `setup` receives `{ host, shadow }` |
 | `prop(name, default, options?)`      | Declare a single reactive prop (syncs with HTML attribute) |
-| `defineProps(defs)`                  | Declare multiple props at once from an object literal      |
+| `defineProps(defs)`                  | Declare multiple props at once (supports direct defaults)  |
 | `typed<T>(default, options?)`        | Typed PropDef helper for explicit type parameters          |
 | `defineEmits<T>()`                   | Emit typed custom events                                   |
 | `defineSlots()`                      | Reactive slot-presence signals for named/default slots     |
 | `onSlotChange(name, cb)`             | React to slot content changes inside `onMount`             |
-| `provide(key, value)`                | Provide a context value to descendant components           |
-| `inject(key, fallback?)`             | Inject a context value from an ancestor component          |
+| `useProvide(key, value)`             | Provide a context value to descendant components           |
+| `useInject(key, fallback?)`          | Inject a context value from an ancestor component          |
 | `createContext<T>()`                 | Create a typed injection key with optional default         |
 | `syncContextProps(ctx, props, keys)` | Reactively inherit props from a context object             |
-| `defineField(options, callbacks?)`   | Form-associated element via ElementInternals               |
+| `defineField(options, callbacks?)`      | Form-associated element via ElementInternals               |
 
 **Signals** (re-exported from `@vielzeug/stateit`)
 
@@ -206,7 +214,7 @@ toValue(42); // 42 (plain values pass through)
 | `onCleanup(fn)`             | Register a cleanup function (runs on unmount or effect re-run)        |
 | `onError(fn)`               | Scoped error boundary for render/lifecycle errors                     |
 | `handle(target, event, fn)` | Add event listener with automatic cleanup                             |
-| `syncDOMProps(el, map)`     | Reactively sync signal values onto DOM element properties             |
+| `.prop=${signal}` / `attr` | Declarative (optionally two-way) property binding for DOM properties   |
 | `aria(attrs)`               | Reactive ARIA attributes on the host (setup) or any element (onMount) |
 | `onFormAssociated(fn)`      | Called when element is inserted into a `<form>`                       |
 | `onFormDisabled(fn)`        | Called when the associated form's disabled state changes              |

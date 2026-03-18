@@ -138,13 +138,42 @@ function applyAttr(element: Element, name: string, value: string | number | bool
  * const { query } = await mount('my-counter');
  */
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetup: string | ((ctx: SetupContext) => SetupResult),
+  tagOrSetupOrOptions: string,
+  options?: MountOptions,
+): Promise<Fixture<T>>;
+export async function mount<T extends HTMLElement = HTMLElement>(
+  tagOrSetupOrOptions: (ctx: SetupContext) => SetupResult,
+  options?: MountOptions,
+): Promise<Fixture<T>>;
+export async function mount<T extends HTMLElement = HTMLElement>(
+  tagOrSetupOrOptions: DefineOptions & { setup: (ctx: SetupContext) => SetupResult },
+  options?: MountOptions,
+): Promise<Fixture<T>>;
+export async function mount<T extends HTMLElement = HTMLElement>(
+  tagOrSetupOrOptions:
+    | string
+    | ((ctx: SetupContext) => SetupResult)
+    | (DefineOptions & { setup: (ctx: SetupContext) => SetupResult }),
   options: MountOptions = {},
 ): Promise<Fixture<T>> {
   const { attrs = {}, container = document.body, defineOptions, html, props = {} } = options;
 
-  const tagName =
-    typeof tagOrSetup === 'function' ? define(`trial-${++_tagCounter}`, tagOrSetup, defineOptions) : tagOrSetup;
+  let tagName: string;
+  let setup: (ctx: SetupContext) => SetupResult;
+  const defOptions: DefineOptions | undefined = defineOptions;
+
+  if (typeof tagOrSetupOrOptions === 'string') {
+    tagName = tagOrSetupOrOptions;
+  } else if (typeof tagOrSetupOrOptions === 'function') {
+    tagName = `trial-${++_tagCounter}`;
+    setup = tagOrSetupOrOptions;
+    define(tagName, setup, defOptions ?? {});
+  } else {
+    tagName = `trial-${++_tagCounter}`;
+    setup = tagOrSetupOrOptions.setup;
+    define(tagName, setup, tagOrSetupOrOptions);
+  }
+
   const element = document.createElement(tagName) as T;
 
   if (html) element.innerHTML = html;

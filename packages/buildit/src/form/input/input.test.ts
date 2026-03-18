@@ -229,6 +229,17 @@ describe('bit-input', () => {
 
       expect(fixture.query('input')?.getAttribute('aria-invalid')).not.toBe('true');
     });
+
+    it('hides helper text when error is present', async () => {
+      fixture = await mount('bit-input', { attrs: { error: 'Required', helper: 'Enter your email' } });
+
+      const helperEl = fixture.query<HTMLElement>('.helper-text:not([role="alert"])');
+      const errorEl = fixture.query<HTMLElement>('.helper-text[role="alert"]');
+
+      expect(helperEl?.hidden).toBe(true);
+      expect(errorEl?.hidden).toBe(false);
+      expect(errorEl?.textContent?.trim()).toBe('Required');
+    });
   });
 
   // ─── Events ────────────────────────────────────────────────────────────────
@@ -364,6 +375,28 @@ describe('bit-input', () => {
       fixture = await mount('bit-input', { attrs: { rounded: 'full' } });
 
       expect(fixture.element.getAttribute('rounded')).toBe('full');
+    });
+
+    it('marks char counter as near-limit at 90% maxlength', async () => {
+      fixture = await mount('bit-input', { attrs: { maxlength: '10', value: '123456789' } });
+
+      const counter = fixture.query<HTMLElement>('.char-counter');
+
+      expect(counter?.hidden).toBe(false);
+      expect(counter?.textContent?.trim()).toBe('9 / 10');
+      expect(counter?.hasAttribute('data-near-limit')).toBe(true);
+      expect(counter?.hasAttribute('data-at-limit')).toBe(false);
+    });
+
+    it('marks char counter as at-limit at maxlength', async () => {
+      fixture = await mount('bit-input', { attrs: { maxlength: '10', value: '1234567890' } });
+
+      const counter = fixture.query<HTMLElement>('.char-counter');
+
+      expect(counter?.hidden).toBe(false);
+      expect(counter?.textContent?.trim()).toBe('10 / 10');
+      expect(counter?.hasAttribute('data-at-limit')).toBe(true);
+      expect(counter?.hasAttribute('data-near-limit')).toBe(false);
     });
   });
 });

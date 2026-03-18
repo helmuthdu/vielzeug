@@ -2,8 +2,7 @@
  * Testing - Render Utilities Tests
  * Tests for the testing utilities themselves
  */
-import { html, signal } from '@vielzeug/craftit';
-
+import { html, signal } from '..';
 import { cleanup, fire, mock, mount, user, waitFor } from './';
 
 describe('Testing: Render Utilities', () => {

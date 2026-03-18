@@ -3,17 +3,18 @@ import {
   createContext,
   createId,
   define,
-  defineProps,
   effect,
+  fire,
   handle,
   html,
-  inject,
+  useInject,
   onMount,
   onSlotChange,
-  provide,
+  useProvide,
   type ReadonlySignal,
   signal,
   watch,
+  defineProps,
 } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -27,13 +28,13 @@ import { FORM_CTX } from '../form/form';
 export type RadioGroupContext = {
   color: ReadonlySignal<ThemeColor | undefined>;
   disabled: ReadonlySignal<boolean>;
-  name: ReadonlySignal<string>;
+  name: ReadonlySignal<string | undefined>;
   select: (value: string) => void;
   size: ReadonlySignal<ComponentSize | undefined>;
   value: ReadonlySignal<string>;
 };
 
-export const RADIO_GROUP_CTX = createContext<RadioGroupContext>();
+export const RADIO_GROUP_CTX = createContext<RadioGroupContext>('RadioGroupContext');
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -95,171 +96,168 @@ export type BitRadioGroupProps = {
  * </bit-radio-group>
  * ```
  */
-export const RADIO_GROUP_TAG = define('bit-radio-group', ({ host }) => {
-  const props = defineProps<BitRadioGroupProps>({
-    color: { default: undefined },
-    disabled: { default: false },
-    error: { default: '' },
-    helper: { default: '' },
-    label: { default: '' },
-    name: { default: '' },
-    orientation: { default: 'vertical' },
-    required: { default: false },
-    size: { default: undefined },
-    value: { default: '' },
-  });
+export const RADIO_GROUP_TAG = define(
+  'bit-radio-group',
+  ({ host }) => {
+    const props = defineProps<BitRadioGroupProps>({
+      color: { default: undefined },
+      disabled: { default: false },
+      error: { default: '' },
+      helper: { default: '' },
+      label: { default: '' },
+      name: { default: '' },
+      orientation: { default: 'vertical' },
+      required: { default: false },
+      size: { default: undefined },
+      value: { default: '' },
+    });
 
-  const selectedValue = signal('');
+    const selectedValue = signal('');
 
-  watch(
-    props.value,
-    (v) => {
-      selectedValue.value = v;
-    },
-    { immediate: true },
-  );
+    watch(
+      props.value,
+      (v) => {
+        selectedValue.value = (v as string | undefined) ?? '';
+      },
+      { immediate: true },
+    );
 
-  const selectRadio = (val: string) => {
-    selectedValue.value = val;
-    host.dispatchEvent(new CustomEvent('change', { bubbles: true, composed: true, detail: { value: val } }));
-  };
+    const selectRadio = (val: string) => {
+      selectedValue.value = val;
+      fire(host, 'change', { detail: { value: val } });
+    };
+    const formCtx = useInject(FORM_CTX, undefined);
 
-  const formCtx = inject(FORM_CTX);
+    mountFormContextSync(host, formCtx, props);
+    // Provide context to child bit-radio elements
+    useProvide(RADIO_GROUP_CTX, {
+      color: props.color,
+      disabled: computed(() => Boolean(props.disabled.value)),
+      name: props.name,
+      select: selectRadio,
+      size: props.size,
+      value: selectedValue,
+    });
 
-  mountFormContextSync(host, formCtx, props);
+    // Sync name/color/size/disabled onto slotted bit-radio children.
+    // Checked state is handled reactively inside bit-radio via group context.
+    const syncChildren = () => {
+      const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
 
-  // Provide context to child bit-radio elements
-  provide(RADIO_GROUP_CTX, {
-    color: props.color,
-    disabled: computed(() => Boolean(props.disabled.value)),
-    name: props.name,
-    select: selectRadio,
-    size: props.size,
-    value: selectedValue,
-  });
+      if (!slot) return;
 
-  // Sync name/color/size/disabled onto slotted bit-radio children.
-  // Checked state is handled reactively inside bit-radio via group context.
-  const syncChildren = () => {
-    const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
-
-    if (!slot) return;
-
-    const radios = slot
-      .assignedElements({ flatten: true })
-      .filter((el) => el.tagName.toLowerCase() === 'bit-radio') as HTMLElement[];
-
-    for (const radio of radios) {
-      const val = radio.getAttribute('value') ?? '';
-
-      if (val === selectedValue.value) radio.setAttribute('checked', '');
-      else radio.removeAttribute('checked');
-
-      if (props.name.value) radio.setAttribute('name', props.name.value);
-
-      if (props.color.value) radio.setAttribute('color', props.color.value);
-      else radio.removeAttribute('color');
-
-      if (props.size.value) radio.setAttribute('size', props.size.value);
-      else radio.removeAttribute('size');
-
-      if (props.disabled.value) radio.setAttribute('disabled', '');
-      else radio.removeAttribute('disabled');
-    }
-  };
-
-  onMount(() => {
-    onSlotChange('default', syncChildren);
-    effect(syncChildren);
-
-    // Roving tabindex: only the selected (or first) radio is tabbable
-    const updateTabindex = () => {
-      const slot2 = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
-
-      if (!slot2) return;
-
-      const radios = slot2
+      const radios = slot
         .assignedElements({ flatten: true })
         .filter((el) => el.tagName.toLowerCase() === 'bit-radio') as HTMLElement[];
-      let hasFocusable = false;
 
       for (const radio of radios) {
-        const isSelected = radio.getAttribute('value') === selectedValue.value;
+        const val = radio.getAttribute('value') ?? '';
 
-        if (isSelected && !props.disabled.value) {
-          radio.setAttribute('tabindex', '0');
-          hasFocusable = true;
-        } else {
-          radio.setAttribute('tabindex', '-1');
+        if (val === selectedValue.value) radio.setAttribute('checked', '');
+        else radio.removeAttribute('checked');
+
+        if (props.name.value) radio.setAttribute('name', props.name.value);
+
+        if (props.color.value) radio.setAttribute('color', props.color.value);
+        else radio.removeAttribute('color');
+
+        if (props.size.value) radio.setAttribute('size', props.size.value);
+        else radio.removeAttribute('size');
+
+        if (props.disabled.value) radio.setAttribute('disabled', '');
+        else radio.removeAttribute('disabled');
+      }
+    };
+
+    onMount(() => {
+      onSlotChange('default', syncChildren);
+      effect(syncChildren);
+
+      // Roving tabindex: only the selected (or first) radio is tabbable
+      const updateTabindex = () => {
+        const slot2 = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
+
+        if (!slot2) return;
+
+        const radios = slot2
+          .assignedElements({ flatten: true })
+          .filter((el) => el.tagName.toLowerCase() === 'bit-radio') as HTMLElement[];
+        let hasFocusable = false;
+
+        for (const radio of radios) {
+          const isSelected = radio.getAttribute('value') === selectedValue.value;
+
+          if (isSelected && !props.disabled.value) {
+            radio.setAttribute('tabindex', '0');
+            hasFocusable = true;
+          } else {
+            radio.setAttribute('tabindex', '-1');
+          }
         }
-      }
 
-      // If nothing is selected, make the first non-disabled radio tabbable
-      if (!hasFocusable && radios.length > 0) {
-        const first = radios.find((r) => !r.hasAttribute('disabled'));
+        // If nothing is selected, make the first non-disabled radio tabbable
+        if (!hasFocusable && radios.length > 0) {
+          const first = radios.find((r) => !r.hasAttribute('disabled'));
 
-        if (first) first.setAttribute('tabindex', '0');
-      }
-    };
+          if (first) first.setAttribute('tabindex', '0');
+        }
+      };
 
-    effect(updateTabindex);
+      effect(updateTabindex);
 
-    // Arrow-key navigation within the group
-    const handleKeydown = (e: KeyboardEvent) => {
-      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      // Arrow-key navigation within the group
+      const handleKeydown = (e: KeyboardEvent) => {
+        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
 
-      const slot3 = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
+        const slot3 = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
 
-      if (!slot3) return;
+        if (!slot3) return;
 
-      const radios = slot3
-        .assignedElements({ flatten: true })
-        .filter((el) => el.tagName.toLowerCase() === 'bit-radio' && !el.hasAttribute('disabled')) as HTMLElement[];
+        const radios = slot3
+          .assignedElements({ flatten: true })
+          .filter((el) => el.tagName.toLowerCase() === 'bit-radio' && !el.hasAttribute('disabled')) as HTMLElement[];
 
-      if (!radios.length) return;
+        if (!radios.length) return;
 
-      const focused = radios.indexOf(document.activeElement as HTMLElement);
+        const focused = radios.indexOf(document.activeElement as HTMLElement);
 
-      if (focused === -1) return;
+        if (focused === -1) return;
 
-      e.preventDefault();
+        e.preventDefault();
 
-      const next =
-        e.key === 'ArrowDown' || e.key === 'ArrowRight'
-          ? (focused + 1) % radios.length
-          : (focused - 1 + radios.length) % radios.length;
+        const next =
+          e.key === 'ArrowDown' || e.key === 'ArrowRight'
+            ? (focused + 1) % radios.length
+            : (focused - 1 + radios.length) % radios.length;
 
-      radios[next].focus();
+        radios[next].focus();
 
-      const val = radios[next].getAttribute('value') ?? '';
+        const val = radios[next].getAttribute('value') ?? '';
 
-      selectRadio(val);
-    };
+        selectRadio(val);
+      };
 
-    handle(host, 'keydown', handleKeydown);
-    // Listen for change events bubbled from child bit-radio elements
-    handle(host, 'change', (e: Event) => {
-      if (e.target === host) return; // our own re-dispatch
+      handle(host, 'keydown', handleKeydown);
+      // Listen for change events bubbled from child bit-radio elements
+      handle(host, 'change', (e: Event) => {
+        if (e.target === host) return; // our own re-dispatch
 
-      e.stopPropagation();
+        e.stopPropagation();
 
-      const target = e.target as HTMLElement;
-      const val = target.getAttribute('value') ?? '';
+        const target = e.target as HTMLElement;
+        const val = target.getAttribute('value') ?? '';
 
-      selectRadio(val);
+        selectRadio(val);
+      });
     });
-  });
 
-  const legendId = createId('radio-group-legend');
-  const errorId = `${legendId}-error`;
-  const helperId = `${legendId}-helper`;
+    const legendId = createId('radio-group-legend');
+    const errorId = `${legendId}-error`;
+    const helperId = `${legendId}-helper`;
+    const hasError = computed(() => Boolean(props.error.value));
+    const hasHelper = computed(() => Boolean(props.helper.value) && !hasError.value);
 
-  const hasError = computed(() => Boolean(props.error.value));
-  const hasHelper = computed(() => Boolean(props.helper.value) && !hasError.value);
-
-  return {
-    styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
-    template: html`
+    return html`
       <fieldset
         role="radiogroup"
         aria-required="${() => String(Boolean(props.required.value))}"
@@ -277,6 +275,9 @@ export const RADIO_GROUP_TAG = define('bit-radio-group', ({ host }) => {
         </div>
         <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper.value}>${() => props.helper.value}</div>
       </fieldset>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
+  },
+);

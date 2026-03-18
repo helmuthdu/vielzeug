@@ -15,14 +15,15 @@ Define and register a custom element with a setup function.
 **Parameters:**
 
 - `name: string` – Element tag name (must contain a hyphen, e.g., 'my-component')
-- `setup: (ctx: SetupContext) => SetupResult` – Setup function called with `{ host }` context; returns template or configuration
+- `setup: (ctx: SetupContext) => SetupResult` – Setup function called with `{ host, shadow }`; returns a template (`string` or `HTMLResult`)
 - `options?: DefineOptions` – Optional configuration
 
 **DefineOptions:**
 
 - `formAssociated?: boolean` — Enable form-associated custom element (required for `defineField()`)
+- `host?: Record<string, string | boolean | number>` — Static attributes applied to the host element
 - `shadow?: Omit<ShadowRootInit, 'mode'>` — Shadow root init options, e.g. `{ delegatesFocus: true }`
-- `target?: string | HTMLElement` — Render the shadow root into this selector or element (portal)
+- `styles?: readonly (string | CSSStyleSheet | CSSResult)[]` — Static styles adopted by the component shadow root
 
 **SetupContext:**
 
@@ -63,18 +64,24 @@ define(
 **With Styles:**
 
 ```ts
-define('styled-button', () => {
-  const styles = css`
-    button {
-      background: #0070f3;
-      color: white;
-    }
-  `;
-  return {
-    template: html`<button>Click Me</button>`,
-    styles: [styles.content],
-  };
-});
+import { define, html, css } from '@vielzeug/craftit';
+
+define(
+  'styled-button',
+  () => {
+    return html`<button>Click Me</button>`;
+  },
+  {
+    styles: [
+      css`
+        button {
+          background: #0070f3;
+          color: white;
+        }
+      `,
+    ],
+  },
+);
 ```
 
 ## Signals
@@ -442,10 +449,25 @@ html`${show(open, () => html`<heavy-chart></heavy-chart>`)}`;
 
 ---
 
+### `.value=${signal}` / `.checked=${signal}`
+
+Property bindings are declarative and reactive. When the source is a writable signal and the property is `.value` or `.checked`, Craftit also wires DOM -> signal updates automatically.
+
+**Example:**
+
+```ts
+const name = signal('Alice');
+const accepted = signal(false);
+
+html`<input .value=${name} />`;
+html`<input type="checkbox" .checked=${accepted} />`;
+```
+
+---
+
 ### `bind(signal)` — from `@vielzeug/craftit/directives`
 
-Two-way input binding — attaches reactive `:value` + `input` listener in one step.
-Use in spread position on any `<input>`, `<textarea>`, or `<select>` element.
+Spread-position alias for two-way form bindings. Prefer `.value` / `.checked` in templates when possible.
 
 **Signature:**
 
@@ -546,45 +568,6 @@ html`${loadUser()}`;
 const trusted = '<strong>Bold</strong>';
 raw`<div>${trusted}</div>`; // raw tag
 html`<div>${rawHtml(trusted)}</div>`; // only this value unescaped
-```
-
----
-
-### Portals (Component Target)
-
-Render components to different DOM locations using the `target` option.
-**Example:**
-
-```ts
-define(
-  'modal-dialog',
-  () => {
-    const isOpen = prop('open', false, { parse: (v) => v === '' || v === 'true' });
-    return html`
-      ${html.when(
-        isOpen,
-        () => html`
-          <div class="modal">
-            <button
-              @click=${() => {
-                isOpen.value = false;
-              }}>
-              Close
-            </button>
-          </div>
-        `,
-      )}
-    `;
-  },
-  { target: 'body' },
-);
-
-// Usage:
-const showModal = signal(false);
-html`
-  <button @click=${() => (showModal.value = true)}>Open Modal</button>
-  <modal-dialog ?open=${showModal}></modal-dialog>
-`;
 ```
 
 ---
@@ -733,40 +716,6 @@ define('my-component', () => {
     return () => clearInterval(timer);
   });
   return html`<div>Content</div>`;
-});
-```
-
----
-
-### `onUnmount(fn)`
-
-Register a function to run before component unmounts.
-**Parameters:**
-
-- `fn: CleanupFn` – Unmount callback
-  **Returns:** `void`
-  **Example:**
-
-```ts
-onUnmount(() => {
-  console.log('Unmounting...');
-});
-```
-
----
-
-### `onRendered(fn)`
-
-Runs **once** after the component's initial render completes and all `onMount` hooks have finished. Use for measuring DOM or initialising third-party libraries that need a fully-painted DOM.
-**Parameters:**
-
-- `fn: () => void` – Callback
-  **Returns:** `void`
-  **Example:**
-
-```ts
-onRendered(() => {
-  console.log('Initial render complete — DOM is ready to measure');
 });
 ```
 
@@ -1086,7 +1035,7 @@ define('focus-input', () => {
 ### `refs()`
 
 Create a list of element references for multiple elements. `values` is a live, deduped `ReadonlyArray<T>`.
-**Returns:** `RefList<T>`
+**Returns:** `Refs<T>`
 **Example:**
 
 ```ts
@@ -1115,13 +1064,13 @@ Create a typed injection key (preferred over `Symbol()`).
 
 ```ts
 const ThemeKey = createContext<{ mode: Signal<'light' | 'dark'> }>();
-provide(ThemeKey, { mode: signal('light') });
-const theme = inject(ThemeKey); // typed: { mode: Signal<'light' | 'dark'> } | undefined
+useProvide(ThemeKey, { mode: signal('light') });
+const theme = useInject(ThemeKey); // typed: { mode: Signal<'light' | 'dark'> } | undefined
 ```
 
 ---
 
-### `provide(key, value)`
+### `useProvide(key, value)`
 
 Provide a value to descendant components.
 **Parameters:**
@@ -1135,14 +1084,14 @@ Provide a value to descendant components.
 const ThemeKey: InjectionKey<{ mode: Signal<string> }> = Symbol('theme');
 define('app-root', () => {
   const mode = signal('light');
-  provide(ThemeKey, { mode });
+  useProvide(ThemeKey, { mode });
   return html`<slot></slot>`;
 });
 ```
 
 ---
 
-### `inject(key, fallback?)`
+### `useInject(key, fallback?)`
 
 Inject a value from an ancestor component.
 **Parameters:**
@@ -1154,7 +1103,7 @@ Inject a value from an ancestor component.
 
 ```ts
 define('themed-button', () => {
-  const theme = inject(ThemeKey);
+  const theme = useInject(ThemeKey);
   return html` <button class=${theme?.mode.value}>Button</button> `;
 });
 ```
@@ -1274,9 +1223,9 @@ define('guarded-button', () => {
 ### `defineSlots()`
 
 Access slotted content from the host element. Must be called inside a `define` setup function.
-**Returns:** `SlotsAPI<T>`
+**Returns:** `Slots<T>`
 
-**SlotsAPI methods:**
+**Slots methods:**
 
 - `has(name): ReadonlySignal<boolean>` – Reactive signal that is `true` when the named slot has assigned nodes
 
@@ -1333,28 +1282,27 @@ html`<counter-button @clicked=${(e: CustomEvent) => console.log(e.detail.count)}
 
 ---
 
-### Form Lifecycle Callbacks
+### Form Lifecycle via `defineField` Callbacks
 
-These must be called inside a `define` setup for components with `{ formAssociated: true }`:
-
-| Function                 | Fires when                            |
-| ------------------------ | ------------------------------------- |
-| `onFormAssociated(fn)`   | Element is inserted into a form       |
-| `onFormDisabled(fn)`     | Form's `disabled` state changes       |
-| `onFormReset(fn)`        | The associated form is reset          |
-| `onFormStateRestore(fn)` | Browser restores submitted-form state |
+Use `defineField(options, callbacks)` to react to form lifecycle events:
 
 ```ts
 define(
   'custom-input',
   () => {
     const value = signal('');
-    const formField = defineField({ value });
 
-    onFormReset(() => {
-      value.value = '';
-    });
-    onFormDisabled((isDisabled) => console.log('disabled:', isDisabled));
+    defineField(
+      { value },
+      {
+        onReset: () => {
+          value.value = '';
+        },
+        onDisabled: (isDisabled) => {
+          console.log('disabled:', isDisabled);
+        },
+      },
+    );
 
     return html`<input :value=${value} @input=${(e) => (value.value = e.target.value)} />`;
   },
@@ -1496,7 +1444,7 @@ Reactively inherits prop values from a context object provided by an ancestor co
 
 **Parameters:**
 
-- `ctx: Ctx | undefined` – Context object (usually from `inject()`)
+- `ctx: Ctx | undefined` – Context object (usually from `useInject()`)
 - `props: Props` – The component’s props object from `defineProps()`
 - `keys: K[]` – The prop keys to sync from context into props
 
@@ -1508,33 +1456,25 @@ const BUTTON_GROUP_CTX = createContext<{ size: ReadonlySignal<string>; variant: 
 define('my-button', () => {
   const props = defineProps({ size: { default: 'md' }, variant: { default: 'primary' } });
   // Inherit size/variant from a parent <button-group> if available
-  syncContextProps(inject(BUTTON_GROUP_CTX), props, ['size', 'variant']);
+  syncContextProps(useInject(BUTTON_GROUP_CTX), props, ['size', 'variant']);
   return html`<button class=${() => `btn-${props.variant.value} btn-${props.size.value}`}><slot /></button>`;
 });
 ```
 
 ---
 
-### `syncDOMProps(el, map)`
+### `attr(map)` / `spread(map)` — from `@vielzeug/craftit/directives`
 
-Reactively synchronises Signal or getter values onto DOM element properties. A single tracked effect is created and its cleanup registered automatically. Must be called inside `onMount`.
+Batch binding helpers for spread position.
 
-**Parameters:**
-
-- `el: E extends Element` – Target DOM element
-- `map: Record<string, ReadonlySignal<unknown> | (() => unknown)>` – Property name to signal/getter map
+- `attr(map)` applies DOM property bindings (`.value`, `.disabled`, etc.)
+- `spread(map)` supports mixed keys: `name` (attr), `?name` (bool attr), `.name` (prop), `@name` (event)
 
 **Example:**
 
 ```ts
-onMount(() => {
-  syncDOMProps(inputRef.value!, {
-    disabled: props.disabled,
-    readOnly: props.readonly,
-    name: props.name,
-    type: () => validateType(props.type.value),
-  });
-});
+html`<input ${attr({ value: name, disabled: isDisabled })} />`;
+html`<button ${spread({ title: label, '?disabled': isDisabled, '.value': label, '@click': onClick })}></button>`;
 ```
 
 ## Testing Utilities
@@ -1762,7 +1702,7 @@ interface CSSResult {
 interface Ref<T extends Element = Element> {
   value: T | null;
 }
-interface RefList<T extends Element = Element> {
+interface Refs<T extends Element = Element> {
   readonly values: ReadonlyArray<T>;
   add(el: T | null): void;
   clear(): void;
@@ -1774,18 +1714,14 @@ type SetupContext = { host: HTMLElement; shadow: ShadowRoot };
 
 type SetupResult =
   | string
-  | HTMLResult
-  | {
-      template: string | HTMLResult;
-      styles?: (string | CSSStyleSheet | CSSResult)[];
-    };
+  | HTMLResult;
 
 type DefineOptions = {
   formAssociated?: boolean;
+  host?: Record<string, string | boolean | number>;
   /** Shadow root init options — mode is always 'open' */
   shadow?: Omit<ShadowRootInit, 'mode'>;
-  /** Render the element's shadow root into this selector or element (portal) */
-  target?: string | HTMLElement;
+  styles?: readonly (string | CSSStyleSheet | CSSResult)[];
 };
 ```
 

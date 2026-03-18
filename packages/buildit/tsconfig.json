@@ -3,6 +3,12 @@
   "include": ["src/**/*.d.ts", "src/**/*.ts"],
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "customConditions": ["source"]
+    "baseUrl": ".",
+    "customConditions": ["source"],
+    "paths": {
+      "@vielzeug/craftit": ["../craftit/src/index.ts"],
+      "@vielzeug/craftit/directives": ["../craftit/src/directives/index.ts"],
+      "@vielzeug/craftit/test": ["../craftit/src/test/index.ts"]
+    }
   }
 }

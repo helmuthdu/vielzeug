@@ -187,6 +187,29 @@ describe('bit-select', () => {
 
       expect(Array.isArray(detail.values)).toBe(true);
     });
+
+    it('updates selected state immediately for grouped options while dropdown stays open', async () => {
+      fixture = await mount('bit-select', {
+        attrs: { multiple: true },
+        html: OPTIONS_WITH_GROUPS,
+      });
+
+      await user.click(fixture.query<HTMLElement>('.field')!);
+      await fixture.flush();
+
+      const carrotOption = Array.from(fixture.queryAll<HTMLElement>('[role="option"]')).find(
+        (option) => option.textContent?.trim() === 'Carrot',
+      );
+
+      expect(carrotOption).toBeTruthy();
+
+      await user.click(carrotOption!);
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('open')).toBe(true);
+      expect(carrotOption?.getAttribute('aria-selected')).toBe('true');
+      expect(carrotOption?.hasAttribute('data-selected')).toBe(true);
+    });
   });
 
   // ─── States ──────────────────────────────────────────────────────────────────
@@ -242,6 +265,62 @@ describe('bit-select', () => {
       await fixture.attr('value', 'banana');
 
       expect(fixture.element.getAttribute('value')).toBe('banana');
+    });
+
+    it('renders chips after csv value update in multiple mode', async () => {
+      fixture = await mount('bit-select', { attrs: { multiple: true }, html: OPTIONS });
+
+      await fixture.attr('value', 'apple,banana');
+
+      expect(fixture.queryAll('bit-chip').length).toBe(2);
+    });
+
+    it('applies color to rendered chips in multiple mode', async () => {
+      fixture = await mount('bit-select', {
+        attrs: { color: 'primary', multiple: true, value: 'apple,banana' },
+        html: OPTIONS,
+      });
+
+      await fixture.flush();
+
+      expect(fixture.query('bit-chip')?.getAttribute('color')).toBe('primary');
+    });
+
+    it('updates rendered chip color when select color changes', async () => {
+      fixture = await mount('bit-select', {
+        attrs: { color: 'primary', multiple: true, value: 'apple,banana' },
+        html: OPTIONS,
+      });
+
+      await fixture.flush();
+      await fixture.attr('color', 'success');
+      await fixture.flush();
+
+      expect(fixture.query('bit-chip')?.getAttribute('color')).toBe('success');
+    });
+
+    it('removes a chip when its remove button is clicked', async () => {
+      fixture = await mount('bit-select', {
+        attrs: { multiple: true, value: 'apple,banana' },
+        html: OPTIONS,
+      });
+
+      const changeHandler = vi.fn();
+
+      fixture.element.addEventListener('change', changeHandler);
+      await fixture.flush();
+
+      const chip = fixture.query<HTMLElement>('bit-chip');
+      const removeBtn = chip?.shadowRoot?.querySelector<HTMLButtonElement>('.remove-btn');
+
+      expect(removeBtn).toBeTruthy();
+
+      await user.click(removeBtn!);
+      await fixture.flush();
+
+      expect(fixture.queryAll('bit-chip').length).toBe(1);
+      expect(changeHandler).toHaveBeenCalled();
+      expect((changeHandler.mock.calls.at(-1)?.[0] as CustomEvent).detail.values).toEqual(['banana']);
     });
   });
 

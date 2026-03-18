@@ -1,6 +1,6 @@
 import { isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import type { HTMLResult } from '../craftit';
+import type { Directive, HTMLResult } from '../internal';
 
 /**
  * Conditionally renders one of two templates based on a condition.
@@ -18,17 +18,19 @@ export function when<V extends string | HTMLResult>(
   condition: Signal<unknown> | ReadonlySignal<unknown> | (() => unknown),
   thenFn: () => V,
   elseFn?: () => V,
-): () => string | HTMLResult;
+): Directive;
 export function when<V extends string | HTMLResult>(condition: unknown, thenFn: () => V, elseFn?: () => V): V | string;
 export function when<V extends string | HTMLResult>(
   condition: unknown,
   thenFn: () => V,
   elseFn?: () => V,
-): V | string | (() => string | HTMLResult) {
+): V | string | Directive {
   if (isSignal(condition) || typeof condition === 'function') {
     const get = isSignal(condition) ? () => (condition as ReadonlySignal<unknown>).value : (condition as () => unknown);
 
-    return (): string | HTMLResult => (get() ? thenFn() : (elseFn?.() ?? ''));
+    return {
+      render: (): string | HTMLResult => (get() ? thenFn() : (elseFn?.() ?? '')),
+    };
   }
 
   return condition ? thenFn() : (elseFn?.() ?? '');

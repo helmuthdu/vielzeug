@@ -1,4 +1,14 @@
-import { computed, define, defineProps, effect, html, inject, syncContextProps } from '@vielzeug/craftit';
+import {
+  computed,
+  define,
+  effect,
+  fire,
+  html,
+  typed,
+  useInject,
+  syncContextProps,
+  defineProps,
+} from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -43,46 +53,41 @@ export type BitTabItemProps = {
  * <bit-tab-item slot="tabs" value="settings" disabled>Settings</bit-tab-item>
  * ```
  */
-export const TAB_ITEM_TAG = define('bit-tab-item', ({ host }) => {
-  const props = defineProps<BitTabItemProps>({
-    active: { default: false },
-    color: { default: undefined },
-    disabled: { default: false },
-    size: { default: undefined },
-    value: { default: '' },
-    variant: { default: undefined },
-  });
+export const TAB_ITEM_TAG = define(
+  'bit-tab-item',
+  ({ host }) => {
+    const props = defineProps<BitTabItemProps>({
+      active: typed<boolean>(false),
+      color: typed<BitTabItemProps['color']>(undefined),
+      disabled: typed<boolean>(false),
+      size: typed<BitTabItemProps['size']>(undefined),
+      value: typed<string>(''),
+      variant: typed<BitTabItemProps['variant']>(undefined),
+    });
 
-  const tabsCtx = inject(TABS_CTX, undefined);
+    const tabsCtx = useInject(TABS_CTX, undefined);
 
-  syncContextProps(tabsCtx, props, ['color', 'size', 'variant']);
+    syncContextProps(tabsCtx, props, ['color', 'size', 'variant']);
 
-  const isActive = tabsCtx
-    ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
-    : props.active;
+    const isActive = tabsCtx
+      ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
+      : props.active;
 
-  effect(() => {
-    host.toggleAttribute('active', isActive.value);
-  });
+    effect(() => {
+      host.toggleAttribute('active', isActive.value);
+    });
 
-  const ariaSelected = computed(() => String(isActive.value));
-  const tabIndex = computed(() => (isActive.value ? '0' : '-1'));
+    const ariaSelected = computed(() => String(isActive.value));
+    const tabIndex = computed(() => (isActive.value ? '0' : '-1'));
+    const handleClick = () => {
+      if (props.disabled.value) return;
 
-  const handleClick = () => {
-    if (props.disabled.value) return;
-
-    host.dispatchEvent(
-      new CustomEvent('tab-click', {
-        bubbles: true,
-        composed: true,
+      fire(host, 'click', {
         detail: { value: props.value.value },
-      }),
-    );
-  };
+      });
+    };
 
-  return {
-    styles: [colorThemeMixin, forcedColorsFocusMixin('button'), coarsePointerMixin, styles],
-    template: html`
+    return html`
       <button
         role="tab"
         type="button"
@@ -97,6 +102,9 @@ export const TAB_ITEM_TAG = define('bit-tab-item', ({ host }) => {
         <slot></slot>
         <slot name="suffix"></slot>
       </button>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [colorThemeMixin, forcedColorsFocusMixin('button'), coarsePointerMixin, styles],
+  },
+);

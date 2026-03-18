@@ -2,9 +2,7 @@ import {
   computed,
   createId,
   define,
-  defineEmits,
   defineField,
-  defineProps,
   effect,
   handle,
   html,
@@ -12,6 +10,8 @@ import {
   onMount,
   ref,
   signal,
+  defineProps,
+  defineEmits,
 } from '@vielzeug/craftit';
 import { each } from '@vielzeug/craftit/directives';
 import { createDropZone } from '@vielzeug/dragit';
@@ -35,7 +35,7 @@ function formatBytes(bytes: number): string {
   return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${units[i]}`;
 }
 
-function matchesAccept(file: File, accept: string): boolean {
+function matchesAccept(file: File, accept: string | undefined): boolean {
   if (!accept) return true;
 
   return accept
@@ -50,11 +50,13 @@ function matchesAccept(file: File, accept: string): boolean {
     });
 }
 
-function isFileAccepted(file: File, accept: string): boolean {
+function isFileAccepted(file: File, accept: string | undefined): boolean {
   return !accept || matchesAccept(file, accept);
 }
 
-function isFileSizeAllowed(file: File, maxBytes: number): boolean {
+function isFileSizeAllowed(file: File, maxBytes: number | undefined): boolean {
+  if (maxBytes == null) return true;
+
   return maxBytes === 0 || file.size <= maxBytes;
 }
 
@@ -160,8 +162,6 @@ export type BitFileInputProps = {
 export const FILE_INPUT_TAG = define(
   'bit-file-input',
   ({ host }) => {
-    const emit = defineEmits<BitFileInputEvents>();
-
     const props = defineProps<BitFileInputProps>({
       accept: { default: '' },
       color: { default: undefined },
@@ -179,18 +179,17 @@ export const FILE_INPUT_TAG = define(
       size: { default: undefined },
       variant: { default: undefined },
     });
+    const emit = defineEmits<BitFileInputEvents>();
 
     // ============================================
     // State
     // ============================================
-
     const files = signal<File[]>([]);
     const isDragging = signal(false);
 
     // ============================================
     // Form Integration
     // ============================================
-
     defineField(
       {
         disabled: computed(() => Boolean(props.disabled.value)),
@@ -220,7 +219,6 @@ export const FILE_INPUT_TAG = define(
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       isInvalid.value ? host.setAttribute('invalid', '') : host.removeAttribute('invalid');
     });
-
     effect(() => {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       isDragging.value ? host.setAttribute('drag-over', '') : host.removeAttribute('drag-over');
@@ -229,19 +227,15 @@ export const FILE_INPUT_TAG = define(
     // ============================================
     // IDs
     // ============================================
-
     const fileInputId = createId('file-input');
     const labelId = `label-${fileInputId}`;
     const helperId = `helper-${fileInputId}`;
     const errorId = `error-${fileInputId}`;
-
     // ============================================
     // Refs
     // ============================================
-
     const dropzoneRef = ref<HTMLDivElement>();
     const inputRef = ref<HTMLInputElement>();
-
     const hintText = computed(() => {
       const parts: string[] = [];
 
@@ -249,15 +243,18 @@ export const FILE_INPUT_TAG = define(
         parts.push(
           props.accept.value
             .split(',')
-            .map((s) => s.trim())
+            .map((s: string) => s.trim())
             .join(', '),
         );
       }
 
-      if (props['max-size'].value > 0) parts.push(`max ${formatBytes(props['max-size'].value)}`);
+      const maxSize = props['max-size'].value ?? 0;
 
-      if (props['max-files'].value > 0)
-        parts.push(`up to ${props['max-files'].value} file${props['max-files'].value !== 1 ? 's' : ''}`);
+      if (maxSize > 0) parts.push(`max ${formatBytes(maxSize)}`);
+
+      const maxFiles = props['max-files'].value ?? 0;
+
+      if (maxFiles > 0) parts.push(`up to ${maxFiles} file${maxFiles !== 1 ? 's' : ''}`);
 
       return parts.join(' · ');
     });
@@ -265,15 +262,13 @@ export const FILE_INPUT_TAG = define(
     // ============================================
     // File Management
     // ============================================
-
     function addFiles(newFiles: File[], originalEvent?: Event): void {
       if (props.disabled.value) return;
 
-      const maxFilesLimit = props['max-files'].value;
-      const maxSizeLimit = props['max-size'].value;
+      const maxFilesLimit = props['max-files'].value ?? 0;
+      const maxSizeLimit = props['max-size'].value ?? 0;
       const acceptVal = props.accept.value;
-      const isMultiple = props.multiple.value;
-
+      const isMultiple = Boolean(props.multiple.value);
       let incoming = Array.from(newFiles);
 
       if (!isMultiple) incoming = incoming.slice(0, 1);
@@ -293,17 +288,14 @@ export const FILE_INPUT_TAG = define(
       files.value = updated;
       emit('change', { files: files.value, originalEvent });
     }
-
     function removeFile(file: File): void {
       files.value = files.value.filter((f) => f !== file);
       emit('remove', { file, files: files.value });
       emit('change', { files: files.value });
     }
-
     // ============================================
     // Mount
     // ============================================
-
     onMount(() => {
       const inp = inputRef.value!;
       const dz = dropzoneRef.value!;
@@ -316,12 +308,10 @@ export const FILE_INPUT_TAG = define(
 
         input.value = ''; // reset so the same file triggers change again
       });
-
       // Click dropzone → open file picker
       handle(dz, 'click', () => {
         if (!props.disabled.value) inp.click();
       });
-
       // Keyboard: Enter / Space → open picker
       handle(dz, 'keydown', (e: KeyboardEvent) => {
         if ((e.key === 'Enter' || e.key === ' ') && !props.disabled.value) {
@@ -331,7 +321,7 @@ export const FILE_INPUT_TAG = define(
       });
 
       const dropZone = createDropZone({
-        disabled: () => props.disabled.value,
+        disabled: () => Boolean(props.disabled.value),
         element: dz,
         onDrop: (droppedFiles, e) => addFiles(droppedFiles, e),
         onHoverChange: (hovered) => {
@@ -345,98 +335,94 @@ export const FILE_INPUT_TAG = define(
     // ============================================
     // Template
     // ============================================
-
-    return {
-      styles: [
-        ...formFieldMixins,
-        sizeVariantMixin({
-          lg: {
-            '--_min-height': 'var(--size-40)',
-            fontSize: 'var(--text-base)',
-          },
-          sm: { '--_min-height': 'var(--size-28)', fontSize: 'var(--text-xs)' },
-        }),
-        disabledLoadingMixin(),
-        forcedColorsFocusMixin('.dropzone'),
-        componentStyles,
-      ],
-      template: html`
-        <div class="file-input-wrapper" part="wrapper">
-          <label class="label-outside" id="${labelId}" part="label" ?hidden=${() => !props.label.value}
-            >${() => props.label.value}</label
-          >
-          <div
-            class="dropzone"
-            part="dropzone"
-            ref=${dropzoneRef}
-            role="button"
-            :tabindex=${() => (props.disabled.value ? '-1' : '0')}
-            :aria-disabled=${() => String(props.disabled.value)}
-            :aria-label=${() => (!props.label.value ? 'File upload drop zone' : null)}
-            :aria-labelledby=${() => (props.label.value ? labelId : null)}
-            aria-describedby="${helperId}">
-            <input
-              type="file"
-              ref=${inputRef}
-              part="input"
-              id="${fileInputId}"
-              :accept=${() => props.accept.value}
-              ?multiple=${() => props.multiple.value}
-              ?required=${() => props.required.value}
-              ?disabled=${() => props.disabled.value}
-              :name=${() => props.name.value}
-              hidden
-              inert
-              tabindex="-1" />
-            <div class="dropzone-content">
-              <span class="dropzone-icon" aria-hidden="true"> ${uploadIcon} </span>
-              <span class="dropzone-title">Drop files here or <u>click to browse</u></span>
-              <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
-            </div>
-          </div>
-          <ul class="file-list" role="list" aria-label="Selected files" ?hidden=${() => files.value.length === 0}>
-            ${each(
-              files,
-              (file: File) => html`
-                <li class="file-item">
-                  <span class="file-icon" aria-hidden="true"> ${fileIcon} </span>
-                  <span class="file-meta">
-                    <span class="file-name" :title=${() => file.name}>${() => file.name}</span>
-                    <span class="file-size">${() => formatBytes(file.size)}</span>
-                  </span>
-                  <button
-                    class="file-remove"
-                    type="button"
-                    :aria-label=${() => `Remove ${file.name}`}
-                    @click=${() => removeFile(file)}>
-                    ${clearIcon}
-                  </button>
-                </li>
-              `,
-              undefined,
-              {
-                key: (file: File) => `${file.name}:${file.size}:${file.lastModified}`,
-              },
-            )}
-          </ul>
-          <div
-            class="helper-text"
-            id="${helperId}"
-            part="helper"
-            ?hidden=${() => isInvalid.value || !props.helper.value}>
-            ${() => props.helper.value}
-          </div>
-          <div
-            class="helper-text helper-text-error"
-            id="${errorId}"
-            role="alert"
-            part="error"
-            ?hidden=${() => !isInvalid.value}>
-            ${() => props.error.value}
+    return html`
+      <div class="file-input-wrapper" part="wrapper">
+        <label class="label-outside" id="${labelId}" part="label" ?hidden=${() => !props.label.value}
+          >${() => props.label.value}</label
+        >
+        <div
+          class="dropzone"
+          part="dropzone"
+          ref=${dropzoneRef}
+          role="button"
+          :tabindex=${() => (props.disabled.value ? '-1' : '0')}
+          :aria-disabled=${() => String(props.disabled.value)}
+          :aria-label=${() => (!props.label.value ? 'File upload drop zone' : null)}
+          :aria-labelledby=${() => (props.label.value ? labelId : null)}
+          aria-describedby="${helperId}">
+          <input
+            type="file"
+            ref=${inputRef}
+            part="input"
+            id="${fileInputId}"
+            :accept=${() => props.accept.value}
+            ?multiple=${() => props.multiple.value}
+            ?required=${() => props.required.value}
+            ?disabled=${() => props.disabled.value}
+            :name=${() => props.name.value}
+            hidden
+            inert
+            tabindex="-1" />
+          <div class="dropzone-content">
+            <span class="dropzone-icon" aria-hidden="true"> ${uploadIcon} </span>
+            <span class="dropzone-title">Drop files here or <u>click to browse</u></span>
+            <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
           </div>
         </div>
-      `,
-    };
+        <ul class="file-list" role="list" aria-label="Selected files" ?hidden=${() => files.value.length === 0}>
+          ${each(
+            files,
+            (file: File) => html`
+              <li class="file-item">
+                <span class="file-icon" aria-hidden="true"> ${fileIcon} </span>
+                <span class="file-meta">
+                  <span class="file-name" title="${file.name}">${file.name}</span>
+                  <span class="file-size">${formatBytes(file.size)}</span>
+                </span>
+                <button
+                  class="file-remove"
+                  type="button"
+                  aria-label="${`Remove ${file.name}`}"
+                  @click=${() => removeFile(file)}>
+                  ${clearIcon}
+                </button>
+              </li>
+            `,
+            undefined,
+            {
+              key: (file: File) => `${file.name}:${file.size}:${file.lastModified}`,
+            },
+          )}
+        </ul>
+        <div class="helper-text" id="${helperId}" part="helper" ?hidden=${() => isInvalid.value || !props.helper.value}>
+          ${() => props.helper.value}
+        </div>
+        <div
+          class="helper-text helper-text-error"
+          id="${errorId}"
+          role="alert"
+          part="error"
+          ?hidden=${() => !isInvalid.value}>
+          ${() => props.error.value}
+        </div>
+      </div>
+    `;
   },
-  { formAssociated: true, shadow: { delegatesFocus: true } },
+  {
+    formAssociated: true,
+    shadow: { delegatesFocus: true },
+    styles: [
+      ...formFieldMixins,
+      sizeVariantMixin({
+        lg: {
+          '--_min-height': 'var(--size-40)',
+          fontSize: 'var(--text-base)',
+        },
+        sm: { '--_min-height': 'var(--size-28)', fontSize: 'var(--text-xs)' },
+      }),
+      disabledLoadingMixin(),
+      forcedColorsFocusMixin('.dropzone'),
+      componentStyles,
+    ],
+  },
 );

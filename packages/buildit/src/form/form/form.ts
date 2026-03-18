@@ -2,11 +2,12 @@ import {
   computed,
   createContext,
   define,
-  defineEmits,
-  defineProps,
   html,
-  provide,
+  typed,
+  useProvide,
   type ReadonlySignal,
+  defineProps,
+  defineEmits,
 } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
@@ -31,7 +32,7 @@ export type FormContext = {
   variant: ReadonlySignal<Exclude<VisualVariant, 'glass' | 'frost' | 'text'> | undefined>;
 };
 
-export const FORM_CTX = createContext<FormContext>();
+export const FORM_CTX = createContext<FormContext>('FormContext');
 
 // ============================================
 // Styles
@@ -102,26 +103,23 @@ export const FORM_TAG = define(
   'bit-form',
   ({ host }) => {
     const props = defineProps<BitFormProps>({
-      disabled: { default: false },
-      novalidate: { default: false },
-      orientation: { default: 'vertical' },
-      size: { default: undefined },
-      validateOn: { default: 'submit' },
-      variant: { default: undefined },
+      disabled: typed<boolean>(false),
+      novalidate: typed<boolean>(false),
+      orientation: typed<BitFormProps['orientation']>('vertical'),
+      size: typed<BitFormProps['size']>(undefined),
+      validateOn: typed<BitFormProps['validateOn']>(undefined),
+      variant: typed<BitFormProps['variant']>(undefined),
     });
-
     const emit = defineEmits<BitFormEvents>();
 
     // Provide context to all child bit-* form fields
-    provide(FORM_CTX, {
+    useProvide(FORM_CTX, {
       disabled: computed(() => Boolean(props.disabled.value)),
       size: props.size,
       validateOn: computed(() => props.validateOn.value ?? 'submit'),
       variant: props.variant,
     });
-
     // ── Event handlers ────────────────────────────────────────────────────────
-
     function handleSubmit(e: Event) {
       const submitEvent = e as SubmitEvent;
       const formEl = host.shadowRoot?.querySelector('form');
@@ -134,24 +132,23 @@ export const FORM_TAG = define(
 
       emit('submit', { formData, originalEvent: submitEvent });
     }
-
     function handleReset(e: Event) {
       emit('reset', { originalEvent: e });
     }
 
-    return {
-      styles: [componentStyles],
-      template: html`
-        <form
-          part="form"
-          :novalidate="${() => props.novalidate.value || null}"
-          :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
-          @submit="${handleSubmit}"
-          @reset="${handleReset}">
-          <slot></slot>
-        </form>
-      `,
-    };
+    return html`
+      <form
+        part="form"
+        :novalidate="${() => props.novalidate.value || null}"
+        :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
+        @submit="${handleSubmit}"
+        @reset="${handleReset}">
+        <slot></slot>
+      </form>
+    `;
   },
-  { shadow: { delegatesFocus: false } },
+  {
+    shadow: { delegatesFocus: false },
+    styles: [componentStyles],
+  },
 );

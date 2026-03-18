@@ -12,10 +12,11 @@
 
 import {
   computed,
+  createId,
   createFormIds,
   defineField,
   effect,
-  inject,
+  useInject,
   type ReadonlySignal,
   ref,
   signal,
@@ -25,15 +26,15 @@ import {
 import { FORM_CTX } from '../form/form/form';
 
 export type TextFieldBaseProps = {
-  disabled: ReadonlySignal<boolean>;
-  label: ReadonlySignal<string>;
-  'label-placement': ReadonlySignal<'inset' | 'outside'>;
-  name: ReadonlySignal<string>;
-  value: ReadonlySignal<string>;
+  disabled: ReadonlySignal<boolean | undefined>;
+  label: ReadonlySignal<string | undefined>;
+  'label-placement': ReadonlySignal<'inset' | 'outside' | undefined>;
+  name: ReadonlySignal<string | undefined>;
+  value: ReadonlySignal<string | undefined>;
 };
 
 export function useTextField(props: TextFieldBaseProps, fieldPrefix: string) {
-  const formCtx = inject(FORM_CTX);
+  const formCtx = useInject(FORM_CTX, undefined);
   const valueSignal = signal('');
 
   const fd = defineField(
@@ -48,12 +49,17 @@ export function useTextField(props: TextFieldBaseProps, fieldPrefix: string) {
   watch(
     props.value,
     (v) => {
-      valueSignal.value = String(v || '');
+      valueSignal.value = String(v ?? '');
     },
     { immediate: true },
   );
 
-  const { errorId, fieldId, helperId, labelId: labelInsetId } = createFormIds(fieldPrefix, props.name);
+  const {
+    errorId,
+    fieldId,
+    helperId,
+    labelId: labelInsetId,
+  } = createFormIds(fieldPrefix, props.name.value || createId(fieldPrefix));
   const labelOutsideId = `${labelInsetId}-outside`;
 
   const labelInsetRef = ref<HTMLLabelElement>();
@@ -66,7 +72,7 @@ export function useTextField(props: TextFieldBaseProps, fieldPrefix: string) {
 
   /** Call inside a blur or change handler to trigger validation if the form context warrants it. */
   function triggerValidation(on: 'blur' | 'change'): void {
-    if (formCtx?.validateOn.value === on) fd.reportValidity();
+    triggerValidationOnEvent(formCtx, fd, on);
   }
 
   return {
@@ -85,9 +91,114 @@ export function useTextField(props: TextFieldBaseProps, fieldPrefix: string) {
 }
 
 export type LabelSyncProps = {
-  label: ReadonlySignal<string>;
-  'label-placement': ReadonlySignal<'inset' | 'outside'>;
+  label: ReadonlySignal<string | undefined>;
+  'label-placement': ReadonlySignal<'inset' | 'outside' | undefined>;
 };
+
+export type CounterState = {
+  atLimit: boolean;
+  hidden: boolean;
+  nearLimit: boolean;
+  text: string;
+};
+
+export type SplitAssistiveState = {
+  errorHidden: boolean;
+  errorText: string;
+  helperHidden: boolean;
+  helperText: string;
+};
+
+export type MergedAssistiveState = {
+  hidden: boolean;
+  isError: boolean;
+  text: string;
+};
+
+export type ValidationTriggerSource = {
+  validateOn: { value: 'blur' | 'change' | 'submit' | undefined };
+};
+
+export type ValidationReporter = {
+  reportValidity: () => void;
+};
+
+/** Parse comma-separated values used by multi-select style controls. */
+export function parseCsvValues(value: string | undefined): string[] {
+  if (!value) return [];
+
+  return value
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+/** Serialize selected values to the shared comma-separated form value shape. */
+export function stringifyCsvValues(values: string[]): string {
+  return values.join(',');
+}
+
+/** Parse positive numeric values from optional component props. */
+export function parsePositiveNumber(value: unknown): number | null {
+  if (value == null) return null;
+
+  const n = Number(value);
+
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Shared counter-state thresholds for text controls with maxlength support. */
+export function resolveCounterState(length: number, max: number | null): CounterState {
+  if (max == null) {
+    return { atLimit: false, hidden: true, nearLimit: false, text: '' };
+  }
+
+  const ratio = length / max;
+
+  return {
+    atLimit: ratio >= 1,
+    hidden: false,
+    nearLimit: ratio >= 0.9 && ratio < 1,
+    text: `${length} / ${max}`,
+  };
+}
+
+/** Split helper/error state for controls that render separate helper and error elements (input). */
+export function resolveSplitAssistiveText(error: string | undefined, helper: string | undefined): SplitAssistiveState {
+  const hasError = Boolean(error);
+  const hasHelper = Boolean(helper);
+
+  return {
+    errorHidden: !hasError,
+    errorText: error ?? '',
+    helperHidden: hasError || !hasHelper,
+    helperText: helper ?? '',
+  };
+}
+
+/** Merged helper/error state for controls that render one assistive text element (textarea). */
+export function resolveMergedAssistiveText(
+  error: string | undefined,
+  helper: string | undefined,
+): MergedAssistiveState {
+  const isError = Boolean(error);
+  const text = error || helper || '';
+
+  return {
+    hidden: !text,
+    isError,
+    text,
+  };
+}
+
+/** Call reportValidity only when form context is configured for the given event. */
+export function triggerValidationOnEvent(
+  formCtx: ValidationTriggerSource | undefined,
+  field: ValidationReporter,
+  on: 'blur' | 'change',
+): void {
+  if (formCtx?.validateOn.value === on) field.reportValidity();
+}
 
 /**
  * Reactively synchronises label text and visibility for components that manage
@@ -100,8 +211,8 @@ export function mountLabelSyncStandalone(
   props: LabelSyncProps,
 ): void {
   effect(() => {
-    const placement = props['label-placement'].value;
-    const labelText = props.label.value || '';
+    const placement = props['label-placement'].value ?? 'inset';
+    const labelText = props.label.value ?? '';
 
     if (labelInsetRef.value) {
       labelInsetRef.value.textContent = labelText;

@@ -1,6 +1,6 @@
 import { isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { computedOrStatic } from '../craftit';
+import { computedOrStatic } from '../internal';
 
 type ClassValue = boolean | undefined | null | Signal<boolean> | ReadonlySignal<boolean> | (() => boolean);
 

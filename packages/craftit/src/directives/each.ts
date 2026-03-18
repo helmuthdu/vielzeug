@@ -1,6 +1,16 @@
 import { computed, isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import { EACH_SIGNAL, MARKER_PATTERN, extractResult, htmlResult, type Binding, type HTMLResult } from '../craftit';
+import {
+  CF_ID_ATTR,
+  EACH_SIGNAL,
+  extractResult,
+  htmlResult,
+  type Binding,
+  type Directive,
+  type HTMLResult,
+} from '../internal';
+
+const _ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="(\\d+)"`, 'g');
 
 /* immutable — shared singleton for empty static lists */
 const _EMPTY = htmlResult('');
@@ -11,13 +21,22 @@ function _renumber(res: HTMLResult, c: { n: number }): { bindings: Binding[]; ht
   const nb: Binding[] = [];
 
   for (const b of res.__bindings) {
-    const m = b.marker.replace(/(\d+)$/, () => String(c.n++));
+    const oldId = b.uid;
+    const newId = map.get(oldId) ?? String(c.n++);
 
-    map.set(b.marker, m);
-    nb.push({ ...b, marker: m });
+    if (!map.has(oldId)) map.set(oldId, newId);
+
+    nb.push({ ...b, uid: newId });
   }
 
-  return { bindings: nb, html: res.__html.replace(MARKER_PATTERN, (match) => map.get(match) ?? match) };
+  return {
+    bindings: nb,
+    html: res.__html
+      // Re-map element binding ids.
+      .replace(_ATTR_ID_RE, (_, id) => `${CF_ID_ATTR}="${map.get(id) ?? id}"`)
+      // Re-map numeric comment markers used by text/html placeholders.
+      .replace(/<!--(\d+)-->/g, (_, id) => `<!--${map.get(id) ?? id}-->`),
+  };
 }
 
 /** Render loop used by the reactive path (keys + rendered metadata required for reconciliation). */
@@ -93,7 +112,7 @@ export interface EachOptions<T> {
 }
 
 type ReactiveSource<T> = ReadonlySignal<T[]> | (() => T[]);
-type EachSignalResult = {
+type EachSignalResult = Directive & {
   [EACH_SIGNAL]: ReadonlySignal<{
     bindings: Binding[];
     html: string;

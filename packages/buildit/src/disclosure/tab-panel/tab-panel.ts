@@ -1,4 +1,4 @@
-import { computed, define, defineProps, effect, html, inject, signal } from '@vielzeug/craftit';
+import { computed, define, effect, html, typed, useInject, signal, defineProps } from '@vielzeug/craftit';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
@@ -33,49 +33,48 @@ export type BitTabPanelProps = {
  * <bit-tab-panel value="code" padding="none"><pre>No padding for code</pre></bit-tab-panel>
  * ```
  */
-export const TAB_PANEL_TAG = define('bit-tab-panel', ({ host }) => {
-  const props = defineProps<BitTabPanelProps>({
-    active: { default: false },
-    lazy: { default: false },
-    padding: { default: 'md' },
-    value: { default: '' },
-  });
+export const TAB_PANEL_TAG = define(
+  'bit-tab-panel',
+  ({ host }) => {
+    const props = defineProps<BitTabPanelProps>({
+      active: typed<boolean>(false),
+      lazy: typed<boolean>(false),
+      padding: typed<BitTabPanelProps['padding']>('md'),
+      value: typed<string>(''),
+    });
 
-  const tabsCtx = inject(TABS_CTX, undefined);
-  const isActive = tabsCtx
-    ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
-    : props.active;
+    const tabsCtx = useInject(TABS_CTX, undefined);
+    const isActive = tabsCtx
+      ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
+      : props.active;
+    // Map padding prop to CSS variable
+    const paddingValue = computed(() => {
+      const paddingMap: Record<string, string> = {
+        '2xl': 'var(--size-12)',
+        lg: 'var(--size-6)',
+        md: 'var(--size-4)',
+        none: '0',
+        sm: 'var(--size-2)',
+        xl: 'var(--size-8)',
+        xs: 'var(--size-1)',
+      };
+      const key = props.padding.value ?? 'md';
 
-  // Map padding prop to CSS variable
-  const paddingValue = computed(() => {
-    const paddingMap: Record<string, string> = {
-      '2xl': 'var(--size-12)',
-      lg: 'var(--size-6)',
-      md: 'var(--size-4)',
-      none: '0',
-      sm: 'var(--size-2)',
-      xl: 'var(--size-8)',
-      xs: 'var(--size-1)',
-    };
+      return paddingMap[key] ?? paddingMap.md;
+    });
+    // Track whether the panel has ever been active (for lazy rendering)
+    const hasBeenActive = signal(false);
 
-    return paddingMap[props.padding.value] || paddingMap.md;
-  });
+    effect(() => {
+      host.toggleAttribute('active', isActive.value);
 
-  // Track whether the panel has ever been active (for lazy rendering)
-  const hasBeenActive = signal(false);
+      if (isActive.value) hasBeenActive.value = true;
+    });
 
-  effect(() => {
-    host.toggleAttribute('active', isActive.value);
+    // shouldRender: true if not lazy OR has been active at least once
+    const shouldRender = computed(() => !props.lazy.value || hasBeenActive.value);
 
-    if (isActive.value) hasBeenActive.value = true;
-  });
-
-  // shouldRender: true if not lazy OR has been active at least once
-  const shouldRender = computed(() => !props.lazy.value || hasBeenActive.value);
-
-  return {
-    styles: [reducedMotionMixin, styles],
-    template: html`
+    return html`
       <div
         class="panel"
         part="panel"
@@ -87,6 +86,9 @@ export const TAB_PANEL_TAG = define('bit-tab-panel', ({ host }) => {
         tabindex="0">
         ${() => (shouldRender.value ? html`<slot></slot>` : '')}
       </div>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [reducedMotionMixin, styles],
+  },
+);

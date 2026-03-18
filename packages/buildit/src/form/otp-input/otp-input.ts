@@ -1,4 +1,4 @@
-import { computed, define, defineEmits, defineProps, html, onMount } from '@vielzeug/craftit';
+import { computed, define, html, onMount, typed, defineProps, defineEmits } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -68,154 +68,146 @@ export type BitOtpInputProps = {
  * <bit-otp-input length="6" color="primary"></bit-otp-input>
  * ```
  */
-export const OTP_INPUT_TAG = define('bit-otp-input', ({ host }) => {
-  const props = defineProps<BitOtpInputProps>({
-    color: { default: undefined },
-    disabled: { default: false },
-    label: { default: 'One-time password' },
-    length: { default: 6 },
-    masked: { default: false },
-    name: { default: undefined },
-    separator: { default: undefined },
-    size: { default: undefined },
-    type: { default: 'numeric' },
-    value: { default: '' },
-    variant: { default: undefined },
-  });
+export const OTP_INPUT_TAG = define(
+  'bit-otp-input',
+  ({ host }) => {
+    const props = defineProps<BitOtpInputProps>({
+      color: typed<BitOtpInputProps['color']>(undefined),
+      disabled: typed<boolean>(false),
+      label: typed<string>('One-time password'),
+      length: typed<number>(6),
+      masked: typed<boolean>(false),
+      name: typed<string | undefined>(undefined),
+      separator: typed<string | undefined>(undefined),
+      size: typed<BitOtpInputProps['size']>(undefined),
+      type: typed<BitOtpInputProps['type']>('numeric'),
+      value: typed<string>(''),
+      variant: typed<BitOtpInputProps['variant']>(undefined),
+    });
+    const emit = defineEmits<BitOtpInputEvents>();
 
-  const emit = defineEmits<BitOtpInputEvents>();
+    const cells = computed(() => Array.from({ length: Number(props.length.value) || 6 }, (_, i) => i));
 
-  const cells = computed(() => Array.from({ length: Number(props.length.value) || 6 }, (_, i) => i));
-
-  function getInputs(): HTMLInputElement[] {
-    return [...(host.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
-  }
-
-  function getValue(): string {
-    return getInputs()
-      .map((i) => i.value)
-      .join('');
-  }
-
-  function isAllowed(char: string): boolean {
-    if (props.type.value === 'numeric') return /^\d$/.test(char);
-
-    return /^[a-z\d]$/i.test(char);
-  }
-
-  function handleInput(e: Event, index: number) {
-    const input = e.target as HTMLInputElement;
-    let val = input.value;
-
-    // Keep only last character if multiple were typed somehow
-    if (val.length > 1) val = val.slice(-1);
-
-    // Validate character
-    if (val && !isAllowed(val)) {
-      input.value = '';
-
-      return;
+    function getInputs(): HTMLInputElement[] {
+      return [...(host.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
     }
-
-    input.value = val;
-
-    const allInputs = getInputs();
-    const full = getValue();
-    const complete = full.length === allInputs.length && full.split('').every(Boolean);
-
-    host.setAttribute('value', full);
-    emit('change', { complete, value: full });
-
-    if (complete) emit('complete', { value: full });
-
-    // Auto-advance
-    if (val && index < allInputs.length - 1) {
-      allInputs[index + 1].focus();
-      allInputs[index + 1].select();
+    function getValue(): string {
+      return getInputs()
+        .map((i) => i.value)
+        .join('');
     }
-  }
+    function isAllowed(char: string): boolean {
+      if (props.type.value === 'numeric') return /^\d$/.test(char);
 
-  function handleKeydown(e: KeyboardEvent, index: number) {
-    const input = e.target as HTMLInputElement;
-    const allInputs = getInputs();
+      return /^[a-z\d]$/i.test(char);
+    }
+    function handleInput(e: Event, index: number) {
+      const input = e.target as HTMLInputElement;
+      let val = input.value;
 
-    if (e.key === 'Backspace') {
-      if (input.value) {
+      // Keep only last character if multiple were typed somehow
+      if (val.length > 1) val = val.slice(-1);
+
+      // Validate character
+      if (val && !isAllowed(val)) {
         input.value = '';
-      } else if (index > 0) {
-        allInputs[index - 1].focus();
-        allInputs[index - 1].select();
-        allInputs[index - 1].value = '';
+
+        return;
       }
 
+      input.value = val;
+
+      const allInputs = getInputs();
       const full = getValue();
+      const complete = full.length === allInputs.length && full.split('').every(Boolean);
 
       host.setAttribute('value', full);
-      emit('change', { complete: false, value: full });
-      e.preventDefault();
-    } else if (e.key === 'ArrowLeft' && index > 0) {
-      allInputs[index - 1].focus();
-      e.preventDefault();
-    } else if (e.key === 'ArrowRight' && index < allInputs.length - 1) {
-      allInputs[index + 1].focus();
-      e.preventDefault();
-    } else if (e.key === 'Home') {
-      allInputs[0].focus();
-      e.preventDefault();
-    } else if (e.key === 'End') {
-      allInputs[allInputs.length - 1].focus();
-      e.preventDefault();
+      emit('change', { complete, value: full });
+
+      if (complete) emit('complete', { value: full });
+
+      // Auto-advance
+      if (val && index < allInputs.length - 1) {
+        allInputs[index + 1].focus();
+        allInputs[index + 1].select();
+      }
     }
-  }
+    function handleKeydown(e: KeyboardEvent, index: number) {
+      const input = e.target as HTMLInputElement;
+      const allInputs = getInputs();
 
-  function handlePaste(e: ClipboardEvent) {
-    e.preventDefault();
+      if (e.key === 'Backspace') {
+        if (input.value) {
+          input.value = '';
+        } else if (index > 0) {
+          allInputs[index - 1].focus();
+          allInputs[index - 1].select();
+          allInputs[index - 1].value = '';
+        }
 
-    const pasted = e.clipboardData?.getData('text') ?? '';
-    const chars = pasted
-      .split('')
-      .filter((c) => isAllowed(c))
-      .slice(0, Number(props.length.value) || 6);
+        const full = getValue();
 
-    const allInputs = getInputs();
+        host.setAttribute('value', full);
+        emit('change', { complete: false, value: full });
+        e.preventDefault();
+      } else if (e.key === 'ArrowLeft' && index > 0) {
+        allInputs[index - 1].focus();
+        e.preventDefault();
+      } else if (e.key === 'ArrowRight' && index < allInputs.length - 1) {
+        allInputs[index + 1].focus();
+        e.preventDefault();
+      } else if (e.key === 'Home') {
+        allInputs[0].focus();
+        e.preventDefault();
+      } else if (e.key === 'End') {
+        allInputs[allInputs.length - 1].focus();
+        e.preventDefault();
+      }
+    }
+    function handlePaste(e: ClipboardEvent) {
+      e.preventDefault();
 
-    chars.forEach((char, i) => {
-      if (allInputs[i]) allInputs[i].value = char;
+      const pasted = e.clipboardData?.getData('text') ?? '';
+      const chars = pasted
+        .split('')
+        .filter((c) => isAllowed(c))
+        .slice(0, Number(props.length.value) || 6);
+      const allInputs = getInputs();
+
+      chars.forEach((char, i) => {
+        if (allInputs[i]) allInputs[i].value = char;
+      });
+
+      const full = getValue();
+      const complete = full.length === allInputs.length && full.split('').every(Boolean);
+
+      host.setAttribute('value', full);
+      emit('change', { complete, value: full });
+
+      if (complete) emit('complete', { value: full });
+
+      // Focus the cell after last pasted char
+      const focusIdx = Math.min(chars.length, allInputs.length - 1);
+
+      allInputs[focusIdx]?.focus();
+    }
+    onMount(() => {
+      // Populate cells from value prop on mount
+      const initialVal = String(props.value.value || '');
+      const allInputs = getInputs();
+
+      initialVal.split('').forEach((c, i) => {
+        if (allInputs[i]) allInputs[i].value = c;
+      });
     });
 
-    const full = getValue();
-    const complete = full.length === allInputs.length && full.split('').every(Boolean);
+    const separatorIdx = computed(() => {
+      const len = Number(props.length.value) || 6;
 
-    host.setAttribute('value', full);
-    emit('change', { complete, value: full });
-
-    if (complete) emit('complete', { value: full });
-
-    // Focus the cell after last pasted char
-    const focusIdx = Math.min(chars.length, allInputs.length - 1);
-
-    allInputs[focusIdx]?.focus();
-  }
-
-  onMount(() => {
-    // Populate cells from value prop on mount
-    const initialVal = String(props.value.value || '');
-    const allInputs = getInputs();
-
-    initialVal.split('').forEach((c, i) => {
-      if (allInputs[i]) allInputs[i].value = c;
+      return props.separator.value != null ? Math.floor(len / 2) : -1;
     });
-  });
 
-  const separatorIdx = computed(() => {
-    const len = Number(props.length.value) || 6;
-
-    return props.separator.value != null ? Math.floor(len / 2) : -1;
-  });
-
-  return {
-    styles: [colorThemeMixin, sizeVariantMixin({}), forcedColorsFocusMixin('.cell'), styles],
-    template: html`
+    return html`
       <div class="otp-group" part="group" role="group" :aria-label="${() => props.label.value}">
         ${() =>
           cells.value.map(
@@ -241,6 +233,9 @@ export const OTP_INPUT_TAG = define('bit-otp-input', ({ host }) => {
             `,
           )}
       </div>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [colorThemeMixin, sizeVariantMixin({}), forcedColorsFocusMixin('.cell'), styles],
+  },
+);

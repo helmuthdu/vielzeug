@@ -8,17 +8,17 @@ import {
   createId,
   define,
   defineEmits,
-  defineField,
   defineSlots,
+  defineField,
   guard,
   html,
-  inject,
+  useInject,
   observeIntersection,
   observeMedia,
   observeResize,
   onMount,
   prop,
-  provide,
+  useProvide,
   ref,
   signal,
   type InjectionKey,
@@ -74,51 +74,51 @@ describe('Composables', () => {
     });
 
     it('should treat boolean prop as false when attribute is the string "false"', async () => {
-      // Simulates framework bindings (e.g. Vue :loading="false") that set the attribute
-      // to the string "false" instead of removing it when the bound value is false.
       let loadingProp!: ReturnType<typeof prop<boolean>>;
-      const { element, flush } = await mount(() => {
-        loadingProp = prop('loading', false);
 
-        return html`<div>${() => String(loadingProp.value)}</div>`;
-      });
+      await mount(
+        () => {
+          loadingProp = prop('loading', false);
 
-      element.setAttribute('loading', 'false');
-      await flush();
+          return html`<div>${() => String(loadingProp.value)}</div>`;
+        },
+        { attrs: { loading: 'false' } },
+      );
 
       expect(loadingProp.value).toBe(false);
     });
 
     it('should treat boolean prop as true when attribute is the string "true"', async () => {
       let loadingProp!: ReturnType<typeof prop<boolean>>;
-      const { element, flush } = await mount(() => {
-        loadingProp = prop('loading', false);
 
-        return html`<div>${() => String(loadingProp.value)}</div>`;
-      });
+      await mount(
+        () => {
+          loadingProp = prop('loading', false);
 
-      element.setAttribute('loading', 'true');
-      await flush();
+          return html`<div>${() => String(loadingProp.value)}</div>`;
+        },
+        { attrs: { loading: 'true' } },
+      );
 
       expect(loadingProp.value).toBe(true);
     });
   });
 
-  describe('Context (provide/inject)', () => {
-    it('should provide and inject values', async () => {
+  describe('Context (useProvide/useInject)', () => {
+    it('should useProvide and useInject values', async () => {
       const ThemeKey = Symbol('theme') as InjectionKey<string>;
 
       await mount(() => {
-        provide(ThemeKey, 'dark');
+        useProvide(ThemeKey, 'dark');
 
-        return html`<div>${inject(ThemeKey) ?? ''}</div>`;
+        return html`<div>${useInject(ThemeKey) ?? ''}</div>`;
       });
     });
 
     it('should use default value when not provided', async () => {
       const Key = Symbol('test') as InjectionKey<string>;
       const { query } = await mount(() => {
-        const value = inject(Key, 'default');
+        const value = useInject(Key, 'default');
 
         return html`<div>${value}</div>`;
       });
@@ -126,20 +126,18 @@ describe('Composables', () => {
       expect(query('div')?.textContent).toBe('default');
     });
 
-    it('should provide type-safe context', async () => {
+    it('should useProvide type-safe context', async () => {
       const UserContext = createContext<{ name: string; role: string }>();
+      const childTag = `test-user-consumer-${Math.random().toString(36).slice(2)}`;
 
-      // Consumer must be a registered element so it can be nested
-      const childTag = (
-        await mount(() => {
-          const user = inject(UserContext);
+      define(childTag, () => {
+        const user = useInject(UserContext);
 
-          return html`<div class="user-info">${user?.name} (${user?.role})</div>`;
-        })
-      ).element.tagName.toLowerCase();
+        return html`<div class="user-info">${user?.name} (${user?.role})</div>`;
+      });
 
       const { element, flush } = await mount(() => {
-        provide(UserContext, { name: 'Alice', role: 'admin' });
+        useProvide(UserContext, { name: 'Alice', role: 'admin' });
 
         return html`<${childTag}></${childTag}>`;
       });
@@ -475,19 +473,19 @@ describe('Composables', () => {
       let receivedValue: number | undefined;
 
       define('test-nested-consumer-4', () => {
-        receivedValue = inject(Key);
+        receivedValue = useInject(Key);
 
         return html`<div class="result">${receivedValue}</div>`;
       });
 
       define('test-nested-inner-4', () => {
-        provide(Key, 2);
+        useProvide(Key, 2);
 
         return html`<test-nested-consumer-4></test-nested-consumer-4>`;
       });
 
       define('test-nested-outer-4', () => {
-        provide(Key, 1);
+        useProvide(Key, 1);
 
         return html`<test-nested-inner-4></test-nested-inner-4>`;
       });

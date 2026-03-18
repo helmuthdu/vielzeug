@@ -65,7 +65,9 @@
 
   /* Last row in each section — remove separator */
   tr:last-child th,
-  tr:last-child td { border-bottom: none; }
+  tr:last-child td {
+    border-bottom: none;
+  }
 
   /* ── Header / footer rows ─────────────────────────────────────────────── */
 
@@ -81,15 +83,21 @@
   /* ── Row hover (body only) ────────────────────────────────────────────── */
 
   tbody tr:hover th,
-  tbody tr:hover td { background: var(--_row-hover-bg); }
+  tbody tr:hover td {
+    background: var(--_row-hover-bg);
+  }
 
   /* ── Striped rows ─────────────────────────────────────────────────────── */
 
   tbody tr:nth-child(even) th,
-  tbody tr:nth-child(even) td { background: var(--_stripe-bg); }
+  tbody tr:nth-child(even) td {
+    background: var(--_stripe-bg);
+  }
 
   tbody tr:nth-child(even):hover th,
-  tbody tr:nth-child(even):hover td { background: var(--_row-hover-bg); }
+  tbody tr:nth-child(even):hover td {
+    background: var(--_row-hover-bg);
+  }
 }
 
 /* ── Loading state ───────────────────────────────────────────────────────── */

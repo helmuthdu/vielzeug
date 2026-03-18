@@ -18,12 +18,12 @@ describe('bit-tab-item', () => {
       expect(fixture.query('button[role="tab"]')).toBeTruthy();
     });
 
-    it('dispatches tab-click with value on click', async () => {
+    it('dispatches click with value on click', async () => {
       fixture = await mount('bit-tab-item', { attrs: { value: 'overview' }, html: 'Overview' });
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('tab-click', handler);
+      fixture.element.addEventListener('click', handler);
 
       fixture.query('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 

@@ -7,9 +7,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@vielzeug/craftit/test': path.resolve(__dirname, '../craftit/src/test/test.ts'),
-    },
+    alias: [
+      { find: /^@vielzeug\/craftit\/test$/, replacement: path.resolve(__dirname, '../craftit/src/test/test.ts') },
+      {
+        find: /^@vielzeug\/craftit\/directives$/,
+        replacement: path.resolve(__dirname, '../craftit/src/directives/index.ts'),
+      },
+      { find: /^@vielzeug\/craftit$/, replacement: path.resolve(__dirname, '../craftit/src/index.ts') },
+    ],
   },
   test: {
     environment: 'jsdom',

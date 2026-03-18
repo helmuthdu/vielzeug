@@ -1,22 +1,17 @@
-import {
-  aria,
-  define,
-  defineEmits,
-  defineProps,
-  effect,
-  handle,
-  html,
-  onMount,
-  ref,
-  signal,
-  syncDOMProps,
-} from '@vielzeug/craftit';
+import { aria, define, effect, handle, html, onMount, ref, signal, defineProps, defineEmits } from '@vielzeug/craftit';
+import { attr } from '@vielzeug/craftit/directives';
 
 import type { DisablableProps, InputType, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
 import { clearIcon, eyeIcon, eyeOffIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync, useTextField } from '../../utils/use-text-field';
+import {
+  mountFormContextSync,
+  parsePositiveNumber,
+  resolveCounterState,
+  resolveSplitAssistiveText,
+  useTextField,
+} from '../../utils/use-text-field';
 import componentStyles from './input.css?inline';
 
 /** Input component properties */
@@ -84,7 +79,7 @@ const VALID_INPUT_TYPES = [
   'week',
 ] as const;
 
-const validateInputType = (type: string | null): string => {
+const validateInputType = (type: string | null | undefined): string => {
   return VALID_INPUT_TYPES.includes(type as (typeof VALID_INPUT_TYPES)[number]) ? type! : 'text';
 };
 
@@ -142,7 +137,6 @@ const validateInputType = (type: string | null): string => {
 export const INPUT_TAG = define(
   'bit-input',
   ({ host }) => {
-    const emit = defineEmits<BitInputEvents>();
     const props = defineProps<BitInputProps>({
       autocomplete: { default: undefined },
       clearable: { default: false },
@@ -167,9 +161,9 @@ export const INPUT_TAG = define(
       value: { default: '' },
       variant: { default: undefined },
     });
+    const emit = defineEmits<BitInputEvents>();
 
     const showPassword = signal(false);
-
     // Shared text-field setup: value signal, form registration, IDs, label refs
     const tf = useTextField(props, 'input');
     const {
@@ -200,106 +194,89 @@ export const INPUT_TAG = define(
 
       if (!inp) return;
 
+      const syncOptionalAttr = (name: 'autocomplete' | 'inputmode' | 'pattern', value: string | null | undefined) => {
+        if (value == null || value === '') {
+          inp.removeAttribute(name);
+        } else {
+          inp.setAttribute(name, value);
+        }
+      };
+
       // Define event handlers
       const handleInput = (e: Event) => {
         if (e.target !== inp) return;
 
-        valueSignal.value = inp.value;
         emit('input', { originalEvent: e, value: inp.value });
       };
-
       const handleChange = (e: Event) => {
         if (e.target !== inp) return;
 
-        valueSignal.value = inp.value;
         emit('change', { originalEvent: e, value: inp.value });
         tf.triggerValidation('change');
       };
-
       const handleBlur = () => tf.triggerValidation('blur');
 
       // Attach event listeners
       handle(inp, 'input', handleInput);
       handle(inp, 'change', handleChange);
       handle(inp, 'blur', handleBlur);
-
       // Effect 1: label visibility (via shared composable)
       tf.mountLabelSync();
-
-      // Effect 2: sync input element properties
-      syncDOMProps(inp, {
-        disabled: props.disabled,
-        name: () => props.name.value || '',
-        placeholder: props.placeholder,
-        readOnly: props.readonly,
-        required: props.required,
-        type: () =>
-          props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value),
-        value: valueSignal,
-      });
       // Sync optional input attributes that require conditional attribute removal
       effect(() => {
-        const maxLen = props.maxlength.value != null ? Number(props.maxlength.value) : -1;
+        const maxLen = parsePositiveNumber(props.maxlength.value);
 
-        if (maxLen > 0) inp.maxLength = maxLen;
+        if (maxLen != null) inp.maxLength = maxLen;
+        else inp.removeAttribute('maxlength');
 
-        const minLen = props.minlength.value != null ? Number(props.minlength.value) : -1;
+        const minLen = parsePositiveNumber(props.minlength.value);
 
-        if (minLen > 0) inp.minLength = minLen;
+        if (minLen != null) inp.minLength = minLen;
+        else inp.removeAttribute('minlength');
 
-        if (props.pattern.value != null) inp.pattern = props.pattern.value;
-        else inp.removeAttribute('pattern');
+        syncOptionalAttr('pattern', props.pattern.value ?? null);
+        syncOptionalAttr('inputmode', props.inputmode.value ?? null);
 
-        if (props.inputmode.value != null) inp.inputMode = props.inputmode.value;
-        else inp.removeAttribute('inputmode');
+        const autocomplete = props.autocomplete.value;
 
-        if (props.autocomplete.value != null) inp.autocomplete = props.autocomplete.value as AutoFill;
-        else inp.removeAttribute('autocomplete');
+        if (autocomplete == null || autocomplete === '') inp.removeAttribute('autocomplete');
+        else inp.autocomplete = autocomplete as AutoFill;
       });
-
       // Effect 3: sync helper and error text
       effect(() => {
+        const assistive = resolveSplitAssistiveText(props.error.value, props.helper.value);
+
         if (helperRef.value) {
-          helperRef.value.textContent = props.helper.value;
-          helperRef.value.hidden = !!props.error.value || !props.helper.value;
+          helperRef.value.textContent = assistive.helperText;
+          helperRef.value.hidden = assistive.helperHidden;
         }
 
         if (errorRef.value) {
-          errorRef.value.textContent = props.error.value;
-          errorRef.value.hidden = !props.error.value;
+          errorRef.value.textContent = assistive.errorText;
+          errorRef.value.hidden = assistive.errorHidden;
         }
       });
-
       // Effect 4: sync character counter
       effect(() => {
         if (!charCounterRef.value) return;
 
-        const maxLen = props.maxlength.value != null ? Number(props.maxlength.value) : -1;
+        const state = resolveCounterState(valueSignal.value.length, parsePositiveNumber(props.maxlength.value));
 
-        if (maxLen > 0) {
-          const len = valueSignal.value.length;
+        charCounterRef.value.hidden = state.hidden;
+        charCounterRef.value.textContent = state.text;
+        charCounterRef.value.removeAttribute('data-near-limit');
+        charCounterRef.value.removeAttribute('data-at-limit');
 
-          charCounterRef.value.textContent = `${len} / ${maxLen}`;
-          charCounterRef.value.hidden = false;
-          charCounterRef.value.removeAttribute('data-near-limit');
-          charCounterRef.value.removeAttribute('data-at-limit');
-
-          if (len >= maxLen) charCounterRef.value.setAttribute('data-at-limit', '');
-          else if (len >= maxLen * 0.9) charCounterRef.value.setAttribute('data-near-limit', '');
-        } else {
-          charCounterRef.value.hidden = true;
-        }
+        if (state.atLimit) charCounterRef.value.setAttribute('data-at-limit', '');
+        else if (state.nearLimit) charCounterRef.value.setAttribute('data-near-limit', '');
       });
-
       // Effect 5: manage has-value attribute for clearable button visibility
       effect(() => {
         if (valueSignal.value) host.setAttribute('has-value', '');
         else host.removeAttribute('has-value');
       });
-
       // Effect 6: propagate form context size/variant/disabled to host
       mountFormContextSync(host, tf.formCtx, props);
-
       aria(inp, {
         describedby: () => (props.error.value ? errorId : helperId),
         errormessage: () => (props.error.value ? errorId : null),
@@ -308,7 +285,7 @@ export const INPUT_TAG = define(
 
       // Clear button
       if (clearBtnRef.value) {
-        clearBtnRef.value.addEventListener('click', (e: MouseEvent) => {
+        handle(clearBtnRef.value, 'click', (e: MouseEvent) => {
           e.preventDefault();
           valueSignal.value = '';
           emit('input', { originalEvent: e, value: '' });
@@ -319,72 +296,83 @@ export const INPUT_TAG = define(
       }
     });
 
-    return {
-      styles: [
-        sizeVariantMixin({
-          lg: {
-            '--_field-height': 'var(--size-12)',
-            '--_padding': 'var(--size-2-5) var(--size-3-5)',
-            fontSize: 'var(--text-base)',
-            gap: 'var(--size-2-5)',
-          },
-          sm: {
-            '--_field-height': 'var(--size-8)',
-            '--_padding': 'var(--size-1) var(--size-2)',
-            fontSize: 'var(--text-xs)',
-            gap: 'var(--size-1-5)',
-          },
-        }),
-        ...formFieldMixins,
-        disabledLoadingMixin(),
-        forcedColorsFocusMixin('input'),
-        componentStyles,
-      ],
-      template: html` <div class="input-wrapper" part="wrapper">
+    return html` <div class="input-wrapper" part="wrapper">
+      <label
+        class="label-outside"
+        for="${inputId}"
+        id="${labelOutsideId}"
+        part="label"
+        ref=${labelOutsideRef}
+        hidden></label>
+      <div class="field" part="field">
         <label
-          class="label-outside"
+          class="label-inset"
           for="${inputId}"
-          id="${labelOutsideId}"
+          id="${labelInsetId}"
           part="label"
-          ref=${labelOutsideRef}
+          ref=${labelInsetRef}
           hidden></label>
-        <div class="field" part="field">
-          <label
-            class="label-inset"
-            for="${inputId}"
-            id="${labelInsetId}"
-            part="label"
-            ref=${labelInsetRef}
-            hidden></label>
-          <div class="input-row" part="input-row">
-            <slot name="prefix"></slot>
-            <input
-              part="input"
-              id="${inputId}"
-              :aria-labelledby="${() => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId)}"
-              aria-describedby="${helperId}"
-              ref=${inputRef} />
-            <slot name="suffix"></slot>
-            <button
-              class="pwd-toggle-btn"
-              part="pwd-toggle"
-              type="button"
-              :aria-label="${() => (showPassword.value ? 'Hide password' : 'Show password')}"
-              :aria-pressed="${() => String(showPassword.value)}"
-              tabindex="-1"
-              @click="${togglePasswordVisibility}">
-              ${() => (showPassword.value ? eyeOffIcon : eyeIcon)}
-            </button>
-            <button class="clear-btn" part="clear" type="button" aria-label="Clear" tabindex="-1" ref=${clearBtnRef}>
-              ${clearIcon}
-            </button>
-          </div>
+        <div class="input-row" part="input-row">
+          <slot name="prefix"></slot>
+          <input
+            part="input"
+            id="${inputId}"
+            ${attr({
+              disabled: props.disabled,
+              name: props.name,
+              placeholder: props.placeholder,
+              readOnly: props.readonly,
+              required: props.required,
+              type:
+                props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value),
+              value: valueSignal,
+            })}
+            :aria-labelledby="${() => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId)}"
+            aria-describedby="${helperId}"
+            ref=${inputRef} />
+          <slot name="suffix"></slot>
+          <button
+            class="pwd-toggle-btn"
+            part="pwd-toggle"
+            type="button"
+            :aria-label="${() => (showPassword.value ? 'Hide password' : 'Show password')}"
+            :aria-pressed="${() => String(showPassword.value)}"
+            tabindex="-1"
+            @click="${togglePasswordVisibility}">
+            ${() => (showPassword.value ? eyeOffIcon : eyeIcon)}
+          </button>
+          <button class="clear-btn" part="clear" type="button" aria-label="Clear" tabindex="-1" ref=${clearBtnRef}>
+            ${clearIcon}
+          </button>
         </div>
-        <div class="helper-text" id="${helperId}" part="helper" ref=${helperRef} hidden></div>
-        <div class="helper-text" id="${errorId}" role="alert" part="error" ref=${errorRef} hidden></div>
-        <div class="char-counter" part="char-counter" ref=${charCounterRef} hidden></div>
-      </div>`,
-    };
+      </div>
+      <div class="helper-text" id="${helperId}" part="helper" ref=${helperRef} hidden></div>
+      <div class="helper-text" id="${errorId}" role="alert" part="error" ref=${errorRef} hidden></div>
+      <div class="char-counter" part="char-counter" ref=${charCounterRef} hidden></div>
+    </div>`;
   },
-  { formAssociated: true, shadow: { delegatesFocus: true } },
+  {
+    formAssociated: true,
+    shadow: { delegatesFocus: true },
+    styles: [
+      sizeVariantMixin({
+        lg: {
+          '--_field-height': 'var(--size-12)',
+          '--_padding': 'var(--size-2-5) var(--size-3-5)',
+          fontSize: 'var(--text-base)',
+          gap: 'var(--size-2-5)',
+        },
+        sm: {
+          '--_field-height': 'var(--size-8)',
+          '--_padding': 'var(--size-1) var(--size-2)',
+          fontSize: 'var(--text-xs)',
+          gap: 'var(--size-1-5)',
+        },
+      }),
+      ...formFieldMixins,
+      disabledLoadingMixin(),
+      forcedColorsFocusMixin('input'),
+      componentStyles,
+    ],
+  },
 );

@@ -4,13 +4,13 @@ import {
   computed,
   createId,
   define,
-  defineEmits,
-  defineProps,
   html,
   onMount,
   onSlotChange,
   signal,
   watch,
+  defineProps,
+  defineEmits,
 } from '@vielzeug/craftit';
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
 
@@ -87,213 +87,199 @@ export type BitPopoverProps = {
  * </bit-popover>
  * ```
  */
-export const POPOVER_TAG = define('bit-popover', ({ host }) => {
-  const props = defineProps<BitPopoverProps>({
-    disabled: { default: false },
-    label: { default: undefined },
-    offset: { default: PANEL_OFFSET },
-    open: { default: undefined },
-    placement: { default: 'bottom' },
-    trigger: { default: 'click' },
-  });
-
-  const emit = defineEmits<BitPopoverEvents>();
-
-  const visible = signal(false);
-  const panelId = createId('popover');
-  let panelEl: HTMLElement | null = null;
-  let currentTrigger: HTMLElement | null = null;
-  let autoUpdateCleanup: (() => void) | null = null;
-
-  const triggers = computed<PopoverTrigger[]>(() => normalizeTriggers(props.trigger.value));
-
-  function updatePosition() {
-    if (!panelEl || !currentTrigger) return;
-
-    positionFloat(currentTrigger, panelEl, {
-      middleware: [offset(props.offset.value ?? PANEL_OFFSET), flip(), shift({ padding: 8 })],
-      placement: props.placement.value,
-    }).then((resolvedPlacement) => {
-      if (panelEl) panelEl.dataset.placement = resolvedPlacement;
+export const POPOVER_TAG = define(
+  'bit-popover',
+  ({ host }) => {
+    const props = defineProps<BitPopoverProps>({
+      disabled: { default: false },
+      label: { default: undefined },
+      offset: { default: PANEL_OFFSET },
+      open: { default: undefined },
+      placement: { default: 'bottom' },
+      trigger: { default: 'click' },
     });
-  }
+    const emit = defineEmits<BitPopoverEvents>();
 
-  /** Show the panel and start auto-updating its position. */
-  function showFloat() {
-    visible.value = true;
-    currentTrigger?.setAttribute('aria-expanded', 'true');
+    const visible = signal(false);
+    const panelId = createId('popover');
+    let panelEl: HTMLElement | null = null;
+    let currentTrigger: HTMLElement | null = null;
+    let autoUpdateCleanup: (() => void) | null = null;
+    const triggers = computed<PopoverTrigger[]>(() => normalizeTriggers(props.trigger.value));
 
-    if (panelEl && !panelEl.matches(':popover-open')) panelEl.showPopover();
+    function updatePosition() {
+      if (!panelEl || !currentTrigger) return;
 
-    if (currentTrigger && panelEl) {
-      autoUpdateCleanup?.();
-      autoUpdateCleanup = autoUpdate(currentTrigger, panelEl, updatePosition);
+      positionFloat(currentTrigger, panelEl, {
+        middleware: [offset(props.offset.value ?? PANEL_OFFSET), flip(), shift({ padding: 8 })],
+        placement: props.placement.value,
+      }).then((resolvedPlacement) => {
+        if (panelEl) panelEl.dataset.placement = resolvedPlacement;
+      });
     }
+    /** Show the panel and start auto-updating its position. */
+    function showFloat() {
+      visible.value = true;
+      currentTrigger?.setAttribute('aria-expanded', 'true');
 
-    updatePosition();
-  }
+      if (panelEl && !panelEl.matches(':popover-open')) panelEl.showPopover();
 
-  /** Hide the panel and stop auto-updating its position. */
-  function hideFloat() {
-    autoUpdateCleanup?.();
-    autoUpdateCleanup = null;
-    currentTrigger?.setAttribute('aria-expanded', 'false');
-    visible.value = false;
-
-    if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
-  }
-
-  function open() {
-    if (props.open.value !== undefined) return;
-
-    if (props.disabled.value) return;
-
-    if (visible.value) return;
-
-    showFloat();
-    emit('open');
-  }
-
-  function close() {
-    if (props.open.value !== undefined) return;
-
-    if (!visible.value) return;
-
-    hideFloat();
-    emit('close');
-  }
-
-  function toggle() {
-    if (visible.value) close();
-    else open();
-  }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') close();
-  }
-
-  function handleClickOutside(e: MouseEvent) {
-    if (!visible.value) return;
-
-    const path = e.composedPath();
-
-    if (path.includes(host)) return;
-
-    if (panelEl && path.includes(panelEl)) return;
-
-    if (currentTrigger && path.includes(currentTrigger)) return;
-
-    close();
-  }
-
-  // Don't close when focus moves from the trigger into the panel content.
-  function handleFocusOut(e: FocusEvent) {
-    const next = e.relatedTarget as Element | null;
-
-    if (next && panelEl?.contains(next)) return;
-
-    if (next && currentTrigger?.contains(next)) return;
-
-    close();
-  }
-
-  onMount(() => {
-    const triggerSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-
-    if (!triggerSlot) return;
-
-    const bindEvents = () => {
-      unbindEvents();
-
-      const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
-
-      if (!el) return;
-
-      currentTrigger = el;
-      el.setAttribute('aria-controls', panelId);
-      el.setAttribute('aria-haspopup', 'dialog');
-      el.setAttribute('aria-expanded', String(visible.value));
-      el.setAttribute('aria-disabled', String(Boolean(props.disabled.value)));
-
-      const t = triggers.value;
-
-      if (t.includes('click')) {
-        el.addEventListener('click', toggle);
-        document.addEventListener('click', handleClickOutside, { capture: true });
+      if (currentTrigger && panelEl) {
+        autoUpdateCleanup?.();
+        autoUpdateCleanup = autoUpdate(currentTrigger, panelEl, updatePosition);
       }
 
-      if (t.includes('hover')) {
-        el.addEventListener('mouseenter', open);
-        el.addEventListener('mouseleave', close);
-        panelEl?.addEventListener('mouseenter', open);
-        panelEl?.addEventListener('mouseleave', close);
-      }
-
-      if (t.includes('focus')) {
-        el.addEventListener('focusin', open);
-        el.addEventListener('focusout', handleFocusOut);
-        panelEl?.addEventListener('focusout', handleFocusOut);
-      }
-
-      document.addEventListener('keydown', handleKeydown);
-    };
-
-    const unbindEvents = () => {
-      if (!currentTrigger) return;
-
-      currentTrigger.removeAttribute('aria-controls');
-      currentTrigger.removeAttribute('aria-haspopup');
-      currentTrigger.removeAttribute('aria-expanded');
-      currentTrigger.removeAttribute('aria-disabled');
-      currentTrigger.removeEventListener('click', toggle);
-      currentTrigger.removeEventListener('mouseenter', open);
-      currentTrigger.removeEventListener('mouseleave', close);
-      currentTrigger.removeEventListener('focusin', open);
-      currentTrigger.removeEventListener('focusout', handleFocusOut);
-      panelEl?.removeEventListener('mouseenter', open);
-      panelEl?.removeEventListener('mouseleave', close);
-      panelEl?.removeEventListener('focusout', handleFocusOut);
-      document.removeEventListener('click', handleClickOutside, { capture: true });
-      document.removeEventListener('keydown', handleKeydown);
-      currentTrigger = null;
-    };
-
-    onSlotChange('default', bindEvents);
-
-    // Controlled mode
-    watch(props.open, (openVal) => {
-      if (openVal === undefined || openVal === null) return;
-
-      if (openVal) {
-        showFloat();
-        emit('open');
-      } else {
-        hideFloat();
-        emit('close');
-      }
-    });
-
-    watch(props.trigger, bindEvents);
-    watch(props.disabled, (isDisabled) => {
-      currentTrigger?.setAttribute('aria-disabled', String(Boolean(isDisabled)));
-
-      if (isDisabled) {
-        close();
-      }
-    });
-
-    return () => {
-      unbindEvents();
+      updatePosition();
+    }
+    /** Hide the panel and stop auto-updating its position. */
+    function hideFloat() {
       autoUpdateCleanup?.();
       autoUpdateCleanup = null;
+      currentTrigger?.setAttribute('aria-expanded', 'false');
+      visible.value = false;
 
       if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
-    };
-  });
+    }
+    function open() {
+      if (props.open.value !== undefined) return;
 
-  return {
-    styles: [reducedMotionMixin, styles],
-    template: html`
+      if (props.disabled.value) return;
+
+      if (visible.value) return;
+
+      showFloat();
+      emit('open');
+    }
+    function close() {
+      if (props.open.value !== undefined) return;
+
+      if (!visible.value) return;
+
+      hideFloat();
+      emit('close');
+    }
+    function toggle() {
+      if (visible.value) close();
+      else open();
+    }
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.key === 'Escape') close();
+    }
+    function handleClickOutside(e: MouseEvent) {
+      if (!visible.value) return;
+
+      const path = e.composedPath();
+
+      if (path.includes(host)) return;
+
+      if (panelEl && path.includes(panelEl)) return;
+
+      if (currentTrigger && path.includes(currentTrigger)) return;
+
+      close();
+    }
+    // Don't close when focus moves from the trigger into the panel content.
+    function handleFocusOut(e: FocusEvent) {
+      const next = e.relatedTarget as Element | null;
+
+      if (next && panelEl?.contains(next)) return;
+
+      if (next && currentTrigger?.contains(next)) return;
+
+      close();
+    }
+    onMount(() => {
+      const triggerSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+
+      if (!triggerSlot) return;
+
+      const bindEvents = () => {
+        unbindEvents();
+
+        const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+
+        if (!el) return;
+
+        currentTrigger = el;
+        el.setAttribute('aria-controls', panelId);
+        el.setAttribute('aria-haspopup', 'dialog');
+        el.setAttribute('aria-expanded', String(visible.value));
+        el.setAttribute('aria-disabled', String(Boolean(props.disabled.value)));
+
+        const t = triggers.value;
+
+        if (t.includes('click')) {
+          el.addEventListener('click', toggle);
+          document.addEventListener('click', handleClickOutside, { capture: true });
+        }
+
+        if (t.includes('hover')) {
+          el.addEventListener('mouseenter', open);
+          el.addEventListener('mouseleave', close);
+          panelEl?.addEventListener('mouseenter', open);
+          panelEl?.addEventListener('mouseleave', close);
+        }
+
+        if (t.includes('focus')) {
+          el.addEventListener('focusin', open);
+          el.addEventListener('focusout', handleFocusOut);
+          panelEl?.addEventListener('focusout', handleFocusOut);
+        }
+
+        document.addEventListener('keydown', handleKeydown);
+      };
+      const unbindEvents = () => {
+        if (!currentTrigger) return;
+
+        currentTrigger.removeAttribute('aria-controls');
+        currentTrigger.removeAttribute('aria-haspopup');
+        currentTrigger.removeAttribute('aria-expanded');
+        currentTrigger.removeAttribute('aria-disabled');
+        currentTrigger.removeEventListener('click', toggle);
+        currentTrigger.removeEventListener('mouseenter', open);
+        currentTrigger.removeEventListener('mouseleave', close);
+        currentTrigger.removeEventListener('focusin', open);
+        currentTrigger.removeEventListener('focusout', handleFocusOut);
+        panelEl?.removeEventListener('mouseenter', open);
+        panelEl?.removeEventListener('mouseleave', close);
+        panelEl?.removeEventListener('focusout', handleFocusOut);
+        document.removeEventListener('click', handleClickOutside, { capture: true });
+        document.removeEventListener('keydown', handleKeydown);
+        currentTrigger = null;
+      };
+
+      onSlotChange('default', bindEvents);
+      // Controlled mode
+      watch(props.open, (openVal) => {
+        if (openVal === undefined || openVal === null) return;
+
+        if (openVal) {
+          showFloat();
+          emit('open');
+        } else {
+          hideFloat();
+          emit('close');
+        }
+      });
+      watch(props.trigger, bindEvents);
+      watch(props.disabled, (isDisabled) => {
+        currentTrigger?.setAttribute('aria-disabled', String(Boolean(isDisabled)));
+
+        if (isDisabled) {
+          close();
+        }
+      });
+
+      return () => {
+        unbindEvents();
+        autoUpdateCleanup?.();
+        autoUpdateCleanup = null;
+
+        if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
+      };
+    });
+
+    return html`
       <slot></slot>
       <div
         class="panel"
@@ -309,6 +295,9 @@ export const POPOVER_TAG = define('bit-popover', ({ host }) => {
         }}>
         <slot name="content"></slot>
       </div>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [reducedMotionMixin, styles],
+  },
+);

@@ -1,4 +1,4 @@
-import { define, defineProps, html, watch } from '@vielzeug/craftit';
+import { define, html, typed, watch, defineProps } from '@vielzeug/craftit';
 
 import styles from './text.css?inline';
 
@@ -68,45 +68,51 @@ export type BitTextProps = {
  * ```
  */
 
-export const TEXT_TAG = define('bit-text', ({ host }) => {
-  // Only props read by JS need signals. CSS attribute selectors (variant, size,
-  // color, weight, align, truncate, italic) are handled entirely by the browser
-  // and do not need a MutationObserver per-prop.
-  const props = defineProps<Pick<BitTextProps, 'as' | 'lines'>>({
-    as: { default: undefined },
-    lines: { default: undefined, type: Number },
-  });
+export const TEXT_TAG = define(
+  'bit-text',
+  ({ host }) => {
+    const props = defineProps<BitTextProps>({
+      align: typed<BitTextProps['align']>(undefined),
+      as: typed<BitTextProps['as']>(undefined),
+      color: typed<BitTextProps['color']>(undefined),
+      italic: typed<boolean>(false),
+      lines: typed<number | undefined>(undefined, { type: Number }),
+      size: typed<BitTextProps['size']>(undefined),
+      truncate: typed<boolean>(false),
+      variant: typed<BitTextProps['variant']>(undefined),
+      weight: typed<BitTextProps['weight']>(undefined),
+    });
 
-  // Single watcher drives both role + aria-level from `as`.
-  // h1–h6 → role="heading" + aria-level; everything else → remove both.
-  watch(
-    props.as,
-    (tag) => {
-      const match = /^h([1-6])$/.exec(tag ?? '');
+    // Single watcher drives both role + aria-level from `as`.
+    // h1–h6 → role="heading" + aria-level; everything else → remove both.
+    watch(
+      props.as,
+      (tag) => {
+        const match = /^h([1-6])$/.exec((tag as string | undefined) ?? '');
 
-      if (match) {
-        host.setAttribute('role', 'heading');
-        host.setAttribute('aria-level', match[1]);
-      } else {
-        host.removeAttribute('role');
-        host.removeAttribute('aria-level');
-      }
-    },
-    { immediate: true },
-  );
+        if (match) {
+          host.setAttribute('role', 'heading');
+          host.setAttribute('aria-level', match[1]);
+        } else {
+          host.removeAttribute('role');
+          host.removeAttribute('aria-level');
+        }
+      },
+      { immediate: true },
+    );
+    // Drive --_lines on the host so the CSS line-clamp rule works.
+    watch(
+      props.lines,
+      (n) => {
+        if (n != null) host.style.setProperty('--_lines', String(n));
+        else host.style.removeProperty('--_lines');
+      },
+      { immediate: true },
+    );
 
-  // Drive --_lines on the host so the CSS line-clamp rule works.
-  watch(
-    props.lines,
-    (n) => {
-      if (n != null) host.style.setProperty('--_lines', String(n));
-      else host.style.removeProperty('--_lines');
-    },
-    { immediate: true },
-  );
-
-  return {
+    return html`<slot></slot>`;
+  },
+  {
     styles: [styles],
-    template: html`<slot></slot>`,
-  };
-});
+  },
+);

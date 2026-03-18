@@ -18,8 +18,8 @@
   },
   "scripts": {
     "build": "tsc && vite build  && tsc -p tsconfig.declarations.json",
-    "fix": "biome check --write --unsafe src",
-    "lint": "biome check src",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
     "prepublishOnly": "npm run build",
     "test": "vitest"
   },

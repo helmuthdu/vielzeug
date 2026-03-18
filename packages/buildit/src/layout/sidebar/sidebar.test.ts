@@ -260,8 +260,8 @@ describe('bit-sidebar', () => {
   describe('Responsive auto-collapse', () => {
     it('collapses when the responsive media query matches', async () => {
       const mockMql = {
-        matches: true,
         addEventListener: vi.fn(),
+        matches: true,
         removeEventListener: vi.fn(),
       };
       const origMatchMedia = window.matchMedia;
@@ -281,10 +281,10 @@ describe('bit-sidebar', () => {
     it('expands when the responsive media query stops matching', async () => {
       let capturedHandler!: (e: MediaQueryListEvent) => void;
       const mockMql = {
-        matches: true,
         addEventListener: vi.fn((_: string, cb: (e: MediaQueryListEvent) => void) => {
           capturedHandler = cb;
         }),
+        matches: true,
         removeEventListener: vi.fn(),
       };
       const origMatchMedia = window.matchMedia;
@@ -314,8 +314,8 @@ describe('bit-sidebar', () => {
 
     it('fires collapse event when auto-collapsing', async () => {
       const mockMql = {
-        matches: true,
         addEventListener: vi.fn(),
+        matches: true,
         removeEventListener: vi.fn(),
       };
       const origMatchMedia = window.matchMedia;

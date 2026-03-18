@@ -50,6 +50,11 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
 
+// jsdom does not implement scrollTo on Element in all environments
+if (!Element.prototype.scrollTo) {
+  (Element.prototype as any).scrollTo = () => {};
+}
+
 // jsdom does not implement ResizeObserver — stub it so layout components can load
 if (typeof ResizeObserver === 'undefined') {
   (globalThis as any).ResizeObserver = class ResizeObserver {

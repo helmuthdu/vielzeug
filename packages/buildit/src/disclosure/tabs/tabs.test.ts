@@ -37,7 +37,7 @@ describe('bit-tabs', () => {
 
       const tabs = fixture.element.querySelectorAll('bit-tab-item');
 
-      tabs[1].dispatchEvent(new CustomEvent('tab-click', { bubbles: true, composed: true }));
+      tabs[1].dispatchEvent(new CustomEvent('click', { bubbles: true, composed: true }));
 
       expect(onChange).toHaveBeenCalledTimes(1);
       expect((onChange.mock.calls[0][0] as CustomEvent).detail.value).toBe('settings');

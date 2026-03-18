@@ -1,4 +1,4 @@
-import { aria, define, defineProps, effect, html, onMount } from '@vielzeug/craftit';
+import { aria, define, effect, html, onMount, defineProps } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -183,67 +183,65 @@ function buildTable(
  * </bit-table>
  * ```
  */
-export const TABLE_TAG = define('bit-table', ({ host }) => {
-  const props = defineProps<BitTableProps>({
-    bordered: { default: false, type: Boolean },
-    caption: { default: undefined },
-    color: { default: undefined },
-    loading: { default: false, type: Boolean },
-    size: { default: undefined },
-    sticky: { default: false, type: Boolean },
-    striped: { default: false, type: Boolean },
-  });
-
-  aria({
-    busy: () => props.loading.value,
-    label: () => props.caption.value ?? null,
-  });
-
-  // Build the fully-native shadow table via DOM APIs (not innerHTML) to avoid
-  // HTML-parser foster-parenting which would eject <slot> elements from table
-  // contexts.  All three issues — color themes, sticky headers, colspan —
-  // require real <thead>/<tbody>/<tfoot>/<tr>/<th>/<td> in the shadow tree.
-  onMount(() => {
-    const scrollContainer = host.shadowRoot!.querySelector('.scroll-container')!;
-
-    const table = document.createElement('table');
-    const captionEl = document.createElement('caption');
-    const thead = document.createElement('thead');
-    const tbody = document.createElement('tbody');
-    const tfoot = document.createElement('tfoot');
-
-    table.setAttribute('part', 'table');
-    thead.setAttribute('part', 'head');
-    tbody.setAttribute('part', 'body');
-    tfoot.setAttribute('part', 'foot');
-
-    table.append(captionEl, thead, tbody, tfoot);
-    scrollContainer.appendChild(table);
-
-    // Sync caption text from prop
-    effect(() => {
-      captionEl.hidden = !(captionEl.textContent = props.caption.value ?? '');
+export const TABLE_TAG = define(
+  'bit-table',
+  ({ host }) => {
+    const props = defineProps<BitTableProps>({
+      bordered: { default: false, type: Boolean },
+      caption: { default: undefined },
+      color: { default: undefined },
+      loading: { default: false, type: Boolean },
+      size: { default: undefined },
+      sticky: { default: false, type: Boolean },
+      striped: { default: false, type: Boolean },
     });
 
-    // Initial build
-    let cleanupCellObservers = buildTable(host, thead, tbody, tfoot);
+    aria({
+      busy: () => props.loading.value,
+      label: () => props.caption.value ?? null,
+    });
+    // Build the fully-native shadow table via DOM APIs (not innerHTML) to avoid
+    // HTML-parser foster-parenting which would eject <slot> elements from table
+    // contexts.  All three issues — color themes, sticky headers, colspan —
+    // require real <thead>/<tbody>/<tfoot>/<tr>/<th>/<td> in the shadow tree.
+    onMount(() => {
+      const scrollContainer = host.shadowRoot!.querySelector('.scroll-container')!;
+      const table = document.createElement('table');
+      const captionEl = document.createElement('caption');
+      const thead = document.createElement('thead');
+      const tbody = document.createElement('tbody');
+      const tfoot = document.createElement('tfoot');
 
-    // Rebuild whenever direct children change (rows added / removed / reordered)
-    const structureObserver = new MutationObserver(() => {
-      cleanupCellObservers();
-      cleanupCellObservers = buildTable(host, thead, tbody, tfoot);
+      table.setAttribute('part', 'table');
+      thead.setAttribute('part', 'head');
+      tbody.setAttribute('part', 'body');
+      tfoot.setAttribute('part', 'foot');
+      table.append(captionEl, thead, tbody, tfoot);
+      scrollContainer.appendChild(table);
+      // Sync caption text from prop
+      effect(() => {
+        captionEl.hidden = !(captionEl.textContent = props.caption.value ?? '');
+      });
+
+      // Initial build
+      let cleanupCellObservers = buildTable(host, thead, tbody, tfoot);
+      // Rebuild whenever direct children change (rows added / removed / reordered)
+      const structureObserver = new MutationObserver(() => {
+        cleanupCellObservers();
+        cleanupCellObservers = buildTable(host, thead, tbody, tfoot);
+      });
+
+      structureObserver.observe(host, { childList: true });
+
+      return () => {
+        structureObserver.disconnect();
+        cleanupCellObservers();
+      };
     });
 
-    structureObserver.observe(host, { childList: true });
-
-    return () => {
-      structureObserver.disconnect();
-      cleanupCellObservers();
-    };
-  });
-
-  return {
+    return html`<div class="scroll-container" part="scroll"></div>`;
+  },
+  {
     styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
-    template: html`<div class="scroll-container" part="scroll"></div>`,
-  };
-});
+  },
+);

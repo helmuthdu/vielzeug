@@ -181,5 +181,4 @@ describe('Core: Lifecycle Hooks', () => {
       expect(clickCount).toBe(1);
     });
   });
-
 });

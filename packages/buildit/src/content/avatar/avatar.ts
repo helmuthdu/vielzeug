@@ -1,4 +1,4 @@
-import { computed, define, defineProps, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
+import { computed, define, html, onMount, onSlotChange, signal, watch, defineProps } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -70,80 +70,69 @@ export type BitAvatarProps = {
  * <bit-avatar alt="John Smith" status="online"></bit-avatar>
  * ```
  */
-export const AVATAR_TAG = define('bit-avatar', () => {
-  const props = defineProps<BitAvatarProps>({
-    alt: { default: undefined },
-    color: { default: undefined },
-    initials: { default: undefined },
-    rounded: { default: undefined },
-    size: { default: undefined },
-    src: { default: undefined },
-    status: { default: undefined },
-  });
-
-  const imgFailed = signal(false);
-
-  // Reset stale error state whenever src changes
-  watch(props.src, () => {
-    imgFailed.value = false;
-  });
-
-  // Attach load/error listeners reactively when the img element mounts
-  const attachImgListeners = (el: HTMLImageElement | null) => {
-    if (!el) return;
-
-    el.addEventListener('error', () => {
-      imgFailed.value = true;
+export const AVATAR_TAG = define(
+  'bit-avatar',
+  () => {
+    const props = defineProps<BitAvatarProps>({
+      alt: { default: undefined },
+      color: { default: undefined },
+      initials: { default: undefined },
+      rounded: { default: undefined },
+      size: { default: undefined },
+      src: { default: undefined },
+      status: { default: undefined },
     });
-    el.addEventListener('load', () => {
+
+    const imgFailed = signal(false);
+
+    // Reset stale error state whenever src changes
+    watch(props.src, () => {
       imgFailed.value = false;
     });
-  };
 
-  const derivedInitials = computed(() => {
-    if (props.initials.value) return props.initials.value.slice(0, 2);
+    // Attach load/error listeners reactively when the img element mounts
+    const attachImgListeners = (el: HTMLImageElement | null) => {
+      if (!el) return;
 
-    const alt = props.alt.value;
+      el.addEventListener('error', () => {
+        imgFailed.value = true;
+      });
+      el.addEventListener('load', () => {
+        imgFailed.value = false;
+      });
+    };
+    const derivedInitials = computed(() => {
+      if (props.initials.value) return props.initials.value.slice(0, 2);
 
-    if (!alt) return '';
+      const alt = props.alt.value;
 
-    const parts = alt.trim().split(/\s+/);
+      if (!alt) return '';
 
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      const parts = alt.trim().split(/\s+/);
 
-    return parts[0].slice(0, 2).toUpperCase();
-  });
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 
-  const showImage = computed(() => !!props.src.value && !imgFailed.value);
-  const showInitials = computed(() => !showImage.value && !!derivedInitials.value);
-  const showFallback = computed(() => !showImage.value && !showInitials.value);
+      return parts[0].slice(0, 2).toUpperCase();
+    });
+    const showImage = computed(() => !!props.src.value && !imgFailed.value);
+    const showInitials = computed(() => !showImage.value && !!derivedInitials.value);
+    const showFallback = computed(() => !showImage.value && !showInitials.value);
+    // Combines name and status into a single accessible label so AT announces them together
+    const avatarLabel = computed(() => {
+      const name = (props.alt.value as string | undefined) || null;
+      const statusKey = props.status.value as AvatarStatus | undefined;
+      const status = statusKey ? STATUS_LABELS[statusKey] : null;
 
-  // Combines name and status into a single accessible label so AT announces them together
-  const avatarLabel = computed(() => {
-    const name = props.alt.value || null;
-    const status = props.status.value ? STATUS_LABELS[props.status.value] : null;
+      if (!name && !status) return null;
 
-    if (!name && !status) return null;
+      if (!name) return `Status: ${status}`;
 
-    if (!name) return `Status: ${status}`;
+      if (!status) return name;
 
-    if (!status) return name;
+      return `${name}, ${status}`;
+    });
 
-    return `${name}, ${status}`;
-  });
-
-  return {
-    styles: [
-      colorThemeMixin,
-      roundedVariantMixin,
-      sizeVariantMixin({
-        lg: { fontSize: 'var(--avatar-font-size, var(--text-base))', size: 'var(--avatar-size, var(--size-14))' },
-        md: { fontSize: 'var(--avatar-font-size, var(--text-sm))', size: 'var(--avatar-size, var(--size-10))' },
-        sm: { fontSize: 'var(--avatar-font-size, var(--text-xs))', size: 'var(--avatar-size, var(--size-7))' },
-      }),
-      componentStyles,
-    ],
-    template: html`
+    return html`
       <span
         class="avatar"
         part="avatar"
@@ -185,9 +174,21 @@ export const AVATAR_TAG = define('bit-avatar', () => {
               :data-status="${() => props.status.value}"
               aria-hidden="true"></span>`
           : ''}
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [
+      colorThemeMixin,
+      roundedVariantMixin,
+      sizeVariantMixin({
+        lg: { fontSize: 'var(--avatar-font-size, var(--text-base))', size: 'var(--avatar-size, var(--size-14))' },
+        md: { fontSize: 'var(--avatar-font-size, var(--text-sm))', size: 'var(--avatar-size, var(--size-10))' },
+        sm: { fontSize: 'var(--avatar-font-size, var(--text-xs))', size: 'var(--avatar-size, var(--size-7))' },
+      }),
+      componentStyles,
+    ],
+  },
+);
 
 // ============================================
 // AvatarGroup
@@ -225,33 +226,33 @@ export type BitAvatarGroupProps = {
  * </bit-avatar-group>
  * ```
  */
-export const AVATAR_GROUP_TAG = define('bit-avatar-group', ({ host }) => {
-  const props = defineProps<BitAvatarGroupProps>({
-    max: { default: 5 },
-    total: { default: undefined },
-  });
+export const AVATAR_GROUP_TAG = define(
+  'bit-avatar-group',
+  ({ host }) => {
+    const props = defineProps<BitAvatarGroupProps>({
+      max: { default: 5 },
+      total: { default: undefined },
+    });
 
-  const overflowCount = signal(0);
+    const overflowCount = signal(0);
 
-  onMount(() => {
-    const updateVisibility = () => {
-      const avatars = [...host.querySelectorAll('bit-avatar')];
-      const max = Number(props.max.value) || 5;
-      const hidden = Math.max(0, avatars.length - max);
+    onMount(() => {
+      const updateVisibility = () => {
+        const avatars = [...host.querySelectorAll('bit-avatar')];
+        const max = Number(props.max.value) || 5;
+        const hidden = Math.max(0, avatars.length - max);
 
-      overflowCount.value = props.total.value != null ? Number(props.total.value) - max : hidden;
-      avatars.forEach((a, i) => {
-        if (i >= max) a.setAttribute('data-avatar-group-hidden', '');
-        else a.removeAttribute('data-avatar-group-hidden');
-      });
-    };
+        overflowCount.value = props.total.value != null ? Number(props.total.value) - max : hidden;
+        avatars.forEach((a, i) => {
+          if (i >= max) a.setAttribute('data-avatar-group-hidden', '');
+          else a.removeAttribute('data-avatar-group-hidden');
+        });
+      };
 
-    onSlotChange('default', updateVisibility);
-  });
+      onSlotChange('default', updateVisibility);
+    });
 
-  return {
-    styles: [groupStyles],
-    template: html`
+    return html`
       <slot></slot>
       ${() =>
         overflowCount.value > 0
@@ -259,6 +260,9 @@ export const AVATAR_GROUP_TAG = define('bit-avatar-group', ({ host }) => {
               +${() => overflowCount.value}
             </span>`
           : ''}
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [groupStyles],
+  },
+);

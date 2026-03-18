@@ -34,20 +34,24 @@ yarn add @vielzeug/craftit
 ```ts
 import { define, signal, html, css } from '@vielzeug/craftit';
 
-define('my-counter', ({ host }) => {
-  const count = signal(0);
-  const styles = css`
-    button {
-      padding: 8px 16px;
-      font-size: 1rem;
-    }
-  `;
+define(
+  'my-counter',
+  () => {
+    const count = signal(0);
 
-  return {
-    template: html`<button @click=${() => count.value++}>Count: ${count}</button>`,
-    styles: [styles],
-  };
-});
+    return html`<button @click=${() => count.value++}>Count: ${count}</button>`;
+  },
+  {
+    styles: [
+      css`
+        button {
+          padding: 8px 16px;
+          font-size: 1rem;
+        }
+      `,
+    ],
+  },
+);
 ```
 
 ```html
@@ -60,12 +64,12 @@ define('my-counter', ({ host }) => {
 - **Fine-grained reactivity** — Re-exports all signals from [@vielzeug/stateit](/stateit/): `signal()`, `computed()`, `effect()`, `watch()`, `batch()`, `untrack()`, and more
 - **Template literals** — `html\`...\``tagged template for declarative, reactive DOM updates with`:attr`, `?bool`, `@event`, `ref=`, and `.prop` bindings
 - **CSS-in-JS** — `css\`...\``with shadow DOM scoping;`css.theme()` for design-token-based light/dark theming
-- **Lifecycle hooks** — `onMount()`, `onUnmount()`, `onRendered()`, `onCleanup()`, `onError()` for full component lifecycle control
+- **Lifecycle hooks** — `onMount()`, `onCleanup()`, `onError()`, `handle()`, and `watch()` for component lifecycle control
 - **Props** — `prop()` and `defineProps()` for reactive attribute bindings with auto type-coercion, reflection, and validation
 - **Slots & Emits** — `defineSlots()` (reactive slot presence), `onSlotChange()`, and `defineEmits()` for composable component APIs
 - **Refs** — `ref<T>()` and `refs<T>()` for DOM element references
 - **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation
-- **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
+- **Context / DI** — `useProvide()`, `useInject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
 - **Accessibility** — `aria()` for reactive ARIA attributes, `createId()`, `createFormIds()`, `useFocusTrap()`
 - **Observers** — `observeResize()`, `observeIntersection()`, `observeMedia()` return reactive signals
 - **Async rendering** — `suspense()` manages loading/error/retry for async data fetching

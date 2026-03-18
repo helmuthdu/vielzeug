@@ -70,23 +70,32 @@ export type BitBadgeProps = {
  * <bit-badge color="warning" variant="flat">Beta</bit-badge>
  * ```
  */
-export const BADGE_TAG = define('bit-badge', () => {
-  const countProp = prop('count', undefined as number | undefined);
-  const maxProp = prop('max', undefined as number | undefined);
-  const ariaLabelProp = prop('aria-label', undefined as string | undefined);
+export const BADGE_TAG = define(
+  'bit-badge',
+  () => {
+    const countProp = prop('count', undefined as number | undefined);
+    const maxProp = prop('max', undefined as number | undefined);
+    const ariaLabelProp = prop('aria-label', undefined as string | undefined);
 
-  const label = computed(() => {
-    const count = countProp.value != null ? Number(countProp.value) : undefined;
-    const max = maxProp.value != null ? Number(maxProp.value) : undefined;
+    const label = computed(() => {
+      const count = countProp.value != null ? Number(countProp.value) : undefined;
+      const max = maxProp.value != null ? Number(maxProp.value) : undefined;
 
-    if (count === undefined || Number.isNaN(count)) return undefined;
+      if (count === undefined || Number.isNaN(count)) return undefined;
 
-    if (max !== undefined && !Number.isNaN(max) && count > max) return `${max}+`;
+      if (max !== undefined && !Number.isNaN(max) && count > max) return `${max}+`;
 
-    return String(count);
-  });
+      return String(count);
+    });
 
-  return {
+    return html`<span class="badge" part="badge" aria-label=${() => ariaLabelProp.value}>
+        <slot name="icon"></slot>
+        <span ?hidden=${() => label.value == null}>${() => label.value}</span>
+        <slot ?hidden=${() => label.value != null}></slot>
+      </span>
+      <slot name="target"></slot>`;
+  },
+  {
     styles: [
       colorThemeMixin,
       roundedVariantMixin,
@@ -98,11 +107,5 @@ export const BADGE_TAG = define('bit-badge', () => {
       }),
       componentStyles,
     ],
-    template: html`<span class="badge" part="badge" aria-label=${() => ariaLabelProp.value}>
-        <slot name="icon"></slot>
-        <span ?hidden=${() => label.value == null}>${() => label.value}</span>
-        <slot ?hidden=${() => label.value != null}></slot>
-      </span>
-      <slot name="target"></slot>`,
-  };
-});
+  },
+);

@@ -131,6 +131,17 @@ describe('bit-textarea', () => {
 
       expect(fixture.query('textarea')?.getAttribute('aria-invalid')).not.toBe('true');
     });
+
+    it('prefers error text over helper text in merged assistive block', async () => {
+      fixture = await mount('bit-textarea', {
+        attrs: { error: 'Too short', helper: 'At least 20 characters' },
+      });
+
+      const helperEl = fixture.query<HTMLElement>('.helper-text');
+
+      expect(helperEl?.hidden).toBe(false);
+      expect(helperEl?.textContent?.trim()).toBe('Too short');
+    });
   });
 
   // ─── Rows and Resize ─────────────────────────────────────────────────────────
@@ -254,6 +265,26 @@ describe('bit-textarea', () => {
       fixture = await mount('bit-textarea', { attrs: { maxlength: '100' } });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.maxLength).toBe(100);
+    });
+
+    it('sets near-limit counter class at 90% maxlength', async () => {
+      fixture = await mount('bit-textarea', { attrs: { maxlength: '10', value: '123456789' } });
+
+      const counter = fixture.query<HTMLElement>('.counter');
+
+      expect(counter?.hidden).toBe(false);
+      expect(counter?.textContent?.trim()).toBe('9/10');
+      expect(counter?.className).toContain('near-limit');
+    });
+
+    it('sets at-limit counter class at maxlength', async () => {
+      fixture = await mount('bit-textarea', { attrs: { maxlength: '10', value: '1234567890' } });
+
+      const counter = fixture.query<HTMLElement>('.counter');
+
+      expect(counter?.hidden).toBe(false);
+      expect(counter?.textContent?.trim()).toBe('10/10');
+      expect(counter?.className).toContain('at-limit');
     });
   });
 });

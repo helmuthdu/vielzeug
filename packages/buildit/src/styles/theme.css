@@ -375,7 +375,8 @@
   --color-secondary-contrast: light-dark(hsl(240deg 5% 98% / 100%), hsl(210deg 4% 10% / 100%));
   --color-secondary-focus: light-dark(hsl(240deg 6% 26% / 100%), hsl(210deg 5% 88% / 100%));
   --color-secondary-border: light-dark(hsl(240deg 5% 26% / 60%), hsl(210deg 4% 80% / 60%));
-  --color-secondary-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
+  --color-secondary-focus-shadow:
+    0 0 0 4px color-mix(in srgb, var(--color-secondary) 15%, transparent), var(--shadow-sm);
 
   /* Info */
   --color-info: light-dark(hsl(200deg 90% 50% / 91%), hsl(200deg 90% 60% / 91%));
@@ -438,7 +439,11 @@
 }
 
 /* VitePress dark theme: force dark color-scheme so light-dark() resolves to dark values */
-html.dark { color-scheme: dark; }
+html.dark {
+  color-scheme: dark;
+}
 
 /* VitePress light theme: force light color-scheme so light-dark() resolves to light values */
-html:not(.dark) { color-scheme: light; }
+html:not(.dark) {
+  color-scheme: light;
+}

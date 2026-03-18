@@ -1,14 +1,14 @@
 import { isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import type { HTMLResult } from '../craftit';
+import type { HTMLResult } from '../internal';
 
 type TemplateFn = () => string | HTMLResult;
 type Branch = readonly [unknown, TemplateFn];
 
 /**
- * Multi-branch conditional rendering. Evaluates each `[condition, templateFn]` tuple
- * in order and renders the first truthy branch. An optional trailing fallback function
- * is rendered when no branch matches.
+ * Multi-branch conditional rendering. Pass branches as individual `[condition, templateFn]`
+ * tuples (variadic), with an optional trailing `fallback` function.
+ * Renders the first truthy branch, or the fallback when no branch matches.
  *
  * Reactive when any condition is a Signal or getter function — the output updates
  * automatically whenever a reactive condition changes.
@@ -23,34 +23,20 @@ type Branch = readonly [unknown, TemplateFn];
  *   () => html`<user-panel>`,
  * )}`
  *
- * // Reactive — re-evaluates when signals change
- * const role = signal<'admin' | 'mod' | 'user'>('user');
- * html`${match(
- *   [() => role.value === 'admin', () => html`<admin-panel>`],
- *   [() => role.value === 'mod',   () => html`<mod-panel>`],
- *   () => html`<user-panel>`,
- * )}`
- *
  * // Reactive Signal conditions
  * html`${match(
- *   [isAdmin, () => html`<admin-panel>`],
+ *   [isAdmin,    () => html`<admin-panel>`],
  *   [isLoggedIn, () => html`<user-panel>`],
  *   () => html`<guest-panel>`,
  * )}`
  */
-export function match(...args: [...ReadonlyArray<Branch>, TemplateFn]): TemplateFn | string | HTMLResult;
-export function match(...args: ReadonlyArray<Branch>): TemplateFn | string | HTMLResult;
-export function match(...args: Array<Branch | TemplateFn>): TemplateFn | string | HTMLResult {
-  const last = args.at(-1);
-  let branches: Branch[];
-  let fallback: TemplateFn | undefined;
-
-  if (typeof last === 'function') {
-    fallback = last as TemplateFn;
-    branches = args.slice(0, -1) as Branch[];
-  } else {
-    branches = args as Branch[];
-  }
+export function match(...args: (Branch | TemplateFn)[]): TemplateFn | string | HTMLResult {
+  // Separate branches from optional trailing fallback function.
+  // A Branch is a tuple [condition, fn] (an array); a TemplateFn is a bare () => ... function.
+  const lastArg = args[args.length - 1];
+  const hasFallback = typeof lastArg === 'function' && !Array.isArray(lastArg);
+  const branches = (hasFallback ? args.slice(0, -1) : args) as Branch[];
+  const fallback = hasFallback ? (lastArg as TemplateFn) : undefined;
 
   const _resolve = (cond: unknown): boolean => {
     if (isSignal(cond)) return !!(cond as ReadonlySignal<unknown>).value;

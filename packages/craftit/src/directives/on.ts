@@ -1,4 +1,6 @@
-import type { DirectiveDescriptor } from '../craftit';
+import type { DirectiveDescriptor } from '../internal';
+
+import { listen } from '../utils';
 
 /**
  * Attaches an event listener to an element as a spread directive, supporting
@@ -33,17 +35,15 @@ export function on<K extends keyof HTMLElementEventMap>(
 ): DirectiveDescriptor;
 export function on(event: string, handler: (e: any) => void, options?: AddEventListenerOptions): DirectiveDescriptor {
   return {
-    __craftit_directive: (el, registerCleanup) => {
+    mount(el, { registerCleanup }) {
       if (event === 'clickOutside') {
         const docHandler = (e: Event) => {
           if (!e.composedPath().includes(el)) handler(e as MouseEvent);
         };
 
-        document.addEventListener('click', docHandler, options);
-        registerCleanup(() => document.removeEventListener('click', docHandler, options));
+        registerCleanup(listen(document, 'click', docHandler, options));
       } else {
-        el.addEventListener(event, handler, options);
-        registerCleanup(() => el.removeEventListener(event, handler, options));
+        registerCleanup(listen(el, event, handler, options));
       }
     },
   };

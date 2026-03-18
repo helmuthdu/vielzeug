@@ -7,28 +7,75 @@ description: Complete API reference for Buildit web components.
 
 [[toc]]
 
+## Package Entry Points
+
+Use the package through one of three top-level entry points:
+
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/buildit` | Register all published components |
+| `@vielzeug/buildit/styles` | Global tokens and shared component styles |
+| `@vielzeug/buildit/types` | Shared TypeScript types |
+
+For runtime registration, prefer explicit side-effect imports so your bundle only includes the elements you use.
+
 ## Component Import Paths
 
-All components are available as modular imports:
+All currently published component subpaths are available as modular imports:
 
 ```typescript
 import '@vielzeug/buildit/accordion';
 import '@vielzeug/buildit/accordion-item';
 import '@vielzeug/buildit/alert';
+import '@vielzeug/buildit/avatar';
 import '@vielzeug/buildit/badge';
+import '@vielzeug/buildit/box';
+import '@vielzeug/buildit/breadcrumb';
 import '@vielzeug/buildit/button';
 import '@vielzeug/buildit/button-group';
 import '@vielzeug/buildit/card';
-import '@vielzeug/buildit/chip';
 import '@vielzeug/buildit/checkbox';
+import '@vielzeug/buildit/checkbox-group';
+import '@vielzeug/buildit/chip';
+import '@vielzeug/buildit/combobox';
+import '@vielzeug/buildit/dialog';
+import '@vielzeug/buildit/drawer';
+import '@vielzeug/buildit/file-input';
+import '@vielzeug/buildit/form';
+import '@vielzeug/buildit/grid';
+import '@vielzeug/buildit/grid-item';
 import '@vielzeug/buildit/input';
+import '@vielzeug/buildit/menu';
+import '@vielzeug/buildit/number-input';
+import '@vielzeug/buildit/otp-input';
+import '@vielzeug/buildit/pagination';
+import '@vielzeug/buildit/popover';
+import '@vielzeug/buildit/progress';
 import '@vielzeug/buildit/radio';
+import '@vielzeug/buildit/radio-group';
+import '@vielzeug/buildit/rating';
 import '@vielzeug/buildit/select';
+import '@vielzeug/buildit/separator';
+import '@vielzeug/buildit/sidebar';
 import '@vielzeug/buildit/skeleton';
+import '@vielzeug/buildit/slider';
 import '@vielzeug/buildit/switch';
+import '@vielzeug/buildit/tab-item';
+import '@vielzeug/buildit/tab-panel';
+import '@vielzeug/buildit/table';
+import '@vielzeug/buildit/tabs';
 import '@vielzeug/buildit/text';
 import '@vielzeug/buildit/textarea';
+import '@vielzeug/buildit/toast';
 import '@vielzeug/buildit/tooltip';
+```
+
+Additional published style assets:
+
+```typescript
+import '@vielzeug/buildit/styles/animation.css';
+import '@vielzeug/buildit/styles/layers.css';
+import '@vielzeug/buildit/styles/theme.css';
 ```
 
 ## Button Component

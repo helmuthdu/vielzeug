@@ -55,7 +55,6 @@ export type BitBoxProps = {
  * <bit-box variant="frost" rainbow>Frosted glass</bit-box>
  * ```
  */
-export const BOX_TAG = define('bit-box', () => ({
+export const BOX_TAG = define('bit-box', () => html`<div class="box" part="box"><slot></slot></div>`, {
   styles: [...surfaceMixins, rainbowEffectMixin('.box'), frostVariantMixin('.box'), componentStyles],
-  template: html`<div class="box" part="box"><slot></slot></div>`,
-}));
+});

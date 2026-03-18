@@ -1,15 +1,16 @@
 import {
   computed,
   define,
-  defineEmits,
-  defineProps,
   handle,
   html,
-  inject,
+  typed,
+  useInject,
   onMount,
   ref,
   syncContextProps,
   watch,
+  defineProps,
+  defineEmits,
 } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
@@ -75,62 +76,62 @@ export type BitAccordionItemProps = {
  * ```
  */
 
-export const ACCORDION_ITEM_TAG = define('bit-accordion-item', ({ host }) => {
-  const props = defineProps<BitAccordionItemProps>({
-    disabled: { default: false },
-    expanded: { default: false },
-    size: { default: undefined },
-    variant: { default: undefined },
-  });
+export const ACCORDION_ITEM_TAG = define(
+  'bit-accordion-item',
+  ({ host }) => {
+    const props = defineProps<BitAccordionItemProps>({
+      disabled: typed<boolean>(false),
+      expanded: typed<boolean>(false),
+      size: typed<BitAccordionItemProps['size']>(undefined),
+      variant: typed<BitAccordionItemProps['variant']>(undefined),
+    });
+    const emit = defineEmits<BitAccordionItemEvents>();
 
-  // Inherit size/variant from a parent bit-accordion when present.
-  const accordionCtx = inject(ACCORDION_CTX, undefined);
+    // Inherit size/variant from a parent bit-accordion when present.
+    const accordionCtx = useInject(ACCORDION_CTX, undefined);
 
-  syncContextProps(accordionCtx, props, ['size', 'variant']);
+    syncContextProps(accordionCtx, props, ['size', 'variant']);
 
-  const titleId = 'accordion-item-title';
-  const detailsRef = ref<HTMLDetailsElement>();
-  const summaryRef = ref<HTMLElement>();
-  const emit = defineEmits<BitAccordionItemEvents>();
+    const titleId = 'accordion-item-title';
+    const detailsRef = ref<HTMLDetailsElement>();
+    const summaryRef = ref<HTMLElement>();
+    const handleToggle = () => {
+      const isOpen = detailsRef.value?.open ?? false;
 
-  const handleToggle = () => {
-    const isOpen = detailsRef.value?.open ?? false;
+      // Notify accordion parent for single-selection management
+      if (isOpen && !host.hasAttribute('expanded')) {
+        host.setAttribute('expanded', '');
+        emit('expand', { expanded: true, item: host });
+      } else if (!isOpen && host.hasAttribute('expanded')) {
+        host.removeAttribute('expanded');
+        emit('collapse', { expanded: false, item: host });
+      }
+    };
 
-    // Notify accordion parent for single-selection management
-    if (isOpen && !host.hasAttribute('expanded')) {
-      host.setAttribute('expanded', '');
-      emit('expand', { expanded: true, item: host });
-    } else if (!isOpen && host.hasAttribute('expanded')) {
-      host.removeAttribute('expanded');
-      emit('collapse', { expanded: false, item: host });
-    }
-  };
+    onMount(() => {
+      const details = detailsRef.value;
+      const summary = summaryRef.value;
 
-  onMount(() => {
-    const details = detailsRef.value;
-    const summary = summaryRef.value;
+      if (!details || !summary) return;
 
-    if (!details || !summary) return;
+      // Sync details.open when expanded prop changes (needs live DOM refs)
+      watch(
+        props.expanded,
+        (v) => {
+          const expanded = Boolean(v);
 
-    // Sync details.open when expanded prop changes (needs live DOM refs)
-    watch(
-      props.expanded,
-      (v) => {
-        details.open = v;
-        summary.setAttribute('aria-expanded', v ? 'true' : 'false');
-      },
-      { immediate: true },
-    );
+          details.open = expanded;
+          summary.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        },
+        { immediate: true },
+      );
+      handle(details, 'toggle', handleToggle);
+    });
 
-    handle(details, 'toggle', handleToggle);
-  });
+    const ariaExpanded = computed(() => (props.expanded.value ? 'true' : 'false'));
+    const ariaDisabled = computed(() => (props.disabled.value ? 'true' : 'false'));
 
-  const ariaExpanded = computed(() => (props.expanded.value ? 'true' : 'false'));
-  const ariaDisabled = computed(() => (props.disabled.value ? 'true' : 'false'));
-
-  return {
-    styles: [coarsePointerMixin, styles],
-    template: html` <details part="item" ?open=${props.expanded} ref=${detailsRef}>
+    return html` <details part="item" ?open=${props.expanded} ref=${detailsRef}>
       <summary part="summary" :aria-expanded=${ariaExpanded} :aria-disabled=${ariaDisabled} ref=${summaryRef}>
         <slot name="prefix"></slot>
         <div class="header-content" part="header">
@@ -160,6 +161,9 @@ export const ACCORDION_ITEM_TAG = define('bit-accordion-item', ({ host }) => {
           <slot></slot>
         </div>
       </div>
-    </details>`,
-  };
-});
+    </details>`;
+  },
+  {
+    styles: [coarsePointerMixin, styles],
+  },
+);

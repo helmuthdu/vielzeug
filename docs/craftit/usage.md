@@ -76,18 +76,11 @@ import {
   createFormIds,
   memo,
   handle,
-  syncDOMProps,
   syncContextProps,
   onMount,
-  onUnmount,
-  onRendered,
   onCleanup,
   onError,
   onSlotChange,
-  onFormAssociated,
-  onFormDisabled,
-  onFormReset,
-  onFormStateRestore,
   aria,
   prop,
   defineProps,
@@ -95,8 +88,8 @@ import {
   defineField,
   ref,
   refs,
-  provide,
-  inject,
+  useProvide,
+  useInject,
   createContext,
   defineSlots,
   defineEmits,
@@ -111,12 +104,11 @@ import type {
   Signal,
   ReadonlySignal,
   Ref,
-  RefList,
+  Refs,
   InjectionKey,
   HTMLResult,
   CSSResult,
   FormFieldHandle,
-  SetupContext,
 } from '@vielzeug/craftit';
 ```
 
@@ -579,19 +571,19 @@ html`
 `;
 ```
 
-### Two-Way Binding (`html.bind`)
+### Two-Way Binding (`.value` / `.checked`)
 
-`html.bind(signal)` is a shorthand that attaches both `:value` and the `input`/`change` listener in one step:
+Writable signals on `.value` and `.checked` are bridged automatically:
 
 ```ts
 const name = signal('');
-// Long form
-html`<input :value=${name} @input=${(e: Event) => (name.value = (e.target as HTMLInputElement).value)} />`;
-// Short form — same result
-html`<input ${html.bind(name)} />`;
+const accepted = signal(false);
+
+html`<input .value=${name} />`;
+html`<input type="checkbox" .checked=${accepted} />`;
 ```
 
-Works with text inputs, textareas, selects, checkboxes, and radio buttons.
+You can still use `bind(signal)` for spread-position syntax.
 
 ### Reactive Functions
 
@@ -883,32 +875,6 @@ define('my-component', () => {
 });
 ```
 
-### onUnmount
-
-Runs before the component is unmounted:
-
-```ts
-onUnmount(() => {
-  console.log('Component unmounting...');
-  // Cleanup subscriptions, timers, etc.
-});
-```
-
-### onRendered
-
-Runs **once** after the component's initial render completes and all `onMount` hooks have finished:
-
-```ts
-onRendered(() => {
-  console.log('Initial render complete');
-  // DOM is fully ready; safe to measure or initialise third-party libraries
-});
-```
-
-::: tip
-`onRendered` fires only once per component mount. It is not a post-update hook. Use `effect()` or `watch()` to react to signal changes.
-:::
-
 ### onCleanup
 
 Register cleanup functions:
@@ -1023,18 +989,15 @@ define('my-dialog', () => {
 
 `getFocusableElements(root)` returns all keyboard-focusable descendants in DOM order.
 
-## syncDOMProps
+## Declarative Property Batches
 
-Reactively synchronise Signal or getter values onto DOM element properties. A single tracked effect is created and cleaned up automatically:
+For spread-position property batches, use `attr()` (properties only) or `spread()` (attrs + props + events):
 
 ```ts
-onMount(() => {
-  syncDOMProps(inputRef.value!, {
-    disabled: props.disabled,
-    name: props.name,
-    type: () => validateInputType(props.type.value),
-  });
-});
+import { attr, spread } from '@vielzeug/craftit/directives';
+
+html`<input ${attr({ value: name, disabled: isDisabled })} />`;
+html`<button ${spread({ '@click': onClick, '?disabled': isDisabled, '.value': label, title: label })}></button>`;
 ```
 
 ## Platform Observers
@@ -1446,14 +1409,14 @@ html`<counter-button @clicked=${(e: CustomEvent) => console.log(e.detail.count)}
 Share data between parent and child components:
 
 ```ts
-import { define, provide, inject, signal, html } from '@vielzeug/craftit';
+import { define, useProvide, useInject, signal, html } from '@vielzeug/craftit';
 import type { InjectionKey } from '@vielzeug/craftit';
 // Create typed injection key (preferred over raw `Symbol()`)
 const ThemeKey = createContext<{ mode: Signal<'light' | 'dark'> }>();
 // Parent provides
 define('app-root', () => {
   const mode = signal<'light' | 'dark'>('light');
-  provide(ThemeKey, { mode });
+  useProvide(ThemeKey, { mode });
   return html`
     <div>
       <button @click=${() => (mode.value = mode.value === 'light' ? 'dark' : 'light')}>Toggle Theme</button>
@@ -1463,7 +1426,7 @@ define('app-root', () => {
 });
 // Child injects
 define('themed-card', () => {
-  const theme = inject(ThemeKey);
+  const theme = useInject(ThemeKey);
   return html` <div class=${() => `card theme-${theme?.mode.value}`}>Card content</div> `;
 });
 ```
@@ -1476,7 +1439,7 @@ define('themed-card', () => {
 
 ## Portals
 
-Render components to different DOM locations using the `target` option in `define()`:
+Craftit does not provide a built-in `target` option for portals. Prefer rendering an always-mounted host component (for example under `document.body`) and toggling internal modal content reactively.
 
 ```ts
 import { define, prop, html } from '@vielzeug/craftit';
@@ -1508,8 +1471,7 @@ define(
       )}
     `;
   },
-  { target: 'body' },
-); // Component renders to body instead of parent
+);
 
 // Use the modal component
 define('app-component', () => {
@@ -1625,7 +1587,7 @@ await user.press(input, 'Enter');
 Craftit is built with TypeScript and provides excellent type inference:
 
 ```ts
-import type { Signal, ReadonlySignal, Ref, RefList, InjectionKey } from '@vielzeug/craftit';
+import type { Signal, ReadonlySignal, Ref, Refs, InjectionKey } from '@vielzeug/craftit';
 // Typed signals
 const count: Signal<number> = signal(0);
 const name: Signal<string> = signal('Alice');
@@ -1633,7 +1595,7 @@ const name: Signal<string> = signal('Alice');
 const doubled: Signal<number> = computed(() => count.value * 2);
 // Typed refs
 const inputRef: Ref<HTMLInputElement> = ref<HTMLInputElement>();
-const inputRefs: RefList<HTMLInputElement> = refs<HTMLInputElement>();
+const inputRefs: Refs<HTMLInputElement> = refs<HTMLInputElement>();
 // Typed injection keys
 const ThemeKey = createContext<{ mode: Signal<'light' | 'dark'> }>();
 // Typed event emitter

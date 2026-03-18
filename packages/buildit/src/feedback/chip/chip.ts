@@ -1,4 +1,4 @@
-import { computed, define, defineEmits, defineProps, html, signal, type Signal, watch } from '@vielzeug/craftit';
+import { computed, define, html, signal, type Signal, watch, defineProps, defineEmits } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -156,152 +156,158 @@ export type BitChipProps = ChipBaseProps &
  * </bit-chip>
  * ```
  */
-export const CHIP_TAG = define('bit-chip', ({ host }) => {
-  const props = defineProps<BitChipProps>({
-    'aria-label': { default: undefined },
-    checked: { default: undefined },
-    color: { default: undefined },
-    'default-checked': { default: false, type: Boolean },
-    disabled: { default: false, type: Boolean },
-    mode: { default: 'static' },
-    rounded: { default: undefined },
-    size: { default: undefined },
-    value: { default: undefined },
-    variant: { default: undefined },
-  });
+export const CHIP_TAG = define(
+  'bit-chip',
+  ({ host }) => {
+    const props = defineProps<BitChipProps>({
+      'aria-label': { default: undefined },
+      checked: { default: undefined },
+      color: { default: undefined },
+      'default-checked': { default: false, type: Boolean },
+      disabled: { default: false, type: Boolean },
+      mode: { default: 'static' },
+      rounded: { default: undefined },
+      size: { default: undefined },
+      value: { default: undefined },
+      variant: { default: undefined },
+    });
+    const emit = defineEmits<BitChipEvents>();
 
-  const emit = defineEmits<BitChipEvents>();
+    // Typed accessor for checked — only present on SelectableChipProps, not in the full union keyof.
+    const checkedProp = (props as Record<'checked', Signal<boolean | undefined>>)['checked'];
+    // Typed accessor for aria-label — hyphenated key falls outside the union's keyof.
+    const ariaLabelProp = (props as Record<'aria-label', Signal<string | undefined>>)['aria-label'];
+    // ============================================
+    // State Management
+    // ============================================
+    // Capture controlled mode at setup-time — once controlled, always controlled.
+    // If the `checked` attribute is present in the initial HTML, the consumer drives state.
+    const isControlled = host.hasAttribute('checked');
+    // Internal tracking for uncontrolled selectable chips; seeded from default-checked.
+    const checkedState = signal(!isControlled && host.hasAttribute('default-checked'));
+    // Effective checked value — reactive to props.checked attribute changes in controlled mode.
+    const isChecked = computed(() => {
+      if (props.mode.value !== 'selectable') return false;
 
-  // ============================================
-  // State Management
-  // ============================================
+      if (isControlled) {
+        void checkedProp.value; // subscribe so we re-evaluate when the attribute changes
 
-  // Capture controlled mode at setup-time — once controlled, always controlled.
-  // If the `checked` attribute is present in the initial HTML, the consumer drives state.
-  const isControlled = host.hasAttribute('checked');
-
-  // Internal tracking for uncontrolled selectable chips; seeded from default-checked.
-  const checkedState = signal(!isControlled && host.hasAttribute('default-checked'));
-
-  // Effective checked value — reactive to props.checked attribute changes in controlled mode.
-  const isChecked = computed(() => {
-    if (props.mode.value !== 'selectable') return false;
-
-    if (isControlled) {
-      void checkedProp.value; // subscribe so we re-evaluate when the attribute changes
-
-      return host.hasAttribute('checked');
-    }
-
-    return checkedState.value;
-  });
-
-  // Sync the [checked] attribute for CSS selectors in uncontrolled mode.
-  // Controlled chips have the attribute managed externally by the consumer.
-  watch(
-    [isChecked, props.mode],
-    () => {
-      if (!isControlled) {
-        host.toggleAttribute('checked', props.mode.value === 'selectable' && isChecked.value);
+        return host.hasAttribute('checked');
       }
-    },
-    { immediate: true },
-  );
 
-  // ============================================
-  // Event Handlers
-  // ============================================
+      return checkedState.value;
+    });
 
-  function handleRemove(e: MouseEvent) {
-    e.stopPropagation();
-    // Button's disabled attribute prevents this from firing when disabled
-    emit('remove', { originalEvent: e, value: props.value.value });
-  }
+    // Sync the [checked] attribute for CSS selectors in uncontrolled mode.
+    // Controlled chips have the attribute managed externally by the consumer.
+    watch(
+      [isChecked, props.mode],
+      () => {
+        if (!isControlled) {
+          host.toggleAttribute('checked', props.mode.value === 'selectable' && isChecked.value);
+        }
+      },
+      { immediate: true },
+    );
+    // ============================================
+    // Event Handlers
+    // ============================================
+    function handleRemove(e: MouseEvent) {
+      e.stopPropagation();
 
-  function handleSelectableActivate(e: MouseEvent) {
-    e.stopPropagation();
+      if (props.disabled.value) return;
 
-    const nextChecked = !isChecked.value;
+      // Button's disabled attribute prevents this from firing when disabled
+      emit('remove', { originalEvent: e, value: props.value.value });
+    }
+    function handleSelectableActivate(e: MouseEvent) {
+      e.stopPropagation();
 
-    if (!isControlled) {
-      checkedState.value = nextChecked;
+      if (props.disabled.value) return;
+
+      const nextChecked = !isChecked.value;
+
+      if (!isControlled) {
+        checkedState.value = nextChecked;
+      }
+
+      emit('change', { checked: nextChecked, originalEvent: e, value: props.value.value });
+    }
+    function handleActionClick(e: MouseEvent) {
+      e.stopPropagation();
+
+      if (props.disabled.value) return;
+
+      emit('click', { originalEvent: e, value: props.value.value });
     }
 
-    emit('change', { checked: nextChecked, originalEvent: e, value: props.value.value });
-  }
+    // ============================================
+    // Template Helpers
+    // ============================================
+    const renderChipContent = () => html`
+      <slot name="icon"></slot>
+      <span class="label"><slot></slot></span>
+    `;
+    const renderRemoveButton = () => html`
+      <button
+        class="remove-btn"
+        part="remove-btn"
+        type="button"
+        :aria-label="${() => {
+          const label = ariaLabelProp.value || props.value.value;
 
-  function handleActionClick(e: MouseEvent) {
-    e.stopPropagation();
-    emit('click', { originalEvent: e, value: props.value.value });
-  }
+          return label ? `Remove ${label}` : 'Remove';
+        }}"
+        ?hidden="${() => props.mode.value !== 'removable'}"
+        :disabled="${() => props.disabled.value}"
+        @click="${handleRemove}">
+        ${CHIP_CLOSE_ICON}
+      </button>
+    `;
+    const renderSelectableChip = () => html`
+      <button
+        class="chip-btn"
+        part="chip-btn"
+        type="button"
+        role="checkbox"
+        :aria-checked="${() => String(isChecked.value)}"
+        :aria-label="${() => ariaLabelProp.value}"
+        :disabled="${() => props.disabled.value}"
+        @click="${handleSelectableActivate}">
+        <span class="chip" part="chip"> ${renderChipContent()} </span>
+      </button>
+    `;
+    const renderActionChip = () => html`
+      <button
+        class="chip-btn"
+        part="chip-btn"
+        type="button"
+        :aria-label="${() => ariaLabelProp.value}"
+        :disabled="${() => props.disabled.value}"
+        @click="${handleActionClick}">
+        <span class="chip" part="chip"> ${renderChipContent()} </span>
+      </button>
+    `;
+    const renderStaticChip = () => html`
+      <span class="chip" part="chip"> ${renderChipContent()} ${renderRemoveButton()} </span>
+    `;
 
-  // ============================================
-  // Template Helpers
-  // ============================================
+    // ============================================
+    // Render
+    // ============================================
+    return html`
+      ${() => {
+        const mode = props.mode.value;
 
-  const renderChipContent = () => html`
-    <slot name="icon"></slot>
-    <span class="label"><slot></slot></span>
-  `;
+        if (mode === 'selectable') return renderSelectableChip();
 
-  // Typed accessor for aria-label — hyphenated key falls outside the union's keyof.
-  const ariaLabelProp = (props as Record<'aria-label', Signal<string | undefined>>)['aria-label'];
-  // Typed accessor for checked — only present on SelectableChipProps, not in the full union keyof.
-  const checkedProp = (props as Record<'checked', Signal<boolean | undefined>>)['checked'];
+        if (mode === 'action') return renderActionChip();
 
-  const renderRemoveButton = () => html`
-    <button
-      class="remove-btn"
-      part="remove-btn"
-      type="button"
-      :aria-label="${() => {
-        const label = ariaLabelProp.value || props.value.value;
-
-        return label ? `Remove ${label}` : 'Remove';
-      }}"
-      :disabled="${() => props.disabled.value}"
-      @click="${handleRemove}">
-      ${CHIP_CLOSE_ICON}
-    </button>
-  `;
-
-  const renderSelectableChip = () => html`
-    <button
-      class="chip-btn"
-      part="chip-btn"
-      type="button"
-      role="checkbox"
-      :aria-checked="${() => String(isChecked.value)}"
-      :aria-label="${() => ariaLabelProp.value}"
-      :disabled="${() => props.disabled.value}"
-      @click="${handleSelectableActivate}">
-      <span class="chip" part="chip"> ${renderChipContent()} </span>
-    </button>
-  `;
-
-  const renderActionChip = () => html`
-    <button
-      class="chip-btn"
-      part="chip-btn"
-      type="button"
-      :aria-label="${() => ariaLabelProp.value}"
-      :disabled="${() => props.disabled.value}"
-      @click="${handleActionClick}">
-      <span class="chip" part="chip"> ${renderChipContent()} </span>
-    </button>
-  `;
-
-  const renderStaticChip = () => html`
-    <span class="chip" part="chip">
-      ${renderChipContent()} ${() => (props.mode.value === 'removable' ? renderRemoveButton() : '')}
-    </span>
-  `;
-
-  // ============================================
-  // Render
-  // ============================================
-
-  return {
+        return renderStaticChip();
+      }}
+    `;
+  },
+  {
     styles: [
       colorThemeMixin,
       disabledStateMixin(),
@@ -323,16 +329,5 @@ export const CHIP_TAG = define('bit-chip', ({ host }) => {
       forcedColorsMixin,
       componentStyles,
     ],
-    template: html`
-      ${() => {
-        const mode = props.mode.value;
-
-        if (mode === 'selectable') return renderSelectableChip();
-
-        if (mode === 'action') return renderActionChip();
-
-        return renderStaticChip();
-      }}
-    `,
-  };
-});
+  },
+);

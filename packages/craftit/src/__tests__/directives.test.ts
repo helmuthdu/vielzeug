@@ -1,22 +1,11 @@
 /**
  * Directives Tests
  * Tests for all craftit directives: when, each, classes, bind,
- * style, choose, match, raw, attr, on, memo, until
+ * style, choose, match, raw, spread, on, memo, until
  */
 
 import { define, html, signal } from '..';
-import { attr } from '../directives/attr';
-import { bind } from '../directives/bind';
-import { choose } from '../directives/choose';
-import { classes } from '../directives/classes';
-import { each } from '../directives/each';
-import { match } from '../directives/match';
-import { memo } from '../directives/memo';
-import { on } from '../directives/on';
-import { raw } from '../directives/raw';
-import { style } from '../directives/style';
-import { until } from '../directives/until';
-import { when } from '../directives/when';
+import { attr, bind, choose, classes, each, match, memo, on, raw, spread, style, until, when } from '../directives';
 import { mount } from '../test';
 
 describe('Directive: when()', () => {
@@ -274,6 +263,43 @@ describe('Directive: each()', () => {
 
     expect(query('.empty')?.textContent).toBe('None');
   });
+
+  it('should preserve multiple bindings on the same keyed child element', async () => {
+    const clicks: string[] = [];
+
+    define('test-for-keyed-multi-bindings', () => {
+      const items = signal([
+        { id: 'a', label: 'Alpha' },
+        { id: 'b', label: 'Beta' },
+      ]);
+
+      return html`
+        <div>
+          ${each(
+            items,
+            (item) => html`
+              <button data-value=${item.id} title=${item.label} @click=${() => clicks.push(item.id)}>
+                ${item.label}
+              </button>
+            `,
+            undefined,
+            { key: (item) => item.id },
+          )}
+        </div>
+      `;
+    });
+
+    const { queryAll } = await mount('test-for-keyed-multi-bindings');
+    const buttons = queryAll<HTMLButtonElement>('button');
+
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].getAttribute('data-value')).toBe('a');
+    expect(buttons[0].getAttribute('title')).toBe('Alpha');
+
+    (buttons[0] as HTMLButtonElement).click();
+
+    expect(clicks).toEqual(['a']);
+  });
 });
 
 describe('Directive: classes()', () => {
@@ -392,6 +418,85 @@ describe('Directive: bind()', () => {
     input.checked = true;
     input.dispatchEvent(new Event('change'));
     expect(checked.value).toBe(true);
+  });
+});
+
+describe('Directive: attr() property map', () => {
+  it('should apply a property map in spread position', async () => {
+    const value = signal('One');
+
+    define('test-attr-props-basic', () => {
+      return html`<input ${attr({ disabled: () => false, value })} />`;
+    });
+
+    const { query } = await mount('test-attr-props-basic');
+    const input = query('input') as HTMLInputElement;
+
+    expect(input.value).toBe('One');
+    expect(input.disabled).toBe(false);
+  });
+
+  it('should sync back to signal for value binding', async () => {
+    const value = signal('One');
+
+    define('test-attr-props-two-way', () => {
+      return html`<input ${attr({ value })} />`;
+    });
+
+    const { query } = await mount('test-attr-props-two-way');
+    const input = query('input') as HTMLInputElement;
+
+    input.value = 'Two';
+    input.dispatchEvent(new Event('input'));
+    expect(value.value).toBe('Two');
+  });
+});
+
+describe('Directive: spread()', () => {
+  it('should support mixed attribute, boolean attr, property, and event entries', async () => {
+    const title = signal('Start');
+    let clicks = 0;
+
+    define('test-spread-mixed', () => {
+      return html`<button
+        ${spread({ '?disabled': false, '.value': title, '@click': () => clicks++, title })}></button>`;
+    });
+
+    const { flush, query } = await mount('test-spread-mixed');
+    const button = query('button') as HTMLButtonElement;
+
+    expect(button.value).toBe('Start');
+    expect(button.getAttribute('title')).toBe('Start');
+    expect(button.hasAttribute('disabled')).toBe(false);
+
+    title.value = 'Next';
+    await flush();
+    expect(button.value).toBe('Next');
+    expect(button.getAttribute('title')).toBe('Next');
+
+    button.click();
+    expect(clicks).toBe(1);
+  });
+});
+
+describe('Directive: spread() text-field map', () => {
+  it('should apply common text-field props and keep .value two-way', async () => {
+    const value = signal('Alice');
+
+    define('test-spread-text-field', () => {
+      return html`<input ${spread({ '.name': 'user', '.required': true, '.value': value })} />`;
+    });
+
+    const { query } = await mount('test-spread-text-field');
+    const input = query('input') as HTMLInputElement;
+
+    expect(input.name).toBe('user');
+    expect(input.required).toBe(true);
+    expect(input.value).toBe('Alice');
+
+    input.value = 'Bob';
+    input.dispatchEvent(new Event('input'));
+    expect(value.value).toBe('Bob');
   });
 });
 
@@ -595,13 +700,13 @@ describe('Directive: raw()', () => {
   });
 });
 
-describe('Directive: attr()', () => {
+describe('Directive: spread() attribute entries', () => {
   it('should set static attribute values', async () => {
-    define('test-attr-static', () => {
-      return html`<input ${attr({ maxlength: 100, placeholder: 'Search' })} />`;
+    define('test-spread-attr-static', () => {
+      return html`<input ${spread({ maxlength: 100, placeholder: 'Search' })} />`;
     });
 
-    const { query } = await mount('test-attr-static');
+    const { query } = await mount('test-spread-attr-static');
     const input = query('input')!;
 
     expect(input.getAttribute('placeholder')).toBe('Search');
@@ -609,22 +714,22 @@ describe('Directive: attr()', () => {
   });
 
   it('should set boolean true as empty-string attribute', async () => {
-    define('test-attr-bool-true', () => {
-      return html`<input ${attr({ required: true })} />`;
+    define('test-spread-attr-bool-true', () => {
+      return html`<input ${spread({ required: true })} />`;
     });
 
-    const { query } = await mount('test-attr-bool-true');
+    const { query } = await mount('test-spread-attr-bool-true');
 
     expect(query('input')?.hasAttribute('required')).toBe(true);
     expect(query('input')?.getAttribute('required')).toBe('');
   });
 
   it('should remove attribute when value is false/null/undefined', async () => {
-    define('test-attr-falsy', () => {
-      return html`<input ${attr({ disabled: null, readonly: undefined, required: false })} />`;
+    define('test-spread-attr-falsy', () => {
+      return html`<input ${spread({ disabled: null, readonly: undefined, required: false })} />`;
     });
 
-    const { query } = await mount('test-attr-falsy');
+    const { query } = await mount('test-spread-attr-falsy');
     const input = query('input')!;
 
     expect(input.hasAttribute('required')).toBe(false);
@@ -635,11 +740,11 @@ describe('Directive: attr()', () => {
   it('should update reactively when a Signal changes', async () => {
     const label = signal('First');
 
-    define('test-attr-signal', () => {
-      return html`<input ${attr({ placeholder: label })} />`;
+    define('test-spread-attr-signal', () => {
+      return html`<input ${spread({ placeholder: label })} />`;
     });
 
-    const { flush, query } = await mount('test-attr-signal');
+    const { flush, query } = await mount('test-spread-attr-signal');
 
     expect(query('input')?.getAttribute('placeholder')).toBe('First');
 
@@ -651,11 +756,11 @@ describe('Directive: attr()', () => {
   it('should update reactively from a getter function', async () => {
     const count = signal(0);
 
-    define('test-attr-getter', () => {
-      return html`<button ${attr({ 'aria-label': () => `count: ${count.value}` })}></button>`;
+    define('test-spread-attr-getter', () => {
+      return html`<button ${spread({ 'aria-label': () => `count: ${count.value}` })}></button>`;
     });
 
-    const { flush, query } = await mount('test-attr-getter');
+    const { flush, query } = await mount('test-spread-attr-getter');
 
     expect(query('button')?.getAttribute('aria-label')).toBe('count: 0');
 
@@ -667,11 +772,11 @@ describe('Directive: attr()', () => {
   it('should remove attribute reactively when signal becomes false', async () => {
     const required = signal(true);
 
-    define('test-attr-remove', () => {
-      return html`<input ${attr({ required })} />`;
+    define('test-spread-attr-remove', () => {
+      return html`<input ${spread({ required })} />`;
     });
 
-    const { flush, query } = await mount('test-attr-remove');
+    const { flush, query } = await mount('test-spread-attr-remove');
 
     expect(query('input')?.hasAttribute('required')).toBe(true);
 

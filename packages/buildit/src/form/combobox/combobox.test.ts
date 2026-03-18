@@ -167,5 +167,109 @@ describe('bit-combobox', () => {
 
       expect(fixture.queryAll('bit-chip').length).toBeGreaterThan(0);
     });
+
+    it('applies color to rendered chips in multiple mode', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { color: 'primary', label: 'Country', multiple: '', value: 'us,gb' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      expect(fixture.query('bit-chip')?.getAttribute('color')).toBe('primary');
+    });
+
+    it('updates rendered chip color when combobox color changes', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { color: 'primary', label: 'Country', multiple: '', value: 'us,gb' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      await fixture.attr('color', 'success');
+      await fixture.flush();
+
+      expect(fixture.query('bit-chip')?.getAttribute('color')).toBe('success');
+    });
+
+    it('removes a chip when its remove button is clicked', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country', multiple: '', value: 'us,gb' },
+        html: optionsHtml,
+      });
+
+      const onChange = vi.fn();
+
+      fixture.element.addEventListener('change', onChange);
+      await fixture.flush();
+
+      const chip = fixture.query<HTMLElement>('bit-chip');
+      const removeBtn = chip?.shadowRoot?.querySelector<HTMLButtonElement>('.remove-btn');
+
+      expect(removeBtn).toBeTruthy();
+
+      await user.click(removeBtn!);
+      await fixture.flush();
+
+      expect(fixture.queryAll('bit-chip').length).toBe(1);
+      expect(onChange).toHaveBeenCalled();
+      expect((onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail.values).toEqual(['gb']);
+    });
+
+    it('updates option selected state immediately in multiple mode without reopening', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country', multiple: '' },
+        html: optionsHtml,
+      });
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]');
+
+      expect(input).toBeTruthy();
+
+      await user.click(input!);
+      await fixture.flush();
+      await new Promise((r) => setTimeout(r, 20));
+
+      const usOption = fixture
+        .queryAll<HTMLElement>('.option')
+        .find((opt) => opt.textContent?.includes('United States')) as HTMLElement;
+      const gbOption = fixture
+        .queryAll<HTMLElement>('.option')
+        .find((opt) => opt.textContent?.includes('United Kingdom')) as HTMLElement;
+
+      expect(usOption).toBeTruthy();
+      expect(gbOption).toBeTruthy();
+
+      await user.click(usOption);
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('open')).toBe(true);
+      expect(usOption.hasAttribute('data-selected')).toBe(true);
+
+      await user.click(gbOption);
+      await fixture.flush();
+
+      expect(usOption.hasAttribute('data-selected')).toBe(true);
+      expect(gbOption.hasAttribute('data-selected')).toBe(true);
+      expect(fixture.queryAll('.option[data-selected]').length).toBe(2);
+
+      await user.click(usOption);
+      await fixture.flush();
+
+      expect(usOption.hasAttribute('data-selected')).toBe(false);
+      expect(gbOption.hasAttribute('data-selected')).toBe(true);
+      expect(fixture.queryAll('.option[data-selected]').length).toBe(1);
+    });
+
+    it('normalizes csv values in single mode to the first value', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country', value: 'us,gb' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]');
+
+      expect(input?.value).toBe('United States');
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { define, defineEmits, defineProps, guard, html, onMount, onSlotChange, signal } from '@vielzeug/craftit';
+import { define, guard, html, onMount, onSlotChange, signal, defineProps, defineEmits } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -67,55 +67,45 @@ export type BitAlertProps = {
  * </bit-alert>
  * ```
  */
-export const ALERT_TAG = define('bit-alert', ({ host }) => {
-  const props = defineProps<BitAlertProps>({
-    accented: { default: false },
-    color: { default: undefined },
-    dismissible: { default: false },
-    heading: { default: '' },
-    horizontal: { default: false },
-    rounded: { default: undefined },
-    size: { default: undefined },
-    variant: { default: undefined },
-  });
+export const ALERT_TAG = define(
+  'bit-alert',
+  ({ host }) => {
+    const props = defineProps<BitAlertProps>({
+      accented: { default: false },
+      color: { default: undefined },
+      dismissible: { default: false },
+      heading: { default: '' },
+      horizontal: { default: false },
+      rounded: { default: undefined },
+      size: { default: undefined },
+      variant: { default: undefined },
+    });
+    const emit = defineEmits<BitAlertEvents>();
 
-  const emit = defineEmits<BitAlertEvents>();
+    const handleDismiss = guard(
+      () => props.dismissible.value,
+      (e: MouseEvent) => {
+        host.setAttribute('dismissing', '');
+        awaitExit(host, () => {
+          host.removeAttribute('dismissing');
+          host.setAttribute('dismissed', '');
+          emit('dismiss', { originalEvent: e });
+        });
+      },
+    );
+    const hasIcon = signal(false);
+    const hasActions = signal(false);
 
-  const handleDismiss = guard(
-    () => props.dismissible.value,
-    (e: MouseEvent) => {
-      host.setAttribute('dismissing', '');
-      awaitExit(host, () => {
-        host.removeAttribute('dismissing');
-        host.setAttribute('dismissed', '');
-        emit('dismiss', { originalEvent: e });
+    onMount(() => {
+      onSlotChange('icon', (els) => {
+        hasIcon.value = els.length > 0;
       });
-    },
-  );
-
-  const hasIcon = signal(false);
-  const hasActions = signal(false);
-
-  onMount(() => {
-    onSlotChange('icon', (els) => {
-      hasIcon.value = els.length > 0;
+      onSlotChange('actions', (els) => {
+        hasActions.value = els.length > 0;
+      });
     });
-    onSlotChange('actions', (els) => {
-      hasActions.value = els.length > 0;
-    });
-  });
 
-  return {
-    styles: [
-      ...formFieldMixins,
-      forcedColorsMixin,
-      sizeVariantMixin({
-        lg: { '--_padding': 'var(--size-4) var(--size-5)', fontSize: 'var(--text-base)', gap: 'var(--size-3-5)' },
-        sm: { '--_padding': 'var(--size-2) var(--size-3)', fontSize: 'var(--text-xs)', gap: 'var(--size-2)' },
-      }),
-      componentStyles,
-    ],
-    template: html`
+    return html`
       <div class="alert" :role="${() => (props.color.value === 'error' ? 'alert' : 'status')}" part="alert">
         <span class="icon" part="icon" aria-hidden="true" ?hidden=${() => !hasIcon.value}>
           <slot name="icon"></slot>
@@ -144,6 +134,17 @@ export const ALERT_TAG = define('bit-alert', ({ host }) => {
           ${closeIcon}
         </button>
       </div>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [
+      ...formFieldMixins,
+      forcedColorsMixin,
+      sizeVariantMixin({
+        lg: { '--_padding': 'var(--size-4) var(--size-5)', fontSize: 'var(--text-base)', gap: 'var(--size-3-5)' },
+        sm: { '--_padding': 'var(--size-2) var(--size-3)', fontSize: 'var(--text-xs)', gap: 'var(--size-2)' },
+      }),
+      componentStyles,
+    ],
+  },
+);

@@ -1,4 +1,4 @@
-import { define, defineProps, html } from '@vielzeug/craftit';
+import { define, html, typed, defineProps } from '@vielzeug/craftit';
 
 import type { ThemeColor } from '../../types';
 
@@ -38,17 +38,17 @@ export type BitSeparatorProps = {
  * <bit-separator orientation="vertical"></bit-separator>
  * ```
  */
-export const SEPARATOR_TAG = define('bit-separator', () => {
-  const props = defineProps<BitSeparatorProps>({
-    color: { default: undefined },
-    decorative: { default: true, type: Boolean },
-    label: { default: undefined },
-    orientation: { default: 'horizontal' },
-  });
+export const SEPARATOR_TAG = define(
+  'bit-separator',
+  () => {
+    const props = defineProps<BitSeparatorProps>({
+      color: typed<BitSeparatorProps['color']>(undefined),
+      decorative: typed<boolean>(true),
+      label: typed<string | undefined>(undefined),
+      orientation: typed<BitSeparatorProps['orientation']>('horizontal'),
+    });
 
-  return {
-    styles: [colorThemeMixin, componentStyles],
-    template: html`
+    return html`
       ${() =>
         props.label.value
           ? html`
@@ -75,6 +75,9 @@ export const SEPARATOR_TAG = define('bit-separator', () => {
                 :aria-hidden="${() => (props.decorative.value ? 'true' : null)}"
                 :aria-orientation="${() => props.orientation.value}" />
             `}
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [colorThemeMixin, componentStyles],
+  },
+);

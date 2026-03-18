@@ -1,6 +1,8 @@
-import { effect, type Signal } from '@vielzeug/stateit';
+import type { Signal } from '@vielzeug/stateit';
 
-import type { DirectiveDescriptor } from '../craftit';
+import type { DirectiveDescriptor } from '../internal';
+
+import { attr } from './attr';
 
 /**
  * Creates a two-way binding between a writable Signal and a form element.
@@ -27,41 +29,14 @@ export function bind(sig: Signal<boolean>): DirectiveDescriptor;
 export function bind(sig: Signal<string>): DirectiveDescriptor;
 export function bind(sig: Signal<boolean> | Signal<string>): DirectiveDescriptor {
   return {
-    __craftit_directive: (el, registerCleanup) => {
-      const input = el as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-      const isToggle = (input as HTMLInputElement).type === 'checkbox' || (input as HTMLInputElement).type === 'radio';
+    mount(el, context) {
+      const input = el as HTMLInputElement;
+      const isToggle = input.type === 'checkbox' || input.type === 'radio';
 
-      if (isToggle) {
-        const boolSig = sig as Signal<boolean>;
-
-        registerCleanup(
-          effect(() => {
-            (input as HTMLInputElement).checked = !!boolSig.value;
-          }),
-        );
-
-        const handler = (e: Event) => {
-          boolSig.value = (e.target as HTMLInputElement).checked;
-        };
-
-        input.addEventListener('change', handler);
-        registerCleanup(() => input.removeEventListener('change', handler));
-      } else {
-        const strSig = sig as Signal<string>;
-
-        registerCleanup(
-          effect(() => {
-            input.value = strSig.value;
-          }),
-        );
-
-        const handler = (e: Event) => {
-          strSig.value = (e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).value;
-        };
-
-        input.addEventListener('input', handler);
-        registerCleanup(() => input.removeEventListener('input', handler));
-      }
+      (isToggle ? attr({ checked: sig as Signal<boolean> }) : attr({ value: sig as Signal<string> })).mount!(
+        el,
+        context,
+      );
     },
   };
 }

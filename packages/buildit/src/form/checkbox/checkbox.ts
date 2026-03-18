@@ -2,18 +2,18 @@ import {
   aria,
   createId,
   define,
-  defineEmits,
-  defineProps,
-  defineSlots,
   effect,
   guard,
   handle,
   html,
-  inject,
+  useInject,
   onMount,
   ref,
   signal,
   watch,
+  defineProps,
+  defineEmits,
+  defineSlots,
 } from '@vielzeug/craftit';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
@@ -81,8 +81,6 @@ export type BitCheckboxProps = CheckableProps &
 export const CHECKBOX_TAG = define(
   'bit-checkbox',
   ({ host }) => {
-    const slots = defineSlots();
-    const emit = defineEmits<BitCheckboxEvents>();
     const props = defineProps<BitCheckboxProps>({
       checked: { default: false },
       color: { default: undefined },
@@ -94,14 +92,14 @@ export const CHECKBOX_TAG = define(
       size: { default: undefined },
       value: { default: 'on' },
     });
+    const emit = defineEmits<BitCheckboxEvents>();
+    const slots = defineSlots<{ default: unknown }>();
 
     const indeterminateSignal = signal(false);
-
     const { checkedSignal, formCtx, triggerValidation } = useToggleField(props, () => {
       indeterminateSignal.value = props.indeterminate.value ?? false;
     });
-
-    const groupCtx = inject(CHECKBOX_GROUP_CTX);
+    const groupCtx = useInject(CHECKBOX_GROUP_CTX, undefined);
 
     // Propagate form context size/disabled to host when not explicitly set
     mountFormContextSync(host, formCtx, props);
@@ -113,7 +111,7 @@ export const CHECKBOX_TAG = define(
     watch(
       props.indeterminate,
       (v) => {
-        indeterminateSignal.value = v ?? false;
+        indeterminateSignal.value = Boolean(v);
       },
       { immediate: true },
     );
@@ -145,12 +143,10 @@ export const CHECKBOX_TAG = define(
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         isChecked ? host.setAttribute('checked', '') : host.removeAttribute('checked');
         host.removeAttribute('indeterminate');
-
         emit('change', { checked: isChecked, value: props.value.value ?? '' });
         triggerValidation('change');
       },
     );
-
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
@@ -160,11 +156,9 @@ export const CHECKBOX_TAG = define(
 
     handle(host, 'click', toggle);
     handle(host, 'keydown', handleKeydown);
-
     // Pre-register the slot signal during setup so its onMount runs before ours,
     // ensuring slots.has('default').value returns the correct value inside onMount.
     slots.has('default');
-
     onMount(() => {
       host.setAttribute('role', 'checkbox');
 
@@ -193,65 +187,63 @@ export const CHECKBOX_TAG = define(
         else helperEl.removeAttribute('role');
       });
     });
-
     aria({
       checked: () => (indeterminateSignal.value ? 'mixed' : String(checkedSignal.value)),
       describedby: () => (props.error.value || props.helper.value ? helperId : null),
       invalid: () => !!props.error.value,
     });
-
     watch(props.disabled, (disabled) => {
       if (disabled) host.removeAttribute('tabindex');
       else host.setAttribute('tabindex', '0');
     });
 
-    return {
-      styles: [
-        ...formControlMixins,
-        coarsePointerMixin,
-        sizeVariantMixin({
-          lg: {
-            fontSize: 'var(--text-base)',
-            gap: 'var(--size-2-5)',
-            size: 'var(--size-6)',
-          },
-          sm: {
-            fontSize: 'var(--text-xs)',
-            gap: 'var(--size-1-5)',
-            size: 'var(--size-4)',
-          },
-        }),
-        componentStyles,
-      ],
-      template: html` <div class="checkbox-wrapper" part="checkbox">
-          <div class="box" part="box">
-            <svg
-              class="checkmark"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              xmlns="http://www.w3.org/2000/svg">
-              <path d="M 20,6 9,17 4,12" />
-            </svg>
-            <svg
-              class="dash"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              xmlns="http://www.w3.org/2000/svg">
-              <path d="M 5,12 H 19" />
-            </svg>
-          </div>
+    return html` <div class="checkbox-wrapper" part="checkbox">
+        <div class="box" part="box">
+          <svg
+            class="checkmark"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            xmlns="http://www.w3.org/2000/svg">
+            <path d="M 20,6 9,17 4,12" />
+          </svg>
+          <svg
+            class="dash"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            xmlns="http://www.w3.org/2000/svg">
+            <path d="M 5,12 H 19" />
+          </svg>
         </div>
-        <span class="label" part="label" ref=${labelRef}><slot></slot></span>
-        <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`,
-    };
+      </div>
+      <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+      <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`;
   },
-  { formAssociated: true },
+  {
+    formAssociated: true,
+    styles: [
+      ...formControlMixins,
+      coarsePointerMixin,
+      sizeVariantMixin({
+        lg: {
+          fontSize: 'var(--text-base)',
+          gap: 'var(--size-2-5)',
+          size: 'var(--size-6)',
+        },
+        sm: {
+          fontSize: 'var(--text-xs)',
+          gap: 'var(--size-1-5)',
+          size: 'var(--size-4)',
+        },
+      }),
+      componentStyles,
+    ],
+  },
 );

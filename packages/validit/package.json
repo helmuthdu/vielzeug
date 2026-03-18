@@ -14,12 +14,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./standalone": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/validit.js",
+      "require": "./dist/validit.cjs"
     }
   },
   "scripts": {
-    "build": "tsc && vite build  && tsc -p tsconfig.declarations.json",
-    "fix": "biome check --write --unsafe src",
-    "lint": "biome check src",
+    "build": "tsc && vite build && vite build --config vite.bundle.config.ts && tsc -p tsconfig.declarations.json",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
     "prepublishOnly": "npm run build",
     "preview": "vite preview",
     "test": "vitest"

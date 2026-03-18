@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/stateit';
 
-import type { HTMLResult } from '../craftit';
+import type { HTMLResult } from '../internal';
 
 type State = { done: false } | { done: true; value: string | HTMLResult };
 

@@ -3,25 +3,26 @@ import {
   computed,
   createId,
   define,
-  defineEmits,
   defineField,
-  defineProps,
-  defineSlots,
   effect,
   guard,
   handle,
   html,
-  inject,
+  useInject,
   onMount,
   ref,
   signal,
   watch,
+  defineProps,
+  defineEmits,
+  defineSlots,
+  fire,
 } from '@vielzeug/craftit';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync } from '../../utils/use-text-field';
+import { mountFormContextSync } from '../../utils';
 import { FORM_CTX } from '../form/form';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
 import componentStyles from './radio.css?inline';
@@ -79,8 +80,6 @@ export type BitRadioProps = CheckableProps &
 export const RADIO_TAG = define(
   'bit-radio',
   ({ host }) => {
-    const slots = defineSlots();
-    const emit = defineEmits<BitRadioEvents>();
     const props = defineProps<BitRadioProps>({
       checked: { default: false },
       color: { default: undefined },
@@ -91,23 +90,23 @@ export const RADIO_TAG = define(
       size: { default: undefined },
       value: { default: '' },
     });
+    const emit = defineEmits<BitRadioEvents>();
+    const slots = defineSlots<{ default: unknown }>();
 
     const checkedSignal = signal(false);
-
-    const groupCtx = inject(RADIO_GROUP_CTX);
-    const formCtx = inject(FORM_CTX);
+    const groupCtx = useInject(RADIO_GROUP_CTX, undefined);
+    const formCtx = useInject(FORM_CTX, undefined);
 
     mountFormContextSync(host, formCtx, props);
-
     defineField(
       {
-        disabled: computed(() => props.disabled.value),
+        disabled: computed(() => Boolean(props.disabled.value)),
         toFormValue: (v: string | null) => v,
-        value: computed(() => (checkedSignal.value ? props.value.value : null)),
+        value: computed(() => (checkedSignal.value ? (props.value.value ?? '') : null)),
       },
       {
         onReset: () => {
-          checkedSignal.value = props.checked.value;
+          checkedSignal.value = Boolean(props.checked.value);
         },
       },
     );
@@ -130,7 +129,7 @@ export const RADIO_TAG = define(
       watch(
         props.checked,
         (v) => {
-          checkedSignal.value = v ?? false;
+          checkedSignal.value = Boolean(v);
         },
         { immediate: true },
       );
@@ -156,7 +155,6 @@ export const RADIO_TAG = define(
         (r) => !r.hasAttribute('disabled'),
       );
     };
-
     const selectRadio = (target: HTMLElement, originalEvent: Event) => {
       const radios = getRadioGroup();
 
@@ -172,24 +170,17 @@ export const RADIO_TAG = define(
               checkedSignal.value = true;
               emit('change', { checked: true, originalEvent });
             } else {
-              radio.dispatchEvent(
-                new CustomEvent('change', {
-                  bubbles: true,
-                  composed: true,
-                  detail: { checked: true, originalEvent },
-                }),
-              );
+              fire(radio, 'change', {
+                detail: { checked: true, originalEvent },
+              });
             }
           }
         } else if (radio.hasAttribute('checked')) {
           radio.removeAttribute('checked');
-          radio.dispatchEvent(
-            new CustomEvent('change', { bubbles: true, composed: true, detail: { checked: false, originalEvent } }),
-          );
+          fire(radio, 'change', { detail: { checked: false, originalEvent } });
         }
       });
     };
-
     const handleClick = guard(
       () => !props.disabled.value && !host.hasAttribute('checked'),
       (e: Event) => {
@@ -200,7 +191,6 @@ export const RADIO_TAG = define(
         }
       },
     );
-
     const handleKeydown = guard(
       () => !props.disabled.value,
       (e: KeyboardEvent) => {
@@ -254,11 +244,9 @@ export const RADIO_TAG = define(
 
     handle(host, 'click', handleClick);
     handle(host, 'keydown', handleKeydown);
-
     // Pre-register the slot signal during setup so its onMount runs before ours,
     // ensuring slots.has('default').value returns the correct value inside onMount.
     slots.has('default');
-
     onMount(() => {
       host.setAttribute('role', 'radio');
 
@@ -287,13 +275,11 @@ export const RADIO_TAG = define(
         else helperEl.removeAttribute('role');
       });
     });
-
     aria({
       checked: () => String(checkedSignal.value),
       describedby: () => (props.error.value || props.helper.value ? helperId : null),
       invalid: () => !!props.error.value,
     });
-
     watch(
       computed(() => ({ checked: checkedSignal.value, disabled: props.disabled.value })),
       ({ checked, disabled }) => {
@@ -302,32 +288,32 @@ export const RADIO_TAG = define(
       },
     );
 
-    return {
-      styles: [
-        ...formControlMixins,
-        coarsePointerMixin,
-        sizeVariantMixin({
-          lg: {
-            fontSize: 'var(--text-base)',
-            gap: 'var(--size-2-5)',
-            size: 'var(--size-6)',
-          },
-          sm: {
-            fontSize: 'var(--text-xs)',
-            gap: 'var(--size-1-5)',
-            size: 'var(--size-4)',
-          },
-        }),
-        componentStyles,
-      ],
-      template: html` <div class="radio-wrapper" part="radio">
-          <div class="circle" part="circle">
-            <div class="dot" part="dot"></div>
-          </div>
+    return html` <div class="radio-wrapper" part="radio">
+        <div class="circle" part="circle">
+          <div class="dot" part="dot"></div>
         </div>
-        <span class="label" part="label" ref=${labelRef}><slot></slot></span>
-        <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`,
-    };
+      </div>
+      <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+      <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`;
   },
-  { formAssociated: true },
+  {
+    formAssociated: true,
+    styles: [
+      ...formControlMixins,
+      coarsePointerMixin,
+      sizeVariantMixin({
+        lg: {
+          fontSize: 'var(--text-base)',
+          gap: 'var(--size-2-5)',
+          size: 'var(--size-6)',
+        },
+        sm: {
+          fontSize: 'var(--text-xs)',
+          gap: 'var(--size-1-5)',
+          size: 'var(--size-4)',
+        },
+      }),
+      componentStyles,
+    ],
+  },
 );

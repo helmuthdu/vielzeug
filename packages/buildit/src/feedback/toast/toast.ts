@@ -1,4 +1,4 @@
-import { define, defineEmits, defineProps, html, onMount, ref, signal } from '@vielzeug/craftit';
+import { define, html, onMount, ref, signal, defineProps, defineEmits } from '@vielzeug/craftit';
 import { classes, each } from '@vielzeug/craftit/directives';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
@@ -121,219 +121,208 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
   `;
 }
 
-export const TOAST_TAG = define('bit-toast', ({ host }) => {
-  const props = defineProps<BitToastProps>({
-    max: { default: 5 },
-    position: { default: 'bottom-right' },
-  });
+export const TOAST_TAG = define(
+  'bit-toast',
+  ({ host }) => {
+    const props = defineProps<BitToastProps>({
+      max: { default: 5 },
+      position: { default: 'bottom-right' },
+    });
+    const emit = defineEmits<BitToastEvents>();
 
-  const emit = defineEmits<BitToastEvents>();
+    const toasts = signal<NormalizedToast[]>([]);
+    const exitingIds = signal<Set<string>>(new Set());
+    const containerRef = ref<HTMLDivElement>();
+    const timers = new Map<
+      string,
+      {
+        remaining: number;
+        startedAt: number;
+        timeoutId: number;
+      }
+    >();
+    // Sequential dismiss queue — only one toast exits at a time so animations never overlap.
+    const dismissQueue: string[] = [];
+    let isDismissing = false;
+    const setExiting = (id: string, value: boolean) => {
+      const next = new Set(exitingIds.value);
 
-  const toasts = signal<NormalizedToast[]>([]);
-  const exitingIds = signal<Set<string>>(new Set());
-  const containerRef = ref<HTMLDivElement>();
-  const timers = new Map<string, { remaining: number; startedAt: number; timeoutId: number }>();
+      if (value) next.add(id);
+      else next.delete(id);
 
-  // Sequential dismiss queue — only one toast exits at a time so animations never overlap.
-  const dismissQueue: string[] = [];
-  let isDismissing = false;
+      exitingIds.value = next;
+    };
+    const scheduleRemoval = (id: string, duration: number) => {
+      const timeoutId = window.setTimeout(() => {
+        removeToast(id);
+        timers.delete(id);
+      }, duration);
 
-  const setExiting = (id: string, value: boolean) => {
-    const next = new Set(exitingIds.value);
+      timers.set(id, { remaining: duration, startedAt: Date.now(), timeoutId });
+    };
+    let isPaused = false;
+    const pauseTimers = () => {
+      if (isPaused) return;
 
-    if (value) next.add(id);
-    else next.delete(id);
+      isPaused = true;
+      for (const [id, t] of timers) {
+        clearTimeout(t.timeoutId);
+        timers.set(id, { ...t, remaining: Math.max(0, t.remaining - (Date.now() - t.startedAt)) });
+      }
+    };
+    const resumeTimers = () => {
+      if (!isPaused) return;
 
-    exitingIds.value = next;
-  };
+      isPaused = false;
+      for (const [id, t] of timers) {
+        if (t.remaining <= 0) continue;
 
-  const scheduleRemoval = (id: string, duration: number) => {
-    const timeoutId = window.setTimeout(() => {
-      removeToast(id);
+        scheduleRemoval(id, t.remaining);
+      }
+    };
+    const addToast = (toast: ToastItem): string => {
+      const id = toast.id || crypto.randomUUID();
+      const item: NormalizedToast = { dismissible: true, duration: 5000, ...toast, id };
+
+      toasts.value = [...toasts.value, item].slice(-(props.max.value ?? 5));
+      emit('add', { id });
+
+      if (item.duration! > 0) scheduleRemoval(id, item.duration!);
+
+      return id;
+    };
+    const removeToast = (id: string) => {
+      // Cancel the auto-dismiss timer if one is running.
+      const timer = timers.get(id);
+
+      if (timer) {
+        clearTimeout(timer.timeoutId);
+        timers.delete(id);
+      }
+
+      // Skip if already exiting or already queued.
+      if (exitingIds.value.has(id) || dismissQueue.includes(id)) return;
+
+      if (isDismissing) {
+        dismissQueue.push(id);
+
+        return;
+      }
+
+      isDismissing = true;
+      executeRemoval(id);
+    };
+    // Internal: actually animate and remove. Always called from processNextInQueue or directly
+    // when the queue is empty.
+    const executeRemoval = (id: string) => {
+      // Guard: could have been removed by clearAll between queue entry and execution.
+      if (exitingIds.value.has(id)) {
+        processNextInQueue();
+
+        return;
+      }
+
+      const item = toasts.value.find((t) => t.id === id);
+      const wrapper = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${id}"]`);
+      const finalize = () => {
+        setExiting(id, false);
+        toasts.value = toasts.value.filter((t) => t.id !== id);
+        item?.onDismiss?.();
+        emit('dismiss', { id });
+        processNextInQueue();
+      };
+
+      if (wrapper) {
+        setExiting(id, true);
+        awaitExit(wrapper, finalize);
+      } else {
+        finalize();
+      }
+    };
+    const processNextInQueue = () => {
+      if (dismissQueue.length === 0) {
+        isDismissing = false;
+
+        return;
+      }
+
+      const nextId = dismissQueue.shift()!;
+
+      executeRemoval(nextId);
+    };
+    const updateToast = (id: string, updates: Partial<ToastItem>) => {
+      toasts.value = toasts.value.map((t) => (t.id === id ? { ...t, ...updates, id } : t));
+
+      if (updates.duration === undefined) return;
+
+      const timer = timers.get(id);
+
+      if (timer) clearTimeout(timer.timeoutId);
+
       timers.delete(id);
-    }, duration);
 
-    timers.set(id, { remaining: duration, startedAt: Date.now(), timeoutId });
-  };
+      if (updates.duration > 0) scheduleRemoval(id, updates.duration);
+    };
+    const clearAll = () => {
+      for (const [, t] of timers) clearTimeout(t.timeoutId);
+      timers.clear();
+      // Drain any pending queue entries and replace with the full current list so
+      // they exit one-by-one in order.
+      dismissQueue.length = 0;
 
-  let isPaused = false;
+      const ids = toasts.value.map((t) => t.id).filter((id) => !exitingIds.value.has(id));
 
-  const pauseTimers = () => {
-    if (isPaused) return;
+      if (!ids.length) return;
 
-    isPaused = true;
-    for (const [id, t] of timers) {
-      clearTimeout(t.timeoutId);
-      timers.set(id, { ...t, remaining: Math.max(0, t.remaining - (Date.now() - t.startedAt)) });
-    }
-  };
+      dismissQueue.push(...ids);
 
-  const resumeTimers = () => {
-    if (!isPaused) return;
-
-    isPaused = false;
-    for (const [id, t] of timers) {
-      if (t.remaining <= 0) continue;
-
-      scheduleRemoval(id, t.remaining);
-    }
-  };
-
-  const addToast = (toast: ToastItem): string => {
-    const id = toast.id || crypto.randomUUID();
-    const item: NormalizedToast = { dismissible: true, duration: 5000, ...toast, id };
-
-    toasts.value = [...toasts.value, item].slice(-props.max.value);
-    emit('add', { id });
-
-    if (item.duration! > 0) scheduleRemoval(id, item.duration!);
-
-    return id;
-  };
-
-  const removeToast = (id: string) => {
-    // Cancel the auto-dismiss timer if one is running.
-    const timer = timers.get(id);
-
-    if (timer) {
-      clearTimeout(timer.timeoutId);
-      timers.delete(id);
-    }
-
-    // Skip if already exiting or already queued.
-    if (exitingIds.value.has(id) || dismissQueue.includes(id)) return;
-
-    if (isDismissing) {
-      dismissQueue.push(id);
-
-      return;
-    }
-
-    isDismissing = true;
-    executeRemoval(id);
-  };
-
-  // Internal: actually animate and remove. Always called from processNextInQueue or directly
-  // when the queue is empty.
-  const executeRemoval = (id: string) => {
-    // Guard: could have been removed by clearAll between queue entry and execution.
-    if (exitingIds.value.has(id)) {
-      processNextInQueue();
-
-      return;
-    }
-
-    const item = toasts.value.find((t) => t.id === id);
-    const wrapper = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${id}"]`);
-
-    const finalize = () => {
-      setExiting(id, false);
-      toasts.value = toasts.value.filter((t) => t.id !== id);
-      item?.onDismiss?.();
-      emit('dismiss', { id });
-      processNextInQueue();
+      if (!isDismissing) processNextInQueue();
     };
 
-    if (wrapper) {
-      setExiting(id, true);
-      awaitExit(wrapper, finalize);
-    } else {
-      finalize();
-    }
-  };
+    onMount(() => {
+      const el = host as ToastElement;
 
-  const processNextInQueue = () => {
-    if (dismissQueue.length === 0) {
-      isDismissing = false;
+      el.add = addToast;
+      el.update = updateToast;
+      el.dismiss = removeToast;
+      el.clear = clearAll;
+    });
 
-      return;
-    }
+    const urgencyOf = (t: NormalizedToast) => t.urgency ?? (t.color === 'error' ? 'assertive' : 'polite');
+    let focusPaused = false;
+    let hoverPaused = false;
+    const maybePause = () => pauseTimers();
+    const maybeResume = () => {
+      if (!focusPaused && !hoverPaused) resumeTimers();
+    };
+    const setHovered = (hovered: boolean) => {
+      hoverPaused = hovered;
+      host.classList.toggle('hovered', hovered);
 
-    const nextId = dismissQueue.shift()!;
+      if (hovered) maybePause();
+      else maybeResume();
+    };
+    const renderToastItem = (toast: NormalizedToast) => html`
+      <div
+        class=${classes({ exiting: () => exitingIds.value.has(toast.id), 'toast-wrapper': true })}
+        data-toast-id=${toast.id}
+        part="toast-wrapper">
+        <bit-alert
+          color=${toast.color || (toast.urgency === 'assertive' ? 'error' : 'primary')}
+          variant=${toast.variant || 'solid'}
+          size=${toast.size || 'md'}
+          rounded=${toast.rounded || 'md'}
+          ?dismissible=${toast.dismissible}
+          ?horizontal=${toast.horizontal}
+          heading=${toast.heading || ''}
+          @dismiss=${() => removeToast(toast.id)}>
+          ${toast.meta ? html`<span slot="meta">${toast.meta}</span>` : ''} ${toast.message}
+          ${renderToastActions(toast, () => removeToast(toast.id))}
+        </bit-alert>
+      </div>
+    `;
 
-    executeRemoval(nextId);
-  };
-
-  const updateToast = (id: string, updates: Partial<ToastItem>) => {
-    toasts.value = toasts.value.map((t) => (t.id === id ? { ...t, ...updates, id } : t));
-
-    if (updates.duration === undefined) return;
-
-    const timer = timers.get(id);
-
-    if (timer) clearTimeout(timer.timeoutId);
-
-    timers.delete(id);
-
-    if (updates.duration > 0) scheduleRemoval(id, updates.duration);
-  };
-
-  const clearAll = () => {
-    for (const [, t] of timers) clearTimeout(t.timeoutId);
-    timers.clear();
-
-    // Drain any pending queue entries and replace with the full current list so
-    // they exit one-by-one in order.
-    dismissQueue.length = 0;
-
-    const ids = toasts.value.map((t) => t.id).filter((id) => !exitingIds.value.has(id));
-
-    if (!ids.length) return;
-
-    dismissQueue.push(...ids);
-
-    if (!isDismissing) processNextInQueue();
-  };
-
-  onMount(() => {
-    const el = host as ToastElement;
-
-    el.add = addToast;
-    el.update = updateToast;
-    el.dismiss = removeToast;
-    el.clear = clearAll;
-  });
-
-  const urgencyOf = (t: NormalizedToast) => t.urgency ?? (t.color === 'error' ? 'assertive' : 'polite');
-
-  let focusPaused = false;
-  let hoverPaused = false;
-  const maybePause = () => pauseTimers();
-  const maybeResume = () => {
-    if (!focusPaused && !hoverPaused) resumeTimers();
-  };
-
-  const setHovered = (hovered: boolean) => {
-    hoverPaused = hovered;
-    host.classList.toggle('hovered', hovered);
-
-    if (hovered) maybePause();
-    else maybeResume();
-  };
-
-  const renderToastItem = (toast: NormalizedToast) => html`
-    <div
-      class=${classes({ 'toast-wrapper': true, exiting: () => exitingIds.value.has(toast.id) })}
-      data-toast-id=${toast.id}
-      part="toast-wrapper">
-      <bit-alert
-        color=${toast.color || (toast.urgency === 'assertive' ? 'error' : 'primary')}
-        variant=${toast.variant || 'solid'}
-        size=${toast.size || 'md'}
-        rounded=${toast.rounded || 'md'}
-        ?dismissible=${toast.dismissible}
-        ?horizontal=${toast.horizontal}
-        heading=${toast.heading || ''}
-        @dismiss=${() => removeToast(toast.id)}>
-        ${toast.meta ? html`<span slot="meta">${toast.meta}</span>` : ''} ${toast.message}
-        ${renderToastActions(toast, () => removeToast(toast.id))}
-      </bit-alert>
-    </div>
-  `;
-
-  return {
-    styles: [reducedMotionMixin, componentStyles],
-    template: html`
+    return html`
       <div
         class="toast-container"
         ref=${containerRef}
@@ -370,9 +359,12 @@ export const TOAST_TAG = define('bit-toast', ({ host }) => {
         </div>
         <slot></slot>
       </div>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [reducedMotionMixin, componentStyles],
+  },
+);
 
 // ─── Singleton toast service ─────────────────────────────────────────────────
 

@@ -1,11 +1,11 @@
-import { computed, defineField, inject, type ReadonlySignal, signal, watch } from '@vielzeug/craftit';
+import { computed, defineField, useInject, type ReadonlySignal, signal, watch } from '@vielzeug/craftit';
 
-import { FORM_CTX } from '../form/form/form';
+import { FORM_CTX } from '../form';
 
 export interface ToggleFieldBaseProps {
-  disabled: ReadonlySignal<boolean>;
-  value: ReadonlySignal<string>;
-  checked: ReadonlySignal<boolean>;
+  disabled: ReadonlySignal<boolean | undefined>;
+  value: ReadonlySignal<string | undefined>;
+  checked: ReadonlySignal<boolean | undefined>;
 }
 
 /**
@@ -15,14 +15,14 @@ export interface ToggleFieldBaseProps {
  * @param onExtraReset - Optional callback invoked alongside the field reset (e.g. to reset `indeterminateSignal`)
  */
 export function useToggleField(props: ToggleFieldBaseProps, onExtraReset?: () => void) {
-  const formCtx = inject(FORM_CTX);
+  const formCtx = useInject(FORM_CTX, undefined);
   const checkedSignal = signal(false);
 
   const fd = defineField(
     {
       disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)),
       toFormValue: (v: string | null) => v,
-      value: computed(() => (checkedSignal.value ? props.value.value : null)),
+      value: computed(() => (checkedSignal.value ? (props.value.value ?? '') : null)),
     },
     {
       onReset: () => {

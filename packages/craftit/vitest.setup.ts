@@ -26,7 +26,9 @@ if (!('IntersectionObserver' in globalThis)) {
     readonly rootMargin = '';
     readonly thresholds: readonly number[] = [];
     constructor(_cb: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
-    takeRecords(): IntersectionObserverEntry[] { return []; }
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
   } as unknown as typeof IntersectionObserver;
 }
 

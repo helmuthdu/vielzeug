@@ -3,18 +3,18 @@ import {
   computed,
   createId,
   define,
-  defineEmits,
   defineField,
-  defineProps,
-  defineSlots,
   guard,
   handle,
   html,
-  inject,
+  useInject,
   onMount,
   ref,
   signal,
   watch,
+  defineProps,
+  defineEmits,
+  defineSlots,
 } from '@vielzeug/craftit';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
@@ -103,8 +103,6 @@ export type BitSliderProps = ThemableProps &
 export const SLIDER_TAG = define(
   'bit-slider',
   ({ host }) => {
-    const slots = defineSlots();
-    const emit = defineEmits<BitSliderEvents>();
     const props = defineProps<BitSliderProps>({
       color: { default: undefined },
       disabled: { default: false },
@@ -121,18 +119,17 @@ export const SLIDER_TAG = define(
       value: { default: '0' },
       'value-text': { default: undefined },
     });
+    const emit = defineEmits<BitSliderEvents>();
+    const slots = defineSlots<{ default: unknown }>();
 
     // Treat `range` as static — determined at first render
     const isRange = props.range.value;
-
     // ── Shared helpers ────────────────────────────────────────────
-
     const getNum = (v: string | number | undefined, fallback: number) => {
       const n = Number(v);
 
       return Number.isFinite(n) ? n : fallback;
     };
-
     const snapVal = (value: number) => {
       const min = getNum(props.min.value, 0);
       const max = getNum(props.max.value, 100);
@@ -140,27 +137,27 @@ export const SLIDER_TAG = define(
 
       return Math.max(min, Math.min(max, Math.round(value / step) * step));
     };
-
     const toPercent = (value: number) => {
       const min = getNum(props.min.value, 0);
       const max = getNum(props.max.value, 100);
 
       return ((value - min) / (max - min)) * 100;
     };
-
     // ── Single-value state ────────────────────────────────────────
-
-    const formCtx = inject(FORM_CTX);
+    const formCtx = useInject(FORM_CTX, undefined);
 
     mountFormContextSync(host, formCtx, props);
 
-    let sliderFd: { reportValidity: () => boolean } | undefined;
-
+    let sliderFd:
+      | {
+          reportValidity: () => boolean;
+        }
+      | undefined;
     const valueSignal = signal('0');
 
     if (!isRange) {
       sliderFd = defineField(
-        { disabled: computed(() => props.disabled.value), value: valueSignal },
+        { disabled: computed(() => Boolean(props.disabled.value)), value: valueSignal },
         {
           onReset: () => {
             valueSignal.value = '0';
@@ -175,7 +172,7 @@ export const SLIDER_TAG = define(
         { immediate: true },
       );
       aria({
-        disabled: () => props.disabled.value,
+        disabled: () => Boolean(props.disabled.value),
         valuemax: () => getNum(props.max.value, 100),
         valuemin: () => getNum(props.min.value, 0),
         valuenow: () => Number(valueSignal.value || 0),
@@ -184,12 +181,14 @@ export const SLIDER_TAG = define(
     }
 
     // ── Range state ───────────────────────────────────────────────
-
     const startVal = signal(0);
     const endVal = signal(100);
 
     if (isRange) {
-      sliderFd = defineField<{ from: number; to: number }>(
+      sliderFd = defineField<{
+        from: number;
+        to: number;
+      }>(
         {
           disabled: computed(() => Boolean(props.disabled.value)),
           toFormValue: ({ from, to }) => {
@@ -216,30 +215,27 @@ export const SLIDER_TAG = define(
       watch(
         props.from,
         (v) => {
-          startVal.value = snapVal(getNum(v, 0));
+          startVal.value = snapVal(getNum(v as string | number | undefined, 0));
         },
         { immediate: true },
       );
       watch(
         props.to,
         (v) => {
-          endVal.value = snapVal(getNum(v, 100));
+          endVal.value = snapVal(getNum(v as string | number | undefined, 100));
         },
         { immediate: true },
       );
     }
 
     // ── Refs ──────────────────────────────────────────────────────
-
     const containerRef = ref<HTMLDivElement>();
     const labelRef = ref<HTMLSpanElement>();
     const thumbStartRef = ref<HTMLDivElement>();
     const thumbEndRef = ref<HTMLDivElement>();
     const startId = createId('slider-start');
     const endId = createId('slider-end');
-
     // ── CSS update helpers ────────────────────────────────────────
-
     const updateSingleCSS = (value: number) => {
       const pct = toPercent(value);
 
@@ -247,7 +243,6 @@ export const SLIDER_TAG = define(
       host.style.setProperty('--_fill-start', '0%');
       host.style.setProperty('--_fill-width', `${pct}%`);
     };
-
     const updateRangeCSS = () => {
       const s = toPercent(startVal.value);
       const e = toPercent(endVal.value);
@@ -257,9 +252,7 @@ export const SLIDER_TAG = define(
       host.style.setProperty('--_fill-start', `${s}%`);
       host.style.setProperty('--_fill-width', `${e - s}%`);
     };
-
     // ── Key-delta maps (avoids switch complexity) ─────────────────
-
     const keyDelta = (key: string, step: number, min: number, max: number, current: number): number | null => {
       if (key === 'ArrowRight' || key === 'ArrowUp') return current + step;
 
@@ -273,7 +266,6 @@ export const SLIDER_TAG = define(
     };
 
     // ── Range mode setup ──────────────────────────────────────────
-
     function triggerValidation(on: 'blur' | 'change'): void {
       if (formCtx?.validateOn.value === on) sliderFd?.reportValidity();
     }
@@ -289,9 +281,7 @@ export const SLIDER_TAG = define(
 
         return snapVal(min + pct * (max - min));
       };
-
       let dragging: 'start' | 'end' | null = null;
-
       const applyDrag = (val: number) => {
         const min = getNum(props.min.value, 0);
         const max = getNum(props.max.value, 100);
@@ -364,7 +354,6 @@ export const SLIDER_TAG = define(
         emit('change', { from: startVal.value, originalEvent: e, to: endVal.value });
         triggerValidation('change');
       };
-
       const thumbStartEl = thumbStartRef.value;
       const thumbEndEl = thumbEndRef.value;
 
@@ -406,9 +395,7 @@ export const SLIDER_TAG = define(
         });
       }
     };
-
     // ── Single-value mode setup ───────────────────────────────────
-
     const setupSingleMode = (container: HTMLDivElement) => {
       host.setAttribute('role', 'slider');
 
@@ -433,7 +420,6 @@ export const SLIDER_TAG = define(
           triggerValidation('change');
         }
       };
-
       let isDragging = false;
 
       handle(
@@ -522,54 +508,54 @@ export const SLIDER_TAG = define(
       else setupSingleMode(container);
     });
 
-    return {
-      styles: [
-        disabledStateMixin(),
-        colorThemeMixin,
-        sizeVariantMixin({
-          lg: {
-            fontSize: 'var(--text-base)',
-            height: 'calc(var(--size-5) - var(--size-1))',
-            size: 'var(--size-5)',
-          },
-          md: {
-            fontSize: 'var(--text-base)',
-            height: 'var(--size-3)',
-            size: 'var(--size-5)',
-          },
-          sm: {
-            fontSize: 'var(--text-xs)',
-            height: 'var(--size-2)',
-            size: 'var(--size-4)',
-          },
-        }),
-        componentStyles,
-        coarsePointerMixin,
-      ],
-      template: html`
-        <div class="slider-container" part="slider" ref=${containerRef}>
-          <div class="slider-track" part="track">
-            <div class="slider-fill" part="fill"></div>
-            <div class="slider-thumb slider-thumb-sole" part="thumb"></div>
-            <div
-              class="slider-thumb slider-thumb-start"
-              part="thumb-start"
-              ref=${thumbStartRef}
-              role="slider"
-              tabindex="${() => (props.disabled.value ? '-1' : '0')}"
-              id="${startId}"></div>
-            <div
-              class="slider-thumb slider-thumb-end"
-              part="thumb-end"
-              ref=${thumbEndRef}
-              role="slider"
-              tabindex="${() => (props.disabled.value ? '-1' : '0')}"
-              id="${endId}"></div>
-          </div>
+    return html`
+      <div class="slider-container" part="slider" ref=${containerRef}>
+        <div class="slider-track" part="track">
+          <div class="slider-fill" part="fill"></div>
+          <div class="slider-thumb slider-thumb-sole" part="thumb"></div>
+          <div
+            class="slider-thumb slider-thumb-start"
+            part="thumb-start"
+            ref=${thumbStartRef}
+            role="slider"
+            tabindex="${() => (props.disabled.value ? '-1' : '0')}"
+            id="${startId}"></div>
+          <div
+            class="slider-thumb slider-thumb-end"
+            part="thumb-end"
+            ref=${thumbEndRef}
+            role="slider"
+            tabindex="${() => (props.disabled.value ? '-1' : '0')}"
+            id="${endId}"></div>
         </div>
-        <span class="label" part="label" ref=${labelRef}><slot></slot></span>
-      `,
-    };
+      </div>
+      <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+    `;
   },
-  { formAssociated: true },
+  {
+    formAssociated: true,
+    styles: [
+      disabledStateMixin(),
+      colorThemeMixin,
+      sizeVariantMixin({
+        lg: {
+          fontSize: 'var(--text-base)',
+          height: 'calc(var(--size-5) - var(--size-1))',
+          size: 'var(--size-5)',
+        },
+        md: {
+          fontSize: 'var(--text-base)',
+          height: 'var(--size-3)',
+          size: 'var(--size-5)',
+        },
+        sm: {
+          fontSize: 'var(--text-xs)',
+          height: 'var(--size-2)',
+          size: 'var(--size-4)',
+        },
+      }),
+      componentStyles,
+      coarsePointerMixin,
+    ],
+  },
 );

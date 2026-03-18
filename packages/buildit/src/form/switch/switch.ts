@@ -2,9 +2,6 @@ import {
   aria,
   createId,
   define,
-  defineEmits,
-  defineProps,
-  defineSlots,
   effect,
   guard,
   handle,
@@ -12,6 +9,9 @@ import {
   onMount,
   ref,
   watch,
+  defineProps,
+  defineEmits,
+  defineSlots,
 } from '@vielzeug/craftit';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
@@ -75,8 +75,6 @@ export type BitSwitchProps = CheckableProps &
 export const SWITCH_TAG = define(
   'bit-switch',
   ({ host }) => {
-    const slots = defineSlots();
-    const emit = defineEmits<BitSwitchEvents>();
     const props = defineProps<BitSwitchProps>({
       checked: { default: false },
       color: { default: undefined },
@@ -87,6 +85,8 @@ export const SWITCH_TAG = define(
       size: { default: undefined },
       value: { default: 'on' },
     });
+    const emit = defineEmits<BitSwitchEvents>();
+    const slots = defineSlots<{ default: unknown }>();
 
     const { checkedSignal, formCtx, triggerValidation } = useToggleField(props);
 
@@ -96,7 +96,6 @@ export const SWITCH_TAG = define(
     const labelRef = ref<HTMLSpanElement>();
     const helperRef = ref<HTMLDivElement>();
     const helperId = createId('switch-helper');
-
     const toggle = guard(
       () => !props.disabled.value,
       (e: Event) => {
@@ -111,7 +110,6 @@ export const SWITCH_TAG = define(
         triggerValidation('change');
       },
     );
-
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
@@ -121,11 +119,9 @@ export const SWITCH_TAG = define(
 
     handle(host, 'click', toggle);
     handle(host, 'keydown', handleKeydown);
-
     // Pre-register the slot signal during setup so its onMount runs before ours,
     // ensuring slots.has('default').value returns the correct value inside onMount.
     slots.has('default');
-
     onMount(() => {
       host.setAttribute('role', 'switch');
 
@@ -154,47 +150,45 @@ export const SWITCH_TAG = define(
         else helperEl.removeAttribute('role');
       });
     });
-
     aria({
       checked: () => String(checkedSignal.value),
       describedby: () => (props.error.value || props.helper.value ? helperId : null),
       invalid: () => !!props.error.value,
     });
-
     watch(props.disabled, (disabled) => {
       if (disabled) host.removeAttribute('tabindex');
       else host.setAttribute('tabindex', '0');
     });
 
-    return {
-      styles: [
-        ...formControlMixins,
-        sizeVariantMixin({
-          lg: {
-            fontSize: 'var(--text-base)',
-            gap: 'var(--size-3)',
-            height: 'var(--size-7)',
-            thumbSize: 'var(--size-6)',
-            width: 'var(--size-14)',
-          },
-          sm: {
-            fontSize: 'var(--text-xs)',
-            gap: 'var(--size-2)',
-            height: 'var(--size-5)',
-            thumbSize: 'var(--size-4)',
-            width: 'var(--size-9)',
-          },
-        }),
-        componentStyles,
-      ],
-      template: html`<div class="switch-wrapper" part="switch">
-          <div class="switch-track" part="track">
-            <div class="switch-thumb" part="thumb"></div>
-          </div>
+    return html`<div class="switch-wrapper" part="switch">
+        <div class="switch-track" part="track">
+          <div class="switch-thumb" part="thumb"></div>
         </div>
-        <span class="label" part="label" ref=${labelRef}><slot></slot></span>
-        <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`,
-    };
+      </div>
+      <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+      <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`;
   },
-  { formAssociated: true },
+  {
+    formAssociated: true,
+    styles: [
+      ...formControlMixins,
+      sizeVariantMixin({
+        lg: {
+          fontSize: 'var(--text-base)',
+          gap: 'var(--size-3)',
+          height: 'var(--size-7)',
+          thumbSize: 'var(--size-6)',
+          width: 'var(--size-14)',
+        },
+        sm: {
+          fontSize: 'var(--text-xs)',
+          gap: 'var(--size-2)',
+          height: 'var(--size-5)',
+          thumbSize: 'var(--size-4)',
+          width: 'var(--size-9)',
+        },
+      }),
+      componentStyles,
+    ],
+  },
 );

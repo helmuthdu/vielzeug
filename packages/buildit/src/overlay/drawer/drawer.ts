@@ -2,14 +2,15 @@ import {
   computed,
   createId,
   define,
-  defineEmits,
-  defineProps,
-  defineSlots,
   handle,
   html,
   onMount,
   ref,
   watch,
+  defineProps,
+  defineEmits,
+  defineSlots,
+  fire,
 } from '@vielzeug/craftit';
 
 import { closeIcon } from '../../icons';
@@ -111,125 +112,112 @@ export type BitDrawerProps = {
  * </bit-drawer>
  * ```
  */
-export const DRAWER_TAG = define('bit-drawer', ({ host }) => {
-  const slots = defineSlots<{ default: unknown; footer: unknown; header: unknown }>();
-  const props = defineProps<BitDrawerProps>({
-    dismissible: { default: true },
-    'initial-focus': { default: undefined },
-    label: { default: undefined },
-    open: { default: false },
-    persistent: { default: false },
-    placement: { default: 'right' },
-    'return-focus': { default: true },
-    size: { default: undefined },
-    title: { default: undefined },
-  });
+export const DRAWER_TAG = define(
+  'bit-drawer',
+  ({ host }) => {
+    const props = defineProps<BitDrawerProps>({
+      dismissible: { default: true },
+      'initial-focus': { default: undefined },
+      label: { default: undefined },
+      open: { default: false },
+      persistent: { default: false },
+      placement: { default: 'right' },
+      'return-focus': { default: true },
+      size: { default: undefined },
+      title: { default: undefined },
+    });
+    const emit = defineEmits<BitDrawerEvents>();
+    const slots = defineSlots<{ default: unknown; footer: unknown; header: unknown }>();
 
-  const emit = defineEmits<BitDrawerEvents>();
-
-  const drawerLabelId = createId('drawer-label');
-  const dialogRef = ref<HTMLDialogElement>();
-  const panelRef = ref<HTMLDivElement>();
-
-  // Header is visible when there is slot content or a title prop.
-  // The close button is independently positioned — always in the top-end corner of the panel.
-  const hasHeader = computed(() => slots.has('header').value || !!props.title.value);
-  const hasFooter = computed(() => slots.has('footer').value);
-
-  const { applyInitialFocus, captureReturnFocus, closeWithAnimation, restoreFocus } = useOverlay(
-    host,
-    dialogRef,
-    () => panelRef.value,
-    props,
-  );
-
-  /**
-   * Dispatches a cancellable `close-request` event. If not prevented, triggers the close animation.
-   * Consumers can call `e.preventDefault()` to block closing (e.g. when there are unsaved changes).
-   */
-  const requestClose = (trigger: 'backdrop' | 'button' | 'escape') => {
-    const allowed = host.dispatchEvent(
-      new CustomEvent('close-request', {
-        bubbles: true,
+    const drawerLabelId = createId('drawer-label');
+    const dialogRef = ref<HTMLDialogElement>();
+    const panelRef = ref<HTMLDivElement>();
+    // Header is visible when there is slot content or a title prop.
+    // The close button is independently positioned — always in the top-end corner of the panel.
+    const hasHeader = computed(() => slots.has('header').value || !!props.title.value);
+    const hasFooter = computed(() => slots.has('footer').value);
+    const { applyInitialFocus, captureReturnFocus, closeWithAnimation, restoreFocus } = useOverlay(
+      host,
+      dialogRef,
+      () => panelRef.value,
+      props,
+    );
+    /**
+     * Dispatches a cancellable `close-request` event. If not prevented, triggers the close animation.
+     * Consumers can call `e.preventDefault()` to block closing (e.g. when there are unsaved changes).
+     */
+    const requestClose = (trigger: 'backdrop' | 'button' | 'escape') => {
+      const allowed = fire(host, 'close-request', {
         cancelable: true,
         detail: { placement: props.placement.value ?? 'right', trigger },
-      }),
-    );
+      });
 
-    if (allowed) closeWithAnimation();
-  };
+      if (allowed) closeWithAnimation();
+    };
+    const openDrawer = () => {
+      const dialog = dialogRef.value;
 
-  const openDrawer = () => {
-    const dialog = dialogRef.value;
+      if (!dialog || dialog.open) return;
 
-    if (!dialog || dialog.open) return;
-
-    captureReturnFocus();
-    dialog.showModal();
-    lockBackground(host);
-    applyInitialFocus();
-    emit('open', { placement: props.placement.value ?? 'right' });
-  };
-
-  onMount(() => {
-    const dialog = dialogRef.value;
-
-    if (!dialog) return;
-
-    // Expose imperative API on the element instance.
-    const el = host as DrawerElement;
-
-    el.show = openDrawer;
-    el.hide = closeWithAnimation;
-
-    // Fires after every close (animation or programmatic). Syncs state and returns focus.
-    const handleNativeClose = () => {
-      unlockBackground();
-      host.removeAttribute('open');
-
-      restoreFocus();
-
-      emit('close', { placement: props.placement.value ?? 'right' });
+      captureReturnFocus();
+      dialog.showModal();
+      lockBackground(host);
+      applyInitialFocus();
+      emit('open', { placement: props.placement.value ?? 'right' });
     };
 
-    // Intercept Escape so the exit animation runs before dialog.close().
-    const handleCancel = (e: Event) => {
-      e.preventDefault();
+    onMount(() => {
+      const dialog = dialogRef.value;
 
-      if (!props.persistent.value) requestClose('escape');
-    };
+      if (!dialog) return;
 
-    const handleBackdropClick = (e: MouseEvent) => {
-      if (!props.persistent.value && e.target === dialog) requestClose('backdrop');
-    };
+      // Expose imperative API on the element instance.
+      const el = host as DrawerElement;
 
-    // { immediate: true } handles both the initial state and future changes.
-    // Initial mount with open=false: closeWithAnimation() is a no-op since the dialog isn't open yet.
-    watch(
-      props.open,
-      (isOpen) => {
-        if (isOpen) openDrawer();
-        else closeWithAnimation();
-      },
-      { immediate: true },
-    );
+      el.show = openDrawer;
+      el.hide = closeWithAnimation;
 
-    handle(dialog, 'close', handleNativeClose);
-    handle(dialog, 'cancel', handleCancel);
-    handle(dialog, 'click', handleBackdropClick);
-
-    return () => {
-      // Release the top-layer slot if the element is removed while open.
-      if (dialog.open) {
+      // Fires after every close (animation or programmatic). Syncs state and returns focus.
+      const handleNativeClose = () => {
         unlockBackground();
-        dialog.close();
-      }
-    };
-  });
+        host.removeAttribute('open');
+        restoreFocus();
+        emit('close', { placement: props.placement.value ?? 'right' });
+      };
+      // Intercept Escape so the exit animation runs before dialog.close().
+      const handleCancel = (e: Event) => {
+        e.preventDefault();
 
-  return {
-    styles: [elevationMixin, forcedColorsMixin, coarsePointerMixin, reducedMotionMixin, styles],
-    template: html`
+        if (!props.persistent.value) requestClose('escape');
+      };
+      const handleBackdropClick = (e: MouseEvent) => {
+        if (!props.persistent.value && e.target === dialog) requestClose('backdrop');
+      };
+
+      // { immediate: true } handles both the initial state and future changes.
+      // Initial mount with open=false: closeWithAnimation() is a no-op since the dialog isn't open yet.
+      watch(
+        props.open,
+        (isOpen) => {
+          if (isOpen) openDrawer();
+          else closeWithAnimation();
+        },
+        { immediate: true },
+      );
+      handle(dialog, 'close', handleNativeClose);
+      handle(dialog, 'cancel', handleCancel);
+      handle(dialog, 'click', handleBackdropClick);
+
+      return () => {
+        // Release the top-layer slot if the element is removed while open.
+        if (dialog.open) {
+          unlockBackground();
+          dialog.close();
+        }
+      };
+    });
+
+    return html`
       <dialog
         ref=${dialogRef}
         aria-modal="true"
@@ -258,6 +246,9 @@ export const DRAWER_TAG = define('bit-drawer', ({ host }) => {
           </div>
         </div>
       </dialog>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [elevationMixin, forcedColorsMixin, coarsePointerMixin, reducedMotionMixin, styles],
+  },
+);

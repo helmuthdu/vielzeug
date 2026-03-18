@@ -1,14 +1,15 @@
 import {
   computed,
   define,
-  defineEmits,
-  defineProps,
-  defineSlots,
   handle,
   html,
   onMount,
   ref,
   watch,
+  defineProps,
+  defineEmits,
+  defineSlots,
+  fire,
 } from '@vielzeug/craftit';
 
 import type { PaddingSize, RoundedSize } from '../../types';
@@ -118,129 +119,123 @@ export type BitDialogProps = {
  * </script>
  * ```
  */
-export const DIALOG_TAG = define('bit-dialog', ({ host }) => {
-  const props = defineProps<BitDialogProps>({
-    backdrop: { default: undefined },
-    dismissible: { default: false },
-    elevation: { default: undefined },
-    'initial-focus': { default: undefined },
-    label: { default: '' },
-    open: { default: false },
-    padding: { default: undefined },
-    persistent: { default: false },
-    'return-focus': { default: true },
-    rounded: { default: undefined },
-    size: { default: 'md' },
-  });
-
-  const emit = defineEmits<BitDialogEvents>();
-
-  const slots = defineSlots<{ default: unknown; footer: unknown; header: unknown }>();
-
-  const dialogRef = ref<HTMLDialogElement>();
-
-  const hasHeader = computed(() => slots.has('header').value || !!props.label.value || props.dismissible.value);
-  const hasFooter = computed(() => slots.has('footer').value);
-
-  const { applyInitialFocus, captureReturnFocus, closeWithAnimation, restoreFocus } = useOverlay(
-    host,
-    dialogRef,
-    () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
-    props,
-  );
-
-  onMount(() => {
-    const dialog = dialogRef.value;
-
-    if (!dialog) return;
-
-    // Sync prop changes → native dialog
-    watch(props.open, (open) => {
-      if (open) {
-        if (!dialog.open) {
-          captureReturnFocus();
-          dialog.showModal();
-          applyInitialFocus();
-          lockBackground(host);
-          emit('open');
-        }
-      } else {
-        closeWithAnimation();
-      }
+export const DIALOG_TAG = define(
+  'bit-dialog',
+  ({ host }) => {
+    const props = defineProps<BitDialogProps>({
+      backdrop: { default: undefined },
+      dismissible: { default: false },
+      elevation: { default: undefined },
+      'initial-focus': { default: undefined },
+      label: { default: '' },
+      open: { default: false },
+      padding: { default: undefined },
+      persistent: { default: false },
+      'return-focus': { default: true },
+      rounded: { default: undefined },
+      size: { default: 'md' },
     });
+    const emit = defineEmits<BitDialogEvents>();
+    const slots = defineSlots<{ default: unknown; footer: unknown; header: unknown }>();
 
-    // Native dialog 'close' fires after animation finishes or on programmatic .close()
-    const handleNativeClose = () => {
-      unlockBackground();
-      // Sync the open prop back to the host attribute if closed externally
-      host.removeAttribute('open');
+    const dialogRef = ref<HTMLDialogElement>();
+    const hasHeader = computed(() => slots.has('header').value || !!props.label.value || props.dismissible.value);
+    const hasFooter = computed(() => slots.has('footer').value);
+    const { applyInitialFocus, captureReturnFocus, closeWithAnimation, restoreFocus } = useOverlay(
+      host,
+      dialogRef,
+      () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
+      props,
+    );
 
-      // Return focus to the triggering element unless opted out
-      restoreFocus();
+    onMount(() => {
+      const dialog = dialogRef.value;
 
-      emit('close');
-    };
+      if (!dialog) return;
 
-    // Intercept Escape to play exit animation first; also enforce persistent mode
-    const handleKeydown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
+      // Sync prop changes → native dialog
+      watch(
+        props.open,
+        (open) => {
+          if (open) {
+            if (!dialog.open) {
+              captureReturnFocus();
+              dialog.showModal();
+              applyInitialFocus();
+              lockBackground(host);
+              emit('open');
+            }
+          } else {
+            closeWithAnimation();
+          }
+        },
+        { immediate: true },
+      );
 
-        if (!props.persistent.value) {
+      // Native dialog 'close' fires after animation finishes or on programmatic .close()
+      const handleNativeClose = () => {
+        unlockBackground();
+        // Sync the open prop back to the host attribute if closed externally
+        host.removeAttribute('open');
+        // Return focus to the triggering element unless opted out
+        restoreFocus();
+        emit('close');
+      };
+      // Intercept Escape to play exit animation first; also enforce persistent mode
+      const handleKeydown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+
+          if (!props.persistent.value) {
+            closeWithAnimation();
+          }
+        }
+      };
+      // Backdrop click: the click target is the <dialog> element itself (not the panel)
+      const handleBackdropClick = (e: MouseEvent) => {
+        if (props.persistent.value) return;
+
+        // When clicking the backdrop, the event target is the <dialog> element itself.
+        // Clicks inside the panel bubble up with a more specific target.
+        if (e.target === dialog) {
           closeWithAnimation();
         }
+      };
+
+      handle(dialog, 'close', handleNativeClose);
+      handle(dialog, 'click', handleBackdropClick);
+      handle(dialog, 'keydown', handleKeydown);
+
+      return () => {
+        // Ensure the native dialog is closed on unmount to release top-layer
+        if (dialog.open) dialog.close();
+
+        unlockBackground();
+      };
+    });
+
+    const handleDismiss = () => {
+      const dialog = dialogRef.value;
+
+      if (!dialog) return;
+
+      fire(dialog, 'close-request');
+      dialog.classList.add('closing');
+
+      const panel = dialog.querySelector<HTMLElement>('.panel');
+      const finish = () => {
+        dialog.classList.remove('closing');
+        dialog.close();
+      };
+
+      if (panel) {
+        awaitExit(panel, finish, 'transition');
+      } else {
+        finish();
       }
     };
 
-    // Backdrop click: the click target is the <dialog> element itself (not the panel)
-    const handleBackdropClick = (e: MouseEvent) => {
-      if (props.persistent.value) return;
-
-      // When clicking the backdrop, the event target is the <dialog> element itself.
-      // Clicks inside the panel bubble up with a more specific target.
-      if (e.target === dialog) {
-        closeWithAnimation();
-      }
-    };
-
-    handle(dialog, 'close', handleNativeClose);
-    handle(dialog, 'click', handleBackdropClick);
-    handle(dialog, 'keydown', handleKeydown);
-
-    return () => {
-      // Ensure the native dialog is closed on unmount to release top-layer
-      if (dialog.open) dialog.close();
-
-      unlockBackground();
-    };
-  });
-
-  const handleDismiss = () => {
-    const dialog = dialogRef.value;
-
-    if (!dialog) return;
-
-    const event = new Event('close-request');
-
-    dialog.dispatchEvent(event);
-    dialog.classList.add('closing');
-
-    const panel = dialog.querySelector<HTMLElement>('.panel');
-    const finish = () => {
-      dialog.classList.remove('closing');
-      dialog.close();
-    };
-
-    if (panel) {
-      awaitExit(panel, finish, 'transition');
-    } else {
-      finish();
-    }
-  };
-
-  return {
-    styles: [elevationMixin, roundedVariantMixin, coarsePointerMixin, reducedMotionMixin, componentStyles],
-    template: html`
+    return html`
       <dialog
         ref=${dialogRef}
         class="dialog"
@@ -271,6 +266,9 @@ export const DIALOG_TAG = define('bit-dialog', ({ host }) => {
           </div>
         </div>
       </dialog>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [elevationMixin, roundedVariantMixin, coarsePointerMixin, reducedMotionMixin, componentStyles],
+  },
+);

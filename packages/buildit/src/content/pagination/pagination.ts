@@ -1,5 +1,5 @@
-import { computed, define, defineEmits, defineProps, html } from '@vielzeug/craftit';
-import { each, when } from '@vielzeug/craftit/directives';
+import { computed, define, html, defineProps, defineEmits } from '@vielzeug/craftit';
+import { each } from '@vielzeug/craftit/directives';
 
 import '../../actions/button/button';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
@@ -91,178 +91,172 @@ function buildPageRange(
  * <bit-pagination page="3" total-pages="10" color="primary"></bit-pagination>
  * ```
  */
-export const PAGINATION_TAG = define('bit-pagination', ({ host }) => {
-  const props = defineProps<BitPaginationProps>({
-    color: { default: undefined },
-    label: { default: 'Pagination' },
-    page: { default: 1 },
-    'show-first-last': { default: false, type: Boolean },
-    'show-prev-next': { default: false, type: Boolean },
-    siblings: { default: 1 },
-    size: { default: undefined },
-    'total-pages': { default: 1 },
-    variant: { default: undefined },
-  });
+export const PAGINATION_TAG = define(
+  'bit-pagination',
+  ({ host }) => {
+    const props = defineProps<BitPaginationProps>({
+      color: { default: undefined },
+      label: { default: 'Pagination' },
+      page: { default: 1 },
+      'show-first-last': { default: false, type: Boolean },
+      'show-prev-next': { default: false, type: Boolean },
+      siblings: { default: 1 },
+      size: { default: undefined },
+      'total-pages': { default: 1 },
+      variant: { default: undefined },
+    });
+    const emit = defineEmits<BitPaginationEvents>();
 
-  const emit = defineEmits<BitPaginationEvents>();
+    function goTo(page: number) {
+      const total = Number(props['total-pages'].value) || 1;
+      const next = Math.min(Math.max(1, page), total);
 
-  function goTo(page: number) {
-    const total = Number(props['total-pages'].value) || 1;
-    const next = Math.min(Math.max(1, page), total);
+      if (next === Number(props.page.value)) return;
 
-    if (next === Number(props.page.value)) return;
+      host.setAttribute('page', String(next));
+      emit('change', { page: next });
+    }
 
-    host.setAttribute('page', String(next));
-    emit('change', { page: next });
-  }
+    const pageItems = computed(() =>
+      buildPageRange(
+        Number(props.page.value) || 1,
+        Number(props['total-pages'].value) || 1,
+        // eslint-disable-next-line no-constant-binary-expression
+        Number(props.siblings.value) ?? 1,
+      ),
+    );
+    const isFirst = computed(() => (Number(props.page.value) || 1) <= 1);
+    const isLast = computed(() => (Number(props.page.value) || 1) >= (Number(props['total-pages'].value) || 1));
 
-  const pageItems = computed(() =>
-    buildPageRange(
-      Number(props.page.value) || 1,
-      Number(props['total-pages'].value) || 1,
-      // eslint-disable-next-line no-constant-binary-expression
-      Number(props.siblings.value) ?? 1,
-    ),
-  );
-
-  const isFirst = computed(() => (Number(props.page.value) || 1) <= 1);
-  const isLast = computed(() => (Number(props.page.value) || 1) >= (Number(props['total-pages'].value) || 1));
-
-  return {
-    styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, styles],
-    template: html`
+    return html`
       <nav :aria-label="${() => props.label.value}" part="nav">
         <ol class="pagination" part="list">
-          ${when(
-            props['show-first-last'],
-            () =>
-              html`<li>
-                <bit-button
-                  icon-only
-                  :variant="${() => props.variant.value || 'ghost'}"
-                  part="first-btn"
-                  aria-label="First page"
-                  :size="${() => props.size.value || null}"
-                  :color="${() => props.color.value || null}"
-                  ?disabled="${() => isFirst.value}"
-                  @click="${() => goTo(1)}"
-                  ><svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true">
-                    <polyline points="11 17 6 12 11 7" />
-                    <polyline points="18 17 13 12 18 7" /></svg
-                ></bit-button>
-              </li>`,
-          )}
-          ${when(
-            props['show-prev-next'],
-            () =>
-              html`<li>
-                <bit-button
-                  icon-only
-                  :variant="${() => props.variant.value || 'ghost'}"
-                  part="prev-btn"
-                  aria-label="Previous page"
-                  :size="${() => props.size.value || null}"
-                  :color="${() => props.color.value || null}"
-                  ?disabled="${() => isFirst.value}"
-                  @click="${() => goTo((Number(props.page.value) || 1) - 1)}"
-                  ><svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true">
-                    <polyline points="15 18 9 12 15 6" /></svg
-                ></bit-button>
-              </li>`,
-          )}
+          ${() =>
+            props['show-first-last'].value
+              ? html`<li>
+                  <button
+                    type="button"
+                    class="nav-btn"
+                    part="first-btn"
+                    aria-label="First page"
+                    ?disabled=${() => isFirst.value}
+                    @click=${() => goTo(1)}>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true">
+                      <polyline points="11 17 6 12 11 7" />
+                      <polyline points="18 17 13 12 18 7" />
+                    </svg>
+                  </button>
+                </li>`
+              : ''}
+          ${() =>
+            props['show-prev-next'].value
+              ? html`<li>
+                  <button
+                    type="button"
+                    class="nav-btn"
+                    part="prev-btn"
+                    aria-label="Previous page"
+                    ?disabled=${() => isFirst.value}
+                    @click=${() => goTo((Number(props.page.value) || 1) - 1)}>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+                </li>`
+              : ''}
+          ${() =>
+            props['show-prev-next'].value
+              ? html`<li>
+                  <button
+                    type="button"
+                    class="nav-btn"
+                    part="next-btn"
+                    aria-label="Next page"
+                    ?disabled=${() => isLast.value}
+                    @click=${() => goTo((Number(props.page.value) || 1) + 1)}>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                </li>`
+              : ''}
+          ${() =>
+            props['show-first-last'].value
+              ? html`<li>
+                  <button
+                    type="button"
+                    class="nav-btn"
+                    part="last-btn"
+                    aria-label="Last page"
+                    ?disabled=${() => isLast.value}
+                    @click=${() => goTo(Number(props['total-pages'].value) || 1)}>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true">
+                      <polyline points="13 17 18 12 13 7" />
+                      <polyline points="6 17 11 12 6 7" />
+                    </svg>
+                  </button>
+                </li>`
+              : ''}
           ${each(pageItems, (item) => {
             if (item === 'ellipsis-start' || item === 'ellipsis-end') {
               return html`<li><span class="ellipsis" aria-hidden="true">&hellip;</span></li>`;
             }
 
             const pg = item as number;
-            const isCurrent = pg === (Number(props.page.value) || 1);
+
+            if (pg === (Number(props.page.value) || 1)) {
+              return html`<li>
+                <button part="page-btn" aria-label="Page ${pg}" aria-current="page" @click=${() => goTo(pg)}>
+                  ${pg}
+                </button>
+              </li>`;
+            }
 
             return html`<li>
-              <button
-                part="page-btn"
-                :aria-label="${() => `Page ${pg}`}"
-                :aria-current="${() => (isCurrent ? 'page' : null)}"
-                @click="${() => goTo(pg)}">
-                ${pg}
-              </button>
+              <button part="page-btn" aria-label="Page ${pg}" @click=${() => goTo(pg)}>${pg}</button>
             </li>`;
           })}
-          ${when(
-            props['show-prev-next'],
-            () =>
-              html`<li>
-                <bit-button
-                  icon-only
-                  :variant="${() => props.variant.value || 'ghost'}"
-                  part="next-btn"
-                  aria-label="Next page"
-                  :size="${() => props.size.value || null}"
-                  :color="${() => props.color.value || null}"
-                  ?disabled="${() => isLast.value}"
-                  @click="${() => goTo((Number(props.page.value) || 1) + 1)}"
-                  ><svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true">
-                    <polyline points="9 18 15 12 9 6" /></svg
-                ></bit-button>
-              </li>`,
-          )}
-          ${when(
-            props['show-first-last'],
-            () =>
-              html`<li>
-                <bit-button
-                  icon-only
-                  :variant="${() => props.variant.value || 'ghost'}"
-                  part="last-btn"
-                  aria-label="Last page"
-                  :size="${() => props.size.value || null}"
-                  :color="${() => props.color.value || null}"
-                  ?disabled="${() => isLast.value}"
-                  @click="${() => goTo(Number(props['total-pages'].value) || 1)}"
-                  ><svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true">
-                    <polyline points="13 17 18 12 13 7" />
-                    <polyline points="6 17 11 12 6 7" /></svg
-                ></bit-button>
-              </li>`,
-          )}
         </ol>
       </nav>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, styles],
+  },
+);

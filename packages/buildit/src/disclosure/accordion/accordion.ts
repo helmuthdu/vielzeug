@@ -2,13 +2,13 @@ import {
   computed,
   createContext,
   define,
-  defineEmits,
-  defineProps,
   handle,
   html,
-  onCleanup,
-  provide,
+  typed,
+  useProvide,
   type ReadonlySignal,
+  defineProps,
+  defineEmits,
 } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
@@ -21,7 +21,7 @@ export type AccordionContext = {
   variant: ReadonlySignal<VisualVariant | undefined>;
 };
 /** Injection key for the accordion context. */
-export const ACCORDION_CTX = createContext<AccordionContext>();
+export const ACCORDION_CTX = createContext<AccordionContext>('AccordionContext');
 
 import styles from './accordion.css?inline';
 
@@ -61,71 +61,68 @@ export type BitAccordionProps = {
  * ```
  */
 
-export const ACCORDION_TAG = define('bit-accordion', ({ host }) => {
-  const props = defineProps<BitAccordionProps>({
-    selectionMode: { default: undefined },
-    size: { default: undefined },
-    variant: { default: undefined },
-  });
+export const ACCORDION_TAG = define(
+  'bit-accordion',
+  ({ host }) => {
+    const props = defineProps<BitAccordionProps>({
+      selectionMode: typed<BitAccordionProps['selectionMode']>(undefined),
+      size: typed<BitAccordionProps['size']>(undefined),
+      variant: typed<BitAccordionProps['variant']>(undefined),
+    });
+    const emit = defineEmits<BitAccordionEvents>();
 
-  const emit = defineEmits<BitAccordionEvents>();
+    const notifyExpand = (expandedItem: HTMLElement) => {
+      if (props.selectionMode.value === 'single') {
+        host.querySelectorAll('bit-accordion-item').forEach((item) => {
+          if (item !== expandedItem && item.hasAttribute('expanded')) {
+            item.removeAttribute('expanded');
+          }
+        });
+        emit('change', { expandedItem });
+      }
+    };
 
-  const notifyExpand = (expandedItem: HTMLElement) => {
-    if (props.selectionMode.value === 'single') {
-      host.querySelectorAll('bit-accordion-item').forEach((item) => {
-        if (item !== expandedItem && item.hasAttribute('expanded')) {
-          item.removeAttribute('expanded');
-        }
-      });
-      emit('change', { expandedItem });
-    }
-  };
+    useProvide(ACCORDION_CTX, {
+      notifyExpand,
+      selectionMode: computed(() => props.selectionMode.value),
+      size: props.size,
+      variant: props.variant,
+    });
 
-  provide(ACCORDION_CTX, {
-    notifyExpand,
-    selectionMode: computed(() => props.selectionMode.value),
-    size: props.size,
-    variant: props.variant,
-  });
+    // Listen for expanded events bubbling up from child accordion-items.
+    // This allows single-selection management without tight coupling via context calls.
+    const handleExpand = (e: Event) => notifyExpand(e.target as HTMLElement);
 
-  // Listen for expand events bubbling up from child accordion-items.
-  // This allows single-selection management without tight coupling via context calls.
-  const handleExpand = (e: Event) => notifyExpand(e.target as HTMLElement);
+    handle(host, 'expand', handleExpand);
+    // Group-level arrow-key navigation between accordion item summaries (WAI-ARIA Accordion pattern).
+    handle(host, 'keydown', (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
 
-  host.addEventListener('expand', handleExpand);
+      const items = [...host.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
+      const summaries = items
+        .map((item) => item.shadowRoot?.querySelector<HTMLElement>('summary'))
+        .filter(Boolean) as HTMLElement[];
 
-  // Group-level arrow-key navigation between accordion item summaries (WAI-ARIA Accordion pattern).
-  handle(host, 'keydown', (e: KeyboardEvent) => {
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
+      if (!summaries.length) return;
 
-    const items = [...host.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
-    const summaries = items
-      .map((item) => item.shadowRoot?.querySelector<HTMLElement>('summary'))
-      .filter(Boolean) as HTMLElement[];
+      const focused = summaries.indexOf(document.activeElement as HTMLElement);
 
-    if (!summaries.length) return;
+      if (focused === -1) return; // the focus is not on a summary — let native handling proceed
 
-    const focused = summaries.indexOf(document.activeElement as HTMLElement);
+      let next = focused;
 
-    if (focused === -1) return; // focus is not on a summary — let native handling proceed
+      if (e.key === 'ArrowDown') next = (focused + 1) % summaries.length;
+      else if (e.key === 'ArrowUp') next = (focused - 1 + summaries.length) % summaries.length;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = summaries.length - 1;
 
-    let next = focused;
+      e.preventDefault();
+      summaries[next]?.focus();
+    });
 
-    if (e.key === 'ArrowDown') next = (focused + 1) % summaries.length;
-    else if (e.key === 'ArrowUp') next = (focused - 1 + summaries.length) % summaries.length;
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = summaries.length - 1;
-
-    e.preventDefault();
-    summaries[next]?.focus();
-  });
-
-  onCleanup(() => {
-    host.removeEventListener('expand', handleExpand);
-  });
-
-  return {
+    return html`<slot></slot>`;
+  },
+  {
     styles: [styles],
-    template: html`<slot></slot>`,
-  };
-});
+  },
+);

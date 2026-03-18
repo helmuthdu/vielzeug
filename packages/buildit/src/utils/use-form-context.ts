@@ -3,7 +3,7 @@ import { effect, type ReadonlySignal } from '@vielzeug/craftit';
 import { type FormContext } from '../form/form/form';
 
 export interface FormContextSyncProps {
-  disabled: ReadonlySignal<boolean>;
+  disabled: ReadonlySignal<boolean | undefined>;
   size: ReadonlySignal<string | undefined>;
   variant?: ReadonlySignal<string | undefined>;
 }

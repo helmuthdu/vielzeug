@@ -3,17 +3,23 @@
  * Tests for the define() function and component lifecycle
  */
 
-import { define, html, signal } from '..';
+import { define, html, signal, defineProps, defineEmits } from '..';
 import { mount } from '../test';
+
+const expectType = <T>(_value: T): void => {
+  // compile-time-only helper for typing assertions
+};
 
 describe('Core: Component Definition', () => {
   describe('define()', () => {
     it('should define a custom element', () => {
-      define('test-basic', () => {
+      const tag = `test-basic-${Math.random().toString(36).slice(2)}`;
+
+      define(tag, () => {
         return html`<div>Hello</div>`;
       });
 
-      const el = document.createElement('test-basic');
+      const el = document.createElement(tag);
 
       expect(el).toBeInstanceOf(HTMLElement);
     });
@@ -51,12 +57,34 @@ describe('Core: Component Definition', () => {
 
   describe('Component Props', () => {
     it('should receive attributes as props', async () => {
-      const { element } = await mount(() => html`<div>Component</div>`, {
-        attrs: { size: 'large', variant: 'primary' },
-      });
+      const { element } = await mount(
+        () => {
+          defineProps({ size: 'small', variant: 'secondary' });
+
+          return html`<div>Component</div>`;
+        },
+        {
+          attrs: { size: 'large', variant: 'primary' },
+        },
+      );
 
       expect(element.getAttribute('variant')).toBe('primary');
       expect(element.getAttribute('size')).toBe('large');
+    });
+
+    it('should initialize prop signal from attribute', async () => {
+      const { query } = await mount(
+        () => {
+          const props = defineProps({ count: { default: 0, type: Number } });
+
+          return html`<div class="count">${props.count}</div>`;
+        },
+        {
+          attrs: { count: '42' },
+        },
+      );
+
+      expect(query('.count')?.textContent).toBe('42');
     });
   });
 
@@ -104,6 +132,41 @@ describe('Core: Component Definition', () => {
       expect(element.innerHTML).toContain('Header');
       expect(element.innerHTML).toContain('Content');
     });
+
+    it('should support defineEmits', async () => {
+      const spy = vi.fn();
+      const { element, flush, query } = await mount(() => {
+        const emit = defineEmits<{ close: undefined; ping: { ok: boolean } }>();
+        const fire = () => {
+          emit('close');
+          emit('ping', { ok: true });
+        };
+
+        return html`<button @click=${fire}>Emit</button>`;
+      });
+
+      element.addEventListener('ping', spy);
+      query('button')!.dispatchEvent(new Event('click'));
+      await flush();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('should dispatch events via defineEmits', async () => {
+    const spy = vi.fn();
+    const { element, flush, query } = await mount(() => {
+      const emit = defineEmits();
+      const fire = () => emit('ping', { ok: true });
+
+      return html`<button @click=${fire}>Ping</button>`;
+    });
+
+    element.addEventListener('ping', spy);
+    query('button')!.dispatchEvent(new Event('click'));
+    await flush();
+
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   describe('Error Handling', () => {
@@ -132,6 +195,23 @@ describe('Core: Component Definition', () => {
       expect(query('div')?.textContent).toBe('0');
       await act(() => count.value++);
       expect(query('div')?.textContent).toBe('1');
+    });
+
+    it('should infer typed prop signals from defineProps', async () => {
+      const { query } = await mount(
+        () => {
+          const props = defineProps<{ count: number }>({ count: { default: 0, type: Number } });
+
+          expectType<ReturnType<typeof signal<number>>>(props.count);
+
+          return html`<div class="count">${props.count}</div>`;
+        },
+        {
+          attrs: { count: '7' },
+        },
+      );
+
+      expect(query('.count')?.textContent).toBe('7');
     });
   });
 });

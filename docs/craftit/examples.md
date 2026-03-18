@@ -955,7 +955,7 @@ define(
       )}
     `;
   },
-  { styles: [styles.content], target: 'body' },
+  { styles: [styles.content] },
 );
 ```
 
@@ -1057,7 +1057,7 @@ define('tab-group', () => {
 Context-based theming system.
 
 ```ts
-import { define, provide, inject, signal, html, css } from '@vielzeug/craftit';
+import { define, useProvide, useInject, signal, html, css } from '@vielzeug/craftit';
 import type { InjectionKey, Signal } from '@vielzeug/craftit';
 // Define theme context
 interface ThemeContext {
@@ -1070,7 +1070,7 @@ define('theme-provider', () => {
   const mode = signal<'light' | 'dark'>('light');
   const primaryColor = signal('#0070f3');
   // Provide theme to children
-  provide(ThemeKey, { mode, primaryColor });
+  useProvide(ThemeKey, { mode, primaryColor });
   const toggleTheme = () => {
     mode.value = mode.value === 'light' ? 'dark' : 'light';
   };
@@ -1083,7 +1083,7 @@ define('theme-provider', () => {
 });
 // Themed button component
 define('themed-button', () => {
-  const theme = inject(ThemeKey);
+  const theme = useInject(ThemeKey);
   if (!theme) {
     return html`<button>No theme</button>`;
   }

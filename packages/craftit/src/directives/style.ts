@@ -1,6 +1,7 @@
 import { isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { computedOrStatic } from '../craftit';
+import { computedOrStatic } from '../internal';
+import { toKebab } from '../utils';
 
 type StyleValue =
   | string
@@ -30,8 +31,6 @@ const UNITLESS = new Set([
   'widows',
   'zIndex',
 ]);
-
-const toKebab = (s: string): string => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
 const toCssValue = (prop: string, val: string | number): string => {
   if (typeof val === 'number' && !UNITLESS.has(prop)) return `${val}px`;

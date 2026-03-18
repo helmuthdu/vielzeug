@@ -107,7 +107,7 @@
   }
 
   .chips-row {
-    display: none;
+    display: flex;
     flex: 1;
     flex-wrap: wrap;
     gap: var(--size-1);

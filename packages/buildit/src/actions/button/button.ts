@@ -1,4 +1,4 @@
-import { computed, define, defineField, defineProps, html, inject, syncContextProps } from '@vielzeug/craftit';
+import { computed, define, fire, html, syncContextProps, defineField, useInject, defineProps } from '@vielzeug/craftit';
 import { when } from '@vielzeug/craftit/directives';
 
 import type { ButtonType, DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
@@ -108,21 +108,19 @@ export const BUTTON_TAG = define(
     });
 
     // Reactively inherit size/variant/color from a parent bit-button-group when present.
-    const groupCtx = inject(BUTTON_GROUP_CTX, undefined);
+    const groupCtx = useInject(BUTTON_GROUP_CTX, undefined);
 
     syncContextProps(groupCtx, props, ['color', 'size', 'variant']);
 
-    const isDisabled = computed(() => props.disabled.value || props.loading.value);
+    const isDisabled = computed(() => props.disabled.value || props.loading.value || false);
     const isLink = computed(() => !!props.href.value);
-
     // Form association: relay submit/reset clicks to the associated form.
     // The inner <button> always has type="button" so shadow DOM never drives native form actions.
-    const field = defineField({
+    const formField = defineField({
       disabled: isDisabled,
       toFormValue: () => null,
       value: computed(() => ''),
     });
-
     // Prevent navigation on disabled links; native <button disabled> handles the button case.
     const handleLinkClick = (e: MouseEvent) => {
       if (isDisabled.value) {
@@ -135,88 +133,88 @@ export const BUTTON_TAG = define(
       // Relay to host as a proper MouseEvent. stopPropagation prevents double-dispatch in
       // browsers where shadow DOM already retargets the event to the host.
       e.stopPropagation();
-      host.dispatchEvent(new MouseEvent(e.type, e));
+      fire(host, e.type, e);
     };
-
     const handleButtonClick = (e: MouseEvent) => {
       if (isDisabled.value) return;
 
       // Relay to host, handle form submission, and stop inner bubble in one place.
       e.stopPropagation();
 
-      const form = field.internals.form;
+      const form = formField.internals.form;
 
       if (form) {
         if (props.type.value === 'submit') form.requestSubmit();
         else if (props.type.value === 'reset') form.reset();
       }
 
-      host.dispatchEvent(new MouseEvent(e.type, e));
+      fire(host, e.type, e);
     };
 
-    return {
-      styles: [
-        ...formFieldMixins,
-        forcedColorsMixin,
-        sizeVariantMixin({
-          lg: {
-            fontSize: 'var(--text-base)',
-            gap: 'var(--size-2-5)',
-            height: 'var(--size-12)',
-            iconSize: 'var(--size-6)',
-            lineHeight: 'var(--leading-relaxed)',
-            padding: 'var(--size-2-5) var(--size-5)',
-          },
-          sm: {
-            fontSize: 'var(--text-sm)',
-            gap: 'var(--size-1-5)',
-            height: 'var(--size-8)',
-            iconSize: 'var(--size-4)',
-            lineHeight: 'var(--leading-tight)',
-            padding: 'var(--size-1-5) var(--size-3)',
-          },
-        }),
-        frostVariantMixin('button'),
-        rainbowEffectMixin('button'),
-        disabledLoadingMixin('button'),
-        componentStyles,
-      ],
-      template: html`
-        ${when(
-          isLink,
-          () =>
-            html`<a
-              part="button"
-              :href="${() => props.href.value ?? null}"
-              :target="${() => props.target.value ?? null}"
-              :rel="${() => props.rel.value ?? null}"
-              :aria-label="${() => props.label.value ?? null}"
-              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-              role="button"
-              @click="${handleLinkClick}">
-              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-              <slot name="prefix"></slot>
-              <span class="content" part="content"><slot></slot></span>
-              <slot name="suffix"></slot>
-            </a>`,
-          () =>
-            html`<button
-              part="button"
-              type="button"
-              ?disabled=${isDisabled}
-              :aria-label="${() => props.label.value ?? null}"
-              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-              @click="${handleButtonClick}">
-              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-              <slot name="prefix"></slot>
-              <span class="content" part="content"><slot></slot></span>
-              <slot name="suffix"></slot>
-            </button>`,
-        )}
-      `,
-    };
+    return html`
+      ${when(
+        isLink,
+        () =>
+          html`<a
+            part="button"
+            :href="${() => props.href.value ?? null}"
+            :target="${() => props.target.value ?? null}"
+            :rel="${() => props.rel.value ?? null}"
+            :aria-label="${() => props.label.value ?? null}"
+            :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+            :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+            role="button"
+            @click="${handleLinkClick}">
+            <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+            <slot name="prefix"></slot>
+            <span class="content" part="content"><slot></slot></span>
+            <slot name="suffix"></slot>
+          </a>`,
+        () =>
+          html`<button
+            part="button"
+            type="button"
+            ?disabled=${isDisabled}
+            :aria-label="${() => props.label.value ?? null}"
+            :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+            :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+            @click="${handleButtonClick}">
+            <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+            <slot name="prefix"></slot>
+            <span class="content" part="content"><slot></slot></span>
+            <slot name="suffix"></slot>
+          </button>`,
+      )}
+    `;
   },
-  { formAssociated: true, shadow: { delegatesFocus: true } },
+  {
+    formAssociated: true,
+    shadow: { delegatesFocus: true },
+    styles: [
+      ...formFieldMixins,
+      forcedColorsMixin,
+      sizeVariantMixin({
+        lg: {
+          fontSize: 'var(--text-base)',
+          gap: 'var(--size-2-5)',
+          height: 'var(--size-12)',
+          iconSize: 'var(--size-6)',
+          lineHeight: 'var(--leading-relaxed)',
+          padding: 'var(--size-2-5) var(--size-5)',
+        },
+        sm: {
+          fontSize: 'var(--text-sm)',
+          gap: 'var(--size-1-5)',
+          height: 'var(--size-8)',
+          iconSize: 'var(--size-4)',
+          lineHeight: 'var(--leading-tight)',
+          padding: 'var(--size-1-5) var(--size-3)',
+        },
+      }),
+      frostVariantMixin('button'),
+      rainbowEffectMixin('button'),
+      disabledLoadingMixin('button'),
+      componentStyles,
+    ],
+  },
 );

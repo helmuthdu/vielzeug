@@ -117,10 +117,7 @@ describe('bit-skeleton', () => {
       try {
         fixture = await mount('bit-skeleton');
 
-        capturedCb(
-          [{ isIntersecting: false } as IntersectionObserverEntry],
-          {} as IntersectionObserver,
-        );
+        capturedCb([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
 
         expect(fixture.element.hasAttribute('data-paused')).toBe(true);
       } finally {

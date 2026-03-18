@@ -1,4 +1,4 @@
-import { computed, define, defineProps, html, watch } from '@vielzeug/craftit';
+import { computed, define, html, watch, defineProps } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -67,54 +67,51 @@ export type BitProgressProps = {
  * <bit-progress indeterminate color="primary" label="Loading…"></bit-progress>
  * ```
  */
-export const PROGRESS_TAG = define('bit-progress', ({ host }) => {
-  const props = defineProps<BitProgressProps>({
-    color: { default: undefined },
-    'floating-label': { default: undefined },
-    indeterminate: { default: false },
-    label: { default: undefined },
-    max: { default: 100 },
-    size: { default: undefined },
-    title: { default: undefined },
-    type: { default: 'linear' },
-    value: { default: 0 },
-    'value-text': { default: undefined },
-  });
+export const PROGRESS_TAG = define(
+  'bit-progress',
+  ({ host }) => {
+    const props = defineProps<BitProgressProps>({
+      color: { default: undefined },
+      'floating-label': { default: undefined },
+      indeterminate: { default: false },
+      label: { default: undefined },
+      max: { default: 100 },
+      size: { default: undefined },
+      title: { default: undefined },
+      type: { default: 'linear' },
+      value: { default: 0 },
+      'value-text': { default: undefined },
+    });
 
-  // The SVG circle circumference for a radius of 45 (viewBox 0 0 100 100)
-  const RADIUS = 45;
-  const CIRC = 2 * Math.PI * RADIUS; // ~282.7
+    // The SVG circle circumference for a radius of 45 (viewBox 0 0 100 100)
+    const RADIUS = 45;
+    const CIRC = 2 * Math.PI * RADIUS; // ~282.7
+    const percent = computed(() => {
+      const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
+      const m = Math.max(1, Number(props.max.value));
 
-  const percent = computed(() => {
-    const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
-    const m = Math.max(1, Number(props.max.value));
+      return `${(v / m) * 100}%`;
+    });
+    const dashoffset = computed(() => {
+      const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
+      const m = Math.max(1, Number(props.max.value));
 
-    return `${(v / m) * 100}%`;
-  });
+      return CIRC - (v / m) * CIRC;
+    });
+    const isCircular = computed(() => props.type.value === 'circular');
 
-  const dashoffset = computed(() => {
-    const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
-    const m = Math.max(1, Number(props.max.value));
+    // Use watch([...], fn, { immediate: true }) at setup-level so it fires during
+    // connectedCallback (when attributes are already synced) rather than deferring
+    // to onMount. The immediate flag triggers the first run synchronously.
+    watch(
+      [props.value, props.max, props.indeterminate],
+      () => {
+        host.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
+      },
+      { immediate: true },
+    );
 
-    return CIRC - (v / m) * CIRC;
-  });
-
-  const isCircular = computed(() => props.type.value === 'circular');
-
-  // Use watch([...], fn, { immediate: true }) at setup-level so it fires during
-  // connectedCallback (when attributes are already synced) rather than deferring
-  // to onMount. The immediate flag triggers the first run synchronously.
-  watch(
-    [props.value, props.max, props.indeterminate],
-    () => {
-      host.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
-    },
-    { immediate: true },
-  );
-
-  return {
-    styles: [colorThemeMixin, forcedColorsMixin, reducedMotionMixin, componentStyles],
-    template: html`
+    return html`
       ${() =>
         isCircular.value
           ? html` <div
@@ -167,6 +164,9 @@ export const PROGRESS_TAG = define('bit-progress', ({ host }) => {
                 <span class="end-label row-label">${() => props.label.value}</span>
               </div>
             </div>`}
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [colorThemeMixin, forcedColorsMixin, reducedMotionMixin, componentStyles],
+  },
+);

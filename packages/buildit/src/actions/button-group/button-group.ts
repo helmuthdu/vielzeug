@@ -1,4 +1,4 @@
-import { createContext, define, defineProps, html, provide, type ReadonlySignal } from '@vielzeug/craftit';
+import { createContext, define, html, useProvide, type ReadonlySignal, defineProps } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -9,7 +9,7 @@ export type ButtonGroupContext = {
   variant: ReadonlySignal<Exclude<VisualVariant, 'glass'> | undefined>;
 };
 /** Injection key for the button-group context. */
-export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext>();
+export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext>('ButtonGroupContext');
 
 import styles from './button-group.css?inline';
 
@@ -55,29 +55,32 @@ export type BitButtonGroupProps = {
  * <bit-button-group><bit-button>First</bit-button><bit-button>Second</bit-button></bit-button-group>
  * ```
  */
-export const BUTTON_GROUP_TAG = define('bit-button-group', () => {
-  const props = defineProps<BitButtonGroupProps>({
-    attached: { default: false },
-    color: { default: undefined },
-    fullwidth: { default: false },
-    label: { default: undefined },
-    orientation: { default: undefined },
-    size: { default: undefined },
-    variant: { default: undefined },
-  });
+export const BUTTON_GROUP_TAG = define(
+  'bit-button-group',
+  () => {
+    const props = defineProps<BitButtonGroupProps>({
+      attached: { default: false },
+      color: { default: undefined },
+      fullwidth: { default: false },
+      label: { default: undefined },
+      orientation: { default: undefined },
+      size: { default: undefined },
+      variant: { default: undefined },
+    });
 
-  provide(BUTTON_GROUP_CTX, {
-    color: props.color,
-    size: props.size,
-    variant: props.variant,
-  });
+    useProvide(BUTTON_GROUP_CTX, {
+      color: props.color,
+      size: props.size,
+      variant: props.variant,
+    });
 
-  return {
-    styles: [styles],
-    template: html`
+    return html`
       <div class="button-group" part="group" role="group" :aria-label="${() => props.label.value ?? null}">
         <slot></slot>
       </div>
-    `,
-  };
-});
+    `;
+  },
+  {
+    styles: [styles],
+  },
+);
