@@ -712,3 +712,72 @@ describe('unextend()', () => {
     expect(permit.unextend('admin', 'editor')).toBe(permit);
   });
 });
+
+describe('checkAll() and checkAny()', () => {
+  let permit: Permit;
+
+  beforeEach(() => {
+    permit = createPermit();
+    permit.grant('editor', 'posts', 'read', 'write');
+  });
+
+  it('checkAll() returns true only when every action is permitted', () => {
+    const user = { id: '1', roles: ['editor'] };
+
+    expect(permit.checkAll(user, 'posts', ['read', 'write'])).toBe(true);
+    expect(permit.checkAll(user, 'posts', ['read', 'write', 'delete'])).toBe(false);
+  });
+
+  it('checkAny() returns true when at least one action is permitted', () => {
+    const user = { id: '1', roles: ['editor'] };
+
+    expect(permit.checkAny(user, 'posts', ['read', 'delete'])).toBe(true);
+    expect(permit.checkAny(user, 'posts', ['delete', 'archive'])).toBe(false);
+  });
+
+  it('matches the behaviour of the equivalent for() guard methods', () => {
+    const user = { id: '1', roles: ['editor'] };
+    const guard = permit.for(user);
+
+    expect(permit.checkAll(user, 'posts', ['read', 'write'])).toBe(guard.canAll('posts', ['read', 'write']));
+    expect(permit.checkAny(user, 'posts', ['read', 'delete'])).toBe(guard.canAny('posts', ['read', 'delete']));
+  });
+});
+
+describe('unextend()', () => {
+  let permit: Permit;
+
+  beforeEach(() => {
+    permit = createPermit();
+    permit.grant('editor', 'posts', 'read', 'write');
+    permit.extend('admin', 'editor');
+  });
+
+  it('removes a specific parent from a child role', () => {
+    permit.unextend('admin', 'editor');
+
+    const admin = { id: '1', roles: ['admin'] };
+
+    expect(permit.check(admin, 'posts', 'read')).toBe(false); // no longer inherited
+  });
+
+  it('removes all parents when no parentRole is specified', () => {
+    permit.extend('admin', 'moderator');
+    permit.grant('moderator', 'comments', 'delete');
+    permit.unextend('admin');
+
+    const admin = { id: '1', roles: ['admin'] };
+
+    expect(permit.check(admin, 'posts', 'read')).toBe(false);
+    expect(permit.check(admin, 'comments', 'delete')).toBe(false);
+  });
+
+  it('is a no-op for roles with no parents or non-existent parents', () => {
+    expect(() => permit.unextend('ghost')).not.toThrow();
+    expect(() => permit.unextend('admin', 'nonexistent')).not.toThrow();
+  });
+
+  it('returns the permit for fluent chaining', () => {
+    expect(permit.unextend('admin', 'editor')).toBe(permit);
+  });
+});
