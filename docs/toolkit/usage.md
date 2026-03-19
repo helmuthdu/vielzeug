@@ -11,46 +11,6 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 
 [[toc]]
 
-## Why Toolkit?
-
-Lodash ships ~70 kB even tree-shaken. Toolkit provides modern, tree-shakeable utilities with full TypeScript inference at a fraction of the size.
-
-```ts
-// Before — verbose native JS
-const groups = items.reduce(
-  (acc, item) => {
-    const key = item.category;
-    (acc[key] = acc[key] || []).push(item);
-    return acc;
-  },
-  {} as Record<string, typeof items>,
-);
-
-// After — Toolkit
-import { group } from '@vielzeug/toolkit';
-const groups = group(items, (item) => item.category);
-```
-
-| Feature           | Toolkit                                       | Lodash        | Radash  |
-| ----------------- | --------------------------------------------- | ------------- | ------- |
-| Bundle size       | <PackageInfo package="toolkit" type="size" /> | ~25 kB        | ~11 kB  |
-| Tree-shakeable    | ✅ Always                                     | ✅ lodash-es  | ✅      |
-| TypeScript        | ✅ First-class                                | ⚠️ Via @types | ✅      |
-| Async utilities   | ✅                                            | ⚠️ Limited    | ✅      |
-| Zero dependencies | ✅                                            | ✅            | ✅      |
-
-**Use Toolkit when** you want utility functions with strong TypeScript types and minimal bundle impact.
-
-## Import
-
-```ts
-// Named imports (recommended for tree-shaking)
-import { chunk, group, debounce } from '@vielzeug/toolkit';
-
-// Optional: Import types
-import type { ChunkOptions } from '@vielzeug/toolkit';
-```
-
 ## Basic Usage
 
 ### Import Patterns
@@ -84,7 +44,7 @@ import { chunk, group } from '@vielzeug/toolkit';
 ### Arrays
 
 ```ts
-import { select, group, chunk, toggle, uniq, keyBy } from '@vielzeug/toolkit';
+import { select, group, chunk, toggle, uniq, keyBy, sort } from '@vielzeug/toolkit';
 
 const numbers = [1, 2, 3, 4, 5, 6];
 
@@ -92,7 +52,11 @@ const numbers = [1, 2, 3, 4, 5, 6];
 const doubled = select([null, 2, null, 4], (n) => n * 2); // [4, 8]
 
 // Filter by predicate, then map
-const evenDoubled = select(numbers, (n) => n * 2, (n) => n % 2 === 0); // [4, 8, 12]
+const evenDoubled = select(
+  numbers,
+  (n) => n * 2,
+  (n) => n % 2 === 0,
+); // [4, 8, 12]
 
 // Group
 const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
@@ -100,6 +64,17 @@ const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
 
 // Chunk
 const batches = chunk(numbers, 2); // [[1, 2], [3, 4], [5, 6]]
+
+// Sort by selector (ascending by default)
+const ascending = sort([{ value: 3 }, { value: 1 }], (item) => item.value);
+
+// Sort by multiple fields
+const users = [
+  { age: 30, name: 'Bob' },
+  { age: 30, name: 'Alice' },
+  { age: 25, name: 'Chris' },
+];
+const sortedUsers = sort(users, { age: 'desc', name: 'asc' });
 
 // Toggle item in/out
 const updated = toggle([1, 2, 3], 2); // [1, 3]
@@ -126,7 +101,7 @@ const missing = get(config, 'api.timeout', 5000); // 5000 (default value)
 
 // Recursively search object values for a match
 seek(config, 'localhost', 1); // true (exact match)
-seek(config, 'local', 0.5);   // true (fuzzy match)
+seek(config, 'local', 0.5); // true (fuzzy match)
 
 // Remove nulls/empty values
 const clean = prune({ a: 1, b: null, c: '' }); // { a: 1 }
@@ -211,10 +186,10 @@ const days = interval('2024-01-01', '2024-01-07', { interval: 'day' });
 // [Date(2024-01-01), Date(2024-01-02), ..., Date(2024-01-07)]
 
 // Check a date's expiry status
-expires('2024-01-01');  // 'EXPIRED'
-expires('2030-06-15');  // 'LATER'
-expires('2026-03-18');  // 'SOON' (within 7 days from today)
-expires('9999-12-31');  // 'NEVER'
+expires('2024-01-01'); // 'EXPIRED'
+expires('2030-06-15'); // 'LATER'
+expires('2026-03-18'); // 'SOON' (within 7 days from today)
+expires('9999-12-31'); // 'NEVER'
 ```
 
 ### Random
@@ -223,11 +198,11 @@ expires('9999-12-31');  // 'NEVER'
 import { uuid, random, draw, shuffle } from '@vielzeug/toolkit';
 
 // Cryptographically secure random values
-uuid();            // 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
-random(1, 10);     // integer between 1 and 10 (inclusive)
+uuid(); // 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+random(1, 10); // integer between 1 and 10 (inclusive)
 
 // Array sampling
-draw([1, 2, 3, 4, 5]);   // random element, e.g. 3
+draw([1, 2, 3, 4, 5]); // random element, e.g. 3
 shuffle([1, 2, 3, 4, 5]); // new shuffled array, e.g. [3, 1, 5, 2, 4]
 ```
 
@@ -306,7 +281,7 @@ function ProductList({ products }) {
   // Memoize expensive operations
   const pages = useMemo(() => chunk(products, 20), [products]);
 
-  return (/* ... */);
+  return null;
 }
 ```
 
@@ -316,11 +291,16 @@ Use utilities with Vue composition API:
 
 ```vue
 <script setup>
-import { computed } from 'vue';
-import { group, filter } from '@vielzeug/toolkit';
+import { computed, ref } from 'vue';
+import { group, select } from '@vielzeug/toolkit';
 
 const products = ref([]);
-const grouped = computed(() => group(products.value, (p) => p.category));
+const grouped = computed(() =>
+  group(
+    select(products.value, (p) => p),
+    (p) => p.category,
+  ),
+);
 </script>
 ```
 
@@ -329,7 +309,7 @@ const grouped = computed(() => group(products.value, (p) => p.category));
 Use utilities in server-side code:
 
 ```ts
-import { map, group } from '@vielzeug/toolkit';
+import { group } from '@vielzeug/toolkit';
 
 app.get('/api/products', async (req, res) => {
   const products = await fetchProducts();
@@ -344,17 +324,17 @@ app.get('/api/products', async (req, res) => {
 
 For optimal TypeScript support, configure your `tsconfig.json`:
 
-```json
+```jsonc
 {
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "moduleResolution": "bundler", // or "node16"
+    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true
-  }
+    "allowSyntheticDefaultImports": true,
+  },
 }
 ```
 
@@ -454,16 +434,3 @@ Toolkit requires modern JavaScript features (ES2020+):
 - **Node.js**: v16.x or higher recommended
 
 For older browsers, use a transpiler like Babel or SWC.
-
-## Next Steps
-
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./api">API Reference</a> – Complete API documentation</li>
-      <li><a href="./examples">Examples</a> – Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
-    </ul>
-  </div>
-</div>

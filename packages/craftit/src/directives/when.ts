@@ -1,6 +1,6 @@
 import { isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import type { Directive, HTMLResult } from '../internal';
+import type { Directive, HTMLResult } from '../core/internal';
 
 /**
  * Conditionally renders one of two templates based on a condition.

@@ -46,6 +46,14 @@ describe('bit-chip', () => {
 
       expect(fixture.query('.remove-btn')?.getAttribute('aria-label')).toBe('Remove');
     });
+
+    it('remove button uses the explicit aria-label when provided', async () => {
+      fixture = await mount('bit-chip', {
+        attrs: { 'aria-label': 'Saved filter', mode: 'removable', value: 'filter-1' },
+      });
+
+      expect(fixture.query('.remove-btn')?.getAttribute('aria-label')).toBe('Remove Saved filter');
+    });
   });
 
   describe('Props', () => {
@@ -173,6 +181,24 @@ describe('bit-chip', () => {
       expect(toggle.getAttribute('aria-checked')).toBe('true');
     });
 
+    it('treats a defined checked property as controlled and reflects host state', async () => {
+      fixture = await mount('bit-chip', { attrs: { mode: 'selectable' } });
+
+      const toggle = fixture.query<HTMLButtonElement>('.chip-btn')!;
+
+      (fixture.element as HTMLElement & { checked?: boolean }).checked = true;
+      await fixture.flush();
+
+      expect(toggle.getAttribute('aria-checked')).toBe('true');
+      expect(fixture.element.hasAttribute('checked')).toBe(true);
+
+      fire.click(toggle);
+      await fixture.flush();
+
+      expect(toggle.getAttribute('aria-checked')).toBe('true');
+      expect(fixture.element.hasAttribute('checked')).toBe(true);
+    });
+
     it('does not emit change when disabled', async () => {
       fixture = await mount('bit-chip', { attrs: { disabled: '', mode: 'selectable' } });
 
@@ -192,6 +218,41 @@ describe('bit-chip', () => {
       expect(fixture.element.hasAttribute('checked')).toBe(true);
       await fixture.attr('mode', 'static');
       expect(fixture.element.hasAttribute('checked')).toBe(false);
+    });
+  });
+
+  describe('Action Mode', () => {
+    it('fires click event with detail when action chip clicked', async () => {
+      fixture = await mount('bit-chip', { attrs: { mode: 'action', value: 'add' } });
+
+      const handler = vi.fn();
+
+      fixture.element.addEventListener('click', handler);
+
+      fire.click(fixture.query<HTMLButtonElement>('.chip-btn')!);
+
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      const ev = handler.mock.calls[0][0] as CustomEvent<{
+        originalEvent: MouseEvent;
+        value: string | undefined;
+      }>;
+
+      expect(ev.detail.value).toBe('add');
+      expect(ev.detail.originalEvent).toBeInstanceOf(MouseEvent);
+    });
+
+    it('does not emit click when disabled', async () => {
+      fixture = await mount('bit-chip', { attrs: { disabled: '', mode: 'action', value: 'add' } });
+
+      const handler = vi.fn();
+
+      fixture.element.addEventListener('click', handler);
+
+      fire.click(fixture.query<HTMLButtonElement>('.chip-btn')!);
+
+      expect(handler).not.toHaveBeenCalled();
+      await fixture.attr('disabled', false);
     });
   });
 

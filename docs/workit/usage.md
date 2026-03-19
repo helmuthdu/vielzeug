@@ -3,46 +3,13 @@ title: Workit — Usage Guide
 description: How to use workit for task functions, single workers, pools, timeouts, AbortSignal, transferables, status, isNative, fallback mode, and testing.
 ---
 
+# Workit Usage Guide
+
 ::: tip
 New to Workit? Start with the [Overview](./index.md) for a quick introduction.
 :::
 
-# Usage Guide
-
 [[toc]]
-
-## Why Workit?
-
-Raw Web Workers require blob-URL boilerplate, untyped `postMessage`/`onmessage` pairs, and no built-in pooling, timeouts, or cancellation.
-
-```ts
-// Before — raw Web Worker
-const blob = new Blob([`onmessage = (e) => postMessage(e.data * 2);`]);
-const worker = new Worker(URL.createObjectURL(blob));
-worker.postMessage(21);
-worker.onmessage = (e) => console.log(e.data); // 42 — untyped, no await, no error handling
-
-// After — Workit
-import { createWorker } from '@vielzeug/workit';
-const worker = createWorker<number, number>((n) => n * 2);
-console.log(await worker.run(21)); // 42 — typed, awaitable, error-safe
-worker.dispose();
-```
-
-| Feature           | Workit                                       | Comlink | workerpool   |
-| ----------------- | -------------------------------------------- | ------- | ------------ |
-| Bundle size       | <PackageInfo package="workit" type="size" /> | ~2 kB   | ~10 kB       |
-| Worker pools      | ✅                                           | ❌      | ✅           |
-| Typed payloads    | ✅                                           | Partial | ❌           |
-| Graceful fallback | ✅ Main-thread                               | ❌      | ✅ (Node.js) |
-| Timeout support   | ✅                                           | ❌      | ✅           |
-| AbortSignal       | ✅                                           | ❌      | ❌           |
-| Testing utilities | ✅                                           | ❌      | ❌           |
-| Zero dependencies | ✅                                           | ✅      | ❌           |
-
-**Use Workit when** you need typed, awaitable Web Workers with pooling, cancellation, and a graceful fallback for environments where Workers are unavailable.
-
-**Consider Comlink** if you only need a simple typed RPC proxy over a single Worker without pooling or timeout requirements.
 
 ## Task Functions
 
@@ -239,7 +206,7 @@ This is useful for logging, telemetry, or feature detection.
 
 ## Fallback Mode
 
-When Web Workers are unavailable (e.g. SSR, certain browser security contexts) workit logs a warning and runs tasks synchronously on the main thread. Set `fallback: false` to opt out and get an error instead.
+When Web Workers are unavailable (e.g. SSR, certain browser security contexts) workit logs a warning and runs tasks on the main thread. Set `fallback: false` to opt out and get an error instead.
 
 ```ts
 import { createWorker } from '@vielzeug/workit';
@@ -258,9 +225,15 @@ Use `scripts` to load CDN libraries inside the Worker via `importScripts()`. The
 ```ts
 import { createWorker } from '@vielzeug/workit';
 
-const worker = createWorker<string, string>((text) => ((window as any)._ ? (window as any)._.kebabCase(text) : text), {
-  scripts: ['https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js'],
-});
+const worker = createWorker<string, string>(
+  (text) => {
+    const lodash = (globalThis as any)._;
+    return lodash ? lodash.kebabCase(text) : text;
+  },
+  {
+    scripts: ['https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js'],
+  },
+);
 
 console.log(await worker.run('Hello World')); // 'hello-world'
 worker.dispose();

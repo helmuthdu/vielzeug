@@ -1,14 +1,4 @@
-import {
-  computed,
-  define,
-  effect,
-  fire,
-  html,
-  typed,
-  useInject,
-  syncContextProps,
-  defineProps,
-} from '@vielzeug/craftit';
+import { computed, defineComponent, effect, fire, html, typed, inject, syncContextProps } from '@vielzeug/craftit/core';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -53,19 +43,17 @@ export type BitTabItemProps = {
  * <bit-tab-item slot="tabs" value="settings" disabled>Settings</bit-tab-item>
  * ```
  */
-export const TAB_ITEM_TAG = define(
-  'bit-tab-item',
-  ({ host }) => {
-    const props = defineProps<BitTabItemProps>({
-      active: typed<boolean>(false),
-      color: typed<BitTabItemProps['color']>(undefined),
-      disabled: typed<boolean>(false),
-      size: typed<BitTabItemProps['size']>(undefined),
-      value: typed<string>(''),
-      variant: typed<BitTabItemProps['variant']>(undefined),
-    });
-
-    const tabsCtx = useInject(TABS_CTX, undefined);
+export const TAB_ITEM_TAG = defineComponent<BitTabItemProps>({
+  props: {
+    active: typed<boolean>(false),
+    color: typed<BitTabItemProps['color']>(undefined),
+    disabled: typed<boolean>(false),
+    size: typed<BitTabItemProps['size']>(undefined),
+    value: typed<string>(''),
+    variant: typed<BitTabItemProps['variant']>(undefined),
+  },
+  setup({ host, props }) {
+    const tabsCtx = inject(TABS_CTX, undefined);
 
     syncContextProps(tabsCtx, props, ['color', 'size', 'variant']);
 
@@ -104,7 +92,6 @@ export const TAB_ITEM_TAG = define(
       </button>
     `;
   },
-  {
-    styles: [colorThemeMixin, forcedColorsFocusMixin('button'), coarsePointerMixin, styles],
-  },
-);
+  styles: [colorThemeMixin, forcedColorsFocusMixin('button'), coarsePointerMixin, styles],
+  tag: 'bit-tab-item',
+});

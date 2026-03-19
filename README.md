@@ -104,6 +104,26 @@ npm install @vielzeug/deposit
 
 ---
 
+### [@vielzeug/dragit](packages/dragit) – Drag-and-Drop Primitives
+
+Framework-agnostic drag-and-drop helpers for file drop zones and sortable lists.
+
+```bash
+npm install @vielzeug/dragit
+```
+
+**Key Features:**
+
+- `createDropZone()` with accept filtering for MIME types, wildcards, and file extensions
+- `onDropRejected` callback for invalid files and counter-based hover state
+- `createSortable()` for native sortable lists with `data-sort-id`
+- Drag handles, dynamic list refresh, and cleanup via `destroy()` / `using`
+- Zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/dragit/) • [Examples](https://vielzeug.dev/dragit/examples)
+
+---
+
 ### [@vielzeug/fetchit](packages/fetchit) – HTTP Client & Query Management
 
 Modern, type-safe HTTP client with intelligent caching and query management.
@@ -120,6 +140,26 @@ npm install @vielzeug/fetchit
 - Automatic retry with exponential backoff (3.4 KB gzipped)
 
 [📖 Documentation](https://vielzeug.dev/fetchit/) • [Examples](https://vielzeug.dev/fetchit/examples)
+
+---
+
+### [@vielzeug/floatit](packages/floatit) – Floating Positioning
+
+Lightweight floating-element positioning for tooltips, dropdowns, popovers, and menus.
+
+```bash
+npm install @vielzeug/floatit
+```
+
+**Key Features:**
+
+- `positionFloat()` to compute and apply `left` / `top` in one call
+- `computePosition()` for low-level `{ x, y, placement }` control
+- Middleware pipeline: `offset`, `flip`, `shift`, and `size`
+- `autoUpdate()` for scroll, resize, and element-size updates
+- Zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/floatit/) • [Examples](https://vielzeug.dev/floatit/examples)
 
 ---
 
@@ -243,7 +283,7 @@ npm install @vielzeug/stateit
 ### [@vielzeug/toolkit](packages/toolkit) – Utility Library
 
 
-Comprehensive, type-safe utility library with 100+ helpers for modern JavaScript.
+Comprehensive, type-safe utility library with 75+ helpers for modern JavaScript.
 
 ```bash
 npm install @vielzeug/toolkit
@@ -251,8 +291,9 @@ npm install @vielzeug/toolkit
 
 **Key Features:**
 
-- 100+ utilities for arrays, objects, strings, dates, and more
+- 75+ utilities for arrays, objects, strings, dates, and more
 - Full TypeScript support with inference
+- Selector-based and multi-field sorting support (`sort`)
 - Tree-shakeable by design (0.1-0.5 KB per utility)
 - Zero dependencies
 
@@ -276,6 +317,26 @@ npm install @vielzeug/validit
 - Comprehensive error handling (2.8 KB gzipped)
 
 [📖 Documentation](https://vielzeug.dev/validit/) • [Examples](https://vielzeug.dev/validit/examples)
+
+---
+
+### [@vielzeug/virtualit](packages/virtualit) – Virtual Lists
+
+Framework-agnostic virtual list engine that renders only visible rows with efficient scrolling and measurement.
+
+```bash
+npm install @vielzeug/virtualit
+```
+
+**Key Features:**
+
+- Virtualized rendering with configurable overscan
+- Fixed and measured variable-height rows
+- Programmatic scrolling (`scrollToIndex`, `scrollToOffset`)
+- Framework-agnostic callback API
+- Zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/virtualit/) • [Examples](https://vielzeug.dev/virtualit/examples)
 
 ---
 
@@ -307,10 +368,10 @@ npm install @vielzeug/workit
 **Key Features:**
 
 - `createWorker(fn)` — serialize a function and run it in a dedicated Web Worker
-- `createPool(fn, options)` — concurrent worker pool with configurable size
-- Timeout support with `AbortSignal`-based cancellation
+- `createWorker(fn, { size })` — concurrent worker pool with configurable size
+- Timeout support and queued-task cancellation via `AbortSignal`
 - Graceful fallback to main-thread execution when Workers are unavailable
-- `testWorker()` helper for unit testing without Worker infrastructure
+- `createTestWorker()` helper for unit testing without Worker infrastructure
 - Zero dependencies
 
 [📖 Documentation](https://vielzeug.dev/workit/) • [Examples](https://vielzeug.dev/workit/examples)
@@ -406,8 +467,10 @@ vielzeug/
 │   ├── buildit/       # Web component library (built on craftit)
 │   ├── craftit/       # Web component primitives
 │   ├── deposit/       # Browser storage (IndexedDB + LocalStorage)
+│   ├── dragit/        # Drag-and-drop utilities
 │   ├── eventit/       # Typed event bus
 │   ├── fetchit/       # HTTP client & query management
+│   ├── floatit/       # Floating UI positioning utilities
 │   ├── formit/        # Form state management
 │   ├── i18nit/        # Internationalization
 │   ├── logit/         # Structured logging
@@ -416,6 +479,7 @@ vielzeug/
 │   ├── stateit/       # Reactive state (signals)
 │   ├── toolkit/       # Utility functions
 │   ├── validit/       # Schema validation
+│   ├── virtualit/     # Virtual list engine
 │   ├── wireit/        # Dependency injection
 │   └── workit/        # Web Worker pool
 ├── docs/              # VitePress documentation

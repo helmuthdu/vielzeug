@@ -1,12 +1,12 @@
 /**
- * Trial — Testing utilities for Craftit components
+ * Testing utilities for Craftit components
  *
- * ⚠️ Requirements: DOM environment (browser / jsdom / happy-dom)
+ * ⚠️ Requires DOM environment (browser / jsdom / happy-dom)
  */
 
-import type { DefineOptions, SetupContext, SetupResult } from '../';
-
-import { define } from '../';
+import { defineComponent, type BuildPropSchema, type DefineComponentOptions } from '../core/define';
+import { _resetMarkerIndex } from '../core/template';
+import { _resetIdCounter } from '../core/utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -58,9 +58,14 @@ export interface MountOptions {
   html?: string;
   /** Parent container (default: document.body) */
   container?: HTMLElement;
-  /** Options forwarded to define() when passing a setup function */
-  defineOptions?: DefineOptions;
+  /** Extra defineComponent options when passing an inline setup function */
+  componentOptions?: Omit<DefineComponentOptions<any, any>, 'setup' | 'tag'>;
 }
+
+type TestComponentOptions<
+  Props extends Record<string, unknown> = Record<string, never>,
+  Events extends Record<string, unknown> = Record<string, unknown>,
+> = Omit<DefineComponentOptions<BuildPropSchema<Props>, Events>, 'tag'>;
 
 export interface WaitOptions {
   /** Maximum wait time in ms (default: 1000) */
@@ -71,22 +76,30 @@ export interface WaitOptions {
   message?: string;
 }
 
-// ─── Internal state ───────────────────────────────────────────────────────────
+// ─── Test environment state ───────────────────────────────────────────────────
 
-const _mounted: HTMLElement[] = [];
-let _tagCounter = 0;
+const _mountedElements: HTMLElement[] = [];
+let _componentTagCounter = 0;
+
+/**
+ * Resets global test counters used for deterministic IDs/markers.
+ * @internal
+ */
+export const _resetCounters = (): void => {
+  _resetIdCounter();
+  _resetMarkerIndex();
+};
 
 // ─── Core ────────────────────────────────────────────────────────────────────
 
 /**
  * Flush pending reactive updates.
- * Drains the microtask queue completely (more robust than fixed-tick approach)
- * then yields one animation frame for any rAF-scheduled work.
+ * Drains the microtask queue completely, then yields one animation frame
+ * for any rAF-scheduled work.
  */
 export function flush(): Promise<void> {
   // Drain all pending microtasks by repeatedly yielding until the queue is empty.
-  // A fixed number of Promise.resolve() ticks can under-flush when signal batching
-  // or async effects schedule additional microtasks.
+  // Fixed tick approaches can under-flush when signal batching schedules additional microtasks.
   const drainMicrotasks = (): Promise<void> => {
     let ticks = 0;
     const drain = (): Promise<void> =>
@@ -122,13 +135,12 @@ function applyAttr(element: Element, name: string, value: string | number | bool
 }
 
 /**
- * Mount a component into the DOM, flush reactive updates, and return a test fixture.
+ * Mount a component into the DOM and return a test fixture.
  *
- * Accepts either a registered tag name or a setup function.
- * When a setup function is passed, a unique tag name is auto-generated and the
- * element is defined via `define()` — no `uniqueName` boilerplate needed.
+ * Accepts a registered tag name, an inline setup function, or a component
+ * options object. Setup functions are auto-registered with generated tag names.
  *
- * @example — inline setup (no define/uniqueName ceremony)
+ * @example — inline setup function
  * const { query } = await mount(() => {
  *   const count = signal(0);
  *   return html`<button @click=${() => count.value++}>${count}</button>`;
@@ -142,36 +154,37 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: (ctx: SetupContext) => SetupResult,
+  tagOrSetupOrOptions: TestComponentOptions['setup'],
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: DefineOptions & { setup: (ctx: SetupContext) => SetupResult },
+  tagOrSetupOrOptions: TestComponentOptions<any, any>,
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions:
-    | string
-    | ((ctx: SetupContext) => SetupResult)
-    | (DefineOptions & { setup: (ctx: SetupContext) => SetupResult }),
+  tagOrSetupOrOptions: string | TestComponentOptions['setup'] | TestComponentOptions<any, any>,
   options: MountOptions = {},
 ): Promise<Fixture<T>> {
-  const { attrs = {}, container = document.body, defineOptions, html, props = {} } = options;
+  const { attrs = {}, componentOptions, container = document.body, html, props = {} } = options;
 
   let tagName: string;
-  let setup: (ctx: SetupContext) => SetupResult;
-  const defOptions: DefineOptions | undefined = defineOptions;
+  let inlineDefinition: TestComponentOptions<any, any> | undefined;
 
   if (typeof tagOrSetupOrOptions === 'string') {
     tagName = tagOrSetupOrOptions;
   } else if (typeof tagOrSetupOrOptions === 'function') {
-    tagName = `trial-${++_tagCounter}`;
-    setup = tagOrSetupOrOptions;
-    define(tagName, setup, defOptions ?? {});
+    tagName = `trial-${++_componentTagCounter}`;
+    inlineDefinition = {
+      ...(componentOptions ?? {}),
+      setup: tagOrSetupOrOptions as TestComponentOptions<any, any>['setup'],
+    };
   } else {
-    tagName = `trial-${++_tagCounter}`;
-    setup = tagOrSetupOrOptions.setup;
-    define(tagName, setup, tagOrSetupOrOptions);
+    tagName = `trial-${++_componentTagCounter}`;
+    inlineDefinition = tagOrSetupOrOptions;
+  }
+
+  if (inlineDefinition) {
+    defineComponent({ tag: tagName, ...(inlineDefinition as TestComponentOptions<any, any>) });
   }
 
   const element = document.createElement(tagName) as T;
@@ -183,7 +196,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   for (const [name, value] of Object.entries(attrs)) applyAttr(element, name, value);
 
   container.appendChild(element);
-  _mounted.push(element);
+  _mountedElements.push(element);
   await flush();
 
   return {
@@ -205,9 +218,9 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     destroy() {
       element.remove();
 
-      const i = _mounted.indexOf(element);
+      const i = _mountedElements.indexOf(element);
 
-      if (i !== -1) _mounted.splice(i, 1);
+      if (i !== -1) _mountedElements.splice(i, 1);
     },
     element,
 
@@ -509,6 +522,6 @@ export function mock(tagName: string, template = ''): void {
  * afterEach(() => cleanup());
  */
 export function cleanup(): void {
-  for (const el of _mounted) el.remove();
-  _mounted.length = 0;
+  for (const el of _mountedElements) el.remove();
+  _mountedElements.length = 0;
 }

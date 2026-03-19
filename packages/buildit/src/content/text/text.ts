@@ -1,4 +1,4 @@
-import { define, html, typed, watch, defineProps } from '@vielzeug/craftit';
+import { defineComponent, html, typed, watch } from '@vielzeug/craftit/core';
 
 import styles from './text.css?inline';
 
@@ -68,21 +68,19 @@ export type BitTextProps = {
  * ```
  */
 
-export const TEXT_TAG = define(
-  'bit-text',
-  ({ host }) => {
-    const props = defineProps<BitTextProps>({
-      align: typed<BitTextProps['align']>(undefined),
-      as: typed<BitTextProps['as']>(undefined),
-      color: typed<BitTextProps['color']>(undefined),
-      italic: typed<boolean>(false),
-      lines: typed<number | undefined>(undefined, { type: Number }),
-      size: typed<BitTextProps['size']>(undefined),
-      truncate: typed<boolean>(false),
-      variant: typed<BitTextProps['variant']>(undefined),
-      weight: typed<BitTextProps['weight']>(undefined),
-    });
-
+export const TEXT_TAG = defineComponent<BitTextProps>({
+  props: {
+    align: typed<BitTextProps['align']>(undefined),
+    as: typed<BitTextProps['as']>(undefined),
+    color: typed<BitTextProps['color']>(undefined),
+    italic: typed<boolean>(false),
+    lines: typed<number | undefined>(undefined, { type: Number }),
+    size: typed<BitTextProps['size']>(undefined),
+    truncate: typed<boolean>(false),
+    variant: typed<BitTextProps['variant']>(undefined),
+    weight: typed<BitTextProps['weight']>(undefined),
+  },
+  setup({ host, props }) {
     // Single watcher drives both role + aria-level from `as`.
     // h1–h6 → role="heading" + aria-level; everything else → remove both.
     watch(
@@ -112,7 +110,6 @@ export const TEXT_TAG = define(
 
     return html`<slot></slot>`;
   },
-  {
-    styles: [styles],
-  },
-);
+  styles: [styles],
+  tag: 'bit-text',
+});

@@ -2,7 +2,7 @@
 <template>
   <div id="repl-container" class="repl-container" :class="{ 'is-expanded': isExpanded }">
     <!-- Library Selector Card Grid -->
-    <bit-grid v-if="!isExpanded" responsive gap="md" min-col-width="280px" style="margin-bottom: 2rem;">
+    <bit-grid v-if="!isExpanded" responsive gap="md" min-col-width="280px" style="margin-bottom: 2rem">
       <bit-card
         v-for="(desc, lib) in libraryDescriptions"
         :key="lib"
@@ -10,7 +10,10 @@
         variant="flat"
         padding="md"
         :color="selectedLibrary === lib ? 'primary' : undefined"
-        @click="selectedLibrary = lib; switchLibrary();">
+        @click="
+          selectedLibrary = lib;
+          switchLibrary();
+        ">
         <div class="lib-card-body">
           <div class="card-icon">
             <img :src="withBase(`/logo-${lib}.svg`)" :alt="`${lib} logo`" class="lib-logo" />

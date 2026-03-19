@@ -67,6 +67,7 @@ Use `indeterminate` when the duration of an operation is unknown. The bar animat
 The `label` attribute renders visible text and doubles as the accessible `aria-label`.
 
 **Linear:**
+
 - Without `title` — rendered at the **end of the bar** (trailing inline).
 - With `title` — moved into the **header row** above the bar.
 
@@ -273,34 +274,34 @@ const interval = setInterval(() => {
 
 ### Attributes
 
-| Attribute        | Type                                                                      | Default    | Description                                                                                                                                                                     |
-| ---------------- | ------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `value`          | `number`                                                                  | `0`        | Current progress value (0 to `max`). Ignored when `indeterminate`.                                                                                                              |
-| `max`            | `number`                                                                  | `100`      | Maximum value                                                                                                                                                                   |
-| `indeterminate`  | `boolean`                                                                 | `false`    | Show infinite animation when duration is unknown                                                                                                                                |
-| `type`           | `'linear' \| 'circular'`                                                  | `'linear'` | Bar style                                                                                                                                                                       |
-| `color`          | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Theme color for the fill                                                                                                                                                        |
-| `size`           | `'sm' \| 'md' \| 'lg'`                                                    | —          | Bar height (linear) or circle diameter (circular)                                                                                                                               |
+| Attribute        | Type                                                                      | Default    | Description                                                                                                                                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`          | `number`                                                                  | `0`        | Current progress value (0 to `max`). Ignored when `indeterminate`.                                                                                                                                                                                       |
+| `max`            | `number`                                                                  | `100`      | Maximum value                                                                                                                                                                                                                                            |
+| `indeterminate`  | `boolean`                                                                 | `false`    | Show infinite animation when duration is unknown                                                                                                                                                                                                         |
+| `type`           | `'linear' \| 'circular'`                                                  | `'linear'` | Bar style                                                                                                                                                                                                                                                |
+| `color`          | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Theme color for the fill                                                                                                                                                                                                                                 |
+| `size`           | `'sm' \| 'md' \| 'lg'`                                                    | —          | Bar height (linear) or circle diameter (circular)                                                                                                                                                                                                        |
 | `label`          | `string`                                                                  | —          | Visible text label and accessible name. **Linear** without `title`: rendered at bar end. **Linear** with `title`: moved to the header row. **Circular**: large text centered inside the ring. Falls back to `title`, then `"Progress"` for `aria-label`. |
-| `title`          | `string`                                                                  | —          | **Linear**: header text above the bar; moves `label` to the header row when combined. **Circular**: smaller text below the `label` inside the ring.            |
-| `floating-label` | `string`                                                                  | —          | Text for the floating chip above the fill endpoint (linear only). Hidden when `indeterminate`.                                                                                  |
-| `value-text`     | `string`                                                                  | —          | Human-readable value for screen readers (e.g. `"Step 2 of 5"`). Overrides the raw `aria-valuenow`.                                                                              |
+| `title`          | `string`                                                                  | —          | **Linear**: header text above the bar; moves `label` to the header row when combined. **Circular**: smaller text below the `label` inside the ring.                                                                                                      |
+| `floating-label` | `string`                                                                  | —          | Text for the floating chip above the fill endpoint (linear only). Hidden when `indeterminate`.                                                                                                                                                           |
+| `value-text`     | `string`                                                                  | —          | Human-readable value for screen readers (e.g. `"Step 2 of 5"`). Overrides the raw `aria-valuenow`.                                                                                                                                                       |
 
 ### CSS Custom Properties
 
-| Property                          | Description                                                   | Default                |
-| --------------------------------- | ------------------------------------------------------------- | ---------------------- |
-| `--progress-height`               | Linear bar height override                                    | Size-dependent         |
-| `--progress-track-bg`             | Track (unfilled background) color                             | `--color-contrast-200` |
-| `--progress-fill`                 | Fill bar / stroke color                                       | Theme-dependent        |
-| `--progress-radius`               | Linear bar border radius                                      | `var(--rounded-full)`  |
-| `--progress-circle-size`          | Circular ring diameter                                        | `6rem` (size-dependent)|
-| `--progress-stroke-width`         | Circular stroke width                                         | Height-dependent       |
-| `--progress-circular-label-size`  | Font size of the label inside the ring                        | `--text-xl` (size-dependent) |
-| `--progress-circular-title-size`  | Font size of the title inside the ring                        | `--text-xs` (size-dependent) |
-| `--progress-label-gap`            | Gap between header/bar row and between bar and trailing label | `0.25rem`              |
-| `--progress-title-color`          | Title text color                                              | `currentColor`         |
-| `--progress-label-color`          | Label text color                                              | `currentColor`         |
+| Property                         | Description                                                   | Default                      |
+| -------------------------------- | ------------------------------------------------------------- | ---------------------------- |
+| `--progress-height`              | Linear bar height override                                    | Size-dependent               |
+| `--progress-track-bg`            | Track (unfilled background) color                             | `--color-contrast-200`       |
+| `--progress-fill`                | Fill bar / stroke color                                       | Theme-dependent              |
+| `--progress-radius`              | Linear bar border radius                                      | `var(--rounded-full)`        |
+| `--progress-circle-size`         | Circular ring diameter                                        | `6rem` (size-dependent)      |
+| `--progress-stroke-width`        | Circular stroke width                                         | Height-dependent             |
+| `--progress-circular-label-size` | Font size of the label inside the ring                        | `--text-xl` (size-dependent) |
+| `--progress-circular-title-size` | Font size of the title inside the ring                        | `--text-xs` (size-dependent) |
+| `--progress-label-gap`           | Gap between header/bar row and between bar and trailing label | `0.25rem`                    |
+| `--progress-title-color`         | Title text color                                              | `currentColor`               |
+| `--progress-label-color`         | Label text color                                              | `currentColor`               |
 
 ## Accessibility
 

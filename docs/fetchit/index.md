@@ -1,15 +1,17 @@
 ---
 title: Fetchit — HTTP client for TypeScript
-description: Lightweight, type-safe HTTP client with query caching, request deduplication, and standalone mutations. Built on the native fetch API. Zero dependencies.
+description: Type-safe HTTP client, query cache, and mutation primitives built on native fetch.
 ---
 
 <PackageBadges package="fetchit" />
 
-<img src="/logo-fetchit.svg" alt="Fetchit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-fetchit.svg" alt="Fetchit logo" width="156" class="logo-highlight"/>
 
 # Fetchit
 
-**Fetchit** provides three independent primitives built on the native `fetch` API: an HTTP client, a query cache, and standalone mutations. Use any combination based on your needs.
+`@vielzeug/fetchit` ships three composable primitives built on native `fetch`: `createApi`, `createQuery`, and `createMutation`.
+
+<!-- Search keywords: HTTP client, query cache, API data fetching. -->
 
 ## Installation
 
@@ -35,47 +37,73 @@ yarn add @vielzeug/fetchit
 import { createApi, createQuery, createMutation } from '@vielzeug/fetchit';
 
 const api = createApi({ baseUrl: 'https://api.example.com' });
-
-// GET with typed response
-const users = await api.get<User[]>('/users');
-
-// Type-safe path parameters — TypeScript errors if params are wrong or missing
-const user = await api.get<User>('/users/{id}', { params: { id: 42 } });
-
-// Cached query with lifecycle callbacks
 const qc = createQuery({ staleTime: 5_000 });
-const post = await qc.query({
+
+const user = await qc.query({
   key: ['users', 42],
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 42 }, signal }),
-  onSuccess: (data) => console.log(`Loaded ${data.name}`),
-  onError: (err) => console.error(err.message),
 });
 
-// Standalone mutation with cache invalidation on success
 const createUser = createMutation((data: NewUser) => api.post<User>('/users', { body: data }), {
   onSuccess: () => qc.invalidate(['users']),
 });
-await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
+
+await createUser.mutate({ name: 'Alice' });
 ```
+
+## Why Fetchit?
+
+Native `fetch` is excellent but low-level. Fetchit adds base URL, typed path parameters, a query cache, and structured error handling with virtually no overhead.
+
+```ts
+// Before — raw fetch
+const res = await fetch(`https://api.example.com/users/${userId}`);
+if (!res.ok) throw new Error(`HTTP ${res.status}`);
+const user: User = await res.json();
+
+// After — Fetchit
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const user = await api.get<User>('/users/{id}', { params: { id: userId } });
+```
+
+| Feature               | Fetchit                                       | axios          | ky     |
+| --------------------- | --------------------------------------------- | -------------- | ------ |
+| Bundle size           | <PackageInfo package="fetchit" type="size" /> | ~26 kB         | ~5 kB  |
+| Built on              | fetch                                         | XMLHttpRequest | fetch  |
+| Type-safe path params | ✅                                            | Manual         | Manual |
+| Query cache           | ✅                                            | ❌             | ❌     |
+| Standalone mutations  | ✅                                            | ❌             | ❌     |
+| Zero dependencies     | ✅                                            | ❌             | ❌     |
+
+**Use Fetchit when** you want a typed fetch-based client with lightweight caching and mutation workflows without adopting a full data framework.
+
+**Consider axios or ky** when you only need request helpers and do not need built-in query caching or mutation state.
 
 ## Features
 
 - **Type-safe path params** — `{param}` placeholders extracted and validated at compile time
 - **HTTP client** — `createApi()` with base URL, global headers, timeout, interceptors, and deduplication
 - **Query cache** — `createQuery()` for stale-while-revalidate caching, prefix invalidation, and reactive subscriptions
-- **Query callbacks** — `onSuccess`, `onError`, `onSettled` per-call callbacks on `query()` for fire-and-forget side effects
+- **Query callbacks** — per-trigger-call `onSuccess`, `onError`, `onSettled`
 - **Standalone mutations** — `createMutation()` with lifecycle callbacks, retry, observable state, and `cancel()`
-- **Request deduplication** — GET/HEAD/OPTIONS always deduplicate concurrent identical calls; others opt-in
+- **Request deduplication** — GET/HEAD/OPTIONS/DELETE dedupe concurrent identical calls by default
 - **Interceptors** — `use()` middleware for auth tokens, logging, and request transforms
 - **Retry with backoff** — configurable attempt count, exponential delay strategy, and `shouldRetry` predicate
 - **Abort support** — `QueryFnContext` passes an `AbortSignal` to every query function
 - **Disposable** — both clients implement `[Symbol.dispose]` for `using` declarations
 - **Zero dependencies** — <PackageInfo package="fetchit" type="size" /> gzipped
 
-## Next Steps
+## Compatibility
 
-|                           |                                                              |
-| ------------------------- | ------------------------------------------------------------ |
-| [Usage Guide](./usage.md) | HTTP client, query client, mutations, interceptors, and more |
-| [API Reference](./api.md) | Complete type signatures and method documentation            |
-| [Examples](./examples.md) | Real-world data-fetching patterns                            |
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ✅      |
+| SSR         | ✅      |
+| Deno        | ✅      |
+
+## See Also
+
+- [Validit](/validit/)
+- [Formit](/formit/)
+- [Stateit](/stateit/)

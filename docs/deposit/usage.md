@@ -7,44 +7,6 @@ description: How to use Deposit for schema-driven browser storage with IndexedDB
 
 [[toc]]
 
-## Why Deposit?
-
-Raw IndexedDB requires verbose event-based boilerplate; `localStorage` loses type information and offers no query capabilities.
-
-```ts
-// Before — raw IndexedDB boilerplate
-const req = indexedDB.open('my-app', 1);
-req.onupgradeneeded = (e) => {
-  (e.target as IDBOpenDBRequest).result.createObjectStore('users', { keyPath: 'id' });
-};
-req.onsuccess = (e) => {
-  const db = (e.target as IDBOpenDBRequest).result;
-  const all = db.transaction('users', 'readonly').objectStore('users').getAll();
-  all.onsuccess = () => { /* untyped, no filtering */ };
-};
-
-// After — Deposit
-import { createLocalStorage, defineSchema } from '@vielzeug/deposit';
-const schema = defineSchema<{ users: User }>({ users: { key: 'id', indexes: ['age'] } });
-const db = createLocalStorage({ dbName: 'my-app', schema });
-await db.put('users', { id: 1, name: 'Alice', age: 30 });
-const adults = await db.from('users').between('age', 18, 99).orderBy('name').toArray();
-```
-
-| Feature              | Deposit                                       | Dexie.js  | idb   |
-| -------------------- | --------------------------------------------- | --------- | ----- |
-| Bundle size          | <PackageInfo package="deposit" type="size" /> | ~30 kB    | ~5 kB |
-| LocalStorage adapter | ✅ Built-in                                   | ❌        | ❌    |
-| Query builder        | ✅ Fluent                                     | ✅        | ❌    |
-| TTL support          | ✅ Built-in                                   | ❌        | ❌    |
-| Typed schema         | ✅                                            | ⚠️ Manual | ❌    |
-| Transactions         | ✅ (IndexedDB)                                | ✅        | ✅    |
-| Zero dependencies    | ✅                                            | ✅        | ✅    |
-
-**Use Deposit when** you want typed, queryable browser storage across both `localStorage` and IndexedDB through one consistent API.
-
-**Consider Dexie.js** if you need live queries, Dexie Cloud sync, or advanced IndexedDB hooks beyond what Deposit offers.
-
 ## Defining a Schema
 
 Use `defineSchema<S>(schema)` to create a fully-typed schema. The type parameter `S` maps table names to record types; the runtime value describes the primary key and optional indexes per table.
@@ -246,10 +208,14 @@ const exists = await db.has('users', 1); // boolean
 
 ### `count(table)`
 
-Counts live records. Both adapters scan all records to exclude TTL-expired entries — O(n).
+Counts records in the table, with adapter-specific semantics:
+
+- `createLocalStorage`: TTL-accurate live count (implemented via `getAll`) — O(n)
+- `createIndexedDB`: native `IDBObjectStore.count()` — O(1), may include TTL-expired records until eviction
 
 ```ts
 const total = await db.count('users'); // number
+const liveTotal = await db.from('users').count(); // TTL-accurate on both adapters
 ```
 
 ### `getOrPut(table, key, factory, ttl?)`
@@ -277,7 +243,7 @@ await qb.between('age', 18, 30).toArray();
 
 // Prefix match
 await qb.startsWith('name', 'Al').toArray();
-await qb.startsWith('name', 'al', true).toArray(); // case-insensitive
+await qb.startsWith('name', 'al', { ignoreCase: true }).toArray();
 
 // Custom predicate
 await qb.filter((u) => u.age > 18 && (u.city ?? '').length > 0).toArray();
@@ -423,6 +389,7 @@ const updated = await db.patch('sessions', 's1', { token: 'xyz' });
 | `ttl.seconds(n)` | `n * 1_000`                       |
 | `ttl.minutes(n)` | `n * 60_000`                      |
 | `ttl.hours(n)`   | `n * 3_600_000`                   |
+| `ttl.days(n)`    | `n * 86_400_000`                  |
 
 ::: tip Lazy eviction
 Expired entries are removed lazily: the LocalStorage adapter evicts on read; the IndexedDB adapter evicts in a background write after `getAll()` returns.

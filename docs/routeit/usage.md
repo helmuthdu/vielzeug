@@ -11,71 +11,6 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 
 [[toc]]
 
-## Why Routeit?
-
-Managing client-side navigation without a router means scattered `location.pathname` checks, manual `popstate` listeners, and duplicated history manipulation:
-
-```ts
-// Before — manual history management
-window.addEventListener('popstate', () => {
-  if (location.pathname === '/') renderHome();
-  else if (location.pathname.startsWith('/users/')) {
-    const id = location.pathname.split('/')[2];
-    renderUser(id);
-  }
-});
-
-// After — Routeit
-import { createRouter } from '@vielzeug/routeit';
-const router = createRouter();
-router
-  .on('/', () => renderHome())
-  .on('/users/:id', ({ params }) => renderUser(params.id))
-  .start();
-```
-
-| Feature              | Routeit                                        | page.js | Navigo  |
-| -------------------- | ---------------------------------------------- | ------- | ------- |
-| Bundle size          | <PackageInfo package="routeit" type="size" />  | ~1 kB   | ~5 kB   |
-| History + hash modes | ✅                                             | ✅      | ✅      |
-| Typed path params    | ✅                                             | ❌      | ❌      |
-| Named routes         | ✅                                             | ❌      | Partial |
-| Middleware           | ✅                                             | ✅      | ✅      |
-| Route groups         | ✅                                             | ❌      | ❌      |
-| View Transition API  | ✅                                             | ❌      | ❌      |
-| Zero dependencies    | ✅                                             | ✅      | ✅      |
-
-**Use Routeit when** you need typed path params, named routes, and middleware in a lightweight, framework-agnostic client-side router.
-
-**Consider React Router or TanStack Router** if you are building a React app that needs deep framework integration, file-based routing, or data loaders.
-
-## Import
-
-```ts
-import { createRouter } from '@vielzeug/routeit';
-
-// Types only
-import type {
-  Router,
-  RouteContext,
-  RouteHandler,
-  RouteOptions,
-  RouteGroup,
-  GroupOptions,
-  RouteState,
-  RouteParams,
-  QueryParams,
-  RouterOptions,
-  NavigationTarget,
-  NavigateOptions,
-  ResolvedRoute,
-  RouterMode,
-  Middleware,
-  PathParams,
-  Unsubscribe,
-} from '@vielzeug/routeit';
-```
-
 ## Basic Usage
 
 ### Creating a Router
@@ -201,7 +136,7 @@ router.group('/api', (r) => {
 });
 ```
 
-### Typed Prefix Params
+## Typed Prefix Params
 
 When the group prefix contains path params, they are automatically typed inside `on()` handlers via the `RouteGroup<Prefix>` generic:
 

@@ -3,7 +3,17 @@ title: Stateit — API Reference
 description: Complete type signatures, parameter docs, and return values for every export in @vielzeug/stateit.
 ---
 
-## API Reference
+# Stateit API Reference
+
+[[toc]]
+
+## API At a Glance
+
+| Symbol          | Purpose                                  | Execution mode | Common gotcha                                                 |
+| --------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------- |
+| `signal()`      | Create reactive primitive values         | Sync           | Write signals inside batch/effect-safe flows                  |
+| `computed()`    | Derive memoized values from dependencies | Sync           | Avoid side effects inside computed callbacks                  |
+| `createStore()` | Create object-like state container       | Sync           | Mutate through provided APIs to keep notifications consistent |
 
 ## Signal Primitives
 
@@ -214,10 +224,14 @@ watch(nameSignal, (name) => console.log('name:', name));
 ### `nextValue`
 
 ```ts
-function nextValue<T>(source: ReadonlySignal<T>, predicate?: (v: T) => boolean): Promise<T>;
+function nextValue<T>(
+  source: ReadonlySignal<T>,
+  predicate?: (v: T) => boolean,
+  options?: { signal?: AbortSignal },
+): Promise<T>;
 ```
 
-Returns a `Promise` that resolves with the next value of `source` that satisfies the optional predicate. The watch subscription is disposed automatically — no cleanup required.
+Returns a `Promise` that resolves with the next value of `source` that satisfies the optional predicate. The watch subscription is disposed automatically — no cleanup required. Pass `options.signal` to cancel early.
 
 ```ts
 const status = signal<'idle' | 'loading' | 'done'>('idle');
@@ -227,14 +241,20 @@ const next = await nextValue(status);
 
 // Wait for a specific condition
 const done = await nextValue(status, (v) => v === 'done');
+
+// Abortable wait
+const controller = new AbortController();
+const p = nextValue(status, (v) => v === 'done', { signal: controller.signal });
+controller.abort(new Error('cancelled'));
 ```
 
 **Parameters**
 
-| Parameter   | Type                | Description                                                       |
-| ----------- | ------------------- | ----------------------------------------------------------------- |
-| `source`    | `ReadonlySignal<T>` | The signal to watch                                               |
-| `predicate` | `(v: T) => boolean` | Optional filter; `Promise` only resolves when this returns `true` |
+| Parameter        | Type                | Description                                                       |
+| ---------------- | ------------------- | ----------------------------------------------------------------- |
+| `source`         | `ReadonlySignal<T>` | The signal to watch                                               |
+| `predicate`      | `(v: T) => boolean` | Optional filter; `Promise` only resolves when this returns `true` |
+| `options.signal` | `AbortSignal`       | Optional abort signal; rejects with `signal.reason` when aborted  |
 
 **Returns** — `Promise<T>`
 
@@ -329,6 +349,21 @@ Unwraps a value or signal. If `v` is a `ReadonlySignal`, returns `.value` (track
 ```ts
 toValue(10); // 10
 toValue(signal(10)); // 10 — tracked if inside effect
+```
+
+---
+
+### `peekValue`
+
+```ts
+function peekValue<T>(v: T | ReadonlySignal<T>): T;
+```
+
+Unwraps a value or signal without tracking. If `v` is a signal, returns `v.peek()`.
+
+```ts
+peekValue(10); // 10
+peekValue(signal(10)); // 10 — untracked
 ```
 
 ---
@@ -767,4 +802,3 @@ const mockSignal = {
   peek: () => 42,
 };
 ```
-

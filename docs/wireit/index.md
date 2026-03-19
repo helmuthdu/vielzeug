@@ -5,11 +5,13 @@ description: Zero-dependency IoC container with typed tokens, lifetimes, async r
 
 <PackageBadges package="wireit" />
 
-<img src="/logo-wireit.svg" alt="Wireit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-wireit.svg" alt="Wireit logo" width="156" class="logo-highlight"/>
 
 # Wireit
 
-**Wireit** is a zero-dependency IoC container for TypeScript. Register dependencies with typed tokens, resolve them synchronously or asynchronously, and scope lifetimes to containers or request cycles — all with full type inference.
+**Wireit** is a zero-dependency inversion of control (IoC) container for TypeScript. Register dependencies with typed tokens, resolve them synchronously or asynchronously, and scope lifetimes to containers or request cycles with full type inference.
+
+<!-- Search keywords: dependency injection container, DI container, service composition. -->
 
 ## Installation
 
@@ -34,7 +36,7 @@ yarn add @vielzeug/wireit
 ```ts
 import { createContainer, createToken } from '@vielzeug/wireit';
 
-const DbToken      = createToken<Database>('Database');
+const DbToken = createToken<Database>('Database');
 const ServiceToken = createToken<UserService>('UserService');
 
 const container = createContainer();
@@ -45,6 +47,44 @@ container
 
 const service = container.get(ServiceToken);
 ```
+
+## Why Wireit?
+
+Manual dependency wiring gets hard to scale: constructors balloon, test setup repeats, and switching implementations requires touching many call sites.
+
+```ts
+// Before — manual wiring
+const config = loadConfig();
+const db = new Database(config.dbUrl);
+const repo = new UserRepository(db);
+const serviceBefore = new UserService(repo);
+
+// After — Wireit
+const container = createContainer();
+container
+  .value(ConfigToken, loadConfig())
+  .factory(DbToken, (config) => new Database(config.dbUrl), { deps: [ConfigToken] })
+  .bind(RepoToken, UserRepository, { deps: [DbToken] })
+  .bind(SvcToken, UserService, { deps: [RepoToken] });
+
+const serviceAfter = container.get(SvcToken);
+```
+
+| Feature              | Wireit                                       | InversifyJS | tsyringe |
+| -------------------- | -------------------------------------------- | ----------- | -------- |
+| Bundle size          | <PackageInfo package="wireit" type="size" /> | ~11 kB      | ~6 kB    |
+| Decorators required  | ❌                                           | ✅          | ✅       |
+| `reflect-metadata`   | ❌                                           | ✅          | ✅       |
+| Typed tokens         | ✅ Explicit `createToken<T>()`               | Partial     | Partial  |
+| Async providers      | ✅                                           | ✅          | ✅       |
+| Child containers     | ✅                                           | ✅          | ✅       |
+| Snapshot and restore | ✅                                           | ❌          | ❌       |
+| Built-in mocking     | ✅ `container.mock()`                        | ❌          | ❌       |
+| Zero dependencies    | ✅                                           | ❌          | ❌       |
+
+**Use Wireit when** you want predictable, type-safe DI without decorators, metadata, or heavyweight framework conventions.
+
+**Consider alternatives when** you already rely on decorator-based DI and want to stay aligned with that ecosystem.
 
 ## Features
 
@@ -63,10 +103,17 @@ const service = container.get(ServiceToken);
 - **Debug** — `debug()` walks the full hierarchy and lists all tokens and aliases
 - **Zero dependencies** — <PackageInfo package="wireit" type="size" /> gzipped
 
-## Next Steps
+## Compatibility
 
-|                           |                                                                  |
-| ------------------------- | ---------------------------------------------------------------- |
-| [Usage Guide](./usage.md) | Tokens, providers, lifetimes, async, child containers, testing   |
-| [API Reference](./api.md) | Complete type signatures and method documentation                |
-| [Examples](./examples.md) | Real-world DI patterns and framework integrations                |
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ✅      |
+| SSR         | ✅      |
+| Deno        | ✅      |
+
+## See Also
+
+- [Permit](/permit/)
+- [Fetchit](/fetchit/)
+- [Workit](/workit/)

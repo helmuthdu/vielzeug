@@ -257,12 +257,3 @@ When customizing colors, ensure proper contrast ratios:
   --custom-text: hsl(210deg 4% 12%); /* 17.9:1 contrast - AAA ✅ */
 }
 ```
-
-## Next Steps
-
-::: tip Continue Learning
-
-- [API Reference](./api.md) — Complete list of CSS custom properties per component
-- [Components](./components/button.md) — Component-specific theming options
-- [Examples](./examples.md) — Real-world theming examples and recipes
-  :::

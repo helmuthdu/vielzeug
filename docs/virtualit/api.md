@@ -3,9 +3,129 @@ title: Virtualit — API Reference
 description: Complete API reference for the Virtualit virtual list engine.
 ---
 
-## Virtualit API Reference
+# Virtualit API Reference
 
 [[toc]]
+
+## API At a Glance
+
+| Symbol                          | Purpose                                 | Execution mode | Common gotcha                                   |
+| ------------------------------- | --------------------------------------- | -------------- | ----------------------------------------------- |
+| `createVirtualizer()`           | Create virtual list controller          | Sync           | Call attach() with the correct scroll container |
+| `createDomVirtualList()`        | DOM-first wrapper around `Virtualizer`  | Sync           | Call `update(items, enabled)` after mount       |
+| `virtualizer.getVirtualItems()` | Read the currently visible range        | Sync           | Re-render after invalidation/size changes       |
+| `virtualizer.scrollToIndex()`   | Programmatically jump to item positions | Sync           | Attach first; no-op before mounting             |
+
+## Package Exports
+
+```ts
+export { Virtualizer, createVirtualizer } from '@vielzeug/virtualit';
+export type { ScrollToIndexOptions, VirtualItem, VirtualizerOptions } from '@vielzeug/virtualit';
+
+export { createDomVirtualList } from '@vielzeug/virtualit/dom';
+export type { DomVirtualListController, DomVirtualListOptions, DomVirtualListRenderArgs } from '@vielzeug/virtualit/dom';
+```
+
+## DOM Module (`@vielzeug/virtualit/dom`)
+
+The DOM module is a convenience wrapper for dropdown/listbox style UIs where you already own DOM rendering and want a tiny controller with `update()`, `scrollToIndex()`, and `destroy()`.
+
+### `createDomVirtualList(options)`
+
+Creates a controller that lazily manages an internal `Virtualizer` when the scroll/list elements exist and virtualization is enabled.
+
+```ts
+import { createDomVirtualList } from '@vielzeug/virtualit/dom';
+
+const virtualList = createDomVirtualList<Row>({
+  clear: (listEl) => {
+    listEl.innerHTML = '';
+  },
+  estimateSize: 36,
+  getListElement: () => listEl,
+  getScrollElement: () => dropdownEl,
+  render: ({ items, listEl, virtualItems }) => {
+    listEl.innerHTML = '';
+
+    for (const item of virtualItems) {
+      const row = document.createElement('div');
+      row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
+      row.textContent = items[item.index]?.label ?? '';
+      listEl.appendChild(row);
+    }
+  },
+});
+
+virtualList.update(rows, true);
+```
+
+**Parameters:**
+
+| Parameter | Type                     | Description |
+| --------- | ------------------------ | ----------- |
+| `options` | `DomVirtualListOptions<T>` | DOM adapter callbacks and sizing behavior |
+
+**Returns:** `DomVirtualListController<T>`
+
+---
+
+### `DomVirtualListOptions<T>`
+
+```ts
+interface DomVirtualListOptions<T> {
+  clear: (listEl: HTMLElement) => void;
+  estimateSize: number | ((index: number, item: T) => number);
+  getListElement: () => HTMLElement | null;
+  getScrollElement: () => HTMLElement | null;
+  overscan?: number;
+  render: (args: DomVirtualListRenderArgs<T>) => void;
+}
+```
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `clear` | `(listEl: HTMLElement) => void` | — | Clears previously rendered option nodes before repaint or teardown |
+| `estimateSize` | `number \| (index: number, item: T) => number` | — | Fixed row size or per-item estimator |
+| `getListElement` | `() => HTMLElement \| null` | — | Returns the positioned list element that receives item nodes |
+| `getScrollElement` | `() => HTMLElement \| null` | — | Returns the scroll container observed by the virtualizer |
+| `overscan` | `number` | `3` | Extra items rendered above and below viewport |
+| `render` | `(args: DomVirtualListRenderArgs<T>) => void` | — | Called when visible window changes |
+
+---
+
+### `DomVirtualListRenderArgs<T>`
+
+```ts
+interface DomVirtualListRenderArgs<T> {
+  items: T[];
+  listEl: HTMLElement;
+  virtualItems: VirtualItem[];
+}
+```
+
+---
+
+### `DomVirtualListController<T>`
+
+```ts
+interface DomVirtualListController<T> {
+  destroy: () => void;
+  scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
+  update: (items: T[], enabled: boolean) => void;
+}
+```
+
+#### `update(items, enabled)`
+
+Synchronizes source items and enable state. When `enabled` is `false`, when items are empty, or when required DOM elements are missing, the internal virtualizer is destroyed and list styles are reset.
+
+#### `scrollToIndex(index, options?)`
+
+Proxies to the internal virtualizer when active. If not active yet, this is a no-op.
+
+#### `destroy()`
+
+Idempotent teardown. Destroys the internal virtualizer and resets list element styles.
 
 ## Core Functions
 
@@ -217,6 +337,8 @@ scrollToIndex(index: number, options?: ScrollToIndexOptions): void
 ```
 
 Programmatically scrolls to bring an item into view. Out-of-range indices are clamped to `[0, count - 1]`.
+
+If the virtualizer is not attached yet, the call is a no-op.
 
 **`ScrollToIndexOptions`:**
 

@@ -1,4 +1,4 @@
-import { define, effect, html, defineProps } from '@vielzeug/craftit';
+import { defineComponent, effect, html } from '@vielzeug/craftit/core';
 
 import styles from './grid-item.css?inline';
 
@@ -48,18 +48,16 @@ export type BitGridItemProps = {
  * <!-- Explicit placement -->
  * <bit-grid-item col="2 / 5" row="1 / 3">Placed</bit-grid-item>
  */
-export const GRID_ITEM_TAG = define(
-  'bit-grid-item',
-  ({ host }) => {
-    const props = defineProps<BitGridItemProps>({
-      align: { default: undefined },
-      col: { default: '' },
-      colSpan: { default: undefined },
-      justify: { default: undefined },
-      row: { default: '' },
-      rowSpan: { default: undefined },
-    });
-
+export const GRID_ITEM_TAG = defineComponent<BitGridItemProps>({
+  props: {
+    align: { default: undefined },
+    col: { default: '' },
+    colSpan: { default: undefined },
+    justify: { default: undefined },
+    row: { default: '' },
+    rowSpan: { default: undefined },
+  },
+  setup({ host, props }) {
     effect(() => {
       const col = props.col.value;
       const span = props.colSpan.value;
@@ -91,7 +89,6 @@ export const GRID_ITEM_TAG = define(
 
     return html`<slot></slot>`;
   },
-  {
-    styles: [styles],
-  },
-);
+  styles: [styles],
+  tag: 'bit-grid-item',
+});

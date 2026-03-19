@@ -17,10 +17,11 @@
     }
   },
   "scripts": {
-    "build": "tsc && vite build  && tsc -p tsconfig.declarations.json",
+    "build": "vite build && pnpm run build:types",
+    "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "pnpm run build",
     "test": "vitest"
   },
   "publishConfig": {

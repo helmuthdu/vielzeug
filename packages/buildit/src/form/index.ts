@@ -1,5 +1,5 @@
 export { CHECKBOX_GROUP_CTX, CHECKBOX_GROUP_TAG } from './checkbox-group/checkbox-group';
-export type { BitCheckboxGroupProps } from './checkbox-group/checkbox-group';
+export type { BitCheckboxGroupEvents, BitCheckboxGroupProps } from './checkbox-group/checkbox-group';
 export { CHECKBOX_TAG } from './checkbox/checkbox';
 export type { BitCheckboxEvents, BitCheckboxProps } from './checkbox/checkbox';
 export { COMBOBOX_OPTION_TAG, COMBOBOX_TAG } from './combobox/combobox';
@@ -15,7 +15,7 @@ export type { BitNumberInputEvents, BitNumberInputProps } from './number-input/n
 export { OTP_INPUT_TAG } from './otp-input/otp-input';
 export type { BitOtpInputEvents, BitOtpInputProps } from './otp-input/otp-input';
 export { RADIO_GROUP_CTX, RADIO_GROUP_TAG } from './radio-group/radio-group';
-export type { BitRadioGroupProps } from './radio-group/radio-group';
+export type { BitRadioGroupEvents, BitRadioGroupProps } from './radio-group/radio-group';
 export { RADIO_TAG } from './radio/radio';
 export type { BitRadioEvents, BitRadioProps } from './radio/radio';
 export { RATING_TAG } from './rating/rating';
@@ -28,3 +28,4 @@ export { SWITCH_TAG } from './switch/switch';
 export type { BitSwitchEvents, BitSwitchProps } from './switch/switch';
 export { TEXTAREA_TAG } from './textarea/textarea';
 export type { BitTextareaEvents, BitTextareaProps } from './textarea/textarea';
+export type { BaseFormProps, SelectableFieldProps, TextFieldProps } from './shared/base-props';

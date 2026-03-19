@@ -11,58 +11,6 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 
 [[toc]]
 
-## Why Wireit?
-
-Dependency injection decouples your code from its dependencies, making testing and composition easier — without decorators or `reflect-metadata`.
-
-```ts
-// Before — manual wiring
-const config = loadConfig();
-const db = new Database(config.dbUrl);
-const repo = new UserRepository(db);
-const svc = new UserService(repo);
-
-// After — Wireit
-const container = createContainer();
-container
-  .value(ConfigToken, loadConfig())
-  .factory(DbToken, (config) => new Database(config.dbUrl), { deps: [ConfigToken] })
-  .bind(RepoToken, UserRepository, { deps: [DbToken] })
-  .bind(SvcToken, UserService, { deps: [RepoToken] });
-
-const svc = container.get(SvcToken);
-```
-
-| Feature             | Wireit                                       | InversifyJS | tsyringe |
-| ------------------- | -------------------------------------------- | ----------- | -------- |
-| Bundle size         | <PackageInfo package="wireit" type="size" /> | ~13 kB      | ~6 kB    |
-| Decorators required | ❌                                           | ✅          | ✅       |
-| reflect-metadata    | ❌                                           | ✅          | ✅       |
-| Async providers     | ✅                                           | ✅          | ✅       |
-| Child containers    | ✅                                           | ✅          | ✅       |
-| Snapshot/restore    | ✅                                           | ❌          | ❌       |
-| container.mock()    | ✅                                           | ❌          | ❌       |
-| Zero dependencies   | ✅                                           | ❌          | ❌       |
-
-## Import
-
-```ts
-import { createContainer, createToken } from '@vielzeug/wireit';
-
-// Types only
-import type {
-  Token,
-  Lifetime,
-  Provider,
-  ValueProvider,
-  ClassProvider,
-  FactoryProvider,
-  ProviderOptions,
-  TokenValues,
-  Snapshot,
-} from '@vielzeug/wireit';
-```
-
 ## Tokens
 
 Every dependency is identified by a typed token — a branded symbol. The description is **required** and appears in error messages and `debug()` output.
@@ -343,7 +291,7 @@ const analytics = await container.getOptionalAsync(AnalyticsToken);
 
 ## Snapshot / Restore
 
-`snapshot()` deep-copies all current registrations and cached instances. `restore(snap)` rolls back all changes:
+`snapshot()` captures the current local registrations, aliases, and cached instances. `restore(snap)` rolls back all changes:
 
 ```ts
 const snap = container.snapshot();
@@ -430,8 +378,3 @@ const { tokens, aliases } = container.debug();
 console.log(tokens); // ['AppConfig', 'Database', 'Logger', 'UserService']
 console.log(aliases); // [['ILogger', 'Logger']]
 ```
-
-## Next Steps
-
-- [API Reference](./api.md) — complete type signatures
-- [Examples](./examples.md) — practical real-world patterns

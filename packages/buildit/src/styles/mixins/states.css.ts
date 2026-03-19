@@ -1,4 +1,4 @@
-import { css } from '@vielzeug/craftit';
+import { css } from '@vielzeug/craftit/core';
 
 /**
  * Disabled State Mixin

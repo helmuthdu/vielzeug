@@ -11,59 +11,6 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 
 [[toc]]
 
-## Why Dragit?
-
-The HTML5 Drag & Drop API requires careful counter tracking to avoid hover state flicker, has no MIME type pre-filtering, and provides no sortable list abstraction.
-
-```ts
-// Before — raw HTML5 Drag & Drop
-let enterCount = 0;
-dropzone.addEventListener('dragenter', () => { enterCount++; dropzone.classList.add('over'); });
-dropzone.addEventListener('dragleave', () => { if (--enterCount === 0) dropzone.classList.remove('over'); });
-dropzone.addEventListener('dragover', (e) => e.preventDefault());
-dropzone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  enterCount = 0;
-  const files = [...e.dataTransfer!.files];
-  if (!files.every((f) => f.type.startsWith('image/'))) return showError('Images only');
-  uploadFiles(files);
-});
-
-// After — Dragit
-import { createDropZone } from '@vielzeug/dragit';
-const zone = createDropZone({
-  element: dropzone,
-  accept: ['image/*'],
-  onDrop: (files) => uploadFiles(files),
-  onDropRejected: (files) => showError(`${files.length} file(s) not accepted`),
-  onHoverChange: (hovered) => dropzone.classList.toggle('over', hovered),
-});
-```
-
-| Feature             | Dragit                                       | SortableJS | dnd-kit    |
-| ------------------- | -------------------------------------------- | ---------- | ---------- |
-| Bundle size         | <PackageInfo package="dragit" type="size" /> | ~12 kB     | ~25 kB     |
-| Framework agnostic  | ✅                                           | ✅         | React only |
-| MIME type filtering | ✅ Pre-validated                             | ❌         | ❌         |
-| Counter-based hover | ✅                                           | ❌         | N/A        |
-| Sortable lists      | ✅                                           | ✅         | ✅         |
-| Drag handles        | ✅                                           | ✅         | ✅         |
-| `using` support     | ✅                                           | ❌         | ❌         |
-| Zero dependencies   | ✅                                           | ✅         | ❌         |
-
-**Use Dragit when** you need reliable file drop zones with MIME filtering or sortable lists in a framework-agnostic environment.
-
-**Consider dnd-kit** if you are building a React app and need complex multi-container drag interactions or accessibility-first sortable trees.
-
-## Import
-
-```ts
-import { createDropZone, createSortable } from '@vielzeug/dragit';
-
-// Types only
-import type { DropZone, DropZoneOptions, Sortable, SortableOptions } from '@vielzeug/dragit';
-```
-
 ## Drop Zone
 
 `createDropZone` attaches drag-and-drop behaviour to any DOM element. It handles the quirks of the HTML Drag & Drop API — most importantly, hover state is tracked with a counter so it never fires spuriously when the cursor moves over a child element.

@@ -1,30 +1,16 @@
-import {
-  aria,
-  createId,
-  define,
-  effect,
-  guard,
-  handle,
-  html,
-  onMount,
-  ref,
-  watch,
-  defineProps,
-  defineEmits,
-  defineSlots,
-} from '@vielzeug/craftit';
+import { defineComponent, html } from '@vielzeug/craftit/core';
+import { useA11yControl, useCheckableControl } from '@vielzeug/craftit/labs';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { formControlMixins, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync } from '../../utils/use-text-field';
-import { useToggleField } from '../../utils/use-toggle-field';
+import { useToggleField } from '../shared/composables';
+import { SWITCH_SIZE_PRESET } from '../shared/design-presets';
+import { mountFormContextSync } from '../shared/dom-sync';
 import componentStyles from './switch.css?inline';
 
-/** Switch component properties */
-
 export type BitSwitchEvents = {
-  change: { checked: boolean };
+  change: { checked: boolean; originalEvent?: Event; value: boolean };
 };
 
 export type BitSwitchProps = CheckableProps &
@@ -48,8 +34,10 @@ export type BitSwitchProps = CheckableProps &
  * @attr {string} name - Form field name
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Switch size: 'sm' | 'md' | 'lg'
+ * @attr {string} error - Error message (marks field as invalid)
+ * @attr {string} helper - Helper text displayed below the switch
  *
- * @fires change - Emitted when switch is toggled
+ * @fires change - Emitted when switch is toggled. detail: { value: boolean, checked: boolean, originalEvent?: Event }
  *
  * @slot - Switch label text
  *
@@ -57,138 +45,81 @@ export type BitSwitchProps = CheckableProps &
  * @part track - The switch track element
  * @part thumb - The switch thumb element
  * @part label - The label element
- *
- * @cssprop --switch-width - Track width
- * @cssprop --switch-height - Track height
- * @cssprop --switch-bg - Background color (checked state)
- * @cssprop --switch-track - Track background color (unchecked)
- * @cssprop --switch-thumb - Thumb background color
- * @cssprop --switch-font-size - Label font size
- *
- * @example
- * ```html
- * <bit-switch checked>Enable feature</bit-switch>
- * <bit-switch color="primary">Dark mode</bit-switch>
- * <bit-switch size="lg">Large toggle</bit-switch>
- * ```
+ * @part helper-text - The helper/error text element
  */
-export const SWITCH_TAG = define(
-  'bit-switch',
-  ({ host }) => {
-    const props = defineProps<BitSwitchProps>({
-      checked: { default: false },
-      color: { default: undefined },
-      disabled: { default: false },
-      error: { default: '', omit: true },
-      helper: { default: '' },
-      name: { default: '' },
-      size: { default: undefined },
-      value: { default: 'on' },
-    });
-    const emit = defineEmits<BitSwitchEvents>();
-    const slots = defineSlots<{ default: unknown }>();
-
+export const SWITCH_TAG = defineComponent<BitSwitchProps, BitSwitchEvents>({
+  formAssociated: true,
+  props: {
+    checked: { default: false },
+    color: { default: undefined },
+    disabled: { default: false },
+    error: { default: '' },
+    helper: { default: '' },
+    name: { default: '' },
+    size: { default: undefined },
+    value: { default: 'on' },
+  },
+  setup({ emit, host, props, reflect, slots }) {
     const { checkedSignal, formCtx, triggerValidation } = useToggleField(props);
 
-    // Propagate form context size/disabled to host when not explicitly set
     mountFormContextSync(host, formCtx, props);
 
-    const labelRef = ref<HTMLSpanElement>();
-    const helperRef = ref<HTMLDivElement>();
-    const helperId = createId('switch-helper');
-    const toggle = guard(
-      () => !props.disabled.value,
-      (e: Event) => {
-        e.preventDefault();
-        checkedSignal.value = !checkedSignal.value;
-
-        const isChecked = checkedSignal.value;
-
-        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        isChecked ? host.setAttribute('checked', '') : host.removeAttribute('checked');
-        emit('change', { checked: isChecked });
+    // Pass writable checkedSignal directly — toggle() mutates it in place
+    const control = useCheckableControl({
+      checked: checkedSignal,
+      clearIndeterminateFirst: false,
+      disabled: props.disabled,
+      onToggle: (e) => {
         triggerValidation('change');
+        emit('change', control.changePayload(e));
       },
-    );
-    const handleKeydown = (e: KeyboardEvent) => {
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        toggle(e);
-      }
-    };
-
-    handle(host, 'click', toggle);
-    handle(host, 'keydown', handleKeydown);
-    // Pre-register the slot signal during setup so its onMount runs before ours,
-    // ensuring slots.has('default').value returns the correct value inside onMount.
-    slots.has('default');
-    onMount(() => {
-      host.setAttribute('role', 'switch');
-
-      if (!props.disabled.value) host.setAttribute('tabindex', '0');
-
-      // labelRef.value is only available after the template has been rendered
-      const label = labelRef.value;
-
-      if (slots.has('default').value && label) {
-        const labelId = createId('switch-label');
-
-        label.id = labelId;
-        aria({ labelledby: labelId });
-      }
-
-      effect(() => {
-        const helperEl = helperRef.value;
-
-        if (!helperEl) return;
-
-        helperEl.id = helperId;
-        helperEl.textContent = props.error.value || props.helper.value || '';
-        helperEl.hidden = !props.error.value && !props.helper.value;
-
-        if (props.error.value) helperEl.setAttribute('role', 'alert');
-        else helperEl.removeAttribute('role');
-      });
+      value: props.value,
     });
-    aria({
-      checked: () => String(checkedSignal.value),
-      describedby: () => (props.error.value || props.helper.value ? helperId : null),
+
+    const a11y = useA11yControl(host, {
+      checked: () => (control.checked.value ? 'true' : 'false'),
+      helperId: undefined,
+      helperText: () => props.error.value || props.helper.value,
       invalid: () => !!props.error.value,
-    });
-    watch(props.disabled, (disabled) => {
-      if (disabled) host.removeAttribute('tabindex');
-      else host.setAttribute('tabindex', '0');
+      labelId: undefined,
+      labelSlot: slots as any,
+      role: 'switch',
     });
 
-    return html`<div class="switch-wrapper" part="switch">
+    reflect({
+      checked: () => control.checked.value,
+      classMap: () => ({
+        'is-checked': control.checked.value,
+        'is-disabled': !!props.disabled.value,
+      }),
+      onClick: (e: Event) => control.toggle(e),
+      onKeydown: (e: Event) => {
+        const ke = e as KeyboardEvent;
+
+        if (ke.key === ' ' || ke.key === 'Enter') {
+          ke.preventDefault();
+          control.toggle(e);
+        }
+      },
+      tabindex: () => (props.disabled.value ? undefined : 0),
+    });
+
+    return html`
+      <div class="switch-wrapper" part="switch">
         <div class="switch-track" part="track">
           <div class="switch-thumb" part="thumb"></div>
         </div>
       </div>
-      <span class="label" part="label" ref=${labelRef}><slot></slot></span>
-      <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`;
+      <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
+      <div
+        class="helper-text"
+        part="helper-text"
+        data-a11y-helper
+        id="${a11y.helperId}"
+        aria-live="polite"
+        hidden></div>
+    `;
   },
-  {
-    formAssociated: true,
-    styles: [
-      ...formControlMixins,
-      sizeVariantMixin({
-        lg: {
-          fontSize: 'var(--text-base)',
-          gap: 'var(--size-3)',
-          height: 'var(--size-7)',
-          thumbSize: 'var(--size-6)',
-          width: 'var(--size-14)',
-        },
-        sm: {
-          fontSize: 'var(--text-xs)',
-          gap: 'var(--size-2)',
-          height: 'var(--size-5)',
-          thumbSize: 'var(--size-4)',
-          width: 'var(--size-9)',
-        },
-      }),
-      componentStyles,
-    ],
-  },
-);
+  styles: [...formControlMixins, sizeVariantMixin(SWITCH_SIZE_PRESET), componentStyles],
+  tag: 'bit-switch',
+});

@@ -1,4 +1,4 @@
-import { computed, define, html, signal, type Signal, watch, defineProps, defineEmits } from '@vielzeug/craftit';
+import { computed, defineComponent, html, signal, typed, watch } from '@vielzeug/craftit/core';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -57,14 +57,16 @@ type ChipBaseProps = {
   variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
 };
 
+type BitChipMode = 'static' | 'removable' | 'selectable' | 'action';
+
 /** Read-only presentation chip */
 type StaticChipProps = {
-  mode?: 'static';
+  mode?: Extract<BitChipMode, 'static'>;
 };
 
 /** Removable chip mode */
 type RemovableChipProps = {
-  mode: 'removable';
+  mode: Extract<BitChipMode, 'removable'>;
 };
 
 /** Selectable chip mode */
@@ -73,12 +75,18 @@ type SelectableChipProps = {
   checked?: boolean | undefined;
   /** Initial checked state for uncontrolled `mode="selectable"` */
   'default-checked'?: boolean;
-  mode: 'selectable';
+  mode: Extract<BitChipMode, 'selectable'>;
 };
 
 /** Action chip mode — behaves like a button, fires a click event without maintaining state */
 type ActionChipProps = {
-  mode: 'action';
+  mode: Extract<BitChipMode, 'action'>;
+};
+
+type BitChipComponentProps = ChipBaseProps & {
+  checked?: boolean | undefined;
+  'default-checked'?: boolean;
+  mode?: BitChipMode;
 };
 
 export type BitChipEvents = {
@@ -156,56 +164,54 @@ export type BitChipProps = ChipBaseProps &
  * </bit-chip>
  * ```
  */
-export const CHIP_TAG = define(
-  'bit-chip',
-  ({ host }) => {
-    const props = defineProps<BitChipProps>({
-      'aria-label': { default: undefined },
-      checked: { default: undefined },
-      color: { default: undefined },
-      'default-checked': { default: false, type: Boolean },
-      disabled: { default: false, type: Boolean },
-      mode: { default: 'static' },
-      rounded: { default: undefined },
-      size: { default: undefined },
-      value: { default: undefined },
-      variant: { default: undefined },
-    });
-    const emit = defineEmits<BitChipEvents>();
-
-    // Typed accessor for checked — only present on SelectableChipProps, not in the full union keyof.
-    const checkedProp = (props as Record<'checked', Signal<boolean | undefined>>)['checked'];
-    // Typed accessor for aria-label — hyphenated key falls outside the union's keyof.
-    const ariaLabelProp = (props as Record<'aria-label', Signal<string | undefined>>)['aria-label'];
+export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
+  props: {
+    'aria-label': typed<BitChipComponentProps['aria-label']>(undefined),
+    checked: typed<BitChipComponentProps['checked']>(undefined, {
+      parse: (value) => (value == null ? undefined : value !== 'false'),
+    }),
+    color: typed<BitChipComponentProps['color']>(undefined),
+    'default-checked': typed<boolean>(false),
+    disabled: typed<boolean>(false),
+    mode: typed<BitChipMode>('static'),
+    rounded: typed<BitChipComponentProps['rounded']>(undefined),
+    size: typed<BitChipComponentProps['size']>(undefined),
+    value: typed<BitChipComponentProps['value']>(undefined),
+    variant: typed<BitChipComponentProps['variant']>(undefined),
+  },
+  setup({ emit, host, props }) {
+    const checkedProp = props.checked;
+    const ariaLabelProp = props['aria-label'];
     // ============================================
     // State Management
     // ============================================
-    // Capture controlled mode at setup-time — once controlled, always controlled.
-    // If the `checked` attribute is present in the initial HTML, the consumer drives state.
-    const isControlled = host.hasAttribute('checked');
+    // Once a checked prop is provided, treat the chip as controlled for the rest of its lifecycle.
+    const isControlled = signal(checkedProp.value !== undefined);
     // Internal tracking for uncontrolled selectable chips; seeded from default-checked.
-    const checkedState = signal(!isControlled && host.hasAttribute('default-checked'));
-    // Effective checked value — reactive to props.checked attribute changes in controlled mode.
+    const checkedState = signal(!isControlled.value && props['default-checked'].value);
+
+    watch(checkedProp, (value) => {
+      if (value !== undefined) {
+        isControlled.value = true;
+      }
+    });
+
+    // Effective checked value — reactive to checked prop changes in controlled mode.
     const isChecked = computed(() => {
       if (props.mode.value !== 'selectable') return false;
 
-      if (isControlled) {
-        void checkedProp.value; // subscribe so we re-evaluate when the attribute changes
-
-        return host.hasAttribute('checked');
+      if (isControlled.value) {
+        return checkedProp.value ?? false;
       }
 
       return checkedState.value;
     });
 
-    // Sync the [checked] attribute for CSS selectors in uncontrolled mode.
-    // Controlled chips have the attribute managed externally by the consumer.
+    // Sync the [checked] attribute for CSS selectors across controlled and uncontrolled modes.
     watch(
       [isChecked, props.mode],
       () => {
-        if (!isControlled) {
-          host.toggleAttribute('checked', props.mode.value === 'selectable' && isChecked.value);
-        }
+        host.toggleAttribute('checked', props.mode.value === 'selectable' && isChecked.value);
       },
       { immediate: true },
     );
@@ -227,7 +233,7 @@ export const CHIP_TAG = define(
 
       const nextChecked = !isChecked.value;
 
-      if (!isControlled) {
+      if (!isControlled.value) {
         checkedState.value = nextChecked;
       }
 
@@ -307,27 +313,26 @@ export const CHIP_TAG = define(
       }}
     `;
   },
-  {
-    styles: [
-      colorThemeMixin,
-      disabledStateMixin(),
-      roundedVariantMixin,
-      sizeVariantMixin({
-        lg: {
-          '--_font-size': 'var(--text-sm)',
-          '--_gap': 'var(--size-1-5)',
-          '--_padding-x': 'var(--size-3)',
-          '--_padding-y': 'var(--size-1)',
-        },
-        sm: {
-          '--_font-size': 'var(--text-xs)',
-          '--_gap': 'var(--size-0-5)',
-          '--_padding-x': 'var(--size-2-5)',
-          '--_padding-y': 'var(--size-px)',
-        },
-      }),
-      forcedColorsMixin,
-      componentStyles,
-    ],
-  },
-);
+  styles: [
+    colorThemeMixin,
+    disabledStateMixin(),
+    roundedVariantMixin,
+    sizeVariantMixin({
+      lg: {
+        '--_font-size': 'var(--text-sm)',
+        '--_gap': 'var(--size-1-5)',
+        '--_padding-x': 'var(--size-3)',
+        '--_padding-y': 'var(--size-1)',
+      },
+      sm: {
+        '--_font-size': 'var(--text-xs)',
+        '--_gap': 'var(--size-0-5)',
+        '--_padding-x': 'var(--size-2-5)',
+        '--_padding-y': 'var(--size-px)',
+      },
+    }),
+    forcedColorsMixin,
+    componentStyles,
+  ],
+  tag: 'bit-chip',
+});

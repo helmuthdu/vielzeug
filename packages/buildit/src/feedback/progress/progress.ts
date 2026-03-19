@@ -1,4 +1,4 @@
-import { computed, define, html, watch, defineProps } from '@vielzeug/craftit';
+import { computed, defineComponent, html, watch } from '@vielzeug/craftit/core';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -67,22 +67,20 @@ export type BitProgressProps = {
  * <bit-progress indeterminate color="primary" label="Loading…"></bit-progress>
  * ```
  */
-export const PROGRESS_TAG = define(
-  'bit-progress',
-  ({ host }) => {
-    const props = defineProps<BitProgressProps>({
-      color: { default: undefined },
-      'floating-label': { default: undefined },
-      indeterminate: { default: false },
-      label: { default: undefined },
-      max: { default: 100 },
-      size: { default: undefined },
-      title: { default: undefined },
-      type: { default: 'linear' },
-      value: { default: 0 },
-      'value-text': { default: undefined },
-    });
-
+export const PROGRESS_TAG = defineComponent<BitProgressProps>({
+  props: {
+    color: { default: undefined },
+    'floating-label': { default: undefined },
+    indeterminate: { default: false },
+    label: { default: undefined },
+    max: { default: 100 },
+    size: { default: undefined },
+    title: { default: undefined },
+    type: { default: 'linear' },
+    value: { default: 0 },
+    'value-text': { default: undefined },
+  },
+  setup({ host, props }) {
     // The SVG circle circumference for a radius of 45 (viewBox 0 0 100 100)
     const RADIUS = 45;
     const CIRC = 2 * Math.PI * RADIUS; // ~282.7
@@ -166,7 +164,6 @@ export const PROGRESS_TAG = define(
             </div>`}
     `;
   },
-  {
-    styles: [colorThemeMixin, forcedColorsMixin, reducedMotionMixin, componentStyles],
-  },
-);
+  styles: [colorThemeMixin, forcedColorsMixin, reducedMotionMixin, componentStyles],
+  tag: 'bit-progress',
+});

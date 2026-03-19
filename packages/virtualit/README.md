@@ -137,6 +137,13 @@ virt.invalidate();
 
 ## API
 
+### Package Exports
+
+```ts
+export { Virtualizer, createVirtualizer } from '@vielzeug/virtualit';
+export type { ScrollToIndexOptions, VirtualItem, VirtualizerOptions } from '@vielzeug/virtualit';
+```
+
 ### `createVirtualizer(el, options)`
 
 Creates and immediately attaches a `Virtualizer` to `el`.
@@ -177,6 +184,16 @@ interface VirtualItem {
 }
 ```
 
+## Documentation
+
+Full docs at **[vielzeug.dev/virtualit](https://vielzeug.dev/virtualit)**
+
+| | |
+|---|---|
+| [Usage Guide](https://vielzeug.dev/virtualit/usage) | Fixed/variable heights, overscan, scrolling |
+| [API Reference](https://vielzeug.dev/virtualit/api) | Complete type signatures |
+| [Examples](https://vielzeug.dev/virtualit/examples) | Real-world virtual list patterns |
+
 ## License
 
-MIT
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

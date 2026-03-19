@@ -1,4 +1,4 @@
-import { computed, define, html, prop } from '@vielzeug/craftit';
+import { computed, defineComponent, html } from '@vielzeug/craftit/core';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -70,16 +70,22 @@ export type BitBadgeProps = {
  * <bit-badge color="warning" variant="flat">Beta</bit-badge>
  * ```
  */
-export const BADGE_TAG = define(
-  'bit-badge',
-  () => {
-    const countProp = prop('count', undefined as number | undefined);
-    const maxProp = prop('max', undefined as number | undefined);
-    const ariaLabelProp = prop('aria-label', undefined as string | undefined);
-
+export const BADGE_TAG = defineComponent<BitBadgeProps>({
+  props: {
+    anchor: { default: undefined },
+    ariaLabel: { default: undefined },
+    color: { default: undefined },
+    count: { default: undefined },
+    dot: { default: false },
+    max: { default: undefined },
+    rounded: { default: undefined },
+    size: { default: undefined },
+    variant: { default: undefined },
+  },
+  setup({ props }) {
     const label = computed(() => {
-      const count = countProp.value != null ? Number(countProp.value) : undefined;
-      const max = maxProp.value != null ? Number(maxProp.value) : undefined;
+      const count = props.count.value != null ? Number(props.count.value) : undefined;
+      const max = props.max.value != null ? Number(props.max.value) : undefined;
 
       if (count === undefined || Number.isNaN(count)) return undefined;
 
@@ -88,24 +94,23 @@ export const BADGE_TAG = define(
       return String(count);
     });
 
-    return html`<span class="badge" part="badge" aria-label=${() => ariaLabelProp.value}>
+    return html`<span class="badge" part="badge" aria-label=${() => props.ariaLabel.value}>
         <slot name="icon"></slot>
         <span ?hidden=${() => label.value == null}>${() => label.value}</span>
         <slot ?hidden=${() => label.value != null}></slot>
       </span>
       <slot name="target"></slot>`;
   },
-  {
-    styles: [
-      colorThemeMixin,
-      roundedVariantMixin,
-      frostVariantMixin('.badge'),
-      sizeVariantMixin({
-        lg: { '--_padding-x': 'var(--size-2-5)', '--_padding-y': 'var(--size-1)', fontSize: 'var(--text-sm)' },
-        md: { '--_padding-x': 'var(--size-2)', '--_padding-y': 'var(--size-0-5)', fontSize: 'var(--text-xs)' },
-        sm: { '--_padding-x': 'var(--size-1-5)', '--_padding-y': 'var(--size-px)', fontSize: 'var(--text-xs)' },
-      }),
-      componentStyles,
-    ],
-  },
-);
+  styles: [
+    colorThemeMixin,
+    roundedVariantMixin,
+    frostVariantMixin('.badge'),
+    sizeVariantMixin({
+      lg: { '--_padding-x': 'var(--size-2-5)', '--_padding-y': 'var(--size-1)', fontSize: 'var(--text-sm)' },
+      md: { '--_padding-x': 'var(--size-2)', '--_padding-y': 'var(--size-0-5)', fontSize: 'var(--text-xs)' },
+      sm: { '--_padding-x': 'var(--size-1-5)', '--_padding-y': 'var(--size-px)', fontSize: 'var(--text-xs)' },
+    }),
+    componentStyles,
+  ],
+  tag: 'bit-badge',
+});

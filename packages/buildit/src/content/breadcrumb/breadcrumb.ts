@@ -1,4 +1,4 @@
-import { define, effect, html, onMount, onSlotChange, defineProps } from '@vielzeug/craftit';
+import { defineComponent, effect, html, onMount, onSlotChange } from '@vielzeug/craftit/core';
 
 // ============================================
 // Types
@@ -30,15 +30,13 @@ import itemStyles from './breadcrumb-item.css?inline';
  * <bit-breadcrumb-item active>Current Page</bit-breadcrumb-item>
  * ```
  */
-export const BREADCRUMB_ITEM_TAG = define(
-  'bit-breadcrumb-item',
-  () => {
-    const props = defineProps<BitBreadcrumbItemProps>({
-      active: { default: false },
-      href: { default: '' },
-      separator: { default: '/' },
-    });
-
+export const BREADCRUMB_ITEM_TAG = defineComponent<BitBreadcrumbItemProps>({
+  props: {
+    active: { default: false },
+    href: { default: '' },
+    separator: { default: '/' },
+  },
+  setup({ props }) {
     return html`
       <li class="item" role="listitem">
         <span class="separator" part="separator" aria-hidden="true">${() => props.separator.value || '/'}</span>
@@ -54,10 +52,9 @@ export const BREADCRUMB_ITEM_TAG = define(
       </li>
     `;
   },
-  {
-    styles: [itemStyles],
-  },
-);
+  styles: [itemStyles],
+  tag: 'bit-breadcrumb-item',
+});
 
 // ============================================
 // Breadcrumb Component
@@ -80,23 +77,13 @@ import componentStyles from './breadcrumb.css?inline';
  * </bit-breadcrumb>
  * ```
  */
-export const BREADCRUMB_TAG = define(
-  'bit-breadcrumb',
-  ({ host }) => {
-    const props = defineProps<BitBreadcrumbProps>({
-      label: { default: 'Breadcrumb' },
-      separator: { default: '' },
-    });
-
-    const getItems = () => {
-      const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
-
-      if (!slot) return [];
-
-      return slot
-        .assignedElements({ flatten: true })
-        .filter((el) => el.tagName.toLowerCase() === 'bit-breadcrumb-item') as HTMLElement[];
-    };
+export const BREADCRUMB_TAG = defineComponent<BitBreadcrumbProps>({
+  props: {
+    label: { default: 'Breadcrumb' },
+    separator: { default: '' },
+  },
+  setup({ host, props }) {
+    const getItems = (): HTMLElement[] => Array.from(host.getElementsByTagName('bit-breadcrumb-item')) as HTMLElement[];
     const syncSeparatorVar = () => {
       const sep = props.separator.value;
 
@@ -123,6 +110,8 @@ export const BREADCRUMB_TAG = define(
 
     onMount(() => {
       onSlotChange('default', syncItems);
+      // Ensure initial slotted items are normalized once on mount.
+      syncItems();
     });
     effect(syncSeparatorVar);
     effect(syncItems);
@@ -135,7 +124,6 @@ export const BREADCRUMB_TAG = define(
       </nav>
     `;
   },
-  {
-    styles: [componentStyles],
-  },
-);
+  styles: [componentStyles],
+  tag: 'bit-breadcrumb',
+});

@@ -3,62 +3,13 @@ title: Fetchit — Usage Guide
 description: HTTP client, query client, standalone mutations, interceptors, and error handling for Fetchit.
 ---
 
-## Fetchit Usage Guide
+# Fetchit Usage Guide
 
 ::: tip New to Fetchit?
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
 
 [[toc]]
-
-## Why Fetchit?
-
-Native `fetch` is excellent but low-level. Fetchit adds base URL, typed path parameters, a query cache, and structured error handling with virtually no overhead.
-
-```ts
-// Before — raw fetch
-const res = await fetch(`https://api.example.com/users/${userId}`);
-if (!res.ok) throw new Error(`HTTP ${res.status}`);
-const user: User = await res.json();
-
-// After — Fetchit
-const api = createApi({ baseUrl: 'https://api.example.com' });
-const user = await api.get<User>('/users/{id}', { params: { id: userId } });
-```
-
-| Feature               | Fetchit                                       | axios          | ky     |
-| --------------------- | --------------------------------------------- | -------------- | ------ |
-| Bundle size           | <PackageInfo package="fetchit" type="size" /> | ~30 kB         | ~5 kB  |
-| Built on              | fetch                                         | XMLHttpRequest | fetch  |
-| Type-safe path params | ✅                                            | Manual         | Manual |
-| Query cache           | ✅                                            | ❌             | ❌     |
-| Standalone mutations  | ✅                                            | ❌             | ❌     |
-| Zero dependencies     | ✅                                            | ❌             | ❌     |
-
-## Import
-
-```ts
-import { createApi, createQuery, createMutation, HttpError } from '@vielzeug/fetchit';
-// Types
-import type {
-  ApiClient,
-  QueryClient,
-  Mutation,
-  QueryState,
-  MutationState,
-  QueryStatus,
-  QueryKey,
-  QueryFnContext,
-  QueryOptions,
-  RetryOptions,
-  HttpRequestConfig,
-  ApiClientOptions,
-  QueryClientOptions,
-  MutationOptions,
-  Interceptor,
-  Unsubscribe,
-} from '@vielzeug/fetchit';
-```
 
 ## HTTP Client
 
@@ -109,7 +60,7 @@ const user = await api.get<User>('/users/{id}', { params: { id: 42 } });
 
 // Multiple params — TypeScript enforces all are provided
 const comment = await api.get<Comment>('/posts/{postId}/comments/{commentId}', {
-  params: { postId: 1, postId: 1, commentId: 99 },
+  params: { postId: 1, commentId: 99 },
 });
 // → GET /posts/1/comments/99
 ```
@@ -142,7 +93,7 @@ api.headers({ Authorization: undefined });
 
 ### Request Deduplication
 
-GET, HEAD, and OPTIONS requests are **always** deduplicated — concurrent identical in-flight calls share one network request.
+GET, HEAD, OPTIONS, and DELETE requests are **always** deduplicated — concurrent identical in-flight calls share one network request.
 
 ```ts
 // Only ONE network call is made
@@ -225,19 +176,19 @@ const user = await qc.query({
 });
 ```
 
-| Option        | Type                                  | Default     | Description                                                       |
-| ------------- | ------------------------------------- | ----------- | ----------------------------------------------------------------- |
-| `key`         | `QueryKey`                            | required    | Cache identifier; serialized with stable key ordering             |
-| `fn`          | `(ctx: QueryFnContext) => Promise<T>` | required    | Data-fetching function; receives `{ key, signal }`                |
-| `staleTime`   | `number`                              | `0`         | ms served from cache before a background refresh                  |
-| `gcTime`      | `number`                              | `300000`    | ms after last observer is removed before the entry is GC'd        |
-| `enabled`     | `boolean`                             | `true`      | Pass `false` to skip execution and return cached data             |
-| `retry`       | `number \| false`                     | `1`         | Number of retry attempts (`false` = no retries)                   |
-| `retryDelay`  | `number \| (attempt) => number`       | exponential | Delay between retries                                             |
-| `shouldRetry` | `(error, attempt) => boolean`         | —           | Return `false` to skip retrying for a specific error (e.g. `4xx`) |
-| `onSuccess`   | `(data: T) => void`                   | —           | Called after a successful fetch; not called on cache hits         |
-| `onError`     | `(error: Error) => void`              | —           | Called after a failed fetch (not called when aborted)             |
-| `onSettled`   | `(data, error) => void`               | —           | Always called after the fetch completes; not called on cache hits |
+| Option        | Type                                  | Default     | Description                                                                |
+| ------------- | ------------------------------------- | ----------- | -------------------------------------------------------------------------- |
+| `key`         | `QueryKey`                            | required    | Cache identifier; serialized with stable key ordering                      |
+| `fn`          | `(ctx: QueryFnContext) => Promise<T>` | required    | Data-fetching function; receives `{ key, signal }`                         |
+| `staleTime`   | `number`                              | `0`         | ms served from cache before the next `query()` call refetches              |
+| `gcTime`      | `number`                              | `300000`    | ms after last observer is removed before the entry is GC'd                 |
+| `enabled`     | `boolean`                             | `true`      | Pass `false` to skip execution and return cached data if present           |
+| `retry`       | `number \| false`                     | `1`         | Number of retry attempts (`false` = no retries)                            |
+| `retryDelay`  | `number \| (attempt) => number`       | exponential | Delay between retries                                                      |
+| `shouldRetry` | `(error, attempt) => boolean`         | —           | Return `false` to skip retrying for a specific error (e.g. `4xx`)          |
+| `onSuccess`   | `(data: T) => void`                   | —           | Called after a successful fetch; not called on cache hits                  |
+| `onError`     | `(error: Error) => void`              | —           | Called after a failed fetch (not called when aborted)                      |
+| `onSettled`   | `(data, error) => void`               | —           | Called after a triggered fetch settles; not called on cache/inflight reuse |
 
 ::: tip Retry semantics
 `retry: 3` means **3 retries** (4 total attempts: 1 initial + 3 retries). `retry: false` means 1 attempt only.
@@ -333,8 +284,14 @@ Object property order doesn't matter in query keys — Fetchit sorts keys before
 
 ```ts
 // These produce the same cache entry
-await qc.query({ key: ['users', { page: 1, role: 'admin' }], fn: ... });
-await qc.query({ key: ['users', { role: 'admin', page: 1 }], fn: ... });
+await qc.query({
+  key: ['users', { page: 1, role: 'admin' }],
+  fn: ({ signal }) => api.get('/users', { query: { page: 1, role: 'admin' }, signal }),
+});
+await qc.query({
+  key: ['users', { role: 'admin', page: 1 }],
+  fn: ({ signal }) => api.get('/users', { query: { page: 1, role: 'admin' }, signal }),
+});
 ```
 
 ### Dispose

@@ -5,78 +5,72 @@
 
 # attempt
 
-Execute a function with advanced error handling and retry logic.
+Execute an async function with retry + timeout handling and receive a discriminated result.
 
 ## Signature
 
 ```typescript
-function attempt<T extends Fn, R = Awaited<ReturnType<T>>>(
-  fn: T,
-  options?: {
-    identifier?: string;
-    retries?: number;
-    silent?: boolean;
-    timeout?: number;
-  },
-): Promise<R | undefined>;
+type AttemptOptions = {
+  onError?: (err: unknown) => void;
+  timeout?: number;
+  times?: number;
+};
+
+type AttemptResult<R> = { ok: true; value: R } | { error: unknown; ok: false };
+
+function attempt<T extends Fn, R = Awaited<ReturnType<T>>>(fn: T, options?: AttemptOptions): Promise<AttemptResult<R>>;
 ```
 
 ## Parameters
 
-- `fn` – The function to be executed
-- `options.identifier` – Custom identifier for logging purposes
-- `options.retries` – Number of retry attempts if the function fails (default: 0)
-- `options.silent` – If true, suppresses error logging (default: false)
-- `options.timeout` – Timeout in milliseconds for function execution (default: 7000)
+- `fn` - Function to execute.
+- `options.times` - Total attempts including the first (default: `3`).
+- `options.timeout` - Per-attempt timeout in ms (default: `7000`).
+- `options.onError` - Called once when all attempts fail.
 
 ## Returns
 
-Promise resolving to the function result or `undefined` if all attempts failed.
+A promise that resolves to:
+
+- `{ ok: true, value }` on success
+- `{ ok: false, error }` on failure
 
 ## Examples
 
-### Basic Usage
+### Basic usage
 
 ```typescript
 import { attempt } from '@vielzeug/toolkit';
-const unreliableFunction = async () => {
+
+const result = await attempt(async () => {
   if (Math.random() < 0.7) throw new Error('Random failure');
   return 'Success!';
-};
-const result = await attempt(unreliableFunction, {
-  retries: 3,
-  timeout: 5000,
-  silent: false,
 });
-console.log(result); // 'Success!' or undefined
-```
 
-### With Custom Identifier
-
-```typescript
-import { attempt } from '@vielzeug/toolkit';
-async function fetchUserData(userId: string) {
-  const response = await fetch(`/api/users/${userId}`);
-  return response.json();
+if (result.ok) {
+  console.log(result.value);
+} else {
+  console.error(result.error);
 }
-const userData = await attempt(() => fetchUserData('123'), {
-  identifier: 'fetchUserData',
-  retries: 5,
-  timeout: 10000,
-});
 ```
 
-### Silent Mode
+### Retry + timeout
 
 ```typescript
 import { attempt } from '@vielzeug/toolkit';
-// Don't log errors
-const result = await attempt(riskyOperation, { silent: true, retries: 2 });
-if (!result) {
-  console.log('Operation failed after all attempts');
+
+const user = await attempt(() => fetch('/api/user').then((r) => r.json()), {
+  times: 5,
+  timeout: 10_000,
+  onError: (err) => console.error('user fetch failed', err),
+});
+
+if (user.ok) {
+  console.log(user.value);
 }
 ```
 
 ## Related
 
-- [retry](./retry.md) – Retry operations with exponential backoff
+- [retry](./retry.md) - Retry async operations with backoff
+- [race](./race.md) - Enforce minimum loading durations

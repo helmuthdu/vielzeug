@@ -1,15 +1,17 @@
 ---
 title: Eventit — Typed event bus for TypeScript
-description: Zero-dependency typed event bus with async/await, streaming, AbortSignal, and test utilities. Works anywhere TypeScript runs.
+description: Zero-dependency typed event bus with subscribe/emit, wait(), async streams, AbortSignal support, and test helpers.
 ---
 
 <PackageBadges package="eventit" />
 
-<img src="/logo-eventit.svg" alt="Eventit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-eventit.svg" alt="Eventit logo" width="156" class="logo-highlight"/>
 
 # Eventit
 
-**Eventit** is a zero-dependency typed event bus: define your event map once, then emit, subscribe, await, and stream events with full TypeScript inference — no magic strings, no runtime surprises.
+`@vielzeug/eventit` is a zero-dependency typed event bus. Define your event map once and get type-safe `emit`, `on`, `once`, `wait`, and `events` APIs with payload inference.
+
+<!-- Search keywords: event bus, pub-sub, typed message dispatch. -->
 
 ## Installation
 
@@ -32,59 +34,100 @@ yarn add @vielzeug/eventit
 ## Quick Start
 
 ```ts
-import { createBus, BusDisposedError } from '@vielzeug/eventit';
-import type { Bus, BusOptions, EventMap, EventKey, Listener, Unsubscribe } from '@vielzeug/eventit';
+import { BusDisposedError, createBus } from '@vielzeug/eventit';
 
 type AppEvents = {
   'user:login': { userId: string; email: string };
   'user:logout': void;
-  'cart:updated': { items: CartItem[]; total: number };
 };
 
 const bus = createBus<AppEvents>();
 
-// Subscribe
-const unsub = bus.on('user:login', ({ userId }) => {
-  loadUserProfile(userId);
+bus.on('user:login', ({ userId }) => {
+  console.log('Logged in:', userId);
 });
 
-// Emit
 bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
-bus.emit('user:logout'); // void event — no payload
+bus.emit('user:logout');
 
-// Await the next emit
-const { userId } = await bus.wait('user:login');
+const nextLogin = await bus.wait('user:login');
 
-// Stream all future emits
-for await (const { items } of bus.events('cart:updated')) {
-  renderCart(items);
+for await (const payload of bus.events('user:login', AbortSignal.timeout(5_000))) {
+  console.log(payload.email);
 }
 
-// Auto-cleanup with `using`
-{
-  using bus = createBus<AppEvents>();
-  bus.on('user:login', handler);
-} // bus.dispose() called automatically at block exit
+try {
+  await bus.wait('user:login', AbortSignal.timeout(500));
+} catch (err) {
+  if (err instanceof BusDisposedError) {
+    console.log('Bus was disposed');
+  }
+}
 ```
+
+## Why Eventit?
+
+Manual event emitters lack TypeScript inference across event names and payloads, and offer no async patterns — `await`ing an event or streaming all future emits requires bespoke wiring.
+
+```ts
+// Before — manual typed event bus
+type Handlers = { 'user:login': (p: { userId: string }) => void };
+const listeners = new Map<keyof Handlers, Set<Function>>();
+function on<K extends keyof Handlers>(event: K, fn: Handlers[K]) {
+  /* ... */
+}
+function emit<K extends keyof Handlers>(event: K, payload: Parameters<Handlers[K]>[0]) {
+  /* ... */
+}
+// No await, no stream, no AbortSignal, no error isolation
+
+// After — Eventit
+import { createBus } from '@vielzeug/eventit';
+const bus = createBus<AppEvents>();
+bus.on('user:login', ({ userId }) => loadProfile(userId));
+bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
+const session = await bus.wait('user:login'); // async one-shot
+for await (const event of bus.events('cart:updated')) {
+} // async stream
+```
+
+| Feature              | Eventit                                       | mitt     | EventEmitter3 |
+| -------------------- | --------------------------------------------- | -------- | ------------- |
+| Bundle size          | <PackageInfo package="eventit" type="size" /> | ~200 B   | ~1.5 kB       |
+| TypeScript inference | ✅ Full                                       | ⚠️ Basic | ⚠️ Basic      |
+| Async/await (`wait`) | ✅                                            | ❌       | ❌            |
+| Async streaming      | ✅                                            | ❌       | ❌            |
+| AbortSignal          | ✅                                            | ❌       | ❌            |
+| Error isolation      | ✅                                            | ❌       | ❌            |
+| Zero dependencies    | ✅                                            | ✅       | ✅            |
+
+**Use Eventit when** you need a fully-typed event bus with async patterns (`wait`, `events` generator) and AbortSignal-based lifecycle management.
+
+**Consider mitt** if you only need a bare-minimum synchronous pub/sub with the smallest possible footprint.
 
 ## Features
 
-- **Typed event maps** — define all events and payloads once; TypeScript enforces them everywhere
-- **Void events** — emit signal events cleanly: `bus.emit('refresh')`
-- **`once`** — auto-unsubscribing one-shot listeners
-- **`wait`** — `await bus.wait('event')` resolves on the next emit
-- **`events`** — async generator for pull-based streaming; terminates cleanly on dispose or abort
-- **AbortSignal** — pass any `AbortSignal` to `on`, `once`, `wait`, or `events` for lifecycle-driven cleanup
-- **`[Symbol.dispose]`** — supports the `using` keyword for automatic teardown
-- **Error isolation** — optional `onError` keeps a failing listener from crashing others; `event` and `payload` are fully typed
-- **`listenerCount`** — query active listener counts per-event or globally
-- **`BusDisposedError`** — typed error class for `instanceof`-safe rejection handling
+- **Typed event maps** for strict event/payload correctness
+- **Persistent + one-shot listeners** with `on` and `once`
+- **Async event coordination** with `wait`
+- **Async streaming** with `events`
+- **Abort-aware APIs** for lifecycle-safe teardown
+- **`onEmit` and `onError` hooks** for logging and resilience
+- **`dispose` and `[Symbol.dispose]`** for deterministic cleanup
+- **Testing helper** via `@vielzeug/eventit/test`
 - **Zero dependencies** — <PackageInfo package="eventit" type="size" /> gzipped, <PackageInfo package="eventit" type="dependencies" /> dependencies
 
-## Next Steps
+## Compatibility
 
-|                           |                                                   |
-| ------------------------- | ------------------------------------------------- |
-| [Usage Guide](./usage.md) | Subscribing, async patterns, AbortSignal, testing |
-| [API Reference](./api.md) | Complete type signatures and method documentation |
-| [Examples](./examples.md) | Real-world event bus patterns and recipes         |
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ✅      |
+| SSR         | ✅      |
+| Deno        | ✅      |
+
+## See Also
+
+- [Stateit](/stateit/)
+- [Routeit](/routeit/)
+- [Workit](/workit/)

@@ -115,6 +115,11 @@
     min-width: 0;
   }
 
+  .chips-row[hidden],
+  .trigger-value[hidden] {
+    display: none;
+  }
+
   .trigger-value {
     flex: 1;
     min-width: 0;
@@ -122,7 +127,7 @@
     text-overflow: ellipsis;
     font-size: var(--_font-size);
     line-height: 1;
-    color: var(--_theme-content);
+    color: var(--color-contrast-900);
     white-space: nowrap;
     transition: color var(--transition-fast);
   }
@@ -215,6 +220,12 @@
     transform: translateY(0);
   }
 
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
   /* ========================================
        Option Items
        ======================================== */
@@ -233,7 +244,7 @@
       color var(--transition-fast);
   }
 
-  /* Truncate long labels so options always stay single-line (fixed virtualizer row height). */
+  /* Truncate long labels to keep option rows compact and readable. */
   .option > span:first-child {
     flex: 1;
     min-width: 0;
@@ -247,13 +258,13 @@
   }
 
   .option[data-focused]:not([data-disabled]) {
-    color: var(--_theme-content);
+    color: var(--_theme-base);
     background: color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100));
   }
 
   .option[data-selected] {
     font-weight: var(--font-medium);
-    color: var(--_theme-content);
+    color: var(--_theme-base);
     background: color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50));
   }
 
@@ -271,7 +282,7 @@
     display: inline-flex;
     flex-shrink: 0;
     margin-inline-start: auto;
-    color: var(--_theme-content);
+    color: var(--_theme-base);
     opacity: 0;
     transition: opacity var(--transition-fast);
   }
@@ -399,19 +410,11 @@
   }
 
   :host([variant='bordered']) .trigger-value {
-    color: var(--_theme-content);
-  }
-
-  :host([variant='bordered'][color='secondary']) .trigger-value {
-    color: var(--_theme-base);
+    color: var(--color-contrast-900);
   }
 
   :host([variant='bordered']) .trigger-placeholder {
-    color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
-  }
-
-  :host([variant='bordered'][color='secondary']) .trigger-placeholder {
-    color: color-mix(in srgb, var(--_theme-base) 45%, transparent);
+    color: var(--_placeholder);
   }
 
   :host([variant='bordered']) .field:hover {

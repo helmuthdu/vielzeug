@@ -1,14 +1,12 @@
 import {
   computed,
   createContext,
-  define,
+  defineComponent,
   html,
   typed,
-  useProvide,
+  provide,
   type ReadonlySignal,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -99,21 +97,18 @@ export type BitFormProps = {
  * </bit-form>
  * ```
  */
-export const FORM_TAG = define(
-  'bit-form',
-  ({ host }) => {
-    const props = defineProps<BitFormProps>({
-      disabled: typed<boolean>(false),
-      novalidate: typed<boolean>(false),
-      orientation: typed<BitFormProps['orientation']>('vertical'),
-      size: typed<BitFormProps['size']>(undefined),
-      validateOn: typed<BitFormProps['validateOn']>(undefined),
-      variant: typed<BitFormProps['variant']>(undefined),
-    });
-    const emit = defineEmits<BitFormEvents>();
-
+export const FORM_TAG = defineComponent<BitFormProps, BitFormEvents>({
+  props: {
+    disabled: typed<boolean>(false),
+    novalidate: typed<boolean>(false),
+    orientation: typed<BitFormProps['orientation']>('vertical'),
+    size: typed<BitFormProps['size']>(undefined),
+    validateOn: typed<BitFormProps['validateOn']>(undefined),
+    variant: typed<BitFormProps['variant']>(undefined),
+  },
+  setup({ emit, host, props }) {
     // Provide context to all child bit-* form fields
-    useProvide(FORM_CTX, {
+    provide(FORM_CTX, {
       disabled: computed(() => Boolean(props.disabled.value)),
       size: props.size,
       validateOn: computed(() => props.validateOn.value ?? 'submit'),
@@ -147,8 +142,7 @@ export const FORM_TAG = define(
       </form>
     `;
   },
-  {
-    shadow: { delegatesFocus: false },
-    styles: [componentStyles],
-  },
-);
+  shadow: { delegatesFocus: false },
+  styles: [componentStyles],
+  tag: 'bit-form',
+});

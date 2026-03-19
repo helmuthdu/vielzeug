@@ -8,23 +8,28 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   computed,
-  define,
+  defineComponent,
   html,
   signal,
   typed,
+  type DefineComponentSetupContext,
   onMount,
   onCleanup,
   onError,
-  useProvide,
-  useInject,
+  provide,
+  inject,
   ref,
   refs,
-  defineEmits,
-  defineProps,
   onSlotChange,
 } from '..';
 import { each } from '../directives';
 import { mount } from '../test';
+
+const register = (
+  tag: string,
+  setup: Parameters<typeof defineComponent>[0]['setup'],
+  options: Omit<Parameters<typeof defineComponent>[0], 'setup' | 'tag'> = {},
+) => defineComponent({ setup, tag, ...options });
 
 describe('Regression Tests', () => {
   describe('Keyed Reconciliation', () => {
@@ -35,7 +40,7 @@ describe('Regression Tests', () => {
           items.value = [...items.value, { id: items.value.length + 1, value: 90 }];
         };
 
-        define(
+        register(
           'test-no-duplication',
           () => html`
             <div class="container">
@@ -68,7 +73,7 @@ describe('Regression Tests', () => {
           { id: 2, value: 'B' },
         ]);
 
-        define(
+        register(
           'test-reuse-nodes',
           () => html`
             <div>
@@ -108,7 +113,7 @@ describe('Regression Tests', () => {
           { id: 3, value: 'C' },
         ]);
 
-        define(
+        register(
           'test-remove-nodes',
           () => html`
             <div>
@@ -142,7 +147,7 @@ describe('Regression Tests', () => {
           { id: 3, text: 'Third' },
         ]);
 
-        define(
+        register(
           'test-reorder',
           () => html`
             <div>
@@ -173,7 +178,7 @@ describe('Regression Tests', () => {
       it('should prepend items without recreating existing ones', async () => {
         const items = signal([{ id: 1, text: 'Existing' }]);
 
-        define(
+        register(
           'test-prepend',
           () => html`
             <div>
@@ -201,7 +206,7 @@ describe('Regression Tests', () => {
       it('should handle empty to populated list', async () => {
         const items = signal<Array<{ id: number; text: string }>>([]);
 
-        define(
+        register(
           'test-empty-to-populated',
           () => html`
             <div>
@@ -230,7 +235,7 @@ describe('Regression Tests', () => {
           { id: 2, text: 'B' },
         ]);
 
-        define(
+        register(
           'test-populated-to-empty',
           () => html`
             <div>
@@ -253,7 +258,7 @@ describe('Regression Tests', () => {
       it('should handle single item updates', async () => {
         const items = signal([{ id: 1, text: 'Only' }]);
 
-        define(
+        register(
           'test-single-item',
           () => html`
             <div>
@@ -276,7 +281,7 @@ describe('Regression Tests', () => {
       it('should show fallback when empty', async () => {
         const items = signal<number[]>([]);
 
-        define(
+        register(
           'test-fallback-empty',
           () => html`
             <div>
@@ -299,7 +304,7 @@ describe('Regression Tests', () => {
       it('should hide fallback when items exist', async () => {
         const items = signal([1, 2]);
 
-        define(
+        register(
           'test-fallback-hidden',
           () => html`
             <div>
@@ -322,7 +327,7 @@ describe('Regression Tests', () => {
       it('should toggle fallback correctly', async () => {
         const items = signal([1]);
 
-        define(
+        register(
           'test-fallback-toggle',
           () => html`
             <div>
@@ -356,7 +361,7 @@ describe('Regression Tests', () => {
       it('should update element properties reactively', async () => {
         const value = signal('initial');
 
-        define('test-prop-bindings', () => html` <input type="text" value=${value} /> `);
+        register('test-prop-bindings', () => html` <input type="text" value=${value} /> `);
 
         const { flush, query } = await mount('test-prop-bindings');
 
@@ -372,7 +377,7 @@ describe('Regression Tests', () => {
       it('should handle boolean attributes correctly', async () => {
         const checked = signal(false);
 
-        define('test-boolean-attrs', () => html` <div class=${() => (checked.value ? 'checked' : '')}>State</div> `);
+        register('test-boolean-attrs', () => html` <div class=${() => (checked.value ? 'checked' : '')}>State</div> `);
 
         const { flush, query } = await mount('test-boolean-attrs');
 
@@ -392,7 +397,7 @@ describe('Regression Tests', () => {
         const placeholder = signal('Enter text');
         const maxLength = signal(10);
 
-        define(
+        register(
           'test-multi-props',
           () => html` <div data-value=${value} title=${placeholder} aria-label=${maxLength}></div> `,
         );
@@ -420,7 +425,7 @@ describe('Regression Tests', () => {
       it('should toggle CSS classes reactively', async () => {
         const completed = signal(false);
 
-        define(
+        register(
           'test-class-toggle',
           () => html` <div class="${() => (completed.value ? 'completed' : '')}">Task</div> `,
         );
@@ -440,7 +445,7 @@ describe('Regression Tests', () => {
         const active = signal(false);
         const disabled = signal(false);
 
-        define('test-multi-classes', () => {
+        register('test-multi-classes', () => {
           const classes = computed(() => {
             const cls = ['base'];
 
@@ -479,7 +484,7 @@ describe('Regression Tests', () => {
         const count = signal(0);
         const increment = () => (count.value += 1);
 
-        define(
+        register(
           'test-event-handler',
           () => html`
             <button @click=${increment}>Click</button>
@@ -504,7 +509,7 @@ describe('Regression Tests', () => {
           count.value += mode.value === 'add' ? 1 : -1;
         };
 
-        define(
+        register(
           'test-dynamic-handler',
           () => html`
             <button class="action" @click=${handleClick}>Action</button>
@@ -537,7 +542,7 @@ describe('Regression Tests', () => {
         const count = signal(0);
         const doubled = computed(() => count.value * 2);
 
-        define('test-computed-basic', () => html`<div class="result">${doubled}</div>`);
+        register('test-computed-basic', () => html`<div class="result">${doubled}</div>`);
 
         const { flush, query } = await mount('test-computed-basic');
 
@@ -553,7 +558,7 @@ describe('Regression Tests', () => {
         const b = computed(() => a.value * 2);
         const c = computed(() => b.value + 1);
 
-        define('test-nested-computed', () => html`<div>${c}</div>`);
+        register('test-nested-computed', () => html`<div>${c}</div>`);
 
         const { flush, query } = await mount('test-nested-computed');
 
@@ -569,7 +574,7 @@ describe('Regression Tests', () => {
         const b = signal(3);
         const sum = computed(() => a.value + b.value);
 
-        define('test-multi-deps', () => html`<div>${sum}</div>`);
+        register('test-multi-deps', () => html`<div>${sum}</div>`);
 
         const { flush, query } = await mount('test-multi-deps');
 
@@ -591,7 +596,7 @@ describe('Regression Tests', () => {
         const count = signal(0);
         const doubled = computed(() => count.value * 2);
 
-        define('test-computed-conditional', () => {
+        register('test-computed-conditional', () => {
           const content = computed(() => {
             if (show.value) {
               return html`<span class="value">${doubled}</span>`;
@@ -630,7 +635,7 @@ describe('Regression Tests', () => {
           return email.value.includes('@') ? '' : 'Invalid email';
         });
 
-        define(
+        register(
           'test-validation',
           () => html`
             <input
@@ -666,7 +671,7 @@ describe('Regression Tests', () => {
           return 'Strong';
         });
 
-        define(
+        register(
           'test-password-strength',
           () => html`
             <input
@@ -711,7 +716,7 @@ describe('Regression Tests', () => {
         return allItems.value.filter((t) => t.done);
       });
 
-      define(
+      register(
         'test-filter',
         () => html`
           <div>
@@ -750,7 +755,7 @@ describe('Regression Tests', () => {
       const filter = signal<'all' | 'active'>('active');
       const filtered = computed(() => (filter.value === 'all' ? items.value : items.value.filter((t) => !t.done)));
 
-      define(
+      register(
         'test-filter-update',
         () => html`
           <div>
@@ -782,7 +787,7 @@ describe('Regression Tests', () => {
           todos.value = todos.value.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
         };
 
-        define(
+        register(
           'test-toggle',
           () => html`
             <div>
@@ -824,7 +829,7 @@ describe('Regression Tests', () => {
           todos.value = todos.value.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
         };
 
-        define(
+        register(
           'test-multi-toggle',
           () => html`
             <div>
@@ -866,7 +871,7 @@ describe('Regression Tests', () => {
       const b = signal(0);
       const sum = computed(() => a.value + b.value);
 
-      define('test-batching', () => html`<div>${sum}</div>`);
+      register('test-batching', () => html`<div>${sum}</div>`);
 
       const { flush, query } = await mount('test-batching');
 
@@ -884,7 +889,7 @@ describe('Regression Tests', () => {
       const count = signal(0);
       let intervalId: number | undefined;
 
-      define('test-rapid', () => {
+      register('test-rapid', () => {
         intervalId = setInterval(() => {
           count.value++;
 
@@ -905,18 +910,18 @@ describe('Regression Tests', () => {
     });
   });
 
-  describe('defineProps & Global Helpers', () => {
-    it('should support shorthand defineProps with direct default values', async () => {
+  describe('defineComponent props & global helpers', () => {
+    it('should support direct default values in defineComponent prop schemas', async () => {
       const { query } = await mount(
-        () => {
-          const props = defineProps({
+        {
+          props: {
             active: typed(true, { reflect: false }),
-            count: 0,
-            label: 'default',
-          });
-
-          return html`<div class="count">${props.count}</div>
-            <div class="label">${props.label}</div>`;
+            count: { default: 0 },
+            label: { default: 'default' },
+          },
+          setup: ({ props }: DefineComponentSetupContext<any>) =>
+            html`<div class="count">${props.count}</div>
+              <div class="label">${props.label}</div>`,
         },
         {
           attrs: { count: '42', label: 'custom' },
@@ -930,19 +935,19 @@ describe('Regression Tests', () => {
     it('should support object defaults containing a default key via typed helper', async () => {
       const configDefault = { default: 'fallback', mode: 'dark' };
 
-      const { query } = await mount(() => {
-        const props = defineProps<{ config: { mode: string } }>({
+      const { query } = await mount({
+        props: {
           // Explicit typed wrapper prevents structural ambiguity with PropDef<T>.
           config: typed(configDefault, { reflect: false }),
-        });
-
-        return html`<div class="mode">${() => props.config.value.mode}</div>`;
+        },
+        setup: ({ props }: DefineComponentSetupContext<any>) =>
+          html`<div class="mode">${() => props.config.value.mode}</div>`,
       });
 
       expect(query('.mode')?.textContent).toBe('dark');
     });
 
-    it('should useProvide all lifecycle and utility functions as global exports', async () => {
+    it('should provide all lifecycle and utility functions as global exports', async () => {
       let elementInstance: HTMLElement | undefined;
 
       const { element } = await mount(({ host }) => {
@@ -951,12 +956,12 @@ describe('Regression Tests', () => {
         expect(onMount).toBeDefined();
         expect(onCleanup).toBeDefined();
         expect(onError).toBeDefined();
-        expect(useProvide).toBeDefined();
-        expect(useInject).toBeDefined();
+        expect(provide).toBeDefined();
+        expect(inject).toBeDefined();
         expect(ref).toBeDefined();
         expect(refs).toBeDefined();
-        expect(defineEmits).toBeDefined();
-        expect(defineProps).toBeDefined();
+        expect(defineComponent).toBeDefined();
+        expect(typed).toBeDefined();
 
         return html`<div id="test"></div>`;
       });
@@ -992,7 +997,7 @@ describe('Regression Tests', () => {
     it('onMount callbacks run after slot assignment', async () => {
       const onMountFn = vi.fn();
 
-      define('test-slot-timing-element', ({ host }) => {
+      register('test-slot-timing-element', ({ host }) => {
         onMount(() => {
           onMountFn();
 
@@ -1024,7 +1029,7 @@ describe('Regression Tests', () => {
     it('onSlotChange callback receives assigned elements', async () => {
       const onSlotChangeFn = vi.fn();
 
-      define('test-slot-change-element', () => {
+      register('test-slot-change-element', () => {
         onMount(() => {
           onSlotChange('default', (elements) => {
             onSlotChangeFn(elements.length);

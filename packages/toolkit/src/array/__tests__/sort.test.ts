@@ -98,12 +98,12 @@ describe('sort', () => {
     ];
 
     expect(sort(data, { age: 'desc', name: 'asc' })).toEqual([
-      { age: 30, name: 'Alice' },
-      { age: 25, name: 'Alice' },
-      { age: 30, name: 'Bob' },
-      { age: 25, name: 'Bob' },
       { age: 35, name: 'Charlie' },
+      { age: 30, name: 'Alice' },
+      { age: 30, name: 'Bob' },
       { age: 30, name: 'Charlie' },
+      { age: 25, name: 'Alice' },
+      { age: 25, name: 'Bob' },
     ]);
   });
 

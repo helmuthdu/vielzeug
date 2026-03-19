@@ -1,6 +1,6 @@
 import type { Signal } from '@vielzeug/stateit';
 
-import type { DirectiveDescriptor } from '../internal';
+import type { Directive } from '../core/internal';
 
 import { attr } from './attr';
 
@@ -25,9 +25,9 @@ import { attr } from './attr';
  * const size = signal('');
  * html`<select ${bind(size)}><option value="sm">S</option></select>`
  */
-export function bind(sig: Signal<boolean>): DirectiveDescriptor;
-export function bind(sig: Signal<string>): DirectiveDescriptor;
-export function bind(sig: Signal<boolean> | Signal<string>): DirectiveDescriptor {
+export function bind(sig: Signal<boolean>): Directive;
+export function bind(sig: Signal<string>): Directive;
+export function bind(sig: Signal<boolean> | Signal<string>): Directive {
   return {
     mount(el, context) {
       const input = el as HTMLInputElement;

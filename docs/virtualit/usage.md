@@ -3,65 +3,13 @@ title: Virtualit — Usage Guide
 description: Fixed and variable heights, measurement, programmatic scrolling, and framework integration for Virtualit.
 ---
 
-## Virtualit Usage Guide
+# Virtualit Usage Guide
 
 ::: tip New to Virtualit?
 Start with the [Overview](./index.md) for installation and a quick introduction, then come back here for in-depth patterns.
 :::
 
 [[toc]]
-
-## Why Virtualit?
-
-Rendering thousands of items as real DOM nodes freezes the browser. Each node consumes layout, paint, and memory — long lists need to render only what is visible in the viewport.
-
-```ts
-// Before — render all 10 000 items (browser freezes)
-list.innerHTML = '';
-items.forEach((item) => {
-  const el = document.createElement('div');
-  el.textContent = item.name;
-  list.appendChild(el); // 10 000 DOM nodes
-});
-
-// After — Virtualit (only ~15 visible rows in the DOM at any time)
-import { createVirtualizer } from '@vielzeug/virtualit';
-const virt = createVirtualizer(scrollEl, {
-  count: items.length,
-  estimateSize: 36,
-  onChange: (virtualItems, totalSize) => {
-    list.style.height = `${totalSize}px`;
-    list.innerHTML = '';
-    for (const { index, top } of virtualItems) {
-      const el = document.createElement('div');
-      el.style.cssText = `position:absolute;top:${top}px;height:36px;`;
-      el.textContent = items[index].name;
-      list.appendChild(el);
-    }
-  },
-});
-```
-
-| Feature            | Virtualit                                       | TanStack Virtual | react-window  |
-| ------------------ | ----------------------------------------------- | ---------------- | ------------- |
-| Bundle size        | <PackageInfo package="virtualit" type="size" /> | ~4 kB            | ~6 kB         |
-| Framework agnostic | ✅                                              | ✅               | React only    |
-| Variable heights   | ✅ Measured                                     | ✅               | ⚠️ Static     |
-| O(log n) lookup    | ✅                                              | ✅               | ✅            |
-| `using` support    | ✅                                              | ❌               | ❌            |
-| Zero dependencies  | ✅                                              | ✅               | ✅            |
-
-**Use Virtualit when** you need to render large lists in a framework-agnostic environment with precise control over item measurement and scroll position.
-
-**Consider TanStack Virtual** if you need its React/Vue/Solid adapters, horizontal virtualisation, or window-based (not container-based) virtualisation.
-
-## Import
-
-```ts
-import { createVirtualizer, Virtualizer } from '@vielzeug/virtualit';
-// Types
-import type { VirtualItem, VirtualizerOptions, ScrollToIndexOptions } from '@vielzeug/virtualit';
-```
 
 ## DOM Layout Requirements
 
@@ -86,6 +34,56 @@ A common alternative is to make the spacer and item container the same element:
   <div class="list" style="position:relative;"></div>
 </div>
 ```
+
+## DOM Module for Dropdowns and Listboxes
+
+If your component already has a dropdown scroll container and a listbox element, use `createDomVirtualList` from `@vielzeug/virtualit/dom`. It wraps the `Virtualizer` lifecycle and keeps the integration surface tiny.
+
+```ts
+import { createDomVirtualList } from '@vielzeug/virtualit/dom';
+
+type Option = { disabled?: boolean; label: string; value: string };
+
+let options: Option[] = [];
+
+const domVirtualList = createDomVirtualList<Option>({
+  clear: (listEl) => {
+    for (const el of Array.from(listEl.querySelectorAll('.option'))) el.remove();
+  },
+  estimateSize: 36,
+  getListElement: () => listboxEl,
+  getScrollElement: () => dropdownEl,
+  overscan: 4,
+  render: ({ items, listEl, virtualItems }) => {
+    for (const item of virtualItems) {
+      const opt = items[item.index];
+      if (!opt) continue;
+
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'option';
+      row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
+      row.textContent = opt.label;
+      row.disabled = !!opt.disabled;
+      row.addEventListener('click', () => selectOption(opt));
+      listEl.appendChild(row);
+    }
+  },
+});
+
+// Keep this in sync when options or open state change
+domVirtualList.update(options, isOpen);
+
+// Keyboard nav helper
+domVirtualList.scrollToIndex(focusedIndex, { align: 'auto' });
+
+// Component teardown
+domVirtualList.destroy();
+```
+
+::: tip Migration note
+If you previously managed `createVirtualizer`, attach/destroy, and list-height styles manually for a dropdown/listbox, you can move that glue code into `createDomVirtualList` and keep rendering logic in a single `render` callback.
+:::
 
 ## Fixed Heights
 
@@ -199,12 +197,12 @@ function setDensity(mode: 'compact' | 'comfortable') {
 
 Scroll to bring a specific item into view.
 
-| `align`             | Behaviour                                                                |
-| ------------------- | ------------------------------------------------------------------------ |
-| `'start'` (default) | Item top aligns with the container top                                   |
-| `'end'`             | Item bottom aligns with the container bottom                             |
-| `'center'`          | Item is centered in the viewport                                         |
-| `'auto'`            | No scroll if already fully visible; otherwise scrolls the minimum amount |
+| `align`            | Behaviour                                                                |
+| ------------------ | ------------------------------------------------------------------------ |
+| `'start'`          | Item top aligns with the container top                                   |
+| `'end'`            | Item bottom aligns with the container bottom                             |
+| `'center'`         | Item is centered in the viewport                                         |
+| `'auto'` (default) | No scroll if already fully visible; otherwise scrolls the minimum amount |
 
 ```ts
 // Jump to item 500 at the top of the viewport

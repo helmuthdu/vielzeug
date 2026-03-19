@@ -4,7 +4,7 @@ describe('bit-slider', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./slider');
+    await (() => import('./slider'))();
   });
 
   afterEach(() => {
@@ -188,7 +188,7 @@ describe('bit-slider accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./slider');
+    await (() => import('./slider'))();
   });
 
   afterEach(() => {

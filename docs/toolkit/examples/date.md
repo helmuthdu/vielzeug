@@ -1,6 +1,6 @@
 ---
-title: Toolkit — Date Examples
-description: Date utility examples for Toolkit.
+title: 'Toolkit — Date Examples'
+description: 'Date utility examples for Toolkit.'
 ---
 
 # Date Utilities
@@ -8,6 +8,14 @@ description: Date utility examples for Toolkit.
 Date utilities provide a set of helpers to work with dates and times in a type-safe, ergonomic way. Use these tools for checking expiration, generating date ranges, and finding precise time differences without the weight of large date libraries.
 
 ## 📚 Quick Reference
+
+## Problem
+
+Implement 📚 quick reference in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
 
 | Method                           | Description                                                       |
 | :------------------------------- | :---------------------------------------------------------------- |
@@ -134,3 +142,20 @@ const diffInDays = timeDiff(start, end, ['days']); // "1 day"
 - [timeDiff](./date/timeDiff.md)
 
 </div>
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Array Examples](./array.md)
+- [Async Examples](./async.md)
+- [Function Examples](./function.md)

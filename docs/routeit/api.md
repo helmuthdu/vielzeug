@@ -7,6 +7,14 @@ description: Complete API reference for Routeit with type signatures and paramet
 
 [[toc]]
 
+## API At a Glance
+
+| Symbol              | Purpose                                 | Execution mode | Common gotcha                                        |
+| ------------------- | --------------------------------------- | -------------- | ---------------------------------------------------- |
+| `createRouter()`    | Create typed router with route handlers | Sync           | Call start() once after route registration           |
+| `router.navigate()` | Navigate programmatically               | Async          | Await navigation when middleware performs async work |
+| `router.buildUrl()` | Build links from named routes/params    | Sync           | Provide all required params for typed route patterns |
+
 ## `createRouter(options?)`
 
 Factory function that creates a new `Router` instance.

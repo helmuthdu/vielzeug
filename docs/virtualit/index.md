@@ -5,11 +5,13 @@ description: Lightweight, framework-agnostic virtual list engine with variable h
 
 <PackageBadges package="virtualit" />
 
-<img src="/logo-virtualit.svg" alt="Virtualit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-virtualit.svg" alt="Virtualit logo" width="156" class="logo-highlight"/>
 
 # Virtualit
 
 **Virtualit** is a framework-agnostic virtual list engine. It renders only the items visible in the viewport plus a configurable overscan buffer, keeping the DOM small regardless of how many items are in your dataset.
+
+<!-- Search keywords: virtual list, windowed rendering, large list performance. -->
 
 ## Installation
 
@@ -59,6 +61,55 @@ const virt = createVirtualizer(scrollEl, {
 virt.destroy();
 ```
 
+## Entry Points
+
+- `@vielzeug/virtualit` — core `Virtualizer` and `createVirtualizer` primitives.
+- `@vielzeug/virtualit/dom` — `createDomVirtualList` helper for dropdown/listbox-style DOM integrations.
+
+## Why Virtualit?
+
+Rendering thousands of items as real DOM nodes freezes the browser. Each node consumes layout, paint, and memory — long lists need to render only what is visible in the viewport.
+
+```ts
+// Before — render all 10 000 items (browser freezes)
+list.innerHTML = '';
+items.forEach((item) => {
+  const el = document.createElement('div');
+  el.textContent = item.name;
+  list.appendChild(el); // 10 000 DOM nodes
+});
+
+// After — Virtualit (only ~15 visible rows in the DOM at any time)
+import { createVirtualizer } from '@vielzeug/virtualit';
+const virt = createVirtualizer(scrollEl, {
+  count: items.length,
+  estimateSize: 36,
+  onChange: (virtualItems, totalSize) => {
+    list.style.height = `${totalSize}px`;
+    list.innerHTML = '';
+    for (const { index, top } of virtualItems) {
+      const el = document.createElement('div');
+      el.style.cssText = `position:absolute;top:${top}px;height:36px;`;
+      el.textContent = items[index].name;
+      list.appendChild(el);
+    }
+  },
+});
+```
+
+| Feature            | Virtualit                                       | TanStack Virtual | react-window |
+| ------------------ | ----------------------------------------------- | ---------------- | ------------ |
+| Bundle size        | <PackageInfo package="virtualit" type="size" /> | ~5 kB            | ~8 kB        |
+| Framework agnostic | ✅                                              | ✅               | React only   |
+| Variable heights   | ✅ Measured                                     | ✅               | ⚠️ Static    |
+| O(log n) lookup    | ✅                                              | ✅               | ✅           |
+| `using` support    | ✅                                              | ❌               | ❌           |
+| Zero dependencies  | ✅                                              | ✅               | ✅           |
+
+**Use Virtualit when** you need to render large lists in a framework-agnostic environment with precise control over item measurement and scroll position.
+
+**Consider TanStack Virtual** if you need its React/Vue/Solid adapters, horizontal virtualisation, or window-based (not container-based) virtualisation.
+
 ## Features
 
 - **Framework-agnostic** — callback-based `onChange` connects to any rendering layer (React, Vue, Svelte, Lit, vanilla DOM)
@@ -70,6 +121,21 @@ virt.destroy();
 - **Clamp-safe** — `scrollToIndex` silently clamps out-of-range indices rather than silently scrolling to the wrong position
 - **Disposable** — implements `[Symbol.dispose]` for `using` declarations
 - **Zero dependencies**
+
+## Compatibility
+
+| Environment | Support       |
+| ----------- | ------------- |
+| Browser     | ✅            |
+| Node.js     | ❌ (DOM only) |
+| SSR         | ❌ (DOM only) |
+| Deno        | ❌            |
+
+## Prerequisites
+
+- Browser DOM environment with scroll container measurement.
+- A fixed-height scroll container with `overflow: auto` and a positioned inner list layer.
+- Item renderer that applies absolute positioning from virtual item offsets.
 
 ## How It Works
 
@@ -84,3 +150,9 @@ With overscan=3: render items 0–8
 ```
 
 The offset array is rebuilt (O(n)) only when item heights change: on `measureElement()` flush, `count` change, `estimateSize` change, or `invalidate()`. Scroll and resize events recompute the visible window without rebuilding offsets.
+
+## See Also
+
+- [Buildit](/buildit/)
+- [Craftit](/craftit/)
+- [Dragit](/dragit/)

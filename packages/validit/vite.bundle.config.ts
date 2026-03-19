@@ -6,8 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Secondary build: bundles all validit internals into a single validit.{js,cjs}
- * file (zero external dependencies). Run after the main vite build so
- * it adds to dist/ rather than replacing it.
+ * file. Run after the main vite build so it adds to dist/ rather than replacing it.
  */
 export default defineConfig({
   build: {

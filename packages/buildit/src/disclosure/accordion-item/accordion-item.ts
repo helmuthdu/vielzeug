@@ -1,17 +1,15 @@
 import {
   computed,
-  define,
+  defineComponent,
   handle,
   html,
   typed,
-  useInject,
+  inject,
   onMount,
   ref,
   syncContextProps,
   watch,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -76,19 +74,16 @@ export type BitAccordionItemProps = {
  * ```
  */
 
-export const ACCORDION_ITEM_TAG = define(
-  'bit-accordion-item',
-  ({ host }) => {
-    const props = defineProps<BitAccordionItemProps>({
-      disabled: typed<boolean>(false),
-      expanded: typed<boolean>(false),
-      size: typed<BitAccordionItemProps['size']>(undefined),
-      variant: typed<BitAccordionItemProps['variant']>(undefined),
-    });
-    const emit = defineEmits<BitAccordionItemEvents>();
-
+export const ACCORDION_ITEM_TAG = defineComponent<BitAccordionItemProps, BitAccordionItemEvents>({
+  props: {
+    disabled: typed<boolean>(false),
+    expanded: typed<boolean>(false),
+    size: typed<BitAccordionItemProps['size']>(undefined),
+    variant: typed<BitAccordionItemProps['variant']>(undefined),
+  },
+  setup({ emit, host, props }) {
     // Inherit size/variant from a parent bit-accordion when present.
-    const accordionCtx = useInject(ACCORDION_CTX, undefined);
+    const accordionCtx = inject(ACCORDION_CTX, undefined);
 
     syncContextProps(accordionCtx, props, ['size', 'variant']);
 
@@ -163,7 +158,6 @@ export const ACCORDION_ITEM_TAG = define(
       </div>
     </details>`;
   },
-  {
-    styles: [coarsePointerMixin, styles],
-  },
-);
+  styles: [coarsePointerMixin, styles],
+  tag: 'bit-accordion-item',
+});

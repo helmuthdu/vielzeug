@@ -1,15 +1,17 @@
 ---
 title: I18nit — Internationalization for TypeScript
-description: Zero-dependency i18n library with type-safe keys, nested messages, variable interpolation, pluralisation, lazy loaders, formatting helpers, and reactive subscriptions.
+description: Type-safe i18n for TypeScript with interpolation, pluralization, async loaders, and Intl formatting helpers.
 ---
 
 <PackageBadges package="i18nit" />
 
-<img src="/logo-i18nit.svg" alt="I18nit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-i18nit.svg" alt="I18nit logo" width="156" class="logo-highlight"/>
 
 # I18nit
 
-**i18nit** is a minimal, zero-dependency internationalisation library for TypeScript. Define messages as typed objects, access them with dot-notation keys, interpolate variables, pluralise, load locale bundles on demand, and subscribe to locale changes — all with first-class TypeScript inference throughout.
+`@vielzeug/i18nit` is a zero-dependency internationalization library with typed keys, nested message trees, fallback chains, and async locale loading.
+
+<!-- Search keywords: localization runtime, translation catalog, i18n message formatting. -->
 
 ## Installation
 
@@ -35,52 +37,92 @@ yarn add @vielzeug/i18nit
 import { createI18n } from '@vielzeug/i18nit';
 
 const i18n = createI18n({
-  locale: 'en',
   fallback: 'en',
+  locale: 'en',
   messages: {
-    en: {
-      greeting: 'Hello, {name}!',
-      inbox: { zero: 'No messages', one: 'One message', other: '{count} messages' },
-      nav: { home: 'Home', about: 'About' },
-    },
     de: {
       greeting: 'Hallo, {name}!',
       inbox: { one: 'Eine Nachricht', other: '{count} Nachrichten' },
     },
+    en: {
+      greeting: 'Hello, {name}!',
+      inbox: { zero: 'No messages', one: 'One message', other: '{count} messages' },
+      nav: { home: 'Home' },
+    },
   },
 });
 
-i18n.t('greeting', { name: 'Alice' }); // "Hello, Alice!"
-i18n.t('nav.home');                     // "Home"
-i18n.t('inbox', { count: 0 });          // "No messages"
-i18n.t('inbox', { count: 3 });          // "3 messages"
+i18n.t('greeting', { name: 'Alice' });
+i18n.t('inbox', { count: 0 });
+i18n.t('inbox', { count: 3 });
 
 i18n.locale = 'de';
-i18n.t('greeting', { name: 'Alice' }); // "Hallo, Alice!"
-i18n.t('nav.home');                     // "Home" (fallback to 'en')
+i18n.t('nav.home'); // falls back to en
 ```
+
+## Why I18nit?
+
+Rolling your own i18n means hard-coded string lookups, no pluralisation, no type safety on translation keys, and no lazy loading for large locale bundles.
+
+```ts
+// Before — manual locale map (no type safety, no pluralisation)
+const messages = {
+  en: { greeting: 'Hello, {name}!', items: '{count} items' },
+  de: { greeting: 'Hallo, {name}!' },
+};
+let locale = 'en';
+function t(key: string, vars?: Record<string, unknown>) {
+  let msg = (messages as any)[locale]?.[key] ?? key; // no type safety
+  if (vars) msg = msg.replace(/{(\w+)}/g, (_: string, k: string) => String(vars[k] ?? k));
+  return msg;
+}
+
+// After — I18nit
+import { createI18n } from '@vielzeug/i18nit';
+const i18n = createI18n<typeof messages.en>({ locale: 'en', messages });
+i18n.t('greeting', { name: 'Alice' }); // typed key, typed vars
+i18n.t('items', { count: 3 }); // typed + pluralised
+```
+
+| Feature              | I18nit                                       | i18next    | typesafe-i18n |
+| -------------------- | -------------------------------------------- | ---------- | ------------- |
+| Bundle size          | <PackageInfo package="i18nit" type="size" /> | ~15 kB     | ~1 kB         |
+| Type-safe keys       | ✅                                           | ❌         | ✅            |
+| No code generation   | ✅                                           | ✅         | ❌            |
+| Pluralisation        | ✅ Intl.PluralRules                          | ✅         | ✅            |
+| Formatting helpers   | ✅ Intl-backed                               | ✅ Plugins | ❌            |
+| BCP47 locale cascade | ✅                                           | ✅         | ❌            |
+| Async loaders        | ✅                                           | ✅         | ✅            |
+| Zero dependencies    | ✅                                           | ❌         | ✅            |
+
+**Use I18nit when** you want type-safe translation keys with full TypeScript inference, pluralisation, and Intl-based formatting — without a code generation step.
+
+**Consider i18next** if you need its large plugin ecosystem (react-i18next, backend adapters) or are migrating an existing project.
 
 ## Features
 
-- **Type-safe keys** — `TranslationKeyParam<T>` resolves all valid dot-notation paths from your message object
-- **Variable interpolation** — `{var}`, `{obj.prop}`, `{arr[0]}`, `{arr|and}`, `{arr| - }` and more
-- **Pluralisation** — `Intl.PluralRules`-based with `zero/one/two/few/many/other` plural forms
-- **Nested messages** — deeply nested message trees accessed via dot-notation keys
-- **Full BCP47 cascade** — `sr-Latn-RS → sr-Latn → sr → fallback(s)` for missing keys
-- **Message management** — `add()` deep-merges, `replace()` swaps the catalog, `reload()` force-refreshes
-- **Batch updates** — `batch()` collapses multiple catalog changes into a single subscriber notification
-- **Async loading** — `registerLoader()` + `setLocale()` for on-demand locale bundles
-- **Scope & withLocale** — `scope(ns)` for key-prefix binding (namespace keys enforced at compile time), `withLocale(locale)` for locale-pinned translations
-- **Formatting helpers** — `number()`, `date()`, `list()`, `relative()`, `currency()` all backed by `Intl`
-- **Reactive subscriptions** — `subscribe(fn, immediate?)` + `dispose()` for locale-change notifications
-- **Diagnostics** — `onDiagnostic` receives typed `DiagnosticEvent` for subscriber errors and loader failures
-- **Disposable** — `using` and `await using` for deterministic resource release
-- **Lightweight** — <PackageInfo package="i18nit" type="size" /> gzipped, zero dependencies
+- Type-safe translation keys and namespace scoping
+- Dot-notation lookups with fallback chains
+- Interpolation for nested vars and array tokens
+- Plural messages driven by `Intl.PluralRules`
+- Async loading (`load`, `setLocale`, `registerLoader`, `reload`)
+- Catalog updates (`add`, `replace`) and notification batching (`batch`)
+- Locale-bound and namespace-bound views (`withLocale`, `scope`)
+- Intl formatting helpers (`number`, `date`, `list`, `relative`, `currency`)
+- Diagnostics (`onDiagnostic`) and custom missing-key handling (`onMissing`)
+- Lightweight runtime — <PackageInfo package="i18nit" type="size" /> gzipped, zero dependencies
 
-## Next Steps
+## Compatibility
 
-|                           |                                                                |
-| ------------------------- | -------------------------------------------------------------- |
-| [Usage Guide](./usage.md) | Messages, interpolation, pluralisation, batching, and patterns |
-| [API Reference](./api.md) | Complete type signatures and API documentation                 |
-| [Examples](./examples.md) | Real-world i18n recipes                                        |
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ✅      |
+| SSR         | ✅      |
+| Deno        | ✅      |
+
+## See Also
+
+- [Stateit](/stateit/)
+- [Craftit](/craftit/)
+- [Routeit](/routeit/)

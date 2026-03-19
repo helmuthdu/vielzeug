@@ -336,11 +336,11 @@ Prevent interaction with specific items.
 
 ### CSS Custom Properties
 
-| Property                   | Description      | Default        |
-| -------------------------- | ---------------- | -------------- |
-| `--accordion-item-bg`      | Background color | `transparent`  |
-| `--accordion-item-radius`  | Border radius    | `0.375rem`     |
-| `--accordion-item-padding` | Inner padding    | Size-dependent |
+| Property                      | Description                                       | Default                    |
+| ----------------------------- | ------------------------------------------------- | -------------------------- |
+| `--accordion-item-bg`         | Background color                                  | `transparent`              |
+| `--accordion-item-radius`     | Border radius                                     | `0.375rem`                 |
+| `--accordion-item-padding`    | Inner padding                                     | Size-dependent             |
 | `--accordion-item-transition` | Transition duration for expand/collapse animation | `var(--transition-normal)` |
 
 ## Accessibility

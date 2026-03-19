@@ -1,4 +1,4 @@
-import { createContext, define, html, useProvide, type ReadonlySignal, defineProps } from '@vielzeug/craftit';
+import { createContext, defineComponent, html, provide, type ReadonlySignal } from '@vielzeug/craftit/core';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -55,20 +55,18 @@ export type BitButtonGroupProps = {
  * <bit-button-group><bit-button>First</bit-button><bit-button>Second</bit-button></bit-button-group>
  * ```
  */
-export const BUTTON_GROUP_TAG = define(
-  'bit-button-group',
-  () => {
-    const props = defineProps<BitButtonGroupProps>({
-      attached: { default: false },
-      color: { default: undefined },
-      fullwidth: { default: false },
-      label: { default: undefined },
-      orientation: { default: undefined },
-      size: { default: undefined },
-      variant: { default: undefined },
-    });
-
-    useProvide(BUTTON_GROUP_CTX, {
+export const BUTTON_GROUP_TAG = defineComponent<BitButtonGroupProps>({
+  props: {
+    attached: { default: false },
+    color: { default: undefined },
+    fullwidth: { default: false },
+    label: { default: undefined },
+    orientation: { default: undefined },
+    size: { default: undefined },
+    variant: { default: undefined },
+  },
+  setup({ props }) {
+    provide(BUTTON_GROUP_CTX, {
       color: props.color,
       size: props.size,
       variant: props.variant,
@@ -80,7 +78,6 @@ export const BUTTON_GROUP_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [styles],
-  },
-);
+  styles: [styles],
+  tag: 'bit-button-group',
+});

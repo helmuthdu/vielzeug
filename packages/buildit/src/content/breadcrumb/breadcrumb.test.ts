@@ -2,6 +2,8 @@ import { type Fixture, mount } from '@vielzeug/craftit/test';
 
 describe('bit-breadcrumb', () => {
   let fixture: Fixture<HTMLElement>;
+  const getItems = (): HTMLElement[] =>
+    Array.from(fixture.element.getElementsByTagName('bit-breadcrumb-item')) as HTMLElement[];
 
   beforeAll(async () => {
     await import('./breadcrumb');
@@ -48,7 +50,7 @@ describe('bit-breadcrumb', () => {
         `,
       });
 
-      const items = fixture.element.querySelectorAll<HTMLElement>('bit-breadcrumb-item');
+      const items = getItems();
 
       expect(items[0].getAttribute('separator')).toBe('>');
       expect(items[0].hasAttribute('data-show-separator')).toBe(false);

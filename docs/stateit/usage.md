@@ -11,78 +11,6 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 
 [[toc]]
 
-## Why Stateit?
-
-Plain variables don't notify anything when they change. Framework-specific stores add boilerplate and coupling.
-
-```ts
-// Before — manual notification
-let count = 0;
-const listeners: Array<() => void> = [];
-function setCount(n: number) {
-  count = n;
-  listeners.forEach((fn) => fn());
-}
-
-// After — Stateit signals
-import { signal, effect } from '@vielzeug/stateit';
-const count = signal(0);
-effect(() => console.log(count.value)); // auto-tracks dependencies
-count.value = 1; // notifies automatically
-```
-
-| Feature                 | Stateit                                       | Zustand | Jotai  | Nanostores |
-| ----------------------- | --------------------------------------------- | ------- | ------ | ---------- |
-| Bundle size             | <PackageInfo package="stateit" type="size" /> | ~1.2 kB | ~3 kB  | ~1 kB      |
-| Framework-agnostic      | ✅                                            | ✅      | React  | ✅         |
-| Fine-grained reactivity | ✅                                            | ❌      | ✅     | ✅         |
-| Structured stores       | ✅                                            | ✅      | Manual | ❌         |
-| Zero dependencies       | ✅                                            | ❌      | ❌     | ✅         |
-
-**Use Stateit when** you need fine-grained reactivity without framework lock-in, or when building web components and vanilla JS apps.
-
-**Consider alternatives when** you need DevTools integration (Zustand), React Suspense support (Jotai), or server-side stores.
-
-## Import
-
-```ts
-import {
-  // Signals
-  signal,
-  computed,
-  writable,
-  derived,
-  effect,
-  watch,
-  batch,
-  untrack,
-  onCleanup,
-  readonly,
-  toValue,
-  nextValue,
-  isSignal,
-  // Stores
-  store,
-  isStore,
-  shallowEqual,
-  configureStateit,
-  // Types
-  type Signal,
-  type ReadonlySignal,
-  type ComputedSignal,
-  type WritableSignal,
-  type CleanupFn,
-  type EffectCallback,
-  type EffectOptions,
-  type Subscription,
-  type Disposable,
-  type WatchOptions,
-  type Store,
-  type StoreOptions,
-  type EqualityFn,
-} from '@vielzeug/stateit';
-```
-
 ## Signals
 
 A **signal** is the fundamental reactive primitive. It holds a single value and
@@ -591,7 +519,7 @@ Freezes the store. After `freeze()`:
 - `.value` is still readable
 - `s.frozen` returns `true`
 
-Always freeze stores that are no longer needed to avoid memory leaks.
+Use `freeze()` when you want to lock a store from further writes. It is not a replacement for disposing `effect()` / `watch()` subscriptions.
 
 ## Narrowing to Read-Only
 
@@ -665,9 +593,10 @@ const isOpen = store({ value: false });
 // ✅ computed instead of duplicating logic in effects
 const fullName = computed(() => `${firstName.value} ${lastName.value}`);
 
-// ❌ don't manually sync values in an effect
+// ❌ avoid manually syncing derived state in an effect
+const fullNameState = signal('');
 effect(() => {
-  fullName.value = firstName.value + ' ' + lastName.value;
+  fullNameState.value = `${firstName.value} ${lastName.value}`;
 });
 ```
 
@@ -675,11 +604,11 @@ effect(() => {
 
 ```ts
 // ✅ slice subscription — only fires when count changes
-const countSignal = userStore.select(s => s.count);
+const countSignal = userStore.select((s) => s.count);
 watch(countSignal, (count) => console.log('count:', count));
 
-// ❌ old pattern — no longer supported
-watch(userStore, s => s.count, (count) => ...);
+// ❌ old overload is no longer supported:
+// watch(userStore, (s) => s.count, (count) => { ... });
 ```
 
 ### 4. Batch Multiple Updates
@@ -770,16 +699,3 @@ it('computed updates reactively', () => {
   sq.dispose();
 });
 ```
-
-## Next Steps
-
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./api">API Reference</a> – Complete API documentation</li>
-      <li><a href="./examples">Examples</a> – Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
-    </ul>
-  </div>
-</div>

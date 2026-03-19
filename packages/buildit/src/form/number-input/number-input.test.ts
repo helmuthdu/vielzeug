@@ -1,10 +1,10 @@
-import { type Fixture, fire, mount } from '@vielzeug/craftit/test';
+import { fire, type Fixture, mount } from '@vielzeug/craftit/test';
 
 describe('bit-number-input', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./number-input');
+    await (() => import('./number-input'))();
     await import('../input/input');
     await import('../../actions/button/button');
   });
@@ -159,7 +159,9 @@ describe('bit-number-input', () => {
     });
 
     it('increase button is disabled when at max', async () => {
-      fixture = await mount('bit-number-input', { attrs: { max: '10', value: '10' } });
+      fixture = await mount('bit-number-input', {
+        attrs: { max: '10', value: '10' },
+      });
 
       const btn = fixture.query('[aria-label="Increase"]');
 
@@ -175,7 +177,12 @@ describe('bit-number-input', () => {
     });
 
     it('does not change value when disabled', async () => {
-      fixture = await mount('bit-number-input', { attrs: { disabled: '', value: '5' } });
+      fixture = await mount('bit-number-input', {
+        attrs: {
+          disabled: '',
+          value: '5',
+        },
+      });
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
@@ -209,7 +216,7 @@ describe('bit-number-input', () => {
     it('change event detail carries the new value', async () => {
       fixture = await mount('bit-number-input', { attrs: { value: '3' } });
 
-      let detail: { value: number | null } | undefined;
+      let detail: { originalEvent?: Event; value: number | null } | undefined;
 
       fixture.element.addEventListener('change', (e: Event) => {
         detail = (e as CustomEvent).detail;
@@ -222,6 +229,7 @@ describe('bit-number-input', () => {
       await fixture.flush();
 
       expect(detail?.value).toBe(4);
+      expect(detail?.originalEvent).toBeDefined();
     });
   });
 });
@@ -232,7 +240,7 @@ describe('bit-number-input accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./number-input');
+    await (() => import('./number-input'))();
     await import('../input/input');
     await import('../../actions/button/button');
   });

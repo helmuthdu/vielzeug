@@ -1,6 +1,6 @@
 ---
-title: Toolkit — Async Examples
-description: Async utility examples for Toolkit.
+title: 'Toolkit — Async Examples'
+description: 'Async utility examples for Toolkit.'
 ---
 
 # Async Utilities Examples
@@ -9,33 +9,41 @@ Comprehensive async/promise utilities for modern JavaScript applications.
 
 ## Overview
 
+## Problem
+
+Implement overview in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
+
 The async category provides utilities for managing promises, concurrency control, retries, timeouts, and other asynchronous patterns.
 
 ## attempt
 
-Execute a function with advanced error handling and retry logic.
+Execute a function with retry + timeout handling and inspect the discriminated result.
 
 ```typescript
 import { attempt } from '@vielzeug/toolkit';
 
-// Basic usage
-const unreliableFunction = async () => {
-  if (Math.random() < 0.7) throw new Error('Random failure');
-  return 'Success!';
-};
+const result = await attempt(
+  async () => {
+    if (Math.random() < 0.7) throw new Error('Random failure');
 
-const result = await attempt(unreliableFunction, {
-  retries: 3,
-  timeout: 5000,
-  silent: false,
-});
+    return 'Success!';
+  },
+  {
+    times: 3,
+    timeout: 5000,
+    onError: (err) => console.error('attempt failed', err),
+  },
+);
 
-// With identifier for logging
-await attempt(fetchUserData, {
-  identifier: 'fetchUserData',
-  retries: 5,
-  timeout: 10000,
-});
+if (result.ok) {
+  console.log(result.value);
+} else {
+  console.error(result.error);
+}
 ```
 
 ## defer
@@ -281,14 +289,22 @@ await waitFor(() => window.myGlobal !== undefined, {
 ### API Request with Retry and Timeout
 
 ```typescript
-import { retry, attempt } from '@vielzeug/toolkit';
+import { attempt } from '@vielzeug/toolkit';
 
 async function fetchWithRetry(url: string) {
-  return retry(() => attempt(() => fetch(url).then((r) => r.json()), { timeout: 5000 }), {
-    times: 3,
-    delay: 1000,
-    backoff: 2,
-  });
+  const result = await attempt(
+    async () => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      return res.json();
+    },
+    { times: 3, timeout: 10_000 },
+  );
+
+  if (!result.ok) throw result.error;
+
+  return result.value;
 }
 ```
 
@@ -365,3 +381,20 @@ async function waitForJobCompletion(jobId: string) {
   return fetch(`/api/jobs/${jobId}/result`).then((r) => r.json());
 }
 ```
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Array Examples](./array.md)
+- [Date Examples](./date.md)
+- [Function Examples](./function.md)

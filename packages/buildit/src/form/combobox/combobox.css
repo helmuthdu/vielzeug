@@ -6,6 +6,7 @@
     --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
     --_padding: var(--combobox-padding, var(--size-1-5) var(--size-3));
     --_radius: var(--combobox-radius, var(--rounded-md));
+    --_placeholder: var(--combobox-placeholder-color, var(--color-contrast-500));
     --_bg: var(--combobox-bg, var(--color-contrast-100));
     --_border-color: var(--combobox-border-color, var(--color-contrast-300));
 
@@ -110,6 +111,11 @@
     min-width: 0;
   }
 
+  .chips-list {
+    /* Wrapper exists for list diffing isolation; keep chip layout unchanged. */
+    display: contents;
+  }
+
   .input {
     flex: 1 1 4rem;
     min-width: 4rem;
@@ -118,10 +124,20 @@
     font-family: inherit;
     font-size: var(--_font-size);
     line-height: 1;
-    color: var(--_theme-content);
+    color: var(--color-contrast-900);
     outline: none;
     background: transparent;
     border: 0;
+  }
+
+  :host([multiple]) .input {
+    flex-basis: 6rem;
+    min-width: 6rem;
+  }
+
+  :host([multiple]) .chips-row:has(bit-chip) .input {
+    flex: 0 1 2.25rem;
+    min-width: 2.25rem;
   }
 
   .input::placeholder {
@@ -267,13 +283,13 @@
   }
 
   .option[data-focused]:not([data-disabled]) {
-    color: var(--_theme-content);
+    color: var(--_theme-base);
     background: color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100));
   }
 
   .option[data-selected] {
     font-weight: var(--font-medium);
-    color: var(--_theme-content);
+    color: var(--_theme-base);
     background: color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50));
   }
 
@@ -291,7 +307,7 @@
     display: inline-flex;
     flex-shrink: 0;
     margin-inline-start: auto;
-    color: var(--_theme-content);
+    color: var(--_theme-base);
     opacity: 0;
     transition: opacity var(--transition-fast);
   }
@@ -433,19 +449,11 @@
   }
 
   :host([variant='bordered']) .input {
-    color: var(--_theme-content);
-  }
-
-  :host([variant='bordered'][color='secondary']) .input {
-    color: var(--_theme-base);
+    color: var(--color-contrast-900);
   }
 
   :host([variant='bordered']) .input::placeholder {
-    color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
-  }
-
-  :host([variant='bordered'][color='secondary']) .input::placeholder {
-    color: color-mix(in srgb, var(--_theme-base) 45%, transparent);
+    color: var(--_placeholder);
   }
 
   :host([variant='bordered']) .field:hover {

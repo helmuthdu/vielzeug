@@ -1,6 +1,6 @@
 import { isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import type { HTMLResult } from '../internal';
+import type { HTMLResult } from '../core/internal';
 
 type Dep = unknown | ReadonlySignal<unknown>;
 

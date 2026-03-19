@@ -1,6 +1,6 @@
 ---
 title: Eventit — Usage Guide
-description: Event maps, subscribing, async/await, streaming, AbortSignal, error handling, disposal, and testing with Eventit.
+description: Event maps, subscriptions, wait(), async event streams, hooks, cleanup, and testing for @vielzeug/eventit.
 ---
 
 # Eventit Usage Guide
@@ -10,50 +10,6 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 :::
 
 [[toc]]
-
-## Why Eventit?
-
-Manual event emitters lack TypeScript inference across event names and payloads, and offer no async patterns — `await`ing an event or streaming all future emits requires bespoke wiring.
-
-```ts
-// Before — manual typed event bus
-type Handlers = { 'user:login': (p: { userId: string }) => void };
-const listeners = new Map<keyof Handlers, Set<Function>>();
-function on<K extends keyof Handlers>(event: K, fn: Handlers[K]) { /* ... */ }
-function emit<K extends keyof Handlers>(event: K, payload: Parameters<Handlers[K]>[0]) { /* ... */ }
-// No await, no stream, no AbortSignal, no error isolation
-
-// After — Eventit
-import { createBus } from '@vielzeug/eventit';
-const bus = createBus<AppEvents>();
-bus.on('user:login', ({ userId }) => loadProfile(userId));
-bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
-const session = await bus.wait('user:login');              // async one-shot
-for await (const event of bus.events('cart:updated')) { }  // async stream
-```
-
-| Feature              | Eventit                                       | mitt     | EventEmitter3 |
-| -------------------- | --------------------------------------------- | -------- | ------------- |
-| Bundle size          | <PackageInfo package="eventit" type="size" /> | ~200 B   | ~2 kB         |
-| TypeScript inference | ✅ Full                                       | ⚠️ Basic | ⚠️ Basic      |
-| Async/await (`wait`) | ✅                                            | ❌       | ❌            |
-| Async streaming      | ✅                                            | ❌       | ❌            |
-| AbortSignal          | ✅                                            | ❌       | ❌            |
-| Error isolation      | ✅                                            | ❌       | ❌            |
-| Zero dependencies    | ✅                                            | ✅       | ✅            |
-
-**Use Eventit when** you need a fully-typed event bus with async patterns (`wait`, `events` generator) and AbortSignal-based lifecycle management.
-
-**Consider mitt** if you only need a bare-minimum synchronous pub/sub with the smallest possible footprint.
-
-## Import
-
-```ts
-import { createBus } from '@vielzeug/eventit';
-
-// Types only
-import type { Bus, BusOptions, EventMap, EventKey, Listener, Unsubscribe } from '@vielzeug/eventit';
-```
 
 ## Event Maps
 
@@ -71,8 +27,6 @@ type AppEvents = {
 
 const bus = createBus<AppEvents>();
 ```
-
-Colons in event names (e.g. `'user:login'`) are a common convention for grouping related events. You can use any string key your team prefers.
 
 ## Subscribing
 
@@ -110,16 +64,6 @@ bus.on('user:login', handler, controller.signal);
 
 // Later — removes the listener automatically
 controller.abort();
-```
-
-This composes naturally with component lifecycle, request cancellation, and timeout signals:
-
-```ts
-// Unsubscribe after 10 seconds
-bus.on('data:loaded', handler, AbortSignal.timeout(10_000));
-
-// React/Vue: pass component signal
-bus.on('theme:change', applyTheme, componentSignal);
 ```
 
 ## Emitting Events
@@ -175,10 +119,6 @@ for await (const payload of bus.events('data:loaded', controller.signal)) {
 // loop ends here — no exception thrown on abort or dispose
 ```
 
-`events()` is pull-based — it only awaits the next value when the loop body is ready. This makes it safe for processing events at variable rates without accumulating a backlog.
-
-`events()` terminates **cleanly** — when the bus is disposed or the signal aborts, the `for await` loop exits without throwing. No `try/catch` is required:
-
 ## Error Handling
 
 By default, a listener that throws propagates the error to the `emit()` caller, and subsequent listeners for that emit do not run.
@@ -200,7 +140,7 @@ const bus = createBus<AppEvents>({
 - `event` — the event key that was being emitted
 - `payload` — the payload, typed to `T[K]` for the specific event
 
-## Emit Hook
+### `onEmit` hook
 
 `onEmit` is called before any listeners run on every emission. Both `event` and `payload` are **fully typed** to the specific event that fired — no casts needed.
 
@@ -214,7 +154,7 @@ const bus = createBus<AppEvents>({
 ```
 
 ::: tip
-`createTestBus` uses `onEmit` internally for recording payloads. You can still provide your own `onEmit` — it will be called after the recording hook.
+`createTestBus` composes your `onEmit` hook with its own recording behavior.
 :::
 
 ## Dispose & Cleanup

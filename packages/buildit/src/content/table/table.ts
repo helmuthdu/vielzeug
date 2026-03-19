@@ -1,4 +1,4 @@
-import { aria, define, effect, html, onMount, defineProps } from '@vielzeug/craftit';
+import { aria, defineComponent, effect, html, onMount } from '@vielzeug/craftit/core';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -183,19 +183,17 @@ function buildTable(
  * </bit-table>
  * ```
  */
-export const TABLE_TAG = define(
-  'bit-table',
-  ({ host }) => {
-    const props = defineProps<BitTableProps>({
-      bordered: { default: false, type: Boolean },
-      caption: { default: undefined },
-      color: { default: undefined },
-      loading: { default: false, type: Boolean },
-      size: { default: undefined },
-      sticky: { default: false, type: Boolean },
-      striped: { default: false, type: Boolean },
-    });
-
+export const TABLE_TAG = defineComponent<BitTableProps>({
+  props: {
+    bordered: { default: false, type: Boolean },
+    caption: { default: undefined },
+    color: { default: undefined },
+    loading: { default: false, type: Boolean },
+    size: { default: undefined },
+    sticky: { default: false, type: Boolean },
+    striped: { default: false, type: Boolean },
+  },
+  setup({ host, props }) {
     aria({
       busy: () => props.loading.value,
       label: () => props.caption.value ?? null,
@@ -241,7 +239,6 @@ export const TABLE_TAG = define(
 
     return html`<div class="scroll-container" part="scroll"></div>`;
   },
-  {
-    styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
-  },
-);
+  styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
+  tag: 'bit-table',
+});

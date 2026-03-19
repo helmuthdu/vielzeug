@@ -152,17 +152,17 @@
   }
 
   /* Error State */
-  :host([error]) .field {
+  :host([error]:not([error=''])) .field {
     border-color: var(--color-error);
   }
 
-  :host([error]) .field:focus-within {
+  :host([error]:not([error=''])) .field:focus-within {
     border-color: var(--color-error);
     box-shadow: var(--color-error-focus-shadow);
   }
 
-  :host([error]) .label-inset,
-  :host([error]) .label-outside {
+  :host([error]:not([error=''])) .label-inset,
+  :host([error]:not([error=''])) .label-outside {
     color: var(--color-error);
   }
 }

@@ -11,57 +11,6 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 
 [[toc]]
 
-## Why Buildit?
-
-Every project needs UI primitives. Buildit provides accessible web components that work natively anywhere HTML is rendered—no framework required.
-
-```html
-<!-- Before — roll your own button with ARIA -->
-<button class="btn btn-primary" role="button" aria-pressed="false" tabindex="0">
-  <span class="btn-spinner" aria-hidden="true"></span>
-  Save
-</button>
-
-<!-- After — Buildit -->
-<bit-button variant="primary" loading>Save</bit-button>
-```
-
-| Feature            | Buildit                                       | Shoelace | Material Web |
-| ------------------ | --------------------------------------------- | -------- | ------------ |
-| Bundle size        | <PackageInfo package="buildit" type="size" /> | ~145 kB  | ~200 kB      |
-| Built with         | Craftit                                       | Lit      | Lit          |
-| Accessible         | WCAG AA                                       | WCAG AA  | WCAG AA      |
-| Framework agnostic | ✅                                            | ✅       | ✅           |
-
-**Use Buildit when** you want accessible web components that match the Vielzeug design system without a heavy framework dependency.
-
-## Import
-
-Always import the global styles **first**, then register the components you need via their side-effect entry points:
-
-```ts
-// 1. Global styles — required
-import '@vielzeug/buildit/styles';
-
-// 2. Individual component registration (tree-shakeable)
-import '@vielzeug/buildit/button';
-import '@vielzeug/buildit/checkbox';
-import '@vielzeug/buildit/input';
-
-// 3. Optional: register everything at once
-import '@vielzeug/buildit';
-```
-
-The root package mostly re-exports shared symbols and types. For runtime registration, prefer subpath imports such as `@vielzeug/buildit/dialog` or `@vielzeug/buildit/select`.
-
-### Package entry points
-
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/buildit` | Register all components |
-| `@vielzeug/buildit/styles` | Global tokens and base styles |
-| `@vielzeug/buildit/types` | Shared TypeScript types |
-
 ## Basic Usage
 
 ### Using Components
@@ -82,13 +31,19 @@ Set attributes directly on the custom element:
 
 ### Event Handling
 
-Components emit DOM events. You can listen to them using standard `addEventListener`.
+Components emit DOM events. Many use familiar event names like `click`, `input`, `change`, `open`, and `close`. A few intentionally use namespaced custom events where collision avoidance matters, such as `bit-select` on `bit-menu`.
 
 ```javascript
 const button = document.querySelector('bit-button');
 
-button.addEventListener('click', (event) => {
-  console.log('Button clicked!', event.detail);
+button.addEventListener('click', () => {
+  console.log('Button clicked');
+});
+
+const input = document.querySelector('bit-input');
+
+input.addEventListener('change', (event) => {
+  console.log('Input value:', event.detail.value);
 });
 ```
 
@@ -123,11 +78,11 @@ Components that have distinct regions expose them as named slots:
 
 ### Icon Slots
 
-Many interactive components (e.g., `bit-button`, `bit-input`) expose `icon` slots for leading or trailing icons:
+Many interactive components expose leading or trailing content slots. For example, `bit-button` and `bit-input` use `prefix` and `suffix`:
 
 ```html
 <bit-button>
-  <svg slot="icon" aria-hidden="true"><!-- ... --></svg>
+  <svg slot="prefix" aria-hidden="true"><!-- ... --></svg>
   Submit
 </bit-button>
 
@@ -228,23 +183,9 @@ bit-button {
 </script>
 ```
 
-### 5. Listen to Custom Events
+### 5. Listen to Component Events
 
 ```js
 const input = document.querySelector('bit-input');
-input.addEventListener('bit-change', (e) => console.log(e.detail.value));
+input.addEventListener('change', (e) => console.log(e.detail.value));
 ```
-
-## Next Steps
-
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./api">API Reference</a> – Complete API documentation</li>
-      <li><a href="./frameworks">Framework Integration</a> – React, Vue, Svelte, Angular</li>
-      <li><a href="./theming">Theming</a> – Customize design tokens</li>
-      <li><a href="./examples">Examples</a> – Practical code examples</li>
-    </ul>
-  </div>
-</div>

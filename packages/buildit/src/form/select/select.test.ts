@@ -1,18 +1,19 @@
+import { html, signal } from '@vielzeug/craftit/core';
 import { type Fixture, mount, user } from '@vielzeug/craftit/test';
 
-const OPTIONS = `
+export const SELECT_OPTIONS = `
   <option value="apple">Apple</option>
   <option value="banana">Banana</option>
   <option value="cherry">Cherry</option>
 `;
 
-const OPTIONS_WITH_DISABLED = `
+export const SELECT_OPTIONS_WITH_DISABLED = `
   <option value="apple">Apple</option>
   <option value="banana" disabled>Banana</option>
   <option value="cherry">Cherry</option>
 `;
 
-const OPTIONS_WITH_GROUPS = `
+export const SELECT_OPTIONS_WITH_GROUPS = `
   <optgroup label="Fruits">
     <option value="apple">Apple</option>
     <option value="banana">Banana</option>
@@ -26,7 +27,7 @@ describe('bit-select', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./select');
+    await (() => import('./select'))();
   });
 
   afterEach(() => {
@@ -37,14 +38,14 @@ describe('bit-select', () => {
 
   describe('Rendering', () => {
     it('renders wrapper, field, trigger, and dropdown elements', async () => {
-      fixture = await mount('bit-select', { html: OPTIONS });
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
 
       expect(fixture.query('.field')).toBeTruthy();
       expect(fixture.query('.dropdown')).toBeTruthy();
     });
 
     it('renders option items in the dropdown', async () => {
-      fixture = await mount('bit-select', { html: OPTIONS });
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
@@ -55,7 +56,7 @@ describe('bit-select', () => {
     });
 
     it('renders optgroups when provided', async () => {
-      fixture = await mount('bit-select', { html: OPTIONS_WITH_GROUPS });
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS_WITH_GROUPS });
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
@@ -66,7 +67,10 @@ describe('bit-select', () => {
     });
 
     it('renders placeholder text when no value selected', async () => {
-      fixture = await mount('bit-select', { attrs: { placeholder: 'Select item' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { placeholder: 'Select item' },
+        html: SELECT_OPTIONS,
+      });
 
       const trigger = fixture.query('.trigger-value');
 
@@ -74,13 +78,19 @@ describe('bit-select', () => {
     });
 
     it('renders helper text when set', async () => {
-      fixture = await mount('bit-select', { attrs: { helper: 'Choose one' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { helper: 'Choose one' },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.query('.helper-text')).toBeTruthy();
     });
 
     it('renders error message with role="alert"', async () => {
-      fixture = await mount('bit-select', { attrs: { error: 'Selection required' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { error: 'Selection required' },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.query('.helper-text')).toBeTruthy();
     });
@@ -89,8 +99,30 @@ describe('bit-select', () => {
   // ─── Selection ───────────────────────────────────────────────────────────────
 
   describe('Selection', () => {
+    it('keeps chip row hidden in single mode before and after selection', async () => {
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+
+      const chipsRow = fixture.query<HTMLElement>('.chips-row');
+      const triggerValue = fixture.query<HTMLElement>('.trigger-value');
+
+      expect(chipsRow?.hasAttribute('hidden')).toBe(true);
+      expect(triggerValue?.hasAttribute('hidden')).toBe(false);
+
+      await user.click(fixture.query<HTMLElement>('.field')!);
+      await fixture.flush();
+      await user.click(fixture.query<HTMLElement>('[role="option"]')!);
+      await fixture.flush();
+
+      expect(chipsRow?.hasAttribute('hidden')).toBe(true);
+      expect(triggerValue?.hasAttribute('hidden')).toBe(false);
+      expect(fixture.queryAll('bit-chip').length).toBe(0);
+    });
+
     it('shows selected value label when value is set', async () => {
-      fixture = await mount('bit-select', { attrs: { value: 'apple' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { value: 'apple' },
+        html: SELECT_OPTIONS,
+      });
 
       const trigger = fixture.query('.trigger-value');
 
@@ -98,7 +130,7 @@ describe('bit-select', () => {
     });
 
     it('opens dropdown when clicked', async () => {
-      fixture = await mount('bit-select', { html: OPTIONS });
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
       expect(fixture.element.hasAttribute('open')).toBe(false);
 
       await user.click(fixture.query<HTMLElement>('.field')!);
@@ -107,7 +139,7 @@ describe('bit-select', () => {
     });
 
     it('closes dropdown after selecting an option', async () => {
-      fixture = await mount('bit-select', { html: OPTIONS });
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
       expect(fixture.element.hasAttribute('open')).toBe(true);
@@ -120,7 +152,7 @@ describe('bit-select', () => {
     });
 
     it('emits change event with value and originalEvent on selection', async () => {
-      fixture = await mount('bit-select', { html: OPTIONS });
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
 
       const changeHandler = vi.fn();
 
@@ -138,11 +170,12 @@ describe('bit-select', () => {
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
 
       expect(detail.value).toBeDefined();
+      expect(detail.labels).toEqual(['Apple']);
       expect(detail.originalEvent).toBeDefined();
     });
 
     it('skips disabled options when clicked', async () => {
-      fixture = await mount('bit-select', { html: OPTIONS_WITH_DISABLED });
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS_WITH_DISABLED });
 
       const changeHandler = vi.fn();
 
@@ -164,13 +197,19 @@ describe('bit-select', () => {
 
   describe('Multiple Selection', () => {
     it('allows multiple selections when multiple attribute is set', async () => {
-      fixture = await mount('bit-select', { attrs: { multiple: true }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { multiple: true },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.element.hasAttribute('multiple')).toBe(true);
     });
 
     it('emits change event with values array for multiple select', async () => {
-      fixture = await mount('bit-select', { attrs: { multiple: true }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { multiple: true },
+        html: SELECT_OPTIONS,
+      });
 
       const changeHandler = vi.fn();
 
@@ -191,7 +230,7 @@ describe('bit-select', () => {
     it('updates selected state immediately for grouped options while dropdown stays open', async () => {
       fixture = await mount('bit-select', {
         attrs: { multiple: true },
-        html: OPTIONS_WITH_GROUPS,
+        html: SELECT_OPTIONS_WITH_GROUPS,
       });
 
       await user.click(fixture.query<HTMLElement>('.field')!);
@@ -216,13 +255,19 @@ describe('bit-select', () => {
 
   describe('Disabled State', () => {
     it('reflects disabled on host', async () => {
-      fixture = await mount('bit-select', { attrs: { disabled: true }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { disabled: true },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
     });
 
     it('does not open when disabled', async () => {
-      fixture = await mount('bit-select', { attrs: { disabled: true }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { disabled: true },
+        html: SELECT_OPTIONS,
+      });
 
       await user.click(fixture.query<HTMLElement>('.field')!);
 
@@ -232,7 +277,10 @@ describe('bit-select', () => {
 
   describe('Required State', () => {
     it('reflects required on host', async () => {
-      fixture = await mount('bit-select', { attrs: { required: true }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { required: true },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.element.hasAttribute('required')).toBe(true);
     });
@@ -242,7 +290,10 @@ describe('bit-select', () => {
 
   describe('Error State', () => {
     it('renders error text in alert element', async () => {
-      fixture = await mount('bit-select', { attrs: { error: 'Required' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { error: 'Required' },
+        html: SELECT_OPTIONS,
+      });
 
       const errorEl = fixture.query('.helper-text');
 
@@ -254,13 +305,16 @@ describe('bit-select', () => {
 
   describe('Form Integration', () => {
     it('exposes name attribute', async () => {
-      fixture = await mount('bit-select', { attrs: { name: 'fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { name: 'fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.element.getAttribute('name')).toBe('fruit');
     });
 
     it('updates value attribute dynamically', async () => {
-      fixture = await mount('bit-select', { html: OPTIONS });
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
 
       await fixture.attr('value', 'banana');
 
@@ -268,7 +322,10 @@ describe('bit-select', () => {
     });
 
     it('renders chips after csv value update in multiple mode', async () => {
-      fixture = await mount('bit-select', { attrs: { multiple: true }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { multiple: true },
+        html: SELECT_OPTIONS,
+      });
 
       await fixture.attr('value', 'apple,banana');
 
@@ -278,7 +335,7 @@ describe('bit-select', () => {
     it('applies color to rendered chips in multiple mode', async () => {
       fixture = await mount('bit-select', {
         attrs: { color: 'primary', multiple: true, value: 'apple,banana' },
-        html: OPTIONS,
+        html: SELECT_OPTIONS,
       });
 
       await fixture.flush();
@@ -289,7 +346,7 @@ describe('bit-select', () => {
     it('updates rendered chip color when select color changes', async () => {
       fixture = await mount('bit-select', {
         attrs: { color: 'primary', multiple: true, value: 'apple,banana' },
-        html: OPTIONS,
+        html: SELECT_OPTIONS,
       });
 
       await fixture.flush();
@@ -302,7 +359,7 @@ describe('bit-select', () => {
     it('removes a chip when its remove button is clicked', async () => {
       fixture = await mount('bit-select', {
         attrs: { multiple: true, value: 'apple,banana' },
-        html: OPTIONS,
+        html: SELECT_OPTIONS,
       });
 
       const changeHandler = vi.fn();
@@ -321,6 +378,7 @@ describe('bit-select', () => {
       expect(fixture.queryAll('bit-chip').length).toBe(1);
       expect(changeHandler).toHaveBeenCalled();
       expect((changeHandler.mock.calls.at(-1)?.[0] as CustomEvent).detail.values).toEqual(['banana']);
+      expect((changeHandler.mock.calls.at(-1)?.[0] as CustomEvent).detail.originalEvent).toBeDefined();
     });
   });
 
@@ -331,7 +389,10 @@ describe('bit-select', () => {
 
     colors.forEach((color) => {
       it(`applies ${color} color`, async () => {
-        fixture = await mount('bit-select', { attrs: { color }, html: OPTIONS });
+        fixture = await mount('bit-select', {
+          attrs: { color },
+          html: SELECT_OPTIONS,
+        });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
       });
@@ -345,7 +406,10 @@ describe('bit-select', () => {
 
     sizes.forEach((size) => {
       it(`applies ${size} size`, async () => {
-        fixture = await mount('bit-select', { attrs: { size }, html: OPTIONS });
+        fixture = await mount('bit-select', {
+          attrs: { size },
+          html: SELECT_OPTIONS,
+        });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
       });
@@ -362,9 +426,55 @@ describe('bit-select', () => {
     });
 
     it('handles fullwidth attribute', async () => {
-      fixture = await mount('bit-select', { attrs: { fullwidth: true }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { fullwidth: true },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.element.hasAttribute('fullwidth')).toBe(true);
+    });
+
+    it('uses array options prop from structured binding and updates reactively', async () => {
+      fixture = await mount(() => {
+        const options = signal([
+          { disabled: false, label: 'Alpha', value: 'a' },
+          { disabled: false, label: 'Beta', value: 'b' },
+        ]);
+
+        return html`
+          <button @click=${() => (options.value = [{ disabled: false, label: 'Gamma', value: 'g' }])}>Update</button>
+          <bit-select options=${options}></bit-select>
+        `;
+      });
+
+      const select = fixture.query<HTMLElement>('bit-select')!;
+      const field = select.shadowRoot?.querySelector<HTMLElement>('.field');
+
+      await user.click(field as HTMLInputElement);
+      await fixture.flush();
+
+      expect(
+        Array.from(select.shadowRoot?.querySelectorAll<HTMLElement>('[role="option"]') ?? []).map((el) =>
+          el.textContent?.trim(),
+        ),
+      ).toEqual(['Alpha', 'Beta']);
+
+      await user.click(fixture.query<HTMLElement>('button')!);
+      await fixture.flush();
+
+      if (select.hasAttribute('open')) {
+        await user.click(field as HTMLInputElement);
+        await fixture.flush();
+      }
+
+      await user.click(field as HTMLInputElement);
+      await fixture.flush();
+
+      expect(
+        Array.from(select.shadowRoot?.querySelectorAll<HTMLElement>('[role="option"]') ?? []).map((el) =>
+          el.textContent?.trim(),
+        ),
+      ).toEqual(['Gamma']);
     });
   });
 });
@@ -373,7 +483,7 @@ describe('bit-select accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./select');
+    await (() => import('./select'))();
   });
 
   afterEach(() => {
@@ -384,19 +494,28 @@ describe('bit-select accessibility', () => {
 
   describe('Semantic Structure', () => {
     it('trigger field has role="combobox"', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.query('.field')?.getAttribute('role')).toBe('combobox');
     });
 
     it('dropdown has role="listbox"', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.query('.dropdown')?.getAttribute('role')).toBe('listbox');
     });
 
     it('each option item has role="option"', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
@@ -407,7 +526,10 @@ describe('bit-select accessibility', () => {
     });
 
     it('error message has role="alert" for live announcements', async () => {
-      fixture = await mount('bit-select', { attrs: { error: 'Selection required' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { error: 'Selection required' },
+        html: SELECT_OPTIONS,
+      });
 
       const errorEl = fixture.query('.helper-text');
 
@@ -420,13 +542,19 @@ describe('bit-select accessibility', () => {
 
   describe('WAI-ARIA Attributes', () => {
     it('trigger has aria-expanded="false" when closed', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.query('.field')?.getAttribute('aria-expanded')).toBe('false');
     });
 
     it('trigger has aria-expanded="true" when open', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       await user.click(fixture.query<HTMLElement>('.field')!);
 
@@ -434,7 +562,10 @@ describe('bit-select accessibility', () => {
     });
 
     it('trigger has aria-expanded="false" after selection', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
@@ -447,7 +578,10 @@ describe('bit-select accessibility', () => {
     });
 
     it('selected option has aria-selected="true"', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit', value: 'apple' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit', value: 'apple' },
+        html: SELECT_OPTIONS,
+      });
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       await fixture.flush();
@@ -458,7 +592,10 @@ describe('bit-select accessibility', () => {
     });
 
     it('trigger has aria-haspopup="listbox"', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       // The field uses role="combobox" which implies listbox popup semantics
       const field = fixture.query('.field');
@@ -471,13 +608,19 @@ describe('bit-select accessibility', () => {
 
   describe('Focus Management', () => {
     it('trigger is keyboard focusable (tabindex="0")', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.query('.field')?.getAttribute('tabindex')).toBe('0');
     });
 
     it('trigger is not focusable when disabled (tabindex="-1")', async () => {
-      fixture = await mount('bit-select', { attrs: { disabled: true, label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { disabled: true, label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       expect(fixture.query('.field')?.getAttribute('tabindex')).toBe('-1');
     });
@@ -487,7 +630,10 @@ describe('bit-select accessibility', () => {
 
   describe('Keyboard Navigation', () => {
     it('opens on Enter key press on trigger', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       await user.press(fixture.query<HTMLElement>('.field')!, 'Enter');
 
@@ -495,7 +641,10 @@ describe('bit-select accessibility', () => {
     });
 
     it('opens on Space key press on trigger', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       await user.press(fixture.query<HTMLElement>('.field')!, ' ');
 
@@ -503,7 +652,10 @@ describe('bit-select accessibility', () => {
     });
 
     it('closes on Escape key press', async () => {
-      fixture = await mount('bit-select', { attrs: { label: 'Fruit' }, html: OPTIONS });
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
 
       await user.click(fixture.query<HTMLElement>('.field')!);
       expect(fixture.element.hasAttribute('open')).toBe(true);

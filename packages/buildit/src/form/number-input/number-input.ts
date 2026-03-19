@@ -1,4 +1,4 @@
-import { computed, define, defineField, html, signal, watch, defineProps, defineEmits } from '@vielzeug/craftit';
+import { computed, defineComponent, defineField, html, signal, watch } from '@vielzeug/craftit/core';
 
 import type { DisablableProps, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
@@ -10,8 +10,8 @@ import '../input/input';
 import styles from './number-input.css?inline';
 
 export type BitNumberInputEvents = {
-  change: { value: number | null };
-  input: { value: number | null };
+  change: { originalEvent?: Event; value: number | null };
+  input: { originalEvent?: Event; value: number | null };
 };
 
 /** Number Input props */
@@ -65,8 +65,8 @@ export type BitNumberInputProps = ThemableProps &
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} placeholder - Input placeholder
  *
- * @fires change - On committed value change, with { value: number | null }
- * @fires input - On every keystroke, with { value: number | null }
+ * @fires change - On committed value change. detail: { value: number | null, originalEvent?: Event }
+ * @fires input - On every keystroke. detail: { value: number | null, originalEvent?: Event }
  *
  * @cssprop --number-input-height - Control height
  * @cssprop --number-input-border-color - Border color
@@ -79,29 +79,27 @@ export type BitNumberInputProps = ThemableProps &
  * <bit-number-input label="Quantity" value="1" min="1" max="99" step="1"></bit-number-input>
  * ```
  */
-export const NUMBER_INPUT_TAG = define(
-  'bit-number-input',
-  ({ host }) => {
-    const props = defineProps<BitNumberInputProps>({
-      color: { default: undefined },
-      disabled: { default: false },
-      fullwidth: { default: false },
-      label: { default: undefined },
-      'label-placement': { default: 'inset' },
-      'large-step': { default: undefined },
-      max: { default: undefined },
-      min: { default: undefined },
-      name: { default: undefined },
-      nullable: { default: false },
-      placeholder: { default: undefined },
-      readonly: { default: false },
-      size: { default: undefined },
-      step: { default: 1 },
-      value: { default: undefined },
-      variant: { default: undefined },
-    });
-    const emit = defineEmits<BitNumberInputEvents>();
-
+export const NUMBER_INPUT_TAG = defineComponent<BitNumberInputProps, BitNumberInputEvents>({
+  formAssociated: true,
+  props: {
+    color: { default: undefined },
+    disabled: { default: false },
+    fullwidth: { default: false },
+    label: { default: undefined },
+    'label-placement': { default: 'inset' },
+    'large-step': { default: undefined },
+    max: { default: undefined },
+    min: { default: undefined },
+    name: { default: undefined },
+    nullable: { default: false },
+    placeholder: { default: undefined },
+    readonly: { default: false },
+    size: { default: undefined },
+    step: { default: 1 },
+    value: { default: undefined },
+    variant: { default: undefined },
+  },
+  setup({ emit, host, props }) {
     const inputValue = signal<string>(props.value.value != null ? String(props.value.value) : '');
 
     defineField(
@@ -139,7 +137,7 @@ export const NUMBER_INPUT_TAG = define(
 
       return Number.isNaN(n) ? null : n;
     }
-    function commit(val: number | null) {
+    function commit(val: number | null, originalEvent?: Event) {
       const clamped = val != null ? clamp(val) : null;
 
       inputValue.value = clamped != null ? String(clamped) : '';
@@ -147,14 +145,14 @@ export const NUMBER_INPUT_TAG = define(
       if (clamped != null) host.setAttribute('value', String(clamped));
       else host.removeAttribute('value');
 
-      emit('change', { value: clamped });
+      emit('change', { originalEvent, value: clamped });
     }
-    function increment(delta: number) {
+    function increment(delta: number, originalEvent?: Event) {
       if (props.disabled.value || props.readonly.value) return;
 
       const current = parseValue() ?? (props.min.value != null ? Number(props.min.value) : 0);
 
-      commit(current + delta);
+      commit(current + delta, originalEvent);
     }
     function handleKeydown(e: KeyboardEvent) {
       if (props.disabled.value || props.readonly.value) return;
@@ -165,33 +163,33 @@ export const NUMBER_INPUT_TAG = define(
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          increment(-step);
+          increment(-step, e);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          increment(step);
+          increment(step, e);
           break;
         case 'End':
           if (props.max.value != null) {
             e.preventDefault();
-            commit(Number(props.max.value));
+            commit(Number(props.max.value), e);
           }
 
           break;
         case 'Home':
           if (props.min.value != null) {
             e.preventDefault();
-            commit(Number(props.min.value));
+            commit(Number(props.min.value), e);
           }
 
           break;
         case 'PageDown':
           e.preventDefault();
-          increment(-largeStep);
+          increment(-largeStep, e);
           break;
         case 'PageUp':
           e.preventDefault();
-          increment(largeStep);
+          increment(largeStep, e);
           break;
       }
     }
@@ -224,7 +222,7 @@ export const NUMBER_INPUT_TAG = define(
           :size="${() => props.size.value || null}"
           :color="${() => props.color.value || null}"
           ?disabled="${() => props.disabled.value || props.readonly.value || atMin.value}"
-          @click="${() => increment(-(Number(props.step.value) || 1))}"
+          @click="${(e: Event) => increment(-(Number(props.step.value) || 1), e)}"
           >${minusIcon}</bit-button
         >
         <bit-input
@@ -251,7 +249,10 @@ export const NUMBER_INPUT_TAG = define(
             if (typeof v !== 'string') return;
 
             inputValue.value = v;
-            emit('input', { value: parseValue() });
+
+            const originalEvent = (e as CustomEvent<{ originalEvent?: Event }>).detail?.originalEvent ?? e;
+
+            emit('input', { originalEvent, value: parseValue() });
           }}"
           @change="${(e: Event) => {
             const v = (
@@ -263,7 +264,10 @@ export const NUMBER_INPUT_TAG = define(
             if (typeof v !== 'string') return;
 
             inputValue.value = v;
-            commit(parseValue());
+
+            const originalEvent = (e as CustomEvent<{ originalEvent?: Event }>).detail?.originalEvent ?? e;
+
+            commit(parseValue(), originalEvent);
           }}"></bit-input>
         <bit-button
           icon-only
@@ -274,14 +278,12 @@ export const NUMBER_INPUT_TAG = define(
           :size="${() => props.size.value || null}"
           :color="${() => props.color.value || null}"
           ?disabled="${() => props.disabled.value || props.readonly.value || atMax.value}"
-          @click="${() => increment(Number(props.step.value) || 1)}"
+          @click="${(e: Event) => increment(Number(props.step.value) || 1, e)}"
           >${plusIcon}</bit-button
         >
       </div>
     `;
   },
-  {
-    formAssociated: true,
-    styles: [disabledStateMixin(), styles],
-  },
-);
+  styles: [disabledStateMixin(), styles],
+  tag: 'bit-number-input',
+});

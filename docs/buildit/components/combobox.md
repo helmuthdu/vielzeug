@@ -110,19 +110,31 @@ Add an `icon` named slot inside any `<bit-combobox-option>` for a leading icon. 
 <ComponentPreview center>
 
 ```html
-<bit-combobox label="Default">
+<bit-combobox variant="bordered" label="Default">
   <bit-combobox-option value="a">Option A</bit-combobox-option>
   <bit-combobox-option value="b">Option B</bit-combobox-option>
 </bit-combobox>
-<bit-combobox label="Primary" color="primary">
+<bit-combobox variant="bordered" label="Primary" color="primary">
   <bit-combobox-option value="a">Option A</bit-combobox-option>
   <bit-combobox-option value="b">Option B</bit-combobox-option>
 </bit-combobox>
-<bit-combobox label="Success" color="success">
+<bit-combobox variant="bordered" label="Secondary" color="secondary">
   <bit-combobox-option value="a">Option A</bit-combobox-option>
   <bit-combobox-option value="b">Option B</bit-combobox-option>
 </bit-combobox>
-<bit-combobox label="Error" color="error">
+<bit-combobox variant="bordered" label="Info" color="info">
+  <bit-combobox-option value="a">Option A</bit-combobox-option>
+  <bit-combobox-option value="b">Option B</bit-combobox-option>
+</bit-combobox>
+<bit-combobox variant="bordered" label="Warning" color="warning">
+  <bit-combobox-option value="a">Option A</bit-combobox-option>
+  <bit-combobox-option value="b">Option B</bit-combobox-option>
+</bit-combobox>
+<bit-combobox variant="bordered" label="Success" color="success">
+  <bit-combobox-option value="a">Option A</bit-combobox-option>
+  <bit-combobox-option value="b">Option B</bit-combobox-option>
+</bit-combobox>
+<bit-combobox variant="bordered" label="Error" color="error">
   <bit-combobox-option value="a">Option A</bit-combobox-option>
   <bit-combobox-option value="b">Option B</bit-combobox-option>
 </bit-combobox>
@@ -193,7 +205,7 @@ Add `multiple` to allow selecting more than one option. Each selected value is s
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox label="Technologies" multiple placeholder="Search…" style="max-width: 300px;">
+<bit-combobox id="combobox-multiselect-demo" label="Technologies" multiple placeholder="Search…" style="max-width: 300px;">
   <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
   <bit-combobox-option value="rust">Rust</bit-combobox-option>
   <bit-combobox-option value="go">Go</bit-combobox-option>
@@ -367,7 +379,7 @@ Assigning a new array to `options` updates the dropdown immediately. When both `
     <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
   </bit-combobox>
   <bit-button type="submit">Submit</bit-button>
-</form>
+</bit-form>
 ```
 
 </ComponentPreview>

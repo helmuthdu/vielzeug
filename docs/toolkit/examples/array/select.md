@@ -69,6 +69,7 @@ import { parallel } from '@vielzeug/toolkit';
 const ids = [1, 2, 3];
 const details = await parallel(3, ids, async (id) => fetchUser(id));
 ```
+
 :::
 
 ### Default Filtering

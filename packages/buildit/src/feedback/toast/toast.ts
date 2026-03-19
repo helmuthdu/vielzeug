@@ -1,4 +1,4 @@
-import { define, html, onMount, ref, signal, defineProps, defineEmits } from '@vielzeug/craftit';
+import { defineComponent, html, onMount, ref, signal } from '@vielzeug/craftit/core';
 import { classes, each } from '@vielzeug/craftit/directives';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
@@ -121,15 +121,12 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
   `;
 }
 
-export const TOAST_TAG = define(
-  'bit-toast',
-  ({ host }) => {
-    const props = defineProps<BitToastProps>({
-      max: { default: 5 },
-      position: { default: 'bottom-right' },
-    });
-    const emit = defineEmits<BitToastEvents>();
-
+export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
+  props: {
+    max: { default: 5 },
+    position: { default: 'bottom-right' },
+  },
+  setup({ emit, host, props }) {
     const toasts = signal<NormalizedToast[]>([]);
     const exitingIds = signal<Set<string>>(new Set());
     const containerRef = ref<HTMLDivElement>();
@@ -361,10 +358,9 @@ export const TOAST_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [reducedMotionMixin, componentStyles],
-  },
-);
+  styles: [reducedMotionMixin, componentStyles],
+  tag: 'bit-toast',
+});
 
 // ─── Singleton toast service ─────────────────────────────────────────────────
 

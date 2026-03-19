@@ -1,6 +1,6 @@
 ---
-title: Toolkit — Money Examples
-description: Money utility examples for Toolkit.
+title: 'Toolkit — Money Examples'
+description: 'Money utility examples for Toolkit.'
 ---
 
 # Money Utilities
@@ -8,6 +8,14 @@ description: Money utility examples for Toolkit.
 Utilities for handling monetary amounts with precision and proper formatting.
 
 ## Overview
+
+## Problem
+
+Implement overview in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
 
 The money utilities provide essential functions for working with currency amounts, including formatting for display and currency conversion. These utilities use `bigint` for precise arithmetic to avoid floating-point errors common in financial calculations.
 
@@ -95,3 +103,20 @@ For arithmetic operations on monetary amounts, see:
   transform: translateY(-2px);
 }
 </style>
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Array Examples](./array.md)
+- [Async Examples](./async.md)
+- [Date Examples](./date.md)

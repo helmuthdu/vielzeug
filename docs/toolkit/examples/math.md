@@ -1,6 +1,6 @@
 ---
-title: Toolkit — Math Examples
-description: Math utility examples for Toolkit.
+title: 'Toolkit — Math Examples'
+description: 'Math utility examples for Toolkit.'
 ---
 
 # Math Utilities
@@ -8,6 +8,14 @@ description: Math utility examples for Toolkit.
 Math utilities provide essential tools for common mathematical operations. These helpers simplify calculations, ranges, statistics, and number-safe distribution.
 
 ## 📚 Quick Reference
+
+## Problem
+
+Implement 📚 quick reference in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
 
 | Method                               | Description                                          |
 | :----------------------------------- | :--------------------------------------------------- |
@@ -173,3 +181,20 @@ range(0, 10, 2); // [0, 2, 4, 6, 8, 10]
 - [sum](./math/sum.md)
 
 </div>
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Array Examples](./array.md)
+- [Async Examples](./async.md)
+- [Date Examples](./date.md)

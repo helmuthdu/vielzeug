@@ -18,7 +18,7 @@ function makeContainer(clientHeight = 200, initialScrollTop = 0): HTMLElement {
     },
   });
 
-  // jsdom doesn't implement scrollTo; useProvide a minimal stub
+  // jsdom doesn't implement scrollTo; provide a minimal stub
   el.scrollTo = ((options?: ScrollToOptions) => {
     if (typeof options?.top === 'number') scrollTop = options.top;
   }) as typeof el.scrollTo;

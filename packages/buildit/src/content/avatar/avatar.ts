@@ -1,4 +1,4 @@
-import { computed, define, html, onMount, onSlotChange, signal, watch, defineProps } from '@vielzeug/craftit';
+import { computed, defineComponent, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit/core';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -70,19 +70,17 @@ export type BitAvatarProps = {
  * <bit-avatar alt="John Smith" status="online"></bit-avatar>
  * ```
  */
-export const AVATAR_TAG = define(
-  'bit-avatar',
-  () => {
-    const props = defineProps<BitAvatarProps>({
-      alt: { default: undefined },
-      color: { default: undefined },
-      initials: { default: undefined },
-      rounded: { default: undefined },
-      size: { default: undefined },
-      src: { default: undefined },
-      status: { default: undefined },
-    });
-
+export const AVATAR_TAG = defineComponent<BitAvatarProps>({
+  props: {
+    alt: { default: undefined },
+    color: { default: undefined },
+    initials: { default: undefined },
+    rounded: { default: undefined },
+    size: { default: undefined },
+    src: { default: undefined },
+    status: { default: undefined },
+  },
+  setup({ props }) {
     const imgFailed = signal(false);
 
     // Reset stale error state whenever src changes
@@ -176,19 +174,18 @@ export const AVATAR_TAG = define(
           : ''}
     `;
   },
-  {
-    styles: [
-      colorThemeMixin,
-      roundedVariantMixin,
-      sizeVariantMixin({
-        lg: { fontSize: 'var(--avatar-font-size, var(--text-base))', size: 'var(--avatar-size, var(--size-14))' },
-        md: { fontSize: 'var(--avatar-font-size, var(--text-sm))', size: 'var(--avatar-size, var(--size-10))' },
-        sm: { fontSize: 'var(--avatar-font-size, var(--text-xs))', size: 'var(--avatar-size, var(--size-7))' },
-      }),
-      componentStyles,
-    ],
-  },
-);
+  styles: [
+    colorThemeMixin,
+    roundedVariantMixin,
+    sizeVariantMixin({
+      lg: { fontSize: 'var(--avatar-font-size, var(--text-base))', size: 'var(--avatar-size, var(--size-14))' },
+      md: { fontSize: 'var(--avatar-font-size, var(--text-sm))', size: 'var(--avatar-size, var(--size-10))' },
+      sm: { fontSize: 'var(--avatar-font-size, var(--text-xs))', size: 'var(--avatar-size, var(--size-7))' },
+    }),
+    componentStyles,
+  ],
+  tag: 'bit-avatar',
+});
 
 // ============================================
 // AvatarGroup
@@ -226,14 +223,12 @@ export type BitAvatarGroupProps = {
  * </bit-avatar-group>
  * ```
  */
-export const AVATAR_GROUP_TAG = define(
-  'bit-avatar-group',
-  ({ host }) => {
-    const props = defineProps<BitAvatarGroupProps>({
-      max: { default: 5 },
-      total: { default: undefined },
-    });
-
+export const AVATAR_GROUP_TAG = defineComponent<BitAvatarGroupProps>({
+  props: {
+    max: { default: 5 },
+    total: { default: undefined },
+  },
+  setup({ host, props }) {
     const overflowCount = signal(0);
 
     onMount(() => {
@@ -262,7 +257,6 @@ export const AVATAR_GROUP_TAG = define(
           : ''}
     `;
   },
-  {
-    styles: [groupStyles],
-  },
-);
+  styles: [groupStyles],
+  tag: 'bit-avatar-group',
+});

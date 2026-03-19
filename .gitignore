@@ -123,6 +123,7 @@ dist-storybook/
 
 # Vitepress
 docs/.vitepress/cache/
+docs/.vitepress/.temp/
 
 # Junie
 .junie

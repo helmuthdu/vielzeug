@@ -1,9 +1,20 @@
 <template>
-  <bit-grid cols-md="2" cols="1" areas-md="'editor output'" areas="'editor' 'output'" gap="lg" fullwidth align="start"
+  <bit-grid
+    cols-md="2"
+    cols="1"
+    areas-md="'editor output'"
+    areas="'editor' 'output'"
+    gap="lg"
+    fullwidth
+    align="start"
     style="margin: 0.5rem 0; min-height: 500px">
     <!-- Code Editor -->
     <div class="editor-section" style="grid-area: editor">
-      <bit-grid areas="'title selector actions'" style="grid-template-columns: auto 1fr" align="center" gap="md"
+      <bit-grid
+        areas="'title selector actions'"
+        style="grid-template-columns: auto 1fr"
+        align="center"
+        gap="md"
         class="section-header">
         <h3 class="section-label" style="grid-area: title">Editor</h3>
         <div class="header-actions" style="grid-area: selector">
@@ -16,10 +27,22 @@
         <div class="header-actions" style="grid-area: actions">
           <bit-grid cols="1" justify="end" gap="md" flow="column">
             <bit-grid-item>
-              <bit-button color="primary" variant="solid" v-bind="isExecuting ? { loading: true } : {}"
+              <bit-button
+                color="primary"
+                variant="solid"
+                v-bind="isExecuting ? { loading: true } : {}"
                 @click="handleRunCode">
-                <svg v-if="!isExecuting" slot="prefix" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                <svg
+                  v-if="!isExecuting"
+                  slot="prefix"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
                   stroke-linejoin="round">
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
@@ -29,15 +52,33 @@
             <bit-grid-item>
               <bit-tooltip :content="isExpanded ? 'Collapse' : 'Expand'" placement="bottom">
                 <bit-button icon-only variant="ghost" @click="emit('toggle-expand')">
-                  <svg v-if="!isExpanded" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    v-if="!isExpanded"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round">
                     <polyline points="15 3 21 3 21 9" />
                     <polyline points="9 21 3 21 3 15" />
                     <line x1="21" y1="3" x2="14" y2="10" />
                     <line x1="3" y1="21" x2="10" y2="14" />
                   </svg>
-                  <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    v-else
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round">
                     <polyline points="4 14 10 14 10 20" />
                     <polyline points="20 10 14 10 14 4" />
                     <line x1="14" y1="10" x2="21" y2="3" />
@@ -54,11 +95,23 @@
         <div class="editor-floating-toolbar">
           <bit-tooltip content="Format Code" placement="top">
             <bit-button icon-only variant="ghost" size="sm" @click="formatCode">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" version="1.1" id="svg8"
-                xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                version="1.1"
+                id="svg8"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:svg="http://www.w3.org/2000/svg">
                 <defs id="defs8" />
-                <path d="m 17.122614,2 5,5.0000001 L 7.1226139,22 2.1226137,17 Z" id="path2"
+                <path
+                  d="m 17.122614,2 5,5.0000001 L 7.1226139,22 2.1226137,17 Z"
+                  id="path2"
                   style="stroke-width: 2.00057; stroke-dasharray: none" />
                 <path d="M 15.981361,11.55223 12.594039,8.1175984" id="path1" />
               </svg>
@@ -66,8 +119,16 @@
           </bit-tooltip>
           <bit-tooltip content="Copy to Clipboard" placement="top">
             <bit-button icon-only variant="ghost" size="sm" @click="copyCode">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
                 <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
               </svg>
@@ -76,8 +137,16 @@
           <bit-separator orientation="vertical" style="height: 14px; margin: 0 0.25rem"></bit-separator>
           <bit-tooltip content="Reset to Default" placement="top">
             <bit-button icon-only variant="ghost" size="sm" @click="resetEditor">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
               </svg>
@@ -85,8 +154,16 @@
           </bit-tooltip>
           <bit-tooltip content="Clear Editor" placement="top">
             <bit-button icon-only variant="ghost" size="sm" color="error" @click="clearEditor">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
                 <path d="M3 6h18" />
                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -101,14 +178,26 @@
 
     <!-- Output -->
     <div class="output-section" style="grid-area: output">
-      <bit-grid areas="'title actions'" style="grid-template-columns: auto 1fr" align="center" gap="sm"
+      <bit-grid
+        areas="'title actions'"
+        style="grid-template-columns: auto 1fr"
+        align="center"
+        gap="sm"
         class="section-header">
         <h3 class="section-label" style="grid-area: title">Output</h3>
         <div style="grid-area: actions; display: flex; justify-content: flex-end">
           <bit-tooltip content="Clear Output" placement="bottom">
             <bit-button icon-only variant="ghost" @click="handleClearOutput">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
                 <path d="M3 6h18" />
                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -121,8 +210,16 @@
       </bit-grid>
       <div ref="outputContainer" class="output-area">
         <div class="output-placeholder">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round">
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
           </svg>
@@ -383,7 +480,7 @@ const handleRunCode = async () => {
     });
 
     // Create function with access to window globals
-    const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
     const fn = new AsyncFunction(code);
     const result = await fn.call(window);
 

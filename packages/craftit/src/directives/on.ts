@@ -1,6 +1,6 @@
-import type { DirectiveDescriptor } from '../internal';
+import type { Directive } from '../core/internal';
 
-import { listen } from '../utils';
+import { listen } from '../core/utils';
 
 /**
  * Attaches an event listener to an element as a spread directive, supporting
@@ -27,13 +27,13 @@ export function on(
   event: 'clickOutside',
   handler: (e: MouseEvent) => void,
   options?: AddEventListenerOptions,
-): DirectiveDescriptor;
+): Directive;
 export function on<K extends keyof HTMLElementEventMap>(
   event: K,
   handler: (e: HTMLElementEventMap[K]) => void,
   options?: AddEventListenerOptions,
-): DirectiveDescriptor;
-export function on(event: string, handler: (e: any) => void, options?: AddEventListenerOptions): DirectiveDescriptor {
+): Directive;
+export function on(event: string, handler: (e: any) => void, options?: AddEventListenerOptions): Directive {
   return {
     mount(el, { registerCleanup }) {
       if (event === 'clickOutside') {

@@ -4,7 +4,7 @@ describe('bit-switch', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./switch');
+    await (() => import('./switch'))();
   });
 
   afterEach(() => {
@@ -84,7 +84,12 @@ describe('bit-switch', () => {
     });
 
     it('preserves checked=true when disabled and clicked', async () => {
-      fixture = await mount('bit-switch', { attrs: { checked: true, disabled: true } });
+      fixture = await mount('bit-switch', {
+        attrs: {
+          checked: true,
+          disabled: true,
+        },
+      });
       await user.click(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
@@ -106,7 +111,12 @@ describe('bit-switch', () => {
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
       expect(onChange).toHaveBeenCalledTimes(1);
-      expect((onChange.mock.calls[0][0] as CustomEvent).detail.checked).toBe(true);
+
+      const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
+
+      expect(detail.checked).toBe(true);
+      expect(detail.value).toBe(true);
+      expect(detail.originalEvent).toBeDefined();
     });
 
     it('emits change with checked=false on switch-off', async () => {
@@ -116,7 +126,11 @@ describe('bit-switch', () => {
 
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
-      expect((onChange.mock.calls[0][0] as CustomEvent).detail.checked).toBe(false);
+
+      const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
+
+      expect(detail.checked).toBe(false);
+      expect(detail.value).toBe(false);
     });
 
     it('emits change on Space keypress', async () => {
@@ -245,7 +259,7 @@ describe('bit-switch', () => {
 // Dedicated WAI-ARIA / accessibility spec for bit-switch
 describe('bit-switch accessibility', () => {
   beforeAll(async () => {
-    await import('./switch');
+    await (() => import('./switch'))();
   });
 
   // ─── Semantic Structure ───────────────────────────────────────────────────

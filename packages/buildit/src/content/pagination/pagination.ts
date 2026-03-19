@@ -1,4 +1,4 @@
-import { computed, define, html, defineProps, defineEmits } from '@vielzeug/craftit';
+import { computed, defineComponent, html } from '@vielzeug/craftit/core';
 import { each } from '@vielzeug/craftit/directives';
 
 import '../../actions/button/button';
@@ -91,22 +91,19 @@ function buildPageRange(
  * <bit-pagination page="3" total-pages="10" color="primary"></bit-pagination>
  * ```
  */
-export const PAGINATION_TAG = define(
-  'bit-pagination',
-  ({ host }) => {
-    const props = defineProps<BitPaginationProps>({
-      color: { default: undefined },
-      label: { default: 'Pagination' },
-      page: { default: 1 },
-      'show-first-last': { default: false, type: Boolean },
-      'show-prev-next': { default: false, type: Boolean },
-      siblings: { default: 1 },
-      size: { default: undefined },
-      'total-pages': { default: 1 },
-      variant: { default: undefined },
-    });
-    const emit = defineEmits<BitPaginationEvents>();
-
+export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationEvents>({
+  props: {
+    color: { default: undefined },
+    label: { default: 'Pagination' },
+    page: { default: 1 },
+    'show-first-last': { default: false, type: Boolean },
+    'show-prev-next': { default: false, type: Boolean },
+    siblings: { default: 1 },
+    size: { default: undefined },
+    'total-pages': { default: 1 },
+    variant: { default: undefined },
+  },
+  setup({ emit, host, props }) {
     function goTo(page: number) {
       const total = Number(props['total-pages'].value) || 1;
       const next = Math.min(Math.max(1, page), total);
@@ -256,7 +253,6 @@ export const PAGINATION_TAG = define(
       </nav>
     `;
   },
-  {
-    styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, styles],
-  },
-);
+  styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, styles],
+  tag: 'bit-pagination',
+});

@@ -1,138 +1,68 @@
 ---
 title: Eventit — API Reference
-description: Complete API reference for Eventit with type signatures and parameter documentation.
+description: Source-aligned API reference for @vielzeug/eventit and @vielzeug/eventit/test.
 ---
 
 # Eventit API Reference
 
 [[toc]]
 
+## API At a Glance
+
+| Symbol            | Purpose                                 | Execution mode | Common gotcha                                 |
+| ----------------- | --------------------------------------- | -------------- | --------------------------------------------- |
+| `createBus()`     | Create a typed event bus instance       | Sync           | Use a strict event map to avoid payload drift |
+| `bus.wait()`      | Await a one-time event occurrence       | Async          | Handle timeout/cancellation for long waits    |
+| `createTestBus()` | Create deterministic test bus utilities | Sync           | Reset emitted events between test cases       |
+
+## Package Entry Points
+
+| Import                   | Purpose                        |
+| ------------------------ | ------------------------------ |
+| `@vielzeug/eventit`      | Main runtime API and types     |
+| `@vielzeug/eventit/core` | Core bundle entry              |
+| `@vielzeug/eventit/test` | Test helpers (`createTestBus`) |
+
 ## Types
 
-### `EventMap`
-
-The base constraint for an event map type. All event maps must satisfy:
-
-```ts
-type EventMap = Record<string, unknown>;
-```
-
-### `EventKey<T>`
-
-Extracts the valid event keys from a `Bus<T>`:
-
-```ts
-type EventKey<T extends EventMap> = keyof T & string;
-```
-
-### `Listener<T>`
-
-The listener function signature for a given payload type:
-
-```ts
-type Listener<T> = (payload: T) => void;
-```
-
-### `Unsubscribe`
-
-The function returned by `on()` and `once()` to remove a listener:
-
-```ts
-type Unsubscribe = () => void;
-```
-
-### `BusOptions<T>`
-
-Options for `createBus<T>()`:
-
-```ts
-type BusOptions<T extends EventMap = EventMap> = {
-  /** Called on every emit before listeners run. Useful for logging/tracing. */
-  onEmit?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
-  /** If provided, listener errors are forwarded here instead of re-thrown. */
-  onError?: <K extends EventKey<T>>(err: unknown, event: K, payload: T[K]) => void;
-};
-```
-
-Both callbacks are **generic** — `event` and `payload` are typed to the specific event that fired.
+- `EventMap`: `Record<string, unknown>`
+- `EventKey<T>`: `keyof T & string`
+- `Listener<T>`: `(payload: T) => void`
+- `Unsubscribe`: `() => void`
+- `BusOptions<T>`:
+  - `onEmit(event, payload)` called before listeners run
+  - `onError(err, event, payload)` called for listener errors (instead of re-throw)
+- `Bus<T>`: typed runtime bus (`on`, `once`, `emit`, `wait`, `events`, `listenerCount`, `dispose`)
+- `TestBus<T>`: `Bus<T>` plus `emitted(event)` and `reset()`
 
 ### `BusDisposedError`
 
-A typed error class thrown when a disposed bus is awaited. Prefer `instanceof` checks over string matching:
+A typed error used when `wait()` is rejected due to bus disposal:
 
-```ts
-class BusDisposedError extends Error {
-  constructor() {
-    super('Bus is disposed');
-    this.name = 'BusDisposedError';
-  }
-}
-```
-
-```ts
-try {
-  const payload = await bus.wait('user:login');
-} catch (err) {
-  if (err instanceof BusDisposedError) {
-    /* bus was torn down */
-  } else {
-    throw err;
-  }
-}
-```
-
-### `Bus<T>`
-
-The typed event bus interface:
-
-```ts
-type Bus<T extends EventMap> = {
-  readonly disposed: boolean;
-  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
-  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
-  wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]>;
-  events<K extends EventKey<T>>(event: K, signal?: AbortSignal): AsyncGenerator<T[K]>;
-  emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void;
-  listenerCount(event?: EventKey<T>): number;
-  dispose(): void;
-  [Symbol.dispose](): void;
-};
-```
-
-### `TestBus<T>`
-
-Extends `Bus<T>` with payload recording:
-
-```ts
-type TestBus<T extends EventMap> = Bus<T> & {
-  emitted<K extends EventKey<T>>(event: K): T[K][];
-  reset(): void;
-};
-```
+`BusDisposedError extends Error` with message `Bus is disposed`.
 
 ## `createBus()`
 
-```ts
-function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T>;
-```
+Signature: `createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T>`
 
 Creates and returns a new `Bus<T>` instance.
 
-| Parameter         | Type                                        | Default | Description                                                            |
-| ----------------- | ------------------------------------------- | ------- | ---------------------------------------------------------------------- |
-| `options`         | `BusOptions<T>`                             | `{}`    | Optional configuration                                                 |
-| `options.onEmit`  | `<K>(event: K, payload: T[K]) => void`      | —       | Called before listeners on every emission; payload is fully typed      |
-| `options.onError` | `<K>(err, event: K, payload: T[K]) => void` | —       | Capture listener errors instead of re-throwing; payload is fully typed |
+| Parameter | Type            | Description                 |
+| --------- | --------------- | --------------------------- |
+| `options` | `BusOptions<T>` | Optional hook configuration |
 
 **Returns:** `Bus<T>`
 
 ```ts
 import { createBus } from '@vielzeug/eventit';
 
-const bus = createBus<AppEvents>();
+type AppEvents = {
+  'user:login': { userId: string };
+  'user:logout': void;
+};
 
 const bus = createBus<AppEvents>({
-  onEmit: (event, payload) => console.debug('[bus]', event, payload), // payload typed to T[K]
+  onEmit: (event, payload) => console.debug('[bus]', event, payload),
   onError: (err, event, payload) => console.error('[bus] error in', event, err, payload),
 });
 ```
@@ -141,9 +71,7 @@ const bus = createBus<AppEvents>({
 
 ### `bus.disposed`
 
-```ts
-readonly disposed: boolean
-```
+Type: `readonly boolean`
 
 `true` after `dispose()` has been called. Use this to guard against using a torn-down bus.
 
@@ -157,17 +85,15 @@ if (!bus.disposed) {
 
 ### `bus.on()`
 
-```ts
-on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe
-```
+Signature: `on(event, listener, signal?) => Unsubscribe`
 
-Subscribe to an event. The listener is called synchronously on every emit.
+Subscribe to an event. The listener runs synchronously on every emit.
 
-| Parameter  | Type             | Description                                         |
-| ---------- | ---------------- | --------------------------------------------------- |
-| `event`    | `K`              | The event key to subscribe to                       |
-| `listener` | `Listener<T[K]>` | The callback to invoke on each emit                 |
-| `signal`   | `AbortSignal`    | Optional signal — removes the listener when aborted |
+| Parameter  | Type             | Description                          |
+| ---------- | ---------------- | ------------------------------------ |
+| `event`    | `K`              | Event key to subscribe to            |
+| `listener` | `Listener<T[K]>` | Callback for each emit               |
+| `signal`   | `AbortSignal`    | Optional signal for auto-unsubscribe |
 
 **Returns:** `Unsubscribe` — call to remove the listener manually.
 
@@ -189,17 +115,15 @@ controller.abort(); // listener removed
 
 ### `bus.once()`
 
-```ts
-once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe
-```
+Signature: `once(event, listener, signal?) => Unsubscribe`
 
 Subscribe to the next emit of an event. The listener fires exactly once and is automatically removed.
 
-| Parameter  | Type             | Description                                                            |
-| ---------- | ---------------- | ---------------------------------------------------------------------- |
-| `event`    | `K`              | The event key                                                          |
-| `listener` | `Listener<T[K]>` | Fires once, then auto-removed                                          |
-| `signal`   | `AbortSignal`    | Optional — removes the listener early if aborted before the first emit |
+| Parameter  | Type             | Description                  |
+| ---------- | ---------------- | ---------------------------- |
+| `event`    | `K`              | Event key                    |
+| `listener` | `Listener<T[K]>` | One-shot callback            |
+| `signal`   | `AbortSignal`    | Optional early-cancel signal |
 
 **Returns:** `Unsubscribe`
 
@@ -211,16 +135,14 @@ bus.once('session:expired', () => redirectToLogin());
 
 ### `bus.wait()`
 
-```ts
-wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]>
-```
+Signature: `wait(event, signal?) => Promise<payload>`
 
 Returns a `Promise` that resolves with the payload of the next emit of `event`.
 
-| Parameter | Type          | Description                              |
-| --------- | ------------- | ---------------------------------------- |
-| `event`   | `K`           | The event key to wait for                |
-| `signal`  | `AbortSignal` | Optional — rejects with the abort reason |
+| Parameter | Type          | Description           |
+| --------- | ------------- | --------------------- |
+| `event`   | `K`           | Event key to await    |
+| `signal`  | `AbortSignal` | Optional abort signal |
 
 **Returns:** `Promise<T[K]>`
 
@@ -230,26 +152,24 @@ Returns a `Promise` that resolves with the payload of the next emit of `event`.
 - The provided `signal` aborts — rejects with `signal.reason`
 
 ```ts
-const { userId } = await bus.wait('user:login');
+const login = await bus.wait('user:login');
 
 // With timeout
-const { userId } = await bus.wait('user:login', AbortSignal.timeout(5_000));
+const timedLogin = await bus.wait('user:login', AbortSignal.timeout(5_000));
 ```
 
 ---
 
 ### `bus.events()`
 
-```ts
-events<K extends EventKey<T>>(event: K, signal?: AbortSignal): AsyncGenerator<T[K]>
-```
+Signature: `events(event, signal?) => AsyncGenerator<payload>`
 
 Returns an `AsyncGenerator` that yields payloads for every future emit of `event`. Pull-based — only proceeds when the `for await` loop body is ready.
 
-| Parameter | Type          | Description                                      |
-| --------- | ------------- | ------------------------------------------------ |
-| `event`   | `K`           | The event key to iterate                         |
-| `signal`  | `AbortSignal` | Optional — terminates the generator when aborted |
+| Parameter | Type          | Description                       |
+| --------- | ------------- | --------------------------------- |
+| `event`   | `K`           | Event key to stream               |
+| `signal`  | `AbortSignal` | Optional early-termination signal |
 
 **Terminates when:**
 
@@ -273,9 +193,7 @@ for await (const payload of bus.events('data:loaded', ctl.signal)) {
 
 ### `bus.emit()`
 
-```ts
-emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void
-```
+Signature: `emit(event, payload?) => void`
 
 Emit an event, calling all registered listeners synchronously in subscription order.
 
@@ -292,9 +210,7 @@ bus.emit('user:logout'); // void — no argument
 
 ### `bus.dispose()`
 
-```ts
-dispose(): void
-```
+Signature: `dispose() => void`
 
 Permanently tears down the bus:
 
@@ -313,9 +229,7 @@ bus.disposed; // true
 
 ### `bus[Symbol.dispose]()`
 
-```ts
-[Symbol.dispose](): void
-```
+Signature: `[Symbol.dispose]() => void`
 
 Alias for `dispose()`. Enables the `using` keyword (TypeScript 5.2+):
 
@@ -330,15 +244,13 @@ Alias for `dispose()`. Enables the `using` keyword (TypeScript 5.2+):
 
 ### `bus.listenerCount()`
 
-```ts
-listenerCount(event?: EventKey<T>): number
-```
+Signature: `listenerCount(event?) => number`
 
 Returns the number of active listeners.
 
-| Parameter | Type                     | Description                                                             |
-| --------- | ------------------------ | ----------------------------------------------------------------------- |
-| `event`   | `EventKey<T>` (optional) | Specific event to count. Omit to count all listeners across all events. |
+| Parameter | Type                     | Description                              |
+| --------- | ------------------------ | ---------------------------------------- |
+| `event`   | `EventKey<T>` (optional) | Specific event key; omit for total count |
 
 **Returns:** `number`
 
@@ -361,31 +273,42 @@ Import from `@vielzeug/eventit/test`.
 
 ### `createTestBus()`
 
-```ts
-function createTestBus<T extends EventMap>(options?: BusOptions<T>): TestBus<T>;
-```
+Signature: `createTestBus<T extends EventMap>(options?: BusOptions<T>): TestBus<T>`
 
-Creates a `TestBus<T>` — a full `Bus<T>` that also records every emitted payload for later assertion. Accepts the full `BusOptions<T>` including `onEmit` — user-provided `onEmit` is called after the internal recording hook.
+Creates a `TestBus<T>` (a full `Bus<T>` plus recording helpers).
 
-| Parameter | Type                            | Default | Description                       |
-| --------- | ------------------------------- | ------- | --------------------------------- |
-| `options` | `Omit<BusOptions<T>, 'onEmit'>` | `{}`    | Optional — `onError` is supported |
+Behavior:
+
+- Every `emit()` is recorded per event key
+- `emitted(event)` returns a snapshot array
+- `reset()` clears records without removing listeners
+- `dispose()` clears listeners and records
+- Accepts full `BusOptions<T>` including `onEmit` and `onError`
+
+| Parameter | Type            | Description                                     |
+| --------- | --------------- | ----------------------------------------------- |
+| `options` | `BusOptions<T>` | Optional hooks; composed with internal recorder |
 
 **Returns:** `TestBus<T>`
 
 ```ts
 import { createTestBus } from '@vielzeug/eventit/test';
 
+type AppEvents = {
+  'user:login': { userId: string };
+};
+
 const bus = createTestBus<AppEvents>();
+
+bus.emit('user:login', { userId: '1' });
+console.log(bus.emitted('user:login')); // [{ userId: '1' }]
 ```
 
 ---
 
 ### `testBus.emitted()`
 
-```ts
-emitted<K extends EventKey<T>>(event: K): T[K][]
-```
+Signature: `emitted(event) => payload[]`
 
 Returns a **snapshot** of all payloads emitted for the given event key, in emission order. Each call returns a new array — mutations do not affect the internal records.
 
@@ -401,9 +324,7 @@ bus.emitted('user:login');
 
 ### `testBus.reset()`
 
-```ts
-reset(): void
-```
+Signature: `reset() => void`
 
 Clears all recorded payloads without disposing the bus or removing any listeners.
 
@@ -416,8 +337,6 @@ bus.emitted('user:login'); // => []
 
 ### `testBus.dispose()`
 
-```ts
-dispose(): void
-```
+Signature: `dispose() => void`
 
 Clears recorded payloads and then calls the underlying `bus.dispose()`, removing all listeners and rejecting pending waits. Idempotent.

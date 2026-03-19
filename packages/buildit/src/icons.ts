@@ -1,4 +1,4 @@
-import { html } from '@vielzeug/craftit';
+import { html } from '@vielzeug/craftit/core';
 
 // ─── Shared SVG icon utilities ────────────────────────────────────────────────
 // All icons use currentColor so they inherit whatever color the host applies.

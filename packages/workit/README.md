@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/workit)](https://www.npmjs.com/package/@vielzeug/workit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Workit** wraps Web Workers in a clean, fully-typed async API. Define a task function once — workit handles worker creation, message passing, timeouts, cancellation, and pooling. Falls back to main-thread execution gracefully when Workers are unavailable (SSR, tests).
+**Workit** wraps Web Workers in a clean, fully-typed async API. Define a task function once — workit handles worker creation, message passing, timeouts, queued-task cancellation, and pooling. Falls back to main-thread execution when Workers are unavailable (SSR, tests).
 
 ## Installation
 
@@ -45,7 +45,7 @@ pool.dispose();
 - ✅ **Graceful fallback** — runs tasks on the main thread when Workers are unavailable
 - ✅ **Pool support** — create N workers via the `size` option with built-in queuing
 - ✅ **Timeout support** — reject tasks that exceed a configurable time limit
-- ✅ **AbortSignal** — cancel queued tasks with the standard `AbortController` API
+- ✅ **AbortSignal** — cancel queued tasks with the standard `AbortController` API (in-flight tasks cannot be interrupted)
 - ✅ **Transferables** — move large buffers to the Worker without copying via `transfer`
 - ✅ **`isNative`** — know at runtime whether a real Worker is active or fallback is in use
 - ✅ **`[Symbol.dispose]`** — `using` keyword support (ES2025 explicit resource management)
@@ -55,6 +55,29 @@ pool.dispose();
 
 ## API
 
+### Package Exports
+
+```typescript
+export {
+  createWorker,
+  TaskError,
+  TaskTimeoutError,
+  TerminatedError,
+  WorkerError,
+} from '@vielzeug/workit';
+
+export type {
+  RunOptions,
+  TaskFn,
+  WorkerHandle,
+  WorkerOptions,
+  WorkerStatus,
+} from '@vielzeug/workit';
+
+export { createTestWorker } from '@vielzeug/workit/test';
+export type { TestWorkerHandle } from '@vielzeug/workit/test';
+```
+
 ### `createWorker(fn, options?)`
 
 Single factory for both single-worker and pool use cases.
@@ -63,12 +86,14 @@ Single factory for both single-worker and pool use cases.
 import { createWorker } from '@vielzeug/workit';
 import type { TaskFn, WorkerOptions, WorkerHandle, RunOptions } from '@vielzeug/workit';
 
-const worker = createWorker<TInput, TOutput>(fn, {
-  size?: number | 'auto', // worker slots (default: 1, 'auto' = hardwareConcurrency)
-  timeout?: number,        // ms before task rejects (default: none)
-  fallback?: boolean,      // allow main-thread fallback (default: true)
-  scripts?: string[],      // URLs loaded via importScripts() inside the Worker
-});
+const options: WorkerOptions = {
+  size: 'auto', // default: 1
+  timeout: 5000,
+  fallback: true,
+  scripts: ['https://cdn.example.com/lib.js'],
+};
+
+const worker = createWorker<TInput, TOutput>(fn, options);
 
 // WorkerHandle interface
 await worker.run(input);                        // Promise<TOutput>
@@ -104,7 +129,7 @@ try {
 
 ### `createTestWorker(fn)` — testing subpath
 
-Test utility that runs `fn` directly in the same thread and records all calls.
+Test utility that runs `fn` directly in the same thread and records successful calls.
 
 ```typescript
 import { createTestWorker } from '@vielzeug/workit/test';

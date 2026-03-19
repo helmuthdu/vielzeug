@@ -1,15 +1,13 @@
 import {
   computed,
   createContext,
-  define,
+  defineComponent,
   handle,
   html,
   typed,
-  useProvide,
+  provide,
   type ReadonlySignal,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -61,16 +59,13 @@ export type BitAccordionProps = {
  * ```
  */
 
-export const ACCORDION_TAG = define(
-  'bit-accordion',
-  ({ host }) => {
-    const props = defineProps<BitAccordionProps>({
-      selectionMode: typed<BitAccordionProps['selectionMode']>(undefined),
-      size: typed<BitAccordionProps['size']>(undefined),
-      variant: typed<BitAccordionProps['variant']>(undefined),
-    });
-    const emit = defineEmits<BitAccordionEvents>();
-
+export const ACCORDION_TAG = defineComponent<BitAccordionProps, BitAccordionEvents>({
+  props: {
+    selectionMode: typed<BitAccordionProps['selectionMode']>(undefined),
+    size: typed<BitAccordionProps['size']>(undefined),
+    variant: typed<BitAccordionProps['variant']>(undefined),
+  },
+  setup({ emit, host, props }) {
     const notifyExpand = (expandedItem: HTMLElement) => {
       if (props.selectionMode.value === 'single') {
         host.querySelectorAll('bit-accordion-item').forEach((item) => {
@@ -82,7 +77,7 @@ export const ACCORDION_TAG = define(
       }
     };
 
-    useProvide(ACCORDION_CTX, {
+    provide(ACCORDION_CTX, {
       notifyExpand,
       selectionMode: computed(() => props.selectionMode.value),
       size: props.size,
@@ -122,7 +117,6 @@ export const ACCORDION_TAG = define(
 
     return html`<slot></slot>`;
   },
-  {
-    styles: [styles],
-  },
-);
+  styles: [styles],
+  tag: 'bit-accordion',
+});

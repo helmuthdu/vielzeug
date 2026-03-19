@@ -1,4 +1,4 @@
-import { computed, define, effect, html, typed, useInject, signal, defineProps } from '@vielzeug/craftit';
+import { computed, defineComponent, effect, html, typed, inject, signal } from '@vielzeug/craftit/core';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
@@ -33,17 +33,15 @@ export type BitTabPanelProps = {
  * <bit-tab-panel value="code" padding="none"><pre>No padding for code</pre></bit-tab-panel>
  * ```
  */
-export const TAB_PANEL_TAG = define(
-  'bit-tab-panel',
-  ({ host }) => {
-    const props = defineProps<BitTabPanelProps>({
-      active: typed<boolean>(false),
-      lazy: typed<boolean>(false),
-      padding: typed<BitTabPanelProps['padding']>('md'),
-      value: typed<string>(''),
-    });
-
-    const tabsCtx = useInject(TABS_CTX, undefined);
+export const TAB_PANEL_TAG = defineComponent<BitTabPanelProps>({
+  props: {
+    active: typed<boolean>(false),
+    lazy: typed<boolean>(false),
+    padding: typed<BitTabPanelProps['padding']>('md'),
+    value: typed<string>(''),
+  },
+  setup({ host, props }) {
+    const tabsCtx = inject(TABS_CTX, undefined);
     const isActive = tabsCtx
       ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
       : props.active;
@@ -88,7 +86,6 @@ export const TAB_PANEL_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [reducedMotionMixin, styles],
-  },
-);
+  styles: [reducedMotionMixin, styles],
+  tag: 'bit-tab-panel',
+});

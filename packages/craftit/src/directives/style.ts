@@ -1,7 +1,6 @@
-import { isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
+import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { computedOrStatic } from '../internal';
-import { toKebab } from '../utils';
+import { toKebab } from '../core/utils';
 
 type StyleValue =
   | string
@@ -18,7 +17,6 @@ const UNITLESS = new Set([
   'columnCount',
   'flex',
   'flexGrow',
-  'flexOrder',
   'flexShrink',
   'fontWeight',
   'gridColumn',
@@ -59,7 +57,7 @@ export function style(map: Record<string, StyleValue>): string | ReadonlySignal<
   const entries = Object.entries(map);
   const hasReactive = entries.some(([, v]) => isSignal(v) || typeof v === 'function');
 
-  const _build = (): string => {
+  const build = (): string => {
     const parts: string[] = [];
 
     for (const [k, v] of entries) {
@@ -75,5 +73,5 @@ export function style(map: Record<string, StyleValue>): string | ReadonlySignal<
     return parts.join(';');
   };
 
-  return computedOrStatic(hasReactive, _build);
+  return hasReactive ? computed(build) : build();
 }

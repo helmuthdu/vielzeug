@@ -1,10 +1,10 @@
-import { type Fixture, fire, mount } from '@vielzeug/craftit/test';
+import { fire, type Fixture, mount } from '@vielzeug/craftit/test';
 
 describe('bit-rating', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./rating');
+    await (() => import('./rating'))();
   });
 
   afterEach(() => {
@@ -148,7 +148,7 @@ describe('bit-rating', () => {
     it('change event detail carries the selected star value', async () => {
       fixture = await mount('bit-rating');
 
-      let detail: { value: number } | undefined;
+      let detail: { originalEvent?: Event; value: number } | undefined;
 
       fixture.element.addEventListener('change', (e: Event) => {
         detail = (e as CustomEvent).detail;
@@ -161,6 +161,7 @@ describe('bit-rating', () => {
       await fixture.flush();
 
       expect(detail?.value).toBe(2);
+      expect(detail?.originalEvent).toBeDefined();
     });
 
     it('does not fire change when readonly', async () => {
@@ -213,7 +214,7 @@ describe('bit-rating accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./rating');
+    await (() => import('./rating'))();
   });
 
   afterEach(() => {

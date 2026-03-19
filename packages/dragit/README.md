@@ -131,8 +131,8 @@ Target `.dragit-placeholder` in your CSS to style the placeholder shown while dr
 
 ```css
 .dragit-placeholder {
-  background: var(--color-primary-50);
-  border: 2px dashed var(--color-primary-300);
+  background: #eff6ff;
+  border: 2px dashed #93c5fd;
   border-radius: 4px;
   box-sizing: border-box;
 }
@@ -140,4 +140,14 @@ Target `.dragit-placeholder` in your CSS to style the placeholder shown while dr
 
 ## Documentation
 
-Full documentation at [vielzeug.dev/dragit](https://vielzeug.dev/dragit/).
+Full docs at **[vielzeug.dev/dragit](https://vielzeug.dev/dragit)**
+
+| | |
+|---|---|
+| [Usage Guide](https://vielzeug.dev/dragit/usage) | Drop zones, accept filtering, sortable lists |
+| [API Reference](https://vielzeug.dev/dragit/api) | Complete type signatures |
+| [Examples](https://vielzeug.dev/dragit/examples) | Real-world drag-and-drop patterns |
+
+## License
+
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

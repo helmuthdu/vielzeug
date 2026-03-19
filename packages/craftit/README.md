@@ -1,10 +1,10 @@
 # @vielzeug/craftit
 
-> Web component authoring with signals, reactive templates, and framework-agnostic custom elements
+> Functional web components with signals, typed props, and template bindings
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/craftit)](https://www.npmjs.com/package/@vielzeug/craftit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Craftit** is a declarative web component library built on fine-grained signals: define custom elements with `define()`, author reactive UIs with `signal()`, `computed()`, and `effect()`, and render with a tagged template literal.
+**Craftit** provides a compact API for authoring custom elements with fine-grained reactivity. It builds on `@vielzeug/stateit` (re-exported from the main entry) and adds component lifecycle, templating, typed props, context, slots/emits, form-associated helpers, and observer utilities.
 
 ## Installation
 
@@ -16,235 +16,145 @@ pnpm add @vielzeug/craftit
 
 ## Quick Start
 
-```typescript
-import { define, signal, computed, html } from '@vielzeug/craftit';
+```ts
+import { defineComponent, signal, computed, html } from '@vielzeug/craftit';
 
-define('my-counter', () => {
-  const count = signal(0);
-  const doubled = computed(() => count.value * 2);
+defineComponent({
+  setup() {
+    const count = signal(0);
+    const doubled = computed(() => count.value * 2);
 
-  return html`
-    <div>
-      <p>Count: ${count}</p>
+    return html`
+      <button @click=${() => count.value++}>Count: ${count}</button>
       <p>Doubled: ${doubled}</p>
-      <button @click=${() => count.value++}>Increment</button>
-    </div>
-  `;
+    `;
+  },
+  tag: 'my-counter',
 });
 ```
 
 ## Features
 
-- ✅ **Signals** — fine-grained reactive primitives: `signal()`, `computed()`, `effect()`
-- ✅ **Custom elements** — `define(name, setup, options?)` registers a standard web component
-- ✅ **html template tag** — efficient DOM patching with tagged template literals
-- ✅ **Refs** — `ref<T>()` and `refs<T>()` for DOM element references
-- ✅ **Watch** — `watch(source, callback)` for derived reactions
-- ✅ **Batched updates** — `batch(fn)` to group multiple signal writes
-- ✅ **Props, slots, emits** — `defineProps`, `defineSlots`, `defineEmits`
-- ✅ **Context / DI** — `useProvide()`, `useInject()`, `createContext()` for cross-component data sharing
-- ✅ **Form-associated** — `defineField()` for custom form controls with native validation
-- ✅ **Accessibility** — `aria()`, `createId()`, `createFormIds()`, `useFocusTrap()`
-- ✅ **Lifecycle** — `onMount`, `onUnmount`, `onRendered`, `onCleanup`, `onError`
-- ✅ **Observers** — `observeResize()`, `observeIntersection()`, `observeMedia()`
-- ✅ **Framework-agnostic** — pure web components, usable anywhere
+- ✅ **Component authoring** — `defineComponent({ tag, props, setup, ... })`
+- ✅ **Signals included** — all `@vielzeug/stateit` exports are re-exported
+- ✅ **Reactive templates** — `html` tagged template with text/attr/prop/event/ref bindings
+- ✅ **Lifecycle helpers** — `onMount`, `onCleanup`, `onError`, `handle`, `watch`, `effect`, `fire`
+- ✅ **Typed component APIs** — `defineComponent`, `prop`, `typed`, setup-context `emit` and `slots`
+- ✅ **Context / DI** — `createContext`, `provide`, `inject`, `syncContextProps`
+- ✅ **Form-associated controls** — `defineField` with `ElementInternals`
+- ✅ **Observer utilities** — `observeResize`, `observeIntersection`, `observeMedia`
+- ✅ **Directive subpath** — `@vielzeug/craftit/directives`
+- ✅ **Test subpath** — `@vielzeug/craftit/test`
 
-## Usage
+## Entry Points
 
-### Signals
+| Entry | Purpose |
+|---|---|
+| `@vielzeug/craftit` | Main API (components + stateit re-exports) |
+| `@vielzeug/craftit/directives` | Directive helpers like `each`, `when`, `bind`, `match`, `until` |
+| `@vielzeug/craftit/test` | Mount/query/event testing utilities |
+| `@vielzeug/craftit/core` | Standalone bundle export |
 
-```typescript
-import { signal, computed, effect, watch } from '@vielzeug/craftit';
+## Usage Highlights
 
-const count = signal(0);
-const label = computed(() => `Count: ${count.value}`);
+### Typed props + emits
 
-effect(() => {
-  console.log(label.value); // runs when label changes
-});
+```ts
+import { defineComponent, html } from '@vielzeug/craftit';
 
-watch(count, (next, prev) => {
-  console.log('count changed:', prev, '->', next);
-});
-
-count.value = 1;
-
-// Batch multiple writes into one update
-batch(() => {
-  count.value = 10;
-  // other signals...
-});
-```
-
-### Defining a Component
-
-```typescript
-import { define, html, defineProps, ref, effect } from '@vielzeug/craftit';
-
-define('user-card', () => {
-  const props = defineProps({ name: 'Guest' });
-  const name = props.name; // reactive prop from attributes
-  const containerRef = ref<HTMLDivElement>();
-
-  effect(() => console.log('name is:', name.value));
-
-  return html`
-    <div ref=${containerRef}>
-      <h2>${name}</h2>
-      <button @click=${() => (name.value = 'Clicked!')}>Click me</button>
-    </div>
-  `;
+defineComponent<
+  { disabled: boolean; label: string },
+  { change: string }
+>({
+  props: {
+    disabled: { default: false },
+    label: { default: 'Name' },
+  },
+  setup({ emit, props }) {
+    return html`
+      <label>${props.label}</label>
+      <input
+        :disabled=${props.disabled}
+        @input=${(e: Event) => emit('change', (e.target as HTMLInputElement).value)}
+      />
+    `;
+  },
+  tag: 'name-input',
 });
 ```
 
-### Props, Slots, and Emits
+### Directives subpath
 
-```typescript
-import { define, defineProps, defineEmits, defineSlots, html } from '@vielzeug/craftit';
+```ts
+import { defineComponent, signal, html } from '@vielzeug/craftit';
+import { each, when } from '@vielzeug/craftit/directives';
 
-define('my-input', () => {
-  const props = defineProps({
-    label: '',
-    disabled: false,
-  });
-  const emit = defineEmits<{ change: string }>();
-  const slots = defineSlots();
+defineComponent({
+  setup() {
+    const todos = signal([{ id: 1, text: 'Write docs', done: false }]);
 
-  return html`
-    <label>${props.label}</label>
-    <input
-      ?disabled=${props.disabled}
-      @input=${(e: Event) => emit('change', (e.target as HTMLInputElement).value)}
-    />
-    <p>Has content: ${() => String(slots.has('default').value)}</p>
-    <slot></slot>
-  `;
+    return html`
+      ${when(
+        () => todos.value.length > 0,
+        () => html`<ul>${each(todos, (todo) => html`<li>${todo.text}</li>`, () => html``, { key: (t) => t.id })}</ul>`,
+        () => html`<p>No todos</p>`,
+      )}
+    `;
+  },
+  tag: 'todo-list',
 });
 ```
 
-### Signal Utilities
+### Form-associated field
 
-```typescript
-import { readonly, writable, isSignal, toValue } from '@vielzeug/craftit';
+```ts
+import { defineComponent, defineField, signal, html } from '@vielzeug/craftit';
 
-const count = signal(0);
-const ro = readonly(count); // read-only view
-const custom = writable(
-  () => count.value,
-  (v) => (count.value = v * 2),
-);
+defineComponent({
+  formAssociated: true,
+  setup() {
+    const value = signal('');
+    const field = defineField({ value });
 
-isSignal(count); // true
-toValue(count); // 0
-toValue(42); // 42 (plain values pass through)
+    return html`
+      <input
+        type="email"
+        :value=${value}
+        @input=${(e: Event) => {
+          value.value = (e.target as HTMLInputElement).value;
+          field.setCustomValidity(value.value.includes('@') ? '' : 'Invalid email');
+        }}
+      />
+    `;
+  },
+  tag: 'email-field',
+});
 ```
 
-## API
+## API Summary
 
-**Components**
-
-| Export                               | Description                                                |
-| ------------------------------------ | ---------------------------------------------------------- |
-| `define(name, setup, options?)`      | Register a custom element. `setup` receives `{ host, shadow }` |
-| `prop(name, default, options?)`      | Declare a single reactive prop (syncs with HTML attribute) |
-| `defineProps(defs)`                  | Declare multiple props at once (supports direct defaults)  |
-| `typed<T>(default, options?)`        | Typed PropDef helper for explicit type parameters          |
-| `defineEmits<T>()`                   | Emit typed custom events                                   |
-| `defineSlots()`                      | Reactive slot-presence signals for named/default slots     |
-| `onSlotChange(name, cb)`             | React to slot content changes inside `onMount`             |
-| `useProvide(key, value)`             | Provide a context value to descendant components           |
-| `useInject(key, fallback?)`          | Inject a context value from an ancestor component          |
-| `createContext<T>()`                 | Create a typed injection key with optional default         |
-| `syncContextProps(ctx, props, keys)` | Reactively inherit props from a context object             |
-| `defineField(options, callbacks?)`      | Form-associated element via ElementInternals               |
-
-**Signals** (re-exported from `@vielzeug/stateit`)
-
-| Export                    | Description                                      |
-| ------------------------- | ------------------------------------------------ |
-| `signal(initial)`         | Create a reactive signal                         |
-| `computed(fn)`            | Create a memoized derived signal                 |
-| `effect(fn)`              | Run a side-effect when dependencies change       |
-| `watch(source, callback)` | Watch a signal (or array of signals) for changes |
-| `batch(fn)`               | Group mutations into a single update             |
-| `untrack(fn)`             | Read signals without creating dependencies       |
-| `readonly(signal)`        | Read-only signal wrapper                         |
-| `writable(get, set)`      | Bi-directional computed signal                   |
-| `isSignal(v)`             | Type guard for signals                           |
-| `toValue(v)`              | Unwrap signal or return plain value              |
-
-**Templates**
-
-| Export                                 | Description                                |
-| -------------------------------------- | ------------------------------------------ |
-| `html`                                 | Tagged template for reactive DOM rendering |
-| `html.when(cond, then, else?)`         | Conditional rendering — mounts/unmounts    |
-| `html.each(source, keyFn, templateFn)` | Keyed list rendering                       |
-
-**Directives** (from `@vielzeug/craftit/directives`)
-
-| Export                          | Description                                         |
-| ------------------------------- | --------------------------------------------------- |
-| `when(cond, thenFn, elseFn?)`   | Conditional rendering                               |
-| `each(source, keyFn, tplFn)`    | Keyed list rendering                                |
-| `show(cond, template)`          | Conditional visibility — keeps DOM mounted          |
-| `bind(signal)`                  | Two-way input binding shorthand                     |
-| `classes(obj)`                  | Build dynamic class strings                         |
-| `style(obj)`                    | Build dynamic inline style strings                  |
-| `match(...branches, fallback?)` | Multi-branch conditional rendering (else-if chains) |
-| `raw`                           | Tagged template — no HTML escaping                  |
-| `rawHtml(content)`              | Mark a string as trusted raw HTML                   |
-| `escapeHtml(value)`             | Escape HTML entities                                |
-| `suspense(asyncFn, opts)`       | Async data with loading/error/retry                 |
-
-**Styling**
-
-| Export                           | Description                                  |
-| -------------------------------- | -------------------------------------------- |
-| `css`                            | Tagged template for scoped shadow DOM styles |
-| `css.theme(light, dark?, opts?)` | CSS custom properties for light/dark theming |
-
-**Lifecycle**
-
-| Export                      | Description                                                           |
-| --------------------------- | --------------------------------------------------------------------- |
-| `onMount(fn)`               | Run after component connects to the DOM                               |
-| `onUnmount(fn)`             | Run before component disconnects                                      |
-| `onRendered(fn)`            | Run once after initial render and all `onMount` hooks                 |
-| `onCleanup(fn)`             | Register a cleanup function (runs on unmount or effect re-run)        |
-| `onError(fn)`               | Scoped error boundary for render/lifecycle errors                     |
-| `handle(target, event, fn)` | Add event listener with automatic cleanup                             |
-| `.prop=${signal}` / `attr` | Declarative (optionally two-way) property binding for DOM properties   |
-| `aria(attrs)`               | Reactive ARIA attributes on the host (setup) or any element (onMount) |
-| `onFormAssociated(fn)`      | Called when element is inserted into a `<form>`                       |
-| `onFormDisabled(fn)`        | Called when the associated form's disabled state changes              |
-| `onFormReset(fn)`           | Called when the associated form is reset                              |
-| `onFormStateRestore(fn)`    | Called when the browser restores form state                           |
-
-**Utilities**
-
-| Export                           | Description                                                        |
-| -------------------------------- | ------------------------------------------------------------------ |
-| `ref<T>()`                       | Single DOM element reference                                       |
-| `refs<T>()`                      | Multiple DOM element references (live `ReadonlyArray`)             |
-| `guard(condition, handler)`      | Conditional event handler wrapper                                  |
-| `createId(prefix?)`              | Generate a unique stable ID for accessibility linkage              |
-| `createFormIds(prefix, name)`    | Generate a set of stable ARIA IDs for a form control               |
-| `useFocusTrap(container)`        | Trap keyboard focus inside a container (`onMount`)                 |
-| `getFocusableElements(root)`     | All keyboard-focusable descendants in DOM order                    |
-| `observeResize(el)`              | `ReadonlySignal<{width, height}>` via `ResizeObserver` (`onMount`) |
-| `observeIntersection(el, opts?)` | `ReadonlySignal<IntersectionObserverEntry>` (`onMount`)            |
-| `observeMedia(query)`            | `ReadonlySignal<boolean>` tracking a CSS media query               |
+| Group | Main exports |
+|---|---|
+| Components | `defineComponent`, `DefineComponentOptions`, `DefineComponentSetupContext`, `BuildPropSchema` |
+| Runtime | `onMount`, `onCleanup`, `onError`, `handle`, `aria`, `effect`, `watch`, `fire` |
+| Props | `prop`, `typed`, `PropOptions`, `PropDef`, `InferPropsSignals` |
+| Slots / emits | setup-context `slots`, setup-context `emit`, `onSlotChange`, `Slots`, `EmitFn` |
+| Context | `createContext`, `provide`, `inject`, `syncContextProps`, `InjectionKey` |
+| Form | `defineField`, `FormFieldOptions`, `FormFieldCallbacks`, `FormFieldHandle` |
+| Observers | `observeResize`, `observeIntersection`, `observeMedia` |
+| Utilities | `html`, `css`, `createId`, `createFormIds`, `guard`, `escapeHtml`, `toKebab` |
+| Re-exported from stateit | `signal`, `computed`, `batch`, `untrack`, `readonly`, and more |
 
 ## Documentation
 
 Full docs at **[vielzeug.dev/craftit](https://vielzeug.dev/craftit)**
 
-|                                                   |                                |
-| ------------------------------------------------- | ------------------------------ |
-| [Usage Guide](https://vielzeug.dev/craftit/usage) | Components, signals, templates |
-| [API Reference](https://vielzeug.dev/craftit/api) | Complete type signatures       |
-| [Examples](https://vielzeug.dev/craftit/examples) | Real-world component patterns  |
+| | |
+|---|---|
+| [Overview](https://vielzeug.dev/craftit/) | Install and architecture overview |
+| [Usage Guide](https://vielzeug.dev/craftit/usage) | Practical patterns and subpath usage |
+| [API Reference](https://vielzeug.dev/craftit/api) | Complete signatures and types |
+| [Examples](https://vielzeug.dev/craftit/examples) | End-to-end component examples |
 
 ## License
 

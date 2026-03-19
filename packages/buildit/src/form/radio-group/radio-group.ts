@@ -2,26 +2,26 @@ import {
   computed,
   createContext,
   createId,
-  define,
+  defineComponent,
   effect,
-  fire,
   handle,
   html,
-  useInject,
+  inject,
   onMount,
   onSlotChange,
-  useProvide,
+  provide,
   type ReadonlySignal,
   signal,
   watch,
-  defineProps,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
+import { mountFormContextSync } from '../shared/dom-sync';
+import { createChoiceChangeDetail, type ChoiceChangeDetail } from '../shared/utils';
+import componentStyles from './radio-group.css?inline';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -29,18 +29,14 @@ export type RadioGroupContext = {
   color: ReadonlySignal<ThemeColor | undefined>;
   disabled: ReadonlySignal<boolean>;
   name: ReadonlySignal<string | undefined>;
-  select: (value: string) => void;
+  select: (value: string, originalEvent?: Event) => void;
   size: ReadonlySignal<ComponentSize | undefined>;
   value: ReadonlySignal<string>;
 };
 
 export const RADIO_GROUP_CTX = createContext<RadioGroupContext>('RadioGroupContext');
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-import componentStyles from './radio-group.css?inline';
-
-// ─── Props ────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type BitRadioGroupProps = {
   /** Theme color — propagated to all child bit-radio elements */
@@ -65,6 +61,10 @@ export type BitRadioGroupProps = {
   value?: string;
 };
 
+export type BitRadioGroupEvents = {
+  change: ChoiceChangeDetail;
+};
+
 /**
  * A fieldset wrapper that groups `bit-radio` elements, provides shared
  * `name`, `color`, and `size` via context, and manages roving tabindex
@@ -83,35 +83,24 @@ export type BitRadioGroupProps = {
  * @attr {string} orientation - Layout: 'vertical' | 'horizontal'
  * @attr {boolean} required - Required field
  *
- * @fires change - Emitted when a radio is selected. detail: { value: string }
+ * @fires change - Emitted when a radio is selected. detail: { value: string, values: string[], labels: string[], originalEvent?: Event }
  *
  * @slot - Place `bit-radio` elements here
- *
- * @example
- * ```html
- * <bit-radio-group name="size" label="T-shirt size" value="medium">
- *   <bit-radio value="small">Small</bit-radio>
- *   <bit-radio value="medium">Medium</bit-radio>
- *   <bit-radio value="large">Large</bit-radio>
- * </bit-radio-group>
- * ```
  */
-export const RADIO_GROUP_TAG = define(
-  'bit-radio-group',
-  ({ host }) => {
-    const props = defineProps<BitRadioGroupProps>({
-      color: { default: undefined },
-      disabled: { default: false },
-      error: { default: '' },
-      helper: { default: '' },
-      label: { default: '' },
-      name: { default: '' },
-      orientation: { default: 'vertical' },
-      required: { default: false },
-      size: { default: undefined },
-      value: { default: '' },
-    });
-
+export const RADIO_GROUP_TAG = defineComponent<BitRadioGroupProps, BitRadioGroupEvents>({
+  props: {
+    color: { default: undefined },
+    disabled: { default: false },
+    error: { default: '' },
+    helper: { default: '' },
+    label: { default: '' },
+    name: { default: '' },
+    orientation: { default: 'vertical' },
+    required: { default: false },
+    size: { default: undefined },
+    value: { default: '' },
+  },
+  setup({ emit, host, props }) {
     const selectedValue = signal('');
 
     watch(
@@ -122,15 +111,28 @@ export const RADIO_GROUP_TAG = define(
       { immediate: true },
     );
 
-    const selectRadio = (val: string) => {
-      selectedValue.value = val;
-      fire(host, 'change', { detail: { value: val } });
+    const getSlottedRadios = (): HTMLElement[] => Array.from(host.getElementsByTagName('bit-radio')) as HTMLElement[];
+
+    const getLabelForValue = (value: string): string => {
+      const radio = getSlottedRadios().find((el) => (el.getAttribute('value') ?? '') === value);
+
+      return radio?.textContent?.replace(/\s+/g, ' ').trim() || value;
     };
-    const formCtx = useInject(FORM_CTX, undefined);
+
+    const selectRadio = (val: string, originalEvent?: Event) => {
+      selectedValue.value = val;
+
+      const labels = val ? [getLabelForValue(val)] : [];
+      const values = val ? [val] : [];
+
+      emit('change', createChoiceChangeDetail(values, labels, originalEvent));
+    };
+
+    const formCtx = inject(FORM_CTX, undefined);
 
     mountFormContextSync(host, formCtx, props);
-    // Provide context to child bit-radio elements
-    useProvide(RADIO_GROUP_CTX, {
+
+    provide(RADIO_GROUP_CTX, {
       color: props.color,
       disabled: computed(() => Boolean(props.disabled.value)),
       name: props.name,
@@ -142,15 +144,7 @@ export const RADIO_GROUP_TAG = define(
     // Sync name/color/size/disabled onto slotted bit-radio children.
     // Checked state is handled reactively inside bit-radio via group context.
     const syncChildren = () => {
-      const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
-
-      if (!slot) return;
-
-      const radios = slot
-        .assignedElements({ flatten: true })
-        .filter((el) => el.tagName.toLowerCase() === 'bit-radio') as HTMLElement[];
-
-      for (const radio of radios) {
+      for (const radio of getSlottedRadios()) {
         const val = radio.getAttribute('value') ?? '';
 
         if (val === selectedValue.value) radio.setAttribute('checked', '');
@@ -171,17 +165,13 @@ export const RADIO_GROUP_TAG = define(
 
     onMount(() => {
       onSlotChange('default', syncChildren);
+      // Apply group props to already-slotted radios on first mount.
+      syncChildren();
       effect(syncChildren);
 
       // Roving tabindex: only the selected (or first) radio is tabbable
-      const updateTabindex = () => {
-        const slot2 = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
-
-        if (!slot2) return;
-
-        const radios = slot2
-          .assignedElements({ flatten: true })
-          .filter((el) => el.tagName.toLowerCase() === 'bit-radio') as HTMLElement[];
+      effect(() => {
+        const radios = getSlottedRadios();
         let hasFocusable = false;
 
         for (const radio of radios) {
@@ -201,21 +191,13 @@ export const RADIO_GROUP_TAG = define(
 
           if (first) first.setAttribute('tabindex', '0');
         }
-      };
-
-      effect(updateTabindex);
+      });
 
       // Arrow-key navigation within the group
-      const handleKeydown = (e: KeyboardEvent) => {
+      handle(host, 'keydown', (e: KeyboardEvent) => {
         if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
 
-        const slot3 = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
-
-        if (!slot3) return;
-
-        const radios = slot3
-          .assignedElements({ flatten: true })
-          .filter((el) => el.tagName.toLowerCase() === 'bit-radio' && !el.hasAttribute('disabled')) as HTMLElement[];
+        const radios = getSlottedRadios().filter((el) => !el.hasAttribute('disabled'));
 
         if (!radios.length) return;
 
@@ -231,23 +213,14 @@ export const RADIO_GROUP_TAG = define(
             : (focused - 1 + radios.length) % radios.length;
 
         radios[next].focus();
+        selectRadio(radios[next].getAttribute('value') ?? '', e);
+      });
 
-        const val = radios[next].getAttribute('value') ?? '';
-
-        selectRadio(val);
-      };
-
-      handle(host, 'keydown', handleKeydown);
-      // Listen for change events bubbled from child bit-radio elements
       handle(host, 'change', (e: Event) => {
-        if (e.target === host) return; // our own re-dispatch
+        if (e.target === host) return;
 
         e.stopPropagation();
-
-        const target = e.target as HTMLElement;
-        const val = target.getAttribute('value') ?? '';
-
-        selectRadio(val);
+        selectRadio((e.target as HTMLElement).getAttribute('value') ?? '', e);
       });
     });
 
@@ -277,7 +250,6 @@ export const RADIO_GROUP_TAG = define(
       </fieldset>
     `;
   },
-  {
-    styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
-  },
-);
+  styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
+  tag: 'bit-radio-group',
+});

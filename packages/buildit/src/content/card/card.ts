@@ -1,15 +1,4 @@
-import {
-  define,
-  handle,
-  html,
-  onMount,
-  onSlotChange,
-  ref,
-  signal,
-  watch,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+import { defineComponent, handle, html, onMount, onSlotChange, ref, signal, watch } from '@vielzeug/craftit/core';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
@@ -109,21 +98,18 @@ export type BitCardProps = {
  * <bit-card variant="frost" color="secondary">Frosted card</bit-card>
  * ```
  */
-export const CARD_TAG = define(
-  'bit-card',
-  ({ host }) => {
-    const props = defineProps<BitCardProps>({
-      color: { default: undefined },
-      disabled: { default: false, type: Boolean },
-      elevation: { default: undefined },
-      interactive: { default: false, type: Boolean },
-      loading: { default: false, type: Boolean },
-      orientation: { default: undefined },
-      padding: { default: undefined },
-      variant: { default: undefined },
-    });
-    const emit = defineEmits<BitCardEvents>();
-
+export const CARD_TAG = defineComponent<BitCardProps, BitCardEvents>({
+  props: {
+    color: { default: undefined },
+    disabled: { default: false, type: Boolean },
+    elevation: { default: undefined },
+    interactive: { default: false, type: Boolean },
+    loading: { default: false, type: Boolean },
+    orientation: { default: undefined },
+    padding: { default: undefined },
+    variant: { default: undefined },
+  },
+  setup({ emit, host, props }) {
     const mediaSlot = ref<HTMLSlotElement>();
     const headerSlot = ref<HTMLSlotElement>();
     const contentSlot = ref<HTMLSlotElement>();
@@ -209,7 +195,6 @@ export const CARD_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [...surfaceMixins, frostVariantMixin('.card'), reducedMotionMixin, componentStyles],
-  },
-);
+  styles: [...surfaceMixins, frostVariantMixin('.card'), reducedMotionMixin, componentStyles],
+  tag: 'bit-card',
+});

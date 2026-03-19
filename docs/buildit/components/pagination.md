@@ -64,12 +64,48 @@ The `variant` prop controls the visual style of the previous, next, first, and l
 <ComponentPreview vertical>
 
 ```html
-<bit-pagination page="5" total-pages="12" color="primary" variant="ghost" show-prev-next show-first-last></bit-pagination>
-<bit-pagination page="5" total-pages="12" color="primary" variant="solid" show-prev-next show-first-last></bit-pagination>
-<bit-pagination page="5" total-pages="12" color="primary" variant="flat" show-prev-next show-first-last></bit-pagination>
-<bit-pagination page="5" total-pages="12" color="primary" variant="bordered" show-prev-next show-first-last></bit-pagination>
-<bit-pagination page="5" total-pages="12" color="primary" variant="outline" show-prev-next show-first-last></bit-pagination>
-<bit-pagination page="5" total-pages="12" color="primary" variant="text" show-prev-next show-first-last></bit-pagination>
+<bit-pagination
+  page="5"
+  total-pages="12"
+  color="primary"
+  variant="ghost"
+  show-prev-next
+  show-first-last></bit-pagination>
+<bit-pagination
+  page="5"
+  total-pages="12"
+  color="primary"
+  variant="solid"
+  show-prev-next
+  show-first-last></bit-pagination>
+<bit-pagination
+  page="5"
+  total-pages="12"
+  color="primary"
+  variant="flat"
+  show-prev-next
+  show-first-last></bit-pagination>
+<bit-pagination
+  page="5"
+  total-pages="12"
+  color="primary"
+  variant="bordered"
+  show-prev-next
+  show-first-last></bit-pagination>
+<bit-pagination
+  page="5"
+  total-pages="12"
+  color="primary"
+  variant="outline"
+  show-prev-next
+  show-first-last></bit-pagination>
+<bit-pagination
+  page="5"
+  total-pages="12"
+  color="primary"
+  variant="text"
+  show-prev-next
+  show-first-last></bit-pagination>
 ```
 
 </ComponentPreview>
@@ -143,8 +179,7 @@ Use `siblings` to control how many page numbers appear on each side of the curre
   value="12"
   show-first-last
   sibling-count="1"
-  aria-label="Search results pages"
-></bit-pagination>
+  aria-label="Search results pages"></bit-pagination>
 ```
 
 **Tip:** Combine with a `<bit-text variant="caption" color="subtle">` showing `"Showing 221–240 of 500"` above the table for users who scan results rather than navigate page-by-page.
@@ -153,31 +188,31 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 
 ### Attributes
 
-| Attribute        | Type                                               | Default    | Description                                          |
-| ---------------- | -------------------------------------------------- | ---------- | ---------------------------------------------------- |
-| `page`           | `number`                                           | `1`        | Currently active page (1-based)                      |
-| `total-pages`    | `number`                                           | `1`        | Total number of pages                                |
-| `siblings`       | `number`                                           | `1`        | Page buttons visible on each side of the current page |
-| `show-first-last`| `boolean`                                          | `false`    | Show first and last page buttons                     |
-| `show-prev-next` | `boolean`                                          | `false`    | Show previous and next page buttons                  |
-| `color`          | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | — | Active page color |
-| `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost' \| 'glass'` | `'ghost'` | Visual style of nav buttons |
-| `size`           | `'sm' \| 'md' \| 'lg'`                             | `'md'`     | Component size                                       |
-| `label`          | `string`                                           | `'pagination'` | `aria-label` for the nav landmark                |
+| Attribute         | Type                                                                                      | Default        | Description                                           |
+| ----------------- | ----------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------- |
+| `page`            | `number`                                                                                  | `1`            | Currently active page (1-based)                       |
+| `total-pages`     | `number`                                                                                  | `1`            | Total number of pages                                 |
+| `siblings`        | `number`                                                                                  | `1`            | Page buttons visible on each side of the current page |
+| `show-first-last` | `boolean`                                                                                 | `false`        | Show first and last page buttons                      |
+| `show-prev-next`  | `boolean`                                                                                 | `false`        | Show previous and next page buttons                   |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`                 | —              | Active page color                                     |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost' \| 'glass'` | `'ghost'`      | Visual style of nav buttons                           |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`         | Component size                                        |
+| `label`           | `string`                                                                                  | `'pagination'` | `aria-label` for the nav landmark                     |
 
 ### Events
 
-| Event        | Detail              | Description                          |
-| ------------ | ------------------- | ------------------------------------ |
-| `bit-change` | `{ page: number }`  | Fired when the user selects a page   |
+| Event        | Detail             | Description                        |
+| ------------ | ------------------ | ---------------------------------- |
+| `bit-change` | `{ page: number }` | Fired when the user selects a page |
 
 ### CSS Custom Properties
 
-| Property                  | Description                        |
-| ------------------------- | ---------------------------------- |
-| `--pagination-item-size`  | Width and height of each page button |
-| `--pagination-gap`        | Gap between page buttons           |
-| `--pagination-radius`     | Border radius of page buttons      |
+| Property                 | Description                          |
+| ------------------------ | ------------------------------------ |
+| `--pagination-item-size` | Width and height of each page button |
+| `--pagination-gap`       | Gap between page buttons             |
+| `--pagination-radius`    | Border radius of page buttons        |
 
 ## Accessibility
 

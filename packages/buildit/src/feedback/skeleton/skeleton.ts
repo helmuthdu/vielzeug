@@ -1,4 +1,5 @@
-import { computed, define, html, observeIntersection, onMount, watch, defineProps } from '@vielzeug/craftit';
+import { computed, defineComponent, html, onMount, watch } from '@vielzeug/craftit/core';
+import { observeIntersection } from '@vielzeug/craftit/labs';
 
 import type { ComponentSize } from '../../types';
 
@@ -64,20 +65,18 @@ export type BitSkeletonProps = {
  * <bit-skeleton width="100%" height="10rem"></bit-skeleton>
  * ```
  */
-export const SKELETON_TAG = define(
-  'bit-skeleton',
-  ({ host }) => {
-    const props = defineProps<BitSkeletonProps>({
-      animated: { default: true },
-      height: { default: undefined },
-      lines: { default: 1 },
-      radius: { default: undefined },
-      size: { default: undefined },
-      striped: { default: false },
-      variant: { default: 'rect' },
-      width: { default: undefined },
-    });
-
+export const SKELETON_TAG = defineComponent<BitSkeletonProps>({
+  props: {
+    animated: { default: true },
+    height: { default: undefined },
+    lines: { default: 1 },
+    radius: { default: undefined },
+    size: { default: undefined },
+    striped: { default: false },
+    variant: { default: 'rect' },
+    width: { default: undefined },
+  },
+  setup({ host, props }) {
     const lineCount = computed(() => {
       const value = Math.floor(Number(props.lines.value));
 
@@ -128,7 +127,6 @@ export const SKELETON_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [reducedMotionMixin, componentStyles],
-  },
-);
+  styles: [reducedMotionMixin, componentStyles],
+  tag: 'bit-skeleton',
+});

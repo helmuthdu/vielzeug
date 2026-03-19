@@ -121,15 +121,8 @@ Vue 3 has excellent native support for Web Components. No extra configuration is
 
 ```vue
 <template>
-  <bit-input
-    label="Email"
-    type="email"
-    :disabled="isLoading"
-    @bit-change="handleChange"
-  />
-  <bit-button variant="solid" color="primary" :loading="isLoading" @click="submit">
-    Submit
-  </bit-button>
+  <bit-input label="Email" type="email" :disabled="isLoading" @bit-change="handleChange" />
+  <bit-button variant="solid" color="primary" :loading="isLoading" @click="submit"> Submit </bit-button>
 </template>
 
 <script setup lang="ts">
@@ -293,20 +286,11 @@ import dynamic from 'next/dynamic';
 
 // Ensure the import runs client-side only
 const ClientComponent = dynamic(
-  () => import('./MyComponent').then((mod) => { import('@vielzeug/buildit'); return mod; }),
-  { ssr: false }
+  () =>
+    import('./MyComponent').then((mod) => {
+      import('@vielzeug/buildit');
+      return mod;
+    }),
+  { ssr: false },
 );
 ```
-
-## Next Steps
-
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./theming">Theming</a> – Customize design tokens and colors</li>
-      <li><a href="./api">API Reference</a> – Complete component API documentation</li>
-      <li><a href="./examples">Examples</a> – Practical recipes</li>
-    </ul>
-  </div>
-</div>

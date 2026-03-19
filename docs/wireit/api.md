@@ -7,6 +7,42 @@ description: Complete API reference for @vielzeug/wireit dependency injection co
 
 [[toc]]
 
+## API At a Glance
+
+| Symbol                       | Purpose                             | Execution mode | Common gotcha                                               |
+| ---------------------------- | ----------------------------------- | -------------- | ----------------------------------------------------------- |
+| `createContainer()`          | Create a typed dependency container | Sync           | Avoid duplicate token registration without overwrite intent |
+| `container.get()/getAsync()` | Resolve sync/async providers        | Mixed          | Use getAsync for async factories                            |
+| `createTestContainer()`      | Create isolated test containers     | Sync           | Dispose test container after each test                      |
+
+## Package Exports
+
+```ts
+export {
+  AliasCycleError,
+  AsyncProviderError,
+  CircularDependencyError,
+  Container,
+  ContainerDisposedError,
+  createContainer,
+  createTestContainer,
+  createToken,
+  ProviderNotFoundError,
+} from '@vielzeug/wireit';
+
+export type {
+  ClassProvider,
+  FactoryProvider,
+  Lifetime,
+  Provider,
+  ProviderOptions,
+  Snapshot,
+  Token,
+  TokenValues,
+  ValueProvider,
+} from '@vielzeug/wireit';
+```
+
 ## `createToken(description)`
 
 Creates a typed injection token.
@@ -165,7 +201,7 @@ Map `token` to `source` — resolving `token` will resolve `source` instead.
 
 **Returns:** `this` (chainable)
 
-**Throws:** `AliasCycleError` if a cycle is detected
+`AliasCycleError` is raised when resolving a token whose alias chain forms a cycle (for example via `get()`, `getAsync()`, or `has()`).
 
 **Example:**
 

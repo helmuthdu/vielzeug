@@ -2,38 +2,40 @@ import {
   aria,
   computed,
   createFormIds,
-  define,
+  defineComponent,
   defineField,
   effect,
   html,
-  useInject,
+  inject,
   onMount,
   onSlotChange,
   ref,
   signal,
   typed,
   watch,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 import { each } from '@vielzeug/craftit/directives';
-import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
-import { createVirtualizer, type VirtualItem } from '@vielzeug/virtualit';
 
-import type { DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
+import type { VisualVariant } from '../../types';
 
 import '../../feedback/chip/chip';
-import { checkIconHTML, chevronDownIcon } from '../../icons';
+import type { SelectableFieldProps } from '../shared/base-props';
+
+import { checkIcon, chevronDownIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import {
-  mountFormContextSync,
-  mountLabelSyncStandalone,
-  resolveMergedAssistiveText,
-  stringifyCsvValues,
-  triggerValidationOnEvent,
-} from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
-import { computeControlledCsvState, removeStringValue, toggleStringValue } from '../shared/form-utils';
+import { FIELD_SIZE_PRESET } from '../shared/design-presets';
+import { createDropdownPositioner, createOutsideClickHandler, mountLabelSyncStandalone } from '../shared/dom-sync';
+import {
+  type ChoiceChangeDetail,
+  computeControlledCsvState,
+  createChoiceChangeDetail,
+  navigateNext,
+  navigatePrev,
+  resolveMergedAssistiveText,
+} from '../shared/utils';
+import { createFieldValidation } from '../shared/validation';
+import componentStyles from './select.css?inline';
 
 // ============================================
 // Types
@@ -46,11 +48,20 @@ type OptionItem = {
   value: string;
 };
 
+type FlatRow =
+  | {
+      idx: number;
+      opt: OptionItem;
+      type: 'option';
+    }
+  | {
+      label: string;
+      type: 'group';
+    };
+
 // ============================================
 // Styles
 // ============================================
-
-import componentStyles from './select.css?inline';
 
 // ============================================
 // Component Props
@@ -59,41 +70,19 @@ import componentStyles from './select.css?inline';
 /** Select component properties */
 
 export type BitSelectEvents = {
-  change: { originalEvent?: Event; value: string; values: string[] };
+  change: ChoiceChangeDetail;
 };
 
-export type BitSelectProps = ThemableProps &
-  SizableProps &
-  DisablableProps & {
-    /** Error message */
-    error?: string;
-    /** Expand to full width */
-    fullwidth?: boolean;
-    /** Helper text */
-    helper?: string;
-    /** Label text */
-    label?: string;
-    /** Label placement: 'inset' | 'outside' */
-    'label-placement'?: 'inset' | 'outside';
-    /** Show loading state in dropdown */
-    loading?: boolean;
-    /** Allow selecting multiple options */
-    multiple?: boolean;
-    /** Form field name */
-    name?: string;
-    /** JS options array (alternative to slotted <option> elements) */
-    options?: OptionItem[];
-    /** Placeholder text when no option is selected */
-    placeholder?: string;
-    /** Mark the field as required */
-    required?: boolean;
-    /** Border radius size */
-    rounded?: RoundedSize | '';
-    /** Current value (use comma-separated for multiple) */
-    value?: string;
-    /** Visual style variant */
-    variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
-  };
+export type BitSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>> & {
+  /** Show loading state in dropdown */
+  loading?: boolean;
+  /** Allow selecting multiple options */
+  multiple?: boolean;
+  /** JS options array (alternative to slotted <option> elements) */
+  options?: OptionItem[];
+  /** Mark the field as required */
+  required?: boolean;
+};
 
 /**
  * A fully custom form-associated select dropdown with keyboard navigation and ARIA support.
@@ -117,7 +106,7 @@ export type BitSelectProps = ThemableProps &
  * @attr {string} rounded - Border radius
  * @attr {boolean} fullwidth - Expand to full width
  *
- * @fires change - Fired when selection changes with the new value
+ * @fires change - Fired when selection changes. detail: { value: string, values: string[], labels: string[], originalEvent?: Event }
  *
  * @slot - `<option>` and `<optgroup>` elements
  *
@@ -147,31 +136,28 @@ export type BitSelectProps = ThemableProps &
  * </bit-select>
  * ```
  */
-export const SELECT_TAG = define(
-  'bit-select',
-  ({ host }) => {
-    const props = defineProps<BitSelectProps>({
-      // 'options' is a JS-only prop handled via Object.defineProperty
-      color: { default: undefined },
-      disabled: { default: false },
-      error: { default: '', omit: true },
-      fullwidth: { default: false },
-      helper: { default: '' },
-      label: { default: '' },
-      'label-placement': { default: 'inset' },
-      loading: { default: false },
-      multiple: { default: false },
-      name: { default: '' },
-      options: typed<OptionItem[] | undefined>(undefined),
-      placeholder: { default: '' },
-      required: { default: false },
-      rounded: { default: undefined },
-      size: { default: undefined },
-      value: { default: '' },
-      variant: { default: undefined },
-    });
-    const emit = defineEmits<BitSelectEvents>();
-
+export const SELECT_TAG = defineComponent<BitSelectProps, BitSelectEvents>({
+  formAssociated: true,
+  props: {
+    color: { default: undefined },
+    disabled: { default: false },
+    error: { default: '', omit: true },
+    fullwidth: { default: false },
+    helper: { default: '' },
+    label: { default: '' },
+    'label-placement': { default: 'inset' },
+    loading: { default: false },
+    multiple: { default: false },
+    name: { default: '' },
+    options: typed<OptionItem[] | undefined>(undefined, { reflect: false }),
+    placeholder: { default: '' },
+    required: { default: false },
+    rounded: { default: undefined },
+    size: { default: undefined },
+    value: { default: '' },
+    variant: { default: undefined },
+  },
+  setup({ emit, host, props }) {
     // ============================================
     // State
     // ============================================
@@ -180,19 +166,15 @@ export const SELECT_TAG = define(
     const isOpen = signal(false);
     const focusedIndex = signal(-1);
     const isLoading = computed(() => Boolean(props.loading.value));
-    // Merged options: JS prop overrides slotted options
+    // Merged options: explicit prop value overrides slotted options.
     const options = computed(() => {
-      const jsProp = (
-        host as unknown as {
-          _optionsProp?: OptionItem[];
-        }
-      )._optionsProp;
+      const propOptions = props.options.value;
 
-      return jsProp && jsProp.length > 0 ? jsProp : slottedOptions.value;
+      return propOptions !== undefined ? propOptions : slottedOptions.value;
     });
-    const formCtx = useInject(FORM_CTX, undefined);
+    const formCtx = inject(FORM_CTX, undefined);
     // Form-associated value (comma-separated for multiple)
-    const formValue = computed(() => stringifyCsvValues(selectedValues.value));
+    const formValue = computed(() => selectedValues.value.join(','));
     const fd = defineField(
       { disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)), value: formValue },
       {
@@ -202,13 +184,23 @@ export const SELECT_TAG = define(
       },
     );
 
-    function triggerValidation(on: 'blur' | 'change'): void {
-      triggerValidationOnEvent(formCtx, fd, on);
-    }
-    // Sync open attribute on host
-    watch(isOpen, (v) => host.toggleAttribute('open', v), { immediate: true });
-    // Sync has-error attribute on host (error is a string prop, needs boolean attribute for CSS)
-    watch(props.error, (v) => host.toggleAttribute('has-error', Boolean(v)), { immediate: true });
+    const { triggerValidation } = createFieldValidation(formCtx, fd);
+
+    // Sync host attributes from component state for CSS hooks.
+    watch(
+      isOpen,
+      (value) => {
+        host.toggleAttribute('open', ((value) => Boolean(value))(value));
+      },
+      { immediate: true },
+    );
+    watch(
+      props.error,
+      (value) => {
+        host.toggleAttribute('has-error', ((value) => Boolean(value))(value));
+      },
+      { immediate: true },
+    );
 
     // Accessibility IDs
     const { fieldId: selectId, labelId } = createFormIds('select', props.name.value);
@@ -219,8 +211,6 @@ export const SELECT_TAG = define(
     // Refs for dynamic content
     const labelOutsideRef = ref<HTMLSpanElement>();
     const labelInsetRef = ref<HTMLSpanElement>();
-    const dropdownContentRef = ref<HTMLDivElement>();
-    const dropdownSpacerRef = ref<HTMLDivElement>();
 
     // ============================================
     // Option reading from slot
@@ -255,20 +245,6 @@ export const SELECT_TAG = define(
     effect(() => {
       selectedValues.value = computeControlledCsvState(props.value.value).values;
     });
-    // Expose JS options property setter
-    Object.defineProperty(host, 'options', {
-      get() {
-        return options.value;
-      },
-      set(val: OptionItem[]) {
-        (
-          host as unknown as {
-            _optionsProp?: OptionItem[];
-          }
-        )._optionsProp = val;
-        slottedOptions.value = [...slottedOptions.value]; // trigger recompute
-      },
-    });
 
     // ============================================
     // Display value
@@ -284,16 +260,54 @@ export const SELECT_TAG = define(
 
       return options.value.find((o) => o.value === first)?.label ?? first;
     });
-    const selectedChipItems = computed(() =>
-      selectedValues.value.map((value) => ({
+    const selectedChipItems = computed(() => {
+      if (!props.multiple.value) return [];
+
+      return selectedValues.value.map((value) => ({
         label: options.value.find((o) => o.value === value)?.label ?? value,
         value,
-      })),
-    );
+      }));
+    });
     const assistiveText = computed(() => resolveMergedAssistiveText(props.error.value, props.helper.value));
     const showChips = computed(() => props.multiple.value && selectedValues.value.length > 0);
     const triggerText = computed(() => displayLabel.value || props.placeholder.value || '');
     const hasLabel = computed(() => !!props.label.value);
+
+    function buildFlatList(opts: OptionItem[]): FlatRow[] {
+      const flat: FlatRow[] = [];
+      const groups = new Map<string | undefined, OptionItem[]>();
+
+      for (const opt of opts) {
+        const key = opt.group;
+
+        if (!groups.has(key)) groups.set(key, []);
+
+        groups.get(key)!.push(opt);
+      }
+
+      let globalIdx = 0;
+
+      for (const [groupLabel, groupOpts] of groups) {
+        if (groupLabel !== undefined) flat.push({ label: groupLabel, type: 'group' });
+
+        for (const opt of groupOpts) flat.push({ idx: globalIdx++, opt, type: 'option' });
+      }
+
+      return flat;
+    }
+
+    const flatRows = computed(() => buildFlatList(options.value));
+
+    function getLabelForValue(value: string): string {
+      return options.value.find((option) => option.value === value)?.label ?? value;
+    }
+
+    function emitChange(originalEvent?: Event): void {
+      const values = selectedValues.value;
+      const labels = values.map((value) => getLabelForValue(value));
+
+      emit('change', createChoiceChangeDetail(values, labels, originalEvent));
+    }
 
     function removeChip(event: Event): void {
       event.stopPropagation();
@@ -302,35 +316,19 @@ export const SELECT_TAG = define(
 
       if (value === undefined) return;
 
-      selectedValues.value = removeStringValue(selectedValues.value, value);
-      emit('change', { value: formValue.value, values: selectedValues.value });
+      selectedValues.value = selectedValues.value.filter((v) => v !== value);
+      emitChange(event);
       triggerValidation('change');
     }
 
     // ============================================
-    // Dropdown positioning
+    // Dropdown positioning (shared positioner)
     // ============================================
-    let autoUpdateCleanup: (() => void) | null = null;
+    const positioner = createDropdownPositioner(
+      () => triggerEl,
+      () => dropdownEl,
+    );
 
-    function updateDropdownPosition() {
-      if (!dropdownEl || !triggerEl) return;
-
-      const referenceWidth = triggerEl.getBoundingClientRect().width;
-
-      positionFloat(triggerEl, dropdownEl, {
-        middleware: [
-          flip({ padding: 6 }),
-          shift({ padding: 6 }),
-          size({
-            apply({ elements }) {
-              elements.floating.style.width = `${referenceWidth}px`;
-            },
-            padding: 6,
-          }),
-        ],
-        placement: 'bottom-start',
-      });
-    }
     // ============================================
     // Open / Close
     // ============================================
@@ -341,20 +339,12 @@ export const SELECT_TAG = define(
       focusedIndex.value =
         selectedValues.value.length > 0 ? options.value.findIndex((o) => o.value === selectedValues.value[0]) : 0;
       requestAnimationFrame(() => {
-        // Start autoUpdate: repositions on scroll, resize, reference size change
-        if (triggerEl && dropdownEl) {
-          autoUpdateCleanup?.();
-          autoUpdateCleanup = autoUpdate(triggerEl, dropdownEl, updateDropdownPosition, { observeFloating: false });
-        } else {
-          updateDropdownPosition();
-        }
-
+        positioner.startAutoUpdate();
         scrollFocusedIntoView();
       });
     }
     function close() {
-      autoUpdateCleanup?.();
-      autoUpdateCleanup = null;
+      positioner.stopAutoUpdate();
       isOpen.value = false;
       focusedIndex.value = -1;
       triggerEl?.focus();
@@ -367,13 +357,15 @@ export const SELECT_TAG = define(
       if (opt.disabled) return;
 
       if (props.multiple.value) {
-        selectedValues.value = toggleStringValue(selectedValues.value, opt.value);
+        selectedValues.value = selectedValues.value.includes(opt.value)
+          ? selectedValues.value.filter((entry) => entry !== opt.value)
+          : [...selectedValues.value, opt.value];
       } else {
         selectedValues.value = [opt.value];
         close();
       }
 
-      emit('change', { originalEvent: e, value: formValue.value, values: selectedValues.value });
+      emitChange(e);
       triggerValidation('change');
     }
     // ============================================
@@ -382,10 +374,10 @@ export const SELECT_TAG = define(
     function scrollFocusedIntoView() {
       const idx = focusedIndex.value;
 
-      if (virtualizer && idx >= 0) {
-        const flatIdx = currentFlatList.findIndex((r) => r.type === 'option' && r.idx === idx);
+      if (idx >= 0) {
+        const focusedOptionEl = dropdownEl?.querySelector<HTMLElement>(`#${selectId}-opt-${idx}`);
 
-        if (flatIdx >= 0) virtualizer.scrollToIndex(flatIdx, { align: 'auto' });
+        focusedOptionEl?.scrollIntoView({ block: 'nearest' });
 
         return;
       }
@@ -421,11 +413,9 @@ export const SELECT_TAG = define(
           if (!isOpen.value) {
             open();
           } else {
-            let next = focusedIndex.value + 1;
+            const next = navigateNext(opts, focusedIndex.value);
 
-            while (next < opts.length && opts[next].disabled) next++;
-
-            if (next < opts.length) {
+            if (next !== focusedIndex.value) {
               focusedIndex.value = next;
               scrollFocusedIntoView();
             }
@@ -438,11 +428,9 @@ export const SELECT_TAG = define(
           if (!isOpen.value) {
             open();
           } else {
-            let prev = focusedIndex.value - 1;
+            const prev = navigatePrev(opts, focusedIndex.value);
 
-            while (prev >= 0 && opts[prev].disabled) prev--;
-
-            if (prev >= 0) {
+            if (prev !== focusedIndex.value) {
               focusedIndex.value = prev;
               scrollFocusedIntoView();
             }
@@ -474,196 +462,9 @@ export const SELECT_TAG = define(
           break;
       }
     }
-    // ============================================
-    // Virtualizer
-    // ============================================
-    // Flatten options to a linear renderable list (group headers + options)
-    function buildFlatList(opts: OptionItem[]): Array<
-      | {
-          idx: number;
-          opt: OptionItem;
-          type: 'option';
-        }
-      | {
-          label: string;
-          type: 'group';
-        }
-    > {
-      const flat: Array<
-        | {
-            idx: number;
-            opt: OptionItem;
-            type: 'option';
-          }
-        | {
-            label: string;
-            type: 'group';
-          }
-      > = [];
-      const groups = new Map<string | undefined, OptionItem[]>();
-
-      for (const opt of opts) {
-        const key = opt.group;
-
-        if (!groups.has(key)) groups.set(key, []);
-
-        groups.get(key)!.push(opt);
-      }
-
-      let globalIdx = 0;
-
-      for (const [groupLabel, groupOpts] of groups) {
-        if (groupLabel !== undefined) flat.push({ label: groupLabel, type: 'group' });
-
-        for (const opt of groupOpts) flat.push({ idx: globalIdx++, opt, type: 'option' });
-      }
-
-      return flat;
-    }
-
-    let virtualizer: ReturnType<typeof createVirtualizer> | null = null;
-    let currentFlatList: ReturnType<typeof buildFlatList> = [];
-    // Cached raw DOM refs — set once when setupVirtualizer runs so renderVirtualItems
-    // never reads from reactive signal refs (which would re-subscribe the calling effect).
-    let containerEl: HTMLDivElement | null = null;
-
-    function renderVirtualItems(virtualItems: VirtualItem[]) {
-      if (!containerEl) return;
-
-      containerEl.innerHTML = '';
-      for (const item of virtualItems) {
-        const row = currentFlatList[item.index];
-
-        if (!row) continue;
-
-        if (row.type === 'group') {
-          const groupHeader = document.createElement('div');
-
-          groupHeader.className = 'optgroup-label';
-          groupHeader.setAttribute('role', 'presentation');
-          groupHeader.textContent = row.label;
-          groupHeader.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
-          containerEl.appendChild(groupHeader);
-        } else {
-          const { idx, opt } = row;
-          const optionEl = document.createElement('div');
-
-          optionEl.className = 'option';
-          optionEl.setAttribute('role', 'option');
-          optionEl.id = `${selectId}-opt-${idx}`;
-          optionEl.dataset.optionIndex = String(idx);
-          optionEl.dataset.optionValue = opt.value;
-          optionEl.setAttribute('aria-selected', String(selectedValues.peek().includes(opt.value)));
-          optionEl.setAttribute('aria-disabled', String(opt.disabled));
-          optionEl.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
-
-          if (focusedIndex.peek() === idx) optionEl.setAttribute('data-focused', '');
-
-          if (selectedValues.peek().includes(opt.value)) optionEl.setAttribute('data-selected', '');
-
-          if (opt.disabled) optionEl.setAttribute('data-disabled', '');
-
-          const label = document.createElement('span');
-
-          label.textContent = opt.label;
-          optionEl.appendChild(label);
-
-          const check = document.createElement('span');
-
-          check.className = 'option-check';
-          check.setAttribute('aria-hidden', 'true');
-          check.innerHTML = checkIconHTML;
-          optionEl.appendChild(check);
-          optionEl.addEventListener('click', (e: MouseEvent) => {
-            e.stopPropagation();
-            selectOption(opt, e);
-          });
-          optionEl.addEventListener('mouseenter', () => {
-            focusedIndex.value = idx;
-            // Update focused styling in-place without a full re-render.
-            for (const el of containerEl!.querySelectorAll<HTMLElement>('[data-focused]')) {
-              el.removeAttribute('data-focused');
-            }
-            optionEl.setAttribute('data-focused', '');
-          });
-          containerEl.appendChild(optionEl);
-        }
-      }
-    }
-    // Refreshes only the selected/focused data-attributes on already-rendered
-    // items without clearing the DOM. Called when selection changes while the
-    // dropdown is open (e.g. programmatic value update).
-    function updateRenderedItemState() {
-      if (!containerEl) return;
-
-      const focused = focusedIndex.peek();
-      const selected = selectedValues.peek();
-
-      for (const el of containerEl.querySelectorAll<HTMLElement>('.option')) {
-        const idx = Number(el.dataset.optionIndex ?? '-1');
-        const value = el.dataset.optionValue ?? '';
-        const isSelected = value !== '' && selected.includes(value);
-
-        el.toggleAttribute('data-focused', idx === focused);
-        el.toggleAttribute('data-selected', isSelected);
-        el.setAttribute('aria-selected', String(isSelected));
-      }
-    }
-    function setupVirtualizer() {
-      virtualizer?.destroy();
-
-      const scrollEl = dropdownEl;
-
-      containerEl = dropdownContentRef.value ?? null;
-
-      if (!scrollEl || !containerEl) return;
-
-      currentFlatList = buildFlatList(options.value);
-      virtualizer = createVirtualizer(scrollEl, {
-        count: currentFlatList.length,
-        estimateSize: (i) => (currentFlatList[i]?.type === 'group' ? 28 : 36),
-        onChange: (virtualItems) => renderVirtualItems(virtualItems),
-        overscan: 4,
-      });
-
-      // Set the spacer height once — it equals the total height of all items and
-      // never changes during scrolling. Setting it inside onChange (every scroll)
-      // would trigger the virtualizer's own ResizeObserver and cause a render loop.
-      if (dropdownSpacerRef.value) {
-        dropdownSpacerRef.value.style.height = `${virtualizer.getTotalSize()}px`;
-        // Prevent the flex container from shrinking this spacer below its declared
-        // height, and stop item transforms from leaking into the dropdown's
-        // scrollable overflow area (which would cause the scrollbar thumb to resize
-        // as different items are rendered during scroll).
-        dropdownSpacerRef.value.style.flexShrink = '0';
-        dropdownSpacerRef.value.style.contain = 'layout';
-      }
-    }
     onMount(() => {
       onSlotChange('default', readOptions);
-      // Rebuild virtualizer when options list changes
-      effect(() => {
-        // Access options & isOpen to re-create virtualizer when either changes
-        const opts = options.value;
-        const open = isOpen.value;
-
-        if (open && opts.length > 0) {
-          requestAnimationFrame(() => setupVirtualizer());
-        } else if (!open) {
-          virtualizer?.destroy();
-          virtualizer = null;
-        }
-      });
       mountLabelSyncStandalone(labelInsetRef, labelOutsideRef, props);
-      // Effect to manage dynamic content and visibility
-      effect(() => {
-        void selectedValues.value;
-        void focusedIndex.value;
-
-        // Update focused/selected state on already-rendered items without touching
-        // the DOM structure. The virtualizer owns full re-renders via onChange.
-        updateRenderedItemState();
-      });
 
       if (triggerEl) {
         aria(triggerEl, {
@@ -675,24 +476,12 @@ export const SELECT_TAG = define(
         });
       }
 
-      // Close on outside click
-      const handleOutsideClick = (e: MouseEvent) => {
-        if (!isOpen.value) return;
-
-        if (!host.contains(e.target as Node) && !dropdownEl?.contains(e.target as Node)) {
-          close();
-        }
-      };
-
-      document.addEventListener('click', handleOutsideClick, true);
-      // Propagate form context size/variant/disabled to host
-      mountFormContextSync(host, formCtx, props);
+      // Close on outside click (shared handler)
+      const removeOutsideClick = createOutsideClickHandler(host, () => dropdownEl, isOpen, close);
 
       return () => {
-        virtualizer?.destroy();
-        autoUpdateCleanup?.();
-        autoUpdateCleanup = null;
-        document.removeEventListener('click', handleOutsideClick, true);
+        positioner.destroy();
+        removeOutsideClick();
       };
     });
 
@@ -765,36 +554,44 @@ export const SELECT_TAG = define(
         }}>
         <div class="dropdown-loading" ?hidden=${() => !isLoading.value}>Loading…</div>
         <div class="dropdown-empty" ?hidden=${() => isLoading.value || options.value.length > 0}>No options</div>
-        <div style="position:relative" ref=${dropdownSpacerRef} ?hidden=${() => isLoading.value}>
-          <div
-            ref=${dropdownContentRef}
-            style="position:absolute;top:0;left:0;right:0"
-            ?hidden=${() => isLoading.value}></div>
+        <div class="options-list" ?hidden=${() => isLoading.value || options.value.length === 0}>
+          ${each(
+            () => flatRows.value,
+            (row) =>
+              row.type === 'group'
+                ? html`<div class="optgroup-label" role="presentation">${row.label}</div>`
+                : html`<div
+                    class="option"
+                    role="option"
+                    id=${`${selectId}-opt-${row.idx}`}
+                    data-option-index=${() => String(row.idx)}
+                    data-option-value=${row.opt.value}
+                    aria-selected=${() => String(selectedValues.value.includes(row.opt.value))}
+                    aria-disabled=${() => String(row.opt.disabled)}
+                    ?data-focused=${() => focusedIndex.value === row.idx}
+                    ?data-selected=${() => selectedValues.value.includes(row.opt.value)}
+                    ?data-disabled=${() => row.opt.disabled}
+                    @click=${(e: MouseEvent) => {
+                      e.stopPropagation();
+                      selectOption(row.opt, e);
+                    }}
+                    @mouseenter=${() => {
+                      focusedIndex.value = row.idx;
+                    }}>
+                    <span>${row.opt.label}</span>
+                    <span class="option-check" aria-hidden="true">${checkIcon}</span>
+                  </div>`,
+          )}
         </div>
       </div>`;
   },
-  {
-    formAssociated: true,
-    shadow: { delegatesFocus: true },
-    styles: [
-      sizeVariantMixin({
-        lg: {
-          '--_field-height': 'var(--size-12)',
-          '--_padding': 'var(--size-2-5) var(--size-3-5)',
-          fontSize: 'var(--text-base)',
-          gap: 'var(--size-2-5)',
-        },
-        sm: {
-          '--_field-height': 'var(--size-8)',
-          '--_padding': 'var(--size-1) var(--size-2)',
-          fontSize: 'var(--text-xs)',
-          gap: 'var(--size-1-5)',
-        },
-      }),
-      ...formFieldMixins,
-      disabledLoadingMixin(),
-      forcedColorsFocusMixin('.field'),
-      componentStyles,
-    ],
-  },
-);
+  shadow: { delegatesFocus: true },
+  styles: [
+    sizeVariantMixin(FIELD_SIZE_PRESET),
+    ...formFieldMixins,
+    disabledLoadingMixin(),
+    forcedColorsFocusMixin('.field'),
+    componentStyles,
+  ],
+  tag: 'bit-select',
+});

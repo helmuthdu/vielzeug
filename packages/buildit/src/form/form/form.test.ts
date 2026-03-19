@@ -4,7 +4,7 @@ describe('bit-form', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./form');
+    await (() => import('./form'))();
   });
 
   afterEach(() => {

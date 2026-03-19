@@ -43,6 +43,7 @@ const alice = await db.get('users', 1);
 - ✅ **Fluent query builder** — `equals`, `between`, `startsWith`, `filter`, `and`, `or`, `search`, `contains`, `orderBy`, `limit`, `offset`, `page`, `map`, and more
 - ✅ **`for await...of`** — `QueryBuilder` implements `AsyncIterator`
 - ✅ **TTL** — per-record expiry via optional `ttl` (ms) on `put`, `putMany`, and `getOrPut`; use the `ttl` helper for readable durations
+- ✅ **Adapter-specific count semantics** — `localStorage` `count()` is TTL-accurate; IndexedDB `count()` is native O(1) (may include not-yet-evicted expired rows)
 - ✅ **`patch` returns merged record** — no follow-up `get` needed after a partial update
 - ✅ **`getMany`** — batch fetch by a list of keys in a single operation
 - ✅ **Transactions** — atomic multi-table writes with the full method set (IndexedDB only)
@@ -132,7 +133,7 @@ await db.deleteAll('users');
 
 // Existence and count
 const exists = await db.has('users', 1);
-const total = await db.count('users');
+const total = await db.count('users'); // localStorage: live count; IndexedDB: native store count
 
 // Cache pattern
 const user = await db.getOrPut('users', 1, () => fetchUser(1), ttl.minutes(5));
@@ -157,6 +158,7 @@ await db.put('sessions', session, ttl.hours(1)); // 3_600_000 ms
 await db.put('cache', entry, ttl.minutes(15)); // 900_000 ms
 await db.put('tokens', token, ttl.seconds(30)); // 30_000 ms
 await db.put('events', event, ttl.ms(500)); // 500 ms
+await db.put('reports', report, ttl.days(7)); // 604_800_000 ms
 ```
 
 ### Query Builder
@@ -167,7 +169,7 @@ const qb = db.from('users');
 // Filtering
 await qb.equals('city', 'Paris').toArray();
 await qb.between('age', 18, 30).toArray();
-await qb.startsWith('name', 'ali', true).toArray(); // case-insensitive
+await qb.startsWith('name', 'ali', { ignoreCase: true }).toArray();
 await qb.filter((u) => u.age > 18).toArray();
 await qb
   .and(
@@ -250,15 +252,22 @@ const db = createIndexedDB({ dbName: 'my-app', version: 2, schema, migrationFn }
 
 ## API
 
+### Package Entry Points
+
+| Import                          | Purpose                                             |
+| ------------------------------- | --------------------------------------------------- |
+| `@vielzeug/deposit`             | Main API (`createLocalStorage`, `createIndexedDB`) |
+| `@vielzeug/deposit/core`  | Pre-bundled standalone build with the same exports  |
+
 ### Factory Functions
 
 | Export                        | Returns                                                    |
 | ----------------------------- | ---------------------------------------------------------- |
-| `createLocalStorage(options)` | `Adapter<Schema<S>>`                                       |
-| `createIndexedDB(options)`    | `IndexedDBHandle<Schema<S>>`                               |
+| `createLocalStorage(options)` | `Adapter<S>`                                               |
+| `createIndexedDB(options)`    | `IndexedDBHandle<S>`                                       |
 | `defineSchema<S>(schema)`     | `Schema<S>`                                                |
 | `storeField(field)`           | `string` — IDB key path for a record field (e.g. `'v.id'`) |
-| `ttl`                         | `{ ms, seconds, minutes, hours }` — TTL duration helpers   |
+| `ttl`                         | `{ ms, seconds, minutes, hours, days }` — TTL duration helpers |
 
 ### `Adapter<S>` Methods
 
@@ -275,7 +284,7 @@ const db = createIndexedDB({ dbName: 'my-app', version: 2, schema, migrationFn }
 | `deleteMany(table, keys[])`           | Delete multiple records by key list                                   |
 | `deleteAll(table)`                    | Remove all records in a table                                         |
 | `has(table, key)`                     | Check existence (respects TTL)                                        |
-| `count(table)`                        | Count live records                                                    |
+| `count(table)`                        | LocalStorage: live count; IndexedDB: native O(1) store count (may include not-yet-evicted expired rows) |
 | `getOrPut(table, key, factory, ttl?)` | Get cached or create via factory                                      |
 | `from(table)`                         | Create a lazy `QueryBuilder`                                          |
 
@@ -292,7 +301,7 @@ const db = createIndexedDB({ dbName: 'my-app', version: 2, schema, migrationFn }
 | ---------------------------------------- | ------------------------------------------------------------------------------ |
 | `equals(field, value)`                   | Strict equality filter                                                         |
 | `between(field, lower, upper)`           | Inclusive range filter                                                         |
-| `startsWith(field, prefix, ignoreCase?)` | Prefix filter                                                                  |
+| `startsWith(field, prefix, options?)` | Prefix filter (`options.ignoreCase` for case-insensitive matching)                    |
 | `filter(fn)`                             | Custom predicate                                                               |
 | `and(...predicates)`                     | All predicates must match                                                      |
 | `or(...predicates)`                      | Any predicate must match                                                       |

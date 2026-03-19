@@ -13,6 +13,15 @@ You don't need to adopt the whole ecosystem. Pick the packages you need and impo
 The [REPL](/repl.html) lets you run any package in the browser without installing anything.
 :::
 
+## Documentation Standards
+
+- [Documentation Style Guide](./docs-style-guide.md)
+
+## Integration Guides
+
+- [Building a Typed Form Flow](./building-a-typed-form-flow.md) - Validit + Formit + Fetchit
+- [State and Routing](./state-and-routing.md) - Stateit + Routeit
+
 ## Install a Package
 
 Every package is independent. Install just what you need:
@@ -292,15 +301,3 @@ const unchanged = isEqual(prev, next);
 **Zero surprises.** APIs follow consistent conventions: `create*` for factories, `on*` for subscriptions, `safeParse` for fallible operations. Learn one package and the next one feels familiar.
 
 **No magic.** No proxies chasing object mutations, no decorators, no global singletons. If you want to know what a function does, reading it is enough.
-
-## Next Steps
-
-Not sure where to begin? Here's a recommended path:
-
-1. **[Stateit](/stateit/)** — understand the reactive foundation everything else builds on
-2. **[Toolkit](/toolkit/)** — pick up utilities you'll use in every project
-3. **[Fetchit](/fetchit/)** — add a proper HTTP layer with caching
-4. **[Craftit](/craftit/)** — build your first custom element with reactive templates
-5. **[Formit](/formit/) + [Validit](/validit/)** — wire up forms with schema validation
-
-Or jump straight to the [REPL](/repl.html) and experiment without any setup.

@@ -1,6 +1,6 @@
 import { isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import type { HTMLResult } from '../internal';
+import type { HTMLResult } from '../core/internal';
 
 type TemplateFn = () => string | HTMLResult;
 type Branch = readonly [unknown, TemplateFn];
@@ -38,7 +38,7 @@ export function match(...args: (Branch | TemplateFn)[]): TemplateFn | string | H
   const branches = (hasFallback ? args.slice(0, -1) : args) as Branch[];
   const fallback = hasFallback ? (lastArg as TemplateFn) : undefined;
 
-  const _resolve = (cond: unknown): boolean => {
+  const resolve = (cond: unknown): boolean => {
     if (isSignal(cond)) return !!(cond as ReadonlySignal<unknown>).value;
 
     if (typeof cond === 'function') return !!(cond as () => unknown)();
@@ -46,9 +46,9 @@ export function match(...args: (Branch | TemplateFn)[]): TemplateFn | string | H
     return !!cond;
   };
 
-  const _eval = (): string | HTMLResult => {
+  const evaluate = (): string | HTMLResult => {
     for (const [cond, fn] of branches) {
-      if (_resolve(cond)) return fn();
+      if (resolve(cond)) return fn();
     }
 
     return fallback?.() ?? '';
@@ -56,5 +56,5 @@ export function match(...args: (Branch | TemplateFn)[]): TemplateFn | string | H
 
   const reactive = branches.some(([cond]) => isSignal(cond) || typeof cond === 'function');
 
-  return reactive ? _eval : _eval();
+  return reactive ? evaluate : evaluate();
 }

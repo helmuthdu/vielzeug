@@ -1,17 +1,26 @@
-import { css } from '@vielzeug/craftit';
+import { css } from '@vielzeug/craftit/core';
 import { type Fixture, mount } from '@vielzeug/craftit/test';
+import { user } from '@vielzeug/craftit/test';
 
-vi.mock('../../styles', () => ({
-  colorThemeMixin: css``,
-  disabledStateMixin: () => css``,
-  sizeVariantMixin: () => css``,
-}));
+vi.mock('../../styles', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../styles')>();
+
+  return {
+    ...actual,
+    colorThemeMixin: css``,
+    disabledStateMixin: () => css``,
+    sizeVariantMixin: () => css``,
+  };
+});
 
 describe('bit-checkbox-group', () => {
   let fixture: Fixture<HTMLElement>;
+  const getCheckboxes = (): HTMLElement[] =>
+    Array.from(fixture.element.getElementsByTagName('bit-checkbox')) as HTMLElement[];
 
   beforeAll(async () => {
-    await import('./checkbox-group');
+    await (() => import('../checkbox/checkbox'))();
+    await (() => import('./checkbox-group'))();
   });
 
   afterEach(() => {
@@ -26,7 +35,10 @@ describe('bit-checkbox-group', () => {
 
   describe('Core Functionality', () => {
     it('renders semantic fieldset and grouped items', async () => {
-      fixture = await mount('bit-checkbox-group', { attrs: { label: 'Choose options' }, html: checkboxHtml });
+      fixture = await mount('bit-checkbox-group', {
+        attrs: { label: 'Choose options' },
+        html: checkboxHtml,
+      });
       await fixture.flush();
 
       expect(fixture.query('fieldset')).toBeTruthy();
@@ -41,7 +53,7 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
       await fixture.flush();
 
-      const checkboxes = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox');
+      const checkboxes = getCheckboxes();
 
       expect(checkboxes[0].hasAttribute('checked')).toBe(true);
       expect(checkboxes[1].hasAttribute('checked')).toBe(false);
@@ -56,7 +68,7 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
       await fixture.flush();
 
-      const checkboxes = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox');
+      const checkboxes = getCheckboxes();
 
       for (const checkbox of checkboxes) {
         expect(checkbox.getAttribute('color')).toBe('primary');
@@ -71,7 +83,25 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
       await fixture.flush();
 
-      const checkboxes = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox');
+      const checkboxes = getCheckboxes();
+
+      for (const checkbox of checkboxes) {
+        expect(checkbox.getAttribute('size')).toBe('lg');
+      }
+    });
+
+    it('updates slotted checkbox size when group size changes', async () => {
+      fixture = await mount('bit-checkbox-group', {
+        attrs: { size: 'sm' },
+        html: checkboxHtml,
+      });
+      await fixture.flush();
+      await fixture.flush();
+
+      await fixture.attr('size', 'lg');
+      await fixture.flush();
+
+      const checkboxes = getCheckboxes();
 
       for (const checkbox of checkboxes) {
         expect(checkbox.getAttribute('size')).toBe('lg');
@@ -86,7 +116,7 @@ describe('bit-checkbox-group', () => {
       await fixture.flush();
       await fixture.flush();
 
-      const checkboxes = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox');
+      const checkboxes = getCheckboxes();
 
       for (const checkbox of checkboxes) {
         expect(checkbox.hasAttribute('disabled')).toBe(true);
@@ -101,18 +131,24 @@ describe('bit-checkbox-group', () => {
 
       fixture.element.addEventListener('change', onChange);
 
-      const first = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox')[0];
+      const first = getCheckboxes()[0];
 
       first.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 
       expect(onChange).toHaveBeenCalled();
 
       const evt = onChange.mock.calls
-        .map((call) => call[0] as CustomEvent<{ values?: string[] }>)
+        .map(
+          (call) =>
+            call[0] as CustomEvent<{ labels?: string[]; originalEvent?: Event; value?: string; values?: string[] }>,
+        )
         .find((event) => Array.isArray(event?.detail?.values));
 
       expect(evt).toBeTruthy();
       expect(evt?.detail.values).toContain('a');
+      expect(evt?.detail.value).toBe('a');
+      expect(evt?.detail.labels).toContain('A');
+      expect(evt?.detail.originalEvent).toBeDefined();
     });
 
     it('toggles value off if already checked', async () => {
@@ -127,14 +163,40 @@ describe('bit-checkbox-group', () => {
 
       fixture.element.addEventListener('change', onChange);
 
-      const first = fixture.element.querySelectorAll<HTMLElement>('bit-checkbox')[0];
+      const first = getCheckboxes()[0];
 
       first.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 
-      const evt = onChange.mock.calls[0][0] as CustomEvent<{ values: string[] }>;
+      const evt = onChange.mock.calls[0][0] as CustomEvent<{
+        labels: string[];
+        originalEvent?: Event;
+        value: string;
+        values: string[];
+      }>;
 
       expect(evt.detail.values).not.toContain('a');
       expect(evt.detail.values).toContain('b');
+      expect(evt.detail.value).toBe('b');
+      expect(evt.detail.labels).toEqual(['B']);
+      expect(evt.detail.originalEvent).toBeDefined();
+    });
+
+    it('toggles value when clicking slotted checkbox', async () => {
+      fixture = await mount('bit-checkbox-group', {
+        attrs: { values: 'a' },
+        html: checkboxHtml,
+      });
+      await fixture.flush();
+      await fixture.flush();
+
+      const second = getCheckboxes()[1];
+
+      await user.click(second);
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('values')).toBe('a,b');
+      expect(getCheckboxes()[0].hasAttribute('checked')).toBe(true);
+      expect(getCheckboxes()[1].hasAttribute('checked')).toBe(true);
     });
   });
 
@@ -205,7 +267,9 @@ describe('bit-checkbox-group', () => {
     });
 
     it('applies horizontal orientation', async () => {
-      fixture = await mount('bit-checkbox-group', { attrs: { orientation: 'horizontal' } });
+      fixture = await mount('bit-checkbox-group', {
+        attrs: { orientation: 'horizontal' },
+      });
       expect(fixture.element.getAttribute('orientation')).toBe('horizontal');
     });
   });

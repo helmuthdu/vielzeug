@@ -244,6 +244,11 @@ const next = await nextValue(status);
 
 // Wait for a specific condition
 const done = await nextValue(status, (v) => v === 'done');
+
+// Abortable wait
+const controller = new AbortController();
+const p = nextValue(status, (v) => v === 'done', { signal: controller.signal });
+controller.abort(new Error('cancelled'));
 ```
 
 ### Custom Equality
@@ -262,24 +267,26 @@ const sorted = computed(() => [...tags.value].sort(), { equals: (a, b) => a.join
 
 ### Signal Functions
 
-| Export             | Signature                        | Returns                  |
-| ------------------ | -------------------------------- | ------------------------ |
-| `signal`           | `signal(initial, options?)`      | `Signal<T>`              |
-| `computed`         | `computed(fn, options?)`         | `ComputedSignal<T>`      |
-| `writable`         | `writable(get, set, options?)`   | `WritableSignal<T>`      |
-| `derived`          | `derived(sources, fn, options?)` | `ComputedSignal<R>`      |
-| `effect`           | `effect(fn, options?)`           | `Subscription`           |
-| `watch`            | `watch(source, cb, options?)`    | `Subscription`           |
-| `nextValue`        | `nextValue(source, predicate?)`  | `Promise<T>`             |
-| `batch`            | `batch(fn)`                      | `T`                      |
-| `untrack`          | `untrack(fn)`                    | `T`                      |
-| `onCleanup`        | `onCleanup(fn)`                  | `void`                   |
-| `readonly`         | `readonly(sig)`                  | `ReadonlySignal<T>`      |
-| `toValue`          | `toValue(v)`                     | `T`                      |
-| `isSignal`         | `isSignal(v)`                    | `v is ReadonlySignal<T>` |
-| `isStore`          | `isStore(v)`                     | `v is Store<T>`          |
-| `shallowEqual`     | `shallowEqual(a, b)`             | `boolean`                |
-| `configureStateit` | `configureStateit(opts)`         | `void`                   |
+| Export             | Signature                                                | Returns                  |
+| ------------------ | -------------------------------------------------------- | ------------------------ |
+| `signal`           | `signal(initial, options?)`                              | `Signal<T>`              |
+| `computed`         | `computed(fn, options?)`                                 | `ComputedSignal<T>`      |
+| `writable`         | `writable(get, set, options?)`                           | `WritableSignal<T>`      |
+| `derived`          | `derived(sources, fn, options?)`                         | `ComputedSignal<R>`      |
+| `effect`           | `effect(fn, options?)`                                   | `Subscription`           |
+| `watch`            | `watch(source, cb, options?)`                            | `Subscription`           |
+| `nextValue`        | `nextValue(source, predicate?, { signal? }?)`           | `Promise<T>`             |
+| `batch`            | `batch(fn)`                                              | `T`                      |
+| `untrack`          | `untrack(fn)`                                            | `T`                      |
+| `onCleanup`        | `onCleanup(fn)`                                          | `void`                   |
+| `readonly`         | `readonly(sig)`                                          | `ReadonlySignal<T>`      |
+| `toValue`          | `toValue(v)`                                             | `T`                      |
+| `peekValue`        | `peekValue(v)`                                           | `T`                      |
+| `isSignal`         | `isSignal(v)`                                            | `v is ReadonlySignal<T>` |
+| `isStore`          | `isStore(v)`                                             | `v is Store<T>`          |
+| `shallowEqual`     | `shallowEqual(a, b)`                                     | `boolean`                |
+| `configureStateit` | `configureStateit(opts)`                                 | `void`                   |
+| `_resetContextForTesting` | `_resetContextForTesting()`                       | `void`                   |
 
 ### Store Functions
 

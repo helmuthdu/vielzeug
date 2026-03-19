@@ -4,37 +4,33 @@
  * style, choose, match, raw, spread, on, memo, until
  */
 
-import { define, html, signal } from '..';
+import { html, signal } from '..';
 import { attr, bind, choose, classes, each, match, memo, on, raw, spread, style, until, when } from '../directives';
 import { mount } from '../test';
 
 describe('Directive: when()', () => {
   it('should render when condition is true', async () => {
-    define('test-if-true', () => {
+    const { query } = await mount(() => {
       const visible = signal(true);
 
       return html`${when(visible.value, () => html`<div>Visible</div>`)}`;
     });
 
-    const { query } = await mount('test-if-true');
-
     expect(query('div')?.textContent).toBe('Visible');
   });
 
   it('should not render when condition is false', async () => {
-    define('test-if-false', () => {
+    const { query } = await mount(() => {
       const visible = signal(false);
 
       return html`${when(visible.value, () => html`<div class="content">Hidden</div>`)}`;
     });
 
-    const { query } = await mount('test-if-false');
-
     expect(query('.content')).toBeNull();
   });
 
   it('should support else branch', async () => {
-    define('test-if-else', () => {
+    const { query } = await mount(() => {
       const visible = signal(false);
 
       return html`${when(
@@ -44,13 +40,11 @@ describe('Directive: when()', () => {
       )}`;
     });
 
-    const { query } = await mount('test-if-else');
-
     expect(query('div')?.textContent).toBe('No');
   });
 
   it('should accept a Signal as condition', async () => {
-    define('test-if-signal', () => {
+    const { query } = await mount(() => {
       const loggedIn = signal(true);
 
       return html`
@@ -64,15 +58,13 @@ describe('Directive: when()', () => {
       `;
     });
 
-    const { query } = await mount('test-if-signal');
-
     expect(query('span')?.textContent).toBe('Welcome!');
   });
 
   it('should support reactive getter conditions', async () => {
     const count = signal(0);
 
-    define('test-if-getter', () => {
+    const { flush, query } = await mount(() => {
       return html`
         <div>
           ${when(
@@ -83,8 +75,6 @@ describe('Directive: when()', () => {
         </div>
       `;
     });
-
-    const { flush, query } = await mount('test-if-getter');
 
     expect(query('.below')).toBeTruthy();
     expect(query('.below')?.textContent).toBe('Below threshold');
@@ -101,7 +91,7 @@ describe('Directive: when()', () => {
 
 describe('Directive: each()', () => {
   it('should render list items', async () => {
-    define('test-for-basic', () => {
+    const { queryAll } = await mount(() => {
       const items = signal([1, 2, 3]);
 
       return html`
@@ -110,8 +100,6 @@ describe('Directive: each()', () => {
         </ul>
       `;
     });
-
-    const { queryAll } = await mount('test-for-basic');
     const items = queryAll('li');
 
     expect(items.length).toBe(3);
@@ -119,7 +107,7 @@ describe('Directive: each()', () => {
   });
 
   it('should render fallback for empty list', async () => {
-    define('test-for-fallback', () => {
+    const { query } = await mount(() => {
       const items = signal<number[]>([]);
 
       return html`
@@ -134,13 +122,11 @@ describe('Directive: each()', () => {
       `;
     });
 
-    const { query } = await mount('test-for-fallback');
-
     expect(query('.empty')?.textContent).toBe('Empty');
   });
 
   it('should update when list changes', async () => {
-    define('test-for-reactive', () => {
+    const { flush, queryAll } = await mount(() => {
       const items = signal([1, 2]);
 
       setTimeout(() => (items.value = [1, 2, 3]), 50);
@@ -152,8 +138,6 @@ describe('Directive: each()', () => {
       `;
     });
 
-    const { flush, queryAll } = await mount('test-for-reactive');
-
     expect(queryAll('li').length).toBe(2);
 
     await new Promise((r) => setTimeout(r, 60));
@@ -162,7 +146,7 @@ describe('Directive: each()', () => {
   });
 
   it('should support key function', async () => {
-    define('test-for-keyed', () => {
+    const { queryAll } = await mount(() => {
       const items = signal([1, 2, 3]);
 
       return html`
@@ -172,13 +156,11 @@ describe('Directive: each()', () => {
       `;
     });
 
-    const { queryAll } = await mount('test-for-keyed');
-
     expect(queryAll('li').length).toBe(3);
   });
 
   it('should support simple each() without key', async () => {
-    define('test-for-simple', () => {
+    const { queryAll } = await mount(() => {
       const items = signal([1, 2, 3]);
 
       return html`
@@ -187,8 +169,6 @@ describe('Directive: each()', () => {
         </ul>
       `;
     });
-
-    const { queryAll } = await mount('test-for-simple');
     const listItems = queryAll('li');
 
     expect(listItems.length).toBe(3);
@@ -197,7 +177,7 @@ describe('Directive: each()', () => {
   });
 
   it('should support each() with key function and empty fallback', async () => {
-    define('test-for-advanced', () => {
+    const { query } = await mount(() => {
       const items = signal<{ id: number; name: string }[]>([]);
 
       return html`
@@ -212,13 +192,11 @@ describe('Directive: each()', () => {
       `;
     });
 
-    const { query } = await mount('test-for-advanced');
-
     expect(query('.empty')?.textContent).toBe('No items');
   });
 
   it('should filter items using select option', async () => {
-    define('test-for-select', () => {
+    const { queryAll } = await mount(() => {
       const items = signal([
         { active: true, id: 1, name: 'Alice' },
         { active: false, id: 2, name: 'Bob' },
@@ -234,8 +212,6 @@ describe('Directive: each()', () => {
         </ul>
       `;
     });
-
-    const { queryAll } = await mount('test-for-select');
     const listItems = queryAll('.item');
 
     expect(listItems.length).toBe(2);
@@ -244,7 +220,7 @@ describe('Directive: each()', () => {
   });
 
   it('should show empty when all items filtered out by select', async () => {
-    define('test-for-select-empty', () => {
+    const { query } = await mount(() => {
       const items = signal([{ active: false, id: 1 }]);
 
       return html`
@@ -259,15 +235,13 @@ describe('Directive: each()', () => {
       `;
     });
 
-    const { query } = await mount('test-for-select-empty');
-
     expect(query('.empty')?.textContent).toBe('None');
   });
 
   it('should preserve multiple bindings on the same keyed child element', async () => {
     const clicks: string[] = [];
 
-    define('test-for-keyed-multi-bindings', () => {
+    const { queryAll } = await mount(() => {
       const items = signal([
         { id: 'a', label: 'Alpha' },
         { id: 'b', label: 'Beta' },
@@ -289,7 +263,6 @@ describe('Directive: each()', () => {
       `;
     });
 
-    const { queryAll } = await mount('test-for-keyed-multi-bindings');
     const buttons = queryAll<HTMLButtonElement>('button');
 
     expect(buttons).toHaveLength(2);
@@ -359,13 +332,11 @@ describe('Directive: classes()', () => {
 
 describe('Directive: bind()', () => {
   it('should set the initial value on the input from the signal', async () => {
-    define('test-bind-initial', () => {
+    const { query } = await mount(() => {
       const name = signal('Alice');
 
       return html`<input ${bind(name)} />`;
     });
-
-    const { query } = await mount('test-bind-initial');
 
     expect((query('input') as HTMLInputElement)?.value).toBe('Alice');
   });
@@ -373,11 +344,7 @@ describe('Directive: bind()', () => {
   it('should update input value when signal changes', async () => {
     const name = signal('Alice');
 
-    define('test-bind-signal-update', () => {
-      return html`<input ${bind(name)} />`;
-    });
-
-    const { flush, query } = await mount('test-bind-signal-update');
+    const { flush, query } = await mount(() => html`<input ${bind(name)} />`);
 
     name.value = 'Bob';
     await flush();
@@ -387,11 +354,7 @@ describe('Directive: bind()', () => {
   it('should update signal when input fires an input event', async () => {
     const name = signal('Alice');
 
-    define('test-bind-input-event', () => {
-      return html`<input ${bind(name)} />`;
-    });
-
-    const { query } = await mount('test-bind-input-event');
+    const { query } = await mount(() => html`<input ${bind(name)} />`);
     const input = query('input') as HTMLInputElement;
 
     input.value = 'Charlie';
@@ -402,11 +365,7 @@ describe('Directive: bind()', () => {
   it('should bind checkbox checked state to a boolean signal', async () => {
     const checked = signal(true);
 
-    define('test-bind-checkbox', () => {
-      return html`<input type="checkbox" ${bind(checked)} />`;
-    });
-
-    const { flush, query } = await mount('test-bind-checkbox');
+    const { flush, query } = await mount(() => html`<input type="checkbox" ${bind(checked)} />`);
     const input = query('input') as HTMLInputElement;
 
     expect(input.checked).toBe(true);
@@ -425,11 +384,7 @@ describe('Directive: attr() property map', () => {
   it('should apply a property map in spread position', async () => {
     const value = signal('One');
 
-    define('test-attr-props-basic', () => {
-      return html`<input ${attr({ disabled: () => false, value })} />`;
-    });
-
-    const { query } = await mount('test-attr-props-basic');
+    const { query } = await mount(() => html`<input ${attr({ disabled: () => false, value })} />`);
     const input = query('input') as HTMLInputElement;
 
     expect(input.value).toBe('One');
@@ -439,11 +394,7 @@ describe('Directive: attr() property map', () => {
   it('should sync back to signal for value binding', async () => {
     const value = signal('One');
 
-    define('test-attr-props-two-way', () => {
-      return html`<input ${attr({ value })} />`;
-    });
-
-    const { query } = await mount('test-attr-props-two-way');
+    const { query } = await mount(() => html`<input ${attr({ value })} />`);
     const input = query('input') as HTMLInputElement;
 
     input.value = 'Two';
@@ -457,12 +408,9 @@ describe('Directive: spread()', () => {
     const title = signal('Start');
     let clicks = 0;
 
-    define('test-spread-mixed', () => {
-      return html`<button
-        ${spread({ '?disabled': false, '.value': title, '@click': () => clicks++, title })}></button>`;
-    });
-
-    const { flush, query } = await mount('test-spread-mixed');
+    const { flush, query } = await mount(
+      () => html`<button ${spread({ '?disabled': false, '.value': title, '@click': () => clicks++, title })}></button>`,
+    );
     const button = query('button') as HTMLButtonElement;
 
     expect(button.value).toBe('Start');
@@ -483,11 +431,9 @@ describe('Directive: spread() text-field map', () => {
   it('should apply common text-field props and keep .value two-way', async () => {
     const value = signal('Alice');
 
-    define('test-spread-text-field', () => {
-      return html`<input ${spread({ '.name': 'user', '.required': true, '.value': value })} />`;
-    });
-
-    const { query } = await mount('test-spread-text-field');
+    const { query } = await mount(
+      () => html`<input ${spread({ '.name': 'user', '.required': true, '.value': value })} />`,
+    );
     const input = query('input') as HTMLInputElement;
 
     expect(input.name).toBe('user');
@@ -563,32 +509,22 @@ describe('Directive: choose()', () => {
   ] as const;
 
   it('should render the matching static case', async () => {
-    define('test-choose-static', () => {
-      return html`<div>${choose('about', cases)}</div>`;
-    });
-
-    const { query } = await mount('test-choose-static');
+    const { query } = await mount(() => html`<div>${choose('about', cases)}</div>`);
 
     expect(query('.about')?.textContent).toBe('About');
     expect(query('.home')).toBeNull();
   });
 
   it('should render the default when no case matches', async () => {
-    define('test-choose-default', () => {
-      return html`<div>${choose('other' as never, cases, () => html`<h1 class="err">Error</h1>`)}</div>`;
-    });
-
-    const { query } = await mount('test-choose-default');
+    const { query } = await mount(
+      () => html`<div>${choose('other' as never, cases, () => html`<h1 class="err">Error</h1>`)}</div>`,
+    );
 
     expect(query('.err')?.textContent).toBe('Error');
   });
 
   it('should render empty string when no case matches and no default is given', async () => {
-    define('test-choose-empty', () => {
-      return html`<div>${choose('other' as never, cases)}</div>`;
-    });
-
-    const { query } = await mount('test-choose-empty');
+    const { query } = await mount(() => html`<div>${choose('other' as never, cases)}</div>`);
 
     expect(query('div')?.innerHTML).toBe('');
   });
@@ -596,11 +532,7 @@ describe('Directive: choose()', () => {
   it('should update reactively when a Signal changes', async () => {
     const section = signal<'home' | 'about' | 'contact'>('home');
 
-    define('test-choose-signal', () => {
-      return html`<div>${choose(section, cases)}</div>`;
-    });
-
-    const { flush, query } = await mount('test-choose-signal');
+    const { flush, query } = await mount(() => html`<div>${choose(section, cases)}</div>`);
 
     expect(query('.home')).not.toBeNull();
     expect(query('.about')).toBeNull();
@@ -619,11 +551,7 @@ describe('Directive: choose()', () => {
   it('should update reactively when a getter function is used', async () => {
     const section = signal<'home' | 'about'>('home');
 
-    define('test-choose-getter', () => {
-      return html`<div>${choose(() => section.value, cases as never)}</div>`;
-    });
-
-    const { flush, query } = await mount('test-choose-getter');
+    const { flush, query } = await mount(() => html`<div>${choose(() => section.value, cases as never)}</div>`);
 
     expect(query('.home')).not.toBeNull();
 
@@ -636,21 +564,13 @@ describe('Directive: choose()', () => {
 
 describe('Directive: raw()', () => {
   it('should render a static HTML string without escaping', async () => {
-    define('test-raw-static', () => {
-      return html`<div>${raw('<strong>bold</strong>')}</div>`;
-    });
-
-    const { query } = await mount('test-raw-static');
+    const { query } = await mount(() => html`<div>${raw('<strong>bold</strong>')}</div>`);
 
     expect(query('strong')?.textContent).toBe('bold');
   });
 
   it('should NOT escape angle brackets (unlike plain string interpolation)', async () => {
-    define('test-raw-no-escape', () => {
-      return html`<div>${raw('<em>hi</em>')}</div>`;
-    });
-
-    const { query } = await mount('test-raw-no-escape');
+    const { query } = await mount(() => html`<div>${raw('<em>hi</em>')}</div>`);
 
     expect(query('em')).not.toBeNull();
   });
@@ -658,11 +578,7 @@ describe('Directive: raw()', () => {
   it('should update reactively when a Signal changes', async () => {
     const content = signal('<b>one</b>');
 
-    define('test-raw-signal', () => {
-      return html`<div>${raw(content)}</div>`;
-    });
-
-    const { flush, query } = await mount('test-raw-signal');
+    const { flush, query } = await mount(() => html`<div>${raw(content)}</div>`);
 
     expect(query('b')?.textContent).toBe('one');
 
@@ -675,11 +591,9 @@ describe('Directive: raw()', () => {
   it('should update reactively when a getter function is used', async () => {
     const flag = signal(true);
 
-    define('test-raw-getter', () => {
-      return html`<div>${raw(() => (flag.value ? '<span class="a">A</span>' : '<span class="b">B</span>'))}</div>`;
-    });
-
-    const { flush, query } = await mount('test-raw-getter');
+    const { flush, query } = await mount(
+      () => html`<div>${raw(() => (flag.value ? '<span class="a">A</span>' : '<span class="b">B</span>'))}</div>`,
+    );
 
     expect(query('.a')).not.toBeNull();
 
@@ -690,11 +604,7 @@ describe('Directive: raw()', () => {
   });
 
   it('should render an empty string as empty content', async () => {
-    define('test-raw-empty', () => {
-      return html`<div>${raw('')}</div>`;
-    });
-
-    const { query } = await mount('test-raw-empty');
+    const { query } = await mount(() => html`<div>${raw('')}</div>`);
 
     expect(query('div')?.innerHTML).toBe('');
   });
@@ -702,11 +612,7 @@ describe('Directive: raw()', () => {
 
 describe('Directive: spread() attribute entries', () => {
   it('should set static attribute values', async () => {
-    define('test-spread-attr-static', () => {
-      return html`<input ${spread({ maxlength: 100, placeholder: 'Search' })} />`;
-    });
-
-    const { query } = await mount('test-spread-attr-static');
+    const { query } = await mount(() => html`<input ${spread({ maxlength: 100, placeholder: 'Search' })} />`);
     const input = query('input')!;
 
     expect(input.getAttribute('placeholder')).toBe('Search');
@@ -714,22 +620,16 @@ describe('Directive: spread() attribute entries', () => {
   });
 
   it('should set boolean true as empty-string attribute', async () => {
-    define('test-spread-attr-bool-true', () => {
-      return html`<input ${spread({ required: true })} />`;
-    });
-
-    const { query } = await mount('test-spread-attr-bool-true');
+    const { query } = await mount(() => html`<input ${spread({ required: true })} />`);
 
     expect(query('input')?.hasAttribute('required')).toBe(true);
     expect(query('input')?.getAttribute('required')).toBe('');
   });
 
   it('should remove attribute when value is false/null/undefined', async () => {
-    define('test-spread-attr-falsy', () => {
-      return html`<input ${spread({ disabled: null, readonly: undefined, required: false })} />`;
-    });
-
-    const { query } = await mount('test-spread-attr-falsy');
+    const { query } = await mount(
+      () => html`<input ${spread({ disabled: null, readonly: undefined, required: false })} />`,
+    );
     const input = query('input')!;
 
     expect(input.hasAttribute('required')).toBe(false);
@@ -740,11 +640,7 @@ describe('Directive: spread() attribute entries', () => {
   it('should update reactively when a Signal changes', async () => {
     const label = signal('First');
 
-    define('test-spread-attr-signal', () => {
-      return html`<input ${spread({ placeholder: label })} />`;
-    });
-
-    const { flush, query } = await mount('test-spread-attr-signal');
+    const { flush, query } = await mount(() => html`<input ${spread({ placeholder: label })} />`);
 
     expect(query('input')?.getAttribute('placeholder')).toBe('First');
 
@@ -756,11 +652,9 @@ describe('Directive: spread() attribute entries', () => {
   it('should update reactively from a getter function', async () => {
     const count = signal(0);
 
-    define('test-spread-attr-getter', () => {
-      return html`<button ${spread({ 'aria-label': () => `count: ${count.value}` })}></button>`;
-    });
-
-    const { flush, query } = await mount('test-spread-attr-getter');
+    const { flush, query } = await mount(
+      () => html`<button ${spread({ 'aria-label': () => `count: ${count.value}` })}></button>`,
+    );
 
     expect(query('button')?.getAttribute('aria-label')).toBe('count: 0');
 
@@ -772,11 +666,7 @@ describe('Directive: spread() attribute entries', () => {
   it('should remove attribute reactively when signal becomes false', async () => {
     const required = signal(true);
 
-    define('test-spread-attr-remove', () => {
-      return html`<input ${spread({ required })} />`;
-    });
-
-    const { flush, query } = await mount('test-spread-attr-remove');
+    const { flush, query } = await mount(() => html`<input ${spread({ required })} />`);
 
     expect(query('input')?.hasAttribute('required')).toBe(true);
 
@@ -790,11 +680,7 @@ describe('Directive: on()', () => {
   it('should attach an event listener to the element', async () => {
     let clicked = 0;
 
-    define('test-on-click', () => {
-      return html`<button ${on('click', () => clicked++)}>Click</button>`;
-    });
-
-    const { query } = await mount('test-on-click');
+    const { query } = await mount(() => html`<button ${on('click', () => clicked++)}>Click</button>`);
 
     query('button')!.dispatchEvent(new Event('click'));
     expect(clicked).toBe(1);
@@ -818,11 +704,7 @@ describe('Directive: on()', () => {
   it('should fire clickOutside when a click occurs outside the element', async () => {
     let outsideCount = 0;
 
-    define('test-on-outside', () => {
-      return html`<div class="inner" ${on('clickOutside', () => outsideCount++)}></div>`;
-    });
-
-    const { element } = await mount('test-on-outside');
+    const { element } = await mount(() => html`<div class="inner" ${on('clickOutside', () => outsideCount++)}></div>`);
 
     // Click inside — should NOT fire
     element.shadowRoot!.querySelector('.inner')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -836,13 +718,12 @@ describe('Directive: on()', () => {
   it('should NOT fire clickOutside when a click is inside the element', async () => {
     let outsideCount = 0;
 
-    define('test-on-inside-click', () => {
-      return html`<div ${on('clickOutside', () => outsideCount++)}>
-        <button class="btn">Inside</button>
-      </div>`;
-    });
-
-    const { element } = await mount('test-on-inside-click');
+    const { element } = await mount(
+      () =>
+        html`<div ${on('clickOutside', () => outsideCount++)}>
+          <button class="btn">Inside</button>
+        </div>`,
+    );
 
     element.shadowRoot!.querySelector('.btn')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(outsideCount).toBe(0);
@@ -851,43 +732,37 @@ describe('Directive: on()', () => {
 
 describe('Directive: match()', () => {
   it('should render the first truthy branch (static)', async () => {
-    define('test-match-static', () => {
-      return html`<div>
-        ${match(
-          [false, () => html`<span>A</span>`],
-          [true, () => html`<span>B</span>`],
-          [true, () => html`<span>C</span>`],
-        )}
-      </div>`;
-    });
-
-    const { query } = await mount('test-match-static');
+    const { query } = await mount(
+      () =>
+        html`<div>
+          ${match(
+            [false, () => html`<span>A</span>`],
+            [true, () => html`<span>B</span>`],
+            [true, () => html`<span>C</span>`],
+          )}
+        </div>`,
+    );
 
     expect(query('span')?.textContent).toBe('B');
   });
 
   it('should render fallback when no branch matches (static)', async () => {
-    define('test-match-static-fallback', () => {
-      return html`<div>
-        ${match(
-          [false, () => html`<span>A</span>`],
-          [false, () => html`<span>B</span>`],
-          () => html`<span class="fallback">Fallback</span>`,
-        )}
-      </div>`;
-    });
-
-    const { query } = await mount('test-match-static-fallback');
+    const { query } = await mount(
+      () =>
+        html`<div>
+          ${match(
+            [false, () => html`<span>A</span>`],
+            [false, () => html`<span>B</span>`],
+            () => html`<span class="fallback">Fallback</span>`,
+          )}
+        </div>`,
+    );
 
     expect(query('.fallback')?.textContent).toBe('Fallback');
   });
 
   it('should render empty when no branch matches and no fallback', async () => {
-    define('test-match-static-empty', () => {
-      return html`<div>${match([false, () => html`<span>A</span>`])}</div>`;
-    });
-
-    const { query } = await mount('test-match-static-empty');
+    const { query } = await mount(() => html`<div>${match([false, () => html`<span>A</span>`])}</div>`);
 
     expect(query('span')).toBeNull();
   });
@@ -896,17 +771,16 @@ describe('Directive: match()', () => {
     const isAdmin = signal(false);
     const isMod = signal(false);
 
-    define('test-match-signal', () => {
-      return html`<div>
-        ${match(
-          [isAdmin, () => html`<span class="admin">Admin</span>`],
-          [isMod, () => html`<span class="mod">Mod</span>`],
-          () => html`<span class="user">User</span>`,
-        )}
-      </div>`;
-    });
-
-    const { flush, query } = await mount('test-match-signal');
+    const { flush, query } = await mount(
+      () =>
+        html`<div>
+          ${match(
+            [isAdmin, () => html`<span class="admin">Admin</span>`],
+            [isMod, () => html`<span class="mod">Mod</span>`],
+            () => html`<span class="user">User</span>`,
+          )}
+        </div>`,
+    );
 
     expect(query('.user')).not.toBeNull();
 
@@ -924,18 +798,17 @@ describe('Directive: match()', () => {
   it('should react to getter conditions', async () => {
     const score = signal(0);
 
-    define('test-match-getter', () => {
-      return html`<div>
-        ${match(
-          [() => score.value >= 90, () => html`<span class="a">A</span>`],
-          [() => score.value >= 70, () => html`<span class="b">B</span>`],
-          [() => score.value >= 50, () => html`<span class="c">C</span>`],
-          () => html`<span class="f">F</span>`,
-        )}
-      </div>`;
-    });
-
-    const { flush, query } = await mount('test-match-getter');
+    const { flush, query } = await mount(
+      () =>
+        html`<div>
+          ${match(
+            [() => score.value >= 90, () => html`<span class="a">A</span>`],
+            [() => score.value >= 70, () => html`<span class="b">B</span>`],
+            [() => score.value >= 50, () => html`<span class="c">C</span>`],
+            () => html`<span class="f">F</span>`,
+          )}
+        </div>`,
+    );
 
     expect(query('.f')).not.toBeNull();
 
@@ -958,38 +831,37 @@ describe('Directive: match()', () => {
   it('should evaluate branches in order and stop at first match', async () => {
     const renderCounts = [0, 0, 0];
 
-    define('test-match-order', () => {
-      return html`<div>
-        ${match(
-          [
-            true,
-            () => {
-              renderCounts[0]++;
+    const { query } = await mount(
+      () =>
+        html`<div>
+          ${match(
+            [
+              true,
+              () => {
+                renderCounts[0]++;
 
-              return html`<span>First</span>`;
-            },
-          ],
-          [
-            true,
-            () => {
-              renderCounts[1]++;
+                return html`<span>First</span>`;
+              },
+            ],
+            [
+              true,
+              () => {
+                renderCounts[1]++;
 
-              return html`<span>Second</span>`;
-            },
-          ],
-          [
-            true,
-            () => {
-              renderCounts[2]++;
+                return html`<span>Second</span>`;
+              },
+            ],
+            [
+              true,
+              () => {
+                renderCounts[2]++;
 
-              return html`<span>Third</span>`;
-            },
-          ],
-        )}
-      </div>`;
-    });
-
-    const { query } = await mount('test-match-order');
+                return html`<span>Third</span>`;
+              },
+            ],
+          )}
+        </div>`,
+    );
 
     expect(query('span')?.textContent).toBe('First');
     expect(renderCounts).toEqual([1, 0, 0]);
@@ -1000,11 +872,7 @@ describe('Directive: memo()', () => {
   it('should render the template initially', async () => {
     const data = signal('hello');
 
-    define('test-memo-initial', () => {
-      return html`<div>${memo([data], () => html`<span>${data}</span>`)}</div>`;
-    });
-
-    const { query } = await mount('test-memo-initial');
+    const { query } = await mount(() => html`<div>${memo([data], () => html`<span>${data}</span>`)}</div>`);
 
     expect(query('span')?.textContent).toBe('hello');
   });
@@ -1013,17 +881,16 @@ describe('Directive: memo()', () => {
     const count = signal(0);
     let renderCount = 0;
 
-    define('test-memo-re-render', () => {
-      return html`<div>
-        ${memo([count], () => {
-          renderCount++;
+    const { flush, query } = await mount(
+      () =>
+        html`<div>
+          ${memo([count], () => {
+            renderCount++;
 
-          return html`<span>${count}</span>`;
-        })}
-      </div>`;
-    });
-
-    const { flush, query } = await mount('test-memo-re-render');
+            return html`<span>${count}</span>`;
+          })}
+        </div>`,
+    );
 
     expect(query('span')?.textContent).toBe('0');
     expect(renderCount).toBe(1);
@@ -1039,18 +906,17 @@ describe('Directive: memo()', () => {
     const unrelated = signal(0);
     let renderCount = 0;
 
-    define('test-memo-skip', () => {
-      return html`<div>
-        ${memo([guarded], () => {
-          renderCount++;
+    const { flush } = await mount(
+      () =>
+        html`<div>
+          ${memo([guarded], () => {
+            renderCount++;
 
-          return html`<span class="g">${guarded}</span>`;
-        })}
-        <b>${unrelated}</b>
-      </div>`;
-    });
-
-    const { flush } = await mount('test-memo-skip');
+            return html`<span class="g">${guarded}</span>`;
+          })}
+          <b>${unrelated}</b>
+        </div>`,
+    );
 
     expect(renderCount).toBe(1);
 
@@ -1069,11 +935,9 @@ describe('Directive: until()', () => {
   it('should show pendingFn while promise is pending', async () => {
     const pending = new Promise<string>(() => {});
 
-    define('test-until-pending', () => {
-      return html`<div>${until(pending, () => html`<span class="loading">Loading</span>`)}</div>`;
-    });
-
-    const { query } = await mount('test-until-pending');
+    const { query } = await mount(
+      () => html`<div>${until(pending, () => html`<span class="loading">Loading</span>`)}</div>`,
+    );
 
     expect(query('.loading')).not.toBeNull();
   });
@@ -1082,16 +946,15 @@ describe('Directive: until()', () => {
     let resolve!: (v: string) => void;
     const promise = new Promise<string>((r) => (resolve = r));
 
-    define('test-until-resolved', () => {
-      return html`<div>
-        ${until(
-          promise.then((v) => html`<span class="done">${v}</span>`),
-          () => html`<span class="loading">…</span>`,
-        )}
-      </div>`;
-    });
-
-    const { flush, query } = await mount('test-until-resolved');
+    const { flush, query } = await mount(
+      () =>
+        html`<div>
+          ${until(
+            promise.then((v) => html`<span class="done">${v}</span>`),
+            () => html`<span class="loading">…</span>`,
+          )}
+        </div>`,
+    );
 
     expect(query('.loading')).not.toBeNull();
 
@@ -1106,11 +969,7 @@ describe('Directive: until()', () => {
   it('should render empty string when no pendingFn and promise is pending', async () => {
     const pending = new Promise<string>(() => {});
 
-    define('test-until-no-fallback', () => {
-      return html`<div>${until(pending)}</div>`;
-    });
-
-    const { query } = await mount('test-until-no-fallback');
+    const { query } = await mount(() => html`<div>${until(pending)}</div>`);
 
     expect(query('div')?.textContent).toBe('');
   });
@@ -1119,17 +978,16 @@ describe('Directive: until()', () => {
     let reject!: (err: unknown) => void;
     const promise = new Promise<string>((_, r) => (reject = r));
 
-    define('test-until-error', () => {
-      return html`<div>
-        ${until(
-          promise.then((v) => html`<span class="done">${v}</span>`),
-          () => html`<span class="loading">…</span>`,
-          (err) => html`<span class="error">${String(err)}</span>`,
-        )}
-      </div>`;
-    });
-
-    const { flush, query } = await mount('test-until-error');
+    const { flush, query } = await mount(
+      () =>
+        html`<div>
+          ${until(
+            promise.then((v) => html`<span class="done">${v}</span>`),
+            () => html`<span class="loading">…</span>`,
+            (err) => html`<span class="error">${String(err)}</span>`,
+          )}
+        </div>`,
+    );
 
     expect(query('.loading')).not.toBeNull();
 

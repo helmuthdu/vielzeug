@@ -5,9 +5,8 @@ import { defineConfig } from 'vite';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
- * Secondary build: bundles all craftit internals into a single craftit.{js,cjs}
- * file (with @vielzeug/stateit kept external). Run after the main vite build so
- * it adds to dist/ rather than replacing it.
+ * Secondary build: bundles all routeit internals into a single routeit.{js,cjs}
+ * file. Run after the main vite build so it adds to dist/ rather than replacing it.
  */
 export default defineConfig({
   build: {

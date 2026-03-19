@@ -381,33 +381,33 @@ Buttons expand to fill the container equally.
 
 ### `bit-button` Attributes
 
-| Attribute    | Type                                                                           | Default     | Description                                                             |
-| ------------ | ------------------------------------------------------------------------------ | ----------- | ----------------------------------------------------------------------- |
-| `variant`    | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`   | Visual style variant                                                    |
-| `color`      | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | `'primary'` | Semantic color                                                          |
-| `size`       | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`      | Button size                                                             |
-| `type`       | `'button' \| 'submit' \| 'reset'`                                              | `'button'`  | Button type (for forms)                                                 |
-| `disabled`   | `boolean`                                                                      | `false`     | Disable the button                                                      |
-| `loading`    | `boolean`                                                                      | `false`     | Show loading state                                                      |
-| `rainbow`    | `boolean`                                                                      | `false`     | Animated rainbow border effect                                          |
-| `icon-only`  | `boolean`                                                                      | `false`     | Icon-only mode (square aspect ratio, no padding)                        |
-| `label`      | `string`                                                                       | —           | Accessible label for the inner element — required for icon-only buttons |
-| `fullwidth`  | `boolean`                                                                      | `false`     | Button takes full width of container                                    |
-| `rounded`    | `boolean`                                                                      | `false`     | Fully rounded corners                                                   |
-| `href`       | `string`                                                                       | —           | URL to navigate to; renders as `<a role="button">`                      |
-| `target`     | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | —           | Link target (requires `href`)                                           |
-| `rel`        | `string`                                                                       | —           | Link `rel` attribute (requires `href`)                                  |
+| Attribute   | Type                                                                           | Default     | Description                                                             |
+| ----------- | ------------------------------------------------------------------------------ | ----------- | ----------------------------------------------------------------------- |
+| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`   | Visual style variant                                                    |
+| `color`     | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | `'primary'` | Semantic color                                                          |
+| `size`      | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`      | Button size                                                             |
+| `type`      | `'button' \| 'submit' \| 'reset'`                                              | `'button'`  | Button type (for forms)                                                 |
+| `disabled`  | `boolean`                                                                      | `false`     | Disable the button                                                      |
+| `loading`   | `boolean`                                                                      | `false`     | Show loading state                                                      |
+| `rainbow`   | `boolean`                                                                      | `false`     | Animated rainbow border effect                                          |
+| `icon-only` | `boolean`                                                                      | `false`     | Icon-only mode (square aspect ratio, no padding)                        |
+| `label`     | `string`                                                                       | —           | Accessible label for the inner element — required for icon-only buttons |
+| `fullwidth` | `boolean`                                                                      | `false`     | Button takes full width of container                                    |
+| `rounded`   | `boolean`                                                                      | `false`     | Fully rounded corners                                                   |
+| `href`      | `string`                                                                       | —           | URL to navigate to; renders as `<a role="button">`                      |
+| `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | —           | Link target (requires `href`)                                           |
+| `rel`       | `string`                                                                       | —           | Link `rel` attribute (requires `href`)                                  |
 
 ### `bit-button-group` Attributes
 
-| Attribute     | Type                                                                           | Default        | Description                                                      |
-| ------------- | ------------------------------------------------------------------------------ | -------------- | ---------------------------------------------------------------- |
-| `orientation` | `'horizontal' \| 'vertical'`                                                   | `'horizontal'` | Group layout direction                                           |
-| `attached`    | `boolean`                                                                      | `false`        | Remove spacing and connect buttons                               |
-| `fullwidth`   | `boolean`                                                                      | `false`        | Buttons expand to fill container                                 |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                         | -              | Apply size to all child buttons                                  |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | -              | Apply variant to all child buttons                               |
-| `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | -              | Apply color to all child buttons                                 |
+| Attribute     | Type                                                                           | Default        | Description                        |
+| ------------- | ------------------------------------------------------------------------------ | -------------- | ---------------------------------- |
+| `orientation` | `'horizontal' \| 'vertical'`                                                   | `'horizontal'` | Group layout direction             |
+| `attached`    | `boolean`                                                                      | `false`        | Remove spacing and connect buttons |
+| `fullwidth`   | `boolean`                                                                      | `false`        | Buttons expand to fill container   |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                         | -              | Apply size to all child buttons    |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | -              | Apply variant to all child buttons |
+| `color`       | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                | -              | Apply color to all child buttons   |
 
 ### Slots
 

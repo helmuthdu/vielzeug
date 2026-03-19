@@ -61,9 +61,10 @@ cleanup();
 
 ## Usage Notes
 
-- `positionFloat()` defaults to `strategy: 'fixed'`.
+- `strategy` is part of the public option types but is not currently applied internally; position from viewport coordinates (typically with `position: fixed` CSS).
 - Middleware runs in order; the common chain is `offset()`, `flip()`, `shift()`, then `size()`.
 - Call the cleanup returned by `autoUpdate()` when the floating UI closes.
+- Use `autoUpdate(..., { observeFloating: false })` when observing floating-size changes would cause unnecessary update loops.
 - Use `computePosition()` when you want to apply transforms or animations yourself.
 
 ## Documentation
@@ -73,7 +74,7 @@ Full docs at **[vielzeug.dev/floatit](https://vielzeug.dev/floatit)**
 | | |
 |---|---|
 | [Overview](https://vielzeug.dev/floatit/) | Installation, quick start, and feature overview |
-| [Usage Guide](https://vielzeug.dev/floatit/usage) | Placement, middleware, strategy, and lifecycle patterns |
+| [Usage Guide](https://vielzeug.dev/floatit/usage) | Placement, middleware, and lifecycle patterns |
 | [API Reference](https://vielzeug.dev/floatit/api) | Complete function signatures and types |
 | [Examples](https://vielzeug.dev/floatit/examples) | Tooltips, dropdowns, and framework recipes |
 

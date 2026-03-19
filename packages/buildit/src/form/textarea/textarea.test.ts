@@ -4,7 +4,7 @@ describe('bit-textarea', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./textarea');
+    await (() => import('./textarea'))();
   });
 
   afterEach(() => {
@@ -23,7 +23,9 @@ describe('bit-textarea', () => {
     });
 
     it('renders helper text when helper attribute is set', async () => {
-      fixture = await mount('bit-textarea', { attrs: { helper: 'Max 200 characters' } });
+      fixture = await mount('bit-textarea', {
+        attrs: { helper: 'Max 200 characters' },
+      });
 
       expect(fixture.query('.helper-text')).toBeTruthy();
     });
@@ -69,7 +71,9 @@ describe('bit-textarea', () => {
     });
 
     it('sets placeholder on textarea', async () => {
-      fixture = await mount('bit-textarea', { attrs: { placeholder: 'Enter message' } });
+      fixture = await mount('bit-textarea', {
+        attrs: { placeholder: 'Enter message' },
+      });
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.placeholder).toBe('Enter message');
     });
@@ -127,9 +131,33 @@ describe('bit-textarea', () => {
     });
 
     it('does not set aria-invalid when no error', async () => {
-      fixture = await mount('bit-textarea', { attrs: { label: 'Comment', 'label-placement': 'outside' } });
+      fixture = await mount('bit-textarea', {
+        attrs: {
+          label: 'Comment',
+          'label-placement': 'outside',
+        },
+      });
 
       expect(fixture.query('textarea')?.getAttribute('aria-invalid')).not.toBe('true');
+    });
+
+    it('does not reflect an empty error attribute by default', async () => {
+      fixture = await mount('bit-textarea');
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('error')).toBe(false);
+    });
+
+    it('removes the host error attribute when error becomes empty', async () => {
+      fixture = await mount('bit-textarea', { attrs: { error: 'Required' } });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('error')).toBe('Required');
+
+      await fixture.attr('error', '');
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('error')).toBe(false);
     });
 
     it('prefers error text over helper text in merged assistive block', async () => {
@@ -268,7 +296,12 @@ describe('bit-textarea', () => {
     });
 
     it('sets near-limit counter class at 90% maxlength', async () => {
-      fixture = await mount('bit-textarea', { attrs: { maxlength: '10', value: '123456789' } });
+      fixture = await mount('bit-textarea', {
+        attrs: {
+          maxlength: '10',
+          value: '123456789',
+        },
+      });
 
       const counter = fixture.query<HTMLElement>('.counter');
 
@@ -278,7 +311,12 @@ describe('bit-textarea', () => {
     });
 
     it('sets at-limit counter class at maxlength', async () => {
-      fixture = await mount('bit-textarea', { attrs: { maxlength: '10', value: '1234567890' } });
+      fixture = await mount('bit-textarea', {
+        attrs: {
+          maxlength: '10',
+          value: '1234567890',
+        },
+      });
 
       const counter = fixture.query<HTMLElement>('.counter');
 
@@ -293,7 +331,7 @@ describe('bit-textarea accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./textarea');
+    await (() => import('./textarea'))();
   });
 
   afterEach(() => {
@@ -316,7 +354,9 @@ describe('bit-textarea accessibility', () => {
     });
 
     it('error message has role="alert" for assistive technology', async () => {
-      fixture = await mount('bit-textarea', { attrs: { error: 'Field is required' } });
+      fixture = await mount('bit-textarea', {
+        attrs: { error: 'Field is required' },
+      });
 
       const errorEl = fixture.query('.helper-text');
 
@@ -337,7 +377,12 @@ describe('bit-textarea accessibility', () => {
     });
 
     it('updates aria-invalid when error is added dynamically', async () => {
-      fixture = await mount('bit-textarea', { attrs: { label: 'Message', 'label-placement': 'outside' } });
+      fixture = await mount('bit-textarea', {
+        attrs: {
+          label: 'Message',
+          'label-placement': 'outside',
+        },
+      });
       expect(fixture.query('textarea')?.getAttribute('aria-invalid')).not.toBe('true');
 
       await fixture.attr('error', 'Too short');
@@ -346,7 +391,12 @@ describe('bit-textarea accessibility', () => {
     });
 
     it('sets aria-labelledby pointing to label when outside label is set', async () => {
-      fixture = await mount('bit-textarea', { attrs: { label: 'Comment', 'label-placement': 'outside' } });
+      fixture = await mount('bit-textarea', {
+        attrs: {
+          label: 'Comment',
+          'label-placement': 'outside',
+        },
+      });
 
       const labelledByVal = fixture.query('textarea')?.getAttribute('aria-labelledby');
 
@@ -384,7 +434,12 @@ describe('bit-textarea accessibility', () => {
     });
 
     it('readonly textarea is keyboard-accessible but not editable', async () => {
-      fixture = await mount('bit-textarea', { attrs: { readonly: true, value: 'Read only' } });
+      fixture = await mount('bit-textarea', {
+        attrs: {
+          readonly: true,
+          value: 'Read only',
+        },
+      });
 
       const ta = fixture.query<HTMLTextAreaElement>('textarea')!;
 

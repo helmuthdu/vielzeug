@@ -1,15 +1,17 @@
 ---
 title: Buildit — Web component library
-description: Accessible, customizable web components built with Craftit. Works with any framework or vanilla JS.
+description: Accessible, themeable web components built with Craftit for framework and vanilla DOM apps.
 ---
 
 <PackageBadges package="buildit" />
 
-<img src="/logo-buildit.svg" alt="Buildit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-buildit.svg" alt="Buildit logo" width="156" class="logo-highlight"/>
 
 # Buildit
 
-**Buildit** is the Vielzeug component library: accessible, themeable web components built with [@vielzeug/craftit](/craftit/). It works with vanilla DOM and framework apps alike through standards-based custom elements and tree-shakeable registration entry points.
+**Buildit** is the Vielzeug component library: accessible, themeable web components built with [@vielzeug/craftit](/craftit/). It works with vanilla Document Object Model (DOM) code and framework apps through standards-based custom elements and tree-shakeable registration entry points.
+
+<!-- Search keywords: web component library, UI component kit, design system components. -->
 
 ## Installation
 
@@ -58,11 +60,11 @@ import '@vielzeug/buildit';
 
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/buildit` | Register all published components |
+| Import                     | Purpose                                   |
+| -------------------------- | ----------------------------------------- |
+| `@vielzeug/buildit`        | Register all published components         |
 | `@vielzeug/buildit/styles` | Global tokens and shared component styles |
-| `@vielzeug/buildit/types` | Shared TypeScript types |
+| `@vielzeug/buildit/types`  | Shared TypeScript types                   |
 
 Component registration happens through side-effect imports such as `@vielzeug/buildit/button` and `@vielzeug/buildit/dialog`.
 
@@ -82,6 +84,32 @@ Component registration happens through side-effect imports such as `@vielzeug/bu
 
 **Overlay:** `bit-dialog`, `bit-drawer`, `bit-menu`, `bit-popover`, `bit-tooltip`
 
+## Why Buildit?
+
+Every project needs UI primitives. Buildit provides accessible web components that work natively anywhere HTML is rendered—no framework required.
+
+```html
+<!-- Before — roll your own button with ARIA -->
+<button class="btn btn-primary" role="button" aria-pressed="false" tabindex="0">
+  <span class="btn-spinner" aria-hidden="true"></span>
+  Save
+</button>
+
+<!-- After — Buildit -->
+<bit-button variant="primary" loading>Save</bit-button>
+```
+
+| Feature            | Buildit                                       | Shoelace | Material Web |
+| ------------------ | --------------------------------------------- | -------- | ------------ |
+| Bundle size        | <PackageInfo package="buildit" type="size" /> | ~145 kB  | ~200 kB      |
+| Built with         | Craftit                                       | Lit      | Lit          |
+| Accessible         | WCAG AA                                       | WCAG AA  | WCAG AA      |
+| Framework agnostic | ✅                                            | ✅       | ✅           |
+
+**Use Buildit when** you want accessible web components that match the Vielzeug design system without a heavy framework dependency.
+
+**Consider Shoelace or Material Web** if your team is already standardized on those ecosystems and you need their established component catalogs.
+
 ## Features
 
 - **Accessible** — keyboard navigation, ARIA wiring, and focus management across interactive components
@@ -91,10 +119,23 @@ Component registration happens through side-effect imports such as `@vielzeug/bu
 - **Comprehensive surface** — actions, content, disclosure, feedback, form, layout, and overlay primitives
 - **Zero runtime deps** — <PackageInfo package="buildit" type="size" /> gzipped
 
-## Next Steps
+## Compatibility
 
-|                           |                                                    |
-| ------------------------- | -------------------------------------------------- |
-| [Usage Guide](./usage.md) | Import patterns, slots, events, and accessibility |
-| [API Reference](./api.md) | Component props, events, and CSS variables         |
-| [Examples](./examples.md) | Framework integration recipes                      |
+| Environment | Support       |
+| ----------- | ------------- |
+| Browser     | ✅            |
+| Node.js     | ❌ (DOM only) |
+| SSR         | ❌ (DOM only) |
+| Deno        | ❌            |
+
+## Prerequisites
+
+- Browser runtime with Custom Elements support.
+- Import `@vielzeug/buildit/styles` before rendering components.
+- For SSR, render placeholders server-side and hydrate components only on the client.
+
+## See Also
+
+- [Craftit](/craftit/)
+- [Floatit](/floatit/)
+- [Formit](/formit/)

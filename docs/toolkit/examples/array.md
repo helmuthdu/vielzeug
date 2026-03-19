@@ -1,6 +1,6 @@
 ---
-title: Toolkit — Array Examples
-description: Array utility examples for Toolkit.
+title: 'Toolkit — Array Examples'
+description: 'Array utility examples for Toolkit.'
 ---
 
 # Array Utilities
@@ -8,6 +8,14 @@ description: Array utility examples for Toolkit.
 Array utilities provide a powerful set of tools to transform, query, and manipulate arrays in a type-safe, ergonomic way.
 
 ## 📚 Quick Reference
+
+## Problem
+
+Implement 📚 quick reference in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
 
 | Method                                | Category       | Description                                     |
 | :------------------------------------ | :------------- | :---------------------------------------------- |
@@ -23,7 +31,7 @@ Array utilities provide a powerful set of tools to transform, query, and manipul
 | [`rotate`](./array/rotate.md)         | Transformation | Rotate elements by N positions                  |
 | [`search`](./array/search.md)         | Query          | Fuzzy search in array                           |
 | [`select`](./array/select.md)         | Transformation | Map and filter in one step                      |
-| [`sort`](./array/sort.md)             | Sorting        | Sort with custom comparator                     |
+| [`sort`](./array/sort.md)             | Sorting        | Sort by selector or multi-field object selector |
 | [`toggle`](./array/toggle.md)         | Transformation | Add or remove item (toggle behaviour)           |
 | [`uniq`](./array/uniq.md)             | Set            | Remove duplicate values                         |
 
@@ -112,3 +120,20 @@ fold([], (a, b) => a + b); // undefined
 - [uniq](./array/uniq.md)
 
 </div>
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Async Examples](./async.md)
+- [Date Examples](./date.md)
+- [Function Examples](./function.md)

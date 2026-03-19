@@ -63,9 +63,9 @@ const config = {
   },
 };
 
-get(config, 'api.endpoints.login');          // '/api/v1/login'
-get(config, 'api.version');                  // undefined
-get(config, 'api.version', 'v1');            // 'v1' (default value)
+get(config, 'api.endpoints.login'); // '/api/v1/login'
+get(config, 'api.version'); // undefined
+get(config, 'api.version', 'v1'); // 'v1' (default value)
 ```
 
 ### Array Index Access
@@ -81,7 +81,7 @@ const data = {
 };
 
 get(data, 'users[0].name'); // 'Alice'
-get(data, 'users[1].id');   // 2
+get(data, 'users[1].id'); // 2
 ```
 
 ### Throwing on Missing Paths

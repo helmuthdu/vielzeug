@@ -3,79 +3,65 @@
  * Tests for the core HTML template system, attribute binding, event handling, and lifecycle
  */
 
-import { computed, define, escapeHtml, html, onError, onMount, signal } from '..';
+import { computed, escapeHtml, html, onError, onMount, signal } from '..';
 import { fire, mount } from '../test';
 
 describe('Template: HTML System', () => {
   describe('html Tagged Template', () => {
     it('should render static content', async () => {
-      define('test-static', () => {
-        return html`<div>Hello World</div>`;
-      });
-
-      const { query } = await mount('test-static');
+      const { query } = await mount(() => html`<div>Hello World</div>`);
 
       expect(query('div')?.textContent).toBe('Hello World');
     });
 
     it('should interpolate values', async () => {
-      define('test-interpolate', () => {
+      const { query } = await mount(() => {
         const name = 'Alice';
 
         return html`<div>Hello ${name}</div>`;
       });
 
-      const { query } = await mount('test-interpolate');
-
       expect(query('div')?.textContent).toBe('Hello Alice');
     });
 
     it('should support signal interpolation', async () => {
-      define('test-signal-interpolate', () => {
+      const { query } = await mount(() => {
         const count = signal(0);
 
         return html`<div>${count}</div>`;
       });
 
-      const { query } = await mount('test-signal-interpolate');
-
       expect(query('div')?.textContent).toBe('0');
     });
 
     it('should support computed values', async () => {
-      define('test-computed', () => {
+      const { query } = await mount(() => {
         const count = signal(5);
         const doubled = computed(() => count.value * 2);
 
         return html`<div>${doubled}</div>`;
       });
 
-      const { query } = await mount('test-computed');
-
       expect(query('div')?.textContent).toBe('10');
     });
 
     it('should escape HTML by default', async () => {
-      define('test-escape', () => {
+      const { query } = await mount(() => {
         const userInput = '<script>alert("xss")</script>';
 
         return html`<div>${userInput}</div>`;
       });
-
-      const { query } = await mount('test-escape');
 
       expect(query('div')?.textContent).toBe('<script>alert("xss")</script>');
       expect(query('div')?.innerHTML).toBe('&lt;script&gt;alert("xss")&lt;/script&gt;');
     });
 
     it('should preserve HTMLResult objects without escaping', async () => {
-      define('test-html-result', () => {
+      const { query } = await mount(() => {
         const inner = html`<span>Inner</span>`;
 
         return html`<div>${inner}</div>`;
       });
-
-      const { query } = await mount('test-html-result');
 
       expect(query('span')?.textContent).toBe('Inner');
     });
@@ -83,51 +69,43 @@ describe('Template: HTML System', () => {
 
   describe('Attributes', () => {
     it('should set string attributes', async () => {
-      define('test-attr-string', () => {
+      const { query } = await mount(() => {
         const id = 'my-id';
 
         return html`<div id=${id}>Test</div>`;
       });
 
-      const { query } = await mount('test-attr-string');
-
       expect(query('div')?.getAttribute('id')).toBe('my-id');
     });
 
     it('should set boolean attributes', async () => {
-      define('test-attr-boolean', () => {
+      const { query } = await mount(() => {
         const disabled = signal(true);
 
         return html`<button disabled=${disabled}>Click</button>`;
       });
 
-      const { query } = await mount('test-attr-boolean');
-
       expect(query('button')?.hasAttribute('disabled')).toBe(true);
     });
 
     it('should remove false boolean attributes', async () => {
-      define('test-attr-remove', () => {
+      const { query } = await mount(() => {
         const disabled = signal(false);
 
         return html`<button disabled=${disabled}>Click</button>`;
       });
 
-      const { query } = await mount('test-attr-remove');
-
       expect(query('button')?.hasAttribute('disabled')).toBe(false);
     });
 
     it('should support reactive attributes', async () => {
-      define('test-reactive-attr', () => {
+      const { flush, query } = await mount(() => {
         const cls = signal('initial');
 
         setTimeout(() => (cls.value = 'updated'), 50);
 
         return html`<div class=${cls}>Test</div>`;
       });
-
-      const { flush, query } = await mount('test-reactive-attr');
 
       expect(query('div')?.className).toBe('initial');
 
@@ -140,12 +118,7 @@ describe('Template: HTML System', () => {
   describe('Event Handlers', () => {
     it('should bind click events', async () => {
       let clicked = false;
-
-      define('test-click', () => {
-        return html`<button @click=${() => (clicked = true)}>Click</button>`;
-      });
-
-      const { query } = await mount('test-click');
+      const { query } = await mount(() => html`<button @click=${() => (clicked = true)}>Click</button>`);
 
       fire.click(query('button')!);
       expect(clicked).toBe(true);
@@ -154,37 +127,31 @@ describe('Template: HTML System', () => {
 
   describe('Edge Cases', () => {
     it('should handle null values', async () => {
-      define('test-null', () => {
+      const { query } = await mount(() => {
         const value = null;
 
         return html`<div>${value}</div>`;
       });
 
-      const { query } = await mount('test-null');
-
       expect(query('div')?.textContent).toBe('');
     });
 
     it('should handle undefined values', async () => {
-      define('test-undefined', () => {
+      const { query } = await mount(() => {
         const value = undefined;
 
         return html`<div>${value}</div>`;
       });
 
-      const { query } = await mount('test-undefined');
-
       expect(query('div')?.textContent).toBe('');
     });
 
     it('should handle nested templates', async () => {
-      define('test-nested', () => {
+      const { query } = await mount(() => {
         const inner = html`<span>Inner</span>`;
 
         return html`<div>${inner}</div>`;
       });
-
-      const { query } = await mount('test-nested');
 
       expect(query('span')?.textContent).toBe('Inner');
     });

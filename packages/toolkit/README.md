@@ -63,7 +63,7 @@ if (is.string(value)) { /* value narrowed to string */ }
 ### Array Utilities
 
 ```typescript
-import { group, chunk, keyBy, fold, select, toggle, uniq } from '@vielzeug/toolkit';
+import { group, chunk, keyBy, fold, select, toggle, uniq, sort } from '@vielzeug/toolkit';
 
 // Group by key
 const byRole = group(users, (u) => u.role);     // { admin: [...], user: [...] }
@@ -86,6 +86,19 @@ select([1, 2, 3, 4], (n) => n * 10, (n) => n > 2); // [30, 40]
 // Toggle item in/out of array
 toggle([1, 2, 3], 2);                            // [1, 3]
 toggle([1, 2, 3], 4);                            // [1, 2, 3, 4]
+
+// Sort by selector (single-field)
+sort([{ value: 3 }, { value: 1 }], (item) => item.value); // [{ value: 1 }, { value: 3 }]
+
+// Sort by object selectors (multi-field)
+sort(
+  [
+	{ age: 30, name: 'Bob' },
+	{ age: 30, name: 'Alice' },
+	{ age: 25, name: 'Chris' },
+  ],
+  { age: 'desc', name: 'asc' },
+);
 
 // Remove duplicates
 uniq([1, 2, 2, 3]);                              // [1, 2, 3]
@@ -126,13 +139,18 @@ const result = await retry(() => fetchData(), { times: 3, delay: 200, backoff: 2
 await sleep(500);
 
 // Process items with concurrency limit
-const results = await parallel(5, urls, async (url) => fetch(url).then(r => r.json()));
+const results = await parallel(5, urls, async (url) => fetch(url).then((r) => r.json()));
 
 // Race promise against minimum delay (prevents loading flicker)
 const data = await race(fetchUser(id), 300);
 
-// Attempt with silent error handling
-const user = await attempt(fetchUser, { times: 2, timeout: 5000 });
+// Attempt with explicit success/failure handling
+const userAttempt = await attempt(fetchUser, { times: 2, timeout: 5000 });
+if (userAttempt.ok) {
+  console.log(userAttempt.value);
+} else {
+  console.error(userAttempt.error);
+}
 
 // Poll until condition is true
 await waitFor(() => document.querySelector('#app') !== null, { timeout: 5000 });
@@ -203,17 +221,32 @@ expires('2023-01-01'); // e.g. 'EXPIRED'
 ```typescript
 import { is } from '@vielzeug/toolkit';
 
-is.string('hello');           // true
-is.number(42);                // true
-is.array([1, 2, 3]);          // true
-is.nil(null);                 // true
-is.nil(undefined);            // true
-is.equal([1, 2], [1, 2]);     // true (deep equality)
-is.match(user, { role: 'admin' }); // true (partial match)
-is.positive(5);               // true
-is.within(3, 1, 5);           // true
-is.ge(5, 5);                  // true  (a >= b)
-is.gt(5, 3);                  // true  (a > b)
+is.string(v);
+is.number(v);
+is.boolean(v);
+is.array(v);
+is.object(v);
+is.fn(v);
+is.date(v);
+is.promise(v);
+is.regex(v);
+is.nil(v);
+is.defined(v);
+is.primitive(v);
+is.empty(v);
+is.equal(a, b);
+is.match(obj, src);
+is.even(n);
+is.odd(n);
+is.positive(n);
+is.negative(n);
+is.zero(n);
+is.within(n, min, max);
+is.ge(a, b);
+is.gt(a, b);
+is.le(a, b);
+is.lt(a, b);
+is.typeOf(v); // e.g. 'string' | 'number' | 'array'
 ```
 
 ## API
@@ -234,7 +267,8 @@ is.gt(5, 3);                  // true  (a > b)
 | `rotate(arr, n, opts?)` | Rotate elements by N positions |
 | `search(arr, query, opts?)` | Fuzzy search |
 | `select(arr, mapper, predicate?)` | Map elements matching predicate (default: not nil) |
-| `sort(arr, comparator)` | Sort with custom comparator |
+| `sort(arr, selector, direction?)` | Sort by selector with `'asc'`/`'desc'` direction |
+| `sort(arr, selectors)` | Sort by multiple fields using object selectors |
 | `toggle(arr, item, selector?, opts?)` | Add or remove item |
 | `uniq(arr)` | Remove duplicates |
 
@@ -342,15 +376,32 @@ All type checks live on the `is` object:
 ```typescript
 import { is } from '@vielzeug/toolkit';
 
-is.string(v)         is.number(v)         is.boolean(v)
-is.array(v)          is.object(v)         is.fn(v)
-is.date(v)           is.promise(v)        is.regex(v)
-is.nil(v)            is.defined(v)        is.primitive(v)
-is.empty(v)          is.equal(a, b)       is.match(obj, src)
-is.even(n)           is.odd(n)            is.positive(n)
-is.negative(n)       is.zero(n)           is.within(n, min, max)
-is.ge(a, b)          is.gt(a, b)          is.le(a, b)          is.lt(a, b)
-is.typeOf(v)         // returns 'string' | 'number' | 'array' | ...
+is.string(v);
+is.number(v);
+is.boolean(v);
+is.array(v);
+is.object(v);
+is.fn(v);
+is.date(v);
+is.promise(v);
+is.regex(v);
+is.nil(v);
+is.defined(v);
+is.primitive(v);
+is.empty(v);
+is.equal(a, b);
+is.match(obj, src);
+is.even(n);
+is.odd(n);
+is.positive(n);
+is.negative(n);
+is.zero(n);
+is.within(n, min, max);
+is.ge(a, b);
+is.gt(a, b);
+is.le(a, b);
+is.lt(a, b);
+is.typeOf(v); // e.g. 'string' | 'number' | 'array'
 ```
 
 ## Documentation

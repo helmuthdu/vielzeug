@@ -9,12 +9,7 @@ title: Radio Group
 **Guideline: clarify** — a radio group makes it immediately obvious that only one option can be selected, removing ambiguity that checkboxes would introduce.
 
 ```html
-<bit-radio-group
-  label="Default view"
-  name="default-view"
-  value="kanban"
-  orientation="vertical"
->
+<bit-radio-group label="Default view" name="default-view" value="kanban" orientation="vertical">
   <bit-radio value="kanban">Kanban board</bit-radio>
   <bit-radio value="list">List</bit-radio>
   <bit-radio value="timeline">Timeline</bit-radio>

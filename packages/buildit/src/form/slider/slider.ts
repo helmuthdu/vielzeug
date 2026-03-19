@@ -2,32 +2,31 @@ import {
   aria,
   computed,
   createId,
-  define,
+  defineComponent,
   defineField,
   guard,
   handle,
   html,
-  useInject,
+  inject,
   onMount,
   ref,
   signal,
   watch,
-  defineProps,
-  defineEmits,
-  defineSlots,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
+import { SLIDER_SIZE_PRESET } from '../shared/design-presets';
+import { mountFormContextSync } from '../shared/dom-sync';
+import { createFieldValidation } from '../shared/validation';
 import componentStyles from './slider.css?inline';
 
 /** Slider component properties */
 
 export type BitSliderEvents = {
-  change: { from?: number; originalEvent?: Event; to?: number; value?: number };
+  change: { from?: number; originalEvent?: Event; to?: number; value: number | { from: number; to: number } };
 };
 
 export type BitSliderProps = ThemableProps &
@@ -76,7 +75,7 @@ export type BitSliderProps = ThemableProps &
  * @attr {string}  color - Theme color
  * @attr {string}  size  - 'sm' | 'md' | 'lg'
  *
- * @fires change - `{ value }` in single mode · `{ from, to }` in range mode
+ * @fires change - detail always includes `value`; single mode: { value: number }, range mode: { value: { from, to }, from, to }, plus optional originalEvent
  *
  * @slot - Slider label text
  *
@@ -100,28 +99,25 @@ export type BitSliderProps = ThemableProps &
  * <bit-slider range from="20" to="80" color="primary">Price range</bit-slider>
  * ```
  */
-export const SLIDER_TAG = define(
-  'bit-slider',
-  ({ host }) => {
-    const props = defineProps<BitSliderProps>({
-      color: { default: undefined },
-      disabled: { default: false },
-      from: { default: '0' },
-      'from-value-text': { default: undefined },
-      max: { default: '100' },
-      min: { default: '0' },
-      name: { default: '' },
-      range: { default: false },
-      size: { default: undefined },
-      step: { default: '1' },
-      to: { default: '100' },
-      'to-value-text': { default: undefined },
-      value: { default: '0' },
-      'value-text': { default: undefined },
-    });
-    const emit = defineEmits<BitSliderEvents>();
-    const slots = defineSlots<{ default: unknown }>();
-
+export const SLIDER_TAG = defineComponent<BitSliderProps, BitSliderEvents>({
+  formAssociated: true,
+  props: {
+    color: { default: undefined },
+    disabled: { default: false },
+    from: { default: '0' },
+    'from-value-text': { default: undefined },
+    max: { default: '100' },
+    min: { default: '0' },
+    name: { default: '' },
+    range: { default: false },
+    size: { default: undefined },
+    step: { default: '1' },
+    to: { default: '100' },
+    'to-value-text': { default: undefined },
+    value: { default: '0' },
+    'value-text': { default: undefined },
+  },
+  setup({ emit, host, props, slots }) {
     // Treat `range` as static — determined at first render
     const isRange = props.range.value;
     // ── Shared helpers ────────────────────────────────────────────
@@ -144,7 +140,7 @@ export const SLIDER_TAG = define(
       return ((value - min) / (max - min)) * 100;
     };
     // ── Single-value state ────────────────────────────────────────
-    const formCtx = useInject(FORM_CTX, undefined);
+    const formCtx = inject(FORM_CTX, undefined);
 
     mountFormContextSync(host, formCtx, props);
 
@@ -266,9 +262,9 @@ export const SLIDER_TAG = define(
     };
 
     // ── Range mode setup ──────────────────────────────────────────
-    function triggerValidation(on: 'blur' | 'change'): void {
-      if (formCtx?.validateOn.value === on) sliderFd?.reportValidity();
-    }
+    const { triggerValidation } = createFieldValidation(formCtx, {
+      reportValidity: () => sliderFd?.reportValidity() ?? false,
+    });
 
     const setupRangeMode = (container: HTMLDivElement) => {
       updateRangeCSS();
@@ -292,7 +288,11 @@ export const SLIDER_TAG = define(
         startVal.value = Math.max(min, Math.min(startVal.value, max));
         endVal.value = Math.max(min, Math.min(endVal.value, max));
         updateRangeCSS();
-        emit('change', { from: startVal.value, to: endVal.value });
+        emit('change', {
+          from: startVal.value,
+          to: endVal.value,
+          value: { from: startVal.value, to: endVal.value },
+        });
         triggerValidation('change');
       };
 
@@ -351,7 +351,12 @@ export const SLIDER_TAG = define(
         e.preventDefault();
         setVal(snapVal(Math.max(min, Math.min(max, next))));
         updateRangeCSS();
-        emit('change', { from: startVal.value, originalEvent: e, to: endVal.value });
+        emit('change', {
+          from: startVal.value,
+          originalEvent: e,
+          to: endVal.value,
+          value: { from: startVal.value, to: endVal.value },
+        });
         triggerValidation('change');
       };
       const thumbStartEl = thumbStartRef.value;
@@ -532,30 +537,12 @@ export const SLIDER_TAG = define(
       <span class="label" part="label" ref=${labelRef}><slot></slot></span>
     `;
   },
-  {
-    formAssociated: true,
-    styles: [
-      disabledStateMixin(),
-      colorThemeMixin,
-      sizeVariantMixin({
-        lg: {
-          fontSize: 'var(--text-base)',
-          height: 'calc(var(--size-5) - var(--size-1))',
-          size: 'var(--size-5)',
-        },
-        md: {
-          fontSize: 'var(--text-base)',
-          height: 'var(--size-3)',
-          size: 'var(--size-5)',
-        },
-        sm: {
-          fontSize: 'var(--text-xs)',
-          height: 'var(--size-2)',
-          size: 'var(--size-4)',
-        },
-      }),
-      componentStyles,
-      coarsePointerMixin,
-    ],
-  },
-);
+  styles: [
+    disabledStateMixin(),
+    colorThemeMixin,
+    sizeVariantMixin(SLIDER_SIZE_PRESET),
+    componentStyles,
+    coarsePointerMixin,
+  ],
+  tag: 'bit-slider',
+});

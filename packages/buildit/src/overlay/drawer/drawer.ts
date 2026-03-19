@@ -1,27 +1,12 @@
-import {
-  computed,
-  createId,
-  define,
-  handle,
-  html,
-  onMount,
-  ref,
-  watch,
-  defineProps,
-  defineEmits,
-  defineSlots,
-  fire,
-} from '@vielzeug/craftit';
+import { computed, createId, defineComponent, fire, handle, html, onMount, ref, watch } from '@vielzeug/craftit/core';
 
 import { closeIcon } from '../../icons';
 import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
-import { lockBackground, unlockBackground } from '../../utils/background-lock';
-import { useOverlay } from '../../utils/use-overlay';
+import { lockBackground, unlockBackground, useOverlay } from '../../utils';
+import styles from './drawer.css?inline';
 
 type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
 type DrawerSize = 'sm' | 'lg' | 'full';
-
-import styles from './drawer.css?inline';
 
 /** Element interface exposing the imperative API for `bit-drawer`. */
 export interface DrawerElement extends HTMLElement, Omit<BitDrawerProps, 'title'> {
@@ -112,23 +97,19 @@ export type BitDrawerProps = {
  * </bit-drawer>
  * ```
  */
-export const DRAWER_TAG = define(
-  'bit-drawer',
-  ({ host }) => {
-    const props = defineProps<BitDrawerProps>({
-      dismissible: { default: true },
-      'initial-focus': { default: undefined },
-      label: { default: undefined },
-      open: { default: false },
-      persistent: { default: false },
-      placement: { default: 'right' },
-      'return-focus': { default: true },
-      size: { default: undefined },
-      title: { default: undefined },
-    });
-    const emit = defineEmits<BitDrawerEvents>();
-    const slots = defineSlots<{ default: unknown; footer: unknown; header: unknown }>();
-
+export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
+  props: {
+    dismissible: { default: true },
+    'initial-focus': { default: undefined },
+    label: { default: undefined },
+    open: { default: false },
+    persistent: { default: false },
+    placement: { default: 'right' },
+    'return-focus': { default: true },
+    size: { default: undefined },
+    title: { default: undefined },
+  },
+  setup({ emit, host, props, slots }) {
     const drawerLabelId = createId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();
@@ -248,7 +229,6 @@ export const DRAWER_TAG = define(
       </dialog>
     `;
   },
-  {
-    styles: [elevationMixin, forcedColorsMixin, coarsePointerMixin, reducedMotionMixin, styles],
-  },
-);
+  styles: [elevationMixin, forcedColorsMixin, coarsePointerMixin, reducedMotionMixin, styles],
+  tag: 'bit-drawer',
+});

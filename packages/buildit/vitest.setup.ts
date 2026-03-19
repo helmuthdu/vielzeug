@@ -45,6 +45,23 @@ if (typeof ClipboardEvent === 'undefined') {
 
 install(afterEach);
 
+const consoleError = globalThis.console.error;
+const consoleWarn = globalThis.console.warn;
+const isKnownFormContextInjectWarning = (args: unknown[]) =>
+  args.some((arg) => typeof arg === 'string' && arg.includes('[craftit:E7] inject key missing: Symbol(FormContext)'));
+
+globalThis.console.error = (...args: unknown[]) => {
+  if (isKnownFormContextInjectWarning(args)) return;
+
+  consoleError(...args);
+};
+
+globalThis.console.warn = (...args: unknown[]) => {
+  if (isKnownFormContextInjectWarning(args)) return;
+
+  consoleWarn(...args);
+};
+
 // jsdom does not implement scrollIntoView — stub it to avoid unhandled errors
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};

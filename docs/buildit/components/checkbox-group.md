@@ -9,11 +9,7 @@ title: Checkbox Group
 **Guideline: onboard** — a checkbox group in a setup wizard lets users activate capabilities they want from day one, creating a sense of ownership and reducing later churn.
 
 ```html
-<bit-checkbox-group
-  label="Enable features for your workspace"
-  name="features"
-  orientation="vertical"
->
+<bit-checkbox-group label="Enable features for your workspace" name="features" orientation="vertical">
   <bit-checkbox value="analytics" checked>Usage analytics</bit-checkbox>
   <bit-checkbox value="integrations">Third-party integrations</bit-checkbox>
   <bit-checkbox value="api-access">API access</bit-checkbox>

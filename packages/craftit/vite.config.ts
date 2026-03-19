@@ -10,8 +10,10 @@ export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
       entry: {
+        core: resolve(__dirname, 'src/core/index.ts'),
         'directives/index': resolve(__dirname, 'src/directives/index.ts'),
         index: resolve(__dirname, 'src/index.ts'),
+        labs: resolve(__dirname, 'src/labs/index.ts'),
         test: resolve(__dirname, 'src/test/index.ts'),
       },
       name: 'craftit',

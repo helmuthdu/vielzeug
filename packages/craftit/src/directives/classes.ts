@@ -1,6 +1,4 @@
-import { isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
-
-import { computedOrStatic } from '../internal';
+import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
 type ClassValue = boolean | undefined | null | Signal<boolean> | ReadonlySignal<boolean> | (() => boolean);
 
@@ -23,7 +21,7 @@ export function classes(map: Record<string, ClassValue>): string | ReadonlySigna
   const entries = Object.entries(map);
   const hasReactive = entries.some(([, v]) => isSignal(v) || typeof v === 'function');
 
-  const _build = (): string =>
+  const build = (): string =>
     entries
       .filter(([, v]) => {
         if (isSignal(v)) return (v as ReadonlySignal<boolean>).value;
@@ -35,5 +33,5 @@ export function classes(map: Record<string, ClassValue>): string | ReadonlySigna
       .map(([k]) => k)
       .join(' ');
 
-  return computedOrStatic(hasReactive, _build);
+  return hasReactive ? computed(build) : build();
 }

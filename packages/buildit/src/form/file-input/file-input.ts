@@ -1,7 +1,7 @@
 import {
   computed,
   createId,
-  define,
+  defineComponent,
   defineField,
   effect,
   handle,
@@ -10,9 +10,7 @@ import {
   onMount,
   ref,
   signal,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 import { each } from '@vielzeug/craftit/directives';
 import { createDropZone } from '@vielzeug/dragit';
 
@@ -20,6 +18,7 @@ import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../.
 
 import { clearIcon, fileIcon, uploadIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import { FILE_INPUT_SIZE_PRESET } from '../shared/design-presets';
 
 // ============================================
 // Helpers
@@ -73,8 +72,8 @@ import componentStyles from './file-input.css?inline';
 /** FileInput component properties */
 
 export type BitFileInputEvents = {
-  change: { files: File[]; originalEvent?: Event };
-  remove: { file: File; files: File[] };
+  change: { files: File[]; originalEvent?: Event; value: File[] };
+  remove: { file: File; files: File[]; originalEvent?: Event; value: File[] };
 };
 
 export type BitFileInputProps = {
@@ -136,8 +135,8 @@ export type BitFileInputProps = {
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
  *
- * @fires change - Emitted when the file selection changes. detail: { files: File[], originalEvent?: Event }
- * @fires remove - Emitted when a file is removed from the list. detail: { file: File, files: File[] }
+ * @fires change - Emitted when the file selection changes. detail: { value: File[], files: File[], originalEvent?: Event }
+ * @fires remove - Emitted when a file is removed from the list. detail: { value: File[], file: File, files: File[], originalEvent?: Event }
  *
  * @part wrapper - The outer wrapper div
  * @part label - The label element
@@ -159,28 +158,26 @@ export type BitFileInputProps = {
  * <bit-file-input variant="bordered" color="primary" />
  * ```
  */
-export const FILE_INPUT_TAG = define(
-  'bit-file-input',
-  ({ host }) => {
-    const props = defineProps<BitFileInputProps>({
-      accept: { default: '' },
-      color: { default: undefined },
-      disabled: { default: false },
-      error: { default: '', omit: true },
-      fullwidth: { default: false },
-      helper: { default: '' },
-      label: { default: '' },
-      'max-files': { default: 0, type: Number },
-      'max-size': { default: 0, type: Number },
-      multiple: { default: false },
-      name: { default: '' },
-      required: { default: false },
-      rounded: { default: undefined },
-      size: { default: undefined },
-      variant: { default: undefined },
-    });
-    const emit = defineEmits<BitFileInputEvents>();
-
+export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEvents>({
+  formAssociated: true,
+  props: {
+    accept: { default: '' },
+    color: { default: undefined },
+    disabled: { default: false },
+    error: { default: '', omit: true },
+    fullwidth: { default: false },
+    helper: { default: '' },
+    label: { default: '' },
+    'max-files': { default: 0, type: Number },
+    'max-size': { default: 0, type: Number },
+    multiple: { default: false },
+    name: { default: '' },
+    required: { default: false },
+    rounded: { default: undefined },
+    size: { default: undefined },
+    variant: { default: undefined },
+  },
+  setup({ emit, host, props }) {
     // ============================================
     // State
     // ============================================
@@ -286,12 +283,12 @@ export const FILE_INPUT_TAG = define(
       }
 
       files.value = updated;
-      emit('change', { files: files.value, originalEvent });
+      emit('change', { files: files.value, originalEvent, value: files.value });
     }
-    function removeFile(file: File): void {
+    function removeFile(file: File, originalEvent?: Event): void {
       files.value = files.value.filter((f) => f !== file);
-      emit('remove', { file, files: files.value });
-      emit('change', { files: files.value });
+      emit('remove', { file, files: files.value, originalEvent, value: files.value });
+      emit('change', { files: files.value, originalEvent, value: files.value });
     }
     // ============================================
     // Mount
@@ -383,7 +380,7 @@ export const FILE_INPUT_TAG = define(
                   class="file-remove"
                   type="button"
                   aria-label="${`Remove ${file.name}`}"
-                  @click=${() => removeFile(file)}>
+                  @click=${(e: Event) => removeFile(file, e)}>
                   ${clearIcon}
                 </button>
               </li>
@@ -408,21 +405,13 @@ export const FILE_INPUT_TAG = define(
       </div>
     `;
   },
-  {
-    formAssociated: true,
-    shadow: { delegatesFocus: true },
-    styles: [
-      ...formFieldMixins,
-      sizeVariantMixin({
-        lg: {
-          '--_min-height': 'var(--size-40)',
-          fontSize: 'var(--text-base)',
-        },
-        sm: { '--_min-height': 'var(--size-28)', fontSize: 'var(--text-xs)' },
-      }),
-      disabledLoadingMixin(),
-      forcedColorsFocusMixin('.dropzone'),
-      componentStyles,
-    ],
-  },
-);
+  shadow: { delegatesFocus: true },
+  styles: [
+    ...formFieldMixins,
+    sizeVariantMixin(FILE_INPUT_SIZE_PRESET),
+    disabledLoadingMixin(),
+    forcedColorsFocusMixin('.dropzone'),
+    componentStyles,
+  ],
+  tag: 'bit-file-input',
+});

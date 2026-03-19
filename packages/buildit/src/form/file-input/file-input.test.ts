@@ -4,7 +4,7 @@ describe('bit-file-input', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./file-input');
+    await (() => import('./file-input'))();
   });
 
   afterEach(() => {
@@ -162,6 +162,12 @@ describe('bit-file-input', () => {
 
       await new Promise((r) => setTimeout(r, 10));
       expect(handler).toHaveBeenCalled();
+
+      const detail = (handler.mock.calls[0][0] as CustomEvent).detail;
+
+      expect(Array.isArray(detail.files)).toBe(true);
+      expect(detail.value).toEqual(detail.files);
+      expect(detail.originalEvent).toBeDefined();
     });
   });
 });
@@ -170,7 +176,7 @@ describe('bit-file-input accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./file-input');
+    await (() => import('./file-input'))();
   });
 
   afterEach(() => {

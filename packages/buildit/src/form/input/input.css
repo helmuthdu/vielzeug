@@ -132,7 +132,7 @@
     line-height: var(--leading-normal);
 
     /* No all: unset needed - reset layer handles it */
-    color: var(--_theme-content);
+    color: var(--color-contrast-900);
     outline: none;
     background: transparent;
     border: none;
@@ -272,17 +272,17 @@
        Error State
        ======================================== */
 
-  :host([error]) .field {
+  :host([error]:not([error=''])) .field {
     border-color: var(--color-error);
   }
 
-  :host([error]) .field:focus-within {
+  :host([error]:not([error=''])) .field:focus-within {
     border-color: var(--color-error);
     box-shadow: var(--color-error-focus-shadow);
   }
 
-  :host([error]) .label-inset,
-  :host([error]) .label-outside {
+  :host([error]:not([error=''])) .label-inset,
+  :host([error]:not([error=''])) .label-outside {
     color: var(--color-error);
   }
 
@@ -333,19 +333,11 @@
   }
 
   :host([variant='bordered']) input {
-    color: var(--_theme-content);
-  }
-
-  :host([variant='bordered'][color='secondary']) input {
-    color: var(--_theme-base);
+    color: var(--color-contrast-900);
   }
 
   :host([variant='bordered']) input::placeholder {
-    color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
-  }
-
-  :host([variant='bordered'][color='secondary']) input::placeholder {
-    color: color-mix(in srgb, var(--_theme-base) 45%, transparent);
+    color: var(--_placeholder);
   }
 
   :host([variant='bordered']) .field:hover {

@@ -1,0 +1,211 @@
+---
+title: 'Deposit Examples — Advanced Examples'
+description: 'Advanced TTL, transaction, batch, and migration examples for Deposit.'
+---
+
+## Advanced Examples
+
+## Problem
+
+Implement advanced examples in a production-friendly way with `@vielzeug/deposit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/deposit` installed.
+
+### Session Cache with TTL
+
+Cache authentication data with automatic expiry. No manual expiry checks needed.
+
+```ts
+import { createLocalStorage, defineSchema, ttl } from '@vielzeug/deposit';
+
+interface Session {
+  id: string;
+  userId: string;
+  accessToken: string;
+  refreshToken: string;
+}
+
+const schema = defineSchema<{ sessions: Session }>({ sessions: { key: 'id' } });
+const cache = createLocalStorage({ dbName: 'auth', schema });
+
+async function getOrRefreshSession(id: string): Promise<Session> {
+  return cache.getOrPut(
+    'sessions',
+    id,
+    async () => {
+      const res = await fetch('/api/auth/refresh');
+      const data = (await res.json()) as Session;
+      return data;
+    },
+    ttl.hours(1),
+  );
+}
+
+// Invalidate on logout
+async function logout(id: string) {
+  await cache.delete('sessions', id);
+}
+```
+
+---
+
+### Multi-Table Atomic Transaction
+
+An order is updated and a related audit log entry is created in a single atomic write.
+
+```ts
+import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
+
+interface Order {
+  id: number;
+  userId: number;
+  status: 'pending' | 'shipped' | 'delivered';
+  total: number;
+}
+interface AuditLog {
+  id: number;
+  orderId: number;
+  action: string;
+  at: number;
+}
+
+const schema = defineSchema<{ orders: Order; audit: AuditLog }>({
+  orders: { key: 'id' },
+  audit: { key: 'id', indexes: ['orderId'] },
+});
+
+const db = createIndexedDB({ dbName: 'shop', version: 1, schema });
+
+async function shipOrder(orderId: number, auditId: number): Promise<void> {
+  await db.transaction(['orders', 'audit'], async (tx) => {
+    const order = await tx.get('orders', orderId);
+    if (!order) throw new Error(`Order ${orderId} not found`);
+    if (order.status !== 'pending') throw new Error('Order already processed');
+
+    await tx.patch('orders', orderId, { status: 'shipped' });
+    await tx.put('audit', { id: auditId, orderId, action: 'shipped', at: Date.now() });
+
+    // reads also work inside the transaction
+    const total = await tx.count('orders');
+    const recent = await tx.from('audit').orderBy('at', 'desc').limit(5).toArray();
+  });
+  // Either both writes happened, or neither did
+}
+```
+
+---
+
+### Batch Operations
+
+Import, delete, and query records in bulk.
+
+```ts
+import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
+
+interface Contact {
+  id: number;
+  name: string;
+  email: string;
+  group: string;
+}
+
+const schema = defineSchema<{ contacts: Contact }>({
+  contacts: { key: 'id', indexes: ['group'] },
+});
+
+const db = createIndexedDB({ dbName: 'crm', version: 1, schema });
+
+// Bulk import
+const imported: Contact[] = await fetch('/api/contacts').then((r) => r.json());
+await db.putMany('contacts', imported);
+
+// Fetch specific records by ID
+const selected = await db.getMany('contacts', [1, 7, 42]);
+
+// Bulk delete stale records
+const staleIds = (await db.from('contacts').equals('group', 'archived').toArray()).map((c) => c.id);
+await db.deleteMany('contacts', staleIds);
+
+// Numeric aggregation with reduce
+const totalCount = await db.from('contacts').count();
+const activeCount = await db
+  .from('contacts')
+  .filter((c) => c.group !== 'archived')
+  .count();
+
+// Find contacts by name substring
+const smiths = await db.from('contacts').contains('smith', ['name']).toArray();
+
+db.close();
+```
+
+---
+
+### Schema Migration
+
+Add an index and a table when upgrading from v1 to v3.
+
+```ts
+import { createIndexedDB, defineSchema, type MigrationFn, storeField } from '@vielzeug/deposit';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
+interface Tag {
+  id: number;
+  label: string;
+}
+
+const schema = defineSchema<{ users: User; tags: Tag }>({
+  users: { key: 'id', indexes: ['email', 'role'] },
+  tags: { key: 'id' },
+});
+
+const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
+  if (oldVersion < 2) {
+    tx.objectStore('users').createIndex('role', storeField('role'));
+  }
+  if (oldVersion < 3) {
+    db.createObjectStore('tags', { keyPath: storeField('id') });
+  }
+};
+
+const db = createIndexedDB({ dbName: 'my-app', version: 3, schema, migrationFn });
+```
+
+---
+
+### Inline Schema
+
+```ts
+import { createLocalStorage } from '@vielzeug/deposit';
+
+const db = createLocalStorage<{ items: { id: string; label: string; done: boolean } }>({
+  dbName: 'todos',
+  schema: { items: { key: 'id' } },
+});
+
+await db.put('items', { id: '1', label: 'Buy milk', done: false });
+const todo = await db.get('items', '1');
+// todo is typed as { id: string; label: string; done: boolean } | undefined
+```
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Basic Examples](./basic-examples.md)

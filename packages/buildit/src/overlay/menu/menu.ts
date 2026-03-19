@@ -2,16 +2,14 @@ import {
   aria,
   createId,
   css,
-  define,
+  defineComponent,
   effect,
   handle,
   html,
   onMount,
   onSlotChange,
   signal,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
 
 import type { AddEventListeners, ComponentSize, ThemeColor } from '../../types';
@@ -66,16 +64,14 @@ export type BitMenuItemProps = {
   value?: string;
 };
 
-export const MENU_ITEM_TAG = define(
-  'bit-menu-item',
-  ({ host }) => {
-    const props = defineProps<BitMenuItemProps>({
-      checked: { default: false },
-      disabled: { default: false },
-      type: { default: undefined },
-      value: { default: '' },
-    });
-
+export const MENU_ITEM_TAG = defineComponent<BitMenuItemProps>({
+  props: {
+    checked: { default: false },
+    disabled: { default: false },
+    type: { default: undefined },
+    value: { default: '' },
+  },
+  setup({ host, props }) {
     const itemStyles = /* css */ css`
     @layer buildit.base {
       :host {
@@ -194,16 +190,15 @@ export const MENU_ITEM_TAG = define(
       </div>
     `;
   },
-  {},
-);
+  tag: 'bit-menu-item',
+});
 
 // ============================================
 // Menu Separator
 // ============================================
 
-export const SEPARATOR_TAG = define(
-  'bit-menu-separator',
-  () => {
+export const SEPARATOR_TAG = defineComponent({
+  setup() {
     const sepStyles = /* css */ css`
       @layer buildit.base {
         :host {
@@ -218,8 +213,8 @@ export const SEPARATOR_TAG = define(
       ${sepStyles}
     </style>`;
   },
-  {},
-);
+  tag: 'bit-menu-separator',
+});
 
 // ============================================
 // Menu Component
@@ -238,17 +233,14 @@ export const SEPARATOR_TAG = define(
  * </bit-menu>
  * ```
  */
-export const MENU_TAG = define(
-  'bit-menu',
-  ({ host }) => {
-    const props = defineProps<BitMenuProps>({
-      color: { default: undefined },
-      disabled: { default: false },
-      placement: { default: 'bottom-start' },
-      size: { default: undefined },
-    });
-    const emit = defineEmits<BitMenuEvents>();
-
+export const MENU_TAG = defineComponent<BitMenuProps, BitMenuEvents>({
+  props: {
+    color: { default: undefined },
+    disabled: { default: false },
+    placement: { default: 'bottom-start' },
+    size: { default: undefined },
+  },
+  setup({ emit, host, props }) {
     const menuId = createId('menu');
     const isOpen = signal(false);
     const focusedIndex = signal(-1);
@@ -472,7 +464,6 @@ export const MENU_TAG = define(
       };
     });
 
-    // ── Template ──────────────────────────────────────────────────────────────
     return html`
       <style>
         ${componentStyles}${themeStyles}
@@ -483,5 +474,5 @@ export const MENU_TAG = define(
       </div>
     `;
   },
-  {},
-) as unknown as AddEventListeners<BitMenuEvents>;
+  tag: 'bit-menu',
+}) as unknown as AddEventListeners<BitMenuEvents>;

@@ -1,10 +1,11 @@
+import { html, signal } from '@vielzeug/craftit/core';
 import { type Fixture, mount, user } from '@vielzeug/craftit/test';
 
 describe('bit-combobox', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./combobox');
+    await (() => import('./combobox'))();
   });
 
   afterEach(() => {
@@ -60,7 +61,7 @@ describe('bit-combobox', () => {
       expect(input).toBeTruthy();
       await user.click(input!);
       await fixture.flush();
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       const firstOption = fixture.query<HTMLElement>('.option');
 
@@ -72,6 +73,7 @@ describe('bit-combobox', () => {
       const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
 
       expect(Array.isArray(detail.values)).toBe(true);
+      expect(detail.labels).toEqual(['United States']);
       expect(detail.value).toBe('us');
     });
   });
@@ -153,7 +155,7 @@ describe('bit-combobox', () => {
 
       await user.type(input, 'Atlantis');
       await fixture.flush();
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(fixture.query('.no-results-create')?.textContent).toContain('Create "Atlantis"');
     });
@@ -166,6 +168,136 @@ describe('bit-combobox', () => {
       await fixture.flush();
 
       expect(fixture.queryAll('bit-chip').length).toBeGreaterThan(0);
+    });
+
+    it('filters options while typing in multiple mode', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country', multiple: '' },
+        html: optionsHtml,
+      });
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await user.type(input, 'ger');
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const optionTexts = fixture.queryAll<HTMLElement>('.option').map((option) => option.textContent ?? '');
+
+      expect(optionTexts.some((text) => text.includes('Germany'))).toBe(true);
+      expect(optionTexts.some((text) => text.includes('United States'))).toBe(false);
+    });
+
+    it('continues searching in the docs multiselect flow after selecting the first item', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Technologies', multiple: '', placeholder: 'Search…' },
+        html: `
+          <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
+          <bit-combobox-option value="rust">Rust</bit-combobox-option>
+          <bit-combobox-option value="go">Go</bit-combobox-option>
+          <bit-combobox-option value="python">Python</bit-combobox-option>
+          <bit-combobox-option value="java">Java</bit-combobox-option>
+        `,
+      });
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const firstOption = fixture
+        .queryAll<HTMLElement>('.option')
+        .find((opt) => opt.textContent?.includes('TypeScript')) as HTMLElement;
+
+      expect(firstOption).toBeTruthy();
+
+      await user.click(firstOption);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      await user.click(fixture.query<HTMLElement>('.field')!);
+      await user.type(input, 'ru');
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const optionTexts = fixture.queryAll<HTMLElement>('.option').map((option) => option.textContent ?? '');
+
+      expect(input.getAttribute('placeholder')).toBe('');
+      expect(optionTexts.some((text) => text.includes('Rust'))).toBe(true);
+      expect(optionTexts.some((text) => text.includes('TypeScript'))).toBe(false);
+    });
+
+    it('restores focus to the live input after multiselect chip re-render', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Technologies', multiple: '', placeholder: 'Search...' },
+        html: `
+          <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
+          <bit-combobox-option value="rust">Rust</bit-combobox-option>
+          <bit-combobox-option value="go">Go</bit-combobox-option>
+        `,
+      });
+
+      const getInput = () =>
+        fixture.element.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]') ?? null;
+
+      const initialInput = getInput();
+
+      if (!initialInput) throw new Error('Expected combobox input to exist before first click');
+
+      await user.click(initialInput);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      await user.click(fixture.query<HTMLElement>('.field')!);
+      await fixture.flush();
+
+      const liveInput = getInput();
+
+      if (!liveInput) throw new Error('Expected combobox input to exist after chip re-render');
+
+      expect(fixture.element.shadowRoot?.activeElement).toBe(liveInput);
+
+      await user.type(liveInput, 'ru');
+      await fixture.flush();
+
+      const optionTexts = fixture.queryAll<HTMLElement>('.option').map((option) => option.textContent ?? '');
+
+      expect(optionTexts.some((text) => text.includes('Rust'))).toBe(true);
+    });
+
+    it('selects filtered results with Enter after the first multiselect value', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country', multiple: '' },
+        html: optionsHtml,
+      });
+
+      const onChange = vi.fn();
+
+      fixture.element.addEventListener('change', onChange);
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      await fixture.flush();
+
+      await user.type(input, 'ger');
+      await user.press(input, 'Enter');
+      await fixture.flush();
+
+      const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
+
+      expect(detail.values).toContain('us');
+      expect(detail.values).toContain('de');
     });
 
     it('applies color to rendered chips in multiple mode', async () => {
@@ -213,6 +345,27 @@ describe('bit-combobox', () => {
       expect(fixture.queryAll('bit-chip').length).toBe(1);
       expect(onChange).toHaveBeenCalled();
       expect((onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail.values).toEqual(['gb']);
+      expect((onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail.originalEvent).toBeDefined();
+    });
+
+    it('emits change with originalEvent when cleared via clear button', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { clearable: '', label: 'Country', value: 'us' },
+        html: optionsHtml,
+      });
+
+      const onChange = vi.fn();
+
+      fixture.element.addEventListener('change', onChange);
+
+      await user.click(fixture.query<HTMLElement>('.clear-btn')!);
+      await fixture.flush();
+
+      const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
+
+      expect(detail.value).toBe('');
+      expect(detail.values).toEqual([]);
+      expect(detail.originalEvent).toBeDefined();
     });
 
     it('updates option selected state immediately in multiple mode without reopening', async () => {
@@ -227,7 +380,7 @@ describe('bit-combobox', () => {
 
       await user.click(input!);
       await fixture.flush();
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       const usOption = fixture
         .queryAll<HTMLElement>('.option')
@@ -270,6 +423,45 @@ describe('bit-combobox', () => {
       const input = fixture.query<HTMLInputElement>('input[role="combobox"]');
 
       expect(input?.value).toBe('United States');
+    });
+
+    it('uses array options prop from structured binding and updates reactively', async () => {
+      fixture = await mount(() => {
+        const options = signal([
+          { disabled: false, iconEl: null, label: 'Alpha', value: 'a' },
+          { disabled: false, iconEl: null, label: 'Beta', value: 'b' },
+        ]);
+
+        return html`
+          <button @click=${() => (options.value = [{ disabled: false, iconEl: null, label: 'Gamma', value: 'g' }])}>
+            Update
+          </button>
+          <bit-combobox options=${options}></bit-combobox>
+        `;
+      });
+
+      const combobox = fixture.query<HTMLElement>('bit-combobox')!;
+      const input = combobox.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]');
+
+      await user.click(input as HTMLInputElement);
+      await fixture.flush();
+
+      expect(
+        Array.from(combobox.shadowRoot?.querySelectorAll<HTMLElement>('.option') ?? []).map((el) =>
+          el.textContent?.replace(/\s+/g, ' ').trim(),
+        ),
+      ).toEqual(['Alpha', 'Beta']);
+
+      await user.click(fixture.query<HTMLElement>('button')!);
+      await fixture.flush();
+      await user.click(input as HTMLInputElement);
+      await fixture.flush();
+
+      expect(
+        Array.from(combobox.shadowRoot?.querySelectorAll<HTMLElement>('.option') ?? []).map((el) =>
+          el.textContent?.replace(/\s+/g, ' ').trim(),
+        ),
+      ).toEqual(['Gamma']);
     });
   });
 });

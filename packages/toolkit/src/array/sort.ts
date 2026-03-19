@@ -3,6 +3,9 @@ import { compare } from '../function/compare';
 import { compareBy } from '../function/compareBy';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
 
+export type SortDirection = 'asc' | 'desc';
+export type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
+
 /**
  * Sorts an array by a selector function (single-field) or by a multi-field
  * object of `{ key: 'asc' | 'desc' }` entries.
@@ -24,12 +27,12 @@ import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
  *
  * @throws {TypeError} If the first argument is not an array.
  */
-export function sort<T>(array: T[], selector: (item: T) => any, direction?: 'asc' | 'desc'): T[];
-export function sort<T>(array: T[], selectors: Partial<Record<keyof T, 'asc' | 'desc'>>): T[];
+export function sort<T>(array: T[], selector: (item: T) => unknown, direction?: SortDirection): T[];
+export function sort<T>(array: T[], selectors: SortSelectors<T>): T[];
 export function sort<T>(
   array: T[],
-  selectorOrSelectors: ((item: T) => any) | Partial<Record<keyof T, 'asc' | 'desc'>>,
-  direction: 'asc' | 'desc' = 'asc',
+  selectorOrSelectors: ((item: T) => unknown) | SortSelectors<T>,
+  direction: SortDirection = 'asc',
 ): T[] {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 

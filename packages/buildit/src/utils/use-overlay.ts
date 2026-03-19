@@ -1,4 +1,4 @@
-import { type ReadonlySignal } from '@vielzeug/craftit';
+import { type ReadonlySignal } from '@vielzeug/craftit/core';
 
 import { awaitExit } from './animation';
 

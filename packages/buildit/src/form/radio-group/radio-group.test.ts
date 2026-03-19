@@ -1,17 +1,23 @@
-import { css } from '@vielzeug/craftit';
+import { css } from '@vielzeug/craftit/core';
 import { type Fixture, mount, user } from '@vielzeug/craftit/test';
 
-vi.mock('../../styles', () => ({
-  colorThemeMixin: css``,
-  disabledStateMixin: () => css``,
-  sizeVariantMixin: () => css``,
-}));
+vi.mock('../../styles', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../styles')>();
+
+  return {
+    ...actual,
+    colorThemeMixin: css``,
+    disabledStateMixin: () => css``,
+    sizeVariantMixin: () => css``,
+  };
+});
 
 describe('bit-radio-group', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./radio-group');
+    await (() => import('../radio/radio'))();
+    await (() => import('./radio-group'))();
   });
 
   afterEach(() => {
@@ -26,7 +32,10 @@ describe('bit-radio-group', () => {
 
   describe('Core Functionality', () => {
     it('renders semantic fieldset and grouped items', async () => {
-      fixture = await mount('bit-radio-group', { attrs: { label: 'Choose one' }, html: radioHtml });
+      fixture = await mount('bit-radio-group', {
+        attrs: { label: 'Choose one' },
+        html: radioHtml,
+      });
       await fixture.flush();
 
       expect(fixture.query('fieldset')).toBeTruthy();
@@ -47,8 +56,44 @@ describe('bit-radio-group', () => {
       expect(radios[1].getAttribute('name')).toBe('letters');
     });
 
+    it('applies size to slotted radios before interaction', async () => {
+      fixture = await mount('bit-radio-group', {
+        attrs: { size: 'lg' },
+        html: radioHtml,
+      });
+      await fixture.flush();
+      await fixture.flush();
+
+      const radios = fixture.element.querySelectorAll<HTMLElement>('bit-radio');
+
+      expect(radios[0].getAttribute('size')).toBe('lg');
+      expect(radios[1].getAttribute('size')).toBe('lg');
+      expect(radios[2].getAttribute('size')).toBe('lg');
+    });
+
+    it('updates slotted radio size when group size changes', async () => {
+      fixture = await mount('bit-radio-group', {
+        attrs: { size: 'sm' },
+        html: radioHtml,
+      });
+      await fixture.flush();
+      await fixture.flush();
+
+      await fixture.attr('size', 'lg');
+      await fixture.flush();
+
+      const radios = fixture.element.querySelectorAll<HTMLElement>('bit-radio');
+
+      expect(radios[0].getAttribute('size')).toBe('lg');
+      expect(radios[1].getAttribute('size')).toBe('lg');
+      expect(radios[2].getAttribute('size')).toBe('lg');
+    });
+
     it('emits change when slotted radio dispatches change', async () => {
-      fixture = await mount('bit-radio-group', { attrs: { name: 'letters' }, html: radioHtml });
+      fixture = await mount('bit-radio-group', {
+        attrs: { name: 'letters' },
+        html: radioHtml,
+      });
       await fixture.flush();
 
       const onChange = vi.fn();
@@ -62,10 +107,16 @@ describe('bit-radio-group', () => {
       expect(onChange).toHaveBeenCalled();
 
       const changeWithDetail = onChange.mock.calls
-        .map((call) => call[0] as CustomEvent<{ value?: string }>)
+        .map(
+          (call) =>
+            call[0] as CustomEvent<{ labels?: string[]; originalEvent?: Event; value?: string; values?: string[] }>,
+        )
         .find((event) => event?.detail?.value === 'b');
 
       expect(changeWithDetail).toBeTruthy();
+      expect(changeWithDetail?.detail.values).toEqual(['b']);
+      expect(changeWithDetail?.detail.labels).toEqual(['B']);
+      expect(changeWithDetail?.detail.originalEvent).toBeDefined();
     });
   });
 

@@ -8,15 +8,15 @@ import {
   type Binding,
   type Directive,
   type HTMLResult,
-} from '../internal';
+} from '../core/internal';
 
-const _ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="(\\d+)"`, 'g');
+const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="(\\d+)"`, 'g');
 
 /* immutable — shared singleton for empty static lists */
-const _EMPTY = htmlResult('');
-const _NO_BINDINGS: Binding[] = [];
+const EMPTY = htmlResult('');
+const NO_BINDINGS: Binding[] = [];
 
-function _renumber(res: HTMLResult, c: { n: number }): { bindings: Binding[]; html: string } {
+function renumber(res: HTMLResult, c: { n: number }): { bindings: Binding[]; html: string } {
   const map = new Map<string, string>();
   const nb: Binding[] = [];
 
@@ -33,14 +33,14 @@ function _renumber(res: HTMLResult, c: { n: number }): { bindings: Binding[]; ht
     bindings: nb,
     html: res.__html
       // Re-map element binding ids.
-      .replace(_ATTR_ID_RE, (_, id) => `${CF_ID_ATTR}="${map.get(id) ?? id}"`)
+      .replace(ATTR_ID_RE, (_, id) => `${CF_ID_ATTR}="${map.get(id) ?? id}"`)
       // Re-map numeric comment markers used by text/html placeholders.
       .replace(/<!--(\d+)-->/g, (_, id) => `<!--${map.get(id) ?? id}-->`),
   };
 }
 
 /** Render loop used by the reactive path (keys + rendered metadata required for reconciliation). */
-function _renderKeyed<T>(
+function renderKeyed<T>(
   items: T[],
   template: (item: T, index: number) => string | HTMLResult,
   keyFn: (item: T, index: number) => string | number,
@@ -60,7 +60,7 @@ function _renderKeyed<T>(
     keys.push(keyFn(items[i], i));
 
     const res = template(items[i], i);
-    const entry = typeof res === 'string' ? { bindings: _NO_BINDINGS, html: res } : _renumber(res, c);
+    const entry = typeof res === 'string' ? { bindings: NO_BINDINGS, html: res } : renumber(res, c);
 
     html += entry.html;
     allBindings.push(...entry.bindings);
@@ -71,7 +71,7 @@ function _renderKeyed<T>(
 }
 
 /** Render loop used by the static path — no key/reconciliation metadata needed. */
-function _renderStatic<T>(
+function renderStatic<T>(
   items: T[],
   template: (item: T, index: number) => string | HTMLResult,
 ): { bindings: Binding[]; html: string } {
@@ -81,7 +81,7 @@ function _renderStatic<T>(
 
   for (let i = 0; i < items.length; i++) {
     const res = template(items[i], i);
-    const entry = typeof res === 'string' ? { bindings: _NO_BINDINGS, html: res } : _renumber(res, c);
+    const entry = typeof res === 'string' ? { bindings: NO_BINDINGS, html: res } : renumber(res, c);
 
     html += entry.html;
     allBindings.push(...entry.bindings);
@@ -173,10 +173,10 @@ export function each<T>(
         return htmlResult(er.html, er.bindings);
       }
 
-      return _EMPTY;
+      return EMPTY;
     }
 
-    const { bindings, html } = _renderStatic(filtered, template);
+    const { bindings, html } = renderStatic(filtered, template);
 
     return htmlResult(html, bindings);
   }
@@ -194,7 +194,7 @@ export function each<T>(
         return er ? { ...extractResult(er), items: [], keys: [] } : { bindings: [], html: '', items: [], keys: [] };
       }
 
-      const { bindings, html, keys, rendered } = _renderKeyed(filtered, template, keyFn);
+      const { bindings, html, keys, rendered } = renderKeyed(filtered, template, keyFn);
 
       return { bindings, html, items: rendered, keys };
     }),

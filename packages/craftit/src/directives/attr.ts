@@ -1,6 +1,6 @@
 import type { ReadonlySignal } from '@vielzeug/stateit';
 
-import type { DirectiveDescriptor } from '../internal';
+import type { Directive } from '../core/internal';
 
 import { spread } from './spread';
 
@@ -19,7 +19,7 @@ export type AttrValue =
  * @example
  * html`<input ${attr({ value, disabled, readOnly: readonly })} />`
  */
-export function attr(map: Record<string, AttrValue>): DirectiveDescriptor {
+export function attr(map: Record<string, AttrValue>): Directive {
   const mapped: Record<string, AttrValue> = {};
 
   for (const [key, value] of Object.entries(map)) {

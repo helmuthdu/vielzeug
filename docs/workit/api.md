@@ -3,9 +3,28 @@ title: Workit — API Reference
 description: Complete type signatures and documentation for createWorker, WorkerHandle, error classes, and testing utilities.
 ---
 
-# API Reference
+# Workit API Reference
 
 [[toc]]
+
+## API At a Glance
+
+| Symbol               | Purpose                                 | Execution mode | Common gotcha                                      |
+| -------------------- | --------------------------------------- | -------------- | -------------------------------------------------- |
+| `createWorker()`     | Create a typed worker or worker pool    | Sync           | Dispose workers to release threads/resources       |
+| `worker.run()`       | Execute a typed task in worker/fallback | Async          | Pass transferables for large buffers when possible |
+| `createTestWorker()` | Run worker tasks in-process for tests   | Async          | Use call recording assertions to verify behavior   |
+
+## Package Exports
+
+```ts
+export { createWorker, TaskError, TaskTimeoutError, TerminatedError, WorkerError } from '@vielzeug/workit';
+
+export type { RunOptions, TaskFn, WorkerHandle, WorkerOptions, WorkerStatus } from '@vielzeug/workit';
+
+export { createTestWorker } from '@vielzeug/workit/test';
+export type { TestWorkerHandle } from '@vielzeug/workit/test';
+```
 
 ## Types
 
@@ -25,11 +44,11 @@ The signature for the task function passed to `createWorker`. Accepts a single t
 type WorkerStatus = 'idle' | 'running' | 'terminated';
 ```
 
-| Value | Meaning |
-|---|---|
-| `'idle'` | All worker slots are free |
-| `'running'` | One or more slots are executing a task |
-| `'terminated'` | `dispose()` was called |
+| Value          | Meaning                                |
+| -------------- | -------------------------------------- |
+| `'idle'`       | All worker slots are free              |
+| `'running'`    | One or more slots are executing a task |
+| `'terminated'` | `dispose()` was called                 |
 
 ---
 
@@ -44,12 +63,12 @@ type WorkerOptions = {
 };
 ```
 
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `size` | `number \| 'auto'` | `1` | Number of concurrent worker slots. `'auto'` uses `navigator.hardwareConcurrency`. |
-| `timeout` | `number` | `undefined` | Milliseconds before a task rejects with `TaskTimeoutError`. |
-| `fallback` | `boolean` | `true` | Run on the main thread when Web Workers are unavailable. |
-| `scripts` | `string[]` | `[]` | URLs loaded via `importScripts()` inside each Worker. |
+| Property   | Type               | Default     | Description                                                                       |
+| ---------- | ------------------ | ----------- | --------------------------------------------------------------------------------- |
+| `size`     | `number \| 'auto'` | `1`         | Number of concurrent worker slots. `'auto'` uses `navigator.hardwareConcurrency`. |
+| `timeout`  | `number`           | `undefined` | Milliseconds before a task rejects with `TaskTimeoutError`.                       |
+| `fallback` | `boolean`          | `true`      | Run on the main thread when Web Workers are unavailable.                          |
+| `scripts`  | `string[]`         | `[]`        | URLs loaded via `importScripts()` inside each Worker.                             |
 
 ---
 
@@ -62,10 +81,10 @@ type RunOptions = {
 };
 ```
 
-| Property | Type | Description |
-|---|---|---|
-| `signal` | `AbortSignal` | Cancel a queued task. In-flight tasks cannot be interrupted. |
-| `transfer` | `Transferable[]` | Objects to move (not copy) to the worker thread. |
+| Property   | Type             | Description                                                  |
+| ---------- | ---------------- | ------------------------------------------------------------ |
+| `signal`   | `AbortSignal`    | Cancel a queued task. In-flight tasks cannot be interrupted. |
+| `transfer` | `Transferable[]` | Objects to move (not copy) to the worker thread.             |
 
 ---
 
@@ -87,20 +106,20 @@ The return type of `createWorker`. See [WorkerHandle Interface](#workerhandle-in
 ## createWorker
 
 ```ts
-function createWorker<TInput, TOutput>(
+declare function createWorker<TInput, TOutput>(
   fn: TaskFn<TInput, TOutput>,
   options?: WorkerOptions,
-): WorkerHandle<TInput, TOutput>
+): WorkerHandle<TInput, TOutput>;
 ```
 
 Creates a worker (or pool) that executes `fn` in a Web Worker. If Workers are unavailable and `fallback` is `true`, tasks run on the main thread and a warning is logged.
 
 **Parameters**
 
-| Parameter | Type | Description |
-|---|---|---|
-| `fn` | `TaskFn<TInput, TOutput>` | The task function. Must be self-contained — no closure over outer scope. |
-| `options` | `WorkerOptions` | Optional configuration (size, timeout, fallback, scripts). |
+| Parameter | Type                      | Description                                                              |
+| --------- | ------------------------- | ------------------------------------------------------------------------ |
+| `fn`      | `TaskFn<TInput, TOutput>` | The task function. Must be self-contained — no closure over outer scope. |
+| `options` | `WorkerOptions`           | Optional configuration (size, timeout, fallback, scripts).               |
 
 **Returns** `WorkerHandle<TInput, TOutput>`
 
@@ -120,13 +139,12 @@ const pool = createWorker<number, number>((n) => n ** 2, { size: 4, timeout: 300
 
 ### `run(input, options?)`
 
-```ts
-run(input: TInput, options?: RunOptions): Promise<TOutput>
-```
+`run(input: TInput, options?: RunOptions): Promise<TOutput>`
 
 Dispatches a task to the next available worker slot. If all slots are busy, the task is queued.
 
 Rejects with:
+
 - `TaskTimeoutError` — if `timeout` is configured and the task exceeds it
 - `TerminatedError` — if `dispose()` was called before or during the task
 - `TaskError` — if the task function throws
@@ -140,9 +158,7 @@ The task function is serialized via `.toString()` and runs in an isolated scope.
 
 ### `dispose()`
 
-```ts
-dispose(): void
-```
+`dispose(): void`
 
 Terminates all worker threads and rejects any pending or in-flight tasks with `TerminatedError`. After calling `dispose()`, `status` becomes `'terminated'` and further calls to `run()` reject immediately.
 
@@ -150,9 +166,7 @@ Terminates all worker threads and rejects any pending or in-flight tasks with `T
 
 ### `size`
 
-```ts
-readonly size: number
-```
+`readonly size: number`
 
 The number of worker slots configured for this handle (always ≥ 1).
 
@@ -160,9 +174,7 @@ The number of worker slots configured for this handle (always ≥ 1).
 
 ### `status`
 
-```ts
-readonly status: WorkerStatus
-```
+`readonly status: WorkerStatus`
 
 The current state of the worker handle. See [`WorkerStatus`](#workerstatus).
 
@@ -170,9 +182,7 @@ The current state of the worker handle. See [`WorkerStatus`](#workerstatus).
 
 ### `isNative`
 
-```ts
-readonly isNative: boolean
-```
+`readonly isNative: boolean`
 
 `true` when tasks run in a real Web Worker; `false` when falling back to the main thread. Useful for logging or telemetry.
 
@@ -180,9 +190,7 @@ readonly isNative: boolean
 
 ### `[Symbol.dispose]()`
 
-```ts
-[Symbol.dispose](): void
-```
+`[Symbol.dispose](): void`
 
 Alias for `dispose()`. Enables the ES2025 explicit resource management `using` keyword:
 
@@ -223,7 +231,7 @@ Base class for all workit errors. Use `instanceof WorkerError` to catch any erro
 
 ### `TaskTimeoutError`
 
-```ts
+```txt
 class TaskTimeoutError extends WorkerError {
   constructor(ms: number)
 }
@@ -235,7 +243,7 @@ Thrown when a task exceeds the configured `timeout`. The error message includes 
 
 ### `TerminatedError`
 
-```ts
+```txt
 class TerminatedError extends WorkerError {
   constructor()
 }
@@ -247,7 +255,7 @@ Thrown when `run()` is called on a disposed handle, or when `dispose()` is calle
 
 ### `TaskError`
 
-```ts
+```txt
 class TaskError extends WorkerError {
   constructor(message: string, cause?: unknown)
 }
@@ -273,12 +281,10 @@ import type { TestWorkerHandle } from '@vielzeug/workit/test';
 ### `createTestWorker`
 
 ```ts
-function createTestWorker<TInput, TOutput>(
-  fn: TaskFn<TInput, TOutput>,
-): TestWorkerHandle<TInput, TOutput>
+declare function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TestWorkerHandle<TInput, TOutput>;
 ```
 
-Creates a `TestWorkerHandle` that runs `fn` synchronously in the same thread and records every call. No Worker is ever spawned, so tests work in any environment.
+Creates a `TestWorkerHandle` that runs `fn` in-process on the same thread and records successful calls. No Worker is ever spawned, so tests work in any environment.
 
 ---
 
@@ -292,8 +298,8 @@ type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & {
 
 Extends `WorkerHandle` with:
 
-| Member | Type | Description |
-|---|---|---|
-| `calls` | `ReadonlyArray<{ input, output }>` | All successful `run()` calls in order. |
-| `isNative` | `boolean` | Always `false` — no Worker is spawned. |
-| `[Symbol.dispose]()` | `void` | Same as `dispose()`. |
+| Member               | Type                               | Description                            |
+| -------------------- | ---------------------------------- | -------------------------------------- |
+| `calls`              | `ReadonlyArray<{ input, output }>` | All successful `run()` calls in order. |
+| `isNative`           | `boolean`                          | Always `false` — no Worker is spawned. |
+| `[Symbol.dispose]()` | `void`                             | Same as `dispose()`.                   |

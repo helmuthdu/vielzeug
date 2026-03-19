@@ -1,20 +1,11 @@
-import {
-  computed,
-  define,
-  typed,
-  defineField,
-  html,
-  useInject,
-  signal,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+import { computed, defineComponent, typed, defineField, html, inject, signal } from '@vielzeug/craftit/core';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync } from '../../utils/use-text-field';
 import { FORM_CTX } from '../form/form';
+import { mountFormContextSync } from '../shared/dom-sync';
+import { createFieldValidation } from '../shared/validation';
 import styles from './rating.css?inline';
 
 const FULL_STAR_PATH = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
@@ -34,7 +25,7 @@ function starIcon(filled: boolean) {
 }
 
 export type BitRatingEvents = {
-  change: { value: number };
+  change: { originalEvent?: Event; value: number };
 };
 
 /** Rating props */
@@ -67,7 +58,7 @@ export type BitRatingProps = ThemableProps &
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} name - Form field name
  *
- * @fires change - Emitted when value changes, with { value: number }
+ * @fires change - Emitted when value changes. detail: { value: number, originalEvent?: Event }
  *
  * @cssprop --rating-star-size - Star diameter
  * @cssprop --rating-color-empty - Empty star color
@@ -79,22 +70,20 @@ export type BitRatingProps = ThemableProps &
  * <bit-rating value="3" max="5" color="warning"></bit-rating>
  * ```
  */
-export const RATING_TAG = define(
-  'bit-rating',
-  ({ host }) => {
-    const props = defineProps<BitRatingProps>({
-      color: typed<BitRatingProps['color']>(undefined),
-      disabled: typed<boolean>(false),
-      label: typed<string>('Rating'),
-      max: typed<number>(5),
-      name: typed<string | undefined>(undefined),
-      readonly: typed<boolean>(false),
-      size: typed<BitRatingProps['size']>(undefined),
-      value: typed<number>(0),
-    });
-    const emit = defineEmits<BitRatingEvents>();
-
-    const formCtx = useInject(FORM_CTX, undefined);
+export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
+  formAssociated: true,
+  props: {
+    color: typed<BitRatingProps['color']>(undefined),
+    disabled: typed<boolean>(false),
+    label: typed<string>('Rating'),
+    max: typed<number>(5),
+    name: typed<string | undefined>(undefined),
+    readonly: typed<boolean>(false),
+    size: typed<BitRatingProps['size']>(undefined),
+    value: typed<number>(0),
+  },
+  setup({ emit, host, props }) {
+    const formCtx = inject(FORM_CTX, undefined);
 
     mountFormContextSync(host, formCtx, props);
 
@@ -110,9 +99,7 @@ export const RATING_TAG = define(
       },
     );
 
-    function triggerValidation(on: 'blur' | 'change'): void {
-      if (formCtx?.validateOn.value === on) fd.reportValidity();
-    }
+    const { triggerValidation } = createFieldValidation(formCtx, fd);
 
     const hovered = signal<number | null>(null);
     // eslint-disable-next-line no-constant-binary-expression
@@ -150,11 +137,11 @@ export const RATING_TAG = define(
         p.addEventListener('animationend', () => p.remove(), { once: true });
       }
     }
-    function select(star: number) {
+    function select(star: number, originalEvent?: Event) {
       if (props.readonly.value || props.disabled.value) return;
 
       host.setAttribute('value', String(star));
-      emit('change', { value: star });
+      emit('change', { originalEvent, value: star });
       triggerValidation('change');
       spawnSparkles(star);
     }
@@ -163,14 +150,14 @@ export const RATING_TAG = define(
 
       if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
         e.preventDefault();
-        select(Math.min(max, star + 1));
+        select(Math.min(max, star + 1), e);
 
         const nextBtn = host.shadowRoot?.querySelector<HTMLButtonElement>(`[data-star="${Math.min(max, star + 1)}"]`);
 
         nextBtn?.focus();
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
         e.preventDefault();
-        select(Math.max(1, star - 1));
+        select(Math.max(1, star - 1), e);
 
         const prevBtn = host.shadowRoot?.querySelector<HTMLButtonElement>(`[data-star="${Math.max(1, star - 1)}"]`);
 
@@ -205,7 +192,7 @@ export const RATING_TAG = define(
               :data-star="${star}"
               ?data-filled="${() => filled}"
               :disabled="${() => props.disabled.value || props.readonly.value || null}"
-              @click="${() => select(star)}"
+              @click="${(e: Event) => select(star, e)}"
               @mouseenter="${() => {
                 if (!props.readonly.value && !props.disabled.value) hovered.value = star;
               }}"
@@ -220,8 +207,6 @@ export const RATING_TAG = define(
       </div>
     `;
   },
-  {
-    formAssociated: true,
-    styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, styles],
-  },
-);
+  styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, styles],
+  tag: 'bit-rating',
+});

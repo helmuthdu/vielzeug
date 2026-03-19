@@ -1,4 +1,4 @@
-import { computed, define, html, onMount, typed, defineProps, defineEmits } from '@vielzeug/craftit';
+import { computed, defineComponent, html, onMount, typed } from '@vielzeug/craftit/core';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -6,8 +6,8 @@ import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../..
 import styles from './otp-input.css?inline';
 
 export type BitOtpInputEvents = {
-  change: { complete: boolean; value: string };
-  complete: { value: string };
+  change: { complete: boolean; originalEvent?: Event; value: string };
+  complete: { originalEvent?: Event; value: string };
 };
 
 /** OTP Input props */
@@ -53,8 +53,8 @@ export type BitOtpInputProps = {
  * @attr {string} label - Group aria-label
  * @attr {string} separator - Optional separator character shown in the middle
  *
- * @fires change - Emitted whenever a cell changes, with { value, complete }
- * @fires complete - Emitted when all cells are filled
+ * @fires change - Emitted whenever a cell changes. detail: { value: string, complete: boolean, originalEvent?: Event }
+ * @fires complete - Emitted when all cells are filled. detail: { value: string, originalEvent?: Event }
  *
  * @cssprop --otp-cell-size - Width and height of each cell
  * @cssprop --otp-cell-gap - Gap between cells
@@ -68,24 +68,21 @@ export type BitOtpInputProps = {
  * <bit-otp-input length="6" color="primary"></bit-otp-input>
  * ```
  */
-export const OTP_INPUT_TAG = define(
-  'bit-otp-input',
-  ({ host }) => {
-    const props = defineProps<BitOtpInputProps>({
-      color: typed<BitOtpInputProps['color']>(undefined),
-      disabled: typed<boolean>(false),
-      label: typed<string>('One-time password'),
-      length: typed<number>(6),
-      masked: typed<boolean>(false),
-      name: typed<string | undefined>(undefined),
-      separator: typed<string | undefined>(undefined),
-      size: typed<BitOtpInputProps['size']>(undefined),
-      type: typed<BitOtpInputProps['type']>('numeric'),
-      value: typed<string>(''),
-      variant: typed<BitOtpInputProps['variant']>(undefined),
-    });
-    const emit = defineEmits<BitOtpInputEvents>();
-
+export const OTP_INPUT_TAG = defineComponent<BitOtpInputProps, BitOtpInputEvents>({
+  props: {
+    color: typed<BitOtpInputProps['color']>(undefined),
+    disabled: typed<boolean>(false),
+    label: typed<string>('One-time password'),
+    length: typed<number>(6),
+    masked: typed<boolean>(false),
+    name: typed<string | undefined>(undefined),
+    separator: typed<string | undefined>(undefined),
+    size: typed<BitOtpInputProps['size']>(undefined),
+    type: typed<BitOtpInputProps['type']>('numeric'),
+    value: typed<string>(''),
+    variant: typed<BitOtpInputProps['variant']>(undefined),
+  },
+  setup({ emit, host, props }) {
     const cells = computed(() => Array.from({ length: Number(props.length.value) || 6 }, (_, i) => i));
 
     function getInputs(): HTMLInputElement[] {
@@ -122,9 +119,9 @@ export const OTP_INPUT_TAG = define(
       const complete = full.length === allInputs.length && full.split('').every(Boolean);
 
       host.setAttribute('value', full);
-      emit('change', { complete, value: full });
+      emit('change', { complete, originalEvent: e, value: full });
 
-      if (complete) emit('complete', { value: full });
+      if (complete) emit('complete', { originalEvent: e, value: full });
 
       // Auto-advance
       if (val && index < allInputs.length - 1) {
@@ -148,7 +145,7 @@ export const OTP_INPUT_TAG = define(
         const full = getValue();
 
         host.setAttribute('value', full);
-        emit('change', { complete: false, value: full });
+        emit('change', { complete: false, originalEvent: e, value: full });
         e.preventDefault();
       } else if (e.key === 'ArrowLeft' && index > 0) {
         allInputs[index - 1].focus();
@@ -182,9 +179,9 @@ export const OTP_INPUT_TAG = define(
       const complete = full.length === allInputs.length && full.split('').every(Boolean);
 
       host.setAttribute('value', full);
-      emit('change', { complete, value: full });
+      emit('change', { complete, originalEvent: e, value: full });
 
-      if (complete) emit('complete', { value: full });
+      if (complete) emit('complete', { originalEvent: e, value: full });
 
       // Focus the cell after last pasted char
       const focusIdx = Math.min(chars.length, allInputs.length - 1);
@@ -235,7 +232,6 @@ export const OTP_INPUT_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [colorThemeMixin, sizeVariantMixin({}), forcedColorsFocusMixin('.cell'), styles],
-  },
-);
+  styles: [colorThemeMixin, sizeVariantMixin({}), forcedColorsFocusMixin('.cell'), styles],
+  tag: 'bit-otp-input',
+});

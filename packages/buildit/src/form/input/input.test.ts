@@ -4,7 +4,7 @@ describe('bit-input', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./input');
+    await (() => import('./input'))();
   });
 
   afterEach(() => {
@@ -36,13 +36,23 @@ describe('bit-input', () => {
     });
 
     it('renders outside label when label-placement is "outside"', async () => {
-      fixture = await mount('bit-input', { attrs: { label: 'Email', 'label-placement': 'outside' } });
+      fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Email',
+          'label-placement': 'outside',
+        },
+      });
 
       expect(fixture.query('.label-outside')).toBeTruthy();
     });
 
     it('renders inset label when label-placement is "inset"', async () => {
-      fixture = await mount('bit-input', { attrs: { label: 'Email', 'label-placement': 'inset' } });
+      fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Email',
+          'label-placement': 'inset',
+        },
+      });
 
       expect(fixture.query('.label-inset')).toBeTruthy();
     });
@@ -56,7 +66,9 @@ describe('bit-input', () => {
     });
 
     it('renders error message when error attribute is set', async () => {
-      fixture = await mount('bit-input', { attrs: { error: 'This field is required' } });
+      fixture = await mount('bit-input', {
+        attrs: { error: 'This field is required' },
+      });
 
       const errorEl = fixture.query('.helper-text[role="alert"]');
 
@@ -225,13 +237,42 @@ describe('bit-input', () => {
       expect(fixture.query('input')?.getAttribute('aria-invalid')).toBe('true');
     });
     it('does not set aria-invalid when no error', async () => {
-      fixture = await mount('bit-input', { attrs: { label: 'Email', 'label-placement': 'outside' } });
+      fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Email',
+          'label-placement': 'outside',
+        },
+      });
 
       expect(fixture.query('input')?.getAttribute('aria-invalid')).not.toBe('true');
     });
 
+    it('does not reflect an empty error attribute by default', async () => {
+      fixture = await mount('bit-input');
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('error')).toBe(false);
+    });
+
+    it('removes the host error attribute when error becomes empty', async () => {
+      fixture = await mount('bit-input', { attrs: { error: 'Required' } });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('error')).toBe('Required');
+
+      await fixture.attr('error', '');
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('error')).toBe(false);
+    });
+
     it('hides helper text when error is present', async () => {
-      fixture = await mount('bit-input', { attrs: { error: 'Required', helper: 'Enter your email' } });
+      fixture = await mount('bit-input', {
+        attrs: {
+          error: 'Required',
+          helper: 'Enter your email',
+        },
+      });
 
       const helperEl = fixture.query<HTMLElement>('.helper-text:not([role="alert"])');
       const errorEl = fixture.query<HTMLElement>('.helper-text[role="alert"]');
@@ -378,7 +419,12 @@ describe('bit-input', () => {
     });
 
     it('marks char counter as near-limit at 90% maxlength', async () => {
-      fixture = await mount('bit-input', { attrs: { maxlength: '10', value: '123456789' } });
+      fixture = await mount('bit-input', {
+        attrs: {
+          maxlength: '10',
+          value: '123456789',
+        },
+      });
 
       const counter = fixture.query<HTMLElement>('.char-counter');
 
@@ -389,7 +435,12 @@ describe('bit-input', () => {
     });
 
     it('marks char counter as at-limit at maxlength', async () => {
-      fixture = await mount('bit-input', { attrs: { maxlength: '10', value: '1234567890' } });
+      fixture = await mount('bit-input', {
+        attrs: {
+          maxlength: '10',
+          value: '1234567890',
+        },
+      });
 
       const counter = fixture.query<HTMLElement>('.char-counter');
 
@@ -405,7 +456,7 @@ describe('bit-input accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./input');
+    await (() => import('./input'))();
   });
 
   afterEach(() => {
@@ -449,7 +500,12 @@ describe('bit-input accessibility', () => {
     });
 
     it('updates aria-invalid when error is added dynamically', async () => {
-      fixture = await mount('bit-input', { attrs: { label: 'Email', 'label-placement': 'outside' } });
+      fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Email',
+          'label-placement': 'outside',
+        },
+      });
       expect(fixture.query('input')?.getAttribute('aria-invalid')).not.toBe('true');
 
       await fixture.attr('error', 'Invalid');
@@ -469,7 +525,12 @@ describe('bit-input accessibility', () => {
     });
 
     it('sets aria-labelledby pointing to label when outside label is set', async () => {
-      fixture = await mount('bit-input', { attrs: { label: 'Username', 'label-placement': 'outside' } });
+      fixture = await mount('bit-input', {
+        attrs: {
+          label: 'Username',
+          'label-placement': 'outside',
+        },
+      });
 
       const labelledByVal = fixture.query('input')?.getAttribute('aria-labelledby');
 
@@ -507,7 +568,12 @@ describe('bit-input accessibility', () => {
     });
 
     it('readonly input is keyboard-accessible but not editable', async () => {
-      fixture = await mount('bit-input', { attrs: { readonly: true, value: 'Read only' } });
+      fixture = await mount('bit-input', {
+        attrs: {
+          readonly: true,
+          value: 'Read only',
+        },
+      });
 
       const input = fixture.query<HTMLInputElement>('input')!;
 

@@ -1,19 +1,16 @@
 import {
   computed,
   createContext,
-  define,
+  defineComponent,
   effect,
   html,
-  useInject,
-  observeMedia,
+  inject,
   onMount,
-  useProvide,
+  provide,
   type ReadonlySignal,
   watch,
-  defineProps,
-  defineEmits,
-  defineSlots,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
+import { observeMedia } from '@vielzeug/craftit/labs';
 
 import { chevronLeftIcon, chevronRightIcon } from '../../icons';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
@@ -116,23 +113,19 @@ export type BitSidebarProps = {
  * <bit-sidebar collapsible responsive="(max-width: 768px)">...</bit-sidebar>
  * ```
  */
-export const SIDEBAR_TAG = define(
-  'bit-sidebar',
-  ({ host }) => {
-    const props = defineProps<BitSidebarProps>({
-      collapsed: { default: false },
-      collapsible: { default: false },
-      label: { default: 'Sidebar navigation' },
-      responsive: { default: undefined },
-      variant: { default: undefined },
-    });
-    const emit = defineEmits<BitSidebarEvents>();
-    const slots = defineSlots<{ default: unknown; footer: unknown; header: unknown }>();
-
+export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
+  props: {
+    collapsed: { default: false },
+    collapsible: { default: false },
+    label: { default: 'Sidebar navigation' },
+    responsive: { default: undefined },
+    variant: { default: undefined },
+  },
+  setup({ emit, host, props, slots }) {
     const hasHeader = computed(() => slots.has('header').value);
     const hasFooter = computed(() => slots.has('footer').value);
 
-    useProvide(SIDEBAR_CTX, {
+    provide(SIDEBAR_CTX, {
       collapsed: props.collapsed as ReadonlySignal<boolean>,
       variant: props.variant as ReadonlySignal<SidebarVariant | undefined>,
     });
@@ -205,10 +198,9 @@ export const SIDEBAR_TAG = define(
       </nav>
     `;
   },
-  {
-    styles: [coarsePointerMixin, reducedMotionMixin, sidebarStyles],
-  },
-);
+  styles: [coarsePointerMixin, reducedMotionMixin, sidebarStyles],
+  tag: 'bit-sidebar',
+});
 
 // ─── bit-sidebar-group styles ────────────────────────────────────────────────
 
@@ -245,19 +237,15 @@ export type BitSidebarGroupProps = {
  * </bit-sidebar-group>
  * ```
  */
-export const SIDEBAR_GROUP_TAG = define(
-  'bit-sidebar-group',
-  ({ host }) => {
-    const props = defineProps<BitSidebarGroupProps>({
-      collapsible: { default: false },
-      label: { default: '' },
-      open: { default: true },
-    });
-    const emit = defineEmits<BitSidebarGroupEvents>();
-    const slots = defineSlots<{ default: unknown; icon: unknown }>();
-
+export const SIDEBAR_GROUP_TAG = defineComponent<BitSidebarGroupProps, BitSidebarGroupEvents>({
+  props: {
+    collapsible: { default: false },
+    label: { default: '' },
+    open: { default: true },
+  },
+  setup({ emit, host, props, slots }) {
     const hasIcon = computed(() => slots.has('icon').value);
-    const sidebarCtx = useInject(SIDEBAR_CTX, undefined);
+    const sidebarCtx = inject(SIDEBAR_CTX, undefined);
 
     effect(() => {
       host.toggleAttribute('sidebar-collapsed', sidebarCtx?.collapsed.value ?? false);
@@ -299,10 +287,9 @@ export const SIDEBAR_GROUP_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [reducedMotionMixin, groupStyles],
-  },
-);
+  styles: [reducedMotionMixin, groupStyles],
+  tag: 'bit-sidebar-group',
+});
 
 // ─── bit-sidebar-item styles ─────────────────────────────────────────────────
 
@@ -372,21 +359,18 @@ export type BitSidebarItemProps = {
  * </bit-sidebar-item>
  * ```
  */
-export const SIDEBAR_ITEM_TAG = define(
-  'bit-sidebar-item',
-  ({ host }) => {
-    const props = defineProps<BitSidebarItemProps>({
-      active: { default: false },
-      disabled: { default: false },
-      href: { default: undefined },
-      rel: { default: undefined },
-      target: { default: undefined },
-    });
-    const slots = defineSlots<{ default: unknown; end: unknown; icon: unknown }>();
-
+export const SIDEBAR_ITEM_TAG = defineComponent<BitSidebarItemProps>({
+  props: {
+    active: { default: false },
+    disabled: { default: false },
+    href: { default: undefined },
+    rel: { default: undefined },
+    target: { default: undefined },
+  },
+  setup({ host, props, slots }) {
     const hasIcon = computed(() => slots.has('icon').value);
     const hasEnd = computed(() => slots.has('end').value);
-    const sidebarCtx = useInject(SIDEBAR_CTX, undefined);
+    const sidebarCtx = inject(SIDEBAR_CTX, undefined);
 
     effect(() => {
       host.toggleAttribute('sidebar-collapsed', sidebarCtx?.collapsed.value ?? false);
@@ -434,7 +418,6 @@ export const SIDEBAR_ITEM_TAG = define(
             `}
     `;
   },
-  {
-    styles: [coarsePointerMixin, itemStyles],
-  },
-);
+  styles: [coarsePointerMixin, itemStyles],
+  tag: 'bit-sidebar-item',
+});

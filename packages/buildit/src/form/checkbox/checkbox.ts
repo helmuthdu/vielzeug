@@ -1,33 +1,17 @@
-import {
-  aria,
-  createId,
-  define,
-  effect,
-  guard,
-  handle,
-  html,
-  useInject,
-  onMount,
-  ref,
-  signal,
-  watch,
-  defineProps,
-  defineEmits,
-  defineSlots,
-} from '@vielzeug/craftit';
+import { defineComponent, html, inject, signal, watch } from '@vielzeug/craftit/core';
+import { useA11yControl, useCheckableControl } from '@vielzeug/craftit/labs';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync } from '../../utils/use-text-field';
-import { useToggleField } from '../../utils/use-toggle-field';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
+import { useToggleField } from '../shared/composables';
+import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
+import { mountFormContextSync } from '../shared/dom-sync';
 import componentStyles from './checkbox.css?inline';
 
-/** Checkbox component properties */
-
 export type BitCheckboxEvents = {
-  change: { checked: boolean; value: string };
+  change: { checked: boolean; fieldValue: string; originalEvent?: Event; value: boolean };
 };
 
 export type BitCheckboxProps = CheckableProps &
@@ -49,155 +33,106 @@ export type BitCheckboxProps = CheckableProps &
  *
  * @attr {boolean} checked - Checked state
  * @attr {boolean} disabled - Disable checkbox interaction
- * @attr {boolean} indeterminate - Indeterminate state (partially checked)
- * @attr {string} value - Field value
+ * @attr {boolean} indeterminate - Indeterminate (partially checked) state
+ * @attr {string} value - Field value submitted with forms
  * @attr {string} name - Form field name
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Checkbox size: 'sm' | 'md' | 'lg'
+ * @attr {string} error - Error message (marks field as invalid)
+ * @attr {string} helper - Helper text displayed below the checkbox
  *
- * @fires change - Emitted when the checkbox state changes
+ * @fires change - Emitted when checkbox is toggled. detail: { value: boolean, checked: boolean, fieldValue: string, originalEvent?: Event }
  *
  * @slot - Checkbox label text
  *
  * @part checkbox - The checkbox wrapper element
  * @part box - The visual checkbox box
- * @part label - The label text element
- *
- * @cssprop --checkbox-size - Checkbox dimensions
- * @cssprop --checkbox-bg - Background color (unchecked)
- * @cssprop --checkbox-checked-bg - Background color (checked)
- * @cssprop --checkbox-border-color - Border color
- * @cssprop --checkbox-color - Checkmark icon color
- * @cssprop --checkbox-radius - Border radius
- * @cssprop --checkbox-font-size - Label font size
- *
- * @example
- * ```html
- * <bit-checkbox checked>Accept terms</bit-checkbox>
- * <bit-checkbox color="primary" size="lg">Subscribe</bit-checkbox>
- * <bit-checkbox indeterminate>Select all</bit-checkbox>
- * ```
+ * @part label - The label element
+ * @part helper-text - The helper/error text element
  */
-export const CHECKBOX_TAG = define(
-  'bit-checkbox',
-  ({ host }) => {
-    const props = defineProps<BitCheckboxProps>({
-      checked: { default: false },
-      color: { default: undefined },
-      disabled: { default: false },
-      error: { default: '', omit: true },
-      helper: { default: '' },
-      indeterminate: { default: false },
-      name: { default: '' },
-      size: { default: undefined },
-      value: { default: 'on' },
-    });
-    const emit = defineEmits<BitCheckboxEvents>();
-    const slots = defineSlots<{ default: unknown }>();
+export const CHECKBOX_TAG = defineComponent<BitCheckboxProps, BitCheckboxEvents>({
+  formAssociated: true,
+  props: {
+    checked: { default: false },
+    color: { default: undefined },
+    disabled: { default: false },
+    error: { default: '' },
+    helper: { default: '' },
+    indeterminate: { default: false },
+    name: { default: '' },
+    size: { default: undefined },
+    value: { default: 'on' },
+  },
+  setup({ emit, host, props, reflect, slots }) {
+    // Form integration — provides checkedSignal and triggerValidation
+    const { checkedSignal, formCtx, triggerValidation } = useToggleField(props);
 
-    const indeterminateSignal = signal(false);
-    const { checkedSignal, formCtx, triggerValidation } = useToggleField(props, () => {
-      indeterminateSignal.value = props.indeterminate.value ?? false;
-    });
-    const groupCtx = useInject(CHECKBOX_GROUP_CTX, undefined);
-
-    // Propagate form context size/disabled to host when not explicitly set
     mountFormContextSync(host, formCtx, props);
 
-    const labelRef = ref<HTMLSpanElement>();
-    const helperRef = ref<HTMLDivElement>();
-    const helperId = createId('checkbox-helper');
+    // Separate writable indeterminate signal, synced from the prop
+    const indeterminateSignal = signal(Boolean(props.indeterminate.value));
 
-    watch(
-      props.indeterminate,
-      (v) => {
-        indeterminateSignal.value = Boolean(v);
-      },
-      { immediate: true },
-    );
+    watch(props.indeterminate, (v) => {
+      indeterminateSignal.value = Boolean(v);
+    });
 
-    const toggle = guard(
-      () => !props.disabled.value,
-      (e: Event) => {
-        e.preventDefault();
+    const groupCtx = inject(CHECKBOX_GROUP_CTX, undefined);
 
-        if (groupCtx) {
-          indeterminateSignal.value = false;
-          host.removeAttribute('indeterminate');
-          groupCtx.toggle(props.value.value ?? '');
-          triggerValidation('change');
-
-          return;
-        }
-
-        const wasIndeterminate = indeterminateSignal.value;
-
-        indeterminateSignal.value = false;
-
-        if (!wasIndeterminate) {
-          checkedSignal.value = !checkedSignal.value;
-        }
-
-        const isChecked = checkedSignal.value;
-
-        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        isChecked ? host.setAttribute('checked', '') : host.removeAttribute('checked');
-        host.removeAttribute('indeterminate');
-        emit('change', { checked: isChecked, value: props.value.value ?? '' });
+    // Pass the writable checkedSignal directly — toggle() mutates it in place
+    const controlHandle = useCheckableControl({
+      checked: checkedSignal,
+      clearIndeterminateFirst: true,
+      disabled: props.disabled,
+      group: groupCtx,
+      indeterminate: indeterminateSignal,
+      onToggle: (e) => {
         triggerValidation('change');
+
+        // In a checkbox-group, the group owns change emission/state updates.
+        // Emitting here would bubble to the group and toggle a second time.
+        if (groupCtx) return;
+
+        emit('change', controlHandle.changePayload(e));
       },
-    );
-    const handleKeydown = (e: KeyboardEvent) => {
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        toggle(e);
-      }
-    };
-
-    handle(host, 'click', toggle);
-    handle(host, 'keydown', handleKeydown);
-    // Pre-register the slot signal during setup so its onMount runs before ours,
-    // ensuring slots.has('default').value returns the correct value inside onMount.
-    slots.has('default');
-    onMount(() => {
-      host.setAttribute('role', 'checkbox');
-
-      if (!props.disabled.value) host.setAttribute('tabindex', '0');
-
-      // labelRef.value is only populated after template render
-      const label = labelRef.value;
-
-      if (slots.has('default').value && label) {
-        const labelId = createId('checkbox-label');
-
-        label.id = labelId;
-        aria({ labelledby: labelId });
-      }
-
-      effect(() => {
-        const helperEl = helperRef.value;
-
-        if (!helperEl) return;
-
-        helperEl.id = helperId;
-        helperEl.textContent = props.error.value || props.helper.value || '';
-        helperEl.hidden = !props.error.value && !props.helper.value;
-
-        if (props.error.value) helperEl.setAttribute('role', 'alert');
-        else helperEl.removeAttribute('role');
-      });
+      value: props.value,
     });
-    aria({
-      checked: () => (indeterminateSignal.value ? 'mixed' : String(checkedSignal.value)),
-      describedby: () => (props.error.value || props.helper.value ? helperId : null),
+
+    const a11y = useA11yControl(host, {
+      checked: () => {
+        if (controlHandle.indeterminate.value) return 'mixed';
+
+        return controlHandle.checked.value ? 'true' : 'false';
+      },
+      helperId: undefined,
+      helperText: () => props.error.value || props.helper.value,
       invalid: () => !!props.error.value,
-    });
-    watch(props.disabled, (disabled) => {
-      if (disabled) host.removeAttribute('tabindex');
-      else host.setAttribute('tabindex', '0');
+      labelId: undefined,
+      labelSlot: slots as any,
+      role: 'checkbox',
     });
 
-    return html` <div class="checkbox-wrapper" part="checkbox">
+    reflect({
+      checked: () => controlHandle.checked.value,
+      classMap: () => ({
+        'is-checked': controlHandle.checked.value,
+        'is-disabled': !!props.disabled.value,
+        'is-indeterminate': controlHandle.indeterminate.value,
+      }),
+      indeterminate: () => controlHandle.indeterminate.value,
+      onClick: (e: Event) => controlHandle.toggle(e),
+      onKeydown: (e: Event) => {
+        const ke = e as KeyboardEvent;
+
+        if (ke.key === ' ' || ke.key === 'Enter') {
+          ke.preventDefault();
+          controlHandle.toggle(e);
+        }
+      },
+      tabindex: () => (props.disabled.value ? undefined : 0),
+    });
+
+    return html`
+      <div class="checkbox-wrapper" part="checkbox">
         <div class="box" part="box">
           <svg
             class="checkmark"
@@ -223,27 +158,16 @@ export const CHECKBOX_TAG = define(
           </svg>
         </div>
       </div>
-      <span class="label" part="label" ref=${labelRef}><slot></slot></span>
-      <div class="helper-text" part="helper-text" ref=${helperRef} aria-live="polite" hidden></div>`;
+      <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
+      <div
+        class="helper-text"
+        part="helper-text"
+        data-a11y-helper
+        id="${a11y.helperId}"
+        aria-live="polite"
+        hidden></div>
+    `;
   },
-  {
-    formAssociated: true,
-    styles: [
-      ...formControlMixins,
-      coarsePointerMixin,
-      sizeVariantMixin({
-        lg: {
-          fontSize: 'var(--text-base)',
-          gap: 'var(--size-2-5)',
-          size: 'var(--size-6)',
-        },
-        sm: {
-          fontSize: 'var(--text-xs)',
-          gap: 'var(--size-1-5)',
-          size: 'var(--size-4)',
-        },
-      }),
-      componentStyles,
-    ],
-  },
-);
+  styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],
+  tag: 'bit-checkbox',
+});

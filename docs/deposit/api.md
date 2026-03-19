@@ -7,6 +7,21 @@ description: Complete API reference for the Deposit browser storage library.
 
 [[toc]]
 
+## API At a Glance
+
+| Symbol                 | Purpose                          | Execution mode | Common gotcha                                    |
+| ---------------------- | -------------------------------- | -------------- | ------------------------------------------------ |
+| `defineSchema()`       | Declare typed tables and indexes | Sync           | Indexes must match keys on stored records        |
+| `createIndexedDB()`    | Create an IndexedDB adapter      | Async          | Run migrations before large writes in production |
+| `createLocalStorage()` | Create a LocalStorage adapter    | Sync           | Storage limits are lower than IndexedDB          |
+
+## Package Entry Points
+
+| Import                   | Purpose                                            |
+| ------------------------ | -------------------------------------------------- |
+| `@vielzeug/deposit`      | Main API and exported types/classes                |
+| `@vielzeug/deposit/core` | Pre-bundled standalone build with the same exports |
+
 ## Factory Functions
 
 ### `defineSchema(schema)`
@@ -39,18 +54,16 @@ Creates a LocalStorage-backed adapter.
 **Signature:**
 
 ```ts
-function createLocalStorage<S extends Record<string, Record<string, unknown>>>(
-  options: LocalStorageOptions<S>,
-): Adapter<Schema<S>>;
+function createLocalStorage<S extends Schema<any>>(options: LocalStorageOptions<S>): Adapter<S>;
 ```
 
 **Options — `LocalStorageOptions<S>`:**
 
-| Property  | Type        | Description                                |
-| --------- | ----------- | ------------------------------------------ |
-| `dbName`  | `string`    | Namespace prefix for all localStorage keys |
-| `schema`  | `Schema<S>` | Table definitions                          |
-| `logger?` | `Logger`    | Custom logger; defaults to `console`       |
+| Property  | Type     | Description                                     |
+| --------- | -------- | ----------------------------------------------- |
+| `dbName`  | `string` | Namespace prefix for all localStorage keys      |
+| `schema`  | `S`      | Schema object (typically from `defineSchema()`) |
+| `logger?` | `Logger` | Custom logger; defaults to `console`            |
 
 ---
 
@@ -87,9 +100,7 @@ Creates an IndexedDB-backed adapter. The database connection is opened lazily on
 **Signature:**
 
 ```ts
-function createIndexedDB<S extends Record<string, Record<string, unknown>>>(
-  options: IndexedDBOptions<S>,
-): IndexedDBHandle<Schema<S>>;
+function createIndexedDB<S extends Schema<any>>(options: IndexedDBOptions<S>): IndexedDBHandle<S>;
 ```
 
 **Options — `IndexedDBOptions<S>`:**
@@ -98,7 +109,7 @@ function createIndexedDB<S extends Record<string, Record<string, unknown>>>(
 | -------------- | ------------- | ------------------------------------------------------------------- |
 | `dbName`       | `string`      | IDB database name                                                   |
 | `version`      | `number`      | Database version — **required**; increment to trigger `migrationFn` |
-| `schema`       | `Schema<S>`   | Table definitions                                                   |
+| `schema`       | `S`           | Schema object (typically from `defineSchema()`)                     |
 | `migrationFn?` | `MigrationFn` | Called inside `onupgradeneeded` on version upgrade                  |
 | `logger?`      | `Logger`      | Custom logger; defaults to `console`                                |
 
@@ -185,6 +196,7 @@ patch<K extends keyof S>(
   table: K,
   key: KeyType<S, K>,
   partial: Partial<RecordType<S, K>>,
+  ttl?: number,
 ): Promise<RecordType<S, K> | undefined>
 ```
 
@@ -205,7 +217,7 @@ delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void>
 Removes multiple records by key list. Silently ignores missing keys.
 
 ```ts
-delete<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>
+deleteMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>
 ```
 
 ---
@@ -232,9 +244,9 @@ has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean>
 
 ### `count(table)`
 
-Counts live (non-expired) records in the given table.
+Counts records in the given table (see adapter-specific semantics below).
 
-> **Note:** Both adapters scan all records to exclude TTL-expired entries — O(n). For very large tables, prefer fetching only the data you need.
+> **Adapter behavior:** `createLocalStorage().count()` is TTL-accurate (O(n)); `createIndexedDB().count()` uses native `IDBObjectStore.count()` (O(1), may include not-yet-evicted expired records). Use `db.from(table).count()` for a TTL-accurate count on both.
 
 ```ts
 count<K extends keyof S>(table: K): Promise<number>
@@ -342,10 +354,14 @@ Inclusive range filter. The bound types are inferred from the field type, so pas
 
 ---
 
-#### `startsWith(field, prefix, ignoreCase?)`
+#### `startsWith(field, prefix, options?)`
 
 ```ts
-startsWith<K extends keyof T>(field: K, prefix: string, ignoreCase?: boolean): QueryBuilder<T>
+startsWith<K extends keyof T>(
+  field: K,
+  prefix: string,
+  options?: { ignoreCase?: boolean },
+): QueryBuilder<T>
 ```
 
 Filters string fields that start with `prefix`. Case-sensitive by default.
@@ -558,7 +574,7 @@ for await (const record of db.from('users').orderBy('name')) {
 
 ### `ttl`
 
-A convenience constant of named duration helpers. Returns raw millisecond values for use with `put`, `putMany`, `getOrPut`, and `getOrPut`.
+A convenience constant of named duration helpers. Returns raw millisecond values for use with `put`, `putMany`, and `getOrPut`.
 
 ```ts
 const ttl: {
@@ -566,6 +582,7 @@ const ttl: {
   seconds(n: number): number; // ttl.seconds(30) === 30_000
   minutes(n: number): number; // ttl.minutes(15) === 900_000
   hours(n: number): number; // ttl.hours(1) === 3_600_000
+  days(n: number): number; // ttl.days(1) === 86_400_000
 };
 ```
 
@@ -660,9 +677,9 @@ Provide to `createIndexedDB` to handle schema migrations across database version
 ### `LocalStorageOptions<S>`
 
 ```ts
-type LocalStorageOptions<S extends Record<string, Record<string, unknown>>> = {
+type LocalStorageOptions<S extends Schema<any>> = {
   dbName: string;
-  schema: Schema<S>;
+  schema: S;
   logger?: Logger;
 };
 ```
@@ -672,11 +689,11 @@ type LocalStorageOptions<S extends Record<string, Record<string, unknown>>> = {
 ### `IndexedDBOptions<S>`
 
 ```ts
-type IndexedDBOptions<S extends Record<string, Record<string, unknown>>> = {
+type IndexedDBOptions<S extends Schema<any>> = {
   dbName: string;
   /** Increment to trigger `migrationFn` on next open. Required. */
   version: number;
-  schema: Schema<S>;
+  schema: S;
   migrationFn?: MigrationFn;
   logger?: Logger;
 };

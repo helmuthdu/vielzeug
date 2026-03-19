@@ -1,16 +1,4 @@
-import {
-  computed,
-  define,
-  handle,
-  html,
-  onMount,
-  ref,
-  watch,
-  defineProps,
-  defineEmits,
-  defineSlots,
-  fire,
-} from '@vielzeug/craftit';
+import { computed, defineComponent, handle, html, onMount, ref, watch, fire } from '@vielzeug/craftit/core';
 
 import type { PaddingSize, RoundedSize } from '../../types';
 
@@ -119,25 +107,21 @@ export type BitDialogProps = {
  * </script>
  * ```
  */
-export const DIALOG_TAG = define(
-  'bit-dialog',
-  ({ host }) => {
-    const props = defineProps<BitDialogProps>({
-      backdrop: { default: undefined },
-      dismissible: { default: false },
-      elevation: { default: undefined },
-      'initial-focus': { default: undefined },
-      label: { default: '' },
-      open: { default: false },
-      padding: { default: undefined },
-      persistent: { default: false },
-      'return-focus': { default: true },
-      rounded: { default: undefined },
-      size: { default: 'md' },
-    });
-    const emit = defineEmits<BitDialogEvents>();
-    const slots = defineSlots<{ default: unknown; footer: unknown; header: unknown }>();
-
+export const DIALOG_TAG = defineComponent<BitDialogProps, BitDialogEvents>({
+  props: {
+    backdrop: { default: undefined },
+    dismissible: { default: false },
+    elevation: { default: undefined },
+    'initial-focus': { default: undefined },
+    label: { default: '' },
+    open: { default: false },
+    padding: { default: undefined },
+    persistent: { default: false },
+    'return-focus': { default: true },
+    rounded: { default: undefined },
+    size: { default: 'md' },
+  },
+  setup({ emit, host, props, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
     const hasHeader = computed(() => slots.has('header').value || !!props.label.value || props.dismissible.value);
     const hasFooter = computed(() => slots.has('footer').value);
@@ -268,7 +252,6 @@ export const DIALOG_TAG = define(
       </dialog>
     `;
   },
-  {
-    styles: [elevationMixin, roundedVariantMixin, coarsePointerMixin, reducedMotionMixin, componentStyles],
-  },
-);
+  styles: [elevationMixin, roundedVariantMixin, coarsePointerMixin, reducedMotionMixin, componentStyles],
+  tag: 'bit-dialog',
+});

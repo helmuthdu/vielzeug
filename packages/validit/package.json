@@ -15,7 +15,7 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./standalone": {
+    "./core": {
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/validit.js",
@@ -23,10 +23,12 @@
     }
   },
   "scripts": {
-    "build": "tsc && vite build && vite build --config vite.bundle.config.ts && tsc -p tsconfig.declarations.json",
+    "build": "vite build && pnpm run build:core && pnpm run build:types",
+    "build:core": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "vitest"
   },

@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/buildit)](https://www.npmjs.com/package/@vielzeug/buildit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Buildit** is the Vielzeug component library. It ships accessible custom elements for actions, forms, content, overlays, layout, and feedback — all built on top of `@vielzeug/craftit`, styled with CSS custom properties, and published as tree-shakeable side-effect entry points.
+**Buildit** is the Vielzeug component library. It ships accessible custom elements for actions, forms, content, overlays, layout, and feedback — all built on top of `@vielzeug/craftit`, styled with CSS custom properties, and published as side-effect entry points for explicit runtime registration.
 
 ## Installation
 
@@ -48,7 +48,7 @@ import '@vielzeug/buildit';
 
 - ✅ **Framework-agnostic custom elements** — works with vanilla DOM, React, Vue, Svelte, Angular, and SSR-friendly client hydration flows
 - ✅ **Accessible by default** — keyboard navigation, ARIA wiring, focus management, and form-associated controls
-- ✅ **Tree-shakeable imports** — register only the elements you need via subpath imports like `@vielzeug/buildit/button`
+- ✅ **Granular runtime imports** — register only the elements you need via subpath imports like `@vielzeug/buildit/button`
 - ✅ **Design-token based styling** — global styles plus CSS custom properties for local overrides
 - ✅ **Domain-organized package surface** — actions, content, disclosure, feedback, form, layout, and overlay primitives
 - ✅ **Published subpaths** — components, `styles`, and shared `types` are exposed directly
@@ -59,7 +59,7 @@ import '@vielzeug/buildit';
 
 | Import | Purpose |
 |---|---|
-| `@vielzeug/buildit` | Register all published components |
+| `@vielzeug/buildit` | Register all published components and re-export shared symbols/types |
 | `@vielzeug/buildit/styles` | Global design tokens and shared component styles |
 | `@vielzeug/buildit/types` | Shared TypeScript types |
 
@@ -96,8 +96,9 @@ import '@vielzeug/buildit';
 ## Usage Notes
 
 - Import `@vielzeug/buildit/styles` before registering components.
-- Component subpaths are **side-effect imports** that register custom elements.
-- The root package primarily re-exports tags, types, and shared symbols; use subpath imports to register elements explicitly.
+- Component subpaths are **side-effect imports** that register one published custom element entry point.
+- The root package both **registers all published components** and re-exports tags, types, and shared symbols.
+- Prefer subpath imports for application code when you want tighter control over registration and bundle size.
 - Prefer declarative attributes and slots over manual DOM mutation.
 
 ## API Summary

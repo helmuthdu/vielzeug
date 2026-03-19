@@ -1,6 +1,6 @@
 import { isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import type { HTMLResult } from '../internal';
+import type { HTMLResult } from '../core/internal';
 
 type TemplateFn = () => string | HTMLResult;
 type CaseEntry<T> = readonly [T, TemplateFn];
@@ -46,19 +46,19 @@ export function choose<T extends PropertyKey>(
   cases: ReadonlyArray<CaseEntry<T>>,
   defaultFn?: TemplateFn,
 ): string | HTMLResult | TemplateFn {
-  const _pick = (v: T): string | HTMLResult => {
+  const pick = (v: T): string | HTMLResult => {
     const entry = cases.find(([key]) => key === v);
 
     return entry ? entry[1]() : (defaultFn?.() ?? '');
   };
 
   if (isSignal(value)) {
-    return () => _pick((value as ReadonlySignal<T>).value);
+    return () => pick((value as ReadonlySignal<T>).value);
   }
 
   if (typeof value === 'function') {
-    return () => _pick((value as () => T)());
+    return () => pick((value as () => T)());
   }
 
-  return _pick(value as T);
+  return pick(value as T);
 }

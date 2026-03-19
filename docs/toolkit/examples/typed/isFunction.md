@@ -66,13 +66,13 @@ function execute(value: unknown) {
 - Returns `true` for class constructors
 - Useful for callback validation and type narrowing
 
+## Related
+
+- [isObject](./isObject.md)
+- [isArray](./isArray.md)
+
 ## See Also
 
 - [isObject](./isObject.md): Check if value is an object
 - [isPromise](./isPromise.md): Check if value is a Promise
 - [typeOf](./typeOf.md): Get the type of any value
-
-## Related
-
-- [isObject](./isObject.md)
-- [isArray](./isArray.md)

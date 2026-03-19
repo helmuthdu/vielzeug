@@ -4,7 +4,7 @@ describe('bit-otp-input', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./otp-input');
+    await (() => import('./otp-input'))();
   });
 
   afterEach(() => {
@@ -111,7 +111,7 @@ describe('bit-otp-input', () => {
     it('fires change after paste with complete=true', async () => {
       fixture = await mount('bit-otp-input', { attrs: { length: '4' } });
 
-      let detail: { complete: boolean; value: string } | undefined;
+      let detail: { complete: boolean; originalEvent?: Event; value: string } | undefined;
 
       fixture.element.addEventListener('change', (e: Event) => {
         detail = (e as CustomEvent).detail;
@@ -128,6 +128,7 @@ describe('bit-otp-input', () => {
       }
 
       expect(detail?.complete).toBe(true);
+      expect(detail?.originalEvent).toBeDefined();
     });
 
     it('fires complete when all cells are filled via paste', async () => {
@@ -148,6 +149,10 @@ describe('bit-otp-input', () => {
       }
 
       expect(handler).toHaveBeenCalled();
+
+      const detail = (handler.mock.calls[0][0] as CustomEvent).detail;
+
+      expect(detail.originalEvent).toBeDefined();
     });
   });
 });
@@ -158,7 +163,7 @@ describe('bit-otp-input accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./otp-input');
+    await (() => import('./otp-input'))();
   });
 
   afterEach(() => {
@@ -211,7 +216,12 @@ describe('bit-otp-input accessibility', () => {
 
   describe('Separator Accessibility', () => {
     it('separator span has aria-hidden="true"', async () => {
-      fixture = await mount('bit-otp-input', { attrs: { length: '6', separator: '-' } });
+      fixture = await mount('bit-otp-input', {
+        attrs: {
+          length: '6',
+          separator: '-',
+        },
+      });
 
       const sep = fixture.query('.separator');
 

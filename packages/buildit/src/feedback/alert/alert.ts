@@ -1,4 +1,4 @@
-import { define, guard, html, onMount, onSlotChange, signal, defineProps, defineEmits } from '@vielzeug/craftit';
+import { defineComponent, guard, html, onMount, onSlotChange, signal } from '@vielzeug/craftit/core';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -16,7 +16,7 @@ export type BitAlertProps = {
   accented?: boolean;
   /** Theme color */
   color?: ThemeColor;
-  /** Show a dismiss (×) button */
+  /** Show a dismissable (×) button */
   dismissible?: boolean;
   /** Heading text shown above the content */
   heading?: string;
@@ -67,21 +67,18 @@ export type BitAlertProps = {
  * </bit-alert>
  * ```
  */
-export const ALERT_TAG = define(
-  'bit-alert',
-  ({ host }) => {
-    const props = defineProps<BitAlertProps>({
-      accented: { default: false },
-      color: { default: undefined },
-      dismissible: { default: false },
-      heading: { default: '' },
-      horizontal: { default: false },
-      rounded: { default: undefined },
-      size: { default: undefined },
-      variant: { default: undefined },
-    });
-    const emit = defineEmits<BitAlertEvents>();
-
+export const ALERT_TAG = defineComponent<BitAlertProps, BitAlertEvents>({
+  props: {
+    accented: { default: false },
+    color: { default: undefined },
+    dismissible: { default: false },
+    heading: { default: '' },
+    horizontal: { default: false },
+    rounded: { default: undefined },
+    size: { default: undefined },
+    variant: { default: undefined },
+  },
+  setup({ emit, host, props }) {
     const handleDismiss = guard(
       () => props.dismissible.value,
       (e: MouseEvent) => {
@@ -136,15 +133,14 @@ export const ALERT_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [
-      ...formFieldMixins,
-      forcedColorsMixin,
-      sizeVariantMixin({
-        lg: { '--_padding': 'var(--size-4) var(--size-5)', fontSize: 'var(--text-base)', gap: 'var(--size-3-5)' },
-        sm: { '--_padding': 'var(--size-2) var(--size-3)', fontSize: 'var(--text-xs)', gap: 'var(--size-2)' },
-      }),
-      componentStyles,
-    ],
-  },
-);
+  styles: [
+    ...formFieldMixins,
+    forcedColorsMixin,
+    sizeVariantMixin({
+      lg: { '--_padding': 'var(--size-4) var(--size-5)', fontSize: 'var(--text-base)', gap: 'var(--size-3-5)' },
+      sm: { '--_padding': 'var(--size-2) var(--size-3)', fontSize: 'var(--text-xs)', gap: 'var(--size-2)' },
+    }),
+    componentStyles,
+  ],
+  tag: 'bit-alert',
+});

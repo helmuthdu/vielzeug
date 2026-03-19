@@ -1,8 +1,8 @@
 import { effect, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import type { DirectiveDescriptor } from '../internal';
+import type { Directive } from '../core/internal';
 
-import { listen, setAttr } from '../utils';
+import { listen, setAttr } from '../core/utils';
 
 export type SpreadValue =
   | string
@@ -141,7 +141,7 @@ const applyEntry = (
  * - `.name` -> DOM property
  * - `@name` -> event listener
  */
-export function spread(map: Record<string, SpreadValue>): DirectiveDescriptor {
+export function spread(map: Record<string, SpreadValue>): Directive {
   return {
     mount(el, { registerCleanup }) {
       for (const [key, value] of Object.entries(map)) {

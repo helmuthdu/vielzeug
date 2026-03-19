@@ -6,24 +6,27 @@
 import {
   createContext,
   createId,
-  define,
-  defineEmits,
-  defineSlots,
+  defineComponent,
   defineField,
   guard,
   html,
-  useInject,
-  observeIntersection,
-  observeMedia,
-  observeResize,
+  inject,
   onMount,
   prop,
-  useProvide,
+  provide,
   ref,
   signal,
+  type ReadonlySignal,
   type InjectionKey,
 } from '..';
+import { observeIntersection, observeMedia, observeResize } from '../labs';
 import { mount, waitForEvent } from '../test';
+
+const register = (
+  tag: string,
+  setup: Parameters<typeof defineComponent>[0]['setup'],
+  options: Omit<Parameters<typeof defineComponent>[0], 'setup' | 'tag'> = {},
+) => defineComponent({ setup, tag, ...options });
 
 describe('Composables', () => {
   describe('ref()', () => {
@@ -104,21 +107,21 @@ describe('Composables', () => {
     });
   });
 
-  describe('Context (useProvide/useInject)', () => {
-    it('should useProvide and useInject values', async () => {
+  describe('Context (provide/inject)', () => {
+    it('should provide and inject values', async () => {
       const ThemeKey = Symbol('theme') as InjectionKey<string>;
 
       await mount(() => {
-        useProvide(ThemeKey, 'dark');
+        provide(ThemeKey, 'dark');
 
-        return html`<div>${useInject(ThemeKey) ?? ''}</div>`;
+        return html`<div>${inject(ThemeKey) ?? ''}</div>`;
       });
     });
 
     it('should use default value when not provided', async () => {
       const Key = Symbol('test') as InjectionKey<string>;
       const { query } = await mount(() => {
-        const value = useInject(Key, 'default');
+        const value = inject(Key, 'default');
 
         return html`<div>${value}</div>`;
       });
@@ -126,18 +129,18 @@ describe('Composables', () => {
       expect(query('div')?.textContent).toBe('default');
     });
 
-    it('should useProvide type-safe context', async () => {
+    it('should provide type-safe context', async () => {
       const UserContext = createContext<{ name: string; role: string }>();
       const childTag = `test-user-consumer-${Math.random().toString(36).slice(2)}`;
 
-      define(childTag, () => {
-        const user = useInject(UserContext);
+      register(childTag, () => {
+        const user = inject(UserContext);
 
         return html`<div class="user-info">${user?.name} (${user?.role})</div>`;
       });
 
       const { element, flush } = await mount(() => {
-        useProvide(UserContext, { name: 'Alice', role: 'admin' });
+        provide(UserContext, { name: 'Alice', role: 'admin' });
 
         return html`<${childTag}></${childTag}>`;
       });
@@ -155,14 +158,14 @@ describe('Composables', () => {
     it('should create form field with validation methods', async () => {
       let formField!: ReturnType<typeof defineField>;
 
-      await mount(
-        () => {
+      await mount({
+        formAssociated: true,
+        setup: () => {
           formField = defineField({ value: signal('test') });
 
           return html`<div></div>`;
         },
-        { defineOptions: { formAssociated: true } },
-      );
+      });
       expect(formField).toHaveProperty('setValidity');
       expect(formField).toHaveProperty('reportValidity');
       formField.setValidity({ valueMissing: true }, 'Required');
@@ -172,8 +175,9 @@ describe('Composables', () => {
     it('should handle custom toFormValue transformation', async () => {
       let transformCalled = false;
 
-      await mount(
-        () => {
+      await mount({
+        formAssociated: true,
+        setup: () => {
           defineField({
             toFormValue: (v) => {
               transformCalled = true;
@@ -185,14 +189,14 @@ describe('Composables', () => {
 
           return html`<div></div>`;
         },
-        { defineOptions: { formAssociated: true } },
-      );
+      });
       expect(transformCalled).toBe(true);
     });
 
     it('should sync disabled state', async () => {
-      await mount(
-        () => {
+      await mount({
+        formAssociated: true,
+        setup: () => {
           const value = signal('test');
           const disabled = signal(false);
 
@@ -200,8 +204,7 @@ describe('Composables', () => {
 
           return html`<input :value=${value} ?disabled=${disabled} />`;
         },
-        { defineOptions: { formAssociated: true } },
-      );
+      });
     });
   });
 
@@ -257,12 +260,15 @@ describe('Composables', () => {
     });
   });
 
-  describe('defineSlots()', () => {
+  describe('setup slots', () => {
     it('should detect whether a named slot has assigned nodes', async () => {
-      let capturedSlots!: ReturnType<typeof defineSlots>;
+      let headerAssigned!: ReadonlySignal<boolean>;
+      let defaultAssigned!: ReadonlySignal<boolean>;
+
       const { flush } = await mount(
-        () => {
-          capturedSlots = defineSlots();
+        ({ slots }) => {
+          headerAssigned = slots.has('header');
+          defaultAssigned = slots.has('default');
 
           return html`<slot name="header"></slot><slot></slot>`;
         },
@@ -270,20 +276,18 @@ describe('Composables', () => {
       );
 
       await flush();
-      expect(capturedSlots.has('header').value).toBe(true);
-      expect(capturedSlots.has('default').value).toBe(false);
+      expect(headerAssigned.value).toBe(true);
+      expect(defaultAssigned.value).toBe(false);
     });
   });
 
-  describe('defineEmits()', () => {
+  describe('setup emit', () => {
     it('should emit type-safe custom events', async () => {
-      const { element } = await mount(() => {
-        const emit = defineEmits<{ value: { value: string } }>();
-
+      const { element } = await mount((({ emit }: { emit: (event: 'value', detail: { value: string }) => void }) => {
         setTimeout(() => emit('value', { value: 'test-value' }), 50);
 
         return html`<div>Emitter Component</div>`;
-      });
+      }) as Parameters<typeof defineComponent>[0]['setup']);
 
       const event = await waitForEvent<CustomEvent>(element, 'value');
 
@@ -310,7 +314,7 @@ describe('Composables', () => {
       });
 
       it('should update the signal when ResizeObserver fires', async () => {
-        let capturedCb!: ResizeObserverCallback;
+        let capturedCb: ResizeObserverCallback | undefined;
         const origRO = globalThis.ResizeObserver;
 
         globalThis.ResizeObserver = class {
@@ -333,6 +337,8 @@ describe('Composables', () => {
 
             return html`<div ref=${divRef}></div>`;
           });
+
+          if (!capturedCb) throw new Error('ResizeObserver callback not captured');
 
           capturedCb(
             [{ contentBoxSize: [{ blockSize: 42, inlineSize: 100 }] }] as unknown as ResizeObserverEntry[],
@@ -364,7 +370,7 @@ describe('Composables', () => {
       });
 
       it('should update the signal when IntersectionObserver fires', async () => {
-        let capturedCb!: IntersectionObserverCallback;
+        let capturedCb: IntersectionObserverCallback | undefined;
         const origIO = globalThis.IntersectionObserver;
 
         globalThis.IntersectionObserver = class {
@@ -389,6 +395,8 @@ describe('Composables', () => {
           });
 
           const fakeEntry = { intersectionRatio: 1, isIntersecting: true } as IntersectionObserverEntry;
+
+          if (!capturedCb) throw new Error('IntersectionObserver callback not captured');
 
           capturedCb([fakeEntry], {} as IntersectionObserver);
 
@@ -423,7 +431,7 @@ describe('Composables', () => {
 
       it('should update the signal when the media query changes', async () => {
         let capturedMatches!: ReturnType<typeof observeMedia>;
-        let capturedHandler!: (e: MediaQueryListEvent) => void;
+        let capturedHandler: ((e: MediaQueryListEvent) => void) | undefined;
         const mockMql = {
           addEventListener: vi.fn((_: string, cb: (e: MediaQueryListEvent) => void) => {
             capturedHandler = cb;
@@ -444,6 +452,8 @@ describe('Composables', () => {
         });
 
         expect(capturedMatches.value).toBe(false);
+
+        if (!capturedHandler) throw new Error('MediaQueryList change handler not captured');
 
         capturedHandler({ matches: true } as MediaQueryListEvent);
 
@@ -472,20 +482,20 @@ describe('Composables', () => {
       const Key = Symbol('value') as InjectionKey<number>;
       let receivedValue: number | undefined;
 
-      define('test-nested-consumer-4', () => {
-        receivedValue = useInject(Key);
+      register('test-nested-consumer-4', () => {
+        receivedValue = inject(Key);
 
         return html`<div class="result">${receivedValue}</div>`;
       });
 
-      define('test-nested-inner-4', () => {
-        useProvide(Key, 2);
+      register('test-nested-inner-4', () => {
+        provide(Key, 2);
 
         return html`<test-nested-consumer-4></test-nested-consumer-4>`;
       });
 
-      define('test-nested-outer-4', () => {
-        useProvide(Key, 1);
+      register('test-nested-outer-4', () => {
+        provide(Key, 1);
 
         return html`<test-nested-inner-4></test-nested-inner-4>`;
       });

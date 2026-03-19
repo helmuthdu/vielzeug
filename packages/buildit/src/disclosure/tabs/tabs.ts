@@ -1,17 +1,15 @@
 import {
   computed,
   createContext,
-  define,
+  defineComponent,
   handle,
   html,
   onMount,
-  useProvide,
+  provide,
   type ReadonlySignal,
   ref,
   watch,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -80,25 +78,22 @@ export type BitTabsProps = {
  * </bit-tabs>
  * ```
  */
-export const TABS_TAG = define(
-  'bit-tabs',
-  ({ host }) => {
-    const props = defineProps<BitTabsProps>({
-      activation: { default: 'auto' },
-      color: { default: undefined },
-      label: { default: undefined },
-      orientation: { default: 'horizontal' },
-      size: { default: undefined },
-      value: { default: undefined },
-      variant: { default: undefined },
-    });
-    const emit = defineEmits<BitTabsEvents>();
-
+export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
+  props: {
+    activation: { default: 'auto' },
+    color: { default: undefined },
+    label: { default: undefined },
+    orientation: { default: 'horizontal' },
+    size: { default: undefined },
+    value: { default: undefined },
+    variant: { default: undefined },
+  },
+  setup({ emit, host, props }) {
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();
     const getTabs = () => [...host.querySelectorAll<HTMLElement>('bit-tab-item')];
 
-    useProvide(TABS_CTX, {
+    provide(TABS_CTX, {
       color: props.color,
       orientation: computed(() => props.orientation.value ?? 'horizontal'),
       size: props.size,
@@ -223,7 +218,6 @@ export const TABS_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [colorThemeMixin, styles],
-  },
-);
+  styles: [colorThemeMixin, styles],
+  tag: 'bit-tabs',
+});

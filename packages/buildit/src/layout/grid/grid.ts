@@ -1,4 +1,5 @@
-import { define, effect, html, observeResize, onMount, defineProps } from '@vielzeug/craftit';
+import { defineComponent, effect, html, onMount } from '@vielzeug/craftit/core';
+import { observeResize } from '@vielzeug/craftit/labs';
 
 const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
   ['cols2xl', '--size-screen-2xl'],
@@ -137,32 +138,30 @@ export type BitGridProps = {
  *   <main style="grid-area: main">Main</main>
  * </bit-grid>
  */
-export const GRID_TAG = define(
-  'bit-grid',
-  ({ host }) => {
-    const props = defineProps<BitGridProps>({
-      align: { default: undefined },
-      areas: { default: '' },
-      areas2xl: { default: '' },
-      areasLg: { default: '' },
-      areasMd: { default: '' },
-      areasSm: { default: '' },
-      areasXl: { default: '' },
-      cols: { default: undefined },
-      cols2xl: { default: undefined },
-      colsLg: { default: undefined },
-      colsMd: { default: undefined },
-      colsSm: { default: undefined },
-      colsXl: { default: undefined },
-      flow: { default: undefined },
-      fullwidth: { default: false },
-      gap: { default: undefined },
-      justify: { default: undefined },
-      minColWidth: { default: '' },
-      responsive: { default: false },
-      rows: { default: undefined },
-    });
-
+export const GRID_TAG = defineComponent<BitGridProps>({
+  props: {
+    align: { default: undefined },
+    areas: { default: '' },
+    areas2xl: { default: '' },
+    areasLg: { default: '' },
+    areasMd: { default: '' },
+    areasSm: { default: '' },
+    areasXl: { default: '' },
+    cols: { default: undefined },
+    cols2xl: { default: undefined },
+    colsLg: { default: undefined },
+    colsMd: { default: undefined },
+    colsSm: { default: undefined },
+    colsXl: { default: undefined },
+    flow: { default: undefined },
+    fullwidth: { default: false },
+    gap: { default: undefined },
+    justify: { default: undefined },
+    minColWidth: { default: '' },
+    responsive: { default: false },
+    rows: { default: undefined },
+  },
+  setup({ host, props }) {
     const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
       if (activeCols === 'auto' || (!activeCols && responsive)) {
         return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;
@@ -254,7 +253,6 @@ export const GRID_TAG = define(
 
     return html`<slot></slot>`;
   },
-  {
-    styles: [styles],
-  },
-);
+  styles: [styles],
+  tag: 'bit-grid',
+});

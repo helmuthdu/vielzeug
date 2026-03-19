@@ -4,7 +4,7 @@ describe('bit-checkbox', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
-    await import('./checkbox');
+    await (() => import('./checkbox'))();
   });
 
   afterEach(() => {
@@ -129,7 +129,12 @@ describe('bit-checkbox', () => {
     });
 
     it('preserves checked state when disabled and clicked', async () => {
-      fixture = await mount('bit-checkbox', { attrs: { checked: true, disabled: true } });
+      fixture = await mount('bit-checkbox', {
+        attrs: {
+          checked: true,
+          disabled: true,
+        },
+      });
       await user.click(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
@@ -145,7 +150,13 @@ describe('bit-checkbox', () => {
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
       expect(onChange).toHaveBeenCalledTimes(1);
-      expect((onChange.mock.calls[0][0] as CustomEvent).detail.checked).toBe(true);
+
+      const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
+
+      expect(detail.checked).toBe(true);
+      expect(detail.value).toBe(true);
+      expect(detail.fieldValue).toBe('on');
+      expect(detail.originalEvent).toBeDefined();
     });
 
     it('emits change with checked=false when unchecked', async () => {
@@ -155,7 +166,11 @@ describe('bit-checkbox', () => {
 
       fixture.element.addEventListener('change', onChange);
       await user.click(fixture.element);
-      expect((onChange.mock.calls[0][0] as CustomEvent).detail.checked).toBe(false);
+
+      const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
+
+      expect(detail.checked).toBe(false);
+      expect(detail.value).toBe(false);
     });
 
     it('emits change on Space keypress', async () => {
@@ -296,7 +311,12 @@ describe('bit-checkbox', () => {
     });
 
     it('handles both checked and indeterminate set simultaneously (checked wins)', async () => {
-      fixture = await mount('bit-checkbox', { attrs: { checked: true, indeterminate: false } });
+      fixture = await mount('bit-checkbox', {
+        attrs: {
+          checked: true,
+          indeterminate: false,
+        },
+      });
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
     });
   });
@@ -305,7 +325,7 @@ describe('bit-checkbox', () => {
 // Dedicated WAI-ARIA / accessibility spec for bit-checkbox
 describe('bit-checkbox accessibility', () => {
   beforeAll(async () => {
-    await import('./checkbox');
+    await (() => import('./checkbox'))();
   });
 
   // ─── Semantic Structure ───────────────────────────────────────────────────

@@ -14,13 +14,20 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./dom": {
+      "source": "./src/dom/index.ts",
+      "types": "./dist/dom/index.d.ts",
+      "import": "./dist/dom.js",
+      "require": "./dist/dom.cjs"
     }
   },
   "scripts": {
-    "build": "tsc && vite build  && tsc -p tsconfig.declarations.json",
+    "build": "vite build && pnpm run build:types",
+    "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "pnpm run build",
     "test": "vitest"
   },
   "publishConfig": {

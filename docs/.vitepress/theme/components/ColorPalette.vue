@@ -133,8 +133,7 @@ const contrastScale: ColorSwatch[] = [
               :style="{
                 background: `var(${swatch.variable})`,
                 color: swatch.textVariable ? `var(${swatch.textVariable})` : 'var(--color-contrast-900)',
-              }"
-            >
+              }">
               <span class="swatch-label">{{ swatch.label }}</span>
             </div>
           </div>
@@ -158,8 +157,7 @@ const contrastScale: ColorSwatch[] = [
               :style="{
                 background: `var(${swatch.variable})`,
                 color: swatch.textVariable ? `var(${swatch.textVariable})` : 'var(--color-contrast-900)',
-              }"
-            >
+              }">
               <span class="swatch-label">{{ swatch.label }}</span>
             </div>
           </div>
@@ -180,8 +178,7 @@ const contrastScale: ColorSwatch[] = [
           :style="{
             background: `var(${swatch.variable})`,
             color: Number(swatch.label) >= 500 ? 'var(--color-contrast-50)' : 'var(--color-contrast-900)',
-          }"
-        >
+          }">
           <span class="swatch-label">{{ swatch.label }}</span>
         </div>
       </div>

@@ -3,79 +3,13 @@ title: Floatit — Usage Guide
 description: Middleware composition, placement, autoUpdate, and positioning patterns for Floatit.
 ---
 
-## Floatit Usage Guide
+# Floatit Usage Guide
 
 ::: tip New to Floatit?
 Start with the [Overview](./index.md) for a quick introduction, then come back here for in-depth patterns.
 :::
 
 [[toc]]
-
-## Why Floatit?
-
-Manual floating-element positioning with `getBoundingClientRect` breaks at viewport edges — there is no built-in overflow detection, flip logic, or automatic repositioning on scroll or resize.
-
-```ts
-// Before — manual positioning (no overflow handling)
-function position(ref: Element, float: HTMLElement) {
-  const rect = ref.getBoundingClientRect();
-  float.style.top  = `${rect.bottom + 8}px`;
-  float.style.left = `${rect.left}px`;
-  // Clips at viewport edges, never flips, breaks on scroll
-}
-
-// After — Floatit
-import { positionFloat, offset, flip, shift } from '@vielzeug/floatit';
-await positionFloat(reference, floating, {
-  placement: 'bottom',
-  middleware: [offset(8), flip(), shift({ padding: 6 })],
-});
-```
-
-| Feature           | Floatit                                       | Floating UI | Popper.js |
-| ----------------- | --------------------------------------------- | ----------- | --------- |
-| Bundle size       | <PackageInfo package="floatit" type="size" /> | ~7 kB       | ~8 kB     |
-| One-call API      | ✅ `positionFloat`                            | ❌ Manual   | ❌ Manual |
-| Flip middleware   | ✅                                            | ✅          | ✅        |
-| Shift middleware  | ✅                                            | ✅          | ✅        |
-| Size middleware   | ✅                                            | ✅          | ✅        |
-| autoUpdate        | ✅                                            | ✅          | ✅        |
-| Zero dependencies | ✅                                            | ✅          | ✅        |
-
-**Use Floatit when** you need a lightweight positioning engine for tooltips, dropdowns, and popovers that integrates cleanly into the Vielzeug component system.
-
-**Consider Floating UI** if you need its framework adapters (React, Vue, Svelte) or virtual element reference support.
-
-## Import
-
-```ts
-import {
-  positionFloat,
-  computePosition,
-  autoUpdate,
-  offset,
-  flip,
-  shift,
-  size,
-} from '@vielzeug/floatit';
-
-// Types
-import type {
-  Placement,
-  Side,
-  Alignment,
-  Strategy,
-  Middleware,
-  MiddlewareState,
-  FloatOptions,
-  ComputePositionConfig,
-  ComputePositionResult,
-  FlipOptions,
-  ShiftOptions,
-  SizeOptions,
-  SizeApplyArgs,
-} from '@vielzeug/floatit';
-```
 
 ## Placement
 
@@ -131,7 +65,7 @@ Adds a gap (in pixels) between the reference and the floating element along the 
 
 ```ts
 // 8px gap between reference and floating
-middleware: [offset(8)]
+middleware: [offset(8)];
 ```
 
 ### flip
@@ -140,10 +74,10 @@ Flips the floating element to the opposite side when it would overflow the viewp
 
 ```ts
 // Default: flip when any part overflows
-middleware: [flip()]
+middleware: [flip()];
 
 // Keep 8px clearance before flipping
-middleware: [flip({ padding: 8 })]
+middleware: [flip({ padding: 8 })];
 ```
 
 When `flip` changes the placement, `computePosition` restarts the middleware pipeline using the new placement so all subsequent middlewares (e.g. `shift`) receive the correct coordinates.
@@ -154,7 +88,7 @@ Slides the floating element along its cross axis so it stays within the viewport
 
 ```ts
 // Keep at least 6px from every viewport edge
-middleware: [shift({ padding: 6 })]
+middleware: [shift({ padding: 6 })];
 ```
 
 ### size
@@ -172,7 +106,7 @@ middleware: [
       elements.floating.style.maxHeight = `${availableHeight}px`;
     },
   }),
-]
+];
 ```
 
 ### Middleware order matters
@@ -181,11 +115,11 @@ Middlewares run sequentially. The recommended order is:
 
 ```ts
 middleware: [
-  offset(8),    // 1. push away from reference first
-  flip(),       // 2. flip side if needed (triggers a pipeline restart)
+  offset(8), // 1. push away from reference first
+  flip(), // 2. flip side if needed (triggers a pipeline restart)
   shift({ padding: 6 }), // 3. nudge into viewport after final side is known
-  size({ apply: ... }),  // 4. resize with final available space
-]
+  size({ apply: ({ availableHeight }) => console.log(availableHeight) }), // 4. resize with final available space
+];
 ```
 
 ### Custom middleware
@@ -231,21 +165,21 @@ function hide() {
 - `resize` on `window`
 - `ResizeObserver` on both the reference and floating elements
 
+If your floating element's size is fully controlled externally and observing it causes unnecessary update loops, disable floating observation:
+
+```ts
+const cleanup = autoUpdate(reference, floating, update, {
+  observeFloating: false,
+});
+```
+
 Always call the returned cleanup when the floating element is hidden to avoid unnecessary reflows.
 
 ## Strategy
 
-The default strategy is `'fixed'`, which works with `position: fixed` in CSS. Pass `strategy: 'absolute'` if your floating element uses `position: absolute` within a positioned ancestor.
+`Strategy` is currently a typed option (`'fixed' | 'absolute'`) but is not applied by Floatit's internal calculations. `computePosition` always works from viewport-space `getBoundingClientRect()` values, and `positionFloat` applies `left`/`top` inline styles.
 
-```ts
-positionFloat(reference, floating, {
-  placement: 'bottom',
-  strategy: 'absolute',
-  middleware: [flip()],
-});
-```
-
-The coordinates from `computePosition` are always in viewport space (from `getBoundingClientRect`), so for `absolute` strategy you may need to subtract the offset parent's position.
+In practice, configure your floating element CSS to match viewport-space coordinates (typically `position: fixed`).
 
 ## Common Patterns
 
@@ -263,7 +197,9 @@ function showTooltip(trigger: Element, tooltip: HTMLElement) {
     positionFloat(trigger, tooltip, {
       placement: 'top',
       middleware: [offset(8), flip(), shift({ padding: 6 })],
-    }).then((p) => { tooltip.dataset.placement = p; }),
+    }).then((p) => {
+      tooltip.dataset.placement = p;
+    }),
   );
 }
 

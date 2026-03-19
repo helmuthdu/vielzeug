@@ -99,12 +99,12 @@ yarn add @vielzeug/toolkit
 :::
 
 ```typescript
-import { chunk, debounce, formatCurrency } from '@vielzeug/toolkit';
+import { chunk, debounce, currency } from '@vielzeug/toolkit';
 
 // Utilities that just work
 const batches = chunk([1, 2, 3, 4, 5], 2);
 const search = debounce((query) => api.search(query), 300);
-const price = formatCurrency(1234.56, 'USD'); // "$1,234.56"
+const price = currency({ amount: 123456n, currency: 'USD' }); // "$1,234.56"
 ```
 
 ## 💬 Community & Support

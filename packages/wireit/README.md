@@ -228,6 +228,34 @@ container.restore(snap);
 
 ## API
 
+**Package exports**
+
+```ts
+export {
+  AliasCycleError,
+  AsyncProviderError,
+  CircularDependencyError,
+  Container,
+  ContainerDisposedError,
+  createContainer,
+  createTestContainer,
+  createToken,
+  ProviderNotFoundError,
+} from '@vielzeug/wireit';
+
+export type {
+  ClassProvider,
+  FactoryProvider,
+  Lifetime,
+  Provider,
+  ProviderOptions,
+  Snapshot,
+  Token,
+  TokenValues,
+  ValueProvider,
+} from '@vielzeug/wireit';
+```
+
 **Factory functions**
 
 | Export                        | Description                                                                    |

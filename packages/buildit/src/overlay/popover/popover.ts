@@ -3,15 +3,13 @@ import type { Placement } from '@vielzeug/floatit';
 import {
   computed,
   createId,
-  define,
+  defineComponent,
   html,
   onMount,
   onSlotChange,
   signal,
   watch,
-  defineProps,
-  defineEmits,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
 
 import { reducedMotionMixin } from '../../styles';
@@ -87,19 +85,16 @@ export type BitPopoverProps = {
  * </bit-popover>
  * ```
  */
-export const POPOVER_TAG = define(
-  'bit-popover',
-  ({ host }) => {
-    const props = defineProps<BitPopoverProps>({
-      disabled: { default: false },
-      label: { default: undefined },
-      offset: { default: PANEL_OFFSET },
-      open: { default: undefined },
-      placement: { default: 'bottom' },
-      trigger: { default: 'click' },
-    });
-    const emit = defineEmits<BitPopoverEvents>();
-
+export const POPOVER_TAG = defineComponent<BitPopoverProps, BitPopoverEvents>({
+  props: {
+    disabled: { default: false },
+    label: { default: undefined },
+    offset: { default: PANEL_OFFSET },
+    open: { default: undefined },
+    placement: { default: 'bottom' },
+    trigger: { default: 'click' },
+  },
+  setup({ emit, host, props }) {
     const visible = signal(false);
     const panelId = createId('popover');
     let panelEl: HTMLElement | null = null;
@@ -297,7 +292,6 @@ export const POPOVER_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [reducedMotionMixin, styles],
-  },
-);
+  styles: [reducedMotionMixin, styles],
+  tag: 'bit-popover',
+});

@@ -7,7 +7,6 @@ A fully-featured, form-associated select widget that reads native `<option>` and
 - ⌨️ **Full Keyboard Nav** — Arrow keys, Enter, Space, Escape, Home, End, Tab
 - ⏳ **Loading State** — `loading` attribute shows a loading indicator while options are being fetched
 - ♿ **ARIA Combobox** — `role="combobox"`, `role="listbox"`, `role="option"` with live attributes
-- ⚡ **Virtualised Rendering** — powered by `@vielzeug/virtualit` for smooth performance with thousands of options
 - 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
 - 🎨 **5 Variants** — solid, flat, bordered, outline, ghost
 - 🏷️ **Label Placement** — inset (floating) or outside
@@ -282,9 +281,10 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
     <option value="art">Art</option>
   </bit-select>
   <bit-button type="submit">Submit</bit-button>
-</form>
+</bit-form>
 
 <script type="module">
+  import '@vielzeug/buildit/form';
   import '@vielzeug/buildit/select';
   import '@vielzeug/buildit/button';
 

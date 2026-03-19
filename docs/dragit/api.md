@@ -7,6 +7,14 @@ description: Complete API reference for Dragit with type signatures, option docu
 
 [[toc]]
 
+## API At a Glance
+
+| Symbol                   | Purpose                                      | Execution mode | Common gotcha                                                     |
+| ------------------------ | -------------------------------------------- | -------------- | ----------------------------------------------------------------- |
+| `createDropZone()`       | Create a typed drop-zone controller          | Sync           | Remember to destroy the controller during teardown                |
+| `createSortable()`       | Add sortable drag-and-drop behavior to lists | Sync           | Provide stable item identity for reorder operations               |
+| `DropZoneOptions.accept` | Filter file types before processing          | Sync           | Mismatch between MIME and extension can reject files unexpectedly |
+
 ## Types
 
 ### `DropZoneOptions`
@@ -64,7 +72,7 @@ interface Sortable {
 ## `createDropZone()`
 
 ```ts
-function createDropZone(options: DropZoneOptions): DropZone;
+declare function createDropZone(options: DropZoneOptions): DropZone;
 ```
 
 Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` handle.
@@ -106,9 +114,7 @@ const zone = createDropZone({
 
 ### `zone.hovered`
 
-```ts
-readonly hovered: boolean
-```
+`readonly hovered: boolean`
 
 `true` when a drag is currently over the zone. Updated synchronously by the internal counter — safe to read at any time.
 
@@ -118,9 +124,7 @@ console.log(zone.hovered); // false initially
 
 ### `zone.destroy()`
 
-```ts
-destroy(): void
-```
+`destroy(): void`
 
 Removes all event listeners from the element, resets the drag counter and hover state, and clears the `hovered` flag. Safe to call multiple times.
 
@@ -130,9 +134,7 @@ zone.destroy();
 
 ### `zone[Symbol.dispose]()`
 
-```ts
-[Symbol.dispose](): void
-```
+`[Symbol.dispose](): void`
 
 Alias for `destroy()`. Called automatically when used with the `using` keyword.
 
@@ -147,12 +149,12 @@ Alias for `destroy()`. Called automatically when used with the `using` keyword.
 ## `createSortable()`
 
 ```ts
-function createSortable(options: SortableOptions): Sortable;
+declare function createSortable(options: SortableOptions): Sortable;
 ```
 
 Makes the direct children of a container element reorderable via drag. Each item must have a `data-sort-id` attribute. Returns a `Sortable` handle.
 
-`createSortable` sets `draggable="true"`, `role="listitem"` on all qualifying children and `role="list"` on the container at initialization. All are removed on `destroy()`.
+`createSortable` sets `draggable="true"` and `role="listitem"` on qualifying children and sets `role="list"` on the container at initialization.
 
 | Option        | Type                                     | Default | Description                                                                                                                                   |
 | ------------- | ---------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -187,9 +189,7 @@ const sortable = createSortable({
 
 ### `sortable.refresh()`
 
-```ts
-refresh(): void
-```
+`refresh(): void`
 
 Re-scans the container's children and sets `draggable="true"` and `role="listitem"` on all elements with a `data-sort-id` attribute. Call this after programmatically adding or removing items.
 
@@ -205,17 +205,15 @@ sortable.refresh();
 
 ### `sortable.destroy()`
 
-```ts
-destroy(): void
-```
+`destroy(): void`
 
-Removes all event listeners from the container, strips `draggable` and `role` attributes from all items, and cleans up any in-progress drag state (removes `data-dragging` attribute, removes the placeholder element).
+Removes all event listeners from the container, strips `draggable` and `role` attributes from sortable items, and cleans up any in-progress drag state (removes `data-dragging` attribute, removes the placeholder element).
+
+Note: the container's `role="list"` attribute is currently left in place after `destroy()`.
 
 ### `sortable[Symbol.dispose]()`
 
-```ts
-[Symbol.dispose](): void
-```
+`[Symbol.dispose](): void`
 
 Alias for `destroy()`.
 
@@ -229,7 +227,7 @@ Dragit reads and writes the following DOM attributes:
 | -------------------- | ----------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
 | `data-sort-id`       | You                                 | —                       | Required on each sortable item. Used as the stable identifier in `onReorder`.                     |
 | `draggable`          | `createSortable` init / `refresh()` | `destroy()`             | Enables native drag on each item.                                                                 |
-| `role="list"`        | `createSortable` init               | `destroy()`             | Accessibility role on the container.                                                              |
+| `role="list"`        | `createSortable` init               | —                       | Accessibility role on the container.                                                              |
 | `role="listitem"`    | `createSortable` init / `refresh()` | `destroy()`             | Accessibility role on each item.                                                                  |
 | `data-dragging`      | During drag                         | `dragend` / `destroy()` | Applied to the item currently being dragged. Use for styling: `[data-dragging] { opacity: 0.4 }`. |
 | `aria-hidden="true"` | On placeholder creation             | Placeholder removal     | Applied to the `.dragit-placeholder` element.                                                     |

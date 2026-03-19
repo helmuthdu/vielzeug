@@ -7,6 +7,14 @@ description: Complete API reference for the Formit form management library.
 
 [[toc]]
 
+## API At a Glance
+
+| Symbol          | Purpose                                           | Execution mode | Common gotcha                                           |
+| --------------- | ------------------------------------------------- | -------------- | ------------------------------------------------------- |
+| `createForm()`  | Create form state and field actions               | Sync           | Keep defaultValues shape aligned with submitted payload |
+| `form.submit()` | Run async submit handlers with status transitions | Async          | Return/await async work to preserve submit state        |
+| `form.bind()`   | Bind field state and handlers to inputs           | Sync           | Do not override generated handlers without forwarding   |
+
 ## `createForm(init?)`
 
 ```ts

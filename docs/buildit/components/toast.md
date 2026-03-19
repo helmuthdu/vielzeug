@@ -53,12 +53,36 @@ If no `<bit-toast>` element exists in the page, the service creates and appends 
 <bit-toast id="toast-br" position="bottom-right"></bit-toast>
 
 <bit-grid cols="3" gap="md" style="padding: var(--size-4);">
-  <bit-button color="primary"   onclick="document.getElementById('toast-tl').add({ message: 'Top Left',      color: 'primary',   duration: 3000 })">Top Left</bit-button>
-  <bit-button color="secondary" onclick="document.getElementById('toast-tc').add({ message: 'Top Center',    color: 'secondary', duration: 3000 })">Top Center</bit-button>
-  <bit-button color="info"      onclick="document.getElementById('toast-tr').add({ message: 'Top Right',     color: 'info',      duration: 3000 })">Top Right</bit-button>
-  <bit-button color="success"   onclick="document.getElementById('toast-bl').add({ message: 'Bottom Left',   color: 'success',   duration: 3000 })">Bottom Left</bit-button>
-  <bit-button color="warning"   onclick="document.getElementById('toast-bc').add({ message: 'Bottom Center', color: 'warning',   duration: 3000 })">Bottom Center</bit-button>
-  <bit-button color="error"     onclick="document.getElementById('toast-br').add({ message: 'Bottom Right',  color: 'error',     duration: 3000 })">Bottom Right</bit-button>
+  <bit-button
+    color="primary"
+    onclick="document.getElementById('toast-tl').add({ message: 'Top Left',      color: 'primary',   duration: 3000 })"
+    >Top Left</bit-button
+  >
+  <bit-button
+    color="secondary"
+    onclick="document.getElementById('toast-tc').add({ message: 'Top Center',    color: 'secondary', duration: 3000 })"
+    >Top Center</bit-button
+  >
+  <bit-button
+    color="info"
+    onclick="document.getElementById('toast-tr').add({ message: 'Top Right',     color: 'info',      duration: 3000 })"
+    >Top Right</bit-button
+  >
+  <bit-button
+    color="success"
+    onclick="document.getElementById('toast-bl').add({ message: 'Bottom Left',   color: 'success',   duration: 3000 })"
+    >Bottom Left</bit-button
+  >
+  <bit-button
+    color="warning"
+    onclick="document.getElementById('toast-bc').add({ message: 'Bottom Center', color: 'warning',   duration: 3000 })"
+    >Bottom Center</bit-button
+  >
+  <bit-button
+    color="error"
+    onclick="document.getElementById('toast-br').add({ message: 'Bottom Right',  color: 'error',     duration: 3000 })"
+    >Bottom Right</bit-button
+  >
 </bit-grid>
 ```
 
@@ -74,9 +98,23 @@ Toasts inherit all `bit-alert` variants and colors.
 <bit-toast id="demo-variants" position="bottom-center"></bit-toast>
 
 <bit-grid cols="3" gap="md" style="padding: 2rem; max-width: 600px; margin: 0 auto;">
-  <bit-button color="primary"  variant="flat"    onclick="document.getElementById('demo-variants').add({ message: 'Flat variant',     color: 'primary', variant: 'flat',     duration: 3000 })">Flat</bit-button>
-  <bit-button color="success"                    onclick="document.getElementById('demo-variants').add({ message: 'Solid variant',    color: 'success', variant: 'solid',    duration: 3000 })">Solid</bit-button>
-  <bit-button color="warning"  variant="bordered" onclick="document.getElementById('demo-variants').add({ message: 'Bordered variant', color: 'warning', variant: 'bordered', duration: 3000 })">Bordered</bit-button>
+  <bit-button
+    color="primary"
+    variant="flat"
+    onclick="document.getElementById('demo-variants').add({ message: 'Flat variant',     color: 'primary', variant: 'flat',     duration: 3000 })"
+    >Flat</bit-button
+  >
+  <bit-button
+    color="success"
+    onclick="document.getElementById('demo-variants').add({ message: 'Solid variant',    color: 'success', variant: 'solid',    duration: 3000 })"
+    >Solid</bit-button
+  >
+  <bit-button
+    color="warning"
+    variant="bordered"
+    onclick="document.getElementById('demo-variants').add({ message: 'Bordered variant', color: 'warning', variant: 'bordered', duration: 3000 })"
+    >Bordered</bit-button
+  >
 </bit-grid>
 ```
 
@@ -91,13 +129,17 @@ Use `heading` to add a bold title above the message, and `meta` for secondary in
 ```html
 <bit-toast id="demo-heading" position="bottom-right"></bit-toast>
 
-<bit-button color="info" onclick="document.getElementById('demo-heading').add({
+<bit-button
+  color="info"
+  onclick="document.getElementById('demo-heading').add({
   color: 'info',
   heading: 'New Message',
   message: 'You have 3 unread messages from your team.',
   meta: '2 min ago',
   duration: 5000,
-})">Show toast with heading</bit-button>
+})"
+  >Show toast with heading</bit-button
+>
 ```
 
 </ComponentPreview>
@@ -113,27 +155,29 @@ Toasts can carry action buttons. Each button auto-dismisses the toast when click
 
 <bit-grid cols="2" gap="md" style="padding: 2rem;">
   <bit-button color="warning" onclick="window.showConfirm()">Confirm actions</bit-button>
-  <bit-button color="info"    onclick="window.showHorizontal()">Horizontal action</bit-button>
+  <bit-button color="info" onclick="window.showHorizontal()">Horizontal action</bit-button>
 </bit-grid>
 
 <script>
-  window.showConfirm = () => document.getElementById('demo-actions').add({
-    color: 'warning',
-    heading: 'Unsaved Changes',
-    message: 'You have unsaved changes. What would you like to do?',
-    duration: 0,
-    actions: [
-      { label: 'Save',  variant: 'flat',   color: 'warning', onClick: () => console.log('saved') },
-      { label: 'Discard', variant: 'solid', color: 'warning', onClick: () => console.log('discarded') },
-    ],
-  });
+  window.showConfirm = () =>
+    document.getElementById('demo-actions').add({
+      color: 'warning',
+      heading: 'Unsaved Changes',
+      message: 'You have unsaved changes. What would you like to do?',
+      duration: 0,
+      actions: [
+        { label: 'Save', variant: 'flat', color: 'warning', onClick: () => console.log('saved') },
+        { label: 'Discard', variant: 'solid', color: 'warning', onClick: () => console.log('discarded') },
+      ],
+    });
 
-  window.showHorizontal = () => document.getElementById('demo-actions').add({
-    color: 'info',
-    message: 'A new update is available.',
-    horizontal: true,
-    actions: [{ label: 'Refresh', variant: 'flat', onClick: () => location.reload() }],
-  });
+  window.showHorizontal = () =>
+    document.getElementById('demo-actions').add({
+      color: 'info',
+      message: 'A new update is available.',
+      horizontal: true,
+      actions: [{ label: 'Refresh', variant: 'flat', onClick: () => location.reload() }],
+    });
 </script>
 ```
 
@@ -321,22 +365,22 @@ toaster.clear(); // animated clear
 
 ## ToastItem Properties
 
-| Property      | Type                                   | Default     | Description                                           |
-| ------------- | -------------------------------------- | ----------- | ----------------------------------------------------- |
-| `message`     | `string`                               | —           | **Required.** The notification text                   |
-| `id`          | `string`                               | auto UUID   | Unique id. Auto-generated via `crypto.randomUUID()`   |
-| `color`       | `ThemeColor`                           | `'primary'` | Alert color theme                                     |
-| `heading`     | `string`                               | —           | Bold heading above the message                        |
-| `variant`     | `'solid' \| 'flat' \| 'bordered'`      | `'solid'`   | Visual style                                          |
-| `size`        | `'sm' \| 'md' \| 'lg'`                 | `'md'`      | Alert size                                            |
-| `rounded`     | `RoundedSize \| ''`                    | `'md'`      | Border radius                                         |
-| `duration`    | `number`                               | `5000`      | Auto-dismiss delay in ms. `0` = persistent            |
-| `dismissible` | `boolean`                              | `true`      | Show close (×) button                                 |
-| `meta`        | `string`                               | —           | Secondary text alongside the heading (e.g. timestamp) |
-| `horizontal`  | `boolean`                              | `false`     | Render action buttons inline (to the right) instead of below  |
-| `urgency`     | `'polite' \| 'assertive'`              | auto        | Screen reader urgency. Auto-derived: `error` color → `assertive`, others → `polite` |
-| `actions`     | `ActionItem[]`                         | —           | Array of action buttons (each auto-dismisses the toast on click) |
-| `onDismiss`   | `() => void`                           | —           | Callback fired after the exit animation completes     |
+| Property      | Type                              | Default     | Description                                                                         |
+| ------------- | --------------------------------- | ----------- | ----------------------------------------------------------------------------------- |
+| `message`     | `string`                          | —           | **Required.** The notification text                                                 |
+| `id`          | `string`                          | auto UUID   | Unique id. Auto-generated via `crypto.randomUUID()`                                 |
+| `color`       | `ThemeColor`                      | `'primary'` | Alert color theme                                                                   |
+| `heading`     | `string`                          | —           | Bold heading above the message                                                      |
+| `variant`     | `'solid' \| 'flat' \| 'bordered'` | `'solid'`   | Visual style                                                                        |
+| `size`        | `'sm' \| 'md' \| 'lg'`            | `'md'`      | Alert size                                                                          |
+| `rounded`     | `RoundedSize \| ''`               | `'md'`      | Border radius                                                                       |
+| `duration`    | `number`                          | `5000`      | Auto-dismiss delay in ms. `0` = persistent                                          |
+| `dismissible` | `boolean`                         | `true`      | Show close (×) button                                                               |
+| `meta`        | `string`                          | —           | Secondary text alongside the heading (e.g. timestamp)                               |
+| `horizontal`  | `boolean`                         | `false`     | Render action buttons inline (to the right) instead of below                        |
+| `urgency`     | `'polite' \| 'assertive'`         | auto        | Screen reader urgency. Auto-derived: `error` color → `assertive`, others → `polite` |
+| `actions`     | `ActionItem[]`                    | —           | Array of action buttons (each auto-dismisses the toast on click)                    |
+| `onDismiss`   | `() => void`                      | —           | Callback fired after the exit animation completes                                   |
 
 ### ActionItem Properties
 
@@ -348,10 +392,10 @@ toaster.clear(); // animated clear
 
 ## Attributes
 
-| Attribute    | Type     | Default          | Description                        |
-| ------------ | -------- | ---------------- | ---------------------------------- |
-| `position`   | `string` | `'bottom-right'` | Screen position                    |
-| `max`      | `number` | `5`              | Max toasts in the DOM at once      |
+| Attribute  | Type     | Default          | Description                   |
+| ---------- | -------- | ---------------- | ----------------------------- |
+| `position` | `string` | `'bottom-right'` | Screen position               |
+| `max`      | `number` | `5`              | Max toasts in the DOM at once |
 
 ## Events
 
@@ -368,16 +412,16 @@ document.querySelector('bit-toast').addEventListener('dismiss', (e) => {
 
 ## CSS Custom Properties
 
-| Property               | Default  | Description                          |
-| ---------------------- | -------- | ------------------------------------ |
-| `--toast-position`     | `fixed`  | CSS `position` value                 |
-| `--toast-inset-top`    | `auto`   | Top inset                            |
-| `--toast-inset-bottom` | `1rem`   | Bottom inset                         |
-| `--toast-inset-left`   | `auto`   | Left inset                           |
-| `--toast-inset-right`  | `1rem`   | Right inset                          |
-| `--toast-z-index`      | `9999`   | Z-index                              |
-| `--toast-max-width`    | `400px`  | Max width                            |
-| `--toast-gap`          | `0.5rem` | Gap between toasts when expanded     |
+| Property               | Default  | Description                      |
+| ---------------------- | -------- | -------------------------------- |
+| `--toast-position`     | `fixed`  | CSS `position` value             |
+| `--toast-inset-top`    | `auto`   | Top inset                        |
+| `--toast-inset-bottom` | `1rem`   | Bottom inset                     |
+| `--toast-inset-left`   | `auto`   | Left inset                       |
+| `--toast-inset-right`  | `1rem`   | Right inset                      |
+| `--toast-z-index`      | `9999`   | Z-index                          |
+| `--toast-max-width`    | `400px`  | Max width                        |
+| `--toast-gap`          | `0.5rem` | Gap between toasts when expanded |
 
 ## Accessibility
 
@@ -401,4 +445,4 @@ The toast component follows WAI-ARIA best practices.
 - Use `duration: 0` for errors and confirmations that require user action
 - Use `toast.promise()` instead of manually managing loading/success/error toasts
 - Use `max` to prevent overwhelming users during high-frequency events
-:::
+  :::

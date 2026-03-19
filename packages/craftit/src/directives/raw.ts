@@ -1,6 +1,6 @@
 import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { htmlResult, type HTMLResult } from '../internal';
+import { htmlResult, type HTMLResult } from '../core/internal';
 
 /**
  * Renders a trusted HTML string without escaping.

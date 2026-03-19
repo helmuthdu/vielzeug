@@ -2,25 +2,25 @@ import {
   computed,
   createContext,
   createId,
-  define,
+  defineComponent,
   effect,
-  fire,
   handle,
   html,
-  useInject,
+  inject,
   onMount,
   onSlotChange,
-  useProvide,
+  provide,
   type ReadonlySignal,
   signal,
-  defineProps,
-} from '@vielzeug/craftit';
+} from '@vielzeug/craftit/core';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync } from '../../utils';
 import { FORM_CTX } from '../form/form';
+import { mountFormContextSync } from '../shared/dom-sync';
+import { createChoiceChangeDetail, parseCsvValues, type ChoiceChangeDetail } from '../shared/utils';
+import componentStyles from './checkbox-group.css?inline';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -28,17 +28,13 @@ export type CheckboxGroupContext = {
   color: ReadonlySignal<ThemeColor | undefined>;
   disabled: ReadonlySignal<boolean>;
   size: ReadonlySignal<ComponentSize | undefined>;
-  toggle: (value: string) => void;
+  toggle: (value: string, originalEvent?: Event) => void;
   values: ReadonlySignal<string[]>;
 };
 
 export const CHECKBOX_GROUP_CTX = createContext<CheckboxGroupContext>('CheckboxGroupContext');
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-import componentStyles from './checkbox-group.css?inline';
-
-// ─── Props ────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type BitCheckboxGroupProps = {
   /** Theme color — propagated to all child bit-checkbox elements */
@@ -61,6 +57,10 @@ export type BitCheckboxGroupProps = {
   values?: string;
 };
 
+export type BitCheckboxGroupEvents = {
+  change: ChoiceChangeDetail;
+};
+
 /**
  * A fieldset wrapper that groups `bit-checkbox` elements, provides shared
  * `color` and `size` via context, and manages multi-value selection state.
@@ -77,62 +77,57 @@ export type BitCheckboxGroupProps = {
  * @attr {string} orientation - Layout: 'vertical' | 'horizontal'
  * @attr {boolean} required - Required field
  *
- * @fires change - Emitted when selection changes. detail: { values: string[] }
+ * @fires change - Emitted when selection changes. detail: { value: string, values: string[], labels: string[], originalEvent?: Event }
  *
  * @slot - Place `bit-checkbox` elements here
- *
- * @example
- * ```html
- * <bit-checkbox-group name="fruits" label="Favourite fruits" value="apple,banana">
- *   <bit-checkbox value="apple">Apple</bit-checkbox>
- *   <bit-checkbox value="banana">Banana</bit-checkbox>
- *   <bit-checkbox value="cherry">Cherry</bit-checkbox>
- * </bit-checkbox-group>
- * ```
  */
-export const CHECKBOX_GROUP_TAG = define(
-  'bit-checkbox-group',
-  ({ host }) => {
-    const props = defineProps<BitCheckboxGroupProps>({
-      color: { default: undefined },
-      disabled: { default: false },
-      error: { default: '' },
-      helper: { default: '' },
-      label: { default: '' },
-      orientation: { default: 'vertical' },
-      required: { default: false },
-      size: { default: undefined },
-      values: { default: '' },
-    });
-
+export const CHECKBOX_GROUP_TAG = defineComponent<BitCheckboxGroupProps, BitCheckboxGroupEvents>({
+  props: {
+    color: { default: undefined },
+    disabled: { default: false },
+    error: { default: '' },
+    helper: { default: '' },
+    label: { default: '' },
+    orientation: { default: 'vertical' },
+    required: { default: false },
+    size: { default: undefined },
+    values: { default: '' },
+  },
+  setup({ emit, host, props }) {
     // Parse comma-separated value string into an array of checked values
-    const parseValues = (v: string | undefined): string[] =>
-      v
-        ? v
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : [];
+    const parseValues = (v: string | undefined): string[] => parseCsvValues(v);
     const checkedValues = signal<string[]>(parseValues(props.values.value));
+
+    const getCheckboxes = (): HTMLElement[] => Array.from(host.getElementsByTagName('bit-checkbox')) as HTMLElement[];
+    const getLabelForValue = (value: string): string => {
+      const checkbox = getCheckboxes().find((item) => (item.getAttribute('value') ?? '') === value);
+
+      return checkbox?.textContent?.replace(/\s+/g, ' ').trim() || value;
+    };
+    const emitChange = (originalEvent?: Event) => {
+      const values = checkedValues.value;
+
+      emit('change', createChoiceChangeDetail(values, values.map(getLabelForValue), originalEvent));
+    };
 
     // Keep checkedValues in sync when prop changes externally
     effect(() => {
       checkedValues.value = parseValues(props.values.value);
     });
 
-    const toggleCheckbox = (val: string) => {
+    const toggleCheckbox = (val: string, originalEvent?: Event) => {
       const current = checkedValues.value;
       const next = current.includes(val) ? current.filter((v) => v !== val) : [...current, val];
 
       checkedValues.value = next;
       host.setAttribute('values', next.join(','));
-      fire(host, 'change', { detail: { values: next } });
+      emitChange(originalEvent);
     };
-    const formCtx = useInject(FORM_CTX, undefined);
+    const formCtx = inject(FORM_CTX, undefined);
 
     mountFormContextSync(host, formCtx, props);
-    // Provide context to child bit-checkbox elements
-    useProvide(CHECKBOX_GROUP_CTX, {
+
+    provide(CHECKBOX_GROUP_CTX, {
       color: props.color,
       disabled: computed(() => Boolean(props.disabled.value)),
       size: props.size,
@@ -142,29 +137,17 @@ export const CHECKBOX_GROUP_TAG = define(
 
     // Sync checked state + color/size/disabled onto slotted bit-checkbox children
     const syncChildren = () => {
-      // Read reactive signals before any early return so this effect subscribes
-      // to them even when the shadow DOM hasn't rendered yet. Once the slot is
-      // available, any change to these signals will re-run syncChildren.
       const values = checkedValues.value;
       const color = props.color.value;
       const size = props.size.value;
       const disabled = props.disabled.value;
-      const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot');
-
-      if (!slot) return;
-
-      const checkboxes = slot
-        .assignedElements({ flatten: true })
-        .filter((el) => el.tagName.toLowerCase() === 'bit-checkbox') as HTMLElement[];
+      const checkboxes = Array.from(host.getElementsByTagName('bit-checkbox')) as HTMLElement[];
 
       for (const checkbox of checkboxes) {
         const val = checkbox.getAttribute('value') ?? '';
 
-        if (values.includes(val)) {
-          checkbox.setAttribute('checked', '');
-        } else {
-          checkbox.removeAttribute('checked');
-        }
+        if (values.includes(val)) checkbox.setAttribute('checked', '');
+        else checkbox.removeAttribute('checked');
 
         if (color) checkbox.setAttribute('color', color);
         else checkbox.removeAttribute('color');
@@ -178,18 +161,19 @@ export const CHECKBOX_GROUP_TAG = define(
     };
 
     effect(syncChildren);
+
     onMount(() => {
       onSlotChange('default', syncChildren);
-      // Listen for change events bubbled from child bit-checkbox elements
+      syncChildren();
+
       handle(host, 'change', (e: Event) => {
-        if (e.target === host) return; // our own re-dispatch
+        if (e.target === host) return;
 
         e.stopPropagation();
 
-        const target = e.target as HTMLElement;
-        const val = target.getAttribute('value') ?? '';
+        const val = (e.target as HTMLElement).getAttribute('value') ?? '';
 
-        toggleCheckbox(val);
+        toggleCheckbox(val, e);
       });
     });
 
@@ -219,7 +203,6 @@ export const CHECKBOX_GROUP_TAG = define(
       </fieldset>
     `;
   },
-  {
-    styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
-  },
-);
+  styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
+  tag: 'bit-checkbox-group',
+});

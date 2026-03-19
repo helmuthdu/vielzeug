@@ -3,9 +3,17 @@ title: Floatit — API Reference
 description: Complete API reference for the Floatit floating positioning library.
 ---
 
-## Floatit API Reference
+# Floatit API Reference
 
 [[toc]]
+
+## API At a Glance
+
+| Symbol              | Purpose                                         | Execution mode | Common gotcha                                     |
+| ------------------- | ----------------------------------------------- | -------------- | ------------------------------------------------- |
+| `computePosition()` | Compute floating coordinates without DOM writes | Async          | Apply returned coordinates every reposition cycle |
+| `positionFloat()`   | Compute and apply position styles directly      | Async          | Use autoUpdate for scrolling/resizing contexts    |
+| `autoUpdate()`      | Reposition on viewport/layout changes           | Sync           | Dispose the updater when the floating UI unmounts |
 
 ## Core Functions
 
@@ -56,7 +64,7 @@ panel.style.transform = `translate(${x}px, ${y}px)`;
 
 ---
 
-### `autoUpdate(reference, floating, update)`
+### `autoUpdate(reference, floating, update, options?)`
 
 Automatically re-calls `update` whenever the floating element's position may have changed.
 
@@ -64,13 +72,15 @@ Listens to:
 
 - `scroll` on `window` (capturing — covers all scroll ancestors)
 - `resize` on `window`
-- `ResizeObserver` on both `reference` and `floating`
+- `ResizeObserver` on `reference` and (by default) on `floating`
 
 **Parameters:**
 
 - `reference: Element` — The anchor element
 - `floating: HTMLElement` — The floating element
 - `update: () => void` — Callback to re-run positioning
+- `options?: AutoUpdateOptions`
+  - `observeFloating?: boolean` — Whether to observe size changes on the floating element itself (default: `true`)
 
 **Returns:** `() => void` — Cleanup function; call it when the floating element is hidden
 
@@ -100,7 +110,7 @@ Adds a pixel gap between the reference element and the floating element along th
 **Returns:** `Middleware`
 
 ```ts
-offset(8) // 8px gap
+offset(8); // 8px gap
 ```
 
 ---
@@ -117,8 +127,8 @@ Flips to the opposite side when the preferred side would overflow the viewport.
 **Returns:** `Middleware`
 
 ```ts
-flip()               // flip when overflow
-flip({ padding: 8 }) // flip when within 8px of viewport edge
+flip(); // flip when overflow
+flip({ padding: 8 }); // flip when within 8px of viewport edge
 ```
 
 ::: info Pipeline restart
@@ -139,8 +149,8 @@ Slides the floating element along its cross axis to keep it inside the viewport.
 **Returns:** `Middleware`
 
 ```ts
-shift()              // clamp to viewport
-shift({ padding: 6}) // maintain 6px from edges
+shift(); // clamp to viewport
+shift({ padding: 6 }); // maintain 6px from edges
 ```
 
 ---
@@ -163,7 +173,7 @@ size({
   apply({ availableHeight, elements }) {
     elements.floating.style.maxHeight = `${availableHeight}px`;
   },
-})
+});
 ```
 
 ---
@@ -173,7 +183,7 @@ size({
 ### `Placement`
 
 ```ts
-type Side      = 'top' | 'bottom' | 'left' | 'right';
+type Side = 'top' | 'bottom' | 'left' | 'right';
 type Alignment = 'start' | 'end';
 type Placement = Side | `${Side}-${Alignment}`;
 // e.g. 'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | ...
@@ -185,12 +195,22 @@ type Placement = Side | `${Side}-${Alignment}`;
 type Strategy = 'fixed' | 'absolute';
 ```
 
+`Strategy` is currently part of the public types but not applied by `computePosition`/`positionFloat` internals. Coordinates are computed from viewport-space rects and `positionFloat` applies `left`/`top` only.
+
+### `AutoUpdateOptions`
+
+```ts
+interface AutoUpdateOptions {
+  observeFloating?: boolean;
+}
+```
+
 ### `FloatOptions`
 
 ```ts
 interface FloatOptions {
-  placement?:  Placement;
-  strategy?:   Strategy;
+  placement?: Placement;
+  strategy?: Strategy;
   middleware?: Array<Middleware | null | undefined | false>;
 }
 ```
@@ -199,8 +219,8 @@ interface FloatOptions {
 
 ```ts
 interface ComputePositionConfig {
-  placement?:  Placement;
-  strategy?:   Strategy;
+  placement?: Placement;
+  strategy?: Strategy;
   middleware?: Array<Middleware | null | undefined | false>;
 }
 ```
@@ -209,8 +229,8 @@ interface ComputePositionConfig {
 
 ```ts
 interface ComputePositionResult {
-  x:         number;
-  y:         number;
+  x: number;
+  y: number;
   placement: Placement;
 }
 ```
@@ -220,7 +240,7 @@ interface ComputePositionResult {
 ```ts
 interface Middleware {
   name: string;
-  fn:   (state: MiddlewareState) => MiddlewareState;
+  fn: (state: MiddlewareState) => MiddlewareState;
 }
 ```
 
@@ -228,16 +248,16 @@ interface Middleware {
 
 ```ts
 interface MiddlewareState {
-  x:         number;
-  y:         number;
+  x: number;
+  y: number;
   placement: Placement;
   rects: {
     reference: { x: number; y: number; width: number; height: number };
-    floating:  { x: number; y: number; width: number; height: number };
+    floating: { x: number; y: number; width: number; height: number };
   };
   elements: {
     reference: Element;
-    floating:  HTMLElement;
+    floating: HTMLElement;
   };
 }
 ```
@@ -275,11 +295,11 @@ interface SizeOptions {
 
 ```ts
 interface SizeApplyArgs {
-  availableWidth:  number;
+  availableWidth: number;
   availableHeight: number;
   elements: {
     reference: Element;
-    floating:  HTMLElement;
+    floating: HTMLElement;
   };
 }
 ```

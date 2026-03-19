@@ -1,4 +1,4 @@
-import { computed, define, fire, html, syncContextProps, defineField, useInject, defineProps } from '@vielzeug/craftit';
+import { computed, defineComponent, defineField, fire, html, inject, syncContextProps } from '@vielzeug/craftit/core';
 import { when } from '@vielzeug/craftit/directives';
 
 import type { ButtonType, DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
@@ -87,30 +87,27 @@ export type BitButtonProps = ThemableProps &
  * <bit-button variant="frost" rainbow>Special Button</bit-button>
  * ```
  */
-export const BUTTON_TAG = define(
-  'bit-button',
-  ({ host }) => {
-    const props = defineProps<BitButtonProps>({
-      color: { default: undefined },
-      disabled: { default: false },
-      fullwidth: { default: false },
-      href: { default: undefined },
-      iconOnly: { default: false },
-      label: { default: undefined },
-      loading: { default: false },
-      rainbow: { default: false },
-      rel: { default: undefined },
-      rounded: { default: undefined },
-      size: { default: undefined },
-      target: { default: undefined },
-      type: { default: 'button' },
-      variant: { default: 'solid' },
-    });
-
+export const BUTTON_TAG = defineComponent<BitButtonProps>({
+  formAssociated: true,
+  props: {
+    color: { default: undefined },
+    disabled: { default: false },
+    fullwidth: { default: false },
+    href: { default: undefined },
+    iconOnly: { default: false },
+    label: { default: undefined },
+    loading: { default: false },
+    rainbow: { default: false },
+    rel: { default: undefined },
+    rounded: { default: undefined },
+    size: { default: undefined },
+    target: { default: undefined },
+    type: { default: 'button' },
+    variant: { default: 'solid' },
+  },
+  setup({ host, props }) {
     // Reactively inherit size/variant/color from a parent bit-button-group when present.
-    const groupCtx = useInject(BUTTON_GROUP_CTX, undefined);
-
-    syncContextProps(groupCtx, props, ['color', 'size', 'variant']);
+    syncContextProps(inject(BUTTON_GROUP_CTX, undefined), props, ['color', 'size', 'variant']);
 
     const isDisabled = computed(() => props.disabled.value || props.loading.value || false);
     const isLink = computed(() => !!props.href.value);
@@ -187,34 +184,32 @@ export const BUTTON_TAG = define(
       )}
     `;
   },
-  {
-    formAssociated: true,
-    shadow: { delegatesFocus: true },
-    styles: [
-      ...formFieldMixins,
-      forcedColorsMixin,
-      sizeVariantMixin({
-        lg: {
-          fontSize: 'var(--text-base)',
-          gap: 'var(--size-2-5)',
-          height: 'var(--size-12)',
-          iconSize: 'var(--size-6)',
-          lineHeight: 'var(--leading-relaxed)',
-          padding: 'var(--size-2-5) var(--size-5)',
-        },
-        sm: {
-          fontSize: 'var(--text-sm)',
-          gap: 'var(--size-1-5)',
-          height: 'var(--size-8)',
-          iconSize: 'var(--size-4)',
-          lineHeight: 'var(--leading-tight)',
-          padding: 'var(--size-1-5) var(--size-3)',
-        },
-      }),
-      frostVariantMixin('button'),
-      rainbowEffectMixin('button'),
-      disabledLoadingMixin('button'),
-      componentStyles,
-    ],
-  },
-);
+  shadow: { delegatesFocus: true },
+  styles: [
+    ...formFieldMixins,
+    forcedColorsMixin,
+    sizeVariantMixin({
+      lg: {
+        fontSize: 'var(--text-base)',
+        gap: 'var(--size-2-5)',
+        height: 'var(--size-12)',
+        iconSize: 'var(--size-6)',
+        lineHeight: 'var(--leading-relaxed)',
+        padding: 'var(--size-2-5) var(--size-5)',
+      },
+      sm: {
+        fontSize: 'var(--text-sm)',
+        gap: 'var(--size-1-5)',
+        height: 'var(--size-8)',
+        iconSize: 'var(--size-4)',
+        lineHeight: 'var(--leading-tight)',
+        padding: 'var(--size-1-5) var(--size-3)',
+      },
+    }),
+    frostVariantMixin('button'),
+    rainbowEffectMixin('button'),
+    disabledLoadingMixin('button'),
+    componentStyles,
+  ],
+  tag: 'bit-button',
+});

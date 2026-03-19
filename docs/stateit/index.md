@@ -5,16 +5,18 @@ description: Tiny, type-safe reactive primitives — signals, effects, computed 
 
 <PackageBadges package="stateit" />
 
-<img src="/logo-stateit.svg" alt="Stateit Logo" width="156" class="logo-highlight"/>
+<img src="/logo-stateit.svg" alt="Stateit logo" width="156" class="logo-highlight"/>
 
 # Stateit
 
 **Stateit** is a tiny, zero-dependency reactive library that unifies two complementary primitives:
 
-- **Signals** — fine-grained reactive atoms (`signal`, `computed`, `effect`, `watch`)
+- **Signals** — fine-grained reactive values (`signal`, `computed`, `effect`, `watch`)
 - **Stores** — structured reactive state containers for plain objects (`store`)
 
 Both share the same `.value` access and `watch()` / `effect()` subscription model. A `Store<T>` **is** a `Signal<T>`, so every signal primitive works on stores too.
+
+<!-- Search keywords: reactive state, signals store, computed effects. -->
 
 ## Installation
 
@@ -107,6 +109,38 @@ stopWatch.dispose();
 counter.freeze();
 ```
 
+## Why Stateit?
+
+Plain variables don't notify anything when they change. Framework-specific stores add boilerplate and coupling.
+
+```ts
+// Before — manual notification
+let count = 0;
+const listeners: Array<() => void> = [];
+function setCount(n: number) {
+  count = n;
+  listeners.forEach((fn) => fn());
+}
+
+// After — Stateit signals
+import { signal, effect } from '@vielzeug/stateit';
+const count = signal(0);
+effect(() => console.log(count.value)); // auto-tracks dependencies
+count.value = 1; // notifies automatically
+```
+
+| Feature                 | Stateit                                       | Zustand | Jotai  | Nanostores |
+| ----------------------- | --------------------------------------------- | ------- | ------ | ---------- |
+| Bundle size             | <PackageInfo package="stateit" type="size" /> | ~3.5 kB | ~7 kB  | ~2 kB      |
+| Framework-agnostic      | ✅                                            | ✅      | React  | ✅         |
+| Fine-grained reactivity | ✅                                            | ❌      | ✅     | ✅         |
+| Structured stores       | ✅                                            | ✅      | Manual | ❌         |
+| Zero dependencies       | ✅                                            | ❌      | ❌     | ✅         |
+
+**Use Stateit when** you need fine-grained reactivity without framework lock-in, or when building web components and vanilla JS apps.
+
+**Consider alternatives when** you need DevTools integration (Zustand), React Suspense support (Jotai), or server-side stores.
+
 ## Features
 
 ### Signals
@@ -142,10 +176,17 @@ counter.freeze();
 - **`configureStateit()`** — global defaults (e.g. `maxEffectIterations`)
 - **`shallowEqual`** — exported equality helper (the default for stores)
 
-## Next Steps
+## Compatibility
 
-|                           |                                               |
-| ------------------------- | --------------------------------------------- |
-| [Usage Guide](./usage.md) | Concepts, patterns, and best practices        |
-| [API Reference](./api.md) | Complete type signatures and parameter docs   |
-| [Examples](./examples.md) | Real-world recipes and framework integrations |
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ✅      |
+| SSR         | ✅      |
+| Deno        | ✅      |
+
+## See Also
+
+- [Routeit](/routeit/)
+- [Formit](/formit/)
+- [Eventit](/eventit/)

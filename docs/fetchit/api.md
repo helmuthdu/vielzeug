@@ -3,9 +3,24 @@ title: Fetchit — API Reference
 description: Complete API reference for the Fetchit HTTP client, query client, and standalone mutation.
 ---
 
-## Fetchit API Reference
+# Fetchit API Reference
 
 [[toc]]
+
+## API At a Glance
+
+| Symbol          | Purpose                                              | Execution mode | Common gotcha                                       |
+| --------------- | ---------------------------------------------------- | -------------- | --------------------------------------------------- |
+| `createApi()`   | Create an HTTP client with defaults and interceptors | Sync           | Set a baseUrl to avoid relative path surprises      |
+| `createQuery()` | Create cache/query orchestration utilities           | Sync           | Invalidate keys after mutations to avoid stale data |
+| `mutate()`      | Run standalone async mutations with status tracking  | Async          | Surface server errors via typed HttpError handling  |
+
+## Package Entry Points
+
+| Import                   | Purpose            |
+| ------------------------ | ------------------ |
+| `@vielzeug/fetchit`      | Main API and types |
+| `@vielzeug/fetchit/core` | Core bundle entry  |
 
 ## Core Functions
 
@@ -20,7 +35,7 @@ Creates an HTTP client. Returns an `ApiClient`.
 | `baseUrl` | `string`                      | `''`    | Base URL prepended to every request                                           |
 | `headers` | `Record<string, string>`      | `{}`    | Default headers sent with every request                                       |
 | `timeout` | `number`                      | `30000` | Request timeout in ms                                                         |
-| `dedupe`  | `boolean`                     | `false` | Deduplicate non-idempotent methods; GET/HEAD/OPTIONS always dedupe regardless |
+| `dedupe`  | `boolean`                     | `false` | Deduplicate non-idempotent methods; GET/HEAD/OPTIONS/DELETE dedupe by default |
 | `logger`  | `(level, msg, meta?) => void` | —       | Optional logger; `level` is `'info'`, `'warn'`, or `'error'`                  |
 
 **Returns:** `ApiClient`
@@ -65,13 +80,13 @@ Creates a query client with caching, deduplication, and reactive subscriptions. 
 
 **Parameters — `QueryClientOptions`:**
 
-| Option        | Type                            | Default     | Description                                                                         |
-| ------------- | ------------------------------- | ----------- | ----------------------------------------------------------------------------------- |
-| `staleTime`   | `number`                        | `0`         | ms a successful entry is served from cache before a background refresh is triggered |
-| `gcTime`      | `number`                        | `300000`    | ms after the last subscriber leaves before the cache entry is garbage collected     |
-| `retry`       | `number \| false`               | `1`         | Default retry attempts for all queries                                              |
-| `retryDelay`  | `number \| (attempt) => number` | exponential | Delay between retries; defaults to exponential backoff (1s → 2s → … up to 30s)      |
-| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to skip retrying for a specific error class                          |
+| Option        | Type                            | Default     | Description                                                                    |
+| ------------- | ------------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `staleTime`   | `number`                        | `0`         | ms a successful entry is served from cache before next `query()` refetches     |
+| `gcTime`      | `number`                        | `300000`    | ms before cache entry collection (unless observed or `Infinity`)               |
+| `retry`       | `number \| false`               | `1`         | Default retry attempts for all queries                                         |
+| `retryDelay`  | `number \| (attempt) => number` | exponential | Delay between retries; defaults to exponential backoff (1s → 2s → … up to 30s) |
+| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to skip retrying for a specific error class                     |
 
 **Returns:** `QueryClient`
 
@@ -98,7 +113,7 @@ const user = await qc.query({
 | `set`              | `<T>(key, data \| updater) => void`           | Set or update cached data                                    |
 | `getState`         | `<T>(key) => QueryState<T> \| null`           | Full state snapshot                                          |
 | `subscribe`        | `<T>(key, listener) => Unsubscribe`           | Subscribe to state changes; fires immediately                |
-| `invalidate`       | `(key) => void`                               | Purge entry (supports prefix matching)                       |
+| `invalidate`       | `(key) => void`                               | Evict key/prefix (observed keys reset to `idle`)             |
 | `cancel`           | `(key) => void`                               | Cancel in-flight request; state → `'idle'` or `'success'`    |
 | `clear`            | `() => void`                                  | Clear all entries; notifies active subscribers with `'idle'` |
 | `dispose`          | `() => void`                                  | Cancel all in-flight requests and clear all timers           |
@@ -127,17 +142,13 @@ Creates a standalone, observable mutation handle. Returns a `Mutation<TData, TVa
 | `onError`     | `(error, variables) => void`       | —           | Called after a failed mutation                             |
 | `onSettled`   | `(data, error, variables) => void` | —           | Always called after mutation completes                     |
 
-**Returns:** `Mutation<TData, TVariables>`
+**Returns:** `Mutation<TData, TVariables>` with:
 
-```ts
-{
-  mutate(variables: TVariables, opts?: RetryOptions & { signal?: AbortSignal }): Promise<TData>;
-  cancel(): void;
-  getState(): MutationState<TData>;
-  subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe;
-  reset(): void;
-}
-```
+- `mutate(variables, opts?) => Promise<TData>`
+- `cancel() => void`
+- `getState() => MutationState<TData>`
+- `subscribe(listener) => Unsubscribe`
+- `reset() => void`
 
 **Example:**
 
@@ -164,22 +175,13 @@ unsub();
 
 Thrown for non-2xx HTTP responses and network-level failures (timeout, abort, connection error).
 
-```ts
-class HttpError extends Error {
-  readonly name = 'HttpError';
-  readonly url: string; // full URL of the request
-  readonly method: string; // HTTP method (uppercased)
-  readonly status?: number; // HTTP status code (absent for network errors)
-  readonly data?: unknown; // parsed response body (for non-2xx responses)
-  readonly response?: Response; // raw Response object (absent for network errors)
-  readonly isTimeout: boolean; // true when failed due to AbortSignal.timeout()
-  readonly isAborted: boolean; // true when cancelled via an AbortSignal
+`HttpError` extends `Error` and includes:
 
-  static fromResponse(res: Response, data: unknown, method: string, url: string): HttpError;
-  static fromCause(cause: unknown, method: string, url: string): HttpError;
-  static is(err: unknown, status?: number): err is HttpError;
-}
-```
+- `name`, `url`, `method`, `status`, `data`, `response`
+- `isTimeout` and `isAborted`
+- `fromResponse(res, data, method, url)`
+- `fromCause(cause, method, url)`
+- `is(err, status?)`
 
 **`HttpError.is(err, status?)`** — type-safe narrowing helper:
 

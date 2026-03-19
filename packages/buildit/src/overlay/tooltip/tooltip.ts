@@ -1,6 +1,15 @@
 import type { Placement } from '@vielzeug/floatit';
 
-import { computed, createId, define, html, onMount, onSlotChange, signal, watch, defineProps } from '@vielzeug/craftit';
+import {
+  computed,
+  createId,
+  defineComponent,
+  html,
+  onMount,
+  onSlotChange,
+  signal,
+  watch,
+} from '@vielzeug/craftit/core';
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize } from '../../types';
@@ -65,21 +74,19 @@ export type BitTooltipProps = {
  * </bit-tooltip>
  * ```
  */
-export const TOOLTIP_TAG = define(
-  'bit-tooltip',
-  ({ host }) => {
-    const props = defineProps<BitTooltipProps>({
-      'close-delay': { default: 0 },
-      content: { default: '' },
-      delay: { default: 0 },
-      disabled: { default: false },
-      open: { default: undefined },
-      placement: { default: 'top' },
-      size: { default: undefined },
-      trigger: { default: 'hover,focus' },
-      variant: { default: undefined },
-    });
-
+export const TOOLTIP_TAG = defineComponent<BitTooltipProps>({
+  props: {
+    'close-delay': { default: 0 },
+    content: { default: '' },
+    delay: { default: 0 },
+    disabled: { default: false },
+    open: { default: undefined },
+    placement: { default: 'top' },
+    size: { default: undefined },
+    trigger: { default: 'hover,focus' },
+    variant: { default: undefined },
+  },
+  setup({ host, props }) {
     const visible = signal(false);
     const activePlacement = signal<TooltipPlacement>('top');
     let autoUpdateCleanup: (() => void) | null = null;
@@ -297,7 +304,6 @@ export const TOOLTIP_TAG = define(
       </div>
     `;
   },
-  {
-    styles: [forcedColorsMixin, styles],
-  },
-);
+  styles: [forcedColorsMixin, styles],
+  tag: 'bit-tooltip',
+});

@@ -1,4 +1,4 @@
-import { define, html } from '@vielzeug/craftit';
+import { defineComponent, html } from '@vielzeug/craftit/core';
 
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -55,6 +55,10 @@ export type BitBoxProps = {
  * <bit-box variant="frost" rainbow>Frosted glass</bit-box>
  * ```
  */
-export const BOX_TAG = define('bit-box', () => html`<div class="box" part="box"><slot></slot></div>`, {
+export const BOX_TAG = defineComponent({
+  setup() {
+    return html`<div class="box" part="box"><slot></slot></div>`;
+  },
   styles: [...surfaceMixins, rainbowEffectMixin('.box'), frostVariantMixin('.box'), componentStyles],
+  tag: 'bit-box',
 });
