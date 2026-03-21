@@ -1,12 +1,12 @@
 /**
- * Property Binding Tests
+ * Reflect Tests
  * Tests for the .property syntax that binds to element properties (e.g. .value, .checked)
  */
 
 import { computed, defineComponent, html, signal } from '..';
 import { fire, mount } from '../test';
 
-describe('Property Binding: .property syntax', () => {
+describe('Reflect: .property syntax', () => {
   describe('Text input .value binding', () => {
     it('should set initial value property from signal', async () => {
       const { query } = await mount(() => {

@@ -95,8 +95,8 @@
 
   ::slotted(svg) {
     flex-shrink: 0;
-    width: var(--_icon-size, var(--size-5));
-    height: var(--_icon-size, var(--size-5));
+    width: var(--_icon-size, var(--leading-6));
+    height: var(--_icon-size, var(--leading-6));
   }
 }
 

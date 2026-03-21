@@ -91,6 +91,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/timit",
+      "projectFolder": "packages/timit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/validit",
       "projectFolder": "packages/validit",
       "shouldPublish": true,

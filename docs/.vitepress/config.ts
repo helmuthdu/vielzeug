@@ -53,6 +53,7 @@ export default defineConfig({
           {
             items: [
               { link: '/logit/', text: 'Logit' },
+              { link: '/timit/', text: 'Timit' },
               { link: '/toolkit/', text: 'Toolkit' },
             ],
             text: 'Core & Utilities',
@@ -1006,6 +1007,38 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/timit/': [
+        { link: '/timit/', text: 'Overview' },
+        {
+          items: [
+            { link: '/timit/usage#parsing-inputs', text: 'Parsing Inputs' },
+            { link: '/timit/usage#time-zone-conversion', text: 'Time Zone Conversion' },
+            { link: '/timit/usage#date-time-arithmetic', text: 'Date-Time Arithmetic' },
+            { link: '/timit/usage#duration-differences', text: 'Duration Differences' },
+            { link: '/timit/usage#formatting', text: 'Formatting' },
+          ],
+          link: '/timit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/timit/api#exports', text: 'Exports' },
+            { link: '/timit/api#core-types', text: 'Core Types' },
+            { link: '/timit/api#behavior-notes', text: 'Behavior Notes' },
+          ],
+          link: '/timit/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/timit/examples/timezone-conversion', text: 'Timezone Conversion' },
+            { link: '/timit/examples/dst-safe-arithmetic', text: 'DST-safe Arithmetic' },
+            { link: '/timit/examples/locale-formatting', text: 'Locale Formatting' },
+          ],
+          link: '/timit/examples',
+          text: 'Examples',
+        },
+      ],
       '/validit/': [
         { link: '/validit/', text: 'Overview' },
         {
@@ -1231,6 +1264,7 @@ export default defineConfig({
         '@vielzeug/permit': resolve(__dirname, '../../packages/permit/src'),
         '@vielzeug/routeit': resolve(__dirname, '../../packages/routeit/src'),
         '@vielzeug/stateit': resolve(__dirname, '../../packages/stateit/src'),
+        '@vielzeug/timit': resolve(__dirname, '../../packages/timit/src'),
         '@vielzeug/toolkit': resolve(__dirname, '../../packages/toolkit/src'),
         '@vielzeug/validit': resolve(__dirname, '../../packages/validit/src'),
         '@vielzeug/virtualit': resolve(__dirname, '../../packages/virtualit/src'),
