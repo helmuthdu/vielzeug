@@ -56,8 +56,11 @@ features:
   - title: '@vielzeug/stateit'
     details: "<img src='/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
     link: /stateit/
+  - title: '@vielzeug/timit'
+    details: "<img src='/logo-timit.svg' class='logo-highlight-smaller' alt='Timit Logo' width='72'/>Temporal-powered date and time utilities for modern TypeScript apps."
+    link: /timit/
   - title: '@vielzeug/toolkit'
-    details: "<img src='/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library for arrays, objects, strings, math, dates, and more."
+    details: "<img src='/logo-toolkit.svg' class='logo-highlight-smaller' alt='Toolkit Logo' width='72'/>A comprehensive utility library for arrays, objects, strings, math, dates, and more."
     link: /toolkit/
   - title: '@vielzeug/validit'
     details: "<img src='/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."

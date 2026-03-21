@@ -108,17 +108,14 @@
        Slotted Prefix/Suffix Icons
        ======================================== */
 
-  ::slotted([slot='prefix']),
-  ::slotted([slot='suffix']) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--size-4);
-    color: var(--color-contrast-500);
-    user-select: none;
-    opacity: 0.8;
-    transition: var(--_motion-transition, color var(--transition-fast));
+  ::slotted(svg) {
+    flex-shrink: 0;
+    width: var(--_icon-size, var(--leading-6));
+    height: var(--_icon-size, var(--leading-6));
   }
+}
+
+@layer buildit.overrides {
 
   /* ========================================
        Input Element
