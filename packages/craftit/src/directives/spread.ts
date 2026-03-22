@@ -1,8 +1,8 @@
-import { effect, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
+import { effect, type ReadonlySignal } from '@vielzeug/stateit';
 
-import type { Directive } from '../core/internal';
-
-import { listen, setAttr } from '../core/utils';
+import { type Directive } from '../core/internal';
+import { bindPropertyModel, hasWritableValueSetter, toReactiveBindingSource } from '../core/runtime-bindings';
+import { listen, setAttr } from '../core/utilities';
 
 export type SpreadValue =
   | string
@@ -14,122 +14,101 @@ export type SpreadValue =
   | (() => string | number | boolean | null | undefined)
   | ((event: Event) => void);
 
-const isReactiveSource = (value: unknown): value is ReadonlySignal<unknown> | (() => unknown) =>
-  isSignal(value) || typeof value === 'function';
+type RegisterCleanup = (fn: () => void) => void;
 
-const resolveReactiveSource = (value: ReadonlySignal<unknown> | (() => unknown)): (() => unknown) =>
-  isSignal(value) ? () => value.value : (value as () => unknown);
+const applyReactiveValue = (
+  source: ReadonlySignal<unknown> | undefined,
+  apply: (value: unknown) => void,
+  registerCleanup: RegisterCleanup,
+): boolean => {
+  if (!source) return false;
 
-const hasWritableValueSetter = (value: unknown): value is Signal<unknown> => {
-  if (!isSignal(value)) return false;
+  registerCleanup(
+    effect(() => {
+      apply(source.value);
+    }),
+  );
 
-  let proto: object | null = Object.getPrototypeOf(value);
-
-  while (proto) {
-    const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
-
-    if (descriptor) return typeof descriptor.set === 'function';
-
-    proto = Object.getPrototypeOf(proto);
-  }
-
-  return false;
+  return true;
 };
 
-const applyEntry = (
+const applyEventEntry = (
   el: HTMLElement,
   rawKey: string,
   rawValue: SpreadValue,
-  registerCleanup: (fn: () => void) => void,
+  registerCleanup: RegisterCleanup,
+): boolean => {
+  if (!rawKey.startsWith('@')) return false;
+
+  if (typeof rawValue === 'function') {
+    registerCleanup(listen(el, rawKey.slice(1), rawValue as (event: Event) => void));
+  }
+
+  return true;
+};
+
+const applyPropertyEntry = (
+  el: HTMLElement,
+  rawKey: string,
+  rawValue: SpreadValue,
+  registerCleanup: RegisterCleanup,
+): boolean => {
+  if (!rawKey.startsWith('.')) return false;
+
+  const key = rawKey.slice(1);
+  const writableModel = hasWritableValueSetter(rawValue) ? rawValue : undefined;
+  const source = toReactiveBindingSource(rawValue);
+
+  if (!applyReactiveValue(source, (value) => ((el as any)[key] = value), registerCleanup)) {
+    (el as any)[key] = rawValue;
+  }
+
+  bindPropertyModel(el, key, writableModel, registerCleanup);
+
+  return true;
+};
+
+const applyBooleanAttributeEntry = (
+  el: HTMLElement,
+  rawKey: string,
+  rawValue: SpreadValue,
+  registerCleanup: RegisterCleanup,
+): boolean => {
+  if (!rawKey.startsWith('?')) return false;
+
+  const key = rawKey.slice(1);
+  const source = toReactiveBindingSource(rawValue);
+
+  if (!applyReactiveValue(source, (value) => el.toggleAttribute(key, Boolean(value)), registerCleanup)) {
+    el.toggleAttribute(key, Boolean(rawValue));
+  }
+
+  return true;
+};
+
+const applyAttributeEntry = (
+  el: HTMLElement,
+  rawKey: string,
+  rawValue: SpreadValue,
+  registerCleanup: RegisterCleanup,
 ): void => {
-  if (rawValue === undefined) return;
+  const source = toReactiveBindingSource(rawValue);
 
-  if (rawKey.startsWith('@')) {
-    if (typeof rawValue === 'function') {
-      registerCleanup(listen(el, rawKey.slice(1), rawValue as (event: Event) => void));
-    }
-
-    return;
-  }
-
-  if (rawKey.startsWith('.')) {
-    const key = rawKey.slice(1);
-    const writableModel = hasWritableValueSetter(rawValue) ? (rawValue as Signal<unknown>) : undefined;
-
-    if (isReactiveSource(rawValue)) {
-      const get = resolveReactiveSource(rawValue);
-
-      registerCleanup(
-        effect(() => {
-          (el as any)[key] = get();
-        }),
-      );
-    } else {
-      (el as any)[key] = rawValue;
-    }
-
-    if (writableModel && key === 'value') {
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
-        const eventName = el instanceof HTMLSelectElement ? 'change' : 'input';
-
-        registerCleanup(
-          listen(el, eventName, () => {
-            const next = el.value;
-
-            if (!Object.is(writableModel.value, next)) {
-              try {
-                writableModel.value = next;
-              } catch {
-                // Readonly signal/computed source: keep one-way behavior.
-              }
-            }
-          }),
-        );
-      }
-    } else if (writableModel && key === 'checked' && el instanceof HTMLInputElement) {
-      registerCleanup(
-        listen(el, 'change', () => {
-          const next = el.checked;
-
-          if (!Object.is(writableModel.value, next)) {
-            try {
-              writableModel.value = next;
-            } catch {
-              // Readonly signal/computed source: keep one-way behavior.
-            }
-          }
-        }),
-      );
-    }
-
-    return;
-  }
-
-  if (rawKey.startsWith('?')) {
-    const key = rawKey.slice(1);
-
-    if (isReactiveSource(rawValue)) {
-      const get = resolveReactiveSource(rawValue);
-
-      registerCleanup(
-        effect(() => {
-          el.toggleAttribute(key, Boolean(get()));
-        }),
-      );
-    } else {
-      el.toggleAttribute(key, Boolean(rawValue));
-    }
-
-    return;
-  }
-
-  if (isReactiveSource(rawValue)) {
-    const get = resolveReactiveSource(rawValue);
-
-    registerCleanup(effect(() => setAttr(el, rawKey, get())));
-  } else {
+  if (!applyReactiveValue(source, (value) => setAttr(el, rawKey, value), registerCleanup)) {
     setAttr(el, rawKey, rawValue);
   }
+};
+
+const applyEntry = (el: HTMLElement, rawKey: string, rawValue: SpreadValue, registerCleanup: RegisterCleanup): void => {
+  if (rawValue === undefined) return;
+
+  if (applyEventEntry(el, rawKey, rawValue, registerCleanup)) return;
+
+  if (applyPropertyEntry(el, rawKey, rawValue, registerCleanup)) return;
+
+  if (applyBooleanAttributeEntry(el, rawKey, rawValue, registerCleanup)) return;
+
+  applyAttributeEntry(el, rawKey, rawValue, registerCleanup);
 };
 
 /**

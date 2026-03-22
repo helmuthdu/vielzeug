@@ -1,4 +1,4 @@
-import { computed, defineComponent, html, signal, typed, watch } from '@vielzeug/craftit/core';
+import { computed, defineComponent, html, signal, typed, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 

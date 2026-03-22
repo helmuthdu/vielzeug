@@ -1,12 +1,4 @@
-import {
-  computed,
-  createContext,
-  defineComponent,
-  html,
-  typed,
-  provide,
-  type ReadonlySignal,
-} from '@vielzeug/craftit/core';
+import { computed, createContext, defineComponent, html, typed, provide, type ReadonlySignal } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 

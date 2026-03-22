@@ -14,4 +14,3 @@ export default defineConfig({
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
   },
 });
-

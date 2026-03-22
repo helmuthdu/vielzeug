@@ -1,4 +1,4 @@
-import { effect, type ReadonlySignal } from '@vielzeug/craftit/core';
+import { effect, type ReadonlySignal } from '@vielzeug/craftit';
 
 import { type FormContext } from '../../form/form';
 

@@ -1,5 +1,5 @@
-import { defineComponent, html } from '@vielzeug/craftit/core';
-import { useA11yControl, useCheckableControl } from '@vielzeug/craftit/labs';
+import { defineComponent, html } from '@vielzeug/craftit';
+import { useA11yControl, createCheckableControl } from '@vielzeug/craftit/labs';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
@@ -59,13 +59,13 @@ export const SWITCH_TAG = defineComponent<BitSwitchProps, BitSwitchEvents>({
     size: { default: undefined },
     value: { default: 'on' },
   },
-  setup({ emit, host, props, reflect, slots }) {
+  setup({ emit, host, props, reflect }) {
     const { checkedSignal, formCtx, triggerValidation } = useToggleField(props);
 
     mountFormContextSync(host, formCtx, props);
 
     // Pass writable checkedSignal directly — toggle() mutates it in place
-    const control = useCheckableControl({
+    const control = createCheckableControl({
       checked: checkedSignal,
       clearIndeterminateFirst: false,
       disabled: props.disabled,
@@ -78,11 +78,9 @@ export const SWITCH_TAG = defineComponent<BitSwitchProps, BitSwitchEvents>({
 
     const a11y = useA11yControl(host, {
       checked: () => (control.checked.value ? 'true' : 'false'),
-      helperId: undefined,
       helperText: () => props.error.value || props.helper.value,
+      helperTone: () => (props.error.value ? 'error' : 'default'),
       invalid: () => !!props.error.value,
-      labelId: undefined,
-      labelSlot: slots as any,
       role: 'switch',
     });
 

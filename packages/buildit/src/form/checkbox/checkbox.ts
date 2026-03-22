@@ -1,5 +1,5 @@
-import { defineComponent, html, inject, signal, watch } from '@vielzeug/craftit/core';
-import { useA11yControl, useCheckableControl } from '@vielzeug/craftit/labs';
+import { defineComponent, html, inject, signal, watch } from '@vielzeug/craftit';
+import { useA11yControl, createCheckableControl } from '@vielzeug/craftit/labs';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
@@ -63,7 +63,7 @@ export const CHECKBOX_TAG = defineComponent<BitCheckboxProps, BitCheckboxEvents>
     size: { default: undefined },
     value: { default: 'on' },
   },
-  setup({ emit, host, props, reflect, slots }) {
+  setup({ emit, host, props, reflect }) {
     // Form integration — provides checkedSignal and triggerValidation
     const { checkedSignal, formCtx, triggerValidation } = useToggleField(props);
 
@@ -79,7 +79,7 @@ export const CHECKBOX_TAG = defineComponent<BitCheckboxProps, BitCheckboxEvents>
     const groupCtx = inject(CHECKBOX_GROUP_CTX, undefined);
 
     // Pass the writable checkedSignal directly — toggle() mutates it in place
-    const controlHandle = useCheckableControl({
+    const controlHandle = createCheckableControl({
       checked: checkedSignal,
       clearIndeterminateFirst: true,
       disabled: props.disabled,
@@ -103,11 +103,9 @@ export const CHECKBOX_TAG = defineComponent<BitCheckboxProps, BitCheckboxEvents>
 
         return controlHandle.checked.value ? 'true' : 'false';
       },
-      helperId: undefined,
       helperText: () => props.error.value || props.helper.value,
+      helperTone: () => (props.error.value ? 'error' : 'default'),
       invalid: () => !!props.error.value,
-      labelId: undefined,
-      labelSlot: slots as any,
       role: 'checkbox',
     });
 

@@ -17,15 +17,17 @@ description: Entry points, import paths, and exported symbols for @vielzeug/buil
 
 ## Package Entry Points
 
-| Import                                   | Purpose                                                                |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| `@vielzeug/buildit`                      | Registers all published components and re-exports shared symbols/types |
-| `@vielzeug/buildit/types`                | Shared TypeScript types                                                |
-| `@vielzeug/buildit/styles`               | Global tokens and shared component styles                              |
-| `@vielzeug/buildit/styles/styles.css`    | Explicit base stylesheet path                                          |
-| `@vielzeug/buildit/styles/theme.css`     | Theme token stylesheet                                                 |
-| `@vielzeug/buildit/styles/animation.css` | Animation helpers                                                      |
-| `@vielzeug/buildit/styles/layers.css`    | Cascade layer definitions                                              |
+| Import                                    | Purpose                                                                |
+| ----------------------------------------- | ---------------------------------------------------------------------- |
+| `@vielzeug/buildit`                       | Registers all published components and re-exports shared symbols/types |
+| `@vielzeug/buildit/types`                 | Shared TypeScript types                                                |
+| `@vielzeug/buildit/styles`                | Global tokens and shared component styles                              |
+| `@vielzeug/buildit/styles/styles.css`     | Explicit base stylesheet path                                          |
+| `@vielzeug/buildit/styles/theme.css`      | Theme token stylesheet                                                 |
+| `@vielzeug/buildit/styles/animation.css`  | Animation helpers                                                      |
+| `@vielzeug/buildit/styles/layers.css`     | Cascade layer definitions                                              |
+
+For headless controller primitives (`createListNavigation`, `createOverlayControl`, `createSelectionModel`), use `@vielzeug/craftit/labs`.
 
 ## Runtime Registration Imports
 

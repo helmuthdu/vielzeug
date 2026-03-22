@@ -47,6 +47,7 @@ defineComponent({
 - Forgetting cleanup/dispose calls can leak listeners or stale state.
 - Skipping explicit typing can hide integration issues until runtime.
 - Not handling error branches makes examples harder to adapt safely.
+- Calling `defineField()` without `formAssociated: true` on `defineComponent` throws at runtime.
 
 ## Related Recipes
 

@@ -1,22 +1,30 @@
 import { effect, onMount } from '../core/runtime';
-import { createId } from '../core/utils';
+import { createId } from '../core/utilities';
+
+/**
+ * Tone of helper/error text: 'default' for helper, 'error' for error message.
+ */
+export type A11yTone = 'default' | 'error';
 
 /**
  * Configuration for `useA11yControl()`.
+ *
+ * Label presence is detected via DOM query (not heuristics).
+ * All other state getters are reactive and can change over time.
  */
 export type A11yControlConfig = {
   /** Reactive aria-checked value ('true' | 'false' | 'mixed' | undefined) */
   checked?: () => 'true' | 'false' | 'mixed' | undefined;
   /** Optional: custom helper ID instead of auto-generated */
   helperId?: string;
-  /** Helper/error text to display below control */
+  /** Helper text content (mutually exclusive with explicit label/helper management) */
   helperText?: () => string | undefined;
+  /** Tone of helper text: 'error' to set role="alert", 'default' otherwise */
+  helperTone?: () => A11yTone;
   /** Reactive aria-invalid value */
   invalid?: () => boolean;
   /** Optional: custom label ID instead of auto-generated */
   labelId?: string;
-  /** Slot helper (from setup context) for label presence detection */
-  labelSlot?: any;
   /** ARIA role (e.g., 'checkbox', 'radio', 'switch') */
   role: string;
 };
@@ -36,12 +44,11 @@ export type A11yControlHandle = {
  *
  * Encapsulates:
  * - Stable ID generation for labels and helpers
- * - `aria-labelledby` wiring when label slot is present
+ * - `aria-labelledby` wiring when label is present (detected via DOM query)
  * - `aria-describedby` wiring when helper text is present
  * - `aria-invalid` sync with error state
  * - `aria-checked` for checkable controls
- * - Helper text live region with `aria-live="polite"`
- * - Error state alert role (`role="alert"`)
+ * - Helper text live region with `aria-live="polite"` or `role="alert"` based on tone
  *
  * @example
  * const a11y = useA11yControl(host, {
@@ -49,12 +56,12 @@ export type A11yControlHandle = {
  *   checked: () => indeterminate.value ? 'mixed' : String(checked.value),
  *   invalid: () => !!error.value,
  *   helperText: () => error.value || helper.value,
- *   labelSlot: slots.default,
+ *   helperTone: () => error.value ? 'error' : 'default',
  * });
  *
  * // Later in template:
  * // <span id=${a11y.labelId}>Label</span>
- * // <div id=${a11y.helperId}>Error text</div>
+ * // <div id=${a11y.helperId} aria-live="polite">Error or helper text</div>
  */
 export function useA11yControl(host: HTMLElement, config: A11yControlConfig): A11yControlHandle {
   const labelId = config.labelId || createId('a11y-label');
@@ -73,14 +80,18 @@ export function useA11yControl(host: HTMLElement, config: A11yControlConfig): A1
       helperElement = shadow.querySelector('[data-a11y-helper]') as HTMLDivElement | null;
     }
 
-    // Detect label slot presence once on mount
-    if (config.labelSlot && typeof config.labelSlot === 'object' && 'has' in config.labelSlot) {
-      const hasLabel = (config.labelSlot.has as () => boolean)?.();
+    // Detect label presence via DOM query: check if label span has slotted content
+    if (shadow) {
+      const labelSpan = shadow.querySelector('[data-a11y-label]') as HTMLElement | null;
 
-      if (hasLabel) {
-        const labelSpan = shadow?.querySelector('[data-a11y-label]') as HTMLElement | null;
+      if (labelSpan) {
+        // Check if the label slot has any assigned nodes
+        const slot = labelSpan.querySelector('slot') as HTMLSlotElement | null;
+        const hasLabelContent = slot
+          ? slot.assignedNodes().length > 0
+          : (labelSpan.textContent?.trim().length ?? 0 > 0);
 
-        if (labelSpan) {
+        if (hasLabelContent) {
           labelSpan.id = labelId;
           host.setAttribute('aria-labelledby', labelId);
         }
@@ -114,10 +125,10 @@ export function useA11yControl(host: HTMLElement, config: A11yControlConfig): A1
           helperElement.hidden = false;
           host.setAttribute('aria-describedby', helperId);
 
-          // Add alert role if this is error text (heuristic: starts with capital or error keywords)
-          const isError = text.toLowerCase().includes('error') || text.toLowerCase().includes('required');
+          // Set role based on explicit tone (no text heuristics)
+          const tone = config.helperTone?.() ?? 'default';
 
-          if (isError) {
+          if (tone === 'error') {
             helperElement.setAttribute('role', 'alert');
           } else {
             helperElement.removeAttribute('role');

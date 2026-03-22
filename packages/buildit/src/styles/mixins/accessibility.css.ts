@@ -1,4 +1,4 @@
-import { css } from '@vielzeug/craftit/core';
+import { css } from '@vielzeug/craftit';
 
 /**
  * Coarse Pointer Mixin

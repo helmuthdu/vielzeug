@@ -13,8 +13,8 @@ import {
   signal,
   typed,
   watch,
-} from '@vielzeug/craftit/core';
-import { each } from '@vielzeug/craftit/directives';
+} from '@vielzeug/craftit';
+import { createListNavigation, createOverlayControl } from '@vielzeug/craftit/labs';
 
 import type { VisualVariant } from '../../types';
 
@@ -25,13 +25,11 @@ import { checkIcon, chevronDownIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { FORM_CTX } from '../form/form';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
-import { createDropdownPositioner, createOutsideClickHandler, mountLabelSyncStandalone } from '../shared/dom-sync';
+import { createDropdownPositioner, mountLabelSyncStandalone } from '../shared/dom-sync';
 import {
   type ChoiceChangeDetail,
   computeControlledCsvState,
   createChoiceChangeDetail,
-  navigateNext,
-  navigatePrev,
   resolveMergedAssistiveText,
 } from '../shared/utils';
 import { createFieldValidation } from '../shared/validation';
@@ -329,25 +327,52 @@ export const SELECT_TAG = defineComponent<BitSelectProps, BitSelectEvents>({
       () => dropdownEl,
     );
 
+    const listNavigation = createListNavigation<OptionItem>({
+      getIndex: () => focusedIndex.value,
+      getItems: () => options.value,
+      isItemDisabled: (option) => option.disabled,
+      setIndex: (index) => {
+        focusedIndex.value = index;
+        scrollFocusedIntoView();
+      },
+    });
+
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => host,
+      getPanelElement: () => dropdownEl,
+      getTriggerElement: () => triggerEl,
+      isDisabled: () => Boolean(props.disabled.value),
+      isOpen: () => isOpen.value,
+      positioner: {
+        floating: () => dropdownEl,
+        reference: () => triggerEl,
+        update: () => positioner.updatePosition(),
+      },
+      setOpen: (next) => {
+        isOpen.value = next;
+
+        if (!next) listNavigation.reset();
+      },
+    });
+
     // ============================================
     // Open / Close
     // ============================================
     function open() {
-      if (props.disabled.value) return;
+      overlay.open();
 
-      isOpen.value = true;
-      focusedIndex.value =
-        selectedValues.value.length > 0 ? options.value.findIndex((o) => o.value === selectedValues.value[0]) : 0;
       requestAnimationFrame(() => {
-        positioner.startAutoUpdate();
-        scrollFocusedIntoView();
+        const selectedIndex =
+          selectedValues.value.length > 0
+            ? options.value.findIndex((option) => option.value === selectedValues.value[0])
+            : 0;
+
+        listNavigation.set(selectedIndex >= 0 ? selectedIndex : 0);
       });
     }
-    function close() {
-      positioner.stopAutoUpdate();
-      isOpen.value = false;
-      focusedIndex.value = -1;
-      triggerEl?.focus();
+
+    function close(reason: 'escape' | 'programmatic' = 'programmatic') {
+      overlay.close({ reason });
       triggerValidation('blur');
     }
     // ============================================
@@ -413,12 +438,7 @@ export const SELECT_TAG = defineComponent<BitSelectProps, BitSelectEvents>({
           if (!isOpen.value) {
             open();
           } else {
-            const next = navigateNext(opts, focusedIndex.value);
-
-            if (next !== focusedIndex.value) {
-              focusedIndex.value = next;
-              scrollFocusedIntoView();
-            }
+            listNavigation.next();
           }
 
           break;
@@ -428,32 +448,25 @@ export const SELECT_TAG = defineComponent<BitSelectProps, BitSelectEvents>({
           if (!isOpen.value) {
             open();
           } else {
-            const prev = navigatePrev(opts, focusedIndex.value);
-
-            if (prev !== focusedIndex.value) {
-              focusedIndex.value = prev;
-              scrollFocusedIntoView();
-            }
+            listNavigation.prev();
           }
 
           break;
         case 'End':
           if (isOpen.value) {
             e.preventDefault();
-            focusedIndex.value = opts.length - 1;
-            scrollFocusedIntoView();
+            listNavigation.last();
           }
 
           break;
         case 'Escape':
           e.preventDefault();
-          close();
+          close('escape');
           break;
         case 'Home':
           if (isOpen.value) {
             e.preventDefault();
-            focusedIndex.value = 0;
-            scrollFocusedIntoView();
+            listNavigation.first();
           }
 
           break;
@@ -464,20 +477,21 @@ export const SELECT_TAG = defineComponent<BitSelectProps, BitSelectEvents>({
     }
     onMount(() => {
       onSlotChange('default', readOptions);
+      // Ensure initial light-DOM <option>/<optgroup> content is available immediately.
+      readOptions();
       mountLabelSyncStandalone(labelInsetRef, labelOutsideRef, props);
 
       if (triggerEl) {
         aria(triggerEl, {
           activedescendant: () => (focusedIndex.value >= 0 ? `${selectId}-opt-${focusedIndex.value}` : null),
           disabled: () => props.disabled.value,
-          expanded: () => isOpen.value,
+          expanded: () => (isOpen.value ? 'true' : 'false'),
           invalid: () => !!props.error.value,
           labelledby: () => (hasLabel.value ? labelId : null),
         });
       }
 
-      // Close on outside click (shared handler)
-      const removeOutsideClick = createOutsideClickHandler(host, () => dropdownEl, isOpen, close);
+      const removeOutsideClick = overlay.bindOutsideClick(document);
 
       return () => {
         positioner.destroy();
@@ -508,21 +522,21 @@ export const SELECT_TAG = defineComponent<BitSelectProps, BitSelectEvents>({
           <label class="label-inset" id="${labelId}" ref=${labelInsetRef} hidden></label>
           <div class="trigger-row">
             <div class="chips-row" ?hidden=${() => !showChips.value}>
-              ${each(
-                () => selectedChipItems.value,
-                (item) => html`
-                  <bit-chip
-                    value=${item.value}
-                    aria-label=${item.label}
-                    mode="removable"
-                    variant="flat"
-                    size="sm"
-                    color=${() => props.color.value}
-                    @remove=${removeChip}>
-                    ${item.label}
-                  </bit-chip>
-                `,
-              )}
+              ${() =>
+                selectedChipItems.value.map(
+                  (item) => html`
+                    <bit-chip
+                      value=${item.value}
+                      aria-label=${item.label}
+                      mode="removable"
+                      variant="flat"
+                      size="sm"
+                      color=${() => props.color.value}
+                      @remove=${removeChip}>
+                      ${item.label}
+                    </bit-chip>
+                  `,
+                )}
             </div>
             <span
               class="trigger-value ${() => (displayLabel.value ? '' : 'trigger-placeholder')}"
@@ -555,9 +569,8 @@ export const SELECT_TAG = defineComponent<BitSelectProps, BitSelectEvents>({
         <div class="dropdown-loading" ?hidden=${() => !isLoading.value}>Loading…</div>
         <div class="dropdown-empty" ?hidden=${() => isLoading.value || options.value.length > 0}>No options</div>
         <div class="options-list" ?hidden=${() => isLoading.value || options.value.length === 0}>
-          ${each(
-            () => flatRows.value,
-            (row) =>
+          ${() =>
+            flatRows.value.map((row) =>
               row.type === 'group'
                 ? html`<div class="optgroup-label" role="presentation">${row.label}</div>`
                 : html`<div
@@ -581,7 +594,7 @@ export const SELECT_TAG = defineComponent<BitSelectProps, BitSelectEvents>({
                     <span>${row.opt.label}</span>
                     <span class="option-check" aria-hidden="true">${checkIcon}</span>
                   </div>`,
-          )}
+            )}
         </div>
       </div>`;
   },

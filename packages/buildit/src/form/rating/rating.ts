@@ -1,4 +1,4 @@
-import { computed, defineComponent, typed, defineField, html, inject, signal } from '@vielzeug/craftit/core';
+import { computed, defineComponent, typed, defineField, html, inject, signal } from '@vielzeug/craftit';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 

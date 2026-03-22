@@ -1,4 +1,4 @@
-import { css } from '@vielzeug/craftit/core';
+import { css } from '@vielzeug/craftit';
 import { type Fixture, mount, user } from '@vielzeug/craftit/test';
 
 vi.mock('../../styles', async (importOriginal) => {

@@ -2,7 +2,7 @@
  * Core - Signal System Tests
  * Comprehensive tests for signals, computed, effects, watchers, and batching
  */
-import { batch, computed, effect, readonly, signal, toValue, watch, writable } from '../';
+import { batch, computed, effect, readonly, signal, toValue, watch, writable } from '../index';
 
 describe('Core: Signal System', () => {
   describe('signal()', () => {
@@ -204,6 +204,23 @@ describe('Core: Signal System', () => {
       b.value = 1;
       a.value = 2;
       expect(fires).toBe(1);
+    });
+
+    it('array form: { immediate, once } fires once and disposes safely during initial run', () => {
+      const a = signal(0);
+      const b = signal(0);
+      let fires = 0;
+
+      const stop = watch([a, b], () => fires++, { immediate: true, once: true });
+
+      expect(fires).toBe(1);
+
+      a.value = 1;
+      b.value = 1;
+
+      expect(fires).toBe(1);
+
+      stop();
     });
 
     it('{ equals } suppresses notification for semantically equal values', () => {

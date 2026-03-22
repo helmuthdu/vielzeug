@@ -1,4 +1,4 @@
-import { computed, defineComponent, handle, html, onMount, ref, watch, fire } from '@vielzeug/craftit/core';
+import { computed, defineComponent, handle, html, onMount, ref, watch, fire } from '@vielzeug/craftit';
 
 import type { PaddingSize, RoundedSize } from '../../types';
 
@@ -203,7 +203,7 @@ export const DIALOG_TAG = defineComponent<BitDialogProps, BitDialogEvents>({
 
       if (!dialog) return;
 
-      fire(dialog, 'close-request');
+      fire.custom(dialog, 'close-request');
       dialog.classList.add('closing');
 
       const panel = dialog.querySelector<HTMLElement>('.panel');

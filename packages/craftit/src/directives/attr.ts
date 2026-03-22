@@ -1,7 +1,6 @@
-import type { ReadonlySignal } from '@vielzeug/stateit';
+import { type ReadonlySignal } from '@vielzeug/stateit';
 
-import type { Directive } from '../core/internal';
-
+import { type Directive } from '../core/internal';
 import { spread } from './spread';
 
 export type AttrValue =
@@ -14,7 +13,10 @@ export type AttrValue =
   | (() => string | number | boolean | null | undefined);
 
 /**
- * Batch property-binding helper.
+ * Batch DOM property-binding helper.
+ *
+ * The public name stays `attr(...)` for ergonomics, but the mapped entries are
+ * applied as `.property` bindings under the hood.
  *
  * @example
  * html`<input ${attr({ value, disabled, readOnly: readonly })} />`

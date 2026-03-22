@@ -12,7 +12,7 @@ import {
   provide,
   type ReadonlySignal,
   signal,
-} from '@vielzeug/craftit/core';
+} from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 

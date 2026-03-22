@@ -1,4 +1,4 @@
-import { defineComponent, effect, handle, html, onMount, ref, signal } from '@vielzeug/craftit/core';
+import { defineComponent, effect, handle, html, onMount, ref, signal } from '@vielzeug/craftit';
 import { attr } from '@vielzeug/craftit/directives';
 
 import type { InputType, VisualVariant } from '../../types';

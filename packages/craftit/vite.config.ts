@@ -10,7 +10,6 @@ export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
       entry: {
-        core: resolve(__dirname, 'src/core/index.ts'),
         'directives/index': resolve(__dirname, 'src/directives/index.ts'),
         index: resolve(__dirname, 'src/index.ts'),
         labs: resolve(__dirname, 'src/labs/index.ts'),
@@ -21,7 +20,7 @@ export default defineConfig(
     {
       build: {
         rolldownOptions: {
-          external: ['@vielzeug/stateit'],
+          external: ['@vielzeug/stateit', '@vielzeug/floatit'],
           output: {
             minify: true,
           },

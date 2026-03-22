@@ -1,4 +1,4 @@
-import { defineComponent, html, typed, watch } from '@vielzeug/craftit/core';
+import { defineComponent, html, typed, watch } from '@vielzeug/craftit';
 
 import styles from './text.css?inline';
 

@@ -1,4 +1,4 @@
-import { computed, defineComponent, html } from '@vielzeug/craftit/core';
+import { computed, defineComponent, html } from '@vielzeug/craftit';
 import { each } from '@vielzeug/craftit/directives';
 
 import '../../actions/button/button';

@@ -4,9 +4,9 @@
  * ⚠️ Requires DOM environment (browser / jsdom / happy-dom)
  */
 
-import { defineComponent, type BuildPropSchema, type DefineComponentOptions } from '../core/define';
+import { defineComponent, type BuildPropSchema, type DefineComponentOptions } from '../core/component';
 import { _resetMarkerIndex } from '../core/template';
-import { _resetIdCounter } from '../core/utils';
+import { _resetIdCounter } from '../core/utilities';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -122,7 +122,7 @@ export function flush(): Promise<void> {
  * @example
  * // vitest.setup.ts
  * import { afterEach } from 'vitest';
- * import { install } from '@vielzeug/craftit/trial';
+ * import { install } from '@vielzeug/craftit/test';
  * install(afterEach);
  */
 export function install(afterEachHook: (fn: () => void) => void): void {

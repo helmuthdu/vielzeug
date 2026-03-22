@@ -1,4 +1,4 @@
-import { defineComponent, handle, html, onMount, onSlotChange, ref, signal, watch } from '@vielzeug/craftit/core';
+import { defineComponent, handle, html, onMount, onSlotChange, ref, signal, watch } from '@vielzeug/craftit';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 

@@ -1,4 +1,4 @@
-import { html, signal } from '@vielzeug/craftit/core';
+import { html, signal } from '@vielzeug/craftit';
 import { type Fixture, mount, user } from '@vielzeug/craftit/test';
 
 describe('bit-combobox', () => {

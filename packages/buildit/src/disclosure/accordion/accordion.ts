@@ -7,7 +7,7 @@ import {
   typed,
   provide,
   type ReadonlySignal,
-} from '@vielzeug/craftit/core';
+} from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 

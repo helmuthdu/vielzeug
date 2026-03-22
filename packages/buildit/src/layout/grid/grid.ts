@@ -1,4 +1,4 @@
-import { defineComponent, effect, html, onMount } from '@vielzeug/craftit/core';
+import { defineComponent, effect, html, onMount } from '@vielzeug/craftit';
 import { observeResize } from '@vielzeug/craftit/labs';
 
 const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [

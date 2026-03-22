@@ -68,6 +68,8 @@ import '@vielzeug/buildit';
 
 Component registration happens through side-effect imports such as `@vielzeug/buildit/button` and `@vielzeug/buildit/dialog`.
 
+For headless widget controllers (navigation/overlay/selection), use `@vielzeug/craftit/labs`.
+
 ## Components
 
 **Actions:** `bit-button`, `bit-button-group`

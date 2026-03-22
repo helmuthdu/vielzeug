@@ -3,7 +3,7 @@
  * Tests for onMount, onCleanup, and onRendered hooks
  */
 
-import { handle, html, onCleanup, onMount, signal } from '..';
+import { handle, html, onCleanup, onError, onMount, signal } from '../index';
 import { mount } from '../test';
 
 describe('Core: Lifecycle Hooks', () => {
@@ -180,5 +180,46 @@ describe('Core: Lifecycle Hooks', () => {
       btn.dispatchEvent(new Event('click'));
       expect(clickCount).toBe(1);
     });
+  });
+});
+
+describe('Lifecycle: onError()', () => {
+  it('should call the error handler when setup throws', async () => {
+    const errors: unknown[] = [];
+
+    await mount(() => {
+      onError((err) => errors.push(err));
+      throw new Error('setup error');
+    });
+
+    expect(errors).toHaveLength(1);
+    expect((errors[0] as Error).message).toBe('setup error');
+  });
+
+  it('should call the error handler when onMount throws', async () => {
+    const errors: unknown[] = [];
+    const { destroy } = await mount(() => {
+      onError((err) => errors.push(err));
+
+      onMount(() => {
+        throw new Error('mount error');
+      });
+
+      return html`<div></div>`;
+    });
+
+    expect(errors).toHaveLength(1);
+    expect((errors[0] as Error).message).toBe('mount error');
+
+    destroy();
+  });
+
+  it('should not throw to the caller when a handler is registered', async () => {
+    await expect(
+      mount(() => {
+        onError(() => {});
+        throw new Error('swallowed');
+      }),
+    ).resolves.not.toThrow();
   });
 });

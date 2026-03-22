@@ -34,7 +34,7 @@ yarn add @vielzeug/craftit
 ## Quick Start
 
 ```ts
-import { defineComponent, signal, computed, html, css } from '@vielzeug/craftit/core';
+import { defineComponent, signal, computed, html, css } from '@vielzeug/craftit';
 
 defineComponent({
   setup() {
@@ -118,10 +118,10 @@ defineComponent({
 - **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation
 - **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
 - **Accessibility** — `aria()` for reactive ARIA attributes plus ID helpers (`createId()`, `createFormIds()`)
-- **Labs observers** — `observeResize()`, `observeIntersection()`, `observeMedia()` from `@vielzeug/craftit/labs`
+- **Observers** — `observeResize()` from `@vielzeug/craftit`; `observeIntersection()` and `observeMedia()` from `@vielzeug/craftit/labs`
 - **Directive subpath** — `@vielzeug/craftit/directives` for `when`, `each`, `match`, `until`, `bind`, and more
 - **Testing subpath** — `@vielzeug/craftit/test` for `mount`, `fire`, `user`, `waitFor`, and cleanup helpers
-- **Core/Labs split** — stable APIs live in `@vielzeug/craftit/core`; experimental APIs live in `@vielzeug/craftit/labs`
+- **Focused entrypoints** — use `@vielzeug/craftit` for stable APIs and `@vielzeug/craftit/labs` for experimental utilities
 - **Framework-agnostic** — Pure web components that work in any framework or vanilla HTML
 - **Lightweight** — <PackageInfo package="craftit" type="size" /> gzipped
 

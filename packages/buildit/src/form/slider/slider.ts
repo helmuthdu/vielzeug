@@ -12,7 +12,7 @@ import {
   ref,
   signal,
   watch,
-} from '@vielzeug/craftit/core';
+} from '@vielzeug/craftit';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 

@@ -15,15 +15,9 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./core": {
-      "source": "./src/core/index.ts",
-      "types": "./dist/core.d.ts",
-      "import": "./dist/core.js",
-      "require": "./dist/core.cjs"
-    },
     "./labs": {
       "source": "./src/labs/index.ts",
-      "types": "./dist/labs.d.ts",
+      "types": "./dist/labs/index.d.ts",
       "import": "./dist/labs.js",
       "require": "./dist/labs.cjs"
     },
@@ -41,8 +35,8 @@
     }
   },
   "scripts": {
-    "build": "vite build && pnpm run build:core && pnpm run build:types",
-    "build:core": "vite build --config vite.bundle.config.ts",
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
@@ -55,6 +49,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
+    "@vielzeug/floatit": "workspace:*",
     "@vielzeug/stateit": "workspace:*"
   },
   "devDependencies": {

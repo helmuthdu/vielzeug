@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { fire } from '../core/runtime';
+import { aria, fire } from '../core/runtime';
+import { signal } from '../index';
 
 describe('Runtime: fire', () => {
   it('should dispatch a CustomEvent when detail is provided', () => {
@@ -9,7 +10,7 @@ describe('Runtime: fire', () => {
 
     target.addEventListener('custom-event', handler);
 
-    fire(target, 'custom-event', { detail: { ok: true } });
+    fire.custom(target, 'custom-event', { detail: { ok: true } });
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -28,7 +29,7 @@ describe('Runtime: fire', () => {
 
     target.addEventListener('click', handler);
 
-    fire(target, 'click', { clientX: 100 } as MouseEventInit);
+    fire.mouse(target, 'click', { clientX: 100 });
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -45,7 +46,7 @@ describe('Runtime: fire', () => {
 
     target.addEventListener('keydown', handler);
 
-    fire(target, 'keydown', { key: 'Enter' } as KeyboardEventInit);
+    fire.keyboard(target, 'keydown', { key: 'Enter' });
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -62,7 +63,7 @@ describe('Runtime: fire', () => {
 
     target.addEventListener('focus', handler);
 
-    fire(target, 'focus');
+    fire.focus(target, 'focus');
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -72,13 +73,13 @@ describe('Runtime: fire', () => {
     expect(event.type).toBe('focus');
   });
 
-  it('should dispatch a regular Event for input/change', () => {
+  it('should dispatch a regular Event for basic DOM events', () => {
     const target = document.createElement('input');
     const handler = vi.fn();
 
     target.addEventListener('input', handler);
 
-    fire(target, 'input');
+    fire.basic(target, 'input');
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -95,7 +96,7 @@ describe('Runtime: fire', () => {
 
     target.addEventListener('click', handler);
 
-    fire(target, 'click', { bubbles: false, cancelable: false });
+    fire.mouse(target, 'click', { bubbles: false, cancelable: false });
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -103,5 +104,67 @@ describe('Runtime: fire', () => {
 
     expect(event.bubbles).toBe(false);
     expect(event.cancelable).toBe(false);
+  });
+
+  it('should fall back to CustomEvent for touch events when TouchEvent is unavailable', () => {
+    const target = document.createElement('div');
+    const handler = vi.fn();
+
+    // Simulate jsdom-like environments where TouchEvent constructor is missing.
+    vi.stubGlobal('TouchEvent', undefined);
+
+    try {
+      target.addEventListener('touchstart', handler);
+
+      fire.touch(target, 'touchstart');
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0]).toBeInstanceOf(CustomEvent);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('should dispatch a prebuilt event instance', () => {
+    const target = document.createElement('div');
+    const handler = vi.fn();
+    const event = new Event('ready', { bubbles: true });
+
+    target.addEventListener('ready', handler);
+
+    fire.event(target, event);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler.mock.calls[0][0]).toBe(event);
+  });
+});
+
+describe('Runtime: aria', () => {
+  it('should remove aria-* attribute when value is false', () => {
+    const target = document.createElement('button');
+
+    target.setAttribute('aria-expanded', 'true');
+
+    const cleanup = aria(target, { expanded: false });
+
+    expect(target.hasAttribute('aria-expanded')).toBe(false);
+
+    cleanup();
+  });
+
+  it('should reactively remove and restore aria-* attribute', () => {
+    const target = document.createElement('button');
+    const expanded = signal(true);
+    const cleanup = aria(target, { expanded: () => expanded.value });
+
+    expect(target.getAttribute('aria-expanded')).toBe('true');
+
+    expanded.value = false;
+    expect(target.hasAttribute('aria-expanded')).toBe(false);
+
+    expanded.value = true;
+    expect(target.getAttribute('aria-expanded')).toBe('true');
+
+    cleanup();
   });
 });

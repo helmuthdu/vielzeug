@@ -1,4 +1,4 @@
-import { aria, defineComponent, effect, html, onMount } from '@vielzeug/craftit/core';
+import { aria, defineComponent, effect, html, onMount } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 

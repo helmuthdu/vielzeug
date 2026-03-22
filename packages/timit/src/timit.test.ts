@@ -1,18 +1,7 @@
+import { Temporal } from '@js-temporal/polyfill';
 import { describe, expect, it } from 'vitest';
 
-import { Temporal } from '@js-temporal/polyfill';
-
-import {
-  add,
-  asInstant,
-  asZoned,
-  diff,
-  format,
-  formatRange,
-  now,
-  subtract,
-  within,
-} from './timit';
+import { add, asInstant, asZoned, diff, format, formatRange, now, subtract, within } from './timit';
 
 describe('now', () => {
   it('creates a zoned date-time using the selected time zone', () => {
@@ -67,8 +56,8 @@ describe('date arithmetic', () => {
 
   it('computes duration between two values', () => {
     const duration = diff('2026-03-21T10:00:00Z', '2026-03-21T12:30:00Z', {
-      largestUnit: 'hours',
-      smallestUnit: 'minutes',
+      largestUnit: 'hour',
+      smallestUnit: 'minute',
     });
 
     expect(duration.toString()).toBe('PT2H30M');
@@ -86,8 +75,8 @@ describe('range and formatting', () => {
 
   it('formats a single instant with pattern presets', () => {
     const result = format('2026-03-21T10:15:30Z', {
-      pattern: 'short',
       locale: 'en-GB',
+      pattern: 'short',
       tz: 'UTC',
     });
 
@@ -97,8 +86,8 @@ describe('range and formatting', () => {
 
   it('formats a range of instants', () => {
     const result = formatRange('2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z', {
-      pattern: 'short',
       locale: 'en-GB',
+      pattern: 'short',
       tz: 'UTC',
     });
 
@@ -107,4 +96,3 @@ describe('range and formatting', () => {
     expect(result).toContain('12:00');
   });
 });
-

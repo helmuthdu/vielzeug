@@ -1,4 +1,4 @@
-import { computed, defineComponent, effect, fire, html, typed, inject, syncContextProps } from '@vielzeug/craftit/core';
+import { computed, defineComponent, effect, fire, html, typed, inject, syncContextProps } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -70,7 +70,7 @@ export const TAB_ITEM_TAG = defineComponent<BitTabItemProps>({
     const handleClick = () => {
       if (props.disabled.value) return;
 
-      fire(host, 'click', {
+      fire.custom(host, 'click', {
         detail: { value: props.value.value },
       });
     };

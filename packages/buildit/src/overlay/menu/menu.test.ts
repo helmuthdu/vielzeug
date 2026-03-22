@@ -20,9 +20,14 @@ describe('bit-menu', () => {
         `,
       });
 
+      const onOpen = vi.fn();
+
+      fixture.element.addEventListener('bit-open', onOpen);
+
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
+      expect((onOpen.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'toggle' });
     });
 
     it('emits bit-select and closes for normal menu items', async () => {
@@ -34,8 +39,10 @@ describe('bit-menu', () => {
       });
 
       const onSelect = vi.fn();
+      const onClose = vi.fn();
 
       fixture.element.addEventListener('bit-select', onSelect);
+      fixture.element.addEventListener('bit-close', onClose);
 
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
       await user.click(fixture.element.querySelector<HTMLElement>('bit-menu-item')!);
@@ -43,6 +50,7 @@ describe('bit-menu', () => {
       expect(onSelect).toHaveBeenCalledTimes(1);
       expect((onSelect.mock.calls[0][0] as CustomEvent).detail.value).toBe('edit');
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(false);
+      expect((onClose.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'programmatic' });
     });
 
     it('toggles checkbox menu item without closing menu', async () => {
@@ -114,6 +122,24 @@ describe('bit-menu', () => {
       await user.press(trigger, 'ArrowDown');
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
+    });
+
+    it('emits escape close reason when dismissed via Escape key', async () => {
+      fixture = await mount('bit-menu', {
+        html: `
+          <button slot="trigger">Open</button>
+          <bit-menu-item value="edit">Edit</bit-menu-item>
+        `,
+      });
+
+      const onClose = vi.fn();
+
+      fixture.element.addEventListener('bit-close', onClose);
+
+      await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
+      await user.press(fixture.query('.menu-panel')!, 'Escape');
+
+      expect((onClose.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'escape' });
     });
   });
 });

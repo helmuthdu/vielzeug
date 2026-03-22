@@ -1,4 +1,4 @@
-import { computed, defineField, inject, type ReadonlySignal, signal, watch } from '@vielzeug/craftit/core';
+import { computed, defineField, inject, type ReadonlySignal, signal, watch } from '@vielzeug/craftit';
 
 import { FORM_CTX } from '../../form/form';
 import { createFieldValidation } from '../validation';

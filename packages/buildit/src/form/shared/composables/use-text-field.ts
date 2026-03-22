@@ -20,7 +20,7 @@ import {
   ref,
   signal,
   watch,
-} from '@vielzeug/craftit/core';
+} from '@vielzeug/craftit';
 
 import { FORM_CTX } from '../../form/form';
 import { mountLabelSyncStandalone } from '../dom-sync';

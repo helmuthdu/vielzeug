@@ -15,6 +15,8 @@ Start with the [Overview](./index.md) for installation and a quick intro, then u
 
 `defineComponent({ tag, setup, props?, styles?, formAssociated?, shadow? })` registers a custom element and returns the tag name.
 
+Tags are strict: registering the same tag shows a warning and skips duplicate registration.
+
 ```ts
 import { defineComponent, html, signal } from '@vielzeug/craftit';
 
@@ -78,6 +80,8 @@ batch(() => {
 
 `html` supports text, attributes, properties, events, and refs.
 
+Event bindings also support modifiers like `.stop`, `.prevent`, `.self`, `.once`, `.capture`, and `.passive`.
+
 ```ts
 import { defineComponent, html, ref, signal } from '@vielzeug/craftit';
 
@@ -88,7 +92,12 @@ defineComponent({
 
     return html`
       <label :title=${() => `Current: ${name.value}`}>Name</label>
-      <input ref=${inputRef} :value=${name} @input=${(e: Event) => (name.value = (e.target as HTMLInputElement).value)} />
+      <input
+        ref=${inputRef}
+        :value=${name}
+        @input=${(e: Event) => (name.value = (e.target as HTMLInputElement).value)}
+        @keydown.prevent=${(e: KeyboardEvent) => console.log(e.key)}
+      />
       <p>Hello ${name}</p>
     `;
   },
@@ -99,6 +108,32 @@ defineComponent({
 ## Directives Subpath
 
 The `@vielzeug/craftit/directives` subpath contains optional directive helpers.
+
+### `attr` and `bind`
+
+`attr(...)` intentionally keeps its short public name, but it batches DOM property
+bindings in spread position. Use it when you want ergonomic `.value`, `.checked`,
+`.disabled`, and similar bindings without writing the dot-prefix yourself.
+
+`bind(...)` is the two-way shorthand built on that same property-binding path.
+
+```ts
+import { defineComponent, html, signal } from '@vielzeug/craftit';
+import { attr, bind } from '@vielzeug/craftit/directives';
+
+defineComponent({
+  setup() {
+    const name = signal('Ada');
+    const accepted = signal(false);
+
+    return html`
+      <input ${attr({ value: name })} />
+      <input type="checkbox" ${bind(accepted)} />
+    `;
+  },
+  tag: 'x-bind-demo',
+});
+```
 
 ## `when`
 
@@ -202,6 +237,18 @@ defineComponent({
 });
 ```
 
+`emit(...)` always dispatches `CustomEvent`s, including events without detail.
+
+For manual dispatch, use the explicit `fire.*` helpers:
+
+```ts
+import { fire } from '@vielzeug/craftit';
+
+fire.mouse(button, 'click');
+fire.keyboard(input, 'keydown', { key: 'Enter' });
+fire.custom(host, 'change', { detail: { value: 'Ada' } });
+```
+
 ## Props and Attributes
 
 Use top-level `defineComponent({ props })` for grouped props or `prop()` for one-off low-level bindings.
@@ -229,7 +276,7 @@ defineComponent<{ disabled: boolean; label: string; variant: Variant }>({
 ```ts
 import { defineComponent, html } from '@vielzeug/craftit';
 
-defineComponent<Record<string, never>, { close: undefined }>({
+defineComponent<Record<string, never>, { close: void }>({
   setup({ emit, slots }) {
     return html`
       <header>
@@ -303,7 +350,8 @@ defineComponent({
 Observer helpers must run inside an active lifecycle context (typically `onMount`).
 
 ```ts
-import { defineComponent, effect, html, onMount, observeMedia, observeResize, ref } from '@vielzeug/craftit';
+import { defineComponent, effect, html, onMount, observeResize, ref } from '@vielzeug/craftit';
+import { observeMedia } from '@vielzeug/craftit/labs';
 
 defineComponent({
   setup() {

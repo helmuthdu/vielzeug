@@ -9,7 +9,7 @@ import {
   ref,
   syncContextProps,
   watch,
-} from '@vielzeug/craftit/core';
+} from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 

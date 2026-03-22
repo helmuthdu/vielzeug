@@ -1,4 +1,4 @@
-import { effect, handle, type ReadonlySignal } from '@vielzeug/craftit/core';
+import { effect, handle, type ReadonlySignal } from '@vielzeug/craftit';
 
 import {
   parsePositiveNumber,

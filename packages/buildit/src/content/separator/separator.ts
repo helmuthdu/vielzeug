@@ -1,4 +1,4 @@
-import { defineComponent, html, typed } from '@vielzeug/craftit/core';
+import { defineComponent, html, typed } from '@vielzeug/craftit';
 
 import type { ThemeColor } from '../../types';
 

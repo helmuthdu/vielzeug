@@ -1,4 +1,4 @@
-import { computed, defineComponent, effect, html, onMount, ref } from '@vielzeug/craftit/core';
+import { computed, defineComponent, effect, html, onMount, ref } from '@vielzeug/craftit';
 import { attr } from '@vielzeug/craftit/directives';
 
 import type { VisualVariant } from '../../types';

@@ -1,15 +1,6 @@
 import type { Placement } from '@vielzeug/floatit';
 
-import {
-  computed,
-  createId,
-  defineComponent,
-  html,
-  onMount,
-  onSlotChange,
-  signal,
-  watch,
-} from '@vielzeug/craftit/core';
+import { computed, createId, defineComponent, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize } from '../../types';

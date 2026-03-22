@@ -1,4 +1,4 @@
-import { defineComponent, effect, html, onMount, onSlotChange } from '@vielzeug/craftit/core';
+import { defineComponent, effect, html, onMount, onSlotChange } from '@vielzeug/craftit';
 
 // ============================================
 // Types

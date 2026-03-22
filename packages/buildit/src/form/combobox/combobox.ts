@@ -14,8 +14,14 @@ import {
   signal,
   typed,
   watch,
-} from '@vielzeug/craftit/core';
-import { each } from '@vielzeug/craftit/directives';
+} from '@vielzeug/craftit';
+import {
+  createListNavigation,
+  createOverlayControl,
+  createSelectionControl,
+  type ListNavigationResult,
+  type OverlayOpenReason,
+} from '@vielzeug/craftit/labs';
 
 import type { AddEventListeners } from '../../types';
 
@@ -24,15 +30,8 @@ import { checkIconHTML, chevronDownIcon, clearIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { FORM_CTX } from '../form/form';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
-import { createDropdownPositioner, createOutsideClickHandler, mountLabelSyncStandalone } from '../shared/dom-sync';
-import {
-  computeControlledCsvState,
-  createChoiceChangeDetail,
-  navigateFirst,
-  navigateNext,
-  navigatePrev,
-  resolveMergedAssistiveText,
-} from '../shared/utils';
+import { createDropdownPositioner, mountLabelSyncStandalone } from '../shared/dom-sync';
+import { computeControlledCsvState, createChoiceChangeDetail, resolveMergedAssistiveText } from '../shared/utils';
 import { createFieldValidation } from '../shared/validation';
 import {
   backfillSelectionLabels,
@@ -41,12 +40,6 @@ import {
   makeCreatableValue,
   parseSlottedOptions,
 } from './combobox-options';
-import {
-  removeSelectionByValue,
-  selectedValueList,
-  selectedValuesToCsv,
-  toggleMultiSelection,
-} from './combobox-selection';
 import { createComboboxVirtualizer } from './combobox-virtualizer';
 import componentStyles from './combobox.css?inline';
 import {
@@ -173,28 +166,54 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       props.value.value ? [{ label: '', value: props.value.value }] : [],
     );
     const focusedIndex = signal(-1);
+    const selectionController = createSelectionControl<ComboboxSelectionItem>({
+      findByKey: (value) => {
+        const existing = selectedValues.value.find((item) => item.value === value);
+
+        if (existing) return existing;
+
+        // If not found in selection, try to find in all options to get label
+        const option = allOptions.value.find((o) => o.value === value);
+
+        if (option) return { label: option.label, value: option.value };
+
+        // Fallback: key is the value
+        return { label: '', value };
+      },
+      getMode: () => (isMultiple.value ? 'multiple' : 'single'),
+      getSelected: () => selectedValues.value,
+      keyExtractor: (item) => item.value,
+      setSelected: (next) => {
+        selectedValues.value = next;
+      },
+    });
 
     // Sync external value prop changes to selectedValues (controlled mode)
-    watch(
-      props.value,
-      (newValue) => {
-        const state = computeControlledCsvState(String(newValue ?? ''));
+    const syncControlledValue = (nextValue: unknown): void => {
+      const state = computeControlledCsvState(String(nextValue ?? ''));
 
-        if (state.isEmpty) {
-          selectedValues.value = [];
-          query.value = '';
-          formValue.value = '';
-        } else if (isMultiple.value) {
-          selectedValues.value = state.values.map((value) => ({ label: '', value }));
-          formValue.value = state.formValue;
-        } else {
-          // Single mode: one value
-          selectedValues.value = [{ label: '', value: state.firstValue }];
-          formValue.value = state.firstValue;
-        }
-      },
-      { immediate: true },
-    );
+      if (state.isEmpty) {
+        selectionController.clear();
+        query.value = '';
+        formValue.value = '';
+
+        return;
+      }
+
+      if (isMultiple.value) {
+        selectedValues.value = state.values.map((value) => ({ label: '', value }));
+        formValue.value = state.formValue;
+
+        return;
+      }
+
+      // Single mode: one value
+      selectedValues.value = [{ label: '', value: state.firstValue }];
+      formValue.value = state.firstValue;
+    };
+
+    watch(props.value, (newValue) => syncControlledValue(newValue), { immediate: true });
+    watch(props.multiple, () => syncControlledValue(props.value.value));
 
     // Convenience getter for single-select
     const selectedValue = computed(() => selectedValues.value[0]?.value ?? '');
@@ -256,7 +275,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       isMultiple.value && selectedValues.value.length > 0 ? '' : props.placeholder.value || '',
     );
 
-    const selectedValueItems = computed(() => selectedValueList(selectedValues.value));
+    const selectedValueItems = computed(() => selectedValues.value.map((s) => s.value));
     const selectedLabelItems = computed(() =>
       selectedValues.value.map((selection) => {
         if (selection.label) return selection.label;
@@ -266,16 +285,11 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
     );
 
     function syncMultipleFormValue() {
-      formValue.value = selectedValuesToCsv(selectedValues.value);
+      formValue.value = selectionController.serialize(',');
     }
 
     function emitChange(originalEvent?: Event) {
       emit('change', createChoiceChangeDetail(selectedValueItems.value, selectedLabelItems.value, originalEvent));
-    }
-
-    function setMultipleSelection(next: ComboboxSelectionItem[]) {
-      selectedValues.value = next;
-      syncMultipleFormValue();
     }
 
     function removeChip(event: Event): void {
@@ -285,7 +299,8 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
 
       if (value === undefined) return;
 
-      setMultipleSelection(removeSelectionByValue(selectedValues.value, value));
+      selectionController.remove(value);
+      syncMultipleFormValue();
       emitChange(event);
       triggerValidation('change');
     }
@@ -296,20 +311,50 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       () => dropdownEl,
     );
 
-    // ── Open / Close ─────────────────────────────────────────────────────────
-    function open(clearFilter = true) {
-      if (isDisabled.value) return;
+    const listNavigation = createListNavigation<ComboboxOptionItem>({
+      getIndex: () => focusedIndex.value,
+      getItems: () => filteredOptions.value,
+      isItemDisabled: (option) => option.disabled,
+      setIndex: (index) => {
+        focusedIndex.value = index;
+        scrollFocusedIntoView();
+      },
+    });
 
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => host,
+      getPanelElement: () => dropdownEl,
+      getTriggerElement: () => inputEl,
+      isDisabled: () => isDisabled.value,
+      isOpen: () => isOpen.value,
+      positioner: {
+        floating: () => dropdownEl,
+        reference: () => fieldEl,
+        update: () => positioner.updatePosition(),
+      },
+      restoreFocus: false,
+      setOpen: (next, _context) => {
+        isOpen.value = next;
+
+        if (!next) listNavigation.reset();
+      },
+    });
+
+    const applyNavigationResult = (result: ListNavigationResult): void => {
+      if (result.reason === 'empty' || result.reason === 'no-enabled-item') {
+        focusedIndex.value = -1;
+      }
+    };
+
+    // ── Open / Close ─────────────────────────────────────────────────────────
+    function open(clearFilter = true, reason: OverlayOpenReason = 'programmatic') {
       if (clearFilter) query.value = '';
 
-      isOpen.value = true;
-      positioner.startAutoUpdate();
-      requestAnimationFrame(() => positioner.updatePosition());
+      overlay.open({ reason });
     }
-    function close() {
-      isOpen.value = false;
-      positioner.stopAutoUpdate();
-      focusedIndex.value = -1;
+
+    function close(reason: 'escape' | 'programmatic' | 'outside-click' | 'toggle' = 'programmatic') {
+      overlay.close({ reason, restoreFocus: false });
 
       // In single mode restore the query to the selected label (or clear)
       if (!isMultiple.value) {
@@ -327,7 +372,8 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       if (opt.disabled) return;
 
       if (isMultiple.value) {
-        setMultipleSelection(toggleMultiSelection(selectedValues.value, opt));
+        selectionController.toggle(opt.value);
+        syncMultipleFormValue();
         query.value = '';
         emitChange(originalEvent);
         triggerValidation('change');
@@ -335,7 +381,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
         focusLiveInput();
         requestAnimationFrame(() => focusLiveInput());
       } else {
-        selectedValues.value = [{ label: opt.label, value: opt.value }];
+        selectionController.select(opt.value);
         query.value = opt.label;
         formValue.value = opt.value;
         emitChange(originalEvent);
@@ -346,7 +392,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
     }
     function clearValue(e: Event) {
       e.stopPropagation();
-      selectedValues.value = [];
+      selectionController.clear();
       query.value = '';
       formValue.value = '';
       emitChange(e);
@@ -358,16 +404,16 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
 
       query.value = target.value;
 
-      if (!isMultiple.value) selectedValues.value = [];
+      if (!isMultiple.value) selectionController.clear();
 
-      focusedIndex.value = navigateFirst(filteredOptions.value);
+      applyNavigationResult(listNavigation.first());
 
-      if (!isOpen.value) open(false);
+      if (!isOpen.value) open(false, 'trigger');
 
       emit('search', { query: target.value } as { query: string });
     }
     function handleFocus() {
-      if (!isOpen.value) open(false);
+      if (!isOpen.value) open(false, 'trigger');
     }
     // ── Keyboard Navigation ──────────────────────────────────────────────────
     function handleKeydown(e: KeyboardEvent) {
@@ -380,21 +426,11 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
           e.preventDefault();
 
           if (!isOpen.value) {
-            open();
+            open(true, 'trigger');
 
-            const first = navigateFirst(opts);
-
-            if (first >= 0) {
-              focusedIndex.value = first;
-              scrollFocusedIntoView();
-            }
+            applyNavigationResult(listNavigation.first());
           } else {
-            const next = navigateNext(opts, focusedIndex.value);
-
-            if (next !== focusedIndex.value) {
-              focusedIndex.value = next;
-              scrollFocusedIntoView();
-            }
+            applyNavigationResult(listNavigation.next());
           }
 
           break;
@@ -402,21 +438,17 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
           e.preventDefault();
 
           if (!isOpen.value) {
-            open();
+            open(true, 'trigger');
           } else {
-            const prev = navigatePrev(opts, focusedIndex.value);
-
-            if (prev !== focusedIndex.value) {
-              focusedIndex.value = prev;
-              scrollFocusedIntoView();
-            }
+            applyNavigationResult(listNavigation.prev());
           }
 
           break;
         case 'Backspace':
           // In multiple mode, remove the last chip when the input is empty
           if (isMultiple.value && !query.value && selectedValues.value.length > 0) {
-            setMultipleSelection(selectedValues.value.slice(0, -1));
+            selectedValues.value = selectedValues.value.slice(0, -1);
+            syncMultipleFormValue();
             emitChange(e);
             triggerValidation('change');
           }
@@ -425,8 +457,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
         case 'End':
           if (isOpen.value) {
             e.preventDefault();
-            focusedIndex.value = opts.length - 1;
-            scrollFocusedIntoView();
+            applyNavigationResult(listNavigation.last());
           }
 
           break;
@@ -447,20 +478,19 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
           e.preventDefault();
 
           if (isOpen.value) {
-            close();
+            close('escape');
           }
 
           break;
         case 'Home':
           if (isOpen.value) {
             e.preventDefault();
-            focusedIndex.value = 0;
-            scrollFocusedIntoView();
+            applyNavigationResult(listNavigation.first());
           }
 
           break;
         case 'Tab':
-          close();
+          close('programmatic');
           break;
         default:
           break;
@@ -510,8 +540,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       dropdownEl = host.shadowRoot?.querySelector<HTMLElement>('.dropdown') ?? null;
       listboxEl = host.shadowRoot?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
 
-      // Close on outside click (shared handler — listener is registered inside createOutsideClickHandler)
-      const removeOutsideClick = createOutsideClickHandler(host, () => dropdownEl, isOpen, close);
+      const removeOutsideClick = overlay.bindOutsideClick(document);
 
       onSlotChange('default', readOptions);
       // Ensure initial light-DOM options are available for immediate keyboard interaction.
@@ -607,7 +636,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
           class="field"
           part="field"
           @click="${() => {
-            if (!isOpen.value) open(false);
+            if (!isOpen.value) open(false, 'trigger');
 
             focusLiveInput();
           }}">
@@ -616,21 +645,21 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
             <div class="chips-row">
               <!-- Keep chip list diffing isolated so input node identity stays stable. -->
               <span class="chips-list">
-                ${each(
-                  () => (isMultiple.value ? selectedValues.value : []),
-                  (item) => html`
-                    <bit-chip
-                      value=${item.value}
-                      aria-label=${item.label || item.value}
-                      mode="removable"
-                      variant="flat"
-                      size="sm"
-                      color=${() => props.color.value}
-                      @remove=${removeChip}>
-                      ${item.label || item.value}
-                    </bit-chip>
-                  `,
-                )}
+                ${() =>
+                  (isMultiple.value ? selectedValues.value : []).map(
+                    (item) => html`
+                      <bit-chip
+                        value=${item.value}
+                        aria-label=${item.label || item.value}
+                        mode="removable"
+                        variant="flat"
+                        size="sm"
+                        color=${() => props.color.value}
+                        @remove=${removeChip}>
+                        ${item.label || item.value}
+                      </bit-chip>
+                    `,
+                  )}
               </span>
               <input
                 ref=${(el: HTMLInputElement | null) => {
@@ -649,7 +678,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
                     controls: () => `${comboId}-listbox`,
                     describedby: () => (props.error.value || props.helper.value ? helperId : null),
                     disabled: () => isDisabled.value,
-                    expanded: () => isOpen.value,
+                    expanded: () => (isOpen.value ? 'true' : 'false'),
                     invalid: () => !!props.error.value,
                     labelledby: () => (hasLabel.value ? labelId : null),
                   });

@@ -11,7 +11,7 @@ export type CheckableChangePayload = {
 };
 
 /**
- * Configuration for `useCheckableControl()`.
+ * Configuration for `createCheckableControl()`.
  */
 export type CheckableControlConfig = {
   /** Writable checked signal — mutated directly by toggle() so all reactive bindings stay in sync */
@@ -31,7 +31,7 @@ export type CheckableControlConfig = {
 };
 
 /**
- * Handle returned from `useCheckableControl()`.
+ * Handle returned from `createCheckableControl()`.
  */
 export type CheckableControlHandle = {
   /** Create a standard change payload from an event */
@@ -56,7 +56,7 @@ export type CheckableControlHandle = {
  *
  * @example
  * const checkedSignal = signal(false);
- * const control = useCheckableControl({
+ * const control = createCheckableControl({
  *   checked: checkedSignal,
  *   disabled: props.disabled,
  *   value: props.value,
@@ -68,7 +68,7 @@ export type CheckableControlHandle = {
  *   onClick: (e) => control.toggle(e),
  * });
  */
-export function useCheckableControl(config: CheckableControlConfig): CheckableControlHandle {
+export function createCheckableControl(config: CheckableControlConfig): CheckableControlHandle {
   const indeterminate = config.indeterminate ?? signal<boolean>(false);
 
   const toggle = (e: Event) => {

@@ -1,4 +1,4 @@
-import { computed, defineComponent, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit/core';
+import { computed, defineComponent, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 

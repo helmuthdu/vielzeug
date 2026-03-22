@@ -38,11 +38,11 @@ defineComponent({
 - ✅ **Component authoring** — `defineComponent({ tag, props, setup, ... })`
 - ✅ **Signals included** — all `@vielzeug/stateit` exports are re-exported
 - ✅ **Reactive templates** — `html` tagged template with text/attr/prop/event/ref bindings
-- ✅ **Lifecycle helpers** — `onMount`, `onCleanup`, `onError`, `handle`, `watch`, `effect`, `fire`
+- ✅ **Lifecycle helpers** — `onMount`, `onCleanup`, `onError`, `handle`, `watch`, `effect`, `fire.*`
 - ✅ **Typed component APIs** — `defineComponent`, `prop`, `typed`, setup-context `emit` and `slots`
 - ✅ **Context / DI** — `createContext`, `provide`, `inject`, `syncContextProps`
 - ✅ **Form-associated controls** — `defineField` with `ElementInternals`
-- ✅ **Observer utilities** — `observeResize`, `observeIntersection`, `observeMedia`
+- ✅ **Observer utilities** — `observeResize` (main API) + `observeIntersection` / `observeMedia` (`/labs`)
 - ✅ **Directive subpath** — `@vielzeug/craftit/directives`
 - ✅ **Test subpath** — `@vielzeug/craftit/test`
 
@@ -53,7 +53,6 @@ defineComponent({
 | `@vielzeug/craftit` | Main API (components + stateit re-exports) |
 | `@vielzeug/craftit/directives` | Directive helpers like `each`, `when`, `bind`, `match`, `until` |
 | `@vielzeug/craftit/test` | Mount/query/event testing utilities |
-| `@vielzeug/craftit/core` | Standalone bundle export |
 
 ## Usage Highlights
 

@@ -1,13 +1,38 @@
 /** Experimental/labs API for @vielzeug/craftit. */
 
-// Composables that can evolve more aggressively pre-release.
-export { useA11yControl, type A11yControlConfig, type A11yControlHandle } from './a11y-control';
+// Composable UI controllers for building custom interactive widgets.
 export {
-  useCheckableControl,
+  createListNavigation,
+  type ListNavigationController,
+  type ListNavigationOptions,
+  type ListNavigationResult,
+  type ListNavigationResultReason,
+} from './list';
+export {
+  createOverlayControl,
+  type OverlayChangeContext,
+  type OverlayCloseReason,
+  type OverlayControl,
+  type OverlayControlOptions,
+  type OverlayOpenReason,
+  type OverlayPositioner,
+} from './overlay';
+export {
+  createSelectionControl,
+  type SelectionController,
+  type SelectionControllerOptions,
+  type SelectionKeyExtractor,
+  type SelectionMode,
+} from './selection';
+
+// Composables that can evolve more aggressively pre-release.
+export { useA11yControl, type A11yControlConfig, type A11yControlHandle, type A11yTone } from './a11y';
+export {
+  createCheckableControl,
   type CheckableChangePayload,
   type CheckableControlConfig,
   type CheckableControlHandle,
-} from './controls';
+} from './selectable';
 
 // Platform observers and higher-level experiments.
 export { observeIntersection, observeMedia, observeResize } from './observers';

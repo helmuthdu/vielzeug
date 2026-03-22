@@ -1,4 +1,4 @@
-import { defineComponent, html } from '@vielzeug/craftit/core';
+import { defineComponent, html } from '@vielzeug/craftit';
 
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
 

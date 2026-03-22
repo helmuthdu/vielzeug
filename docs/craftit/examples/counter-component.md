@@ -14,7 +14,7 @@ Implement counter component in a production-friendly way with `@vielzeug/craftit
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { defineComponent, html, signal } from '@vielzeug/craftit/core';
+import { defineComponent, html, signal } from '@vielzeug/craftit';
 
 defineComponent({
   setup() {

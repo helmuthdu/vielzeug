@@ -9,7 +9,7 @@ import {
   provide,
   type ReadonlySignal,
   watch,
-} from '@vielzeug/craftit/core';
+} from '@vielzeug/craftit';
 import { observeMedia } from '@vielzeug/craftit/labs';
 
 import { chevronLeftIcon, chevronRightIcon } from '../../icons';
@@ -134,7 +134,7 @@ export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
       if (props.collapsed.value === next) return;
 
       props.collapsed.value = next;
-      emit(next ? 'collapse' : 'expand', undefined);
+      emit(next ? 'collapse' : 'expand');
     };
     const doToggle = () => {
       setCollapsed(!props.collapsed.value);

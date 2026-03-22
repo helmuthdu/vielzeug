@@ -4,9 +4,15 @@
  * style, choose, match, raw, spread, on, memo, until
  */
 
-import { html, signal } from '..';
 import { attr, bind, choose, classes, each, match, memo, on, raw, spread, style, until, when } from '../directives';
+import { computed, defineComponent, html, signal } from '../index';
 import { mount } from '../test';
+
+const register = (
+  tag: string,
+  setup: Parameters<typeof defineComponent>[0]['setup'],
+  options: Omit<Parameters<typeof defineComponent>[0], 'setup' | 'tag'> = {},
+) => defineComponent({ setup, tag, ...options });
 
 describe('Directive: when()', () => {
   it('should render when condition is true', async () => {
@@ -378,6 +384,26 @@ describe('Directive: bind()', () => {
     input.dispatchEvent(new Event('change'));
     expect(checked.value).toBe(true);
   });
+
+  it('should sync select values via change events', async () => {
+    const value = signal('sm');
+
+    const { query } = await mount(
+      () => html`
+        <select ${bind(value)}>
+          <option value="sm">Small</option>
+          <option value="lg">Large</option>
+        </select>
+      `,
+    );
+    const select = query('select') as HTMLSelectElement;
+
+    expect(select.value).toBe('sm');
+
+    select.value = 'lg';
+    select.dispatchEvent(new Event('change'));
+    expect(value.value).toBe('lg');
+  });
 });
 
 describe('Directive: attr() property map', () => {
@@ -400,6 +426,34 @@ describe('Directive: attr() property map', () => {
     input.value = 'Two';
     input.dispatchEvent(new Event('input'));
     expect(value.value).toBe('Two');
+  });
+
+  it('should sync back to signal for checked binding', async () => {
+    const checked = signal(true);
+
+    const { query } = await mount(() => html`<input type="checkbox" ${attr({ checked })} />`);
+    const input = query('input') as HTMLInputElement;
+
+    expect(input.checked).toBe(true);
+
+    input.checked = false;
+    input.dispatchEvent(new Event('change'));
+    expect(checked.value).toBe(false);
+  });
+
+  it('should keep computed value maps one-way', async () => {
+    const first = signal('Grace');
+    const last = signal('Hopper');
+    const fullName = computed(() => `${first.value} ${last.value}`);
+
+    const { query } = await mount(() => html`<input ${attr({ value: fullName })} />`);
+    const input = query('input') as HTMLInputElement;
+
+    expect(input.value).toBe('Grace Hopper');
+
+    input.value = 'Edited in DOM';
+    input.dispatchEvent(new Event('input'));
+    expect(fullName.value).toBe('Grace Hopper');
   });
 });
 
@@ -443,6 +497,59 @@ describe('Directive: spread() text-field map', () => {
     input.value = 'Bob';
     input.dispatchEvent(new Event('input'));
     expect(value.value).toBe('Bob');
+  });
+
+  it('should keep .checked two-way for checkbox property maps', async () => {
+    const checked = signal(false);
+
+    const { flush, query } = await mount(() => html`<input type="checkbox" ${spread({ '.checked': checked })} />`);
+    const input = query('input') as HTMLInputElement;
+
+    expect(input.checked).toBe(false);
+
+    checked.value = true;
+    await flush();
+    expect(input.checked).toBe(true);
+
+    input.checked = false;
+    input.dispatchEvent(new Event('change'));
+    expect(checked.value).toBe(false);
+  });
+
+  it('should sync select .value via change events', async () => {
+    const value = signal('b');
+
+    const { query } = await mount(
+      () => html`
+        <select ${spread({ '.value': value })}>
+          <option value="a">A</option>
+          <option value="b">B</option>
+        </select>
+      `,
+    );
+    const select = query('select') as HTMLSelectElement;
+
+    expect(select.value).toBe('b');
+
+    select.value = 'a';
+    select.dispatchEvent(new Event('change'));
+    expect(value.value).toBe('a');
+  });
+
+  it('should keep computed property sources one-way', async () => {
+    const first = signal('Ada');
+    const last = signal('Lovelace');
+    const fullName = computed(() => `${first.value} ${last.value}`);
+
+    const { query } = await mount(() => html`<input ${spread({ '.value': fullName })} />`);
+    const input = query('input') as HTMLInputElement;
+
+    expect(input.value).toBe('Ada Lovelace');
+
+    input.value = 'Changed in DOM';
+    input.dispatchEvent(new Event('input'));
+
+    expect(fullName.value).toBe('Ada Lovelace');
   });
 });
 
@@ -997,5 +1104,495 @@ describe('Directive: until()', () => {
 
     expect(query('.error')?.textContent).toBe('oops');
     expect(query('.loading')).toBeNull();
+  });
+});
+
+describe('Keyed Reconciliation', () => {
+  describe('DOM Node Lifecycle', () => {
+    it('should not duplicate nodes when adding items', async () => {
+      const items = signal([{ id: 1, value: 100 }]);
+      const addItem = () => {
+        items.value = [...items.value, { id: items.value.length + 1, value: 90 }];
+      };
+
+      register(
+        'test-no-duplication',
+        () => html`
+          <div class="container">
+            ${each(items, (item) => html`<div class="item">${item.value}</div>`, undefined, {
+              key: (item) => item.id,
+            })}
+          </div>
+          <button class="add-btn">Add</button>
+        `,
+      );
+
+      const { flush, query, queryAll } = await mount('test-no-duplication');
+
+      query('.add-btn')!.addEventListener('click', addItem);
+
+      expect(queryAll('.item').length).toBe(1);
+
+      query('.add-btn')!.dispatchEvent(new Event('click'));
+      await flush();
+      expect(queryAll('.item').length).toBe(2);
+
+      query('.add-btn')!.dispatchEvent(new Event('click'));
+      await flush();
+      expect(queryAll('.item').length).toBe(3);
+    });
+
+    it('should reuse nodes with same keys', async () => {
+      const items = signal([
+        { id: 1, value: 'A' },
+        { id: 2, value: 'B' },
+      ]);
+
+      register(
+        'test-reuse-nodes',
+        () => html`
+          <div>
+            ${each(items, (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`, undefined, {
+              key: (item) => item.id,
+            })}
+          </div>
+        `,
+      );
+
+      const { flush, queryAll } = await mount('test-reuse-nodes');
+
+      const initialNodes = queryAll('.item');
+
+      expect(initialNodes[0].getAttribute('data-id')).toBe('1');
+      expect(initialNodes[1].getAttribute('data-id')).toBe('2');
+
+      // Update values but keep keys
+      items.value = [
+        { id: 1, value: 'A-Updated' },
+        { id: 2, value: 'B-Updated' },
+      ];
+      await flush();
+
+      const updatedNodes = queryAll('.item');
+
+      expect(updatedNodes.length).toBe(2);
+      expect(updatedNodes[0].getAttribute('data-id')).toBe('1');
+      expect(updatedNodes[1].getAttribute('data-id')).toBe('2');
+      expect(updatedNodes[0].textContent).toBe('A-Updated');
+    });
+
+    it('should remove nodes correctly', async () => {
+      const items = signal([
+        { id: 1, value: 'A' },
+        { id: 2, value: 'B' },
+        { id: 3, value: 'C' },
+      ]);
+
+      register(
+        'test-remove-nodes',
+        () => html`
+          <div>
+            ${each(items, (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`, undefined, {
+              key: (item) => item.id,
+            })}
+          </div>
+        `,
+      );
+
+      const { flush, queryAll } = await mount('test-remove-nodes');
+
+      expect(queryAll('.item').length).toBe(3);
+
+      items.value = items.value.filter((item) => item.id !== 2);
+      await flush();
+
+      const remaining = queryAll('.item');
+
+      expect(remaining.length).toBe(2);
+      expect(remaining[0].getAttribute('data-id')).toBe('1');
+      expect(remaining[1].getAttribute('data-id')).toBe('3');
+    });
+  });
+
+  describe('Item Ordering', () => {
+    it('should handle reordering correctly', async () => {
+      const items = signal([
+        { id: 1, text: 'First' },
+        { id: 2, text: 'Second' },
+        { id: 3, text: 'Third' },
+      ]);
+
+      register(
+        'test-reorder',
+        () => html`
+          <div>
+            ${each(items, (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`, undefined, {
+              key: (item) => item.id,
+            })}
+          </div>
+        `,
+      );
+
+      const { flush, queryAll } = await mount('test-reorder');
+
+      const initial = queryAll('.item');
+
+      expect(initial[0].textContent).toBe('First');
+      expect(initial[2].textContent).toBe('Third');
+
+      // Reverse order
+      items.value = [items.value[2], items.value[1], items.value[0]];
+      await flush();
+
+      const reordered = queryAll('.item');
+
+      expect(reordered[0].textContent).toBe('Third');
+      expect(reordered[2].textContent).toBe('First');
+    });
+
+    it('should prepend items without recreating existing ones', async () => {
+      const items = signal([{ id: 1, text: 'Existing' }]);
+
+      register(
+        'test-prepend',
+        () => html`
+          <div>
+            ${each(items, (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`, undefined, {
+              key: (item) => item.id,
+            })}
+          </div>
+        `,
+      );
+
+      const { flush, queryAll } = await mount('test-prepend');
+
+      items.value = [{ id: 2, text: 'New' }, ...items.value];
+      await flush();
+
+      const updated = queryAll('.item');
+
+      expect(updated.length).toBe(2);
+      expect(updated[0].getAttribute('data-id')).toBe('2');
+      expect(updated[1].getAttribute('data-id')).toBe('1');
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle empty to populated list', async () => {
+      const items = signal<Array<{ id: number; text: string }>>([]);
+
+      register(
+        'test-empty-to-populated',
+        () => html`
+          <div>
+            ${each(items, (item) => html`<div class="item">${item.text}</div>`, undefined, {
+              key: (item) => item.id,
+            })}
+          </div>
+        `,
+      );
+
+      const { flush, queryAll } = await mount('test-empty-to-populated');
+
+      expect(queryAll('.item').length).toBe(0);
+
+      items.value = [
+        { id: 1, text: 'A' },
+        { id: 2, text: 'B' },
+      ];
+      await flush();
+      expect(queryAll('.item').length).toBe(2);
+    });
+
+    it('should handle populated to empty list', async () => {
+      const items = signal([
+        { id: 1, text: 'A' },
+        { id: 2, text: 'B' },
+      ]);
+
+      register(
+        'test-populated-to-empty',
+        () => html`
+          <div>
+            ${each(items, (item) => html`<div class="item">${item.text}</div>`, undefined, {
+              key: (item) => item.id,
+            })}
+          </div>
+        `,
+      );
+
+      const { flush, queryAll } = await mount('test-populated-to-empty');
+
+      expect(queryAll('.item').length).toBe(2);
+
+      items.value = [];
+      await flush();
+      expect(queryAll('.item').length).toBe(0);
+    });
+
+    it('should handle single item updates', async () => {
+      const items = signal([{ id: 1, text: 'Only' }]);
+
+      register(
+        'test-single-item',
+        () => html`
+          <div>
+            ${each(items, (item) => html`<div class="item">${item.text}</div>`, undefined, {
+              key: (item) => item.id,
+            })}
+          </div>
+        `,
+      );
+
+      const { flush, queryAll } = await mount('test-single-item');
+
+      items.value = [{ id: 1, text: 'Updated' }];
+      await flush();
+      expect(queryAll('.item')[0].textContent).toBe('Updated');
+    });
+  });
+
+  describe('Fallback Content', () => {
+    it('should show fallback when empty', async () => {
+      const items = signal<number[]>([]);
+
+      register(
+        'test-fallback-empty',
+        () => html`
+          <div>
+            ${each(
+              items,
+              (item) => html`<div class="item">${item}</div>`,
+              () => html`<div class="empty">No items</div>`,
+              { key: (i) => i },
+            )}
+          </div>
+        `,
+      );
+
+      const { query, queryAll } = await mount('test-fallback-empty');
+
+      expect(queryAll('.item').length).toBe(0);
+      expect(query('.empty')).not.toBeNull();
+    });
+
+    it('should hide fallback when items exist', async () => {
+      const items = signal([1, 2]);
+
+      register(
+        'test-fallback-hidden',
+        () => html`
+          <div>
+            ${each(
+              items,
+              (item) => html`<div class="item">${item}</div>`,
+              () => html`<div class="empty">No items</div>`,
+              { key: (i) => i },
+            )}
+          </div>
+        `,
+      );
+
+      const { query, queryAll } = await mount('test-fallback-hidden');
+
+      expect(queryAll('.item').length).toBe(2);
+      expect(query('.empty')).toBeNull();
+    });
+
+    it('should toggle fallback correctly', async () => {
+      const items = signal([1]);
+
+      register(
+        'test-fallback-toggle',
+        () => html`
+          <div>
+            ${each(
+              items,
+              (item) => html`<div class="item">${item}</div>`,
+              () => html`<div class="empty">No items</div>`,
+              { key: (i) => i },
+            )}
+          </div>
+        `,
+      );
+
+      const { flush, query } = await mount('test-fallback-toggle');
+
+      expect(query('.empty')).toBeNull();
+
+      items.value = [];
+      await flush();
+      expect(query('.empty')).not.toBeNull();
+
+      items.value = [2];
+      await flush();
+      expect(query('.empty')).toBeNull();
+    });
+  });
+});
+
+describe('List Filtering', () => {
+  it('should filter list based on signal', async () => {
+    const allItems = signal([
+      { done: false, id: 1, text: 'Task 1' },
+      { done: true, id: 2, text: 'Task 2' },
+      { done: false, id: 3, text: 'Task 3' },
+    ]);
+    const filter = signal<'all' | 'active' | 'completed'>('all');
+
+    const filtered = computed(() => {
+      if (filter.value === 'all') return allItems.value;
+
+      if (filter.value === 'active') return allItems.value.filter((t) => !t.done);
+
+      return allItems.value.filter((t) => t.done);
+    });
+
+    register(
+      'test-filter',
+      () => html`
+        <div>
+          <button class="all" @click=${() => (filter.value = 'all')}>All</button>
+          <button class="active" @click=${() => (filter.value = 'active')}>Active</button>
+          <button class="completed" @click=${() => (filter.value = 'completed')}>Completed</button>
+          ${each(filtered, (item) => html`<div class="item">${item.text}</div>`, undefined, {
+            key: (item) => item.id,
+          })}
+        </div>
+      `,
+    );
+
+    const { flush, query, queryAll } = await mount('test-filter');
+
+    expect(queryAll('.item').length).toBe(3);
+
+    query('.active')!.dispatchEvent(new Event('click'));
+    await flush();
+    expect(queryAll('.item').length).toBe(2);
+
+    query('.completed')!.dispatchEvent(new Event('click'));
+    await flush();
+    expect(queryAll('.item').length).toBe(1);
+
+    query('.all')!.dispatchEvent(new Event('click'));
+    await flush();
+    expect(queryAll('.item').length).toBe(3);
+  });
+
+  it('should update filtered list when items change', async () => {
+    const items = signal([
+      { done: false, id: 1 },
+      { done: false, id: 2 },
+    ]);
+    const filter = signal<'all' | 'active'>('active');
+    const filtered = computed(() => (filter.value === 'all' ? items.value : items.value.filter((t) => !t.done)));
+
+    register(
+      'test-filter-update',
+      () => html`
+        <div>
+          ${each(filtered, (item) => html`<div class="item">${item.id}</div>`, undefined, { key: (item) => item.id })}
+        </div>
+      `,
+    );
+
+    const { flush, queryAll } = await mount('test-filter-update');
+
+    expect(queryAll('.item').length).toBe(2);
+
+    // Mark one as done
+    items.value = [
+      { done: true, id: 1 },
+      { done: false, id: 2 },
+    ];
+    await flush();
+    expect(queryAll('.item').length).toBe(1);
+  });
+});
+
+describe('State Management', () => {
+  describe('Todo Toggle', () => {
+    it('should toggle todo completed state', async () => {
+      const todos = signal([{ completed: false, id: 1, text: 'Task' }]);
+
+      const toggle = (id: number) => {
+        todos.value = todos.value.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
+      };
+
+      register(
+        'test-toggle',
+        () => html`
+          <div>
+            ${each(
+              todos,
+              (t) => html`
+                <input type="checkbox" ?checked=${() => t.completed} @change=${() => toggle(t.id)} />
+                <span class=${() => (t.completed ? 'done' : '')}>${t.text}</span>
+                <span class="status">${t.completed ? 'done' : 'todo'}</span>
+              `,
+              undefined,
+              { key: (t) => t.id },
+            )}
+          </div>
+        `,
+      );
+
+      const { flush, query } = await mount('test-toggle');
+
+      const span = query('span')!;
+      const status = query('.status')!;
+
+      expect(span.classList.contains('done')).toBe(false);
+      expect(status.textContent).toBe('todo');
+
+      todos.value = todos.value.map((t) => (t.id === 1 ? { ...t, completed: true } : t));
+      await flush();
+
+      expect(todos.value[0]?.completed).toBe(true);
+    });
+
+    it('should handle multiple toggles', async () => {
+      const todos = signal([
+        { completed: false, id: 1 },
+        { completed: true, id: 2 },
+      ]);
+
+      const toggle = (id: number) => {
+        todos.value = todos.value.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
+      };
+
+      register(
+        'test-multi-toggle',
+        () => html`
+          <div>
+            ${each(
+              todos,
+              (t) => html`
+                <input type="checkbox" ?checked=${() => t.completed} @change=${() => toggle(t.id)} />
+                <span class="status">${t.completed ? 'done' : 'todo'}</span>
+              `,
+              undefined,
+              { key: (t) => t.id },
+            )}
+          </div>
+        `,
+      );
+
+      const { flush, queryAll } = await mount('test-multi-toggle');
+
+      const statuses = queryAll('.status');
+
+      expect(statuses[0].textContent).toBe('todo');
+      expect(statuses[1].textContent).toBe('done');
+
+      todos.value = todos.value.map((t) => (t.id === 1 ? { ...t, completed: true } : t));
+      await flush();
+
+      todos.value = todos.value.map((t) => (t.id === 2 ? { ...t, completed: false } : t));
+      await flush();
+
+      expect(todos.value[0]?.completed).toBe(true);
+      expect(todos.value[1]?.completed).toBe(false);
+    });
   });
 });

@@ -162,8 +162,8 @@ Set `disabled` on the `bit-menu` element to prevent the panel from opening at al
   });
 
   // Fired when the panel opens / closes
-  menu.addEventListener('bit-open', () => console.log('menu opened'));
-  menu.addEventListener('bit-close', () => console.log('menu closed'));
+  menu.addEventListener('open', () => console.log('menu opened'));
+  menu.addEventListener('close', () => console.log('menu closed'));
 </script>
 ```
 
@@ -306,8 +306,8 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | Event        | Detail                                                        | Description                                                                                               |
 | ------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `bit-select` | `{ value: string, checked?: boolean, originalEvent?: Event }` | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items |
-| `bit-open`   | —                                                             | Emitted when the panel opens                                                                              |
-| `bit-close`  | —                                                             | Emitted when the panel closes                                                                             |
+| `open`   | —                                                             | Emitted when the panel opens                                                                              |
+| `close`  | —                                                             | Emitted when the panel closes                                                                             |
 
 ### CSS Custom Properties (`bit-menu`)
 

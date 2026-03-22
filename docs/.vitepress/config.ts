@@ -805,6 +805,38 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/timit/': [
+        { link: '/timit/', text: 'Overview' },
+        {
+          items: [
+            { link: '/timit/usage#parsing-inputs', text: 'Parsing Inputs' },
+            { link: '/timit/usage#time-zone-conversion', text: 'Time Zone Conversion' },
+            { link: '/timit/usage#date-time-arithmetic', text: 'Date-Time Arithmetic' },
+            { link: '/timit/usage#duration-differences', text: 'Duration Differences' },
+            { link: '/timit/usage#formatting', text: 'Formatting' },
+          ],
+          link: '/timit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/timit/api#exports', text: 'Exports' },
+            { link: '/timit/api#core-types', text: 'Core Types' },
+            { link: '/timit/api#behavior-notes', text: 'Behavior Notes' },
+          ],
+          link: '/timit/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/timit/examples/timezone-conversion', text: 'Timezone Conversion' },
+            { link: '/timit/examples/dst-safe-arithmetic', text: 'DST-safe Arithmetic' },
+            { link: '/timit/examples/locale-formatting', text: 'Locale Formatting' },
+          ],
+          link: '/timit/examples',
+          text: 'Examples',
+        },
+      ],
       '/toolkit/': [
         { link: '/toolkit/', text: 'Overview' },
         {
@@ -1004,38 +1036,6 @@ export default defineConfig({
             },
           ],
           link: '/toolkit/examples',
-          text: 'Examples',
-        },
-      ],
-      '/timit/': [
-        { link: '/timit/', text: 'Overview' },
-        {
-          items: [
-            { link: '/timit/usage#parsing-inputs', text: 'Parsing Inputs' },
-            { link: '/timit/usage#time-zone-conversion', text: 'Time Zone Conversion' },
-            { link: '/timit/usage#date-time-arithmetic', text: 'Date-Time Arithmetic' },
-            { link: '/timit/usage#duration-differences', text: 'Duration Differences' },
-            { link: '/timit/usage#formatting', text: 'Formatting' },
-          ],
-          link: '/timit/usage',
-          text: 'Usage Guide',
-        },
-        {
-          items: [
-            { link: '/timit/api#exports', text: 'Exports' },
-            { link: '/timit/api#core-types', text: 'Core Types' },
-            { link: '/timit/api#behavior-notes', text: 'Behavior Notes' },
-          ],
-          link: '/timit/api',
-          text: 'API Reference',
-        },
-        {
-          items: [
-            { link: '/timit/examples/timezone-conversion', text: 'Timezone Conversion' },
-            { link: '/timit/examples/dst-safe-arithmetic', text: 'DST-safe Arithmetic' },
-            { link: '/timit/examples/locale-formatting', text: 'Locale Formatting' },
-          ],
-          link: '/timit/examples',
           text: 'Examples',
         },
       ],

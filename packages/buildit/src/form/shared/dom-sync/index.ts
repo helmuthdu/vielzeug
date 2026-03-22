@@ -1,4 +1,4 @@
-export { createDropdownPositioner, createOutsideClickHandler } from './dropdown';
+export { createDropdownPositioner } from './dropdown';
 export {
   setupFieldEvents,
   syncCounter,

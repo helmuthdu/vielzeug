@@ -14,13 +14,13 @@ Implement typed props and emits in a production-friendly way with `@vielzeug/cra
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { defineComponent, html, typed } from '@vielzeug/craftit/core';
+import { defineComponent, html, typed } from '@vielzeug/craftit';
 
 type Variant = 'primary' | 'danger';
 
 defineComponent<
   { message: string; open: boolean; variant: Variant },
-  { close: undefined }
+  { close: void }
 >({
   props: {
     message: { default: 'Saved successfully' },
@@ -54,6 +54,7 @@ defineComponent<
 - Forgetting cleanup/dispose calls can leak listeners or stale state.
 - Skipping explicit typing can hide integration issues until runtime.
 - Not handling error branches makes examples harder to adapt safely.
+- For no-detail events, prefer `void` payload types so calls stay ergonomic (`emit('close')`).
 
 ## Related Recipes
 

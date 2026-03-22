@@ -120,6 +120,9 @@ importers:
 
   packages/craftit:
     dependencies:
+      '@vielzeug/floatit':
+        specifier: workspace:*
+        version: link:../floatit
       '@vielzeug/stateit':
         specifier: workspace:*
         version: link:../stateit

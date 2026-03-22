@@ -8,11 +8,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
   mergeConfig(getConfig(__dirname, { name: 'timit' }), {
-	build: {
-	  rolldownOptions: {
-		external: ['@js-temporal/polyfill'],
-	  },
-	},
+    build: {
+      rolldownOptions: {
+        external: ['@js-temporal/polyfill'],
+      },
+    },
   }),
 );
-

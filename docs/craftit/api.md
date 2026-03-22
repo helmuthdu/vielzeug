@@ -10,7 +10,6 @@ description: API reference for Craftit main exports, directives, and testing uti
 ## Package Entry Points
 
 - `@vielzeug/craftit` — core API (stable)
-- `@vielzeug/craftit/core` — explicit core API import path
 - `@vielzeug/craftit/labs` — experimental APIs
 - `@vielzeug/craftit/directives` — template directives
 - `@vielzeug/craftit/test` — testing helpers
@@ -32,6 +31,8 @@ defineComponent<Props, Events>(options: DefineComponentOptions<BuildPropSchema<P
 ```
 
 Registers a custom element and returns the tag name.
+
+If the tag already exists, Craftit warns once and skips duplicate registration.
 
 - `DefineComponentOptions`:
   - `tag: string`
@@ -57,6 +58,8 @@ Registers a custom element and returns the tag name.
 - `onCleanup(fn)` — register cleanup.
 - `onError(fn)` — component-scoped error handler.
 
+`onCleanup()` is component-aware: inside component setup/mount it runs on unmount; outside component context it delegates to stateit's effect cleanup behavior.
+
 ### Reactivity Wrappers
 
 - `effect(fn, options?)` — component-aware wrapper around stateit `effect`.
@@ -70,8 +73,14 @@ Signatures:
 ### DOM/Event Utilities
 
 - `handle(target, event, listener, options?)` — listener with auto-cleanup.
-- `fire(target, type, options?)` — dispatches DOM/custom events.
-- `aria(attrs)` or `aria(target, attrs)` — reactive ARIA attributes.
+- `fire.basic(target, type, options?)` — dispatches a plain `Event`.
+- `fire.custom(target, type, options?)` — dispatches a `CustomEvent`.
+- `fire.mouse(target, type, options?)` — dispatches a `MouseEvent`.
+- `fire.keyboard(target, type, options?)` — dispatches a `KeyboardEvent`.
+- `fire.focus(target, type, options?)` — dispatches a `FocusEvent`.
+- `fire.touch(target, type, options?)` — dispatches a `TouchEvent` when available, otherwise `CustomEvent`.
+- `fire.event(target, event)` — dispatches a prebuilt event instance.
+- `aria(attrs)` or `aria(target, attrs)` — reactive ARIA attributes (`false`, `null`, and `undefined` remove the attribute).
 
 ## Template and Styling
 
@@ -82,6 +91,14 @@ html(strings: TemplateStringsArray, ...values: unknown[]): HTMLResult;
 ```
 
 Tagged template with reactive bindings.
+
+Template event bindings support modifiers:
+
+- `@click.stop=${handler}`
+- `@submit.prevent=${handler}`
+- `@click.self=${handler}`
+- `@keydown.once=${handler}`
+- listener options: `.capture`, `.passive`, `.once`
 
 ### `css`
 
@@ -118,9 +135,22 @@ Helper for explicit generic prop typing in `defineComponent({ props })`.
 
 ```ts
 type EmitFn<T extends Record<string, unknown>> = {
-  <K extends { [P in keyof T]: T[P] extends undefined ? P : never }[keyof T]>(event: K): void;
-  <K extends keyof T>(event: K, detail: T[K]): void;
+  <K extends KeysWithoutDetail<T>>(event: K): void;
+  <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): void;
 };
+
+type KeysWithoutDetail<T extends Record<string, unknown>> = {
+  [P in keyof T]: [T[P]] extends [void | undefined | never] ? P : never;
+}[keyof T];
+```
+
+Example:
+
+```ts
+type Events = { open: void; select: { value: string } };
+
+emit('open');
+emit('select', { value: 'alpha' });
 ```
 
 ### setup-context `slots`
@@ -131,9 +161,13 @@ type EmitFn<T extends Record<string, unknown>> = {
 slots.has(name): ReadonlySignal<boolean>
 ```
 
+If Craftit cannot find a matching `<slot>` element for `name`, it warns once in dev tooling and returns a signal that stays `false`.
+
 ### `onSlotChange(slotName, callback)`
 
 Listens for slot assignment changes (call inside `onMount`).
+
+If no matching `<slot>` exists, Craftit warns once instead of failing silently.
 
 ## Context API
 
@@ -154,6 +188,8 @@ Types:
 defineField<T>(options: FormFieldOptions<T>, callbacks?: FormFieldCallbacks): FormFieldHandle;
 ```
 
+Requires `defineComponent({ formAssociated: true, ... })`; otherwise Craftit throws an explicit runtime error.
+
 Types:
 
 - `FormFieldOptions<T>`
@@ -169,11 +205,17 @@ Types:
 
 Import from `@vielzeug/craftit/labs`:
 
-- `observeResize(el): ReadonlySignal<{ width: number; height: number }>`
+- `createListNavigation(options)`
+- `createOverlayControl(options)`
+- `createSelectionModel(options)`
 - `observeIntersection(el, options?): ReadonlySignal<IntersectionObserverEntry | null>`
 - `observeMedia(query): ReadonlySignal<boolean>`
 - `useA11yControl(host, config)`
-- `useCheckableControl(config)`
+- `createCheckableControl(config)`
+
+Main API (`@vielzeug/craftit`) also exports:
+
+- `observeResize(el): ReadonlySignal<{ width: number; height: number }>`
 
 ## Utility APIs
 
@@ -215,6 +257,11 @@ until(promise, pendingFn?, onError?)
 each(source, template, empty?, options?)
 bind(sig)
 ```
+
+- `attr(map)` — shorthand for batching DOM property bindings in spread position.
+  Despite the name, entries map to `.property` bindings internally.
+- `bind(sig)` — two-way shorthand built on the same property-binding path used by
+  `attr(...)`, `spread({ '.value': ... })`, and template `.value` / `.checked` bindings.
 
 ## Testing APIs
 

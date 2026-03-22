@@ -1,4 +1,4 @@
-import { computed, defineComponent, defineField, fire, html, inject, syncContextProps } from '@vielzeug/craftit/core';
+import { computed, defineComponent, defineField, fire, html, inject, syncContextProps } from '@vielzeug/craftit';
 import { when } from '@vielzeug/craftit/directives';
 
 import type { ButtonType, DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
@@ -130,7 +130,7 @@ export const BUTTON_TAG = defineComponent<BitButtonProps>({
       // Relay to host as a proper MouseEvent. stopPropagation prevents double-dispatch in
       // browsers where shadow DOM already retargets the event to the host.
       e.stopPropagation();
-      fire(host, e.type, e);
+      fire.mouse(host, e.type, e);
     };
     const handleButtonClick = (e: MouseEvent) => {
       if (isDisabled.value) return;
@@ -145,7 +145,7 @@ export const BUTTON_TAG = defineComponent<BitButtonProps>({
         else if (props.type.value === 'reset') form.reset();
       }
 
-      fire(host, e.type, e);
+      fire.mouse(host, e.type, e);
     };
 
     return html`

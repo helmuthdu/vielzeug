@@ -1,4 +1,4 @@
-import { defineComponent, effect, html } from '@vielzeug/craftit/core';
+import { defineComponent, effect, html } from '@vielzeug/craftit';
 
 import styles from './grid-item.css?inline';
 

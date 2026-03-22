@@ -14,7 +14,7 @@ Implement search list with directives in a production-friendly way with `@vielze
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { computed, defineComponent, html, signal } from '@vielzeug/craftit/core';
+import { computed, defineComponent, html, signal } from '@vielzeug/craftit';
 import { each, when } from '@vielzeug/craftit/directives';
 
 defineComponent({

@@ -1,4 +1,4 @@
-import { css } from '@vielzeug/craftit/core';
+import { css } from '@vielzeug/craftit';
 
 /**
  * Register the --rainbow-angle CSS custom property so browsers can

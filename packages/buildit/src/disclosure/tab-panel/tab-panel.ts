@@ -1,4 +1,4 @@
-import { computed, defineComponent, effect, html, typed, inject, signal } from '@vielzeug/craftit/core';
+import { computed, defineComponent, effect, html, typed, inject, signal } from '@vielzeug/craftit';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';

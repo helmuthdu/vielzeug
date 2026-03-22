@@ -1,4 +1,4 @@
-import { computed, createId, defineComponent, fire, handle, html, onMount, ref, watch } from '@vielzeug/craftit/core';
+import { computed, createId, defineComponent, fire, handle, html, onMount, ref, watch } from '@vielzeug/craftit';
 
 import { closeIcon } from '../../icons';
 import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
@@ -128,7 +128,7 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
      * Consumers can call `e.preventDefault()` to block closing (e.g. when there are unsaved changes).
      */
     const requestClose = (trigger: 'backdrop' | 'button' | 'escape') => {
-      const allowed = fire(host, 'close-request', {
+      const allowed = fire.custom(host, 'close-request', {
         cancelable: true,
         detail: { placement: props.placement.value ?? 'right', trigger },
       });

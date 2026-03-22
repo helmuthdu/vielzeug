@@ -10,7 +10,7 @@ import {
   onMount,
   ref,
   signal,
-} from '@vielzeug/craftit/core';
+} from '@vielzeug/craftit';
 import { each } from '@vielzeug/craftit/directives';
 import { createDropZone } from '@vielzeug/dragit';
 

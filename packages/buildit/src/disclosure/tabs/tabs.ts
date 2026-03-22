@@ -9,7 +9,7 @@ import {
   type ReadonlySignal,
   ref,
   watch,
-} from '@vielzeug/craftit/core';
+} from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 

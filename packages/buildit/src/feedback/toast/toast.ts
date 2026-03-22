@@ -1,4 +1,4 @@
-import { defineComponent, html, onMount, ref, signal } from '@vielzeug/craftit/core';
+import { defineComponent, html, onMount, ref, signal } from '@vielzeug/craftit';
 import { classes, each } from '@vielzeug/craftit/directives';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';

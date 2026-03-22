@@ -9,8 +9,9 @@ import {
   onMount,
   onSlotChange,
   signal,
-} from '@vielzeug/craftit/core';
-import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+} from '@vielzeug/craftit';
+import { createListNavigation, createOverlayControl } from '@vielzeug/craftit/labs';
+import { flip, offset, positionFloat, shift } from '@vielzeug/floatit';
 
 import type { AddEventListeners, ComponentSize, ThemeColor } from '../../types';
 
@@ -26,9 +27,13 @@ export interface MenuItemSelectDetail {
   originalEvent?: Event;
 }
 
+type MenuOpenReason = 'programmatic' | 'toggle' | 'trigger';
+
+type MenuCloseReason = 'escape' | 'outside-click' | 'programmatic' | 'toggle';
+
 export type BitMenuEvents = {
-  'bit-close': never;
-  'bit-open': never;
+  'bit-close': { reason: MenuCloseReason };
+  'bit-open': { reason: MenuOpenReason };
   'bit-select': { checked?: boolean; originalEvent?: Event; value: string | undefined };
 };
 
@@ -246,12 +251,22 @@ export const MENU_TAG = defineComponent<BitMenuProps, BitMenuEvents>({
     const focusedIndex = signal(-1);
     let triggerEl: HTMLElement | null = null;
     let panelEl: HTMLElement | null = null;
-    let autoUpdateCleanup: (() => void) | null = null;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     function getItems(): HTMLElement[] {
       return Array.from(host.querySelectorAll<HTMLElement>('bit-menu-item:not([disabled])'));
     }
+
+    const listNavigation = createListNavigation<HTMLElement>({
+      getIndex: () => focusedIndex.value,
+      getItems,
+      isItemDisabled: (item) => item.hasAttribute('disabled'),
+      setIndex: (index) => {
+        focusedIndex.value = index;
+        getItems()[index]?.focus();
+      },
+    });
+
     function updatePosition() {
       if (!panelEl || !triggerEl) return;
 
@@ -260,47 +275,70 @@ export const MENU_TAG = defineComponent<BitMenuProps, BitMenuEvents>({
         placement: props.placement.value,
       });
     }
-    // ── Open / Close ──────────────────────────────────────────────────────────
-    function open() {
-      if (props.disabled.value) return;
 
-      isOpen.value = true;
-      focusedIndex.value = -1;
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => host,
+      getPanelElement: () => panelEl,
+      getTriggerElement: () => triggerEl,
+      isDisabled: () => Boolean(props.disabled.value),
+      isOpen: () => isOpen.value,
+      onClose: (reason) => emit('bit-close', { reason }),
+      onOpen: (reason) => emit('bit-open', { reason }),
+      positioner: {
+        floating: () => panelEl,
+        reference: () => triggerEl,
+        update: updatePosition,
+      },
+      setOpen: (next, _context) => {
+        isOpen.value = next;
 
-      if (triggerEl && panelEl) {
-        autoUpdateCleanup?.();
-        autoUpdateCleanup = autoUpdate(triggerEl, panelEl, updatePosition);
+        if (!next) listNavigation.reset();
+      },
+    });
+
+    const activateItem = (item: HTMLElement, originalEvent: Event): void => {
+      const value = item.getAttribute('value') ?? '';
+      const type = item.getAttribute('type');
+      let checked: boolean | undefined;
+
+      if (type === 'checkbox') {
+        const next = !item.hasAttribute('checked');
+
+        if (next) item.setAttribute('checked', '');
+        else item.removeAttribute('checked');
+
+        checked = next;
+      } else if (type === 'radio') {
+        for (const radio of host.querySelectorAll<HTMLElement>('bit-menu-item[type="radio"]')) {
+          radio.removeAttribute('checked');
+        }
+
+        item.setAttribute('checked', '');
+        checked = true;
       }
 
+      emit('bit-select', { checked, originalEvent, value });
+
+      if (type !== 'checkbox' && type !== 'radio') {
+        overlay.close({ reason: 'programmatic' });
+      }
+    };
+
+    // ── Open / Close ──────────────────────────────────────────────────────────
+    function open() {
+      overlay.open();
+
       requestAnimationFrame(() => {
-        updatePosition();
-
-        // Focus first item
-        const items = getItems();
-
-        if (items.length > 0) {
-          focusedIndex.value = 0;
-          items[0].focus();
-        }
+        listNavigation.first();
       });
-      emit('bit-open', undefined as never);
     }
-    function close() {
-      isOpen.value = false;
-      autoUpdateCleanup?.();
-      autoUpdateCleanup = null;
-      focusedIndex.value = -1;
-      triggerEl?.focus();
-      emit('bit-close', undefined as never);
-    }
+
     function toggleMenu() {
-      if (isOpen.value) close();
-      else open();
+      overlay.toggle();
     }
+
     // ── Keyboard Navigation ───────────────────────────────────────────────────
     function handleKeydown(e: KeyboardEvent) {
-      const items = getItems();
-
       if (!isOpen.value) {
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
           e.preventDefault();
@@ -315,68 +353,38 @@ export const MENU_TAG = defineComponent<BitMenuProps, BitMenuEvents>({
         case 'Enter': {
           e.preventDefault();
 
-          const focused = items[focusedIndex.value];
+          const focused = listNavigation.getActiveItem();
 
           if (focused) {
-            const value = focused.getAttribute('value') ?? '';
-            const type = focused.getAttribute('type');
-            let checked: boolean | undefined;
-
-            if (type === 'checkbox') {
-              const next = !focused.hasAttribute('checked');
-
-              if (next) focused.setAttribute('checked', '');
-              else focused.removeAttribute('checked');
-
-              checked = next;
-            } else if (type === 'radio') {
-              for (const radio of host.querySelectorAll<HTMLElement>('bit-menu-item[type="radio"]'))
-                radio.removeAttribute('checked');
-              focused.setAttribute('checked', '');
-              checked = true;
-            }
-
-            emit('bit-select', { checked, originalEvent: e, value });
-
-            if (type !== 'checkbox' && type !== 'radio') close();
+            activateItem(focused, e);
           }
 
           break;
         }
         case 'ArrowDown': {
           e.preventDefault();
-
-          const next = Math.min(focusedIndex.value + 1, items.length - 1);
-
-          focusedIndex.value = next;
-          items[next]?.focus();
+          listNavigation.next();
           break;
         }
         case 'ArrowUp': {
           e.preventDefault();
-
-          const prev = Math.max(focusedIndex.value - 1, 0);
-
-          focusedIndex.value = prev;
-          items[prev]?.focus();
+          listNavigation.prev();
           break;
         }
         case 'End':
           e.preventDefault();
-          focusedIndex.value = items.length - 1;
-          items[items.length - 1]?.focus();
+          listNavigation.last();
           break;
         case 'Escape':
           e.preventDefault();
-          close();
+          overlay.close({ reason: 'escape' });
           break;
         case 'Home':
           e.preventDefault();
-          focusedIndex.value = 0;
-          items[0]?.focus();
+          listNavigation.first();
           break;
         case 'Tab':
-          close();
+          overlay.close({ reason: 'programmatic' });
           break;
       }
     }
@@ -404,7 +412,7 @@ export const MENU_TAG = defineComponent<BitMenuProps, BitMenuEvents>({
           aria(triggerEl, {
             controls: () => menuId,
             disabled: () => props.disabled.value,
-            expanded: () => isOpen.value,
+            expanded: () => (isOpen.value ? 'true' : 'false'),
             haspopup: 'menu',
           });
           triggerEl.addEventListener('click', toggleMenu);
@@ -418,44 +426,22 @@ export const MENU_TAG = defineComponent<BitMenuProps, BitMenuEvents>({
         const item = (e.target as HTMLElement)?.closest<HTMLElement>('bit-menu-item');
 
         if (item && !item.hasAttribute('disabled')) {
-          const value = item.getAttribute('value') ?? '';
-          const type = item.getAttribute('type');
-          let checked: boolean | undefined;
-
-          if (type === 'checkbox') {
-            const next = !item.hasAttribute('checked');
-
-            if (next) item.setAttribute('checked', '');
-            else item.removeAttribute('checked');
-
-            checked = next;
-          } else if (type === 'radio') {
-            // Uncheck siblings with same name/group (all radio items in this menu)
-            for (const radio of host.querySelectorAll<HTMLElement>('bit-menu-item[type="radio"]')) {
-              radio.removeAttribute('checked');
-            }
-            item.setAttribute('checked', '');
-            checked = true;
-          }
-
-          emit('bit-select', { checked, originalEvent: e, value });
-
-          if (type !== 'checkbox' && type !== 'radio') close();
+          activateItem(item, e);
         }
       };
 
       handle(host, 'click', handleItemClick);
-      // Close on outside click
-      handle(document, 'click', (e: MouseEvent) => {
-        if (!e.composedPath().includes(host)) close();
-      });
+
+      const removeOutsideClick = overlay.bindOutsideClick(document);
+
       effect(() => {
         panelEl?.toggleAttribute('data-open', isOpen.value);
       });
+
       handle(panelEl, 'keydown', handleKeydown as EventListener);
 
       return () => {
-        autoUpdateCleanup?.();
+        removeOutsideClick();
 
         if (prevTriggerEl) {
           prevTriggerEl.removeEventListener('click', toggleMenu);

@@ -1,15 +1,18 @@
-import type { Signal } from '@vielzeug/stateit';
+import { type Signal } from '@vielzeug/stateit';
 
-import type { Directive } from '../core/internal';
-
+import { type Directive } from '../core/internal';
 import { attr } from './attr';
 
 /**
  * Creates a two-way binding between a writable Signal and a form element.
  *
- * - **`Signal<string>`** (`<input>`, `<textarea>`, `<select>`): syncs `.value` via the `input` event.
+ * - **`Signal<string>`** (`<input>`, `<textarea>`): syncs `.value` via the `input` event.
+ * - **`Signal<string>`** (`<select>`): syncs `.value` via the `change` event.
  * - **`Signal<boolean>`** (checkbox/radio): auto-detected from the element's `type` attribute;
  *   syncs `.checked` via the `change` event.
+ *
+ * Internally this reuses craftit's shared property-binding path, so `.value`,
+ * `.checked`, `attr(...)`, and `spread({ '.value': ... })` stay in sync.
  *
  * Use in spread position on any form element.
  *

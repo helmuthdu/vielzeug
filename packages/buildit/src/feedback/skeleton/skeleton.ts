@@ -1,4 +1,4 @@
-import { computed, defineComponent, html, onMount, watch } from '@vielzeug/craftit/core';
+import { computed, defineComponent, html, onMount, watch } from '@vielzeug/craftit';
 import { observeIntersection } from '@vielzeug/craftit/labs';
 
 import type { ComponentSize } from '../../types';
