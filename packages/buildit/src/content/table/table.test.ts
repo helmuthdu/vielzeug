@@ -5,11 +5,76 @@ import { type Fixture, mount } from '@vielzeug/craftit/test';
 //   bit-tr        → mirrored into <tbody> as native <tr>
 //   bit-tr[foot]  → mirrored into <tfoot> as native <tr>
 //   bit-th / bit-td → mirrored as native <th> / <td> with forwarded attrs
-const HEAD_ROW = '<bit-tr head><bit-th scope="col">Name</bit-th><bit-th scope="col">Email</bit-th></bit-tr>';
-const BODY_ROWS =
-  '<bit-tr><bit-td>Alice</bit-td><bit-td>alice@example.com</bit-td></bit-tr><bit-tr><bit-td>Bob</bit-td><bit-td>bob@example.com</bit-td></bit-tr>';
-const FOOT_ROW = '<bit-tr foot><bit-td colspan="2">2 users</bit-td></bit-tr>';
+type MarkerCell = {
+  attrs?: Record<string, string>;
+  tag: 'bit-td' | 'bit-th';
+  text: string;
+};
+
+const createCell = (cell: MarkerCell): HTMLElement => {
+  const node = document.createElement(cell.tag);
+
+  for (const [name, value] of Object.entries(cell.attrs ?? {})) {
+    node.setAttribute(name, value);
+  }
+
+  node.textContent = cell.text;
+
+  return node;
+};
+
+const createRow = (cells: MarkerCell[], section?: 'body' | 'foot' | 'head'): HTMLElement => {
+  const row = document.createElement('bit-tr');
+
+  if (section === 'head') row.setAttribute('head', '');
+
+  if (section === 'foot') row.setAttribute('foot', '');
+
+  for (const cell of cells) {
+    row.appendChild(createCell(cell));
+  }
+
+  return row;
+};
+
+const rowsToHtml = (...rows: HTMLElement[]): string => {
+  const root = document.createElement('div');
+
+  for (const row of rows) {
+    root.appendChild(row);
+  }
+
+  return root.innerHTML;
+};
+
+const HEAD_ROW = rowsToHtml(
+  createRow(
+    [
+      { attrs: { scope: 'col' }, tag: 'bit-th', text: 'Name' },
+      { attrs: { scope: 'col' }, tag: 'bit-th', text: 'Email' },
+    ],
+    'head',
+  ),
+);
+const BODY_ROWS = rowsToHtml(
+  createRow([
+    { tag: 'bit-td', text: 'Alice' },
+    { tag: 'bit-td', text: 'alice@example.com' },
+  ]),
+  createRow([
+    { tag: 'bit-td', text: 'Bob' },
+    { tag: 'bit-td', text: 'bob@example.com' },
+  ]),
+);
+const FOOT_ROW = rowsToHtml(createRow([{ attrs: { colspan: '2' }, tag: 'bit-td', text: '2 users' }], 'foot'));
 const ALL_ROWS = HEAD_ROW + BODY_ROWS + FOOT_ROW;
+const HEAD_SCOPE_COL_ROW = rowsToHtml(createRow([{ attrs: { scope: 'col' }, tag: 'bit-th', text: 'Name' }], 'head'));
+const BODY_SCOPE_ROW_ROW = rowsToHtml(
+  createRow([
+    { attrs: { scope: 'row' }, tag: 'bit-th', text: 'Alice' },
+    { tag: 'bit-td', text: 'admin' },
+  ]),
+);
 
 describe('bit-table', () => {
   let fixture: Fixture<HTMLElement>;
@@ -173,10 +238,10 @@ describe('bit-table', () => {
   // ─── Accessibility ───────────────────────────────────────────────────────────────
 
   describe('Accessibility', () => {
-    it('sets aria-busy=false on host when loading is absent', async () => {
+    it('removes aria-busy on host when loading is absent', async () => {
       fixture = await mount('bit-table');
 
-      expect(fixture.element.getAttribute('aria-busy')).toBe('false');
+      expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
     });
 
     it('sets aria-busy=true on host when loading is set', async () => {
@@ -188,7 +253,7 @@ describe('bit-table', () => {
     it('updates aria-busy reactively when loading changes', async () => {
       fixture = await mount('bit-table');
 
-      expect(fixture.element.getAttribute('aria-busy')).toBe('false');
+      expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
 
       await fixture.attr('loading', '');
 
@@ -196,7 +261,7 @@ describe('bit-table', () => {
 
       await fixture.attr('loading', false);
 
-      expect(fixture.element.getAttribute('aria-busy')).toBe('false');
+      expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
     });
 
     it('sets aria-label on host when caption is provided', async () => {
@@ -223,7 +288,7 @@ describe('bit-table', () => {
 
     it('allows scope="col" on header cells', async () => {
       fixture = await mount('bit-table', {
-        html: '<bit-tr head><bit-th scope="col">Name</bit-th></bit-tr>',
+        html: HEAD_SCOPE_COL_ROW,
       });
 
       expect(fixture.element.querySelector('bit-th')?.getAttribute('scope')).toBe('col');
@@ -231,7 +296,7 @@ describe('bit-table', () => {
 
     it('allows scope="row" on row header cells in body', async () => {
       fixture = await mount('bit-table', {
-        html: '<bit-tr><bit-th scope="row">Alice</bit-th><bit-td>admin</bit-td></bit-tr>',
+        html: BODY_SCOPE_ROW_ROW,
       });
 
       expect(fixture.element.querySelector('bit-th')?.getAttribute('scope')).toBe('row');
@@ -350,10 +415,10 @@ describe('bit-table', () => {
       expect(fixture.element.getAttribute('aria-busy')).toBe('true');
     });
 
-    it('sets aria-busy=false when loading is inactive', async () => {
+    it('removes aria-busy when loading is inactive', async () => {
       fixture = await mount('bit-table', { html: BODY_ROWS });
 
-      expect(fixture.element.getAttribute('aria-busy')).toBe('false');
+      expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
     });
 
     it('toggles aria-busy when loading attribute is added', async () => {
@@ -369,7 +434,7 @@ describe('bit-table', () => {
 
       await fixture.attr('loading', false);
 
-      expect(fixture.element.getAttribute('aria-busy')).toBe('false');
+      expect(fixture.element.hasAttribute('aria-busy')).toBe(false);
     });
   });
 

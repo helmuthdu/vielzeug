@@ -204,11 +204,15 @@ export const TABLE_TAG = defineComponent<BitTableProps>({
     // require real <thead>/<tbody>/<tfoot>/<tr>/<th>/<td> in the shadow tree.
     onMount(() => {
       const scrollContainer = host.shadowRoot!.querySelector('.scroll-container')!;
+
       const table = document.createElement('table');
       const captionEl = document.createElement('caption');
       const thead = document.createElement('thead');
       const tbody = document.createElement('tbody');
       const tfoot = document.createElement('tfoot');
+
+      // Keep part assignment imperative so template typing stays strict.
+      scrollContainer.setAttribute('part', 'scroll');
 
       table.setAttribute('part', 'table');
       thead.setAttribute('part', 'head');
@@ -237,7 +241,7 @@ export const TABLE_TAG = defineComponent<BitTableProps>({
       };
     });
 
-    return html`<div class="scroll-container" part="scroll"></div>`;
+    return html`<div class="scroll-container"></div>`;
   },
   styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
   tag: 'bit-table',

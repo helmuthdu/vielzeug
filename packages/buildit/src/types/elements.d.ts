@@ -16,7 +16,23 @@ declare global {
     'bit-card': HTMLElement & BitCardProps & AddEventListeners<BitCardEvents>;
     'bit-pagination': HTMLElement & BitPaginationProps & AddEventListeners<BitPaginationEvents>;
     'bit-separator': HTMLElement & BitSeparatorProps;
+    'bit-table': HTMLElement & BitTableProps;
     'bit-text': HTMLElement & BitTextProps;
+    // table markers (light-DOM authoring API used by bit-table)
+    'bit-tr': HTMLElement & { foot?: boolean; head?: boolean };
+    'bit-th': HTMLElement & {
+      abbr?: string;
+      axis?: string;
+      colspan?: number | string;
+      headers?: string;
+      rowspan?: number | string;
+      scope?: 'col' | 'colgroup' | 'row' | 'rowgroup' | string;
+    };
+    'bit-td': HTMLElement & {
+      colspan?: number | string;
+      headers?: string;
+      rowspan?: number | string;
+    };
     // disclosure
     'bit-accordion': HTMLElement & BitAccordionProps & AddEventListeners<BitAccordionEvents>;
     'bit-accordion-item': HTMLElement & BitAccordionItemProps & AddEventListeners<BitAccordionItemEvents>;

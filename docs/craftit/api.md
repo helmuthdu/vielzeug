@@ -16,11 +16,11 @@ description: API reference for Craftit main exports, directives, and testing uti
 
 ## API At a Glance
 
-| Symbol      | Purpose                                     | Execution mode | Common gotcha                                    |
-| ----------- | ------------------------------------------- | -------------- | ------------------------------------------------ |
-| `defineComponent()` | Define and register a custom element | Sync | Element names must include a hyphen |
-| `html`      | Create reactive templates                   | Sync           | Do not build templates with string concatenation |
-| `onMount()` | Run setup logic tied to component lifecycle | Sync           | Always return cleanup when registering listeners |
+| Symbol              | Purpose                            | Execution mode | Common gotcha                                    |
+| ------------------- | ---------------------------------- | -------------- | ------------------------------------------------ |
+| `defineComponent()` | Define and register a custom element | Sync         | Element names must include a hyphen              |
+| `html`              | Create reactive templates          | Sync           | Do not build templates with string concatenation |
+| `onMount()`         | Run setup logic tied to component lifecycle | Sync | Always return cleanup when registering listeners |
 
 ## Core Component API
 
@@ -206,12 +206,23 @@ Types:
 Import from `@vielzeug/craftit/labs`:
 
 - `createListNavigation(options)`
+  - returns result-based navigation (`ListNavigationResult` with `reason`, `moved`, `wrapped`, `index`)
 - `createOverlayControl(options)`
-- `createSelectionModel(options)`
+  - reason-aware overlay transitions via `setOpen(next, { reason })`, `onOpen(reason)`, and `onClose(reason)`
+- `createSelectionControl(options)`
+  - key-driven selection via `keyExtractor` and `findByKey`
+- `useA11yControl(host, config)`
+  - explicit helper tone (`'default' | 'error'`), no text heuristics
+- `createCheckableControl(config)`
+- `observeResize(el): ReadonlySignal<{ width: number; height: number }>`
 - `observeIntersection(el, options?): ReadonlySignal<IntersectionObserverEntry | null>`
 - `observeMedia(query): ReadonlySignal<boolean>`
-- `useA11yControl(host, config)`
-- `createCheckableControl(config)`
+
+### Labs contract notes
+
+- `aria(...)` semantics apply broadly: `false`, `null`, and `undefined` remove ARIA attributes.
+- `createOverlayControl` close/open reasons are part of the public contract and intended for typed event payloads.
+- `createSelectionControl` intentionally avoids item-shape assumptions; keys are the stable API surface.
 
 Main API (`@vielzeug/craftit`) also exports:
 

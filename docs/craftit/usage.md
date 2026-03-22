@@ -351,7 +351,7 @@ Observer helpers must run inside an active lifecycle context (typically `onMount
 
 ```ts
 import { defineComponent, effect, html, onMount, observeResize, ref } from '@vielzeug/craftit';
-import { observeMedia } from '@vielzeug/craftit/labs';
+import { observeIntersection, observeMedia } from '@vielzeug/craftit/labs';
 
 defineComponent({
   setup() {
@@ -360,9 +360,10 @@ defineComponent({
     onMount(() => {
       const size = observeResize(boxRef.value!);
       const dark = observeMedia('(prefers-color-scheme: dark)');
+      const intersection = observeIntersection(boxRef.value!, { threshold: 0.5 });
 
       effect(() => {
-        console.log(size.value.width, size.value.height, dark.value);
+        console.log(size.value.width, size.value.height, dark.value, intersection.value?.isIntersecting);
       });
     });
 
@@ -370,6 +371,49 @@ defineComponent({
   },
   tag: 'x-observed',
 });
+```
+
+## Labs Controllers
+
+Use `@vielzeug/craftit/labs` when you need headless interaction logic:
+
+- `createListNavigation` for keyboard/list focus with rich result metadata.
+- `createOverlayControl` for reason-aware open/close orchestration.
+- `createSelectionControl` for key-driven single/multiple selection.
+
+```ts
+import { createListNavigation, createOverlayControl, createSelectionControl } from '@vielzeug/craftit/labs';
+
+const nav = createListNavigation({
+  getIndex: () => focusedIndex.value,
+  getItems: () => options.value,
+  setIndex: (index) => {
+    focusedIndex.value = index;
+  },
+});
+
+const overlay = createOverlayControl({
+  getBoundaryElement: () => host,
+  isOpen: () => open.value,
+  setOpen: (next, context) => {
+    open.value = next;
+    console.log(context.reason);
+  },
+});
+
+const selection = createSelectionControl({
+  getMode: () => 'single',
+  getSelected: () => selected.value,
+  setSelected: (next) => {
+    selected.value = next;
+  },
+  keyExtractor: (item) => item.id,
+  findByKey: (id) => options.value.find((item) => item.id === id),
+});
+
+const moveResult = nav.next();
+if (moveResult.reason === 'moved') selection.select(options.value[moveResult.index]!.id);
+overlay.open({ reason: 'trigger' });
 ```
 
 ## Testing Utilities

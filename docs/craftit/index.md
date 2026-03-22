@@ -98,7 +98,7 @@ defineComponent({
 | SSR                | ❌                                            | ✅           | ✅                |
 | Form-associated    | ✅ Built-in                                   | ⚠️ Manual    | ⚠️ Limited        |
 | Context / DI       | ✅ Built-in                                   | ✅ @lit-labs | ✅ @stencil       |
-| Reactive observers | ✅ Via `craftit/labs`                         | ❌           | ❌                |
+| Reactive observers | ✅ Core + Labs                              | ❌           | ❌                |
 
 **Use Craftit when** you want signals-based web components with stable core APIs and opt-in experimental APIs (`labs`) — without decorators or a compiler step.
 
@@ -109,8 +109,8 @@ defineComponent({
 ## Features
 
 - **Fine-grained reactivity** — Re-exports all signals from `@vielzeug/stateit`: `signal()`, `computed()`, `effect()`, `watch()`, `batch()`, `untrack()`, and more
-- **Template literals** — `html\`...\``for declarative, reactive DOM updates with`:attr`, `@event`, `ref=`, and `.prop` bindings
-- **Styling helper** — `css\`...\``for component styles used via`defineComponent({ styles })`
+- **Template literals** — `html\`...\`` for declarative, reactive DOM updates with `:attr`, `@event`, `ref=`, and `.prop` bindings
+- **Styling helper** — `css\`...\`` for component styles used via `defineComponent({ styles })`
 - **Lifecycle hooks** — `onMount()`, `onCleanup()`, `onError()`, `handle()`, and `watch()` for component lifecycle control
 - **Props** — top-level `defineComponent({ props })`, plus `prop()` for low-level reactive attribute bindings
 - **Slots & Emits** — setup-context `slots` / `emit`, plus `onSlotChange()` for slot-change observation
@@ -118,7 +118,7 @@ defineComponent({
 - **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation
 - **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
 - **Accessibility** — `aria()` for reactive ARIA attributes plus ID helpers (`createId()`, `createFormIds()`)
-- **Observers** — `observeResize()` from `@vielzeug/craftit`; `observeIntersection()` and `observeMedia()` from `@vielzeug/craftit/labs`
+- **Observers** — `observeResize()` from `@vielzeug/craftit` and `@vielzeug/craftit/labs`; `observeIntersection()` and `observeMedia()` from `@vielzeug/craftit/labs`
 - **Directive subpath** — `@vielzeug/craftit/directives` for `when`, `each`, `match`, `until`, `bind`, and more
 - **Testing subpath** — `@vielzeug/craftit/test` for `mount`, `fire`, `user`, `waitFor`, and cleanup helpers
 - **Focused entrypoints** — use `@vielzeug/craftit` for stable APIs and `@vielzeug/craftit/labs` for experimental utilities
