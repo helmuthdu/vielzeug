@@ -226,19 +226,6 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 
 </ComponentPreview>
 
-## Guideline Recipe: Delightful Success Moment
-
-**Guideline: delight** — a soft success alert with a headline and follow-up action rewards the user immediately after they complete a key step.
-
-```html
-<bit-alert color="success" variant="soft" heading="You're all set!" dismissible>
-  Your workspace is ready. Import your first project or invite your team.
-  <bit-button slot="actions" size="sm" variant="outline" color="success"> Invite teammates </bit-button>
-</bit-alert>
-```
-
-**Tip:** Pair `variant="soft"` with `dismissible` so the message disappears once acknowledged — keeping the interface clean.
-
 ## API Reference
 
 ### Attributes
@@ -290,7 +277,7 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 | `--alert-bg`           | Background color                  | Theme-dependent               |
 | `--alert-color`        | Text and icon color               | Theme-dependent               |
 | `--alert-border-color` | Border color                      | Theme-dependent               |
-| `--alert-radius`       | Border radius                     | `var(--rounded-md)`           |
+| `--alert-radius`       | Border radius                     | `var(--rounded-lg)`           |
 | `--alert-padding`      | Internal padding                  | `var(--size-3) var(--size-4)` |
 | `--alert-gap`          | Gap between icon, body, and close | `var(--size-3)`               |
 | `--alert-font-size`    | Font size                         | `var(--text-sm)`              |

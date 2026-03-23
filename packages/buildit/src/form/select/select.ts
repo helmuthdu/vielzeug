@@ -588,7 +588,7 @@ export const SELECT_TAG = defineComponent<BitSelectProps, BitSelectEvents>({
                       e.stopPropagation();
                       selectOption(row.opt, e);
                     }}
-                    @mouseenter=${() => {
+                    @pointerenter=${() => {
                       focusedIndex.value = row.idx;
                     }}>
                     <span>${row.opt.label}</span>

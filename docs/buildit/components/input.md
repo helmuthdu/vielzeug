@@ -296,7 +296,7 @@ Prevent interaction or modification of the input.
 | Property             | Description      | Default                    |
 | -------------------- | ---------------- | -------------------------- |
 | `--_theme-bg`        | Background color | `var(--color-contrast-50)` |
-| `--_theme-radius`    | Border radius    | `var(--rounded-md)`        |
+| `--_theme-radius`    | Border radius    | `var(--rounded-lg)`        |
 | `--_theme-font-size` | Font size        | `var(--text-sm)`           |
 
 ## Accessibility

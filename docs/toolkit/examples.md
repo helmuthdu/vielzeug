@@ -29,10 +29,18 @@ Use these example collections to find working snippets for the current Toolkit A
 ## Getting Started
 
 ```ts
-import { chunk, retry, currency } from '@vielzeug/toolkit';
+import { chunk, retry, currency, Scheduler } from '@vielzeug/toolkit';
 
 const batches = chunk([1, 2, 3, 4], 2);
 const value = currency({ amount: 1299n, currency: 'USD' });
 
-await retry(async () => fetch('/api/health'), { times: 3, delay: 100 });
+await retry(async () => fetch('/api/health'), {
+  times: 3,
+  delay: 100,
+  shouldRetry: (err, attempt) => attempt < 2,
+});
+
+// Background-priority task (won't delay user interactions)
+const scheduler = new Scheduler();
+void scheduler.postTask(() => cleanupOldData(), { delay: 60_000, priority: 'background' });
 ```

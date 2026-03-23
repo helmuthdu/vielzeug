@@ -10,20 +10,6 @@ import styles from './rating.css?inline';
 
 const FULL_STAR_PATH = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
 
-function starIcon(filled: boolean) {
-  return html`<svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    aria-hidden="true"
-    fill="${filled ? 'currentColor' : 'none'}"
-    stroke="currentColor"
-    stroke-width="${filled ? 0 : 1.5}"
-    stroke-linecap="round"
-    stroke-linejoin="round">
-    <path d="${FULL_STAR_PATH}" />
-  </svg>`;
-}
-
 export type BitRatingEvents = {
   change: { originalEvent?: Event; value: number };
 };
@@ -87,10 +73,18 @@ export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
 
     mountFormContextSync(host, formCtx, props);
 
+    const normalizedValue = computed(() => {
+      const max = Math.max(1, Number(props.max.value) || 5);
+      const raw = Number(props.value.value);
+      const safe = Number.isFinite(raw) ? raw : 0;
+
+      return Math.min(max, Math.max(0, safe));
+    });
+
     const fd = defineField(
       {
         disabled: computed(() => Boolean(props.disabled.value)),
-        value: computed(() => String(props.value.value || 0)),
+        value: computed(() => String(normalizedValue.value || 0)),
       },
       {
         onReset: () => {
@@ -102,8 +96,7 @@ export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
     const { triggerValidation } = createFieldValidation(formCtx, fd);
 
     const hovered = signal<number | null>(null);
-    // eslint-disable-next-line no-constant-binary-expression
-    const displayValue = computed(() => hovered.value ?? Number(props.value.value) ?? 0);
+    const displayValue = computed(() => hovered.value ?? normalizedValue.value);
 
     function spawnSparkles(star: number) {
       const layer = host.shadowRoot?.querySelector<HTMLElement>('.sparkle-layer');
@@ -140,10 +133,16 @@ export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
     function select(star: number, originalEvent?: Event) {
       if (props.readonly.value || props.disabled.value) return;
 
-      host.setAttribute('value', String(star));
-      emit('change', { originalEvent, value: star });
+      const max = Math.max(1, Number(props.max.value) || 5);
+      const nextValue = Math.min(max, Math.max(0, star));
+
+      if (nextValue === normalizedValue.value) return;
+
+      // Write through the reactive prop signal; craftit handles host reflection.
+      props.value.value = nextValue;
+      emit('change', { originalEvent, value: nextValue });
       triggerValidation('change');
-      spawnSparkles(star);
+      spawnSparkles(nextValue);
     }
     function handleKeydown(e: KeyboardEvent, star: number) {
       const max = Number(props.max.value) || 5;
@@ -179,30 +178,39 @@ export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
         :aria-label="${() => props.label.value}"
         :aria-required="${() => null}">
         ${() =>
-          stars.value.map((star) => {
-            const filled = star <= displayValue.value;
-
-            return html`<button
-              class="star-btn"
-              part="star"
-              type="button"
-              role="radio"
-              :aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
-              :aria-checked="${() => String(star === (Number(props.value.value) || 0))}"
-              :data-star="${star}"
-              ?data-filled="${() => filled}"
-              :disabled="${() => props.disabled.value || props.readonly.value || null}"
-              @click="${(e: Event) => select(star, e)}"
-              @mouseenter="${() => {
-                if (!props.readonly.value && !props.disabled.value) hovered.value = star;
-              }}"
-              @mouseleave="${() => {
-                hovered.value = null;
-              }}"
-              @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
-              ${starIcon(filled)}
-            </button>`;
-          })}
+          stars.value.map(
+            (star) =>
+              html`<button
+                class="star-btn"
+                part="star"
+                type="button"
+                role="radio"
+                :aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
+                :aria-checked="${() => String(star === normalizedValue.value)}"
+                :data-star="${star}"
+                ?data-filled="${() => star <= displayValue.value}"
+                :disabled="${() => props.disabled.value || props.readonly.value || null}"
+                @click="${(e: Event) => select(star, e)}"
+                @pointerenter="${() => {
+                  if (!props.readonly.value && !props.disabled.value) hovered.value = star;
+                }}"
+                @pointerleave="${() => {
+                  hovered.value = null;
+                }}"
+                @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  fill="${() => (star <= displayValue.value ? 'currentColor' : 'none')}"
+                  stroke="currentColor"
+                  stroke-width="${() => (star <= displayValue.value ? 0 : 1.5)}"
+                  stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="${FULL_STAR_PATH}" />
+                </svg>
+              </button>`,
+          )}
         <div class="sparkle-layer"></div>
       </div>
     `;

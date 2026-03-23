@@ -8,6 +8,7 @@ A slide-in panel that overlays page content from any edge of the screen. Built o
 - ↔️ **4 Placements**: left, right (default), top, bottom
 - 📐 **4 Sizes**: sm, md (default), lg, full
 - 🔘 **Dismissable** — optional close (×) button in the header
+- 🌫️ **Backdrop Styles** — `opaque` (default), `blur`, or `transparent`
 - 🧩 **Flexible slots** — `header`, default body, and `footer`
 - 🎞️ **Smooth animations** — slide-in/out transitions with backdrop fade
 - ♿ **Accessible**: `role="dialog"`, `aria-modal`, `aria-labelledby` from `label` prop
@@ -125,7 +126,7 @@ Use the `header` slot to replace the default title bar and the `footer` slot for
 <bit-button id="open-slots-btn">Open with slots</bit-button>
 
 <bit-drawer id="drawer-slots" label="Edit profile" dismissable>
-  <div slot="header" style="display:flex; align-items:center; gap:0.5rem; padding: 1rem 1.25rem;">
+  <div slot="header">
     <strong>Edit profile</strong>
     <bit-badge color="primary" size="sm">Beta</bit-badge>
   </div>
@@ -145,6 +146,44 @@ Use the `header` slot to replace the default title bar and the `footer` slot for
   });
   document.getElementById('cancel-slots-btn').addEventListener('click', function () {
     document.getElementById('drawer-slots').removeAttribute('open');
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Backdrop Styles (`backdrop`)
+
+Use `backdrop` to match dialog behavior:
+
+- `opaque` (default): dim overlay
+- `blur`: dim + blur
+- `transparent`: no overlay
+
+<ComponentPreview center>
+
+```html
+<bit-button id="open-backdrop-opaque">Opaque</bit-button>
+<bit-button id="open-backdrop-blur">Blur</bit-button>
+<bit-button id="open-backdrop-transparent">Transparent</bit-button>
+
+<bit-drawer id="drawer-backdrop-opaque" label="Opaque backdrop" placement="right" backdrop="opaque" dismissable>
+  <p>Default dimmed backdrop.</p>
+</bit-drawer>
+
+<bit-drawer id="drawer-backdrop-blur" label="Blur backdrop" placement="right" backdrop="blur" dismissable>
+  <p>Backdrop uses blur + dim overlay.</p>
+</bit-drawer>
+
+<bit-drawer id="drawer-backdrop-transparent" label="Transparent backdrop" placement="right" backdrop="transparent" dismissable>
+  <p>No dimmed backdrop, drawer still behaves like a dialog.</p>
+</bit-drawer>
+
+<script>
+  ['opaque', 'blur', 'transparent'].forEach((kind) => {
+    document.getElementById('open-backdrop-' + kind).addEventListener('click', () => {
+      document.getElementById('drawer-backdrop-' + kind).setAttribute('open', '');
+    });
   });
 </script>
 ```
@@ -172,45 +211,6 @@ Use the `header` slot to replace the default title bar and the `footer` slot for
 </script>
 ```
 
-## Guideline Recipe: Onboarding Checklist Drawer
-
-Use a drawer for progressive setup tasks without navigating away from the current page.
-
-<ComponentPreview center>
-
-```html
-<bit-button id="open-onboard-drawer" color="primary">Open onboarding</bit-button>
-
-<bit-drawer id="onboard-drawer" label="Project onboarding" placement="right" size="lg" dismissable>
-  <div slot="header" style="display: flex; align-items: center; gap: 0.5rem;">
-    <strong>Project onboarding</strong>
-    <bit-badge color="info" variant="flat">3 steps</bit-badge>
-  </div>
-
-  <div style="display: grid; gap: 0.875rem;">
-    <bit-checkbox checked>Choose template</bit-checkbox>
-    <bit-checkbox>Set brand colors</bit-checkbox>
-    <bit-checkbox>Invite first teammate</bit-checkbox>
-    <bit-input label="Owner email" placeholder="you@company.com" helper="Invite will be sent instantly."></bit-input>
-  </div>
-
-  <div slot="footer" style="display: flex; gap: 0.5rem;">
-    <bit-button variant="ghost" id="skip-onboard">Skip</bit-button>
-    <bit-button color="primary" id="finish-onboard">Finish setup</bit-button>
-  </div>
-</bit-drawer>
-
-<script>
-  const onboard = document.getElementById('onboard-drawer');
-  document.getElementById('open-onboard-drawer').addEventListener('click', () => onboard.setAttribute('open', ''));
-  ['skip-onboard', 'finish-onboard'].forEach((id) => {
-    document.getElementById(id).addEventListener('click', () => onboard.removeAttribute('open'));
-  });
-</script>
-```
-
-</ComponentPreview>
-
 ## API Reference
 
 ### Attributes
@@ -221,7 +221,9 @@ Use a drawer for progressive setup tasks without navigating away from the curren
 | `placement`   | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'` | Edge the drawer slides in from                    |
 | `size`        | `'sm' \| 'md' \| 'lg' \| 'full'`         | `'md'`    | Panel width (or height for top/bottom placements) |
 | `label`       | `string`                                 | —         | Accessible title shown in the header bar          |
-| `dismissable` | `boolean`                                | `false`   | Shows a close (×) button in the header            |
+| `dismissable` | `boolean`                                | `true`    | Shows a close (×) button in the header            |
+| `backdrop`    | `'opaque' \| 'blur' \| 'transparent'`   | `'opaque'` | Backdrop style, matching `bit-dialog`               |
+| `persistent`  | `boolean`                                | `false`   | Prevents backdrop click from requesting close      |
 
 ### Slots
 

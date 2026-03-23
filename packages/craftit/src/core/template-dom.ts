@@ -6,6 +6,7 @@ export type BindingTargets = {
 };
 
 const templateCache = new Map<string, HTMLTemplateElement>();
+const TEMPLATE_CACHE_MAX = 1000;
 
 const getCachedTemplate = (html: string): HTMLTemplateElement => {
   let tpl = templateCache.get(html);
@@ -13,6 +14,13 @@ const getCachedTemplate = (html: string): HTMLTemplateElement => {
   if (!tpl) {
     tpl = document.createElement('template');
     tpl.innerHTML = html;
+
+    if (templateCache.size >= TEMPLATE_CACHE_MAX) {
+      const oldestKey = templateCache.keys().next().value as string | undefined;
+
+      if (oldestKey !== undefined) templateCache.delete(oldestKey);
+    }
+
     templateCache.set(html, tpl);
   }
 

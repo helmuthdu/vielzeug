@@ -3,7 +3,7 @@
     --_font-size: var(--textarea-font-size, var(--text-sm));
     --_gap: var(--textarea-gap, var(--size-2));
     --_padding: var(--textarea-padding, var(--size-2) var(--size-3));
-    --_radius: var(--textarea-radius, var(--rounded-md));
+    --_radius: var(--textarea-radius, var(--rounded-lg));
     --_placeholder: var(--textarea-placeholder-color, var(--color-contrast-500));
     --_bg: var(--textarea-bg, var(--color-contrast-100));
     --_border-color: var(--textarea-border-color, var(--color-contrast-300));

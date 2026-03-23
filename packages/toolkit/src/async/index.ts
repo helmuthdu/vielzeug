@@ -6,5 +6,6 @@ export * from './predict';
 export * from './queue';
 export * from './race';
 export * from './retry';
+export * from './scheduler';
 export * from './sleep';
 export * from './waitFor';

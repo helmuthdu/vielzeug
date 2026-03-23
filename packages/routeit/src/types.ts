@@ -68,8 +68,6 @@ export type NavigateOptions = {
  * router.navigate({ name: 'userDetail', params: { id: '123' } })
  */
 export type NavigationTarget = string | { hash?: string; name: string; params?: RouteParams; query?: QueryParams };
-
-export type RouterMode = 'history' | 'hash';
 export type Unsubscribe = () => void;
 
 export type RouterOptions = {
@@ -79,8 +77,6 @@ export type RouterOptions = {
   base?: string;
   /** Global middleware applied to every route */
   middleware?: Middleware | Middleware[];
-  /** Router mode — 'history' uses the HTML5 History API, 'hash' uses URL hash (default: 'history') */
-  mode?: RouterMode;
   /** Called when a route handler or middleware throws an error */
   onError?: (error: unknown, context: RouteContext) => void;
   /** Called when no route matches the current URL */
@@ -137,6 +133,8 @@ export type RouteRecord = {
   name?: string;
   paramNames: string[];
   path: string;
-  prefixRegex: RegExp;
-  regex: RegExp;
+  /** URLPattern instance used for prefix route matching in isActive(..., false). */
+  prefixUrlPattern: URLPattern;
+  /** URLPattern instance used for exact route matching. */
+  urlPattern: URLPattern;
 };

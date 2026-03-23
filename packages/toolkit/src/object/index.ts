@@ -1,4 +1,4 @@
-export * from './cache';
+export * from './stash';
 export * from './diff';
 export * from './merge';
 export * from './parseJSON';

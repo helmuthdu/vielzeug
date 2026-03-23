@@ -251,14 +251,14 @@
   --text-xl: 1.25rem; /* 20px - subheadings */
   --text-2xl: 1.5rem; /* 24px - major headings */
 
-  /* Header Sizes
-     Limited to 6 sizes for design consistency */
-  --header-xs: 0.875rem;
-  --header-sm: 1rem;
-  --header-md: 1.5rem;
-  --header-lg: 2rem;
-  --header-xl: 3rem;
-  --header-2xl: 4rem;
+  /* Headings Sizes
+     Limited to 6 (h1-h6) sizes for design consistency */
+  --heading-xs: 0.875rem;
+  --heading-sm: 1rem;
+  --heading-md: 1.5rem;
+  --heading-lg: 2rem;
+  --heading-xl: 3rem;
+  --heading-2xl: 4rem;
 
   /* Semantic Text Colors (for accessibility)
      These adapt to light/dark mode automatically */

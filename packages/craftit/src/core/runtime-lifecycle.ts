@@ -210,8 +210,6 @@ export type FireApi = {
 
 const DEFAULT_FIRE_OPTIONS: FireDefaults = { bubbles: true, cancelable: true, composed: true };
 
-const dispatchEvent = (target: EventTarget, event: Event): boolean => target.dispatchEvent(event);
-
 /**
  * Dispatch DOM events explicitly without guessing constructors from the event name.
  *
@@ -223,29 +221,29 @@ const dispatchEvent = (target: EventTarget, event: Event): boolean => target.dis
  */
 export const fire: FireApi = {
   basic(target, type, options = {}) {
-    return dispatchEvent(target, new Event(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+    return target.dispatchEvent(new Event(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
   },
   custom<Detail = unknown>(target: EventTarget, type: string, options: CustomEventInit<Detail> = {}) {
-    return dispatchEvent(target, new CustomEvent<Detail>(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+    return target.dispatchEvent(new CustomEvent<Detail>(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
   },
   event(target, event) {
-    return dispatchEvent(target, event);
+    return target.dispatchEvent(event);
   },
   focus(target, type, options = {}) {
-    return dispatchEvent(target, new FocusEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+    return target.dispatchEvent(new FocusEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
   },
   keyboard(target, type, options = {}) {
-    return dispatchEvent(target, new KeyboardEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+    return target.dispatchEvent(new KeyboardEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
   },
   mouse(target, type, options = {}) {
-    return dispatchEvent(target, new MouseEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+    return target.dispatchEvent(new MouseEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
   },
   touch(target, type, options = {}) {
     if (typeof TouchEvent !== 'undefined') {
-      return dispatchEvent(target, new TouchEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+      return target.dispatchEvent(new TouchEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
     }
 
-    return dispatchEvent(target, new CustomEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+    return target.dispatchEvent(new CustomEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
   },
 };
 

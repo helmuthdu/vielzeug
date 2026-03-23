@@ -4,7 +4,7 @@
     --_color: var(--button-color, var(--color-contrast-900));
     --_border: var(--button-border, var(--border));
     --_border-color: var(--button-border-color, var(--color-contrast-200));
-    --_radius: var(--button-radius, var(--rounded-md));
+    --_radius: var(--button-radius, var(--rounded-lg));
 
     display: inline-flex;
     align-items: center;

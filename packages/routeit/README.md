@@ -1,6 +1,6 @@
 # @vielzeug/routeit
 
-> Fast, type-safe client-side router with history and hash modes, middleware, named routes, and a URL builder
+> Fast, type-safe history API router with middleware, named routes, and a URL builder
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/routeit)](https://www.npmjs.com/package/@vielzeug/routeit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -30,7 +30,7 @@ router
 
 ## Features
 
-- ✅ **History and hash modes** — `history` (default) or `hash`
+- ✅ **History API routing** — modern browser navigation with base-path support
 - ✅ **Typed path params** — `PathParams<'/users/:id'>` inferred from the path literal at compile time
 - ✅ **Named wildcard params** — `/docs/:rest*` captures multi-segment paths as a single param
 - ✅ **Middleware** — global, per-group, and per-route; `ctx.locals` for passing data down the chain
@@ -232,8 +232,7 @@ const router = createRouter({
 
 | Option           | Type                         | Default     | Description                                         |
 | ---------------- | ---------------------------- | ----------- | --------------------------------------------------- |
-| `mode`           | `'history' \| 'hash'`        | `'history'` | Routing mode                                        |
-| `base`           | `string`                     | `'/'`       | Base path prefix for history mode                   |
+| `base`           | `string`                     | `'/'`       | Base path prefix for routing                        |
 | `onNotFound`     | `RouteHandler`               | —           | Handler for unmatched routes                        |
 | `onError`        | `(error, ctx) => void`       | —           | Handler for errors thrown in handlers or middleware |
 | `middleware`     | `Middleware \| Middleware[]` | `[]`        | Global middleware applied before every route        |

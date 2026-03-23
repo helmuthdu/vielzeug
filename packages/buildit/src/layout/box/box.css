@@ -4,7 +4,7 @@
     --_color: var(--box-color, var(--color-contrast-900));
     --_border-width: var(--box-border, var(--border));
     --_border-color: var(--box-border-color, var(--color-contrast-300));
-    --_radius: var(--box-radius, var(--rounded-md));
+    --_radius: var(--box-radius, var(--rounded-lg));
     --_padding: var(--box-padding, var(--size-4));
     --_shadow: var(--box-shadow, var(--shadow-sm));
 

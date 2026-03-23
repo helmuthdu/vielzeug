@@ -3,7 +3,6 @@ import type {
   NavigationTarget,
   RouteParams,
   RouteState,
-  RouterMode,
   Middleware,
   RouteHandler,
   RouteContext,
@@ -12,7 +11,7 @@ import type {
 import type { RouteRecord } from './types';
 
 import { runMiddleware } from './middleware';
-import { buildUrl, matchRecord, normalizePath, parseQuery } from './path';
+import { buildUrl, matchRecordWithPattern, normalizePath, parseQuery } from './path';
 
 type ViewTransitionDocument = Document & {
   startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
@@ -36,28 +35,15 @@ export function stripBase(path: string, base: string): string {
   return base !== '/' && path.startsWith(base) ? normalizePath(path.slice(base.length) || '/') : normalizePath(path);
 }
 
-export function readLocation(mode: RouterMode, base: string): { hash: string; pathname: string; query: QueryParams } {
-  if (mode === 'history') {
-    return {
-      hash: window.location.hash.slice(1),
-      pathname: stripBase(window.location.pathname || '/', base),
-      query: parseQuery(window.location.search),
-    };
-  }
-
-  const raw = window.location.hash || '';
-  const fragment = raw.startsWith('#') ? raw.slice(1) : raw;
-  const qi = fragment.indexOf('?');
-
+export function readLocation(base: string): { hash: string; pathname: string; query: QueryParams } {
   return {
-    hash: '',
-    pathname: normalizePath(qi >= 0 ? fragment.slice(0, qi) : fragment || '/'),
-    query: qi >= 0 ? parseQuery(fragment.slice(qi)) : {},
+    hash: window.location.hash.slice(1),
+    pathname: stripBase(window.location.pathname || '/', base),
+    query: parseQuery(window.location.search),
   };
 }
 
 export async function handleRoute(
-  mode: RouterMode,
   base: string,
   records: RouteRecord[],
   globalMiddleware: Middleware[],
@@ -70,13 +56,13 @@ export async function handleRoute(
   id: number,
   useTransition?: boolean,
 ): Promise<void> {
-  const { hash, pathname, query } = readLocation(mode, base);
+  const { hash, pathname, query } = readLocation(base);
 
   let matchedRecord: RouteRecord | undefined;
   let matchedParams: RouteParams = {};
 
   for (const record of records) {
-    const params = matchRecord(pathname, record);
+    const params = matchRecordWithPattern(pathname, record);
 
     if (params) {
       matchedRecord = record;
@@ -155,7 +141,6 @@ export async function handleRoute(
 }
 
 export function createOnPopState(
-  mode: RouterMode,
   base: string,
   records: RouteRecord[],
   globalMiddleware: Middleware[],
@@ -171,13 +156,11 @@ export function createOnPopState(
   setPendingViewTransition: (value: boolean | undefined) => void,
 ): () => void {
   return (): void => {
-    const newHref =
-      mode === 'history' ? window.location.pathname + window.location.search : window.location.hash.slice(1);
+    const newHref = window.location.pathname + window.location.search;
 
     setLastHref(newHref);
 
     void handleRoute(
-      mode,
       base,
       records,
       globalMiddleware,

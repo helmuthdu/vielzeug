@@ -70,35 +70,20 @@ describe('Core: Component Definition', () => {
       expect(query2('div')?.textContent).toBe('0');
     });
 
-    it('should warn once and skip when registering the same tag repeatedly', () => {
+    it('should throw when registering the same tag repeatedly', () => {
       const tag = `test-dup-${Math.random().toString(36).slice(2)}`;
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-      try {
+      defineComponent({
+        setup: () => html`<div>First</div>`,
+        tag,
+      });
+
+      expect(() => {
         defineComponent({
-          setup: () => html`<div>First</div>`,
+          setup: () => html`<div>Second</div>`,
           tag,
         });
-
-        expect(() => {
-          defineComponent({
-            setup: () => html`<div>Second</div>`,
-            tag,
-          });
-        }).not.toThrow();
-
-        expect(() => {
-          defineComponent({
-            setup: () => html`<div>Third</div>`,
-            tag,
-          });
-        }).not.toThrow();
-
-        expect(warn).toHaveBeenCalledTimes(1);
-        expect(warn.mock.calls[0]?.[0]).toContain('skipping duplicate registration');
-      } finally {
-        warn.mockRestore();
-      }
+      }).toThrow('[craftit:E9]');
     });
   });
 
@@ -135,6 +120,24 @@ describe('Core: Component Definition', () => {
       );
 
       expect(query('.count')?.textContent).toBe('42');
+    });
+
+    it('should keep attribute->prop sync after reconnect', async () => {
+      const fixture = await mount({
+        props: { count: { default: 0, type: Number } },
+        setup: ({ props }) => html`<div class="count">${props.count}</div>`,
+      });
+
+      await fixture.attr('count', '1');
+      expect(fixture.query('.count')?.textContent).toBe('1');
+
+      fixture.element.remove();
+      await fixture.flush();
+      document.body.appendChild(fixture.element);
+      await fixture.flush();
+
+      await fixture.attr('count', '2');
+      expect(fixture.query('.count')?.textContent).toBe('2');
     });
 
     it('should pass array values through attribute bindings without stringifying', async () => {

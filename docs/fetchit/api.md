@@ -83,7 +83,7 @@ Creates a query client with caching, deduplication, and reactive subscriptions. 
 | Option        | Type                            | Default     | Description                                                                    |
 | ------------- | ------------------------------- | ----------- | ------------------------------------------------------------------------------ |
 | `staleTime`   | `number`                        | `0`         | ms a successful entry is served from cache before next `query()` refetches     |
-| `gcTime`      | `number`                        | `300000`    | ms before cache entry collection (unless observed or `Infinity`)               |
+| `gcTime`      | `number`                        | `300000`    | ms before an unobserved cache entry is collected (`Infinity` disables GC); runs at `'background'` priority via the Scheduler API |
 | `retry`       | `number \| false`               | `1`         | Default retry attempts for all queries                                         |
 | `retryDelay`  | `number \| (attempt) => number` | exponential | Delay between retries; defaults to exponential backoff (1s → 2s → … up to 30s) |
 | `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to skip retrying for a specific error class                     |

@@ -416,6 +416,67 @@ describe('Query Client', () => {
       vi.useRealTimers();
     });
 
+    it('re-arms GC when the last subscriber unsubscribes from a successful entry', async () => {
+      vi.useFakeTimers();
+
+      const qc = createQuery({ gcTime: 1_000 });
+
+      await qc.query({ fn: async () => ({ id: 1 }), key: ['x'] });
+
+      const unsub = qc.subscribe(['x'], () => {});
+
+      // While observed, GC should not evict the entry.
+      vi.advanceTimersByTime(2_000);
+      expect(qc.get(['x'])).toEqual({ id: 1 });
+
+      // Unsubscribe should start the GC timer again.
+      unsub();
+      vi.advanceTimersByTime(1_001);
+      expect(qc.get(['x'])).toBeUndefined();
+
+      vi.useRealTimers();
+    });
+
+    it('respects per-query gcTime override when GC is re-armed after unsubscribe', async () => {
+      vi.useFakeTimers();
+
+      const qc = createQuery({ gcTime: 10_000 });
+
+      await qc.query({ fn: async () => ({ id: 1 }), gcTime: 500, key: ['x'] });
+
+      const unsub = qc.subscribe(['x'], () => {});
+
+      unsub();
+
+      vi.advanceTimersByTime(501);
+      expect(qc.get(['x'])).toBeUndefined();
+
+      vi.useRealTimers();
+    });
+
+    it('evicts errored entries after gcTime', async () => {
+      vi.useFakeTimers();
+
+      const qc = createQuery({ gcTime: 1_000 });
+
+      await qc
+        .query({
+          fn: async () => {
+            throw new Error('boom');
+          },
+          key: ['err'],
+          retry: false,
+        })
+        .catch(() => {});
+
+      expect(qc.getState(['err'])?.status).toBe('error');
+
+      vi.advanceTimersByTime(1_001);
+      expect(qc.getState(['err'])).toBeNull();
+
+      vi.useRealTimers();
+    });
+
     it('invalidate() notifies subscribers with idle state and keeps the observed entry in cache', async () => {
       const qc = createQuery();
 

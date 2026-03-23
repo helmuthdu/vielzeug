@@ -1,11 +1,9 @@
 /**
- * Component authoring API — consolidates define, props, lifecycle, and form field functionality.
+ * Component authoring API — define, props, lifecycle, and form field functionality.
  *
- * This module provides the complete toolkit for creating web components:
  * - defineComponent: Main API for building typed custom elements
  * - prop/typed/createProps: Reactive property definitions
  * - defineField: Form field integration
- * - registerComponent: Low-level registration (internal use)
  */
 
 import {
@@ -19,7 +17,7 @@ import {
 
 import { createSlots, type Slots, type ReflectConfig } from './host';
 import { reflect } from './host';
-import { type Binding, type HTMLResult, htmlResult } from './internal';
+import { type HTMLResult, htmlResult } from './internal';
 import { currentRuntime, runtimeStack } from './runtime-lifecycle';
 import { applyBindingsInContainer, applyHtmlBinding } from './template';
 import { type RegisterCleanup } from './template-bindings';
@@ -31,23 +29,10 @@ import { createEmitFn, type EmitFn, setAttr, toKebab, runAll, loadStylesheet, ty
 // FORM FIELD API
 // ─────────────────────────────────────────────────────────────────────────────
 
-type FormAssociatedCallbacks = {
-  formAssociated?: (form: HTMLFormElement | null) => void;
-  formDisabled?: (disabled: boolean) => void;
-  formReset?: () => void;
-  formStateRestore?: (state: unknown, mode: 'autocomplete' | 'restore') => void;
-};
-
-export const formCallbackRegistry = new WeakMap<HTMLElement, FormAssociatedCallbacks>();
+/** @internal */
+export const formCallbackRegistry = new WeakMap<HTMLElement, FormFieldCallbacks>();
+/** @internal */
 export const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
-
-const setFormCallback = <K extends keyof FormAssociatedCallbacks>(key: K, fn: FormAssociatedCallbacks[K]): void => {
-  const el = currentRuntime().el;
-
-  if (!formCallbackRegistry.has(el)) formCallbackRegistry.set(el, {});
-
-  formCallbackRegistry.get(el)![key] = fn;
-};
 
 /**
  * Callbacks that hook into form lifecycle events. Can be passed directly to {@link defineField}
@@ -106,13 +91,9 @@ export const defineField = <T = unknown>(
     });
   }
 
-  if (callbacks?.onReset) setFormCallback('formReset', callbacks.onReset);
-
-  if (callbacks?.onAssociated) setFormCallback('formAssociated', callbacks.onAssociated);
-
-  if (callbacks?.onDisabled) setFormCallback('formDisabled', callbacks.onDisabled);
-
-  if (callbacks?.onStateRestore) setFormCallback('formStateRestore', callbacks.onStateRestore);
+  if (callbacks) {
+    formCallbackRegistry.set(host, { ...formCallbackRegistry.get(host), ...callbacks });
+  }
 
   const checkValidity = () => internals.checkValidity();
   const reportValidity = () => internals.reportValidity();
@@ -158,9 +139,6 @@ type PropMeta<T = unknown> = {
   reflect: boolean;
   signal: Signal<T>;
 };
-
-type InferSignalValueFromDef<PValue, DefValue> =
-  undefined extends InferPropValue<DefValue> ? PValue : Exclude<PValue, undefined>;
 
 const PROP_DEF_KEYS = new Set(['default', 'omit', 'parse', 'reflect', 'type']);
 const isPropDef = (value: unknown): value is PropDef<unknown> => {
@@ -209,9 +187,6 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
   // framework/host property bindings), then fall back to attributes.
   if (hasPreUpgradeProperty) {
     delete (el as unknown as Record<string, unknown>)[name];
-  }
-
-  if (hasPreUpgradeProperty) {
     s.value = preUpgradeValue as T;
   } else if (el.hasAttribute(name)) {
     s.value = parse(el.getAttribute(name)) as T;
@@ -256,22 +231,12 @@ type InferPropValue<T> = T extends object
       : T
     : T
   : T;
+
 export type InferPropsSignals<T extends PropInputDefs> = {
   [K in keyof T]: Signal<InferPropValue<T[K]>>;
 };
 
-export type PropTypeHint<T> = T | PropOptions<T> | PropDef<T>;
-
-export function createProps<
-  P extends Record<string, unknown>,
-  D extends { [K in keyof P]-?: PropTypeHint<P[K]> } = { [K in keyof P]-?: PropTypeHint<P[K]> },
->(
-  defs: D,
-): {
-  [K in keyof P]-?: Signal<InferSignalValueFromDef<P[K], D[K]>>;
-};
-export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals<D>;
-export function createProps(defs: any): any {
+export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals<D> {
   const result = {} as Record<string, Signal<unknown>>;
 
   for (const [name, def] of Object.entries(defs)) {
@@ -283,7 +248,7 @@ export function createProps(defs: any): any {
     result[name] = prop(toKebab(name), descriptor.default, propDef);
   }
 
-  return result;
+  return result as InferPropsSignals<D>;
 }
 
 /**
@@ -324,6 +289,8 @@ export type ComponentRegistrationOptions = {
   formAssociated?: boolean;
   /** Custom options for host element (e.g. for aria-*) */
   host?: Record<string, string | boolean | number>;
+  /** @internal — list of attribute names to observe via attributeChangedCallback */
+  observedAttrs?: string[];
   /** Shadow root init options (mode is always 'open') — use e.g. `{ delegatesFocus: true }` for form controls */
   shadow?: Omit<ShadowRootInit, 'mode'>;
   /** Component styles applied to the shadow root. Static — set at definition time, not per-render. */
@@ -384,80 +351,32 @@ export type DefineComponentOptions<
   tag: string;
 };
 
-// ─── Lifecycle helpers ────────────────────────────────────────────────────────
-
-const handleDisconnect = (runtime: { cleanups: CleanupFn[] }) => {
-  runAll(runtime.cleanups);
-  runtime.cleanups = [];
-};
-
-const handleFormCallbacks = {
-  formAssociated: (el: HTMLElement, form: HTMLFormElement | null) => {
-    formCallbackRegistry.get(el)?.formAssociated?.(form);
-  },
-  formDisabled: (el: HTMLElement, disabled: boolean) => {
-    formCallbackRegistry.get(el)?.formDisabled?.(disabled);
-  },
-  formReset: (el: HTMLElement) => {
-    formCallbackRegistry.get(el)?.formReset?.();
-  },
-  formStateRestore: (el: HTMLElement, state: unknown, mode: 'autocomplete' | 'restore') => {
-    formCallbackRegistry.get(el)?.formStateRestore?.(state, mode);
-  },
-};
-
-const applyBindingsToShadow = (
-  shadowRoot: ShadowRoot,
-  bindings: Binding[],
-  runtime: {
-    cleanups: CleanupFn[];
-  },
-  keyedStates: Map<string, Map<string | number, KeyedNode>>,
-  appliedHtmlBindings: Set<string>,
-) => {
-  if (!bindings.length) return;
-
-  const registerCleanup: RegisterCleanup = (fn) => runtime.cleanups.push(fn);
-
-  applyBindingsInContainer(shadowRoot, bindings, registerCleanup, {
-    onHtml: (b) => {
-      if (!appliedHtmlBindings.has(b.uid)) {
-        appliedHtmlBindings.add(b.uid);
-        applyHtmlBinding(shadowRoot, b, registerCleanup, keyedStates);
-      }
-    },
-  });
-};
-
-const renderToShadowRoot = (shadowRoot: ShadowRoot, tpl: string | HTMLResult) => {
-  const result: HTMLResult = typeof tpl === 'string' ? htmlResult(tpl) : tpl;
-
-  shadowRoot.replaceChildren(parseHTML(result.__html));
-
-  return result.__bindings;
-};
-
 // ─── Base custom element ──────────────────────────────────────────────────────
+
+type ComponentRuntime = {
+  cleanups: CleanupFn[];
+  el: HTMLElement;
+  errorHandlers: Array<(err: unknown) => void>;
+  onMount: Array<() => CleanupFn | undefined | void>;
+  styles?: (string | CSSStyleSheet | CSSResult)[];
+};
+
+// Lifecycle methods (connectedCallback, attributeChangedCallback, …) are invoked
+// by the browser runtime, not TypeScript code — suppress false-positive lint warnings.
 
 class BaseElement extends HTMLElement {
   static _setup: (ctx: ComponentSetupContext) => string | HTMLResult;
   static _options?: ComponentRegistrationOptions;
   static formAssociated = false;
+  static observedAttributes: string[] = [];
 
   shadow: ShadowRoot;
   private _keyedStates = new Map<string, Map<string | number, KeyedNode>>();
-  private _onMountFns: (() => CleanupFn | undefined | void)[] = [];
+  private _mountFns: (() => CleanupFn | undefined | void)[] = [];
   private _template: string | HTMLResult | null = null;
-  private appliedHtmlBindings = new Set<string>();
-  private runtime: {
-    cleanups: CleanupFn[];
-    el: HTMLElement;
-    errorHandlers: Array<(err: unknown) => void>;
-    onMount: Array<() => CleanupFn | undefined | void>;
-    styles?: (string | CSSStyleSheet | CSSResult)[];
-  };
+  private _appliedHtmlBindings = new Set<string>();
   private _setupDone = false;
-  private _attrObserver?: MutationObserver;
+  private _runtime: ComponentRuntime;
 
   constructor() {
     super();
@@ -465,7 +384,7 @@ class BaseElement extends HTMLElement {
     const options = (this.constructor as typeof BaseElement)._options;
 
     this.shadow = this.attachShadow({ mode: 'open', ...options?.shadow });
-    this.runtime = {
+    this._runtime = {
       cleanups: [],
       el: this,
       errorHandlers: [],
@@ -477,12 +396,50 @@ class BaseElement extends HTMLElement {
   connectedCallback(): void {
     if (!this._setupDone) this._runSetup();
 
-    this.init();
+    this._init();
+  }
+
+  // Fires synchronously on observed attribute change — no MutationObserver needed.
+  // observedAttributes is set at class-definition time from the prop schema.
+  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    if (oldValue === newValue) return;
+
+    const meta = propRegistry.get(this)?.get(name);
+
+    if (!meta) return;
+
+    const parsed = meta.parse(newValue);
+
+    if (!Object.is(meta.signal.peek(), parsed)) meta.signal.value = parsed as never;
+  }
+
+  disconnectedCallback(): void {
+    runAll(this._runtime.cleanups);
+    this._runtime.cleanups = [];
+    this._runtime.onMount = this._mountFns.slice(); // restore for reconnect
+    this._appliedHtmlBindings.clear();
+    this._keyedStates.clear();
+  }
+
+  formAssociatedCallback(form: HTMLFormElement | null): void {
+    formCallbackRegistry.get(this)?.onAssociated?.(form);
+  }
+
+  formDisabledCallback(disabled: boolean): void {
+    formCallbackRegistry.get(this)?.onDisabled?.(disabled);
+  }
+
+  formResetCallback(): void {
+    formCallbackRegistry.get(this)?.onReset?.();
+  }
+
+  formStateRestoreCallback(state: unknown, mode: 'autocomplete' | 'restore'): void {
+    formCallbackRegistry.get(this)?.onStateRestore?.(state, mode);
   }
 
   private _handleError(err: unknown): void {
-    if (this.runtime.errorHandlers.length > 0) {
-      for (const fn of this.runtime.errorHandlers) fn(err);
+    if (this._runtime.errorHandlers.length > 0) {
+      for (const fn of this._runtime.errorHandlers) fn(err);
     } else {
       console.error(`[craftit:E3] <${this.localName}>`, err);
     }
@@ -490,41 +447,26 @@ class BaseElement extends HTMLElement {
 
   private _runSetup(): void {
     this._setupDone = true;
-    runtimeStack.push(this.runtime as any);
-
-    const options = (this.constructor as typeof BaseElement)._options || {};
+    runtimeStack.push(this._runtime as any);
 
     try {
-      const hostOptions = options.host;
+      const { host: hostOptions } = (this.constructor as typeof BaseElement)._options ?? {};
 
       if (hostOptions) {
         for (const [name, value] of Object.entries(hostOptions)) {
           if (typeof value === 'boolean') {
-            if (value) this.setAttribute(name, '');
-            else this.removeAttribute(name);
+            if (value) {
+              this.setAttribute(name, '');
+            } else {
+              this.removeAttribute(name);
+            }
           } else {
             this.setAttribute(name, String(value));
           }
         }
       }
 
-      // MutationObserver to keep registered prop signals in sync with attribute changes.
-      this._attrObserver = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-          if (mutation.type === 'attributes') {
-            const name = mutation.attributeName!;
-            const newValue = this.getAttribute(name);
-
-            this._handleAttributeChange(name, mutation.oldValue, newValue);
-          }
-        }
-      });
-      this._attrObserver.observe(this, { attributeOldValue: true, attributes: true });
-
-      const res = (this.constructor as typeof BaseElement)._setup({
-        host: this,
-        shadow: this.shadow,
-      });
+      const res = (this.constructor as typeof BaseElement)._setup({ host: this, shadow: this.shadow });
 
       if (typeof res === 'string' || (typeof res === 'object' && res !== null && '__html' in res)) {
         this._template = res as string | HTMLResult;
@@ -536,97 +478,59 @@ class BaseElement extends HTMLElement {
     }
   }
 
-  private _handleAttributeChange(name: string, oldValue: string | null, newValue: string | null) {
-    if (oldValue === newValue) return;
+  private _init(): void {
+    const { styles } = this._runtime;
 
-    const meta = propRegistry.get(this)?.get(name);
-
-    if (!meta) return;
-
-    const parsedValue = meta.parse(newValue);
-
-    if (!Object.is(meta.signal.peek(), parsedValue)) {
-      meta.signal.value = parsedValue as never;
-    }
-  }
-
-  disconnectedCallback(): void {
-    if (this._attrObserver) {
-      this._attrObserver.disconnect();
-      this._attrObserver = undefined;
-    }
-
-    handleDisconnect(this.runtime);
-    this.runtime.onMount = this._onMountFns.slice();
-    this.appliedHtmlBindings.clear();
-    this._keyedStates.clear();
-  }
-
-  formAssociatedCallback(form: HTMLFormElement | null): void {
-    handleFormCallbacks.formAssociated(this, form);
-  }
-
-  formDisabledCallback(disabled: boolean): void {
-    handleFormCallbacks.formDisabled(this, disabled);
-  }
-
-  formResetCallback(): void {
-    handleFormCallbacks.formReset(this);
-  }
-
-  formStateRestoreCallback(state: unknown, mode: 'autocomplete' | 'restore'): void {
-    handleFormCallbacks.formStateRestore(this, state, mode);
-  }
-
-  private applyBindings(bindings: Binding[]) {
-    applyBindingsToShadow(this.shadow, bindings, this.runtime, this._keyedStates, this.appliedHtmlBindings);
-  }
-
-  private init(): void {
     // Apply styles synchronously before rendering to prevent FOUC.
-    const styles = this.runtime.styles;
+    if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
 
-    if (styles?.length) {
-      this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
+    if (this._template) {
+      const result: HTMLResult = typeof this._template === 'string' ? htmlResult(this._template) : this._template;
+
+      this.shadow.replaceChildren(parseHTML(result.__html));
+
+      if (result.__bindings.length) {
+        const registerCleanup: RegisterCleanup = (fn) => this._runtime.cleanups.push(fn);
+
+        applyBindingsInContainer(this.shadow, result.__bindings, registerCleanup, {
+          onHtml: (b) => {
+            if (!this._appliedHtmlBindings.has(b.uid)) {
+              this._appliedHtmlBindings.add(b.uid);
+              applyHtmlBinding(this.shadow, b, registerCleanup, this._keyedStates);
+            }
+          },
+        });
+      }
     }
 
-    if (this._template) this.render(this._template);
-
-    // Defer onMount callbacks to allow slot assignment to complete.
-    // This ensures parent-controlled child state (e.g., selected tabs) can be queried correctly.
+    // Defer onMount callbacks to a microtask for deterministic timing.
+    // Components that depend on layout/paint should schedule rAF inside onMount.
     queueMicrotask(() => {
-      runtimeStack.push(this.runtime as any);
+      runtimeStack.push(this._runtime as any);
 
       try {
-        const fns = this.runtime.onMount;
+        const fns = this._runtime.onMount;
 
-        this._onMountFns = fns.slice();
+        this._mountFns = fns.slice(); // snapshot for reconnect
+
         for (const fn of fns) {
           const cleanup = fn();
 
-          if (typeof cleanup === 'function') this.runtime.cleanups.push(cleanup);
+          if (typeof cleanup === 'function') this._runtime.cleanups.push(cleanup);
         }
       } catch (err) {
         this._handleError(err);
       } finally {
         runtimeStack.pop();
+        this._runtime.onMount = [];
       }
-
-      this.runtime.onMount = [];
     });
-  }
-
-  private render(tpl: string | HTMLResult) {
-    const bindings = renderToShadowRoot(this.shadow, tpl);
-
-    this.applyBindings(bindings);
   }
 }
 
 // ─── Component registration ───────────────────────────────────────────────────
 
-const duplicateTagWarned = new Set<string>();
-
+/** @internal — use `defineComponent` instead. */
 export function registerComponent(
   tag: string,
   setup: (ctx: ComponentSetupContext) => string | HTMLResult,
@@ -635,18 +539,14 @@ export function registerComponent(
   if (!tag) throw new Error('[craftit:E4] registerComponent(tag, ...) requires a tag name');
 
   if (customElements.get(tag)) {
-    if (!duplicateTagWarned.has(tag)) {
-      duplicateTagWarned.add(tag);
-      console.warn(`[craftit:E9] custom element already defined, skipping duplicate registration: ${tag}`);
-    }
-
-    return tag;
+    throw new Error(`[craftit:E9] custom element already defined: ${tag}`);
   }
 
   class Element extends BaseElement {
     static override _setup = setup;
     static override _options = options;
-    static override formAssociated = !!options?.formAssociated;
+    static override formAssociated = options.formAssociated ?? false;
+    static override observedAttributes = options.observedAttrs ?? [];
   }
 
   customElements.define(tag, Element);
@@ -671,9 +571,9 @@ export function registerComponent(
  *     checked: { default: false },
  *     disabled: { default: false },
  *   },
- *   setup({ props, emit, reflect }) {
- *     // props.checked → Signal<boolean | undefined>  ✅
- *     // emit('change', { checked: true })            ✅
+ *   setup({ props, emit }) {
+ *     // props.checked → Signal<boolean>  ✅
+ *     // emit('change', { checked: true }) ✅
  *   },
  * });
  * ```
@@ -683,6 +583,10 @@ export function defineComponent<
   EventsType extends Record<string, unknown> = Record<string, never>,
 >(options: DefineComponentOptions<BuildPropSchema<PropsType>, EventsType>): string {
   const { formAssociated, host: hostOptions, props: propDefs, setup, shadow: shadowOptions, styles, tag } = options;
+
+  // Derive observed attribute names from prop schema at definition time so
+  // attributeChangedCallback fires correctly — no MutationObserver needed.
+  const observedAttrs = propDefs ? Object.keys(propDefs).map(toKebab) : [];
 
   return registerComponent(
     tag,
@@ -702,6 +606,6 @@ export function defineComponent<
         slots,
       } as DefineComponentSetupContext<BuildPropSchema<PropsType>, EventsType>);
     },
-    { formAssociated, host: hostOptions, shadow: shadowOptions, styles },
+    { formAssociated, host: hostOptions, observedAttrs, shadow: shadowOptions, styles },
   );
 }

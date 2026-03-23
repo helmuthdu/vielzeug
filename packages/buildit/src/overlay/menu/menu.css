@@ -1,5 +1,22 @@
 @layer buildit.base {
   :host {
+    --_menu-panel-bg: var(
+      --menu-panel-bg,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
+      )
+    );
+    --_menu-panel-border-color: var(
+      --menu-panel-border-color,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
+      )
+    );
+    --_menu-panel-blur: var(--menu-panel-blur, var(--blur-md));
+    --_menu-panel-shadow: var(--menu-panel-shadow, var(--shadow-xl));
+
     position: relative;
     display: inline-block;
   }
@@ -15,14 +32,15 @@
     z-index: calc(var(--z-popover, 1000) + 1);
     box-sizing: border-box;
     visibility: hidden;
-    min-width: 10rem;
+    min-width: var(--menu-panel-min-width, 10rem);
     padding: var(--size-1);
     margin: 0;
     pointer-events: none;
-    background: var(--color-canvas);
-    border: var(--border) solid var(--color-contrast-200);
-    border-radius: var(--rounded-md);
-    box-shadow: var(--shadow-lg);
+    background: var(--_menu-panel-bg);
+    border: var(--border) solid var(--_menu-panel-border-color);
+    border-radius: var(--menu-panel-radius, var(--rounded-lg));
+    box-shadow: var(--_menu-panel-shadow);
+    backdrop-filter: blur(var(--_menu-panel-blur));
     opacity: 0;
     transform: translateY(-4px) scale(0.97);
     transform-origin: top;

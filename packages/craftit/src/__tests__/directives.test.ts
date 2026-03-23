@@ -102,7 +102,7 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(items, (item) => html`<li>${item}</li>`)}
+          ${each(items, (item) => html`<li>${item}</li>`, undefined, { key: (item) => item })}
         </ul>
       `;
     });
@@ -139,7 +139,7 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(items, (item) => html`<li>${item}</li>`)}
+          ${each(items, (item) => html`<li>${item}</li>`, undefined, { key: (item) => item })}
         </ul>
       `;
     });
@@ -165,16 +165,14 @@ describe('Directive: each()', () => {
     expect(queryAll('li').length).toBe(3);
   });
 
-  it('should support simple each() without key', async () => {
-    const { queryAll } = await mount(() => {
-      const items = signal([1, 2, 3]);
-
-      return html`
+  it('should support simple each() without key for static arrays', async () => {
+    const { queryAll } = await mount(
+      () => html`
         <ul>
-          ${each(items, (item) => html`<li>${item}</li>`)}
+          ${each([1, 2, 3], (item) => html`<li>${item}</li>`)}
         </ul>
-      `;
-    });
+      `,
+    );
     const listItems = queryAll('li');
 
     expect(listItems.length).toBe(3);
@@ -235,7 +233,7 @@ describe('Directive: each()', () => {
             items,
             (item) => html`<span>${item.id}</span>`,
             () => html`<p class="empty">None</p>`,
-            { select: (item) => item.active },
+            { key: (item) => item.id, select: (item) => item.active },
           )}
         </div>
       `;
@@ -1105,10 +1103,58 @@ describe('Directive: until()', () => {
     expect(query('.error')?.textContent).toBe('oops');
     expect(query('.loading')).toBeNull();
   });
+
+  it('should render a default error message when promise rejects without onError', async () => {
+    let reject!: (err: unknown) => void;
+    const promise = new Promise<string>((_, r) => (reject = r));
+
+    const { flush, query } = await mount(
+      () => html`<div>${until(promise, () => html`<span class="loading">…</span>`)}</div>`,
+    );
+
+    reject('boom');
+    await promise.catch(() => {});
+    await flush();
+
+    expect(query('div')?.textContent).toContain('Error: boom');
+  });
 });
 
 describe('Keyed Reconciliation', () => {
   describe('DOM Node Lifecycle', () => {
+    it('should preserve sibling nodes rendered after a keyed each() block', async () => {
+      const items = signal([
+        { id: 1, value: 'A' },
+        { id: 2, value: 'B' },
+      ]);
+
+      register(
+        'test-keyed-sibling-preserve',
+        () => html`
+          <div class="container">
+            ${each(items, (item) => html`<span class="item">${item.value}</span>`, undefined, {
+              key: (item) => item.id,
+            })}
+            <button class="after">After</button>
+          </div>
+        `,
+      );
+
+      const { flush, query, queryAll } = await mount('test-keyed-sibling-preserve');
+
+      expect(query('.after')).toBeTruthy();
+      expect(queryAll('.item')).toHaveLength(2);
+
+      items.value = [
+        { id: 2, value: 'B2' },
+        { id: 3, value: 'C3' },
+      ];
+      await flush();
+
+      expect(query('.after')).toBeTruthy();
+      expect(queryAll('.item')).toHaveLength(2);
+    });
+
     it('should not duplicate nodes when adding items', async () => {
       const items = signal([{ id: 1, value: 100 }]);
       const addItem = () => {

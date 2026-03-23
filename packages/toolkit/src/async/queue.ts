@@ -1,4 +1,5 @@
 import { assert } from '../function/assert';
+import { Scheduler } from './scheduler';
 
 /**
  * Creates a promise queue that processes promises sequentially with optional concurrency limit.
@@ -36,6 +37,24 @@ export function queue(options: { concurrency?: number } = {}) {
     resolve: (value: unknown) => void;
   }> = [];
 
+  let flushQueued = false;
+
+  const scheduleNext = (): void => {
+    if (flushQueued) return;
+
+    flushQueued = true;
+
+    const scheduler = new Scheduler();
+
+    void scheduler.postTask(
+      () => {
+        flushQueued = false;
+        next();
+      },
+      { priority: 'user-visible' },
+    );
+  };
+
   const next = (): void => {
     if (activeCount < concurrency && tasks.length > 0) {
       const task = tasks.shift()!;
@@ -48,7 +67,7 @@ export function queue(options: { concurrency?: number } = {}) {
         .catch(task.reject)
         .finally(() => {
           activeCount--;
-          next();
+          scheduleNext();
 
           if (activeCount === 0 && tasks.length === 0 && idleResolve) {
             idleResolve();
@@ -64,14 +83,16 @@ export function queue(options: { concurrency?: number } = {}) {
      * Adds a promise-returning function to the queue
      */
     add: <T>(fn: () => Promise<T>): Promise<T> => {
-      return new Promise<T>((resolve, reject) => {
-        tasks.push({
-          fn: fn as () => Promise<unknown>,
-          reject,
-          resolve: resolve as (value: unknown) => void,
-        });
-        next();
+      const { promise, reject, resolve } = Promise.withResolvers<T>();
+
+      tasks.push({
+        fn: fn as () => Promise<unknown>,
+        reject,
+        resolve: resolve as (value: unknown) => void,
       });
+      scheduleNext();
+
+      return promise;
     },
 
     /**
@@ -90,9 +111,10 @@ export function queue(options: { concurrency?: number } = {}) {
       }
 
       if (!idlePromise) {
-        idlePromise = new Promise<void>((resolve) => {
-          idleResolve = resolve;
-        });
+        const deferred = Promise.withResolvers<void>();
+
+        idlePromise = deferred.promise;
+        idleResolve = deferred.resolve;
       }
 
       return idlePromise;

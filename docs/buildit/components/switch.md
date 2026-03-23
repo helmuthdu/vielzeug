@@ -137,34 +137,6 @@ Listen to change events for custom logic.
 
 </ComponentPreview>
 
-## Guideline Recipe: Onboard with a Preferences Summary
-
-**Guideline: onboard** — a concise row of feature switches during setup shows users what’s possible and lets them opt in or out immediately.
-
-```html
-<form>
-  <div style="display:flex;flex-direction:column;gap:var(--size-3)">
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <bit-text variant="label" weight="semibold">Keyboard shortcuts</bit-text>
-        <bit-text variant="caption" color="subtle">Use ⌘K to open command palette</bit-text>
-      </div>
-      <bit-switch name="shortcuts" checked></bit-switch>
-    </div>
-    <bit-separator></bit-separator>
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <bit-text variant="label" weight="semibold">Desktop notifications</bit-text>
-        <bit-text variant="caption" color="subtle">Alerts for mentions and assignments</bit-text>
-      </div>
-      <bit-switch name="notifications"></bit-switch>
-    </div>
-  </div>
-</form>
-```
-
-**Tip:** Pair each switch with a one-line caption explaining the impact so users can make an informed choice without opening a help article.
-
 ## API Reference
 
 ### Attributes

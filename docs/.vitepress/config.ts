@@ -2,13 +2,38 @@ import browserslist from 'browserslist';
 import { browserslistToTargets } from 'lightningcss';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineConfig, type UserConfig } from 'vitepress';
+import { defineConfig, type DefaultTheme, type UserConfig } from 'vitepress';
 
 import type { ThemeConfig } from './theme/types';
 
 import { getPackagesData } from './theme/utils/packageData';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const NON_COLLAPSIBLE_PACKAGE_PATHS = new Set(['/buildit/']);
+
+const isPackageSidebarPath = (path: string): boolean => /^\/[a-z]+it\/$/.test(path);
+
+const makePackageSidebarsCollapsible = (sidebar: DefaultTheme.SidebarMulti): DefaultTheme.SidebarMulti => {
+  return Object.fromEntries(
+    Object.entries(sidebar).map(([path, items]) => {
+      if (!isPackageSidebarPath(path) || NON_COLLAPSIBLE_PACKAGE_PATHS.has(path)) {
+        return [path, items];
+      }
+
+      const normalizedItems = items.map((item) => {
+        if (!('items' in item)) return item;
+
+        return {
+          ...item,
+          collapsed: item.collapsed ?? item.text === 'API Reference',
+        };
+      });
+
+      return [path, normalizedItems];
+    }),
+  ) as DefaultTheme.SidebarMulti;
+};
 
 export default defineConfig({
   base: '/',
@@ -98,7 +123,7 @@ export default defineConfig({
     search: {
       provider: 'local',
     },
-    sidebar: {
+    sidebar: makePackageSidebarsCollapsible({
       '/buildit/': [
         { link: '/buildit/', text: 'Overview' },
         {
@@ -1235,7 +1260,7 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
-    },
+    }),
     socialLinks: [{ icon: 'github', link: 'https://github.com/helmuthdu/vielzeug' }],
   },
   title: 'Vielzeug',

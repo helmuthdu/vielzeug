@@ -169,32 +169,6 @@ Add `novalidate` to suppress native browser validation popups. Pair with `error`
 </bit-form>
 ```
 
-## Guideline Recipe: Onboard with a Validated First-Run Form
-
-**Guideline: onboard** — wrapping setup fields in `bit-form` with built-in validation lets users self-correct inline rather than hitting a server error after submission.
-
-```html
-<bit-form id="setup-form">
-  <bit-input
-    name="display-name"
-    label="Display name"
-    required
-    helper="This is how your teammates will see you"
-    minlength="2"></bit-input>
-  <bit-input name="email" label="Work email" type="email" required></bit-input>
-  <bit-button type="submit" variant="solid" color="primary">Create account</bit-button>
-</bit-form>
-
-<script>
-  document.getElementById('setup-form').addEventListener('submit', (e) => {
-    if (!e.detail.valid) return; // Let built-in messages show
-    // proceed with e.detail.values
-  });
-</script>
-```
-
-**Tip:** Use `bit-form` rather than a bare `<form>` to get automatic uniform styling, bulk `disabled` toggling, and a `submit` event that already carries `valid` and `values`.
-
 ## API Reference
 
 ### Attributes

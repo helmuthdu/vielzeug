@@ -1,6 +1,49 @@
-import type { RouteParams, QueryParams } from './types';
-
+import type { RouteParams, QueryParams, RouteRecord } from './types';
 /** -------------------- Path Utilities -------------------- **/
+
+const URL_PATTERN_BASE = 'http://localhost';
+
+function toMatchUrl(pathname: string): URL {
+  return new URL(normalizePath(pathname), URL_PATTERN_BASE);
+}
+
+export function extractParamNames(pattern: string): string[] {
+  const names: string[] = [];
+
+  pattern.replace(/:([\w]+)\*?/g, (_, name: string) => {
+    names.push(name);
+
+    return '';
+  });
+
+  return names;
+}
+
+/**
+ * Convert a route pattern to URLPattern syntax.
+ * Example: '/users/:id' -> '/users/:id(\d+)?'
+ * URLPattern requires a protocol and hostname, so we use a placeholder base.
+ */
+function patternToURLPattern(pattern: string): string {
+  // URLPattern requires named wildcards, so we normalize bare splats.
+  return pattern.replace(/\/\*/g, '/:__splat*');
+}
+
+/**
+ * Create an exact URLPattern instance for a route.
+ */
+export function createURLPattern(pattern: string): URLPattern {
+  return new URLPattern({ pathname: patternToURLPattern(pattern) }, URL_PATTERN_BASE);
+}
+
+/**
+ * Create a prefix URLPattern instance for `isActive(..., false)` checks.
+ */
+export function createPrefixURLPattern(pattern: string): URLPattern {
+  if (pattern.endsWith('*')) return createURLPattern(pattern);
+
+  return createURLPattern(pattern === '/' ? '/*' : `${pattern}/*`);
+}
 
 export function normalizePath(path: string): string {
   if (!path) return '/';
@@ -10,44 +53,18 @@ export function normalizePath(path: string): string {
   return normalized !== '/' && normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
 }
 
-export function buildRegexStr(pattern: string): { paramNames: string[]; regexStr: string } {
-  const paramNames: string[] = [];
-  const regexStr = pattern
-    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\/:([\w]+)\*/g, (_, name) => {
-      paramNames.push(name);
-
-      return '(?:/(.*)|$)';
-    })
-    .replace(/:([\w]+)\*/g, (_, name) => {
-      paramNames.push(name);
-
-      return '(.*)';
-    })
-    .replace(/\*/g, '.*')
-    .replace(/:([\w]+)/g, (_, name) => {
-      paramNames.push(name);
-
-      return '([^/]+)';
-    });
-
-  return { paramNames, regexStr };
-}
-
-export function compilePattern(pattern: string, exact = true): { paramNames: string[]; regex: RegExp } {
-  const { paramNames, regexStr } = buildRegexStr(pattern);
-  // Wildcard patterns never need a $ anchor; exact patterns do; prefix patterns use (/.*)?$
-  const anchor = pattern.endsWith('*') ? '' : exact ? '$' : '(/.*)?$';
-
-  return { paramNames, regex: new RegExp(`^${regexStr}${anchor}`) };
-}
-
-export function matchRecord(pathname: string, record: { paramNames: string[]; regex: RegExp }): RouteParams | null {
-  const match = pathname.match(record.regex);
+export function matchRecordWithPattern(pathname: string, record: RouteRecord): RouteParams | null {
+  const match = record.urlPattern.exec(toMatchUrl(pathname));
 
   if (!match) return null;
 
-  return Object.fromEntries(record.paramNames.map((name, i) => [name, decodeURIComponent(match[i + 1] ?? '')]));
+  return Object.fromEntries(
+    record.paramNames.map((name) => [name, decodeURIComponent(match.pathname.groups[name] ?? '')]),
+  );
+}
+
+export function testRecordWithPattern(pathname: string, pattern: URLPattern): boolean {
+  return pattern.test(toMatchUrl(pathname));
 }
 
 const E = '[routeit]';

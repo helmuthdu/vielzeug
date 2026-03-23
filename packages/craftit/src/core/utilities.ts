@@ -45,9 +45,11 @@ export const listen = (
   handler: (e: any) => void,
   options?: AddEventListenerOptions,
 ): (() => void) => {
-  el.addEventListener(name, handler, options);
+  const listener: EventListener = handler as EventListener;
 
-  return () => el.removeEventListener(name, handler, options);
+  el.addEventListener(name, listener, options);
+
+  return () => el.removeEventListener(name, listener, options);
 };
 
 /**

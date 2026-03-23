@@ -263,21 +263,6 @@ fileInput.addEventListener('remove', ({ detail }) => {
 });
 ```
 
-## Guideline Recipe: Onboard with a Clear Upload Zone
-
-**Guideline: onboard** — explicit helper text and an accept filter tell users exactly what to do and what the system expects before they even click.
-
-```html
-<bit-file-input
-  label="Upload your avatar"
-  accept="image/png,image/jpeg,image/webp"
-  max-size="2097152"
-  helper="PNG, JPG or WebP · max 2 MB"
-  name="avatar"></bit-file-input>
-```
-
-**Tip:** Combine `helper` with `accept` and `max-size` so validation errors state the rule that was broken, not just that something went wrong.
-
 ## API Reference
 
 ### Attributes
@@ -324,7 +309,7 @@ fileInput.addEventListener('remove', ({ detail }) => {
 | --------------------------- | ------------------------- | --------------------------- |
 | `--file-input-bg`           | Dropzone background color | `var(--color-contrast-100)` |
 | `--file-input-border-color` | Dropzone border color     | `var(--color-contrast-300)` |
-| `--file-input-radius`       | Border radius             | `var(--rounded-md)`         |
+| `--file-input-radius`       | Border radius             | `var(--rounded-lg)`         |
 | `--file-input-min-height`   | Minimum dropzone height   | `var(--size-40)`            |
 | `--file-input-font-size`    | Font size                 | `var(--text-sm)`            |
 

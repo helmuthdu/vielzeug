@@ -67,11 +67,11 @@ Glass and frost look best over colorful backgrounds or images to make the blur a
 
 ```html
 <bit-box variant="glass" fullwidth>
-  <bit-text variant="heading" size="lg">Glass Effect</bit-text>
+  <bit-text variant="heading" size="md">Glass Effect</bit-text>
   <bit-text>Vibrant glass with saturated colors and brightness boost</bit-text>
 </bit-box>
 <bit-box variant="frost" fullwidth>
-  <bit-text variant="heading" size="lg">Frost Effect</bit-text>
+  <bit-text variant="heading" size="md">Frost Effect</bit-text>
   <bit-text>Frosted glass with muted tones and stronger blur</bit-text>
 </bit-box>
 ```
@@ -176,22 +176,6 @@ Animated rainbow border effect — works on any variant.
 
 </ComponentPreview>
 
-## Guideline Recipe: Bolder Feature Highlight
-
-**Guideline: bolder** — a solid elevated box with a primary color theme makes a featured section impossible to overlook.
-
-```html
-<bit-box variant="solid" color="primary" elevation="2" padding="lg">
-  <bit-text variant="heading" size="lg" weight="bold">Start your free trial</bit-text>
-  <bit-text variant="body" style="margin-block:var(--size-2)">
-    14 days, no credit card required. Cancel anytime.
-  </bit-text>
-  <bit-button variant="solid" color="canvas" size="lg">Get started</bit-button>
-</bit-box>
-```
-
-**Tip:** Use `elevation="2"` or `elevation="3"` to lift the box above surrounding content and draw the eye to the CTA.
-
 ## API Reference
 
 ### Attributes
@@ -228,7 +212,7 @@ CSS custom properties work regardless of whether a `color` attribute is set.
 | `--box-color`        | `var(--color-contrast-900)` | Text color    |
 | `--box-border`       | `var(--border)`             | Border width  |
 | `--box-border-color` | `var(--color-contrast-300)` | Border color  |
-| `--box-radius`       | `var(--rounded-md)`         | Border radius |
+| `--box-radius`       | `var(--rounded-lg)`         | Border radius |
 | `--box-padding`      | `var(--size-4)`             | Inner padding |
 | `--box-shadow`       | `var(--shadow-sm)`          | Box shadow    |
 

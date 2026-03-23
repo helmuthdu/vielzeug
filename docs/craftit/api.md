@@ -32,7 +32,7 @@ defineComponent<Props, Events>(options: DefineComponentOptions<BuildPropSchema<P
 
 Registers a custom element and returns the tag name.
 
-If the tag already exists, Craftit warns once and skips duplicate registration.
+If the tag already exists, Craftit throws `[craftit:E9]`.
 
 - `DefineComponentOptions`:
   - `tag: string`
@@ -174,6 +174,8 @@ If no matching `<slot>` exists, Craftit warns once instead of failing silently.
 - `createContext<T>(description?)`
 - `provide(key, value)`
 - `inject(key)` / `inject(key, fallback)`
+- `injectOptional(key)`
+- `injectRequired(key)`
 - `syncContextProps(ctx, props, keys)`
 
 Types:
@@ -243,6 +245,14 @@ Also exported:
 
 ## Directive APIs
 
+### `each(source, template, empty?, options?)`
+
+- Static array source: `options.key` optional.
+- Reactive source (`Signal<T[]>` or `() => T[]`): `options.key` required.
+- `options.select` filters items before rendering.
+
+For dynamic lists with interactions, prefer event delegation on a stable parent element.
+
 Exports:
 
 - `attr`
@@ -268,6 +278,8 @@ until(promise, pendingFn?, onError?)
 each(source, template, empty?, options?)
 bind(sig)
 ```
+
+`until(...)` renders `Error: <reason>` by default when the promise rejects and `onError` is omitted.
 
 - `attr(map)` — shorthand for batching DOM property bindings in spread position.
   Despite the name, entries map to `.property` bindings internally.

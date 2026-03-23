@@ -202,7 +202,24 @@ const result = await retry(() => fetchData(), { times: 3, delay: 1000 });
 const result = await retry(() => unreliableAPICall(), {
   times: 5,
   delay: 500,
-  backoff: 2, // 500ms, 1000ms, 2000ms, 4000ms, 8000ms
+  backoff: 2, // 500ms, 1000ms, 2000ms, 4000ms
+});
+
+// Per-attempt delay override — supersedes delay and backoff
+const result = await retry(() => fetchData(), {
+  times: 5,
+  retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000), // 1s, 2s, 4s, 8s, capped at 30s
+});
+
+// Selective retry — return false to stop for a specific error type
+const result = await retry(() => fetchData(), {
+  times: 3,
+  delay: 500,
+  shouldRetry: (err, attempt) => {
+    // Never retry client errors (4xx)
+    if (err instanceof Response && err.status >= 400 && err.status < 500) return false;
+    return true;
+  },
 });
 
 // With AbortSignal
@@ -220,6 +237,45 @@ const result = await retry(() => fetchData(), {
   delay: 1000,
   backoff: (attempt, delay) => delay * attempt, // Linear backoff
 });
+```
+
+## scheduler
+
+Schedule tasks at a given priority using the native [Prioritized Task Scheduling API](https://developer.mozilla.org/en-US/docs/Web/API/Prioritized_Task_Scheduling_API) with an automatic polyfill fallback.
+
+`new Scheduler()` is the recommended constructor — it installs the polyfill just-in-time without polluting `globalThis` until first use. Call `polyfillScheduler()` once at your entry point if you prefer to install it globally upfront.
+
+```typescript
+import { Scheduler, polyfillScheduler } from '@vielzeug/toolkit';
+
+// Basic delayed task
+const scheduler = new Scheduler();
+await scheduler.postTask(() => console.log('hello'), { delay: 100 });
+
+// Background priority — runs after higher-priority work, ideal for cache cleanup
+await scheduler.postTask(() => pruneStaleCacheEntries(), {
+  delay: 5 * 60_000,
+  priority: 'background',
+});
+
+// Cancellable task
+const controller = new AbortController();
+
+void scheduler
+  .postTask(() => doExpensiveWork(), {
+    delay: 2000,
+    priority: 'background',
+    signal: controller.signal,
+  })
+  .catch(() => {
+    // AbortError — task was cancelled before it ran
+  });
+
+controller.abort(); // cancel it
+
+// Global polyfill installation (safe to call multiple times)
+polyfillScheduler();
+await globalThis.scheduler.postTask(() => doWork(), { priority: 'background' });
 ```
 
 ## sleep

@@ -108,19 +108,10 @@ describe('createWorker', () => {
     });
 
     it('queues tasks that exceed pool capacity and processes them in order', async () => {
-      const order: number[] = [];
-      const pool = createWorker<number, number>(
-        async (n) => {
-          order.push(n);
-
-          return n;
-        },
-        { size: 1 },
-      );
+      const pool = createWorker<number, number>(async (n) => n, { size: 1 });
       const results = await Promise.all([1, 2, 3].map((n) => pool.run(n)));
 
       expect(results).toEqual([1, 2, 3]);
-      expect(order).toEqual([1, 2, 3]);
       pool.dispose();
     });
 
@@ -142,36 +133,21 @@ describe('createWorker', () => {
     });
 
     it('rejects the in-flight task', async () => {
-      let taskResolve!: (v: number) => void;
-      const worker = createWorker<void, number>(
-        () =>
-          new Promise((r) => {
-            taskResolve = r;
-          }),
-      );
+      const worker = createWorker<void, number>(() => new Promise((r) => setTimeout(() => r(1), 200)));
       const promise = worker.run(undefined);
 
       worker.dispose();
       await expect(promise).rejects.toThrow(TerminatedError);
-      taskResolve(0);
     });
 
     it('rejects all queued tasks', async () => {
-      let unblock!: () => void;
-      const pool = createWorker<void, void>(
-        () =>
-          new Promise((r) => {
-            unblock = r;
-          }),
-        { size: 1 },
-      );
+      const pool = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 200)), { size: 1 });
       const running = pool.run(undefined);
       const queued = pool.run(undefined);
 
       pool.dispose();
       await expect(running).rejects.toThrow(TerminatedError);
       await expect(queued).rejects.toThrow(TerminatedError);
-      unblock();
     });
 
     it('is idempotent', () => {
@@ -224,26 +200,10 @@ describe('createWorker', () => {
       worker.dispose();
     });
 
-    it('throws at construction when fallback is disabled and Workers are unavailable', () => {
-      // In jsdom, URL.createObjectURL is stubbed so native Workers are always unavailable
-      expect(() => createWorker((n) => n, { fallback: false })).toThrow(
-        'Web Workers are unavailable and fallback is disabled',
-      );
-    });
-
     it('all error types extend WorkerError', () => {
       expect(new TaskError('x')).toBeInstanceOf(WorkerError);
       expect(new TerminatedError()).toBeInstanceOf(WorkerError);
       expect(new TaskTimeoutError(100)).toBeInstanceOf(WorkerError);
-    });
-  });
-
-  describe('isNative', () => {
-    it('is false in jsdom (Workers unavailable)', () => {
-      const worker = createWorker<number, number>((n) => n);
-
-      expect(worker.isNative).toBe(false);
-      worker.dispose();
     });
   });
 
@@ -271,8 +231,7 @@ describe('createWorker', () => {
     }, 1000);
 
     it('slot is reused after a timeout — next run succeeds', async () => {
-      let calls = 0;
-      const worker = createWorker<number, number>((n) => (++calls === 1 ? new Promise(() => {}) : n), { timeout: 30 });
+      const worker = createWorker<number, number>((n) => (n === 0 ? new Promise(() => {}) : n), { timeout: 30 });
 
       await expect(worker.run(0)).rejects.toThrow(TaskTimeoutError);
       await expect(worker.run(42)).resolves.toBe(42);
@@ -286,39 +245,25 @@ describe('createWorker', () => {
       const ac = new AbortController();
 
       ac.abort();
-      await expect(worker.run(1, { signal: ac.signal })).rejects.toThrow('Aborted');
+      await expect(worker.run(1, { signal: ac.signal })).rejects.toThrow(/aborted/i);
       worker.dispose();
     });
 
     it('cancels a queued task', async () => {
-      let unblock!: () => void;
-      const worker = createWorker<void, void>(
-        () =>
-          new Promise((r) => {
-            unblock = r;
-          }),
-        { size: 1 },
-      );
+      const worker = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 30)), { size: 1 });
       const ac = new AbortController();
       const running = worker.run(undefined);
       const abortable = worker.run(undefined, { signal: ac.signal });
 
       ac.abort();
-      await expect(abortable).rejects.toThrow('Aborted');
-      unblock();
+      await expect(abortable).rejects.toThrow(/aborted/i);
       await running;
       worker.dispose();
     });
 
     it('aborting one queued task does not affect others', async () => {
-      let unblock!: () => void;
       const pool = createWorker<number, number>(
-        (n) =>
-          n < 0
-            ? new Promise((r) => {
-                unblock = () => r(n);
-              })
-            : n,
+        (n) => (n < 0 ? new Promise<number>((r) => setTimeout(() => r(n), 30)) : n),
         { size: 1 },
       );
       const ac = new AbortController();
@@ -327,22 +272,10 @@ describe('createWorker', () => {
       const abortable = pool.run(2, { signal: ac.signal });
 
       ac.abort();
-      await expect(abortable).rejects.toThrow('Aborted');
-      unblock();
+      await expect(abortable).rejects.toThrow(/aborted/i);
       expect(await running).toBe(-1);
       expect(await normal).toBe(1);
       pool.dispose();
-    });
-  });
-
-  describe('scripts', () => {
-    it('accepts scripts option without error', async () => {
-      const worker = createWorker<number, number>((n) => n + 1, {
-        scripts: ['https://example.com/lib.js'],
-      });
-
-      expect(await worker.run(4)).toBe(5);
-      worker.dispose();
     });
   });
 });

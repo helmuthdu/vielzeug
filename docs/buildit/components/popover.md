@@ -167,25 +167,6 @@ Use the `open` attribute to programmatically show or hide the popover.
 </script>
 ```
 
-## Guideline Recipe: Adapt Help to the Current Context
-
-**Guideline: adapt** — a popover surfaces detail exactly when and where the user needs it, without navigating away or opening a full modal.
-
-```html
-<bit-popover placement="top">
-  <bit-button slot="trigger" variant="ghost" size="sm" icon-only aria-label="What is MFA?"> ? </bit-button>
-  <div style="max-width:280px">
-    <bit-text variant="label" weight="semibold">Multi-factor authentication</bit-text>
-    <bit-text variant="body" size="sm" style="margin-top:var(--size-1)">
-      MFA adds a second verification step — usually an app or SMS code — to protect your account even if your password
-      is compromised.
-    </bit-text>
-  </div>
-</bit-popover>
-```
-
-**Tip:** Keep popover content under 60 words. If you need more space, link to a docs page instead of expanding the popover.
-
 ## API Reference
 
 ### Attributes

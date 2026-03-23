@@ -156,7 +156,7 @@ import { createQuery } from '@vielzeug/fetchit';
 
 const qc = createQuery({
   staleTime: 0, // default: 0 — data is immediately stale
-  gcTime: 300_000, // default: 5 min — unused entries are GC'd after this
+  gcTime: 300_000, // default: 5 min — GC runs at background priority once an entry is unobserved
   retry: 1, // default: 1 retry attempt
   retryDelay: undefined, // default: exponential backoff (1s → 2s → 4s → … up to 30s)
   shouldRetry: undefined, // default: undefined — retries all errors
@@ -165,12 +165,12 @@ const qc = createQuery({
 
 ### `query(options)`
 
-Fetches data with automatic caching, deduplication, and retry. The `fn` receives a `QueryFnContext` carrying an `AbortSignal`.
+Fetches data with automatic caching, deduplication, and retry. The `fn` receives a `QueryFnContext` with both the cache `key` and an `AbortSignal`.
 
 ```ts
 const user = await qc.query({
   key: ['users', userId],
-  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: userId }, signal }),
+  fn: ({ key, signal }) => api.get<User>('/users/{id}', { params: { id: key[1] as number }, signal }),
   staleTime: 5_000,
   retry: 3,
 });
@@ -181,7 +181,7 @@ const user = await qc.query({
 | `key`         | `QueryKey`                            | required    | Cache identifier; serialized with stable key ordering                      |
 | `fn`          | `(ctx: QueryFnContext) => Promise<T>` | required    | Data-fetching function; receives `{ key, signal }`                         |
 | `staleTime`   | `number`                              | `0`         | ms served from cache before the next `query()` call refetches              |
-| `gcTime`      | `number`                              | `300000`    | ms after last observer is removed before the entry is GC'd                 |
+| `gcTime`      | `number`                              | `300000`    | ms before an unobserved entry is GC'd at background priority (paused while observed) |
 | `enabled`     | `boolean`                             | `true`      | Pass `false` to skip execution and return cached data if present           |
 | `retry`       | `number \| false`                     | `1`         | Number of retry attempts (`false` = no retries)                            |
 | `retryDelay`  | `number \| (attempt) => number`       | exponential | Delay between retries                                                      |
@@ -251,7 +251,7 @@ const unsub = qc.subscribe<User>(['users', 1], (state) => {
 unsub(); // stop listening
 ```
 
-Subscribing keeps the cache entry alive (cancels any pending GC timer). The entry is removed when the last subscriber leaves and the status is `'idle'`.
+Subscribing keeps the cache entry alive (cancels any pending GC timer). When the last subscriber leaves, `'idle'` entries are removed immediately; non-idle entries start a new `gcTime` countdown.
 
 ### `invalidate(key)`
 

@@ -200,10 +200,10 @@ export const POPOVER_TAG = defineComponent<BitPopoverProps, BitPopoverEvents>({
         }
 
         if (t.includes('hover')) {
-          el.addEventListener('mouseenter', open);
-          el.addEventListener('mouseleave', close);
-          panelEl?.addEventListener('mouseenter', open);
-          panelEl?.addEventListener('mouseleave', close);
+          el.addEventListener('pointerenter', open);
+          el.addEventListener('pointerleave', close);
+          panelEl?.addEventListener('pointerenter', open);
+          panelEl?.addEventListener('pointerleave', close);
         }
 
         if (t.includes('focus')) {
@@ -222,12 +222,12 @@ export const POPOVER_TAG = defineComponent<BitPopoverProps, BitPopoverEvents>({
         currentTrigger.removeAttribute('aria-expanded');
         currentTrigger.removeAttribute('aria-disabled');
         currentTrigger.removeEventListener('click', toggle);
-        currentTrigger.removeEventListener('mouseenter', open);
-        currentTrigger.removeEventListener('mouseleave', close);
+        currentTrigger.removeEventListener('pointerenter', open);
+        currentTrigger.removeEventListener('pointerleave', close);
         currentTrigger.removeEventListener('focusin', open);
         currentTrigger.removeEventListener('focusout', handleFocusOut);
-        panelEl?.removeEventListener('mouseenter', open);
-        panelEl?.removeEventListener('mouseleave', close);
+        panelEl?.removeEventListener('pointerenter', open);
+        panelEl?.removeEventListener('pointerleave', close);
         panelEl?.removeEventListener('focusout', handleFocusOut);
         document.removeEventListener('click', handleClickOutside, { capture: true });
         document.removeEventListener('keydown', handleKeydown);

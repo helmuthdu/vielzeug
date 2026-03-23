@@ -21,7 +21,7 @@ describe('bit-chip', () => {
     it('does not render remove button in static mode', async () => {
       fixture = await mount('bit-chip');
 
-      expect(fixture.query('.remove-btn')?.hasAttribute('hidden')).toBe(true);
+      expect(fixture.query('.remove-btn')).toBeNull();
     });
 
     it('renders remove button in removable mode', async () => {

@@ -70,25 +70,29 @@ Control which side of the trigger the panel opens on. The menu automatically fli
 
 Use the `icon` named slot on each `bit-menu-item` for leading icons.
 
+::: tip Material Icons
+These examples use Material Symbols Rounded ligatures (for example: `<span class="material-symbols-rounded">search</span>`).
+:::
+
 <ComponentPreview vertical>
 
 ```html
 <bit-menu>
   <bit-button slot="trigger">File</bit-button>
   <bit-menu-item value="new">
-    <span slot="icon">📄</span>
+    <span slot="icon" class="material-symbols-rounded" aria-hidden="true">description</span>
     New File
   </bit-menu-item>
   <bit-menu-item value="open">
-    <span slot="icon">📂</span>
+    <span slot="icon" class="material-symbols-rounded" aria-hidden="true">folder_open</span>
     Open…
   </bit-menu-item>
   <bit-menu-item value="save">
-    <span slot="icon">💾</span>
+    <span slot="icon" class="material-symbols-rounded" aria-hidden="true">save</span>
     Save
   </bit-menu-item>
   <bit-menu-item value="delete" disabled>
-    <span slot="icon">🗑️</span>
+    <span slot="icon" class="material-symbols-rounded" aria-hidden="true">delete</span>
     Delete (disabled)
   </bit-menu-item>
 </bit-menu>
@@ -146,8 +150,8 @@ Set `disabled` on the `bit-menu` element to prevent the panel from opening at al
   const menu = document.getElementById('action-menu');
 
   // Fired when a menu item is selected
-  menu.addEventListener('bit-select', (e) => {
-    console.log('selected:', e.detail.value);
+  menu.addEventListener('select', (e) => {
+    console.log('selected:', e.detail.value, 'checked:', e.detail.checked);
     switch (e.detail.value) {
       case 'rename':
         openRenameDialog();
@@ -161,9 +165,15 @@ Set `disabled` on the `bit-menu` element to prevent the panel from opening at al
     }
   });
 
-  // Fired when the panel opens / closes
-  menu.addEventListener('open', () => console.log('menu opened'));
-  menu.addEventListener('close', () => console.log('menu closed'));
+  // Fired when the panel opens
+  menu.addEventListener('open', (e) => {
+    console.log('menu opened via:', e.detail.reason); // 'toggle', 'programmatic', or 'trigger'
+  });
+
+  // Fired when the panel closes
+  menu.addEventListener('close', (e) => {
+    console.log('menu closed via:', e.detail.reason); // 'escape', 'outside-click', 'programmatic', or 'toggle'
+  });
 </script>
 ```
 
@@ -175,7 +185,9 @@ Any element works as the trigger — including icon-only buttons.
 
 ```html
 <bit-menu>
-  <bit-button slot="trigger" variant="ghost" size="sm" aria-label="More options"> ⋯ </bit-button>
+  <bit-button slot="trigger" variant="ghost" size="sm" aria-label="More options">
+    <span class="material-symbols-rounded" aria-hidden="true">more_horiz</span>
+  </bit-button>
   <bit-menu-item value="edit">Edit</bit-menu-item>
   <bit-menu-item value="copy">Copy link</bit-menu-item>
   <bit-menu-item value="report">Report</bit-menu-item>
@@ -220,15 +232,15 @@ Set `type="checkbox"` on a `bit-menu-item` to make it toggleable. Clicking or pr
   <bit-menu-item value="toolbar" type="checkbox">Show Toolbar</bit-menu-item>
   <bit-menu-item value="statusbar" type="checkbox" checked>Show Status Bar</bit-menu-item>
 </bit-menu>
+
+<script>
+  document.getElementById('view-menu').addEventListener('select', (e) => {
+    console.log(e.detail.value, 'checked:', e.detail.checked);
+  });
+</script>
 ```
 
 </ComponentPreview>
-
-```js
-document.getElementById('view-menu').addEventListener('bit-select', (e) => {
-  console.log(e.detail.value, 'checked:', e.detail.checked);
-});
-```
 
 ### Radio Items
 
@@ -246,26 +258,6 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 ```
 
 </ComponentPreview>
-
-## Guideline Recipe: Quieter Actions Menu
-
-**Guideline: quieter** — moving secondary CRUD actions into a menu reduces button sprawl and keeps the primary action prominent.
-
-```html
-<div style="display:flex;align-items:center;gap:var(--size-2)">
-  <bit-text style="flex:1">Project Alpha</bit-text>
-  <bit-button variant="solid" color="primary" size="sm">Open</bit-button>
-  <bit-menu placement="bottom-end">
-    <bit-button slot="trigger" variant="ghost" size="sm" icon-only aria-label="More actions"> ⋯ </bit-button>
-    <bit-menu-item value="rename">Rename</bit-menu-item>
-    <bit-menu-item value="duplicate">Duplicate</bit-menu-item>
-    <bit-menu-item value="archive">Archive</bit-menu-item>
-    <bit-menu-item value="delete">Delete…</bit-menu-item>
-  </bit-menu>
-</div>
-```
-
-**Tip:** Always keep the most common action (`Open`) as a visible button; move destructive actions like `Delete` to the last position in the menu.
 
 ## API Reference
 
@@ -303,19 +295,22 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 
 ### Events
 
-| Event        | Detail                                                        | Description                                                                                               |
-| ------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `bit-select` | `{ value: string, checked?: boolean, originalEvent?: Event }` | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items |
-| `open`   | —                                                             | Emitted when the panel opens                                                                              |
-| `close`  | —                                                             | Emitted when the panel closes                                                                             |
+| Event    | Detail                                  | Description                                                                                                                   |
+| -------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `select` | `{ value: string, checked?: boolean }`  | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items                    |
+| `open`   | `{ reason: OverlayOpenReason }`         | Emitted when the panel opens. Reason can be `'toggle'`, `'programmatic'`, or `'trigger'`                                    |
+| `close`  | `{ reason: OverlayCloseReason }`        | Emitted when the panel closes. Reason can be `'escape'`, `'outside-click'`, `'programmatic'`, or `'toggle'`                 |
 
 ### CSS Custom Properties (`bit-menu`)
 
 | Property                 | Description                | Default        |
 | ------------------------ | -------------------------- | -------------- |
 | `--menu-panel-min-width` | Minimum width of the panel | `10rem`        |
-| `--menu-panel-radius`    | Border radius of the panel | `--rounded-md` |
-| `--menu-panel-shadow`    | Box shadow of the panel    | `--shadow-lg`  |
+| `--menu-panel-radius`    | Border radius of the panel | `--rounded-lg` |
+| `--menu-panel-shadow`    | Box shadow of the panel    | `--shadow-xl`  |
+| `--menu-panel-bg`        | Panel background surface   | mixed contrast surface |
+| `--menu-panel-border-color` | Panel border color      | subtle mixed contrast |
+| `--menu-panel-blur`      | Panel blur amount          | `--blur-md`    |
 
 ## Accessibility
 

@@ -7,7 +7,7 @@
     display: block;
     color: var(--accordion-item-body-color, var(--text-color-body));
 
-    --accordion-details-radius: var(--rounded-md);
+    --accordion-details-radius: var(--rounded-lg);
     --accordion-item-transition: var(--transition-normal);
   }
 
@@ -262,8 +262,8 @@
 
   /* Expanded state - adjust border radius */
   :host([expanded]) {
-    --accordion-details-radius: var(--rounded-md) var(--rounded-md) 0 0;
-    --accordion-summary-radius: 0 0 var(--rounded-md) var(--rounded-md);
+    --accordion-details-radius: var(--rounded-lg) var(--rounded-lg) 0 0;
+    --accordion-summary-radius: 0 0 var(--rounded-lg) var(--rounded-lg);
   }
 
   @media (forced-colors: active) {

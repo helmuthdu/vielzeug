@@ -2491,6 +2491,91 @@ cart.patch({ items: 3 })`,
       name: 'Watch & Subscribe',
     },
   },
+  timit: {
+    'dst-safe-arithmetic': {
+      code: `import { d } from '@vielzeug/timit'
+
+// DST spring-forward in New York (2:00 AM is skipped)
+const beforeDst = '2026-03-08T01:30:00-05:00[America/New_York]'
+const plusOneHour = d.add(beforeDst, { hours: 1 })
+
+console.log('Before:', beforeDst)
+console.log('After +1h:', plusOneHour.toString())
+console.log('Hour:', plusOneHour.hour, 'Offset:', plusOneHour.offset)
+
+const minusThirty = d.subtract(plusOneHour, { minutes: 30 })
+console.log('After -30m:', minusThirty.toString())`,
+      name: 'DST-safe Arithmetic',
+    },
+    'meeting-duration': {
+      code: `import { d } from '@vielzeug/timit'
+
+const start = '2026-03-21T10:00:00Z'
+const end = '2026-03-21T12:45:00Z'
+
+const duration = d.diff(start, end, {
+  largestUnit: 'hours',
+  smallestUnit: 'minutes',
+})
+
+console.log('Duration ISO:', duration.toString())
+console.log('Hours:', duration.hours)
+console.log('Minutes:', duration.minutes)
+
+console.log('Within range checks:')
+console.log('11:00 in range:', d.within('2026-03-21T11:00:00Z', start, end))
+console.log('13:00 in range:', d.within('2026-03-21T13:00:00Z', start, end))`,
+      name: 'Meeting Duration & Range Checks',
+    },
+    'timezone-aware-scheduling': {
+      code: `import { d } from '@vielzeug/timit'
+
+const meetingUtc = d.asInstant('2026-04-15T14:00:00Z')
+const attendees = [
+  { name: 'Alice', tz: 'America/New_York' },
+  { name: 'Bruno', tz: 'Europe/Berlin' },
+  { name: 'Keiko', tz: 'Asia/Tokyo' },
+]
+
+for (const attendee of attendees) {
+  const local = d.asZoned(meetingUtc, { tz: attendee.tz })
+  const formatted = d.format(local, {
+    pattern: 'long',
+    locale: 'en-US',
+    tz: attendee.tz,
+  })
+
+  console.log(
+    attendee.name + ' (' + attendee.tz + '):',
+    formatted,
+  )
+}
+
+const start = d.asZoned(meetingUtc, { tz: 'UTC' })
+const end = d.add(start, { minutes: 45 })
+console.log('Meeting window:', d.formatRange(start, end, { pattern: 'short', locale: 'en-US', tz: 'UTC' }))`,
+      name: 'Timezone-aware Scheduling',
+    },
+    'timezone-conversion': {
+      code: `import { d } from '@vielzeug/timit'
+
+const utcTime = '2026-03-21T10:15:30Z'
+
+const tokyo = d.asZoned(utcTime, { tz: 'Asia/Tokyo' })
+const berlin = d.asZoned(utcTime, { tz: 'Europe/Berlin' })
+const newYork = d.asZoned(utcTime, { tz: 'America/New_York' })
+
+console.log('UTC instant:', d.asInstant(utcTime).toString())
+console.log('Tokyo:', tokyo.toString())
+console.log('Berlin:', berlin.toString())
+console.log('New York:', newYork.toString())
+
+console.log('Formatted:')
+console.log('Tokyo short:', d.format(tokyo, { pattern: 'short', locale: 'en-US' }))
+console.log('Berlin long:', d.format(berlin, { pattern: 'long', locale: 'de-DE' }))`,
+      name: 'Timezone Conversion',
+    },
+  },
   toolkit: {
     'array-chunk': {
       code: `import { chunk } from '@vielzeug/toolkit'

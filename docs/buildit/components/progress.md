@@ -237,39 +237,6 @@ const interval = setInterval(() => {
 }, 200);
 ```
 
-## Guideline Recipe: Delight During Long Operations
-
-**Guideline: delight** — a progress bar combined with a title and a floating label turns a wait into a transparent, trustworthy experience.
-
-```html
-<bit-progress
-  id="upload-bar"
-  type="linear"
-  color="primary"
-  value="0"
-  max="100"
-  title="Uploading…"
-  label="0%"
-  floating-label="0%"></bit-progress>
-
-<script>
-  let v = 0;
-  const bar = document.getElementById('upload-bar');
-  const iv = setInterval(() => {
-    v = Math.min(v + 8, 100);
-    bar.setAttribute('value', String(v));
-    bar.setAttribute('label', `${v}%`);
-    bar.setAttribute('floating-label', `${v}%`);
-    if (v === 100) {
-      bar.setAttribute('title', 'Upload complete!');
-      clearInterval(iv);
-    }
-  }, 400);
-</script>
-```
-
-**Tip:** The `label` attribute doubles as the accessible name (`aria-label`). Set it to something meaningful like `"Uploading profile photo — 45%"` so screen reader users hear both the context and the current value.
-
 ## API Reference
 
 ### Attributes

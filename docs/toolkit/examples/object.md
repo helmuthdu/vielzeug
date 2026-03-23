@@ -19,7 +19,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 | Method                               | Description                                                                  |
 | :----------------------------------- | :--------------------------------------------------------------------------- |
-| [`cache`](./object/cache.md)         | Key-value cache with automatic GC and observer support.                      |
+| [`stash`](./object/stash.md)         | Key-value cache with automatic GC and observer support.                      |
 | [`diff`](./object/diff.md)           | Compare two objects and return the structural differences.                   |
 | [`merge`](./object/merge.md)         | Merge multiple objects with configurable strategies (deep, shallow, concat). |
 | [`parseJSON`](./object/parseJSON.md) | Safely parse JSON strings with optional fallback value.                      |
@@ -82,9 +82,9 @@ prune('   '); // undefined
 ### Caching
 
 ```ts
-import { cache } from '@vielzeug/toolkit';
+import { stash } from '@vielzeug/toolkit';
 
-const myCache = cache<string>();
+const myCache = stash<string>({ hash: (key) => JSON.stringify(key) });
 myCache.set(['user', 1], 'John Doe');
 myCache.get(['user', 1]); // 'John Doe'
 myCache.scheduleGc(['user', 1], 5000); // Auto-delete after 5s
@@ -95,7 +95,7 @@ myCache.size(); // 1
 
 <div class="grid-links">
 
-- [cache](./object/cache.md)
+- [stash](./object/stash.md)
 - [diff](./object/diff.md)
 - [merge](./object/merge.md)
 - [parseJSON](./object/parseJSON.md)

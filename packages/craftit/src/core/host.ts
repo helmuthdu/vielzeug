@@ -1,30 +1,27 @@
 /**
  * Host utilities — component context injection, slot observation, and attribute/class reflection.
  *
- * This module consolidates:
  * - Context API (provide, inject, createContext, syncContextProps)
  * - Slot observation and detection (Slots type, createSlots, onSlotChange)
  * - Host element binding (reflect) for attributes, events, and classes
  */
 
-import { type ReadonlySignal, type Signal, signal, effect } from '@vielzeug/stateit';
+import { type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
 
-import { currentRuntime, onCleanup, onMount, runtimeStack, handle } from './runtime-lifecycle';
+// Use the wrapped effect from runtime-lifecycle so reactive bindings are
+// automatically cleaned up on unmount — raw stateit effect has no lifecycle awareness.
+import { currentRuntime, effect, handle, onCleanup, onMount } from './runtime-lifecycle';
 import { setAttr } from './utilities';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTEXT API
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Context registry ─────────────────────────────────────────────────────────
 const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown> | string | symbol, unknown>>();
 
 export type InjectionKey<T> = symbol & {
   readonly __craftit_injection_key?: T;
 };
-
-/** Sentinel used to distinguish "argument not passed" from `undefined` in overloaded functions. */
-const _UNSET = Symbol('craftit.unset');
 
 export const provide = <T>(key: InjectionKey<T> | string | symbol, value: T): void => {
   const el = currentRuntime().el;
@@ -36,34 +33,22 @@ export const provide = <T>(key: InjectionKey<T> | string | symbol, value: T): vo
 
 export function inject<T>(key: InjectionKey<T> | string | symbol): T | undefined;
 export function inject<T>(key: InjectionKey<T> | string | symbol, fallback: T): T;
-export function inject<T>(key: InjectionKey<T> | string | symbol, fallback: T | typeof _UNSET = _UNSET): T | undefined {
-  const rt = currentRuntime();
-  let node: Node | null = rt.el;
+export function inject<T>(key: InjectionKey<T> | string | symbol, ...rest: [T?]): T | undefined {
+  let node: Node | null = currentRuntime().el;
 
   while (node) {
     if (node instanceof HTMLElement) {
-      const ctxMap = contextRegistry.get(node);
+      const v = contextRegistry.get(node)?.get(key);
 
-      if (ctxMap?.has(key)) {
-        return ctxMap.get(key) as T;
-      }
+      if (v !== undefined) return v as T;
     }
 
-    // Fall back to DOM traversal
-    const rootNode = node.getRootNode() as Node;
-    const parentElement: HTMLElement | null = (node as HTMLElement).parentElement;
-    const hostElement = rootNode instanceof ShadowRoot ? rootNode.host : null;
+    const root = node.getRootNode() as Node;
 
-    node = parentElement ?? hostElement ?? null;
+    node = (node as HTMLElement).parentElement ?? (root instanceof ShadowRoot ? root.host : null);
   }
 
-  if (fallback === _UNSET) {
-    console.warn(`[craftit:E7] inject key missing: ${String(key)}`);
-
-    return undefined;
-  }
-
-  return fallback as T;
+  return rest.length > 0 ? rest[0] : undefined;
 }
 
 export function createContext<T>(description?: string): InjectionKey<T> {
@@ -74,6 +59,8 @@ export function createContext<T>(description?: string): InjectionKey<T> {
  * Reactively inherits prop values from a context object provided by an ancestor component.
  * For each key, when the context value is not `undefined`, it is written into the matching prop signal.
  * The effect is automatically cleaned up when the component unmounts.
+ *
+ * Deferred to `onMount` so context values win over HTML attribute values set on the child.
  *
  * @example
  * syncContextProps(inject(BUTTON_GROUP_CTX), props, ['color', 'size', 'variant']);
@@ -89,18 +76,15 @@ export const syncContextProps = <
 ): void => {
   if (!ctx) return;
 
-  // Defer to onMount so the effect runs after craftit's own attribute→prop sync
-  // (the propsKey loop in connectedCallback). This ensures context values win
-  // over HTML attribute values set on the child element.
-  onMount(() =>
+  onMount(() => {
     effect(() => {
       for (const k of keys) {
         const v = ctx[k]?.value;
 
         if (v !== undefined) props[k].value = v;
       }
-    }),
-  );
+    });
+  });
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -110,8 +94,7 @@ export const syncContextProps = <
 const missingSlotWarnings = new Set<string>();
 
 const warnMissingSlot = (el: HTMLElement, slotName: string, source: 'onSlotChange()' | 'slots.has()'): void => {
-  const normalizedName = slotName || 'default';
-  const key = `${source}:${el.localName}:${normalizedName}`;
+  const key = `${source}:${el.localName}:${slotName || 'default'}`;
 
   if (missingSlotWarnings.has(key)) return;
 
@@ -124,23 +107,18 @@ const warnMissingSlot = (el: HTMLElement, slotName: string, source: 'onSlotChang
 export type Slots<T extends Record<string, unknown> = Record<string, unknown>> = {
   /**
    * Returns a `ReadonlySignal<boolean>` that is `true` when the slot has assigned content.
-   * Reactive — use the returned signal directly in computed(), html templates, or effects.
+   * Reactive — use the signal directly in templates, computed(), or effects.
    * @example const hasIcon = slots.has('icon'); // ReadonlySignal<boolean>
    */
   has(name: keyof T): ReadonlySignal<boolean>;
 };
 
 /**
- * Observes a named slot (or the default slot when `slotName` is `'default'` or `''`) and
- * calls `callback` with the list of assigned elements whenever the slot's children change.
- *
+ * Observes a slot and calls `callback` with assigned elements whenever they change.
  * Must be called inside an {@link onMount} callback.
  *
  * @example
  * onMount(() => {
- *   onSlotChange('default', (nodes) => {
- *     console.log('Default slot has', nodes.length, 'elements');
- *   });
  *   onSlotChange('icon', (nodes) => setHasIcon(nodes.length > 0));
  * });
  */
@@ -158,7 +136,7 @@ export const onSlotChange = (slotName: string, callback: (elements: Element[]) =
 
   const handler = () => callback(slot.assignedElements({ flatten: true }));
 
-  handler(); // run immediately with current content
+  handler();
   slot.addEventListener('slotchange', handler);
   onCleanup(() => slot.removeEventListener('slotchange', handler));
 };
@@ -167,43 +145,34 @@ export const createSlots = <T extends Record<string, unknown> = Record<string, u
   const el = currentRuntime().el;
   const sigs = new Map<string, Signal<boolean>>();
 
-  const setup = (slotName: string, s: Signal<boolean>): (() => void) | undefined => {
-    const slot = el.shadowRoot?.querySelector<HTMLSlotElement>(
-      slotName ? `slot[name="${slotName}"]` : 'slot:not([name])',
-    );
-
-    if (!slot) {
-      warnMissingSlot(el, slotName, 'slots.has()');
-
-      return;
-    }
-
-    const update = () => {
-      s.value = slot.assignedNodes().length > 0;
-    };
-
-    update();
-    slot.addEventListener('slotchange', update);
-
-    return () => slot.removeEventListener('slotchange', update);
-  };
-
   const get = (slotName: string): Signal<boolean> => {
-    if (!sigs.has(slotName)) {
-      const s = signal(false);
+    if (sigs.has(slotName)) return sigs.get(slotName)!;
 
-      sigs.set(slotName, s);
+    const s = signal(false);
 
-      // During setup shadow DOM isn't rendered yet — defer to onMount.
-      // Post-mount (e.g. test access) shadow DOM is ready, set up immediately.
-      if (runtimeStack.length > 0) {
-        onMount(() => setup(slotName, s));
-      } else {
-        setup(slotName, s);
+    sigs.set(slotName, s);
+
+    onMount(() => {
+      const selector = slotName ? `slot[name="${slotName}"]` : 'slot:not([name])';
+      const slot = el.shadowRoot?.querySelector<HTMLSlotElement>(selector);
+
+      if (!slot) {
+        warnMissingSlot(el, slotName, 'slots.has()');
+
+        return;
       }
-    }
 
-    return sigs.get(slotName)!;
+      const update = () => {
+        s.value = slot.assignedNodes().length > 0;
+      };
+
+      update();
+      slot.addEventListener('slotchange', update);
+
+      return () => slot.removeEventListener('slotchange', update);
+    });
+
+    return s;
   };
 
   return {
@@ -228,13 +197,11 @@ export type HostBindingValue =
   | null
   | undefined;
 
-type HostEventBindingValue = (e: Event) => void;
-
 /**
  * Configuration for `reflect()`.
  */
 export type ReflectConfig = {
-  [key: string]: HostBindingValue | HostEventBindingValue;
+  [key: string]: HostBindingValue | ((e: Event) => void);
   classMap?: () => Record<string, boolean>;
 };
 
@@ -242,77 +209,57 @@ export type ReflectConfig = {
  * Reflect reactive attributes, events, and classes to a host element.
  * Must be called within a component setup context.
  *
+ * - `on*` keys map to event listeners: `onClick` → `'click'`, `onValueChanged` → `'valueChanged'`
+ * - `classMap` maps to a reactive class object
+ * - all other keys map to attributes (static or reactive getter)
+ *
  * @example
- * setup({ host, reflect }) {
+ * setup({ reflect }) {
  *   reflect({
  *     role: 'checkbox',
- *     tabindex: () => disabled ? undefined : 0,
- *     checked: () => checked.value,
- *     classMap: () => ({ 'is-checked': checked.value }),
+ *     tabindex: () => props.disabled.value ? undefined : 0,
+ *     checked: () => props.checked.value,
+ *     classMap: () => ({ checked: props.checked.value }),
  *     onClick: handleToggle,
  *   });
  * }
  */
 export function reflect(host: HTMLElement, config: ReflectConfig): void {
   for (const [key, value] of Object.entries(config)) {
-    if (key === 'classMap' && typeof value === 'function') {
+    if (key === 'classMap') {
       applyClassMap(host, value as () => Record<string, boolean>);
-    } else if (key.startsWith('on') && typeof value === 'function') {
-      // Event binding: onClick, onKeydown, etc.
-      const eventName = key.slice(2).toLowerCase();
+    } else if (key.startsWith('on') && key.length > 2 && typeof value === 'function') {
+      // onClick → 'click', onValueChanged → 'valueChanged', onKeydown → 'keydown'
+      const raw = key.slice(2);
 
-      handle(host, eventName, value as HostEventBindingValue);
+      handle(host, raw[0].toLowerCase() + raw.slice(1), value as (e: Event) => void);
     } else {
-      // Attribute binding
       applyAttribute(host, key, value as HostBindingValue);
     }
   }
 }
 
 function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue): void {
-  const isReactive = typeof value === 'function';
-
-  if (isReactive) {
-    // Re-run whenever the getter changes
-    effect(() => {
-      const resolved = (value as () => HostBindingValue)();
-
-      setAttr(host, name, resolved);
-    });
+  if (typeof value === 'function') {
+    effect(() => setAttr(host, name, (value as () => HostBindingValue)()));
   } else {
-    // Static value set once
     setAttr(host, name, value);
   }
 }
 
 function applyClassMap(host: HTMLElement, getter: () => Record<string, boolean>): void {
-  let lastClasses = new Set<string>();
+  let prev = new Set<string>();
 
   effect(() => {
-    const classes = getter();
-    const nextClasses = new Set<string>();
+    const next = new Set(
+      Object.entries(getter())
+        .filter(([, active]) => active)
+        .map(([cls]) => cls),
+    );
 
-    for (const [name, shouldAdd] of Object.entries(classes)) {
-      if (shouldAdd) {
-        nextClasses.add(name);
+    for (const cls of prev) if (!next.has(cls)) host.classList.remove(cls);
+    for (const cls of next) if (!prev.has(cls)) host.classList.add(cls);
 
-        if (!lastClasses.has(name)) {
-          host.classList.add(name);
-        }
-      } else {
-        if (lastClasses.has(name)) {
-          host.classList.remove(name);
-        }
-      }
-    }
-
-    // Remove classes that are no longer in the map
-    for (const removed of lastClasses) {
-      if (!nextClasses.has(removed)) {
-        host.classList.remove(removed);
-      }
-    }
-
-    lastClasses = nextClasses;
+    prev = next;
   });
 }

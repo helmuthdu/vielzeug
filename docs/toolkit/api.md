@@ -96,7 +96,7 @@ See [Object Examples](./examples/object.md) for detailed usage.
 
 | Utility                                       | Description                          | Example                            |
 | --------------------------------------------- | ------------------------------------ | ---------------------------------- |
-| [`cache`](./examples/object/cache.md)         | Key-value cache with automatic GC    | `cache<T>()`                       |
+| [`stash`](./examples/object/stash.md)         | Key-value cache with automatic GC    | `stash<T>({ hash: key => ... })` |
 | [`diff`](./examples/object/diff.md)           | Find differences between objects     | `diff(obj1, obj2)`                 |
 | [`merge`](./examples/object/merge.md)         | Merge objects (deep/shallow/etc.)    | `merge('deep', obj1, obj2)`        |
 | [`parseJSON`](./examples/object/parseJSON.md) | Safely parse JSON with fallback      | `parseJSON(str, defaultValue)`     |
@@ -161,15 +161,17 @@ See [Async Examples](./examples/async.md) for detailed usage.
 
 | Utility                                    | Description                                   | Example                                           |
 | ------------------------------------------ | --------------------------------------------- | ------------------------------------------------- |
-| [`attempt`](./examples/async/attempt.md)   | Execute fn with retry and error handling      | `attempt(fetchFn, { times: 3, timeout: 5000 })`   |
-| [`defer`](./examples/async/defer.md)       | Create deferred promise with external control | `const { promise, resolve } = defer()`            |
-| [`parallel`](./examples/async/parallel.md) | Process array with controlled concurrency     | `await parallel(5, items, asyncFn)`               |
-| [`pool`](./examples/async/pool.md)         | Concurrency-limited promise pool              | `const slot = pool(3); await slot(fn)`            |
-| [`queue`](./examples/async/queue.md)       | Sequential queue with concurrency control     | `const q = queue(); q.add(task)`                  |
-| [`race`](./examples/async/race.md)         | Race promise with minimum delay               | `race(fetchFn(), 500)`                            |
-| [`retry`](./examples/async/retry.md)       | Retry async fn with backoff                   | `retry(asyncFn, { times: 3, delay: 250 })`        |
-| [`sleep`](./examples/async/sleep.md)       | Wait milliseconds                             | `await sleep(1000)`                               |
-| [`waitFor`](./examples/async/waitFor.md)   | Poll condition until true                     | `await waitFor(() => isReady, { timeout: 5000 })` |
+| [`attempt`](./examples/async/attempt.md)           | Execute fn with retry and error handling                        | `attempt(fetchFn, { times: 3, timeout: 5000 })`                     |
+| [`defer`](./examples/async/defer.md)               | Create deferred promise with external control                   | `const { promise, resolve } = defer()`                              |
+| [`parallel`](./examples/async/parallel.md)         | Process array with controlled concurrency                       | `await parallel(5, items, asyncFn)`                                 |
+| [`pool`](./examples/async/pool.md)                 | Concurrency-limited promise pool                                | `const slot = pool(3); await slot(fn)`                              |
+| [`queue`](./examples/async/queue.md)               | Sequential queue with concurrency control                       | `const q = queue(); q.add(task)`                                    |
+| [`race`](./examples/async/race.md)                 | Race promise with minimum delay                                 | `race(fetchFn(), 500)`                                              |
+| [`retry`](./examples/async/retry.md)               | Retry async fn with backoff, per-attempt delay, and predicate   | `retry(asyncFn, { times: 3, delay: 250, shouldRetry: fn })`         |
+| [`Scheduler`](./examples/async/scheduler.md)       | Task scheduler with native API or polyfill fallback             | `new Scheduler().postTask(fn, { delay: 100, priority: 'background' })` |
+| [`polyfillScheduler`](./examples/async/scheduler.md) | Install the Scheduler polyfill globally when not natively supported | `polyfillScheduler()`                                           |
+| [`sleep`](./examples/async/sleep.md)               | Wait milliseconds                                               | `await sleep(1000)`                                                 |
+| [`waitFor`](./examples/async/waitFor.md)           | Poll condition until true                                       | `await waitFor(() => isReady, { timeout: 5000 })`                   |
 
 ## Math Utilities
 
@@ -288,7 +290,7 @@ See [Typed Examples](./examples/typed.md) for detailed usage.
 ```ts
 // Best for tree-shaking — all utilities come from the main package
 import { chunk, fold, group, keyBy, select } from '@vielzeug/toolkit';
-import { retry, sleep, parallel } from '@vielzeug/toolkit';
+import { retry, sleep, parallel, Scheduler, polyfillScheduler } from '@vielzeug/toolkit';
 import { debounce, throttle, memo } from '@vielzeug/toolkit';
 import { merge, prune, diff } from '@vielzeug/toolkit';
 ```

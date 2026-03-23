@@ -422,22 +422,6 @@ cb.addEventListener('search', (e) => {
 });
 ```
 
-## Guideline Recipe: Onboard with Smart Defaults
-
-**Guideline: onboard** — pre-populating a combobox with a sensible default value removes friction during first-time setup forms.
-
-```html
-<bit-combobox label="Primary language" name="language" value="en" helper="Used for UI language and date formatting">
-  <bit-combobox-option value="en">English</bit-combobox-option>
-  <bit-combobox-option value="fr">Français</bit-combobox-option>
-  <bit-combobox-option value="de">Deutsch</bit-combobox-option>
-  <bit-combobox-option value="es">Español</bit-combobox-option>
-  <bit-combobox-option value="ja">日本語</bit-combobox-option>
-</bit-combobox>
-```
-
-**Tip:** Combine with `helper` text explaining the impact of the choice so users feel confident selecting without needing to know the full implications first.
-
 ## API Reference
 
 ### `bit-combobox` Attributes
@@ -498,7 +482,7 @@ cb.addEventListener('search', (e) => {
 | `--combobox-font-size`    | Input / option font size   | `--text-sm`            |
 | `--combobox-gap`          | Gap between field elements | `--size-2`             |
 | `--combobox-padding`      | Field padding              | Inner paddings         |
-| `--combobox-radius`       | Field border radius        | `--rounded-md`         |
+| `--combobox-radius`       | Field border radius        | `--rounded-lg`         |
 | `--combobox-bg`           | Field background color     | `--color-contrast-100` |
 | `--combobox-border-color` | Default border color       | `--color-contrast-300` |
 

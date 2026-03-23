@@ -1,7 +1,7 @@
 @layer buildit.base {
   :host {
     --_font-size: var(--file-input-font-size, var(--text-sm));
-    --_radius: var(--file-input-radius, var(--rounded-md));
+    --_radius: var(--file-input-radius, var(--rounded-lg));
     --_bg: var(--file-input-bg, var(--color-contrast-100));
     --_border-color: var(--file-input-border-color, var(--color-contrast-300));
     --_min-height: var(--file-input-min-height, var(--size-36));

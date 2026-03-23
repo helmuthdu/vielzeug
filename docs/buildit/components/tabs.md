@@ -331,24 +331,6 @@ Prevent specific tabs from being selected.
 
 Disabled tabs are skipped during keyboard navigation.
 
-## Guideline Recipe: Bolder Active Tab as Section Anchor
-
-**Guideline: bolder** — using the `solid` or `underline` variant gives the active tab strong visual weight, making the selected section unmistakable even in dense UIs.
-
-```html
-<bit-tabs value="activity" variant="underline" color="primary">
-  <bit-tab-item value="overview">Overview</bit-tab-item>
-  <bit-tab-item value="activity">Activity</bit-tab-item>
-  <bit-tab-item value="settings">Settings</bit-tab-item>
-
-  <bit-tab-panel value="overview">Project summary goes here.</bit-tab-panel>
-  <bit-tab-panel value="activity">Recent activity feed goes here.</bit-tab-panel>
-  <bit-tab-panel value="settings">Project settings form goes here.</bit-tab-panel>
-</bit-tabs>
-```
-
-**Tip:** For long pages, use `variant="underline"` rather than `"solid"` to avoid a heavy visual anchor competing with content below the tab row.
-
 ## API Reference
 
 ### `bit-tabs` Attributes
@@ -405,7 +387,7 @@ Disabled tabs are skipped during keyboard navigation.
 | Property              | Default                    | Description                            |
 | --------------------- | -------------------------- | -------------------------------------- |
 | `--tabs-transition`   | `var(--transition-normal)` | Transition speed for tab hover states  |
-| `--tabs-radius`       | `var(--rounded-md)`        | Border radius of the tab bar container |
+| `--tabs-radius`       | `var(--rounded-lg)`        | Border radius of the tab bar container |
 | `--tab-panel-padding` | `var(--size-4)`            | Padding inside each tab panel          |
 
 ## Accessibility

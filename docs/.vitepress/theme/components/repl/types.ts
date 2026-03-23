@@ -1268,6 +1268,62 @@ declare module '@vielzeug/floatit' {
 }
 `;
 
+export const timitTypes = `
+declare module '@vielzeug/timit' {
+  export { Temporal };
+
+  export type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
+  export type TimeInput = Date | Temporal.Instant | Temporal.PlainDateTime | Temporal.ZonedDateTime | number | string;
+
+  export interface TimeOptions {
+    tz?: string;
+    when?: DateTimeDisambiguation;
+  }
+
+  export interface DifferenceOptions extends TimeOptions {
+    largestUnit?: Temporal.DateTimeUnit;
+    roundingIncrement?: number;
+    roundingMode?: Temporal.RoundingMode;
+    smallestUnit?: Temporal.DateTimeUnit;
+  }
+
+  export type FormatPattern = 'iso' | 'short' | 'long' | 'date-only' | 'time-only';
+
+  export interface FormatOptions {
+    pattern?: FormatPattern;
+    locale?: Intl.LocalesArgument;
+    tz?: string;
+    intl?: Intl.DateTimeFormatOptions;
+  }
+
+  export function now(tz?: string): Temporal.ZonedDateTime;
+  export function asInstant(input: TimeInput, options?: TimeOptions): Temporal.Instant;
+  export function asZoned(input: TimeInput, options?: TimeOptions): Temporal.ZonedDateTime;
+  export function add(input: TimeInput, duration: Temporal.DurationLike, options?: TimeOptions): Temporal.ZonedDateTime;
+  export function subtract(
+    input: TimeInput,
+    duration: Temporal.DurationLike,
+    options?: TimeOptions,
+  ): Temporal.ZonedDateTime;
+  export function diff(start: TimeInput, end: TimeInput, options?: DifferenceOptions): Temporal.Duration;
+  export function within(input: TimeInput, start: TimeInput, end: TimeInput, options?: TimeOptions): boolean;
+  export function format(input: TimeInput, options?: FormatOptions): string;
+  export function formatRange(start: TimeInput, end: TimeInput, options?: FormatOptions): string;
+
+  export const d: {
+    add: typeof add;
+    asInstant: typeof asInstant;
+    asZoned: typeof asZoned;
+    diff: typeof diff;
+    format: typeof format;
+    formatRange: typeof formatRange;
+    now: typeof now;
+    subtract: typeof subtract;
+    within: typeof within;
+  };
+}
+`;
+
 export const virtualitTypes = `
 declare module '@vielzeug/virtualit' {
   export interface VirtualItem {
@@ -1367,6 +1423,7 @@ export const libraryTypes = {
   permit: permitTypes,
   routeit: routeitTypes,
   stateit: stateitTypes,
+  timit: timitTypes,
   toolkit: toolkitTypes,
   validit: validitTypes,
   virtualit: virtualitTypes,

@@ -3,7 +3,7 @@
     --_bg: var(--alert-bg, var(--_theme-backdrop));
     --_color: var(--alert-color, var(--_theme-base));
     --_border-color: var(--alert-border-color, var(--_theme-border));
-    --_radius: var(--alert-radius, var(--rounded-md));
+    --_radius: var(--alert-radius, var(--rounded-lg));
     --_padding: var(--alert-padding, var(--size-4));
     --_gap: var(--alert-gap, var(--size-3));
     --_font-size: var(--alert-font-size, var(--text-sm));

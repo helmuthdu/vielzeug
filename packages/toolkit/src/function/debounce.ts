@@ -1,5 +1,6 @@
 import type { Fn } from '../types';
 
+import { Scheduler } from '../async/scheduler';
 import { assert } from './assert';
 
 export type Debounced<T extends Fn> = ((this: ThisParameterType<T>, ...args: Parameters<T>) => void) & {
@@ -22,15 +23,31 @@ export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
     type: TypeError,
   });
 
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timerController: AbortController | undefined;
   let lastArgs: Parameters<T> | undefined;
   let lastThis: ThisParameterType<T> | undefined;
 
   const clearTimer = () => {
-    if (timer !== undefined) {
-      clearTimeout(timer);
-      timer = undefined;
+    if (timerController !== undefined) {
+      timerController.abort();
+      timerController = undefined;
     }
+  };
+
+  const scheduleInvoke = () => {
+    const controller = new AbortController();
+    const scheduler = new Scheduler();
+
+    timerController = controller;
+    void scheduler
+      .postTask(invoke, {
+        delay,
+        priority: 'user-visible',
+        signal: controller.signal,
+      })
+      .catch(() => {
+        // Aborts are expected when debounce is rescheduled or canceled.
+      });
   };
 
   const invoke = () => {
@@ -52,7 +69,7 @@ export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     lastThis = this;
     clearTimer();
-    timer = setTimeout(invoke, delay);
+    scheduleInvoke();
   } as Debounced<T>;
 
   debounced.cancel = () => {
@@ -63,7 +80,7 @@ export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
 
   debounced.flush = () => invoke() as ReturnType<T> | undefined;
 
-  debounced.pending = () => timer !== undefined;
+  debounced.pending = () => timerController !== undefined;
 
   return debounced;
 }

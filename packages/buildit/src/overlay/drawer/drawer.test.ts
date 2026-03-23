@@ -104,6 +104,12 @@ describe('bit-drawer', () => {
 
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
+
+    it('reflects backdrop attribute on host', async () => {
+      fixture = await mount('bit-drawer', { attrs: { backdrop: 'transparent' } });
+
+      expect(fixture.element.getAttribute('backdrop')).toBe('transparent');
+    });
   });
 
   // ─── Open / Close ─────────────────────────────────────────────────────────
@@ -336,7 +342,7 @@ describe('bit-drawer accessibility', () => {
       expect(icon?.getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('close button is visible by default (dismissible defaults to true)', async () => {
+    it('close button is visible by default (dismissable defaults to true)', async () => {
       fixture = await mount('bit-drawer');
 
       const closeBtn = fixture.query<HTMLButtonElement>('[aria-label="Close"]');

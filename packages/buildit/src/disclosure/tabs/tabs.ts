@@ -8,6 +8,7 @@ import {
   provide,
   type ReadonlySignal,
   ref,
+  signal,
   watch,
 } from '@vielzeug/craftit';
 
@@ -91,13 +92,47 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
   setup({ emit, host, props }) {
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();
+    const selectedValue = signal<string | undefined>(props.value.value);
     const getTabs = () => [...host.querySelectorAll<HTMLElement>('bit-tab-item')];
+
+    const setSelection = (value: string | undefined, shouldEmit = false) => {
+      selectedValue.value = value;
+
+      if (value == null) host.removeAttribute('value');
+      else if (host.getAttribute('value') !== value) host.setAttribute('value', value);
+
+      if (shouldEmit && value) emit('change', { value });
+    };
+
+    const ensureSelection = () => {
+      const tabs = getTabs();
+
+      // During initial connection, slotted tab items may not be assigned yet.
+      // Keep current selection until tabs exist instead of falling back to undefined.
+      if (tabs.length === 0) return;
+
+      const current = selectedValue.value;
+      const hasCurrent = current
+        ? tabs.some((tab) => tab.getAttribute('value') === current && !tab.hasAttribute('disabled'))
+        : false;
+
+      if (hasCurrent) return;
+
+      const firstEnabled = tabs.find((tab) => !tab.hasAttribute('disabled'))?.getAttribute('value') ?? undefined;
+
+      setSelection(firstEnabled, false);
+    };
+
+    watch(props.value, (value) => {
+      selectedValue.value = value;
+      ensureSelection();
+    });
 
     provide(TABS_CTX, {
       color: props.color,
       orientation: computed(() => props.orientation.value ?? 'horizontal'),
       size: props.size,
-      value: props.value,
+      value: selectedValue,
       variant: props.variant,
     });
 
@@ -126,7 +161,7 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
       }
     };
     const triggerIndicator = () => {
-      const value = props.value.value;
+      const value = selectedValue.value;
 
       if (!value) return;
 
@@ -135,7 +170,7 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
       moveIndicator(activeTab);
     };
 
-    watch(props.value, () => requestAnimationFrame(triggerIndicator));
+    watch(selectedValue, () => requestAnimationFrame(triggerIndicator));
 
     const handleTabClick = (e: Event) => {
       const tab = (e.target as HTMLElement).closest('bit-tab-item') as HTMLElement | null;
@@ -147,14 +182,13 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
 
       const value = tab.getAttribute('value');
 
-      if (!value || value === props.value.value) return;
+      if (!value || value === selectedValue.value) return;
 
-      host.setAttribute('value', value);
-      emit('change', { value });
+      setSelection(value, true);
     };
     const handleKeydown = (e: KeyboardEvent) => {
       const tabs = getTabs().filter((t) => !t.hasAttribute('disabled'));
-      const current = tabs.findIndex((t) => t.getAttribute('value') === props.value.value);
+      const current = tabs.findIndex((t) => t.getAttribute('value') === selectedValue.value);
       const isVertical = props.orientation.value === 'vertical';
       // eslint-disable-next-line no-useless-assignment
       let next = current;
@@ -172,9 +206,8 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
         );
         const focusedValue = focused?.getAttribute('value');
 
-        if (focusedValue && focusedValue !== props.value.value) {
-          host.setAttribute('value', focusedValue);
-          emit('change', { value: focusedValue });
+        if (focusedValue && focusedValue !== selectedValue.value) {
+          setSelection(focusedValue, true);
         }
 
         return;
@@ -189,8 +222,7 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
 
         if (props.activation.value !== 'manual') {
           // Auto mode: activate on focus
-          host.setAttribute('value', value);
-          emit('change', { value });
+          setSelection(value, true);
         }
       }
     };
@@ -198,7 +230,24 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
     handle(host, 'click', handleTabClick);
     handle(host, 'keydown', handleKeydown);
     onMount(() => {
-      requestAnimationFrame(triggerIndicator);
+      const syncSelection = () => {
+        ensureSelection();
+        triggerIndicator();
+      };
+      const tabsSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
+
+      if (tabsSlot) {
+        tabsSlot.addEventListener('slotchange', syncSelection);
+      }
+
+      syncSelection();
+      requestAnimationFrame(syncSelection);
+
+      return () => {
+        if (tabsSlot) {
+          tabsSlot.removeEventListener('slotchange', syncSelection);
+        }
+      };
     });
 
     return html`

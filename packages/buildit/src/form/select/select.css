@@ -5,7 +5,7 @@
     --_field-height: var(--select-height, var(--size-10));
     --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
     --_padding: var(--select-padding, var(--size-1-5) var(--size-3));
-    --_radius: var(--select-radius, var(--rounded-md));
+    --_radius: var(--select-radius, var(--rounded-lg));
     --_placeholder: var(--select-placeholder-color, var(--color-contrast-500));
     --_bg: var(--select-bg, var(--color-contrast-100));
     --_border-color: var(--select-border-color, var(--color-contrast-300));

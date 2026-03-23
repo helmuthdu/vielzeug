@@ -373,7 +373,7 @@ Mix attributes for a fully styled, accessible table.
 | `--table-cell-color`        | `var(--color-contrast-900)`           | Body cell text color                     |
 | `--table-stripe-bg`         | `var(--color-contrast-100)`           | Alternating row background (striped)     |
 | `--table-row-hover-bg`      | `var(--color-contrast-200)`           | Row background on hover                  |
-| `--table-radius`            | `var(--rounded-md)`                   | Outer corner radius (bordered variant)   |
+| `--table-radius`            | `var(--rounded-lg)`                   | Outer corner radius (bordered variant)   |
 | `--table-shadow`            | —                                     | Outer box shadow                         |
 | `--table-sticky-max-height` | `24rem`                               | Max height when `sticky` is active       |
 

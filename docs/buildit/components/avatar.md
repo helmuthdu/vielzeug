@@ -127,22 +127,6 @@ Stack multiple avatars by applying a negative margin via CSS. You can use `--ava
 
 </ComponentPreview>
 
-## Guideline Recipe: Onboard User Identity
-
-**Guideline: onboard** — pairing an avatar with a name and role helps new users immediately orient themselves in the product.
-
-```html
-<div style="display:flex;align-items:center;gap:var(--size-3)">
-  <bit-avatar size="lg" initials="JS" color="primary" status="online"></bit-avatar>
-  <div>
-    <bit-text variant="label" weight="semibold">Jane Smith</bit-text>
-    <bit-text variant="caption" color="subtle">Product Designer · Pro plan</bit-text>
-  </div>
-</div>
-```
-
-**Tip:** Use `status="online"` during onboarding flows to signal an active, connected account.
-
 ## API Reference
 
 ### Attributes

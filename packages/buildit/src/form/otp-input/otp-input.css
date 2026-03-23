@@ -3,7 +3,7 @@
     --_cell-size: var(--otp-cell-size, var(--size-12));
     --_cell-gap: var(--otp-cell-gap, var(--size-2));
     --_cell-font-size: var(--otp-cell-font-size, var(--text-xl));
-    --_cell-radius: var(--otp-cell-radius, var(--rounded-md));
+    --_cell-radius: var(--otp-cell-radius, var(--rounded-lg));
     --_cell-border: var(--otp-cell-border, var(--border));
     --_cell-border-color: var(--otp-cell-border-color, var(--color-contrast-300));
     --_cell-bg: var(--otp-cell-bg, var(--color-canvas));

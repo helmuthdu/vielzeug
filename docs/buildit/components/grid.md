@@ -427,22 +427,6 @@ Use `responsive` to let the grid fit as many columns as possible based on a mini
 Use `responsive` for fluid layouts where column count depends on available space. Use `cols` with optional breakpoint attributes (`cols-sm`, `cols-md`, etc.) for explicit control.
 :::
 
-## Guideline Recipe: Adapt a Responsive Dashboard
-
-**Guideline: adapt** — using breakpoint column attributes makes the same markup reflow from a single-column mobile view to a rich multi-column desktop layout with no JavaScript.
-
-```html
-<bit-grid cols="1" cols-md="2" cols-lg="3" gap="md">
-  <bit-card variant="elevated">Visitors</bit-card>
-  <bit-card variant="elevated">Signups</bit-card>
-  <bit-card variant="elevated">Revenue</bit-card>
-  <bit-card variant="elevated" colspan="1" colspan-lg="2">Conversion funnel</bit-card>
-  <bit-card variant="elevated">Churn rate</bit-card>
-</bit-grid>
-```
-
-**Tip:** Use `colspan` attributes on individual `bit-grid-item` children to let key metrics span more columns at larger breakpoints.
-
 ## API Reference
 
 ### Grid Attributes

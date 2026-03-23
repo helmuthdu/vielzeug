@@ -1,3 +1,5 @@
-import { vi } from 'vitest';
+import { Scheduler } from '@vielzeug/toolkit';
 
-globalThis.window.URL.createObjectURL = vi.fn();
+globalThis.window.URL.createObjectURL = () => '';
+
+new Scheduler();

@@ -298,6 +298,14 @@ export function within(element: Element): QueryScope {
 
 // ─── Events ──────────────────────────────────────────────────────────────────
 
+const createPointerEvent = (type: string, init: PointerEventInit = {}): Event => {
+  if (typeof PointerEvent !== 'undefined') {
+    return new PointerEvent(type, init);
+  }
+
+  return new MouseEvent(type, init);
+};
+
 /**
  * Fire low-level DOM events synchronously.
  *
@@ -309,7 +317,7 @@ export function within(element: Element): QueryScope {
 export const fire = {
   blur: (el: Element, opts?: FocusEventInit) => el.dispatchEvent(new FocusEvent('blur', { bubbles: true, ...opts })),
   change: (el: Element, opts?: EventInit) => el.dispatchEvent(new Event('change', { bubbles: true, ...opts })),
-  click: (el: Element, opts?: MouseEventInit) =>
+  click: (el: Element, opts?: PointerEventInit) =>
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...opts })),
   custom<D = unknown>(el: Element, name: string, detail?: D, opts?: Omit<CustomEventInit<D>, 'detail'>): void {
     el.dispatchEvent(new CustomEvent<D>(name, { bubbles: true, cancelable: true, detail, ...opts }));
@@ -320,10 +328,14 @@ export const fire = {
     el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...opts })),
   keyUp: (el: Element, opts?: KeyboardEventInit) =>
     el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, ...opts })),
-  mouseEnter: (el: Element, opts?: MouseEventInit) =>
-    el.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false, ...opts })),
-  mouseLeave: (el: Element, opts?: MouseEventInit) =>
-    el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false, ...opts })),
+  pointerDown: (el: Element, opts?: PointerEventInit) =>
+    el.dispatchEvent(createPointerEvent('pointerdown', { bubbles: true, cancelable: true, ...opts })),
+  pointerEnter: (el: Element, opts?: PointerEventInit) =>
+    el.dispatchEvent(createPointerEvent('pointerenter', { bubbles: false, ...opts })),
+  pointerLeave: (el: Element, opts?: PointerEventInit) =>
+    el.dispatchEvent(createPointerEvent('pointerleave', { bubbles: false, ...opts })),
+  pointerUp: (el: Element, opts?: PointerEventInit) =>
+    el.dispatchEvent(createPointerEvent('pointerup', { bubbles: true, cancelable: true, ...opts })),
   submit: (el: Element, opts?: EventInit) =>
     el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true, ...opts })),
 } as const;
@@ -349,16 +361,16 @@ export const user = {
     fire.change(el);
     await tick();
   },
-  async click(el: Element, opts?: MouseEventInit): Promise<void> {
-    fire.mouseEnter(el, opts);
+  async click(el: Element, opts?: PointerEventInit): Promise<void> {
+    fire.pointerEnter(el, opts);
     fire.click(el, opts);
     await tick();
   },
 
   async dblClick(el: Element): Promise<void> {
     for (let i = 0; i < 2; i++) {
-      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+      fire.pointerDown(el);
+      fire.pointerUp(el);
       fire.click(el);
     }
     el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
@@ -380,7 +392,7 @@ export const user = {
   },
 
   async hover(el: Element): Promise<void> {
-    fire.mouseEnter(el);
+    fire.pointerEnter(el);
     await tick();
   },
 
@@ -413,7 +425,7 @@ export const user = {
   },
 
   async unhover(el: Element): Promise<void> {
-    fire.mouseLeave(el);
+    fire.pointerLeave(el);
     await tick();
   },
 } as const;

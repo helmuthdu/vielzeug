@@ -19,14 +19,15 @@ export type BitTextProps = {
     | 'heading'
     | 'body'
     | 'muted'
+    | 'tertiary'
     | 'disabled'
     | 'contrast';
   /** Italic text style */
   italic?: boolean;
   /** Clamp text to N lines with an ellipsis (multi-line truncation) */
   lines?: number;
-  /** Text size (responsive scale) */
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl';
+  /** Text size — maps to --text-* tokens for body variants and --heading-* tokens for the heading variant */
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   /** Enable single-line text truncation with ellipsis */
   truncate?: boolean;
   /** Text semantic variant */
@@ -41,9 +42,9 @@ export type BitTextProps = {
  * @element bit-text
  *
  * @attr {string} variant - Text variant: 'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'
- * @attr {string} size - Font size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl'
+ * @attr {string} size - Font size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'. Maps to --text-* tokens for body variants and --heading-* tokens for the heading variant.
  * @attr {string} weight - Font weight: 'normal' | 'medium' | 'semibold' | 'bold'
- * @attr {string} color - Text color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'disabled' | 'contrast'
+ * @attr {string} color - Text color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error' | 'heading' | 'body' | 'muted' | 'tertiary' | 'disabled' | 'contrast'
  * @attr {string} align - Text alignment: 'left' | 'center' | 'right' | 'justify'
  * @attr {boolean} truncate - Truncate text with ellipsis when it overflows (single-line)
  * @attr {number} lines - Clamp to N lines with ellipsis (multi-line truncation)

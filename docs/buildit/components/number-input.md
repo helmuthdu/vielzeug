@@ -151,24 +151,6 @@ Add the `fullwidth` attribute to stretch the control to its container width.
 </script>
 ```
 
-## Guideline Recipe: Clarify Constraints Upfront
-
-**Guideline: clarify** — exposing `min`, `max`, and `step` as visible context removes the guesswork of what values are valid before the user starts typing.
-
-```html
-<!-- Seat count picker: make the valid range obvious -->
-<bit-number-input
-  label="Number of seats"
-  name="seats"
-  min="1"
-  max="500"
-  step="1"
-  value="5"
-  helper="Min 1 · Max 500 seats per workspace"></bit-number-input>
-```
-
-**Tip:** Use `helper` to restate the `min`/`max` range in plain language so users don't need to hit a validation error to discover the limits.
-
 ## API Reference
 
 ### Attributes

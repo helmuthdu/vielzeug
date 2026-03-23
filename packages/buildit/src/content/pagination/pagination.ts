@@ -114,6 +114,24 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
       emit('change', { page: next });
     }
 
+    function handlePageClick(event: Event) {
+      const btn = (event.target as HTMLElement)?.closest('[part="page-btn"]') as HTMLButtonElement | null;
+
+      if (!btn) return;
+
+      const ariaLabel = btn.getAttribute('aria-label');
+
+      if (!ariaLabel) return;
+
+      const pageMatch = ariaLabel.match(/\d+/);
+
+      if (!pageMatch) return;
+
+      const page = Number(pageMatch[0]);
+
+      goTo(page);
+    }
+
     const pageItems = computed(() =>
       buildPageRange(
         Number(props.page.value) || 1,
@@ -126,7 +144,7 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
     const isLast = computed(() => (Number(props.page.value) || 1) >= (Number(props['total-pages'].value) || 1));
 
     return html`
-      <nav :aria-label="${() => props.label.value}" part="nav">
+      <nav :aria-label="${() => props.label.value}" part="nav" @click=${handlePageClick}>
         <ol class="pagination" part="list">
           ${() =>
             props['show-first-last'].value
@@ -179,6 +197,27 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
                   </button>
                 </li>`
               : ''}
+          <li style="display: contents;">
+            ${each(
+              pageItems,
+              (item) => {
+                if (item === 'ellipsis-start' || item === 'ellipsis-end') {
+                  return html`<span class="ellipsis" aria-hidden="true">&hellip;</span>`;
+                }
+
+                const pg = item as number;
+                const isCurrent = pg === (Number(props.page.value) || 1);
+
+                return isCurrent
+                  ? html`<button type="button" part="page-btn" aria-label="Page ${pg}" aria-current="page">
+                      ${pg}
+                    </button>`
+                  : html`<button type="button" part="page-btn" aria-label="Page ${pg}">${pg}</button>`;
+              },
+              undefined,
+              { key: (item) => `${item}` },
+            )}
+          </li>
           ${() =>
             props['show-prev-next'].value
               ? html`<li>
@@ -230,25 +269,6 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
                   </button>
                 </li>`
               : ''}
-          ${each(pageItems, (item) => {
-            if (item === 'ellipsis-start' || item === 'ellipsis-end') {
-              return html`<li><span class="ellipsis" aria-hidden="true">&hellip;</span></li>`;
-            }
-
-            const pg = item as number;
-
-            if (pg === (Number(props.page.value) || 1)) {
-              return html`<li>
-                <button part="page-btn" aria-label="Page ${pg}" aria-current="page" @click=${() => goTo(pg)}>
-                  ${pg}
-                </button>
-              </li>`;
-            }
-
-            return html`<li>
-              <button part="page-btn" aria-label="Page ${pg}" @click=${() => goTo(pg)}>${pg}</button>
-            </li>`;
-          })}
         </ol>
       </nav>
     `;

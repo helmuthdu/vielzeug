@@ -3,7 +3,7 @@ export type { BitDialogEvents, BitDialogProps } from './dialog/dialog';
 export { DRAWER_TAG } from './drawer/drawer';
 export type { BitDrawerEvents, BitDrawerProps } from './drawer/drawer';
 export { MENU_ITEM_TAG, MENU_TAG } from './menu/menu';
-export type { BitMenuEvents, BitMenuItemProps, BitMenuProps, MenuItemSelectDetail } from './menu/menu';
+export type { BitMenuEvents, BitMenuProps, MenuSelectDetail } from './menu/menu';
 export { POPOVER_TAG } from './popover/popover';
 export type { BitPopoverEvents, BitPopoverProps } from './popover/popover';
 export { TOOLTIP_TAG } from './tooltip/tooltip';

@@ -4,10 +4,6 @@ import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './table.css?inline';
-// table-document.css is imported via styles/styles.css for synchronous document
-// cascade availability. It is also kept here for library consumers who import
-// this module directly (Vite will process it as a stylesheet side effect).
-import './table-document.css';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 

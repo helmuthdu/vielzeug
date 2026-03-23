@@ -18,9 +18,6 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
     dispose(): void {
       status = 'terminated';
     },
-    get isNative(): boolean {
-      return false;
-    },
     run(input: TInput, _options?: RunOptions): Promise<TOutput> {
       if (status === 'terminated') {
         return Promise.reject(new TerminatedError());

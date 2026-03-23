@@ -1,5 +1,14 @@
 import { resolvePath, stripBase, readLocation, handleRoute, createOnPopState } from './navigation';
-import { buildUrl, joinPaths, matchRecord, normalizePath, buildRegexStr } from './path';
+import {
+  buildUrl,
+  createPrefixURLPattern,
+  createURLPattern,
+  extractParamNames,
+  joinPaths,
+  matchRecordWithPattern,
+  normalizePath,
+  testRecordWithPattern,
+} from './path';
 import {
   type GroupOptions,
   type Middleware,
@@ -13,7 +22,6 @@ import {
   type RouteParams,
   type RouteRecord,
   type RouteState,
-  type RouterMode,
   type RouterOptions,
   type Unsubscribe,
   type QueryParams,
@@ -23,7 +31,6 @@ import {
 /** -------------------- Router -------------------- **/
 
 export class Router {
-  readonly #mode: RouterMode;
   readonly #base: string;
   readonly #records: RouteRecord[] = [];
   readonly #routesByName = new Map<string, RouteRecord>();
@@ -42,7 +49,6 @@ export class Router {
   readonly #onPopState: () => void;
 
   constructor(options: RouterOptions = {}) {
-    this.#mode = options.mode ?? 'history';
     this.#base = normalizePath(options.base ?? '/');
     this.#onNotFound = options.onNotFound;
     this.#onError = options.onError;
@@ -50,7 +56,6 @@ export class Router {
     this.#globalMiddleware = ([] as Middleware[]).concat(options.middleware ?? []);
 
     this.#onPopState = createOnPopState(
-      this.#mode,
       this.#base,
       this.#records,
       this.#globalMiddleware,
@@ -141,8 +146,7 @@ export class Router {
     inherited: Middleware[] = [],
   ): void {
     const fullPath = normalizePath(path);
-    const isWildcard = fullPath.endsWith('*');
-    const { paramNames, regexStr } = buildRegexStr(fullPath);
+    const paramNames = extractParamNames(fullPath);
     const routeMiddleware = ([] as Middleware[]).concat(options?.middleware ?? []);
     const record: RouteRecord = {
       handler,
@@ -151,8 +155,8 @@ export class Router {
       name: options?.name,
       paramNames,
       path: fullPath,
-      prefixRegex: new RegExp(`^${regexStr}${isWildcard ? '' : '(/.*)?$'}`),
-      regex: new RegExp(`^${regexStr}${isWildcard ? '' : '$'}`),
+      prefixUrlPattern: createPrefixURLPattern(fullPath),
+      urlPattern: createURLPattern(fullPath),
     };
 
     this.#records.push(record);
@@ -173,9 +177,8 @@ export class Router {
     if (this.#isStarted) return this;
 
     this.#isStarted = true;
-    this.#lastHref =
-      this.#mode === 'history' ? window.location.pathname + window.location.search : window.location.hash.slice(1);
-    window.addEventListener(this.#mode === 'history' ? 'popstate' : 'hashchange', this.#onPopState);
+    this.#lastHref = window.location.pathname + window.location.search;
+    window.addEventListener('popstate', this.#onPopState);
     void this.#handleRoute();
 
     return this;
@@ -185,7 +188,7 @@ export class Router {
     if (!this.#isStarted) return this;
 
     this.#isStarted = false;
-    window.removeEventListener(this.#mode === 'history' ? 'popstate' : 'hashchange', this.#onPopState);
+    window.removeEventListener('popstate', this.#onPopState);
 
     return this;
   }
@@ -211,24 +214,15 @@ export class Router {
    */
   async navigate(target: NavigationTarget, options: NavigateOptions = {}): Promise<void> {
     const path = resolvePath(target, this.#routesByName);
-    const destination = this.#mode === 'history' ? joinPaths(this.#base, path) : normalizePath(path);
+    const destination = joinPaths(this.#base, path);
 
     if (!options.force && destination === this.#lastHref) return;
 
     this.#lastHref = destination;
 
-    if (this.#mode === 'history') {
-      window.history[options.replace ? 'replaceState' : 'pushState'](options.state ?? null, '', destination);
+    window.history[options.replace ? 'replaceState' : 'pushState'](options.state ?? null, '', destination);
 
-      return this.#handleRoute(options.viewTransition);
-    } else {
-      // Let the hashchange event drive dispatch — setting location.hash fires it automatically.
-      // Store pending viewTransition so #onPopState can forward it.
-      this.#pendingViewTransition = options.viewTransition;
-
-      if (options.replace) window.location.replace(`#${destination}`);
-      else window.location.hash = destination;
-    }
+    return this.#handleRoute(options.viewTransition);
   }
 
   /** -------------------- State -------------------- **/
@@ -269,9 +263,7 @@ export class Router {
       throw new Error('[routeit] Route "${nameOrPattern}" not found');
     }
 
-    const base = this.#mode === 'history' ? this.#base : '/';
-
-    return buildUrl(base, record ? record.path : nameOrPattern, params, query);
+    return buildUrl(this.#base, record ? record.path : nameOrPattern, params, query);
   }
 
   /**
@@ -279,18 +271,20 @@ export class Router {
    * Pass `false` as the second argument for prefix matching (e.g. to highlight parent nav items).
    */
   isActive(nameOrPattern: string, exact = true): boolean {
-    const { pathname } = readLocation(this.#mode, this.#base);
+    const { pathname } = readLocation(this.#base);
     const record = this.#routesByName.get(nameOrPattern) ?? this.#routesByPath.get(normalizePath(nameOrPattern));
 
     if (record) {
-      if (exact) return record.regex.test(pathname);
+      if (exact) return testRecordWithPattern(pathname, record.urlPattern);
 
-      return record.prefixRegex.test(pathname);
+      return testRecordWithPattern(pathname, record.prefixUrlPattern);
     }
 
-    const { regexStr } = buildRegexStr(normalizePath(nameOrPattern));
+    const pattern = exact
+      ? createURLPattern(normalizePath(nameOrPattern))
+      : createPrefixURLPattern(normalizePath(nameOrPattern));
 
-    return new RegExp(`^${regexStr}${exact ? '$' : '(/.*)?$'}`).test(pathname);
+    return testRecordWithPattern(pathname, pattern);
   }
 
   /**
@@ -298,10 +292,10 @@ export class Router {
    * Automatically strips the base path, so callers can pass `window.location.pathname` directly.
    */
   resolve(pathname: string): ResolvedRoute | null {
-    const path = this.#mode === 'history' ? stripBase(pathname, this.#base) : normalizePath(pathname);
+    const path = stripBase(pathname, this.#base);
 
     for (const record of this.#records) {
-      const params = matchRecord(path, record);
+      const params = matchRecordWithPattern(path, record);
 
       if (params) return { meta: record.meta, name: record.name, params };
     }
@@ -315,7 +309,6 @@ export class Router {
     const id = ++this.#navId;
 
     await handleRoute(
-      this.#mode,
       this.#base,
       this.#records,
       this.#globalMiddleware,

@@ -109,8 +109,8 @@ const grouped = group(items, (item) => item.category);
 ## Features
 
 - **Arrays** — `chunk`, `group`, `keyBy`, `fold`, `select`, `toggle`, `replace`, `rotate`, `search`, `sort`, `contains`, `uniq`, `pick`, `list`, `remoteList`
-- **Async** — `retry`, `sleep`, `parallel`, `pool`, `queue`, `race`, `attempt`, `defer`, `waitFor`
-- **Objects** — `merge`, `diff`, `get`, `seek`, `prune`, `proxy`, `cache`, `parseJSON`
+- **Async** — `retry`, `sleep`, `parallel`, `pool`, `queue`, `race`, `attempt`, `defer`, `waitFor`, `Scheduler`, `polyfillScheduler`
+- **Objects** — `merge`, `diff`, `get`, `seek`, `prune`, `proxy`, `stash`, `parseJSON`
 - **Strings** — `camelCase`, `kebabCase`, `pascalCase`, `snakeCase`, `truncate`, `similarity`
 - **Math** — `sum`, `average`, `median`, `min`, `max`, `clamp`, `round`, `range`, `percent`, `linspace`, `allocate`, `distribute`
 - **Dates** — `timeDiff`, `interval`, `expires`

@@ -158,24 +158,6 @@ Control the resize handle with the `resize` attribute.
 
 </ComponentPreview>
 
-## Guideline Recipe: Polish with Auto-Resize and Character Guidance
-
-**Guideline: polish** — an auto-resizing textarea with a character counter removes manual scrolling friction and gives users a clear sense of constraint.
-
-```html
-<bit-textarea
-  label="Bio"
-  name="bio"
-  placeholder="Tell us a little about yourself..."
-  helper="Shown on your public profile"
-  maxlength="160"
-  show-count
-  auto-resize
-  rows="3"></bit-textarea>
-```
-
-**Tip:** Use `auto-resize` with a `rows` minimum so the textarea starts compact but grows with the content — preserving layout stability while eliminating the fixed-size scroll trap.
-
 ## API Reference
 
 ### Attributes
@@ -222,7 +204,7 @@ Control the resize handle with the `resize` attribute.
 | ------------------------------ | ----------------- | ----------------------------- |
 | `--textarea-bg`                | Background color  | `var(--color-contrast-100)`   |
 | `--textarea-border-color`      | Border color      | `var(--color-contrast-300)`   |
-| `--textarea-radius`            | Border radius     | `var(--rounded-md)`           |
+| `--textarea-radius`            | Border radius     | `var(--rounded-lg)`           |
 | `--textarea-padding`           | Padding           | `var(--size-2) var(--size-3)` |
 | `--textarea-font-size`         | Font size         | `var(--text-sm)`              |
 | `--textarea-placeholder-color` | Placeholder color | `var(--color-contrast-500)`   |

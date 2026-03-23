@@ -105,28 +105,6 @@ Use `readonly` to display a rating without allowing user interaction — useful 
 
 </ComponentPreview>
 
-## Guideline Recipe: Delight with Instant Feedback Rating
-
-**Guideline: delight** — an interactive rating immediately after a key moment (onboarding complete, feature used) feels timely and relevant rather than intrusive.
-
-```html
-<div style="display:flex;flex-direction:column;align-items:center;gap:var(--size-3)">
-  <bit-text variant="label" weight="semibold">How was your setup experience?</bit-text>
-  <bit-rating id="setup-rating" max="5" value="0" color="warning"></bit-rating>
-  <bit-text id="rating-thanks" variant="caption" color="subtle" hidden>
-    Thanks! Your feedback helps us improve.
-  </bit-text>
-</div>
-
-<script>
-  document.getElementById('setup-rating').addEventListener('change', (e) => {
-    document.getElementById('rating-thanks').hidden = false;
-  });
-</script>
-```
-
-**Tip:** Show the thank-you message immediately on `change` — don't require a submit button. The micro-interaction is itself the reward.
-
 ## API Reference
 
 ### Attributes

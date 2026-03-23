@@ -6,6 +6,6 @@ layout: home
 
 # REPL – Try Vielzeug Online
 
-Test all Vielzeug utilities in your browser without installation. This interactive playground includes all functions from the toolkit with full TypeScript support and instant results.
+Test Vielzeug packages in your browser without installation. The interactive playground includes package-specific examples, Monaco type support, and instant output.
 
 <REPL />

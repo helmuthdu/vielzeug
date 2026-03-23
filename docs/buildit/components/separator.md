@@ -106,24 +106,6 @@ By default the separator is decorative (`aria-hidden="true"`). Set `decorative="
 <bit-separator decorative="false" aria-label="End of navigation"></bit-separator>
 ```
 
-## Guideline Recipe: Distill with Visual Section Breaks
-
-**Guideline: distill** — a labeled separator gives a long form or settings page clear, scannable sections without adding visual bulk.
-
-```html
-<section>
-  <bit-input name="display-name" label="Display name"></bit-input>
-  <bit-input name="email" label="Email" type="email"></bit-input>
-
-  <bit-separator label="Security" style="margin-block:var(--size-4)"></bit-separator>
-
-  <bit-input name="current-password" label="Current password" type="password"></bit-input>
-  <bit-input name="new-password" label="New password" type="password"></bit-input>
-</section>
-```
-
-**Tip:** Prefer the `label` variant over a plain `<h3>` heading inside dense forms — it occupies less vertical space while still marking the transition.
-
 ## API Reference
 
 ### Attributes

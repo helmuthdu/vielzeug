@@ -7,6 +7,7 @@ import styles from './drawer.css?inline';
 
 type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
 type DrawerSize = 'sm' | 'lg' | 'full';
+type DrawerBackdrop = 'opaque' | 'blur' | 'transparent';
 
 /** Element interface exposing the imperative API for `bit-drawer`. */
 export interface DrawerElement extends HTMLElement, Omit<BitDrawerProps, 'title'> {
@@ -25,7 +26,7 @@ export type BitDrawerEvents = {
 
 export type BitDrawerProps = {
   /** Show the close (×) button in the header (default: true) */
-  dismissible?: boolean;
+  dismissable?: boolean;
   /**
    * CSS selector for the element inside the drawer that should receive focus on open.
    * Defaults to native dialog focus management (first focusable element).
@@ -38,6 +39,8 @@ export type BitDrawerProps = {
    * When omitted, `aria-labelledby` points to the visible header title instead.
    */
   label?: string;
+  /** Backdrop style — 'opaque' (default), 'blur', or 'transparent' */
+  backdrop?: DrawerBackdrop;
   /** Controlled open state */
   open?: boolean;
   /** When true, backdrop clicks do not close the drawer (default: false) */
@@ -68,7 +71,8 @@ export type BitDrawerProps = {
  * @attr {string} size - 'sm' | 'lg' | 'full'
  * @attr {string} title - Visible header title text
  * @attr {string} label - Invisible aria-label (for drawers without a visible title)
- * @attr {boolean} dismissible - Show the close (×) button (default: true)
+ * @attr {boolean} dismissable - Show the close (×) button (default: true)
+ * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {boolean} persistent - Prevent backdrop-click from closing (default: false)
  *
  * @slot header - Drawer header content
@@ -99,7 +103,8 @@ export type BitDrawerProps = {
  */
 export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
   props: {
-    dismissible: { default: true },
+    backdrop: { default: undefined },
+    dismissable: { default: true },
     'initial-focus': { default: undefined },
     label: { default: undefined },
     open: { default: false },
@@ -113,84 +118,84 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
     const drawerLabelId = createId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();
-    // Header is visible when there is slot content or a title prop.
-    // The close button is independently positioned — always in the top-end corner of the panel.
-    const hasHeader = computed(() => slots.has('header').value || !!props.title.value);
+
+    // Header is visible when there is slot content, a title prop, or a close button.
+    const hasHeader = computed(() => slots.has('header').value || !!props.title.value || props.dismissable.value);
     const hasFooter = computed(() => slots.has('footer').value);
-    const { applyInitialFocus, captureReturnFocus, closeWithAnimation, restoreFocus } = useOverlay(
+
+    const { applyInitialFocus, captureReturnFocus, restoreFocus } = useOverlay(
       host,
       dialogRef,
       () => panelRef.value,
       props,
     );
-    /**
-     * Dispatches a cancellable `close-request` event. If not prevented, triggers the close animation.
-     * Consumers can call `e.preventDefault()` to block closing (e.g. when there are unsaved changes).
-     */
+
+    const close = () => {
+      const dialog = dialogRef.value;
+      if (!dialog?.open) return;
+      dialog.close();
+    };
+
     const requestClose = (trigger: 'backdrop' | 'button' | 'escape') => {
       const allowed = fire.custom(host, 'close-request', {
         cancelable: true,
         detail: { placement: props.placement.value ?? 'right', trigger },
       });
 
-      if (allowed) closeWithAnimation();
+      if (allowed) close();
     };
+
     const openDrawer = () => {
       const dialog = dialogRef.value;
-
       if (!dialog || dialog.open) return;
 
       captureReturnFocus();
       dialog.showModal();
       lockBackground(host);
+
       applyInitialFocus();
       emit('open', { placement: props.placement.value ?? 'right' });
     };
 
     onMount(() => {
       const dialog = dialogRef.value;
-
       if (!dialog) return;
 
-      // Expose imperative API on the element instance.
+      // Expose imperative API
       const el = host as DrawerElement;
-
       el.show = openDrawer;
-      el.hide = closeWithAnimation;
+      el.hide = close;
 
-      // Fires after every close (animation or programmatic). Syncs state and returns focus.
       const handleNativeClose = () => {
         unlockBackground();
         host.removeAttribute('open');
         restoreFocus();
         emit('close', { placement: props.placement.value ?? 'right' });
       };
-      // Intercept Escape so the exit animation runs before dialog.close().
+
       const handleCancel = (e: Event) => {
         e.preventDefault();
-
         if (!props.persistent.value) requestClose('escape');
       };
+
       const handleBackdropClick = (e: MouseEvent) => {
         if (!props.persistent.value && e.target === dialog) requestClose('backdrop');
       };
 
-      // { immediate: true } handles both the initial state and future changes.
-      // Initial mount with open=false: closeWithAnimation() is a no-op since the dialog isn't open yet.
       watch(
         props.open,
         (isOpen) => {
           if (isOpen) openDrawer();
-          else closeWithAnimation();
+          else close();
         },
         { immediate: true },
       );
+
       handle(dialog, 'close', handleNativeClose);
       handle(dialog, 'cancel', handleCancel);
       handle(dialog, 'click', handleBackdropClick);
 
       return () => {
-        // Release the top-layer slot if the element is removed while open.
         if (dialog.open) {
           unlockBackground();
           dialog.close();
@@ -209,16 +214,16 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
             <span class="header-title" id="${drawerLabelId}">
               <slot name="header">${() => props.title.value ?? ''}</slot>
             </span>
+            <button
+              class="close-btn"
+              part="close-btn"
+              type="button"
+              aria-label="Close"
+              ?hidden=${() => !props.dismissable.value}
+              @click="${() => requestClose('button')}">
+              ${closeIcon}
+            </button>
           </div>
-          <button
-            class="close-btn"
-            part="close-btn"
-            type="button"
-            aria-label="Close"
-            ?hidden=${() => !props.dismissible.value}
-            @click="${() => requestClose('button')}">
-            ${closeIcon}
-          </button>
           <div class="body" part="body">
             <slot></slot>
           </div>

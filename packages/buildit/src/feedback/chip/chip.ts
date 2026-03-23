@@ -294,7 +294,8 @@ export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
         <span class="chip" part="chip"> ${renderChipContent()} </span>
       </button>
     `;
-    const renderStaticChip = () => html`
+    const renderStaticChip = () => html` <span class="chip" part="chip"> ${renderChipContent()} </span> `;
+    const renderRemovableChip = () => html`
       <span class="chip" part="chip"> ${renderChipContent()} ${renderRemoveButton()} </span>
     `;
 
@@ -308,6 +309,8 @@ export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
         if (mode === 'selectable') return renderSelectableChip();
 
         if (mode === 'action') return renderActionChip();
+
+        if (mode === 'removable') return renderRemovableChip();
 
         return renderStaticChip();
       }}

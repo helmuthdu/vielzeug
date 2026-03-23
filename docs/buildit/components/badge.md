@@ -196,11 +196,13 @@ Use the `anchor` prop with the `target` slot to pin a badge to the corner of any
 
 ```html
 <bit-badge color="error" count="5" anchor="top-end">
-  <bit-button slot="target" variant="ghost" aria-label="Inbox">&#128706;</bit-button>
+  <bit-button slot="target" variant="ghost" aria-label="Inbox" icon-only rounded>
+    <span class="material-symbols-rounded">inbox</span>
+  </bit-button>
 </bit-badge>
 
 <bit-badge color="success" dot anchor="bottom-end">
-  <img slot="target" src="/avatar.png" width="40" height="40" alt="User avatar" style="border-radius: 50%;" />
+  <bit-avatar slot="target" size="sm" src="https://bit.ly/dan-abramov" alt="Dan Abramov">
 </bit-badge>
 
 <bit-badge color="warning" count="12" anchor="top-start">
@@ -314,30 +316,6 @@ Stack multiple badges to show different types of information.
 ```
 
 </ComponentPreview>
-
-## Guideline Recipe: Clarify System State at a Glance
-
-**Guideline: clarify** — badges communicate discrete, categorical state without requiring the user to read prose.
-
-```html
-<!-- Status trifecta: make every row's health readable in a scan -->
-<div style="display:flex;flex-direction:column;gap:var(--size-2)">
-  <div style="display:flex;align-items:center;gap:var(--size-2)">
-    <bit-text>API Gateway</bit-text>
-    <bit-badge color="success" variant="soft">Operational</bit-badge>
-  </div>
-  <div style="display:flex;align-items:center;gap:var(--size-2)">
-    <bit-text>Image Service</bit-text>
-    <bit-badge color="warning" variant="soft">Degraded</bit-badge>
-  </div>
-  <div style="display:flex;align-items:center;gap:var(--size-2)">
-    <bit-text>Billing Worker</bit-text>
-    <bit-badge color="danger" variant="soft">Outage</bit-badge>
-  </div>
-</div>
-```
-
-**Tip:** Keep badge labels to 1–2 words. Use consistent color-to-meaning mapping site-wide so users build instant recognition.
 
 ## API Reference
 

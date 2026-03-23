@@ -14,7 +14,7 @@ Implement context provider and consumer in a production-friendly way with `@viel
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { createContext, defineComponent, html, inject, provide, signal } from '@vielzeug/craftit';
+import { createContext, defineComponent, html, injectOptional, provide, signal } from '@vielzeug/craftit';
 
 const THEME_CTX = createContext<ReturnType<typeof signal<'light' | 'dark'>>>('theme');
 
@@ -34,7 +34,7 @@ defineComponent({
 
 defineComponent({
   setup() {
-    const theme = inject(THEME_CTX);
+    const theme = injectOptional(THEME_CTX);
 
     return html`<p>Theme: ${() => theme?.value ?? 'light'}</p>`;
   },

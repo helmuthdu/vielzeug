@@ -214,20 +214,6 @@ The selected `value` attribute is submitted with the form under the `name` field
 
 ---
 
-## Guideline Recipe: Onboard with Explicit Plan Selection
-
-**Guideline: onboard** — a radio group with descriptive labels makes a mutually exclusive choice obvious during first-time account setup.
-
-```html
-<bit-radio-group label="Choose your plan" name="plan" value="pro" orientation="vertical">
-  <bit-radio value="free">Free — up to 3 projects, community support</bit-radio>
-  <bit-radio value="pro">Pro — unlimited projects, priority support · $12/mo</bit-radio>
-  <bit-radio value="team">Team — everything in Pro plus SSO · $29/mo</bit-radio>
-</bit-radio-group>
-```
-
-**Tip:** Pre-select the recommended plan with `value` on the group so users see a sensible default; include pricing inline in the label for transparency.
-
 ## API Reference
 
 ### `bit-radio` Attributes

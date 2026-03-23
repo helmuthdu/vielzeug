@@ -26,7 +26,7 @@ A versatile and feature-rich card container component with purposeful variants, 
 ```html
 <bit-card>
   <img slot="media" src="/hero.jpg" alt="Card hero image" />
-  <bit-text slot="header" variant="heading" size="xl">Card Title</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Card Title</bit-text>
   <bit-text>This is the card content. It can contain any HTML elements.</bit-text>
   <bit-text slot="footer" size="sm" variant="caption">Additional information</bit-text>
   <div slot="actions">
@@ -71,17 +71,17 @@ Use the `elevation` prop (0-5) to control shadow depth. Works with any variant.
 
 ```html
 <bit-card>
-  <bit-text slot="header" variant="heading" size="lg">Default Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Default Card</bit-text>
   <bit-text>Clean, subtle background with gentle borders. Use elevation prop for shadow depth.</bit-text>
 </bit-card>
 
 <bit-card variant="solid" color="primary">
-  <bit-text slot="header" variant="heading" size="lg">Solid Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Solid Card</bit-text>
   <bit-text>Filled with the theme color background.</bit-text>
 </bit-card>
 
 <bit-card variant="flat" color="primary">
-  <bit-text slot="header" variant="heading" size="lg">Flat Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Flat Card</bit-text>
   <bit-text>Subtle backdrop tint, low visual weight.</bit-text>
 </bit-card>
 ```
@@ -103,7 +103,7 @@ Frost variant works best when placed over colorful backgrounds or images to show
 
 ```html
 <bit-card variant="frost" padding="lg">
-  <bit-text slot="header" variant="heading" size="xl">Neutral Frost Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Neutral Frost Card</bit-text>
   <bit-text>Subtle canvas-based transparency with backdrop blur.</bit-text>
   <div slot="footer">
     <bit-button variant="frost" size="sm">Learn More</bit-button>
@@ -121,27 +121,27 @@ Control the internal spacing of the card.
 
 ```html
 <bit-card padding="none" elevation="1">
-  <bit-text slot="header" variant="heading" size="lg">No Padding</bit-text>
+  <bit-text slot="header" variant="heading" size="md">No Padding</bit-text>
   <bit-text>Content reaches the edges.</bit-text>
 </bit-card>
 
 <bit-card padding="sm" elevation="1">
-  <bit-text slot="header" variant="heading" size="lg">Small Padding</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Small Padding</bit-text>
   <bit-text>Compact spacing.</bit-text>
 </bit-card>
 
 <bit-card padding="md" elevation="1">
-  <bit-text slot="header" variant="heading" size="lg">Medium Padding</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Medium Padding</bit-text>
   <bit-text>Default spacing (if not specified).</bit-text>
 </bit-card>
 
 <bit-card padding="lg" elevation="1">
-  <bit-text slot="header" variant="heading" size="lg">Large Padding</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Large Padding</bit-text>
   <bit-text>Generous spacing.</bit-text>
 </bit-card>
 
 <bit-card padding="xl" elevation="1">
-  <bit-text slot="header" variant="heading" size="lg">Extra Large Padding</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Extra Large Padding</bit-text>
   <bit-text>Maximum spacing for spacious layouts.</bit-text>
 </bit-card>
 ```
@@ -156,32 +156,32 @@ Apply semantic color themes to cards for different contexts.
 
 ```html
 <bit-card color="primary">
-  <bit-text slot="header" variant="heading" size="lg">Primary Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Primary Card</bit-text>
   <bit-text>Uses the primary brand color.</bit-text>
 </bit-card>
 
 <bit-card color="secondary">
-  <bit-text slot="header" variant="heading" size="lg">Secondary Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Secondary Card</bit-text>
   <bit-text>Uses the secondary brand color.</bit-text>
 </bit-card>
 
 <bit-card color="info">
-  <bit-text slot="header" variant="heading" size="lg">Info Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Info Card</bit-text>
   <bit-text>Perfect for positive messages.</bit-text>
 </bit-card>
 
 <bit-card color="success">
-  <bit-text slot="header" variant="heading" size="lg">Success Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Success Card</bit-text>
   <bit-text>Perfect for positive messages.</bit-text>
 </bit-card>
 
 <bit-card color="warning">
-  <bit-text slot="header" variant="heading" size="lg">Warning Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Warning Card</bit-text>
   <bit-text>Great for caution messages.</bit-text>
 </bit-card>
 
 <bit-card color="error">
-  <bit-text slot="header" variant="heading" size="lg">Error Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Error Card</bit-text>
   <bit-text>Ideal for error states.</bit-text>
 </bit-card>
 ```
@@ -196,32 +196,32 @@ Control shadow depth with explicit elevation levels (0-5).
 
 ```html
 <bit-card elevation="0">
-  <bit-text slot="header" variant="heading" size="lg">Elevation 0</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Elevation 0</bit-text>
   <bit-text>No shadow - flat appearance.</bit-text>
 </bit-card>
 
 <bit-card elevation="1">
-  <bit-text slot="header" variant="heading" size="lg">Elevation 1</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Elevation 1</bit-text>
   <bit-text>Subtle shadow.</bit-text>
 </bit-card>
 
 <bit-card elevation="2">
-  <bit-text slot="header" variant="heading" size="lg">Elevation 2</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Elevation 2</bit-text>
   <bit-text>Medium shadow (default).</bit-text>
 </bit-card>
 
 <bit-card elevation="3">
-  <bit-text slot="header" variant="heading" size="lg">Elevation 3</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Elevation 3</bit-text>
   <bit-text>Prominent shadow.</bit-text>
 </bit-card>
 
 <bit-card elevation="4">
-  <bit-text slot="header" variant="heading" size="lg">Elevation 4</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Elevation 4</bit-text>
   <bit-text>High elevation.</bit-text>
 </bit-card>
 
 <bit-card elevation="5">
-  <bit-text slot="header" variant="heading" size="lg">Elevation 5</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Elevation 5</bit-text>
   <bit-text>Maximum elevation.</bit-text>
 </bit-card>
 ```
@@ -241,7 +241,7 @@ Set `orientation="horizontal"` for a side-by-side media + content layout. The ve
     style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
     📷
   </div>
-  <bit-text slot="header" variant="heading" size="xl">Horizontal Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Horizontal Card</bit-text>
   <bit-text>Media appears on the left side, perfect for list items, product cards, and profile layouts.</bit-text>
   <div slot="actions">
     <bit-button size="sm">View</bit-button>
@@ -266,7 +266,7 @@ Add images, videos, or custom content at the top of the card (or left side in ho
     src="https://images.unsplash.com/photo-1557683316-973673baf926?w=400"
     alt="Gradient"
     style="width: 100%; height: 200px; object-fit: cover;" />
-  <bit-text slot="header" variant="heading" size="xl">Beautiful Gradient</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Beautiful Gradient</bit-text>
   <bit-text>Images automatically fill the media slot with proper sizing.</bit-text>
 </bit-card>
 ```
@@ -281,7 +281,7 @@ Separate slot for action buttons with automatic layout.
 
 ```html
 <bit-card elevation="2">
-  <bit-text slot="header" variant="heading" size="xl">Action Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Action Card</bit-text>
   <bit-text>This card has multiple actions in a dedicated slot.</bit-text>
   <div slot="actions">
     <bit-button color="primary" size="sm">Confirm</bit-button>
@@ -303,7 +303,7 @@ Prevent interaction and show visual feedback.
 
 ```html
 <bit-card interactive disabled elevation="1">
-  <bit-text slot="header" variant="heading" size="lg">Disabled Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Disabled Card</bit-text>
   <bit-text>This card is disabled and cannot be interacted with.</bit-text>
   <div slot="actions">
     <bit-button size="sm">Action</bit-button>
@@ -321,7 +321,7 @@ Show an animated loading indicator while content is being fetched.
 
 ```html
 <bit-card loading color="primary" elevation="2">
-  <bit-text slot="header" variant="heading" size="lg">Loading Content</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Loading Content</bit-text>
   <bit-text>An animated loading bar appears at the top of the card.</bit-text>
 </bit-card>
 ```
@@ -336,7 +336,7 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 
 ```html
 <bit-card interactive elevation="2">
-  <bit-text slot="header" variant="heading" size="lg">Activate Me</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Activate Me</bit-text>
   <bit-text> This card supports keyboard activation and emits an 'activate' event with trigger metadata. </bit-text>
 </bit-card>
 
@@ -358,10 +358,7 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 ```html
 <bit-card padding="lg" elevation="2" style="max-width: 320px">
   <div slot="media" style="text-align: center; padding: var(--size-4) var(--size-4) 0;">
-    <div
-      style="width: 80px; height: 80px; border-radius: 50%; background: var(--color-primary); margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-2xl); font-weight: var(--font-bold);">
-      JD
-    </div>
+    <bit-avatar initials="JD" color="primary" size="lg"></bit-avatar>
   </div>
   <div slot="header" style="text-align: center">
     <bit-text variant="heading" size="xl">Jane Doe</bit-text>
@@ -420,7 +417,7 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
       ✓
     </div>
     <div style="flex: 1">
-      <bit-text variant="heading" size="lg" color="success"> Success! </bit-text>
+      <bit-text variant="heading" color="success"> Success! </bit-text>
       <bit-text color="body"> Your changes have been saved successfully. </bit-text>
     </div>
   </div>
@@ -435,14 +432,17 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 
 ```html
 <bit-card elevation="2" padding="lg" style="max-width: 200px; text-align: center;">
-  <div
-    style="font-size: var(--text-4xl); font-weight: var(--font-bold); color: var(--color-primary); margin-bottom: var(--size-2);">
+  <bit-text
+    color="primary"
+    variant="heading"
+    size="xl"
+    style="margin-bottom: var(--size-2); display: block;">
     1,234
-  </div>
-  <div style="color: var(--color-contrast-600); font-size: var(--text-sm);">Total Users</div>
-  <div style="color: var(--color-success); font-size: var(--text-sm); margin-top: var(--size-2);">
+  </bit-text>
+  <bit-text size="sm" color="secondary">Total Users</bit-text>
+  <bit-text size="sm" color="success" style="margin-top: var(--size-2); display: block;">
     ↑ 12% from last month
-  </div>
+  </bit-text>
 </bit-card>
 ```
 
@@ -462,7 +462,7 @@ Perfect for compact layouts and list views:
       style="background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
       📱
     </div>
-    <bit-text slot="header" variant="heading" size="lg">Smartphone Pro</bit-text>
+    <bit-text slot="header" variant="heading" size="md">Smartphone Pro</bit-text>
     <bit-text>Latest model with advanced features.</bit-text>
     <div slot="actions" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
       <bit-text weight="bold">$999</bit-text>
@@ -476,7 +476,7 @@ Perfect for compact layouts and list views:
       style="background: linear-gradient(135deg, #f093fb, #f5576c); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
       💻
     </div>
-    <bit-text slot="header" variant="heading" size="lg">Laptop Elite</bit-text>
+    <bit-text slot="header" variant="heading" size="md">Laptop Elite</bit-text>
     <bit-text>Powerful performance for professionals.</bit-text>
     <div slot="actions" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
       <bit-text weight="bold">$1,499</bit-text>
@@ -487,26 +487,6 @@ Perfect for compact layouts and list views:
 ```
 
 </ComponentPreview>
-
-## Guideline Recipe: Bolder Product Card CTA
-
-**Guideline: bolder** — combining solid card elevation with a clear primary button ensures the call-to-action stands out without needing extra visual weight elsewhere.
-
-```html
-<bit-card variant="elevated" elevation="2" style="max-width:320px">
-  <img slot="media" src="/product-thumbnail.jpg" alt="Pro Plan" />
-  <bit-text slot="default" variant="heading" size="md">Pro Plan</bit-text>
-  <bit-text slot="default" variant="body" color="subtle">
-    Unlimited projects, priority support, and advanced analytics.
-  </bit-text>
-  <div slot="actions" style="display:flex;gap:var(--size-2)">
-    <bit-button variant="solid" color="primary" style="flex:1">Upgrade — $12/mo</bit-button>
-    <bit-button variant="ghost">Learn more</bit-button>
-  </div>
-</bit-card>
-```
-
-**Tip:** Use `elevation="2"` + `variant="elevated"` for product/pricing cards so they read as actionable containers.
 
 ## API Reference
 
@@ -548,7 +528,7 @@ Perfect for compact layouts and list views:
 | `--card-color`        | `var(--color-contrast-900)` | Text color         |
 | `--card-border`       | `var(--border)`             | Border width       |
 | `--card-border-color` | `var(--color-contrast-300)` | Border color       |
-| `--card-radius`       | `var(--rounded-md)`         | Border radius      |
+| `--card-radius`       | `var(--rounded-lg)`         | Border radius      |
 | `--card-padding`      | `var(--size-4)`             | Internal padding   |
 | `--card-shadow`       | `var(--shadow-sm)`          | Box shadow         |
 | `--card-hover-shadow` | `var(--shadow-md)`          | Hover state shadow |
@@ -565,7 +545,7 @@ Perfect for compact layouts and list views:
     --card-radius: var(--rounded-2xl);
     --card-padding: var(--size-8);
   ">
-  <bit-text slot="header" variant="heading" size="xl">Custom Styled Card</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Custom Styled Card</bit-text>
   <bit-text>This card has custom colors and spacing.</bit-text>
 </bit-card>
 ```
@@ -579,7 +559,7 @@ Perfect for compact layouts and list views:
     --card-hover-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   "
   interactive>
-  <bit-text slot="header" variant="heading" size="xl">Enhanced Shadow</bit-text>
+  <bit-text slot="header" variant="heading" size="md">Enhanced Shadow</bit-text>
   <bit-text>Hover to see the custom shadow effect.</bit-text>
 </bit-card>
 ```

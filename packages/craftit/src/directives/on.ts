@@ -37,11 +37,12 @@ export function on(event: string, handler: (e: any) => void, options?: AddEventL
   return {
     mount(el, { registerCleanup }) {
       if (event === 'clickOutside') {
+        const doc = el.ownerDocument ?? document;
         const docHandler = (e: Event) => {
           if (!e.composedPath().includes(el)) handler(e as MouseEvent);
         };
 
-        registerCleanup(listen(document, 'click', docHandler, options));
+        registerCleanup(listen(doc, 'click', docHandler, options));
       } else {
         registerCleanup(listen(el, event, handler, options));
       }

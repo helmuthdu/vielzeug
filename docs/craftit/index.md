@@ -116,7 +116,7 @@ defineComponent({
 - **Slots & Emits** — setup-context `slots` / `emit`, plus `onSlotChange()` for slot-change observation
 - **Refs** — `ref<T>()` and `refs<T>()` for DOM element references
 - **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation
-- **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
+- **Context / DI** — `provide()`, `inject()`, `injectOptional()`, `injectRequired()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
 - **Accessibility** — `aria()` for reactive ARIA attributes plus ID helpers (`createId()`, `createFormIds()`)
 - **Observers** — `observeResize()` from `@vielzeug/craftit` and `@vielzeug/craftit/labs`; `observeIntersection()` and `observeMedia()` from `@vielzeug/craftit/labs`
 - **Directive subpath** — `@vielzeug/craftit/directives` for `when`, `each`, `match`, `until`, `bind`, and more

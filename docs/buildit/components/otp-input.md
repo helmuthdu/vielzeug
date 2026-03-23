@@ -144,31 +144,6 @@ Use `separator` to add a visual divider between cells.
 
 </ComponentPreview>
 
-## Guideline Recipe: Delight with Instant Verification Feedback
-
-**Guideline: delight** — auto-submitting when the last digit is entered (with a brief success animation guard) feels responsive and removes a redundant button press.
-
-```html
-<bit-otp-input
-  id="otp"
-  label="Verification code"
-  length="6"
-  type="numeric"
-  autocomplete="one-time-code"></bit-otp-input>
-
-<script>
-  const otp = document.getElementById('otp');
-  otp.addEventListener('complete', (e) => {
-    // Only proceed if reduced motion isn't preferred
-    verify(e.detail.value).then(() => {
-      otp.setAttribute('color', 'success');
-    });
-  });
-</script>
-```
-
-**Tip:** Listen for the `complete` event rather than `change` so you only trigger verification once all digits are filled.
-
 ## API Reference
 
 ### Attributes

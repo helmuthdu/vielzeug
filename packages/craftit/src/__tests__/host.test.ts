@@ -11,7 +11,7 @@ import {
   type InjectionKey,
   type ReadonlySignal,
 } from '../index';
-import { mount } from '../test';
+import { fire, mount } from '../test';
 
 const register = (
   tag: string,
@@ -47,23 +47,17 @@ describe('core/host.ts', () => {
         expect(query('div')?.textContent).toBe('fallback');
       });
 
-      it('warns and returns undefined when the key is absent and no fallback is given', async () => {
+      it('returns undefined when the key is absent and no fallback is given', async () => {
         const MissingKey = Symbol('missing') as InjectionKey<string>;
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
         let received: string | undefined = 'sentinel';
 
-        try {
-          await mount(() => {
-            received = inject(MissingKey);
+        await mount(() => {
+          received = inject(MissingKey);
 
-            return html`<div></div>`;
-          });
+          return html`<div></div>`;
+        });
 
-          expect(received).toBeUndefined();
-          expect(warn).toHaveBeenCalledWith(expect.stringContaining('inject key missing'));
-        } finally {
-          warn.mockRestore();
-        }
+        expect(received).toBeUndefined();
       });
 
       it('reads the nearest ancestor value when context is re-provided at a closer scope', async () => {
@@ -167,23 +161,18 @@ describe('core/host.ts', () => {
       it('is a no-op when the context value is undefined (key not provided by any ancestor)', async () => {
         const MissingCtx = createContext<{ size: ReadonlySignal<string> }>();
         let consumerSize!: ReturnType<typeof signal<string>>;
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-        try {
-          await mount(() => {
-            consumerSize = signal('medium');
+        await mount(() => {
+          consumerSize = signal('medium');
 
-            const ctx = inject(MissingCtx); // warns + returns undefined
+          const ctx = inject(MissingCtx);
 
-            syncContextProps(ctx, { size: consumerSize }, ['size']);
+          syncContextProps(ctx, { size: consumerSize }, ['size']);
 
-            return html`<div></div>`;
-          });
+          return html`<div></div>`;
+        });
 
-          expect(consumerSize.value).toBe('medium');
-        } finally {
-          warn.mockRestore();
-        }
+        expect(consumerSize.value).toBe('medium');
       });
     });
   });
@@ -288,8 +277,10 @@ describe('onMount slot timing', () => {
     el.appendChild(child);
     document.body.appendChild(el);
 
-    // Give microtask time to run onMount
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // onMount now runs on the next frame to ensure slot assignment has settled.
+    await new Promise<void>((resolve) =>
+      typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(() => resolve()) : setTimeout(resolve, 0),
+    );
 
     expect(onMountFn).toHaveBeenCalled();
     el.remove();
@@ -314,10 +305,50 @@ describe('onMount slot timing', () => {
     el.appendChild(child);
     document.body.appendChild(el);
 
-    // Give microtask time to run onMount and initial onSlotChange
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // onMount now runs on the next frame to ensure slot assignment has settled.
+    await new Promise<void>((resolve) =>
+      typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(() => resolve()) : setTimeout(resolve, 0),
+    );
 
     expect(onSlotChangeFn).toHaveBeenCalledWith(1);
     el.remove();
+  });
+});
+
+describe('reflect()', () => {
+  it('binds native click events for onClick', async () => {
+    const onClick = vi.fn();
+
+    const { element, flush } = await mount({
+      setup: ({ reflect }) => {
+        reflect({ onClick });
+
+        return html`<div>ok</div>`;
+      },
+    });
+
+    await flush();
+
+    fire.click(element);
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('normalizes onValueChanged to the valueChanged event name', async () => {
+    const onValueChanged = vi.fn();
+
+    const { element, flush } = await mount({
+      setup: ({ reflect }) => {
+        reflect({ onValueChanged });
+
+        return html`<div>ok</div>`;
+      },
+    });
+
+    await flush();
+
+    fire.custom(element, 'valueChanged', { id: 1 });
+
+    expect(onValueChanged).toHaveBeenCalledTimes(1);
   });
 });

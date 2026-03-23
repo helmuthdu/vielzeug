@@ -4,7 +4,6 @@ import { type Binding, type HtmlBinding } from './internal';
 import { applyBindingsWithTargets } from './template-bindings';
 import { type RegisterCleanup } from './template-bindings';
 import {
-  clearAfterMarker,
   createNodes,
   findCommentMarker,
   indexBindingsInNodes,
@@ -108,7 +107,11 @@ export const applyHtmlBinding = (
           if (keyedState && keys?.length && data.items?.length === keys.length) {
             bindingsAlreadyApplied = true;
 
-            if (keyedState.size === 0) clearAfterMarker(marker);
+            // Transition from empty/fallback insertion back to keyed list items.
+            if (keyedState.size === 0 && lastInsertedNodes.length > 0) {
+              for (const n of lastInsertedNodes) (n as ChildNode).remove();
+              lastInsertedNodes = [];
+            }
 
             const newKeyedState = new Map<string | number, KeyedNode>();
 

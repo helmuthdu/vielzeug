@@ -163,41 +163,6 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 </script>
 ```
 
-## Guideline Recipe: Onboard with a Range Budget Picker
-
-**Guideline: onboard** — a slider with a live value display gives users an immediate, tactile way to express a preference without typing a number.
-
-```html
-<div style="display:flex;flex-direction:column;gap:var(--size-2)">
-  <div style="display:flex;justify-content:space-between">
-    <bit-text variant="label">Monthly budget</bit-text>
-    <bit-text variant="label" id="budget-display" weight="semibold">$500</bit-text>
-  </div>
-  <bit-slider
-    id="budget-slider"
-    min="0"
-    max="2000"
-    step="50"
-    value="500"
-    color="primary"
-    aria-label="Monthly budget in dollars"></bit-slider>
-  <div style="display:flex;justify-content:space-between">
-    <bit-text variant="caption" color="subtle">$0</bit-text>
-    <bit-text variant="caption" color="subtle">$2,000</bit-text>
-  </div>
-</div>
-
-<script>
-  const slider = document.getElementById('budget-slider');
-  const display = document.getElementById('budget-display');
-  slider.addEventListener('input', (e) => {
-    display.textContent = `$${e.target.value}`;
-  });
-</script>
-```
-
-**Tip:** Always show the current value alongside the slider — users can’t tell their exact position from the thumb alone.
-
 ## API Reference
 
 ### Attributes

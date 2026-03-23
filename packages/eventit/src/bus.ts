@@ -4,11 +4,16 @@ import { BusDisposedError } from './errors';
 
 export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   const subs = new Map<string, Set<Listener<unknown>>>();
-  const pending = new Set<(err: unknown) => void>();
-  let disposed = false;
+  const disposeController = new AbortController();
 
   function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): () => void {
-    if (disposed || signal?.aborted) return () => {};
+    const mergedSignal = signal ? AbortSignal.any([disposeController.signal, signal]) : disposeController.signal;
+
+    try {
+      mergedSignal.throwIfAborted();
+    } catch {
+      return () => {};
+    }
 
     const l = listener as Listener<unknown>;
     let set = subs.get(event);
@@ -26,9 +31,9 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
       if (s?.size === 0) subs.delete(event);
 
-      signal?.removeEventListener('abort', unsub);
+      mergedSignal.removeEventListener('abort', unsub);
     }
-    signal?.addEventListener('abort', unsub, { once: true });
+    mergedSignal.addEventListener('abort', unsub, { once: true });
 
     return unsub;
   }
@@ -46,29 +51,30 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   }
 
   function wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]> {
-    if (disposed) return Promise.reject(new BusDisposedError());
+    const mergedSignal = signal ? AbortSignal.any([disposeController.signal, signal]) : disposeController.signal;
 
-    if (signal?.aborted) return Promise.reject(signal.reason);
+    try {
+      mergedSignal.throwIfAborted();
+    } catch (err) {
+      return Promise.reject(err);
+    }
 
     return new Promise<T[K]>((resolve, reject) => {
-      function onDispose(reason: unknown) {
-        signal?.removeEventListener('abort', onAbort);
-        reject(reason);
-      }
       function onAbort() {
-        pending.delete(onDispose);
         unsub();
-        reject(signal!.reason);
+        reject(mergedSignal.reason);
       }
 
-      const unsub = once(event, (payload) => {
-        pending.delete(onDispose);
-        signal?.removeEventListener('abort', onAbort);
-        resolve(payload);
-      });
+      const unsub = once(
+        event,
+        (payload) => {
+          mergedSignal.removeEventListener('abort', onAbort);
+          resolve(payload);
+        },
+        mergedSignal,
+      );
 
-      pending.add(onDispose);
-      signal?.addEventListener('abort', onAbort, { once: true });
+      mergedSignal.addEventListener('abort', onAbort, { once: true });
     });
   }
 
@@ -77,7 +83,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
       try {
         yield await wait(event, signal);
       } catch (err) {
-        if (disposed || signal?.aborted) return;
+        if (disposeController.signal.aborted || signal?.aborted) return;
 
         throw err;
       }
@@ -85,7 +91,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   }
 
   function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void {
-    if (disposed) return;
+    if (disposeController.signal.aborted) return;
 
     const payload = (args as unknown[])[0];
 
@@ -116,21 +122,16 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   }
 
   function dispose(): void {
-    if (disposed) return;
+    if (disposeController.signal.aborted) return;
 
-    disposed = true;
-
-    const err = new BusDisposedError();
-
-    for (const reject of pending) reject(err);
-    pending.clear();
+    disposeController.abort(new BusDisposedError());
     subs.clear();
   }
 
   return {
     dispose,
     get disposed() {
-      return disposed;
+      return disposeController.signal.aborted;
     },
     emit,
     events,

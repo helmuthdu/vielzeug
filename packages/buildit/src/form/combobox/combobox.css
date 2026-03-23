@@ -5,7 +5,7 @@
     --_field-height: var(--combobox-height, var(--size-10));
     --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
     --_padding: var(--combobox-padding, var(--size-1-5) var(--size-3));
-    --_radius: var(--combobox-radius, var(--rounded-md));
+    --_radius: var(--combobox-radius, var(--rounded-lg));
     --_placeholder: var(--combobox-placeholder-color, var(--color-contrast-500));
     --_bg: var(--combobox-bg, var(--color-contrast-100));
     --_border-color: var(--combobox-border-color, var(--color-contrast-300));

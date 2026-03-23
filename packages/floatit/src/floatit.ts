@@ -245,6 +245,12 @@ export interface AutoUpdateOptions {
    * Defaults to `true`.
    */
   observeFloating?: boolean;
+  /**
+   * Whether to observe `window.visualViewport` resize/scroll changes.
+   * Helps keep floating UI aligned during pinch-zoom and virtual keyboard changes.
+   * Defaults to `true`.
+   */
+  observeVisualViewport?: boolean;
 }
 
 /**
@@ -256,7 +262,7 @@ export function autoUpdate(
   reference: Element,
   floating: HTMLElement,
   update: () => void,
-  { observeFloating = true }: AutoUpdateOptions = {},
+  { observeFloating = true, observeVisualViewport = true }: AutoUpdateOptions = {},
 ): () => void {
   // Scroll events inside the floating element itself (e.g. a dropdown scrolling
   // its own options list) must never trigger repositioning.
@@ -272,6 +278,11 @@ export function autoUpdate(
   window.addEventListener('scroll', scrollHandler, { capture: true, passive: true });
   window.addEventListener('resize', update, { passive: true });
 
+  const vv = observeVisualViewport ? window.visualViewport : null;
+
+  vv?.addEventListener('resize', update, { passive: true });
+  vv?.addEventListener('scroll', update, { passive: true });
+
   const ro = new ResizeObserver(update);
 
   ro.observe(reference);
@@ -281,6 +292,8 @@ export function autoUpdate(
   return () => {
     window.removeEventListener('scroll', scrollHandler, { capture: true } as EventListenerOptions);
     window.removeEventListener('resize', update);
+    vv?.removeEventListener('resize', update);
+    vv?.removeEventListener('scroll', update);
     ro.disconnect();
   };
 }

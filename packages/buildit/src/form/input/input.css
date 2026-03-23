@@ -8,7 +8,7 @@
     --_gap: var(--input-gap, var(--size-2));
     --_field-height: var(--input-height, var(--size-10));
     --_padding: var(--input-padding, var(--size-1-5) var(--size-3));
-    --_radius: var(--input-radius, var(--rounded-md));
+    --_radius: var(--input-radius, var(--rounded-lg));
     --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
     --_bg: var(--input-bg, var(--color-contrast-100));
     --_border-color: var(--input-border-color, var(--color-contrast-300));

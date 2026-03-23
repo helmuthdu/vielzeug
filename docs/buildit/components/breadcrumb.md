@@ -106,21 +106,6 @@ Override the default `"Breadcrumb"` landmark label when a page has multiple navi
 
 </ComponentPreview>
 
-## Guideline Recipe: Adapt Navigation Context
-
-**Guideline: adapt** — breadcrumbs give users a spatial anchor on any screen size, reducing disorientation in deep hierarchies.
-
-```html
-<bit-breadcrumb aria-label="Checkout steps">
-  <bit-breadcrumb-item href="/store">Store</bit-breadcrumb-item>
-  <bit-breadcrumb-item href="/store/cart">Cart</bit-breadcrumb-item>
-  <bit-breadcrumb-item href="/store/checkout">Checkout</bit-breadcrumb-item>
-  <bit-breadcrumb-item aria-current="page">Payment</bit-breadcrumb-item>
-</bit-breadcrumb>
-```
-
-**Tip:** Always set `aria-current="page"` on the last item and omit its `href` so assistive technology announces it as the current location.
-
 ## API Reference
 
 ### `bit-breadcrumb` Attributes

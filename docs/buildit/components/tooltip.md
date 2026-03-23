@@ -1,6 +1,6 @@
 # Tooltip
 
-A lightweight floating label that appears on hover, focus, or click. Automatically flips placement when near viewport edges, supports a typed arrow pointer, and dismisses on `Escape`.
+A lightweight floating label that appears on hover, focus, or click. Automatically flips placement when near viewport edges and dismisses on `Escape`.
 
 ## Features
 
@@ -10,7 +10,7 @@ A lightweight floating label that appears on hover, focus, or click. Automatical
 - 🎨 **2 Variants**: dark (default), light
 - 📏 **3 Sizes**: sm, md, lg
 - ♿ **Accessible**: `role="tooltip"`, `aria-describedby` wiring, keyboard `Escape` dismiss
-- 🔧 **No external deps** — pure JS positioning, no Popper/Floating UI
+- 🔧 **Powered by floatit**: uses `@vielzeug/floatit` for viewport-aware auto-positioning (`flip`, `shift`, `autoUpdate`)
 
 ## Source Code
 
@@ -148,47 +148,21 @@ Set `disabled` to suppress the tooltip entirely.
 </bit-tooltip>
 ```
 
-## Guideline Recipe: Clarify Icon-Only Controls
-
-**Guideline: clarify** — adding a tooltip to every icon-only button ensures their purpose is discoverable without cluttering the visual design.
-
-```html
-<div role="toolbar" aria-label="Text formatting" style="display:flex;gap:var(--size-1)">
-  <bit-tooltip content="Bold (Ctrl+B)">
-    <bit-button variant="ghost" size="sm" icon-only aria-label="Bold">
-      <b>B</b>
-    </bit-button>
-  </bit-tooltip>
-
-  <bit-tooltip content="Italic (Ctrl+I)">
-    <bit-button variant="ghost" size="sm" icon-only aria-label="Italic">
-      <i>I</i>
-    </bit-button>
-  </bit-tooltip>
-
-  <bit-tooltip content="Underline (Ctrl+U)">
-    <bit-button variant="ghost" size="sm" icon-only aria-label="Underline">
-      <u>U</u>
-    </bit-button>
-  </bit-tooltip>
-</div>
-```
-
-**Tip:** Always include the keyboard shortcut in the tooltip label — it doubles as a discoverability hint for power users.
-
 ## API Reference
 
 ### Attributes
 
-| Attribute   | Type                                     | Default         | Description                                          |
-| ----------- | ---------------------------------------- | --------------- | ---------------------------------------------------- |
-| `content`   | `string`                                 | `''`            | Tooltip text                                         |
-| `placement` | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges) |
-| `trigger`   | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                     |
-| `delay`     | `number`                                 | `0`             | Show delay in milliseconds                           |
-| `variant`   | `'dark' \| 'light'`                      | `'dark'`        | Visual style variant                                 |
-| `size`      | `'sm' \| 'md' \| 'lg'`                   | `'md'`          | Tooltip bubble size                                  |
-| `disabled`  | `boolean`                                | `false`         | Disable the tooltip entirely                         |
+| Attribute     | Type                                     | Default         | Description                                                                           |
+| ------------- | ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------- |
+| `content`     | `string`                                 | `''`            | Tooltip text                                                                          |
+| `placement`   | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges)                                  |
+| `trigger`     | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                                                      |
+| `delay`       | `number`                                 | `0`             | Show delay in milliseconds                                                            |
+| `close-delay` | `number`                                 | `0`             | Hide delay in milliseconds — useful to keep the tooltip open when moving between trigger and bubble |
+| `open`        | `boolean`                                | —               | Controlled open state; when set, trigger events are ignored                           |
+| `variant`     | `'dark' \| 'light'`                      | —               | Visual style (`dark` appearance is the unset default)                                 |
+| `size`        | `'sm' \| 'md' \| 'lg'`                   | —               | Tooltip bubble size (medium appearance is the unset default)                          |
+| `disabled`    | `boolean`                                | `false`         | Disable the tooltip entirely                                                          |
 
 ### Slots
 
@@ -217,7 +191,6 @@ The tooltip component follows WAI-ARIA best practices.
 
 - The tooltip bubble has `role="tooltip"`.
 - The trigger element is augmented with `aria-describedby` pointing to the tooltip — this happens automatically when using the `focus` trigger.
-- The arrow pointer is `aria-hidden="true"` to avoid noise for screen readers.
 
 ::: tip
 When `trigger` includes `focus`, the tooltip is automatically wired as a programmatic description for the focused element, which benefits screen reader users.

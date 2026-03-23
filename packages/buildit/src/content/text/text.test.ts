@@ -117,6 +117,41 @@ describe('bit-text', () => {
       });
     }
   });
+
+  describe('Sizes', () => {
+    for (const size of ['xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const) {
+      it(`reflects ${size} size as host attribute`, async () => {
+        fixture = await mount('bit-text', { attrs: { size } });
+
+        expect(fixture.element.getAttribute('size')).toBe(size);
+        fixture.destroy();
+      });
+    }
+  });
+
+  describe('Colors', () => {
+    for (const color of [
+      'primary',
+      'secondary',
+      'info',
+      'success',
+      'warning',
+      'error',
+      'heading',
+      'body',
+      'muted',
+      'tertiary',
+      'disabled',
+      'contrast',
+    ] as const) {
+      it(`reflects ${color} color as host attribute`, async () => {
+        fixture = await mount('bit-text', { attrs: { color } });
+
+        expect(fixture.element.getAttribute('color')).toBe(color);
+        fixture.destroy();
+      });
+    }
+  });
 });
 
 describe('bit-text accessibility', () => {
@@ -143,10 +178,32 @@ describe('bit-text accessibility', () => {
       expect(fixture.element.textContent?.trim()).toBe('Visible');
     });
 
+    it('color="tertiary" does not hide content', async () => {
+      fixture = await mount('bit-text', { attrs: { color: 'tertiary' }, html: 'Tertiary text' });
+
+      expect(fixture.element.textContent?.trim()).toBe('Tertiary text');
+    });
+
     it('italic does not hide content', async () => {
       fixture = await mount('bit-text', { attrs: { italic: '' }, html: 'Slanted' });
 
       expect(fixture.element.textContent?.trim()).toBe('Slanted');
+    });
+  });
+
+  describe('Heading + size compound', () => {
+    it('heading variant with size lg carries both attributes', async () => {
+      fixture = await mount('bit-text', { attrs: { size: 'lg', variant: 'heading' } });
+
+      expect(fixture.element.getAttribute('variant')).toBe('heading');
+      expect(fixture.element.getAttribute('size')).toBe('lg');
+    });
+
+    it('heading variant with size 2xl carries both attributes', async () => {
+      fixture = await mount('bit-text', { attrs: { size: '2xl', variant: 'heading' } });
+
+      expect(fixture.element.getAttribute('variant')).toBe('heading');
+      expect(fixture.element.getAttribute('size')).toBe('2xl');
     });
   });
 });

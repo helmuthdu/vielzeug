@@ -268,26 +268,6 @@ Prevent interaction with specific items.
 
 </ComponentPreview>
 
-## Guideline Recipe: Quieter FAQ Section
-
-**Guideline: quieter** — collapse secondary content so users focus on only what they need right now.
-
-```html
-<bit-accordion value="1">
-  <bit-accordion-item value="1" label="What's included?">
-    Access to all features and 30 days of history.
-  </bit-accordion-item>
-  <bit-accordion-item value="2" label="Can I cancel anytime?">
-    Yes — no contracts, cancel from account settings.
-  </bit-accordion-item>
-  <bit-accordion-item value="3" label="How do I get support?">
-    Use in-app chat or email support@example.com.
-  </bit-accordion-item>
-</bit-accordion>
-```
-
-**Tip:** Combine with `multiple` selection mode when users need to compare items side by side.
-
 ## API Reference
 
 ### `bit-accordion` Attributes

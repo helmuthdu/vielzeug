@@ -1,17 +1,22 @@
 @layer buildit.base {
   :host {
     /* ── Public API tokens ──────────────────────────────────────────────── */
-    --_radius: var(--table-radius, var(--rounded-md));
+    --_radius: var(--table-radius, var(--rounded-lg));
     --_shadow: var(--table-shadow, none);
-    --_border: var(--table-border, 1px solid var(--color-contrast-300));
+    --_border: var(--table-border, 1px solid var(--color-contrast-200));
 
     /* ── Tokens consumed by native th/td in the shadow table ────────────── */
-    --_cell-padding: var(--table-cell-padding, var(--size-3) var(--size-4));
+    --_cell-padding: var(--table-cell-padding, var(--size-4) var(--size-5));
     --_cell-font-size: var(--table-cell-font-size, var(--text-sm));
-    --_cell-color: var(--table-cell-color, var(--color-contrast-900));
-    --_th-bg: var(--table-header-bg, var(--color-contrast-100));
-    --_th-color: var(--table-header-color, var(--color-contrast-600));
-    --_row-hover-bg: var(--table-row-hover-bg, var(--color-contrast-200));
+    --_cell-color: var(--table-cell-color, var(--color-contrast-800));
+    --_th-bg: var(
+      --table-header-bg,
+      color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
+    );
+    --_th-color: var(--table-header-color, var(--_theme-content));
+    --_th-font-weight: var(--font-semibold);
+    --_th-font-size: var(--text-xs);
+    --_row-hover-bg: var(--table-row-hover-bg, var(--color-contrast-100));
     --_stripe-bg: transparent;
 
     display: block;
@@ -40,12 +45,15 @@
   /* ── Caption ─────────────────────────────────────────────────────────── */
 
   caption {
-    padding: var(--size-2) var(--size-4);
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
-    color: var(--color-contrast-600);
+    padding: var(--size-3) var(--size-5);
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: var(--color-contrast-500);
     text-align: start;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     caption-side: top;
+    background: var(--_th-bg);
   }
 
   /* ── Native cells (live in shadow DOM — all styling goes here) ────────── */
@@ -60,12 +68,14 @@
     text-align: start;
     background: transparent;
     border-bottom: var(--_border);
-    transition: background 120ms ease;
+    transition: background var(--duration-150) var(--ease-in-out);
   }
 
   /* Last row in each section — remove separator */
-  tr:last-child th,
-  tr:last-child td {
+  tbody tr:last-child th,
+  tbody tr:last-child td,
+  tfoot tr:last-child th,
+  tfoot tr:last-child td {
     border-bottom: none;
   }
 
@@ -75,9 +85,17 @@
   thead td,
   tfoot th,
   tfoot td {
-    font-weight: var(--font-medium, 500);
+    font-size: var(--_th-font-size);
+    font-weight: var(--_th-font-weight);
     color: var(--_th-color);
-    background: var(--_th-bg);
+    background: var(--_th-bg) !important;
+    border-bottom: var(--border-2) solid var(--color-contrast-200);
+    backdrop-filter: blur(var(--blur-md)) saturate(140%);
+  }
+
+  thead th {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   /* ── Row hover (body only) ────────────────────────────────────────────── */
@@ -110,7 +128,7 @@
   :host([loading]) table {
     pointer-events: none;
     opacity: 0.5;
-    transition: var(--_motion-transition, opacity var(--transition-fast));
+    transition: opacity var(--duration-200) var(--ease-in-out);
   }
 }
 
@@ -119,7 +137,7 @@
 @layer buildit.variants {
   /* Striped: flip --_stripe-bg token on */
   :host([striped]) {
-    --_stripe-bg: var(--table-stripe-bg, var(--color-contrast-100));
+    --_stripe-bg: var(--table-stripe-bg, var(--color-contrast-50));
   }
 
   /* Bordered: border and radius on the host itself; overflow:hidden on the
@@ -128,12 +146,19 @@
     overflow: hidden;
     border: var(--_border);
     border-radius: var(--_radius);
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* Clip painted table sections (caption/thead/tbody/tfoot) to the same radius
+     without interfering with scrolling or sticky headers. */
+  :host([bordered]) .scroll-container {
+    border-radius: inherit;
+    clip-path: inset(0 round var(--_radius));
   }
 
   /* Color theme: remap header tokens from the theme mixin's --_theme-* vars */
   :host([color]) {
-    --_th-bg: var(--_theme-backdrop, var(--color-contrast-50));
-    --_th-color: var(--_theme-base, inherit);
+    --_th-color: var(--_theme-base);
   }
 
   /* Sticky: clamp height and let the single scroll container handle both axes.
@@ -149,7 +174,16 @@
   :host([sticky]) thead td {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 10;
+    background: var(
+      --table-sticky-header-bg,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-50) 94%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 94%, transparent)
+      )
+    );
+    backdrop-filter: blur(var(--table-sticky-blur, var(--blur-md))) saturate(140%);
+    will-change: backdrop-filter;
   }
 }
 
@@ -157,12 +191,12 @@
 
 @layer buildit.utilities {
   :host([size='sm']) {
-    --_cell-padding: var(--size-1-5) var(--size-3);
+    --_cell-padding: var(--size-2) var(--size-3);
     --_cell-font-size: var(--text-xs);
   }
 
   :host([size='lg']) {
-    --_cell-padding: var(--size-4) var(--size-6);
+    --_cell-padding: var(--size-5) var(--size-8);
     --_cell-font-size: var(--text-base);
   }
 }

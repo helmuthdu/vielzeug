@@ -14,62 +14,30 @@ import {
 import { createAttrBinding, createPropBinding } from './template-bindings';
 import { escapeHtml } from './utilities';
 
-const RE_EVENT = /\s+@([a-zA-Z_][-a-zA-Z0-9_.]*)\s*=\s*["']?$/;
-const RE_REF = /\s+ref\s*=\s*["']?$/;
-const RE_SPECIAL_ATTR = /\s+([:?])([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
-const RE_PROP = /\.([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
-const RE_PLAIN_ATTR = /\s+([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="([^"]+)"`, 'g');
 
 const isHtmlResult = (value: unknown): value is HTMLResult => typeof value === 'object' && !!value && '__html' in value;
-const hasKey = (obj: unknown, key: string): boolean => typeof obj === 'object' && !!obj && key in obj;
 const normalizeCompiledHtml = (html: string): string => html.replace(/>\s+</g, '><').trim();
 
-type CompiledEventSlot = {
-  kind: 'event';
-  modifiers: EventBinding['modifiers'];
-  name: string;
+// Slot patterns applied in priority order; first match wins
+const SLOT_PATTERNS = [
+  { kind: 'event' as const, regex: /\s+@([a-zA-Z_][-a-zA-Z0-9_.]*)\s*=\s*["']?$/ },
+  { kind: 'ref' as const, regex: /\s+ref\s*=\s*["']?$/ },
+  { kind: 'specialAttr' as const, regex: /\s+([:?])([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
+  { kind: 'prop' as const, regex: /\.([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
+  { kind: 'plainAttr' as const, regex: /\s+([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
+] as const;
+
+type CompiledTemplateSlot = {
+  kind: (typeof SLOT_PATTERNS)[number]['kind'] | 'node';
+  // For 'specialAttr' slots
+  mode?: 'attr' | 'bool';
+  modifiers?: EventBinding['modifiers'];
+  // For 'event' slots
+  name?: string;
   prefix: string;
   raw: string;
 };
-
-type CompiledRefSlot = {
-  kind: 'ref';
-  prefix: string;
-  raw: string;
-};
-
-type CompiledSpecialAttrSlot = {
-  kind: 'specialAttr';
-  mode: 'attr' | 'bool';
-  name: string;
-  prefix: string;
-};
-
-type CompiledPropSlot = {
-  kind: 'prop';
-  name: string;
-  prefix: string;
-};
-
-type CompiledPlainAttrSlot = {
-  kind: 'plainAttr';
-  name: string;
-  prefix: string;
-};
-
-type CompiledNodeSlot = {
-  kind: 'node';
-  raw: string;
-};
-
-type CompiledTemplateSlot =
-  | CompiledEventSlot
-  | CompiledRefSlot
-  | CompiledSpecialAttrSlot
-  | CompiledPropSlot
-  | CompiledPlainAttrSlot
-  | CompiledNodeSlot;
 
 type CompiledTemplatePlan = {
   slots: CompiledTemplateSlot[];
@@ -78,6 +46,11 @@ type CompiledTemplatePlan = {
 
 const templatePlanCache = new WeakMap<TemplateStringsArray, CompiledTemplatePlan>();
 
+/**
+ * Parses event descriptor string into name and modifiers.
+ * @example
+ * parseEventDescriptor('click.stop.prevent') → { name: 'click', modifiers: { stop, prevent } }
+ */
 const parseEventDescriptor = (descriptor: string): { modifiers: EventBinding['modifiers']; name: string } => {
   const [name, ...rawModifiers] = descriptor.split('.');
   const modifiers: NonNullable<EventBinding['modifiers']> = {};
@@ -99,57 +72,37 @@ const buildTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan 
 
   for (let i = 0; i < strings.length - 1; i++) {
     const str = strings[i];
-    const eventMatch = RE_EVENT.exec(str);
+    let matched = false;
 
-    if (eventMatch) {
-      const parsed = parseEventDescriptor(eventMatch[1]);
+    for (const pattern of SLOT_PATTERNS) {
+      const m = pattern.regex.exec(str);
 
-      slots.push({
-        kind: 'event',
-        modifiers: parsed.modifiers,
-        name: parsed.name,
-        prefix: str.slice(0, -eventMatch[0].length),
-        raw: str,
-      });
-      continue;
+      if (!m) continue;
+
+      const prefix = str.slice(0, -m[0].length);
+
+      matched = true;
+
+      if (pattern.kind === 'event') {
+        const parsed = parseEventDescriptor(m[1]);
+
+        slots.push({ kind: 'event', modifiers: parsed.modifiers, name: parsed.name, prefix, raw: str });
+      } else if (pattern.kind === 'ref') {
+        slots.push({ kind: 'ref', prefix, raw: str });
+      } else if (pattern.kind === 'specialAttr') {
+        slots.push({ kind: 'specialAttr', mode: m[1] === '?' ? 'bool' : 'attr', name: m[2], prefix, raw: str });
+      } else if (pattern.kind === 'prop') {
+        slots.push({ kind: 'prop', name: m[1], prefix, raw: str });
+      } else if (pattern.kind === 'plainAttr') {
+        slots.push({ kind: 'plainAttr', name: m[1], prefix, raw: str });
+      }
+
+      break; // first match wins
     }
 
-    const refMatch = RE_REF.exec(str);
-
-    if (refMatch) {
-      slots.push({ kind: 'ref', prefix: str.slice(0, -refMatch[0].length), raw: str });
-      continue;
+    if (!matched) {
+      slots.push({ kind: 'node', prefix: str, raw: str });
     }
-
-    const specialAttrMatch = RE_SPECIAL_ATTR.exec(str);
-
-    if (specialAttrMatch) {
-      const [, prefix, name] = specialAttrMatch;
-
-      slots.push({
-        kind: 'specialAttr',
-        mode: prefix === '?' ? 'bool' : 'attr',
-        name,
-        prefix: str.slice(0, -specialAttrMatch[0].length),
-      });
-      continue;
-    }
-
-    const propMatch = RE_PROP.exec(str);
-
-    if (propMatch) {
-      slots.push({ kind: 'prop', name: propMatch[1], prefix: str.slice(0, -propMatch[0].length) });
-      continue;
-    }
-
-    const plainAttrMatch = RE_PLAIN_ATTR.exec(str);
-
-    if (plainAttrMatch) {
-      slots.push({ kind: 'plainAttr', name: plainAttrMatch[1], prefix: str.slice(0, -plainAttrMatch[0].length) });
-      continue;
-    }
-
-    slots.push({ kind: 'node', raw: str });
   }
 
   return { slots, tail: strings[strings.length - 1] ?? '' };
@@ -208,29 +161,9 @@ const getEachSignalSource = (
   items?: Array<{ bindings: Binding[]; html: string }>;
   keys?: (string | number)[];
 }> | null => {
-  if (typeof value !== 'object' || value === null) return null;
+  if (typeof value !== 'object' || value === null || !(EACH_SIGNAL in value)) return null;
 
-  if (EACH_SIGNAL in value) {
-    return (value as { [EACH_SIGNAL]: ReadonlySignal<{ bindings: Binding[]; html: string }> })[EACH_SIGNAL];
-  }
-
-  // Support duplicate module instances by matching symbol descriptions.
-  for (const sym of Object.getOwnPropertySymbols(value)) {
-    if (sym.description !== EACH_SIGNAL.description) continue;
-
-    const candidate = (value as Record<symbol, unknown>)[sym];
-
-    if (candidate && typeof candidate === 'object' && 'value' in (candidate as object)) {
-      return candidate as ReadonlySignal<{
-        bindings: Binding[];
-        html: string;
-        items?: Array<{ bindings: Binding[]; html: string }>;
-        keys?: (string | number)[];
-      }>;
-    }
-  }
-
-  return null;
+  return (value as { [EACH_SIGNAL]: ReadonlySignal<{ bindings: Binding[]; html: string }> })[EACH_SIGNAL];
 };
 
 const resolveDirectiveValue = (value: unknown): string => {
@@ -241,6 +174,43 @@ const resolveDirectiveValue = (value: unknown): string => {
   if (isHtmlResult(value)) return value.__html;
 
   return escapeHtml(String(value));
+};
+
+const renderHtmlItems = (
+  getter: () => unknown,
+  effect: (fn: () => void) => void,
+): { bindings: Binding[]; signal: Signal<any> } => {
+  let cached = { bindings: [] as Binding[], html: '' };
+  const fnSignal = signal(cached);
+
+  effect(() => {
+    const res = getter();
+    const items = Array.isArray(res) ? res : [res];
+    const getNestedId = createMarkerIdFactory();
+    let html = '';
+    const nextBindings: Binding[] = [];
+
+    for (const item of items) {
+      if (isHtmlResult(item)) {
+        const entry = rekeyHtmlResult(item, getNestedId);
+
+        html += entry.html;
+        nextBindings.push(...entry.bindings);
+      } else {
+        html += resolveDirectiveValue(item);
+      }
+    }
+
+    const bindingsChanged =
+      nextBindings.length !== cached.bindings.length || nextBindings.some((b, i) => b !== cached.bindings[i]);
+
+    if (html !== cached.html || bindingsChanged) {
+      cached = { bindings: nextBindings, html };
+      fnSignal.value = cached;
+    }
+  });
+
+  return { bindings: [], signal: fnSignal };
 };
 
 const createHtmlWrapperSignal = (
@@ -258,48 +228,13 @@ const createHtmlWrapperSignal = (
   const eachSignal = getEachSignalSource(value);
 
   if (eachSignal) {
-    return {
-      keyed: true,
-      signal: eachSignal,
-    };
+    return { keyed: true, signal: eachSignal };
   }
 
   if (typeof value === 'function' && !isSignal(value)) {
-    let cached = { bindings: [] as Binding[], html: '' };
-    const fnSignal = signal(cached);
+    const { signal: sig } = renderHtmlItems(value as () => unknown, effect);
 
-    const computeValue = value as () => unknown;
-
-    const update = () => {
-      const res = computeValue();
-      const items = Array.isArray(res) ? res : [res];
-      const getNextId = createMarkerIdFactory();
-      let html = '';
-      const bindings: Binding[] = [];
-
-      for (const item of items) {
-        if (isHtmlResult(item)) {
-          const entry = rekeyHtmlResult(item, getNextId);
-
-          html += entry.html;
-          bindings.push(...entry.bindings);
-        } else {
-          html += resolveDirectiveValue(item);
-        }
-      }
-
-      const bindingsChanged =
-        bindings.length !== cached.bindings.length || bindings.some((b, i) => b !== cached.bindings[i]);
-
-      if (html !== cached.html || bindingsChanged) {
-        cached = { bindings, html };
-        fnSignal.value = cached;
-      }
-    };
-
-    effect(update);
-
-    return { keyed: false, signal: fnSignal };
+    return { keyed: false, signal: sig };
   }
 
   if (isSignal(value) && isHtmlResult(value.value)) {
@@ -326,6 +261,27 @@ export const resetTemplateCompilerState = (): void => {
   // Marker IDs are deterministic per compiled template; no global state to reset.
 };
 
+/**
+ * Compiles a tagged template into an HTMLResult with reactive bindings.
+ *
+ * Detects interpolation slots using regex patterns:
+ * - `@event-name` → event listener binding
+ * - `ref` → ref binding
+ * - `:prop` or `?bool` → special attributes
+ * - `.prop` → property binding
+ * - plain attributes → attribute binding
+ *
+ * Rekeys nested HTMLResult bindings to avoid ID collisions.
+ *
+ * @param strings - Template string parts
+ * @param values - Interpolated values (signals, functions, directives, primitives)
+ * @param effect - Effect hook for reactive bindings
+ * @returns HTMLResult with compiled HTML and bindings array
+ *
+ * @example
+ * const name = signal('Alice');
+ * const html = compileTemplate`<h1>${() => name.value}</h1>`;
+ */
 export const compileTemplate = (
   strings: TemplateStringsArray,
   values: unknown[],
@@ -361,7 +317,7 @@ export const compileTemplate = (
         bindings.push({
           handler: value as (e: Event) => void,
           modifiers: slot.modifiers,
-          name: slot.name,
+          name: slot.name!,
           type: 'event',
           uid: id,
         });
@@ -393,7 +349,7 @@ export const compileTemplate = (
       const id = getElementBindingId(slot.prefix);
 
       result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-      bindings.push(createAttrBinding(slot.mode, slot.name, id, value));
+      bindings.push(createAttrBinding(slot.mode!, slot.name!, id, value));
       continue;
     }
 
@@ -401,7 +357,7 @@ export const compileTemplate = (
       const id = getElementBindingId(slot.prefix);
 
       result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-      bindings.push(createPropBinding(slot.name, id, value));
+      bindings.push(createPropBinding(slot.name!, id, value));
       continue;
     }
 
@@ -409,12 +365,12 @@ export const compileTemplate = (
       const id = getElementBindingId(slot.prefix);
 
       result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-      bindings.push(createAttrBinding('attr', slot.name, id, value));
+      bindings.push(createAttrBinding('attr', slot.name!, id, value));
       continue;
     }
 
-    if (hasKey(value, 'mount') || hasKey(value, 'render')) {
-      const isInterpolation = hasKey(value, 'render');
+    if (typeof value === 'object' && value !== null && ('mount' in value || 'render' in value)) {
+      const isInterpolation = 'render' in value;
       const id = isInterpolation ? getNextId() : getElementBindingId(slot.raw);
 
       if (isInterpolation) result += `${slot.raw}<!--${id}-->`;

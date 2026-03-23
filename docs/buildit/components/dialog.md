@@ -324,57 +324,6 @@ dialog.addEventListener('close', () => {
 });
 ```
 
-## Guideline Recipe: Delightful Completion
-
-Use a short success moment after user confirmation, while respecting reduced-motion preferences.
-
-<ComponentPreview center>
-
-```html
-<bit-button id="open-done-dialog">Finish setup</bit-button>
-
-<bit-dialog id="done-dialog" label="Complete setup" dismissable>
-  <p>Your workspace setup is complete. Send the first invite now?</p>
-  <div slot="footer" style="display: flex; gap: 0.5rem;">
-    <bit-button variant="ghost" id="done-later">Later</bit-button>
-    <bit-button color="success" id="done-invite">Send invite</bit-button>
-  </div>
-</bit-dialog>
-
-<bit-alert id="done-toast" color="success" variant="flat" hidden> Setup complete. Team invite sent. </bit-alert>
-
-<script>
-  const dialog = document.getElementById('done-dialog');
-  const toast = document.getElementById('done-toast');
-
-  document.getElementById('open-done-dialog').addEventListener('click', () => {
-    dialog.setAttribute('open', '');
-  });
-
-  ['done-later', 'done-invite'].forEach((id) => {
-    document.getElementById(id).addEventListener('click', () => {
-      dialog.removeAttribute('open');
-      toast.removeAttribute('hidden');
-
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        toast.animate(
-          [
-            { opacity: 0, transform: 'translateY(6px)' },
-            { opacity: 1, transform: 'translateY(0)' },
-          ],
-          {
-            duration: 180,
-            easing: 'ease-out',
-          },
-        );
-      }
-    });
-  });
-</script>
-```
-
-</ComponentPreview>
-
 ## API Reference
 
 ### Attributes
@@ -412,7 +361,7 @@ Use a short success moment after user confirmation, while respecting reduced-mot
 | ----------------------- | --------------------------------------------- | --------------------------- |
 | `--dialog-bg`           | Panel background color                        | `var(--color-canvas)`       |
 | `--dialog-border-color` | Panel border color                            | `var(--color-contrast-300)` |
-| `--dialog-radius`       | Panel border radius                           | `var(--rounded-xl)`         |
+| `--dialog-radius`       | Panel border radius                           | `var(--rounded-lg)`         |
 | `--dialog-shadow`       | Panel drop shadow                             | `var(--shadow-xl)`          |
 | `--dialog-padding`      | Padding for header, body, and footer sections | `var(--size-6)`             |
 | `--dialog-gap`          | Gap between footer action buttons             | `var(--size-4)`             |

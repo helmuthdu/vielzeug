@@ -5,9 +5,9 @@ A versatile typography component with semantic variants for consistent text styl
 ## Features
 
 - 🎨 **6 Semantic Variants**: body, heading, label, caption, overline, code
-- 📏 **13 Sizes**: xs to 9xl (12px to 128px)
+- 📏 **6 Sizes**: xs, sm, md, lg, xl, 2xl (body scale) — heading variant uses the heading scale
 - ⚖️ **4 Font Weights**: normal, medium, semibold, bold
-- 🌈 **11 Colors**: semantic (primary, secondary, info, success, warning, error) + text colors (heading, body, muted, disabled, contrast)
+- 🌈 **12 Colors**: semantic (primary, secondary, info, success, warning, error) + text colors (heading, body, muted, tertiary, disabled, contrast)
 - 📐 **4 Alignments**: left, center, right, justify
 - ✂️ **Truncate**: Single-line ellipsis truncation
 - 📋 **Line Clamp**: Multi-line truncation with ellipsis via `lines` prop
@@ -51,16 +51,22 @@ Normal paragraph text with standard line height. The default variant for general
 
 ### Heading
 
-Emphasized text for headings with tighter line height and semibold weight. Defaults to `2xl` size — override with `size` when needed.
+Emphasized text for headings with tighter line height and semibold weight. Defaults to `md` on the heading scale (`--heading-md`, 1.5rem / 24px) — set `size` explicitly to pick a different step.
+
+::: info Heading scale vs body scale
+`variant="heading"` maps the `size` attribute to the **heading scale** (`--heading-xs` → `--heading-2xl`) rather than the body text scale. This gives a much wider range: from 0.875rem (xs) all the way to 4rem (2xl). See [Size Options](#size-options) for the full mapping.
+:::
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-text variant="heading">Default heading (2xl)</bit-text>
-<bit-text variant="heading" size="3xl">Main Heading</bit-text>
-<bit-text variant="heading" size="2xl">Section Heading</bit-text>
-<bit-text variant="heading" size="xl">Subsection Heading</bit-text>
-<bit-text variant="heading" size="lg">Small Heading</bit-text>
+<bit-text variant="heading">Default heading (md — 24px)</bit-text>
+<bit-text variant="heading" size="xs">Heading xs (14px)</bit-text>
+<bit-text variant="heading" size="sm">Heading sm (16px)</bit-text>
+<bit-text variant="heading" size="md">Heading md (24px)</bit-text>
+<bit-text variant="heading" size="lg">Heading lg (32px)</bit-text>
+<bit-text variant="heading" size="xl">Heading xl (48px)</bit-text>
+<bit-text variant="heading" size="2xl">Heading 2xl (64px)</bit-text>
 ```
 
 </ComponentPreview>
@@ -123,27 +129,31 @@ Monospace text for inline code snippets.
 
 ## Size Options
 
-Choose from 13 size options to match your design hierarchy.
+Choose from 6 size steps. The token scale resolved depends on the active variant:
+
+| `size` | Body scale token | Value | Heading scale token | Value |
+| ------ | ---------------- | ----- | ------------------- | ----- |
+| `xs`   | `--text-xs`      | 12px  | `--heading-xs`      | 14px  |
+| `sm`   | `--text-sm`      | 14px  | `--heading-sm`      | 16px  |
+| `md`   | `--text-base`    | 16px  | `--heading-md`      | 24px  |
+| `lg`   | `--text-lg`      | 18px  | `--heading-lg`      | 32px  |
+| `xl`   | `--text-xl`      | 20px  | `--heading-xl`      | 48px  |
+| `2xl`  | `--text-2xl`     | 24px  | `--heading-2xl`     | 64px  |
+
+`variant="heading"` resolves sizes against the **heading scale**. All other variants (`body`, `label`, `caption`, `overline`, `code`) resolve against the **body scale**.
 
 <ComponentPreview center vertical>
 
 ```html
-<bit-text size="xs">Extra small text (12px)</bit-text>
-<bit-text size="sm">Small text (14px)</bit-text>
-<bit-text size="md">Medium text (16px)</bit-text>
-<bit-text size="lg">Large text (18px)</bit-text>
-<bit-text size="xl">Extra large text (20px)</bit-text>
-<bit-text size="2xl">2XL text (24px)</bit-text>
-<bit-text size="3xl">3XL text (30px)</bit-text>
-<bit-text size="4xl">4XL text (36px)</bit-text>
-<bit-text size="5xl">5XL text (48px)</bit-text>
+<bit-text size="xs">Extra small text (xs)</bit-text>
+<bit-text size="sm">Small text (sm)</bit-text>
+<bit-text size="md">Medium text (md)</bit-text>
+<bit-text size="lg">Large text (lg)</bit-text>
+<bit-text size="xl">Extra large text (xl)</bit-text>
+<bit-text size="2xl">2XL text (2xl)</bit-text>
 ```
 
 </ComponentPreview>
-
-::: tip Size Range
-Sizes continue up to `9xl` (128px) for hero text and large displays.
-:::
 
 ## Colors
 
@@ -166,7 +176,16 @@ Use semantic colors to convey meaning and maintain consistency.
 
 ### Text Colors
 
-Automatic text colors that adapt to your theme.
+Automatic text colors that adapt to your theme. Each value maps to a semantic `--text-color-*` token from the theme.
+
+| `color`    | Token                      | Contrast step          | WCAG                |
+| ---------- | -------------------------- | ---------------------- | ------------------- |
+| `heading`  | `--text-color-heading`     | `--color-contrast-900` | AAA                 |
+| `body`     | `--text-color-body`        | `--color-contrast-800` | AAA                 |
+| `muted`    | `--text-color-secondary`   | `--color-contrast-600` | AA                  |
+| `tertiary` | `--text-color-tertiary`    | `--color-contrast-500` | AA (large text)     |
+| `disabled` | `--text-color-disabled`    | `--color-contrast-400` | decorative only     |
+| `contrast` | `--text-color-contrast`    | `--color-contrast-100` | for dark backgrounds|
 
 <ComponentPreview center vertical>
 
@@ -174,6 +193,7 @@ Automatic text colors that adapt to your theme.
 <bit-text color="heading">Heading color (highest contrast)</bit-text>
 <bit-text color="body">Body text color (default)</bit-text>
 <bit-text color="muted">Muted/secondary text</bit-text>
+<bit-text color="tertiary">Tertiary text</bit-text>
 <bit-text color="disabled">Disabled text</bit-text>
 <bit-text color="contrast">Contrast text (for colored backgrounds)</bit-text>
 ```
@@ -293,8 +313,8 @@ Block elements (`p`, `div`, `h1`–`h6`) render as `display: block`. Inline elem
 
 ```html
 <!-- Block-level — role="heading" + aria-level set automatically -->
-<bit-text as="h1" variant="heading" size="3xl">H1 Heading</bit-text>
-<bit-text as="h2" variant="heading" size="2xl">H2 Heading</bit-text>
+<bit-text as="h1" variant="heading" size="2xl">H1 Heading</bit-text>
+<bit-text as="h2" variant="heading" size="xl">H2 Heading</bit-text>
 <bit-text as="p">Paragraph with proper semantics</bit-text>
 <bit-text as="div">Div container</bit-text>
 
@@ -385,42 +405,32 @@ Show file information with truncation using width constraints.
 
 </ComponentPreview>
 
-## Guideline Recipe: Distill Status at a Glance
-
-**Guideline: distill** — consistent use of semantic `color` and `variant` attributes lets a page communicate status without icons or extra markup.
-
-```html
-<div style="display:flex;flex-direction:column;gap:var(--size-1)">
-  <bit-text variant="overline" color="subtle">System status</bit-text>
-  <bit-text variant="heading" size="sm" weight="bold">All systems operational</bit-text>
-  <bit-text variant="caption" color="success">Checked 2 minutes ago</bit-text>
-</div>
-
-<!-- Incident variant -->
-<div style="display:flex;flex-direction:column;gap:var(--size-1);margin-top:var(--size-4)">
-  <bit-text variant="overline" color="subtle">Incident</bit-text>
-  <bit-text variant="heading" size="sm" weight="bold" color="danger">Elevated error rate</bit-text>
-  <bit-text variant="caption" color="subtle">Started 14 minutes ago · investigating</bit-text>
-</div>
-```
-
-**Tip:** Use `variant="overline"` + `variant="heading"` + `variant="caption"` as a three-tier hierarchy to communicate label, title, and metadata without any extra container components.
-
 ## API Reference
 
 ### Attributes
 
-| Attribute  | Type                                                                                                                                    | Default | Description                                                           |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------- |
-| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                                                   | —       | Text variant style                                                    |
-| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| '4xl' \| '5xl' \| '6xl' \| '7xl' \| '8xl' \| '9xl'`                          | —       | Font size (falls back to variant default, then `base`)                |
-| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                                          | —       | Font weight (falls back to variant default, then `normal`)            |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'disabled' \| 'contrast'` | —       | Text color (falls back to variant default, then `inherit`)            |
-| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                            | —       | Text alignment (forces `display: block`)                              |
-| `truncate` | `boolean`                                                                                                                               | —       | Single-line truncation with ellipsis                                  |
-| `lines`    | `number`                                                                                                                                | —       | Clamp to N lines with ellipsis (multi-line truncation)                |
-| `italic`   | `boolean`                                                                                                                               | —       | Italic font style                                                     |
-| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                           | —       | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level` |
+| Attribute  | Type                                                                                                                                    | Default | Description                                                                                                               |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                                                   | —       | Text variant style                                                                                                        |
+| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'`                                                                                        | —       | Font size. `variant="heading"` resolves against `--heading-*` tokens; all other variants resolve against `--text-*` tokens |
+| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                                          | —       | Font weight (falls back to variant default, then `normal`)                                                                |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'tertiary' \| 'disabled' \| 'contrast'` | — | Text color (falls back to variant default, then `inherit`)                                                           |
+| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                            | —       | Text alignment (forces `display: block`)                                                                                  |
+| `truncate` | `boolean`                                                                                                                               | —       | Single-line truncation with ellipsis                                                                                      |
+| `lines`    | `number`                                                                                                                                | —       | Clamp to N lines with ellipsis (multi-line truncation)                                                                    |
+| `italic`   | `boolean`                                                                                                                               | —       | Italic font style                                                                                                         |
+| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                         | —       | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level`                                                     |
+
+### Variant Defaults
+
+| Variant    | Default size          | Default weight        | Default color                    | Line height               | Letter spacing            |
+| ---------- | --------------------- | --------------------- | -------------------------------- | ------------------------- | ------------------------- |
+| `body`     | `--text-base` (16px)  | `--font-normal` (400) | `--text-color-body` (contrast-800)    | `--leading-normal` (1.5)  | `normal`                  |
+| `heading`  | `--heading-md` (24px) | `--font-semibold` (600) | `--text-color-heading` (contrast-900) | `--leading-tight` (1.15)  | `--tracking-header` (-0.025em) |
+| `label`    | `--text-sm` (14px)    | `--font-medium` (500) | `--text-color-heading` (contrast-900) | `--leading-snug` (1.375)  | `normal`                  |
+| `caption`  | `--text-sm` (14px)    | `--font-normal` (400) | `--text-color-secondary` (contrast-600) | `--leading-normal` (1.5) | `normal`                 |
+| `overline` | `--text-xs` (12px)    | `--font-semibold` (600) | `--text-color-body` (contrast-800) | `--leading-none` (1)    | `0.08em`                  |
+| `code`     | `--text-sm` (14px)    | `--font-normal` (400) | `--text-color-body` (contrast-800)    | `--leading-normal` (1.5)  | `normal`                  |
 
 ### Slots
 
@@ -473,10 +483,12 @@ Always set `as` for headings and form labels. For page titles, pair `as="h1"` wi
 - Pair `variant="overline"` with `size="xs"` for category labels and eyebrow headings.
 - Use `truncate` (single-line) or `lines="N"` (multi-line) with a width constraint on the element or its container.
 - Prefer `lines` over `truncate` for card bodies and article previews where two or three lines are acceptable.
+- Set an explicit `size` when using `variant="heading"` to select the correct step from the heading scale.
 
 **Don't:**
 
-- Use heading sizes (`3xl` and above) without also setting `variant="heading"` — the variant controls line height and weight defaults.
+- Forget that `variant="heading"` uses the heading scale — `size="2xl"` on a heading renders at 4rem (64px), not 1.5rem.
 - Rely on `color` alone to convey meaning — always pair with a descriptive text label.
 - Use `bit-text` as a replacement for native block elements (`<p>`, `<h2>`, etc.) in long-form content — prefer the `as` attribute instead.
 - Set both `truncate` and `lines` on the same element; use one or the other.
+- Use `color="muted"` for headings — it resolves to `--text-color-secondary` (contrast-600) which may not meet AAA for small heading sizes.

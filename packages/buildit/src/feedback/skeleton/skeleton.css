@@ -2,7 +2,7 @@
   :host {
     --_bg: var(--skeleton-bg, var(--color-contrast-200));
     --_highlight: var(--skeleton-highlight, var(--color-contrast-100));
-    --_radius: var(--skeleton-radius, var(--rounded-md));
+    --_radius: var(--skeleton-radius, var(--rounded-lg));
     --_circle-size: var(--skeleton-size, var(--size-10));
     --_width: var(--skeleton-width, 100%);
     --_height: var(--skeleton-height, var(--size-4));

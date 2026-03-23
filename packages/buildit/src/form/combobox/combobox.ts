@@ -580,7 +580,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
               // Apply focused state when keyboard nav lands here (focusedIndex === -1 means create row)
               if (focusedIndex.value === -1) createEl.setAttribute('data-focused', '');
 
-              createEl.addEventListener('mousedown', (e) => {
+              createEl.addEventListener('pointerdown', (e: PointerEvent) => {
                 e.preventDefault();
               });
 

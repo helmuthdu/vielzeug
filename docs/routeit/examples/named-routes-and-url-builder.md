@@ -20,17 +20,16 @@ import { createRouter } from '@vielzeug/routeit';
 
 const router = createRouter({ base: '/app' });
 
-router.routes([
-  { path: '/', name: 'home', handler: renderHome },
-  { path: '/users', name: 'userList', handler: renderUsers },
-  { path: '/users/:id', name: 'userDetail', handler: ({ params }) => renderUser(params.id) },
-  { path: '/users/:id/posts/:postId', name: 'userPost', handler: ({ params }) => renderPost(params) },
-]);
-router.start();
+router
+  .on('/', renderHome, { name: 'home' })
+  .on('/users', renderUsers, { name: 'userList' })
+  .on('/users/:id', ({ params }) => renderUser(params.id), { name: 'userDetail' })
+  .on('/users/:id/posts/:postId', ({ params }) => renderPost(params), { name: 'userPost' })
+  .start();
 
 // Navigate by name — never hard-code paths
-router.navigate({ name: 'userDetail', params: { id: '42' } });
-router.navigate({ name: 'userDetail', params: { id: '42' }, hash: 'activity' });
+await router.navigate({ name: 'userDetail', params: { id: '42' } });
+await router.navigate({ name: 'userDetail', params: { id: '42' }, hash: 'activity' });
 
 // Build URLs for links
 router.url('userDetail', { id: '42' }); // '/app/users/42'

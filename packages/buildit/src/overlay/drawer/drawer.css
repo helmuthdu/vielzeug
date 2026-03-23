@@ -1,9 +1,12 @@
 @layer buildit.base {
   :host {
-    --_backdrop: var(--drawer-backdrop, rgb(0 0 0 / 50%));
-    --_panel-bg: var(--drawer-bg, var(--color-canvas));
+    --_backdrop-bg: var(--drawer-backdrop, color-mix(in srgb, var(--color-canvas) 40%, transparent));
+    --_backdrop-filter: none;
+    --_panel-bg: var(--drawer-bg, light-dark(color-mix(in srgb, var(--color-contrast-50) 85%, transparent), color-mix(in srgb, var(--color-contrast-100) 85%, transparent)));
+    --_panel-blur: var(--drawer-panel-blur, var(--blur-md));
     --_panel-shadow: var(--drawer-shadow, var(--shadow-xl));
-    --_transition: var(--transition-normal);
+    --_panel-border-color: light-dark(color-mix(in srgb, var(--color-contrast-900) 8%, transparent), color-mix(in srgb, var(--color-contrast-100) 8%, transparent));
+    --_panel-bleed: var(--size-8);
 
     display: contents;
   }
@@ -19,6 +22,9 @@
     height: 100%;
     max-height: 100%;
     pointer-events: none;
+    transition:
+      display var(--transition-normal) allow-discrete,
+      overlay var(--transition-normal) allow-discrete;
   }
 
   dialog:not([open]) {
@@ -26,26 +32,26 @@
   }
 
   dialog[open] {
+    display: flex;
     pointer-events: auto;
   }
 
   dialog::backdrop {
-    background: var(--_backdrop);
+    background: var(--_backdrop-bg);
     opacity: 1;
-    transition: var(
-      --_motion-transition,
-      opacity var(--_transition) ease,
-      overlay var(--_transition) ease allow-discrete,
-      display var(--_transition) ease allow-discrete
-    );
-
-    @starting-style {
-      opacity: 0;
-    }
+    backdrop-filter: var(--_backdrop-filter);
+    transition:
+      display var(--transition-normal) allow-discrete,
+      overlay var(--transition-normal) allow-discrete,
+      opacity var(--transition-normal),
+      backdrop-filter var(--transition-normal);
   }
 
-  dialog.closing::backdrop {
-    opacity: 0;
+  @starting-style {
+    dialog[open]::backdrop {
+      opacity: 0;
+      backdrop-filter: blur(0);
+    }
   }
 
   .panel {
@@ -55,137 +61,111 @@
     flex-direction: column;
     overflow: hidden;
     background: var(--_panel-bg);
+    border: var(--border) solid var(--_panel-border-color);
     box-shadow: var(--_panel-shadow);
-
-    /* Default: right drawer */
-    transition: var(
-      --_motion-transition,
-      transform var(--_transition) ease,
-      overlay var(--_transition) ease allow-discrete,
-      display var(--_transition) ease allow-discrete
-    );
+    opacity: 1;
+    backdrop-filter: blur(var(--_panel-blur));
+    transform: translate3d(0, 0, 0);
+    transition:
+      opacity var(--transition-normal),
+      transform var(--transition-normal),
+      display var(--transition-normal) allow-discrete;
   }
 
-  dialog.closing .panel {
-    transform: var(--_panel-exit-transform);
+  @starting-style {
+    dialog[open] .panel {
+      opacity: 0;
+      transform: var(--_panel-exit-transform, translate3d(0, 0, 0));
+    }
   }
-
-  /* ========================
-       Placement variants
-       ======================== */
 
   /* left */
   :host([placement='left']) .panel {
-    --_panel-exit-transform: translateX(-100%);
+    --_panel-exit-transform: translateX(calc(-100% - var(--_panel-bleed)));
 
     inset-block: 0;
     inset-inline-start: 0;
-    width: var(--drawer-size, 20rem);
-    max-width: calc(100vw - var(--size-4));
-
-    @starting-style {
-      transform: translateX(-100%);
-    }
+    width: calc(var(--drawer-size, 20rem) + var(--_panel-bleed));
+    max-width: calc(100dvw + var(--_panel-bleed));
+    padding-inline-start: var(--_panel-bleed);
+    margin-inline-start: calc(var(--_panel-bleed) * -1);
+    border-block: none;
+    border-inline-start: none;
   }
 
   /* right (default) */
   :host(:not([placement])) .panel,
   :host([placement='right']) .panel {
-    --_panel-exit-transform: translateX(100%);
+    --_panel-exit-transform: translateX(calc(100% + var(--_panel-bleed)));
 
     inset-block: 0;
     inset-inline-end: 0;
-    width: var(--drawer-size, 20rem);
-    max-width: calc(100vw - var(--size-4));
-
-    @starting-style {
-      transform: translateX(100%);
-    }
+    width: calc(var(--drawer-size, 20rem) + var(--_panel-bleed));
+    max-width: calc(100dvw + var(--_panel-bleed));
+    padding-inline-end: var(--_panel-bleed);
+    margin-inline-end: calc(var(--_panel-bleed) * -1);
+    border-block: none;
+    border-inline-end: none;
   }
 
   /* top */
   :host([placement='top']) .panel {
-    --_panel-exit-transform: translateY(-100%);
+    --_panel-exit-transform: translateY(calc(-100% - var(--_panel-bleed)));
 
     inset-block-start: 0;
     inset-inline: 0;
-    height: var(--drawer-size, 16rem);
-    max-height: calc(100dvh - var(--size-4));
-
-    @starting-style {
-      transform: translateY(-100%);
-    }
+    height: calc(var(--drawer-size, 16rem) + var(--_panel-bleed));
+    max-height: calc(100dvh + var(--_panel-bleed));
+    padding-block-start: var(--_panel-bleed);
+    margin-block-start: calc(var(--_panel-bleed) * -1);
+    border-block-start: none;
+    border-inline: none;
   }
 
   /* bottom */
   :host([placement='bottom']) .panel {
-    --_panel-exit-transform: translateY(100%);
+    --_panel-exit-transform: translateY(calc(100% + var(--_panel-bleed)));
 
     inset-block-end: 0;
     inset-inline: 0;
-    height: var(--drawer-size, 16rem);
-    max-height: calc(100dvh - var(--size-4));
-
-    @starting-style {
-      transform: translateY(100%);
-    }
+    height: calc(var(--drawer-size, 16rem) + var(--_panel-bleed));
+    max-height: calc(100dvh + var(--_panel-bleed));
+    padding-block-end: var(--_panel-bleed);
+    margin-block-end: calc(var(--_panel-bleed) * -1);
+    border-block-end: none;
+    border-inline: none;
   }
 
-  /*
-     * RTL overrides for horizontal placements:
-     * 'left' uses inset-inline-start (= physical right in RTL), so the out-of-view
-     * position shifts to the opposite physical side.
-     * 'right' uses inset-inline-end (= physical left in RTL), same logic applies.
-     */
+  /* RTL overrides */
   :host(:dir(rtl)[placement='left']) .panel {
-    --_panel-exit-transform: translateX(100%);
-
-    @starting-style {
-      transform: translateX(100%);
-    }
+    --_panel-exit-transform: translateX(calc(100% + var(--_panel-bleed)));
   }
 
   :host(:dir(rtl)[placement='right']) .panel,
   :host(:dir(rtl):not([placement])) .panel {
-    --_panel-exit-transform: translateX(-100%);
-
-    @starting-style {
-      transform: translateX(-100%);
-    }
+    --_panel-exit-transform: translateX(calc(-100% - var(--_panel-bleed)));
   }
 
-  /* ========================
-       Size utilities
-       ======================== */
-
-  :host([size='sm']) {
-    --drawer-size: 14rem;
-  }
-
-  :host([size='lg']) {
-    --drawer-size: 32rem;
-  }
-
-  :host([size='full']) {
-    --drawer-size: 100%;
-  }
+  /* Size utilities */
+  :host([size='sm']) { --drawer-size: 14rem; }
+  :host([size='lg']) { --drawer-size: 32rem; }
+  :host([size='full']) { --drawer-size: 100%; }
 
   :host([size='full']) .panel {
-    max-width: 100%;
-    max-height: 100%;
+    width: calc(100% + var(--_panel-bleed));
+    max-width: none;
+    height: calc(100% + var(--_panel-bleed));
+    max-height: none;
+    border: none;
   }
 
-  /* ========================
-       Header / Body / Footer slots
-       ======================== */
-
+  /* Header / Body / Footer */
   .header {
     display: flex;
     flex-shrink: 0;
-    gap: var(--size-4);
+    gap: var(--size-2);
     align-items: center;
-    padding-block: var(--size-4);
-    padding-inline: var(--size-4) var(--size-10);
+    padding: var(--size-4);
     border-bottom: var(--border) solid var(--color-contrast-200);
   }
 
@@ -214,27 +194,29 @@
     border-top: var(--border) solid var(--color-contrast-200);
   }
 
-  /* Close button — absolute-positioned, independent of header slot presence */
+  .header[hidden], .footer[hidden], .close-btn[hidden] {
+    display: none;
+  }
+
   .close-btn {
     all: unset;
-    position: absolute;
-    inset-block-start: var(--size-3);
-    inset-inline-end: var(--size-3);
-    z-index: 1;
+    box-sizing: border-box;
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    min-width: var(--_touch-target);
-    min-height: var(--_touch-target);
-    padding: var(--size-1);
+    width: var(--size-8);
+    height: var(--size-8);
+    margin-inline-start: auto;
     color: var(--color-contrast-500);
     cursor: pointer;
     border-radius: var(--rounded-sm);
+    transition: var(--transition-fast);
   }
 
   .close-btn:hover {
     color: var(--color-contrast-800);
-    background: var(--color-contrast-100);
+    background: var(--color-contrast-200);
   }
 
   .close-btn:focus-visible {
@@ -245,20 +227,29 @@
     :host([placement='left']) .panel,
     :host(:not([placement])) .panel,
     :host([placement='right']) .panel {
-      width: min(var(--drawer-size, 20rem), calc(100vw - var(--size-2)));
-      max-width: calc(100vw - var(--size-2));
+      width: calc(min(var(--drawer-size, 20rem), calc(100vw - var(--size-2))) + var(--_panel-bleed));
+      max-width: calc(100vw - var(--size-2) + var(--_panel-bleed));
     }
 
     :host([placement='top']) .panel,
     :host([placement='bottom']) .panel {
-      height: min(var(--drawer-size, 16rem), calc(100dvh - var(--size-2)));
-      max-height: calc(100dvh - var(--size-2));
+      height: calc(min(var(--drawer-size, 16rem), calc(100dvh - var(--size-2))) + var(--_panel-bleed));
+      max-height: calc(100dvh - var(--size-2) + var(--_panel-bleed));
     }
 
-    .header,
-    .body,
-    .footer {
+    .header, .body, .footer {
       padding: var(--size-3);
     }
   }
 }
+
+@layer buildit.config {
+  :host([backdrop='blur']) {
+    --_backdrop-filter: blur(var(--blur-xs));
+  }
+
+  :host([backdrop='transparent']) {
+    --_backdrop-bg: transparent;
+  }
+}
+

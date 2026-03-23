@@ -13,7 +13,7 @@ description: Complete API reference for Routeit with type signatures and paramet
 | ------------------- | --------------------------------------- | -------------- | ---------------------------------------------------- |
 | `createRouter()`    | Create typed router with route handlers | Sync           | Call start() once after route registration           |
 | `router.navigate()` | Navigate programmatically               | Async          | Await navigation when middleware performs async work |
-| `router.buildUrl()` | Build links from named routes/params    | Sync           | Provide all required params for typed route patterns |
+| `router.url()`      | Build links from named routes/params    | Sync           | Provide all required params for typed route patterns |
 
 ## `createRouter(options?)`
 

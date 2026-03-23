@@ -1,12 +1,12 @@
 # Sidebar
 
-A collapsible navigation sidebar with labelled groups and individual items. Renders a semantic `<nav>` landmark and supports icon-only collapse mode, keyboard navigation, and full ARIA compliance.
+A collapsible navigation sidebar with labelled groups and individual items. It uses the same frosted panel surface treatment as the drawer, while still supporting icon-only collapse mode, keyboard navigation, and full ARIA compliance.
 
 ## Features
 
 - 🗂️ **3 Sub-components**: `bit-sidebar`, `bit-sidebar-group`, `bit-sidebar-item`
 - 🔄 **Collapsible**: smooth icon-only mode with animated width transition
-- 🎨 **3 Variants**: default (bordered), floating (shadowed), inset (subtle background)
+- 🎨 **3 Variants**: default (drawer-style panel), floating (rounded elevated panel), inset (subtle background)
 - 🔗 **Link or button**: `bit-sidebar-item` renders an `<a>` when `href` is set, otherwise a `<button>`
 - 📌 **Active indicator**: visual pill indicator for the current page item
 - 🔘 **Collapsible groups**: optional accordion-style group headers
@@ -152,7 +152,7 @@ Use the `end` slot on `bit-sidebar-item` for trailing content such as notificati
 
 ### Floating
 
-Elevates the sidebar with a shadow and rounded corners — suited for dashboard shells where the sidebar floats over the background.
+Uses the same drawer-inspired panel surface with a stronger floating presentation, rounded corners, and more separation from the page background.
 
 <ComponentPreview>
 
@@ -182,7 +182,7 @@ Elevates the sidebar with a shadow and rounded corners — suited for dashboard 
 
 ### Inset
 
-A subtle variant with a slightly tinted background and no visible border — blends naturally into page content areas.
+A subtle variant with a slightly tinted background and no visible border or elevated panel shadow — blends naturally into page content areas.
 
 <ComponentPreview>
 

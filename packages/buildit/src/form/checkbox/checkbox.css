@@ -5,7 +5,7 @@
 
   :host {
     --_size: var(--checkbox-size, var(--size-5));
-    --_radius: var(--checkbox-radius, var(--rounded-md));
+    --_radius: var(--checkbox-radius, var(--rounded-lg));
     --_font-size: var(--checkbox-font-size, var(--text-sm));
     --_bg: var(--checkbox-bg, var(--color-contrast-200));
     --_border: var(--checkbox-border-color, var(--color-contrast-300));

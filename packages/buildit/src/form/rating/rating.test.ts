@@ -124,6 +124,52 @@ describe('bit-rating', () => {
         expect(fixture.element.getAttribute('value')).toBe('0');
       }
     });
+
+    it('clicking a different star updates the selected state', async () => {
+      fixture = await mount('bit-rating', { attrs: { value: '2' } });
+
+      const star2 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
+      const star4 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
+      const star3 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="3"]');
+
+      expect(star2?.getAttribute('aria-checked')).toBe('true');
+      expect(star2?.hasAttribute('data-filled')).toBe(true);
+      expect(star3?.hasAttribute('data-filled')).toBe(false);
+
+      if (star4) {
+        fire.click(star4);
+        await fixture.flush();
+      }
+
+      expect(fixture.element.getAttribute('value')).toBe('4');
+      expect(star2?.getAttribute('aria-checked')).toBe('false');
+      expect(star4?.getAttribute('aria-checked')).toBe('true');
+      expect(star3?.hasAttribute('data-filled')).toBe(true);
+      expect(star4?.hasAttribute('data-filled')).toBe(true);
+    });
+
+    it('updates selection on consecutive star clicks', async () => {
+      fixture = await mount('bit-rating', { attrs: { value: '1' } });
+
+      const star2 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
+      const star5 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="5"]');
+
+      if (star2) {
+        fire.click(star2);
+        await fixture.flush();
+      }
+
+      expect(fixture.element.getAttribute('value')).toBe('2');
+
+      if (star5) {
+        fire.click(star5);
+        await fixture.flush();
+      }
+
+      expect(fixture.element.getAttribute('value')).toBe('5');
+      expect(star2?.getAttribute('aria-checked')).toBe('false');
+      expect(star5?.getAttribute('aria-checked')).toBe('true');
+    });
   });
 
   // ─── Events ──────────────────────────────────────────────────────────────────

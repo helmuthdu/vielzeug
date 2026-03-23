@@ -211,7 +211,7 @@ shuffle([1, 2, 3, 4, 5]); // new shuffled array, e.g. [3, 1, 5, 2, 4]
 ### Async Operations
 
 ```ts
-import { parallel, retry, race, waitFor } from '@vielzeug/toolkit';
+import { parallel, retry, race, waitFor, Scheduler } from '@vielzeug/toolkit';
 
 // Process with concurrency limit
 const users = await parallel(3, ids, async (id) => fetchUser(id));
@@ -219,11 +219,25 @@ const users = await parallel(3, ids, async (id) => fetchUser(id));
 // Retry with exponential backoff
 const data = await retry(() => fetchData(), { times: 3, delay: 500, backoff: 2 });
 
+// Retry with per-attempt delay and selective predicate
+const data = await retry(() => fetchData(), {
+  times: 4,
+  retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
+  shouldRetry: (err) => !(err instanceof Response && err.status < 500),
+});
+
 // Ensure loading state shows for at least 300ms (prevents flicker)
 const result = await race(fetchQuickData(), 300);
 
 // Poll until ready
 await waitFor(() => document.querySelector('#app') !== null, { timeout: 5000 });
+
+// Schedule a low-priority background task (e.g. cache cleanup)
+const scheduler = new Scheduler();
+void scheduler.postTask(() => pruneStaleEntries(), {
+  delay: 5 * 60_000,
+  priority: 'background',
+});
 ```
 
 ### Composition

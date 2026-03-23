@@ -41,8 +41,9 @@ export function until(
     (err) => {
       if (onError) {
         state.value = { done: true, value: onError(err) };
+      } else {
+        state.value = { done: true, value: `Error: ${String(err)}` };
       }
-      // Without an onError handler, pendingFn stays visible indefinitely.
     },
   );
 

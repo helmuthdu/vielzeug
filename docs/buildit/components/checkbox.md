@@ -311,21 +311,6 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 
 ---
 
-## Guideline Recipe: Onboard with Opt-In Preferences
-
-**Guideline: onboard** — presenting preferences as a checkbox list during setup gives users ownership from the very first interaction.
-
-```html
-<bit-checkbox-group label="Email notifications" name="notifications" orientation="vertical">
-  <bit-checkbox value="product" checked>Product updates and new features</bit-checkbox>
-  <bit-checkbox value="security" checked>Security alerts</bit-checkbox>
-  <bit-checkbox value="tips">Tips and onboarding guides</bit-checkbox>
-  <bit-checkbox value="marketing">Promotions and offers</bit-checkbox>
-</bit-checkbox-group>
-```
-
-**Tip:** Pre-check only high-value, user-benefit options (like security alerts) — avoid pre-checking promotional content.
-
 ## API Reference
 
 ### `bit-checkbox` Attributes

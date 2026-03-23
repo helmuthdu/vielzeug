@@ -257,45 +257,6 @@ When `href` is provided, `bit-button` renders as an `<a role="button">` element 
 Always set `rel="noopener noreferrer"` when using `target="_blank"` to prevent tabnapping attacks.
 :::
 
-## Guideline Recipes
-
-### Bolder Primary Action
-
-Use one high-emphasis action and keep alternatives quieter.
-
-<ComponentPreview center>
-
-```html
-<div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-  <bit-button
-    color="primary"
-    variant="solid"
-    style="--button-padding: 0.75rem 1.2rem; --button-shadow: var(--shadow-lg); --button-font-size: var(--text-base);">
-    Publish Changes
-  </bit-button>
-  <bit-button color="primary" variant="outline">Preview</bit-button>
-  <bit-button variant="ghost" color="secondary">Cancel</bit-button>
-</div>
-```
-
-</ComponentPreview>
-
-### Quieter Action Cluster
-
-Use outline, ghost, and text variants for dense toolbars and secondary actions.
-
-<ComponentPreview center>
-
-```html
-<bit-button-group attached>
-  <bit-button variant="text" size="sm">Sort</bit-button>
-  <bit-button variant="ghost" size="sm">Filter</bit-button>
-  <bit-button variant="outline" size="sm" color="secondary">Export</bit-button>
-</bit-button-group>
-```
-
-</ComponentPreview>
-
 ## Button Groups
 
 ### Orientation

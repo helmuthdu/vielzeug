@@ -7,9 +7,9 @@ A page-navigation control for splitting content across multiple pages. Renders n
 - 🔢 **Numbered pages** with automatic ellipsis when the range is large
 - ⏮️ **First / Last navigation** buttons (opt-in)
 - ◀️ **Previous / Next** buttons (opt-in)
-- 🎨 **6 Theme Colors**: primary, secondary, info, success, warning, error
-- �️ **8 Visual Variants**: solid, flat, bordered, outline, ghost, text, frost, glass
-- �📏 **3 Sizes**: sm, md, lg
+- 🌈 **6 Theme Colors**: primary, secondary, info, success, warning, error
+- 🎨 **8 Variants**: solid, flat, bordered, outline, ghost, text, frost, glass
+- 📏 **3 Sizes**: sm, md, lg
 - ♿ **Accessible**: `aria-current="page"` on active button, configurable `aria-label`
 
 ## Source Code
@@ -167,22 +167,6 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 ```
 
 </ComponentPreview>
-
-## Guideline Recipe: Clarify Current Page Position
-
-**Guideline: clarify** — including first/last navigation and an ellipsis range makes the user's exact position in a large dataset immediately explicit.
-
-```html
-<bit-pagination
-  total="500"
-  page-size="20"
-  value="12"
-  show-first-last
-  sibling-count="1"
-  aria-label="Search results pages"></bit-pagination>
-```
-
-**Tip:** Combine with a `<bit-text variant="caption" color="subtle">` showing `"Showing 221–240 of 500"` above the table for users who scan results rather than navigate page-by-page.
 
 ## API Reference
 

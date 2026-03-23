@@ -77,14 +77,14 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
       checkElement.setAttribute('aria-hidden', 'true');
       checkElement.innerHTML = deps.checkIconHTML;
       optionElement.appendChild(checkElement);
-      optionElement.addEventListener('mousedown', (event: MouseEvent) => {
+      optionElement.addEventListener('pointerdown', (event: PointerEvent) => {
         event.preventDefault();
       });
       optionElement.addEventListener('click', (event: MouseEvent) => {
         event.stopPropagation();
         deps.onSelectOption(option, event);
       });
-      optionElement.addEventListener('mouseenter', () => {
+      optionElement.addEventListener('pointerenter', () => {
         deps.setFocusedIndex(item.index);
 
         for (const focusedElement of cachedListbox!.querySelectorAll<HTMLElement>('[data-focused]')) {

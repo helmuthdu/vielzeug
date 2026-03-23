@@ -15,7 +15,7 @@ Start with the [Overview](./index.md) for installation and a quick intro, then u
 
 `defineComponent({ tag, setup, props?, styles?, formAssociated?, shadow? })` registers a custom element and returns the tag name.
 
-Tags are strict: registering the same tag shows a warning and skips duplicate registration.
+Tags are strict: registering the same tag throws `[craftit:E9]`.
 
 ```ts
 import { defineComponent, html, signal } from '@vielzeug/craftit';
@@ -160,6 +160,10 @@ defineComponent({
 
 ## `each`
 
+Reactive `each()` sources (Signal/getter) require an explicit `key` option.
+
+For frequently changing lists, prefer delegated events on a parent node.
+
 ```ts
 import { defineComponent, html, signal } from '@vielzeug/craftit';
 import { each } from '@vielzeug/craftit/directives';
@@ -172,10 +176,15 @@ defineComponent({
     ]);
 
     return html`
-      <ul>
+      <ul @click=${(e: Event) => {
+        const target = (e.target as HTMLElement).closest<HTMLElement>('[data-task-id]');
+        if (!target) return;
+
+        console.log('clicked task', target.dataset.taskId);
+      }}>
         ${each(
           tasks,
-          (task) => html`<li>${task.text}</li>`,
+          (task) => html`<li data-task-id=${task.id}>${task.text}</li>`,
           () => html`<li>No tasks</li>`,
           { key: (task) => task.id },
         )}
@@ -293,7 +302,7 @@ defineComponent<Record<string, never>, { close: void }>({
 ## Context (Provide / Inject)
 
 ```ts
-import { createContext, defineComponent, html, inject, provide, signal } from '@vielzeug/craftit';
+import { createContext, defineComponent, html, injectOptional, provide, signal } from '@vielzeug/craftit';
 
 const COUNT_CTX = createContext<ReturnType<typeof signal<number>>>('count');
 
@@ -310,7 +319,7 @@ defineComponent({
 
 defineComponent({
   setup() {
-    const count = inject(COUNT_CTX);
+    const count = injectOptional(COUNT_CTX);
 
     return html`<p>Count: ${() => count?.value ?? 0}</p>`;
   },

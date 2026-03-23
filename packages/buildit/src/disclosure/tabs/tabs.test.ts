@@ -42,6 +42,66 @@ describe('bit-tabs', () => {
       expect(onChange).toHaveBeenCalledTimes(1);
       expect((onChange.mock.calls[0][0] as CustomEvent).detail.value).toBe('settings');
     });
+
+    it('falls back to first enabled tab when value is missing', async () => {
+      fixture = await mount('bit-tabs', { html: htmlTabs });
+
+      await fixture.flush();
+
+      const panels = fixture.element.querySelectorAll('bit-tab-panel');
+      const firstPanel = panels[0].shadowRoot?.querySelector('[role="tabpanel"]');
+
+      expect(fixture.element.getAttribute('value')).toBe('overview');
+      expect(firstPanel?.getAttribute('aria-hidden')).toBe('false');
+    });
+
+    it('falls back to first enabled tab when value does not exist', async () => {
+      fixture = await mount('bit-tabs', { attrs: { value: 'missing' }, html: htmlTabs });
+
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('overview');
+    });
+
+    it('keeps configured selection when tab items are assigned after connect', async () => {
+      fixture = await mount('bit-tabs', { attrs: { value: 'settings' } });
+
+      fixture.element.innerHTML = htmlTabs;
+      await fixture.flush();
+
+      const panels = fixture.element.querySelectorAll('bit-tab-panel');
+      const overviewPanel = panels[0].shadowRoot?.querySelector('[role="tabpanel"]');
+      const settingsPanel = panels[1].shadowRoot?.querySelector('[role="tabpanel"]');
+
+      expect(fixture.element.getAttribute('value')).toBe('settings');
+      expect(overviewPanel?.getAttribute('aria-hidden')).toBe('true');
+      expect(settingsPanel?.getAttribute('aria-hidden')).toBe('false');
+    });
+
+    it('keeps initially selected panel visible across reconnect', async () => {
+      fixture = await mount('bit-tabs', { attrs: { value: 'settings' }, html: htmlTabs });
+
+      const getPanelHidden = (value: string) =>
+        fixture.element
+          .querySelector<HTMLElement>(`bit-tab-panel[value="${value}"]`)
+          ?.shadowRoot?.querySelector('[role="tabpanel"]')
+          ?.getAttribute('aria-hidden');
+
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('settings');
+      expect(getPanelHidden('settings')).toBe('false');
+      expect(getPanelHidden('overview')).toBe('true');
+
+      fixture.element.remove();
+      await fixture.flush();
+      document.body.appendChild(fixture.element);
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('settings');
+      expect(getPanelHidden('settings')).toBe('false');
+      expect(getPanelHidden('overview')).toBe('true');
+    });
   });
 
   describe('Accessibility', () => {

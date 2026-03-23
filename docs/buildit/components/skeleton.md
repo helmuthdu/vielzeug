@@ -149,7 +149,7 @@ Add `striped` to replace the shimmer with a diagonal stripe pattern. Useful for 
     <bit-skeleton striped variant="text" lines="3" width="98%"></bit-skeleton>
 
     <!-- Action button -->
-    <bit-skeleton striped width="7rem" height="2rem" style="border-radius: var(--rounded-md);"></bit-skeleton>
+    <bit-skeleton striped width="7rem" height="2rem" style="border-radius: var(--rounded-lg);"></bit-skeleton>
   </bit-grid>
 </bit-card>
 ```
@@ -161,26 +161,6 @@ The spacing between lines is adjustable via the `--skeleton-stripe-size` CSS cus
 ```html
 <bit-skeleton striped width="100%" height="2rem" style="--skeleton-stripe-size: 16px"></bit-skeleton>
 ```
-
-## Guideline Recipe: Delight with Purposeful Loading States
-
-**Guideline: delight** — a skeleton that mirrors the real content’s shape tells users exactly what’s coming and makes the perceived wait feel shorter.
-
-```html
-<!-- Show while team member data loads -->
-<div style="display:flex;flex-direction:column;gap:var(--size-3)">
-  <div style="display:flex;align-items:center;gap:var(--size-3)">
-    <bit-skeleton variant="circle" size="lg"></bit-skeleton>
-    <div style="flex:1;display:flex;flex-direction:column;gap:var(--size-1)">
-      <bit-skeleton variant="text" style="width:120px"></bit-skeleton>
-      <bit-skeleton variant="text" style="width:80px"></bit-skeleton>
-    </div>
-  </div>
-  <bit-skeleton variant="rectangle" style="height:80px;border-radius:var(--radius-2)"></bit-skeleton>
-</div>
-```
-
-**Tip:** Match the skeleton structure to the actual component layout (avatar + 2 text lines + content box) so there’s no jarring jump when real data arrives.
 
 ## API Reference
 
@@ -207,7 +187,7 @@ This component does not emit custom events.
 | ---------------------------- | --------------------------------------------------------- | --------------------------- |
 | `--skeleton-bg`              | Base color                                                | `var(--color-contrast-200)` |
 | `--skeleton-highlight`       | Shimmer highlight color                                   | `var(--color-contrast-100)` |
-| `--skeleton-radius`          | Border radius                                             | `var(--rounded-md)`         |
+| `--skeleton-radius`          | Border radius                                             | `var(--rounded-lg)`         |
 | `--skeleton-size`            | Circle fallback size                                      | `var(--size-10)`            |
 | `--skeleton-width`           | Component width                                           | `100%`                      |
 | `--skeleton-height`          | Component height                                          | `var(--size-4)`             |

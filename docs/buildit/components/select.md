@@ -301,28 +301,6 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 </script>
 ```
 
-## Guideline Recipe: Clarify with Grouped Options
-
-**Guideline: clarify** — grouping related options reduces scan time and makes large option lists easy to navigate at a glance.
-
-```html
-<bit-select label="Notify me about" name="notification-scope" value="all-comments">
-  <optgroup label="Comments">
-    <option value="all-comments">All comments</option>
-    <option value="mentions">Only @mentions</option>
-  </optgroup>
-  <optgroup label="Activity">
-    <option value="assignments">Assignments</option>
-    <option value="status-changes">Status changes</option>
-  </optgroup>
-  <optgroup label="Other">
-    <option value="none">None</option>
-  </optgroup>
-</bit-select>
-```
-
-**Tip:** Keep each group to 5 options or fewer. If a group would exceed that, consider a searchable `bit-combobox` instead.
-
 ## API Reference
 
 ### Attributes

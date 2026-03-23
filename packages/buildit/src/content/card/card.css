@@ -4,7 +4,7 @@
     --_color: var(--card-color, var(--color-contrast-900));
     --_border: var(--card-border, var(--border));
     --_border-color: var(--card-border-color, var(--color-contrast-300));
-    --_radius: var(--card-radius, var(--rounded-md));
+    --_radius: var(--card-radius, var(--rounded-lg));
     --_padding: var(--card-padding, var(--size-4));
     --_shadow: var(--card-shadow, var(--shadow-sm));
     --_hover-shadow: var(--card-hover-shadow, var(--shadow-md));

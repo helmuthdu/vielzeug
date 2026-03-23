@@ -70,6 +70,37 @@ describe('bit-menu', () => {
       expect(item.hasAttribute('checked')).toBe(true);
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
     });
+
+    it('updates the internal checked UI for checkbox menu items', async () => {
+      fixture = await mount('bit-menu', {
+        html: `
+          <button slot="trigger">Open</button>
+          <bit-menu-item value="show-ids" type="checkbox">Show IDs</bit-menu-item>
+        `,
+      });
+
+      await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
+
+      const item = fixture.element.querySelector<HTMLElement>('bit-menu-item')!;
+      const initialCheck = item.shadowRoot?.querySelector<HTMLElement>('.item-check');
+      const initialItem = item.shadowRoot?.querySelector<HTMLElement>('.item');
+
+      expect(initialItem?.getAttribute('role')).toBe('menuitemcheckbox');
+      expect(initialItem?.getAttribute('aria-checked')).toBe('false');
+      expect(initialCheck).toBeTruthy();
+      expect(initialCheck?.textContent).toBe('☐');
+
+      await user.click(item);
+
+      const internalItem = item.shadowRoot?.querySelector<HTMLElement>('.item');
+      const internalCheck = item.shadowRoot?.querySelector<HTMLElement>('.item-check');
+
+      expect(item.hasAttribute('checked')).toBe(true);
+      expect(internalItem?.getAttribute('aria-checked')).toBe('true');
+      expect(internalItem?.getAttribute('role')).toBe('menuitemcheckbox');
+      expect(internalCheck).toBeTruthy();
+      expect(internalCheck?.textContent).toBe('☑');
+    });
   });
 
   describe('Accessibility', () => {

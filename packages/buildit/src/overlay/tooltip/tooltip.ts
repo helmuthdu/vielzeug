@@ -1,7 +1,7 @@
 import type { Placement } from '@vielzeug/floatit';
 
 import { computed, createId, defineComponent, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
-import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { autoUpdate, computePosition, flip, offset, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize } from '../../types';
 
@@ -10,7 +10,8 @@ import { forcedColorsMixin } from '../../styles';
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
 type TooltipTrigger = 'hover' | 'focus' | 'click';
 
-const ARROW_OFFSET = 8; // offset from trigger to tooltip edge
+const TOOLTIP_OFFSET = 8; // gap from trigger to tooltip edge
+const LEFT_GAP_COMPENSATION = 4; // left placement looks visually tighter in practice
 
 import styles from './tooltip.css?inline';
 
@@ -106,13 +107,19 @@ export const TOOLTIP_TAG = defineComponent<BitTooltipProps>({
 
       if (!triggerEl) return;
 
-      positionFloat(triggerEl, tooltipEl, {
-        middleware: [offset(ARROW_OFFSET), flip(), shift({ padding: 6 })],
+      computePosition(triggerEl, tooltipEl, {
+        middleware: [offset(TOOLTIP_OFFSET), flip(), shift({ padding: 6 })],
         placement: props.placement.value as Placement,
-      }).then((placement) => {
+      }).then(({ placement, x, y }) => {
         if (!tooltipEl) return;
 
-        activePlacement.value = placement.split('-')[0] as TooltipPlacement;
+        const side = placement.split('-')[0] as TooltipPlacement;
+        const adjustedX = side === 'left' ? x - LEFT_GAP_COMPENSATION : x;
+
+        tooltipEl.style.left = `${adjustedX}px`;
+        tooltipEl.style.top = `${y}px`;
+
+        activePlacement.value = side;
       });
     }
     function show() {
@@ -205,8 +212,8 @@ export const TOOLTIP_TAG = defineComponent<BitTooltipProps>({
         const t = triggers.value;
 
         if (t.includes('hover')) {
-          triggerEl.addEventListener('mouseenter', show);
-          triggerEl.addEventListener('mouseleave', hide);
+          triggerEl.addEventListener('pointerenter', show);
+          triggerEl.addEventListener('pointerleave', hide);
         }
 
         if (t.includes('focus')) {
@@ -227,8 +234,8 @@ export const TOOLTIP_TAG = defineComponent<BitTooltipProps>({
         if (!triggerEl) return;
 
         triggerEl.removeAttribute('aria-describedby');
-        triggerEl.removeEventListener('mouseenter', show);
-        triggerEl.removeEventListener('mouseleave', hide);
+        triggerEl.removeEventListener('pointerenter', show);
+        triggerEl.removeEventListener('pointerleave', hide);
         triggerEl.removeEventListener('focusin', show);
         triggerEl.removeEventListener('focusout', hide);
         triggerEl.removeEventListener('click', toggleClick);
@@ -291,7 +298,6 @@ export const TOOLTIP_TAG = defineComponent<BitTooltipProps>({
         :data-placement="${activePlacement}"
         :aria-hidden="${() => String(!visible.value)}">
         <slot name="content">${() => props.content.value}</slot>
-        <span class="arrow" part="arrow" aria-hidden="true"></span>
       </div>
     `;
   },

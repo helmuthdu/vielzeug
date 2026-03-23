@@ -158,7 +158,7 @@ const queryClient = createQuery({ staleTime: 5_000 });
 // Concurrent calls share one in-flight request
 const user = await queryClient.query({
   key: ['user', id],
-  queryFn: () => api.get<User>(`/users/${id}`).then((r) => r.json()),
+  fn: () => api.get<User>(`/users/${id}`).then((r) => r.json()),
 });
 
 // Invalidate after a mutation

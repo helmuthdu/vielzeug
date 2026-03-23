@@ -1,5 +1,6 @@
 import type { Fn } from '../types';
 
+import { Scheduler } from '../async/scheduler';
 import { assert } from './assert';
 
 export type ThrottleOptions = {
@@ -39,17 +40,33 @@ export function throttle<T extends Fn>(
   const leading = options.leading ?? true;
   const trailing = options.trailing ?? false;
 
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timerController: AbortController | undefined;
   let lastInvokeTime = 0;
   let lastArgs: Parameters<T> | undefined;
   let lastThis: ThisParameterType<T> | undefined;
   let lastResult: ReturnType<T> | undefined;
 
   const clearTimer = () => {
-    if (timer !== undefined) {
-      clearTimeout(timer);
-      timer = undefined;
+    if (timerController !== undefined) {
+      timerController.abort();
+      timerController = undefined;
     }
+  };
+
+  const scheduleTimer = (delayMs: number) => {
+    const controller = new AbortController();
+    const scheduler = new Scheduler();
+
+    timerController = controller;
+    void scheduler
+      .postTask(timerExpired, {
+        delay: delayMs,
+        priority: 'user-visible',
+        signal: controller.signal,
+      })
+      .catch(() => {
+        // Aborts are expected when throttle is rescheduled or canceled.
+      });
   };
 
   const invoke = (now: number) => {
@@ -78,7 +95,7 @@ export function throttle<T extends Fn>(
       invoke(now);
     } else if (lastArgs) {
       // reschedule until a window elapses
-      timer = setTimeout(timerExpired, remaining(now));
+      scheduleTimer(remaining(now));
     } else {
       clearTimer();
     }
@@ -101,9 +118,9 @@ export function throttle<T extends Fn>(
     if (rem <= 0) {
       // Window elapsed: invoke now
       invoke(now);
-    } else if (trailing && !timer) {
+    } else if (trailing && !timerController) {
       // Schedule trailing call if not already scheduled
-      timer = setTimeout(timerExpired, rem);
+      scheduleTimer(rem);
     }
   } as Throttled<T>;
 
@@ -123,7 +140,7 @@ export function throttle<T extends Fn>(
   };
 
   // Pending if a trailing call is scheduled OR there are queued args.
-  throttled.pending = () => lastArgs !== undefined || timer !== undefined;
+  throttled.pending = () => lastArgs !== undefined || timerController !== undefined;
 
   return throttled;
 }

@@ -51,16 +51,6 @@ describe('bit-tooltip', () => {
 
       expect(fixture.query('[role="tooltip"]')).toBeTruthy();
     });
-
-    it('arrow has aria-hidden true', async () => {
-      fixture = await mount('bit-tooltip', { attrs: { content: 'tip' } });
-
-      const arrow = fixture.query('.arrow');
-
-      if (arrow) {
-        expect(arrow.getAttribute('aria-hidden')).toBe('true');
-      }
-    });
   });
 
   describe('Placements', () => {

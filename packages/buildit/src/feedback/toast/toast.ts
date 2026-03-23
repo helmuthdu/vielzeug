@@ -323,8 +323,8 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
       <div
         class="toast-container"
         ref=${containerRef}
-        @mouseenter=${() => setHovered(true)}
-        @mouseleave=${() => setHovered(false)}
+        @pointerenter=${() => setHovered(true)}
+        @pointerleave=${() => setHovered(false)}
         @focusin=${() => {
           focusPaused = true;
           maybePause();
@@ -342,7 +342,9 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
           aria-atomic="false"
           aria-label="Notifications"
           class="toast-live-region">
-          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'polite'), renderToastItem)}
+          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'polite'), renderToastItem, undefined, {
+            key: (toast) => toast.id,
+          })}
         </div>
         <!-- Assertive live region: critical errors that interrupt immediately -->
         <div
@@ -352,7 +354,9 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
           aria-atomic="false"
           aria-label="Critical notifications"
           class="toast-live-region">
-          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'assertive'), renderToastItem)}
+          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'assertive'), renderToastItem, undefined, {
+            key: (toast) => toast.id,
+          })}
         </div>
         <slot></slot>
       </div>

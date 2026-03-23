@@ -1,12 +1,30 @@
 @layer buildit.base {
   :host {
-    --_radius: var(--dialog-radius, var(--rounded-xl));
+    --_radius: var(--dialog-radius, var(--rounded-lg));
     --_padding: var(--dialog-padding, var(--size-4));
     --_gap: var(--dialog-gap, var(--size-4));
     --_max-width: var(--dialog-max-width, 32rem);
-    --_elevation: var(--shadow-md);
+    --_elevation: var(--shadow-xl);
     --_backdrop-filter: none;
-    --_backdrop: var(--dialog-backdrop, rgb(0 0 0 / 50%));
+    --_backdrop-bg: var(
+      --dialog-backdrop,
+      color-mix(in srgb, var(--color-canvas) 40%, transparent)
+    );
+    --_panel-bg: var(
+      --dialog-bg,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
+      )
+    );
+    --_panel-blur: var(--dialog-panel-blur, var(--blur-md));
+    --_panel-border-color: var(
+      --dialog-border-color,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
+      )
+    );
 
     display: contents;
   }
@@ -45,7 +63,7 @@
   }
 
   dialog::backdrop {
-    background: var(--_backdrop);
+    background: var(--_backdrop-bg);
     opacity: 1;
     backdrop-filter: var(--_backdrop-filter);
     transition: var(
@@ -77,10 +95,11 @@
     max-width: calc(100vw - var(--size-8));
     max-height: calc(100dvh - var(--size-8));
     overflow: hidden;
-    background: var(--dialog-bg, var(--color-canvas));
-    border: var(--border) solid var(--dialog-border-color, var(--color-contrast-300));
+    background: var(--_panel-bg);
+    border: var(--border) solid var(--_panel-border-color);
     border-radius: var(--_radius);
     box-shadow: var(--dialog-shadow, var(--_elevation));
+    backdrop-filter: blur(var(--_panel-blur));
     opacity: 1;
     transform: scale(1) translateY(0);
     transition: var(
@@ -172,7 +191,7 @@
 
   .close:hover {
     color: var(--color-contrast-900);
-    background: var(--color-contrast-100);
+    background: var(--color-contrast-200);
   }
 
   .close:focus-visible {
@@ -255,7 +274,7 @@
   }
 
   :host([backdrop='transparent']) {
-    --_backdrop: transparent;
+    --_backdrop-bg: transparent;
   }
 
   /* Panel elevation / shadow scale */

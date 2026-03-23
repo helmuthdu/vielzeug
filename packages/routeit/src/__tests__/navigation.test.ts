@@ -10,11 +10,11 @@ describe('Navigation', () => {
     disposeRouter();
   });
 
-  describe('history mode', () => {
+  describe('history navigation', () => {
     it('calls pushState with the target path', async () => {
       const handler = vi.fn();
 
-      const router = createRouter({ mode: 'history' });
+      const router = createRouter();
 
       router.on('/about', handler);
 
@@ -28,7 +28,7 @@ describe('Navigation', () => {
     it('{ replace: true } calls replaceState instead of pushState', async () => {
       const handler = vi.fn();
 
-      const router = createRouter({ mode: 'history' });
+      const router = createRouter();
 
       router.on('/about', handler);
 
@@ -42,7 +42,7 @@ describe('Navigation', () => {
     it('{ state } option is forwarded to pushState', async () => {
       const handler = vi.fn();
 
-      const router = createRouter({ mode: 'history' });
+      const router = createRouter();
 
       router.on('/about', handler);
 
@@ -58,7 +58,7 @@ describe('Navigation', () => {
         await new Promise((r) => setTimeout(r, 1));
       });
 
-      const router = createRouter({ mode: 'history' });
+      const router = createRouter();
 
       router.on('/page', handler);
 
@@ -78,7 +78,7 @@ describe('Navigation', () => {
     it('strips the base prefix when matching routes', async () => {
       const handler = vi.fn();
 
-      const router = createRouter({ base: '/app', mode: 'history' });
+      const router = createRouter({ base: '/app' });
 
       router.on('/about', handler);
 
@@ -92,7 +92,7 @@ describe('Navigation', () => {
       it('does not push a new history entry when navigating to the current URL', async () => {
         const handler = vi.fn();
 
-        const router = createRouter({ mode: 'history' });
+        const router = createRouter();
 
         router.on('/about', handler);
 
@@ -108,7 +108,7 @@ describe('Navigation', () => {
       it('does not re-run for the same path with identical query string', async () => {
         const handler = vi.fn();
 
-        const router = createRouter({ mode: 'history' });
+        const router = createRouter();
 
         router.on('/search', handler);
 
@@ -125,7 +125,7 @@ describe('Navigation', () => {
       it('{ force: true } bypasses the deduplication check', async () => {
         const handler = vi.fn();
 
-        const router = createRouter({ mode: 'history' });
+        const router = createRouter();
 
         router.on('/about', handler);
 
@@ -140,7 +140,7 @@ describe('Navigation', () => {
       it('popstate resets the dedup state so the same URL can be navigated again', async () => {
         const handler = vi.fn();
 
-        const router = createRouter({ mode: 'history' });
+        const router = createRouter();
 
         router.on('/about', handler);
 
@@ -160,29 +160,6 @@ describe('Navigation', () => {
         expect((globalThis as any).mockHistory.pushState).toHaveBeenCalledWith(null, '', '/about');
         expect(handler).toHaveBeenCalledTimes(1);
       });
-    });
-  });
-
-  describe('hash mode', () => {
-    it('reads current path from location.hash to match routes', async () => {
-      const handler = vi.fn();
-
-      (globalThis as any).mockLocation.hash = '#/about';
-      await boot(createRouter({ mode: 'hash' }).on('/about', handler));
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it('navigate() sets location.hash instead of calling pushState', () => {
-      createRouter({ mode: 'hash' }).navigate('/about');
-      expect((globalThis as any).mockLocation.hash).toBe('/about');
-      expect((globalThis as any).mockHistory.pushState).not.toHaveBeenCalled();
-    });
-
-    it('hash mode ignores base when navigating (routes use hash fragment, not pathname)', () => {
-      const router = createRouter({ base: '/app', mode: 'hash' });
-
-      router.navigate('/about');
-      expect((globalThis as any).mockLocation.hash).toBe('/about');
     });
   });
 
@@ -509,20 +486,12 @@ describe('Navigation', () => {
       expect(router.url('x')).toBe('/x');
     });
 
-    it('includes the base path prefix in history mode', () => {
-      const router = createRouter({ base: '/app', mode: 'history' });
+    it('includes the base path prefix', () => {
+      const router = createRouter({ base: '/app' });
 
       router.on('/x', vi.fn(), { name: 'x' });
 
       expect(router.url('x')).toBe('/app/x');
-    });
-
-    it('does not include base in hash mode', () => {
-      const router = createRouter({ base: '/app', mode: 'hash' });
-
-      router.on('/x', vi.fn(), { name: 'x' });
-
-      expect(router.url('x')).toBe('/x');
     });
 
     it('throws for an unknown named route', () => {
@@ -587,8 +556,8 @@ describe('Navigation', () => {
       expect(resolved?.name).toBe('first');
     });
 
-    it('strips the base path in history mode so callers can pass window.location.pathname', () => {
-      const router = createRouter({ base: '/app', mode: 'history' });
+    it('strips the base path so callers can pass window.location.pathname', () => {
+      const router = createRouter({ base: '/app' });
 
       router.on('/about', vi.fn(), { name: 'about' });
 

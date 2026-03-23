@@ -5,10 +5,6 @@ export type TaskFn<TInput, TOutput> = (input: TInput) => TOutput | Promise<TOutp
 export type WorkerStatus = 'idle' | 'running' | 'terminated';
 
 export type WorkerOptions = {
-  /** Run on the main thread when Web Workers are unavailable. Default: true. */
-  fallback?: boolean;
-  /** URLs of external scripts to load inside the Worker via importScripts(). */
-  scripts?: string[];
   /** Number of concurrent worker slots. Default: 1. Pass 'auto' to use navigator.hardwareConcurrency. */
   size?: number | 'auto';
   /** Abort tasks after this many milliseconds. Default: none. */
@@ -27,8 +23,6 @@ export type WorkerHandle<TInput, TOutput> = {
   [Symbol.dispose](): void;
   /** Dispose all workers and reject any pending tasks. */
   dispose(): void;
-  /** True when tasks run in a real Web Worker; false when falling back to the main thread. */
-  readonly isNative: boolean;
   /**
    * Execute the task function.
    *
@@ -63,10 +57,6 @@ export class TerminatedError extends WorkerError {
 
 /**
  * Thrown when a task function throws. The message is the stringified original error.
- *
- * NOTE: `cause` is only populated in fallback (main-thread) mode. In native Worker mode the error
- * crosses the message boundary as a string, so `cause` will always be `undefined`. Do not rely on
- * `instanceof` checks against `cause` in production code.
  */
 export class TaskError extends WorkerError {
   constructor(message: string, cause?: unknown) {
@@ -77,26 +67,22 @@ export class TaskError extends WorkerError {
 
 /** -------------------- Internal: Script Builder -------------------- **/
 
-function buildWorkerScript(fn: TaskFn<unknown, unknown>, scripts: string[] = []): string {
-  const imports = scripts.length > 0 ? `importScripts(${scripts.map((s) => JSON.stringify(s)).join(',')});` : '';
-
-  return `(function(){${imports}const __fn=(${fn.toString()});self.onmessage=async function(e){const{id,input}=e.data;try{const result=await __fn(input);self.postMessage({id,ok:true,result});}catch(err){self.postMessage({id,ok:false,error:err instanceof Error?err.message:String(err)});}};})();`;
+function buildWorkerScript(fn: TaskFn<unknown, unknown>): string {
+  return `const __fn=(${fn.toString()});self.onmessage=async function(e){const{id,input}=e.data;try{const result=await __fn(input);self.postMessage({id,ok:true,result});}catch(err){self.postMessage({id,ok:false,error:err instanceof Error?err.message:String(err)});}};`;
 }
 
-function tryCreateNativeWorker(fn: TaskFn<unknown, unknown>, scripts?: string[]): Worker | null {
+function createNativeWorker(fn: TaskFn<unknown, unknown>): Worker {
   try {
-    if (typeof Worker === 'undefined') return null;
-
-    const script = buildWorkerScript(fn, scripts);
+    const script = buildWorkerScript(fn);
     const blob = new Blob([script], { type: 'application/javascript' });
     const url = URL.createObjectURL(blob);
-    const worker = new Worker(url);
+    const worker = new Worker(url, { type: 'module' });
 
     URL.revokeObjectURL(url);
 
     return worker;
   } catch {
-    return null;
+    throw new Error('[workit] Failed to create Worker. This package requires native Worker support.');
   }
 }
 
@@ -108,33 +94,20 @@ type PendingSlot<TOutput> = {
   timer?: ReturnType<typeof setTimeout>;
 };
 
-type SlotMessage<TOutput> =
-  | { id: number; ok: true; result: TOutput }
-  | { cause?: unknown; error: string; id: number; ok: false };
+type SlotMessage<TOutput> = { id: number; ok: true; result: TOutput } | { error: string; id: number; ok: false };
 
 class Slot<TInput, TOutput> {
-  readonly isNative: boolean;
   busy = false;
   private taskId = 0;
-  private readonly native: Worker | null;
-  private readonly fn: TaskFn<TInput, TOutput>;
+  private readonly native: Worker;
   private readonly timeout: number | undefined;
   private pending: PendingSlot<TOutput> | null = null;
 
   constructor(fn: TaskFn<TInput, TOutput>, options: WorkerOptions) {
-    this.fn = fn;
     this.timeout = options.timeout;
-    this.native = tryCreateNativeWorker(fn as TaskFn<unknown, unknown>, options.scripts);
-    this.isNative = this.native !== null;
-
-    if (!this.native && options.fallback === false) {
-      throw new Error('[workit] Web Workers are unavailable and fallback is disabled');
-    }
-
-    if (this.native) {
-      this.native.onmessage = (e: MessageEvent<SlotMessage<TOutput>>) => this.onMessage(e.data);
-      this.native.onerror = (e: ErrorEvent) => this.onMessage({ error: e.message, id: this.taskId, ok: false });
-    }
+    this.native = createNativeWorker(fn as TaskFn<unknown, unknown>);
+    this.native.onmessage = (e: MessageEvent<SlotMessage<TOutput>>) => this.onMessage(e.data);
+    this.native.onerror = (e: ErrorEvent) => this.onMessage({ error: e.message, id: this.taskId, ok: false });
   }
 
   run(input: TInput, transfer: Transferable[] = []): Promise<TOutput> {
@@ -153,21 +126,12 @@ class Slot<TInput, TOutput> {
 
       this.pending = pending;
 
-      if (this.native) {
-        this.native.postMessage({ id, input }, transfer);
-      } else {
-        Promise.resolve()
-          .then(() => this.fn(input))
-          .then((result) => this.onMessage({ id, ok: true, result }))
-          .catch((err: unknown) =>
-            this.onMessage({ cause: err, error: err instanceof Error ? err.message : String(err), id, ok: false }),
-          );
-      }
+      this.native.postMessage({ id, input }, transfer);
     });
   }
 
   terminate(): void {
-    this.native?.terminate();
+    this.native.terminate();
 
     if (this.pending) {
       clearTimeout(this.pending.timer);
@@ -187,7 +151,7 @@ class Slot<TInput, TOutput> {
     if (data.ok) {
       resolve(data.result);
     } else {
-      reject(new TaskError(data.error, data.cause));
+      reject(new TaskError(data.error));
     }
   }
 }
@@ -208,22 +172,14 @@ class WorkitImpl<TInput, TOutput> {
   private terminated = false;
 
   constructor(fn: TaskFn<TInput, TOutput>, options: WorkerOptions = {}) {
-    const cpuCount = typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency ?? 4) : 4;
+    const cpuCount = navigator.hardwareConcurrency ?? 1;
     const count = Math.max(1, options.size === 'auto' ? cpuCount : (options.size ?? 1));
 
     this.slots = Array.from({ length: count }, () => new Slot(fn, options));
-
-    if (!this.slots[0]!.isNative) {
-      console.warn('[workit] Web Workers unavailable, running tasks on the main thread');
-    }
   }
 
   get size(): number {
     return this.slots.length;
-  }
-
-  get isNative(): boolean {
-    return this.slots[0]!.isNative;
   }
 
   get status(): WorkerStatus {
@@ -240,8 +196,10 @@ class WorkitImpl<TInput, TOutput> {
     if (this.terminated) return Promise.reject(new TerminatedError());
 
     return new Promise<TOutput>((resolve, reject) => {
-      if (signal?.aborted) {
-        reject(new DOMException('Aborted', 'AbortError'));
+      try {
+        signal?.throwIfAborted();
+      } catch (err) {
+        reject(err);
 
         return;
       }
@@ -256,7 +214,7 @@ class WorkitImpl<TInput, TOutput> {
 
             if (idx !== -1) {
               this.queue.splice(idx, 1);
-              reject(new DOMException('Aborted', 'AbortError'));
+              reject(signal.reason);
             }
           },
           { once: true },

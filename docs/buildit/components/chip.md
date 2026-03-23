@@ -266,22 +266,6 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 });
 ```
 
-## Guideline Recipe: Clarify Active Filters
-
-**Guideline: clarify** — removable chips make active filter state visible and reversible at a glance, reducing user uncertainty about what data is shown.
-
-```html
-<div style="display:flex;flex-wrap:wrap;gap:var(--size-2);align-items:center">
-  <bit-text variant="caption" color="subtle">Active filters:</bit-text>
-  <bit-chip mode="removable" color="primary">Status: Active</bit-chip>
-  <bit-chip mode="removable" color="primary">Role: Admin</bit-chip>
-  <bit-chip mode="removable" color="primary">Joined: Last 30 days</bit-chip>
-  <bit-button variant="text" size="sm">Clear all</bit-button>
-</div>
-```
-
-**Tip:** Place the filter chip row directly above the data table so the visual connection between filter and result is immediate.
-
 ## API Reference
 
 ### Attributes

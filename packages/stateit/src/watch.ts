@@ -68,19 +68,28 @@ export const nextValue = <T>(
   options?: { signal?: AbortSignal },
 ): Promise<T> =>
   new Promise<T>((resolve, reject) => {
+    const signal = options?.signal;
+
+    try {
+      signal?.throwIfAborted();
+    } catch (err) {
+      reject(err);
+
+      return;
+    }
+
     const stop = watch(source, (v) => {
       if (!predicate || predicate(v)) {
         stop();
+        signal?.removeEventListener('abort', onAbort);
         resolve(v);
       }
     });
 
-    options?.signal?.addEventListener(
-      'abort',
-      () => {
-        stop();
-        reject(options.signal!.reason);
-      },
-      { once: true },
-    );
+    const onAbort = () => {
+      stop();
+      reject(signal!.reason);
+    };
+
+    signal?.addEventListener('abort', onAbort, { once: true });
   });

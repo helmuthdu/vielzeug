@@ -274,42 +274,6 @@ When more than one toast is present, they stack with a 3D perspective. Only the 
 - Enter animation is handled by CSS `@starting-style` (no JS class toggling)
 - Exit animation fires from `animationend`, no hardcoded timeouts
 
-## Guideline Recipe: Delight with Action-Confirmation Toasts
-
-**Guideline: delight** — a toast with an undo action turns a routine confirmation into a moment of control, reducing anxiety about irreversible operations.
-
-```js
-import { toast } from '@vielzeug/buildit/toast';
-
-document.getElementById('delete-btn').addEventListener('click', async () => {
-  // Optimistically remove the item from the UI
-  removeItemFromUI();
-
-  let undone = false;
-
-  toast.show({
-    heading: 'Project deleted',
-    message: 'This action will complete in 5 seconds.',
-    color: 'neutral',
-    duration: 5000,
-    actions: [
-      {
-        label: 'Undo',
-        handler: () => {
-          undone = true;
-          restoreItemToUI();
-        },
-      },
-    ],
-    onDismiss: () => {
-      if (!undone) commitDeleteOnServer();
-    },
-  });
-});
-```
-
-**Tip:** Use `onDismiss` to commit the actual delete operation only after the undo window closes — making destructive actions feel safe and reversible.
-
 ## `toast` Singleton Service
 
 The `toast` export is the recommended imperative API. It finds the first `<bit-toast>` element in the document, or creates one if none exists.
