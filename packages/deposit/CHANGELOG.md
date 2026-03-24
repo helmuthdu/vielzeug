@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/deposit
 
-This log was last generated on Mon, 16 Feb 2026 10:16:12 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 22:12:47 GMT and should not be manually modified.
+
+## 2.0.0
+Tue, 24 Mar 2026 22:12:47 GMT
+
+### Breaking changes
+
+- Major release: type-safe storage layer for localStorage and IndexedDB with defineSchema for compile-time table and field types; full CRUD API (get, put, patch, delete, getAll, getMany, putMany, deleteMany, getOr, getOrPut, has, count); fluent QueryBuilder with where, equals, orderBy, limit, offset, filter, search, map, first, last, toArray, and toGrouped; TTL helpers (ttl.seconds/minutes/hours/days/at) for automatic expiry; atomic multi-table transactions; schema migration support via migrationFn
 
 ## 1.1.6
 Mon, 16 Feb 2026 10:16:12 GMT

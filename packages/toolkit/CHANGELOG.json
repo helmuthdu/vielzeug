@@ -2,6 +2,28 @@
   "name": "@vielzeug/toolkit",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/toolkit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: comprehensive utility library across eight categories — Array (chunk, group, sort, uniq, search, remoteList, keyBy, and more), Object (merge with 5 strategies, diff, path, seek, cache, parseJSON), String (camelCase, kebabCase, pascalCase, snakeCase, truncate, similarity), Math (clamp, range, round, sum, average, allocate, distribute, median), Date (expires, timeDiff, interval), Function (compose, pipe, curry, debounce, throttle, memo, once, retry), Async (defer, parallel, pool, queue, race, sleep, waitFor), Typed (is type guards, isEqual, isMatch, isEmpty), and Random (uuid, draw, shuffle)",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/logit\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/logit\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.4",
       "tag": "@vielzeug/toolkit_v1.1.4",
       "date": "Thu, 12 Feb 2026 17:52:26 GMT",

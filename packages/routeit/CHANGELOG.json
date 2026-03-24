@@ -2,6 +2,20 @@
   "name": "@vielzeug/routeit",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/routeit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: client-side router with history and hash modes, configurable base path, and per-route middleware chains; named routes with urlFor() and navigateTo(); typed prefix params and nested route groups; programmatic navigation (navigate, back, forward, go) with replace and state options; isActive() for link state; subscribe() for reactive route change observation; link() and linkTo() DOM helpers for anchor creation; debug() for runtime route inspection; global and per-route not-found handler",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/routeit_v1.0.1",
       "date": "Sun, 15 Feb 2026 21:52:44 GMT",

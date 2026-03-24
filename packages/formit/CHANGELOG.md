@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/formit
 
-This log was last generated on Sun, 15 Feb 2026 21:52:44 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 22:12:47 GMT and should not be manually modified.
+
+## 2.0.0
+Tue, 24 Mar 2026 22:12:47 GMT
+
+### Breaking changes
+
+- Major release: reactive form state management with per-field validators (sync and async), cross-field validator option, and AbortSignal cancellation; full field lifecycle — get/set/patch, touch/untouch, setError/clearErrors, resetField; array field helpers (appendField, removeField, moveField); typed bind() helper for framework-agnostic input binding with configurable validateOnChange and validateOnBlur; submit() with skipValidation and partial-field targeting; subscribe() and watch() for reactive state and field-level observation; fromSchema() adapter for validit / Zod / any safeParseAsync-compatible schema; FormValidationError and SubmitError typed error classes
 
 ## 1.1.3
 Sun, 15 Feb 2026 21:52:44 GMT

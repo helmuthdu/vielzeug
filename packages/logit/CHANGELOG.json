@@ -2,6 +2,20 @@
   "name": "@vielzeug/logit",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/logit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: structured console logger with configurable log levels (debug/info/warn/error/success/trace), prefix namespacing, timestamp toggling, and environment-aware output; scope() for child loggers with inherited configuration; groupCollapsed/groupEnd for collapsible log sections; table() and time()/timeEnd() helpers; remote logging via setRemote() for shipping logs to external endpoints; assert() with structured context output",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.2",
       "tag": "@vielzeug/logit_v1.1.2",
       "date": "Thu, 12 Feb 2026 17:52:26 GMT",

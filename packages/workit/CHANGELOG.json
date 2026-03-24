@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/workit",
+  "entries": [
+    {
+      "version": "2.0.0",
+      "tag": "@vielzeug/workit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: Web Worker pool abstraction via createWorker() with configurable pool size (fixed or 'auto' for hardware concurrency); run() with AbortSignal cancellation and Transferable support for zero-copy transfers; per-task and pool-level timeout with TaskTimeoutError; automatic fallback to main-thread execution when Workers are unavailable; isNative flag for environment detection; external script loading via scripts option; status property (idle/running/terminated); typed WorkerHandle<TInput, TOutput> with full TypeScript inference; [Symbol.dispose]() support",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ]
+      }
+    }
+  ]
+}

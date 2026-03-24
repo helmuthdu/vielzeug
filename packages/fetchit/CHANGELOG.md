@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/fetchit
 
-This log was last generated on Mon, 16 Feb 2026 11:16:45 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 22:12:47 GMT and should not be manually modified.
+
+## 2.0.0
+Tue, 24 Mar 2026 22:12:47 GMT
+
+### Breaking changes
+
+- Major release: HTTP client (createApi) with configurable base URL, timeout, deduplication, and composable interceptors; query client (createQuery) with staleTime/gcTime caching, prefetch, invalidation, per-key subscriptions, and AbortSignal cancellation; standalone mutation helper (createMutation) with retries, retry delay, and onSuccess/onError/onSettled callbacks; typed HttpError with status, data, isTimeout, and isAborted properties; [Symbol.dispose]() support on all clients
 
 ## 1.1.7
 Mon, 16 Feb 2026 11:16:45 GMT

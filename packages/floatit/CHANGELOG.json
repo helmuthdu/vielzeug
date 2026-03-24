@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/floatit",
+  "entries": [
+    {
+      "version": "2.0.0",
+      "tag": "@vielzeug/floatit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: floating-element positioning engine with positionFloat() for inline-style application and computePosition() for headless usage; middleware pipeline with offset, flip, shift, and size helpers; autoUpdate() for scroll/resize tracking with cleanup; support for all 12 placement values (top/bottom/left/right with start/end alignment); fixed and absolute positioning strategies; zero dependencies",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ]
+      }
+    }
+  ]
+}
