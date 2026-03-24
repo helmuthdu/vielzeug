@@ -7,17 +7,18 @@ import {
   inject,
   onMount,
   provide,
+  signal,
   type ReadonlySignal,
   watch,
 } from '@vielzeug/craftit';
-import { observeMedia } from '@vielzeug/craftit/labs';
 
 import { chevronLeftIcon, chevronRightIcon } from '../../icons';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-type SidebarVariant = 'default' | 'floating' | 'inset';
+type SidebarVariant = 'floating' | 'inset';
+type SidebarCollapseSource = 'api' | 'responsive' | 'toggle';
 
 /** Context provided by `bit-sidebar` to its `bit-sidebar-group` and `bit-sidebar-item` children. */
 export type SidebarContext = {
@@ -35,10 +36,8 @@ import sidebarStyles from './sidebar.css?inline';
 /** bit-sidebar element interface */
 export type SidebarElement = HTMLElement &
   BitSidebarProps & {
-    /** Collapse the sidebar. */
-    collapse(): void;
-    /** Expand the sidebar. */
-    expand(): void;
+    /** Set collapsed state imperatively. */
+    setCollapsed(next: boolean): void;
     /** Toggle between collapsed and expanded. */
     toggle(): void;
   };
@@ -46,19 +45,20 @@ export type SidebarElement = HTMLElement &
 /** Sidebar component properties */
 
 export type BitSidebarEvents = {
-  collapse: undefined;
-  expand: undefined;
+  'collapsed-change': { collapsed: boolean; source: SidebarCollapseSource };
 };
 
 export type BitSidebarGroupEvents = {
-  toggle: { open: boolean };
+  'open-change': { open: boolean };
 };
 
 export type BitSidebarProps = {
-  /** Whether the sidebar is collapsed to icon-only mode */
+  /** Controlled collapsed state */
   collapsed?: boolean;
   /** Whether the sidebar supports collapsing */
   collapsible?: boolean;
+  /** Initial collapsed state in uncontrolled mode */
+  'default-collapsed'?: boolean;
   /**
    * Accessible label for the navigation landmark.
    * Use to distinguish multiple navigation regions on a page.
@@ -80,17 +80,17 @@ export type BitSidebarProps = {
  *
  * @element bit-sidebar
  *
- * @attr {boolean} collapsed - Collapsed (icon-only) state
+ * @attr {boolean} collapsed - Controlled collapsed state
+ * @attr {boolean} default-collapsed - Initial collapsed state for uncontrolled sidebars
  * @attr {boolean} collapsible - Show the collapse toggle button
- * @attr {string} variant - Visual variant: 'default' | 'floating' | 'inset'
+ * @attr {string} variant - Visual variant: 'floating' | 'inset'
  * @attr {string} label - Accessible aria-label for the nav landmark
  *
  * @slot header - Branding or logo content above the nav
  * @slot - Navigation content (bit-sidebar-group / bit-sidebar-item)
  * @slot footer - Footer content below the nav (user info, settings, etc.)
  *
- * @fires collapse - Fired when the sidebar collapses
- * @fires expand - Fired when the sidebar expands
+ * @fires collapsed-change - Fired when collapsed state changes
  *
  * @cssprop --sidebar-width - Expanded sidebar width (default: 16rem)
  * @cssprop --sidebar-collapsed-width - Collapsed sidebar width (default: 3.5rem)
@@ -115,8 +115,9 @@ export type BitSidebarProps = {
  */
 export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
   props: {
-    collapsed: { default: false },
-    collapsible: { default: false },
+    collapsed: { default: undefined, type: Boolean },
+    collapsible: { default: false, type: Boolean },
+    'default-collapsed': { default: false, type: Boolean },
     label: { default: 'Sidebar navigation' },
     responsive: { default: undefined },
     variant: { default: undefined },
@@ -125,53 +126,83 @@ export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
     const hasHeader = computed(() => slots.has('header').value);
     const hasFooter = computed(() => slots.has('footer').value);
 
+    const isControlled = signal(host.hasAttribute('collapsed'));
+    const collapsedState = signal(
+      isControlled.value ? host.hasAttribute('collapsed') : props['default-collapsed'].value,
+    );
+
+    const isCollapsed = computed(() => collapsedState.value);
+
     provide(SIDEBAR_CTX, {
-      collapsed: props.collapsed as ReadonlySignal<boolean>,
+      collapsed: isCollapsed as ReadonlySignal<boolean>,
       variant: props.variant as ReadonlySignal<SidebarVariant | undefined>,
     });
 
-    const setCollapsed = (next: boolean) => {
-      if (props.collapsed.value === next) return;
+    const setCollapsed = (next: boolean, source: SidebarCollapseSource) => {
+      if (isCollapsed.value === next) return;
 
-      props.collapsed.value = next;
-      emit(next ? 'collapse' : 'expand');
+      if (!isControlled.value) {
+        collapsedState.value = next;
+      }
+
+      emit('collapsed-change', { collapsed: next, source });
     };
     const doToggle = () => {
-      setCollapsed(!props.collapsed.value);
+      setCollapsed(!isCollapsed.value, 'toggle');
     };
+
+    effect(() => {
+      host.toggleAttribute('data-collapsed', isCollapsed.value);
+    });
 
     onMount(() => {
       const el = host as SidebarElement;
 
-      el.collapse = () => {
-        setCollapsed(true);
-      };
-      el.expand = () => {
-        setCollapsed(false);
-      };
+      el.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
       el.toggle = doToggle;
-      // Responsive auto-collapse: observe the media query set on the `responsive` prop.
-      // When the query starts matching the sidebar collapses; when it stops it expands.
-      // A later manual toggle or programmatic collapse/expand still works as normal.
+
+      let mediaCleanup: (() => void) | undefined;
+      const observer = new MutationObserver(() => {
+        if (!host.hasAttribute('collapsed') && !isControlled.value) return;
+
+        isControlled.value = true;
+        collapsedState.value = host.hasAttribute('collapsed');
+      });
+
+      observer.observe(host, {
+        attributeFilter: ['collapsed'],
+        attributes: true,
+      });
+
       watch(
         props.responsive,
         (query) => {
-          const mediaQuery = (query as string | undefined) ?? '';
+          mediaCleanup?.();
+          mediaCleanup = undefined;
+
+          const mediaQuery = String(query ?? '').trim();
 
           if (!mediaQuery) return;
 
-          const matches = observeMedia(mediaQuery);
+          const mql = window.matchMedia(mediaQuery);
+          const onChange = (event: MediaQueryListEvent) => {
+            setCollapsed(event.matches, 'responsive');
+          };
 
-          watch(
-            matches,
-            (mobile) => {
-              setCollapsed(mobile);
-            },
-            { immediate: true },
-          );
+          setCollapsed(mql.matches, 'responsive');
+          mql.addEventListener('change', onChange);
+
+          mediaCleanup = () => {
+            mql.removeEventListener('change', onChange);
+          };
         },
         { immediate: true },
       );
+
+      return () => {
+        observer.disconnect();
+        mediaCleanup?.();
+      };
     });
 
     return html`
@@ -183,8 +214,8 @@ export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
             part="toggle-btn"
             type="button"
             ?hidden=${() => !props.collapsible.value}
-            aria-label="${() => (props.collapsed.value ? 'Expand sidebar' : 'Collapse sidebar')}"
-            aria-expanded="${() => String(!props.collapsed.value)}"
+            aria-label="${() => (isCollapsed.value ? 'Expand sidebar' : 'Collapse sidebar')}"
+            aria-expanded="${() => String(!isCollapsed.value)}"
             @click="${doToggle}">
             <span class="toggle-icon" aria-hidden="true">${chevronLeftIcon}</span>
           </button>
@@ -210,9 +241,11 @@ import groupStyles from './sidebar-group.css?inline';
 export type BitSidebarGroupProps = {
   /** Whether this group can be collapsed */
   collapsible?: boolean;
+  /** Initial open state in uncontrolled mode */
+  'default-open'?: boolean;
   /** Accessible label for the group */
   label?: string;
-  /** Whether this collapsible group is open */
+  /** Controlled open state */
   open?: boolean;
 };
 
@@ -223,12 +256,13 @@ export type BitSidebarGroupProps = {
  *
  * @attr {string} label - Group label text
  * @attr {boolean} collapsible - Whether this group can be toggled open/closed
- * @attr {boolean} open - Expanded state (when collapsible)
+ * @attr {boolean} open - Controlled expanded state
+ * @attr {boolean} default-open - Initial expanded state in uncontrolled mode
  *
  * @slot - Navigation items (`bit-sidebar-item`)
  * @slot icon - Icon displayed before the label
  *
- * @fires toggle - Fired when the group is toggled (collapsible groups only)
+ * @fires open-change - Fired when the group open state changes (collapsible groups only)
  *
  * @example
  * ```html
@@ -239,9 +273,10 @@ export type BitSidebarGroupProps = {
  */
 export const SIDEBAR_GROUP_TAG = defineComponent<BitSidebarGroupProps, BitSidebarGroupEvents>({
   props: {
-    collapsible: { default: false },
+    collapsible: { default: false, type: Boolean },
+    'default-open': { default: true, type: Boolean },
     label: { default: '' },
-    open: { default: true },
+    open: { default: undefined, type: Boolean },
   },
   setup({ emit, host, props, slots }) {
     const hasIcon = computed(() => slots.has('icon').value);
@@ -251,40 +286,63 @@ export const SIDEBAR_GROUP_TAG = defineComponent<BitSidebarGroupProps, BitSideba
       host.toggleAttribute('sidebar-collapsed', sidebarCtx?.collapsed.value ?? false);
     });
 
-    const isCollapsible = computed(() => props.collapsible.value);
-    const isOpen = computed(() => !isCollapsible.value || props.open.value);
-    const toggle = () => {
-      if (!props.collapsible.value) return;
+    const isControlled = computed(() => props.open.value !== undefined);
+    const openState = signal(props['default-open'].value);
+    const isOpen = computed(() => {
+      if (!props.collapsible.value) return true;
 
-      const next = !props.open.value;
+      if (isControlled.value) return props.open.value ?? false;
 
-      props.open.value = next;
-      emit('toggle', { open: next });
+      return openState.value;
+    });
+
+    watch(props.open, (value) => {
+      if (value === undefined) return;
+
+      openState.value = value;
+    });
+
+    effect(() => {
+      host.toggleAttribute('open', isOpen.value);
+    });
+
+    const handleGroupClick = (e: MouseEvent) => {
+      if (!(e.target instanceof HTMLElement) || !e.target.closest('.group-header')) return;
+
+      e.stopPropagation();
+      e.preventDefault();
+
+      if (!props.collapsible.value) {
+        return;
+      }
+
+      const next = !isOpen.value;
+
+      if (props.open.value === next) return;
+
+      if (!isControlled.value) {
+        openState.value = next;
+      }
+
+      emit('open-change', { open: next });
     };
 
     return html`
-      <div
-        class="group-header"
-        part="group-header"
-        role="${() => (isCollapsible.value ? 'button' : null)}"
-        tabindex="${() => (isCollapsible.value ? '0' : null)}"
-        aria-expanded="${() => (isCollapsible.value ? String(props.open.value) : null)}"
-        @click="${toggle}"
-        @keydown="${(e: KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            toggle();
-          }
-        }}">
-        <span class="group-icon" part="group-icon" ?hidden=${() => !hasIcon.value} aria-hidden="true">
-          <slot name="icon"></slot>
-        </span>
-        <span class="group-label" part="group-label">${() => props.label.value}</span>
-        <span class="chevron" ?hidden=${() => !isCollapsible.value} aria-hidden="true">${chevronRightIcon}</span>
-      </div>
-      <div class="group-items" part="group-items" role="list" ?hidden=${() => !isOpen.value}>
-        <slot></slot>
-      </div>
+      <details class="group" part="group" ?open=${() => isOpen.value} @click="${handleGroupClick}">
+        <summary
+          class="group-header"
+          part="group-header"
+          :aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}">
+          <span class="group-icon" part="group-icon" ?hidden=${() => !hasIcon.value} aria-hidden="true">
+            <slot name="icon"></slot>
+          </span>
+          <span class="group-label" part="group-label">${() => props.label.value}</span>
+          <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">${chevronRightIcon}</span>
+        </summary>
+        <div class="group-items" part="group-items" role="list">
+          <slot></slot>
+        </div>
+      </details>
     `;
   },
   styles: [reducedMotionMixin, groupStyles],
@@ -361,8 +419,8 @@ export type BitSidebarItemProps = {
  */
 export const SIDEBAR_ITEM_TAG = defineComponent<BitSidebarItemProps>({
   props: {
-    active: { default: false },
-    disabled: { default: false },
+    active: { default: false, type: Boolean },
+    disabled: { default: false, type: Boolean },
     href: { default: undefined },
     rel: { default: undefined },
     target: { default: undefined },
@@ -376,7 +434,16 @@ export const SIDEBAR_ITEM_TAG = defineComponent<BitSidebarItemProps>({
       host.toggleAttribute('sidebar-collapsed', sidebarCtx?.collapsed.value ?? false);
     });
 
-    const isLink = computed(() => !!props.href.value);
+    const isLink = computed(() => !!props.href.value && !props.disabled.value);
+    const renderItemContent = () => html`
+      <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon.value} aria-hidden="true">
+        <slot name="icon"></slot>
+      </span>
+      <span class="item-label" part="item-label"><slot></slot></span>
+      <span class="item-end" part="item-end" ?hidden=${() => !hasEnd.value}>
+        <slot name="end"></slot>
+      </span>
+    `;
 
     return html`
       ${() =>
@@ -388,16 +455,8 @@ export const SIDEBAR_ITEM_TAG = defineComponent<BitSidebarItemProps>({
                 href="${() => props.href.value}"
                 :rel="${() => props.rel.value ?? null}"
                 :target="${() => props.target.value ?? null}"
-                :aria-current="${() => (props.active.value ? 'page' : null)}"
-                :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
-                tabindex="${() => (props.disabled.value ? '-1' : null)}">
-                <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon.value} aria-hidden="true">
-                  <slot name="icon"></slot>
-                </span>
-                <span class="item-label" part="item-label"><slot></slot></span>
-                <span class="item-end" part="item-end" ?hidden=${() => !hasEnd.value}>
-                  <slot name="end"></slot>
-                </span>
+                :aria-current="${() => (props.active.value ? 'page' : null)}">
+                ${renderItemContent()}
               </a>
             `
           : html`
@@ -407,13 +466,7 @@ export const SIDEBAR_ITEM_TAG = defineComponent<BitSidebarItemProps>({
                 type="button"
                 :aria-current="${() => (props.active.value ? 'page' : null)}"
                 :disabled="${() => props.disabled.value || null}">
-                <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon.value} aria-hidden="true">
-                  <slot name="icon"></slot>
-                </span>
-                <span class="item-label" part="item-label"><slot></slot></span>
-                <span class="item-end" part="item-end" ?hidden=${() => !hasEnd.value}>
-                  <slot name="end"></slot>
-                </span>
+                ${renderItemContent()}
               </button>
             `}
     `;

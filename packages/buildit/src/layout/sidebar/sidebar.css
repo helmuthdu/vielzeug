@@ -36,7 +36,7 @@
     backdrop-filter: blur(var(--_panel-blur));
   }
 
-  :host([collapsed]) {
+  :host([data-collapsed]) {
     width: var(--_sidebar-collapsed-width);
     min-width: var(--_sidebar-collapsed-width);
     max-width: var(--_sidebar-collapsed-width);
@@ -112,12 +112,12 @@
     transition: var(--_motion-transition, transform var(--_sidebar-transition));
   }
 
-  :host([collapsed]) .toggle-icon {
+  :host([data-collapsed]) .toggle-icon {
     transform: rotate(180deg);
   }
 
-  :host(:not([dir='rtl'])[collapsed]) .toggle-icon,
-  :host(:dir(ltr)[collapsed]) .toggle-icon {
+  :host(:not([dir='rtl'])[data-collapsed]) .toggle-icon,
+  :host(:dir(ltr)[data-collapsed]) .toggle-icon {
     transform: rotate(180deg);
   }
 
@@ -125,7 +125,7 @@
     transform: rotate(180deg);
   }
 
-  :host(:dir(rtl)[collapsed]) .toggle-icon {
+  :host(:dir(rtl)[data-collapsed]) .toggle-icon {
     transform: rotate(0deg);
   }
 }

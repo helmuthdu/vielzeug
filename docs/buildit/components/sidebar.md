@@ -9,9 +9,9 @@ A collapsible navigation sidebar with labelled groups and individual items. It u
 - 🎨 **3 Variants**: default (drawer-style panel), floating (rounded elevated panel), inset (subtle background)
 - 🔗 **Link or button**: `bit-sidebar-item` renders an `<a>` when `href` is set, otherwise a `<button>`
 - 📌 **Active indicator**: visual pill indicator for the current page item
-- 🔘 **Collapsible groups**: optional accordion-style group headers
+- 🔘 **Collapsible groups**: native `<details>/<summary>` interaction with optional toggle event
 - ♿ **Accessible**: `role="navigation"`, `aria-current="page"`, `aria-expanded`, keyboard navigation
-- ⌨️ **Imperative API**: `collapse()`, `expand()`, `toggle()` methods on the element
+- ⌨️ **Imperative API**: `setCollapsed(next)`, `toggle()` methods on the element
 
 ## Source Code
 
@@ -75,6 +75,10 @@ Add the `collapsible` attribute to show the collapse toggle button. Items will a
 ## Groups
 
 Use `bit-sidebar-group` to organize items into labelled sections. Add the `collapsible` attribute to allow toggling the group open/closed.
+
+`bit-sidebar-group` now uses native `details/summary` semantics internally for simpler keyboard and accessibility behavior.
+
+Set `default-open="false"` for uncontrolled groups that start collapsed, or pass `open` to control the group state externally.
 
 <ComponentPreview>
 
@@ -287,13 +291,13 @@ When linking to external resources, use `target` and `rel` attributes on `bit-si
 
 ## Imperative API
 
-All collapse state methods are exposed on the element instance.
+Collapse methods are exposed on the element instance.
 
 ```js
 const sidebar = document.querySelector('bit-sidebar');
 
-sidebar.collapse(); // collapse to icon-only
-sidebar.expand(); // expand to full width
+sidebar.setCollapsed(true); // collapse to icon-only
+sidebar.setCollapsed(false); // expand to full width
 sidebar.toggle(); // toggle between states
 ```
 
@@ -302,12 +306,8 @@ sidebar.toggle(); // toggle between states
 ```js
 const sidebar = document.querySelector('bit-sidebar');
 
-sidebar.addEventListener('collapse', () => {
-  console.log('Sidebar collapsed');
-});
-
-sidebar.addEventListener('expand', () => {
-  console.log('Sidebar expanded');
+sidebar.addEventListener('collapsed-change', (e) => {
+  console.log('Collapsed:', e.detail.collapsed, 'source:', e.detail.source);
 });
 
 const group = document.querySelector('bit-sidebar-group[collapsible]');
@@ -347,9 +347,10 @@ bit-sidebar-item {
 
 | Attribute     | Type      | Default                | Description                                              |
 | ------------- | --------- | ---------------------- | -------------------------------------------------------- |
-| `collapsed`   | `boolean` | `false`                | Collapses the sidebar to icon-only mode                  |
+| `collapsed`   | `boolean` | —                      | Controlled collapsed state                               |
+| `default-collapsed` | `boolean` | `false`          | Initial collapsed state in uncontrolled mode             |
 | `collapsible` | `boolean` | `false`                | Shows the collapse/expand toggle button in the header    |
-| `variant`     | `string`  | `'default'`            | Visual variant: `'default'` \| `'floating'` \| `'inset'` |
+| `variant`     | `string`  | —                      | Visual variant: `'floating'` \| `'inset'`               |
 | `label`       | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                    |
 
 ### `bit-sidebar` Slots
@@ -364,15 +365,13 @@ bit-sidebar-item {
 
 | Event      | Detail      | Description                      |
 | ---------- | ----------- | -------------------------------- |
-| `collapse` | `undefined` | Fired when the sidebar collapses |
-| `expand`   | `undefined` | Fired when the sidebar expands   |
+| `collapsed-change` | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested |
 
 ### `bit-sidebar` Methods
 
 | Method       | Description                         |
 | ------------ | ----------------------------------- |
-| `collapse()` | Collapse the sidebar                |
-| `expand()`   | Expand the sidebar                  |
+| `setCollapsed(next)` | Set collapsed state             |
 | `toggle()`   | Toggle between collapsed / expanded |
 
 ### `bit-sidebar` CSS Custom Properties
@@ -392,7 +391,8 @@ bit-sidebar-item {
 | ------------- | --------- | ------- | ------------------------------------------------------------ |
 | `label`       | `string`  | `''`    | Visible group label text                                     |
 | `collapsible` | `boolean` | `false` | Adds a toggle button to collapse/expand the group's items    |
-| `open`        | `boolean` | `true`  | Group open state (only meaningful when `collapsible` is set) |
+| `default-open` | `boolean` | `true` | Initial open state for uncontrolled collapsible groups       |
+| `open`        | `boolean` | —       | Controlled group open state                                  |
 
 ### `bit-sidebar-group` Slots
 
@@ -415,7 +415,7 @@ bit-sidebar-item {
 | ---------- | --------- | ------- | ------------------------------------------------------------------------ |
 | `href`     | `string`  | —       | URL — renders an `<a>` when set, otherwise a `<button>`                  |
 | `active`   | `boolean` | `false` | Marks the item as the current page (`aria-current="page"`)               |
-| `disabled` | `boolean` | `false` | Disables the item (sets `disabled` on button, `aria-disabled` on anchor) |
+| `disabled` | `boolean` | `false` | Disables the item and forces button rendering |
 | `rel`      | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)                     |
 | `target`   | `string`  | —       | `target` attribute on the inner `<a>` (link items only)                  |
 
