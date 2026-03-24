@@ -275,8 +275,8 @@
     "axe-core": "^4.11.1",
     "browserslist": "^4.28.1",
     "lightningcss": "^1.32.0",
-    "typescript": "~5.9.3",
-    "vite": "^8.0.1",
-    "vitest": "^4.1.0"
+    "typescript": "~6.0.2",
+    "vite": "^8.0.2",
+    "vitest": "^4.1.1"
   }
 }
