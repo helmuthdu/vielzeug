@@ -10,7 +10,7 @@
   },
   "gitPolicy": {},
   "nodeSupportedVersionRange": ">=20.14.0 <=22.22.0",
-  "pnpmVersion": "10.30.3",
+  "pnpmVersion": "10.32.1",
   "projects": [
     {
       "packageName": "@vielzeug/buildit",
