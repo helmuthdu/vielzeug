@@ -84,10 +84,10 @@ jobs:
         run: pnpm install -g @microsoft/rush
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: rush install
 
       - name: Build dependencies
-        run: pnpm run build
+        run: rush build
         env:
           NODE_ENV: production
 
