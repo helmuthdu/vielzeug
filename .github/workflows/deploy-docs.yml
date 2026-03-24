@@ -80,14 +80,16 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Install Rush
-        run: pnpm install -g @microsoft/rush
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Rush install
+        run: node common/scripts/install-run-rush.js install
 
       - name: Build dependencies
-        run: pnpm run build
+        run: node common/scripts/install-run-rush.js build --verbose
+        env:
+          NODE_ENV: production
+
+      - name: Install root docs dependencies
+        run: pnpm install --frozen-lockfile
         env:
           NODE_ENV: production
 
