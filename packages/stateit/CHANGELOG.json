@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/stateit",
+  "entries": [
+    {
+      "version": "2.0.0",
+      "tag": "@vielzeug/stateit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: fine-grained reactive primitives — signal(), computed(), effect(), watch(), batch(), untrack(), and readonly(); store() for reactive object state with patch(), update(), reset(), select() for derived slices, and freeze(); derived() for multi-source computed signals; writable() for custom getter/setter signals; nextValue() promise for async signal observation; onCleanup() for effect-scoped teardown; [Symbol.dispose]() on all subscription handles; configureStateit() for global max-iteration limits; shallowEqual helper; full TypeScript generics throughout",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ]
+      }
+    }
+  ]
+}

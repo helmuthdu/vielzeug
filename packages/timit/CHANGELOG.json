@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/timit",
+  "entries": [
+    {
+      "version": "2.0.0",
+      "tag": "@vielzeug/timit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: introduce Temporal-first date and time toolkit with helpers for parsing (with timezone-aware plain string support), ZonedDateTime conversion, DST-safe arithmetic, duration differences, inclusive range checks, and Intl-based single/range formatting; includes Temporal re-export powered by @js-temporal/polyfill for runtimes without native Temporal",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ]
+      }
+    }
+  ]
+}

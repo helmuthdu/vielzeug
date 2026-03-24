@@ -2,6 +2,20 @@
   "name": "@vielzeug/validit",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/validit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: schema-first validation with full TypeScript type inference via v factory; primitives (string, number, boolean, date, null, undefined, unknown, never, any) with chainable refinements (min, max, email, url, regex, and more); complex types (object with strict/partial/pick/omit, array, tuple, record, union, intersect, variant discriminated unions, enum, nativeEnum, literal, instanceof); modifiers (optional, nullable, nullish); coerce namespace for type-coercing schemas; lazy() for recursive schemas; ValidationError with path-aware issues, flatten(), and static is() guard; zero dependencies",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.3",
       "tag": "@vielzeug/validit_v1.1.3",
       "date": "Sun, 15 Feb 2026 21:52:44 GMT",

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/permit
 
-This log was last generated on Thu, 12 Feb 2026 17:52:26 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 22:12:47 GMT and should not be manually modified.
+
+## 2.0.0
+Tue, 24 Mar 2026 22:12:47 GMT
+
+### Breaking changes
+
+- Major release: role-based access control (RBAC) with typed user and permission data generics; per-role, per-resource action permissions (create/read/update/delete) supporting static boolean or dynamic predicate functions receiving the user and optional resource data; wildcard (*) role for universal grants; ANONYMOUS role constant for unauthenticated users; hasRole() for case-insensitive role membership checks; set(), remove(), and clear() for runtime permission management
 
 ## 1.1.3
 Thu, 12 Feb 2026 17:52:26 GMT

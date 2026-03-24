@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/toolkit
 
-This log was last generated on Thu, 12 Feb 2026 17:52:26 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 22:12:47 GMT and should not be manually modified.
+
+## 2.0.0
+Tue, 24 Mar 2026 22:12:47 GMT
+
+### Breaking changes
+
+- Major release: comprehensive utility library across eight categories — Array (chunk, group, sort, uniq, search, remoteList, keyBy, and more), Object (merge with 5 strategies, diff, path, seek, cache, parseJSON), String (camelCase, kebabCase, pascalCase, snakeCase, truncate, similarity), Math (clamp, range, round, sum, average, allocate, distribute, median), Date (expires, timeDiff, interval), Function (compose, pipe, curry, debounce, throttle, memo, once, retry), Async (defer, parallel, pool, queue, race, sleep, waitFor), Typed (is type guards, isEqual, isMatch, isEmpty), and Random (uuid, draw, shuffle)
 
 ## 1.1.4
 Thu, 12 Feb 2026 17:52:26 GMT

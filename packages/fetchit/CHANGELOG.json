@@ -2,6 +2,25 @@
   "name": "@vielzeug/fetchit",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/fetchit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: HTTP client (createApi) with configurable base URL, timeout, deduplication, and composable interceptors; query client (createQuery) with staleTime/gcTime caching, prefetch, invalidation, per-key subscriptions, and AbortSignal cancellation; standalone mutation helper (createMutation) with retries, retry delay, and onSuccess/onError/onSettled callbacks; typed HttpError with status, data, isTimeout, and isAborted properties; [Symbol.dispose]() support on all clients",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/toolkit\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.7",
       "tag": "@vielzeug/fetchit_v1.1.7",
       "date": "Mon, 16 Feb 2026 11:16:45 GMT",

@@ -1,0 +1,36 @@
+{
+  "name": "@vielzeug/buildit",
+  "entries": [
+    {
+      "version": "2.0.0",
+      "tag": "@vielzeug/buildit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: complete web component library with 30+ accessible, themeable components (Button, Dialog, Drawer, Form, Select, Combobox, Toast, Tabs, Accordion, and more); signals-based reactivity via @vielzeug/craftit integration; CSS custom property theming system with dark-mode support; framework adapters for React, Vue 3, Svelte, and Angular; full ARIA compliance and keyboard navigation across all components",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/craftit\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/dragit\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/floatit\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/toolkit\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/virtualit\" to `2.0.0`"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/logit
 
-This log was last generated on Thu, 12 Feb 2026 17:52:26 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 22:12:47 GMT and should not be manually modified.
+
+## 2.0.0
+Tue, 24 Mar 2026 22:12:47 GMT
+
+### Breaking changes
+
+- Major release: structured console logger with configurable log levels (debug/info/warn/error/success/trace), prefix namespacing, timestamp toggling, and environment-aware output; scope() for child loggers with inherited configuration; groupCollapsed/groupEnd for collapsible log sections; table() and time()/timeEnd() helpers; remote logging via setRemote() for shipping logs to external endpoints; assert() with structured context output
 
 ## 1.1.2
 Thu, 12 Feb 2026 17:52:26 GMT

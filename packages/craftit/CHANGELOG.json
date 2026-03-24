@@ -2,6 +2,28 @@
   "name": "@vielzeug/craftit",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/craftit_v2.0.0",
+      "date": "Tue, 24 Mar 2026 22:12:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Major release: full signals-based web component framework built on @vielzeug/stateit; reactive html and css tagged templates with conditional rendering (html.when, html.each, html.show, html.match); component lifecycle hooks (onMount, onUnmount, onUpdated, onCleanup); prop/defineProps for reflected DOM attributes; context API (provide/inject/createContext); form-associated custom elements with ElementInternals; delegated event handling via handle(); shadow DOM refs and refs() helpers; defineEmits and defineSlots for typed component contracts",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ce2565c4a8c872f2540fb4122c5290f83ab3185"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/floatit\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/stateit\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/craftit_v1.0.1",
       "date": "Sun, 15 Feb 2026 21:52:44 GMT",

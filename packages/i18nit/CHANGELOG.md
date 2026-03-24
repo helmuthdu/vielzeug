@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/i18nit
 
-This log was last generated on Mon, 16 Feb 2026 21:17:52 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 22:12:47 GMT and should not be manually modified.
+
+## 2.0.0
+Tue, 24 Mar 2026 22:12:47 GMT
+
+### Breaking changes
+
+- Major release: TypeScript-first internationalization with nested message key resolution and plural forms (zero/one/two/few/many/other per CLDR); variable interpolation and HTML escaping; lazy async loaders per locale with loadAll() batch support; namespace() for module-scoped translations; Intl-backed number() and date() formatting helpers; setLocale() with subscribe() for reactive locale switching; fallback locale chain support
 
 ## 1.2.0
 Mon, 16 Feb 2026 21:17:52 GMT
