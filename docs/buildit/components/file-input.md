@@ -17,7 +17,7 @@ A modern file upload component with drag-and-drop support, file list management,
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/file-input/file-input.ts
+<<< @/../packages/buildit/src/inputs/file-input/file-input.ts
 :::
 
 ## Basic Usage

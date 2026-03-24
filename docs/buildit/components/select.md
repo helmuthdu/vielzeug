@@ -20,7 +20,7 @@ A fully-featured, form-associated select widget that reads native `<option>` and
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/select/select.ts
+<<< @/../packages/buildit/src/inputs/select/select.ts
 :::
 
 ## Basic Usage

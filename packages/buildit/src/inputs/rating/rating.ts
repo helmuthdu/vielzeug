@@ -3,8 +3,8 @@ import { computed, defineComponent, typed, defineField, html, inject, signal } f
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX } from '../form/form';
 import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import { createFieldValidation } from '../shared/validation';
 import styles from './rating.css?inline';
 

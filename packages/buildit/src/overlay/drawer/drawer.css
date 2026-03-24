@@ -2,10 +2,19 @@
   :host {
     --_backdrop-bg: var(--drawer-backdrop, color-mix(in srgb, var(--color-canvas) 40%, transparent));
     --_backdrop-filter: none;
-    --_panel-bg: var(--drawer-bg, light-dark(color-mix(in srgb, var(--color-contrast-50) 85%, transparent), color-mix(in srgb, var(--color-contrast-100) 85%, transparent)));
+    --_panel-bg: var(
+      --drawer-bg,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
+      )
+    );
     --_panel-blur: var(--drawer-panel-blur, var(--blur-md));
     --_panel-shadow: var(--drawer-shadow, var(--shadow-xl));
-    --_panel-border-color: light-dark(color-mix(in srgb, var(--color-contrast-900) 8%, transparent), color-mix(in srgb, var(--color-contrast-100) 8%, transparent));
+    --_panel-border-color: light-dark(
+      color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
+      color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
+    );
     --_panel-bleed: var(--size-8);
 
     display: contents;
@@ -147,9 +156,17 @@
   }
 
   /* Size utilities */
-  :host([size='sm']) { --drawer-size: 14rem; }
-  :host([size='lg']) { --drawer-size: 32rem; }
-  :host([size='full']) { --drawer-size: 100%; }
+  :host([size='sm']) {
+    --drawer-size: 14rem;
+  }
+
+  :host([size='lg']) {
+    --drawer-size: 32rem;
+  }
+
+  :host([size='full']) {
+    --drawer-size: 100%;
+  }
 
   :host([size='full']) .panel {
     width: calc(100% + var(--_panel-bleed));
@@ -194,7 +211,9 @@
     border-top: var(--border) solid var(--color-contrast-200);
   }
 
-  .header[hidden], .footer[hidden], .close-btn[hidden] {
+  .header[hidden],
+  .footer[hidden],
+  .close-btn[hidden] {
     display: none;
   }
 
@@ -237,7 +256,9 @@
       max-height: calc(100dvh - var(--size-2) + var(--_panel-bleed));
     }
 
-    .header, .body, .footer {
+    .header,
+    .body,
+    .footer {
       padding: var(--size-3);
     }
   }
@@ -252,4 +273,3 @@
     --_backdrop-bg: transparent;
   }
 }
-

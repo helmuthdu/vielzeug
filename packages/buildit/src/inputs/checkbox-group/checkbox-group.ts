@@ -17,8 +17,8 @@ import {
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX } from '../form/form';
 import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import { createChoiceChangeDetail, parseCsvValues, type ChoiceChangeDetail } from '../shared/utils';
 import componentStyles from './checkbox-group.css?inline';
 

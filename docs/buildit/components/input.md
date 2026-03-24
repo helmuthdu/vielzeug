@@ -16,7 +16,7 @@ A customizable text input component with multiple types, variants, and validatio
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/input/input.ts
+<<< @/../packages/buildit/src/inputs/input/input.ts
 :::
 
 ## Basic Usage

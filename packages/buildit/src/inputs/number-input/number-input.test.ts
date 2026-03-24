@@ -6,7 +6,7 @@ describe('bit-number-input', () => {
   beforeAll(async () => {
     await (() => import('./number-input'))();
     await import('../input/input');
-    await import('../../actions/button/button');
+    await import('../button/button');
   });
 
   afterEach(() => {
@@ -242,7 +242,7 @@ describe('bit-number-input accessibility', () => {
   beforeAll(async () => {
     await (() => import('./number-input'))();
     await import('../input/input');
-    await import('../../actions/button/button');
+    await import('../button/button');
   });
 
   afterEach(() => {

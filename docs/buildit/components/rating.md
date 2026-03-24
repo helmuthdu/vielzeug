@@ -15,7 +15,7 @@ A star-based rating input that lets users select a score. Supports hover preview
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/rating/rating.ts
+<<< @/../packages/buildit/src/inputs/rating/rating.ts
 :::
 
 ## Basic Usage

@@ -98,7 +98,7 @@ import '@vielzeug/buildit/tooltip';
 
 ## Root Export Surface
 
-The package root is a **flat named-export surface**. It re-exports symbols from the internal action/content/disclosure/feedback/form/layout/overlay/type modules while also registering all published components as a side effect.
+The package root is a **flat named-export surface**. It re-exports symbols from the internal content/disclosure/feedback/inputs/layout/overlay/type modules while also registering all published components as a side effect.
 
 Notable root exports include:
 
@@ -125,9 +125,6 @@ Use the following pages as the canonical per-component API source.
 - [Skeleton](./components/skeleton.md)
 - [Toast](./components/toast.md)
 
-### Actions
-
-- [Button (+ Button Group)](./components/button.md)
 
 ### Content
 
@@ -147,8 +144,9 @@ Use the following pages as the canonical per-component API source.
 - [Popover](./components/popover.md)
 - [Tooltip](./components/tooltip.md)
 
-### Form
+### Inputs
 
+- [Button (+ Button Group)](./components/button.md)
 - [Checkbox (+ Checkbox Group)](./components/checkbox.md)
 - [Checkbox Group](./components/checkbox-group.md)
 - [Combobox](./components/combobox.md)

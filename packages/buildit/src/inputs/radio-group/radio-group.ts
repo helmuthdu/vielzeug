@@ -18,8 +18,8 @@ import {
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX } from '../form/form';
 import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import { createChoiceChangeDetail, type ChoiceChangeDetail } from '../shared/utils';
 import componentStyles from './radio-group.css?inline';
 

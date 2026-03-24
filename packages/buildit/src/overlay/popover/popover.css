@@ -39,10 +39,10 @@
     border: var(--border) solid var(--_panel-border-color);
     border-radius: var(--rounded-lg);
     box-shadow: var(--_panel-shadow);
-    backdrop-filter: blur(var(--_panel-blur));
 
     /* Hidden by default */
     opacity: 0;
+    backdrop-filter: blur(var(--_panel-blur));
     transform: scale(0.96) translateY(var(--size-2));
     transition: var(
       --_motion-transition,

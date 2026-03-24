@@ -1,6 +1,6 @@
 import { computed, defineField, inject, type ReadonlySignal, signal, watch } from '@vielzeug/craftit';
 
-import { FORM_CTX } from '../../form/form';
+import { FORM_CTX } from '../form-context';
 import { createFieldValidation } from '../validation';
 
 export interface ToggleFieldBaseProps {

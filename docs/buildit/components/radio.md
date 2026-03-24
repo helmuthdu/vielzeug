@@ -17,11 +17,11 @@ A radio button and a group wrapper for mutually exclusive selections.
 ## Source Code
 
 ::: details View Radio Source
-<<< @/../packages/buildit/src/form/radio/radio.ts
+<<< @/../packages/buildit/src/inputs/radio/radio.ts
 :::
 
 ::: details View Radio Group Source
-<<< @/../packages/buildit/src/form/radio-group/radio-group.ts
+<<< @/../packages/buildit/src/inputs/radio-group/radio-group.ts
 :::
 
 ---

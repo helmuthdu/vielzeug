@@ -14,7 +14,7 @@ A toggle switch component for binary on/off states. Perfect for settings, featur
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/switch/switch.ts
+<<< @/../packages/buildit/src/inputs/switch/switch.ts
 :::
 
 ## Basic Usage

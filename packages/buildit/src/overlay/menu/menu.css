@@ -40,8 +40,8 @@
     border: var(--border) solid var(--_menu-panel-border-color);
     border-radius: var(--menu-panel-radius, var(--rounded-lg));
     box-shadow: var(--_menu-panel-shadow);
-    backdrop-filter: blur(var(--_menu-panel-blur));
     opacity: 0;
+    backdrop-filter: blur(var(--_menu-panel-blur));
     transform: translateY(-4px) scale(0.97);
     transform-origin: top;
     transition:

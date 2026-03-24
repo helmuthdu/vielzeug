@@ -27,11 +27,11 @@ A customizable boolean form control with indeterminate state support, plus a gro
 ## Source Code
 
 ::: details View Checkbox Source
-<<< @/../packages/buildit/src/form/checkbox/checkbox.ts
+<<< @/../packages/buildit/src/inputs/checkbox/checkbox.ts
 :::
 
 ::: details View Checkbox Group Source
-<<< @/../packages/buildit/src/form/checkbox-group/checkbox-group.ts
+<<< @/../packages/buildit/src/inputs/checkbox-group/checkbox-group.ts
 :::
 
 ---

@@ -5,7 +5,7 @@ import type { DisablableProps, SizableProps, ThemableProps, VisualVariant } from
 import { minusIcon, plusIcon } from '../../icons';
 import { disabledStateMixin } from '../../styles';
 // Ensure child components are registered
-import '../../actions/button/button';
+import '../button/button';
 import '../input/input';
 import styles from './number-input.css?inline';
 

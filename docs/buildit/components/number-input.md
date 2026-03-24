@@ -16,7 +16,7 @@ A numeric text field with increment (＋) and decrement (−) spin-buttons. Enfo
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/number-input/number-input.ts
+<<< @/../packages/buildit/src/inputs/number-input/number-input.ts
 :::
 
 ## Basic Usage

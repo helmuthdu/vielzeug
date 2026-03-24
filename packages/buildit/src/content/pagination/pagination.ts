@@ -1,7 +1,7 @@
 import { computed, defineComponent, html } from '@vielzeug/craftit';
 import { each } from '@vielzeug/craftit/directives';
 
-import '../../actions/button/button';
+import '../../inputs/button/button';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';

@@ -72,15 +72,13 @@ For headless widget controllers (navigation/overlay/selection), use `@vielzeug/c
 
 ## Components
 
-**Actions:** `bit-button`, `bit-button-group`
-
 **Content:** `bit-avatar`, `bit-breadcrumb`, `bit-card`, `bit-pagination`, `bit-separator`, `bit-table`, `bit-text`
 
 **Disclosure:** `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`
 
 **Feedback:** `bit-alert`, `bit-badge`, `bit-chip`, `bit-progress`, `bit-skeleton`, `bit-toast`
 
-**Form:** `bit-checkbox`, `bit-checkbox-group`, `bit-combobox`, `bit-file-input`, `bit-form`, `bit-input`, `bit-number-input`, `bit-otp-input`, `bit-radio`, `bit-radio-group`, `bit-rating`, `bit-select`, `bit-slider`, `bit-switch`, `bit-textarea`
+**Inputs:** `bit-button`, `bit-button-group`, `bit-checkbox`, `bit-checkbox-group`, `bit-combobox`, `bit-file-input`, `bit-form`, `bit-input`, `bit-number-input`, `bit-otp-input`, `bit-radio`, `bit-radio-group`, `bit-rating`, `bit-select`, `bit-slider`, `bit-switch`, `bit-textarea`
 
 **Layout:** `bit-box`, `bit-grid`, `bit-grid-item`, `bit-sidebar`
 
@@ -118,7 +116,7 @@ Every project needs UI primitives. Buildit provides accessible web components th
 - **Themeable** — global tokens plus component-level CSS custom properties
 - **Framework agnostic** — works anywhere HTML can be rendered
 - **Tree-shakeable** — import only the component entry points you register
-- **Comprehensive surface** — actions, content, disclosure, feedback, form, layout, and overlay primitives
+- **Comprehensive surface** — inputs, content, disclosure, feedback, layout, and overlay primitives
 - **Zero runtime deps** — <PackageInfo package="buildit" type="size" /> gzipped
 
 ## Compatibility

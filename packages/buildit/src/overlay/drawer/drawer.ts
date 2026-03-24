@@ -25,6 +25,8 @@ export type BitDrawerEvents = {
 };
 
 export type BitDrawerProps = {
+  /** Backdrop style — 'opaque' (default), 'blur', or 'transparent' */
+  backdrop?: DrawerBackdrop;
   /** Show the close (×) button in the header (default: true) */
   dismissable?: boolean;
   /**
@@ -39,8 +41,6 @@ export type BitDrawerProps = {
    * When omitted, `aria-labelledby` points to the visible header title instead.
    */
   label?: string;
-  /** Backdrop style — 'opaque' (default), 'blur', or 'transparent' */
-  backdrop?: DrawerBackdrop;
   /** Controlled open state */
   open?: boolean;
   /** When true, backdrop clicks do not close the drawer (default: false) */
@@ -132,7 +132,9 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
 
     const close = () => {
       const dialog = dialogRef.value;
+
       if (!dialog?.open) return;
+
       dialog.close();
     };
 
@@ -147,6 +149,7 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
 
     const openDrawer = () => {
       const dialog = dialogRef.value;
+
       if (!dialog || dialog.open) return;
 
       captureReturnFocus();
@@ -159,10 +162,12 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
 
     onMount(() => {
       const dialog = dialogRef.value;
+
       if (!dialog) return;
 
       // Expose imperative API
       const el = host as DrawerElement;
+
       el.show = openDrawer;
       el.hide = close;
 
@@ -175,6 +180,7 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
 
       const handleCancel = (e: Event) => {
         e.preventDefault();
+
         if (!props.persistent.value) requestClose('escape');
       };
 

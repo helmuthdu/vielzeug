@@ -1,33 +1,11 @@
-import { computed, createContext, defineComponent, html, typed, provide, type ReadonlySignal } from '@vielzeug/craftit';
+import { computed, defineComponent, html, typed, provide } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
-// ============================================
-// Context
-// ============================================
-
-export type FormContext = {
-  /** Whether all child fields are disabled */
-  disabled: ReadonlySignal<boolean>;
-  /** Default size propagated to all child form fields */
-  size: ReadonlySignal<ComponentSize | undefined>;
-  /**
-   * When to validate child form controls:
-   * - `'submit'` (default): only on form submit
-   * - `'blur'`: validate each field when it loses focus
-   * - `'change'`: validate on every value change
-   */
-  validateOn: ReadonlySignal<'submit' | 'blur' | 'change'>;
-  /** Default variant propagated to all child form fields */
-  variant: ReadonlySignal<Exclude<VisualVariant, 'glass' | 'frost' | 'text'> | undefined>;
-};
-
-export const FORM_CTX = createContext<FormContext>('FormContext');
-
+import { FORM_CTX } from '../shared/form-context';
 // ============================================
 // Styles
 // ============================================
-
 import componentStyles from './form.css?inline';
 
 // ============================================

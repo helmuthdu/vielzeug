@@ -23,9 +23,9 @@ import type { SelectableFieldProps } from '../shared/base-props';
 
 import { checkIcon, chevronDownIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { FORM_CTX } from '../form/form';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
 import { createDropdownPositioner, mountLabelSyncStandalone } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import {
   type ChoiceChangeDetail,
   computeControlledCsvState,

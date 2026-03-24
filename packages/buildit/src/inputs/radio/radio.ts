@@ -4,10 +4,10 @@ import { useA11yControl, createCheckableControl } from '@vielzeug/craftit/labs';
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
-import { FORM_CTX } from '../form/form';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
 import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './radio.css?inline';
 
 /** Radio component properties */

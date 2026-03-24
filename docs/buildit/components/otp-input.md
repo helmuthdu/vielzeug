@@ -19,7 +19,7 @@ A segmented one-time password input that renders individual cells for each digit
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/otp-input/otp-input.ts
+<<< @/../packages/buildit/src/inputs/otp-input/otp-input.ts
 :::
 
 ## Basic Usage

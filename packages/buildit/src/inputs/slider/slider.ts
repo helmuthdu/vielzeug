@@ -17,9 +17,9 @@ import {
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX } from '../form/form';
 import { SLIDER_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import { createFieldValidation } from '../shared/validation';
 import componentStyles from './slider.css?inline';
 

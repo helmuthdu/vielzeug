@@ -3,11 +3,10 @@
  * This file is the single source of truth for element type registrations.
  */
 
+export {};
+
 declare global {
   interface HTMLElementTagNameMap {
-    // actions
-    'bit-button': HTMLElement & BitButtonProps;
-    'bit-button-group': HTMLElement & BitButtonGroupProps;
     // content
     'bit-avatar': HTMLElement & BitAvatarProps;
     'bit-avatar-group': HTMLElement & BitAvatarGroupProps;
@@ -46,7 +45,9 @@ declare global {
     'bit-progress': HTMLElement & BitProgressProps;
     'bit-skeleton': HTMLElement & BitSkeletonProps;
     'bit-toast': ToastElement;
-    // form
+    // inputs
+    'bit-button': HTMLElement & BitButtonProps;
+    'bit-button-group': HTMLElement & BitButtonGroupProps;
     'bit-checkbox': HTMLElement & BitCheckboxProps & FormValidityMethods & AddEventListeners<BitCheckboxEvents>;
     'bit-checkbox-group': HTMLElement & BitCheckboxGroupProps;
     'bit-combobox': HTMLElement & BitComboboxProps & FormValidityMethods & AddEventListeners<BitComboboxEvents>;
@@ -78,6 +79,7 @@ declare global {
     'bit-drawer': DrawerElement & AddEventListeners<BitDrawerEvents>;
     'bit-menu': HTMLElement & BitMenuProps & AddEventListeners<BitMenuEvents>;
     'bit-menu-item': HTMLElement & BitMenuItemProps;
+    'bit-menu-separator': HTMLElement;
     'bit-popover': HTMLElement & BitPopoverProps & AddEventListeners<BitPopoverEvents>;
     'bit-tooltip': HTMLElement & BitTooltipProps;
   }

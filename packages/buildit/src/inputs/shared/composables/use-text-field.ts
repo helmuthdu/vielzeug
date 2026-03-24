@@ -22,8 +22,8 @@ import {
   watch,
 } from '@vielzeug/craftit';
 
-import { FORM_CTX } from '../../form/form';
 import { mountLabelSyncStandalone } from '../dom-sync';
+import { FORM_CTX } from '../form-context';
 import { triggerValidationOnEvent } from '../validation';
 
 export type TextFieldBaseProps = {

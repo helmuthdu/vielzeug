@@ -221,7 +221,7 @@ Use `bit-menu-separator` to add a horizontal divider between groups of related i
 
 ### Checkbox Items
 
-Set `type="checkbox"` on a `bit-menu-item` to make it toggleable. Clicking or pressing `Enter`/`Space` toggles the `checked` attribute and emits `bit-select` with `checked` in the event detail. The menu stays open when a checkbox item is activated.
+Set `type="checkbox"` on a `bit-menu-item` to make it toggleable. Clicking or pressing `Enter`/`Space` toggles the `checked` attribute and emits `select` with `checked` in the event detail. The menu stays open when a checkbox item is activated.
 
 <ComponentPreview vertical>
 

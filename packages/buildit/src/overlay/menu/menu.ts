@@ -1,5 +1,6 @@
 import {
   aria,
+  computed,
   createId,
   css,
   defineComponent,
@@ -31,10 +32,19 @@ export interface MenuSelectDetail {
   checked?: boolean;
 }
 
+export type BitMenuItemType = 'checkbox' | 'radio';
+
 export type BitMenuEvents = {
   close: { reason: OverlayCloseReason };
   open: { reason: OverlayOpenReason };
   select: MenuSelectDetail;
+};
+
+export type BitMenuItemProps = {
+  checked?: boolean;
+  disabled?: boolean;
+  type?: BitMenuItemType;
+  value?: string;
 };
 
 export type BitMenuProps = {
@@ -60,8 +70,14 @@ const themeStyles = /* css */ css`
 // Menu Item Component
 // ============================================
 
-export const MENU_ITEM_TAG = defineComponent({
-  setup({ host }) {
+export const MENU_ITEM_TAG = defineComponent<BitMenuItemProps>({
+  props: {
+    checked: { default: false, type: Boolean },
+    disabled: { default: false, type: Boolean },
+    type: { default: undefined },
+    value: { default: undefined },
+  },
+  setup({ props }) {
     const itemStyles = /* css */ css`
       @layer buildit.base {
         :host {
@@ -128,6 +144,15 @@ export const MENU_ITEM_TAG = defineComponent({
           display: contents;
         }
 
+        .item-check {
+          align-items: center;
+          color: currentColor;
+          display: inline-flex;
+          flex-shrink: 0;
+          justify-content: center;
+          width: 1.25rem;
+        }
+
         .item-label {
           flex: 1;
           min-width: 0;
@@ -139,50 +164,57 @@ export const MENU_ITEM_TAG = defineComponent({
       ${coarsePointerMixin}
     `;
 
-    onMount(() => {
-      const itemEl = host.shadowRoot?.querySelector<HTMLElement>('.item');
-      if (!itemEl) return;
+    const isCheckable = computed(() => props.type.value === 'checkbox' || props.type.value === 'radio');
+    const isChecked = computed(() => isCheckable.value && props.checked.value);
+    const itemRole = computed(() => {
+      if (props.type.value === 'checkbox') return 'menuitemcheckbox';
 
-      const sync = () => {
-        const type = host.getAttribute('type');
-        const checked = host.hasAttribute('checked');
-        const disabled = host.hasAttribute('disabled');
-        const isCheckable = type === 'checkbox' || type === 'radio';
+      if (props.type.value === 'radio') return 'menuitemradio';
 
-        // Visual state via classes — reliable within shadow DOM
-        itemEl.classList.toggle('is-checkable', isCheckable);
-        itemEl.classList.toggle('is-checked', isCheckable && checked);
-
-        // ARIA
-        if (type === 'checkbox') {
-          itemEl.setAttribute('role', 'menuitemcheckbox');
-          itemEl.setAttribute('aria-checked', String(checked));
-        } else if (type === 'radio') {
-          itemEl.setAttribute('role', 'menuitemradio');
-          itemEl.setAttribute('aria-checked', String(checked));
-        } else {
-          itemEl.setAttribute('role', 'menuitem');
-          itemEl.removeAttribute('aria-checked');
-        }
-
-        itemEl.setAttribute('aria-disabled', String(disabled));
-      };
-
-      const observer = new MutationObserver(sync);
-      observer.observe(host, { attributes: true, attributeFilter: ['checked', 'disabled', 'type'] });
-      sync();
-
-      return () => observer.disconnect();
+      return 'menuitem';
     });
+    const checkIndicator = computed(() => {
+      if (props.type.value === 'checkbox') return props.checked.value ? '☑' : '☐';
+
+      if (props.type.value === 'radio') return props.checked.value ? '◉' : '◯';
+
+      return '';
+    });
+    const itemClass = computed(
+      () => `item${isCheckable.value ? ' is-checkable' : ''}${isChecked.value ? ' is-checked' : ''}`,
+    );
+    const renderContent = () => html`
+      <span class="item-check" aria-hidden="true">${() => checkIndicator.value}</span>
+      <span class="icon-slot"><slot name="icon"></slot></span>
+      <span class="item-label"><slot></slot></span>
+    `;
 
     return html`
       <style>
         ${itemStyles}
       </style>
-      <div class="item" tabindex="-1">
-        <span class="icon-slot"><slot name="icon"></slot></span>
-        <span class="item-label"><slot></slot></span>
-      </div>
+      ${() =>
+        isCheckable.value
+          ? html`
+              <div
+                class="${() => itemClass.value}"
+                tabindex="-1"
+                role="${() => itemRole.value}"
+                aria-checked="${() => String(isChecked.value)}"
+                aria-disabled="${() => String(props.disabled.value)}">
+                ${renderContent()}
+              </div>
+            `
+          : html`
+              <div
+                class="${() => itemClass.value}"
+                tabindex="-1"
+                role="menuitem"
+                aria-disabled="${() => String(props.disabled.value)}">
+                <span class="icon-slot"><slot name="icon"></slot></span>
+                <span class="item-label"><slot></slot></span>
+              </div>
+            `}
     `;
   },
   tag: 'bit-menu-item',
@@ -319,11 +351,21 @@ export const MENU_TAG = defineComponent<BitMenuProps, BitMenuEvents>({
           overlay.open();
           requestAnimationFrame(() => listNavigation.first());
         }
+
         return;
       }
 
       // When open: navigate and activate
       switch (e.key) {
+        case ' ': {
+          e.preventDefault();
+
+          const focused = listNavigation.getActiveItem();
+
+          if (focused) activateItem(focused);
+
+          break;
+        }
         case 'ArrowDown':
           e.preventDefault();
           listNavigation.next();
@@ -332,24 +374,26 @@ export const MENU_TAG = defineComponent<BitMenuProps, BitMenuEvents>({
           e.preventDefault();
           listNavigation.prev();
           break;
-        case 'Home':
-          e.preventDefault();
-          listNavigation.first();
-          break;
         case 'End':
           e.preventDefault();
           listNavigation.last();
           break;
-        case 'Enter':
-        case ' ': {
+        case 'Enter': {
           e.preventDefault();
+
           const focused = listNavigation.getActiveItem();
+
           if (focused) activateItem(focused);
+
           break;
         }
         case 'Escape':
           e.preventDefault();
           overlay.close({ reason: 'escape' });
+          break;
+        case 'Home':
+          e.preventDefault();
+          listNavigation.first();
           break;
         case 'Tab':
           overlay.close({ reason: 'programmatic' });

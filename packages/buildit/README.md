@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/buildit)](https://www.npmjs.com/package/@vielzeug/buildit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Buildit** is the Vielzeug component library. It ships accessible custom elements for actions, forms, content, overlays, layout, and feedback — all built on top of `@vielzeug/craftit`, styled with CSS custom properties, and published as side-effect entry points for explicit runtime registration.
+**Buildit** is the Vielzeug component library. It ships accessible custom elements for inputs, content, overlays, layout, and feedback — all built on top of `@vielzeug/craftit`, styled with CSS custom properties, and published as side-effect entry points for explicit runtime registration.
 
 ## Installation
 
@@ -50,7 +50,7 @@ import '@vielzeug/buildit';
 - ✅ **Accessible by default** — keyboard navigation, ARIA wiring, focus management, and form-associated controls
 - ✅ **Granular runtime imports** — register only the elements you need via subpath imports like `@vielzeug/buildit/button`
 - ✅ **Design-token based styling** — global styles plus CSS custom properties for local overrides
-- ✅ **Domain-organized package surface** — actions, content, disclosure, feedback, form, layout, and overlay primitives
+- ✅ **Domain-organized package surface** — inputs, content, disclosure, feedback, layout, and overlay primitives
 - ✅ **Published subpaths** — components, `styles`, and shared `types` are exposed directly
 
 ## Package Structure
@@ -65,10 +65,6 @@ import '@vielzeug/buildit';
 
 ### Component entry points
 
-**Actions**
-
-`button`, `button-group`
-
 **Content**
 
 `avatar`, `breadcrumb`, `card`, `pagination`, `separator`, `table`, `text`
@@ -81,9 +77,9 @@ import '@vielzeug/buildit';
 
 `alert`, `badge`, `chip`, `progress`, `skeleton`, `toast`
 
-**Form**
+**Inputs**
 
-`checkbox`, `checkbox-group`, `combobox`, `file-input`, `form`, `input`, `number-input`, `otp-input`, `radio`, `radio-group`, `rating`, `select`, `slider`, `switch`, `textarea`
+`button`, `button-group`, `checkbox`, `checkbox-group`, `combobox`, `file-input`, `form`, `input`, `number-input`, `otp-input`, `radio`, `radio-group`, `rating`, `select`, `slider`, `switch`, `textarea`
 
 **Layout**
 

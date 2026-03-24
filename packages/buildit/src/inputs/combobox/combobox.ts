@@ -28,9 +28,9 @@ import type { AddEventListeners } from '../../types';
 import '../../feedback/chip/chip';
 import { checkIconHTML, chevronDownIcon, clearIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { FORM_CTX } from '../form/form';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
 import { createDropdownPositioner, mountLabelSyncStandalone } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import { computeControlledCsvState, createChoiceChangeDetail, resolveMergedAssistiveText } from '../shared/utils';
 import { createFieldValidation } from '../shared/validation';
 import {

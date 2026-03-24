@@ -16,7 +16,7 @@ A multi-line text input with integrated label, helper text, character counter, a
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/textarea/textarea.ts
+<<< @/../packages/buildit/src/inputs/textarea/textarea.ts
 :::
 
 ## Basic Usage

@@ -68,12 +68,12 @@
       "require": "./dist/breadcrumb.cjs"
     },
     "./button": {
-      "types": "./dist/actions/button/button.d.ts",
+      "types": "./dist/inputs/button/button.d.ts",
       "import": "./dist/button.js",
       "require": "./dist/button.cjs"
     },
     "./button-group": {
-      "types": "./dist/actions/button-group/button-group.d.ts",
+      "types": "./dist/inputs/button-group/button-group.d.ts",
       "import": "./dist/button-group.js",
       "require": "./dist/button-group.cjs"
     },
@@ -83,12 +83,12 @@
       "require": "./dist/card.cjs"
     },
     "./checkbox": {
-      "types": "./dist/form/checkbox/checkbox.d.ts",
+      "types": "./dist/inputs/checkbox/checkbox.d.ts",
       "import": "./dist/checkbox.js",
       "require": "./dist/checkbox.cjs"
     },
     "./checkbox-group": {
-      "types": "./dist/form/checkbox-group/checkbox-group.d.ts",
+      "types": "./dist/inputs/checkbox-group/checkbox-group.d.ts",
       "import": "./dist/checkbox-group.js",
       "require": "./dist/checkbox-group.cjs"
     },
@@ -98,7 +98,7 @@
       "require": "./dist/chip.cjs"
     },
     "./combobox": {
-      "types": "./dist/form/combobox/combobox.d.ts",
+      "types": "./dist/inputs/combobox/combobox.d.ts",
       "import": "./dist/combobox.js",
       "require": "./dist/combobox.cjs"
     },
@@ -113,12 +113,12 @@
       "require": "./dist/drawer.cjs"
     },
     "./file-input": {
-      "types": "./dist/form/file-input/file-input.d.ts",
+      "types": "./dist/inputs/file-input/file-input.d.ts",
       "import": "./dist/file-input.js",
       "require": "./dist/file-input.cjs"
     },
     "./form": {
-      "types": "./dist/form/form/form.d.ts",
+      "types": "./dist/inputs/form/form.d.ts",
       "import": "./dist/form.js",
       "require": "./dist/form.cjs"
     },
@@ -133,7 +133,7 @@
       "require": "./dist/grid-item.cjs"
     },
     "./input": {
-      "types": "./dist/form/input/input.d.ts",
+      "types": "./dist/inputs/input/input.d.ts",
       "import": "./dist/input.js",
       "require": "./dist/input.cjs"
     },
@@ -143,12 +143,12 @@
       "require": "./dist/menu.cjs"
     },
     "./number-input": {
-      "types": "./dist/form/number-input/number-input.d.ts",
+      "types": "./dist/inputs/number-input/number-input.d.ts",
       "import": "./dist/number-input.js",
       "require": "./dist/number-input.cjs"
     },
     "./otp-input": {
-      "types": "./dist/form/otp-input/otp-input.d.ts",
+      "types": "./dist/inputs/otp-input/otp-input.d.ts",
       "import": "./dist/otp-input.js",
       "require": "./dist/otp-input.cjs"
     },
@@ -168,22 +168,22 @@
       "require": "./dist/progress.cjs"
     },
     "./radio": {
-      "types": "./dist/form/radio/radio.d.ts",
+      "types": "./dist/inputs/radio/radio.d.ts",
       "import": "./dist/radio.js",
       "require": "./dist/radio.cjs"
     },
     "./radio-group": {
-      "types": "./dist/form/radio-group/radio-group.d.ts",
+      "types": "./dist/inputs/radio-group/radio-group.d.ts",
       "import": "./dist/radio-group.js",
       "require": "./dist/radio-group.cjs"
     },
     "./rating": {
-      "types": "./dist/form/rating/rating.d.ts",
+      "types": "./dist/inputs/rating/rating.d.ts",
       "import": "./dist/rating.js",
       "require": "./dist/rating.cjs"
     },
     "./select": {
-      "types": "./dist/form/select/select.d.ts",
+      "types": "./dist/inputs/select/select.d.ts",
       "import": "./dist/select.js",
       "require": "./dist/select.cjs"
     },
@@ -203,12 +203,12 @@
       "require": "./dist/skeleton.cjs"
     },
     "./slider": {
-      "types": "./dist/form/slider/slider.d.ts",
+      "types": "./dist/inputs/slider/slider.d.ts",
       "import": "./dist/slider.js",
       "require": "./dist/slider.cjs"
     },
     "./switch": {
-      "types": "./dist/form/switch/switch.d.ts",
+      "types": "./dist/inputs/switch/switch.d.ts",
       "import": "./dist/switch.js",
       "require": "./dist/switch.cjs"
     },
@@ -238,7 +238,7 @@
       "require": "./dist/text.cjs"
     },
     "./textarea": {
-      "types": "./dist/form/textarea/textarea.d.ts",
+      "types": "./dist/inputs/textarea/textarea.d.ts",
       "import": "./dist/textarea.js",
       "require": "./dist/textarea.cjs"
     },

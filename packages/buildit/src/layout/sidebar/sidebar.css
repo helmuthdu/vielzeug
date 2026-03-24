@@ -3,9 +3,21 @@
     --_sidebar-width: var(--sidebar-width, 16rem);
     --_sidebar-collapsed-width: var(--sidebar-collapsed-width, 3.5rem);
     --_sidebar-transition: var(--transition-normal);
-    --_panel-bg: var(--sidebar-bg, light-dark(color-mix(in srgb, var(--color-contrast-50) 85%, transparent), color-mix(in srgb, var(--color-contrast-100) 85%, transparent)));
+    --_panel-bg: var(
+      --sidebar-bg,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
+      )
+    );
     --_panel-blur: var(--sidebar-panel-blur, var(--blur-md));
-    --_panel-border-color: var(--sidebar-border-color, light-dark(color-mix(in srgb, var(--color-contrast-900) 8%, transparent), color-mix(in srgb, var(--color-contrast-100) 8%, transparent)));
+    --_panel-border-color: var(
+      --sidebar-border-color,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
+      )
+    );
     --_panel-radius: var(--sidebar-radius, 0);
     --_panel-shadow: var(--sidebar-shadow, var(--shadow-xl));
 

@@ -16,7 +16,7 @@ A smart `<form>` wrapper that propagates `disabled`, `size`, `variant`, and `val
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/form/form.ts
+<<< @/../packages/buildit/src/inputs/form/form.ts
 :::
 
 ## Basic Usage

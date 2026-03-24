@@ -1,6 +1,6 @@
 import { effect, type ReadonlySignal } from '@vielzeug/craftit';
 
-import { type FormContext } from '../../form/form';
+import { type FormContext } from '../form-context';
 
 export interface FormContextSyncProps {
   disabled: ReadonlySignal<boolean | undefined>;

@@ -1,5 +1,9 @@
 import { type Fixture, mount, user } from '@vielzeug/craftit/test';
 
+import type { BitMenuItemProps } from './menu';
+
+type MenuItemElement = HTMLElement & BitMenuItemProps;
+
 describe('bit-menu', () => {
   let fixture: Fixture<HTMLElement>;
 
@@ -22,7 +26,7 @@ describe('bit-menu', () => {
 
       const onOpen = vi.fn();
 
-      fixture.element.addEventListener('bit-open', onOpen);
+      fixture.element.addEventListener('open', onOpen);
 
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
@@ -30,7 +34,7 @@ describe('bit-menu', () => {
       expect((onOpen.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'toggle' });
     });
 
-    it('emits bit-select and closes for normal menu items', async () => {
+    it('emits select and closes for normal menu items', async () => {
       fixture = await mount('bit-menu', {
         html: `
           <button slot="trigger">Open</button>
@@ -41,11 +45,11 @@ describe('bit-menu', () => {
       const onSelect = vi.fn();
       const onClose = vi.fn();
 
-      fixture.element.addEventListener('bit-select', onSelect);
-      fixture.element.addEventListener('bit-close', onClose);
+      fixture.element.addEventListener('select', onSelect);
+      fixture.element.addEventListener('close', onClose);
 
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
-      await user.click(fixture.element.querySelector<HTMLElement>('bit-menu-item')!);
+      await user.click(fixture.element.querySelector<MenuItemElement>('[value="edit"]')!);
 
       expect(onSelect).toHaveBeenCalledTimes(1);
       expect((onSelect.mock.calls[0][0] as CustomEvent).detail.value).toBe('edit');
@@ -63,7 +67,7 @@ describe('bit-menu', () => {
 
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
-      const item = fixture.element.querySelector<HTMLElement>('bit-menu-item')!;
+      const item = fixture.element.querySelector<MenuItemElement>('[value="show-ids"]')!;
 
       await user.click(item);
 
@@ -81,7 +85,7 @@ describe('bit-menu', () => {
 
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
-      const item = fixture.element.querySelector<HTMLElement>('bit-menu-item')!;
+      const item = fixture.element.querySelector<MenuItemElement>('[value="show-ids"]')!;
       const initialCheck = item.shadowRoot?.querySelector<HTMLElement>('.item-check');
       const initialItem = item.shadowRoot?.querySelector<HTMLElement>('.item');
 
@@ -165,7 +169,7 @@ describe('bit-menu', () => {
 
       const onClose = vi.fn();
 
-      fixture.element.addEventListener('bit-close', onClose);
+      fixture.element.addEventListener('close', onClose);
 
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
       await user.press(fixture.query('.menu-panel')!, 'Escape');

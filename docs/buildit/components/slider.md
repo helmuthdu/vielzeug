@@ -19,7 +19,7 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/slider/slider.ts
+<<< @/../packages/buildit/src/inputs/slider/slider.ts
 :::
 
 ## Basic Usage

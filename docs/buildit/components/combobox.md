@@ -24,7 +24,7 @@ An autocomplete input that combines a text field with a filterable dropdown list
 ## Source Code
 
 ::: details View Source Code
-<<< @/../packages/buildit/src/form/combobox/combobox.ts
+<<< @/../packages/buildit/src/inputs/combobox/combobox.ts
 :::
 
 ## Basic Usage

@@ -188,11 +188,6 @@ export default defineConfig({
             },
             {
               collapsed: true,
-              items: [{ link: '/buildit/components/button', text: 'Button' }],
-              text: 'Actions',
-            },
-            {
-              collapsed: true,
               items: [
                 { link: '/buildit/components/avatar', text: 'Avatar' },
                 { link: '/buildit/components/breadcrumb', text: 'Breadcrumb' },
@@ -218,6 +213,7 @@ export default defineConfig({
             {
               collapsed: true,
               items: [
+                { link: '/buildit/components/button', text: 'Button' },
                 { link: '/buildit/components/checkbox', text: 'Checkbox' },
                 { link: '/buildit/components/combobox', text: 'Combobox' },
                 { link: '/buildit/components/file-input', text: 'File Input' },
@@ -232,7 +228,7 @@ export default defineConfig({
                 { link: '/buildit/components/switch', text: 'Switch' },
                 { link: '/buildit/components/textarea', text: 'Textarea' },
               ],
-              text: 'Form',
+              text: 'Inputs',
             },
             {
               collapsed: true,

@@ -9,10 +9,7 @@
     --_cell-padding: var(--table-cell-padding, var(--size-4) var(--size-5));
     --_cell-font-size: var(--table-cell-font-size, var(--text-sm));
     --_cell-color: var(--table-cell-color, var(--color-contrast-800));
-    --_th-bg: var(
-      --table-header-bg,
-      color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
-    );
+    --_th-bg: var(--table-header-bg, color-mix(in srgb, var(--color-contrast-100) 85%, transparent));
     --_th-color: var(--table-header-color, var(--_theme-content));
     --_th-font-weight: var(--font-semibold);
     --_th-font-size: var(--text-xs);
