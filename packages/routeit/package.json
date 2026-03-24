@@ -10,15 +10,25 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./core": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/craftit.js",
+      "require": "./dist/craftit.cjs"
     }
   },
   "scripts": {
-    "build": "tsc && vite build",
-    "fix": "biome check --write --unsafe src",
-    "lint": "biome check src",
-    "prepublishOnly": "npm run build",
+    "build": "vite build && pnpm run build:core && pnpm run build:types",
+    "build:core": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
+    "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "vitest"
   },
@@ -27,9 +37,9 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.0.18"
+    "@types/node": "^25.5.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.2",
+    "vitest": "^4.1.1"
   }
 }

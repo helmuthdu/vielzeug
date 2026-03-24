@@ -1,12 +1,12 @@
-import { assert } from '../function/assert';
+import { assertAll } from '../function/assert';
 import { isDate } from '../typed/isDate';
 
 // #region IntervalTypes
-type IntervalType = 'D' | 'W' | 'M' | 'MS' | 'ME' | 'Y' | 'YS' | 'YE';
+type IntervalType = 'day' | 'week' | 'month' | 'monthStart' | 'monthEnd' | 'year' | 'yearStart' | 'yearEnd';
 type IntervalOptions = {
   interval?: IntervalType;
-  steps?: number;
   latest?: boolean;
+  steps?: number;
 };
 // #endregion IntervalTypes
 
@@ -15,7 +15,7 @@ type IntervalOptions = {
  *
  * @example
  * ```ts
- * const options = { interval: 'D', steps: 1, latest: false };
+ * const options = { interval: 'day', steps: 1, latest: false };
  *
  * interval('2022-01-01', '2022-01-31', options); // Returns an array of dates for every day in January 2022
  * ```
@@ -29,12 +29,12 @@ type IntervalOptions = {
 export function interval(
   start: Date | string,
   end: Date | string,
-  { interval = 'D', steps = 1, latest = false }: IntervalOptions = {},
+  { interval = 'day', latest = false, steps = 1 }: IntervalOptions = {},
 ): Date[] {
   const startDate = new Date(start);
   const endDate = new Date(end);
 
-  assert([isDate(startDate), isDate(endDate)], 'Invalid date format. Use a valid Date object or ISO string.', {
+  assertAll([isDate(startDate), isDate(endDate)], 'Invalid date format. Use a valid Date object or ISO string.', {
     args: { end, start },
     type: TypeError,
   });
@@ -60,21 +60,21 @@ function incrementDate(date: Date, interval: IntervalType, steps: number): Date 
   const day = date.getDate();
 
   switch (interval) {
-    case 'D':
+    case 'day':
       return new Date(Date.UTC(year, month, day + steps));
-    case 'W':
-      return new Date(Date.UTC(year, month, day + 7 * steps));
-    case 'M':
+    case 'month':
       return new Date(Date.UTC(year, month + steps, day));
-    case 'MS':
-      return new Date(Date.UTC(year, month + steps, 1));
-    case 'ME':
+    case 'monthEnd':
       return new Date(Date.UTC(year, month + steps + 1, 0));
-    case 'Y':
+    case 'monthStart':
+      return new Date(Date.UTC(year, month + steps, 1));
+    case 'week':
+      return new Date(Date.UTC(year, month, day + 7 * steps));
+    case 'year':
       return new Date(Date.UTC(year + steps, month, day));
-    case 'YS':
-      return new Date(Date.UTC(year + steps, 0, 1));
-    case 'YE':
+    case 'yearEnd':
       return new Date(Date.UTC(year + steps, 11, 31));
+    case 'yearStart':
+      return new Date(Date.UTC(year + steps, 0, 1));
   }
 }

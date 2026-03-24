@@ -1,970 +1,739 @@
+---
+title: Deposit — API Reference
+description: Complete API reference for the Deposit browser storage library.
+---
+
 # Deposit API Reference
-
-Complete API documentation for `@vielzeug/deposit`.
-
-## Table of Contents
 
 [[toc]]
 
-## Core Classes
+## API At a Glance
 
-### `Deposit<S>`
+| Symbol                 | Purpose                          | Execution mode | Common gotcha                                    |
+| ---------------------- | -------------------------------- | -------------- | ------------------------------------------------ |
+| `defineSchema()`       | Declare typed tables and indexes | Sync           | Indexes must match keys on stored records        |
+| `createIndexedDB()`    | Create an IndexedDB adapter      | Async          | Run migrations before large writes in production |
+| `createLocalStorage()` | Create a LocalStorage adapter    | Sync           | Storage limits are lower than IndexedDB          |
 
-Main class for interacting with browser storage. Provides a unified, type-safe API for both IndexedDB and LocalStorage.
+## Package Entry Points
 
-**Type Parameters:**
+| Import                   | Purpose                                            |
+| ------------------------ | -------------------------------------------------- |
+| `@vielzeug/deposit`      | Main API and exported types/classes                |
+| `@vielzeug/deposit/core` | Pre-bundled standalone build with the same exports |
 
-- `S extends DepositDataSchema` – Your schema type defining all tables and their records
+## Factory Functions
 
-## Deposit Methods
+### `defineSchema(schema)`
 
-### `new Deposit(adapterOrConfig)`
+Creates a fully-typed schema definition. The type parameter `S` maps table names to record types.
 
-Creates a new Deposit instance.
+**Signature:**
 
-**Parameters:**
-
-- `adapterOrConfig: DepositStorageAdapter<S> | AdapterConfig<S>` – Either a custom adapter or configuration object
+```ts
+function defineSchema<S extends Record<string, Record<string, unknown>>>(schema: {
+  [K in keyof S]: { key: keyof S[K] & string; indexes?: (keyof S[K] & string)[] };
+}): Schema<S>;
+```
 
 **Example:**
 
 ```ts
-// With adapter instance
-const adapter = new IndexedDBAdapter('my-db', 1, schema);
-const db = new Deposit(adapter);
-
-// With configuration object
-const db = new Deposit({
-  type: 'indexedDB',
-  dbName: 'my-db',
-  version: 1,
-  schema,
+const schema = defineSchema<{ users: User; posts: Post }>({
+  users: { key: 'id', indexes: ['name', 'age'] },
+  posts: { key: 'id', indexes: ['authorId'] },
 });
 ```
 
 ---
 
-### `put(table, value, ttl?)`
+### `createLocalStorage(options)`
 
-Inserts or updates a single record.
+Creates a LocalStorage-backed adapter.
 
-**Parameters:**
+**Signature:**
 
-- `table: keyof S` – Table name
-- `value: S[K]['record']` – Record to store
-- `ttl?: number` – Optional time-to-live in milliseconds
+```ts
+function createLocalStorage<S extends Schema<any>>(options: LocalStorageOptions<S>): Adapter<S>;
+```
 
-**Returns:** `Promise<void>`
+**Options — `LocalStorageOptions<S>`:**
+
+| Property  | Type     | Description                                     |
+| --------- | -------- | ----------------------------------------------- |
+| `dbName`  | `string` | Namespace prefix for all localStorage keys      |
+| `schema`  | `S`      | Schema object (typically from `defineSchema()`) |
+| `logger?` | `Logger` | Custom logger; defaults to `console`            |
+
+---
+
+### `storeField(field)`
+
+Returns the IDB key path for a given record field, accounting for deposit's internal envelope format.
+Use this inside `migrationFn` when creating indexes or object stores to stay decoupled from deposit's storage internals.
+
+**Signature:**
+
+```ts
+function storeField(field: string): string;
+// storeField('email') === 'v.email'
+```
 
 **Example:**
 
 ```ts
-// Insert/update
-await db.put('users', {
-  id: 'u1',
-  name: 'Alice',
-  email: 'alice@example.com',
-});
+import { storeField } from '@vielzeug/deposit';
 
-// With TTL (expires in 1 hour)
-await db.put(
-  'sessions',
-  {
-    id: 's1',
-    token: 'abc123',
-  },
-  3600000,
-);
+const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
+  if (oldVersion < 2) {
+    tx.objectStore('users').createIndex('email', storeField('email'), { unique: true });
+  }
+};
 ```
 
 ---
 
-### `get(table, key, defaultValue?)`
+### `createIndexedDB(options)`
 
-Retrieves a single record by its key.
+Creates an IndexedDB-backed adapter. The database connection is opened lazily on the first operation.
 
-**Parameters:**
-
-- `table: keyof S` – Table name
-- `key: KeyType<S, K>` – Record key
-- `defaultValue?: T` – Optional default value if not found
-
-**Returns:** `Promise<T | undefined>`
-
-**Example:**
+**Signature:**
 
 ```ts
-const user = await db.get('users', 'u1');
+function createIndexedDB<S extends Schema<any>>(options: IndexedDBOptions<S>): IndexedDBHandle<S>;
+```
 
-// With default value
-const user = await db.get('users', 'u1', {
-  id: 'u1',
-  name: 'Guest',
-  email: '',
-});
+**Options — `IndexedDBOptions<S>`:**
+
+| Property       | Type          | Description                                                         |
+| -------------- | ------------- | ------------------------------------------------------------------- |
+| `dbName`       | `string`      | IDB database name                                                   |
+| `version`      | `number`      | Database version — **required**; increment to trigger `migrationFn` |
+| `schema`       | `S`           | Schema object (typically from `defineSchema()`)                     |
+| `migrationFn?` | `MigrationFn` | Called inside `onupgradeneeded` on version upgrade                  |
+| `logger?`      | `Logger`      | Custom logger; defaults to `console`                                |
+
+## Adapter Interface
+
+`Adapter<S>` is the common interface implemented by both adapters.
+
+### `get(table, key)`
+
+Returns the record for the given primary key, or `undefined` when absent or expired.
+
+```ts
+get<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<RecordType<S, K> | undefined>
+```
+
+---
+
+### `getOr(table, key, defaultValue)`
+
+Returns the record when present, or `defaultValue` when absent or expired. The return type is always `RecordType<S, K>` — never `undefined`.
+
+```ts
+getOr<K extends keyof S>(
+  table: K,
+  key: KeyType<S, K>,
+  defaultValue: RecordType<S, K>,
+): Promise<RecordType<S, K>>
+```
+
+```ts
+const user = await db.getOr('users', 1, defaultUser); // User — never undefined
 ```
 
 ---
 
 ### `getAll(table)`
 
-Retrieves all records from a table.
-
-**Parameters:**
-
-- `table: keyof S` – Table name
-
-**Returns:** `Promise<S[K]['record'][]>`
-
-**Example:**
+Returns all live (non-expired) records. The IndexedDB adapter asynchronously evicts expired entries from the store after returning.
 
 ```ts
-const allUsers = await db.getAll('users');
-console.log(`Found ${allUsers.length} users`);
+getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]>
+```
+
+---
+
+### `getMany(table, keys[])`
+
+Batch fetch by a list of primary keys. Missing or expired records are omitted from the result.
+
+```ts
+getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<S, K>[]>
+```
+
+---
+
+### `put(table, value, ttl?)`
+
+Upserts a single record. `ttl` is the time-to-live in milliseconds. For multiple records use `putMany`.
+
+```ts
+put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void>
+```
+
+> **LocalStorage:** throws a descriptive `QuotaExceededError` when the storage quota is exceeded.
+
+---
+
+### `putMany(table, values[], ttl?)`
+
+Upserts multiple records. The same optional `ttl` is applied to every record.
+
+```ts
+putMany<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void>
+```
+
+---
+
+### `patch(table, key, partial)`
+
+Merges `partial` into the existing record and returns the result. Returns `undefined` when the key is absent or expired. TTL is preserved.
+
+```ts
+patch<K extends keyof S>(
+  table: K,
+  key: KeyType<S, K>,
+  partial: Partial<RecordType<S, K>>,
+  ttl?: number,
+): Promise<RecordType<S, K> | undefined>
 ```
 
 ---
 
 ### `delete(table, key)`
 
-Deletes a single record by its key.
-
-**Parameters:**
-
-- `table: keyof S` – Table name
-- `key: KeyType<S, K>` – Record key
-
-**Returns:** `Promise<void>`
-
-**Example:**
+Removes a single record by key. Silently ignores missing keys. For multiple keys use `deleteMany`.
 
 ```ts
-await db.delete('users', 'u1');
+delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void>
 ```
 
 ---
 
-### `clear(table)`
+### `deleteMany(table, keys[])`
 
-Removes all records from a table.
-
-**Parameters:**
-
-- `table: keyof S` – Table name
-
-**Returns:** `Promise<void>`
-
-**Example:**
+Removes multiple records by key list. Silently ignores missing keys.
 
 ```ts
-await db.clear('users');
+deleteMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void>
+```
+
+---
+
+### `deleteAll(table)`
+
+Removes all records in the given table.
+
+```ts
+deleteAll<K extends keyof S>(table: K): Promise<void>
+```
+
+---
+
+### `has(table, key)`
+
+Returns `true` when a live record exists for the given key. Respects TTL.
+
+```ts
+has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean>
 ```
 
 ---
 
 ### `count(table)`
 
-Returns the number of records in a table.
+Counts records in the given table (see adapter-specific semantics below).
 
-**Parameters:**
-
-- `table: keyof S` – Table name
-
-**Returns:** `Promise<number>`
-
-**Example:**
+> **Adapter behavior:** `createLocalStorage().count()` is TTL-accurate (O(n)); `createIndexedDB().count()` uses native `IDBObjectStore.count()` (O(1), may include not-yet-evicted expired records). Use `db.from(table).count()` for a TTL-accurate count on both.
 
 ```ts
-const userCount = await db.count('users');
-console.log(`${userCount} users in database`);
+count<K extends keyof S>(table: K): Promise<number>
 ```
 
 ---
 
-### `bulkPut(table, values, ttl?)`
+### `getOrPut(table, key, factory, ttl?)`
 
-Inserts or updates multiple records in a single operation.
-
-**Parameters:**
-
-- `table: keyof S` – Table name
-- `values: S[K]['record'][]` – Array of records
-- `ttl?: number` – Optional TTL for all records
-
-**Returns:** `Promise<void>`
-
-**Example:**
+Returns the cached record when present; otherwise calls `factory()`, stores the result with optional TTL, and returns it.
 
 ```ts
-await db.bulkPut('users', [
-  { id: 'u1', name: 'Alice', email: 'alice@example.com' },
-  { id: 'u2', name: 'Bob', email: 'bob@example.com' },
-  { id: 'u3', name: 'Carol', email: 'carol@example.com' },
-]);
+getOrPut<K extends keyof S>(
+  table: K,
+  key: KeyType<S, K>,
+  factory: () => RecordType<S, K> | Promise<RecordType<S, K>>,
+  ttl?: number,
+): Promise<RecordType<S, K>>
 ```
 
 ---
 
-### `bulkDelete(table, keys)`
+### `from(table)`
 
-Deletes multiple records by their keys.
-
-**Parameters:**
-
-- `table: keyof S` – Table name
-- `keys: KeyType<S, K>[]` – Array of keys to delete
-
-**Returns:** `Promise<void>`
-
-**Example:**
+Creates a lazy `QueryBuilder<T>`. No query runs until a terminal method is called.
 
 ```ts
-await db.bulkDelete('users', ['u1', 'u2', 'u3']);
+from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>>
+```
+
+## IndexedDBHandle
+
+`IndexedDBHandle<S>` extends `Adapter<S>` with two additional members.
+
+### `transaction(tables, fn)`
+
+Runs `fn` inside a single `readwrite` IDB transaction spanning all listed tables. All writes commit atomically — if `fn` throws, the transaction is aborted and nothing is persisted.
+
+```ts
+transaction<K extends keyof S>(
+  tables: K[],
+  fn: (tx: TransactionContext<S, K>) => Promise<void>,
+): Promise<void>
+```
+
+**`TransactionContext<S, K>` methods:**
+
+| Method                           | Description                                            |
+| -------------------------------- | ------------------------------------------------------ |
+| `get(table, key)`                | Read a record by key                                   |
+| `getOr(table, key, default)`     | Read a record; return `default` when absent            |
+| `getAll(table)`                  | Read all live records                                  |
+| `getMany(table, keys[])`         | Batch read by key list, omitting misses                |
+| `put(table, value, ttl?)`        | Write or upsert a record                               |
+| `putMany(table, values[], ttl?)` | Upsert multiple records                                |
+| `patch(table, key, partial)`     | Partial update — returns merged record or `undefined`  |
+| `delete(table, key)`             | Delete a single record                                 |
+| `deleteMany(table, keys[])`      | Delete multiple records                                |
+| `deleteAll(table)`               | Delete all records in a table                          |
+| `has(table, key)`                | Check existence                                        |
+| `count(table)`                   | Native IDB record count (includes TTL-expired records) |
+| `from(table)`                    | Create a lazy `QueryBuilder`                           |
+
+> **Note:** `getOrPut` is absent from `TransactionContext`. The read-then-conditionally-write pattern is not safely atomic within a shared transaction scope.
+
+> **count() in transactions:** Returns the native IDB count which includes TTL-expired records. Use `(await tx.getAll(table)).length` for a TTL-accurate count.
+
+---
+
+### `close()`
+
+Closes the underlying `IDBDatabase` connection and resets internal state.
+
+```ts
+close(): void
+```
+
+## QueryBuilder
+
+`QueryBuilder<T>` is an immutable, lazy pipeline. Each method returns a new instance.
+
+### Filtering
+
+#### `equals(field, value)`
+
+```ts
+equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>
+```
+
+Strict equality filter (`===`).
+
+---
+
+#### `between(field, lower, upper)`
+
+```ts
+between<K extends keyof T>(
+  field: K,
+  lower: T[K] extends number | string ? T[K] : never,
+  upper: T[K] extends number | string ? T[K] : never,
+): QueryBuilder<T>
+```
+
+Inclusive range filter. The bound types are inferred from the field type, so passing a `string` bound for a `number` field is a compile-time error.
+
+---
+
+#### `startsWith(field, prefix, options?)`
+
+```ts
+startsWith<K extends keyof T>(
+  field: K,
+  prefix: string,
+  options?: { ignoreCase?: boolean },
+): QueryBuilder<T>
+```
+
+Filters string fields that start with `prefix`. Case-sensitive by default.
+
+---
+
+#### `filter(fn)`
+
+```ts
+filter(fn: Predicate<T>): QueryBuilder<T>
+```
+
+Filters using a custom predicate.
+
+---
+
+#### `and(...predicates)`
+
+```ts
+and(...predicates: Predicate<T>[]): QueryBuilder<T>
+```
+
+Keeps records that satisfy **all** predicates.
+
+---
+
+#### `or(...predicates)`
+
+```ts
+or(...predicates: Predicate<T>[]): QueryBuilder<T>
+```
+
+Keeps records that satisfy **at least one** predicate.
+
+---
+
+### Sorting & Pagination
+
+#### `orderBy(field, direction?)`
+
+```ts
+orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>
+```
+
+Sorts by `field`. Default direction is `'asc'`.
+
+---
+
+#### `limit(n)`
+
+```ts
+limit(n: number): QueryBuilder<T>
+```
+
+Takes the first `n` records.
+
+---
+
+#### `offset(n)`
+
+```ts
+offset(n: number): QueryBuilder<T>
+```
+
+Skips the first `n` records.
+
+---
+
+#### `page(pageNumber, pageSize)`
+
+```ts
+page(pageNumber: number, pageSize: number): QueryBuilder<T>
+```
+
+Slices by 1-based page number. `page(2, 10)` returns records 11–20.
+
+---
+
+#### `reverse()`
+
+```ts
+reverse(): QueryBuilder<T>
+```
+
+Reverses the order of the result.
+
+---
+
+### Transformation
+
+#### `map(callback)`
+
+```ts
+map<U>(callback: (record: T) => U): ProjectedQuery<U>
+```
+
+Transforms each record to a new value. Returns a `ProjectedQuery<U>` rather than `QueryBuilder<U>` — `U` is unconstrained, so primitive projections like `map(u => u.name)` work correctly. `ProjectedQuery<U>` exposes the same terminal methods (`toArray`, `first`, `last`, `count`, `[Symbol.asyncIterator]`) but is not further chainable.
+
+```ts
+const names = await db
+  .from('users')
+  .map((u) => u.name)
+  .toArray(); // string[]
+const dtos = await db
+  .from('users')
+  .map((u) => ({ id: u.id }))
+  .toArray(); // { id: number }[]
 ```
 
 ---
 
-### `query(table)`
-
-Creates a QueryBuilder for advanced querying.
-
-**Parameters:**
-
-- `table: keyof S` – Table name
-
-**Returns:** `QueryBuilder<S[K]['record']>`
-
-**Example:**
+#### `search(query, tone?)`
 
 ```ts
-const adults = await db
-  .query('users')
-  .filter((user) => user.age >= 18)
-  .orderBy('name', 'asc')
-  .toArray();
+search(query: string, tone?: number): QueryBuilder<T>
+```
+
+Fuzzy full-text search across all fields, powered by `@vielzeug/toolkit`.
+`tone` controls the match threshold in the range `[0, 1]` — lower values are more permissive. Defaults to `0.25`.
+
+---
+
+#### `contains(query, fields?)`
+
+```ts
+contains(query: string, fields?: (keyof T & string)[]): QueryBuilder<T>
+```
+
+Case-insensitive substring match. When `fields` is omitted, all string-valued fields are checked.
+
+---
+
+#### `reduce(callback, initial)`
+
+```ts
+reduce<A>(callback: (accumulator: A, record: T) => A, initial: A): Promise<A>
+```
+
+Reduces all matching records to a single value. Applied after all filters, sorting, and pagination operators.
+
+```ts
+const totalAge = await db.from('users').reduce((sum, u) => sum + u.age, 0);
+const ids = await db
+  .from('users')
+  .filter((u) => u.active)
+  .reduce<number[]>((acc, u) => [...acc, u.id], []);
 ```
 
 ---
 
-### `transaction(tables, fn, ttl?)`
+### Terminals
 
-Performs operations across multiple tables with automatic adapter-appropriate behavior.
-
-**Atomicity:**
-
-- **IndexedDB**: Fully atomic – all changes happen in a single IDBTransaction (ACID guarantees)
-- **LocalStorage**: Optimistic – changes are applied sequentially (not atomic across tables)
-
-**Parameters:**
-
-- `tables: K[]` – Array of table names
-- `fn: (stores: T) => Promise<void>` – Transaction callback receiving store proxies
-- `ttl?: number` – Optional TTL for all modified records
-
-**Returns:** `Promise<void>`
-
-**Example:**
+#### `toArray()`
 
 ```ts
-await db.transaction(['users', 'posts'], async (stores) => {
-  // Add user
-  stores.users.push({
-    id: 'u1',
-    name: 'Alice',
-    email: 'alice@example.com',
-  });
-
-  // Add post
-  stores.posts.push({
-    id: 'p1',
-    userId: 'u1',
-    title: 'Hello World',
-    content: 'My first post',
-  });
-
-  // For IndexedDB: Changes are committed atomically
-  // For LocalStorage: Changes are committed optimistically
-});
+toArray(): Promise<T[]>
 ```
 
-**Behavior:**
-
-- Loads all specified tables into memory
-- Executes the callback with in-memory proxies
-- On success: commits all changes (atomically for IndexedDB)
-- On error: rolls back all changes without persisting
+Executes the pipeline and returns all results.
 
 ---
 
-### `patch(table, patches)`
-
-Applies a batch of operations (put, delete, clear) atomically.
-
-**Parameters:**
-
-- `table: keyof S` – Table name
-- `patches: PatchOperation[]` – Array of operations
-
-**Returns:** `Promise<void>`
-
-**Example:**
+#### `first()`
 
 ```ts
-await db.patch('users', [
-  { type: 'put', value: { id: 'u1', name: 'Alice', email: 'a@example.com' } },
-  { type: 'put', value: { id: 'u2', name: 'Bob', email: 'b@example.com' }, ttl: 3600000 },
-  { type: 'delete', key: 'u3' },
-  { type: 'clear' }, // Clears all, then applies puts
-]);
+first(): Promise<T | undefined>
 ```
 
-## QueryBuilder Methods
-
-### `equals(field, value)`
-
-Filters records where field equals value.
-
-**Example:**
-
-```ts
-const admins = await db.query('users').equals('role', 'admin').toArray();
-```
+Executes the pipeline and returns the first result.
 
 ---
 
-### `between(field, lower, upper)`
-
-Filters records where field is between lower and upper (inclusive).
-
-**Example:**
+#### `last()`
 
 ```ts
-const youngAdults = await db.query('users').between('age', 18, 30).toArray();
+last(): Promise<T | undefined>
 ```
+
+Executes the pipeline and returns the last result.
 
 ---
 
-### `startsWith(field, prefix, ignoreCase?)`
-
-Filters string fields that start with prefix.
-
-**Example:**
+#### `count()`
 
 ```ts
-const aliceUsers = await db.query('users').startsWith('name', 'Alice', true).toArray();
+count(): Promise<number>
 ```
+
+Executes the pipeline and returns the count of matching records.
+
+> **Note:** `limit`, `offset`, and `page` are applied before counting. Call `count()` before adding pagination operators if you need the total match count.
 
 ---
 
-### `where(field, predicate)`
-
-Filters using custom predicate function.
-
-**Example:**
+#### `[Symbol.asyncIterator]()`
 
 ```ts
-const verified = await db
-  .query('users')
-  .where('email', (email) => email.endsWith('@company.com'))
-  .toArray();
+[Symbol.asyncIterator](): AsyncGenerator<T>
 ```
 
----
-
-### `filter(fn)`
-
-Filters using predicate on entire record.
-
-**Example:**
+Enables `for await...of` iteration.
 
 ```ts
-const special = await db
-  .query('users')
-  .filter((user) => user.age > 18 && user.email.includes('gmail'))
-  .toArray();
-```
-
----
-
-### `not(fn)`, `and(...fns)`, `or(...fns)`
-
-Logical operators for combining predicates.
-
-**Example:**
-
-```ts
-const result = await db
-  .query('users')
-  .and(
-    (u) => u.age >= 18,
-    (u) => u.verified === true,
-  )
-  .toArray();
-```
-
----
-
-### `orderBy(field, direction)`
-
-Sorts results by field.
-
-**Parameters:**
-
-- `field: keyof T` – Field to sort by
-- `direction: 'asc' | 'desc'` – Sort direction (default: 'asc')
-
-**Example:**
-
-```ts
-const sorted = await db.query('users').orderBy('name', 'asc').toArray();
-```
-
----
-
-### `limit(n)`, `offset(n)`, `page(pageNumber, pageSize)`
-
-Pagination methods.
-
-**Example:**
-
-```ts
-// First 10 users
-const first10 = await db.query('users').limit(10).toArray();
-
-// Skip first 10, get next 10
-const next10 = await db.query('users').offset(10).limit(10).toArray();
-
-// Page 2 (10 per page)
-const page2 = await db.query('users').page(2, 10).toArray();
-```
-
----
-
-### `reverse()`
-
-Reverses the order of results.
-
-**Example:**
-
-```ts
-const reversed = await db.query('users').orderBy('createdAt', 'asc').reverse().toArray();
-```
-
----
-
-### `count()`, `first()`, `last()`
-
-Aggregation helpers.
-
-**Example:**
-
-```ts
-const count = await db.query('users').count();
-const firstUser = await db.query('users').first();
-const lastUser = await db.query('users').last();
-```
-
----
-
-### `average(field)`, `min(field)`, `max(field)`, `sum(field)`
-
-Numeric aggregations.
-
-**Example:**
-
-```ts
-const avgAge = await db.query('users').average('age');
-const youngest = await db.query('users').min('age');
-const oldest = await db.query('users').max('age');
-const totalAge = await db.query('users').sum('age');
-```
-
----
-
-### `modify(callback, context?)`
-
-Transforms records in the query.
-
-**Example:**
-
-```ts
-const uppercased = await db
-  .query('users')
-  .modify((user) => ({
-    ...user,
-    name: user.name.toUpperCase(),
-  }))
-  .toArray();
-```
-
----
-
-### `groupBy(field)`
-
-Groups records by a field value. Returns an object where keys are the field values.
-
-**Parameters:**
-
-- `field: K` – Field to group by
-
-**Returns:** `this` (for chaining)
-
-**Example:**
-
-```ts
-const byRole = await db.query('users').groupBy('role').toArray();
-// Result: { admin: User[], user: User[] }
-```
-
-::: warning Type Safety
-`groupBy()` changes the result structure but returns `T[]` for chaining. You'll need to cast the result manually. For better type safety, use `toGrouped()` instead.
-:::
-
----
-
-### `toGrouped(field)`
-
-Type-safe alternative to `groupBy().toArray()`. Returns an array of grouped results with proper typing.
-
-**Parameters:**
-
-- `field: K` – Field to group by
-
-**Returns:** `Promise<Array<{ key: T[K], values: T[] }>>`
-
-**Example:**
-
-```ts
-const grouped = await db.query('users').toGrouped('role');
-// Type: Array<{ key: 'admin' | 'user', values: User[] }>
-
-for (const group of grouped) {
-  console.log(`${group.key}: ${group.values.length} users`);
+for await (const record of db.from('users').orderBy('name')) {
+  process(record);
 }
 ```
 
-::: tip Recommended
-Use `toGrouped()` for better type safety and clearer intent. It returns properly typed results without requiring manual type casting.
-:::
-
----
-
-### `search(query, tone?)`
-
-Performs fuzzy search across all string fields.
-
-**Parameters:**
-
-- `query: string` – Search query
-- `tone?: number` – Optional search sensitivity
-
-**Example:**
-
-```ts
-const searchResults = await db.query('users').search('alice').toArray();
-```
-
----
-
-### `reset()`
-
-Resets the query builder to start fresh.
-
-**Example:**
-
-```ts
-const builder = db.query('users').equals('role', 'admin').reset().equals('role', 'user'); // Start over
-```
-
----
-
-### `toArray()`
-
-Executes the query and returns results.
-
-**Returns:** `Promise<T[]>`
-
-**Example:**
-
-```ts
-const results = await db
-  .query('users')
-  .filter((u) => u.active)
-  .orderBy('name', 'asc')
-  .toArray();
-```
-
----
-
-### `build(conditions)`
-
-Builds query from condition objects (useful for dynamic queries).
-
-**Example:**
-
-```ts
-const conditions = [
-  { type: 'equals', field: 'role', value: 'admin' },
-  { type: 'orderBy', field: 'name', value: 'asc' },
-  { type: 'limit', value: 10 },
-];
-
-const results = await db.query('users').build(conditions).toArray();
-```
-
-## Adapters
-
-### `LocalStorageAdapter<S>`
-
-Storage adapter using browser LocalStorage with schema validation and safe key encoding.
-
-**Constructor:**
-
-```ts
-new LocalStorageAdapter(dbName: string, version: number, schema: S)
-```
-
-**Example:**
-
-```ts
-const adapter = new LocalStorageAdapter('my-app', 1, schema);
-const db = new Deposit(adapter);
-```
-
-**Characteristics:**
-
-- Synchronous operations (wrapped in promises for API consistency)
-- ~5-10MB storage limit
-- String-based storage (JSON serialization)
-- Survives page reloads
-- Shared across all tabs/windows
-- **Schema validation** on initialization (throws clear errors for invalid schemas)
-- **Safe key encoding** using `encodeURIComponent` (handles special characters including colons)
-- **Graceful error handling** (corrupted entries are skipped and deleted, not thrown)
-
-**Schema Validation:**
-
-```ts
-// ✅ Valid – will work
-const validSchema = {
-  users: { key: 'id', record: {} as User },
-};
-
-// ❌ Invalid – will throw immediately
-const invalidSchema = {
-  users: { record: {} as User }, // Missing 'key' field
-};
-// Error: "Invalid schema: table "users" missing required "key" field..."
-```
-
-**Safe Key Handling:**
-
-```ts
-// Special characters in dbName and table names are safely encoded
-const adapter = new LocalStorageAdapter('my:app:db', 1, schema); // ✅ Works
-```
-
----
-
-### `IndexedDBAdapter<S>`
-
-Storage adapter using browser IndexedDB with schema validation and robust index creation.
-
-**Constructor:**
-
-```ts
-new IndexedDBAdapter(
-  dbName: string,
-  version: number,
-  schema: S,
-  migrationFn?: DepositMigrationFn<S>
-)
-```
-
-**Example:**
-
-```ts
-const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
-  // Optional migration logic
-});
-const db = new Deposit(adapter);
-```
-
-**Characteristics:**
-
-- Asynchronous, transaction-based operations
-- Much larger storage limits (typically hundreds of MB to GB)
-- Native object storage with indexes
-- Supports complex queries via indexes
-- Isolated per origin
-- **Schema validation** on initialization
-- **Smart index creation** (detects duplicates, skips redundant key path indexes)
-- **Robust error handling** for index creation failures
-
-**Index Creation:**
-
-```ts
-const schema = {
-  users: {
-    key: 'id',
-    indexes: ['email', 'role', 'email'], // Duplicate 'email' detected and skipped
-    record: {} as User,
-  },
-};
-// Logs warning: "Duplicate index "email" in table "users" – skipping"
-
-const schema2 = {
-  users: {
-    key: 'id',
-    indexes: ['id'], // Redundant – key path is already indexed
-    record: {} as User,
-  },
-};
-// Logs warning: "Skipping index on key path "id" – redundant"
-```
-
-```ts
-const adapter = new IndexedDBAdapter('my-app', 1, schema, (db, oldVersion, newVersion, tx, schema) => {
-  if (oldVersion < 1) {
-    // Migration logic
-  }
-});
-
-const db = new Deposit(adapter);
-```
-
-**Characteristics:**
-
-- Asynchronous operations
-- ~50MB+ storage (quota-based)
-- Supports indexes for fast lookups
-- Survives page reloads
-- Isolated per origin
-
 ## Types
 
-### `DepositDataSchema`
+### `ttl`
 
-Schema definition type.
+A convenience constant of named duration helpers. Returns raw millisecond values for use with `put`, `putMany`, and `getOrPut`.
 
 ```ts
-type DepositDataSchema = {
-  [tableName: string]: {
-    key: string; // Primary key field name
-    indexes?: string[]; // Optional index fields
-    record: any; // Record type
+const ttl: {
+  ms(n: number): number; // identity: ttl.ms(500) === 500
+  seconds(n: number): number; // ttl.seconds(30) === 30_000
+  minutes(n: number): number; // ttl.minutes(15) === 900_000
+  hours(n: number): number; // ttl.hours(1) === 3_600_000
+  days(n: number): number; // ttl.days(1) === 86_400_000
+};
+```
+
+```ts
+import { ttl } from '@vielzeug/deposit';
+
+await db.put('sessions', session, ttl.hours(1));
+await db.put('cache', entry, ttl.minutes(15));
+await db.getOrPut('users', id, fetchUser, ttl.seconds(30));
+```
+
+---
+
+### `ProjectedQuery<U>`
+
+The return type of `QueryBuilder.map()`. Exposes terminal methods only — it is not chainable with further query operators.
+
+```ts
+class ProjectedQuery<U> {
+  toArray(): Promise<U[]>;
+  first(): Promise<U | undefined>;
+  last(): Promise<U | undefined>;
+  count(): Promise<number>;
+  [Symbol.asyncIterator](): AsyncGenerator<U>;
+}
+```
+
+---
+
+### `Schema<S>`
+
+Use `defineSchema<S>(schema)` rather than constructing this type directly.
+
+```ts
+type Schema<S> = {
+  [K in keyof S]: {
+    key: keyof S[K] & string;
+    indexes?: (keyof S[K] & string)[];
   };
 };
 ```
 
-**Example:**
+---
+
+### `RecordOf<S, K>`
+
+Extracts the record type for table `K` from a schema `S`.
 
 ```ts
-import { defineSchema } from '@vielzeug/deposit';
+export type RecordOf<S extends Schema<any>, K extends keyof S> = /* ... */
+```
 
-// Recommended: Use defineSchema helper for clean syntax
-const schema = defineSchema<{ users: User; posts: Post }>()({
-  users: {
-    key: 'id',
-    indexes: ['email', 'role'],
-  },
-  posts: {
-    key: 'id',
-    indexes: ['userId', 'createdAt'],
-  },
-});
+```ts
+import type { RecordOf } from '@vielzeug/deposit';
+
+type User = RecordOf<typeof schema, 'users'>; // { id: number; name: string; age: number }
 ```
 
 ---
 
-### `defineSchema<S>()(schema)`
+### `KeyOf<S, K>`
 
-Helper function to create a type-safe schema definition with clean syntax.
-
-**Generic Parameters:**
-
-- `S` – Schema definition type (maps table names to record types)
-
-**Parameters:**
-
-- `schema: { [K in keyof S]: { key: keyof S[K]; indexes?: Array<keyof S[K]> } }`
-
-**Returns:** `DepositDataSchema<S>`
-
-**Example:**
+Extracts the primary key type for table `K` from a schema `S`.
 
 ```ts
-import { defineSchema } from '@vielzeug/deposit';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface Post {
-  id: number;
-  title: string;
-}
-
-// Curried function for better type inference
-const schema = defineSchema<{ users: User; posts: Post }>()({
-  users: {
-    key: 'id',
-    indexes: ['email'],
-  },
-  posts: {
-    key: 'id',
-  },
-});
+export type KeyOf<S extends Schema<any>, K extends keyof S> = /* ... */
 ```
 
-**Benefits:**
+```ts
+import type { KeyOf } from '@vielzeug/deposit';
 
-- ✅ No need for empty `record: {} as Type` declarations
-- ✅ Full type inference and autocomplete for keys and indexes
-- ✅ Clean, minimal syntax
-- ✅ Type-safe field validation
+type UserId = KeyOf<typeof schema, 'users'>; // number
+```
 
 ---
 
-### `DepositMigrationFn<S>`
-
-Migration function type for IndexedDB schema changes.
+### `MigrationFn`
 
 ```ts
-type DepositMigrationFn<S> = (
+type MigrationFn = (
   db: IDBDatabase,
   oldVersion: number,
   newVersion: number | null,
   transaction: IDBTransaction,
-  schema: S,
-) => void | Promise<void>;
+) => void;
 ```
 
-**Example:**
+Provide to `createIndexedDB` to handle schema migrations across database versions.
+
+---
+
+### `LocalStorageOptions<S>`
 
 ```ts
-const migration: DepositMigrationFn<typeof schema> = async (db, oldVersion, newVersion, tx, schema) => {
-  if (oldVersion < 2) {
-    // Migrate data from version 1 to 2
-    const store = tx.objectStore('users');
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      for (const user of request.result) {
-        user.role = user.role || 'user';
-        store.put(user);
-      }
-    };
-  }
+type LocalStorageOptions<S extends Schema<any>> = {
+  dbName: string;
+  schema: S;
+  logger?: Logger;
 };
 ```
 
 ---
 
-### `PatchOperation<T, K>`
-
-Operation types for `patch()` method.
+### `IndexedDBOptions<S>`
 
 ```ts
-type PatchOperation<T, K> = { type: 'put'; value: T; ttl?: number } | { type: 'delete'; key: K } | { type: 'clear' };
+type IndexedDBOptions<S extends Schema<any>> = {
+  dbName: string;
+  /** Increment to trigger `migrationFn` on next open. Required. */
+  version: number;
+  schema: S;
+  migrationFn?: MigrationFn;
+  logger?: Logger;
+};
 ```
 
-## Utility Functions
+---
 
-### `runSafe(fn, label?)`
-
-Wraps a function to catch and log errors without throwing.
-
-**Example:**
+### `TransactionContext<S, K>`
 
 ```ts
-import { runSafe } from '@vielzeug/deposit';
-
-const safeFetch = runSafe(async () => {
-  const data = await fetch('/api/data').then((r) => r.json());
-  return data;
-}, 'FETCH_FAILED');
-
-const result = await safeFetch(); // Returns undefined on error
+type TransactionContext<S extends Schema<any>, K extends keyof S> = {
+  count<T extends K>(table: T): Promise<number>;
+  delete<T extends K>(table: T, key: KeyType<S, T>): Promise<void>;
+  deleteAll<T extends K>(table: T): Promise<void>;
+  deleteMany<T extends K>(table: T, keys: KeyType<S, T>[]): Promise<void>;
+  from<T extends K>(table: T): QueryBuilder<RecordType<S, T>>;
+  get<T extends K>(table: T, key: KeyType<S, T>): Promise<RecordType<S, T> | undefined>;
+  getAll<T extends K>(table: T): Promise<RecordType<S, T>[]>;
+  getMany<T extends K>(table: T, keys: KeyType<S, T>[]): Promise<RecordType<S, T>[]>;
+  getOr<T extends K>(table: T, key: KeyType<S, T>, defaultValue: RecordType<S, T>): Promise<RecordType<S, T>>;
+  has<T extends K>(table: T, key: KeyType<S, T>): Promise<boolean>;
+  patch<T extends K>(
+    table: T,
+    key: KeyType<S, T>,
+    partial: Partial<RecordType<S, T>>,
+  ): Promise<RecordType<S, T> | undefined>;
+  put<T extends K>(table: T, value: RecordType<S, T>, ttl?: number): Promise<void>;
+  putMany<T extends K>(table: T, values: RecordType<S, T>[], ttl?: number): Promise<void>;
+};
 ```
 
-## Advanced Usage
+---
 
-### Memoization
-
-QueryBuilder automatically memoizes results for performance:
+### `Logger`
 
 ```ts
-const query = db.query('users').equals('role', 'admin');
-
-const result1 = await query.toArray(); // Executes query
-const result2 = await query.toArray(); // Returns cached result
+type Logger = {
+  error(...args: unknown[]): void;
+  warn(...args: unknown[]): void;
+};
 ```
 
-### TTL (Time-To-Live)
-
-Records can expire automatically:
-
-```ts
-// Expires in 1 hour
-await db.put('sessions', { id: 's1', token: 'abc' }, 3600000);
-
-// After 1 hour
-const session = await db.get('sessions', 's1'); // undefined (expired)
-```
-
-### Type Safety
-
-Deposit provides full type inference:
-
-```ts
-const user = await db.get('users', 'u1');
-// user is typed as: { id: string; name: string; email: string } | undefined
-
-const users = await db
-  .query('users')
-  .filter((u) => u.name.includes('Alice')) // Full autocomplete
-  .toArray();
-```
-
-Implements all DepositStorageAdapter methods and `connect()`.
-
-## Types
-
-### DepotDataRecord\<T, K\>
-
-Defines a table schema record.
-
-- `key`: The primary key field name.
-- `indexes`: Optional array of index field names.
-- `record`: The record type.
-
-### DepositDataSchema\<S\>
-
-Maps table names to DepotDataRecord definitions.
-
-### DepositMigrationFn\<S\>
-
-Migration function signature for IndexedDB upgrades.
-
-### DepositStorageAdapter\<S\>
-
-Interface for storage adapters. Methods:
-
-- `bulkDelete`, `bulkPut`, `clear`, `count`, `delete`, `get`, `getAll`, `put`, `connect?`
-
-## Utility Functions
-
-### runSafe(fn, label?)
-
-Wraps a function to suppress and log errors.
-
-### wrapWithExpiry(value, ttl?)
-
-Wraps a value with an expiry timestamp.
-
-### unwrapWithExpiry(value, now, onExpire?)
-
-Unwraps a value, deleting it if expired.
+Pass a custom logger to `createLocalStorage` or `createIndexedDB` to redirect internal warnings. Defaults to `console`.

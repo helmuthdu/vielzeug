@@ -1,0 +1,32 @@
+@layer buildit.base {
+  :host {
+    display: inline-flex;
+    width: fit-content;
+  }
+
+  :host([fullwidth]) {
+    width: 100%;
+  }
+
+  .wrapper {
+    display: inline-flex;
+    gap: var(--size-1);
+    align-items: center;
+    width: 100%;
+  }
+
+  /* Style the inner <input> through bit-input's exported part */
+  bit-input::part(input) {
+    text-align: center;
+  }
+
+  bit-input {
+    width: var(--size-20);
+  }
+
+  :host([fullwidth]) bit-input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+}

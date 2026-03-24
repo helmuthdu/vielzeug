@@ -1,0 +1,276 @@
+@layer buildit.base {
+  /* ========================================
+       Base Styles & Defaults
+       ======================================== */
+
+  :host {
+    display: block;
+    color: var(--accordion-item-body-color, var(--text-color-body));
+
+    --accordion-details-radius: var(--rounded-lg);
+    --accordion-item-transition: var(--transition-normal);
+  }
+
+  details {
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--accordion-item-radius);
+    transition: all var(--accordion-item-transition);
+  }
+
+  summary {
+    position: relative;
+    display: flex;
+    gap: var(--size-4);
+    align-items: center;
+    min-height: var(--_touch-target);
+    padding: var(--accordion-item-details-padding, var(--size-3) var(--size-4));
+    font-size: var(--accordion-item-title);
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+    list-style: none;
+    background: var(--accordion-item-bg);
+    border: var(--border) solid var(--accordion-item-border-color);
+    border-radius: var(--accordion-details-radius);
+    transition: all var(--accordion-item-transition);
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary:focus {
+    outline: none;
+  }
+
+  summary:focus-visible {
+    outline: var(--border-2) solid currentcolor;
+    outline-offset: var(--border-2);
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentcolor 20%, transparent);
+  }
+
+  .header-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .subtitle {
+    font-size: var(--accordion-item-subtitle-size);
+    line-height: var(--leading-normal);
+    color: var(--accordion-item-subtitle-color, var(--text-color-secondary));
+  }
+
+  .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: var(--font-medium);
+    color: var(--accordion-item-title-color, var(--text-color-heading));
+    white-space: nowrap;
+  }
+
+  .content-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    font-size: var(--accordion-item-body);
+    background: var(--accordion-item-bg);
+    border-inline: 1px solid var(--accordion-item-border-color);
+    border-bottom: 1px solid var(--accordion-item-border-color);
+    border-radius: var(--accordion-summary-radius);
+    transition: grid-template-rows var(--accordion-item-transition);
+  }
+
+  details[open] .content-wrapper {
+    grid-template-rows: 1fr;
+  }
+
+  .content-inner {
+    padding: var(--accordion-item-summary-padding, var(--size-2) var(--size-4));
+    overflow: hidden;
+  }
+}
+
+@layer buildit.variants {
+  /* ========================================
+       Visual Variants
+       ======================================== */
+
+  :host,
+  :host([variant='solid']) {
+    --accordion-item-bg: var(--color-contrast-50);
+    --accordion-item-border-color: transparent;
+  }
+
+  :host summary:hover,
+  :host([variant='solid']) summary:hover {
+    --accordion-item-bg: var(--color-contrast-200);
+  }
+
+  :host([variant='flat']) {
+    --accordion-item-bg: var(--color-contrast-100);
+  }
+
+  :host([variant='flat']) summary:hover {
+    --accordion-item-bg: var(--color-contrast-200);
+  }
+
+  :host([variant='bordered']) {
+    --accordion-item-bg: var(--color-contrast-100);
+    --accordion-item-border-color: var(--color-contrast-300);
+
+    box-shadow: var(--inset-shadow-xs), var(--shadow-2xs);
+  }
+
+  :host([variant='bordered']) summary:hover {
+    background: var(--color-contrast-200);
+  }
+
+  :host([variant='outline']) {
+    --accordion-item-bg: transparent;
+    --accordion-item-border-color: var(--color-contrast-300);
+  }
+
+  :host([variant='outline']) summary:hover {
+    background: var(--color-contrast-300);
+  }
+
+  :host([variant='ghost']) {
+    --accordion-item-bg: transparent;
+    --accordion-item-border-color: transparent;
+  }
+
+  :host([variant='ghost']) summary:hover {
+    background: var(--color-contrast-200);
+  }
+
+  :host([variant='text']) {
+    --accordion-item-bg: transparent;
+    --accordion-item-border-color: transparent;
+  }
+
+  :host([variant='text']) summary:hover {
+    background: transparent;
+  }
+
+  /* Glass & Frost - Shared Styles */
+  :host([variant='glass']) details,
+  :host([variant='frost']) details {
+    border-radius: inherit;
+  }
+
+  :host([variant='glass']) summary,
+  :host([variant='frost']) summary {
+    border-radius: inherit;
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+  }
+
+  :host([variant='glass']) .content-wrapper,
+  :host([variant='frost']) .content-wrapper {
+    border-radius: 0;
+    backdrop-filter: blur(var(--blur-lg)) saturate(180%);
+  }
+
+  /* Glass */
+  :host([variant='glass']) {
+    --accordion-item-bg: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
+    --accordion-item-border-color: transparent;
+    --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
+    --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
+    --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);
+  }
+
+  :host([variant='glass']) summary {
+    text-shadow: var(--text-shadow-xs);
+  }
+
+  :host([variant='glass']) summary:hover {
+    background: color-mix(in srgb, var(--color-secondary) 20%, transparent);
+  }
+
+  :host([variant='glass']) .content-wrapper {
+    filter: brightness(1.05);
+  }
+
+  /* Frost */
+  :host([variant='frost']) {
+    --accordion-item-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    --accordion-item-border-color: transparent;
+  }
+
+  :host([variant='frost']) summary {
+    text-shadow: var(--text-shadow-2xs);
+  }
+
+  :host([variant='frost']) summary:hover {
+    background: color-mix(in srgb, var(--color-canvas) 20%, transparent);
+  }
+
+  /* ========================================
+     Size Variants
+     ======================================== */
+
+  :host([size='sm']) {
+    --accordion-item-details-padding: var(--size-2) var(--size-4);
+    --accordion-item-summary-padding: var(--size-1) var(--size-5);
+    --accordion-item-title: var(--text-sm);
+    --accordion-item-subtitle-size: var(--text-xs);
+    --accordion-item-body: var(--text-xs);
+  }
+
+  :host(:not([size])),
+  :host([size='md']) {
+    --accordion-item-details-padding: var(--size-3) var(--size-4);
+    --accordion-item-summary-padding: var(--size-1) var(--size-5);
+    --accordion-item-title: var(--text-base);
+    --accordion-item-subtitle-size: var(--text-sm);
+    --accordion-item-body: var(--text-sm);
+  }
+
+  :host([size='lg']) {
+    --accordion-item-details-padding: var(--size-4) var(--size-4);
+    --accordion-item-summary-padding: var(--size-1) var(--size-5);
+    --accordion-item-title: var(--text-lg);
+    --accordion-item-subtitle-size: var(--text-base);
+    --accordion-item-body: var(--text-base);
+  }
+
+  /* ========================================
+     States
+     ======================================== */
+
+  :host([disabled]) {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  /* ========================================
+     Chevron Animation
+     ======================================== */
+
+  .chevron {
+    width: var(--size-5);
+    height: var(--size-5);
+    margin-inline-start: auto;
+    transition: transform var(--accordion-item-transition);
+  }
+
+  details[open] .chevron {
+    transform: rotate(-90deg);
+  }
+
+  /* Expanded state - adjust border radius */
+  :host([expanded]) {
+    --accordion-details-radius: var(--rounded-lg) var(--rounded-lg) 0 0;
+    --accordion-summary-radius: 0 0 var(--rounded-lg) var(--rounded-lg);
+  }
+
+  @media (forced-colors: active) {
+    /* Default variant uses a transparent border — ensure a visible border
+         renders in HCM so the summary is distinguishable from the body */
+    summary {
+      border-color: ButtonText;
+    }
+  }
+}

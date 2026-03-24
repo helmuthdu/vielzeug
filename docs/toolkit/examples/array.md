@@ -1,102 +1,139 @@
-# 🧩 Array Utilities
+---
+title: 'Toolkit — Array Examples'
+description: 'Array utility examples for Toolkit.'
+---
 
-Array utilities provide a powerful set of tools to transform, query, and manipulate arrays in a type-safe, ergonomic way. Use these helpers to write cleaner, more expressive code for common array operations like mapping, filtering, grouping, and more.
+# Array Utilities
+
+Array utilities provide a powerful set of tools to transform, query, and manipulate arrays in a type-safe, ergonomic way.
 
 ## 📚 Quick Reference
 
-| Method                                | Category       | Description                                      |
-| :------------------------------------ | :------------- | :----------------------------------------------- |
-| [`aggregate`](./array/aggregate.md)   | Aggregation    | Perform complex aggregations on an array         |
-| [`arrange`](./array/arrange.md)       | Sorting        | Sort array by a property or function             |
-| [`chunk`](./array/chunk.md)           | Transformation | Split array into chunks of a specific size       |
-| [`compact`](./array/compact.md)       | Transformation | Remove `null` or `undefined` values              |
-| [`every`](./array/every.md)           | Query          | Check if all elements match a predicate          |
-| [`filter`](./array/filter.md)         | Query          | Filter elements by predicate (supports async)    |
-| [`find`](./array/find.md)             | Query          | Find the first element matching a predicate      |
-| [`flatten`](./array/flatten.md)       | Transformation | Flatten nested arrays                            |
-| [`group`](./array/group.md)           | Aggregation    | Group elements by a key or function              |
-| [`list`](./array/list.md)             | Pagination     | Client-side reactive pagination with filtering   |
-| [`map`](./array/map.md)               | Transformation | Map each element to a new value (supports async) |
-| [`reduce`](./array/reduce.md)         | Transformation | Reduce array to a single value                   |
-| [`remoteList`](./array/remoteList.md) | Pagination     | Server-side reactive pagination with caching     |
-| [`some`](./array/some.md)             | Query          | Check if any element matches a predicate         |
-| [`sort`](./array/sort.md)             | Sorting        | Sort array with custom comparator                |
-| [`uniq`](./array/uniq.md)             | Set            | Remove duplicate values                          |
+## Problem
+
+Implement 📚 quick reference in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
+
+| Method                                | Category       | Description                                     |
+| :------------------------------------ | :------------- | :---------------------------------------------- |
+| [`chunk`](./array/chunk.md)           | Transformation | Split array into chunks of a specific size      |
+| [`contains`](./array/contains.md)     | Query          | Check if array contains a value (deep equality) |
+| [`fold`](./array/fold.md)             | Aggregation    | Reduce without an initial value                 |
+| [`group`](./array/group.md)           | Aggregation    | Group elements by a key or function             |
+| [`keyBy`](./array/keyBy.md)           | Aggregation    | Index elements by a key                         |
+| [`list`](./array/list.md)             | Pagination     | Client-side reactive pagination with filtering  |
+| [`pick`](./array/pick.md)             | Query          | Pick and transform single element               |
+| [`remoteList`](./array/remoteList.md) | Pagination     | Server-side reactive pagination with caching    |
+| [`replace`](./array/replace.md)       | Transformation | Replace first matching element                  |
+| [`rotate`](./array/rotate.md)         | Transformation | Rotate elements by N positions                  |
+| [`search`](./array/search.md)         | Query          | Fuzzy search in array                           |
+| [`select`](./array/select.md)         | Transformation | Map and filter in one step                      |
+| [`sort`](./array/sort.md)             | Sorting        | Sort by selector or multi-field object selector |
+| [`toggle`](./array/toggle.md)         | Transformation | Add or remove item (toggle behaviour)           |
+| [`uniq`](./array/uniq.md)             | Set            | Remove duplicate values                         |
 
 ## 💡 Practical Examples
 
 ### Data Transformation
 
 ```ts
-import { map, chunk, compact, uniq } from '@vielzeug/toolkit';
+import { chunk, select, toggle, uniq } from '@vielzeug/toolkit';
 
-const rawData = [1, 2, null, 2, 3, undefined, 4];
+const rawData = [1, 2, 2, 3, 4, 5];
 
-// 1. Clean data (remove nulls/undefined)
-const clean = compact(rawData); // [1, 2, 2, 3, 4]
+// Remove duplicates
+const unique = uniq(rawData); // [1, 2, 3, 4, 5]
 
-// 2. Get unique values
-const unique = uniq(clean); // [1, 2, 3, 4]
+// Map + filter in one pass (select returns only non-null results)
+const doubled = select(unique, (x) => (x > 2 ? x * 2 : null)); // [6, 8, 10]
 
-// 3. Transform values
-const doubled = map(unique, (x) => x * 2); // [2, 4, 6, 8]
+// Batch for processing
+const batches = chunk(doubled, 2); // [[6, 8], [10]]
 
-// 4. Batch for processing
-const batches = chunk(doubled, 2); // [[2, 4], [6, 8]]
+// Toggle item in/out of a set
+const tags = toggle(['ts', 'react'], 'react'); // ['ts']
+const withNew = toggle(['ts'], 'vue'); // ['ts', 'vue']
 ```
 
-### Advanced Grouping & Sorting
+### Advanced Grouping & Indexing
 
 ```ts
-import { group, arrange } from '@vielzeug/toolkit';
+import { group, keyBy } from '@vielzeug/toolkit';
 
 const users = [
-  { name: 'Alice', role: 'admin', age: 30 },
-  { name: 'Bob', role: 'user', age: 25 },
-  { name: 'Charlie', role: 'user', age: 35 },
+  { id: 1, name: 'Alice', role: 'admin' },
+  { id: 2, name: 'Bob', role: 'user' },
+  { id: 3, name: 'Carol', role: 'user' },
 ];
 
 // Group by role
 const byRole = group(users, (u) => u.role);
 /*
 {
-  admin: [{ name: 'Alice', ... }],
-  user: [{ name: 'Bob', ... }, { name: 'Charlie', ... }]
+  admin: [{ id: 1, name: 'Alice', role: 'admin' }],
+  user:  [{ id: 2, ... }, { id: 3, ... }]
 }
 */
 
-// Sort by age (descending)
-const oldestFirst = arrange(users, (u) => u.age, 'desc');
+// Index by id (last wins when keys collide)
+const byId = keyBy(users, 'id');
+/*
+{
+  '1': { id: 1, name: 'Alice', ... },
+  '2': { id: 2, name: 'Bob',   ... },
+  '3': { id: 3, name: 'Carol', ... }
+}
+*/
+```
+
+### Fold — Reduce Without Initial Value
+
+```ts
+import { fold } from '@vielzeug/toolkit';
+
+fold([1, 2, 3], (a, b) => a + b); // 6
+fold([3, 1, 4], (a, b) => (a > b ? a : b)); // 4 (max)
+fold([], (a, b) => a + b); // undefined
 ```
 
 ## 🔗 All Array Utilities
 
 <div class="grid-links">
 
-- [aggregate](./array/aggregate.md)
-- [alternate](./array/alternate.md)
-- [arrange](./array/arrange.md)
 - [chunk](./array/chunk.md)
-- [compact](./array/compact.md)
 - [contains](./array/contains.md)
-- [every](./array/every.md)
-- [filter](./array/filter.md)
-- [findIndex](./array/findIndex.md)
-- [findLast](./array/findLast.md)
-- [find](./array/find.md)
-- [flatten](./array/flatten.md)
+- [fold](./array/fold.md)
 - [group](./array/group.md)
+- [keyBy](./array/keyBy.md)
 - [list](./array/list.md)
-- [map](./array/map.md)
 - [pick](./array/pick.md)
-- [reduce](./array/reduce.md)
 - [remoteList](./array/remoteList.md)
+- [replace](./array/replace.md)
+- [rotate](./array/rotate.md)
 - [search](./array/search.md)
 - [select](./array/select.md)
-- [shift](./array/shift.md)
-- [some](./array/some.md)
 - [sort](./array/sort.md)
-- [substitute](./array/substitute.md)
+- [toggle](./array/toggle.md)
 - [uniq](./array/uniq.md)
 
 </div>
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Async Examples](./async.md)
+- [Date Examples](./date.md)
+- [Function Examples](./function.md)

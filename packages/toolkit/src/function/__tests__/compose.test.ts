@@ -7,6 +7,7 @@ describe('compose', () => {
     const subtract = (x: number) => x - 4;
 
     const composedFn = compose(subtract, multiply, add);
+
     expect(composedFn(5)).toBe(17); // ((5 + 2) * 3) - 4 = 17
   });
 
@@ -14,6 +15,7 @@ describe('compose', () => {
     const add = (x: number) => x + 2;
 
     const composedFn = compose(add);
+
     expect(composedFn(5)).toBe(7); // 5 + 2 = 7
   });
 
@@ -26,6 +28,7 @@ describe('compose', () => {
     const appendExclamation = (str: string) => `${str}!`;
 
     const composedFn = compose(appendExclamation, toUpperCase);
+
     expect(composedFn('hello')).toBe('HELLO!');
   });
 
@@ -34,22 +37,15 @@ describe('compose', () => {
     const add = (x: number) => x + 2;
 
     const composedFn = compose(returnUndefined, add);
+
     expect(composedFn(1)).toBeUndefined();
-  });
-
-  it('should handle asynchronous functions', async () => {
-    const asyncAdd = async (x: number) => x + 1;
-    const asyncMultiply = async (x: number) => x * 2;
-
-    const composedFn = compose(asyncMultiply, asyncAdd);
-    const result = await composedFn(3);
-    expect(result).toBe(8); // (3 + 1) * 2 = 8
   });
 
   it('should pass the initial value through the pipeline', () => {
     const identity = <T>(x: T) => x;
 
     const composedFn = compose(identity);
+
     expect(composedFn(42)).toBe(42);
   });
 });

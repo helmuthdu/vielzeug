@@ -15,7 +15,6 @@ interface PackagesData {
   [key: string]: PackageInfo;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Build-time data extraction requires nested logic
 export function getPackagesData(): PackagesData {
   // Go up from docs/.vitepress/theme/utils to the project root, then into packages
   const packagesDir = path.resolve(__dirname, '../../../../packages');
@@ -40,14 +39,17 @@ export function getPackagesData(): PackagesData {
 
         // Try to get actual bundle size
         let size = 'N/A';
+
         if (fs.existsSync(distPath)) {
           const distFiles = fs.readdirSync(distPath);
 
           // Prefer package-named file (e.g., deposit.cjs) over index.cjs
           let cjsFile = distFiles.find((f: string) => f === `${dir}.cjs`);
+
           if (!cjsFile) {
             cjsFile = distFiles.find((f: string) => f.endsWith('.cjs') && f !== 'index.cjs');
           }
+
           if (!cjsFile) {
             cjsFile = distFiles.find((f: string) => f.endsWith('.cjs'));
           }
@@ -65,9 +67,9 @@ export function getPackagesData(): PackagesData {
         }
 
         packages[dir] = {
-          version: packageJson.version,
           dependencies,
           size,
+          version: packageJson.version,
         };
       } catch (err) {
         console.warn(`Could not read package.json for ${dir}:`, err);

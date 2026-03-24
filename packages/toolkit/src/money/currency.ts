@@ -5,9 +5,9 @@ import type { Money } from './types';
  */
 export type CurrencyFormatOptions = {
   locale?: string; // BCP 47 language tag (e.g., 'en-US', 'de-DE')
-  style?: 'symbol' | 'code' | 'name'; // Display style
-  minimumFractionDigits?: number; // Minimum decimal places
   maximumFractionDigits?: number; // Maximum decimal places
+  minimumFractionDigits?: number; // Minimum decimal places
+  style?: 'symbol' | 'code' | 'name'; // Display style
 };
 
 /**
@@ -29,7 +29,7 @@ export type CurrencyFormatOptions = {
  * @returns Formatted currency string
  */
 export function currency(money: Money, options: CurrencyFormatOptions = {}): string {
-  const { locale = 'en-US', style = 'symbol', minimumFractionDigits, maximumFractionDigits } = options;
+  const { locale = 'en-US', maximumFractionDigits, minimumFractionDigits, style = 'symbol' } = options;
 
   // Get decimal places for currency (default to 2 for most currencies)
   const decimalPlaces = getCurrencyDecimals(money.currency);
@@ -38,25 +38,9 @@ export function currency(money: Money, options: CurrencyFormatOptions = {}): str
   const divisor = 10 ** decimalPlaces;
   const amount = Number(money.amount) / divisor;
 
-  // Determine Intl.NumberFormat style
-  let currencyDisplay: 'symbol' | 'code' | 'name';
-  switch (style) {
-    case 'symbol':
-      currencyDisplay = 'symbol';
-      break;
-    case 'code':
-      currencyDisplay = 'code';
-      break;
-    case 'name':
-      currencyDisplay = 'name';
-      break;
-    default:
-      currencyDisplay = 'symbol';
-  }
-
   const formatter = new Intl.NumberFormat(locale, {
     currency: money.currency,
-    currencyDisplay,
+    currencyDisplay: style,
     maximumFractionDigits: maximumFractionDigits ?? decimalPlaces,
     minimumFractionDigits: minimumFractionDigits ?? decimalPlaces,
     style: 'currency',
@@ -65,36 +49,9 @@ export function currency(money: Money, options: CurrencyFormatOptions = {}): str
   return formatter.format(amount);
 }
 
-/**
- * Gets the number of decimal places for a currency.
- * Most currencies use 2 decimal places, but some use 0 or 3.
- */
 function getCurrencyDecimals(currencyCode: string): number {
-  const zeroDecimalCurrencies = [
-    'BIF',
-    'CLP',
-    'DJF',
-    'GNF',
-    'JPY',
-    'KMF',
-    'KRW',
-    'MGA',
-    'PYG',
-    'RWF',
-    'UGX',
-    'VND',
-    'VUV',
-    'XAF',
-    'XOF',
-    'XPF',
-  ];
-  const threeDecimalCurrencies = ['BHD', 'IQD', 'JOD', 'KWD', 'LYD', 'OMR', 'TND'];
-
-  if (zeroDecimalCurrencies.includes(currencyCode.toUpperCase())) {
-    return 0;
-  }
-  if (threeDecimalCurrencies.includes(currencyCode.toUpperCase())) {
-    return 3;
-  }
-  return 2; // Default for most currencies
+  return (
+    new Intl.NumberFormat('en', { currency: currencyCode, style: 'currency' }).resolvedOptions()
+      .maximumFractionDigits ?? 2
+  );
 }

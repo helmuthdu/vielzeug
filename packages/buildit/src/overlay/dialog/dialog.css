@@ -1,0 +1,322 @@
+@layer buildit.base {
+  :host {
+    --_radius: var(--dialog-radius, var(--rounded-lg));
+    --_padding: var(--dialog-padding, var(--size-4));
+    --_gap: var(--dialog-gap, var(--size-4));
+    --_max-width: var(--dialog-max-width, 32rem);
+    --_elevation: var(--shadow-xl);
+    --_backdrop-filter: none;
+    --_backdrop-bg: var(--dialog-backdrop, color-mix(in srgb, var(--color-canvas) 40%, transparent));
+    --_panel-bg: var(
+      --dialog-bg,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
+      )
+    );
+    --_panel-blur: var(--dialog-panel-blur, var(--blur-md));
+    --_panel-border-color: var(
+      --dialog-border-color,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
+      )
+    );
+
+    display: contents;
+  }
+
+  /* =====================
+       Native <dialog> resets
+       ===================== */
+
+  dialog {
+    all: unset;
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: transparent;
+    border: none;
+  }
+
+  /* all:unset removes the UA stylesheet's dialog:not([open]){display:none} — restore it */
+  dialog:not([open]) {
+    display: none;
+  }
+
+  dialog[open] {
+    pointer-events: auto;
+  }
+
+  dialog::backdrop {
+    background: var(--_backdrop-bg);
+    opacity: 1;
+    backdrop-filter: var(--_backdrop-filter);
+    transition: var(
+      --_motion-transition,
+      opacity var(--transition-normal) ease,
+      overlay var(--transition-normal) ease allow-discrete,
+      display var(--transition-normal) ease allow-discrete
+    );
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  dialog.closing::backdrop {
+    opacity: 0;
+  }
+
+  /* =====================
+       Panel (the visible dialog box)
+       ===================== */
+
+  .panel {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: var(--_max-width);
+    max-width: calc(100vw - var(--size-8));
+    max-height: calc(100dvh - var(--size-8));
+    overflow: hidden;
+    background: var(--_panel-bg);
+    border: var(--border) solid var(--_panel-border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--dialog-shadow, var(--_elevation));
+    opacity: 1;
+    backdrop-filter: blur(var(--_panel-blur));
+    transform: scale(1) translateY(0);
+    transition: var(
+      --_motion-transition,
+      opacity var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1),
+      transform var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1)
+    );
+
+    @starting-style {
+      opacity: 0;
+      transform: scale(0.96) translateY(var(--size-2));
+    }
+  }
+
+  dialog.closing .panel {
+    opacity: 0;
+    transform: scale(0.96) translateY(var(--size-2));
+  }
+
+  /* =====================
+       Sizes
+       ===================== */
+
+  .panel[data-size='sm'] {
+    --_max-width: var(--dialog-max-width, 22rem);
+  }
+
+  .panel[data-size='md'] {
+    --_max-width: var(--dialog-max-width, 32rem);
+  }
+
+  .panel[data-size='lg'] {
+    --_max-width: var(--dialog-max-width, 48rem);
+  }
+
+  .panel[data-size='xl'] {
+    --_max-width: var(--dialog-max-width, 64rem);
+  }
+
+  .panel[data-size='full'] {
+    width: calc(100vw - var(--size-8));
+    max-width: calc(100vw - var(--size-8));
+    max-height: calc(100dvh - var(--size-8));
+  }
+
+  /* =====================
+       Header
+       ===================== */
+
+  .header {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-2);
+    align-items: center;
+    padding: var(--_padding);
+    padding-bottom: 0;
+  }
+
+  .header[hidden] {
+    display: none;
+  }
+
+  .title {
+    flex: 1;
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-900);
+  }
+
+  .close {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-8);
+    min-width: var(--_touch-target);
+    height: var(--size-8);
+    min-height: var(--_touch-target);
+    padding: 0;
+    margin-inline-start: auto;
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-md);
+    transition: var(--_motion-transition, background var(--transition-fast), color var(--transition-fast));
+  }
+
+  .close:hover {
+    color: var(--color-contrast-900);
+    background: var(--color-contrast-200);
+  }
+
+  .close:focus-visible {
+    outline: var(--border-2) solid var(--color-focus);
+    outline-offset: var(--border-2);
+  }
+
+  .close[hidden] {
+    display: none;
+  }
+
+  /* =====================
+       Body
+       ===================== */
+
+  .body {
+    flex: 1;
+    padding: var(--_padding);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    color: var(--color-contrast-700);
+  }
+
+  /* =====================
+       Footer
+       ===================== */
+
+  .footer {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: var(--_gap);
+    align-items: center;
+    justify-content: flex-end;
+    padding: var(--_padding);
+    padding-top: 0;
+  }
+
+  .footer[hidden] {
+    display: none;
+  }
+
+  /* =====================
+       Dividers when header/footer present
+       ===================== */
+
+  .header:not([hidden]) + .body {
+    padding-top: var(--size-4);
+  }
+
+  .body + .footer:not([hidden]) {
+    padding-top: var(--size-4);
+    border-top: var(--border) solid var(--color-contrast-100);
+  }
+
+  @media (width <= 640px) {
+    .panel,
+    .panel[data-size='sm'],
+    .panel[data-size='md'],
+    .panel[data-size='lg'],
+    .panel[data-size='xl'] {
+      width: calc(100vw - var(--size-4));
+      max-width: calc(100vw - var(--size-4));
+      max-height: calc(100dvh - var(--size-4));
+    }
+
+    .header,
+    .body,
+    .footer {
+      padding-inline: var(--size-3);
+    }
+  }
+}
+
+@layer buildit.config {
+  :host([backdrop='blur']) {
+    --_backdrop-filter: blur(var(--blur-xs));
+  }
+
+  :host([backdrop='transparent']) {
+    --_backdrop-bg: transparent;
+  }
+
+  /* Panel elevation / shadow scale */
+  :host([elevation='none']) {
+    --_elevation: var(--shadow-none);
+  }
+
+  :host([elevation='sm']) {
+    --_elevation: var(--shadow-sm);
+  }
+
+  :host([elevation='md']) {
+    --_elevation: var(--shadow-md);
+  }
+
+  :host([elevation='lg']) {
+    --_elevation: var(--shadow-lg);
+  }
+
+  :host([elevation='xl']) {
+    --_elevation: var(--shadow-xl);
+  }
+
+  :host([elevation='2xl']) {
+    --_elevation: var(--shadow-2xl);
+  }
+
+  /* Padding scale */
+  :host([padding='none']) {
+    --_padding: var(--size-0);
+  }
+
+  :host([padding='sm']) {
+    --_padding: var(--size-3);
+  }
+
+  :host([padding='md']) {
+    --_padding: var(--size-4);
+  }
+
+  :host([padding='lg']) {
+    --_padding: var(--size-6);
+  }
+
+  :host([padding='xl']) {
+    --_padding: var(--size-8);
+  }
+}

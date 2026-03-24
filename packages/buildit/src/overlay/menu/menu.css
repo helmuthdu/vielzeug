@@ -1,0 +1,71 @@
+@layer buildit.base {
+  :host {
+    --_menu-panel-bg: var(
+      --menu-panel-bg,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
+      )
+    );
+    --_menu-panel-border-color: var(
+      --menu-panel-border-color,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
+      )
+    );
+    --_menu-panel-blur: var(--menu-panel-blur, var(--blur-md));
+    --_menu-panel-shadow: var(--menu-panel-shadow, var(--shadow-xl));
+
+    position: relative;
+    display: inline-block;
+  }
+
+  /* ========================================
+       Menu Panel
+       ======================================== */
+
+  .menu-panel {
+    position: fixed;
+    inset-inline-start: 0;
+    top: 0;
+    z-index: calc(var(--z-popover, 1000) + 1);
+    box-sizing: border-box;
+    visibility: hidden;
+    min-width: var(--menu-panel-min-width, 10rem);
+    padding: var(--size-1);
+    margin: 0;
+    pointer-events: none;
+    background: var(--_menu-panel-bg);
+    border: var(--border) solid var(--_menu-panel-border-color);
+    border-radius: var(--menu-panel-radius, var(--rounded-lg));
+    box-shadow: var(--_menu-panel-shadow);
+    opacity: 0;
+    backdrop-filter: blur(var(--_menu-panel-blur));
+    transform: translateY(-4px) scale(0.97);
+    transform-origin: top;
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-fast),
+      visibility var(--transition-fast);
+  }
+
+  .menu-panel[data-open] {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  /* ========================================
+       Menu Items (slotted bit-menu-item)
+       ======================================== */
+
+  ::slotted(bit-menu-item) {
+    display: block;
+  }
+
+  ::slotted(bit-menu-separator) {
+    display: block;
+  }
+}

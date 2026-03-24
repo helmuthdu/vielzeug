@@ -1,5 +1,3 @@
-import { assert } from '../function/assert';
-
 /**
  * Calculate the similarity between two strings using the Levenshtein distance algorithm.
  *
@@ -18,21 +16,14 @@ import { assert } from '../function/assert';
  *
  * @returns A number between 0 and 1 representing the similarity between the two strings.
  */
-export function similarity(str1: unknown, str2: unknown): number {
-  assert(
-    ['string', 'number'].includes(typeof str1) && ['string', 'number'].includes(typeof str2),
-    'Invalid arguments',
-    {
-      args: { str1, str2 },
-      type: TypeError,
-    },
-  );
-
-  const a = String(str1).toLowerCase();
-  const b = String(str2).toLowerCase();
+export function similarity(str1: string, str2: string): number {
+  const a = str1.toLowerCase();
+  const b = str2.toLowerCase();
 
   if (a === b) return 1;
+
   if (a.length === 0) return b.length === 0 ? 1 : 0;
+
   if (b.length === 0) return 0;
 
   // Swap to ensure we use the smaller string for columns (O(min(A,B)) space)
@@ -47,6 +38,7 @@ export function similarity(str1: unknown, str2: unknown): number {
     currRow[0] = i;
     for (let j = 1; j <= shorterLength; j++) {
       const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1;
+
       currRow[j] = Math.min(
         currRow[j - 1] + 1, // insertion
         prevRow[j] + 1, // deletion

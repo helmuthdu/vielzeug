@@ -1,0 +1,106 @@
+@layer buildit.base {
+  :host {
+    --_cols: var(--grid-cols, repeat(auto-fit, minmax(250px, 1fr)));
+    --_rows: var(--grid-rows, auto);
+    --_gap: var(--grid-gap, var(--size-4));
+    --_row-gap: var(--grid-row-gap, var(--_gap));
+    --_col-gap: var(--grid-col-gap, var(--_gap));
+
+    display: grid;
+    grid-template-rows: var(--_rows);
+    grid-template-columns: var(--_cols);
+    grid-auto-flow: row;
+    gap: var(--_row-gap) var(--_col-gap);
+  }
+
+  :host([gap='none']) {
+    --_row-gap: 0;
+    --_col-gap: 0;
+  }
+
+  :host([gap='xs']) {
+    --_row-gap: var(--size-1);
+    --_col-gap: var(--size-1);
+  }
+
+  :host([gap='sm']) {
+    --_row-gap: var(--size-2);
+    --_col-gap: var(--size-2);
+  }
+
+  :host([gap='md']) {
+    --_row-gap: var(--size-4);
+    --_col-gap: var(--size-4);
+  }
+
+  :host([gap='lg']) {
+    --_row-gap: var(--size-6);
+    --_col-gap: var(--size-6);
+  }
+
+  :host([gap='xl']) {
+    --_row-gap: var(--size-8);
+    --_col-gap: var(--size-8);
+  }
+
+  :host([gap='2xl']) {
+    --_row-gap: var(--size-12);
+    --_col-gap: var(--size-12);
+  }
+
+  :host([align='start']) {
+    align-items: start;
+  }
+
+  :host([align='center']) {
+    align-items: center;
+  }
+
+  :host([align='end']) {
+    align-items: end;
+  }
+
+  :host([align='stretch']) {
+    align-items: stretch;
+  }
+
+  :host([align='baseline']) {
+    align-items: baseline;
+  }
+
+  :host([justify='start']) {
+    justify-items: start;
+  }
+
+  :host([justify='center']) {
+    justify-items: center;
+  }
+
+  :host([justify='end']) {
+    justify-items: end;
+  }
+
+  :host([justify='stretch']) {
+    justify-items: stretch;
+  }
+
+  :host([flow='row']) {
+    grid-auto-flow: row;
+  }
+
+  :host([flow='column']) {
+    grid-auto-flow: column;
+  }
+
+  :host([flow='row-dense']) {
+    grid-auto-flow: row dense;
+  }
+
+  :host([flow='column-dense']) {
+    grid-auto-flow: column dense;
+  }
+
+  :host([fullwidth]) {
+    width: 100%;
+  }
+}

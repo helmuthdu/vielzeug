@@ -1,27 +1,55 @@
 import type { Predicate, Sorter } from '../types';
+
 import { search as defaultSearch } from './search';
 
-// #region Meta
-export type Meta = Readonly<{
-  end: number; // inclusive
+// #region BaseMeta
+/** Minimal pagination metadata shared by both `list` and `remoteList`. */
+export type BaseMeta = Readonly<{
+  end: number;
   isEmpty: boolean;
   isFirst: boolean;
   isLast: boolean;
   limit: number;
-  page: number; // 1-based
+  page: number;
   pages: number;
-  start: number; // 1-based
+  start: number;
   total: number;
 }>;
+// #endregion BaseMeta
+
+// #region BaseList
+/**
+ * Minimal shared interface satisfied by both `list()` and `remoteList()` results.
+ * Use this type for code that works with either.
+ */
+export type BaseList<T> = {
+  readonly current: readonly T[];
+  readonly meta: BaseMeta;
+  subscribe(listener: () => void): () => void;
+};
+// #endregion BaseList
+
+// #region Meta
+export type Meta = BaseMeta;
 // #endregion Meta
 
 // #region List
 export type List<T, F, S> = {
+  // Batch updates across properties in one recompute/refetch
+  batch(
+    mutator: (ctx: {
+      goTo(p: number): void; // 1-based
+      setData?(d: readonly T[]): void; // local-only
+      setFilter(f: F): void;
+      setLimit(n: number): void;
+      setQuery(q: string): void;
+      setSort(s?: S): void;
+    }) => void,
+  ): void;
   readonly current: readonly T[];
-  readonly meta: Meta;
-  subscribe(listener: () => void): () => void;
-
   goTo(page: number): void;
+
+  readonly meta: Meta;
   next(): void;
   prev(): void;
   reset(): void;
@@ -31,17 +59,7 @@ export type List<T, F, S> = {
   setLimit(n: number): void;
   setSort(sort?: S): void;
 
-  // Batch updates across properties in one recompute/refetch
-  batch(
-    mutator: (ctx: {
-      setLimit(n: number): void;
-      setFilter(f: F): void;
-      setSort(s?: S): void;
-      setQuery(q: string): void;
-      setData?(d: readonly T[]): void; // local-only
-      goTo(p: number): void; // 1-based
-    }) => void,
-  ): void;
+  subscribe(listener: () => void): () => void;
 };
 // #endregion List
 
@@ -82,17 +100,22 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
     let arr = rawData;
 
     if (query) arr = searchFn(arr, query, searchTone);
+
     if (filterFn) arr = arr.filter(filterFn);
+
     arr = sortFn ? [...arr].sort(sortFn) : [...arr];
 
     const pages = Math.max(1, Math.ceil(arr.length / limit));
+
     offset = Math.min(offset, pages - 1);
     view = arr;
   };
 
   const slice = (): readonly T[] => {
     if (!view.length) return [];
+
     const start = offset * limit;
+
     return view.slice(start, start + limit);
   };
 
@@ -104,6 +127,7 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
   let timer: ReturnType<typeof setTimeout> | undefined;
   const debouncedSearch = (q: string, ms: number) => {
     if (timer) clearTimeout(timer);
+
     timer = setTimeout(() => {
       query = q;
       timer = undefined;
@@ -164,6 +188,7 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
     },
     goTo(page) {
       const pages = Math.max(1, Math.ceil(view.length / limit));
+
       offset = Math.max(0, Math.min(page - 1, pages - 1));
       notify();
     },
@@ -174,6 +199,7 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
       const page = Math.min(offset + 1, pages);
       const start = isEmpty ? 0 : (page - 1) * limit + 1;
       const end = isEmpty ? 0 : Math.min(page * limit, total);
+
       return {
         end,
         isEmpty,
@@ -188,6 +214,7 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
     },
     next() {
       const pages = Math.max(1, Math.ceil(view.length / limit));
+
       if (offset < pages - 1) {
         offset++;
         notify();
@@ -208,9 +235,9 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
       update();
     },
     search(q, opts) {
-      query = q;
-      offset = 0;
       if (opts?.immediate) {
+        query = q;
+        offset = 0;
         update();
       } else {
         debouncedSearch(q, cfg.debounceMs ?? DEFAULTS.debounceMs);
@@ -237,6 +264,7 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
     },
     subscribe(listener) {
       listeners.add(listener);
+
       return () => listeners.delete(listener);
     },
   };

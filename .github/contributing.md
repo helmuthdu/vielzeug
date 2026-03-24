@@ -227,7 +227,8 @@ git push origin your-branch-name
 
 ```
 vielzeug/
-├── packages/           # All packages
+├── packages/          # All packages
+│   ├── buildit/       # UI Library
 │   ├── craftit/       # Web components
 │   ├── deposit/       # Client-side storage
 │   ├── fetchit/       # HTTP client
@@ -236,7 +237,7 @@ vielzeug/
 │   ├── logit/         # Logging
 │   ├── permit/        # Permissions
 │   ├── routeit/       # Routing
-│   ├── snapit/       # State management
+│   ├── storeit/        # State management
 │   ├── toolkit/       # Utilities
 │   ├── validit/       # Validation
 │   └── wireit/        # Dependency injection
@@ -253,7 +254,7 @@ vielzeug/
 
 - 💬 **Questions?** [Start a discussion](https://github.com/helmuthdu/vielzeug/discussions)
 - 🐛 **Found a bug?** [Open an issue](https://github.com/helmuthdu/vielzeug/issues)
-- 📖 **Documentation:** [vielzeug.dev](https://helmuthdu.github.io/vielzeug)
+- 📖 **Documentation:** [vielzeug.dev](https://vielzeug.dev)
 
 ## Code of Conduct
 

@@ -21,6 +21,7 @@ describe('memoize', () => {
 
   it('should respect the TTL and evict expired cache entries', () => {
     vi.useFakeTimers();
+
     const mockFn = vi.fn((x: number) => x * 2);
     const memoizedFn = memo(mockFn, { ttl: 1000 });
 

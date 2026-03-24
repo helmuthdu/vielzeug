@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+
 import { parallel } from '../parallel';
 
 describe('parallel', () => {
@@ -14,6 +15,7 @@ describe('parallel', () => {
       const delays = [50, 10, 30, 5, 20];
       const results = await parallel(3, delays, async (delay, index) => {
         await new Promise((resolve) => setTimeout(resolve, delay));
+
         return index;
       });
 
@@ -22,11 +24,13 @@ describe('parallel', () => {
 
     it('should work with empty array', async () => {
       const results = await parallel(2, [], async (n) => n);
+
       expect(results).toEqual([]);
     });
 
     it('should work with single item', async () => {
       const results = await parallel(2, [42], async (n) => n * 2);
+
       expect(results).toEqual([84]);
     });
   });
@@ -43,6 +47,7 @@ describe('parallel', () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         concurrentCount--;
+
         return n;
       });
 
@@ -56,6 +61,7 @@ describe('parallel', () => {
       await parallel(1, [1, 2, 3], async (n) => {
         order.push(n);
         await new Promise((resolve) => setTimeout(resolve, 10));
+
         return n;
       });
 
@@ -77,6 +83,7 @@ describe('parallel', () => {
 
       await parallel(2, input, async (item, index, array) => {
         calls.push([item, index, array]);
+
         return item;
       });
 
@@ -101,6 +108,7 @@ describe('parallel', () => {
           if (n === 2) {
             throw new Error('Test error');
           }
+
           return n;
         }),
       ).rejects.toThrow('Test error');
@@ -113,9 +121,11 @@ describe('parallel', () => {
         parallel(2, [1, 2, 3, 4, 5], async (n) => {
           processed.push(n);
           await new Promise((resolve) => setTimeout(resolve, 10));
+
           if (n === 3) {
             throw new Error('Error at 3');
           }
+
           return n;
         }),
       ).rejects.toThrow('Error at 3');
@@ -128,6 +138,7 @@ describe('parallel', () => {
   describe('abort signal', () => {
     it('should abort if signal is already aborted', async () => {
       const controller = new AbortController();
+
       controller.abort();
 
       await expect(parallel(2, [1, 2, 3], async (n) => n, controller.signal)).rejects.toThrow('Aborted');
@@ -146,6 +157,7 @@ describe('parallel', () => {
           async (n) => {
             processed.push(n);
             await new Promise((resolve) => setTimeout(resolve, 20));
+
             return n;
           },
           controller.signal,
@@ -170,6 +182,7 @@ describe('parallel', () => {
       const urls = ['url1', 'url2', 'url3', 'url4', 'url5'];
       const fetchMock = vi.fn(async (url: string) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
+
         return `data-${url}`;
       });
 
@@ -185,6 +198,7 @@ describe('parallel', () => {
 
       const results = await parallel(10, items, async (n) => {
         await new Promise((resolve) => setTimeout(resolve, 5));
+
         return n * 2;
       });
 
@@ -205,9 +219,11 @@ describe('parallel', () => {
       await expect(
         parallel(2, items, async (n) => {
           await new Promise((resolve) => setTimeout(resolve, 5));
+
           if (n === 4) {
             throw new Error('Failed at 4');
           }
+
           return n * 2;
         }),
       ).rejects.toThrow('Failed at 4');

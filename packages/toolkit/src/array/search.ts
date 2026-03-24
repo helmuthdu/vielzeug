@@ -2,7 +2,6 @@ import { assert } from '../function/assert';
 import { seek } from '../object/seek';
 import { IS_STRING_ERROR_MSG, isString } from '../typed/isString';
 import { IS_WITHIN_ERROR_MSG, isWithin } from '../typed/isWithin';
-import { filter } from './filter';
 
 /**
  * Performs a search on an array of objects, checking all values for a match with the search string.
@@ -25,9 +24,9 @@ export function search<T>(array: T[], query: string, tone = 0.25): T[] {
   assert(isString(query), IS_STRING_ERROR_MSG, { args: { query }, type: TypeError });
   assert(isWithin(tone, 0, 1), IS_WITHIN_ERROR_MSG, { args: { max: 1, min: 0, tone }, type: TypeError });
 
-  if (!query) return [];
+  if (!query) return [...array];
 
   const searchTerm = query.toLowerCase();
 
-  return filter(array, (obj) => seek(obj, searchTerm, tone));
+  return array.filter((obj) => seek(obj as object, searchTerm, tone));
 }

@@ -15,12 +15,14 @@ describe('min', () => {
   it('returns the minimum value mapped by a callback function', () => {
     const array = [{ value: 1 }, { value: 2 }, { value: 3 }];
     const callback = (item: { value: number }) => item.value;
+
     expect(min(array, callback)).toBe(array[0]);
   });
 
   it('handles arrays with mixed types using a callback', () => {
     const array = [true, false, true];
     const callback = (item: boolean) => (item ? 1 : 0);
+
     expect(min(array, callback)).toBe(false);
   });
 
@@ -31,6 +33,7 @@ describe('min', () => {
   it('handles arrays with a mix of numbers and other types', () => {
     const array = [1, '2', true, null];
     const callback = (item: unknown) => (typeof item === 'number' ? item : Number.POSITIVE_INFINITY);
+
     expect(min(array, callback)).toBe(1);
   });
 
@@ -41,6 +44,7 @@ describe('min', () => {
   it('handles arrays with undefined or null values', () => {
     const array = [1, null, undefined, 2];
     const callback = (item: unknown) => (item ? (item as number) : Number.POSITIVE_INFINITY);
+
     expect(min(array, callback)).toBe(1);
   });
 
@@ -49,15 +53,10 @@ describe('min', () => {
   });
 
   it('throws TypeError if the first argument is not an array', () => {
-    // @ts-expect-error
-    expect(() => min(null)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => min(undefined)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => min(123)).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => min({})).toThrow(TypeError);
-    // @ts-expect-error
-    expect(() => min('string')).toThrow(TypeError);
+    expect(() => min(null as any)).toThrow(TypeError);
+    expect(() => min(undefined as any)).toThrow(TypeError);
+    expect(() => min(123 as any)).toThrow(TypeError);
+    expect(() => min({} as any)).toThrow(TypeError);
+    expect(() => min('string' as any)).toThrow(TypeError);
   });
 });

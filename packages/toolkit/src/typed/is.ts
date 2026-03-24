@@ -1,122 +1,95 @@
-import { assert } from '../function/assert';
-import { ge } from './ge';
-import { gt } from './gt';
+import { isArray } from './isArray';
+import { isBoolean } from './isBoolean';
+import { isDate } from './isDate';
 import { isDefined } from './isDefined';
 import { isEmpty } from './isEmpty';
 import { isEqual } from './isEqual';
 import { isEven } from './isEven';
+import { isFunction } from './isFunction';
 import { isMatch } from './isMatch';
 import { isNegative } from './isNegative';
 import { isNil } from './isNil';
+import { isNumber } from './isNumber';
+import { isObject } from './isObject';
 import { isOdd } from './isOdd';
 import { isPositive } from './isPositive';
+import { isPrimitive } from './isPrimitive';
+import { isPromise } from './isPromise';
 import { isRegex } from './isRegex';
+import { isString } from './isString';
 import { isWithin } from './isWithin';
 import { isZero } from './isZero';
-import { le } from './le';
-import { lt } from './lt';
-import { type ArgType, typeOf } from './typeOf';
-
-type isType =
-  | ArgType
-  | 'defined'
-  | 'empty'
-  | 'eq'
-  | 'even'
-  | 'ge'
-  | 'gt'
-  | 'le'
-  | 'lt'
-  | 'match'
-  | 'ne'
-  | 'negative'
-  | 'nil'
-  | 'odd'
-  | 'positive'
-  | 'regex'
-  | 'within'
-  | 'zero';
+import { typeOf } from './typeOf';
 
 /**
- * @description
- * Checks if the value type of argument.
+ * Namespace of type-checking and comparison utilities.
  *
  * @example
  * ```ts
- * is('array', []);
- * is('boolean', true);
- * is('date', new Date());
- * is('defined', 123);
- * is('empty', []);
- * is('even', 2);
- * is('function', () => {});
- * is('match', { a: 1, b: 2 }, { a: 1 });
- * is('nan', Number.NaN);
- * is('negative', -123);
- * is('nil', null);
- * is('null', null);
- * is('number', 123);
- * is('object', {});
- * is('odd', 3);
- * is('positive', 123);
- * is('string', 'hello');
- * is('symbol', Symbol('test'));
- * is('regex', /abc/);
- * is('string', 'hello world');
- * is('undefined', undefined);
- * is('within', 1, 2, 3);
- * is('zero', 0);
- * is('eq', [1, 2, 3], [1, 2, 3]);
- * is('ne', [1, 2, 3], [1, 2]);
- * is('ge', 5, 5);
- * is('gt', 5, 3);
- * is('le', 5, 5);
- * is('lt', 3, 5);
+ * is.string('hello');          // true
+ * is.array([1, 2, 3]);         // true
+ * is.nil(null);                // true
+ * is.nil(undefined);           // true
+ * is.equal([1, 2], [1, 2]);    // true
+ * is.positive(5);              // true
+ * is.within(3, 1, 5);          // true
+ * is.match({ a: 1, b: 2 }, { a: 1 }); // true
+ * is.ge(5, 5);                 // true
+ * is.gt(5, 3);                 // true
+ * is.typeOf('hello');          // 'string'
  * ```
- *
- * @param type - The type to check against.
- * @param args - The argument to be checked.
- *
- * @returns `true` if the value is of the specified type, else `false`.
  */
-export function is(type: 'within', ...args: Parameters<typeof isWithin>): boolean;
-export function is(type: 'eq', ...args: Parameters<typeof isEqual>): boolean;
-export function is(type: 'ne', ...args: Parameters<typeof isEqual>): boolean;
-export function is(type: 'gt', ...args: Parameters<typeof gt>): boolean;
-export function is(type: 'ge', ...args: Parameters<typeof ge>): boolean;
-export function is(type: 'lt', ...args: Parameters<typeof lt>): boolean;
-export function is(type: 'le', ...args: Parameters<typeof le>): boolean;
-export function is(type: 'match', ...args: Parameters<typeof isMatch>): boolean;
-export function is(type: 'empty', ...args: Parameters<typeof isEmpty>): boolean;
-export function is(type: 'array', arg: unknown): arg is Array<unknown>;
-export function is(type: 'string', arg: unknown): arg is string;
-export function is(type: 'number', arg: unknown): arg is number;
-export function is(type: 'object', arg: unknown): arg is object;
-export function is(type: 'nil', arg: unknown): arg is null | undefined;
-export function is(type: 'primitive', arg: unknown): arg is string | number | boolean;
-export function is(type: isType, arg: unknown): boolean;
-export function is(type: string, arg: unknown): boolean {
-  assert(Boolean(type), 'Type must be provided', { args: { type }, type: Error });
-
-  const compare = {
-    defined: isDefined,
-    empty: isEmpty,
-    eq: (args: Parameters<typeof isEqual>) => isEqual(...args),
-    even: isEven,
-    ge: (args: Parameters<typeof ge>) => ge(...args),
-    gt: (args: Parameters<typeof gt>) => gt(...args),
-    le: (args: Parameters<typeof le>) => le(...args),
-    lt: (args: Parameters<typeof lt>) => lt(...args),
-    match: (args: Parameters<typeof isMatch>) => isMatch(...args),
-    ne: (args: Parameters<typeof isEqual>) => !isEqual(...args),
-    negative: isNegative,
-    nil: isNil,
-    odd: isOdd,
-    positive: isPositive,
-    regex: isRegex,
-    within: (args: Parameters<typeof isWithin>) => isWithin(...args),
-    zero: isZero,
-  };
-
-  return compare[type as keyof typeof compare]?.(arg) ?? typeOf(arg) === type;
-}
+export const is = {
+  /** `true` if value is an array */
+  array: isArray,
+  /** `true` if value is a boolean */
+  boolean: isBoolean,
+  /** `true` if value is a valid Date */
+  date: isDate,
+  /** `true` if value is not `undefined` */
+  defined: isDefined,
+  /** `true` if value is null, undefined, `''`, `[]`, or `{}` */
+  empty: isEmpty,
+  /** Deep equality check */
+  equal: isEqual,
+  /** `true` if value is an even integer */
+  even: isEven,
+  /** `true` if value is a function */
+  fn: isFunction,
+  /** `true` if a >= b (numbers only) */
+  ge: (a: number, b: number) => a >= b,
+  /** `true` if a > b (numbers only) */
+  gt: (a: number, b: number) => a > b,
+  /** `true` if a <= b (numbers only) */
+  le: (a: number, b: number) => a <= b,
+  /** `true` if a < b (numbers only) */
+  lt: (a: number, b: number) => a < b,
+  /** Partial deep-match: `true` if `object` contains all of `source`'s properties */
+  match: isMatch,
+  /** `true` if value is a negative number */
+  negative: isNegative,
+  /** `true` if value is null or undefined */
+  nil: isNil,
+  /** `true` if value is a number (excluding NaN) */
+  number: isNumber,
+  /** `true` if value is a plain object */
+  object: isObject,
+  /** `true` if value is an odd integer */
+  odd: isOdd,
+  /** `true` if value is a positive number */
+  positive: isPositive,
+  /** `true` if value is a string, number, or boolean */
+  primitive: isPrimitive,
+  /** `true` if value is a Promise */
+  promise: isPromise,
+  /** `true` if value is a RegExp */
+  regex: isRegex,
+  /** `true` if value is a string */
+  string: isString,
+  /** Returns the runtime type tag of the value */
+  typeOf,
+  /** `true` if value is within [min, max] (inclusive) */
+  within: isWithin,
+  /** `true` if value is exactly 0 */
+  zero: isZero,
+};

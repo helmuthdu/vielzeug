@@ -1,0 +1,119 @@
+/* ========================================
+   Popover UA resets — unlayered so they unconditionally beat
+   the browser's [popover] UA stylesheet (padding / inset / border / margin).
+   Must NOT be inside @layer; unlayered author rules win over every layer and
+   every UA default.
+   ======================================== */
+.tooltip {
+  inset: unset;
+  padding: var(--size-1-5) var(--size-3);
+  margin: 0;
+  overflow: visible;
+  border: var(--_tooltip-border-width, var(--border-0)) solid var(--_tooltip-border-color, transparent);
+  transform-origin: center;
+  will-change: opacity, transform, filter;
+}
+
+@layer buildit.base {
+  :host {
+    position: relative;
+    display: inline-block;
+  }
+
+  .tooltip {
+    --_tooltip-fg: light-dark(var(--color-contrast-100), var(--color-contrast-900));
+    --_tooltip-bg: light-dark(
+      color-mix(in srgb, var(--color-contrast-900) 80%, transparent),
+      color-mix(in srgb, var(--color-contrast-100) 80%, transparent)
+    );
+    --_tooltip-border-width: var(--border);
+    --_tooltip-border-color: light-dark(
+      color-mix(in srgb, var(--color-contrast-100) 12%, transparent),
+      color-mix(in srgb, var(--color-contrast-900) 12%, transparent)
+    );
+    --_tooltip-shadow: var(--shadow-md);
+    --_tooltip-closed-transform: translateY(var(--size-1)) scale(0.98);
+
+    /* Positioning — JS sets top/left inline */
+    position: fixed;
+    max-width: var(--tooltip-max-width, var(--size-72));
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-snug);
+    color: var(--_tooltip-fg);
+    word-break: auto-phrase;
+    white-space: pre-line;
+    pointer-events: none;
+    background: var(--_tooltip-bg);
+    border-radius: var(--rounded);
+    box-shadow: var(--_tooltip-shadow);
+
+    /* Hidden by default (also serves as exit state) */
+    opacity: 0;
+    backdrop-filter: blur(var(--blur-sm));
+    transform: var(--_tooltip-closed-transform);
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-normal) var(--ease-out),
+      display var(--transition-fast) allow-discrete,
+      overlay var(--transition-fast) allow-discrete;
+  }
+
+  .tooltip[data-placement='top'] {
+    --_tooltip-closed-transform: translateY(var(--size-2)) scale(0.96);
+  }
+
+  .tooltip[data-placement='bottom'] {
+    --_tooltip-closed-transform: translateY(calc(var(--size-2) * -1)) scale(0.96);
+  }
+
+  .tooltip[data-placement='left'] {
+    --_tooltip-closed-transform: translateX(var(--size-2)) scale(0.96);
+  }
+
+  .tooltip[data-placement='right'] {
+    --_tooltip-closed-transform: translateX(calc(var(--size-2) * -1)) scale(0.96);
+  }
+
+  /* Entry animation via @starting-style */
+  .tooltip:popover-open {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+    transition:
+      opacity var(--transition-normal),
+      transform var(--transition-spring),
+      display var(--transition-normal) allow-discrete,
+      overlay var(--transition-normal) allow-discrete;
+
+    @starting-style {
+      opacity: 0;
+      transform: var(--_tooltip-closed-transform);
+    }
+  }
+}
+
+@layer buildit.variants {
+  /* Light tooltip */
+  :host([variant='light']) .tooltip {
+    --_tooltip-fg: light-dark(var(--color-contrast-900), var(--color-contrast-100));
+    --_tooltip-bg: light-dark(
+      color-mix(in srgb, var(--color-contrast-100) 80%, transparent),
+      color-mix(in srgb, var(--color-contrast-900) 80%, transparent)
+    );
+    --_tooltip-border-color: light-dark(
+      color-mix(in srgb, var(--color-contrast-900) 12%, transparent),
+      color-mix(in srgb, var(--color-contrast-100) 12%, transparent)
+    );
+    --_tooltip-shadow: var(--shadow-md);
+  }
+}
+
+@layer buildit.utilities {
+  :host([size='sm']) .tooltip {
+    font-size: var(--text-xs);
+  }
+
+  :host([size='lg']) .tooltip {
+    font-size: var(--text-base);
+  }
+}

@@ -7,7 +7,7 @@
 
 The `isEven` utility is a type guard that checks if a given number is an even integer.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isEven.ts

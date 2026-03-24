@@ -1,189 +1,213 @@
 <template>
-  <div class="repl-layout">
+  <bit-grid
+    cols-md="2"
+    cols="1"
+    areas-md="'editor output'"
+    areas="'editor' 'output'"
+    gap="lg"
+    fullwidth
+    align="start"
+    style="margin: 0.5rem 0; min-height: 500px">
     <!-- Code Editor -->
-    <div class="editor-section">
-      <div class="editor-header">
-        <div class="header-title">
-          <h3>Editor</h3>
-        </div>
-        <div class="header-actions">
-          <select v-model="localSelectedExample" @change="loadExample" id="example-selector">
-            <option value="">Choose an example...</option>
+    <div class="editor-section" style="grid-area: editor">
+      <bit-grid
+        areas="'title selector actions'"
+        style="grid-template-columns: auto 1fr"
+        align="center"
+        gap="md"
+        class="section-header">
+        <h3 class="section-label" style="grid-area: title">Editor</h3>
+        <div class="header-actions" style="grid-area: selector">
+          <bit-select fullwidth placeholder="Examples..." :value="localSelectedExample" @change="handleExampleSelect">
             <optgroup v-for="category in examplesByCategory" :key="category.name" :label="category.name">
               <option v-for="ex in category.examples" :key="ex.value" :value="ex.value">{{ ex.label }}</option>
             </optgroup>
-          </select>
-          <button @click="handleRunCode" class="btn-primary btn-with-icon btn-run">
-            <svg
-              v-if="!isExecuting"
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-            <svg
-              v-else
-              class="spinner"
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round">
-              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-            </svg>
-            <span>{{ isExecuting ? 'Running...' : 'Run' }}</span>
-          </button>
-          <button
-            @click="emit('toggle-expand')"
-            class="btn-icon expand-btn"
-            :title="isExpanded ? 'Collapse' : 'Expand'">
-            <svg
-              v-if="!isExpanded"
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round">
-              <polyline points="15 3 21 3 21 9" />
-              <polyline points="9 21 3 21 3 15" />
-              <line x1="21" y1="3" x2="14" y2="10" />
-              <line x1="3" y1="21" x2="10" y2="14" />
-            </svg>
-            <svg
-              v-else
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round">
-              <polyline points="4 14 10 14 10 20" />
-              <polyline points="20 10 14 10 14 4" />
-              <line x1="14" y1="10" x2="21" y2="3" />
-              <line x1="10" y1="14" x2="3" y2="21" />
-            </svg>
-          </button>
+          </bit-select>
         </div>
-      </div>
+        <div class="header-actions" style="grid-area: actions">
+          <bit-grid cols="1" justify="end" gap="md" flow="column">
+            <bit-grid-item>
+              <bit-button
+                color="primary"
+                variant="solid"
+                v-bind="isExecuting ? { loading: true } : {}"
+                @click="handleRunCode">
+                <svg
+                  v-if="!isExecuting"
+                  slot="prefix"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                Run
+              </bit-button>
+            </bit-grid-item>
+            <bit-grid-item>
+              <bit-tooltip :content="isExpanded ? 'Collapse' : 'Expand'" placement="bottom">
+                <bit-button icon-only variant="ghost" @click="emit('toggle-expand')">
+                  <svg
+                    v-if="!isExpanded"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="15 3 21 3 21 9" />
+                    <polyline points="9 21 3 21 3 15" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                  <svg
+                    v-else
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="4 14 10 14 10 20" />
+                    <polyline points="20 10 14 10 14 4" />
+                    <line x1="14" y1="10" x2="21" y2="3" />
+                    <line x1="10" y1="14" x2="3" y2="21" />
+                  </svg>
+                </bit-button>
+              </bit-tooltip>
+            </bit-grid-item>
+          </bit-grid>
+        </div>
+      </bit-grid>
       <div class="editor-content-wrapper">
         <div ref="editorContainer" class="code-editor"></div>
         <div class="editor-floating-toolbar">
-          <button @click="formatCode" class="btn-icon-alt" title="Format Code">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              version="1.1"
-              id="svg8"
-              xmlns="http://www.w3.org/2000/svg"
-              xmlns:svg="http://www.w3.org/2000/svg">
-              <defs id="defs8" />
-              <path
-                d="m 17.122614,2 5,5.0000001 L 7.1226139,22 2.1226137,17 Z"
-                id="path2"
-                style="stroke-width: 2.00057; stroke-dasharray: none" />
-              <path d="M 15.981361,11.55223 12.594039,8.1175984" id="path1" />
-            </svg>
-          </button>
-          <button @click="copyCode" class="btn-icon-alt" title="Copy to Clipboard">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round">
-              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-            </svg>
-          </button>
-          <div class="toolbar-divider"></div>
-          <button @click="resetEditor" class="btn-icon-alt" title="Reset to Default">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-            </svg>
-          </button>
-          <button @click="clearEditor" class="btn-icon-alt" title="Clear Editor">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              style="color: var(--vp-c-danger)">
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              <line x1="10" x2="10" y1="11" y2="17" />
-              <line x1="14" x2="14" y1="11" y2="17" />
-            </svg>
-          </button>
+          <bit-tooltip content="Format Code" placement="top">
+            <bit-button icon-only variant="ghost" size="sm" @click="formatCode">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                version="1.1"
+                id="svg8"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:svg="http://www.w3.org/2000/svg">
+                <defs id="defs8" />
+                <path
+                  d="m 17.122614,2 5,5.0000001 L 7.1226139,22 2.1226137,17 Z"
+                  id="path2"
+                  style="stroke-width: 2.00057; stroke-dasharray: none" />
+                <path d="M 15.981361,11.55223 12.594039,8.1175984" id="path1" />
+              </svg>
+            </bit-button>
+          </bit-tooltip>
+          <bit-tooltip content="Copy to Clipboard" placement="top">
+            <bit-button icon-only variant="ghost" size="sm" @click="copyCode">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+              </svg>
+            </bit-button>
+          </bit-tooltip>
+          <bit-separator orientation="vertical" style="height: 14px; margin: 0 0.25rem"></bit-separator>
+          <bit-tooltip content="Reset to Default" placement="top">
+            <bit-button icon-only variant="ghost" size="sm" @click="resetEditor">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+            </bit-button>
+          </bit-tooltip>
+          <bit-tooltip content="Clear Editor" placement="top">
+            <bit-button icon-only variant="ghost" size="sm" color="error" @click="clearEditor">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                <line x1="10" x2="10" y1="11" y2="17" />
+                <line x1="14" x2="14" y1="11" y2="17" />
+              </svg>
+            </bit-button>
+          </bit-tooltip>
         </div>
       </div>
     </div>
 
     <!-- Output -->
-    <div class="output-section">
-      <div class="output-header">
-        <h3>Output</h3>
-        <button @click="handleClearOutput" class="btn-icon" title="Clear Output">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round">
-            <path d="M3 6h18" />
-            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            <line x1="10" x2="10" y1="11" y2="17" />
-            <line x1="14" x2="14" y1="11" y2="17" />
-          </svg>
-        </button>
-      </div>
+    <div class="output-section" style="grid-area: output">
+      <bit-grid
+        areas="'title actions'"
+        style="grid-template-columns: auto 1fr"
+        align="center"
+        gap="sm"
+        class="section-header">
+        <h3 class="section-label" style="grid-area: title">Output</h3>
+        <div style="grid-area: actions; display: flex; justify-content: flex-end">
+          <bit-tooltip content="Clear Output" placement="bottom">
+            <bit-button icon-only variant="ghost" @click="handleClearOutput">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                <line x1="10" x2="10" y1="11" y2="17" />
+                <line x1="14" x2="14" y1="11" y2="17" />
+              </svg>
+            </bit-button>
+          </bit-tooltip>
+        </div>
+      </bit-grid>
       <div ref="outputContainer" class="output-area">
         <div class="output-placeholder">
           <svg
@@ -204,7 +228,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </bit-grid>
 </template>
 
 <script setup lang="ts">
@@ -280,6 +304,10 @@ watch(
     localSelectedExample.value = newVal;
   },
 );
+
+watch(localSelectedExample, (newVal) => {
+  if (newVal) loadExample();
+});
 
 watch(
   () => props.selectedLibrary,
@@ -519,6 +547,11 @@ const handleClearOutput = () => {
   emit('clear-output');
 };
 
+const handleExampleSelect = (e: Event) => {
+  const detail = (e as CustomEvent<{ value: string }>).detail;
+  localSelectedExample.value = detail?.value ?? '';
+};
+
 const loadExample = () => {
   if (!editor || !localSelectedExample.value) return;
 
@@ -680,14 +713,6 @@ defineExpose({
 
 <style scoped>
 /* REPL Layout */
-.repl-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin: 0.5rem 0;
-  min-height: 500px;
-}
-
 .editor-section,
 .output-section {
   border: 1px solid var(--vp-c-divider);
@@ -695,149 +720,33 @@ defineExpose({
   overflow: hidden;
   background: var(--vp-c-bg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(8px);
+  transition:
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .editor-section:hover,
 .output-section:hover {
   border-color: var(--vp-c-brand-1);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
 }
 
 /* Headers */
-.editor-header,
-.output-header {
+.section-header {
   background: var(--vp-c-bg-soft);
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--vp-c-divider);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   min-height: 56px;
 }
 
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-right: 1rem;
-}
-
-.editor-header h3,
-.output-header h3 {
+.section-label {
   margin: 0;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--vp-c-text-2);
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-/* Buttons */
-.btn-primary,
-.btn-icon,
-.btn-icon-alt {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-primary {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, var(--vp-c-brand-1), var(--vp-c-brand-2));
-  color: white;
-  box-shadow: 0 4px 12px var(--vp-c-brand-soft);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  gap: 0.5rem;
-}
-
-.btn-primary:hover {
-  filter: brightness(1.1);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px var(--vp-c-brand-soft);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-.btn-with-icon {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.btn-run {
-  padding: 0.35rem 1rem;
-  font-size: 0.85rem;
-  height: 32px;
-}
-
-.btn-icon {
-  padding: 0.5rem;
-  background: transparent;
-  color: var(--vp-c-text-2);
-  border: 1px solid transparent;
-}
-
-.btn-icon:hover {
-  background: var(--vp-c-bg-alt);
-  color: var(--vp-c-brand-1);
-  border-color: var(--vp-c-divider);
-}
-
-.btn-icon-alt {
-  width: 28px;
-  height: 28px;
-  color: var(--vp-c-text-2);
-  background: transparent;
-}
-
-.btn-icon-alt:hover {
-  background: var(--vp-c-bg-alt);
-  color: var(--vp-c-brand-1);
-}
-
-.expand-btn {
-  margin-left: 0.25rem;
-  opacity: 0.6;
-}
-
-.expand-btn:hover {
-  opacity: 1;
-}
-
-/* Selectors */
-#example-selector {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.8rem;
-  border-radius: 8px;
-  background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider);
-  color: var(--vp-c-text-1);
-  outline: none;
-  transition: all 0.2s;
-  min-width: 180px;
-  cursor: pointer;
-}
-
-#example-selector:hover,
-#example-selector:focus {
-  border-color: var(--vp-c-brand-1);
+  white-space: nowrap;
 }
 
 /* Editor & Output Areas */
@@ -856,7 +765,6 @@ defineExpose({
   gap: 0.25rem;
   padding: 0.25rem;
   background: var(--vp-c-bg-soft);
-  backdrop-filter: blur(12px);
   border: 1px solid var(--vp-c-divider);
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -870,13 +778,6 @@ defineExpose({
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
   border-color: var(--vp-c-brand-1);
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 14px;
-  background: var(--vp-c-divider);
-  margin: 0 0.25rem;
 }
 
 .code-editor,
@@ -1077,12 +978,6 @@ defineExpose({
 }
 
 /* Responsive */
-@media (max-width: 960px) {
-  .repl-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 768px) {
   .editor-header {
     flex-direction: column;
@@ -1095,36 +990,8 @@ defineExpose({
   .header-actions {
     width: 100%;
     justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  #example-selector {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .btn-run {
-    flex-shrink: 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-actions {
     flex-wrap: wrap;
-  }
-
-  #example-selector {
-    width: 100%;
-    order: 2;
-  }
-
-  .btn-run,
-  .expand-btn {
-    order: 1;
-  }
-
-  .btn-run {
-    width: auto;
+    gap: 0.5rem;
   }
 }
 </style>

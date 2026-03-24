@@ -16,7 +16,6 @@
  */
 export function isPrimitive(arg: unknown): arg is string | number | boolean {
   const type = typeof arg;
+
   return type === 'string' || type === 'boolean' || (type === 'number' && !Number.isNaN(arg));
 }
-
-export const IS_PRIMITIVE_ERROR_MSG = 'Expected a primitive value';

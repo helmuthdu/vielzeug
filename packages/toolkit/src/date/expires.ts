@@ -19,12 +19,14 @@ export function expires(date: string | Date, days = 7): Expires {
   const targetTime = target.getTime();
 
   if (Number.isNaN(targetTime)) return 'UNKNOWN';
+
   if (target.getFullYear() >= 9999) return 'NEVER';
 
   const now = Date.now();
   const diff = targetTime - now;
 
   if (diff <= 0) return 'EXPIRED';
+
   if (diff <= days * 24 * 60 * 60 * 1000) return 'SOON';
 
   return 'LATER';

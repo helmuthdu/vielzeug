@@ -1,5 +1,6 @@
-import { type ExchangeRate, exchange } from '../exchange';
 import type { Money } from '../types';
+
+import { type ExchangeRate, exchange } from '../exchange';
 
 describe('exchange', () => {
   describe('basic conversion', () => {

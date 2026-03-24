@@ -7,7 +7,7 @@
 
 Creates a reactive, paginated list with filtering, sorting, and searching capabilities. Supports a subscription pattern for reactivity.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/list.ts

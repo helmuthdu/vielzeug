@@ -1,13 +1,13 @@
 <div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.1.4-blue" alt="Version">
   <img src="https://img.shields.io/badge/size-2617_B-success" alt="Size">
 </div>
 
-# path
+# get
 
-The `path` utility safely retrieves a nested value from an object using a dot-notation string or an array of keys. It prevents runtime errors when accessing properties of `undefined` or `null` objects and supports a customizable fallback value.
+The `get` utility safely retrieves a nested value from an object using a dot-notation path string. It prevents runtime errors when accessing properties of `undefined` or `null` intermediate objects and supports an optional default value.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/path.ts
@@ -16,10 +16,10 @@ The `path` utility safely retrieves a nested value from an object using a dot-no
 ## Features
 
 - **Isomorphic**: Works in both Browser and Node.js.
-- **Safe Access**: Never throws if a parent property is missing.
-- **Flexible Path Formats**: Use dot-notation (`'a.b.c'`) or an array of keys (`['a', 'b', 'c']`).
-- **Default Value Support**: Provide a fallback value for missing paths.
-- **Type-safe**: Supports generic return types for better autocompletion.
+- **Safe Access**: Never throws if a parent is `null` or `undefined` (unless `throwOnMissing` is set).
+- **Dot & Bracket Notation**: Supports `'a.b.c'` and `'a[0].b'` path formats.
+- **Default Value**: Provide a fallback value for missing or `undefined` paths.
+- **Type-safe**: Generic return type with full TypeScript inference.
 
 ## API
 
@@ -28,28 +28,32 @@ The `path` utility safely retrieves a nested value from an object using a dot-no
 :::
 
 ```ts
-function path<T = any>(obj: any, path: string, fallback?: T, options?: PathOptions): T | undefined;
+function get<T extends object, P extends string>(
+  item: T,
+  path: P,
+  defaultValue?: unknown,
+  options?: PathOptions,
+): unknown;
 ```
 
 ### Parameters
 
-- `obj`: The object to query.
-- `path`: The path to the desired property as a dot-separated string.
-- `fallback`: Optional. A value to return if the path does not exist or resolves to `undefined`.
+- `item`: The object to query.
+- `path`: The path to the desired property as a dot-separated (or bracket-notation) string.
+- `defaultValue`: Optional. A value returned when the path is missing or resolves to `undefined`.
 - `options`: Optional configuration:
-  - `throwOnMissing`: If `true`, throws an error instead of returning the fallback value (defaults to `false`).
-  - `allowArrayIndex`: If `true`, supports bracket notation for array indices (e.g., `'d[1]'`) (defaults to `false`).
+  - `throwOnMissing`: If `true`, throws an `Error` instead of returning the default value.
 
 ### Returns
 
-- The value at the specified path, or the `fallback` value, or `undefined`.
+The value at the path, the `defaultValue`, or `undefined`.
 
 ## Examples
 
 ### Basic Nested Access
 
 ```ts
-import { path } from '@vielzeug/toolkit';
+import { get } from '@vielzeug/toolkit';
 
 const config = {
   api: {
@@ -59,15 +63,15 @@ const config = {
   },
 };
 
-path(config, 'api.endpoints.login'); // '/api/v1/login'
-path(config, 'api.version'); // undefined
-path(config, 'api.version', 'v1'); // 'v1'
+get(config, 'api.endpoints.login'); // '/api/v1/login'
+get(config, 'api.version'); // undefined
+get(config, 'api.version', 'v1'); // 'v1' (default value)
 ```
 
-### Using Array Index with allowArrayIndex
+### Array Index Access
 
 ```ts
-import { path } from '@vielzeug/toolkit';
+import { get } from '@vielzeug/toolkit';
 
 const data = {
   users: [
@@ -76,30 +80,27 @@ const data = {
   ],
 };
 
-// Access array index with bracket notation
-path(data, 'd[1]', undefined, { allowArrayIndex: true }); // 2
-path(data, 'users[0].name', undefined, { allowArrayIndex: true }); // 'Alice'
+get(data, 'users[0].name'); // 'Alice'
+get(data, 'users[1].id'); // 2
 ```
 
 ### Throwing on Missing Paths
 
 ```ts
-import { path } from '@vielzeug/toolkit';
+import { get } from '@vielzeug/toolkit';
 
 const obj = { a: { b: 1 } };
 
-// Throws an error instead of returning fallback
-path(obj, 'e.f.g', 'default', { throwOnMissing: true }); // throws Error
+// Throws an error instead of returning the default value
+get(obj, 'e.f.g', undefined, { throwOnMissing: true }); // throws Error
 ```
 
 ## Implementation Notes
 
-- Performance-optimized for deep traversal.
-- Correctly handles numeric keys for array indexing within paths.
-- Returns the fallback value if the resolved value is strictly `undefined`.
+- Bracket notation (`[0]`) is parsed and treated as a key automatically.
+- Returns `defaultValue` only when the resolved value is `undefined`; `null` is returned as-is.
 
 ## See Also
 
-- [seek](./seek.md): Find a value anywhere in an object by key.
-- [merge](./merge.md): Combine objects.
-- [clone](./clone.md): Create a copy of an object.
+- [seek](./seek.md): Recursively search object values by similarity score.
+- [merge](./merge.md): Combine multiple objects together.

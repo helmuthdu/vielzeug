@@ -7,7 +7,7 @@
 
 The `uniq` utility creates a new array containing only unique values from the input array. It removes duplicates, preserving the first occurrence of each unique value.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/uniq.ts
@@ -86,6 +86,5 @@ const uniqueCaseInsensitive = uniq(data, (s) => s.toLowerCase());
 
 ## See Also
 
-- [filter](./filter.md): Create a subset of an array based on a predicate.
-- [compact](./compact.md): Remove falsy values from an array.
-- [aggregate](./aggregate.md): Group and aggregate array elements.
+- [select](./select.md): Filter array elements by a predicate.
+- [group](./group.md): Group and partition array elements.

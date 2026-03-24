@@ -7,7 +7,7 @@
 
 The `fp` utility enables "Functional Programming" mode for compatible toolkit functions. It converts a standard utility (where the array is usually the first argument) into a partially applied function where the data argument is moved to the end.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/fp.ts
@@ -72,4 +72,3 @@ process([5, 12, 8, 20]); // [144, 400]
 
 - [pipe](./pipe.md): Compose multiple FP functions together.
 - [curry](./curry.md): Manual currying for any custom function.
-- [map](../array/map.md): The standard version of the map utility.

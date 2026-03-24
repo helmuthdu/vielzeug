@@ -7,7 +7,7 @@
 
 The `camelCase` utility transforms a string into `camelCase` format (lower case first letter, with subsequent words capitalized and no separators). It is ideal for normalizing user input or converting string keys into standard JavaScript property names.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/string/camelCase.ts

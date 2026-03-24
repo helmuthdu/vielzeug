@@ -1,0 +1,44 @@
+{
+  "name": "@vielzeug/workit",
+  "version": "1.0.0",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./test": {
+      "source": "./src/test/test.ts",
+      "types": "./dist/test.d.ts",
+      "import": "./dist/test.js",
+      "require": "./dist/test.cjs"
+    }
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:types",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.2",
+    "vitest": "^4.1.1"
+  }
+}

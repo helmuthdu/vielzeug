@@ -1,481 +1,123 @@
 # @vielzeug/validit
 
-Lightweight, type-safe schema validation for TypeScript. Build robust validation with minimal code and maximum type safety.
+> Composable, type-safe schema validation with sync/async parsing and full TypeScript inference.
 
-## ✨ Features
+[![npm version](https://img.shields.io/npm/v/@vielzeug/validit)](https://www.npmjs.com/package/@vielzeug/validit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- ✅ **Type-Safe** – Full TypeScript support with automatic type inference
-- ✅ **Zero Dependencies** – No external dependencies
-- ✅ **Lightweight** – 2.8 KB gzipped
-- ✅ **Intuitive API** – Inspired by Zod but simpler
-- ✅ **Composable** – Build complex schemas from simple primitives
-- ✅ **Async Validation** – Full support for async validators
-- ✅ **Convenience Helpers** – Pre-built schemas for common patterns (email, URL, UUID, etc.)
-- ✅ **Framework Agnostic** – Works anywhere JavaScript runs
+`@vielzeug/validit` is a lightweight validation library for runtime data checks with a fluent API and precise TypeScript output types.
 
-## 🆚 Comparison with Alternatives
+## Installation
 
-validit is inspired by Zod but focuses on simplicity and smaller bundle size:
-
-| Feature                   | validit    | Zod    |
-| ------------------------- | ---------- | ------ |
-| Bundle Size (gzipped)     | ~2 KB      | ~12 KB |
-| Type Inference            | ✅         | ✅     |
-| Basic Validation          | ✅         | ✅     |
-| Custom Refinements        | ✅         | ✅     |
-| Async Validation          | ✅         | ✅     |
-| Parallel Array Validation | ✅         | ❌     |
-| Convenience Schemas       | ✅         | ❌     |
-| Transformers              | ✅ (basic) | ✅     |
-| Preprocess                | ❌         | ✅     |
-| Coercion                  | ✅ (basic) | ✅     |
-| Brand Types               | ❌         | ✅     |
-| Discriminated Unions      | ✅         | ✅     |
-
-If you need advanced features like brand types, use Zod. If you want a lightweight alternative with the essentials plus async validation, use validit.
-
-## 📦 Installation
-
-```bash
-npm install @vielzeug/validit
+```sh
+pnpm add @vielzeug/validit
+# npm install @vielzeug/validit
+# yarn add @vielzeug/validit
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
-```typescript
+```ts
 import { v, type Infer } from '@vielzeug/validit';
 
-// Define a schema with convenience helpers
-const userSchema = v.object({
-  id: v.int().positive(), // Convenience: number().int().positive()
-  name: v.string().min(1).max(100), // Non-empty string (min(1) rejects "")
-  email: v.email(), // Convenience: string().email()
-  age: v.number().int().min(18).optional(),
-  role: v.enum('admin', 'user', 'guest'),
-});
+const UserSchema = v
+  .object({
+    id: v.coerce.number().int().positive(),
+    name: v.string().min(1),
+    email: v.string().trim().email(),
+    role: v.union('admin', 'editor', 'viewer').default('viewer'),
+  })
+  .strict();
 
-// Infer TypeScript type
-type User = Infer<typeof userSchema>;
-// {
-//   id: number;
-//   name: string;
-//   email: string;
-//   age?: number | undefined;
-//   role: 'admin' | 'user' | 'guest';
-// }
+type User = Infer<typeof UserSchema>;
 
-// Validate data
-const user = userSchema.parse({
-  id: 1,
-  name: 'John Doe',
-  email: 'john@example.com',
-  role: 'admin',
-}); // ✅ Returns typed data
+const result = UserSchema.safeParse({ id: '42', name: 'Ada', email: 'ada@example.com' });
 
-// Safe parse (no exceptions)
-const result = userSchema.safeParse(data);
 if (result.success) {
-  console.log(result.data); // Typed user data
+  const user: User = result.data;
+  console.log(user.id); // 42
 } else {
-  console.error(result.error.issues); // Validation errors
+  console.log(result.error.flatten());
 }
 ```
 
-## 🎯 API Reference
+## Features
 
-### Convenience Schemas
+- Chainable schema API for primitive and composite types
+- Full output type inference via `Infer<T>` / `InferOutput<T>`
+- Sync and async custom rules with `.refine()` / `.refineAsync()`
+- Built-in coercion via `v.coerce.string|number|boolean|date`
+- Object helpers: `.partial()`, `.required()`, `.pick()`, `.omit()`, `.extend()`, `.strict()`
+- Union options: `v.union()`, `v.intersect()`, and discriminated `v.variant()`
+- Configurable global messages via `configure({ messages })`
+- Structured errors with `ValidationError`, `Issue`, and `error.flatten()`
+- Zero dependencies
 
-Pre-configured schemas for common patterns:
+## Entry Points
 
-```typescript
-v.email(); // Email validation (string().email())
-v.url(); // URL validation (string().url())
-v.uuid(); // UUID validation
-v.int().positive(); // Positive integer (number().int().positive())
-v.int().negative(); // Negative integer (number().int().negative())
-```
+| Entry | Purpose |
+| --- | --- |
+| `@vielzeug/validit` | `v` namespace, flat factory exports, `Schema`, errors, and type utilities |
 
-### Primitives
+## Usage Highlights
 
-#### String
+### `refine` vs `refineAsync`
 
-```typescript
-v.string() // string
-  .min(3) // min length
-  .max(100) // max length
-  .length(10) // exact length
-  .pattern(/^[a-z]+$/) // regex pattern
-  .email() // email validation
-  .url() // URL validation
-  .uuid() // UUID validation
-  .trim(); // trim whitespace
-```
+```ts
+const PasswordSchema = v
+  .string()
+  .min(8)
+  .refine((value) => /[A-Z]/.test(value), 'Must contain an uppercase letter');
 
-#### Number
-
-```typescript
-v.number() // number
-  .min(0) // minimum value
-  .max(100) // maximum value
-  .int() // integer only
-  .positive() // > 0
-  .negative(); // < 0
-```
-
-#### Boolean
-
-```typescript
-v.boolean(); // boolean
-```
-
-#### Date
-
-```typescript
-v.date() // Date object
-  .min(new Date('2020-01-01')) // minimum date
-  .max(new Date()); // maximum date
-```
-
-### Literals & Enums
-
-```typescript
-v.literal('active'); // Exact value
-v.enum('red', 'green', 'blue'); // One of values
-```
-
-### Complex Types
-
-#### Array
-
-```typescript
-v.array(v.string()) // string[]
-  .min(1) // min items
-  .max(10) // max items
-  .length(5) // exact length
-```
-
-#### Object
-
-```typescript
-v.object({
-  name: v.string(),
-  age: v.number(),
-})
-  .partial() // Make all fields optional
-  .pick('name') // Select specific fields
-  .omit('age'); // Exclude specific fields
-```
-
-#### Union
-
-```typescript
-v.union(v.string(), v.number()); // string | number
-```
-
-### Modifiers
-
-```typescript
-schema.optional(); // T | undefined (makes field optional)
-schema.nullable(); // T | null (allows null)
-schema.default(value); // Provides default value when undefined
-```
-
-> **Note**: All schemas reject `null` and `undefined` by default. Use `.optional()` or `.nullable()` to allow them.
-
-To reject empty strings or arrays, use `.min(1)`:
-
-```typescript
-v.string().min(1); // Rejects empty string ""
-v.array(v.string()).min(1); // Rejects empty array []
-```
-schema.describe('name'); // Add description for better error messages
-```
-
-### Async Validation
-
-Full async support for all validation needs:
-
-```typescript
-// Async refinements
-const schema = v.string().refineAsync(async (val) => {
-  const exists = await checkDatabase(val);
+const UniqueEmailSchema = v.string().email().refineAsync(async (value) => {
+  const exists = await db.users.exists({ email: value });
   return !exists;
-}, 'Already exists');
+}, 'Email already in use');
 
-// Must use parseAsync for async validators
-const result = await schema.parseAsync(value);
-
-// Safe async parse
-const result = await schema.safeParseAsync(value);
-if (result.success) {
-  console.log(result.data);
-}
+PasswordSchema.parse('Hello123');
+await UniqueEmailSchema.parseAsync('a@b.com');
 ```
 
-## Usage Examples
+### Flat Exports (Tree-Shake Friendly)
 
-### Form Validation
+```ts
+import {
+  configure,
+  object,
+  string,
+  number,
+  union,
+  type Infer,
+} from '@vielzeug/validit';
 
-```typescript
-const registrationSchema = v.object({
-  username: v
-    .string()
-    .min(1, 'Username is required')
-    .max(20)
-    .pattern(/^[a-zA-Z0-9_]+$/),
-  email: v.email(),
-  password: v
-    .string()
-    .min(8)
-    .refine((val) => /[A-Z]/.test(val), 'Must contain uppercase')
-    .refine((val) => /[0-9]/.test(val), 'Must contain number'),
-  age: v.int().min(13),
-  terms: v
-    .boolean()
-    .refine((val) => val === true, 'Must accept terms'),
+configure({
+  messages: {
+    string_email: () => 'Please provide a valid email address',
+  },
 });
 
-type RegistrationData = Infer<typeof registrationSchema>;
-
-const result = registrationSchema.safeParse(formData);
-if (!result.success) {
-  // Show validation errors
-  result.error.issues.forEach((issue) => {
-    console.log(`${issue.path.join('.')}: ${issue.message}`);
-  });
-}
-```
-
-### API Response Validation
-
-```typescript
-const apiResponseSchema = v.object({
-  success: v.boolean(),
-  data: v.object({
-    id: v.number(),
-    name: v.string(),
-    email: v.string().email(),
-  }),
-  meta: v
-    .object({
-      timestamp: v.date(),
-      version: v.string(),
-    })
-    .optional(),
+const Account = object({
+  email: string().email(),
+  age: number().int().min(18),
+  plan: union('free', 'pro'),
 });
 
-async function fetchData() {
-  const response = await fetch('/api/data');
-  const json = await response.json();
-
-  // Validate and get typed data
-  return apiResponseSchema.parse(json);
-}
+type Account = Infer<typeof Account>;
 ```
 
-### Configuration Schema
+## API At A Glance
 
-```typescript
-const configSchema = v.object({
-  apiKey: v.string().min(32),
-  environment: v.enum('dev', 'staging', 'prod'),
-  timeout: v.number().int().min(1000).default(5000),
-  retries: v.number().int().min(0).max(5).default(3),
-  features: v.object({
-    auth: v.boolean().default(true),
-    analytics: v.boolean().default(false),
-  }),
-});
+- `v` namespace: `string`, `number`, `boolean`, `date`, `literal`, `enum`, `nativeEnum`, `object`, `array`, `tuple`, `record`, `union`, `intersect`, `variant`, `lazy`, `instanceof`, `never`, `any`, `unknown`, `null`, `undefined`
+- Base schema methods: `parse`, `safeParse`, `parseAsync`, `safeParseAsync`, `optional`, `nullable`, `nullish`, `required`, `default`, `catch`, `refine`, `refineAsync`, `transform`, `preprocess`, `describe`, `brand`, `is`
+- Flat helpers: `optional(schema)`, `nullable(schema)`, `nullish(schema)`, `preprocess(fn, schema)`
+- Errors and types: `ValidationError`, `ErrorCode`, `Issue`, `ParseResult<T>`, `MessageFn<Ctx>`, `Infer<T>`
 
-type Config = Infer<typeof configSchema>;
-```
+## Documentation
 
-### Nested Object Validation
+- [Overview](https://vielzeug.dev/validit/)
+- [Usage Guide](https://vielzeug.dev/validit/usage)
+- [API Reference](https://vielzeug.dev/validit/api)
+- [Examples](https://vielzeug.dev/validit/examples)
 
-```typescript
-const addressSchema = v.object({
-  street: v.string(),
-  city: v.string(),
-  zipCode: v.string().pattern(/^\d{5}$/),
-});
+## License
 
-const personSchema = v.object({
-  name: v.string(),
-  email: v.string().email(),
-  address: addressSchema,
-  billingAddress: addressSchema.optional(),
-});
-```
-
-### Custom Refinements
-
-```typescript
-const passwordSchema = v
-  .string()
-  .min(8, 'Password must be at least 8 characters')
-  .refine((val) => /[A-Z]/.test(val), 'Must contain at least one uppercase letter')
-  .refine((val) => /[a-z]/.test(val), 'Must contain at least one lowercase letter')
-  .refine((val) => /[0-9]/.test(val), 'Must contain at least one number');
-
-// Object-level refinement
-const signupSchema = v
-  .object({
-    password: v.string(),
-    confirmPassword: v.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, 'Passwords must match');
-```
-
-### Async Validation Examples
-
-```typescript
-// Username availability check
-const usernameSchema = v
-  .string()
-  .min(3)
-  .refineAsync(async (username) => {
-    const available = await checkUsernameAvailability(username);
-    return available;
-  }, 'Username already taken');
-
-// Must use parseAsync
-const result = await usernameSchema.safeParseAsync('john_doe');
-
-// Combining sync and async validations
-const emailSchema = v
-  .email() // Sync validation
-  .refineAsync(async (email) => {
-    const exists = await checkEmailInDatabase(email);
-    return !exists;
-  }, 'Email already registered'); // Async validation
-
-// Object with async validation
-const userSchema = v
-  .object({
-    email: v.email(),
-    username: v.string().min(3),
-  })
-  .refineAsync(async (data) => {
-    const valid = await validateUserData(data);
-    return valid;
-  }, 'Invalid user data');
-
-await userSchema.parseAsync({ email: 'test@example.com', username: 'john' });
-
-// Parallel array validation for performance
-const itemsSchema = v.array(
-  v
-    .object({
-      id: v.int().positive(),
-      name: v.string(),
-    })
-    .refineAsync(async (item) => {
-      return await validateItem(item);
-    }, 'Invalid item'),
-);
-
-await itemsSchema.parseAsync(items);
-```
-
-### Union Types
-
-```typescript
-// Discriminated union
-const resultSchema = v.union(
-  v.object({
-    success: v.literal(true),
-    data: v.string(),
-  }),
-  v.object({
-    success: v.literal(false),
-    error: v.string(),
-  }),
-);
-
-type Result = Infer<typeof resultSchema>;
-// { success: true; data: string } | { success: false; error: string }
-```
-
-## Error Handling
-
-```typescript
-import { ValidationError } from '@vielzeug/validit';
-
-try {
-  schema.parse(data);
-} catch (error) {
-  if (error instanceof ValidationError) {
-    error.issues.forEach((issue) => {
-      console.log(`Path: ${issue.path.join('.')}`);
-      console.log(`Message: ${issue.message}`);
-    });
-  }
-}
-
-// Or use safeParse to avoid exceptions
-const result = schema.safeParse(data);
-if (!result.success) {
-  result.error.issues; // Array of validation issues
-}
-```
-
-## Type Inference
-
-```typescript
-import { type Infer } from '@vielzeug/validit';
-
-const schema = v.object({
-  id: v.number(),
-  name: v.string(),
-  tags: v.array(v.string()).optional(),
-});
-
-type Data = Infer<typeof schema>;
-// {
-//   id: number;
-//   name: string;
-//   tags?: string[] | undefined;
-// }
-```
-
-## Performance & Code Quality
-
-validit is designed with performance and maintainability in mind:
-
-### **Efficient Validation**
-
-```typescript
-// Validate arrays with async validators
-const schema = v.array(
-  v.object({ id: v.number(), data: v.string() }).refineAsync(async (item) => await validateItem(item)),
-);
-
-// Much faster for large datasets
-await schema.parseAsync(largeArray);
-```
-
-## 📖 Documentation
-
-- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/validit)
-- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/validit/usage)
-- [**API Reference**](https://helmuthdu.github.io/vielzeug/validit/api)
-- [**Examples**](https://helmuthdu.github.io/vielzeug/validit/examples)
-
-## 📄 License
-
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
-
-## 🤝 Contributing
-
-Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
-
-## 🔗 Links
-
-- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
-- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
-
----
-
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) - part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

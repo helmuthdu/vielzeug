@@ -1,4 +1,5 @@
 import { assert } from '../function/assert';
+import { Scheduler } from './scheduler';
 
 /**
  * Creates a promise queue that processes promises sequentially with optional concurrency limit.
@@ -30,15 +31,34 @@ export function queue(options: { concurrency?: number } = {}) {
   let idlePromise: Promise<void> | null = null;
   let idleResolve: (() => void) | null = null;
 
-  const queue: Array<{
+  const tasks: Array<{
     fn: () => Promise<unknown>;
-    resolve: (value: unknown) => void;
     reject: (error: unknown) => void;
+    resolve: (value: unknown) => void;
   }> = [];
 
+  let flushQueued = false;
+
+  const scheduleNext = (): void => {
+    if (flushQueued) return;
+
+    flushQueued = true;
+
+    const scheduler = new Scheduler();
+
+    void scheduler.postTask(
+      () => {
+        flushQueued = false;
+        next();
+      },
+      { priority: 'user-visible' },
+    );
+  };
+
   const next = (): void => {
-    if (activeCount < concurrency && queue.length > 0) {
-      const task = queue.shift()!;
+    if (activeCount < concurrency && tasks.length > 0) {
+      const task = tasks.shift()!;
+
       activeCount++;
 
       task
@@ -47,9 +67,9 @@ export function queue(options: { concurrency?: number } = {}) {
         .catch(task.reject)
         .finally(() => {
           activeCount--;
-          next();
+          scheduleNext();
 
-          if (activeCount === 0 && queue.length === 0 && idleResolve) {
+          if (activeCount === 0 && tasks.length === 0 && idleResolve) {
             idleResolve();
             idlePromise = null;
             idleResolve = null;
@@ -63,35 +83,38 @@ export function queue(options: { concurrency?: number } = {}) {
      * Adds a promise-returning function to the queue
      */
     add: <T>(fn: () => Promise<T>): Promise<T> => {
-      return new Promise<T>((resolve, reject) => {
-        queue.push({
-          fn: fn as () => Promise<unknown>,
-          reject,
-          resolve: resolve as (value: unknown) => void,
-        });
-        next();
+      const { promise, reject, resolve } = Promise.withResolvers<T>();
+
+      tasks.push({
+        fn: fn as () => Promise<unknown>,
+        reject,
+        resolve: resolve as (value: unknown) => void,
       });
+      scheduleNext();
+
+      return promise;
     },
 
     /**
      * Clears all pending tasks from the queue
      */
     clear: (): void => {
-      queue.length = 0;
+      tasks.length = 0;
     },
 
     /**
      * Returns a promise that resolves when the queue becomes idle
      */
     onIdle: (): Promise<void> => {
-      if (activeCount === 0 && queue.length === 0) {
+      if (activeCount === 0 && tasks.length === 0) {
         return Promise.resolve();
       }
 
       if (!idlePromise) {
-        idlePromise = new Promise<void>((resolve) => {
-          idleResolve = resolve;
-        });
+        const deferred = Promise.withResolvers<void>();
+
+        idlePromise = deferred.promise;
+        idleResolve = deferred.resolve;
       }
 
       return idlePromise;
@@ -108,7 +131,7 @@ export function queue(options: { concurrency?: number } = {}) {
      * Returns the current size of the queue
      */
     get size(): number {
-      return queue.length;
+      return tasks.length;
     },
   };
 }

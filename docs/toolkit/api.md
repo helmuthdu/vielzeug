@@ -1,10 +1,23 @@
+---
+title: Toolkit — API Reference
+description: Complete API reference for Toolkit utility functions.
+---
+
 # Toolkit API Reference
 
-Complete reference for all utilities available in `@vielzeug/toolkit`.
+[[toc]]
+
+## API At a Glance
+
+| Symbol       | Purpose                                    | Execution mode | Common gotcha                                     |
+| ------------ | ------------------------------------------ | -------------- | ------------------------------------------------- |
+| `chunk()`    | Split arrays into fixed-size groups        | Sync           | Validate positive chunk sizes                     |
+| `retry()`    | Retry async operations with delay strategy | Async          | Use bounded retries to avoid runaway loops        |
+| `currency()` | Format monetary values safely              | Sync           | Match currency precision to business requirements |
 
 ## Overview
 
-Toolkit provides **110+ utilities** organized into 9 categories. All utilities are:
+Toolkit provides **75+ utilities** organized into 10 categories. All utilities are:
 
 - ✅ **Type-safe** with full TypeScript inference
 - ✅ **Tree-shakeable** for minimal bundle sizes
@@ -16,7 +29,8 @@ Toolkit provides **110+ utilities** organized into 9 categories. All utilities a
 - [Array Utilities](#array-utilities) – Transform, filter, group, and sort arrays
 - [Object Utilities](#object-utilities) – Deep operations, merging, and traversal
 - [String Utilities](#string-utilities) – Formatting, casing, and manipulation
-- [Function Utilities](#function-utilities) – Debounce, throttle, memoize, and retry
+- [Function Utilities](#function-utilities) – Debounce, throttle, memoize, and more
+- [Async Utilities](#async-utilities) – Async control flow, retry, and concurrency
 - [Math Utilities](#math-utilities) – Statistics, calculations, and ranges
 - [Money Utilities](#money-utilities) – Currency formatting and conversion
 - [Date Utilities](#date-utilities) – Time intervals and differences
@@ -31,51 +45,41 @@ See [Array Examples](./examples/array.md) for detailed usage.
 
 ### Transformation
 
-| Utility                                        | Description                                    | Example                                            |
-| ---------------------------------------------- | ---------------------------------------------- | -------------------------------------------------- |
-| [`map`](./examples/array/map.md)               | Transform each element (async supported)       | `map([1,2,3], x => x*2)` → `[2,4,6]`               |
-| [`filter`](./examples/array/filter.md)         | Filter elements by predicate (async supported) | `filter([1,2,3], x => x > 1)` → `[2,3]`            |
-| [`reduce`](./examples/array/reduce.md)         | Reduce array to single value                   | `reduce([1,2,3], (a,b) => a+b)` → `6`              |
-| [`chunk`](./examples/array/chunk.md)           | Split into chunks of specific size             | `chunk([1,2,3,4,5], 2)` → `[[1,2],[3,4],[5]]`      |
-| [`flatten`](./examples/array/flatten.md)       | Flatten nested arrays                          | `flatten([[1,2],[3,4]])` → `[1,2,3,4]`             |
-| [`compact`](./examples/array/compact.md)       | Remove null/undefined values                   | `compact([1,null,2])` → `[1,2]`                    |
-| [`alternate`](./examples/array/alternate.md)   | Toggle item in array (add/remove)              | `alternate([1,2], 2)` → `[1]`                      |
-| [`shift`](./examples/array/shift.md)           | Rotate array elements                          | `shift([1,2,3], 1)` → `[2,3,1]`                    |
-| [`substitute`](./examples/array/substitute.md) | Replace elements conditionally                 | `substitute([1,2,3], x => x === 2, 0)` → `[1,0,3]` |
+| Utility                                  | Description                               | Example                                         |
+| ---------------------------------------- | ----------------------------------------- | ----------------------------------------------- |
+| [`chunk`](./examples/array/chunk.md)     | Split into chunks of specific size        | `chunk([1,2,3,4,5], 2)` → `[[1,2],[3,4],[5]]`   |
+| [`fold`](./examples/array/fold.md)       | Reduce to single value (no initial value) | `fold([1,2,3], (a,b) => a+b)` → `6`             |
+| [`replace`](./examples/array/replace.md) | Replace first matching element            | `replace([1,2,3], x => x === 2, 0)` → `[1,0,3]` |
+| [`rotate`](./examples/array/rotate.md)   | Rotate array positions                    | `rotate([1,2,3], 1)` → `[2,3,1]`                |
+| [`toggle`](./examples/array/toggle.md)   | Toggle item in array (add/remove)         | `toggle([1,2], 2)` → `[1]`                      |
 
 ### Aggregation
 
-| Utility                                      | Description                       | Example                       |
-| -------------------------------------------- | --------------------------------- | ----------------------------- |
-| [`group`](./examples/array/group.md)         | Group elements by key or function | `group(users, u => u.role)`   |
-| [`aggregate`](./examples/array/aggregate.md) | Aggregate array to object by key  | `aggregate(items, 'id')`      |
-| [`uniq`](./examples/array/uniq.md)           | Remove duplicate values           | `uniq([1,2,2,3])` → `[1,2,3]` |
+| Utility                              | Description                       | Example                       |
+| ------------------------------------ | --------------------------------- | ----------------------------- |
+| [`group`](./examples/array/group.md) | Group elements by key or function | `group(users, u => u.role)`   |
+| [`keyBy`](./examples/array/keyBy.md) | Index array by property           | `keyBy(users, 'id')`          |
+| [`uniq`](./examples/array/uniq.md)   | Remove duplicate values           | `uniq([1,2,2,3])` → `[1,2,3]` |
 
 ### Querying
 
-| Utility                                      | Description                   | Example                                |
-| -------------------------------------------- | ----------------------------- | -------------------------------------- |
-| [`find`](./examples/array/find.md)           | Find first matching element   | `find([1,2,3], x => x > 1)` → `2`      |
-| [`findIndex`](./examples/array/findIndex.md) | Find index of first match     | `findIndex([1,2,3], x => x > 1)` → `1` |
-| [`findLast`](./examples/array/findLast.md)   | Find last matching element    | `findLast([1,2,3], x => x > 1)` → `3`  |
-| [`some`](./examples/array/some.md)           | Check if any element matches  | `some([1,2,3], x => x > 2)` → `true`   |
-| [`every`](./examples/array/every.md)         | Check if all elements match   | `every([1,2,3], x => x > 0)` → `true`  |
-| [`contains`](./examples/array/contains.md)   | Check if array contains value | `contains([1,2,3], 2)` → `true`        |
-| [`search`](./examples/array/search.md)       | Fuzzy search in array         | `search(users, 'alice')`               |
+| Utility                                    | Description                   | Example                         |
+| ------------------------------------------ | ----------------------------- | ------------------------------- |
+| [`contains`](./examples/array/contains.md) | Check if array contains value | `contains([1,2,3], 2)` → `true` |
+| [`search`](./examples/array/search.md)     | Fuzzy search in array         | `search(users, 'alice')`        |
 
 ### Sorting
 
-| Utility                                  | Description                  | Example                                   |
-| ---------------------------------------- | ---------------------------- | ----------------------------------------- |
-| [`sort`](./examples/array/sort.md)       | Sort with custom comparator  | `sort([3,1,2], (a,b) => a-b)` → `[1,2,3]` |
-| [`arrange`](./examples/array/arrange.md) | Sort by property or function | `arrange(users, {age: 'asc'})`            |
+| Utility                            | Description                          | Example                                     |
+| ---------------------------------- | ------------------------------------ | ------------------------------------------- |
+| [`sort`](./examples/array/sort.md) | Sort by selector or object selectors | `sort(users, { age: 'desc', name: 'asc' })` |
 
 ### Selection
 
-| Utility                                | Description                | Example                                     |
-| -------------------------------------- | -------------------------- | ------------------------------------------- |
-| [`pick`](./examples/array/pick.md)     | Pick and transform element | `pick([1,2,3], x => x*2, x => x > 1)` → `4` |
-| [`select`](./examples/array/select.md) | Map and filter in one step | `select([1,2,3], x => x > 1 ? x*2 : null)`  |
+| Utility                                | Description                         | Example                                       |
+| -------------------------------------- | ----------------------------------- | --------------------------------------------- |
+| [`pick`](./examples/array/pick.md)     | Pick and transform element          | `pick([1,2,3], x => x*2, x => x > 1)` → `4`   |
+| [`select`](./examples/array/select.md) | Map non-null elements with callback | `select([null, 1, 2], x => x * 2)` → `[2, 4]` |
 
 ### Pagination
 
@@ -90,18 +94,16 @@ See [Array Examples](./examples/array.md) for detailed usage.
 
 See [Object Examples](./examples/object.md) for detailed usage.
 
-| Utility                                       | Description                          | Example                          |
-| --------------------------------------------- | ------------------------------------ | -------------------------------- |
-| [`cache`](./examples/object/cache.md)         | Key-value cache with automatic GC    | `cache<T>()`                     |
-| [`clone`](./examples/object/clone.md)         | Deep clone an object                 | `clone({a: {b: 1}})`             |
-| [`merge`](./examples/object/merge.md)         | Merge objects (deep/shallow/etc.)    | `merge('deep', obj1, obj2)`      |
-| [`diff`](./examples/object/diff.md)           | Find differences between objects     | `diff(obj1, obj2)`               |
-| [`path`](./examples/object/path.md)           | Access nested properties safely      | `path(obj, 'user.profile.name')` |
-| [`seek`](./examples/object/seek.md)           | Find value by key anywhere in object | `seek(obj, 'email')`             |
-| [`parseJSON`](./examples/object/parseJSON.md) | Safely parse JSON with fallback      | `parseJSON(str, defaultValue)`   |
-| [`keys`](./examples/object/keys.md)           | Type-safe Object.keys()              | `keys(obj)`                      |
-| [`values`](./examples/object/values.md)       | Type-safe Object.values()            | `values(obj)`                    |
-| [`entries`](./examples/object/entries.md)     | Type-safe Object.entries()           | `entries(obj)`                   |
+| Utility                                       | Description                          | Example                            |
+| --------------------------------------------- | ------------------------------------ | ---------------------------------- |
+| [`stash`](./examples/object/stash.md)         | Key-value cache with automatic GC    | `stash<T>({ hash: key => ... })` |
+| [`diff`](./examples/object/diff.md)           | Find differences between objects     | `diff(obj1, obj2)`                 |
+| [`merge`](./examples/object/merge.md)         | Merge objects (deep/shallow/etc.)    | `merge('deep', obj1, obj2)`        |
+| [`parseJSON`](./examples/object/parseJSON.md) | Safely parse JSON with fallback      | `parseJSON(str, defaultValue)`     |
+| [`get`](./examples/object/path.md)            | Access nested properties safely      | `get(obj, 'user.profile.name')`    |
+| [`proxy`](./examples/object/proxy.md)         | Object proxy with get/set hooks      | `proxy(obj, { set: logger })`      |
+| [`prune`](./examples/object/prune.md)         | Remove null/empty values recursively | `prune({ a: 1, b: null })`         |
+| [`seek`](./examples/object/seek.md)           | Search object values by similarity   | `seek(obj, 'hello', 0.8)` → `true` |
 
 ## String Utilities
 
@@ -132,22 +134,44 @@ See [String Examples](./examples/string.md) for detailed usage.
 
 ## Function Utilities
 
-**Control execution timing and behavior.**
+**Control execution flow, composition, and assertions.**
 
 See [Function Examples](./examples/function.md) for detailed usage.
 
-| Utility                                       | Description                               | Example                                 |
-| --------------------------------------------- | ----------------------------------------- | --------------------------------------- |
-| [`debounce`](./examples/function/debounce.md) | Delay execution until idle                | `debounce(fn, 300)`                     |
-| [`throttle`](./examples/function/throttle.md) | Limit execution rate                      | `throttle(fn, 100)`                     |
-| [`memo`](./examples/function/memo.md)         | Memoize/cache function results            | `memo(expensiveFn)`                     |
-| [`retry`](./examples/function/retry.md)       | Retry failed operations                   | `retry(asyncFn, {attempts: 3})`         |
-| [`parallel`](./examples/function/parallel.md) | Process array with controlled concurrency | `parallel(5, items, asyncFn)`           |
-| [`compose`](./examples/function/compose.md)   | Compose functions right-to-left           | `compose(f, g, h)`                      |
-| [`pipe`](./examples/function/pipe.md)         | Compose functions left-to-right           | `pipe(f, g, h)`                         |
-| [`once`](./examples/function/once.md)         | Execute function only once                | `once(fn)`                              |
-| [`delay`](./examples/function/delay.md)       | Delay execution                           | `await delay(1000)`                     |
-| [`prune`](./examples/function/prune.md)       | Remove nullable/empty values              | `prune({ a: 1, b: null })` → `{ a: 1 }` |
+| Utility                                               | Description                             | Example                                   |
+| ----------------------------------------------------- | --------------------------------------- | ----------------------------------------- |
+| [`assert`](./examples/function/assert.md)             | Assert condition (throws or warns)      | `assert(x > 0, 'Must be positive')`       |
+| [`assertParams`](./examples/function/assertParams.md) | Assert required object keys are present | `assertParams(params, ['id', 'name'])`    |
+| [`compare`](./examples/function/compare.md)           | Compare two values → -1, 0, or 1        | `compare('a', 'b')` → `-1`                |
+| [`compareBy`](./examples/function/compareBy.md)       | Multi-key object comparator             | `compareBy({ name: 'asc', age: 'desc' })` |
+| [`compose`](./examples/function/compose.md)           | Compose functions right-to-left         | `compose(f, g, h)`                        |
+| [`curry`](./examples/function/curry.md)               | Curry function with partial application | `curry(add)(1)(2)` → `3`                  |
+| [`debounce`](./examples/function/debounce.md)         | Delay execution until idle              | `debounce(fn, 300)`                       |
+| [`fp`](./examples/function/fp.md)                     | Functional programming pipeline wrapper | `fp(map, double)([1,2,3])`                |
+| [`memo`](./examples/function/memo.md)                 | Memoize/cache function results          | `memo(expensiveFn)`                       |
+| [`once`](./examples/function/once.md)                 | Execute function only once              | `once(fn)`                                |
+| [`pipe`](./examples/function/pipe.md)                 | Compose functions left-to-right         | `pipe(f, g, h)`                           |
+| [`throttle`](./examples/function/throttle.md)         | Limit execution rate                    | `throttle(fn, 100)`                       |
+
+## Async Utilities
+
+**Async control flow, retry strategies, and concurrency primitives.**
+
+See [Async Examples](./examples/async.md) for detailed usage.
+
+| Utility                                    | Description                                   | Example                                           |
+| ------------------------------------------ | --------------------------------------------- | ------------------------------------------------- |
+| [`attempt`](./examples/async/attempt.md)           | Execute fn with retry and error handling                        | `attempt(fetchFn, { times: 3, timeout: 5000 })`                     |
+| [`defer`](./examples/async/defer.md)               | Create deferred promise with external control                   | `const { promise, resolve } = defer()`                              |
+| [`parallel`](./examples/async/parallel.md)         | Process array with controlled concurrency                       | `await parallel(5, items, asyncFn)`                                 |
+| [`pool`](./examples/async/pool.md)                 | Concurrency-limited promise pool                                | `const slot = pool(3); await slot(fn)`                              |
+| [`queue`](./examples/async/queue.md)               | Sequential queue with concurrency control                       | `const q = queue(); q.add(task)`                                    |
+| [`race`](./examples/async/race.md)                 | Race promise with minimum delay                                 | `race(fetchFn(), 500)`                                              |
+| [`retry`](./examples/async/retry.md)               | Retry async fn with backoff, per-attempt delay, and predicate   | `retry(asyncFn, { times: 3, delay: 250, shouldRetry: fn })`         |
+| [`Scheduler`](./examples/async/scheduler.md)       | Task scheduler with native API or polyfill fallback             | `new Scheduler().postTask(fn, { delay: 100, priority: 'background' })` |
+| [`polyfillScheduler`](./examples/async/scheduler.md) | Install the Scheduler polyfill globally when not natively supported | `polyfillScheduler()`                                           |
+| [`sleep`](./examples/async/sleep.md)               | Wait milliseconds                                               | `await sleep(1000)`                                                 |
+| [`waitFor`](./examples/async/waitFor.md)           | Poll condition until true                                       | `await waitFor(() => isReady, { timeout: 5000 })`                   |
 
 ## Math Utilities
 
@@ -157,13 +181,9 @@ See [Math Examples](./examples/math.md) for detailed usage.
 
 ### Arithmetic Operations
 
-| Utility                                   | Description      | Example                   |
-| ----------------------------------------- | ---------------- | ------------------------- |
-| [`add`](./examples/math/add.md)           | Add two numbers  | `add(10, 20)` → `30`      |
-| [`subtract`](./examples/math/subtract.md) | Subtract numbers | `subtract(20, 10)` → `10` |
-| [`multiply`](./examples/math/multiply.md) | Multiply numbers | `multiply(10, 5)` → `50`  |
-| [`divide`](./examples/math/divide.md)     | Divide numbers   | `divide(20, 5)` → `4`     |
-| [`abs`](./examples/math/abs.md)           | Absolute value   | `abs(-5)` → `5`           |
+| Utility                         | Description    | Example         |
+| ------------------------------- | -------------- | --------------- |
+| [`abs`](./examples/math/abs.md) | Absolute value | `abs(-5)` → `5` |
 
 ### Distribution
 
@@ -184,13 +204,13 @@ See [Math Examples](./examples/math.md) for detailed usage.
 
 ### Number Utilities
 
-| Utility                             | Description             | Example                       |
-| ----------------------------------- | ----------------------- | ----------------------------- |
-| [`clamp`](./examples/math/clamp.md) | Clamp value to range    | `clamp(10, 0, 5)` → `5`       |
-| [`range`](./examples/math/range.md) | Generate number range   | `range(1, 5)` → `[1,2,3,4,5]` |
-| [`round`](./examples/math/round.md) | Round to decimal places | `round(3.14159, 2)` → `3.14`  |
-| [`rate`](./examples/math/rate.md)   | Calculate percentage    | `rate(25, 100)` → `25`        |
-| [`boil`](./examples/math/boil.md)   | Reduce with comparator  | `boil([1,2,3], (a,b) => a+b)` |
+| Utility                                   | Description                   | Example                                         |
+| ----------------------------------------- | ----------------------------- | ----------------------------------------------- |
+| [`clamp`](./examples/math/clamp.md)       | Clamp value to range          | `clamp(10, 0, 5)` → `5`                         |
+| [`linspace`](./examples/math/linspace.md) | Evenly spaced number sequence | `linspace(0, 1, 5)` → `[0, 0.25, 0.5, 0.75, 1]` |
+| [`percent`](./examples/math/percent.md)   | Calculate percentage          | `percent(25, 100)` → `25`                       |
+| [`range`](./examples/math/range.md)       | Generate number range         | `range(1, 6, 1)` → `[1,2,3,4,5]`                |
+| [`round`](./examples/math/round.md)       | Round to decimal places       | `round(3.14159, 2)` → `3.14`                    |
 
 ## Money Utilities
 
@@ -209,11 +229,11 @@ See [Money Examples](./examples/money.md) for detailed usage.
 
 See [Date Examples](./examples/date.md) for detailed usage.
 
-| Utility                                   | Description               | Example                                                 |
-| ----------------------------------------- | ------------------------- | ------------------------------------------------------- |
-| [`expires`](./examples/date/expires.md)   | Check expiration status   | `expires('2026-01-01')` → `'SOON'`                      |
-| [`interval`](./examples/date/interval.md) | Generate date range       | `interval('2024-01-01', '2024-01-31', {interval: 'D'})` |
-| [`timeDiff`](./examples/date/timeDiff.md) | Calculate time difference | `timeDiff(date1, date2)` → `{value: 5, unit: 'DAY'}`    |
+| Utility                                   | Description               | Example                                                     |
+| ----------------------------------------- | ------------------------- | ----------------------------------------------------------- |
+| [`expires`](./examples/date/expires.md)   | Check expiration status   | `expires('2030-01-01')` → `'LATER'`                         |
+| [`interval`](./examples/date/interval.md) | Generate date range       | `interval('2024-01-01', '2024-01-07', { interval: 'day' })` |
+| [`timeDiff`](./examples/date/timeDiff.md) | Calculate time difference | `timeDiff(date1, date2)` → `{ value: 5, unit: 'day' }`      |
 
 ## Random Utilities
 
@@ -230,77 +250,49 @@ See [Random Examples](./examples/random.md) for detailed usage.
 
 ## Typed Utilities
 
-**Comprehensive type guards and runtime type checking.**
+Typed checks are exposed through the `is` namespace plus `is.typeOf(...)`.
 
 See [Typed Examples](./examples/typed.md) for detailed usage.
 
-### Type Guards
+### `is` Namespace Methods
 
-| Utility                                          | Description                 | TypeScript Narrowing            |
-| ------------------------------------------------ | --------------------------- | ------------------------------- |
-| [`isString`](./examples/typed/isString.md)       | Check if string             | `unknown` → `string`            |
-| [`isNumber`](./examples/typed/isNumber.md)       | Check if number             | `unknown` → `number`            |
-| [`isBoolean`](./examples/typed/isBoolean.md)     | Check if boolean            | `unknown` → `boolean`           |
-| [`isArray`](./examples/typed/isArray.md)         | Check if array              | `unknown` → `Array<unknown>`    |
-| [`isObject`](./examples/typed/isObject.md)       | Check if object             | `unknown` → `object`            |
-| [`isFunction`](./examples/typed/isFunction.md)   | Check if function           | `unknown` → `Function`          |
-| [`isDate`](./examples/typed/isDate.md)           | Check if Date               | `unknown` → `Date`              |
-| [`isRegex`](./examples/typed/isRegex.md)         | Check if RegExp             | `unknown` → `RegExp`            |
-| [`isPromise`](./examples/typed/isPromise.md)     | Check if Promise            | `unknown` → `Promise<unknown>`  |
-| [`isDefined`](./examples/typed/isDefined.md)     | Check if not null/undefined | `T` → `NonNullable<T>`          |
-| [`isNil`](./examples/typed/isNil.md)             | Check if null or undefined  | `unknown` → `null \| undefined` |
-| [`isPrimitive`](./examples/typed/isPrimitive.md) | Check if primitive type     | `unknown` → `boolean`           |
-
-### Value Checks
-
-| Utility                                        | Description              | Example                          |
-| ---------------------------------------------- | ------------------------ | -------------------------------- |
-| [`isEmpty`](./examples/typed/isEmpty.md)       | Check if empty           | `isEmpty([])` → `true`           |
-| [`isEqual`](./examples/typed/isEqual.md)       | Deep equality comparison | `isEqual({a:1}, {a:1})` → `true` |
-| [`isMatch`](./examples/typed/isMatch.md)       | Pattern matching         | `isMatch(obj, {role: 'admin'})`  |
-| [`isWithin`](./examples/typed/isWithin.md)     | Check if number in range | `isWithin(5, 0, 10)` → `true`    |
-| [`isEven`](./examples/typed/isEven.md)         | Check if even number     | `isEven(4)` → `true`             |
-| [`isOdd`](./examples/typed/isOdd.md)           | Check if odd number      | `isOdd(3)` → `true`              |
-| [`isPositive`](./examples/typed/isPositive.md) | Check if positive        | `isPositive(5)` → `true`         |
-| [`isNegative`](./examples/typed/isNegative.md) | Check if negative        | `isNegative(-5)` → `true`        |
-| [`isZero`](./examples/typed/isZero.md)         | Check if zero            | `isZero(0)` → `true`             |
-
-### Comparison
-
-| Utility                        | Description      | Example             |
-| ------------------------------ | ---------------- | ------------------- |
-| [`gt`](./examples/typed/gt.md) | Greater than     | `gt(5, 3)` → `true` |
-| [`ge`](./examples/typed/ge.md) | Greater or equal | `ge(5, 5)` → `true` |
-| [`lt`](./examples/typed/lt.md) | Less than        | `lt(3, 5)` → `true` |
-| [`le`](./examples/typed/le.md) | Less or equal    | `le(5, 5)` → `true` |
-
-### Multi-Purpose
-
-| Utility                                | Description                | Example                         |
-| -------------------------------------- | -------------------------- | ------------------------------- |
-| [`is`](./examples/typed/is.md)         | Multi-purpose type checker | `is('string', val)` → `boolean` |
-| [`typeOf`](./examples/typed/typeOf.md) | Get type of value          | `typeOf([])` → `'array'`        |
+| Method                        | Description                                  | Example                             |
+| ----------------------------- | -------------------------------------------- | ----------------------------------- |
+| `is.string(value)`            | Check if value is a string                   | `is.string('x')`                    |
+| `is.number(value)`            | Check if value is a number (excluding `NaN`) | `is.number(42)`                     |
+| `is.boolean(value)`           | Check if value is a boolean                  | `is.boolean(false)`                 |
+| `is.array(value)`             | Check if value is an array                   | `is.array([1, 2])`                  |
+| `is.object(value)`            | Check if value is a plain object             | `is.object({ a: 1 })`               |
+| `is.fn(value)`                | Check if value is a function                 | `is.fn(() => {})`                   |
+| `is.date(value)`              | Check if value is a valid Date               | `is.date(new Date())`               |
+| `is.regex(value)`             | Check if value is a RegExp                   | `is.regex(/a/)`                     |
+| `is.promise(value)`           | Check if value is a Promise                  | `is.promise(Promise.resolve())`     |
+| `is.defined(value)`           | Check if value is not `undefined`            | `is.defined(0)`                     |
+| `is.nil(value)`               | Check if value is `null` or `undefined`      | `is.nil(null)`                      |
+| `is.primitive(value)`         | Check if value is string/number/boolean      | `is.primitive('x')`                 |
+| `is.empty(value)`             | Check if value is empty                      | `is.empty([])`                      |
+| `is.equal(a, b)`              | Deep equality comparison                     | `is.equal({ a: 1 }, { a: 1 })`      |
+| `is.match(object, source)`    | Partial deep-match                           | `is.match(user, { role: 'admin' })` |
+| `is.within(value, min, max)`  | Inclusive range check                        | `is.within(5, 1, 10)`               |
+| `is.even(value)`              | Check if number is even                      | `is.even(4)`                        |
+| `is.odd(value)`               | Check if number is odd                       | `is.odd(3)`                         |
+| `is.positive(value)`          | Check if number is positive                  | `is.positive(3)`                    |
+| `is.negative(value)`          | Check if number is negative                  | `is.negative(-3)`                   |
+| `is.zero(value)`              | Check if value is exactly zero               | `is.zero(0)`                        |
+| `is.gt(a, b)` / `is.ge(a, b)` | Greater-than / greater-or-equal              | `is.gt(5, 3)`                       |
+| `is.lt(a, b)` / `is.le(a, b)` | Less-than / less-or-equal                    | `is.le(5, 5)`                       |
+| `is.typeOf(value)`            | Runtime type tag                             | `is.typeOf([]) // 'array'`          |
 
 ## Import Reference
 
 ### Individual Imports (Recommended)
 
 ```ts
-// Best for tree-shaking
-import { map, filter, group } from '@vielzeug/toolkit';
-```
-
-### Category Imports
-
-```ts
-import { chunk, map } from '@vielzeug/toolkit/array';
-import { merge, clone } from '@vielzeug/toolkit/object';
-import { camelCase } from '@vielzeug/toolkit/string';
-import { debounce } from '@vielzeug/toolkit/function';
-import { sum, average } from '@vielzeug/toolkit/math';
-import { interval } from '@vielzeug/toolkit/date';
-import { random, uuid } from '@vielzeug/toolkit/random';
-import { isString, isArray } from '@vielzeug/toolkit/typed';
+// Best for tree-shaking — all utilities come from the main package
+import { chunk, fold, group, keyBy, select } from '@vielzeug/toolkit';
+import { retry, sleep, parallel, Scheduler, polyfillScheduler } from '@vielzeug/toolkit';
+import { debounce, throttle, memo } from '@vielzeug/toolkit';
+import { merge, prune, diff } from '@vielzeug/toolkit';
 ```
 
 ## See Also
@@ -312,4 +304,4 @@ import { isString, isArray } from '@vielzeug/toolkit/typed';
 
 ---
 
-> **Note**: All utilities throw `TypeError` for invalid inputs. Check individual utility docs for specific error conditions and edge cases.
+> **Note**: Error behavior is utility-specific. See each utility page for exact validation and thrown error types.

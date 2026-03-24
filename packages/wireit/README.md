@@ -1,36 +1,17 @@
-# Wireit
+# @vielzeug/wireit
 
-**Lightweight, type-safe dependency injection for TypeScript**
+> Lightweight typed dependency injection container for TypeScript with tokens, lifetimes, async resolution, child containers, and test utilities
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
-[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/package/@vielzeug/wireit)
-[![Bundle Size](https://img.shields.io/badge/size-2.1_KB-success)](https://bundlephobia.com/package/@vielzeug/wireit)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@vielzeug/wireit)](https://www.npmjs.com/package/@vielzeug/wireit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Simple, powerful dependency injection container with full TypeScript support, zero dependencies, and IoC principles.
+**Wireit** is a zero-dependency IoC container built around typed tokens — register and resolve dependencies with singleton/transient/scoped lifetimes, async factories, dispose hooks, child containers, and first-class test helpers.
 
-## ✨ Features
+## Installation
 
-- 🎯 **Type-Safe** – Full TypeScript inference for tokens and dependencies
-- 🪶 **Lightweight** – 2.1 KB gzipped, zero dependencies
-- 🔄 **Lifetimes** – Singleton, Transient, and Scoped support
-- ⚡ **Async Support** – Handle async factories and dependencies
-- 🌳 **Hierarchical** – Parent/child containers with inheritance
-- 🧪 **Testing Friendly** – Built-in mocking and testing utilities
-- 🔗 **Token Aliasing** – Create aliases for flexible provider management
-- 🚀 **Production Ready** – Comprehensive test coverage
-
-## 📦 Installation
-
-```bash
-# pnpm
+```sh
 pnpm add @vielzeug/wireit
-
-# npm
-npm install @vielzeug/wireit
-
-# yarn
-yarn add @vielzeug/wireit
+# npm install @vielzeug/wireit
+# yarn add @vielzeug/wireit
 ```
 
 ## Quick Start
@@ -38,402 +19,325 @@ yarn add @vielzeug/wireit
 ```typescript
 import { createContainer, createToken } from '@vielzeug/wireit';
 
-// 1. Define tokens
-const Database = createToken<DatabaseService>('Database');
-const UserRepo = createToken<UserRepository>('UserRepository');
-const UserService = createToken<UserService>('UserService');
+const DbToken = createToken<Database>('Database');
+const ServiceToken = createToken<UserService>('UserService');
 
-// 2. Create container and register providers
 const container = createContainer();
 
 container
-  .registerValue(Database, new PrismaDatabase())
-  .register(UserRepo, {
-    useClass: UserRepositoryImpl,
-    deps: [Database],
-    lifetime: 'singleton',
-  })
-  .register(UserService, {
-    useClass: UserServiceImpl,
-    deps: [UserRepo],
-  });
+  .factory(DbToken, () => new Database(process.env.DB_URL!))
+  .bind(ServiceToken, UserService, { deps: [DbToken] });
 
-// 3. Resolve dependencies
-const userService = container.get(UserService);
-await userService.createUser({ name: 'Alice' });
+const service = container.get(ServiceToken);
 ```
 
-## Core Concepts
+## Features
+
+- ✅ **Typed tokens** — `createToken<T>(description)` — type-safe, no magic strings
+- ✅ **Three registration styles** — `register()`, `factory()` shorthand, `bind()` shorthand
+- ✅ **Plain values** — `container.value(token, value)` for constants and config
+- ✅ **Lifetimes** — `singleton` (default), `transient`, and `scoped` per-child-container
+- ✅ **Async providers** — factories may return `Promise<T>`; resolve with `getAsync()`
+- ✅ **Dispose hooks** — per-provider `dispose(instance)` called on `container.dispose()`
+- ✅ **Child containers** — `createChild()` inherits registrations; `scoped` lifetime creates one instance per child
+- ✅ **Scoped execution** — `runInScope(fn)` creates, uses, and auto-disposes a child
+- ✅ **Aliases** — `alias(token, source)` maps one token to another, resolved through parent chain
+- ✅ **Batch resolution** — `getAll([...tokens])` and `getAllAsync([...tokens])` return typed tuples
+- ✅ **Optional resolution** — `getOptional()` and `getOptionalAsync()` return `undefined` when missing
+- ✅ **Test helpers** — `createTestContainer(base?)` and `container.mock(token, mock, fn)`
+- ✅ **Snapshot/Restore** — `snapshot()` and `restore(snap)` for stateless test isolation
+- ✅ **Debug** — `debug()` walks the full parent chain and lists all tokens and aliases
+- ✅ **Zero dependencies** — <2 kB gzipped, pure TypeScript ESM
+
+## Usage
 
 ### Tokens
 
-Tokens are typed symbols that identify dependencies:
+Every dependency is identified by a typed token, not a string or class reference:
 
 ```typescript
-const Logger = createToken<ILogger>('Logger');
-const Config = createToken<AppConfig>('Config');
-const Cache = createToken<CacheService>('Cache');
+import { createToken } from '@vielzeug/wireit';
+
+const ConfigToken = createToken<AppConfig>('AppConfig');
+const DbToken = createToken<Database>('Database');
+const ServiceToken = createToken<UserService>('UserService');
 ```
 
-### Providers
+The description is required — it appears in error messages and `debug()` output.
 
-Three types of providers for different use cases:
+### Registering Providers
 
-#### Value Provider
+#### Value
 
-Register a plain value or existing instance:
+Use `value()` for constants, config, and plain objects:
 
 ```typescript
-const config = { apiUrl: 'https://api.example.com', timeout: 5000 };
-container.registerValue(Config, config);
+container.value(ConfigToken, { apiUrl: 'https://api.example.com', timeout: 5000 });
 ```
 
-#### Class Provider
+#### Factory
 
-Register a class to be instantiated:
+Use `factory()` for any function that creates an instance:
 
 ```typescript
-container.register(Logger, {
-  useClass: ConsoleLogger,
-  deps: [Config],
-  lifetime: 'singleton', // default
+container.factory(DbToken, (config) => new Database(config.apiUrl), {
+  deps: [ConfigToken],
 });
 ```
 
-#### Factory Provider
+#### Class (bind)
 
-Register a factory function:
+Use `bind()` to pair a class directly with a token:
 
 ```typescript
-container.registerFactory(Cache, (config) => new RedisCache(config.redisUrl), [Config], { lifetime: 'singleton' });
+container.bind(ServiceToken, UserService, { deps: [DbToken] });
+```
+
+#### Full register
+
+Use `register()` for the full provider object — useful when the provider type matters:
+
+```typescript
+container.register(ServiceToken, { useClass: UserService, deps: [DbToken], lifetime: 'transient' });
 ```
 
 ### Lifetimes
 
-Control when instances are created:
+| Lifetime              | Behaviour                                                |
+| --------------------- | -------------------------------------------------------- |
+| `singleton` (default) | One instance per container — created on first `get()`    |
+| `transient`           | New instance on every `get()`                            |
+| `scoped`              | One instance per child container; singletons in the root |
 
 ```typescript
-// Singleton – Created once, reused everywhere (default for classes)
-container.register(Database, {
-  useClass: PrismaDatabase,
-  lifetime: 'singleton',
-});
-
-// Transient – Created every time (default for factories)
-container.registerFactory(RequestId, () => generateId(), [], {
-  lifetime: 'transient',
-});
-
-// Scoped – Created once per scope (e.g., per request)
-container.register(RequestContext, {
-  useClass: Context,
-  lifetime: 'scoped',
-});
+container.factory(RequestId, () => crypto.randomUUID(), { lifetime: 'transient' });
+container.bind(RequestHandler, RequestHandlerImpl, { deps: [RequestId], lifetime: 'scoped' });
 ```
 
-## 🔥 Advanced Usage
+### Child Containers and Hierarchy
 
-### Async Factories
-
-Handle async initialization:
+Child containers inherit all registrations from their parent. Registrations in the child take precedence:
 
 ```typescript
-container.registerFactory(
-  Database,
-  async (config) => {
-    const db = new PrismaClient();
-    await db.$connect();
-    return db;
-  },
-  [Config],
-  { async: true, lifetime: 'singleton' },
-);
+const child = container.createChild();
+child.value(RequestContext, { userId: 'u1' });
 
-// Use getAsync for async resolution
-const db = await container.getAsync(Database);
-```
-
-### Parent/Child Containers
-
-Create isolated scopes:
-
-```typescript
-const rootContainer = createContainer();
-rootContainer.registerValue(Config, globalConfig);
-
-// Child inherits from parent
-const requestContainer = rootContainer.createChild([
-  [RequestId, { useValue: generateId() }],
-  [User, { useValue: currentUser }],
-]);
-
-// Child can override parent registrations
-requestContainer.registerValue(Config, requestSpecificConfig);
+const handler = child.get(RequestHandler); // uses child context
 ```
 
 ### Scoped Execution
 
-Run code in an isolated scope with automatic cleanup:
+`runInScope()` creates a child container, passes it to your function, then disposes it automatically:
 
 ```typescript
-app.use(async (req, res) => {
-  await container.runInScope(
-    async (scope) => {
-      const handler = scope.get(RequestHandler);
-      await handler.process(req, res);
-    },
-    [
-      [RequestId, { useValue: req.id }],
-      [User, { useValue: req.user }],
-    ],
-  );
-  // Scope is automatically cleaned up
+await container.runInScope(async (scope) => {
+  scope.value(RequestId, crypto.randomUUID());
+  const handler = scope.get(RequestHandler);
+  await handler.process(request);
 });
 ```
 
-### Token Aliasing
+### Async Resolution
 
-Create flexible provider relationships:
+Factories can return a `Promise<T>`. Use `getAsync()` (or `getAllAsync()`) to resolve them:
 
 ```typescript
-const IUserService = createToken<IUserService>('IUserService');
-const UserServiceImpl = createToken<UserServiceImpl>('UserServiceImpl');
-
-container.register(UserServiceImpl, {
-  useClass: UserServiceImpl,
-  deps: [Database],
+container.factory(DbToken, async () => {
+  const db = new Database(env.DB_URL);
+  await db.connect();
+  return db;
 });
 
-// Alias interface to implementation
-container.alias(UserServiceImpl, IUserService);
-
-// Both work
-const service1 = container.get(UserServiceImpl);
-const service2 = container.get(IUserService); // Same instance
+const db = await container.getAsync(DbToken);
 ```
 
-### Optional Dependencies
+### Aliases
 
-Handle missing dependencies gracefully:
+Map one token to another — useful for interface-to-implementation bindings:
 
 ```typescript
-// Returns undefined if not registered
-const logger = container.getOptional(Logger);
+const IUserServiceToken = createToken<IUserService>('IUserService');
 
-// Or use allowOptional option
-const container = createContainer({ allowOptional: true });
-const missing = container.get(SomeToken); // undefined instead of error
+container.bind(UserServiceToken, UserServiceImpl, { deps: [DbToken] });
+container.alias(IUserServiceToken, UserServiceToken);
+
+const svc = container.get(IUserServiceToken); // resolves to UserServiceImpl
 ```
 
-## 🧪 Testing
+### Batch Resolution
 
-### Test Containers
-
-Create isolated containers for testing:
+Resolve multiple tokens at once with a typed tuple result:
 
 ```typescript
-import { createTestContainer } from '@vielzeug/wireit';
-
-describe('UserService', () => {
-  const { container, dispose } = createTestContainer(baseContainer);
-
-  afterEach(() => dispose());
-
-  it('should create user', async () => {
-    const service = container.get(UserService);
-    const user = await service.createUser({ name: 'Test' });
-    expect(user.name).toBe('Test');
-  });
-});
+const [db, config, logger] = container.getAll([DbToken, ConfigToken, LoggerToken]);
+const [db, cache] = await container.getAllAsync([DbToken, CacheToken]);
 ```
 
-### Mocking Dependencies
+### Dispose Hooks
 
-Temporarily replace dependencies:
+Register a `dispose` callback on any class or factory provider:
 
 ```typescript
-import { withMock } from '@vielzeug/wireit';
-
-it('should handle database error', async () => {
-  const mockDb = { save: vi.fn().mockRejectedValue(new Error('DB Error')) };
-
-  await withMock(container, Database, mockDb, async () => {
-    const service = container.get(UserService);
-    await expect(service.createUser(data)).rejects.toThrow('DB Error');
-  });
-
-  // Original database is restored after withMock
+container.factory(DbToken, () => new Database(env.DB_URL), {
+  dispose: (db) => db.close(),
 });
+
+await container.dispose(); // calls db.close() on the cached singleton
 ```
 
-## 🎯 Real-World Example
+`dispose()` is idempotent — calling it multiple times is safe. The container also implements `[Symbol.asyncDispose]` for `await using` syntax.
+
+### Testing
+
+#### createTestContainer
+
+`createTestContainer(base?)` returns `{ container, dispose }` — an isolated child container for test overrides and a cleanup function:
 
 ```typescript
-import { createContainer, createToken } from '@vielzeug/wireit';
+import { createTestContainer, createToken } from '@vielzeug/wireit';
 
-// Tokens
-const Config = createToken<AppConfig>('Config');
-const Logger = createToken<ILogger>('Logger');
-const Database = createToken<IDatabase>('Database');
-const UserRepo = createToken<IUserRepository>('UserRepository');
-const UserService = createToken<IUserService>('UserService');
-const EmailService = createToken<IEmailService>('EmailService');
+const { container, dispose } = createTestContainer(appContainer);
+container.value(DbToken, mockDb, { overwrite: true });
 
-// Setup
-const container = createContainer();
+afterEach(() => dispose());
+```
 
-// Configuration
-container.registerValue(Config, {
-  apiUrl: process.env.API_URL,
-  dbUrl: process.env.DATABASE_URL,
-  logLevel: 'info',
-});
+#### container.mock
 
-// Infrastructure
-container.registerFactory(Logger, (config) => new ConsoleLogger(config.logLevel), [Config], { lifetime: 'singleton' });
+`mock()` temporarily replaces a token for the duration of a callback, then restores the original:
 
-container.registerFactory(
-  Database,
-  async (config) => {
-    const db = new PrismaClient({ datasourceUrl: config.dbUrl });
-    await db.$connect();
-    return db;
-  },
-  [Config],
-  { async: true, lifetime: 'singleton' },
-);
+```typescript
+const result = await container.mock(DbToken, fakeDb, () => service.loadUsers());
 
-// Repositories
-container.register(UserRepo, {
-  useClass: UserRepository,
-  deps: [Database, Logger],
-  lifetime: 'singleton',
-});
-
-// Services
-container.register(UserService, {
-  useClass: UserService,
-  deps: [UserRepo, EmailService, Logger],
-});
-
-container.register(EmailService, {
-  useClass: SendGridEmailService,
-  deps: [Config, Logger],
-});
-
-// Usage in Express
-app.post('/users', async (req, res) => {
-  await container.runInScope(
-    async (scope) => {
-      const service = scope.get(UserService);
-      const user = await service.createUser(req.body);
-      res.json(user);
-    },
-    [[RequestId, { useValue: req.id }]],
-  );
+// Or with a full provider:
+await container.mock(DbToken, { useFactory: () => createInMemoryDb() }, async () => {
+  // ... test code
 });
 ```
 
-## 📚 API Reference
+#### Snapshot / Restore
 
-### Container Methods
+For lower-level test isolation:
 
-| Method                                             | Description                         |
-| -------------------------------------------------- | ----------------------------------- |
-| `register(token, provider)`                        | Register a provider for a token     |
-| `registerValue(token, value, lifetime?)`           | Register a plain value              |
-| `registerFactory(token, factory, deps?, options?)` | Register a factory function         |
-| `registerMany(providers)`                          | Register multiple providers at once |
-| `get(token)`                                       | Resolve a dependency synchronously  |
-| `getAsync(token)`                                  | Resolve a dependency asynchronously |
-| `getOptional(token)`                               | Resolve or return undefined         |
-| `getOptionalAsync(token)`                          | Async resolve or return undefined   |
-| `alias(source, alias)`                             | Create an alias for a token         |
-| `has(token)`                                       | Check if token is registered        |
-| `unregister(token)`                                | Remove a registration               |
-| `clear()`                                          | Clear all registrations             |
-| `createChild(overrides?)`                          | Create a child container            |
-| `runInScope(fn, overrides?)`                       | Run function in isolated scope      |
-| `debug()`                                          | Get debug information               |
+```typescript
+const snap = container.snapshot();
+container.value(DbToken, fakeDb, { overwrite: true });
+// ... test
+container.restore(snap);
+```
 
-### Factory Functions
+## API
 
-| Function                               | Description                   |
-| -------------------------------------- | ----------------------------- |
-| `createToken(description?)`            | Create a typed token          |
-| `createContainer(options?)`            | Create a new container        |
-| `createTestContainer(base?)`           | Create a test container       |
-| `withMock(container, token, mock, fn)` | Temporarily mock a dependency |
+**Package exports**
 
-### Error Classes
+```ts
+export {
+  AliasCycleError,
+  AsyncProviderError,
+  CircularDependencyError,
+  Container,
+  ContainerDisposedError,
+  createContainer,
+  createTestContainer,
+  createToken,
+  ProviderNotFoundError,
+} from '@vielzeug/wireit';
 
-| Error                     | When Thrown                         |
-| ------------------------- | ----------------------------------- |
-| `ProviderNotFoundError`   | Token not registered                |
-| `AsyncProviderError`      | Async provider used with sync get() |
-| `CircularDependencyError` | Circular dependency detected        |
+export type {
+  ClassProvider,
+  FactoryProvider,
+  Lifetime,
+  Provider,
+  ProviderOptions,
+  Snapshot,
+  Token,
+  TokenValues,
+  ValueProvider,
+} from '@vielzeug/wireit';
+```
 
-## 🔍 How It Works
+**Factory functions**
 
-Wireit uses TypeScript symbols as tokens to uniquely identify dependencies. The container maintains a registry of providers and resolves dependencies by:
+| Export                        | Description                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `createToken<T>(description)` | Create a typed dependency injection token                                      |
+| `createContainer()`           | Create a new root container                                                    |
+| `createTestContainer(base?)`  | Returns `{ container, dispose }` — isolated child container for test overrides |
 
-1. **Token Resolution** – Resolves aliases to source tokens
-2. **Circular Detection** – Tracks dependency stack to prevent cycles
-3. **Provider Execution** – Instantiates classes or calls factories
-4. **Instance Caching** – Caches singletons for reuse
-5. **Parent Delegation** – Falls back to parent container if not found
+**Container registration**
 
-## 🆚 Comparison with Alternatives
+| Method                             | Description                                |
+| ---------------------------------- | ------------------------------------------ |
+| `register(token, provider, opts?)` | Register a full `Provider<T>`              |
+| `value(token, val, opts?)`         | Register a plain value                     |
+| `factory(token, fn, opts?)`        | Register a factory function                |
+| `bind(token, cls, opts?)`          | Bind a class to a token                    |
+| `alias(token, source)`             | Map `token` to `source`                    |
+| `unregister(token)`                | Remove a registration                      |
+| `clear()`                          | Clear all registrations (no dispose hooks) |
 
-| Feature          | Wireit | InversifyJS | TSyringe |
-| ---------------- | ------ | ----------- | -------- |
-| Bundle Size      | 2.1 KB | ~14KB       | ~7KB     |
-| Dependencies     | 0      | 1           | 2        |
-| Decorators       | ❌     | ✅          | ✅       |
-| Async Support    | ✅     | ✅          | ❌       |
-| Scoped Lifetimes | ✅     | ✅          | ✅       |
-| Testing Helpers  | ✅     | ❌          | ❌       |
-| TypeScript First | ✅     | ✅          | ✅       |
+**Container resolution**
 
-## 💡 Best Practices
+| Method                       | Description                              |
+| ---------------------------- | ---------------------------------------- |
+| `get<T>(token)`              | Resolve synchronously — throws if async  |
+| `getAsync<T>(token)`         | Resolve asynchronously                   |
+| `getAll(tokens)`             | Resolve a tuple of tokens synchronously  |
+| `getAllAsync(tokens)`        | Resolve a tuple of tokens asynchronously |
+| `getOptional<T>(token)`      | Resolve or return `undefined`            |
+| `getOptionalAsync<T>(token)` | Resolve async or return `undefined`      |
+| `has(token)`                 | Check if a token is registered           |
 
-### ✅ Do
+**Container lifecycle**
 
-- Use descriptive token names for debugging
-- Register singletons for expensive resources
-- Use scoped lifetimes for request-specific data
-- Leverage parent/child containers for isolation
-- Use `createTestContainer` in tests
+| Method / Property       | Description                               |
+| ----------------------- | ----------------------------------------- |
+| `createChild()`         | Create a child container                  |
+| `runInScope(fn)`        | Run `fn` in an auto-disposed child        |
+| `dispose()`             | Run dispose hooks and clear registrations |
+| `disposed`              | Whether the container has been disposed   |
+| `[Symbol.asyncDispose]` | `await using` support                     |
 
-### ❌ Don't
+**Container testing**
 
-- Don't create circular dependencies
-- Don't use `get()` with async providers
-- Don't mutate container during resolution
-- Don't register too many transient services
+| Method                  | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `mock(token, mock, fn)` | Temporarily replace a token; restore after `fn`   |
+| `snapshot()`            | Capture current registrations                     |
+| `restore(snap)`         | Restore a previous snapshot                       |
+| `debug()`               | List all tokens and aliases (including inherited) |
 
-## 📖 Documentation
+**Exported types**
 
-- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/wireit)
-- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/wireit/usage)
-- [**API Reference**](https://helmuthdu.github.io/vielzeug/wireit/api)
-- [**Examples**](https://helmuthdu.github.io/vielzeug/wireit/examples)
+| Type                       | Description                                                  |
+| -------------------------- | ------------------------------------------------------------ |
+| `Token<T>`                 | Typed injection token                                        |
+| `Lifetime`                 | `'singleton' \| 'transient' \| 'scoped'`                     |
+| `Provider<T>`              | Union of `ValueProvider`, `ClassProvider`, `FactoryProvider` |
+| `ProviderOptions<T, Deps>` | Options for `factory()` and `bind()`                         |
+| `TokenValues<T>`           | Extracts value types from a tuple of tokens                  |
+| `Snapshot`                 | Opaque snapshot handle                                       |
 
-## 📄 License
+**Exported errors**
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
+| Error                     | Thrown when                                  |
+| ------------------------- | -------------------------------------------- |
+| `ProviderNotFoundError`   | No provider is registered for a token        |
+| `CircularDependencyError` | A dependency graph cycle is detected         |
+| `AsyncProviderError`      | An async provider is resolved with `get()`   |
+| `AliasCycleError`         | Alias definitions form a cycle               |
+| `ContainerDisposedError`  | Any method is called on a disposed container |
 
-## 🤝 Contributing
+## Documentation
 
-Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
+Full docs at **[vielzeug.dev/wireit](https://vielzeug.dev/wireit)**
 
-## 🔗 Links
+|                                                  |                                         |
+| ------------------------------------------------ | --------------------------------------- |
+| [Usage Guide](https://vielzeug.dev/wireit/usage) | Registration, lifetimes, async, testing |
+| [API Reference](https://vielzeug.dev/wireit/api) | Complete type signatures                |
+| [Examples](https://vielzeug.dev/wireit/examples) | Real-world DI patterns                  |
 
-- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
-- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+## License
 
----
-
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

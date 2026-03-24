@@ -7,7 +7,7 @@
 
 Converts money from one currency to another using the provided exchange rate. Maintains precision by using bigint arithmetic.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/money/exchange.ts
@@ -213,8 +213,6 @@ const gbp = exchange(eur, eurToGbp);
 ## See Also
 
 - [currency](./currency.md): Format money for display
-- [add](../math/add.md): Add monetary amounts
-- [multiply](../math/multiply.md): Multiply amounts
 
 <style>
 .badges {

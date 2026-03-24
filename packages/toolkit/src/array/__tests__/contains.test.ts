@@ -1,4 +1,4 @@
-import { fp } from '../../function/fp';
+import { partial } from '../../function/fp';
 import { contains } from '../contains';
 
 describe('contains', () => {
@@ -34,14 +34,13 @@ describe('contains', () => {
     const notArray = 'not an array';
     const value = 1;
 
-    // biome-ignore lint/suspicious/noExplicitAny: -
     expect(() => contains(notArray as unknown as any, value)).toThrow(TypeError);
   });
 
   it('should work with the contains in fp mode', () => {
     const array = [1, 2, 3, { a: 1 }, 'hello'];
     const value = { a: 1 };
-    const containsValue = fp(contains, value);
+    const containsValue = partial(contains, value);
 
     expect(containsValue(array)).toBe(true);
   });

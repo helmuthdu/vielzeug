@@ -18,9 +18,11 @@ describe('curry', () => {
 
     const step1 = curriedAdd(1);
     const step2 = step1(2);
+
     expect(typeof step2).toBe('function');
 
     const result = step2(3);
+
     expect(result).toBe(6);
   });
 });

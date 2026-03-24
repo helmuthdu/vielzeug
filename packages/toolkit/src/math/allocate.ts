@@ -42,26 +42,21 @@ export function allocate(amount: number | bigint, ratios: number[]): (number | b
 
     for (let i = 0; i < ratios.length - 1; i++) {
       const share = (amount * BigInt(Math.floor(ratios[i] * 1000000))) / BigInt(Math.floor(totalRatio * 1000000));
+
       results.push(share);
       remainder -= share;
     }
 
     // Last allocation gets the remainder to ensure exact sum
     results.push(remainder);
+
     return results;
   }
 
   // Handle number type
-  const results: number[] = [];
-  let remainder = amount;
+  const results = Array.from({ length: ratios.length - 1 }, (_, i) => Math.floor((amount * ratios[i]) / totalRatio));
 
-  for (let i = 0; i < ratios.length - 1; i++) {
-    const share = Math.floor((amount * ratios[i]) / totalRatio);
-    results.push(share);
-    remainder -= share;
-  }
+  results.push(amount - results.reduce((s, v) => s + v, 0));
 
-  // Last allocation gets the remainder to ensure exact sum
-  results.push(remainder);
   return results;
 }

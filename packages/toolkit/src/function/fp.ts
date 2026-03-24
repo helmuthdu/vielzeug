@@ -1,36 +1,26 @@
 import type { Fn } from '../types';
-import { assert } from './assert';
 
-// biome-ignore lint/suspicious/noExplicitAny: -
 type RemoveFirstParameter<T extends Fn> = T extends (first: any, ...rest: infer R) => any ? R : never;
+type FirstParameter<T extends Fn> = T extends (first: infer A, ...rest: any[]) => any ? A : never;
 
 /**
- * Creates a function that can be used in functional programming mode.
- * This function is a wrapper around the original function, allowing you to pass the first argument as an array.
+ * Partially applies a multi-arg function by pre-filling every argument
+ * except the first — returning a unary function useful for pipeline composition.
  *
  * @example
  * ```ts
- * import { fp } from './fp';
- * import { map } from './map';
- *
  * const double = (num: number) => num * 2;
- * const doubleArray = fp(map, double);
+ * const doubleAll = partial(select, double);
+ * doubleAll([1, 2, 3]); // [2, 4, 6]
  *
- * doubleArray([1, 2, 3]) // [2, 4, 6]
+ * // In a pipe
+ * pipe(partial(select, (x: number) => x > 1 ? x * 2 : null))([1, 2, 3]); // [4, 6]
  * ```
  *
- * @param callback - The function to be wrapped.
- * @param args - The arguments to be passed to the function.
- *
- * @returns A function that takes an array and applies the original function to it.
- *
- * @throws {TypeError} If the function cannot be used in functional programming mode.
+ * @param callback - Any function whose first argument is the collection.
+ * @param args - The remaining arguments to pre-apply.
+ * @returns A unary function `(collection) => ReturnType<F>`.
  */
-export const fp = <T, F extends Fn = Fn>(callback: F, ...args: RemoveFirstParameter<F>) => {
-  assert(
-    // biome-ignore lint/suspicious/noExplicitAny: -
-    (callback as any).fp,
-    `"${callback.name}" cannot be used in functional programming mode. Please use the original function.`,
-  );
-  return (array: T[]) => callback(array, ...args);
+export const partial = <F extends Fn>(callback: F, ...args: RemoveFirstParameter<F>) => {
+  return (collection: FirstParameter<F>) => callback(collection, ...args);
 };

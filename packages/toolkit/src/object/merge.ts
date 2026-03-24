@@ -1,6 +1,7 @@
+import type { Obj } from '../types';
+
 import { isArray } from '../typed/isArray';
 import { isObject } from '../typed/isObject';
-import type { Obj } from '../types';
 
 // #region MergeStrategy
 type MergeStrategy =
@@ -9,7 +10,6 @@ type MergeStrategy =
   | 'lastWins'
   | 'arrayConcat'
   | 'arrayReplace'
-  // biome-ignore lint/suspicious/noExplicitAny: -
   | ((target: any, source: any) => any);
 // #endregion MergeStrategy
 
@@ -59,7 +59,31 @@ export function merge<T extends Obj[]>(strategy: MergeStrategy = 'deep', ...item
     return Object.assign({}, ...items) as Merge<T>;
   }
 
-  return items.reduce((acc, obj) => deepMerge(acc, obj, strategy) as unknown as Merge<T>, {} as Merge<T>);
+  return items.reduce((acc, obj) => mergeObjects(acc, obj, strategy) as unknown as Merge<T>, {} as Merge<T>);
+}
+
+/**
+ * Merges objects deeply. Shorthand for `merge('deep', ...items)`.
+ *
+ * @example
+ * ```ts
+ * deepMerge({ a: { x: 1 } }, { a: { y: 2 } }); // { a: { x: 1, y: 2 } }
+ * ```
+ */
+export function deepMerge<T extends Obj[]>(...items: [...T]): Merge<T> {
+  return merge('deep', ...items) as Merge<T>;
+}
+
+/**
+ * Merges objects shallowly. Shorthand for `merge('shallow', ...items)`.
+ *
+ * @example
+ * ```ts
+ * shallowMerge({ a: 1, b: { x: 1 } }, { b: { y: 2 } }); // { a: 1, b: { y: 2 } }
+ * ```
+ */
+export function shallowMerge<T extends Obj[]>(...items: [...T]): Merge<T> {
+  return merge('shallow', ...items) as Merge<T>;
 }
 
 /**
@@ -74,23 +98,20 @@ export function merge<T extends Obj[]>(strategy: MergeStrategy = 'deep', ...item
  * @param strategy - The merge strategy.
  * @returns A new merged object.
  */
-function deepMerge<T extends Obj, U extends Obj>(target: T, source: U, strategy: MergeStrategy): DeepMerge<T, U> {
+function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, strategy: MergeStrategy): DeepMerge<T, U> {
   if (!isObject(source)) return source as DeepMerge<T, U>;
 
   const result = { ...target } as DeepMerge<T, U>;
 
-  for (const key in source) {
-    if (!Object.hasOwn(source, key)) continue; // Prevent prototype pollution
-
+  for (const key of Object.keys(source)) {
     const sourceValue = source[key];
     const targetValue = result[key];
 
-    // biome-ignore lint/suspicious/noExplicitAny: -
     (result as any)[key] =
       isArray(sourceValue) && isArray(targetValue)
         ? handleArrayMerge(targetValue, sourceValue, strategy)
         : isObject(sourceValue) && isObject(targetValue)
-          ? deepMerge(targetValue, sourceValue, strategy)
+          ? mergeObjects(targetValue as Obj, sourceValue as Obj, strategy)
           : applyMergeStrategy(targetValue, sourceValue, strategy);
   }
 
@@ -102,14 +123,16 @@ function deepMerge<T extends Obj, U extends Obj>(target: T, source: U, strategy:
  *
  * - `"arrayConcat"` → Concatenates arrays.
  * - `"arrayReplace"` → Replaces the existing array.
- * - Default: **Unique merge** (Set-based optimization).
+ * - Default: Concatenates arrays (same as `"arrayConcat"`).
  */
 function handleArrayMerge<T, U>(targetArray: T[] | undefined, sourceArray: U[], strategy: MergeStrategy): (T | U)[] {
   if (!targetArray) return sourceArray;
-  // biome-ignore lint/suspicious/noExplicitAny: -
+
   if (strategy === 'arrayConcat') return targetArray.concat(sourceArray as any);
+
   if (strategy === 'arrayReplace') return sourceArray;
-  return Array.from(new Set([...targetArray, ...sourceArray])); // Unique merge
+
+  return [...targetArray, ...sourceArray];
 }
 
 /**
@@ -120,5 +143,6 @@ function handleArrayMerge<T, U>(targetArray: T[] | undefined, sourceArray: U[], 
  */
 function applyMergeStrategy<T, U>(target: T, source: U, strategy: MergeStrategy): T | U {
   if (typeof strategy === 'function') return strategy(target, source);
+
   return strategy === 'lastWins' || source !== undefined ? source : target;
 }

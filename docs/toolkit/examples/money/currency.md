@@ -7,7 +7,7 @@
 
 Formats a monetary amount as a currency string with proper locale and symbol. Handles decimal places automatically based on currency.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/money/currency.ts
@@ -213,7 +213,6 @@ currency(money, {
 ## See Also
 
 - [exchange](../money/exchange.md): Convert between currencies
-- [add](../math/add.md): Add monetary amounts
 - [distribute](../math/distribute.md): Split amounts equally
 
 <style>

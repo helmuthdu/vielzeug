@@ -1,0 +1,165 @@
+@layer buildit.base {
+  /* ========================================
+       Base Styles & Defaults
+       ======================================== */
+
+  :host {
+    --_size: var(--slider-size, var(--size-5));
+    --_height: var(--slider-height, var(--size-3));
+    --_track: var(--slider-track, var(--color-contrast-300));
+    --_fill: var(--slider-fill, var(--color-neutral));
+    --_thumb: var(--slider-thumb, var(--color-contrast-100));
+    --_thumb-size: calc(var(--_size) - var(--size-1));
+    --_font-size: var(--text-sm);
+    --_shadow: var(--color-neutral-focus-shadow);
+
+    position: relative;
+    display: inline-flex;
+    gap: var(--_gap, var(--size-3));
+    align-items: center;
+    width: 100%;
+    touch-action: none;
+    cursor: pointer;
+    user-select: none;
+  }
+}
+
+/* ========================================
+     Track, Fill & Thumb
+     ======================================== */
+
+.slider-container {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  width: 100%;
+  height: var(--_size);
+  min-height: var(--_touch-target);
+}
+
+.slider-track {
+  position: relative;
+  width: 100%;
+  height: var(--_height);
+  background: var(--_track);
+  border-radius: var(--rounded-full);
+}
+
+/* Fill: always driven by --_fill-start / --_fill-width */
+.slider-fill {
+  position: absolute;
+  top: 0;
+  left: var(--_fill-start, 0%);
+  width: var(--_fill-width, 0%);
+  height: 100%;
+  background: var(--_fill);
+  border-radius: var(--rounded-full);
+  transition:
+    left var(--transition-normal),
+    width var(--transition-normal);
+}
+
+:host([data-dragging]) .slider-fill {
+  transition: none;
+}
+
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: var(--_thumb-size);
+  height: var(--_thumb-size);
+  cursor: grab;
+  background: var(--_thumb);
+  border: 2px solid var(--_fill);
+  border-radius: var(--rounded-full);
+  box-shadow: var(--shadow-sm);
+  transform: translate(-50%, -50%);
+  transition:
+    box-shadow var(--transition-normal),
+    transform var(--transition-fast),
+    left var(--transition-normal);
+}
+
+:host([data-dragging]) .slider-thumb {
+  transition:
+    box-shadow var(--transition-normal),
+    transform var(--transition-fast);
+}
+
+/* ── Single-value thumb ─────────────────────────────────── */
+
+.slider-thumb-sole {
+  left: var(--_thumb-pos, 0%);
+}
+
+:host(:focus-visible) .slider-thumb-sole,
+:host(:active) .slider-thumb-sole {
+  box-shadow: var(--_shadow);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* ── Range thumbs ───────────────────────────────────────── */
+
+.slider-thumb-start {
+  left: var(--_thumb-start, 0%);
+}
+
+.slider-thumb-end {
+  left: var(--_thumb-end, 100%);
+}
+
+.slider-thumb-start:focus-visible,
+.slider-thumb-end:focus-visible {
+  z-index: 2;
+  cursor: grabbing;
+  outline: var(--border-2) solid var(--_fill);
+  outline-offset: 2px;
+  box-shadow: var(--_shadow);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* ── Visibility gating ──────────────────────────────────── */
+
+:host(:not([range])) .slider-thumb-start,
+:host(:not([range])) .slider-thumb-end {
+  display: none;
+}
+
+:host([range]) .slider-thumb-sole {
+  display: none;
+}
+
+@media (forced-colors: active) {
+  /* Replace box-shadow focus ring with outline for sole-thumb focus visibility */
+  :host(:focus-visible) .slider-thumb-sole {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+@layer buildit.overrides {
+  :host {
+    --_fill: var(--slider-fill, var(--_theme-base));
+    --_shadow: var(--_theme-shadow);
+  }
+}
+
+/* ========================================
+     Label
+     ======================================== */
+
+.label {
+  font-size: var(--_font-size);
+  color: var(--color-contrast);
+  white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+  :host {
+    --_thumb-size: calc(var(--_size) + var(--size-2));
+    --_size: var(--size-7);
+  }
+}

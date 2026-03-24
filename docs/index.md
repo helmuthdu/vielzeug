@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: 'Vielzeug'
-  text: 'The modular TypeScript toolkit'
-  tagline: 'Type-safe utilities, blazing-fast storage, flexible logging, and more — all in one monorepo.'
+  text: 'Many tools. One good decision.'
+  tagline: 'Each tool does one thing well. All of them play nicely together. TypeScript-first, zero dependencies.'
   image:
     src: '/logo.svg'
     alt: 'Vielzeug Logo'
@@ -17,15 +17,27 @@ hero:
       link: https://github.com/helmuthdu/vielzeug
 
 features:
+  - title: '@vielzeug/buildit'
+    details: "<img src='/logo-buildit.svg' class='logo-highlight-smaller' alt='Buildit Logo' width='72'/>A library of ready-made web components, accessible, themeable, built on craftit."
+    link: /buildit/
   - title: '@vielzeug/craftit'
     details: "<img src='/logo-craftit.svg' class='logo-highlight-smaller' alt='Craftit Logo' width='72'/>Lightweight, type-safe web component creation with reactive state."
     link: /craftit/
   - title: '@vielzeug/deposit'
     details: "<img src='/logo-deposit.svg' class='logo-highlight-smaller' alt='Deposit Logo' width='72'/>Type-safe local storage with schemas, expiration, and query building capabilities."
     link: /deposit/
+  - title: '@vielzeug/dragit'
+    details: "<img src='/logo-dragit.svg' class='logo-highlight-smaller' alt='Dragit Logo' width='72'/>File drop zones with MIME filtering and sortable lists."
+    link: /dragit/
+  - title: '@vielzeug/eventit'
+    details: "<img src='/logo-eventit.svg' class='logo-highlight-smaller' alt='Eventit Logo' width='72'/>Typed event bus for decoupled, reactive inter-module communication."
+    link: /eventit/
   - title: '@vielzeug/fetchit'
     details: "<img src='/logo-fetchit.svg' class='logo-highlight-smaller' alt='Fetchit Logo' width='72'/>Advanced HTTP client with caching, retries and deduplication."
     link: /fetchit/
+  - title: '@vielzeug/floatit'
+    details: "<img src='/logo-floatit.svg' class='logo-highlight-smaller' alt='Floatit Logo' width='72'/>Type-safe utility for precise floating-point math without pitfalls."
+    link: /floatit/
   - title: '@vielzeug/formit'
     details: "<img src='/logo-formit.svg' class='logo-highlight-smaller' alt='Formit Logo' width='72'/>Type-safe form state and validation with minimal code and maximum flexibility."
     link: /formit/
@@ -41,18 +53,27 @@ features:
   - title: '@vielzeug/routeit'
     details: "<img src='/logo-routeit.svg' class='logo-highlight-smaller' alt='Routeit Logo' width='72'/>Lightweight, type-safe client-side routing with middleware support."
     link: /routeit/
-  - title: '@vielzeug/snapit'
-    details: "<img src='/logo-snapit.svg' class='logo-highlight-smaller' alt='Snapit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
-    link: /snapit/
+  - title: '@vielzeug/stateit'
+    details: "<img src='/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
+    link: /stateit/
+  - title: '@vielzeug/timit'
+    details: "<img src='/logo-timit.svg' class='logo-highlight-smaller' alt='Timit Logo' width='72'/>Temporal-powered date and time utilities for modern TypeScript apps."
+    link: /timit/
   - title: '@vielzeug/toolkit'
-    details: "<img src='/logo-toolkit.svg' class='logo-highlight-smaller' alt='Utils Logo' width='72'/>A comprehensive utility library for arrays, objects, strings, math, dates, and more."
+    details: "<img src='/logo-toolkit.svg' class='logo-highlight-smaller' alt='Toolkit Logo' width='72'/>A comprehensive utility library for arrays, objects, strings, math, dates, and more."
     link: /toolkit/
   - title: '@vielzeug/validit'
     details: "<img src='/logo-validit.svg' class='logo-highlight-smaller' alt='Validit Logo' width='72'/>Type-safe schema validation with advanced error handling."
     link: /validit/
+  - title: '@vielzeug/virtualit'
+    details: "<img src='/logo-virtualit.svg' class='logo-highlight-smaller' alt='Virtualit Logo' width='72'/>Lightweight virtual list engine to renders only visible items."
+    link: /virtualit/
   - title: '@vielzeug/wireit'
     details: "<img src='/logo-wireit.svg' class='logo-highlight-smaller' alt='Wireit Logo' width='72'/>Lightweight dependency injection container with IoC principles."
     link: /wireit/
+  - title: '@vielzeug/workit'
+    details: "<img src='/logo-workit.svg' class='logo-highlight-smaller' alt='Workit Logo' width='72'/>Web Worker abstraction with pooling, queuing, timeouts, and more."
+    link: /workit/
 ---
 
 ## 🚀 Why Vielzeug?
@@ -81,12 +102,12 @@ yarn add @vielzeug/toolkit
 :::
 
 ```typescript
-import { chunk, debounce, formatCurrency } from '@vielzeug/toolkit';
+import { chunk, debounce, currency } from '@vielzeug/toolkit';
 
 // Utilities that just work
 const batches = chunk([1, 2, 3, 4, 5], 2);
 const search = debounce((query) => api.search(query), 300);
-const price = formatCurrency(1234.56, 'USD'); // "$1,234.56"
+const price = currency({ amount: 123456n, currency: 'USD' }); // "$1,234.56"
 ```
 
 ## 💬 Community & Support

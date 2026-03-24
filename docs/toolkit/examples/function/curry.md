@@ -7,7 +7,7 @@
 
 The `curry` utility transforms a function that takes multiple arguments into a sequence of functions, each taking a single argument. It is a fundamental tool for functional programming, enabling easy partial application and better logic reuse.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/curry.ts

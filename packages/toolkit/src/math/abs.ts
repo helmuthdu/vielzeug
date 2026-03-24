@@ -18,5 +18,6 @@ export function abs(value: number | bigint): number | bigint {
   if (typeof value === 'bigint') {
     return value < 0n ? -value : value;
   }
+
   return Math.abs(value);
 }

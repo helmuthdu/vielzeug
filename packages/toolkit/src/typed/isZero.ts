@@ -1,24 +1,24 @@
 /**
- * Checks if the value is a positive number.
+ * Checks if the value is zero.
  *
  * @example
  * ```ts
- * isPositive(0); // true
- * isPositive(123); // false
- * isPositive(-123); // false
- * isPositive(0.0000001); // false
- * isPositive('hello world'); // false
- * isPositive({}); // false
- * isPositive([]); // false
- * isPositive(new Date()); // false
- * isPositive(null); // false
- * isPositive(undefined); // false
- * isPositive(NaN); // false
+ * isZero(0); // true
+ * isZero(123); // false
+ * isZero(-123); // false
+ * isZero(0.0000001); // false
+ * isZero('hello world'); // false
+ * isZero({}); // false
+ * isZero([]); // false
+ * isZero(new Date()); // false
+ * isZero(null); // false
+ * isZero(undefined); // false
+ * isZero(NaN); // false
  * ```
  *
  * @param arg - The argument to be checked.
  *
- * @returns `true` if the value is a positive number, else `false`.
+ * @returns `true` if the value is zero, else `false`.
  *
  */
 export function isZero(arg: unknown): arg is number {

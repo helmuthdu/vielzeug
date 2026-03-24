@@ -1,17 +1,16 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import type { Fn } from '../types';
 
 // #region MemoizeOptions
 type MemoizeOptions<T extends Fn> = {
-  ttl?: number; // Time-to-live in milliseconds
   maxSize?: number; // Maximum number of items in cache
   resolver?: (...args: Parameters<T>) => string; // Custom key generator
+  ttl?: number; // Time-to-live in milliseconds
 };
 // #endregion MemoizeOptions
 
 type CacheEntry<T extends Fn> = {
-  value: ReturnType<T>;
   timestamp: number;
+  value: ReturnType<T>;
 };
 
 /**
@@ -37,24 +36,15 @@ type CacheEntry<T extends Fn> = {
  */
 export function memo<T extends Fn>(
   fn: T,
-  { ttl, maxSize, resolver }: MemoizeOptions<T> = {},
+  { maxSize, resolver, ttl }: MemoizeOptions<T> = {},
 ): (...args: Parameters<T>) => ReturnType<T> {
   const cache = new Map<string, CacheEntry<T>>();
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: -
   const keyGen = (args: Parameters<T>): string => {
     if (resolver) return resolver(...args);
-    if (args.length === 0) return '__empty__';
-    if (args.length === 1) {
-      const arg = args[0];
-      const argType = typeof arg;
-      if (argType === 'string' || argType === 'number' || argType === 'boolean') {
-        return `${argType}:${arg}`;
-      }
-      if (arg === null) return 'null';
-      if (arg === undefined) return 'undefined';
-    }
-    return JSON.stringify(args);
+
+    // Use a replacer to distinguish undefined from null (JSON.stringify collapses both to null)
+    return JSON.stringify(args, (_, v) => (v === undefined ? '__undefined__' : v));
   };
 
   return (...args: Parameters<T>): ReturnType<T> => {
@@ -65,11 +55,18 @@ export function memo<T extends Fn>(
     if (cached && (!ttl || now - cached.timestamp < ttl)) {
       cache.delete(key);
       cache.set(key, cached); // Move to end (most recently used)
+
       return cached.value;
     }
 
     const result = fn(...args);
+
     cache.set(key, { timestamp: now, value: result });
+
+    if (result instanceof Promise) {
+      // Evict on rejection so subsequent calls retry instead of returning a settled failure
+      (result as Promise<unknown>).catch(() => cache.delete(key));
+    }
 
     if (maxSize && cache.size > maxSize) {
       cache.delete(cache.keys().next().value!); // Remove least recently used

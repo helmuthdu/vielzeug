@@ -10,15 +10,37 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./labs": {
+      "source": "./src/labs/index.ts",
+      "types": "./dist/labs/index.d.ts",
+      "import": "./dist/labs.js",
+      "require": "./dist/labs.cjs"
+    },
+    "./directives": {
+      "source": "./src/directives/index.ts",
+      "types": "./dist/directives/index.d.ts",
+      "import": "./dist/directives/index.js",
+      "require": "./dist/directives/index.cjs"
+    },
+    "./test": {
+      "source": "./src/test/index.ts",
+      "types": "./dist/test/index.d.ts",
+      "import": "./dist/test.js",
+      "require": "./dist/test.cjs"
     }
   },
   "scripts": {
-    "build": "tsc && vite build",
-    "fix": "biome check --write --unsafe src",
-    "lint": "biome check src",
-    "prepublishOnly": "npm run build",
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
+    "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "vitest"
   },
@@ -26,10 +48,16 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
+  "dependencies": {
+    "@vielzeug/floatit": "workspace:*",
+    "@vielzeug/stateit": "workspace:*"
+  },
   "devDependencies": {
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.0.18"
+    "@types/node": "^25.5.0",
+    "jsdom": "^29.0.1",
+    "terser": "^5.46.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.2",
+    "vitest": "^4.1.1"
   }
 }

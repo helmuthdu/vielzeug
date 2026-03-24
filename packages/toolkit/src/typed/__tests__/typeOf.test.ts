@@ -14,10 +14,12 @@ describe('typeOf', () => {
     expect(typeOf(Number('not-a-number'))).toBe<ArgType>('nan');
   });
 
-  it('returns "Promise" for async functions', () => {
-    expect(typeOf(async () => {})).toBe<ArgType>('promise');
+  it('returns "function" for async functions', () => {
+    expect(typeOf(async () => {})).toBe<ArgType>('function');
+
     const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-    expect(typeOf(new AsyncFunction('return 1'))).toBe<ArgType>('promise');
+
+    expect(typeOf(new AsyncFunction('return 1'))).toBe<ArgType>('function');
   });
 
   it('returns "Number" for numbers', () => {
@@ -35,7 +37,9 @@ describe('typeOf', () => {
   it('returns "Object" for plain objects', () => {
     expect(typeOf({})).toBe<ArgType>('object');
     expect(typeOf(Object.create(null))).toBe<ArgType>('object');
+
     class Test {}
+
     expect(typeOf(new Test())).toBe<ArgType>('object');
   });
 
@@ -78,7 +82,6 @@ describe('typeOf', () => {
 
   it('returns "RegExp" for RegExp objects', () => {
     expect(typeOf(/abc/)).toBe<ArgType>('regexp');
-    // biome-ignore lint/complexity/useRegexLiterals: -
     expect(typeOf(new RegExp('abc'))).toBe<ArgType>('regexp');
   });
 

@@ -7,7 +7,7 @@
 
 The `isDefined` utility is a type guard that checks if a value is NOT `undefined` or `null`. It is essential for safely handling optional values and cleaning up data sets.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isDefined.ts
@@ -68,4 +68,4 @@ const cleanData = filter(data, isDefined);
 
 - [isNil](./isNil.md): The inverse check (returns true for null/undefined).
 - [isEmpty](./isEmpty.md): Check if a value is empty (includes length checks).
-- [compact](../array/compact.md): Remove all falsy values from an array.
+- [select](../array/select.md): Filter array elements, keeping only defined values.

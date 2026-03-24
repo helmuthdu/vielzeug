@@ -1,110 +1,278 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: - */
 import { beforeEach, describe, expect, it } from 'vitest';
+
 import {
+  AliasCycleError,
   AsyncProviderError,
   CircularDependencyError,
-  Container,
+  type Container,
+  ContainerDisposedError,
   createContainer,
   createTestContainer,
   createToken,
   ProviderNotFoundError,
-  withMock,
+  type Token,
+  type TokenValues,
 } from './wireit';
 
-describe('createToken', () => {
-  it('should create a unique symbol token', () => {
-    const token1 = createToken<string>('test');
-    const token2 = createToken<string>('test');
+// ─── createToken ──────────────────────────────────────────────────────────────
 
-    expect(typeof token1).toBe('symbol');
-    expect(token1).not.toBe(token2);
+describe('createToken', () => {
+  it('returns a unique symbol for each call, even with the same description', () => {
+    const a = createToken<string>('Service');
+    const b = createToken<string>('Service');
+
+    expect(a).not.toBe(b);
+    expect(a.description).toBe('Service');
   });
 
-  it('should create token with description', () => {
+  it('description appears in error messages and debug output', () => {
     const token = createToken<string>('MyService');
 
     expect(token.description).toBe('MyService');
-  });
-
-  it('should create token without description', () => {
-    const token = createToken<string>();
-
-    expect(typeof token).toBe('symbol');
+    expect(() => createContainer().get(token)).toThrow(/MyService/);
   });
 });
 
-describe('Container - Basic Registration', () => {
+// ─── Registration ─────────────────────────────────────────────────────────────
+
+describe('Container - Registration', () => {
   let container: Container;
 
   beforeEach(() => {
     container = createContainer();
   });
 
-  it('should register and resolve value provider', () => {
-    const token = createToken<string>('config');
-    container.registerValue(token, 'test-value');
+  it('resolves useValue, useClass, and useFactory providers', () => {
+    class Svc {
+      tag = 'class';
+    }
 
-    const value = container.get(token);
+    const V = createToken<string>('V');
+    const C = createToken<Svc>('C');
+    const F = createToken<number>('F');
 
-    expect(value).toBe('test-value');
+    container
+      .value(V, 'val')
+      .register(C, { useClass: Svc })
+      .register(F, { useFactory: () => 42 });
+
+    expect(container.get(V)).toBe('val');
+    expect(container.get(C)).toBeInstanceOf(Svc);
+    expect(container.get(F)).toBe(42);
   });
 
-  it('should register value with custom lifetime', () => {
-    const token = createToken<string>('config');
-    container.registerValue(token, 'test-value', 'transient');
+  it('factory() is a shorthand for register with useFactory', () => {
+    let n = 0;
+    const token = createToken<number>('Counter');
 
-    expect(container.has(token)).toBe(true);
+    container.factory(token, () => ++n, { lifetime: 'transient' });
+
+    expect(container.get(token)).toBe(1);
+    expect(container.get(token)).toBe(2);
   });
 
-  it('should register class provider', () => {
-    class TestService {
-      getValue() {
-        return 'test';
+  it('factory() injects deps and forwards options', () => {
+    const UrlT = createToken<string>('Url');
+    const SvcT = createToken<string>('Svc');
+
+    container.value(UrlT, 'https://api.local');
+    container.factory(SvcT, (url: string) => `Svc(${url})`, { deps: [UrlT] });
+
+    expect(container.get(SvcT)).toBe('Svc(https://api.local)');
+  });
+
+  it('bind() is a shorthand for register with useClass', () => {
+    class Logger {
+      log = (msg: string) => msg;
+    }
+
+    const token = createToken<Logger>('Logger');
+
+    container.bind(token, Logger);
+
+    expect(container.get(token)).toBeInstanceOf(Logger);
+  });
+
+  it('bind() injects deps into the class constructor', () => {
+    class Db {
+      url = 'db://local';
+    }
+
+    class Repo {
+      db: Db;
+      constructor(db: Db) {
+        this.db = db;
       }
     }
 
-    const token = createToken<TestService>('TestService');
-    container.register(token, { useClass: TestService });
+    const DbT = createToken<Db>('Db');
+    const RepoT = createToken<Repo>('Repo');
 
-    const service = container.get(token);
+    container.bind(DbT, Db).bind(RepoT, Repo, { deps: [DbT] });
 
-    expect(service).toBeInstanceOf(TestService);
-    expect(service.getValue()).toBe('test');
+    expect(container.get(RepoT).db).toBeInstanceOf(Db);
   });
 
-  it('should register factory provider', () => {
-    const token = createToken<string>('factory');
-    container.registerFactory(token, () => 'factory-result');
+  it('factory() and bind() support { overwrite: true }', () => {
+    const token = createToken<string>('T');
 
-    const value = container.get(token);
+    container.value(token, 'original');
+    container.factory(token, () => 'replaced', { overwrite: true });
 
-    expect(value).toBe('factory-result');
+    expect(container.get(token)).toBe('replaced');
   });
 
-  it('should support method chaining', () => {
-    const token1 = createToken<string>('token1');
-    const token2 = createToken<string>('token2');
+  it('throws when re-registering without { overwrite: true }; original is preserved', () => {
+    const token = createToken<string>('S');
 
-    const result = container.registerValue(token1, 'value1').registerValue(token2, 'value2');
+    container.value(token, 'original');
+
+    expect(() => container.value(token, 'replacement')).toThrow(/already registered/);
+    expect(container.get(token)).toBe('original');
+  });
+
+  it('replaces provider when { overwrite: true } is passed', () => {
+    const token = createToken<string>('S');
+
+    container.value(token, 'first');
+    container.value(token, 'second', { overwrite: true });
+
+    expect(container.get(token)).toBe('second');
+  });
+
+  it('unregister removes a token; subsequent get() throws ProviderNotFoundError', () => {
+    const token = createToken<string>('S');
+
+    container.value(token, 'val');
+    container.unregister(token);
+
+    expect(container.has(token)).toBe(false);
+    expect(() => container.get(token)).toThrow(ProviderNotFoundError);
+  });
+
+  it('clear() removes all registrations and aliases', () => {
+    const Src = createToken<string>('Src');
+    const Alias = createToken<string>('Alias');
+
+    container.value(Src, 'val').alias(Alias, Src);
+
+    container.clear();
+
+    expect(container.has(Src)).toBe(false);
+    expect(() => container.get(Alias)).toThrow(ProviderNotFoundError);
+  });
+
+  it('registration methods are chainable and return this', () => {
+    const A = createToken<string>('A');
+    const B = createToken<string>('B');
+
+    const result = container.value(A, 'a').value(B, 'b').unregister(A);
 
     expect(result).toBe(container);
-    expect(container.get(token1)).toBe('value1');
-    expect(container.get(token2)).toBe('value2');
+    expect(container.has(A)).toBe(false);
+    expect(container.get(B)).toBe('b');
   });
 
-  it('should register multiple providers at once', () => {
-    const token1 = createToken<string>('token1');
-    const token2 = createToken<number>('token2');
+  it('stores and retrieves falsy values (null, undefined, 0, false) correctly', () => {
+    const N = createToken<null>('N');
+    const U = createToken<undefined>('U');
+    const Z = createToken<number>('Z');
+    const F = createToken<boolean>('F');
 
-    container.registerMany([
-      [token1, { useValue: 'value1' }],
-      [token2, { useValue: 42 }],
-    ]);
+    container.value(N, null);
+    container.value(U, undefined);
+    container.value(Z, 0);
+    container.value(F, false);
 
-    expect(container.get(token1)).toBe('value1');
-    expect(container.get(token2)).toBe(42);
+    expect(container.get(N)).toBeNull();
+    expect(container.get(U)).toBeUndefined();
+    expect(container.get(Z)).toBe(0);
+    expect(container.get(F)).toBe(false);
   });
 });
+
+// ─── Lookup ───────────────────────────────────────────────────────────────────
+
+describe('Container - Lookup', () => {
+  let container: Container;
+
+  beforeEach(() => {
+    container = createContainer();
+  });
+
+  it('has() returns false before registration, true after', () => {
+    const token = createToken<string>('S');
+
+    expect(container.has(token)).toBe(false);
+    container.value(token, 'val');
+    expect(container.has(token)).toBe(true);
+  });
+
+  it('has() walks the parent chain', () => {
+    const token = createToken<string>('S');
+
+    container.value(token, 'val');
+
+    expect(container.createChild().has(token)).toBe(true);
+  });
+
+  it('has() resolves aliases', () => {
+    const Src = createToken<string>('Src');
+    const Alias = createToken<string>('Alias');
+
+    container.value(Src, 'val').alias(Alias, Src);
+
+    expect(container.has(Alias)).toBe(true);
+  });
+
+  it('get() throws ProviderNotFoundError with token name in message', () => {
+    const token = createToken('MyService');
+
+    expect(() => container.get(token)).toThrow(ProviderNotFoundError);
+    expect(() => container.get(token)).toThrow(/MyService/);
+  });
+
+  it('get() throws AsyncProviderError for async factories; message hints at getAsync()', () => {
+    const token = createToken<string>('Async');
+
+    container.register(token, { useFactory: async () => 'val' });
+
+    expect(() => container.get(token)).toThrow(AsyncProviderError);
+    expect(() => container.get(token)).toThrow(/getAsync/);
+  });
+
+  it('getOptional() returns undefined for a missing token', () => {
+    expect(container.getOptional(createToken<string>('X'))).toBeUndefined();
+  });
+
+  it('getOptional() returns the registered value, including falsy values like 0', () => {
+    const token = createToken<number>('Zero');
+
+    container.value(token, 0);
+
+    expect(container.getOptional(token)).toBe(0);
+  });
+
+  it('getOptional() rethrows non-ProviderNotFoundError errors', () => {
+    const token = createToken<string>('Async');
+
+    container.register(token, { useFactory: async () => 'val' });
+
+    expect(() => container.getOptional(token)).toThrow(AsyncProviderError);
+  });
+
+  it('getOptionalAsync() returns undefined for a missing token; resolves value when present', async () => {
+    const Missing = createToken<string>('X');
+    const Present = createToken<string>('Y');
+
+    container.register(Present, { useFactory: async () => 'found' });
+
+    await expect(container.getOptionalAsync(Missing)).resolves.toBeUndefined();
+    await expect(container.getOptionalAsync(Present)).resolves.toBe('found');
+  });
+});
+
+// ─── Lifetimes ────────────────────────────────────────────────────────────────
 
 describe('Container - Lifetimes', () => {
   let container: Container;
@@ -113,107 +281,55 @@ describe('Container - Lifetimes', () => {
     container = createContainer();
   });
 
-  it('should create singleton instances only once', () => {
-    let instanceCount = 0;
+  it('singleton (default): instance created once and cached', () => {
+    let n = 0;
+    const token = createToken<object>('S');
 
-    class TestService {
-      constructor() {
-        instanceCount++;
-      }
-    }
+    container.register(token, { useFactory: () => ({ id: ++n }) });
 
-    const token = createToken<TestService>('TestService');
-    container.register(token, { lifetime: 'singleton', useClass: TestService });
-
-    const instance1 = container.get(token);
-    const instance2 = container.get(token);
-
-    expect(instanceCount).toBe(1);
-    expect(instance1).toBe(instance2);
+    expect(container.get(token)).toBe(container.get(token));
+    expect(n).toBe(1);
   });
 
-  it('should create transient instances each time', () => {
-    let instanceCount = 0;
+  it('transient: new instance returned on every get()', () => {
+    let n = 0;
+    const token = createToken<object>('T');
 
-    class TestService {
-      constructor() {
-        instanceCount++;
-      }
-    }
+    container.register(token, { lifetime: 'transient', useFactory: () => ({ id: ++n }) });
 
-    const token = createToken<TestService>('TestService');
-    container.register(token, { lifetime: 'transient', useClass: TestService });
-
-    const instance1 = container.get(token);
-    const instance2 = container.get(token);
-
-    expect(instanceCount).toBe(2);
-    expect(instance1).not.toBe(instance2);
+    expect(container.get(token)).not.toBe(container.get(token));
+    expect(n).toBe(2);
   });
 
-  it('should default to singleton for class providers', () => {
-    let instanceCount = 0;
+  it('scoped in root: acts as singleton', () => {
+    let n = 0;
+    const token = createToken<object>('S');
 
-    class TestService {
-      constructor() {
-        instanceCount++;
-      }
-    }
-
-    const token = createToken<TestService>('TestService');
-    container.register(token, { useClass: TestService });
+    container.register(token, { lifetime: 'scoped', useFactory: () => ({ id: ++n }) });
 
     container.get(token);
     container.get(token);
 
-    expect(instanceCount).toBe(1);
+    expect(n).toBe(1);
   });
 
-  it('should default to transient for factory providers', () => {
-    let callCount = 0;
+  it('scoped in children: one instance per child, shared within the same child', () => {
+    let n = 0;
+    const token = createToken<object>('S');
 
-    const token = createToken<number>('factory');
-    container.registerFactory(token, () => ++callCount);
+    container.register(token, { lifetime: 'scoped', useFactory: () => ({ id: ++n }) });
 
-    const value1 = container.get(token);
-    const value2 = container.get(token);
+    const c1 = container.createChild();
+    const c2 = container.createChild();
+    const inst1 = c1.get(token);
 
-    expect(value1).toBe(1);
-    expect(value2).toBe(2);
-  });
-
-  it('should support singleton factory', () => {
-    let callCount = 0;
-
-    const token = createToken<number>('factory');
-    container.registerFactory(token, () => ++callCount, [], { lifetime: 'singleton' });
-
-    const value1 = container.get(token);
-    const value2 = container.get(token);
-
-    expect(value1).toBe(1);
-    expect(value2).toBe(1);
-  });
-
-  it('should handle scoped lifetime in root container', () => {
-    let instanceCount = 0;
-
-    class ScopedService {
-      constructor() {
-        instanceCount++;
-      }
-    }
-
-    const token = createToken<ScopedService>('ScopedService');
-    container.register(token, { lifetime: 'scoped', useClass: ScopedService });
-
-    const instance1 = container.get(token);
-    const instance2 = container.get(token);
-
-    expect(instanceCount).toBe(1);
-    expect(instance1).toBe(instance2);
+    expect(c1.get(token)).toBe(inst1);
+    expect(c2.get(token)).not.toBe(inst1);
+    expect(n).toBe(2);
   });
 });
+
+// ─── Dependencies ─────────────────────────────────────────────────────────────
 
 describe('Container - Dependencies', () => {
   let container: Container;
@@ -222,106 +338,88 @@ describe('Container - Dependencies', () => {
     container = createContainer();
   });
 
-  it('should resolve class with dependencies', () => {
-    const ConfigToken = createToken<{ apiUrl: string }>('Config');
-    const ServiceToken = createToken<any>('Service');
-
-    class Service {
-      config: { apiUrl: string };
-      constructor(config: { apiUrl: string }) {
-        this.config = config;
-      }
+  it('injects deps into useClass constructor', () => {
+    class Db {
+      url = 'db://local';
     }
 
-    container.registerValue(ConfigToken, { apiUrl: 'https://api.example.com' });
-    container.register(ServiceToken, { deps: [ConfigToken], useClass: Service });
-
-    const service = container.get(ServiceToken);
-
-    expect(service.config.apiUrl).toBe('https://api.example.com');
-  });
-
-  it('should resolve factory with dependencies', () => {
-    const ConfigToken = createToken<{ apiUrl: string }>('Config');
-    const ServiceToken = createToken<string>('Service');
-
-    container.registerValue(ConfigToken, { apiUrl: 'https://api.example.com' });
-    container.registerFactory(ServiceToken, (config: { apiUrl: string }) => `Service: ${config.apiUrl}`, [ConfigToken]);
-
-    const service = container.get(ServiceToken);
-
-    expect(service).toBe('Service: https://api.example.com');
-  });
-
-  it('should resolve nested dependencies', () => {
-    const DatabaseToken = createToken<any>('Database');
-    const RepositoryToken = createToken<any>('Repository');
-    const ServiceToken = createToken<any>('Service');
-
-    class Database {
-      name = 'db';
-    }
-    class Repository {
-      db: Database;
-      constructor(db: Database) {
+    class Repo {
+      db: Db;
+      constructor(db: Db) {
         this.db = db;
       }
     }
-    class Service {
-      repo: Repository;
-      constructor(repo: Repository) {
-        this.repo = repo;
-      }
-    }
 
-    container.register(DatabaseToken, { useClass: Database });
-    container.register(RepositoryToken, { deps: [DatabaseToken], useClass: Repository });
-    container.register(ServiceToken, { deps: [RepositoryToken], useClass: Service });
+    const DbT = createToken<Db>('Db');
+    const RepoT = createToken<Repo>('Repo');
 
-    const service = container.get(ServiceToken);
+    container.register(DbT, { useClass: Db });
+    container.register(RepoT, { deps: [DbT], useClass: Repo });
 
-    expect(service.repo.db.name).toBe('db');
+    expect(container.get(RepoT).db).toBeInstanceOf(Db);
   });
 
-  it('should detect circular dependencies', () => {
-    const Token1 = createToken('Service1');
-    const Token2 = createToken('Service2');
+  it('injects deps into useFactory', () => {
+    const UrlT = createToken<string>('Url');
+    const SvcT = createToken<string>('Svc');
 
-    class Service1 {
-      s2: any;
-      constructor(s2: any) {
-        this.s2 = s2;
-      }
-    }
-    class Service2 {
-      s1: any;
-      constructor(s1: any) {
-        this.s1 = s1;
-      }
-    }
+    container.value(UrlT, 'https://api.local');
+    container.register(SvcT, { deps: [UrlT], useFactory: (url: string) => `Svc(${url})` });
 
-    container.register(Token1, { deps: [Token2], useClass: Service1 });
-    container.register(Token2, { deps: [Token1], useClass: Service2 });
-
-    expect(() => container.get(Token1)).toThrow(CircularDependencyError);
-    expect(() => container.get(Token1)).toThrow(/Circular dependency detected.*Service1.*Service2/);
+    expect(container.get(SvcT)).toBe('Svc(https://api.local)');
   });
 
-  it('should detect self-referencing circular dependency', () => {
-    const Token = createToken('Service');
+  it('resolves a multi-level dependency chain', () => {
+    class A {
+      val = 'a';
+    }
 
-    class Service {
-      self: any;
-      constructor(self: any) {
-        this.self = self;
+    class B {
+      a: A;
+      constructor(a: A) {
+        this.a = a;
       }
     }
 
-    container.register(Token, { deps: [Token], useClass: Service });
+    class C {
+      b: B;
+      constructor(b: B) {
+        this.b = b;
+      }
+    }
 
-    expect(() => container.get(Token)).toThrow(CircularDependencyError);
+    const TA = createToken<A>('A');
+    const TB = createToken<B>('B');
+    const TC = createToken<C>('C');
+
+    container.register(TA, { useClass: A });
+    container.register(TB, { deps: [TA], useClass: B });
+    container.register(TC, { deps: [TB], useClass: C });
+
+    expect(container.get(TC).b.a.val).toBe('a');
+  });
+
+  it('throws CircularDependencyError for mutual circular deps; path included in message', () => {
+    const A = createToken('A');
+    const B = createToken('B');
+
+    container.register(A, { deps: [B], useFactory: (b: any) => b });
+    container.register(B, { deps: [A], useFactory: (a: any) => a });
+
+    expect(() => container.get(A)).toThrow(CircularDependencyError);
+    expect(() => container.get(A)).toThrow(/A.*B/);
+  });
+
+  it('throws CircularDependencyError for a self-referencing token', () => {
+    const Self = createToken('Self');
+
+    container.register(Self, { deps: [Self], useFactory: (s: any) => s });
+
+    expect(() => container.get(Self)).toThrow(CircularDependencyError);
   });
 });
+
+// ─── Aliasing ─────────────────────────────────────────────────────────────────
 
 describe('Container - Aliasing', () => {
   let container: Container;
@@ -330,74 +428,86 @@ describe('Container - Aliasing', () => {
     container = createContainer();
   });
 
-  it('should resolve alias to source token', () => {
-    const SourceToken = createToken<string>('Source');
-    const AliasToken = createToken<string>('Alias');
+  it('resolves an alias to its source token', () => {
+    const Src = createToken<string>('Src');
+    const Alias = createToken<string>('Alias');
 
-    container.registerValue(SourceToken, 'value');
-    container.alias(SourceToken, AliasToken);
+    container.value(Src, 'val').alias(Alias, Src);
 
-    expect(container.get(AliasToken)).toBe('value');
+    expect(container.get(Alias)).toBe('val');
   });
 
-  it('should support chained aliases', () => {
-    const Token1 = createToken<string>('Token1');
-    const Token2 = createToken<string>('Token2');
-    const Token3 = createToken<string>('Token3');
+  it('resolves chained aliases', () => {
+    const A = createToken<string>('A');
+    const B = createToken<string>('B');
+    const C = createToken<string>('C');
 
-    container.registerValue(Token1, 'value');
-    container.alias(Token1, Token2);
-    container.alias(Token2, Token3);
+    container.value(A, 'val').alias(B, A).alias(C, B);
 
-    expect(container.get(Token3)).toBe('value');
+    expect(container.get(C)).toBe('val');
   });
 
-  it('should detect alias cycles', () => {
-    const Token1 = createToken('Token1');
-    const Token2 = createToken('Token2');
+  it('resolves an alias whose source is registered in a parent container', () => {
+    const Src = createToken<string>('Src');
+    const Alias = createToken<string>('Alias');
 
-    container.alias(Token1, Token2);
-    container.alias(Token2, Token1);
+    container.value(Src, 'val');
 
-    expect(() => container.get(Token1)).toThrow(/Alias cycle detected/);
+    const child = container.createChild();
+
+    child.alias(Alias, Src);
+
+    expect(child.get(Alias)).toBe('val');
+  });
+
+  it('throws ProviderNotFoundError when alias source is not registered', () => {
+    const Src = createToken<string>('Src');
+    const Alias = createToken<string>('Alias');
+
+    container.alias(Alias, Src);
+
+    expect(() => container.get(Alias)).toThrow(ProviderNotFoundError);
+  });
+
+  it('throws AliasCycleError for cyclic aliases; message includes the full cycle path', () => {
+    const A = createToken('A');
+    const B = createToken('B');
+
+    container.alias(A, B).alias(B, A);
+
+    expect(() => container.get(A)).toThrow(AliasCycleError);
+    expect(() => container.get(A)).toThrow(/A → B → A/);
+  });
+
+  it('aliases defined in a parent are visible to child containers', () => {
+    const Src = createToken<string>('Src');
+    const Alias = createToken<string>('Alias');
+
+    container.value(Src, 'val').alias(Alias, Src);
+
+    const child = container.createChild();
+
+    expect(child.get(Alias)).toBe('val');
+    expect(child.has(Alias)).toBe(true);
+  });
+
+  it('child alias overrides parent alias for the same token', () => {
+    const Src1 = createToken<string>('Src1');
+    const Src2 = createToken<string>('Src2');
+    const Alias = createToken<string>('Alias');
+
+    container.value(Src1, 'parent').value(Src2, 'child').alias(Alias, Src1);
+
+    const child = container.createChild();
+
+    child.alias(Alias, Src2);
+
+    expect(container.get(Alias)).toBe('parent');
+    expect(child.get(Alias)).toBe('child');
   });
 });
 
-describe('Container - Error Handling', () => {
-  let container: Container;
-
-  beforeEach(() => {
-    container = createContainer();
-  });
-
-  it('should throw ProviderNotFoundError for unregistered token', () => {
-    const token = createToken('Unknown');
-
-    expect(() => container.get(token)).toThrow(ProviderNotFoundError);
-    expect(() => container.get(token)).toThrow(/No provider registered for token/);
-  });
-
-  it('should throw AsyncProviderError for async factory in sync get', () => {
-    const token = createToken<string>('AsyncService');
-
-    container.registerFactory(token, async () => 'value', [], { async: true });
-
-    expect(() => container.get(token)).toThrow(AsyncProviderError);
-    expect(() => container.get(token)).toThrow(/is async.*Use getAsync/);
-  });
-
-  it('should include token description in errors', () => {
-    const token = createToken('MyService');
-
-    expect(() => container.get(token)).toThrow(/MyService/);
-  });
-
-  it('should handle anonymous tokens in errors', () => {
-    const token = createToken();
-
-    expect(() => container.get(token)).toThrow(/anonymous/);
-  });
-});
+// ─── Async Resolution ─────────────────────────────────────────────────────────
 
 describe('Container - Async Resolution', () => {
   let container: Container;
@@ -406,230 +516,163 @@ describe('Container - Async Resolution', () => {
     container = createContainer();
   });
 
-  it('should resolve async factory', async () => {
-    const token = createToken<string>('AsyncService');
+  it('getAsync() resolves both async and sync providers', async () => {
+    const Async = createToken<string>('Async');
+    const Sync = createToken<string>('Sync');
 
-    container.registerFactory(token, async () => 'async-value', [], { async: true });
+    container.register(Async, { useFactory: async () => 'async' });
+    container.value(Sync, 'sync');
 
-    const value = await container.getAsync(token);
-
-    expect(value).toBe('async-value');
+    await expect(container.getAsync(Async)).resolves.toBe('async');
+    await expect(container.getAsync(Sync)).resolves.toBe('sync');
   });
 
-  it('should cache async singleton factory', async () => {
-    let callCount = 0;
+  it('singleton: async factory called once even under concurrent load', async () => {
+    let n = 0;
+    const token = createToken<number>('S');
 
-    const token = createToken<number>('AsyncFactory');
-    container.registerFactory(
-      token,
-      async () => {
-        callCount++;
-        return 42;
+    container.register(token, {
+      useFactory: async () => {
+        await new Promise((r) => setTimeout(r, 10));
+
+        return ++n;
       },
-      [],
-      { async: true, lifetime: 'singleton' },
-    );
+    });
 
-    const value1 = await container.getAsync(token);
-    const value2 = await container.getAsync(token);
-
-    expect(callCount).toBe(1);
-    expect(value1).toBe(42);
-    expect(value2).toBe(42);
-  });
-
-  it('should handle concurrent async singleton requests', async () => {
-    let callCount = 0;
-
-    const token = createToken<number>('AsyncFactory');
-    container.registerFactory(
-      token,
-      async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        callCount++;
-        return 42;
-      },
-      [],
-      { async: true, lifetime: 'singleton' },
-    );
-
-    const [value1, value2, value3] = await Promise.all([
+    const [a, b, c] = await Promise.all([
       container.getAsync(token),
       container.getAsync(token),
       container.getAsync(token),
     ]);
 
-    expect(callCount).toBe(1);
-    expect(value1).toBe(42);
-    expect(value2).toBe(42);
-    expect(value3).toBe(42);
+    expect(n).toBe(1);
+    expect(a).toBe(b);
+    expect(b).toBe(c);
   });
 
-  it('should resolve async dependencies', async () => {
-    const ConfigToken = createToken<{ value: string }>('Config');
-    const ServiceToken = createToken<string>('Service');
+  it('transient: getAsync() creates a new instance on every call', async () => {
+    let n = 0;
+    const token = createToken<number>('T');
 
-    container.registerFactory(ConfigToken, async () => ({ value: 'config' }), [], { async: true });
-    container.registerFactory(ServiceToken, async (config: { value: string }) => config.value, [ConfigToken], {
-      async: true,
-    });
+    container.register(token, { lifetime: 'transient', useFactory: async () => ++n });
 
-    const value = await container.getAsync(ServiceToken);
+    const a = await container.getAsync(token);
+    const b = await container.getAsync(token);
 
-    expect(value).toBe('config');
+    expect(a).not.toBe(b);
+    expect(n).toBe(2);
   });
 
-  it('should resolve class with async dependencies', async () => {
-    const ConfigToken = createToken<{ value: string }>('Config');
-    const ServiceToken = createToken<any>('Service');
-
-    class Service {
-      config: { value: string };
-      constructor(config: { value: string }) {
-        this.config = config;
+  it('injects async deps into both factory and class constructor', async () => {
+    class Svc {
+      val: string;
+      constructor(val: string) {
+        this.val = val;
       }
     }
 
-    container.registerFactory(ConfigToken, async () => ({ value: 'config' }), [], { async: true });
-    container.register(ServiceToken, { deps: [ConfigToken], useClass: Service });
+    const Cfg = createToken<string>('Cfg');
+    const FactoryT = createToken<string>('FactorySvc');
+    const ClassT = createToken<Svc>('ClassSvc');
 
-    const service = await container.getAsync(ServiceToken);
+    container.register(Cfg, { useFactory: async () => 'cfg' });
+    container.register(FactoryT, { deps: [Cfg], useFactory: async (c: string) => `svc:${c}` });
+    container.register(ClassT, { deps: [Cfg], useClass: Svc });
 
-    expect(service.config.value).toBe('config');
+    await expect(container.getAsync(FactoryT)).resolves.toBe('svc:cfg');
+    expect((await container.getAsync(ClassT)).val).toBe('cfg');
   });
 
-  it('should detect circular dependencies in async resolution', async () => {
-    const Token1 = createToken('Service1');
-    const Token2 = createToken('Service2');
+  it('throws CircularDependencyError in async resolution', async () => {
+    const A = createToken('A');
+    const B = createToken('B');
 
-    container.registerFactory(Token1, async (s2: any) => s2, [Token2], { async: true });
-    container.registerFactory(Token2, async (s1: any) => s1, [Token1], { async: true });
+    container.register(A, { deps: [B], useFactory: async (b: any) => b });
+    container.register(B, { deps: [A], useFactory: async (a: any) => a });
 
-    await expect(container.getAsync(Token1)).rejects.toThrow(CircularDependencyError);
-  });
-});
-
-describe('Container - Optional Resolution', () => {
-  let container: Container;
-
-  beforeEach(() => {
-    container = createContainer();
+    await expect(container.getAsync(A)).rejects.toThrow(CircularDependencyError);
   });
 
-  it('should return undefined for missing token in getOptional', () => {
-    const token = createToken<string>('Missing');
+  it("parallel deps do not corrupt each other's cycle detection state", async () => {
+    // Diamond: Root → [Left, Right], both → Shared. This is NOT a cycle; Shared is a singleton.
+    const Shared = createToken<number>('Shared');
+    const Left = createToken<number>('Left');
+    const Right = createToken<number>('Right');
+    const Root = createToken<number>('Root');
 
-    const value = container.getOptional(token);
+    let sharedBuilt = 0;
 
-    expect(value).toBeUndefined();
-  });
+    container.factory(Shared, async () => {
+      sharedBuilt++;
 
-  it('should return value for existing token in getOptional', () => {
-    const token = createToken<string>('Existing');
-    container.registerValue(token, 'value');
+      return 1;
+    });
+    container.factory(Left, async (s: number) => s + 10, { deps: [Shared] });
+    container.factory(Right, async (s: number) => s + 20, { deps: [Shared] });
+    container.factory(Root, async (l: number, r: number) => l + r, { deps: [Left, Right] });
 
-    const value = container.getOptional(token);
+    const result = await container.getAsync(Root);
 
-    expect(value).toBe('value');
-  });
-
-  it('should throw non-ProviderNotFoundError in getOptional', () => {
-    const token = createToken<string>('AsyncService');
-    container.registerFactory(token, async () => 'value', [], { async: true });
-
-    expect(() => container.getOptional(token)).toThrow(AsyncProviderError);
-  });
-
-  it('should return undefined for missing token in getOptionalAsync', async () => {
-    const token = createToken<string>('Missing');
-
-    const value = await container.getOptionalAsync(token);
-
-    expect(value).toBeUndefined();
-  });
-
-  it('should return value for existing token in getOptionalAsync', async () => {
-    const token = createToken<string>('Existing');
-    container.registerValue(token, 'value');
-
-    const value = await container.getOptionalAsync(token);
-
-    expect(value).toBe('value');
-  });
-
-  it('should support allowOptional option', () => {
-    const containerWithOptional = createContainer({ allowOptional: true });
-    const token = createToken<string>('Missing');
-
-    const value = containerWithOptional.get(token);
-
-    expect(value).toBeUndefined();
+    // Shared is a singleton — built exactly once
+    expect(sharedBuilt).toBe(1);
+    // 1+10 + 1+20 = 32
+    expect(result).toBe(32);
   });
 });
 
-describe('Container - Parent/Child Containers', () => {
+// ─── Hierarchy ────────────────────────────────────────────────────────────────
+
+describe('Container - Hierarchy', () => {
   let parent: Container;
-  let child: Container;
 
   beforeEach(() => {
     parent = createContainer();
   });
 
-  it('should create child container', () => {
-    child = parent.createChild();
+  it('child inherits registrations from parent', () => {
+    const token = createToken<string>('S');
 
-    expect(child).toBeInstanceOf(Container);
+    parent.value(token, 'parent-val');
+
+    expect(parent.createChild().get(token)).toBe('parent-val');
   });
 
-  it('should resolve parent providers from child', () => {
-    const token = createToken<string>('Parent');
-    parent.registerValue(token, 'parent-value');
+  it('child override is isolated — parent retains its own registration', () => {
+    const token = createToken<string>('S');
 
-    child = parent.createChild();
+    parent.value(token, 'parent-val');
 
-    expect(child.get(token)).toBe('parent-value');
+    const child = parent.createChild();
+
+    child.value(token, 'child-val');
+
+    expect(parent.get(token)).toBe('parent-val');
+    expect(child.get(token)).toBe('child-val');
   });
 
-  it('should override parent providers in child', () => {
-    const token = createToken<string>('Service');
-    parent.registerValue(token, 'parent-value');
+  it('clearing a child does not affect parent; cleared child still inherits parent', () => {
+    const token = createToken<string>('S');
 
-    child = parent.createChild([[token, { useValue: 'child-value' }]]);
+    parent.value(token, 'parent-val');
 
-    expect(parent.get(token)).toBe('parent-value');
-    expect(child.get(token)).toBe('child-value');
-  });
+    const child = parent.createChild();
 
-  it('should not affect parent when child is modified', () => {
-    const token = createToken<string>('Service');
-    parent.registerValue(token, 'parent-value');
-
-    child = parent.createChild();
-    child.registerValue(token, 'child-value');
-
-    expect(parent.get(token)).toBe('parent-value');
-    expect(child.get(token)).toBe('child-value');
-  });
-
-  it('should clear child without affecting parent', () => {
-    const token = createToken<string>('Service');
-    parent.registerValue(token, 'parent-value');
-
-    child = parent.createChild();
     child.clear();
 
-    expect(parent.get(token)).toBe('parent-value');
-    expect(child.get(token)).toBe('parent-value');
+    expect(parent.get(token)).toBe('parent-val');
+    expect(child.get(token)).toBe('parent-val');
   });
 
-  it('should inherit allowOptional from parent', () => {
-    const parentWithOptional = createContainer({ allowOptional: true });
-    const childContainer = parentWithOptional.createChild();
-    const token = createToken<string>('Missing');
+  it('grandchild inherits through the full parent chain', () => {
+    const token = createToken<string>('S');
 
-    expect(childContainer.get(token)).toBeUndefined();
+    parent.value(token, 'root');
+
+    expect(parent.createChild().createChild().get(token)).toBe('root');
   });
 });
+
+// ─── Scoped Execution ─────────────────────────────────────────────────────────
 
 describe('Container - Scoped Execution', () => {
   let container: Container;
@@ -638,370 +681,537 @@ describe('Container - Scoped Execution', () => {
     container = createContainer();
   });
 
-  it('should run function in scope', async () => {
-    const token = createToken<string>('Scoped');
-
-    const result = await container.runInScope(
-      (scope) => {
-        scope.registerValue(token, 'scoped-value');
-        return scope.get(token);
-      },
-      [[token, { useValue: 'initial' }]],
-    );
-
-    expect(result).toBe('scoped-value');
-  });
-
-  it('should clean up scope after execution', async () => {
-    const token = createToken<string>('Scoped');
-
-    await container.runInScope((scope) => {
-      scope.registerValue(token, 'scoped-value');
-      return 'done';
-    });
-
-    expect(container.has(token)).toBe(false);
-  });
-
-  it('should handle async functions in scope', async () => {
-    const token = createToken<string>('Async');
+  it('scope is isolated from parent; disposed after fn completes', async () => {
+    const token = createToken<string>('S');
+    let scopeRef!: Container;
 
     const result = await container.runInScope(async (scope) => {
-      scope.registerValue(token, 'async-value');
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      scopeRef = scope;
+      scope.value(token, 'scoped');
+
       return scope.get(token);
     });
 
-    expect(result).toBe('async-value');
+    expect(result).toBe('scoped');
+    expect(scopeRef.disposed).toBe(true);
+    expect(container.has(token)).toBe(false);
   });
 
-  it('should clean up even if function throws', async () => {
-    const token = createToken<string>('Scoped');
+  it('scope is disposed even when fn throws', async () => {
+    const token = createToken<string>('S');
+    let scopeRef!: Container;
 
     await expect(
       container.runInScope((scope) => {
-        scope.registerValue(token, 'value');
-        throw new Error('Test error');
+        scopeRef = scope;
+        scope.value(token, 'val');
+        throw new Error('boom');
       }),
-    ).rejects.toThrow('Test error');
+    ).rejects.toThrow('boom');
 
-    expect(container.has(token)).toBe(false);
+    expect(scopeRef.disposed).toBe(true);
+  });
+
+  it('dispose hooks run when the scope is exited', async () => {
+    const log: string[] = [];
+    const token = createToken<object>('S');
+
+    container.register(token, {
+      dispose: async () => {
+        log.push('disposed');
+      },
+      lifetime: 'scoped',
+      useFactory: () => ({}),
+    });
+
+    await container.runInScope(async (scope) => {
+      scope.get(token);
+    });
+
+    expect(log).toEqual(['disposed']);
   });
 });
 
-describe('Container - Management', () => {
+// ─── Snapshot / Restore ───────────────────────────────────────────────────────
+
+describe('Container - Snapshot / Restore', () => {
   let container: Container;
 
   beforeEach(() => {
     container = createContainer();
   });
 
-  it('should check if token is registered', () => {
-    const token = createToken<string>('Service');
+  it('restore reverts registrations to the snapshot point', () => {
+    const token = createToken<string>('S');
 
-    expect(container.has(token)).toBe(false);
+    container.value(token, 'original');
 
-    container.registerValue(token, 'value');
+    const snap = container.snapshot();
 
-    expect(container.has(token)).toBe(true);
+    container.value(token, 'modified', { overwrite: true });
+    container.restore(snap);
+
+    expect(container.get(token)).toBe('original');
   });
 
-  it('should unregister token', () => {
-    const token = createToken<string>('Service');
-    container.registerValue(token, 'value');
+  it('tokens registered after snapshot are absent after restore', () => {
+    const snap = container.snapshot();
 
-    container.unregister(token);
+    container.value(createToken<string>('New'), 'val');
+    container.restore(snap);
 
-    expect(container.has(token)).toBe(false);
+    expect(container.debug().tokens).toHaveLength(0);
   });
 
-  it('should support unregister chaining', () => {
-    const token1 = createToken<string>('Token1');
-    const token2 = createToken<string>('Token2');
+  it('aliases registered after snapshot are absent after restore', () => {
+    const Src = createToken<string>('Src');
+    const Alias = createToken<string>('Alias');
 
-    container.registerValue(token1, 'value1').registerValue(token2, 'value2');
+    container.value(Src, 'val');
 
-    const result = container.unregister(token1).unregister(token2);
+    const snap = container.snapshot();
 
-    expect(result).toBe(container);
-    expect(container.has(token1)).toBe(false);
-    expect(container.has(token2)).toBe(false);
+    container.alias(Alias, Src);
+    container.restore(snap);
+
+    expect(() => container.get(Alias)).toThrow(ProviderNotFoundError);
+    expect(container.get(Src)).toBe('val');
   });
 
-  it('should clear all registrations', () => {
-    const token1 = createToken<string>('Token1');
-    const token2 = createToken<string>('Token2');
+  it('cached singleton instance is preserved across snapshot/restore', () => {
+    let n = 0;
+    const token = createToken<object>('S');
 
-    container.registerValue(token1, 'value1').registerValue(token2, 'value2');
+    container.register(token, { useFactory: () => ({ id: ++n }) });
 
-    container.clear();
+    const original = container.get(token); // n = 1
+    const snap = container.snapshot();
 
-    expect(container.has(token1)).toBe(false);
-    expect(container.has(token2)).toBe(false);
+    container.value(token, { id: 99 }, { overwrite: true });
+    container.restore(snap);
+
+    expect(container.get(token)).toBe(original);
+    expect(n).toBe(1);
   });
 
-  it('should clear aliases when clearing container', () => {
-    const SourceToken = createToken<string>('Source');
-    const AliasToken = createToken<string>('Alias');
+  it('restore is chainable', () => {
+    const snap = container.snapshot();
 
-    container.registerValue(SourceToken, 'value');
-    container.alias(SourceToken, AliasToken);
-
-    container.clear();
-
-    expect(() => container.get(AliasToken)).toThrow(ProviderNotFoundError);
-  });
-
-  it('should provide debug information', () => {
-    const token1 = createToken('Service1');
-    const token2 = createToken('Service2');
-    const aliasToken = createToken('ServiceAlias');
-
-    container.registerValue(token1, 'value1').registerValue(token2, 'value2').alias(token1, aliasToken);
-
-    const debug = container.debug();
-
-    expect(debug.tokens).toContain('Service1');
-    expect(debug.tokens).toContain('Service2');
-    expect(debug.aliases).toContainEqual(['ServiceAlias', 'Service1']);
-  });
-
-  it('should handle anonymous tokens in debug', () => {
-    const token = createToken();
-    container.registerValue(token, 'value');
-
-    const debug = container.debug();
-
-    expect(debug.tokens).toContain('anonymous');
+    expect(container.restore(snap)).toBe(container);
   });
 });
 
-describe('createTestContainer', () => {
-  it('should create test container with dispose', () => {
-    const { container, dispose } = createTestContainer();
+// ─── Dispose Lifecycle ────────────────────────────────────────────────────────
 
-    expect(container).toBeInstanceOf(Container);
-    expect(typeof dispose).toBe('function');
+describe('Container - Dispose Lifecycle', () => {
+  it('calls dispose hook on each resolved singleton; container is unusable after', async () => {
+    const log: string[] = [];
+    const A = createToken<object>('A');
+    const B = createToken<object>('B');
+    const container = createContainer();
+
+    container.register(A, {
+      dispose: () => {
+        log.push('A');
+      },
+      useFactory: () => ({}),
+    });
+    container.register(B, {
+      dispose: () => {
+        log.push('B');
+      },
+      useFactory: () => ({}),
+    });
+
+    container.get(A);
+    container.get(B);
+    await container.dispose();
+
+    expect(log).toContain('A');
+    expect(log).toContain('B');
+    expect(container.disposed).toBe(true);
+    expect(() => container.get(A)).toThrow(ContainerDisposedError);
   });
 
-  it('should dispose test container', () => {
-    const { container, dispose } = createTestContainer();
-    const token = createToken<string>('Test');
+  it('dispose() is idempotent — calling it multiple times is safe', async () => {
+    const log: string[] = [];
+    const token = createToken<object>('T');
+    const container = createContainer();
 
-    container.registerValue(token, 'test-value');
-    dispose();
+    container.register(token, {
+      dispose: () => {
+        log.push('disposed');
+      },
+      useFactory: () => ({}),
+    });
+    container.get(token);
 
+    await container.dispose();
+    await container.dispose();
+
+    expect(log).toHaveLength(1);
+  });
+
+  it('skips dispose hook if the instance was never resolved', async () => {
+    const log: string[] = [];
+    const token = createToken<object>('S');
+    const container = createContainer();
+
+    container.register(token, {
+      dispose: () => {
+        log.push('called');
+      },
+      useFactory: () => ({}),
+    });
+
+    await container.dispose();
+
+    expect(log).toHaveLength(0);
+  });
+
+  it('supports async dispose hooks', async () => {
+    const log: string[] = [];
+    const token = createToken<object>('S');
+    const container = createContainer();
+
+    container.register(token, {
+      dispose: async () => {
+        await new Promise((r) => setTimeout(r, 5));
+        log.push('async');
+      },
+      useFactory: () => ({}),
+    });
+
+    container.get(token);
+    await container.dispose();
+
+    expect(log).toEqual(['async']);
+  });
+
+  it('transient instances are not cached, so dispose hook is never called', async () => {
+    const log: string[] = [];
+    const token = createToken<object>('T');
+    const container = createContainer();
+
+    container.register(token, {
+      dispose: () => {
+        log.push('called');
+      },
+      lifetime: 'transient',
+      useFactory: () => ({}),
+    });
+
+    container.get(token);
+    container.get(token);
+    await container.dispose();
+
+    expect(log).toHaveLength(0);
+  });
+
+  it('clear() removes all registrations without invoking dispose hooks', async () => {
+    const log: string[] = [];
+    const token = createToken<object>('S');
+    const container = createContainer();
+
+    container.register(token, {
+      dispose: () => {
+        log.push('called');
+      },
+      useFactory: () => ({}),
+    });
+
+    container.get(token);
+    container.clear();
+
+    expect(log).toHaveLength(0);
     expect(container.has(token)).toBe(false);
   });
+});
 
-  it('should create test container from base', () => {
+// ─── Debug ────────────────────────────────────────────────────────────────────
+
+describe('Container - Debug', () => {
+  it('lists token descriptions, alias pairs, and falls back to "anonymous"', () => {
+    const container = createContainer();
+    const A = createToken('Alpha');
+    const B = createToken('Beta');
+    const Alias = createToken('MyAlias');
+    const Anon = Symbol() as Token;
+
+    container.value(A, 'a').value(B, 'b').value(Anon, 'x').alias(Alias, A);
+
+    const { aliases, tokens } = container.debug();
+
+    expect(tokens).toContain('Alpha');
+    expect(tokens).toContain('Beta');
+    expect(tokens).toContain('anonymous');
+    expect(aliases).toContainEqual(['MyAlias', 'Alpha']);
+  });
+
+  it('includes tokens and aliases inherited from parent containers, child overrides win', () => {
+    const parent = createContainer();
+    const ParentOnly = createToken<string>('ParentOnly');
+    const Shared = createToken<string>('Shared');
+    const Iface = createToken<string>('Iface');
+    const ImplA = createToken<string>('ImplA');
+    const ImplB = createToken<string>('ImplB');
+
+    parent.value(ParentOnly, 'p').value(Shared, 'parent-shared').value(ImplA, 'a').alias(Iface, ImplA);
+
+    const child = parent.createChild();
+
+    child.value(Shared, 'child-shared').value(ImplB, 'b').alias(Iface, ImplB);
+
+    const { aliases, tokens } = child.debug();
+
+    // Own + inherited tokens
+    expect(tokens).toContain('ParentOnly');
+    expect(tokens).toContain('Shared');
+    // Child alias for Iface wins over parent's
+    expect(aliases).toContainEqual(['Iface', 'ImplB']);
+    expect(aliases).not.toContainEqual(['Iface', 'ImplA']);
+  });
+});
+
+// ─── createTestContainer ──────────────────────────────────────────────────────
+
+describe('createTestContainer', () => {
+  it('returns an isolated child container; dispose() runs hooks and marks it disposed', async () => {
+    const log: string[] = [];
+    const { container, dispose } = createTestContainer();
+    const token = createToken<object>('T');
+
+    container.factory(token, () => ({}), {
+      dispose: () => {
+        log.push('disposed');
+      },
+    });
+    container.get(token);
+
+    await dispose();
+
+    expect(log).toEqual(['disposed']);
+    expect(container.disposed).toBe(true);
+  });
+
+  it('inherits registrations from the provided base container', () => {
     const base = createContainer();
     const token = createToken<string>('Base');
-    base.registerValue(token, 'base-value');
+
+    base.value(token, 'base-val');
 
     const { container } = createTestContainer(base);
 
-    expect(container.get(token)).toBe('base-value');
+    expect(container.get(token)).toBe('base-val');
+  });
+
+  it('child registrations are isolated from the base', async () => {
+    const base = createContainer();
+    const token = createToken<string>('T');
+
+    base.value(token, 'base-val');
+
+    const { container, dispose } = createTestContainer(base);
+
+    container.value(token, 'test-val');
+    await dispose();
+
+    expect(base.get(token)).toBe('base-val');
   });
 });
 
-describe('withMock', () => {
+// ─── Disposed Container ───────────────────────────────────────────────────────
+
+describe('Container - Disposed', () => {
+  it('get/getAsync/has throw ContainerDisposedError after dispose()', async () => {
+    const token = createToken<string>('T');
+    const container = createContainer();
+
+    container.value(token, 'val');
+    await container.dispose();
+
+    expect(() => container.get(token)).toThrow(ContainerDisposedError);
+    await expect(container.getAsync(token)).rejects.toThrow(ContainerDisposedError);
+    expect(() => container.has(token)).toThrow(ContainerDisposedError);
+  });
+
+  it('register/factory/bind/alias/unregister throw after dispose()', async () => {
+    const token = createToken<string>('T');
+    const container = createContainer();
+
+    await container.dispose();
+
+    expect(() => container.register(token, { useValue: 'x' })).toThrow(ContainerDisposedError);
+    expect(() => container.factory(token, () => 'x')).toThrow(ContainerDisposedError);
+    expect(() => container.bind(token, class {})).toThrow(ContainerDisposedError);
+    expect(() => container.alias(token, token)).toThrow(ContainerDisposedError);
+    expect(() => container.unregister(token)).toThrow(ContainerDisposedError);
+  });
+
+  it('createChild() throws after dispose()', async () => {
+    const container = createContainer();
+
+    await container.dispose();
+
+    expect(() => container.createChild()).toThrow(ContainerDisposedError);
+  });
+});
+
+// ─── getAll / getAllAsync ──────────────────────────────────────────────────────────
+
+describe('Container - getAll / getAllAsync', () => {
   let container: Container;
 
   beforeEach(() => {
     container = createContainer();
   });
 
-  it('should temporarily mock a dependency', async () => {
-    const token = createToken<string>('Service');
-    container.registerValue(token, 'original');
+  it('getAll() resolves multiple tokens as a typed tuple', () => {
+    const A = createToken<string>('A');
+    const B = createToken<number>('B');
+    const C = createToken<boolean>('C');
 
-    const result = await withMock(container, token, 'mocked', () => {
-      return container.get(token);
+    container.value(A, 'hello').value(B, 42).value(C, true);
+
+    const result = container.getAll([A, B, C]);
+
+    // Verify values
+    expect(result[0]).toBe('hello');
+    expect(result[1]).toBe(42);
+    expect(result[2]).toBe(true);
+
+    // Verify TypeScript infers the correct tuple type
+    const typed: TokenValues<[typeof A, typeof B, typeof C]> = result;
+
+    expect(typed).toBeDefined();
+  });
+
+  it('getAll() propagates errors from individual get() calls', () => {
+    const A = createToken<string>('A');
+    const Missing = createToken<string>('Missing');
+
+    container.value(A, 'val');
+
+    expect(() => container.getAll([A, Missing])).toThrow(ProviderNotFoundError);
+  });
+
+  it('getAllAsync() resolves multiple tokens as a typed tuple', async () => {
+    const A = createToken<string>('A');
+    const B = createToken<number>('B');
+
+    container.factory(A, async () => 'async-val');
+    container.value(B, 99);
+
+    const [a, b] = await container.getAllAsync([A, B]);
+
+    expect(a).toBe('async-val');
+    expect(b).toBe(99);
+  });
+
+  it('getAllAsync() resolves all tokens concurrently', async () => {
+    const order: number[] = [];
+    const A = createToken<number>('A');
+    const B = createToken<number>('B');
+
+    container.factory(A, async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      order.push(1);
+
+      return 1;
     });
+    container.factory(B, async () => {
+      order.push(2);
+
+      return 2;
+    });
+
+    const [a, b] = await container.getAllAsync([A, B]);
+
+    expect(a).toBe(1);
+    expect(b).toBe(2);
+    // B resolved before A (no sequential waiting)
+    expect(order).toEqual([2, 1]);
+  });
+});
+
+// ─── mock ──────────────────────────────────────────────────────────────────────
+
+describe('Container - mock', () => {
+  let container: Container;
+
+  beforeEach(() => {
+    container = createContainer();
+  });
+
+  it('replaces registration during fn, then restores the original', async () => {
+    const token = createToken<string>('S');
+
+    container.value(token, 'original');
+
+    const result = await container.mock(token, 'mocked', () => container.get(token));
 
     expect(result).toBe('mocked');
     expect(container.get(token)).toBe('original');
   });
 
-  it('should support async functions', async () => {
-    const token = createToken<string>('Service');
-    container.registerValue(token, 'original');
+  it('accepts a full Provider<T> as the mock', async () => {
+    const token = createToken<string>('S');
 
-    const result = await withMock(container, token, 'mocked', async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      return container.get(token);
-    });
+    container.value(token, 'original');
 
-    expect(result).toBe('mocked');
+    const result = await container.mock(token, { useFactory: () => 'factory-mock' }, () => container.get(token));
+
+    expect(result).toBe('factory-mock');
     expect(container.get(token)).toBe('original');
   });
 
-  it('should restore original provider after error', async () => {
-    const token = createToken<string>('Service');
-    container.registerValue(token, 'original');
+  it('restores original even when fn throws', async () => {
+    const token = createToken<string>('S');
+
+    container.value(token, 'original');
 
     await expect(
-      withMock(container, token, 'mocked', () => {
-        throw new Error('Test error');
+      container.mock(token, 'mocked', () => {
+        throw new Error('boom');
       }),
-    ).rejects.toThrow('Test error');
+    ).rejects.toThrow('boom');
 
     expect(container.get(token)).toBe('original');
   });
 
-  it('should handle mocking unregistered token', async () => {
-    const token = createToken<string>('Service');
+  it('token is absent after mock if it was not registered before', async () => {
+    const token = createToken<string>('S');
 
-    await withMock(container, token, 'mocked', () => {
-      expect(container.get(token)).toBe('mocked');
+    await container.mock(token, 'temp', () => {
+      expect(container.get(token)).toBe('temp');
     });
 
     expect(container.has(token)).toBe(false);
   });
 
-  it('should restore original value after mocking', async () => {
-    let instanceCount = 0;
+  it('preserves the cached singleton instance through mock/restore', async () => {
+    let n = 0;
 
-    class Service {
+    class Svc {
       constructor() {
-        instanceCount++;
+        n++;
       }
       getValue() {
         return 'real';
       }
     }
 
-    const token = createToken<Service>('Service');
-    container.register(token, { lifetime: 'singleton', useClass: Service });
+    const token = createToken<Svc>('S');
 
-    // Get the original instance to increment instanceCount
-    container.get(token);
-    expect(instanceCount).toBe(1);
+    container.register(token, { useClass: Svc });
 
-    await withMock(container, token, { getValue: () => 'mock' } as any, () => {
-      const mockInstance = container.get(token);
-      expect(mockInstance.getValue()).toBe('mock');
+    const original = container.get(token); // n = 1
+
+    await container.mock(token, { getValue: () => 'mock' } as any, () => {
+      expect(container.get(token).getValue()).toBe('mock');
     });
 
-    // After withMock, a new instance will be created since we lost the singleton
-    // This is expected behavior - withMock is for testing, not production
-    const afterMockInstance = container.get(token);
-    expect(afterMockInstance.getValue()).toBe('real');
-  });
-});
-
-describe('Edge Cases', () => {
-  let container: Container;
-
-  beforeEach(() => {
-    container = createContainer();
-  });
-
-  it('should handle empty dependency array', () => {
-    class Service {}
-
-    const token = createToken<Service>('Service');
-    container.register(token, { deps: [], useClass: Service });
-
-    const service = container.get(token);
-
-    expect(service).toBeInstanceOf(Service);
-  });
-
-  it('should handle undefined deps', () => {
-    class Service {}
-
-    const token = createToken<Service>('Service');
-    container.register(token, { useClass: Service });
-
-    const service = container.get(token);
-
-    expect(service).toBeInstanceOf(Service);
-  });
-
-  it('should overwrite existing registration', () => {
-    const token = createToken<string>('Service');
-
-    container.registerValue(token, 'first');
-    container.registerValue(token, 'second');
-
-    expect(container.get(token)).toBe('second');
-  });
-
-  it('should handle complex object values', () => {
-    const token = createToken<any>('ComplexConfig');
-    const config = {
-      array: [1, 2, 3],
-      fn: () => 'test',
-      nested: { deeply: { value: 42 } },
-    };
-
-    container.registerValue(token, config);
-
-    const retrieved = container.get(token);
-
-    expect(retrieved).toBe(config);
-    expect(retrieved.nested.deeply.value).toBe(42);
-    expect(retrieved.fn()).toBe('test');
-  });
-
-  it('should handle null and undefined values', () => {
-    const nullToken = createToken<null>('Null');
-    const undefinedToken = createToken<undefined>('Undefined');
-
-    container.registerValue(nullToken, null);
-    container.registerValue(undefinedToken, undefined);
-
-    expect(container.get(nullToken)).toBeNull();
-    expect(container.get(undefinedToken)).toBeUndefined();
-  });
-
-  it('should handle classes with complex constructors', () => {
-    class ComplexService {
-      a: string;
-      b: number;
-      c: { value: string };
-      constructor(a: string, b: number, c: { value: string }) {
-        this.a = a;
-        this.b = b;
-        this.c = c;
-      }
-    }
-
-    const TokenA = createToken<string>('A');
-    const TokenB = createToken<number>('B');
-    const TokenC = createToken<{ value: string }>('C');
-    const ServiceToken = createToken<ComplexService>('Service');
-
-    container.registerValue(TokenA, 'test');
-    container.registerValue(TokenB, 42);
-    container.registerValue(TokenC, { value: 'complex' });
-    container.register(ServiceToken, {
-      deps: [TokenA, TokenB, TokenC],
-      useClass: ComplexService,
-    });
-
-    const service = container.get(ServiceToken);
-
-    expect(service.a).toBe('test');
-    expect(service.b).toBe(42);
-    expect(service.c.value).toBe('complex');
-  });
-
-  it('should handle factory returning different types', () => {
-    const token = createToken<any>('Factory');
-
-    container.registerFactory(token, () => ({ type: 'object' }));
-    expect(container.get(token)).toEqual({ type: 'object' });
-
-    container.registerFactory(token, () => 'string');
-    expect(container.get(token)).toBe('string');
-
-    container.registerFactory(token, () => 42);
-    expect(container.get(token)).toBe(42);
-
-    container.registerFactory(token, () => true);
-    expect(container.get(token)).toBe(true);
+    expect(container.get(token)).toBe(original);
+    expect(n).toBe(1);
   });
 });

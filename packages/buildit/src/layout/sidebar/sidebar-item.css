@@ -1,0 +1,114 @@
+@layer buildit.base {
+  :host {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .item {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    min-width: 0;
+    min-height: var(--_touch-target);
+    padding: var(--size-1-5) var(--size-2);
+    font-size: var(--sidebar-item-font-size, var(--text-sm));
+    font-weight: var(--font-medium);
+    color: var(--sidebar-item-color, var(--color-contrast-700));
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+    border-radius: var(--rounded-sm);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  /* Make <a> items look like the container */
+  a.item {
+    text-decoration: none;
+  }
+
+  .item:hover {
+    color: var(--sidebar-item-hover-color, var(--color-contrast-900));
+    background: var(--sidebar-item-hover-bg, var(--color-contrast-100));
+  }
+
+  .item:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  :host([active]) .item {
+    font-weight: var(--font-semibold);
+    color: var(--sidebar-item-active-color, var(--color-primary));
+    background: var(
+      --sidebar-item-active-bg,
+      var(--color-primary-100, color-mix(in srgb, var(--color-primary) 12%, transparent))
+    );
+  }
+
+  :host([active]) .item::before {
+    position: absolute;
+    inset-block: var(--size-1);
+    inset-inline-start: 0;
+    width: 3px;
+    content: '';
+    background: var(--sidebar-item-indicator, var(--color-primary));
+    border-radius: var(--rounded-full);
+  }
+
+  :host([disabled]) .item {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .item-icon {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-5);
+    height: var(--size-5);
+  }
+
+  .item-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: opacity var(--transition-fast);
+  }
+
+  .item-end {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-1);
+    align-items: center;
+    transition: opacity var(--transition-fast);
+  }
+
+  /* Collapsed sidebar: hide text/end content */
+  :host([sidebar-collapsed]) .item-label,
+  :host([sidebar-collapsed]) .item-end {
+    width: 0;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  :host([sidebar-collapsed]) .item {
+    gap: 0;
+    justify-content: center;
+    padding: var(--size-2) var(--size-4);
+  }
+
+  :host([sidebar-collapsed][active]) .item::before {
+    inset-block: var(--size-2);
+  }
+}

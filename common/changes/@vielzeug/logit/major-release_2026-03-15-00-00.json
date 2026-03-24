@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/logit",
+      "comment": "Major release: structured console logger with configurable log levels (debug/info/warn/error/success/trace), prefix namespacing, timestamp toggling, and environment-aware output; scope() for child loggers with inherited configuration; groupCollapsed/groupEnd for collapsible log sections; table() and time()/timeEnd() helpers; remote logging via setRemote() for shipping logs to external endpoints; assert() with structured context output",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/logit"
+}

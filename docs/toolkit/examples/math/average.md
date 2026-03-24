@@ -7,7 +7,7 @@
 
 The `average` utility calculates the arithmetic mean of an array of numbers. It provides a simple, functional way to find the average value in a collection.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/average.ts

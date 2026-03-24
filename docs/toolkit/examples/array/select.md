@@ -5,9 +5,9 @@
 
 # select
 
-The `select` utility is a high-performance combined transformation and filtering tool. It allows you to simultaneously map and filter an array in a single pass, and it provides built-in support for asynchronous operations.
+The `select` utility maps and filters an array in a single pass. A predicate function decides which elements are processed; elements failing the predicate are excluded from the result. When no predicate is given, `null` and `undefined` elements in the source array are automatically skipped.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/select.ts
@@ -16,30 +16,29 @@ The `select` utility is a high-performance combined transformation and filtering
 ## Features
 
 - **Isomorphic**: Works in both Browser and Node.js.
-- **Combined Operation**: Map and filter in one step for better readability and performance.
-- **Async Support**: Handle asynchronous mapping functions seamlessly.
-- **Intelligent Defaults**: Automatically filters out `null` or `undefined` results by default.
+- **Single Pass**: Map and filter in one iteration for readability and performance.
+- **Flexible Predicate**: Pass an explicit predicate to control which elements are processed.
+- **Nil Filtering**: Without a predicate, `null` and `undefined` source elements are automatically skipped.
 
 ## API
 
 ```ts
 function select<T, R>(
   array: T[],
-  callback: (item: T, index: number, array: T[]) => R | Promise<R>,
+  callback: (item: T, index: number, array: T[]) => R,
   predicate?: (item: T, index: number, array: T[]) => boolean,
-): R[] | Promise<R[]>;
+): R[];
 ```
 
 ### Parameters
 
-- `array`: The array to process.
-- `callback`: A transformation function that receives each element and returns a new value (or a Promise for one).
-- `predicate`: Optional. A function that decides which elements from the _original_ array should be processed by the callback. Defaults to a check that excludes `null` or `undefined` items.
+- `array`: The input array.
+- `callback`: Transformation applied to each element that passes the predicate.
+- `predicate`: Optional. Filters the **input** elements before mapping. Defaults to `!isNil(element)` — skips `null` and `undefined` source values.
 
 ### Returns
 
-- A new array of transformed elements.
-- A `Promise<R[]>` if the callback is asynchronous.
+A new array containing the mapped values of elements that passed the predicate.
 
 ## Examples
 
@@ -61,22 +60,17 @@ const result = select(
 
 ### Asynchronous Selection
 
+::: warning
+`select` does not support async callbacks. Use `parallel` or `Promise.all` for async mapping:
+
 ```ts
-import { select, delay } from '@vielzeug/toolkit';
+import { parallel } from '@vielzeug/toolkit';
 
 const ids = [1, 2, 3];
-
-// Fetch data for specific IDs
-const details = await select(
-  ids,
-  async (id) => {
-    await delay(50); // Simulate API latency
-    return { id, status: 'ok' };
-  },
-  (id) => id !== 2,
-);
-// [{ id: 1, ... }, { id: 3, ... }]
+const details = await parallel(3, ids, async (id) => fetchUser(id));
 ```
+
+:::
 
 ### Default Filtering
 
@@ -93,12 +87,10 @@ const doubled = select(data, (x) => x * 2);
 ## Implementation Notes
 
 - Throws `TypeError` if the first argument is not an array.
-- When using async callbacks, all transformations are initiated concurrently.
-- If no predicate is provided, it uses a standard "is defined" check on the input elements.
+- The predicate filters **source elements**, not callback results. To filter `null` callback results, use `predicate` explicitly or use `Array.filter` after.
+- If no predicate is provided, it uses `!isNil(element)` on the original input.
 
 ## See Also
 
-- [map](./map.md): Standard array transformation.
-- [filter](./filter.md): Standard array filtering.
-- [compact](./compact.md): Remove falsy values from an array.
+- [toggle](./toggle.md): Add or remove an item from an array.
 - [pick](./pick.md): Extract specific properties from an array of objects.

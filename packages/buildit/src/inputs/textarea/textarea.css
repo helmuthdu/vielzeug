@@ -1,0 +1,263 @@
+@layer buildit.base {
+  :host {
+    --_font-size: var(--textarea-font-size, var(--text-sm));
+    --_gap: var(--textarea-gap, var(--size-2));
+    --_padding: var(--textarea-padding, var(--size-2) var(--size-3));
+    --_radius: var(--textarea-radius, var(--rounded-lg));
+    --_placeholder: var(--textarea-placeholder-color, var(--color-contrast-500));
+    --_bg: var(--textarea-bg, var(--color-contrast-100));
+    --_border-color: var(--textarea-border-color, var(--color-contrast-300));
+    --_min-height: var(--textarea-min-height, var(--size-24));
+    --_max-height: var(--textarea-max-height, none);
+    --_resize: var(--textarea-resize, vertical);
+
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 12rem;
+  }
+
+  .textarea-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1-5);
+    min-width: 0; /* Allow shrinking below content size */
+  }
+
+  .field {
+    box-sizing: border-box;
+    display: grid; /* Grid automatically sizes to content */
+    min-width: 0; /* Allow shrinking */
+    padding: var(--_padding);
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--shadow-2xs);
+    transition:
+      background var(--transition-fast),
+      backdrop-filter var(--transition-slow),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  /* ========================================
+       Label Styles
+       ======================================== */
+
+  .label-inset,
+  .label-outside,
+  label.label-inset,
+  label.label-outside {
+    font-weight: var(--font-medium);
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--transition-fast);
+  }
+
+  .label-inset,
+  label.label-inset {
+    margin-bottom: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+  }
+
+  .label-outside,
+  label.label-outside {
+    font-size: var(--text-sm);
+    line-height: var(--leading-none);
+  }
+
+  /* ========================================
+       Helper / Error Text
+       ======================================== */
+
+  .helper-text {
+    padding-inline: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+  }
+
+  /* ========================================
+       Textarea Element
+       ======================================== */
+
+  textarea {
+    box-sizing: border-box;
+    min-width: 12rem; /* Match :host min-width to prevent resize below minimum */
+    min-height: var(--_min-height);
+    max-height: var(--_max-height);
+    padding: 0;
+    font: inherit;
+    font-size: var(--_font-size);
+    line-height: var(--leading-relaxed);
+    color: var(--_theme-content);
+    resize: vertical; /* Default resize, can be overridden by inline style */
+    outline: none;
+    background: transparent;
+    border: none;
+  }
+
+  textarea::placeholder {
+    color: var(--_placeholder);
+    transition: color var(--transition-fast);
+  }
+
+  textarea:focus-visible {
+    outline: none;
+  }
+
+  /* ========================================
+       Character Counter
+       ======================================== */
+
+  .counter {
+    align-self: flex-end;
+    padding-inline: 2px;
+    margin-top: var(--size-1);
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-400);
+    transition: color var(--transition-fast);
+  }
+
+  .counter.near-limit {
+    color: var(--color-warning);
+  }
+
+  .counter.at-limit {
+    color: var(--color-error);
+  }
+
+  /* ========================================
+       Hover & Focus States
+       ======================================== */
+
+  :host(:not([disabled], [variant='bordered'], [variant='flat'])) .field:hover {
+    border-color: var(--color-contrast-400);
+  }
+
+  :host(:not([disabled], [variant='text'], [variant='flat'])) .field:focus-within {
+    background: var(--color-canvas);
+    border-color: var(--_theme-focus);
+    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+    transform: translateY(-1px);
+  }
+
+  :host(:not([disabled])) .field:focus-within .label-inset,
+  :host(:not([disabled])) .field:focus-within .label-outside {
+    color: var(--_theme-focus);
+  }
+
+  /* Error State */
+  :host([error]:not([error=''])) .field {
+    border-color: var(--color-error);
+  }
+
+  :host([error]:not([error=''])) .field:focus-within {
+    border-color: var(--color-error);
+    box-shadow: var(--color-error-focus-shadow);
+  }
+
+  :host([error]:not([error=''])) .label-inset,
+  :host([error]:not([error=''])) .label-outside {
+    color: var(--color-error);
+  }
+}
+
+@layer buildit.variants {
+  /* Solid (Default) */
+  :host(:not([variant])) .field,
+  :host([variant='solid']) .field {
+    background: var(--color-contrast-50);
+    border-color: var(--color-contrast-300);
+    box-shadow: var(--shadow-2xs);
+  }
+
+  :host(:not([variant], [disabled])) .field:focus-within,
+  :host([variant='solid']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Flat */
+  :host([variant='flat']) .field {
+    border-color: var(--_theme-border);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  :host([variant='flat']) .field:hover {
+    background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
+    border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
+  }
+
+  :host([variant='flat']) .field:focus-within {
+    background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
+    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Bordered */
+  :host([variant='bordered']) .field {
+    background: var(--_theme-backdrop);
+    border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
+  }
+
+  :host([variant='bordered']) textarea {
+    color: var(--_theme-content);
+  }
+
+  :host([variant='bordered'][color='secondary']) textarea {
+    color: var(--_theme-base);
+  }
+
+  :host([variant='bordered']) textarea::placeholder {
+    color: color-mix(in srgb, var(--_theme-content) 45%, transparent);
+  }
+
+  :host([variant='bordered'][color='secondary']) textarea::placeholder {
+    color: color-mix(in srgb, var(--_theme-base) 45%, transparent);
+  }
+
+  :host([variant='bordered']) .field:hover {
+    border-color: var(--_theme-focus);
+  }
+
+  /* Outline */
+  :host([variant='outline']) .field {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :host([variant='outline']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Ghost */
+  :host([variant='ghost']) .field {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  :host([variant='ghost']) .field:hover {
+    background: var(--color-contrast-100);
+  }
+
+  :host([variant='ghost']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+}
+
+@layer buildit.utilities {
+  /* Auto-resize hides overflow */
+  :host([auto-resize]) textarea {
+    overflow: hidden;
+  }
+
+  /* Full width */
+  :host([fullwidth]) {
+    width: 100%;
+  }
+}

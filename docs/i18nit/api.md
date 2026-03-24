@@ -1,1071 +1,131 @@
-# i18nit API Reference
+---
+title: I18nit — API Reference
+description: API reference for @vielzeug/i18nit types, factory, instance methods, and bound views.
+---
 
-Complete API documentation for i18nit.
-
-## Table of Contents
+# I18nit API Reference
 
 [[toc]]
 
+## API At a Glance
+
+| Symbol         | Purpose                                         | Execution mode | Common gotcha                                         |
+| -------------- | ----------------------------------------------- | -------------- | ----------------------------------------------------- |
+| `createI18n()` | Create translation runtime and dictionary store | Sync           | Always provide fallback locale/messages               |
+| `t()`          | Resolve translated strings with interpolation   | Sync           | Missing keys should be handled in development logging |
+| `loadLocale()` | Load locale dictionaries lazily                 | Async          | Cache loaded locales to avoid duplicate fetches       |
+
+## Package Entry Points
+
+| Import                  | Purpose                    |
+| ----------------------- | -------------------------- |
+| `@vielzeug/i18nit`      | Main runtime API and types |
+| `@vielzeug/i18nit/core` | Core bundle entry          |
+
 ## Types
 
-### Locale
+Core exported types:
 
-```ts
-type Locale = string;
-```
+- `Locale`, `Unsubscribe`
+- `PluralForm`, `PluralMessages`, `MessageValue`, `Messages`
+- `Vars`, `Loader`
+- `I18nOptions<T>`, `BoundI18n<T>`
+- `TranslationKey<T>`, `TranslationKeyParam<T>`, `PluralKeys<T>`, `NamespaceKeys<T>`
+- `LocaleChangeReason`, `LocaleChangeEvent`, `LocaleChangeListener`
+- `DiagnosticEvent`
 
-A string representing a locale identifier (e.g., `'en'`, `'es'`, `'fr-FR'`).
+Behavior highlights:
 
-### PluralForm
+- `Messages` is recursive; leaves are `string` or `PluralMessages`.
+- `PluralMessages` requires `other`.
+- `TranslationKey<T>` resolves dot-notation keys up to depth 8.
+- `TranslationKeyParam<T>` falls back to generic string support when needed.
+- `scope()` only accepts namespace keys (`NamespaceKeys<T>`).
 
-```ts
-type PluralForm = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
-```
+## createI18n
 
-Plural category used for pluralization rules. These categories are determined automatically using the `Intl.PluralRules` API, which supports 100+ languages with proper plural rules from the [Unicode CLDR](https://cldr.unicode.org/).
+Signature: `createI18n<T extends Messages = Messages>(config?: I18nOptions<T>): I18n<T>`
 
-**Plural categories by language:**
+Creates an `I18n` instance.
 
-- **Simple (one/other)**: English, German, Spanish, etc.
-- **Complex (zero/one/two/few/many/other)**: Arabic
-- **Complex (one/few/many)**: Russian, Polish, Czech
-- **No plurals (other only)**: Chinese, Japanese, Korean
+Options:
 
-### PluralMessages
-
-```ts
-type PluralMessages = Partial<Record<PluralForm, string>> & { other: string };
-```
-
-Object defining plural forms for a message. The `other` form is required.
-
-**Example:**
-
-```ts
-const messages = {
-  items: {
-    zero: 'No items',
-    one: 'One item',
-    other: '{count} items',
-  },
-};
-```
-
-### PluralMessages
-
-```ts
-type PluralMessages = Partial<Record<PluralForm, string>> & { other: string };
-```
-
-Object defining plural forms for a message. The `other` form is required.
-
-**Example:**
-
-```ts
-const messages = {
-  items: {
-    zero: 'No items',
-    one: 'One item',
-    other: '{count} items',
-  },
-};
-```
-
-### MessageValue
-
-```ts
-type MessageValue = string | PluralMessages;
-```
-
-A translation can be a string or plural messages object.
-
-### Messages
-
-```ts
-type Messages = {
-  [key: string]: MessageValue | Messages;
-};
-```
-
-Collection of translations for a locale. Supports both flat keys and nested object structures.
-
-**Flat Structure:**
-
-```ts
-const messages: Messages = {
-  greeting: 'Hello!',
-  'user.name': 'User Name',
-};
-```
-
-**Nested Structure:**
-
-```ts
-const messages: Messages = {
-  greeting: 'Hello!',
-  user: {
-    name: 'User Name',
-    profile: {
-      title: 'Profile',
-      settings: 'Settings',
-    },
-  },
-};
-```
-
-Both structures can be accessed with dot notation:
-
-- `i18n.t('greeting')` → "Hello!"
-- `i18n.t('user.name')` → "User Name"
-- `i18n.t('user.profile.title')` → "Profile"
-
-Options for translation methods.
-
-- **locale**: Override the current locale for this translation
-- **escape**: Enable/disable HTML escaping for this translation
-
-### I18nConfig
-
-```ts
-type I18nConfig = {
-  locale?: Locale;
-  fallback?: Locale | Locale[];
-  messages?: Record<Locale, Messages>;
-  loaders?: Record<Locale, (locale: Locale) => Promise<Messages>>;
-  escape?: boolean;
-};
-```
-
-Configuration object for creating an i18n instance.
-
-**Properties:**
-
-- **locale** (`Locale`, optional): Initial locale (default: `'en'`)
-- **fallback** (`Locale | Locale[]`, optional): Fallback locale(s) for missing translations
-- **messages** (`Record<Locale, Messages>`, optional): Pre-loaded message catalogs
-- **loaders** (`Record<Locale, (locale: Locale) => Promise<Messages>>`, optional): Async loaders for lazy-loading locales. Each loader receives the locale as a parameter, allowing reusable functions.
-- **escape** (`boolean`, optional): Enable HTML escaping by default (default: `false`)
-
-## createI18n()
-
-Create a new i18n instance.
-
-### Signature
-
-```ts
-function createI18n(config?: I18nConfig): I18n;
-```
-
-### Parameters
-
-- **config** (`I18nConfig`, optional): Configuration object
-
-### Returns
-
-- **I18n**: A new i18n instance
-
-### Example
-
-```ts
-import { createI18n } from '@vielzeug/i18nit';
-
-// Simple loader function that receives locale
-const loadLocale = async (locale: string) => {
-  const response = await fetch(`/locales/${locale}.json`);
-  return response.json();
-};
-
-const i18n = createI18n({
-  locale: 'en',
-  fallback: 'en',
-  messages: {
-    en: {
-      greeting: 'Hello!',
-    },
-    es: {
-      greeting: '¡Hola!',
-    },
-  },
-  loaders: {
-    fr: loadLocale, // Reusable loader receives 'fr'
-    de: loadLocale, // Same loader receives 'de'
-  },
-  escape: false,
-});
-```
+| Option         | Type                                          | Description                                  |
+| -------------- | --------------------------------------------- | -------------------------------------------- |
+| `locale`       | `Locale`                                      | Initial locale (default `en`)                |
+| `fallback`     | `Locale \| Locale[]`                          | Fallback locale chain                        |
+| `messages`     | `Record<string, T \| DeepPartialMessages<T>>` | Preloaded catalogs                           |
+| `loaders`      | `Record<Locale, Loader>`                      | Async locale loaders                         |
+| `onMissing`    | `(key, locale) => string \| undefined`        | Missing-key resolver                         |
+| `onDiagnostic` | `(event: DiagnosticEvent) => void`            | Diagnostic sink for subscriber/loader errors |
 
 ## I18n Instance
 
-### Translation Methods
+### Locale and Catalogs
 
-#### t()
+- `locale` (get/set): active locale
+- `locales`: loaded catalog locales
+- `loadableLocales`: locales with registered loaders
+- `hasLocale(locale)`: whether locale catalog is loaded
 
-Translate a message key with optional variables and options.
+### Translation and Lookup
 
-```ts
-t(key: string, vars?: Record<string, unknown>, options?: TranslateParams): string
-```
+- `t(key, vars?)`: translate key
+- `has(key)`: key exists in active locale chain
+- `hasOwn(key)`: key exists in active locale only
+- `scope(ns)`: namespace-bound view
+- `withLocale(locale)`: locale-bound view
 
-**Parameters:**
+### Catalog Mutation
 
-- **key**: Translation key (supports dot notation)
-- **vars**: Variables for interpolation
-- **options**: Translation options
+- `add(locale, messages)`: deep-merge into locale catalog
+- `replace(locale, messages)`: replace locale catalog with deep clone
+- `batch(fn)`: coalesce notifications triggered during `fn`
 
-**Returns:** Translated string
+### Loading
 
-**Example:**
+- `load(...locales)`: load locale catalogs (deduped per locale while in-flight)
+- `setLocale(locale)`: load locale if necessary, then switch
+- `registerLoader(locale, loader)`: add/replace loader
+- `reload(locale)`: clear locale catalog and force loader refresh (no-op if no loader)
 
-```ts
-i18n.t('greeting'); // "Hello!"
-i18n.t('welcome', { name: 'Alice' }); // "Welcome, Alice!"
-i18n.t('hello', undefined, { locale: 'es' }); // "¡Hola!"
-i18n.t('user.name'); // "Name"
-```
+### Formatting
 
-**Notes:**
+- `number(value, options?)`
+- `date(value, options?)`
+- `list(items, type?)`
+- `relative(value, unit, options?)`
+- `currency(value, currency, options?)`
 
-- Use `undefined` for vars if you only want to pass options
-- Supports nested keys with dot notation
-- Variables are interpolated using `{varName}` syntax
-- Numbers are automatically formatted based on locale
+### Subscription and Lifecycle
 
----
+- `subscribe(listener, immediate?) => Unsubscribe`
+- `dispose()`
+- `[Symbol.dispose]()`
+- `[Symbol.asyncDispose]()`
 
-### Locale Management
+## BoundI18n
 
-#### getLocale()
+`BoundI18n<T>` is a translator view returned by `scope()` and `withLocale()`.
 
-Get the current locale.
+Members:
 
-```ts
-getLocale(): Locale
-```
+- `locale`
+- `t(key, vars?)`
+- `has(key)` / `hasOwn(key)`
+- `number`, `date`, `list`, `relative`, `currency`
+- `scope(ns)`
+- `withLocale(locale)`
 
-**Returns:** Current locale string
+Notes:
 
-**Example:**
+- `withLocale(locale)` does not mutate instance locale.
+- `scope(ns)` prefixes keys while keeping full formatter capabilities.
 
-```ts
-const currentLocale = i18n.getLocale(); // "en"
-```
+## Runtime Semantics
 
----
-
-#### setLocale()
-
-Set the current locale and notify subscribers.
-
-```ts
-setLocale(locale: Locale): void
-```
-
-**Parameters:**
-
-- **locale**: Locale to set
-
-**Example:**
-
-```ts
-i18n.setLocale('es');
-i18n.setLocale('fr-FR');
-```
-
-**Notes:**
-
-- Triggers subscriber callbacks
-- Does nothing if locale is already set
-
----
-
-### Message Management
-
-#### add()
-
-Add messages to a locale (merges with existing).
-
-```ts
-add(locale: Locale, messages: Messages): void
-```
-
-**Parameters:**
-
-- **locale**: Target locale
-- **messages**: Messages to add
-
-**Example:**
-
-```ts
-i18n.add('en', {
-  newKey: 'New translation',
-  another: 'Another one',
-});
-
-// Merges with existing messages
-```
-
----
-
-#### set()
-
-Replace all messages for a locale.
-
-```ts
-set(locale: Locale, messages: Messages): void
-```
-
-**Parameters:**
-
-- **locale**: Target locale
-- **messages**: Messages to set
-
-**Example:**
-
-```ts
-i18n.set('en', {
-  greeting: 'Hello!',
-  // All previous messages are replaced
-});
-```
-
----
-
-#### getMessages()
-
-Get all messages for a locale.
-
-```ts
-getMessages(locale: Locale): Messages | undefined
-```
-
-**Parameters:**
-
-- **locale**: Target locale
-
-**Returns:** Messages object or undefined if locale not found
-
-**Example:**
-
-```ts
-const messages = i18n.getMessages('en');
-console.log(messages); // { greeting: 'Hello!', ... }
-```
-
----
-
-#### hasLocale()
-
-Check if a locale is loaded.
-
-```ts
-hasLocale(locale: Locale): boolean
-```
-
-**Parameters:**
-
-- **locale**: Locale to check
-
-**Returns:** True if locale exists
-
-**Example:**
-
-```ts
-if (i18n.hasLocale('es')) {
-  console.log('Spanish is loaded');
-}
-```
-
----
-
-#### has()
-
-Check if a translation key exists.
-
-```ts
-has(key: string, locale?: Locale): boolean
-```
-
-**Parameters:**
-
-- **key**: Translation key
-- **locale**: Locale to check (uses current if not provided)
-
-**Returns:** True if key exists
-
-**Example:**
-
-```ts
-if (i18n.has('greeting')) {
-  console.log('Greeting exists');
-}
-
-if (i18n.has('greeting', 'es')) {
-  console.log('Spanish greeting exists');
-}
-```
-
----
-
-### Async Loading
-
-#### register()
-
-Register a loader function for a locale.
-
-```ts
-register(locale: Locale, loader: (locale: Locale) => Promise<Messages>): void
-```
-
-**Parameters:**
-
-- **locale**: Target locale
-- **loader**: Async function that receives the locale and returns messages
-
-**Example:**
-
-```ts
-// Reusable loader function
-const loadLocale = async (locale: string) => {
-  const response = await fetch(`/locales/${locale}.json`);
-  return response.json();
-};
-
-// Register for multiple locales
-i18n.register('es', loadLocale);
-i18n.register('fr', loadLocale);
-i18n.register('de', loadLocale);
-
-// Or with dynamic import
-const importLoader = async (locale: string) => {
-  const module = await import(`./locales/${locale}.json`);
-  return module.default;
-};
-
-i18n.register('it', importLoader);
-```
-
----
-
-#### load()
-
-Load translations for a locale.
-
-```ts
-async load(locale: Locale): Promise<void>
-```
-
-**Parameters:**
-
-- **locale**: Locale to load
-
-**Returns:** Promise that resolves when loaded
-
-**Example:**
-
-```ts
-await i18n.load('es');
-console.log('Spanish loaded');
-
-// Load multiple
-await Promise.all([i18n.load('es'), i18n.load('fr')]);
-```
-
-**Notes:**
-
-- Does nothing if locale already loaded
-- Caches loading promise to prevent duplicate requests
-- Calls `add()` internally to merge loaded messages
-
----
-
-#### loadAll()
-
-Load multiple locales in parallel.
-
-```ts
-async loadAll(locales: Locale[]): Promise<void>
-```
-
-**Parameters:**
-
-- **locales**: Array of locales to load
-
-**Returns:** Promise that resolves when all locales are loaded
-
-**Example:**
-
-```ts
-// Preload all locales at app startup
-await i18n.loadAll(['en', 'es', 'fr']);
-console.log('All locales loaded!');
-
-// Then use sync t() everywhere
-i18n.setLocale('es');
-console.log(i18n.t('greeting')); // No await needed
-```
-
-**Notes:**
-
-- Loads all locales in parallel for better performance
-- Useful for preloading all needed locales at app startup
-- Each locale is loaded only once (uses same caching as `load()`)
-
----
-
-#### hasAsync()
-
-Check if a key exists, loading locale if needed.
-
-```ts
-async hasAsync(key: string, locale?: Locale): Promise<boolean>
-```
-
-**Parameters:**
-
-- **key**: Translation key
-- **locale**: Locale to check (uses current if not provided)
-
-**Returns:** Promise resolving to true if key exists
-
-**Example:**
-
-```ts
-if (await i18n.hasAsync('greeting', 'es')) {
-  console.log('Spanish greeting exists');
-}
-```
-
----
-
-### Formatting Helpers
-
-#### number()
-
-Format a number with locale-specific formatting.
-
-```ts
-number(value: number, options?: Intl.NumberFormatOptions, locale?: Locale): string
-```
-
-**Parameters:**
-
-- **value**: Number to format
-- **options**: Intl.NumberFormat options
-- **locale**: Locale to use (uses current if not provided)
-
-**Returns:** Formatted number string
-
-**Example:**
-
-```ts
-i18n.number(1234.56); // "1,234.56" (en-US)
-i18n.number(1234.56, { style: 'currency', currency: 'USD' }); // "$1,234.56"
-i18n.number(0.856, { style: 'percent' }); // "85.6%"
-i18n.number(1234.56, undefined, 'de'); // "1.234,56"
-```
-
----
-
-#### date()
-
-Format a date with locale-specific formatting.
-
-```ts
-date(value: Date | number, options?: Intl.DateTimeFormatOptions, locale?: Locale): string
-```
-
-**Parameters:**
-
-- **value**: Date object or timestamp
-- **options**: Intl.DateTimeFormat options
-- **locale**: Locale to use (uses current if not provided)
-
-**Returns:** Formatted date string
-
-**Example:**
-
-```ts
-const date = new Date('2024-01-15');
-
-i18n.date(date); // "1/15/2024" (en-US)
-i18n.date(date, { dateStyle: 'long' }); // "January 15, 2024"
-i18n.date(date, { dateStyle: 'full', timeStyle: 'short' });
-// "Monday, January 15, 2024 at 12:00 AM"
-
-// With timestamp
-i18n.date(Date.now(), { dateStyle: 'medium' });
-```
-
----
-
-### Namespaces
-
-#### namespace()
-
-Create a namespaced translator.
-
-```ts
-namespace(ns: string): {
-  t: (key: string, vars?: Record<string, unknown>, options?: TranslateParams) => string;
-  tl: (key: string, vars?: Record<string, unknown>, options?: TranslateParams) => Promise<string>;
-}
-```
-
-**Parameters:**
-
-- **ns**: Namespace prefix
-
-**Returns:** Object with `t` method
-
-**Example:**
-
-```ts
-const errors = i18n.namespace('errors');
-const user = i18n.namespace('user');
-
-errors.t('required'); // Same as i18n.t('errors.required')
-user.t('profile.name'); // Same as i18n.t('user.profile.name')
-
-// With locale override
-errors.t('validation', undefined, { locale: 'es' });
-```
-
----
-
-### Subscriptions
-
-#### subscribe()
-
-Subscribe to locale changes.
-
-```ts
-subscribe(handler: (locale: Locale) => void): () => void
-```
-
-**Parameters:**
-
-- **handler**: Callback function called when locale changes
-
-**Returns:** Unsubscribe function
-
-**Example:**
-
-```ts
-const unsubscribe = i18n.subscribe((locale) => {
-  console.log('Locale changed to:', locale);
-  // Update UI, trigger re-renders, etc.
-});
-
-// Later...
-unsubscribe();
-```
-
-**Notes:**
-
-- Handler is called immediately upon subscription
-- Handler errors are caught and ignored
-- Multiple subscribers are supported
-
-## Configuration
-
-### locale
-
-```ts
-locale?: Locale
-```
-
-**Default:** `'en'`
-
-Initial locale for the instance.
-
-**Example:**
-
-```ts
-createI18n({ locale: 'es' });
-```
-
----
-
-### fallback
-
-```ts
-fallback?: Locale | Locale[]
-```
-
-**Default:** `[]`
-
-Fallback locale(s) used when translation not found.
-
-**Example:**
-
-```ts
-// Single fallback
-createI18n({ locale: 'en-US', fallback: 'en' });
-
-// Multiple fallbacks
-createI18n({ locale: 'pt-BR', fallback: ['pt', 'es', 'en'] });
-```
-
-**Fallback chain example:**
-
-```ts
-// locale: 'en-US', fallback: ['en', 'es']
-// Chain: en-US → en → es
-```
-
----
-
-### messages
-
-```ts
-messages?: Record<Locale, Messages>
-```
-
-**Default:** `{}`
-
-Initial translation messages.
-
-**Example:**
-
-```ts
-createI18n({
-  messages: {
-    en: {
-      greeting: 'Hello!',
-      user: {
-        name: 'Name',
-      },
-    },
-    es: {
-      greeting: '¡Hola!',
-      user: {
-        name: 'Nombre',
-      },
-    },
-  },
-});
-```
-
----
-
-### loaders
-
-```ts
-loaders?: Record<Locale, () => Promise<Messages>>
-```
-
-**Default:** `{}`
-
-Async loader functions for lazy-loading translations.
-
-**Example:**
-
-```ts
-createI18n({
-  loaders: {
-    es: async () => {
-      const response = await fetch('/locales/es.json');
-      return response.json();
-    },
-    fr: () => import('./locales/fr.json'),
-  },
-});
-```
-
----
-
-### escape
-
-```ts
-escape?: boolean
-```
-
-**Default:** `false`
-
-Enable HTML escaping globally.
-
-**Example:**
-
-```ts
-createI18n({ escape: true });
-
-// Can be overridden per translation
-i18n.t('key', { html: '<b>bold</b>' }, { escape: false });
-```
-
-## Message Types
-
-### String Messages
-
-Simple string translations.
-
-```ts
-const messages = {
-  greeting: 'Hello!',
-  welcome: 'Welcome to our app',
-};
-```
-
----
-
-### String with Variables
-
-Strings with interpolation using `{varName}` syntax.
-
-```ts
-const messages = {
-  greeting: 'Hello, {name}!',
-  info: 'You have {count} new messages',
-};
-
-i18n.t('greeting', { name: 'Alice' }); // "Hello, Alice!"
-i18n.t('info', { count: 5 }); // "You have 5 new messages"
-```
-
-**Nested variables:**
-
-```ts
-const messages = {
-  userInfo: 'User: {user.name} ({user.email})',
-};
-
-i18n.t('userInfo', { user: { name: 'Bob', email: 'bob@example.com' } });
-// "User: Bob (bob@example.com)"
-```
-
-**Array variables:**
-
-```ts
-const messages = {
-  first: 'First: {items[0]}',
-  outOfBounds: 'Tenth: {items[10]}', // Safe – returns empty if out of bounds
-};
-
-i18n.t('first', { items: ['apple', 'banana'] });
-// "First: apple"
-
-i18n.t('outOfBounds', { items: ['apple'] });
-// "Tenth: " (empty, no error)
-```
-
-**Array joining:**
-
-```ts
-const messages = {
-  // Default comma separator
-  shopping: 'Shopping list: {items}',
-
-  // Natural "and" list
-  guests: 'Invited: {names|and}',
-
-  // Natural "or" list
-  options: 'Choose: {choices|or}',
-
-  // Custom separator
-  path: 'Path: {folders| / }',
-
-  // Array length
-  count: 'You have {items.length} items',
-
-  // Combined features
-  summary: 'First: {items[0]}, Total: {items.length}, All: {items|and}',
-};
-
-// Default comma
-i18n.t('shopping', { items: ['Apple', 'Banana', 'Orange'] });
-// "Shopping list: Apple, Banana, Orange"
-
-// "and" separator
-i18n.t('guests', { names: ['Alice', 'Bob', 'Charlie'] });
-// "Invited: Alice, Bob and Charlie"
-
-// "or" separator
-i18n.t('options', { choices: ['Tea', 'Coffee', 'Juice'] });
-// "Choose: Tea, Coffee or Juice"
-
-// Custom separator
-i18n.t('path', { folders: ['home', 'user', 'documents'] });
-// "Path: home / user / documents"
-
-// Array length
-i18n.t('count', { items: ['A', 'B', 'C'] });
-// "You have 3 items"
-
-// Combined
-i18n.t('summary', { items: ['Apple', 'Banana', 'Orange'] });
-// "First: Apple, Total: 3, All: Apple, Banana and Orange"
-```
-
-**Array handling summary:**
-
-| Syntax              | Description                                             | Example Output            |
-| ------------------- | ------------------------------------------------------- | ------------------------- |
-| `{items}`           | Default join (`, `)                                     | `"A, B, C"`               |
-| `{items\|and}`      | Locale-aware "and" via Intl.ListFormat (100+ languages) | `"A, B, and C"` (English) |
-| `{items\|or}`       | Locale-aware "or" via Intl.ListFormat (100+ languages)  | `"A, B, or C"` (English)  |
-| `{items\| – }`      | Custom separator                                        | `"A – B – C"`             |
-| `{items.length}`    | Array length                                            | `"3"`                     |
-| `{items[0]}`        | Safe index (empty if bounds)                            | `"A"` or `""`             |
-| `{items[0].name}`   | Nested array access                                     | Accesses nested object    |
-| `{user.items}`      | Nested array join                                       | `"A, B, C"`               |
-| `{user.items\|and}` | Nested array with separator                             | `"A, B, and C"` (English) |
-
-**Intl.ListFormat – Automatic Language Support:**
-
-The `and` and `or` separators use the browser/runtime's built-in **Intl.ListFormat API** which automatically handles list formatting for **100+ languages** with:
-
-- ✅ **Automatic conjunctions** – Correct "and"/"or" word for each language
-- ✅ **Proper grammar** – Oxford comma, locale-specific punctuation
-- ✅ **Unicode CLDR standards** – International standard for list formatting
-- ✅ **Right-to-left languages** – Arabic, Hebrew, etc.
-- ✅ **Zero maintenance** – No manual language configuration required
-
-**Examples across languages:**
-
-| Language   | Locale | "and" Example                | "or" Example                |
-| ---------- | ------ | ---------------------------- | --------------------------- |
-| English    | en     | "A, B, and C" (Oxford comma) | "A, B, or C" (Oxford comma) |
-| Spanish    | es     | "A, B y C"                   | "A, B o C"                  |
-| French     | fr     | "A, B et C"                  | "A, B ou C"                 |
-| German     | de     | "A, B und C"                 | "A, B oder C"               |
-| Italian    | it     | "A, B e C"                   | "A, B o C"                  |
-| Portuguese | pt     | "A, B e C"                   | "A, B ou C"                 |
-| Russian    | ru     | "A, B и C"                   | "A, B или C"                |
-| Japanese   | ja     | "A、B、C" (Japanese comma)   | "A、B、または C"            |
-| Chinese    | zh     | "A、B和C"                    | "A、B或C"                   |
-| Arabic     | ar     | Proper RTL with "و"          | Proper RTL with "أو"        |
-
-And **90+ more languages** automatically supported!
-
-**Browser Support:**
-
-- Chrome 72+ (2019)
-- Firefox 78+ (2020)
-- Safari 14.1+ (2021)
-- Edge 79+ (2020)
-- Node.js 12+ (2019)
-
-For older environments, gracefully falls back to English formatting.
-
----
-
-### Plural Messages
-
-Object with plural forms based on language rules.
-
-```ts
-const messages = {
-  items: {
-    zero: 'No items',
-    one: 'One item',
-    other: '{count} items',
-  },
-};
-
-i18n.t('items', { count: 0 }); // "No items"
-i18n.t('items', { count: 1 }); // "One item"
-i18n.t('items', { count: 5 }); // "5 items"
-```
-
-**Required forms by language:**
-
-- **English**: `one`, `other`
-- **French**: `one` (0-1), `other`
-- **Arabic**: `zero`, `one`, `two`, `few`, `many`, `other`
-- **Russian**: `one`, `few`, `many`, `other`
-- **Polish**: `one`, `few`, `many`
-
----
-
-### Function Messages
-
-Dynamic messages with custom logic.
-
-```ts
-const messages = {
-  greeting: (vars) => {
-    const hour = new Date().getHours();
-    const name = vars.name as string;
-    if (hour < 12) return `Good morning, ${name}!`;
-    if (hour < 18) return `Good afternoon, ${name}!`;
-    return `Good evening, ${name}!`;
-  },
-
-  price: (vars, helpers) => {
-    const amount = vars.amount as number;
-    return helpers.number(amount, { style: 'currency', currency: 'USD' });
-  },
-
-  timestamp: (vars, helpers) => {
-    const date = vars.date as Date;
-    return `Posted ${helpers.date(date, { dateStyle: 'medium' })}`;
-  },
-};
-
-i18n.t('greeting', { name: 'Alice' }); // "Good morning, Alice!"
-i18n.t('price', { amount: 99.99 }); // "$99.99"
-i18n.t('timestamp', { date: new Date() }); // "Posted Feb 9, 2026"
-```
-
-## Best Practices
-
-### 1. Type Safety
-
-```ts
-// Define message keys as types
-type MessageKeys = 'greeting' | 'farewell';
-
-// Use with TypeScript
-const i18n = createI18n<Record<MessageKeys, string>>({
-  messages: {
-    en: {
-      greeting: 'Hello',
-      farewell: 'Goodbye',
-    },
-  },
-});
-```
-
-### 2. Organize by Feature
-
-```ts
-const messages = {
-  en: {
-    auth: { ... },
-    user: { ... },
-    products: { ... },
-  },
-};
-```
-
-### 3. Use Namespaces
-
-```ts
-const auth = i18n.namespace('auth');
-const user = i18n.namespace('user');
-
-auth.t('login');
-user.t('profile.name');
-```
-
-### 4. Lazy Load Translations
-
-```ts
-// Preload at app startup
-await i18n.loadAll(['en', 'es', 'fr']);
-
-// Or configure loaders and load on-demand
-createI18n({
-  loaders: {
-    es: () => import('./locales/es.json'),
-    fr: () => import('./locales/fr.json'),
-  },
-});
-
-// Load when needed
-await i18n.load('es');
-```
-
----
-
-For complete usage examples, see [Usage Guide](./usage.md) and [Examples](./examples.md).
+- Missing key: returns `onMissing?.(key, locale) ?? key`.
+- Fallback chain: active locale -> BCP47 ancestors -> configured fallback locales.
+- Plural resolution uses `Intl.PluralRules` with `count` (defaults to `0` when missing).
+- `batch()` is synchronous; async operations inside it notify when they complete.
+- Subscriber errors and loader errors route through `onDiagnostic` (or console defaults).

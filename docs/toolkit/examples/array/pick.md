@@ -7,7 +7,7 @@
 
 The `pick` utility finds the first element in an array that satisfies a condition and then transforms it using a callback function. It is a more powerful version of `find` that includes a built-in transformation step and support for asynchronous operations.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/pick.ts
@@ -67,7 +67,7 @@ const result = pick(
 ### Asynchronous Picking
 
 ```ts
-import { pick, delay } from '@vielzeug/toolkit';
+import { pick, sleep } from '@vielzeug/toolkit';
 
 const ids = [1, 2, 3, 4, 5];
 
@@ -75,7 +75,7 @@ const ids = [1, 2, 3, 4, 5];
 const data = await pick(
   ids,
   async (id) => {
-    await delay(100);
+    await sleep(100);
     return { id, data: 'fetched' };
   },
   (id) => id % 2 === 0,
@@ -92,5 +92,4 @@ const data = await pick(
 ## See Also
 
 - [select](./select.md): Transform and filter _multiple_ elements.
-- [find](./find.md): Find an element without transforming it.
-- [compact](./compact.md): Remove falsy values from an array.
+- [select](./select.md): Filter all matching elements instead of just the first.

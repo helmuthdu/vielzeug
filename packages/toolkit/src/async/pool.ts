@@ -28,6 +28,7 @@ export function pool(limit: number): <T>(fn: () => Promise<T>) => Promise<T> {
   const dequeue = (): void => {
     if (queue.length > 0 && activeCount < limit) {
       const next = queue.shift();
+
       next?.();
     }
   };

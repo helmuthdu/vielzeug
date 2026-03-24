@@ -24,12 +24,12 @@ describe('isObject', () => {
 
   it('should return false for functions', () => {
     expect(isObject(() => {})).toBe(false);
-    // biome-ignore lint/complexity/useArrowFunction: -
     expect(isObject(function () {})).toBe(false);
   });
 
   it('should return true for instances of classes', () => {
     class MyClass {}
+
     expect(isObject(new MyClass())).toBe(true);
   });
 

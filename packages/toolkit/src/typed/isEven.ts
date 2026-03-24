@@ -6,5 +6,5 @@
  * @returns {boolean} - Returns true if the number is even, otherwise false.
  */
 export function isEven(arg: unknown): arg is number {
-  return typeof arg === 'number' && Number.isFinite(arg) && Number.isInteger(arg) && arg % 2 === 0;
+  return typeof arg === 'number' && Number.isInteger(arg) && arg % 2 === 0;
 }

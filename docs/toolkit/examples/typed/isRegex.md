@@ -7,7 +7,7 @@
 
 Checks if a value is a regular expression.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isRegex.ts

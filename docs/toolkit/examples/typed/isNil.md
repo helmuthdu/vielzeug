@@ -7,7 +7,7 @@
 
 The `isNil` utility is a type guard that checks if a value is strictly `null` or `undefined`. It is the inverse of `isDefined` and is useful for identifying missing or uninitialized data.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isNil.ts

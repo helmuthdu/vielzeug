@@ -1,0 +1,283 @@
+/* ========================================
+     Base Styles & Defaults
+     ======================================== */
+
+:host {
+  /* Internal variables with CSS custom property fallbacks */
+  --_size: var(--text-size, var(--text-base));
+  --_weight: var(--text-weight, var(--font-normal));
+  --_color: var(--text-color, var(--text-color-body));
+  --_line-height: var(--text-line-height, var(--leading-normal));
+  --_letter-spacing: var(--text-letter-spacing, normal);
+
+  display: block;
+  font-size: var(--_size);
+  font-weight: var(--_weight);
+  line-height: var(--_line-height);
+  color: var(--_color);
+  letter-spacing: var(--_letter-spacing);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* ========================================
+     Unlayered display overrides
+     These must live outside any @layer so they can beat the unlayered
+     display: block on :host. Same cascade rule that was fixed for [lines].
+     ======================================== */
+
+/* Multi-line truncation */
+:host([lines]) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: var(--_lines);
+}
+
+/* Inline semantic tags — but not when align/truncate force block layout */
+:host(:is([as='span'], [as='label'], [as='code']):not([align], [truncate])) {
+  display: inline;
+}
+
+/* ========================================
+     Variant Styles
+     ======================================== */
+
+/* Body (default) — uses base defaults above */
+
+/* Heading
+   Default size: --heading-md (24px)
+   Letter-spacing: --tracking-header (-0.025em) per theme guidelines
+   Line-height: --leading-tight (1.15) for display headings */
+:host([variant='heading']) {
+  --_size: var(--text-size, var(--heading-md));
+  --_weight: var(--text-weight, var(--font-semibold));
+  --_color: var(--text-color, var(--text-color-heading));
+  --_line-height: var(--text-line-height, var(--leading-tight));
+  --_letter-spacing: var(--text-letter-spacing, var(--tracking-header));
+}
+
+/* Label — slightly tighter line-height for UI labels */
+:host([variant='label']) {
+  --_size: var(--text-size, var(--text-sm));
+  --_weight: var(--text-weight, var(--font-medium));
+  --_color: var(--text-color, var(--text-color-heading));
+  --_line-height: var(--text-line-height, var(--leading-snug));
+}
+
+/* Caption */
+:host([variant='caption']) {
+  --_size: var(--text-size, var(--text-sm));
+  --_color: var(--text-color, var(--text-color-secondary));
+}
+
+/* Overline */
+:host([variant='overline']) {
+  --_size: var(--text-size, var(--text-xs));
+  --_weight: var(--text-weight, var(--font-semibold));
+  --_line-height: var(--text-line-height, var(--leading-none));
+  --_letter-spacing: var(--text-letter-spacing, 0.08em);
+
+  text-transform: uppercase;
+}
+
+/* Code */
+:host([variant='code']) {
+  --_size: var(--text-size, var(--text-sm));
+
+  font-family: var(--font-mono, monospace);
+}
+
+/* ========================================
+     Size Variants — body scale (--text-*)
+     Used by all variants except heading.
+     ======================================== */
+
+:host([size='xs']) {
+  --_size: var(--text-xs);
+}
+
+:host([size='sm']) {
+  --_size: var(--text-sm);
+}
+
+:host([size='md']) {
+  --_size: var(--text-base);
+}
+
+:host([size='lg']) {
+  --_size: var(--text-lg);
+}
+
+:host([size='xl']) {
+  --_size: var(--text-xl);
+}
+
+:host([size='2xl']) {
+  --_size: var(--text-2xl);
+}
+
+/* ========================================
+     Size Variants — heading scale (--heading-*)
+     Compound selectors override the body-scale rules above when
+     variant="heading" and a size is also provided.
+     ======================================== */
+
+:host([variant='heading'][size='xs']) {
+  --_size: var(--heading-xs);
+}
+
+:host([variant='heading'][size='sm']) {
+  --_size: var(--heading-sm);
+}
+
+:host([variant='heading'][size='md']) {
+  --_size: var(--heading-md);
+}
+
+:host([variant='heading'][size='lg']) {
+  --_size: var(--heading-lg);
+}
+
+:host([variant='heading'][size='xl']) {
+  --_size: var(--heading-xl);
+}
+
+:host([variant='heading'][size='2xl']) {
+  --_size: var(--heading-2xl);
+}
+
+/* ========================================
+     Weight Variants
+     ======================================== */
+
+:host([weight='normal']) {
+  --_weight: var(--font-normal);
+}
+
+:host([weight='medium']) {
+  --_weight: var(--font-medium);
+}
+
+:host([weight='semibold']) {
+  --_weight: var(--font-semibold);
+}
+
+:host([weight='bold']) {
+  --_weight: var(--font-bold);
+}
+
+/* ========================================
+     Color Variants
+     Semantic colors map to --text-color-* tokens.
+     Theme colors map to --color-* base tokens.
+     ======================================== */
+
+:host([color='primary']) {
+  --_color: var(--color-primary);
+}
+
+:host([color='secondary']) {
+  --_color: var(--color-secondary);
+}
+
+:host([color='info']) {
+  --_color: var(--color-info);
+}
+
+:host([color='success']) {
+  --_color: var(--color-success);
+}
+
+:host([color='warning']) {
+  --_color: var(--color-warning);
+}
+
+:host([color='error']) {
+  --_color: var(--color-error);
+}
+
+/* Semantic text colors */
+:host([color='heading']) {
+  --_color: var(--text-color-heading); /* --color-contrast-900 */
+}
+
+:host([color='body']) {
+  --_color: var(--text-color-body); /* --color-contrast-800 */
+}
+
+:host([color='muted']) {
+  --_color: var(--text-color-secondary); /* --color-contrast-600 — AA compliant */
+}
+
+:host([color='tertiary']) {
+  --_color: var(--text-color-tertiary); /* --color-contrast-500 — AA for large text */
+}
+
+:host([color='disabled']) {
+  --_color: var(--text-color-disabled); /* --color-contrast-400 */
+}
+
+:host([color='contrast']) {
+  --_color: var(--text-color-contrast); /* --color-contrast-100 */
+}
+
+@layer buildit.utilities {
+  /* ========================================
+     Alignment
+     ======================================== */
+
+  :host([align]) {
+    display: block;
+  }
+
+  :host([align='left']) {
+    text-align: start;
+  }
+
+  :host([align='center']) {
+    text-align: center;
+  }
+
+  :host([align='right']) {
+    text-align: end;
+  }
+
+  :host([align='justify']) {
+    text-align: justify;
+  }
+
+  /* ========================================
+     Truncate (single-line)
+     ======================================== */
+
+  :host([truncate]) {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ========================================
+     Italic
+     ======================================== */
+
+  :host([italic]) {
+    font-style: italic;
+  }
+
+  /* ========================================
+     Block Display for Certain Tags
+     ======================================== */
+
+  :host([as='p']),
+  :host([as='div']),
+  :host(:is([as='h1'], [as='h2'], [as='h3'], [as='h4'], [as='h5'], [as='h6'])) {
+    display: block;
+  }
+
+  /* Note: display: inline for span/label/code is handled outside this @layer
+     (above) so it can override the unlayered :host { display: block }. */
+}

@@ -46,20 +46,11 @@ export async function parallel<T, R>(
   let hasError = false;
   let error: unknown;
 
-  // Check for abort
-  const checkAbort = () => {
-    if (signal?.aborted) {
-      hasError = true;
-      error = new DOMException('Aborted', 'AbortError');
-      return true;
-    }
-    return false;
-  };
-
-  // Worker function that processes items from the queue
   const worker = async (): Promise<void> => {
     while (currentIndex < array.length && !hasError) {
-      if (checkAbort()) {
+      if (signal?.aborted) {
+        hasError = true;
+        error = new DOMException('Aborted', 'AbortError');
         break;
       }
 

@@ -1,0 +1,65 @@
+@layer buildit.base {
+  :host {
+    --_panel-bg: var(
+      --popover-bg,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
+      )
+    );
+    --_panel-blur: var(--popover-panel-blur, var(--blur-md));
+    --_panel-border-color: var(
+      --popover-border-color,
+      light-dark(
+        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
+        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
+      )
+    );
+    --_panel-shadow: var(--popover-shadow, var(--shadow-xl));
+
+    position: relative;
+    display: inline-block;
+  }
+
+  .panel {
+    position: fixed;
+
+    /* Popover UA resets */
+    inset: unset;
+    box-sizing: border-box;
+    min-width: var(--popover-min-width, 12rem);
+    max-width: var(--popover-max-width, 24rem);
+    max-height: var(--popover-max-height, min(70vh, 32rem));
+    padding: 0;
+    margin: 0;
+    overflow: auto;
+    word-break: auto-phrase;
+    overflow-wrap: anywhere;
+    background: var(--_panel-bg);
+    border: var(--border) solid var(--_panel-border-color);
+    border-radius: var(--rounded-lg);
+    box-shadow: var(--_panel-shadow);
+
+    /* Hidden by default */
+    opacity: 0;
+    backdrop-filter: blur(var(--_panel-blur));
+    transform: scale(0.96) translateY(var(--size-2));
+    transition: var(
+      --_motion-transition,
+      opacity var(--transition-fast),
+      transform var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1),
+      display var(--transition-fast) allow-discrete,
+      overlay var(--transition-fast) allow-discrete
+    );
+  }
+
+  .panel:popover-open {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+
+    @starting-style {
+      opacity: 0;
+      transform: scale(0.96) translateY(var(--size-2));
+    }
+  }
+}

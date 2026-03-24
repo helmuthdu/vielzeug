@@ -1,0 +1,167 @@
+@layer buildit.base {
+  :host {
+    display: inline-flex;
+    outline: none;
+
+    --tab-item-transition: var(--transition-normal);
+    --tab-item-radius: var(--rounded-lg);
+  }
+
+  button {
+    position: relative;
+    display: inline-flex;
+    gap: var(--size-2);
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: var(--_touch-target);
+    padding: var(--tab-item-padding, var(--size-1-5) var(--size-4));
+    font-family: inherit;
+    font-size: var(--tab-item-font-size, var(--text-sm));
+    font-weight: var(--font-medium);
+    color: var(--tab-item-color, var(--text-color-secondary));
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    background: transparent;
+    border: none;
+    border-radius: var(--tab-item-radius);
+    transition:
+      background var(--tab-item-transition),
+      color var(--tab-item-transition),
+      box-shadow var(--tab-item-transition);
+  }
+
+  button:focus {
+    outline: none;
+  }
+
+  :host(:focus-visible) button,
+  button:focus-visible {
+    outline: var(--border-2) solid var(--_theme-focus);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px var(--_theme-shadow);
+  }
+}
+
+@layer buildit.variants {
+  /* ─── solid / default ─── */
+  :host button:hover,
+  :host([variant='solid']) button:hover {
+    color: var(--text-color-heading);
+    background: var(--color-contrast-200);
+  }
+
+  :host([active]) button,
+  :host([variant='solid'][active]) button {
+    color: var(--text-color-heading);
+    background: var(--color-contrast-0, var(--color-canvas));
+    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
+  }
+
+  /* ─── flat ─── */
+  :host([variant='flat']) button:hover {
+    color: var(--text-color-heading);
+    background: var(--color-contrast-200);
+  }
+
+  :host([variant='flat'][active]) button {
+    color: var(--text-color-heading);
+    background: var(--color-contrast-0, var(--color-canvas));
+    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
+  }
+
+  /* ─── bordered ─── */
+  :host([variant='bordered']) button:hover {
+    color: var(--text-color-heading);
+    background: var(--color-contrast-200);
+  }
+
+  :host([variant='bordered'][active]) button {
+    color: var(--text-color-heading);
+    background: var(--color-contrast-0, var(--color-canvas));
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* ─── ghost ─── */
+  :host([variant='ghost']) button:hover {
+    color: var(--text-color-heading);
+    background: var(--color-contrast-100);
+  }
+
+  :host([variant='ghost'][active]) button {
+    color: var(--_theme-contrast);
+    background: var(--_theme-base);
+  }
+
+  /* ─── glass ─── */
+  :host([variant='glass']) button {
+    color: color-mix(in srgb, var(--color-secondary-contrast) 70%, transparent);
+    text-shadow: var(--text-shadow-2xs);
+  }
+
+  :host([variant='glass']) button:hover {
+    color: var(--color-secondary-contrast);
+    background: color-mix(in srgb, var(--color-secondary-contrast) 10%, transparent);
+  }
+
+  :host([variant='glass'][active]) button {
+    color: var(--color-secondary-contrast);
+    background: color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent);
+    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
+  }
+
+  /* ─── frost ─── */
+  :host([variant='frost']) button {
+    color: var(--text-color-secondary);
+  }
+
+  :host([variant='frost']) button:hover {
+    color: var(--text-color-heading);
+    background: color-mix(in srgb, var(--color-contrast) 10%, transparent);
+  }
+
+  :host([variant='frost'][active]) button {
+    color: var(--text-color-heading);
+    background: color-mix(in srgb, var(--color-canvas) 60%, transparent);
+    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
+  }
+
+  /* ─── sizes ─── */
+  :host([size='sm']) {
+    --tab-item-font-size: var(--text-xs);
+    --tab-item-padding: var(--size-1) var(--size-3);
+  }
+
+  :host(:not([size])),
+  :host([size='md']) {
+    --tab-item-font-size: var(--text-sm);
+    --tab-item-padding: var(--size-1-5) var(--size-4);
+  }
+
+  :host([size='lg']) {
+    --tab-item-font-size: var(--text-base);
+    --tab-item-padding: var(--size-2) var(--size-5);
+  }
+
+  /* ─── disabled ─── */
+  :host([disabled]) {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  @media (forced-colors: active) {
+    /* Ensure focus ring is visible regardless of variant theme color */
+    button:focus-visible {
+      outline: 2px solid Highlight;
+      box-shadow: none;
+    }
+
+    /* Active tab: box-shadow raised indicator is stripped; use outline inste
+         ad so the selected tab remains distinguishable */
+    :host([active]) button {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
+  }
+}

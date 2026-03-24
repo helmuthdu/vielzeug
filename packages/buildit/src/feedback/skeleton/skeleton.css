@@ -1,0 +1,150 @@
+@layer buildit.base {
+  :host {
+    --_bg: var(--skeleton-bg, var(--color-contrast-200));
+    --_highlight: var(--skeleton-highlight, var(--color-contrast-100));
+    --_radius: var(--skeleton-radius, var(--rounded-lg));
+    --_circle-size: var(--skeleton-size, var(--size-10));
+    --_width: var(--skeleton-width, 100%);
+    --_height: var(--skeleton-height, var(--size-4));
+    --_line-gap: var(--skeleton-line-gap, var(--size-2));
+    --_last-line-width: var(--skeleton-last-line-width, 60%);
+    --_duration: var(--skeleton-duration, 1.6s);
+    --_stripe-size: var(--skeleton-stripe-size, 8px);
+
+    display: inline-block;
+    width: var(--_width);
+    height: var(--_height);
+  }
+
+  .stack {
+    display: grid;
+    gap: var(--_line-gap);
+    width: 100%;
+    height: 100%;
+  }
+
+  .bone {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--_bg);
+    border-radius: var(--_radius);
+  }
+
+  .bone::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+    background: linear-gradient(90deg, var(--_bg) 0%, var(--_highlight) 50%, var(--_bg) 100%);
+    transform: translateX(-100%);
+    animation: var(--_motion-animation, bit-skeleton-shimmer var(--_duration) linear infinite);
+  }
+
+  :host([data-animated='false']) .bone::after {
+    display: none;
+  }
+
+  /* Pause shimmer when scrolled out of the viewport — no visible effect, saves GPU */
+  :host([data-paused]) .bone::after {
+    animation-play-state: paused;
+  }
+
+  @keyframes bit-skeleton-shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  /* In RTL the shimmer should sweep right-to-left */
+  :host(:dir(rtl)) .bone::after {
+    animation-direction: reverse;
+  }
+}
+
+@layer buildit.variants {
+  /* Circle variant — avatars, icons */
+  :host([variant='circle']) {
+    --_radius: var(--rounded-full);
+
+    width: var(--skeleton-width, var(--_circle-size));
+    height: var(--skeleton-height, var(--_circle-size));
+    aspect-ratio: 1 / 1;
+  }
+
+  /* Text variant — thinner, for inline text lines */
+  :host([variant='text']) {
+    --_height: var(--size-3);
+    --_radius: var(--rounded-sm);
+
+    height: auto;
+  }
+
+  :host([variant='text']) .stack {
+    height: auto;
+  }
+
+  :host([variant='text']) .bone {
+    height: var(--_height);
+  }
+
+  :host([variant='text']) .bone[data-last='true'] {
+    width: var(--_last-line-width);
+  }
+}
+
+@layer buildit.striped {
+  :host([striped]) .stack {
+    width: 99%;
+  }
+
+  :host([striped]) .bone {
+    --_stripe-color: var(--skeleton-stripe-color, var(--color-contrast-400));
+
+    background-color: transparent;
+    border: var(--border) dashed var(--_stripe-color);
+  }
+
+  :host([striped]) .bone::before {
+    --_stripe-color: var(--skeleton-stripe-color, var(--color-contrast-300));
+
+    position: absolute;
+    inset: 0;
+    content: '';
+    background-color: var(--_stripe-color);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cline x1='0' y1='8' x2='8' y2='0' stroke='white' stroke-width='1'/%3E%3C/svg%3E");
+    mask-size: var(--_stripe-size) var(--_stripe-size);
+  }
+
+  :host([striped]) .bone::after {
+    display: none;
+  }
+}
+
+@layer buildit.utilities {
+  :host([size='sm']) {
+    --_height: var(--size-3);
+    --_circle-size: var(--size-8);
+  }
+
+  :host([size='md']) {
+    --_height: var(--size-4);
+    --_circle-size: var(--size-10);
+  }
+
+  :host([size='lg']) {
+    --_height: var(--size-6);
+    --_circle-size: var(--size-14);
+  }
+}
+
+@media (forced-colors: active) {
+  .bone {
+    background: ButtonFace;
+    border: 1px solid ButtonText;
+  }
+
+  .bone::after {
+    display: none;
+  }
+}

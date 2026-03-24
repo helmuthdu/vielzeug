@@ -7,7 +7,7 @@
 
 The `group` utility partitions an array into an object of collections, based on a provided key or selection function.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/group.ts
@@ -126,7 +126,7 @@ const byRole = group(users, 'role');
 ### Real-World Example: E-commerce
 
 ```ts
-import { group, map } from '@vielzeug/toolkit';
+import { group } from '@vielzeug/toolkit';
 
 interface Product {
   id: number;
@@ -179,7 +179,7 @@ const byPosition = group(items, (item, index, array) => (index < array.length / 
 ### Nested Grouping
 
 ```ts
-import { group, map } from '@vielzeug/toolkit';
+import { group } from '@vielzeug/toolkit';
 
 const transactions = [
   { id: 1, user: 'Alice', category: 'food', amount: 50 },
@@ -192,7 +192,7 @@ const transactions = [
 const byUser = group(transactions, 'user');
 
 // Then group each user's transactions by category
-const nested = Object.fromEntries(map(Object.entries(byUser), ([user, txns]) => [user, group(txns, 'category')]));
+const nested = Object.fromEntries(Object.entries(byUser).map(([user, txns]) => [user, group(txns, 'category')]));
 /*
 {
   Alice: { food: [...], transport: [...] },
@@ -231,14 +231,14 @@ function ProductCatalog({ products }: { products: Product[] }) {
 
 ```ts
 import express from 'express';
-import { group, map } from '@vielzeug/toolkit';
+import { group } from '@vielzeug/toolkit';
 
 app.get('/api/analytics/by-category', async (req, res) => {
   const products = await fetchProducts();
 
   const grouped = group(products, 'category');
 
-  const analytics = map(Object.entries(grouped), ([category, items]) => ({
+  const analytics = Object.entries(grouped).map(([category, items]) => ({
     category,
     count: items.length,
     totalValue: items.reduce((sum, p) => sum + p.price, 0),
@@ -346,7 +346,6 @@ const byName = group(users, u => u.name);
 
 ## See Also
 
-- [map](./map.md): Transform elements of an array
-- [filter](./filter.md): Subset an array
-- [aggregate](./aggregate.md): For more complex grouping and reduction patterns
-- [sortBy](./sortBy.md): Sort before/after grouping
+- [keyBy](./keyBy.md): Create a lookup map — one entry per key instead of arrays.
+- [fold](./fold.md): Reduce an array to a single value without an initial accumulator.
+- [sort](./sort.md): Sort before/after grouping.

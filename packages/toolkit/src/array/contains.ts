@@ -20,11 +20,8 @@ import { isEqual } from '../typed/isEqual';
  * @throws {TypeError} If the first argument is not an array.
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: -
-export function contains<T>(array: T[], value: any): boolean {
+export function contains<T>(array: T[], value: unknown): boolean {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
   return array.some((val) => isEqual(val, value));
 }
-
-contains.fp = true;

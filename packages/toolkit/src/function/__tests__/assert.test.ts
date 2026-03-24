@@ -1,16 +1,8 @@
-import { Logit } from '@vielzeug/logit';
-import { assert } from '../assert';
-
-vi.mock('@vielzeug/logit', () => ({
-  Logit: {
-    error: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
+import { assert, assertAll } from '../assert';
 
 describe('assert', () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should do nothing if the condition is true', () => {
@@ -26,12 +18,14 @@ describe('assert', () => {
   });
 
   it('should log a warning if bypass is true', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     assert(false, 'Test warning', { bypass: true });
-    expect(Logit.warn).toHaveBeenCalledWith('Test warning');
+    expect(console.warn).toHaveBeenCalledWith('Test warning');
   });
 
   it('should include context in the error message', () => {
     const context = { value: 42 };
+
     expect(() => assert(false, 'Test error', { args: context })).toThrowError(
       'Test error\nArguments: {\n  "value": 42\n}',
     );
@@ -39,12 +33,12 @@ describe('assert', () => {
 
   it('should use the provided ErrorType', () => {
     class CustomError extends Error {}
-    // @ts-expect-error
-    expect(() => assert(false, 'Custom error', { type: CustomError })).toThrowError(CustomError);
+
+    expect(() => assert(false, 'Custom error', { type: CustomError as any })).toThrowError(CustomError);
   });
 
   it('should handle multiple conditions', () => {
-    expect(() => assert([true, true])).not.toThrow();
-    expect(() => assert([true, false], 'One condition failed')).toThrowError('One condition failed');
+    expect(() => assertAll([true, true])).not.toThrow();
+    expect(() => assertAll([true, false], 'One condition failed')).toThrowError('One condition failed');
   });
 });

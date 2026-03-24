@@ -1,0 +1,302 @@
+@layer buildit.base {
+  :host {
+    --_font-size: var(--file-input-font-size, var(--text-sm));
+    --_radius: var(--file-input-radius, var(--rounded-lg));
+    --_bg: var(--file-input-bg, var(--color-contrast-100));
+    --_border-color: var(--file-input-border-color, var(--color-contrast-300));
+    --_min-height: var(--file-input-min-height, var(--size-36));
+
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .file-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1-5);
+    width: 100%;
+  }
+
+  /* ========================================
+       Label
+       ======================================== */
+
+  .label-outside {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-none);
+    color: var(--color-contrast-500);
+    cursor: default;
+    user-select: none;
+    transition: color var(--transition-fast);
+  }
+
+  /* ========================================
+       Dropzone
+       ======================================== */
+
+  .dropzone {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2);
+    align-items: center;
+    justify-content: center;
+    min-height: var(--_min-height);
+    padding: var(--size-6) var(--size-4);
+    text-align: center;
+    cursor: pointer;
+    outline: none;
+    background: var(--_bg);
+    border: var(--border-2) dashed var(--_border-color);
+    border-radius: var(--_radius);
+    transition:
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  .dropzone-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2);
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .dropzone-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-contrast-400);
+    transition:
+      color var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  .dropzone-title {
+    font-size: var(--_font-size);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-snug);
+    color: var(--color-contrast-700);
+  }
+
+  .dropzone-title u {
+    color: var(--_theme-focus, var(--color-primary));
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 2px;
+    transition: text-decoration-color var(--transition-fast);
+  }
+
+  .dropzone-hint {
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-400);
+  }
+
+  /* ========================================
+       Helper Text
+       ======================================== */
+
+  .helper-text {
+    padding-inline: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+  }
+
+  /* ========================================
+       File List
+       ======================================== */
+
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .file-item {
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--size-3);
+    align-items: center;
+    padding: var(--size-2) var(--size-3);
+    background: var(--color-contrast-50);
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--_radius);
+    transition: background var(--transition-fast);
+  }
+
+  .file-item:hover {
+    background: var(--color-contrast-100);
+  }
+
+  .file-icon {
+    flex-shrink: 0;
+    color: var(--_theme-focus, var(--color-primary));
+  }
+
+  .file-meta {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--size-0-5);
+    min-width: 0;
+  }
+
+  .file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-contrast-700);
+    white-space: nowrap;
+  }
+
+  .file-size {
+    font-size: var(--text-xs);
+    color: var(--color-contrast-400);
+  }
+
+  .file-remove {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding: var(--size-1);
+    color: var(--color-contrast-400);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-sm);
+    transition:
+      color var(--transition-fast),
+      background var(--transition-fast);
+  }
+
+  .file-remove:hover {
+    color: var(--color-error);
+    background: var(--color-error-backdrop, color-mix(in srgb, var(--color-error) 12%, transparent));
+  }
+
+  /* ========================================
+       Hover & Focus
+       ======================================== */
+
+  :host(:not([disabled])) .dropzone:hover {
+    border-color: var(--color-contrast-400);
+  }
+
+  :host(:not([disabled])) .dropzone:hover .dropzone-title u {
+    text-decoration-color: var(--_theme-focus, var(--color-primary));
+  }
+
+  :host(:not([disabled])) .dropzone:focus-visible {
+    border-color: var(--_theme-focus, var(--color-primary));
+    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+  }
+
+  :host(:not([disabled])) .dropzone:hover .dropzone-icon,
+  :host(:not([disabled])) .dropzone:focus-visible .dropzone-icon {
+    color: var(--_theme-focus, var(--color-primary));
+    transform: translateY(-2px);
+  }
+
+  /* ========================================
+       Drag-Over State
+       ======================================== */
+
+  :host([drag-over]) .dropzone {
+    background: color-mix(in srgb, var(--_theme-base, var(--color-primary)) 8%, var(--color-canvas));
+    border-color: var(--_theme-focus, var(--color-primary));
+    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+  }
+
+  :host([drag-over]) .dropzone .dropzone-icon {
+    color: var(--_theme-focus, var(--color-primary));
+    transform: translateY(-4px) scale(1.1);
+  }
+
+  /* ========================================
+       Error State
+       ======================================== */
+
+  :host([invalid]) .dropzone {
+    border-color: var(--color-error);
+  }
+
+  :host([invalid]) .label-outside {
+    color: var(--color-error);
+  }
+
+  /* ========================================
+       Error Text
+       ======================================== */
+
+  .helper-text-error {
+    color: var(--color-error);
+  }
+}
+
+@layer buildit.variants {
+  /* Solid (Default) */
+  :host(:not([variant])) .dropzone,
+  :host([variant='solid']) .dropzone {
+    background: var(--color-contrast-50);
+    border-color: var(--color-contrast-300);
+  }
+
+  /* Flat */
+  :host([variant='flat']) .dropzone {
+    border-color: var(--_theme-border);
+  }
+
+  :host([variant='flat']) .dropzone:hover {
+    background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
+    border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
+  }
+
+  :host([variant='flat']) .dropzone:focus-visible,
+  :host([variant='flat'][drag-over]) .dropzone {
+    background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
+    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Bordered */
+  :host([variant='bordered']) .dropzone {
+    background: var(--_theme-backdrop);
+    border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
+  }
+
+  :host([variant='bordered']) .dropzone:hover {
+    border-color: var(--_theme-focus);
+  }
+
+  /* Outline */
+  :host([variant='outline']) .dropzone {
+    background: transparent;
+  }
+
+  /* Ghost */
+  :host([variant='ghost']) .dropzone {
+    background: transparent;
+    border-color: var(--color-contrast-200);
+  }
+
+  :host([variant='ghost']) .dropzone:hover {
+    background: var(--color-contrast-100);
+  }
+}
+
+@layer buildit.utilities {
+  :host([fullwidth]) {
+    width: 100%;
+  }
+}

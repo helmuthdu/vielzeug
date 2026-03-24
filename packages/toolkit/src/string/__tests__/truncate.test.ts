@@ -10,7 +10,7 @@ describe('truncate', () => {
   });
 
   it('should truncate the string to the nearest word if completeWords is true', () => {
-    expect(truncate('Hello World', 8, true)).toBe('Hello…');
+    expect(truncate('Hello World', 8, { completeWords: true })).toBe('Hello…');
   });
 
   it('should handle strings with no spaces when completeWords is true', () => {
@@ -22,7 +22,7 @@ describe('truncate', () => {
   });
 
   it('should use a custom ellipsis if provided', () => {
-    expect(truncate('Hello World', 5, false, '...')).toBe('Hello...');
+    expect(truncate('Hello World', 5, { ellipsis: '...' })).toBe('Hello...');
   });
 
   it('should handle empty strings gracefully', () => {
@@ -34,7 +34,7 @@ describe('truncate', () => {
   });
 
   it('should handle a limit of 0 with completeWords set to true', () => {
-    expect(truncate('Hello World', 0, true)).toBe('…');
+    expect(truncate('Hello World', 0, { completeWords: true })).toBe('…');
   });
 
   it('should handle strings with only spaces', () => {

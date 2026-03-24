@@ -7,7 +7,7 @@
 
 Distributes an amount evenly among N parties. Handles rounding to ensure the sum equals the original amount exactly. Useful for splitting bills, costs, or payments equally.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/distribute.ts
@@ -157,7 +157,7 @@ distribute(5n, 3);
 ## See Also
 
 - [allocate](./allocate.md): Distribute amount proportionally by ratios
-- [divide](./divide.md): Simple division
+- [allocate](./allocate.md): Distribute a total into weighted shares.
 - [sum](./sum.md): Sum an array of numbers
 
 <style>

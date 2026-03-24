@@ -20,5 +20,6 @@ export async function sleep(timeout: number): Promise<void> {
     'Timeout must be a non-negative finite number',
     { args: { timeout }, type: TypeError },
   );
+
   return new Promise((resolve) => setTimeout(resolve, timeout));
 }

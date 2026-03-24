@@ -7,7 +7,7 @@
 
 Checks if a value is a Promise.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isPromise.ts

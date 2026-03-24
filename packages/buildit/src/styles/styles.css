@@ -1,0 +1,5 @@
+/* Import all external stylesheets first (LightningCSS requirement) */
+@import url('preflight.css');
+@import url('theme.css');
+@import url('animation.css');
+@import url('layer.css');

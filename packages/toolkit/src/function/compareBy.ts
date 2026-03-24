@@ -32,6 +32,7 @@ export const compareBy = <T>(selectors: Partial<Record<keyof T, 'asc' | 'desc'>>
       const dir = direction === 'desc' ? -1 : 1;
 
       const cmp = compare(v1, v2);
+
       if (cmp !== 0) return cmp * dir;
     }
 

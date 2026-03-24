@@ -1,0 +1,144 @@
+@layer buildit.base {
+  :host {
+    --_bg: var(--badge-bg, var(--_theme-backdrop));
+    --_color: var(--badge-color, var(--_theme-base));
+    --_border-color: var(--badge-border-color, var(--_theme-border));
+    --_radius: var(--badge-radius, var(--rounded-full));
+    --_font-size: var(--badge-font-size, var(--text-xs));
+    --_font-weight: var(--badge-font-weight, var(--font-semibold));
+    --_padding-x: var(--badge-padding-x, var(--size-1-5));
+    --_padding-y: var(--badge-padding-y, var(--size-0-5));
+    --_gap: var(--badge-gap, var(--size-1));
+
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
+  .badge {
+    display: inline-flex;
+    gap: var(--_gap);
+    align-items: center;
+    justify-content: center;
+
+    /* Dot-only (no text slot) gets circular shape */
+    min-width: var(--size-2);
+    max-width: var(--badge-max-width, 24ch);
+    padding: var(--_padding-y) var(--_padding-x);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--_font-size);
+    font-weight: var(--_font-weight);
+    line-height: 1;
+    color: var(--_color);
+    white-space: nowrap;
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+  }
+
+  ::slotted([slot='icon']) {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+  }
+}
+
+@layer buildit.variants {
+  /* Solid (Default) - Full theme color background */
+  :host(:not([variant])),
+  :host([variant='solid']) {
+    --_bg: var(--badge-bg, var(--_theme-base));
+    --_color: var(--badge-color, var(--_theme-contrast));
+    --_border-color: var(--badge-border-color, var(--_theme-base));
+  }
+
+  /* Flat - Subtle background with theme color text */
+  :host([variant='flat']) {
+    --_bg: var(--badge-bg, color-mix(in srgb, var(--_theme-backdrop) 8%, var(--color-contrast-100)));
+    --_color: var(--badge-color, var(--_theme-base));
+    --_border-color: var(--badge-border-color, color-mix(in srgb, var(--_theme-focus) 20%, transparent));
+  }
+
+  /* Bordered - Outlined with filled background */
+  :host([variant='bordered']) {
+    --_bg: var(--badge-bg, var(--_theme-backdrop));
+    --_color: var(--badge-color, var(--_theme-base));
+    --_border-color: var(--badge-border-color, var(--_theme-border));
+  }
+
+  /* Outline - Transparent with colored border */
+  :host([variant='outline']) {
+    --_bg: var(--badge-bg, transparent);
+    --_color: var(--badge-color, var(--_theme-base));
+    --_border-color: var(--badge-border-color, var(--_theme-base));
+  }
+
+  /* Dot-only mode */
+  :host([dot]) .badge {
+    min-width: unset;
+    padding: var(--size-1);
+    line-height: 0;
+  }
+}
+
+@layer buildit.overrides {
+  /* Dot — always force badge background and border regardless of variant */
+  :host([dot]) {
+    --_bg: var(--badge-bg, var(--_theme-base));
+    --_border-color: var(--badge-border-color, var(--_theme-base));
+  }
+
+  /* ========================================
+       Anchor overlay mode
+       ======================================== */
+
+  :host([anchor]) {
+    position: relative;
+    display: inline-flex;
+  }
+
+  /*
+     * Per-direction multiplier: +1 in LTR, -1 in RTL.
+     * Used to flip the translateX offset so the badge always overflows
+     * the correct physical edge that corresponds to its logical corner.
+     */
+  :host {
+    --_dir: 1;
+  }
+
+  :host(:dir(rtl)) {
+    --_dir: -1;
+  }
+
+  /* Default position: top-end */
+  :host([anchor]) .badge {
+    position: absolute;
+    inset-inline-end: 0;
+    top: 0;
+    z-index: 1;
+    transform: translate(calc(var(--_dir) * 50%), -50%);
+  }
+
+  :host([anchor='top-start']) .badge {
+    inset-inline-start: 0;
+    inset-inline-end: unset;
+    transform: translate(calc(var(--_dir) * -50%), -50%);
+  }
+
+  :host([anchor='bottom-end']) .badge {
+    top: unset;
+    bottom: 0;
+    transform: translate(calc(var(--_dir) * 50%), 50%);
+  }
+
+  :host([anchor='bottom-start']) .badge {
+    inset-inline-start: 0;
+    inset-inline-end: unset;
+    top: unset;
+    bottom: 0;
+    transform: translate(calc(var(--_dir) * -50%), 50%);
+  }
+}

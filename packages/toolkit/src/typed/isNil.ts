@@ -16,5 +16,3 @@
 export function isNil(arg: unknown): arg is null | undefined {
   return arg === undefined || arg === null;
 }
-
-export const IS_NIL_ERROR_MSG = 'Expected a null or undefined value';

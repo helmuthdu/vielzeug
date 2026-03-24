@@ -1,653 +1,525 @@
-# API Reference
+---
+title: Formit — API Reference
+description: Complete API reference for the Formit form management library.
+---
 
-Complete API documentation for Formit.
-
-## Table of Contents
+# Formit API Reference
 
 [[toc]]
 
+## API At a Glance
+
+| Symbol          | Purpose                                           | Execution mode | Common gotcha                                           |
+| --------------- | ------------------------------------------------- | -------------- | ------------------------------------------------------- |
+| `createForm()`  | Create form state and field actions               | Sync           | Keep defaultValues shape aligned with submitted payload |
+| `form.submit()` | Run async submit handlers with status transitions | Async          | Return/await async work to preserve submit state        |
+| `form.bind()`   | Bind field state and handlers to inputs           | Sync           | Do not override generated handlers without forwarding   |
+
 ## `createForm(init?)`
 
-Creates a new form instance.
-
-### Parameters
-
-- `init?: FormInit` – Optional configuration object
-
-```typescript
-type FormInit = {
-  fields?: Record<string, any>; // Plain values, nested objects, or FieldConfig
-  validate?: FormValidator; // Form-level validator
-};
-
-type FieldConfig = {
-  value?: any;
-  validators?: FieldValidator | FieldValidator[];
-};
-
-type FieldValidator = (value: FormDataEntryValue) => string | undefined | null | Promise<string | undefined | null>;
-
-type FormValidator = (
-  formData: FormData,
-) => Map<string, string> | undefined | null | Promise<Map<string, string> | undefined | null>;
+```ts
+function createForm<TValues extends Record<string, unknown>>(init?: FormOptions<TValues>): Form<TValues>;
 ```
 
-### Returns
+Creates and returns a new form instance. All options are optional.
 
-A form instance with the following methods:
+### `FormOptions`
 
-## Form Instance Methods
+```ts
+interface FormOptions<TValues> {
+  /** Initial field values. Nested objects are auto-flattened to dot-notation keys. */
+  defaultValues?: Partial<TValues>;
+
+  /** Per-field validators. A field may have one or an array of validators (first failure wins). */
+  validators?: Record<string, FieldValidator | FieldValidator[]>;
+
+  /** Cross-field validator — runs on full validate() and submit() only. */
+  validator?: FormValidator<TValues>;
+}
+```
+
+## Values
 
 ### `get(name)`
 
-Get a field value. Returns array if multiple values exist for the same name.
-
-```typescript
-get(name: string): any
+```ts
+get<K extends keyof TValues>(name: K): TValues[K]
+get(name: string): unknown
 ```
 
-**Examples:**
-
-```typescript
-form.get('email'); // string | File | null
-form.get('tags'); // string[] (if multiple values)
-form.get('user.profile.name'); // nested access
-```
-
----
+Returns the current value for the given field.
 
 ### `set(name, value, options?)`
 
-Set a single field value.
-
-```typescript
-set(name: string, value: any, options?: {
-  markDirty?: boolean;    // default: true
-  markTouched?: boolean;  // default: false
-}): void
+```ts
+set<K extends keyof TValues>(name: K, value: TValues[K], options?: SetOptions): void
+set(name: string, value: unknown, options?: SetOptions): void
 ```
 
-**Examples:**
+Sets the value of a single field.
 
-```typescript
-form.set('email', 'user@example.com');
-form.set('age', 25, { markDirty: false });
-form.set('tags', ['js', 'ts']);
-form.set('avatar', fileInput.files[0]);
+```ts
+interface SetOptions {
+  /** If true, mark the field as touched when setting. Default: false */
+  touch?: boolean;
+}
 ```
 
----
+### `patch(entries, options?)`
 
-### `set(entries, options?)`
-
-Set multiple fields at once.
-
-```typescript
-set(entries: Record<string, any> | FormData, options?: {
-  replace?: boolean;   // default: false
-  markDirty?: boolean; // default: false
-}): void
+```ts
+patch(entries: Partial<TValues>, options?: SetOptions): void
 ```
 
-**Examples:**
-
-```typescript
-// Merge values
-form.set({ email: 'user@example.com', name: 'Alice' });
-
-// Replace all values
-form.set({ email: 'new@example.com' }, { replace: true });
-
-// Copy from another FormData
-form.set(otherFormData);
-```
-
----
+Deep partial merge — sets multiple fields at once. Nested objects are merged recursively; sibling keys not present in `entries` are left unchanged.
 
 ### `values()`
 
-Get all form values as a plain object.
-
-```typescript
-values(): Record<string, any>
+```ts
+values(): TValues
 ```
 
-**Example:**
+Returns a snapshot of all current values, reconstructing any nested shape from flattened dot-notation keys.
 
-```typescript
-const allValues = form.values();
-// { email: 'user@example.com', name: 'Alice', ... }
+## Field State
+
+### `field(name)`
+
+```ts
+field(name: string): FieldState<unknown>
 ```
 
----
+Returns a live state snapshot for one field.
 
-### `data()`
-
-Get the native FormData instance.
-
-```typescript
-data(): FormData
-```
-
-**Example:**
-
-```typescript
-const formData = form.data();
-await fetch('/api/submit', { method: 'POST', body: formData });
-```
-
----
-
-### `clone()`
-
-Clone the FormData for safe external mutation.
-
-```typescript
-clone(): FormData
-```
-
----
-
-### `error(name?)`
-
-Get error(s).
-
-```typescript
-error(): Map<string, string>         // Get all errors
-error(name: string): string | undefined  // Get specific error
-```
-
-**Examples:**
-
-```typescript
-const emailError = form.error('email');
-const allErrors = form.error();
-
-// Iterate over all errors
-for (const [field, message] of allErrors) {
-  console.log(`${field}: ${message}`);
+```ts
+interface FieldState<V = unknown> {
+  value: V;
+  error: string | undefined;
+  touched: boolean;
+  dirty: boolean;
 }
 ```
 
----
+### `getError(name)`
 
-### `error(name, message)`
-
-Set or clear a single error.
-
-```typescript
-error(name: string, message: string): void
+```ts
+getError(name: string): string | undefined
 ```
 
-**Examples:**
+Returns the current error for a specific field without allocating a full `FieldState` snapshot.
 
-```typescript
-// Set error
-form.error('email', 'This email is already taken');
+### `isFieldDirty(name)`
 
-// Clear error
-form.error('email', '');
+```ts
+isFieldDirty(name: string): boolean
 ```
 
----
+Returns `true` if the field's current value differs from its baseline value.
 
-### `errors(nextErrors)`
+### `isFieldTouched(name)`
 
-Set multiple errors at once.
-
-```typescript
-errors(nextErrors: Map<string, string> | Record<string, string>): void
+```ts
+isFieldTouched(name: string): boolean
 ```
 
-**Examples:**
+Returns `true` if the field has been marked as touched.
 
-```typescript
-// Set from object
-form.errors({ email: 'Invalid', password: 'Too short' });
+### `errors`
 
-// Set from Map
-form.errors(new Map([['email', 'Invalid']]));
-
-// Clear all errors
-form.errors({});
-form.errors(new Map());
+```ts
+readonly errors: Record<string, string>
 ```
 
----
+All current field errors as a plain object.
 
-### `dirty(name)`
+### `setError(name, message?)`
 
-Check if a field has been modified from its initial value.
-
-```typescript
-dirty(name: string): boolean
+```ts
+setError(name: string, message?: string): void
 ```
 
-**Example:**
+Manually set or clear a single field's error. Omit `message` (or pass `undefined`) to clear.
 
-```typescript
-if (form.dirty('email')) {
-  console.log('Email has been changed');
-}
+### `setErrors(nextErrors)`
+
+```ts
+setErrors(nextErrors: Record<string, string>): void
 ```
 
----
+Replace all errors at once with the provided map.
 
-### `touch(name)`
+### `clearErrors()`
 
-Check if a field has been touched (user interacted with it).
-
-```typescript
-touch(name: string): boolean
+```ts
+clearErrors(): void
 ```
 
-**Example:**
+Clears all field errors. Shorthand for `setErrors({})`.
 
-```typescript
-if (form.touch('email')) {
-  console.log('User has focused on email field');
-}
+## Touch
+
+### `touch(first, ...rest)`
+
+```ts
+touch(first: string, ...rest: string[]): void
 ```
 
----
+Mark one or more fields as touched.
 
-### `touch(name, mark)`
+### `touchAll()`
 
-Mark a field as touched.
-
-```typescript
-touch(name: string, mark: true): void
+```ts
+touchAll(): void
 ```
 
-**Example:**
+Mark every field as touched. Useful before submit to surface all errors to the user.
 
-```typescript
-form.touch('email', true);
+### `untouch(name)`
+
+```ts
+untouch(name: string): void
 ```
 
----
+Remove the touched state from a single field. Useful in multi-step forms when moving between steps.
 
-### `validate(name)`
+### `untouchAll()`
 
-Validate a specific field.
-
-```typescript
-validate(name: string): Promise<string | undefined>
+```ts
+untouchAll(): void
 ```
 
-**Example:**
+Remove the touched state from all fields.
 
-```typescript
-const error = await form.validate('email');
-if (error) {
-  console.log('Email validation failed:', error);
-}
+## Array Fields
+
+### `appendField(name, value)`
+
+```ts
+appendField(name: string, value: unknown): void
 ```
 
----
+Appends an item to the end of an array field.
+
+### `removeField(name, index)`
+
+```ts
+removeField(name: string, index: number): void
+```
+
+Removes the item at `index` from an array field.
+
+### `moveField(name, from, to)`
+
+```ts
+moveField(name: string, from: number, to: number): void
+```
+
+Moves an array item from one index to another. Useful for drag-and-drop reordering.
+
+## Validation
+
+### `validateField(name, signal?)`
+
+```ts
+validateField(name: string, signal?: AbortSignal): Promise<string | undefined>
+```
+
+Runs all field-level validators for the given field. Sets `isValidating` while running and stores the result in the error map. Returns the resulting error string, or `undefined` if valid.
 
 ### `validate(options?)`
 
-Validate multiple fields or the entire form.
-
-```typescript
-validate(options?: {
-  signal?: AbortSignal;
-  onlyTouched?: boolean;
-  fields?: string[];
-}): Promise<Map<string, string>>
+```ts
+validate(options?: ValidateOptions<TValues>): Promise<ValidateResult>
 ```
 
-**Examples:**
+Validates the form and returns a `ValidateResult`.
 
-```typescript
-// Validate all fields
-const errors = await form.validate();
-
-// Validate only touched fields
-const errors = await form.validate({ onlyTouched: true });
-
-// Validate specific fields
-const errors = await form.validate({ fields: ['email', 'password'] });
-
-// With abort signal
-const controller = new AbortController();
-const errors = await form.validate({ signal: controller.signal });
-```
-
----
-
-### `submit(onSubmit, options?)`
-
-Submit the form with automatic validation.
-
-```typescript
-submit(
-  onSubmit: (formData: FormData) => any | Promise<any>,
-  options?: {
-    signal?: AbortSignal;
-    validate?: boolean; // default: true
-  }
-): Promise<any>
-```
-
-**Behavior:**
-
-1. Validates form (unless `validate: false`)
-2. If validation fails, throws `ValidationError`
-3. If validation passes, calls `onSubmit` with FormData
-4. Returns the result of `onSubmit`
-
-**Examples:**
-
-```typescript
-// Basic submission
-const result = await form.submit(async (formData) => {
-  const response = await fetch('/api/submit', {
-    method: 'POST',
-    body: formData,
-  });
-  return response.json();
-});
-
-// Skip validation
-await form.submit(onSubmit, { validate: false });
-
-// With abort signal
-const controller = new AbortController();
-await form.submit(onSubmit, { signal: controller.signal });
-
-// Handle validation errors
-try {
-  await form.submit(onSubmit);
-} catch (error) {
-  if (error instanceof ValidationError) {
-    console.log('Validation failed:', error.errors);
-  }
+```ts
+/** Result returned by form.validate(). */
+interface ValidateResult {
+  /** Whether the entire error map is empty after this run. */
+  valid: boolean;
+  /** Full current error map (all fields, not only the ones validated in this run). */
+  errors: Record<string, string>;
 }
 ```
 
----
-
-### `reset(newFormData?)`
-
-Reset the form to initial values or new values.
-
-```typescript
-reset(newFormData?: FormData | Record<string, any>): void
+```ts
+interface ValidateOptions<TValues extends Record<string, unknown> = Record<string, unknown>> {
+  /** Cancel the validation run. */
+  signal?: AbortSignal;
+  /**
+   * Only validate fields the user has touched.
+   * @remarks Treated as a partial run — the form-level `validator` is NOT run.
+   */
+  onlyTouched?: boolean;
+  /**
+   * Restrict validation to these fields (partial validation).
+   * When supplied, the form-level `validator` is NOT run.
+   * Errors on other fields are left unchanged.
+   * Pass an empty array to validate nothing.
+   */
+  fields?: FlatKeyOf<TValues>[];
+}
 ```
 
-**Examples:**
+| Mode    | `fields` supplied | Form-level validator | Other errors |
+| ------- | ----------------- | -------------------- | ------------ |
+| Full    | No                | Runs                 | Replaced     |
+| Partial | Yes               | Skipped              | Preserved    |
 
-```typescript
-// Reset to initial values
-form.reset();
+## Submit
 
-// Reset to new values
-form.reset({ email: '', password: '' });
+### `submit(handler, options?)`
 
-// Reset from FormData
-form.reset(otherFormData);
+```ts
+submit<R>(
+  handler: (values: TValues) => R | Promise<R>,
+  options?: SubmitOptions,
+): Promise<R>
 ```
 
----
+Validates the form (unless `skipValidation` is set), then calls `handler` with the current values. Returns the handler's result.
 
-### `subscribe(listener)`
-
-Subscribe to form state changes.
-
-```typescript
-subscribe(listener: (state: FormState) => void): () => void
+```ts
+interface SubmitOptions<TValues extends Record<string, unknown> = Record<string, unknown>> {
+  /** Restrict validation to these fields. */
+  fields?: FlatKeyOf<TValues>[];
+  /** Cancel the operation. */
+  signal?: AbortSignal;
+  /** Skip validation before calling the handler. */
+  skipValidation?: boolean;
+}
 ```
 
-**Returns:** Unsubscribe function
+**Behaviour:**
 
-**Example:**
+1. If `isSubmitting` is already `true`, throws `SubmitError` (double-submit guard).
+2. Sets `isSubmitting = true`, increments `submitCount`.
+3. If `skipValidation` is not set, runs `touchAll()` then validates. Throws `FormValidationError` on failure.
+4. Calls `handler(values)` and awaits the result.
+5. Resets `isSubmitting = false` when done (success or error).
 
-```typescript
-const unsubscribe = form.subscribe((state) => {
-  console.log('Form state:', state);
-  console.log('Errors:', state.errors);
-  console.log('Dirty fields:', state.dirty);
-  console.log('Touched fields:', state.touched);
-  console.log('Is submitting:', state.isSubmitting);
-  console.log('Is validating:', state.isValidating);
-  console.log('Submit count:', state.submitCount);
-});
-
-// Later: cleanup
-unsubscribe();
-```
-
----
-
-### `subscribeField(name, listener)`
-
-Subscribe to specific field changes.
-
-```typescript
-subscribeField(
-  name: string,
-  listener: (payload: {
-    value: any;
-    error?: string;
-    touched: boolean;
-    dirty: boolean;
-  }) => void
-): () => void
-```
-
-**Returns:** Unsubscribe function
-
-**Example:**
-
-```typescript
-const unsubscribe = form.subscribeField('email', ({ value, error, touched, dirty }) => {
-  console.log('Email:', value);
-  console.log('Error:', error);
-  console.log('Touched:', touched);
-  console.log('Dirty:', dirty);
-});
-
-// Later: cleanup
-unsubscribe();
-```
-
----
+## Bind
 
 ### `bind(name, config?)`
 
-Create a binding object for input elements.
+```ts
+bind(name: string, config?: BindConfig): BindResult
+```
 
-```typescript
-bind(name: string, config?: {
-  valueExtractor?: (event: any) => any;
-  markTouchedOnBlur?: boolean; // default: true
-}): {
-  name: string;
-  value: any;
-  onChange: (event: any) => void;
-  onBlur: () => void;
-  set: (value: any | ((prev: any) => any)) => void;
+Returns a memoized live descriptor for wiring a field to a DOM input or framework component. The `value`, `error`, `touched`, and `dirty` properties are getters — they read the current value fresh each time. Same arguments always return the same object.
+
+```ts
+interface BindResult<V = unknown, K extends string = string> {
+  readonly name: K;
+  onBlur(): void;
+  onChange(event: unknown): void;
+  readonly value: V;
+  readonly error: string | undefined;
+  readonly touched: boolean;
+  readonly dirty: boolean;
 }
 ```
 
-**Examples:**
-
-```typescript
-// Simple input binding
-<input {...form.bind('email')} />
-
-// Custom value extractor
-const binding = form.bind('category', {
-  valueExtractor: (e) => e.selectedOption
-});
-
-// Disable touch on blur
-<input {...form.bind('name', { markTouchedOnBlur: false })} />
-
-// Programmatic updates
-const emailBinding = form.bind('email');
-emailBinding.set('new@example.com');
-emailBinding.set((prev) => prev + '@domain.com');
+```ts
+interface BindConfig {
+  /**
+   * Custom extractor for the value from a change event.
+   * Default: `(e) => (e.target as HTMLInputElement).value`
+   */
+  valueExtractor?: (event: unknown) => unknown;
+  /** Whether to call `touch(name)` on blur. Default: true */
+  touchOnBlur?: boolean;
+  /** Whether to call `validateField(name)` on blur. Default: false */
+  validateOnBlur?: boolean;
+  /** Whether to call `validateField(name)` on every change. Default: false */
+  validateOnChange?: boolean;
+}
 ```
 
----
+## Reset
 
-### `snapshot()`
+### `reset(newValues?)`
 
-Get an immutable snapshot of the current form state.
-
-```typescript
-snapshot(): FormState
+```ts
+reset(newValues?: Partial<TValues>): void
 ```
 
-**Returns:**
+Resets the entire form. If `newValues` is supplied, it is deeply merged in as both the new current values and the new baseline for dirty tracking. If omitted, the form reverts to the original `defaultValues`.
 
-```typescript
-type FormState = {
-  errors: Map<string, string>;
-  touched: Set<string>;
-  dirty: Set<string>;
+Clears all errors, touched flags, and dirty state.
+
+### `resetField(name)`
+
+```ts
+resetField(name: string): void
+```
+
+Resets a single field to its `defaultValues` value. Clears its error, touched flag, and dirty state without affecting the rest of the form.
+
+## State
+
+### `state`
+
+```ts
+readonly state: FormState
+```
+
+Returns a snapshot of the complete form state. A new snapshot object is created each time a field changes.
+
+```ts
+interface FormState<TValues extends Record<string, unknown> = Record<string, unknown>> {
+  isValid: boolean;
+  isDirty: boolean;
+  isTouched: boolean;
   isValidating: boolean;
   isSubmitting: boolean;
   submitCount: number;
-};
-```
-
-**Example:**
-
-```typescript
-const state = form.snapshot();
-console.log(state.errors.get('email'));
-console.log(state.dirty.has('email'));
-console.log(state.touched.has('email'));
-```
-
-## Types
-
-### `FormInit`
-
-```typescript
-type FormInit = {
-  fields?: Record<string, any>;
-  validate?: FormValidator;
-};
-```
-
-### `FieldConfig`
-
-```typescript
-type FieldConfig = {
-  value?: any;
-  validators?: FieldValidator | FieldValidator[];
-};
-```
-
-### `FieldValidator`
-
-```typescript
-type FieldValidator = (value: FormDataEntryValue) => string | undefined | null | Promise<string | undefined | null>;
-```
-
-### `FormValidator`
-
-```typescript
-type FormValidator = (
-  formData: FormData,
-) => Map<string, string> | undefined | null | Promise<Map<string, string> | undefined | null>;
-```
-
-### `FormState`
-
-```typescript
-type FormState = {
-  errors: Map<string, string>;
-  touched: Set<string>;
-  dirty: Set<string>;
-  isValidating: boolean;
-  isSubmitting: boolean;
-  submitCount: number;
-};
-```
-
-### `ValidationError`
-
-```typescript
-class ValidationError extends Error {
-  readonly type: 'validation';
-  readonly errors: Map<string, string>;
+  errors: Record<string, string>;
+  /** Flat dot-notation keys of all fields that currently differ from their baseline value. */
+  dirtyFields: FlatKeyOf<TValues>[];
 }
 ```
 
-**Example:**
+### Individual getters
 
-```typescript
-try {
-  await form.submit(onSubmit);
-} catch (error) {
-  if (error instanceof ValidationError) {
-    for (const [field, message] of error.errors) {
-      console.log(`${field}: ${message}`);
-    }
-  }
+| Getter         | Type                     | Description                                         |
+| -------------- | ------------------------ | --------------------------------------------------- |
+| `isValid`      | `boolean`                | No errors currently present                         |
+| `isDirty`      | `boolean`                | At least one field differs from its default         |
+| `isTouched`    | `boolean`                | At least one field has been touched                 |
+| `isValidating` | `boolean`                | A `validateField` or `validate` call is in progress |
+| `isSubmitting` | `boolean`                | A `submit` handler is running                       |
+| `submitCount`  | `number`                 | Number of times `submit` has been called            |
+| `errors`       | `Record<string, string>` | All current field errors                            |
+| `disposed`     | `boolean`                | Whether `dispose()` has been called                 |
+
+## Subscriptions
+
+### `subscribe(listener, options?)`
+
+```ts
+subscribe(listener: (state: FormState) => void, options?: { immediate?: boolean }): Unsubscribe
+```
+
+Registers a callback that fires with the latest `FormState` snapshot whenever any field changes. Returns an unsubscribe function. The callback fires immediately on registration unless `immediate: false` is set.
+
+```ts
+type Unsubscribe = () => void;
+```
+
+### `watch(name, listener, options?)`
+
+```ts
+watch(
+  name: string,
+  listener: (state: FieldState) => void,
+  options?: { immediate?: boolean },
+): Unsubscribe
+```
+
+Registers a callback that fires with the latest `FieldState` snapshot whenever **only that field** changes. More efficient than `subscribe` when you only care about one field. Fires immediately on registration unless `immediate: false` is set.
+
+## Lifecycle
+
+### `dispose()`
+
+```ts
+dispose(): void
+```
+
+Aborts all in-flight validators, removes all subscribers, and marks the form as `disposed`. A disposed form will not accept further changes.
+
+## Error Classes
+
+### `FormValidationError`
+
+Thrown by `submit()` when validation fails.
+
+```ts
+class FormValidationError extends Error {
+  readonly type = 'validation';
+  /** All field errors at the time of failure */
+  readonly errors: Record<string, string>;
 }
 ```
 
-## Complete Example
+### `SubmitError`
 
-```typescript
-import { createForm, ValidationError } from '@vielzeug/formit';
+Thrown by `submit()` when called while the form is already submitting.
+
+```ts
+class SubmitError extends Error {
+  readonly type = 'submit';
+}
+```
+
+## Standalone Utilities
+
+### `toFormData(values)`
+
+```ts
+function toFormData(values: Record<string, unknown>): FormData;
+```
+
+Converts a plain values object into a `FormData` instance. `File` and `Blob` values are appended as-is. `null` and `undefined` values are omitted. All other values are converted to strings via `.toString()`.
+
+The same functionality is available as an instance method (`form.toFormData()`) which uses the current `form.values()` snapshot.
+
+### `fromSchema(schema)`
+
+```ts
+function fromSchema<TValues>(schema: SafeParseSchema): Pick<FormOptions<TValues>, 'validator'>;
+```
+
+Adapts any `safeParse`-compatible schema (Zod, Valibot, or custom) as a form-level validator. Returns `{ validator: ... }` which you spread into `createForm()` options.
+
+```ts
+/** Structural type for any safeParse-compatible schema. */
+interface SafeParseSchema {
+  safeParse(
+    data: unknown,
+  ): { success: true } | { success: false; error: { issues: { path: (string | number)[]; message: string }[] } };
+}
+```
+
+```ts
+import { z } from 'zod';
+const schema = z.object({ email: z.string().email(), age: z.number().min(18) });
 
 const form = createForm({
-  fields: {
-    email: {
-      value: '',
-      validators: [(v) => !v && 'Email is required', (v) => v && !String(v).includes('@') && 'Invalid email'],
-    },
-    password: {
-      value: '',
-      validators: (v) => String(v).length < 8 && 'Min 8 characters',
-    },
-    confirmPassword: '',
-  },
-  validate: (formData) => {
-    const errors = new Map();
-    const password = formData.get('password');
-    const confirm = formData.get('confirmPassword');
-
-    if (password !== confirm) {
-      errors.set('confirmPassword', 'Passwords must match');
-    }
-
-    return errors;
-  },
+  defaultValues: { email: '', age: 0 },
+  ...fromSchema(schema),
 });
+```
 
-// Subscribe to changes
-const unsubscribe = form.subscribe((state) => {
-  updateUI(state);
-});
+## Exported Types
 
-// Handle submission
-try {
-  const result = await form.submit(async (formData) => {
-    const response = await fetch('/api/register', {
-      method: 'POST',
-      body: formData,
-    });
-    return response.json();
-  });
+```ts
+// Instance
+export type { Form }; // Full form interface
+export type { FormOptions }; // createForm() init options
+export type { FormState }; // Snapshot from form.state / subscribe
 
-  console.log('Success:', result);
-} catch (error) {
-  if (error instanceof ValidationError) {
-    console.log('Validation errors:', error.errors);
-  } else {
-    console.error('Submit error:', error);
-  }
-}
+// Field
+export type { FieldState }; // Snapshot from form.field() / watch()
+export type { BindResult }; // Returned by form.bind()
 
-// Cleanup
-unsubscribe();
+// Validators
+export type { FieldValidator }; // (value: V, signal: AbortSignal) => string | undefined | Promise<...>
+export type { FormValidator }; // (values: TValues, signal: AbortSignal) => Record<string, string> | Promise<...>
+export type { SafeParseSchema }; // Structural type for safeParse-compatible schemas
+
+// Operation results and options
+export type { ValidateResult };
+export type { ValidateOptions };
+export type { SetOptions };
+export type { SubmitOptions };
+export type { BindConfig };
+
+// Utility types
+export type { FlatKeyOf }; // Recursive dot-notation key union of a TValues shape
+export type { TypeAtPath }; // Value type at a dot-notation path
+export type { Unsubscribe }; // () => void
 ```

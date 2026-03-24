@@ -7,7 +7,7 @@
 
 Checks if a value is a number (excluding NaN).
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isNumber.ts

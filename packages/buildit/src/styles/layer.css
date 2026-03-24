@@ -1,0 +1,18 @@
+/* ========================================
+   CSS Cascade Layers
+
+   Define explicit layer order for predictable styling.
+   Layer order > Specificity
+
+   User styles (unlayered or custom layers) automatically
+   have higher priority than all BuildIt layers.
+   ======================================== */
+
+@layer buildit.reset,
+  buildit.tokens,
+  buildit.themes,
+  buildit.base,
+  buildit.variants,
+  buildit.states,
+  buildit.utilities,
+  buildit.overrides;

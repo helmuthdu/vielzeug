@@ -7,7 +7,7 @@
 
 The `compare` utility is a generic comparator function that determines the relative order of two values. It returns `-1` if the first value is smaller, `1` if it is larger, and `0` if they are equal.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/compare.ts

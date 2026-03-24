@@ -7,7 +7,7 @@
 
 The `merge` utility combines multiple objects into a single new object using a variety of configurable strategies.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/object/merge.ts
@@ -94,6 +94,5 @@ merge(custom, { val: 10 }, { val: 5 }); // { val: 15 }
 
 ## See Also
 
-- [clone](./clone.md): Create a deep copy of a single object.
 - [diff](./diff.md): Find the differences between two objects.
-- [patch](./patch.md): Apply a diff to an object.
+- [prune](./prune.md): Remove empty/null values after merging.

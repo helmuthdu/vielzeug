@@ -1,36 +1,49 @@
+---
+title: 'Toolkit — Async Examples'
+description: 'Async utility examples for Toolkit.'
+---
+
 # Async Utilities Examples
 
 Comprehensive async/promise utilities for modern JavaScript applications.
 
 ## Overview
 
+## Problem
+
+Implement overview in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
+
 The async category provides utilities for managing promises, concurrency control, retries, timeouts, and other asynchronous patterns.
 
 ## attempt
 
-Execute a function with advanced error handling and retry logic.
+Execute a function with retry + timeout handling and inspect the discriminated result.
 
 ```typescript
 import { attempt } from '@vielzeug/toolkit';
 
-// Basic usage
-const unreliableFunction = async () => {
-  if (Math.random() < 0.7) throw new Error('Random failure');
-  return 'Success!';
-};
+const result = await attempt(
+  async () => {
+    if (Math.random() < 0.7) throw new Error('Random failure');
 
-const result = await attempt(unreliableFunction, {
-  retries: 3,
-  timeout: 5000,
-  silent: false,
-});
+    return 'Success!';
+  },
+  {
+    times: 3,
+    timeout: 5000,
+    onError: (err) => console.error('attempt failed', err),
+  },
+);
 
-// With identifier for logging
-await attempt(fetchUserData, {
-  identifier: 'fetchUserData',
-  retries: 5,
-  timeout: 10000,
-});
+if (result.ok) {
+  console.log(result.value);
+} else {
+  console.error(result.error);
+}
 ```
 
 ## defer
@@ -65,22 +78,9 @@ const clickEvent = await eventPromise.promise;
 
 ## delay
 
-Delay the execution of a function by a specified time.
-
-```typescript
-import { delay } from '@vielzeug/toolkit';
-
-// Basic usage
-const log = () => console.log('Hello, world!');
-delay(log, 1000); // Logs after 1 second
-
-// With async function
-const fetchData = async () => fetch('/api/data');
-const result = await delay(fetchData, 500);
-
-// Custom delay
-await delay(() => processData(), 2000);
-```
+::: warning Removed
+`delay` has been removed. Use `sleep` for a plain async wait, or `attempt` for delayed retries.
+:::
 
 ## parallel
 
@@ -131,30 +131,9 @@ async function fetchUser(id: number) {
 
 ## predict
 
-Add timeout to async operations with AbortSignal support.
-
-```typescript
-import { predict } from '@vielzeug/toolkit';
-
-// Basic usage
-const result = await predict(
-  async (signal) => {
-    const response = await fetch('/api/data', { signal });
-    return response.json();
-  },
-  { timeout: 5000 },
-);
-
-// With custom AbortSignal
-const controller = new AbortController();
-
-const result = await predict(async (signal) => longRunningTask(signal), { timeout: 10000, signal: controller.signal });
-
-// Combine with retry
-import { retry } from '@vielzeug/toolkit';
-
-const result = await retry(() => predict((signal) => fetchData(signal), { timeout: 5000 }), { times: 3, delay: 1000 });
-```
+::: tip Internal utility
+`predict` is not exported from the package index. It powers `attempt` internally. Use `attempt` for retry + timeout logic, or `race` for a minimum-delay guarantee.
+:::
 
 ## queue
 
@@ -193,7 +172,7 @@ for (const url of urls) {
 
 ## race
 
-Race promises with a guaranteed minimum delay (better UX for loading states).
+Race a promise against a guaranteed minimum delay — useful for preventing loading flicker.
 
 ```typescript
 import { race } from '@vielzeug/toolkit';
@@ -201,17 +180,10 @@ import { race } from '@vielzeug/toolkit';
 // Show loading spinner for at least 500ms
 const data = await race(fetchQuickData(), 500);
 
-// Prevents flickering for fast operations
-const result = await race(
-  [fetch('/api/1'), fetch('/api/2')],
-  1000, // Ensure at least 1 second
-);
-
 // Use case: Better UX
 async function loadUserProfile(userId: string) {
   // Even if data loads in 50ms, show spinner for at least 300ms
   const user = await race(fetchUser(userId), 300);
-
   return user;
 }
 ```
@@ -230,7 +202,24 @@ const result = await retry(() => fetchData(), { times: 3, delay: 1000 });
 const result = await retry(() => unreliableAPICall(), {
   times: 5,
   delay: 500,
-  backoff: 2, // 500ms, 1000ms, 2000ms, 4000ms, 8000ms
+  backoff: 2, // 500ms, 1000ms, 2000ms, 4000ms
+});
+
+// Per-attempt delay override — supersedes delay and backoff
+const result = await retry(() => fetchData(), {
+  times: 5,
+  retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000), // 1s, 2s, 4s, 8s, capped at 30s
+});
+
+// Selective retry — return false to stop for a specific error type
+const result = await retry(() => fetchData(), {
+  times: 3,
+  delay: 500,
+  shouldRetry: (err, attempt) => {
+    // Never retry client errors (4xx)
+    if (err instanceof Response && err.status >= 400 && err.status < 500) return false;
+    return true;
+  },
 });
 
 // With AbortSignal
@@ -248,6 +237,45 @@ const result = await retry(() => fetchData(), {
   delay: 1000,
   backoff: (attempt, delay) => delay * attempt, // Linear backoff
 });
+```
+
+## scheduler
+
+Schedule tasks at a given priority using the native [Prioritized Task Scheduling API](https://developer.mozilla.org/en-US/docs/Web/API/Prioritized_Task_Scheduling_API) with an automatic polyfill fallback.
+
+`new Scheduler()` is the recommended constructor — it installs the polyfill just-in-time without polluting `globalThis` until first use. Call `polyfillScheduler()` once at your entry point if you prefer to install it globally upfront.
+
+```typescript
+import { Scheduler, polyfillScheduler } from '@vielzeug/toolkit';
+
+// Basic delayed task
+const scheduler = new Scheduler();
+await scheduler.postTask(() => console.log('hello'), { delay: 100 });
+
+// Background priority — runs after higher-priority work, ideal for cache cleanup
+await scheduler.postTask(() => pruneStaleCacheEntries(), {
+  delay: 5 * 60_000,
+  priority: 'background',
+});
+
+// Cancellable task
+const controller = new AbortController();
+
+void scheduler
+  .postTask(() => doExpensiveWork(), {
+    delay: 2000,
+    priority: 'background',
+    signal: controller.signal,
+  })
+  .catch(() => {
+    // AbortError — task was cancelled before it ran
+  });
+
+controller.abort(); // cancel it
+
+// Global polyfill installation (safe to call multiple times)
+polyfillScheduler();
+await globalThis.scheduler.postTask(() => doWork(), { priority: 'background' });
 ```
 
 ## sleep
@@ -317,21 +345,22 @@ await waitFor(() => window.myGlobal !== undefined, {
 ### API Request with Retry and Timeout
 
 ```typescript
-import { retry, predict } from '@vielzeug/toolkit';
+import { attempt } from '@vielzeug/toolkit';
 
 async function fetchWithRetry(url: string) {
-  return retry(
-    () =>
-      predict(
-        async (signal) => {
-          const response = await fetch(url, { signal });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return response.json();
-        },
-        { timeout: 5000 },
-      ),
-    { times: 3, delay: 1000, backoff: 2 },
+  const result = await attempt(
+    async () => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      return res.json();
+    },
+    { times: 3, timeout: 10_000 },
   );
+
+  if (!result.ok) throw result.error;
+
+  return result.value;
 }
 ```
 
@@ -408,3 +437,20 @@ async function waitForJobCompletion(jobId: string) {
   return fetch(`/api/jobs/${jobId}/result`).then((r) => r.json());
 }
 ```
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Array Examples](./array.md)
+- [Date Examples](./date.md)
+- [Function Examples](./function.md)

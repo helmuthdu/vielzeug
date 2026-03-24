@@ -1,614 +1,331 @@
+---
+title: Validit — API Reference
+description: Complete API reference for Validit schemas and methods.
+---
+
 # Validit API Reference
-
-Complete API documentation for all Validit schemas and methods.
-
-## Table of Contents
 
 [[toc]]
 
-## Core Exports
+## API At a Glance
+
+| Symbol             | Purpose                                 | Execution mode | Common gotcha                                         |
+| ------------------ | --------------------------------------- | -------------- | ----------------------------------------------------- |
+| `v.object()`       | Create typed object schema definitions  | Sync           | Use strict/passthrough intentionally for unknown keys |
+| `safeParse()`      | Validate unknown input without throwing | Sync           | Always branch on success before using parsed data     |
+| `safeParseAsync()` | Validate async refinement pipelines     | Async          | Await result to capture async validation issues       |
+
+## Package Exports
 
 ```ts
 import {
-  v, // Main factory object
-  type Infer, // Type inference utility
-  type Schema, // Base schema class
-  ValidationError, // Error class
-  type ParseResult, // Result type for safeParse
-  type Issue, // Individual error type
+  ErrorCode,
+  Schema,
+  ValidationError,
+  any,
+  configure,
+  nullable,
+  nullish,
+  optional,
+  preprocess,
+  resolveMessage,
+  unknown,
+  v,
+  type Infer,
+  type InferOutput,
+  type Issue,
+  type MessageFn,
+  type ParseResult,
+  type Messages,
 } from '@vielzeug/validit';
 ```
 
-## Factory Object: `v`
-
-The main entry point for creating schemas.
-
-### Primitive Schemas
-
-#### `v.string()`
-
-Creates a string schema.
-
-```ts
-v.string(); // string
-```
-
-**Methods:**
-
-- `.min(length: number, message?: string)` – Minimum length
-- `.max(length: number, message?: string)` – Maximum length
-- `.length(exact: number, message?: string)` – Exact length
-- `.pattern(regex: RegExp, message?: string)` – Regex pattern
-- `.email(message?: string)` – Email validation
-- `.url(message?: string)` – URL validation
-- `.uuid(message?: string)` – UUID format
-- `.trim()` – Must be trimmed (validation only, doesn't transform)
-
-#### `v.number()`
-
-Creates a number schema.
-
-```ts
-v.number(); // number
-```
-
-**Methods:**
-
-- `.min(minimum: number, message?: string)` – Minimum value
-- `.max(maximum: number, message?: string)` – Maximum value
-- `.int(message?: string)` – Must be integer
-- `.positive(message?: string)` – Must be > 0
-- `.negative(message?: string)` – Must be < 0
-
-#### `v.boolean()`
-
-Creates a boolean schema.
-
-```ts
-v.boolean(); // boolean
-```
-
-#### `v.date()`
-
-Creates a Date schema.
-
-```ts
-v.date(); // Date
-```
-
-**Methods:**
-
-- `.min(date: Date, message?: string)` – After date
-- `.max(date: Date, message?: string)` – Before date
-
----
-
-### Literal & Enum Schemas
-
-#### `v.literal(value)`
-
-Creates a schema that matches an exact value.
-
-```ts
-v.literal('active'); // type: 'active'
-v.literal(42); // type: 42
-v.literal(true); // type: true
-```
-
-**Parameters:**
-
-- `value: string | number | boolean` – The exact value to match
-
-#### `v.enum(...values)`
-
-Creates an enum schema from a list of values.
-
-```ts
-v.enum('red', 'green', 'blue'); // 'red' | 'green' | 'blue'
-v.enum(1, 2, 3); // 1 | 2 | 3
-v.enum('admin', 'user', 'guest'); // 'admin' | 'user' | 'guest'
-```
-
-**Parameters:**
-
-- `...values: [T, ...T[]]` – At least one value required
-
----
-
-### Complex Schemas
-
-#### `v.array(schema)`
-
-Creates an array schema.
-
-```ts
-v.array(v.number()); // number[]
-```
-
-**Parameters:**
-
-- `schema: Schema<T>` – Schema for array items
-
-**Methods:**
-
-- `.min(length: number, message?: string)` – Minimum items
-- `.max(length: number, message?: string)` – Maximum items
-- `.length(exact: number, message?: string)` – Exact number of items
-
-#### `v.object(shape)`
-
-Creates an object schema.
-
-```ts
-v.object({
-  name: v.string(),
-  age: v.number(),
-});
-```
-
-**Parameters:**
-
-- `shape: Record<string, Schema<any>>` – Object shape definition
-
-**Methods:**
-
-- `.partial()` – Make all fields optional
-- `.pick(...keys)` – Select specific fields
-- `.omit(...keys)` – Exclude specific fields
-
-#### `v.union(...schemas)`
-
-Creates a union schema.
-
-```ts
-v.union(v.string(), v.number()); // string | number
-v.union(v.object({ type: v.literal('a'), value: v.string() }), v.object({ type: v.literal('b'), value: v.number() }));
-```
-
-**Parameters:**
-
-- `...schemas: [Schema<T>, Schema<U>, ...Schema<any>[]]` – At least 2 schemas
-
----
-
-### Convenience Schemas
-
-#### `v.email()`
-
-Shorthand for `v.string().email()`.
-
-```ts
-v.email(); // string (email format)
-```
-
-#### `v.url()`
-
-Shorthand for `v.string().url()`.
-
-```ts
-v.url(); // string (URL format)
-```
-
-#### `v.uuid()`
-
-UUID validation.
-
-```ts
-v.uuid(); // string (UUID format)
-```
-
-#### `v.int().positive()`
-
-Shorthand for `v.number().int().positive()`.
-
-```ts
-v.int().positive(); // number (positive integer)
-```
-
-#### `v.int().negative()`
-
-Shorthand for `v.number().int().negative()`.
-
-```ts
-v.int().negative(); // number (negative integer)
-```
-
----
-
-### Utility Schemas
-
-#### `v.any()`
-
-Accepts any value (no validation).
-
-```ts
-v.any(); // any
-```
-
-#### `v.unknown()`
-
-Accepts any value (typed as `unknown`).
-
-```ts
-v.unknown(); // unknown
-```
-
-#### `v.null()`
-
-Matches `null` exactly.
-
-```ts
-v.null(); // null
-```
-
-#### `v.undefined()`
-
-Matches `undefined` exactly.
-
-```ts
-v.undefined(); // undefined
-```
-
-#### `v.void()`
-
-Alias for `v.undefined()`.
-
-```ts
-v.void(); // undefined
-```
-
----
-
-### Coercion (Experimental)
-
-#### `v.coerce.string()`
-
-Converts values to string.
-
-```ts
-v.coerce.string();
-// Accepts: string, number, boolean
-// Returns: string
-```
-
-#### `v.coerce.number()`
-
-Converts strings to numbers.
-
-```ts
-v.coerce.number();
-// Accepts: number, numeric string
-// Returns: number
-```
-
-#### `v.coerce.boolean()`
-
-Converts values to boolean.
-
-```ts
-v.coerce.boolean();
-// Accepts: boolean, 'true', 'false', 1, 0
-// Returns: boolean
-```
-
-#### `v.coerce.date()`
-
-Converts values to Date.
-
-```ts
-v.coerce.date();
-// Accepts: Date, date string, timestamp
-// Returns: Date
-```
-
-::: warning
-Coercion features are experimental and have limitations. Use with caution in production.
-:::
-
-## Schema Methods
-
-All schemas inherit these methods:
+`@vielzeug/validit` also exports flat schema factories and schema classes from `./schemas` (for example: `string`, `number`, `object`, `array`, `union`, `variant`, `enumOf`, `nativeEnum`, `instanceOf`, `coerceString`).
+
+## v Factory
+
+### Primitive Factories
+
+- `v.string()`
+- `v.number()`
+- `v.boolean()`
+- `v.date()`
+- `v.literal(value)`
+- `v.enum(values)`
+- `v.nativeEnum(enumObj)`
+- `v.null()`
+- `v.undefined()`
+- `v.any()`
+- `v.unknown()`
+- `v.never()`
+
+### Composite Factories
+
+- `v.object(shape)`
+- `v.array(itemSchema)`
+- `v.tuple(items)`
+- `v.record(keySchema, valueSchema)`
+- `v.union(a, b, ...rest)`
+- `v.intersect(a, b, ...rest)`
+- `v.variant(discriminator, map)`
+- `v.lazy(getter)`
+- `v.instanceof(ClassCtor)`
+
+### Wrapper/Utility Factories
+
+- `v.optional(schema)`
+- `v.nullable(schema)`
+- `v.nullish(schema)`
+- `v.preprocess(fn, schema)`
+
+### Coercion Factories
+
+- `v.coerce.string()`
+- `v.coerce.number()`
+- `v.coerce.boolean()`
+- `v.coerce.date()`
+
+## Schema Base Methods
+
+All schemas inherit from `Schema<Output>`.
 
 ### Validation
 
-#### `parse(value: unknown): Output`
-
-Validates and returns data. Throws `ValidationError` on failure.
-
 ```ts
-const user = schema.parse(data);
-// Throws ValidationError if invalid
+parse(value: unknown): Output
+safeParse(value: unknown): ParseResult<Output>
+parseAsync(value: unknown): Promise<Output>
+safeParseAsync(value: unknown): Promise<ParseResult<Output>>
 ```
 
-#### `safeParse(value: unknown): ParseResult<Output>`
-
-Validates and returns a result object. Never throws.
-
-```ts
-const result = schema.safeParse(data);
-
-if (result.success) {
-  console.log(result.data);
-} else {
-  console.log(result.error);
-}
-```
-
-**Returns:**
-
-```ts
-type ParseResult<T> = { success: true; data: T } | { success: false; error: ValidationError };
-```
-
-#### `parseAsync(value: unknown): Promise<Output>`
-
-Async version of `parse()`. Required for async validators.
-
-```ts
-const user = await schema.parseAsync(data);
-```
-
-#### `safeParseAsync(value: unknown): Promise<ParseResult<Output>>`
-
-Async version of `safeParse()`.
-
-```ts
-const result = await schema.safeParseAsync(data);
-```
-
----
+- `parse()` throws `ValidationError` on failure.
+- `safeParse()` never throws for validation failures.
+- If async validators exist, `parse()` throws and you must use `parseAsync()` / `safeParseAsync()`.
 
 ### Modifiers
 
-#### `optional(): this & Schema<Output | undefined>`
-
-Makes the schema accept `undefined`.
-
 ```ts
-v.string().optional(); // string | undefined
-v.email().optional(); // string | undefined
+optional(): Schema<Output | undefined>
+nullable(): Schema<Output | null>
+nullish(): Schema<Output | null | undefined>
+required(): Schema<Exclude<Output, undefined>>
+default(value: Output | (() => Output)): this
+catch(fallback: Output | (() => Output)): this
 ```
-
-::: tip 💡 Validation Defaults
-All schemas **reject `null` and `undefined` by default**. You don't need a `required()` method!
-
-- Use `.optional()` to allow `undefined`
-- Use `.nullable()` to allow `null`
-- Use `.min(1)` to reject empty strings or arrays
-  :::
-
-#### `nullable(): this & Schema<Output | null>`
-
-Makes the schema accept `null`.
-
-```ts
-v.string().nullable(); // string | null
-v.number().nullable(); // number | null
-```
-
-#### `default(value: Output): this`
-
-Provides a default value when `undefined`.
-
-```ts
-v.string().default('hello'); // 'hello' if undefined
-v.number().default(0); // 0 if undefined
-v.boolean().default(false); // false if undefined
-```
-
----
 
 ### Custom Validation
 
-#### `refine(check: (value: Output) => boolean, message?: string): this`
-
-Adds sync custom validation.
-
 ```ts
-v.string().refine((val) => val.length >= 3, 'Must be at least 3 characters');
+refine(
+  check: (value: Output) => boolean,
+  message?: MessageFn<{ value: Output }>,
+): this
 
-v.number().refine((val) => val % 2 === 0, 'Must be even');
+refineAsync(
+  check: (value: Output) => Promise<boolean>,
+  message?: MessageFn<{ value: Output }>,
+): this
 ```
 
-**Parameters:**
+- `refine()` is sync only.
+- `refineAsync()` stores async checks used by `parseAsync()` and `safeParseAsync()`.
 
-- `check: (value: Output) => boolean` – Validation function
-- `message?: string` – Error message (default: 'Invalid value')
-
-#### `refineAsync(check: (value: Output) => Promise<boolean> | boolean, message?: string): this`
-
-Adds async custom validation.
+### Transform and Metadata
 
 ```ts
-v.string().refineAsync(async (val) => {
-  const exists = await checkDatabase(val);
-  return !exists;
-}, 'Already exists');
+transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput>
+preprocess(fn: (value: unknown) => unknown): this
+describe(description: string): this
+brand<Brand extends string>(): Schema<Output & { __brand: Brand }>
+is(value: unknown): value is Output
 ```
 
-**Parameters:**
+## StringSchema
 
-- `check: (value: Output) => Promise<boolean> | boolean` – Async validation function
-- `message?: string` – Error message
+`v.string()` methods:
 
-::: warning
-Schemas with async validators must use `parseAsync()` or `safeParseAsync()`. Calling `parse()` will throw an error.
-:::
+- `.min(length, message?)`
+- `.max(length, message?)`
+- `.length(exact, message?)`
+- `.nonempty(message?)`
+- `.startsWith(prefix, message?)`
+- `.endsWith(suffix, message?)`
+- `.includes(substr, message?)`
+- `.regex(pattern, message?)`
+- `.email(message?)`
+- `.url(message?)`
+- `.uuid(message?)`
+- `.date(message?)`
+- `.datetime(message?)`
+- `.trim()`
+- `.lowercase()`
+- `.uppercase()`
 
----
+## NumberSchema
 
-### Utilities
+`v.number()` methods:
 
-#### `describe(description: string): this`
+- `.min(min, message?)`
+- `.max(max, message?)`
+- `.int(message?)`
+- `.positive(message?)`
+- `.negative(message?)`
+- `.nonNegative(message?)`
+- `.nonPositive(message?)`
+- `.multipleOf(step, message?)`
 
-Adds a description for better error messages.
+## DateSchema
+
+`v.date()` methods:
+
+- `.min(date, message?)`
+- `.max(date, message?)`
+
+## ArraySchema
+
+`v.array(schema)` methods:
+
+- `.min(length, message?)`
+- `.max(length, message?)`
+- `.length(exact, message?)`
+- `.nonempty(message?)`
+
+## ObjectSchema
+
+`v.object(shape)` methods:
+
+- `.partial()`
+- `.partial(...keys)`
+- `.required()`
+- `.extend(extraShape)`
+- `.pick(...keys)`
+- `.omit(...keys)`
+- `.strip()`
+- `.passthrough()`
+- `.strict()`
+
+Properties:
+
+- `.shape` (readonly)
+
+## TupleSchema
+
+`v.tuple(items)` validates fixed-length arrays with per-index schemas.
+
+## RecordSchema
+
+`v.record(keySchema, valueSchema)` validates object keys and values.
+
+## Union and Intersection
+
+### UnionSchema
+
+`v.union(a, b, ...rest)`:
+
+- accepts schema instances or raw literal values (`string | number | boolean | null | undefined`)
+- returns the output of the first successful branch
+- exposes `.schemas` (readonly normalized branch schemas)
+
+### IntersectSchema
+
+`v.intersect(a, b, ...rest)`:
+
+- all branches must pass
+- aggregates issues from failing branches
+- exposes `.schemas` (readonly)
+
+## VariantSchema
+
+`v.variant(discriminator, map)`:
+
+- requires `map` values to be object schemas
+- injects discriminator literals into each branch internally
+- validates in O(1) by discriminator lookup
+
+## Other Schemas
+
+- `v.lazy(getter)` for recursive schemas
+- `v.instanceof(Ctor)` for class instance checks
+- `v.enum(values)` for string tuple enums
+- `v.nativeEnum(enumObj)` for TS native enums
+- `v.literal(value)` for exact value match
+- `v.never()` always fails
+
+## Global Configuration
+
+### configure
 
 ```ts
-v.number().int().min(0).describe('age');
-
-// Errors will show: "age: Must be at least 0"
+configure({
+  messages: {
+    string_email: () => 'Invalid email',
+    number_min: ({ min }) => `Must be >= ${min}`,
+  },
+});
 ```
 
-**Parameters:**
+### Messages
 
-- `description: string` – Field description
-
-#### `transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput>`
-
-Applies a transformation after validation.
-
-```ts
-v.string()
-  .email()
-  .transform((email) => email.toLowerCase());
-
-v.string().transform((str) => str.split(','));
-```
-
-**Parameters:**
-
-- `fn: (value: Output) => NewOutput` – Transformation function
-
-::: warning
-Transform returns a generic `Schema<NewOutput>`, so you lose type-specific methods. Apply validators before transforming.
-:::
+`Messages` is the full message contract used internally. `configure({ messages })` accepts `Partial<Messages>`.
 
 ## Types
 
-### `Infer<T>`
-
-Extracts the TypeScript type from a schema.
+### Infer and InferOutput
 
 ```ts
-import { type Infer } from '@vielzeug/validit';
-
-const schema = v.object({
-  id: v.number(),
-  name: v.string(),
-  email: v.email().optional(),
-});
-
-type User = Infer<typeof schema>;
-// {
-//   id: number;
-//   name: string;
-//   email?: string | undefined;
-// }
+type User = Infer<typeof UserSchema>;
+type UserOut = InferOutput<typeof UserSchema>;
 ```
 
-### `Schema<Output>`
+Both extract schema output types.
 
-Base schema class. All schemas extend this.
-
-```ts
-class Schema<Output = unknown> {
-  parse(value: unknown): Output;
-  safeParse(value: unknown): ParseResult<Output>;
-  parseAsync(value: unknown): Promise<Output>;
-  safeParseAsync(value: unknown): Promise<ParseResult<Output>>;
-  // ... modifiers and utilities
-}
-```
-
-### `ValidationError`
-
-Error thrown by `parse()` and `parseAsync()`.
-
-```ts
-class ValidationError extends Error {
-  readonly issues: Issue[];
-  readonly message: string;
-  readonly name: 'ValidationError';
-}
-```
-
-**Properties:**
-
-- `issues: Issue[]` – Array of validation errors
-- `message: string` – Formatted error message
-
-### `Issue`
-
-Individual validation error.
-
-```ts
-type Issue = {
-  path: (string | number)[];
-  message: string;
-  code?: string;
-  params?: Record<string, unknown>;
-};
-```
-
-**Properties:**
-
-- `path` – Field path (e.g., `['user', 'email']`)
-- `message` – Error message
-- `code` – Error code (for i18n)
-- `params` – Additional parameters
-
-### `ParseResult<T>`
-
-Result type for `safeParse()` and `safeParseAsync()`.
+### ParseResult
 
 ```ts
 type ParseResult<T> = { success: true; data: T } | { success: false; error: ValidationError };
 ```
 
-## Error Codes
-
-Built-in error codes for internationalization:
-
-| Code             | Description              |
-| ---------------- | ------------------------ |
-| `invalid_type`   | Wrong type               |
-| `invalid_email`  | Invalid email format     |
-| `invalid_url`    | Invalid URL format       |
-| `invalid_string` | Pattern mismatch         |
-| `invalid_length` | Wrong length             |
-| `too_small`      | Below minimum            |
-| `too_big`        | Above maximum            |
-| `custom`         | Custom refinement failed |
-
-## Performance Tips
-
-### Reuse Schemas
-
-Create schemas once and reuse them:
+### MessageFn
 
 ```ts
-// ✅ Good
-const emailSchema = v.email();
-const user1 = emailSchema.parse(email1);
-const user2 = emailSchema.parse(email2);
-
-// ❌ Avoid
-const user1 = v.email().parse(email1);
-const user2 = v.email().parse(email2);
+type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
 ```
 
-### Use Convenience Schemas
+## Errors
 
-Convenience schemas are optimized shortcuts:
+### ValidationError
+
+- `.issues: Issue[]`
+- `.flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] }`
+- `ValidationError.is(value): value is ValidationError`
+
+### Issue
 
 ```ts
-// ✅ Preferred
-v.email();
-v.int().positive();
-
-// ⚠️ Works but longer
-v.string().email();
-v.number().int().positive();
+type Issue = {
+  code: ErrorCode | (string & {});
+  message: string;
+  params?: Record<string, unknown>;
+  path: (string | number)[];
+};
 ```
 
-## Next Steps
+### ErrorCode
 
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./usage">Usage Guide</a> – Comprehensive usage patterns</li>
-      <li><a href="./examples">Examples</a> – Real-world examples</li>
-    </ul>
-  </div>
-</div>
+Built-in codes:
+
+- `custom`
+- `invalid_date`
+- `invalid_enum`
+- `invalid_length`
+- `invalid_literal`
+- `invalid_string`
+- `invalid_type`
+- `invalid_union`
+- `invalid_url`
+- `invalid_variant`
+- `not_integer`
+- `not_multiple_of`
+- `too_big`
+- `too_small`
+- `unrecognized_keys`

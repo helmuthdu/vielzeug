@@ -1,29 +1,37 @@
+import type { Obj } from '../types';
+
 import { isEqual } from '../typed/isEqual';
 import { isObject } from '../typed/isObject';
-import type { Obj } from '../types';
+
+/** Sentinel value returned by `diff` when a key exists in `prev` but not in `curr`. */
+export const DELETED: unique symbol = Symbol('deleted');
+
+export type DiffResult<T extends Obj> = { [K in keyof T]?: T[K] | typeof DELETED };
 
 /**
  * Computes the difference between two objects.
  *
+ * Keys present in `prev` but absent in `curr` are marked with the `DELETED` sentinel.
+ *
  * @example
  * ```ts
- * const obj1 = { a: 1, b: 2, c: 3 };
- * const obj2 = { b: 2, c: 3, d: 4 };
+ * import { diff, DELETED } from '@vielzeug/toolkit';
  *
- * diff(obj1, obj2); // { d: 4 }
+ * diff({ a: 1, b: 2 }, { a: 1, b: 2, c: 3 }); // { c: DELETED }
+ * diff({ a: 1, b: 99 }, { a: 1, b: 2 });       // { b: 99 }
  * ```
  *
  * @param curr - The current object.
  * @param prev - The previous object.
  * @param [compareFn] - A custom function to compare values.
- * @returns An object containing new/modified properties.
+ * @returns An object containing new/modified/deleted properties.
  */
 export function diff<T extends Obj>(
   curr?: T,
   prev?: T,
   compareFn: (a: unknown, b: unknown) => boolean = isEqual,
-): Partial<T> {
-  if (!curr && !prev) return {} as Partial<T>;
+): DiffResult<T> {
+  if (!curr && !prev) return {};
 
   const result: Record<string, unknown> = {};
 
@@ -32,14 +40,17 @@ export function diff<T extends Obj>(
     const _prev = prev?.[key];
 
     if (isObject(_curr) && isObject(_prev)) {
-      const nestedDiff = diff(_curr, _prev, compareFn) as Partial<T[keyof T]>;
+      const nestedDiff = diff(_curr as Obj, _prev as Obj, compareFn);
+
       if (Object.keys(nestedDiff).length > 0) {
         result[key] = nestedDiff;
       }
     } else if (!compareFn(_curr, _prev)) {
-      result[key] = _curr;
+      const wasDeleted = prev != null && key in prev && (curr == null || !(key in curr));
+
+      result[key] = wasDeleted ? DELETED : _curr;
     }
   }
 
-  return result as Partial<T>;
+  return result as DiffResult<T>;
 }

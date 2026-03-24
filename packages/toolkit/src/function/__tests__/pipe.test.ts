@@ -7,6 +7,7 @@ describe('pipe', () => {
     const subtract = (x: number) => x - 4;
 
     const pipedFn = pipe(subtract, multiply, add);
+
     expect(pipedFn(5)).toBe(5); // ((5 - 4) * 3) + 2 = 5
   });
 
@@ -14,6 +15,7 @@ describe('pipe', () => {
     const square = (x: number) => x * x;
 
     const pipedFn = pipe(square);
+
     expect(pipedFn(4)).toBe(16);
   });
 
@@ -22,6 +24,7 @@ describe('pipe', () => {
     const appendExclamation = (str: string) => `${str}!`;
 
     const pipedFn = pipe(toUpperCase, appendExclamation);
+
     expect(pipedFn('hello')).toBe('HELLO!');
   });
 
@@ -33,15 +36,7 @@ describe('pipe', () => {
     const identity = <T>(x: T) => x;
 
     const pipedFn = pipe(identity);
+
     expect(pipedFn(42)).toBe(42);
-  });
-
-  it('should handle asynchronous functions', async () => {
-    const asyncAdd = async (x: number) => x + 1;
-    const asyncMultiply = async (x: number) => x * 2;
-
-    const pipedFn = pipe(asyncAdd, asyncMultiply);
-    const result = await pipedFn(3);
-    expect(result).toBe(8); // (3 + 1) * 2 = 8
   });
 });

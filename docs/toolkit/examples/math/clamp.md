@@ -7,7 +7,7 @@
 
 The `clamp` utility restricts a numeric value to be within a specified range. If the value is smaller than the minimum, it returns the minimum. If it's larger than the maximum, it returns the maximum. Otherwise, it returns the value itself.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/clamp.ts

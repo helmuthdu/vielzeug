@@ -7,7 +7,7 @@
 
 The `assertParams` utility ensures that specific keys are present and non-empty in a given object. It is designed for validating function arguments or API payloads, providing clear error messages and TypeScript type narrowing.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/assertParams.ts

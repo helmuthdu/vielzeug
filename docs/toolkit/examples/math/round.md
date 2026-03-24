@@ -7,7 +7,7 @@
 
 Rounds a number to a specified precision.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/round.ts

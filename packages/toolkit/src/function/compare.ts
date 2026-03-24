@@ -19,12 +19,15 @@
  *
  * @returns 0 if equal, 1 if the first value is greater, -1 if the second value is greater.
  */
-// biome-ignore lint/suspicious/noExplicitAny: -
-export const compare = (a: any, b: any): number => {
+export const compare = (a: unknown, b: unknown): number => {
   if (a === b) return 0;
+
   if (a === undefined) return 1;
+
   if (b === undefined) return -1;
+
   if (a === null) return b === null ? 0 : -1;
+
   if (b === null) return 1;
 
   if (typeof a === 'string' && typeof b === 'string') {
@@ -32,16 +35,20 @@ export const compare = (a: any, b: any): number => {
   }
 
   if (typeof a === 'number' && typeof b === 'number') {
-    return a - b;
+    return a === b ? 0 : a > b ? 1 : -1;
   }
 
   if (a instanceof Date && b instanceof Date) {
-    return a.getTime() - b.getTime();
+    const at = a.getTime();
+    const bt = b.getTime();
+
+    return at === bt ? 0 : at > bt ? 1 : -1;
   }
 
   if (typeof a === 'object' && typeof b === 'object') {
     const aString = JSON.stringify(a);
     const bString = JSON.stringify(b);
+
     return aString.localeCompare(bString);
   }
 

@@ -1,0 +1,494 @@
+@layer buildit.base {
+  :host {
+    --_font-size: var(--combobox-font-size, var(--text-sm));
+    --_gap: var(--combobox-gap, var(--size-2));
+    --_field-height: var(--combobox-height, var(--size-10));
+    --_row-min-height: calc(var(--leading-normal) * var(--_font-size) + 2px);
+    --_padding: var(--combobox-padding, var(--size-1-5) var(--size-3));
+    --_radius: var(--combobox-radius, var(--rounded-lg));
+    --_placeholder: var(--combobox-placeholder-color, var(--color-contrast-500));
+    --_bg: var(--combobox-bg, var(--color-contrast-100));
+    --_border-color: var(--combobox-border-color, var(--color-contrast-300));
+
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 12rem;
+  }
+
+  :host([fullwidth]) {
+    width: 100%;
+  }
+
+  .combobox-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1-5);
+    width: 100%;
+  }
+
+  /* ========================================
+       Label
+       ======================================== */
+
+  .label-inset {
+    margin-bottom: 2px;
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--transition-fast);
+  }
+
+  .label-outside {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-none);
+    color: var(--color-contrast-500);
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--transition-fast);
+  }
+
+  /* ========================================
+       Field / Input
+       ======================================== */
+
+  .field {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: stretch;
+    justify-content: center;
+    height: var(--_field-height);
+    min-height: max(var(--_field-height), var(--_touch-target, 0px));
+    padding: var(--_padding);
+    padding-inline-end: var(--size-8);
+    text-align: start;
+    cursor: text;
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--shadow-2xs);
+    transition: var(
+      --_motion-transition,
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast)
+    );
+  }
+
+  /* Expand height for multi-select chips or inset label */
+  :host([multiple]) .field,
+  .field:has(.label-inset:not([hidden])) {
+    height: auto;
+  }
+
+  :host([clearable]) .field {
+    padding-inline-end: var(--size-14);
+  }
+
+  .field-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--_gap);
+    row-gap: var(--size-1);
+    align-items: center;
+    min-height: var(--_row-min-height);
+  }
+
+  .chips-row {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: var(--size-1);
+    align-items: center;
+    min-width: 0;
+  }
+
+  .chips-list {
+    /* Wrapper exists for list diffing isolation; keep chip layout unchanged. */
+    display: contents;
+  }
+
+  .input {
+    flex: 1 1 4rem;
+    min-width: 4rem;
+    height: var(--_row-min-height);
+    padding: 0;
+    font-family: inherit;
+    font-size: var(--_font-size);
+    line-height: 1;
+    color: var(--color-contrast-900);
+    outline: none;
+    background: transparent;
+    border: 0;
+  }
+
+  :host([multiple]) .input {
+    flex-basis: 6rem;
+    min-width: 6rem;
+  }
+
+  :host([multiple]) .chips-row:has(bit-chip) .input {
+    flex: 0 1 2.25rem;
+    min-width: 2.25rem;
+  }
+
+  .input::placeholder {
+    color: var(--_placeholder);
+  }
+
+  .chevron {
+    position: absolute;
+    inset-inline-end: var(--size-2-5);
+    top: 50%;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    color: var(--color-contrast-500);
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition: var(--_motion-transition, transform var(--transition-fast), color var(--transition-fast));
+  }
+
+  :host([open]) .chevron {
+    color: var(--_theme-focus, var(--color-primary));
+    transform: translateY(-50%) rotate(180deg);
+  }
+
+  .chevron .loader {
+    display: none;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentcolor;
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+    animation: var(--_motion-animation, bit-combobox-spin 0.6s linear infinite);
+  }
+
+  :host([loading]) .chevron .loader {
+    display: inline-block;
+  }
+
+  :host([loading]) .chevron svg {
+    display: none;
+  }
+
+  @keyframes bit-combobox-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .clear-btn {
+    position: absolute;
+    inset-inline-end: var(--size-9);
+    top: 50%;
+    display: inline-flex;
+    visibility: hidden;
+    flex-shrink: 0;
+    align-items: center;
+    padding: 0;
+    color: var(--color-contrast-400);
+    cursor: pointer;
+    background: none;
+    border: 0;
+    transform: translateY(-50%);
+  }
+
+  .clear-btn:hover {
+    color: var(--color-contrast-600);
+  }
+
+  :host([clearable]) .clear-btn:not([hidden]) {
+    visibility: visible;
+  }
+
+  /* ========================================
+       Dropdown / Listbox
+       ======================================== */
+
+  .dropdown {
+    position: fixed;
+    inset-inline-start: 0;
+    top: 0;
+    z-index: calc(var(--z-popover, 1000) + 1);
+    box-sizing: border-box;
+    visibility: hidden;
+    max-height: min(16rem, 50dvh);
+    padding: var(--size-1);
+    margin: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    text-align: start;
+    pointer-events: none;
+    scrollbar-width: thin;
+    background: var(--color-canvas);
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--_radius);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: var(
+      --_motion-transition,
+      opacity var(--transition-fast),
+      transform var(--transition-fast),
+      visibility var(--transition-fast)
+    );
+  }
+
+  .dropdown[data-open] {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ========================================
+       Option Items
+       ======================================== */
+
+  .option {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    padding: var(--size-1-5) var(--size-2-5);
+    font-size: var(--_font-size);
+    line-height: var(--leading-normal);
+    cursor: pointer;
+    border-radius: var(--rounded-sm);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  /* Truncate long labels so options always stay single-line (fixed virtualizer row height). */
+  .option > span:not(.option-check, .option-icon) {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .option:hover:not([data-disabled]) {
+    background: var(--color-contrast-100);
+  }
+
+  .option[data-focused]:not([data-disabled]) {
+    color: var(--_theme-base);
+    background: color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100));
+  }
+
+  .option[data-selected] {
+    font-weight: var(--font-medium);
+    color: var(--_theme-base);
+    background: color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50));
+  }
+
+  .option[data-selected][data-focused] {
+    background: color-mix(in srgb, var(--_theme-base) 20%, var(--color-contrast-100));
+  }
+
+  .option[data-disabled] {
+    color: var(--color-contrast-400);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .option-check {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    color: var(--_theme-base);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .option[data-selected] .option-check {
+    opacity: 1;
+  }
+
+  .no-results,
+  .no-results-create,
+  .dropdown-loading {
+    padding: var(--size-3) var(--size-2-5);
+    font-size: var(--_font-size);
+    color: var(--color-contrast-400);
+    text-align: center;
+  }
+
+  .no-results-create {
+    display: flex;
+    gap: var(--size-1-5);
+    align-items: center;
+    width: 100%;
+    padding: var(--size-1-5) var(--size-2-5);
+    font-size: var(--_font-size);
+    color: var(--_theme-content, var(--color-primary-content));
+    text-align: start;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    border-radius: var(--rounded-sm);
+  }
+
+  .no-results-create:hover,
+  .no-results-create[data-focused] {
+    background: color-mix(in srgb, var(--_theme-base, var(--color-primary)) 10%, transparent);
+  }
+
+  /* ========================================
+       Option Icon
+       ======================================== */
+
+  .option-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  /* ========================================
+       Slotted option elements (hidden data nodes)
+       ======================================== */
+
+  ::slotted(bit-combobox-option) {
+    display: none;
+  }
+
+  /* ========================================
+       Helper / Error Text
+       ======================================== */
+
+  .helper-text {
+    padding-inline: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+  }
+
+  /* ========================================
+       Focus / Hover States
+       ======================================== */
+
+  :host(:not([disabled], [variant='bordered'], [variant='flat'])) .field:hover {
+    border-color: var(--color-contrast-400);
+  }
+
+  :host(:not([disabled], [variant='flat'])) .field:focus-within,
+  :host([open]:not([disabled], [variant='flat'])) .field {
+    background: var(--color-canvas);
+    border-color: var(--_theme-focus);
+    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+    transform: translateY(-1px);
+  }
+
+  :host(:not([disabled])) .field:focus-within .label-inset,
+  :host(:not([disabled])) .field:focus-within .label-outside,
+  :host([open]:not([disabled])) .label-inset {
+    color: var(--_theme-focus);
+  }
+
+  :host([error]:not([error=''])) .field {
+    border-color: var(--color-error);
+  }
+
+  :host([error]:not([error=''])) .field:focus-within {
+    border-color: var(--color-error);
+    box-shadow: var(--color-error-focus-shadow);
+  }
+
+  :host([error]:not([error=''])) .label-inset,
+  :host([error]:not([error=''])) .label-outside {
+    color: var(--color-error);
+  }
+}
+
+@layer buildit.variants {
+  /* Solid (Default) */
+  :host(:not([variant])) .field,
+  :host([variant='solid']) .field {
+    background: var(--color-contrast-50);
+    border-color: var(--color-contrast-300);
+    box-shadow: var(--shadow-2xs);
+  }
+
+  :host(:not([variant], [disabled])) .field:focus-within,
+  :host([variant='solid']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Flat */
+  :host([variant='flat']) .field {
+    border-color: var(--_theme-border);
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  :host([variant='flat']) .field:hover {
+    background: color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100));
+    border-color: color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300));
+  }
+
+  :host([variant='flat']) .field:focus-within {
+    background: color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas));
+    border-color: color-mix(in srgb, var(--_theme-focus) 60%, transparent);
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Bordered */
+  :host([variant='bordered']) .field {
+    background: var(--_theme-backdrop);
+    border-color: color-mix(in srgb, var(--_theme-focus) 70%, transparent);
+  }
+
+  :host([variant='bordered']) .input {
+    color: var(--color-contrast-900);
+  }
+
+  :host([variant='bordered']) .input::placeholder {
+    color: var(--_placeholder);
+  }
+
+  :host([variant='bordered']) .field:hover {
+    border-color: var(--_theme-focus);
+  }
+
+  /* Outline */
+  :host([variant='outline']) .field {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :host([variant='outline']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Ghost */
+  :host([variant='ghost']) .field {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  :host([variant='ghost']) .field:hover {
+    background: var(--color-contrast-100);
+  }
+
+  :host([variant='ghost']:not([disabled])) .field:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+}
+
+@layer buildit.utilities {
+  :host([fullwidth]) {
+    display: flex;
+    width: 100%;
+  }
+}

@@ -7,7 +7,7 @@
 
 The `isWithin` utility checks if a numeric value falls within a specified inclusive range. It is perfect for validating inputs, checking UI bounds, or coordinating logic that requires values to be between certain limits.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isWithin.ts

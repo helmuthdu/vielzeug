@@ -7,7 +7,7 @@
 
 Creates a reactive, server-side paginated list with automatic data fetching, caching, filtering, sorting, and searching. Perfect for handling large datasets with backend pagination.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/remoteList.ts
@@ -405,7 +405,6 @@ await products.setSort({ key: 'price', dir: 'asc' });
 
 - [list](./list.md): Client-side pagination utility
 - [search](./search.md): Fuzzy search functionality
-- [filter](./filter.md): Array filtering utility
 - [sort](./sort.md): Functional sorting utility
 
 <style>

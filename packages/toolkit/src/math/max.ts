@@ -1,5 +1,5 @@
+import { fold } from '../array/fold';
 import { compare } from '../function/compare';
-import { boil } from './boil';
 
 /**
  * Finds the maximum item in an array.
@@ -23,8 +23,7 @@ import { boil } from './boil';
  * @throws {TypeError} If the provided array is not an array.
  */
 export function max<T>(array: T[], callback?: (item: T) => string | number | Date): T | undefined {
-  return boil(array, (a, b) => {
-    const fn = callback || ((item: T) => item);
-    return compare(fn(a), fn(b)) > 0 ? a : b;
-  });
+  const fn = callback ?? ((item: T) => item);
+
+  return fold(array, (a, b) => (compare(fn(a), fn(b)) > 0 ? a : b));
 }

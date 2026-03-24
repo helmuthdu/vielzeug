@@ -18,6 +18,7 @@ describe('isString', () => {
 
   it('should return false for objects with a toString method', () => {
     const objWithToString = { toString: () => 'I am a string' };
+
     expect(isString(objWithToString)).toBe(false);
   });
 });

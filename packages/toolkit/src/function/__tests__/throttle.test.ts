@@ -29,7 +29,7 @@ describe('throttle', () => {
 
   it('should execute on trailing edge with latest args', () => {
     const fn = vi.fn();
-    const throttled = throttle(fn, 1000);
+    const throttled = throttle(fn, 1000, { trailing: true });
 
     throttled('a'); // leading
     throttled('b');
@@ -103,6 +103,7 @@ describe('throttle', () => {
     throttled('b'); // queued
 
     const result = throttled.flush();
+
     expect(fn).toHaveBeenCalledTimes(2);
     expect(fn).toHaveBeenLastCalledWith('b');
     expect(result).toBe('result');
@@ -114,7 +115,7 @@ describe('throttle', () => {
     const fn = vi.fn(function (this: typeof context) {
       return this.value;
     });
-    const throttled = throttle(fn, 1000);
+    const throttled = throttle(fn, 1000, { trailing: true });
 
     throttled.call(context);
     throttled.call(context);

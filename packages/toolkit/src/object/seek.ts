@@ -1,6 +1,10 @@
 import { assert } from '../function/assert';
 import { similarity } from '../string/similarity';
-import { is } from '../typed/is';
+import { isArray } from '../typed/isArray';
+import { isNil } from '../typed/isNil';
+import { isNumber } from '../typed/isNumber';
+import { isObject } from '../typed/isObject';
+import { isString } from '../typed/isString';
 import { IS_WITHIN_ERROR_MSG, isWithin } from '../typed/isWithin';
 
 /**
@@ -27,27 +31,28 @@ import { IS_WITHIN_ERROR_MSG, isWithin } from '../typed/isWithin';
  *
  * @returns Whether the object contains a matching value.
  */
-export function seek<T>(item: T, query: string, tone = 1): boolean {
-  assert(isWithin(tone, 0, 1), IS_WITHIN_ERROR_MSG, { args: { max: 1, min: 0, tone }, type: TypeError });
+function _seek<T>(item: T, query: string, tone: number): boolean {
+  if (isNil(item)) return false;
 
-  if (is('nil', item)) return false;
-
-  if (is('string', item) || is('number', item)) {
-    // Lowercase both sides for case-insensitive comparison
-    return similarity(item, query) >= tone;
+  if (isString(item) || isNumber(item)) {
+    return similarity(String(item), query) >= tone;
   }
 
-  // Handle arrays
-  if (is('array', item)) {
-    return (item as unknown[]).some((value) => seek(value, query, tone));
+  if (isArray(item)) {
+    return (item as unknown[]).some((value) => _seek(value, query, tone));
   }
 
-  // Handle objects but skip dates/regex/etc which are technically objects
-  if (is('object', item)) {
+  if (isObject(item)) {
     return Object.values(item as Record<string, unknown>).some((value) =>
-      is('nil', value) ? false : seek(value, query, tone),
+      isNil(value) ? false : _seek(value, query, tone),
     );
   }
 
   return false;
+}
+
+export function seek<T>(item: T, query: string, tone = 1): boolean {
+  assert(isWithin(tone, 0, 1), IS_WITHIN_ERROR_MSG, { args: { max: 1, min: 0, tone }, type: TypeError });
+
+  return _seek(item, query, tone);
 }

@@ -1,47 +1,15 @@
+---
+title: Toolkit — Usage Guide
+description: Array, async, object, string, math, and function utilities for Toolkit.
+---
+
 # Toolkit Usage Guide
 
-Complete guide to installing and using Toolkit in your projects.
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Toolkit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
-
-## Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/toolkit
-```
-
-```sh [npm]
-npm install @vielzeug/toolkit
-```
-
-```sh [yarn]
-yarn add @vielzeug/toolkit
-```
-
-:::
-
-## Import
-
-```ts
-// Named imports (recommended for tree-shaking)
-import { chunk, group, debounce } from '@vielzeug/toolkit';
-
-// Category-specific imports
-import { chunk, map, filter } from '@vielzeug/toolkit/array';
-import { merge, clone } from '@vielzeug/toolkit/object';
-import { debounce, throttle } from '@vielzeug/toolkit/function';
-
-// Optional: Import types
-import type { ChunkOptions } from '@vielzeug/toolkit';
-```
 
 ## Basic Usage
 
@@ -59,17 +27,6 @@ const byRole = group(users, (u) => u.role);
 const search = debounce((query) => fetchResults(query), 300);
 ```
 
-### Category-Specific Imports
-
-Import from specific modules for better code organization:
-
-```ts
-import { chunk, map, filter } from '@vielzeug/toolkit/array';
-import { merge, clone } from '@vielzeug/toolkit/object';
-import { camelCase } from '@vielzeug/toolkit/string';
-import { debounce, throttle } from '@vielzeug/toolkit/function';
-```
-
 ### Namespace Imports (Not Recommended)
 
 ⚠️ **Avoid** importing the entire library—this prevents tree-shaking:
@@ -82,20 +39,24 @@ import * as toolkit from '@vielzeug/toolkit';
 import { chunk, group } from '@vielzeug/toolkit';
 ```
 
-## Basic Usage
+## Common Patterns
 
 ### Arrays
 
 ```ts
-import { map, filter, group, chunk } from '@vielzeug/toolkit';
+import { select, group, chunk, toggle, uniq, keyBy, sort } from '@vielzeug/toolkit';
 
 const numbers = [1, 2, 3, 4, 5, 6];
 
-// Transform
-const doubled = map(numbers, (n) => n * 2); // [2, 4, 6, 8, 10, 12]
+// Filter nil elements from source, then map the rest
+const doubled = select([null, 2, null, 4], (n) => n * 2); // [4, 8]
 
-// Filter
-const evens = filter(numbers, (n) => n % 2 === 0); // [2, 4, 6]
+// Filter by predicate, then map
+const evenDoubled = select(
+  numbers,
+  (n) => n * 2,
+  (n) => n % 2 === 0,
+); // [4, 8, 12]
 
 // Group
 const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
@@ -103,12 +64,29 @@ const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
 
 // Chunk
 const batches = chunk(numbers, 2); // [[1, 2], [3, 4], [5, 6]]
+
+// Sort by selector (ascending by default)
+const ascending = sort([{ value: 3 }, { value: 1 }], (item) => item.value);
+
+// Sort by multiple fields
+const users = [
+  { age: 30, name: 'Bob' },
+  { age: 30, name: 'Alice' },
+  { age: 25, name: 'Chris' },
+];
+const sortedUsers = sort(users, { age: 'desc', name: 'asc' });
+
+// Toggle item in/out
+const updated = toggle([1, 2, 3], 2); // [1, 3]
+
+// Remove duplicates
+const unique = uniq([1, 2, 2, 3]); // [1, 2, 3]
 ```
 
 ### Objects
 
 ```ts
-import { merge, clone, path, diff } from '@vielzeug/toolkit';
+import { merge, get, diff, seek, prune } from '@vielzeug/toolkit';
 
 const config = { api: { host: 'localhost', port: 8080 } };
 const overrides = { api: { port: 3000 } };
@@ -117,11 +95,16 @@ const overrides = { api: { port: 3000 } };
 const final = merge('deep', config, overrides);
 // { api: { host: 'localhost', port: 3000 } }
 
-// Deep clone
-const copy = clone(config);
+// Access nested properties safely
+const port = get(config, 'api.port'); // 8080
+const missing = get(config, 'api.timeout', 5000); // 5000 (default value)
 
-// Access nested properties
-const port = path(config, 'api.port'); // 8080
+// Recursively search object values for a match
+seek(config, 'localhost', 1); // true (exact match)
+seek(config, 'local', 0.5); // true (fuzzy match)
+
+// Remove nulls/empty values
+const clean = prune({ a: 1, b: null, c: '' }); // { a: 1 }
 
 // Find differences
 const changes = diff(config, final);
@@ -142,41 +125,118 @@ truncate('A very long string', 10); // 'A very lon...'
 
 ### Type Guards
 
+All type checks live on the `is` namespace:
+
 ```ts
-import { isString, isArray, isObject, isEmpty } from '@vielzeug/toolkit';
+import { is } from '@vielzeug/toolkit';
 
 function processInput(input: unknown) {
-  if (isString(input)) {
+  if (is.string(input)) {
     return input.toUpperCase(); // TypeScript knows input is string
   }
 
-  if (isArray(input)) {
+  if (is.array(input)) {
     return input.length; // TypeScript knows input is array
   }
 
-  if (isObject(input)) {
+  if (is.object(input)) {
     return Object.keys(input); // TypeScript knows input is object
   }
 }
+
+// Deep equality, pattern matching, numeric checks
+is.equal([1, 2], [1, 2]); // true
+is.match(user, { role: 'admin' }); // true
+is.positive(5); // true
+is.within(3, 1, 5); // true
+is.ge(5, 5); // true  (a >= b)
+```
+
+### Money
+
+```ts
+import { currency, exchange } from '@vielzeug/toolkit';
+import type { Money } from '@vielzeug/toolkit';
+
+// Money amounts are stored as bigint (minor units) for precision
+const usd: Money = { amount: 123456n, currency: 'USD' }; // $1,234.56
+
+// Format for display
+currency(usd); // '$1,234.56'
+currency(usd, { locale: 'de-DE' }); // '1.234,56 $'
+currency(usd, { style: 'code' }); // 'USD 1,234.56'
+
+// Convert between currencies
+const rate = { from: 'USD', to: 'EUR', rate: 0.85 };
+const eur = exchange(usd, rate);
+// { amount: 104937n, currency: 'EUR' } (~€1,049.37)
+```
+
+### Dates
+
+```ts
+import { timeDiff, interval, expires } from '@vielzeug/toolkit';
+
+// Calculate the largest human-readable time unit between two dates
+const diff = timeDiff(new Date('2025-01-01'), new Date('2026-01-01'));
+// { value: 1, unit: 'year' }
+
+// Generate a date range
+const days = interval('2024-01-01', '2024-01-07', { interval: 'day' });
+// [Date(2024-01-01), Date(2024-01-02), ..., Date(2024-01-07)]
+
+// Check a date's expiry status
+expires('2024-01-01'); // 'EXPIRED'
+expires('2030-06-15'); // 'LATER'
+expires('2026-03-18'); // 'SOON' (within 7 days from today)
+expires('9999-12-31'); // 'NEVER'
+```
+
+### Random
+
+```ts
+import { uuid, random, draw, shuffle } from '@vielzeug/toolkit';
+
+// Cryptographically secure random values
+uuid(); // 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+random(1, 10); // integer between 1 and 10 (inclusive)
+
+// Array sampling
+draw([1, 2, 3, 4, 5]); // random element, e.g. 3
+shuffle([1, 2, 3, 4, 5]); // new shuffled array, e.g. [3, 1, 5, 2, 4]
 ```
 
 ## Advanced Usage
 
 ### Async Operations
 
-Many utilities support async callbacks:
-
 ```ts
-import { map, filter } from '@vielzeug/toolkit';
+import { parallel, retry, race, waitFor, Scheduler } from '@vielzeug/toolkit';
 
-// Async map – parallel execution
-const users = await map([1, 2, 3], async (id) => {
-  return await fetchUser(id);
+// Process with concurrency limit
+const users = await parallel(3, ids, async (id) => fetchUser(id));
+
+// Retry with exponential backoff
+const data = await retry(() => fetchData(), { times: 3, delay: 500, backoff: 2 });
+
+// Retry with per-attempt delay and selective predicate
+const data = await retry(() => fetchData(), {
+  times: 4,
+  retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
+  shouldRetry: (err) => !(err instanceof Response && err.status < 500),
 });
 
-// Async filter
-const active = await filter(users, async (user) => {
-  return (await checkStatus(user.id)) === 'active';
+// Ensure loading state shows for at least 300ms (prevents flicker)
+const result = await race(fetchQuickData(), 300);
+
+// Poll until ready
+await waitFor(() => document.querySelector('#app') !== null, { timeout: 5000 });
+
+// Schedule a low-priority background task (e.g. cache cleanup)
+const scheduler = new Scheduler();
+void scheduler.postTask(() => pruneStaleEntries(), {
+  delay: 5 * 60_000,
+  priority: 'background',
 });
 ```
 
@@ -185,15 +245,11 @@ const active = await filter(users, async (user) => {
 Combine utilities for complex transformations:
 
 ```ts
-import { filter, group, arrange } from '@vielzeug/toolkit';
+import { select, group } from '@vielzeug/toolkit';
 
-// Chain operations
+// Filter in-stock products and group by category
 const result = group(
-  arrange(
-    filter(products, (p) => p.inStock),
-    (p) => p.price,
-    'desc',
-  ),
+  select(products, (p) => (p.inStock ? p : null)),
   (p) => p.category,
 );
 ```
@@ -239,7 +295,7 @@ function ProductList({ products }) {
   // Memoize expensive operations
   const pages = useMemo(() => chunk(products, 20), [products]);
 
-  return (/* ... */);
+  return null;
 }
 ```
 
@@ -249,11 +305,16 @@ Use utilities with Vue composition API:
 
 ```vue
 <script setup>
-import { computed } from 'vue';
-import { group, filter } from '@vielzeug/toolkit';
+import { computed, ref } from 'vue';
+import { group, select } from '@vielzeug/toolkit';
 
 const products = ref([]);
-const grouped = computed(() => group(products.value, (p) => p.category));
+const grouped = computed(() =>
+  group(
+    select(products.value, (p) => p),
+    (p) => p.category,
+  ),
+);
 </script>
 ```
 
@@ -262,7 +323,7 @@ const grouped = computed(() => group(products.value, (p) => p.category));
 Use utilities in server-side code:
 
 ```ts
-import { map, group } from '@vielzeug/toolkit';
+import { group } from '@vielzeug/toolkit';
 
 app.get('/api/products', async (req, res) => {
   const products = await fetchProducts();
@@ -271,23 +332,23 @@ app.get('/api/products', async (req, res) => {
 });
 ```
 
-> **💡 Tip**: See [Examples](./examples.md) for complete application examples.
+> **💡 Tip**: See [Examples](./examples/array.md) for complete category examples.
 
 ## TypeScript Configuration
 
 For optimal TypeScript support, configure your `tsconfig.json`:
 
-```json
+```jsonc
 {
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "moduleResolution": "bundler", // or "node16"
+    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true
-  }
+    "allowSyntheticDefaultImports": true,
+  },
 }
 ```
 
@@ -312,13 +373,13 @@ import * as toolkit from '@vielzeug/toolkit';
 ✅ **Good**: Let TypeScript infer types
 
 ```ts
-const names = map(users, (u) => u.name); // string[]
+const names = select(users, (u) => u.name); // string[]
 ```
 
 ❌ **Bad**: Manual type assertions
 
 ```ts
-const names = map(users, (u) => u.name) as string[];
+const names = select(users, (u) => u.name) as string[];
 ```
 
 ### 3. Use Type Guards
@@ -326,7 +387,7 @@ const names = map(users, (u) => u.name) as string[];
 ✅ **Good**: Type-safe runtime checks
 
 ```ts
-if (isString(value)) {
+if (is.string(value)) {
   return value.toUpperCase();
 }
 ```
@@ -342,7 +403,7 @@ return (value as string).toUpperCase();
 ✅ **Good**: Readable transformations
 
 ```ts
-const result = group(filter(items, isValid), (item) => item.category);
+const result = group(select(items, isValid), (item) => item.category);
 ```
 
 ❌ **Bad**: Nested callbacks
@@ -358,10 +419,10 @@ const result = items.reduce((acc, item) => {
 
 ### 5. Handle Async Operations
 
-✅ **Good**: Use built-in async support
+✅ **Good**: Use `parallel` for concurrent fetching
 
 ```ts
-const users = await map(ids, async (id) => fetchUser(id));
+const users = await parallel(5, ids, async (id) => fetchUser(id));
 ```
 
 ❌ **Bad**: Manual Promise.all
@@ -387,16 +448,3 @@ Toolkit requires modern JavaScript features (ES2020+):
 - **Node.js**: v16.x or higher recommended
 
 For older browsers, use a transpiler like Babel or SWC.
-
-## Next Steps
-
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./api">API Reference</a> – Complete API documentation</li>
-      <li><a href="./examples">Examples</a> – Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
-    </ul>
-  </div>
-</div>

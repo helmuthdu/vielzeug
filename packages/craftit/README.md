@@ -1,448 +1,160 @@
 # @vielzeug/craftit
 
-Lightweight, type-safe web component creation library
+> Functional web components with signals, typed props, and template bindings
 
-## What is Craftit?
+[![npm version](https://img.shields.io/npm/v/@vielzeug/craftit)](https://www.npmjs.com/package/@vielzeug/craftit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Craftit** is a modern, minimal library for creating web components with a reactive state, automatic rendering, and excellent TypeScript support. Build custom elements with the ergonomics of modern frameworks but with native browser APIs.
+**Craftit** provides a compact API for authoring custom elements with fine-grained reactivity. It builds on `@vielzeug/stateit` (re-exported from the main entry) and adds component lifecycle, templating, typed props, context, slots/emits, form-associated helpers, and observer utilities.
 
-### The Problem
+## Installation
 
-Creating web components with vanilla Custom Elements API is verbose and error-prone:
-
-```ts
-// Vanilla Custom Elements – verbose and manual
-class MyCounter extends HTMLElement {
-  #count = 0;
-  #shadow: ShadowRoot;
-
-  constructor() {
-    super();
-    this.#shadow = this.attachShadow({ mode: 'open' });
-    this.render();
-  }
-
-  connectedCallback() {
-    this.#shadow.querySelector('button')?.addEventListener('click', () => {
-      this.#count++;
-      this.render(); // Manual re-render
-    });
-  }
-
-  render() {
-    this.#shadow.innerHTML = `
-      <div>Count: ${this.#count}</div>
-      <button>Increment</button>
-    `; // Loses event listeners!
-  }
-}
-
-customElements.define('my-counter', MyCounter);
-```
-
-### The Solution
-
-```ts
-// Craftit – reactive and automatic
-import { defineElement, html } from '@vielzeug/craftit';
-
-defineElement('my-counter', {
-  state: { count: 0 },
-
-  template: (el) => html`
-    <div>Count: ${el.state.count}</div>
-    <button>Increment</button>
-  `,
-
-  onConnected(el) {
-    el.on('button', 'click', () => {
-      el.state.count++; // Automatic re-render!
-    });
-  },
-});
-```
-
-## ✨ Features
-
-- **🔥 Reactive State** – Automatic re-renders on state changes with Proxy-based reactivity
-- **⚡ Efficient Updates** – Smart DOM reconciliation, only updates what changed
-- **🎯 Event Delegation** – Built-in support for dynamic element event handling
-- **📝 Form Support** – Full ElementInternals integration for form participation
-- **🎨 Shadow DOM** – Encapsulated styles with CSSStyleSheet support
-- **🎭 CSS Variables** – Built-in theming support with `css.var()` and `css.theme()`
-- **🔍 Type-Safe** – Complete TypeScript support with full type inference
-- **📦 Tiny Bundle** – Only **~5 KB gzipped** with zero dependencies
-- **🧪 Testable** – Built-in testing utilities (`attach`, `destroy`, `flush`)
-- **🪝 Lifecycle Hooks** – Full control with `onConnected`, `onDisconnected`, `onUpdated`
-- **🌐 Framework Agnostic** – Use with React, Vue, Svelte, or vanilla JS
-
-## 🆚 Comparison with Alternatives
-
-| Feature          | Craftit   | Lit      | Stencil   |
-| ---------------- | --------- | -------- | --------- |
-| Bundle Size      | **~6 KB** | ~15 KB   | ~10 KB    |
-| Dependencies     | 0         | 0        | Many      |
-| TypeScript       | Native    | Good     | Excellent |
-| Reactive State   | Built-in  | External | Built-in  |
-| Event Delegation | ✅        | ❌       | ❌        |
-| Form Integration | ✅        | ⚠️       | ✅        |
-| Learning Curve   | Low       | Medium   | High      |
-
-## 📦 Installation
-
-```bash
-# pnpm
+```sh
 pnpm add @vielzeug/craftit
-# npm
-npm install @vielzeug/craftit
-# yarn
-yarn add @vielzeug/craftit
+# npm install @vielzeug/craftit
+# yarn add @vielzeug/craftit
 ```
 
-## 🚀 Quick Start
-
-### Basic Component
+## Quick Start
 
 ```ts
-import { defineElement, html, css } from '@vielzeug/craftit';
+import { defineComponent, signal, computed, html } from '@vielzeug/craftit';
 
-defineElement('hello-world', {
-  template: html`
-    <div class="greeting">
-      <h1>Hello, World!</h1>
-      <p>Welcome to Craftit!</p>
-    </div>
-  `,
+defineComponent({
+  setup() {
+    const count = signal(0);
+    const doubled = computed(() => count.value * 2);
 
-  styles: [
-    css`
-      .greeting {
-        padding: 1rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 8px;
-      }
-    `,
-  ],
-});
-
-// Use in HTML
-// <hello-world></hello-world>
-```
-
-### With State
-
-```ts
-defineElement('user-profile', {
-  state: {
-    name: 'Alice',
-    age: 30,
-    email: 'alice@example.com',
+    return html`
+      <button @click=${() => count.value++}>Count: ${count}</button>
+      <p>Doubled: ${doubled}</p>
+    `;
   },
-
-  template: (el) => html`
-    <div class="profile">
-      <h2>${el.state.name}</h2>
-      <p>Age: ${el.state.age}</p>
-      <p>Email: ${el.state.email}</p>
-    </div>
-  `,
+  tag: 'my-counter',
 });
 ```
 
-### Interactive Component
+## Features
+
+- ✅ **Component authoring** — `defineComponent({ tag, props, setup, ... })`
+- ✅ **Signals included** — all `@vielzeug/stateit` exports are re-exported
+- ✅ **Reactive templates** — `html` tagged template with text/attr/prop/event/ref bindings
+- ✅ **Lifecycle helpers** — `onMount`, `onCleanup`, `onError`, `handle`, `watch`, `effect`, `fire.*`
+- ✅ **Typed component APIs** — `defineComponent`, `prop`, `typed`, setup-context `emit` and `slots`
+- ✅ **Context / DI** — `createContext`, `provide`, `inject`, `syncContextProps`
+- ✅ **Form-associated controls** — `defineField` with `ElementInternals`
+- ✅ **Observer utilities** — `observeResize` (main API) + `observeIntersection` / `observeMedia` (`/labs`)
+- ✅ **Directive subpath** — `@vielzeug/craftit/directives`
+- ✅ **Test subpath** — `@vielzeug/craftit/test`
+
+## Entry Points
+
+| Entry | Purpose |
+|---|---|
+| `@vielzeug/craftit` | Main API (components + stateit re-exports) |
+| `@vielzeug/craftit/directives` | Directive helpers like `each`, `when`, `bind`, `match`, `until` |
+| `@vielzeug/craftit/test` | Mount/query/event testing utilities |
+
+## Usage Highlights
+
+### Typed props + emits
 
 ```ts
-defineElement('click-counter', {
-  state: { count: 0 },
+import { defineComponent, html } from '@vielzeug/craftit';
 
-  template: (el) => html`
-    <div>
-      <p>Count: ${el.state.count}</p>
-      <button class="increment">Increment</button>
-      <button class="decrement">Decrement</button>
-      <button class="reset">Reset</button>
-    </div>
-  `,
-
-  onConnected(el) {
-    el.on('.increment', 'click', () => {
-      el.state.count++;
-    });
-
-    el.on('.decrement', 'click', () => {
-      el.state.count--;
-    });
-
-    el.on('.reset', 'click', () => {
-      el.state.count = 0;
-    });
+defineComponent<
+  { disabled: boolean; label: string },
+  { change: string }
+>({
+  props: {
+    disabled: { default: false },
+    label: { default: 'Name' },
   },
+  setup({ emit, props }) {
+    return html`
+      <label>${props.label}</label>
+      <input
+        :disabled=${props.disabled}
+        @input=${(e: Event) => emit('change', (e.target as HTMLInputElement).value)}
+      />
+    `;
+  },
+  tag: 'name-input',
 });
 ```
 
-### Form Integration
+### Directives subpath
 
 ```ts
-defineElement('custom-input', {
-  state: { value: '' },
+import { defineComponent, signal, html } from '@vielzeug/craftit';
+import { each, when } from '@vielzeug/craftit/directives';
 
-  template: (el) => html`<input type="text" value="${el.state.value}" />`,
+defineComponent({
+  setup() {
+    const todos = signal([{ id: 1, text: 'Write docs', done: false }]);
 
+    return html`
+      ${when(
+        () => todos.value.length > 0,
+        () => html`<ul>${each(todos, (todo) => html`<li>${todo.text}</li>`, () => html``, { key: (t) => t.id })}</ul>`,
+        () => html`<p>No todos</p>`,
+      )}
+    `;
+  },
+  tag: 'todo-list',
+});
+```
+
+### Form-associated field
+
+```ts
+import { defineComponent, defineField, signal, html } from '@vielzeug/craftit';
+
+defineComponent({
   formAssociated: true,
+  setup() {
+    const value = signal('');
+    const field = defineField({ value });
 
-  onConnected(el) {
-    el.on('input', 'input', (e) => {
-      const input = e.currentTarget as HTMLInputElement;
-      el.state.value = input.value;
-      el.form?.value(input.value);
-    });
+    return html`
+      <input
+        type="email"
+        :value=${value}
+        @input=${(e: Event) => {
+          value.value = (e.target as HTMLInputElement).value;
+          field.setCustomValidity(value.value.includes('@') ? '' : 'Invalid email');
+        }}
+      />
+    `;
   },
-});
-
-// Use in forms
-// <form>
-//   <custom-input name="username"></custom-input>
-//   <button type="submit">Submit</button>
-// </form>
-```
-
-## 🎓 Core Concepts
-
-### Reactive State
-
-State changes automatically trigger re-renders:
-
-```ts
-defineElement('todo-list', {
-  state: {
-    todos: ['Learn Craftit', 'Build component'],
-    filter: 'all',
-  },
-
-  template: (el) => html`
-    <ul>
-      ${el.state.todos.map((todo) => `<li>${todo}</li>`).join('')}
-    </ul>
-  `,
-
-  onConnected(el) {
-    // Any state change triggers re-render
-    el.state.todos.push('New todo'); // ✅ Automatic re-render
-
-    // Nested objects also reactive
-    el.state.filter = 'completed'; // ✅ Automatic re-render
-  },
+  tag: 'email-field',
 });
 ```
 
-### Event Delegation
+## API Summary
 
-Handle events on dynamic elements:
+| Group | Main exports |
+|---|---|
+| Components | `defineComponent`, `DefineComponentOptions`, `DefineComponentSetupContext`, `BuildPropSchema` |
+| Runtime | `onMount`, `onCleanup`, `onError`, `handle`, `aria`, `effect`, `watch`, `fire` |
+| Props | `prop`, `typed`, `PropOptions`, `PropDef`, `InferPropsSignals` |
+| Slots / emits | setup-context `slots`, setup-context `emit`, `onSlotChange`, `Slots`, `EmitFn` |
+| Context | `createContext`, `provide`, `inject`, `syncContextProps`, `InjectionKey` |
+| Form | `defineField`, `FormFieldOptions`, `FormFieldCallbacks`, `FormFieldHandle` |
+| Observers | `observeResize`, `observeIntersection`, `observeMedia` |
+| Utilities | `html`, `css`, `createId`, `createFormIds`, `guard`, `escapeHtml`, `toKebab` |
+| Re-exported from stateit | `signal`, `computed`, `batch`, `untrack`, `readonly`, and more |
 
-```ts
-defineElement('todo-list', {
-  state: { todos: ['Item 1', 'Item 2'] },
+## Documentation
 
-  template: (el) => html`
-    <ul>
-      ${el.state.todos
-        .map(
-          (todo, i) => `
-        <li>
-          ${todo}
-          <button class="delete" data-index="${i}">Delete</button>
-        </li>
-      `,
-        )
-        .join('')}
-    </ul>
-  `,
+Full docs at **[vielzeug.dev/craftit](https://vielzeug.dev/craftit)**
 
-  onConnected(el) {
-    // Works for dynamically added elements!
-    el.on('.delete', 'click', (e) => {
-      const index = +(e.currentTarget as HTMLElement).dataset.index!;
-      el.state.todos.splice(index, 1);
-    });
-  },
-});
-```
+| | |
+|---|---|
+| [Overview](https://vielzeug.dev/craftit/) | Install and architecture overview |
+| [Usage Guide](https://vielzeug.dev/craftit/usage) | Practical patterns and subpath usage |
+| [API Reference](https://vielzeug.dev/craftit/api) | Complete signatures and types |
+| [Examples](https://vielzeug.dev/craftit/examples) | End-to-end component examples |
 
-### CSS Variables & Theming
+## License
 
-Built-in CSS variable helpers with **automatic autocomplete**:
-
-```ts
-import { defineElement, html, css } from '@vielzeug/craftit';
-
-// Create a typed theme
-const theme = css.theme({
-  primaryColor: '#3b82f6',
-  bgColor: '#ffffff',
-  textColor: '#1f2937',
-  spacing: '1rem',
-});
-
-defineElement('themed-button', {
-  template: html`<button>Click Me</button>`,
-
-  styles: [
-    css`
-      /* Inject CSS variables */
-      ${theme}
-
-      button {
-        /* ✨ Autocomplete works! Type theme. to see all properties */
-        background: ${theme.primaryColor}; /* var(--primary-color) */
-        color: ${theme.textColor}; /* var(--text-color) */
-        padding: ${theme.spacing}; /* var(--spacing) */
-        border: none;
-        border-radius: 8px;
-      }
-    `,
-  ],
-});
-```
-
-**Benefits:**
-
-- ✅ **Autocomplete** – Type `theme.` and see all variables
-- ✅ **Type-safe** – Typos caught at compile time
-- ✅ **Refactoring** – Rename properties safely
-- ✅ **Single import** – Just `import { css }`
-
-### Lifecycle Hooks
-
-```ts
-defineElement('lifecycle-demo', {
-  template: html`<div>Component</div>`,
-
-  onConnected(el) {
-    console.log('Component added to DOM');
-    // Perfect for event listeners, subscriptions
-  },
-
-  onDisconnected(el) {
-    console.log('Component removed from DOM');
-    // Cleanup is automatic!
-  },
-
-  onUpdated(el) {
-    console.log('Component re-rendered');
-  },
-});
-```
-
-## 🎯 API Reference
-
-### `defineElement(name, options)`
-
-Define and register a custom element.
-
-```ts
-defineElement('my-component', {
-  state: {}, // Initial state
-  template: html`...`, // Template (string, Node, or function)
-  styles: [css`...`], // CSS styles (auto-minified)
-  observedAttributes: [], // Attributes to watch
-  formAssociated: false, // Enable form participation
-  onConnected: (el) => {}, // Lifecycle: added to DOM
-  onDisconnected: (el) => {}, // Lifecycle: removed from DOM
-  onUpdated: (el) => {}, // Lifecycle: after render
-  onAttributeChanged: (name, oldVal, newVal, el) => {},
-});
-```
-
-### Component Instance API
-
-```ts
-// State
-el.state.count = 10; // Direct mutation
-await el.set({ count: 10 }); // Batch update
-await el.set((state) => ({ ...state, count: 10 })); // Updater
-
-// DOM Queries
-el.find('.button'); // querySelector
-el.findAll('.item'); // querySelectorAll
-
-// Events
-el.on('.button', 'click', handler); // Event delegation
-el.emit('custom-event', { data }); // Dispatch event
-
-// Utilities
-el.delay(() => {}, 1000); // setTimeout with cleanup
-el.clear(timeoutId); // clearTimeout
-await el.flush(); // Wait for render
-
-// Watchers
-const unwatch = el.watch(
-  (state) => state.count,
-  (val, prev) => console.log(val, prev),
-);
-unwatch(); // Cleanup
-```
-
-## 🔥 Advanced Features
-
-### Async State Updates
-
-```ts
-el.on('.load', 'click', async () => {
-  await el.set(async (state) => {
-    const data = await fetch('/api/data').then((r) => r.json());
-    return { ...state, data };
-  });
-});
-```
-
-### State Watchers
-
-```ts
-const unwatch = el.watch(
-  (state) => state.count,
-  (count, prevCount) => {
-    console.log(`Count changed from ${prevCount} to ${count}`);
-  },
-);
-```
-
-### Testing Utilities
-
-```ts
-import { attach, destroy } from '@vielzeug/craftit';
-
-const el = document.createElement('my-component');
-await attach(el); // Mounts and waits for render
-
-// Test assertions
-expect(el.find('.count')?.textContent).toBe('0');
-
-destroy(el); // Clean removal
-```
-
-## 📖 Documentation
-
-- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/craftit)
-- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/craftit/usage)
-- [**API Reference**](https://helmuthdu.github.io/vielzeug/craftit/api)
-- [**Examples**](https://helmuthdu.github.io/vielzeug/craftit/examples)
-
-## 📄 License
-
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
-
-## 🤝 Contributing
-
-Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
-
-## 🔗 Links
-
-- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
-- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
-
----
-
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

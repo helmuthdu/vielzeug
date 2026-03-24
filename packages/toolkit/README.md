@@ -1,538 +1,419 @@
 # @vielzeug/toolkit
 
-A comprehensive, type-safe utility library for modern JavaScript and TypeScript.
+> Typed utility functions for everyday TypeScript — arrays, objects, strings, async, dates, math, and more
 
-## ✨ Features
+[![npm version](https://img.shields.io/npm/v/@vielzeug/toolkit)](https://www.npmjs.com/package/@vielzeug/toolkit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- 🎯 **119 Type-Safe Utilities** – Covering arrays, objects, strings, async operations, and more
-- 📦 **Tree-Shakable** – Import only what you need, minimize bundle size
-- 🔒 **Zero Dependencies** – No supply chain risks, no version conflicts
-- 💪 **Full TypeScript Support** – Complete type inference and safety
-- ⚡ **Async-First** – Built-in support for promises and async operations
-- 🧪 **Battle-Tested** – >95% test coverage, production-ready
-- 🌐 **Isomorphic** – Works in both browser and Node.js environments
+**Toolkit** is a tree-shakeable collection of TypeScript utility functions covering arrays, objects, strings, async control-flow, dates, math, money, and type guards — all individually importable with full type inference and zero dependencies.
 
-## 🆚 Comparison with Alternatives
+## Installation
 
-| Feature                | Toolkit          | Lodash            | Ramda             | Native JS  |
-| ---------------------- | ---------------- | ----------------- | ----------------- | ---------- |
-| TypeScript Support     | ✅ First-class   | ⚠️ Via @types     | ⚠️ Via @types     | ❌ Limited |
-| Tree-shakeable         | ✅ By default    | ⚠️ lodash-es only | ✅ Yes            | N/A        |
-| Bundle Size (min+gzip) | ~0.1-1KB/utility | ~24KB (full)      | ~12KB (full)      | 0KB        |
-| Dependencies           | 0                | 0                 | 0                 | N/A        |
-| Async Support          | ✅ Built-in      | ❌ Limited        | ❌ Limited        | ⚠️ Manual  |
-| Learning Curve         | Low              | Low               | High (FP focused) | Low        |
-
-## 📦 Installation
-
-```bash
-# pnpm
+```sh
 pnpm add @vielzeug/toolkit
-# npm
-npm install @vielzeug/toolkit
-# yarn
-yarn add @vielzeug/toolkit
+# npm install @vielzeug/toolkit
+# yarn add @vielzeug/toolkit
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ```typescript
-import { chunk, map, retry, pool } from '@vielzeug/toolkit';
+import { group, chunk, debounce, retry, merge, uuid, is } from '@vielzeug/toolkit';
 
-// Array operations
-const batches = chunk([1, 2, 3, 4, 5], 2);
-// [[1, 2], [3, 4], [5]]
+// Group an array by a key
+const byStatus = group(users, (u) => u.status);
+// { active: [...], inactive: [...] }
 
-// Async map with automatic Promise handling
-const users = await map([1, 2, 3], async (id) => fetchUser(id));
+// Split array into chunks
+const pages = chunk([1, 2, 3, 4, 5], 2); // [[1,2],[3,4],[5]]
 
-// Retry with exponential backoff
-const data = await retry(() => fetch('/api/data').then((r) => r.json()), { times: 3, delay: 1000, backoff: 2 });
+// Debounce an event handler
+const handleSearch = debounce((query: string) => fetchResults(query), 300);
 
-// Rate limiting with promise pool
-const apiPool = pool(5); // Max 5 concurrent requests
-const results = await Promise.all(urls.map((url) => apiPool(() => fetch(url))));
+// Retry a failing async function
+const result = await retry(() => fetchData(), { times: 3, delay: 200 });
+
+// Deep merge objects
+const config = merge('deep', defaults, overrides);
+
+// Generate a UUID
+const id = uuid(); // e.g. "550e8400-e29b-41d4-a716-446655440000"
+
+// Runtime type checks
+if (is.string(value)) { /* value narrowed to string */ }
 ```
 
-## Categories
+## Features
 
-### 📊 Array (25 utilities)
+- ✅ **Tree-shakeable** — import only what you use
+- ✅ **Type-safe** — full TypeScript inference on every utility
+- ✅ **Array** — `chunk`, `group`, `keyBy`, `fold`, `select`, `toggle`, `rotate`, `replace`, `search`, `uniq`, `sort`, `contains`, `pick`, `list`, `remoteList`
+- ✅ **Object** — `merge`, `diff`, `get`, `seek`, `prune`, `proxy`, `cache`, `parseJSON`
+- ✅ **String** — `camelCase`, `kebabCase`, `pascalCase`, `snakeCase`, `truncate`, `similarity`
+- ✅ **Async** — `retry`, `sleep`, `parallel`, `pool`, `queue`, `race`, `attempt`, `defer`, `waitFor`
+- ✅ **Function** — `debounce`, `throttle`, `memo`, `once`, `pipe`, `compose`, `curry`, `compare`, `fp`
+- ✅ **Math** — `sum`, `average`, `median`, `min`, `max`, `clamp`, `round`, `range`, `percent`, `linspace`, `allocate`, `distribute`
+- ✅ **Date** — `timeDiff`, `interval`, `expires`
+- ✅ **Money** — `currency`, `exchange`
+- ✅ **Random** — `uuid`, `random`, `draw`, `shuffle`
+- ✅ **Type guards** — `is.string`, `is.number`, `is.array`, `is.nil`, `is.equal`, `is.match`, and more
+- ✅ **Zero dependencies**
 
-Transform, filter, group, and manipulate arrays with full type safety.
+## Usage
 
-```typescript
-import { group, uniq, flatten, sort } from '@vielzeug/toolkit';
-
-// Group by property
-const grouped = group(users, (user) => user.role);
-
-// Remove duplicates
-const unique = uniq([1, 2, 2, 3, 3, 3]);
-
-// Flatten nested arrays
-const flat = flatten([
-  [1, 2],
-  [3, [4, 5]],
-]);
-
-// Sort with custom comparator
-const sorted = sort(items, (a, b) => a.price – b.price);
-```
-
-**Available utilities:**
-`aggregate`, `alternate`, `arrange`, `chunk`, `compact`, `contains`, `every`, `filter`, `find`, `findIndex`, `findLast`, `flatten`, `group`, `list`, `map`, `pick`, `reduce`, `remoteList`, `search`, `select`, `shift`, `some`, `sort`, `substitute`, `uniq`
-
----
-
-### ⚡ Async (11 utilities)
-
-Promise utilities, concurrency control, retries, and async patterns.
+### Array Utilities
 
 ```typescript
-import { parallel, queue, waitFor, race, defer } from '@vielzeug/toolkit';
+import { group, chunk, keyBy, fold, select, toggle, uniq, sort } from '@vielzeug/toolkit';
 
-// Process with controlled concurrency
-await parallel(3, urls, async (url) => fetch(url));
+// Group by key
+const byRole = group(users, (u) => u.role);     // { admin: [...], user: [...] }
 
-// Task queue with monitoring
-const taskQueue = queue({ concurrency: 5 });
-taskQueue.add(() => processTask());
-await taskQueue.onIdle();
+// Split into chunks
+const pages = chunk(items, 10);                  // Item[][]
 
-// Wait for condition
-await waitFor(() => document.querySelector('#app') !== null);
+// Index by key
+const byId = keyBy(users, 'id');                 // { '1': user1, '2': user2 }
 
-// Race with minimum delay (better UX)
-const data = await race(fetchData(), 500);
+// Fold (reduce without initial value)
+fold([1, 2, 3], (a, b) => a + b);               // 6
 
-// Externally-controlled promise
-const deferred = defer<string>();
-setTimeout(() => deferred.resolve('Done!'), 1000);
-```
+// Filter nil elements from source, then map remaining
+select([null, 1, null, 2], (n) => n * 10); // [10, 20]
 
-**Available utilities:**
-`attempt`, `defer`, `delay`, `parallel`, `pool`, `predict`, `queue`, `race`, `retry`, `sleep`, `waitFor`
+// Filter by predicate, then map
+select([1, 2, 3, 4], (n) => n * 10, (n) => n > 2); // [30, 40]
 
----
+// Toggle item in/out of array
+toggle([1, 2, 3], 2);                            // [1, 3]
+toggle([1, 2, 3], 4);                            // [1, 2, 3, 4]
 
-### 📅 Date (3 utilities)
+// Sort by selector (single-field)
+sort([{ value: 3 }, { value: 1 }], (item) => item.value); // [{ value: 1 }, { value: 3 }]
 
-Date manipulation and time calculations.
-
-```typescript
-import { interval, timeDiff, expires } from '@vielzeug/toolkit';
-
-// Calculate time intervals
-const days = interval(new Date('2024-01-01'), new Date('2024-12-31'), 'days');
-
-// Time difference
-const diff = timeDiff(date1, date2);
-
-// Check expiration
-if (expires(expiryDate)) {
-  // Handle expired
-}
-```
-
-**Available utilities:**
-`expires`, `interval`, `timeDiff`
-
----
-
-### ⚙️ Function (14 utilities)
-
-Function composition, memoization, and execution control.
-
-```typescript
-import { debounce, throttle, memo, pipe, curry } from '@vielzeug/toolkit';
-
-// Debounce user input
-const search = debounce((query) => fetchResults(query), 300);
-
-// Throttle scroll events
-const onScroll = throttle(() => updateUI(), 100);
-
-// Memoize expensive calculations
-const fibonacci = memo((n) => (n <= 1 ? n : fibonacci(n – 1) + fibonacci(n – 2)));
-
-// Function composition
-const transform = pipe(
-  (x) => x * 2,
-  (x) => x + 1,
-  (x) => x.toString(),
+// Sort by object selectors (multi-field)
+sort(
+  [
+	{ age: 30, name: 'Bob' },
+	{ age: 30, name: 'Alice' },
+	{ age: 25, name: 'Chris' },
+  ],
+  { age: 'desc', name: 'asc' },
 );
 
-// Currying
-const add = curry((a, b, c) => a + b + c);
-const add5 = add(5);
+// Remove duplicates
+uniq([1, 2, 2, 3]);                              // [1, 2, 3]
 ```
 
-**Available utilities:**
-`assert`, `assertParams`, `compare`, `compareBy`, `compose`, `curry`, `debounce`, `fp`, `memo`, `once`, `pipe`, `proxy`, `prune`, `throttle`, `worker`
-
----
-
-### 🔢 Math (17 utilities)
-
-Mathematical operations, statistics, and calculations.
+### Object Utilities
 
 ```typescript
-import { average, median, clamp, range, distribute } from '@vielzeug/toolkit';
-
-// Calculate average
-const avg = average([1, 2, 3, 4, 5]); // 3
-
-// Find median
-const med = median([1, 2, 3, 4, 5]); // 3
-
-// Clamp value to range
-const clamped = clamp(150, 0, 100); // 100
-
-// Generate range
-const numbers = range(1, 10); // [1, 2, 3, ..., 10]
-
-// Distribute amount
-const shares = distribute(100, 3); // [33.33, 33.33, 33.34]
-```
-
-**Available utilities:**
-`abs`, `add`, `allocate`, `average`, `boil`, `clamp`, `distribute`, `divide`, `max`, `median`, `min`, `multiply`, `range`, `rate`, `round`, `subtract`, `sum`
-
----
-
-### 💰 Money (3 utilities)
-
-Currency formatting and exchange calculations.
-
-```typescript
-import { currency, exchange } from '@vielzeug/toolkit';
-
-// Format currency
-const formatted = currency(1234.56, 'USD'); // "$1,234.56"
-
-// Currency exchange
-const converted = exchange(100, 'USD', 'EUR', 0.85); // 85
-```
-
-**Available utilities:**
-`currency`, `exchange`, `types`
-
----
-
-### 📦 Object (10 utilities)
-
-Deep merging, cloning, diffing, and object manipulation.
-
-```typescript
-import { merge, clone, diff, path, seek } from '@vielzeug/toolkit';
+import { merge, diff, get, seek, prune, parseJSON } from '@vielzeug/toolkit';
 
 // Deep merge
-const merged = merge(obj1, obj2);
+const cfg = merge('deep', { api: { host: 'localhost' } }, { api: { port: 3000 } });
+// { api: { host: 'localhost', port: 3000 } }
 
-// Deep clone
-const copy = clone(original);
+// Nested path access
+get(cfg, 'api.host');   // 'localhost'
 
-// Diff objects
-const changes = diff(oldObj, newObj);
+// Recursively search object values by similarity
+seek(cfg, 'localhost', 1);   // true (exact match)
 
-// Get nested value
-const value = path(obj, 'user.address.city');
+// Remove nulls/empty values
+prune({ a: 1, b: null, c: '' });  // { a: 1 }
 
-// Search object
-const results = seek(data, (val) => val > 100);
+// Safe JSON parse
+parseJSON('{"a":1}', {});  // { a: 1 }
+parseJSON('bad json', {}); // {}
 ```
 
-**Available utilities:**
-`cache`, `clone`, `diff`, `entries`, `keys`, `merge`, `parseJSON`, `path`, `seek`, `values`
-
----
-
-### 🎲 Random (4 utilities)
-
-Random values, shuffling, and UUID generation.
+### Async Utilities
 
 ```typescript
-import { random, shuffle, draw, uuid } from '@vielzeug/toolkit';
+import { retry, sleep, parallel, pool, race, attempt, waitFor } from '@vielzeug/toolkit';
 
-// Random number
-const num = random(1, 100);
+// Retry with backoff
+const result = await retry(() => fetchData(), { times: 3, delay: 200, backoff: 2 });
 
-// Shuffle array
-const shuffled = shuffle([1, 2, 3, 4, 5]);
+// Delay
+await sleep(500);
 
-// Draw random items
-const winners = draw(participants, 3);
+// Process items with concurrency limit
+const results = await parallel(5, urls, async (url) => fetch(url).then((r) => r.json()));
 
-// Generate UUID
-const id = uuid(); // "550e8400-e29b-41d4-a716-446655440000"
+// Race promise against minimum delay (prevents loading flicker)
+const data = await race(fetchUser(id), 300);
+
+// Attempt with explicit success/failure handling
+const userAttempt = await attempt(fetchUser, { times: 2, timeout: 5000 });
+if (userAttempt.ok) {
+  console.log(userAttempt.value);
+} else {
+  console.error(userAttempt.error);
+}
+
+// Poll until condition is true
+await waitFor(() => document.querySelector('#app') !== null, { timeout: 5000 });
 ```
 
-**Available utilities:**
-`draw`, `random`, `shuffle`, `uuid`
-
----
-
-### 📝 String (6 utilities)
-
-String formatting, case conversion, and similarity.
+### String Utilities
 
 ```typescript
-import { camelCase, kebabCase, pascalCase, snakeCase, truncate, similarity } from '@vielzeug/toolkit';
+import { camelCase, kebabCase, snakeCase, pascalCase, truncate, similarity } from '@vielzeug/toolkit';
 
-// Case conversions
-camelCase('hello world'); // "helloWorld"
-kebabCase('hello world'); // "hello-world"
-pascalCase('hello world'); // "HelloWorld"
-snakeCase('hello world'); // "hello_world"
-
-// Truncate text
-truncate('Long text here', 10); // "Long text..."
-
-// String similarity
-similarity('hello', 'hallo'); // 0.8
+camelCase('hello-world');          // 'helloWorld'
+kebabCase('helloWorld');           // 'hello-world'
+snakeCase('helloWorld');           // 'hello_world'
+pascalCase('hello-world');         // 'HelloWorld'
+truncate('A very long string', 10); // 'A very lon...'
+similarity('hello', 'hallo');      // ~0.8
 ```
 
-**Available utilities:**
-`camelCase`, `kebabCase`, `pascalCase`, `similarity`, `snakeCase`, `truncate`
-
----
-
-### ✅ Typed (27 utilities)
-
-Type guards, type checking, and validation.
+### Function Utilities
 
 ```typescript
-import { isString, isArray, isPromise, isEmpty, isEqual } from '@vielzeug/toolkit';
+import { memo, once, pipe, debounce, throttle, compare } from '@vielzeug/toolkit';
 
-// Type guards with narrowing
-if (isString(value)) {
-  // TypeScript knows value is string
-  console.log(value.toUpperCase());
-}
+const fib    = memo((n: number): number => n <= 1 ? n : fib(n - 1) + fib(n - 2));
+const init   = once(() => bootstrap());
+const process = pipe(trim, normalize, validate);
+const search = debounce(fetchResults, 300);
+const scroll = throttle(updatePosition, 16);
 
-// Check arrays
-if (isArray(data)) {
-  data.forEach((item) => console.log(item));
-}
-
-// Promise detection
-if (isPromise(result)) {
-  await result;
-}
-
-// Empty check
-if (isEmpty(obj)) {
-  // Handle empty
-}
-
-// Deep equality
-if (isEqual(obj1, obj2)) {
-  // Objects are equal
-}
+// Compare → always -1 | 0 | 1 (safe for sort)
+compare(1, 2);   // -1
+compare('b', 'a'); // 1
 ```
 
-**Available utilities:**
-`ge`, `gt`, `is`, `isArray`, `isBoolean`, `isDate`, `isDefined`, `isEmpty`, `isEqual`, `isEven`, `isFunction`, `isNegative`, `isNil`, `isNumber`, `isObject`, `isOdd`, `isPositive`, `isPrimitive`, `isPromise`, `isRegex`, `isString`, `isWithin`, `isZero`, `le`, `lt`, `typeOf`
-
-## Real-World Examples
-
-### API Rate Limiting with Retry
+### Math Utilities
 
 ```typescript
-import { pool, retry, predict } from '@vielzeug/toolkit';
+import { sum, average, clamp, round, range, percent, linspace } from '@vielzeug/toolkit';
 
-// Create rate-limited pool
-const apiPool = pool(10); // Max 10 concurrent requests
-
-async function fetchWithRetry(url: string) {
-  return apiPool(() =>
-    retry(
-      () =>
-        predict(
-          async (signal) => {
-            const response = await fetch(url, { signal });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
-          },
-          { timeout: 5000 },
-        ),
-      { times: 3, delay: 1000, backoff: 2 },
-    ),
-  );
-}
-
-// Process many URLs with rate limiting and retry
-const results = await Promise.all(urls.map((url) => fetchWithRetry(url)));
+sum([1, 2, 3, 4]);          // 10
+average([10, 20, 30]);      // 20
+clamp(105, 0, 100);         // 100
+round(Math.PI, 4);          // 3.1416
+range(1, 6, 1);              // [1, 2, 3, 4, 5]
+percent(25, 100);           // 25
+linspace(0, 10, 5);         // [0, 2.5, 5, 7.5, 10]
 ```
 
-### Batch Processing with Progress
+### Date Utilities
 
 ```typescript
-import { chunk, parallel, sleep } from '@vielzeug/toolkit';
+import { timeDiff, interval, expires } from '@vielzeug/toolkit';
 
-async function processBatch(items: any[], batchSize = 10) {
-  const batches = chunk(items, batchSize);
-  const results = [];
+// Human-readable time difference
+timeDiff(new Date('2025-01-01'), new Date());
+// e.g. { value: 2, unit: 'MONTH' }
 
-  for (let i = 0; i < batches.length; i++) {
-    console.log(`Processing batch ${i + 1}/${batches.length}`);
+// Generate date range
+interval('2024-01-01', '2024-01-07', { interval: 'day' });
+// [Date, Date, Date, Date, Date, Date, Date]
 
-    const batchResults = await parallel(3, batches[i], async (item) => {
-      return await processItem(item);
-    });
-
-    results.push(...batchResults);
-
-    // Delay between batches
-    if (i < batches.length – 1) {
-      await sleep(1000);
-    }
-  }
-
-  return results;
-}
+// Check expiration
+expires('2023-01-01'); // e.g. 'EXPIRED'
 ```
 
-### Form Validation Pipeline
+### Type Guards
 
 ```typescript
-import { pipe, curry, isEmpty, isString } from '@vielzeug/toolkit';
+import { is } from '@vielzeug/toolkit';
 
-const required = (value: any) => {
-  if (isEmpty(value)) throw new Error('Required field');
-  return value;
-};
-
-const minLength = curry((min: number, value: string) => {
-  if (!isString(value) || value.length < min) {
-    throw new Error(`Minimum ${min} characters`);
-  }
-  return value;
-});
-
-const email = (value: string) => {
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-    throw new Error('Invalid email');
-  }
-  return value;
-};
-
-// Create validation pipeline
-const validateEmail = pipe(required, minLength(5), email);
-
-try {
-  const validEmail = validateEmail(userInput);
-} catch (error) {
-  console.error(error.message);
-}
+is.string(v);
+is.number(v);
+is.boolean(v);
+is.array(v);
+is.object(v);
+is.fn(v);
+is.date(v);
+is.promise(v);
+is.regex(v);
+is.nil(v);
+is.defined(v);
+is.primitive(v);
+is.empty(v);
+is.equal(a, b);
+is.match(obj, src);
+is.even(n);
+is.odd(n);
+is.positive(n);
+is.negative(n);
+is.zero(n);
+is.within(n, min, max);
+is.ge(a, b);
+is.gt(a, b);
+is.le(a, b);
+is.lt(a, b);
+is.typeOf(v); // e.g. 'string' | 'number' | 'array'
 ```
 
-## Performance & Bundle Size
+## API
 
-### Tree-Shaking
+### Array
 
-Toolkit is designed for optimal tree-shaking. Import only what you use:
+| Function | Description |
+|---|---|
+| `chunk(arr, size)` | Split array into chunks of given size |
+| `contains(arr, value)` | Check if array contains a value (deep equality) |
+| `fold(arr, fn)` | Reduce without initial value |
+| `group(arr, selector)` | Group by key — returns `Record<string, T[]>` |
+| `keyBy(arr, selector)` | Index by key — returns `Record<string, T>` |
+| `list(data, opts?)` | Reactive client-side pagination |
+| `pick(arr, valueFn, predicate?)` | Pick single transformed element |
+| `remoteList(opts)` | Reactive server-side pagination |
+| `replace(arr, predicate, value)` | Replace first matching element |
+| `rotate(arr, n, opts?)` | Rotate elements by N positions |
+| `search(arr, query, opts?)` | Fuzzy search |
+| `select(arr, mapper, predicate?)` | Map elements matching predicate (default: not nil) |
+| `sort(arr, selector, direction?)` | Sort by selector with `'asc'`/`'desc'` direction |
+| `sort(arr, selectors)` | Sort by multiple fields using object selectors |
+| `toggle(arr, item, selector?, opts?)` | Add or remove item |
+| `uniq(arr)` | Remove duplicates |
+
+### Object
+
+| Function | Description |
+|---|---|
+| `cache()` | Key-value cache with auto GC |
+| `diff(a, b)` | Find differences between objects |
+| `merge(strategy, ...objs)` | Merge objects (deep/shallow/concat) |
+| `parseJSON(str, fallback?)` | Safe JSON parse |
+| `get(obj, path, default?)` | Access nested property by dot-path |
+| `proxy(obj, opts)` | Object proxy with get/set hooks |
+| `prune(value)` | Remove nulls/empty values recursively |
+| `seek(obj, query, tone?)` | Search object values by similarity score |
+
+### String
+
+| Function | Description |
+|---|---|
+| `camelCase(str)` | Convert to camelCase |
+| `kebabCase(str)` | Convert to kebab-case |
+| `pascalCase(str)` | Convert to PascalCase |
+| `similarity(a, b)` | Similarity score (0–1) between two strings |
+| `snakeCase(str)` | Convert to snake_case |
+| `truncate(str, limit)` | Truncate with ellipsis |
+
+### Function
+
+| Function | Description |
+|---|---|
+| `assert(cond, msg, opts?)` | Assert condition, throw on failure |
+| `assertParams(params, keys)` | Validate required object keys |
+| `compare(a, b)` | Safe comparator returning -1 \| 0 \| 1 |
+| `compareBy(criteria)` | Multi-key object comparator |
+| `compose(...fns)` | Right-to-left function composition |
+| `curry(fn)` | Curry with partial application |
+| `debounce(fn, ms)` | Delay execution until idle |
+| `fp(fn, ...args)` | Functional pipeline helper |
+| `memo(fn)` | Cache results by arguments |
+| `once(fn)` | Execute only on first call |
+| `pipe(...fns)` | Left-to-right function composition |
+| `throttle(fn, ms)` | Limit execution rate |
+
+### Async
+
+| Function | Description |
+|---|---|
+| `attempt(fn, opts?)` | Execute with retry and error handling |
+| `defer()` | Deferred promise with external resolve/reject |
+| `parallel(n, items, fn, signal?)` | Process array with concurrency limit |
+| `pool(n)` | Concurrency-limited promise pool |
+| `queue(opts?)` | Sequential/concurrent task queue |
+| `race(promise, minDelay)` | Race promise against minimum delay |
+| `retry(fn, opts?)` | Retry with backoff |
+| `sleep(ms)` | Async delay |
+| `waitFor(cond, opts?)` | Poll until condition is true |
+
+### Math
+
+| Function | Description |
+|---|---|
+| `abs(n)` | Absolute value |
+| `allocate(amount, ratios)` | Distribute proportionally (bigint) |
+| `average(arr, fn?)` | Average of numbers |
+| `clamp(n, min, max)` | Clamp to range |
+| `distribute(amount, n)` | Distribute evenly (bigint) |
+| `linspace(start, end, steps?)` | Evenly spaced number array |
+| `max(arr, fn?)` | Maximum value |
+| `median(arr, fn?)` | Median value |
+| `min(arr, fn?)` | Minimum value |
+| `percent(value, total)` | Percentage (0–100) |
+| `range(start, end, step?)` | Generate number array |
+| `round(n, precision?)` | Round to decimal places |
+| `sum(arr, fn?)` | Sum of numbers |
+
+### Date
+
+| Function | Description |
+|---|---|
+| `expires(date)` | Check expiration status |
+| `interval(start, end, opts?)` | Generate date array for a range |
+| `timeDiff(a, b?, units?)` | Time difference as `{ value, unit }` |
+
+### Money
+
+| Function | Description |
+|---|---|
+| `currency(money)` | Format for display |
+| `exchange(money, opts)` | Convert between currencies |
+
+### Random
+
+| Function | Description |
+|---|---|
+| `draw(arr)` | Random element from array |
+| `random(min, max)` | Random number in range |
+| `shuffle(arr)` | Shuffle array |
+| `uuid()` | Generate UUID v4 |
+
+### Type Guards (`is` namespace)
+
+All type checks live on the `is` object:
 
 ```typescript
-// ✅ Good – Only includes chunk function (~0.5KB gzipped)
-import { chunk } from '@vielzeug/toolkit';
+import { is } from '@vielzeug/toolkit';
 
-// ⚠️ Avoid – Imports entire library (~35KB gzipped)
-import * as toolkit from '@vielzeug/toolkit';
-```
-
-### Bundle Size by Category
-
-| Category | Utilities | Approx. Size (gzipped) |
-| -------- | --------- | ---------------------- |
-| Array    | 25        | ~8KB                   |
-| Async    | 11        | ~3KB                   |
-| Date     | 3         | ~1KB                   |
-| Function | 14        | ~5KB                   |
-| Math     | 17        | ~4KB                   |
-| Money    | 3         | ~1KB                   |
-| Object   | 10        | ~3KB                   |
-| Random   | 4         | ~1KB                   |
-| String   | 6         | ~2KB                   |
-| Typed    | 27        | ~3KB                   |
-
-> **Note**: Individual utilities are typically **0.1-0.8 KB gzipped** each.
-
-## TypeScript Support
-
-Full TypeScript support with complete type inference:
-
-```typescript
-import { map, filter, group } from '@vielzeug/toolkit';
-
-const numbers = [1, 2, 3, 4, 5];
-
-// Type inferred as number[]
-const doubled = map(numbers, (n) => n * 2);
-
-// Type inferred as number[]
-const evens = filter(numbers, (n) => n % 2 === 0);
-
-// Type inferred as Record<string, User[]>
-const byRole = group(users, (u) => u.role);
-
-// Async operations automatically return Promise
-const results = await map(ids, async (id) => fetchUser(id));
-// Type: Promise<User[]>
+is.string(v);
+is.number(v);
+is.boolean(v);
+is.array(v);
+is.object(v);
+is.fn(v);
+is.date(v);
+is.promise(v);
+is.regex(v);
+is.nil(v);
+is.defined(v);
+is.primitive(v);
+is.empty(v);
+is.equal(a, b);
+is.match(obj, src);
+is.even(n);
+is.odd(n);
+is.positive(n);
+is.negative(n);
+is.zero(n);
+is.within(n, min, max);
+is.ge(a, b);
+is.gt(a, b);
+is.le(a, b);
+is.lt(a, b);
+is.typeOf(v); // e.g. 'string' | 'number' | 'array'
 ```
 
 ## Documentation
 
-- **[Full Documentation](https://helmuthdu.github.io/vielzeug/toolkit/)**
-- **[API Reference](https://helmuthdu.github.io/vielzeug/toolkit/api)**
-- **[Usage Guide](https://helmuthdu.github.io/vielzeug/toolkit/usage)**
-- **[Examples](https://helmuthdu.github.io/vielzeug/toolkit/examples/array)**
+Full docs at **[vielzeug.dev/toolkit](https://vielzeug.dev/toolkit)**
 
-## 🤝 Contributing
+| | |
+|---|---|
+| [Usage Guide](https://vielzeug.dev/toolkit/usage) | Arrays, objects, async, strings |
+| [API Reference](https://vielzeug.dev/toolkit/api) | Complete function signatures |
+| [Examples](https://vielzeug.dev/toolkit/examples) | Real-world utility patterns |
 
-We welcome contributions! Please see our [Contributing Guide](../../CONTRIBUTING.md) for details.
+## License
 
-### Development
-
-```bash
-# Install dependencies
-pnpm install
-
-# Build the package
-pnpm build
-
-# Run tests
-pnpm test
-
-# Run tests in watch mode
-pnpm test:watch
-
-# Type check
-pnpm typecheck
-```
-
-## 📖 Documentation
-
-- [**Full Documentation**](https://helmuthdu.github.io/vielzeug/toolkit)
-- [**Usage Guide**](https://helmuthdu.github.io/vielzeug/toolkit/usage)
-- [**API Reference**](https://helmuthdu.github.io/vielzeug/toolkit/api)
-- [**Examples**](https://helmuthdu.github.io/vielzeug/toolkit/examples)
-
-## 📄 License
-
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
-
-## 🤝 Contributing
-
-Contributions are welcome! Check our [GitHub repository](https://github.com/helmuthdu/vielzeug).
-
-## 🔗 Links
-
-- [GitHub Repository](https://github.com/helmuthdu/vielzeug)
-- [Documentation](https://helmuthdu.github.io/vielzeug/deposit)
-- [NPM Package](https://www.npmjs.com/package/@vielzeug/deposit)
-- [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
-
----
-
-Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) ecosystem – A collection of type-safe utilities for modern web development.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

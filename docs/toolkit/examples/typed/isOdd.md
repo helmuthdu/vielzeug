@@ -7,7 +7,7 @@
 
 The `isOdd` utility is a type guard that checks if a given number is an odd integer.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isOdd.ts

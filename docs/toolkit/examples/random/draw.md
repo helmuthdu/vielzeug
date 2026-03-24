@@ -7,7 +7,7 @@
 
 The `draw` utility picks a single random element from an array. It is perfect for sampling data, picking winners in a game, or selecting random items for display.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/random/draw.ts

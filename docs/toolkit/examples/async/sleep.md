@@ -81,5 +81,5 @@ async function mockAPICall() {
 
 ## Related
 
-- [delay](./delay.md) – Delay function execution
+- [retry](./retry.md): Retry a function with configurable backoff.
 - [waitFor](./waitFor.md) – Poll for a condition

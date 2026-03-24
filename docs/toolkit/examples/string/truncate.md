@@ -7,7 +7,7 @@
 
 The `truncate` utility shortens a string to a specified length and appends a customizable suffix (like an ellipsis) if the string exceeds that length.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/string/truncate.ts

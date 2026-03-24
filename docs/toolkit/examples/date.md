@@ -1,4 +1,97 @@
-# 📅 Date Utilities
+---
+title: 'Toolkit — Date Examples'
+description: 'Date utility examples for Toolkit.'
+---
+
+# Date Utilities
+
+Date utilities provide a set of helpers to work with dates and times in a type-safe, ergonomic way. Use these tools for checking expiration, generating date ranges, and finding precise time differences without the weight of large date libraries.
+
+## 📚 Quick Reference
+
+## Problem
+
+Implement 📚 quick reference in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
+
+| Method                           | Description                                                       |
+| :------------------------------- | :---------------------------------------------------------------- |
+| [`expires`](./date/expires.md)   | Check if a given date or timestamp has already passed.            |
+| [`interval`](./date/interval.md) | Generate an array of dates between two dates at a given interval. |
+| [`timeDiff`](./date/timeDiff.md) | Get the most significant time difference between two dates.       |
+
+## 💡 Practical Examples
+
+### Expiration Checks
+
+```ts
+import { expires } from '@vielzeug/toolkit';
+
+// Check if a token is still valid
+const tokenExpiry = '2026-01-01T00:00:00Z';
+if (expires(tokenExpiry)) {
+  console.log('Token has expired');
+}
+```
+
+### Generating Date Ranges with `interval`
+
+The `interval` function accepts a string interval code:
+
+| Code           | Description                                 |
+| -------------- | ------------------------------------------- |
+| `'day'`        | Increment by one calendar day               |
+| `'week'`       | Increment by 7 days                         |
+| `'month'`      | Increment by one month (same day)           |
+| `'monthStart'` | Increment to the 1st of the next month      |
+| `'monthEnd'`   | Increment to the last day of the next month |
+| `'year'`       | Increment by one year (same month/day)      |
+| `'yearStart'`  | Increment to January 1 of the next year     |
+| `'yearEnd'`    | Increment to December 31 of the next year   |
+
+```ts
+import { interval } from '@vielzeug/toolkit';
+
+// Every day in January
+const days = interval('2024-01-01', '2024-01-05', { interval: 'day' });
+// [2024-01-01, 2024-01-02, 2024-01-03, 2024-01-04, 2024-01-05]
+
+// Every Monday in Q1
+const weeks = interval('2024-01-01', '2024-03-31', { interval: 'week' });
+
+// First day of each month in 2024
+const months = interval('2024-01-01', '2024-12-31', { interval: 'monthStart' });
+```
+
+### Time Differences with `timeDiff`
+
+`timeDiff` returns `{ value: number; unit: TimeUnit } | undefined`. It returns `undefined` when either date is invalid. The `unit` is one of: `'YEAR' | 'MONTH' | 'WEEK' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND'`.
+
+```ts
+import { timeDiff } from '@vielzeug/toolkit';
+
+const past = new Date(Date.now() - 1000 * 60 * 60 * 24 * 5);
+const diff = timeDiff(past); // { value: 5, unit: 'DAY' }
+
+// Filter to specific units only
+const minuteOrSecond = timeDiff(past, new Date(), ['MINUTE', 'SECOND']);
+
+// Invalid input returns undefined
+const invalid = timeDiff('not-a-date'); // undefined
+```
+
+## 🔗 All Date Utilities
+
+<div class="grid-links">
+
+- [expires](./date/expires.md)
+- [interval](./date/interval.md)
+- [timeDiff](./date/timeDiff.md)
+
+</div>
 
 Date utilities provide a set of helpers to work with dates and times in a type-safe, ergonomic way. Use these tools for checking expiration, calculating intervals, and finding precise time differences without the weight of large date libraries.
 
@@ -49,3 +142,20 @@ const diffInDays = timeDiff(start, end, ['days']); // "1 day"
 - [timeDiff](./date/timeDiff.md)
 
 </div>
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Array Examples](./array.md)
+- [Async Examples](./async.md)
+- [Function Examples](./function.md)

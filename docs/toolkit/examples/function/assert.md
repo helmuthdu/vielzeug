@@ -7,7 +7,7 @@
 
 The `assert` utility validates conditions during runtime. If a condition (or any condition in a list) is false, it throws a customizable error. It features advanced debugging options, support for various error types, and a "bypass" mode for soft warnings.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/assert.ts

@@ -42,6 +42,7 @@ describe('seek', () => {
 
   it('should handle null or undefined values in the object', () => {
     const dataWithNull = { ...data, extra: null, nested: { prop: undefined } };
+
     expect(seek(dataWithNull, 'extra', 0.5)).toBe(false);
     expect(seek(dataWithNull, 'prop', 0.5)).toBe(false);
   });

@@ -9,12 +9,12 @@
     "preRushx": []
   },
   "gitPolicy": {},
-  "nodeSupportedVersionRange": ">=20.14.0 <=22.22.0",
-  "pnpmVersion": "10.29.2",
+  "nodeSupportedVersionRange": ">=20.14.0 <=22.22.1",
+  "pnpmVersion": "10.33.0",
   "projects": [
     {
-      "packageName": "@vielzeug/deposit",
-      "projectFolder": "packages/deposit",
+      "packageName": "@vielzeug/buildit",
+      "projectFolder": "packages/buildit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -25,8 +25,26 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/deposit",
+      "projectFolder": "packages/deposit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/eventit",
+      "projectFolder": "packages/eventit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/fetchit",
       "projectFolder": "packages/fetchit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/floatit",
+      "projectFolder": "packages/floatit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -61,14 +79,20 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/snapit",
-      "projectFolder": "packages/snapit",
+      "packageName": "@vielzeug/stateit",
+      "projectFolder": "packages/stateit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
       "packageName": "@vielzeug/toolkit",
       "projectFolder": "packages/toolkit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/timit",
+      "projectFolder": "packages/timit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -81,6 +105,24 @@
     {
       "packageName": "@vielzeug/wireit",
       "projectFolder": "packages/wireit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/workit",
+      "projectFolder": "packages/workit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/virtualit",
+      "projectFolder": "packages/virtualit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/dragit",
+      "projectFolder": "packages/dragit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     }

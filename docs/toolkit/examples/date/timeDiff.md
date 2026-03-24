@@ -7,7 +7,7 @@
 
 The `timeDiff` utility calculates the time difference between two dates and returns it in a human-readable format (e.g., "5 days ago" or "in 2 hours"). It's perfect for displaying relative timestamps in user interfaces.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/date/timeDiff.ts

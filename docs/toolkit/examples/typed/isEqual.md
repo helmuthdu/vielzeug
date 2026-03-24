@@ -7,7 +7,7 @@
 
 The `isEqual` utility performs a deep equality comparison between two values. It determines if two values are structurally identical, recursively checking nested objects and arrays.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/typed/isEqual.ts

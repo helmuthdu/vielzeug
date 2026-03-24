@@ -1,8 +1,21 @@
-# ⚙️ Function Utilities
+---
+title: 'Toolkit — Function Examples'
+description: 'Function utility examples for Toolkit.'
+---
+
+# Function Utilities
 
 Function utilities provide a powerful set of tools to control execution, compose logic, and enhance function behavior in a type-safe way. Use these helpers for debouncing, throttling, memoization, retries, and more.
 
 ## 📚 Quick Reference
+
+## Problem
+
+Implement 📚 quick reference in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
 
 ### Execution Control
 
@@ -27,7 +40,6 @@ Function utilities provide a powerful set of tools to control execution, compose
 | :------------------------------------------- | :---------------------------------------------------------------- |
 | [`assert`](./function/assert.md)             | Throw an error if a condition is not met (with advanced options). |
 | [`assertParams`](./function/assertParams.md) | Validate function parameters against expected types.              |
-| [`worker`](./function/worker.md)             | Easily run heavy functions in a Web Worker.                       |
 
 ## 💡 Practical Examples
 
@@ -90,9 +102,23 @@ const heavyCalc = memo((n: number) => {
 - [memo](./function/memo.md)
 - [once](./function/once.md)
 - [pipe](./function/pipe.md)
-- [proxy](./function/proxy.md)
-- [prune](./function/prune.md)
 - [throttle](./function/throttle.md)
-- [worker](./function/worker.md)
 
 </div>
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Array Examples](./array.md)
+- [Async Examples](./async.md)
+- [Date Examples](./date.md)

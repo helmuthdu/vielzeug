@@ -7,7 +7,7 @@
 
 The `compareBy` utility is a factory function that creates a comparator based on a selector function. It is ideal for sorting arrays of objects by a specific property or a computed value.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/function/compareBy.ts
@@ -77,4 +77,3 @@ files.sort(byExtLength);
 
 - [compare](./compare.md): The underlying primitive comparison logic.
 - [sort](../array/sort.md): Functional sorting using a selector directly.
-- [sortBy](../array/sortBy.md): Sort by multiple fields.

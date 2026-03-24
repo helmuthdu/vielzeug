@@ -5,8 +5,8 @@ import type { Money } from './types';
  */
 export type ExchangeRate = {
   from: string; // Source currency code
-  to: string; // Target currency code
   rate: number; // Exchange rate multiplier
+  to: string; // Target currency code
 };
 
 /**

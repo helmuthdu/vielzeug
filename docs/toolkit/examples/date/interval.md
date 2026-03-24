@@ -7,7 +7,7 @@
 
 The `interval` utility creates an array of dates between a start and end date, separated by a specified time unit (e.g., days, weeks, months). It's ideal for generating date series for calendars, charts, or timelines.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/date/interval.ts

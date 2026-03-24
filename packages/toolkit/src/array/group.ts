@@ -1,6 +1,7 @@
+import type { Selector } from '../types';
+
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-import type { Selector } from '../types';
 
 /**
  * Groups the elements of an array based on the given key.
@@ -8,7 +9,7 @@ import type { Selector } from '../types';
  * @example
  * ```ts
  * const data = [{ a: 2 }, { a: 1 }];
- * group(data, 'a') // { '1': [{ a: 2 }], '2': [{ a: 1 }] };
+ * group(data, 'a') // { '2': [{ a: 2 }], '1': [{ a: 1 }] };
  * ```
  *
  * @param array - The array to group.
@@ -18,26 +19,22 @@ import type { Selector } from '../types';
  *
  * @throws {TypeError} If the provided array is not an array.
  */
-export function group<T, _K extends keyof T, R extends string | number | symbol>(
-  array: T[],
-  selector: Selector<T>,
-): Record<R, T[]> {
+export function group<T>(array: T[], selector: Selector<T>): Record<string, T[]> {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
-  const result = {} as Record<R, T[]>;
+  const result: Record<string, T[]> = {};
   const getKey = typeof selector === 'function' ? selector : (item: T) => item[selector];
 
   for (const item of array) {
     const rawKey = getKey(item);
-    const key = (rawKey === undefined || rawKey === null ? '_' : String(rawKey)) as R;
+    const key = rawKey === undefined || rawKey === null ? '_' : String(rawKey);
 
     if (!result[key]) {
       result[key] = [];
     }
+
     result[key].push(item);
   }
 
   return result;
 }
-
-group.fp = true;

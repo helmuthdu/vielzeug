@@ -1,8 +1,21 @@
-# 🔤 String Utilities
+---
+title: 'Toolkit — String Examples'
+description: 'String utility examples for Toolkit.'
+---
+
+# String Utilities
 
 String utilities provide essential tools to transform, compare, and format strings in a type-safe, ergonomic way. Use these helpers for case conversion, similarity checks, truncation, and more.
 
 ## 📚 Quick Reference
+
+## Problem
+
+Implement 📚 quick reference in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
+
+## Runnable Example
+
+The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
 
 | Method                                 | Description                                                  |
 | :------------------------------------- | :----------------------------------------------------------- |
@@ -54,3 +67,20 @@ similarity('hello', 'world'); // 0.2
 - [truncate](./string/truncate.md)
 
 </div>
+
+## Expected Output
+
+- The example runs without type errors in a standard TypeScript setup.
+- The main flow produces the behavior described in the recipe title.
+
+## Common Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Related Recipes
+
+- [Array Examples](./array.md)
+- [Async Examples](./async.md)
+- [Date Examples](./date.md)

@@ -7,7 +7,7 @@
 
 The `search` utility performs a fuzzy search across an array of objects. It checks all string properties of each object and returns a filtered list of items that match the query based on a similarity threshold (tone).
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/array/search.ts
@@ -77,6 +77,6 @@ search(products, 'phone', 0.25); // [{ name: 'iPhone 15' }]
 
 ## See Also
 
-- [filter](./filter.md): Filter items based on exact conditions.
+- [select](./select.md): Filter array elements by a predicate.
 - [similarity](../string/similarity.md): The underlying string comparison helper.
 - [contains](./contains.md): Check for existence using deep equality.

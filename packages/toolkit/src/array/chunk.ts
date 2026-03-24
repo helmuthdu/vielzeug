@@ -48,6 +48,7 @@ export function chunk<T>(input: T[] | string, size = 2, options: ChunkOptions = 
   if (isString(input) && overlap) {
     const padded = pad + input + pad;
     const numChunks = padded.length - size + 1;
+
     return Array.from({ length: numChunks }, (_, i) => padded.slice(i, i + size)) as ChunkResult<T>;
   }
 

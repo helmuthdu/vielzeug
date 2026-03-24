@@ -1,498 +1,161 @@
+---
+title: Permit — Usage Guide
+description: Role setup, inheritance, wildcard permissions, dynamic rules, and practical checks for Permit.
+---
+
 # Permit Usage Guide
 
-Complete guide to installing and using Permit in your projects.
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Permit?
+Start with the [Overview](./index.md), then use this page for implementation-level behavior.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/permit
-```
-
-```sh [npm]
-npm install @vielzeug/permit
-```
-
-```sh [yarn]
-yarn add @vielzeug/permit
-```
-
-:::
-
-## Import
+## Basic Setup
 
 ```ts
-import { Permit } from '@vielzeug/permit';
-
-// Optional: Import types and constants
-import type {
-  BaseUser,
-  PermissionAction,
-  PermissionCheck,
-  PermissionMap,
-  ResourcePermissions,
-  RolesWithPermissions,
-} from '@vielzeug/permit';
-
-import { WILDCARD, ANONYMOUS } from '@vielzeug/permit';
+const permit = createPermit();
 ```
 
-## Basic Usage
-
-### Registering Permissions
+You can seed state at construction:
 
 ```ts
-// Static permissions (always true/false)
-Permit.register('admin', 'posts', {
-  read: true,
-  create: true,
-  update: true,
-  delete: true,
-});
-
-Permit.register('viewer', 'posts', {
-  read: true,
-  create: false,
-  update: false,
-  delete: false,
-});
-
-// Permissions are normalized (case-insensitive, trimmed)
-Permit.register('Editor', 'Posts', { read: true });
-// Same as: Permit.register('editor', 'posts', { read: true });
-```
-
-### Checking Permissions
-
-```ts
-const user = { id: '123', roles: ['viewer'] };
-
-// Check if user can view posts
-const canView = Permit.check(user, 'posts', 'read'); // true
-
-// Check if user can delete posts
-const canDelete = Permit.check(user, 'posts', 'delete'); // false
-
-// Role and resource names are normalized
-const userWithCaps = { id: '456', roles: ['EDITOR'] };
-Permit.check(userWithCaps, 'POSTS', 'read'); // true (normalized matching)
-```
-
-### Dynamic Permissions
-
-```ts
-// Function-based permissions for context-aware checks
-Permit.register('author', 'posts', {
-  update: (user, post) => user.id === post.authorId,
-  delete: (user, post) => user.id === post.authorId && post.status === 'draft',
-});
-
-const user = { id: '123', roles: ['author'] };
-const post = { id: 'p1', authorId: '123', status: 'draft' };
-
-// Must provide data for dynamic permissions
-const canUpdate = Permit.check(user, 'posts', 'update', post); // true
-const canDelete = Permit.check(user, 'posts', 'delete', post); // true
-
-// Without data, function permissions return false
-Permit.check(user, 'posts', 'update'); // false (no data provided)
-```
-
-## Advanced Features
-
-### Wildcards
-
-Use the exported `WILDCARD` constant for permissions that apply to all resources or roles:
-
-```ts
-import { Permit, WILDCARD } from '@vielzeug/permit';
-
-// Admin has all permissions on all resources
-Permit.register('admin', WILDCARD, {
-  read: true,
-  create: true,
-  update: true,
-  delete: true,
-});
-
-// All roles can view posts
-Permit.register(WILDCARD, 'posts', {
-  read: true,
-});
-
-// Specific permissions override wildcards
-Permit.register('admin', WILDCARD, { read: true });
-Permit.register('admin', 'secrets', { read: false }); // Specific wins
-```
-
-### Anonymous Users
-
-Use the `ANONYMOUS` constant for unauthenticated users:
-
-```ts
-import { Permit, ANONYMOUS } from '@vielzeug/permit';
-
-// Public read access for unauthenticated users
-Permit.register(ANONYMOUS, 'posts', { read: true });
-
-// Malformed users are treated as ANONYMOUS + WILDCARD
-const malformedUser = null;
-Permit.check(malformedUser, 'posts', 'read'); // true (has ANONYMOUS role)
-```
-
-::: warning Security Note
-Malformed users (missing `id` or `roles`) automatically receive both `ANONYMOUS` and `WILDCARD` roles. Ensure wildcard permissions are intended for public access.
-:::
-
-### Multiple Roles
-
-Users can have multiple roles, and permissions are additive (first-match-wins):
-
-```ts
-Permit.register('viewer', 'posts', { read: true });
-Permit.register('creator', 'posts', { create: true });
-
-const user = { id: '1', roles: ['viewer', 'creator'] };
-
-// User has permissions from both roles
-Permit.check(user, 'posts', 'read'); // true
-Permit.check(user, 'posts', 'create'); // true
-```
-
-### Setting Permissions
-
-Use `set()` to replace or merge permissions:
-
-```ts
-// Merge with existing (default)
-Permit.set('editor', 'posts', { read: true, create: true });
-
-// Replace completely
-Permit.set('editor', 'posts', { read: true }, true); // Only read remains
-```
-
-### Unregistering Permissions
-
-Remove permissions when no longer needed:
-
-```ts
-// Remove specific action
-Permit.unregister('editor', 'posts', 'delete');
-
-// Remove all actions for a resource
-Permit.unregister('editor', 'posts');
-
-// Automatically cleans up empty role/resource entries
-```
-
-### Checking User Roles
-
-Use `hasRole()` helper for role checks:
-
-```ts
-const user = { id: '1', roles: ['Admin', 'Editor'] };
-
-// Normalized comparison (case-insensitive)
-Permit.hasRole(user, 'admin'); // true
-Permit.hasRole(user, 'EDITOR'); // true
-Permit.hasRole(user, 'moderator'); // false
-
-// For malformed users, only ANONYMOUS role returns true
-const malformed = null;
-Permit.hasRole(malformed, ANONYMOUS); // true
-Permit.hasRole(malformed, 'admin'); // false
-```
-
-### Merging Permissions
-
-Registering permissions for the same role/resource merges them:
-
-```ts
-Permit.register('editor', 'posts', { read: true, create: true });
-Permit.register('editor', 'posts', { update: true }); // Adds to existing
-
-// Editor now has: read, create, and update
-```
-
-### TypeScript Generics
-
-Use generics for better type safety:
-
-```ts
-interface User extends BaseUser {
-  email: string;
-  department: string;
-}
-
-interface Post {
-  id: string;
-  authorId: string;
-  department: string;
-}
-
-Permit.register<User, Post>('manager', 'posts', {
-  update: (user, post) => {
-    // Full type inference
-    return user.department === post.department;
+const permit = createPermit({
+  initial: {
+    hierarchy: { editor: ['viewer'] },
+    permissions: {
+      editor: { posts: { write: true } },
+      viewer: { posts: { read: true } },
+    },
   },
 });
 ```
 
-### Clearing Permissions
+## Registering Permissions with define()
+
+Use `define(role, resource, actions)` to add or merge permissions.
 
 ```ts
-// Clear all registered permissions
-Permit.clear();
-
-// Useful for testing or re-initialization
-```
-
-### Inspecting Permissions
-
-```ts
-// Get deep copy of all registered permissions
-const allPermissions = Permit.roles;
-
-// Iterate over roles
-for (const [role, resources] of allPermissions) {
-  console.log(`Role: ${role}`);
-
-  for (const [resource, actions] of resources) {
-    console.log(`  Resource: ${resource}`, actions);
-  }
-}
-```
-
-## Permission Patterns
-
-### Role-Based Access Control (RBAC)
-
-```ts
-// Define roles with specific permissions
-Permit.register('admin', 'users', {
+permit.define('editor', 'posts', {
   read: true,
-  create: true,
-  update: true,
-  delete: true,
+  write: (user, data) => user.id === data?.authorId,
 });
 
-Permit.register('moderator', 'users', {
-  read: true,
-  update: true,
-});
-
-Permit.register('user', 'users', {
-  read: true,
-});
+permit.define('editor', 'posts', { delete: false }); // merges into same role/resource
 ```
 
-### Resource Ownership
+Shorthands:
 
 ```ts
-// Users can only modify their own resources
-Permit.register('user', 'profile', {
-  read: true,
-  update: (user, profile) => user.id === profile.userId,
-  delete: (user, profile) => user.id === profile.userId,
-});
+permit.grant('viewer', 'posts', 'read');
+permit.deny('blocked', 'posts', 'read');
 ```
 
-### Status-Based Permissions
+Notes:
+
+- Role/resource/action names are normalized (trim + lowercase).
+- Empty `actions` map is ignored unless `strict: true`, where it throws.
+- All write methods are fluent and return `permit`.
+
+## Wildcards
+
+Use `WILDCARD` (`'*'`) for role, resource, or action.
 
 ```ts
-// Permissions depend on resource status
-Permit.register('editor', 'articles', {
-  update: (user, article) => {
-    return article.status === 'draft' || article.status === 'review';
-  },
-  delete: (user, article) => {
-    return article.status === 'draft';
-  },
-});
+permit.grant(WILDCARD, 'status', 'read'); // every user role
+permit.grant('admin', WILDCARD, 'read', 'write'); // every resource
+permit.define('superadmin', 'posts', { [WILDCARD]: true }); // every action on posts
 ```
 
-### Hierarchical Permissions
+Resource precedence behavior:
 
 ```ts
-// Combine role levels with resource ownership
-Permit.register('admin', 'documents', {
-  read: true,
-  create: true,
-  update: true,
-  delete: true,
-});
+permit.define('admin', WILDCARD, { read: true, delete: true });
+permit.define('admin', 'posts', { write: true, read: false });
 
-Permit.register('manager', 'documents', {
-  read: true,
-  create: true,
-  update: (user, doc) => doc.department === user.department,
-  delete: (user, doc) => doc.department === user.department,
-});
-
-Permit.register('employee', 'documents', {
-  read: (user, doc) => doc.department === user.department,
-  create: true,
-  update: (user, doc) => doc.authorId === user.id,
-  delete: (user, doc) => doc.authorId === user.id,
-});
+permit.check({ id: '1', roles: ['admin'] }, 'posts', 'read'); // false (specific wins)
+permit.check({ id: '1', roles: ['admin'] }, 'posts', 'delete'); // true (fallback)
 ```
 
-## Integration Patterns
+Set `wildcardFallback: false` in `createPermit()` to disable wildcard-resource fallback once a specific resource entry exists.
 
-### With Authentication
+## Role Inheritance
 
 ```ts
-// After user login
-function onLogin(user) {
-  // Load user-specific permissions
-  const permissions = await fetchUserPermissions(user.id);
-
-  permissions.forEach((perm) => {
-    Permit.register(perm.role, perm.resource, perm.actions);
-  });
-}
+permit.grant('viewer', WILDCARD, 'read');
+permit.extend('editor', 'viewer');
+permit.extend('admin', 'editor');
 ```
 
-### With React
+Resolution uses breadth-first traversal across role parents.
 
-```tsx
-import { Permit } from '@vielzeug/permit';
-import { useAuth } from './auth';
-
-function usePermission(resource: string, action: string, data?: any) {
-  const { user } = useAuth();
-  return Permit.check(user, resource, action, data);
-}
-
-// Usage
-function DeleteButton({ post }) {
-  const canDelete = usePermission('posts', 'delete', post);
-
-  if (!canDelete) return null;
-
-  return <button onClick={() => deletePost(post)}>Delete</button>;
-}
-```
-
-### With Express
+Remove inheritance:
 
 ```ts
-import { Permit } from '@vielzeug/permit';
-
-function authorize(resource: string, action: string) {
-  return (req, res, next) => {
-    if (!Permit.check(req.user, resource, action, req.body)) {
-      return res.status(403).json({ error: 'Permission denied' });
-    }
-    next();
-  };
-}
-
-// Usage
-app.delete('/api/posts/:id', authorize('posts', 'delete'), async (req, res) => {
-  // Handle deletion
-});
+permit.unextend('admin', 'editor'); // remove one parent
+permit.unextend('editor'); // remove all parents for editor
 ```
 
-### With Vue
+## Anonymous Users
+
+Users are treated as anonymous when null, missing `id`, or missing `roles` array.
 
 ```ts
-// composable
-import { computed } from 'vue';
-import { Permit } from '@vielzeug/permit';
-import { useAuth } from './auth';
+permit.grant(ANONYMOUS, 'posts', 'read');
 
-export function usePermission(resource: string, action: string, data?: any) {
-  const { user } = useAuth();
-
-  return computed(() => {
-    return Permit.check(user.value, resource, action, data?.value);
-  });
-}
+permit.check(null, 'posts', 'read'); // true
+isAnonymous(null); // true
+hasRole(null, ANONYMOUS); // true
 ```
+
+A user with valid `id` and `roles: []` is authenticated (not anonymous).
+
+## Checking Permissions
+
+```ts
+const user = { id: 'u1', roles: ['editor'] };
+
+permit.check(user, 'posts', 'read');
+permit.check(user, 'posts', 'write', { authorId: 'u1' });
+
+permit.checkAll(user, 'posts', ['read', 'write'], { authorId: 'u1' });
+permit.checkAny(user, 'posts', ['write', 'delete']);
+```
+
+First role with an explicit opinion wins (`true` or `false`).
+
+## Guard API
+
+Use `permit.for(user)` to bind checks to one user.
+
+```ts
+const guard = permit.for(user);
+
+guard.can('posts', 'read');
+guard.canAll('posts', ['read', 'write'], { authorId: 'u1' });
+guard.canAny('posts', ['write', 'delete']);
+```
+
+The guard is live and reflects later permission changes.
+
+## Removing and Resetting State
+
+```ts
+permit.remove('editor', 'posts', 'write'); // one action
+permit.remove('editor', 'posts'); // one resource
+permit.remove('editor'); // full role
+
+const state = permit.snapshot();
+permit.clear();
+permit.restore(state);
+```
+
+`snapshot()` / `restore()` include both permissions and hierarchy.
 
 ## Best Practices
 
-1. **Register permissions early**: Register all permissions during app initialization
-2. **Use TypeScript**: Leverage generics for type-safe permission functions
-3. **Clear in tests**: Always call `Permit.clear()` before each test
-4. **Validate user structure**: Ensure user has `id` and `roles` properties
-5. **Provide data for dynamic permissions**: Function-based permissions need context
-6. **Use constants**: Import and use `WILDCARD` instead of string literals
-7. **Document permissions**: Comment why specific roles have certain permissions
-8. **Audit regularly**: Use `Permit.roles` to inspect registered permissions
-
-## Common Patterns
-
-### Loading Permissions from Database
-
-```ts
-async function initializePermissions() {
-  const permissions = await db.permissions.findAll();
-
-  for (const perm of permissions) {
-    Permit.register(perm.role, perm.resource, {
-      read: perm.canView,
-      create: perm.canCreate,
-      update: perm.canUpdate,
-      delete: perm.canDelete,
-    });
-  }
-}
-```
-
-### Environment-Specific Permissions
-
-```ts
-if (process.env.NODE_ENV === 'development') {
-  // Dev-only permissions
-  Permit.register('developer', WILDCARD, {
-    read: true,
-    create: true,
-    update: true,
-    delete: true,
-  });
-}
-```
-
-### Caching Permission Checks
-
-```ts
-// For expensive permission checks
-const permissionCache = new Map<string, boolean>();
-
-function checkWithCache(user, resource, action, data?) {
-  const key = `${user.id}-${resource}-${action}`;
-
-  if (permissionCache.has(key)) {
-    return permissionCache.get(key);
-  }
-
-  const result = Permit.check(user, resource, action, data);
-  permissionCache.set(key, result);
-
-  return result;
-}
-```
-
-## Next Steps
-
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./api">API Reference</a> – Complete API documentation</li>
-      <li><a href="./examples">Examples</a> – Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
-    </ul>
-  </div>
-</div>
+- Define one centralized Permit instance per bounded context.
+- Use `scope`-like naming conventions in resources (`billing.invoice`, `posts.comment`).
+- Prefer `guard` objects (`permit.for(user)`) for repeated checks.
+- Reserve wildcards for explicit platform-level roles.
+- Use `strict: true` in tests/CI to catch misconfigured `define()` calls early.

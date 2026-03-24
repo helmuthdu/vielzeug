@@ -7,7 +7,7 @@
 
 Returns the absolute value of a number. Supports both regular numbers and bigint.
 
-## Implementation
+## Source Code
 
 ::: details View Source Code
 <<< @/../packages/toolkit/src/math/abs.ts
@@ -116,8 +116,8 @@ const tempDifference = abs(temp1 – temp2);
 
 ## See Also
 
-- [subtract](./subtract.md): Subtract numbers
-- [multiply](./multiply.md): Multiply numbers
+- [clamp](./clamp.md): Constrain a number within a range.
+- [round](./round.md): Round a number to a given precision.
 - [isNegative](../typed/isNegative.md): Check if value is negative
 - [isPositive](../typed/isPositive.md): Check if value is positive
 

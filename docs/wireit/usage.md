@@ -1,644 +1,380 @@
+---
+title: Wireit — Usage Guide
+description: Tokens, providers, lifetimes, async resolution, child containers, and testing for @vielzeug/wireit.
+---
+
 # Wireit Usage Guide
 
-Complete guide to installing and using Wireit in your projects.
-
-::: tip 💡 API Reference
-This guide covers API usage and basic patterns. For complete application examples, see [Examples](./examples.md).
+::: tip New to Wireit?
+Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-## Table of Contents
 
 [[toc]]
 
-## Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/wireit
-```
-
-```sh [npm]
-npm install @vielzeug/wireit
-```
-
-```sh [yarn]
-yarn add @vielzeug/wireit
-```
-
-:::
-
-## Import
-
-```ts
-import { createContainer, createToken } from '@vielzeug/wireit';
-
-// Optional: Import types
-import type { Container, Token, Provider, Lifetime, ContainerOptions } from '@vielzeug/wireit';
-```
-
-## Basic Usage
-
-### Creating a Container
-
-```ts
-import { createContainer } from '@vielzeug/wireit';
-
-const container = createContainer();
-
-// With options
-const container = createContainer({
-  parent: parentContainer,
-  allowOptional: true,
-});
-```
-
-### Basic Registration and Resolution
-
-```ts
-import { createContainer, createToken } from '@vielzeug/wireit';
-
-// 1. Create tokens
-const Logger = createToken<ILogger>('Logger');
-
-// 2. Register provider
-container.registerValue(Logger, new ConsoleLogger());
-
-// 3. Resolve dependency
-const logger = container.get(Logger);
-logger.info('Hello, Wireit!');
-```
-
 ## Tokens
 
-Tokens are typed symbols that uniquely identify dependencies in the container.
-
-### Creating Tokens
+Every dependency is identified by a typed token — a branded symbol. The description is **required** and appears in error messages and `debug()` output.
 
 ```ts
-// Basic token
-const Logger = createToken<ILogger>('Logger');
+import { createToken } from '@vielzeug/wireit';
 
-// Token with complex type
-const Config = createToken<{
-  apiUrl: string;
-  timeout: number;
-}>('Config');
-
-// Token without description (anonymous)
-const Cache = createToken<CacheService>();
+const ConfigToken = createToken<AppConfig>('AppConfig');
+const DbToken = createToken<IDatabase>('Database');
+const LoggerToken = createToken<ILogger>('Logger');
+const ServiceToken = createToken<UserService>('UserService');
 ```
 
-### Token Best Practices
+Centralise token definitions in a dedicated file:
 
 ```ts
-// ✅ Use descriptive names
-const UserRepository = createToken<IUserRepository>('UserRepository');
-
-// ✅ Use interfaces for flexibility
-interface ILogger {
-  info(message: string): void;
-  error(message: string): void;
-}
-const Logger = createToken<ILogger>('Logger');
-
-// ❌ Avoid generic names
-const Service = createToken<any>('Service');
-
-// ❌ Avoid coupling to implementation
-const PrismaDatabase = createToken<PrismaClient>('Database');
-// ✅ Better: use interface
-const Database = createToken<IDatabase>('Database');
+// tokens.ts
+export const ConfigToken = createToken<AppConfig>('AppConfig');
+export const DbToken = createToken<IDatabase>('Database');
+export const LoggerToken = createToken<ILogger>('Logger');
+export const ServiceToken = createToken<UserService>('UserService');
 ```
+
+::: tip
+Use interface types for tokens (`createToken<ILogger>`) so implementations are swappable without changing call sites.
+:::
 
 ## Providers
 
-Wireit supports three types of providers for different scenarios.
+### value()
 
-### Value Provider
-
-Register an existing instance or plain value:
+Use `value()` for constants, configuration objects, and already-constructed instances:
 
 ```ts
-// Plain object
-const config = { apiUrl: 'https://api.example.com', timeout: 5000 };
-container.registerValue(Config, config);
-
-// Existing instance
-const logger = new ConsoleLogger();
-container.registerValue(Logger, logger);
-
-// With custom lifetime
-container.registerValue(RequestId, generateId(), 'transient');
+container.value(ConfigToken, { apiUrl: 'https://api.example.com', timeout: 5000 });
+container.value(LoggerToken, console);
 ```
 
-### Class Provider
+### factory()
 
-Register a class to be instantiated by the container:
+Use `factory()` for any function that creates an instance. Resolved deps are passed in order:
+
+```ts
+// Sync
+container.factory(DbToken, (config) => new Database(config.apiUrl), {
+  deps: [ConfigToken],
+});
+
+// Async — must be resolved via getAsync()
+container.factory(
+  DbToken,
+  async (config) => {
+    const db = new Database(config.apiUrl);
+    await db.connect();
+    return db;
+  },
+  { deps: [ConfigToken] },
+);
+```
+
+### bind()
+
+Use `bind()` to pair a class with a token. The container instantiates it with the resolved deps as constructor arguments:
 
 ```ts
 class UserService {
   constructor(
-    private database: IDatabase,
+    private db: IDatabase,
     private logger: ILogger,
   ) {}
-
-  async createUser(data: UserData) {
-    this.logger.info('Creating user');
-    return this.database.users.create(data);
-  }
 }
 
-container.register(UserService, {
-  useClass: UserService,
-  deps: [Database, Logger],
-  lifetime: 'singleton', // default
-});
-```
-
-### Factory Provider
-
-Register a factory function for custom creation logic:
-
-```ts
-// Simple factory
-container.registerFactory(Logger, () => new ConsoleLogger(), [], { lifetime: 'singleton' });
-
-// Factory with dependencies
-container.registerFactory(Database, (config) => new PrismaClient({ url: config.dbUrl }), [Config], {
+container.bind(ServiceToken, UserService, {
+  deps: [DbToken, LoggerToken],
   lifetime: 'singleton',
 });
-
-// Async factory
-container.registerFactory(
-  Database,
-  async (config) => {
-    const db = new PrismaClient({ url: config.dbUrl });
-    await db.$connect();
-    return db;
-  },
-  [Config],
-  { async: true, lifetime: 'singleton' },
-);
 ```
 
-### Batch Registration
+### register()
 
-Register multiple providers at once:
+Use `register()` when you need the full provider object:
 
 ```ts
-container.registerMany([
-  [Config, { useValue: appConfig }],
-  [Logger, { useClass: ConsoleLogger }],
-  [Database, { useClass: PrismaDatabase, deps: [Config, Logger] }],
-  [UserRepo, { useClass: UserRepository, deps: [Database] }],
-]);
+container.register(ServiceToken, {
+  useClass: UserService,
+  deps: [DbToken, LoggerToken],
+  lifetime: 'transient',
+});
 ```
+
+### Re-registration guard
+
+Re-registering an existing token throws by default. Pass `{ overwrite: true }` to replace it intentionally:
+
+```ts
+container.value(ConfigToken, defaultConfig);
+
+// Throws — ConfigToken already registered
+// container.value(ConfigToken, otherConfig);
+
+// OK — explicit overwrite
+container.value(ConfigToken, otherConfig, { overwrite: true });
+```
+
+### Dispose hooks
+
+Class and factory providers accept an optional `dispose` callback invoked by `container.dispose()`:
+
+```ts
+container.factory(
+  DbToken,
+  async () => {
+    const db = new Database(env.DB_URL);
+    await db.connect();
+    return db;
+  },
+  {
+    dispose: async (db) => db.close(),
+  },
+);
+
+await container.dispose(); // calls db.close(), then clears the container
+```
+
+`dispose()` is idempotent — calling it more than once is safe. The container also implements `[Symbol.asyncDispose]`:
+
+```ts
+{
+  await using container = createContainer();
+  container.bind(ServiceToken, MyService);
+  const svc = container.get(ServiceToken);
+  // container.dispose() is called automatically when the block exits
+}
+```
+
+::: warning
+`dispose` hooks are only invoked for `singleton` and `scoped` instances that were resolved at least once. `transient` instances are not cached, so their hooks are never called.
+:::
 
 ## Lifetimes
 
-Control when and how often instances are created.
-
-### Singleton
-
-Created once and reused across all resolutions (default for classes):
+| Lifetime    | Behaviour                                                                |
+| ----------- | ------------------------------------------------------------------------ |
+| `singleton` | One instance per container — created on first `get()`, cached thereafter |
+| `transient` | New instance on every `get()` call                                       |
+| `scoped`    | One instance per child container; behaves like singleton in the root     |
 
 ```ts
-let instanceCount = 0;
+// Singleton (default)
+container.bind(DbToken, Database, { deps: [ConfigToken] });
 
-class Database {
-  constructor() {
-    instanceCount++;
-  }
+// Transient
+container.factory(RequestIdToken, () => crypto.randomUUID(), { lifetime: 'transient' });
+
+// Scoped — one per child container
+container.bind(RequestContextToken, RequestContext, { lifetime: 'scoped' });
+```
+
+## Child Containers and Hierarchy
+
+A child container inherits all registrations from its parent. Registrations in the child shadow the parent without modifying it:
+
+```ts
+const root = createContainer();
+root.value(ConfigToken, globalConfig);
+root.bind(LoggerToken, ConsoleLogger);
+
+const child = root.createChild();
+child.value(UserToken, currentUser); // local only
+
+child.get(ConfigToken); // globalConfig — inherited from root
+child.get(UserToken); // currentUser — local
+root.get(UserToken); // throws ProviderNotFoundError — not in root
+```
+
+`scoped` providers resolve once per child — each `createChild()` call gets its own instance:
+
+```ts
+root.bind(RequestContextToken, RequestContext, { lifetime: 'scoped' });
+
+const child1 = root.createChild();
+const child2 = root.createChild();
+
+child1.get(RequestContextToken) === child2.get(RequestContextToken); // false — separate instances
+```
+
+## Scoped Execution
+
+`runInScope(fn)` creates a child container, passes it to your callback, then calls `dispose()` on it automatically — even if the callback throws:
+
+```ts
+await container.runInScope(async (scope) => {
+  scope.value(RequestIdToken, crypto.randomUUID());
+  scope.value(UserToken, req.user);
+
+  const handler = scope.get(RequestHandlerToken);
+  await handler.process(req);
+});
+// scope.dispose() is called here regardless of outcome
+```
+
+### Request-scoped web server (Express example)
+
+```ts
+app.use(async (req, _res, next) => {
+  await container.runInScope(async (scope) => {
+    scope.value(RequestToken, req);
+    scope.value(UserToken, req.user);
+
+    await scope.get(RequestHandlerToken).handle(req);
+  });
+  next();
+});
+```
+
+## Aliases
+
+Map one token to another — useful for interface-to-implementation bindings:
+
+```ts
+const ILoggerToken = createToken<ILogger>('ILogger');
+
+container.bind(ConsoleLoggerToken, ConsoleLogger);
+container.alias(ILoggerToken, ConsoleLoggerToken);
+
+container.get(ILoggerToken) === container.get(ConsoleLoggerToken); // true
+```
+
+Alias chains are supported (`C → B → A` all resolve to `A`). Cycles throw `AliasCycleError` with the full path shown (`A → B → A`).
+
+Aliases defined in parent containers are automatically visible to child containers. A child can also shadow a parent alias by defining its own mapping for the same token.
+
+## Async Resolution
+
+When a factory returns a `Promise`, use `getAsync()` to resolve it:
+
+```ts
+container.factory(DbToken, async () => {
+  const db = new Database(env.DB_URL);
+  await db.connect();
+  return db;
+});
+
+// ✅
+const db = await container.getAsync(DbToken);
+
+// ❌ Throws AsyncProviderError
+const db = container.get(DbToken);
+```
+
+Concurrent `getAsync()` calls for the same singleton share a single in-flight promise — the factory runs exactly once.
+
+## Batch Resolution
+
+Resolve multiple tokens at once with a fully typed tuple result:
+
+```ts
+const [db, config, logger] = container.getAll([DbToken, ConfigToken, LoggerToken]);
+
+// Async
+const [db, cache] = await container.getAllAsync([DbToken, CacheToken]);
+```
+
+The return type is inferred from the token tuple: `getAll([DbToken, ConfigToken])` returns `[IDatabase, AppConfig]`.
+
+## Optional Resolution
+
+Return `undefined` instead of throwing when a token is not registered:
+
+```ts
+const cache = container.getOptional(CacheToken);
+if (cache) {
+  await cache.set('session', data);
 }
 
-container.register(Database, {
-  useClass: Database,
-  lifetime: 'singleton',
-});
-
-const db1 = container.get(Database);
-const db2 = container.get(Database);
-
-console.log(instanceCount); // 1
-console.log(db1 === db2); // true
+const analytics = await container.getOptionalAsync(AnalyticsToken);
 ```
 
-### Transient
+## Snapshot / Restore
 
-New instance created for every resolution (default for factories):
-
-```ts
-let instanceCount = 0;
-
-container.registerFactory(
-  RequestId,
-  () => {
-    instanceCount++;
-    return generateId();
-  },
-  [],
-  { lifetime: 'transient' },
-);
-
-const id1 = container.get(RequestId);
-const id2 = container.get(RequestId);
-
-console.log(instanceCount); // 2
-console.log(id1 === id2); // false
-```
-
-### Scoped
-
-Created once per scope (useful for request-scoped dependencies):
+`snapshot()` captures the current local registrations, aliases, and cached instances. `restore(snap)` rolls back all changes:
 
 ```ts
-container.register(RequestContext, {
-  useClass: Context,
-  lifetime: 'scoped',
-});
+const snap = container.snapshot();
 
-// In root container, acts like singleton
-const ctx1 = container.get(RequestContext);
-const ctx2 = container.get(RequestContext);
-console.log(ctx1 === ctx2); // true
+container.value(LoggerToken, silentLogger, { overwrite: true });
+// ... run some code ...
 
-// In child container, new instance per child
-const child1 = container.createChild();
-const child2 = container.createChild();
-
-const ctx3 = child1.get(RequestContext);
-const ctx4 = child2.get(RequestContext);
-console.log(ctx3 === ctx4); // false
-```
-
-## Container Management
-
-### Checking Registration
-
-```ts
-const Logger = createToken<ILogger>('Logger');
-
-console.log(container.has(Logger)); // false
-
-container.registerValue(Logger, new ConsoleLogger());
-
-console.log(container.has(Logger)); // true
-```
-
-### Unregistering
-
-```ts
-container.register(Logger, { useClass: ConsoleLogger });
-container.unregister(Logger);
-
-console.log(container.has(Logger)); // false
-```
-
-### Clearing Container
-
-```ts
-container.registerValue(Config, config);
-container.registerValue(Logger, logger);
-
-container.clear(); // Removes all registrations
-
-console.log(container.has(Config)); // false
-console.log(container.has(Logger)); // false
-```
-
-### Debug Information
-
-```ts
-container.registerValue(Config, config);
-container.register(Logger, { useClass: ConsoleLogger });
-container.alias(Logger, ILogger);
-
-const debug = container.debug();
-console.log(debug);
-// {
-//   tokens: ['Config', 'Logger'],
-//   aliases: [['ILogger', 'Logger']]
-// }
-```
-
-## Advanced Features
-
-### Async Resolution
-
-For providers with async initialization:
-
-```ts
-container.registerFactory(
-  Database,
-  async (config) => {
-    const db = new PrismaClient();
-    await db.$connect();
-    return db;
-  },
-  [Config],
-  { async: true, lifetime: 'singleton' },
-);
-
-// Must use getAsync
-const db = await container.getAsync(Database);
-
-// ❌ This will throw AsyncProviderError
-// const db = container.get(Database);
-```
-
-### Optional Resolution
-
-Handle missing dependencies gracefully:
-
-```ts
-// Returns undefined if not registered
-const logger = container.getOptional(Logger);
-if (logger) {
-  logger.info('Logger is available');
-}
-
-// Async version
-const db = await container.getOptionalAsync(Database);
-```
-
-### Allow Optional Mode
-
-Configure container to return undefined for missing tokens:
-
-```ts
-const container = createContainer({ allowOptional: true });
-
-const missing = container.get(UnknownToken); // undefined instead of error
-```
-
-### Token Aliasing
-
-Create multiple names for the same provider:
-
-```ts
-const LoggerImpl = createToken<ConsoleLogger>('ConsoleLogger');
-const ILogger = createToken<ILogger>('ILogger');
-
-container.register(LoggerImpl, { useClass: ConsoleLogger });
-container.alias(LoggerImpl, ILogger);
-
-const logger1 = container.get(LoggerImpl);
-const logger2 = container.get(ILogger);
-
-console.log(logger1 === logger2); // true
-```
-
-### Chained Aliases
-
-```ts
-const Token1 = createToken('Token1');
-const Token2 = createToken('Token2');
-const Token3 = createToken('Token3');
-
-container.registerValue(Token1, 'value');
-container.alias(Token1, Token2);
-container.alias(Token2, Token3);
-
-console.log(container.get(Token3)); // 'value'
-```
-
-### Parent/Child Containers
-
-Create hierarchical container structures:
-
-```ts
-const parent = createContainer();
-parent.registerValue(Config, globalConfig);
-parent.register(Logger, { useClass: ConsoleLogger });
-
-// Child inherits from parent
-const child = parent.createChild();
-
-console.log(child.get(Config)); // globalConfig
-console.log(child.get(Logger)); // ConsoleLogger instance
-
-// Child can override parent
-child.registerValue(Config, childConfig);
-
-console.log(parent.get(Config)); // globalConfig (unchanged)
-console.log(child.get(Config)); // childConfig
-```
-
-### Create Child with Overrides
-
-```ts
-const child = parent.createChild([
-  [RequestId, { useValue: generateId() }],
-  [User, { useValue: currentUser }],
-]);
-
-const requestId = child.get(RequestId);
-const user = child.get(User);
-```
-
-### Scoped Execution
-
-Run code in an isolated scope with automatic cleanup:
-
-```ts
-await container.runInScope(
-  async (scope) => {
-    const handler = scope.get(RequestHandler);
-    const result = await handler.process(data);
-    return result;
-  },
-  [
-    [RequestId, { useValue: generateId() }],
-    [User, { useValue: currentUser }],
-  ],
-);
-// Scope is automatically cleaned up
-```
-
-### Request-Scoped Dependencies
-
-Perfect for web servers:
-
-```ts
-app.use(async (req, res) => {
-  await container.runInScope(
-    async (scope) => {
-      // Register request-specific dependencies
-      scope.registerValue(Request, req);
-      scope.registerValue(Response, res);
-
-      // Resolve and execute handler
-      const handler = scope.get(RequestHandler);
-      await handler.handle();
-    },
-    [[RequestId, { useValue: req.id }]],
-  );
-});
+container.restore(snap); // LoggerToken is back to its original state
 ```
 
 ## Testing
 
-### Test Containers
+### createTestContainer
 
-Create isolated containers for testing:
+`createTestContainer(base?)` returns `{ container, dispose }`. `container` is an isolated child container for test overrides — it inherits all registrations from `base`. Call `dispose()` in `afterEach` to tear it down without affecting the base container:
 
 ```ts
 import { createTestContainer } from '@vielzeug/wireit';
 
 describe('UserService', () => {
-  const { container, dispose } = createTestContainer(baseContainer);
+  let container: Container;
+  let dispose: () => Promise<void>;
 
-  afterEach(() => {
-    dispose(); // Clean up after each test
+  beforeEach(() => {
+    ({ container, dispose } = createTestContainer(appContainer));
+    container.value(DbToken, mockDb, { overwrite: true });
   });
 
-  it('should create user', async () => {
-    const service = container.get(UserService);
-    const user = await service.createUser({ name: 'Test User' });
-    expect(user.name).toBe('Test User');
-  });
-});
-```
+  afterEach(() => dispose());
 
-### Mocking Dependencies
-
-Use `withMock` to temporarily replace dependencies:
-
-```ts
-import { withMock } from '@vielzeug/wireit';
-
-it('should handle database error', async () => {
-  const mockDb = {
-    users: {
-      create: vi.fn().mockRejectedValue(new Error('DB Error')),
-    },
-  };
-
-  await withMock(container, Database, mockDb, async () => {
-    const service = container.get(UserService);
-    await expect(service.createUser(userData)).rejects.toThrow('DB Error');
-  });
-
-  // Original database is automatically restored
-});
-```
-
-### Testing with Different Configurations
-
-```ts
-describe('UserService with mock logger', () => {
-  it('should log user creation', async () => {
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-    };
-
-    const { container, dispose } = createTestContainer();
-    container.registerValue(Logger, mockLogger);
-    container.register(UserService, {
-      useClass: UserService,
-      deps: [Database, Logger],
-    });
-
-    const service = container.get(UserService);
-    await service.createUser({ name: 'Test' });
-
-    expect(mockLogger.info).toHaveBeenCalledWith('Creating user');
-
-    dispose();
+  it('creates a user', async () => {
+    const svc = container.get(ServiceToken);
+    await svc.createUser({ name: 'Alice' });
+    expect(mockDb.insert).toHaveBeenCalled();
   });
 });
 ```
 
-## Best Practices
+### container.mock()
 
-### ✅ Do
-
-- **Use descriptive token names** for easier debugging
-- **Use interfaces** for token types to allow swapping implementations
-- **Register singletons** for expensive resources (database, connections)
-- **Use scoped lifetimes** for request-specific data
-- **Leverage parent/child** containers for isolation
-- **Use `createTestContainer`** in tests for automatic cleanup
-- **Create tokens in a central file** for consistency
-
-### ❌ Don't
-
-- **Don't create circular dependencies** – refactor your design
-- **Don't use `get()` with async providers** – use `getAsync()`
-- **Don't mutate container** during resolution
-- **Don't register too many transient services** – prefer singletons
-- **Don't use `any` types** – leverage TypeScript inference
-- **Don't access private container internals** – use public API
-
-### Code Organization
+`mock()` snapshots the container, registers a temporary replacement, runs your callback, then restores the original — even if the callback throws:
 
 ```ts
-// tokens.ts
-export const Database = createToken<IDatabase>('Database');
-export const Logger = createToken<ILogger>('Logger');
-export const UserService = createToken<IUserService>('UserService');
+it('handles database errors', async () => {
+  const brokenDb = { insert: vi.fn().mockRejectedValue(new Error('DB down')) };
 
-// container.ts
-import * as Tokens from './tokens';
-
-export const container = createContainer();
-
-container
-  .register(Tokens.Database, { useClass: PrismaDatabase })
-  .register(Tokens.Logger, { useClass: ConsoleLogger })
-  .register(Tokens.UserService, {
-    useClass: UserService,
-    deps: [Tokens.Database, Tokens.Logger],
+  await container.mock(DbToken, brokenDb, async () => {
+    const svc = container.get(ServiceToken);
+    await expect(svc.createUser(data)).rejects.toThrow('DB down');
   });
 
-// app.ts
-import { container } from './container';
-import * as Tokens from './tokens';
-
-const service = container.get(Tokens.UserService);
+  // DbToken is fully restored — original db is back
+});
 ```
 
-### Avoid Common Pitfalls
+The second argument accepts either a plain value (wrapped in `{ useValue }`) or a full `Provider<T>`:
 
 ```ts
-// ❌ Circular dependency
-container.register(ServiceA, { useClass: A, deps: [ServiceB] });
-container.register(ServiceB, { useClass: B, deps: [ServiceA] });
-
-// ✅ Break the cycle with shared dependency
-container.register(Shared, { useClass: SharedService });
-container.register(ServiceA, { useClass: A, deps: [Shared] });
-container.register(ServiceB, { useClass: B, deps: [Shared] });
-
-// ❌ Async provider with sync resolution
-container.registerFactory(DB, async () => db, [], { async: true });
-const db = container.get(DB); // Error!
-
-// ✅ Use getAsync
-const db = await container.getAsync(DB);
-
-// ❌ Registering during resolution
-container.registerFactory(Service, () => {
-  container.register(AnotherService, ...); // Don't do this!
-  return new Service();
+await container.mock(DbToken, { useFactory: () => createInMemoryDb() }, async () => {
+  /* ... */
 });
-
-// ✅ Register all dependencies first
-container.register(AnotherService, ...);
-container.registerFactory(Service, () => new Service());
 ```
 
-## Next Steps
+### Manual snapshot/restore
 
-<div class="vp-doc">
-  <div class="custom-block tip">
-    <p class="custom-block-title">💡 Continue Learning</p>
-    <ul>
-      <li><a href="./api">API Reference</a> – Complete API documentation</li>
-      <li><a href="./examples">Examples</a> – Practical code examples</li>
-      <li><a href="/repl">Interactive REPL</a> – Try it in your browser</li>
-    </ul>
-  </div>
-</div>
+```ts
+it('tests with custom logger', () => {
+  const snap = container.snapshot();
+  container.value(LoggerToken, { info: vi.fn(), error: vi.fn() }, { overwrite: true });
+
+  const svc = container.get(ServiceToken);
+  // assertions...
+
+  container.restore(snap);
+});
+```
+
+### Debug
+
+`debug()` returns a snapshot of all tokens and aliases visible from the container, walking the full parent chain (child-wins):
+
+```ts
+const { tokens, aliases } = container.debug();
+console.log(tokens); // ['AppConfig', 'Database', 'Logger', 'UserService']
+console.log(aliases); // [['ILogger', 'Logger']]
+```

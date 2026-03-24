@@ -1,4 +1,4 @@
-import { diff } from '../diff';
+import { DELETED, diff } from '../diff';
 
 describe('diff', () => {
   it('should return an empty object if both inputs are undefined', () => {
@@ -7,40 +7,42 @@ describe('diff', () => {
 
   it('should return the current object if the previous object is undefined', () => {
     const curr = { a: 1, b: 2 };
+
     expect(diff(curr)).toEqual(curr);
   });
 
   it('should return an empty object if both objects are equal', () => {
     const obj = { a: 1, b: 2 };
+
     expect(diff(obj, obj)).toEqual({});
   });
 
   it('should return the difference between two objects', () => {
-    const curr = { a: 1, b: 2, c: 3 };
-    const prev = { b: 2, c: 3, d: 4 };
-    // @ts-expect-error
-    expect(diff(curr, prev)).toEqual({ a: 1, d: undefined });
+    const curr: any = { a: 1, b: 2, c: 3 };
+    const prev: any = { b: 2, c: 3, d: 4 };
+
+    expect(diff(curr, prev)).toEqual({ a: 1, d: DELETED });
   });
 
   it('should handle nested objects', () => {
-    const curr = { a: { x: 1, y: 2 }, b: 2 };
-    const prev = { a: { x: 1, y: 3 }, b: 2 };
+    const curr: any = { a: { x: 1, y: 2 }, b: 2 };
+    const prev: any = { a: { x: 1, y: 3 }, b: 2 };
+
     expect(diff(curr, prev)).toEqual({ a: { y: 2 } });
   });
 
   it('should use a custom comparator if provided', () => {
-    const curr = { a: 1, b: 2 };
-    const prev = { a: 1, b: '2' };
-    // biome-ignore lint/suspicious/noDoubleEquals: -
+    const curr: any = { a: 1, b: 2 };
+    const prev: any = { a: 1, b: '2' };
     const comparator = (a: unknown, b: unknown) => a == b; // Loose equality
-    // @ts-expect-error
+
     expect(diff(curr, prev, comparator)).toEqual({});
   });
 
   it('should handle cases where keys are added or removed', () => {
-    const curr = { a: 1, b: 2 };
-    const prev = { b: 2, c: 3 };
-    // @ts-expect-error
-    expect(diff(curr, prev)).toEqual({ a: 1, c: undefined });
+    const curr: any = { a: 1, b: 2 };
+    const prev: any = { b: 2, c: 3 };
+
+    expect(diff(curr, prev)).toEqual({ a: 1, c: DELETED });
   });
 });

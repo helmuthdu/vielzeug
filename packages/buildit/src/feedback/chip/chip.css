@@ -1,0 +1,261 @@
+@layer buildit.base {
+  :host {
+    --_bg: var(--chip-bg, var(--color-contrast-150, var(--color-contrast-100)));
+    --_color: var(--chip-color, var(--color-contrast-800));
+    --_border-color: var(--chip-border-color, transparent);
+    --_radius: var(--chip-radius, var(--rounded-full));
+    --_font-size: var(--chip-font-size, var(--text-sm));
+    --_font-weight: var(--chip-font-weight, var(--font-medium));
+    --_padding-x: var(--chip-padding-x, var(--size-2-5));
+    --_padding-y: var(--chip-padding-y, var(--size-0-5));
+    --_gap: var(--chip-gap, var(--size-1));
+
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    vertical-align: middle;
+  }
+
+  .chip {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    gap: var(--_gap);
+    align-items: center;
+    max-width: 100%;
+    padding: var(--_padding-y) var(--_padding-x);
+    font-size: var(--_font-size);
+    font-weight: var(--_font-weight);
+    line-height: 1.2;
+    color: var(--_color);
+    white-space: nowrap;
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    transition:
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  .label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ========================================
+       Remove Button
+       ======================================== */
+
+  .remove-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.35em;
+    height: 1.35em;
+    padding: 0;
+    margin-inline: var(--size-0-5) calc(var(--size-2) * -1);
+    color: inherit;
+    cursor: pointer;
+    background: color-mix(in srgb, currentcolor 12%, transparent);
+    border: none;
+    border-radius: var(--_radius);
+    opacity: 0.7;
+    transition:
+      background var(--transition-fast),
+      opacity var(--transition-fast);
+  }
+
+  .remove-btn:hover {
+    background: color-mix(in srgb, currentcolor 28%, transparent);
+    opacity: 1;
+  }
+
+  .remove-btn:focus-visible {
+    outline: 2px solid currentcolor;
+    outline-offset: 1px;
+    opacity: 1;
+  }
+
+  /* ========================================
+       Icon slot
+       ======================================== */
+
+  ::slotted([slot='icon']) {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+  }
+
+  .chip-btn {
+    display: inline-flex;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
+
+  .chip-btn:disabled {
+    cursor: not-allowed;
+  }
+
+  :host([mode='selectable'][checked]) .chip {
+    outline: var(--border-2) solid var(--_theme-base, currentColor);
+    outline-offset: -2px;
+  }
+
+  :host([mode='selectable']:not([disabled])) .chip,
+  :host([mode='action']:not([disabled])) .chip {
+    cursor: pointer;
+  }
+
+  .chip-btn:focus-visible .chip {
+    outline: 2px solid var(--_theme-base, currentColor);
+    outline-offset: 2px;
+  }
+}
+
+@layer buildit.variants {
+  /* Solid (Default) — full theme color fill */
+  :host(:not([variant])) .chip,
+  :host([variant='solid']) .chip {
+    color: var(--_theme-contrast, var(--color-contrast-50));
+    background: var(--_theme-base, var(--color-contrast-700));
+    border-color: transparent;
+  }
+
+  /* Flat — subtle tint */
+  :host([variant='flat']) .chip {
+    color: var(--_theme-base, var(--color-contrast-800));
+    background: color-mix(in srgb, var(--_theme-backdrop, var(--color-contrast-200)) 55%, transparent);
+    border-color: transparent;
+  }
+
+  /* Bordered — backdrop fill with themed border */
+  :host([variant='bordered']) .chip {
+    color: var(--_theme-base, var(--color-contrast-900));
+    background: var(--_theme-backdrop, var(--color-contrast-50));
+    border-color: var(--_theme-border, var(--color-contrast-300));
+  }
+
+  :host([variant='bordered']) .remove-btn {
+    color: var(--_theme-backdrop, var(--color-contrast-50));
+    background: var(--_theme-focus, var(--color-contrast-700));
+    border: var(--border) solid var(--_theme-focus, var(--color-contrast-700));
+  }
+
+  :host([variant='bordered']) .remove-btn:hover {
+    background: color-mix(in srgb, var(--_theme-focus, var(--color-contrast-700)) 80%, black);
+    opacity: 1;
+  }
+
+  /* Outline — transparent with colored border */
+  :host([variant='outline']) .chip {
+    color: var(--_theme-base, var(--color-contrast-900));
+    background: transparent;
+    border-color: var(--_theme-base, var(--color-contrast-400));
+  }
+
+  :host([variant='outline']) .remove-btn {
+    color: var(--_theme-backdrop, var(--color-contrast-50));
+    background: var(--_theme-focus, var(--color-contrast-700));
+    border: var(--border) solid var(--_theme-focus, var(--color-contrast-700));
+  }
+
+  :host([variant='outline']) .remove-btn:hover {
+    background: color-mix(in srgb, var(--_theme-focus, var(--color-contrast-700)) 80%, black);
+    opacity: 1;
+  }
+
+  /* Ghost — transparent, no border */
+  :host([variant='ghost']) .chip {
+    color: var(--_theme-base, var(--color-contrast-900));
+    background: transparent;
+    border-color: transparent;
+  }
+
+  :host([variant='ghost']) .remove-btn {
+    border: var(--border) solid var(--_theme-focus, var(--color-contrast-400));
+  }
+
+  :host([variant='ghost']) .remove-btn:hover {
+    background: color-mix(in srgb, currentcolor 15%, transparent);
+  }
+
+  /* ========================================
+     Hover / Active Feedback — interactive modes
+     ======================================== */
+
+  /* Solid (default) */
+  :host(:not([variant]):is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip,
+  :host([variant='solid']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
+    background: var(--_theme-focus, var(--color-contrast-800));
+  }
+
+  :host(:not([variant]):is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip,
+  :host([variant='solid']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
+    background: var(--_theme-content, var(--color-contrast-900));
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  /* Flat */
+  :host([variant='flat']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
+    color: var(--_theme-contrast, var(--color-contrast-50));
+    background: var(--_theme-focus, var(--color-contrast-700));
+  }
+
+  :host([variant='flat']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
+    color: var(--_theme-contrast, var(--color-contrast-50));
+    background: var(--_theme-content, var(--color-contrast-900));
+    box-shadow: var(--inset-shadow-sm);
+  }
+
+  /* Bordered */
+  :host([variant='bordered']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
+    color: var(--_theme-contrast, var(--color-contrast-50));
+    background: var(--_theme-focus, var(--color-contrast-700));
+    border-color: var(--_theme-focus, var(--color-contrast-700));
+  }
+
+  :host([variant='bordered']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
+    color: var(--_theme-contrast, var(--color-contrast-50));
+    background: var(--_theme-content, var(--color-contrast-900));
+    box-shadow: var(--inset-shadow-sm);
+  }
+
+  /* Outline */
+  :host([variant='outline']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
+    background: var(--_theme-backdrop, var(--color-contrast-100));
+    border-color: var(--_theme-focus, var(--color-contrast-700));
+  }
+
+  :host([variant='outline']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
+    color: var(--_theme-contrast, var(--color-contrast-50));
+    background: var(--_theme-base, var(--color-contrast-700));
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  /* Ghost */
+  :host([variant='ghost']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:hover .chip {
+    background: var(--_theme-backdrop, var(--color-contrast-100));
+  }
+
+  :host([variant='ghost']:is([mode='selectable'], [mode='action']):not([disabled])) .chip-btn:active .chip {
+    color: var(--_theme-contrast, var(--color-contrast-50));
+    background: var(--_theme-base, var(--color-contrast-700));
+    box-shadow: var(--inset-shadow-2xs);
+  }
+}
