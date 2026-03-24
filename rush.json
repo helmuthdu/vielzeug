@@ -9,7 +9,7 @@
     "preRushx": []
   },
   "gitPolicy": {},
-  "nodeSupportedVersionRange": ">=20.14.0 <=22.22.0",
+  "nodeSupportedVersionRange": ">=20.14.0 <=22.22.1",
   "pnpmVersion": "10.33.0",
   "projects": [
     {
