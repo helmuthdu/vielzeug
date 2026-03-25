@@ -3,19 +3,19 @@
   "short_name": "Vielzeug",
   "icons": [
     {
-      "src": "/vielzeug/favicon/web-app-manifest-192x192.png",
+      "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/vielzeug/favicon/web-app-manifest-512x512.png",
+      "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#f6ac2c",
-  "background_color": "#0e0e0e",
+  "theme_color": "#db2777",
+  "background_color": "#181a1b",
   "display": "standalone"
 }
