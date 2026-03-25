@@ -23,13 +23,13 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="7.9650113"
-     inkscape:cx="55.932124"
-     inkscape:cy="46.76704"
+     inkscape:zoom="6.0009695"
+     inkscape:cx="-18.580331"
+     inkscape:cy="24.079442"
      inkscape:window-width="1920"
      inkscape:window-height="1022"
-     inkscape:window-x="0"
-     inkscape:window-y="369"
+     inkscape:window-x="1080"
+     inkscape:window-y="342"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg2"
      showgrid="false" />
@@ -69,27 +69,6 @@
        transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
   </g>
   <g
-     id="g10"
-     transform="translate(15.586475,-16.320346)"
-     style="opacity:0.849576;fill:#ffa50a;fill-opacity:1">
-    <ellipse
-       style="fill:#ffa50a;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
-       id="ellipse9"
-       cx="17.38196"
-       cy="33.16288"
-       rx="1.9409472"
-       ry="1.9135387"
-       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
-    <ellipse
-       style="fill:#ffa50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
-       id="ellipse10"
-       cx="17.38196"
-       cy="33.162884"
-       rx="1.5814766"
-       ry="1.5591443"
-       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
-  </g>
-  <g
      id="g12"
      transform="translate(0.66568822,30.001678)"
      style="opacity:0.849576;fill:#ffa50a;fill-opacity:1">
@@ -112,7 +91,7 @@
   </g>
   <g
      id="g4"
-     transform="matrix(3.3612659,0.90064848,-0.90064848,3.3612659,-182.26393,-112.41037)">
+     transform="matrix(2.4606174,-2.4606174,2.4606174,2.4606174,-200.21556,145.33126)">
     <path
        style="fill:#e92063;fill-opacity:1;stroke-width:0.0103763"
        d="m 74.014653,20.358239 c 0,0 -2.742591,1.622434 -2.877972,1.556451 -0.220497,-0.107489 0.05383,-0.610907 0.05383,-0.610907 -0.650251,0.548161 -1.300501,1.096323 -1.950752,1.644484 -0.0287,0.02464 -0.05675,0.05058 -0.08399,0.07782 -0.605065,0.605066 -0.605065,1.585962 0,2.191027 0.605065,0.605065 1.585961,0.605065 2.191026,0 0.06566,-0.06566 0.175755,-0.209478 0.175755,-0.209478 l 1.82801,-2.435835 c 0,0 -0.470958,0.250084 -0.564586,-0.109137 z"
@@ -132,4 +111,25 @@
      cy="20.220602"
      rx="30.495951"
      ry="11.840109" />
+  <g
+     id="g10"
+     transform="translate(15.586475,-16.320346)"
+     style="opacity:0.849576;fill:#ffa50a;fill-opacity:1">
+    <ellipse
+       style="fill:#ffa50a;fill-opacity:0.29955;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       id="ellipse9"
+       cx="17.38196"
+       cy="33.16288"
+       rx="1.9409472"
+       ry="1.9135387"
+       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
+    <ellipse
+       style="fill:#ffa50a;fill-opacity:1;stroke:none;stroke-width:3;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       id="ellipse10"
+       cx="17.38196"
+       cy="33.162884"
+       rx="1.5814766"
+       ry="1.5591443"
+       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
+  </g>
 </svg>
