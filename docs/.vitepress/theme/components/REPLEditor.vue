@@ -268,6 +268,7 @@ const localSelectedExample = ref(props.selectedExample);
 let editor: any = null;
 let lastCursorPosition: any = null; // Track last cursor position
 let consoleIntercepted = false;
+let pendingExample: string | null = null; // Example queued before editor was ready
 const originalConsole = {
   log: console.log,
   error: console.error,
@@ -549,11 +550,21 @@ const handleClearOutput = () => {
 
 const handleExampleSelect = (e: Event) => {
   const detail = (e as CustomEvent<{ value: string }>).detail;
-  localSelectedExample.value = detail?.value ?? '';
+  const newValue = detail?.value ?? '';
+  localSelectedExample.value = newValue;
+  // Always call loadExample directly so that re-selecting the *same* example
+  // also reloads the editor — the watcher only fires when the value changes.
+  if (newValue) loadExample();
 };
 
 const loadExample = () => {
-  if (!editor || !localSelectedExample.value) return;
+  if (!localSelectedExample.value) return;
+
+  // Editor not ready yet — remember and apply once initializeEditor runs.
+  if (!editor) {
+    pendingExample = localSelectedExample.value;
+    return;
+  }
 
   const libExamples = props.examples[props.selectedLibrary];
   const example = libExamples?.[localSelectedExample.value];
@@ -583,6 +594,13 @@ const initializeEditor = () => {
     scrollBeyondLastLine: false,
     automaticLayout: true,
   });
+
+  // Apply any example that was selected before the editor finished initializing.
+  if (pendingExample) {
+    localSelectedExample.value = pendingExample;
+    pendingExample = null;
+    loadExample();
+  }
 
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, handleRunCode);
 
