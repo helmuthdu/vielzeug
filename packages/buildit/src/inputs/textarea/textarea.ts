@@ -1,14 +1,14 @@
-import { computed, defineComponent, effect, html, onMount, ref } from '@vielzeug/craftit';
-import { attr } from '@vielzeug/craftit/directives';
+import { define, effect, html, inject, onElement, ref } from '@vielzeug/craftit';
+import { createTextFieldControl } from '@vielzeug/craftit/controls';
 
 import type { VisualVariant } from '../../types';
 import type { TextFieldProps } from '../shared/base-props';
 
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { useTextField } from '../shared/composables';
+import { disablableBundle, roundableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
 import { TEXTAREA_SIZE_PRESET } from '../shared/design-presets';
-import { setupFieldEvents, syncCounter, syncMergedAssistive } from '../shared/dom-sync';
-import { parsePositiveNumber } from '../shared/utils';
+import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './textarea.css?inline';
 
 /** Textarea component properties */
@@ -30,6 +30,29 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
   /** Number of visible text rows */
   rows?: number;
 };
+
+const textareaProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  ...roundableBundle,
+  'auto-resize': false,
+  error: { default: '' as string, omit: true },
+  fullwidth: false,
+  helper: '',
+  label: '',
+  'label-placement': 'inset',
+  maxlength: undefined,
+  name: '',
+  'no-resize': false,
+  placeholder: '',
+  readonly: false,
+  required: false,
+  resize: undefined,
+  rows: undefined,
+  value: '',
+  variant: undefined,
+} satisfies PropBundle<BitTextareaProps>;
 
 /**
  * A multi-line text input with label, helper text, character counter, and auto-resize.
@@ -61,111 +84,72 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
  *
  * @slot helper - Complex helper content
  */
-export const TEXTAREA_TAG = defineComponent<BitTextareaProps, BitTextareaEvents>({
+export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-textarea', {
   formAssociated: true,
-  props: {
-    'auto-resize': { default: false },
-    color: { default: undefined },
-    disabled: { default: false },
-    error: { default: '', omit: true },
-    fullwidth: { default: false },
-    helper: { default: '' },
-    label: { default: '' },
-    'label-placement': { default: 'inset' },
-    maxlength: { default: undefined },
-    name: { default: '' },
-    'no-resize': { default: false },
-    placeholder: { default: '' },
-    readonly: { default: false },
-    required: { default: false },
-    resize: { default: undefined },
-    rounded: { default: undefined },
-    rows: { default: undefined },
-    size: { default: undefined },
-    value: { default: '' },
-    variant: { default: undefined },
-  },
-  setup({ emit, props }) {
-    const tf = useTextField(props, 'textarea');
+  props: textareaProps,
+  setup({ emit, host, props }) {
+    const formCtx = inject(FORM_CTX, undefined);
+
+    mountFormContextSync(host.el, formCtx, props);
+
+    const textareaRef = ref<HTMLTextAreaElement>();
+
+    const autoGrow = () => {
+      if (!props['auto-resize'].value || !textareaRef.value) return;
+
+      const textareaEl = textareaRef.value;
+
+      textareaEl.style.height = 'auto';
+      textareaEl.style.height = `${textareaEl.scrollHeight}px`;
+    };
+
+    const tf = createTextFieldControl({
+      context: formCtx,
+      disabled: props.disabled,
+      elementRef: textareaRef,
+      error: props.error,
+      helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
+      maxLength: props.maxlength,
+      name: props.name,
+      onChange: (event, value) => {
+        emit('change', { originalEvent: event, value });
+      },
+      onInput: (event, value) => {
+        emit('input', { originalEvent: event, value });
+      },
+      onInputExtra: autoGrow,
+      placeholder: props.placeholder,
+      prefix: 'textarea',
+      readOnly: props.readonly,
+      required: props.required,
+      rows: props.rows,
+      value: props.value,
+    });
     const {
+      assistive,
+      attrs: textareaAttrs,
+      errorId,
       fieldId: textareaId,
       helperId,
       labelInsetId,
       labelInsetRef,
       labelOutsideId,
       labelOutsideRef,
-      valueSignal,
     } = tf;
-    const maxLen = computed<number | undefined>(() => props.maxlength.value);
 
-    const textareaRef = ref<HTMLTextAreaElement>();
-    const helperRef = ref<HTMLDivElement>();
-    const counterRef = ref<HTMLSpanElement>();
-
-    onMount(() => {
-      const ta = textareaRef.value;
-
-      if (!ta) return;
-
-      const autoGrow = () => {
-        if (!props['auto-resize'].value || !ta) return;
-
-        ta.style.height = 'auto';
-        ta.style.height = `${ta.scrollHeight}px`;
-      };
-
-      tf.mountLabelSync();
-
-      effect(() => {
-        const rows = parsePositiveNumber(props.rows.value);
-
-        if (rows != null) ta.rows = rows;
-        else ta.removeAttribute('rows');
-
-        const max = parsePositiveNumber(maxLen.value);
-
-        if (max != null) ta.maxLength = max;
-        else ta.removeAttribute('maxlength');
-
-        ta.style.resize =
+    onElement(textareaRef, (textareaEl) => {
+      const syncLayout = effect(() => {
+        textareaEl.style.resize =
           props['auto-resize'].value || props['no-resize'].value ? 'none' : props.resize.value || 'vertical';
+
+        if (props['auto-resize'].value) {
+          requestAnimationFrame(autoGrow);
+        }
       });
 
-      syncMergedAssistive({
-        error: () => props.error.value,
-        helper: () => props.helper.value,
-        ref: helperRef,
-      });
-
-      syncCounter({
-        count: computed(() => valueSignal.value.length),
-        format: 'merged',
-        maxLength: maxLen,
-        ref: counterRef,
-      });
-
-      // TODO: migrate aria() on inner elements to a future useA11yField() composable
-      import('@vielzeug/craftit').then(({ aria }) => {
-        aria(ta, {
-          describedby: () => (props.error.value ? tf.errorId : helperId),
-          invalid: () => !!props.error.value,
-          labelledby: () => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId),
-        });
-      });
-
-      setupFieldEvents(ta, {
-        onBlur: () => tf.triggerValidation('blur'),
-        onChange: (e, value) => {
-          emit('change', { originalEvent: e, value });
-          tf.triggerValidation('change');
-        },
-        onInput: (e, value) => {
-          autoGrow();
-          emit('input', { originalEvent: e, value });
-        },
-      });
-
-      if (props['auto-resize'].value) requestAnimationFrame(autoGrow);
+      return syncLayout;
     });
 
     return html`
@@ -176,18 +160,31 @@ export const TEXTAREA_TAG = defineComponent<BitTextareaProps, BitTextareaEvents>
           <textarea
             ref=${textareaRef}
             id="${textareaId}"
-            ${attr({
-              disabled: props.disabled,
-              name: props.name,
-              placeholder: props.placeholder,
-              readOnly: props.readonly,
-              required: props.required,
-              value: valueSignal,
-            })}
-            aria-describedby="${helperId}"></textarea>
+            ${textareaAttrs}
+            :aria-describedby="${() => (assistive.value.hasError ? errorId : helperId)}"
+            :aria-errormessage="${() => (assistive.value.hasError ? errorId : null)}"
+            :aria-invalid="${() => String(assistive.value.hasError)}"
+            :aria-labelledby="${() =>
+              props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId}"></textarea>
         </div>
-        <span class="counter" aria-live="polite" ref=${counterRef} hidden></span>
-        <div id="${helperId}" class="helper-text" aria-live="polite" ref=${helperRef} hidden></div>
+        <span
+          class="${() =>
+            assistive.value.counterAtLimit
+              ? 'counter at-limit'
+              : assistive.value.counterNearLimit
+                ? 'counter near-limit'
+                : 'counter'}"
+          aria-live="polite"
+          ?hidden=${() => !assistive.value.hasCounter}
+          >${() => assistive.value.counterText.replace(' / ', '/')}</span
+        >
+        <div
+          id="${helperId}"
+          class="helper-text"
+          aria-live="polite"
+          ?hidden=${() => !(assistive.value.hasError || assistive.value.showHelper)}>
+          ${() => (assistive.value.hasError ? assistive.value.errorText : assistive.value.helperText)}
+        </div>
       </div>
     `;
   },
@@ -199,5 +196,4 @@ export const TEXTAREA_TAG = defineComponent<BitTextareaProps, BitTextareaEvents>
     forcedColorsFocusMixin('textarea'),
     componentStyles,
   ],
-  tag: 'bit-textarea',
 });

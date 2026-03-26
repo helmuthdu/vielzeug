@@ -1,10 +1,10 @@
 # @vielzeug/permit
 
-> Lightweight, type-safe role-based access control (RBAC) with inheritance, wildcards, dynamic checks, and anonymous-user support.
+> Minimal, deterministic authorization engine.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/permit)](https://www.npmjs.com/package/@vielzeug/permit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`@vielzeug/permit` provides a focused RBAC engine built around role, resource, and action checks.
+`@vielzeug/permit` is a small policy engine built around one rule primitive and one decision function.
 
 ## Installation
 
@@ -14,67 +14,55 @@ pnpm add @vielzeug/permit
 # yarn add @vielzeug/permit
 ```
 
-## Entry Point
-
-| Entry | Purpose |
-| --- | --- |
-| `@vielzeug/permit` | `createPermit`, constants, helpers, and full Permit types |
-
 ## Quick Start
 
 ```ts
 import { ANONYMOUS, WILDCARD, createPermit } from '@vielzeug/permit';
 
-const permit = createPermit();
+const permit = createPermit({
+  predicates: {
+    isOwner: ({ principal, data }) => principal.id === data?.authorId,
+  },
+});
 
 permit
-  .grant('viewer', WILDCARD, 'read')
-  .extend('editor', 'viewer')
-  .define('editor', 'posts', {
-    write: (user, data) => user.id === data?.authorId,
-  })
-  .extend('admin', 'editor')
-  .grant('admin', WILDCARD, 'delete')
-  .grant(ANONYMOUS, 'posts', 'read');
+  .set({ role: 'editor', resource: 'posts', action: 'read', effect: 'allow' })
+  .set({ role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: 'isOwner' })
+  .set({ role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 })
+  .set({ role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' })
+  .set({ role: WILDCARD, resource: 'status', action: 'read', effect: 'allow' });
 
-const user = { id: 'u1', roles: ['editor'] };
+const principal = { id: 'u1', roles: ['editor'] };
 
-permit.check(user, 'posts', 'read');
-permit.check(user, 'posts', 'write', { authorId: 'u1' });
-permit.checkAny(user, 'posts', ['write', 'delete']);
+permit.can(principal, 'posts', 'read');
+permit.can(principal, 'posts', 'update', { authorId: 'u1' });
+permit.withUser(principal).can('status', 'read');
 ```
 
-## Features
+## API
 
-- Role/resource/action permission checks
-- Dynamic rules via permission functions `(user, data?) => boolean`
-- Role inheritance (`extend`/`unextend`) with BFS resolution
-- Wildcard role/resource/action support (`WILDCARD`)
-- Anonymous-role support (`ANONYMOUS`) for unauthenticated users
-- Bulk checks (`checkAll`, `checkAny`) and user-bound guards (`for(user)`)
-- Permission lifecycle operations (`remove`, `snapshot`, `restore`, `clear`)
-- Strict-mode and wildcard-fallback options
-- Zero dependencies
+- `createPermit<TAction, TData>(options?)`
+- `permit.set(rule)`
+- `permit.can(principal, resource, action, data?)`
+- `permit.withUser(principal).can(resource, action, data?)`
+- `permit.clear()`
+- `permit.exportPolicy()`
+- `permit.importPolicy(policy)`
 
-## API At a Glance
+## Decision Rules
 
-- `createPermit<TUser, TAction, TData>(opts?)`
-- `permit.define(role, resource, actions)`
-- `permit.grant(role, resource, ...actions)` / `permit.deny(...)`
-- `permit.check(user, resource, action, data?)`
-- `permit.checkAll(...)` / `permit.checkAny(...)`
-- `permit.for(user)`
-- `permit.extend(childRole, parentRole)` / `permit.unextend(...)`
-- `permit.snapshot()` / `permit.restore(state)` / `permit.clear()`
-- `hasRole(user, role)` / `isAnonymous(user)`
-- `WILDCARD`, `ANONYMOUS`
+- Default outcome is deny.
+- Higher `priority` wins.
+- For equal priority, more specific rules win over wildcard rules.
+- If top-precedence rules conflict, `deny` overrides `allow`.
+- Result does not depend on role order in the principal payload.
 
-## Documentation
+## Notes
 
-- [Overview](https://vielzeug.dev/permit/)
-- [Usage Guide](https://vielzeug.dev/permit/usage)
-- [API Reference](https://vielzeug.dev/permit/api)
-- [Examples](https://vielzeug.dev/permit/examples)
+- Role/resource/action values are normalized (trim + lowercase).
+- Predicates are referenced by id (`when`) and resolved through the `predicates` option.
+- Exported policy is JSON-serializable.
+- Invalid principal payloads throw instead of silently falling back to anonymous.
 
 ## License
 

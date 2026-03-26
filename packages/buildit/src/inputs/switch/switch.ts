@@ -1,16 +1,17 @@
-import { defineComponent, html } from '@vielzeug/craftit';
-import { useA11yControl, createCheckableControl } from '@vielzeug/craftit/labs';
+import { define, computed, html, inject } from '@vielzeug/craftit';
+import { type CheckableChangePayload, createCheckableFieldControl } from '@vielzeug/craftit/controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { formControlMixins, sizeVariantMixin } from '../../styles';
-import { useToggleField } from '../shared/composables';
+import { disablableBundle, type PropBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { SWITCH_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './switch.css?inline';
 
 export type BitSwitchEvents = {
-  change: { checked: boolean; originalEvent?: Event; value: boolean };
+  change: CheckableChangePayload;
 };
 
 export type BitSwitchProps = CheckableProps &
@@ -22,6 +23,17 @@ export type BitSwitchProps = CheckableProps &
     /** Helper text displayed below the switch */
     helper?: string;
   };
+
+const switchProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  checked: false,
+  error: '',
+  helper: '',
+  name: '',
+  value: 'on',
+} satisfies PropBundle<BitSwitchProps>;
 
 /**
  * A toggle switch component for binary on/off states.
@@ -37,7 +49,7 @@ export type BitSwitchProps = CheckableProps &
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the switch
  *
- * @fires change - Emitted when switch is toggled. detail: { value: boolean, checked: boolean, originalEvent?: Event }
+ * @fires change - Emitted when switch is toggled. detail: { checked: boolean, fieldValue: string, originalEvent?: Event }
  *
  * @slot - Switch label text
  *
@@ -47,59 +59,48 @@ export type BitSwitchProps = CheckableProps &
  * @part label - The label element
  * @part helper-text - The helper/error text element
  */
-export const SWITCH_TAG = defineComponent<BitSwitchProps, BitSwitchEvents>({
+export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', {
   formAssociated: true,
-  props: {
-    checked: { default: false },
-    color: { default: undefined },
-    disabled: { default: false },
-    error: { default: '' },
-    helper: { default: '' },
-    name: { default: '' },
-    size: { default: undefined },
-    value: { default: 'on' },
-  },
-  setup({ emit, host, props, reflect }) {
-    const { checkedSignal, formCtx, triggerValidation } = useToggleField(props);
+  props: switchProps,
+  setup({ emit, host, props }) {
+    const formCtx = inject(FORM_CTX, undefined);
 
-    mountFormContextSync(host, formCtx, props);
-
-    // Pass writable checkedSignal directly — toggle() mutates it in place
-    const control = createCheckableControl({
-      checked: checkedSignal,
+    const checkable = createCheckableFieldControl({
+      checked: props.checked,
       clearIndeterminateFirst: false,
-      disabled: props.disabled,
-      onToggle: (e) => {
-        triggerValidation('change');
-        emit('change', control.changePayload(e));
+      disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)),
+      error: props.error,
+      helper: props.helper,
+      host: host.el,
+      onToggle: (payload) => {
+        checkable.control.triggerValidation('change');
+        emit('change', payload);
       },
+      prefix: 'switch',
+      role: 'switch',
+      validateOn: formCtx?.validateOn,
       value: props.value,
     });
+    const { a11y, control, press: pressControl } = checkable;
 
-    const a11y = useA11yControl(host, {
-      checked: () => (control.checked.value ? 'true' : 'false'),
-      helperText: () => props.error.value || props.helper.value,
-      helperTone: () => (props.error.value ? 'error' : 'default'),
-      invalid: () => !!props.error.value,
-      role: 'switch',
-    });
+    mountFormContextSync(host.el, formCtx, props);
 
-    reflect({
+    host.bind('class', () => ({
+      'is-checked': control.checked.value,
+      'is-disabled': control.disabled.value,
+    }));
+
+    host.bind('attr', {
       checked: () => control.checked.value,
-      classMap: () => ({
-        'is-checked': control.checked.value,
-        'is-disabled': !!props.disabled.value,
-      }),
-      onClick: (e: Event) => control.toggle(e),
-      onKeydown: (e: Event) => {
-        const ke = e as KeyboardEvent;
-
-        if (ke.key === ' ' || ke.key === 'Enter') {
-          ke.preventDefault();
-          control.toggle(e);
-        }
+      tabindex: () => (control.disabled.value ? undefined : 0),
+    });
+    host.bind('on', {
+      click: (e) => {
+        pressControl.handleClick(e);
       },
-      tabindex: () => (props.disabled.value ? undefined : 0),
+      keydown: (e) => {
+        pressControl.handleKeydown(e);
+      },
     });
 
     return html`
@@ -119,5 +120,4 @@ export const SWITCH_TAG = defineComponent<BitSwitchProps, BitSwitchEvents>({
     `;
   },
   styles: [...formControlMixins, sizeVariantMixin(SWITCH_SIZE_PRESET), componentStyles],
-  tag: 'bit-switch',
 });

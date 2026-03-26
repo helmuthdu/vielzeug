@@ -1,4 +1,4 @@
-import { defineComponent, html, typed, watch } from '@vielzeug/craftit';
+import { define, html, watch } from '@vielzeug/craftit';
 
 import styles from './text.css?inline';
 
@@ -69,17 +69,17 @@ export type BitTextProps = {
  * ```
  */
 
-export const TEXT_TAG = defineComponent<BitTextProps>({
+export const TEXT_TAG = define<BitTextProps>('bit-text', {
   props: {
-    align: typed<BitTextProps['align']>(undefined),
-    as: typed<BitTextProps['as']>(undefined),
-    color: typed<BitTextProps['color']>(undefined),
-    italic: typed<boolean>(false),
-    lines: typed<number | undefined>(undefined, { type: Number }),
-    size: typed<BitTextProps['size']>(undefined),
-    truncate: typed<boolean>(false),
-    variant: typed<BitTextProps['variant']>(undefined),
-    weight: typed<BitTextProps['weight']>(undefined),
+    align: undefined,
+    as: undefined,
+    color: undefined,
+    italic: false,
+    lines: { default: undefined as number | undefined, type: Number },
+    size: undefined,
+    truncate: false,
+    variant: undefined,
+    weight: undefined,
   },
   setup({ host, props }) {
     // Single watcher drives both role + aria-level from `as`.
@@ -90,11 +90,11 @@ export const TEXT_TAG = defineComponent<BitTextProps>({
         const match = /^h([1-6])$/.exec((tag as string | undefined) ?? '');
 
         if (match) {
-          host.setAttribute('role', 'heading');
-          host.setAttribute('aria-level', match[1]);
+          host.el.setAttribute('role', 'heading');
+          host.el.setAttribute('aria-level', match[1]);
         } else {
-          host.removeAttribute('role');
-          host.removeAttribute('aria-level');
+          host.el.removeAttribute('role');
+          host.el.removeAttribute('aria-level');
         }
       },
       { immediate: true },
@@ -103,8 +103,8 @@ export const TEXT_TAG = defineComponent<BitTextProps>({
     watch(
       props.lines,
       (n) => {
-        if (n != null) host.style.setProperty('--_lines', String(n));
-        else host.style.removeProperty('--_lines');
+        if (n != null) host.el.style.setProperty('--_lines', String(n));
+        else host.el.style.removeProperty('--_lines');
       },
       { immediate: true },
     );
@@ -112,5 +112,4 @@ export const TEXT_TAG = defineComponent<BitTextProps>({
     return html`<slot></slot>`;
   },
   styles: [styles],
-  tag: 'bit-text',
 });

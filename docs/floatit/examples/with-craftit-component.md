@@ -17,9 +17,10 @@ Usage inside a [@vielzeug/craftit](/craftit/) component with automatic `autoUpda
 
 ```ts
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
-import { define, onMount, signal } from '@vielzeug/craftit';
+import { currentRuntime, define, onMount, signal } from '@vielzeug/craftit';
 
-define('my-tooltip', ({ host }) => {
+define('my-tooltip', () => {
+  const host = currentRuntime().el;
   const visible = signal(false);
   let tooltipEl: HTMLElement | null = null;
   let cleanup: (() => void) | null = null;

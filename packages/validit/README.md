@@ -56,7 +56,7 @@ if (result.success) {
 
 | Entry | Purpose |
 | --- | --- |
-| `@vielzeug/validit` | `v` namespace, flat factory exports, `Schema`, errors, and type utilities |
+| `@vielzeug/validit` | `v` namespace, `Schema`, errors, and type utilities |
 
 ## Usage Highlights
 
@@ -77,38 +77,29 @@ PasswordSchema.parse('Hello123');
 await UniqueEmailSchema.parseAsync('a@b.com');
 ```
 
-### Flat Exports (Tree-Shake Friendly)
+### Global Message Customization
 
 ```ts
-import {
-  configure,
-  object,
-  string,
-  number,
-  union,
-  type Infer,
-} from '@vielzeug/validit';
+import { configure, v } from '@vielzeug/validit';
 
 configure({
   messages: {
+    enum_invalid: ({ values }) => `Pick one of: ${values.join(', ')}`,
     string_email: () => 'Please provide a valid email address',
+    variant_type: () => 'Expected payload object',
   },
 });
 
-const Account = object({
-  email: string().email(),
-  age: number().int().min(18),
-  plan: union('free', 'pro'),
+const Account = v.object({
+  email: v.string().email(),
+  plan: v.union('free', 'pro'),
 });
-
-type Account = Infer<typeof Account>;
 ```
 
 ## API At A Glance
 
 - `v` namespace: `string`, `number`, `boolean`, `date`, `literal`, `enum`, `nativeEnum`, `object`, `array`, `tuple`, `record`, `union`, `intersect`, `variant`, `lazy`, `instanceof`, `never`, `any`, `unknown`, `null`, `undefined`
 - Base schema methods: `parse`, `safeParse`, `parseAsync`, `safeParseAsync`, `optional`, `nullable`, `nullish`, `required`, `default`, `catch`, `refine`, `refineAsync`, `transform`, `preprocess`, `describe`, `brand`, `is`
-- Flat helpers: `optional(schema)`, `nullable(schema)`, `nullish(schema)`, `preprocess(fn, schema)`
 - Errors and types: `ValidationError`, `ErrorCode`, `Issue`, `ParseResult<T>`, `MessageFn<Ctx>`, `Infer<T>`
 
 ## Documentation

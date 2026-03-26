@@ -14,17 +14,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./core": {
-      "source": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "import": "./dist/fetchit.js",
-      "require": "./dist/fetchit.cjs"
     }
   },
   "scripts": {
-    "build": "vite build && pnpm run build:core && pnpm run build:types",
-    "build:core": "vite build --config vite.bundle.config.ts",
+    "build": "vite build && pnpm run build:types",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
@@ -42,8 +35,8 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "typescript": "~6.0.2",
-    "vite": "^8.0.2",
-    "vitest": "^4.1.1"
+    "vite": "^8.0.3",
+    "vitest": "^4.1.2"
   },
   "dependencies": {
     "@vielzeug/toolkit": "workspace:*"

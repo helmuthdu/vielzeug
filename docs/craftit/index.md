@@ -9,7 +9,7 @@ description: Functional web component library with signals, typed props, templat
 
 # Craftit
 
-**Craftit** is a functional web component library built on top of `@vielzeug/stateit`. It combines signal-based reactivity with component-focused APIs for templates, lifecycle, props, emits, slots, context, form association, and observers.
+**Craftit** is a functional web component library built on top of `@vielzeug/stateit`. It combines signal-based reactivity with component-focused APIs for templates, lifecycle, props, typed emits, setup-context slots, context, form association, and observers.
 
 <!-- Search keywords: custom elements framework, reactive templates, web component authoring. -->
 
@@ -34,9 +34,9 @@ yarn add @vielzeug/craftit
 ## Quick Start
 
 ```ts
-import { defineComponent, signal, computed, html, css } from '@vielzeug/craftit';
+import { component, define, signal, computed, html, css } from '@vielzeug/craftit';
 
-defineComponent({
+define('my-counter', component({
   setup() {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
@@ -54,8 +54,7 @@ defineComponent({
       }
     `,
   ],
-  tag: 'my-counter',
-});
+}));
 ```
 
 ```html
@@ -82,25 +81,24 @@ class MyCounter extends HTMLElement {
 customElements.define('my-counter', MyCounter);
 
 // After — Craftit
-defineComponent({
+define('my-counter', component({
   setup() {
     const count = signal(0);
     return html`<button @click=${() => count.value++}>${count}</button>`;
   },
-  tag: 'my-counter',
-});
+}));
 ```
 
-| Feature            | Craftit                                       | Lit          | Stencil           |
-| ------------------ | --------------------------------------------- | ------------ | ----------------- |
+| Feature            | Craftit                                        | Lit          | Stencil           |
+| ------------------ | ---------------------------------------------- | ------------ | ----------------- |
 | Bundle size        | <PackageInfo package="craftit" type="size" /> | ~7 kB        | ~50 kB (compiler) |
-| Signals            | ✅ Built-in                                   | ✅ @lit-labs | ❌                |
-| SSR                | ❌                                            | ✅           | ✅                |
-| Form-associated    | ✅ Built-in                                   | ⚠️ Manual    | ⚠️ Limited        |
-| Context / DI       | ✅ Built-in                                   | ✅ @lit-labs | ✅ @stencil       |
-| Reactive observers | ✅ Core + Labs                              | ❌           | ❌                |
+| Signals            | ✅ Built-in                                    | ✅ @lit-labs | ❌                |
+| SSR                | ❌                                             | ✅           | ✅                |
+| Form-associated    | ✅ Built-in                                    | ⚠️ Manual    | ⚠️ Limited        |
+| Context / DI       | ✅ Built-in                                    | ✅ @lit-labs | ✅ @stencil       |
+| Reactive observers | ✅ Core + Controls                             | ❌           | ❌                |
 
-**Use Craftit when** you want signals-based web components with stable core APIs and opt-in experimental APIs (`labs`) — without decorators or a compiler step.
+**Use Craftit when** you want signals-based web components with stable core APIs and headless controls for interaction-heavy widgets — without decorators or a compiler step.
 
 **Consider Lit** if you need SSR, a larger community ecosystem, or React/Vue-style architecture with decorator-based components.
 
@@ -110,18 +108,18 @@ defineComponent({
 
 - **Fine-grained reactivity** — Re-exports all signals from `@vielzeug/stateit`: `signal()`, `computed()`, `effect()`, `watch()`, `batch()`, `untrack()`, and more
 - **Template literals** — `html\`...\`` for declarative, reactive DOM updates with `:attr`, `@event`, `ref=`, and `.prop` bindings
-- **Styling helper** — `css\`...\`` for component styles used via `defineComponent({ styles })`
-- **Lifecycle hooks** — `onMount()`, `onCleanup()`, `onError()`, `handle()`, and `watch()` for component lifecycle control
-- **Props** — top-level `defineComponent({ props })`, plus `prop()` for low-level reactive attribute bindings
-- **Slots & Emits** — setup-context `slots` / `emit`, plus `onSlotChange()` for slot-change observation
+- **Styling helper** — `css\`...\`` for component styles used via `component({ styles })`
+- **Lifecycle hooks** — `onMount()`, `onCleanup()`, `onError()`, `handle()`, `watch()`, `onElement()`, and `useOnce()` for component lifecycle control
+- **Props** — top-level `component({ props })`, plus `prop()` for low-level reactive attribute bindings
+- **Slots & Emits** — setup-context `slots` and setup-context `emit` with typed event schemas
 - **Refs** — `ref<T>()` and `refs<T>()` for DOM element references
 - **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation
-- **Context / DI** — `provide()`, `inject()`, `injectOptional()`, `injectRequired()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
-- **Accessibility** — `aria()` for reactive ARIA attributes plus ID helpers (`createId()`, `createFormIds()`)
-- **Observers** — `observeResize()` from `@vielzeug/craftit` and `@vielzeug/craftit/labs`; `observeIntersection()` and `observeMedia()` from `@vielzeug/craftit/labs`
-- **Directive subpath** — `@vielzeug/craftit/directives` for `when`, `each`, `match`, `until`, `bind`, and more
-- **Testing subpath** — `@vielzeug/craftit/test` for `mount`, `fire`, `user`, `waitFor`, and cleanup helpers
-- **Focused entrypoints** — use `@vielzeug/craftit` for stable APIs and `@vielzeug/craftit/labs` for experimental utilities
+- **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
+- **Accessibility** — `aria()` for reactive ARIA attributes plus stable ID helpers such as `createId()` from core
+- **Observers** — `resizeObserver()`, `intersectionObserver()`, and `mediaObserver()` from `@vielzeug/craftit/observers`
+- **Directive subpath** — `@vielzeug/craftit/directives` for `when`, `each`, `choose`, `until`, `bind`, `attrs`, and more
+- **Testing subpath** — `@vielzeug/craftit/testing` for `mount`, `fire`, `user`, `waitFor`, and cleanup helpers
+- **Focused entrypoints** — use `@vielzeug/craftit` for stable APIs and focused subpaths (`/controls`, `/observers`, `/directives`, `/testing`) when you want narrower imports
 - **Framework-agnostic** — Pure web components that work in any framework or vanilla HTML
 - **Lightweight** — <PackageInfo package="craftit" type="size" /> gzipped
 

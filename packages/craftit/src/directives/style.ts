@@ -1,6 +1,6 @@
 import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { toKebab } from '../core/utilities';
+import { toKebab } from '../internal';
 
 type StyleValue =
   | string

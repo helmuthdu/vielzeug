@@ -17,11 +17,12 @@ export type PathParams<T extends string> = [ParseParams<T>] extends [never]
 
 export type RouteParams = Record<string, string>;
 export type QueryParams = Record<string, string | string[]>;
+export type MaybePromise<T> = T | Promise<T>;
 
 /** Handler may be sync or async — async return values are implicitly awaited by the router. */
 export type RouteHandler<Params extends RouteParams = RouteParams, Meta = unknown> = (
   context: RouteContext<Params, Meta>,
-) => void;
+) => MaybePromise<void>;
 
 /** Middleware function. Call `next()` to continue the chain; return without calling it to block navigation. */
 export type Middleware<Meta = unknown> = (

@@ -321,6 +321,17 @@ describe('dirty & touched', () => {
     form.setError('x', 'Bad');
     expect(form.isValid).toBe(false);
   });
+
+  test('Date values compare by timestamp for dirty tracking', () => {
+    const baseline = new Date('2024-01-01T00:00:00.000Z');
+    const form = createForm({ defaultValues: { dueAt: baseline } });
+
+    form.set('dueAt', new Date('2024-01-02T00:00:00.000Z'));
+    expect(form.field('dueAt').dirty).toBe(true);
+
+    form.set('dueAt', new Date('2024-01-01T00:00:00.000Z'));
+    expect(form.field('dueAt').dirty).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -346,11 +357,11 @@ describe('field', () => {
     expect(f.dirty).toBe(false);
   });
 
-  test('field() mirrors the watch payload', () => {
+  test('field() mirrors the field subscribe payload', () => {
     const form = createForm({ defaultValues: { x: 42 } });
     let last: ReturnType<typeof form.field> | undefined;
 
-    form.watch('x', (p) => {
+    form.subscribe('x', (p) => {
       last = p;
     });
     expect(form.field('x')).toEqual(last);
@@ -376,11 +387,11 @@ describe('errors', () => {
     expect(form.field('field').error).toBe('');
   });
 
-  test('setError with undefined removes the error', () => {
+  test('clearError removes the field error', () => {
     const form = createForm({});
 
     form.setError('email', 'Bad');
-    form.setError('email', undefined);
+    form.clearError('email');
     expect(form.field('email').error).toBeUndefined();
   });
 
@@ -415,14 +426,14 @@ describe('errors', () => {
     expect(Object.keys(form.state.errors)).toHaveLength(0);
   });
 
-  test('clearErrors() is a shorthand for setErrors({})', () => {
+  test('clearError only clears the targeted field error', () => {
     const form = createForm({});
 
     form.setError('a', 'Err A');
     form.setError('b', 'Err B');
-    form.clearErrors();
-    expect(Object.keys(form.state.errors)).toHaveLength(0);
-    expect(form.isValid).toBe(true);
+    form.clearError('a');
+    expect(form.state.errors).toEqual({ b: 'Err B' });
+    expect(form.isValid).toBe(false);
   });
 
   test('isValid reflects whether the error map is empty', async () => {
@@ -733,21 +744,21 @@ describe('subscribe', () => {
     expect(count).toBe(initial);
   });
 
-  test('watch fires immediately with the current field payload', () => {
+  test('field subscribe fires immediately with the current field payload', () => {
     const form = createForm({ defaultValues: { name: 'Alice' } });
     let payload: unknown;
 
-    form.watch('name', (p) => {
+    form.subscribe('name', (p) => {
       payload = p;
     });
     expect((payload as { value: unknown }).value).toBe('Alice');
   });
 
-  test('watch with immediate:false does not fire on registration', () => {
+  test('field subscribe with immediate:false does not fire on registration', () => {
     const form = createForm({ defaultValues: { x: 1 } });
     let count = 0;
 
-    form.watch(
+    form.subscribe(
       'x',
       () => {
         count++;
@@ -757,11 +768,11 @@ describe('subscribe', () => {
     expect(count).toBe(0);
   });
 
-  test('watch only fires when the subscribed field changes', async () => {
+  test('field subscribe only fires when the subscribed field changes', async () => {
     const form = createForm({ defaultValues: { a: 1, b: 2 } });
     let bCount = 0;
 
-    form.watch('b', () => {
+    form.subscribe('b', () => {
       bCount++;
     });
 
@@ -772,11 +783,11 @@ describe('subscribe', () => {
     expect(bCount).toBe(initial);
   });
 
-  test('watch payload reflects current error and touched state', async () => {
+  test('field subscribe payload reflects current error and touched state', async () => {
     const form = createForm({ defaultValues: { email: '' } });
     const payloads: { error?: string; touched: boolean }[] = [];
 
-    form.watch('email', (p) => payloads.push({ error: p.error, touched: p.touched }));
+    form.subscribe('email', (p) => payloads.push({ error: p.error, touched: p.touched }));
 
     form.setError('email', 'Invalid');
     form.touch('email');
@@ -788,23 +799,23 @@ describe('subscribe', () => {
     expect(last.touched).toBe(true);
   });
 
-  test('unsubscribeField stops future notifications and cleans up the bucket', () => {
+  test('field unsubscribe stops future notifications and cleans up the bucket', () => {
     const form = createForm({ defaultValues: { x: 1 } });
-    const unsub = form.watch('x', () => {});
+    const unsub = form.subscribe('x', () => {});
 
     unsub();
     // no error expected — internal bucket should be removed
   });
 
-  test('multiple independent watch listeners on one field all fire', async () => {
+  test('multiple independent field listeners on one field all fire', async () => {
     const form = createForm({ defaultValues: { x: 0 } });
     let a = 0;
     let b = 0;
 
-    form.watch('x', () => {
+    form.subscribe('x', () => {
       a++;
     });
-    form.watch('x', () => {
+    form.subscribe('x', () => {
       b++;
     });
 
@@ -896,15 +907,15 @@ describe('bind', () => {
     expect(form.field('name').touched).toBe(true);
   });
 
-  test('bind() returns the same object reference on repeated calls with same args', () => {
+  test('bind() returns a fresh object on repeated calls with same args', () => {
     const form = createForm({ defaultValues: { name: '' } });
     const b1 = form.bind('name');
     const b2 = form.bind('name');
 
-    expect(b1).toBe(b2);
+    expect(b1).not.toBe(b2);
   });
 
-  test('bind() with different configs returns distinct cached objects', () => {
+  test('bind() with different configs returns distinct objects', () => {
     const form = createForm({ defaultValues: { name: '' } });
     const b1 = form.bind('name', { validateOnBlur: true });
     const b2 = form.bind('name', { validateOnBlur: false });
@@ -1025,7 +1036,7 @@ describe('dispose', () => {
     form.subscribe(() => {
       formCount++;
     });
-    form.watch('x', () => {
+    form.subscribe('x', () => {
       fieldCount++;
     });
 
@@ -1041,48 +1052,18 @@ describe('dispose', () => {
 });
 
 // ---------------------------------------------------------------------------
-// field shorthand getters
+// clearError
 // ---------------------------------------------------------------------------
 
-describe('field shorthand getters', () => {
-  test('getError returns the current field error', () => {
+describe('clearError', () => {
+  test('clears only one field error', () => {
     const form = createForm({});
 
     form.setError('email', 'Invalid');
-    expect(form.getError('email')).toBe('Invalid');
-    form.setError('email', undefined);
-    expect(form.getError('email')).toBeUndefined();
-  });
-
-  test('isFieldDirty returns whether a field differs from baseline', () => {
-    const form = createForm({ defaultValues: { x: 1 } });
-
-    expect(form.isFieldDirty('x')).toBe(false);
-    form.set('x', 2);
-    expect(form.isFieldDirty('x')).toBe(true);
-    form.set('x', 1);
-    expect(form.isFieldDirty('x')).toBe(false);
-  });
-
-  test('isFieldTouched returns whether a field has been touched', () => {
-    const form = createForm({ defaultValues: { x: 1 } });
-
-    expect(form.isFieldTouched('x')).toBe(false);
-    form.touch('x');
-    expect(form.isFieldTouched('x')).toBe(true);
-    form.untouch('x');
-    expect(form.isFieldTouched('x')).toBe(false);
-  });
-
-  test('shorthand getters return same values as field()', () => {
-    const form = createForm({ defaultValues: { x: 1 } });
-
-    form.setError('x', 'Bad');
-    form.touch('x');
-    form.set('x', 2);
-    expect(form.getError('x')).toBe(form.field('x').error);
-    expect(form.isFieldTouched('x')).toBe(form.field('x').touched);
-    expect(form.isFieldDirty('x')).toBe(form.field('x').dirty);
+    form.setError('name', 'Required');
+    form.clearError('email');
+    expect(form.field('email').error).toBeUndefined();
+    expect(form.field('name').error).toBe('Required');
   });
 });
 
@@ -1091,51 +1072,51 @@ describe('field shorthand getters', () => {
 // ---------------------------------------------------------------------------
 
 describe('array field utilities', () => {
-  test('appendField adds an item to an existing array field', () => {
+  test('array(name).append adds an item to an existing array field', () => {
     const form = createForm({ defaultValues: { tags: ['a', 'b'] } });
 
-    form.appendField('tags', 'c');
+    form.array('tags').append('c');
     expect(form.get('tags')).toEqual(['a', 'b', 'c']);
   });
 
-  test('appendField creates the array when the field is not yet set', () => {
+  test('array(name).append creates the array when the field is not yet set', () => {
     const form = createForm<Record<string, unknown>>({});
 
-    form.appendField('tags', 'first');
+    form.array('tags').append('first');
     expect(form.get('tags')).toEqual(['first']);
   });
 
-  test('appendField marks the field dirty', () => {
+  test('array(name).append marks the field dirty', () => {
     const form = createForm({ defaultValues: { tags: ['a'] } });
 
-    form.appendField('tags', 'b');
-    expect(form.isFieldDirty('tags')).toBe(true);
+    form.array('tags').append('b');
+    expect(form.field('tags').dirty).toBe(true);
   });
 
-  test('removeField removes the item at the given index', () => {
+  test('array(name).remove removes the item at the given index', () => {
     const form = createForm({ defaultValues: { tags: ['a', 'b', 'c'] } });
 
-    form.removeField('tags', 1);
+    form.array('tags').remove(1);
     expect(form.get('tags')).toEqual(['a', 'c']);
   });
 
-  test('removeField is a no-op when the field is not an array', () => {
+  test('array(name).remove is a no-op when the field is not an array', () => {
     const form = createForm({ defaultValues: { x: 1 } });
 
-    expect(() => form.removeField('x', 0)).not.toThrow();
+    expect(() => form.array('x').remove(0)).not.toThrow();
     expect(form.get('x')).toBe(1);
   });
 
-  test('moveField reorders items in an array field', () => {
+  test('array(name).move reorders items in an array field', () => {
     const form = createForm({ defaultValues: { tags: ['a', 'b', 'c', 'd'] } });
 
-    form.moveField('tags', 0, 2);
+    form.array('tags').move(0, 2);
     expect(form.get('tags')).toEqual(['b', 'c', 'a', 'd']);
   });
 
-  test('moveField is a no-op when the field is not an array', () => {
+  test('array(name).move is a no-op when the field is not an array', () => {
     const form = createForm({ defaultValues: { x: 1 } });
 
-    expect(() => form.moveField('x', 0, 1)).not.toThrow();
+    expect(() => form.array('x').move(0, 1)).not.toThrow();
   });
 });

@@ -11,8 +11,8 @@ description: Complete API reference for the Virtualit virtual list engine.
 
 | Symbol                          | Purpose                                 | Execution mode | Common gotcha                                   |
 | ------------------------------- | --------------------------------------- | -------------- | ----------------------------------------------- |
-| `createVirtualizer()`           | Create virtual list controller          | Sync           | Call attach() with the correct scroll container |
-| `createDomVirtualList()`        | DOM-first wrapper around `Virtualizer`  | Sync           | Call `update(items, enabled)` after mount       |
+| `createVirtualizer()`           | Create virtual list controller          | Sync           | `createVirtualizer()` already attaches immediately |
+| `createDomVirtualList()`        | DOM-first wrapper around `Virtualizer`  | Sync           | Call `setItems(items)` and `setActive(isOpen)` after mount |
 | `virtualizer.getVirtualItems()` | Read the currently visible range        | Sync           | Re-render after invalidation/size changes       |
 | `virtualizer.scrollToIndex()`   | Programmatically jump to item positions | Sync           | Attach first; no-op before mounting             |
 
@@ -38,9 +38,6 @@ Creates a controller that lazily manages an internal `Virtualizer` when the scro
 import { createDomVirtualList } from '@vielzeug/virtualit/dom';
 
 const virtualList = createDomVirtualList<Row>({
-  clear: (listEl) => {
-    listEl.innerHTML = '';
-  },
   estimateSize: 36,
   getListElement: () => listEl,
   getScrollElement: () => dropdownEl,
@@ -56,7 +53,8 @@ const virtualList = createDomVirtualList<Row>({
   },
 });
 
-virtualList.update(rows, true);
+virtualList.setItems(rows);
+virtualList.setActive(true);
 ```
 
 **Parameters:**
@@ -73,7 +71,7 @@ virtualList.update(rows, true);
 
 ```ts
 interface DomVirtualListOptions<T> {
-  clear: (listEl: HTMLElement) => void;
+  clear?: (listEl: HTMLElement) => void;
   estimateSize: number | ((index: number, item: T) => number);
   getListElement: () => HTMLElement | null;
   getScrollElement: () => HTMLElement | null;
@@ -84,7 +82,7 @@ interface DomVirtualListOptions<T> {
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
-| `clear` | `(listEl: HTMLElement) => void` | — | Clears previously rendered option nodes before repaint or teardown |
+| `clear` | `(listEl: HTMLElement) => void` | internal `listEl.textContent = ''` | Optional custom clear strategy |
 | `estimateSize` | `number \| (index: number, item: T) => number` | — | Fixed row size or per-item estimator |
 | `getListElement` | `() => HTMLElement \| null` | — | Returns the positioned list element that receives item nodes |
 | `getScrollElement` | `() => HTMLElement \| null` | — | Returns the scroll container observed by the virtualizer |
@@ -110,14 +108,23 @@ interface DomVirtualListRenderArgs<T> {
 ```ts
 interface DomVirtualListController<T> {
   destroy: () => void;
+  setActive: (active: boolean) => void;
+  setItems: (items: T[], options?: DomVirtualListSetItemsOptions) => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
-  update: (items: T[], enabled: boolean) => void;
+}
+
+interface DomVirtualListSetItemsOptions {
+  remeasure?: boolean;
 }
 ```
 
-#### `update(items, enabled)`
+#### `setItems(items, options?)`
 
-Synchronizes source items and enable state. When `enabled` is `false`, when items are empty, or when required DOM elements are missing, the internal virtualizer is destroyed and list styles are reset.
+Synchronizes source items. If active and mounted, updates the internal virtualizer count. Pass `{ remeasure: true }` to force a measurement reset when layout changed.
+
+#### `setActive(active)`
+
+Enables or disables virtualization without changing item data. When inactive, the internal virtualizer is destroyed and list styles are reset.
 
 #### `scrollToIndex(index, options?)`
 

@@ -1,16 +1,12 @@
-import { computed, defineComponent, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
+import { define, computed, effect, html, signal, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
+import '../icon/icon';
+import { type PropBundle, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
-// ============================================
-// Styles
-// ============================================
+import groupStyles from './avatar-group.css?inline';
 import componentStyles from './avatar.css?inline';
-
-// ============================================
-// Types
-// ============================================
 
 export type AvatarStatus = 'online' | 'offline' | 'busy' | 'away';
 
@@ -70,16 +66,16 @@ export type BitAvatarProps = {
  * <bit-avatar alt="John Smith" status="online"></bit-avatar>
  * ```
  */
-export const AVATAR_TAG = defineComponent<BitAvatarProps>({
+export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
   props: {
-    alt: { default: undefined },
-    color: { default: undefined },
-    initials: { default: undefined },
-    rounded: { default: undefined },
-    size: { default: undefined },
-    src: { default: undefined },
-    status: { default: undefined },
-  },
+    ...themableBundle,
+    ...sizableBundle,
+    ...roundableBundle,
+    alt: undefined,
+    initials: undefined,
+    src: undefined,
+    status: undefined,
+  } satisfies PropBundle<BitAvatarProps>,
   setup({ props }) {
     const imgFailed = signal(false);
 
@@ -152,16 +148,7 @@ export const AVATAR_TAG = defineComponent<BitAvatarProps>({
             : ''}
         ${() =>
           showFallback.value
-            ? html`<span class="icon-fallback" part="fallback" aria-hidden="true">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  width="55%"
-                  height="55%">
-                  <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4Z" />
-                </svg>
-              </span>`
+            ? html`<bit-icon class="icon-fallback" part="fallback" name="user" size="50%"></bit-icon>`
             : ''}
       </span>
       ${() =>
@@ -184,14 +171,11 @@ export const AVATAR_TAG = defineComponent<BitAvatarProps>({
     }),
     componentStyles,
   ],
-  tag: 'bit-avatar',
 });
 
 // ============================================
 // AvatarGroup
 // ============================================
-
-import groupStyles from './avatar-group.css?inline';
 
 /** AvatarGroup component properties */
 export type BitAvatarGroupProps = {
@@ -223,28 +207,29 @@ export type BitAvatarGroupProps = {
  * </bit-avatar-group>
  * ```
  */
-export const AVATAR_GROUP_TAG = defineComponent<BitAvatarGroupProps>({
+export const AVATAR_GROUP_TAG = define<{ max?: number; total?: number }>('bit-avatar-group', {
   props: {
-    max: { default: 5 },
-    total: { default: undefined },
+    max: 5,
+    total: undefined,
   },
-  setup({ host, props }) {
+  setup({ host, props, slots }) {
     const overflowCount = signal(0);
 
-    onMount(() => {
-      const updateVisibility = () => {
-        const avatars = [...host.querySelectorAll('bit-avatar')];
-        const max = Number(props.max.value) || 5;
-        const hidden = Math.max(0, avatars.length - max);
+    const updateVisibility = () => {
+      const avatars = [...host.el.querySelectorAll('bit-avatar')];
+      const max = Number(props.max.value) || 5;
+      const hidden = Math.max(0, avatars.length - max);
 
-        overflowCount.value = props.total.value != null ? Number(props.total.value) - max : hidden;
-        avatars.forEach((a, i) => {
-          if (i >= max) a.setAttribute('data-avatar-group-hidden', '');
-          else a.removeAttribute('data-avatar-group-hidden');
-        });
-      };
+      overflowCount.value = props.total.value != null ? Number(props.total.value) - max : hidden;
+      avatars.forEach((a, i) => {
+        if (i >= max) a.setAttribute('data-avatar-group-hidden', '');
+        else a.removeAttribute('data-avatar-group-hidden');
+      });
+    };
 
-      onSlotChange('default', updateVisibility);
+    effect(() => {
+      void slots.elements().value;
+      updateVisibility();
     });
 
     return html`
@@ -258,5 +243,4 @@ export const AVATAR_GROUP_TAG = defineComponent<BitAvatarGroupProps>({
     `;
   },
   styles: [groupStyles],
-  tag: 'bit-avatar-group',
 });

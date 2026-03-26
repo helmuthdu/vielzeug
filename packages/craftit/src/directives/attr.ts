@@ -1,6 +1,6 @@
 import { type ReadonlySignal } from '@vielzeug/stateit';
 
-import { type Directive } from '../core/internal';
+import { type Directive } from '../internal';
 import { spread } from './spread';
 
 export type AttrValue =
@@ -14,14 +14,12 @@ export type AttrValue =
 
 /**
  * Batch DOM property-binding helper.
- *
- * The public name stays `attr(...)` for ergonomics, but the mapped entries are
- * applied as `.property` bindings under the hood.
+ * Applied as `.property` bindings under the hood.
  *
  * @example
- * html`<input ${attr({ value, disabled, readOnly: readonly })} />`
+ * html`<input ${attrs({ value, disabled, readOnly: readonly })} />`
  */
-export function attr(map: Record<string, AttrValue>): Directive {
+export function attrs(map: Record<string, AttrValue>): Directive {
   const mapped: Record<string, AttrValue> = {};
 
   for (const [key, value] of Object.entries(map)) {

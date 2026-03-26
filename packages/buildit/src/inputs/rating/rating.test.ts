@@ -1,4 +1,4 @@
-import { fire, type Fixture, mount } from '@vielzeug/craftit/test';
+import { fire, type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-rating', () => {
   let fixture: Fixture<HTMLElement>;
@@ -70,6 +70,14 @@ describe('bit-rating', () => {
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
+    it('uses token-driven icon sizing instead of a fixed pixel size', async () => {
+      fixture = await mount('bit-rating');
+
+      const firstIcon = fixture.shadow?.querySelector<HTMLElement>('bit-icon[name="star"]');
+
+      expect(firstIcon?.getAttribute('size')).toBe('var(--_star-size)');
+    });
+
     it('reflects disabled attribute', async () => {
       fixture = await mount('bit-rating', { attrs: { disabled: '' } });
 
@@ -80,6 +88,12 @@ describe('bit-rating', () => {
       fixture = await mount('bit-rating', { attrs: { readonly: '' } });
 
       expect(fixture.element.hasAttribute('readonly')).toBe(true);
+    });
+
+    it('reflects solid attribute', async () => {
+      fixture = await mount('bit-rating', { attrs: { solid: '' } });
+
+      expect(fixture.element.hasAttribute('solid')).toBe(true);
     });
   });
 
@@ -148,6 +162,18 @@ describe('bit-rating', () => {
       expect(star4?.hasAttribute('data-filled')).toBe(true);
     });
 
+    it('keeps selected stars marked filled when solid mode is enabled', async () => {
+      fixture = await mount('bit-rating', { attrs: { solid: '', value: '3' } });
+
+      const star1 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="1"]');
+      const star3 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="3"]');
+      const star4 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
+
+      expect(star1?.hasAttribute('data-filled')).toBe(true);
+      expect(star3?.hasAttribute('data-filled')).toBe(true);
+      expect(star4?.hasAttribute('data-filled')).toBe(false);
+    });
+
     it('updates selection on consecutive star clicks', async () => {
       fixture = await mount('bit-rating', { attrs: { value: '1' } });
 
@@ -169,6 +195,37 @@ describe('bit-rating', () => {
       expect(fixture.element.getAttribute('value')).toBe('5');
       expect(star2?.getAttribute('aria-checked')).toBe('false');
       expect(star5?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('ArrowRight increases rating from focused star', async () => {
+      fixture = await mount('bit-rating', { attrs: { value: '2' } });
+
+      const star2 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
+
+      if (!star2) return;
+
+      star2.focus();
+      await user.press(star2, 'ArrowRight');
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('3');
+    });
+
+    it('Home/End set rating to min/max', async () => {
+      fixture = await mount('bit-rating', { attrs: { max: '7', value: '4' } });
+
+      const star4 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
+
+      if (!star4) return;
+
+      star4.focus();
+      await user.press(star4, 'Home');
+      await fixture.flush();
+      expect(fixture.element.getAttribute('value')).toBe('1');
+
+      await user.press(star4, 'End');
+      await fixture.flush();
+      expect(fixture.element.getAttribute('value')).toBe('7');
     });
   });
 

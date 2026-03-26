@@ -1,44 +1,19 @@
----
-title: 'Permit Examples — Snapshot / Restore for Test Isolation'
-description: 'Snapshot / Restore for Test Isolation examples for permit.'
----
-
-## Snapshot / Restore for Test Isolation
-
-## Problem
-
-Implement snapshot / restore for test isolation in a production-friendly way with `@vielzeug/permit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/permit` installed.
+# Policy Export/Import for Test Isolation
 
 ```ts
+import { createPermit } from '@vielzeug/permit';
+
 const permit = createPermit();
-permit.grant('viewer', 'posts', 'read').extend('editor', 'viewer');
 
-const baseline = permit.snapshot();
+permit.set({ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' });
 
-// mutate in a test
-permit.grant('editor', 'posts', 'write');
+const policy = permit.exportPolicy();
 
-// reset to baseline
-permit.restore(baseline);
+beforeEach(() => {
+  permit.importPolicy(policy);
+});
+
+afterEach(() => {
+  permit.clear();
+});
 ```
-
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Blog Roles](./blog-roles.md)
-- [Bound Guard in UI Layer](./bound-guard-in-ui-layer.md)
-- [Disabling Wildcard Fallback](./disabling-wildcard-fallback.md)

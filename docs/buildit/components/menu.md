@@ -7,8 +7,10 @@ An action dropdown triggered by any slotted element. Presents a list of `bit-men
 - 🎯 **Any trigger**: use any element in the `trigger` slot — button, icon, link
 - ⌨️ **Full Keyboard Nav**: ArrowDown/Up, Enter/Space, Escape, Tab, Home/End
 - 📍 **Auto-positioning**: uses `@vielzeug/floatit` to flip when near viewport edges
-- 🔕 **Outside-click close**: dismiss by clicking anywhere outside- ➖ **Separator**: `bit-menu-separator` renders a visual divider between groups of items
-- ✅ **Checkable Items**: `bit-menu-item` supports `type="checkbox"` and `type="radio"` for toggleable selections- 🙅 **Disabled items**: individual `bit-menu-item` items can be disabled
+- 🔕 **Outside-click close**: dismiss by clicking anywhere outside
+- ➖ **Separator**: `bit-menu-separator` renders a visual divider between groups of items
+- ✅ **Checkable Items**: `bit-menu-item` supports `type="checkbox"` and `type="radio"` for toggleable selections
+- 🙅 **Disabled items**: individual `bit-menu-item` items can be disabled
 - 🧩 **Icon slot**: each item supports a leading `icon` slot
 - 🎨 **Color Themes**: primary, secondary, info, success, warning, error
 - 📏 **3 Sizes**: sm, md, lg
@@ -35,6 +37,7 @@ Place your trigger element in the `trigger` slot and add `bit-menu-item` childre
 <script type="module">
   import '@vielzeug/buildit/menu';
   import '@vielzeug/buildit/button';
+  import '@vielzeug/buildit/icon';
 </script>
 ```
 
@@ -70,8 +73,8 @@ Control which side of the trigger the panel opens on. The menu automatically fli
 
 Use the `icon` named slot on each `bit-menu-item` for leading icons.
 
-::: tip Material Icons
-These examples use Material Symbols Rounded ligatures (for example: `<span class="material-symbols-rounded">search</span>`).
+::: tip Icons
+These examples use inline SVG slot content so they stay framework and icon-library agnostic.
 :::
 
 <ComponentPreview vertical>
@@ -80,19 +83,19 @@ These examples use Material Symbols Rounded ligatures (for example: `<span class
 <bit-menu>
   <bit-button slot="trigger">File</bit-button>
   <bit-menu-item value="new">
-    <span slot="icon" class="material-symbols-rounded" aria-hidden="true">description</span>
+    <bit-icon slot="icon" name="file" size="18"></bit-icon>
     New File
   </bit-menu-item>
   <bit-menu-item value="open">
-    <span slot="icon" class="material-symbols-rounded" aria-hidden="true">folder_open</span>
+    <bit-icon slot="icon" name="folder" size="18"></bit-icon>
     Open…
   </bit-menu-item>
   <bit-menu-item value="save">
-    <span slot="icon" class="material-symbols-rounded" aria-hidden="true">save</span>
+    <bit-icon slot="icon" name="save" size="18"></bit-icon>
     Save
   </bit-menu-item>
   <bit-menu-item value="delete" disabled>
-    <span slot="icon" class="material-symbols-rounded" aria-hidden="true">delete</span>
+    <bit-icon slot="icon" name="trash-2" size="18"></bit-icon>
     Delete (disabled)
   </bit-menu-item>
 </bit-menu>
@@ -167,12 +170,12 @@ Set `disabled` on the `bit-menu` element to prevent the panel from opening at al
 
   // Fired when the panel opens
   menu.addEventListener('open', (e) => {
-    console.log('menu opened via:', e.detail.reason); // 'toggle', 'programmatic', or 'trigger'
+    console.log('menu opened via:', e.detail.reason); // 'programmatic' or 'trigger'
   });
 
   // Fired when the panel closes
   menu.addEventListener('close', (e) => {
-    console.log('menu closed via:', e.detail.reason); // 'escape', 'outside-click', 'programmatic', or 'toggle'
+    console.log('menu closed via:', e.detail.reason); // 'escape', 'outside-click', 'programmatic', or 'trigger'
   });
 </script>
 ```
@@ -186,7 +189,7 @@ Any element works as the trigger — including icon-only buttons.
 ```html
 <bit-menu>
   <bit-button slot="trigger" variant="ghost" size="sm" aria-label="More options">
-    <span class="material-symbols-rounded" aria-hidden="true">more_horiz</span>
+    <bit-icon name="ellipsis" size="18"></bit-icon>
   </bit-button>
   <bit-menu-item value="edit">Edit</bit-menu-item>
   <bit-menu-item value="copy">Copy link</bit-menu-item>
@@ -281,7 +284,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 
 | Attribute  | Type                    | Default | Description                                                  |
 | ---------- | ----------------------- | ------- | ------------------------------------------------------------ |
-| `value`    | `string`                | `''`    | Value emitted in the `bit-select` event detail               |
+| `value`    | `string`                | `''`    | Value emitted in the `select` event detail                   |
 | `type`     | `'checkbox' \| 'radio'` | —       | Makes the item checkable; radio items are mutually exclusive |
 | `checked`  | `boolean`               | `false` | Whether a checkable item is currently checked                |
 | `disabled` | `boolean`               | `false` | Prevent the item from being selected                         |
@@ -298,8 +301,8 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | Event    | Detail                                  | Description                                                                                                                   |
 | -------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `select` | `{ value: string, checked?: boolean }`  | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items                    |
-| `open`   | `{ reason: OverlayOpenReason }`         | Emitted when the panel opens. Reason can be `'toggle'`, `'programmatic'`, or `'trigger'`                                    |
-| `close`  | `{ reason: OverlayCloseReason }`        | Emitted when the panel closes. Reason can be `'escape'`, `'outside-click'`, `'programmatic'`, or `'toggle'`                 |
+| `open`   | `{ reason: 'programmatic' \| 'trigger' }`                                     | Emitted when the panel opens.                                                                                                 |
+| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }` | Emitted when the panel closes.                                                                                                |
 
 ### CSS Custom Properties (`bit-menu`)
 

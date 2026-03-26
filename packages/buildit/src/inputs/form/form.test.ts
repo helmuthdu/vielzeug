@@ -1,10 +1,11 @@
-import { type Fixture, mount } from '@vielzeug/craftit/test';
+import { type Fixture, mount } from '@vielzeug/craftit/testing';
 
 describe('bit-form', () => {
   let fixture: Fixture<HTMLElement>;
 
   beforeAll(async () => {
     await (() => import('./form'))();
+    await (() => import('../input/input'))();
   });
 
   afterEach(() => {
@@ -71,6 +72,37 @@ describe('bit-form', () => {
       fixture = await mount('bit-form', { attrs: { orientation: 'horizontal' } });
 
       expect(fixture.element.getAttribute('orientation')).toBe('horizontal');
+    });
+  });
+
+  describe('Context Propagation', () => {
+    it('propagates disabled/size/variant to child controls', async () => {
+      fixture = await mount('bit-form', {
+        attrs: { disabled: '', size: 'lg', variant: 'flat' },
+        html: '<bit-input></bit-input>',
+      });
+
+      await fixture.flush();
+
+      const child = fixture.element.querySelector('bit-input');
+
+      expect(child?.hasAttribute('disabled')).toBe(true);
+      expect(child?.getAttribute('size')).toBe('lg');
+      expect(child?.getAttribute('variant')).toBe('flat');
+    });
+
+    it('does not override explicit child size/variant', async () => {
+      fixture = await mount('bit-form', {
+        attrs: { size: 'lg', variant: 'flat' },
+        html: '<bit-input size="sm" variant="bordered"></bit-input>',
+      });
+
+      await fixture.flush();
+
+      const child = fixture.element.querySelector('bit-input');
+
+      expect(child?.getAttribute('size')).toBe('sm');
+      expect(child?.getAttribute('variant')).toBe('bordered');
     });
   });
 });

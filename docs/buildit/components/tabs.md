@@ -249,6 +249,54 @@ Set `color` on `bit-tabs` to apply a theme color — it propagates automatically
 
 </ComponentPreview>
 
+### Vertical Tabs
+
+Use `orientation="vertical"` to place the tab list on the side. This works well for settings pages, account sections, or docs-style navigation.
+
+<ComponentPreview>
+
+```html
+<bit-tabs value="profile" orientation="vertical" variant="bordered" style="min-height: 320px;">
+  <bit-tab-item slot="tabs" value="profile">Profile</bit-tab-item>
+  <bit-tab-item slot="tabs" value="security">Security</bit-tab-item>
+  <bit-tab-item slot="tabs" value="notifications">Notifications</bit-tab-item>
+  <bit-tab-item slot="tabs" value="billing">Billing</bit-tab-item>
+
+  <bit-tab-panel value="profile"><p>Profile preferences and personal details.</p></bit-tab-panel>
+  <bit-tab-panel value="security"><p>Password, sessions, and 2FA controls.</p></bit-tab-panel>
+  <bit-tab-panel value="notifications"><p>Email and push notification settings.</p></bit-tab-panel>
+  <bit-tab-panel value="billing"><p>Plans, invoices, and payment methods.</p></bit-tab-panel>
+</bit-tabs>
+```
+
+</ComponentPreview>
+
+### Vertical + Manual Activation
+
+For keyboard-heavy interfaces, pair vertical tabs with `activation="manual"` so arrow keys move focus and Enter/Space commits selection.
+
+<ComponentPreview>
+
+```html
+<bit-tabs
+  value="account"
+  orientation="vertical"
+  activation="manual"
+  variant="ghost"
+  color="primary"
+  style="min-height: 280px;">
+  <bit-tab-item slot="tabs" value="account">Account</bit-tab-item>
+  <bit-tab-item slot="tabs" value="privacy">Privacy</bit-tab-item>
+  <bit-tab-item slot="tabs" value="integrations">Integrations</bit-tab-item>
+
+  <bit-tab-panel value="account"><p>Account profile and team membership.</p></bit-tab-panel>
+  <bit-tab-panel value="privacy"><p>Data export, retention, and consent settings.</p></bit-tab-panel>
+  <bit-tab-panel value="integrations"><p>Connected services and API tokens.</p></bit-tab-panel>
+</bit-tabs>
+```
+
+</ComponentPreview>
+
 ## Customization
 
 ### Icons & Badges
@@ -260,23 +308,31 @@ Use the `prefix` and `suffix` slots on `bit-tab-item` to add icons or notificati
 ```html
 <bit-tabs value="inbox" variant="flat">
   <bit-tab-item slot="tabs" value="inbox">
-    <span slot="prefix" class="material-symbols-rounded">inbox</span>
+    <bit-icon slot="prefix" name="inbox" size="18"></bit-icon>
     Inbox
     <bit-badge slot="suffix" color="error" size="sm">4</bit-badge>
   </bit-tab-item>
   <bit-tab-item slot="tabs" value="sent">
-    <span slot="prefix" class="material-symbols-rounded">send</span>
+    <bit-icon slot="prefix" name="send" size="18"></bit-icon>
     Sent
   </bit-tab-item>
   <bit-tab-item slot="tabs" value="drafts">
-    <span slot="prefix" class="material-symbols-rounded">draft</span>
+    <bit-icon slot="prefix" name="mail" size="18"></bit-icon>
     Drafts
   </bit-tab-item>
 
-  <bit-tab-panel value="inbox"><p>Your inbox messages.</p></bit-tab-panel>
-  <bit-tab-panel value="sent"><p>Sent items.</p></bit-tab-panel>
-  <bit-tab-panel value="drafts"><p>Draft messages.</p></bit-tab-panel>
+  <bit-tab-panel value="inbox"><p>Inbox content.</p></bit-tab-panel>
+  <bit-tab-panel value="sent"><p>Sent content.</p></bit-tab-panel>
+  <bit-tab-panel value="drafts"><p>Drafts content.</p></bit-tab-panel>
 </bit-tabs>
+
+<script type="module">
+  import '@vielzeug/buildit/tabs';
+  import '@vielzeug/buildit/tab-item';
+  import '@vielzeug/buildit/tab-panel';
+  import '@vielzeug/buildit/badge';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>

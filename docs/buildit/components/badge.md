@@ -137,35 +137,11 @@ Use the `icon` slot to prepend an SVG or icon font glyph.
 
 ```html
 <bit-badge color="success">
-  <svg
-    slot="icon"
-    xmlns="http://www.w3.org/2000/svg"
-    width="10"
-    height="10"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="3"
-    stroke-linecap="round"
-    stroke-linejoin="round">
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
+  <bit-icon slot="icon" name="check" size="10"></bit-icon>
   Verified
 </bit-badge>
 <bit-badge color="warning">
-  <svg
-    slot="icon"
-    xmlns="http://www.w3.org/2000/svg"
-    width="10"
-    height="10"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="3"
-    stroke-linecap="round"
-    stroke-linejoin="round">
-    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0" />
-  </svg>
+  <bit-icon slot="icon" name="alert-circle" size="10"></bit-icon>
   Pending
 </bit-badge>
 ```
@@ -197,7 +173,7 @@ Use the `anchor` prop with the `target` slot to pin a badge to the corner of any
 ```html
 <bit-badge color="error" count="5" anchor="top-end">
   <bit-button slot="target" variant="ghost" aria-label="Inbox" icon-only rounded>
-    <span class="material-symbols-rounded">inbox</span>
+    <bit-icon name="inbox" size="18"></bit-icon>
   </bit-button>
 </bit-badge>
 
@@ -208,6 +184,13 @@ Use the `anchor` prop with the `target` slot to pin a badge to the corner of any
 <bit-badge color="warning" count="12" anchor="top-start">
   <bit-button slot="target" variant="outline" size="sm">Messages</bit-button>
 </bit-badge>
+
+<script type="module">
+  import '@vielzeug/buildit/badge';
+  import '@vielzeug/buildit/button';
+  import '@vielzeug/buildit/avatar';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>
@@ -255,19 +238,7 @@ Combine badges with icon buttons for compact notification indicators.
 
 ```html
 <bit-button variant="ghost" style="position: relative;">
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round">
-    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-  </svg>
+  <bit-icon name="bell" size="20"></bit-icon>
   <bit-badge
     slot="suffix"
     color="error"
@@ -277,16 +248,7 @@ Combine badges with icon buttons for compact notification indicators.
 </bit-button>
 
 <bit-button variant="ghost" style="position: relative;">
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round">
+  <bit-icon name="mail" size="20"></bit-icon>
     <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
   </svg>
   <bit-badge slot="suffix" color="success" dot size="sm" style="position: absolute; top: 4px; right: 4px;"></bit-badge>

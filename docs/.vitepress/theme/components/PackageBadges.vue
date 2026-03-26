@@ -62,6 +62,7 @@ const getBadgeUrl = (label: string, value: string | number, color: string) => {
 
 <template>
   <div class="badges">
+    <img src="https://github.com/helmuthdu/vielzeug/actions/workflows/ci.yml/badge.svg" alt="CI" />
     <img
       v-for="badge in badges"
       :key="badge.label"

@@ -289,7 +289,7 @@ Set `no-filter` to keep all options visible regardless of what the user types. U
 
 </ComponentPreview>
 
-For a real server-side integration, replace options dynamically on `bit-input`:
+For a real server-side integration, replace options dynamically on `search`:
 
 ```js
 const cb = document.getElementById('user-cb');
@@ -324,7 +324,7 @@ Add `creatable` to allow users to create a new option when their query does not 
 ```js
 document.querySelector('bit-combobox').addEventListener('change', (e) => {
   // Both selected and newly created options fire change
-  console.log('Selected/created:', e.detail.value, e.detail.label);
+  console.log('Selected/created:', e.detail.value, e.detail.labels);
 });
 ```
 
@@ -352,12 +352,12 @@ cb.addEventListener('search', async (e) => {
 
 ## JavaScript Options
 
-Set the `options` property directly in JavaScript to provide options without using `<bit-combobox-option>` children. Each item is an object with `value`, `label`, and optional `disabled` fields.
+Set the `options` property directly in JavaScript to provide options without using `<bit-combobox-option>` children. Each item only needs a `value`; `label` falls back to the same string when omitted, while `disabled` remains optional.
 
 ```js
 const cb = document.querySelector('bit-combobox');
 cb.options = [
-  { value: 'ts', label: 'TypeScript' },
+  { value: 'ts' },
   { value: 'rust', label: 'Rust' },
   { value: 'go', label: 'Go', disabled: true },
 ];
@@ -411,7 +411,7 @@ const cb = document.getElementById('my-cb');
 
 // Fired when a value is selected from the list
 cb.addEventListener('change', (e) => {
-  console.log('value:', e.detail.value, 'label:', e.detail.label);
+  console.log('value:', e.detail.value, 'labels:', e.detail.labels);
   // In multiple mode, e.detail.values is a string array
   console.log('values:', e.detail.values);
 });
@@ -419,6 +419,15 @@ cb.addEventListener('change', (e) => {
 // Fired on every keystroke in the input
 cb.addEventListener('search', (e) => {
   console.log('query:', e.detail.query);
+});
+
+// Fired when the popup opens/closes
+cb.addEventListener('open', (e) => {
+  console.log('opened because:', e.detail.reason); // 'trigger' | 'programmatic'
+});
+
+cb.addEventListener('close', (e) => {
+  console.log('closed because:', e.detail.reason); // 'escape' | 'outside-click' | 'programmatic'
 });
 ```
 
@@ -472,7 +481,9 @@ cb.addEventListener('search', (e) => {
 
 | Event    | Detail                                               | Description                                       |
 | -------- | ---------------------------------------------------- | ------------------------------------------------- |
-| `change` | `{ value: string, values: string[], label: string }` | Emitted when a value is selected from the listbox |
+| `change` | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when selected value(s) change |
+| `open`   | `{ reason: 'trigger' \| 'programmatic' }`            | Emitted when the dropdown opens                   |
+| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' }` | Emitted when the dropdown closes |
 | `search` | `{ query: string }`                                  | Emitted on every keystroke in the text input      |
 
 ### CSS Custom Properties

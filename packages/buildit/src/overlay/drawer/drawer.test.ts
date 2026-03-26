@@ -1,4 +1,4 @@
-import { type Fixture, mount } from '@vielzeug/craftit/test';
+import { type Fixture, mount } from '@vielzeug/craftit/testing';
 
 describe('bit-drawer', () => {
   let fixture: Fixture<HTMLElement>;
@@ -158,7 +158,7 @@ describe('bit-drawer', () => {
       expect(handler).toHaveBeenCalled();
     });
 
-    it('open event detail contains placement', async () => {
+    it('open event detail contains placement and reason', async () => {
       fixture = await mount('bit-drawer', { attrs: { placement: 'left' } });
 
       let detail: unknown;
@@ -170,6 +170,7 @@ describe('bit-drawer', () => {
       await fixture.attr('open', '');
 
       expect((detail as { placement: string })?.placement).toBe('left');
+      expect((detail as { reason: string })?.reason).toBe('programmatic');
     });
 
     it('fires close after the drawer closes', async () => {
@@ -189,6 +190,7 @@ describe('bit-drawer', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
+      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
     });
 
     it('fires close-request when close button is clicked', async () => {
@@ -203,7 +205,7 @@ describe('bit-drawer', () => {
       expect(handler).toHaveBeenCalled();
     });
 
-    it('close-request detail contains trigger and placement', async () => {
+    it('close-request detail contains reason and placement', async () => {
       fixture = await mount('bit-drawer', { attrs: { open: '', placement: 'left' } });
 
       let detail: unknown;
@@ -214,8 +216,57 @@ describe('bit-drawer', () => {
 
       fixture.query<HTMLButtonElement>('[aria-label="Close"]')?.click();
 
-      expect((detail as { placement: string; trigger: string })?.trigger).toBe('button');
-      expect((detail as { placement: string; trigger: string })?.placement).toBe('left');
+      expect((detail as { placement: string; reason: string })?.reason).toBe('trigger');
+      expect((detail as { placement: string; reason: string })?.placement).toBe('left');
+    });
+
+    it('close-request reason is outside-click for backdrop clicks', async () => {
+      fixture = await mount('bit-drawer', { attrs: { open: '', placement: 'left' } });
+
+      let detail: unknown;
+
+      fixture.element.addEventListener('close-request', (e) => {
+        detail = (e as CustomEvent).detail;
+      });
+
+      fixture.query<HTMLDialogElement>('dialog')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.flush();
+
+      expect((detail as { placement: string; reason: string })?.reason).toBe('outside-click');
+      expect((detail as { placement: string; reason: string })?.placement).toBe('left');
+    });
+
+    it('close-request reason is escape for cancel events', async () => {
+      fixture = await mount('bit-drawer', { attrs: { open: '', placement: 'right' } });
+
+      let detail: unknown;
+
+      fixture.element.addEventListener('close-request', (e) => {
+        detail = (e as CustomEvent).detail;
+      });
+
+      fixture
+        .query<HTMLDialogElement>('dialog')
+        ?.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      expect((detail as { placement: string; reason: string })?.reason).toBe('escape');
+      expect((detail as { placement: string; reason: string })?.placement).toBe('right');
+    });
+
+    it('close reason is programmatic when open is removed externally', async () => {
+      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+
+      let detail: unknown;
+
+      fixture.element.addEventListener('close', (e) => {
+        detail = (e as CustomEvent).detail;
+      });
+
+      fixture.element.removeAttribute('open');
+      await fixture.flush();
+
+      expect((detail as { reason: string })?.reason).toBe('programmatic');
     });
 
     it('preventing close-request keeps the drawer open', async () => {
@@ -337,12 +388,12 @@ describe('bit-drawer accessibility', () => {
     it('close button icon has aria-hidden="true"', async () => {
       fixture = await mount('bit-drawer');
 
-      const icon = fixture.query('[aria-label="Close"] svg');
+      const icon = fixture.query('button[aria-label="Close"] bit-icon');
 
       expect(icon?.getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('close button is visible by default (dismissable defaults to true)', async () => {
+    it('close button is visible by default (dismissible defaults to true)', async () => {
       fixture = await mount('bit-drawer');
 
       const closeBtn = fixture.query<HTMLButtonElement>('[aria-label="Close"]');

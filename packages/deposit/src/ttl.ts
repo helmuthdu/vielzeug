@@ -19,11 +19,11 @@ export const ttl = {
 /* -------------------- TTL Envelope (storage-layer only) -------------------- */
 
 /** @internal */
-export type Envelope<T> = { exp?: number; v: T };
+export type Envelope<T> = { __d: 1; exp?: number; v: T };
 
 /** @internal */
 export function wrap<T>(value: T, ttl?: number): Envelope<T> {
-  return ttl ? { exp: Date.now() + ttl, v: value } : { v: value };
+  return ttl ? { __d: 1, exp: Date.now() + ttl, v: value } : { __d: 1, v: value };
 }
 
 /** @internal */
@@ -33,7 +33,7 @@ export function unwrap<T>(env: Envelope<T>): T | undefined {
 
 /** @internal */
 export function isEnvelope(value: unknown): value is Envelope<unknown> {
-  return typeof value === 'object' && value !== null && 'v' in value;
+  return typeof value === 'object' && value !== null && (value as any).__d === 1 && 'v' in value;
 }
 
 /** @internal */

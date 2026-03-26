@@ -23,7 +23,7 @@ const pool = createWorker<string, string>(
     const r = await fetch(url);
     return r.text();
   },
-  { size: 4, timeout: 8000 },
+  { concurrency: 4, timeout: 8000 },
 );
 
 function startBatch(urls: string[]) {

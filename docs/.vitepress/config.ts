@@ -178,6 +178,7 @@ export default defineConfig({
               collapsed: true,
               items: [
                 { link: '/buildit/components/alert', text: 'Alert' },
+                { link: '/buildit/components/async', text: 'Async' },
                 { link: '/buildit/components/badge', text: 'Badge' },
                 { link: '/buildit/components/chip', text: 'Chip' },
                 { link: '/buildit/components/progress', text: 'Progress' },
@@ -192,6 +193,7 @@ export default defineConfig({
                 { link: '/buildit/components/avatar', text: 'Avatar' },
                 { link: '/buildit/components/breadcrumb', text: 'Breadcrumb' },
                 { link: '/buildit/components/card', text: 'Card' },
+                { link: '/buildit/components/icon', text: 'Icon' },
                 { link: '/buildit/components/pagination', text: 'Pagination' },
                 { link: '/buildit/components/separator', text: 'Separator' },
                 { link: '/buildit/components/table', text: 'Table' },
@@ -245,6 +247,7 @@ export default defineConfig({
         {
           items: [
             { link: '/buildit/api', text: 'API Reference' },
+            { link: '/buildit/accessibility', text: 'Accessibility' },
             {
               items: [
                 { link: '/buildit/examples/common-patterns', text: 'Common Patterns' },
@@ -263,7 +266,7 @@ export default defineConfig({
         {
           collapsed: false,
           items: [
-            { link: '/craftit/usage#define', text: 'define()' },
+            { link: '/craftit/usage#component-and-define', text: 'component() and define()' },
             { link: '/craftit/usage#signals-and-state', text: 'Signals' },
             { link: '/craftit/usage#template-bindings', text: 'Templates' },
             { link: '/craftit/usage#directives-subpath', text: 'Directives' },
@@ -281,14 +284,14 @@ export default defineConfig({
         {
           collapsed: true,
           items: [
-            { link: '/craftit/api#entry-points', text: 'Entry Points' },
+            { link: '/craftit/api#package-entry-points', text: 'Entry Points' },
             { link: '/craftit/api#core-component-api', text: 'Core API' },
             { link: '/craftit/api#runtime-helpers', text: 'Runtime' },
             { link: '/craftit/api#props-api', text: 'Props' },
             { link: '/craftit/api#slots-and-emits', text: 'Slots & Emits' },
             { link: '/craftit/api#context-api', text: 'Context' },
             { link: '/craftit/api#form-associated-api', text: 'Forms' },
-            { link: '/craftit/api#observer-apis', text: 'Observers' },
+            { link: '/craftit/api#controls-apis', text: 'Controls & Observers' },
             { link: '/craftit/api#directive-apis', text: 'Directives' },
             { link: '/craftit/api#testing-apis', text: 'Testing' },
             { link: '/craftit/api#stateit-re-exports', text: 'Stateit Re-exports' },
@@ -304,8 +307,8 @@ export default defineConfig({
             { link: '/craftit/examples/observers-in-onmount', text: 'Observers in `onMount`' },
             { link: '/craftit/examples/search-list-with-directives', text: 'Search List with Directives' },
             {
-              link: '/craftit/examples/test-example-at-vielzeug-craftit-test',
-              text: 'Test Example (`@vielzeug/craftit/test`)',
+              link: '/craftit/examples/test-example-at-vielzeug-craftit-testing',
+              text: 'Test Example (`@vielzeug/craftit/testing`)',
             },
             { link: '/craftit/examples/typed-props-and-emits', text: 'Typed Props and Emits' },
           ],

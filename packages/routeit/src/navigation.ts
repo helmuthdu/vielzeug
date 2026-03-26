@@ -24,7 +24,7 @@ export function resolvePath(target: NavigationTarget, routesByName: Map<string, 
 
   const record = routesByName.get(target.name);
 
-  if (!record) throw new Error('[routeit] Route "${target.name}" not found');
+  if (!record) throw new Error(`[routeit] Route "${target.name}" not found`);
 
   const path = buildUrl('/', record.path, target.params, target.query);
 
@@ -53,7 +53,7 @@ export async function handleRoute(
   navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>,
   setCurrentState: (state: RouteState) => void,
   notifyListeners: () => void,
-  id: number,
+  isNavigationCurrent: () => boolean,
   useTransition?: boolean,
 ): Promise<void> {
   const { hash, pathname, query } = readLocation(base);
@@ -71,6 +71,8 @@ export async function handleRoute(
     }
   }
 
+  if (!isNavigationCurrent()) return;
+
   setCurrentState({
     hash,
     meta: matchedRecord?.meta,
@@ -80,8 +82,8 @@ export async function handleRoute(
     query,
   });
 
-  const run = async (currentId: number): Promise<void> => {
-    if (currentId !== id) return;
+  const run = async (): Promise<void> => {
+    if (!isNavigationCurrent()) return;
 
     if (!matchedRecord) {
       if (onNotFound) {
@@ -117,11 +119,13 @@ export async function handleRoute(
     const doc = typeof document !== 'undefined' ? (document as ViewTransitionDocument) : null;
 
     if ((useTransition ?? useViewTransition) && doc?.startViewTransition) {
-      await doc.startViewTransition(() => run(id)).finished;
+      await doc.startViewTransition(() => run()).finished;
     } else {
-      await run(id);
+      await run();
     }
   } catch (error) {
+    if (!isNavigationCurrent()) return;
+
     if (onError) {
       onError(error, {
         hash,
@@ -136,43 +140,9 @@ export async function handleRoute(
       console.error('[routeit] Route handling error:', error);
     }
   } finally {
+    // eslint-disable-next-line no-unsafe-finally
+    if (!isNavigationCurrent()) return;
+
     notifyListeners();
   }
-}
-
-export function createOnPopState(
-  base: string,
-  records: RouteRecord[],
-  globalMiddleware: Middleware[],
-  onNotFound: RouteHandler | undefined,
-  onError: ((error: unknown, context: RouteContext) => void) | undefined,
-  useViewTransition: boolean,
-  navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>,
-  setCurrentState: (state: RouteState) => void,
-  notifyListeners: () => void,
-  nextNavId: () => number,
-  setLastHref: (value: string) => void,
-  getPendingViewTransition: () => boolean | undefined,
-  setPendingViewTransition: (value: boolean | undefined) => void,
-): () => void {
-  return (): void => {
-    const newHref = window.location.pathname + window.location.search;
-
-    setLastHref(newHref);
-
-    void handleRoute(
-      base,
-      records,
-      globalMiddleware,
-      onNotFound,
-      onError,
-      useViewTransition,
-      navigate,
-      setCurrentState,
-      notifyListeners,
-      nextNavId(),
-      getPendingViewTransition(),
-    );
-    setPendingViewTransition(undefined);
-  };
 }

@@ -1,7 +1,7 @@
 @layer buildit.base {
   :host {
     --_height: var(--progress-height, var(--size-2, 0.5rem));
-    --_radius: var(--progress-radius, var(--rounded-full, 9999px));
+    --_radius: var(--progress-radius, var(--rounded-lg));
     --_circle-size: var(--progress-circle-size, 6rem);
     --_circular-label-size: var(--progress-circular-label-size, var(--text-xl, 1.25rem));
     --_circular-title-size: var(--progress-circular-title-size, var(--text-xs, 0.75rem));

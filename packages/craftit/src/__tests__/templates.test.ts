@@ -3,14 +3,11 @@
  * Tests for the core HTML template system, attribute binding, event handling, and lifecycle
  */
 
-import { computed, defineComponent, escapeHtml, html, signal } from '../index';
-import { fire, mount } from '../test';
+import { computed, define, html, signal, type ComponentDefinition } from '../index';
+import { fire, mount } from '../testing';
 
-const register = (
-  tag: string,
-  setup: Parameters<typeof defineComponent>[0]['setup'],
-  options: Omit<Parameters<typeof defineComponent>[0], 'setup' | 'tag'> = {},
-) => defineComponent({ setup, tag, ...options });
+const register = (tag: string, setup: ComponentDefinition['setup'], options: Omit<ComponentDefinition, 'setup'> = {}) =>
+  define(tag, { setup, ...options });
 
 describe('Template: HTML System', () => {
   describe('html Tagged Template', () => {
@@ -297,33 +294,6 @@ describe('Template: HTML System', () => {
       expect(query('span')?.textContent).toBe('Inner');
     });
   });
-
-  describe('Utility: escapeHtml()', () => {
-    it('should escape & < > characters', () => {
-      expect(escapeHtml('<b>Bold</b>')).toBe('&lt;b&gt;Bold&lt;/b&gt;');
-    });
-
-    it('should escape double quotes', () => {
-      expect(escapeHtml('"quoted"')).toBe('&quot;quoted&quot;');
-    });
-
-    it('should escape single quotes', () => {
-      expect(escapeHtml("it's")).toBe('it&#39;s');
-    });
-
-    it('should escape ampersands', () => {
-      expect(escapeHtml('a & b')).toBe('a &amp; b');
-    });
-
-    it('should convert non-string values via String()', () => {
-      expect(escapeHtml(42)).toBe('42');
-      expect(escapeHtml(null)).toBe('null');
-    });
-
-    it('should return an empty string unchanged', () => {
-      expect(escapeHtml('')).toBe('');
-    });
-  });
 });
 
 describe('Reflect: .property syntax', () => {
@@ -462,7 +432,7 @@ describe('Reflect: .property syntax', () => {
 
   describe('Custom element property binding', () => {
     it('should bind to custom element properties', async () => {
-      defineComponent({ setup: () => html`<div></div>`, tag: 'custom-prop-element' });
+      define('custom-prop-element', { setup: () => html`<div></div>` });
 
       const { query } = await mount(() => {
         const data = signal({ name: 'test', value: 42 });
@@ -476,7 +446,7 @@ describe('Reflect: .property syntax', () => {
     });
 
     it('should update custom properties reactively', async () => {
-      defineComponent({ setup: () => html`<div></div>`, tag: 'custom-prop-reactive' });
+      define('custom-prop-reactive', { setup: () => html`<div></div>` });
 
       const { query } = await mount(() => {
         const data = signal({ count: 1 });

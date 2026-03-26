@@ -30,6 +30,10 @@ export function buildUrl(base: string, path: string, params?: Params, query?: Pa
     }
   }
 
+  const unresolved = pathClean.match(/\{[^}]+\}/g);
+
+  if (unresolved) throw new Error(`[fetchit] unresolved path params: ${unresolved.join(', ')}`);
+
   const url = baseClean && pathClean ? `${baseClean}/${pathClean}` : baseClean || pathClean;
 
   if (!query) return url;

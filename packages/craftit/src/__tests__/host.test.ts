@@ -1,23 +1,22 @@
 import {
   createContext,
-  defineComponent,
+  define,
+  effect,
   html,
   inject,
   onMount,
-  onSlotChange,
   provide,
   signal,
   syncContextProps,
+  type ComponentDefinition,
   type InjectionKey,
   type ReadonlySignal,
 } from '../index';
-import { fire, mount } from '../test';
+import { currentRuntime } from '../runtime-core';
+import { mount } from '../testing';
 
-const register = (
-  tag: string,
-  setup: Parameters<typeof defineComponent>[0]['setup'],
-  options: Omit<Parameters<typeof defineComponent>[0], 'setup' | 'tag'> = {},
-) => defineComponent({ setup, tag, ...options });
+const register = (tag: string, setup: ComponentDefinition['setup'], options: Omit<ComponentDefinition, 'setup'> = {}) =>
+  define(tag, { setup, ...options });
 
 describe('core/host.ts', () => {
   describe('Context API', () => {
@@ -178,75 +177,58 @@ describe('core/host.ts', () => {
   });
 
   describe('Slots API', () => {
-    describe('slots.has()', () => {
-      it('returns true when the named slot has assigned nodes', async () => {
-        let headerAssigned!: ReadonlySignal<boolean>;
+    it('tracks default and named slot presence from setup context', async () => {
+      let headerAssigned!: ReadonlySignal<boolean>;
+      let defaultAssigned!: ReadonlySignal<boolean>;
 
-        const { flush } = await mount(
-          ({ slots }) => {
-            headerAssigned = slots.has('header');
+      const { flush } = await mount(
+        ({ slots }) => {
+          headerAssigned = slots.has('header');
+          defaultAssigned = slots.has();
 
-            return html`<slot name="header"></slot>`;
-          },
-          { html: '<span slot="header">Title</span>' },
-        );
+          return html`<slot name="header"></slot><slot></slot>`;
+        },
+        { html: '<span slot="header">Title</span><span>Default content</span>' },
+      );
 
-        await flush();
-        expect(headerAssigned.value).toBe(true);
-      });
+      await flush();
 
-      it('returns false when the named slot has no assigned nodes', async () => {
-        let footerAssigned!: ReadonlySignal<boolean>;
-
-        const { flush } = await mount(({ slots }) => {
-          footerAssigned = slots.has('footer');
-
-          return html`<slot name="footer"></slot>`;
-        });
-
-        await flush();
-        expect(footerAssigned.value).toBe(false);
-      });
-
-      it('warns when no matching slot element exists in the shadow template', async () => {
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
-        try {
-          await mount(({ slots }) => {
-            slots.has('nonexistent');
-
-            return html`<div>No slots here</div>`;
-          });
-
-          expect(warn).toHaveBeenCalledWith(
-            expect.stringContaining('slots.has() could not find a matching <slot name="nonexistent">'),
-          );
-        } finally {
-          warn.mockRestore();
-        }
-      });
+      expect(headerAssigned.value).toBe(true);
+      expect(defaultAssigned.value).toBe(true);
     });
 
-    describe('onSlotChange()', () => {
-      it('warns when no matching slot element exists in the shadow template', async () => {
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    it('exposes named assigned elements from setup context', async () => {
+      let triggerElements!: ReadonlySignal<Element[]>;
 
-        try {
-          await mount(() => {
-            onMount(() => {
-              onSlotChange('nonexistent', () => undefined);
-            });
+      const { flush } = await mount(
+        ({ slots }) => {
+          triggerElements = slots.elements('trigger');
 
-            return html`<div>No slots here</div>`;
-          });
+          return html`<slot name="trigger"></slot>`;
+        },
+        { html: '<button slot="trigger">Open</button>' },
+      );
 
-          expect(warn).toHaveBeenCalledWith(
-            expect.stringContaining('onSlotChange() could not find a matching <slot name="nonexistent">'),
-          );
-        } finally {
-          warn.mockRestore();
-        }
+      await flush();
+
+      expect(triggerElements.value).toHaveLength(1);
+      expect((triggerElements.value[0] as HTMLElement).tagName).toBe('BUTTON');
+    });
+
+    it('supports reactive side effects from namedElements without accidental dependency loops', async () => {
+      const callback = vi.fn();
+
+      const { flush } = await mount(({ slots }) => {
+        effect(() => {
+          callback(slots.elements('nonexistent').value);
+        });
+
+        return html`<div>No slots here</div>`;
       });
+
+      await flush();
+
+      expect(callback).toHaveBeenCalledWith([]);
     });
   });
 });
@@ -255,7 +237,9 @@ describe('onMount slot timing', () => {
   it('onMount callbacks run after slot assignment', async () => {
     const onMountFn = vi.fn();
 
-    register('test-slot-timing-element', ({ host }) => {
+    register('test-slot-timing-element', () => {
+      const host = currentRuntime().el;
+
       onMount(() => {
         onMountFn();
 
@@ -286,14 +270,12 @@ describe('onMount slot timing', () => {
     el.remove();
   });
 
-  it('onSlotChange callback receives assigned elements', async () => {
-    const onSlotChangeFn = vi.fn();
+  it('slot signals receive assigned elements by onMount time', async () => {
+    const slotFn = vi.fn();
 
-    register('test-slot-change-element', () => {
+    register('test-slot-change-element', ({ slots }) => {
       onMount(() => {
-        onSlotChange('default', (elements) => {
-          onSlotChangeFn(elements.length);
-        });
+        slotFn(slots.elements().value.length);
       });
 
       return '<slot></slot>';
@@ -310,45 +292,7 @@ describe('onMount slot timing', () => {
       typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(() => resolve()) : setTimeout(resolve, 0),
     );
 
-    expect(onSlotChangeFn).toHaveBeenCalledWith(1);
+    expect(slotFn).toHaveBeenCalledWith(1);
     el.remove();
-  });
-});
-
-describe('reflect()', () => {
-  it('binds native click events for onClick', async () => {
-    const onClick = vi.fn();
-
-    const { element, flush } = await mount({
-      setup: ({ reflect }) => {
-        reflect({ onClick });
-
-        return html`<div>ok</div>`;
-      },
-    });
-
-    await flush();
-
-    fire.click(element);
-
-    expect(onClick).toHaveBeenCalledTimes(1);
-  });
-
-  it('normalizes onValueChanged to the valueChanged event name', async () => {
-    const onValueChanged = vi.fn();
-
-    const { element, flush } = await mount({
-      setup: ({ reflect }) => {
-        reflect({ onValueChanged });
-
-        return html`<div>ok</div>`;
-      },
-    });
-
-    await flush();
-
-    fire.custom(element, 'valueChanged', { id: 1 });
-
-    expect(onValueChanged).toHaveBeenCalledTimes(1);
   });
 });

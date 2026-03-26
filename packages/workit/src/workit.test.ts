@@ -1,8 +1,6 @@
 import { createTestWorker } from './test/test';
 import { createWorker, TaskError, TaskTimeoutError, TerminatedError, WorkerError } from './workit';
 
-/** -------------------- createWorker -------------------- **/
-
 describe('createWorker', () => {
   describe('execution', () => {
     it('runs a synchronous task', async () => {
@@ -35,33 +33,35 @@ describe('createWorker', () => {
     });
   });
 
-  describe('size', () => {
+  describe('concurrency', () => {
     it('defaults to 1', () => {
       const worker = createWorker<number, number>((n) => n);
 
-      expect(worker.size).toBe(1);
+      expect(worker.concurrency).toBe(1);
       worker.dispose();
     });
 
-    it('respects an explicit size', () => {
-      const pool = createWorker<number, number>((n) => n, { size: 4 });
+    it('respects an explicit concurrency value', () => {
+      const pool = createWorker<number, number>((n) => n, { concurrency: 4 });
 
-      expect(pool.size).toBe(4);
+      expect(pool.concurrency).toBe(4);
       pool.dispose();
     });
 
-    it('clamps size 0 to 1', () => {
-      const pool = createWorker<number, number>((n) => n, { size: 0 });
+    it('supports auto concurrency', () => {
+      const pool = createWorker<number, number>((n) => n, { concurrency: 'auto' });
 
-      expect(pool.size).toBe(1);
+      expect(pool.concurrency).toBeGreaterThanOrEqual(1);
       pool.dispose();
     });
 
-    it("'auto' creates at least 1 slot", () => {
-      const pool = createWorker<number, number>((n) => n, { size: 'auto' });
+    it('rejects invalid concurrency values', () => {
+      expect(() => createWorker<number, number>((n) => n, { concurrency: 0 })).toThrow(WorkerError);
+      expect(() => createWorker<number, number>((n) => n, { concurrency: 1.5 })).toThrow(WorkerError);
+    });
 
-      expect(pool.size).toBeGreaterThanOrEqual(1);
-      pool.dispose();
+    it('rejects invalid timeout values', () => {
+      expect(() => createWorker<number, number>((n) => n, { timeout: -1 })).toThrow(WorkerError);
     });
   });
 
@@ -75,7 +75,7 @@ describe('createWorker', () => {
 
     it('is running while a task is in progress', async () => {
       const worker = createWorker<void, void>(() => new Promise(() => {}));
-      const promise = worker.run();
+      const promise = worker.run(undefined);
 
       expect(worker.status).toBe('running');
       worker.dispose();
@@ -98,9 +98,9 @@ describe('createWorker', () => {
     });
   });
 
-  describe('concurrency', () => {
+  describe('pooling', () => {
     it('dispatches tasks to all slots in a pool', async () => {
-      const pool = createWorker<number, number>((n) => n * 2, { size: 3 });
+      const pool = createWorker<number, number>((n) => n * 2, { concurrency: 3 });
       const results = await Promise.all([1, 2, 3].map((n) => pool.run(n)));
 
       expect(results).toEqual([2, 4, 6]);
@@ -108,7 +108,7 @@ describe('createWorker', () => {
     });
 
     it('queues tasks that exceed pool capacity and processes them in order', async () => {
-      const pool = createWorker<number, number>(async (n) => n, { size: 1 });
+      const pool = createWorker<number, number>(async (n) => n, { concurrency: 1 });
       const results = await Promise.all([1, 2, 3].map((n) => pool.run(n)));
 
       expect(results).toEqual([1, 2, 3]);
@@ -116,7 +116,7 @@ describe('createWorker', () => {
     });
 
     it('processes more tasks than pool slots', async () => {
-      const pool = createWorker<number, number>((n) => n + 1, { size: 2 });
+      const pool = createWorker<number, number>((n) => n + 1, { concurrency: 2 });
       const results = await Promise.all([10, 20, 30, 40, 50].map((n) => pool.run(n)));
 
       expect(results).toEqual([11, 21, 31, 41, 51]);
@@ -124,7 +124,7 @@ describe('createWorker', () => {
     });
   });
 
-  describe('terminate', () => {
+  describe('termination', () => {
     it('rejects new run() calls', async () => {
       const worker = createWorker<number, number>((n) => n);
 
@@ -141,7 +141,7 @@ describe('createWorker', () => {
     });
 
     it('rejects all queued tasks', async () => {
-      const pool = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 200)), { size: 1 });
+      const pool = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 200)), { concurrency: 1 });
       const running = pool.run(undefined);
       const queued = pool.run(undefined);
 
@@ -188,7 +188,7 @@ describe('createWorker', () => {
       worker.dispose();
     });
 
-    it('slot is reused after a task error — next run succeeds', async () => {
+    it('slot is reused after a task error', async () => {
       const worker = createWorker<number, number>((n) => {
         if (n < 0) throw new Error('negative');
 
@@ -200,7 +200,29 @@ describe('createWorker', () => {
       worker.dispose();
     });
 
-    it('all error types extend WorkerError', () => {
+    it('uses WorkerError for runtime worker availability failures', async () => {
+      const worker = createWorker<number, number>((n) => n * 2);
+      const previousWorker = globalThis.Worker;
+
+      Object.defineProperty(globalThis, 'Worker', {
+        configurable: true,
+        value: undefined,
+        writable: true,
+      });
+
+      await expect(worker.run(1)).rejects.toThrow(WorkerError);
+
+      Object.defineProperty(globalThis, 'Worker', {
+        configurable: true,
+        value: previousWorker,
+        writable: true,
+      });
+
+      worker.dispose();
+    });
+
+    it('all exported error types extend WorkerError', () => {
+      expect(new WorkerError('x')).toBeInstanceOf(WorkerError);
       expect(new TaskError('x')).toBeInstanceOf(WorkerError);
       expect(new TerminatedError()).toBeInstanceOf(WorkerError);
       expect(new TaskTimeoutError(100)).toBeInstanceOf(WorkerError);
@@ -230,11 +252,32 @@ describe('createWorker', () => {
       worker.dispose();
     }, 1000);
 
-    it('slot is reused after a timeout — next run succeeds', async () => {
+    it('slot is reused after a timeout', async () => {
       const worker = createWorker<number, number>((n) => (n === 0 ? new Promise(() => {}) : n), { timeout: 30 });
 
       await expect(worker.run(0)).rejects.toThrow(TaskTimeoutError);
       await expect(worker.run(42)).resolves.toBe(42);
+      worker.dispose();
+    }, 1000);
+
+    it('recycles the timed-out worker before the next task starts', async () => {
+      const worker = createWorker<string, number>(
+        (input) => {
+          const scope = self as typeof self & { __runs?: number };
+
+          scope.__runs = (scope.__runs ?? 0) + 1;
+
+          if (input === 'timeout') {
+            return new Promise<number>(() => {});
+          }
+
+          return scope.__runs;
+        },
+        { timeout: 10 },
+      );
+
+      await expect(worker.run('timeout')).rejects.toThrow(TaskTimeoutError);
+      await expect(worker.run('fresh')).resolves.toBe(1);
       worker.dispose();
     }, 1000);
   });
@@ -250,7 +293,7 @@ describe('createWorker', () => {
     });
 
     it('cancels a queued task', async () => {
-      const worker = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 30)), { size: 1 });
+      const worker = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 30)), { concurrency: 1 });
       const ac = new AbortController();
       const running = worker.run(undefined);
       const abortable = worker.run(undefined, { signal: ac.signal });
@@ -264,7 +307,7 @@ describe('createWorker', () => {
     it('aborting one queued task does not affect others', async () => {
       const pool = createWorker<number, number>(
         (n) => (n < 0 ? new Promise<number>((r) => setTimeout(() => r(n), 30)) : n),
-        { size: 1 },
+        { concurrency: 1 },
       );
       const ac = new AbortController();
       const running = pool.run(-1);
@@ -277,10 +320,23 @@ describe('createWorker', () => {
       expect(await normal).toBe(1);
       pool.dispose();
     });
+
+    it('removes queued abort listeners when a task starts running', async () => {
+      const worker = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 20)), { concurrency: 1 });
+      const controller = new AbortController();
+      const removeSpy = vi.spyOn(controller.signal, 'removeEventListener');
+
+      const first = worker.run(undefined);
+      const second = worker.run(undefined, { signal: controller.signal });
+
+      await first;
+      await second;
+
+      expect(removeSpy).toHaveBeenCalledWith('abort', expect.any(Function));
+      worker.dispose();
+    });
   });
 });
-
-/** -------------------- createTestWorker -------------------- **/
 
 describe('createTestWorker', () => {
   describe('run', () => {
@@ -338,12 +394,20 @@ describe('createTestWorker', () => {
     });
   });
 
-  describe('terminate', () => {
+  describe('termination', () => {
     it('rejects run() calls after dispose()', async () => {
       const worker = createTestWorker<number, number>((n) => n);
 
       worker.dispose();
       await expect(worker.run(1)).rejects.toThrow(TerminatedError);
+    });
+
+    it('rejects immediately when signal is already aborted', async () => {
+      const worker = createTestWorker<number, number>((n) => n);
+      const controller = new AbortController();
+
+      controller.abort();
+      await expect(worker.run(1, { signal: controller.signal })).rejects.toThrow(/aborted/i);
     });
   });
 
@@ -377,17 +441,17 @@ describe('createTestWorker', () => {
     it('is typed as ReadonlyArray', () => {
       const worker = createTestWorker<number, number>((n) => n);
 
-      // @ts-expect-error — ReadonlyArray does not expose push
+      // @ts-expect-error - ReadonlyArray does not expose push.
       void worker.calls.push;
       expect(Array.isArray(worker.calls)).toBe(true);
     });
   });
 
   describe('shape', () => {
-    it('size is always 1', () => {
+    it('concurrency is always 1', () => {
       const worker = createTestWorker<number, number>((n) => n);
 
-      expect(worker.size).toBe(1);
+      expect(worker.concurrency).toBe(1);
     });
   });
 });

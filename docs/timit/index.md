@@ -34,16 +34,19 @@ yarn add @vielzeug/timit
 ## Quick Start
 
 ```ts
-import { d } from '@vielzeug/timit';
+import { t } from '@vielzeug/timit';
 
 // Get current time in a timezone
-const meeting = d.asZoned(d.now(), { tz: 'America/New_York' });
+const meeting = t.toZoned(t.now(), { tz: 'America/New_York' });
 
 // Add time (DST-safe)
-const reminder = d.add(meeting, { minutes: -15 });
+const reminder = t.shift(meeting, { minutes: -15 });
 
 // Format for humans
-const text = d.format(reminder, { pattern: 'short', locale: 'en-US' });
+const text = t.formatHuman(reminder, { pattern: 'short', locale: 'en-US' });
+
+// Format for APIs/logs
+const stable = t.formatISO(reminder);
 ```
 
 ## Why Timit?
@@ -55,7 +58,7 @@ Manual date handling breaks at daylight-saving boundaries, timezone edges, and D
 const reminder = new Date(meeting.getTime() - 15 * 60_000);
 
 // After — DST-safe, handles transitions correctly
-const reminder = d.add(meeting, { minutes: -15 });
+const reminder = t.shift(meeting, { minutes: -15 });
 ```
 
 | Feature        | Timit                                       | date-fns | Day.js  | Native Date |
@@ -73,12 +76,13 @@ const reminder = d.add(meeting, { minutes: -15 });
 
 ## Features
 
-- **`d` namespace** — grouped functions for IDE autocomplete (like Validit's `v`)
-- **DST-safe arithmetic** — `d.add()`, `d.subtract()` handle transitions correctly
-- **Timezone conversion** — `d.asZoned()`, `d.asInstant()` with full timezone support
-- **Preset formatting** — `'short'`, `'long'`, `'iso'`, `'date-only'`, `'time-only'`
-- **Range queries** — `d.within()` for inclusive time range checks
-- **Duration diffs** — `d.diff()` with granular control over units
+- **`t` namespace** — grouped functions for IDE autocomplete
+- **Explicit parsing** — `t.parseLocal()` for plain local strings with required timezone
+- **DST-safe arithmetic** — `t.shift()` handles transitions correctly
+- **Timezone conversion** — `t.toZoned()`, `t.toInstant()` with full timezone support
+- **Formatting split by intent** — `t.formatHuman()` for UI, `t.formatISO()` for APIs/logs
+- **Range queries** — `t.within()` for inclusive time checks with normalized bounds
+- **Duration diffs** — `t.diff()` with granular control over units
 - **Intl integration** — formatting respects locale & calendar systems
 - **Tree-shaking friendly** — import `d` or individual functions
 - **Polyfilled Temporal** — works in runtimes without native support via `@js-temporal/polyfill`

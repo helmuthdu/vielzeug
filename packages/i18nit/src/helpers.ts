@@ -8,13 +8,15 @@ import type { MessageValue, Messages } from './types';
  */
 export function resolvePath(obj: Record<string, unknown>, path: string): unknown {
   // Try direct access first (handles keys with literal dots)
-  if (path in obj) return obj[path];
+  if (Object.hasOwn(obj, path)) return obj[path];
 
   const parts = path.match(/[^.[\]]+/gu) ?? [];
   let value: unknown = obj;
 
   for (const part of parts) {
     if (value == null || typeof value !== 'object') return undefined;
+
+    if (!Object.hasOwn(value as object, part)) return undefined;
 
     value = (value as Record<string, unknown>)[part];
   }

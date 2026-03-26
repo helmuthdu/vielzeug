@@ -148,7 +148,7 @@ export type CheckableProps = FormElementProps & {
 /**
  * Adds type-safe `addEventListener` / `removeEventListener` overloads to a custom element type.
  *
- * The event map `T` uses plain detail shapes (the same type passed to `defineEmits`):
+ * The event map `T` uses plain detail shapes (the same shapes used in a component's `emits` schema):
  * ```ts
  * export interface BitInputEvents {
  *   change: { value: string; originalEvent: Event };

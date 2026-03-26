@@ -1,9 +1,8 @@
-export { attr } from './attr';
+export { attrs } from './attr';
 export { bind } from './bind';
 export { choose } from './choose';
 export { classes } from './classes';
 export { each } from './each';
-export { match } from './match';
 export { memo } from './memo';
 export { on } from './on';
 export { raw } from './raw';

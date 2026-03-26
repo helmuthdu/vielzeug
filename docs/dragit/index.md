@@ -53,7 +53,7 @@ using zone = createDropZone({
 
 // Sortable list
 using sortable = createSortable({
-  container: document.getElementById('list')!,
+  element: document.getElementById('list')!,
   onReorder: (ids) => {
     saveOrder(ids);
   },
@@ -117,9 +117,9 @@ const zone = createDropZone({
 - **`onDropRejected`** — separate callback for files that didn't match `accept`; enables rejection UX without extra filtering logic
 - **Sortable lists** — reorders DOM children with a placeholder indicator; fires `onReorder` only when the order actually changes
 - **Drag handles** — scope dragging to a child selector via `handle`; whole item is draggable when omitted
-- **`sortable.refresh()`** — re-syncs `draggable` and `role` attributes after adding or removing list items
+- **Auto-synced items** — a `MutationObserver` re-syncs `draggable` and `role` attributes when list items are added or removed
 - **`[Symbol.dispose]`** — both primitives support the `using` keyword for automatic cleanup
-- **Reactive-friendly `disabled`** — pass `() => signal.value` to integrate with any reactive framework
+- **Reactive-friendly `disabled`** — pass a boolean or `() => signal.value` to integrate with any reactive framework
 - **Zero dependencies** — <PackageInfo package="dragit" type="size" /> gzipped, <PackageInfo package="dragit" type="dependencies" /> dependencies
 
 ## Compatibility

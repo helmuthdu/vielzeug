@@ -67,10 +67,10 @@ try {
 - Partial validation via `validate({ fields })` or `validate({ onlyTouched: true })`
 - `submit` with double-submit protection (`SubmitError`)
 - Validation failure signaling via `FormValidationError`
-- Form-level `subscribe` and field-level `watch`
-- Memoized `bind()` helper with live getters
-- Array helpers: `appendField`, `removeField`, `moveField`
-- Instance `toFormData()` plus standalone `toFormData(values)`
+- Unified `subscribe()` for form-level and field-level observation
+- `bind()` helper with live getters
+- Array batch helper: `array(name).append/remove/move`
+- Standalone `toFormData(values)`
 
 ## Core API
 

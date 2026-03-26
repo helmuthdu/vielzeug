@@ -8,6 +8,9 @@ export type Messages = {
   date_max: (ctx: { max: Date; value: Date }) => string;
   date_min: (ctx: { min: Date; value: Date }) => string;
   date_type: () => string;
+  enum_invalid: (ctx: { values: readonly unknown[] }) => string;
+  instanceof_type: (ctx: { className: string }) => string;
+  literal_expected: (ctx: { expected: unknown }) => string;
   never_invalid: () => string;
   number_int: () => string;
   number_max: (ctx: { max: number; value: number }) => string;
@@ -38,6 +41,8 @@ export type Messages = {
   tuple_length: (ctx: { exact: number }) => string;
   tuple_type: () => string;
   union_invalid: () => string;
+  variant_invalid_discriminator: (ctx: { discriminator: string; expected: string[] }) => string;
+  variant_type: () => string;
 };
 
 const _defaultMessages: Messages = {
@@ -50,6 +55,9 @@ const _defaultMessages: Messages = {
   date_max: ({ max }) => `Must be before ${max.toISOString()}`,
   date_min: ({ min }) => `Must be after ${min.toISOString()}`,
   date_type: () => 'Expected valid date',
+  enum_invalid: ({ values }) => `Expected one of: ${values.map((v) => JSON.stringify(v)).join(', ')}`,
+  instanceof_type: ({ className }) => `Expected instance of ${className}`,
+  literal_expected: ({ expected }) => `Expected ${JSON.stringify(expected)}`,
   never_invalid: () => 'Value is not allowed',
   number_int: () => 'Must be an integer',
   number_max: ({ max }) => `Must be at most ${max}`,
@@ -80,6 +88,9 @@ const _defaultMessages: Messages = {
   tuple_length: ({ exact }) => `Expected tuple of length ${exact}`,
   tuple_type: () => 'Expected array',
   union_invalid: () => 'Does not match any of the expected types',
+  variant_invalid_discriminator: ({ discriminator, expected }) =>
+    `Invalid discriminator value at "${discriminator}": expected ${expected.map((k) => JSON.stringify(k)).join(' | ')}`,
+  variant_type: () => 'Expected object',
 };
 
 let _activeMessages: Messages = _defaultMessages;

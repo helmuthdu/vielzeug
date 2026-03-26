@@ -28,8 +28,8 @@ export function useI18n() {
 
   return {
     locale: i18n.locale,
-    setLocale: (locale: string) => i18n.setLocale(locale),
-    t: i18n.t.bind(i18n),
+    switchLocale: (locale: string) => i18n.switchLocale(locale),
+    t: i18n.t,
   };
 }
 ```
@@ -49,7 +49,7 @@ export function useI18n() {
 
   return {
     locale,
-    setLocale: (next: string) => i18n.setLocale(next),
+    switchLocale: (next: string) => i18n.switchLocale(next),
     t: (key: string, vars?: Record<string, unknown>) => i18n.t(key, vars),
   };
 }

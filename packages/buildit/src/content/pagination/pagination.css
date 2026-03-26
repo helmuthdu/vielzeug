@@ -44,7 +44,7 @@
   /* Default (ghost-like) behavior unless variant is specified */
   :host(:not([variant])) button,
   :host([variant='ghost']) button {
-    color: var(--_theme-base);
+    color: var(--color-contrast-700);
     background: transparent;
     border-color: transparent;
     border-width: 0;
@@ -134,7 +134,7 @@
 
   :host([variant='glass']) button:hover:not(:disabled, [aria-current='page']) {
     background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
-    border-color: color-mix(in srgb, var(--_theme-focus) 45%, transparent);
+    border-color: color-mix(in srgb, var(--_theme-border) 45%, transparent);
   }
 
   button:hover:not(:disabled, [aria-current='page']) {
@@ -146,11 +146,62 @@
     outline-offset: var(--border-2);
   }
 
+  /* Selected page styling - applies to all variants */
   button[aria-current='page'] {
+    font-weight: var(--font-bold);
     color: var(--_theme-contrast, var(--color-canvas));
     cursor: default;
     background: var(--_theme-base, var(--color-contrast-800));
     border-color: var(--_theme-base, var(--color-contrast-800));
+  }
+
+  :host([variant='ghost']) button[aria-current='page'],
+  :host(:not([variant])) button[aria-current='page'] {
+    color: var(--_theme-contrast);
+    background: var(--_theme-focus);
+    border-color: var(--_theme-focus);
+  }
+
+  :host([variant='solid']) button[aria-current='page'] {
+    background: var(--_theme-focus);
+    border-color: var(--_theme-focus);
+  }
+
+  :host([variant='flat']) button[aria-current='page'] {
+    color: var(--_theme-contrast);
+    background: var(--_theme-base);
+    border-color: var(--_theme-base);
+  }
+
+  :host([variant='bordered']) button[aria-current='page'] {
+    color: var(--_theme-contrast);
+    background: var(--_theme-focus);
+    border-color: var(--_theme-focus);
+  }
+
+  :host([variant='outline']) button[aria-current='page'] {
+    color: var(--_theme-contrast);
+    background: var(--_theme-base);
+    border-color: var(--_theme-base);
+  }
+
+  :host([variant='text']) button[aria-current='page'] {
+    color: var(--_theme-focus);
+    text-decoration-line: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+
+  :host([variant='frost']) button[aria-current='page'] {
+    color: var(--_theme-contrast);
+    background: color-mix(in srgb, var(--_theme-base) 70%, transparent);
+    border-color: var(--_theme-base);
+  }
+
+  :host([variant='glass']) button[aria-current='page'] {
+    color: var(--_theme-contrast);
+    background: color-mix(in srgb, var(--color-canvas) 90%, transparent);
+    border-color: var(--_theme-base);
   }
 
   button:disabled {

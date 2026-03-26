@@ -1,14 +1,15 @@
 export { ANONYMOUS, WILDCARD } from './constants';
 export { createPermit } from './factory';
 export type {
-  BaseUser,
-  PermissionActions,
-  PermissionCheck,
   PermissionData,
-  Permit,
+  PermitEffect,
   PermitGuard,
+  PermitPolicy,
+  PermitPredicate,
+  PermitPrincipal,
+  PermitRule,
+  Permit,
   PermitOptions,
-  PermitSnapshot,
-  PermitState,
+  PrincipalInput,
+  UserPrincipal,
 } from './types';
-export { hasRole, isAnonymous } from './utils';

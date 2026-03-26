@@ -1,19 +1,20 @@
 import {
+  define,
   computed,
   createContext,
-  defineComponent,
-  handle,
   html,
   onMount,
   provide,
-  type ReadonlySignal,
   ref,
   signal,
+  type ReadonlySignal,
   watch,
 } from '@vielzeug/craftit';
+import { createListControl, createListKeyControl, createPressControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
+import { sizableBundle, themableBundle, type PropBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin } from '../../styles';
 
 /** Context provided by bit-tabs to its bit-tab-item and bit-tab-panel children. */
@@ -54,17 +55,29 @@ export type BitTabsProps = {
   variant?: VisualVariant;
 };
 
+const tabsProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  activation: 'auto',
+  label: undefined,
+  orientation: 'horizontal',
+  value: undefined,
+  variant: undefined,
+} satisfies PropBundle<BitTabsProps>;
+
 /**
  * Tabs container. Manages tab selection and syncs state to child tab items and panels.
  *
  * @element bit-tabs
+ * @element bit-tab-item - Child element for tab buttons (auto-discovered)
+ * @element bit-tab-panel - Child element for tab content (auto-discovered)
  *
  * @attr {string} value - The value of the currently selected tab
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'ghost' | 'glass' | 'frost'
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  *
- * @fires change - Emitted when the active tab changes, detail: { value: string }
+ * @fires change - Emitted when the active tab changes with detail: { value: string }
  *
  * @slot tabs - Place `bit-tab-item` elements here
  * @slot - Place `bit-tab-panel` elements here
@@ -79,27 +92,36 @@ export type BitTabsProps = {
  * </bit-tabs>
  * ```
  */
-export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
-  props: {
-    activation: { default: 'auto' },
-    color: { default: undefined },
-    label: { default: undefined },
-    orientation: { default: 'horizontal' },
-    size: { default: undefined },
-    value: { default: undefined },
-    variant: { default: undefined },
-  },
-  setup({ emit, host, props }) {
+export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
+  props: tabsProps,
+  setup({ emit, host, props, shadowRoot }) {
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();
     const selectedValue = signal<string | undefined>(props.value.value);
-    const getTabs = () => [...host.querySelectorAll<HTMLElement>('bit-tab-item')];
+    const focusedIndex = signal(0);
+    const isManualActivation = computed(() => props.activation.value === 'manual');
+    const isVertical = computed(() => props.orientation.value === 'vertical');
+
+    host.bind('attr', {
+      value: () => selectedValue.value ?? null,
+    });
+
+    const getTabs = () => [...host.el.querySelectorAll<HTMLElement>(':scope > bit-tab-item[slot="tabs"]')];
+    const getEnabledTabs = () => getTabs().filter((t) => !t.hasAttribute('disabled'));
+    const focusTab = (tab: HTMLElement | undefined) => {
+      if (!tab) return;
+
+      const focusable = tab.shadowRoot?.querySelector<HTMLElement>('[role="tab"]') ?? tab;
+
+      focusable.focus();
+    };
+
+    // ────────────────────────────────────────────────────────────────
+    // Selection State Management
+    // ────────────────────────────────────────────────────────────────
 
     const setSelection = (value: string | undefined, shouldEmit = false) => {
       selectedValue.value = value;
-
-      if (value == null) host.removeAttribute('value');
-      else if (host.getAttribute('value') !== value) host.setAttribute('value', value);
 
       if (shouldEmit && value) emit('change', { value });
     };
@@ -107,9 +129,7 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
     const ensureSelection = () => {
       const tabs = getTabs();
 
-      // During initial connection, slotted tab items may not be assigned yet.
-      // Keep current selection until tabs exist instead of falling back to undefined.
-      if (tabs.length === 0) return;
+      if (tabs.length === 0) return; // No tabs yet, keep current selection
 
       const current = selectedValue.value;
       const hasCurrent = current
@@ -128,6 +148,35 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
       ensureSelection();
     });
 
+    // ────────────────────────────────────────────────────────────────
+    // List Control for Keyboard Navigation
+    // ────────────────────────────────────────────────────────────────
+
+    const listControl = createListControl({
+      getIndex: () => focusedIndex.value,
+      getItems: () => getEnabledTabs(),
+      isItemDisabled: (tab: HTMLElement) => tab.hasAttribute('disabled'),
+      loop: true,
+      setIndex: (index) => {
+        focusedIndex.value = index;
+
+        const tabs = getEnabledTabs();
+        const nextTab = tabs[index];
+
+        focusTab(nextTab);
+
+        if (!isManualActivation.value) {
+          const value = nextTab?.getAttribute('value');
+
+          if (value) setSelection(value, true);
+        }
+      },
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Context & Indicator Management
+    // ────────────────────────────────────────────────────────────────
+
     provide(TABS_CTX, {
       color: props.color,
       orientation: computed(() => props.orientation.value ?? 'horizontal'),
@@ -142,25 +191,23 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
 
       if (!indicator || !tablist || !activeTab) return;
 
-      if (props.orientation.value === 'vertical') {
-        const tabRect = activeTab.getBoundingClientRect();
-        const listRect = tablist.getBoundingClientRect();
+      const tabRect = activeTab.getBoundingClientRect();
+      const listRect = tablist.getBoundingClientRect();
 
+      if (isVertical.value) {
         indicator.style.top = `${tabRect.top - listRect.top + tablist.scrollTop}px`;
         indicator.style.height = `${tabRect.height}px`;
         indicator.style.left = '0';
         indicator.style.width = '';
       } else {
-        const tabRect = activeTab.getBoundingClientRect();
-        const listRect = tablist.getBoundingClientRect();
-
         indicator.style.left = `${tabRect.left - listRect.left + tablist.scrollLeft}px`;
         indicator.style.width = `${tabRect.width}px`;
         indicator.style.top = '';
         indicator.style.height = '';
       }
     };
-    const triggerIndicator = () => {
+
+    const updateIndicator = () => {
       const value = selectedValue.value;
 
       if (!value) return;
@@ -170,15 +217,21 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
       moveIndicator(activeTab);
     };
 
-    watch(selectedValue, () => requestAnimationFrame(triggerIndicator));
+    watch(selectedValue, () => requestAnimationFrame(updateIndicator));
+
+    // ────────────────────────────────────────────────────────────────
+    // Event Handlers
+    // ────────────────────────────────────────────────────────────────
 
     const handleTabClick = (e: Event) => {
-      const tab = (e.target as HTMLElement).closest('bit-tab-item') as HTMLElement | null;
+      const tab = e
+        .composedPath()
+        .find((node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'bit-tab-item');
 
       if (!tab || tab.hasAttribute('disabled')) return;
 
-      // Guard: only respond to tab-items that belong to THIS tabs instance, not nested ones.
-      if (tab.closest('bit-tabs') !== host) return;
+      // Guard: only respond to tab-items that belong to THIS tabs instance
+      if (tab.closest('bit-tabs') !== host.el) return;
 
       const value = tab.getAttribute('value');
 
@@ -186,55 +239,74 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
 
       setSelection(value, true);
     };
-    const handleKeydown = (e: KeyboardEvent) => {
-      const tabs = getTabs().filter((t) => !t.hasAttribute('disabled'));
-      const current = tabs.findIndex((t) => t.getAttribute('value') === selectedValue.value);
-      const isVertical = props.orientation.value === 'vertical';
-      // eslint-disable-next-line no-useless-assignment
-      let next = current;
 
-      if (e.key === (isVertical ? 'ArrowDown' : 'ArrowRight')) next = (current + 1) % tabs.length;
-      else if (e.key === (isVertical ? 'ArrowUp' : 'ArrowLeft')) next = (current - 1 + tabs.length) % tabs.length;
-      else if (!isVertical && e.key === 'ArrowDown') next = (current + 1) % tabs.length;
-      else if (!isVertical && e.key === 'ArrowUp') next = (current - 1 + tabs.length) % tabs.length;
-      else if (e.key === 'Home') next = 0;
-      else if (e.key === 'End') next = tabs.length - 1;
-      else if (props.activation.value === 'manual' && (e.key === 'Enter' || e.key === ' ')) {
-        // Manual mode: activate the currently focused tab
-        const focused = tabs.find(
-          (t) => t === document.activeElement || t.shadowRoot?.activeElement === document.activeElement,
-        );
-        const focusedValue = focused?.getAttribute('value');
+    const activateFocusedTab = (): void => {
+      const tabs = getEnabledTabs();
+      const focusedTab = tabs.find(
+        (tab) => tab === document.activeElement || tab.shadowRoot?.activeElement === document.activeElement,
+      );
+      const focusedValue = focusedTab?.getAttribute('value');
 
-        if (focusedValue && focusedValue !== selectedValue.value) {
-          setSelection(focusedValue, true);
-        }
-
-        return;
-      } else return;
-
-      e.preventDefault();
-
-      const value = tabs[next]?.getAttribute('value');
-
-      if (value) {
-        (tabs[next] as HTMLElement)?.focus();
-
-        if (props.activation.value !== 'manual') {
-          // Auto mode: activate on focus
-          setSelection(value, true);
-        }
-      }
+      if (focusedValue && focusedValue !== selectedValue.value) setSelection(focusedValue, true);
     };
 
-    handle(host, 'click', handleTabClick);
-    handle(host, 'keydown', handleKeydown);
+    const manualActivationPress = createPressControl({
+      disabled: () => !isManualActivation.value,
+      onPress: activateFocusedTab,
+    });
+
+    const tabListKeys = createListKeyControl({
+      control: listControl,
+      keys: () => {
+        if (isVertical.value) {
+          return {
+            next: ['ArrowDown'],
+            prev: ['ArrowUp'],
+          };
+        }
+
+        return {
+          next: ['ArrowRight', 'ArrowDown'],
+          prev: ['ArrowLeft', 'ArrowUp'],
+        };
+      },
+    });
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      const tabs = getEnabledTabs();
+
+      if (tabs.length === 0) return;
+
+      const path = e.composedPath();
+      const activeTabFromEvent = path.find(
+        (node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'bit-tab-item',
+      );
+
+      const focused = activeTabFromEvent ? tabs.indexOf(activeTabFromEvent) : -1;
+
+      if (focused >= 0) focusedIndex.value = focused;
+
+      if (tabListKeys.handleKeydown(e)) return;
+
+      manualActivationPress.handleKeydown(e);
+    };
+
+    host.bind('on', {
+      click: handleTabClick,
+      keydown: handleKeydown,
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Lifecycle
+    // ────────────────────────────────────────────────────────────────
+
     onMount(() => {
       const syncSelection = () => {
         ensureSelection();
-        triggerIndicator();
+        updateIndicator();
       };
-      const tabsSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
+
+      const tabsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
 
       if (tabsSlot) {
         tabsSlot.addEventListener('slotchange', syncSelection);
@@ -268,5 +340,4 @@ export const TABS_TAG = defineComponent<BitTabsProps, BitTabsEvents>({
     `;
   },
   styles: [colorThemeMixin, styles],
-  tag: 'bit-tabs',
 });

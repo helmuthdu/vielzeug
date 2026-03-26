@@ -15,11 +15,17 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./labs": {
-      "source": "./src/labs/index.ts",
-      "types": "./dist/labs/index.d.ts",
-      "import": "./dist/labs.js",
-      "require": "./dist/labs.cjs"
+    "./controls": {
+      "source": "./src/controls/index.ts",
+      "types": "./dist/controls/index.d.ts",
+      "import": "./dist/controls.js",
+      "require": "./dist/controls.cjs"
+    },
+    "./observers": {
+      "source": "./src/observers/index.ts",
+      "types": "./dist/observers/index.d.ts",
+      "import": "./dist/observers.js",
+      "require": "./dist/observers.cjs"
     },
     "./directives": {
       "source": "./src/directives/index.ts",
@@ -27,11 +33,11 @@
       "import": "./dist/directives/index.js",
       "require": "./dist/directives/index.cjs"
     },
-    "./test": {
-      "source": "./src/test/index.ts",
-      "types": "./dist/test/index.d.ts",
-      "import": "./dist/test.js",
-      "require": "./dist/test.cjs"
+    "./testing": {
+      "source": "./src/testing/index.ts",
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
     }
   },
   "scripts": {
@@ -55,9 +61,8 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "jsdom": "^29.0.1",
-    "terser": "^5.46.1",
     "typescript": "~6.0.2",
-    "vite": "^8.0.2",
-    "vitest": "^4.1.1"
+    "vite": "^8.0.3",
+    "vitest": "^4.1.2"
   }
 }

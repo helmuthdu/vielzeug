@@ -1,7 +1,8 @@
-import { computed, defineComponent, html, watch } from '@vielzeug/craftit';
+import { define, computed, effect, html } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
+import { type PropBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './progress.css?inline';
 
@@ -67,19 +68,19 @@ export type BitProgressProps = {
  * <bit-progress indeterminate color="primary" label="Loading…"></bit-progress>
  * ```
  */
-export const PROGRESS_TAG = defineComponent<BitProgressProps>({
+export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
   props: {
-    color: { default: undefined },
-    'floating-label': { default: undefined },
-    indeterminate: { default: false },
-    label: { default: undefined },
-    max: { default: 100 },
-    size: { default: undefined },
-    title: { default: undefined },
-    type: { default: 'linear' },
-    value: { default: 0 },
-    'value-text': { default: undefined },
-  },
+    ...themableBundle,
+    ...sizableBundle,
+    'floating-label': undefined,
+    indeterminate: false,
+    label: undefined,
+    max: 100,
+    title: undefined,
+    type: 'linear',
+    value: 0,
+    'value-text': undefined,
+  } satisfies PropBundle<BitProgressProps>,
   setup({ host, props }) {
     // The SVG circle circumference for a radius of 45 (viewBox 0 0 100 100)
     const RADIUS = 45;
@@ -98,16 +99,12 @@ export const PROGRESS_TAG = defineComponent<BitProgressProps>({
     });
     const isCircular = computed(() => props.type.value === 'circular');
 
-    // Use watch([...], fn, { immediate: true }) at setup-level so it fires during
-    // connectedCallback (when attributes are already synced) rather than deferring
-    // to onMount. The immediate flag triggers the first run synchronously.
-    watch(
-      [props.value, props.max, props.indeterminate],
-      () => {
-        host.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
-      },
-      { immediate: true },
-    );
+    effect(() => {
+      void props.value.value;
+      void props.max.value;
+      void props.indeterminate.value;
+      host.el.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
+    });
 
     return html`
       ${() =>
@@ -165,5 +162,4 @@ export const PROGRESS_TAG = defineComponent<BitProgressProps>({
     `;
   },
   styles: [colorThemeMixin, forcedColorsMixin, reducedMotionMixin, componentStyles],
-  tag: 'bit-progress',
 });

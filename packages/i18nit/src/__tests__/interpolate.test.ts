@@ -56,7 +56,7 @@ describe('interpolate — template interpolation', () => {
       expect(i18n.t('dash', { items })).toBe('A - B - C');
     });
 
-    test('{items|and} and {items|or} produce locale-aware list conjunctions in templates', () => {
+    test('{items|and} and {items|or} produce locale-aware list conjunctions in templates', async () => {
       const i18n = createI18n({
         locale: 'en',
         messages: {
@@ -68,7 +68,7 @@ describe('interpolate — template interpolation', () => {
       expect(i18n.t('join', { x: ['A', 'B', 'C'] })).toBe('A, B, and C');
       expect(i18n.t('split', { x: ['A', 'B', 'C'] })).toBe('A, B, or C');
 
-      i18n.locale = 'fr';
+      await i18n.switchLocale('fr');
       expect(i18n.t('join', { x: ['A', 'B', 'C'] })).toBe('A, B et C');
       expect(i18n.t('split', { x: ['A', 'B', 'C'] })).toBe('A, B ou C');
     });

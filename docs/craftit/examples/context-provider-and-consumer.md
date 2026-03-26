@@ -14,32 +14,36 @@ Implement context provider and consumer in a production-friendly way with `@viel
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { createContext, defineComponent, html, injectOptional, provide, signal } from '@vielzeug/craftit';
+import { component, createContext, define, html, inject, provide, signal } from '@vielzeug/craftit';
 
 const THEME_CTX = createContext<ReturnType<typeof signal<'light' | 'dark'>>>('theme');
 
-defineComponent({
-  setup() {
-    const theme = signal<'light' | 'dark'>('light');
+define(
+  'theme-provider',
+  component({
+    setup() {
+      const theme = signal<'light' | 'dark'>('light');
 
-    provide(THEME_CTX, theme);
+      provide(THEME_CTX, theme);
 
-    return html`
-      <button @click=${() => (theme.value = theme.value === 'light' ? 'dark' : 'light')}>Toggle theme</button>
-      <slot></slot>
-    `;
-  },
-  tag: 'theme-provider',
-});
+      return html`
+        <button @click=${() => (theme.value = theme.value === 'light' ? 'dark' : 'light')}>Toggle theme</button>
+        <slot></slot>
+      `;
+    },
+  }),
+);
 
-defineComponent({
-  setup() {
-    const theme = injectOptional(THEME_CTX);
+define(
+  'theme-label',
+  component({
+    setup() {
+      const theme = inject(THEME_CTX, signal<'light' | 'dark'>('light'));
 
-    return html`<p>Theme: ${() => theme?.value ?? 'light'}</p>`;
-  },
-  tag: 'theme-label',
-});
+      return html`<p>Theme: ${theme}</p>`;
+    },
+  }),
+);
 ```
 
 ## Expected Output

@@ -1,4 +1,4 @@
-import { type Fixture, mount, waitFor } from '@vielzeug/craftit/test';
+import { type Fixture, mount, waitFor } from '@vielzeug/craftit/testing';
 
 import type { ToastItem } from './toast';
 

@@ -8,6 +8,7 @@ export const componentManifest = [
   { name: 'accordion', source: './src/disclosure/accordion/accordion' },
   { name: 'accordion-item', source: './src/disclosure/accordion-item/accordion-item' },
   { name: 'alert', source: './src/feedback/alert/alert' },
+  { name: 'async', source: './src/feedback/async/async' },
   { name: 'avatar', source: './src/content/avatar/avatar' },
   { name: 'badge', source: './src/feedback/badge/badge' },
   { name: 'box', source: './src/layout/box/box' },
@@ -25,6 +26,7 @@ export const componentManifest = [
   { name: 'form', source: './src/inputs/form/form' },
   { name: 'grid', source: './src/layout/grid/grid' },
   { name: 'grid-item', source: './src/layout/grid-item/grid-item' },
+  { name: 'icon', source: './src/content/icon/icon' },
   { name: 'input', source: './src/inputs/input/input' },
   { name: 'menu', source: './src/overlay/menu/menu' },
   { name: 'number-input', source: './src/inputs/number-input/number-input' },
@@ -55,10 +57,17 @@ export const componentNames = componentManifest.map(({ name }) => name);
 
 export function getComponentExportTargets({ name, source }) {
   return {
+    source: `${source}.ts`,
     import: `./dist/${name}.js`,
     require: `./dist/${name}.cjs`,
     types: `./dist/${source.replace('./src/', '')}.d.ts`,
   };
+}
+
+export function getComponentExports() {
+  return Object.fromEntries(
+    componentManifest.map((component) => [`./${component.name}`, getComponentExportTargets(component)]),
+  );
 }
 
 export function getBuilditLibraryEntries(rootDir) {

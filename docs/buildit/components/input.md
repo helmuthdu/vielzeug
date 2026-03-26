@@ -26,6 +26,7 @@ A customizable text input component with multiple types, variants, and validatio
 
 <script type="module">
   import '@vielzeug/buildit/input';
+  import '@vielzeug/buildit/icon';
 </script>
 ```
 
@@ -113,7 +114,7 @@ Use the `rounded` attribute to apply border radius from the theme. Use it withou
 ```html
 <!-- Default/Full: Pill shape (9999px) -->
 <bit-input rounded placeholder="Search..." variant="flat">
-  <span slot="prefix" class="material-symbols-rounded">search</span>
+  <bit-icon slot="prefix" name="search" size="18"></bit-icon>
 </bit-input>
 
 <!-- Large: 0.5rem / 8px -->
@@ -144,7 +145,7 @@ Add prefix or suffix content like icons or clear buttons using slots.
 
 ```html
 <bit-input placeholder="Search...">
-  <span slot="prefix" class="material-symbols-rounded">search</span>
+  <bit-icon slot="prefix" name="search" size="18"></bit-icon>
 </bit-input>
 <bit-input placeholder="Enter amount">
   <span slot="prefix">$</span>
@@ -197,14 +198,14 @@ Combine labels with prefix and suffix slots for rich input fields.
 
 ```html
 <bit-input label="Search" placeholder="Type to search...">
-  <span slot="prefix" class="material-symbols-rounded">search</span>
+  <bit-icon slot="prefix" name="search" size="18"></bit-icon>
 </bit-input>
 <bit-input label="Amount" value="1250">
   <span slot="prefix">$</span>
   <span slot="suffix">USD</span>
 </bit-input>
 <bit-input label="Website" type="url" value="example.com">
-  <span slot="prefix" class="material-symbols-rounded">language</span>
+  <bit-icon slot="prefix" name="globe" size="18"></bit-icon>
 </bit-input>
 ```
 
@@ -233,7 +234,7 @@ Provide additional context or validation messages below the input using the `hel
 <bit-input label="Password" type="password" helper="Must be at least 8 characters long"></bit-input>
 <bit-input label="Email Address">
   <div slot="helper" style="color: var(--color-primary); font-weight: 500;">
-    <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">lightbulb</span>
+    <bit-icon name="lightbulb" size="16"></bit-icon>
     Verification link will be sent to this address
   </div>
 </bit-input>

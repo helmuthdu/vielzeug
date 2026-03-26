@@ -182,16 +182,21 @@ Add prefix or suffix icons using slots.
 
 ```html
 <bit-button>
-  <span slot="prefix" class="material-symbols-rounded">arrow_back</span>
+  <bit-icon slot="prefix" name="arrow-left" size="18"></bit-icon>
   Back
 </bit-button>
 <bit-button variant="outline" color="success">
   Save
-  <span slot="suffix" class="material-symbols-rounded">save</span>
+  <bit-icon slot="suffix" name="save" size="18"></bit-icon>
 </bit-button>
 <bit-button icon-only label="Delete" color="error">
-  <span class="material-symbols-rounded">delete</span>
+  <bit-icon name="trash-2" size="18"></bit-icon>
 </bit-button>
+
+<script type="module">
+  import '@vielzeug/buildit/button';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>
@@ -217,8 +222,13 @@ Use the `rounded` attribute to apply border radius from the theme. Use it withou
 
 <!-- Icon-only always uses perfect circle -->
 <bit-button rounded icon-only label="Check">
-  <span class="material-symbols-rounded">check</span>
+  <bit-icon name="check" size="18"></bit-icon>
 </bit-button>
+
+<script type="module">
+  import '@vielzeug/buildit/button';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>
@@ -247,8 +257,13 @@ When `href` is provided, `bit-button` renders as an `<a role="button">` element 
 <bit-button href="#" variant="outline">Outline Link</bit-button>
 <bit-button href="#" target="_blank" rel="noopener noreferrer" variant="ghost">
   Open in new tab
-  <span slot="suffix" class="material-symbols-rounded">open_in_new</span>
+  <bit-icon slot="suffix" name="external-link" size="18"></bit-icon>
 </bit-button>
+
+<script type="module">
+  import '@vielzeug/buildit/button';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>

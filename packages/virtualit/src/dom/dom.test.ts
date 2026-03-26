@@ -26,29 +26,28 @@ describe('createDomVirtualList', () => {
   test('renders virtual items when enabled with items', async () => {
     const scrollEl = makeContainer(120);
     const listEl = document.createElement('div');
-    const clear = vi.fn();
     const render = vi.fn();
     const domList = createDomVirtualList<string>({
-      clear,
       estimateSize: 36,
       getListElement: () => listEl,
       getScrollElement: () => scrollEl,
       render,
     });
 
-    domList.update(['a', 'b', 'c', 'd'], true);
+    domList.setItems(['a', 'b', 'c', 'd']);
 
     expect(render).toHaveBeenCalled();
     expect(listEl.style.height).not.toBe('');
-    expect(clear).not.toHaveBeenCalled();
 
     domList.destroy();
   });
 
-  test('clears and resets styles when disabled or empty', () => {
+  test('clears and resets styles when inactive or empty', () => {
     const scrollEl = makeContainer(120);
     const listEl = document.createElement('div');
-    const clear = vi.fn();
+    const clear = vi.fn((el: HTMLElement) => {
+      el.textContent = '';
+    });
     const domList = createDomVirtualList<string>({
       clear,
       estimateSize: 36,
@@ -57,32 +56,32 @@ describe('createDomVirtualList', () => {
       render: () => {},
     });
 
-    domList.update(['a', 'b'], true);
+    domList.setItems(['a', 'b']);
     expect(listEl.style.height).not.toBe('');
 
-    domList.update([], true);
+    domList.setActive(false);
 
     expect(clear).toHaveBeenCalled();
     expect(listEl.style.height).toBe('');
     expect(listEl.style.position).toBe('');
     expect(listEl.style.contain).toBe('');
+
+    domList.setActive(true);
+    domList.setItems([], { remeasure: true });
+    expect(clear).toHaveBeenCalledTimes(2);
   });
 
   test('scrollToIndex delegates to virtualizer after update', () => {
     const scrollEl = makeContainer(120);
     const listEl = document.createElement('div');
     const domList = createDomVirtualList<string>({
-      clear: () => {},
       estimateSize: 36,
       getListElement: () => listEl,
       getScrollElement: () => scrollEl,
       render: () => {},
     });
 
-    domList.update(
-      Array.from({ length: 20 }, (_, i) => String(i)),
-      true,
-    );
+    domList.setItems(Array.from({ length: 20 }, (_, i) => String(i)));
     domList.scrollToIndex(10, { align: 'start' });
 
     expect(scrollEl.scrollTop).toBeGreaterThan(0);

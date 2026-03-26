@@ -23,7 +23,7 @@ const fibPool = createWorker<number, number>(
     if (n <= 1) return n;
     return fib(n - 1) + fib(n - 2);
   },
-  { size: 4, timeout: 5000 },
+  { concurrency: 4, timeout: 5000 },
 );
 
 const inputs = [30, 32, 34, 36, 38, 40];

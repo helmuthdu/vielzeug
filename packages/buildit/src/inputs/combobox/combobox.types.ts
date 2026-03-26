@@ -1,10 +1,21 @@
+import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
+
 import type { VisualVariant } from '../../types';
 import type { SelectableFieldProps } from '../shared/base-props';
 import type { ChoiceChangeDetail } from '../shared/utils';
 
 export type BitComboboxEvents = {
   change: ChoiceChangeDetail;
+  close: OverlayCloseDetail;
+  open: OverlayOpenDetail;
   search: { query: string };
+};
+
+export type ComboboxOptionInput = {
+  disabled?: boolean;
+  iconEl?: Element | null;
+  label?: string;
+  value: string;
 };
 
 export type ComboboxOptionItem = {
@@ -27,7 +38,7 @@ export type BitComboboxProps = SelectableFieldProps<Exclude<VisualVariant, 'glas
   loading?: boolean;
   multiple?: boolean;
   'no-filter'?: boolean;
-  options?: ComboboxOptionItem[];
+  options?: ComboboxOptionInput[];
 };
 
 export type BitComboboxOptionProps = {

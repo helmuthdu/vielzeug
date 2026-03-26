@@ -1,17 +1,19 @@
-import { defineComponent, html, inject, signal, watch } from '@vielzeug/craftit';
-import { useA11yControl, createCheckableControl } from '@vielzeug/craftit/labs';
+import { define, computed, html, inject } from '@vielzeug/craftit';
+import { createCheckableFieldControl, type CheckableChangePayload } from '@vielzeug/craftit/controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
+import '../../content/icon/icon';
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
-import { useToggleField } from '../shared/composables';
+import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
 import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './checkbox.css?inline';
 
 export type BitCheckboxEvents = {
-  change: { checked: boolean; fieldValue: string; originalEvent?: Event; value: boolean };
+  change: CheckableChangePayload;
 };
 
 export type BitCheckboxProps = CheckableProps &
@@ -25,6 +27,18 @@ export type BitCheckboxProps = CheckableProps &
     /** Indeterminate state (partially checked) */
     indeterminate?: boolean;
   };
+
+const checkboxProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  checked: false,
+  error: '',
+  helper: '',
+  indeterminate: false,
+  name: '',
+  value: 'on',
+} satisfies PropBundle<BitCheckboxProps>;
 
 /**
  * A customizable checkbox component with theme colors, sizes, and indeterminate state support.
@@ -41,7 +55,7 @@ export type BitCheckboxProps = CheckableProps &
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the checkbox
  *
- * @fires change - Emitted when checkbox is toggled. detail: { value: boolean, checked: boolean, fieldValue: string, originalEvent?: Event }
+ * @fires change - Emitted when checkbox is toggled. detail: { checked: boolean, fieldValue: string, originalEvent?: Event }
  *
  * @slot - Checkbox label text
  *
@@ -50,110 +64,67 @@ export type BitCheckboxProps = CheckableProps &
  * @part label - The label element
  * @part helper-text - The helper/error text element
  */
-export const CHECKBOX_TAG = defineComponent<BitCheckboxProps, BitCheckboxEvents>({
+export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-checkbox', {
   formAssociated: true,
-  props: {
-    checked: { default: false },
-    color: { default: undefined },
-    disabled: { default: false },
-    error: { default: '' },
-    helper: { default: '' },
-    indeterminate: { default: false },
-    name: { default: '' },
-    size: { default: undefined },
-    value: { default: 'on' },
-  },
-  setup({ emit, host, props, reflect }) {
-    // Form integration — provides checkedSignal and triggerValidation
-    const { checkedSignal, formCtx, triggerValidation } = useToggleField(props);
-
-    mountFormContextSync(host, formCtx, props);
-
-    // Separate writable indeterminate signal, synced from the prop
-    const indeterminateSignal = signal(Boolean(props.indeterminate.value));
-
-    watch(props.indeterminate, (v) => {
-      indeterminateSignal.value = Boolean(v);
-    });
-
+  props: checkboxProps,
+  setup({ emit, host, props }) {
+    const formCtx = inject(FORM_CTX, undefined);
     const groupCtx = inject(CHECKBOX_GROUP_CTX, undefined);
 
-    // Pass the writable checkedSignal directly — toggle() mutates it in place
-    const controlHandle = createCheckableControl({
-      checked: checkedSignal,
+    const checkable = createCheckableFieldControl({
+      checked: props.checked,
       clearIndeterminateFirst: true,
-      disabled: props.disabled,
+      disabled: computed(
+        () => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value) || Boolean(groupCtx?.disabled.value),
+      ),
+      error: props.error,
       group: groupCtx,
-      indeterminate: indeterminateSignal,
-      onToggle: (e) => {
-        triggerValidation('change');
+      helper: props.helper,
+      host: host.el,
+      indeterminate: props.indeterminate,
+      onToggle: (payload) => {
+        checkable.control.triggerValidation('change');
 
         // In a checkbox-group, the group owns change emission/state updates.
         // Emitting here would bubble to the group and toggle a second time.
         if (groupCtx) return;
 
-        emit('change', controlHandle.changePayload(e));
+        emit('change', payload);
       },
+      prefix: 'checkbox',
+      role: 'checkbox',
+      validateOn: formCtx?.validateOn,
       value: props.value,
     });
+    const { a11y, control: controlHandle, press: pressControl } = checkable;
 
-    const a11y = useA11yControl(host, {
-      checked: () => {
-        if (controlHandle.indeterminate.value) return 'mixed';
+    mountFormContextSync(host.el, formCtx, props);
 
-        return controlHandle.checked.value ? 'true' : 'false';
-      },
-      helperText: () => props.error.value || props.helper.value,
-      helperTone: () => (props.error.value ? 'error' : 'default'),
-      invalid: () => !!props.error.value,
-      role: 'checkbox',
-    });
+    host.bind('class', () => ({
+      'is-checked': controlHandle.checked.value,
+      'is-disabled': controlHandle.disabled.value,
+      'is-indeterminate': controlHandle.indeterminate.value,
+    }));
 
-    reflect({
+    host.bind('attr', {
       checked: () => controlHandle.checked.value,
-      classMap: () => ({
-        'is-checked': controlHandle.checked.value,
-        'is-disabled': !!props.disabled.value,
-        'is-indeterminate': controlHandle.indeterminate.value,
-      }),
       indeterminate: () => controlHandle.indeterminate.value,
-      onClick: (e: Event) => controlHandle.toggle(e),
-      onKeydown: (e: Event) => {
-        const ke = e as KeyboardEvent;
-
-        if (ke.key === ' ' || ke.key === 'Enter') {
-          ke.preventDefault();
-          controlHandle.toggle(e);
-        }
+      tabindex: () => (controlHandle.disabled.value ? undefined : 0),
+    });
+    host.bind('on', {
+      click: (e) => {
+        pressControl.handleClick(e);
       },
-      tabindex: () => (props.disabled.value ? undefined : 0),
+      keydown: (e) => {
+        pressControl.handleKeydown(e);
+      },
     });
 
     return html`
       <div class="checkbox-wrapper" part="checkbox">
         <div class="box" part="box">
-          <svg
-            class="checkmark"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            xmlns="http://www.w3.org/2000/svg">
-            <path d="M 20,6 9,17 4,12" />
-          </svg>
-          <svg
-            class="dash"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            xmlns="http://www.w3.org/2000/svg">
-            <path d="M 5,12 H 19" />
-          </svg>
+          <bit-icon class="checkmark" name="check" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+          <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
         </div>
       </div>
       <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
@@ -167,5 +138,4 @@ export const CHECKBOX_TAG = defineComponent<BitCheckboxProps, BitCheckboxEvents>
     `;
   },
   styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],
-  tag: 'bit-checkbox',
 });

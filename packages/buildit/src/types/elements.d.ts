@@ -13,6 +13,7 @@ declare global {
     'bit-breadcrumb': HTMLElement & BitBreadcrumbProps;
     'bit-breadcrumb-item': HTMLElement & BitBreadcrumbItemProps;
     'bit-card': HTMLElement & BitCardProps & AddEventListeners<BitCardEvents>;
+    'bit-icon': HTMLElement & BitIconProps;
     'bit-pagination': HTMLElement & BitPaginationProps & AddEventListeners<BitPaginationEvents>;
     'bit-separator': HTMLElement & BitSeparatorProps;
     'bit-table': HTMLElement & BitTableProps;

@@ -1,4 +1,4 @@
-import { type Fixture, fire, mount } from '@vielzeug/craftit/test';
+import { type Fixture, fire, mount } from '@vielzeug/craftit/testing';
 
 describe('bit-chip', () => {
   let fixture: Fixture<HTMLElement> | undefined;
@@ -47,9 +47,9 @@ describe('bit-chip', () => {
       expect(fixture.query('.remove-btn')?.getAttribute('aria-label')).toBe('Remove');
     });
 
-    it('remove button uses the explicit aria-label when provided', async () => {
+    it('remove button uses the explicit label when provided', async () => {
       fixture = await mount('bit-chip', {
-        attrs: { 'aria-label': 'Saved filter', mode: 'removable', value: 'filter-1' },
+        attrs: { label: 'Saved filter', mode: 'removable', value: 'filter-1' },
       });
 
       expect(fixture.query('.remove-btn')?.getAttribute('aria-label')).toBe('Remove Saved filter');

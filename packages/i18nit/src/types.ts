@@ -64,6 +64,7 @@ export type PluralKeys<T extends Messages, P extends string = '', D extends read
     }[keyof T & string];
 
 export type Loader = (locale: Locale) => Promise<Messages>;
+export type SwitchMode = 'strict' | 'best-effort';
 
 /** The reason a `subscribe()` listener was notified. */
 export type LocaleChangeReason = 'locale-change' | 'catalog-update';
@@ -108,6 +109,8 @@ export type I18nOptions<T extends Messages = Messages> = {
    */
   onDiagnostic?: (event: DiagnosticEvent) => void;
   onMissing?: (key: string, locale: Locale) => string | undefined;
+  /** Default mode for `ensureLocale()` and `switchLocale()`. */
+  switchMode?: SwitchMode;
 };
 
 export type BoundI18n<T extends Messages = Messages> = {
@@ -126,4 +129,22 @@ export type BoundI18n<T extends Messages = Messages> = {
   t<K extends PluralKeys<T>>(key: K, vars: { count: number } & Vars): string;
   t(key: TranslationKeyParam<T>, vars?: Vars): string;
   withLocale(locale: Locale): BoundI18n<T>;
+};
+
+export type I18n<T extends Messages = Messages> = BoundI18n<T> & {
+  [Symbol.asyncDispose](): Promise<void>;
+  [Symbol.dispose](): void;
+  add(locale: Locale, messages: Messages): void;
+  batch(fn: () => void): void;
+  dispose(): void;
+  ensureLocale(locale: Locale, mode?: SwitchMode): Promise<void>;
+  hasLocale(locale: Locale): boolean;
+  isReady(locale: Locale): boolean;
+  readonly loadableLocales: Locale[];
+  readonly locales: Locale[];
+  registerLoader(locale: Locale, loader: Loader): void;
+  reload(locale: Locale): Promise<void>;
+  replace(locale: Locale, messages: Messages): void;
+  subscribe(listener: (event: LocaleChangeEvent) => void, immediate?: boolean): Unsubscribe;
+  switchLocale(locale: Locale, mode?: SwitchMode): Promise<void>;
 };

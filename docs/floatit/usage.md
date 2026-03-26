@@ -29,10 +29,10 @@ All positions use `getBoundingClientRect` coordinates, meaning they work correct
 
 ## positionFloat
 
-`positionFloat` is the primary convenience API. It computes the position and immediately applies `left` / `top` inline styles to the floating element, returning the resolved `Placement` (which may differ from the requested one if `flip` was applied).
+`positionFloat` computes the position and immediately applies `left` / `top` inline styles to the floating element, returning the resolved `Placement` (which may differ from the requested one if `flip` was applied).
 
 ```ts
-const placement = await positionFloat(reference, floating, {
+const placement = positionFloat(reference, floating, {
   placement: 'top',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
@@ -40,14 +40,14 @@ const placement = await positionFloat(reference, floating, {
 floatingEl.dataset.placement = placement; // react to flips
 ```
 
-The floating element must have `position: fixed` (or `position: absolute` for absolute strategy) in your CSS for the applied `left`/`top` values to take effect.
+The floating element must have `position: fixed` in your CSS for the applied `left`/`top` values to take effect.
 
 ## computePosition
 
 The low-level API. Returns `{ x, y, placement }` without touching the DOM — useful when you want to apply styles yourself or integrate with animation libraries.
 
 ```ts
-const { x, y, placement } = await computePosition(reference, floating, {
+const { x, y, placement } = computePosition(reference, floating, {
   placement: 'bottom-start',
   middleware: [flip(), shift({ padding: 4 })],
 });
@@ -139,17 +139,17 @@ middleware: [offset(8), nudge(4), flip()];
 
 ## autoUpdate
 
-By default, `positionFloat` / `computePosition` only runs once. If the trigger scrolls, the window resizes, or either element changes size, the position goes stale. `autoUpdate` reacts to all of these automatically.
+## float
+
+`float` is the primary API for dynamic positioning. It positions the floating element immediately and keeps it in sync as the viewport or elements change. It combines `positionFloat` and `autoUpdate` in a single call.
 
 ```ts
 let cleanup: (() => void) | null = null;
 
 function show() {
-  cleanup = autoUpdate(reference, floating, () => {
-    positionFloat(reference, floating, {
-      placement: 'top',
-      middleware: [offset(8), flip(), shift({ padding: 6 })],
-    });
+  cleanup = float(reference, floating, {
+    placement: 'top',
+    middleware: [offset(8), flip(), shift({ padding: 6 })],
   });
 }
 
@@ -159,11 +159,26 @@ function hide() {
 }
 ```
 
-`autoUpdate` listens to:
+## autoUpdate
+
+`autoUpdate` is the lower-level primitive behind `float`. Use it directly when you need to run custom logic (e.g. reading `placement` to update an arrow) on every reposition.
+
+```ts
+const cleanup = autoUpdate(reference, floating, () => {
+  const placement = positionFloat(reference, floating, {
+    placement: 'top',
+    middleware: [offset(8), flip(), shift({ padding: 6 })],
+  });
+  floating.dataset.placement = placement;
+});
+```
+
+`autoUpdate` calls the callback once immediately on registration, then listens to:
 
 - `scroll` on `window` (capturing, covers all scroll ancestors)
 - `resize` on `window`
-- `ResizeObserver` on both the reference and floating elements
+- `ResizeObserver` on the reference and (by default) the floating element
+- `window.visualViewport` (by default, covers pinch-zoom and virtual keyboard)
 
 If your floating element's size is fully controlled externally and observing it causes unnecessary update loops, disable floating observation:
 
@@ -175,32 +190,22 @@ const cleanup = autoUpdate(reference, floating, update, {
 
 Always call the returned cleanup when the floating element is hidden to avoid unnecessary reflows.
 
-## Strategy
-
-`Strategy` is currently a typed option (`'fixed' | 'absolute'`) but is not applied by Floatit's internal calculations. `computePosition` always works from viewport-space `getBoundingClientRect()` values, and `positionFloat` applies `left`/`top` inline styles.
-
-In practice, configure your floating element CSS to match viewport-space coordinates (typically `position: fixed`).
-
 ## Common Patterns
 
 ### Tooltip
 
 ```ts
-import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { float, flip, offset, shift } from '@vielzeug/floatit';
 
 let cleanup: (() => void) | null = null;
 
 function showTooltip(trigger: Element, tooltip: HTMLElement) {
   tooltip.showPopover?.() ?? tooltip.setAttribute('data-open', '');
 
-  cleanup = autoUpdate(trigger, tooltip, () =>
-    positionFloat(trigger, tooltip, {
-      placement: 'top',
-      middleware: [offset(8), flip(), shift({ padding: 6 })],
-    }).then((p) => {
-      tooltip.dataset.placement = p;
-    }),
-  );
+  cleanup = float(trigger, tooltip, {
+    placement: 'top',
+    middleware: [offset(8), flip(), shift({ padding: 6 })],
+  });
 }
 
 function hideTooltip(tooltip: HTMLElement) {
@@ -213,23 +218,21 @@ function hideTooltip(tooltip: HTMLElement) {
 ### Dropdown / Select
 
 ```ts
-import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
+import { float, flip, shift, size } from '@vielzeug/floatit';
 
 function openDropdown(trigger: HTMLElement, panel: HTMLElement) {
-  return autoUpdate(trigger, panel, () =>
-    positionFloat(trigger, panel, {
-      placement: 'bottom-start',
-      middleware: [
-        flip({ padding: 6 }),
-        shift({ padding: 6 }),
-        size({
-          padding: 6,
-          apply({ elements }) {
-            elements.floating.style.width = `${(elements.reference as HTMLElement).offsetWidth}px`;
-          },
-        }),
-      ],
-    }),
-  );
+  return float(trigger, panel, {
+    placement: 'bottom-start',
+    middleware: [
+      flip({ padding: 6 }),
+      shift({ padding: 6 }),
+      size({
+        padding: 6,
+        apply({ elements }) {
+          elements.floating.style.width = `${(elements.reference as HTMLElement).offsetWidth}px`;
+        },
+      }),
+    ],
+  });
 }
 ```

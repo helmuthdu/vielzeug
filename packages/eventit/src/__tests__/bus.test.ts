@@ -1,4 +1,4 @@
-import { BusDisposedError, createBus } from '../eventit';
+import { BusDisposedError, createBus } from '../index';
 
 type TestEvents = {
   count: number;

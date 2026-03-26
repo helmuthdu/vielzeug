@@ -13,7 +13,7 @@ Virtualize a popup listbox (combobox/dropdown style) without hand-wiring `Virtua
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
 
-Use `createDomVirtualList` so your component only needs to call `update(items, isOpen)` and provide a DOM render callback.
+Use `createDomVirtualList` so your component only needs to call `setItems(items)` and `setActive(isOpen)` with a DOM render callback.
 
 ```ts
 import { createDomVirtualList, type DomVirtualListController } from '@vielzeug/virtualit/dom';
@@ -33,9 +33,6 @@ function ensureController() {
   if (controller) return controller;
 
   controller = createDomVirtualList<Option>({
-    clear: (listEl) => {
-      for (const el of Array.from(listEl.querySelectorAll('.option'))) el.remove();
-    },
     estimateSize: 36,
     getListElement: () => document.querySelector<HTMLElement>('[role="listbox"]'),
     getScrollElement: () => document.querySelector<HTMLElement>('.dropdown'),
@@ -64,12 +61,13 @@ function ensureController() {
 
 function openDropdown() {
   isOpen = true;
-  ensureController().update(options, isOpen);
+  ensureController().setItems(options);
+  ensureController().setActive(isOpen);
 }
 
 function closeDropdown() {
   isOpen = false;
-  ensureController().update(options, isOpen); // disables virtualization + resets list styles
+  ensureController().setActive(isOpen); // disables virtualization + resets list styles
 }
 
 function onArrowDown() {
@@ -94,7 +92,7 @@ function destroyCombobox() {
 ## Common Pitfalls
 
 - Returning `null` from `getScrollElement`/`getListElement` while open prevents activation.
-- Forgetting `update(items, isOpen)` on open/close leaves stale DOM state.
+- Forgetting `setItems(items)` or `setActive(isOpen)` on open/close leaves stale DOM state.
 - Mixing non-virtual state rows with `.option` rows without a clear strategy can make `clear` remove the wrong nodes.
 
 ## Related Recipes
@@ -102,4 +100,3 @@ function destroyCombobox() {
 - [Keyboard Navigation](./keyboard-navigation.md)
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
 - [Using `Virtualizer` Directly (Without `createVirtualizer`)](./using-virtualizer-directly-without-createvirtualizer.md)
-

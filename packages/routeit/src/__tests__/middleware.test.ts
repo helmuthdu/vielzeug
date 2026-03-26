@@ -87,7 +87,15 @@ describe('Route context & middleware', () => {
       });
 
       (globalThis as any).mockLocation.pathname = '/chain';
-      await boot(createRouter().on('/chain', () => calls.push('h'), { middleware: [mw] }));
+      await boot(
+        createRouter().on(
+          '/chain',
+          () => {
+            calls.push('h');
+          },
+          { middleware: [mw] },
+        ),
+      );
       expect(calls).toEqual(['mw', 'h']);
     });
 
@@ -103,7 +111,15 @@ describe('Route context & middleware', () => {
       });
 
       (globalThis as any).mockLocation.pathname = '/order';
-      await boot(createRouter().on('/order', () => calls.push('h'), { middleware: [mw1, mw2] }));
+      await boot(
+        createRouter().on(
+          '/order',
+          () => {
+            calls.push('h');
+          },
+          { middleware: [mw1, mw2] },
+        ),
+      );
       expect(calls).toEqual(['mw1', 'mw2', 'h']);
     });
 
@@ -125,23 +141,39 @@ describe('Route context & middleware', () => {
       });
 
       (globalThis as any).mockLocation.pathname = '/async';
-      await boot(createRouter().on('/async', () => calls.push('h'), { middleware: [mw] }));
+      await boot(
+        createRouter().on(
+          '/async',
+          () => {
+            calls.push('h');
+          },
+          { middleware: [mw] },
+        ),
+      );
       expect(calls).toEqual(['mw', 'h']);
     });
 
     it('locals mutated by middleware are available to downstream middleware', async () => {
-      const calls: string[] = [];
+      const calls: Array<number | string> = [];
       const mw1 = vi.fn(async (ctx: RouteContext, next: () => Promise<void>) => {
         ctx.locals.value = 1;
         await next();
       });
       const mw2 = vi.fn(async (ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push(<string>ctx.locals.value);
+        calls.push(ctx.locals.value as string);
         await next();
       });
 
       (globalThis as any).mockLocation.pathname = '/locals';
-      await boot(createRouter().on('/locals', () => calls.push('h'), { middleware: [mw1, mw2] }));
+      await boot(
+        createRouter().on(
+          '/locals',
+          () => {
+            calls.push('h');
+          },
+          { middleware: [mw1, mw2] },
+        ),
+      );
       expect(calls).toEqual([1, 'h']);
     });
 
@@ -158,7 +190,13 @@ describe('Route context & middleware', () => {
 
       (globalThis as any).mockLocation.pathname = '/global';
       await boot(
-        createRouter({ middleware: [globalMw] }).on('/global', () => calls.push('h'), { middleware: [routeMw] }),
+        createRouter({ middleware: [globalMw] }).on(
+          '/global',
+          () => {
+            calls.push('h');
+          },
+          { middleware: [routeMw] },
+        ),
       );
       expect(calls).toEqual(['global', 'route', 'h']);
     });
@@ -173,9 +211,15 @@ describe('Route context & middleware', () => {
       const router = createRouter({ middleware: [globalMw] });
 
       (globalThis as any).mockLocation.pathname = '/a';
-      await boot(router.on('/a', () => calls.push('a')));
+      await boot(
+        router.on('/a', () => {
+          calls.push('a');
+        }),
+      );
 
-      router.on('/b', () => calls.push('b'));
+      router.on('/b', () => {
+        calls.push('b');
+      });
       await router.navigate('/b');
 
       expect(calls).toEqual(['global', 'a', 'global', 'b']);
@@ -193,7 +237,11 @@ describe('Route context & middleware', () => {
       });
 
       (globalThis as any).mockLocation.pathname = '/multi';
-      await boot(createRouter({ middleware: [g1, g2] }).on('/multi', () => calls.push('h')));
+      await boot(
+        createRouter({ middleware: [g1, g2] }).on('/multi', () => {
+          calls.push('h');
+        }),
+      );
       expect(calls).toEqual(['g1', 'g2', 'h']);
     });
 
@@ -213,7 +261,11 @@ describe('Route context & middleware', () => {
       router.use(g2);
 
       (globalThis as any).mockLocation.pathname = '/use';
-      await boot(router.on('/use', () => calls.push('h')));
+      await boot(
+        router.on('/use', () => {
+          calls.push('h');
+        }),
+      );
       expect(calls).toEqual(['g1', 'g2', 'h']);
     });
 
@@ -233,7 +285,11 @@ describe('Route context & middleware', () => {
       router.use(g2, g1);
 
       (globalThis as any).mockLocation.pathname = '/multiuse';
-      await boot(router.on('/multiuse', () => calls.push('h')));
+      await boot(
+        router.on('/multiuse', () => {
+          calls.push('h');
+        }),
+      );
       expect(calls).toEqual(['g1', 'g2', 'g1', 'h']);
     });
 
@@ -253,7 +309,11 @@ describe('Route context & middleware', () => {
       router.use(g2);
 
       (globalThis as any).mockLocation.pathname = '/after';
-      await boot(router.on('/after', () => calls.push('h')));
+      await boot(
+        router.on('/after', () => {
+          calls.push('h');
+        }),
+      );
       expect(calls).toEqual(['g1', 'g2', 'h']);
     });
 
@@ -270,6 +330,26 @@ describe('Route context & middleware', () => {
           .on('/redirect', vi.fn()),
       );
       expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('throws when middleware calls next() more than once', async () => {
+      const onError = vi.fn();
+      const bad = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
+        await next();
+        await next();
+      });
+
+      (globalThis as any).mockLocation.pathname = '/double-next';
+      await boot(
+        createRouter({ onError })
+          .on('/double-next', vi.fn(), { middleware: [bad] })
+          .on('/error', vi.fn()),
+      );
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: '[routeit] next() called multiple times' }),
+        expect.objectContaining({ pathname: '/double-next' }),
+      );
     });
   });
 });

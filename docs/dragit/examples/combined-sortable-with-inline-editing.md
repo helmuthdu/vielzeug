@@ -36,11 +36,11 @@ function render() {
     )
     .join('');
 
-  sortable.refresh(); // sync draggable after re-render
+  // MutationObserver keeps draggable/role in sync automatically
 }
 
 const sortable = createSortable({
-  container: listEl,
+  element: listEl,
   handle: '.handle',
   onReorder: (ids) => {
     items = ids.map((id) => items.find((i) => i.id === id)!);

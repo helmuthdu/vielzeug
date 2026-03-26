@@ -1,16 +1,10 @@
-import { computed, defineComponent, html, typed, provide } from '@vielzeug/craftit';
+import { define, computed, html, provide } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
+import { disablableBundle, sizableBundle, type PropBundle } from '../shared/bundles';
 import { FORM_CTX } from '../shared/form-context';
-// ============================================
-// Styles
-// ============================================
 import componentStyles from './form.css?inline';
-
-// ============================================
-// Types
-// ============================================
 
 export type BitFormEvents = {
   reset: { originalEvent: Event };
@@ -36,6 +30,15 @@ export type BitFormProps = {
   /** Default variant for all child fields */
   variant?: Exclude<VisualVariant, 'glass' | 'frost' | 'text'>;
 };
+
+const formProps = {
+  ...sizableBundle,
+  ...disablableBundle,
+  novalidate: false,
+  orientation: 'vertical',
+  validateOn: undefined,
+  variant: undefined,
+} satisfies PropBundle<BitFormProps>;
 
 /**
  * `bit-form` — Native `<form>` wrapper that propagates `disabled`, `size`, and `variant`
@@ -67,16 +70,9 @@ export type BitFormProps = {
  * </bit-form>
  * ```
  */
-export const FORM_TAG = defineComponent<BitFormProps, BitFormEvents>({
-  props: {
-    disabled: typed<boolean>(false),
-    novalidate: typed<boolean>(false),
-    orientation: typed<BitFormProps['orientation']>('vertical'),
-    size: typed<BitFormProps['size']>(undefined),
-    validateOn: typed<BitFormProps['validateOn']>(undefined),
-    variant: typed<BitFormProps['variant']>(undefined),
-  },
-  setup({ emit, host, props }) {
+export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
+  props: formProps,
+  setup({ emit, props, shadowRoot }) {
     // Provide context to all child bit-* form fields
     provide(FORM_CTX, {
       disabled: computed(() => Boolean(props.disabled.value)),
@@ -84,10 +80,10 @@ export const FORM_TAG = defineComponent<BitFormProps, BitFormEvents>({
       validateOn: computed(() => props.validateOn.value ?? 'submit'),
       variant: props.variant,
     });
-    // ── Event handlers ────────────────────────────────────────────────────────
+
     function handleSubmit(e: Event) {
       const submitEvent = e as SubmitEvent;
-      const formEl = host.shadowRoot?.querySelector('form');
+      const formEl = shadowRoot?.querySelector('form');
 
       if (!formEl) return;
 
@@ -97,6 +93,7 @@ export const FORM_TAG = defineComponent<BitFormProps, BitFormEvents>({
 
       emit('submit', { formData, originalEvent: submitEvent });
     }
+
     function handleReset(e: Event) {
       emit('reset', { originalEvent: e });
     }
@@ -114,5 +111,4 @@ export const FORM_TAG = defineComponent<BitFormProps, BitFormEvents>({
   },
   shadow: { delegatesFocus: false },
   styles: [componentStyles],
-  tag: 'bit-form',
 });

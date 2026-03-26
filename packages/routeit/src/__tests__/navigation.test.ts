@@ -361,6 +361,22 @@ describe('Navigation', () => {
 
       expect(handler).not.toHaveBeenCalled();
     });
+
+    it('state returns an immutable snapshot of params and query values', async () => {
+      const router = createRouter();
+
+      (globalThis as any).mockLocation.pathname = '/items/42';
+      (globalThis as any).mockLocation.search = '?tags=a&tags=b';
+      await boot(router.on('/items/:id', vi.fn()));
+
+      const snapshot = router.state;
+
+      snapshot.params.id = '99';
+      (snapshot.query.tags as string[]).push('c');
+
+      expect(router.state.params.id).toBe('42');
+      expect(router.state.query.tags).toEqual(['a', 'b']);
+    });
   });
 
   describe('isActive()', () => {
@@ -497,7 +513,7 @@ describe('Navigation', () => {
     it('throws for an unknown named route', () => {
       const router = createRouter();
 
-      expect(() => router.url('missing')).toThrow();
+      expect(() => router.url('missing')).toThrow('[routeit] Route "missing" not found');
     });
 
     it('throws when a required path parameter is missing', () => {
@@ -579,6 +595,49 @@ describe('Navigation', () => {
 
       router.resolve('/about');
       expect(spy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Concurrent navigation', () => {
+    it('ignores stale notifications when a newer navigation is in-flight', async () => {
+      const calls: string[] = [];
+      let releaseFirst: (() => void) | undefined;
+      const firstGate = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+
+      const router = createRouter();
+
+      router.on('/a', async () => {
+        calls.push('a-start');
+        await firstGate;
+        calls.push('a-end');
+      });
+      router.on('/b', () => {
+        calls.push('b');
+      });
+
+      (globalThis as any).mockLocation.pathname = '/';
+      await boot(router);
+
+      const states: string[] = [];
+
+      router.subscribe((state) => {
+        states.push(state.pathname);
+      });
+
+      states.length = 0;
+
+      const first = router.navigate('/a', { force: true });
+
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      await router.navigate('/b', { force: true });
+      releaseFirst?.();
+      await first;
+
+      expect(states).toEqual(['/b']);
+      expect(calls).toContain('b');
     });
   });
 });

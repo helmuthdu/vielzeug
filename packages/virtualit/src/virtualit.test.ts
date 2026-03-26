@@ -32,6 +32,32 @@ const flushMicrotasks = () => new Promise<void>((r) => queueMicrotask(r));
 // ─── Core rendering ──────────────────────────────────────────────────────────
 
 describe('getVirtualItems / getTotalSize', () => {
+  test('normalizes invalid count and estimate values', () => {
+    const el = makeContainer(200);
+    const virt = createVirtualizer(el, {
+      count: -10,
+      estimateSize: Number.NaN,
+      overscan: -3,
+    });
+
+    expect(virt.count).toBe(0);
+    expect(virt.getTotalSize()).toBe(0);
+    expect(virt.getVirtualItems()).toHaveLength(0);
+    virt.destroy();
+  });
+
+  test('sanitizes invalid per-index estimate results', () => {
+    const el = makeContainer(200);
+    const virt = createVirtualizer(el, {
+      count: 3,
+      estimateSize: (i) => (i === 1 ? Number.NaN : 20),
+    });
+
+    // item 1 falls back to default estimate size 36
+    expect(virt.getTotalSize()).toBe(20 + 36 + 20);
+    virt.destroy();
+  });
+
   test('fixed-height list: returns correct range at scrollTop 0', () => {
     const el = makeContainer(200);
     const virt = createVirtualizer(el, { count: 100, estimateSize: 36 });
@@ -211,6 +237,22 @@ describe('estimateSize setter', () => {
 // ─── measureElement ──────────────────────────────────────────────────────────
 
 describe('measureElement', () => {
+  test('ignores out-of-range index and invalid heights', async () => {
+    const el = makeContainer(200);
+    const onChange = vi.fn();
+    const virt = createVirtualizer(el, { count: 3, estimateSize: 20, onChange });
+
+    onChange.mockClear();
+    virt.measureElement(999, 50);
+    virt.measureElement(1, -10);
+    virt.measureElement(1, Number.NaN);
+    await flushMicrotasks();
+
+    expect(virt.getTotalSize()).toBe(60);
+    expect(onChange).not.toHaveBeenCalled();
+    virt.destroy();
+  });
+
   test('measured height affects totalSize after microtask flush', async () => {
     const el = makeContainer(200);
     const virt = createVirtualizer(el, { count: 5, estimateSize: 36 });
@@ -293,6 +335,15 @@ describe('invalidate', () => {
 // ─── scrollToIndex ────────────────────────────────────────────────────────────
 
 describe('scrollToIndex', () => {
+  test('no-ops when count is 0', () => {
+    const el = makeContainer(200, 123);
+    const virt = createVirtualizer(el, { count: 0, estimateSize: 36 });
+
+    virt.scrollToIndex(0, { align: 'start' });
+    expect(el.scrollTop).toBe(123);
+    virt.destroy();
+  });
+
   test('align start scrolls itemTop to scrollTop', () => {
     const el = makeContainer(200, 0);
     const virt = createVirtualizer(el, { count: 100, estimateSize: 36 });
@@ -352,9 +403,10 @@ describe('scrollToIndex', () => {
     const el = makeContainer(200, 0);
     const virt = createVirtualizer(el, { count: 10, estimateSize: 50 });
 
-    // Index 999 should clamp to 9 — last item at offset 9*50=450
+    // Index 999 clamps to item 9, then scroll target is clamped to max offset.
+    // total=500, viewport=200 => max scrollTop is 300.
     virt.scrollToIndex(999, { align: 'start' });
-    expect(el.scrollTop).toBe(9 * 50);
+    expect(el.scrollTop).toBe(300);
     virt.destroy();
   });
 
@@ -371,6 +423,16 @@ describe('scrollToIndex', () => {
 // ─── scrollToOffset ──────────────────────────────────────────────────────────
 
 describe('scrollToOffset', () => {
+  test('clamps offset to max scroll range', () => {
+    const el = makeContainer(100, 0);
+    const virt = createVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    virt.scrollToOffset(999);
+    // total 100, viewport 100 => max scroll offset is 0
+    expect(el.scrollTop).toBe(0);
+    virt.destroy();
+  });
+
   test('sets scrollTop to given offset', () => {
     const el = makeContainer(200, 0);
     const virt = createVirtualizer(el, { count: 50, estimateSize: 36 });

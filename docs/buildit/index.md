@@ -68,7 +68,7 @@ import '@vielzeug/buildit';
 
 Component registration happens through side-effect imports such as `@vielzeug/buildit/button` and `@vielzeug/buildit/dialog`.
 
-For headless widget controllers (navigation/overlay/selection), use `@vielzeug/craftit/labs`.
+For headless widget controllers (navigation/overlay/selection), use `@vielzeug/craftit/controls`.
 
 ## Components
 
@@ -76,7 +76,7 @@ For headless widget controllers (navigation/overlay/selection), use `@vielzeug/c
 
 **Disclosure:** `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`
 
-**Feedback:** `bit-alert`, `bit-badge`, `bit-chip`, `bit-progress`, `bit-skeleton`, `bit-toast`
+**Feedback:** `bit-alert`, `bit-async`, `bit-badge`, `bit-chip`, `bit-progress`, `bit-skeleton`, `bit-toast`
 
 **Inputs:** `bit-button`, `bit-button-group`, `bit-checkbox`, `bit-checkbox-group`, `bit-combobox`, `bit-file-input`, `bit-form`, `bit-input`, `bit-number-input`, `bit-otp-input`, `bit-radio`, `bit-radio-group`, `bit-rating`, `bit-select`, `bit-slider`, `bit-switch`, `bit-textarea`
 

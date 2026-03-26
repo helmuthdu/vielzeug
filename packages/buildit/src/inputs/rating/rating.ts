@@ -1,14 +1,14 @@
-import { computed, defineComponent, typed, defineField, html, inject, signal } from '@vielzeug/craftit';
+import { define, computed, defineField, html, inject, signal } from '@vielzeug/craftit';
+import { createSliderControl, createValidationControl } from '@vielzeug/craftit/controls';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
+import '../../content/icon/icon';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
-import { createFieldValidation } from '../shared/validation';
 import styles from './rating.css?inline';
-
-const FULL_STAR_PATH = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
 
 export type BitRatingEvents = {
   change: { originalEvent?: Event; value: number };
@@ -26,9 +26,23 @@ export type BitRatingProps = ThemableProps &
     name?: string;
     /** Make rating read-only */
     readonly?: boolean;
+    /** Render selected stars as solid-filled instead of outline-only */
+    solid?: boolean;
     /** Current rating value */
     value?: number;
   };
+
+const ratingProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  label: 'Rating',
+  max: 5,
+  name: undefined,
+  readonly: false,
+  solid: false,
+  value: 0,
+} satisfies PropBundle<BitRatingProps>;
 
 /**
  * A star rating input.
@@ -43,6 +57,7 @@ export type BitRatingProps = ThemableProps &
  * @attr {string} color - Theme color for filled stars
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} name - Form field name
+ * @attr {boolean} solid - Fill selected stars (outline remains default when omitted)
  *
  * @fires change - Emitted when value changes. detail: { value: number, originalEvent?: Event }
  *
@@ -54,24 +69,16 @@ export type BitRatingProps = ThemableProps &
  * @example
  * ```html
  * <bit-rating value="3" max="5" color="warning"></bit-rating>
+ * <bit-rating value="4" solid></bit-rating>
  * ```
  */
-export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
+export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', {
   formAssociated: true,
-  props: {
-    color: typed<BitRatingProps['color']>(undefined),
-    disabled: typed<boolean>(false),
-    label: typed<string>('Rating'),
-    max: typed<number>(5),
-    name: typed<string | undefined>(undefined),
-    readonly: typed<boolean>(false),
-    size: typed<BitRatingProps['size']>(undefined),
-    value: typed<number>(0),
-  },
+  props: ratingProps,
   setup({ emit, host, props }) {
     const formCtx = inject(FORM_CTX, undefined);
 
-    mountFormContextSync(host, formCtx, props);
+    mountFormContextSync(host.el, formCtx, props);
 
     const normalizedValue = computed(() => {
       const max = Math.max(1, Number(props.max.value) || 5);
@@ -88,15 +95,24 @@ export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
       },
       {
         onReset: () => {
-          host.removeAttribute('value');
+          props.value.value = 0;
         },
       },
     );
 
-    const { triggerValidation } = createFieldValidation(formCtx, fd);
+    const { triggerValidation } = createValidationControl(formCtx?.validateOn, fd);
 
+    const isInteractive = computed(() => !props.readonly.value && !props.disabled.value);
     const hovered = signal<number | null>(null);
     const displayValue = computed(() => hovered.value ?? normalizedValue.value);
+    const getStarButtons = () => {
+      return [...(host.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-star]') ?? [])];
+    };
+    const ratingControl = createSliderControl({
+      max: () => Number(props.max.value) || 5,
+      min: () => 1,
+      step: () => 1,
+    });
 
     function spawnSparkles(star: number) {
       const layer = host.shadowRoot?.querySelector<HTMLElement>('.sparkle-layer');
@@ -131,7 +147,7 @@ export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
       }
     }
     function select(star: number, originalEvent?: Event) {
-      if (props.readonly.value || props.disabled.value) return;
+      if (!isInteractive.value) return;
 
       const max = Math.max(1, Number(props.max.value) || 5);
       const nextValue = Math.min(max, Math.max(0, star));
@@ -145,23 +161,16 @@ export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
       spawnSparkles(nextValue);
     }
     function handleKeydown(e: KeyboardEvent, star: number) {
-      const max = Number(props.max.value) || 5;
+      const next = ratingControl.nextFromKey(e.key, star);
 
-      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        select(Math.min(max, star + 1), e);
+      if (next == null) return;
 
-        const nextBtn = host.shadowRoot?.querySelector<HTMLButtonElement>(`[data-star="${Math.min(max, star + 1)}"]`);
+      e.preventDefault();
+      select(next, e);
 
-        nextBtn?.focus();
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        select(Math.max(1, star - 1), e);
+      const buttons = getStarButtons();
 
-        const prevBtn = host.shadowRoot?.querySelector<HTMLButtonElement>(`[data-star="${Math.max(1, star - 1)}"]`);
-
-        prevBtn?.focus();
-      }
+      buttons[next - 1]?.focus();
     }
 
     const stars = computed(() => {
@@ -189,26 +198,16 @@ export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
                 :aria-checked="${() => String(star === normalizedValue.value)}"
                 :data-star="${star}"
                 ?data-filled="${() => star <= displayValue.value}"
-                :disabled="${() => props.disabled.value || props.readonly.value || null}"
+                :disabled="${() => (!isInteractive.value ? true : null)}"
                 @click="${(e: Event) => select(star, e)}"
                 @pointerenter="${() => {
-                  if (!props.readonly.value && !props.disabled.value) hovered.value = star;
+                  if (isInteractive.value) hovered.value = star;
                 }}"
                 @pointerleave="${() => {
                   hovered.value = null;
                 }}"
                 @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  fill="${() => (star <= displayValue.value ? 'currentColor' : 'none')}"
-                  stroke="currentColor"
-                  stroke-width="${() => (star <= displayValue.value ? 0 : 1.5)}"
-                  stroke-linecap="round"
-                  stroke-linejoin="round">
-                  <path d="${FULL_STAR_PATH}" />
-                </svg>
+                <bit-icon name="star" size="var(--_star-size)" stroke-width="1.5" aria-hidden="true"></bit-icon>
               </button>`,
           )}
         <div class="sparkle-layer"></div>
@@ -216,5 +215,4 @@ export const RATING_TAG = defineComponent<BitRatingProps, BitRatingEvents>({
     `;
   },
   styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, styles],
-  tag: 'bit-rating',
 });

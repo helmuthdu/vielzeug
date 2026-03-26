@@ -1,8 +1,9 @@
-import { defineComponent, guard, html, onMount, onSlotChange, signal } from '@vielzeug/craftit';
+import { define, html } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
-import { closeIcon } from '../../icons';
+import '../../content/icon/icon';
+import { type PropBundle, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { forcedColorsMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { awaitExit } from '../../utils/animation';
 import componentStyles from './alert.css?inline';
@@ -16,7 +17,7 @@ export type BitAlertProps = {
   accented?: boolean;
   /** Theme color */
   color?: ThemeColor;
-  /** Show a dismissable (×) button */
+  /** Show a dismissible (×) button */
   dismissible?: boolean;
   /** Heading text shown above the content */
   heading?: string;
@@ -67,44 +68,32 @@ export type BitAlertProps = {
  * </bit-alert>
  * ```
  */
-export const ALERT_TAG = defineComponent<BitAlertProps, BitAlertEvents>({
+export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
   props: {
-    accented: { default: false },
-    color: { default: undefined },
-    dismissible: { default: false },
-    heading: { default: '' },
-    horizontal: { default: false },
-    rounded: { default: undefined },
-    size: { default: undefined },
-    variant: { default: undefined },
-  },
-  setup({ emit, host, props }) {
-    const handleDismiss = guard(
-      () => props.dismissible.value,
-      (e: MouseEvent) => {
-        host.setAttribute('dismissing', '');
-        awaitExit(host, () => {
-          host.removeAttribute('dismissing');
-          host.setAttribute('dismissed', '');
-          emit('dismiss', { originalEvent: e });
-        });
-      },
-    );
-    const hasIcon = signal(false);
-    const hasActions = signal(false);
+    ...themableBundle,
+    ...sizableBundle,
+    ...roundableBundle,
+    accented: false,
+    dismissible: false,
+    heading: '',
+    horizontal: false,
+    variant: undefined,
+  } satisfies PropBundle<BitAlertProps>,
+  setup({ emit, host, props, slots }) {
+    const handleDismiss = (e: MouseEvent) => {
+      if (!props.dismissible.value) return;
 
-    onMount(() => {
-      onSlotChange('icon', (els) => {
-        hasIcon.value = els.length > 0;
+      host.el.setAttribute('dismissing', '');
+      awaitExit(host.el, () => {
+        host.el.removeAttribute('dismissing');
+        host.el.setAttribute('dismissed', '');
+        emit('dismiss', { originalEvent: e });
       });
-      onSlotChange('actions', (els) => {
-        hasActions.value = els.length > 0;
-      });
-    });
+    };
 
     return html`
       <div class="alert" :role="${() => (props.color.value === 'error' ? 'alert' : 'status')}" part="alert">
-        <span class="icon" part="icon" aria-hidden="true" ?hidden=${() => !hasIcon.value}>
+        <span class="icon" part="icon" aria-hidden="true" ?hidden=${() => !slots.has('icon').value}>
           <slot name="icon"></slot>
         </span>
         <div class="header" part="header" ?hidden=${() => !props.heading.value}>
@@ -118,7 +107,7 @@ export const ALERT_TAG = defineComponent<BitAlertProps, BitAlertEvents>({
             <slot></slot>
           </div>
         </div>
-        <div class="actions" part="actions" ?hidden=${() => !hasActions.value}>
+        <div class="actions" part="actions" ?hidden=${() => !slots.has('actions').value}>
           <slot name="actions"></slot>
         </div>
         <button
@@ -128,7 +117,7 @@ export const ALERT_TAG = defineComponent<BitAlertProps, BitAlertEvents>({
           aria-label="Dismiss alert"
           ?hidden=${() => !props.dismissible.value}
           @click=${handleDismiss}>
-          ${closeIcon}
+          <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
         </button>
       </div>
     `;
@@ -142,5 +131,4 @@ export const ALERT_TAG = defineComponent<BitAlertProps, BitAlertEvents>({
     }),
     componentStyles,
   ],
-  tag: 'bit-alert',
 });

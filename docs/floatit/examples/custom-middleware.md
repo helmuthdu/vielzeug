@@ -27,7 +27,7 @@ const snap = (grid: number): Middleware => ({
   }),
 });
 
-await positionFloat(trigger, floating, {
+positionFloat(trigger, floating, {
   placement: 'bottom',
   middleware: [offset(8), flip(), snap(4)],
 });

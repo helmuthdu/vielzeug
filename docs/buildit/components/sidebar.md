@@ -50,18 +50,19 @@ Add the `collapsible` attribute to show the collapse toggle button. Items will a
   gap="none"
   style="height: 400px; --grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
   <bit-sidebar collapsible label="App navigation" style="grid-area: sidebar;">
+    <bit-icon slot="logo" name="rocket" size="24"></bit-icon>
     <span slot="header">My App</span>
     <bit-sidebar-group label="Main">
       <bit-sidebar-item href="#" active>
-        <span slot="icon">🏠</span>
+        <bit-icon slot="icon" name="home" size="18"></bit-icon>
         Dashboard
       </bit-sidebar-item>
       <bit-sidebar-item href="#">
-        <span slot="icon">📁</span>
+        <bit-icon slot="icon" name="folder" size="18"></bit-icon>
         Projects
       </bit-sidebar-item>
       <bit-sidebar-item href="#">
-        <span slot="icon">⚙️</span>
+        <bit-icon slot="icon" name="settings" size="18"></bit-icon>
         Settings
       </bit-sidebar-item>
     </bit-sidebar-group>
@@ -89,23 +90,24 @@ Set `default-open="false"` for uncontrolled groups that start collapsed, or pass
   gap="none"
   style="height: 400px; --grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
   <bit-sidebar label="App navigation" style="grid-area: sidebar;">
+    <span slot="header">My App</span>
     <bit-sidebar-group label="Main">
       <bit-sidebar-item href="#" active>
-        <span slot="icon">🏠</span>
+        <bit-icon slot="icon" name="home" size="18"></bit-icon>
         Dashboard
       </bit-sidebar-item>
       <bit-sidebar-item href="#">
-        <span slot="icon">📊</span>
+        <bit-icon slot="icon" name="chart-column" size="18"></bit-icon>
         Analytics
       </bit-sidebar-item>
     </bit-sidebar-group>
     <bit-sidebar-group label="Settings" collapsible open>
       <bit-sidebar-item href="#">
-        <span slot="icon">👤</span>
+        <bit-icon slot="icon" name="user" size="18"></bit-icon>
         Profile
       </bit-sidebar-item>
       <bit-sidebar-item href="#">
-        <span slot="icon">🔔</span>
+        <bit-icon slot="icon" name="bell" size="18"></bit-icon>
         Notifications
       </bit-sidebar-item>
     </bit-sidebar-group>
@@ -131,17 +133,17 @@ Use the `end` slot on `bit-sidebar-item` for trailing content such as notificati
   <bit-sidebar label="App navigation" style="grid-area: sidebar;">
     <bit-sidebar-group label="Inbox">
       <bit-sidebar-item href="#">
-        <span slot="icon">📬</span>
+        <bit-icon slot="icon" name="inbox" size="18"></bit-icon>
         Inbox
         <bit-badge slot="end" color="primary">12</bit-badge>
       </bit-sidebar-item>
       <bit-sidebar-item href="#">
-        <span slot="icon">⭐</span>
+        <bit-icon slot="icon" name="star" size="18"></bit-icon>
         Starred
         <bit-badge slot="end">4</bit-badge>
       </bit-sidebar-item>
       <bit-sidebar-item href="#">
-        <span slot="icon">🗑️</span>
+        <bit-icon slot="icon" name="trash-2" size="18"></bit-icon>
         Trash
       </bit-sidebar-item>
     </bit-sidebar-group>
@@ -169,11 +171,11 @@ Uses the same drawer-inspired panel surface with a stronger floating presentatio
   <bit-sidebar variant="floating" label="Floating sidebar" style="grid-area: sidebar;">
     <bit-sidebar-group label="Navigation">
       <bit-sidebar-item href="#" active>
-        <span slot="icon">🏠</span>
+        <bit-icon slot="icon" name="home" size="18"></bit-icon>
         Home
       </bit-sidebar-item>
       <bit-sidebar-item href="#">
-        <span slot="icon">📁</span>
+        <bit-icon slot="icon" name="folder" size="18"></bit-icon>
         Files
       </bit-sidebar-item>
     </bit-sidebar-group>
@@ -195,11 +197,11 @@ A subtle variant with a slightly tinted background and no visible border or elev
   <bit-sidebar variant="inset" label="Inset sidebar" style="grid-area: sidebar;">
     <bit-sidebar-group label="Navigation">
       <bit-sidebar-item href="#" active>
-        <span slot="icon">🏠</span>
+        <bit-icon slot="icon" name="home" size="18"></bit-icon>
         Home
       </bit-sidebar-item>
       <bit-sidebar-item href="#">
-        <span slot="icon">📁</span>
+        <bit-icon slot="icon" name="folder" size="18"></bit-icon>
         Files
       </bit-sidebar-item>
     </bit-sidebar-group>
@@ -212,7 +214,7 @@ A subtle variant with a slightly tinted background and no visible border or elev
 
 ## Header and Footer Slots
 
-Use `slot="header"` for branding (logo, app name) and `slot="footer"` for user profile or secondary actions.
+Use `slot="logo"` for the logo/icon and `slot="header"` for the app name or branding text. Use `slot="footer"` for user profile or secondary actions.
 
 <ComponentPreview>
 
@@ -223,18 +225,16 @@ Use `slot="header"` for branding (logo, app name) and `slot="footer"` for user p
   gap="none"
   style="height: 400px; --grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
   <bit-sidebar label="App sidebar" style="grid-area: sidebar;">
-    <div slot="header" style="display: flex; align-items: center; gap: var(--size-2); font-weight: var(--font-bold);">
-      <span>🚀</span>
-      <span>MyApp</span>
-    </div>
+    <bit-icon slot="logo" name="rocket" size="24"></bit-icon>
+    <span slot="header">MyApp</span>
 
     <bit-sidebar-group label="Navigation">
       <bit-sidebar-item href="#" active>
-        <span slot="icon">🏠</span>
+        <bit-icon slot="icon" name="home" size="18"></bit-icon>
         Dashboard
       </bit-sidebar-item>
       <bit-sidebar-item href="#">
-        <span slot="icon">👥</span>
+        <bit-icon slot="icon" name="users" size="18"></bit-icon>
         Team
       </bit-sidebar-item>
     </bit-sidebar-group>
@@ -243,7 +243,7 @@ Use `slot="header"` for branding (logo, app name) and `slot="footer"` for user p
       slot="footer"
       style="display: flex; align-items: center; gap: var(--size-2); font-size: var(--text-sm); color: var(--color-contrast-600);">
       <bit-sidebar-item href="#">
-        <span slot="icon">⚙️</span>
+        <bit-icon slot="icon" name="settings" size="18"></bit-icon>
         Config
       </bit-sidebar-item>
     </div>
@@ -253,6 +253,8 @@ Use `slot="header"` for branding (logo, app name) and `slot="footer"` for user p
 ```
 
 </ComponentPreview>
+
+> **Note:** The sidebar header now supports a dedicated `logo` slot for the logo/icon, and a `header` slot for the app name or branding text. When collapsed, only the logo/icon is shown above the toggle button.
 
 ## Disabled Items
 
@@ -268,8 +270,14 @@ Set `disabled` on a `bit-sidebar-item` to prevent interaction.
   style="--grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
   <bit-sidebar label="App navigation" style="grid-area: sidebar;">
     <bit-sidebar-group label="Options">
-      <bit-sidebar-item href="/available">Available</bit-sidebar-item>
-      <bit-sidebar-item href="/locked" disabled>Locked (disabled)</bit-sidebar-item>
+      <bit-sidebar-item href="/available">
+        <bit-icon slot="icon" name="check-circle" size="18"></bit-icon>
+        Available
+      </bit-sidebar-item>
+      <bit-sidebar-item href="/locked" disabled>
+        <bit-icon slot="icon" name="lock" size="18"></bit-icon>
+        Locked (disabled)
+      </bit-sidebar-item>
     </bit-sidebar-group>
   </bit-sidebar>
   <main style="grid-area: main; padding: var(--size-4);">Content area</main>
@@ -284,7 +292,7 @@ When linking to external resources, use `target` and `rel` attributes on `bit-si
 
 ```html
 <bit-sidebar-item href="https://example.com" target="_blank" rel="noopener noreferrer">
-  <span slot="icon">🌐</span>
+  <bit-icon slot="icon" name="globe" size="18"></bit-icon>
   External Docs
 </bit-sidebar-item>
 ```
@@ -357,7 +365,8 @@ bit-sidebar-item {
 
 | Slot      | Description                                        |
 | --------- | -------------------------------------------------- |
-| `header`  | Branding, logo, or app name — displayed at the top |
+| `logo`    | Logo or icon, always visible at the top            |
+| `header`  | App name or branding text, hidden when collapsed   |
 | (default) | `bit-sidebar-group` or `bit-sidebar-item` elements |
 | `footer`  | User info, theme toggles, or secondary actions     |
 

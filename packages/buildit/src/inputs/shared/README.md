@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD012 -->
+
 # Form Shared Modules
 
 This folder follows a single organization pattern by concern:
@@ -13,5 +15,3 @@ This folder follows a single organization pattern by concern:
 - `mount-*` and DOM effects live under `dom-sync/`.
 - Pure helpers and derived state calculators live under `utils/`.
 - Validation policy helpers live under `validation/`.
-- Existing legacy entry files keep compatibility re-exports for incremental migration.
-

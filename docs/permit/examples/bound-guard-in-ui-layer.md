@@ -1,46 +1,21 @@
----
-title: 'Permit Examples — Bound Guard in UI Layer'
-description: 'Bound Guard in UI Layer examples for permit.'
----
-
-## Bound Guard in UI Layer
-
-## Problem
-
-Implement bound guard in ui layer in a production-friendly way with `@vielzeug/permit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/permit` installed.
+# Bound Guard in UI Layer
 
 ```ts
-const permit = createPermit().grant('editor', 'posts', 'read', 'write').grant('admin', '*', 'delete');
+import { createPermit } from '@vielzeug/permit';
 
-const user = { id: 'u1', roles: ['editor'] };
-const guard = permit.for(user);
+const permit = createPermit();
 
-if (guard.can('posts', 'write')) {
-  // show edit button
-}
+permit
+  .set({ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' })
+  .set({ role: 'editor', resource: 'posts', action: 'update', effect: 'allow' });
 
-if (guard.canAny('posts', ['write', 'delete'])) {
-  // show actions menu
+export function usePostActions(user: { id: string; roles: string[] }) {
+  const guard = permit.withUser(user);
+
+  return {
+    canRead: guard.can('posts', 'read'),
+    canUpdate: guard.can('posts', 'update'),
+    canDelete: guard.can('posts', 'delete'),
+  };
 }
 ```
-
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Blog Roles](./blog-roles.md)
-- [Disabling Wildcard Fallback](./disabling-wildcard-fallback.md)
-- [Inheritance and Overrides](./inheritance-and-overrides.md)

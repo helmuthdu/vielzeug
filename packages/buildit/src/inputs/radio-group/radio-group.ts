@@ -1,23 +1,22 @@
 import {
+  define,
   computed,
   createContext,
   createId,
-  defineComponent,
   effect,
-  handle,
   html,
   inject,
-  onMount,
-  onSlotChange,
   provide,
   type ReadonlySignal,
   signal,
   watch,
 } from '@vielzeug/craftit';
+import { createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import { createChoiceChangeDetail, type ChoiceChangeDetail } from '../shared/utils';
@@ -65,6 +64,19 @@ export type BitRadioGroupEvents = {
   change: ChoiceChangeDetail;
 };
 
+const radioGroupProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  error: '',
+  helper: '',
+  label: '',
+  name: undefined,
+  orientation: 'vertical',
+  required: false,
+  value: '',
+} satisfies PropBundle<BitRadioGroupProps>;
+
 /**
  * A fieldset wrapper that groups `bit-radio` elements, provides shared
  * `name`, `color`, and `size` via context, and manages roving tabindex
@@ -87,21 +99,15 @@ export type BitRadioGroupEvents = {
  *
  * @slot - Place `bit-radio` elements here
  */
-export const RADIO_GROUP_TAG = defineComponent<BitRadioGroupProps, BitRadioGroupEvents>({
-  props: {
-    color: { default: undefined },
-    disabled: { default: false },
-    error: { default: '' },
-    helper: { default: '' },
-    label: { default: '' },
-    name: { default: '' },
-    orientation: { default: 'vertical' },
-    required: { default: false },
-    size: { default: undefined },
-    value: { default: '' },
-  },
-  setup({ emit, host, props }) {
-    const selectedValue = signal('');
+export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('bit-radio-group', {
+  props: radioGroupProps,
+  setup({ emit, host, props, slots }) {
+    const selectedValue = signal((props.value.value as string | undefined) ?? '');
+    const isDisabled = computed(() => Boolean(props.disabled.value));
+
+    host.bind('attr', {
+      value: () => selectedValue.value || null,
+    });
 
     watch(
       props.value,
@@ -111,7 +117,11 @@ export const RADIO_GROUP_TAG = defineComponent<BitRadioGroupProps, BitRadioGroup
       { immediate: true },
     );
 
-    const getSlottedRadios = (): HTMLElement[] => Array.from(host.getElementsByTagName('bit-radio')) as HTMLElement[];
+    const getSlottedRadios = (): HTMLElement[] =>
+      Array.from(host.el.getElementsByTagName('bit-radio')) as HTMLElement[];
+
+    const getEnabledRadios = (): HTMLElement[] =>
+      isDisabled.value ? [] : getSlottedRadios().filter((radio) => !radio.hasAttribute('disabled'));
 
     const getLabelForValue = (value: string): string => {
       const radio = getSlottedRadios().find((el) => (el.getAttribute('value') ?? '') === value);
@@ -130,11 +140,11 @@ export const RADIO_GROUP_TAG = defineComponent<BitRadioGroupProps, BitRadioGroup
 
     const formCtx = inject(FORM_CTX, undefined);
 
-    mountFormContextSync(host, formCtx, props);
+    mountFormContextSync(host.el, formCtx, props);
 
     provide(RADIO_GROUP_CTX, {
       color: props.color,
-      disabled: computed(() => Boolean(props.disabled.value)),
+      disabled: isDisabled,
       name: props.name,
       select: selectRadio,
       size: props.size,
@@ -144,60 +154,89 @@ export const RADIO_GROUP_TAG = defineComponent<BitRadioGroupProps, BitRadioGroup
     // Sync name/color/size/disabled onto slotted bit-radio children.
     // Checked state is handled reactively inside bit-radio via group context.
     const syncChildren = () => {
+      const setMaybe = (el: HTMLElement, name: string, value: string | undefined) => {
+        if (value) el.setAttribute(name, value);
+        else el.removeAttribute(name);
+      };
+      const setBool = (el: HTMLElement, name: string, enabled: boolean) => {
+        el.toggleAttribute(name, enabled);
+      };
+
       for (const radio of getSlottedRadios()) {
         const val = radio.getAttribute('value') ?? '';
 
-        if (val === selectedValue.value) radio.setAttribute('checked', '');
-        else radio.removeAttribute('checked');
-
-        if (props.name.value) radio.setAttribute('name', props.name.value);
-
-        if (props.color.value) radio.setAttribute('color', props.color.value);
-        else radio.removeAttribute('color');
-
-        if (props.size.value) radio.setAttribute('size', props.size.value);
-        else radio.removeAttribute('size');
-
-        if (props.disabled.value) radio.setAttribute('disabled', '');
-        else radio.removeAttribute('disabled');
+        setBool(radio, 'checked', val === selectedValue.value);
+        setMaybe(radio, 'name', props.name.value);
+        setMaybe(radio, 'color', props.color.value);
+        setMaybe(radio, 'size', props.size.value);
+        setBool(radio, 'disabled', isDisabled.value);
       }
     };
 
-    onMount(() => {
-      onSlotChange('default', syncChildren);
-      // Apply group props to already-slotted radios on first mount.
+    effect(() => {
+      void slots.elements().value;
       syncChildren();
-      effect(syncChildren);
+    });
 
-      // Roving tabindex: only the selected (or first) radio is tabbable
-      effect(() => {
-        const radios = getSlottedRadios();
-        let hasFocusable = false;
+    // Roving tabindex: only the selected (or first) radio is tabbable
+    effect(() => {
+      void slots.elements().value;
 
-        for (const radio of radios) {
-          const isSelected = radio.getAttribute('value') === selectedValue.value;
+      const radios = getSlottedRadios();
+      const setTabIndex = (radio: HTMLElement, selected: boolean) => {
+        radio.setAttribute('tabindex', selected && !isDisabled.value ? '0' : '-1');
+      };
+      let hasFocusable = false;
 
-          if (isSelected && !props.disabled.value) {
-            radio.setAttribute('tabindex', '0');
-            hasFocusable = true;
-          } else {
-            radio.setAttribute('tabindex', '-1');
-          }
+      for (const radio of radios) {
+        const isSelected = radio.getAttribute('value') === selectedValue.value;
+
+        setTabIndex(radio, isSelected);
+
+        if (isSelected && !isDisabled.value) hasFocusable = true;
+      }
+
+      if (!hasFocusable && radios.length > 0) {
+        const first = radios.find((r) => !r.hasAttribute('disabled'));
+
+        if (first) first.setAttribute('tabindex', '0');
+      }
+    });
+
+    const listControl = createListControl<HTMLElement>({
+      getIndex: () => getEnabledRadios().indexOf(document.activeElement as HTMLElement),
+      getItems: getEnabledRadios,
+      loop: true,
+      setIndex: (index) => {
+        const radio = getEnabledRadios()[index];
+
+        if (!radio) return;
+
+        radio.focus();
+      },
+    });
+
+    const radioGroupListKeys = createListKeyControl({
+      control: listControl,
+      keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
+      onInvoke: (_action, _result, event) => {
+        const activeRadio = document.activeElement as HTMLElement | null;
+
+        if (activeRadio?.tagName === 'BIT-RADIO') {
+          selectRadio(activeRadio.getAttribute('value') ?? '', event);
         }
+      },
+    });
 
-        // If nothing is selected, make the first non-disabled radio tabbable
-        if (!hasFocusable && radios.length > 0) {
-          const first = radios.find((r) => !r.hasAttribute('disabled'));
+    host.bind('on', {
+      change: (e) => {
+        if (e.target === host.el) return;
 
-          if (first) first.setAttribute('tabindex', '0');
-        }
-      });
-
-      // Arrow-key navigation within the group
-      handle(host, 'keydown', (e: KeyboardEvent) => {
-        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-
-        const radios = getSlottedRadios().filter((el) => !el.hasAttribute('disabled'));
+        e.stopPropagation();
+        selectRadio((e.target as HTMLElement).getAttribute('value') ?? '', e);
+      },
+      keydown: (e) => {
+        const radios = getEnabledRadios();
 
         if (!radios.length) return;
 
@@ -205,23 +244,8 @@ export const RADIO_GROUP_TAG = defineComponent<BitRadioGroupProps, BitRadioGroup
 
         if (focused === -1) return;
 
-        e.preventDefault();
-
-        const next =
-          e.key === 'ArrowDown' || e.key === 'ArrowRight'
-            ? (focused + 1) % radios.length
-            : (focused - 1 + radios.length) % radios.length;
-
-        radios[next].focus();
-        selectRadio(radios[next].getAttribute('value') ?? '', e);
-      });
-
-      handle(host, 'change', (e: Event) => {
-        if (e.target === host) return;
-
-        e.stopPropagation();
-        selectRadio((e.target as HTMLElement).getAttribute('value') ?? '', e);
-      });
+        radioGroupListKeys.handleKeydown(e);
+      },
     });
 
     const legendId = createId('radio-group-legend');
@@ -251,5 +275,4 @@ export const RADIO_GROUP_TAG = defineComponent<BitRadioGroupProps, BitRadioGroup
     `;
   },
   styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
-  tag: 'bit-radio-group',
 });

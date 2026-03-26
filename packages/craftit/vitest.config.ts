@@ -14,5 +14,6 @@ export default defineConfig({
     globals: true,
     name: 'craftit',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    watch: false,
   },
 });

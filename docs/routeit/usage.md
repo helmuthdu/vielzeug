@@ -19,15 +19,14 @@ Start with the [Overview](./index.md) for a quick introduction and installation,
 import { createRouter } from '@vielzeug/routeit';
 
 const router = createRouter();
-// history mode, base '/', no global middleware
+// base '/', no global middleware
 ```
 
 With options:
 
 ```ts
 const router = createRouter({
-  mode: 'history', // or 'hash'
-  base: '/app', // prefix for all history-mode routes
+  base: '/app', // prefix for all routes
   viewTransition: true, // use the View Transitions API when available
   autoStart: true, // start immediately, no separate start() call needed
 });
@@ -78,7 +77,7 @@ router.on('/users/:id', (ctx) => {
 ### Starting and Stopping
 
 ```ts
-router.start(); // attach popstate/hashchange listener, handle current URL
+router.start(); // attach popstate listener, handle current URL
 router.stop(); // detach listener
 router.dispose(); // stop + clear all subscribers
 
@@ -187,7 +186,7 @@ const requireAuth: Middleware = async (ctx, next) => {
 
 ### Middleware Chain Order
 
-```
+```text
 Global middleware (RouterOptions.middleware or router.use())
   ↓
 Group middleware (group() options.middleware)
@@ -258,7 +257,7 @@ try {
 
 ### Same-URL Deduplication
 
-By default, navigating to the current URL in history mode is a no-op — no new history entry is pushed and no handler re-runs. Override with `{ force: true }`:
+By default, navigating to the current URL is a no-op — no new history entry is pushed and no handler re-runs. Override with `{ force: true }`:
 
 ```ts
 await router.navigate('/current-page'); // no-op
@@ -308,7 +307,7 @@ router.isActive('userList', false); // prefix match by name
 
 ## URL Builder
 
-`url(nameOrPattern, params?, query?)` generates a URL and prepends the base path in history mode:
+`url(nameOrPattern, params?, query?)` generates a URL and prepends the base path:
 
 ```ts
 const router = createRouter({ base: '/app' });
@@ -386,7 +385,7 @@ if (match?.name === 'userDetail') {
 
 ```ts
 const { pathname, params, query, hash, name, meta } = router.state;
-// Returns a shallow copy — safe to store directly
+// Returns an immutable snapshot
 ```
 
 ### `subscribe(listener)`
@@ -438,24 +437,6 @@ const router = createRouter({
   },
 });
 ```
-
-## Hash Mode
-
-Switch to hash-based routing for environments without server-side URL handling:
-
-```ts
-const router = createRouter({ mode: 'hash' });
-
-router
-  .on('/', () => renderHome())
-  .on('/users/:id', ({ params }) => renderUser(params.id))
-  .start();
-
-// URLs become: https://example.com/#/users/42
-await router.navigate('/users/42'); // sets location.hash = '/users/42'
-```
-
-The `base` option is ignored in hash mode.
 
 ## View Transitions
 

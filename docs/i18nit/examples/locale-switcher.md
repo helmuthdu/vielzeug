@@ -15,7 +15,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 ```ts
 async function switchLocale(locale: string) {
-  await i18n.setLocale(locale);
+  await i18n.switchLocale(locale);
   render();
 }
 

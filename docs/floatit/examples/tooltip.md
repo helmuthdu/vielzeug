@@ -16,7 +16,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 A popover-based tooltip that flips and shifts to stay visible.
 
 ```ts
-import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { float, flip, offset, shift } from '@vielzeug/floatit';
 
 const trigger = document.querySelector<HTMLElement>('#trigger')!;
 const tooltip = document.querySelector<HTMLElement>('#tooltip')!;
@@ -25,14 +25,10 @@ let cleanup: (() => void) | null = null;
 
 function show() {
   tooltip.showPopover();
-  cleanup = autoUpdate(trigger, tooltip, () =>
-    positionFloat(trigger, tooltip, {
-      placement: 'top',
-      middleware: [offset(8), flip(), shift({ padding: 6 })],
-    }).then((p) => {
-      tooltip.dataset.placement = p;
-    }),
-  );
+  cleanup = float(trigger, tooltip, {
+    placement: 'top',
+    middleware: [offset(8), flip(), shift({ padding: 6 })],
+  });
 }
 
 function hide() {

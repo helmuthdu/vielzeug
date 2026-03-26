@@ -1,4 +1,4 @@
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-button', () => {
   let fixture: Fixture<HTMLElement>;
@@ -163,7 +163,7 @@ describe('bit-button', () => {
 
       await user.click(fixture.query<HTMLElement>('[part="button"]')!);
 
-      expect(handler).toHaveBeenCalled();
+      expect(handler).toHaveBeenCalledTimes(1);
     });
   });
 

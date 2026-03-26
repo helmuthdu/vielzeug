@@ -1,6 +1,6 @@
 import { afterEach, vi } from 'vitest';
 
-import { install } from './src/test';
+import { install } from './src/testing';
 
 install(afterEach);
 

@@ -1,18 +1,8 @@
-import {
-  computed,
-  defineComponent,
-  handle,
-  html,
-  typed,
-  inject,
-  onMount,
-  ref,
-  syncContextProps,
-  watch,
-} from '@vielzeug/craftit';
+import { define, computed, html, inject, onMount, ref, syncContextProps } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
+import '../../content/icon/icon';
 import { coarsePointerMixin } from '../../styles';
 import { ACCORDION_CTX } from '../accordion/accordion';
 import styles from './accordion-item.css?inline';
@@ -74,12 +64,12 @@ export type BitAccordionItemProps = {
  * ```
  */
 
-export const ACCORDION_ITEM_TAG = defineComponent<BitAccordionItemProps, BitAccordionItemEvents>({
+export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItemEvents>('bit-accordion-item', {
   props: {
-    disabled: typed<boolean>(false),
-    expanded: typed<boolean>(false),
-    size: typed<BitAccordionItemProps['size']>(undefined),
-    variant: typed<BitAccordionItemProps['variant']>(undefined),
+    disabled: false,
+    expanded: false,
+    size: undefined,
+    variant: undefined,
   },
   setup({ emit, host, props }) {
     // Inherit size/variant from a parent bit-accordion when present.
@@ -92,14 +82,15 @@ export const ACCORDION_ITEM_TAG = defineComponent<BitAccordionItemProps, BitAcco
     const summaryRef = ref<HTMLElement>();
     const handleToggle = () => {
       const isOpen = detailsRef.value?.open ?? false;
+      const wasExpanded = Boolean(props.expanded.value);
 
       // Notify accordion parent for single-selection management
-      if (isOpen && !host.hasAttribute('expanded')) {
-        host.setAttribute('expanded', '');
-        emit('expand', { expanded: true, item: host });
-      } else if (!isOpen && host.hasAttribute('expanded')) {
-        host.removeAttribute('expanded');
-        emit('collapse', { expanded: false, item: host });
+      if (isOpen && !wasExpanded) {
+        props.expanded.value = true;
+        emit('expand', { expanded: true, item: host.el });
+      } else if (!isOpen && wasExpanded) {
+        props.expanded.value = false;
+        emit('collapse', { expanded: false, item: host.el });
       }
     };
 
@@ -109,24 +100,69 @@ export const ACCORDION_ITEM_TAG = defineComponent<BitAccordionItemProps, BitAcco
 
       if (!details || !summary) return;
 
-      // Sync details.open when expanded prop changes (needs live DOM refs)
-      watch(
-        props.expanded,
-        (v) => {
-          const expanded = Boolean(v);
+      // Detect RTL by preferring the closest explicit dir="..." ancestor.
+      const checkRTL = () => {
+        let isRTL: boolean | undefined;
 
-          details.open = expanded;
-          summary.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-        },
-        { immediate: true },
-      );
-      handle(details, 'toggle', handleToggle);
+        // 1) Closest ancestor dir always wins (supports local RTL sections).
+        let parent: HTMLElement | null = host.el;
+
+        while (parent) {
+          const dir = parent.getAttribute('dir');
+
+          if (dir === 'rtl') {
+            isRTL = true;
+            break;
+          }
+
+          if (dir === 'ltr') {
+            isRTL = false;
+            break;
+          }
+
+          parent = parent.parentElement;
+        }
+
+        // 2) Fallback to computed direction when no explicit dir is found.
+        if (isRTL === undefined) {
+          isRTL = getComputedStyle(host.el).direction === 'rtl';
+        }
+
+        // 3) Keep markup simple for CSS targeting.
+        details.classList.toggle('rtl', isRTL);
+      };
+
+      // Check initially
+      checkRTL();
+
+      // Re-check when DOM attributes change
+      const observer = new MutationObserver((mutations) => {
+        const dirChanged = mutations.some((m) => m.attributeName === 'dir');
+
+        if (dirChanged) {
+          checkRTL();
+        }
+      });
+
+      observer.observe(document.documentElement, {
+        attributeFilter: ['dir'],
+        attributes: true,
+        subtree: true,
+      });
+
+      details.addEventListener('toggle', handleToggle);
+
+      return () => {
+        observer.disconnect();
+        details.removeEventListener('toggle', handleToggle);
+      };
     });
 
-    const ariaExpanded = computed(() => (props.expanded.value ? 'true' : 'false'));
+    const isExpanded = computed(() => Boolean(props.expanded.value));
+    const ariaExpanded = computed(() => String(isExpanded.value));
     const ariaDisabled = computed(() => (props.disabled.value ? 'true' : 'false'));
 
-    return html` <details part="item" ?open=${props.expanded} ref=${detailsRef}>
+    return html` <details part="item" ?open=${isExpanded} ref=${detailsRef}>
       <summary part="summary" :aria-expanded=${ariaExpanded} :aria-disabled=${ariaDisabled} ref=${summaryRef}>
         <slot name="prefix"></slot>
         <div class="header-content" part="header">
@@ -138,18 +174,7 @@ export const ACCORDION_ITEM_TAG = defineComponent<BitAccordionItemProps, BitAcco
           </span>
         </div>
         <slot name="suffix"></slot>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="chevron"
-          part="chevron"
-          xmlns="http://www.w3.org/2000/svg">
-          <path d="m 14.999979,5.9999793 -5.9999997,5.9999997 5.9999997,6" />
-        </svg>
+        <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
       </summary>
       <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
         <div class="content-inner">
@@ -159,5 +184,4 @@ export const ACCORDION_ITEM_TAG = defineComponent<BitAccordionItemProps, BitAcco
     </details>`;
   },
   styles: [coarsePointerMixin, styles],
-  tag: 'bit-accordion-item',
 });

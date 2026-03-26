@@ -9,6 +9,7 @@ A star-based rating input that lets users select a score. Supports hover preview
 - 🌈 **6 Semantic Colors** — primary, secondary, info, success, warning, error
 - 📏 **3 Sizes** — sm, md, lg
 - 🔒 **Readonly & Disabled** — readonly shows a non-interactive score; disabled removes from tab order
+- 🧱 **Solid Fill Mode** — selected stars can render as solid-filled via `solid`
 - 🔗 **Form-Associated** — `name` attribute & native form `reset` support
 - 🖱️ **Hover Preview** — stars fill on hover before selection is committed
 
@@ -95,6 +96,20 @@ Use `readonly` to display a rating without allowing user interaction — useful 
 
 </ComponentPreview>
 
+## Solid Stars
+
+Use `solid` to render selected stars as filled shapes instead of outline-only.
+
+<ComponentPreview center>
+
+```html
+<bit-rating value="3" color="warning"></bit-rating>
+<bit-rating value="3" color="warning" solid></bit-rating>
+<bit-rating value="4" color="primary" solid></bit-rating>
+```
+
+</ComponentPreview>
+
 ## Disabled
 
 <ComponentPreview center>
@@ -114,6 +129,7 @@ Use `readonly` to display a rating without allowing user interaction — useful 
 | `value`    | `number`                                                                  | `0`     | Current selected rating                     |
 | `max`      | `number`                                                                  | `5`     | Total number of stars                       |
 | `readonly` | `boolean`                                                                 | `false` | Prevents user interaction; shows value only |
+| `solid`    | `boolean`                                                                 | `false` | Fills selected stars instead of outline-only |
 | `disabled` | `boolean`                                                                 | `false` | Disables the rating input                   |
 | `label`    | `string`                                                                  | —       | Accessible label for the rating group       |
 | `name`     | `string`                                                                  | —       | Form field name                             |

@@ -23,12 +23,14 @@ export type Schema<S extends Record<string, Record<string, unknown>>> = {
   [K in keyof S]: SchemaEntry<S[K]>;
 };
 
-export type MigrationFn = (
-  db: IDBDatabase,
-  oldVersion: number,
-  newVersion: number | null,
-  transaction: IDBTransaction,
-) => void;
+export type MigrationContext = {
+  db: IDBDatabase;
+  newVersion: number | null;
+  oldVersion: number;
+  tx: IDBTransaction;
+};
+
+export type MigrationFn = (ctx: MigrationContext) => void;
 
 // NonNullable strips the `| undefined` introduced by the optional phantom property (`?`).
 // Intersecting with Record<string, unknown> satisfies the constraint required by QueryBuilder<T>.
@@ -82,12 +84,13 @@ export type TransactionContext<S extends Schema<any>, K extends keyof S> = {
   getMany<T extends K>(table: T, keys: KeyType<S, T>[]): Promise<RecordType<S, T>[]>;
   getOr<T extends K>(table: T, key: KeyType<S, T>, defaultValue: RecordType<S, T>): Promise<RecordType<S, T>>;
   has<T extends K>(table: T, key: KeyType<S, T>): Promise<boolean>;
+  /** Throws if the key does not exist or has expired. */
   patch<T extends K>(
     table: T,
     key: KeyType<S, T>,
     partial: Partial<RecordType<S, T>>,
     ttl?: number,
-  ): Promise<RecordType<S, T> | undefined>;
+  ): Promise<RecordType<S, T>>;
   put<T extends K>(table: T, value: RecordType<S, T>, ttl?: number): Promise<void>;
   putMany<T extends K>(table: T, values: RecordType<S, T>[], ttl?: number): Promise<void>;
 };
@@ -111,17 +114,20 @@ export interface Adapter<S extends Schema<any>> {
     ttl?: number,
   ): Promise<RecordType<S, K>>;
   has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean>;
+  /** Throws if the key does not exist or has expired. */
   patch<K extends keyof S>(
     table: K,
     key: KeyType<S, K>,
     partial: Partial<RecordType<S, K>>,
     ttl?: number,
-  ): Promise<RecordType<S, K> | undefined>;
+  ): Promise<RecordType<S, K>>;
   put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void>;
   putMany<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void>;
 }
 
 export interface IndexedDBHandle<S extends Schema<any>> extends Adapter<S> {
+  /** Native IDB record count — O(1) but may include TTL-expired records not yet evicted. */
+  countRaw<K extends keyof S>(table: K): Promise<number>;
   transaction<K extends keyof S>(tables: K[], fn: (tx: TransactionContext<S, K>) => Promise<void>): Promise<void>;
   close(): void;
 }

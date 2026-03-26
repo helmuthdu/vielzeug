@@ -23,18 +23,17 @@ Factory function that creates a new `Router` instance.
 import { createRouter } from '@vielzeug/routeit';
 
 const router = createRouter();
-const router = createRouter({ mode: 'hash', base: '/app' });
+const router = createRouter({ base: '/app' });
 ```
 
-| Parameter                | Type                         | Default     | Description                                                                   |
-| ------------------------ | ---------------------------- | ----------- | ----------------------------------------------------------------------------- |
-| `options.mode`           | `RouterMode`                 | `'history'` | Routing mode — `'history'` uses the HTML5 History API, `'hash'` uses URL hash |
-| `options.base`           | `string`                     | `'/'`       | Base path prefix for all routes in history mode                               |
-| `options.onNotFound`     | `RouteHandler`               | —           | Called when no route matches the current URL                                  |
-| `options.onError`        | `(error, ctx) => void`       | —           | Called when a handler or middleware throws                                    |
-| `options.middleware`     | `Middleware \| Middleware[]` | `[]`        | Global middleware applied before every route                                  |
-| `options.viewTransition` | `boolean`                    | `false`     | Wrap navigations in the View Transition API when available                    |
-| `options.autoStart`      | `boolean`                    | `false`     | Start listening and handle the current URL immediately after construction     |
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `options.base` | `string` | `'/'` | Base path prefix for all routes |
+| `options.onNotFound` | `RouteHandler` | — | Called when no route matches the current URL |
+| `options.onError` | `(error, ctx) => void` | — | Called when a handler or middleware throws |
+| `options.middleware` | `Middleware \| Middleware[]` | `[]` | Global middleware applied before every route |
+| `options.viewTransition` | `boolean` | `false` | Wrap navigations in the View Transition API when available |
+| `options.autoStart` | `boolean` | `false` | Start listening and handle the current URL immediately after construction |
 
 **Returns:** `Router`
 
@@ -133,7 +132,7 @@ router.use(analytics, errorTracker);
 
 #### `router.start()`
 
-Attach the `popstate` (history mode) or `hashchange` (hash mode) event listener and handle the current URL. Idempotent — safe to call more than once.
+Attach the `popstate` event listener and handle the current URL. Idempotent — safe to call more than once.
 
 **Returns:** `this` (chainable)
 
@@ -178,7 +177,7 @@ await router.navigate({ name: 'user', query: { tab: 'posts' }, hash: 'activity' 
 
 #### `router.url(nameOrPattern, params?, query?)`
 
-Generate a URL from a path pattern or named route. Prepends the base path in history mode.
+Generate a URL from a path pattern or named route. Prepends the base path.
 
 ```ts
 router.url('/users/:id', { id: '42' }); // '/users/42'
@@ -232,7 +231,7 @@ router.resolve('/unknown');
 
 #### `router.state` (getter)
 
-Current route state as a shallow copy.
+Current route state as an immutable snapshot.
 
 ```ts
 const { pathname, params, query, hash, name, meta } = router.state;
@@ -282,7 +281,7 @@ type RouteContext<Params extends RouteParams = RouteParams, Meta = unknown> = {
 ```ts
 type RouteHandler<Params extends RouteParams = RouteParams, Meta = unknown> = (
   context: RouteContext<Params, Meta>,
-) => void;
+) => void | Promise<void>;
 ```
 
 Handlers may return a `Promise` — TypeScript's `void` return allows async functions and functions that return any value.
@@ -342,7 +341,6 @@ type GroupOptions = {
 
 ```ts
 type RouterOptions = {
-  mode?: RouterMode;
   base?: string;
   onNotFound?: RouteHandler;
   onError?: (error: unknown, context: RouteContext) => void;
@@ -404,12 +402,6 @@ type RouteParams = Record<string, string>;
 type QueryParams = Record<string, string | string[]>;
 ```
 
-### `RouterMode`
-
-```ts
-type RouterMode = 'history' | 'hash';
-```
-
 ### `PathParams<T>`
 
 Extracts typed path params from a path pattern literal at the type level.
@@ -443,7 +435,7 @@ type StaticParams = PathParams<'/about'>;
 
 ### Middleware Execution Order
 
-```
+```text
 Global middleware 1  (RouterOptions.middleware / router.use())
   ↓
 Global middleware 2

@@ -3,8 +3,6 @@ title: Buildit — API Reference
 description: Entry points, import paths, and exported symbols for @vielzeug/buildit.
 ---
 
-# Buildit API Reference
-
 [[toc]]
 
 ## API At a Glance
@@ -27,7 +25,7 @@ description: Entry points, import paths, and exported symbols for @vielzeug/buil
 | `@vielzeug/buildit/styles/animation.css`  | Animation helpers                                                      |
 | `@vielzeug/buildit/styles/layers.css`     | Cascade layer definitions                                              |
 
-For headless controller primitives (`createListNavigation`, `createOverlayControl`, `createSelectionModel`), use `@vielzeug/craftit/labs`.
+For headless controller primitives (`createTextFieldControl`, `createChoiceFieldControl`, `createCheckableFieldControl`, `createListControl`, `createOverlayControl`), use `@vielzeug/craftit/controls`.
 
 ## Runtime Registration Imports
 
@@ -53,6 +51,7 @@ import '@vielzeug/buildit';
 import '@vielzeug/buildit/accordion';
 import '@vielzeug/buildit/accordion-item';
 import '@vielzeug/buildit/alert';
+import '@vielzeug/buildit/async';
 import '@vielzeug/buildit/avatar';
 import '@vielzeug/buildit/badge';
 import '@vielzeug/buildit/box';
@@ -70,6 +69,7 @@ import '@vielzeug/buildit/file-input';
 import '@vielzeug/buildit/form';
 import '@vielzeug/buildit/grid';
 import '@vielzeug/buildit/grid-item';
+import '@vielzeug/buildit/icon';
 import '@vielzeug/buildit/input';
 import '@vielzeug/buildit/menu';
 import '@vielzeug/buildit/number-input';
@@ -119,18 +119,19 @@ Use the following pages as the canonical per-component API source.
 ### Feedback
 
 - [Alert](./components/alert.md)
+- [Async (bit-async)](./components/async.md)
 - [Badge](./components/badge.md)
 - [Chip](./components/chip.md)
 - [Progress](./components/progress.md)
 - [Skeleton](./components/skeleton.md)
 - [Toast](./components/toast.md)
 
-
 ### Content
 
 - [Avatar](./components/avatar.md)
 - [Breadcrumb](./components/breadcrumb.md)
 - [Card](./components/card.md)
+- [Icon](./components/icon.md)
 - [Pagination](./components/pagination.md)
 - [Separator](./components/separator.md)
 - [Table](./components/table.md)
@@ -175,3 +176,4 @@ Use the following pages as the canonical per-component API source.
 - Import `@vielzeug/buildit/styles` before component registration.
 - Importing `@vielzeug/buildit` registers every published component; use it when convenience matters more than granular control.
 - For attribute/event/CSS variable details, use each component page in this section.
+- For WCAG compliance details and the axe-core testing contract, see the **[Accessibility Quality Bar](./accessibility.md)**.

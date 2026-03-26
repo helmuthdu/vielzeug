@@ -3,13 +3,11 @@ title: Workit — Examples
 description: Practical examples and recipes for workit.
 ---
 
-# Workit Examples
-
 [[toc]]
 
 ## How to Use These Examples
 
-These examples cover single workers, pools, timeouts, cancellation, external scripts, and testing.
+These examples cover single workers, pools, timeouts, cancellation, transferables, and testing.
 
 1. Start with the first example page to learn the baseline pattern.
 2. Move to advanced pages that match your framework or production scenario.
@@ -19,7 +17,7 @@ These examples are aligned with the current `@vielzeug/workit` API.
 
 ## Examples Overview
 
-- [Using External Scripts (importScripts)](./examples/using-external-scripts-importscripts.md)
+- [Using Transferables](./examples/using-transferables.md)
 - [Image Processing](./examples/image-processing.md)
 - [Data Transformation Pipeline](./examples/data-transformation-pipeline.md)
 - [Cancellable Batch](./examples/cancellable-batch.md)

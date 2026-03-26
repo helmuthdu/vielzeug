@@ -1,5 +1,5 @@
 import { html, ref } from '../index';
-import { mount } from '../test';
+import { mount } from '../testing';
 
 describe('core/internal.ts', () => {
   describe('ref()', () => {

@@ -1,4 +1,4 @@
-import { type Fixture, mount } from '@vielzeug/craftit/test';
+import { type Fixture, mount } from '@vielzeug/craftit/testing';
 
 describe('bit-sidebar', () => {
   let fixture: Fixture<HTMLElement>;
@@ -142,20 +142,6 @@ describe('bit-sidebar-group', () => {
     expect(fixture.query<HTMLDetailsElement>('[part="group"]')?.open).toBe(false);
   });
 
-  it('emits open-change when toggling in uncontrolled mode', async () => {
-    fixture = await mount('bit-sidebar-group', { attrs: { collapsible: '', 'default-open': 'false' } });
-
-    const handler = vi.fn();
-
-    fixture.element.addEventListener('open-change', handler);
-    fixture.query<HTMLElement>('[part="group-header"]')?.click();
-    await fixture.flush();
-
-    expect(fixture.element.hasAttribute('open')).toBe(true);
-    expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler.mock.calls[0][0].detail).toEqual({ open: true });
-  });
-
   it('does not mutate open state in controlled mode without external update', async () => {
     fixture = await mount('bit-sidebar-group', { attrs: { collapsible: '', open: '' } });
 
@@ -186,7 +172,12 @@ describe('bit-sidebar-item', () => {
   it('renders a button when disabled even if href is present', async () => {
     fixture = await mount('bit-sidebar-item', { attrs: { disabled: '', href: '/home' } });
 
-    expect(fixture.query('button.item')).toBeTruthy();
+    // Should render a <div class="item"> with aria-disabled and tabindex
+    const divItem = fixture.query('div.item');
+
+    expect(divItem).toBeTruthy();
+    expect(divItem?.getAttribute('aria-disabled')).toBe('true');
+    expect(divItem?.getAttribute('tabindex')).toBe('-1');
     expect(fixture.query('a.item')).toBeFalsy();
   });
 

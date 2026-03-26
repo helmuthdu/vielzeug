@@ -30,7 +30,7 @@
     color: var(--color-contrast-600);
     text-decoration: none;
     outline-offset: 2px;
-    border-radius: var(--rounded-sm);
+    border-radius: var(--rounded-lg);
     transition: color var(--transition-fast);
   }
 

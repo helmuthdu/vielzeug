@@ -18,7 +18,7 @@ pnpm add @vielzeug/i18nit
 
 | Entry | Purpose |
 | --- | --- |
-| `@vielzeug/i18nit` | Main API (`createI18n`, `I18n`, exported types) |
+| `@vielzeug/i18nit` | Main API (`createI18n`, exported types) |
 | `@vielzeug/i18nit/core` | Core bundle entry |
 
 ## Quick Start
@@ -46,7 +46,7 @@ i18n.t('greeting', { name: 'Alice' });
 i18n.t('inbox', { count: 0 });
 i18n.t('inbox', { count: 3 });
 
-i18n.locale = 'de';
+await i18n.switchLocale('de');
 i18n.t('nav.home'); // falls back to en
 ```
 
@@ -57,7 +57,7 @@ i18n.t('nav.home'); // falls back to en
 - ICU-style interpolation with object/array path support
 - Plural messages (`zero/one/two/few/many/other`) via `Intl.PluralRules`
 - Locale chain fallback (`sr-Latn-RS -> sr-Latn -> sr`) + configured fallback locales
-- Async locale loading (`load`, `setLocale`, `registerLoader`, `reload`)
+- Async locale loading (`ensureLocale`, `switchLocale`, `registerLoader`, `reload`)
 - Catalog updates (`add` deep-merge, `replace` full replace)
 - Subscription API with batched notifications (`batch`, `subscribe`)
 - Intl format helpers (`number`, `date`, `list`, `relative`, `currency`)
@@ -67,8 +67,8 @@ i18n.t('nav.home'); // falls back to en
 ## API At a Glance
 
 - `createI18n<T>(options?) => I18n<T>`
-- `class I18n<T> implements BoundI18n<T>`
 - `type BoundI18n<T>`
+- `type I18n<T>`
 - `type I18nOptions<T>`
 - `type Messages`, `TranslationKey`, `TranslationKeyParam`, `PluralKeys`, `NamespaceKeys`
 

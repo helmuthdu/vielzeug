@@ -67,7 +67,7 @@ import '@vielzeug/buildit';
 
 **Content**
 
-`avatar`, `breadcrumb`, `card`, `pagination`, `separator`, `table`, `text`
+`avatar`, `breadcrumb`, `card`, `icon`, `pagination`, `separator`, `table`, `text`
 
 **Disclosure**
 
@@ -96,6 +96,7 @@ import '@vielzeug/buildit';
 - The root package both **registers all published components** and re-exports tags, types, and shared symbols.
 - Prefer subpath imports for application code when you want tighter control over registration and bundle size.
 - Prefer declarative attributes and slots over manual DOM mutation.
+- Buildit default icon glyphs are Lucide-based and centralized in `packages/buildit/src/icons.ts`.
 
 ## API Summary
 

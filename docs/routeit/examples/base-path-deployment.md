@@ -16,14 +16,13 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 Deploy at a subdirectory without changing route definitions:
 
 ```ts
-const router = createRouter({ mode: 'history', base: '/my-app' });
+const router = createRouter({ base: '/my-app' });
 
-router.routes([
-  { path: '/', handler: renderHome },
-  { path: '/about', handler: renderAbout },
-  { path: '/users/:id', name: 'user', handler: ({ params }) => renderUser(params.id) },
-]);
-router.start();
+router
+  .on('/', renderHome)
+  .on('/about', renderAbout)
+  .on('/users/:id', ({ params }) => renderUser(params.id), { name: 'user' })
+  .start();
 
 // Navigation and URL building automatically prepend /my-app
 router.navigate('/about'); // pushes /my-app/about

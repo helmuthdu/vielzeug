@@ -8,12 +8,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   resolve: {
     alias: [
-      { find: /^@vielzeug\/craftit\/test$/, replacement: path.resolve(__dirname, '../craftit/src/test/test.ts') },
+      {
+        find: /^@vielzeug\/craftit\/testing$/,
+        replacement: path.resolve(__dirname, '../craftit/src/testing/index.ts'),
+      },
       {
         find: /^@vielzeug\/craftit\/directives$/,
         replacement: path.resolve(__dirname, '../craftit/src/directives/index.ts'),
       },
-      { find: /^@vielzeug\/craftit\/labs$/, replacement: path.resolve(__dirname, '../craftit/src/labs/index.ts') },
+      {
+        find: /^@vielzeug\/craftit\/controls$/,
+        replacement: path.resolve(__dirname, '../craftit/src/controls/index.ts'),
+      },
+      {
+        find: /^@vielzeug\/craftit\/observers$/,
+        replacement: path.resolve(__dirname, '../craftit/src/observers/index.ts'),
+      },
       { find: /^@vielzeug\/craftit$/, replacement: path.resolve(__dirname, '../craftit/src/index.ts') },
       { find: /^@vielzeug\/floatit$/, replacement: path.resolve(__dirname, '../floatit/src/index.ts') },
       { find: /^@vielzeug\/toolkit$/, replacement: path.resolve(__dirname, '../toolkit/src/index.ts') },
@@ -29,5 +39,6 @@ export default defineConfig({
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
     teardownTimeout: 10_000,
     testTimeout: 10_000,
+    watch: false,
   },
 });

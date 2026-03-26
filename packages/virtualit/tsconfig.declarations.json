@@ -1,5 +1,10 @@
 {
   "extends": "../../tsconfig.declarations.json",
+  "compilerOptions": {
+    "customConditions": [],
+    "declarationDir": "./dist",
+    "rootDir": "./src"
+  },
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts"

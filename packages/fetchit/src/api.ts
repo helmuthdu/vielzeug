@@ -30,6 +30,7 @@ export function createApi(opts: ApiClientOptions = {}) {
     Object.entries(initialHeaders).map(([k, v]) => [k.toLowerCase(), v]),
   );
   const inFlight = new Map<string, Promise<unknown>>();
+  const activeControllers = new Set<AbortController>();
   const interceptors: Interceptor[] = [];
   let pipeline: ((ctx: FetchContext) => Promise<Response>) | null = null;
   let _disposed = false;
@@ -65,26 +66,27 @@ export function createApi(opts: ApiClientOptions = {}) {
     return p;
   }
 
-  async function handleResponse<T>(res: Response, m: string, full: string, start: number): Promise<T> {
-    const parsed = await parseResponse(res);
-
-    if (!res.ok) {
-      logger?.(res.status >= 500 ? 'error' : 'warn', `${m} ${full} - ${res.status}`);
-      throw HttpError.fromResponse(res, parsed, m, full);
-    }
-
-    logger?.('info', `${m} ${full} - ${res.status} (${Date.now() - start}ms)`);
-
-    return parsed as T;
-  }
-
-  async function execute<T>(init: RequestInit, full: string, m: string, dedupeKey: string | undefined): Promise<T> {
+  async function execute<T>(
+    init: RequestInit,
+    full: string,
+    m: string,
+    dedupeKey: string | undefined,
+    requestAc: AbortController,
+  ): Promise<T> {
     const start = Date.now();
 
     try {
       const res = await getPipeline()({ init, url: full });
+      const parsed = await parseResponse(res);
 
-      return await handleResponse<T>(res, m, full, start);
+      if (!res.ok) {
+        logger?.(res.status >= 500 ? 'error' : 'warn', `${m} ${full} - ${res.status}`);
+        throw HttpError.fromResponse(res, parsed, m, full);
+      }
+
+      logger?.('info', `${m} ${full} - ${res.status} (${Date.now() - start}ms)`);
+
+      return parsed as T;
     } catch (err) {
       if (err instanceof HttpError) throw err;
 
@@ -92,6 +94,8 @@ export function createApi(opts: ApiClientOptions = {}) {
       throw HttpError.fromCause(err, m, full);
     } finally {
       if (dedupeKey) inFlight.delete(dedupeKey);
+
+      activeControllers.delete(requestAc);
     }
   }
 
@@ -132,7 +136,12 @@ export function createApi(opts: ApiClientOptions = {}) {
       if (existing) return existing as Promise<T>;
     }
 
-    const signal = timeoutSignal(cfgTimeout ?? timeout, extSignal);
+    const requestAc = new AbortController();
+
+    activeControllers.add(requestAc);
+
+    const combinedExt = extSignal ? AbortSignal.any([extSignal, requestAc.signal]) : requestAc.signal;
+    const signal = timeoutSignal(cfgTimeout ?? timeout, combinedExt);
 
     const init: RequestInit = {
       ...rest,
@@ -148,7 +157,7 @@ export function createApi(opts: ApiClientOptions = {}) {
       init.body = body as BodyInit;
     }
 
-    const p = execute<T>(init, full, m, dedupeKey);
+    const p = execute<T>(init, full, m, dedupeKey, requestAc);
 
     if (dedupeKey) inFlight.set(dedupeKey, p);
 
@@ -159,6 +168,8 @@ export function createApi(opts: ApiClientOptions = {}) {
     delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
     dispose(): void {
       _disposed = true;
+      for (const ac of activeControllers) ac.abort();
+      activeControllers.clear();
       inFlight.clear();
       interceptors.length = 0;
       pipeline = null;

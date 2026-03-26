@@ -108,12 +108,13 @@ const zone = createDropZone({
 
 ### Disabled state
 
-Pass a function to `disabled`. When it returns `true`, all drag events are silently ignored and hover state will not change.
+Pass `disabled` as a boolean or a function. When truthy, all drag events are silently ignored and hover state will not change.
 
 ```ts
 const zone = createDropZone({
   element: dropEl,
-  disabled: () => props.readOnly,
+  disabled: props.readOnly,      // static boolean
+  // disabled: () => props.readOnly, // or a function for reactive frameworks
   onDrop: (files) => {
     /* ... */
   },
@@ -152,7 +153,7 @@ Or use the `using` keyword (TypeScript 5.2+, requires `"lib": ["ESNext.Disposabl
 
 ### Setup
 
-Every sortable item must carry a `data-sort-id` attribute with a unique, stable identifier:
+Every sortable item must carry a `data-sort-id` attribute (or a custom attribute via `itemAttribute`) with a unique, stable identifier:
 
 ```html
 <ul id="task-list">
@@ -164,9 +165,9 @@ Every sortable item must carry a `data-sort-id` attribute with a unique, stable 
 
 ```ts
 const sortable = createSortable({
-  container: document.getElementById('task-list')!,
+  element: document.getElementById('task-list')!,
   onReorder: (ids) => {
-    // ids is the new ordered array of data-sort-id values
+    // ids is the new ordered array of identity attribute values
     // Only called when the order actually changed
     saveTaskOrder(ids); // e.g. ['task-2', 'task-1', 'task-3']
   },
@@ -198,7 +199,7 @@ By default the entire item is draggable. Pass a `handle` selector to restrict dr
 
 ```ts
 const sortable = createSortable({
-  container: listEl,
+  element: listEl,
   handle: '.drag-handle',
   onReorder: (ids) => {
     saveOrder(ids);
@@ -206,13 +207,15 @@ const sortable = createSortable({
 });
 ```
 
+When a `handle` is set, `draggable="true"` is placed on the handle element itself rather than the list item, so dragging only activates from the handle.
+
 ### Lifecycle hooks
 
 ```ts
 const sortable = createSortable({
-  container: listEl,
+  element: listEl,
   onDragStart: (id, event) => {
-    // id — the data-sort-id of the item being dragged
+    // id — the identity attribute value of the item being dragged
     listEl.classList.add('sorting');
   },
   onDragEnd: (event) => {
@@ -224,27 +227,39 @@ const sortable = createSortable({
 });
 ```
 
-### Dynamic lists
+### Custom identity attribute
 
-When items are added to or removed from the container after `createSortable` is called, call `refresh()` to re-scan and update `draggable`/`role` on the current children:
+If your markup already uses a different attribute for item identity, pass `itemAttribute` to avoid duplicating data:
 
 ```ts
-// Add a new item to the DOM
+const sortable = createSortable({
+  element: listEl,
+  itemAttribute: 'data-id', // or 'data-key', 'data-item-id', etc.
+  onReorder: (ids) => {
+    saveOrder(ids);
+  },
+});
+```
+
+### Dynamic lists
+
+Items added to or removed from the container are automatically picked up — dragit uses a `MutationObserver` to keep `draggable` and `role` in sync. No manual refresh call required.
+
+```ts
+// Just mutate the DOM; dragit handles the rest
 const newItem = document.createElement('li');
 newItem.dataset.sortId = 'task-4';
 newItem.textContent = 'Deploy';
 listEl.appendChild(newItem);
-
-// Sync dragit state
-sortable.refresh();
 ```
 
 ### Disabled state
 
 ```ts
 const sortable = createSortable({
-  container: listEl,
-  disabled: () => isLocked,
+  element: listEl,
+  disabled: isLocked,          // static boolean
+  // disabled: () => isLocked, // or a function for reactive frameworks
   onReorder: (ids) => {
     saveOrder(ids);
   },
@@ -267,11 +282,12 @@ While an item is being dragged, dragit inserts a `<div class="dragit-placeholder
 }
 ```
 
-The item being dragged receives a `data-dragging` attribute while in flight, which you can also style:
+The item being dragged has `opacity: 0` applied automatically while in flight (restored on drop or cancel). The `data-dragging` attribute is also set, which you can use for additional styling:
 
 ```css
 [data-dragging] {
-  opacity: 0.4;
+  /* opacity is already 0 — use for other effects */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 ```
 
@@ -280,7 +296,7 @@ The item being dragged receives a `data-dragging` attribute while in flight, whi
 ```ts
 sortable.destroy();
 // or:
-using sortable = createSortable({ container: listEl, onReorder: saveOrder });
+using sortable = createSortable({ element: listEl, onReorder: saveOrder });
 ```
 
 `destroy()` removes all event listeners, strips `draggable`/`role` from all items, and cleans up any in-progress drag state (removes `data-dragging` attribute, removes the placeholder).

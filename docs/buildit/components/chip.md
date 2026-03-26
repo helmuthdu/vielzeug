@@ -130,37 +130,18 @@ Set `mode="action"` to make the chip behave like a button — it fires a `click`
 ```html
 <bit-chip mode="action" value="add">Add Tag</bit-chip>
 <bit-chip mode="action" color="primary" variant="flat" value="star">
-  <svg
-    slot="icon"
-    xmlns="http://www.w3.org/2000/svg"
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-  </svg>
+  <bit-icon slot="icon" name="star" size="12"></bit-icon>
   Favourite
 </bit-chip>
 <bit-chip mode="action" color="error" variant="ghost" value="delete" aria-label="Delete item">
-  <svg
-    slot="icon"
-    xmlns="http://www.w3.org/2000/svg"
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round">
-    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
-  </svg>
+  <bit-icon slot="icon" name="trash-2" size="12"></bit-icon>
   Remove
 </bit-chip>
+
+<script type="module">
+  import '@vielzeug/buildit/chip';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>
@@ -181,38 +162,18 @@ Use the `icon` named slot to prepend a leading icon or glyph.
 
 ```html
 <bit-chip color="success" variant="flat">
-  <svg
-    slot="icon"
-    xmlns="http://www.w3.org/2000/svg"
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.5"
-    stroke-linecap="round"
-    stroke-linejoin="round">
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
+  <bit-icon slot="icon" name="check" size="12"></bit-icon>
   Verified
 </bit-chip>
 <bit-chip color="primary" variant="bordered">
-  <svg
-    slot="icon"
-    xmlns="http://www.w3.org/2000/svg"
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 8v4l3 3" />
-  </svg>
+  <bit-icon slot="icon" name="clock" size="12"></bit-icon>
   Pending
 </bit-chip>
+
+<script type="module">
+  import '@vielzeug/buildit/chip';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>

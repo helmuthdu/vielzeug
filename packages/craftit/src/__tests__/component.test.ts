@@ -1,38 +1,39 @@
+// noinspection HtmlUnknownAttribute
 /**
  * Core - Component Definition Tests
- * Tests for the defineComponent() function and component lifecycle
+ * Tests for define() and component lifecycle
  */
 
 import {
-  defineComponent,
+  define,
   defineField,
   html,
   inject,
   onCleanup,
   onError,
   onMount,
-  prop,
   provide,
   ref,
   refs,
   signal,
-  typed,
-  type DefineComponentSetupContext,
+  type ComponentDefinition,
+  type ComponentSetupContext,
 } from '../index';
-import { fire, mount, waitForEvent } from '../test';
+import { intersectionObserver, mediaObserver, resizeObserver } from '../observers';
+import { currentRuntime } from '../runtime-core';
+import { fire, mount, waitForEvent } from '../testing';
 
 const expectType = <T>(_value: T): void => {
   // compile-time-only helper for typing assertions
 };
 
 describe('Core: Component Definition', () => {
-  describe('defineComponent()', () => {
+  describe('define()', () => {
     it('should define a custom element', () => {
       const tag = `test-basic-${Math.random().toString(36).slice(2)}`;
 
-      defineComponent({
+      define(tag, {
         setup: () => html`<div>Hello</div>`,
-        tag,
       });
 
       const el = document.createElement(tag);
@@ -70,20 +71,18 @@ describe('Core: Component Definition', () => {
       expect(query2('div')?.textContent).toBe('0');
     });
 
-    it('should throw when registering the same tag repeatedly', () => {
+    it('should ignore repeated registration for the same tag', () => {
       const tag = `test-dup-${Math.random().toString(36).slice(2)}`;
 
-      defineComponent({
+      define(tag, {
         setup: () => html`<div>First</div>`,
-        tag,
       });
 
       expect(() => {
-        defineComponent({
+        define(tag, {
           setup: () => html`<div>Second</div>`,
-          tag,
         });
-      }).toThrow('[craftit:E9]');
+      }).not.toThrow();
     });
   });
 
@@ -92,8 +91,8 @@ describe('Core: Component Definition', () => {
       const { element } = await mount(
         {
           props: {
-            size: { default: 'small' },
-            variant: { default: 'secondary' },
+            size: 'small',
+            variant: 'secondary',
           },
           setup: () => html`<div>Component</div>`,
         },
@@ -109,7 +108,7 @@ describe('Core: Component Definition', () => {
     it('should initialize prop signal from attribute', async () => {
       const { query } = await mount(
         {
-          props: { count: { default: 0, type: Number } },
+          props: { count: 0 },
           setup: ({ props }) => {
             return html`<div class="count">${props.count}</div>`;
           },
@@ -124,8 +123,8 @@ describe('Core: Component Definition', () => {
 
     it('should keep attribute->prop sync after reconnect', async () => {
       const fixture = await mount({
-        props: { count: { default: 0, type: Number } },
-        setup: ({ props }) => html`<div class="count">${props.count}</div>`,
+        props: { count: 0 },
+        setup: ({ props }) => html`<div class="count">${() => props.count.value}</div>`,
       });
 
       await fixture.attr('count', '1');
@@ -145,15 +144,14 @@ describe('Core: Component Definition', () => {
       const childTag = `test-array-child-${suffix}`;
       const parentTag = `test-array-parent-${suffix}`;
 
-      defineComponent({
-        props: { items: { default: [] as string[] } },
+      define<{ items: string[] }>(childTag, {
+        props: { items: [] as string[] },
         setup: ({ props }) => {
-          return html`<div class="items">${() => props.items.value.join('|')}</div>`;
+          return html`<div class="items">${() => props.items.value?.join('|')}</div>`;
         },
-        tag: childTag,
       });
 
-      defineComponent({
+      define(parentTag, {
         setup: () => {
           const items = signal<string[]>(['alpha', 'beta']);
 
@@ -164,7 +162,6 @@ describe('Core: Component Definition', () => {
             </div>
           `;
         },
-        tag: parentTag,
       });
 
       const { query } = await mount(parentTag);
@@ -248,6 +245,106 @@ describe('Core: Component Definition', () => {
       expect(closeSpy.mock.calls[0]?.[0]).toBeInstanceOf(CustomEvent);
       expect(spy).toHaveBeenCalledTimes(1);
     });
+
+    it('should infer emits from component event generics', async () => {
+      const tag = `test-object-emits-${Math.random().toString(36).slice(2)}`;
+
+      define<Record<string, never>, { change: { value: string }; retry: void }>(tag, {
+        setup: ({ emit }) => {
+          const fire = () => {
+            emit('change', { value: 'ok' });
+            emit('retry');
+          };
+
+          return html`<button @click=${fire}>Emit</button>`;
+        },
+      });
+
+      const { element, flush, query } = await mount(tag);
+      const changeSpy = vi.fn();
+      const retrySpy = vi.fn();
+
+      element.addEventListener('change', changeSpy);
+      element.addEventListener('retry', retrySpy);
+      query('button')!.dispatchEvent(new Event('click'));
+      await flush();
+
+      expect(changeSpy).toHaveBeenCalledTimes(1);
+      expect((changeSpy.mock.calls[0]?.[0] as CustomEvent<{ value: string }>).detail.value).toBe('ok');
+      expect(retrySpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should expose setup slots context', async () => {
+      let defaultAssigned = false;
+      let triggerAssigned = false;
+
+      const { flush } = await mount(
+        ({ slots }) => {
+          onMount(() => {
+            defaultAssigned = slots.has().value;
+            triggerAssigned = slots.has('trigger').value;
+          });
+
+          return html`<slot name="trigger"></slot><slot></slot>`;
+        },
+        { html: '<button slot="trigger">Open</button><span>Body</span>' },
+      );
+
+      await flush();
+
+      expect(defaultAssigned).toBe(true);
+      expect(triggerAssigned).toBe(true);
+    });
+
+    it('should infer emit and props from object event schema + raw prop defaults', async () => {
+      const tag = `test-schema-events-${Math.random().toString(36).slice(2)}`;
+      const toggleProps = {
+        checked: false,
+        label: 'Toggle',
+      };
+
+      define<{ checked?: boolean; label?: string }, { toggle: { checked: boolean } }, typeof toggleProps>(tag, {
+        props: toggleProps,
+        setup: ({ emit, props }) => {
+          expectType<ReturnType<typeof signal<boolean>>>(props.checked);
+          expectType<ReturnType<typeof signal<string>>>(props.label);
+
+          const fireToggle = () => emit('toggle', { checked: !props.checked.value });
+
+          return html`<button @click=${fireToggle}>${props.label}</button>`;
+        },
+      });
+
+      const { element, flush, query } = await mount(tag);
+
+      const spy = vi.fn();
+
+      element.addEventListener('toggle', spy);
+      query('button')!.dispatchEvent(new Event('click'));
+      await flush();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect((spy.mock.calls[0]?.[0] as CustomEvent<{ checked: boolean }>).detail.checked).toBe(true);
+    });
+
+    it('should preserve optional prop typing when default is explicitly undefined', async () => {
+      const tag = `test-optional-default-undefined-${Math.random().toString(36).slice(2)}`;
+
+      define<{ value?: string }>(tag, {
+        props: {
+          value: { default: undefined, reflect: false },
+        },
+        setup: ({ props }) => {
+          expectType<import('@vielzeug/stateit').Signal<string | undefined>>(props.value);
+
+          return html`<div class="value">${() => props.value.value ?? ''}</div>`;
+        },
+      });
+
+      const { query } = await mount(tag);
+
+      expect(query('.value')?.textContent).toBe('');
+    });
   });
 
   it('should dispatch events via setup emit', async () => {
@@ -296,7 +393,7 @@ describe('Core: Component Definition', () => {
     it('should infer typed prop signals from setup context props', async () => {
       const { query } = await mount(
         {
-          props: { count: { default: 0, type: Number } },
+          props: { count: 0 },
           setup: ({ props }) => {
             expectType<ReturnType<typeof signal<number>>>(props.count);
 
@@ -314,76 +411,6 @@ describe('Core: Component Definition', () => {
 });
 
 describe('core/component.ts', () => {
-  describe('prop()', () => {
-    it('returns the default value when no matching attribute is present', async () => {
-      const { query } = await mount(() => {
-        const label = prop('label', 'Guest');
-
-        return html`<div>${label}</div>`;
-      });
-
-      expect(query('div')?.textContent).toBe('Guest');
-    });
-
-    it('reads the attribute value set on the host element at connect time', async () => {
-      const { query } = await mount(
-        () => {
-          const label = prop('label', 'Guest');
-
-          return html`<div>${label}</div>`;
-        },
-        { attrs: { label: 'Alice' } },
-      );
-
-      expect(query('div')?.textContent).toBe('Alice');
-    });
-
-    it('coerces the string "false" to boolean false for a boolean-defaulted prop', async () => {
-      let loadingProp!: ReturnType<typeof prop<boolean>>;
-
-      await mount(
-        () => {
-          loadingProp = prop('loading', false);
-
-          return html`<div>${() => String(loadingProp.value)}</div>`;
-        },
-        { attrs: { loading: 'false' } },
-      );
-
-      expect(loadingProp.value).toBe(false);
-    });
-
-    it('coerces the string "true" to boolean true for a boolean-defaulted prop', async () => {
-      let loadingProp!: ReturnType<typeof prop<boolean>>;
-
-      await mount(
-        () => {
-          loadingProp = prop('loading', false);
-
-          return html`<div>${() => String(loadingProp.value)}</div>`;
-        },
-        { attrs: { loading: 'true' } },
-      );
-
-      expect(loadingProp.value).toBe(true);
-    });
-
-    it('coerces a numeric string to a number for a number-defaulted prop', async () => {
-      let countProp!: ReturnType<typeof prop<number>>;
-
-      await mount(
-        () => {
-          countProp = prop('count', 0);
-
-          return html`<div>${() => String(countProp.value)}</div>`;
-        },
-        { attrs: { count: '42' } },
-      );
-
-      expect(countProp.value).toBe(42);
-    });
-  });
-
   describe('defineField()', () => {
     it('returns a handle exposing checkValidity, reportValidity, and setValidity', async () => {
       let handle!: ReturnType<typeof defineField>;
@@ -469,7 +496,7 @@ describe('core/component.ts', () => {
         setTimeout(() => emit('value-changed', { value: 'hello' }), 50);
 
         return html`<div></div>`;
-      }) as Parameters<typeof defineComponent>[0]['setup']);
+      }) as ComponentDefinition['setup']);
 
       const event = await waitForEvent<CustomEvent<{ value: string }>>(element, 'value-changed');
 
@@ -481,7 +508,7 @@ describe('core/component.ts', () => {
         setTimeout(() => emit('ping'), 50);
 
         return html`<div></div>`;
-      }) as Parameters<typeof defineComponent>[0]['setup']);
+      }) as ComponentDefinition['setup']);
 
       const event = await waitForEvent<CustomEvent>(element, 'ping');
 
@@ -491,16 +518,16 @@ describe('core/component.ts', () => {
   });
 });
 
-describe('defineComponent props & global helpers', () => {
-  it('should support direct default values in defineComponent prop schemas', async () => {
+describe('component props & global helpers', () => {
+  it('should support direct default values in component props', async () => {
     const { query } = await mount(
       {
         props: {
-          active: typed(true, { reflect: false }),
-          count: { default: 0 },
-          label: { default: 'default' },
+          active: { default: true, reflect: false },
+          count: 0,
+          label: 'default',
         },
-        setup: ({ props }: DefineComponentSetupContext<any>) =>
+        setup: ({ props }: ComponentSetupContext<any>) =>
           html`<div class="count">${props.count}</div>
             <div class="label">${props.label}</div>`,
       },
@@ -513,16 +540,14 @@ describe('defineComponent props & global helpers', () => {
     expect(query('.label')?.textContent).toBe('custom');
   });
 
-  it('should support object defaults containing a default key via typed helper', async () => {
+  it('should support object defaults containing a default key via inline prop defs', async () => {
     const configDefault = { default: 'fallback', mode: 'dark' };
 
     const { query } = await mount({
       props: {
-        // Explicit typed wrapper prevents structural ambiguity with PropDef<T>.
-        config: typed(configDefault, { reflect: false }),
+        config: { default: configDefault, reflect: false },
       },
-      setup: ({ props }: DefineComponentSetupContext<any>) =>
-        html`<div class="mode">${() => props.config.value.mode}</div>`,
+      setup: ({ props }: ComponentSetupContext<any>) => html`<div class="mode">${() => props.config.value.mode}</div>`,
     });
 
     expect(query('.mode')?.textContent).toBe('dark');
@@ -531,8 +556,8 @@ describe('defineComponent props & global helpers', () => {
   it('should provide all lifecycle and utility functions as global exports', async () => {
     let elementInstance: HTMLElement | undefined;
 
-    const { element } = await mount(({ host }) => {
-      elementInstance = host;
+    const { element } = await mount(() => {
+      elementInstance = currentRuntime().el;
 
       expect(onMount).toBeDefined();
       expect(onCleanup).toBeDefined();
@@ -541,8 +566,10 @@ describe('defineComponent props & global helpers', () => {
       expect(inject).toBeDefined();
       expect(ref).toBeDefined();
       expect(refs).toBeDefined();
-      expect(defineComponent).toBeDefined();
-      expect(typed).toBeDefined();
+      expect(define).toBeDefined();
+      expect(resizeObserver).toBeDefined();
+      expect(intersectionObserver).toBeDefined();
+      expect(mediaObserver).toBeDefined();
 
       return html`<div id="test"></div>`;
     });

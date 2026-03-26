@@ -18,7 +18,6 @@ export default defineConfig({
       formats: ['es', 'cjs'],
       name: 'craftit',
     },
-    minify: 'terser',
     rolldownOptions: {
       external: ['@vielzeug/stateit'],
       output: {
@@ -26,17 +25,5 @@ export default defineConfig({
       },
     },
     sourcemap: true,
-    terserOptions: {
-      compress: {
-        passes: 2,
-      },
-      format: {
-        comments: false,
-      },
-      mangle: {
-        toplevel: true,
-      },
-      module: true,
-    },
   },
 });

@@ -115,25 +115,22 @@ type Registration<T = unknown> = {
 
 type SnapshotData = [Map<Token<any>, Registration<any>>, Map<Token<any>, Token<any>>];
 
-// Module-scoped factory — populated by the static block below so that
-// createContainer() and child getter can call the private constructor.
-let _new: (parent?: Container) => Container;
-
 /** -------------------- Container -------------------- **/
 
 export class Container {
   #registry = new Map<Token<any>, Registration<any>>();
   #aliases = new Map<Token<any>, Token<any>>();
+  #retired: Registration<any>[] = [];
   #parent?: Container;
   #disposed = false;
 
-  // Expose the private constructor to the module-scoped _new variable.
-  static {
-    _new = (parent) => new Container(parent);
-  }
-
   private constructor(parent?: Container) {
     this.#parent = parent;
+  }
+
+  /** Create a new root dependency injection container. */
+  static create(): Container {
+    return new Container();
   }
 
   /* ---- Registration ---- */
@@ -151,6 +148,13 @@ export class Container {
 
     if (!overwrite && this.#registry.has(token)) {
       throw new Error(`Token "${tokenName(token)}" is already registered. Use { overwrite: true } to replace it.`);
+    }
+
+    // Track the replaced registration for later cleanup
+    const prev = this.#registry.get(token);
+
+    if (prev?.resolved) {
+      this.#retired.push(prev);
     }
 
     this.#registry.set(token, { provider });
@@ -222,6 +226,7 @@ export class Container {
 
   /** Clear all registrations and aliases in this container without running dispose hooks. */
   clear(): this {
+    this.#assertNotDisposed();
     this.#registry.clear();
     this.#aliases.clear();
 
@@ -242,14 +247,16 @@ export class Container {
     if (this.#disposed) return;
 
     this.#disposed = true;
-    for (const reg of this.#registry.values()) {
+    for (const reg of [...this.#registry.values(), ...this.#retired]) {
       const { instance, provider, resolved } = reg;
 
       if (resolved && 'dispose' in provider && provider.dispose) {
         await provider.dispose(instance as any);
       }
     }
-    this.clear();
+    this.#retired = [];
+    this.#registry.clear();
+    this.#aliases.clear();
   }
 
   [Symbol.asyncDispose](): Promise<void> {
@@ -344,7 +351,7 @@ export class Container {
   createChild(): Container {
     this.#assertNotDisposed();
 
-    return _new(this);
+    return new Container(this);
   }
 
   /**
@@ -387,6 +394,62 @@ export class Container {
     }
   }
 
+  /* ---- Convenience API (Minimal Surface) ---- */
+
+  /**
+   * Simplified registration for common use cases.
+   * Shorthand that detects whether to use class, factory, or value registration.
+   * @example
+   * container.set(DbToken, () => new Database());
+   * container.set(ConfigToken, { host: 'localhost' });
+   * container.set(SvcToken, ServiceImpl, { deps: [DbToken] });
+   */
+  set<T>(
+    token: Token<T>,
+    source: T | ((...args: any[]) => T | Promise<T>) | (new (...args: any[]) => T),
+    opts?: ProviderOptions<T>,
+  ): this {
+    if (typeof source === 'function') {
+      const fn = source as any;
+      // Try to detect if it's a class or factory
+      const isClass = /^class\s/.test(fn.toString()) || fn.prototype?.constructor === fn;
+
+      return isClass ? this.bind(token, fn, opts) : this.factory(token, fn, opts);
+    }
+
+    return this.value(token, source, opts);
+  }
+
+  /**
+   * Resolve a token asynchronously (works for both sync and async providers).
+   * This is the primary resolution method in a greenfield design.
+   * @example
+   * const config = await container.resolve(ConfigToken);
+   * const [db, cache] = await container.resolveAll([DbToken, CacheToken]);
+   */
+  async resolve<T>(token: Token<T>): Promise<T> {
+    return this.getAsync(token);
+  }
+
+  /**
+   * Resolve multiple tokens, returning a typed tuple.
+   * @example
+   * const [db, logger, config] = await container.resolveAll([DbToken, LoggerToken, ConfigToken]);
+   */
+  async resolveAll<T extends readonly Token<any>[]>(tokens: [...T]): Promise<TokenValues<T>> {
+    return this.getAllAsync(tokens);
+  }
+
+  /**
+   * Resolve a token, returning `undefined` if not registered.
+   * @example
+   * const cache = await container.resolveOptional(CacheToken);
+   * if (cache) { ... }
+   */
+  async resolveOptional<T>(token: Token<T>): Promise<T | undefined> {
+    return this.getOptionalAsync(token);
+  }
+
   /* ---- Snapshot / Restore ---- */
 
   /**
@@ -408,6 +471,15 @@ export class Container {
     this.#assertNotDisposed();
 
     const [registry, aliases] = snap as unknown as SnapshotData;
+
+    // Track resolved registrations that are being replaced
+    for (const [token, currentReg] of this.#registry.entries()) {
+      const restoredReg = registry.get(token);
+
+      if (currentReg.resolved && (!restoredReg || restoredReg !== currentReg)) {
+        this.#retired.push(currentReg);
+      }
+    }
 
     this.#registry = new Map(registry);
     this.#aliases = new Map(aliases);
@@ -589,13 +661,16 @@ export class Container {
     const cache = (cacheReg: Registration<T>): Promise<T> => {
       if (cacheReg.resolved) return Promise.resolve(cacheReg.instance as T);
 
-      cacheReg.promise ??= build().then((inst) => {
-        cacheReg.instance = inst;
-        cacheReg.resolved = true;
-        cacheReg.promise = undefined;
+      cacheReg.promise ??= build()
+        .then((inst) => {
+          cacheReg.instance = inst;
+          cacheReg.resolved = true;
 
-        return inst;
-      });
+          return inst;
+        })
+        .finally(() => {
+          cacheReg.promise = undefined;
+        });
 
       return cacheReg.promise;
     };
@@ -619,7 +694,7 @@ export class Container {
  * const container = createContainer();
  */
 export function createContainer(): Container {
-  return _new();
+  return Container.create();
 }
 
 /** -------------------- Testing Helpers -------------------- **/
@@ -635,7 +710,7 @@ export function createContainer(): Container {
  * await dispose();
  */
 export function createTestContainer(base?: Container) {
-  const child = (base ?? createContainer()).createChild();
+  const child = (base ?? Container.create()).createChild();
 
   return {
     container: child,

@@ -1,5 +1,5 @@
 import { html, signal } from '@vielzeug/craftit';
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-combobox', () => {
   let fixture: Fixture<HTMLElement>;
@@ -45,6 +45,91 @@ describe('bit-combobox', () => {
       expect((onInput.mock.calls.at(-1)?.[0] as CustomEvent).detail.query).toContain('uni');
     });
 
+    it('emits open/close events with reason details', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+
+      const onOpen = vi.fn();
+      const onClose = vi.fn();
+
+      fixture.element.addEventListener('open', onOpen);
+      fixture.element.addEventListener('close', onClose);
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await user.press(input, 'Escape');
+      await fixture.flush();
+
+      expect(onOpen).toHaveBeenCalled();
+      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
+      expect(onClose).toHaveBeenCalled();
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('escape');
+    });
+
+    it('emits programmatic open reason when Enter opens a closed combobox', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+
+      const onOpen = vi.fn();
+
+      fixture.element.addEventListener('open', onOpen);
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.press(input, 'Enter');
+      await fixture.flush();
+
+      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('programmatic');
+    });
+
+    it('emits outside-click close reason when clicking away from the popup', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+
+      const onClose = vi.fn();
+
+      fixture.element.addEventListener('close', onClose);
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.flush();
+
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('outside-click');
+    });
+
+    it('emits programmatic close reason after selecting an option in single mode', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+
+      const onClose = vi.fn();
+
+      fixture.element.addEventListener('close', onClose);
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.query<HTMLElement>('.option')!);
+      await fixture.flush();
+
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('programmatic');
+    });
+
     it('emits change when an option is selected', async () => {
       fixture = await mount('bit-combobox', {
         attrs: { label: 'Country' },
@@ -75,6 +160,32 @@ describe('bit-combobox', () => {
       expect(Array.isArray(detail.values)).toBe(true);
       expect(detail.labels).toEqual(['United States']);
       expect(detail.value).toBe('us');
+    });
+
+    it('shows all options when reopened after a selection', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      // Open and select first option
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.query<HTMLElement>('.option')!);
+      await fixture.flush();
+
+      // Reopen
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const options = fixture.queryAll<HTMLElement>('.option');
+
+      expect(options.length).toBe(3);
     });
   });
 
@@ -428,16 +539,12 @@ describe('bit-combobox', () => {
     it('uses array options prop from structured binding and updates reactively', async () => {
       fixture = await mount(() => {
         const options = signal([
-          { disabled: false, iconEl: null, label: 'Alpha', value: 'a' },
-          { disabled: false, iconEl: null, label: 'Beta', value: 'b' },
+          { label: 'Alpha', value: 'a' },
+          { label: 'Beta', value: 'b' },
         ]);
 
-        return html`
-          <button @click=${() => (options.value = [{ disabled: false, iconEl: null, label: 'Gamma', value: 'g' }])}>
-            Update
-          </button>
-          <bit-combobox options=${options}></bit-combobox>
-        `;
+        return html` <button @click=${() => (options.value = [{ label: 'Gamma', value: 'g' }])}>Update</button>
+          <bit-combobox options=${options}></bit-combobox>`;
       });
 
       const combobox = fixture.query<HTMLElement>('bit-combobox')!;
@@ -462,6 +569,27 @@ describe('bit-combobox', () => {
           el.textContent?.replace(/\s+/g, ' ').trim(),
         ),
       ).toEqual(['Gamma']);
+    });
+
+    it('defaults JS option labels to their value when label is omitted', async () => {
+      fixture = await mount(() => {
+        const options = signal([{ value: 'alpha' }]);
+
+        return html`<bit-combobox options=${options}></bit-combobox>`;
+      });
+
+      const combobox = fixture.query<HTMLElement>('bit-combobox')!;
+      const input = combobox.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]');
+
+      await user.click(input as HTMLInputElement);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(
+        Array.from(combobox.shadowRoot?.querySelectorAll<HTMLElement>('.option') ?? []).map((el) =>
+          el.textContent?.replace(/\s+/g, ' ').trim(),
+        ),
+      ).toEqual(['alpha']);
     });
   });
 });

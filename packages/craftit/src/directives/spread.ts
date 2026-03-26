@@ -1,8 +1,7 @@
 import { effect, type ReadonlySignal } from '@vielzeug/stateit';
 
-import { type Directive } from '../core/internal';
-import { bindPropertyModel, hasWritableValueSetter, toReactiveBindingSource } from '../core/runtime-bindings';
-import { listen, setAttr } from '../core/utilities';
+import { type Directive, listen, setAttr } from '../internal';
+import { bindPropertyModel, hasWritableValueSetter, toReactiveBindingSource } from '../runtime-bindings';
 
 export type SpreadValue =
   | string

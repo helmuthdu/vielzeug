@@ -13,30 +13,32 @@ Start with the [Overview](./index.md) for a quick introduction, then use this pa
 
 ## Parsing Inputs
 
-Use `d.asInstant()` to normalize any time input to a canonical timeline value (ignores timezone).
+Use `t.toInstant()` to normalize any time input to a canonical timeline value.
+For plain local strings, use `t.parseLocal()` or provide `tz` to `t.toInstant()`.
 
 ```ts
-import { d } from '@vielzeug/timit';
+import { t } from '@vielzeug/timit';
 
 // ISO strings with offset work automatically
-const a = d.asInstant('2026-03-21T10:15:30Z');
+const a = t.toInstant('2026-03-21T10:15:30Z');
 
-// Plain strings need a timezone
-const b = d.asInstant('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
+// Plain local strings require timezone context
+const b = t.toInstant('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
+const c = t.parseLocal('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
 
 // Dates, epoch numbers, and Temporal types work too
-const c = d.asInstant(new Date());
-const d1 = d.asInstant(1711011330000); // epoch ms
+const d = t.toInstant(new Date());
+const e = t.toInstant(1711011330000); // epoch ms
 ```
 
 ## Time Zone Conversion
 
-Use `d.asZoned()` to view an instant in a target timezone—same moment, different wall-clock time.
+Use `t.toZoned()` to view an instant in a target timezone: same moment, different wall-clock time.
 
 ```ts
 const utc = '2026-03-21T10:15:30Z';
-const tokyo = d.asZoned(utc, { tz: 'Asia/Tokyo' });
-const newYork = d.asZoned(utc, { tz: 'America/New_York' });
+const tokyo = t.toZoned(utc, { tz: 'Asia/Tokyo' });
+const newYork = t.toZoned(utc, { tz: 'America/New_York' });
 
 console.log(tokyo.hour);   // 19 (7:15 PM JST)
 console.log(newYork.hour); // 6  (6:15 AM EDT)
@@ -44,28 +46,28 @@ console.log(newYork.hour); // 6  (6:15 AM EDT)
 
 ## Date-Time Arithmetic
 
-`d.add()` and `d.subtract()` handle DST transitions correctly.
+`t.shift()` handles DST transitions correctly. Use positive durations to add and negative durations to subtract.
 
 ```ts
 // Spring forward (2026-03-08 02:00 → 03:00 EDT)
 const beforeDst = '2026-03-08T01:30:00-05:00[America/New_York]';
-const afterAdd = d.add(beforeDst, { hours: 1 });
+const afterAdd = t.shift(beforeDst, { hours: 1 });
 // Result: 2026-03-08T03:30:00-04:00 (correctly skipped to 3:30 EDT)
 
 // Regular arithmetic
 const meeting = '2026-03-21T14:00:00Z';
-const reminder = d.subtract(meeting, { hours: 1 });
+const reminder = t.shift(meeting, { hours: -1 });
 ```
 
 ## Duration Differences
 
-Use `d.diff()` to compute the duration between two times with optional rounding.
+Use `t.diff()` to compute the duration between two times with optional rounding.
 
 ```ts
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:30:00Z';
 
-const duration = d.diff(start, end, {
+const duration = t.diff(start, end, {
   largestUnit: 'hours',
   smallestUnit: 'minutes',
 });
@@ -77,18 +79,22 @@ console.log(duration.minutes);    // 30
 
 ## Formatting
 
-Use `d.format()` with preset patterns for human-readable output.
+Use `t.formatHuman()` for localized UI strings and `t.formatISO()` for stable machine output.
 
 ```ts
 const time = '2026-03-21T10:15:30Z';
 
 // Preset patterns (recommended)
-d.format(time, { pattern: 'short', locale: 'en-GB', tz: 'UTC' });
+t.formatHuman(time, { pattern: 'short', locale: 'en-GB', tz: 'UTC' });
 // → "21/03/2026, 10:15"
 
+// Canonical machine format
+t.formatISO(time);
+// → "2026-03-21T10:15:30Z"
+
 // Advanced: escape hatch to Intl.DateTimeFormatOptions
-d.format(time, { 
-  locale: 'de-DE', 
+t.formatHuman(time, {
+  locale: 'de-DE',
   tz: 'Europe/Berlin',
   intl: { hour12: false, weekday: 'long' }
 });
@@ -101,7 +107,6 @@ d.format(time, {
 |---------|---------|----------|
 | `'short'` | "21/03/2026, 10:15" | Quick lists |
 | `'long'` | "Saturday, March 21, 2026, 10:15:30" | Details |
-| `'iso'` | "2026-03-21T10:15:30Z" | APIs, logs |
 | `'date-only'` | "21/03/2026" | Calendars |
 | `'time-only'` | "10:15" | Clocks, timers |
 
@@ -114,30 +119,32 @@ const now = '2026-03-21T11:00:00Z';
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-if (d.within(now, start, end)) {
+if (t.within(now, start, end)) {
   console.log('Meeting is happening now');
 }
 ```
+
+`t.within()` normalizes range bounds automatically, so reversed ranges still behave predictably.
 
 ## Current Time
 
 Get the current time in a specific timezone.
 
 ```ts
-const localTime = d.now();           // system timezone
-const londonTime = d.now('Europe/London');
-const sydneyTime = d.now('Australia/Sydney');
+const localTime = t.now();           // system timezone
+const londonTime = t.now('Europe/London');
+const sydneyTime = t.now('Australia/Sydney');
 ```
 
 ## Format Ranges
 
-Use `d.formatRange()` for human-friendly time spans.
+Use `t.formatRange()` for human-friendly time spans.
 
 ```ts
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-const text = d.formatRange(start, end, {
+const text = t.formatRange(start, end, {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
@@ -147,10 +154,10 @@ const text = d.formatRange(start, end, {
 
 ## Best Practices
 
-- Use `d.asInstant()` for timeline operations (comparisons, storage).
-- Use `d.asZoned()` when you need local wall-clock times (displaying to users).
-- Always provide a `tz` when parsing plain strings without offsets.
-- Let format presets handle 80% of cases; use `intl` escape hatch only when needed.
+- Use `t.toInstant()` for timeline operations (comparisons, storage).
+- Use `t.toZoned()` when you need local wall-clock times (displaying to users).
+- Use `t.parseLocal()` for plain local strings.
+- Use `t.formatHuman()` for UI and `t.formatISO()` for APIs/logs.
 - Store times as instants (ISO strings); convert to zoned only for display.
 
 ## Common Patterns
@@ -159,17 +166,17 @@ const text = d.formatRange(start, end, {
 
 ```ts
 const userTz = 'America/New_York';
-const scheduledTime = d.asZoned(new Date('2026-04-15T14:00:00Z'), { tz: userTz });
+const scheduledTime = t.toZoned(new Date('2026-04-15T14:00:00Z'), { tz: userTz });
 
-console.log(`Meeting: ${d.format(scheduledTime, { pattern: 'long' })}`);
+console.log(`Meeting: ${t.formatHuman(scheduledTime, { pattern: 'long' })}`);
 ```
 
 ### Calculate Elapsed Time
 
 ```ts
-const start = d.now();
+const start = t.now();
 // ... do work ...
-const elapsed = d.diff(start, d.now(), { largestUnit: 'seconds' });
+const elapsed = t.diff(start, t.now(), { largestUnit: 'seconds' });
 console.log(`Took ${elapsed.seconds}s`);
 ```
 
@@ -178,14 +185,13 @@ console.log(`Took ${elapsed.seconds}s`);
 ```ts
 const event = {
   title: 'Team Standup',
-  utc: d.asInstant('2026-03-21T09:00:00Z'),
+  utc: t.toInstant('2026-03-21T09:00:00Z'),
 };
 
 const timezones = ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo'];
 
 for (const tz of timezones) {
-  const local = d.asZoned(event.utc, { tz });
-  console.log(`${tz}: ${d.format(local, { pattern: 'short' })}`);
+  const local = t.toZoned(event.utc, { tz });
+  console.log(`${tz}: ${t.formatHuman(local, { pattern: 'short' })}`);
 }
 ```
-

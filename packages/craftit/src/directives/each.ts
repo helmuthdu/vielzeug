@@ -3,14 +3,14 @@ import { computed, isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 import {
   CF_ID_ATTR,
   EACH_SIGNAL,
+  escapeHtml,
   extractResult,
   htmlResult,
   isHtmlResult,
   type Binding,
   type Directive,
   type HTMLResult,
-} from '../core/internal';
-import { escapeHtml } from '../core/utilities';
+} from '../internal';
 
 const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="(\\d+)"`, 'g');
 
@@ -61,11 +61,19 @@ function renderKeyed<T>(
   let html = '';
   const allBindings: Binding[] = [];
   const keys: (string | number)[] = [];
+  const seenKeys = new Set<string | number>();
   const rendered: Array<{ bindings: Binding[]; html: string }> = [];
   const c = { n: 0 };
 
   for (let i = 0; i < items.length; i++) {
-    keys.push(keyFn(items[i], i));
+    const nextKey = keyFn(items[i], i);
+
+    if (seenKeys.has(nextKey)) {
+      throw new Error(`[craftit:each] Duplicate key "${String(nextKey)}" at index ${i}.`);
+    }
+
+    seenKeys.add(nextKey);
+    keys.push(nextKey);
 
     const entry = toResultEntry(template(items[i], i), c);
 
@@ -96,28 +104,6 @@ function renderStatic<T>(
   return { bindings: allBindings, html };
 }
 
-/**
- * Options accepted by `each()`.
- */
-export interface EachOptions<T> {
-  /**
-   * Key extractor for stable DOM reconciliation.
-   * Receives the item and its **filtered** array index (after `select` is applied).
-   *
-   * Required when `source` is reactive (Signal/getter).
-   * Optional for static arrays (render-once path).
-   */
-  key?: (item: T, index: number) => string | number;
-  /**
-   * Filter predicate. Receives the item and its **original** array index.
-   * Only items for which `select` returns `true` are rendered.
-   *
-   * @example
-   * each(items, item => html`<li>${item.name}</li>`, undefined, { select: item => item.active })
-   */
-  select?: (item: T, index: number) => boolean;
-}
-
 type ReactiveSource<T> = ReadonlySignal<T[]> | (() => T[]);
 type EachSignalResult = Directive & {
   [EACH_SIGNAL]: ReadonlySignal<{
@@ -128,8 +114,45 @@ type EachSignalResult = Directive & {
   }>;
 };
 
+export interface EachOptions<T> {
+  fallback?: () => string | HTMLResult;
+  key?: (item: T, index: number) => string | number;
+  render: (item: T, index: number) => string | HTMLResult;
+  /**
+   * Filter predicate. Receives the item and its original array index.
+   * Only items for which `select` returns `true` are rendered.
+   */
+  select?: (item: T, index: number) => boolean;
+}
+
+const isFunction = (value: unknown): value is (...args: any[]) => any => typeof value === 'function';
+
+const validateEachOptions = <T>(options: EachOptions<T>): void => {
+  if (!isFunction(options.render)) {
+    throw new Error('[craftit:each] options.render must be a function.');
+  }
+
+  if (options.key !== undefined && !isFunction(options.key)) {
+    throw new Error('[craftit:each] options.key must be a function when provided.');
+  }
+
+  if (options.select !== undefined && !isFunction(options.select)) {
+    throw new Error('[craftit:each] options.select must be a function when provided.');
+  }
+
+  if (options.fallback !== undefined && !isFunction(options.fallback)) {
+    throw new Error('[craftit:each] options.fallback must be a function when provided.');
+  }
+};
+
+const assertArrayResult = <T>(value: T[] | unknown): T[] => {
+  if (Array.isArray(value)) return value as T[];
+
+  throw new Error('[craftit:each] source must resolve to an array.');
+};
+
 /**
- * Renders a reactive list with keyed DOM reconciliation for efficient updates.
+ * Renders a list with keyed DOM reconciliation for reactive sources.
  * Use inside `html` tagged templates.
  *
  * For reactive sources (Signal/getter), you must provide a stable `key` function.
@@ -141,51 +164,35 @@ type EachSignalResult = Directive & {
  * import { each } from '@vielzeug/craftit/directives';
  *
  * // Static array (key optional):
- * html`${each([1, 2, 3], item => html`<li>${item}</li>`)}`
+ * html`${each([1, 2, 3], { render: (item) => html`<li>${item}</li>` })}`
  *
  * // Reactive source (key required):
- * html`${each(items, item => html`<li>${item.name}</li>`, undefined, { key: item => item.id })}`
+ * html`${each(items, { key: item => item.id, render: (item) => html`<li>${item.name}</li>` })}`
  *
  * // Full example:
- * html`${each(items, item => html`<li>${item.name}</li>`, () => html`<p>No items</p>`, {
+ * html`${each(items, {
+ *   fallback: () => html`<p>No items</p>`,
  *   key: item => item.id,
+ *   render: (item) => html`<li>${item.name}</li>`,
  *   select: item => item.active,
  * })}`
  */
-export function each<T>(
-  source: T[],
-  template: (item: T, index: number) => string | HTMLResult,
-  empty?: () => string | HTMLResult,
-  options?: EachOptions<T>,
-): HTMLResult;
+export function each<T>(source: T[], options: EachOptions<T>): HTMLResult;
 export function each<T>(
   source: ReactiveSource<T>,
-  template: (item: T, index: number) => string | HTMLResult,
   options: EachOptions<T> & { key: (item: T, index: number) => string | number },
 ): EachSignalResult;
-export function each<T>(
-  source: ReactiveSource<T>,
-  template: (item: T, index: number) => string | HTMLResult,
-  empty: (() => string | HTMLResult) | undefined,
-  options: EachOptions<T> & { key: (item: T, index: number) => string | number },
-): EachSignalResult;
-export function each<T>(
-  source: T[] | ReactiveSource<T>,
-  template: (item: T, index: number) => string | HTMLResult,
-  emptyOrOptions?: (() => string | HTMLResult) | EachOptions<T>,
-  options?: EachOptions<T>,
-): HTMLResult | EachSignalResult {
-  const hasEmptyFn = typeof emptyOrOptions === 'function';
-  const empty = hasEmptyFn ? emptyOrOptions : undefined;
-  const resolvedOptions = (hasEmptyFn ? options : (options ?? emptyOrOptions)) ?? {};
-  const select = resolvedOptions.select;
+export function each<T>(source: T[] | ReactiveSource<T>, options: EachOptions<T>): HTMLResult | EachSignalResult {
+  validateEachOptions(options);
+
+  const { fallback, key, render, select } = options;
 
   if (Array.isArray(source)) {
     const filtered = select ? source.filter(select) : source;
 
     if (!filtered.length) {
-      if (empty) {
-        const er = extractResult(toHtmlResult(empty()));
+      if (fallback) {
+        const er = extractResult(toHtmlResult(fallback()));
 
         return htmlResult(er.html, er.bindings);
       }
@@ -193,14 +200,12 @@ export function each<T>(
       return EMPTY;
     }
 
-    const { bindings, html } = renderStatic(filtered, template);
+    const { bindings, html } = renderStatic(filtered, render);
 
     return htmlResult(html, bindings);
   }
 
-  const keyFn = resolvedOptions.key;
-
-  if (!keyFn) {
+  if (!key) {
     throw new Error('[craftit:each] Reactive each() requires options.key for stable reconciliation.');
   }
 
@@ -208,16 +213,16 @@ export function each<T>(
 
   return {
     [EACH_SIGNAL]: computed(() => {
-      const raw = getItems();
+      const raw = assertArrayResult<T>(getItems());
       const filtered = select ? raw.filter(select) : raw;
 
       if (!filtered.length) {
-        const er = empty ? toHtmlResult(empty()) : undefined;
+        const er = fallback ? toHtmlResult(fallback()) : undefined;
 
         return er ? { ...extractResult(er), items: [], keys: [] } : { bindings: [], html: '', items: [], keys: [] };
       }
 
-      const { bindings, html, keys, rendered } = renderKeyed(filtered, template, keyFn);
+      const { bindings, html, keys, rendered } = renderKeyed(filtered, render, key);
 
       return { bindings, html, items: rendered, keys };
     }),

@@ -3652,7 +3652,7 @@ const worker = createWorker((input) => {
   const end = Date.now() + input.durationMs
   while (Date.now() < end) { /* busy wait */ }
   return 'completed after ' + input.durationMs + 'ms'
-}, { size: 2 })
+}, { concurrency: 2 })
 
 async function run() {
   // Run a short task normally
@@ -3700,8 +3700,7 @@ const worker = createWorker((input) => {
 })
 
 async function run() {
-  console.log('Worker native:', worker.isNative)
-  console.log('Worker size:', worker.size)
+  console.log('Worker concurrency:', worker.concurrency)
   console.log('Worker status:', worker.status)
 
   const result = await worker.run({ numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] })
@@ -3792,12 +3791,12 @@ const pool = createWorker((input) => {
   }
   return { chunkId, result: +result.toFixed(4) }
 }, {
-  size: 3,        // 3 concurrent worker threads
+  concurrency: 3, // 3 concurrent worker threads
   timeout: 5000,  // abort tasks after 5 seconds
 })
 
 async function processChunks() {
-  console.log('Pool size:', pool.size, '| Native:', pool.isNative)
+  console.log('Pool concurrency:', pool.concurrency)
 
   // These run in parallel across the worker pool
   const chunks = [

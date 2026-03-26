@@ -46,12 +46,9 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
       optionElement.setAttribute('aria-selected', String(isSelected));
       optionElement.setAttribute('aria-disabled', String(!!option.disabled));
       optionElement.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
-
-      if (focused === item.index) optionElement.setAttribute('data-focused', '');
-
-      if (isSelected) optionElement.setAttribute('data-selected', '');
-
-      if (option.disabled) optionElement.setAttribute('data-disabled', '');
+      optionElement.toggleAttribute('data-focused', focused === item.index);
+      optionElement.toggleAttribute('data-selected', isSelected);
+      optionElement.toggleAttribute('data-disabled', !!option.disabled);
 
       if (option.iconEl) {
         const iconWrapper = document.createElement('span');
@@ -87,10 +84,7 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
       optionElement.addEventListener('pointerenter', () => {
         deps.setFocusedIndex(item.index);
 
-        for (const focusedElement of cachedListbox!.querySelectorAll<HTMLElement>('[data-focused]')) {
-          focusedElement.removeAttribute('data-focused');
-        }
-        optionElement.setAttribute('data-focused', '');
+        updateRenderedItemState();
       });
       cachedListbox.appendChild(optionElement);
     }
@@ -132,7 +126,8 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
 
   function setupVirtualizer(options: ComboboxOptionItem[], isOpen: boolean) {
     currentOptions = options;
-    domVirtualList.update(currentOptions, isOpen);
+    domVirtualList.setActive(isOpen);
+    domVirtualList.setItems(currentOptions);
   }
 
   return { domVirtualList, setupVirtualizer, updateRenderedItemState };

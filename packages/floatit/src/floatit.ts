@@ -5,7 +5,6 @@
 export type Side = 'top' | 'bottom' | 'left' | 'right';
 export type Alignment = 'start' | 'end';
 export type Placement = Side | `${Side}-${Alignment}`;
-export type Strategy = 'fixed' | 'absolute';
 
 interface Rect {
   x: number;
@@ -29,7 +28,6 @@ export interface Middleware {
 
 export interface ComputePositionConfig {
   placement?: Placement;
-  strategy?: Strategy;
   middleware?: Array<Middleware | null | undefined | false>;
 }
 
@@ -55,67 +53,65 @@ function toRect({ height, width, x, y }: DOMRect): Rect {
   return { height, width, x, y };
 }
 
-function crossCoord(align: Alignment | null, start: number, span: number, floatSpan: number): number {
-  return align === 'start' ? start : align === 'end' ? start + span - floatSpan : start + (span - floatSpan) / 2;
+function alignedOffset(align: Alignment | null, refStart: number, refSize: number, floatSize: number): number {
+  if (align === 'start') return refStart;
+
+  if (align === 'end') return refStart + refSize - floatSize;
+
+  return refStart + (refSize - floatSize) / 2;
 }
 
-/** Compute the base x/y for a floating element relative to a reference element. */
 function baseCoords(placement: Placement, ref: Rect, float: Rect): { x: number; y: number } {
   const side = getSide(placement);
   const align = getAlign(placement);
 
-  if (side === 'top') return { x: crossCoord(align, ref.x, ref.width, float.width), y: ref.y - float.height };
+  if (side === 'top') return { x: alignedOffset(align, ref.x, ref.width, float.width), y: ref.y - float.height };
 
-  if (side === 'bottom') return { x: crossCoord(align, ref.x, ref.width, float.width), y: ref.y + ref.height };
+  if (side === 'bottom') return { x: alignedOffset(align, ref.x, ref.width, float.width), y: ref.y + ref.height };
 
-  if (side === 'left') return { x: ref.x - float.width, y: crossCoord(align, ref.y, ref.height, float.height) };
+  if (side === 'left') return { x: ref.x - float.width, y: alignedOffset(align, ref.y, ref.height, float.height) };
 
-  /* right */ return { x: ref.x + ref.width, y: crossCoord(align, ref.y, ref.height, float.height) };
+  /* right */ return { x: ref.x + ref.width, y: alignedOffset(align, ref.y, ref.height, float.height) };
+}
+
+// ─── Pipeline ─────────────────────────────────────────────────────────────────
+
+function runPipeline(
+  mws: Middleware[],
+  placement: Placement,
+  reference: Element,
+  floating: HTMLElement,
+): ComputePositionResult {
+  const refRect = toRect(reference.getBoundingClientRect());
+  const floatRect = toRect(floating.getBoundingClientRect());
+  let state: MiddlewareState = {
+    ...baseCoords(placement, refRect, floatRect),
+    elements: { floating, reference },
+    placement,
+    rects: { floating: floatRect, reference: refRect },
+  };
+
+  for (const mw of mws) state = mw.fn(state);
+
+  // If a middleware (e.g. flip) changed the placement, restart once with the new one.
+  if (state.placement !== placement) {
+    return runPipeline(mws, state.placement, reference, floating);
+  }
+
+  return { placement: state.placement, x: state.x, y: state.y };
 }
 
 // ─── computePosition ──────────────────────────────────────────────────────────
 
-/**
- * Computes the position of a floating element relative to a reference element.
- * Returns a Promise for API compatibility.
- */
+/** Computes the position of a floating element relative to a reference element. */
 export function computePosition(
   reference: Element,
   floating: HTMLElement,
   config: ComputePositionConfig = {},
-): Promise<ComputePositionResult> {
-  const { middleware = [], placement: initial = 'bottom' } = config;
-  const mws = middleware.filter(Boolean) as Middleware[];
+): ComputePositionResult {
+  const { middleware = [], placement = 'bottom' } = config;
 
-  let activePlacement = initial;
-  let resets = 0;
-
-  const run = (): ComputePositionResult => {
-    const refRect = toRect(reference.getBoundingClientRect());
-    const floatRect = toRect(floating.getBoundingClientRect());
-    const base = baseCoords(activePlacement, refRect, floatRect);
-
-    let state: MiddlewareState = {
-      ...base,
-      elements: { floating, reference },
-      placement: activePlacement,
-      rects: { floating: floatRect, reference: refRect },
-    };
-
-    for (const mw of mws) state = mw.fn(state);
-
-    // If a middleware (e.g. flip) changed the placement, restart once with the new one.
-    if (state.placement !== activePlacement && resets < 1) {
-      activePlacement = state.placement;
-      resets++;
-
-      return run();
-    }
-
-    return { placement: state.placement, x: state.x, y: state.y };
-  };
-
-  return Promise.resolve(run());
+  return runPipeline(middleware.filter(Boolean) as Middleware[], placement, reference, floating);
 }
 
 // ─── Middlewares ──────────────────────────────────────────────────────────────
@@ -216,17 +212,29 @@ export interface SizeOptions {
   apply?: (args: SizeApplyArgs) => void;
 }
 
-/** Provides available width/height and optionally resizes the floating element. */
+/** Provides available width/height based on actual float position and optionally resizes the floating element. */
 export function size(options: SizeOptions = {}): Middleware {
   const { apply, padding = 0 } = options;
 
   return {
     fn(state) {
-      apply?.({
-        availableHeight: window.innerHeight - padding * 2,
-        availableWidth: window.innerWidth - padding * 2,
-        elements: state.elements,
-      });
+      const {
+        placement,
+        rects: { floating },
+        x,
+        y,
+      } = state;
+      const side = getSide(placement);
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      const availableHeight =
+        side === 'bottom' ? vh - y - padding : side === 'top' ? y + floating.height - padding : vh - padding * 2;
+
+      const availableWidth =
+        side === 'right' ? vw - x - padding : side === 'left' ? x + floating.width - padding : vw - padding * 2;
+
+      apply?.({ availableHeight, availableWidth, elements: state.elements });
 
       return state;
     },
@@ -256,6 +264,7 @@ export interface AutoUpdateOptions {
 /**
  * Automatically calls `update` whenever the floating element's position may have
  * changed (viewport resize, scroll events, or reference / floating element resize).
+ * Calls `update` once immediately on registration.
  * Returns a cleanup function.
  */
 export function autoUpdate(
@@ -264,11 +273,10 @@ export function autoUpdate(
   update: () => void,
   { observeFloating = true, observeVisualViewport = true }: AutoUpdateOptions = {},
 ): () => void {
-  // Scroll events inside the floating element itself (e.g. a dropdown scrolling
-  // its own options list) must never trigger repositioning.
+  update();
+
   // Use composedPath() instead of e.target — shadow DOM retargets e.target to
-  // the shadow host at the window listener boundary, so contains(e.target) would
-  // miss scrolls that originated inside a shadow root.
+  // the shadow host at the window listener boundary.
   const scrollHandler = (e: Event) => {
     if (e.composedPath().includes(floating)) return;
 
@@ -298,13 +306,11 @@ export function autoUpdate(
   };
 }
 
-// ─── positionFloat ────────────────────────────────────────────────────────────
+// ─── positionFloat / float ────────────────────────────────────────────────────
 
 export interface FloatOptions {
   /** Preferred placement relative to the reference element. */
   placement?: Placement;
-  /** Positioning strategy. Defaults to `'fixed'`. */
-  strategy?: Strategy;
   /** Middleware to modify positioning behavior. */
   middleware?: Array<Middleware | null | undefined | false>;
 }
@@ -312,27 +318,31 @@ export interface FloatOptions {
 /**
  * Computes and applies the floating position to a floating element.
  * Sets `left`/`top` inline styles and returns the resolved placement.
+ */
+export function positionFloat(reference: Element, floating: HTMLElement, options: FloatOptions = {}): Placement {
+  const { placement, x, y } = computePosition(reference, floating, options);
+
+  floating.style.left = `${x}px`;
+  floating.style.top = `${y}px`;
+
+  return placement;
+}
+
+/**
+ * Positions a floating element relative to a reference element and keeps it in
+ * sync as the viewport or elements change. Returns a cleanup function.
  *
  * @example
  * ```ts
- * positionFloat(reference, floating, {
+ * const cleanup = float(trigger, tooltip, {
  *   placement: 'top',
  *   middleware: [offset(8), flip(), shift({ padding: 6 })],
- * }).then(placement => el.dataset.placement = placement);
+ * });
+ *
+ * // When done:
+ * cleanup();
  * ```
  */
-export function positionFloat(
-  reference: Element,
-  floating: HTMLElement,
-  options: FloatOptions = {},
-): Promise<Placement> {
-  return computePosition(reference, floating, {
-    strategy: 'fixed',
-    ...options,
-  }).then(({ placement, x, y }) => {
-    floating.style.left = `${x}px`;
-    floating.style.top = `${y}px`;
-
-    return placement;
-  });
+export function float(reference: Element, floating: HTMLElement, options: FloatOptions = {}): () => void {
+  return autoUpdate(reference, floating, () => positionFloat(reference, floating, options));
 }

@@ -33,7 +33,7 @@ describe('core — BoundView (scope & withLocale)', () => {
       expect(ns.has('missing')).toBe(false);
     });
 
-    test('reacts to locale changes on the parent instance', () => {
+    test('reacts to locale changes on the parent instance', async () => {
       const i18n = createI18n({
         locale: 'en',
         messages: {
@@ -45,7 +45,7 @@ describe('core — BoundView (scope & withLocale)', () => {
       const nav = i18n.scope('nav');
 
       expect(nav.t('home')).toBe('Home');
-      i18n.locale = 'fr';
+      await i18n.switchLocale('fr');
       expect(nav.t('home')).toBe('Accueil');
     });
 

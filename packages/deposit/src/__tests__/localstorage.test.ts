@@ -40,7 +40,7 @@ describe('LocalStorage adapter', () => {
     });
 
     test('patch – returns undefined when key absent', async () => {
-      expect(await db.patch('users', 99, { name: 'Ghost' })).toBeUndefined();
+      await expect(db.patch('users', 99, { name: 'Ghost' })).rejects.toThrow('deposit: patch target');
     });
 
     test('patch – no follow-up get needed', async () => {

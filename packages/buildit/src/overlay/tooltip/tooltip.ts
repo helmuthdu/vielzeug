@@ -1,11 +1,14 @@
 import type { Placement } from '@vielzeug/floatit';
 
-import { computed, createId, defineComponent, html, onMount, onSlotChange, signal, watch } from '@vielzeug/craftit';
-import { autoUpdate, computePosition, flip, offset, shift } from '@vielzeug/floatit';
+import { define, createCleanupSignal, computed, createId, html, onMount, signal, watch } from '@vielzeug/craftit';
+import { createOverlayControl } from '@vielzeug/craftit/controls';
+import { computePosition, flip, offset, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize } from '../../types';
 
+import { disablableBundle, sizableBundle, type PropBundle } from '../../inputs/shared/bundles';
 import { forcedColorsMixin } from '../../styles';
+import { syncAria } from '../../utils/aria';
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
 type TooltipTrigger = 'hover' | 'focus' | 'click';
@@ -37,6 +40,18 @@ export type BitTooltipProps = {
   variant?: 'dark' | 'light';
 };
 
+const tooltipProps = {
+  ...sizableBundle,
+  ...disablableBundle,
+  'close-delay': 0,
+  content: '',
+  delay: 0,
+  open: undefined,
+  placement: 'top',
+  trigger: 'hover,focus',
+  variant: undefined,
+} satisfies PropBundle<BitTooltipProps>;
+
 /**
  * A lightweight tooltip shown on hover/focus/click relative to the slotted trigger.
  *
@@ -66,22 +81,13 @@ export type BitTooltipProps = {
  * </bit-tooltip>
  * ```
  */
-export const TOOLTIP_TAG = defineComponent<BitTooltipProps>({
-  props: {
-    'close-delay': { default: 0 },
-    content: { default: '' },
-    delay: { default: 0 },
-    disabled: { default: false },
-    open: { default: undefined },
-    placement: { default: 'top' },
-    size: { default: undefined },
-    trigger: { default: 'hover,focus' },
-    variant: { default: undefined },
-  },
-  setup({ host, props }) {
+export const TOOLTIP_TAG = define('bit-tooltip', {
+  props: tooltipProps,
+  setup({ props, shadowRoot, slots }) {
     const visible = signal(false);
+    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const isControlled = computed(() => props.open.value !== undefined);
     const activePlacement = signal<TooltipPlacement>('top');
-    let autoUpdateCleanup: (() => void) | null = null;
     let showTimer: ReturnType<typeof setTimeout> | null = null;
     let hideTimer: ReturnType<typeof setTimeout> | null = null;
     let tooltipEl: HTMLElement | null = null;
@@ -92,10 +98,22 @@ export const TOOLTIP_TAG = defineComponent<BitTooltipProps>({
         .map((t: string) => t.trim() as TooltipTrigger)
         .filter(Boolean),
     );
+    const clearShowTimer = () => {
+      if (!showTimer) return;
+
+      clearTimeout(showTimer);
+      showTimer = null;
+    };
+    const clearHideTimer = () => {
+      if (!hideTimer) return;
+
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    };
 
     function getTriggerEl(): Element | null {
       // First slotted element is the trigger
-      const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      const slot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
       const assigned = slot?.assignedElements({ flatten: true });
 
       return assigned?.[0] ?? null;
@@ -107,181 +125,168 @@ export const TOOLTIP_TAG = defineComponent<BitTooltipProps>({
 
       if (!triggerEl) return;
 
-      computePosition(triggerEl, tooltipEl, {
+      const { placement, x, y } = computePosition(triggerEl, tooltipEl, {
         middleware: [offset(TOOLTIP_OFFSET), flip(), shift({ padding: 6 })],
         placement: props.placement.value as Placement,
-      }).then(({ placement, x, y }) => {
-        if (!tooltipEl) return;
-
-        const side = placement.split('-')[0] as TooltipPlacement;
-        const adjustedX = side === 'left' ? x - LEFT_GAP_COMPENSATION : x;
-
-        tooltipEl.style.left = `${adjustedX}px`;
-        tooltipEl.style.top = `${y}px`;
-
-        activePlacement.value = side;
       });
+
+      const side = placement.split('-')[0] as TooltipPlacement;
+      const adjustedX = side === 'left' ? x - LEFT_GAP_COMPENSATION : x;
+
+      tooltipEl.style.left = `${adjustedX}px`;
+      tooltipEl.style.top = `${y}px`;
+
+      activePlacement.value = side;
     }
-    function show() {
-      if (props.open.value !== undefined) return; // controlled mode
 
-      const hasSlottedContent = () => {
-        const contentSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="content"]');
-
-        return (contentSlot?.assignedNodes({ flatten: true }).length ?? 0) > 0;
-      };
-
-      if (props.disabled.value || (!props.content.value && !hasSlottedContent())) return;
-
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
-      }
-
-      if (showTimer) clearTimeout(showTimer);
-
-      showTimer = setTimeout(
-        () => {
+    const overlay = createOverlayControl({
+      disabled: isDisabled,
+      elements: {
+        boundary: document.body,
+        panel: tooltipEl,
+        trigger: getTriggerEl() as HTMLElement | null,
+      },
+      isOpen: visible,
+      positioner: {
+        floating: () => tooltipEl,
+        reference: () => getTriggerEl() as HTMLElement | null,
+        update: updatePosition,
+      },
+      restoreFocus: false,
+      setOpen: (next) => {
+        if (next) {
           visible.value = true;
 
           if (tooltipEl && !tooltipEl.matches(':popover-open')) {
             tooltipEl.showPopover();
           }
 
-          // Start autoUpdate: repositions on scroll, resize, and reference size change
-          const triggerEl = getTriggerEl();
+          return;
+        }
 
-          if (triggerEl && tooltipEl) {
-            autoUpdateCleanup?.();
-            autoUpdateCleanup = autoUpdate(triggerEl, tooltipEl, updatePosition);
-          } else {
-            requestAnimationFrame(() => updatePosition());
-          }
+        visible.value = false;
+
+        if (tooltipEl?.matches(':popover-open')) {
+          tooltipEl.hidePopover();
+        }
+      },
+    });
+
+    function show() {
+      if (isControlled.value) return;
+
+      if (isDisabled.value || (!props.content.value && !slots.has('content').value)) return;
+
+      clearHideTimer();
+      clearShowTimer();
+
+      showTimer = setTimeout(
+        () => {
+          overlay.open('trigger');
         },
         Number(props.delay.value) || 0,
       );
     }
     function hide() {
-      if (props.open.value !== undefined) return; // controlled mode
+      if (isControlled.value) return;
 
-      if (showTimer) {
-        clearTimeout(showTimer);
-        showTimer = null;
-      }
+      clearShowTimer();
 
       const closeDelay = Number(props['close-delay'].value) || 0;
 
       if (closeDelay > 0) {
-        if (hideTimer) clearTimeout(hideTimer);
+        clearHideTimer();
 
         hideTimer = setTimeout(() => {
           hideTimer = null;
-          _doHide();
+          closeNow();
         }, closeDelay);
       } else {
-        _doHide();
+        closeNow();
       }
     }
-    function _doHide() {
-      autoUpdateCleanup?.();
-      autoUpdateCleanup = null;
-      visible.value = false;
-
-      if (tooltipEl?.matches(':popover-open')) {
-        tooltipEl.hidePopover();
-      }
+    function closeNow() {
+      overlay.close('trigger', false);
     }
     function toggleClick() {
       if (visible.value) hide();
       else show();
     }
     onMount(() => {
-      const slot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      const slot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      const triggerBinding = createCleanupSignal();
 
       if (!slot) return;
 
       const bindTriggerEvents = () => {
-        unbindTriggerEvents(); // clean up previous bindings
+        triggerBinding.clear();
 
         const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
         if (!triggerEl) return;
 
-        triggerEl.setAttribute('aria-describedby', tooltipId);
+        const removeAria = syncAria(triggerEl, {
+          describedby: () => tooltipId,
+        });
+
+        const cleanups: Array<() => void> = [];
+        const add = (
+          target: EventTarget,
+          event: string,
+          listener: EventListener,
+          options?: AddEventListenerOptions,
+        ) => {
+          target.addEventListener(event, listener, options);
+          cleanups.push(() => target.removeEventListener(event, listener, options));
+        };
 
         const t = triggers.value;
 
         if (t.includes('hover')) {
-          triggerEl.addEventListener('pointerenter', show);
-          triggerEl.addEventListener('pointerleave', hide);
+          add(triggerEl, 'pointerenter', show as EventListener);
+          add(triggerEl, 'pointerleave', hide as EventListener);
         }
 
         if (t.includes('focus')) {
-          triggerEl.addEventListener('focusin', show);
-          triggerEl.addEventListener('focusout', hide);
+          add(triggerEl, 'focusin', show as EventListener);
+          add(triggerEl, 'focusout', hide as EventListener);
         }
 
         if (t.includes('click')) {
-          triggerEl.addEventListener('click', toggleClick);
+          add(triggerEl, 'click', toggleClick as EventListener);
         }
 
         // Keyboard escape to dismiss
-        document.addEventListener('keydown', handleKeydown);
-      };
-      const unbindTriggerEvents = () => {
-        const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+        add(document, 'keydown', handleKeydown as EventListener);
 
-        if (!triggerEl) return;
+        triggerBinding.set(() => {
+          removeAria();
 
-        triggerEl.removeAttribute('aria-describedby');
-        triggerEl.removeEventListener('pointerenter', show);
-        triggerEl.removeEventListener('pointerleave', hide);
-        triggerEl.removeEventListener('focusin', show);
-        triggerEl.removeEventListener('focusout', hide);
-        triggerEl.removeEventListener('click', toggleClick);
-        document.removeEventListener('keydown', handleKeydown);
+          for (const cleanup of cleanups) cleanup();
+        });
       };
 
-      onSlotChange('default', bindTriggerEvents);
+      watch(slots.elements(), bindTriggerEvents, { immediate: true });
       // Controlled mode: watch the `open` prop and show/hide accordingly
       watch(props.open, (openVal) => {
         if (openVal === undefined || openVal === null) return;
 
         if (openVal) {
-          visible.value = true;
-
-          if (tooltipEl && !tooltipEl.matches(':popover-open')) tooltipEl.showPopover();
-
-          const triggerEl = getTriggerEl();
-
-          if (triggerEl && tooltipEl) {
-            autoUpdateCleanup?.();
-            autoUpdateCleanup = autoUpdate(triggerEl, tooltipEl, updatePosition);
-          } else {
-            requestAnimationFrame(() => updatePosition());
-          }
+          overlay.open('programmatic');
         } else {
-          _doHide();
+          overlay.close('programmatic', false);
         }
       });
 
       return () => {
-        unbindTriggerEvents();
+        triggerBinding.clear();
 
-        if (showTimer) clearTimeout(showTimer);
-
-        if (hideTimer) clearTimeout(hideTimer);
-
-        autoUpdateCleanup?.();
-        autoUpdateCleanup = null;
-
-        if (tooltipEl?.matches(':popover-open')) {
-          tooltipEl.hidePopover();
-        }
+        clearShowTimer();
+        clearHideTimer();
       };
     });
     function handleKeydown(e: KeyboardEvent) {
-      if (e.key === 'Escape') hide();
+      if (e.key === 'Escape') overlay.close('escape', false);
     }
 
     return html`
@@ -302,5 +307,4 @@ export const TOOLTIP_TAG = defineComponent<BitTooltipProps>({
     `;
   },
   styles: [forcedColorsMixin, styles],
-  tag: 'bit-tooltip',
 });

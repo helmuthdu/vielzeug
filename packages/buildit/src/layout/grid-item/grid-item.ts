@@ -1,4 +1,4 @@
-import { defineComponent, effect, html } from '@vielzeug/craftit';
+import { define, effect, html } from '@vielzeug/craftit';
 
 import styles from './grid-item.css?inline';
 
@@ -48,14 +48,14 @@ export type BitGridItemProps = {
  * <!-- Explicit placement -->
  * <bit-grid-item col="2 / 5" row="1 / 3">Placed</bit-grid-item>
  */
-export const GRID_ITEM_TAG = defineComponent<BitGridItemProps>({
+export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
   props: {
-    align: { default: undefined },
-    col: { default: '' },
-    colSpan: { default: undefined },
-    justify: { default: undefined },
-    row: { default: '' },
-    rowSpan: { default: undefined },
+    align: undefined,
+    col: '',
+    colSpan: undefined,
+    justify: undefined,
+    row: '',
+    rowSpan: undefined,
   },
   setup({ host, props }) {
     effect(() => {
@@ -63,13 +63,13 @@ export const GRID_ITEM_TAG = defineComponent<BitGridItemProps>({
       const span = props.colSpan.value;
 
       if (col) {
-        host.style.setProperty('grid-column', col);
+        host.el.style.setProperty('grid-column', col);
       } else if (span === 'full') {
-        host.style.setProperty('grid-column', '1 / -1');
+        host.el.style.setProperty('grid-column', '1 / -1');
       } else if (span) {
-        host.style.setProperty('grid-column', `span ${span}`);
+        host.el.style.setProperty('grid-column', `span ${span}`);
       } else {
-        host.style.removeProperty('grid-column');
+        host.el.style.removeProperty('grid-column');
       }
     });
     effect(() => {
@@ -77,18 +77,17 @@ export const GRID_ITEM_TAG = defineComponent<BitGridItemProps>({
       const span = props.rowSpan.value;
 
       if (row) {
-        host.style.setProperty('grid-row', row);
+        host.el.style.setProperty('grid-row', row);
       } else if (span === 'full') {
-        host.style.setProperty('grid-row', '1 / -1');
+        host.el.style.setProperty('grid-row', '1 / -1');
       } else if (span) {
-        host.style.setProperty('grid-row', `span ${span}`);
+        host.el.style.setProperty('grid-row', `span ${span}`);
       } else {
-        host.style.removeProperty('grid-row');
+        host.el.style.removeProperty('grid-row');
       }
     });
 
     return html`<slot></slot>`;
   },
   styles: [styles],
-  tag: 'bit-grid-item',
 });

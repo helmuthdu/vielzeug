@@ -1,4 +1,4 @@
-import { fire, type Fixture, mount } from '@vielzeug/craftit/test';
+import { fire, type Fixture, mount } from '@vielzeug/craftit/testing';
 
 describe('bit-number-input', () => {
   let fixture: Fixture<HTMLElement>;

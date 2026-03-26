@@ -1,8 +1,7 @@
 import {
+  define,
   computed,
   createContext,
-  defineComponent,
-  effect,
   html,
   inject,
   onMount,
@@ -12,7 +11,7 @@ import {
   watch,
 } from '@vielzeug/craftit';
 
-import { chevronLeftIcon, chevronRightIcon } from '../../icons';
+import '../../content/icon/icon';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -97,8 +96,6 @@ export type BitSidebarProps = {
  * @cssprop --sidebar-bg - Sidebar background color
  * @cssprop --sidebar-border-color - Border color
  *
- * @attr {string} responsive - CSS media query that auto-collapses the sidebar when it matches (e.g. '(max-width: 768px)')
- *
  * @example
  * ```html
  * <bit-sidebar collapsible label="App navigation">
@@ -113,29 +110,30 @@ export type BitSidebarProps = {
  * <bit-sidebar collapsible responsive="(max-width: 768px)">...</bit-sidebar>
  * ```
  */
-export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
+export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sidebar', {
   props: {
     collapsed: { default: undefined, type: Boolean },
-    collapsible: { default: false, type: Boolean },
-    'default-collapsed': { default: false, type: Boolean },
-    label: { default: 'Sidebar navigation' },
-    responsive: { default: undefined },
-    variant: { default: undefined },
+    collapsible: false,
+    'default-collapsed': false,
+    label: 'Sidebar navigation',
+    responsive: undefined,
+    variant: undefined,
   },
   setup({ emit, host, props, slots }) {
     const hasHeader = computed(() => slots.has('header').value);
     const hasFooter = computed(() => slots.has('footer').value);
+    const hasLogo = computed(() => slots.has('logo').value);
 
-    const isControlled = signal(host.hasAttribute('collapsed'));
+    const isControlled = signal(host.el.hasAttribute('collapsed'));
     const collapsedState = signal(
-      isControlled.value ? host.hasAttribute('collapsed') : props['default-collapsed'].value,
+      isControlled.value ? host.el.hasAttribute('collapsed') : props['default-collapsed'].value,
     );
 
     const isCollapsed = computed(() => collapsedState.value);
 
     provide(SIDEBAR_CTX, {
       collapsed: isCollapsed as ReadonlySignal<boolean>,
-      variant: props.variant as ReadonlySignal<SidebarVariant | undefined>,
+      variant: props.variant,
     });
 
     const setCollapsed = (next: boolean, source: SidebarCollapseSource) => {
@@ -151,25 +149,25 @@ export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
       setCollapsed(!isCollapsed.value, 'toggle');
     };
 
-    effect(() => {
-      host.toggleAttribute('data-collapsed', isCollapsed.value);
+    host.bind('attr', {
+      'data-collapsed': () => (isCollapsed.value ? true : undefined),
     });
 
     onMount(() => {
-      const el = host as SidebarElement;
+      const el = host.el as SidebarElement;
 
       el.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
       el.toggle = doToggle;
 
       let mediaCleanup: (() => void) | undefined;
       const observer = new MutationObserver(() => {
-        if (!host.hasAttribute('collapsed') && !isControlled.value) return;
+        if (!host.el.hasAttribute('collapsed') && !isControlled.value) return;
 
         isControlled.value = true;
-        collapsedState.value = host.hasAttribute('collapsed');
+        collapsedState.value = host.el.hasAttribute('collapsed');
       });
 
-      observer.observe(host, {
+      observer.observe(host.el, {
         attributeFilter: ['collapsed'],
         attributes: true,
       });
@@ -208,7 +206,12 @@ export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
     return html`
       <nav aria-label="${() => props.label.value}" part="nav">
         <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader.value && !props.collapsible.value}>
-          <slot name="header"></slot>
+          <span class="sidebar-logo" ?hidden=${() => !hasLogo.value}>
+            <slot name="logo"></slot>
+          </span>
+          <span class="sidebar-header-content">
+            <slot name="header"></slot>
+          </span>
           <button
             class="toggle-btn"
             part="toggle-btn"
@@ -217,7 +220,9 @@ export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
             aria-label="${() => (isCollapsed.value ? 'Expand sidebar' : 'Collapse sidebar')}"
             aria-expanded="${() => String(!isCollapsed.value)}"
             @click="${doToggle}">
-            <span class="toggle-icon" aria-hidden="true">${chevronLeftIcon}</span>
+            <span class="toggle-icon" aria-hidden="true">
+              <bit-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
+            </span>
           </button>
         </div>
         <div class="sidebar-content" part="content">
@@ -230,7 +235,6 @@ export const SIDEBAR_TAG = defineComponent<BitSidebarProps, BitSidebarEvents>({
     `;
   },
   styles: [coarsePointerMixin, reducedMotionMixin, sidebarStyles],
-  tag: 'bit-sidebar',
 });
 
 // ─── bit-sidebar-group styles ────────────────────────────────────────────────
@@ -271,19 +275,19 @@ export type BitSidebarGroupProps = {
  * </bit-sidebar-group>
  * ```
  */
-export const SIDEBAR_GROUP_TAG = defineComponent<BitSidebarGroupProps, BitSidebarGroupEvents>({
+export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEvents>('bit-sidebar-group', {
   props: {
-    collapsible: { default: false, type: Boolean },
-    'default-open': { default: true, type: Boolean },
-    label: { default: '' },
+    collapsible: false,
+    'default-open': true,
+    label: '',
     open: { default: undefined, type: Boolean },
   },
-  setup({ emit, host, props, slots }) {
+  setup({ host, props, slots }) {
     const hasIcon = computed(() => slots.has('icon').value);
     const sidebarCtx = inject(SIDEBAR_CTX, undefined);
 
-    effect(() => {
-      host.toggleAttribute('sidebar-collapsed', sidebarCtx?.collapsed.value ?? false);
+    host.bind('attr', {
+      'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
     });
 
     const isControlled = computed(() => props.open.value !== undefined);
@@ -302,42 +306,28 @@ export const SIDEBAR_GROUP_TAG = defineComponent<BitSidebarGroupProps, BitSideba
       openState.value = value;
     });
 
-    effect(() => {
-      host.toggleAttribute('open', isOpen.value);
+    host.bind('attr', {
+      open: () => (isOpen.value ? true : undefined),
     });
 
-    const handleGroupClick = (e: MouseEvent) => {
-      if (!(e.target instanceof HTMLElement) || !e.target.closest('.group-header')) return;
-
-      e.stopPropagation();
-      e.preventDefault();
-
-      if (!props.collapsible.value) {
-        return;
-      }
-
-      const next = !isOpen.value;
-
-      if (props.open.value === next) return;
-
-      if (!isControlled.value) {
-        openState.value = next;
-      }
-
-      emit('open-change', { open: next });
-    };
-
     return html`
-      <details class="group" part="group" ?open=${() => isOpen.value} @click="${handleGroupClick}">
+      <details class="group" part="group" ?open=${() => isOpen.value}>
         <summary
           class="group-header"
           part="group-header"
-          :aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}">
+          :aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}"
+          @click=${(e: MouseEvent) => {
+            if (!props.collapsible.value) {
+              e.preventDefault();
+            }
+          }}>
           <span class="group-icon" part="group-icon" ?hidden=${() => !hasIcon.value} aria-hidden="true">
             <slot name="icon"></slot>
           </span>
           <span class="group-label" part="group-label">${() => props.label.value}</span>
-          <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">${chevronRightIcon}</span>
+          <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">
+            <bit-icon name="chevron-right" size="12" stroke-width="2" aria-hidden="true"></bit-icon>
+          </span>
         </summary>
         <div class="group-items" part="group-items" role="list">
           <slot></slot>
@@ -346,7 +336,6 @@ export const SIDEBAR_GROUP_TAG = defineComponent<BitSidebarGroupProps, BitSideba
     `;
   },
   styles: [reducedMotionMixin, groupStyles],
-  tag: 'bit-sidebar-group',
 });
 
 // ─── bit-sidebar-item styles ─────────────────────────────────────────────────
@@ -417,21 +406,21 @@ export type BitSidebarItemProps = {
  * </bit-sidebar-item>
  * ```
  */
-export const SIDEBAR_ITEM_TAG = defineComponent<BitSidebarItemProps>({
+export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', {
   props: {
-    active: { default: false, type: Boolean },
-    disabled: { default: false, type: Boolean },
-    href: { default: undefined },
-    rel: { default: undefined },
-    target: { default: undefined },
+    active: false,
+    disabled: false,
+    href: undefined,
+    rel: undefined,
+    target: undefined,
   },
   setup({ host, props, slots }) {
     const hasIcon = computed(() => slots.has('icon').value);
     const hasEnd = computed(() => slots.has('end').value);
     const sidebarCtx = inject(SIDEBAR_CTX, undefined);
 
-    effect(() => {
-      host.toggleAttribute('sidebar-collapsed', sidebarCtx?.collapsed.value ?? false);
+    host.bind('attr', {
+      'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
     });
 
     const isLink = computed(() => !!props.href.value && !props.disabled.value);
@@ -446,31 +435,34 @@ export const SIDEBAR_ITEM_TAG = defineComponent<BitSidebarItemProps>({
     `;
 
     return html`
-      ${() =>
-        isLink.value
-          ? html`
-              <a
-                class="item"
-                part="item"
-                href="${() => props.href.value}"
-                :rel="${() => props.rel.value ?? null}"
-                :target="${() => props.target.value ?? null}"
-                :aria-current="${() => (props.active.value ? 'page' : null)}">
-                ${renderItemContent()}
-              </a>
-            `
-          : html`
-              <button
-                class="item"
-                part="item"
-                type="button"
-                :aria-current="${() => (props.active.value ? 'page' : null)}"
-                :disabled="${() => props.disabled.value || null}">
-                ${renderItemContent()}
-              </button>
-            `}
+      ${() => {
+        if (isLink.value) {
+          return html`
+            <a
+              class="item"
+              part="item"
+              href="${() => props.href.value}"
+              :rel="${() => props.rel.value ?? null}"
+              :target="${() => props.target.value ?? null}"
+              :aria-current="${() => (props.active.value ? 'page' : null)}">
+              ${renderItemContent()}
+            </a>
+          `;
+        } else if (props.disabled.value) {
+          return html` <div class="item" part="item" tabindex="-1" aria-disabled="true">${renderItemContent()}</div> `;
+        } else {
+          return html`
+            <button
+              class="item"
+              part="item"
+              type="button"
+              :aria-current="${() => (props.active.value ? 'page' : null)}">
+              ${renderItemContent()}
+            </button>
+          `;
+        }
+      }}
     `;
   },
   styles: [coarsePointerMixin, itemStyles],
-  tag: 'bit-sidebar-item',
 });
