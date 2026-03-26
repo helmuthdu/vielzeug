@@ -2,6 +2,20 @@
   "name": "@vielzeug/craftit",
   "entries": [
     {
+      "version": "2.0.1",
+      "tag": "@vielzeug/craftit_v2.0.1",
+      "date": "Thu, 26 Mar 2026 06:36:40 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Enhance security",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "c33dc44c7def6a1e60064bde456d68e7b5771255"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.0",
       "tag": "@vielzeug/craftit_v2.0.0",
       "date": "Tue, 24 Mar 2026 22:12:47 GMT",

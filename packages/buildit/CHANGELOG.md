@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/buildit
 
-This log was last generated on Tue, 24 Mar 2026 22:12:47 GMT and should not be manually modified.
+This log was last generated on Thu, 26 Mar 2026 06:36:40 GMT and should not be manually modified.
+
+## 2.0.1
+Thu, 26 Mar 2026 06:36:40 GMT
+
+_Version update only_
 
 ## 2.0.0
 Tue, 24 Mar 2026 22:12:47 GMT
