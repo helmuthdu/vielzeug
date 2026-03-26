@@ -180,6 +180,20 @@ describe('Directive: each()', () => {
     expect(listItems[2].textContent).toBe('3');
   });
 
+  it('should escape plain string results returned by each() template callback', async () => {
+    const payload = '<strong>unsafe</strong>';
+    const { query, queryAll } = await mount(
+      () => html`
+        <ul>
+          ${each([payload], (item) => item)}
+        </ul>
+      `,
+    );
+
+    expect(queryAll('strong')).toHaveLength(0);
+    expect(query('ul')?.textContent).toContain(payload);
+  });
+
   it('should support each() with key function and empty fallback', async () => {
     const { query } = await mount(() => {
       const items = signal<{ id: number; name: string }[]>([]);
@@ -665,6 +679,40 @@ describe('Directive: choose()', () => {
     expect(query('.home')).toBeNull();
     expect(query('.about')).not.toBeNull();
   });
+
+  it('should preserve event bindings across rerenders and branch switches', async () => {
+    const section = signal<'home' | 'about'>('home');
+    const tick = signal(0);
+    let clicks = 0;
+
+    const homeBranch = [
+      ['home', () => html`<button class="home-btn" @click=${() => (clicks += 1)}>Home action</button>`],
+      ['about', () => html`<button class="about-btn" @click=${() => (clicks += 10)}>About action</button>`],
+    ] as const;
+
+    const fixture = await mount(
+      () => html`<div>${choose(() => (tick.value, section.value), homeBranch as never)}</div>`,
+    );
+
+    const clickBranchButton = (): void => {
+      (fixture.query('button') as HTMLButtonElement).click();
+    };
+
+    clickBranchButton();
+    expect(clicks).toBe(1);
+
+    tick.value++;
+    await fixture.flush();
+    clickBranchButton();
+    expect(clicks).toBe(2);
+
+    section.value = 'about';
+    await fixture.flush();
+    clickBranchButton();
+    expect(clicks).toBe(12);
+
+    fixture.destroy();
+  });
 });
 
 describe('Directive: raw()', () => {
@@ -722,6 +770,12 @@ describe('Directive: spread() attribute entries', () => {
 
     expect(input.getAttribute('placeholder')).toBe('Search');
     expect(input.getAttribute('maxlength')).toBe('100');
+  });
+
+  it('should ignore inline event handler attributes for security', async () => {
+    const { query } = await mount(() => html`<div ${spread({ onclick: 'alert(1)' })}></div>`);
+
+    expect(query('div')?.hasAttribute('onclick')).toBe(false);
   });
 
   it('should set boolean true as empty-string attribute', async () => {
@@ -970,6 +1024,42 @@ describe('Directive: match()', () => {
 
     expect(query('span')?.textContent).toBe('First');
     expect(renderCounts).toEqual([1, 0, 0]);
+  });
+
+  it('should preserve event bindings across rerenders and branch switches', async () => {
+    const isPrimary = signal(true);
+    const tick = signal(0);
+    let clicks = 0;
+
+    const { flush, query } = await mount(
+      () =>
+        html`<div>
+          ${match(
+            [
+              () => (tick.value, isPrimary.value),
+              () => html`<button class="primary" @click=${() => (clicks += 1)}>P</button>`,
+            ],
+            [() => !isPrimary.value, () => html`<button class="secondary" @click=${() => (clicks += 10)}>S</button>`],
+          )}
+        </div>`,
+    );
+
+    const clickBranchButton = (): void => {
+      (query('button') as HTMLButtonElement).click();
+    };
+
+    clickBranchButton();
+    expect(clicks).toBe(1);
+
+    tick.value++;
+    await flush();
+    clickBranchButton();
+    expect(clicks).toBe(2);
+
+    isPrimary.value = false;
+    await flush();
+    clickBranchButton();
+    expect(clicks).toBe(12);
   });
 });
 

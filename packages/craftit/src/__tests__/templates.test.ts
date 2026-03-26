@@ -72,6 +72,34 @@ describe('Template: HTML System', () => {
       expect(query('span')?.textContent).toBe('Inner');
     });
 
+    it('should not treat structurally spoofed objects as HTMLResult', async () => {
+      const htmlPayload = '<strong>unsafe</strong>';
+      const spoofed = {
+        __bindings: [],
+        __html: htmlPayload,
+        toString: () => htmlPayload,
+      } as unknown;
+
+      const { query } = await mount(() => html`<div>${spoofed}</div>`);
+
+      expect(query('strong')).toBeNull();
+      expect(query('div')?.textContent).toContain(htmlPayload);
+    });
+
+    it('should escape signal updates when value changes from HTMLResult to plain string', async () => {
+      const payload = '<strong>unsafe</strong>';
+      const source = signal<unknown>(html`<em>safe</em>`);
+      const { flush, query } = await mount(() => html`<div>${source}</div>`);
+
+      expect(query('em')?.textContent).toBe('safe');
+
+      source.value = payload;
+      await flush();
+
+      expect(query('strong')).toBeNull();
+      expect(query('div')?.textContent).toContain(payload);
+    });
+
     it('should compile identical templates to stable marker output', () => {
       const first = html`<div>${signal(1)}</div>`;
       const second = html`<div>${signal(2)}</div>`;

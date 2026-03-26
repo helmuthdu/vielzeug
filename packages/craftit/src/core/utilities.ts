@@ -30,6 +30,13 @@ export const runAll = (fns: Iterable<() => void>): void => {
 };
 
 export const setAttr = (el: Element, name: string, val: unknown): void => {
+  // Avoid inline event-handler attributes (onclick, onerror, ...) to reduce injection risk.
+  if (/^on/i.test(name)) {
+    el.removeAttribute(name);
+
+    return;
+  }
+
   if (val == null || val === false) {
     el.removeAttribute(name);
   } else if (val === true) {

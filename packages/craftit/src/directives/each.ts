@@ -5,16 +5,24 @@ import {
   EACH_SIGNAL,
   extractResult,
   htmlResult,
+  isHtmlResult,
   type Binding,
   type Directive,
   type HTMLResult,
 } from '../core/internal';
+import { escapeHtml } from '../core/utilities';
 
 const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="(\\d+)"`, 'g');
 
 /* immutable — shared singleton for empty static lists */
 const EMPTY = htmlResult('');
 const NO_BINDINGS: Binding[] = [];
+
+const toResultEntry = (value: string | HTMLResult, c: { n: number }): { bindings: Binding[]; html: string } =>
+  isHtmlResult(value) ? renumber(value, c) : { bindings: NO_BINDINGS, html: escapeHtml(value) };
+
+const toHtmlResult = (value: string | HTMLResult): HTMLResult =>
+  isHtmlResult(value) ? value : htmlResult(escapeHtml(value));
 
 function renumber(res: HTMLResult, c: { n: number }): { bindings: Binding[]; html: string } {
   const map = new Map<string, string>();
@@ -59,8 +67,7 @@ function renderKeyed<T>(
   for (let i = 0; i < items.length; i++) {
     keys.push(keyFn(items[i], i));
 
-    const res = template(items[i], i);
-    const entry = typeof res === 'string' ? { bindings: NO_BINDINGS, html: res } : renumber(res, c);
+    const entry = toResultEntry(template(items[i], i), c);
 
     html += entry.html;
     allBindings.push(...entry.bindings);
@@ -80,8 +87,7 @@ function renderStatic<T>(
   const c = { n: 0 };
 
   for (let i = 0; i < items.length; i++) {
-    const res = template(items[i], i);
-    const entry = typeof res === 'string' ? { bindings: NO_BINDINGS, html: res } : renumber(res, c);
+    const entry = toResultEntry(template(items[i], i), c);
 
     html += entry.html;
     allBindings.push(...entry.bindings);
@@ -179,7 +185,7 @@ export function each<T>(
 
     if (!filtered.length) {
       if (empty) {
-        const er = extractResult(empty());
+        const er = extractResult(toHtmlResult(empty()));
 
         return htmlResult(er.html, er.bindings);
       }
@@ -206,7 +212,7 @@ export function each<T>(
       const filtered = select ? raw.filter(select) : raw;
 
       if (!filtered.length) {
-        const er = empty?.();
+        const er = empty ? toHtmlResult(empty()) : undefined;
 
         return er ? { ...extractResult(er), items: [], keys: [] } : { bindings: [], html: '', items: [], keys: [] };
       }
