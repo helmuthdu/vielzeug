@@ -10,6 +10,8 @@
 
 import { type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
+const HTML_RESULT_BRAND: unique symbol = Symbol('craftit.htmlResultBrand');
+
 // ─────────────────────────────────────────────────────────────────────────────
 // REF TYPES
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,22 +36,35 @@ export type RefCallback<T extends Element> = (el: T | null) => void;
 // HTML RESULT
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type HTMLResult = {
+export interface HTMLResult {
   __bindings: Binding[];
   __html: string;
   toString(): string;
-};
+}
 
 /** @internal — construct an HTMLResult from a pre-built html string and bindings. */
 export function htmlResult(html: string, bindings: Binding[] = []): HTMLResult {
-  return {
+  const result = {
     __bindings: bindings,
     __html: html,
     toString() {
       return html;
     },
   };
+
+  Object.defineProperty(result, HTML_RESULT_BRAND, {
+    configurable: false,
+    enumerable: false,
+    value: true,
+    writable: false,
+  });
+
+  return result as HTMLResult;
 }
+
+/** @internal — strict HTMLResult runtime type guard. */
+export const isHtmlResult = (value: unknown): value is HTMLResult =>
+  typeof value === 'object' && !!value && (value as Record<symbol, unknown>)[HTML_RESULT_BRAND] === true;
 
 /** @internal — extract html and bindings from a string or HTMLResult. */
 export function extractResult(v: string | HTMLResult): { bindings: Binding[]; html: string } {

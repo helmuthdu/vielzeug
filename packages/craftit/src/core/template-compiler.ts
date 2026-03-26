@@ -4,6 +4,7 @@ import {
   CF_ID_ATTR,
   EACH_SIGNAL,
   htmlResult,
+  isHtmlResult,
   type Binding,
   type Directive,
   type EventBinding,
@@ -16,7 +17,6 @@ import { escapeHtml } from './utilities';
 
 const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="([^"]+)"`, 'g');
 
-const isHtmlResult = (value: unknown): value is HTMLResult => typeof value === 'object' && !!value && '__html' in value;
 const normalizeCompiledHtml = (html: string): string => html.replace(/>\s+</g, '><').trim();
 
 // Slot patterns applied in priority order; first match wins
@@ -244,7 +244,7 @@ const createHtmlWrapperSignal = (
         const next = (value as ReadonlySignal<unknown>).value;
 
         if (!isHtmlResult(next)) {
-          return { bindings: [], html: String(next) };
+          return { bindings: [], html: resolveDirectiveValue(next) };
         }
 
         const entry = rekeyHtmlResult(next, createMarkerIdFactory());
