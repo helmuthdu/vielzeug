@@ -25,6 +25,7 @@ export default defineConfig({
         replacement: path.resolve(__dirname, '../craftit/src/observers/index.ts'),
       },
       { find: /^@vielzeug\/craftit$/, replacement: path.resolve(__dirname, '../craftit/src/index.ts') },
+      { find: /^@vielzeug\/dragit$/, replacement: path.resolve(__dirname, '../dragit/src/index.ts') },
       { find: /^@vielzeug\/floatit$/, replacement: path.resolve(__dirname, '../floatit/src/index.ts') },
       { find: /^@vielzeug\/stateit$/, replacement: path.resolve(__dirname, '../stateit/src/index.ts') },
       { find: /^@vielzeug\/toolkit$/, replacement: path.resolve(__dirname, '../toolkit/src/index.ts') },
