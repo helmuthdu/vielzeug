@@ -29,6 +29,8 @@ export default defineConfig({
       { find: /^@vielzeug\/floatit$/, replacement: path.resolve(__dirname, '../floatit/src/index.ts') },
       { find: /^@vielzeug\/stateit$/, replacement: path.resolve(__dirname, '../stateit/src/index.ts') },
       { find: /^@vielzeug\/toolkit$/, replacement: path.resolve(__dirname, '../toolkit/src/index.ts') },
+      { find: /^@vielzeug\/virtualit$/, replacement: path.resolve(__dirname, '../virtualit/src/index.ts') },
+      { find: /^@vielzeug\/virtualit\/dom$/, replacement: path.resolve(__dirname, '../virtualit/src/dom/index.ts') },
     ],
   },
   test: {
