@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Major release",
+      "type": "major",
+      "packageName": "@vielzeug/fetchit"
+    }
+  ],
+  "packageName": "@vielzeug/fetchit",
+  "email": "helmuthdu@gmail.com"
+}
