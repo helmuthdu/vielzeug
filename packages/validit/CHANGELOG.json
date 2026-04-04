@@ -2,6 +2,20 @@
   "name": "@vielzeug/validit",
   "entries": [
     {
+      "version": "2.1.0",
+      "tag": "@vielzeug/validit_v2.1.0",
+      "date": "Sat, 04 Apr 2026 13:30:02 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "General Improvements and Bugfixes",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "4cc6f710c57769113ae7d6e3bef2c25a9ac359f3"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.0",
       "tag": "@vielzeug/validit_v2.0.0",
       "date": "Tue, 24 Mar 2026 22:12:47 GMT",
