@@ -1,9 +1,9 @@
-import { createA11yControl } from '../a11y-control';
 /**
  * Tests for createA11yControl composable from the Craftit controls surface
  */
 import { currentRuntime, html, signal } from '../../index';
 import { mount } from '../../testing';
+import { createA11yControl } from '../a11y-control';
 
 describe('createA11yControl', () => {
   it('sets the ARIA role on the host element during setup', async () => {

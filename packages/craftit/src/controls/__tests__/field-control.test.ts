@@ -1,6 +1,8 @@
 import { signal } from '@vielzeug/stateit';
 import { describe, expect, it, vi } from 'vitest';
 
+import { html, onElement, ref } from '../../index';
+import { mount } from '../../testing';
 import {
   createChoiceFieldControl,
   createTextFieldControl,
@@ -9,8 +11,6 @@ import {
   createCheckableStateControl,
 } from '../field-control';
 import { createValidationControl } from '../internal/control-state';
-import { html, onElement, ref } from '../../index';
-import { mount } from '../../testing';
 
 describe('field controls', () => {
   describe('createValidationControl()', () => {
