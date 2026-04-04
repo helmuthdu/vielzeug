@@ -1,6 +1,6 @@
-import type { Directive } from '../core/internal';
+import type { Directive } from '../internal';
 
-import { listen } from '../core/utilities';
+import { listen } from '../internal';
 
 /**
  * Attaches an event listener to an element as a spread directive, supporting

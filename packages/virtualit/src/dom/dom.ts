@@ -9,7 +9,7 @@ export type DomVirtualListRenderArgs<T> = {
 };
 
 export type DomVirtualListOptions<T> = {
-  clear: (listEl: HTMLElement) => void;
+  clear?: (listEl: HTMLElement) => void;
   estimateSize: number | ((index: number, item: T) => number);
   getListElement: () => HTMLElement | null;
   getScrollElement: () => HTMLElement | null;
@@ -17,14 +17,20 @@ export type DomVirtualListOptions<T> = {
   render: (args: DomVirtualListRenderArgs<T>) => void;
 };
 
+export type DomVirtualListSetItemsOptions = {
+  remeasure?: boolean;
+};
+
 export type DomVirtualListController<T> = {
   destroy: () => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
-  update: (items: T[], enabled: boolean) => void;
+  setActive: (active: boolean) => void;
+  setItems: (items: T[], options?: DomVirtualListSetItemsOptions) => void;
 };
 
 export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomVirtualListController<T> {
   let currentItems: T[] = [];
+  let isActive = true;
   let listElRef: HTMLElement | null = null;
   let scrollElRef: HTMLElement | null = null;
   let virtualizer: Virtualizer | null = null;
@@ -32,7 +38,11 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   const resolveEstimate = (index: number): number => {
     if (typeof options.estimateSize === 'number') return options.estimateSize;
 
-    return options.estimateSize(index, currentItems[index]!);
+    const item = currentItems[index];
+
+    if (!item) return 36;
+
+    return options.estimateSize(index, item);
   };
 
   const applyListStyles = () => {
@@ -46,17 +56,19 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   const clearAndReset = () => {
     if (!listElRef) return;
 
-    options.clear(listElRef);
+    if (options.clear) options.clear(listElRef);
+    else listElRef.textContent = '';
+
     listElRef.style.height = '';
     listElRef.style.position = '';
     listElRef.style.contain = '';
   };
 
-  const ensureVirtualizer = () => {
+  const ensureVirtualizer = (remeasure: boolean, lengthChanged: boolean) => {
     const nextScroll = options.getScrollElement();
     const nextList = options.getListElement();
 
-    if (!nextScroll || !nextList || currentItems.length === 0) {
+    if (!isActive || !nextScroll || !nextList || currentItems.length === 0) {
       virtualizer?.destroy();
       virtualizer = null;
       listElRef = nextList;
@@ -84,8 +96,9 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
         overscan: options.overscan ?? 3,
       });
     } else {
-      virtualizer.count = currentItems.length;
-      virtualizer.invalidate();
+      if (lengthChanged) virtualizer.count = currentItems.length;
+
+      if (remeasure) virtualizer.invalidate();
     }
 
     applyListStyles();
@@ -100,20 +113,17 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     scrollToIndex(index, scrollOptions) {
       virtualizer?.scrollToIndex(index, scrollOptions);
     },
-    update(items, enabled) {
+    setActive(active) {
+      isActive = active;
+
+      ensureVirtualizer(false, false);
+    },
+    setItems(items, setItemsOptions = {}) {
+      const lengthChanged = currentItems.length !== items.length;
+
       currentItems = items;
 
-      if (!enabled || currentItems.length === 0) {
-        virtualizer?.destroy();
-        virtualizer = null;
-        listElRef = options.getListElement();
-        scrollElRef = options.getScrollElement();
-        clearAndReset();
-
-        return;
-      }
-
-      ensureVirtualizer();
+      ensureVirtualizer(!!setItemsOptions.remeasure, lengthChanged);
     },
   };
 }

@@ -44,6 +44,34 @@ export interface ScrollToIndexOptions {
   behavior?: ScrollBehavior;
 }
 
+const DEFAULT_ESTIMATE_SIZE = 36;
+const DEFAULT_OVERSCAN = 3;
+
+function toNonNegativeInt(value: number, fallback = 0): number {
+  if (!Number.isFinite(value)) return fallback;
+
+  return Math.max(0, Math.floor(value));
+}
+
+function toPositiveNumber(value: number, fallback: number): number {
+  if (!Number.isFinite(value) || value <= 0) return fallback;
+
+  return value;
+}
+
+function createEstimateSizeFn(
+  estimate: number | ((index: number) => number),
+  fallback = DEFAULT_ESTIMATE_SIZE,
+): (index: number) => number {
+  if (typeof estimate === 'number') {
+    const size = toPositiveNumber(estimate, fallback);
+
+    return () => size;
+  }
+
+  return (index: number) => toPositiveNumber(estimate(index), fallback);
+}
+
 // ─── Virtualizer ──────────────────────────────────────────────────────────────
 
 export class Virtualizer {
@@ -74,12 +102,12 @@ export class Virtualizer {
   private pendingBuild = false;
 
   constructor(options: VirtualizerOptions) {
-    this._count = options.count;
+    this._count = toNonNegativeInt(options.count);
 
-    const est = options.estimateSize ?? 36;
+    const est = options.estimateSize ?? DEFAULT_ESTIMATE_SIZE;
 
-    this._estimateSizeFn = typeof est === 'number' ? () => est : est;
-    this.overscan = options.overscan ?? 3;
+    this._estimateSizeFn = createEstimateSizeFn(est);
+    this.overscan = toNonNegativeInt(options.overscan ?? DEFAULT_OVERSCAN, DEFAULT_OVERSCAN);
     this.onChange = options.onChange;
     // Build the offset table eagerly; computeVisible is deferred to attach()
     // so the first onChange call always has a real containerHeight.
@@ -94,7 +122,11 @@ export class Virtualizer {
 
   /** Setting count automatically rebuilds offsets and triggers a re-render. */
   set count(value: number) {
-    this._count = value;
+    const nextCount = toNonNegativeInt(value);
+
+    if (nextCount === this._count) return;
+
+    this._count = nextCount;
     this.buildOffsets();
 
     if (this.attachedEl) this.computeVisible();
@@ -105,7 +137,7 @@ export class Virtualizer {
    * Useful when switching between row density modes (e.g. compact ↔ comfortable).
    */
   set estimateSize(fn: number | ((index: number) => number)) {
-    this._estimateSizeFn = typeof fn === 'number' ? () => fn : fn;
+    this._estimateSizeFn = createEstimateSizeFn(fn);
     this.measuredHeights.clear();
     this.buildOffsets();
 
@@ -164,9 +196,14 @@ export class Virtualizer {
    * render loop without incurring O(n²) rebuilds.
    */
   measureElement(index: number, height: number): void {
-    if (this.heightAt(index) === height) return;
+    const safeIndex = toNonNegativeInt(index, -1);
+    const safeHeight = toPositiveNumber(height, -1);
 
-    this.measuredHeights.set(index, height);
+    if (safeIndex < 0 || safeIndex >= this._count || safeHeight <= 0) return;
+
+    if (this.heightAt(safeIndex) === safeHeight) return;
+
+    this.measuredHeights.set(safeIndex, safeHeight);
 
     if (!this.pendingBuild) {
       this.pendingBuild = true;
@@ -183,9 +220,10 @@ export class Virtualizer {
   scrollToIndex(index: number, options: ScrollToIndexOptions = {}): void {
     const el = this.attachedEl;
 
-    if (!el) return;
+    if (!el || this._count <= 0) return;
 
-    const clampedIndex = Math.max(0, Math.min(index, this._count - 1));
+    const safeIndex = Number.isFinite(index) ? Math.floor(index) : 0;
+    const clampedIndex = Math.max(0, Math.min(safeIndex, this._count - 1));
     const align = options.align ?? 'auto';
     const behavior = options.behavior ?? 'auto';
     const itemTop = this.offsetAt(clampedIndex);
@@ -209,12 +247,15 @@ export class Virtualizer {
       targetScrollTop = itemTop < visibleStart ? itemTop : itemTop + itemHeight - this.containerHeight;
     }
 
-    el.scrollTo({ behavior, top: Math.max(0, targetScrollTop) });
+    el.scrollTo({ behavior, top: this.clampScrollTop(targetScrollTop) });
   }
 
   /** Programmatically scroll to a specific pixel offset. */
   scrollToOffset(offset: number, options: { behavior?: ScrollBehavior } = {}): void {
-    this.attachedEl?.scrollTo({ behavior: options.behavior ?? 'auto', top: Math.max(0, offset) });
+    this.attachedEl?.scrollTo({
+      behavior: options.behavior ?? 'auto',
+      top: this.clampScrollTop(offset),
+    });
   }
 
   /**
@@ -247,6 +288,13 @@ export class Virtualizer {
 
   private offsetAt(index: number): number {
     return this.scrollOffsets[index] ?? 0;
+  }
+
+  private clampScrollTop(offset: number): number {
+    const safeOffset = Number.isFinite(offset) ? offset : 0;
+    const maxOffset = Math.max(0, this.totalSize - this.containerHeight);
+
+    return Math.min(maxOffset, Math.max(0, safeOffset));
   }
 
   private buildOffsets(): void {

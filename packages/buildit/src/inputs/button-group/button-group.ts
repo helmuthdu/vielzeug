@@ -1,6 +1,9 @@
-import { createContext, defineComponent, html, provide, type ReadonlySignal } from '@vielzeug/craftit';
+import { define, createContext, html, provide, type ReadonlySignal } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+
+import { type PropBundle, sizableBundle, themableBundle } from '../shared/bundles';
+import styles from './button-group.css?inline';
 
 /** Context provided by bit-button-group to its bit-button children. */
 export type ButtonGroupContext = {
@@ -10,8 +13,6 @@ export type ButtonGroupContext = {
 };
 /** Injection key for the button-group context. */
 export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext>('ButtonGroupContext');
-
-import styles from './button-group.css?inline';
 
 /** Button group component properties */
 export type BitButtonGroupProps = {
@@ -55,16 +56,16 @@ export type BitButtonGroupProps = {
  * <bit-button-group><bit-button>First</bit-button><bit-button>Second</bit-button></bit-button-group>
  * ```
  */
-export const BUTTON_GROUP_TAG = defineComponent<BitButtonGroupProps>({
+export const BUTTON_GROUP_TAG = define<BitButtonGroupProps>('bit-button-group', {
   props: {
-    attached: { default: false },
-    color: { default: undefined },
-    fullwidth: { default: false },
-    label: { default: undefined },
-    orientation: { default: undefined },
-    size: { default: undefined },
-    variant: { default: undefined },
-  },
+    ...themableBundle,
+    ...sizableBundle,
+    attached: false,
+    fullwidth: false,
+    label: undefined,
+    orientation: undefined,
+    variant: undefined,
+  } satisfies PropBundle<BitButtonGroupProps>,
   setup({ props }) {
     provide(BUTTON_GROUP_CTX, {
       color: props.color,
@@ -73,11 +74,10 @@ export const BUTTON_GROUP_TAG = defineComponent<BitButtonGroupProps>({
     });
 
     return html`
-      <div class="button-group" part="group" role="group" :aria-label="${() => props.label.value ?? null}">
+      <div class="button-group" part="group" role="group" :aria-label="${() => props.label ?? null}">
         <slot></slot>
       </div>
     `;
   },
   styles: [styles],
-  tag: 'bit-button-group',
 });

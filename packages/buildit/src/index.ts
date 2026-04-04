@@ -1,7 +1,6 @@
 export * from './content';
 export * from './disclosure';
 export * from './feedback';
-export * from './icons';
 export * from './inputs';
 export * from './layout';
 export * from './overlay';

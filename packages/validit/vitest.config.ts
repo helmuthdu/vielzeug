@@ -11,5 +11,6 @@ export default defineConfig({
     globals: true,
     name: 'validit',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    watch: false,
   },
 });

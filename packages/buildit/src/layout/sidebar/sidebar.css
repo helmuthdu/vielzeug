@@ -1,3 +1,18 @@
+.sidebar-logo[hidden] {
+  display: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+}
+
+/*
+ * Simplified and unified sidebar CSS:
+ * - Grouped collapsed/expanded state rules
+ * - Consistent use of CSS variables for spacing, color, and transitions
+ * - Removed redundant or legacy rules
+ * - Clarified variant handling
+ */
+
 @layer buildit.base {
   :host {
     --_sidebar-width: var(--sidebar-width, 16rem);
@@ -18,7 +33,7 @@
         color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
       )
     );
-    --_panel-radius: var(--sidebar-radius, 0);
+    --_panel-radius: var(--sidebar-radius, var(--rounded-lg));
     --_panel-shadow: var(--sidebar-shadow, var(--shadow-xl));
 
     box-sizing: border-box;
@@ -56,27 +71,59 @@
 
   .sidebar-header {
     display: flex;
-    flex-shrink: 0;
     gap: var(--size-2);
     align-items: center;
+    justify-content: space-between;
     min-height: var(--size-14);
-    padding: var(--size-2);
-    overflow: hidden;
+    padding: var(--size-4);
     border-bottom: var(--border) solid var(--color-contrast-200);
   }
 
-  .sidebar-header slot {
+  .sidebar-header .sidebar-header-content {
     display: block;
-    flex: 1;
+    flex: 1 1 0%;
     min-width: 0;
     overflow: hidden;
+  }
+
+  :host([data-collapsed]) .sidebar-header {
+    flex-direction: column;
+    gap: var(--size-2);
+    align-items: center;
+    justify-content: flex-start;
+    min-height: unset;
+    padding-block: var(--size-2);
+    padding-inline: var(--size-2);
+  }
+
+  :host([data-collapsed]) .sidebar-header .sidebar-header-content {
+    display: none !important;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--size-8);
+    min-height: var(--size-8);
+    margin-inline-end: var(--size-2);
+  }
+
+  .sidebar-logo:empty {
+    display: none !important;
+  }
+
+  :host([data-collapsed]) .sidebar-logo {
+    margin-block: var(--size-1);
+    margin-inline-end: 0;
   }
 
   .sidebar-content {
     display: grid;
     flex: 1;
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--size-2);
+    gap: var(--size-4);
     align-content: start;
     min-width: 0;
     padding: var(--size-4);
@@ -99,7 +146,6 @@
     justify-content: center;
     width: var(--size-8);
     height: var(--size-8);
-    margin-inline-start: auto;
     color: var(--color-contrast-500);
     cursor: pointer;
     border-radius: var(--rounded-sm);
@@ -148,7 +194,7 @@
     height: calc(100% - var(--size-4));
     margin: var(--size-2);
 
-    --_panel-radius: var(--rounded-xl);
+    --_panel-radius: var(--rounded-lg);
   }
 
   /* ── inset ── */

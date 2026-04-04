@@ -32,7 +32,7 @@ A basic reorderable list with a visible drag handle and placeholder styling:
 }
 
 [data-dragging] {
-  opacity: 0.3;
+  /* opacity is managed automatically — use for other effects */
 }
 
 .dragit-placeholder {
@@ -47,7 +47,7 @@ A basic reorderable list with a visible drag handle and placeholder styling:
 import { createSortable } from '@vielzeug/dragit';
 
 using sortable = createSortable({
-  container: document.getElementById('list')!,
+  element: document.getElementById('list')!,
   handle: '.handle',
   onReorder: (ids) => {
     console.log('New order:', ids); // ['b', 'a', 'c']

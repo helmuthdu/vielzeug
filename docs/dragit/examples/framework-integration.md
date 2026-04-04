@@ -39,7 +39,7 @@ export function FileDropZone({ onFiles, accept = [], disabled = false }: FileDro
     const zone = createDropZone({
       element: ref.current,
       accept,
-      disabled: () => disabled,
+      disabled,
       onDrop: onFiles,
       onHoverChange: setHovered,
     });
@@ -154,16 +154,12 @@ export function SortableList({ items, onReorder }: SortableListProps) {
     if (!ref.current) return;
 
     sortableRef.current = createSortable({
-      container: ref.current,
+      element: ref.current,
       onReorder,
     });
 
     return () => sortableRef.current?.destroy();
   }, [onReorder]);
-
-  useEffect(() => {
-    sortableRef.current?.refresh();
-  }, [items]);
 
   return (
     <ul ref={ref}>
@@ -194,8 +190,8 @@ watch(
     if (!el) return;
 
     sortable = createSortable({
-      ...({ onReorder: (ids: string[]) => emit('reorder', ids) } satisfies Omit<SortableOptions, 'container'>),
-      container: el,
+      ...({ onReorder: (ids: string[]) => emit('reorder', ids) } satisfies Omit<SortableOptions, 'element'>),
+      element: el,
     });
   },
   { immediate: true },
@@ -203,7 +199,7 @@ watch(
 
 watch(
   () => props.items,
-  () => sortable?.refresh(),
+  () => {}, // MutationObserver keeps draggable/role in sync automatically
   { deep: true },
 );
 
@@ -231,10 +227,9 @@ onUnmounted(() => sortable?.destroy());
   let sortable: ReturnType<typeof createSortable> | null = null;
 
   $: if (container && !sortable) {
-    sortable = createSortable({ container, onReorder });
+    sortable = createSortable({ element: container, onReorder });
   }
 
-  afterUpdate(() => sortable?.refresh());
   onDestroy(() => sortable?.destroy());
 </script>
 

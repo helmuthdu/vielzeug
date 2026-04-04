@@ -3,8 +3,8 @@
  * Tests for onMount, onCleanup, and onRendered hooks
  */
 
-import { handle, html, onCleanup, onError, onMount, signal } from '../index';
-import { mount } from '../test';
+import { createCleanupSignal, handle, html, onCleanup, onError, onMount, signal } from '../index';
+import { mount } from '../testing';
 
 describe('Core: Lifecycle Hooks', () => {
   describe('onMount()', () => {
@@ -87,7 +87,7 @@ describe('Core: Lifecycle Hooks', () => {
       });
 
       destroy();
-      expect(calls).toEqual([1, 2]);
+      expect(calls).toEqual([2, 1]);
     });
   });
 
@@ -179,6 +179,36 @@ describe('Core: Lifecycle Hooks', () => {
 
       btn.dispatchEvent(new Event('click'));
       expect(clickCount).toBe(1);
+    });
+  });
+
+  describe('createCleanupSignal()', () => {
+    it('disposes previous cleanup when replaced and latest cleanup on unmount', async () => {
+      let disposed = 0;
+
+      const { destroy } = await mount(() => {
+        const cleanup = createCleanupSignal();
+
+        onMount(() => {
+          cleanup.set(() => {
+            disposed += 1;
+          });
+
+          cleanup.set(() => {
+            disposed += 10;
+          });
+        });
+
+        return html`<div></div>`;
+      });
+
+      // Replacing cleanup disposes the previous one.
+      expect(disposed).toBe(1);
+
+      destroy();
+
+      // Unmount disposes the latest cleanup.
+      expect(disposed).toBe(11);
     });
   });
 });

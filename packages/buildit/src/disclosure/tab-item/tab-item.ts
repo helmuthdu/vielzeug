@@ -1,4 +1,4 @@
-import { computed, defineComponent, effect, fire, html, typed, inject, syncContextProps } from '@vielzeug/craftit';
+import { define, computed, fire, html, inject, syncContextProps } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -43,34 +43,42 @@ export type BitTabItemProps = {
  * <bit-tab-item slot="tabs" value="settings" disabled>Settings</bit-tab-item>
  * ```
  */
-export const TAB_ITEM_TAG = defineComponent<BitTabItemProps>({
+export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
   props: {
-    active: typed<boolean>(false),
-    color: typed<BitTabItemProps['color']>(undefined),
-    disabled: typed<boolean>(false),
-    size: typed<BitTabItemProps['size']>(undefined),
-    value: typed<string>(''),
-    variant: typed<BitTabItemProps['variant']>(undefined),
+    active: false,
+    color: undefined,
+    disabled: false,
+    size: undefined,
+    value: '',
+    variant: undefined,
   },
   setup({ host, props }) {
     const tabsCtx = inject(TABS_CTX, undefined);
 
     syncContextProps(tabsCtx, props, ['color', 'size', 'variant']);
 
-    const isActive = tabsCtx
-      ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
-      : props.active;
+    const isActive = computed(() =>
+      tabsCtx ? !!tabsCtx.value.value && tabsCtx.value.value === props.value.value : props.active.value,
+    );
+    const isDisabled = computed(() => Boolean(props.disabled.value));
 
-    effect(() => {
-      host.toggleAttribute('active', isActive.value);
+    host.bind('attr', {
+      active: () => (isActive.value ? true : undefined),
     });
 
     const ariaSelected = computed(() => String(isActive.value));
+    const ariaDisabled = computed(() => String(isDisabled.value));
     const tabIndex = computed(() => (isActive.value ? '0' : '-1'));
-    const handleClick = () => {
-      if (props.disabled.value) return;
+    const handleClick = (event: MouseEvent) => {
+      event.stopPropagation();
 
-      fire.custom(host, 'click', {
+      if (isDisabled.value) {
+        event.preventDefault();
+
+        return;
+      }
+
+      fire.custom(host.el, 'click', {
         detail: { value: props.value.value },
       });
     };
@@ -83,7 +91,7 @@ export const TAB_ITEM_TAG = defineComponent<BitTabItemProps>({
         :id="${() => `tab-${props.value.value}`}"
         :aria-selected=${ariaSelected}
         :tabindex=${tabIndex}
-        :aria-disabled=${computed(() => String(props.disabled.value))}
+        :aria-disabled=${ariaDisabled}
         :aria-controls="${() => `tabpanel-${props.value.value}`}"
         @click=${handleClick}>
         <slot name="prefix"></slot>
@@ -93,5 +101,4 @@ export const TAB_ITEM_TAG = defineComponent<BitTabItemProps>({
     `;
   },
   styles: [colorThemeMixin, forcedColorsFocusMixin('button'), coarsePointerMixin, styles],
-  tag: 'bit-tab-item',
 });

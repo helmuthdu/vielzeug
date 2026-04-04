@@ -1,4 +1,4 @@
-import { resolvePath, stripBase, readLocation, handleRoute, createOnPopState } from './navigation';
+import { resolvePath, stripBase, readLocation, handleRoute } from './navigation';
 import {
   buildUrl,
   createPrefixURLPattern,
@@ -43,7 +43,6 @@ export class Router {
   #isStarted = false;
   #lastHref = '';
   #navId = 0;
-  #pendingViewTransition: boolean | undefined;
   #currentState: RouteState = { hash: '', params: {}, pathname: '/', query: {} };
   readonly #navigate: RouteContext['navigate'] = (target, options) => this.navigate(target, options);
   readonly #onPopState: () => void;
@@ -55,21 +54,10 @@ export class Router {
     this.#useViewTransition = options.viewTransition ?? false;
     this.#globalMiddleware = ([] as Middleware[]).concat(options.middleware ?? []);
 
-    this.#onPopState = createOnPopState(
-      this.#base,
-      this.#records,
-      this.#globalMiddleware,
-      this.#onNotFound,
-      this.#onError,
-      this.#useViewTransition,
-      this.#navigate,
-      (state) => (this.#currentState = state),
-      () => this.#notifyListeners(),
-      () => ++this.#navId,
-      (value) => (this.#lastHref = value),
-      () => this.#pendingViewTransition,
-      (value) => (this.#pendingViewTransition = value),
-    );
+    this.#onPopState = (): void => {
+      this.#lastHref = window.location.pathname + window.location.search;
+      void this.#handleRoute();
+    };
 
     if (options.autoStart) queueMicrotask(() => this.start());
   }
@@ -164,7 +152,7 @@ export class Router {
 
     if (options?.name) {
       if (this.#routesByName.has(options.name)) {
-        console.warn('[routeit] Duplicate route name "${options.name}" — overwriting previous registration.');
+        console.warn(`[routeit] Duplicate route name "${options.name}" — overwriting previous registration.`);
       }
 
       this.#routesByName.set(options.name, record);
@@ -229,7 +217,15 @@ export class Router {
 
   /** The current route state (pathname, params, query, hash, name, meta). */
   get state(): RouteState {
-    return { ...this.#currentState };
+    const query = Object.fromEntries(
+      Object.entries(this.#currentState.query).map(([key, value]) => [key, Array.isArray(value) ? [...value] : value]),
+    );
+
+    return {
+      ...this.#currentState,
+      params: { ...this.#currentState.params },
+      query,
+    };
   }
 
   /**
@@ -260,7 +256,7 @@ export class Router {
     const record = this.#routesByName.get(nameOrPattern);
 
     if (!record && !nameOrPattern.startsWith('/')) {
-      throw new Error('[routeit] Route "${nameOrPattern}" not found');
+      throw new Error(`[routeit] Route "${nameOrPattern}" not found`);
     }
 
     return buildUrl(this.#base, record ? record.path : nameOrPattern, params, query);
@@ -318,7 +314,7 @@ export class Router {
       this.#navigate,
       (state) => (this.#currentState = state),
       () => this.#notifyListeners(),
-      id,
+      () => id === this.#navId,
       useTransition,
     );
   }

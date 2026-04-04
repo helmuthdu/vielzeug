@@ -29,8 +29,6 @@ const i18n = createI18n({
 
 i18n.t('greeting', { name: 'Alice' });
 i18n.t('nav.home');
-
-i18n.locale = 'en';
 ```
 
 ## Variable Interpolation
@@ -93,20 +91,21 @@ const i18n = createI18n({
   },
 });
 
-await i18n.load('de'); // preloads, does not switch locale
-await i18n.setLocale('de'); // loads if needed, then switches atomically
+await i18n.ensureLocale('de'); // preloads, does not switch locale
+await i18n.switchLocale('de'); // ensures locale, then switches atomically
 
 i18n.registerLoader('ja', () => import('./locales/ja.json'));
-await i18n.setLocale('ja');
+await i18n.switchLocale('ja');
 
 await i18n.reload('de'); // force refresh from loader if registered
 ```
 
 Notes:
 
-- `load()` is a no-op when the locale catalog is already loaded.
-- `setLocale(locale)` still switches locale even when no loader exists.
-- `reload(locale)` is a no-op when no loader is registered (dev warning in development).
+- `ensureLocale()` is a no-op when the locale catalog is already loaded.
+- `switchLocale(locale)` is strict by default and rejects when no loader/catalog exists.
+- Use `'best-effort'` mode only when you intentionally allow untranslated states.
+- `reload(locale)` throws when no loader is registered.
 
 ## Scoping
 
@@ -173,7 +172,7 @@ stopImmediate();
 ## Best Practices
 
 - Type your primary locale and use `createI18n<T>()` for key autocomplete.
-- Use `setLocale()` for user-triggered locale switches to avoid unloaded catalogs.
+- Use `switchLocale()` for user-triggered locale switches.
 - Use `batch()` around multiple `add()`/`replace()` operations to avoid extra re-renders.
 - Prefer `withLocale()` in SSR or multi-locale rendering pipelines.
 - Use `onDiagnostic` to route loader failures and subscriber errors to observability tooling.

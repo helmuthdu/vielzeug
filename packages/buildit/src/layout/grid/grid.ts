@@ -1,5 +1,5 @@
-import { defineComponent, effect, html, onMount } from '@vielzeug/craftit';
-import { observeResize } from '@vielzeug/craftit/labs';
+import { define, effect, html, onMount } from '@vielzeug/craftit';
+import { resizeObserver } from '@vielzeug/craftit/observers';
 
 const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
   ['cols2xl', '--size-screen-2xl'],
@@ -138,28 +138,28 @@ export type BitGridProps = {
  *   <main style="grid-area: main">Main</main>
  * </bit-grid>
  */
-export const GRID_TAG = defineComponent<BitGridProps>({
+export const GRID_TAG = define<BitGridProps>('bit-grid', {
   props: {
-    align: { default: undefined },
-    areas: { default: '' },
-    areas2xl: { default: '' },
-    areasLg: { default: '' },
-    areasMd: { default: '' },
-    areasSm: { default: '' },
-    areasXl: { default: '' },
-    cols: { default: undefined },
-    cols2xl: { default: undefined },
-    colsLg: { default: undefined },
-    colsMd: { default: undefined },
-    colsSm: { default: undefined },
-    colsXl: { default: undefined },
-    flow: { default: undefined },
-    fullwidth: { default: false },
-    gap: { default: undefined },
-    justify: { default: undefined },
-    minColWidth: { default: '' },
-    responsive: { default: false },
-    rows: { default: undefined },
+    align: undefined,
+    areas: '',
+    areas2xl: '',
+    areasLg: '',
+    areasMd: '',
+    areasSm: '',
+    areasXl: '',
+    cols: undefined,
+    cols2xl: undefined,
+    colsLg: undefined,
+    colsMd: undefined,
+    colsSm: undefined,
+    colsXl: undefined,
+    flow: undefined,
+    fullwidth: false,
+    gap: undefined,
+    justify: undefined,
+    minColWidth: '',
+    responsive: false,
+    rows: undefined,
   },
   setup({ host, props }) {
     const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
@@ -170,13 +170,13 @@ export const GRID_TAG = defineComponent<BitGridProps>({
       return activeCols ? `repeat(${activeCols}, 1fr)` : null;
     };
     const updateCols = () => {
-      const w = host.offsetWidth;
+      const w = host.el.offsetWidth;
       const responsive = Boolean(props.responsive.value);
       const minW = props.minColWidth.value ?? '';
       let activeCols: string | undefined;
 
       for (const [key, cssVar] of BREAKPOINTS) {
-        if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
+        if (w >= resolveBp(host.el, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
           activeCols = props[key].value!;
           break;
         }
@@ -186,7 +186,7 @@ export const GRID_TAG = defineComponent<BitGridProps>({
       const colsValue = computeCols(activeCols, responsive, minW);
 
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      colsValue ? host.style.setProperty('--_cols', colsValue) : host.style.removeProperty('--_cols');
+      colsValue ? host.el.style.setProperty('--_cols', colsValue) : host.el.style.removeProperty('--_cols');
     };
 
     // Re-run cols whenever any responsive prop changes
@@ -205,23 +205,25 @@ export const GRID_TAG = defineComponent<BitGridProps>({
     });
 
     const updateAreas = () => {
-      const w = host.offsetWidth;
+      const w = host.el.offsetWidth;
       let active = '';
 
       for (const [key, cssVar] of AREAS_BREAKPOINTS) {
-        if (w >= resolveBp(host, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
+        if (w >= resolveBp(host.el, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
           active = props[key].value!;
           break;
         }
       }
       active ||= props.areas.value || '';
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      active ? host.style.setProperty('grid-template-areas', active) : host.style.removeProperty('grid-template-areas');
+      active
+        ? host.el.style.setProperty('grid-template-areas', active)
+        : host.el.style.removeProperty('grid-template-areas');
     };
 
     // Also, update on element resize (drives breakpoint switching)
     onMount(() => {
-      const size = observeResize(host);
+      const size = resizeObserver(host.el);
 
       effect(() => {
         void size.value;
@@ -235,8 +237,8 @@ export const GRID_TAG = defineComponent<BitGridProps>({
 
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       rows && rows !== 'auto'
-        ? host.style.setProperty('--_rows', `repeat(${rows}, 1fr)`)
-        : host.style.removeProperty('--_rows');
+        ? host.el.style.setProperty('--_rows', `repeat(${rows}, 1fr)`)
+        : host.el.style.removeProperty('--_rows');
     });
     // Grid template areas (responsive)
     effect(() => {
@@ -254,5 +256,4 @@ export const GRID_TAG = defineComponent<BitGridProps>({
     return html`<slot></slot>`;
   },
   styles: [styles],
-  tag: 'bit-grid',
 });

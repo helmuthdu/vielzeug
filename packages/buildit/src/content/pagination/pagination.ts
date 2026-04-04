@@ -1,9 +1,11 @@
-import { computed, defineComponent, html } from '@vielzeug/craftit';
+import { define, computed, html } from '@vielzeug/craftit';
 import { each } from '@vielzeug/craftit/directives';
 
+import '../icon/icon';
 import '../../inputs/button/button';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
+import { type PropBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
 import styles from './pagination.css?inline';
 
@@ -11,25 +13,15 @@ export type BitPaginationEvents = {
   change: { page: number };
 };
 
-/** Pagination props */
 export type BitPaginationProps = {
-  /** Theme color */
   color?: ThemeColor;
-  /** Accessible label for the nav landmark */
   label?: string;
-  /** Current page (1-indexed) */
   page?: number;
-  /** Show first/last page navigation buttons */
   'show-first-last'?: boolean;
-  /** Show prev/next navigation buttons */
   'show-prev-next'?: boolean;
-  /** Number of sibling pages shown around the current page */
   siblings?: number;
-  /** Size */
   size?: ComponentSize;
-  /** Total number of pages */
   'total-pages'?: number;
-  /** Visual variant for nav buttons */
   variant?: VisualVariant;
 };
 
@@ -91,18 +83,18 @@ function buildPageRange(
  * <bit-pagination page="3" total-pages="10" color="primary"></bit-pagination>
  * ```
  */
-export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationEvents>({
+export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('bit-pagination', {
   props: {
-    color: { default: undefined },
-    label: { default: 'Pagination' },
-    page: { default: 1 },
-    'show-first-last': { default: false, type: Boolean },
-    'show-prev-next': { default: false, type: Boolean },
-    siblings: { default: 1 },
-    size: { default: undefined },
-    'total-pages': { default: 1 },
-    variant: { default: undefined },
-  },
+    ...themableBundle,
+    ...sizableBundle,
+    label: 'Pagination',
+    page: 1,
+    'show-first-last': false,
+    'show-prev-next': false,
+    siblings: 1,
+    'total-pages': 1,
+    variant: undefined,
+  } satisfies PropBundle<BitPaginationProps>,
   setup({ emit, host, props }) {
     function goTo(page: number) {
       const total = Number(props['total-pages'].value) || 1;
@@ -110,7 +102,7 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
 
       if (next === Number(props.page.value)) return;
 
-      host.setAttribute('page', String(next));
+      host.el.setAttribute('page', String(next));
       emit('change', { page: next });
     }
 
@@ -156,19 +148,7 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
                     aria-label="First page"
                     ?disabled=${() => isFirst.value}
                     @click=${() => goTo(1)}>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true">
-                      <polyline points="11 17 6 12 11 7" />
-                      <polyline points="18 17 13 12 18 7" />
-                    </svg>
+                    <bit-icon name="chevrons-left" size="16" aria-hidden="true"></bit-icon>
                   </button>
                 </li>`
               : ''}
@@ -182,25 +162,14 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
                     aria-label="Previous page"
                     ?disabled=${() => isFirst.value}
                     @click=${() => goTo((Number(props.page.value) || 1) - 1)}>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true">
-                      <polyline points="15 18 9 12 15 6" />
-                    </svg>
+                    <bit-icon name="chevron-left" size="16" aria-hidden="true"></bit-icon>
                   </button>
                 </li>`
               : ''}
           <li style="display: contents;">
-            ${each(
-              pageItems,
-              (item) => {
+            ${each(pageItems, {
+              key: (item) => `${item}`,
+              render: (item) => {
                 if (item === 'ellipsis-start' || item === 'ellipsis-end') {
                   return html`<span class="ellipsis" aria-hidden="true">&hellip;</span>`;
                 }
@@ -214,9 +183,7 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
                     </button>`
                   : html`<button type="button" part="page-btn" aria-label="Page ${pg}">${pg}</button>`;
               },
-              undefined,
-              { key: (item) => `${item}` },
-            )}
+            })}
           </li>
           ${() =>
             props['show-prev-next'].value
@@ -228,18 +195,7 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
                     aria-label="Next page"
                     ?disabled=${() => isLast.value}
                     @click=${() => goTo((Number(props.page.value) || 1) + 1)}>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
+                    <bit-icon name="chevron-right" size="16" aria-hidden="true"></bit-icon>
                   </button>
                 </li>`
               : ''}
@@ -253,19 +209,7 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
                     aria-label="Last page"
                     ?disabled=${() => isLast.value}
                     @click=${() => goTo(Number(props['total-pages'].value) || 1)}>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true">
-                      <polyline points="13 17 18 12 13 7" />
-                      <polyline points="6 17 11 12 6 7" />
-                    </svg>
+                    <bit-icon name="chevrons-right" size="16" aria-hidden="true"></bit-icon>
                   </button>
                 </li>`
               : ''}
@@ -274,5 +218,4 @@ export const PAGINATION_TAG = defineComponent<BitPaginationProps, BitPaginationE
     `;
   },
   styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, styles],
-  tag: 'bit-pagination',
 });

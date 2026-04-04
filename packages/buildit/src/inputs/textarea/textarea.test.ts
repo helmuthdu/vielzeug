@@ -1,4 +1,4 @@
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-textarea', () => {
   let fixture: Fixture<HTMLElement>;

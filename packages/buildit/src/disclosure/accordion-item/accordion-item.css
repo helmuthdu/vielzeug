@@ -253,11 +253,34 @@
     width: var(--size-5);
     height: var(--size-5);
     margin-inline-start: auto;
+    transform: rotate(-90deg);
     transition: transform var(--accordion-item-transition);
   }
 
   details[open] .chevron {
-    transform: rotate(-90deg);
+    transform: rotate(0deg);
+  }
+
+  /* RTL Support - use .rtl class added by JavaScript */
+  details.rtl .chevron {
+    transform: rotate(90deg);
+  }
+
+  details.rtl[open] .chevron {
+    transform: rotate(0deg);
+  }
+
+  /* Fallback CSS selectors for other RTL detection methods */
+  html[dir='rtl'] .chevron,
+  [dir='rtl'] .chevron,
+  :dir(rtl) .chevron {
+    transform: rotate(90deg);
+  }
+
+  html[dir='rtl'] details[open] .chevron,
+  [dir='rtl'] details[open] .chevron,
+  :dir(rtl) details[open] .chevron {
+    transform: rotate(0deg);
   }
 
   /* Expanded state - adjust border radius */

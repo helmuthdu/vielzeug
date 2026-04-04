@@ -1,4 +1,4 @@
-import { type Fixture, fire, mount } from '@vielzeug/craftit/test';
+import { type Fixture, fire, mount } from '@vielzeug/craftit/testing';
 
 describe('bit-pagination', () => {
   let fixture: Fixture<HTMLElement>;

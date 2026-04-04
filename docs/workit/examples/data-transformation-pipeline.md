@@ -27,7 +27,7 @@ const statsPool = createWorker<Row, Stats>(
     const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
     return { id, mean, stdDev: Math.sqrt(variance) };
   },
-  { size: 'auto' },
+  { concurrency: 'auto' },
 );
 
 // Process 10 000 rows concurrently

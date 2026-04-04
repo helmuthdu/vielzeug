@@ -3,7 +3,7 @@
     --_bg: var(--badge-bg, var(--_theme-backdrop));
     --_color: var(--badge-color, var(--_theme-base));
     --_border-color: var(--badge-border-color, var(--_theme-border));
-    --_radius: var(--badge-radius, var(--rounded-full));
+    --_radius: var(--badge-radius, var(--rounded-lg));
     --_font-size: var(--badge-font-size, var(--text-xs));
     --_font-weight: var(--badge-font-weight, var(--font-semibold));
     --_padding-x: var(--badge-padding-x, var(--size-1-5));

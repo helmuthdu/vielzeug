@@ -1,7 +1,8 @@
-import { computed, defineComponent, html, signal, typed, watch } from '@vielzeug/craftit';
+import { define, computed, html, signal, watch } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
+import '../../content/icon/icon';
 import {
   colorThemeMixin,
   disabledStateMixin,
@@ -15,38 +16,17 @@ import {
 import componentStyles from './chip.css?inline';
 
 // ============================================
-// Icons
-// ============================================
-
-// Small close icon for remove button (relative sizing for chip)
-const CHIP_CLOSE_ICON = html`
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    width="0.75em"
-    height="0.75em"
-    aria-hidden="true">
-    <path d="M18 6 6 18M6 6l12 12" />
-  </svg>
-`;
-
-// ============================================
 // Types
 // ============================================
 
 /** Chip component properties */
 type ChipBaseProps = {
-  /** Accessible label (required for icon-only chips) */
-  'aria-label'?: string;
   /** Theme color */
   color?: ThemeColor;
   /** Disable interactions */
   disabled?: boolean;
+  /** Accessible label (required for icon-only chips) */
+  label?: string;
   /** Border radius override */
   rounded?: RoundedSize | '';
   /** Component size */
@@ -104,7 +84,7 @@ export type BitChipProps = ChipBaseProps &
  *
  * @element bit-chip
  *
- * @attr {string}  aria-label - Accessible label (required for icon-only chips)
+ * @attr {string}  label     - Accessible label (required for icon-only chips)
  * @attr {string}  color     - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string}  variant   - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
  * @attr {string}  size      - Component size: 'sm' | 'md' | 'lg'
@@ -159,29 +139,30 @@ export type BitChipProps = ChipBaseProps &
  * </bit-chip>
  *
  * <!-- Icon-only chip -->
- * <bit-chip color="error" mode="action" aria-label="Delete">
+ * <bit-chip color="error" mode="action" label="Delete">
  *   <svg slot="icon" ...></svg>
  * </bit-chip>
  * ```
  */
-export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
+export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip', {
   props: {
-    'aria-label': typed<BitChipComponentProps['aria-label']>(undefined),
-    checked: typed<BitChipComponentProps['checked']>(undefined, {
-      parse: (value) => (value == null ? undefined : value !== 'false'),
-    }),
-    color: typed<BitChipComponentProps['color']>(undefined),
-    'default-checked': typed<boolean>(false),
-    disabled: typed<boolean>(false),
-    mode: typed<BitChipMode>('static'),
-    rounded: typed<BitChipComponentProps['rounded']>(undefined),
-    size: typed<BitChipComponentProps['size']>(undefined),
-    value: typed<BitChipComponentProps['value']>(undefined),
-    variant: typed<BitChipComponentProps['variant']>(undefined),
+    checked: {
+      default: undefined as BitChipComponentProps['checked'],
+      parse: (value: string | null) => (value == null ? undefined : value !== 'false'),
+    },
+    color: undefined,
+    'default-checked': false,
+    disabled: false,
+    label: undefined,
+    mode: 'static',
+    rounded: undefined,
+    size: undefined,
+    value: undefined,
+    variant: undefined,
   },
   setup({ emit, host, props }) {
     const checkedProp = props.checked;
-    const ariaLabelProp = props['aria-label'];
+    const labelProp = props.label;
     // ============================================
     // State Management
     // ============================================
@@ -207,25 +188,18 @@ export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
       return checkedState.value;
     });
 
-    // Sync the [checked] attribute for CSS selectors across controlled and uncontrolled modes.
-    watch(
-      [isChecked, props.mode],
-      () => {
-        host.toggleAttribute('checked', props.mode.value === 'selectable' && isChecked.value);
-      },
-      { immediate: true },
-    );
+    host.bind('attr', {
+      checked: () => (props.mode.value === 'selectable' && isChecked.value ? true : undefined),
+    });
     // ============================================
     // Event Handlers
     // ============================================
     function handleRemove(e: MouseEvent) {
-      e.stopPropagation();
-
       if (props.disabled.value) return;
 
-      // Button's disabled attribute prevents this from firing when disabled
       emit('remove', { originalEvent: e, value: props.value.value });
     }
+
     function handleSelectableActivate(e: MouseEvent) {
       e.stopPropagation();
 
@@ -239,9 +213,8 @@ export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
 
       emit('change', { checked: nextChecked, originalEvent: e, value: props.value.value });
     }
-    function handleActionClick(e: MouseEvent) {
-      e.stopPropagation();
 
+    function handleActionClick(e: MouseEvent) {
       if (props.disabled.value) return;
 
       emit('click', { originalEvent: e, value: props.value.value });
@@ -260,14 +233,14 @@ export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
         part="remove-btn"
         type="button"
         :aria-label="${() => {
-          const label = ariaLabelProp.value || props.value.value;
+          const label = labelProp.value || props.value.value;
 
           return label ? `Remove ${label}` : 'Remove';
         }}"
         ?hidden="${() => props.mode.value !== 'removable'}"
         :disabled="${() => props.disabled.value}"
         @click="${handleRemove}">
-        ${CHIP_CLOSE_ICON}
+        <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
       </button>
     `;
     const renderSelectableChip = () => html`
@@ -277,7 +250,7 @@ export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
         type="button"
         role="checkbox"
         :aria-checked="${() => String(isChecked.value)}"
-        :aria-label="${() => ariaLabelProp.value}"
+        :aria-label="${() => labelProp.value}"
         :disabled="${() => props.disabled.value}"
         @click="${handleSelectableActivate}">
         <span class="chip" part="chip"> ${renderChipContent()} </span>
@@ -288,7 +261,7 @@ export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
         class="chip-btn"
         part="chip-btn"
         type="button"
-        :aria-label="${() => ariaLabelProp.value}"
+        :aria-label="${() => labelProp.value}"
         :disabled="${() => props.disabled.value}"
         @click="${handleActionClick}">
         <span class="chip" part="chip"> ${renderChipContent()} </span>
@@ -337,5 +310,4 @@ export const CHIP_TAG = defineComponent<BitChipComponentProps, BitChipEvents>({
     forcedColorsMixin,
     componentStyles,
   ],
-  tag: 'bit-chip',
 });

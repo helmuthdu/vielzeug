@@ -2,7 +2,7 @@
  * Core - Signal System Tests
  * Comprehensive tests for signals, computed, effects, watchers, and batching
  */
-import { batch, computed, effect, readonly, signal, toValue, watch, writable } from '../index';
+import { batch, computed, effect, readonly, signal, toValue, untrack, watch, writable } from '../index';
 
 describe('Core: Signal System', () => {
   describe('signal()', () => {
@@ -22,14 +22,14 @@ describe('Core: Signal System', () => {
     it('should support updating via setter', () => {
       const count = signal(0);
 
-      count.value = count.peek() + 1;
+      count.value = untrack(() => count.value) + 1;
       expect(count.value).toBe(1);
     });
 
     it('should support peek without tracking', () => {
       const count = signal(0);
 
-      expect(count.peek()).toBe(0);
+      expect(untrack(() => count.value)).toBe(0);
     });
 
     it('watch() stops watching after cleanup is called', () => {
@@ -169,58 +169,31 @@ describe('Core: Signal System', () => {
       expect(values).toEqual([5]);
     });
 
-    it('fires cb (no args) when any signal in the source array changes', () => {
+    it('should watch a derived signal', () => {
       const a = signal(1);
       const b = signal(2);
-      let fires = 0;
-      const stop = watch([a, b], () => fires++);
+      const sum = computed(() => a.value + b.value);
+      const values: number[] = [];
+      const stop = watch(sum, (val) => values.push(val), { immediate: true });
 
       a.value = 10;
       b.value = 20;
       stop();
-      a.value = 99; // after dispose — silent
-      expect(fires).toBe(2);
+      a.value = 99;
+
+      expect(values).toEqual([3, 12, 30]);
     });
 
-    it('array form: { immediate } fires cb on subscription', () => {
-      const a = signal(1);
-      const b = signal(2);
-      let fires = 0;
-      const stop = watch([a, b], () => fires++, { immediate: true });
+    it('should support once for a derived signal', () => {
+      const count = signal(0);
+      const parity = computed(() => count.value % 2);
+      const values: number[] = [];
 
-      expect(fires).toBe(1); // immediate
-      a.value = 10;
-      stop();
-      expect(fires).toBe(2);
-    });
+      watch(parity, (val) => values.push(val), { immediate: true, once: true });
+      count.value = 1;
+      count.value = 2;
 
-    it('array form: { once } auto-unsubscribes after the first change', () => {
-      const a = signal(0);
-      const b = signal(0);
-      let fires = 0;
-
-      watch([a, b], () => fires++, { once: true });
-      a.value = 1;
-      b.value = 1;
-      a.value = 2;
-      expect(fires).toBe(1);
-    });
-
-    it('array form: { immediate, once } fires once and disposes safely during initial run', () => {
-      const a = signal(0);
-      const b = signal(0);
-      let fires = 0;
-
-      const stop = watch([a, b], () => fires++, { immediate: true, once: true });
-
-      expect(fires).toBe(1);
-
-      a.value = 1;
-      b.value = 1;
-
-      expect(fires).toBe(1);
-
-      stop();
+      expect(values).toEqual([0, 1]);
     });
 
     it('{ equals } suppresses notification for semantically equal values', () => {
@@ -257,7 +230,7 @@ describe('Core: Signal System', () => {
       const result = batch(() => {
         count.value = 42;
 
-        return count.peek();
+        return untrack(() => count.value);
       });
 
       expect(result).toBe(42);
@@ -291,40 +264,31 @@ describe('Core: Signal System', () => {
   });
 
   describe('writable()', () => {
-    it('should read from the getter reactively', () => {
+    it('should return the same writable signal instance', () => {
       const count = signal(4);
-      const doubled = writable(
-        () => count.value * 2,
-        (v) => (count.value = v / 2),
-      );
+      const writableCount = writable(count);
 
-      expect(doubled.value).toBe(8);
-      count.value = 10;
-      expect(doubled.value).toBe(20);
+      expect(writableCount).toBe(count);
+      expect(writableCount.value).toBe(4);
     });
 
-    it('should forward writes to the setter', () => {
+    it('should allow writes through the returned signal', () => {
       const count = signal(4);
-      const doubled = writable(
-        () => count.value * 2,
-        (v) => (count.value = v / 2),
-      );
+      const writableCount = writable(count);
 
-      doubled.value = 20;
+      writableCount.value = 10;
       expect(count.value).toBe(10);
     });
 
-    it('should keep source and derived in sync bi-directionally', () => {
-      const base = signal(3);
-      const tripled = writable(
-        () => base.value * 3,
-        (v) => (base.value = Math.round(v / 3)),
-      );
+    it('should stay in sync with the original signal', () => {
+      const count = signal(3);
+      const writableCount = writable(count);
 
-      tripled.value = 30;
-      expect(base.value).toBe(10);
-      base.value = 5;
-      expect(tripled.value).toBe(15);
+      count.value = 5;
+      expect(writableCount.value).toBe(5);
+
+      writableCount.value = 8;
+      expect(count.value).toBe(8);
     });
   });
 });

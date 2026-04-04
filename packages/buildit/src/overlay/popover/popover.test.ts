@@ -1,4 +1,4 @@
-import { type Fixture, fire, mount } from '@vielzeug/craftit/test';
+import { type Fixture, fire, mount } from '@vielzeug/craftit/testing';
 
 describe('bit-popover', () => {
   let fixture: Fixture<HTMLElement>;
@@ -252,6 +252,7 @@ describe('bit-popover', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
+      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
     });
 
     it('fires close when the popover closes', async () => {
@@ -274,6 +275,7 @@ describe('bit-popover', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
+      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
     });
 
     it('does not fire open when disabled', async () => {

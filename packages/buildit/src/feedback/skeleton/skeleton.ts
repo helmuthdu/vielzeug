@@ -1,8 +1,9 @@
-import { computed, defineComponent, html, onMount, watch } from '@vielzeug/craftit';
-import { observeIntersection } from '@vielzeug/craftit/labs';
+import { define, computed, html, onMount, signal, watch } from '@vielzeug/craftit';
+import { intersectionObserver } from '@vielzeug/craftit/observers';
 
 import type { ComponentSize } from '../../types';
 
+import { type PropBundle, sizableBundle } from '../../inputs/shared/bundles';
 import { reducedMotionMixin } from '../../styles';
 import componentStyles from './skeleton.css?inline';
 
@@ -65,49 +66,64 @@ export type BitSkeletonProps = {
  * <bit-skeleton width="100%" height="10rem"></bit-skeleton>
  * ```
  */
-export const SKELETON_TAG = defineComponent<BitSkeletonProps>({
+export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
   props: {
-    animated: { default: true },
-    height: { default: undefined },
-    lines: { default: 1 },
-    radius: { default: undefined },
-    size: { default: undefined },
-    striped: { default: false },
-    variant: { default: 'rect' },
-    width: { default: undefined },
-  },
+    ...sizableBundle,
+    animated: true,
+    height: undefined,
+    lines: 1,
+    radius: undefined,
+    striped: false,
+    variant: 'rect',
+    width: undefined,
+  } satisfies PropBundle<BitSkeletonProps>,
   setup({ host, props }) {
+    const isPaused = signal(false);
     const lineCount = computed(() => {
       const value = Math.floor(Number(props.lines.value));
 
       return Number.isFinite(value) && value > 0 ? value : 1;
     });
     const renderLineCount = computed(() => (props.variant.value === 'text' ? lineCount.value : 1));
+    const styleDeps = computed(
+      () =>
+        `${props.width.value ?? ''}|${props.height.value ?? ''}|${props.radius.value ?? ''}|${props.animated.value === false ? '0' : '1'}`,
+    );
 
     watch(
-      [props.width, props.height, props.radius, props.animated],
+      styleDeps,
       () => {
-        if (props.width.value) host.style.setProperty('--skeleton-width', props.width.value);
-        else host.style.removeProperty('--skeleton-width');
+        if (props.width.value) host.el.style.setProperty('--skeleton-width', props.width.value);
+        else host.el.style.removeProperty('--skeleton-width');
 
-        if (props.height.value) host.style.setProperty('--skeleton-height', props.height.value);
-        else host.style.removeProperty('--skeleton-height');
+        if (props.height.value) host.el.style.setProperty('--skeleton-height', props.height.value);
+        else host.el.style.removeProperty('--skeleton-height');
 
-        if (props.radius.value) host.style.setProperty('--skeleton-radius', props.radius.value);
-        else host.style.removeProperty('--skeleton-radius');
+        if (props.radius.value) host.el.style.setProperty('--skeleton-radius', props.radius.value);
+        else host.el.style.removeProperty('--skeleton-radius');
 
-        const rawAnimated = host.getAttribute('animated');
+        const rawAnimated = host.el.getAttribute('animated');
         const isAnimated = rawAnimated !== 'false' && props.animated.value !== false;
 
-        host.setAttribute('data-animated', isAnimated ? 'true' : 'false');
+        host.el.setAttribute('data-animated', isAnimated ? 'true' : 'false');
       },
       { immediate: true },
     );
+
+    host.bind('attr', {
+      'data-paused': () => (isPaused.value ? true : undefined),
+    });
+
     onMount(() => {
-      const entry = observeIntersection(host, { threshold: 0 });
+      const entry = intersectionObserver(host.el, { threshold: 0 });
 
       watch(entry, (e) => {
-        host.toggleAttribute('data-paused', e !== null && !e.isIntersecting);
+        const paused =
+          typeof e === 'object' && e !== null && 'isIntersecting' in e
+            ? !(e as IntersectionObserverEntry).isIntersecting
+            : false;
+
+        isPaused.value = paused;
       });
     });
 
@@ -128,5 +144,4 @@ export const SKELETON_TAG = defineComponent<BitSkeletonProps>({
     `;
   },
   styles: [reducedMotionMixin, componentStyles],
-  tag: 'bit-skeleton',
 });

@@ -1,38 +1,44 @@
 import {
-  aria,
+  define,
+  createCleanupSignal,
   computed,
-  createFormIds,
   css,
-  defineComponent,
-  defineField,
   effect,
   html,
   inject,
   onMount,
-  onSlotChange,
-  ref,
   signal,
-  typed,
+  untrack,
   watch,
 } from '@vielzeug/craftit';
 import {
-  createListNavigation,
+  createChoiceFieldControl,
+  createListControl,
+  createListKeyControl,
   createOverlayControl,
-  createSelectionControl,
-  type ListNavigationResult,
+  createPressControl,
+  type OverlayCloseReason,
   type OverlayOpenReason,
-} from '@vielzeug/craftit/labs';
+} from '@vielzeug/craftit/controls';
 
+import '../../content/icon/icon';
+import '../../feedback/chip/chip';
 import type { AddEventListeners } from '../../types';
 
-import '../../feedback/chip/chip';
-import { checkIconHTML, chevronDownIcon, clearIcon } from '../../icons';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import { syncAria } from '../../utils/aria';
+import {
+  disablableBundle,
+  loadableBundle,
+  roundableBundle,
+  sizableBundle,
+  themableBundle,
+  type PropBundle,
+} from '../shared/bundles';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
-import { createDropdownPositioner, mountLabelSyncStandalone } from '../shared/dom-sync';
+import { createDropdownPositioner, mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
-import { computeControlledCsvState, createChoiceChangeDetail, resolveMergedAssistiveText } from '../shared/utils';
-import { createFieldValidation } from '../shared/validation';
+import { createChoiceChangeDetail } from '../shared/utils';
 import {
   backfillSelectionLabels,
   filterOptions,
@@ -44,12 +50,20 @@ import { createComboboxVirtualizer } from './combobox-virtualizer';
 import componentStyles from './combobox.css?inline';
 import {
   type BitComboboxEvents,
+  type ComboboxOptionInput,
   type BitComboboxProps,
   type ComboboxOptionItem,
   type ComboboxSelectionItem,
 } from './combobox.types';
 
-export type { BitComboboxEvents, BitComboboxOptionProps, BitComboboxProps } from './combobox.types';
+const checkIconHTML = '<bit-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>';
+
+export type {
+  BitComboboxEvents,
+  BitComboboxOptionProps,
+  BitComboboxProps,
+  ComboboxOptionInput,
+} from './combobox.types';
 
 // ============================================
 // Styles
@@ -65,7 +79,7 @@ export type { BitComboboxEvents, BitComboboxOptionProps, BitComboboxProps } from
  * @slot         - Label text for the option.
  * @slot icon    - Optional leading icon or decoration.
  */
-export const COMBOBOX_OPTION_TAG = defineComponent({
+export const COMBOBOX_OPTION_TAG = define('bit-combobox-option', {
   setup() {
     const optionStyles = /* css */ css`
       @layer buildit.base {
@@ -79,18 +93,44 @@ export const COMBOBOX_OPTION_TAG = defineComponent({
       ${optionStyles}
     </style>`;
   },
-  tag: 'bit-combobox-option',
 });
 
 // ============================================
 // Component
 // ============================================
 
+const comboboxProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  ...loadableBundle,
+  ...roundableBundle,
+  clearable: false,
+  creatable: false,
+  error: { default: '' as string, omit: true },
+  fullwidth: false,
+  helper: '',
+  label: '',
+  'label-placement': 'inset',
+  multiple: false,
+  name: '',
+  'no-filter': false,
+  options: { default: undefined as ComboboxOptionInput[] | undefined, reflect: false },
+  placeholder: '',
+  value: '',
+  variant: undefined,
+} satisfies PropBundle<BitComboboxProps>;
+
 /**
  * `bit-combobox` — Autocomplete/combobox text input with a filterable listbox.
  *
  * Place `<bit-combobox-option>` elements as children to define the available options.
  * Each option supports a `label` attribute (falls back to text content) and an `icon` named slot.
+ *
+ * @fires change - Fired when selection changes. detail: { value: string, values: string[], labels: string[], originalEvent?: Event }
+ * @fires open - Fired when the dropdown opens. detail: { reason: 'trigger' | 'programmatic' }
+ * @fires close - Fired when the dropdown closes. detail: { reason: 'escape' | 'outside-click' | 'programmatic' }
+ * @fires search - Fired while typing in the input. detail: { query: string }
  *
  * @example
  * ```html
@@ -101,119 +141,54 @@ export const COMBOBOX_OPTION_TAG = defineComponent({
  * </bit-combobox>
  * ```
  */
-export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>({
+export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-combobox', {
   formAssociated: true,
-  props: {
-    clearable: { default: false },
-    color: { default: undefined },
-    creatable: { default: false },
-    disabled: { default: false },
-    error: { default: '', omit: true },
-    fullwidth: { default: false },
-    helper: { default: '' },
-    label: { default: '' },
-    'label-placement': { default: 'inset' },
-    loading: { default: false },
-    multiple: { default: false },
-    name: { default: '' },
-    'no-filter': { default: false },
-    options: typed<ComboboxOptionItem[] | undefined>(undefined, { reflect: false }),
-    placeholder: { default: '' },
-    rounded: { default: undefined },
-    size: { default: undefined },
-    value: { default: '' },
-    variant: { default: undefined },
-  },
-  setup({ emit, host, props }) {
-    const { fieldId: comboId, helperId, labelId } = createFormIds('combobox', props.name.value);
-    // Label refs
-    const labelOutsideRef = ref<HTMLLabelElement>();
-    const labelInsetRef = ref<HTMLLabelElement>();
+  props: comboboxProps,
+  setup({ emit, host, props, slots }) {
     const formCtx = inject(FORM_CTX, undefined);
-    // Signal for the form value
-    const formValue = signal(String(props.value.value ?? ''));
-    const fd = defineField(
-      { disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)), value: formValue },
-      {
-        onReset: () => {
-          formValue.value = '';
-          selectedValues.value = [];
-          query.value = '';
-        },
-      },
-    );
-
-    const { triggerValidation } = createFieldValidation(formCtx, fd);
-
-    // ── State ────────────────────────────────────────────────────────────────
     const isOpen = signal(false);
     const query = signal('');
-    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const choice = createChoiceFieldControl<ComboboxSelectionItem>({
+      context: formCtx,
+      disabled: props.disabled,
+      error: props.error,
+      getValue: (item) => item.value,
+      helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
+      mapControlledValue: (value) => ({ label: '', value }),
+      multiple: props.multiple,
+      name: props.name,
+      onReset: () => {
+        query.value = '';
+      },
+      prefix: 'combobox',
+      value: props.value,
+    });
+    const {
+      disabled: isDisabled,
+      fieldId: comboId,
+      helperId,
+      labelInsetId,
+      labelInsetRef,
+      labelOutsideId,
+      labelOutsideRef,
+      selectedItems: selectedValues,
+      triggerValidation,
+    } = choice;
+
+    mountFormContextSync(host.el, formCtx, props);
+
+    // ── State ────────────────────────────────────────────────────────────────
     const isMultiple = computed(() => Boolean(props.multiple.value));
     const isCreatable = computed(() => Boolean(props.creatable.value));
     const isNoFilter = computed(() => Boolean(props['no-filter'].value));
 
-    watch(
-      isOpen,
-      (value) => {
-        host.toggleAttribute('open', ((value) => Boolean(value))(value));
-      },
-      { immediate: true },
-    );
-
-    // Multi-value state: always an array; single mode uses at most one entry
-    const selectedValues = signal<ComboboxSelectionItem[]>(
-      props.value.value ? [{ label: '', value: props.value.value }] : [],
-    );
-    const focusedIndex = signal(-1);
-    const selectionController = createSelectionControl<ComboboxSelectionItem>({
-      findByKey: (value) => {
-        const existing = selectedValues.value.find((item) => item.value === value);
-
-        if (existing) return existing;
-
-        // If not found in selection, try to find in all options to get label
-        const option = allOptions.value.find((o) => o.value === value);
-
-        if (option) return { label: option.label, value: option.value };
-
-        // Fallback: key is the value
-        return { label: '', value };
-      },
-      getMode: () => (isMultiple.value ? 'multiple' : 'single'),
-      getSelected: () => selectedValues.value,
-      keyExtractor: (item) => item.value,
-      setSelected: (next) => {
-        selectedValues.value = next;
-      },
+    host.bind('attr', {
+      open: () => (isOpen.value ? true : undefined),
     });
 
-    // Sync external value prop changes to selectedValues (controlled mode)
-    const syncControlledValue = (nextValue: unknown): void => {
-      const state = computeControlledCsvState(String(nextValue ?? ''));
-
-      if (state.isEmpty) {
-        selectionController.clear();
-        query.value = '';
-        formValue.value = '';
-
-        return;
-      }
-
-      if (isMultiple.value) {
-        selectedValues.value = state.values.map((value) => ({ label: '', value }));
-        formValue.value = state.formValue;
-
-        return;
-      }
-
-      // Single mode: one value
-      selectedValues.value = [{ label: '', value: state.firstValue }];
-      formValue.value = state.firstValue;
-    };
-
-    watch(props.value, (newValue) => syncControlledValue(newValue), { immediate: true });
-    watch(props.multiple, () => syncControlledValue(props.value.value));
+    const focusedIndex = signal(-1);
 
     // Convenience getter for single-select
     const selectedValue = computed(() => selectedValues.value[0]?.value ?? '');
@@ -223,6 +198,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
     let fieldEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
     let listboxEl: HTMLElement | null = null;
+    const inputAriaBinding = createCleanupSignal();
 
     function getLiveInput(): HTMLInputElement | null {
       const liveInput = host.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]') ?? null;
@@ -240,16 +216,53 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
     const slottedOptions = signal<ComboboxOptionItem[]>([]);
     const createdOptions = signal<ComboboxOptionItem[]>([]);
     const isLoading = computed(() => Boolean(props.loading.value));
+
+    function normalizeOption(option: ComboboxOptionInput): ComboboxOptionItem {
+      return {
+        disabled: Boolean(option.disabled),
+        iconEl: option.iconEl ?? null,
+        label: option.label ?? option.value,
+        value: option.value,
+      };
+    }
+
     // Merged options: explicit prop value overrides slotted options.
     const allOptions = computed<ComboboxOptionItem[]>(() => {
-      const base = props.options.value ?? slottedOptions.value;
+      const base = props.options.value?.map(normalizeOption) ?? slottedOptions.value;
 
       if (createdOptions.value.length === 0) return base;
 
       return [...base, ...createdOptions.value];
     });
 
-    function readOptions(elements: Element[] = Array.from(host.children)) {
+    const allItemsSignal = computed<ComboboxSelectionItem[]>(() =>
+      allOptions.value.map((option) => ({ label: option.label, value: option.value })),
+    );
+
+    const selectionController = {
+      clear: () => {
+        choice.clear();
+      },
+      remove: (key: string) => {
+        choice.removeValue(key);
+      },
+      select: (key: string) => {
+        const item = allItemsSignal.value.find((entry) => entry.value === key);
+
+        if (!item) return;
+
+        choice.selectItem(item);
+      },
+      toggle: (key: string) => {
+        const item = allItemsSignal.value.find((entry) => entry.value === key);
+
+        if (!item) return;
+
+        choice.toggleItem(item);
+      },
+    };
+
+    function readOptions(elements: Element[] = Array.from(host.el.children)) {
       slottedOptions.value = parseSlottedOptions(elements);
 
       // Backfill labels for any already-selected values that were set before options loaded
@@ -270,7 +283,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
     const creatableLabel = computed(() => {
       return getCreatableLabel(query.value, isCreatable.value, filteredOptions.value);
     });
-    const assistiveText = computed(() => resolveMergedAssistiveText(props.error.value, props.helper.value));
+    const assistiveText = choice.assistive;
     const inputPlaceholder = computed(() =>
       isMultiple.value && selectedValues.value.length > 0 ? '' : props.placeholder.value || '',
     );
@@ -284,10 +297,6 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       }),
     );
 
-    function syncMultipleFormValue() {
-      formValue.value = selectionController.serialize(',');
-    }
-
     function emitChange(originalEvent?: Event) {
       emit('change', createChoiceChangeDetail(selectedValueItems.value, selectedLabelItems.value, originalEvent));
     }
@@ -300,7 +309,6 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       if (value === undefined) return;
 
       selectionController.remove(value);
-      syncMultipleFormValue();
       emitChange(event);
       triggerValidation('change');
     }
@@ -311,7 +319,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       () => dropdownEl,
     );
 
-    const listNavigation = createListNavigation<ComboboxOptionItem>({
+    const listNavigation = createListControl<ComboboxOptionItem>({
       getIndex: () => focusedIndex.value,
       getItems: () => filteredOptions.value,
       isItemDisabled: (option) => option.disabled,
@@ -321,27 +329,41 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       },
     });
 
+    const openListKeys = createListKeyControl({
+      control: listNavigation,
+      disabled: () => !isOpen.value,
+      onInvoke: (_action, result) => {
+        applyNavigationResult(result as ReturnType<typeof listNavigation.next>);
+      },
+    });
+
+    const overlayElements: { boundary: HTMLElement; panel: HTMLElement | null; trigger: HTMLInputElement | null } = {
+      boundary: host.el,
+      panel: null,
+      trigger: null,
+    };
+
     const overlay = createOverlayControl({
-      getBoundaryElement: () => host,
-      getPanelElement: () => dropdownEl,
-      getTriggerElement: () => inputEl,
-      isDisabled: () => isDisabled.value,
-      isOpen: () => isOpen.value,
+      disabled: isDisabled,
+      elements: overlayElements,
+      isOpen: isOpen,
+      onClose: (reason) => emit('close', { reason }),
+      onOpen: (reason) => emit('open', { reason }),
       positioner: {
         floating: () => dropdownEl,
         reference: () => fieldEl,
         update: () => positioner.updatePosition(),
       },
       restoreFocus: false,
-      setOpen: (next, _context) => {
+      setOpen: (next) => {
         isOpen.value = next;
 
         if (!next) listNavigation.reset();
       },
     });
 
-    const applyNavigationResult = (result: ListNavigationResult): void => {
-      if (result.reason === 'empty' || result.reason === 'no-enabled-item') {
+    const applyNavigationResult = (result: ReturnType<typeof listNavigation.next>): void => {
+      if (result.index === -1) {
         focusedIndex.value = -1;
       }
     };
@@ -350,11 +372,11 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
     function open(clearFilter = true, reason: OverlayOpenReason = 'programmatic') {
       if (clearFilter) query.value = '';
 
-      overlay.open({ reason });
+      overlay.open(reason);
     }
 
-    function close(reason: 'escape' | 'programmatic' | 'outside-click' | 'toggle' = 'programmatic') {
-      overlay.close({ reason, restoreFocus: false });
+    function close(reason: OverlayCloseReason = 'programmatic') {
+      overlay.close(reason, false);
 
       // In single mode restore the query to the selected label (or clear)
       if (!isMultiple.value) {
@@ -367,13 +389,39 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
 
       triggerValidation('blur');
     }
+
+    const fieldPress = createPressControl({
+      disabled: () => isDisabled.value,
+      onPress: () => {
+        if (!isOpen.value) open(true, 'trigger');
+
+        focusLiveInput();
+      },
+    });
+
+    const enterPress = createPressControl({
+      disabled: () => isDisabled.value,
+      keys: ['Enter'],
+      onPress: (originalEvent) => {
+        const opts = filteredOptions.value;
+
+        if (isOpen.value && focusedIndex.value >= 0 && focusedIndex.value < opts.length) {
+          selectOption(opts[focusedIndex.value], originalEvent);
+        } else if (isOpen.value && focusedIndex.value === -1 && creatableLabel.value) {
+          // Focused on the "create" item
+          createOption(creatableLabel.value, originalEvent);
+        } else if (!isOpen.value) {
+          open();
+        }
+      },
+    });
+
     // ── Selection ────────────────────────────────────────────────────────────
     function selectOption(opt: ComboboxOptionItem, originalEvent?: Event) {
       if (opt.disabled) return;
 
       if (isMultiple.value) {
         selectionController.toggle(opt.value);
-        syncMultipleFormValue();
         query.value = '';
         emitChange(originalEvent);
         triggerValidation('change');
@@ -383,7 +431,6 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       } else {
         selectionController.select(opt.value);
         query.value = opt.label;
-        formValue.value = opt.value;
         emitChange(originalEvent);
         triggerValidation('change');
         close();
@@ -394,7 +441,6 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       e.stopPropagation();
       selectionController.clear();
       query.value = '';
-      formValue.value = '';
       emitChange(e);
       triggerValidation('change');
       focusLiveInput();
@@ -413,13 +459,13 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       emit('search', { query: target.value } as { query: string });
     }
     function handleFocus() {
-      if (!isOpen.value) open(false, 'trigger');
+      if (!isOpen.value) open(true, 'trigger');
     }
     // ── Keyboard Navigation ──────────────────────────────────────────────────
     function handleKeydown(e: KeyboardEvent) {
       if (isDisabled.value) return;
 
-      const opts = filteredOptions.value;
+      if (openListKeys.handleKeydown(e)) return;
 
       switch (e.key) {
         case 'ArrowDown':
@@ -448,30 +494,13 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
           // In multiple mode, remove the last chip when the input is empty
           if (isMultiple.value && !query.value && selectedValues.value.length > 0) {
             selectedValues.value = selectedValues.value.slice(0, -1);
-            syncMultipleFormValue();
             emitChange(e);
             triggerValidation('change');
           }
 
           break;
-        case 'End':
-          if (isOpen.value) {
-            e.preventDefault();
-            applyNavigationResult(listNavigation.last());
-          }
-
-          break;
         case 'Enter':
-          e.preventDefault();
-
-          if (isOpen.value && focusedIndex.value >= 0 && focusedIndex.value < opts.length) {
-            selectOption(opts[focusedIndex.value], e);
-          } else if (isOpen.value && focusedIndex.value === -1 && creatableLabel.value) {
-            // Focused on the "create" item
-            createOption(creatableLabel.value, e);
-          } else if (!isOpen.value) {
-            open();
-          }
+          enterPress.handleKeydown(e);
 
           break;
         case 'Escape':
@@ -479,13 +508,6 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
 
           if (isOpen.value) {
             close('escape');
-          }
-
-          break;
-        case 'Home':
-          if (isOpen.value) {
-            e.preventDefault();
-            applyNavigationResult(listNavigation.first());
           }
 
           break;
@@ -515,11 +537,11 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       checkIconHTML,
       comboId,
       getDropdownElement: () => dropdownEl,
-      getFocusedIndex: () => focusedIndex.peek(),
-      getIsMultiple: () => isMultiple.peek(),
+      getFocusedIndex: () => untrack(() => focusedIndex.value),
+      getIsMultiple: () => untrack(() => isMultiple.value),
       getListboxElement: () => listboxEl,
-      getSelectedValue: () => selectedValue.peek(),
-      getSelectedValues: () => selectedValues.peek(),
+      getSelectedValue: () => untrack(() => selectedValue.value),
+      getSelectedValues: () => untrack(() => selectedValues.value),
       onSelectOption: selectOption,
       setFocusedIndex: (index) => {
         focusedIndex.value = index;
@@ -540,11 +562,13 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
       dropdownEl = host.shadowRoot?.querySelector<HTMLElement>('.dropdown') ?? null;
       listboxEl = host.shadowRoot?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
 
+      // Make the outside-click handler aware of the panel so clicks inside
+      // the dropdown are not treated as outside clicks (critical for multi-select)
+      overlayElements.panel = dropdownEl;
+
       const removeOutsideClick = overlay.bindOutsideClick(document);
 
-      onSlotChange('default', readOptions);
-      // Ensure initial light-DOM options are available for immediate keyboard interaction.
-      readOptions();
+      watch(slots.elements(), () => readOptions(), { immediate: true });
       // Rebuild virtualizer when filtered options or open state changes
       effect(() => {
         const opts = filteredOptions.value;
@@ -553,60 +577,75 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
         if (open && opts.length > 0) {
           requestAnimationFrame(() => setupVirtualizer(opts, open));
         } else {
-          domVirtualList.update(opts, false);
+          domVirtualList.setItems(opts);
         }
       });
-      mountLabelSyncStandalone(labelInsetRef, labelOutsideRef, props);
       effect(() => {
-        if (listboxEl) {
-          // Remove existing state nodes
-          for (const el of Array.from(listboxEl.querySelectorAll('.no-results,.no-results-create,.dropdown-loading')))
-            el.remove();
+        if (!listboxEl) return;
 
-          if (isLoading.value) {
-            const loadingEl = document.createElement('div');
+        const open = isOpen.value;
 
-            loadingEl.className = 'dropdown-loading';
-            loadingEl.textContent = 'Loading\u2026';
-            listboxEl.prepend(loadingEl);
-          } else if (filteredOptions.value.length === 0) {
-            if (creatableLabel.value) {
-              const createEl = document.createElement('button');
+        // Remove existing state nodes
+        for (const el of Array.from(listboxEl.querySelectorAll('.no-results,.no-results-create,.dropdown-loading')))
+          el.remove();
 
-              createEl.type = 'button';
-              createEl.className = 'no-results-create';
-              createEl.textContent = `Create "${creatableLabel.value}"`;
-
-              // Apply focused state when keyboard nav lands here (focusedIndex === -1 means create row)
-              if (focusedIndex.value === -1) createEl.setAttribute('data-focused', '');
-
-              createEl.addEventListener('pointerdown', (e: PointerEvent) => {
-                e.preventDefault();
-              });
-
-              createEl.addEventListener('click', (e) => {
-                e.stopPropagation();
-                createOption(creatableLabel.value, e);
-              });
-              listboxEl.appendChild(createEl);
-            } else {
-              const noResults = document.createElement('div');
-
-              noResults.className = 'no-results';
-              noResults.setAttribute('role', 'presentation');
-              noResults.textContent = 'No results found';
-              listboxEl.appendChild(noResults);
-            }
-          }
-
-          // Update focused/selected state on already-rendered items without touching
-          // the DOM structure. The virtualizer owns full re-renders via onChange.
+        if (!open) {
           updateRenderedItemState();
+
+          return;
         }
+
+        if (isLoading.value) {
+          const loadingEl = document.createElement('div');
+
+          loadingEl.className = 'dropdown-loading';
+          loadingEl.textContent = 'Loading\u2026';
+          listboxEl.prepend(loadingEl);
+        } else if (filteredOptions.value.length === 0) {
+          if (creatableLabel.value) {
+            const createEl = document.createElement('button');
+
+            createEl.type = 'button';
+            createEl.className = 'no-results-create';
+            createEl.textContent = `Create "${creatableLabel.value}"`;
+
+            // Apply focused state when keyboard nav lands here (focusedIndex === -1 means create row)
+            createEl.toggleAttribute('data-focused', focusedIndex.value === -1);
+
+            createEl.addEventListener('pointerdown', (e: PointerEvent) => {
+              e.preventDefault();
+            });
+
+            createEl.addEventListener('click', (e) => {
+              e.stopPropagation();
+              createOption(creatableLabel.value, e);
+            });
+            listboxEl.appendChild(createEl);
+          } else {
+            const noResults = document.createElement('div');
+
+            noResults.className = 'no-results';
+            noResults.setAttribute('role', 'presentation');
+            noResults.textContent = 'No results found';
+            listboxEl.appendChild(noResults);
+          }
+        }
+
+        // Update focused/selected state on already-rendered items without touching
+        // the DOM structure. The virtualizer owns full re-renders via onChange.
+        updateRenderedItemState();
       });
+
       // Keep rendered option selected/focused attributes in sync while the popup stays open.
+      const renderedStateDeps = computed(
+        () =>
+          `${isOpen.value ? '1' : '0'}|${props.multiple.value ? '1' : '0'}|${focusedIndex.value}|${selectedValue.value}|${selectedValues.value
+            .map((item) => item.value)
+            .join(',')}`,
+      );
+
       watch(
-        [isOpen, props.multiple, focusedIndex, selectedValues, selectedValue],
+        renderedStateDeps,
         () => {
           if (!isOpen.value) return;
 
@@ -628,19 +667,23 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
         <label
           class="label-outside"
           for="${comboId}"
-          id="${labelId}"
+          id="${labelOutsideId}"
           ref=${labelOutsideRef}
           hidden
           part="label"></label>
         <div
           class="field"
           part="field"
-          @click="${() => {
-            if (!isOpen.value) open(false, 'trigger');
-
-            focusLiveInput();
+          @click="${(e: MouseEvent) => {
+            fieldPress.handleClick(e);
           }}">
-          <label class="label-inset" for="${comboId}" id="${labelId}" ref=${labelInsetRef} hidden part="label"></label>
+          <label
+            class="label-inset"
+            for="${comboId}"
+            id="${labelInsetId}"
+            ref=${labelInsetRef}
+            hidden
+            part="label"></label>
           <div class="field-row">
             <div class="chips-row">
               <!-- Keep chip list diffing isolated so input node identity stays stable. -->
@@ -650,7 +693,7 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
                     (item) => html`
                       <bit-chip
                         value=${item.value}
-                        aria-label=${item.label || item.value}
+                        label=${item.label || item.value}
                         mode="removable"
                         variant="flat"
                         size="sm"
@@ -667,21 +710,24 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
 
                   if (!el) {
                     fieldEl = null;
+                    inputAriaBinding.clear();
 
                     return;
                   }
 
                   fieldEl = el.closest('.field') as HTMLElement | null;
-                  aria(el, {
-                    activedescendant: () => (focusedIndex.value >= 0 ? `${comboId}-opt-${focusedIndex.value}` : null),
-                    autocomplete: 'list',
-                    controls: () => `${comboId}-listbox`,
-                    describedby: () => (props.error.value || props.helper.value ? helperId : null),
-                    disabled: () => isDisabled.value,
-                    expanded: () => (isOpen.value ? 'true' : 'false'),
-                    invalid: () => !!props.error.value,
-                    labelledby: () => (hasLabel.value ? labelId : null),
-                  });
+                  inputAriaBinding.set(
+                    syncAria(el, {
+                      activedescendant: () => (focusedIndex.value >= 0 ? `${comboId}-opt-${focusedIndex.value}` : null),
+                      autocomplete: 'list',
+                      controls: () => `${comboId}-listbox`,
+                      describedby: () => (props.error.value || props.helper.value ? helperId : null),
+                      disabled: () => isDisabled.value,
+                      expanded: () => (isOpen.value ? 'true' : 'false'),
+                      invalid: () => !!props.error.value,
+                      labelledby: () => (hasLabel.value ? `${labelOutsideId} ${labelInsetId}` : null),
+                    }),
+                  );
                 }}
                 class="input"
                 part="input"
@@ -706,10 +752,10 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
               tabindex="-1"
               ?hidden=${() => !hasValue.value}
               @click="${clearValue}">
-              ${clearIcon}
+              <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
             </button>
             <span class="chevron" aria-hidden="true">
-              ${chevronDownIcon}
+              <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
               <span class="loader" aria-label="Loading"></span>
             </span>
           </div>
@@ -742,5 +788,4 @@ export const COMBOBOX_TAG = defineComponent<BitComboboxProps, BitComboboxEvents>
     forcedColorsFocusMixin('.input'),
     componentStyles,
   ],
-  tag: 'bit-combobox',
 }) as unknown as AddEventListeners<BitComboboxEvents>;

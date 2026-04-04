@@ -93,7 +93,14 @@ describe('Route registration', () => {
     });
     const router = createRouter();
 
-    router.group('/admin', (r) => r.on('/users', () => calls.push('users')), { middleware: [auth] });
+    router.group(
+      '/admin',
+      (r) =>
+        r.on('/users', () => {
+          calls.push('users');
+        }),
+      { middleware: [auth] },
+    );
 
     mockLocation.pathname = '/admin/users';
     await boot(router);
@@ -113,9 +120,20 @@ describe('Route registration', () => {
 
     mockLocation.pathname = '/g/page';
     await boot(
-      createRouter().group('/g', (r) => r.on('/page', () => order.push('handler'), { middleware: [routeMw] }), {
-        middleware: [groupMw],
-      }),
+      createRouter().group(
+        '/g',
+        (r) =>
+          r.on(
+            '/page',
+            () => {
+              order.push('handler');
+            },
+            { middleware: [routeMw] },
+          ),
+        {
+          middleware: [groupMw],
+        },
+      ),
     );
     expect(order).toEqual(['group', 'route', 'handler']);
   });
@@ -132,7 +150,9 @@ describe('Route registration', () => {
       '/admin',
       (r) => {
         r.group('/users', (inner) => {
-          inner.on('/:id', () => calls.push('handler'));
+          inner.on('/:id', () => {
+            calls.push('handler');
+          });
         });
       },
       { middleware: auth },

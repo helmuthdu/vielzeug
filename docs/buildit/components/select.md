@@ -221,9 +221,6 @@ document.querySelector('bit-select').addEventListener('change', (e) => {
 <bit-select label="Disabled select" disabled>
   <option value="1">Option</option>
 </bit-select>
-<bit-select label="Readonly select" readonly value="1">
-  <option value="1">Locked value</option>
-</bit-select>
 <bit-select label="Required select" required>
   <option value="">Choose…</option>
   <option value="a">Alpha</option>
@@ -254,7 +251,7 @@ select.loading = false;
 
 ## JavaScript Options
 
-For dynamic or large option lists, set the `options` property directly in JavaScript instead of using `<option>` children. Each item is an object with `value`, `label`, and optional `group` properties.
+For dynamic or large option lists, set the `options` property directly in JavaScript instead of using `<option>` children. Each item only needs a `value`; `label` falls back to the same string when omitted, and `group` remains optional.
 
 ```js
 const select = document.querySelector('bit-select');
@@ -296,7 +293,16 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 
   document.querySelector('bit-select').addEventListener('change', (e) => {
     console.log('Selected value:', e.detail.value);
+    console.log('Selected labels:', e.detail.labels);
     // For multiple: e.detail.values (string[])
+  });
+
+  document.querySelector('bit-select').addEventListener('open', (e) => {
+    console.log('Opened because:', e.detail.reason); // 'trigger' | 'programmatic'
+  });
+
+  document.querySelector('bit-select').addEventListener('close', (e) => {
+    console.log('Closed because:', e.detail.reason); // 'escape' | 'outside-click' | 'programmatic' | 'trigger'
   });
 </script>
 ```
@@ -319,7 +325,6 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                                 | `'md'`      | Control size                               |
 | `multiple`        | `boolean`                                                                              | `false`     | Allow multiple selections                  |
 | `disabled`        | `boolean`                                                                              | `false`     | Disable the control                        |
-| `readonly`        | `boolean`                                                                              | `false`     | Prevent the dropdown from opening          |
 | `required`        | `boolean`                                                                              | `false`     | Mark field as required for form validation |
 | `fullwidth`       | `boolean`                                                                              | `false`     | Expand to full width                       |
 | `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | —           | Override border-radius                     |
@@ -335,7 +340,9 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 
 | Event    | Detail                                | Description                               |
 | -------- | ------------------------------------- | ----------------------------------------- |
-| `change` | `{ value: string, values: string[] }` | Emitted when the selected value(s) change |
+| `change` | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when the selected value(s) change |
+| `open`   | `{ reason: 'trigger' \| 'programmatic' }` | Emitted when the dropdown opens |
+| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }` | Emitted when the dropdown closes |
 
 ### CSS Custom Properties
 

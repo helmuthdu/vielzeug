@@ -1,7 +1,8 @@
-import { computed, defineComponent, html } from '@vielzeug/craftit';
+import { define, computed, html } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
+import { type PropBundle, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './badge.css?inline';
 
@@ -15,14 +16,14 @@ export type BitBadgeProps = {
    * Value controls which corner: 'top-end' (default) | 'top-start' | 'bottom-end' | 'bottom-start'
    */
   anchor?: 'top-end' | 'top-start' | 'bottom-end' | 'bottom-start';
-  /** Accessible label for assistive technology. Recommended for count-only and dot mode. */
-  ariaLabel?: string;
   /** Theme color */
   color?: ThemeColor;
   /** Numeric count to display */
   count?: number;
   /** Render as a small dot with no label */
   dot?: boolean;
+  /** Accessible label for assistive technology. Recommended for count-only and dot mode. */
+  label?: string;
   /** Max count — displays "<max>+" when count exceeds this value */
   max?: number;
   /** Border radius override */
@@ -70,18 +71,18 @@ export type BitBadgeProps = {
  * <bit-badge color="warning" variant="flat">Beta</bit-badge>
  * ```
  */
-export const BADGE_TAG = defineComponent<BitBadgeProps>({
+export const BADGE_TAG = define<BitBadgeProps>('bit-badge', {
   props: {
-    anchor: { default: undefined },
-    ariaLabel: { default: undefined },
-    color: { default: undefined },
-    count: { default: undefined },
-    dot: { default: false },
-    max: { default: undefined },
-    rounded: { default: undefined },
-    size: { default: undefined },
-    variant: { default: undefined },
-  },
+    ...themableBundle,
+    ...sizableBundle,
+    ...roundableBundle,
+    anchor: undefined,
+    count: undefined,
+    dot: false,
+    label: undefined,
+    max: undefined,
+    variant: undefined,
+  } satisfies PropBundle<BitBadgeProps>,
   setup({ props }) {
     const label = computed(() => {
       const count = props.count.value != null ? Number(props.count.value) : undefined;
@@ -94,7 +95,7 @@ export const BADGE_TAG = defineComponent<BitBadgeProps>({
       return String(count);
     });
 
-    return html`<span class="badge" part="badge" aria-label=${() => props.ariaLabel.value}>
+    return html`<span class="badge" part="badge" aria-label=${() => props.label.value}>
         <slot name="icon"></slot>
         <span ?hidden=${() => label.value == null}>${() => label.value}</span>
         <slot ?hidden=${() => label.value != null}></slot>
@@ -112,5 +113,4 @@ export const BADGE_TAG = defineComponent<BitBadgeProps>({
     }),
     componentStyles,
   ],
-  tag: 'bit-badge',
 });

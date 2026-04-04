@@ -1,0 +1,145 @@
+@layer buildit.base {
+  :host {
+    --_color: var(--async-color, var(--color-contrast-500));
+    --_icon-size: var(--async-icon-size, var(--size-12));
+    --_gap: var(--async-gap, var(--size-3));
+
+    display: block;
+  }
+
+  /* ── Status regions ─────────────────────────────────────────────── */
+
+  .region {
+    /* `display: contents` can drop slotted/shadow content in some runtimes. */
+    display: block;
+  }
+
+  /* ── Empty state ─────────────────────────────────────────────────── */
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    gap: var(--_gap);
+    align-items: center;
+    justify-content: center;
+    padding: var(--size-10) var(--size-6);
+    color: var(--_color);
+    text-align: center;
+  }
+
+  .empty-state .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--_icon-size);
+    height: var(--_icon-size);
+    opacity: 0.4;
+  }
+
+  .empty-state .icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .empty-state .icon bit-icon {
+    display: flex;
+    width: 100%;
+    height: 100%;
+  }
+
+  .empty-state .title {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-contrast-700);
+  }
+
+  .empty-state .description {
+    max-width: 28ch;
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    opacity: 0.75;
+  }
+
+  /* ── Error state ─────────────────────────────────────────────────── */
+
+  .error-state {
+    display: flex;
+    flex-direction: column;
+    gap: var(--_gap);
+    align-items: center;
+    justify-content: center;
+    padding: var(--size-10) var(--size-6);
+    color: var(--color-error-600);
+    text-align: center;
+  }
+
+  .error-state .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--_icon-size);
+    height: var(--_icon-size);
+    opacity: 0.7;
+  }
+
+  .error-state .icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .error-state .icon bit-icon {
+    display: flex;
+    width: 100%;
+    height: 100%;
+  }
+
+  .error-state .title {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-error-700);
+  }
+
+  .error-state .description {
+    max-width: 32ch;
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    opacity: 0.85;
+  }
+
+  .error-state .retry-btn {
+    display: inline-flex;
+    gap: var(--size-1-5);
+    align-items: center;
+    padding: var(--size-2) var(--size-4);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-error-700);
+    cursor: pointer;
+    background: none;
+    border: 1px solid currentcolor;
+    border-radius: var(--rounded-md);
+    transition: var(--_motion-transition, background var(--transition-fast), opacity var(--transition-fast));
+  }
+
+  .error-state .retry-btn bit-icon {
+    flex: none;
+  }
+
+  .error-state .retry-btn:hover {
+    background: color-mix(in srgb, var(--color-error-500) 10%, transparent);
+  }
+
+  .error-state .retry-btn:focus-visible {
+    outline: 2px solid var(--color-error-500);
+    outline-offset: 2px;
+  }
+
+  /* ── Loading (fallback skeleton block) ───────────────────────────── */
+
+  .loading-default {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2);
+    padding: var(--size-4);
+  }
+}

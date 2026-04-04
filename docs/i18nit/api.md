@@ -9,11 +9,11 @@ description: API reference for @vielzeug/i18nit types, factory, instance methods
 
 ## API At a Glance
 
-| Symbol         | Purpose                                         | Execution mode | Common gotcha                                         |
-| -------------- | ----------------------------------------------- | -------------- | ----------------------------------------------------- |
-| `createI18n()` | Create translation runtime and dictionary store | Sync           | Always provide fallback locale/messages               |
-| `t()`          | Resolve translated strings with interpolation   | Sync           | Missing keys should be handled in development logging |
-| `loadLocale()` | Load locale dictionaries lazily                 | Async          | Cache loaded locales to avoid duplicate fetches       |
+| Symbol           | Purpose                                         | Execution mode | Common gotcha                                         |
+| ---------------- | ----------------------------------------------- | -------------- | ----------------------------------------------------- |
+| `createI18n()`   | Create translation runtime and dictionary store | Sync           | Always provide fallback locale/messages               |
+| `t()`            | Resolve translated strings with interpolation   | Sync           | Missing keys should be handled in development logging |
+| `ensureLocale()` | Load locale dictionaries lazily                 | Async          | Strict mode throws if no loader is registered         |
 
 ## Package Entry Points
 
@@ -29,7 +29,7 @@ Core exported types:
 - `Locale`, `Unsubscribe`
 - `PluralForm`, `PluralMessages`, `MessageValue`, `Messages`
 - `Vars`, `Loader`
-- `I18nOptions<T>`, `BoundI18n<T>`
+- `I18nOptions<T>`, `BoundI18n<T>`, `I18n<T>`, `SwitchMode`
 - `TranslationKey<T>`, `TranslationKeyParam<T>`, `PluralKeys<T>`, `NamespaceKeys<T>`
 - `LocaleChangeReason`, `LocaleChangeEvent`, `LocaleChangeListener`
 - `DiagnosticEvent`
@@ -59,14 +59,15 @@ Options:
 | `onMissing`    | `(key, locale) => string \| undefined`        | Missing-key resolver                         |
 | `onDiagnostic` | `(event: DiagnosticEvent) => void`            | Diagnostic sink for subscriber/loader errors |
 
-## I18n Instance
+## I18n Interface
 
 ### Locale and Catalogs
 
-- `locale` (get/set): active locale
+- `locale` (readonly): active locale
 - `locales`: loaded catalog locales
 - `loadableLocales`: locales with registered loaders
 - `hasLocale(locale)`: whether locale catalog is loaded
+- `isReady(locale)`: whether locale catalog is loaded
 
 ### Translation and Lookup
 
@@ -84,10 +85,10 @@ Options:
 
 ### Loading
 
-- `load(...locales)`: load locale catalogs (deduped per locale while in-flight)
-- `setLocale(locale)`: load locale if necessary, then switch
+- `ensureLocale(locale, mode?)`: ensure locale catalog exists (`'strict'` throws when missing loader)
+- `switchLocale(locale, mode?)`: ensure locale then switch active locale
 - `registerLoader(locale, loader)`: add/replace loader
-- `reload(locale)`: clear locale catalog and force loader refresh (no-op if no loader)
+- `reload(locale)`: clear locale catalog and force loader refresh (throws if no loader)
 
 ### Formatting
 
@@ -127,5 +128,6 @@ Notes:
 - Missing key: returns `onMissing?.(key, locale) ?? key`.
 - Fallback chain: active locale -> BCP47 ancestors -> configured fallback locales.
 - Plural resolution uses `Intl.PluralRules` with `count` (defaults to `0` when missing).
+- `switchLocale()` is strict by default and rejects if the locale is unavailable.
 - `batch()` is synchronous; async operations inside it notify when they complete.
 - Subscriber errors and loader errors route through `onDiagnostic` (or console defaults).

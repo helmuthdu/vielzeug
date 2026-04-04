@@ -5,7 +5,7 @@ import type { MutationState, QueryStatus, Unsubscribe } from './types';
 
 import { toError } from './errors';
 import { getRetryConfig } from './retry';
-import { dispatch, makeState } from './types';
+import { dispatch, makeState } from './state';
 
 export type MutationOptions<TData = unknown, TVariables = unknown> = RetryOptions & {
   onError?: (error: Error, variables: TVariables) => void;
@@ -27,7 +27,7 @@ export function createMutation<TData, TVariables = void>(
   const observers = new Set<(state: MutationState<TData>) => void>();
 
   function notify() {
-    dispatch(observers, makeState(snap) as MutationState<TData>);
+    dispatch(observers, makeState(snap));
   }
 
   return {
@@ -41,16 +41,16 @@ export function createMutation<TData, TVariables = void>(
     },
 
     getState(): MutationState<TData> {
-      return makeState(snap) as MutationState<TData>;
+      return makeState(snap);
     },
 
     async mutate(variables: TVariables, callOpts?: RetryOptions & { signal?: AbortSignal }): Promise<TData> {
       if (snap.status === 'pending') {
-        throw new Error('[fetchit] mutation already in flight — await the previous call or call reset() first');
+        throw new Error('[fetchit] mutation already in flight — await the previous call or call cancel() first');
       }
 
       const retryOpts = getRetryConfig(
-        callOpts?.retry ?? mutOpts?.retry ?? false,
+        callOpts?.retry ?? mutOpts?.retry ?? 0,
         callOpts?.retryDelay ?? mutOpts?.retryDelay,
         callOpts?.shouldRetry ?? mutOpts?.shouldRetry,
       );
@@ -101,7 +101,7 @@ export function createMutation<TData, TVariables = void>(
 
     subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe {
       observers.add(listener);
-      listener(makeState(snap) as MutationState<TData>);
+      listener(makeState(snap));
 
       return () => observers.delete(listener);
     },

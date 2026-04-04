@@ -120,17 +120,22 @@ Use the `icon` slot to add a leading icon. The icon wrapper is hidden entirely w
 
 ```html
 <bit-alert color="success">
-  <span slot="icon" class="material-symbols-rounded">check_circle</span>
+  <bit-icon slot="icon" name="check-circle" size="18"></bit-icon>
   Changes saved successfully.
 </bit-alert>
 <bit-alert color="warning" heading="Heads up">
-  <span slot="icon" class="material-symbols-rounded">warning</span>
+  <bit-icon slot="icon" name="triangle-alert" size="18"></bit-icon>
   Some features are currently in maintenance mode.
 </bit-alert>
 <bit-alert color="error" heading="Access denied" variant="solid" dismissible>
-  <span slot="icon" class="material-symbols-rounded">block</span>
+  <bit-icon slot="icon" name="x-circle" size="18"></bit-icon>
   You do not have permission to perform this action.
 </bit-alert>
+
+<script type="module">
+  import '@vielzeug/buildit/alert';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>

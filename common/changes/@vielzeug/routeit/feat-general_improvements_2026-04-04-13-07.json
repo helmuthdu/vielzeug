@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "General Improvements and Bugfixes",
+      "type": "minor",
+      "packageName": "@vielzeug/routeit"
+    }
+  ],
+  "packageName": "@vielzeug/routeit",
+  "email": "helmuthdu@gmail.com"
+}

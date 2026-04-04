@@ -1,4 +1,4 @@
-import { type Fixture, mount } from '@vielzeug/craftit/test';
+import { type Fixture, mount } from '@vielzeug/craftit/testing';
 
 describe('bit-tab-item', () => {
   let fixture: Fixture<HTMLElement>;

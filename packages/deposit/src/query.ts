@@ -1,36 +1,4 @@
-import { type Predicate, search, sort } from '@vielzeug/toolkit';
-
-/* -------------------- Executable base -------------------- */
-
-/**
- * Shared base for `QueryBuilder` and `ProjectedQuery`.
- * Provides all terminal methods so they don't need to be duplicated.
- */
-abstract class Executable<T> {
-  protected abstract execute(): Promise<T[]>;
-
-  async toArray(): Promise<T[]> {
-    return this.execute();
-  }
-
-  async first(): Promise<T | undefined> {
-    return (await this.execute())[0];
-  }
-
-  async last(): Promise<T | undefined> {
-    const arr = await this.execute();
-
-    return arr[arr.length - 1];
-  }
-
-  async count(): Promise<number> {
-    return (await this.execute()).length;
-  }
-
-  async *[Symbol.asyncIterator](): AsyncGenerator<T> {
-    for (const item of await this.execute()) yield item;
-  }
-}
+type Predicate<T> = (value: T, index: number, array: T[]) => boolean;
 
 /* -------------------- ProjectedQuery -------------------- */
 
@@ -39,56 +7,90 @@ abstract class Executable<T> {
  * Supports the same terminal methods as `QueryBuilder` but is not further chainable,
  * since the record type may no longer be an object (e.g. `map(u => u.name)` yields `string`).
  */
-export class ProjectedQuery<U> extends Executable<U> {
-  private readonly source: () => Promise<U[]>;
+export class ProjectedQuery<U> {
+  private readonly src: () => Promise<U[]>;
 
-  constructor(source: () => Promise<U[]>) {
-    super();
-    this.source = source;
+  constructor(src: () => Promise<U[]>) {
+    this.src = src;
   }
 
-  protected execute(): Promise<U[]> {
-    return this.source();
+  toArray(): Promise<U[]> {
+    return this.src();
+  }
+
+  async first(): Promise<U | undefined> {
+    return (await this.src())[0];
+  }
+
+  async last(): Promise<U | undefined> {
+    const arr = await this.src();
+
+    return arr[arr.length - 1];
+  }
+
+  async count(): Promise<number> {
+    return (await this.src()).length;
+  }
+
+  async *[Symbol.asyncIterator](): AsyncGenerator<U> {
+    for (const item of await this.src()) yield item;
+  }
+
+  async reduce<A>(fn: (acc: A, item: U) => A, initial: A): Promise<A> {
+    return (await this.src()).reduce(fn, initial);
   }
 }
 
 /* -------------------- QueryBuilder -------------------- */
 
-export class QueryBuilder<T extends Record<string, unknown>> extends Executable<T> {
-  private readonly operations: ReadonlyArray<(data: unknown[]) => unknown[]>;
-  private readonly adapter: { getAll(table: string): Promise<unknown[]> };
-  private readonly table: string;
+export class QueryBuilder<T extends Record<string, unknown>> {
+  private readonly source: () => Promise<unknown[]>;
+  private readonly ops: ReadonlyArray<(data: unknown[]) => unknown[]>;
 
   /**
    * @internal — obtain a QueryBuilder via `adapter.from(table)`, not by constructing directly.
    */
-  constructor(
-    adapter: { getAll(table: string): Promise<unknown[]> },
-    table: string,
-    operations: ReadonlyArray<(data: unknown[]) => unknown[]> = [],
-  ) {
-    super();
-    this.adapter = adapter;
-    this.table = table;
-    this.operations = operations;
+  constructor(source: () => Promise<unknown[]>, ops: ReadonlyArray<(data: unknown[]) => unknown[]> = []) {
+    this.source = source;
+    this.ops = ops;
   }
 
-  protected execute(): Promise<T[]> {
-    return this.toArray_impl();
+  private async run(): Promise<T[]> {
+    let data: unknown[] = await this.source();
+
+    for (const op of this.ops) data = op(data);
+
+    return data as T[];
   }
 
-  private toArray_impl(): Promise<T[]> {
-    return this.adapter.getAll(this.table).then((data) => {
-      let result: unknown[] = data;
+  async toArray(): Promise<T[]> {
+    return this.run();
+  }
 
-      for (const op of this.operations) result = op(result);
+  async first(): Promise<T | undefined> {
+    return (await this.run())[0];
+  }
 
-      return result as T[];
-    });
+  async last(): Promise<T | undefined> {
+    const arr = await this.run();
+
+    return arr[arr.length - 1];
+  }
+
+  async count(): Promise<number> {
+    return (await this.run()).length;
+  }
+
+  async *[Symbol.asyncIterator](): AsyncGenerator<T> {
+    for (const item of await this.run()) yield item;
+  }
+
+  async reduce<A>(fn: (acc: A, record: T) => A, initial: A): Promise<A> {
+    return (await this.run()).reduce(fn, initial);
   }
 
   private clone(op: (data: T[]) => T[]): QueryBuilder<T> {
-    return new QueryBuilder<T>(this.adapter, this.table, [...this.operations, op as (data: unknown[]) => unknown[]]);
+    return new QueryBuilder<T>(this.source, [...this.ops, op as (data: unknown[]) => unknown[]]);
   }
 
   equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T> {
@@ -142,7 +144,18 @@ export class QueryBuilder<T extends Record<string, unknown>> extends Executable<
   }
 
   orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): QueryBuilder<T> {
-    return this.clone((data) => sort(data, { [field]: direction } as Partial<Record<keyof T, 'asc' | 'desc'>>) as T[]);
+    return this.clone((data) => {
+      const sign = direction === 'asc' ? 1 : -1;
+
+      return [...data].sort((a, b) => {
+        const av = a[field] as number | string;
+        const bv = b[field] as number | string;
+
+        if (av === bv) return 0;
+
+        return av > bv ? sign : -sign;
+      });
+    });
   }
 
   limit(n: number): QueryBuilder<T> {
@@ -163,16 +176,12 @@ export class QueryBuilder<T extends Record<string, unknown>> extends Executable<
     return this.clone((data) => [...data].reverse());
   }
 
-  /**
-   * Projects each record to a new value.
-   * Returns a `ProjectedQuery<U>` rather than a `QueryBuilder`, since the result
-   * type may not be a plain object (e.g. `map(u => u.name)` yields `string`).
-   */
   map<U>(callback: (record: T) => U): ProjectedQuery<U> {
-    const ops = [...this.operations, (data: unknown[]) => (data as T[]).map(callback)];
+    const ops = [...this.ops, (data: unknown[]) => (data as T[]).map(callback)];
+    const src = this.source;
 
     return new ProjectedQuery<U>(async () => {
-      let data: unknown[] = await this.adapter.getAll(this.table);
+      let data: unknown[] = await src();
 
       for (const op of ops) data = op(data);
 
@@ -186,7 +195,13 @@ export class QueryBuilder<T extends Record<string, unknown>> extends Executable<
    * @param tone  Match threshold in [0, 1]. Lower = more permissive. Defaults to 0.25.
    */
   search(query: string, tone?: number): QueryBuilder<T> {
-    return this.clone((data) => search(data, query, tone) as T[]);
+    void tone;
+
+    const lq = query.toLowerCase();
+
+    return this.clone((data) =>
+      data.filter((r) => Object.values(r).some((v) => typeof v === 'string' && v.toLowerCase().includes(lq))),
+    );
   }
 
   contains(query: string, fields?: (keyof T & string)[]): QueryBuilder<T> {
@@ -199,22 +214,5 @@ export class QueryBuilder<T extends Record<string, unknown>> extends Executable<
         return keys.some((f) => typeof r[f] === 'string' && (r[f] as string).toLowerCase().includes(lq));
       }),
     );
-  }
-
-  async reduce<A>(fn: (acc: A, record: T) => A, initial: A): Promise<A> {
-    return (await this.toArray()).reduce(fn, initial);
-  }
-
-  /**
-   * Returns the number of records after all pipeline operations are applied.
-   * Note: `limit`, `offset`, and `page` affect this count — use them after calling `count()`
-   * if you need a total match count independent of pagination.
-   */
-  override async count(): Promise<number> {
-    return (await this.toArray()).length;
-  }
-
-  async toArray(): Promise<T[]> {
-    return this.toArray_impl();
   }
 }

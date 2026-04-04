@@ -1,8 +1,18 @@
-import { computed, defineComponent, effect, html, typed, inject, signal } from '@vielzeug/craftit';
+import { define, computed, effect, html, inject, signal } from '@vielzeug/craftit';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-panel.css?inline';
+
+const TAB_PANEL_PADDING_MAP: Record<string, string> = {
+  '2xl': 'var(--size-12)',
+  lg: 'var(--size-6)',
+  md: 'var(--size-4)',
+  none: '0',
+  sm: 'var(--size-2)',
+  xl: 'var(--size-8)',
+  xs: 'var(--size-1)',
+};
 
 export type BitTabPanelProps = {
   /** Active state (managed by bit-tabs) */
@@ -33,52 +43,48 @@ export type BitTabPanelProps = {
  * <bit-tab-panel value="code" padding="none"><pre>No padding for code</pre></bit-tab-panel>
  * ```
  */
-export const TAB_PANEL_TAG = defineComponent<BitTabPanelProps>({
+export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
   props: {
-    active: typed<boolean>(false),
-    lazy: typed<boolean>(false),
-    padding: typed<BitTabPanelProps['padding']>('md'),
-    value: typed<string>(''),
+    active: false,
+    lazy: false,
+    padding: 'md',
+    value: '',
   },
   setup({ host, props }) {
     const tabsCtx = inject(TABS_CTX, undefined);
-    const isActive = tabsCtx
-      ? computed(() => !!tabsCtx.value.value && tabsCtx.value.value === props.value.value)
-      : props.active;
+    const isActive = computed(() =>
+      tabsCtx ? !!tabsCtx.value.value && tabsCtx.value.value === props.value.value : props.active.value,
+    );
+
+    host.bind('attr', {
+      active: () => (isActive.value ? true : undefined),
+    });
+
     // Map padding prop to CSS variable
     const paddingValue = computed(() => {
-      const paddingMap: Record<string, string> = {
-        '2xl': 'var(--size-12)',
-        lg: 'var(--size-6)',
-        md: 'var(--size-4)',
-        none: '0',
-        sm: 'var(--size-2)',
-        xl: 'var(--size-8)',
-        xs: 'var(--size-1)',
-      };
       const key = props.padding.value ?? 'md';
 
-      return paddingMap[key] ?? paddingMap.md;
+      return TAB_PANEL_PADDING_MAP[key] ?? TAB_PANEL_PADDING_MAP.md;
     });
     // Track whether the panel has ever been active (for lazy rendering)
     const hasBeenActive = signal(false);
 
     effect(() => {
-      host.toggleAttribute('active', isActive.value);
-
       if (isActive.value) hasBeenActive.value = true;
     });
 
     // shouldRender: true if not lazy OR has been active at least once
     const shouldRender = computed(() => !props.lazy.value || hasBeenActive.value);
+    const panelId = computed(() => `tabpanel-${props.value.value}`);
+    const labelledById = computed(() => `tab-${props.value.value}`);
 
     return html`
       <div
         class="panel"
         part="panel"
         role="tabpanel"
-        :id="${() => `tabpanel-${props.value.value}`}"
-        :aria-labelledby="${() => `tab-${props.value.value}`}"
+        :id="${panelId}"
+        :aria-labelledby="${labelledById}"
         :aria-hidden=${() => String(!isActive.value)}
         :style="${() => `--tab-panel-padding: ${paddingValue.value}`}"
         tabindex="0">
@@ -87,5 +93,4 @@ export const TAB_PANEL_TAG = defineComponent<BitTabPanelProps>({
     `;
   },
   styles: [reducedMotionMixin, styles],
-  tag: 'bit-tab-panel',
 });

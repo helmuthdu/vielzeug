@@ -1,4 +1,4 @@
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-tabs', () => {
   let fixture: Fixture<HTMLElement>;
@@ -130,6 +130,40 @@ describe('bit-tabs', () => {
 
       expect(firstPanel?.getAttribute('aria-hidden')).toBe('false');
       expect(secondPanel?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('manual activation waits for Enter after arrow focus movement', async () => {
+      fixture = await mount('bit-tabs', {
+        attrs: { activation: 'manual', value: 'overview' },
+        html: htmlTabs,
+      });
+
+      const tabs = fixture.element.querySelectorAll<HTMLElement>('bit-tab-item');
+
+      tabs[0]?.focus();
+
+      await user.press(tabs[0]!, 'ArrowRight');
+      expect(fixture.element.getAttribute('value')).toBe('overview');
+
+      await user.press(tabs[1]!, 'Enter');
+      expect(fixture.element.getAttribute('value')).toBe('settings');
+    });
+
+    it('manual activation also supports Space after arrow focus movement', async () => {
+      fixture = await mount('bit-tabs', {
+        attrs: { activation: 'manual', value: 'overview' },
+        html: htmlTabs,
+      });
+
+      const tabs = fixture.element.querySelectorAll<HTMLElement>('bit-tab-item');
+
+      tabs[0]?.focus();
+
+      await user.press(tabs[0]!, 'ArrowRight');
+      expect(fixture.element.getAttribute('value')).toBe('overview');
+
+      await user.press(tabs[1]!, ' ');
+      expect(fixture.element.getAttribute('value')).toBe('settings');
     });
   });
 

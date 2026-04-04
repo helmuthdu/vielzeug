@@ -12,5 +12,6 @@ export default defineConfig({
     globals: true,
     name: 'formit',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    watch: false,
   },
 });

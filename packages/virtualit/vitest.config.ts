@@ -12,5 +12,6 @@ export default defineConfig({
     globals: true,
     name: 'virtualit',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    watch: false,
   },
 });

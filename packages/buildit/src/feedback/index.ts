@@ -1,3 +1,5 @@
+export { ASYNC_TAG } from './async/async';
+export type { BitAsyncEvents, BitAsyncProps } from './async/async';
 export { ALERT_TAG } from './alert/alert';
 export type { BitAlertEvents, BitAlertProps } from './alert/alert';
 export { BADGE_TAG } from './badge/badge';

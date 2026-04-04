@@ -4,6 +4,8 @@ export { BREADCRUMB_ITEM_TAG, BREADCRUMB_TAG } from './breadcrumb/breadcrumb';
 export type { BitBreadcrumbItemProps, BitBreadcrumbProps } from './breadcrumb/breadcrumb';
 export { CARD_TAG } from './card/card';
 export type { BitCardEvents, BitCardProps } from './card/card';
+export { ICON_TAG, registerIcons } from './icon/icon';
+export type { BitIconProps, IconNode } from './icon/icon';
 export { PAGINATION_TAG } from './pagination/pagination';
 export type { BitPaginationEvents, BitPaginationProps } from './pagination/pagination';
 export { SEPARATOR_TAG } from './separator/separator';

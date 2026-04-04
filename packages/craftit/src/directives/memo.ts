@@ -1,8 +1,13 @@
-import { isSignal, type ReadonlySignal } from '@vielzeug/stateit';
+import { computed, isSignal, type ReadonlySignal, untrack } from '@vielzeug/stateit';
 
-import type { HTMLResult } from '../core/internal';
+import type { HTMLResult } from '../internal';
 
 type Dep = unknown | ReadonlySignal<unknown>;
+
+export type MemoOptions = {
+  deps?: ReadonlyArray<Dep>;
+  render: () => string | HTMLResult;
+};
 
 /**
  * Memoizes a template fragment — `templateFn` is only re-called when at least
@@ -16,27 +21,19 @@ type Dep = unknown | ReadonlySignal<unknown>;
  * import { memo } from '@vielzeug/craftit/directives';
  *
  * // Only re-renders the table when `rows` actually changes
- * html`${memo([rows], () => html`<big-table :data=${rows}></big-table>`)}`
+ * html`${memo({ deps: [rows], render: () => html`<big-table :data=${rows}></big-table>` })}`
  *
  * // Multiple deps — re-renders when either changes
- * html`${memo([locale, theme], () => html`<themed-chart :locale=${locale}></themed-chart>`)}`
+ * html`${memo({ deps: [locale, theme], render: () => html`<themed-chart :locale=${locale}></themed-chart>` })}`
  */
-export function memo(deps: ReadonlyArray<Dep>, templateFn: () => string | HTMLResult): () => string | HTMLResult {
-  let cached: string | HTMLResult = '';
-  let lastDeps: unknown[] = [];
-  let initialized = false;
-
-  return (): string | HTMLResult => {
-    const current = deps.map((d) => (isSignal(d) ? (d as ReadonlySignal<unknown>).value : d));
-    const changed =
-      !initialized || current.length !== lastDeps.length || current.some((v, i) => !Object.is(v, lastDeps[i]));
-
-    if (changed) {
-      cached = templateFn();
-      lastDeps = current;
-      initialized = true;
+export function memo(options: MemoOptions): () => string | HTMLResult {
+  const renderSignal = computed(() => {
+    for (const dep of options.deps ?? []) {
+      if (isSignal(dep)) Reflect.get(dep, 'value');
     }
 
-    return cached;
-  };
+    return untrack(options.render);
+  });
+
+  return () => renderSignal.value;
 }

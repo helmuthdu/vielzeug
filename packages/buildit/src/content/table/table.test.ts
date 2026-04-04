@@ -1,4 +1,4 @@
-import { type Fixture, mount } from '@vielzeug/craftit/test';
+import { type Fixture, mount } from '@vielzeug/craftit/testing';
 
 // Light DOM fixtures use the proxy API:
 //   bit-tr[head]  → mirrored into <thead> as native <tr>

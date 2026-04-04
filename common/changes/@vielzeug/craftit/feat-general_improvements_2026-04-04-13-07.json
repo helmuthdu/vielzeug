@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "General Improvements and Bugfixes",
+      "type": "minor",
+      "packageName": "@vielzeug/craftit"
+    }
+  ],
+  "packageName": "@vielzeug/craftit",
+  "email": "helmuthdu@gmail.com"
+}

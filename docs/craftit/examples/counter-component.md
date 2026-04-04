@@ -14,22 +14,24 @@ Implement counter component in a production-friendly way with `@vielzeug/craftit
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { defineComponent, html, signal } from '@vielzeug/craftit';
+import { component, define, html, signal } from '@vielzeug/craftit';
 
-defineComponent({
-  setup() {
-    const count = signal(0);
+define(
+  'simple-counter',
+  component({
+    setup() {
+      const count = signal(0);
 
-    return html`
-      <div>
-        <button @click=${() => count.value--}>-</button>
-        <strong>${count}</strong>
-        <button @click=${() => count.value++}>+</button>
-      </div>
-    `;
-  },
-  tag: 'simple-counter',
-});
+      return html`
+        <div>
+          <button @click=${() => count.value--}>-</button>
+          <strong>${count}</strong>
+          <button @click=${() => count.value++}>+</button>
+        </div>
+      `;
+    },
+  }),
+);
 ```
 
 ## Expected Output

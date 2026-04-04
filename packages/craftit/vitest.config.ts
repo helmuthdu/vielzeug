@@ -7,12 +7,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
-    alias: [{ find: /^@vielzeug\/floatit$/, replacement: path.resolve(__dirname, '../floatit/src/index.ts') }],
+    alias: [
+      { find: /^@vielzeug\/floatit$/, replacement: path.resolve(__dirname, '../floatit/src/index.ts') },
+      { find: /^@vielzeug\/stateit$/, replacement: path.resolve(__dirname, '../stateit/src/index.ts') },
+    ],
   },
   test: {
     environment: 'jsdom',
     globals: true,
     name: 'craftit',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    watch: false,
   },
 });

@@ -1,48 +1,71 @@
-export * from '@vielzeug/stateit';
-
-export { aria, effect, fire, handle, onCleanup, onError, onMount, watch } from './core/runtime-lifecycle';
+export {
+  batch,
+  computed,
+  isSignal,
+  peekValue,
+  readonly,
+  signal,
+  toValue,
+  untrack,
+  writable,
+  type ReadonlySignal,
+  type Signal,
+  type WatchOptions,
+} from '@vielzeug/stateit';
 
 export {
-  defineComponent,
-  defineField,
-  prop,
-  typed,
-  type BuildPropSchema,
-  type DefineComponentOptions,
-  type DefineComponentSetupContext,
-  type FormFieldCallbacks,
-  type FormFieldHandle,
-  type FormFieldOptions,
+  createCleanupSignal,
+  effect,
+  fire,
+  handle,
+  onCleanup,
+  onElement,
+  onError,
+  onMount,
+  watch,
+  type HostEventListeners,
+  type HostEventMap,
+} from './runtime';
+export { currentRuntime, type ComponentRuntime } from './runtime-core';
+
+export {
+  define,
+  type ComponentDefinition,
+  type ComponentOptions,
+  type ComponentSetupContext,
   type InferPropsSignals,
   type PropDef,
+  type PropsInput,
   type PropOptions,
-} from './core/component';
+} from './component';
+export { defineField, type FormFieldCallbacks, type FormFieldHandle, type FormFieldOptions } from './form';
 
 export {
   createContext,
   inject,
-  onSlotChange,
   provide,
+  bridgeContextAttributes,
   syncContextProps,
+  type ComponentHost,
+  type ComponentSlots,
+  type HostBindingValue,
   type InjectionKey,
-  type Slots,
-} from './core/host';
+  type ReflectConfig,
+  type HostContextAttributeBridge,
+} from './host';
 
-export { reflect, type HostBindingValue, type ReflectConfig } from './core/host';
-
-export { html, type KeyedNode } from './core/template';
-
-export { ref, refs, type Directive, type HTMLResult, type Ref, type RefCallback, type Refs } from './core/internal';
+export { html, type KeyedNode } from './template';
 
 export {
-  createFormIds,
-  createId,
   css,
-  escapeHtml,
-  guard,
-  toKebab,
+  createId,
+  ref,
+  refs,
   type CSSResult,
+  type Directive,
   type EmitFn,
-} from './core/utilities';
-
-export { observeResize } from './labs/observers';
+  type HTMLResult,
+  type Ref,
+  type RefCallback,
+  type Refs,
+} from './internal';

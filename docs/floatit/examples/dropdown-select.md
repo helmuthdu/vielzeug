@@ -16,7 +16,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 Match the dropdown width to the trigger and flip up when there is not enough room below.
 
 ```ts
-import { autoUpdate, flip, positionFloat, shift, size } from '@vielzeug/floatit';
+import { float, flip, shift, size } from '@vielzeug/floatit';
 
 const trigger = document.querySelector<HTMLElement>('#select-trigger')!;
 const dropdown = document.querySelector<HTMLElement>('#select-dropdown')!;
@@ -25,22 +25,20 @@ let cleanup: (() => void) | null = null;
 
 function open() {
   dropdown.setAttribute('data-open', '');
-  cleanup = autoUpdate(trigger, dropdown, () =>
-    positionFloat(trigger, dropdown, {
-      placement: 'bottom-start',
-      middleware: [
-        flip({ padding: 6 }),
-        shift({ padding: 6 }),
-        size({
-          padding: 6,
-          apply({ elements }) {
-            const width = (elements.reference as HTMLElement).getBoundingClientRect().width;
-            elements.floating.style.width = `${width}px`;
-          },
-        }),
-      ],
-    }),
-  );
+  cleanup = float(trigger, dropdown, {
+    placement: 'bottom-start',
+    middleware: [
+      flip({ padding: 6 }),
+      shift({ padding: 6 }),
+      size({
+        padding: 6,
+        apply({ elements }) {
+          const width = (elements.reference as HTMLElement).getBoundingClientRect().width;
+          elements.floating.style.width = `${width}px`;
+        },
+      }),
+    ],
+  });
 }
 
 function close() {

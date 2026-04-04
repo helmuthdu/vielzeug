@@ -1,4 +1,7 @@
-import { ErrorCode, Schema, ValidationError } from '../core';
+import type { Issue } from '../core';
+
+import { ErrorCode, Schema } from '../core';
+import { _messages } from '../messages';
 import { LiteralSchema } from './literal';
 import { type InferObject, type ObjectShape, ObjectSchema } from './object';
 
@@ -25,103 +28,74 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     this._map = map;
   }
 
-  override parse(value: unknown): InferVariantMap<K, M> {
-    if (this._asyncValidators.length > 0) {
-      throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
+  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+      return {
+        data: value,
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().variant_type(), path: [] }],
+      };
     }
 
-    return this._withCatch(() => {
-      const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
+    const obj = value as Record<string, unknown>;
+    const discValue = obj[this._discriminator] as string;
+    const matched = this._map.get(discValue);
 
-      if (this._isOptional && processed === undefined) return undefined as unknown as InferVariantMap<K, M>;
+    if (!matched) {
+      const expected = [...this._map.keys()];
 
-      if (this._isNullable && processed === null) return null as unknown as InferVariantMap<K, M>;
-
-      if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
-        throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
-      }
-
-      const obj = processed as Record<string, unknown>;
-      const discValue = obj[this._discriminator] as string;
-      const matched = this._map.get(discValue);
-
-      if (!matched) {
-        const expected = [...this._map.keys()].map((k) => JSON.stringify(k)).join(' | ');
-
-        throw new ValidationError([
+      return {
+        data: value,
+        issues: [
           {
             code: ErrorCode.invalid_variant,
-            message: `Invalid discriminator value at "${this._discriminator}": expected ${expected}`,
+            message: _messages().variant_invalid_discriminator({
+              discriminator: this._discriminator,
+              expected,
+            }),
             path: [],
           },
-        ]);
-      }
+        ],
+      };
+    }
 
-      const result = matched.safeParse(processed);
+    const result = matched.safeParse(value);
 
-      if (!result.success) throw new ValidationError(result.error.issues);
-
-      const data = (result as unknown as { data: InferVariantMap<K, M> }).data;
-      const issues = this._runSync(data, []);
-
-      if (issues.length) throw new ValidationError(issues);
-
-      return this._postprocessors.reduce((v, fn) => fn(v), data) as InferVariantMap<K, M>;
-    });
+    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
   }
 
-  override async parseAsync(value: unknown): Promise<InferVariantMap<K, M>> {
-    return this._withCatchAsync(async () => {
-      const processed = this._preprocessors.reduce((v, fn) => fn(v), value as unknown);
+  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+      return {
+        data: value,
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().variant_type(), path: [] }],
+      };
+    }
 
-      if (this._isOptional && processed === undefined) return undefined as unknown as InferVariantMap<K, M>;
+    const obj = value as Record<string, unknown>;
+    const discValue = obj[this._discriminator] as string;
+    const matched = this._map.get(discValue);
 
-      if (this._isNullable && processed === null) return null as unknown as InferVariantMap<K, M>;
+    if (!matched) {
+      const expected = [...this._map.keys()];
 
-      if (processed == null || typeof processed !== 'object' || Array.isArray(processed)) {
-        throw new ValidationError([{ code: ErrorCode.invalid_type, message: 'Expected object', path: [] }]);
-      }
-
-      const obj = processed as Record<string, unknown>;
-      const discValue = obj[this._discriminator] as string;
-      const matched = this._map.get(discValue);
-
-      if (!matched) {
-        const expected = [...this._map.keys()].map((k) => JSON.stringify(k)).join(' | ');
-
-        throw new ValidationError([
+      return {
+        data: value,
+        issues: [
           {
             code: ErrorCode.invalid_variant,
-            message: `Invalid discriminator value at "${this._discriminator}": expected ${expected}`,
+            message: _messages().variant_invalid_discriminator({
+              discriminator: this._discriminator,
+              expected,
+            }),
             path: [],
           },
-        ]);
-      }
+        ],
+      };
+    }
 
-      const result = await matched.safeParseAsync(processed);
+    const result = await matched.safeParseAsync(value);
 
-      if (!result.success) throw new ValidationError(result.error.issues);
-
-      const data = (result as unknown as { data: InferVariantMap<K, M> }).data;
-      const syncIssues = this._runSync(data, []);
-
-      if (syncIssues.length) throw new ValidationError(syncIssues);
-
-      const asyncIssues = await this._runAsync(data, []);
-
-      if (asyncIssues.length) throw new ValidationError(asyncIssues);
-
-      return this._postprocessors.reduce((v, fn) => fn(v), data) as InferVariantMap<K, M>;
-    });
-  }
-
-  protected override _clone(validators = this._validators): this {
-    const cloned = super._clone(validators);
-
-    (cloned as any)._discriminator = this._discriminator;
-    (cloned as any)._map = this._map;
-
-    return cloned;
+    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
   }
 }
 

@@ -1,4 +1,5 @@
 import { ErrorCode, Schema } from '../core';
+import { _messages } from '../messages';
 
 export class LiteralSchema<T extends string | number | boolean | null | undefined> extends Schema<T> {
   readonly value: T;
@@ -8,7 +9,7 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
       (val, path) =>
         val === value
           ? null
-          : [{ code: ErrorCode.invalid_literal, message: `Expected ${JSON.stringify(value)}`, path }],
+          : [{ code: ErrorCode.invalid_literal, message: _messages().literal_expected({ expected: value }), path }],
     ]);
     this.value = value;
   }

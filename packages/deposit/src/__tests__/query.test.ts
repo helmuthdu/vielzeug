@@ -13,7 +13,7 @@ describe('QueryBuilder', () => {
   let qb: QueryBuilder<(typeof rows)[0]>;
 
   beforeEach(() => {
-    qb = new QueryBuilder(mock, 'users');
+    qb = new QueryBuilder(() => mock.getAll('users'));
   });
 
   describe('Filtering', () => {

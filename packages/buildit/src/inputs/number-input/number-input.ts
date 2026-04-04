@@ -1,9 +1,11 @@
-import { computed, defineComponent, defineField, html, signal, watch } from '@vielzeug/craftit';
+import { define, computed, defineField, html, signal, watch } from '@vielzeug/craftit';
+import { createSpinnerControl } from '@vielzeug/craftit/controls';
 
 import type { DisablableProps, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
-import { minusIcon, plusIcon } from '../../icons';
+import '../../content/icon/icon';
 import { disabledStateMixin } from '../../styles';
+import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
 // Ensure child components are registered
 import '../button/button';
 import '../input/input';
@@ -47,6 +49,25 @@ export type BitNumberInputProps = ThemableProps &
     variant?: VisualVariant;
   };
 
+const numberInputProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  fullwidth: false,
+  label: undefined,
+  'label-placement': 'inset',
+  'large-step': undefined,
+  max: undefined,
+  min: undefined,
+  name: undefined,
+  nullable: false,
+  placeholder: undefined,
+  readonly: false,
+  step: 1,
+  value: undefined,
+  variant: undefined,
+} satisfies PropBundle<BitNumberInputProps>;
+
 /**
  * A numeric spin-button input with +/− controls, min/max clamping, and full keyboard support.
  *
@@ -79,44 +100,38 @@ export type BitNumberInputProps = ThemableProps &
  * <bit-number-input label="Quantity" value="1" min="1" max="99" step="1"></bit-number-input>
  * ```
  */
-export const NUMBER_INPUT_TAG = defineComponent<BitNumberInputProps, BitNumberInputEvents>({
+export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents>('bit-number-input', {
   formAssociated: true,
-  props: {
-    color: { default: undefined },
-    disabled: { default: false },
-    fullwidth: { default: false },
-    label: { default: undefined },
-    'label-placement': { default: 'inset' },
-    'large-step': { default: undefined },
-    max: { default: undefined },
-    min: { default: undefined },
-    name: { default: undefined },
-    nullable: { default: false },
-    placeholder: { default: undefined },
-    readonly: { default: false },
-    size: { default: undefined },
-    step: { default: 1 },
-    value: { default: undefined },
-    variant: { default: undefined },
-  },
+  props: numberInputProps,
   setup({ emit, host, props }) {
-    const inputValue = signal<string>(props.value.value != null ? String(props.value.value) : '');
+    const normalizeValue = (value: number | string | undefined | null): string => (value != null ? String(value) : '');
+    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const isReadonly = computed(() => Boolean(props.readonly.value));
+    const inputValue = signal<string>(normalizeValue(props.value.value));
+    const committedValue = signal<string>(normalizeValue(props.value.value));
+    const syncValueState = (nextValue: string) => {
+      if (inputValue.value !== nextValue) inputValue.value = nextValue;
+
+      if (committedValue.value !== nextValue) committedValue.value = nextValue;
+    };
+
+    host.bind('attr', {
+      value: () => committedValue.value || null,
+    });
 
     defineField(
       {
-        disabled: computed(() => Boolean(props.disabled.value)),
+        disabled: isDisabled,
         value: computed(() => (inputValue.value !== '' ? inputValue.value : null)),
       },
       {
         onReset: () => {
-          inputValue.value = props.value.value != null ? String(props.value.value) : '';
+          syncValueState(normalizeValue(props.value.value));
         },
       },
     );
     watch(props.value, (v) => {
-      const newVal = v != null ? String(v) : '';
-
-      if (inputValue.value !== newVal) inputValue.value = newVal;
+      syncValueState(normalizeValue(v));
     });
     function clamp(n: number): number {
       const min = props.min.value;
@@ -139,67 +154,31 @@ export const NUMBER_INPUT_TAG = defineComponent<BitNumberInputProps, BitNumberIn
     }
     function commit(val: number | null, originalEvent?: Event) {
       const clamped = val != null ? clamp(val) : null;
+      const nextValue = clamped != null ? String(clamped) : '';
 
-      inputValue.value = clamped != null ? String(clamped) : '';
-
-      if (clamped != null) host.setAttribute('value', String(clamped));
-      else host.removeAttribute('value');
+      syncValueState(nextValue);
 
       emit('change', { originalEvent, value: clamped });
     }
-    function increment(delta: number, originalEvent?: Event) {
-      if (props.disabled.value || props.readonly.value) return;
 
-      const current = parseValue() ?? (props.min.value != null ? Number(props.min.value) : 0);
+    const spinner = createSpinnerControl({
+      commit,
+      disabled: () => isDisabled.value,
+      largeStep: () => props['large-step'].value,
+      max: () => props.max.value,
+      min: () => props.min.value,
+      parse: parseValue,
+      readonly: () => isReadonly.value,
+      step: () => props.step.value,
+    });
 
-      commit(current + delta, originalEvent);
-    }
     function handleKeydown(e: KeyboardEvent) {
-      if (props.disabled.value || props.readonly.value) return;
-
-      const step = Number(props.step.value) || 1;
-      const largeStep = Number(props['large-step'].value) || step * 10;
-
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          increment(-step, e);
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          increment(step, e);
-          break;
-        case 'End':
-          if (props.max.value != null) {
-            e.preventDefault();
-            commit(Number(props.max.value), e);
-          }
-
-          break;
-        case 'Home':
-          if (props.min.value != null) {
-            e.preventDefault();
-            commit(Number(props.min.value), e);
-          }
-
-          break;
-        case 'PageDown':
-          e.preventDefault();
-          increment(-largeStep, e);
-          break;
-        case 'PageUp':
-          e.preventDefault();
-          increment(largeStep, e);
-          break;
-      }
+      spinner.handleKeydown(e);
     }
 
-    const atMin = computed(
-      () => props.min.value != null && parseValue() != null && parseValue()! <= Number(props.min.value),
-    );
-    const atMax = computed(
-      () => props.max.value != null && parseValue() != null && parseValue()! >= Number(props.max.value),
-    );
+    const atMin = computed(() => spinner.atMin());
+    const atMax = computed(() => spinner.atMax());
+    const isNonInteractive = computed(() => isDisabled.value || isReadonly.value);
 
     return html`
       <div
@@ -210,8 +189,8 @@ export const NUMBER_INPUT_TAG = defineComponent<BitNumberInputProps, BitNumberIn
         :aria-valuemin="${() => props.min.value ?? null}"
         :aria-valuemax="${() => props.max.value ?? null}"
         :aria-label="${() => props.label.value || null}"
-        :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
-        :aria-readonly="${() => (props.readonly.value ? 'true' : null)}"
+        :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+        :aria-readonly="${() => (isReadonly.value ? 'true' : null)}"
         @keydown="${handleKeydown}">
         <bit-button
           icon-only
@@ -221,10 +200,10 @@ export const NUMBER_INPUT_TAG = defineComponent<BitNumberInputProps, BitNumberIn
           variant="ghost"
           :size="${() => props.size.value || null}"
           :color="${() => props.color.value || null}"
-          ?disabled="${() => props.disabled.value || props.readonly.value || atMin.value}"
-          @click="${(e: Event) => increment(-(Number(props.step.value) || 1), e)}"
-          >${minusIcon}</bit-button
-        >
+          ?disabled="${() => isNonInteractive.value || atMin.value}"
+          @click="${(e: Event) => spinner.incrementBy(-(Number(props.step.value) || 1), e)}"
+          ><bit-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon
+        ></bit-button>
         <bit-input
           part="input"
           type="text"
@@ -237,8 +216,8 @@ export const NUMBER_INPUT_TAG = defineComponent<BitNumberInputProps, BitNumberIn
           :color="${() => props.color.value || null}"
           :size="${() => props.size.value || null}"
           :variant="${() => props.variant.value || null}"
-          ?disabled="${() => props.disabled.value}"
-          ?readonly="${() => props.readonly.value}"
+          ?disabled="${() => isDisabled.value}"
+          ?readonly="${() => isReadonly.value}"
           @input="${(e: Event) => {
             const v = (
               e as CustomEvent<{
@@ -277,13 +256,12 @@ export const NUMBER_INPUT_TAG = defineComponent<BitNumberInputProps, BitNumberIn
           variant="ghost"
           :size="${() => props.size.value || null}"
           :color="${() => props.color.value || null}"
-          ?disabled="${() => props.disabled.value || props.readonly.value || atMax.value}"
-          @click="${(e: Event) => increment(Number(props.step.value) || 1, e)}"
-          >${plusIcon}</bit-button
-        >
+          ?disabled="${() => isNonInteractive.value || atMax.value}"
+          @click="${(e: Event) => spinner.incrementBy(Number(props.step.value) || 1, e)}"
+          ><bit-icon name="plus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon
+        ></bit-button>
       </div>
     `;
   },
   styles: [disabledStateMixin(), styles],
-  tag: 'bit-number-input',
 });

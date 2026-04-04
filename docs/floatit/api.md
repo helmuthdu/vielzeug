@@ -9,17 +9,18 @@ description: Complete API reference for the Floatit floating positioning library
 
 ## API At a Glance
 
-| Symbol              | Purpose                                         | Execution mode | Common gotcha                                     |
-| ------------------- | ----------------------------------------------- | -------------- | ------------------------------------------------- |
-| `computePosition()` | Compute floating coordinates without DOM writes | Async          | Apply returned coordinates every reposition cycle |
-| `positionFloat()`   | Compute and apply position styles directly      | Async          | Use autoUpdate for scrolling/resizing contexts    |
-| `autoUpdate()`      | Reposition on viewport/layout changes           | Sync           | Dispose the updater when the floating UI unmounts |
+| Symbol              | Purpose                                           | Common gotcha                                          |
+| ------------------- | ------------------------------------------------- | ------------------------------------------------------ |
+| `float()`           | Position + auto-update in one call                | Call the returned cleanup when the floating UI unmounts |
+| `positionFloat()`   | Compute and apply position styles directly        | Use `float()` or `autoUpdate` in dynamic contexts      |
+| `computePosition()` | Compute coordinates without DOM writes            | Apply returned coordinates every reposition cycle      |
+| `autoUpdate()`      | Re-run a callback on viewport/layout changes      | Dispose the updater when the floating UI unmounts      |
 
 ## Core Functions
 
-### `positionFloat(reference, floating, options?)`
+### `float(reference, floating, options?)`
 
-Computes the floating position and immediately applies `left` / `top` inline styles to the floating element.
+The primary API. Positions the floating element immediately and keeps it in sync as the viewport or elements change. Returns a cleanup function.
 
 **Parameters:**
 
@@ -27,12 +28,38 @@ Computes the floating position and immediately applies `left` / `top` inline sty
 - `floating: HTMLElement` — The element to be positioned
 - `options?: FloatOptions` — Optional configuration
 
-**Returns:** `Promise<Placement>` — The resolved placement (which may differ from the requested one after `flip`)
+**Returns:** `() => void` — Cleanup function; call it when the floating element is hidden
 
 **Example:**
 
 ```ts
-const placement = await positionFloat(trigger, dropdown, {
+const cleanup = float(trigger, tooltip, {
+  placement: 'top',
+  middleware: [offset(8), flip(), shift({ padding: 6 })],
+});
+
+// When done:
+cleanup();
+```
+
+---
+
+### `positionFloat(reference, floating, options?)`
+
+Computes the floating position and immediately applies `left` / `top` inline styles to the floating element. Use `float()` when you also need auto-update.
+
+**Parameters:**
+
+- `reference: Element` — The anchor element the floating element is positioned relative to
+- `floating: HTMLElement` — The element to be positioned
+- `options?: FloatOptions` — Optional configuration
+
+**Returns:** `Placement` — The resolved placement (which may differ from the requested one after `flip`)
+
+**Example:**
+
+```ts
+const placement = positionFloat(trigger, dropdown, {
   placement: 'bottom-start',
   middleware: [flip(), shift({ padding: 6 })],
 });
@@ -50,12 +77,12 @@ Low-level positioning engine. Computes `{ x, y, placement }` without touching th
 - `floating: HTMLElement` — The floating element
 - `config?: ComputePositionConfig` — Optional configuration
 
-**Returns:** `Promise<ComputePositionResult>`
+**Returns:** `ComputePositionResult`
 
 **Example:**
 
 ```ts
-const { x, y, placement } = await computePosition(trigger, panel, {
+const { x, y, placement } = computePosition(trigger, panel, {
   placement: 'top',
   middleware: [offset(8), flip()],
 });
@@ -66,13 +93,14 @@ panel.style.transform = `translate(${x}px, ${y}px)`;
 
 ### `autoUpdate(reference, floating, update, options?)`
 
-Automatically re-calls `update` whenever the floating element's position may have changed.
+Calls `update` once immediately, then re-calls it whenever the floating element's position may have changed.
 
 Listens to:
 
 - `scroll` on `window` (capturing — covers all scroll ancestors)
 - `resize` on `window`
 - `ResizeObserver` on `reference` and (by default) on `floating`
+- `window.visualViewport` resize/scroll (by default)
 
 **Parameters:**
 
@@ -81,6 +109,7 @@ Listens to:
 - `update: () => void` — Callback to re-run positioning
 - `options?: AutoUpdateOptions`
   - `observeFloating?: boolean` — Whether to observe size changes on the floating element itself (default: `true`)
+  - `observeVisualViewport?: boolean` — Whether to observe `visualViewport` changes for pinch-zoom / virtual keyboard (default: `true`)
 
 **Returns:** `() => void` — Cleanup function; call it when the floating element is hidden
 
@@ -189,19 +218,12 @@ type Placement = Side | `${Side}-${Alignment}`;
 // e.g. 'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | ...
 ```
 
-### `Strategy`
-
-```ts
-type Strategy = 'fixed' | 'absolute';
-```
-
-`Strategy` is currently part of the public types but not applied by `computePosition`/`positionFloat` internals. Coordinates are computed from viewport-space rects and `positionFloat` applies `left`/`top` only.
-
 ### `AutoUpdateOptions`
 
 ```ts
 interface AutoUpdateOptions {
   observeFloating?: boolean;
+  observeVisualViewport?: boolean;
 }
 ```
 
@@ -210,7 +232,6 @@ interface AutoUpdateOptions {
 ```ts
 interface FloatOptions {
   placement?: Placement;
-  strategy?: Strategy;
   middleware?: Array<Middleware | null | undefined | false>;
 }
 ```
@@ -220,7 +241,6 @@ interface FloatOptions {
 ```ts
 interface ComputePositionConfig {
   placement?: Placement;
-  strategy?: Strategy;
   middleware?: Array<Middleware | null | undefined | false>;
 }
 ```

@@ -3,52 +3,60 @@ title: Craftit — API Reference
 description: API reference for Craftit main exports, directives, and testing utilities.
 ---
 
-# Craftit API Reference
-
 [[toc]]
 
 ## Package Entry Points
 
 - `@vielzeug/craftit` — core API (stable)
-- `@vielzeug/craftit/labs` — experimental APIs
+- `@vielzeug/craftit/controls` — headless interaction APIs
+- `@vielzeug/craftit/observers` — browser observer APIs
 - `@vielzeug/craftit/directives` — template directives
-- `@vielzeug/craftit/test` — testing helpers
+- `@vielzeug/craftit/testing` — testing helpers
 
 ## API At a Glance
 
-| Symbol              | Purpose                            | Execution mode | Common gotcha                                    |
-| ------------------- | ---------------------------------- | -------------- | ------------------------------------------------ |
-| `defineComponent()` | Define and register a custom element | Sync         | Element names must include a hyphen              |
-| `html`              | Create reactive templates          | Sync           | Do not build templates with string concatenation |
-| `onMount()`         | Run setup logic tied to component lifecycle | Sync | Always return cleanup when registering listeners |
+- `define()` — registers a component definition under a custom-element tag.
+- `html` — creates reactive templates; avoid building templates with string concatenation.
+- `onMount()` — runs setup logic tied to component lifecycle; return cleanup when you attach listeners.
 
 ## Core Component API
 
-### `defineComponent(options)`
+### `define(tag, definition)`
 
 ```ts
-defineComponent<Props, Events>(options: DefineComponentOptions<BuildPropSchema<Props>, Events>): string;
+define<Props, Events>(tag: string, definition: ComponentDefinition<Props, Events>): string;
 ```
 
 Registers a custom element and returns the tag name.
 
-If the tag already exists, Craftit throws `[craftit:E9]`.
+If the tag already exists, Craftit keeps the existing registration and returns the tag.
 
-- `DefineComponentOptions`:
-  - `tag: string`
-  - `setup(ctx): string | HTMLResult`
-  - `props?: Record<string, PropDef<any>>`
-  - `styles?: (string | CSSStyleSheet | CSSResult)[]`
-  - `host?: Record<string, string | boolean | number>`
-  - `formAssociated?: boolean`
-  - `shadow?: Omit<ShadowRootInit, 'mode'>`
-- `DefineComponentSetupContext`:
-  - `host: HTMLElement`
-  - `shadow: ShadowRoot`
-  - `props: InferPropsSignals<...>`
-  - `emit: EmitFn<Events>`
-  - `slots: Slots`
-  - `reflect(config)`
+## Field Authoring Controls
+
+From `@vielzeug/craftit/controls`:
+
+- `createTextFieldControl(options)` — text field state, ids, assistive state, attrs, and lifecycle wiring.
+- `mountTextFieldLifecycle(options)` — input/change/blur wiring + validation trigger bridge.
+
+```ts
+import { define, html, signal } from '@vielzeug/craftit';
+
+define('my-counter', {
+  setup() {
+    const count = signal(0);
+
+    return html`<button @click=${() => count.value++}>${count}</button>`;
+  },
+});
+```
+
+Access host/shadow via `currentRuntime()` inside `setup()` when needed.
+
+```ts
+const { el: host, shadowRoot: shadow } = currentRuntime();
+```
+
+For host attributes, classes, and host listeners, use `host.bind(...)` from the setup context.
 
 ## Runtime Helpers
 
@@ -57,7 +65,8 @@ If the tag already exists, Craftit throws `[craftit:E9]`.
 - `onMount(fn)` — run logic after mount.
 - `onCleanup(fn)` — register cleanup.
 - `onError(fn)` — component-scoped error handler.
-
+- `createCleanupSignal()` — manage replaceable cleanup functions and dispose on unmount.
+- `onElement(ref, fn, options?)` — element-scoped effect for nullable refs.
 `onCleanup()` is component-aware: inside component setup/mount it runs on unmount; outside component context it delegates to stateit's effect cleanup behavior.
 
 ### Reactivity Wrappers
@@ -73,7 +82,6 @@ Signatures:
 ### DOM/Event Utilities
 
 - `handle(target, event, listener, options?)` — listener with auto-cleanup.
-- `fire.basic(target, type, options?)` — dispatches a plain `Event`.
 - `fire.custom(target, type, options?)` — dispatches a `CustomEvent`.
 - `fire.mouse(target, type, options?)` — dispatches a `MouseEvent`.
 - `fire.keyboard(target, type, options?)` — dispatches a `KeyboardEvent`.
@@ -81,6 +89,9 @@ Signatures:
 - `fire.touch(target, type, options?)` — dispatches a `TouchEvent` when available, otherwise `CustomEvent`.
 - `fire.event(target, event)` — dispatches a prebuilt event instance.
 - `aria(attrs)` or `aria(target, attrs)` — reactive ARIA attributes (`false`, `null`, and `undefined` remove the attribute).
+- `host.bind({ attr: ... })`, `host.bind({ class: ... })`, `host.bind({ on: ... })` — host attribute/class/listener wiring from setup context.
+
+Prefer template `@event` bindings for inner DOM nodes; use `host.bind({ on: ... })` or `handle()` for host-level interactions.
 
 ## Template and Styling
 
@@ -110,7 +121,72 @@ Returns `{ content: string; toString(): string }`.
 
 ## Props API
 
+### `define<Props>(tag, { props })`
+
+Declare component props directly in `define` using plain defaults. The `Props` generic defines the setup signal types.
+
+```ts
+type ButtonProps = {
+  count?: number;
+  disabled?: boolean;
+  label?: string;
+  variant?: 'primary' | 'secondary';
+};
+
+define<ButtonProps>('my-button', {
+  props: {
+    count: 0,
+    disabled: false,
+    label: 'Button',
+    variant: 'primary',
+  },
+  setup({ props }) {
+    return html`
+      <button ?disabled=${props.disabled}>
+        ${props.label}
+        <span class=${`variant-${props.variant}`}>${props.count}</span>
+      </button>
+    `;
+  },
+});
+```
+
+Optional props use `undefined` defaults:
+
+```ts
+type ButtonProps = {
+  description?: string;
+  size?: 'sm' | 'md' | 'lg';
+};
+
+define<ButtonProps>('my-button', {
+  props: {
+    description: undefined,
+    size: undefined,
+  },
+  setup({ props }) {
+    return html`${props.description}`;
+  },
+});
+```
+
+When you need custom parsing or reflection control, use a `PropDef` object inline:
+
+```ts
+define<{ count?: number; error?: string }>('my-counter', {
+  props: {
+    count: { default: undefined, type: Number },
+    error: { default: '', omit: true },
+  },
+  setup({ props }) {
+    return html`${props.count}`;
+  },
+});
+```
+
 ### `prop(name, defaultValue, options?)`
+
+Low-level API for reactive property bindings. Typically use inline `component<Props>({ props })` defaults instead.
 
 ```ts
 prop<T>(name: string, defaultValue: T, options?: PropOptions<T>): Signal<T>;
@@ -118,14 +194,33 @@ prop<T>(name: string, defaultValue: T, options?: PropOptions<T>): Signal<T>;
 
 `PropOptions<T>`:
 
-- `parse?: (value: string | null) => T`
-- `reflect?: boolean`
-- `omit?: boolean`
+- `parse?: (value: string | null) => T` — custom attribute parsing
+- `reflect?: boolean` — reflect property to attribute (default: `true`)
+- `omit?: boolean` — remove attribute instead of setting to `""` for empty strings
 - `type?: StringConstructor | NumberConstructor | BooleanConstructor | ArrayConstructor | ObjectConstructor`
 
-### `typed(defaultValue, options?)`
+### Event typing with `define<Props, Events>()`
 
-Helper for explicit generic prop typing in `defineComponent({ props })`.
+Declare component event payloads with the second `define` generic. This keeps `setup({ emit })` fully typed without a separate `emits` schema.
+
+```ts
+type Events = {
+  select: { value: string };
+  close: void;
+};
+
+define<{ value?: string }, Events>('my-example', {
+  props: {
+    value: undefined,
+  },
+  setup({ emit, props }) {
+    emit('select', { value: props.value.value ?? 'alpha' });
+    emit('close');
+
+    return html``;
+  },
+});
+```
 
 ## Slots and Emits
 
@@ -155,27 +250,27 @@ emit('select', { value: 'alpha' });
 
 ### setup-context `slots`
 
-`setup({ slots })` receives a slots helper:
+`setup({ slots })` receives first-class slot signals.
 
 ```ts
-slots.has(name): ReadonlySignal<boolean>
+setup({ slots }) {
+  slots.has().value;
+  slots.has('header').value;
+  slots.elements('trigger').value;
+  slots.elements().value;
+}
 ```
 
-If Craftit cannot find a matching `<slot>` element for `name`, it warns once in dev tooling and returns a signal that stays `false`.
+- `slots.has(name?)` — whether the given slot currently has assigned elements
+- `slots.elements(name?)` — flattened assigned elements for a slot name
 
-### `onSlotChange(slotName, callback)`
-
-Listens for slot assignment changes (call inside `onMount`).
-
-If no matching `<slot>` exists, Craftit warns once instead of failing silently.
+Omit the name to address the default slot.
 
 ## Context API
 
 - `createContext<T>(description?)`
 - `provide(key, value)`
 - `inject(key)` / `inject(key, fallback)`
-- `injectOptional(key)`
-- `injectRequired(key)`
 - `syncContextProps(ctx, props, keys)`
 
 Types:
@@ -190,7 +285,7 @@ Types:
 defineField<T>(options: FormFieldOptions<T>, callbacks?: FormFieldCallbacks): FormFieldHandle;
 ```
 
-Requires `defineComponent({ formAssociated: true, ... })`; otherwise Craftit throws an explicit runtime error.
+Requires `define('tag-name', { formAssociated: true, ... }))`; otherwise Craftit throws an explicit runtime error.
 
 Types:
 
@@ -203,40 +298,37 @@ Types:
 - `FormFieldHandle`
   - `internals`, `setValidity`, `setCustomValidity`, `checkValidity`, `reportValidity`
 
-## Labs APIs
+## Controls APIs
 
-Import from `@vielzeug/craftit/labs`:
+Import from `@vielzeug/craftit/controls`:
 
-- `createListNavigation(options)`
-  - returns result-based navigation (`ListNavigationResult` with `reason`, `moved`, `wrapped`, `index`)
+- `createListControl(options)`
+  - returns result-based navigation (`ListControlResult` with `reason`, `moved`, `wrapped`, `index`)
 - `createOverlayControl(options)`
   - reason-aware overlay transitions via `setOpen(next, { reason })`, `onOpen(reason)`, and `onClose(reason)`
-- `createSelectionControl(options)`
-  - key-driven selection via `keyExtractor` and `findByKey`
-- `useA11yControl(host, config)`
-  - explicit helper tone (`'default' | 'error'`), no text heuristics
-- `createCheckableControl(config)`
-- `observeResize(el): ReadonlySignal<{ width: number; height: number }>`
-- `observeIntersection(el, options?): ReadonlySignal<IntersectionObserverEntry | null>`
-- `observeMedia(query): ReadonlySignal<boolean>`
+- `createTextFieldControl(options)`
+  - text-field controller with stable ids, validation hooks, and integrated assistive state
+- `createChoiceFieldControl(options)`
+  - single/multi choice controller for select, combobox, and grouped checkboxes
+- `createCheckableFieldControl(options)`
+  - checkbox/radio/switch helper that bundles checkable state, a11y wiring, and press handling
+- `createA11yControl(host, config)`
+  - low-level DOM ARIA/label/helper wiring for advanced custom widgets
 
-### Labs contract notes
+### Controls contract notes
 
 - `aria(...)` semantics apply broadly: `false`, `null`, and `undefined` remove ARIA attributes.
 - `createOverlayControl` close/open reasons are part of the public contract and intended for typed event payloads.
-- `createSelectionControl` intentionally avoids item-shape assumptions; keys are the stable API surface.
 
-Main API (`@vielzeug/craftit`) also exports:
+Observer APIs are exported from `@vielzeug/craftit/observers`:
 
-- `observeResize(el): ReadonlySignal<{ width: number; height: number }>`
+- `resizeObserver(el): ReadonlySignal<{ width: number; height: number }>`
+- `intersectionObserver(el, options?): ReadonlySignal<IntersectionObserverEntry | null>`
+- `mediaObserver(query): ReadonlySignal<boolean>`
 
 ## Utility APIs
 
 - `createId(prefix?)`
-- `createFormIds(prefix, name?)`
-- `guard(condition, handler)`
-- `escapeHtml(value)`
-- `toKebab(str)`
 
 Also exported:
 
@@ -245,22 +337,23 @@ Also exported:
 
 ## Directive APIs
 
-### `each(source, template, empty?, options?)`
+### `each(source, options)`
 
+- `options.render` renders each item.
 - Static array source: `options.key` optional.
 - Reactive source (`Signal<T[]>` or `() => T[]`): `options.key` required.
+- `options.fallback` renders when the list is empty.
 - `options.select` filters items before rendering.
 
 For dynamic lists with interactions, prefer event delegation on a stable parent element.
 
 Exports:
 
-- `attr`
+- `attrs`
 - `bind`
 - `choose`
 - `classes`
 - `each`
-- `match`
 - `memo`
 - `on`
 - `raw`
@@ -272,21 +365,24 @@ Exports:
 Common signatures:
 
 ```ts
-when(condition, thenFn, elseFn?)
-match(...branchesOrFallback)
+when({ condition, then, else })
 until(promise, pendingFn?, onError?)
-each(source, template, empty?, options?)
-bind(sig)
+each(source, { render, key, fallback, select })
+choose({ value, cases, fallback })
+bind({ value, as, event, parse })
+memo({ deps, render })
 ```
 
 `until(...)` renders `Error: <reason>` by default when the promise rejects and `onError` is omitted.
 
-- `attr(map)` — shorthand for batching DOM property bindings in spread position.
+- `attrs(map)` — shorthand for batching DOM property bindings in spread position.
   Despite the name, entries map to `.property` bindings internally.
-- `bind(sig)` — two-way shorthand built on the same property-binding path used by
-  `attr(...)`, `spread({ '.value': ... })`, and template `.value` / `.checked` bindings.
+- `bind({ value })` — two-way shorthand built on the same property-binding path used by
+  `attrs(...)`, `spread({ '.value': ... })`, and template `.value` / `.checked` bindings.
 
 ## Testing APIs
+
+Import from `@vielzeug/craftit/testing`.
 
 Primary exports:
 
@@ -312,7 +408,7 @@ Core test types:
 
 - a registered tag name
 - an inline `setup(ctx) => template` function
-- an inline `defineComponent`-style options object without `tag`
+- an inline `component`-style options object without `tag`
 
 ## Stateit Re-Exports
 

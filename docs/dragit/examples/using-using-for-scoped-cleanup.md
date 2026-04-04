@@ -25,7 +25,7 @@ async function setupPage() {
   });
 
   using sortable = createSortable({
-    container: document.getElementById('list')!,
+    element: document.getElementById('list')!,
     onReorder: saveOrder,
   });
 

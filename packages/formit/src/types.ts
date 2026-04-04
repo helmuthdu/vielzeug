@@ -10,20 +10,27 @@ export type FormValidator<TValues extends Record<string, unknown> = Record<strin
   signal: AbortSignal,
 ) => MaybePromise<Record<string, string> | undefined>;
 
-export type ValidateOptions<TValues extends Record<string, unknown> = Record<string, unknown>> = {
-  /**
-   * Restrict validation to these specific fields.
-   * @remarks The form-level `validator` is NOT run. Errors on unvisited fields are preserved unchanged.
-   * Pass an empty array to validate nothing.
-   */
-  fields?: FlatKeyOf<TValues>[];
-  /**
-   * Only validate fields that have been touched.
-   * @remarks Treated as a partial run — the form-level `validator` is NOT run.
-   */
-  onlyTouched?: boolean;
-  signal?: AbortSignal;
-};
+export type ValidateOptions<TValues extends Record<string, unknown> = Record<string, unknown>> =
+  | {
+      /**
+       * Restrict validation to these specific fields.
+       * @remarks The form-level `validator` is NOT run. Errors on unvisited fields are preserved unchanged.
+       * Pass an empty array to validate nothing.
+       */
+      fields: FlatKeyOf<TValues>[];
+      signal?: AbortSignal;
+    }
+  | {
+      /**
+       * Only validate fields that have been touched.
+       * @remarks Treated as a partial run — the form-level `validator` is NOT run.
+       */
+      onlyTouched: true;
+      signal?: AbortSignal;
+    }
+  | {
+      signal?: AbortSignal;
+    };
 
 export type SetOptions = {
   dirty?: boolean; // default: true
@@ -46,7 +53,7 @@ export type FormState<TValues extends Record<string, unknown> = Record<string, u
 export type SubmitOptions<TValues extends Record<string, unknown> = Record<string, unknown>> = {
   /**
    * Restrict validation to these specific fields.
-   * Note: `touchAll()` always runs before validation, so every named field will be marked touched.
+   * Note: only these fields are touched before validation.
    */
   fields?: FlatKeyOf<TValues>[];
   signal?: AbortSignal;
@@ -111,14 +118,19 @@ export type SafeParseSchema = {
 };
 
 /** The object returned by `form.bind()`. Getters are live — they always read current form state. */
-export type BindResult<V = unknown, K extends string = string> = {
+export type BindResult<V = unknown> = {
   readonly dirty: boolean;
   readonly error: string | undefined;
-  readonly name: K;
   onBlur(): void;
   onChange(event: unknown): void;
   readonly touched: boolean;
   readonly value: V;
+};
+
+export type ArrayFieldBatch = {
+  append(value: unknown): void;
+  move(from: number, to: number): void;
+  remove(index: number): void;
 };
 
 export type FieldState<V = unknown> = {
@@ -145,12 +157,10 @@ export type BindConfig = {
 };
 
 export interface Form<TValues extends Record<string, unknown> = Record<string, unknown>> {
-  /** Append a value to an array field. Creates the array if the field is not yet set. */
-  appendField(name: FlatKeyOf<TValues> | string, value: unknown): void;
-  bind<K extends FlatKeyOf<TValues>>(name: K, config?: BindConfig): BindResult<TypeAtPath<TValues, K>, K>;
+  array(name: FlatKeyOf<TValues> | string): ArrayFieldBatch;
+  bind<K extends FlatKeyOf<TValues>>(name: K, config?: BindConfig): BindResult<TypeAtPath<TValues, K>>;
   bind(name: string, config?: BindConfig): BindResult;
-  /** Clear all field errors. Shorthand for `setErrors({})`. */
-  clearErrors(): void;
+  clearError(name: FlatKeyOf<TValues> | string): void;
   dispose(): void;
   readonly disposed: boolean;
   readonly errors: Record<string, string>;
@@ -158,27 +168,17 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   field<V = unknown>(name: string): FieldState<V>;
   get<K extends FlatKeyOf<TValues>>(name: K): TypeAtPath<TValues, K>;
   get<V = unknown>(name: string): V;
-  /** Returns the current error message for a field without allocating a full `FieldState` object. */
-  getError(name: FlatKeyOf<TValues> | string): string | undefined;
   readonly isDirty: boolean;
-  /** Returns whether the field differs from its baseline value. */
-  isFieldDirty(name: FlatKeyOf<TValues> | string): boolean;
-  /** Returns whether the field has been touched. */
-  isFieldTouched(name: FlatKeyOf<TValues> | string): boolean;
   readonly isSubmitting: boolean;
   readonly isTouched: boolean;
   readonly isValid: boolean;
   readonly isValidating: boolean;
-  /** Move an item from one index to another within an array field (e.g. for drag-and-drop reorder). */
-  moveField(name: FlatKeyOf<TValues> | string, from: number, to: number): void;
   patch(entries: DeepPartial<TValues>, options?: SetOptions): void;
-  /** Remove the item at `index` from an array field. */
-  removeField(name: FlatKeyOf<TValues> | string, index: number): void;
   reset(newValues?: DeepPartial<TValues>): void;
   resetField(name: FlatKeyOf<TValues> | string): void;
   set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void;
   set(name: string, value: unknown, options?: SetOptions): void;
-  setError(name: string, message?: string): void;
+  setError(name: string, message: string): void;
   setErrors(errors: Record<string, string>): void;
   readonly state: FormState<TValues>;
   submit<TResult = void>(
@@ -187,8 +187,17 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   ): Promise<TResult>;
   readonly submitCount: number;
   subscribe(listener: (state: FormState<TValues>) => void, options?: { immediate?: boolean }): Unsubscribe;
-  toFormData(): FormData;
-  touch(first: string, ...rest: string[]): void;
+  subscribe<K extends FlatKeyOf<TValues>>(
+    name: K,
+    listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
+    options?: { immediate?: boolean },
+  ): Unsubscribe;
+  subscribe<V = unknown>(
+    name: string,
+    listener: (state: FieldState<V>) => void,
+    options?: { immediate?: boolean },
+  ): Unsubscribe;
+  touch(name: string): void;
   touchAll(): void;
   /** Remove touched state from a single field without resetting its value. */
   untouch(name: string): void;
@@ -197,16 +206,6 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   validate(options?: ValidateOptions<TValues>): Promise<ValidateResult>;
   validateField(name: string, signal?: AbortSignal): Promise<string | undefined>;
   values(): TValues;
-  watch<K extends FlatKeyOf<TValues>>(
-    name: K,
-    listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
-    options?: { immediate?: boolean },
-  ): Unsubscribe;
-  watch<V = unknown>(
-    name: string,
-    listener: (state: FieldState<V>) => void,
-    options?: { immediate?: boolean },
-  ): Unsubscribe;
 }
 
 export class SubmitError extends Error {

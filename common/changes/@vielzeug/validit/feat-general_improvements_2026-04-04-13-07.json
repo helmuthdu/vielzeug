@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "General Improvements and Bugfixes",
+      "type": "minor",
+      "packageName": "@vielzeug/validit"
+    }
+  ],
+  "packageName": "@vielzeug/validit",
+  "email": "helmuthdu@gmail.com"
+}

@@ -16,8 +16,8 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 ```ts
 i18n.registerLoader('ja', () => import('./locales/ja.json'));
 
-await i18n.load('ja'); // preload only
-await i18n.setLocale('ja'); // switch after load
+await i18n.ensureLocale('ja'); // preload only
+await i18n.switchLocale('ja'); // switch after ensure
 
 await i18n.reload('ja'); // force refresh from loader
 ```

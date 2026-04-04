@@ -1,5 +1,5 @@
 import { html, signal } from '@vielzeug/craftit';
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 export const SELECT_OPTIONS = `
   <option value="apple">Apple</option>
@@ -149,6 +149,76 @@ describe('bit-select', () => {
       await user.click(option);
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
+    });
+
+    it('emits open/close events with reason details', async () => {
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+
+      const onOpen = vi.fn();
+      const onClose = vi.fn();
+
+      fixture.element.addEventListener('open', onOpen);
+      fixture.element.addEventListener('close', onClose);
+
+      const field = fixture.query<HTMLElement>('.field')!;
+
+      await user.click(field);
+      await fixture.flush();
+      await user.press(field, 'Escape');
+      await fixture.flush();
+
+      expect(onOpen).toHaveBeenCalled();
+      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
+      expect(onClose).toHaveBeenCalled();
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('escape');
+    });
+
+    it('emits trigger close reason when the trigger toggles the open panel shut', async () => {
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+
+      const onClose = vi.fn();
+
+      fixture.element.addEventListener('close', onClose);
+
+      const field = fixture.query<HTMLElement>('.field')!;
+
+      await user.click(field);
+      await fixture.flush();
+      await user.click(field);
+      await fixture.flush();
+
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
+    });
+
+    it('emits outside-click close reason when clicking away from the dropdown', async () => {
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+
+      const onClose = vi.fn();
+
+      fixture.element.addEventListener('close', onClose);
+
+      await user.click(fixture.query<HTMLElement>('.field')!);
+      await fixture.flush();
+
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.flush();
+
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('outside-click');
+    });
+
+    it('emits programmatic close reason after selecting an option in single mode', async () => {
+      fixture = await mount('bit-select', { html: SELECT_OPTIONS });
+
+      const onClose = vi.fn();
+
+      fixture.element.addEventListener('close', onClose);
+
+      await user.click(fixture.query<HTMLElement>('.field')!);
+      await fixture.flush();
+      await user.click(fixture.query<HTMLElement>('[role="option"]')!);
+      await fixture.flush();
+
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('programmatic');
     });
 
     it('emits change event with value and originalEvent on selection', async () => {
@@ -437,14 +507,12 @@ describe('bit-select', () => {
     it('uses array options prop from structured binding and updates reactively', async () => {
       fixture = await mount(() => {
         const options = signal([
-          { disabled: false, label: 'Alpha', value: 'a' },
-          { disabled: false, label: 'Beta', value: 'b' },
+          { label: 'Alpha', value: 'a' },
+          { label: 'Beta', value: 'b' },
         ]);
 
-        return html`
-          <button @click=${() => (options.value = [{ disabled: false, label: 'Gamma', value: 'g' }])}>Update</button>
-          <bit-select options=${options}></bit-select>
-        `;
+        return html` <button @click=${() => (options.value = [{ label: 'Gamma', value: 'g' }])}>Update</button>
+          <bit-select options=${options}></bit-select>`;
       });
 
       const select = fixture.query<HTMLElement>('bit-select')!;
@@ -475,6 +543,26 @@ describe('bit-select', () => {
           el.textContent?.trim(),
         ),
       ).toEqual(['Gamma']);
+    });
+
+    it('defaults JS option labels to their value when label is omitted', async () => {
+      fixture = await mount(() => {
+        const options = signal([{ value: 'alpha' }]);
+
+        return html`<bit-select options=${options}></bit-select>`;
+      });
+
+      const select = fixture.query<HTMLElement>('bit-select')!;
+      const field = select.shadowRoot?.querySelector<HTMLElement>('.field');
+
+      await user.click(field as HTMLElement);
+      await fixture.flush();
+
+      expect(
+        Array.from(select.shadowRoot?.querySelectorAll<HTMLElement>('[role="option"]') ?? []).map((el) =>
+          el.textContent?.trim(),
+        ),
+      ).toEqual(['alpha']);
     });
   });
 });
@@ -663,6 +751,54 @@ describe('bit-select accessibility', () => {
       await user.press(fixture.query<HTMLElement>('.field')!, 'Escape');
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
+    });
+
+    it('selects focused option with Enter when open', async () => {
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
+
+      const changeHandler = vi.fn();
+
+      fixture.element.addEventListener('change', changeHandler);
+
+      const trigger = fixture.query<HTMLElement>('.field')!;
+
+      await user.press(trigger, 'Enter');
+      await fixture.flush();
+      await user.press(trigger, 'ArrowDown');
+      await fixture.flush();
+      await user.press(trigger, 'Enter');
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('open')).toBe(false);
+      expect(changeHandler).toHaveBeenCalledTimes(1);
+      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.value).toBe('banana');
+    });
+
+    it('selects focused option with Space when open', async () => {
+      fixture = await mount('bit-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
+
+      const changeHandler = vi.fn();
+
+      fixture.element.addEventListener('change', changeHandler);
+
+      const trigger = fixture.query<HTMLElement>('.field')!;
+
+      await user.press(trigger, ' ');
+      await fixture.flush();
+      await user.press(trigger, 'ArrowDown');
+      await fixture.flush();
+      await user.press(trigger, ' ');
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('open')).toBe(false);
+      expect(changeHandler).toHaveBeenCalledTimes(1);
+      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.value).toBe('banana');
     });
   });
 });

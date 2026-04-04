@@ -1,278 +1,151 @@
-/* ============================================
-   permit — Role-based permission engine
-   ============================================ */
-
 import type {
-  BaseUser,
-  PermissionActions,
-  PermissionCheck,
   PermissionData,
   Permit,
   PermitGuard,
   PermitOptions,
-  PermitSnapshot,
-  PermitState,
+  PermitPolicy,
+  PermitRule,
+  PrincipalInput,
 } from './types';
 
 import { WILDCARD } from './constants';
-import { getEffectiveRoles, isAnonymous, normalize } from './utils';
+import { getRoles, isUserPrincipal, normalize, toPrincipal } from './utils';
 
-/* -------------------- Factory -------------------- */
+type StoredRule<TAction extends string = string> = PermitRule<TAction> & {
+  action: TAction | typeof WILDCARD;
+  priority: number;
+  resource: string;
+  role: string;
+};
 
-export function createPermit<
-  TUser extends BaseUser = BaseUser,
-  TAction extends string = string,
-  TData extends PermissionData = PermissionData,
->(opts: PermitOptions<TUser, TAction, TData> = {}): Permit<TUser, TAction, TData> {
-  const { logger, strict = false, wildcardFallback = true } = opts;
-  const permissions = new Map<string, Map<string, PermissionActions<TAction, TUser, TData>>>();
-  const hierarchy = new Map<string, Set<string>>();
+function specificity(rule: StoredRule): number {
+  return (rule.role === WILDCARD ? 0 : 1) + (rule.resource === WILDCARD ? 0 : 1) + (rule.action === WILDCARD ? 0 : 1);
+}
 
-  function check(user: TUser | null | undefined, resource: string, action: TAction, data?: TData): boolean {
+function normalizeRule<TAction extends string>(rule: PermitRule<TAction>): StoredRule<TAction> {
+  if (!rule.role || rule.role.trim().length === 0) throw new Error('[permit] Rule.role is required');
+
+  if (!rule.resource || rule.resource.trim().length === 0) throw new Error('[permit] Rule.resource is required');
+
+  if (!rule.action || rule.action.trim().length === 0) throw new Error('[permit] Rule.action is required');
+
+  return {
+    ...rule,
+    action: normalize(rule.action) as TAction | typeof WILDCARD,
+    priority: rule.priority ?? 0,
+    resource: normalize(rule.resource),
+    role: normalize(rule.role),
+  };
+}
+
+export function createPermit<TAction extends string = string, TData extends PermissionData = PermissionData>(
+  opts: PermitOptions<TAction, TData> = {},
+): Permit<TAction, TData> {
+  const { initial, logger, predicates = {} } = opts;
+  const rules: StoredRule<TAction>[] = [];
+
+  function set(rule: PermitRule<TAction>): Permit<TAction, TData> {
+    const normalizedRule = normalizeRule(rule);
+
+    if (normalizedRule.when && !predicates[normalizedRule.when]) {
+      throw new Error(`[permit] Unknown predicate '${normalizedRule.when}'`);
+    }
+
+    rules.push(normalizedRule);
+
+    return permit;
+  }
+
+  function can(principalInput: PrincipalInput, resource: string, action: TAction, data?: TData): boolean {
+    const principal = toPrincipal(principalInput);
     const normalizedResource = normalize(resource);
     const normalizedAction = normalize(action) as TAction;
+    const principalRoles = getRoles(principal);
 
-    for (const role of getEffectiveRoles(user, hierarchy)) {
-      const rolePerms = permissions.get(role);
+    const candidates = rules
+      .filter((rule) => {
+        if (!principalRoles.has(rule.role)) return false;
 
-      if (!rolePerms) continue;
+        if (rule.resource !== WILDCARD && rule.resource !== normalizedResource) return false;
 
-      const specific = rolePerms.get(normalizedResource);
-      let permission: PermissionCheck<TUser, TData> | undefined;
+        if (rule.action !== WILDCARD && rule.action !== normalizedAction) return false;
 
-      if (specific !== undefined) {
-        // Specific action, then wildcard action on the specific resource.
-        permission = specific[normalizedAction] ?? specific[WILDCARD];
+        if (!rule.when) return true;
 
-        // Fall back to the wildcard resource only when wildcardFallback is enabled.
-        if (permission === undefined && wildcardFallback) {
-          const wildcardPerms = rolePerms.get(WILDCARD);
+        if (!isUserPrincipal(principal)) return false;
 
-          permission = wildcardPerms?.[normalizedAction] ?? wildcardPerms?.[WILDCARD];
-        }
-      } else {
-        const wildcardPerms = rolePerms.get(WILDCARD);
+        const predicate = predicates[rule.when];
 
-        permission = wildcardPerms?.[normalizedAction] ?? wildcardPerms?.[WILDCARD];
-      }
+        if (!predicate) throw new Error(`[permit] Missing predicate '${rule.when}'`);
 
-      if (permission === undefined) continue;
+        return predicate({ data, principal });
+      })
+      .sort((a, b) => {
+        if (b.priority !== a.priority) return b.priority - a.priority;
 
-      // The first role that has any opinion (true OR false) wins — stops here.
-      // Anonymous users cannot satisfy dynamic ownership checks — always false.
-      const result =
-        typeof permission === 'function' ? (isAnonymous(user) ? false : permission(user!, data)) : Boolean(permission);
+        return specificity(b) - specificity(a);
+      });
 
-      logger?.(result ? 'allow' : 'deny', user, normalizedResource, normalizedAction, data);
+    if (candidates.length === 0) {
+      logger?.('deny', principal, normalizedResource, normalizedAction, data);
 
-      return result;
+      return false;
     }
 
-    logger?.('deny', user, normalizedResource, normalizedAction, data);
-
-    return false;
-  }
-
-  function define(
-    role: string,
-    resource: string,
-    actions: PermissionActions<TAction, TUser, TData>,
-  ): Permit<TUser, TAction, TData> {
-    if (!role) throw new Error('Role is required');
-
-    if (!resource) throw new Error('Resource is required');
-
-    if (Object.keys(actions).length === 0) {
-      const msg = `[permit] define('${role}', '${resource}', {}) has no actions — is this intentional?`;
-
-      if (strict) throw new Error(msg);
-
-      return permit;
-    }
-
-    const normalizedRole = normalize(role);
-    const normalizedResource = normalize(resource);
-
-    if (!permissions.has(normalizedRole)) permissions.set(normalizedRole, new Map());
-
-    const rolePerms = permissions.get(normalizedRole)!;
-    const existing = rolePerms.get(normalizedResource) ?? {};
-    const normalizedActions = Object.fromEntries(
-      Object.entries(actions).map(([k, v]) => [normalize(k), v]),
-    ) as PermissionActions<TAction, TUser, TData>;
-
-    rolePerms.set(normalizedResource, { ...existing, ...normalizedActions });
-
-    return permit;
-  }
-
-  function grant(role: string, resource: string, ...actions: TAction[]): Permit<TUser, TAction, TData> {
-    return define(
-      role,
-      resource,
-      Object.fromEntries(actions.map((a) => [a, true])) as PermissionActions<TAction, TUser, TData>,
+    const highest = candidates[0]!;
+    const highestPriority = highest.priority;
+    const highestSpecificity = specificity(highest);
+    const top = candidates.filter(
+      (rule) => rule.priority === highestPriority && specificity(rule) === highestSpecificity,
     );
+    const denied = top.some((rule) => rule.effect === 'deny');
+    const result = denied ? 'deny' : 'allow';
+
+    logger?.(result, principal, normalizedResource, normalizedAction, data);
+
+    return result === 'allow';
   }
 
-  function deny(role: string, resource: string, ...actions: TAction[]): Permit<TUser, TAction, TData> {
-    return define(
-      role,
-      resource,
-      Object.fromEntries(actions.map((a) => [a, false])) as PermissionActions<TAction, TUser, TData>,
-    );
-  }
-
-  function extend(childRole: string, parentRole: string): Permit<TUser, TAction, TData> {
-    const normalizedChild = normalize(childRole);
-    const normalizedParent = normalize(parentRole);
-
-    if (!hierarchy.has(normalizedChild)) hierarchy.set(normalizedChild, new Set());
-
-    hierarchy.get(normalizedChild)!.add(normalizedParent);
-
-    return permit;
-  }
-
-  function unextend(childRole: string, parentRole?: string): Permit<TUser, TAction, TData> {
-    const normalizedChild = normalize(childRole);
-
-    if (!parentRole) {
-      hierarchy.delete(normalizedChild);
-    } else {
-      const parents = hierarchy.get(normalizedChild);
-
-      if (parents) {
-        parents.delete(normalize(parentRole));
-
-        if (parents.size === 0) hierarchy.delete(normalizedChild);
-      }
-    }
-
-    return permit;
-  }
-
-  function remove(role: string): Permit<TUser, TAction, TData>;
-  function remove(role: string, resource: string): Permit<TUser, TAction, TData>;
-  function remove(role: string, resource: string, action: TAction): Permit<TUser, TAction, TData>;
-  function remove(role: string, resource?: string, action?: TAction): Permit<TUser, TAction, TData> {
-    const normalizedRole = normalize(role);
-    const rolePerms = permissions.get(normalizedRole);
-
-    if (!rolePerms) return permit;
-
-    if (!resource) {
-      permissions.delete(normalizedRole);
-
-      return permit;
-    }
-
-    const normalizedResource = normalize(resource);
-
-    if (action) {
-      const resourcePerms = rolePerms.get(normalizedResource);
-
-      if (resourcePerms) {
-        delete resourcePerms[normalize(action) as TAction];
-
-        if (Object.keys(resourcePerms).length === 0) rolePerms.delete(normalizedResource);
-      }
-    } else {
-      rolePerms.delete(normalizedResource);
-    }
-
-    if (rolePerms.size === 0) permissions.delete(normalizedRole);
-
-    return permit;
-  }
-
-  /**
-   * Returns a pre-bound guard for a specific user.
-   * Useful when making multiple checks for the same user in one scope.
-   *
-   * @example
-   * ```ts
-   * const guard = permit.for(user);
-   * guard.can('posts', 'read');
-   * guard.can('posts', 'update', { authorId: user.id });
-   * guard.canAll('posts', ['read', 'write']);
-   * guard.canAny('posts', ['read', 'write']);
-   * ```
-   */
-  function forUser(user: TUser | null | undefined): PermitGuard<TAction, TData> {
+  function withUser(principal: PrincipalInput): PermitGuard<TAction, TData> {
     return {
-      can: (resource, action, data) => check(user, resource, action, data),
-      canAll: (resource, actions, data) => actions.every((a) => check(user, resource, a, data)),
-      canAny: (resource, actions, data) => actions.some((a) => check(user, resource, a, data)),
+      can: (resource, action, data) => can(principal, resource, action, data),
     };
   }
 
-  function snapshot(): PermitState<TUser, TAction, TData> {
-    const perms: PermitSnapshot<TUser, TAction, TData> = {};
+  function clear(): Permit<TAction, TData> {
+    rules.length = 0;
 
-    for (const [role, resourceMap] of permissions) {
-      perms[role] = {};
-      for (const [resource, actions] of resourceMap) {
-        perms[role][resource] = { ...actions };
-      }
-    }
+    return permit;
+  }
 
-    const hier: Record<string, string[]> = {};
-
-    for (const [child, parents] of hierarchy) {
-      hier[child] = [...parents];
-    }
-
+  function exportPolicy(): PermitPolicy<TAction> {
     return {
-      permissions: perms,
-      ...(Object.keys(hier).length > 0 && { hierarchy: hier }),
+      rules: rules.map((rule) => ({ ...rule })),
     };
   }
 
-  function restore(state: PermitState<TUser, TAction, TData>): Permit<TUser, TAction, TData> {
-    permissions.clear();
-    hierarchy.clear();
+  function importPolicy(policy: PermitPolicy<TAction>): Permit<TAction, TData> {
+    clear();
 
-    for (const [role, resourceMap] of Object.entries(state.permissions)) {
-      const roleMap = new Map<string, PermissionActions<TAction, TUser, TData>>();
-
-      for (const [resource, actions] of Object.entries(resourceMap)) {
-        roleMap.set(normalize(resource), { ...actions });
-      }
-
-      permissions.set(normalize(role), roleMap);
-    }
-
-    for (const [child, parents] of Object.entries(state.hierarchy ?? {})) {
-      hierarchy.set(normalize(child), new Set(parents.map(normalize)));
+    for (const rule of policy.rules) {
+      set(rule);
     }
 
     return permit;
   }
 
-  function clear(): Permit<TUser, TAction, TData> {
-    permissions.clear();
-    hierarchy.clear();
-
-    return permit;
-  }
-
-  const permit: Permit<TUser, TAction, TData> = {
-    check,
-    checkAll: (user, resource, actions, data) => actions.every((a) => check(user, resource, a, data)),
-    checkAny: (user, resource, actions, data) => actions.some((a) => check(user, resource, a, data)),
+  const permit: Permit<TAction, TData> = {
+    can,
     clear,
-    define,
-    deny,
-    extend,
-    for: forUser,
-    grant,
-    remove,
-    restore,
-    snapshot,
-    unextend,
+    exportPolicy,
+    importPolicy,
+    set,
+    withUser,
   };
 
-  if (opts.initial) restore(opts.initial);
+  if (initial) {
+    importPolicy(initial);
+  }
 
   return permit;
 }

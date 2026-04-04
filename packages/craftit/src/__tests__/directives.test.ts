@@ -1,25 +1,22 @@
 /**
  * Directives Tests
  * Tests for all craftit directives: when, each, classes, bind,
- * style, choose, match, raw, spread, on, memo, until
+ * style, choose, raw, spread, on, memo, until
  */
 
-import { attr, bind, choose, classes, each, match, memo, on, raw, spread, style, until, when } from '../directives';
-import { computed, defineComponent, html, signal } from '../index';
-import { mount } from '../test';
+import { attrs, bind, choose, classes, each, memo, on, raw, spread, style, until, when } from '../directives';
+import { computed, define, html, signal, type ComponentDefinition } from '../index';
+import { mount } from '../testing';
 
-const register = (
-  tag: string,
-  setup: Parameters<typeof defineComponent>[0]['setup'],
-  options: Omit<Parameters<typeof defineComponent>[0], 'setup' | 'tag'> = {},
-) => defineComponent({ setup, tag, ...options });
+const register = (tag: string, setup: ComponentDefinition['setup'], options: Omit<ComponentDefinition, 'setup'> = {}) =>
+  define(tag, { setup, ...options });
 
 describe('Directive: when()', () => {
   it('should render when condition is true', async () => {
     const { query } = await mount(() => {
       const visible = signal(true);
 
-      return html`${when(visible.value, () => html`<div>Visible</div>`)}`;
+      return html`${when({ condition: visible.value, then: () => html`<div>Visible</div>` })}`;
     });
 
     expect(query('div')?.textContent).toBe('Visible');
@@ -29,7 +26,7 @@ describe('Directive: when()', () => {
     const { query } = await mount(() => {
       const visible = signal(false);
 
-      return html`${when(visible.value, () => html`<div class="content">Hidden</div>`)}`;
+      return html`${when({ condition: visible.value, then: () => html`<div class="content">Hidden</div>` })}`;
     });
 
     expect(query('.content')).toBeNull();
@@ -39,11 +36,11 @@ describe('Directive: when()', () => {
     const { query } = await mount(() => {
       const visible = signal(false);
 
-      return html`${when(
-        visible.value,
-        () => html`<div>Yes</div>`,
-        () => html`<div>No</div>`,
-      )}`;
+      return html`${when({
+        condition: visible.value,
+        else: () => html`<div>No</div>`,
+        then: () => html`<div>Yes</div>`,
+      })}`;
     });
 
     expect(query('div')?.textContent).toBe('No');
@@ -55,11 +52,11 @@ describe('Directive: when()', () => {
 
       return html`
         <div>
-          ${when(
-            loggedIn,
-            () => html`<span>Welcome!</span>`,
-            () => html`<span>Please login</span>`,
-          )}
+          ${when({
+            condition: loggedIn,
+            else: () => html`<span>Please login</span>`,
+            then: () => html`<span>Welcome!</span>`,
+          })}
         </div>
       `;
     });
@@ -73,11 +70,11 @@ describe('Directive: when()', () => {
     const { flush, query } = await mount(() => {
       return html`
         <div>
-          ${when(
-            () => count.value > 5,
-            () => html`<span class="above">Above threshold</span>`,
-            () => html`<span class="below">Below threshold</span>`,
-          )}
+          ${when({
+            condition: () => count.value > 5,
+            else: () => html`<span class="below">Below threshold</span>`,
+            then: () => html`<span class="above">Above threshold</span>`,
+          })}
         </div>
       `;
     });
@@ -93,6 +90,18 @@ describe('Directive: when()', () => {
     expect(query('.above')?.textContent).toBe('Above threshold');
     expect(query('.below')).toBeNull();
   });
+
+  it('should throw when then is not a function', () => {
+    expect(() => when({ condition: true, then: 'invalid' as unknown as () => string })).toThrow(
+      '[craftit:when] options.then must be a function when provided.',
+    );
+  });
+
+  it('should throw when else is not a function', () => {
+    expect(() => when({ condition: false, else: 'invalid' as unknown as () => string })).toThrow(
+      '[craftit:when] options.else must be a function when provided.',
+    );
+  });
 });
 
 describe('Directive: each()', () => {
@@ -102,7 +111,7 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(items, (item) => html`<li>${item}</li>`, undefined, { key: (item) => item })}
+          ${each(items, { key: (item) => item, render: (item) => html`<li>${item}</li>` })}
         </ul>
       `;
     });
@@ -118,12 +127,11 @@ describe('Directive: each()', () => {
 
       return html`
         <div class="container">
-          ${each(
-            items,
-            (item) => html`<li>${item}</li>`,
-            () => html`<div class="empty">Empty</div>`,
-            { key: (_, i) => i },
-          )}
+          ${each(items, {
+            fallback: () => html`<div class="empty">Empty</div>`,
+            key: (_, i) => i,
+            render: (item) => html`<li>${item}</li>`,
+          })}
         </div>
       `;
     });
@@ -139,7 +147,7 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(items, (item) => html`<li>${item}</li>`, undefined, { key: (item) => item })}
+          ${each(items, { key: (item) => item, render: (item) => html`<li>${item}</li>` })}
         </ul>
       `;
     });
@@ -157,7 +165,7 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(items, (item) => html`<li>${item}</li>`, undefined, { key: (item) => item })}
+          ${each(items, { key: (item) => item, render: (item) => html`<li>${item}</li>` })}
         </ul>
       `;
     });
@@ -169,7 +177,7 @@ describe('Directive: each()', () => {
     const { queryAll } = await mount(
       () => html`
         <ul>
-          ${each([1, 2, 3], (item) => html`<li>${item}</li>`)}
+          ${each([1, 2, 3], { render: (item) => html`<li>${item}</li>` })}
         </ul>
       `,
     );
@@ -185,7 +193,7 @@ describe('Directive: each()', () => {
     const { query, queryAll } = await mount(
       () => html`
         <ul>
-          ${each([payload], (item) => item)}
+          ${each([payload], { render: (item) => item })}
         </ul>
       `,
     );
@@ -200,12 +208,11 @@ describe('Directive: each()', () => {
 
       return html`
         <div>
-          ${each(
-            items,
-            (item) => html`<div class="item">${item.name}</div>`,
-            () => html`<div class="empty">No items</div>`,
-            { key: (item) => item.id },
-          )}
+          ${each(items, {
+            fallback: () => html`<div class="empty">No items</div>`,
+            key: (item) => item.id,
+            render: (item) => html`<div class="item">${item.name}</div>`,
+          })}
         </div>
       `;
     });
@@ -223,8 +230,9 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(items, (item) => html`<li class="item">${item.name}</li>`, undefined, {
+          ${each(items, {
             key: (item) => item.id,
+            render: (item) => html`<li class="item">${item.name}</li>`,
             select: (item) => item.active,
           })}
         </ul>
@@ -243,12 +251,12 @@ describe('Directive: each()', () => {
 
       return html`
         <div>
-          ${each(
-            items,
-            (item) => html`<span>${item.id}</span>`,
-            () => html`<p class="empty">None</p>`,
-            { key: (item) => item.id, select: (item) => item.active },
-          )}
+          ${each(items, {
+            fallback: () => html`<p class="empty">None</p>`,
+            key: (item) => item.id,
+            render: (item) => html`<span>${item.id}</span>`,
+            select: (item) => item.active,
+          })}
         </div>
       `;
     });
@@ -267,16 +275,14 @@ describe('Directive: each()', () => {
 
       return html`
         <div>
-          ${each(
-            items,
-            (item) => html`
+          ${each(items, {
+            key: (item) => item.id,
+            render: (item) => html`
               <button data-value=${item.id} title=${item.label} @click=${() => clicks.push(item.id)}>
                 ${item.label}
               </button>
             `,
-            undefined,
-            { key: (item) => item.id },
-          )}
+          })}
         </div>
       `;
     });
@@ -290,6 +296,31 @@ describe('Directive: each()', () => {
     (buttons[0] as HTMLButtonElement).click();
 
     expect(clicks).toEqual(['a']);
+  });
+
+  it('should throw when render is not a function', () => {
+    expect(() => each([1, 2], { render: null as unknown as (item: number, index: number) => string })).toThrow(
+      '[craftit:each] options.render must be a function.',
+    );
+  });
+
+  it('should throw when reactive source getter does not return array', async () => {
+    expect(() =>
+      each(() => null as unknown as number[], {
+        key: (item) => item,
+        render: (item) => String(item),
+      }),
+    ).toThrow('[craftit:each] source must resolve to an array.');
+
+    await expect(
+      mount(
+        () =>
+          html`${each(() => null as unknown as number[], {
+            key: (item) => item,
+            render: (item) => String(item),
+          })}`,
+      ),
+    ).rejects.toThrow('[craftit:each] source must resolve to an array.');
   });
 });
 
@@ -353,7 +384,7 @@ describe('Directive: bind()', () => {
     const { query } = await mount(() => {
       const name = signal('Alice');
 
-      return html`<input ${bind(name)} />`;
+      return html`<input ${bind({ value: name })} />`;
     });
 
     expect((query('input') as HTMLInputElement)?.value).toBe('Alice');
@@ -362,7 +393,7 @@ describe('Directive: bind()', () => {
   it('should update input value when signal changes', async () => {
     const name = signal('Alice');
 
-    const { flush, query } = await mount(() => html`<input ${bind(name)} />`);
+    const { flush, query } = await mount(() => html`<input ${bind({ value: name })} />`);
 
     name.value = 'Bob';
     await flush();
@@ -372,7 +403,7 @@ describe('Directive: bind()', () => {
   it('should update signal when input fires an input event', async () => {
     const name = signal('Alice');
 
-    const { query } = await mount(() => html`<input ${bind(name)} />`);
+    const { query } = await mount(() => html`<input ${bind({ value: name })} />`);
     const input = query('input') as HTMLInputElement;
 
     input.value = 'Charlie';
@@ -383,7 +414,7 @@ describe('Directive: bind()', () => {
   it('should bind checkbox checked state to a boolean signal', async () => {
     const checked = signal(true);
 
-    const { flush, query } = await mount(() => html`<input type="checkbox" ${bind(checked)} />`);
+    const { flush, query } = await mount(() => html`<input type="checkbox" ${bind({ value: checked })} />`);
     const input = query('input') as HTMLInputElement;
 
     expect(input.checked).toBe(true);
@@ -402,7 +433,7 @@ describe('Directive: bind()', () => {
 
     const { query } = await mount(
       () => html`
-        <select ${bind(value)}>
+        <select ${bind({ value })}>
           <option value="sm">Small</option>
           <option value="lg">Large</option>
         </select>
@@ -416,13 +447,33 @@ describe('Directive: bind()', () => {
     select.dispatchEvent(new Event('change'));
     expect(value.value).toBe('lg');
   });
+
+  it('should throw for checked mode on non-checkable input elements', async () => {
+    await expect(
+      mount(() => {
+        const value = signal('a');
+
+        return html`<input ${bind({ as: 'checked', value })} />`;
+      }),
+    ).rejects.toThrow('[craftit:bind] mode "checked" requires <input type="checkbox|radio">.');
+  });
+
+  it('should throw for value mode on unsupported elements', async () => {
+    await expect(
+      mount(() => {
+        const value = signal('a');
+
+        return html`<div ${bind({ value })}></div>`;
+      }),
+    ).rejects.toThrow('[craftit:bind] value binding requires <input>, <textarea>, or <select>.');
+  });
 });
 
-describe('Directive: attr() property map', () => {
+describe('Directive: attrs() property map', () => {
   it('should apply a property map in spread position', async () => {
     const value = signal('One');
 
-    const { query } = await mount(() => html`<input ${attr({ disabled: () => false, value })} />`);
+    const { query } = await mount(() => html`<input ${attrs({ disabled: () => false, value })} />`);
     const input = query('input') as HTMLInputElement;
 
     expect(input.value).toBe('One');
@@ -432,7 +483,7 @@ describe('Directive: attr() property map', () => {
   it('should sync back to signal for value binding', async () => {
     const value = signal('One');
 
-    const { query } = await mount(() => html`<input ${attr({ value })} />`);
+    const { query } = await mount(() => html`<input ${attrs({ value })} />`);
     const input = query('input') as HTMLInputElement;
 
     input.value = 'Two';
@@ -443,7 +494,7 @@ describe('Directive: attr() property map', () => {
   it('should sync back to signal for checked binding', async () => {
     const checked = signal(true);
 
-    const { query } = await mount(() => html`<input type="checkbox" ${attr({ checked })} />`);
+    const { query } = await mount(() => html`<input type="checkbox" ${attrs({ checked })} />`);
     const input = query('input') as HTMLInputElement;
 
     expect(input.checked).toBe(true);
@@ -458,7 +509,7 @@ describe('Directive: attr() property map', () => {
     const last = signal('Hopper');
     const fullName = computed(() => `${first.value} ${last.value}`);
 
-    const { query } = await mount(() => html`<input ${attr({ value: fullName })} />`);
+    const { query } = await mount(() => html`<input ${attrs({ value: fullName })} />`);
     const input = query('input') as HTMLInputElement;
 
     expect(input.value).toBe('Grace Hopper');
@@ -628,7 +679,7 @@ describe('Directive: choose()', () => {
   ] as const;
 
   it('should render the matching static case', async () => {
-    const { query } = await mount(() => html`<div>${choose('about', cases)}</div>`);
+    const { query } = await mount(() => html`<div>${choose({ cases, value: 'about' })}</div>`);
 
     expect(query('.about')?.textContent).toBe('About');
     expect(query('.home')).toBeNull();
@@ -636,14 +687,17 @@ describe('Directive: choose()', () => {
 
   it('should render the default when no case matches', async () => {
     const { query } = await mount(
-      () => html`<div>${choose('other' as never, cases, () => html`<h1 class="err">Error</h1>`)}</div>`,
+      () =>
+        html`<div>
+          ${choose({ cases, fallback: () => html`<h1 class="err">Error</h1>`, value: 'other' as never })}
+        </div>`,
     );
 
     expect(query('.err')?.textContent).toBe('Error');
   });
 
   it('should render empty string when no case matches and no default is given', async () => {
-    const { query } = await mount(() => html`<div>${choose('other' as never, cases)}</div>`);
+    const { query } = await mount(() => html`<div>${choose({ cases, value: 'other' as never })}</div>`);
 
     expect(query('div')?.innerHTML).toBe('');
   });
@@ -651,7 +705,7 @@ describe('Directive: choose()', () => {
   it('should update reactively when a Signal changes', async () => {
     const section = signal<'home' | 'about' | 'contact'>('home');
 
-    const { flush, query } = await mount(() => html`<div>${choose(section, cases)}</div>`);
+    const { flush, query } = await mount(() => html`<div>${choose({ cases, value: section })}</div>`);
 
     expect(query('.home')).not.toBeNull();
     expect(query('.about')).toBeNull();
@@ -670,7 +724,9 @@ describe('Directive: choose()', () => {
   it('should update reactively when a getter function is used', async () => {
     const section = signal<'home' | 'about'>('home');
 
-    const { flush, query } = await mount(() => html`<div>${choose(() => section.value, cases as never)}</div>`);
+    const { flush, query } = await mount(
+      () => html`<div>${choose({ cases: cases as never, value: () => section.value })}</div>`,
+    );
 
     expect(query('.home')).not.toBeNull();
 
@@ -691,7 +747,7 @@ describe('Directive: choose()', () => {
     ] as const;
 
     const fixture = await mount(
-      () => html`<div>${choose(() => (tick.value, section.value), homeBranch as never)}</div>`,
+      () => html`<div>${choose({ cases: homeBranch as never, value: () => (tick.value, section.value) })}</div>`,
     );
 
     const clickBranchButton = (): void => {
@@ -712,6 +768,21 @@ describe('Directive: choose()', () => {
     expect(clicks).toBe(12);
 
     fixture.destroy();
+  });
+
+  it('should throw when cases contain invalid entries', () => {
+    expect(() =>
+      choose({
+        cases: [['home'] as unknown as readonly ['home', () => string]],
+        value: 'home',
+      }),
+    ).toThrow('[craftit:choose] Invalid case at index 0. Expected [key, templateFn].');
+  });
+
+  it('should throw when fallback is not a function', () => {
+    expect(() => choose({ cases, fallback: 'invalid' as unknown as () => string, value: 'missing' as never })).toThrow(
+      '[craftit:choose] options.fallback must be a function when provided.',
+    );
   });
 });
 
@@ -889,185 +960,13 @@ describe('Directive: on()', () => {
   });
 });
 
-describe('Directive: match()', () => {
-  it('should render the first truthy branch (static)', async () => {
-    const { query } = await mount(
-      () =>
-        html`<div>
-          ${match(
-            [false, () => html`<span>A</span>`],
-            [true, () => html`<span>B</span>`],
-            [true, () => html`<span>C</span>`],
-          )}
-        </div>`,
-    );
-
-    expect(query('span')?.textContent).toBe('B');
-  });
-
-  it('should render fallback when no branch matches (static)', async () => {
-    const { query } = await mount(
-      () =>
-        html`<div>
-          ${match(
-            [false, () => html`<span>A</span>`],
-            [false, () => html`<span>B</span>`],
-            () => html`<span class="fallback">Fallback</span>`,
-          )}
-        </div>`,
-    );
-
-    expect(query('.fallback')?.textContent).toBe('Fallback');
-  });
-
-  it('should render empty when no branch matches and no fallback', async () => {
-    const { query } = await mount(() => html`<div>${match([false, () => html`<span>A</span>`])}</div>`);
-
-    expect(query('span')).toBeNull();
-  });
-
-  it('should react to Signal conditions', async () => {
-    const isAdmin = signal(false);
-    const isMod = signal(false);
-
-    const { flush, query } = await mount(
-      () =>
-        html`<div>
-          ${match(
-            [isAdmin, () => html`<span class="admin">Admin</span>`],
-            [isMod, () => html`<span class="mod">Mod</span>`],
-            () => html`<span class="user">User</span>`,
-          )}
-        </div>`,
-    );
-
-    expect(query('.user')).not.toBeNull();
-
-    isMod.value = true;
-    await flush();
-    expect(query('.mod')).not.toBeNull();
-    expect(query('.user')).toBeNull();
-
-    isAdmin.value = true;
-    await flush();
-    expect(query('.admin')).not.toBeNull();
-    expect(query('.mod')).toBeNull();
-  });
-
-  it('should react to getter conditions', async () => {
-    const score = signal(0);
-
-    const { flush, query } = await mount(
-      () =>
-        html`<div>
-          ${match(
-            [() => score.value >= 90, () => html`<span class="a">A</span>`],
-            [() => score.value >= 70, () => html`<span class="b">B</span>`],
-            [() => score.value >= 50, () => html`<span class="c">C</span>`],
-            () => html`<span class="f">F</span>`,
-          )}
-        </div>`,
-    );
-
-    expect(query('.f')).not.toBeNull();
-
-    score.value = 55;
-    await flush();
-    expect(query('.c')).not.toBeNull();
-    expect(query('.f')).toBeNull();
-
-    score.value = 75;
-    await flush();
-    expect(query('.b')).not.toBeNull();
-    expect(query('.c')).toBeNull();
-
-    score.value = 95;
-    await flush();
-    expect(query('.a')).not.toBeNull();
-    expect(query('.b')).toBeNull();
-  });
-
-  it('should evaluate branches in order and stop at first match', async () => {
-    const renderCounts = [0, 0, 0];
-
-    const { query } = await mount(
-      () =>
-        html`<div>
-          ${match(
-            [
-              true,
-              () => {
-                renderCounts[0]++;
-
-                return html`<span>First</span>`;
-              },
-            ],
-            [
-              true,
-              () => {
-                renderCounts[1]++;
-
-                return html`<span>Second</span>`;
-              },
-            ],
-            [
-              true,
-              () => {
-                renderCounts[2]++;
-
-                return html`<span>Third</span>`;
-              },
-            ],
-          )}
-        </div>`,
-    );
-
-    expect(query('span')?.textContent).toBe('First');
-    expect(renderCounts).toEqual([1, 0, 0]);
-  });
-
-  it('should preserve event bindings across rerenders and branch switches', async () => {
-    const isPrimary = signal(true);
-    const tick = signal(0);
-    let clicks = 0;
-
-    const { flush, query } = await mount(
-      () =>
-        html`<div>
-          ${match(
-            [
-              () => (tick.value, isPrimary.value),
-              () => html`<button class="primary" @click=${() => (clicks += 1)}>P</button>`,
-            ],
-            [() => !isPrimary.value, () => html`<button class="secondary" @click=${() => (clicks += 10)}>S</button>`],
-          )}
-        </div>`,
-    );
-
-    const clickBranchButton = (): void => {
-      (query('button') as HTMLButtonElement).click();
-    };
-
-    clickBranchButton();
-    expect(clicks).toBe(1);
-
-    tick.value++;
-    await flush();
-    clickBranchButton();
-    expect(clicks).toBe(2);
-
-    isPrimary.value = false;
-    await flush();
-    clickBranchButton();
-    expect(clicks).toBe(12);
-  });
-});
-
 describe('Directive: memo()', () => {
   it('should render the template initially', async () => {
     const data = signal('hello');
 
-    const { query } = await mount(() => html`<div>${memo([data], () => html`<span>${data}</span>`)}</div>`);
+    const { query } = await mount(
+      () => html`<div>${memo({ deps: [data], render: () => html`<span>${data}</span>` })}</div>`,
+    );
 
     expect(query('span')?.textContent).toBe('hello');
   });
@@ -1079,10 +978,13 @@ describe('Directive: memo()', () => {
     const { flush, query } = await mount(
       () =>
         html`<div>
-          ${memo([count], () => {
-            renderCount++;
+          ${memo({
+            deps: [count],
+            render: () => {
+              renderCount++;
 
-            return html`<span>${count}</span>`;
+              return html`<span>${count}</span>`;
+            },
           })}
         </div>`,
     );
@@ -1104,10 +1006,13 @@ describe('Directive: memo()', () => {
     const { flush } = await mount(
       () =>
         html`<div>
-          ${memo([guarded], () => {
-            renderCount++;
+          ${memo({
+            deps: [guarded],
+            render: () => {
+              renderCount++;
 
-            return html`<span class="g">${guarded}</span>`;
+              return html`<span class="g">${guarded}</span>`;
+            },
           })}
           <b>${unrelated}</b>
         </div>`,
@@ -1222,9 +1127,7 @@ describe('Keyed Reconciliation', () => {
         'test-keyed-sibling-preserve',
         () => html`
           <div class="container">
-            ${each(items, (item) => html`<span class="item">${item.value}</span>`, undefined, {
-              key: (item) => item.id,
-            })}
+            ${each(items, { key: (item) => item.id, render: (item) => html`<span class="item">${item.value}</span>` })}
             <button class="after">After</button>
           </div>
         `,
@@ -1255,9 +1158,7 @@ describe('Keyed Reconciliation', () => {
         'test-no-duplication',
         () => html`
           <div class="container">
-            ${each(items, (item) => html`<div class="item">${item.value}</div>`, undefined, {
-              key: (item) => item.id,
-            })}
+            ${each(items, { key: (item) => item.id, render: (item) => html`<div class="item">${item.value}</div>` })}
           </div>
           <button class="add-btn">Add</button>
         `,
@@ -1288,8 +1189,9 @@ describe('Keyed Reconciliation', () => {
         'test-reuse-nodes',
         () => html`
           <div>
-            ${each(items, (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`, undefined, {
+            ${each(items, {
               key: (item) => item.id,
+              render: (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
             })}
           </div>
         `,
@@ -1328,8 +1230,9 @@ describe('Keyed Reconciliation', () => {
         'test-remove-nodes',
         () => html`
           <div>
-            ${each(items, (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`, undefined, {
+            ${each(items, {
               key: (item) => item.id,
+              render: (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
             })}
           </div>
         `,
@@ -1362,8 +1265,9 @@ describe('Keyed Reconciliation', () => {
         'test-reorder',
         () => html`
           <div>
-            ${each(items, (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`, undefined, {
+            ${each(items, {
               key: (item) => item.id,
+              render: (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`,
             })}
           </div>
         `,
@@ -1393,8 +1297,9 @@ describe('Keyed Reconciliation', () => {
         'test-prepend',
         () => html`
           <div>
-            ${each(items, (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`, undefined, {
+            ${each(items, {
               key: (item) => item.id,
+              render: (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`,
             })}
           </div>
         `,
@@ -1421,9 +1326,7 @@ describe('Keyed Reconciliation', () => {
         'test-empty-to-populated',
         () => html`
           <div>
-            ${each(items, (item) => html`<div class="item">${item.text}</div>`, undefined, {
-              key: (item) => item.id,
-            })}
+            ${each(items, { key: (item) => item.id, render: (item) => html`<div class="item">${item.text}</div>` })}
           </div>
         `,
       );
@@ -1450,9 +1353,7 @@ describe('Keyed Reconciliation', () => {
         'test-populated-to-empty',
         () => html`
           <div>
-            ${each(items, (item) => html`<div class="item">${item.text}</div>`, undefined, {
-              key: (item) => item.id,
-            })}
+            ${each(items, { key: (item) => item.id, render: (item) => html`<div class="item">${item.text}</div>` })}
           </div>
         `,
       );
@@ -1473,9 +1374,7 @@ describe('Keyed Reconciliation', () => {
         'test-single-item',
         () => html`
           <div>
-            ${each(items, (item) => html`<div class="item">${item.text}</div>`, undefined, {
-              key: (item) => item.id,
-            })}
+            ${each(items, { key: (item) => item.id, render: (item) => html`<div class="item">${item.text}</div>` })}
           </div>
         `,
       );
@@ -1496,12 +1395,11 @@ describe('Keyed Reconciliation', () => {
         'test-fallback-empty',
         () => html`
           <div>
-            ${each(
-              items,
-              (item) => html`<div class="item">${item}</div>`,
-              () => html`<div class="empty">No items</div>`,
-              { key: (i) => i },
-            )}
+            ${each(items, {
+              fallback: () => html`<div class="empty">No items</div>`,
+              key: (i) => i,
+              render: (item) => html`<div class="item">${item}</div>`,
+            })}
           </div>
         `,
       );
@@ -1519,12 +1417,11 @@ describe('Keyed Reconciliation', () => {
         'test-fallback-hidden',
         () => html`
           <div>
-            ${each(
-              items,
-              (item) => html`<div class="item">${item}</div>`,
-              () => html`<div class="empty">No items</div>`,
-              { key: (i) => i },
-            )}
+            ${each(items, {
+              fallback: () => html`<div class="empty">No items</div>`,
+              key: (i) => i,
+              render: (item) => html`<div class="item">${item}</div>`,
+            })}
           </div>
         `,
       );
@@ -1542,12 +1439,11 @@ describe('Keyed Reconciliation', () => {
         'test-fallback-toggle',
         () => html`
           <div>
-            ${each(
-              items,
-              (item) => html`<div class="item">${item}</div>`,
-              () => html`<div class="empty">No items</div>`,
-              { key: (i) => i },
-            )}
+            ${each(items, {
+              fallback: () => html`<div class="empty">No items</div>`,
+              key: (i) => i,
+              render: (item) => html`<div class="item">${item}</div>`,
+            })}
           </div>
         `,
       );
@@ -1591,9 +1487,7 @@ describe('List Filtering', () => {
           <button class="all" @click=${() => (filter.value = 'all')}>All</button>
           <button class="active" @click=${() => (filter.value = 'active')}>Active</button>
           <button class="completed" @click=${() => (filter.value = 'completed')}>Completed</button>
-          ${each(filtered, (item) => html`<div class="item">${item.text}</div>`, undefined, {
-            key: (item) => item.id,
-          })}
+          ${each(filtered, { key: (item) => item.id, render: (item) => html`<div class="item">${item.text}</div>` })}
         </div>
       `,
     );
@@ -1627,7 +1521,7 @@ describe('List Filtering', () => {
       'test-filter-update',
       () => html`
         <div>
-          ${each(filtered, (item) => html`<div class="item">${item.id}</div>`, undefined, { key: (item) => item.id })}
+          ${each(filtered, { key: (item) => item.id, render: (item) => html`<div class="item">${item.id}</div>` })}
         </div>
       `,
     );
@@ -1659,16 +1553,14 @@ describe('State Management', () => {
         'test-toggle',
         () => html`
           <div>
-            ${each(
-              todos,
-              (t) => html`
+            ${each(todos, {
+              key: (t) => t.id,
+              render: (t) => html`
                 <input type="checkbox" ?checked=${() => t.completed} @change=${() => toggle(t.id)} />
                 <span class=${() => (t.completed ? 'done' : '')}>${t.text}</span>
                 <span class="status">${t.completed ? 'done' : 'todo'}</span>
               `,
-              undefined,
-              { key: (t) => t.id },
-            )}
+            })}
           </div>
         `,
       );
@@ -1701,15 +1593,13 @@ describe('State Management', () => {
         'test-multi-toggle',
         () => html`
           <div>
-            ${each(
-              todos,
-              (t) => html`
+            ${each(todos, {
+              key: (t) => t.id,
+              render: (t) => html`
                 <input type="checkbox" ?checked=${() => t.completed} @change=${() => toggle(t.id)} />
                 <span class="status">${t.completed ? 'done' : 'todo'}</span>
               `,
-              undefined,
-              { key: (t) => t.id },
-            )}
+            })}
           </div>
         `,
       );

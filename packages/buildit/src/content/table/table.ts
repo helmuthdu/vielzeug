@@ -1,7 +1,8 @@
-import { aria, defineComponent, effect, html, onMount } from '@vielzeug/craftit';
+import { define, effect, html, onMount } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
+import { type PropBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './table.css?inline';
 
@@ -133,66 +134,20 @@ function buildTable(
   };
 }
 
-/**
- * Accessible data table. Compose with `<bit-tr>`, `<bit-th>`, and `<bit-td>`.
- * Add `head` to header rows and `foot` to footer rows.
- *
- * @element bit-table
- *
- * @attr {string}  caption  - Visible caption and accessible label
- * @attr {string}  color    - Header theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {boolean} bordered - Outer border and radius
- * @attr {boolean} loading  - Busy / loading state
- * @attr {string}  size     - Size variant: 'sm' | 'md' | 'lg'
- * @attr {boolean} sticky   - Stick header cells during vertical scroll
- * @attr {boolean} striped  - Alternating row backgrounds
- *
- * @part scroll - Horizontally-scrollable container
- * @part table  - The native `<table>` element
- * @part head   - The native `<thead>` element
- * @part body   - The native `<tbody>` element
- * @part foot   - The native `<tfoot>` element
- *
- * @cssprop --table-bg                  - Table background
- * @cssprop --table-border              - Full border shorthand for row separators (e.g. `2px solid red`)
- * @cssprop --table-header-bg           - Header row background
- * @cssprop --table-header-color        - Header cell text color
- * @cssprop --table-cell-padding        - Cell padding (e.g. `0.75rem 1rem`)
- * @cssprop --table-cell-font-size      - Cell font size
- * @cssprop --table-cell-color          - Body cell text color
- * @cssprop --table-stripe-bg           - Stripe row background
- * @cssprop --table-row-hover-bg        - Row hover background
- * @cssprop --table-radius              - Outer corner radius
- * @cssprop --table-shadow              - Outer box shadow
- * @cssprop --table-sticky-max-height   - Max height when `sticky` is active (default `24rem`)
- *
- * @example
- * ```html
- * <bit-table caption="Members" striped bordered color="primary">
- *   <bit-tr head>
- *     <bit-th scope="col">Name</bit-th>
- *     <bit-th scope="col">Role</bit-th>
- *   </bit-tr>
- *   <bit-tr><bit-td>Alice</bit-td><bit-td>Admin</bit-td></bit-tr>
- *   <bit-tr><bit-td>Bob</bit-td><bit-td>Editor</bit-td></bit-tr>
- *   <bit-tr foot><bit-td colspan="2">2 members</bit-td></bit-tr>
- * </bit-table>
- * ```
- */
-export const TABLE_TAG = defineComponent<BitTableProps>({
+export const TABLE_TAG = define<BitTableProps>('bit-table', {
   props: {
-    bordered: { default: false, type: Boolean },
-    caption: { default: undefined },
-    color: { default: undefined },
-    loading: { default: false, type: Boolean },
-    size: { default: undefined },
-    sticky: { default: false, type: Boolean },
-    striped: { default: false, type: Boolean },
-  },
+    ...themableBundle,
+    ...sizableBundle,
+    bordered: false,
+    caption: undefined,
+    loading: false,
+    sticky: false,
+    striped: false,
+  } satisfies PropBundle<BitTableProps>,
   setup({ host, props }) {
-    aria({
-      busy: () => props.loading.value,
-      label: () => props.caption.value ?? null,
+    host.bind('attr', {
+      ariaBusy: () => (props.loading.value ? 'true' : null),
+      ariaLabel: () => props.caption.value ?? null,
     });
     // Build the fully-native shadow table via DOM APIs (not innerHTML) to avoid
     // HTML-parser foster-parenting which would eject <slot> elements from table
@@ -222,14 +177,14 @@ export const TABLE_TAG = defineComponent<BitTableProps>({
       });
 
       // Initial build
-      let cleanupCellObservers = buildTable(host, thead, tbody, tfoot);
+      let cleanupCellObservers = buildTable(host.el, thead, tbody, tfoot);
       // Rebuild whenever direct children change (rows added / removed / reordered)
       const structureObserver = new MutationObserver(() => {
         cleanupCellObservers();
-        cleanupCellObservers = buildTable(host, thead, tbody, tfoot);
+        cleanupCellObservers = buildTable(host.el, thead, tbody, tfoot);
       });
 
-      structureObserver.observe(host, { childList: true });
+      structureObserver.observe(host.el, { childList: true });
 
       return () => {
         structureObserver.disconnect();
@@ -240,5 +195,4 @@ export const TABLE_TAG = defineComponent<BitTableProps>({
     return html`<div class="scroll-container"></div>`;
   },
   styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
-  tag: 'bit-table',
 });

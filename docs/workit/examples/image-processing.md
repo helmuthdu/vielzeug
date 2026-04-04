@@ -31,7 +31,7 @@ const imagePool = createWorker<ImageTask, ImageResult>(
     }
     return { pixels: output };
   },
-  { size: 2 },
+  { concurrency: 2 },
 );
 
 async function convertToGrayscale(imageData: ImageData): Promise<ImageData> {

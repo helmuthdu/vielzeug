@@ -1,4 +1,4 @@
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-checkbox', () => {
   let fixture: Fixture<HTMLElement>;
@@ -20,10 +20,17 @@ describe('bit-checkbox', () => {
       expect(fixture.query('slot')).toBeTruthy();
     });
 
-    it('renders checkmark and dash SVG icons inside the box', async () => {
+    it('renders checkmark and dash icons inside the box', async () => {
       fixture = await mount('bit-checkbox');
-      expect(fixture.query('.checkmark')).toBeTruthy();
-      expect(fixture.query('.dash')).toBeTruthy();
+      expect(fixture.query('bit-icon[name="check"]')).toBeTruthy();
+      expect(fixture.query('bit-icon[name="minus"]')).toBeTruthy();
+    });
+
+    it('renders icon state classes expected by the stylesheet', async () => {
+      fixture = await mount('bit-checkbox');
+
+      expect(fixture.query('bit-icon.checkmark[name="check"]')).toBeTruthy();
+      expect(fixture.query('bit-icon.dash[name="minus"]')).toBeTruthy();
     });
 
     it('renders slot content as label text', async () => {
@@ -154,7 +161,6 @@ describe('bit-checkbox', () => {
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
 
       expect(detail.checked).toBe(true);
-      expect(detail.value).toBe(true);
       expect(detail.fieldValue).toBe('on');
       expect(detail.originalEvent).toBeDefined();
     });
@@ -170,7 +176,6 @@ describe('bit-checkbox', () => {
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
 
       expect(detail.checked).toBe(false);
-      expect(detail.value).toBe(false);
     });
 
     it('emits change on Space keypress', async () => {

@@ -31,6 +31,30 @@ container
 const service = container.get(ServiceToken);
 ```
 
+### Minimal API (Recommended for New Code)
+
+For a cleaner, more ergonomic development experience, use the simplified convenience methods:
+
+```typescript
+import { createContainer, createToken } from '@vielzeug/wireit';
+
+const DbToken = createToken<Database>('Database');
+const ServiceToken = createToken<UserService>('UserService');
+
+const container = createContainer();
+
+// Auto-detects whether it's a class, factory, or value
+container.set(DbToken, Database, { deps: [DbToken] });
+container.set(ServiceToken, UserService, { deps: [DbToken] });
+
+// Always async — handles both sync and async providers uniformly
+const service = await container.resolve(ServiceToken);
+const [db, cache] = await container.resolveAll([DbToken, CacheToken]);
+
+// Optional resolution
+const optional = await container.resolveOptional(MissingToken); // undefined
+```
+
 ## Features
 
 - ✅ **Typed tokens** — `createToken<T>(description)` — type-safe, no magic strings
@@ -48,6 +72,14 @@ const service = container.get(ServiceToken);
 - ✅ **Snapshot/Restore** — `snapshot()` and `restore(snap)` for stateless test isolation
 - ✅ **Debug** — `debug()` walks the full parent chain and lists all tokens and aliases
 - ✅ **Zero dependencies** — <2 kB gzipped, pure TypeScript ESM
+
+## Recent Improvements (v2+)
+
+- **Resource cleanup** — Dispose hooks now called for replaced and restored instances, preventing resource leaks
+- **Async failure retry** — Failed async singleton resolutions can now be retried (no sticky failures)
+- **Consistent lifecycle** — `clear()` now properly guards disposed state for consistency
+- **Minimal API surface** — New `set()`, `resolve()`, `resolveAll()`, `resolveOptional()` methods for cleaner, more ergonomic code
+- **Improved internals** — Removed module-scoped factory indirection; cleaner static factory methods
 
 ## Usage
 

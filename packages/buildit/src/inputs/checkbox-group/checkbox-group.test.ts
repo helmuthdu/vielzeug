@@ -1,6 +1,6 @@
 import { css } from '@vielzeug/craftit';
-import { type Fixture, mount } from '@vielzeug/craftit/test';
-import { user } from '@vielzeug/craftit/test';
+import { type Fixture, mount } from '@vielzeug/craftit/testing';
+import { user } from '@vielzeug/craftit/testing';
 
 vi.mock('../../styles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../styles')>();
@@ -126,6 +126,7 @@ describe('bit-checkbox-group', () => {
     it('emits change when slotted checkbox dispatches change', async () => {
       fixture = await mount('bit-checkbox-group', { html: checkboxHtml });
       await fixture.flush();
+      await fixture.flush();
 
       const onChange = vi.fn();
 
@@ -197,6 +198,23 @@ describe('bit-checkbox-group', () => {
       expect(fixture.element.getAttribute('values')).toBe('a,b');
       expect(getCheckboxes()[0].hasAttribute('checked')).toBe(true);
       expect(getCheckboxes()[1].hasAttribute('checked')).toBe(true);
+    });
+
+    it('submits the current values as a form-associated field', async () => {
+      fixture = await mount('bit-checkbox-group', {
+        attrs: { name: 'choices', values: 'a,c' },
+        html: checkboxHtml,
+      });
+      await fixture.flush();
+      await fixture.flush();
+
+      const form = document.createElement('form');
+
+      form.appendChild(fixture.element);
+
+      const formData = new FormData(form);
+
+      expect(formData.get('choices')).toBe('a,c');
     });
   });
 

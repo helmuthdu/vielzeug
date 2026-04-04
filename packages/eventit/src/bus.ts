@@ -65,28 +65,47 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
         reject(mergedSignal.reason);
       }
 
-      const unsub = once(
-        event,
-        (payload) => {
-          mergedSignal.removeEventListener('abort', onAbort);
-          resolve(payload);
-        },
-        mergedSignal,
-      );
+      const unsub = once(event, (payload) => {
+        mergedSignal.removeEventListener('abort', onAbort);
+        resolve(payload);
+      });
 
       mergedSignal.addEventListener('abort', onAbort, { once: true });
     });
   }
 
   async function* events<K extends EventKey<T>>(event: K, signal?: AbortSignal): AsyncGenerator<T[K]> {
-    while (true) {
-      try {
-        yield await wait(event, signal);
-      } catch (err) {
-        if (disposeController.signal.aborted || signal?.aborted) return;
+    const queue: T[K][] = [];
+    let wake: (() => void) | undefined;
+    const mergedSignal = signal ? AbortSignal.any([disposeController.signal, signal]) : disposeController.signal;
 
-        throw err;
+    if (mergedSignal.aborted) return;
+
+    const unsub = on(event, (payload) => {
+      queue.push(payload);
+      wake?.();
+    });
+
+    try {
+      while (!mergedSignal.aborted) {
+        if (queue.length) {
+          yield queue.shift()!;
+          continue;
+        }
+
+        const { promise, resolve } = Promise.withResolvers<void>();
+        const abortHandler = (): void => {
+          resolve();
+        };
+
+        wake = resolve;
+        mergedSignal.addEventListener('abort', abortHandler, { once: true });
+        await promise;
+        mergedSignal.removeEventListener('abort', abortHandler);
+        wake = undefined;
       }
+    } finally {
+      unsub();
     }
   }
 

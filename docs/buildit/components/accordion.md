@@ -141,19 +141,19 @@ Glass and frost variants work best when placed over colorful backgrounds or imag
 ```html
 <bit-accordion variant="glass">
   <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">favorite</span>
+    <bit-icon slot="prefix" name="heart" size="18"></bit-icon>
     <span slot="title">Item 1</span>
     <span slot="subtitle">Subitem 1</span>
     Content
   </bit-accordion-item>
   <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">help</span>
+    <bit-icon slot="prefix" name="help-circle" size="18"></bit-icon>
     <span slot="title">Item 2</span>
     <span slot="subtitle">Subitem 2</span>
     Content
   </bit-accordion-item>
   <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">bookmark</span>
+    <bit-icon slot="prefix" name="bookmark" size="18"></bit-icon>
     <span slot="title">Item 3</span>
     <span slot="subtitle">Subitem 3</span>
     Content
@@ -161,24 +161,30 @@ Glass and frost variants work best when placed over colorful backgrounds or imag
 </bit-accordion>
 <bit-accordion variant="frost">
   <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">favorite</span>
+    <bit-icon slot="prefix" name="heart" size="18"></bit-icon>
     <span slot="title">Item 1</span>
     <span slot="subtitle">Subitem 1</span>
     Content
   </bit-accordion-item>
   <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">help</span>
+    <bit-icon slot="prefix" name="help-circle" size="18"></bit-icon>
     <span slot="title">Item 2</span>
     <span slot="subtitle">Subitem 2</span>
     Content
   </bit-accordion-item>
   <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">bookmark</span>
+    <bit-icon slot="prefix" name="bookmark" size="18"></bit-icon>
     <span slot="title">Item 3</span>
     <span slot="subtitle">Subitem 3</span>
     Content
   </bit-accordion-item>
 </bit-accordion>
+
+<script type="module">
+  import '@vielzeug/buildit/accordion';
+  import '@vielzeug/buildit/accordion-item';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>
@@ -223,24 +229,30 @@ Add icons or descriptive subtitles using slots.
 ```html
 <bit-accordion variant="bordered">
   <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">cloud</span>
+    <bit-icon slot="prefix" name="wind" size="18"></bit-icon>
     <span slot="title">Cloud Storage</span>
     <span slot="subtitle">Manage your files and backups</span>
     <p>Access and manage all your cloud storage files, folders, and backups from this central location.</p>
   </bit-accordion-item>
   <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">security</span>
+    <bit-icon slot="prefix" name="shield" size="18"></bit-icon>
     <span slot="title">Security Settings</span>
     <span slot="subtitle">Two-factor authentication and password management</span>
     <p>Configure security options including 2FA, password policies, and login alerts.</p>
   </bit-accordion-item>
   <bit-accordion-item>
-    <span slot="prefix" class="material-symbols-rounded">palette</span>
+    <bit-icon slot="prefix" name="smile-plus" size="18"></bit-icon>
     <span slot="title">Appearance</span>
     <span slot="subtitle">Theme, colors, and layout preferences</span>
     <p>Customize the look and feel of your application with theme and color options.</p>
   </bit-accordion-item>
 </bit-accordion>
+
+<script type="module">
+  import '@vielzeug/buildit/accordion';
+  import '@vielzeug/buildit/accordion-item';
+  import '@vielzeug/buildit/icon';
+</script>
 ```
 
 </ComponentPreview>

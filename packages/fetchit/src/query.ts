@@ -6,13 +6,11 @@ import type { QueryKey, QueryState, QueryStatus, Unsubscribe } from './types';
 import { toError } from './errors';
 import { DEFAULT_RETRY, getRetryConfig } from './retry';
 import { stableStringify } from './serialize';
-import { dispatch, makeState } from './types';
+import { dispatch, makeState } from './state';
 
 const DEFAULT_GC = 5 * 60_000;
 
 export type QueryFnContext = {
-  /** The cache key for the query that triggered this fetch. */
-  key: QueryKey;
   signal: AbortSignal;
 };
 
@@ -45,8 +43,15 @@ type CacheEntry<T = unknown> = {
   updatedAt: number;
 };
 
+export const STALE_TIMES = {
+  always: 0,
+  long: 5 * 60_000,
+  never: Infinity,
+  short: 30_000,
+} as const;
+
 export function createQuery(opts?: QueryClientOptions) {
-  const staleTimeDefault = opts?.staleTime ?? 0;
+  const staleTimeDefault = opts?.staleTime ?? Infinity;
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
   const retryDefault = opts?.retry ?? DEFAULT_RETRY;
   const retryDelayDefault = opts?.retryDelay;
@@ -145,7 +150,7 @@ export function createQuery(opts?: QueryClientOptions) {
 
     const p = (async () => {
       try {
-        const data = await retry(() => queryFn({ key: queryKey, signal: controller.signal }), {
+        const data = await retry(() => queryFn({ signal: controller.signal }), {
           ...retryOpts,
           signal: controller.signal,
         });

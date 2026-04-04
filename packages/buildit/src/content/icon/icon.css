@@ -1,0 +1,14 @@
+:host {
+  display: inline-flex;
+  line-height: 0;
+  vertical-align: middle;
+  color: inherit;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+svg {
+  display: block;
+}

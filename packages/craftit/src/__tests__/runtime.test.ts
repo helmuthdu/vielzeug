@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { aria, fire } from '../core/runtime';
-import { signal } from '../index';
+import { fire } from '../runtime';
 
 describe('Runtime: fire', () => {
   it('should dispatch a CustomEvent when detail is provided', () => {
@@ -73,13 +72,13 @@ describe('Runtime: fire', () => {
     expect(event.type).toBe('focus');
   });
 
-  it('should dispatch a regular Event for basic DOM events', () => {
+  it('should dispatch a regular Event via fire.event', () => {
     const target = document.createElement('input');
     const handler = vi.fn();
 
     target.addEventListener('input', handler);
 
-    fire.basic(target, 'input');
+    fire.event(target, new Event('input'));
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -136,35 +135,5 @@ describe('Runtime: fire', () => {
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler.mock.calls[0][0]).toBe(event);
-  });
-});
-
-describe('Runtime: aria', () => {
-  it('should remove aria-* attribute when value is false', () => {
-    const target = document.createElement('button');
-
-    target.setAttribute('aria-expanded', 'true');
-
-    const cleanup = aria(target, { expanded: false });
-
-    expect(target.hasAttribute('aria-expanded')).toBe(false);
-
-    cleanup();
-  });
-
-  it('should reactively remove and restore aria-* attribute', () => {
-    const target = document.createElement('button');
-    const expanded = signal(true);
-    const cleanup = aria(target, { expanded: () => expanded.value });
-
-    expect(target.getAttribute('aria-expanded')).toBe('true');
-
-    expanded.value = false;
-    expect(target.hasAttribute('aria-expanded')).toBe(false);
-
-    expanded.value = true;
-    expect(target.getAttribute('aria-expanded')).toBe('true');
-
-    cleanup();
   });
 });

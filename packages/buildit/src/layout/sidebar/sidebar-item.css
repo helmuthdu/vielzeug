@@ -1,3 +1,11 @@
+/*
+ * Simplified and unified sidebar-item CSS:
+ * - Unified badge overlay logic
+ * - Grouped collapsed mode rules
+ * - Combined state rules (active, disabled, hover, focus)
+ * - Clarified selectors for maintainability
+ */
+
 @layer buildit.base {
   :host {
     display: block;
@@ -21,25 +29,22 @@
     cursor: pointer;
     user-select: none;
     outline: none;
-    border-radius: var(--rounded-sm);
+    border-radius: var(--rounded-lg);
     transition:
       background var(--transition-fast),
       color var(--transition-fast);
   }
 
-  /* Make <a> items look like the container */
   a.item {
     text-decoration: none;
   }
 
-  .item:hover {
-    color: var(--sidebar-item-hover-color, var(--color-contrast-900));
-    background: var(--sidebar-item-hover-bg, var(--color-contrast-100));
-  }
-
+  .item:hover,
   .item:focus-visible {
+    color: var(--sidebar-item-hover-color, var(--color-contrast-900));
     outline: var(--focus-ring);
     outline-offset: 1px;
+    background: var(--sidebar-item-hover-bg, var(--color-contrast-100));
   }
 
   :host([active]) .item {
@@ -52,19 +57,22 @@
   }
 
   :host([active]) .item::before {
-    position: absolute;
-    inset-block: var(--size-1);
-    inset-inline-start: 0;
-    width: 3px;
-    content: '';
-    background: var(--sidebar-item-indicator, var(--color-primary));
-    border-radius: var(--rounded-full);
+    display: none;
   }
 
-  :host([disabled]) .item {
+  :host([disabled]) .item,
+  :host([disabled]) .item:hover,
+  :host([disabled]) .item:focus-visible {
+    color: var(--sidebar-item-disabled-color, var(--color-contrast-300));
     pointer-events: none;
     cursor: not-allowed;
-    opacity: 0.5;
+    outline: none;
+    background: none;
+    opacity: 1;
+  }
+
+  :host([disabled]) .item-icon {
+    color: var(--sidebar-item-disabled-color, var(--color-contrast-300));
   }
 
   .item-icon {
@@ -74,6 +82,7 @@
     justify-content: center;
     width: var(--size-5);
     height: var(--size-5);
+    margin: 0 auto;
   }
 
   .item-label {
@@ -93,9 +102,13 @@
     transition: opacity var(--transition-fast);
   }
 
-  /* Collapsed sidebar: hide text/end content */
-  :host([sidebar-collapsed]) .item-label,
-  :host([sidebar-collapsed]) .item-end {
+  /* Collapsed sidebar: hide label text, adjust layout, overlay badge */
+  :host([sidebar-collapsed]) .item,
+  :host([sidebar-collapsed]) .item-icon {
+    position: relative;
+  }
+
+  :host([sidebar-collapsed]) .item-label {
     width: 0;
     overflow: hidden;
     pointer-events: none;
@@ -104,11 +117,70 @@
 
   :host([sidebar-collapsed]) .item {
     gap: 0;
+    align-items: center;
     justify-content: center;
-    padding: var(--size-2) var(--size-4);
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    padding: 0;
   }
 
-  :host([sidebar-collapsed][active]) .item::before {
+  :host([sidebar-collapsed]) .item::before {
     inset-block: var(--size-2);
+  }
+
+  :host([sidebar-collapsed]) .item-icon {
+    width: var(--size-7);
+    height: var(--size-7);
+    padding: var(--size-1-5);
+    font-size: 1.5em;
+  }
+
+  :host([sidebar-collapsed][active]) .item {
+    background: none;
+  }
+
+  :host([sidebar-collapsed]) .item:hover {
+    background: none;
+  }
+
+  :host([sidebar-collapsed][active]) .item-icon {
+    background: var(
+      --sidebar-item-active-bg,
+      var(--color-primary-100, color-mix(in srgb, var(--color-primary) 12%, transparent))
+    );
+    border-radius: var(--rounded-full);
+  }
+
+  :host([sidebar-collapsed]) .item-icon:hover {
+    background: var(--color-contrast-100);
+    border-radius: var(--rounded-full);
+  }
+
+  /* Unified badge overlay logic for collapsed mode */
+  :host([sidebar-collapsed]) .item-end,
+  :host([sidebar-collapsed]) .item-icon .group-badge,
+  :host([sidebar-collapsed]) .item-icon ::slotted([slot='end']) {
+    position: absolute;
+    inset-inline-end: 0;
+    bottom: calc(var(--size-2) * -1);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25em;
+    min-height: 1.25em;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translate(40%, -40%);
+  }
+
+  :host([sidebar-collapsed]) .item-end .group-badge,
+  :host([sidebar-collapsed]) .item-end ::slotted([slot='end']) {
+    position: absolute;
+    inset-inline-end: var(--size-2);
+    top: 50%;
+    z-index: 1;
+    transform: translateY(-50%);
   }
 }

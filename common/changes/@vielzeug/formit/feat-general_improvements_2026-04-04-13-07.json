@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "General Improvements and Bugfixes",
+      "type": "minor",
+      "packageName": "@vielzeug/formit"
+    }
+  ],
+  "packageName": "@vielzeug/formit",
+  "email": "helmuthdu@gmail.com"
+}

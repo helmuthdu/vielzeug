@@ -131,7 +131,7 @@ describe('Query Client', () => {
           },
           key: ['fail'],
           onError,
-          retry: false,
+          retry: 0,
         })
         .catch(() => {});
 
@@ -158,7 +158,7 @@ describe('Query Client', () => {
           },
           key: ['fail'],
           onSettled,
-          retry: false,
+          retry: 0,
         })
         .catch(() => {});
 
@@ -212,7 +212,7 @@ describe('Query Client', () => {
           throw new Error('fail');
         },
         key: ['users', 1],
-        retry: false,
+        retry: 0,
       });
 
       expect(result).toBeUndefined();
@@ -252,7 +252,7 @@ describe('Query Client', () => {
             throw new Error('fail');
           },
           key: ['users', 1],
-          retry: false,
+          retry: 0,
         }),
       ).rejects.toThrow('fail');
 
@@ -378,7 +378,7 @@ describe('Query Client', () => {
             throw new Error('boom');
           },
           key: ['fail'],
-          retry: false,
+          retry: 0,
         })
         .catch(() => {});
 
@@ -465,7 +465,7 @@ describe('Query Client', () => {
             throw new Error('boom');
           },
           key: ['err'],
-          retry: false,
+          retry: 0,
         })
         .catch(() => {});
 

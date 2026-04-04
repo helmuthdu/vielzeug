@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "General Improvements and Bugfixes",
+      "type": "minor",
+      "packageName": "@vielzeug/stateit"
+    }
+  ],
+  "packageName": "@vielzeug/stateit",
+  "email": "helmuthdu@gmail.com"
+}

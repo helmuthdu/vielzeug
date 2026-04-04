@@ -1,4 +1,4 @@
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-radio', () => {
   let fixture: Fixture<HTMLElement>;
@@ -144,7 +144,6 @@ describe('bit-radio', () => {
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
 
       expect(detail.checked).toBe(true);
-      expect(detail.value).toBe(true);
       expect(detail.fieldValue).toBe('yes');
     });
 

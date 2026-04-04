@@ -1,6 +1,8 @@
 export function isSameValue(a: unknown, b: unknown): boolean {
   if (a === b) return true;
 
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+
   if (a instanceof File && b instanceof File) return a.name === b.name && a.size === b.size;
 
   if (a instanceof Blob && b instanceof Blob) return a.size === b.size;

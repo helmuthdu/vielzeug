@@ -1,6 +1,10 @@
-import { computed, createId, defineComponent, fire, handle, html, onMount, ref, watch } from '@vielzeug/craftit';
+import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { closeIcon } from '../../icons';
+import { define, computed, createId, fire, handle, html, onMount, ref, signal, watch } from '@vielzeug/craftit';
+import { createOverlayControl } from '@vielzeug/craftit/controls';
+
+import '../../content/icon/icon';
+import { type PropBundle } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { lockBackground, unlockBackground, useOverlay } from '../../utils';
 import styles from './drawer.css?inline';
@@ -20,15 +24,15 @@ export interface DrawerElement extends HTMLElement, Omit<BitDrawerProps, 'title'
 /** Drawer component properties */
 
 export type BitDrawerEvents = {
-  close: { placement: DrawerPlacement };
-  open: { placement: DrawerPlacement };
+  close: OverlayCloseDetail & { placement: DrawerPlacement };
+  open: OverlayOpenDetail & { placement: DrawerPlacement };
 };
 
 export type BitDrawerProps = {
   /** Backdrop style — 'opaque' (default), 'blur', or 'transparent' */
   backdrop?: DrawerBackdrop;
   /** Show the close (×) button in the header (default: true) */
-  dismissable?: boolean;
+  dismissible?: boolean;
   /**
    * CSS selector for the element inside the drawer that should receive focus on open.
    * Defaults to native dialog focus management (first focusable element).
@@ -71,7 +75,7 @@ export type BitDrawerProps = {
  * @attr {string} size - 'sm' | 'lg' | 'full'
  * @attr {string} title - Visible header title text
  * @attr {string} label - Invisible aria-label (for drawers without a visible title)
- * @attr {boolean} dismissable - Show the close (×) button (default: true)
+ * @attr {boolean} dismissible - Show the close (×) button (default: true)
  * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {boolean} persistent - Prevent backdrop-click from closing (default: false)
  *
@@ -79,8 +83,8 @@ export type BitDrawerProps = {
  * @slot - Main body content
  * @slot footer - Drawer footer content
  *
- * @fires open - When the drawer opens
- * @fires close - When the drawer closes
+ * @fires open - When the drawer opens with detail: { placement, reason }
+ * @fires close - When the drawer closes with detail: { placement, reason }
  *
  * @cssprop --drawer-backdrop - Backdrop background
  * @cssprop --drawer-bg - Panel background color
@@ -101,64 +105,101 @@ export type BitDrawerProps = {
  * </bit-drawer>
  * ```
  */
-export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
-  props: {
-    backdrop: { default: undefined },
-    dismissable: { default: true },
-    'initial-focus': { default: undefined },
-    label: { default: undefined },
-    open: { default: false },
-    persistent: { default: false },
-    placement: { default: 'right' },
-    'return-focus': { default: true },
-    size: { default: undefined },
-    title: { default: undefined },
-  },
+
+/** Event schema for bit-drawer. */
+
+const drawerProps = {
+  backdrop: undefined,
+  dismissible: true,
+  'initial-focus': undefined,
+  label: undefined,
+  open: false,
+  persistent: false,
+  placement: 'right',
+  'return-focus': true,
+  size: undefined,
+  title: undefined,
+} satisfies PropBundle<BitDrawerProps>;
+
+export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', {
+  props: drawerProps,
   setup({ emit, host, props, slots }) {
     const drawerLabelId = createId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();
+    const isOpen = signal(false);
+    let closeReason: OverlayCloseReason = 'programmatic';
 
-    // Header is visible when there is slot content, a title prop, or a close button.
-    const hasHeader = computed(() => slots.has('header').value || !!props.title.value || props.dismissable.value);
+    // Header is visible when there is slot content, a title prop, or a close button
+    const hasHeader = computed(() => slots.has('header').value || !!props.title.value || props.dismissible.value);
     const hasFooter = computed(() => slots.has('footer').value);
 
+    // ────────────────────────────────────────────────────────────────
+    // Overlay State Management
+    // ────────────────────────────────────────────────────────────────
+
     const { applyInitialFocus, captureReturnFocus, restoreFocus } = useOverlay(
-      host,
+      host.el,
       dialogRef,
       () => panelRef.value,
       props,
     );
 
-    const close = () => {
+    const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
       const dialog = dialogRef.value;
 
-      if (!dialog?.open) return;
+      if (!dialog) return;
 
-      dialog.close();
-    };
-
-    const requestClose = (trigger: 'backdrop' | 'button' | 'escape') => {
-      const allowed = fire.custom(host, 'close-request', {
+      const closeAllowed = fire.custom(host.el, 'close-request', {
         cancelable: true,
-        detail: { placement: props.placement.value ?? 'right', trigger },
+        detail: { placement: props.placement.value ?? 'right', reason },
       });
 
-      if (allowed) close();
+      if (!closeAllowed) return;
+
+      closeReason = reason;
+
+      overlay.close(reason, false);
     };
 
-    const openDrawer = () => {
-      const dialog = dialogRef.value;
+    const overlay = createOverlayControl({
+      elements: {
+        boundary: host.el,
+        panel: panelRef.value,
+      },
+      isOpen,
+      onOpen: (reason) => emit('open', { placement: props.placement.value ?? 'right', reason }),
+      setOpen: (next, reason) => {
+        const dialog = dialogRef.value;
 
-      if (!dialog || dialog.open) return;
+        if (!dialog) return;
 
-      captureReturnFocus();
-      dialog.showModal();
-      lockBackground(host);
+        if (next) {
+          if (dialog.open) return;
 
-      applyInitialFocus();
-      emit('open', { placement: props.placement.value ?? 'right' });
-    };
+          captureReturnFocus();
+          dialog.showModal();
+          lockBackground(host.el);
+          applyInitialFocus();
+          isOpen.value = true;
+
+          return;
+        }
+
+        if (dialog.open) {
+          closeReason = reason as OverlayCloseReason;
+          dialog.close();
+
+          return;
+        }
+
+        isOpen.value = false;
+      },
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Lifecycle: Setup Drawer Integration
+    // ────────────────────────────────────────────────────────────────
 
     onMount(() => {
       const dialog = dialogRef.value;
@@ -166,33 +207,56 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
       if (!dialog) return;
 
       // Expose imperative API
-      const el = host as DrawerElement;
+      const el = host.el as DrawerElement;
 
-      el.show = openDrawer;
-      el.hide = close;
+      el.show = () => {
+        overlay.open('programmatic');
+      };
+
+      el.hide = () => {
+        overlay.close('programmatic', false);
+      };
+
+      // ────────────────────────────────────────────────────────────
+      // Event Handlers: Native Close, Escape, Backdrop Click
+      // ────────────────────────────────────────────────────────────
 
       const handleNativeClose = () => {
         unlockBackground();
-        host.removeAttribute('open');
+        host.el.removeAttribute('open');
+        isOpen.value = false;
         restoreFocus();
-        emit('close', { placement: props.placement.value ?? 'right' });
+        emit('close', { placement: props.placement.value ?? 'right', reason: closeReason });
+        closeReason = 'programmatic';
       };
 
       const handleCancel = (e: Event) => {
         e.preventDefault();
 
-        if (!props.persistent.value) requestClose('escape');
+        if (props.persistent.value) return;
+
+        requestClose('escape');
       };
 
       const handleBackdropClick = (e: MouseEvent) => {
-        if (!props.persistent.value && e.target === dialog) requestClose('backdrop');
+        if (props.persistent.value) return;
+
+        if (e.target !== dialog) return; // Click inside panel
+
+        requestClose('outside-click');
       };
 
+      // Sync open prop → native dialog
       watch(
         props.open,
         (isOpen) => {
-          if (isOpen) openDrawer();
-          else close();
+          if (isOpen) {
+            overlay.open('programmatic');
+
+            return;
+          }
+
+          overlay.close('programmatic', false);
         },
         { immediate: true },
       );
@@ -225,9 +289,15 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
               part="close-btn"
               type="button"
               aria-label="Close"
-              ?hidden=${() => !props.dismissable.value}
-              @click="${() => requestClose('button')}">
-              ${closeIcon}
+              ?hidden=${() => !props.dismissible.value}
+              @click="${() => {
+                const dialog = dialogRef.value;
+
+                if (!dialog) return;
+
+                requestClose('trigger');
+              }}">
+              <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
             </button>
           </div>
           <div class="body" part="body">
@@ -241,5 +311,4 @@ export const DRAWER_TAG = defineComponent<BitDrawerProps, BitDrawerEvents>({
     `;
   },
   styles: [elevationMixin, forcedColorsMixin, coarsePointerMixin, reducedMotionMixin, styles],
-  tag: 'bit-drawer',
 });

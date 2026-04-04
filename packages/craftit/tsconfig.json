@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "include": ["src/**/*.d.ts", "src/**/*.ts"],
-  "exclude": ["node_modules", "src/**/__tests__/**", "src/**/*.test.ts"],
+  "exclude": ["node_modules"],
   "compilerOptions": {
     "customConditions": ["source"]
   }

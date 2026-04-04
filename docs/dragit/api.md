@@ -23,7 +23,7 @@ description: Complete API reference for Dragit with type signatures, option docu
 interface DropZoneOptions {
   element: HTMLElement;
   accept?: string[];
-  disabled?: () => boolean;
+  disabled?: boolean | (() => boolean);
   dropEffect?: DataTransfer['dropEffect'];
   onDragEnter?: (event: DragEvent) => void;
   onDragLeave?: (event: DragEvent) => void;
@@ -48,9 +48,10 @@ interface DropZone {
 
 ```ts
 interface SortableOptions {
-  container: HTMLElement;
+  element: HTMLElement;
   handle?: string;
-  disabled?: () => boolean;
+  itemAttribute?: string;
+  disabled?: boolean | (() => boolean);
   onDragStart?: (id: string, event: DragEvent) => void;
   onDragEnd?: (event: DragEvent) => void;
   onReorder?: (orderedIds: string[]) => void;
@@ -61,7 +62,6 @@ interface SortableOptions {
 
 ```ts
 interface Sortable {
-  refresh(): void;
   destroy(): void;
   [Symbol.dispose](): void;
 }
@@ -81,7 +81,7 @@ Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` hand
 | ---------------- | ------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `element`        | `HTMLElement`                               | —        | **Required.** The element to attach drag listeners to.                                                                                                     |
 | `accept`         | `string[]`                                  | `[]`     | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`). |
-| `disabled`       | `() => boolean`                             | —        | When it returns `true`, all drag events are ignored and hover state does not change. Accepts a function for reactive framework integration.                |
+| `disabled`       | `boolean \| (() => boolean)`                | —        | When truthy, all drag events are ignored and hover state does not change. Accepts a boolean or a function for reactive framework integration.              |
 | `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`      | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                   |
 | `onDragEnter`    | `(event: DragEvent) => void`                | —        | Called when a drag first enters the element. Counter-based — not called again on entry to a child.                                                         |
 | `onDragLeave`    | `(event: DragEvent) => void`                | —        | Called when a drag fully leaves the element. Counter-based — not called when leaving a child.                                                              |
@@ -152,24 +152,25 @@ Alias for `destroy()`. Called automatically when used with the `using` keyword.
 declare function createSortable(options: SortableOptions): Sortable;
 ```
 
-Makes the direct children of a container element reorderable via drag. Each item must have a `data-sort-id` attribute. Returns a `Sortable` handle.
+Makes the direct children of a container element reorderable via drag. Each item must have the identity attribute (`data-sort-id` by default). Returns a `Sortable` handle.
 
-`createSortable` sets `draggable="true"` and `role="listitem"` on qualifying children and sets `role="list"` on the container at initialization.
+`createSortable` sets `draggable="true"` and `role="listitem"` on qualifying children and sets `role="list"` on the container at initialization. A `MutationObserver` keeps these attributes in sync when children are added or removed — no manual `refresh()` call required.
 
-| Option        | Type                                     | Default | Description                                                                                                                                   |
-| ------------- | ---------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `container`   | `HTMLElement`                            | —       | **Required.** The container whose `[data-sort-id]` children become sortable.                                                                  |
-| `handle`      | `string`                                 | —       | CSS selector for a drag handle inside each item. When omitted, the whole item is draggable.                                                   |
-| `disabled`    | `() => boolean`                          | —       | When it returns `true`, `dragstart` is blocked. If a drag is in progress when disabled becomes `true`, `onReorder` will not fire at drag end. |
-| `onDragStart` | `(id: string, event: DragEvent) => void` | —       | Called at the start of a drag. `id` is the `data-sort-id` of the item being dragged.                                                          |
-| `onDragEnd`   | `(event: DragEvent) => void`             | —       | Called when a drag ends, whether completed or cancelled.                                                                                      |
-| `onReorder`   | `(orderedIds: string[]) => void`         | —       | Called with the new order of `data-sort-id` values after a successful drop. Only fires when the order has actually changed.                   |
+| Option          | Type                                     | Default          | Description                                                                                                                                       |
+| --------------- | ---------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `element`       | `HTMLElement`                            | —                | **Required.** The container whose identity-attribute children become sortable.                                                                    |
+| `handle`        | `string`                                 | —                | CSS selector for a drag handle inside each item. When omitted, the whole item is draggable. `draggable` is set on the handle element, not the item. |
+| `itemAttribute` | `string`                                 | `'data-sort-id'` | The attribute used to read each item's stable identity. Can be any attribute name.                                                                |
+| `disabled`      | `boolean \| (() => boolean)`             | —                | When truthy, `dragstart` is blocked. If a drag is in progress when disabled becomes truthy, `onReorder` will not fire at drag end.                |
+| `onDragStart`   | `(id: string, event: DragEvent) => void` | —                | Called at the start of a drag. `id` is the identity attribute value of the item being dragged.                                                    |
+| `onDragEnd`     | `(event: DragEvent) => void`             | —                | Called when a drag ends, whether completed or cancelled.                                                                                          |
+| `onReorder`     | `(orderedIds: string[]) => void`         | —                | Called with the new order of identity values after a successful drop. Only fires when the order actually changed.                                 |
 
 **Returns:** `Sortable`
 
 ```ts
 const sortable = createSortable({
-  container: listEl,
+  element: listEl,
   handle: '.drag-handle',
   onDragStart: (id) => {
     listEl.classList.add('sorting');
@@ -186,22 +187,6 @@ const sortable = createSortable({
 ---
 
 ## `Sortable` Interface
-
-### `sortable.refresh()`
-
-`refresh(): void`
-
-Re-scans the container's children and sets `draggable="true"` and `role="listitem"` on all elements with a `data-sort-id` attribute. Call this after programmatically adding or removing items.
-
-```ts
-// After adding a new item to the DOM:
-const item = document.createElement('li');
-item.dataset.sortId = 'new-item';
-item.textContent = 'New Task';
-listEl.appendChild(item);
-
-sortable.refresh();
-```
 
 ### `sortable.destroy()`
 
@@ -225,11 +210,11 @@ Dragit reads and writes the following DOM attributes:
 
 | Attribute            | Set by                              | Removed by              | Description                                                                                       |
 | -------------------- | ----------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `data-sort-id`       | You                                 | —                       | Required on each sortable item. Used as the stable identifier in `onReorder`.                     |
-| `draggable`          | `createSortable` init / `refresh()` | `destroy()`             | Enables native drag on each item.                                                                 |
-| `role="list"`        | `createSortable` init               | —                       | Accessibility role on the container.                                                              |
-| `role="listitem"`    | `createSortable` init / `refresh()` | `destroy()`             | Accessibility role on each item.                                                                  |
-| `data-dragging`      | During drag                         | `dragend` / `destroy()` | Applied to the item currently being dragged. Use for styling: `[data-dragging] { opacity: 0.4 }`. |
+| `data-sort-id`       | You                                          | —                       | Default identity attribute on each sortable item. Configurable via `itemAttribute`.                                              |
+| `draggable`          | `createSortable` init / `MutationObserver`   | `destroy()`             | Enables native drag on each item (or its handle when `handle` is set).                                                          |
+| `role="list"`        | `createSortable` init                        | —                       | Accessibility role on the container.                                                                                             |
+| `role="listitem"`    | `createSortable` init / `MutationObserver`   | `destroy()`             | Accessibility role on each item.                                                                                                 |
+| `data-dragging`      | During drag                                  | `dragend` / `destroy()` | Applied to the item currently being dragged. The item is hidden (`opacity: 0`) automatically while dragging.                    |
 | `aria-hidden="true"` | On placeholder creation             | Placeholder removal     | Applied to the `.dragit-placeholder` element.                                                     |
 
 ## CSS Classes

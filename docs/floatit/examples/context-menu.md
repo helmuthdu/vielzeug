@@ -20,7 +20,7 @@ import { flip, positionFloat, shift } from '@vielzeug/floatit';
 
 const menu = document.querySelector<HTMLElement>('#context-menu')!;
 
-document.addEventListener('contextmenu', async (e) => {
+document.addEventListener('contextmenu', (e) => {
   e.preventDefault();
 
   // Create a zero-size virtual element at the cursor
@@ -30,7 +30,7 @@ document.addEventListener('contextmenu', async (e) => {
 
   menu.style.display = 'block';
 
-  await positionFloat(virtualRef as Element, menu, {
+  positionFloat(virtualRef as Element, menu, {
     placement: 'bottom-start',
     middleware: [flip(), shift({ padding: 8 })],
   });

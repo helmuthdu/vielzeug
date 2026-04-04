@@ -10,20 +10,20 @@ Format times respecting user locale, language, and timezone.
 ## Basic Locale Formatting
 
 ```ts
-import { d } from '@vielzeug/timit';
+import { t } from '@vielzeug/timit';
 
 const time = '2026-03-21T10:15:30Z';
 
 // English (US)
-d.format(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
+t.formatHuman(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
 // → "3/21/2026, 10:15 AM"
 
 // German
-d.format(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' });
+t.formatHuman(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' });
 // → "21.3.2026, 11:15"
 
 // Japanese
-d.format(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
+t.formatHuman(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
 // → "2026/3/21 19:15"
 ```
 
@@ -32,12 +32,14 @@ d.format(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
 ```ts
 const time = '2026-03-21T10:15:30Z';
 
-const patterns = ['short', 'long', 'iso', 'date-only', 'time-only'] as const;
+const patterns = ['short', 'long', 'date-only', 'time-only'] as const;
 
 for (const pattern of patterns) {
-  const formatted = d.format(time, { pattern, locale: 'en-GB', tz: 'UTC' });
+  const formatted = t.formatHuman(time, { pattern, locale: 'en-GB', tz: 'UTC' });
   console.log(`${pattern.padEnd(10)} ${formatted}`);
 }
+
+console.log(`iso       ${t.formatISO(time)}`);
 
 // Output:
 // short      21/03/2026, 10:15
@@ -52,7 +54,7 @@ for (const pattern of patterns) {
 Use the `intl` option for custom `Intl.DateTimeFormatOptions`:
 
 ```ts
-d.format(time, {
+t.formatHuman(time, {
   locale: 'de-DE',
   tz: 'Europe/Berlin',
   pattern: 'short',
@@ -72,7 +74,7 @@ Format a span of time:
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-d.formatRange(start, end, {
+t.formatRange(start, end, {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
@@ -84,7 +86,7 @@ d.formatRange(start, end, {
 
 ```ts
 function formatUserTime(time: string, userLocale: string, userTz: string) {
-  return d.format(time, {
+  return t.formatHuman(time, {
     pattern: 'long',
     locale: userLocale,
     tz: userTz,
@@ -97,4 +99,3 @@ console.log(formatUserTime('2026-03-21T10:15:30Z', 'fr-FR', 'Europe/Paris'));
 console.log(formatUserTime('2026-03-21T10:15:30Z', 'es-ES', 'Europe/Madrid'));
 // → "sábado, 21 de marzo de 2026, 11:15:30"
 ```
-

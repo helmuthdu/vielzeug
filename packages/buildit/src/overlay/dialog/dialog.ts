@@ -1,10 +1,13 @@
-import { computed, defineComponent, handle, html, onMount, ref, watch, fire } from '@vielzeug/craftit';
+import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
+
+import { define, computed, handle, html, onMount, ref, signal, watch, fire } from '@vielzeug/craftit';
+import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import type { PaddingSize, RoundedSize } from '../../types';
 
-import { closeIcon } from '../../icons';
-import { coarsePointerMixin, elevationMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
-import { awaitExit } from '../../utils/animation';
+import '../../content/icon/icon';
+import { type PropBundle } from '../../inputs/shared/bundles';
+import { coarsePointerMixin, elevationMixin, roundedVariantMixin } from '../../styles';
 import { lockBackground, unlockBackground } from '../../utils/background-lock';
 import { useOverlay } from '../../utils/use-overlay';
 import componentStyles from './dialog.css?inline';
@@ -16,8 +19,8 @@ type DialogElevation = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 /** Dialog component properties */
 
 export type BitDialogEvents = {
-  close: undefined;
-  open: undefined;
+  close: OverlayCloseDetail;
+  open: OverlayOpenDetail;
 };
 
 export type BitDialogProps = {
@@ -42,7 +45,7 @@ export type BitDialogProps = {
   /** When true, clicking the backdrop does not close the dialog */
   persistent?: boolean;
   /**
-   * When true (default), focus returns to the element that triggered the dialog after it closes.
+   * When true (default), the focus returns to the element that triggered the dialog after it closes.
    * Set to false if you want to manage focus manually.
    */
   'return-focus'?: boolean;
@@ -69,8 +72,8 @@ export type BitDialogProps = {
  * @attr {string} elevation - Panel shadow: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
  * @attr {string} padding - Padding: 'none' | 'sm' | 'md' | 'lg' | 'xl'
  *
- * @fires open - Fired when the dialog opens
- * @fires close - Fired when the dialog closes (any trigger)
+ * @fires open - Fired when the dialog opens with detail: { reason }
+ * @fires close - Fired when the dialog closes with detail: { reason }
  *
  * @slot - Dialog body content
  * @slot header - Custom header content (replaces the default title + close layout)
@@ -107,30 +110,80 @@ export type BitDialogProps = {
  * </script>
  * ```
  */
-export const DIALOG_TAG = defineComponent<BitDialogProps, BitDialogEvents>({
-  props: {
-    backdrop: { default: undefined },
-    dismissible: { default: false },
-    elevation: { default: undefined },
-    'initial-focus': { default: undefined },
-    label: { default: '' },
-    open: { default: false },
-    padding: { default: undefined },
-    persistent: { default: false },
-    'return-focus': { default: true },
-    rounded: { default: undefined },
-    size: { default: 'md' },
-  },
+
+/** Event schema for bit-dialog. */
+const dialogProps = {
+  backdrop: undefined,
+  dismissible: false,
+  elevation: undefined,
+  'initial-focus': undefined,
+  label: '',
+  open: false,
+  padding: undefined,
+  persistent: false,
+  'return-focus': true,
+  rounded: undefined,
+  size: 'md',
+} satisfies PropBundle<BitDialogProps>;
+
+export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', {
+  props: dialogProps,
   setup({ emit, host, props, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
+    const isOpen = signal(false);
     const hasHeader = computed(() => slots.has('header').value || !!props.label.value || props.dismissible.value);
     const hasFooter = computed(() => slots.has('footer').value);
+    let closeReason: OverlayCloseReason = 'programmatic';
+
+    // ────────────────────────────────────────────────────────────────
+    // Overlay State Management
+    // ────────────────────────────────────────────────────────────────
+
     const { applyInitialFocus, captureReturnFocus, closeWithAnimation, restoreFocus } = useOverlay(
-      host,
+      host.el,
       dialogRef,
       () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
       props,
     );
+
+    const overlay = createOverlayControl({
+      elements: {
+        boundary: host.el,
+        panel: dialogRef.value?.querySelector<HTMLElement>('.panel') ?? null,
+      },
+      isOpen,
+      onOpen: (reason) => emit('open', { reason }),
+      setOpen: (next, reason) => {
+        const dialog = dialogRef.value;
+
+        if (!dialog) return;
+
+        if (next) {
+          if (dialog.open) return;
+
+          captureReturnFocus();
+          dialog.showModal();
+          applyInitialFocus();
+          lockBackground(host.el);
+          isOpen.value = true;
+
+          return;
+        }
+
+        if (dialog.open) {
+          closeReason = reason as OverlayCloseReason;
+          closeWithAnimation();
+
+          return;
+        }
+
+        isOpen.value = false;
+      },
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Lifecycle: Setup Native Dialog Integration
+    // ────────────────────────────────────────────────────────────────
 
     onMount(() => {
       const dialog = dialogRef.value;
@@ -142,47 +195,54 @@ export const DIALOG_TAG = defineComponent<BitDialogProps, BitDialogEvents>({
         props.open,
         (open) => {
           if (open) {
-            if (!dialog.open) {
-              captureReturnFocus();
-              dialog.showModal();
-              applyInitialFocus();
-              lockBackground(host);
-              emit('open');
-            }
-          } else {
-            closeWithAnimation();
+            overlay.open('programmatic');
+
+            return;
           }
+
+          overlay.close('programmatic', false);
         },
         { immediate: true },
       );
 
-      // Native dialog 'close' fires after animation finishes or on programmatic .close()
+      // ────────────────────────────────────────────────────────────
+      // Event Handlers: Close, Escape, Backdrop Click
+      // ────────────────────────────────────────────────────────────
+
       const handleNativeClose = () => {
         unlockBackground();
-        // Sync the open prop back to the host attribute if closed externally
-        host.removeAttribute('open');
-        // Return focus to the triggering element unless opted out
+        host.el.removeAttribute('open');
+        isOpen.value = false;
         restoreFocus();
-        emit('close');
+        emit('close', { reason: closeReason });
+        closeReason = 'programmatic';
       };
-      // Intercept Escape to play exit animation first; also enforce persistent mode
-      const handleKeydown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          e.preventDefault();
 
-          if (!props.persistent.value) {
-            closeWithAnimation();
-          }
+      const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
+        const closeAllowed = fire.custom(host.el, 'close-request', {
+          cancelable: true,
+          detail: { reason },
+        });
+
+        if (!closeAllowed) return;
+
+        closeReason = reason;
+        overlay.close(reason, false);
+      };
+
+      const handleKeydown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && !props.persistent.value) {
+          e.preventDefault();
+          requestClose('escape');
         }
       };
-      // Backdrop click: the click target is the <dialog> element itself (not the panel)
+
       const handleBackdropClick = (e: MouseEvent) => {
         if (props.persistent.value) return;
 
-        // When clicking the backdrop, the event target is the <dialog> element itself.
-        // Clicks inside the panel bubble up with a more specific target.
+        // Click target is the <dialog> element itself (not the panel)
         if (e.target === dialog) {
-          closeWithAnimation();
+          requestClose('outside-click');
         }
       };
 
@@ -203,20 +263,15 @@ export const DIALOG_TAG = defineComponent<BitDialogProps, BitDialogEvents>({
 
       if (!dialog) return;
 
-      fire.custom(dialog, 'close-request');
-      dialog.classList.add('closing');
+      const closeAllowed = fire.custom(host.el, 'close-request', {
+        cancelable: true,
+        detail: { reason: 'trigger' },
+      });
 
-      const panel = dialog.querySelector<HTMLElement>('.panel');
-      const finish = () => {
-        dialog.classList.remove('closing');
-        dialog.close();
-      };
+      if (!closeAllowed) return;
 
-      if (panel) {
-        awaitExit(panel, finish, 'transition');
-      } else {
-        finish();
-      }
+      closeReason = 'trigger';
+      overlay.close('trigger', false);
     };
 
     return html`
@@ -227,7 +282,7 @@ export const DIALOG_TAG = defineComponent<BitDialogProps, BitDialogEvents>({
         :aria-label="${() => props.label.value || null}"
         aria-modal="true">
         <div class="overlay" part="overlay" aria-hidden="true"></div>
-        <div class="panel" part="panel" :data-size="${props.size}">
+        <div class="panel" part="panel" :data-size="${props.size.value}">
           <div class="header" part="header" ?hidden=${() => !hasHeader.value}>
             <slot name="header">
               <span class="title" part="title">${() => props.label.value}</span>
@@ -239,7 +294,7 @@ export const DIALOG_TAG = defineComponent<BitDialogProps, BitDialogEvents>({
               aria-label="Close dialog"
               ?hidden=${() => !props.dismissible.value}
               @click=${handleDismiss}>
-              ${closeIcon}
+              <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
             </button>
           </div>
           <div class="body" part="body">
@@ -252,6 +307,5 @@ export const DIALOG_TAG = defineComponent<BitDialogProps, BitDialogEvents>({
       </dialog>
     `;
   },
-  styles: [elevationMixin, roundedVariantMixin, coarsePointerMixin, reducedMotionMixin, componentStyles],
-  tag: 'bit-dialog',
+  styles: [elevationMixin, roundedVariantMixin, coarsePointerMixin, componentStyles],
 });

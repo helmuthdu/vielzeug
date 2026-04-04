@@ -34,26 +34,17 @@ yarn add @vielzeug/floatit
 ## Quick Start
 
 ```ts
-import { positionFloat, offset, flip, shift, autoUpdate } from '@vielzeug/floatit';
+import { float, offset, flip, shift } from '@vielzeug/floatit';
 
 const reference = document.querySelector('#trigger')!;
 const floating = document.querySelector('#tooltip')!;
 
-// Position once
-await positionFloat(reference, floating, {
+const cleanup = float(reference, floating, {
   placement: 'top',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
 
-// Keep in sync while visible
-const cleanup = autoUpdate(reference, floating, () => {
-  positionFloat(reference, floating, {
-    placement: 'top',
-    middleware: [offset(8), flip(), shift({ padding: 6 })],
-  });
-});
-
-// When done
+// When done:
 cleanup();
 ```
 
@@ -71,8 +62,8 @@ function position(ref: Element, float: HTMLElement) {
 }
 
 // After — Floatit
-import { positionFloat, offset, flip, shift } from '@vielzeug/floatit';
-await positionFloat(reference, floating, {
+import { float, offset, flip, shift } from '@vielzeug/floatit';
+const cleanup = float(reference, floating, {
   placement: 'bottom',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
@@ -81,7 +72,7 @@ await positionFloat(reference, floating, {
 | Feature           | Floatit                                       | Floating UI | Popper.js |
 | ----------------- | --------------------------------------------- | ----------- | --------- |
 | Bundle size       | <PackageInfo package="floatit" type="size" /> | ~8 kB       | ~8 kB     |
-| One-call API      | ✅ `positionFloat`                            | ❌ Manual   | ❌ Manual |
+| One-call API      | ✅ `float`                                    | ❌ Manual   | ❌ Manual |
 | Flip middleware   | ✅                                            | ✅          | ✅        |
 | Shift middleware  | ✅                                            | ✅          | ✅        |
 | Size middleware   | ✅                                            | ✅          | ✅        |
@@ -94,6 +85,7 @@ await positionFloat(reference, floating, {
 
 ## Features
 
+- **`float`** — Positions and keeps in sync with a single call, returns a cleanup
 - **`positionFloat`** — Computes position and applies `left`/`top` inline styles in one call
 - **`computePosition`** — Low-level engine returning `{ x, y, placement }`
 - **`offset`** — Adds a gap between reference and floating element

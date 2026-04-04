@@ -10,7 +10,7 @@ export default defineConfig(
   getConfig(__dirname, {
     entry: {
       index: resolve(__dirname, 'src/index.ts'),
-      test: resolve(__dirname, 'src/test/index.ts'),
+      testing: resolve(__dirname, 'src/testing/index.ts'),
     },
     name: 'eventit',
   }),

@@ -1,9 +1,8 @@
 import {
+  define,
   computed,
   createId,
-  defineComponent,
   defineField,
-  effect,
   handle,
   html,
   onCleanup,
@@ -11,13 +10,15 @@ import {
   ref,
   signal,
 } from '@vielzeug/craftit';
+import { createPressControl } from '@vielzeug/craftit/controls';
 import { each } from '@vielzeug/craftit/directives';
 import { createDropZone } from '@vielzeug/dragit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-import { clearIcon, fileIcon, uploadIcon } from '../../icons';
+import '../../content/icon/icon';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import { disablableBundle, roundableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
 import { FILE_INPUT_SIZE_PRESET } from '../shared/design-presets';
 
 // ============================================
@@ -31,9 +32,8 @@ function formatBytes(bytes: number): string {
   const k = 1024;
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
 
-  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${units[i]}`;
+  return `${(bytes / k ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
-
 function matchesAccept(file: File, accept: string | undefined): boolean {
   if (!accept) return true;
 
@@ -113,6 +113,24 @@ export type BitFileInputProps = {
 // Component Definition
 // ============================================
 
+const fileInputProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  ...roundableBundle,
+  accept: '',
+  error: { default: '' as string, omit: true },
+  fullwidth: false,
+  helper: '',
+  label: '',
+  'max-files': 0,
+  'max-size': 0,
+  multiple: false,
+  name: '',
+  required: false,
+  variant: undefined,
+} satisfies PropBundle<BitFileInputProps>;
+
 /**
  * A file upload component with drag-and-drop support, file list management,
  * and full form integration.
@@ -158,38 +176,27 @@ export type BitFileInputProps = {
  * <bit-file-input variant="bordered" color="primary" />
  * ```
  */
-export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEvents>({
+export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit-file-input', {
   formAssociated: true,
-  props: {
-    accept: { default: '' },
-    color: { default: undefined },
-    disabled: { default: false },
-    error: { default: '', omit: true },
-    fullwidth: { default: false },
-    helper: { default: '' },
-    label: { default: '' },
-    'max-files': { default: 0, type: Number },
-    'max-size': { default: 0, type: Number },
-    multiple: { default: false },
-    name: { default: '' },
-    required: { default: false },
-    rounded: { default: undefined },
-    size: { default: undefined },
-    variant: { default: undefined },
-  },
+  props: fileInputProps,
   setup({ emit, host, props }) {
     // ============================================
     // State
     // ============================================
+
     const files = signal<File[]>([]);
     const isDragging = signal(false);
+    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const maxFilesLimit = computed(() => props['max-files'].value ?? 0);
+    const maxSizeLimit = computed(() => props['max-size'].value ?? 0);
 
     // ============================================
     // Form Integration
     // ============================================
+
     defineField(
       {
-        disabled: computed(() => Boolean(props.disabled.value)),
+        disabled: isDisabled,
         toFormValue: (fi: File[]) => {
           if (fi.length === 0) return null;
 
@@ -212,13 +219,9 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
     // Sync host attributes for CSS selectors
     const isInvalid = computed(() => Boolean(props.error.value));
 
-    effect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      isInvalid.value ? host.setAttribute('invalid', '') : host.removeAttribute('invalid');
-    });
-    effect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      isDragging.value ? host.setAttribute('drag-over', '') : host.removeAttribute('drag-over');
+    host.bind('attr', {
+      'drag-over': () => (isDragging.value ? true : undefined),
+      invalid: () => (isInvalid.value ? true : undefined),
     });
 
     // ============================================
@@ -228,6 +231,7 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
     const labelId = `label-${fileInputId}`;
     const helperId = `helper-${fileInputId}`;
     const errorId = `error-${fileInputId}`;
+
     // ============================================
     // Refs
     // ============================================
@@ -245,11 +249,11 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
         );
       }
 
-      const maxSize = props['max-size'].value ?? 0;
+      const maxSize = maxSizeLimit.value;
 
       if (maxSize > 0) parts.push(`max ${formatBytes(maxSize)}`);
 
-      const maxFiles = props['max-files'].value ?? 0;
+      const maxFiles = maxFilesLimit.value;
 
       if (maxFiles > 0) parts.push(`up to ${maxFiles} file${maxFiles !== 1 ? 's' : ''}`);
 
@@ -260,17 +264,15 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
     // File Management
     // ============================================
     function addFiles(newFiles: File[], originalEvent?: Event): void {
-      if (props.disabled.value) return;
+      if (isDisabled.value) return;
 
-      const maxFilesLimit = props['max-files'].value ?? 0;
-      const maxSizeLimit = props['max-size'].value ?? 0;
       const acceptVal = props.accept.value;
       const isMultiple = Boolean(props.multiple.value);
       let incoming = Array.from(newFiles);
 
       if (!isMultiple) incoming = incoming.slice(0, 1);
 
-      incoming = incoming.filter((f) => isFileAccepted(f, acceptVal) && isFileSizeAllowed(f, maxSizeLimit));
+      incoming = incoming.filter((f) => isFileAccepted(f, acceptVal) && isFileSizeAllowed(f, maxSizeLimit.value));
 
       let updated: File[] = isMultiple ? [...files.value] : [];
 
@@ -278,8 +280,8 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
         if (!updated.includes(f)) updated.push(f);
       }
 
-      if (maxFilesLimit > 0 && updated.length > maxFilesLimit) {
-        updated = updated.slice(0, maxFilesLimit);
+      if (maxFilesLimit.value > 0 && updated.length > maxFilesLimit.value) {
+        updated = updated.slice(0, maxFilesLimit.value);
       }
 
       files.value = updated;
@@ -296,6 +298,13 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
     onMount(() => {
       const inp = inputRef.value!;
       const dz = dropzoneRef.value!;
+      let skipNextClick = false;
+      const pressControl = createPressControl({
+        disabled: () => isDisabled.value,
+        onPress: () => {
+          inp.click();
+        },
+      });
 
       // Native input → add files
       handle(inp, 'change', (e: Event) => {
@@ -306,19 +315,24 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
         input.value = ''; // reset so the same file triggers change again
       });
       // Click dropzone → open file picker
-      handle(dz, 'click', () => {
-        if (!props.disabled.value) inp.click();
+      handle(dz, 'click', (e: MouseEvent) => {
+        if (e.target === inp) return;
+
+        if (skipNextClick) {
+          skipNextClick = false;
+
+          return;
+        }
+
+        if (!isDisabled.value) inp.click();
       });
       // Keyboard: Enter / Space → open picker
       handle(dz, 'keydown', (e: KeyboardEvent) => {
-        if ((e.key === 'Enter' || e.key === ' ') && !props.disabled.value) {
-          e.preventDefault();
-          inp.click();
-        }
+        skipNextClick = pressControl.handleKeydown(e) && e.key === 'Enter';
       });
 
       const dropZone = createDropZone({
-        disabled: () => Boolean(props.disabled.value),
+        disabled: () => isDisabled.value,
         element: dz,
         onDrop: (droppedFiles, e) => addFiles(droppedFiles, e),
         onHoverChange: (hovered) => {
@@ -342,8 +356,8 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
           part="dropzone"
           ref=${dropzoneRef}
           role="button"
-          :tabindex=${() => (props.disabled.value ? '-1' : '0')}
-          :aria-disabled=${() => String(props.disabled.value)}
+          :tabindex=${() => (isDisabled.value ? '-1' : '0')}
+          :aria-disabled=${() => String(isDisabled.value)}
           :aria-label=${() => (!props.label.value ? 'File upload drop zone' : null)}
           :aria-labelledby=${() => (props.label.value ? labelId : null)}
           aria-describedby="${helperId}">
@@ -355,23 +369,27 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
             :accept=${() => props.accept.value}
             ?multiple=${() => props.multiple.value}
             ?required=${() => props.required.value}
-            ?disabled=${() => props.disabled.value}
+            ?disabled=${() => isDisabled.value}
             :name=${() => props.name.value}
             hidden
             inert
             tabindex="-1" />
           <div class="dropzone-content">
-            <span class="dropzone-icon" aria-hidden="true"> ${uploadIcon} </span>
+            <span class="dropzone-icon" aria-hidden="true">
+              <bit-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></bit-icon>
+            </span>
             <span class="dropzone-title">Drop files here or <u>click to browse</u></span>
             <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
           </div>
         </div>
         <ul class="file-list" role="list" aria-label="Selected files" ?hidden=${() => files.value.length === 0}>
-          ${each(
-            files,
-            (file: File) => html`
+          ${each(files, {
+            key: (file: File) => `${file.name}:${file.size}:${file.lastModified}`,
+            render: (file: File) => html`
               <li class="file-item">
-                <span class="file-icon" aria-hidden="true"> ${fileIcon} </span>
+                <span class="file-icon" aria-hidden="true">
+                  <bit-icon name="file" size="18" stroke-width="1.75" aria-hidden="true"></bit-icon>
+                </span>
                 <span class="file-meta">
                   <span class="file-name" title="${file.name}">${file.name}</span>
                   <span class="file-size">${formatBytes(file.size)}</span>
@@ -381,15 +399,11 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
                   type="button"
                   aria-label="${`Remove ${file.name}`}"
                   @click=${(e: Event) => removeFile(file, e)}>
-                  ${clearIcon}
+                  <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
                 </button>
               </li>
             `,
-            undefined,
-            {
-              key: (file: File) => `${file.name}:${file.size}:${file.lastModified}`,
-            },
-          )}
+          })}
         </ul>
         <div class="helper-text" id="${helperId}" part="helper" ?hidden=${() => isInvalid.value || !props.helper.value}>
           ${() => props.helper.value}
@@ -413,5 +427,4 @@ export const FILE_INPUT_TAG = defineComponent<BitFileInputProps, BitFileInputEve
     forcedColorsFocusMixin('.dropzone'),
     componentStyles,
   ],
-  tag: 'bit-file-input',
 });

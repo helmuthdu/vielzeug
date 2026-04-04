@@ -1,161 +1,96 @@
 ---
 title: Permit — Usage Guide
-description: Role setup, inheritance, wildcard permissions, dynamic rules, and practical checks for Permit.
+description: Build deterministic authorization policies with set/can and predicate IDs.
 ---
-
-# Permit Usage Guide
-
-::: tip New to Permit?
-Start with the [Overview](./index.md), then use this page for implementation-level behavior.
-:::
 
 [[toc]]
 
 ## Basic Setup
 
 ```ts
+import { createPermit } from '@vielzeug/permit';
+
 const permit = createPermit();
 ```
 
-You can seed state at construction:
+## Define Policy with `set`
 
 ```ts
-const permit = createPermit({
-  initial: {
-    hierarchy: { editor: ['viewer'] },
-    permissions: {
-      editor: { posts: { write: true } },
-      viewer: { posts: { read: true } },
-    },
+permit
+  .set({ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' })
+  .set({ role: 'blocked', resource: 'posts', action: '*', effect: 'deny', priority: 100 });
+```
+
+Rules are normalized (`trim + lowercase`) for role/resource/action.
+
+## Dynamic Conditions via Predicate IDs
+
+```ts
+const permit = createPermit<'update', { authorId: string }>({
+  predicates: {
+    isOwner: ({ principal, data }) => principal.id === data?.authorId,
   },
 });
-```
 
-## Registering Permissions with define()
-
-Use `define(role, resource, actions)` to add or merge permissions.
-
-```ts
-permit.define('editor', 'posts', {
-  read: true,
-  write: (user, data) => user.id === data?.authorId,
+permit.set({
+  role: 'editor',
+  resource: 'posts',
+  action: 'update',
+  effect: 'allow',
+  when: 'isOwner',
 });
-
-permit.define('editor', 'posts', { delete: false }); // merges into same role/resource
 ```
 
-Shorthands:
+Use predicate names instead of embedding functions in policy state.
+
+## Anonymous and Wildcards
 
 ```ts
-permit.grant('viewer', 'posts', 'read');
-permit.deny('blocked', 'posts', 'read');
+import { ANONYMOUS, WILDCARD } from '@vielzeug/permit';
+
+permit
+  .set({ role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' })
+  .set({ role: WILDCARD, resource: 'status', action: 'read', effect: 'allow' });
 ```
 
-Notes:
+`null` / `undefined` principal is treated as anonymous.
 
-- Role/resource/action names are normalized (trim + lowercase).
-- Empty `actions` map is ignored unless `strict: true`, where it throws.
-- All write methods are fluent and return `permit`.
-
-## Wildcards
-
-Use `WILDCARD` (`'*'`) for role, resource, or action.
+## Evaluate Permissions
 
 ```ts
-permit.grant(WILDCARD, 'status', 'read'); // every user role
-permit.grant('admin', WILDCARD, 'read', 'write'); // every resource
-permit.define('superadmin', 'posts', { [WILDCARD]: true }); // every action on posts
+const principal = { id: 'u1', roles: ['editor'] };
+
+permit.can(principal, 'posts', 'read');
+permit.can(principal, 'posts', 'update', { authorId: 'u1' });
 ```
 
-Resource precedence behavior:
+Permit throws for malformed principal payloads (for example missing `roles`).
+
+## Use Bound Guards
 
 ```ts
-permit.define('admin', WILDCARD, { read: true, delete: true });
-permit.define('admin', 'posts', { write: true, read: false });
-
-permit.check({ id: '1', roles: ['admin'] }, 'posts', 'read'); // false (specific wins)
-permit.check({ id: '1', roles: ['admin'] }, 'posts', 'delete'); // true (fallback)
-```
-
-Set `wildcardFallback: false` in `createPermit()` to disable wildcard-resource fallback once a specific resource entry exists.
-
-## Role Inheritance
-
-```ts
-permit.grant('viewer', WILDCARD, 'read');
-permit.extend('editor', 'viewer');
-permit.extend('admin', 'editor');
-```
-
-Resolution uses breadth-first traversal across role parents.
-
-Remove inheritance:
-
-```ts
-permit.unextend('admin', 'editor'); // remove one parent
-permit.unextend('editor'); // remove all parents for editor
-```
-
-## Anonymous Users
-
-Users are treated as anonymous when null, missing `id`, or missing `roles` array.
-
-```ts
-permit.grant(ANONYMOUS, 'posts', 'read');
-
-permit.check(null, 'posts', 'read'); // true
-isAnonymous(null); // true
-hasRole(null, ANONYMOUS); // true
-```
-
-A user with valid `id` and `roles: []` is authenticated (not anonymous).
-
-## Checking Permissions
-
-```ts
-const user = { id: 'u1', roles: ['editor'] };
-
-permit.check(user, 'posts', 'read');
-permit.check(user, 'posts', 'write', { authorId: 'u1' });
-
-permit.checkAll(user, 'posts', ['read', 'write'], { authorId: 'u1' });
-permit.checkAny(user, 'posts', ['write', 'delete']);
-```
-
-First role with an explicit opinion wins (`true` or `false`).
-
-## Guard API
-
-Use `permit.for(user)` to bind checks to one user.
-
-```ts
-const guard = permit.for(user);
+const guard = permit.withUser({ id: 'u1', roles: ['editor'] });
 
 guard.can('posts', 'read');
-guard.canAll('posts', ['read', 'write'], { authorId: 'u1' });
-guard.canAny('posts', ['write', 'delete']);
 ```
 
-The guard is live and reflects later permission changes.
-
-## Removing and Resetting State
+## Save and Restore Policy
 
 ```ts
-permit.remove('editor', 'posts', 'write'); // one action
-permit.remove('editor', 'posts'); // one resource
-permit.remove('editor'); // full role
-
-const state = permit.snapshot();
+const snapshot = permit.exportPolicy();
 permit.clear();
-permit.restore(state);
+permit.importPolicy(snapshot);
 ```
 
-`snapshot()` / `restore()` include both permissions and hierarchy.
+Policy payloads are JSON-serializable.
 
-## Best Practices
+## Decision Precedence
 
-- Define one centralized Permit instance per bounded context.
-- Use `scope`-like naming conventions in resources (`billing.invoice`, `posts.comment`).
-- Prefer `guard` objects (`permit.for(user)`) for repeated checks.
-- Reserve wildcards for explicit platform-level roles.
-- Use `strict: true` in tests/CI to catch misconfigured `define()` calls early.
+Permit uses one deterministic model:
+
+1. Highest `priority` wins.
+2. For equal priority, more specific rules win.
+3. If still tied, any deny wins.
+4. No match means deny.
+
+This avoids role-order dependent authorization outcomes.

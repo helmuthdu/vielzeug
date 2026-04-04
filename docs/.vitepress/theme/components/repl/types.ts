@@ -1370,10 +1370,8 @@ declare module '@vielzeug/workit' {
   export type WorkerStatus = 'idle' | 'running' | 'terminated';
 
   export type WorkerOptions = {
-    size?: number | 'auto';
+    concurrency?: number | 'auto';
     timeout?: number;
-    fallback?: boolean;
-    scripts?: string[];
   };
 
   export type RunOptions = {
@@ -1384,9 +1382,8 @@ declare module '@vielzeug/workit' {
   export interface WorkerHandle<TInput, TOutput> {
     run(input: TInput, options?: RunOptions): Promise<TOutput>;
     dispose(): void;
-    readonly size: number;
+    readonly concurrency: number;
     readonly status: WorkerStatus;
-    readonly isNative: boolean;
     [Symbol.dispose](): void;
   }
 

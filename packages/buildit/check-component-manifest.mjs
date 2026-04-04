@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { componentManifest, componentNames, getComponentExportTargets } from './component-manifest.mjs';
+import { componentNames, getComponentExports } from './component-manifest.mjs';
 
 const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 const exportsField = packageJson.exports ?? {};
@@ -15,7 +15,8 @@ const ignoredExportKeys = new Set([
   './styles/theme.css',
 ]);
 
-const expectedComponentKeys = new Set(componentNames.map((name) => `./${name}`));
+const expectedComponentExports = getComponentExports();
+const expectedComponentKeys = new Set(Object.keys(expectedComponentExports));
 const actualComponentKeys = Object.keys(exportsField).filter(
   (key) => key.startsWith('./') && !ignoredExportKeys.has(key),
 );
@@ -34,15 +35,12 @@ if (missing.length || extra.length) {
   throw new Error(`buildit component manifest is out of sync with package.json exports.\n${details}`);
 }
 
-for (const component of componentManifest) {
-  const key = `./${component.name}`;
+for (const [key, expected] of Object.entries(expectedComponentExports)) {
   const entry = exportsField[key];
 
   if (!entry || typeof entry !== 'object') {
     throw new Error(`Export ${key} must be an object with types/import/require targets.`);
   }
-
-  const expected = getComponentExportTargets(component);
 
   for (const [field, value] of Object.entries(expected)) {
     if (entry[field] !== value) {

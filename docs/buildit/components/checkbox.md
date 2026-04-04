@@ -3,7 +3,7 @@
 A customizable boolean form control with indeterminate state support, plus a group wrapper for managing multi-selection lists.
 
 - **`bit-checkbox`** — standalone checkbox for a single boolean value.
-- **`bit-checkbox-group`** — `<fieldset>` wrapper that manages a set of checkboxes, propagates `color`, `size`, and `disabled` to all children, and tracks checked values as a comma-separated string.
+- **`bit-checkbox-group`** — form-associated `<fieldset>` wrapper that manages a set of checkboxes, propagates `color`, `size`, and `disabled` to all children, and tracks checked values as a comma-separated `values` string.
 
 ## Features
 
@@ -20,7 +20,7 @@ A customizable boolean form control with indeterminate state support, plus a gro
 
 - ↕️ **2 Orientations** — vertical & horizontal
 - 💬 **Validation Feedback** — `helper` and `error` text with ARIA wiring
-- 📝 **Form Integration** — comma-separated `value` submits with any `<form>` or `bit-form`
+- 📝 **Form Integration** — comma-separated `values` submit through the group's `name` with any `<form>` or `bit-form`
 - 📡 **Context Propagation** — `color`, `size`, and `disabled` propagate to all child checkboxes
 - 🗂️ **Semantic Markup** — renders as `<fieldset>` + `<legend>` for proper screen reader grouping
 
@@ -134,12 +134,12 @@ checkbox.addEventListener('change', (e) => {
 
 ## Checkbox Group
 
-`bit-checkbox-group` wraps `bit-checkbox` elements in a `<fieldset>`. Set `value` to a comma-separated string to pre-select options.
+`bit-checkbox-group` wraps `bit-checkbox` elements in a `<fieldset>`. Set `values` to a comma-separated string to pre-select options, and set `name` when you want the group to submit with a form.
 
 ### Basic Usage
 
 ```html
-<bit-checkbox-group label="Interests" value="sport,music">
+<bit-checkbox-group label="Interests" values="sport,music">
   <bit-checkbox value="sport">Sport</bit-checkbox>
   <bit-checkbox value="music">Music</bit-checkbox>
   <bit-checkbox value="travel">Travel</bit-checkbox>
@@ -180,16 +180,16 @@ checkbox.addEventListener('change', (e) => {
 <ComponentPreview vertical>
 
 ```html
-<bit-checkbox-group label="Small · Primary" size="sm" color="primary" orientation="horizontal">
-  <bit-checkbox value="a" checked>Option A</bit-checkbox>
+<bit-checkbox-group label="Small · Primary" size="sm" color="primary" orientation="horizontal" values="a">
+  <bit-checkbox value="a">Option A</bit-checkbox>
   <bit-checkbox value="b">Option B</bit-checkbox>
 </bit-checkbox-group>
-<bit-checkbox-group label="Medium · Success" size="md" color="success" orientation="horizontal">
-  <bit-checkbox value="a" checked>Option A</bit-checkbox>
+<bit-checkbox-group label="Medium · Success" size="md" color="success" orientation="horizontal" values="a">
+  <bit-checkbox value="a">Option A</bit-checkbox>
   <bit-checkbox value="b">Option B</bit-checkbox>
 </bit-checkbox-group>
-<bit-checkbox-group label="Large · Warning" size="lg" color="warning" orientation="horizontal">
-  <bit-checkbox value="a" checked>Option A</bit-checkbox>
+<bit-checkbox-group label="Large · Warning" size="lg" color="warning" orientation="horizontal" values="a">
+  <bit-checkbox value="a">Option A</bit-checkbox>
   <bit-checkbox value="b">Option B</bit-checkbox>
 </bit-checkbox-group>
 ```
@@ -222,7 +222,7 @@ Disabling the group propagates to all child checkboxes.
 <ComponentPreview>
 
 ```html
-<bit-checkbox-group label="Disabled group" disabled value="a,c">
+<bit-checkbox-group label="Disabled group" disabled values="a,c">
   <bit-checkbox value="a">Option A</bit-checkbox>
   <bit-checkbox value="b">Option B</bit-checkbox>
   <bit-checkbox value="c">Option C</bit-checkbox>
@@ -233,7 +233,9 @@ Disabling the group propagates to all child checkboxes.
 
 ### Form Integration
 
-The group's checked values are stored as a comma-separated `value` attribute and submitted with any `<form>` or `bit-form`.
+The group's checked values are stored in the `values` attribute and submitted under the group's `name` as a comma-separated string with any `<form>` or `bit-form`.
+
+<ComponentPreview vertical>
 
 ```html
 <bit-form id="prefs-form" novalidate>
@@ -261,13 +263,17 @@ The group's checked values are stored as a comma-separated `value` attribute and
 </script>
 ```
 
+</ComponentPreview>
+
 ### Select All Pattern
 
 Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to build a "select all" control.
 
+<ComponentPreview vertical>
+
 ```html
 <bit-checkbox id="select-all" indeterminate>Select all</bit-checkbox>
-<bit-checkbox-group id="options" label="Options" value="a">
+<bit-checkbox-group id="options" label="Options" values="a">
   <bit-checkbox value="a">Option A</bit-checkbox>
   <bit-checkbox value="b">Option B</bit-checkbox>
   <bit-checkbox value="c">Option C</bit-checkbox>
@@ -282,7 +288,7 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
   const options = ['a', 'b', 'c'];
 
   function syncParent() {
-    const checked = group.getAttribute('value')?.split(',').filter(Boolean) ?? [];
+    const checked = group.getAttribute('values')?.split(',').filter(Boolean) ?? [];
     if (checked.length === 0) {
       all.removeAttribute('checked');
       all.removeAttribute('indeterminate');
@@ -297,9 +303,9 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 
   all.addEventListener('change', (e) => {
     if (e.detail.checked) {
-      group.setAttribute('value', options.join(','));
+      group.setAttribute('values', options.join(','));
     } else {
-      group.setAttribute('value', '');
+      group.setAttribute('values', '');
     }
     syncParent();
   });
@@ -308,6 +314,8 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
   syncParent();
 </script>
 ```
+
+</ComponentPreview>
 
 ---
 
@@ -366,7 +374,7 @@ Combine indeterminate state on a parent checkbox with a `bit-checkbox-group` to 
 | Attribute     | Type                                                                      | Default      | Description                                                  |
 | ------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------ |
 | `label`       | `string`                                                                  | `''`         | Legend text — required for accessibility                     |
-| `value`       | `string`                                                                  | `''`         | Comma-separated currently checked values (e.g. `"a,b"`)      |
+| `values`      | `string`                                                                  | `''`         | Comma-separated currently checked values (e.g. `"a,b"`)      |
 | `name`        | `string`                                                                  | `''`         | Form field name                                              |
 | `orientation` | `'vertical' \| 'horizontal'`                                              | `'vertical'` | Layout direction of options                                  |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —            | Color propagated to all child checkboxes                     |

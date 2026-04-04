@@ -7,32 +7,35 @@ description: 'Observers in `onMount` examples for craftit.'
 
 ## Problem
 
-Implement observers in `onmount` in a production-friendly way with `@vielzeug/craftit` while keeping setup and cleanup explicit.
+Implement observers in `onmount` in a production-friendly way with `@vielzeug/craftit/observers` while keeping setup and cleanup explicit.
 
 ## Runnable Example
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { defineComponent, effect, html, onMount, observeMedia, observeResize, ref } from '@vielzeug/craftit';
+import { component, define, effect, html, onMount, ref } from '@vielzeug/craftit';
+import { mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';
 
-defineComponent({
-  setup() {
-    const panel = ref<HTMLDivElement>();
+define(
+  'observed-panel',
+  component({
+    setup() {
+      const panel = ref<HTMLDivElement>();
 
-    onMount(() => {
-      const size = observeResize(panel.value!);
-      const dark = observeMedia('(prefers-color-scheme: dark)');
+      onMount(() => {
+        const size = resizeObserver(panel.value!);
+        const dark = mediaObserver('(prefers-color-scheme: dark)');
 
-      effect(() => {
-        console.log('panel width', size.value.width, 'dark mode', dark.value);
+        effect(() => {
+          console.log('panel width', size.value.width, 'dark mode', dark.value);
+        });
       });
-    });
 
-    return html`<div ref=${panel}>Resize me</div>`;
-  },
-  tag: 'observed-panel',
-});
+      return html`<div ref=${panel}>Resize me</div>`;
+    },
+  }),
+);
 ```
 
 ## Expected Output

@@ -518,11 +518,11 @@ These are fallback values — attributes take precedence when set.
       <bit-text>This is the main featured area.</bit-text>
     </bit-card>
   </bit-grid-item>
-  <bit-card padding="md"><bit-text>Side 1</bit-text></bit-card>
+  <bit-card padding="md" color="secondary"> <bit-text variant="heading" size="md">✨ Side</bit-text></bit-card>
   <bit-card padding="md"><bit-text>Item 2</bit-text></bit-card>
   <bit-card padding="md"><bit-text>Item 3</bit-text></bit-card>
   <bit-grid-item col-span="2">
-    <bit-card padding="md" color="secondary"><bit-text>Spans 2</bit-text></bit-card>
+    <bit-card padding="md"><bit-text>Spans 2</bit-text></bit-card>
   </bit-grid-item>
 </bit-grid>
 ```
@@ -541,11 +541,11 @@ These are fallback values — attributes take precedence when set.
   gap="md"
   style="width: 100%; min-height: 400px;">
   <bit-box padding="xl" color="primary" style="grid-area: hero;">
-    <bit-text variant="heading" size="2xl">🎯 Main Feature</bit-text>
+    <bit-text variant="heading" size="lg">🎯 Main Feature</bit-text>
     <bit-text>Large hero section for your most important content.</bit-text>
   </bit-box>
   <bit-box padding="lg" color="secondary" style="grid-area: side;">
-    <bit-text variant="heading" size="lg">✨ Side</bit-text>
+    <bit-text variant="heading" size="md">✨ Side</bit-text>
   </bit-box>
   <bit-box padding="md" style="grid-area: a;"><bit-text variant="heading" size="md">A</bit-text></bit-box>
   <bit-box padding="md" style="grid-area: b;"><bit-text variant="heading" size="md">B</bit-text></bit-box>

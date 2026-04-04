@@ -1,4 +1,5 @@
 import {
+  type ArrayFieldBatch,
   type BindConfig,
   type BindResult,
   type DeepPartial,
@@ -18,7 +19,7 @@ import {
   type ValidateOptions,
   type ValidateResult,
 } from './types';
-import { flattenValues, isSameValue, toFormData, unflattenValues } from './utils';
+import { flattenValues, isSameValue, unflattenValues } from './utils';
 
 export function createForm<TValues extends Record<string, unknown> = Record<string, unknown>>(
   init: FormOptions<TValues> = {},
@@ -205,12 +206,15 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* -------------------- Errors -------------------- */
 
-  function setError(name: string, message?: string): void {
+  function setError(name: string, message: string): void {
     ensureNotDisposed();
+    fieldErrors.set(name, message);
+    scheduleNotify(name);
+  }
 
-    if (message != null) fieldErrors.set(name, message);
-    else fieldErrors.delete(name);
-
+  function clearError(name: string): void {
+    ensureNotDisposed();
+    fieldErrors.delete(name);
     scheduleNotify(name);
   }
 
@@ -225,20 +229,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     scheduleNotify();
   }
 
-  function clearErrors(): void {
-    setErrors({});
-  }
-
   /* -------------------- Touch -------------------- */
 
-  function touch(first: string, ...rest: string[]): void {
+  function touch(name: string): void {
     ensureNotDisposed();
-    touched.add(first);
-    scheduleNotify(first);
-    for (const name of rest) {
-      touched.add(name);
-      scheduleNotify(name);
-    }
+    touched.add(name);
+    scheduleNotify(name);
   }
 
   /** Mark all known fields as touched. */
@@ -263,12 +259,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* -------------------- Validation -------------------- */
 
-  function resolveFields(options?: { fields?: string[]; onlyTouched?: boolean }): Set<string> {
+  function resolveFields(options?: ValidateOptions<TValues>): Set<string> {
     const base = new Set<string>(Object.keys(validators));
 
-    if (options?.fields !== undefined) return new Set(options.fields);
+    if (options && 'fields' in options) return new Set(options.fields as string[]);
 
-    if (options?.onlyTouched) return new Set([...base].filter((n) => touched.has(n)));
+    if (options && 'onlyTouched' in options) return new Set([...base].filter((n) => touched.has(n)));
 
     return base;
   }
@@ -340,7 +336,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     // A partial run (scoped fields or onlyTouched) must not clear errors on
     // fields it never visited, and must not run the form-level validator.
     // Note: fields:[] (empty array) is treated as partial (validates nothing).
-    const isPartial = !!(options?.fields !== undefined || options?.onlyTouched);
+    const isPartial = !!(options && ('fields' in options || 'onlyTouched' in options));
 
     activeValidationCtrl?.abort();
 
@@ -411,8 +407,13 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       const { fields, signal, skipValidation } = options ?? {};
 
       if (!skipValidation) {
-        touchAll();
-        await validate({ fields, signal });
+        if (fields) {
+          for (const name of fields) touch(name);
+          await validate(signal ? { fields, signal } : { fields });
+        } else {
+          touchAll();
+          await validate(signal ? { signal } : undefined);
+        }
 
         if (fieldErrors.size > 0) {
           throw new FormValidationError(Object.fromEntries(fieldErrors));
@@ -428,30 +429,34 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* -------------------- Subscriptions -------------------- */
 
-  function subscribe(listener: LocalListener, options?: { immediate?: boolean }): Unsubscribe {
-    listeners.add(listener);
-
-    if (options?.immediate !== false) listener(buildState());
-
-    return () => listeners.delete(listener);
-  }
-
-  function watch<K extends FlatKeyOf<TValues>>(
+  function subscribe(listener: LocalListener, options?: { immediate?: boolean }): Unsubscribe;
+  // @ts-expect-error - TypeScript has trouble with this overload signature combination
+  function subscribe<K extends FlatKeyOf<TValues>>(
     name: K,
     listener: (payload: FieldState<TypeAtPath<TValues, K>>) => void,
     options?: { immediate?: boolean },
   ): Unsubscribe;
-  function watch<V = unknown>(
-    name: string,
-    listener: (payload: FieldState<V>) => void,
-    options?: { immediate?: boolean },
-  ): Unsubscribe;
-  function watch<V = unknown>(
-    name: string,
-    fieldCb: (payload: FieldState<V>) => void,
+  function subscribe(
+    listenerOrName: LocalListener | string,
+    callbackOrOptions?: ((payload: FieldState<unknown>) => void) | { immediate?: boolean },
     options?: { immediate?: boolean },
   ): Unsubscribe {
-    const cb = fieldCb as FieldListener;
+    if (typeof listenerOrName === 'function') {
+      const listener = listenerOrName;
+      const listenerOptions =
+        callbackOrOptions && typeof callbackOrOptions !== 'function'
+          ? (callbackOrOptions as { immediate?: boolean })
+          : options;
+
+      listeners.add(listener);
+
+      if (listenerOptions?.immediate !== false) listener(buildState());
+
+      return () => listeners.delete(listener);
+    }
+
+    const name = listenerOrName;
+    const cb = callbackOrOptions as FieldListener;
     const bucket = fieldListeners.get(name) ?? new Set<FieldListener>();
 
     fieldListeners.set(name, bucket);
@@ -462,7 +467,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         dirty: dirty.has(name),
         error: fieldErrors.get(name),
         touched: touched.has(name),
-        value: store.get(name) as V,
+        value: store.get(name) as unknown,
       });
     }
 
@@ -475,16 +480,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   /* -------------------- Bind -------------------- */
 
-  const bindCache = new Map<string, BindResult>();
-
-  function bind<K extends FlatKeyOf<TValues>>(name: K, config?: BindConfig): BindResult<TypeAtPath<TValues, K>, K>;
+  function bind<K extends FlatKeyOf<TValues>>(name: K, config?: BindConfig): BindResult<TypeAtPath<TValues, K>>;
   function bind(name: string, config?: BindConfig): BindResult;
   function bind(name: string, config?: BindConfig): BindResult {
-    const cacheKey = config ? `${name}|${JSON.stringify(config)}` : name;
-    const cached = bindCache.get(cacheKey);
-
-    if (cached) return cached;
-
     const extract =
       config?.valueExtractor ??
       ((event: unknown) =>
@@ -502,7 +500,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       get error() {
         return fieldErrors.get(name);
       },
-      name,
       onBlur: () => {
         if (touchOnBlur) touch(name);
 
@@ -521,59 +518,41 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       },
     };
 
-    bindCache.set(cacheKey, binding);
-
     return binding;
-  }
-
-  /* -------------------- Field Shorthand Getters -------------------- */
-
-  function getError(name: string): string | undefined {
-    return fieldErrors.get(name);
-  }
-
-  function isFieldDirty(name: string): boolean {
-    return dirty.has(name);
-  }
-
-  function isFieldTouched(name: string): boolean {
-    return touched.has(name);
   }
 
   /* -------------------- Array Field Utilities -------------------- */
 
-  function appendField(name: string, value: unknown): void {
+  function array(name: string): ArrayFieldBatch {
     ensureNotDisposed();
 
-    const current = store.get(name);
+    return {
+      append(value: unknown): void {
+        const current = store.get(name);
 
-    set(name, Array.isArray(current) ? [...current, value] : [value]);
-  }
+        set(name, Array.isArray(current) ? [...current, value] : [value]);
+      },
+      move(from: number, to: number): void {
+        const current = store.get(name);
 
-  function removeField(name: string, index: number): void {
-    ensureNotDisposed();
+        if (!Array.isArray(current)) return;
 
-    const current = store.get(name);
+        const next = [...current];
 
-    if (!Array.isArray(current)) return;
+        next.splice(to, 0, next.splice(from, 1)[0]);
+        set(name, next);
+      },
+      remove(index: number): void {
+        const current = store.get(name);
 
-    set(
-      name,
-      current.filter((_, i) => i !== index),
-    );
-  }
+        if (!Array.isArray(current)) return;
 
-  function moveField(name: string, from: number, to: number): void {
-    ensureNotDisposed();
-
-    const current = store.get(name);
-
-    if (!Array.isArray(current)) return;
-
-    const next = [...current];
-
-    next.splice(to, 0, next.splice(from, 1)[0]);
-    set(name, next);
+        set(
+          name,
+          current.filter((_, i) => i !== index),
+        );
+      },
+    };
   }
 
   /* -------------------- Reset -------------------- */
@@ -628,15 +607,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     fieldValidationCtrls.clear();
     listeners.clear();
     fieldListeners.clear();
-    bindCache.clear();
   }
 
   /* -------------------- Public API -------------------- */
 
   return {
-    appendField,
+    array,
     bind,
-    clearErrors,
+    clearError,
     dispose,
     get disposed() {
       return disposed;
@@ -646,12 +624,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     },
     field,
     get,
-    getError,
     get isDirty() {
       return dirty.size > 0;
     },
-    isFieldDirty,
-    isFieldTouched,
     get isSubmitting() {
       return isSubmitting;
     },
@@ -664,9 +639,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     get isValidating() {
       return validatingCount > 0;
     },
-    moveField,
     patch,
-    removeField,
     reset,
     resetField,
     set,
@@ -680,7 +653,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       return submitCount;
     },
     subscribe,
-    toFormData: () => toFormData(values()),
     touch,
     touchAll,
     untouch,
@@ -688,6 +660,5 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     validate,
     validateField,
     values,
-    watch,
   };
 }

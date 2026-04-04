@@ -1,4 +1,4 @@
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-switch', () => {
   let fixture: Fixture<HTMLElement>;
@@ -115,7 +115,7 @@ describe('bit-switch', () => {
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
 
       expect(detail.checked).toBe(true);
-      expect(detail.value).toBe(true);
+      expect(detail.fieldValue).toBe('on');
       expect(detail.originalEvent).toBeDefined();
     });
 
@@ -130,7 +130,7 @@ describe('bit-switch', () => {
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
 
       expect(detail.checked).toBe(false);
-      expect(detail.value).toBe(false);
+      expect(detail.fieldValue).toBe('on');
     });
 
     it('emits change on Space keypress', async () => {

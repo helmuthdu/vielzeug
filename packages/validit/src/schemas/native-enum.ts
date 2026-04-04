@@ -1,4 +1,5 @@
 import { ErrorCode, Schema } from '../core';
+import { _messages } from '../messages';
 
 type NativeEnumValue = string | number;
 type NativeEnumObj = Record<string, NativeEnumValue>;
@@ -22,7 +23,7 @@ export class NativeEnumSchema<T extends NativeEnumObj> extends Schema<InferNativ
           : [
               {
                 code: ErrorCode.invalid_enum,
-                message: `Expected one of: ${values.join(', ')}`,
+                message: _messages().enum_invalid({ values }),
                 params: { values },
                 path,
               },

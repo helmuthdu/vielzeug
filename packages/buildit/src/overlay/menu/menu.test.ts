@@ -1,4 +1,4 @@
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 import type { BitMenuItemProps } from './menu';
 
@@ -31,7 +31,7 @@ describe('bit-menu', () => {
       await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
-      expect((onOpen.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'toggle' });
+      expect((onOpen.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'trigger' });
     });
 
     it('emits select and closes for normal menu items', async () => {
@@ -159,6 +159,38 @@ describe('bit-menu', () => {
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
     });
 
+    it('supports keyboard open using Enter on trigger', async () => {
+      fixture = await mount('bit-menu', {
+        html: `
+          <button slot="trigger">Open</button>
+          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <bit-menu-item value="delete">Delete</bit-menu-item>
+        `,
+      });
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      await user.press(trigger, 'Enter');
+
+      expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
+    });
+
+    it('supports keyboard open using Space on trigger', async () => {
+      fixture = await mount('bit-menu', {
+        html: `
+          <button slot="trigger">Open</button>
+          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <bit-menu-item value="delete">Delete</bit-menu-item>
+        `,
+      });
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      await user.press(trigger, ' ');
+
+      expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
+    });
+
     it('emits escape close reason when dismissed via Escape key', async () => {
       fixture = await mount('bit-menu', {
         html: `
@@ -175,6 +207,80 @@ describe('bit-menu', () => {
       await user.press(fixture.query('.menu-panel')!, 'Escape');
 
       expect((onClose.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'escape' });
+    });
+
+    it('moves focus to the next menu item with ArrowDown', async () => {
+      fixture = await mount('bit-menu', {
+        html: `
+          <button slot="trigger">Open</button>
+          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <bit-menu-item value="delete">Delete</bit-menu-item>
+        `,
+      });
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      await user.press(trigger, 'ArrowDown');
+      await fixture.flush();
+      await user.press(fixture.query('.menu-panel')!, 'ArrowDown');
+      await fixture.flush();
+
+      const items = fixture.element.querySelectorAll<MenuItemElement>('bit-menu-item');
+      const secondInternal = items[1]?.shadowRoot?.querySelector<HTMLElement>('[role="menuitem"]');
+
+      expect(items[1]?.shadowRoot?.activeElement).toBe(secondInternal);
+    });
+
+    it('activates the focused menu item with Enter', async () => {
+      fixture = await mount('bit-menu', {
+        html: `
+          <button slot="trigger">Open</button>
+          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <bit-menu-item value="delete">Delete</bit-menu-item>
+        `,
+      });
+
+      const onSelect = vi.fn();
+
+      fixture.element.addEventListener('select', onSelect);
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      await user.press(trigger, 'ArrowDown');
+      await fixture.flush();
+      await user.press(fixture.query('.menu-panel')!, 'ArrowDown');
+      await fixture.flush();
+      await user.press(fixture.query('.menu-panel')!, 'Enter');
+      await fixture.flush();
+
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      expect((onSelect.mock.calls[0][0] as CustomEvent).detail.value).toBe('delete');
+    });
+
+    it('activates the focused menu item with Space', async () => {
+      fixture = await mount('bit-menu', {
+        html: `
+          <button slot="trigger">Open</button>
+          <bit-menu-item value="edit">Edit</bit-menu-item>
+          <bit-menu-item value="delete">Delete</bit-menu-item>
+        `,
+      });
+
+      const onSelect = vi.fn();
+
+      fixture.element.addEventListener('select', onSelect);
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      await user.press(trigger, 'ArrowDown');
+      await fixture.flush();
+      await user.press(fixture.query('.menu-panel')!, 'ArrowDown');
+      await fixture.flush();
+      await user.press(fixture.query('.menu-panel')!, ' ');
+      await fixture.flush();
+
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      expect((onSelect.mock.calls[0][0] as CustomEvent).detail.value).toBe('delete');
     });
   });
 });

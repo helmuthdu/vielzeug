@@ -5,6 +5,7 @@ export type {
   BoundI18n,
   DeepPartialMessages,
   DiagnosticEvent,
+  I18n,
   I18nOptions,
   Loader,
   Locale,
@@ -17,6 +18,7 @@ export type {
   PluralForm,
   PluralKeys,
   PluralMessages,
+  SwitchMode,
   TranslationKey,
   TranslationKeyParam,
   Unsubscribe,
@@ -24,4 +26,4 @@ export type {
 } from './types';
 
 // ─── Instance & factory ───────────────────────────────────────────────────────
-export { createI18n, I18n } from './i18n';
+export { createI18n } from './i18n';

@@ -1,9 +1,7 @@
 ---
 title: Workit — Usage Guide
-description: How to use workit for task functions, single workers, pools, timeouts, AbortSignal, transferables, status, isNative, fallback mode, and testing.
+description: How to use workit for task functions, single workers, pools, timeouts, AbortSignal, transferables, status, and testing.
 ---
-
-# Workit Usage Guide
 
 ::: tip
 New to Workit? Start with the [Overview](./index.md) for a quick introduction.
@@ -35,12 +33,12 @@ const addWorker = createWorker(add);
 ```
 
 ::: warning Self-contained closures
-The task function runs inside a Web Worker with a separate global scope. Any outer-scope variable you reference will be `undefined` at runtime. Put all helpers inline or import them via `scripts`.
+The task function runs inside a Web Worker with a separate global scope. Any outer-scope variable you reference will be `undefined` at runtime. Put helpers inside the task function or encode them into the input payload.
 :::
 
 ## Single Worker
 
-Calling `createWorker` without a `size` option creates a single worker that processes one task at a time. Additional calls to `run()` are queued and dispatched in order.
+Calling `createWorker` without a `concurrency` option creates a single worker that processes one task at a time. Additional calls to `run()` are queued and dispatched in order.
 
 ```ts
 import { createWorker } from '@vielzeug/workit';
@@ -55,7 +53,7 @@ worker.dispose();
 
 ## Worker Pool
 
-Pass `size` to spin up multiple worker slots. Tasks are dispatched to the first idle slot; if all slots are busy the task is queued.
+Pass `concurrency` to spin up multiple worker slots. Tasks are dispatched to the first idle slot; if all slots are busy the task is queued.
 
 ```ts
 import { createWorker } from '@vielzeug/workit';
@@ -68,7 +66,7 @@ const pool = createWorker<number, number>(
     }
     return fib(n);
   },
-  { size: 4 },
+  { concurrency: 4 },
 );
 
 // Automatically uses all 4 slots in parallel
@@ -76,8 +74,8 @@ const results = await Promise.all([30, 31, 32, 33].map((n) => pool.run(n)));
 
 pool.dispose();
 
-// 'auto' — uses navigator.hardwareConcurrency
-const autoPool = createWorker<number, number>((n) => n ** 2, { size: 'auto' });
+// 'auto' — uses navigator.hardwareConcurrency when available
+const autoPool = createWorker<number, number>((n) => n ** 2, { concurrency: 'auto' });
 ```
 
 ## Timeouts
@@ -109,7 +107,7 @@ Pass an `AbortSignal` via `RunOptions` to cancel a **queued** task before it sta
 ```ts
 import { createWorker } from '@vielzeug/workit';
 
-const worker = createWorker<string, string>((text) => text.toUpperCase(), { size: 1 });
+const worker = createWorker<string, string>((text) => text.toUpperCase(), { concurrency: 1 });
 
 const ac = new AbortController();
 
@@ -188,60 +186,25 @@ worker.dispose();
 console.log(worker.status); // 'terminated'
 ```
 
-## isNative
+## Runtime Availability
 
-The `isNative` property tells you whether tasks are running in a real Web Worker or falling back to the main thread:
+`createWorker()` is safe to call in any runtime. Actual execution happens only when you call `run()`, and that requires a real Worker implementation.
 
 ```ts
-import { createWorker } from '@vielzeug/workit';
+import { createWorker, WorkerError } from '@vielzeug/workit';
 
 const worker = createWorker<number, number>((n) => n * 2);
 
-if (!worker.isNative) {
-  console.warn('Running in fallback mode — tasks run on the main thread');
+try {
+  console.log(await worker.run(21));
+} catch (error) {
+  if (error instanceof WorkerError) {
+    console.error('Worker execution is unavailable in this runtime');
+  }
 }
 ```
 
-This is useful for logging, telemetry, or feature detection.
-
-## Fallback Mode
-
-When Web Workers are unavailable (e.g. SSR, certain browser security contexts) workit logs a warning and runs tasks on the main thread. Set `fallback: false` to opt out and get an error instead.
-
-```ts
-import { createWorker } from '@vielzeug/workit';
-
-// Default: fallback = true — silent degradation + console warning
-const worker = createWorker<number, number>((n) => n * 2);
-
-// Strict mode: throw if Workers are unavailable
-const strict = createWorker<number, number>((n) => n * 2, { fallback: false });
-```
-
-## External Scripts
-
-Use `scripts` to load CDN libraries inside the Worker via `importScripts()`. Their globals are available to the task function.
-
-```ts
-import { createWorker } from '@vielzeug/workit';
-
-const worker = createWorker<string, string>(
-  (text) => {
-    const lodash = (globalThis as any)._;
-    return lodash ? lodash.kebabCase(text) : text;
-  },
-  {
-    scripts: ['https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js'],
-  },
-);
-
-console.log(await worker.run('Hello World')); // 'hello-world'
-worker.dispose();
-```
-
-::: tip
-Script URLs must be accessible from the Worker origin. For local development, host scripts via your dev server or use a CORS-enabled CDN.
-:::
+This keeps construction cheap and predictable in shared modules, while still failing clearly when the runtime cannot execute Workers.
 
 ## `Symbol.dispose` / `using` Declarations
 
@@ -260,7 +223,7 @@ This also works with worker pools:
 
 ```ts
 {
-  using pool = createWorker<string, string>((text) => text.toUpperCase(), { size: 4 });
+  using pool = createWorker<string, string>((text) => text.toUpperCase(), { concurrency: 4 });
   const results = await Promise.all(['hello', 'world'].map((s) => pool.run(s)));
   // ['HELLO', 'WORLD']
 } // all 4 slots terminated automatically
@@ -299,9 +262,6 @@ describe('add worker', () => {
     expect(worker.calls).toHaveLength(2);
     expect(worker.calls[0]!.input).toEqual({ a: 2, b: 3 });
     expect(worker.calls[1]!.output).toBe(30);
-
-    // isNative is always false in test mode
-    expect(worker.isNative).toBe(false);
 
     worker.dispose();
   });

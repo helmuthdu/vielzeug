@@ -11,16 +11,33 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
   const calls: { input: TInput; output: TOutput }[] = [];
   let status: WorkerStatus = 'idle';
 
+  function createAbortError(signal: AbortSignal): unknown {
+    if (signal.reason !== undefined) return signal.reason;
+
+    if (typeof DOMException === 'function') {
+      return new DOMException('Aborted', 'AbortError');
+    }
+
+    return new Error('Aborted');
+  }
+
   return {
     get calls(): ReadonlyArray<{ input: TInput; output: TOutput }> {
       return calls;
     },
+    get concurrency(): number {
+      return 1;
+    },
     dispose(): void {
       status = 'terminated';
     },
-    run(input: TInput, _options?: RunOptions): Promise<TOutput> {
+    run(input: TInput, options: RunOptions = {}): Promise<TOutput> {
       if (status === 'terminated') {
         return Promise.reject(new TerminatedError());
+      }
+
+      if (options.signal?.aborted) {
+        return Promise.reject(createAbortError(options.signal));
       }
 
       status = 'running';
@@ -39,9 +56,6 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
 
           throw err;
         });
-    },
-    get size(): number {
-      return 1;
     },
     get status(): WorkerStatus {
       return status;

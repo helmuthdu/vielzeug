@@ -1,4 +1,4 @@
-import { type Fixture, mount } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-file-input', () => {
   let fixture: Fixture<HTMLElement>;
@@ -168,6 +168,19 @@ describe('bit-file-input', () => {
       expect(Array.isArray(detail.files)).toBe(true);
       expect(detail.value).toEqual(detail.files);
       expect(detail.originalEvent).toBeDefined();
+    });
+
+    it('opens the hidden input on Enter from the dropzone', async () => {
+      fixture = await mount('bit-file-input');
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+      const dropzone = fixture.query<HTMLElement>('[role="button"]')!;
+      const clickSpy = vi.spyOn(input, 'click');
+
+      dropzone.focus();
+      await user.press(dropzone, 'Enter');
+
+      expect(clickSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -1,15 +1,13 @@
 ---
 title: Workit — Web Workers made type-safe
-description: Thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, cancellation, and a graceful main-thread fallback.
+description: Thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, and cancellation.
 ---
 
 <PackageBadges package="workit" />
 
 <img src="/logo-workit.svg" alt="Workit logo" width="156" class="logo-highlight"/>
 
-# Workit
-
-**Workit** wraps Web Workers in a clean, fully typed async API. Define a task function once, and Workit handles worker creation, message passing, timeouts, cancellation, and pooling. It falls back to main-thread execution when workers are unavailable (server-side rendering (SSR), tests).
+**Workit** wraps Web Workers in a clean, fully typed async API. Define a task function once and workit handles worker creation, queuing, timeouts, cancellation, and pooling.
 
 <!-- Search keywords: worker pool, web worker wrapper, background task runner. -->
 
@@ -43,7 +41,7 @@ const sum = await worker.run([1, 2, 3, 4, 5]); // 15
 worker.dispose();
 
 // Worker pool — 4 concurrent workers with a timeout
-const pool = createWorker<string, string>((text) => text.toUpperCase(), { size: 4, timeout: 5000 });
+const pool = createWorker<string, string>((text) => text.toUpperCase(), { concurrency: 4, timeout: 5000 });
 
 const items = ['alpha', 'beta', 'gamma', 'delta'];
 const results = await Promise.all(items.map((item) => pool.run(item)));
@@ -68,18 +66,17 @@ console.log(await typedWorker.run(21)); // 42 — typed, awaitable, error-safe
 typedWorker.dispose();
 ```
 
-| Feature           | Workit                                       | Comlink | workerpool   |
-| ----------------- | -------------------------------------------- | ------- | ------------ |
-| Bundle size       | <PackageInfo package="workit" type="size" /> | ~2 kB   | ~10 kB       |
-| Worker pools      | ✅                                           | ❌      | ✅           |
-| Typed payloads    | ✅                                           | Partial | ❌           |
-| Graceful fallback | ✅ Main-thread                               | ❌      | ✅ (Node.js) |
-| Timeout support   | ✅                                           | ❌      | ✅           |
-| AbortSignal       | ✅                                           | ❌      | ❌           |
-| Testing utilities | ✅                                           | ❌      | ❌           |
-| Zero dependencies | ✅                                           | ✅      | ❌           |
+| Feature           | Workit                                       | Comlink | workerpool |
+| ----------------- | -------------------------------------------- | ------- | ---------- |
+| Bundle size       | <PackageInfo package="workit" type="size" /> | ~2 kB   | ~10 kB     |
+| Worker pools      | ✅                                           | ❌      | ✅         |
+| Typed payloads    | ✅                                           | Partial | ❌         |
+| Timeout support   | ✅                                           | ❌      | ✅         |
+| AbortSignal       | ✅ Queued tasks                              | ❌      | ❌         |
+| Testing utilities | ✅                                           | ❌      | ❌         |
+| Zero dependencies | ✅                                           | ✅      | ❌         |
 
-**Use Workit when** you need typed, awaitable Web Workers with pooling, cancellation, and a graceful fallback for environments where Workers are unavailable.
+**Use Workit when** you need typed, awaitable Web Workers with pooling, timeouts, and cancellation.
 
 **Consider Comlink** if you only need a simple typed RPC proxy over a single Worker without pooling or timeout requirements.
 
@@ -87,12 +84,10 @@ typedWorker.dispose();
 
 - **Type-safe** — payload types flow from `TaskFn` declaration to every `run()` call
 - **Web Worker backed** — CPU-bound work runs off the main thread, no jank
-- **Graceful fallback** — runs tasks on the main thread when Workers are unavailable
-- **Pool support** — create N workers via the `size` option with built-in queuing
+- **Pool support** — create N workers via the `concurrency` option with built-in queuing
 - **Timeout support** — reject tasks that exceed a configurable time limit
 - **AbortSignal** — cancel queued tasks with the standard `AbortController` API
 - **Transferables** — move large buffers to the Worker without a structured-clone copy
-- **`isNative`** — know at runtime whether a real Worker is active or fallback is in use
 - **`[Symbol.dispose]`** — `using` keyword support (ES2025 explicit resource management)
 - **`WorkerError` hierarchy** — single `instanceof WorkerError` covers all error types
 - **Testing utilities** — `createTestWorker` runs tasks in-process with call recording
@@ -100,18 +95,16 @@ typedWorker.dispose();
 
 ## Compatibility
 
-| Environment | Support              |
-| ----------- | -------------------- |
-| Browser     | ✅                   |
-| Node.js     | ❌ (Worker API only) |
-| SSR         | ⚠️ Fallback mode     |
-| Deno        | ❌                   |
+- Browser: full support.
+- Node.js: `createWorker()` is safe, but `run()` requires a compatible Worker implementation.
+- SSR: `createWorker()` is safe, but `run()` requires a compatible Worker implementation.
+- Deno: support depends on Worker compatibility.
 
 ## Prerequisites
 
-- Browser runtime with Web Worker support for off-main-thread execution.
+- Browser or compatible runtime with Web Worker support for off-main-thread execution.
 - Self-contained task functions (no closure over outer module state).
-- In SSR/tests, verify fallback-mode performance expectations before production use.
+- In non-browser runtimes, expect `run()` to reject with `WorkerError` unless a compatible Worker implementation exists.
 
 ## See Also
 

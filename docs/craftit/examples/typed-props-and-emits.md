@@ -7,41 +7,48 @@ description: 'Typed Props and Emits examples for craftit.'
 
 ## Problem
 
-Implement typed props and emits in a production-friendly way with `@vielzeug/craftit` while keeping setup and cleanup explicit.
+Implement typed props and events in a production-friendly way with `@vielzeug/craftit` while keeping setup and cleanup explicit.
 
 ## Runnable Example
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { defineComponent, html, typed } from '@vielzeug/craftit';
+import { component, define, html } from '@vielzeug/craftit';
 
-type Variant = 'primary' | 'danger';
+type AlertBoxProps = {
+  message?: string;
+  open?: boolean;
+  variant?: 'primary' | 'danger';
+};
 
-defineComponent<
-  { message: string; open: boolean; variant: Variant },
-  { close: void }
->({
-  props: {
-    message: { default: 'Saved successfully' },
-    open: { default: true },
-    variant: typed<Variant>('primary'),
-  },
-  setup({ emit, props }) {
-    return html`
-      ${() =>
-        props.open.value
-          ? html`
-              <div :data-variant=${props.variant}>
-                <span>${props.message}</span>
-                <button @click=${() => emit('close')}>Close</button>
-              </div>
-            `
-          : ''}
-    `;
-  },
-  tag: 'alert-box',
-});
+type AlertBoxEvents = {
+  close: void;
+};
+
+define(
+  'alert-box',
+  component<AlertBoxProps, AlertBoxEvents>({
+    props: {
+      message: 'Saved successfully',
+      open: true,
+      variant: 'primary',
+    },
+    setup({ emit, props }) {
+      return html`
+        ${() =>
+          props.open.value
+            ? html`
+                <div :data-variant=${props.variant}>
+                  <span>${props.message}</span>
+                  <button @click=${() => emit('close')}>Close</button>
+                </div>
+              `
+            : ''}
+      `;
+    },
+  }),
+);
 ```
 
 ## Expected Output

@@ -9,6 +9,7 @@ export type {
   IndexedDBOptions,
   KeyOf,
   LocalStorageOptions,
+  MigrationContext,
   MigrationFn,
   RecordOf,
   Schema,

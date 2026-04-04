@@ -1,23 +1,14 @@
-import { defineComponent, handle, html, onMount, onSlotChange, ref, signal, watch } from '@vielzeug/craftit';
+import { define, effect, html } from '@vielzeug/craftit';
+import { createPressControl } from '@vielzeug/craftit/controls';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
+import { disablableBundle, loadableBundle, type PropBundle, themableBundle } from '../../inputs/shared/bundles';
 import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
+import componentStyles from './card.css?inline';
 
 const INTERACTIVE_DESCENDANT_SELECTOR =
   'button, a[href], input, select, textarea, summary, [role="button"], [role="link"], [contenteditable=""], [contenteditable="true"]';
-
-function slotHasMeaningfulContent(slot: HTMLSlotElement | null | undefined): boolean {
-  if (!slot) return false;
-
-  return slot.assignedNodes({ flatten: true }).some((node) => {
-    if (node.nodeType === Node.ELEMENT_NODE) return true;
-
-    if (node.nodeType === Node.TEXT_NODE) return !!node.textContent?.trim();
-
-    return false;
-  });
-}
 
 function isNestedInteractiveTarget(host: HTMLElement, event: Event): boolean {
   for (const node of event.composedPath()) {
@@ -32,8 +23,6 @@ function isNestedInteractiveTarget(host: HTMLElement, event: Event): boolean {
 
   return false;
 }
-
-import componentStyles from './card.css?inline';
 
 /** Card component properties */
 
@@ -98,103 +87,86 @@ export type BitCardProps = {
  * <bit-card variant="frost" color="secondary">Frosted card</bit-card>
  * ```
  */
-export const CARD_TAG = defineComponent<BitCardProps, BitCardEvents>({
+export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
   props: {
-    color: { default: undefined },
-    disabled: { default: false, type: Boolean },
-    elevation: { default: undefined },
-    interactive: { default: false, type: Boolean },
-    loading: { default: false, type: Boolean },
-    orientation: { default: undefined },
-    padding: { default: undefined },
-    variant: { default: undefined },
-  },
-  setup({ emit, host, props }) {
-    const mediaSlot = ref<HTMLSlotElement>();
-    const headerSlot = ref<HTMLSlotElement>();
-    const contentSlot = ref<HTMLSlotElement>();
-    const footerSlot = ref<HTMLSlotElement>();
-    const actionsSlot = ref<HTMLSlotElement>();
-    const hasMedia = signal(false);
-    const hasHeader = signal(false);
-    const hasContent = signal(false);
-    const hasFooter = signal(false);
-    const hasActions = signal(false);
-
-    function updateSlotState() {
-      hasMedia.value = slotHasMeaningfulContent(mediaSlot.value);
-      hasHeader.value = slotHasMeaningfulContent(headerSlot.value);
-      hasContent.value = slotHasMeaningfulContent(contentSlot.value);
-      hasFooter.value = slotHasMeaningfulContent(footerSlot.value);
-      hasActions.value = slotHasMeaningfulContent(actionsSlot.value);
-    }
-    onMount(() => {
-      onSlotChange('media', updateSlotState);
-      onSlotChange('header', updateSlotState);
-      onSlotChange('default', updateSlotState);
-      onSlotChange('footer', updateSlotState);
-      onSlotChange('actions', updateSlotState);
+    ...themableBundle,
+    ...disablableBundle,
+    ...loadableBundle,
+    elevation: undefined,
+    interactive: false,
+    orientation: undefined,
+    padding: undefined,
+    variant: undefined,
+  } satisfies PropBundle<BitCardProps>,
+  setup({ emit, host, props, slots }) {
+    host.bind('attr', {
+      ariaBusy: () => (props.loading.value ? 'true' : 'false'),
+      ariaDisabled: () => (props.interactive.value ? String(props.disabled.value) : null),
+      role: () => (props.interactive.value ? 'button' : null),
     });
-    watch(
-      [props.interactive, props.disabled, props.loading, props.variant, props.color, props.padding, props.orientation],
-      () => {
-        if (props.interactive.value) {
-          host.setAttribute('role', 'button');
-          host.setAttribute('tabindex', props.disabled.value ? '-1' : '0');
-          host.setAttribute('aria-disabled', String(props.disabled.value));
-        } else {
-          host.removeAttribute('role');
-          host.removeAttribute('tabindex');
-          host.removeAttribute('aria-disabled');
-        }
 
-        host.setAttribute('aria-busy', props.loading.value ? 'true' : 'false');
+    effect(() => {
+      if (props.interactive.value) {
+        host.el.setAttribute('tabindex', props.disabled.value ? '-1' : '0');
+      } else {
+        host.el.removeAttribute('tabindex');
+      }
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Event Handlers
+    // ────────────────────────────────────────────────────────────────
+
+    const pressControl = createPressControl({
+      disabled: () => !props.interactive.value || Boolean(props.disabled.value),
+      onPress: (originalEvent, trigger) => {
+        emit('activate', { originalEvent, trigger });
       },
-      { immediate: true },
-    );
+    });
 
     const handleClick = (e: MouseEvent) => {
       if (!props.interactive.value || props.disabled.value) return;
 
-      if (isNestedInteractiveTarget(host, e)) return;
+      if (isNestedInteractiveTarget(host.el, e)) return;
 
-      emit('activate', { originalEvent: e, trigger: 'pointer' });
+      pressControl.handleClick(e);
     };
+
     const handleKeydown = (e: KeyboardEvent) => {
-      if (!props.interactive.value || props.disabled.value) return;
-
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        emit('activate', { originalEvent: e, trigger: 'keyboard' });
-      }
+      pressControl.handleKeydown(e);
     };
 
-    handle(host, 'click', handleClick);
-    handle(host, 'keydown', handleKeydown);
+    host.bind('on', {
+      click: (e) => handleClick(e),
+      keydown: (e) => handleKeydown(e),
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Template
+    // ────────────────────────────────────────────────────────────────
 
     return html`
       <div class="card" part="card">
         <div class="loading-bar" part="loading-bar"></div>
-        <div class="card-media" part="media" ?hidden="${() => !hasMedia.value}">
-          <slot ref=${mediaSlot} name="media"></slot>
+        <div class="card-media" part="media" ?hidden="${() => !slots.has('media').value}">
+          <slot name="media"></slot>
         </div>
         <div class="card-body" part="body">
-          <div class="card-header" part="header" ?hidden="${() => !hasHeader.value}">
-            <slot ref=${headerSlot} name="header"></slot>
+          <div class="card-header" part="header" ?hidden="${() => !slots.has('header').value}">
+            <slot name="header"></slot>
           </div>
-          <div class="card-content" part="content" ?hidden="${() => !hasContent.value}">
-            <slot ref=${contentSlot}></slot>
+          <div class="card-content" part="content" ?hidden="${() => !slots.has().value}">
+            <slot></slot>
           </div>
-          <div class="card-footer" part="footer" ?hidden="${() => !hasFooter.value}">
-            <slot ref=${footerSlot} name="footer"></slot>
+          <div class="card-footer" part="footer" ?hidden="${() => !slots.has('footer').value}">
+            <slot name="footer"></slot>
           </div>
-          <div class="card-actions" part="actions" ?hidden="${() => !hasActions.value}">
-            <slot ref=${actionsSlot} name="actions"></slot>
+          <div class="card-actions" part="actions" ?hidden="${() => !slots.has('actions').value}">
+            <slot name="actions"></slot>
           </div>
         </div>
       </div>
     `;
   },
   styles: [...surfaceMixins, frostVariantMixin('.card'), reducedMotionMixin, componentStyles],
-  tag: 'bit-card',
 });

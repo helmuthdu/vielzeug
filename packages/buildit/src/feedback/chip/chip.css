@@ -3,7 +3,7 @@
     --_bg: var(--chip-bg, var(--color-contrast-150, var(--color-contrast-100)));
     --_color: var(--chip-color, var(--color-contrast-800));
     --_border-color: var(--chip-border-color, transparent);
-    --_radius: var(--chip-radius, var(--rounded-full));
+    --_radius: var(--chip-radius, var(--rounded-lg));
     --_font-size: var(--chip-font-size, var(--text-sm));
     --_font-weight: var(--chip-font-weight, var(--font-medium));
     --_padding-x: var(--chip-padding-x, var(--size-2-5));

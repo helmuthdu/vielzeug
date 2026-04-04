@@ -1,13 +1,5 @@
-import {
-  computed,
-  createContext,
-  defineComponent,
-  handle,
-  html,
-  typed,
-  provide,
-  type ReadonlySignal,
-} from '@vielzeug/craftit';
+import { define, computed, createContext, html, provide, signal, type ReadonlySignal } from '@vielzeug/craftit';
+import { createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -59,64 +51,89 @@ export type BitAccordionProps = {
  * ```
  */
 
-export const ACCORDION_TAG = defineComponent<BitAccordionProps, BitAccordionEvents>({
+export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-accordion', {
   props: {
-    selectionMode: typed<BitAccordionProps['selectionMode']>(undefined),
-    size: typed<BitAccordionProps['size']>(undefined),
-    variant: typed<BitAccordionProps['variant']>(undefined),
+    selectionMode: undefined,
+    size: undefined,
+    variant: undefined,
   },
   setup({ emit, host, props }) {
-    const notifyExpand = (expandedItem: HTMLElement) => {
-      if (props.selectionMode.value === 'single') {
-        host.querySelectorAll('bit-accordion-item').forEach((item) => {
-          if (item !== expandedItem && item.hasAttribute('expanded')) {
-            item.removeAttribute('expanded');
-          }
-        });
-        emit('change', { expandedItem });
-      }
+    const focusedIndex = signal(0);
+    const selectionMode = computed(() => props.selectionMode.value);
+
+    const handleSelectionMode = (expandedItem: HTMLElement) => {
+      if (selectionMode.value !== 'single') return;
+
+      host.el.querySelectorAll('bit-accordion-item[expanded]').forEach((item) => {
+        if (item !== expandedItem && item.hasAttribute('expanded')) {
+          item.removeAttribute('expanded');
+        }
+      });
+
+      emit('change', { expandedItem });
     };
 
+    const getAccordionItems = () => {
+      return [...host.el.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
+    };
+
+    const getSummaryElements = () => {
+      return getAccordionItems()
+        .map((item) => item.shadowRoot?.querySelector<HTMLElement>('summary'))
+        .filter(Boolean) as HTMLElement[];
+    };
+
+    const listControl = createListControl({
+      getIndex: () => focusedIndex.value,
+      getItems: () => getAccordionItems(),
+      isItemDisabled: (item: HTMLElement) => item.hasAttribute('disabled'),
+      loop: true,
+      setIndex: (index) => {
+        focusedIndex.value = index;
+
+        const summaries = getSummaryElements();
+
+        summaries[index]?.focus();
+      },
+    });
+
     provide(ACCORDION_CTX, {
-      notifyExpand,
-      selectionMode: computed(() => props.selectionMode.value),
+      notifyExpand: handleSelectionMode,
+      selectionMode,
       size: props.size,
       variant: props.variant,
     });
 
-    // Listen for expanded events bubbling up from child accordion-items.
-    // This allows single-selection management without tight coupling via context calls.
-    const handleExpand = (e: Event) => notifyExpand(e.target as HTMLElement);
+    // Group-level event and keyboard handling for WAI-ARIA Accordion pattern
+    const accordionListKeys = createListKeyControl({ control: listControl });
 
-    handle(host, 'expand', handleExpand);
-    // Group-level arrow-key navigation between accordion item summaries (WAI-ARIA Accordion pattern).
-    handle(host, 'keydown', (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
+    host.bind('on', {
+      expand: (event: Event) => {
+        const eventTarget = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement);
+        const expandedItem = (event as CustomEvent<{ item?: HTMLElement }>).detail?.item ?? eventTarget;
 
-      const items = [...host.querySelectorAll<HTMLElement>('bit-accordion-item:not([disabled])')];
-      const summaries = items
-        .map((item) => item.shadowRoot?.querySelector<HTMLElement>('summary'))
-        .filter(Boolean) as HTMLElement[];
+        if (!expandedItem || expandedItem.localName !== 'bit-accordion-item') return;
 
-      if (!summaries.length) return;
+        handleSelectionMode(expandedItem);
+      },
+      keydown: (evt) => {
+        const summaries = getSummaryElements();
 
-      const focused = summaries.indexOf(document.activeElement as HTMLElement);
+        if (!summaries.length) return;
 
-      if (focused === -1) return; // the focus is not on a summary — let native handling proceed
+        const activeSummary = evt
+          .composedPath()
+          .find((node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'summary');
+        const focused = activeSummary ? summaries.indexOf(activeSummary) : -1;
 
-      let next = focused;
+        if (focused === -1) return; // focus is not on a summary — let native handling proceed
 
-      if (e.key === 'ArrowDown') next = (focused + 1) % summaries.length;
-      else if (e.key === 'ArrowUp') next = (focused - 1 + summaries.length) % summaries.length;
-      else if (e.key === 'Home') next = 0;
-      else if (e.key === 'End') next = summaries.length - 1;
-
-      e.preventDefault();
-      summaries[next]?.focus();
+        focusedIndex.value = focused;
+        accordionListKeys.handleKeydown(evt);
+      },
     });
 
     return html`<slot></slot>`;
   },
   styles: [styles],
-  tag: 'bit-accordion',
 });

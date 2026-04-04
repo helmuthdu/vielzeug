@@ -1,65 +1,63 @@
-/* ============================================
-   permit — Role-based permission engine
-   ============================================ */
+import type { PermitPrincipal, PrincipalInput, UserPrincipal } from './types';
 
 import { ANONYMOUS, WILDCARD } from './constants';
-
-/* -------------------- Helpers -------------------- */
 
 function normalize(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/**
- * Yields the effective roles for a user in resolution order (BFS over the hierarchy),
- * followed by WILDCARD. Anonymous users yield ANONYMOUS + WILDCARD only.
- */
-function* getEffectiveRoles(
-  user: import('./types').BaseUser | null | undefined,
-  hierarchy: Map<string, Set<string>>,
-): Generator<string> {
-  if (!user?.id || !Array.isArray(user.roles)) {
-    yield ANONYMOUS;
-    yield WILDCARD;
+function isUserPrincipal(principal: PermitPrincipal): principal is UserPrincipal {
+  return principal.kind === 'user';
+}
 
-    return;
-  }
+function toPrincipal(input: PrincipalInput): PermitPrincipal {
+  if (input == null) return { kind: 'anonymous' };
 
-  const seen = new Set<string>();
-  const queue: string[] = user.roles.map(normalize);
+  if (typeof input === 'object' && 'kind' in input) {
+    if (input.kind === 'anonymous') return input;
 
-  for (let i = 0; i < queue.length; i++) {
-    const role = queue[i] as string;
+    if (input.kind === 'user') {
+      if (typeof input.id !== 'string' || input.id.trim().length === 0) {
+        throw new Error('[permit] Invalid principal: user.id must be a non-empty string');
+      }
 
-    if (seen.has(role)) continue;
+      if (!Array.isArray(input.roles) || input.roles.some((role) => typeof role !== 'string')) {
+        throw new Error('[permit] Invalid principal: user.roles must be an array of strings');
+      }
 
-    seen.add(role);
-    yield role;
-
-    for (const parent of hierarchy.get(role) ?? []) {
-      if (!seen.has(parent)) queue.push(parent);
+      return {
+        id: input.id,
+        kind: 'user',
+        roles: input.roles.map(normalize),
+      };
     }
   }
 
-  yield WILDCARD;
+  if (typeof input === 'object' && 'id' in input && 'roles' in input) {
+    if (typeof input.id !== 'string' || input.id.trim().length === 0) {
+      throw new Error('[permit] Invalid principal: id must be a non-empty string');
+    }
+
+    if (!Array.isArray(input.roles) || input.roles.some((role) => typeof role !== 'string')) {
+      throw new Error('[permit] Invalid principal: roles must be an array of strings');
+    }
+
+    return {
+      id: input.id,
+      kind: 'user',
+      roles: input.roles.map(normalize),
+    };
+  }
+
+  throw new Error('[permit] Invalid principal input');
 }
 
-/* -------------------- Standalone Utilities -------------------- */
+function getRoles(principal: PermitPrincipal): Set<string> {
+  if (!isUserPrincipal(principal)) {
+    return new Set([ANONYMOUS, WILDCARD]);
+  }
 
-/**
- * Returns true if the user has the given role (case-insensitive).
- * Treats a null / missing-id / missing-roles user as `anonymous`.
- */
-export function hasRole(user: import('./types').BaseUser | null | undefined, role: string): boolean {
-  if (!user?.id || !Array.isArray(user.roles)) return normalize(role) === ANONYMOUS;
-
-  return user.roles.some((r) => normalize(r) === normalize(role));
+  return new Set([...principal.roles, WILDCARD]);
 }
 
-/** Returns true if the user is unauthenticated (null, missing id, or missing roles). */
-export function isAnonymous(user: import('./types').BaseUser | null | undefined): boolean {
-  return !user?.id || !Array.isArray(user.roles);
-}
-
-// Internal helpers (not part of public API)
-export { getEffectiveRoles, normalize };
+export { getRoles, isUserPrincipal, normalize, toPrincipal };

@@ -23,12 +23,11 @@ const popover = document.querySelector<HTMLElement>('#popover')!;
 
 let cleanup: (() => void) | null = null;
 
-async function update() {
-  const placement = await positionFloat(trigger, popover, {
+function update() {
+  popover.dataset.placement = positionFloat(trigger, popover, {
     placement: 'top',
     middleware: [offset(12), flip(), shift({ padding: 8 })],
   });
-  popover.dataset.placement = placement;
 }
 
 trigger.addEventListener('click', () => {

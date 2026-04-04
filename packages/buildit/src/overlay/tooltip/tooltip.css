@@ -6,7 +6,7 @@
    ======================================== */
 .tooltip {
   inset: unset;
-  padding: var(--size-1-5) var(--size-3);
+  padding: var(--size-0-5) var(--size-2);
   margin: 0;
   overflow: visible;
   border: var(--_tooltip-border-width, var(--border-0)) solid var(--_tooltip-border-color, transparent);
@@ -39,13 +39,13 @@
     max-width: var(--tooltip-max-width, var(--size-72));
     font-size: var(--text-xs);
     font-weight: var(--font-medium);
-    line-height: var(--leading-snug);
+    line-height: var(--leading-normal);
     color: var(--_tooltip-fg);
     word-break: auto-phrase;
     white-space: pre-line;
     pointer-events: none;
     background: var(--_tooltip-bg);
-    border-radius: var(--rounded);
+    border-radius: var(--tooltip-radius, var(--rounded-lg));
     box-shadow: var(--_tooltip-shadow);
 
     /* Hidden by default (also serves as exit state) */

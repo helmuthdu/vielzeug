@@ -1,25 +1,24 @@
 import {
+  define,
   computed,
   createContext,
   createId,
-  defineComponent,
   effect,
-  handle,
   html,
   inject,
-  onMount,
-  onSlotChange,
   provide,
   type ReadonlySignal,
   signal,
 } from '@vielzeug/craftit';
+import { createChoiceFieldControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
-import { createChoiceChangeDetail, parseCsvValues, type ChoiceChangeDetail } from '../shared/utils';
+import { createChoiceChangeDetail, type ChoiceChangeDetail } from '../shared/utils';
 import componentStyles from './checkbox-group.css?inline';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -47,6 +46,8 @@ export type BitCheckboxGroupProps = {
   helper?: string;
   /** Legend / label for the fieldset. Required for accessibility. */
   label?: string;
+  /** Form field name used during submission */
+  name?: string;
   /** Layout direction of the checkbox options */
   orientation?: 'vertical' | 'horizontal';
   /** Mark the group as required */
@@ -61,6 +62,19 @@ export type BitCheckboxGroupEvents = {
   change: ChoiceChangeDetail;
 };
 
+const checkboxGroupProps = {
+  ...themableBundle,
+  ...sizableBundle,
+  ...disablableBundle,
+  error: '',
+  helper: '',
+  label: '',
+  name: '',
+  orientation: 'vertical',
+  required: false,
+  values: '',
+} satisfies PropBundle<BitCheckboxGroupProps>;
+
 /**
  * A fieldset wrapper that groups `bit-checkbox` elements, provides shared
  * `color` and `size` via context, and manages multi-value selection state.
@@ -72,6 +86,7 @@ export type BitCheckboxGroupEvents = {
  * @attr {boolean} disabled - Disable all checkboxes in the group
  * @attr {string} error - Error message
  * @attr {string} helper - Helper text
+ * @attr {string} name - Form field name
  * @attr {string} color - Theme color
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  * @attr {string} orientation - Layout: 'vertical' | 'horizontal'
@@ -81,24 +96,31 @@ export type BitCheckboxGroupEvents = {
  *
  * @slot - Place `bit-checkbox` elements here
  */
-export const CHECKBOX_GROUP_TAG = defineComponent<BitCheckboxGroupProps, BitCheckboxGroupEvents>({
-  props: {
-    color: { default: undefined },
-    disabled: { default: false },
-    error: { default: '' },
-    helper: { default: '' },
-    label: { default: '' },
-    orientation: { default: 'vertical' },
-    required: { default: false },
-    size: { default: undefined },
-    values: { default: '' },
-  },
-  setup({ emit, host, props }) {
-    // Parse comma-separated value string into an array of checked values
-    const parseValues = (v: string | undefined): string[] => parseCsvValues(v);
-    const checkedValues = signal<string[]>(parseValues(props.values.value));
+export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroupEvents>('bit-checkbox-group', {
+  formAssociated: true,
+  props: checkboxGroupProps,
+  setup({ emit, host, props, slots }) {
+    const formCtx = inject(FORM_CTX, undefined);
 
-    const getCheckboxes = (): HTMLElement[] => Array.from(host.getElementsByTagName('bit-checkbox')) as HTMLElement[];
+    mountFormContextSync(host.el, formCtx, props);
+
+    const choice = createChoiceFieldControl<string>({
+      context: formCtx,
+      disabled: props.disabled,
+      error: props.error,
+      getValue: (value) => value,
+      helper: props.helper,
+      label: props.label,
+      mapControlledValue: (value) => value,
+      multiple: signal(true),
+      name: props.name,
+      prefix: 'checkbox-group',
+      value: props.values,
+    });
+    const checkedValues = choice.selectedItems;
+
+    const getCheckboxes = (): HTMLElement[] =>
+      Array.from(host.el.getElementsByTagName('bit-checkbox')) as HTMLElement[];
     const getLabelForValue = (value: string): string => {
       const checkbox = getCheckboxes().find((item) => (item.getAttribute('value') ?? '') === value);
 
@@ -110,22 +132,12 @@ export const CHECKBOX_GROUP_TAG = defineComponent<BitCheckboxGroupProps, BitChec
       emit('change', createChoiceChangeDetail(values, values.map(getLabelForValue), originalEvent));
     };
 
-    // Keep checkedValues in sync when prop changes externally
-    effect(() => {
-      checkedValues.value = parseValues(props.values.value);
-    });
-
     const toggleCheckbox = (val: string, originalEvent?: Event) => {
-      const current = checkedValues.value;
-      const next = current.includes(val) ? current.filter((v) => v !== val) : [...current, val];
-
-      checkedValues.value = next;
-      host.setAttribute('values', next.join(','));
+      choice.toggleItem(val);
+      host.el.setAttribute('values', choice.formValue.value);
+      choice.triggerValidation('change');
       emitChange(originalEvent);
     };
-    const formCtx = inject(FORM_CTX, undefined);
-
-    mountFormContextSync(host, formCtx, props);
 
     provide(CHECKBOX_GROUP_CTX, {
       color: props.color,
@@ -141,7 +153,7 @@ export const CHECKBOX_GROUP_TAG = defineComponent<BitCheckboxGroupProps, BitChec
       const color = props.color.value;
       const size = props.size.value;
       const disabled = props.disabled.value;
-      const checkboxes = Array.from(host.getElementsByTagName('bit-checkbox')) as HTMLElement[];
+      const checkboxes = Array.from(host.el.getElementsByTagName('bit-checkbox')) as HTMLElement[];
 
       for (const checkbox of checkboxes) {
         const val = checkbox.getAttribute('value') ?? '';
@@ -160,21 +172,35 @@ export const CHECKBOX_GROUP_TAG = defineComponent<BitCheckboxGroupProps, BitChec
       }
     };
 
-    effect(syncChildren);
-
-    onMount(() => {
-      onSlotChange('default', syncChildren);
+    effect(() => {
+      void slots.elements().value;
       syncChildren();
+    });
 
-      handle(host, 'change', (e: Event) => {
-        if (e.target === host) return;
+    effect(() => {
+      void slots.elements().value;
 
-        e.stopPropagation();
+      const listeners = getCheckboxes().map((checkbox) => {
+        const handler = (event: Event) => {
+          event.stopPropagation();
 
-        const val = (e.target as HTMLElement).getAttribute('value') ?? '';
+          const val = (checkbox.getAttribute('value') ?? '').trim();
 
-        toggleCheckbox(val, e);
+          if (!val) return;
+
+          toggleCheckbox(val, event);
+        };
+
+        checkbox.addEventListener('change', handler);
+
+        return () => {
+          checkbox.removeEventListener('change', handler);
+        };
       });
+
+      return () => {
+        for (const dispose of listeners) dispose();
+      };
     });
 
     const legendId = createId('checkbox-group-legend');
@@ -204,5 +230,4 @@ export const CHECKBOX_GROUP_TAG = defineComponent<BitCheckboxGroupProps, BitChec
     `;
   },
   styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
-  tag: 'bit-checkbox-group',
 });

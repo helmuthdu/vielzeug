@@ -14,12 +14,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./core": {
-      "source": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "import": "./dist/validit.js",
-      "require": "./dist/validit.cjs"
     }
   },
   "scripts": {
@@ -39,7 +33,7 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "typescript": "~6.0.2",
-    "vite": "^8.0.2",
-    "vitest": "^4.1.1"
+    "vite": "^8.0.3",
+    "vitest": "^4.1.2"
   }
 }

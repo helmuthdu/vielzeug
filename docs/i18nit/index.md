@@ -56,7 +56,7 @@ i18n.t('greeting', { name: 'Alice' });
 i18n.t('inbox', { count: 0 });
 i18n.t('inbox', { count: 3 });
 
-i18n.locale = 'de';
+await i18n.switchLocale('de');
 i18n.t('nav.home'); // falls back to en
 ```
 
@@ -105,7 +105,7 @@ i18n.t('items', { count: 3 }); // typed + pluralised
 - Dot-notation lookups with fallback chains
 - Interpolation for nested vars and array tokens
 - Plural messages driven by `Intl.PluralRules`
-- Async loading (`load`, `setLocale`, `registerLoader`, `reload`)
+- Async loading (`ensureLocale`, `switchLocale`, `registerLoader`, `reload`)
 - Catalog updates (`add`, `replace`) and notification batching (`batch`)
 - Locale-bound and namespace-bound views (`withLocale`, `scope`)
 - Intl formatting helpers (`number`, `date`, `list`, `relative`, `currency`)

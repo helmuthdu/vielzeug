@@ -1,1 +1,6 @@
-// No special setup required for floatit tests.
+// ResizeObserver is not implemented in jsdom.
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};

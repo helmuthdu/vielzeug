@@ -1215,3 +1215,194 @@ describe('Container - mock', () => {
     expect(n).toBe(1);
   });
 });
+
+// ─── Resource Cleanup Edge Cases ──────────────────────────────────────────────
+
+describe('Container - Resource Cleanup', () => {
+  it('dispose hooks called for resolved instances replaced via register overwrite', async () => {
+    const log: string[] = [];
+    const token = createToken<object>('T');
+    const container = createContainer();
+
+    container.register(token, {
+      dispose: () => {
+        log.push('original-disposed');
+      },
+      useFactory: () => ({}),
+    });
+
+    container.get(token); // resolve and cache
+
+    // Replace with a new provider
+    container.register(token, { useValue: {} }, { overwrite: true });
+
+    await container.dispose();
+
+    // Both the original resolved instance and the new one should be cleaned up
+    expect(log).toContain('original-disposed');
+  });
+
+  it('dispose hooks called for instances replaced via restore', async () => {
+    const log: string[] = [];
+    const token = createToken<object>('T');
+    const container = createContainer();
+
+    container.register(token, {
+      dispose: () => {
+        log.push('first');
+      },
+      useFactory: () => ({}),
+    });
+
+    void container.get(token);
+
+    const snap = container.snapshot();
+
+    container.register(
+      token,
+      {
+        dispose: () => {
+          log.push('second');
+        },
+        useFactory: () => ({}),
+      },
+      { overwrite: true },
+    );
+
+    void container.get(token);
+    container.restore(snap);
+
+    await container.dispose();
+
+    // Both instances should have dispose called
+    expect(log).toContain('first');
+    expect(log).toContain('second');
+  });
+
+  it('async singleton factory failure allows retry on subsequent calls', async () => {
+    let attempts = 0;
+    const token = createToken<string>('Async');
+    const container = createContainer();
+
+    container.register(token, {
+      useFactory: async () => {
+        attempts++;
+
+        if (attempts === 1) throw new Error('transient failure');
+
+        return 'success';
+      },
+    });
+
+    // First attempt fails
+    await expect(container.getAsync(token)).rejects.toThrow('transient failure');
+
+    // Second attempt succeeds (not stuck on first failure)
+    await expect(container.getAsync(token)).resolves.toBe('success');
+  });
+
+  it('clear does not invoke dispose hooks', async () => {
+    const log: string[] = [];
+    const token = createToken<object>('T');
+    const container = createContainer();
+
+    container.register(token, {
+      dispose: () => {
+        log.push('disposed');
+      },
+      useFactory: () => ({}),
+    });
+
+    container.get(token);
+    container.clear();
+
+    expect(log).toHaveLength(0);
+  });
+});
+
+// ─── Convenience API (Minimal Surface) ─────────────────────────────────────
+
+describe('Container - Convenience API', () => {
+  let container: Container;
+
+  beforeEach(() => {
+    container = createContainer();
+  });
+
+  it('set() detects and registers a class', () => {
+    class Service {
+      getValue() {
+        return 'service';
+      }
+    }
+
+    const token = createToken<Service>('Svc');
+
+    container.set(token, Service);
+
+    expect(container.get(token)).toBeInstanceOf(Service);
+    expect(container.get(token).getValue()).toBe('service');
+  });
+
+  it('set() detects and registers a factory function', () => {
+    const token = createToken<string>('Val');
+
+    container.set(token, () => 'factory-value');
+
+    expect(container.get(token)).toBe('factory-value');
+  });
+
+  it('set() registers a plain value', () => {
+    const token = createToken<object>('Obj');
+    const obj = { x: 1 };
+
+    container.set(token, obj);
+
+    expect(container.get(token)).toBe(obj);
+  });
+
+  it('set() forwards options to the underlying registration', () => {
+    let n = 0;
+    const token = createToken<number>('Counter');
+
+    container.set(token, () => ++n, { lifetime: 'transient' });
+
+    expect(container.get(token)).toBe(1);
+    expect(container.get(token)).toBe(2);
+  });
+
+  it('resolve() returns a promise for async resolution', async () => {
+    const token = createToken<string>('Val');
+
+    container.set(token, async () => 'resolved');
+
+    await expect(container.resolve(token)).resolves.toBe('resolved');
+  });
+
+  it('resolveAll() returns a typed tuple', async () => {
+    const A = createToken<string>('A');
+    const B = createToken<number>('B');
+
+    container.set(A, 'hello');
+    container.set(B, 42);
+
+    const [a, b] = await container.resolveAll([A, B]);
+
+    expect(a).toBe('hello');
+    expect(b).toBe(42);
+  });
+
+  it('resolveOptional() returns undefined for missing tokens', async () => {
+    const missing = createToken<string>('Missing');
+
+    await expect(container.resolveOptional(missing)).resolves.toBeUndefined();
+  });
+
+  it('resolveOptional() returns the value when present', async () => {
+    const token = createToken<string>('Val');
+
+    container.set(token, 'found');
+
+    await expect(container.resolveOptional(token)).resolves.toBe('found');
+  });
+});

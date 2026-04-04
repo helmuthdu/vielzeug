@@ -1,4 +1,4 @@
-import { defineComponent, html, onMount, ref, signal } from '@vielzeug/craftit';
+import { define, html, onMount, ref, signal } from '@vielzeug/craftit';
 import { classes, each } from '@vielzeug/craftit/directives';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
@@ -121,26 +121,31 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
   `;
 }
 
-export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
+export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
   props: {
-    max: { default: 5 },
-    position: { default: 'bottom-right' },
+    max: 5,
+    position: 'bottom-right',
   },
   setup({ emit, host, props }) {
     const toasts = signal<NormalizedToast[]>([]);
     const exitingIds = signal<Set<string>>(new Set());
     const containerRef = ref<HTMLDivElement>();
-    const timers = new Map<
-      string,
-      {
-        remaining: number;
-        startedAt: number;
-        timeoutId: number;
-      }
-    >();
-    // Sequential dismiss queue — only one toast exits at a time so animations never overlap.
+
+    // Timer tracking: maps id → { remaining, startedAt, timeoutId }
+    const timers = new Map<string, { remaining: number; startedAt: number; timeoutId: number }>();
+
+    // Sequentially dismiss queue — only one toast exits at a time so animations never overlap.
     const dismissQueue: string[] = [];
     let isDismissing = false;
+
+    // Pause state: track focus and hover separately to resume only when both are clear
+    let focusPaused = false;
+    let hoverPaused = false;
+
+    // ────────────────────────────────────────────────────────────────────────────────
+    // Core State Mutations
+    // ────────────────────────────────────────────────────────────────────────────────
+
     const setExiting = (id: string, value: boolean) => {
       const next = new Set(exitingIds.value);
 
@@ -149,55 +154,59 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
 
       exitingIds.value = next;
     };
-    const scheduleRemoval = (id: string, duration: number) => {
-      const timeoutId = window.setTimeout(() => {
-        removeToast(id);
-        timers.delete(id);
-      }, duration);
 
-      timers.set(id, { remaining: duration, startedAt: Date.now(), timeoutId });
-    };
-    let isPaused = false;
+    // ────────────────────────────────────────────────────────────────────────────────
+    // Timer Management (pause/resume for hover/focus)
+    // ────────────────────────────────────────────────────────────────────────────────
+
     const pauseTimers = () => {
-      if (isPaused) return;
-
-      isPaused = true;
       for (const [id, t] of timers) {
         clearTimeout(t.timeoutId);
         timers.set(id, { ...t, remaining: Math.max(0, t.remaining - (Date.now() - t.startedAt)) });
       }
     };
-    const resumeTimers = () => {
-      if (!isPaused) return;
 
-      isPaused = false;
+    const resumeTimers = () => {
       for (const [id, t] of timers) {
         if (t.remaining <= 0) continue;
 
-        scheduleRemoval(id, t.remaining);
+        const timeoutId = window.setTimeout(() => removeToast(id), t.remaining);
+
+        timers.set(id, { ...t, remaining: t.remaining, timeoutId });
       }
     };
+
+    const maybeUpdatePauseState = () => {
+      if (focusPaused || hoverPaused) pauseTimers();
+      else resumeTimers();
+    };
+
+    // ────────────────────────────────────────────────────────────────────────────────
+    // Toast Lifecycle
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    const scheduleRemoval = (id: string, duration: number) => {
+      if (duration <= 0) return;
+
+      const timeoutId = window.setTimeout(() => removeToast(id), duration);
+
+      timers.set(id, { remaining: duration, startedAt: Date.now(), timeoutId });
+    };
+
     const addToast = (toast: ToastItem): string => {
       const id = toast.id || crypto.randomUUID();
       const item: NormalizedToast = { dismissible: true, duration: 5000, ...toast, id };
 
-      toasts.value = [...toasts.value, item].slice(-(props.max.value ?? 5));
+      toasts.value = [...toasts.value, item].slice(-(props.max ?? 5));
       emit('add', { id });
 
       if (item.duration! > 0) scheduleRemoval(id, item.duration!);
 
       return id;
     };
+
     const removeToast = (id: string) => {
-      // Cancel the auto-dismiss timer if one is running.
-      const timer = timers.get(id);
-
-      if (timer) {
-        clearTimeout(timer.timeoutId);
-        timers.delete(id);
-      }
-
-      // Skip if already exiting or already queued.
+      // Already exiting or queued; skip to avoid double-processing
       if (exitingIds.value.has(id) || dismissQueue.includes(id)) return;
 
       if (isDismissing) {
@@ -207,12 +216,12 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
       }
 
       isDismissing = true;
+
       executeRemoval(id);
     };
-    // Internal: actually animate and remove. Always called from processNextInQueue or directly
-    // when the queue is empty.
+
     const executeRemoval = (id: string) => {
-      // Guard: could have been removed by clearAll between queue entry and execution.
+      // Guard: could have been removed since queue entry
       if (exitingIds.value.has(id)) {
         processNextInQueue();
 
@@ -221,9 +230,17 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
 
       const item = toasts.value.find((t) => t.id === id);
       const wrapper = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${id}"]`);
+
       const finalize = () => {
         setExiting(id, false);
         toasts.value = toasts.value.filter((t) => t.id !== id);
+
+        // Clean up timer
+        const timer = timers.get(id);
+
+        if (timer) clearTimeout(timer.timeoutId);
+
+        timers.delete(id);
         item?.onDismiss?.();
         emit('dismiss', { id });
         processNextInQueue();
@@ -236,6 +253,7 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
         finalize();
       }
     };
+
     const processNextInQueue = () => {
       if (dismissQueue.length === 0) {
         isDismissing = false;
@@ -277,7 +295,7 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
     };
 
     onMount(() => {
-      const el = host as ToastElement;
+      const el = host.el as ToastElement;
 
       el.add = addToast;
       el.update = updateToast;
@@ -286,18 +304,11 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
     });
 
     const urgencyOf = (t: NormalizedToast) => t.urgency ?? (t.color === 'error' ? 'assertive' : 'polite');
-    let focusPaused = false;
-    let hoverPaused = false;
-    const maybePause = () => pauseTimers();
-    const maybeResume = () => {
-      if (!focusPaused && !hoverPaused) resumeTimers();
-    };
+
     const setHovered = (hovered: boolean) => {
       hoverPaused = hovered;
-      host.classList.toggle('hovered', hovered);
-
-      if (hovered) maybePause();
-      else maybeResume();
+      host.el.classList.toggle('hovered', hovered);
+      maybeUpdatePauseState();
     };
     const renderToastItem = (toast: NormalizedToast) => html`
       <div
@@ -327,11 +338,11 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
         @pointerleave=${() => setHovered(false)}
         @focusin=${() => {
           focusPaused = true;
-          maybePause();
+          maybeUpdatePauseState();
         }}
         @focusout=${() => {
           focusPaused = false;
-          maybeResume();
+          maybeUpdatePauseState();
         }}
         part="container">
         <!-- Polite live region: normal informational toasts -->
@@ -342,8 +353,9 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
           aria-atomic="false"
           aria-label="Notifications"
           class="toast-live-region">
-          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'polite'), renderToastItem, undefined, {
+          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'polite'), {
             key: (toast) => toast.id,
+            render: renderToastItem,
           })}
         </div>
         <!-- Assertive live region: critical errors that interrupt immediately -->
@@ -354,8 +366,9 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
           aria-atomic="false"
           aria-label="Critical notifications"
           class="toast-live-region">
-          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'assertive'), renderToastItem, undefined, {
+          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'assertive'), {
             key: (toast) => toast.id,
+            render: renderToastItem,
           })}
         </div>
         <slot></slot>
@@ -363,7 +376,6 @@ export const TOAST_TAG = defineComponent<BitToastProps, BitToastEvents>({
     `;
   },
   styles: [reducedMotionMixin, componentStyles],
-  tag: 'bit-toast',
 });
 
 // ─── Singleton toast service ─────────────────────────────────────────────────

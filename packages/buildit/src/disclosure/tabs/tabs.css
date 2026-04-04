@@ -140,6 +140,16 @@
     border-radius: 0 0 var(--tabs-radius) var(--tabs-radius);
   }
 
+  :host([variant='bordered'][orientation='vertical']) [role='tablist'] {
+    border-right: none;
+    border-bottom: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--tabs-radius) 0 0 var(--tabs-radius);
+  }
+
+  :host([variant='bordered'][orientation='vertical']) .panels {
+    border-radius: 0 var(--tabs-radius) var(--tabs-radius) 0;
+  }
+
   /* ─── ghost ─── */
   :host([variant='ghost']) [role='tablist'] {
     gap: var(--size-1);

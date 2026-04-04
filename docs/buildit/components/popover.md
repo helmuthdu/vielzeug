@@ -162,8 +162,8 @@ Use the `open` attribute to programmatically show or hide the popover.
   import '@vielzeug/buildit';
 
   const pop = document.getElementById('pop');
-  pop.addEventListener('open', () => console.log('popover opened'));
-  pop.addEventListener('close', () => console.log('popover closed'));
+  pop.addEventListener('open', (e) => console.log('popover opened because:', e.detail.reason));
+  pop.addEventListener('close', (e) => console.log('popover closed because:', e.detail.reason));
 </script>
 ```
 
@@ -191,8 +191,8 @@ Use the `open` attribute to programmatically show or hide the popover.
 
 | Event   | Detail | Description                 |
 | ------- | ------ | --------------------------- |
-| `open`  | `void` | Fired when the panel opens  |
-| `close` | `void` | Fired when the panel closes |
+| `open`  | `{ reason: 'programmatic' \| 'trigger' }`                                     | Fired when the panel opens  |
+| `close` | `{ reason: 'programmatic' \| 'trigger' \| 'escape' \| 'outside-click' }` | Fired when the panel closes |
 
 ### CSS Custom Properties
 

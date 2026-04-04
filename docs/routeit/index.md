@@ -1,6 +1,6 @@
 ---
 title: Routeit — Client-side router for TypeScript
-description: Lightweight, type-safe client-side router with history and hash modes, typed path params, middleware, named routes, and a URL builder. Zero dependencies.
+description: Lightweight, type-safe client-side router with typed path params, middleware, named routes, and a URL builder. Zero dependencies.
 ---
 
 <PackageBadges package="routeit" />
@@ -75,7 +75,7 @@ router
 | Feature              | Routeit                                       | page.js | Navigo  |
 | -------------------- | --------------------------------------------- | ------- | ------- |
 | Bundle size          | <PackageInfo package="routeit" type="size" /> | ~1 kB   | ~5 kB   |
-| History + hash modes | ✅                                            | ✅      | ✅      |
+| History mode         | ✅                                            | ✅      | ✅      |
 | Typed path params    | ✅                                            | ❌      | ❌      |
 | Named routes         | ✅                                            | ❌      | Partial |
 | Middleware           | ✅                                            | ✅      | ✅      |
@@ -89,7 +89,7 @@ router
 
 ## Features
 
-- **History and hash modes** — `history` (default) or `hash`
+- **History mode routing** — HTML5 History API with base-path support
 - **Typed path params** — `PathParams<'/users/:id'>` inferred from the path literal at compile time
 - **Named wildcard params** — `/docs/:rest*` captures multi-segment paths as a single param
 - **Middleware** — global (`createRouter`/`use()`), per-group, and per-route; `ctx.locals` for passing data down the chain
@@ -117,7 +117,7 @@ router
 ## Prerequisites
 
 - Browser runtime with History API or hash-based navigation.
-- For history mode, configure server rewrites so deep links resolve to the SPA entry point.
+- Configure server rewrites so deep links resolve to the SPA entry point.
 - Register routes before calling `router.start()`.
 
 ## See Also

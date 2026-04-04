@@ -50,7 +50,7 @@ describe('IndexedDB adapter', () => {
     });
 
     test('patch – returns undefined when key absent', async () => {
-      expect(await db.patch('users', 99, { name: 'Ghost' })).toBeUndefined();
+      await expect(db.patch('users', 99, { name: 'Ghost' })).rejects.toThrow('deposit: patch target');
     });
 
     test('patch – no follow-up get needed', async () => {
@@ -159,10 +159,10 @@ describe('IndexedDB adapter', () => {
       await db.putMany('users', [{ id: 1 }, { id: 2 }], 1);
       await db.put('users', { id: 3 });
       await delay(5);
-      // Native store.count() is O(1) but does not filter TTL-expired records.
-      // For a precise live count use db.from(table).count() or (await db.getAll(table)).length.
-      expect(await db.count('users')).toBe(3);
-      expect(await db.from('users').count()).toBe(1);
+      // countRaw() is checked first — before count() triggers background eviction.
+      expect(await db.countRaw('users')).toBe(3);
+      // count() is TTL-accurate.
+      expect(await db.count('users')).toBe(1);
     });
 
     test('update preserves TTL', async () => {
@@ -360,7 +360,7 @@ describe('IndexedDB adapter', () => {
       expect(exists).toBe(true);
     });
 
-    test('count inside transaction returns native record count', async () => {
+    test('count inside transaction returns TTL-accurate count', async () => {
       await db.putMany('users', [{ id: 1 }, { id: 2 }, { id: 3 }]);
 
       let n = 0;
@@ -406,12 +406,12 @@ describe('IndexedDB adapter', () => {
 
       await migDb.put('users', { id: 1, name: 'Alice' });
       expect(migrationSpy).toHaveBeenCalledOnce();
-      expect(migrationSpy).toHaveBeenCalledWith(
-        expect.any(IDBDatabase),
-        expect.any(Number),
-        1,
-        expect.any(IDBTransaction),
-      );
+      expect(migrationSpy).toHaveBeenCalledWith({
+        db: expect.any(IDBDatabase),
+        newVersion: 1,
+        oldVersion: expect.any(Number),
+        tx: expect.any(IDBTransaction),
+      });
       migDb.close();
     });
   });

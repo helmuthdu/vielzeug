@@ -1,4 +1,4 @@
-import { type Fixture, mount, user } from '@vielzeug/craftit/test';
+import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 
 describe('bit-dialog', () => {
   let fixture: Fixture<HTMLElement>;
@@ -101,6 +101,7 @@ describe('bit-dialog', () => {
       await fixture.attr('open', '');
 
       expect(handler).toHaveBeenCalled();
+      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('programmatic');
     });
 
     it('fires close event when dialog closes', async () => {
@@ -114,6 +115,7 @@ describe('bit-dialog', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
+      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('programmatic');
     });
 
     it('fires close event when dismiss button clicked', async () => {
@@ -126,6 +128,31 @@ describe('bit-dialog', () => {
       await user.click(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
 
       expect(handler).toHaveBeenCalled();
+      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
+    });
+
+    it('fires close-request with reason="trigger" from dismiss button', async () => {
+      fixture = await mount('bit-dialog', { attrs: { dismissible: '', open: '' } });
+
+      let detail: { reason: string } | undefined;
+
+      fixture.element.addEventListener('close-request', (e) => {
+        detail = (e as CustomEvent<{ reason: string }>).detail;
+      });
+
+      await user.click(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
+
+      expect(detail?.reason).toBe('trigger');
+    });
+
+    it('keeps dialog open when close-request is prevented', async () => {
+      fixture = await mount('bit-dialog', { attrs: { dismissible: '', open: '' } });
+
+      fixture.element.addEventListener('close-request', (e) => e.preventDefault());
+      await user.click(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
     });
   });
 });

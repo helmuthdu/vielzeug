@@ -1,3 +1,10 @@
+/*
+ * Simplified and unified sidebar-group CSS:
+ * - Combined cursor and chevron logic for [collapsible] and :not([collapsible])
+ * - Grouped hover/focus/active state rules
+ * - Clarified collapsed mode label/chevron hiding
+ */
+
 @layer buildit.base {
   :host {
     display: block;
@@ -13,17 +20,16 @@
     position: relative;
     box-sizing: border-box;
     display: flex;
-    gap: var(--size-2);
     align-items: center;
     justify-content: flex-start;
     width: 100%;
-    min-height: var(--size-8);
+    min-height: var(--size-6);
     padding: var(--size-1) var(--size-2);
+    margin-bottom: var(--size-2);
     color: inherit;
-    cursor: pointer;
     user-select: none;
     outline: none;
-    border-radius: var(--rounded-sm);
+    border-radius: var(--rounded-lg);
     transition: background var(--transition-fast);
   }
 
@@ -31,7 +37,11 @@
     display: none;
   }
 
-  /* Only show hover & focus when the group is collapsible */
+  /* Collapsible group: pointer, hover/focus, show chevron */
+  :host([collapsible]) .group-header {
+    cursor: pointer;
+  }
+
   :host([collapsible]) .group-header:hover {
     background: var(--color-contrast-100);
   }
@@ -40,12 +50,17 @@
     outline: var(--focus-ring);
   }
 
+  /* Non-collapsible group: default cursor, hide chevron */
   :host(:not([collapsible])) .group-header {
     cursor: default;
   }
 
+  :host(:not([collapsible])) .chevron {
+    display: none !important;
+  }
+
   .group-label {
-    flex: 1;
+    flex-grow: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: var(--text-xs);
@@ -65,6 +80,10 @@
     color: var(--color-contrast-400);
   }
 
+  .group-icon:empty {
+    display: none;
+  }
+
   .chevron {
     display: flex;
     flex-shrink: 0;
@@ -74,29 +93,44 @@
     transition: var(--_motion-transition, transform var(--transition-normal));
   }
 
-  :host([collapsible][open]) .chevron {
+  /* Chevron rotation for open group */
+  :host([collapsible]) .group[open] .chevron {
     transform: rotate(90deg);
   }
 
   .group-items {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--size-0-5);
+    gap: var(--size-1);
     min-width: 0;
   }
 
-  /* Collapsed-sidebar: hide label text but keep icon */
+  /* Collapsed-sidebar: hide label text and chevron, center icon */
   :host([sidebar-collapsed]) .group-label,
   :host([sidebar-collapsed]) .chevron {
-    pointer-events: none;
-    opacity: 0;
+    display: none;
   }
-}
 
-@layer buildit.variants {
-  /* When the parent sidebar is collapsed, center the group icon */
   :host([sidebar-collapsed]) .group-header {
-    justify-content: center;
-    padding-inline: var(--size-2);
+    display: none;
+    height: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  :host([sidebar-collapsed]) .group-badge {
+    position: static !important;
+    display: flex !important;
+    visibility: visible !important;
+    width: auto !important;
+    height: auto !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+  }
+
+  /* Collapsible group closed: hide items */
+  :host([collapsible]:not([open])) .group-items {
+    display: none;
   }
 }

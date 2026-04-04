@@ -12,6 +12,52 @@ import type {
 import { QueryBuilder } from '../query';
 import { type Envelope, isEnvelope, readEnvelope, unwrap, wrap } from '../ttl';
 
+/* -------------------- Module-level IDB helpers -------------------- */
+
+function idbReq<R>(req: IDBRequest<R>): Promise<R> {
+  return new Promise<R>((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error ?? new Error('deposit: IndexedDB request failed'));
+  });
+}
+
+function filterRecords<T>(raws: unknown[]): T[] {
+  const out: T[] = [];
+
+  for (const raw of raws) {
+    if (!isEnvelope(raw)) continue;
+
+    const v = unwrap(raw as Envelope<T>);
+
+    if (v !== undefined) out.push(v);
+  }
+
+  return out;
+}
+
+async function storePatch<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  key: IDBValidKey,
+  partial: Partial<T>,
+  ttl?: number,
+): Promise<T | undefined> {
+  const raw = await idbReq<unknown>(store.get(key));
+
+  if (!isEnvelope(raw)) return undefined;
+
+  const current = unwrap(raw as Envelope<T>);
+
+  if (current === undefined) return undefined;
+
+  const merged = { ...current, ...partial } as T;
+  const newEnv: Envelope<T> =
+    ttl !== undefined ? { __d: 1, exp: Date.now() + ttl, v: merged } : { ...(raw as Envelope<T>), v: merged };
+
+  await idbReq(store.put(newEnv));
+
+  return merged;
+}
+
 /* -------------------- IndexedDBAdapter -------------------- */
 
 class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
@@ -33,7 +79,7 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
   }
 
   from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
-    return new QueryBuilder<RecordType<S, K>>(this, String(table));
+    return new QueryBuilder<RecordType<S, K>>(() => this.getAll(table) as Promise<unknown[]>);
   }
 
   close(): void {
@@ -56,7 +102,12 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
           // Run user migration first — it may drop/recreate stores before deposit ensures schema.
           if (this.migrationFn) {
             try {
-              this.migrationFn(db, event.oldVersion, (event as IDBVersionChangeEvent).newVersion ?? null, tx);
+              this.migrationFn({
+                db,
+                newVersion: (event as IDBVersionChangeEvent).newVersion ?? null,
+                oldVersion: event.oldVersion,
+                tx,
+              });
             } catch (err) {
               try {
                 tx.abort();
@@ -98,7 +149,7 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
 
   async get<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<RecordType<S, K> | undefined> {
     return this.withStore(table, 'readonly', async (store) =>
-      readEnvelope<RecordType<S, K>>(await this.idbRequest<unknown>(store.get(key as IDBValidKey))),
+      readEnvelope<RecordType<S, K>>(await idbReq<unknown>(store.get(key as IDBValidKey))),
     );
   }
 
@@ -112,7 +163,7 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
 
   async getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]> {
     return this.withStore(table, 'readonly', async (store) => {
-      const results = await this.idbRequest<Envelope<RecordType<S, K>>[]>(store.getAll());
+      const results = await idbReq<Envelope<RecordType<S, K>>[]>(store.getAll());
       const records: RecordType<S, K>[] = [];
       const expiredKeys: IDBValidKey[] = [];
       const keyField = String((this.schema[table] as { key: string }).key);
@@ -131,7 +182,7 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
 
       if (expiredKeys.length > 0) {
         void this.withStore(table, 'readwrite', (s) =>
-          Promise.all(expiredKeys.map((k) => this.idbRequest(s.delete(k)))).then(() => undefined),
+          Promise.all(expiredKeys.map((k) => idbReq(s.delete(k)))).then(() => undefined),
         ).catch((err) => {
           this.logger.warn('deposit: failed to evict expired records', err);
         });
@@ -143,7 +194,7 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
 
   async getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<S, K>[]> {
     return this.withStore(table, 'readonly', async (store) => {
-      const raws = await Promise.all(keys.map((k) => this.idbRequest<unknown>(store.get(k as IDBValidKey))));
+      const raws = await Promise.all(keys.map((k) => idbReq<unknown>(store.get(k as IDBValidKey))));
 
       return raws
         .map((raw) => readEnvelope<RecordType<S, K>>(raw))
@@ -152,22 +203,22 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
   }
 
   async put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void> {
-    await this.withStore(table, 'readwrite', (store) => this.idbRequest(store.put(wrap(value, ttl))));
+    await this.withStore(table, 'readwrite', (store) => idbReq(store.put(wrap(value, ttl))));
   }
 
   async putMany<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void> {
     await this.withStore(table, 'readwrite', async (store) => {
-      await Promise.all(values.map((v) => this.idbRequest(store.put(wrap(v, ttl)))));
+      await Promise.all(values.map((v) => idbReq(store.put(wrap(v, ttl)))));
     });
   }
 
   async delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> {
-    await this.withStore(table, 'readwrite', (store) => this.idbRequest(store.delete(key as IDBValidKey)));
+    await this.withStore(table, 'readwrite', (store) => idbReq(store.delete(key as IDBValidKey)));
   }
 
   async deleteMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> {
     await this.withStore(table, 'readwrite', async (store) => {
-      await Promise.all(keys.map((k) => this.idbRequest(store.delete(k as IDBValidKey))));
+      await Promise.all(keys.map((k) => idbReq(store.delete(k as IDBValidKey))));
     });
   }
 
@@ -176,25 +227,16 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
     key: KeyType<S, K>,
     partial: Partial<RecordType<S, K>>,
     ttl?: number,
-  ): Promise<RecordType<S, K> | undefined> {
-    return this.withStore(table, 'readwrite', async (store) => {
-      const raw = await this.idbRequest<unknown>(store.get(key as IDBValidKey));
+  ): Promise<RecordType<S, K>> {
+    const result = await this.withStore(table, 'readwrite', (store) =>
+      storePatch<RecordType<S, K>>(store, key as IDBValidKey, partial, ttl),
+    );
 
-      if (!raw || !isEnvelope(raw)) return undefined;
+    if (result === undefined) {
+      throw new Error(`deposit: patch target "${String(key)}" not found in "${String(table)}"`);
+    }
 
-      const current = unwrap(raw as Envelope<RecordType<S, K>>);
-
-      if (current === undefined) return undefined;
-
-      const merged = { ...current, ...partial } as RecordType<S, K>;
-      const env = raw as Envelope<RecordType<S, K>>;
-      const newEnv: Envelope<RecordType<S, K>> =
-        ttl !== undefined ? { exp: Date.now() + ttl, v: merged } : { ...env, v: merged };
-
-      await this.idbRequest(store.put(newEnv));
-
-      return merged;
-    });
+    return result;
   }
 
   async getOrPut<K extends keyof S>(
@@ -204,29 +246,28 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
     ttl?: number,
   ): Promise<RecordType<S, K>> {
     return this.withStore(table, 'readwrite', async (store) => {
-      const existing = readEnvelope<RecordType<S, K>>(await this.idbRequest<unknown>(store.get(key as IDBValidKey)));
+      const existing = readEnvelope<RecordType<S, K>>(await idbReq<unknown>(store.get(key as IDBValidKey)));
 
       if (existing !== undefined) return existing;
 
       const value = await factory();
 
-      await this.idbRequest(store.put(wrap(value, ttl)));
+      await idbReq(store.put(wrap(value, ttl)));
 
       return value;
     });
   }
 
   async deleteAll<K extends keyof S>(table: K): Promise<void> {
-    await this.withStore(table, 'readwrite', (store) => this.idbRequest<undefined>(store.clear()));
+    await this.withStore(table, 'readwrite', (store) => idbReq<undefined>(store.clear()));
   }
 
-  /**
-   * Returns the native IDB record count in O(1).
-   * Note: may include TTL-expired records that have not been evicted yet.
-   * For a precise live count use `(await db.getAll(table)).length` or `db.from(table).count()`.
-   */
   async count<K extends keyof S>(table: K): Promise<number> {
-    return this.withStore(table, 'readonly', (store) => this.idbRequest<number>(store.count()));
+    return (await this.getAll(table)).length;
+  }
+
+  async countRaw<K extends keyof S>(table: K): Promise<number> {
+    return this.withStore(table, 'readonly', (store) => idbReq<number>(store.count()));
   }
 
   async has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean> {
@@ -234,7 +275,7 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
       table,
       'readonly',
       async (store) =>
-        readEnvelope<RecordType<S, K>>(await this.idbRequest<unknown>(store.get(key as IDBValidKey))) !== undefined,
+        readEnvelope<RecordType<S, K>>(await idbReq<unknown>(store.get(key as IDBValidKey))) !== undefined,
     );
   }
 
@@ -253,69 +294,45 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
       let callbackError: unknown;
 
       const ctx: TransactionContext<S, K> = {
-        count: (table) => this.idbRequest<number>(idbTx.objectStore(String(table)).count()),
-        delete: (table, key) => this.idbRequest(idbTx.objectStore(String(table)).delete(key as IDBValidKey)),
-        deleteAll: (table) =>
-          this.idbRequest<undefined>(idbTx.objectStore(String(table)).clear()).then(() => undefined),
+        count: (table) => ctx.getAll(table).then((all) => all.length),
+        delete: (table, key) => idbReq(idbTx.objectStore(String(table)).delete(key as IDBValidKey)),
+        deleteAll: (table) => idbReq<undefined>(idbTx.objectStore(String(table)).clear()).then(() => undefined),
         deleteMany: (table, keys) =>
-          Promise.all(keys.map((k) => this.idbRequest(idbTx.objectStore(String(table)).delete(k as IDBValidKey)))).then(
+          Promise.all(keys.map((k) => idbReq(idbTx.objectStore(String(table)).delete(k as IDBValidKey)))).then(
             () => undefined,
           ),
-        from: (table) =>
-          new QueryBuilder<RecordType<S, K>>(
-            {
-              getAll: (t) => {
-                if (!tables.includes(t as K)) {
-                  throw new Error(`deposit: table "${t}" is not part of this transaction`);
-                }
-
-                return ctx.getAll(t as K);
-              },
-            },
-            String(table),
-          ),
+        from: (table) => new QueryBuilder<RecordType<S, K>>(() => ctx.getAll(table) as Promise<unknown[]>),
         get: (table, key) =>
-          this.idbRequest<unknown>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then((raw) =>
+          idbReq<unknown>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then((raw) =>
             readEnvelope<RecordType<S, K>>(raw),
           ),
         getAll: (table) =>
-          this.idbRequest<unknown[]>(idbTx.objectStore(String(table)).getAll()).then((raws) =>
-            raws
-              .map((raw) => readEnvelope<RecordType<S, K>>(raw))
-              .filter((v): v is RecordType<S, K> => v !== undefined),
-          ),
+          idbReq<unknown[]>(idbTx.objectStore(String(table)).getAll()).then(filterRecords<RecordType<S, K>>),
         getMany: (table, keys) =>
-          Promise.all(
-            keys.map((k) => this.idbRequest<unknown>(idbTx.objectStore(String(table)).get(k as IDBValidKey))),
-          ).then((raws) =>
-            raws
-              .map((raw) => readEnvelope<RecordType<S, K>>(raw))
-              .filter((v): v is RecordType<S, K> => v !== undefined),
+          Promise.all(keys.map((k) => idbReq<unknown>(idbTx.objectStore(String(table)).get(k as IDBValidKey)))).then(
+            (raws) =>
+              raws
+                .map((raw) => readEnvelope<RecordType<S, K>>(raw))
+                .filter((v): v is RecordType<S, K> => v !== undefined),
           ),
         getOr: (table, key, defaultValue) => ctx.get(table, key).then((v) => v ?? defaultValue),
         has: (table, key) =>
-          this.idbRequest<unknown>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then(
+          idbReq<unknown>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then(
             (raw) => readEnvelope<RecordType<S, K>>(raw) !== undefined,
           ),
         patch: (table, key, partial, ttl) =>
-          this.idbRequest<unknown>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then((raw) => {
-            if (!raw || !isEnvelope(raw)) return undefined;
+          storePatch<RecordType<S, K>>(idbTx.objectStore(String(table)), key as IDBValidKey, partial, ttl).then(
+            (result) => {
+              if (result === undefined)
+                throw new Error(`deposit: patch target "${String(key)}" not found in "${String(table)}"`);
 
-            const current = unwrap(raw as Envelope<RecordType<S, K>>);
-
-            if (current === undefined) return undefined;
-
-            const merged = { ...current, ...partial } as RecordType<S, K>;
-            const env = raw as Envelope<RecordType<S, K>>;
-            const newEnv: Envelope<RecordType<S, K>> =
-              ttl !== undefined ? { exp: Date.now() + ttl, v: merged } : { ...env, v: merged };
-
-            return this.idbRequest(idbTx.objectStore(String(table)).put(newEnv)).then(() => merged);
-          }),
+              return result;
+            },
+          ),
         put: (table, value, ttl) =>
-          this.idbRequest(idbTx.objectStore(String(table)).put(wrap(value, ttl))).then(() => undefined),
+          idbReq(idbTx.objectStore(String(table)).put(wrap(value, ttl))).then(() => undefined),
         putMany: (table, values, ttl) =>
-          Promise.all(values.map((v) => this.idbRequest(idbTx.objectStore(String(table)).put(wrap(v, ttl))))).then(
+          Promise.all(values.map((v) => idbReq(idbTx.objectStore(String(table)).put(wrap(v, ttl))))).then(
             () => undefined,
           ),
       };
@@ -428,13 +445,6 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
           }),
         );
       };
-    });
-  }
-
-  private idbRequest<R>(req: IDBRequest<R>): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error ?? new Error(`deposit: IndexedDB request on "${this.dbName}" failed`));
     });
   }
 }

@@ -24,10 +24,9 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
     }
   }
 
-  private checkStorage(): void {
+  private get storage(): Storage {
     try {
-      // accessing localStorage throws a SecurityError in Safari private mode and some sandboxed iframes
-      void localStorage;
+      return localStorage;
     } catch {
       throw new Error(
         'deposit: localStorage is not available in this environment (private browsing or sandboxed iframe?)',
@@ -35,13 +34,23 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
     }
   }
 
+  private writeItem(storageKey: string, value: unknown, table: string): void {
+    try {
+      this.storage.setItem(storageKey, JSON.stringify(value));
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+        throw new Error(`deposit: localStorage quota exceeded while writing to "${table}"`, { cause: err });
+      }
+
+      throw err;
+    }
+  }
+
   from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
-    return new QueryBuilder<RecordType<S, K>>(this, String(table));
+    return new QueryBuilder<RecordType<S, K>>(() => this.getAll(table) as Promise<unknown[]>);
   }
 
   async get<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<RecordType<S, K> | undefined> {
-    this.checkStorage();
-
     return this.readEntry<RecordType<S, K>>(this.storageKey(table, String(key)), String(key));
   }
 
@@ -54,12 +63,10 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
   }
 
   async getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]> {
-    this.checkStorage();
-
     const prefix = this.tablePrefix(table);
     const records: RecordType<S, K>[] = [];
 
-    for (const k of Object.keys(localStorage)) {
+    for (const k of Object.keys(this.storage)) {
       if (!k.startsWith(prefix)) continue;
 
       const value = this.readEntry<RecordType<S, K>>(k);
@@ -71,8 +78,6 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
   }
 
   async getMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<RecordType<S, K>[]> {
-    this.checkStorage();
-
     const results: RecordType<S, K>[] = [];
 
     for (const k of keys) {
@@ -85,50 +90,26 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
   }
 
   async put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void> {
-    this.checkStorage();
-
     const key = this.recordKey(value, table);
 
-    try {
-      localStorage.setItem(this.storageKey(table, String(key)), JSON.stringify(wrap(value, ttl)));
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-        throw new Error(`deposit: localStorage quota exceeded while writing to "${String(table)}"`, { cause: err });
-      }
-
-      throw err;
-    }
+    this.writeItem(this.storageKey(table, String(key)), wrap(value, ttl), String(table));
   }
 
   async putMany<K extends keyof S>(table: K, values: RecordType<S, K>[], ttl?: number): Promise<void> {
-    this.checkStorage();
-
     for (const v of values) {
       const key = this.recordKey(v, table);
 
-      try {
-        localStorage.setItem(this.storageKey(table, String(key)), JSON.stringify(wrap(v, ttl)));
-      } catch (err) {
-        if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-          throw new Error(`deposit: localStorage quota exceeded while writing to "${String(table)}"`, { cause: err });
-        }
-
-        throw err;
-      }
+      this.writeItem(this.storageKey(table, String(key)), wrap(v, ttl), String(table));
     }
   }
 
   async delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> {
-    this.checkStorage();
-
-    localStorage.removeItem(this.storageKey(table, String(key)));
+    this.storage.removeItem(this.storageKey(table, String(key)));
   }
 
   async deleteMany<K extends keyof S>(table: K, keys: KeyType<S, K>[]): Promise<void> {
-    this.checkStorage();
-
     for (const k of keys) {
-      localStorage.removeItem(this.storageKey(table, String(k)));
+      this.storage.removeItem(this.storageKey(table, String(k)));
     }
   }
 
@@ -137,43 +118,40 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
     key: KeyType<S, K>,
     partial: Partial<RecordType<S, K>>,
     ttl?: number,
-  ): Promise<RecordType<S, K> | undefined> {
-    this.checkStorage();
-
+  ): Promise<RecordType<S, K>> {
     const storageKey = this.storageKey(table, String(key));
-    const raw = localStorage.getItem(storageKey);
+    const raw = this.storage.getItem(storageKey);
 
-    if (!raw) return undefined;
+    if (!raw) throw new Error(`deposit: patch target "${String(key)}" not found in "${String(table)}"`);
+
+    let env: Envelope<RecordType<S, K>>;
 
     try {
-      const env = JSON.parse(raw) as Envelope<RecordType<S, K>>;
-
-      if (!isEnvelope(env)) {
-        localStorage.removeItem(storageKey);
-
-        return undefined;
-      }
-
-      const current = unwrap(env);
-
-      if (current === undefined) {
-        localStorage.removeItem(storageKey);
-
-        return undefined;
-      }
-
-      const merged = { ...current, ...partial } as RecordType<S, K>;
-      const newEnv: Envelope<RecordType<S, K>> =
-        ttl !== undefined ? { exp: Date.now() + ttl, v: merged } : { ...env, v: merged };
-
-      localStorage.setItem(storageKey, JSON.stringify(newEnv));
-
-      return merged;
+      env = JSON.parse(raw) as Envelope<RecordType<S, K>>;
     } catch {
-      localStorage.removeItem(storageKey);
-
-      return undefined;
+      this.storage.removeItem(storageKey);
+      throw new Error(`deposit: patch target "${String(key)}" not found in "${String(table)}"`);
     }
+
+    if (!isEnvelope(env)) {
+      this.storage.removeItem(storageKey);
+      throw new Error(`deposit: patch target "${String(key)}" not found in "${String(table)}"`);
+    }
+
+    const current = unwrap(env);
+
+    if (current === undefined) {
+      this.storage.removeItem(storageKey);
+      throw new Error(`deposit: patch target "${String(key)}" not found in "${String(table)}"`);
+    }
+
+    const merged = { ...current, ...partial } as RecordType<S, K>;
+    const newEnv: Envelope<RecordType<S, K>> =
+      ttl !== undefined ? { __d: 1, exp: Date.now() + ttl, v: merged } : { ...env, v: merged };
+
+    this.writeItem(storageKey, newEnv, String(table));
+
+    return merged;
   }
 
   async getOrPut<K extends keyof S>(
@@ -182,8 +160,6 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
     factory: () => RecordType<S, K> | Promise<RecordType<S, K>>,
     ttl?: number,
   ): Promise<RecordType<S, K>> {
-    this.checkStorage();
-
     const existing = await this.get(table, key);
 
     if (existing !== undefined) return existing;
@@ -196,12 +172,10 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
   }
 
   async deleteAll<K extends keyof S>(table: K): Promise<void> {
-    this.checkStorage();
-
     const prefix = this.tablePrefix(table);
 
-    for (const k of Object.keys(localStorage)) {
-      if (k.startsWith(prefix)) localStorage.removeItem(k);
+    for (const k of Object.keys(this.storage)) {
+      if (k.startsWith(prefix)) this.storage.removeItem(k);
     }
   }
 
@@ -210,13 +184,11 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
   }
 
   async has<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<boolean> {
-    this.checkStorage();
-
     return this.readEntry(this.storageKey(table, String(key))) !== undefined;
   }
 
   private readEntry<T>(storageKey: string, keyHint?: string): T | undefined {
-    const raw = localStorage.getItem(storageKey);
+    const raw = this.storage.getItem(storageKey);
 
     if (!raw) return undefined;
 
@@ -224,7 +196,7 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
       const env = JSON.parse(raw) as Envelope<T>;
 
       if (!isEnvelope(env)) {
-        localStorage.removeItem(storageKey);
+        this.storage.removeItem(storageKey);
 
         return undefined;
       }
@@ -232,7 +204,7 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
       const value = unwrap(env);
 
       if (value === undefined) {
-        localStorage.removeItem(storageKey);
+        this.storage.removeItem(storageKey);
 
         return undefined;
       }
@@ -240,7 +212,7 @@ class LocalStorageAdapter<S extends Schema<any>> implements Adapter<S> {
       return value;
     } catch (err) {
       this.logger.warn(`Removing corrupted entry for key: ${keyHint ?? storageKey}`, err);
-      localStorage.removeItem(storageKey);
+      this.storage.removeItem(storageKey);
 
       return undefined;
     }

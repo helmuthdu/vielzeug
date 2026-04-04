@@ -1,4 +1,5 @@
 import { ErrorCode, Schema } from '../core';
+import { _messages } from '../messages';
 
 export class InstanceOfSchema<T> extends Schema<T> {
   constructor(cls: new (...args: any[]) => T) {
@@ -6,7 +7,7 @@ export class InstanceOfSchema<T> extends Schema<T> {
       (value, path) =>
         value instanceof cls
           ? null
-          : [{ code: ErrorCode.invalid_type, message: `Expected instance of ${cls.name}`, path }],
+          : [{ code: ErrorCode.invalid_type, message: _messages().instanceof_type({ className: cls.name }), path }],
     ]);
   }
 }
