@@ -140,10 +140,12 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const labelledById = signal<string | undefined>(undefined);
 
-    mountFormContextSync(host.el, formCtx, props);
+    mountFormContextSync(host.el, formCtx, props as any);
 
-    host.bind('attr', {
-      'data-dragging': () => (isDragging.value ? true : undefined),
+    host.bind({
+      attr: {
+        'data-dragging': () => (isDragging.value ? true : undefined),
+      },
     });
 
     let sliderFd:
@@ -169,15 +171,17 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
         },
         { immediate: true },
       );
-      host.bind('attr', {
-        ariaDisabled: () => (isDisabled.value ? 'true' : null),
-        ariaLabelledby: () => labelledById.value ?? null,
-        ariaValuemax: () => sliderControl.max(),
-        ariaValuemin: () => sliderControl.min(),
-        ariaValuenow: () => Number(valueSignal.value || 0),
-        ariaValuetext: () => props['value-text'].value ?? null,
-        role: () => 'slider',
-        tabindex: () => (isDisabled.value ? null : '0'),
+      host.bind({
+        attr: {
+          ariaDisabled: () => (isDisabled.value ? 'true' : null),
+          ariaLabelledby: () => labelledById.value ?? null,
+          ariaValuemax: () => sliderControl.max(),
+          ariaValuemin: () => sliderControl.min(),
+          ariaValuenow: () => Number(valueSignal.value || 0),
+          ariaValuetext: () => props['value-text'].value ?? null,
+          role: () => 'slider',
+          tabindex: () => (isDisabled.value ? null : '0'),
+        },
       });
     }
 

@@ -137,76 +137,77 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
 
     mountFormContextSync(host.el, formCtx, props);
 
-    host.bind('class', () => ({
-      'is-checked': control.checked.value,
-      'is-disabled': control.disabled.value,
-    }));
-    host.bind('attr', {
-      checked: () => control.checked.value,
-      color: () => effectiveColor.value,
-      disabled: () => (control.disabled.value ? true : undefined),
-      name: () => effectiveName.value || undefined,
-      size: () => effectiveSize.value,
-      tabindex: () => {
-        if (control.disabled.value) return undefined;
+    host.bind({
+      attr: {
+        checked: control.checked,
+        color: effectiveColor,
+        disabled: () => (control.disabled.value ? true : undefined),
+        name: () => effectiveName.value || undefined,
+        size: effectiveSize,
+        tabindex: () => {
+          if (control.disabled.value) return undefined;
 
-        return control.checked.value ? 0 : -1;
+          return control.checked.value ? 0 : -1;
+        },
       },
-    });
+      class: () => ({
+        'is-checked': control.checked.value,
+        'is-disabled': control.disabled.value,
+      }),
+      on: {
+        click: (e: MouseEvent) => {
+          if (control.disabled.value) return;
 
-    host.bind('on', {
-      click: (e) => {
-        if (control.disabled.value) return;
+          if (groupCtx) {
+            groupCtx.select(props.value.value ?? '', e);
+          } else {
+            if (!effectiveName.value) return;
 
-        if (groupCtx) {
-          groupCtx.select(props.value.value ?? '', e);
-        } else {
-          if (!effectiveName.value) return;
+            if (!control.checked.value) {
+              const radioName = props.name.value;
+              const allRadios = document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`);
 
-          if (!control.checked.value) {
-            const radioName = props.name.value;
-            const allRadios = document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`);
+              allRadios.forEach((radio) => {
+                if (radio !== host.el) radio.removeAttribute('checked');
+              });
 
-            allRadios.forEach((radio) => {
-              if (radio !== host.el) radio.removeAttribute('checked');
-            });
-
-            control.toggle(e);
+              control.toggle(e);
+            }
           }
-        }
-      },
-      keydown: (e) => {
-        const radios = getRadioGroup();
+        },
+        keydown: (e: KeyboardEvent) => {
+          const radios = getRadioGroup();
 
-        if (radios.length === 0) return;
+          if (radios.length === 0) return;
 
-        let activeIndex = radios.indexOf(host.el);
+          let activeIndex = radios.indexOf(host.el);
 
-        if (activeIndex === -1) return;
+          if (activeIndex === -1) return;
 
-        const listControl = createListControl({
-          getIndex: () => activeIndex,
-          getItems: () => radios,
-          loop: true,
-          setIndex: (index) => {
-            activeIndex = index;
-            radios[index]?.focus();
-          },
-        });
+          const listControl = createListControl({
+            getIndex: () => activeIndex,
+            getItems: () => radios,
+            loop: true,
+            setIndex: (index) => {
+              activeIndex = index;
+              radios[index]?.focus();
+            },
+          });
 
-        if (pressControl.handleKeydown(e)) return;
+          if (pressControl.handleKeydown(e)) return;
 
-        const radioListKeys = createListKeyControl({
-          control: listControl,
-          keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
-          onInvoke: (_action, _result, event) => {
-            const nextRadio = radios[activeIndex];
+          const radioListKeys = createListKeyControl({
+            control: listControl,
+            keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
+            onInvoke: (_action, _result, event) => {
+              const nextRadio = radios[activeIndex];
 
-            if (nextRadio) selectRadio(nextRadio, event);
-          },
-        });
+              if (nextRadio) selectRadio(nextRadio, event);
+            },
+          });
 
-        radioListKeys.handleKeydown(e);
+          radioListKeys.handleKeydown(e);
+        },
       },
     });
 

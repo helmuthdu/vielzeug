@@ -1,5 +1,5 @@
 import { define, effect, html, inject, onElement, ref } from '@vielzeug/craftit';
-import { createTextFieldControl } from '@vielzeug/craftit/controls';
+import { createFieldControl } from '@vielzeug/craftit/controls';
 
 import type { VisualVariant } from '../../types';
 import type { TextFieldProps } from '../shared/base-props';
@@ -103,33 +103,35 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       textareaEl.style.height = `${textareaEl.scrollHeight}px`;
     };
 
-    const tf = createTextFieldControl({
-      context: formCtx,
-      disabled: props.disabled,
-      elementRef: textareaRef,
-      error: props.error,
-      helper: props.helper,
-      label: props.label,
-      labelPlacement: props['label-placement'],
-      maxLength: props.maxlength,
-      name: props.name,
-      onChange: (event, value) => {
-        emit('change', { originalEvent: event, value });
+    const tf = createFieldControl({
+      kind: 'text',
+      options: {
+        context: formCtx,
+        disabled: props.disabled,
+        elementRef: textareaRef,
+        error: props.error,
+        helper: props.helper,
+        label: props.label,
+        labelPlacement: props['label-placement'],
+        maxLength: props.maxlength,
+        name: props.name,
+        onChange: (event, value) => {
+          emit('change', { originalEvent: event, value });
+        },
+        onInput: (event, value) => {
+          emit('input', { originalEvent: event, value });
+        },
+        onInputExtra: autoGrow,
+        placeholder: props.placeholder,
+        prefix: 'textarea',
+        readOnly: props.readonly,
+        required: props.required,
+        rows: props.rows,
+        value: props.value,
       },
-      onInput: (event, value) => {
-        emit('input', { originalEvent: event, value });
-      },
-      onInputExtra: autoGrow,
-      placeholder: props.placeholder,
-      prefix: 'textarea',
-      readOnly: props.readonly,
-      required: props.required,
-      rows: props.rows,
-      value: props.value,
     });
     const {
       assistive,
-      attrs: textareaAttrs,
       errorId,
       fieldId: textareaId,
       helperId,
@@ -137,6 +139,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       labelInsetRef,
       labelOutsideId,
       labelOutsideRef,
+      value: fieldValue,
     } = tf;
 
     onElement(textareaRef, (textareaEl) => {
@@ -152,39 +155,44 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       return syncLayout;
     });
 
+    const ariaDescribedBy = () => (assistive.value.hasError ? errorId : helperId);
+    const ariaErrorMessage = () => (assistive.value.hasError ? errorId : null);
+    const ariaInvalid = () => String(assistive.value.hasError);
+    const ariaLabelledBy = () => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId);
+    const counterClass = () =>
+      assistive.value.counterAtLimit
+        ? 'counter at-limit'
+        : assistive.value.counterNearLimit
+          ? 'counter near-limit'
+          : 'counter';
+    const counterHidden = () => !assistive.value.hasCounter;
+    const counterText = () => assistive.value.counterText.replace(' / ', '/');
+    const helperHidden = () => !(assistive.value.hasError || assistive.value.showHelper);
+    const helperText = () => (assistive.value.hasError ? assistive.value.errorText : assistive.value.helperText);
+
     return html`
       <div class="textarea-wrapper">
-        <label class="label-outside" for="${textareaId}" id="${labelOutsideId}" ref=${labelOutsideRef} hidden></label>
+        <label class="label-outside" for="${textareaId}" id="${labelOutsideId}" ref="${labelOutsideRef}" hidden></label>
         <div class="field">
-          <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ref=${labelInsetRef} hidden></label>
+          <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ref="${labelInsetRef}" hidden></label>
           <textarea
-            ref=${textareaRef}
+            ref="${textareaRef}"
             id="${textareaId}"
-            ${textareaAttrs}
-            :aria-describedby="${() => (assistive.value.hasError ? errorId : helperId)}"
-            :aria-errormessage="${() => (assistive.value.hasError ? errorId : null)}"
-            :aria-invalid="${() => String(assistive.value.hasError)}"
-            :aria-labelledby="${() =>
-              props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId}"></textarea>
+            :name="${props.name}"
+            :placeholder="${props.placeholder}"
+            :rows="${props.rows}"
+            :maxlength="${props.maxlength}"
+            ?disabled="${props.disabled}"
+            ?readonly="${props.readonly}"
+            ?required="${props.required}"
+            .value="${fieldValue}"
+            :aria-describedby="${ariaDescribedBy}"
+            :aria-errormessage="${ariaErrorMessage}"
+            :aria-invalid="${ariaInvalid}"
+            :aria-labelledby="${ariaLabelledBy}"></textarea>
         </div>
-        <span
-          class="${() =>
-            assistive.value.counterAtLimit
-              ? 'counter at-limit'
-              : assistive.value.counterNearLimit
-                ? 'counter near-limit'
-                : 'counter'}"
-          aria-live="polite"
-          ?hidden=${() => !assistive.value.hasCounter}
-          >${() => assistive.value.counterText.replace(' / ', '/')}</span
-        >
-        <div
-          id="${helperId}"
-          class="helper-text"
-          aria-live="polite"
-          ?hidden=${() => !(assistive.value.hasError || assistive.value.showHelper)}>
-          ${() => (assistive.value.hasError ? assistive.value.errorText : assistive.value.helperText)}
-        </div>
+        <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
+        <div id="${helperId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">${helperText}</div>
       </div>
     `;
   },

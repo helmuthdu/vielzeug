@@ -115,8 +115,10 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
       if (committedValue.value !== nextValue) committedValue.value = nextValue;
     };
 
-    host.bind('attr', {
-      value: () => committedValue.value || null,
+    host.bind({
+      attr: {
+        value: () => committedValue.value || null,
+      },
     });
 
     defineField(
@@ -176,8 +178,6 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
       spinner.handleKeydown(e);
     }
 
-    const atMin = computed(() => spinner.atMin());
-    const atMax = computed(() => spinner.atMax());
     const isNonInteractive = computed(() => isDisabled.value || isReadonly.value);
 
     return html`
@@ -186,38 +186,34 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
         role="spinbutton"
         part="control"
         :aria-valuenow="${() => parseValue() ?? null}"
-        :aria-valuemin="${() => props.min.value ?? null}"
-        :aria-valuemax="${() => props.max.value ?? null}"
-        :aria-label="${() => props.label.value || null}"
+        :aria-valuemin="${() => props.min.value}"
+        :aria-valuemax="${() => props.max.value}"
+        :aria-label="${() => props.label.value}"
         :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
         :aria-readonly="${() => (isReadonly.value ? 'true' : null)}"
         @keydown="${handleKeydown}">
-        <bit-button
-          icon-only
+        <button
           type="button"
           part="decrement-btn"
           aria-label="Decrease"
-          variant="ghost"
-          :size="${() => props.size.value || null}"
-          :color="${() => props.color.value || null}"
-          ?disabled="${() => isNonInteractive.value || atMin.value}"
-          @click="${(e: Event) => spinner.incrementBy(-(Number(props.step.value) || 1), e)}"
-          ><bit-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon
-        ></bit-button>
+          ?disabled="${() => isNonInteractive.value || spinner.atMin()}"
+          @click="${(e: Event) => spinner.incrementBy(-(Number(props.step.value) || 1), e)}">
+          <bit-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
+        </button>
         <bit-input
           part="input"
           type="text"
           inputmode="decimal"
           aria-hidden="true"
-          :value="${() => inputValue.value}"
-          :label="${() => props.label.value || null}"
+          :value="${inputValue}"
+          :label="${() => props.label.value}"
           :label-placement="${() => props['label-placement'].value}"
-          :placeholder="${() => props.placeholder.value || null}"
-          :color="${() => props.color.value || null}"
-          :size="${() => props.size.value || null}"
-          :variant="${() => props.variant.value || null}"
-          ?disabled="${() => isDisabled.value}"
-          ?readonly="${() => isReadonly.value}"
+          :placeholder="${() => props.placeholder.value}"
+          :color="${() => props.color.value}"
+          :size="${() => props.size.value}"
+          :variant="${() => props.variant.value}"
+          ?disabled="${isDisabled}"
+          ?readonly="${isReadonly}"
           @input="${(e: Event) => {
             const v = (
               e as CustomEvent<{
@@ -248,18 +244,14 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
 
             commit(parseValue(), originalEvent);
           }}"></bit-input>
-        <bit-button
-          icon-only
+        <button
           type="button"
           part="increment-btn"
           aria-label="Increase"
-          variant="ghost"
-          :size="${() => props.size.value || null}"
-          :color="${() => props.color.value || null}"
-          ?disabled="${() => isNonInteractive.value || atMax.value}"
-          @click="${(e: Event) => spinner.incrementBy(Number(props.step.value) || 1, e)}"
-          ><bit-icon name="plus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon
-        ></bit-button>
+          ?disabled="${() => isNonInteractive.value || spinner.atMax()}"
+          @click="${(e: Event) => spinner.incrementBy(Number(props.step.value) || 1, e)}">
+          <bit-icon name="plus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
+        </button>
       </div>
     `;
   },

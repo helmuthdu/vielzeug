@@ -12,7 +12,7 @@ import {
   type InjectionKey,
   type ReadonlySignal,
 } from '../index';
-import { currentRuntime } from '../runtime-core';
+import { currentRuntime } from '../runtime';
 import { mount } from '../testing';
 
 const register = (tag: string, setup: ComponentDefinition['setup'], options: Omit<ComponentDefinition, 'setup'> = {}) =>
@@ -26,8 +26,8 @@ describe('core/host.ts', () => {
 
         host.bind({
           attr: {
-            role: 'button',
             'aria-expanded': () => String(open.value),
+            role: 'button',
           },
           class: () => ({ 'is-open': open.value }),
         });
@@ -44,6 +44,52 @@ describe('core/host.ts', () => {
 
       expect(element.getAttribute('aria-expanded')).toBe('true');
       expect(element.classList.contains('is-open')).toBe(true);
+    });
+
+    it('prop binding exposes reactive get/set on the host element', async () => {
+      const { element, flush } = await mount(({ host }) => {
+        const internalValue = signal('initial');
+
+        host.bind({
+          prop: {
+            value: {
+              get: () => internalValue.value,
+              set: (v: unknown) => {
+                internalValue.value = String(v);
+              },
+            },
+          },
+        });
+
+        return html`<div>${internalValue}</div>`;
+      });
+
+      expect((element as HTMLElement & { value: string }).value).toBe('initial');
+
+      (element as HTMLElement & { value: string }).value = 'updated';
+      await flush();
+
+      expect((element as HTMLElement & { value: string }).value).toBe('updated');
+    });
+
+    it('prop binding is cleaned up on component destroy', async () => {
+      const { destroy, element } = await mount(({ host }) => {
+        host.bind({
+          prop: {
+            value: {
+              get: () => 'alive',
+            },
+          },
+        });
+
+        return html`<div></div>`;
+      });
+
+      expect((element as HTMLElement & { value?: string }).value).toBe('alive');
+
+      destroy();
+
+      expect((element as HTMLElement & { value?: string }).value).toBeUndefined();
     });
 
     it('supports listener options for host event bindings', async () => {
@@ -188,7 +234,7 @@ describe('core/host.ts', () => {
           const size = signal('small');
           const ctx = inject(GroupCtx);
 
-          syncContextProps(ctx, { size }, ['size']);
+          syncContextProps(ctx, { size });
 
           return html`<span class="size">${size}</span>`;
         });
@@ -217,7 +263,7 @@ describe('core/host.ts', () => {
 
           const ctx = inject(MissingCtx);
 
-          syncContextProps(ctx, { size: consumerSize }, ['size']);
+          syncContextProps(ctx, { size: consumerSize });
 
           return html`<div></div>`;
         });
@@ -328,7 +374,7 @@ describe('onMount slot timing', () => {
         expect(assigned?.length).toBeGreaterThanOrEqual(1);
       });
 
-      return '<slot></slot>';
+      return html`<slot></slot>`;
     });
 
     const el = document.createElement('test-slot-timing-element');
@@ -355,7 +401,7 @@ describe('onMount slot timing', () => {
         slotFn(slots.elements().value.length);
       });
 
-      return '<slot></slot>';
+      return html`<slot></slot>`;
     });
 
     const el = document.createElement('test-slot-change-element');

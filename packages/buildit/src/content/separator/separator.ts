@@ -46,6 +46,9 @@ export const SEPARATOR_TAG = define<BitSeparatorProps>('bit-separator', {
     orientation: 'horizontal',
   },
   setup({ props }) {
+    const roleAttr = () => (props.decorative.value ? 'none' : 'separator');
+    const ariaHidden = () => (props.decorative.value ? 'true' : null);
+
     return html`
       ${() =>
         props.label.value
@@ -54,23 +57,19 @@ export const SEPARATOR_TAG = define<BitSeparatorProps>('bit-separator', {
                 <hr
                   class="separator"
                   part="separator"
-                  :role="${() => (props.decorative.value ? 'none' : 'separator')}"
-                  :aria-hidden="${() => (props.decorative.value ? 'true' : null)}"
+                  :role="${roleAttr}"
+                  :aria-hidden="${ariaHidden}"
                   :aria-orientation="${() => props.orientation.value}" />
                 <span class="separator-label" part="label">${() => props.label.value}</span>
-                <hr
-                  class="separator"
-                  part="separator"
-                  :role="${() => (props.decorative.value ? 'none' : 'separator')}"
-                  :aria-hidden="${() => (props.decorative.value ? 'true' : null)}" />
+                <hr class="separator" part="separator" :role="${roleAttr}" :aria-hidden="${ariaHidden}" />
               </div>
             `
           : html`
               <hr
                 class="separator"
                 part="separator"
-                :role="${() => (props.decorative.value ? 'none' : 'separator')}"
-                :aria-hidden="${() => (props.decorative.value ? 'true' : null)}"
+                :role="${roleAttr}"
+                :aria-hidden="${ariaHidden}"
                 :aria-orientation="${() => props.orientation.value}" />
             `}
     `;

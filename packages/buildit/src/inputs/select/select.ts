@@ -1,12 +1,7 @@
-import type {
-  OverlayCloseDetail,
-  OverlayCloseReason,
-  OverlayOpenDetail,
-  OverlayOpenReason,
-} from '@vielzeug/craftit/controls';
+import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
 import { define, computed, html, inject, onCleanup, onMount, signal, watch } from '@vielzeug/craftit';
-import { createChoiceFieldControl, createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
+import { createFieldControl, createPopupListControl } from '@vielzeug/craftit/controls';
 
 import type { VisualVariant } from '../../types';
 
@@ -15,7 +10,6 @@ import '../../content/icon/icon';
 import type { SelectableFieldProps } from '../shared/base-props';
 
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { syncAria } from '../../utils/aria';
 import {
   disablableBundle,
   loadableBundle,
@@ -188,19 +182,22 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
 
     mountFormContextSync(host.el, formCtx, props);
 
-    const choice = createChoiceFieldControl<string>({
-      context: formCtx,
-      disabled: props.disabled,
-      error: props.error,
-      getValue: (value) => value,
-      helper: props.helper,
-      label: props.label,
-      labelPlacement: props['label-placement'],
-      mapControlledValue: (value) => value,
-      multiple: props.multiple,
-      name: props.name,
-      prefix: 'select',
-      value: props.value,
+    const choice = createFieldControl<string>({
+      kind: 'choice',
+      options: {
+        context: formCtx,
+        disabled: props.disabled,
+        error: props.error,
+        getValue: (value) => value,
+        helper: props.helper,
+        label: props.label,
+        labelPlacement: props['label-placement'],
+        mapControlledValue: (value) => value,
+        multiple: props.multiple,
+        name: props.name,
+        prefix: 'select',
+        value: props.value,
+      },
     });
     const assistiveText = choice.assistive;
     const { triggerValidation } = choice;
@@ -212,9 +209,11 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     // ────────────────────────────────────────────────────────────────
 
     // Sync host attributes for CSS hooks
-    host.bind('attr', {
-      'has-error': () => (props.error.value ? true : undefined),
-      open: () => (isOpen.value ? true : undefined),
+    host.bind({
+      attr: {
+        'has-error': () => (props.error.value ? true : undefined),
+        open: () => (isOpen.value ? true : undefined),
+      },
     });
 
     // ────────────────────────────────────────────────────────────────
@@ -338,54 +337,53 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
       () => dropdownEl,
     );
 
-    const listNavigation = createListControl<OptionItem>({
+    const popupList = createPopupListControl({
+      ariaSync: { role: 'listbox' },
+      getBoundaryElement: () => host.el,
       getIndex: () => focusedIndex.value,
       getItems: () => options.value,
+      getPanelElement: () => dropdownEl,
+      getTriggerElement: () => triggerEl,
+      isDisabled: () => isDisabled.value,
       isItemDisabled: (option) => option.disabled,
+      isOpen: () => isOpen.value,
+      listId: `${selectId}-listbox`,
+      onClose: (reason) => {
+        emit('close', { reason });
+        triggerValidation('blur');
+      },
+      onOpen: (reason) => emit('open', { reason }),
+      positioner: {
+        floating: () => dropdownEl,
+        reference: () => triggerEl,
+        update: () => positioner.updatePosition(),
+      },
       setIndex: (index) => {
         focusedIndex.value = index;
         scrollFocusedIntoView();
       },
+      setOpen: (next) => {
+        isOpen.value = next;
+      },
     });
 
-    const openListKeys = createListKeyControl({
-      control: listNavigation,
-      disabled: () => !isOpen.value,
-    });
-
-    // ============================================
-    // Open / Close
-    // ============================================
-    function open(reason: OverlayOpenReason = 'programmatic') {
-      if (isDisabled.value || isOpen.value) return;
-
-      isOpen.value = true;
-      emit('open', { reason });
-      requestAnimationFrame(() => positioner.updatePosition());
+    function openPopup(reason: 'programmatic' | 'trigger' = 'programmatic') {
+      popupList.open(reason);
 
       requestAnimationFrame(() => {
         const selectedIndex =
           selectedValues.value.length > 0
             ? options.value.findIndex((option) => option.value === selectedValues.value[0])
-            : 0;
+            : -1;
 
         if (selectedIndex >= 0) {
-          focusedIndex.value = selectedIndex;
-          scrollFocusedIntoView();
-        } else {
-          focusedIndex.value = 0;
+          popupList.set(selectedIndex);
+
+          return;
         }
+
+        popupList.first();
       });
-    }
-
-    function close(reason: OverlayCloseReason = 'programmatic') {
-      if (!isOpen.value) return;
-
-      isOpen.value = false;
-      listNavigation.reset();
-      emit('close', { reason });
-
-      triggerValidation('blur');
     }
 
     // ============================================
@@ -398,7 +396,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
         choice.toggleItem(opt.value);
       } else {
         choice.selectItem(opt.value);
-        close();
+        popupList.close();
       }
 
       emitChange(e);
@@ -427,7 +425,8 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     function handleTriggerKeydown(e: KeyboardEvent) {
       if (isDisabled.value) return;
 
-      if (isOpen.value && openListKeys.handleKeydown(e)) return;
+      // Let popupList handle arrow key navigation
+      if (popupList.handleListKeydown(e)) return;
 
       switch (e.key) {
         case ' ':
@@ -440,24 +439,16 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
 
             if (idx >= 0 && idx < opts.length) selectOption(opts[idx], e);
           } else {
-            open('trigger');
-          }
-
-          break;
-        case 'ArrowDown':
-        case 'ArrowUp':
-          if (!isOpen.value) {
-            e.preventDefault();
-            open('trigger');
+            openPopup('trigger');
           }
 
           break;
         case 'Escape':
           e.preventDefault();
-          close('escape');
+          popupList.close('escape');
           break;
         case 'Tab':
-          close();
+          popupList.close();
           break;
       }
     }
@@ -471,8 +462,8 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
 
           if (isDisabled.value) return;
 
-          if (isOpen.value) close('trigger');
-          else open('trigger');
+          if (isOpen.value) popupList.close('trigger');
+          else openPopup('trigger');
         };
         const onTriggerKeydown = (event: KeyboardEvent) => {
           handleTriggerKeydown(event);
@@ -481,81 +472,66 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
         triggerEl.addEventListener('click', onTriggerClick);
         triggerEl.addEventListener('keydown', onTriggerKeydown);
 
-        syncAria(triggerEl, {
-          activedescendant: () => (focusedIndex.value >= 0 ? `${selectId}-opt-${focusedIndex.value}` : null),
-          disabled: () => isDisabled.value,
-          expanded: () => (isOpen.value ? 'true' : 'false'),
-          invalid: () => !!props.error.value,
-          labelledby: () => (hasLabel.value ? `${labelOutsideId} ${labelInsetId}` : null),
+        // Sync additional ARIA attributes beyond the standard ones
+        const cleanupAria = popupList.syncTriggerAria(triggerEl, {
+          additional: {
+            invalid: () => !!props.error.value,
+            labelledby: () => (hasLabel.value ? `${labelOutsideId} ${labelInsetId}` : null),
+          },
         });
 
         onCleanup(() => {
           triggerEl?.removeEventListener('click', onTriggerClick);
           triggerEl?.removeEventListener('keydown', onTriggerKeydown);
+          cleanupAria();
         });
       }
 
-      const onDocumentClick = (event: Event) => {
-        if (!isOpen.value) return;
-
-        const path = event.composedPath();
-
-        if (
-          path.includes(host.el) ||
-          (dropdownEl && path.includes(dropdownEl)) ||
-          (triggerEl && path.includes(triggerEl))
-        ) {
-          return;
-        }
-
-        close('outside-click');
-      };
-
-      document.addEventListener('click', onDocumentClick);
+      const cleanupClickOutside = popupList.bindOutsideClick(document);
 
       return () => {
         positioner.destroy();
-        document.removeEventListener('click', onDocumentClick);
+        cleanupClickOutside();
       };
     });
 
+    const tabIndexAttr = () => (isDisabled.value ? '-1' : '0');
+    const triggerValueClass = () => `trigger-value ${displayLabel.value ? '' : 'trigger-placeholder'}`;
+    const helperStyle = () => (assistiveText.value.isError ? 'color: var(--color-error);' : '');
+
     return html`<slot style="display:none"></slot>
       <div class="select-wrapper">
-        <label class="label-outside" id="${labelOutsideId}" ref=${labelOutsideRef} hidden></label>
+        <label class="label-outside" id="${labelOutsideId}" ref="${labelOutsideRef}" hidden></label>
         <div
           class="field"
-          ref=${(el: HTMLElement) => {
+          ref="${(el: HTMLElement) => {
             triggerEl = el;
-          }}
+          }}"
           role="combobox"
-          tabindex=${() => (isDisabled.value ? '-1' : '0')}
+          tabindex="${tabIndexAttr}"
           aria-controls="${listboxId}"
           aria-expanded="false"
           aria-labelledby="${labelOutsideId} ${labelInsetId}">
-          <label class="label-inset" id="${labelInsetId}" ref=${labelInsetRef} hidden></label>
+          <label class="label-inset" id="${labelInsetId}" ref="${labelInsetRef}" hidden></label>
           <div class="trigger-row">
-            <div class="chips-row" ?hidden=${() => !showChips.value}>
+            <div class="chips-row" ?hidden="${() => !showChips.value}">
               ${() =>
                 selectedChipItems.value.map(
                   (item) => html`
                     <bit-chip
-                      value=${item.value}
-                      label=${item.label}
+                      value="${item.value}"
+                      label="${item.label}"
                       mode="removable"
                       variant="flat"
                       size="sm"
-                      color=${() => props.color.value}
-                      @remove=${removeChip}>
+                      color="${props.color}"
+                      @remove="${removeChip}">
                       ${item.label}
                     </bit-chip>
                   `,
                 )}
             </div>
-            <span
-              class="trigger-value ${() => (displayLabel.value ? '' : 'trigger-placeholder')}"
-              ?hidden=${() => showChips.value}
-              >${() => triggerText.value}</span
-            >
+            <span class="${triggerValueClass}" ?hidden="${showChips}">${triggerText}</span>
           </div>
           <span class="trigger-icon" aria-hidden="true">
             <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
@@ -565,23 +541,23 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
         <div
           class="helper-text"
           aria-live="polite"
-          ?hidden=${() => assistiveText.value.hidden}
-          style=${() => (assistiveText.value.isError ? 'color: var(--color-error);' : '')}>
+          ?hidden="${() => assistiveText.value.hidden}"
+          style="${helperStyle}">
           ${() => assistiveText.value.text}
         </div>
       </div>
       <div
         class="dropdown"
-        ?data-open=${() => isOpen.value}
+        ?data-open="${isOpen}"
         role="listbox"
         id="${listboxId}"
         aria-label="Options"
-        ref=${(el: HTMLElement) => {
+        ref="${(el: HTMLElement) => {
           dropdownEl = el;
-        }}>
-        <div class="dropdown-loading" ?hidden=${() => !isLoading.value}>Loading…</div>
-        <div class="dropdown-empty" ?hidden=${() => isLoading.value || options.value.length > 0}>No options</div>
-        <div class="options-list" ?hidden=${() => isLoading.value || options.value.length === 0}>
+        }}">
+        <div class="dropdown-loading" ?hidden="${() => !isLoading.value}">Loading…</div>
+        <div class="dropdown-empty" ?hidden="${() => isLoading.value || options.value.length > 0}">No options</div>
+        <div class="options-list" ?hidden="${() => isLoading.value || options.value.length === 0}">
           ${() =>
             flatRows.value.map((row) =>
               row.type === 'group'
@@ -589,21 +565,21 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
                 : html`<div
                     class="option"
                     role="option"
-                    id=${`${selectId}-opt-${row.idx}`}
-                    data-option-index=${() => String(row.idx)}
-                    data-option-value=${row.opt.value}
-                    aria-selected=${() => String(selectedValues.value.includes(row.opt.value))}
-                    aria-disabled=${() => String(row.opt.disabled)}
-                    ?data-focused=${() => focusedIndex.value === row.idx}
-                    ?data-selected=${() => selectedValues.value.includes(row.opt.value)}
-                    ?data-disabled=${() => row.opt.disabled}
-                    @click=${(e: MouseEvent) => {
+                    id="${`${selectId}-opt-${row.idx}`}"
+                    data-option-index="${String(row.idx)}"
+                    data-option-value="${row.opt.value}"
+                    aria-selected="${() => String(selectedValues.value.includes(row.opt.value))}"
+                    aria-disabled="${() => String(row.opt.disabled)}"
+                    ?data-focused="${() => focusedIndex.value === row.idx}"
+                    ?data-selected="${() => selectedValues.value.includes(row.opt.value)}"
+                    ?data-disabled="${() => row.opt.disabled}"
+                    @click="${(e: MouseEvent) => {
                       e.stopPropagation();
                       selectOption(row.opt, e);
-                    }}
-                    @pointerenter=${() => {
+                    }}"
+                    @pointerenter="${() => {
                       focusedIndex.value = row.idx;
-                    }}>
+                    }}">
                     <span>${row.opt.label}</span>
                     <span class="option-check" aria-hidden="true">
                       <bit-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>

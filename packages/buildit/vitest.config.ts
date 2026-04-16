@@ -13,10 +13,6 @@ export default defineConfig({
         replacement: path.resolve(__dirname, '../craftit/src/testing/index.ts'),
       },
       {
-        find: /^@vielzeug\/craftit\/directives$/,
-        replacement: path.resolve(__dirname, '../craftit/src/directives/index.ts'),
-      },
-      {
         find: /^@vielzeug\/craftit\/controls$/,
         replacement: path.resolve(__dirname, '../craftit/src/controls/index.ts'),
       },

@@ -17,28 +17,28 @@ Usage inside a [@vielzeug/craftit](/craftit/) component with automatic `autoUpda
 
 ```ts
 import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
-import { currentRuntime, define, onMount, signal } from '@vielzeug/craftit';
+import { define, onMount, signal } from '@vielzeug/craftit';
 
-define('my-tooltip', () => {
-  const host = currentRuntime().el;
+define('my-tooltip', {
+  setup({ host }) {
   const visible = signal(false);
   let tooltipEl: HTMLElement | null = null;
   let cleanup: (() => void) | null = null;
 
   function update() {
     if (!tooltipEl) return;
-    positionFloat(host, tooltipEl, {
+    positionFloat(host.el, tooltipEl, {
       placement: 'top',
       middleware: [offset(8), flip(), shift({ padding: 6 })],
     });
   }
 
   onMount(() => {
-    host.addEventListener('mouseenter', () => {
+    host.el.addEventListener('mouseenter', () => {
       visible.value = true;
-      cleanup = autoUpdate(host, tooltipEl!, update);
+      cleanup = autoUpdate(host.el, tooltipEl!, update);
     });
-    host.addEventListener('mouseleave', () => {
+    host.el.addEventListener('mouseleave', () => {
       visible.value = false;
       cleanup?.();
       cleanup = null;
@@ -47,6 +47,7 @@ define('my-tooltip', () => {
     // Cleanup is run automatically on unmount by craftit
     return () => cleanup?.();
   });
+  },
 });
 ```
 

@@ -1,70 +1,16 @@
-/**
- * @internal — Binding type system, compiler/runtime helpers, and engine internals.
- *
- * These types and helpers define the contract between the template compiler, binding engine,
- * and component runtime.
- * They are NOT part of the public API and importing directly is an unstable contract.
- *
- * Selected author-facing exports (such as css(), CSSResult, EmitFn, HTMLResult, Directive,
- * ref(), and refs()) are re-exported from the main entry point.
- */
-
 import { signal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
 import { fire } from './runtime';
-import { currentRuntime } from './runtime-core';
-
-const HTML_RESULT_BRAND: unique symbol = Symbol('craftit.htmlResultBrand');
+import { currentRuntime } from './runtime';
 
 let _idCounter = 0;
 
-/** @internal — resets the ID counter. Used by _resetCounters in test/test.ts. */
 export const _resetIdCounter = (): void => {
   _idCounter = 0;
 };
 
-/**
- * Creates a unique, stable ID string — suitable for `aria-labelledby`, `aria-describedby`,
- * and similar accessibility linkages. Call once per component instance (at setup time or inside `onMount`).
- */
 export const createId = (prefix?: string): string => `${prefix ? `${prefix}-` : 'cft-'}${++_idCounter}`;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// REF TYPES
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * A reactive reference to a DOM element.
- *
- * Backed by a Signal — reactivity is built-in. Use with onElement()
- * for first-class element lifecycle management.
- *
- * @example
- * const inputRef = ref<HTMLInputElement>();
- *
- * onElement(inputRef, (input) => {
- *   input.focus();
- *   return () => { };  // cleanup
- * });
- *
- * // In template
- * <input ref=${inputRef} />
- */
 export type Ref<T extends Element> = Signal<T | null>;
-
-/**
- * Create a reactive element reference.
- *
- * Returns a Signal that tracks the mounted/unmounted state of a DOM element.
- * Automatically reactive — use directly in effects or with onElement().
- *
- * @see onElement for element lifecycle integration
- *
- * @example
- * const ref = ref<HTMLInputElement>();
- * // Type: Signal<HTMLInputElement | null>
- * // Automatically updates when element mounts/unmounts
- */
 export function ref<T extends Element>(): Ref<T> {
   return signal<T | null>(null);
 }
@@ -77,64 +23,30 @@ export function refs<T extends Element>(): Refs<T> {
 
 export type RefCallback<T extends Element> = (el: T | null) => void;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HTML RESULT
-// ─────────────────────────────────────────────────────────────────────────────
-
 export interface HTMLResult {
   __bindings: Binding[];
+  __craftitHtmlResult: true;
   __html: string;
   toString(): string;
 }
 
-/** @internal — construct an HTMLResult from a pre-built html string and bindings. */
 export function htmlResult(html: string, bindings: Binding[] = []): HTMLResult {
-  const result = {
+  return {
     __bindings: bindings,
+    __craftitHtmlResult: true,
     __html: html,
     toString() {
       return html;
     },
   };
-
-  Object.defineProperty(result, HTML_RESULT_BRAND, {
-    configurable: false,
-    enumerable: false,
-    value: true,
-    writable: false,
-  });
-
-  return result as HTMLResult;
 }
 
-/** @internal — strict HTMLResult runtime type guard. */
 export const isHtmlResult = (value: unknown): value is HTMLResult =>
-  typeof value === 'object' && !!value && (value as Record<symbol, unknown>)[HTML_RESULT_BRAND] === true;
+  typeof value === 'object' && !!value && (value as HTMLResult).__craftitHtmlResult === true;
 
-/** @internal — extract html and bindings from a string or HTMLResult. */
 export function extractResult(v: string | HTMLResult): { bindings: Binding[]; html: string } {
   return typeof v === 'string' ? { bindings: [], html: v } : { bindings: v.__bindings, html: v.__html };
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DIRECTIVES
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface DirectiveContext {
-  /** The cleanup registration function for the component. */
-  registerCleanup: (fn: () => void) => void;
-}
-
-export interface Directive {
-  /** Invoked when the element is mounted in the DOM. */
-  mount?(el: HTMLElement, context: DirectiveContext): void;
-  /** Invoked by the template engine to render content (interpolation directives). */
-  render?(): HTMLResult | string;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BINDING TYPES
-// ─────────────────────────────────────────────────────────────────────────────
 
 export type TextBinding = {
   signal: ReadonlySignal<unknown>;
@@ -152,7 +64,6 @@ export type AttrBinding = {
 };
 
 export type PropBinding = {
-  /** Optional writable source used for native two-way bridge (.value/.checked). */
   model?: Signal<unknown>;
   name: string;
   signal?: ReadonlySignal<unknown>;
@@ -182,12 +93,6 @@ export type RefBinding = {
   uid: string;
 };
 
-export type CallbackBinding = {
-  apply: (el: HTMLElement, registerCleanup: (fn: () => void) => void) => void;
-  type: 'callback';
-  uid: string;
-};
-
 export type HtmlBinding = {
   keyed?: boolean;
   signal: ReadonlySignal<{
@@ -200,23 +105,8 @@ export type HtmlBinding = {
   uid: string;
 };
 
-export type Binding =
-  | TextBinding
-  | AttrBinding
-  | PropBinding
-  | EventBinding
-  | RefBinding
-  | CallbackBinding
-  | HtmlBinding;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// INTERNAL MARKERS & CONSTANTS
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** @internal — opaque marker for each() reactive results. */
+export type Binding = TextBinding | AttrBinding | PropBinding | EventBinding | RefBinding | HtmlBinding;
 export const EACH_SIGNAL: unique symbol = Symbol('craftit.eachSignal');
-
-/** @internal — binding element identifier attribute. */
 export const CF_ID_ATTR = 'u';
 
 // Shared across rekeyHtmlResult — safe to reuse with replace() (lastIndex not used by replace)
@@ -230,10 +120,7 @@ export const createMarkerIdFactory = (): (() => string) => {
 };
 
 /** @internal — remaps binding UIDs in an HTMLResult using a shared ID factory. */
-export const rekeyHtmlResult = (
-  result: HTMLResult,
-  getNextId: () => string,
-): { bindings: Binding[]; html: string } => {
+export const rekeyHtmlResult = (result: HTMLResult, getNextId: () => string): { bindings: Binding[]; html: string } => {
   const idMap = new Map<string, string>();
   const getMappedId = (id: string): string => {
     const mapped = idMap.get(id);

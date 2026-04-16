@@ -13,6 +13,12 @@ export type ControlContextOptions = {
   validateOn?: ReadonlySignal<ControlValidationMode>;
 };
 
+export type ControlStateOptions = {
+  context?: ControlContextOptions;
+  disabled?: ReadonlySignal<boolean | undefined>;
+  validateOn?: ReadonlySignal<ControlValidationMode>;
+};
+
 const shouldReportValidity = (
   validateOn: ReadonlySignal<ControlValidationMode> | undefined,
   on: FormControlValidationTrigger,
@@ -28,10 +34,10 @@ const triggerValidationForField = (
   if (shouldReportValidity(validateOn, on)) field.reportValidity();
 };
 
-export const createControlState = (options: ControlContextOptions) => {
-  const disabled = computed(() => Boolean(options.disabled?.value));
+export const createControlState = (options: ControlStateOptions) => {
+  const disabled = computed(() => Boolean(options.disabled?.value) || Boolean(options.context?.disabled?.value));
 
-  const validateOn = options.validateOn;
+  const validateOn = options.validateOn ?? options.context?.validateOn;
 
   return {
     disabled,

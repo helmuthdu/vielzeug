@@ -1,6 +1,6 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, computed, createId, fire, handle, html, onMount, ref, signal, watch } from '@vielzeug/craftit';
+import { define, createId, fire, handle, html, onMount, ref, signal, watch } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import '../../content/icon/icon';
@@ -131,8 +131,8 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
     let closeReason: OverlayCloseReason = 'programmatic';
 
     // Header is visible when there is slot content, a title prop, or a close button
-    const hasHeader = computed(() => slots.has('header').value || !!props.title.value || props.dismissible.value);
-    const hasFooter = computed(() => slots.has('footer').value);
+    const hasHeader = () => slots.has('header').value || !!props.title.value || props.dismissible.value;
+    const hasFooter = () => slots.has('footer').value;
 
     // ────────────────────────────────────────────────────────────────
     // Overlay State Management
@@ -159,17 +159,23 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
 
       closeReason = reason;
 
-      overlay.close(reason, false);
+      overlay.close({ reason, restoreFocus: false });
+    };
+
+    const handleCloseButtonClick = () => {
+      const dialog = dialogRef.value;
+
+      if (!dialog) return;
+
+      requestClose('trigger');
     };
 
     const overlay = createOverlayControl({
-      elements: {
-        boundary: host.el,
-        panel: panelRef.value,
-      },
-      isOpen,
+      getBoundaryElement: () => host.el,
+      getPanelElement: () => panelRef.value,
+      isOpen: () => isOpen.value,
       onOpen: (reason) => emit('open', { placement: props.placement.value ?? 'right', reason }),
-      setOpen: (next, reason) => {
+      setOpen: (next, { reason }) => {
         const dialog = dialogRef.value;
 
         if (!dialog) return;
@@ -210,11 +216,11 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       const el = host.el as DrawerElement;
 
       el.show = () => {
-        overlay.open('programmatic');
+        overlay.open({ reason: 'programmatic' });
       };
 
       el.hide = () => {
-        overlay.close('programmatic', false);
+        overlay.close({ reason: 'programmatic', restoreFocus: false });
       };
 
       // ────────────────────────────────────────────────────────────
@@ -251,12 +257,12 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
         props.open,
         (isOpen) => {
           if (isOpen) {
-            overlay.open('programmatic');
+            overlay.open({ reason: 'programmatic' });
 
             return;
           }
 
-          overlay.close('programmatic', false);
+          overlay.close({ reason: 'programmatic', restoreFocus: false });
         },
         { immediate: true },
       );
@@ -277,12 +283,12 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       <dialog
         ref=${dialogRef}
         aria-modal="true"
-        :aria-label="${() => props.label.value ?? null}"
+        :aria-label="${props.label}"
         :aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}">
         <div class="panel" part="panel" ref=${panelRef}>
-          <div class="header" part="header" ?hidden=${() => !hasHeader.value}>
+          <div class="header" part="header" ?hidden=${() => !hasHeader()}>
             <span class="header-title" id="${drawerLabelId}">
-              <slot name="header">${() => props.title.value ?? ''}</slot>
+              <slot name="header">${props.title}</slot>
             </span>
             <button
               class="close-btn"
@@ -290,20 +296,14 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
               type="button"
               aria-label="Close"
               ?hidden=${() => !props.dismissible.value}
-              @click="${() => {
-                const dialog = dialogRef.value;
-
-                if (!dialog) return;
-
-                requestClose('trigger');
-              }}">
+              @click=${handleCloseButtonClick}>
               <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
             </button>
           </div>
           <div class="body" part="body">
             <slot></slot>
           </div>
-          <div class="footer" part="footer" ?hidden=${() => !hasFooter.value}>
+          <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
             <slot name="footer"></slot>
           </div>
         </div>

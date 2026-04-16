@@ -1,8 +1,7 @@
 import { autoUpdate } from '@vielzeug/floatit';
-import { onCleanup as onSignalCleanup, type ReadonlySignal } from '@vielzeug/stateit';
+import { onCleanup as onSignalCleanup } from '@vielzeug/stateit';
 
-import { effect } from '../runtime-lifecycle';
-import { createControlState, type ControlContextOptions } from './internal/control-state';
+import { effect } from '../runtime';
 
 export type OverlayOpenReason = 'programmatic' | 'trigger';
 export type OverlayCloseReason = 'escape' | 'outside-click' | 'programmatic' | 'trigger';
@@ -15,33 +14,30 @@ type OverlayPositioner = {
   update: () => void;
 };
 
-export type OverlayControlOptions = ControlContextOptions & {
-  elements: {
-    boundary: HTMLElement;
-    panel?: HTMLElement | null;
-    trigger?: HTMLElement | null;
-  };
-  isOpen: ReadonlySignal<boolean>;
+export type OverlayControlOptions = {
+  getBoundaryElement: () => HTMLElement | null;
+  getPanelElement?: () => HTMLElement | null;
+  getTriggerElement?: () => HTMLElement | null;
+  isDisabled?: () => boolean;
+  isOpen: () => boolean;
   onClose?: (reason: OverlayCloseReason) => void;
   onOpen?: (reason: OverlayOpenReason) => void;
   positioner?: OverlayPositioner;
   restoreFocus?: boolean | (() => boolean);
-  setOpen: (next: boolean, reason: OverlayOpenReason | OverlayCloseReason) => void;
+  setOpen: (next: boolean, context: { reason: OverlayOpenReason | OverlayCloseReason }) => void;
 };
 
 export type OverlayControl = {
   bindOutsideClick(target?: Document | HTMLElement, capture?: boolean): () => void;
-  close(reason?: OverlayCloseReason, restoreFocus?: boolean): void;
-  open(reason?: OverlayOpenReason): void;
+  close(opts?: { reason?: OverlayCloseReason; restoreFocus?: boolean }): void;
+  open(opts?: { reason?: OverlayOpenReason }): void;
   toggle(): void;
 };
 
 export const createOverlayControl = (options: OverlayControlOptions): OverlayControl => {
-  const controlState = createControlState(options);
-
   // Effect handles positioning lifecycle automatically
   effect(() => {
-    if (!options.isOpen.value || !options.positioner) return;
+    if (!options.isOpen() || !options.positioner) return;
 
     const reference = options.positioner.reference();
     const floating = options.positioner.floating();
@@ -63,34 +59,38 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     return options.restoreFocus ?? true;
   };
 
-  const open = (reason: OverlayOpenReason = 'programmatic'): void => {
-    if (controlState.disabled.value || options.isOpen.value) return;
+  const open = (opts: { reason?: OverlayOpenReason } = {}): void => {
+    const reason = opts.reason ?? 'programmatic';
 
-    options.setOpen(true, reason);
+    if (options.isDisabled?.() || options.isOpen()) return;
+
+    options.setOpen(true, { reason });
     requestAnimationFrame(() => options.positioner?.update());
     options.onOpen?.(reason);
   };
 
-  const close = (reason: OverlayCloseReason = 'programmatic', restoreFocus?: boolean): void => {
-    if (!options.isOpen.value) return;
+  const close = (opts: { reason?: OverlayCloseReason; restoreFocus?: boolean } = {}): void => {
+    const reason = opts.reason ?? 'programmatic';
 
-    options.setOpen(false, reason);
+    if (!options.isOpen()) return;
 
-    const restore = restoreFocus ?? shouldRestoreFocus();
+    options.setOpen(false, { reason });
 
-    if (restore) options.elements.trigger?.focus();
+    const restore = opts.restoreFocus ?? shouldRestoreFocus();
+
+    if (restore) options.getTriggerElement?.()?.focus();
 
     options.onClose?.(reason);
   };
 
   const toggle = (): void => {
-    if (options.isOpen.value) {
-      close('trigger');
+    if (options.isOpen()) {
+      close({ reason: 'trigger' });
 
       return;
     }
 
-    open('trigger');
+    open({ reason: 'trigger' });
   };
 
   const isInside = (element: HTMLElement | null | undefined, target: Node): boolean => {
@@ -99,15 +99,16 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
   const bindOutsideClick = (target: Document | HTMLElement = document, capture = true): (() => void) => {
     const handler = (event: Event) => {
-      if (!options.isOpen.value) return;
+      if (!options.isOpen()) return;
 
-      const el = event.composedPath()[0] as Node | null;
+      const eventTarget = (event as Event & { composedPath?: () => EventTarget[] }).composedPath?.()[0] ?? event.target;
+      const el = eventTarget instanceof Node ? eventTarget : null;
 
       if (!el) return;
 
-      const inside = isInside(options.elements.boundary, el) || isInside(options.elements.panel, el);
+      const inside = isInside(options.getBoundaryElement(), el) || isInside(options.getPanelElement?.() ?? null, el);
 
-      if (!inside) close('outside-click');
+      if (!inside) close({ reason: 'outside-click' });
     };
 
     target.addEventListener('click', handler, { capture });

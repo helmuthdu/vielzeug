@@ -81,7 +81,7 @@ const tooltipProps = {
  * </bit-tooltip>
  * ```
  */
-export const TOOLTIP_TAG = define('bit-tooltip', {
+export const TOOLTIP_TAG = define<BitTooltipProps, any>('bit-tooltip', {
   props: tooltipProps,
   setup({ props, shadowRoot, slots }) {
     const visible = signal(false);
@@ -140,13 +140,11 @@ export const TOOLTIP_TAG = define('bit-tooltip', {
     }
 
     const overlay = createOverlayControl({
-      disabled: isDisabled,
-      elements: {
-        boundary: document.body,
-        panel: tooltipEl,
-        trigger: getTriggerEl() as HTMLElement | null,
-      },
-      isOpen: visible,
+      getBoundaryElement: () => document.body,
+      getPanelElement: () => tooltipEl,
+      getTriggerElement: () => getTriggerEl() as HTMLElement | null,
+      isDisabled: () => isDisabled.value,
+      isOpen: () => visible.value,
       positioner: {
         floating: () => tooltipEl,
         reference: () => getTriggerEl() as HTMLElement | null,
@@ -182,7 +180,7 @@ export const TOOLTIP_TAG = define('bit-tooltip', {
 
       showTimer = setTimeout(
         () => {
-          overlay.open('trigger');
+          overlay.open({ reason: 'trigger' });
         },
         Number(props.delay.value) || 0,
       );
@@ -206,7 +204,7 @@ export const TOOLTIP_TAG = define('bit-tooltip', {
       }
     }
     function closeNow() {
-      overlay.close('trigger', false);
+      overlay.close({ reason: 'trigger', restoreFocus: false });
     }
     function toggleClick() {
       if (visible.value) hide();
@@ -272,9 +270,9 @@ export const TOOLTIP_TAG = define('bit-tooltip', {
         if (openVal === undefined || openVal === null) return;
 
         if (openVal) {
-          overlay.open('programmatic');
+          overlay.open({ reason: 'programmatic' });
         } else {
-          overlay.close('programmatic', false);
+          overlay.close({ reason: 'programmatic', restoreFocus: false });
         }
       });
 
@@ -286,7 +284,7 @@ export const TOOLTIP_TAG = define('bit-tooltip', {
       };
     });
     function handleKeydown(e: KeyboardEvent) {
-      if (e.key === 'Escape') overlay.close('escape', false);
+      if (e.key === 'Escape') overlay.close({ reason: 'escape', restoreFocus: false });
     }
 
     return html`
@@ -302,7 +300,7 @@ export const TOOLTIP_TAG = define('bit-tooltip', {
         }}
         :data-placement="${activePlacement}"
         :aria-hidden="${() => String(!visible.value)}">
-        <slot name="content">${() => props.content.value}</slot>
+        <slot name="content">${props.content}</slot>
       </div>
     `;
   },

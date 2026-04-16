@@ -1,6 +1,6 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, computed, handle, html, onMount, ref, signal, watch, fire } from '@vielzeug/craftit';
+import { define, handle, html, onMount, ref, signal, watch, fire } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import type { PaddingSize, RoundedSize } from '../../types';
@@ -131,8 +131,8 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
   setup({ emit, host, props, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
     const isOpen = signal(false);
-    const hasHeader = computed(() => slots.has('header').value || !!props.label.value || props.dismissible.value);
-    const hasFooter = computed(() => slots.has('footer').value);
+    const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
+    const hasFooter = () => slots.has('footer').value;
     let closeReason: OverlayCloseReason = 'programmatic';
 
     // ────────────────────────────────────────────────────────────────
@@ -147,13 +147,11 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
     );
 
     const overlay = createOverlayControl({
-      elements: {
-        boundary: host.el,
-        panel: dialogRef.value?.querySelector<HTMLElement>('.panel') ?? null,
-      },
-      isOpen,
+      getBoundaryElement: () => host.el,
+      getPanelElement: () => dialogRef.value?.querySelector<HTMLElement>('.panel') ?? null,
+      isOpen: () => isOpen.value,
       onOpen: (reason) => emit('open', { reason }),
-      setOpen: (next, reason) => {
+      setOpen: (next, { reason }) => {
         const dialog = dialogRef.value;
 
         if (!dialog) return;
@@ -195,12 +193,12 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
         props.open,
         (open) => {
           if (open) {
-            overlay.open('programmatic');
+            overlay.open({ reason: 'programmatic' });
 
             return;
           }
 
-          overlay.close('programmatic', false);
+          overlay.close({ reason: 'programmatic', restoreFocus: false });
         },
         { immediate: true },
       );
@@ -227,7 +225,7 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
         if (!closeAllowed) return;
 
         closeReason = reason;
-        overlay.close(reason, false);
+        overlay.close({ reason, restoreFocus: false });
       };
 
       const handleKeydown = (e: KeyboardEvent) => {
@@ -271,21 +269,16 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
       if (!closeAllowed) return;
 
       closeReason = 'trigger';
-      overlay.close('trigger', false);
+      overlay.close({ reason: 'trigger', restoreFocus: false });
     };
 
     return html`
-      <dialog
-        ref=${dialogRef}
-        class="dialog"
-        part="dialog"
-        :aria-label="${() => props.label.value || null}"
-        aria-modal="true">
+      <dialog ref=${dialogRef} class="dialog" part="dialog" aria-label="${props.label}" aria-modal="true">
         <div class="overlay" part="overlay" aria-hidden="true"></div>
-        <div class="panel" part="panel" :data-size="${props.size.value}">
-          <div class="header" part="header" ?hidden=${() => !hasHeader.value}>
+        <div class="panel" part="panel" :data-size="${props.size}">
+          <div class="header" part="header" ?hidden=${() => !hasHeader()}>
             <slot name="header">
-              <span class="title" part="title">${() => props.label.value}</span>
+              <span class="title" part="title">${props.label}</span>
             </slot>
             <button
               class="close"
@@ -300,7 +293,7 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
           <div class="body" part="body">
             <slot></slot>
           </div>
-          <div class="footer" part="footer" ?hidden=${() => !hasFooter.value}>
+          <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
             <slot name="footer"></slot>
           </div>
         </div>

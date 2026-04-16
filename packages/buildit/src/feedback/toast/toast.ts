@@ -1,5 +1,4 @@
-import { define, html, onMount, ref, signal } from '@vielzeug/craftit';
-import { classes, each } from '@vielzeug/craftit/directives';
+import { computed, define, each, html, onMount, ref, signal } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -196,8 +195,9 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
     const addToast = (toast: ToastItem): string => {
       const id = toast.id || crypto.randomUUID();
       const item: NormalizedToast = { dismissible: true, duration: 5000, ...toast, id };
+      const maxToasts = props.max?.value ?? 5;
 
-      toasts.value = [...toasts.value, item].slice(-(props.max ?? 5));
+      toasts.value = [...toasts.value, item].slice(-maxToasts);
       emit('add', { id });
 
       if (item.duration! > 0) scheduleRemoval(id, item.duration!);
@@ -304,6 +304,8 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
     });
 
     const urgencyOf = (t: NormalizedToast) => t.urgency ?? (t.color === 'error' ? 'assertive' : 'polite');
+    const politeToasts = computed(() => toasts.value.filter((t) => urgencyOf(t) === 'polite'));
+    const assertiveToasts = computed(() => toasts.value.filter((t) => urgencyOf(t) === 'assertive'));
 
     const setHovered = (hovered: boolean) => {
       hoverPaused = hovered;
@@ -312,7 +314,7 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
     };
     const renderToastItem = (toast: NormalizedToast) => html`
       <div
-        class=${classes({ exiting: () => exitingIds.value.has(toast.id), 'toast-wrapper': true })}
+        class="${() => (exitingIds.value.has(toast.id) ? 'toast-wrapper exiting' : 'toast-wrapper')}"
         data-toast-id=${toast.id}
         part="toast-wrapper">
         <bit-alert
@@ -353,7 +355,7 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
           aria-atomic="false"
           aria-label="Notifications"
           class="toast-live-region">
-          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'polite'), {
+          ${each(politeToasts, {
             key: (toast) => toast.id,
             render: renderToastItem,
           })}
@@ -366,7 +368,7 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
           aria-atomic="false"
           aria-label="Critical notifications"
           class="toast-live-region">
-          ${each(() => toasts.value.filter((t) => urgencyOf(t) === 'assertive'), {
+          ${each(assertiveToasts, {
             key: (toast) => toast.id,
             render: renderToastItem,
           })}

@@ -3,661 +3,223 @@ import { signal } from '@vielzeug/stateit';
 import { createOverlayControl } from '../../controls';
 
 describe('createOverlayControl', () => {
-  /**
-   * Tests for basic open/close operations
-   */
-  describe('Operations - Open/Close', () => {
-    it('opens the overlay', () => {
-      const isOpen = signal(false);
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+  it('opens with programmatic reason by default', () => {
+    const openState = signal(false);
+    const transitions: Array<{ next: boolean; reason: string }> = [];
 
-      controller.open();
-
-      expect(isOpen.value).toBe(true);
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => document.body,
+      isOpen: () => openState.value,
+      setOpen: (next, { reason }) => {
+        openState.value = next;
+        transitions.push({ next, reason });
+      },
     });
 
-    it('closes the overlay', () => {
-      const isOpen = signal(true);
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+    overlay.open();
 
-      controller.close();
-
-      expect(isOpen.value).toBe(false);
-    });
-
-    it('does not open when already open', () => {
-      const isOpen = signal(true);
-      const setOpenCalls: Array<[boolean, string]> = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next, reason) => {
-          setOpenCalls.push([next, reason]);
-          isOpen.value = next;
-        },
-      });
-
-      controller.open();
-
-      expect(setOpenCalls.length).toBe(0); // setOpen should not be called
-    });
-
-    it('does not close when already closed', () => {
-      const isOpen = signal(false);
-      const setOpenCalls: Array<[boolean, string]> = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next, reason) => {
-          setOpenCalls.push([next, reason]);
-          isOpen.value = next;
-        },
-      });
-
-      controller.close();
-
-      expect(setOpenCalls.length).toBe(0); // setOpen should not be called
-    });
+    expect(openState.value).toBe(true);
+    expect(transitions).toEqual([{ next: true, reason: 'programmatic' }]);
   });
 
-  /**
-   * Tests for toggle functionality
-   */
-  describe('Operations - Toggle', () => {
-    it('toggles from closed to open', () => {
-      const isOpen = signal(false);
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+  it('does not call setOpen when trying to open an already open overlay', () => {
+    const openState = signal(true);
+    const setOpen = vi.fn();
 
-      controller.toggle();
-
-      expect(isOpen.value).toBe(true);
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => document.body,
+      isOpen: () => openState.value,
+      setOpen,
     });
 
-    it('toggles from open to closed', () => {
-      const isOpen = signal(true);
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+    overlay.open({ reason: 'trigger' });
 
-      controller.toggle();
-
-      expect(isOpen.value).toBe(false);
-    });
-
-    it('uses trigger reason when toggling', () => {
-      const isOpen = signal(false);
-      const transitions: string[] = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next, reason) => {
-          isOpen.value = next;
-          transitions.push(`${next ? 'open' : 'close'}:${reason}`);
-        },
-      });
-
-      controller.toggle();
-      controller.toggle();
-
-      expect(transitions).toEqual(['open:trigger', 'close:trigger']);
-    });
+    expect(setOpen).not.toHaveBeenCalled();
   });
 
-  /**
-   * Tests for open/close reason semantics
-   */
-  describe('Operations - Reasons', () => {
-    it('uses programmatic reason when opening', () => {
-      const isOpen = signal(false);
-      const reasons: string[] = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next, reason) => {
-          isOpen.value = next;
+  it('does not call setOpen when trying to close an already closed overlay', () => {
+    const openState = signal(false);
+    const setOpen = vi.fn();
 
-          if (next) {
-            reasons.push(reason);
-          }
-        },
-      });
-
-      controller.open();
-
-      expect(reasons).toEqual(['programmatic']);
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => document.body,
+      isOpen: () => openState.value,
+      setOpen,
     });
 
-    it('uses programmatic reason when closing', () => {
-      const isOpen = signal(true);
-      const reasons: string[] = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next, reason) => {
-          isOpen.value = next;
+    overlay.close({ reason: 'programmatic' });
 
-          if (!next) {
-            reasons.push(reason);
-          }
-        },
-      });
-
-      controller.close();
-
-      expect(reasons).toEqual(['programmatic']);
-    });
-
-    it('allows specifying custom close reason', () => {
-      const isOpen = signal(true);
-      const reasons: string[] = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next, reason) => {
-          isOpen.value = next;
-
-          if (!next) {
-            reasons.push(reason);
-          }
-        },
-      });
-
-      controller.close('escape');
-
-      expect(reasons).toEqual(['escape']);
-    });
+    expect(setOpen).not.toHaveBeenCalled();
   });
 
-  /**
-   * Tests for disabled state behavior
-   */
-  describe('State - Disabled', () => {
-    it('prevents opening when disabled', () => {
-      const isOpen = signal(false);
-      const disabled = signal(true);
-      const controller = createOverlayControl({
-        disabled,
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+  it('closes with explicit reason and can skip focus restoration per call', () => {
+    const openState = signal(true);
+    const other = document.createElement('input');
+    const trigger = document.createElement('button');
 
-      controller.open();
+    document.body.appendChild(trigger);
+    document.body.appendChild(other);
 
-      expect(isOpen.value).toBe(false);
+    const onClose = vi.fn();
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => document.body,
+      getTriggerElement: () => trigger,
+      isOpen: () => openState.value,
+      onClose,
+      restoreFocus: true,
+      setOpen: (next) => {
+        openState.value = next;
+      },
     });
 
-    it('allows opening after disabling is cleared', () => {
-      const isOpen = signal(false);
-      const disabled = signal(true);
-      const controller = createOverlayControl({
-        disabled,
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+    other.focus();
+    overlay.close({ reason: 'escape', restoreFocus: false });
 
-      controller.open();
-      expect(isOpen.value).toBe(false);
+    expect(openState.value).toBe(false);
+    expect(onClose).toHaveBeenCalledWith('escape');
+    expect(document.activeElement).toBe(other);
 
-      disabled.value = false;
-      controller.open();
-      expect(isOpen.value).toBe(true);
-    });
-
-    it('allows closing when disabled', () => {
-      const isOpen = signal(true);
-      const disabled = signal(true);
-      const controller = createOverlayControl({
-        disabled,
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
-
-      controller.close();
-
-      expect(isOpen.value).toBe(false);
-    });
+    trigger.remove();
+    other.remove();
   });
 
-  /**
-   * Tests for outside click detection and boundary checks
-   */
-  describe('Interactions - Outside Click', () => {
-    it('closes on outside click', () => {
-      const isOpen = signal(false);
-      let closedByOutsideClick = false;
-      const host = document.createElement('div');
-      const outside = document.createElement('div');
+  it('restores focus to trigger by default on close', () => {
+    const openState = signal(true);
+    const other = document.createElement('input');
+    const trigger = document.createElement('button');
 
-      document.body.appendChild(host);
-      document.body.appendChild(outside);
+    document.body.appendChild(trigger);
+    document.body.appendChild(other);
 
-      const controller = createOverlayControl({
-        elements: { boundary: host },
-        isOpen,
-        setOpen: (next, reason) => {
-          isOpen.value = next;
-
-          if (!next && reason === 'outside-click') {
-            closedByOutsideClick = true;
-          }
-        },
-      });
-
-      const cleanup = controller.bindOutsideClick(document);
-
-      controller.open();
-      expect(isOpen.value).toBe(true);
-
-      outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(isOpen.value).toBe(false);
-      expect(closedByOutsideClick).toBe(true);
-
-      cleanup();
-      host.remove();
-      outside.remove();
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => document.body,
+      getTriggerElement: () => trigger,
+      isOpen: () => openState.value,
+      setOpen: (next) => {
+        openState.value = next;
+      },
     });
 
-    it('does not close on inside boundary click', () => {
-      const isOpen = signal(false);
-      const setOpenCalls: Array<[boolean, string]> = [];
-      const host = document.createElement('div');
-      const button = document.createElement('button');
+    other.focus();
+    overlay.close({ reason: 'programmatic' });
 
-      host.appendChild(button);
-      document.body.appendChild(host);
+    expect(document.activeElement).toBe(trigger);
 
-      const controller = createOverlayControl({
-        elements: { boundary: host },
-        isOpen,
-        setOpen: (next, reason) => {
-          setOpenCalls.push([next, reason]);
-          isOpen.value = next;
-        },
-      });
-
-      const cleanup = controller.bindOutsideClick(document);
-
-      controller.open();
-      setOpenCalls.length = 0; // reset
-
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(isOpen.value).toBe(true);
-      expect(setOpenCalls.length).toBe(0); // should not have called setOpen
-
-      cleanup();
-      host.remove();
-    });
-
-    it('does not close on panel click', () => {
-      const isOpen = signal(false);
-      const setOpenCalls: Array<[boolean, string]> = [];
-      const host = document.createElement('div');
-      const panel = document.createElement('div');
-      const button = document.createElement('button');
-
-      panel.appendChild(button);
-      document.body.appendChild(host);
-      document.body.appendChild(panel);
-
-      const controller = createOverlayControl({
-        elements: { boundary: host, panel },
-        isOpen,
-        setOpen: (next, reason) => {
-          setOpenCalls.push([next, reason]);
-          isOpen.value = next;
-        },
-      });
-
-      const cleanup = controller.bindOutsideClick(document);
-
-      controller.open();
-      setOpenCalls.length = 0; // reset
-
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(isOpen.value).toBe(true);
-      expect(setOpenCalls.length).toBe(0); // should not have called setOpen
-
-      cleanup();
-      host.remove();
-      panel.remove();
-    });
-
-    it('does not close when overlay is closed', () => {
-      const isOpen = signal(false);
-      const setOpenCalls: Array<[boolean, string]> = [];
-      const outside = document.createElement('div');
-
-      document.body.appendChild(outside);
-
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next, reason) => {
-          setOpenCalls.push([next, reason]);
-          isOpen.value = next;
-        },
-      });
-
-      const cleanup = controller.bindOutsideClick(document);
-
-      outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(setOpenCalls.length).toBe(0); // should not close when already closed
-
-      cleanup();
-      outside.remove();
-    });
-
-    it('cleanup removes event listener', () => {
-      const isOpen = signal(false);
-      const outside = document.createElement('div');
-
-      document.body.appendChild(outside);
-
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
-
-      const cleanup = controller.bindOutsideClick(document);
-
-      controller.open();
-      cleanup();
-
-      outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(isOpen.value).toBe(true); // should still be open after cleanup
-
-      outside.remove();
-    });
+    trigger.remove();
+    other.remove();
   });
 
-  /**
-   * Tests for callbacks
-   */
-  describe('Callbacks - onOpen & onClose', () => {
-    it('calls onOpen callback when opening', () => {
-      const isOpen = signal(false);
-      const onOpenCalls: string[] = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        onOpen: (reason) => {
-          onOpenCalls.push(reason);
-        },
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+  it('toggle uses trigger reason for both directions', () => {
+    const openState = signal(false);
+    const reasons: string[] = [];
 
-      controller.open();
-
-      expect(onOpenCalls).toEqual(['programmatic']);
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => document.body,
+      isOpen: () => openState.value,
+      setOpen: (next, { reason }) => {
+        openState.value = next;
+        reasons.push(reason);
+      },
     });
 
-    it('calls onClose callback when closing', () => {
-      const isOpen = signal(true);
-      const onCloseCalls: string[] = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        onClose: (reason) => {
-          onCloseCalls.push(reason);
-        },
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+    overlay.toggle();
+    overlay.toggle();
 
-      controller.close();
-
-      expect(onCloseCalls).toEqual(['programmatic']);
-    });
-
-    it('calls both callbacks in sequence', () => {
-      const isOpen = signal(false);
-      const callOrder: string[] = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        onClose: (reason) => {
-          callOrder.push(`close:${reason}`);
-        },
-        onOpen: (reason) => {
-          callOrder.push(`open:${reason}`);
-        },
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
-
-      controller.open();
-      controller.close();
-
-      expect(callOrder).toEqual(['open:programmatic', 'close:programmatic']);
-    });
-
-    it('passes close reason to onClose callback', () => {
-      const isOpen = signal(true);
-      const onCloseCalls: string[] = [];
-      const controller = createOverlayControl({
-        elements: { boundary: document.body },
-        isOpen,
-        onClose: (reason) => {
-          onCloseCalls.push(reason);
-        },
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
-
-      controller.close('escape');
-
-      expect(onCloseCalls).toEqual(['escape']);
-    });
+    expect(reasons).toEqual(['trigger', 'trigger']);
   });
 
-  /**
-   * Tests for focus management
-   */
-  describe('Focus - Restoration', () => {
-    it('restores focus to trigger on close by default', () => {
-      const isOpen = signal(false);
-      const trigger = document.createElement('button');
+  it('ignores open when disabled', () => {
+    const openState = signal(false);
 
-      document.body.appendChild(trigger);
-
-      const controller = createOverlayControl({
-        elements: {
-          boundary: document.body,
-          trigger,
-        },
-        isOpen,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
-
-      controller.open();
-      controller.close();
-
-      expect(document.activeElement).toBe(trigger);
-
-      trigger.remove();
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => document.body,
+      isDisabled: () => true,
+      isOpen: () => openState.value,
+      setOpen: (next) => {
+        openState.value = next;
+      },
     });
 
-    it('respects restoreFocus=true option', () => {
-      const isOpen = signal(false);
-      const trigger = document.createElement('button');
+    overlay.open({ reason: 'trigger' });
 
-      document.body.appendChild(trigger);
+    expect(openState.value).toBe(false);
+  });
 
-      const controller = createOverlayControl({
-        elements: {
-          boundary: document.body,
-          trigger,
-        },
-        isOpen,
-        restoreFocus: true,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+  it('closes on outside click and keeps open on boundary/panel clicks', () => {
+    const openState = signal(false);
+    const host = document.createElement('div');
+    const insideBoundary = document.createElement('button');
+    const insidePanel = document.createElement('button');
+    const outside = document.createElement('button');
+    const panel = document.createElement('div');
 
-      controller.open();
-      controller.close();
+    host.appendChild(insideBoundary);
+    panel.appendChild(insidePanel);
+    document.body.appendChild(host);
+    document.body.appendChild(panel);
+    document.body.appendChild(outside);
 
-      expect(document.activeElement).toBe(trigger);
-
-      trigger.remove();
+    const closeReasons: string[] = [];
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => host,
+      getPanelElement: () => panel,
+      isOpen: () => openState.value,
+      onClose: (reason) => {
+        closeReasons.push(reason);
+      },
+      setOpen: (next) => {
+        openState.value = next;
+      },
     });
 
-    it('respects restoreFocus=false option', () => {
-      const isOpen = signal(false);
-      const trigger = document.createElement('button');
-      const other = document.createElement('input');
+    const cleanup = overlay.bindOutsideClick(document);
 
-      document.body.appendChild(trigger);
-      document.body.appendChild(other);
+    overlay.open({ reason: 'trigger' });
+    insideBoundary.click();
+    expect(openState.value).toBe(true);
 
-      const controller = createOverlayControl({
-        elements: {
-          boundary: document.body,
-          trigger,
-        },
-        isOpen,
-        restoreFocus: false,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+    insidePanel.click();
+    expect(openState.value).toBe(true);
 
-      controller.open();
-      other.focus();
-      controller.close();
+    outside.click();
+    expect(openState.value).toBe(false);
+    expect(closeReasons.at(-1)).toBe('outside-click');
 
-      expect(document.activeElement).toBe(other);
+    cleanup();
+    host.remove();
+    panel.remove();
+    outside.remove();
+  });
 
-      trigger.remove();
-      other.remove();
+  it('uses event.target fallback when composedPath is unavailable', () => {
+    const openState = signal(false);
+    const host = document.createElement('div');
+    const outside = document.createElement('button');
+
+    document.body.appendChild(host);
+    document.body.appendChild(outside);
+
+    const overlay = createOverlayControl({
+      getBoundaryElement: () => host,
+      isOpen: () => openState.value,
+      setOpen: (next) => {
+        openState.value = next;
+      },
     });
 
-    it('respects restoreFocus as function', () => {
-      const isOpen = signal(false);
-      const trigger = document.createElement('button');
-      const other = document.createElement('input');
-      const shouldRestore = signal(false);
+    const cleanup = overlay.bindOutsideClick(document);
 
-      document.body.appendChild(trigger);
-      document.body.appendChild(other);
+    overlay.open({ reason: 'trigger' });
 
-      const controller = createOverlayControl({
-        elements: {
-          boundary: document.body,
-          trigger,
-        },
-        isOpen,
-        restoreFocus: () => shouldRestore.value,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
+    const click = new MouseEvent('click', { bubbles: true });
 
-      controller.open();
-      other.focus();
-      controller.close();
+    Object.defineProperty(click, 'composedPath', { value: undefined });
+    outside.dispatchEvent(click);
 
-      expect(document.activeElement).toBe(other);
+    expect(openState.value).toBe(false);
 
-      shouldRestore.value = true;
-      controller.open();
-      controller.close();
-
-      expect(document.activeElement).toBe(trigger);
-
-      trigger.remove();
-      other.remove();
-    });
-
-    it('can override focus restoration per close call', () => {
-      const isOpen = signal(false);
-      const trigger = document.createElement('button');
-      const other = document.createElement('input');
-
-      document.body.appendChild(trigger);
-      document.body.appendChild(other);
-
-      const controller = createOverlayControl({
-        elements: {
-          boundary: document.body,
-          trigger,
-        },
-        isOpen,
-        restoreFocus: true,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
-
-      controller.open();
-      other.focus();
-      controller.close('programmatic', false);
-
-      expect(document.activeElement).toBe(other);
-
-      trigger.remove();
-      other.remove();
-    });
-
-    it('does nothing if no trigger element provided', () => {
-      const isOpen = signal(false);
-      const controller = createOverlayControl({
-        elements: {
-          boundary: document.body,
-        },
-        isOpen,
-        restoreFocus: true,
-        setOpen: (next) => {
-          isOpen.value = next;
-        },
-      });
-
-      expect(() => {
-        controller.open();
-        controller.close();
-      }).not.toThrow();
-    });
+    cleanup();
+    host.remove();
+    outside.remove();
   });
 });

@@ -79,19 +79,17 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
   } satisfies PropBundle<BitSkeletonProps>,
   setup({ host, props }) {
     const isPaused = signal(false);
-    const lineCount = computed(() => {
+    const lineCount = () => {
       const value = Math.floor(Number(props.lines.value));
 
       return Number.isFinite(value) && value > 0 ? value : 1;
-    });
-    const renderLineCount = computed(() => (props.variant.value === 'text' ? lineCount.value : 1));
-    const styleDeps = computed(
-      () =>
-        `${props.width.value ?? ''}|${props.height.value ?? ''}|${props.radius.value ?? ''}|${props.animated.value === false ? '0' : '1'}`,
-    );
+    };
+    const renderLineCount = () => (props.variant.value === 'text' ? lineCount() : 1);
+    const styleDeps = () =>
+      `${props.width.value ?? ''}|${props.height.value ?? ''}|${props.radius.value ?? ''}|${props.animated.value === false ? '0' : '1'}`;
 
     watch(
-      styleDeps,
+      computed(styleDeps),
       () => {
         if (props.width.value) host.el.style.setProperty('--skeleton-width', props.width.value);
         else host.el.style.removeProperty('--skeleton-width');
@@ -110,8 +108,10 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
       { immediate: true },
     );
 
-    host.bind('attr', {
-      'data-paused': () => (isPaused.value ? true : undefined),
+    host.bind({
+      attr: {
+        'data-paused': () => (isPaused.value ? true : undefined),
+      },
     });
 
     onMount(() => {
@@ -130,9 +130,9 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
     return html`
       <div class="stack" part="stack">
         ${() =>
-          Array.from({ length: renderLineCount.value }, (_, index) => {
+          Array.from({ length: renderLineCount() }, (_, index) => {
             const isLastLine =
-              props.variant.value === 'text' && renderLineCount.value > 1 && index === renderLineCount.value - 1;
+              props.variant.value === 'text' && renderLineCount() > 1 && index === renderLineCount() - 1;
 
             return html`<div
               class="bone"

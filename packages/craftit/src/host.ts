@@ -6,11 +6,10 @@
  * - Host element binding (reflect) for attributes, classes, and host listeners
  */
 
-import { type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
+import { type ReadonlySignal, type Signal, isSignal, signal } from '@vielzeug/stateit';
 
 import { listen, setAttr } from './internal';
-import { currentRuntime } from './runtime-core';
-import { effect, onCleanup, onMount, type HostEventListeners } from './runtime-lifecycle';
+import { currentRuntime, effect, onCleanup, onMount, type HostEventListeners } from './runtime';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTEXT API
@@ -62,27 +61,25 @@ export function createContext<T>(description?: string): InjectionKey<T> {
  * Deferred to `onMount` so context values win over HTML attribute values set on the child.
  *
  * @example
- * syncContextProps(inject(BUTTON_GROUP_CTX), props, ['color', 'size', 'variant']);
+ * syncContextProps(inject(BUTTON_GROUP_CTX), props);
  */
-export const syncContextProps = <
-  K extends string,
-  Ctx extends Partial<Record<K, ReadonlySignal<unknown>>>,
-  Props extends Record<K, Signal<unknown>>,
->(
+export const syncContextProps = <Ctx extends Record<string, unknown>, Props extends Record<string, Signal<unknown>>>(
   ctx: Ctx | undefined,
   props: Props,
-  keys: K[],
 ): void => {
   if (!ctx) return;
 
   onMount(() => {
     effect(() => {
-      const target = props as Record<K, Signal<unknown>>;
+      for (const k of Object.keys(ctx)) {
+        const source = (ctx as any)[k];
 
-      for (const k of keys) {
-        const v = ctx[k]?.value;
+        if (!isSignal(source)) continue;
 
-        if (v !== undefined) target[k].value = v;
+        const v = source.value;
+        const target = props[k];
+
+        if (v !== undefined && target) target.value = v;
       }
     });
   });
@@ -123,6 +120,60 @@ export const bridgeContextAttributes = (host: HTMLElement, options: HostContextA
     if (contextVariant && !hasOwnVariant) host.setAttribute('variant', contextVariant);
     else if (!hasOwnVariant) host.removeAttribute('variant');
   });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ARIA SYNC
+// ─────────────────────────────────────────────────────────────────────────────
+
+type AriaValue = string | number | boolean | null | undefined | (() => string | number | boolean | null | undefined);
+
+type AriaConfig = Record<string, AriaValue>;
+
+const normalizeAriaKey = (key: string): string => {
+  if (key === 'role' || key.startsWith('aria-')) return key;
+
+  return key.startsWith('aria') ? `aria-${key.slice(4).toLowerCase()}` : `aria-${key}`;
+};
+
+const setA11yAttr = (target: Element, key: string, value: string | number | boolean | null | undefined): void => {
+  if (value == null || value === false) {
+    target.removeAttribute(key);
+
+    return;
+  }
+
+  target.setAttribute(key, value === true ? 'true' : String(value));
+};
+
+/**
+ * Reactively syncs ARIA attributes to a target element.
+ * Static values are set immediately; getter functions are tracked as effects.
+ * Returns a cleanup function that removes all reactive bindings.
+ *
+ * @example
+ * syncAria(element, {
+ *   role: 'button',
+ *   expanded: () => isOpen.value,
+ *   disabled: () => isDisabled.value,
+ * });
+ */
+export const syncAria = (target: Element, config: AriaConfig): (() => void) => {
+  const disposers: Array<() => void> = [];
+
+  for (const [rawKey, rawValue] of Object.entries(config)) {
+    const key = normalizeAriaKey(rawKey);
+
+    if (typeof rawValue === 'function') {
+      disposers.push(effect(() => setA11yAttr(target, key, rawValue())));
+    } else {
+      setA11yAttr(target, key, rawValue);
+    }
+  }
+
+  return () => {
+    while (disposers.length > 0) disposers.pop()?.();
+  };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -266,8 +317,8 @@ export const createSlots = (): ComponentSlots => {
  * Describes a reactive or static host binding value.
  */
 export type HostBindingValue =
-  | (() => Record<string, boolean>)
   | (() => string | number | boolean | null | undefined)
+  | ReadonlySignal<string | number | boolean | null | undefined>
   | string
   | number
   | boolean
@@ -279,10 +330,23 @@ export type HostBindingValue =
  */
 export type ReflectConfig = Record<string, HostBindingValue>;
 
-export type HostBindConfig<CustomEvents extends Record<string, unknown> = Record<string, never>> =
-  | { attr: ReflectConfig }
-  | { class: () => Record<string, boolean> }
-  | { on: HostEventListeners<CustomEvents> };
+/**
+ * Describes a reactive property accessor binding on the host element.
+ * The getter is called lazily; the optional setter is used when external code
+ * assigns `element.propName = value`.
+ */
+export type HostPropDescriptor<T = unknown> = {
+  get: () => T;
+  set?: (value: T) => void;
+};
+
+export type HostBindConfig<CustomEvents extends Record<string, unknown> = Record<string, never>> = {
+  attr?: ReflectConfig;
+  class?: () => Record<string, boolean>;
+  on?: HostEventListeners<CustomEvents>;
+  prop?: Record<string, HostPropDescriptor>;
+  style?: Record<string, HostBindingValue>;
+};
 
 export type ComponentHost = {
   bind: <CustomEvents extends Record<string, unknown> = Record<string, never>>(
@@ -300,7 +364,7 @@ export const createHost = (): ComponentHost => {
     bind: (config, options) => {
       const disposers: Array<() => void> = [];
 
-      if ('attr' in config) {
+      if (config.attr) {
         for (const [key, value] of Object.entries(config.attr)) {
           const name =
             key.startsWith('aria-') || key === 'role'
@@ -314,17 +378,42 @@ export const createHost = (): ComponentHost => {
         }
       }
 
-      if ('class' in config) {
+      if (config.class) {
         disposers.push(applyClassMap(el, config.class));
       }
 
-      if ('on' in config) {
+      if (config.prop) {
+        for (const [key, descriptor] of Object.entries(config.prop)) {
+          const { get, set } = descriptor;
+
+          Object.defineProperty(el, key, {
+            configurable: true,
+            enumerable: true,
+            get,
+            ...(set ? { set } : {}),
+          });
+
+          disposers.push(() => {
+            delete (el as unknown as Record<string, unknown>)[key];
+          });
+        }
+      }
+
+      if (config.on) {
         for (const event of Object.keys(config.on) as Array<keyof typeof config.on>) {
           const listener = config.on[event];
 
           if (!listener) continue;
 
           disposers.push(listen(el, event as string, listener as EventListener, options));
+        }
+      }
+
+      if (config.style) {
+        for (const [key, value] of Object.entries(config.style)) {
+          const dispose = applyStyle(el, key, value);
+
+          if (dispose) disposers.push(dispose);
         }
       }
 
@@ -343,9 +432,26 @@ export const createHost = (): ComponentHost => {
 
 function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
   if (typeof value === 'function') {
-    return effect(() => setAttr(host, name, (value as () => HostBindingValue)()));
+    return effect(() => setAttr(host, name, value()));
+  } else if (isSignal(value)) {
+    return effect(() => setAttr(host, name, value.value));
   } else {
     setAttr(host, name, value);
+  }
+}
+
+function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
+  const setStyle = (v: any) => {
+    if (v != null) host.style.setProperty(name, String(v));
+    else host.style.removeProperty(name);
+  };
+
+  if (typeof value === 'function') {
+    return effect(() => setStyle(value()));
+  } else if (isSignal(value)) {
+    return effect(() => setStyle(value.value));
+  } else {
+    setStyle(value);
   }
 }
 

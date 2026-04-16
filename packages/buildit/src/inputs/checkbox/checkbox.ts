@@ -100,23 +100,20 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
 
     mountFormContextSync(host.el, formCtx, props);
 
-    host.bind('class', () => ({
-      'is-checked': controlHandle.checked.value,
-      'is-disabled': controlHandle.disabled.value,
-      'is-indeterminate': controlHandle.indeterminate.value,
-    }));
-
-    host.bind('attr', {
-      checked: () => controlHandle.checked.value,
-      indeterminate: () => controlHandle.indeterminate.value,
-      tabindex: () => (controlHandle.disabled.value ? undefined : 0),
-    });
-    host.bind('on', {
-      click: (e) => {
-        pressControl.handleClick(e);
+    host.bind({
+      attr: {
+        checked: controlHandle.checked,
+        indeterminate: controlHandle.indeterminate,
+        tabindex: () => (controlHandle.disabled.value ? undefined : 0),
       },
-      keydown: (e) => {
-        pressControl.handleKeydown(e);
+      class: () => ({
+        'is-checked': controlHandle.checked.value,
+        'is-disabled': controlHandle.disabled.value,
+        'is-indeterminate': controlHandle.indeterminate.value,
+      }),
+      on: {
+        click: pressControl.handleClick,
+        keydown: pressControl.handleKeydown,
       },
     });
 

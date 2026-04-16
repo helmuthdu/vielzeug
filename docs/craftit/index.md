@@ -117,9 +117,8 @@ define('my-counter', {
 - **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
 - **Accessibility** — stable ID helpers such as `createId()` from core
 - **Observers** — `resizeObserver()`, `intersectionObserver()`, and `mediaObserver()` from `@vielzeug/craftit/observers`
-- **Directive subpath** — `@vielzeug/craftit/directives` for `when`, `each`, `choose`, `until`, `bind`, `attrs`, and more
 - **Testing subpath** — `@vielzeug/craftit/testing` for `mount`, `fire`, `user`, `waitFor`, and cleanup helpers
-- **Focused entrypoints** — use `@vielzeug/craftit` for stable APIs and focused subpaths (`/controls`, `/observers`, `/directives`, `/testing`) when you want narrower imports
+- **Focused entrypoints** — use `@vielzeug/craftit` for stable APIs and focused subpaths (`/controls`, `/observers`, `/testing`) when you want narrower imports
 - **Framework-agnostic** — Pure web components that work in any framework or vanilla HTML
 - **Lightweight** — <PackageInfo package="craftit" type="size" /> gzipped
 

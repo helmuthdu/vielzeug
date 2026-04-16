@@ -1,5 +1,5 @@
 import { define, html, inject, ref, signal } from '@vielzeug/craftit';
-import { createTextFieldControl } from '@vielzeug/craftit/controls';
+import { createFieldControl } from '@vielzeug/craftit/controls';
 
 import type { InputType, VisualVariant } from '../../types';
 import type { TextFieldProps } from '../shared/base-props';
@@ -146,7 +146,6 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
 
     const {
       assistive,
-      attrs: inputAttrs,
       clear,
       errorId,
       fieldId: inputId,
@@ -156,37 +155,66 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       labelOutsideId,
       labelOutsideRef,
       value: fieldValue,
-    } = createTextFieldControl({
-      autocomplete: props.autocomplete,
-      context: formCtx,
-      disabled: props.disabled,
-      elementRef: inputRef,
-      error: props.error,
-      helper: props.helper,
-      inputmode: props.inputmode,
-      label: props.label,
-      labelPlacement: props['label-placement'],
-      maxLength: props.maxlength,
-      minLength: props.minlength,
-      name: props.name,
-      onChange: (event, value) => {
-        emit('change', { originalEvent: event, value });
+    } = createFieldControl({
+      kind: 'text',
+      options: {
+        autocomplete: props.autocomplete,
+        context: formCtx,
+        disabled: props.disabled,
+        elementRef: inputRef,
+        error: props.error,
+        helper: props.helper,
+        inputmode: props.inputmode,
+        label: props.label,
+        labelPlacement: props['label-placement'],
+        maxLength: props.maxlength,
+        minLength: props.minlength,
+        name: props.name,
+        onChange: (event, value) => {
+          emit('change', { originalEvent: event, value });
+        },
+        onInput: (event, value) => {
+          emit('input', { originalEvent: event, value });
+        },
+        pattern: props.pattern,
+        placeholder: props.placeholder,
+        prefix: 'input',
+        readOnly: props.readonly,
+        required: props.required,
+        type: resolvedInputType,
+        value: props.value,
       },
-      onInput: (event, value) => {
-        emit('input', { originalEvent: event, value });
-      },
-      pattern: props.pattern,
-      placeholder: props.placeholder,
-      prefix: 'input',
-      readOnly: props.readonly,
-      required: props.required,
-      type: resolvedInputType,
-      value: props.value,
     });
 
-    host.bind('attr', {
-      'has-value': () => (fieldValue.value ? true : undefined),
+    host.bind({
+      attr: {
+        'has-value': () => (fieldValue.value ? true : undefined),
+      },
     });
+
+    const ariaLabelledBy = () => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId);
+    const ariaDescribedBy = () => (assistive.value.hasError ? errorId : helperId);
+    const ariaErrorMessage = () => (assistive.value.hasError ? errorId : null);
+    const ariaInvalid = () => String(assistive.value.hasError);
+    const passwordToggleLabel = () => (showPassword.value ? 'Hide password' : 'Show password');
+    const passwordTogglePressed = () => String(showPassword.value);
+    const passwordToggleIcon = () =>
+      showPassword.value
+        ? html`<bit-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`
+        : html`<bit-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`;
+    const helperHidden = () => !assistive.value.showHelper;
+    const helperText = () => assistive.value.helperText;
+    const errorHidden = () => !assistive.value.hasError;
+    const errorText = () => assistive.value.errorText;
+    const counterNearLimit = () => (assistive.value.counterNearLimit && !assistive.value.counterAtLimit ? '' : null);
+    const counterAtLimit = () => (assistive.value.counterAtLimit ? '' : null);
+    const counterHidden = () => !assistive.value.hasCounter;
+    const counterText = () => assistive.value.counterText;
+
+    const togglePassword = () => {
+      showPassword.value = !showPassword.value;
+      inputRef.value?.focus();
+    };
 
     return html`
       <div class="input-wrapper" part="wrapper">
@@ -195,7 +223,7 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
           for="${inputId}"
           id="${labelOutsideId}"
           part="label"
-          ref=${labelOutsideRef}
+          ref="${labelOutsideRef}"
           hidden></label>
         <div class="field" part="field">
           <label
@@ -203,54 +231,55 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
             for="${inputId}"
             id="${labelInsetId}"
             part="label"
-            ref=${labelInsetRef}
+            ref="${labelInsetRef}"
             hidden></label>
           <div class="input-row" part="input-row">
             <slot name="prefix"></slot>
             <input
               part="input"
               id="${inputId}"
-              ${inputAttrs}
-              :aria-labelledby="${() => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId)}"
-              :aria-describedby="${() => (assistive.value.hasError ? errorId : helperId)}"
-              :aria-errormessage="${() => (assistive.value.hasError ? errorId : null)}"
-              :aria-invalid="${() => String(assistive.value.hasError)}"
-              ref=${inputRef} />
+              :type="${resolvedInputType}"
+              :name="${props.name}"
+              :placeholder="${props.placeholder}"
+              :autocomplete="${props.autocomplete}"
+              :inputmode="${props.inputmode}"
+              :maxlength="${props.maxlength}"
+              :minlength="${props.minlength}"
+              :pattern="${props.pattern}"
+              ?disabled="${props.disabled}"
+              ?readonly="${props.readonly}"
+              ?required="${props.required}"
+              .value="${fieldValue}"
+              :aria-labelledby="${ariaLabelledBy}"
+              :aria-describedby="${ariaDescribedBy}"
+              :aria-errormessage="${ariaErrorMessage}"
+              :aria-invalid="${ariaInvalid}"
+              ref="${inputRef}" />
             <slot name="suffix"></slot>
             <button
               class="pwd-toggle-btn"
               part="pwd-toggle"
               type="button"
-              :aria-label="${() => (showPassword.value ? 'Hide password' : 'Show password')}"
-              :aria-pressed="${() => String(showPassword.value)}"
+              :aria-label="${passwordToggleLabel}"
+              :aria-pressed="${passwordTogglePressed}"
               tabindex="-1"
-              @click="${() => {
-                showPassword.value = !showPassword.value;
-                inputRef.value?.focus();
-              }}">
-              ${() =>
-                showPassword.value
-                  ? html`<bit-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`
-                  : html`<bit-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`}
+              @click="${togglePassword}">
+              ${passwordToggleIcon}
             </button>
-            <button aria-label="Clear" class="clear-btn" part="clear" tabindex="-1" type="button" @click=${clear}>
+            <button aria-label="Clear" class="clear-btn" part="clear" tabindex="-1" type="button" @click="${clear}">
               <bit-icon aria-hidden="true" name="x" size="12" stroke-width="2.5"></bit-icon>
             </button>
           </div>
         </div>
-        <div class="helper-text" id="${helperId}" part="helper" ?hidden=${() => !assistive.value.showHelper}>
-          ${() => assistive.value.helperText}
-        </div>
-        <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden=${() => !assistive.value.hasError}>
-          ${() => assistive.value.errorText}
-        </div>
+        <div class="helper-text" id="${helperId}" part="helper" ?hidden="${helperHidden}">${helperText}</div>
+        <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">${errorText}</div>
         <div
           class="char-counter"
           part="char-counter"
-          :data-near-limit="${() => (assistive.value.counterNearLimit && !assistive.value.counterAtLimit ? '' : null)}"
-          :data-at-limit="${() => (assistive.value.counterAtLimit ? '' : null)}"
-          ?hidden=${() => !assistive.value.hasCounter}>
-          ${() => assistive.value.counterText}
+          :data-near-limit="${counterNearLimit}"
+          :data-at-limit="${counterAtLimit}"
+          ?hidden="${counterHidden}">
+          ${counterText}
         </div>
       </div>
     `;

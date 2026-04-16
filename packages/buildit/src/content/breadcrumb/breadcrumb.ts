@@ -31,12 +31,12 @@ export const BREADCRUMB_ITEM_TAG = define<BitBreadcrumbItemProps>('bit-breadcrum
   setup({ props }) {
     return html`
       <li class="item" role="listitem">
-        <span class="separator" part="separator" aria-hidden="true">${() => props.separator.value || '/'}</span>
+        <span class="separator" part="separator" aria-hidden="true">${props.separator}</span>
         <a
           class="link"
-          href="${() => props.href.value || undefined}"
-          aria-current="${() => (props.active.value ? 'page' : null)}"
-          tabindex="${() => (props.active.value ? '-1' : null)}"
+          :href="${props.href}"
+          :aria-current="${() => (props.active.value ? 'page' : null)}"
+          :tabindex="${() => (props.active.value ? '-1' : null)}"
           part="link">
           <span class="icon"><slot name="icon"></slot></span>
           <span class="label"><slot></slot></span>
@@ -104,7 +104,7 @@ export const BREADCRUMB_TAG = define<BitBreadcrumbProps>('bit-breadcrumb', {
     });
 
     return html`
-      <nav aria-label="${() => props.label.value}" part="nav">
+      <nav part="nav" :aria-label="${props.label}">
         <ol role="list" part="list">
           <slot></slot>
         </ol>

@@ -78,11 +78,11 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
   setup({ emit, host, props }) {
     const formCtx = inject(FORM_CTX, undefined);
 
-    mountFormContextSync(host.el, formCtx, props);
+    mountFormContextSync(host.el, formCtx, props as any);
 
     const normalizedValue = computed(() => {
-      const max = Math.max(1, Number(props.max.value) || 5);
-      const raw = Number(props.value.value);
+      const max = Math.max(1, Number(props.max!.value) || 5);
+      const raw = Number(props.value!.value);
       const safe = Number.isFinite(raw) ? raw : 0;
 
       return Math.min(max, Math.max(0, safe));
@@ -90,26 +90,26 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
 
     const fd = defineField(
       {
-        disabled: computed(() => Boolean(props.disabled.value)),
+        disabled: computed(() => Boolean(props.disabled!.value)),
         value: computed(() => String(normalizedValue.value || 0)),
       },
       {
         onReset: () => {
-          props.value.value = 0;
+          props.value!.value = 0;
         },
       },
     );
 
     const { triggerValidation } = createValidationControl(formCtx?.validateOn, fd);
 
-    const isInteractive = computed(() => !props.readonly.value && !props.disabled.value);
+    const isInteractive = computed(() => !props.readonly!.value && !props.disabled!.value);
     const hovered = signal<number | null>(null);
     const displayValue = computed(() => hovered.value ?? normalizedValue.value);
     const getStarButtons = () => {
       return [...(host.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-star]') ?? [])];
     };
     const ratingControl = createSliderControl({
-      max: () => Number(props.max.value) || 5,
+      max: () => Number(props.max!.value) || 5,
       min: () => 1,
       step: () => 1,
     });
@@ -149,13 +149,13 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
     function select(star: number, originalEvent?: Event) {
       if (!isInteractive.value) return;
 
-      const max = Math.max(1, Number(props.max.value) || 5);
+      const max = Math.max(1, Number(props.max!.value) || 5);
       const nextValue = Math.min(max, Math.max(0, star));
 
       if (nextValue === normalizedValue.value) return;
 
       // Write through the reactive prop signal; craftit handles host reflection.
-      props.value.value = nextValue;
+      props.value!.value = nextValue;
       emit('change', { originalEvent, value: nextValue });
       triggerValidation('change');
       spawnSparkles(nextValue);
@@ -174,18 +174,13 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
     }
 
     const stars = computed(() => {
-      const max = Number(props.max.value) || 5;
+      const max = Number(props.max!.value) || 5;
 
       return Array.from({ length: max }, (_, i) => i + 1);
     });
 
     return html`
-      <div
-        class="stars"
-        part="stars"
-        role="radiogroup"
-        :aria-label="${() => props.label.value}"
-        :aria-required="${() => null}">
+      <div class="stars" part="stars" role="radiogroup" :aria-label="${props.label}" :aria-required="${() => null}">
         ${() =>
           stars.value.map(
             (star) =>

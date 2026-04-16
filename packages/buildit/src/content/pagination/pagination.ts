@@ -1,5 +1,4 @@
-import { define, computed, html } from '@vielzeug/craftit';
-import { each } from '@vielzeug/craftit/directives';
+import { define, computed, each, html } from '@vielzeug/craftit';
 
 import '../icon/icon';
 import '../../inputs/button/button';
@@ -7,7 +6,7 @@ import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { type PropBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
-import styles from './pagination.css?inline';
+import componentStyles from './pagination.css?inline';
 
 export type BitPaginationEvents = {
   change: { page: number };
@@ -95,14 +94,14 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
     'total-pages': 1,
     variant: undefined,
   } satisfies PropBundle<BitPaginationProps>,
-  setup({ emit, host, props }) {
+  setup({ emit, props }) {
     function goTo(page: number) {
-      const total = Number(props['total-pages'].value) || 1;
+      const total = props['total-pages'].value || 1;
       const next = Math.min(Math.max(1, page), total);
 
-      if (next === Number(props.page.value)) return;
+      if (next === props.page.value) return;
 
-      host.el.setAttribute('page', String(next));
+      props.page.value = next;
       emit('change', { page: next });
     }
 
@@ -125,18 +124,14 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
     }
 
     const pageItems = computed(() =>
-      buildPageRange(
-        Number(props.page.value) || 1,
-        Number(props['total-pages'].value) || 1,
-        // eslint-disable-next-line no-constant-binary-expression
-        Number(props.siblings.value) ?? 1,
-      ),
+      buildPageRange(props.page.value || 1, props['total-pages'].value || 1, props.siblings.value ?? 1),
     );
-    const isFirst = computed(() => (Number(props.page.value) || 1) <= 1);
-    const isLast = computed(() => (Number(props.page.value) || 1) >= (Number(props['total-pages'].value) || 1));
+
+    const isFirst = computed(() => (props.page.value || 1) <= 1);
+    const isLast = computed(() => (props.page.value || 1) >= (props['total-pages'].value || 1));
 
     return html`
-      <nav :aria-label="${() => props.label.value}" part="nav" @click=${handlePageClick}>
+      <nav :aria-label="${props.label}" part="nav" @click=${handlePageClick}>
         <ol class="pagination" part="list">
           ${() =>
             props['show-first-last'].value
@@ -146,7 +141,7 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
                     class="nav-btn"
                     part="first-btn"
                     aria-label="First page"
-                    ?disabled=${() => isFirst.value}
+                    ?disabled=${isFirst}
                     @click=${() => goTo(1)}>
                     <bit-icon name="chevrons-left" size="16" aria-hidden="true"></bit-icon>
                   </button>
@@ -160,8 +155,8 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
                     class="nav-btn"
                     part="prev-btn"
                     aria-label="Previous page"
-                    ?disabled=${() => isFirst.value}
-                    @click=${() => goTo((Number(props.page.value) || 1) - 1)}>
+                    ?disabled=${isFirst}
+                    @click=${() => goTo((props.page.value || 1) - 1)}>
                     <bit-icon name="chevron-left" size="16" aria-hidden="true"></bit-icon>
                   </button>
                 </li>`
@@ -175,7 +170,7 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
                 }
 
                 const pg = item as number;
-                const isCurrent = pg === (Number(props.page.value) || 1);
+                const isCurrent = pg === (props.page.value || 1);
 
                 return isCurrent
                   ? html`<button type="button" part="page-btn" aria-label="Page ${pg}" aria-current="page">
@@ -193,8 +188,8 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
                     class="nav-btn"
                     part="next-btn"
                     aria-label="Next page"
-                    ?disabled=${() => isLast.value}
-                    @click=${() => goTo((Number(props.page.value) || 1) + 1)}>
+                    ?disabled=${isLast}
+                    @click=${() => goTo((props.page.value || 1) + 1)}>
                     <bit-icon name="chevron-right" size="16" aria-hidden="true"></bit-icon>
                   </button>
                 </li>`
@@ -207,8 +202,8 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
                     class="nav-btn"
                     part="last-btn"
                     aria-label="Last page"
-                    ?disabled=${() => isLast.value}
-                    @click=${() => goTo(Number(props['total-pages'].value) || 1)}>
+                    ?disabled=${isLast}
+                    @click=${() => goTo(props['total-pages'].value || 1)}>
                     <bit-icon name="chevrons-right" size="16" aria-hidden="true"></bit-icon>
                   </button>
                 </li>`
@@ -217,5 +212,6 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
       </nav>
     `;
   },
-  styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, styles],
+
+  styles: [coarsePointerMixin, colorThemeMixin, sizeVariantMixin(), componentStyles],
 });

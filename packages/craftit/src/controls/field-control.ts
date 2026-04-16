@@ -1,11 +1,11 @@
-import { computed, isSignal, type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
+import { computed, type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
 
-import { spread } from '../directives/spread';
 import { defineField, type FormFieldHandle } from '../form';
-import { createId, ref, type Directive } from '../internal';
-import { effect, handle, onElement, watch } from '../runtime-lifecycle';
+import { createId, ref } from '../internal';
+import { effect, handle, onElement, watch } from '../runtime';
 import {
   createControlState,
+  type ValidationReporter,
   type ControlContextOptions,
   type ControlValidationMode,
   type FormControlValidationTrigger,
@@ -16,10 +16,7 @@ export { createValidationControl } from './internal/control-state';
 export type { ValidationReporter } from './internal/control-state';
 
 // Discriminated union types for text vs checkable variants
-export type TextFieldControlContext = {
-  disabled?: ReadonlySignal<boolean | undefined>;
-  validateOn?: ReadonlySignal<ControlValidationMode>;
-};
+export type TextFieldControlContext = ControlContextOptions;
 
 export type TextFieldOptions = Omit<ControlContextOptions, 'disabled' | 'validateOn'> & {
   autocomplete?: ReadonlySignal<string | undefined>;
@@ -92,7 +89,7 @@ export type CheckableChangePayload = {
 export type FieldControlBaseHandle = {
   disabled: ReadonlySignal<boolean>;
   errorId: string;
-  field: FormFieldHandle;
+  field?: FormFieldHandle;
   fieldId: string;
   helperId: string;
   labelInsetId: string;
@@ -105,7 +102,6 @@ export type FieldControlBaseHandle = {
 
 export type TextFieldHandle = FieldControlBaseHandle & {
   assistive: ReadonlySignal<AssistiveState>;
-  attrs: Directive;
   clear: (event?: Event) => void;
   value: Signal<string>;
 };
@@ -151,7 +147,7 @@ export type CheckableStateHandle = FieldControlBaseHandle & {
 export type ChoiceFieldHandle<T> = FieldControlBaseHandle & {
   assistive: ReadonlySignal<AssistiveState>;
   clear: () => void;
-  field: FormFieldHandle;
+  field?: FormFieldHandle;
   formValue: ReadonlySignal<string>;
   isMultiple: ReadonlySignal<boolean>;
   isSelected: (value: string) => boolean;
@@ -163,7 +159,27 @@ export type ChoiceFieldHandle<T> = FieldControlBaseHandle & {
   toggleItem: (item: T) => void;
 };
 
-type ReactiveValue<T> = ReadonlySignal<T> | (() => T) | T;
+export type TextFieldControlFactoryOptions = {
+  kind: 'text';
+  options: TextFieldOptions;
+};
+
+export type ChoiceFieldControlFactoryOptions<T> = {
+  kind: 'choice';
+  options: ChoiceFieldOptions<T>;
+};
+
+export type CheckableFieldControlFactoryOptions = {
+  kind: 'checkable';
+  options: CheckableStateOptions;
+};
+
+export type FieldControlOptions<T = unknown> =
+  | TextFieldControlFactoryOptions
+  | ChoiceFieldControlFactoryOptions<T>
+  | CheckableFieldControlFactoryOptions;
+
+export type FieldControlHandle<T = unknown> = TextFieldHandle | ChoiceFieldHandle<T> | CheckableStateHandle;
 
 /**
  * Generates a stable set of ARIA-related IDs for a field control.
@@ -185,6 +201,7 @@ const createFieldIds = (prefix: string, name?: string | null) => {
 
 const createBaseFieldHandle = (
   options: {
+    context?: TextFieldControlContext;
     label?: ReadonlySignal<string | undefined>;
     labelPlacement?: ReadonlySignal<'inset' | 'outside' | undefined>;
     name?: ReadonlySignal<string | undefined>;
@@ -215,7 +232,7 @@ const createBaseFieldHandle = (
 
   return {
     bindTrigger:
-      (field: FormFieldHandle): ((on: FormControlValidationTrigger) => void) =>
+      (field: ValidationReporter): ((on: FormControlValidationTrigger) => void) =>
       (on) =>
         controlState.triggerValidation(field, on),
     disabled: controlState.disabled,
@@ -227,17 +244,6 @@ const createBaseFieldHandle = (
     labelOutsideId: ids.labelOutsideId,
     labelOutsideRef,
     validateOn: controlState.validateOn,
-  };
-};
-
-const resolveControlContext = (options: {
-  context?: TextFieldControlContext;
-  disabled?: ReadonlySignal<boolean | undefined>;
-  validateOn?: ReadonlySignal<ControlValidationMode>;
-}) => {
-  return {
-    disabled: computed(() => Boolean(options.disabled?.value) || Boolean(options.context?.disabled?.value)),
-    validateOn: options.validateOn ?? options.context?.validateOn,
   };
 };
 
@@ -272,43 +278,10 @@ export const createAssistiveState = (options: AssistiveOptions) => {
     };
   });
 };
-
-const resolveReactiveValue = <T>(value: ReactiveValue<T> | undefined): T | undefined => {
-  if (value === undefined) return undefined;
-
-  if (isSignal(value)) return (value as ReadonlySignal<T>).value;
-
-  if (typeof value === 'function') return (value as () => T)();
-
-  return value;
-};
-
-const optionalStringSource = (value: ReactiveValue<string | undefined> | undefined): (() => string | undefined) => {
-  return () => {
-    const next = resolveReactiveValue(value);
-
-    if (next == null || next === '') return undefined;
-
-    return String(next);
-  };
-};
-
-const optionalNumberSource = (value: ReactiveValue<number | undefined> | undefined): (() => number | undefined) => {
-  return () => {
-    const next = resolveReactiveValue(value);
-
-    if (next == null || Number.isNaN(Number(next)) || Number(next) <= 0) return undefined;
-
-    return Number(next);
-  };
-};
-
 export const createTextFieldControl = (options: TextFieldOptions): TextFieldHandle => {
   const value = signal('');
-  const controlContext = resolveControlContext(options);
   const { bindTrigger, ...base } = createBaseFieldHandle({
     ...options,
-    ...controlContext,
   });
 
   watch(
@@ -366,25 +339,8 @@ export const createTextFieldControl = (options: TextFieldOptions): TextFieldHand
     });
   }
 
-  const attrs = spread({
-    '?required': options.required,
-    '.disabled': options.disabled,
-    '.readOnly': options.readOnly,
-    '.type': options.type,
-    '.value': value,
-    autocomplete: optionalStringSource(options.autocomplete),
-    inputmode: optionalStringSource(options.inputmode),
-    maxlength: optionalNumberSource(options.maxLength),
-    minlength: optionalNumberSource(options.minLength),
-    name: optionalStringSource(options.name),
-    pattern: optionalStringSource(options.pattern),
-    placeholder: optionalStringSource(options.placeholder),
-    rows: optionalNumberSource(options.rows),
-  });
-
   return {
     assistive,
-    attrs,
     ...base,
     clear,
     field,
@@ -423,13 +379,14 @@ const parseChoiceFieldValues = (value: string | undefined): string[] => {
 };
 
 export const createChoiceFieldControl = <T>(options: ChoiceFieldOptions<T>): ChoiceFieldHandle<T> => {
-  const controlContext = resolveControlContext(options);
   const { bindTrigger, ...base } = createBaseFieldHandle({
-    ...controlContext,
+    context: options.context,
+    disabled: options.disabled,
     label: options.label,
     labelPlacement: options.labelPlacement,
     name: options.name,
     prefix: options.prefix,
+    validateOn: options.validateOn,
   });
   const selectedItems = signal<T[]>([]);
   const isMultiple = computed(() => Boolean(options.multiple?.value));
@@ -583,8 +540,12 @@ export const createCheckableStateControl = (options: CheckableStateOptions): Che
   const field = defineField(
     {
       disabled: base.disabled,
-      toFormValue: (next: string | null) => next,
-      value: computed(() => (checked.value ? (options.value.value ?? '') : null)),
+      toFormValue: (nextValue: string | null) => nextValue,
+      value: computed(() => {
+        if (indeterminate.value) return null;
+
+        return checked.value ? (options.value.value ?? '') : null;
+      }),
     },
     {
       onReset: () => {
@@ -643,3 +604,18 @@ export const createCheckableStateControl = (options: CheckableStateOptions): Che
     value,
   };
 };
+
+export function createFieldControl(options: TextFieldControlFactoryOptions): TextFieldHandle;
+export function createFieldControl<T>(options: ChoiceFieldControlFactoryOptions<T>): ChoiceFieldHandle<T>;
+export function createFieldControl(options: CheckableFieldControlFactoryOptions): CheckableStateHandle;
+export function createFieldControl<T>(options: FieldControlOptions<T>): FieldControlHandle<T> {
+  if (options.kind === 'text') {
+    return createTextFieldControl(options.options);
+  }
+
+  if (options.kind === 'choice') {
+    return createChoiceFieldControl(options.options);
+  }
+
+  return createCheckableStateControl(options.options);
+}

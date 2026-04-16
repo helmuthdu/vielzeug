@@ -1,4 +1,4 @@
-import { define, computed, html, inject, onMount, ref, syncContextProps } from '@vielzeug/craftit';
+import { define, html, inject, onMount, ref, syncContextProps } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -71,11 +71,15 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
     size: undefined,
     variant: undefined,
   },
+
   setup({ emit, host, props }) {
     // Inherit size/variant from a parent bit-accordion when present.
     const accordionCtx = inject(ACCORDION_CTX, undefined);
 
-    syncContextProps(accordionCtx, props, ['size', 'variant']);
+    syncContextProps(accordionCtx, {
+      size: props.size,
+      variant: props.variant,
+    });
 
     const titleId = 'accordion-item-title';
     const detailsRef = ref<HTMLDetailsElement>();
@@ -158,12 +162,12 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
       };
     });
 
-    const isExpanded = computed(() => Boolean(props.expanded.value));
-    const ariaExpanded = computed(() => String(isExpanded.value));
-    const ariaDisabled = computed(() => (props.disabled.value ? 'true' : 'false'));
-
-    return html` <details part="item" ?open=${isExpanded} ref=${detailsRef}>
-      <summary part="summary" :aria-expanded=${ariaExpanded} :aria-disabled=${ariaDisabled} ref=${summaryRef}>
+    return html` <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
+      <summary
+        part="summary"
+        :aria-expanded="${() => String(props.expanded.value)}"
+        :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
+        ref="${summaryRef}">
         <slot name="prefix"></slot>
         <div class="header-content" part="header">
           <span class="title" part="title" id="${titleId}">
@@ -183,5 +187,6 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
       </div>
     </details>`;
   },
+
   styles: [coarsePointerMixin, styles],
 });

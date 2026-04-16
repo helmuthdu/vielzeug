@@ -105,37 +105,7 @@ define(
 );
 ```
 
-## Directives Subpath
-
-The `@vielzeug/craftit/directives` subpath contains optional directive helpers.
-
-### `attrs` and `bind`
-
-`attrs(...)` batches DOM property
-bindings in spread position. Use it when you want ergonomic `.value`, `.checked`,
-`.disabled`, and similar bindings without writing the dot-prefix yourself.
-
-`bind({ value })` is the two-way shorthand built on that same property-binding path.
-
-```ts
-import { define, html, signal } from '@vielzeug/craftit';
-import { attrs, bind } from '@vielzeug/craftit/directives';
-
-define(
-  'x-bind-demo',
-  {
-    setup() {
-      const name = signal('Ada');
-      const accepted = signal(false);
-
-      return html`
-        <input ${attrs({ value: name })} />
-        <input type="checkbox" ${bind({ value: accepted })} />
-      `;
-    },
-  },
-);
-```
+## Template Helpers
 
 ## Compact Field Authoring
 
@@ -143,31 +113,33 @@ For form controls, use Craftit controls to avoid repetitive wiring.
 
 ```ts
 import { define, html, inject, ref } from '@vielzeug/craftit';
-import { createTextFieldControl } from '@vielzeug/craftit/controls';
+import { createFieldControl } from '@vielzeug/craftit/controls';
 
 define<{ value?: string }>('x-input', {
   props: { value: '' },
   setup({ emit, props }) {
     const formCtx = inject('FORM_CTX', undefined);
     const inputRef = ref<HTMLInputElement>();
-    const field = createTextFieldControl({
-      context: formCtx,
-      elementRef: inputRef,
-      onInput: (event, value) => emit('input', { originalEvent: event, value }),
-      prefix: 'x-input',
-      value: props.value,
+    const field = createFieldControl({
+      kind: 'text',
+      options: {
+        context: formCtx,
+        elementRef: inputRef,
+        onInput: (event, value) => emit('input', { originalEvent: event, value }),
+        prefix: 'x-input',
+        value: props.value,
+      },
     });
 
-    return html`<input ${field.attrs} ref=${inputRef} />`;
+    return html`<input .value=${field.value} ref=${inputRef} />`;
   },
 });
 ```
 
-## `when`
+## Conditional Rendering
 
 ```ts
 import { define, html, signal } from '@vielzeug/craftit';
-import { when } from '@vielzeug/craftit/directives';
 
 define(
   'auth-banner',
@@ -177,11 +149,7 @@ define(
 
       return html`
         <button @click=${() => (loggedIn.value = !loggedIn.value)}>Toggle</button>
-        ${when({
-          condition: loggedIn,
-          then: () => html`<p>Welcome back</p>`,
-          else: () => html`<p>Please sign in</p>`,
-        })}
+        ${() => (loggedIn.value ? html`<p>Welcome back</p>` : html`<p>Please sign in</p>`)}
       `;
     },
   },
@@ -196,7 +164,6 @@ For frequently changing lists, prefer delegated events on a parent node.
 
 ```ts
 import { define, html, signal } from '@vielzeug/craftit';
-import { each } from '@vielzeug/craftit/directives';
 
 define(
   'task-list',
@@ -220,30 +187,6 @@ define(
             render: (task) => html`<li data-task-id=${task.id}>${task.text}</li>`,
           })}
         </ul>
-      `;
-    },
-  },
-);
-```
-
-## `until`
-
-```ts
-import { define, html } from '@vielzeug/craftit';
-import { until } from '@vielzeug/craftit/directives';
-
-define(
-  'user-greeting',
-  {
-    setup() {
-      const userPromise = fetch('/api/user').then((r) => r.json() as Promise<{ name: string }>);
-
-      return html`
-        ${until(
-          userPromise.then((u) => html`<p>Hello ${u.name}</p>`),
-          () => html`<p>Loading...</p>`,
-          (err) => html`<p>Error: ${String(err)}</p>`,
-        )}
       `;
     },
   },
@@ -415,7 +358,6 @@ Use setup-context `slots` to detect slot presence and render fallback UI.
 
 ```ts
 import { define, html } from '@vielzeug/craftit';
-import { when } from '@vielzeug/craftit/directives';
 
 define(
   'x-panel',
@@ -423,18 +365,10 @@ define(
     setup({ slots }) {
       return html`
         <header>
-          ${when({
-            condition: () => slots.has('header').value,
-            else: () => html`<h2>Fallback header</h2>`,
-            then: () => html`<slot name="header"></slot>`,
-          })}
+          ${() => (slots.has('header').value ? html`<slot name="header"></slot>` : html`<h2>Fallback header</h2>`)}
         </header>
         <section>
-          ${when({
-            condition: () => slots.has().value,
-            else: () => html`<p>No content yet</p>`,
-            then: () => html`<slot></slot>`,
-          })}
+          ${() => (slots.has().value ? html`<slot></slot>` : html`<p>No content yet</p>`)}
         </section>
       `;
     },

@@ -27,12 +27,6 @@
       "import": "./dist/observers.js",
       "require": "./dist/observers.cjs"
     },
-    "./directives": {
-      "source": "./src/directives/index.ts",
-      "types": "./dist/directives/index.d.ts",
-      "import": "./dist/directives/index.js",
-      "require": "./dist/directives/index.cjs"
-    },
     "./testing": {
       "source": "./src/testing/index.ts",
       "types": "./dist/testing/index.d.ts",

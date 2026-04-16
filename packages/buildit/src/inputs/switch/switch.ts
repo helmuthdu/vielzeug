@@ -85,21 +85,18 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
 
     mountFormContextSync(host.el, formCtx, props);
 
-    host.bind('class', () => ({
-      'is-checked': control.checked.value,
-      'is-disabled': control.disabled.value,
-    }));
-
-    host.bind('attr', {
-      checked: () => control.checked.value,
-      tabindex: () => (control.disabled.value ? undefined : 0),
-    });
-    host.bind('on', {
-      click: (e) => {
-        pressControl.handleClick(e);
+    host.bind({
+      attr: {
+        checked: control.checked,
+        tabindex: () => (control.disabled.value ? undefined : 0),
       },
-      keydown: (e) => {
-        pressControl.handleKeydown(e);
+      class: () => ({
+        'is-checked': control.checked.value,
+        'is-disabled': control.disabled.value,
+      }),
+      on: {
+        click: pressControl.handleClick,
+        keydown: pressControl.handleKeydown,
       },
     });
 

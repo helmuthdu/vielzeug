@@ -11,21 +11,88 @@ import {
 } from './internal';
 import { listen, setAttr } from './internal';
 import { propRegistry } from './props';
-import { bindPropertyModel } from './runtime-bindings';
-import { indexBindings, type BindingTargets } from './template-dom';
+import { bindPropertyModel } from './runtime';
 
 export type RegisterCleanup = (fn: CleanupFn) => void;
 
-// ─── Helper utilities ────────────────────────────────────────────────────────
+export type BindingTargets = {
+  comments: Map<string, Comment>;
+  elements: Map<string, HTMLElement>;
+};
 
-/** Check if a value is a structured type (object or array), not a primitive. */
+const templateCache = new Map<string, HTMLTemplateElement>();
+
+const getCachedTemplate = (html: string): HTMLTemplateElement => {
+  let tpl = templateCache.get(html);
+
+  if (!tpl) {
+    tpl = document.createElement('template');
+    tpl.innerHTML = html;
+
+    templateCache.set(html, tpl);
+  }
+
+  return tpl;
+};
+
+export const parseHTML = (html: string): DocumentFragment =>
+  getCachedTemplate(html).content.cloneNode(true) as DocumentFragment;
+
+const collectBindingTarget = (node: Node, targets: BindingTargets): void => {
+  if (node.nodeType === Node.COMMENT_NODE) {
+    const marker = (node as Comment).nodeValue;
+
+    if (marker) targets.comments.set(marker, node as Comment);
+
+    return;
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+  const id = (node as Element).getAttribute(CF_ID_ATTR);
+
+  if (id) targets.elements.set(id, node as HTMLElement);
+};
+
+const walkBindingTargets = (root: Node, visit: (node: Node) => void): void => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_ELEMENT);
+
+  visit(root);
+
+  while (walker.nextNode()) visit(walker.currentNode);
+};
+
+const scanBindingTargets = (nodes: Iterable<Node>): BindingTargets => {
+  const targets: BindingTargets = { comments: new Map(), elements: new Map() };
+
+  for (const node of nodes) walkBindingTargets(node, (current) => collectBindingTarget(current, targets));
+
+  return targets;
+};
+
+export const indexBindings = (root: Node): BindingTargets => {
+  return scanBindingTargets([root]);
+};
+
+export const indexBindingsInNodes = (nodes: Iterable<Node>): BindingTargets => {
+  return scanBindingTargets(nodes);
+};
+
+export const findCommentMarker = (root: Node, marker: string): Comment | null => {
+  return indexBindings(root).comments.get(marker) ?? null;
+};
+
+export const createNodes = (htmlString: string): Node[] => Array.from(parseHTML(htmlString).childNodes);
+
+export const insertNodes = (marker: Comment, nodes: Node[], before: Node | null): void => {
+  if (marker.parentNode) {
+    for (const node of nodes) marker.parentNode.insertBefore(node, before);
+  }
+};
+
 const isStructuredValue = (value: unknown): value is object =>
   Array.isArray(value) || (typeof value === 'object' && value !== null);
 
-/**
- * Register a reactive effect that updates when a signal changes.
- * Common pattern: `if (signal) registerCleanup(effect(() => update(signal.value)))`
- */
 const signalEffect = (
   signal: ReadonlySignal<unknown>,
   update: (v: unknown) => void,
@@ -34,17 +101,10 @@ const signalEffect = (
   registerCleanup(rawEffect(() => update(signal.value)));
 };
 
-// ─── Individual binding application functions ─────────────────────────────────
-
-/**
- * Apply an attribute binding to an element.
- * Handles bool/attr modes, prop pre-upgrade, and reactive updates.
- */
 export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, registerCleanup: RegisterCleanup) => {
   const update = (value: unknown) => {
     const meta = propRegistry.get(el)?.get(binding.name);
 
-    // Preserve structured values as pre-upgrade properties
     if (!meta && isStructuredValue(value)) {
       (el as any)[binding.name] = value;
 
@@ -84,28 +144,17 @@ export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, register
   }
 };
 
-/**
- * Apply a property binding to an element.
- * Handles reactive updates and two-way binding via property models.
- */
 export const applyPropBinding = (el: HTMLElement, binding: PropBinding, registerCleanup: RegisterCleanup) => {
   const update = (value: unknown) => {
     (el as any)[binding.name] = value;
   };
 
-  if (binding.signal) {
-    signalEffect(binding.signal, update, registerCleanup);
-  } else {
-    update(binding.value!);
-  }
+  if (binding.signal) signalEffect(binding.signal, update, registerCleanup);
+  else update(binding.value!);
 
   bindPropertyModel(el, binding.name, binding.model, registerCleanup);
 };
 
-/**
- * Apply an event listener binding to an element.
- * Handles event modifiers (stop, prevent, self, capture, once, passive).
- */
 export const applyEventBinding = (el: HTMLElement, binding: EventBinding, registerCleanup: RegisterCleanup) => {
   const { modifiers } = binding;
   const listenerOptions = modifiers
@@ -125,10 +174,6 @@ export const applyEventBinding = (el: HTMLElement, binding: EventBinding, regist
   registerCleanup(listen(el, binding.name, wrappedHandler, listenerOptions));
 };
 
-/**
- * Apply a ref binding to an element.
- * Supports function refs, ref arrays, and signal refs with cleanup.
- */
 export const applyRefBinding = (el: HTMLElement, binding: RefBinding, registerCleanup: RegisterCleanup) => {
   const { ref } = binding;
 
@@ -156,27 +201,36 @@ export const applyRefBinding = (el: HTMLElement, binding: RefBinding, registerCl
   });
 };
 
-// ─── Binding orchestration ────────────────────────────────────────────────────
+type ElementBinding = AttrBinding | EventBinding | PropBinding | RefBinding;
 
-/**
- * Apply all bindings to target elements.
- *
- * - Text bindings: Create text nodes, register reactive effects
- * - HTML bindings: Notify caller for keyed reconciliation
- * - Element bindings: Group by ID, apply attr/prop/event/ref in one pass per element
- *
- * @param bindings Array of compiled bindings to apply
- * @param registerCleanup Function to register cleanup callbacks
- * @param targets Indexed comment/element targets from DOM
- * @param opts Optional callbacks (e.g., onHtml for keyed reconciliation)
- */
+export const applyElementBinding = (
+  el: HTMLElement,
+  binding: ElementBinding,
+  registerCleanup: RegisterCleanup,
+): void => {
+  switch (binding.type) {
+    case 'attr':
+      applyAttrBinding(el, binding, registerCleanup);
+      break;
+    case 'event':
+      applyEventBinding(el, binding, registerCleanup);
+      break;
+    case 'prop':
+      applyPropBinding(el, binding, registerCleanup);
+      break;
+    case 'ref':
+      applyRefBinding(el, binding, registerCleanup);
+      break;
+  }
+};
+
 export const applyBindingsWithTargets = (
   bindings: Binding[],
   registerCleanup: RegisterCleanup,
   targets: BindingTargets,
   opts?: { onHtml?: (b: HtmlBinding) => void },
 ) => {
-  const bindingMap = new Map<string, Binding[]>();
+  const bindingMap = new Map<string, ElementBinding[]>();
 
   for (const b of bindings) {
     const id = b.uid;
@@ -200,9 +254,10 @@ export const applyBindingsWithTargets = (
     } else if (b.type === 'html') {
       opts?.onHtml?.(b);
     } else {
-      if (!bindingMap.has(id)) bindingMap.set(id, []);
+      const grouped = bindingMap.get(id);
 
-      bindingMap.get(id)!.push(b);
+      if (grouped) grouped.push(b);
+      else bindingMap.set(id, [b]);
     }
   }
 
@@ -214,25 +269,7 @@ export const applyBindingsWithTargets = (
     el.removeAttribute(CF_ID_ATTR);
     targets.elements.delete(id);
 
-    for (const b of elBindings) {
-      switch (b.type) {
-        case 'attr':
-          applyAttrBinding(el, b, registerCleanup);
-          break;
-        case 'callback':
-          b.apply(el, registerCleanup);
-          break;
-        case 'event':
-          applyEventBinding(el, b, registerCleanup);
-          break;
-        case 'prop':
-          applyPropBinding(el, b, registerCleanup);
-          break;
-        case 'ref':
-          applyRefBinding(el, b, registerCleanup);
-          break;
-      }
-    }
+    for (const b of elBindings) applyElementBinding(el, b, registerCleanup);
   }
 };
 
@@ -245,47 +282,26 @@ export const applyBindingsInContainer = (
   applyBindingsWithTargets(bindings, registerCleanup, indexBindings(container), opts);
 };
 
-// ─── Binding factories ────────────────────────────────────────────────────────
-
 import { type Signal } from '@vielzeug/stateit';
 
-import { hasWritableValueSetter, toReactiveBindingSource } from './runtime-bindings';
+import { hasWritableValueSetter, toReactiveBindingSource } from './runtime';
 
-/**
- * Create an attribute binding descriptor.
- * Called during template compilation for each attribute interpolation.
- *
- * @param mode 'bool' for boolean attributes (presence = true), 'attr' for string values
- * @param name Attribute name (e.g., 'disabled', 'aria-label')
- * @param uid Unique binding ID
- * @param value Attribute value (signal or static)
- */
 export const createAttrBinding = (mode: 'bool' | 'attr', name: string, uid: string, value: unknown): AttrBinding => {
   const source = toReactiveBindingSource(value);
 
   return source ? { mode, name, signal: source, type: 'attr', uid } : { mode, name, type: 'attr', uid, value };
 };
 
-/**
- * Create a property binding descriptor.
- * Called during template compilation for each `.property` interpolation.
- *
- * @param name Property name (e.g., 'value', 'checked')
- * @param uid Unique binding ID
- * @param value Property value (signal, function, or static)
- */
 export const createPropBinding = (name: string, uid: string, value: unknown): PropBinding => {
   const source = toReactiveBindingSource(value);
 
-  if (source) {
-    return {
-      model: hasWritableValueSetter(value) ? (value as Signal<unknown>) : undefined,
-      name,
-      signal: source,
-      type: 'prop',
-      uid,
-    };
-  }
-
-  return { name, type: 'prop', uid, value };
+  return source
+    ? {
+        model: hasWritableValueSetter(value) ? (value as Signal<unknown>) : undefined,
+        name,
+        signal: source,
+        type: 'prop',
+        uid,
+      }
+    : { name, type: 'prop', uid, value };
 };

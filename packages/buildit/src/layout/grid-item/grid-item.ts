@@ -1,4 +1,4 @@
-import { define, effect, html } from '@vielzeug/craftit';
+import { define, html, computed } from '@vielzeug/craftit';
 
 import styles from './grid-item.css?inline';
 
@@ -48,7 +48,7 @@ export type BitGridItemProps = {
  * <!-- Explicit placement -->
  * <bit-grid-item col="2 / 5" row="1 / 3">Placed</bit-grid-item>
  */
-export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
+export const GRID_ITEM_TAG = define('bit-grid-item', {
   props: {
     align: undefined,
     col: '',
@@ -56,35 +56,39 @@ export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
     justify: undefined,
     row: '',
     rowSpan: undefined,
-  },
+  } as BitGridItemProps,
   setup({ host, props }) {
-    effect(() => {
+    const gridColumn = computed(() => {
       const col = props.col.value;
       const span = props.colSpan.value;
 
-      if (col) {
-        host.el.style.setProperty('grid-column', col);
-      } else if (span === 'full') {
-        host.el.style.setProperty('grid-column', '1 / -1');
-      } else if (span) {
-        host.el.style.setProperty('grid-column', `span ${span}`);
-      } else {
-        host.el.style.removeProperty('grid-column');
-      }
+      if (col) return col;
+
+      if (span === 'full') return '1 / -1';
+
+      if (span) return `span ${span}`;
+
+      return null;
     });
-    effect(() => {
+
+    const gridRow = computed(() => {
       const row = props.row.value;
       const span = props.rowSpan.value;
 
-      if (row) {
-        host.el.style.setProperty('grid-row', row);
-      } else if (span === 'full') {
-        host.el.style.setProperty('grid-row', '1 / -1');
-      } else if (span) {
-        host.el.style.setProperty('grid-row', `span ${span}`);
-      } else {
-        host.el.style.removeProperty('grid-row');
-      }
+      if (row) return row;
+
+      if (span === 'full') return '1 / -1';
+
+      if (span) return `span ${span}`;
+
+      return null;
+    });
+
+    host.bind({
+      style: {
+        'grid-column': gridColumn,
+        'grid-row': gridRow,
+      },
     });
 
     return html`<slot></slot>`;

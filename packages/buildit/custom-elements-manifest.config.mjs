@@ -16,8 +16,13 @@ export default {
   dev: false,
   /** Run in watch mode, runs on file changes */
   watch: false,
-  /** Include third party custom elements manifests */
-  dependencies: true,
+  /**
+   * Disable third-party manifest scanning.
+   * The upstream dependency scanner resolves initial relative imports from the
+   * package root instead of each source file directory, which produces a large
+   * volume of false "Cannot resolve ..." warnings for buildit.
+   */
+  dependencies: false,
   /** Output CEM path to `package.json`, defaults to true */
   packagejson: true,
   /** Enable special handling for litelement */

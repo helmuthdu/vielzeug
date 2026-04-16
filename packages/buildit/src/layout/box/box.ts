@@ -59,5 +59,6 @@ export const BOX_TAG = define('bit-box', {
   setup() {
     return html`<div class="box" part="box"><slot></slot></div>`;
   },
+
   styles: [...surfaceMixins, rainbowEffectMixin('.box'), frostVariantMixin('.box'), componentStyles],
 });

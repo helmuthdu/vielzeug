@@ -94,8 +94,10 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
     const otpValue = signal(String(props.value.value || ''));
     const normalizedPropValue = () => String(props.value.value || '');
 
-    host.bind('attr', {
-      value: () => otpValue.value || null,
+    host.bind({
+      attr: {
+        value: () => otpValue.value || null,
+      },
     });
 
     function getInputs(): HTMLInputElement[] {
@@ -245,7 +247,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
     });
 
     return html`
-      <div class="otp-group" part="group" role="group" :aria-label="${() => props.label.value}">
+      <div class="otp-group" part="group" role="group" :aria-label="${props.label}">
         ${() =>
           cells.value.map(
             (i) => html`

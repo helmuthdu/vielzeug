@@ -1,5 +1,4 @@
-import { define, computed, html, watch } from '@vielzeug/craftit';
-import { raw } from '@vielzeug/craftit/directives';
+import { define, computed, html, raw } from '@vielzeug/craftit';
 import * as lucideModule from 'lucide';
 
 import styles from './icon.css?inline';
@@ -94,23 +93,13 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
     strokeWidth: { default: DEFAULT_STROKE_WIDTH, type: Number },
   },
   setup({ host, props }) {
-    watch(
-      props.label,
-      (label) => {
-        const text = (label ?? '').trim();
-
-        if (text) {
-          host.el.setAttribute('aria-label', text);
-          host.el.setAttribute('role', 'img');
-          host.el.removeAttribute('aria-hidden');
-        } else {
-          host.el.setAttribute('aria-hidden', 'true');
-          host.el.removeAttribute('aria-label');
-          host.el.removeAttribute('role');
-        }
+    host.bind({
+      attr: {
+        'aria-hidden': () => ((props.label.value ?? '').trim() ? null : 'true'),
+        'aria-label': () => (props.label.value ?? '').trim() || null,
+        role: () => ((props.label.value ?? '').trim() ? 'img' : null),
       },
-      { immediate: true },
-    );
+    });
 
     const markup = computed(() => {
       const name = (props.name.value ?? '').trim();

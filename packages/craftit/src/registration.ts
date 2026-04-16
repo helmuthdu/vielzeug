@@ -1,19 +1,15 @@
 import { type CleanupFn, untrack } from '@vielzeug/stateit';
 
 import { formCallbackRegistry } from './form';
-import { type CSSResult, type HTMLResult, htmlResult, loadStylesheet, runAll } from './internal';
-import { propRegistry } from './props';
-import { runtimeStack, type ComponentRuntime } from './runtime-core';
-import { applyBindingsInContainer, applyHtmlBinding } from './template';
-import { type RegisterCleanup } from './template-bindings';
-import { parseHTML } from './template-dom';
-import { type KeyedNode } from './template-html';
+import { type CSSResult, extractResult, type HTMLResult, loadStylesheet, runAll } from './internal';
+import { isReflecting, propRegistry } from './props';
+import { runtimeStack, type ComponentRuntime } from './runtime';
+import { applyBindingsInContainer, parseHTML, type RegisterCleanup } from './template-bindings';
+import { applyHtmlBinding, type KeyedNode } from './template-html';
 
 export type ComponentRegistrationOptions = {
   /** Indicates if this should be a form-associated element */
   formAssociated?: boolean;
-  /** Custom options for a host element (e.g. for aria-*) */
-  host?: Record<string, string | boolean | number>;
   /** @internal — list of attribute names to observe via attributeChangedCallback */
   observedAttrs?: string[];
   /** Shadow root init options (mode is always 'open') — use e.g. `{ delegatesFocus: true }` for form controls */
@@ -22,17 +18,7 @@ export type ComponentRegistrationOptions = {
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
-type ComponentSetupResult = string | HTMLResult;
-
-const isDevelopmentMode = (): boolean => {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  if (typeof process === 'undefined') return true;
-
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  return process.env.NODE_ENV !== 'production';
-};
+type ComponentSetupResult = HTMLResult | string;
 
 class BaseElement extends HTMLElement {
   static _options?: ComponentRegistrationOptions;
@@ -74,6 +60,8 @@ class BaseElement extends HTMLElement {
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (oldValue === newValue) return;
+
+    if (isReflecting(this, name)) return;
 
     const propMeta = propRegistry.get(this)?.get(name);
 
@@ -131,28 +119,7 @@ class BaseElement extends HTMLElement {
     runtimeStack.push(this._runtime as any);
 
     try {
-      const options = (this.constructor as typeof BaseElement)._options;
-      const { host: hostOptions } = options ?? {};
-
-      if (hostOptions) {
-        for (const [name, value] of Object.entries(hostOptions)) {
-          if (typeof value === 'boolean') {
-            if (value) {
-              this.setAttribute(name, '');
-            } else {
-              this.removeAttribute(name);
-            }
-          } else {
-            this.setAttribute(name, String(value));
-          }
-        }
-      }
-
-      const result = (this.constructor as typeof BaseElement)._setup();
-
-      if (typeof result === 'string' || (typeof result === 'object' && result !== null && '__html' in result)) {
-        this._template = result as ComponentSetupResult;
-      }
+      this._template = (this.constructor as typeof BaseElement)._setup();
     } catch (err) {
       this._handleError(err);
     } finally {
@@ -165,18 +132,18 @@ class BaseElement extends HTMLElement {
 
     if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
 
-    if (this._template) {
-      const result: HTMLResult = typeof this._template === 'string' ? htmlResult(this._template) : this._template;
+    if (this._template != null) {
+      const { bindings, html: htmlString } = extractResult(this._template);
 
       if (!this._rendered) {
-        this.shadow.replaceChildren(parseHTML(result.__html));
+        this.shadow.replaceChildren(parseHTML(htmlString));
         this._rendered = true;
       }
 
-      if (result.__bindings.length) {
+      if (bindings.length) {
         const registerCleanup: RegisterCleanup = (fn) => this._runtime.cleanups.push(fn);
 
-        applyBindingsInContainer(this.shadow, result.__bindings, registerCleanup, {
+        applyBindingsInContainer(this.shadow, bindings, registerCleanup, {
           onHtml: (binding) => {
             if (!this._appliedHtmlBindings.has(binding.uid)) {
               this._appliedHtmlBindings.add(binding.uid);
@@ -219,11 +186,7 @@ export function registerComponent(
   if (!tag) throw new Error('[craftit:E4] registerComponent(tag, ...) requires a tag name');
 
   if (customElements.get(tag)) {
-    if (isDevelopmentMode()) {
-      throw new Error(`[craftit:E10] define('${tag}', ...) called more than once`);
-    }
-
-    return tag;
+    throw new Error(`[craftit:E10] define('${tag}', ...) called more than once`);
   }
 
   class Element extends BaseElement {

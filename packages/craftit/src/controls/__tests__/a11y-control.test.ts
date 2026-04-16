@@ -1,7 +1,8 @@
 /**
  * Tests for createA11yControl composable from the Craftit controls surface
  */
-import { currentRuntime, html, signal } from '../../index';
+import { html, signal } from '../../index';
+import { currentRuntime } from '../../runtime';
 import { mount } from '../../testing';
 import { createA11yControl } from '../a11y-control';
 

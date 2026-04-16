@@ -92,7 +92,6 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
   setup({ emit, host, props, slots }) {
     const visible = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
-    const ariaDisabled = computed(() => String(isDisabled.value));
     const isControlled = computed(() => props.open.value !== undefined);
     const runIfUncontrolled = (action: () => void) => {
       if (isControlled.value) return;
@@ -104,13 +103,11 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     let currentTrigger: HTMLElement | null = null;
     const triggers = computed<PopoverTrigger[]>(() => normalizeTriggers(props.trigger.value));
     const overlay = createOverlayControl({
-      disabled: isDisabled,
-      elements: {
-        boundary: host.el,
-        panel: panelEl,
-        trigger: currentTrigger,
-      },
-      isOpen: visible,
+      getBoundaryElement: () => host.el,
+      getPanelElement: () => panelEl,
+      getTriggerElement: () => currentTrigger,
+      isDisabled: () => isDisabled.value,
+      isOpen: () => visible.value,
       onClose: (reason) => emit('close', { reason }),
       onOpen: (reason) => emit('open', { reason }),
       positioner: {
@@ -157,10 +154,10 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
       if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
     }
     function open(reason: OverlayOpenDetail['reason'] = 'trigger') {
-      runIfUncontrolled(() => overlay.open(reason));
+      runIfUncontrolled(() => overlay.open({ reason }));
     }
     function close(reason: OverlayCloseDetail['reason'] = 'trigger') {
-      runIfUncontrolled(() => overlay.close(reason, false));
+      runIfUncontrolled(() => overlay.close({ reason, restoreFocus: false }));
     }
     function toggle() {
       runIfUncontrolled(() => overlay.toggle());
@@ -215,7 +212,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
 
         const removeAria = syncAria(el, {
           controls: () => panelId,
-          disabled: () => ariaDisabled.value,
+          disabled: () => String(isDisabled.value),
           expanded: () => String(visible.value),
           haspopup: 'dialog',
         });
@@ -301,7 +298,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
         role="dialog"
         aria-modal="false"
         popover="manual"
-        :aria-label="${() => props.label.value ?? null}"
+        :aria-label="${props.label}"
         :aria-hidden="${() => String(!visible.value)}"
         ref=${(el: HTMLElement) => {
           panelEl = el;

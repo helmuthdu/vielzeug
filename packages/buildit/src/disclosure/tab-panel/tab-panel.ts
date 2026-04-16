@@ -56,8 +56,10 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
       tabsCtx ? !!tabsCtx.value.value && tabsCtx.value.value === props.value.value : props.active.value,
     );
 
-    host.bind('attr', {
-      active: () => (isActive.value ? true : undefined),
+    host.bind({
+      attr: {
+        active: () => (isActive.value ? true : undefined),
+      },
     });
 
     // Map padding prop to CSS variable
@@ -75,8 +77,8 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
 
     // shouldRender: true if not lazy OR has been active at least once
     const shouldRender = computed(() => !props.lazy.value || hasBeenActive.value);
-    const panelId = computed(() => `tabpanel-${props.value.value}`);
-    const labelledById = computed(() => `tab-${props.value.value}`);
+    const panelId = () => `tabpanel-${props.value.value}`;
+    const labelledById = () => `tab-${props.value.value}`;
 
     return html`
       <div
@@ -85,8 +87,8 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
         role="tabpanel"
         :id="${panelId}"
         :aria-labelledby="${labelledById}"
-        :aria-hidden=${() => String(!isActive.value)}
-        :style="${() => `--tab-panel-padding: ${paddingValue.value}`}"
+        aria-hidden="${() => String(!isActive.value)}"
+        :style="--tab-panel-padding: ${paddingValue}"
         tabindex="0">
         ${() => (shouldRender.value ? html`<slot></slot>` : '')}
       </div>

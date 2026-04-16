@@ -10,7 +10,6 @@ description: API reference for Craftit main exports, directives, and testing uti
 - `@vielzeug/craftit` — core API (stable)
 - `@vielzeug/craftit/controls` — headless interaction APIs
 - `@vielzeug/craftit/observers` — browser observer APIs
-- `@vielzeug/craftit/directives` — template directives
 - `@vielzeug/craftit/testing` — testing helpers
 
 ## API At a Glance
@@ -35,7 +34,7 @@ If the tag already exists, Craftit throws in development mode to prevent acciden
 
 From `@vielzeug/craftit/controls`:
 
-- `createTextFieldControl(options)` — text field state, ids, assistive state, attrs, and lifecycle wiring.
+- `createFieldControl({ kind: 'text' | 'choice' | 'checkable', options })` — unified field control factory for text, choice, and checkable states.
 - `mountTextFieldLifecycle(options)` — input/change/blur wiring + validation trigger bridge.
 
 ```ts
@@ -50,10 +49,17 @@ define('my-counter', {
 });
 ```
 
-Access host/shadow via `currentRuntime()` inside `setup()` when needed.
+Use setup context directly for host/shadow access.
 
 ```ts
-const { el: host, shadowRoot: shadow } = currentRuntime();
+define('example-card', {
+  setup({ host, shadowRoot }) {
+    host.bind({ attr: { ready: true } });
+    shadowRoot.adoptedStyleSheets = [];
+
+    return html`<slot></slot>`;
+  },
+});
 ```
 
 For host attributes, classes, and host listeners, use `host.bind(...)` from the setup context.
@@ -269,7 +275,7 @@ Omit the name to address the default slot.
 - `createContext<T>(description?)`
 - `provide(key, value)`
 - `inject(key)` / `inject(key, fallback)`
-- `syncContextProps(ctx, props, keys)`
+- `syncContextProps(ctx, props)`
 
 Types:
 
@@ -304,10 +310,12 @@ Import from `@vielzeug/craftit/controls`:
   - returns result-based navigation (`ListControlResult` with `reason`, `moved`, `wrapped`, `index`)
 - `createOverlayControl(options)`
   - reason-aware overlay transitions via `setOpen(next, { reason })`, `onOpen(reason)`, and `onClose(reason)`
-- `createTextFieldControl(options)`
+- `createFieldControl({ kind: 'text', options })`
   - text-field controller with stable ids, validation hooks, and integrated assistive state
-- `createChoiceFieldControl(options)`
+- `createFieldControl({ kind: 'choice', options })`
   - single/multi choice controller for select, combobox, and grouped checkboxes
+- `createFieldControl({ kind: 'checkable', options })`
+  - checkable-state controller for checkbox/radio/switch widgets
 - `createCheckableFieldControl(options)`
   - checkbox/radio/switch helper that bundles checkable state, a11y wiring, and press handling
 - `createA11yControl(host, config)`
@@ -337,45 +345,22 @@ Also exported:
 ### `each(source, options)`
 
 - `options.render` renders each item.
-- Static array source: `options.key` optional.
-- Reactive source (`Signal<T[]>` or `() => T[]`): `options.key` required.
+- Source must be reactive (`Signal<T[]>` or `() => T[]`).
+- `options.key` is required.
 - `options.fallback` renders when the list is empty.
-- `options.select` filters items before rendering.
 
 For dynamic lists with interactions, prefer event delegation on a stable parent element.
 
 Exports:
 
-- `attrs`
-- `bind`
-- `choose`
-- `classes`
 - `each`
-- `memo`
-- `on`
 - `raw`
-- `spread`
-- `style`
-- `until`
-- `when`
 
 Common signatures:
 
 ```ts
-when({ condition, then, else })
-until(promise, pendingFn?, onError?)
-each(source, { render, key, fallback, select })
-choose({ value, cases, fallback })
-bind({ value, as, event, parse })
-memo({ deps, render })
+each(source, { render, key, fallback })
 ```
-
-`until(...)` renders `Error: <reason>` by default when the promise rejects and `onError` is omitted.
-
-- `attrs(map)` — shorthand for batching DOM property bindings in spread position.
-  Despite the name, entries map to `.property` bindings internally.
-- `bind({ value })` — two-way shorthand built on the same property-binding path used by
-  `attrs(...)`, `spread({ '.value': ... })`, and template `.value` / `.checked` bindings.
 
 ## Testing APIs
 

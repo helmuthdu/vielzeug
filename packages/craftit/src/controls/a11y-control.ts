@@ -1,5 +1,5 @@
 import { createId } from '../internal';
-import { effect, onCleanup, onMount } from '../runtime-lifecycle';
+import { effect, onCleanup, onMount } from '../runtime';
 
 export type A11yTone = 'default' | 'error';
 

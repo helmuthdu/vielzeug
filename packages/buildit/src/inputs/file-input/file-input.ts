@@ -1,173 +1,120 @@
 import {
-  define,
   computed,
   createId,
-  defineField,
+  define,
+  each,
   handle,
   html,
   onCleanup,
   onMount,
   ref,
   signal,
+  defineField,
 } from '@vielzeug/craftit';
 import { createPressControl } from '@vielzeug/craftit/controls';
-import { each } from '@vielzeug/craftit/directives';
 import { createDropZone } from '@vielzeug/dragit';
 
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import type { PropBundle } from '../shared/bundles';
 
-import '../../content/icon/icon';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, roundableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
 import { FILE_INPUT_SIZE_PRESET } from '../shared/design-presets';
 
-// ============================================
-// Helpers
-// ============================================
-
-function formatBytes(bytes: number): string {
+const formatBytes = (bytes: number) => {
   if (bytes === 0) return '0 B';
 
-  const units = ['B', 'KB', 'MB', 'GB'] as const;
   const k = 1024;
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return `${(bytes / k ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
-function matchesAccept(file: File, accept: string | undefined): boolean {
-  if (!accept) return true;
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
 
-  return accept
-    .split(',')
-    .map((s) => s.trim())
-    .some((pattern) => {
-      if (pattern.startsWith('.')) return file.name.toLowerCase().endsWith(pattern.toLowerCase());
+const isFileAccepted = (file: File, accept: string) => {
+  if (!accept || accept === '*') return true;
 
-      if (pattern.endsWith('/*')) return file.type.startsWith(pattern.slice(0, -1));
+  const types = accept.split(',').map((t) => t.trim().toLowerCase());
+  const fileName = file.name.toLowerCase();
+  const fileType = file.type.toLowerCase();
 
-      return file.type === pattern;
-    });
-}
+  return types.some((type) => {
+    if (type.startsWith('.')) return fileName.endsWith(type);
 
-function isFileAccepted(file: File, accept: string | undefined): boolean {
-  return !accept || matchesAccept(file, accept);
-}
+    if (type.endsWith('/*')) return fileType.startsWith(type.replace('/*', '/'));
 
-function isFileSizeAllowed(file: File, maxBytes: number | undefined): boolean {
-  if (maxBytes == null) return true;
+    return fileType === type;
+  });
+};
 
-  return maxBytes === 0 || file.size <= maxBytes;
-}
-
-// ============================================
-// Component Styles
-// ============================================
+const isFileSizeAllowed = (file: File, maxSize?: number) => !maxSize || file.size <= maxSize;
 
 import componentStyles from './file-input.css?inline';
 
-// ============================================
-// Types
-// ============================================
-
-/** FileInput component properties */
-
-export type BitFileInputEvents = {
-  change: { files: File[]; originalEvent?: Event; value: File[] };
-  remove: { file: File; files: File[]; originalEvent?: Event; value: File[] };
-};
-
+/** File input component properties */
 export type BitFileInputProps = {
-  /** Accepted file types (MIME types or extensions, comma-separated) */
+  /** Accepted file types (comma-separated, e.g. '.jpg, .png, image/*') */
   accept?: string;
-  /** Theme color */
-  color?: ThemeColor;
-  /** Disable interaction */
+  /** Theme color tint */
+  color?: string;
+  /** Disabled state */
   disabled?: boolean;
-  /** Error message (marks field as invalid) */
+  /** Error message text */
   error?: string;
-  /** Full width mode */
-  fullwidth?: boolean;
-  /** Helper text */
+  /** Helper text displayed below the input */
   helper?: string;
-  /** Label text */
+  /** Input label text */
   label?: string;
-  /** Maximum number of files (0 = unlimited) */
+  /** Max number of files allowed (only used if multiple is true) */
   'max-files'?: number;
-  /** Maximum file size in bytes (0 = unlimited) */
+  /** Max size of a single file in bytes */
   'max-size'?: number;
-  /** Allow multiple file selection */
+  /** Allow multiple files selection */
   multiple?: boolean;
   /** Form field name */
   name?: string;
-  /** Mark as required */
+  /** Required field */
   required?: boolean;
-  /** Border radius */
-  rounded?: Exclude<RoundedSize, 'full'>;
-  /** Component size */
-  size?: ComponentSize;
-  /** Visual variant */
-  variant?: Exclude<VisualVariant, 'glass' | 'text' | 'frost'>;
+  /** Field size preset */
+  size?: string;
 };
 
-// ============================================
-// Component Definition
-// ============================================
+/** Events emitted by the file-input component */
+export type BitFileInputEvents = {
+  /** Emitted when files are added or removed */
+  change: { files: File[]; originalEvent?: Event; value: File[] };
+  /** Emitted when a specific file is removed */
+  remove: { file: File; files: File[]; originalEvent?: Event; value: File[] };
+};
 
-const fileInputProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  ...roundableBundle,
-  accept: '',
-  error: { default: '' as string, omit: true },
-  fullwidth: false,
-  helper: '',
-  label: '',
+const fileInputProps: PropBundle<BitFileInputProps> = {
+  accept: undefined,
+  color: undefined,
+  disabled: false,
+  error: undefined,
+  helper: undefined,
+  label: undefined,
   'max-files': 0,
   'max-size': 0,
   multiple: false,
-  name: '',
+  name: undefined,
   required: false,
-  variant: undefined,
-} satisfies PropBundle<BitFileInputProps>;
+  size: undefined,
+};
 
 /**
- * A file upload component with drag-and-drop support, file list management,
- * and full form integration.
+ * A file upload component with drag and drop support.
  *
  * @element bit-file-input
  *
- * @attr {string} accept - Accepted file types (MIME types or extensions, e.g. "image/*,.pdf")
- * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {boolean} disabled - Disable all interaction
- * @attr {string} error - Error message
- * @attr {boolean} fullwidth - Full width mode
- * @attr {string} helper - Helper text below the dropzone
- * @attr {string} label - Label text displayed above the dropzone
- * @attr {number} max-files - Maximum number of files (0 = unlimited)
- * @attr {number} max-size - Maximum file size in bytes (0 = unlimited)
- * @attr {boolean} multiple - Allow selecting multiple files
- * @attr {string} name - Form field name
- * @attr {boolean} required - Mark as required
- * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
- * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
+ * @attr {string} accept - Comma-separated file extensions or MIME types
+ * @attr {boolean} multiple - Enable multiple files selection
+ * @attr {number} max-files - Max number of files allowed
+ * @attr {number} max-size - Max size of each file in bytes
+ * @attr {boolean} disabled - Disable interaction
+ * @attr {string} error - Show an error state/message
+ * @attr {string} helper - Provide helper context below the dropzone
  *
- * @fires change - Emitted when the file selection changes. detail: { value: File[], files: File[], originalEvent?: Event }
- * @fires remove - Emitted when a file is removed from the list. detail: { value: File[], file: File, files: File[], originalEvent?: Event }
- *
- * @part wrapper - The outer wrapper div
- * @part label - The label element
- * @part dropzone - The drag-and-drop zone
- * @part input - The hidden native file input
- * @part helper - The helper text element
- * @part error - The error text element
- *
- * @cssprop --file-input-bg - Dropzone background color
- * @cssprop --file-input-border-color - Dropzone border color
- * @cssprop --file-input-radius - Border radius
- * @cssprop --file-input-min-height - Minimum dropzone height
- * @cssprop --file-input-font-size - Font size
+ * @fires change - detail: { files: File[], value: File[] }
+ * @fires remove - detail: { file: File, files: File[] }
  *
  * @example
  * ```html
@@ -219,9 +166,11 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
     // Sync host attributes for CSS selectors
     const isInvalid = computed(() => Boolean(props.error.value));
 
-    host.bind('attr', {
-      'drag-over': () => (isDragging.value ? true : undefined),
-      invalid: () => (isInvalid.value ? true : undefined),
+    host.bind({
+      attr: {
+        'drag-over': () => (isDragging.value ? true : undefined),
+        invalid: () => (isInvalid.value ? true : undefined),
+      },
     });
 
     // ============================================
@@ -272,7 +221,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
 
       if (!isMultiple) incoming = incoming.slice(0, 1);
 
-      incoming = incoming.filter((f) => isFileAccepted(f, acceptVal) && isFileSizeAllowed(f, maxSizeLimit.value));
+      incoming = incoming.filter((f) => isFileAccepted(f, acceptVal || '') && isFileSizeAllowed(f, maxSizeLimit.value));
 
       let updated: File[] = isMultiple ? [...files.value] : [];
 
@@ -349,28 +298,28 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
     return html`
       <div class="file-input-wrapper" part="wrapper">
         <label class="label-outside" id="${labelId}" part="label" ?hidden=${() => !props.label.value}
-          >${() => props.label.value}</label
+          >${props.label}</label
         >
         <div
           class="dropzone"
           part="dropzone"
           ref=${dropzoneRef}
           role="button"
-          :tabindex=${() => (isDisabled.value ? '-1' : '0')}
-          :aria-disabled=${() => String(isDisabled.value)}
-          :aria-label=${() => (!props.label.value ? 'File upload drop zone' : null)}
-          :aria-labelledby=${() => (props.label.value ? labelId : null)}
+          :tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+          :aria-disabled="${() => String(isDisabled.value)}"
+          :aria-label="${() => (!props.label.value ? 'File upload drop zone' : null)}"
+          :aria-labelledby="${() => (props.label.value ? labelId : null)}"
           aria-describedby="${helperId}">
           <input
             type="file"
             ref=${inputRef}
             part="input"
             id="${fileInputId}"
-            :accept=${() => props.accept.value}
-            ?multiple=${() => props.multiple.value}
-            ?required=${() => props.required.value}
-            ?disabled=${() => isDisabled.value}
-            :name=${() => props.name.value}
+            :accept="${props.accept}"
+            ?multiple="${props.multiple}"
+            ?required="${props.required}"
+            ?disabled="${isDisabled}"
+            :name="${props.name}"
             hidden
             inert
             tabindex="-1" />
@@ -406,7 +355,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
           })}
         </ul>
         <div class="helper-text" id="${helperId}" part="helper" ?hidden=${() => isInvalid.value || !props.helper.value}>
-          ${() => props.helper.value}
+          ${props.helper}
         </div>
         <div
           class="helper-text helper-text-error"
@@ -414,7 +363,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
           role="alert"
           part="error"
           ?hidden=${() => !isInvalid.value}>
-          ${() => props.error.value}
+          ${() => props.error.value ?? ''}
         </div>
       </div>
     `;

@@ -98,11 +98,14 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     padding: undefined,
     variant: undefined,
   } satisfies PropBundle<BitCardProps>,
+
   setup({ emit, host, props, slots }) {
-    host.bind('attr', {
-      ariaBusy: () => (props.loading.value ? 'true' : 'false'),
-      ariaDisabled: () => (props.interactive.value ? String(props.disabled.value) : null),
-      role: () => (props.interactive.value ? 'button' : null),
+    host.bind({
+      attr: {
+        ariaBusy: () => (props.loading.value ? 'true' : 'false'),
+        ariaDisabled: () => (props.interactive.value ? String(props.disabled.value) : null),
+        role: () => (props.interactive.value ? 'button' : null),
+      },
     });
 
     effect(() => {
@@ -136,9 +139,11 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
       pressControl.handleKeydown(e);
     };
 
-    host.bind('on', {
-      click: (e) => handleClick(e),
-      keydown: (e) => handleKeydown(e),
+    host.bind({
+      on: {
+        click: (e: MouseEvent) => handleClick(e),
+        keydown: (e: KeyboardEvent) => handleKeydown(e),
+      },
     });
 
     // ────────────────────────────────────────────────────────────────
@@ -168,5 +173,6 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
       </div>
     `;
   },
+
   styles: [...surfaceMixins, frostVariantMixin('.card'), reducedMotionMixin, componentStyles],
 });

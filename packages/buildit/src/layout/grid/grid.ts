@@ -161,6 +161,7 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
     responsive: false,
     rows: undefined,
   },
+
   setup({ host, props }) {
     const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
       if (activeCols === 'auto' || (!activeCols && responsive)) {
@@ -185,8 +186,11 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
 
       const colsValue = computeCols(activeCols, responsive, minW);
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      colsValue ? host.el.style.setProperty('--_cols', colsValue) : host.el.style.removeProperty('--_cols');
+      if (colsValue) {
+        host.el.style.setProperty('--_cols', colsValue);
+      } else {
+        host.el.style.removeProperty('--_cols');
+      }
     };
 
     // Re-run cols whenever any responsive prop changes
@@ -215,10 +219,12 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
         }
       }
       active ||= props.areas.value || '';
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      active
-        ? host.el.style.setProperty('grid-template-areas', active)
-        : host.el.style.removeProperty('grid-template-areas');
+
+      if (active) {
+        host.el.style.setProperty('grid-template-areas', active);
+      } else {
+        host.el.style.removeProperty('grid-template-areas');
+      }
     };
 
     // Also, update on element resize (drives breakpoint switching)
@@ -235,10 +241,11 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
     effect(() => {
       const rows = props.rows.value;
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      rows && rows !== 'auto'
-        ? host.el.style.setProperty('--_rows', `repeat(${rows}, 1fr)`)
-        : host.el.style.removeProperty('--_rows');
+      if (rows && rows !== 'auto') {
+        host.el.style.setProperty('--_rows', `repeat(${rows}, 1fr)`);
+      } else {
+        host.el.style.removeProperty('--_rows');
+      }
     });
     // Grid template areas (responsive)
     effect(() => {
@@ -255,5 +262,6 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
 
     return html`<slot></slot>`;
   },
+
   styles: [styles],
 });

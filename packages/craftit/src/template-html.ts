@@ -2,16 +2,17 @@ import { batch, untrack, effect as _effect, type CleanupFn } from '@vielzeug/sta
 
 import { type Binding, type HtmlBinding } from './internal';
 import { runAll } from './internal';
-import { applyBindingsInContainer, applyBindingsWithTargets } from './template-bindings';
-import { type RegisterCleanup } from './template-bindings';
 import {
+  applyBindingsInContainer,
+  applyBindingsWithTargets,
   createNodes,
   findCommentMarker,
   indexBindingsInNodes,
   insertNodes,
   parseHTML,
   type BindingTargets,
-} from './template-dom';
+  type RegisterCleanup,
+} from './template-bindings';
 
 /** Keyed reconciliation node — holds DOM nodes + lifecycle for one `each()` item. */
 export type KeyedNode = {

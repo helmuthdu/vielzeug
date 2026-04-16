@@ -26,12 +26,10 @@ export {
   type HostEventListeners,
   type HostEventMap,
 } from './runtime';
-export { currentRuntime, type ComponentRuntime } from './runtime-core';
 
 export {
   define,
   type ComponentDefinition,
-  type ComponentOptions,
   type ComponentSetupContext,
   type InferPropsSignals,
   type PropDef,
@@ -45,16 +43,20 @@ export {
   inject,
   provide,
   bridgeContextAttributes,
+  syncAria,
   syncContextProps,
   type ComponentHost,
   type ComponentSlots,
   type HostBindingValue,
+  type HostPropDescriptor,
   type InjectionKey,
   type ReflectConfig,
   type HostContextAttributeBridge,
 } from './host';
 
 export { html, type KeyedNode } from './template';
+export { each } from './directives/each';
+export { raw } from './directives/raw';
 
 export {
   css,
@@ -62,7 +64,6 @@ export {
   ref,
   refs,
   type CSSResult,
-  type Directive,
   type EmitFn,
   type HTMLResult,
   type Ref,

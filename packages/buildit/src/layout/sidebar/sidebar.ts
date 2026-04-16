@@ -120,24 +120,24 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
     variant: undefined,
   },
   setup({ emit, host, props, slots }) {
-    const hasHeader = computed(() => slots.has('header').value);
-    const hasFooter = computed(() => slots.has('footer').value);
-    const hasLogo = computed(() => slots.has('logo').value);
+    const hasHeader = () => slots.has('header').value;
+    const hasFooter = () => slots.has('footer').value;
+    const hasLogo = () => slots.has('logo').value;
 
     const isControlled = signal(host.el.hasAttribute('collapsed'));
     const collapsedState = signal(
       isControlled.value ? host.el.hasAttribute('collapsed') : props['default-collapsed'].value,
     );
 
-    const isCollapsed = computed(() => collapsedState.value);
+    const isCollapsed = () => collapsedState.value;
 
     provide(SIDEBAR_CTX, {
-      collapsed: isCollapsed as ReadonlySignal<boolean>,
+      collapsed: computed(() => collapsedState.value) as ReadonlySignal<boolean>,
       variant: props.variant,
     });
 
     const setCollapsed = (next: boolean, source: SidebarCollapseSource) => {
-      if (isCollapsed.value === next) return;
+      if (isCollapsed() === next) return;
 
       if (!isControlled.value) {
         collapsedState.value = next;
@@ -146,11 +146,13 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
       emit('collapsed-change', { collapsed: next, source });
     };
     const doToggle = () => {
-      setCollapsed(!isCollapsed.value, 'toggle');
+      setCollapsed(!isCollapsed(), 'toggle');
     };
 
-    host.bind('attr', {
-      'data-collapsed': () => (isCollapsed.value ? true : undefined),
+    host.bind({
+      attr: {
+        'data-collapsed': () => (isCollapsed() ? true : undefined),
+      },
     });
 
     onMount(() => {
@@ -204,9 +206,9 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
     });
 
     return html`
-      <nav aria-label="${() => props.label.value}" part="nav">
-        <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader.value && !props.collapsible.value}>
-          <span class="sidebar-logo" ?hidden=${() => !hasLogo.value}>
+      <nav aria-label="${props.label}" part="nav">
+        <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader() && !props.collapsible.value}>
+          <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
             <slot name="logo"></slot>
           </span>
           <span class="sidebar-header-content">
@@ -217,8 +219,8 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
             part="toggle-btn"
             type="button"
             ?hidden=${() => !props.collapsible.value}
-            aria-label="${() => (isCollapsed.value ? 'Expand sidebar' : 'Collapse sidebar')}"
-            aria-expanded="${() => String(!isCollapsed.value)}"
+            aria-label="${() => (isCollapsed() ? 'Expand sidebar' : 'Collapse sidebar')}"
+            aria-expanded="${() => !isCollapsed()}"
             @click="${doToggle}">
             <span class="toggle-icon" aria-hidden="true">
               <bit-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
@@ -228,7 +230,7 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
         <div class="sidebar-content" part="content">
           <slot></slot>
         </div>
-        <div class="sidebar-footer" part="footer" ?hidden=${() => !hasFooter.value}>
+        <div class="sidebar-footer" part="footer" ?hidden=${() => !hasFooter()}>
           <slot name="footer"></slot>
         </div>
       </nav>
@@ -283,19 +285,21 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
     open: { default: undefined, type: Boolean },
   },
   setup({ host, props, slots }) {
-    const hasIcon = computed(() => slots.has('icon').value);
+    const hasIcon = () => slots.has('icon').value;
     const sidebarCtx = inject(SIDEBAR_CTX, undefined);
 
-    host.bind('attr', {
-      'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
+    host.bind({
+      attr: {
+        'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
+      },
     });
 
-    const isControlled = computed(() => props.open.value !== undefined);
+    const isControlled = () => props.open.value !== undefined;
     const openState = signal(props['default-open'].value);
     const isOpen = computed(() => {
       if (!props.collapsible.value) return true;
 
-      if (isControlled.value) return props.open.value ?? false;
+      if (isControlled()) return props.open.value ?? false;
 
       return openState.value;
     });
@@ -306,25 +310,27 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
       openState.value = value;
     });
 
-    host.bind('attr', {
-      open: () => (isOpen.value ? true : undefined),
+    host.bind({
+      attr: {
+        open: () => (isOpen.value ? true : undefined),
+      },
     });
 
     return html`
-      <details class="group" part="group" ?open=${() => isOpen.value}>
+      <details class="group" part="group" ?open=${isOpen}>
         <summary
           class="group-header"
           part="group-header"
-          :aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}"
+          aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}"
           @click=${(e: MouseEvent) => {
             if (!props.collapsible.value) {
               e.preventDefault();
             }
           }}>
-          <span class="group-icon" part="group-icon" ?hidden=${() => !hasIcon.value} aria-hidden="true">
+          <span class="group-icon" part="group-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
             <slot name="icon"></slot>
           </span>
-          <span class="group-label" part="group-label">${() => props.label.value}</span>
+          <span class="group-label" part="group-label">${props.label}</span>
           <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">
             <bit-icon name="chevron-right" size="12" stroke-width="2" aria-hidden="true"></bit-icon>
           </span>
@@ -415,36 +421,39 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
     target: undefined,
   },
   setup({ host, props, slots }) {
-    const hasIcon = computed(() => slots.has('icon').value);
-    const hasEnd = computed(() => slots.has('end').value);
+    const hasIcon = () => slots.has('icon').value;
+    const hasEnd = () => slots.has('end').value;
     const sidebarCtx = inject(SIDEBAR_CTX, undefined);
 
-    host.bind('attr', {
-      'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
+    host.bind({
+      attr: {
+        'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
+      },
     });
 
-    const isLink = computed(() => !!props.href.value && !props.disabled.value);
+    const isLink = () => !!props.href.value && !props.disabled.value;
+
     const renderItemContent = () => html`
-      <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon.value} aria-hidden="true">
+      <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
         <slot name="icon"></slot>
       </span>
       <span class="item-label" part="item-label"><slot></slot></span>
-      <span class="item-end" part="item-end" ?hidden=${() => !hasEnd.value}>
+      <span class="item-end" part="item-end" ?hidden=${() => !hasEnd()}>
         <slot name="end"></slot>
       </span>
     `;
 
     return html`
       ${() => {
-        if (isLink.value) {
+        if (isLink()) {
           return html`
             <a
               class="item"
               part="item"
-              href="${() => props.href.value}"
-              :rel="${() => props.rel.value ?? null}"
-              :target="${() => props.target.value ?? null}"
-              :aria-current="${() => (props.active.value ? 'page' : null)}">
+              href="${props.href}"
+              :rel="${props.rel}"
+              :target="${props.target}"
+              aria-current="${() => (props.active.value ? 'page' : null)}">
               ${renderItemContent()}
             </a>
           `;
@@ -452,11 +461,7 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
           return html` <div class="item" part="item" tabindex="-1" aria-disabled="true">${renderItemContent()}</div> `;
         } else {
           return html`
-            <button
-              class="item"
-              part="item"
-              type="button"
-              :aria-current="${() => (props.active.value ? 'page' : null)}">
+            <button class="item" part="item" type="button" aria-current="${() => (props.active.value ? 'page' : null)}">
               ${renderItemContent()}
             </button>
           `;

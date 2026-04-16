@@ -1,5 +1,4 @@
-import { define, computed, defineField, fire, html, inject, syncContextProps } from '@vielzeug/craftit';
-import { when } from '@vielzeug/craftit/directives';
+import { define, computed, defineField, html, inject, syncContextProps } from '@vielzeug/craftit';
 
 import type { ButtonType, DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
@@ -95,7 +94,7 @@ export type BitButtonProps = ThemableProps &
  * <bit-button variant="frost" rainbow>Special Button</bit-button>
  * ```
  */
-export const BUTTON_TAG = define<BitButtonProps>('bit-button', {
+export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-button', {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -113,17 +112,21 @@ export const BUTTON_TAG = define<BitButtonProps>('bit-button', {
     type: 'button',
     variant: 'solid',
   } satisfies PropBundle<BitButtonProps>,
-  setup({ host, props }) {
+  setup({ emit, host, props }) {
     // Reactively inherit size/variant/color from a parent bit-button-group when present.
-    syncContextProps(inject(BUTTON_GROUP_CTX, undefined), props, ['color', 'size', 'variant']);
+    syncContextProps(inject(BUTTON_GROUP_CTX, undefined), {
+      color: props.color,
+      size: props.size,
+      variant: props.variant,
+    });
 
     const isLink = computed(() => !!props.href.value);
-    const isDisabled = (): boolean => !!(props.disabled.value || props.loading.value);
+    const isDisabled = computed(() => !!(props.disabled.value || props.loading.value));
 
     // Form association: relay submit/reset clicks to the associated form.
     // The inner <button> always has type="button" so shadow DOM never drives native form actions.
     const formField = defineField({
-      disabled: computed(isDisabled),
+      disabled: isDisabled,
       toFormValue: () => null,
       value: computed(() => ''),
     });
@@ -131,7 +134,7 @@ export const BUTTON_TAG = define<BitButtonProps>('bit-button', {
     // Unified click handler for both links and buttons.
     // Forward only when native click didn't traverse to host (jsdom/shadow interop).
     const handleClick = (e: MouseEvent) => {
-      if (isDisabled()) {
+      if (isDisabled.value) {
         e.preventDefault();
         e.stopImmediatePropagation();
 
@@ -157,44 +160,47 @@ export const BUTTON_TAG = define<BitButtonProps>('bit-button', {
       const reachedHost = path.includes(host.el);
 
       if (!reachedHost) {
-        fire.mouse(host.el, e.type, e);
+        emit('click', e);
       }
     };
 
+    host.bind({
+      attr: {
+        'aria-busy': props.loading,
+        'aria-disabled': isDisabled,
+        'aria-label': props.label,
+      },
+    });
+
     return html`
-      ${when({
-        condition: isLink,
-        else: () =>
-          html`<button
-            part="button"
-            type="button"
-            ?disabled=${() => isDisabled()}
-            :aria-label="${() => props.label.value ?? null}"
-            :aria-disabled="${() => (isDisabled() ? 'true' : null)}"
-            :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-            @click="${handleClick}">
-            <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-            <slot name="prefix"></slot>
-            <span class="content" part="content"><slot></slot></span>
-            <slot name="suffix"></slot>
-          </button>`,
-        then: () =>
-          html`<a
-            part="button"
-            :href="${() => props.href.value ?? null}"
-            :target="${() => props.target.value ?? null}"
-            :rel="${() => props.rel.value ?? null}"
-            :aria-label="${() => props.label.value ?? null}"
-            :aria-disabled="${() => (isDisabled() ? 'true' : null)}"
-            :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-            role="button"
-            @click="${handleClick}">
-            <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-            <slot name="prefix"></slot>
-            <span class="content" part="content"><slot></slot></span>
-            <slot name="suffix"></slot>
-          </a>`,
-      })}
+      ${() =>
+        isLink.value
+          ? html`<a
+              part="button"
+              :href="${props.href}"
+              :target="${props.target}"
+              :rel="${props.rel}"
+              role="button"
+              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+              @click="${handleClick}">
+              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+              <slot name="prefix"></slot>
+              <span class="content" part="content"><slot></slot></span>
+              <slot name="suffix"></slot>
+            </a>`
+          : html`<button
+              part="button"
+              type="button"
+              ?disabled=${isDisabled}
+              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+              @click="${handleClick}">
+              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+              <slot name="prefix"></slot>
+              <span class="content" part="content"><slot></slot></span>
+              <slot name="suffix"></slot>
+            </button>`}
     `;
   },
   shadow: { delegatesFocus: true },

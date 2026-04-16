@@ -42,7 +42,7 @@ define('my-counter', {
 - ✅ **Context / DI** — `createContext`, `provide`, `inject`, `syncContextProps`
 - ✅ **Form-associated controls** — `defineField` with `ElementInternals`
 - ✅ **Observer utilities (observers)** — `resizeObserver`, `intersectionObserver`, and `mediaObserver`
-- ✅ **Directive subpath** — `@vielzeug/craftit/directives`
+- ✅ **List and raw helpers** — `each` and `raw` from the main entrypoint
 - ✅ **Test subpath** — `@vielzeug/craftit/testing`
 
 ## Entry Points
@@ -50,7 +50,6 @@ define('my-counter', {
 - `@vielzeug/craftit` — Main API with component authoring and stateit re-exports.
 - `@vielzeug/craftit/controls` — Stable composables for controls and overlays.
 - `@vielzeug/craftit/observers` — Stable browser observer composables.
-- `@vielzeug/craftit/directives` — Directive helpers like `attrs`, `bind`, `choose`, `each`, `when`, and `until`.
 - `@vielzeug/craftit/testing` — Mount, query, and event testing utilities.
 
 ## Usage Highlights
@@ -74,23 +73,20 @@ define<{ disabled: boolean; label: string }, { change: string }>('name-input', {
 });
 ```
 
-### Directives subpath
+### List Rendering + Inline Conditions
 
 ```ts
 import { define, html, signal } from '@vielzeug/craftit';
-import { each, when } from '@vielzeug/craftit/directives';
 
 define('todo-list', {
   setup() {
     const todos = signal([{ id: 1, text: 'Write docs', done: false }]);
 
     return html`
-      ${when({
-        condition: () => todos.value.length > 0,
-        else: () => html`<p>No todos</p>`,
-        then: () =>
-          html`<ul>${each(todos, { key: (todo) => todo.id, render: (todo) => html`<li>${todo.text}</li>` })}</ul>`,
-      })}
+      ${() =>
+        todos.value.length === 0
+          ? html`<p>No todos</p>`
+          : html`<ul>${each(todos, { key: (todo) => todo.id, render: (todo) => html`<li>${todo.text}</li>` })}</ul>`}
     `;
   },
 });
@@ -100,7 +96,6 @@ define('todo-list', {
 
 ```ts
 import { define, effect, html } from '@vielzeug/craftit';
-import { when } from '@vielzeug/craftit/directives';
 
 define('slot-panel', {
   setup({ slots }) {
@@ -109,16 +104,8 @@ define('slot-panel', {
     });
 
     return html`
-      ${when({
-        condition: () => slots.has('header').value,
-        else: () => html`<h2>Fallback header</h2>`,
-        then: () => html`<slot name="header"></slot>`,
-      })}
-      ${when({
-        condition: () => slots.has().value,
-        else: () => html`<p>No content yet</p>`,
-        then: () => html`<slot></slot>`,
-      })}
+      ${() => (slots.has('header').value ? html`<slot name="header"></slot>` : html`<h2>Fallback header</h2>`)}
+      ${() => (slots.has().value ? html`<slot></slot>` : html`<p>No content yet</p>`)}
     `;
   },
 });

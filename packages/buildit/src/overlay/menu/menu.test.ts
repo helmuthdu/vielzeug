@@ -168,11 +168,16 @@ describe('bit-menu', () => {
         `,
       });
 
+      const onOpen = vi.fn();
+
+      fixture.element.addEventListener('open', onOpen);
+
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
 
       await user.press(trigger, 'Enter');
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
+      expect((onOpen.mock.calls[0][0] as CustomEvent).detail.reason).toBe('trigger');
     });
 
     it('supports keyboard open using Space on trigger', async () => {

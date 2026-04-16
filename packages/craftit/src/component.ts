@@ -6,9 +6,10 @@ import { type ComponentHost, type ComponentSlots, createHost, createSlots } from
 import { type EmitFn, type HTMLResult, createEmitFn, toKebab } from './internal';
 import {
   createProps,
-  type ComponentProps,
+  hasStructuredDefault,
   type InferPropsFromDefs,
   type InferPropsSignals,
+  normalizePropDefinition,
   type PropDef,
   type PropInputDefs,
   type PropOptions,
@@ -18,15 +19,7 @@ import {
 import { type ComponentRegistrationOptions, registerComponent } from './registration';
 
 export { createProps, type PropsInput };
-export type {
-  InferPropsFromDefs,
-  InferPropsSignals,
-  ComponentProps,
-  PropDef,
-  PropInputDefs,
-  PropOptions,
-  ResolveComponentProps,
-};
+export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropOptions, ResolveComponentProps };
 export { registerComponent, type ComponentRegistrationOptions };
 
 /**
@@ -37,37 +30,34 @@ export type ComponentSetupContext<
   E extends Record<string, unknown> = Record<string, never>,
   D extends PropInputDefs = PropsInput<P>,
 > = {
+  /** Emit custom events */
   emit: EmitFn<E>;
+  /** Host element API (binding attributes, classes, and listeners) */
   host: ComponentHost;
-  props: ComponentProps<ResolveComponentProps<P, D>>;
+  /** Component props (as signals) */
+  props: InferPropsSignals<ResolveComponentProps<P, D>>;
+  /** The component's ShadowRoot */
   shadowRoot: ShadowRoot;
+  /** Reactive slot API */
   slots: ComponentSlots;
-};
-
-/**
- * Configuration object for define().
- */
-export type ComponentOptions<
-  Props extends Record<string, unknown> = Record<never, never>,
-  Emits extends Record<string, unknown> = Record<string, never>,
-  PropDefs extends PropInputDefs = PropsInput<Props>,
-> = {
-  formAssociated?: boolean;
-  host?: Record<string, string | boolean | number>;
-  props?: PropDefs;
-  setup: (ctx: ComponentSetupContext<ResolveComponentProps<Props, PropDefs>, Emits, PropDefs>) => string | HTMLResult;
-  shadow?: Omit<ShadowRootInit, 'mode'>;
-  styles?: (string | CSSStyleSheet | import('./internal').CSSResult)[];
 };
 
 export type ComponentDefinition<
   Props extends Record<string, unknown> = Record<never, never>,
   Emits extends Record<string, unknown> = Record<string, never>,
   PropDefs extends PropInputDefs = PropsInput<Props>,
-> = ComponentOptions<Props, Emits, PropDefs>;
-
-const isStructuredDefault = (value: unknown): boolean =>
-  Array.isArray(value) || (typeof value === 'object' && value !== null);
+> = {
+  /** Enable form association for the custom element */
+  formAssociated?: boolean;
+  /** Component properties and their metadata */
+  props?: PropDefs;
+  /** Main setup function where component logic is defined */
+  setup: (ctx: ComponentSetupContext<ResolveComponentProps<Props, PropDefs>, Emits, PropDefs>) => HTMLResult | string;
+  /** Shadow DOM configuration (mode is always 'open') */
+  shadow?: Omit<ShadowRootInit, 'mode'>;
+  /** Component-specific styles */
+  styles?: (string | CSSStyleSheet | import('./internal').CSSResult)[];
+};
 
 const validatePropDefinitions = (tag: string, propDefs: PropInputDefs | undefined): void => {
   if (!propDefs) return;
@@ -75,9 +65,9 @@ const validatePropDefinitions = (tag: string, propDefs: PropInputDefs | undefine
   for (const [name, definition] of Object.entries(propDefs)) {
     if (typeof definition !== 'object' || definition === null || !('default' in definition)) continue;
 
-    const descriptor = definition as PropDef<unknown>;
+    const descriptor = normalizePropDefinition(definition as PropDef<unknown>);
 
-    if (descriptor.reflect === true && isStructuredDefault(descriptor.default)) {
+    if (descriptor.reflect === true && hasStructuredDefault(descriptor.default)) {
       throw new Error(
         `[craftit:E9] define('${tag}', ...): props.${name} cannot use reflect: true with object/array defaults`,
       );
@@ -85,15 +75,12 @@ const validatePropDefinitions = (tag: string, propDefs: PropInputDefs | undefine
   }
 };
 
-const defineInternal = <
+export function define<
   Props extends Record<string, unknown> = Record<never, never>,
   EventsType extends Record<string, unknown> = Record<string, never>,
   PropDefs extends PropInputDefs = PropsInput<Props>,
->(
-  tag: string,
-  definition: ComponentDefinition<Props, EventsType, PropDefs> & { props?: PropDefs },
-): string => {
-  const { formAssociated, host: hostOptions, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
+>(tag: string, definition: ComponentDefinition<Props, EventsType, PropDefs> & { props?: PropDefs }): string {
+  const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
 
   validatePropDefinitions(tag, propDefs);
 
@@ -102,7 +89,9 @@ const defineInternal = <
   return registerComponent(
     tag,
     () => {
-      const props = propDefs ? createProps(propDefs) : ({} as ComponentProps<ResolveComponentProps<Props, PropDefs>>);
+      const props = propDefs
+        ? createProps(propDefs)
+        : ({} as InferPropsSignals<ResolveComponentProps<Props, PropDefs>>);
       const emit = createEmitFn<EventsType>();
       const host = createHost();
       let slotsApi: ComponentSlots | undefined;
@@ -122,35 +111,16 @@ const defineInternal = <
       return setup({
         emit: emit as EmitFn<EventsType>,
         host,
-        props: props as ComponentProps<ResolveComponentProps<Props, PropDefs>>,
+        props: props as InferPropsSignals<ResolveComponentProps<Props, PropDefs>>,
         shadowRoot: host.shadowRoot,
         slots,
       } as ComponentSetupContext<ResolveComponentProps<Props, PropDefs>, EventsType, PropDefs>);
     },
     {
       formAssociated,
-      host: hostOptions,
       observedAttrs,
       shadow: shadowOptions,
       styles,
     } satisfies ComponentRegistrationOptions,
   );
-};
-
-export function define<
-  Props extends Record<string, unknown> = Record<never, never>,
-  EventsType extends Record<string, unknown> = Record<string, never>,
-  const PropDefs extends PropInputDefs = PropsInput<Props>,
->(tag: string, definition: ComponentDefinition<Props, EventsType, PropDefs> & { props: PropDefs }): string;
-export function define<
-  Props extends Record<string, unknown> = Record<never, never>,
-  EventsType extends Record<string, unknown> = Record<string, never>,
-  PropDefs extends PropInputDefs = PropsInput<Props>,
->(tag: string, definition: ComponentDefinition<Props, EventsType, PropDefs> & { props?: PropDefs }): string;
-export function define<
-  Props extends Record<string, unknown> = Record<never, never>,
-  EventsType extends Record<string, unknown> = Record<string, never>,
-  PropDefs extends PropInputDefs = PropsInput<Props>,
->(tag: string, definition: ComponentDefinition<Props, EventsType, PropDefs> & { props?: PropDefs }): string {
-  return defineInternal(tag, definition);
 }

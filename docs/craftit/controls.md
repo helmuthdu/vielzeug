@@ -12,10 +12,9 @@ This page documents the `@vielzeug/craftit/controls` entrypoint. These APIs are 
 ```ts
 import {
   createCheckableFieldControl,
-  createChoiceFieldControl,
+  createFieldControl,
   createListControl,
   createOverlayControl,
-  createTextFieldControl,
 } from '@vielzeug/craftit/controls';
 
 import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';
@@ -23,8 +22,7 @@ import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/c
 
 ## Overview
 
-- `createTextFieldControl` - text-field controller with stable ids, validation hooks, and integrated assistive state.
-- `createChoiceFieldControl` - single/multi-select controller for selects, comboboxes, and grouped checkboxes.
+- `createFieldControl` - unified field controller factory for text, choice, and checkable field state.
 - `createCheckableFieldControl` - high-level checkbox/radio/switch controller that bundles checkable state, a11y wiring, and press handling.
 - `createListControl` - keyboard/list focus navigation with rich result metadata.
 - `createOverlayControl` - open/close/toggle orchestration with typed open/close reasons.
@@ -33,11 +31,11 @@ Observer APIs (`resizeObserver`, `intersectionObserver`, `mediaObserver`) are do
 
 ## Which Control Do I Choose?
 
-For normal field authoring, the intended public choice is now just three field controllers:
+For normal field authoring, use the unified field controller factory with a `kind` discriminator:
 
-- Use `createTextFieldControl` for input-like fields with one string value: input, textarea, masked text inputs, and similar controls.
-- Use `createChoiceFieldControl` when the field owns a selected item list or CSV-style form value: select, combobox, multi-select, checkbox-group.
-- Use `createCheckableFieldControl` for single checkable widgets: checkbox, radio, switch.
+- Use `createFieldControl({ kind: 'text', options })` for input-like fields with one string value: input, textarea, masked text inputs, and similar controls.
+- Use `createFieldControl({ kind: 'choice', options })` when the field owns a selected item list or CSV-style form value: select, combobox, multi-select, checkbox-group.
+- Use `createFieldControl({ kind: 'checkable', options })` (or `createCheckableFieldControl`) for single checkable widgets: checkbox, radio, switch.
 
 Everything else in this entrypoint is either a generic non-field primitive (`createListControl`, `createOverlayControl`, `createPressControl`) or a lower-level escape hatch for advanced widgets (`createA11yControl`).
 
@@ -148,21 +146,24 @@ const overlay = createOverlayControl({
 overlay.open({ reason: 'trigger' });
 ```
 
-## `createTextFieldControl`
+## `createFieldControl` (`kind: 'text'`)
 
-`createTextFieldControl` is the base authoring helper for input-like fields. It owns stable ids, field state, validation triggering, and assistive state in one place.
+Use `createFieldControl` with `kind: 'text'` for input-like fields. It owns stable ids, field state, validation triggering, and assistive state in one place.
 
 ```ts
-const field = createTextFieldControl({
-  context: formCtx,
-  error,
-  helper,
-  label,
-  labelPlacement,
-  maxLength,
-  name,
-  prefix: 'input',
-  value,
+const field = createFieldControl({
+  kind: 'text',
+  options: {
+    context: formCtx,
+    error,
+    helper,
+    label,
+    labelPlacement,
+    maxLength,
+    name,
+    prefix: 'input',
+    value,
+  },
 });
 
 const { assistive, fieldId, helperId, errorId, labelInsetId, labelOutsideId, value: inputValue } = field;
@@ -174,23 +175,26 @@ const { assistive, fieldId, helperId, errorId, labelInsetId, labelOutsideId, val
 - `hasCounter`, `counterText`, `counterNearLimit`, and `counterAtLimit` for maxlength UX
 - `showHelper`, `hasError`, and `hidden` so templates do not need to duplicate fallback logic
 
-## `createChoiceFieldControl`
+## `createFieldControl` (`kind: 'choice'`)
 
-`createChoiceFieldControl` is the shared base for select-like components.
+Use `createFieldControl` with `kind: 'choice'` for select-like components.
 
 ```ts
-const choice = createChoiceFieldControl({
-  context: formCtx,
-  error,
-  getValue: (item) => item.value,
-  helper,
-  label,
-  labelPlacement,
-  mapControlledValue: (value) => ({ label: '', value }),
-  multiple,
-  name,
-  prefix: 'combobox',
-  value,
+const choice = createFieldControl({
+  kind: 'choice',
+  options: {
+    context: formCtx,
+    error,
+    getValue: (item) => item.value,
+    helper,
+    label,
+    labelPlacement,
+    mapControlledValue: (value) => ({ label: '', value }),
+    multiple,
+    name,
+    prefix: 'combobox',
+    value,
+  },
 });
 
 choice.selectedItems.value;
@@ -275,10 +279,9 @@ return html`
 ```ts
 export {
   createCheckableFieldControl,
-  createChoiceFieldControl,
+  createFieldControl,
   createListControl,
   createOverlayControl,
-  createTextFieldControl,
 } from '@vielzeug/craftit/controls';
 
 export { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';

@@ -144,11 +144,15 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
     sticky: false,
     striped: false,
   } satisfies PropBundle<BitTableProps>,
+
   setup({ host, props }) {
-    host.bind('attr', {
-      ariaBusy: () => (props.loading.value ? 'true' : null),
-      ariaLabel: () => props.caption.value ?? null,
+    host.bind({
+      attr: {
+        'aria-busy': props.loading,
+        'aria-label': props.caption,
+      },
     });
+
     // Build the fully-native shadow table via DOM APIs (not innerHTML) to avoid
     // HTML-parser foster-parenting which would eject <slot> elements from table
     // contexts.  All three issues — color themes, sticky headers, colspan —
@@ -171,6 +175,7 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
       tfoot.setAttribute('part', 'foot');
       table.append(captionEl, thead, tbody, tfoot);
       scrollContainer.appendChild(table);
+
       // Sync caption text from prop
       effect(() => {
         captionEl.hidden = !(captionEl.textContent = props.caption.value ?? '');
@@ -178,6 +183,7 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
 
       // Initial build
       let cleanupCellObservers = buildTable(host.el, thead, tbody, tfoot);
+
       // Rebuild whenever direct children change (rows added / removed / reordered)
       const structureObserver = new MutationObserver(() => {
         cleanupCellObservers();

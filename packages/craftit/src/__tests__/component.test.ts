@@ -20,7 +20,7 @@ import {
   type ComponentSetupContext,
 } from '../index';
 import { intersectionObserver, mediaObserver, resizeObserver } from '../observers';
-import { currentRuntime } from '../runtime-core';
+import { currentRuntime } from '../runtime';
 import { fire, mount, waitForEvent } from '../testing';
 
 const expectType = <T>(_value: T): void => {
@@ -71,58 +71,32 @@ describe('Core: Component Definition', () => {
       expect(query2('div')?.textContent).toBe('0');
     });
 
-    it('should throw on repeated registration for the same tag in development mode', () => {
+    it('should throw on repeated registration for the same tag', () => {
       const tag = `test-dup-${Math.random().toString(36).slice(2)}`;
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      const originalNodeEnv = process.env.NODE_ENV;
-
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      process.env.NODE_ENV = 'test';
-
-      try {
-        define(tag, {
-          setup: () => html`<div>First</div>`,
-        });
-
-        expect(() => {
-          define(tag, {
-            setup: () => html`<div>Second</div>`,
-          });
-        }).toThrow('[craftit:E10]');
-      } finally {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        process.env.NODE_ENV = originalNodeEnv;
-      }
-    });
-
-    it('should keep repeated registration idempotent in production mode', () => {
-      const tag = `test-dup-prod-${Math.random().toString(36).slice(2)}`;
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      const originalNodeEnv = process.env.NODE_ENV;
-
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      process.env.NODE_ENV = 'production';
 
       define(tag, {
         setup: () => html`<div>First</div>`,
       });
 
-      try {
-        expect(() => {
-          define(tag, {
-            setup: () => html`<div>Second</div>`,
-          });
-        }).not.toThrow();
-      } finally {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        process.env.NODE_ENV = originalNodeEnv;
-      }
+      expect(() => {
+        define(tag, {
+          setup: () => html`<div>Second</div>`,
+        });
+      }).toThrow('[craftit:E10]');
+    });
+
+    it('should throw on repeated registration even without process env', () => {
+      const tag = `test-dup-no-env-${Math.random().toString(36).slice(2)}`;
+
+      define(tag, {
+        setup: () => html`<div>First</div>`,
+      });
+
+      expect(() => {
+        define(tag, {
+          setup: () => html`<div>Second</div>`,
+        });
+      }).toThrow('[craftit:E10]');
     });
   });
 
@@ -159,6 +133,73 @@ describe('Core: Component Definition', () => {
       );
 
       expect(query('.count')?.textContent).toBe('42');
+    });
+
+    it('should restore undefined for typed boolean props when the attribute is removed', async () => {
+      const fixture = await mount(
+        {
+          props: {
+            open: { default: undefined as boolean | undefined, reflect: false, type: Boolean },
+          },
+          setup: ({ props }) => html`<div class="value">${() => String(props.open.value)}</div>`,
+        },
+        {
+          attrs: { open: '' },
+        },
+      );
+
+      expect(fixture.query('.value')?.textContent).toBe('true');
+
+      fixture.element.removeAttribute('open');
+      await fixture.flush();
+
+      expect(fixture.query('.value')?.textContent).toBe('undefined');
+    });
+
+    it('should parse numbers from attributes when a typed descriptor uses Number', async () => {
+      const { query } = await mount(
+        {
+          props: {
+            count: { default: undefined as number | undefined, reflect: false, type: Number },
+          },
+          setup: ({ props }) => html`<div class="count">${() => String(props.count.value)}</div>`,
+        },
+        {
+          attrs: { count: '42' },
+        },
+      );
+
+      expect(query('.count')?.textContent).toBe('42');
+    });
+
+    it('should use custom parse functions for attribute bindings into child props', async () => {
+      const suffix = Math.random().toString(36).slice(2);
+      const childTag = `test-custom-parse-child-${suffix}`;
+      const parentTag = `test-custom-parse-parent-${suffix}`;
+
+      define(childTag, {
+        props: {
+          size: {
+            default: 0,
+            parse: (value: string | null) => (value == null ? 0 : Number(value) * 2),
+            reflect: false,
+          },
+        },
+        setup: ({ props }) => html`<div class="size">${() => String(props.size.value)}</div>`,
+      });
+
+      define(parentTag, {
+        setup: () => {
+          const size = signal('3');
+
+          return html`<${childTag} size=${size}></${childTag}>`;
+        },
+      });
+
+      const { query } = await mount(parentTag);
+      const child = query(childTag) as HTMLElement;
+
+      expect(child.shadowRoot?.querySelector('.size')?.textContent).toBe('6');
     });
 
     it('should keep attribute->prop sync after reconnect', async () => {

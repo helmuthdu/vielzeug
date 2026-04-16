@@ -1,6 +1,6 @@
 import { type ComputedSignal, type ReadonlySignal, type Signal, effect } from '@vielzeug/stateit';
 
-import { currentRuntime } from './runtime-core';
+import { currentRuntime } from './runtime';
 
 /** @internal */
 export const formCallbackRegistry = new WeakMap<HTMLElement, FormFieldCallbacks>();
@@ -36,8 +36,7 @@ export const defineField = <T = unknown>(
   options: FormFieldOptions<T>,
   callbacks?: FormFieldCallbacks,
 ): FormFieldHandle => {
-  const rt = currentRuntime();
-  const host = rt.el;
+  const host = currentRuntime().el;
   const ctor = host.constructor as typeof HTMLElement & { formAssociated?: boolean };
 
   if (!ctor.formAssociated) {

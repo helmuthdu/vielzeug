@@ -1,6 +1,6 @@
 import { signal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import { onCleanup } from '../runtime-lifecycle';
+import { onCleanup } from '../runtime';
 
 /**
  * Observes a CSS media query via `window.matchMedia`. Returns a `ReadonlySignal`

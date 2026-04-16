@@ -70,7 +70,7 @@ describe('bit-combobox', () => {
       expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('escape');
     });
 
-    it('emits programmatic open reason when Enter opens a closed combobox', async () => {
+    it('emits trigger open reason when Enter opens a closed combobox', async () => {
       fixture = await mount('bit-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
@@ -85,7 +85,7 @@ describe('bit-combobox', () => {
       await user.press(input, 'Enter');
       await fixture.flush();
 
-      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('programmatic');
+      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
     });
 
     it('emits outside-click close reason when clicking away from the popup', async () => {
@@ -186,6 +186,58 @@ describe('bit-combobox', () => {
       const options = fixture.queryAll<HTMLElement>('.option');
 
       expect(options.length).toBe(3);
+    });
+
+    it('keeps selected value and visible input text after reopen + escape close', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      await fixture.flush();
+
+      expect(input.value).toBe('United States');
+      expect((fixture.element as unknown as { value: string }).value).toBe('us');
+
+      await user.click(input);
+      await fixture.flush();
+      await user.press(input, 'Escape');
+      await fixture.flush();
+
+      expect((fixture.element as unknown as { value: string }).value).toBe('us');
+      expect(input.value).toBe('United States');
+    });
+
+    it('keeps selected value and visible input text after reopen + outside click close', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      await fixture.flush();
+
+      await user.click(input);
+      await fixture.flush();
+
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.flush();
+
+      expect((fixture.element as unknown as { value: string }).value).toBe('us');
+      expect(input.value).toBe('United States');
     });
   });
 
@@ -446,7 +498,8 @@ describe('bit-combobox', () => {
       await fixture.flush();
 
       const chip = fixture.query<HTMLElement>('bit-chip');
-      const removeBtn = chip?.shadowRoot?.querySelector<HTMLButtonElement>('.remove-btn');
+
+      const removeBtn = chip?.shadowRoot?.querySelector<HTMLButtonElement>('[part="remove-btn"]');
 
       expect(removeBtn).toBeTruthy();
 

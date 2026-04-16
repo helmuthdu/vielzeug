@@ -165,6 +165,22 @@ describe('field controls', () => {
       contextDisabled.value = true;
       expect(handle.disabled.value).toBe(true);
     });
+
+    it('throws without formAssociated', async () => {
+      await expect(
+        mount({
+          setup: () => {
+            createTextFieldControl({
+              prefix: 'standalone',
+              validateOn: signal<'blur' | 'change' | 'submit' | undefined>('change'),
+              value: signal('initial'),
+            });
+
+            return html`<div></div>`;
+          },
+        }),
+      ).rejects.toThrow('formAssociated: true');
+    });
   });
 
   describe('createChoiceFieldControl()', () => {

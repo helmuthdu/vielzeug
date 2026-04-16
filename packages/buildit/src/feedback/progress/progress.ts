@@ -81,43 +81,49 @@ export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
     value: 0,
     'value-text': undefined,
   } satisfies PropBundle<BitProgressProps>,
+
   setup({ host, props }) {
     // The SVG circle circumference for a radius of 45 (viewBox 0 0 100 100)
     const RADIUS = 45;
     const CIRC = 2 * Math.PI * RADIUS; // ~282.7
+
     const percent = computed(() => {
       const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
       const m = Math.max(1, Number(props.max.value));
 
       return `${(v / m) * 100}%`;
     });
+
     const dashoffset = computed(() => {
       const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
       const m = Math.max(1, Number(props.max.value));
 
       return CIRC - (v / m) * CIRC;
     });
-    const isCircular = computed(() => props.type.value === 'circular');
+
+    const ariaValueNow = () => (props.indeterminate.value ? null : String(props.value.value));
+    const ariaLabel = () => props.label.value ?? props.title.value ?? 'Progress';
+    const circularStyle = () => `--_circ:${CIRC}px`;
+    const strokeDasharray = () => (props.indeterminate.value ? undefined : `${CIRC}px`);
+    const strokeDashoffset = () => (props.indeterminate.value ? undefined : `${dashoffset.value}px`);
+    const linearFillStyle = () => (!props.indeterminate.value ? `width:${percent.value}` : null);
 
     effect(() => {
-      void props.value.value;
-      void props.max.value;
-      void props.indeterminate.value;
       host.el.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
     });
 
     return html`
       ${() =>
-        isCircular.value
+        props.type.value === 'circular'
           ? html` <div
               class="circular-track"
               role="progressbar"
-              :aria-valuenow="${() => (props.indeterminate.value ? null : String(props.value.value))}"
+              :aria-valuenow="${ariaValueNow}"
               aria-valuemin="0"
-              :aria-valuemax="${() => String(props.max.value)}"
-              :aria-label="${() => props.label.value ?? props.title.value ?? 'Progress'}"
-              :aria-valuetext="${() => props['value-text'].value ?? null}"
-              :style="${() => `--_circ:${CIRC}px`}">
+              :aria-valuemax="${props.max}"
+              :aria-label="${ariaLabel}"
+              :aria-valuetext="${props['value-text']}"
+              :style="${circularStyle}">
               <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                 <circle class="circle-bg" cx="50" cy="50" r="${RADIUS}"></circle>
                 <circle
@@ -125,41 +131,38 @@ export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
                   cx="50"
                   cy="50"
                   r="${RADIUS}"
-                  :stroke-dasharray="${() => (props.indeterminate.value ? undefined : `${CIRC}px`)}"
-                  :stroke-dashoffset="${() =>
-                    props.indeterminate.value ? undefined : `${dashoffset.value}px`}"></circle>
+                  :stroke-dasharray="${strokeDasharray}"
+                  :stroke-dashoffset="${strokeDashoffset}"></circle>
               </svg>
               <div class="circular-inner">
-                <span class="circular-label">${() => props.label.value}</span>
-                <span class="circular-title">${() => props.title.value}</span>
+                <span class="circular-label">${props.label}</span>
+                <span class="circular-title">${props.title}</span>
               </div>
             </div>`
           : html` <div class="wrapper">
               <div class="header">
-                <span class="progress-title">${() => props.title.value}</span>
-                <span class="end-label header-label">${() => props.label.value}</span>
+                <span class="progress-title">${props.title}</span>
+                <span class="end-label header-label">${props.label}</span>
               </div>
               <div class="bar-row">
                 <div class="track-outer">
                   <div
                     class="track"
                     role="progressbar"
-                    :aria-valuenow="${() => (props.indeterminate.value ? null : String(props.value.value))}"
+                    :aria-valuenow="${ariaValueNow}"
                     aria-valuemin="0"
-                    :aria-valuemax="${() => String(props.max.value)}"
-                    :aria-label="${() => props.label.value ?? props.title.value ?? 'Progress'}"
-                    :aria-valuetext="${() => props['value-text'].value ?? null}">
-                    <div
-                      class="fill"
-                      part="fill"
-                      :style="${() => (!props.indeterminate.value ? `width:${percent.value}` : null)}"></div>
+                    :aria-valuemax="${props.max}"
+                    :aria-label="${ariaLabel}"
+                    :aria-valuetext="${props['value-text']}">
+                    <div class="fill" part="fill" :style="${linearFillStyle}"></div>
                   </div>
-                  <span class="floating-label">${() => props['floating-label'].value}</span>
+                  <span class="floating-label">${props['floating-label']}</span>
                 </div>
-                <span class="end-label row-label">${() => props.label.value}</span>
+                <span class="end-label row-label">${props.label}</span>
               </div>
             </div>`}
     `;
   },
+
   styles: [colorThemeMixin, forcedColorsMixin, reducedMotionMixin, componentStyles],
 });

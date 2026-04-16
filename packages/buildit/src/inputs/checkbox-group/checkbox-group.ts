@@ -10,7 +10,7 @@ import {
   type ReadonlySignal,
   signal,
 } from '@vielzeug/craftit';
-import { createChoiceFieldControl } from '@vielzeug/craftit/controls';
+import { createFieldControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -102,20 +102,23 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
   setup({ emit, host, props, slots }) {
     const formCtx = inject(FORM_CTX, undefined);
 
-    mountFormContextSync(host.el, formCtx, props);
+    mountFormContextSync(host.el, formCtx, props as any);
 
-    const choice = createChoiceFieldControl<string>({
-      context: formCtx,
-      disabled: props.disabled,
-      error: props.error,
-      getValue: (value) => value,
-      helper: props.helper,
-      label: props.label,
-      mapControlledValue: (value) => value,
-      multiple: signal(true),
-      name: props.name,
-      prefix: 'checkbox-group',
-      value: props.values,
+    const choice = createFieldControl<string>({
+      kind: 'choice',
+      options: {
+        context: formCtx,
+        disabled: props.disabled,
+        error: props.error,
+        getValue: (value) => value,
+        helper: props.helper,
+        label: props.label,
+        mapControlledValue: (value) => value,
+        multiple: signal(true),
+        name: props.name,
+        prefix: 'checkbox-group',
+        value: props.values,
+      },
     });
     const checkedValues = choice.selectedItems;
 
@@ -206,26 +209,24 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     const legendId = createId('checkbox-group-legend');
     const errorId = `${legendId}-error`;
     const helperId = `${legendId}-helper`;
-    const hasError = computed(() => Boolean(props.error.value));
-    const hasHelper = computed(() => Boolean(props.helper.value) && !hasError.value);
+    const hasError = () => Boolean(props.error.value);
+    const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
     return html`
       <fieldset
         role="group"
         aria-required="${() => String(Boolean(props.required.value))}"
-        aria-invalid="${() => String(hasError.value)}"
-        aria-errormessage="${() => (hasError.value ? errorId : null)}"
-        aria-describedby="${() => (hasError.value ? errorId : hasHelper.value ? helperId : null)}">
+        aria-invalid="${() => String(hasError())}"
+        aria-errormessage="${() => (hasError() ? errorId : null)}"
+        aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
         <legend id="${legendId}" ?hidden=${() => !props.label.value}>
-          ${() => props.label.value}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
+          ${props.label}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
         </legend>
         <div class="checkbox-group-items" part="items">
           <slot></slot>
         </div>
-        <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError.value}>
-          ${() => props.error.value}
-        </div>
-        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper.value}>${() => props.helper.value}</div>
+        <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError()}>${props.error}</div>
+        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper()}>${props.helper}</div>
       </fieldset>
     `;
   },

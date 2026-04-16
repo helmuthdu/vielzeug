@@ -14,8 +14,7 @@ Implement search list with directives in a production-friendly way with `@vielze
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { computed, define, html, signal } from '@vielzeug/craftit';
-import { each, when } from '@vielzeug/craftit/directives';
+import { computed, define, each, html, signal } from '@vielzeug/craftit';
 
 define(
   'search-list',
@@ -28,17 +27,15 @@ define(
       return html`
         <input :value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
 
-        ${when({
-          condition: () => filtered.value.length > 0,
-          then: () =>
-            html`<ul>
-              ${each(filtered, {
-                key: (_, i) => i,
-                render: (name) => html`<li>${name}</li>`,
-              })}
-            </ul>`,
-          else: () => html`<p>No matches</p>`,
-        })}
+        ${() =>
+          filtered.value.length > 0
+            ? html`<ul>
+                ${each(filtered, {
+                  key: (_, i) => i,
+                  render: (name) => html`<li>${name}</li>`,
+                })}
+              </ul>`
+            : html`<p>No matches</p>`}
       `;
     },
   },
