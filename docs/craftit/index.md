@@ -34,9 +34,9 @@ yarn add @vielzeug/craftit
 ## Quick Start
 
 ```ts
-import { component, define, signal, computed, html, css } from '@vielzeug/craftit';
+import { define, signal, computed, html, css } from '@vielzeug/craftit';
 
-define('my-counter', component({
+define('my-counter', {
   setup() {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
@@ -54,7 +54,7 @@ define('my-counter', component({
       }
     `,
   ],
-}));
+});
 ```
 
 ```html
@@ -81,12 +81,12 @@ class MyCounter extends HTMLElement {
 customElements.define('my-counter', MyCounter);
 
 // After — Craftit
-define('my-counter', component({
+define('my-counter', {
   setup() {
     const count = signal(0);
     return html`<button @click=${() => count.value++}>${count}</button>`;
   },
-}));
+});
 ```
 
 | Feature            | Craftit                                        | Lit          | Stencil           |
@@ -108,14 +108,14 @@ define('my-counter', component({
 
 - **Fine-grained reactivity** — Re-exports all signals from `@vielzeug/stateit`: `signal()`, `computed()`, `effect()`, `watch()`, `batch()`, `untrack()`, and more
 - **Template literals** — `html\`...\`` for declarative, reactive DOM updates with `:attr`, `@event`, `ref=`, and `.prop` bindings
-- **Styling helper** — `css\`...\`` for component styles used via `component({ styles })`
-- **Lifecycle hooks** — `onMount()`, `onCleanup()`, `onError()`, `handle()`, `watch()`, `onElement()`, and `useOnce()` for component lifecycle control
-- **Props** — top-level `component({ props })`, plus `prop()` for low-level reactive attribute bindings
+- **Styling helper** — `css\`...\`` for component styles used via `define(..., { styles })`
+- **Lifecycle hooks** — `onMount()`, `onCleanup()`, `onError()`, `handle()`, `watch()`, and `onElement()` for component lifecycle control
+- **Props** — typed props with `define<Props>(..., { props })` and inline `PropDef` options when needed
 - **Slots & Emits** — setup-context `slots` and setup-context `emit` with typed event schemas
 - **Refs** — `ref<T>()` and `refs<T>()` for DOM element references
 - **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation
 - **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
-- **Accessibility** — `aria()` for reactive ARIA attributes plus stable ID helpers such as `createId()` from core
+- **Accessibility** — stable ID helpers such as `createId()` from core
 - **Observers** — `resizeObserver()`, `intersectionObserver()`, and `mediaObserver()` from `@vielzeug/craftit/observers`
 - **Directive subpath** — `@vielzeug/craftit/directives` for `when`, `each`, `choose`, `until`, `bind`, `attrs`, and more
 - **Testing subpath** — `@vielzeug/craftit/testing` for `mount`, `fire`, `user`, `waitFor`, and cleanup helpers

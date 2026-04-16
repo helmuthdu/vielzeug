@@ -214,6 +214,10 @@ const createBaseFieldHandle = (
   effect(syncLabels);
 
   return {
+    bindTrigger:
+      (field: FormFieldHandle): ((on: FormControlValidationTrigger) => void) =>
+      (on) =>
+        controlState.triggerValidation(field, on),
     disabled: controlState.disabled,
     errorId: ids.errorId,
     fieldId: ids.fieldId,
@@ -222,8 +226,6 @@ const createBaseFieldHandle = (
     labelInsetRef,
     labelOutsideId: ids.labelOutsideId,
     labelOutsideRef,
-    triggerValidation: (field: FormFieldHandle, on: FormControlValidationTrigger) =>
-      controlState.triggerValidation(field, on),
     validateOn: controlState.validateOn,
   };
 };
@@ -304,7 +306,7 @@ const optionalNumberSource = (value: ReactiveValue<number | undefined> | undefin
 export const createTextFieldControl = (options: TextFieldOptions): TextFieldHandle => {
   const value = signal('');
   const controlContext = resolveControlContext(options);
-  const base = createBaseFieldHandle({
+  const { bindTrigger, ...base } = createBaseFieldHandle({
     ...options,
     ...controlContext,
   });
@@ -330,6 +332,8 @@ export const createTextFieldControl = (options: TextFieldOptions): TextFieldHand
     },
   );
 
+  const triggerValidation = bindTrigger(field);
+
   const assistive = createAssistiveState({
     error: options.error,
     helper: options.helper,
@@ -343,7 +347,7 @@ export const createTextFieldControl = (options: TextFieldOptions): TextFieldHand
     value.value = '';
     options.onInput?.(event ?? new Event('input'), '');
     options.onChange?.(event ?? new Event('change'), '');
-    base.triggerValidation(field, 'change');
+    triggerValidation('change');
     options.elementRef?.value?.focus();
   };
 
@@ -357,7 +361,7 @@ export const createTextFieldControl = (options: TextFieldOptions): TextFieldHand
           options.onInputExtra?.(event);
           options.onInput?.(event, nextValue);
         },
-        triggerValidation: (on) => base.triggerValidation(field, on),
+        triggerValidation,
       });
     });
   }
@@ -384,7 +388,7 @@ export const createTextFieldControl = (options: TextFieldOptions): TextFieldHand
     ...base,
     clear,
     field,
-    triggerValidation: (on: FormControlValidationTrigger) => base.triggerValidation(field, on),
+    triggerValidation,
     value,
   };
 };
@@ -420,7 +424,7 @@ const parseChoiceFieldValues = (value: string | undefined): string[] => {
 
 export const createChoiceFieldControl = <T>(options: ChoiceFieldOptions<T>): ChoiceFieldHandle<T> => {
   const controlContext = resolveControlContext(options);
-  const base = createBaseFieldHandle({
+  const { bindTrigger, ...base } = createBaseFieldHandle({
     ...controlContext,
     label: options.label,
     labelPlacement: options.labelPlacement,
@@ -514,6 +518,8 @@ export const createChoiceFieldControl = <T>(options: ChoiceFieldOptions<T>): Cho
     },
   );
 
+  const triggerValidation = bindTrigger(field);
+
   const assistive = createAssistiveState({
     error: options.error,
     helper: options.helper,
@@ -545,13 +551,13 @@ export const createChoiceFieldControl = <T>(options: ChoiceFieldOptions<T>): Cho
     selectedValues,
     selectItem,
     toggleItem,
-    triggerValidation: (on: FormControlValidationTrigger) => base.triggerValidation(field, on),
+    triggerValidation,
   };
 };
 
 export const createCheckableStateControl = (options: CheckableStateOptions): CheckableStateHandle => {
   const value = signal('');
-  const base = createBaseFieldHandle(options);
+  const { bindTrigger, ...base } = createBaseFieldHandle(options);
   const checked = signal(Boolean(options.checked.value));
   const indeterminate = signal(Boolean(options.indeterminate?.value));
   const assistive = createAssistiveState({ error: options.error, helper: options.helper });
@@ -588,6 +594,8 @@ export const createCheckableStateControl = (options: CheckableStateOptions): Che
       },
     },
   );
+
+  const triggerValidation = bindTrigger(field);
 
   watch(
     options.value,
@@ -631,7 +639,7 @@ export const createCheckableStateControl = (options: CheckableStateOptions): Che
     field,
     indeterminate,
     toggle,
-    triggerValidation: (on: FormControlValidationTrigger) => base.triggerValidation(field, on),
+    triggerValidation,
     value,
   };
 };

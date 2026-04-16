@@ -24,6 +24,16 @@ export type ComponentRegistrationOptions = {
 
 type ComponentSetupResult = string | HTMLResult;
 
+const isDevelopmentMode = (): boolean => {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  if (typeof process === 'undefined') return true;
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  return process.env.NODE_ENV !== 'production';
+};
+
 class BaseElement extends HTMLElement {
   static _options?: ComponentRegistrationOptions;
   static _setup: () => ComponentSetupResult;
@@ -209,6 +219,10 @@ export function registerComponent(
   if (!tag) throw new Error('[craftit:E4] registerComponent(tag, ...) requires a tag name');
 
   if (customElements.get(tag)) {
+    if (isDevelopmentMode()) {
+      throw new Error(`[craftit:E10] define('${tag}', ...) called more than once`);
+    }
+
     return tag;
   }
 

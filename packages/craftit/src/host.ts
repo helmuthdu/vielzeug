@@ -159,7 +159,6 @@ export const createSlots = (): ComponentSlots => {
   const elementSignals = new Map<string, Signal<Element[]>>();
   const slotNodesByName = new Map<string, Set<HTMLSlotElement>>();
   const slotCleanupMap = new Map<HTMLSlotElement, () => void>();
-  let isDisposing = false;
 
   const ensurePresenceSignal = (name: string): Signal<boolean> => {
     const normalized = normalizeSlotName(name);
@@ -213,80 +212,37 @@ export const createSlots = (): ComponentSlots => {
 
     slotEl.addEventListener('slotchange', onChange);
 
-    const cleanup = () => {
+    slotCleanupMap.set(slotEl, () => {
       slotEl.removeEventListener('slotchange', onChange);
-      slotCleanupMap.delete(slotEl);
-
-      if (isDisposing) return;
-
-      const currentSet = slotNodesByName.get(name);
-
-      if (!currentSet) return;
-
-      currentSet.delete(slotEl);
-
-      if (currentSet.size === 0) {
-        slotNodesByName.delete(name);
-      }
-
-      recomputeSlot(name);
-    };
-
-    slotCleanupMap.set(slotEl, cleanup);
+    });
 
     recomputeSlot(name);
-  };
-
-  const unbindSlot = (slotEl: HTMLSlotElement): void => {
-    slotCleanupMap.get(slotEl)?.();
   };
 
   const bindAllSlots = (): void => {
     host.shadowRoot?.querySelectorAll('slot').forEach((slotEl) => bindSlot(slotEl));
   };
 
+  const recomputeAllSlots = (): void => {
+    for (const name of slotNodesByName.keys()) {
+      recomputeSlot(name);
+    }
+  };
+
   ensurePresenceSignal(SLOT_DEFAULT);
   ensureElementSignal(SLOT_DEFAULT);
 
+  // setup() runs before the template is rendered, so bind once now (if any slots
+  // already exist) and again on mount after shadow DOM content has been stamped.
   bindAllSlots();
 
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLSlotElement) {
-          bindSlot(node);
-
-          return;
-        }
-
-        if (node instanceof Element) {
-          node.querySelectorAll('slot').forEach((slotEl) => bindSlot(slotEl));
-        }
-      });
-
-      mutation.removedNodes.forEach((node) => {
-        if (node instanceof HTMLSlotElement) {
-          unbindSlot(node);
-
-          return;
-        }
-
-        if (node instanceof Element) {
-          node.querySelectorAll('slot').forEach((slotEl) => unbindSlot(slotEl));
-        }
-      });
-    }
+  onMount(() => {
+    bindAllSlots();
+    recomputeAllSlots();
   });
 
-  if (host.shadowRoot) {
-    observer.observe(host.shadowRoot, { childList: true, subtree: true });
-  }
-
   onCleanup(() => {
-    isDisposing = true;
-    observer.disconnect();
-
-    for (const cleanup of [...slotCleanupMap.values()]) cleanup();
+    for (const cleanup of slotCleanupMap.values()) cleanup();
 
     slotCleanupMap.clear();
     slotNodesByName.clear();
@@ -328,25 +284,11 @@ export type HostBindConfig<CustomEvents extends Record<string, unknown> = Record
   | { class: () => Record<string, boolean> }
   | { on: HostEventListeners<CustomEvents> };
 
-export type HostBindTarget = 'attr' | 'class' | 'on';
-
 export type ComponentHost = {
-  bind: {
-    <CustomEvents extends Record<string, unknown> = Record<string, never>>(
-      config: HostBindConfig<CustomEvents>,
-      options?: AddEventListenerOptions,
-    ): () => void;
-    <CustomEvents extends Record<string, unknown> = Record<string, never>>(
-      target: 'attr',
-      config: ReflectConfig,
-    ): () => void;
-    (target: 'class', getter: () => Record<string, boolean>): () => void;
-    <CustomEvents extends Record<string, unknown> = Record<string, never>>(
-      target: 'on',
-      hostEvents: HostEventListeners<CustomEvents>,
-      options?: AddEventListenerOptions,
-    ): () => void;
-  };
+  bind: <CustomEvents extends Record<string, unknown> = Record<string, never>>(
+    config: HostBindConfig<CustomEvents>,
+    options?: AddEventListenerOptions,
+  ) => () => void;
   el: HTMLElement;
   shadowRoot: ShadowRoot;
 };
@@ -355,21 +297,8 @@ export const createHost = (): ComponentHost => {
   const el = currentRuntime().el;
 
   return {
-    bind: (
-      targetOrConfig: HostBindTarget | HostBindConfig,
-      configOrOptions?: ReflectConfig | (() => Record<string, boolean>) | HostEventListeners | AddEventListenerOptions,
-      maybeOptions?: AddEventListenerOptions,
-    ) => {
+    bind: (config, options) => {
       const disposers: Array<() => void> = [];
-
-      const config =
-        typeof targetOrConfig === 'string'
-          ? ({ [targetOrConfig]: configOrOptions } as HostBindConfig)
-          : (targetOrConfig as HostBindConfig);
-      const options =
-        typeof targetOrConfig === 'string' && targetOrConfig === 'on'
-          ? (maybeOptions as AddEventListenerOptions | undefined)
-          : (configOrOptions as AddEventListenerOptions | undefined);
 
       if ('attr' in config) {
         for (const [key, value] of Object.entries(config.attr)) {

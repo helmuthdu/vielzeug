@@ -66,6 +66,25 @@ export type ComponentDefinition<
   PropDefs extends PropInputDefs = PropsInput<Props>,
 > = ComponentOptions<Props, Emits, PropDefs>;
 
+const isStructuredDefault = (value: unknown): boolean =>
+  Array.isArray(value) || (typeof value === 'object' && value !== null);
+
+const validatePropDefinitions = (tag: string, propDefs: PropInputDefs | undefined): void => {
+  if (!propDefs) return;
+
+  for (const [name, definition] of Object.entries(propDefs)) {
+    if (typeof definition !== 'object' || definition === null || !('default' in definition)) continue;
+
+    const descriptor = definition as PropDef<unknown>;
+
+    if (descriptor.reflect === true && isStructuredDefault(descriptor.default)) {
+      throw new Error(
+        `[craftit:E9] define('${tag}', ...): props.${name} cannot use reflect: true with object/array defaults`,
+      );
+    }
+  }
+};
+
 const defineInternal = <
   Props extends Record<string, unknown> = Record<never, never>,
   EventsType extends Record<string, unknown> = Record<string, never>,
@@ -75,6 +94,8 @@ const defineInternal = <
   definition: ComponentDefinition<Props, EventsType, PropDefs> & { props?: PropDefs },
 ): string => {
   const { formAssociated, host: hostOptions, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
+
+  validatePropDefinitions(tag, propDefs);
 
   const observedAttrs = propDefs ? Object.keys(propDefs).map(toKebab) : [];
 

@@ -14,13 +14,13 @@ Implement context provider and consumer in a production-friendly way with `@viel
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { component, createContext, define, html, inject, provide, signal } from '@vielzeug/craftit';
+import { createContext, define, html, inject, provide, signal } from '@vielzeug/craftit';
 
 const THEME_CTX = createContext<ReturnType<typeof signal<'light' | 'dark'>>>('theme');
 
 define(
   'theme-provider',
-  component({
+  {
     setup() {
       const theme = signal<'light' | 'dark'>('light');
 
@@ -31,18 +31,18 @@ define(
         <slot></slot>
       `;
     },
-  }),
+  },
 );
 
 define(
   'theme-label',
-  component({
+  {
     setup() {
       const theme = inject(THEME_CTX, signal<'light' | 'dark'>('light'));
 
       return html`<p>Theme: ${theme}</p>`;
     },
-  }),
+  },
 );
 ```
 

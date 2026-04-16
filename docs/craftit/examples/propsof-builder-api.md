@@ -1,13 +1,13 @@
 ---
 title: 'Craftit Examples — Plain Props API'
-description: 'Examples demonstrating the component<Props> plain props API.'
+description: 'Examples demonstrating the define<Props> plain props API.'
 ---
 
 ## Plain Props API
 
 ## Problem
 
-Define typed component props directly in `component<Props>({ props })` without a separate schema builder.
+Define typed component props directly in `define<Props>(..., { props })` without a separate schema builder.
 
 ## Runnable Example
 
@@ -16,7 +16,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 ### Basic Usage
 
 ```ts
-import { component, define, html } from '@vielzeug/craftit';
+import { define, html } from '@vielzeug/craftit';
 
 type ButtonProps = {
   count?: number;
@@ -29,9 +29,9 @@ type ButtonProps = {
   variant?: 'solid' | 'outline';
 };
 
-define(
+define<ButtonProps>(
   'x-button',
-  component<ButtonProps>({
+  {
     props: {
       label: 'Button',
       disabled: false,
@@ -44,30 +44,30 @@ define(
     },
     setup({ props }) {
       return html`
-        <button ?disabled=${props.disabled} :data-size=${props.size}>
-          ${props.count > 0 ? html`<span class="badge">${props.count}</span>` : ''}
-          ${props.label}
+        <button ?disabled=${props.disabled.value} :data-size=${props.size.value}>
+          ${props.count.value > 0 ? html`<span class="badge">${props.count.value}</span>` : ''}
+          ${props.label.value}
         </button>
-        ${props.helperText ? html`<small>${props.helperText}</small>` : ''}
+        ${props.helperText.value ? html`<small>${props.helperText.value}</small>` : ''}
       `;
     },
-  }),
+  },
 );
 ```
 
 ### With `PropDef` options
 
 ```ts
-import { component, define, html } from '@vielzeug/craftit';
+import { define, html } from '@vielzeug/craftit';
 
-define(
-  'x-data-component',
-  component<{
+define<{
   data?: Record<string, unknown>;
   error?: string;
   internalState?: number;
   timestamp?: number;
-  }>({
+  }>(
+  'x-data-component',
+  {
     props: {
       // Don't reflect complex objects to attributes
       data: { default: {}, reflect: false },
@@ -86,38 +86,38 @@ define(
       internalState: { default: 0, type: Number, reflect: false },
     },
     setup({ props }) {
-      return html`<div>${props.internalState}</div>`;
+      return html`<div>${props.internalState.value}</div>`;
     },
-  }),
+  },
 );
 ```
 
 ### Union props from the component type
 
 ```ts
-import { component, define, html } from '@vielzeug/craftit';
+import { define, html } from '@vielzeug/craftit';
 
 const COLORS = ['red', 'green', 'blue'] as const;
 const SIZES = ['sm', 'md', 'lg', 'xl'] as const;
 
-define(
-  'x-colored-box',
-  component<{
+define<{
     color?: (typeof COLORS)[number];
     size?: (typeof SIZES)[number];
-  }>({
+  }>(
+  'x-colored-box',
+  {
     props: {
       color: 'red',
       size: 'md',
     },
     setup({ props }) {
       return html`
-        <div style=${{ color: props.color, fontSize: `var(--size-${props.size})` }}>
+        <div style=${{ color: props.color.value, fontSize: `var(--size-${props.size.value})` }}>
           Component
         </div>
       `;
     },
-  }),
+  },
 );
 ```
 
@@ -132,7 +132,7 @@ define(
 
 ### Key Features
 
-- **Type Safety**: Full TypeScript support from `component<Props>`
+- **Type Safety**: Full TypeScript support from `define<Props>`
 - **Simple Defaults**: Plain values for common cases
 - **Advanced Options**: Inline `PropDef` objects for `parse`, `reflect`, and `omit`
 - **Validation**: Keep allowed values in the prop type and choose sensible defaults
@@ -144,11 +144,11 @@ define(
 ### Theme and Variant Customization
 
 ```ts
-define('x-themeable', component<{
+define<{
   color?: 'primary' | 'secondary' | 'accent' | 'neutral';
   size?: 'sm' | 'md' | 'lg';
   variant?: 'solid' | 'outline' | 'ghost';
-}>({
+}>('x-themeable', {
   props: {
     color: 'primary',
     variant: 'solid',
@@ -157,19 +157,19 @@ define('x-themeable', component<{
   setup() {
     return html`...`;
   },
-}))
+})
 ```
 
 ### Form Integration
 
 ```ts
-define('x-field', component<{
+define<{
   disabled?: boolean;
   name?: string;
   placeholder?: string;
   required?: boolean;
   value?: string;
-}>({
+}>('x-field', {
   props: {
     name: '',
     value: '',
@@ -180,18 +180,18 @@ define('x-field', component<{
   setup() {
     return html`...`;
   },
-}))
+})
 ```
 
 ### Configuration Props
 
 ```ts
-define('x-configurable', component<{
+define<{
   itemsPerPage?: number;
   maxItems?: number;
   minItems?: number;
   sortBy?: 'name' | 'date' | 'size';
-}>({
+}>('x-configurable', {
   props: {
     itemsPerPage: 10,
     minItems: 0,
@@ -201,7 +201,7 @@ define('x-configurable', component<{
   setup() {
     return html`...`;
   },
-}))
+})
 ```
 
 ## Related Recipes

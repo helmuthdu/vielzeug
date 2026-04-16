@@ -14,7 +14,7 @@ Implement typed props and events in a production-friendly way with `@vielzeug/cr
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { component, define, html } from '@vielzeug/craftit';
+import { define, html } from '@vielzeug/craftit';
 
 type AlertBoxProps = {
   message?: string;
@@ -26,9 +26,9 @@ type AlertBoxEvents = {
   close: void;
 };
 
-define(
+define<AlertBoxProps, AlertBoxEvents>(
   'alert-box',
-  component<AlertBoxProps, AlertBoxEvents>({
+  {
     props: {
       message: 'Saved successfully',
       open: true,
@@ -39,15 +39,15 @@ define(
         ${() =>
           props.open.value
             ? html`
-                <div :data-variant=${props.variant}>
-                  <span>${props.message}</span>
+                <div :data-variant=${props.variant.value}>
+                  <span>${props.message.value}</span>
                   <button @click=${() => emit('close')}>Close</button>
                 </div>
               `
             : ''}
       `;
     },
-  }),
+  },
 );
 ```
 

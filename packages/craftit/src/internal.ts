@@ -219,6 +219,42 @@ export const EACH_SIGNAL: unique symbol = Symbol('craftit.eachSignal');
 /** @internal — binding element identifier attribute. */
 export const CF_ID_ATTR = 'u';
 
+// Shared across rekeyHtmlResult — safe to reuse with replace() (lastIndex not used by replace)
+const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="([^"]+)"`, 'g');
+
+/** @internal — creates a sequential numeric ID factory starting at 0. */
+export const createMarkerIdFactory = (): (() => string) => {
+  let n = 0;
+
+  return () => String(n++);
+};
+
+/** @internal — remaps binding UIDs in an HTMLResult using a shared ID factory. */
+export const rekeyHtmlResult = (
+  result: HTMLResult,
+  getNextId: () => string,
+): { bindings: Binding[]; html: string } => {
+  const idMap = new Map<string, string>();
+  const getMappedId = (id: string): string => {
+    const mapped = idMap.get(id);
+
+    if (mapped) return mapped;
+
+    const next = getNextId();
+
+    idMap.set(id, next);
+
+    return next;
+  };
+
+  return {
+    bindings: result.__bindings.map((binding) => ({ ...binding, uid: getMappedId(binding.uid) }) as Binding),
+    html: result.__html
+      .replace(ATTR_ID_RE, (_, id: string) => `${CF_ID_ATTR}="${getMappedId(id)}"`)
+      .replace(/<!--(\d+)-->/g, (_, id: string) => `<!--${getMappedId(id)}-->`),
+  };
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // INTERNAL DOM & EVENT UTILITIES
 // ─────────────────────────────────────────────────────────────────────────────

@@ -14,12 +14,12 @@ Implement search list with directives in a production-friendly way with `@vielze
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { component, computed, define, html, signal } from '@vielzeug/craftit';
+import { computed, define, html, signal } from '@vielzeug/craftit';
 import { each, when } from '@vielzeug/craftit/directives';
 
 define(
   'search-list',
-  component({
+  {
     setup() {
       const query = signal('');
       const items = signal(['Alice', 'Bob', 'Carol', 'Dave']);
@@ -41,7 +41,7 @@ define(
         })}
       `;
     },
-  }),
+  },
 );
 ```
 

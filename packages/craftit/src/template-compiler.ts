@@ -3,9 +3,11 @@ import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/
 import {
   CF_ID_ATTR,
   EACH_SIGNAL,
+  createMarkerIdFactory,
   escapeHtml,
   htmlResult,
   isHtmlResult,
+  rekeyHtmlResult,
   type Binding,
   type Directive,
   type EventBinding,
@@ -14,8 +16,6 @@ import {
   type RefCallback,
 } from './internal';
 import { createAttrBinding, createPropBinding } from './template-bindings';
-
-const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="([^"]+)"`, 'g');
 
 const normalizeCompiledHtml = (html: string): string => html.replace(/>\s+</g, '><').trim();
 
@@ -119,39 +119,6 @@ const getCompiledTemplatePlan = (strings: TemplateStringsArray): CompiledTemplat
   return plan;
 };
 
-const createMarkerIdFactory = (): (() => string) => {
-  let markerIndex = 0;
-
-  return () => String(markerIndex++);
-};
-
-const rekeyHtmlResult = (
-  result: HTMLResult,
-  getNextId: () => string,
-): {
-  bindings: Binding[];
-  html: string;
-} => {
-  const idMap = new Map<string, string>();
-  const getMappedId = (id: string): string => {
-    const mapped = idMap.get(id);
-
-    if (mapped) return mapped;
-
-    const next = getNextId();
-
-    idMap.set(id, next);
-
-    return next;
-  };
-
-  return {
-    bindings: result.__bindings.map((binding) => ({ ...binding, uid: getMappedId(binding.uid) }) as Binding),
-    html: result.__html
-      .replace(ATTR_ID_RE, (_, id: string) => `${CF_ID_ATTR}="${getMappedId(id)}"`)
-      .replace(/<!--(\d+)-->/g, (_, id: string) => `<!--${getMappedId(id)}-->`),
-  };
-};
 
 const getEachSignalSource = (
   value: unknown,
@@ -377,34 +344,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
       if (isInterpolation) {
         const render = (value as Directive).render!.bind(value);
-        let cached = { bindings: [] as Binding[], html: '' };
-        const fnSignal = computed(() => {
-          const res = render();
-          const items = Array.isArray(res) ? res : [res];
-          const getNestedId = createMarkerIdFactory();
-          let html = '';
-          const nextBindings: Binding[] = [];
-
-          for (const item of items) {
-            if (isHtmlResult(item)) {
-              const entry = rekeyHtmlResult(item, getNestedId);
-
-              html += entry.html;
-              nextBindings.push(...entry.bindings);
-            } else {
-              html += resolveDirectiveValue(item);
-            }
-          }
-
-          const bindingsChanged =
-            nextBindings.length !== cached.bindings.length || nextBindings.some((b, i) => b !== cached.bindings[i]);
-
-          if (html !== cached.html || bindingsChanged) {
-            cached = { bindings: nextBindings, html };
-          }
-
-          return cached;
-        });
+        const { signal: fnSignal } = renderHtmlItems(render);
 
         bindings.push({ keyed: false, signal: fnSignal, type: 'html', uid: id });
       }

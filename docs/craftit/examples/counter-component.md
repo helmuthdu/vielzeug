@@ -14,11 +14,11 @@ Implement counter component in a production-friendly way with `@vielzeug/craftit
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { component, define, html, signal } from '@vielzeug/craftit';
+import { define, html, signal } from '@vielzeug/craftit';
 
 define(
   'simple-counter',
-  component({
+  {
     setup() {
       const count = signal(0);
 
@@ -30,7 +30,7 @@ define(
         </div>
       `;
     },
-  }),
+  },
 );
 ```
 

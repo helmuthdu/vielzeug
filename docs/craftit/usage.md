@@ -15,7 +15,7 @@ Start with the [Overview](./index.md) for installation and a quick intro, then u
 
 `define(tag, definition)` registers that definition and returns the tag name.
 
-Tags are idempotent: registering the same tag again is ignored.
+Registering the same tag twice throws in development mode to catch accidental duplicate definitions early.
 
 ```ts
 import { define, html, signal } from '@vielzeug/craftit';
@@ -256,24 +256,19 @@ Use lifecycle helpers from the main entrypoint.
 
 ```ts
 import {
-  aria,
-  component,
-  currentRuntime,
   define,
   handle,
   html,
   onCleanup,
   onError,
   onMount,
-  reflect,
   signal,
 } from '@vielzeug/craftit';
 
 define(
   'window-size',
   {
-    setup() {
-      const host = currentRuntime().el;
+    setup({ host }) {
       const width = signal(window.innerWidth);
 
       onError((err) => console.error('window-size failed', err));
@@ -284,19 +279,21 @@ define(
         });
 
         onCleanup(() => {
-          host.toggleAttribute('ready', true);
+          host.el.toggleAttribute('ready', true);
         });
       });
 
-      reflect(host, {}, {
-        keydown: (e) => {
-          if (e.key === 'Enter') host.toggleAttribute('active');
+      host.bind({
+        attr: {
+          'aria-busy': () => String(width.value < 768),
+          'aria-label': 'Window size watcher',
+          tabindex: 0,
         },
-      });
-
-      aria(host, {
-        busy: () => (width.value < 768 ? 'true' : null),
-        label: 'Window size watcher',
+        on: {
+          keydown: (e) => {
+            if (e.key === 'Enter') host.el.toggleAttribute('active');
+          },
+        },
       });
 
       return html`<p>Width: ${width}</p>`;
@@ -319,9 +316,9 @@ fire.custom(host, 'change', { detail: { value: 'Ada' } });
 
 ## Props and Attributes
 
-Use `component<Props>({ props })` with plain default values for grouped props, or `prop()` for one-off low-level bindings.
+Use `define<Props>(..., { props })` with plain default values for grouped props.
 
-### Declaring props with `component<Props>`
+### Declaring props with `define<Props>`
 
 ```ts
 import { define, html } from '@vielzeug/craftit';
@@ -334,7 +331,7 @@ type ButtonProps = {
 
 define(
   'x-button',
-  component<ButtonProps>({
+  {
     props: {
       label: 'Button',
       disabled: false,
@@ -365,7 +362,7 @@ type ButtonProps = {
 
 define(
   'x-button',
-  component<ButtonProps>({
+  {
     props: {
       description: undefined,
       count: { default: undefined, type: Number },
@@ -375,9 +372,9 @@ define(
     setup({ props }) {
       return html`
         <button>
-          ${props.count ? html`<span>${props.count}</span>` : null}
+          ${props.count.value ? html`<span>${props.count.value}</span>` : null}
         </button>
-        ${props.description ? html`<small>${props.description}</small>` : ''}
+        ${props.description.value ? html`<small>${props.description.value}</small>` : ''}
       `;
     },
   },
@@ -386,7 +383,7 @@ define(
 
 ### Typed emits
 
-Declare event contracts with the second `component<Props, Events>` generic:
+Declare event contracts with the second `define<Props, Events>` generic:
 
 ```ts
 import { define, html } from '@vielzeug/craftit';
@@ -397,33 +394,16 @@ type ButtonEvents = {
   change: { variant: Variant };
 };
 
-define(
+define<{ variant?: Variant }, ButtonEvents>(
   'x-button',
-  component<{ variant?: Variant }, ButtonEvents>({
+  {
     props: {
       variant: 'primary',
     },
     setup({ emit, props }) {
-      return html`<button @click=${() => emit('change', { variant: props.variant.value })}>${props.variant}</button>`;
-    },
-  },
-);
-```
-
-### Low-level `prop()` binding
-
-For single reactive properties outside of `component`, use `prop()`:
-
-```ts
-import { define, html, prop } from '@vielzeug/craftit';
-
-define(
-  'x-button',
-  {
-    setup() {
-      const disabled = prop('disabled', false);
-
-      return html`<button ?disabled=${disabled}>Click me</button>`;
+      return html`
+        <button @click=${() => emit('change', { variant: props.variant.value })}>${props.variant.value}</button>
+      `;
     },
   },
 );

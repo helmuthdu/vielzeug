@@ -29,7 +29,7 @@ define<Props, Events>(tag: string, definition: ComponentDefinition<Props, Events
 
 Registers a custom element and returns the tag name.
 
-If the tag already exists, Craftit keeps the existing registration and returns the tag.
+If the tag already exists, Craftit throws in development mode to prevent accidental duplicate registrations. In production mode, existing registrations are kept.
 
 ## Field Authoring Controls
 
@@ -77,7 +77,6 @@ For host attributes, classes, and host listeners, use `host.bind(...)` from the 
 Signatures:
 
 - `watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription`
-- `watch(sources: ReadonlyArray<ReadonlySignal<unknown>>, cb: () => void, options?: WatchOptions<unknown>): Subscription`
 
 ### DOM/Event Utilities
 
@@ -88,7 +87,6 @@ Signatures:
 - `fire.focus(target, type, options?)` — dispatches a `FocusEvent`.
 - `fire.touch(target, type, options?)` — dispatches a `TouchEvent` when available, otherwise `CustomEvent`.
 - `fire.event(target, event)` — dispatches a prebuilt event instance.
-- `aria(attrs)` or `aria(target, attrs)` — reactive ARIA attributes (`false`, `null`, and `undefined` remove the attribute).
 - `host.bind({ attr: ... })`, `host.bind({ class: ... })`, `host.bind({ on: ... })` — host attribute/class/listener wiring from setup context.
 
 Prefer template `@event` bindings for inner DOM nodes; use `host.bind({ on: ... })` or `handle()` for host-level interactions.
@@ -186,7 +184,7 @@ define<{ count?: number; error?: string }>('my-counter', {
 
 ### `prop(name, defaultValue, options?)`
 
-Low-level API for reactive property bindings. Typically use inline `component<Props>({ props })` defaults instead.
+Low-level API for reactive property bindings. Typically use inline `define<Props>(..., { props })` defaults instead.
 
 ```ts
 prop<T>(name: string, defaultValue: T, options?: PropOptions<T>): Signal<T>;
@@ -317,7 +315,6 @@ Import from `@vielzeug/craftit/controls`:
 
 ### Controls contract notes
 
-- `aria(...)` semantics apply broadly: `false`, `null`, and `undefined` remove ARIA attributes.
 - `createOverlayControl` close/open reasons are part of the public contract and intended for typed event payloads.
 
 Observer APIs are exported from `@vielzeug/craftit/observers`:

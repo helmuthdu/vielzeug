@@ -38,7 +38,6 @@ type PropType<T> = T extends string
         : ObjectConstructor;
 
 const PROP_DEF_KEYS = new Set(['default', 'omit', 'parse', 'reflect', 'type']);
-const warnedStructuredReflectProps = new Set<string>();
 
 const isPropDef = (value: unknown): value is PropDef<unknown> => {
   if (typeof value !== 'object' || value === null || !('default' in value)) return false;
@@ -159,23 +158,11 @@ export type ComponentProps<T extends Record<string, unknown>> = InferPropsSignal
 
 export function createProps<D extends PropInputDefs>(defs: D): ComponentProps<InferPropsFromDefs<D>> {
   const props = {} as Record<string, Signal<unknown>>;
-  const tag = currentRuntime().el.localName;
 
   for (const [name, def] of Object.entries(defs)) {
     const descriptor = isPropDef(def) ? (def as PropDef<unknown>) : { default: def };
     const hasStructuredDefault =
       (typeof descriptor.default === 'object' && descriptor.default !== null) || Array.isArray(descriptor.default);
-
-    if (descriptor.reflect === true && hasStructuredDefault) {
-      const warningKey = `${tag}:${String(name)}`;
-
-      if (!warnedStructuredReflectProps.has(warningKey)) {
-        warnedStructuredReflectProps.add(warningKey);
-        console.warn(
-          `[craftit] props.${warningKey} requested reflect: true for a structured default; reflection is disabled.`,
-        );
-      }
-    }
 
     const propDef: PropOptions<unknown> = { reflect: !hasStructuredDefault, ...descriptor };
 

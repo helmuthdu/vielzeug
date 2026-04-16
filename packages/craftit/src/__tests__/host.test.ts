@@ -19,6 +19,57 @@ const register = (tag: string, setup: ComponentDefinition['setup'], options: Omi
   define(tag, { setup, ...options });
 
 describe('core/host.ts', () => {
+  describe('Host bind API', () => {
+    it('applies host attrs and classes from object-style config', async () => {
+      const { element, flush, query } = await mount(({ host }) => {
+        const open = signal(false);
+
+        host.bind({
+          attr: {
+            role: 'button',
+            'aria-expanded': () => String(open.value),
+          },
+          class: () => ({ 'is-open': open.value }),
+        });
+
+        return html`<button @click=${() => (open.value = true)}>Open</button>`;
+      });
+
+      expect(element.getAttribute('role')).toBe('button');
+      expect(element.getAttribute('aria-expanded')).toBe('false');
+      expect(element.classList.contains('is-open')).toBe(false);
+
+      query('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flush();
+
+      expect(element.getAttribute('aria-expanded')).toBe('true');
+      expect(element.classList.contains('is-open')).toBe(true);
+    });
+
+    it('supports listener options for host event bindings', async () => {
+      let clicks = 0;
+      const { element } = await mount(({ host }) => {
+        host.bind(
+          {
+            on: {
+              click: () => {
+                clicks++;
+              },
+            },
+          },
+          { once: true },
+        );
+
+        return html`<div>Host listener</div>`;
+      });
+
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(clicks).toBe(1);
+    });
+  });
+
   describe('Context API', () => {
     describe('inject()', () => {
       it('returns the value provided by an ancestor', async () => {
@@ -229,6 +280,32 @@ describe('core/host.ts', () => {
       await flush();
 
       expect(callback).toHaveBeenCalledWith([]);
+    });
+
+    it('updates slot signals when assigned light-DOM content changes', async () => {
+      let defaultElements!: ReadonlySignal<Element[]>;
+      const { element, flush } = await mount(({ slots }) => {
+        defaultElements = slots.elements();
+
+        return html`<slot></slot>`;
+      });
+
+      await flush();
+      expect(defaultElements.value).toHaveLength(0);
+
+      const child = document.createElement('span');
+
+      child.textContent = 'added';
+      element.appendChild(child);
+      await flush();
+
+      expect(defaultElements.value).toHaveLength(1);
+      expect(defaultElements.value[0]).toBe(child);
+
+      child.remove();
+      await flush();
+
+      expect(defaultElements.value).toHaveLength(0);
     });
   });
 });

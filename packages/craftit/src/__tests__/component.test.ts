@@ -71,18 +71,58 @@ describe('Core: Component Definition', () => {
       expect(query2('div')?.textContent).toBe('0');
     });
 
-    it('should ignore repeated registration for the same tag', () => {
+    it('should throw on repeated registration for the same tag in development mode', () => {
       const tag = `test-dup-${Math.random().toString(36).slice(2)}`;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      const originalNodeEnv = process.env.NODE_ENV;
+
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      process.env.NODE_ENV = 'test';
+
+      try {
+        define(tag, {
+          setup: () => html`<div>First</div>`,
+        });
+
+        expect(() => {
+          define(tag, {
+            setup: () => html`<div>Second</div>`,
+          });
+        }).toThrow('[craftit:E10]');
+      } finally {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        process.env.NODE_ENV = originalNodeEnv;
+      }
+    });
+
+    it('should keep repeated registration idempotent in production mode', () => {
+      const tag = `test-dup-prod-${Math.random().toString(36).slice(2)}`;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      const originalNodeEnv = process.env.NODE_ENV;
+
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      process.env.NODE_ENV = 'production';
 
       define(tag, {
         setup: () => html`<div>First</div>`,
       });
 
-      expect(() => {
-        define(tag, {
-          setup: () => html`<div>Second</div>`,
-        });
-      }).not.toThrow();
+      try {
+        expect(() => {
+          define(tag, {
+            setup: () => html`<div>Second</div>`,
+          });
+        }).not.toThrow();
+      } finally {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        process.env.NODE_ENV = originalNodeEnv;
+      }
     });
   });
 
@@ -344,6 +384,32 @@ describe('Core: Component Definition', () => {
       const { query } = await mount(tag);
 
       expect(query('.value')?.textContent).toBe('');
+    });
+
+    it('should throw at define-time when object prop uses reflect: true', () => {
+      const tag = `test-reflect-structured-object-${Math.random().toString(36).slice(2)}`;
+
+      expect(() => {
+        define<{ data?: Record<string, string> }>(tag, {
+          props: {
+            data: { default: { a: '1' }, reflect: true },
+          },
+          setup: () => html`<div>invalid</div>`,
+        });
+      }).toThrow('[craftit:E9]');
+    });
+
+    it('should throw at define-time when array prop uses reflect: true', () => {
+      const tag = `test-reflect-structured-array-${Math.random().toString(36).slice(2)}`;
+
+      expect(() => {
+        define<{ items?: string[] }>(tag, {
+          props: {
+            items: { default: ['x'], reflect: true },
+          },
+          setup: () => html`<div>invalid</div>`,
+        });
+      }).toThrow('[craftit:E9]');
     });
   });
 

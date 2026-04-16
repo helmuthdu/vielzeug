@@ -1,51 +1,26 @@
 import { computed, isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
 import {
-  CF_ID_ATTR,
   EACH_SIGNAL,
+  createMarkerIdFactory,
   escapeHtml,
   extractResult,
   htmlResult,
   isHtmlResult,
+  rekeyHtmlResult,
   type Binding,
   type Directive,
   type HTMLResult,
 } from '../internal';
 
-const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="(\\d+)"`, 'g');
-
 /* immutable — shared singleton for empty static lists */
 const EMPTY = htmlResult('');
-const NO_BINDINGS: Binding[] = [];
 
-const toResultEntry = (value: string | HTMLResult, c: { n: number }): { bindings: Binding[]; html: string } =>
-  isHtmlResult(value) ? renumber(value, c) : { bindings: NO_BINDINGS, html: escapeHtml(value) };
+const toResultEntry = (value: string | HTMLResult, getNextId: () => string): { bindings: Binding[]; html: string } =>
+  isHtmlResult(value) ? rekeyHtmlResult(value, getNextId) : { bindings: [], html: escapeHtml(value) };
 
 const toHtmlResult = (value: string | HTMLResult): HTMLResult =>
   isHtmlResult(value) ? value : htmlResult(escapeHtml(value));
-
-function renumber(res: HTMLResult, c: { n: number }): { bindings: Binding[]; html: string } {
-  const map = new Map<string, string>();
-  const nb: Binding[] = [];
-
-  for (const b of res.__bindings) {
-    const oldId = b.uid;
-    const newId = map.get(oldId) ?? String(c.n++);
-
-    if (!map.has(oldId)) map.set(oldId, newId);
-
-    nb.push({ ...b, uid: newId });
-  }
-
-  return {
-    bindings: nb,
-    html: res.__html
-      // Re-map element binding ids.
-      .replace(ATTR_ID_RE, (_, id) => `${CF_ID_ATTR}="${map.get(id) ?? id}"`)
-      // Re-map numeric comment markers used by text/html placeholders.
-      .replace(/<!--(\d+)-->/g, (_, id) => `<!--${map.get(id) ?? id}-->`),
-  };
-}
 
 /** Render loop used by the reactive path (keys + rendered metadata required for reconciliation). */
 function renderKeyed<T>(
@@ -63,7 +38,7 @@ function renderKeyed<T>(
   const keys: (string | number)[] = [];
   const seenKeys = new Set<string | number>();
   const rendered: Array<{ bindings: Binding[]; html: string }> = [];
-  const c = { n: 0 };
+  const getNextId = createMarkerIdFactory();
 
   for (let i = 0; i < items.length; i++) {
     const nextKey = keyFn(items[i], i);
@@ -75,7 +50,7 @@ function renderKeyed<T>(
     seenKeys.add(nextKey);
     keys.push(nextKey);
 
-    const entry = toResultEntry(template(items[i], i), c);
+    const entry = toResultEntry(template(items[i], i), getNextId);
 
     html += entry.html;
     allBindings.push(...entry.bindings);
@@ -92,10 +67,10 @@ function renderStatic<T>(
 ): { bindings: Binding[]; html: string } {
   let html = '';
   const allBindings: Binding[] = [];
-  const c = { n: 0 };
+  const getNextId = createMarkerIdFactory();
 
   for (let i = 0; i < items.length; i++) {
-    const entry = toResultEntry(template(items[i], i), c);
+    const entry = toResultEntry(template(items[i], i), getNextId);
 
     html += entry.html;
     allBindings.push(...entry.bindings);

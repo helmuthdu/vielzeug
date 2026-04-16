@@ -14,11 +14,11 @@ Implement form-associated rating input in a production-friendly way with `@vielz
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { component, define, defineField, html, signal } from '@vielzeug/craftit';
+import { define, defineField, html, signal } from '@vielzeug/craftit';
 
 define(
   'rating-input',
-  component({
+  {
     formAssociated: true,
     setup() {
       const value = signal(0);
@@ -35,7 +35,7 @@ define(
         <p>Current: ${value}</p>
       `;
     },
-  }),
+  },
 );
 ```
 
@@ -49,7 +49,7 @@ define(
 - Forgetting cleanup/dispose calls can leak listeners or stale state.
 - Skipping explicit typing can hide integration issues until runtime.
 - Not handling error branches makes examples harder to adapt safely.
-- Calling `defineField()` without `formAssociated: true` on `component(...)` throws at runtime.
+- Calling `defineField()` without `formAssociated: true` on `define(..., { ... })` throws at runtime.
 
 ## Related Recipes
 

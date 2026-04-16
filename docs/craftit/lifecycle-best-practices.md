@@ -62,37 +62,36 @@ define('focus-input', {
 Use:
 
 - `host.bind({ attr: ... })`, `host.bind({ class: ... })`, and `host.bind({ on: ... })` for host wiring
-- `aria(config)` for ARIA/role host attributes
 - `handle(target, event, listener)` for external targets (`window`, `document`, arbitrary elements)
 
 ```ts
-import { aria, define, handle, html, signal } from '@vielzeug/craftit';
+import { define, handle, html, onMount, signal } from '@vielzeug/craftit';
 
 define('toggle-host', {
   setup({ host }) {
     const open = signal(false);
 
-    host.bind('class', () => ({ 'is-open': open.value }));
-    host.bind('attr', { tabindex: 0 });
-    host.bind('on', {
-      click: () => {
-        open.value = !open.value;
+    host.bind({
+      attr: {
+        'aria-expanded': () => String(open.value),
+        role: 'button',
+        tabindex: 0,
+      },
+      class: () => ({ 'is-open': open.value }),
+      on: {
+        click: () => {
+          open.value = !open.value;
+        },
       },
     });
 
-    aria({
-      expanded: () => String(open.value),
-      role: 'button',
+    onMount(() => {
+      handle(window, 'keydown', (e) => {
+        if (e.key === 'Escape') open.value = false;
+      });
     });
 
-      onMount(() => {
-        handle(window, 'keydown', (e) => {
-          if (e.key === 'Escape') open.value = false;
-        });
-      });
-
-      return html`<slot></slot>`;
-    },
+    return html`<slot></slot>`;
   },
 );
 ```
@@ -154,6 +153,6 @@ define(
 
 - Keep reactive state/effects in setup scope first.
 - Use `onElement()` for ref-based imperative logic.
-- Keep ARIA in `aria(...)`; keep host class/attrs/listeners in `host.bind(...)`.
+- Keep host class/attrs/listeners in `host.bind(...)`.
 - Use `onMount()` only for mount-gated APIs.
 - Return/attach cleanups for every listener or disposable resource.

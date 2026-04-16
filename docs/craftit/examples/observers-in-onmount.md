@@ -14,12 +14,12 @@ Implement observers in `onmount` in a production-friendly way with `@vielzeug/cr
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { component, define, effect, html, onMount, ref } from '@vielzeug/craftit';
+import { define, effect, html, onMount, ref } from '@vielzeug/craftit';
 import { mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';
 
 define(
   'observed-panel',
-  component({
+  {
     setup() {
       const panel = ref<HTMLDivElement>();
 
@@ -34,7 +34,7 @@ define(
 
       return html`<div ref=${panel}>Resize me</div>`;
     },
-  }),
+  },
 );
 ```
 
