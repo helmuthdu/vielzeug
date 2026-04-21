@@ -3,7 +3,7 @@ import { define, computed, effect, html, signal, watch } from '@vielzeug/craftit
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import '../icon/icon';
-import { type PropBundle, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { type PropsInput, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import groupStyles from './avatar-group.css?inline';
 import componentStyles from './avatar.css?inline';
@@ -75,8 +75,8 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
     initials: undefined,
     src: undefined,
     status: undefined,
-  } satisfies PropBundle<BitAvatarProps>,
-  setup({ props }) {
+  } satisfies PropsInput<BitAvatarProps>,
+  setup(props) {
     const imgFailed = signal(false);
 
     // Reset stale error state whenever src changes
@@ -199,12 +199,12 @@ export type BitAvatarGroupProps = {
  * </bit-avatar-group>
  * ```
  */
-export const AVATAR_GROUP_TAG = define<{ max?: number; total?: number }>('bit-avatar-group', {
+export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', {
   props: {
     max: 5,
     total: undefined,
-  },
-  setup({ host, props, slots }) {
+  } satisfies PropsInput<BitAvatarGroupProps>,
+  setup(props, { host, slots }) {
     const overflowCount = signal(0);
 
     const updateVisibility = () => {

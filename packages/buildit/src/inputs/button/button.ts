@@ -14,7 +14,7 @@ import { BUTTON_GROUP_CTX } from '../button-group/button-group';
 import {
   disablableBundle,
   loadableBundle,
-  type PropBundle,
+  type PropsInput,
   roundableBundle,
   sizableBundle,
   themableBundle,
@@ -111,10 +111,10 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
     target: undefined,
     type: 'button',
     variant: 'solid',
-  } satisfies PropBundle<BitButtonProps>,
-  setup({ emit, host, props }) {
+  } satisfies PropsInput<BitButtonProps>,
+  setup(props, { emit, host }) {
     // Reactively inherit size/variant/color from a parent bit-button-group when present.
-    syncContextProps(inject(BUTTON_GROUP_CTX, undefined), {
+    syncContextProps(inject(BUTTON_GROUP_CTX), {
       color: props.color,
       size: props.size,
       variant: props.variant,

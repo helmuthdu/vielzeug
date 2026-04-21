@@ -1,23 +1,19 @@
-import {
-  computed,
-  createContext,
-  createId,
-  define,
-  effect,
-  html,
-  inject,
-  provide,
-  signal,
-  watch,
-} from '@vielzeug/craftit';
+import { computed, createContext, createId, define, effect, html, inject, provide, signal } from '@vielzeug/craftit';
 import { createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
 
-import type { PropBundle } from '../shared/bundles';
+import type { PropsInput } from '../shared/bundles';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
-import { createChoiceChangeDetail } from '../shared/utils';
+import {
+  createChoiceChangeDetail,
+  getChoiceLabel,
+  getSlottedByTag,
+  setBooleanAttribute,
+  setMaybeAttribute,
+  syncSignalFromProp,
+} from '../shared/utils';
 import componentStyles from './radio-group.css?inline';
 
 /** Radio group component properties */
@@ -56,7 +52,7 @@ export type RadioGroupContext = {
 
 export const RADIO_GROUP_CTX = createContext<RadioGroupContext | undefined>('BitRadioGroup');
 
-const radioGroupProps: PropBundle<BitRadioGroupProps> = {
+const radioGroupProps: PropsInput<BitRadioGroupProps> = {
   color: undefined,
   disabled: false,
   error: undefined,
@@ -98,7 +94,7 @@ export type BitRadioGroupEvents = {
  */
 export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('bit-radio-group', {
   props: radioGroupProps,
-  setup({ emit, host, props, slots }) {
+  setup(props, { emit, host, slots }) {
     const selectedValue = signal((props.value.value as string | undefined) ?? '');
     const isDisabled = computed(() => Boolean(props.disabled.value));
 
@@ -108,25 +104,21 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
       },
     });
 
-    watch(
-      props.value,
-      (v) => {
+    syncSignalFromProp(props.value, {
+      get value() {
+        return selectedValue.value;
+      },
+      set value(v) {
         selectedValue.value = (v as string | undefined) ?? '';
       },
-      { immediate: true },
-    );
+    });
 
-    const getSlottedRadios = (): HTMLElement[] =>
-      Array.from(host.el.getElementsByTagName('bit-radio')) as HTMLElement[];
+    const getSlottedRadios = (): HTMLElement[] => getSlottedByTag(host.el, 'bit-radio');
 
     const getEnabledRadios = (): HTMLElement[] =>
       isDisabled.value ? [] : getSlottedRadios().filter((radio) => !radio.hasAttribute('disabled'));
 
-    const getLabelForValue = (value: string): string => {
-      const radio = getSlottedRadios().find((el) => (el.getAttribute('value') ?? '') === value);
-
-      return radio?.textContent?.replace(/\s+/g, ' ').trim() || value;
-    };
+    const getLabelForValue = (value: string): string => getChoiceLabel(getSlottedRadios(), value);
 
     const selectRadio = (val: string, originalEvent?: Event) => {
       selectedValue.value = val;
@@ -137,9 +129,9 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
       emit('change', createChoiceChangeDetail(values, labels, originalEvent));
     };
 
-    const formCtx = inject(FORM_CTX, undefined);
+    const formCtx = inject(FORM_CTX);
 
-    mountFormContextSync(host.el, formCtx, props as any);
+    mountFormContextSync(host.el, formCtx, props);
 
     provide(RADIO_GROUP_CTX, {
       color: props.color,
@@ -153,22 +145,14 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
     // Sync name/color/size/disabled onto slotted bit-radio children.
     // Checked state is handled reactively inside bit-radio via group context.
     const syncChildren = () => {
-      const setMaybe = (el: HTMLElement, name: string, value: string | undefined) => {
-        if (value) el.setAttribute(name, value);
-        else el.removeAttribute(name);
-      };
-      const setBool = (el: HTMLElement, name: string, enabled: boolean) => {
-        el.toggleAttribute(name, enabled);
-      };
-
       for (const radio of getSlottedRadios()) {
         const val = radio.getAttribute('value') ?? '';
 
-        setBool(radio, 'checked', val === selectedValue.value);
-        setMaybe(radio, 'name', props.name.value);
-        setMaybe(radio, 'color', props.color.value);
-        setMaybe(radio, 'size', props.size.value);
-        setBool(radio, 'disabled', isDisabled.value);
+        setBooleanAttribute(radio, 'checked', val === selectedValue.value);
+        setMaybeAttribute(radio, 'name', props.name.value);
+        setMaybeAttribute(radio, 'color', props.color.value);
+        setMaybeAttribute(radio, 'size', props.size.value);
+        setBooleanAttribute(radio, 'disabled', isDisabled.value);
       }
     };
 

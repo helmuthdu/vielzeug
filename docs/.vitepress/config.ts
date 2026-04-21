@@ -266,20 +266,60 @@ export default defineConfig({
         {
           collapsed: false,
           items: [
-            { link: '/craftit/usage#component-and-define', text: 'component() and define()' },
+            { link: '/craftit/usage#define', text: 'define()' },
             { link: '/craftit/usage#signals-and-state', text: 'Signals' },
             { link: '/craftit/usage#template-bindings', text: 'Templates' },
-            { link: '/craftit/usage#directives-subpath', text: 'Directives' },
+            { link: '/craftit/usage#compact-field-authoring', text: 'Field Controls' },
+            { link: '/craftit/usage#each', text: 'Directives' },
             { link: '/craftit/usage#lifecycle-and-runtime-helpers', text: 'Lifecycle' },
             { link: '/craftit/usage#props-and-attributes', text: 'Props' },
-            { link: '/craftit/usage#slots-and-emits', text: 'Slots & Emits' },
+            { link: '/craftit/usage#slots', text: 'Slots' },
             { link: '/craftit/usage#context-provide--inject', text: 'Context / DI' },
             { link: '/craftit/usage#form-associated-elements', text: 'Forms' },
             { link: '/craftit/usage#platform-observers', text: 'Observers' },
+            { link: '/craftit/usage#controls', text: 'Controls' },
             { link: '/craftit/usage#testing-utilities', text: 'Testing' },
           ],
           link: '/craftit/usage',
           text: 'Usage Guide',
+        },
+        {
+          collapsed: true,
+          items: [
+            {
+              link: '/craftit/lifecycle-best-practices#prefer-setup-scope-reactivity',
+              text: 'Setup-Scope Reactivity',
+            },
+            {
+              link: '/craftit/lifecycle-best-practices#use-onelement-for-ref-driven-effects',
+              text: 'Ref-Driven Effects',
+            },
+            { link: '/craftit/lifecycle-best-practices#keep-host-wiring-explicit', text: 'Host Wiring' },
+            {
+              link: '/craftit/lifecycle-best-practices#pick-the-right-cleanup-primitive',
+              text: 'Cleanup Patterns',
+            },
+            { link: '/craftit/lifecycle-best-practices#error-handling-pattern', text: 'Error Handling' },
+          ],
+          link: '/craftit/lifecycle-best-practices',
+          text: 'Lifecycle Best Practices',
+        },
+        {
+          collapsed: true,
+          items: [
+            { link: '/craftit/controls#which-control-do-i-choose', text: 'Choosing a Control' },
+            { link: '/craftit/controls#createlistcontrol', text: 'createListControl()' },
+            { link: '/craftit/controls#createoverlaycontrol', text: 'createOverlayControl()' },
+            { link: '/craftit/controls#createtextfield', text: 'createTextField()' },
+            { link: '/craftit/controls#createchoicefield', text: 'createChoiceField()' },
+            {
+              link: '/craftit/controls#createcheckablefieldcontrol',
+              text: 'createCheckableFieldControl()',
+            },
+            { link: '/craftit/controls#createa11ycontrol', text: 'createA11yControl()' },
+          ],
+          link: '/craftit/controls',
+          text: 'Controls',
         },
         {
           collapsed: true,

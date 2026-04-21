@@ -42,13 +42,32 @@ export function createA11yControl(host: HTMLElement, config: A11yControlConfig):
 
   setAttr(host, 'role', config.role);
 
+  let cachedLabelEl: HTMLElement | null = null;
+  let cachedHelperEl: HTMLDivElement | null = null;
+
+  const getLabelElement = (): HTMLElement | null => {
+    if (cachedLabelEl && cachedLabelEl.isConnected) return cachedLabelEl;
+
+    cachedLabelEl = host.shadowRoot?.querySelector('[data-a11y-label]') as HTMLElement | null;
+
+    return cachedLabelEl;
+  };
+
+  const getHelperElement = (): HTMLDivElement | null => {
+    if (cachedHelperEl && cachedHelperEl.isConnected) return cachedHelperEl;
+
+    cachedHelperEl = host.shadowRoot?.querySelector('[data-a11y-helper]') as HTMLDivElement | null;
+
+    return cachedHelperEl;
+  };
+
   const sync = (): void => {
     const shadow = host.shadowRoot;
 
     if (!shadow) return;
 
-    const labelElement = shadow.querySelector('[data-a11y-label]') as HTMLElement | null;
-    const helperElement = shadow.querySelector('[data-a11y-helper]') as HTMLDivElement | null;
+    const labelElement = getLabelElement();
+    const helperElement = getHelperElement();
     const checked = config.checked?.();
     const invalid = config.invalid?.();
     const helperText = config.helperText?.();
@@ -110,8 +129,8 @@ export function createA11yControl(host: HTMLElement, config: A11yControlConfig):
 
     sync();
 
-    const labelElement = shadow.querySelector('[data-a11y-label]') as HTMLElement | null;
-    const helperElement = shadow.querySelector('[data-a11y-helper]') as HTMLElement | null;
+    const labelElement = getLabelElement();
+    const helperElement = getHelperElement();
 
     const elementsToWatch = [labelElement, helperElement].filter(Boolean) as HTMLElement[];
 

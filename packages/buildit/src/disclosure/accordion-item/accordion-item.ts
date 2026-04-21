@@ -72,9 +72,9 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
     variant: undefined,
   },
 
-  setup({ emit, host, props }) {
+  setup(props, { emit, host }) {
     // Inherit size/variant from a parent bit-accordion when present.
-    const accordionCtx = inject(ACCORDION_CTX, undefined);
+    const accordionCtx = inject(ACCORDION_CTX);
 
     syncContextProps(accordionCtx, {
       size: props.size,

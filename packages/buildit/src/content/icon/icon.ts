@@ -90,9 +90,9 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
     name: undefined,
     size: { default: DEFAULT_SIZE as number | string, parse: parseSize },
     solid: false,
-    strokeWidth: { default: DEFAULT_STROKE_WIDTH, type: Number },
+    strokeWidth: { default: DEFAULT_STROKE_WIDTH },
   },
-  setup({ host, props }) {
+  setup(props, { host }) {
     host.bind({
       attr: {
         'aria-hidden': () => ((props.label.value ?? '').trim() ? null : 'true'),

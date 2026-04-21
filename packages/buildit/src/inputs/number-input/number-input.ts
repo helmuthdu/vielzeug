@@ -1,11 +1,14 @@
-import { define, computed, defineField, html, signal, watch } from '@vielzeug/craftit';
+import { define, computed, defineField, html, inject, signal } from '@vielzeug/craftit';
 import { createSpinnerControl } from '@vielzeug/craftit/controls';
 
 import type { DisablableProps, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
 import '../../content/icon/icon';
 import { disabledStateMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
+import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
+import { syncSignalFromProp } from '../shared/utils';
 // Ensure child components are registered
 import '../button/button';
 import '../input/input';
@@ -66,7 +69,7 @@ const numberInputProps = {
   step: 1,
   value: undefined,
   variant: undefined,
-} satisfies PropBundle<BitNumberInputProps>;
+} satisfies PropsInput<BitNumberInputProps>;
 
 /**
  * A numeric spin-button input with +/− controls, min/max clamping, and full keyboard support.
@@ -103,9 +106,10 @@ const numberInputProps = {
 export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents>('bit-number-input', {
   formAssociated: true,
   props: numberInputProps,
-  setup({ emit, host, props }) {
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
     const normalizeValue = (value: number | string | undefined | null): string => (value != null ? String(value) : '');
-    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
     const isReadonly = computed(() => Boolean(props.readonly.value));
     const inputValue = signal<string>(normalizeValue(props.value.value));
     const committedValue = signal<string>(normalizeValue(props.value.value));
@@ -121,6 +125,8 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
       },
     });
 
+    mountFormContextSync(host.el, formCtx, props);
+
     defineField(
       {
         disabled: isDisabled,
@@ -132,8 +138,13 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
         },
       },
     );
-    watch(props.value, (v) => {
-      syncValueState(normalizeValue(v));
+    syncSignalFromProp(props.value, {
+      get value() {
+        return props.value.value;
+      },
+      set value(v) {
+        syncValueState(normalizeValue(v));
+      },
     });
     function clamp(n: number): number {
       const min = props.min.value;

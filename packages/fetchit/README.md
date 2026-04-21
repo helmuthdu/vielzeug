@@ -66,7 +66,6 @@ await createUser.mutate({ name: 'Alice' });
 - `createQuery(options?) => QueryClient`
 - `createMutation(fn, options?) => Mutation`
 - `HttpError`
-- `serializeKey` (stable query-key serializer utility)
 
 ## Docs
 

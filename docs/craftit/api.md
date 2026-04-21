@@ -34,8 +34,9 @@ If the tag already exists, Craftit throws in development mode to prevent acciden
 
 From `@vielzeug/craftit/controls`:
 
-- `createFieldControl({ kind: 'text' | 'choice' | 'checkable', options })` — unified field control factory for text, choice, and checkable states.
-- `mountTextFieldLifecycle(options)` — input/change/blur wiring + validation trigger bridge.
+- `createTextField(options)` — text field helper with ids, assistive state, validation wiring, and value tracking.
+- `createChoiceField(options)` — choice-field helper for select-like components and grouped values.
+- `createCheckableFieldControl(options)` — high-level checkable helper for checkbox, radio, and switch widgets.
 
 ```ts
 import { define, html, signal } from '@vielzeug/craftit';
@@ -71,7 +72,6 @@ For host attributes, classes, and host listeners, use `host.bind(...)` from the 
 - `onMount(fn)` — run logic after mount.
 - `onCleanup(fn)` — register cleanup.
 - `onError(fn)` — component-scoped error handler.
-- `createCleanupSignal()` — manage replaceable cleanup functions and dispose on unmount.
 - `onElement(ref, fn, options?)` — element-scoped effect for nullable refs.
 `onCleanup()` is component-aware: inside component setup/mount it runs on unmount; outside component context it delegates to stateit's effect cleanup behavior.
 
@@ -87,12 +87,6 @@ Signatures:
 ### DOM/Event Utilities
 
 - `handle(target, event, listener, options?)` — listener with auto-cleanup.
-- `fire.custom(target, type, options?)` — dispatches a `CustomEvent`.
-- `fire.mouse(target, type, options?)` — dispatches a `MouseEvent`.
-- `fire.keyboard(target, type, options?)` — dispatches a `KeyboardEvent`.
-- `fire.focus(target, type, options?)` — dispatches a `FocusEvent`.
-- `fire.touch(target, type, options?)` — dispatches a `TouchEvent` when available, otherwise `CustomEvent`.
-- `fire.event(target, event)` — dispatches a prebuilt event instance.
 - `host.bind({ attr: ... })`, `host.bind({ class: ... })`, `host.bind({ on: ... })` — host attribute/class/listener wiring from setup context.
 
 Prefer template `@event` bindings for inner DOM nodes; use `host.bind({ on: ... })` or `handle()` for host-level interactions.
@@ -310,12 +304,10 @@ Import from `@vielzeug/craftit/controls`:
   - returns result-based navigation (`ListControlResult` with `reason`, `moved`, `wrapped`, `index`)
 - `createOverlayControl(options)`
   - reason-aware overlay transitions via `setOpen(next, { reason })`, `onOpen(reason)`, and `onClose(reason)`
-- `createFieldControl({ kind: 'text', options })`
+- `createTextField(options)`
   - text-field controller with stable ids, validation hooks, and integrated assistive state
-- `createFieldControl({ kind: 'choice', options })`
+- `createChoiceField(options)`
   - single/multi choice controller for select, combobox, and grouped checkboxes
-- `createFieldControl({ kind: 'checkable', options })`
-  - checkable-state controller for checkbox/radio/switch widgets
 - `createCheckableFieldControl(options)`
   - checkbox/radio/switch helper that bundles checkable state, a11y wiring, and press handling
 - `createA11yControl(host, config)`

@@ -2,17 +2,17 @@ import { signal } from '@vielzeug/stateit';
 import { describe, expect, it } from 'vitest';
 
 import { toReactiveBindingSource } from '../runtime';
-import { html } from '../template';
+import { html } from '../template-compiler';
 
 describe('template caching', () => {
-  it('reuses computed sources for the same getter function', () => {
+  it('creates a fresh computed source for repeated getter functions', () => {
     const getter = () => 42;
 
     const first = toReactiveBindingSource(getter);
     const second = toReactiveBindingSource(getter);
 
     expect(first).toBeDefined();
-    expect(second).toBe(first);
+    expect(second).not.toBe(first);
   });
 
   it('reuses html wrapper signal for function interpolations', () => {

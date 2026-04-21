@@ -6,7 +6,7 @@ import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } fro
 import '../../content/icon/icon';
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
 import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -37,8 +37,8 @@ const checkboxProps = {
   helper: '',
   indeterminate: false,
   name: '',
-  value: 'on',
-} satisfies PropBundle<BitCheckboxProps>;
+  value: { default: 'on', reflect: true },
+} satisfies PropsInput<BitCheckboxProps>;
 
 /**
  * A customizable checkbox component with theme colors, sizes, and indeterminate state support.
@@ -55,7 +55,7 @@ const checkboxProps = {
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the checkbox
  *
- * @fires change - Emitted when checkbox is toggled. detail: { checked: boolean, fieldValue: string, originalEvent?: Event }
+ * @fires change - Emitted when checkbox is toggled. detail: { checked: boolean, value: string, originalEvent?: Event }
  *
  * @slot - Checkbox label text
  *
@@ -67,9 +67,9 @@ const checkboxProps = {
 export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-checkbox', {
   formAssociated: true,
   props: checkboxProps,
-  setup({ emit, host, props }) {
-    const formCtx = inject(FORM_CTX, undefined);
-    const groupCtx = inject(CHECKBOX_GROUP_CTX, undefined);
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
+    const groupCtx = inject(CHECKBOX_GROUP_CTX);
 
     const checkable = createCheckableFieldControl({
       checked: props.checked,

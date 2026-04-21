@@ -2,43 +2,35 @@
  * Component authoring API — define custom elements, props, and registration.
  */
 
+import type { Signal } from '@vielzeug/stateit';
+
 import { type ComponentHost, type ComponentSlots, createHost, createSlots } from './host';
 import { type EmitFn, type HTMLResult, createEmitFn, toKebab } from './internal';
 import {
   createProps,
-  hasStructuredDefault,
   type InferPropsFromDefs,
   type InferPropsSignals,
-  normalizePropDefinition,
   type PropDef,
   type PropInputDefs,
   type PropOptions,
   type PropsInput,
-  type ResolveComponentProps,
 } from './props';
-import { type ComponentRegistrationOptions, registerComponent } from './registration';
+import { registerComponent } from './registration';
+import { currentRuntime } from './runtime';
 
 export { createProps, type PropsInput };
-export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropOptions, ResolveComponentProps };
-export { registerComponent, type ComponentRegistrationOptions };
+export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropOptions };
+
+// Deprecated use* functions removed — use SetupContext parameter instead
 
 /**
- * Unified setup context passed to component setup functions.
+ * Setup context passed to the component setup function.
+ * Contains emit function, host API, and slots API.
+ * Props are passed as the first positional parameter.
  */
-export type ComponentSetupContext<
-  P extends Record<string, unknown> = Record<never, never>,
-  E extends Record<string, unknown> = Record<string, never>,
-  D extends PropInputDefs = PropsInput<P>,
-> = {
-  /** Emit custom events */
-  emit: EmitFn<E>;
-  /** Host element API (binding attributes, classes, and listeners) */
+export type SetupContextBag<Emits extends Record<string, unknown> = Record<string, unknown>> = {
+  emit: EmitFn<Emits>;
   host: ComponentHost;
-  /** Component props (as signals) */
-  props: InferPropsSignals<ResolveComponentProps<P, D>>;
-  /** The component's ShadowRoot */
-  shadowRoot: ShadowRoot;
-  /** Reactive slot API */
   slots: ComponentSlots;
 };
 
@@ -51,28 +43,15 @@ export type ComponentDefinition<
   formAssociated?: boolean;
   /** Component properties and their metadata */
   props?: PropDefs;
-  /** Main setup function where component logic is defined */
-  setup: (ctx: ComponentSetupContext<ResolveComponentProps<Props, PropDefs>, Emits, PropDefs>) => HTMLResult | string;
+  /** Main setup function where component logic is defined. Props are the first positional parameter. */
+  setup: (
+    props: { readonly [K in keyof InferPropsFromDefs<PropDefs>]-?: Signal<InferPropsFromDefs<PropDefs>[K]> },
+    ctx: SetupContextBag<Emits>,
+  ) => HTMLResult | string;
   /** Shadow DOM configuration (mode is always 'open') */
   shadow?: Omit<ShadowRootInit, 'mode'>;
   /** Component-specific styles */
   styles?: (string | CSSStyleSheet | import('./internal').CSSResult)[];
-};
-
-const validatePropDefinitions = (tag: string, propDefs: PropInputDefs | undefined): void => {
-  if (!propDefs) return;
-
-  for (const [name, definition] of Object.entries(propDefs)) {
-    if (typeof definition !== 'object' || definition === null || !('default' in definition)) continue;
-
-    const descriptor = normalizePropDefinition(definition as PropDef<unknown>);
-
-    if (descriptor.reflect === true && hasStructuredDefault(descriptor.default)) {
-      throw new Error(
-        `[craftit:E9] define('${tag}', ...): props.${name} cannot use reflect: true with object/array defaults`,
-      );
-    }
-  }
 };
 
 export function define<
@@ -82,45 +61,34 @@ export function define<
 >(tag: string, definition: ComponentDefinition<Props, EventsType, PropDefs> & { props?: PropDefs }): string {
   const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
 
-  validatePropDefinitions(tag, propDefs);
-
   const observedAttrs = propDefs ? Object.keys(propDefs).map(toKebab) : [];
 
   return registerComponent(
     tag,
     () => {
-      const props = propDefs
-        ? createProps(propDefs)
-        : ({} as InferPropsSignals<ResolveComponentProps<Props, PropDefs>>);
-      const emit = createEmitFn<EventsType>();
+      const props = propDefs ? createProps(propDefs) : ({} as InferPropsSignals<InferPropsFromDefs<PropDefs>>);
       const host = createHost();
-      let slotsApi: ComponentSlots | undefined;
-      const slots: ComponentSlots = {
-        elements: (name?: string) => {
-          if (!slotsApi) slotsApi = createSlots();
+      const emit = createEmitFn<EventsType>();
+      const slots = createSlots();
 
-          return slotsApi.elements(name);
-        },
-        has: (name?: string) => {
-          if (!slotsApi) slotsApi = createSlots();
+      // Store on runtime for lifecycle hooks (onMount, onCleanup, effect, etc.)
+      const runtime = currentRuntime();
 
-          return slotsApi.has(name);
-        },
-      };
+      runtime.host = host;
+      runtime.props = props as Record<string, Signal<unknown>>;
+      runtime.slots = slots;
 
-      return setup({
-        emit: emit as EmitFn<EventsType>,
+      return setup(props as any, {
+        emit,
         host,
-        props: props as InferPropsSignals<ResolveComponentProps<Props, PropDefs>>,
-        shadowRoot: host.shadowRoot,
         slots,
-      } as ComponentSetupContext<ResolveComponentProps<Props, PropDefs>, EventsType, PropDefs>);
+      });
     },
     {
       formAssociated,
       observedAttrs,
       shadow: shadowOptions,
       styles,
-    } satisfies ComponentRegistrationOptions,
+    },
   );
 }

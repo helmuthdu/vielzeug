@@ -1,12 +1,12 @@
 import { define, html, inject, ref, signal } from '@vielzeug/craftit';
-import { createFieldControl } from '@vielzeug/craftit/controls';
+import { createTextField } from '@vielzeug/craftit/controls';
 
 import type { InputType, VisualVariant } from '../../types';
 import type { TextFieldProps } from '../shared/base-props';
 
 import '../../content/icon/icon';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, roundableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, roundableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -62,23 +62,23 @@ const inputProps = {
   ...roundableBundle,
   autocomplete: undefined,
   clearable: false,
-  error: { default: '' as string, omit: true },
+  error: { default: '' as string, omit: true, reflect: true },
   fullwidth: false,
   helper: '',
   inputmode: undefined,
-  label: '',
+  label: { default: '', reflect: true },
   'label-placement': 'inset',
   maxlength: undefined,
   minlength: undefined,
   name: '',
   pattern: undefined,
-  placeholder: '',
+  placeholder: { default: '', reflect: true },
   readonly: false,
   required: false,
   type: 'text',
   value: '',
   variant: undefined,
-} satisfies PropBundle<BitInputProps>;
+} satisfies PropsInput<BitInputProps>;
 
 /**
  * A customizable text input component with multiple variants, label placements, and form features.
@@ -134,8 +134,8 @@ const inputProps = {
 export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
   formAssociated: true,
   props: inputProps,
-  setup({ emit, host, props }) {
-    const formCtx = inject(FORM_CTX, undefined);
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 
@@ -155,35 +155,32 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       labelOutsideId,
       labelOutsideRef,
       value: fieldValue,
-    } = createFieldControl({
-      kind: 'text',
-      options: {
-        autocomplete: props.autocomplete,
-        context: formCtx,
-        disabled: props.disabled,
-        elementRef: inputRef,
-        error: props.error,
-        helper: props.helper,
-        inputmode: props.inputmode,
-        label: props.label,
-        labelPlacement: props['label-placement'],
-        maxLength: props.maxlength,
-        minLength: props.minlength,
-        name: props.name,
-        onChange: (event, value) => {
-          emit('change', { originalEvent: event, value });
-        },
-        onInput: (event, value) => {
-          emit('input', { originalEvent: event, value });
-        },
-        pattern: props.pattern,
-        placeholder: props.placeholder,
-        prefix: 'input',
-        readOnly: props.readonly,
-        required: props.required,
-        type: resolvedInputType,
-        value: props.value,
+    } = createTextField({
+      autocomplete: props.autocomplete,
+      context: formCtx,
+      disabled: props.disabled,
+      elementRef: inputRef,
+      error: props.error,
+      helper: props.helper,
+      inputmode: props.inputmode,
+      label: props.label,
+      labelPlacement: props['label-placement'],
+      maxLength: props.maxlength,
+      minLength: props.minlength,
+      name: props.name,
+      onChange: (event, value) => {
+        emit('change', { originalEvent: event, value });
       },
+      onInput: (event, value) => {
+        emit('input', { originalEvent: event, value });
+      },
+      pattern: props.pattern,
+      placeholder: props.placeholder,
+      prefix: 'input',
+      readOnly: props.readonly,
+      required: props.required,
+      type: resolvedInputType,
+      value: props.value,
     });
 
     host.bind({
@@ -193,18 +190,18 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     });
 
     const ariaLabelledBy = () => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId);
-    const ariaDescribedBy = () => (assistive.value.hasError ? errorId : helperId);
-    const ariaErrorMessage = () => (assistive.value.hasError ? errorId : null);
-    const ariaInvalid = () => String(assistive.value.hasError);
+    const ariaDescribedBy = () => (assistive.value.errorText ? errorId : helperId);
+    const ariaErrorMessage = () => (assistive.value.errorText ? errorId : null);
+    const ariaInvalid = () => String(!!assistive.value.errorText);
     const passwordToggleLabel = () => (showPassword.value ? 'Hide password' : 'Show password');
     const passwordTogglePressed = () => String(showPassword.value);
     const passwordToggleIcon = () =>
       showPassword.value
         ? html`<bit-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`
         : html`<bit-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`;
-    const helperHidden = () => !assistive.value.showHelper;
+    const helperHidden = () => !!assistive.value.errorText || !assistive.value.helperText;
     const helperText = () => assistive.value.helperText;
-    const errorHidden = () => !assistive.value.hasError;
+    const errorHidden = () => !assistive.value.errorText;
     const errorText = () => assistive.value.errorText;
     const counterNearLimit = () => (assistive.value.counterNearLimit && !assistive.value.counterAtLimit ? '' : null);
     const counterAtLimit = () => (assistive.value.counterAtLimit ? '' : null);

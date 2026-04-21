@@ -10,15 +10,22 @@ import {
   type ReadonlySignal,
   signal,
 } from '@vielzeug/craftit';
-import { createFieldControl } from '@vielzeug/craftit/controls';
+import { createChoiceField } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
-import { createChoiceChangeDetail, type ChoiceChangeDetail } from '../shared/utils';
+import {
+  createChoiceChangeDetail,
+  getChoiceLabel,
+  getSlottedByTag,
+  setBooleanAttribute,
+  setMaybeAttribute,
+  type ChoiceChangeDetail,
+} from '../shared/utils';
 import componentStyles from './checkbox-group.css?inline';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -70,10 +77,10 @@ const checkboxGroupProps = {
   helper: '',
   label: '',
   name: '',
-  orientation: 'vertical',
+  orientation: { default: 'vertical' as const, reflect: true },
   required: false,
   values: '',
-} satisfies PropBundle<BitCheckboxGroupProps>;
+} satisfies PropsInput<BitCheckboxGroupProps>;
 
 /**
  * A fieldset wrapper that groups `bit-checkbox` elements, provides shared
@@ -99,36 +106,28 @@ const checkboxGroupProps = {
 export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroupEvents>('bit-checkbox-group', {
   formAssociated: true,
   props: checkboxGroupProps,
-  setup({ emit, host, props, slots }) {
-    const formCtx = inject(FORM_CTX, undefined);
+  setup(props, { emit, host, slots }) {
+    const formCtx = inject(FORM_CTX);
 
-    mountFormContextSync(host.el, formCtx, props as any);
+    mountFormContextSync(host.el, formCtx, props);
 
-    const choice = createFieldControl<string>({
-      kind: 'choice',
-      options: {
-        context: formCtx,
-        disabled: props.disabled,
-        error: props.error,
-        getValue: (value) => value,
-        helper: props.helper,
-        label: props.label,
-        mapControlledValue: (value) => value,
-        multiple: signal(true),
-        name: props.name,
-        prefix: 'checkbox-group',
-        value: props.values,
-      },
+    const choice = createChoiceField<string>({
+      context: formCtx,
+      disabled: props.disabled,
+      error: props.error,
+      getValue: (value) => value,
+      helper: props.helper,
+      label: props.label,
+      mapControlledValue: (value) => value,
+      multiple: signal(true),
+      name: props.name,
+      prefix: 'checkbox-group',
+      value: props.values,
     });
     const checkedValues = choice.selectedItems;
 
-    const getCheckboxes = (): HTMLElement[] =>
-      Array.from(host.el.getElementsByTagName('bit-checkbox')) as HTMLElement[];
-    const getLabelForValue = (value: string): string => {
-      const checkbox = getCheckboxes().find((item) => (item.getAttribute('value') ?? '') === value);
-
-      return checkbox?.textContent?.replace(/\s+/g, ' ').trim() || value;
-    };
+    const getCheckboxes = (): HTMLElement[] => getSlottedByTag(host.el, 'bit-checkbox');
+    const getLabelForValue = (value: string): string => getChoiceLabel(getCheckboxes(), value);
     const emitChange = (originalEvent?: Event) => {
       const values = checkedValues.value;
 
@@ -156,22 +155,15 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
       const color = props.color.value;
       const size = props.size.value;
       const disabled = props.disabled.value;
-      const checkboxes = Array.from(host.el.getElementsByTagName('bit-checkbox')) as HTMLElement[];
+      const checkboxes = getCheckboxes();
 
       for (const checkbox of checkboxes) {
         const val = checkbox.getAttribute('value') ?? '';
 
-        if (values.includes(val)) checkbox.setAttribute('checked', '');
-        else checkbox.removeAttribute('checked');
-
-        if (color) checkbox.setAttribute('color', color);
-        else checkbox.removeAttribute('color');
-
-        if (size) checkbox.setAttribute('size', size);
-        else checkbox.removeAttribute('size');
-
-        if (disabled) checkbox.setAttribute('disabled', '');
-        else checkbox.removeAttribute('disabled');
+        setBooleanAttribute(checkbox, 'checked', values.includes(val));
+        setMaybeAttribute(checkbox, 'color', color);
+        setMaybeAttribute(checkbox, 'size', size);
+        setBooleanAttribute(checkbox, 'disabled', Boolean(disabled));
       }
     };
 

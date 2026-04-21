@@ -1,17 +1,6 @@
+import { computed, define, effect, html, inject, onMount, signal, untrack, watch } from '@vielzeug/craftit';
 import {
-  computed,
-  createCleanupSignal,
-  define,
-  effect,
-  html,
-  inject,
-  onMount,
-  signal,
-  untrack,
-  watch,
-} from '@vielzeug/craftit';
-import {
-  createFieldControl,
+  createChoiceField,
   createPopupListControl,
   createPressControl,
   type OverlayCloseReason,
@@ -19,43 +8,32 @@ import {
 } from '@vielzeug/craftit/controls';
 
 import type { AddEventListeners } from '../../types';
-import type { PropBundle } from '../shared/bundles';
-import type { ComboboxOptionInput, ComboboxOptionItem, ComboboxSelectionItem } from './combobox.types';
+import type { PropsInput } from '../shared/bundles';
+import type {
+  BitComboboxEvents,
+  BitComboboxProps,
+  ComboboxOptionInput,
+  ComboboxOptionItem,
+  ComboboxSelectionItem,
+} from './combobox.types';
 
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
+import { FIELD_SIZE_PRESET } from '../shared/design-presets';
 import { createDropdownPositioner, mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import { createChoiceChangeDetail } from '../shared/utils';
-import { parseSlottedOptions, backfillSelectionLabels } from './combobox-options';
+import {
+  backfillSelectionLabels,
+  filterOptions,
+  getCreatableLabel,
+  makeCreatableValue,
+  parseSlottedOptions,
+} from './combobox-options';
 import { createComboboxVirtualizer } from './combobox-virtualizer';
 import '../../feedback/chip/chip';
 import componentStyles from './combobox.css?inline';
 
-const FIELD_SIZE_PRESET = {
-  lg: { height: '48px' },
-  md: { height: '40px' },
-  sm: { height: '32px' },
-};
-
-const getCreatableLabel = (query: string, creatable: boolean, filteredOptions: any[]) => {
-  if (!creatable || !query.trim()) return '';
-
-  const exists = filteredOptions.some((o) => o.label.toLowerCase() === query.toLowerCase().trim());
-
-  return exists ? '' : `Create "${query}"`;
-};
-
-const makeCreatableValue = (query: string) => `__new__:${query}`;
-
-const filterOptions = (options: ComboboxOptionItem[], query: string, noFilter: boolean) => {
-  if (noFilter) return options;
-
-  const q = query.toLowerCase().trim();
-
-  if (!q) return options;
-
-  return options.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q));
-};
+export type { BitComboboxEvents, BitComboboxProps } from './combobox.types';
 
 const checkIconHTML = html`<svg
   viewBox="0 0 24 24"
@@ -67,37 +45,12 @@ const checkIconHTML = html`<svg
   <polyline points="20 6 9 17 4 12"></polyline>
 </svg>`.toString();
 
-export type BitComboboxEvents = {
-  change: { labels: string[]; originalEvent?: Event; value: string | string[]; values: string[] };
-  close: { reason: OverlayCloseReason };
-  open: { reason: OverlayOpenReason };
-  search: { query: string };
-};
-
-export type BitComboboxProps = {
-  color?: string;
-  creatable?: boolean;
-  disabled?: boolean;
-  error?: string;
-  helper?: string;
-  label?: string;
-  'label-placement'?: 'outside' | 'inset' | 'hidden';
-  loading?: boolean;
-  multiple?: boolean;
-  name?: string;
-  'no-filter'?: boolean;
-  options?: ComboboxOptionInput[];
-  placeholder?: string;
-  size?: 'sm' | 'md' | 'lg';
-  value?: string | string[];
-  variant?: string;
-};
-
-const comboboxProps: PropBundle<BitComboboxProps> = {
+const comboboxProps: PropsInput<BitComboboxProps> = {
   color: undefined,
   creatable: false,
   disabled: false,
   error: undefined,
+  fullwidth: false,
   helper: undefined,
   label: undefined,
   'label-placement': 'outside',
@@ -107,6 +60,7 @@ const comboboxProps: PropBundle<BitComboboxProps> = {
   'no-filter': false,
   options: undefined,
   placeholder: 'Select...',
+  rounded: undefined,
   size: undefined,
   value: undefined,
   variant: undefined,
@@ -139,30 +93,27 @@ const comboboxProps: PropBundle<BitComboboxProps> = {
 export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-combobox', {
   formAssociated: true,
   props: comboboxProps,
-  setup({ emit, host, props, slots }) {
-    const formCtx = inject(FORM_CTX, undefined);
+  setup(props, { emit, host, slots }) {
+    const formCtx = inject(FORM_CTX);
     const isOpen = signal(false);
     const query = signal('');
 
-    const choice = createFieldControl({
-      kind: 'choice',
-      options: {
-        context: formCtx,
-        disabled: props.disabled,
-        error: props.error,
-        getValue: (item: ComboboxSelectionItem) => item.value,
-        helper: props.helper,
-        label: props.label,
-        labelPlacement: props['label-placement'] as any,
-        mapControlledValue: (value: string) => ({ label: '', value }),
-        multiple: props.multiple,
-        name: props.name,
-        onReset: () => {
-          query.value = '';
-        },
-        prefix: 'combobox',
-        value: props.value as any,
+    const choice = createChoiceField({
+      context: formCtx,
+      disabled: props.disabled,
+      error: props.error,
+      getValue: (item: ComboboxSelectionItem) => item.value,
+      helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'] as any,
+      mapControlledValue: (value: string) => ({ label: '', value }),
+      multiple: props.multiple,
+      name: props.name,
+      onReset: () => {
+        query.value = '';
       },
+      prefix: 'combobox',
+      value: props.value as any,
     });
     const {
       disabled: isDisabled,
@@ -207,10 +158,10 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     let fieldEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
     let listboxEl: HTMLElement | null = null;
-    const inputAriaBinding = createCleanupSignal();
+    let inputAriaBinding: (() => void) | null = null;
 
     function getLiveInput(): HTMLInputElement | null {
-      const liveInput = host.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]') ?? null;
+      const liveInput = host.el.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]') ?? null;
 
       if (liveInput) inputEl = liveInput;
 
@@ -590,8 +541,8 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     // ── Lifecycle ────────────────────────────────────────────────────────────
     onMount(() => {
       fieldEl = inputEl?.closest('.field') as HTMLElement | null;
-      dropdownEl = host.shadowRoot?.querySelector<HTMLElement>('.dropdown') ?? null;
-      listboxEl = host.shadowRoot?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
+      dropdownEl = host.el.shadowRoot?.querySelector<HTMLElement>('.dropdown') ?? null;
+      listboxEl = host.el.shadowRoot?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
 
       // Now update the open/close calls to use object options
       const removeOutsideClick = popupList.bindOutsideClick(document);
@@ -683,8 +634,9 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
       );
 
       return () => {
+        inputAriaBinding?.();
+        inputAriaBinding = null;
         domVirtualList.destroy();
-        positioner.destroy();
         removeOutsideClick();
       };
     });
@@ -738,22 +690,22 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
 
                   if (!el) {
                     fieldEl = null;
-                    inputAriaBinding.clear();
+                    inputAriaBinding?.();
+                    inputAriaBinding = null;
 
                     return;
                   }
 
                   fieldEl = el.closest('.field') as HTMLElement | null;
-                  inputAriaBinding.set(
-                    popupList.syncTriggerAria(el, {
-                      additional: {
-                        autocomplete: 'list',
-                        describedby: () => (props.error.value || props.helper.value ? helperId : null),
-                        invalid: () => !!props.error.value,
-                        labelledby: () => (hasLabel() ? `${labelOutsideId} ${labelInsetId}` : null),
-                      },
-                    }),
-                  );
+                  inputAriaBinding?.();
+                  inputAriaBinding = popupList.syncTriggerAria(el, {
+                    additional: {
+                      autocomplete: 'list',
+                      describedby: () => (props.error.value || props.helper.value ? helperId : null),
+                      invalid: () => !!props.error.value,
+                      labelledby: () => (hasLabel() ? `${labelOutsideId} ${labelInsetId}` : null),
+                    },
+                  });
                 }}
                 class="input"
                 part="input"
@@ -799,9 +751,9 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
           id="${helperId}"
           part="helper-text"
           aria-live="polite"
-          ?hidden=${() => assistiveText.value.hidden}
-          style="${() => (assistiveText.value.isError ? 'color: var(--color-error);' : '')}"
-          >${() => assistiveText.value.text}</span
+          ?hidden=${() => !assistiveText.value.errorText && !assistiveText.value.helperText}
+          style="${() => (assistiveText.value.errorText ? 'color: var(--color-error);' : '')}"
+          >${() => assistiveText.value.errorText || assistiveText.value.helperText}</span
         >
       </div>
     `;

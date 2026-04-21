@@ -82,9 +82,9 @@ const NS_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-we
 /* -------------------- createLogger -------------------- */
 
 const IS_NODE = typeof window === 'undefined';
+const NODE_PROCESS = (globalThis as typeof globalThis & { process?: { env?: { NODE_ENV?: string } } }).process;
 const IS_PROD = IS_NODE
-  ? // @ts-expect-error - process is Node-only
-    (process as any).env?.NODE_ENV === 'production'
+  ? NODE_PROCESS?.env?.NODE_ENV === 'production'
   : (import.meta as any)?.env?.NODE_ENV === 'production';
 
 const ENV_BADGE = IS_PROD ? '🅿' : '🅳';

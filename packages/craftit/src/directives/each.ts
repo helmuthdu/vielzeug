@@ -71,6 +71,12 @@ export interface EachOptions<T> {
   render: (item: T, index: number) => string | HTMLResult;
 }
 
+export function each<T>(
+  source: ReadonlySignal<T[]>,
+  key: (item: T, index: number) => string | number,
+  render: (item: T, index: number) => string | HTMLResult,
+): EachSignalResult;
+
 /**
  * Renders a list with keyed DOM reconciliation for reactive sources.
  * Use inside `html` tagged templates.
@@ -93,8 +99,20 @@ export interface EachOptions<T> {
  *   render: (item) => html`<li>${item.name}</li>`,
  * })}`
  */
-export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): EachSignalResult {
-  const { fallback, key, render } = options;
+export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): EachSignalResult;
+export function each<T>(
+  source: ReadonlySignal<T[]>,
+  keyOrOptions: EachOptions<T> | ((item: T, index: number) => string | number),
+  render?: (item: T, index: number) => string | HTMLResult,
+): EachSignalResult {
+  const options: EachOptions<T> =
+    typeof keyOrOptions === 'function'
+      ? {
+          key: keyOrOptions,
+          render: render!,
+        }
+      : keyOrOptions;
+  const { fallback, key, render: renderItem } = options;
 
   return {
     [EACH_SIGNAL]: computed(() => {
@@ -106,7 +124,7 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): E
         return er ? { ...extractResult(er), items: [], keys: [] } : { bindings: [], html: '', items: [], keys: [] };
       }
 
-      const { bindings, html, keys, rendered } = renderKeyed(raw, render, key);
+      const { bindings, html, keys, rendered } = renderKeyed(raw, renderItem, key);
 
       return { bindings, html, items: rendered, keys };
     }),

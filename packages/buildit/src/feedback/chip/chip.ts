@@ -150,7 +150,7 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
       default: undefined as BitChipComponentProps['checked'],
       parse: (value: string | null) => (value == null ? undefined : value !== 'false'),
     },
-    color: undefined,
+    color: { default: undefined as BitChipComponentProps['color'], reflect: true },
     'default-checked': false,
     disabled: false,
     label: undefined,
@@ -161,7 +161,7 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
     variant: undefined,
   },
 
-  setup({ emit, host, props }) {
+  setup(props, { emit, host }) {
     // ============================================
     // State Management
     // ============================================

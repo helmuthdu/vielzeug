@@ -52,8 +52,8 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
     value: '',
     variant: undefined,
   },
-  setup({ host, props }) {
-    const tabsCtx = inject(TABS_CTX, undefined);
+  setup(props, { host }) {
+    const tabsCtx = inject(TABS_CTX);
 
     syncContextProps(tabsCtx, {
       color: props.color,

@@ -17,7 +17,6 @@ import {
   refs,
   signal,
   type ComponentDefinition,
-  type ComponentSetupContext,
 } from '../index';
 import { intersectionObserver, mediaObserver, resizeObserver } from '../observers';
 import { currentRuntime } from '../runtime';
@@ -123,7 +122,7 @@ describe('Core: Component Definition', () => {
       const { query } = await mount(
         {
           props: { count: 0 },
-          setup: ({ props }) => {
+          setup: (props) => {
             return html`<div class="count">${props.count}</div>`;
           },
         },
@@ -139,9 +138,15 @@ describe('Core: Component Definition', () => {
       const fixture = await mount(
         {
           props: {
-            open: { default: undefined as boolean | undefined, reflect: false, type: Boolean },
+            open: {
+              default: undefined as boolean | undefined,
+              parse: (value: string | null) => (value == null ? undefined : value === '' || value === 'true'),
+              reflect: false,
+            },
           },
-          setup: ({ props }) => html`<div class="value">${() => String(props.open.value)}</div>`,
+          setup: (props) => {
+            return html`<div class="value">${() => String(props.open.value)}</div>`;
+          },
         },
         {
           attrs: { open: '' },
@@ -160,9 +165,15 @@ describe('Core: Component Definition', () => {
       const { query } = await mount(
         {
           props: {
-            count: { default: undefined as number | undefined, reflect: false, type: Number },
+            count: {
+              default: undefined as number | undefined,
+              parse: (value: string | null) => (value == null ? undefined : Number(value)),
+              reflect: false,
+            },
           },
-          setup: ({ props }) => html`<div class="count">${() => String(props.count.value)}</div>`,
+          setup: (props) => {
+            return html`<div class="count">${() => String(props.count.value)}</div>`;
+          },
         },
         {
           attrs: { count: '42' },
@@ -185,7 +196,9 @@ describe('Core: Component Definition', () => {
             reflect: false,
           },
         },
-        setup: ({ props }) => html`<div class="size">${() => String(props.size.value)}</div>`,
+        setup: (props) => {
+          return html`<div class="size">${() => String(props.size.value)}</div>`;
+        },
       });
 
       define(parentTag, {
@@ -205,7 +218,9 @@ describe('Core: Component Definition', () => {
     it('should keep attribute->prop sync after reconnect', async () => {
       const fixture = await mount({
         props: { count: 0 },
-        setup: ({ props }) => html`<div class="count">${() => props.count.value}</div>`,
+        setup: (props) => {
+          return html`<div class="count">${() => props.count.value}</div>`;
+        },
       });
 
       await fixture.attr('count', '1');
@@ -227,7 +242,7 @@ describe('Core: Component Definition', () => {
 
       define<{ items: string[] }>(childTag, {
         props: { items: [] as string[] },
-        setup: ({ props }) => {
+        setup: (props) => {
           return html`<div class="items">${() => props.items.value?.join('|')}</div>`;
         },
       });
@@ -306,12 +321,15 @@ describe('Core: Component Definition', () => {
     it('should support typed emit in setup context', async () => {
       const spy = vi.fn();
       const closeSpy = vi.fn();
-      const { element, flush, query } = await mount((ctx) => {
-        const emit = ctx.emit as ((event: 'close') => void) & ((event: 'ping', detail: { ok: boolean }) => void);
+      const { element, flush, query } = await mount((_props, { emit }) => {
+        const typedEmit = emit as unknown as import('../index').SetupContextBag<{
+          close: undefined;
+          ping: { ok: boolean };
+        }>['emit'];
 
         const fire = () => {
-          emit('close');
-          emit('ping', { ok: true });
+          typedEmit('close');
+          typedEmit('ping', { ok: true });
         };
 
         return html`<button @click=${fire}>Emit</button>`;
@@ -331,7 +349,7 @@ describe('Core: Component Definition', () => {
       const tag = `test-object-emits-${Math.random().toString(36).slice(2)}`;
 
       define<Record<string, never>, { change: { value: string }; retry: void }>(tag, {
-        setup: ({ emit }) => {
+        setup: (_props, { emit }) => {
           const fire = () => {
             emit('change', { value: 'ok' });
             emit('retry');
@@ -360,7 +378,7 @@ describe('Core: Component Definition', () => {
       let triggerAssigned = false;
 
       const { flush } = await mount(
-        ({ slots }) => {
+        (_props, { slots }) => {
           onMount(() => {
             defaultAssigned = slots.has().value;
             triggerAssigned = slots.has('trigger').value;
@@ -386,9 +404,9 @@ describe('Core: Component Definition', () => {
 
       define<{ checked?: boolean; label?: string }, { toggle: { checked: boolean } }, typeof toggleProps>(tag, {
         props: toggleProps,
-        setup: ({ emit, props }) => {
-          expectType<ReturnType<typeof signal<boolean>>>(props.checked);
-          expectType<ReturnType<typeof signal<string>>>(props.label);
+        setup: (props, { emit }) => {
+          expectType<ReturnType<typeof signal<boolean | undefined>>>(props.checked);
+          expectType<ReturnType<typeof signal<string | undefined>>>(props.label);
 
           const fireToggle = () => emit('toggle', { checked: !props.checked.value });
 
@@ -413,9 +431,9 @@ describe('Core: Component Definition', () => {
 
       define<{ value?: string }>(tag, {
         props: {
-          value: { default: undefined, reflect: false },
+          value: { default: undefined as string | undefined, reflect: false },
         },
-        setup: ({ props }) => {
+        setup: (props) => {
           expectType<import('@vielzeug/stateit').Signal<string | undefined>>(props.value);
 
           return html`<div class="value">${() => props.value.value ?? ''}</div>`;
@@ -427,36 +445,44 @@ describe('Core: Component Definition', () => {
       expect(query('.value')?.textContent).toBe('');
     });
 
-    it('should throw at define-time when object prop uses reflect: true', () => {
+    it('should allow object prop with reflect: true at define-time', async () => {
       const tag = `test-reflect-structured-object-${Math.random().toString(36).slice(2)}`;
 
       expect(() => {
         define<{ data?: Record<string, string> }>(tag, {
           props: {
-            data: { default: { a: '1' }, reflect: true },
+            data: { default: { a: '1' } as Record<string, string>, reflect: true },
           },
           setup: () => html`<div>invalid</div>`,
         });
-      }).toThrow('[craftit:E9]');
+      }).not.toThrow();
+
+      const { element } = await mount(tag);
+
+      expect(element.getAttribute('data')).toBe('[object Object]');
     });
 
-    it('should throw at define-time when array prop uses reflect: true', () => {
+    it('should allow array prop with reflect: true at define-time', async () => {
       const tag = `test-reflect-structured-array-${Math.random().toString(36).slice(2)}`;
 
       expect(() => {
         define<{ items?: string[] }>(tag, {
           props: {
-            items: { default: ['x'], reflect: true },
+            items: { default: ['x'] as string[], reflect: true },
           },
           setup: () => html`<div>invalid</div>`,
         });
-      }).toThrow('[craftit:E9]');
+      }).not.toThrow();
+
+      const { element } = await mount(tag);
+
+      expect(element.getAttribute('items')).toBe('x');
     });
   });
 
   it('should dispatch events via setup emit', async () => {
     const spy = vi.fn();
-    const { element, flush, query } = await mount(({ emit }) => {
+    const { element, flush, query } = await mount((_props, { emit }) => {
       const fire = () => emit('ping', { ok: true });
 
       return html`<button @click=${fire}>Ping</button>`;
@@ -501,8 +527,8 @@ describe('Core: Component Definition', () => {
       const { query } = await mount(
         {
           props: { count: 0 },
-          setup: ({ props }) => {
-            expectType<ReturnType<typeof signal<number>>>(props.count);
+          setup: (props) => {
+            expectType<ReturnType<typeof signal<number | undefined>>>(props.count);
 
             return html`<div class="count">${props.count}</div>`;
           },
@@ -595,12 +621,12 @@ describe('core/component.ts', () => {
 
   describe('emit', () => {
     it('dispatches a custom event with the correct type and detail', async () => {
-      const { element } = await mount((({
-        emit,
-      }: {
-        emit: (event: 'value-changed', detail: { value: string }) => void;
-      }) => {
-        setTimeout(() => emit('value-changed', { value: 'hello' }), 50);
+      const { element } = await mount(((_props, { emit }) => {
+        const typedEmit = emit as unknown as import('../index').SetupContextBag<{
+          'value-changed': { value: string };
+        }>['emit'];
+
+        setTimeout(() => typedEmit('value-changed', { value: 'hello' }), 50);
 
         return html`<div></div>`;
       }) as ComponentDefinition['setup']);
@@ -611,7 +637,7 @@ describe('core/component.ts', () => {
     });
 
     it('dispatched events bubble and are composed so host-level listeners receive them', async () => {
-      const { element } = await mount((({ emit }: { emit: (event: string) => void }) => {
+      const { element } = await mount(((_props, { emit }) => {
         setTimeout(() => emit('ping'), 50);
 
         return html`<div></div>`;
@@ -634,9 +660,10 @@ describe('component props & global helpers', () => {
           count: 0,
           label: 'default',
         },
-        setup: ({ props }: ComponentSetupContext<any>) =>
-          html`<div class="count">${props.count}</div>
-            <div class="label">${props.label}</div>`,
+        setup: (props) => {
+          return html`<div class="count">${props.count}</div>
+            <div class="label">${props.label}</div>`;
+        },
       },
       {
         attrs: { count: '42', label: 'custom' },
@@ -652,9 +679,11 @@ describe('component props & global helpers', () => {
 
     const { query } = await mount({
       props: {
-        config: { default: configDefault, reflect: false },
+        config: { default: configDefault as { default: string; mode: string } | undefined, reflect: false },
       },
-      setup: ({ props }: ComponentSetupContext<any>) => html`<div class="mode">${() => props.config.value.mode}</div>`,
+      setup: (props) => {
+        return html`<div class="mode">${() => props.config.value?.mode ?? ''}</div>`;
+      },
     });
 
     expect(query('.mode')?.textContent).toBe('dark');

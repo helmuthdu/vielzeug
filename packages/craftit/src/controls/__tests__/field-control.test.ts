@@ -3,14 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { html, onElement, ref } from '../../index';
 import { mount } from '../../testing';
-import {
-  createChoiceFieldControl,
-  createTextFieldControl,
-  mountTextFieldLifecycle,
-  createAssistiveState,
-  createCheckableStateControl,
-} from '../field-control';
+import { createChoiceField } from '../choice-field-control';
+import { createAssistiveState, createCheckableState, mountTextFieldLifecycle } from '../field-control';
 import { createValidationControl } from '../internal/control-state';
+import { createTextField } from '../text-field-control';
 
 describe('field controls', () => {
   describe('createValidationControl()', () => {
@@ -45,14 +41,14 @@ describe('field controls', () => {
     });
   });
 
-  describe('createTextFieldControl()', () => {
+  describe('createTextField()', () => {
     it('creates a text field handle with stable ids and refs', async () => {
-      let handle!: ReturnType<typeof createTextFieldControl>;
+      let handle!: ReturnType<typeof createTextField>;
 
       await mount({
         formAssociated: true,
         setup: () => {
-          handle = createTextFieldControl({
+          handle = createTextField({
             name: signal('email'),
             prefix: 'field',
             value: signal(''),
@@ -72,14 +68,14 @@ describe('field controls', () => {
     });
 
     it('syncs its local value from the source signal', async () => {
-      let handle!: ReturnType<typeof createTextFieldControl>;
+      let handle!: ReturnType<typeof createTextField>;
       let value!: ReturnType<typeof signal<string>>;
 
       await mount({
         formAssociated: true,
         setup: () => {
           value = signal('hello');
-          handle = createTextFieldControl({
+          handle = createTextField({
             prefix: 'test',
             value,
           });
@@ -94,12 +90,12 @@ describe('field controls', () => {
     });
 
     it('normalizes undefined source values to an empty string', async () => {
-      let handle!: ReturnType<typeof createTextFieldControl>;
+      let handle!: ReturnType<typeof createTextField>;
 
       await mount({
         formAssociated: true,
         setup: () => {
-          handle = createTextFieldControl({
+          handle = createTextField({
             prefix: 'test',
             value: signal<string | undefined>(undefined),
           });
@@ -112,14 +108,14 @@ describe('field controls', () => {
     });
 
     it('keeps base ids stable while source state changes', async () => {
-      let handle!: ReturnType<typeof createTextFieldControl>;
+      let handle!: ReturnType<typeof createTextField>;
       let value!: ReturnType<typeof signal<string>>;
 
       await mount({
         formAssociated: true,
         setup: () => {
           value = signal('01234567');
-          handle = createTextFieldControl({
+          handle = createTextField({
             prefix: 'test',
             value,
           });
@@ -137,7 +133,7 @@ describe('field controls', () => {
     });
 
     it('merges local disabled with context disabled and uses context validateOn by default', async () => {
-      let handle!: ReturnType<typeof createTextFieldControl>;
+      let handle!: ReturnType<typeof createTextField>;
       let contextDisabled!: ReturnType<typeof signal<boolean>>;
 
       await mount({
@@ -145,7 +141,7 @@ describe('field controls', () => {
         setup: () => {
           contextDisabled = signal(false);
 
-          handle = createTextFieldControl({
+          handle = createTextField({
             context: {
               disabled: contextDisabled,
               validateOn: signal<'blur' | 'change' | 'submit' | undefined>('change'),
@@ -170,7 +166,7 @@ describe('field controls', () => {
       await expect(
         mount({
           setup: () => {
-            createTextFieldControl({
+            createTextField({
               prefix: 'standalone',
               validateOn: signal<'blur' | 'change' | 'submit' | undefined>('change'),
               value: signal('initial'),
@@ -183,14 +179,14 @@ describe('field controls', () => {
     });
   });
 
-  describe('createChoiceFieldControl()', () => {
+  describe('createChoiceField()', () => {
     it('normalizes controlled csv values and projects a form value', async () => {
-      let handle!: ReturnType<typeof createChoiceFieldControl<string>>;
+      let handle!: ReturnType<typeof createChoiceField<string>>;
 
       await mount({
         formAssociated: true,
         setup: () => {
-          handle = createChoiceFieldControl({
+          handle = createChoiceField({
             getValue: (value) => value,
             mapControlledValue: (value) => value,
             multiple: signal(true),
@@ -208,7 +204,7 @@ describe('field controls', () => {
     });
 
     it('supports single and multiple selection helpers for object-backed items', async () => {
-      let handle!: ReturnType<typeof createChoiceFieldControl<{ label: string; value: string }>>;
+      let handle!: ReturnType<typeof createChoiceField<{ label: string; value: string }>>;
       let multiple!: ReturnType<typeof signal<boolean>>;
       let contextDisabled!: ReturnType<typeof signal<boolean>>;
 
@@ -217,7 +213,7 @@ describe('field controls', () => {
         setup: () => {
           multiple = signal(true);
           contextDisabled = signal(false);
-          handle = createChoiceFieldControl({
+          handle = createChoiceField({
             context: {
               disabled: contextDisabled,
               validateOn: signal<'blur' | 'change' | 'submit' | undefined>('blur'),
@@ -254,7 +250,7 @@ describe('field controls', () => {
 
       contextDisabled.value = true;
       expect(handle.disabled.value).toBe(true);
-      expect(handle.assistive.value.text).toBe('Hint');
+      expect(handle.assistive.value.helperText).toBe('Hint');
     });
   });
 
@@ -266,15 +262,14 @@ describe('field controls', () => {
       const maxLength = signal<number | undefined>(10);
       const state = createAssistiveState({ error, helper, maxLength, value });
 
-      expect(state.value.showHelper).toBe(true);
-      expect(state.value.hasError).toBe(false);
+      expect(state.value.helperText).toBe('Helper text');
+      expect(state.value.errorText).toBe('');
       expect(state.value.counterNearLimit).toBe(true);
       expect(state.value.counterAtLimit).toBe(false);
 
       error.value = 'Error text';
-      expect(state.value.hasError).toBe(true);
-      expect(state.value.showHelper).toBe(false);
       expect(state.value.errorText).toBe('Error text');
+      expect(state.value.helperText).toBe('Helper text');
     });
 
     it('accepts numeric maxlength values coming through attribute-style strings', () => {
@@ -291,26 +286,24 @@ describe('field controls', () => {
   });
 
   describe('createAssistiveState() text mode', () => {
-    it('prefers error text and marks error mode when error exists', () => {
+    it('prefers error text when error exists', () => {
       const state = createAssistiveState({
         error: signal('Required'),
         helper: signal('Hint'),
       });
 
-      expect(state.value.text).toBe('Required');
-      expect(state.value.hidden).toBe(false);
-      expect(state.value.isError).toBe(true);
+      expect(state.value.errorText).toBe('Required');
+      expect(state.value.helperText).toBe('Hint');
     });
 
-    it('falls back to helper text when no error exists', () => {
+    it('provides helper text when no error exists', () => {
       const state = createAssistiveState({
         error: signal(''),
         helper: signal('Hint'),
       });
 
-      expect(state.value.text).toBe('Hint');
-      expect(state.value.hidden).toBe(false);
-      expect(state.value.isError).toBe(false);
+      expect(state.value.errorText).toBe('');
+      expect(state.value.helperText).toBe('Hint');
     });
   });
 
@@ -352,9 +345,9 @@ describe('field controls', () => {
     });
   });
 
-  describe('createCheckableStateControl()', () => {
+  describe('createCheckableState()', () => {
     it('syncs checked and indeterminate state from source signals', async () => {
-      let handle!: ReturnType<typeof createCheckableStateControl>;
+      let handle!: ReturnType<typeof createCheckableState>;
       let checked!: ReturnType<typeof signal<boolean>>;
       let indeterminate!: ReturnType<typeof signal<boolean>>;
 
@@ -363,7 +356,7 @@ describe('field controls', () => {
         setup: () => {
           checked = signal(true);
           indeterminate = signal(true);
-          handle = createCheckableStateControl({
+          handle = createCheckableState({
             checked,
             helper: signal<string | undefined>('Check helper'),
             indeterminate,
@@ -382,16 +375,16 @@ describe('field controls', () => {
       indeterminate.value = false;
       expect(handle.checked.value).toBe(false);
       expect(handle.indeterminate.value).toBe(false);
-      expect(handle.assistive.value.text).toBe('Check helper');
+      expect(handle.assistive.value.helperText).toBe('Check helper');
     });
 
     it('toggles checked state for standalone controls', async () => {
-      let handle!: ReturnType<typeof createCheckableStateControl>;
+      let handle!: ReturnType<typeof createCheckableState>;
 
       await mount({
         formAssociated: true,
         setup: () => {
-          handle = createCheckableStateControl({
+          handle = createCheckableState({
             checked: signal(false),
             prefix: 'test',
             value: signal('opt'),
@@ -409,12 +402,12 @@ describe('field controls', () => {
     });
 
     it('clears indeterminate before toggling when configured', async () => {
-      let handle!: ReturnType<typeof createCheckableStateControl>;
+      let handle!: ReturnType<typeof createCheckableState>;
 
       await mount({
         formAssociated: true,
         setup: () => {
-          handle = createCheckableStateControl({
+          handle = createCheckableState({
             checked: signal(false),
             clearIndeterminateFirst: true,
             indeterminate: signal(true),
@@ -432,12 +425,12 @@ describe('field controls', () => {
     });
 
     it('does not toggle when disabled', async () => {
-      let handle!: ReturnType<typeof createCheckableStateControl>;
+      let handle!: ReturnType<typeof createCheckableState>;
 
       await mount({
         formAssociated: true,
         setup: () => {
-          handle = createCheckableStateControl({
+          handle = createCheckableState({
             checked: signal(false),
             disabled: signal(true),
             prefix: 'test',
@@ -453,14 +446,14 @@ describe('field controls', () => {
     });
 
     it('delegates group toggles and forwards the toggle payload', async () => {
-      let handle!: ReturnType<typeof createCheckableStateControl>;
+      let handle!: ReturnType<typeof createCheckableState>;
       const toggle = vi.fn();
       const onToggle = vi.fn();
 
       await mount({
         formAssociated: true,
         setup: () => {
-          handle = createCheckableStateControl({
+          handle = createCheckableState({
             checked: signal(false),
             group: { toggle },
             indeterminate: signal(true),
@@ -481,8 +474,8 @@ describe('field controls', () => {
       expect(handle.indeterminate.value).toBe(false);
       expect(onToggle).toHaveBeenCalledWith({
         checked: false,
-        fieldValue: 'val',
         originalEvent: event,
+        value: 'val',
       });
     });
   });

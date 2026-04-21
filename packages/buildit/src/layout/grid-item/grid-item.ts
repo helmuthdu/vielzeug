@@ -1,3 +1,5 @@
+import type { PropsInput } from '@vielzeug/craftit';
+
 import { define, html, computed } from '@vielzeug/craftit';
 
 import styles from './grid-item.css?inline';
@@ -48,7 +50,7 @@ export type BitGridItemProps = {
  * <!-- Explicit placement -->
  * <bit-grid-item col="2 / 5" row="1 / 3">Placed</bit-grid-item>
  */
-export const GRID_ITEM_TAG = define('bit-grid-item', {
+export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
   props: {
     align: undefined,
     col: '',
@@ -56,8 +58,8 @@ export const GRID_ITEM_TAG = define('bit-grid-item', {
     justify: undefined,
     row: '',
     rowSpan: undefined,
-  } as BitGridItemProps,
-  setup({ host, props }) {
+  } satisfies PropsInput<BitGridItemProps>,
+  setup(props, { host }) {
     const gridColumn = computed(() => {
       const col = props.col.value;
       const span = props.colSpan.value;
@@ -68,7 +70,7 @@ export const GRID_ITEM_TAG = define('bit-grid-item', {
 
       if (span) return `span ${span}`;
 
-      return null;
+      return undefined;
     });
 
     const gridRow = computed(() => {
@@ -81,13 +83,13 @@ export const GRID_ITEM_TAG = define('bit-grid-item', {
 
       if (span) return `span ${span}`;
 
-      return null;
+      return undefined;
     });
 
     host.bind({
       style: {
-        'grid-column': gridColumn,
-        'grid-row': gridRow,
+        gridColumn,
+        gridRow,
       },
     });
 

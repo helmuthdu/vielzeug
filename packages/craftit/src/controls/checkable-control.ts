@@ -1,5 +1,5 @@
 import { createA11yControl, type A11yControlHandle } from './a11y-control';
-import { createFieldControl, type CheckableStateHandle, type CheckableStateOptions } from './field-control';
+import { createCheckableState, type CheckableStateHandle, type CheckableStateOptions } from './field-control';
 import { createPressControl, type PressControl } from './press-control';
 
 export type CheckableFieldControlOptions = CheckableStateOptions & {
@@ -15,18 +15,17 @@ export type CheckableFieldControlHandle = {
 };
 
 export const createCheckableFieldControl = (options: CheckableFieldControlOptions): CheckableFieldControlHandle => {
-  const control = createFieldControl({ kind: 'checkable', options });
-  const checkableControl = control as CheckableStateHandle;
+  const control = createCheckableState(options);
 
   const a11y = createA11yControl(options.host, {
     checked: () => {
-      if (options.role === 'checkbox' && checkableControl.indeterminate.value) return 'mixed';
+      if (options.role === 'checkbox' && control.indeterminate.value) return 'mixed';
 
-      return checkableControl.checked.value ? 'true' : 'false';
+      return control.checked.value ? 'true' : 'false';
     },
-    helperText: () => checkableControl.assistive.value.text,
-    helperTone: () => (checkableControl.assistive.value.isError ? 'error' : 'default'),
-    invalid: () => checkableControl.assistive.value.isError,
+    helperText: () => control.assistive.value.errorText || control.assistive.value.helperText,
+    helperTone: () => (control.assistive.value.errorText ? 'error' : 'default'),
+    invalid: () => !!control.assistive.value.errorText,
     role: options.role,
   });
   const press = createPressControl({

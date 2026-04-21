@@ -1,5 +1,4 @@
 import { autoUpdate } from '@vielzeug/floatit';
-import { onCleanup as onSignalCleanup } from '@vielzeug/stateit';
 
 import { effect } from '../runtime';
 
@@ -50,7 +49,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
     const cleanup = autoUpdate(reference, floating, () => options.positioner?.update());
 
-    onSignalCleanup(cleanup); // Auto-cleanup on effect re-run/end
+    return cleanup;
   });
 
   const shouldRestoreFocus = (): boolean => {
@@ -93,10 +92,6 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     open({ reason: 'trigger' });
   };
 
-  const isInside = (element: HTMLElement | null | undefined, target: Node): boolean => {
-    return element ? element.contains(target) : false;
-  };
-
   const bindOutsideClick = (target: Document | HTMLElement = document, capture = true): (() => void) => {
     const handler = (event: Event) => {
       if (!options.isOpen()) return;
@@ -106,7 +101,8 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
       if (!el) return;
 
-      const inside = isInside(options.getBoundaryElement(), el) || isInside(options.getPanelElement?.() ?? null, el);
+      const inside =
+        options.getBoundaryElement()?.contains(el) || (options.getPanelElement?.() ?? null)?.contains(el) || false;
 
       if (!inside) close({ reason: 'outside-click' });
     };

@@ -1,6 +1,6 @@
-import { type ComputedSignal, type ReadonlySignal, type Signal, effect } from '@vielzeug/stateit';
+import { type ComputedSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { currentRuntime } from './runtime';
+import { currentRuntime, effect } from './runtime';
 
 /** @internal */
 export const formCallbackRegistry = new WeakMap<HTMLElement, FormFieldCallbacks>();

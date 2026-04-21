@@ -4,7 +4,7 @@ import { type CheckableChangePayload, createCheckableFieldControl } from '@vielz
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { formControlMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, type PropBundle, sizableBundle, themableBundle } from '../shared/bundles';
+import { disablableBundle, type PropsInput, sizableBundle, themableBundle } from '../shared/bundles';
 import { SWITCH_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -32,8 +32,8 @@ const switchProps = {
   error: '',
   helper: '',
   name: '',
-  value: 'on',
-} satisfies PropBundle<BitSwitchProps>;
+  value: { default: 'on', reflect: true },
+} satisfies PropsInput<BitSwitchProps>;
 
 /**
  * A toggle switch component for binary on/off states.
@@ -49,7 +49,7 @@ const switchProps = {
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the switch
  *
- * @fires change - Emitted when switch is toggled. detail: { checked: boolean, fieldValue: string, originalEvent?: Event }
+ * @fires change - Emitted when switch is toggled. detail: { checked: boolean, value: string, originalEvent?: Event }
  *
  * @slot - Switch label text
  *
@@ -62,8 +62,8 @@ const switchProps = {
 export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', {
   formAssociated: true,
   props: switchProps,
-  setup({ emit, host, props }) {
-    const formCtx = inject(FORM_CTX, undefined);
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
 
     const checkable = createCheckableFieldControl({
       checked: props.checked,

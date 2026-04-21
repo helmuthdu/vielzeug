@@ -33,10 +33,10 @@
     "node": ">=20.3.0"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "typescript": "~6.0.2",
-    "vite": "^8.0.3",
-    "vitest": "^4.1.2"
+    "@types/node": "^25.6.0",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
   },
   "dependencies": {
     "@vielzeug/toolkit": "workspace:*"

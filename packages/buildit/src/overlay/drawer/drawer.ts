@@ -1,10 +1,10 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, createId, fire, handle, html, onMount, ref, signal, watch } from '@vielzeug/craftit';
+import { define, createId, handle, html, onMount, ref, signal, watch } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import '../../content/icon/icon';
-import { type PropBundle } from '../../inputs/shared/bundles';
+import { type PropsInput } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { lockBackground, unlockBackground, useOverlay } from '../../utils';
 import styles from './drawer.css?inline';
@@ -119,11 +119,11 @@ const drawerProps = {
   'return-focus': true,
   size: undefined,
   title: undefined,
-} satisfies PropBundle<BitDrawerProps>;
+} satisfies PropsInput<BitDrawerProps>;
 
 export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', {
   props: drawerProps,
-  setup({ emit, host, props, slots }) {
+  setup(props, { emit, host, slots }) {
     const drawerLabelId = createId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();
@@ -145,15 +145,23 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       props,
     );
 
+    const dispatchCloseRequest = (reason: Exclude<OverlayCloseReason, 'programmatic'>): boolean => {
+      return host.el.dispatchEvent(
+        new CustomEvent('close-request', {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          detail: { placement: props.placement.value ?? 'right', reason },
+        }),
+      );
+    };
+
     const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
       const dialog = dialogRef.value;
 
       if (!dialog) return;
 
-      const closeAllowed = fire.custom(host.el, 'close-request', {
-        cancelable: true,
-        detail: { placement: props.placement.value ?? 'right', reason },
-      });
+      const closeAllowed = dispatchCloseRequest(reason);
 
       if (!closeAllowed) return;
 

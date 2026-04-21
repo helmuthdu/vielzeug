@@ -2,7 +2,7 @@ import { define, computed, effect, html } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { type PropBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { type PropsInput, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './progress.css?inline';
 
@@ -80,9 +80,9 @@ export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
     type: 'linear',
     value: 0,
     'value-text': undefined,
-  } satisfies PropBundle<BitProgressProps>,
+  } satisfies PropsInput<BitProgressProps>,
 
-  setup({ host, props }) {
+  setup(props, { host }) {
     // The SVG circle circumference for a radius of 45 (viewBox 0 0 100 100)
     const RADIUS = 45;
     const CIRC = 2 * Math.PI * RADIUS; // ~282.7

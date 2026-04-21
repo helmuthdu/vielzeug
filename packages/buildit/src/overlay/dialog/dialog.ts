@@ -1,12 +1,12 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, handle, html, onMount, ref, signal, watch, fire } from '@vielzeug/craftit';
+import { define, handle, html, onMount, ref, signal, watch } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import type { PaddingSize, RoundedSize } from '../../types';
 
 import '../../content/icon/icon';
-import { type PropBundle } from '../../inputs/shared/bundles';
+import { type PropsInput } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, elevationMixin, roundedVariantMixin } from '../../styles';
 import { lockBackground, unlockBackground } from '../../utils/background-lock';
 import { useOverlay } from '../../utils/use-overlay';
@@ -124,16 +124,27 @@ const dialogProps = {
   'return-focus': true,
   rounded: undefined,
   size: 'md',
-} satisfies PropBundle<BitDialogProps>;
+} satisfies PropsInput<BitDialogProps>;
 
 export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', {
   props: dialogProps,
-  setup({ emit, host, props, slots }) {
+  setup(props, { emit, host, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
     const isOpen = signal(false);
     const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
     const hasFooter = () => slots.has('footer').value;
     let closeReason: OverlayCloseReason = 'programmatic';
+
+    const dispatchCloseRequest = (reason: Exclude<OverlayCloseReason, 'programmatic'>): boolean => {
+      return host.el.dispatchEvent(
+        new CustomEvent('close-request', {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          detail: { reason },
+        }),
+      );
+    };
 
     // ────────────────────────────────────────────────────────────────
     // Overlay State Management
@@ -217,10 +228,7 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
       };
 
       const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
-        const closeAllowed = fire.custom(host.el, 'close-request', {
-          cancelable: true,
-          detail: { reason },
-        });
+        const closeAllowed = dispatchCloseRequest(reason);
 
         if (!closeAllowed) return;
 
@@ -261,10 +269,7 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
 
       if (!dialog) return;
 
-      const closeAllowed = fire.custom(host.el, 'close-request', {
-        cancelable: true,
-        detail: { reason: 'trigger' },
-      });
+      const closeAllowed = dispatchCloseRequest('trigger');
 
       if (!closeAllowed) return;
 

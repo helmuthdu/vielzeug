@@ -1,12 +1,11 @@
 import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, computed, createCleanupSignal, createId, html, onMount, signal, watch } from '@vielzeug/craftit';
+import { define, computed, createId, html, onMount, signal, syncAria, watch } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 import { flip, offset, positionFloat, shift, type Placement } from '@vielzeug/floatit';
 
-import { disablableBundle, type PropBundle } from '../../inputs/shared/bundles';
+import { disablableBundle, type PropsInput } from '../../inputs/shared/bundles';
 import { reducedMotionMixin } from '../../styles';
-import { syncAria } from '../../utils/aria';
 import styles from './popover.css?inline';
 
 export type PopoverTrigger = 'click' | 'hover' | 'focus';
@@ -47,7 +46,7 @@ export type BitPopoverProps = {
   trigger?: string;
 };
 
-const popoverProps: PropBundle<BitPopoverProps> = {
+const popoverProps: PropsInput<BitPopoverProps> = {
   ...disablableBundle,
   label: undefined,
   offset: PANEL_OFFSET,
@@ -89,7 +88,7 @@ const popoverProps: PropBundle<BitPopoverProps> = {
  */
 export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popover', {
   props: popoverProps,
-  setup({ emit, host, props, slots }) {
+  setup(props, { emit, host, slots }) {
     const visible = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const isControlled = computed(() => props.open.value !== undefined);
@@ -192,13 +191,14 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
       close('trigger');
     }
     onMount(() => {
-      const triggerSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-      const triggerBinding = createCleanupSignal();
+      const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      let triggerBinding: (() => void) | null = null;
 
       if (!triggerSlot) return;
 
       const bindEvents = () => {
-        triggerBinding.clear();
+        triggerBinding?.();
+        triggerBinding = null;
 
         const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
@@ -255,13 +255,13 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
 
         add(document, 'keydown', handleKeydown as EventListener);
 
-        triggerBinding.set(() => {
+        triggerBinding = () => {
           removeAria();
 
           for (const cleanup of cleanups) cleanup();
 
           currentTrigger = null;
-        });
+        };
       };
 
       watch(slots.elements(), bindEvents, { immediate: true });
@@ -283,7 +283,8 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
       });
 
       return () => {
-        triggerBinding.clear();
+        triggerBinding?.();
+        triggerBinding = null;
 
         if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
       };

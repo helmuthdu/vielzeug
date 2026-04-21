@@ -28,7 +28,7 @@ export const BREADCRUMB_ITEM_TAG = define<BitBreadcrumbItemProps>('bit-breadcrum
     href: '',
     separator: '/',
   },
-  setup({ props }) {
+  setup(props) {
     return html`
       <li class="item" role="listitem">
         <span class="separator" part="separator" aria-hidden="true">${props.separator}</span>
@@ -73,7 +73,7 @@ export const BREADCRUMB_TAG = define<BitBreadcrumbProps>('bit-breadcrumb', {
     label: 'Breadcrumb',
     separator: '',
   },
-  setup({ host, props, slots }) {
+  setup(props, { host, slots }) {
     // ────────────────────────────────────────────────────────────────
     // Item & Separator Synchronization
     // ────────────────────────────────────────────────────────────────

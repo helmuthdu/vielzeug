@@ -2,7 +2,7 @@ import { define, computed, html } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-import { type PropBundle, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { type PropsInput, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './badge.css?inline';
 
@@ -82,8 +82,8 @@ export const BADGE_TAG = define<BitBadgeProps>('bit-badge', {
     label: undefined,
     max: undefined,
     variant: undefined,
-  } satisfies PropBundle<BitBadgeProps>,
-  setup({ props }) {
+  } satisfies PropsInput<BitBadgeProps>,
+  setup(props) {
     const label = computed(() => {
       const count = props.count.value != null ? Number(props.count.value) : undefined;
       const max = props.max.value != null ? Number(props.max.value) : undefined;

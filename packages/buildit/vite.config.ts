@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vite';
 
 import { getConfig } from '../../vite.config';
+// @ts-expect-error - .mjs files don't have type declarations in this context
 import { getBuilditLibraryEntries } from './component-manifest.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

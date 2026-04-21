@@ -1,10 +1,10 @@
-import { bridgeContextAttributes, type ReadonlySignal } from '@vielzeug/craftit';
+import { effect, type ReadonlySignal } from '@vielzeug/craftit';
 
 import { type FormContext } from '../form-context';
 
 export interface FormContextSyncProps {
-  disabled: ReadonlySignal<boolean | undefined>;
-  size: ReadonlySignal<string | undefined>;
+  disabled?: ReadonlySignal<boolean | undefined>;
+  size?: ReadonlySignal<string | undefined>;
   variant?: ReadonlySignal<string | undefined>;
 }
 
@@ -24,12 +24,24 @@ export function mountFormContextSync(
 ): void {
   if (!formCtx) return;
 
-  bridgeContextAttributes(host, {
-    contextDisabled: formCtx.disabled,
-    contextSize: formCtx.size,
-    contextVariant: props.variant ? formCtx.variant : undefined,
-    ownDisabled: props.disabled,
-    ownSize: props.size,
-    ownVariant: props.variant,
+  effect(() => {
+    const ctxDisabled = formCtx.disabled.value;
+    const disabledPropValue = props.disabled?.value;
+
+    if (ctxDisabled && !disabledPropValue) host.setAttribute('disabled', '');
+    else if (!disabledPropValue) host.removeAttribute('disabled');
+
+    const ctxSize = formCtx.size.value;
+    const sizePropValue = props.size?.value;
+
+    if (ctxSize && !sizePropValue) host.setAttribute('size', ctxSize);
+    else if (!sizePropValue) host.removeAttribute('size');
+
+    const ctxVariant = formCtx.variant?.value;
+
+    if (props.variant) {
+      if (ctxVariant && !props.variant.value) host.setAttribute('variant', ctxVariant);
+      else if (!props.variant.value) host.removeAttribute('variant');
+    }
   });
 }

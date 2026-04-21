@@ -1,13 +1,12 @@
 import { batch, untrack, effect as _effect, type CleanupFn } from '@vielzeug/stateit';
 
-import { type Binding, type HtmlBinding } from './internal';
-import { runAll } from './internal';
+import { runAll, type Binding, type HtmlBinding } from './internal';
 import {
   applyBindingsInContainer,
   applyBindingsWithTargets,
   createNodes,
   findCommentMarker,
-  indexBindingsInNodes,
+  indexBindingTargets,
   insertNodes,
   parseHTML,
   type BindingTargets,
@@ -32,7 +31,7 @@ const removeKeyed = (keyedNode: KeyedNode) => {
 const applyKeyedItemBindings = (
   nodes: Node[],
   itemBindings: Binding[],
-  targets = indexBindingsInNodes(nodes),
+  targets = indexBindingTargets(nodes),
 ): CleanupFn[] => {
   const itemCleanups: CleanupFn[] = [];
   const itemRegisterCleanup: RegisterCleanup = (fn) => itemCleanups.push(fn);
@@ -123,7 +122,7 @@ export const applyHtmlBinding = (
 
                 runAll(existing.cleanups);
 
-                const itemTargets = indexBindingsInNodes(existing.nodes);
+                const itemTargets = indexBindingTargets(existing.nodes);
                 const itemCleanups = applyKeyedItemBindings(existing.nodes, itemData.bindings, itemTargets);
 
                 newKeyedState.set(key, {
@@ -137,7 +136,7 @@ export const applyHtmlBinding = (
                 runAll(existing.cleanups);
 
                 const newNodes = createNodes(itemData.html);
-                const itemTargets = indexBindingsInNodes(newNodes);
+                const itemTargets = indexBindingTargets(newNodes);
 
                 insertNodes(marker, newNodes, insertPoint);
 
@@ -154,7 +153,7 @@ export const applyHtmlBinding = (
               } else {
                 // CREATE: New item
                 const newNodes = createNodes(itemData.html);
-                const itemTargets = indexBindingsInNodes(newNodes);
+                const itemTargets = indexBindingTargets(newNodes);
 
                 insertNodes(marker, newNodes, insertPoint);
 

@@ -104,7 +104,7 @@ describe('Template: HTML System', () => {
       expect(first.__html).toBe(second.__html);
     });
 
-    it('should normalize adjacent tag whitespace in compiled output', async () => {
+    it('should preserve adjacent tag whitespace in compiled output', async () => {
       const { shadow } = await mount(
         () => html`
           <div>One</div>
@@ -112,7 +112,7 @@ describe('Template: HTML System', () => {
         `,
       );
 
-      expect(shadow.innerHTML).toContain('</div><div>');
+      expect(shadow.innerHTML).toMatch(/<\/div>\s+<div>/);
     });
 
     it('should keep sibling nested HTMLResult bindings isolated', async () => {

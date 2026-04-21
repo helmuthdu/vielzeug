@@ -7,8 +7,8 @@ export type PropOptions<T> = {
   /** When `true`, removes the host attribute instead of setting it to `""` when value is an empty string. */
   omit?: boolean;
   parse?: (value: string | null) => T;
+  /** Whether to reflect prop changes to HTML attributes. Default: false. Set to true for CSS selectors. */
   reflect?: boolean;
-  type?: PropType<T>;
 };
 
 export type OptionalKeys<T extends Record<string, unknown>> = {
@@ -26,48 +26,43 @@ export type PropsInput<T extends Record<string, unknown>> = {
 export type PropDef<T> = PropOptions<T> & { default: T };
 export type PropInputDefs = Record<string, unknown | PropDef<unknown>>;
 
-type PropType<T> = T extends string
-  ? StringConstructor
-  : T extends number
-    ? NumberConstructor
-    : T extends boolean
-      ? BooleanConstructor
-      : T extends unknown[]
-        ? ArrayConstructor
-        : ObjectConstructor;
-
-const PROP_DEF_KEYS = new Set(['default', 'omit', 'parse', 'reflect', 'type']);
-
 export const hasStructuredDefault = (value: unknown): boolean =>
   Array.isArray(value) || (typeof value === 'object' && value !== null);
 
-const isPropDef = (value: unknown): value is PropDef<unknown> => {
-  if (typeof value !== 'object' || value === null || !('default' in value)) return false;
+/**
+ * Explicit prop definition factory. Plain objects with `{ default: ... }` are duck-typed as PropDef.
+ * @example
+ * props: {
+ *   label: 'Default Label',
+ *   disabled: { default: false, reflect: true },
+ * }
+ */
 
-  return Object.keys(value).every((key) => PROP_DEF_KEYS.has(key));
-};
+const isPropDef = (value: unknown): value is PropDef<unknown> =>
+  typeof value === 'object' && value !== null && 'default' in value;
 
-export const normalizePropDefinition = <T>(value: T | PropDef<T>): PropDef<T> => {
+export function normalizePropDefinition<T>(value: T | PropDef<T>): PropDef<T> {
   if (isPropDef(value)) {
     const descriptor = value as PropDef<T>;
 
     return {
       ...descriptor,
-      reflect: descriptor.reflect ?? !hasStructuredDefault(descriptor.default),
+      reflect: descriptor.reflect ?? false,
     };
   }
 
   return {
     default: value as T,
-    reflect: !hasStructuredDefault(value),
+    reflect: false,
   };
-};
+}
 
 export const propRegistry = new WeakMap<HTMLElement, Map<string, PropMeta<unknown>>>();
 
-const reflectingAttr = new WeakMap<HTMLElement, string>();
+let reflectingAttr: { el: HTMLElement; name: string } | null = null;
 
-export const isReflecting = (el: HTMLElement, name: string): boolean => reflectingAttr.get(el) === name;
+export const isReflecting = (el: HTMLElement, name: string): boolean =>
+  reflectingAttr?.el === el && reflectingAttr?.name === name;
 
 type PropMeta<T = unknown> = {
   parse: (value: string | null) => T;
@@ -75,15 +70,15 @@ type PropMeta<T = unknown> = {
   signal: Signal<T>;
 };
 
-const createDefaultParser = <T>(defaultValue: T, type: PropOptions<T>['type']): ((value: string | null) => T) => {
+const createDefaultParser = <T>(defaultValue: T): ((value: string | null) => T) => {
   return (value: string | null): T => {
     if (value == null) return defaultValue;
 
-    if (type === Boolean || typeof defaultValue === 'boolean') {
+    if (typeof defaultValue === 'boolean') {
       return (value === '' || value === 'true') as T;
     }
 
-    if (type === Number || typeof defaultValue === 'number') {
+    if (typeof defaultValue === 'number') {
       return Number(value) as T;
     }
 
@@ -91,12 +86,13 @@ const createDefaultParser = <T>(defaultValue: T, type: PropOptions<T>['type']): 
   };
 };
 
-export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>): Signal<T> => {
+/** @internal Runtime prop registration (called by createProps) */
+const registerProp = <T>(name: string, defaultValue: T, options?: PropOptions<T>): Signal<T> => {
   const el = currentRuntime().el;
 
   if (!propRegistry.has(el)) propRegistry.set(el, new Map());
 
-  const parse = options?.parse ?? createDefaultParser(defaultValue, options?.type);
+  const parse = options?.parse ?? createDefaultParser(defaultValue);
 
   const s = signal<T>(defaultValue);
   const hasPreUpgradeProperty = Object.prototype.hasOwnProperty.call(el, name);
@@ -104,7 +100,7 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
 
   const meta = {
     parse,
-    reflect: options?.reflect ?? true,
+    reflect: options?.reflect ?? false,
     signal: s as Signal<unknown>,
   };
 
@@ -126,13 +122,13 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
     },
   });
 
-  if (options?.reflect ?? true) {
+  if (options?.reflect ?? false) {
     const omit = options?.omit ?? false;
 
     effect(() => {
       const v = s.value;
 
-      reflectingAttr.set(el, name);
+      reflectingAttr = { el, name };
 
       try {
         if (v == null || v === false || (omit && v === '')) {
@@ -141,7 +137,7 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
           setAttr(el, name, v);
         }
       } finally {
-        reflectingAttr.delete(el);
+        reflectingAttr = null;
       }
     });
   }
@@ -170,14 +166,9 @@ export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals
 
   for (const [name, def] of Object.entries(defs)) {
     const descriptor = normalizePropDefinition(def);
-    const signalRef = prop(toKebab(name), descriptor.default, descriptor);
 
-    props[name] = signalRef;
+    props[name] = registerProp(toKebab(name), descriptor.default, descriptor);
   }
 
   return props as InferPropsSignals<InferPropsFromDefs<D>>;
 }
-export type ResolveComponentProps<
-  _Props extends Record<string, unknown>,
-  PropDefs extends PropInputDefs,
-> = InferPropsFromDefs<PropDefs>;

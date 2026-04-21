@@ -1,10 +1,12 @@
-import { define, computed, html, onMount, signal, watch } from '@vielzeug/craftit';
+import { define, computed, html, inject, onMount, signal, watch } from '@vielzeug/craftit';
 import { createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
+import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import styles from './otp-input.css?inline';
 
 export type BitOtpInputEvents = {
@@ -50,7 +52,7 @@ const otpInputProps = {
   type: 'numeric',
   value: '',
   variant: undefined,
-} satisfies PropBundle<BitOtpInputProps>;
+} satisfies PropsInput<BitOtpInputProps>;
 
 /**
  * A segmented OTP (One-Time Password) input with N individual cells.
@@ -86,9 +88,10 @@ const otpInputProps = {
  */
 export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-otp-input', {
   props: otpInputProps,
-  setup({ emit, host, props }) {
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
     const lengthValue = computed(() => Number(props.length.value) || 6);
-    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
     const cells = computed(() => Array.from({ length: lengthValue.value }, (_, i) => i));
     const focusedIndex = signal(0);
     const otpValue = signal(String(props.value.value || ''));
@@ -100,8 +103,10 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
       },
     });
 
+    mountFormContextSync(host.el, formCtx, props);
+
     function getInputs(): HTMLInputElement[] {
-      return [...(host.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
+      return [...(host.el.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
     }
 
     const listControl = createListControl({

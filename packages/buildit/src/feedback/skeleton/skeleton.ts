@@ -3,7 +3,7 @@ import { intersectionObserver } from '@vielzeug/craftit/observers';
 
 import type { ComponentSize } from '../../types';
 
-import { type PropBundle, sizableBundle } from '../../inputs/shared/bundles';
+import { type PropsInput, sizableBundle } from '../../inputs/shared/bundles';
 import { reducedMotionMixin } from '../../styles';
 import componentStyles from './skeleton.css?inline';
 
@@ -76,8 +76,8 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
     striped: false,
     variant: 'rect',
     width: undefined,
-  } satisfies PropBundle<BitSkeletonProps>,
-  setup({ host, props }) {
+  } satisfies PropsInput<BitSkeletonProps>,
+  setup(props, { host }) {
     const isPaused = signal(false);
     const lineCount = () => {
       const value = Math.floor(Number(props.lines.value));

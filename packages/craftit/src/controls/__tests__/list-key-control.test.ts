@@ -103,10 +103,10 @@ describe('createListKeyControl', () => {
 
   it('invokes onInvoke with action and control result', () => {
     const control = {
-      first: vi.fn(() => ({ index: 0, moved: true })),
-      last: vi.fn(() => ({ index: 2, moved: true })),
-      next: vi.fn(() => ({ index: 1, moved: true })),
-      prev: vi.fn(() => ({ index: 0, moved: true })),
+      first: vi.fn(() => ({ index: 0, moved: true, reason: 'moved' as const, wrapped: false })),
+      last: vi.fn(() => ({ index: 2, moved: true, reason: 'moved' as const, wrapped: false })),
+      next: vi.fn(() => ({ index: 1, moved: true, reason: 'moved' as const, wrapped: false })),
+      prev: vi.fn(() => ({ index: 0, moved: true, reason: 'moved' as const, wrapped: false })),
     };
     const onInvoke = vi.fn();
 
@@ -120,9 +120,29 @@ describe('createListKeyControl', () => {
     expect(keyControl.handleKeydown(new KeyboardEvent('keydown', { key: 'Home' }))).toBe(true);
     expect(keyControl.handleKeydown(new KeyboardEvent('keydown', { key: 'End' }))).toBe(true);
 
-    expect(onInvoke).toHaveBeenNthCalledWith(1, 'next', { index: 1, moved: true }, expect.any(KeyboardEvent));
-    expect(onInvoke).toHaveBeenNthCalledWith(2, 'prev', { index: 0, moved: true }, expect.any(KeyboardEvent));
-    expect(onInvoke).toHaveBeenNthCalledWith(3, 'first', { index: 0, moved: true }, expect.any(KeyboardEvent));
-    expect(onInvoke).toHaveBeenNthCalledWith(4, 'last', { index: 2, moved: true }, expect.any(KeyboardEvent));
+    expect(onInvoke).toHaveBeenNthCalledWith(
+      1,
+      'next',
+      { index: 1, moved: true, reason: 'moved', wrapped: false },
+      expect.any(KeyboardEvent),
+    );
+    expect(onInvoke).toHaveBeenNthCalledWith(
+      2,
+      'prev',
+      { index: 0, moved: true, reason: 'moved', wrapped: false },
+      expect.any(KeyboardEvent),
+    );
+    expect(onInvoke).toHaveBeenNthCalledWith(
+      3,
+      'first',
+      { index: 0, moved: true, reason: 'moved', wrapped: false },
+      expect.any(KeyboardEvent),
+    );
+    expect(onInvoke).toHaveBeenNthCalledWith(
+      4,
+      'last',
+      { index: 2, moved: true, reason: 'moved', wrapped: false },
+      expect.any(KeyboardEvent),
+    );
   });
 });

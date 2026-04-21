@@ -9,6 +9,7 @@ import {
   onMount,
   ref,
   signal,
+  syncAria,
   watch,
 } from '@vielzeug/craftit';
 import { createSliderControl, createValidationControl } from '@vielzeug/craftit/controls';
@@ -16,8 +17,7 @@ import { createSliderControl, createValidationControl } from '@vielzeug/craftit/
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { syncAria } from '../../utils/aria';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
 import { SLIDER_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -77,7 +77,7 @@ const sliderProps = {
   'to-value-text': undefined,
   value: '0',
   'value-text': undefined,
-} satisfies PropBundle<BitSliderProps>;
+} satisfies PropsInput<BitSliderProps>;
 
 /**
  * A slider for selecting a single numeric value or a numeric range.
@@ -125,7 +125,7 @@ const sliderProps = {
 export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', {
   formAssociated: true,
   props: sliderProps,
-  setup({ emit, host, props, slots }) {
+  setup(props, { emit, host, slots }) {
     // Treat `range` as static — determined at first render
     const isRange = props.range.value;
     // ── Shared helpers ────────────────────────────────────────────
@@ -135,12 +135,12 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       step: () => props.step.value,
     });
     // ── Single-value state ────────────────────────────────────────
-    const formCtx = inject(FORM_CTX, undefined);
+    const formCtx = inject(FORM_CTX);
     const isDragging = signal(false);
-    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
     const labelledById = signal<string | undefined>(undefined);
 
-    mountFormContextSync(host.el, formCtx, props as any);
+    mountFormContextSync(host.el, formCtx, props);
 
     host.bind({
       attr: {

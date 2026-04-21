@@ -115,7 +115,7 @@ describe('bit-switch', () => {
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
 
       expect(detail.checked).toBe(true);
-      expect(detail.fieldValue).toBe('on');
+      expect(detail.value).toBe('on');
       expect(detail.originalEvent).toBeDefined();
     });
 
@@ -130,7 +130,7 @@ describe('bit-switch', () => {
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
 
       expect(detail.checked).toBe(false);
-      expect(detail.fieldValue).toBe('on');
+      expect(detail.value).toBe('on');
     });
 
     it('emits change on Space keypress', async () => {

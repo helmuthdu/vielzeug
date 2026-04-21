@@ -3,7 +3,7 @@
  * Tests for onMount, onCleanup, and onRendered hooks
  */
 
-import { createCleanupSignal, handle, html, onCleanup, onError, onMount, signal } from '../index';
+import { handle, html, onCleanup, onError, onMount, signal } from '../index';
 import { mount } from '../testing';
 
 describe('Core: Lifecycle Hooks', () => {
@@ -182,20 +182,30 @@ describe('Core: Lifecycle Hooks', () => {
     });
   });
 
-  describe('createCleanupSignal()', () => {
+  describe('imperative cleanup pattern', () => {
     it('disposes previous cleanup when replaced and latest cleanup on unmount', async () => {
       let disposed = 0;
 
       const { destroy } = await mount(() => {
-        const cleanup = createCleanupSignal();
+        let cleanup: (() => void) | null = null;
 
         onMount(() => {
-          cleanup.set(() => {
+          const setCleanup = (next: (() => void) | null) => {
+            cleanup?.();
+            cleanup = next;
+          };
+
+          setCleanup(() => {
             disposed += 1;
           });
 
-          cleanup.set(() => {
+          setCleanup(() => {
             disposed += 10;
+          });
+
+          onCleanup(() => {
+            cleanup?.();
+            cleanup = null;
           });
         });
 

@@ -3,6 +3,7 @@ export {
   computed,
   effect,
   isSignal,
+  isWritable,
   onCleanup,
   peekValue,
   readonly,

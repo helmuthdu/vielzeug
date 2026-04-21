@@ -2,7 +2,7 @@ import { define, effect, html, onMount } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { type PropBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { type PropsInput, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './table.css?inline';
 
@@ -143,9 +143,9 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
     loading: false,
     sticky: false,
     striped: false,
-  } satisfies PropBundle<BitTableProps>,
+  } satisfies PropsInput<BitTableProps>,
 
-  setup({ host, props }) {
+  setup(props, { host }) {
     host.bind({
       attr: {
         'aria-busy': props.loading,
@@ -158,7 +158,7 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
     // contexts.  All three issues — color themes, sticky headers, colspan —
     // require real <thead>/<tbody>/<tfoot>/<tr>/<th>/<td> in the shadow tree.
     onMount(() => {
-      const scrollContainer = host.shadowRoot!.querySelector('.scroll-container')!;
+      const scrollContainer = host.el.shadowRoot!.querySelector('.scroll-container')!;
 
       const table = document.createElement('table');
       const captionEl = document.createElement('caption');

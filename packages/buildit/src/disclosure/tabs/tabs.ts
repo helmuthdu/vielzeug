@@ -14,7 +14,7 @@ import { createListControl, createListKeyControl, createPressControl } from '@vi
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { sizableBundle, themableBundle, type PropBundle } from '../../inputs/shared/bundles';
+import { sizableBundle, themableBundle, type PropsInput } from '../../inputs/shared/bundles';
 import { colorThemeMixin } from '../../styles';
 
 /** Context provided by bit-tabs to its bit-tab-item and bit-tab-panel children. */
@@ -63,7 +63,7 @@ const tabsProps = {
   orientation: 'horizontal',
   value: undefined,
   variant: undefined,
-} satisfies PropBundle<BitTabsProps>;
+} satisfies PropsInput<BitTabsProps>;
 
 /**
  * Tabs container. Manages tab selection and syncs state to child tab items and panels.
@@ -94,7 +94,8 @@ const tabsProps = {
  */
 export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
   props: tabsProps,
-  setup({ emit, host, props, shadowRoot }) {
+  setup(props, { emit, host }) {
+    const shadowRoot = host.el.shadowRoot;
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();
     const selectedValue = signal<string | undefined>(props.value.value);

@@ -113,22 +113,19 @@ For form controls, use Craftit controls to avoid repetitive wiring.
 
 ```ts
 import { define, html, inject, ref } from '@vielzeug/craftit';
-import { createFieldControl } from '@vielzeug/craftit/controls';
+import { createTextField } from '@vielzeug/craftit/controls';
 
 define<{ value?: string }>('x-input', {
   props: { value: '' },
   setup({ emit, props }) {
-    const formCtx = inject('FORM_CTX', undefined);
+    const formCtx = inject('FORM_CTX');
     const inputRef = ref<HTMLInputElement>();
-    const field = createFieldControl({
-      kind: 'text',
-      options: {
-        context: formCtx,
-        elementRef: inputRef,
-        onInput: (event, value) => emit('input', { originalEvent: event, value }),
-        prefix: 'x-input',
-        value: props.value,
-      },
+    const field = createTextField({
+      context: formCtx,
+      elementRef: inputRef,
+      onInput: (event, value) => emit('input', { originalEvent: event, value }),
+      prefix: 'x-input',
+      value: props.value,
     });
 
     return html`<input .value=${field.value} ref=${inputRef} />`;
@@ -197,6 +194,8 @@ define(
 
 Use lifecycle helpers from the main entrypoint.
 
+For ref-driven effects, host wiring patterns, and cleanup replacement strategies, see [Lifecycle Best Practices](./lifecycle-best-practices.md).
+
 ```ts
 import {
   define,
@@ -247,14 +246,12 @@ define(
 
 `emit(...)` always dispatches `CustomEvent`s, including events without detail.
 
-For manual dispatch, use the explicit `fire.*` helpers:
+For manual dispatch, use native DOM events:
 
 ```ts
-import { fire } from '@vielzeug/craftit';
-
-fire.mouse(button, 'click');
-fire.keyboard(input, 'keydown', { key: 'Enter' });
-fire.custom(host, 'change', { detail: { value: 'Ada' } });
+button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+host.dispatchEvent(new CustomEvent('change', { bubbles: true, composed: true, detail: { value: 'Ada' } }));
 ```
 
 ## Props and Attributes
@@ -471,11 +468,21 @@ define(
 
 Use `@vielzeug/craftit/controls` when you need headless interaction logic.
 
-- `createListControl` for keyboard/list focus with rich result metadata.
-- `createOverlayControl` for reason-aware open/close orchestration.
+For field-focused guidance and per-control API details, see [Craftit Controls](./controls.md).
+
+- `createListControl` / `createListKeyControl` — keyboard/list focus with rich result metadata.
+- `createPressControl` — click/keydown press handler with key filtering and disabled state.
+- `createOverlayControl` — reason-aware open/close orchestration.
+- `createPopupListControl` — popup list combining overlay + list navigation.
+- `createSliderControl` / `createSpinnerControl` — range and numeric spinner control.
 
 ```ts
-import { createListControl, createOverlayControl } from '@vielzeug/craftit/controls';
+import {
+  createListControl,
+  createListKeyControl,
+  createOverlayControl,
+  createPopupListControl,
+} from '@vielzeug/craftit/controls';
 
 const nav = createListControl({
   getIndex: () => focusedIndex.value,

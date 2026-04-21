@@ -2,7 +2,7 @@ import { computed, type ReadonlySignal, type Signal, signal } from '@vielzeug/st
 
 import { defineField, type FormFieldHandle } from '../form';
 import { createId, ref } from '../internal';
-import { effect, handle, onElement, watch } from '../runtime';
+import { effect, handle, watch } from '../runtime';
 import {
   createControlState,
   type ValidationReporter,
@@ -82,8 +82,8 @@ export type CheckableStateOptions = ControlContextOptions & {
 
 export type CheckableChangePayload = {
   checked: boolean;
-  fieldValue: string;
   originalEvent?: Event;
+  value: string;
 };
 
 export type FieldControlBaseHandle = {
@@ -112,13 +112,7 @@ export type AssistiveState = {
   counterText: string;
   errorText: string;
   hasCounter: boolean;
-  hasError: boolean;
-  hasHelper: boolean;
   helperText: string;
-  hidden: boolean;
-  isError: boolean;
-  showHelper: boolean;
-  text: string;
 };
 
 export type AssistiveOptions = {
@@ -159,28 +153,6 @@ export type ChoiceFieldHandle<T> = FieldControlBaseHandle & {
   toggleItem: (item: T) => void;
 };
 
-export type TextFieldControlFactoryOptions = {
-  kind: 'text';
-  options: TextFieldOptions;
-};
-
-export type ChoiceFieldControlFactoryOptions<T> = {
-  kind: 'choice';
-  options: ChoiceFieldOptions<T>;
-};
-
-export type CheckableFieldControlFactoryOptions = {
-  kind: 'checkable';
-  options: CheckableStateOptions;
-};
-
-export type FieldControlOptions<T = unknown> =
-  | TextFieldControlFactoryOptions
-  | ChoiceFieldControlFactoryOptions<T>
-  | CheckableFieldControlFactoryOptions;
-
-export type FieldControlHandle<T = unknown> = TextFieldHandle | ChoiceFieldHandle<T> | CheckableStateHandle;
-
 /**
  * Generates a stable set of ARIA-related IDs for a field control.
  * Snapshot `name` at call time — IDs are stable strings, not reactive.
@@ -199,7 +171,7 @@ const createFieldIds = (prefix: string, name?: string | null) => {
   };
 };
 
-const createBaseFieldHandle = (
+export const createBaseFieldHandle = (
   options: {
     context?: TextFieldControlContext;
     label?: ReadonlySignal<string | undefined>;
@@ -252,9 +224,6 @@ export const createAssistiveState = (options: AssistiveOptions) => {
     const value = options.value?.value ?? '';
     const errorText = options.error?.value ?? '';
     const helperText = options.helper?.value ?? '';
-    const hasError = Boolean(errorText);
-    const hasHelper = Boolean(helperText);
-    const text = errorText || helperText || '';
     const maxLength = options.maxLength?.value;
     const parsedMaxLength = Number(maxLength);
     const validMaxLength = Number.isFinite(parsedMaxLength) && parsedMaxLength > 0 ? parsedMaxLength : null;
@@ -268,85 +237,9 @@ export const createAssistiveState = (options: AssistiveOptions) => {
       counterText,
       errorText,
       hasCounter,
-      hasError,
-      hasHelper,
       helperText,
-      hidden: !text,
-      isError: hasError,
-      showHelper: !hasError && hasHelper,
-      text,
     };
   });
-};
-export const createTextFieldControl = (options: TextFieldOptions): TextFieldHandle => {
-  const value = signal('');
-  const { bindTrigger, ...base } = createBaseFieldHandle({
-    ...options,
-  });
-
-  watch(
-    options.value,
-    (next) => {
-      value.value = String(next ?? '');
-    },
-    { immediate: true },
-  );
-
-  const field = defineField(
-    {
-      disabled: base.disabled,
-      value,
-    },
-    {
-      onReset: () => {
-        value.value = '';
-        options.onReset?.();
-      },
-    },
-  );
-
-  const triggerValidation = bindTrigger(field);
-
-  const assistive = createAssistiveState({
-    error: options.error,
-    helper: options.helper,
-    maxLength: options.maxLength,
-    value,
-  });
-
-  const clear = (event?: Event): void => {
-    event?.preventDefault?.();
-
-    value.value = '';
-    options.onInput?.(event ?? new Event('input'), '');
-    options.onChange?.(event ?? new Event('change'), '');
-    triggerValidation('change');
-    options.elementRef?.value?.focus();
-  };
-
-  if (options.elementRef) {
-    onElement(options.elementRef, (element) => {
-      mountTextFieldLifecycle({
-        element,
-        onBlur: options.onBlur,
-        onChange: options.onChange,
-        onInput: (event, nextValue) => {
-          options.onInputExtra?.(event);
-          options.onInput?.(event, nextValue);
-        },
-        triggerValidation,
-      });
-    });
-  }
-
-  return {
-    assistive,
-    ...base,
-    clear,
-    field,
-    triggerValidation,
-    value,
-  };
 };
 
 export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): void => {
@@ -369,150 +262,7 @@ export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): voi
   });
 };
 
-const parseChoiceFieldValues = (value: string | undefined): string[] => {
-  if (!value) return [];
-
-  return value
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-};
-
-export const createChoiceFieldControl = <T>(options: ChoiceFieldOptions<T>): ChoiceFieldHandle<T> => {
-  const { bindTrigger, ...base } = createBaseFieldHandle({
-    context: options.context,
-    disabled: options.disabled,
-    label: options.label,
-    labelPlacement: options.labelPlacement,
-    name: options.name,
-    prefix: options.prefix,
-    validateOn: options.validateOn,
-  });
-  const selectedItems = signal<T[]>([]);
-  const isMultiple = computed(() => Boolean(options.multiple?.value));
-  const selectedValues = computed(() => selectedItems.value.map((item) => options.getValue(item)));
-  const formValue = computed(() =>
-    isMultiple.value ? selectedValues.value.join(',') : (selectedValues.value[0] ?? ''),
-  );
-
-  const normalizeSelectedItems = (items: T[]): T[] => {
-    const normalized = isMultiple.value ? items : items.slice(0, 1);
-    const uniqueItems: T[] = [];
-    const seen = new Set<string>();
-
-    for (const item of normalized) {
-      const value = options.getValue(item);
-
-      if (seen.has(value)) continue;
-
-      seen.add(value);
-      uniqueItems.push(item);
-    }
-
-    return uniqueItems;
-  };
-
-  const replaceSelectedItems = (items: T[]): void => {
-    selectedItems.value = normalizeSelectedItems(items);
-  };
-
-  const clear = (): void => {
-    replaceSelectedItems([]);
-  };
-
-  const removeValue = (value: string): void => {
-    selectedItems.value = selectedItems.value.filter((item) => options.getValue(item) !== value);
-  };
-
-  const selectItem = (item: T): void => {
-    if (isMultiple.value) {
-      const value = options.getValue(item);
-
-      if (selectedItems.value.some((current) => options.getValue(current) === value)) return;
-
-      replaceSelectedItems([...selectedItems.value, item]);
-
-      return;
-    }
-
-    replaceSelectedItems([item]);
-  };
-
-  const toggleItem = (item: T): void => {
-    if (isMultiple.value) {
-      const value = options.getValue(item);
-
-      if (selectedItems.value.some((current) => options.getValue(current) === value)) {
-        removeValue(value);
-
-        return;
-      }
-
-      replaceSelectedItems([...selectedItems.value, item]);
-
-      return;
-    }
-
-    replaceSelectedItems([item]);
-  };
-
-  const syncControlledValue = (nextValue: unknown): void => {
-    const values = parseChoiceFieldValues(typeof nextValue === 'string' ? nextValue : String(nextValue ?? ''));
-
-    replaceSelectedItems(values.map((value) => options.mapControlledValue(value)));
-  };
-
-  const field = defineField(
-    {
-      disabled: base.disabled,
-      value: formValue,
-    },
-    {
-      onReset: () => {
-        clear();
-        options.onReset?.();
-      },
-    },
-  );
-
-  const triggerValidation = bindTrigger(field);
-
-  const assistive = createAssistiveState({
-    error: options.error,
-    helper: options.helper,
-  });
-
-  watch(
-    options.value,
-    (next) => {
-      syncControlledValue(next);
-    },
-    { immediate: true },
-  );
-
-  if (options.multiple) {
-    watch(options.multiple, () => syncControlledValue(options.value.value));
-  }
-
-  return {
-    ...base,
-    assistive,
-    clear,
-    field,
-    formValue,
-    isMultiple,
-    isSelected: (value: string) => selectedItems.value.some((item) => options.getValue(item) === value),
-    removeValue,
-    replaceSelectedItems,
-    selectedItems,
-    selectedValues,
-    selectItem,
-    toggleItem,
-    triggerValidation,
-  };
-};
-
-export const createCheckableStateControl = (options: CheckableStateOptions): CheckableStateHandle => {
+export const createCheckableState = (options: CheckableStateOptions): CheckableStateHandle => {
   const value = signal('');
   const { bindTrigger, ...base } = createBaseFieldHandle(options);
   const checked = signal(Boolean(options.checked.value));
@@ -568,8 +318,8 @@ export const createCheckableStateControl = (options: CheckableStateOptions): Che
 
   const createPayload = (event: Event): CheckableChangePayload => ({
     checked: checked.value,
-    fieldValue: options.value.value ?? '',
     originalEvent: event,
+    value: options.value.value ?? '',
   });
 
   const toggle = (event: Event): void => {
@@ -604,18 +354,3 @@ export const createCheckableStateControl = (options: CheckableStateOptions): Che
     value,
   };
 };
-
-export function createFieldControl(options: TextFieldControlFactoryOptions): TextFieldHandle;
-export function createFieldControl<T>(options: ChoiceFieldControlFactoryOptions<T>): ChoiceFieldHandle<T>;
-export function createFieldControl(options: CheckableFieldControlFactoryOptions): CheckableStateHandle;
-export function createFieldControl<T>(options: FieldControlOptions<T>): FieldControlHandle<T> {
-  if (options.kind === 'text') {
-    return createTextFieldControl(options.options);
-  }
-
-  if (options.kind === 'choice') {
-    return createChoiceFieldControl(options.options);
-  }
-
-  return createCheckableStateControl(options.options);
-}

@@ -14,9 +14,7 @@ export {
 } from '@vielzeug/stateit';
 
 export {
-  createCleanupSignal,
   effect,
-  fire,
   handle,
   onCleanup,
   onElement,
@@ -30,19 +28,19 @@ export {
 export {
   define,
   type ComponentDefinition,
-  type ComponentSetupContext,
   type InferPropsSignals,
   type PropDef,
   type PropsInput,
   type PropOptions,
+  type SetupContextBag,
 } from './component';
+
 export { defineField, type FormFieldCallbacks, type FormFieldHandle, type FormFieldOptions } from './form';
 
 export {
   createContext,
   inject,
   provide,
-  bridgeContextAttributes,
   syncAria,
   syncContextProps,
   type ComponentHost,
@@ -51,11 +49,11 @@ export {
   type HostPropDescriptor,
   type InjectionKey,
   type ReflectConfig,
-  type HostContextAttributeBridge,
 } from './host';
 
-export { html, type KeyedNode } from './template';
+export { html } from './template-compiler';
 export { each } from './directives/each';
+export { classMap } from './directives/classMap';
 export { raw } from './directives/raw';
 
 export {

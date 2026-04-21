@@ -12,6 +12,6 @@ export default defineConfig({
     globals: true,
     name: 'toolkit',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    watch: false,
   },
-  watch: false,
 });

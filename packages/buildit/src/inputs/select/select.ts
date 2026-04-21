@@ -1,7 +1,7 @@
 import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
 import { define, computed, html, inject, onCleanup, onMount, signal, watch } from '@vielzeug/craftit';
-import { createFieldControl, createPopupListControl } from '@vielzeug/craftit/controls';
+import { createChoiceField, createPopupListControl } from '@vielzeug/craftit/controls';
 
 import type { VisualVariant } from '../../types';
 
@@ -16,7 +16,7 @@ import {
   roundableBundle,
   sizableBundle,
   themableBundle,
-  type PropBundle,
+  type PropsInput,
 } from '../shared/bundles';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
 import { createDropdownPositioner, mountFormContextSync } from '../shared/dom-sync';
@@ -98,7 +98,7 @@ const selectProps = {
   required: false,
   value: '',
   variant: undefined,
-} satisfies PropBundle<BitSelectProps>;
+} satisfies PropsInput<BitSelectProps>;
 
 /**
  * A fully custom form-associated select dropdown with keyboard navigation and ARIA support.
@@ -157,7 +157,8 @@ const selectProps = {
 export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', {
   formAssociated: true,
   props: selectProps,
-  setup({ emit, host, props, shadowRoot, slots }) {
+  setup(props, { emit, host, slots }) {
+    const shadowRoot = host.el.shadowRoot;
     // ────────────────────────────────────────────────────────────────
     // State & Context
     // ────────────────────────────────────────────────────────────────
@@ -178,26 +179,23 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     }
 
     const options = computed(() => props.options.value?.map(normalizeOption) ?? slottedOptions.value);
-    const formCtx = inject(FORM_CTX, undefined);
+    const formCtx = inject(FORM_CTX);
 
     mountFormContextSync(host.el, formCtx, props);
 
-    const choice = createFieldControl<string>({
-      kind: 'choice',
-      options: {
-        context: formCtx,
-        disabled: props.disabled,
-        error: props.error,
-        getValue: (value) => value,
-        helper: props.helper,
-        label: props.label,
-        labelPlacement: props['label-placement'],
-        mapControlledValue: (value) => value,
-        multiple: props.multiple,
-        name: props.name,
-        prefix: 'select',
-        value: props.value,
-      },
+    const choice = createChoiceField<string>({
+      context: formCtx,
+      disabled: props.disabled,
+      error: props.error,
+      getValue: (value) => value,
+      helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
+      mapControlledValue: (value) => value,
+      multiple: props.multiple,
+      name: props.name,
+      prefix: 'select',
+      value: props.value,
     });
     const assistiveText = choice.assistive;
     const { triggerValidation } = choice;
@@ -490,14 +488,13 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
       const cleanupClickOutside = popupList.bindOutsideClick(document);
 
       return () => {
-        positioner.destroy();
         cleanupClickOutside();
       };
     });
 
     const tabIndexAttr = () => (isDisabled.value ? '-1' : '0');
     const triggerValueClass = () => `trigger-value ${displayLabel.value ? '' : 'trigger-placeholder'}`;
-    const helperStyle = () => (assistiveText.value.isError ? 'color: var(--color-error);' : '');
+    const helperStyle = () => (assistiveText.value.errorText ? 'color: var(--color-error);' : '');
 
     return html`<slot style="display:none"></slot>
       <div class="select-wrapper">
@@ -541,9 +538,9 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
         <div
           class="helper-text"
           aria-live="polite"
-          ?hidden="${() => assistiveText.value.hidden}"
+          ?hidden="${() => !assistiveText.value.errorText && !assistiveText.value.helperText}"
           style="${helperStyle}">
-          ${() => assistiveText.value.text}
+          ${() => assistiveText.value.errorText || assistiveText.value.helperText}
         </div>
       </div>
       <div

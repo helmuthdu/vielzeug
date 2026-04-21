@@ -1,17 +1,18 @@
-import { effect as rawEffect, type CleanupFn, type ReadonlySignal, untrack } from '@vielzeug/stateit';
+import { effect as rawEffect, type CleanupFn, type ReadonlySignal, type Signal, untrack } from '@vielzeug/stateit';
 
 import {
+  CF_ID_ATTR,
   type AttrBinding,
+  type Binding,
   type EventBinding,
+  type HtmlBinding,
   type PropBinding,
   type RefBinding,
-  type Binding,
-  type HtmlBinding,
-  CF_ID_ATTR,
+  listen,
+  setAttr,
 } from './internal';
-import { listen, setAttr } from './internal';
 import { propRegistry } from './props';
-import { bindPropertyModel } from './runtime';
+import { bindPropertyModel, hasWritableValueSetter, toReactiveBindingSource } from './runtime';
 
 export type RegisterCleanup = (fn: CleanupFn) => void;
 
@@ -70,16 +71,18 @@ const scanBindingTargets = (nodes: Iterable<Node>): BindingTargets => {
   return targets;
 };
 
-export const indexBindings = (root: Node): BindingTargets => {
-  return scanBindingTargets([root]);
-};
-
-export const indexBindingsInNodes = (nodes: Iterable<Node>): BindingTargets => {
-  return scanBindingTargets(nodes);
-};
+export const indexBindingTargets = (nodes: Iterable<Node>): BindingTargets => scanBindingTargets(nodes);
 
 export const findCommentMarker = (root: Node, marker: string): Comment | null => {
-  return indexBindings(root).comments.get(marker) ?? null;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+
+  while (walker.nextNode()) {
+    const comment = walker.currentNode as Comment;
+
+    if (comment.nodeValue === marker) return comment;
+  }
+
+  return null;
 };
 
 export const createNodes = (htmlString: string): Node[] => Array.from(parseHTML(htmlString).childNodes);
@@ -102,15 +105,17 @@ const signalEffect = (
 };
 
 export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, registerCleanup: RegisterCleanup) => {
-  const update = (value: unknown) => {
-    const meta = propRegistry.get(el)?.get(binding.name);
+  const meta = propRegistry.get(el)?.get(binding.name);
 
+  const update = (value: unknown) => {
+    // Structured data (object/array) without a registered prop — set as JS property
     if (!meta && isStructuredValue(value)) {
       (el as any)[binding.name] = value;
 
       return;
     }
 
+    // DOM attribute (when no prop registered, or prop reflects)
     if (!meta || meta.reflect) {
       if (binding.mode === 'bool') {
         el.toggleAttribute(binding.name, Boolean(value));
@@ -119,6 +124,7 @@ export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, register
       }
     }
 
+    // Prop signal sync
     if (!meta) return;
 
     const parsedValue = isStructuredValue(value)
@@ -203,27 +209,6 @@ export const applyRefBinding = (el: HTMLElement, binding: RefBinding, registerCl
 
 type ElementBinding = AttrBinding | EventBinding | PropBinding | RefBinding;
 
-export const applyElementBinding = (
-  el: HTMLElement,
-  binding: ElementBinding,
-  registerCleanup: RegisterCleanup,
-): void => {
-  switch (binding.type) {
-    case 'attr':
-      applyAttrBinding(el, binding, registerCleanup);
-      break;
-    case 'event':
-      applyEventBinding(el, binding, registerCleanup);
-      break;
-    case 'prop':
-      applyPropBinding(el, binding, registerCleanup);
-      break;
-    case 'ref':
-      applyRefBinding(el, binding, registerCleanup);
-      break;
-  }
-};
-
 export const applyBindingsWithTargets = (
   bindings: Binding[],
   registerCleanup: RegisterCleanup,
@@ -269,7 +254,18 @@ export const applyBindingsWithTargets = (
     el.removeAttribute(CF_ID_ATTR);
     targets.elements.delete(id);
 
-    for (const b of elBindings) applyElementBinding(el, b, registerCleanup);
+    // Inline element binding dispatch
+    for (const b of elBindings) {
+      if (b.type === 'attr') {
+        applyAttrBinding(el, b, registerCleanup);
+      } else if (b.type === 'event') {
+        applyEventBinding(el, b, registerCleanup);
+      } else if (b.type === 'prop') {
+        applyPropBinding(el, b, registerCleanup);
+      } else if (b.type === 'ref') {
+        applyRefBinding(el, b, registerCleanup);
+      }
+    }
   }
 };
 
@@ -279,12 +275,8 @@ export const applyBindingsInContainer = (
   registerCleanup: RegisterCleanup,
   opts?: { onHtml?: (b: HtmlBinding) => void },
 ) => {
-  applyBindingsWithTargets(bindings, registerCleanup, indexBindings(container), opts);
+  applyBindingsWithTargets(bindings, registerCleanup, indexBindingTargets([container]), opts);
 };
-
-import { type Signal } from '@vielzeug/stateit';
-
-import { hasWritableValueSetter, toReactiveBindingSource } from './runtime';
 
 export const createAttrBinding = (mode: 'bool' | 'attr', name: string, uid: string, value: unknown): AttrBinding => {
   const source = toReactiveBindingSource(value);

@@ -1,6 +1,6 @@
 import { computed, define, html, provide } from '@vielzeug/craftit';
 
-import type { PropBundle } from '../shared/bundles';
+import type { PropsInput } from '../shared/bundles';
 
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './form.css?inline';
@@ -29,7 +29,7 @@ export type BitFormEvents = {
   submit: { formData: FormData; originalEvent: SubmitEvent };
 };
 
-const formProps: PropBundle<BitFormProps> = {
+const formProps: PropsInput<BitFormProps> = {
   disabled: false,
   novalidate: false,
   orientation: 'vertical',
@@ -65,7 +65,9 @@ const formProps: PropBundle<BitFormProps> = {
  */
 export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
   props: formProps,
-  setup({ emit, host, props, shadowRoot }) {
+  setup(props, { emit, host }) {
+    const shadowRoot = host.el.shadowRoot;
+
     // Reflect orientation to host so CSS and tests can read it
     host.bind({ attr: { orientation: props.orientation } });
     // Provide context to all child bit-* form fields

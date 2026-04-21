@@ -1,6 +1,6 @@
 import { define, createContext, html, provide, type ReadonlySignal } from '@vielzeug/craftit';
 
-import { sizableBundle, themableBundle } from '../shared/bundles';
+import { type PropsInput, sizableBundle, themableBundle } from '../shared/bundles';
 import styles from './button-group.css?inline';
 
 /** Button group properties */
@@ -51,7 +51,7 @@ export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('B
  * <bit-button-group><bit-button>First</bit-button><bit-button>Second</bit-button></bit-button-group>
  * ```
  */
-export const BUTTON_GROUP_TAG = define('bit-button-group', {
+export const BUTTON_GROUP_TAG = define<BitButtonGroupProps>('bit-button-group', {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -60,8 +60,8 @@ export const BUTTON_GROUP_TAG = define('bit-button-group', {
     label: undefined,
     orientation: undefined,
     variant: undefined,
-  } as BitButtonGroupProps,
-  setup({ props }) {
+  } satisfies PropsInput<BitButtonGroupProps>,
+  setup(props) {
     provide(BUTTON_GROUP_CTX, {
       color: props.color!,
       size: props.size!,

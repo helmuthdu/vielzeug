@@ -1,16 +1,4 @@
-import {
-  define,
-  createCleanupSignal,
-  computed,
-  createId,
-  css,
-  effect,
-  handle,
-  html,
-  onMount,
-  signal,
-  watch,
-} from '@vielzeug/craftit';
+import { define, computed, createId, css, effect, handle, html, onMount, signal, watch } from '@vielzeug/craftit';
 import {
   createPopupListControl,
   createPressControl,
@@ -21,7 +9,7 @@ import { flip, offset, positionFloat, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../../inputs/shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
 
 // ============================================
@@ -75,11 +63,11 @@ const menuItemProps = {
   disabled: false,
   type: undefined,
   value: undefined,
-} satisfies PropBundle<BitMenuItemProps>;
+} satisfies PropsInput<BitMenuItemProps>;
 
 export const MENU_ITEM_TAG = define<BitMenuItemProps, any>('bit-menu-item', {
   props: menuItemProps,
-  setup({ props }) {
+  setup(props) {
     const isCheckable = () => props.type.value === 'checkbox' || props.type.value === 'radio';
     const isChecked = () => isCheckable() && props.checked.value;
     const itemRole = () => {
@@ -234,7 +222,7 @@ const menuProps = {
   ...sizableBundle,
   ...disablableBundle,
   placement: 'bottom-start',
-} satisfies PropBundle<BitMenuProps>;
+} satisfies PropsInput<BitMenuProps>;
 
 const isCheckableItemType = (value: string | null): value is BitMenuItemType =>
   value === 'checkbox' || value === 'radio';
@@ -254,7 +242,7 @@ const isCheckableItemType = (value: string | null): value is BitMenuItemType =>
  */
 export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
   props: menuProps,
-  setup({ emit, host, props, slots }) {
+  setup(props, { emit, host, slots }) {
     const menuId = createId('menu');
     const isOpenSignal = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
@@ -401,9 +389,9 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
     onMount(() => {
-      const triggerSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="trigger"]');
+      const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="trigger"]');
 
-      panelEl = host.shadowRoot?.querySelector<HTMLElement>('.menu-panel') ?? null;
+      panelEl = host.el.shadowRoot?.querySelector<HTMLElement>('.menu-panel') ?? null;
 
       effect(() => {
         if (!panelEl) return;
@@ -411,7 +399,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
         panelEl.toggleAttribute('data-open', isOpenSignal.value);
       });
 
-      const triggerBinding = createCleanupSignal();
+      let triggerBinding: (() => void) | null = null;
 
       function resolveTrigger() {
         const assigned = triggerSlot?.assignedElements({ flatten: true });
@@ -419,9 +407,11 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
         triggerEl = (assigned?.[0] as HTMLElement | undefined) ?? null;
 
         if (triggerEl) {
-          triggerBinding.set(popupList.syncTriggerAria(triggerEl));
+          triggerBinding?.();
+          triggerBinding = popupList.syncTriggerAria(triggerEl);
         } else {
-          triggerBinding.clear();
+          triggerBinding?.();
+          triggerBinding = null;
         }
       }
 
@@ -433,7 +423,8 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
 
       return () => {
         removeOutsideClick();
-        triggerBinding.clear();
+        triggerBinding?.();
+        triggerBinding = null;
       };
     });
 

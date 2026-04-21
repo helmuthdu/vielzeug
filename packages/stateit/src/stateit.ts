@@ -463,6 +463,12 @@ export const isSignal = <T = unknown>(value: unknown): value is ReadonlySignal<T
   return 'value' in candidate;
 };
 
+export const isWritable = <T = unknown>(value: unknown): value is Signal<T> => {
+  if (!isSignal(value)) return false;
+
+  return Object.getOwnPropertyDescriptor(Object.getPrototypeOf(value), 'value')?.set !== undefined;
+};
+
 export const peekValue = <T>(input: T | ReadonlySignal<T>): T => (isSignal<T>(input) ? input.value : input);
 
 export const toValue = <T>(input: T | ReadonlySignal<T> | (() => T)): T => {

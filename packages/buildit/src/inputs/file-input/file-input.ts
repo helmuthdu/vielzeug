@@ -5,6 +5,7 @@ import {
   each,
   handle,
   html,
+  inject,
   onCleanup,
   onMount,
   ref,
@@ -14,10 +15,12 @@ import {
 import { createPressControl } from '@vielzeug/craftit/controls';
 import { createDropZone } from '@vielzeug/dragit';
 
-import type { PropBundle } from '../shared/bundles';
+import type { PropsInput } from '../shared/bundles';
 
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { FILE_INPUT_SIZE_PRESET } from '../shared/design-presets';
+import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 
 const formatBytes = (bytes: number) => {
   if (bytes === 0) return '0 B';
@@ -85,7 +88,7 @@ export type BitFileInputEvents = {
   remove: { file: File; files: File[]; originalEvent?: Event; value: File[] };
 };
 
-const fileInputProps: PropBundle<BitFileInputProps> = {
+const fileInputProps: PropsInput<BitFileInputProps> = {
   accept: undefined,
   color: undefined,
   disabled: false,
@@ -126,14 +129,15 @@ const fileInputProps: PropBundle<BitFileInputProps> = {
 export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit-file-input', {
   formAssociated: true,
   props: fileInputProps,
-  setup({ emit, host, props }) {
+  setup(props, { emit, host }) {
     // ============================================
     // State
     // ============================================
 
     const files = signal<File[]>([]);
     const isDragging = signal(false);
-    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const formCtx = inject(FORM_CTX);
+    const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
     const maxFilesLimit = computed(() => props['max-files'].value ?? 0);
     const maxSizeLimit = computed(() => props['max-size'].value ?? 0);
 
@@ -172,6 +176,8 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
         invalid: () => (isInvalid.value ? true : undefined),
       },
     });
+
+    mountFormContextSync(host.el, formCtx, props);
 
     // ============================================
     // IDs

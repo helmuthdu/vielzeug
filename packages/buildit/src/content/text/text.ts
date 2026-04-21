@@ -75,13 +75,13 @@ export const TEXT_TAG = define<BitTextProps>('bit-text', {
     as: undefined,
     color: undefined,
     italic: false,
-    lines: { default: undefined as number | undefined, type: Number },
+    lines: { default: undefined as number | undefined },
     size: undefined,
     truncate: false,
     variant: undefined,
     weight: undefined,
   },
-  setup({ host, props }) {
+  setup(props, { host }) {
     host.bind({
       attr: {
         'aria-level': () => {

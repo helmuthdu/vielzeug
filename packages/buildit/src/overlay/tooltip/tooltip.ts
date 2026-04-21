@@ -1,22 +1,20 @@
 import type { Placement } from '@vielzeug/floatit';
 
-import { define, createCleanupSignal, computed, createId, html, onMount, signal, watch } from '@vielzeug/craftit';
+import { define, computed, createId, html, onMount, signal, syncAria, watch } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 import { computePosition, flip, offset, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize } from '../../types';
 
-import { disablableBundle, sizableBundle, type PropBundle } from '../../inputs/shared/bundles';
+import { disablableBundle, sizableBundle, type PropsInput } from '../../inputs/shared/bundles';
 import { forcedColorsMixin } from '../../styles';
-import { syncAria } from '../../utils/aria';
+import styles from './tooltip.css?inline';
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
 type TooltipTrigger = 'hover' | 'focus' | 'click';
 
 const TOOLTIP_OFFSET = 8; // gap from trigger to tooltip edge
 const LEFT_GAP_COMPENSATION = 4; // left placement looks visually tighter in practice
-
-import styles from './tooltip.css?inline';
 
 /** Tooltip component properties */
 export type BitTooltipProps = {
@@ -50,7 +48,7 @@ const tooltipProps = {
   placement: 'top',
   trigger: 'hover,focus',
   variant: undefined,
-} satisfies PropBundle<BitTooltipProps>;
+} satisfies PropsInput<BitTooltipProps>;
 
 /**
  * A lightweight tooltip shown on hover/focus/click relative to the slotted trigger.
@@ -83,7 +81,8 @@ const tooltipProps = {
  */
 export const TOOLTIP_TAG = define<BitTooltipProps, any>('bit-tooltip', {
   props: tooltipProps,
-  setup({ props, shadowRoot, slots }) {
+  setup(props, { host, slots }) {
+    const shadowRoot = host.el.shadowRoot;
     const visible = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const isControlled = computed(() => props.open.value !== undefined);
@@ -212,12 +211,13 @@ export const TOOLTIP_TAG = define<BitTooltipProps, any>('bit-tooltip', {
     }
     onMount(() => {
       const slot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-      const triggerBinding = createCleanupSignal();
+      let triggerBinding: (() => void) | null = null;
 
       if (!slot) return;
 
       const bindTriggerEvents = () => {
-        triggerBinding.clear();
+        triggerBinding?.();
+        triggerBinding = null;
 
         const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
@@ -257,11 +257,11 @@ export const TOOLTIP_TAG = define<BitTooltipProps, any>('bit-tooltip', {
         // Keyboard escape to dismiss
         add(document, 'keydown', handleKeydown as EventListener);
 
-        triggerBinding.set(() => {
+        triggerBinding = () => {
           removeAria();
 
           for (const cleanup of cleanups) cleanup();
-        });
+        };
       };
 
       watch(slots.elements(), bindTriggerEvents, { immediate: true });
@@ -277,7 +277,8 @@ export const TOOLTIP_TAG = define<BitTooltipProps, any>('bit-tooltip', {
       });
 
       return () => {
-        triggerBinding.clear();
+        triggerBinding?.();
+        triggerBinding = null;
 
         clearShowTimer();
         clearHideTimer();

@@ -93,33 +93,39 @@ define('toggle-host', {
 
     return html`<slot></slot>`;
   },
-);
+});
 ```
 
 ## Pick the Right Cleanup Primitive
 
 - Use `onCleanup(fn)` for one-time teardown owned by the component.
-- Use `createCleanupSignal()` when a disposable resource is replaced over time.
+- Use a mutable cleanup variable when a disposable resource is replaced over time.
 
 ```ts
-import { createCleanupSignal, define, html, onMount, signal } from '@vielzeug/craftit';
+import { define, html, onCleanup, onMount, signal } from '@vielzeug/craftit';
 
 define(
   'search-loader',
   {
     setup() {
       const query = signal('');
-      const activeRequest = createCleanupSignal();
+      let activeRequest: (() => void) | null = null;
 
       onMount(() => {
         const runSearch = () => {
           const controller = new AbortController();
 
-          activeRequest.set(() => controller.abort());
+          activeRequest?.();
+          activeRequest = () => controller.abort();
           fetch(`/api/search?q=${encodeURIComponent(query.value)}`, { signal: controller.signal }).catch(() => {});
         };
 
         runSearch();
+      });
+
+      onCleanup(() => {
+        activeRequest?.();
+        activeRequest = null;
       });
 
       return html`<div>Searching…</div>`;

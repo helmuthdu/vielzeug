@@ -10,7 +10,7 @@ import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } fro
 
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
 import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -41,7 +41,7 @@ const radioProps = {
   helper: '',
   name: '',
   value: '',
-} satisfies PropBundle<BitRadioProps>;
+} satisfies PropsInput<BitRadioProps>;
 
 /**
  * A customizable radio button component for mutually exclusive selections.
@@ -57,7 +57,7 @@ const radioProps = {
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the radio
  *
- * @fires change - Emitted when radio is selected. detail: { checked: boolean, fieldValue: string, originalEvent?: Event }
+ * @fires change - Emitted when radio is selected. detail: { checked: boolean, value: string, originalEvent?: Event }
  *
  * @slot - Radio button label text
  *
@@ -69,9 +69,9 @@ const radioProps = {
 export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
   formAssociated: true,
   props: radioProps,
-  setup({ emit, host, props }) {
-    const groupCtx = inject(RADIO_GROUP_CTX, undefined);
-    const formCtx = inject(FORM_CTX, undefined);
+  setup(props, { emit, host }) {
+    const groupCtx = inject(RADIO_GROUP_CTX);
+    const formCtx = inject(FORM_CTX);
 
     const effectiveName = computed(() => groupCtx?.name.value || props.name.value || '');
     const effectiveSize = computed(() => groupCtx?.size.value ?? props.size.value);
@@ -101,6 +101,28 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
 
       radio.click();
     };
+
+    let activeIndex = -1;
+
+    const listControl = createListControl({
+      getIndex: () => activeIndex,
+      getItems: () => getRadioGroup(),
+      loop: true,
+      setIndex: (index) => {
+        activeIndex = index;
+        getRadioGroup()[index]?.focus();
+      },
+    });
+
+    const radioListKeys = createListKeyControl({
+      control: listControl,
+      keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
+      onInvoke: (_action, _result, event) => {
+        const nextRadio = getRadioGroup()[activeIndex];
+
+        if (nextRadio) selectRadio(nextRadio, event);
+      },
+    });
 
     const activateSelf = (originalEvent?: Event): void => {
       if (control.checked.value) return;
@@ -180,31 +202,11 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
 
           if (radios.length === 0) return;
 
-          let activeIndex = radios.indexOf(host.el);
+          activeIndex = radios.indexOf(host.el);
 
           if (activeIndex === -1) return;
 
-          const listControl = createListControl({
-            getIndex: () => activeIndex,
-            getItems: () => radios,
-            loop: true,
-            setIndex: (index) => {
-              activeIndex = index;
-              radios[index]?.focus();
-            },
-          });
-
           if (pressControl.handleKeydown(e)) return;
-
-          const radioListKeys = createListKeyControl({
-            control: listControl,
-            keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
-            onInvoke: (_action, _result, event) => {
-              const nextRadio = radios[activeIndex];
-
-              if (nextRadio) selectRadio(nextRadio, event);
-            },
-          });
 
           radioListKeys.handleKeydown(e);
         },

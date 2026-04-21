@@ -112,14 +112,17 @@ export type BitSidebarProps = {
  */
 export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sidebar', {
   props: {
-    collapsed: { default: undefined, type: Boolean },
+    collapsed: {
+      default: undefined as boolean | undefined,
+      parse: (value: string | null) => (value == null ? undefined : value === '' || value === 'true'),
+    },
     collapsible: false,
     'default-collapsed': false,
     label: 'Sidebar navigation',
     responsive: undefined,
     variant: undefined,
   },
-  setup({ emit, host, props, slots }) {
+  setup(props, { emit, host, slots }) {
     const hasHeader = () => slots.has('header').value;
     const hasFooter = () => slots.has('footer').value;
     const hasLogo = () => slots.has('logo').value;
@@ -282,11 +285,14 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
     collapsible: false,
     'default-open': true,
     label: '',
-    open: { default: undefined, type: Boolean },
+    open: {
+      default: undefined as boolean | undefined,
+      parse: (value: string | null) => (value == null ? undefined : value === '' || value === 'true'),
+    },
   },
-  setup({ host, props, slots }) {
+  setup(props, { host, slots }) {
     const hasIcon = () => slots.has('icon').value;
-    const sidebarCtx = inject(SIDEBAR_CTX, undefined);
+    const sidebarCtx = inject(SIDEBAR_CTX);
 
     host.bind({
       attr: {
@@ -420,10 +426,10 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
     rel: undefined,
     target: undefined,
   },
-  setup({ host, props, slots }) {
+  setup(props, { host, slots }) {
     const hasIcon = () => slots.has('icon').value;
     const hasEnd = () => slots.has('end').value;
-    const sidebarCtx = inject(SIDEBAR_CTX, undefined);
+    const sidebarCtx = inject(SIDEBAR_CTX);
 
     host.bind({
       attr: {

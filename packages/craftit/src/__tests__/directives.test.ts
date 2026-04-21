@@ -58,6 +58,24 @@ describe('Directive: each()', () => {
     expect(queryAll('li').length).toBe(3);
   });
 
+  it('should support the short-form overload', async () => {
+    const { queryAll } = await mount(() => {
+      const items = signal([1, 2, 3]);
+
+      return html`
+        <ul>
+          ${each(
+            items,
+            (item) => item,
+            (item) => html`<li>${item * 2}</li>`,
+          )}
+        </ul>
+      `;
+    });
+
+    expect(queryAll('li').map((item) => item.textContent)).toEqual(['2', '4', '6']);
+  });
+
   it('should support computed signal sources', async () => {
     const { queryAll } = await mount(() => {
       const items = signal([1, 2, 3]);

@@ -5,7 +5,7 @@ import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import styles from './rating.css?inline';
@@ -41,8 +41,8 @@ const ratingProps = {
   name: undefined,
   readonly: false,
   solid: false,
-  value: 0,
-} satisfies PropBundle<BitRatingProps>;
+  value: { default: 0, reflect: true },
+} satisfies PropsInput<BitRatingProps>;
 
 /**
  * A star rating input.
@@ -75,10 +75,10 @@ const ratingProps = {
 export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', {
   formAssociated: true,
   props: ratingProps,
-  setup({ emit, host, props }) {
-    const formCtx = inject(FORM_CTX, undefined);
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
 
-    mountFormContextSync(host.el, formCtx, props as any);
+    mountFormContextSync(host.el, formCtx, props);
 
     const normalizedValue = computed(() => {
       const max = Math.max(1, Number(props.max!.value) || 5);
@@ -90,7 +90,7 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
 
     const fd = defineField(
       {
-        disabled: computed(() => Boolean(props.disabled!.value)),
+        disabled: computed(() => Boolean(props.disabled!.value) || Boolean(formCtx?.disabled.value)),
         value: computed(() => String(normalizedValue.value || 0)),
       },
       {
@@ -102,11 +102,11 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
 
     const { triggerValidation } = createValidationControl(formCtx?.validateOn, fd);
 
-    const isInteractive = computed(() => !props.readonly!.value && !props.disabled!.value);
+    const isInteractive = computed(() => !props.readonly!.value && !(props.disabled!.value || formCtx?.disabled.value));
     const hovered = signal<number | null>(null);
     const displayValue = computed(() => hovered.value ?? normalizedValue.value);
     const getStarButtons = () => {
-      return [...(host.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-star]') ?? [])];
+      return [...(host.el.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-star]') ?? [])];
     };
     const ratingControl = createSliderControl({
       max: () => Number(props.max!.value) || 5,
@@ -115,8 +115,8 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
     });
 
     function spawnSparkles(star: number) {
-      const layer = host.shadowRoot?.querySelector<HTMLElement>('.sparkle-layer');
-      const btn = host.shadowRoot?.querySelector<HTMLElement>(`[data-star="${star}"]`);
+      const layer = host.el.shadowRoot?.querySelector<HTMLElement>('.sparkle-layer');
+      const btn = host.el.shadowRoot?.querySelector<HTMLElement>(`[data-star="${star}"]`);
 
       if (!layer || !btn) return;
 

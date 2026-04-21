@@ -65,7 +65,7 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
     // Default to success so slotted content is visible without extra wiring.
     status: 'success',
   },
-  setup({ emit, host, props }) {
+  setup(props, { emit, host }) {
     const hasLoadingSlot = signal(false);
     const hasEmptySlot = signal(false);
     const hasErrorSlot = signal(false);

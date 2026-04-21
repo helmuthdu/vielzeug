@@ -4,7 +4,7 @@ import '../icon/icon';
 import '../../inputs/button/button';
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { type PropBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { type PropsInput, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './pagination.css?inline';
 
@@ -87,14 +87,14 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
     ...themableBundle,
     ...sizableBundle,
     label: 'Pagination',
-    page: 1,
+    page: { default: 1, reflect: true },
     'show-first-last': false,
     'show-prev-next': false,
     siblings: 1,
     'total-pages': 1,
     variant: undefined,
-  } satisfies PropBundle<BitPaginationProps>,
-  setup({ emit, props }) {
+  } satisfies PropsInput<BitPaginationProps>,
+  setup(props, { emit }) {
     function goTo(page: number) {
       const total = props['total-pages'].value || 1;
       const next = Math.min(Math.max(1, page), total);

@@ -21,7 +21,7 @@ const register = (tag: string, setup: ComponentDefinition['setup'], options: Omi
 describe('core/host.ts', () => {
   describe('Host bind API', () => {
     it('applies host attrs and classes from object-style config', async () => {
-      const { element, flush, query } = await mount(({ host }) => {
+      const { element, flush, query } = await mount((_props, { host }) => {
         const open = signal(false);
 
         host.bind({
@@ -46,8 +46,36 @@ describe('core/host.ts', () => {
       expect(element.classList.contains('is-open')).toBe(true);
     });
 
+    it('applies class records with static and reactive values', async () => {
+      const { element, flush } = await mount((_props, { host }) => {
+        const open = signal(false);
+        const active = signal(true);
+
+        host.bind({
+          class: {
+            active,
+            open: () => open.value,
+            ready: true,
+          },
+        });
+
+        onMount(() => {
+          open.value = true;
+          active.value = false;
+        });
+
+        return html`<div></div>`;
+      });
+
+      await flush();
+
+      expect(element.classList.contains('ready')).toBe(true);
+      expect(element.classList.contains('open')).toBe(true);
+      expect(element.classList.contains('active')).toBe(false);
+    });
+
     it('prop binding exposes reactive get/set on the host element', async () => {
-      const { element, flush } = await mount(({ host }) => {
+      const { element, flush } = await mount((_props, { host }) => {
         const internalValue = signal('initial');
 
         host.bind({
@@ -73,7 +101,7 @@ describe('core/host.ts', () => {
     });
 
     it('prop binding is cleaned up on component destroy', async () => {
-      const { destroy, element } = await mount(({ host }) => {
+      const { destroy, element } = await mount((_props, { host }) => {
         host.bind({
           prop: {
             value: {
@@ -94,7 +122,7 @@ describe('core/host.ts', () => {
 
     it('supports listener options for host event bindings', async () => {
       let clicks = 0;
-      const { element } = await mount(({ host }) => {
+      const { element } = await mount((_props, { host }) => {
         host.bind(
           {
             on: {
@@ -279,7 +307,7 @@ describe('core/host.ts', () => {
       let defaultAssigned!: ReadonlySignal<boolean>;
 
       const { flush } = await mount(
-        ({ slots }) => {
+        (_props, { slots }) => {
           headerAssigned = slots.has('header');
           defaultAssigned = slots.has();
 
@@ -298,7 +326,7 @@ describe('core/host.ts', () => {
       let triggerElements!: ReadonlySignal<Element[]>;
 
       const { flush } = await mount(
-        ({ slots }) => {
+        (_props, { slots }) => {
           triggerElements = slots.elements('trigger');
 
           return html`<slot name="trigger"></slot>`;
@@ -315,7 +343,7 @@ describe('core/host.ts', () => {
     it('supports reactive side effects from namedElements without accidental dependency loops', async () => {
       const callback = vi.fn();
 
-      const { flush } = await mount(({ slots }) => {
+      const { flush } = await mount((_props, { slots }) => {
         effect(() => {
           callback(slots.elements('nonexistent').value);
         });
@@ -330,7 +358,7 @@ describe('core/host.ts', () => {
 
     it('updates slot signals when assigned light-DOM content changes', async () => {
       let defaultElements!: ReadonlySignal<Element[]>;
-      const { element, flush } = await mount(({ slots }) => {
+      const { element, flush } = await mount((_props, { slots }) => {
         defaultElements = slots.elements();
 
         return html`<slot></slot>`;
@@ -396,7 +424,7 @@ describe('onMount slot timing', () => {
   it('slot signals receive assigned elements by onMount time', async () => {
     const slotFn = vi.fn();
 
-    register('test-slot-change-element', ({ slots }) => {
+    register('test-slot-change-element', (_props, { slots }) => {
       onMount(() => {
         slotFn(slots.elements().value.length);
       });

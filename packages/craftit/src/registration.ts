@@ -21,6 +21,9 @@ export type ComponentRegistrationOptions = {
 type ComponentSetupResult = HTMLResult | string;
 
 class BaseElement extends HTMLElement {
+  // Lifecycle: setup() runs once on first connect. _init() runs on every connect.
+  // On disconnect: cleanups run, DOM stays, mount fns are saved for replay.
+  // On reconnect: styles re-adopt, bindings re-apply, mount fns replay.
   static _options?: ComponentRegistrationOptions;
   static _setup: () => ComponentSetupResult;
   static formAssociated = false;
@@ -116,7 +119,7 @@ class BaseElement extends HTMLElement {
 
   private _runSetup(): void {
     this._setupDone = true;
-    runtimeStack.push(this._runtime as any);
+    runtimeStack.push(this._runtime);
 
     try {
       this._template = (this.constructor as typeof BaseElement)._setup();
@@ -155,7 +158,7 @@ class BaseElement extends HTMLElement {
     }
 
     queueMicrotask(() => {
-      runtimeStack.push(this._runtime as any);
+      runtimeStack.push(this._runtime);
 
       try {
         const mountFns = this._runtime.onMount;

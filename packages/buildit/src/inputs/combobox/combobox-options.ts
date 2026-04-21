@@ -32,25 +32,30 @@ export function backfillSelectionLabels(
 }
 
 export function filterOptions(options: ComboboxOptionItem[], query: string, noFilter: boolean): ComboboxOptionItem[] {
-  if (noFilter || !query) return options;
+  if (noFilter) return options;
 
-  const normalizedQuery = query.toLowerCase();
+  const normalizedQuery = query.toLowerCase().trim();
 
-  return options.filter((option) => option.label.toLowerCase().includes(normalizedQuery));
+  if (!normalizedQuery) return options;
+
+  return options.filter(
+    (option) =>
+      option.label.toLowerCase().includes(normalizedQuery) || option.value.toLowerCase().includes(normalizedQuery),
+  );
 }
 
 export function getCreatableLabel(query: string, creatable: boolean, filteredOptions: ComboboxOptionItem[]): string {
-  if (!creatable || !query) return '';
+  if (!creatable) return '';
 
   const trimmedQuery = query.trim();
 
   if (!trimmedQuery) return '';
 
-  const exactMatch = filteredOptions.find((option) => option.label.toLowerCase() === trimmedQuery.toLowerCase());
+  const exactMatch = filteredOptions.some((option) => option.label.toLowerCase() === trimmedQuery.toLowerCase());
 
-  return exactMatch ? '' : trimmedQuery;
+  return exactMatch ? '' : `Create "${trimmedQuery}"`;
 }
 
-export function makeCreatableValue(label: string): string {
-  return label.toLowerCase().replace(/\s+/g, '-');
+export function makeCreatableValue(query: string): string {
+  return `__new__:${query.trim()}`;
 }

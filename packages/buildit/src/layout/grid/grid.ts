@@ -162,7 +162,7 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
     rows: undefined,
   },
 
-  setup({ host, props }) {
+  setup(props, { host }) {
     const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
       if (activeCols === 'auto' || (!activeCols && responsive)) {
         return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;

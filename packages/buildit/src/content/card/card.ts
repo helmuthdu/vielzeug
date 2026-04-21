@@ -3,7 +3,7 @@ import { createPressControl } from '@vielzeug/craftit/controls';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
-import { disablableBundle, loadableBundle, type PropBundle, themableBundle } from '../../inputs/shared/bundles';
+import { disablableBundle, loadableBundle, type PropsInput, themableBundle } from '../../inputs/shared/bundles';
 import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
 import componentStyles from './card.css?inline';
 
@@ -97,9 +97,9 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     orientation: undefined,
     padding: undefined,
     variant: undefined,
-  } satisfies PropBundle<BitCardProps>,
+  } satisfies PropsInput<BitCardProps>,
 
-  setup({ emit, host, props, slots }) {
+  setup(props, { emit, host, slots }) {
     host.bind({
       attr: {
         ariaBusy: () => (props.loading.value ? 'true' : 'false'),

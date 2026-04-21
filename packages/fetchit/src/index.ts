@@ -21,6 +21,3 @@ export type { QueryClient, QueryClientOptions, QueryFnContext, QueryOptions } fr
 // Mutation
 export { createMutation } from './mutation';
 export type { Mutation, MutationOptions } from './mutation';
-
-// Key serialization (public utility)
-export { stableStringify as serializeKey } from './serialize';

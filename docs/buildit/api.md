@@ -25,7 +25,7 @@ description: Entry points, import paths, and exported symbols for @vielzeug/buil
 | `@vielzeug/buildit/styles/animation.css`  | Animation helpers                                                      |
 | `@vielzeug/buildit/styles/layers.css`     | Cascade layer definitions                                              |
 
-For headless controller primitives (`createTextFieldControl`, `createChoiceFieldControl`, `createCheckableFieldControl`, `createListControl`, `createOverlayControl`), use `@vielzeug/craftit/controls`.
+For headless controller primitives (`createTextField`, `createChoiceField`, `createCheckableFieldControl`, `createListControl`, `createOverlayControl`), use `@vielzeug/craftit/controls`.
 
 ## Runtime Registration Imports
 

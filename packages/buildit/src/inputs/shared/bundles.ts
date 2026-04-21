@@ -9,20 +9,31 @@
  * @example
  * ```ts
  * import { define } from '@vielzeug/craftit';
- * import { define, themableBundle, sizableBundle, disablableBundle } from '../shared/bundles';
+ * import { themableBundle, sizableBundle, disablableBundle, type PropsInput } from '../shared/bundles';
  *
  * const myProps = {
- *   ...themableBundle, *   ...sizableBundle, *   ...disablableBundle, *   label: '', * } satisfies PropBundle<{ color?: string; disabled?: boolean; label?: string; size?: string }>;
+ *   ...themableBundle,
+ *   ...sizableBundle,
+ *   ...disablableBundle,
+ *   label: '',
+ * } satisfies PropsInput<{ color?: string; disabled?: boolean; label?: string; size?: string }>;
  *
- * define('my-el', { props: myProps, setup({ props }) { ... } });
+ * define('my-el', {
+ *   props: myProps,
+ *   setup(props, {  }) {
+ *     const props = useProps<{ color?: string; disabled?: boolean; label?: string; size?: string }>();
+ *
+ *     return props.label.value ?? '';
+ *   },
+ * });
  * ```
  */
 
 import type { PropsInput } from '@vielzeug/craftit';
 
-import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
+export type { PropsInput } from '@vielzeug/craftit';
 
-export type PropBundle<Props extends Record<string, unknown>> = PropsInput<Props>;
+import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 /**
  * Prop bundle for components that support a theme colour.
@@ -30,7 +41,7 @@ export type PropBundle<Props extends Record<string, unknown>> = PropsInput<Props
  */
 export const themableBundle = {
   color: undefined,
-} satisfies PropBundle<{ color?: ThemeColor }>;
+} satisfies PropsInput<{ color?: ThemeColor }>;
 
 /**
  * Prop bundle for components with discrete size variants.
@@ -38,7 +49,7 @@ export const themableBundle = {
  */
 export const sizableBundle = {
   size: undefined,
-} satisfies PropBundle<{ size?: ComponentSize }>;
+} satisfies PropsInput<{ size?: ComponentSize }>;
 
 /**
  * Prop bundle for interactive components that can be disabled.
@@ -46,7 +57,7 @@ export const sizableBundle = {
  */
 export const disablableBundle = {
   disabled: false,
-} satisfies PropBundle<{ disabled?: boolean }>;
+} satisfies PropsInput<{ disabled?: boolean }>;
 
 /**
  * Prop bundle for components with a loading / busy state.
@@ -54,7 +65,7 @@ export const disablableBundle = {
  */
 export const loadableBundle = {
   loading: false,
-} satisfies PropBundle<{ loading?: boolean }>;
+} satisfies PropsInput<{ loading?: boolean }>;
 
 /**
  * Prop bundle for components with configurable border-radius.
@@ -62,4 +73,4 @@ export const loadableBundle = {
  */
 export const roundableBundle = {
   rounded: undefined,
-} satisfies PropBundle<{ rounded?: RoundedSize }>;
+} satisfies PropsInput<{ rounded?: RoundedSize }>;

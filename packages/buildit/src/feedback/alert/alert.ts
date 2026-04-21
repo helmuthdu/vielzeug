@@ -3,7 +3,7 @@ import { define, html } from '@vielzeug/craftit';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import '../../content/icon/icon';
-import { type PropBundle, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { type PropsInput, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { forcedColorsMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { awaitExit } from '../../utils/animation';
 import componentStyles from './alert.css?inline';
@@ -78,8 +78,8 @@ export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
     heading: '',
     horizontal: false,
     variant: undefined,
-  } satisfies PropBundle<BitAlertProps>,
-  setup({ emit, host, props, slots }) {
+  } satisfies PropsInput<BitAlertProps>,
+  setup(props, { emit, host, slots }) {
     const handleDismiss = (e: MouseEvent) => {
       if (!props.dismissible.value) return;
 

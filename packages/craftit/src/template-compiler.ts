@@ -17,20 +17,19 @@ import {
 import { toReactiveBindingSource } from './runtime';
 import { createAttrBinding, createPropBinding } from './template-bindings';
 
-const normalizeCompiledHtml = (html: string): string => html.replace(/>\s+</g, '><').trim();
+// Templates use the HTML as-is; no aggressive whitespace normalization
 
 // Slot patterns applied in priority order; first match wins
 const SLOT_PATTERNS = [
   { kind: 'event' as const, regex: /\s+@([a-zA-Z_][-a-zA-Z0-9_.]*)\s*=\s*["']?$/ },
   { kind: 'ref' as const, regex: /\s+ref\s*=\s*["']?$/ },
-  { kind: 'specialAttr' as const, regex: /\s+([:?])([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
+  { kind: 'boolAttr' as const, regex: /\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
   { kind: 'prop' as const, regex: /\.([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
-  { kind: 'plainAttr' as const, regex: /\s+([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
+  { kind: 'attr' as const, regex: /\s+:?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
 ] as const;
 
 type CompiledTemplateSlot = {
   kind: (typeof SLOT_PATTERNS)[number]['kind'] | 'node';
-  // For 'specialAttr' slots
   mode?: 'attr' | 'bool';
   modifiers?: EventBinding['modifiers'];
   // For 'event' slots
@@ -93,12 +92,12 @@ const buildTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan 
         slots.push({ kind: 'event', modifiers: parsed.modifiers, name: parsed.name, prefix, raw: str });
       } else if (pattern.kind === 'ref') {
         slots.push({ kind: 'ref', prefix, raw: str });
-      } else if (pattern.kind === 'specialAttr') {
-        slots.push({ kind: 'specialAttr', mode: m[1] === '?' ? 'bool' : 'attr', name: m[2], prefix, raw: str });
+      } else if (pattern.kind === 'boolAttr') {
+        slots.push({ kind: 'boolAttr', mode: 'bool', name: m[1], prefix, raw: str });
       } else if (pattern.kind === 'prop') {
         slots.push({ kind: 'prop', name: m[1], prefix, raw: str });
-      } else if (pattern.kind === 'plainAttr') {
-        slots.push({ kind: 'plainAttr', name: m[1], prefix, raw: str });
+      } else if (pattern.kind === 'attr') {
+        slots.push({ kind: 'attr', mode: 'attr', name: m[1], prefix, raw: str });
       }
 
       break;
@@ -312,7 +311,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
       continue;
     }
 
-    if (slot.kind === 'specialAttr') {
+    if (slot.kind === 'boolAttr' || slot.kind === 'attr') {
       const id = getElementBindingId(slot.prefix);
 
       result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
@@ -325,14 +324,6 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
       result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
       bindings.push(createPropBinding(slot.name!, id, value));
-      continue;
-    }
-
-    if (slot.kind === 'plainAttr') {
-      const id = getElementBindingId(slot.prefix);
-
-      result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-      bindings.push(createAttrBinding('attr', slot.name!, id, value));
       continue;
     }
 
@@ -386,5 +377,8 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
   result += plan.tail;
 
-  return htmlResult(normalizeCompiledHtml(result), bindings);
+  return htmlResult(result, bindings);
 };
+
+export const html = (strings: TemplateStringsArray, ...values: unknown[]): HTMLResult =>
+  compileTemplate(strings, values);

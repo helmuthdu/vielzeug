@@ -29,9 +29,6 @@ export function createDropdownPositioner(
   }
 
   return {
-    destroy(): void {
-      // no-op: auto-update lifecycle is owned by createOverlayControl()
-    },
     updatePosition,
   };
 }

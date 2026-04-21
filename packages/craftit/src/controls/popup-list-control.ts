@@ -264,11 +264,11 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
     control: list,
     disabled: () => !options.isOpen(),
     keys: options.keyboardMapping,
-    onInvoke: (action, result) => {
+    onInvoke: (action, result, event) => {
       const navResult = result as { index: number };
 
       if (navResult.index >= 0) {
-        options.onNavigate?.(action, navResult.index, new KeyboardEvent('keydown'));
+        options.onNavigate?.(action, navResult.index, event);
       }
     },
   });

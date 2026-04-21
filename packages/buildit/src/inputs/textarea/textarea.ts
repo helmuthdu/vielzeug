@@ -1,11 +1,11 @@
 import { define, effect, html, inject, onElement, ref } from '@vielzeug/craftit';
-import { createFieldControl } from '@vielzeug/craftit/controls';
+import { createTextField } from '@vielzeug/craftit/controls';
 
 import type { VisualVariant } from '../../types';
 import type { TextFieldProps } from '../shared/base-props';
 
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, roundableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, roundableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
 import { TEXTAREA_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -37,22 +37,22 @@ const textareaProps = {
   ...disablableBundle,
   ...roundableBundle,
   'auto-resize': false,
-  error: { default: '' as string, omit: true },
+  error: { default: '' as string, omit: true, reflect: true },
   fullwidth: false,
   helper: '',
-  label: '',
+  label: { default: '', reflect: true },
   'label-placement': 'inset',
   maxlength: undefined,
   name: '',
   'no-resize': false,
-  placeholder: '',
+  placeholder: { default: '', reflect: true },
   readonly: false,
   required: false,
   resize: undefined,
   rows: undefined,
   value: '',
   variant: undefined,
-} satisfies PropBundle<BitTextareaProps>;
+} satisfies PropsInput<BitTextareaProps>;
 
 /**
  * A multi-line text input with label, helper text, character counter, and auto-resize.
@@ -87,8 +87,8 @@ const textareaProps = {
 export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-textarea', {
   formAssociated: true,
   props: textareaProps,
-  setup({ emit, host, props }) {
-    const formCtx = inject(FORM_CTX, undefined);
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
 
     mountFormContextSync(host.el, formCtx, props);
 
@@ -103,32 +103,29 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       textareaEl.style.height = `${textareaEl.scrollHeight}px`;
     };
 
-    const tf = createFieldControl({
-      kind: 'text',
-      options: {
-        context: formCtx,
-        disabled: props.disabled,
-        elementRef: textareaRef,
-        error: props.error,
-        helper: props.helper,
-        label: props.label,
-        labelPlacement: props['label-placement'],
-        maxLength: props.maxlength,
-        name: props.name,
-        onChange: (event, value) => {
-          emit('change', { originalEvent: event, value });
-        },
-        onInput: (event, value) => {
-          emit('input', { originalEvent: event, value });
-        },
-        onInputExtra: autoGrow,
-        placeholder: props.placeholder,
-        prefix: 'textarea',
-        readOnly: props.readonly,
-        required: props.required,
-        rows: props.rows,
-        value: props.value,
+    const tf = createTextField({
+      context: formCtx,
+      disabled: props.disabled,
+      elementRef: textareaRef,
+      error: props.error,
+      helper: props.helper,
+      label: props.label,
+      labelPlacement: props['label-placement'],
+      maxLength: props.maxlength,
+      name: props.name,
+      onChange: (event, value) => {
+        emit('change', { originalEvent: event, value });
       },
+      onInput: (event, value) => {
+        emit('input', { originalEvent: event, value });
+      },
+      onInputExtra: autoGrow,
+      placeholder: props.placeholder,
+      prefix: 'textarea',
+      readOnly: props.readonly,
+      required: props.required,
+      rows: props.rows,
+      value: props.value,
     });
     const {
       assistive,
@@ -155,9 +152,9 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       return syncLayout;
     });
 
-    const ariaDescribedBy = () => (assistive.value.hasError ? errorId : helperId);
-    const ariaErrorMessage = () => (assistive.value.hasError ? errorId : null);
-    const ariaInvalid = () => String(assistive.value.hasError);
+    const ariaDescribedBy = () => (assistive.value.errorText ? errorId : helperId);
+    const ariaErrorMessage = () => (assistive.value.errorText ? errorId : null);
+    const ariaInvalid = () => String(!!assistive.value.errorText);
     const ariaLabelledBy = () => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId);
     const counterClass = () =>
       assistive.value.counterAtLimit
@@ -167,8 +164,8 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
           : 'counter';
     const counterHidden = () => !assistive.value.hasCounter;
     const counterText = () => assistive.value.counterText.replace(' / ', '/');
-    const helperHidden = () => !(assistive.value.hasError || assistive.value.showHelper);
-    const helperText = () => (assistive.value.hasError ? assistive.value.errorText : assistive.value.helperText);
+    const helperHidden = () => !assistive.value.errorText && !assistive.value.helperText;
+    const helperText = () => assistive.value.errorText || assistive.value.helperText;
 
     return html`
       <div class="textarea-wrapper">

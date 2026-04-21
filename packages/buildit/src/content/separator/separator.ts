@@ -45,7 +45,7 @@ export const SEPARATOR_TAG = define<BitSeparatorProps>('bit-separator', {
     label: undefined,
     orientation: 'horizontal',
   },
-  setup({ props }) {
+  setup(props) {
     const roleAttr = () => (props.decorative.value ? 'none' : 'separator');
     const ariaHidden = () => (props.decorative.value ? 'true' : null);
 

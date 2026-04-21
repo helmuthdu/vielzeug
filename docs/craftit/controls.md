@@ -12,9 +12,21 @@ This page documents the `@vielzeug/craftit/controls` entrypoint. These APIs are 
 ```ts
 import {
   createCheckableFieldControl,
-  createFieldControl,
+  createChoiceField,
   createListControl,
+  createListKeyControl,
   createOverlayControl,
+  createPopupListControl,
+  createPressControl,
+  createSliderControl,
+  createSpinnerControl,
+  createTextField,
+  createValidationControl,
+  type CheckableChangePayload,
+  type OverlayCloseDetail,
+  type OverlayCloseReason,
+  type OverlayOpenDetail,
+  type OverlayOpenReason,
 } from '@vielzeug/craftit/controls';
 
 import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';
@@ -22,22 +34,37 @@ import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/c
 
 ## Overview
 
-- `createFieldControl` - unified field controller factory for text, choice, and checkable field state.
+- `createTextField` - text-field controller with stable ids, validation hooks, and assistive state.
+- `createChoiceField` - choice-field controller for single/multi-select and CSV-backed form values.
 - `createCheckableFieldControl` - high-level checkbox/radio/switch controller that bundles checkable state, a11y wiring, and press handling.
+- `createValidationControl` - low-level validation trigger helper for form-associated elements that manage their own `defineField` lifecycle.
 - `createListControl` - keyboard/list focus navigation with rich result metadata.
+- `createListKeyControl` - keyboard adapter that maps arrow/home/end keys to a `ListControl`.
+- `createPressControl` - click/keydown press handler with key filtering and disabled state.
 - `createOverlayControl` - open/close/toggle orchestration with typed open/close reasons.
+- `createPopupListControl` - combo of overlay + list navigation for popup list widgets.
+- `createSliderControl` - range input value/step/bounds management.
+- `createSpinnerControl` - number spinner increment/decrement logic.
 
 Observer APIs (`resizeObserver`, `intersectionObserver`, `mediaObserver`) are documented under the `@vielzeug/craftit/observers` entrypoint.
 
 ## Which Control Do I Choose?
 
-For normal field authoring, use the unified field controller factory with a `kind` discriminator:
+For normal field authoring, use the dedicated field helpers:
 
-- Use `createFieldControl({ kind: 'text', options })` for input-like fields with one string value: input, textarea, masked text inputs, and similar controls.
-- Use `createFieldControl({ kind: 'choice', options })` when the field owns a selected item list or CSV-style form value: select, combobox, multi-select, checkbox-group.
-- Use `createFieldControl({ kind: 'checkable', options })` (or `createCheckableFieldControl`) for single checkable widgets: checkbox, radio, switch.
+- Use `createTextField(options)` for input-like fields with one string value: input, textarea, and similar controls.
+- Use `createChoiceField(options)` when the field owns a selected item list or CSV-style form value: select, combobox, multi-select, checkbox-group.
+- Use `createCheckableFieldControl(options)` for single checkable widgets: checkbox, radio, switch.
+- Use `createValidationControl(validateOn, field)` when building a form-associated element that manages its own `defineField` lifecycle directly (e.g. slider, rating).
 
-Everything else in this entrypoint is either a generic non-field primitive (`createListControl`, `createOverlayControl`, `createPressControl`) or a lower-level escape hatch for advanced widgets (`createA11yControl`).
+Everything else is a generic non-field primitive for interaction:
+
+- `createListControl` / `createListKeyControl` — focus list navigation
+- `createPressControl` — click/keydown press with disabled guard
+- `createOverlayControl` — open/close lifecycle with reason tracking
+- `createPopupListControl` — popup list combining overlay + list navigation
+- `createSliderControl` — range slider value/bounds management
+- `createSpinnerControl` — numeric spinner increment/decrement
 
 ## `createListControl`
 
@@ -146,24 +173,21 @@ const overlay = createOverlayControl({
 overlay.open({ reason: 'trigger' });
 ```
 
-## `createFieldControl` (`kind: 'text'`)
+## `createTextField`
 
-Use `createFieldControl` with `kind: 'text'` for input-like fields. It owns stable ids, field state, validation triggering, and assistive state in one place.
+Use `createTextField` for input-like fields. It owns stable ids, field state, validation triggering, and assistive state in one place.
 
 ```ts
-const field = createFieldControl({
-  kind: 'text',
-  options: {
-    context: formCtx,
-    error,
-    helper,
-    label,
-    labelPlacement,
-    maxLength,
-    name,
-    prefix: 'input',
-    value,
-  },
+const field = createTextField({
+  context: formCtx,
+  error,
+  helper,
+  label,
+  labelPlacement,
+  maxLength,
+  name,
+  prefix: 'input',
+  value,
 });
 
 const { assistive, fieldId, helperId, errorId, labelInsetId, labelOutsideId, value: inputValue } = field;
@@ -175,26 +199,23 @@ const { assistive, fieldId, helperId, errorId, labelInsetId, labelOutsideId, val
 - `hasCounter`, `counterText`, `counterNearLimit`, and `counterAtLimit` for maxlength UX
 - `showHelper`, `hasError`, and `hidden` so templates do not need to duplicate fallback logic
 
-## `createFieldControl` (`kind: 'choice'`)
+## `createChoiceField`
 
-Use `createFieldControl` with `kind: 'choice'` for select-like components.
+Use `createChoiceField` for select-like components.
 
 ```ts
-const choice = createFieldControl({
-  kind: 'choice',
-  options: {
-    context: formCtx,
-    error,
-    getValue: (item) => item.value,
-    helper,
-    label,
-    labelPlacement,
-    mapControlledValue: (value) => ({ label: '', value }),
-    multiple,
-    name,
-    prefix: 'combobox',
-    value,
-  },
+const choice = createChoiceField({
+  context: formCtx,
+  error,
+  getValue: (item) => item.value,
+  helper,
+  label,
+  labelPlacement,
+  mapControlledValue: (value) => ({ label: '', value }),
+  multiple,
+  name,
+  prefix: 'combobox',
+  value,
 });
 
 choice.selectedItems.value;
@@ -229,59 +250,28 @@ This keeps component code focused on rendering and any truly component-specific 
 
 ## `createA11yControl`
 
-`createA11yControl` remains available as a low-level primitive for advanced widgets that are not already covered by the higher-level field helpers.
-
-```ts
-type A11yTone = 'default' | 'error';
-
-type A11yControlConfig = {
-  checked?: () => 'true' | 'false' | 'mixed' | undefined;
-  helperId?: string;
-  helperText?: () => string | undefined;
-  helperTone?: () => A11yTone;
-  invalid?: () => boolean;
-  labelId?: string;
-  role: string;
-};
-
-type A11yControlHandle = {
-  helperId: string;
-  labelId: string;
-};
-```
-
-### Required template markers
-
-`createA11yControl` expects these markers in your template:
-
-- `[data-a11y-label]` for label wiring (`aria-labelledby`)
-- `[data-a11y-helper]` for helper/error wiring (`aria-describedby`)
-
-### Example
-
-```ts
-const a11y = createA11yControl(host, {
-  role: 'checkbox',
-  checked: () => (checked.value ? 'true' : 'false'),
-  invalid: () => Boolean(error.value),
-  helperText: () => error.value || helper.value,
-  helperTone: () => (error.value ? 'error' : 'default'),
-});
-
-return html`
-  <span data-a11y-label id=${a11y.labelId}><slot></slot></span>
-  <div data-a11y-helper id=${a11y.helperId} aria-live="polite" hidden></div>
-`;
-```
+`createA11yControl` is an internal helper used by the higher-level field controls. It is not part of the public `@vielzeug/craftit/controls` surface — use `createCheckableFieldControl`, `createTextField`, or `createChoiceField` instead.
 
 ## Exports from `@vielzeug/craftit/controls`
 
 ```ts
 export {
   createCheckableFieldControl,
-  createFieldControl,
+  createChoiceField,
   createListControl,
+  createListKeyControl,
   createOverlayControl,
+  createPopupListControl,
+  createPressControl,
+  createSliderControl,
+  createSpinnerControl,
+  createTextField,
+  createValidationControl,
+  type CheckableChangePayload,
+  type OverlayCloseDetail,
+  type OverlayCloseReason,
+  type OverlayOpenDetail,
+  type OverlayOpenReason,
 } from '@vielzeug/craftit/controls';
 
 export { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';

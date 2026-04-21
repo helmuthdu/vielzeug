@@ -85,43 +85,6 @@ export const syncContextProps = <Ctx extends Record<string, unknown>, Props exte
   });
 };
 
-export type HostContextAttributeBridge = {
-  contextDisabled?: ReadonlySignal<boolean | undefined>;
-  contextSize?: ReadonlySignal<string | undefined>;
-  contextVariant?: ReadonlySignal<string | undefined>;
-  ownDisabled?: ReadonlySignal<boolean | undefined>;
-  ownSize?: ReadonlySignal<string | undefined>;
-  ownVariant?: ReadonlySignal<string | undefined>;
-};
-
-export const bridgeContextAttributes = (host: HTMLElement, options: HostContextAttributeBridge): void => {
-  let contextDisabledActive = false;
-
-  effect(() => {
-    const contextDisabled = Boolean(options.contextDisabled?.value);
-
-    if (contextDisabled && !contextDisabledActive) {
-      host.setAttribute('disabled', '');
-      contextDisabledActive = true;
-    } else if (!contextDisabled && contextDisabledActive && !options.ownDisabled?.value) {
-      host.removeAttribute('disabled');
-      contextDisabledActive = false;
-    }
-
-    const contextSize = options.contextSize?.value;
-    const hasOwnSize = Boolean(options.ownSize?.value);
-
-    if (contextSize && !hasOwnSize) host.setAttribute('size', contextSize);
-    else if (!hasOwnSize) host.removeAttribute('size');
-
-    const contextVariant = options.contextVariant?.value;
-    const hasOwnVariant = Boolean(options.ownVariant?.value);
-
-    if (contextVariant && !hasOwnVariant) host.setAttribute('variant', contextVariant);
-    else if (!hasOwnVariant) host.removeAttribute('variant');
-  });
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // ARIA SYNC
 // ─────────────────────────────────────────────────────────────────────────────
@@ -181,13 +144,7 @@ export const syncAria = (target: Element, config: AriaConfig): (() => void) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SLOT_DEFAULT = 'default';
-const normalizeSlotName = (slotName: string | null | undefined): string => {
-  if (!slotName || slotName === SLOT_DEFAULT) return SLOT_DEFAULT;
-
-  return slotName;
-};
-
-const slotsRegistry = new WeakMap<HTMLElement, ComponentSlots>();
+const normalizeSlotName = (slotName: string | null | undefined): string => slotName || SLOT_DEFAULT;
 
 export type ComponentSlots = {
   elements: (name?: string) => ReadonlySignal<Element[]>;
@@ -202,9 +159,6 @@ export type ComponentSlots = {
  */
 export const createSlots = (): ComponentSlots => {
   const host = currentRuntime().el;
-  const cached = slotsRegistry.get(host);
-
-  if (cached) return cached;
 
   const presenceSignals = new Map<string, Signal<boolean>>();
   const elementSignals = new Map<string, Signal<Element[]>>();
@@ -304,8 +258,6 @@ export const createSlots = (): ComponentSlots => {
     has: (name?: string) => ensurePresenceSignal(normalizeSlotName(name)),
   };
 
-  slotsRegistry.set(host, slots);
-
   return slots;
 };
 
@@ -340,9 +292,11 @@ export type HostPropDescriptor<T = unknown> = {
   set?: (value: T) => void;
 };
 
+type HostClassBindingValue = ReadonlySignal<boolean> | (() => boolean) | boolean;
+
 export type HostBindConfig<CustomEvents extends Record<string, unknown> = Record<string, never>> = {
   attr?: ReflectConfig;
-  class?: () => Record<string, boolean>;
+  class?: (() => Record<string, boolean>) | Record<string, HostClassBindingValue>;
   on?: HostEventListeners<CustomEvents>;
   prop?: Record<string, HostPropDescriptor>;
   style?: Record<string, HostBindingValue>;
@@ -354,13 +308,12 @@ export type ComponentHost = {
     options?: AddEventListenerOptions,
   ) => () => void;
   el: HTMLElement;
-  shadowRoot: ShadowRoot;
 };
 
 export const createHost = (): ComponentHost => {
   const el = currentRuntime().el;
 
-  return {
+  const host: ComponentHost = {
     bind: (config, options) => {
       const disposers: Array<() => void> = [];
 
@@ -426,18 +379,28 @@ export const createHost = (): ComponentHost => {
       return cleanup;
     },
     el,
-    shadowRoot: el.shadowRoot as ShadowRoot,
   };
+
+  return host;
+};
+
+const applyReactiveBinding = (
+  value: HostBindingValue,
+  updater: (next: string | number | boolean | null | undefined) => void,
+): (() => void) | void => {
+  if (typeof value === 'function') {
+    return effect(() => updater(value()));
+  }
+
+  if (isSignal(value)) {
+    return effect(() => updater(value.value));
+  }
+
+  updater(value);
 };
 
 function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
-  if (typeof value === 'function') {
-    return effect(() => setAttr(host, name, value()));
-  } else if (isSignal(value)) {
-    return effect(() => setAttr(host, name, value.value));
-  } else {
-    setAttr(host, name, value);
-  }
+  return applyReactiveBinding(value, (next) => setAttr(host, name, next));
 }
 
 function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
@@ -446,27 +409,42 @@ function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (
     else host.style.removeProperty(name);
   };
 
-  if (typeof value === 'function') {
-    return effect(() => setStyle(value()));
-  } else if (isSignal(value)) {
-    return effect(() => setStyle(value.value));
-  } else {
-    setStyle(value);
-  }
+  return applyReactiveBinding(value, setStyle);
 }
 
-function applyClassMap(host: HTMLElement, getter: () => Record<string, boolean>): () => void {
+function applyClassMap(
+  host: HTMLElement,
+  value: (() => Record<string, boolean>) | Record<string, HostClassBindingValue>,
+): () => void {
+  const getMap =
+    typeof value === 'function'
+      ? value
+      : (): Record<string, boolean> => {
+          const result: Record<string, boolean> = {};
+
+          for (const [cls, entry] of Object.entries(value)) {
+            result[cls] = typeof entry === 'function' ? entry() : isSignal(entry) ? entry.value : Boolean(entry);
+          }
+
+          return result;
+        };
+
   let prev = new Set<string>();
 
   return effect(() => {
-    const next = new Set(
-      Object.entries(getter())
-        .filter(([, active]) => active)
-        .map(([cls]) => cls),
-    );
+    const next = new Set<string>();
 
-    for (const cls of prev) if (!next.has(cls)) host.classList.remove(cls);
-    for (const cls of next) if (!prev.has(cls)) host.classList.add(cls);
+    for (const [cls, active] of Object.entries(getMap())) {
+      if (!active) continue;
+
+      next.add(cls);
+
+      if (!prev.has(cls)) host.classList.add(cls);
+    }
+
+    for (const cls of prev) {
+      if (!next.has(cls)) host.classList.remove(cls);
+    }
 
     prev = next;
   });
