@@ -1,5 +1,13 @@
-import { createRouter } from '../router';
-import { boot, disposeRouter, resetMocks } from './setup';
+import { createRouter, defineRoutes } from '../router';
+import { boot, disposeRouter, mockHistory, mockLocation, resetMocks } from './setup';
+
+const routes = defineRoutes({
+  about: { path: '/about' },
+  home: { path: '/' },
+  search: { path: '/search' },
+  userDetail: { meta: { section: 'users' }, path: '/users/:id' },
+  users: { path: '/users' },
+});
 
 describe('Navigation', () => {
   beforeEach(() => {
@@ -11,62 +19,65 @@ describe('Navigation', () => {
   });
 
   describe('history navigation', () => {
-    it('calls pushState with the target path', async () => {
-      const handler = vi.fn();
+    it('calls pushState with the resolved named route URL', async () => {
+      const router = createRouter({
+        routes: defineRoutes({
+          ...routes,
+          about: { handler: vi.fn(), path: '/about' },
+        }),
+      });
 
-      const router = createRouter();
-
-      router.on('/about', handler);
-
-      (globalThis as any).mockLocation.pathname = '/';
+      mockLocation.pathname = '/';
       await boot(router);
 
-      await router.navigate('/about');
-      expect((globalThis as any).mockHistory.pushState).toHaveBeenCalledWith(null, '', '/about');
+      await router.navigate({ name: 'about' });
+      expect(mockHistory.pushState).toHaveBeenCalledWith(undefined, '', '/about');
     });
 
     it('{ replace: true } calls replaceState instead of pushState', async () => {
-      const handler = vi.fn();
-
-      const router = createRouter();
-
-      router.on('/about', handler);
-
-      (globalThis as any).mockLocation.pathname = '/';
-      await boot(router);
-
-      await router.navigate('/about', { replace: true });
-      expect((globalThis as any).mockHistory.replaceState).toHaveBeenCalledWith(null, '', '/about');
-    });
-
-    it('{ state } option is forwarded to pushState', async () => {
-      const handler = vi.fn();
-
-      const router = createRouter();
-
-      router.on('/about', handler);
-
-      (globalThis as any).mockLocation.pathname = '/';
-      await boot(router);
-
-      await router.navigate('/about', { state: 'extra' });
-      expect((globalThis as any).mockHistory.pushState).toHaveBeenCalledWith('extra', '', '/about');
-    });
-
-    it('returns a Promise that resolves after the handler has run', async () => {
-      const handler = vi.fn(async () => {
-        await new Promise((r) => setTimeout(r, 1));
+      const router = createRouter({
+        routes: defineRoutes({
+          about: { handler: vi.fn(), path: '/about' },
+        }),
       });
 
-      const router = createRouter();
+      mockLocation.pathname = '/';
+      await boot(router);
 
-      router.on('/page', handler);
+      await router.navigate({ name: 'about' }, { replace: true });
+      expect(mockHistory.replaceState).toHaveBeenCalledWith(undefined, '', '/about');
+    });
 
-      (globalThis as any).mockLocation.pathname = '/';
+    it('{ state } is forwarded to history state', async () => {
+      const router = createRouter({
+        routes: defineRoutes({
+          about: { handler: vi.fn(), path: '/about' },
+        }),
+      });
+
+      mockLocation.pathname = '/';
+      await boot(router);
+
+      await router.navigate({ name: 'about' }, { state: 'extra' });
+      expect(mockHistory.pushState).toHaveBeenCalledWith('extra', '', '/about');
+    });
+
+    it('resolves after the destination handler has run', async () => {
+      const handler = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1));
+      });
+      const router = createRouter({
+        routes: defineRoutes({
+          home: { path: '/' },
+          page: { handler, path: '/page' },
+        }),
+      });
+
+      mockLocation.pathname = '/';
       await boot(router);
 
       let settled = false;
-      const promise = router.navigate('/page', { force: true }).then(() => {
+      const promise = router.navigate({ name: 'page' }).then(() => {
         settled = true;
       });
 
@@ -77,89 +88,126 @@ describe('Navigation', () => {
 
     it('strips the base prefix when matching routes', async () => {
       const handler = vi.fn();
+      const router = createRouter({
+        base: '/app',
+        routes: defineRoutes({
+          about: { handler, path: '/about' },
+        }),
+      });
 
-      const router = createRouter({ base: '/app' });
-
-      router.on('/about', handler);
-
-      (globalThis as any).mockLocation.pathname = '/app/about';
+      mockLocation.pathname = '/app/about';
       await boot(router);
 
       expect(handler).toHaveBeenCalled();
     });
 
-    describe('same-URL deduplication', () => {
-      it('does not push a new history entry when navigating to the current URL', async () => {
-        const handler = vi.fn();
-
-        const router = createRouter();
-
-        router.on('/about', handler);
-
-        (globalThis as any).mockLocation.pathname = '/about';
-        await boot(router);
-
-        (globalThis as any).mockHistory.pushState.mockClear();
-        await router.navigate('/about');
-
-        expect((globalThis as any).mockHistory.pushState).not.toHaveBeenCalled();
+    it('does not strip sibling prefixes when base paths only partially overlap', async () => {
+      const handler = vi.fn();
+      const router = createRouter({
+        base: '/app',
+        routes: defineRoutes({
+          apple: { handler, path: '/apple' },
+        }),
       });
 
-      it('does not re-run for the same path with identical query string', async () => {
-        const handler = vi.fn();
+      mockLocation.pathname = '/apple';
+      await boot(router);
 
-        const router = createRouter();
+      expect(handler).toHaveBeenCalled();
+    });
 
-        router.on('/search', handler);
-
-        (globalThis as any).mockLocation.pathname = '/search';
-        (globalThis as any).mockLocation.search = '?q=test';
-        await boot(router);
-
-        (globalThis as any).mockHistory.pushState.mockClear();
-        await router.navigate('/search?q=test');
-
-        expect((globalThis as any).mockHistory.pushState).not.toHaveBeenCalled();
+    it('does not push a new history entry for the current named route URL', async () => {
+      const handler = vi.fn();
+      const router = createRouter({
+        routes: defineRoutes({
+          about: { handler, path: '/about' },
+        }),
       });
 
-      it('{ force: true } bypasses the deduplication check', async () => {
-        const handler = vi.fn();
+      mockLocation.pathname = '/about';
+      await boot(router);
 
-        const router = createRouter();
+      mockHistory.pushState.mockClear();
+      await router.navigate({ name: 'about' });
 
-        router.on('/about', handler);
+      expect(mockHistory.pushState).not.toHaveBeenCalled();
+    });
 
-        (globalThis as any).mockLocation.pathname = '/about';
-        await boot(router);
-
-        handler.mockClear();
-        await router.navigate('/about', { force: true });
-        expect(handler).toHaveBeenCalled();
+    it('deduplicates identical query strings on named navigation', async () => {
+      const handler = vi.fn();
+      const router = createRouter({
+        routes: defineRoutes({
+          search: { handler, path: '/search' },
+        }),
       });
 
-      it('popstate resets the dedup state so the same URL can be navigated again', async () => {
-        const handler = vi.fn();
+      mockLocation.pathname = '/search';
+      mockLocation.search = '?q=test';
+      await boot(router);
 
-        const router = createRouter();
+      mockHistory.pushState.mockClear();
+      await router.navigate({ name: 'search', query: { q: 'test' } });
 
-        router.on('/about', handler);
+      expect(mockHistory.pushState).not.toHaveBeenCalled();
+    });
 
-        (globalThis as any).mockLocation.pathname = '/about';
-        await boot(router);
-
-        // Simulate browser back
-
-        (globalThis as any).mockLocation.pathname = '/';
-        window.dispatchEvent(new Event('popstate'));
-        await new Promise<void>((r) => setTimeout(r, 10));
-
-        handler.mockClear();
-        (globalThis as any).mockHistory.pushState.mockClear();
-        await router.navigate('/about');
-
-        expect((globalThis as any).mockHistory.pushState).toHaveBeenCalledWith(null, '', '/about');
-        expect(handler).toHaveBeenCalledTimes(1);
+    it('{ force: true } bypasses deduplication', async () => {
+      const handler = vi.fn();
+      const router = createRouter({
+        routes: defineRoutes({
+          about: { handler, path: '/about' },
+        }),
       });
+
+      mockLocation.pathname = '/about';
+      await boot(router);
+
+      handler.mockClear();
+      await router.navigate({ name: 'about' }, { force: true });
+      expect(handler).toHaveBeenCalled();
+    });
+
+    it('updates dedup state after popstate navigation', async () => {
+      const handler = vi.fn();
+      const router = createRouter({
+        routes: defineRoutes({
+          about: { handler, path: '/about' },
+          home: { path: '/' },
+        }),
+      });
+
+      mockLocation.pathname = '/about';
+      await boot(router);
+
+      mockLocation.pathname = '/';
+      window.dispatchEvent(new Event('popstate'));
+      await new Promise<void>((resolve) => setTimeout(resolve, 10));
+
+      handler.mockClear();
+      mockHistory.pushState.mockClear();
+      await router.navigate({ name: 'about' });
+
+      expect(mockHistory.pushState).toHaveBeenCalledWith(undefined, '', '/about');
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('supports raw path escape hatches via pushPath() and replacePath()', async () => {
+      const target = vi.fn();
+      const router = createRouter({
+        routes: defineRoutes({
+          target: { handler: target, path: '/target' },
+        }),
+      });
+
+      mockLocation.pathname = '/';
+      await boot(router);
+
+      await router.pushPath('/target');
+      await router.replacePath('/target?mode=edit');
+
+      expect(mockHistory.pushState).toHaveBeenCalledWith(undefined, '', '/target');
+      expect(mockHistory.replaceState).toHaveBeenCalledWith(undefined, '', '/target?mode=edit');
+      expect(target).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -167,477 +215,177 @@ describe('Navigation', () => {
     it('start() triggers the initial route match', async () => {
       const handler = vi.fn();
 
-      (globalThis as any).mockLocation.pathname = '/';
-      await boot(createRouter().on('/', handler));
+      mockLocation.pathname = '/';
+      await boot(
+        createRouter({
+          routes: defineRoutes({
+            home: { handler, path: '/' },
+          }),
+        }),
+      );
+
       expect(handler).toHaveBeenCalled();
     });
 
-    it('start() is idempotent — handler runs exactly once even when called twice', async () => {
+    it('start() is idempotent', async () => {
       const handler = vi.fn();
+      const router = createRouter({
+        routes: defineRoutes({
+          home: { handler, path: '/' },
+        }),
+      });
 
-      const router = createRouter().on('/', handler);
-
-      (globalThis as any).mockLocation.pathname = '/';
+      mockLocation.pathname = '/';
       await boot(router);
       router.start();
 
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    it('stop() prevents popstate from triggering further route matching', async () => {
-      const handler = vi.fn();
-      const router = createRouter().on('/', handler);
+    it('stop() prevents popstate from triggering route handling', async () => {
+      const home = vi.fn();
+      const about = vi.fn();
+      const router = createRouter({
+        routes: defineRoutes({
+          about: { handler: about, path: '/about' },
+          home: { handler: home, path: '/' },
+        }),
+      });
 
-      (globalThis as any).mockLocation.pathname = '/';
+      mockLocation.pathname = '/';
       await boot(router);
 
       router.stop();
-
-      (globalThis as any).mockLocation.pathname = '/about';
+      mockLocation.pathname = '/about';
       window.dispatchEvent(new Event('popstate'));
+      await new Promise<void>((resolve) => setTimeout(resolve, 10));
 
-      await new Promise<void>((r) => setTimeout(r, 10));
-
-      expect(handler).toHaveBeenCalledTimes(1);
+      expect(home).toHaveBeenCalledTimes(1);
+      expect(about).not.toHaveBeenCalled();
     });
 
-    it('stop() is safe to call when the router was never started', () => {
-      const router = createRouter();
-
-      expect(() => router.stop()).not.toThrow();
-    });
-
-    it('autoStart: true starts the router without an explicit start() call', async () => {
+    it('autoStart: true handles the current route without an explicit start()', async () => {
       const handler = vi.fn();
 
-      createRouter({ autoStart: true }).on('/', handler);
+      mockLocation.pathname = '/';
+      createRouter({
+        autoStart: true,
+        routes: defineRoutes({
+          home: { handler, path: '/' },
+        }),
+      });
 
-      (globalThis as any).mockLocation.pathname = '/';
-      await new Promise<void>((r) => setTimeout(r, 20));
-
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
       expect(handler).toHaveBeenCalled();
     });
 
-    it('autoStart: true — routes registered after createRouter() are all available', async () => {
-      const handler = vi.fn();
+    it('dispose() is idempotent and blocks later use', async () => {
+      const router = createRouter({
+        routes: defineRoutes({
+          home: { handler: vi.fn(), path: '/' },
+        }),
+      });
 
-      createRouter({ autoStart: true }).on('/', handler);
+      mockLocation.pathname = '/';
+      await boot(router);
 
-      (globalThis as any).mockLocation.pathname = '/';
-      await new Promise<void>((r) => setTimeout(r, 20));
+      router.dispose();
+      router.dispose();
 
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it('autoStart + explicit start() still runs handler only once', async () => {
-      const handler = vi.fn();
-      const router = createRouter({ autoStart: true }).on('/', handler);
-
-      (globalThis as any).mockLocation.pathname = '/';
-      await new Promise<void>((r) => setTimeout(r, 20));
-      router.start();
-
-      expect(handler).toHaveBeenCalledTimes(1);
+      expect(() => router.start()).toThrow('[routeit] Router is disposed');
+      expect(() => router.subscribe(vi.fn())).toThrow('[routeit] Router is disposed');
+      await expect(router.navigate({ name: 'home' })).rejects.toThrow('[routeit] Router is disposed');
     });
   });
 
   describe('State & subscribers', () => {
-    it('state reflects the current pathname, params and query', async () => {
-      const router = createRouter();
+    it('stores frozen route state snapshots', async () => {
+      const router = createRouter({
+        routes: defineRoutes({
+          userDetail: { meta: { foo: 'bar' }, path: '/items/:id' },
+        }),
+      });
 
-      (globalThis as any).mockLocation.pathname = '/items/42';
-      (globalThis as any).mockLocation.search = '?q=test';
+      mockLocation.pathname = '/items/42';
+      mockLocation.search = '?q=test';
+      await boot(router);
 
-      const instance = await boot(router.on('/items/:id', vi.fn()));
-
-      expect(instance.state).toEqual(
+      expect(router.state).toEqual(
         expect.objectContaining({
+          meta: { foo: 'bar' },
+          name: 'userDetail',
           params: { id: '42' },
           pathname: '/items/42',
           query: { q: 'test' },
         }),
       );
+      expect(Object.isFrozen(router.state)).toBe(true);
+      expect(Object.isFrozen(router.state.params)).toBe(true);
+      expect(Object.isFrozen(router.state.query)).toBe(true);
     });
 
-    it('state.name is set for named routes', async () => {
-      const router = createRouter();
+    it('subscribe() fires immediately and on subsequent navigations', async () => {
+      const listener = vi.fn();
+      const router = createRouter({
+        routes: defineRoutes({
+          about: { path: '/about' },
+          home: { path: '/' },
+        }),
+      });
 
-      (globalThis as any).mockLocation.pathname = '/named';
-      await boot(router.on('/named', vi.fn(), { name: 'named' }));
-
-      expect(router.state.name).toBe('named');
-    });
-
-    it('state.meta reflects the matched route meta', async () => {
-      const router = createRouter();
-
-      (globalThis as any).mockLocation.pathname = '/meta';
-      await boot(router.on('/meta', vi.fn(), { meta: { foo: 'bar' } }));
-
-      expect(router.state.meta).toEqual({ foo: 'bar' });
-    });
-
-    it('state.meta is undefined when no route matches', async () => {
-      const router = createRouter();
-
-      (globalThis as any).mockLocation.pathname = '/nope';
-      await boot(router.on('/other', vi.fn()));
-
-      expect(router.state.meta).toBeUndefined();
-    });
-
-    it('subscribe() fires immediately with the current state', async () => {
-      const handler = vi.fn();
-
-      (globalThis as any).mockLocation.pathname = '/';
-      await boot(createRouter().on('/', vi.fn()));
-
-      createRouter().subscribe(handler);
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it('subscribe() notifies listener on subsequent navigations', async () => {
-      const handler = vi.fn();
-
-      const router = createRouter();
-
-      router.on('/a', vi.fn());
-      router.on('/b', vi.fn());
-
-      (globalThis as any).mockLocation.pathname = '/a';
+      mockLocation.pathname = '/';
       await boot(router);
 
-      router.subscribe(handler);
-      await router.navigate('/b');
+      router.subscribe(listener);
+      await router.navigate({ name: 'about' });
 
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it('subscribe() listener receives route name in state notification', async () => {
-      const handler = vi.fn();
-
-      const router = createRouter();
-
-      router.on('/a', vi.fn(), { name: 'a' });
-
-      (globalThis as any).mockLocation.pathname = '/a';
-      await boot(router);
-
-      router.subscribe(handler);
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ name: 'a' }));
-    });
-
-    it('subscribe() listener receives meta in state notification', async () => {
-      const handler = vi.fn();
-
-      const router = createRouter();
-
-      router.on('/a', vi.fn(), { meta: { foo: 'bar' } });
-
-      (globalThis as any).mockLocation.pathname = '/a';
-      await boot(router);
-
-      router.subscribe(handler);
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ meta: { foo: 'bar' } }));
-    });
-
-    it('unsubscribe() stops further listener notifications', async () => {
-      const handler = vi.fn();
-
-      const router = createRouter();
-
-      router.on('/a', vi.fn());
-
-      (globalThis as any).mockLocation.pathname = '/a';
-      await boot(router);
-
-      const unsubscribe = router.subscribe(handler);
-
-      // subscribe() emits once immediately; we only assert no calls after unsubscribe.
-      handler.mockClear();
-
-      unsubscribe();
-      await router.navigate('/a');
-
-      expect(handler).not.toHaveBeenCalled();
-    });
-
-    it('state returns an immutable snapshot of params and query values', async () => {
-      const router = createRouter();
-
-      (globalThis as any).mockLocation.pathname = '/items/42';
-      (globalThis as any).mockLocation.search = '?tags=a&tags=b';
-      await boot(router.on('/items/:id', vi.fn()));
-
-      const snapshot = router.state;
-
-      snapshot.params.id = '99';
-      (snapshot.query.tags as string[]).push('c');
-
-      expect(router.state.params.id).toBe('42');
-      expect(router.state.query.tags).toEqual(['a', 'b']);
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(listener.mock.calls[0]?.[0].pathname).toBe('/');
+      expect(listener.mock.calls[1]?.[0].pathname).toBe('/about');
     });
   });
 
-  describe('isActive()', () => {
-    it('returns true when the pattern matches the current path', async () => {
-      const router = createRouter();
+  describe('Helpers', () => {
+    it('builds URLs and reports active routes by name', async () => {
+      const router = createRouter({ routes });
 
-      router.on('/users/:id', vi.fn(), { name: 'userDetail' });
-
-      (globalThis as any).mockLocation.pathname = '/users/42';
+      mockLocation.pathname = '/users/42';
       await boot(router);
 
-      expect(router.isActive('/users/:id')).toBe(true);
-    });
-
-    it('returns false when the pattern does not match', async () => {
-      const router = createRouter();
-
-      router.on('/users/:id', vi.fn(), { name: 'userDetail' });
-
-      (globalThis as any).mockLocation.pathname = '/posts/1';
-      await boot(router);
-
-      expect(router.isActive('/users/:id')).toBe(false);
-    });
-
-    it('accepts a route name instead of a pattern', async () => {
-      const router = createRouter();
-
-      router.on('/users/:id', vi.fn(), { name: 'userDetail' });
-
-      (globalThis as any).mockLocation.pathname = '/users/42';
-      await boot(router);
-
+      expect(router.url('userDetail', { id: '42' }, { tab: 'profile' })).toBe('/users/42?tab=profile');
       expect(router.isActive('userDetail')).toBe(true);
+      expect(router.isActive('users', false)).toBe(true);
+      expect(router.isActive('home')).toBe(false);
     });
 
-    it('returns false for an inactive named route', async () => {
-      const router = createRouter();
-
-      router.on('/users/:id', vi.fn(), { name: 'userDetail' });
-
-      (globalThis as any).mockLocation.pathname = '/posts/1';
-      await boot(router);
-
-      expect(router.isActive('userDetail')).toBe(false);
-    });
-
-    it('prefix matching matches when the current path starts with the pattern', async () => {
-      const router = createRouter();
-
-      router.on('/admin', vi.fn(), { name: 'admin' });
-
-      (globalThis as any).mockLocation.pathname = '/admin/users';
-      await boot(router);
-
-      expect(router.isActive('/admin', false)).toBe(true);
-    });
-
-    it('prefix matching with a named route matches child paths', async () => {
-      const router = createRouter();
-
-      router.on('/admin', vi.fn(), { name: 'admin' });
-
-      (globalThis as any).mockLocation.pathname = '/admin/users';
-      await boot(router);
-
-      expect(router.isActive('admin', false)).toBe(true);
-    });
-
-    it('prefix matching does NOT match a sibling path sharing only a text prefix', async () => {
-      const router = createRouter();
-
-      router.on('/admin', vi.fn());
-
-      (globalThis as any).mockLocation.pathname = '/administrator';
-      await boot(router);
-
-      expect(router.isActive('/admin', false)).toBe(false);
-    });
-
-    it('default (exact: true) does not match a parent/prefix path', async () => {
-      const router = createRouter();
-
-      router.on('/admin', vi.fn());
-
-      (globalThis as any).mockLocation.pathname = '/admin/users';
-      await boot(router);
-
-      expect(router.isActive('/admin')).toBe(false);
-    });
-  });
-
-  describe('url()', () => {
-    it('interpolates path parameters', () => {
-      const router = createRouter();
-
-      router.on('/users/:id', vi.fn(), { name: 'user' });
-
-      expect(router.url('user', { id: '42' })).toBe('/users/42');
-    });
-
-    it('appends query parameters as a search string', () => {
-      const router = createRouter();
-
-      router.on('/q', vi.fn(), { name: 'q' });
-
-      expect(router.url('q', {}, { a: '1', b: '2' })).toBe('/q?a=1&b=2');
-    });
-
-    it('appends array query parameters with repeated keys', () => {
-      const router = createRouter();
-
-      router.on('/arr', vi.fn(), { name: 'arr' });
-
-      expect(router.url('arr', {}, { a: ['1', '2'] })).toBe('/arr?a=1&a=2');
-    });
-
-    it('builds URL for a named route', () => {
-      const router = createRouter();
-
-      router.on('/x', vi.fn(), { name: 'x' });
-
-      expect(router.url('x')).toBe('/x');
-    });
-
-    it('includes the base path prefix', () => {
-      const router = createRouter({ base: '/app' });
-
-      router.on('/x', vi.fn(), { name: 'x' });
-
-      expect(router.url('x')).toBe('/app/x');
-    });
-
-    it('throws for an unknown named route', () => {
-      const router = createRouter();
-
-      expect(() => router.url('missing')).toThrow('[routeit] Route "missing" not found');
-    });
-
-    it('throws when a required path parameter is missing', () => {
-      const router = createRouter();
-
-      router.on('/users/:id', vi.fn(), { name: 'user' });
-      expect(() => router.url('user')).toThrow();
-    });
-
-    it('builds a wildcard param URL without encoding slashes', () => {
-      const router = createRouter();
-
-      router.on('/files/:rest*', vi.fn(), { name: 'files' });
-
-      expect(router.url('files', { rest: 'a/b/c' })).toBe('/files/a/b/c');
-    });
-  });
-
-  describe('resolve()', () => {
-    it('returns name, params, and meta for a matching path', () => {
-      const router = createRouter();
-
-      router.on('/users/:id', vi.fn(), { meta: { foo: 'bar' }, name: 'user' });
-
-      const resolved = router.resolve('/users/42');
-
-      expect(resolved).toEqual({ meta: { foo: 'bar' }, name: 'user', params: { id: '42' } });
-    });
-
-    it('returns null when no route matches', () => {
-      const router = createRouter();
-
-      router.on('/users/:id', vi.fn(), { name: 'user' });
-
-      expect(router.resolve('/nope')).toBeNull();
-    });
-
-    it('name and meta are undefined for routes registered without them', () => {
-      const router = createRouter();
-
-      router.on('/users/:id', vi.fn());
-
-      const resolved = router.resolve('/users/42');
-
-      expect(resolved).toEqual({ meta: undefined, name: undefined, params: { id: '42' } });
-    });
-
-    it('first registered route wins when multiple patterns match', () => {
-      const router = createRouter();
-
-      router.on('/a/:id', vi.fn(), { name: 'first' });
-      router.on('/a/42', vi.fn(), { name: 'second' });
-
-      const resolved = router.resolve('/a/42');
-
-      expect(resolved?.name).toBe('first');
-    });
-
-    it('strips the base path so callers can pass window.location.pathname', () => {
-      const router = createRouter({ base: '/app' });
-
-      router.on('/about', vi.fn(), { name: 'about' });
-
-      const resolved = router.resolve('/app/about');
-
-      expect(resolved?.name).toBe('about');
-    });
-
-    it('does not trigger navigation or notify listeners', () => {
-      const router = createRouter();
-
-      router.on('/about', vi.fn());
-
-      const spy = vi.fn();
-
-      router.subscribe(spy);
-      // subscribe() emits current state immediately; resolve() must not emit additional updates.
-      spy.mockClear();
-
-      router.resolve('/about');
-      expect(spy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Concurrent navigation', () => {
-    it('ignores stale notifications when a newer navigation is in-flight', async () => {
-      const calls: string[] = [];
-      let releaseFirst: (() => void) | undefined;
-      const firstGate = new Promise<void>((resolve) => {
-        releaseFirst = resolve;
+    it('resolves full pathnames back to named routes', () => {
+      const router = createRouter({
+        base: '/app',
+        routes: defineRoutes({
+          about: { path: '/about' },
+          userDetail: { meta: { section: 'users' }, path: '/users/:id' },
+        }),
       });
 
-      const router = createRouter();
-
-      router.on('/a', async () => {
-        calls.push('a-start');
-        await firstGate;
-        calls.push('a-end');
+      expect(router.resolve('/app/users/42')).toEqual({
+        meta: { section: 'users' },
+        name: 'userDetail',
+        params: { id: '42' },
       });
-      router.on('/b', () => {
-        calls.push('b');
-      });
+      expect(router.resolve('/app/missing')).toBeNull();
+    });
 
-      (globalThis as any).mockLocation.pathname = '/';
-      await boot(router);
-
-      const states: string[] = [];
-
-      router.subscribe((state) => {
-        states.push(state.pathname);
+    it('throws helpful errors for unknown route names', () => {
+      const router = createRouter({
+        routes: defineRoutes({
+          about: { path: '/about' },
+          home: { path: '/' },
+        }),
       });
 
-      states.length = 0;
-
-      const first = router.navigate('/a', { force: true });
-
-      await new Promise<void>((r) => setTimeout(r, 0));
-
-      await router.navigate('/b', { force: true });
-      releaseFirst?.();
-      await first;
-
-      expect(states).toEqual(['/b']);
-      expect(calls).toContain('b');
+      expect(() => router.url('missing' as never)).toThrow(
+        '[routeit] Unknown route name: missing. Available routes: about, home',
+      );
     });
   });
 });

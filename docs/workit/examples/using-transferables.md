@@ -40,29 +40,37 @@ const worker = createWorker<Input, Output>(({ buffer }) => {
 });
 
 const bytes = new Uint8Array([1, 2, 3, 4, 5]);
-const result = await worker.run({ buffer: bytes.buffer }, { transfer: [bytes.buffer] });
+const buffer = bytes.buffer;
+
+// Transfer the buffer — zero-copy move to the worker
+const result = await worker.run({ buffer }, { transfer: [buffer] });
 
 console.log(result.length); // 15
+console.log(buffer.byteLength); // 0 — buffer is now detached
+
 worker.dispose();
 ```
 
 ::: warning
-Once a buffer is transferred it is detached in the sending context. Do not reuse it after calling `run()`.
+Once a buffer is transferred it is detached in the sending context. Do not reuse it after the `run()` call.
 :::
 
 ## Expected Output
 
 - The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- Large buffers are efficiently moved to the worker thread.
+- The buffer is detached in the main thread after transfer.
+- Performance is significantly improved for large payloads.
 
 ## Common Pitfalls
 
 - Forgetting cleanup/dispose calls can leak workers.
 - Accidentally reading a transferred buffer after `run()` will fail because the sender loses ownership.
 - Not typing the payload can hide transfer mistakes until runtime.
+- Using transfer on non-transferable objects (strings, objects) will be silently ignored.
 
 ## Related Recipes
 
-- [Cancellable Batch](./cancellable-batch.md)
 - [Image Processing](./image-processing.md)
+- [Data Transformation Pipeline](./data-transformation-pipeline.md)
 - [Fibonacci with Pool and Timeout](./fibonacci-with-pool-and-timeout.md)

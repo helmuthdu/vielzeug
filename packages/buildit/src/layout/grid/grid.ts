@@ -1,4 +1,4 @@
-import { define, effect, html, onMount } from '@vielzeug/craftit';
+import { define, effect, html } from '@vielzeug/craftit';
 import { resizeObserver } from '@vielzeug/craftit/observers';
 
 const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
@@ -227,16 +227,6 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
       }
     };
 
-    // Also, update on element resize (drives breakpoint switching)
-    onMount(() => {
-      const size = resizeObserver(host.el);
-
-      effect(() => {
-        void size.value;
-        updateCols();
-        updateAreas();
-      });
-    });
     // Rows
     effect(() => {
       const rows = props.rows.value;
@@ -260,7 +250,20 @@ export const GRID_TAG = define<BitGridProps>('bit-grid', {
       updateAreas();
     });
 
-    return html`<slot></slot>`;
+    // Also, update on element resize (drives breakpoint switching)
+    return {
+      mount() {
+        const size = resizeObserver(host.el);
+
+        effect(() => {
+          void size.value;
+          updateCols();
+          updateAreas();
+        });
+      },
+
+      render: () => html`<slot></slot>`,
+    };
   },
 
   styles: [styles],

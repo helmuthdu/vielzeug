@@ -15,9 +15,9 @@ export { createApi } from './api';
 export type { ApiClient, ApiClientOptions, FetchContext, Interceptor } from './api';
 
 // Query client
-export { STALE_TIMES, createQuery } from './query';
-export type { QueryClient, QueryClientOptions, QueryFnContext, QueryOptions } from './query';
+export { createQuery } from './query';
+export type { PrefetchOptions, QueryClient, QueryClientOptions, QueryFnContext, QueryOptions } from './query';
 
 // Mutation
 export { createMutation } from './mutation';
-export type { Mutation, MutationOptions } from './mutation';
+export type { Mutation, MutationFnContext, MutationOptions } from './mutation';

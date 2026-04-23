@@ -13,7 +13,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 | --------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------- |
 | `signal()`      | Create reactive primitive values         | Sync           | Write signals inside batch/effect-safe flows                  |
 | `computed()`    | Derive memoized values from dependencies | Sync           | Avoid side effects inside computed callbacks                  |
-| `createStore()` | Create object-like state container       | Sync           | Mutate through provided APIs to keep notifications consistent |
+| `store()`       | Create object-like state container       | Sync           | Mutate through provided APIs to keep notifications consistent |
 
 ## Signal Primitives
 
@@ -29,7 +29,6 @@ Creates a reactive atom. Read `.value` inside an `effect` or `computed` to subsc
 const count = signal(0);
 count.value; // 0 — tracked read
 count.value = 1; // notifies dependents
-count.peek(); // 1 — untracked read
 count.update((n) => n + 1); // 2 — shorthand for count.value = count.value + 1
 ```
 
@@ -47,7 +46,7 @@ count.update((n) => n + 1); // 2 — shorthand for count.value = count.value + 1
 ### `computed`
 
 ```ts
-function computed<T>(compute: () => T, options?: ReactiveOptions<T> & { lazy?: boolean }): ComputedSignal<T>;
+function computed<T>(compute: () => T, options?: ReactiveOptions<T>): ComputedSignal<T>;
 ```
 
 Creates a lazy derived read-only signal. The `compute` function runs on the first `.value` read (or at construction if `lazy` is not set) and again after any dependency changes (pull-on-read). Call `.dispose()` to detach from dependencies.
@@ -63,14 +62,6 @@ doubled.dispose(); // stop tracking
 // or: using doubled = computed(...) — TC39 using declaration
 ```
 
-Pass `{ lazy: true }` to skip the initial computation until the first `.value` read:
-
-```ts
-const lazy = computed(() => heavyCalc(), { lazy: true });
-// heavyCalc has NOT run yet
-lazy.value; // runs now
-```
-
 When `options.equals` is provided, downstream subscribers are suppressed if the recomputed value equals the previous value. This resolves diamond-dependency scenarios.
 
 **Parameters**
@@ -79,7 +70,6 @@ When `options.equals` is provided, downstream subscribers are suppressed if the 
 | ---------------- | --------------- | --------------------------------------------------------------------- |
 | `compute`        | `() => T`       | Computation function; signals read inside are tracked as dependencies |
 | `options.equals` | `EqualityFn<T>` | Suppress downstream if result is unchanged. Default: `Object.is`      |
-| `options.lazy`   | `boolean`       | Defer initial computation to first `.value` read. Default: `false`    |
 
 **Returns** — `ComputedSignal<T>`
 
@@ -88,69 +78,27 @@ When `options.equals` is provided, downstream subscribers are suppressed if the 
 ### `writable`
 
 ```ts
-function writable<T>(get: () => T, set: (value: T) => void, options?: ReactiveOptions<T>): WritableSignal<T>;
+function writable<T>(input: Signal<T>): Signal<T>;
 ```
 
-Creates a bidirectional computed signal. The getter is tracked reactively; writes are forwarded to `set`. Call `.dispose()` to stop tracking.
+Identity function — returns the input unchanged. Acts as a typed marker at API boundaries where a signal is intentionally meant to be written to. No proxy or wrapper is created.
 
 ```ts
-const celsius = signal(0);
-const fahrenheit = writable(
-  () => (celsius.value * 9) / 5 + 32,
-  (f) => {
-    celsius.value = ((f - 32) * 5) / 9;
-  },
-);
-fahrenheit.value; // 32
-fahrenheit.value = 212; // setter forwards to celsius
-celsius.value; // 100
-fahrenheit.update((f) => f + 10); // increments via fn
+const count = signal(0);
+const exposed: ReadonlySignal<number> = readonly(count);
 
-fahrenheit.dispose();
+// Restore write access where you own the signal
+const mutable = writable(count);
+mutable.value = 5;
 ```
 
 **Parameters**
 
-| Parameter        | Type                 | Description                                                             |
-| ---------------- | -------------------- | ----------------------------------------------------------------------- |
-| `get`            | `() => T`            | Reactive getter; signals read inside are tracked as dependencies        |
-| `set`            | `(value: T) => void` | Called when `.value = v` is assigned                                    |
-| `options.equals` | `EqualityFn<T>`      | Suppress downstream if getter result is unchanged. Default: `Object.is` |
+| Parameter | Type        | Description                       |
+| --------- | ----------- | --------------------------------- |
+| `input`   | `Signal<T>` | The writable signal to pass through |
 
-**Returns** — `WritableSignal<T>`
-
----
-
-### `derived`
-
-```ts
-function derived<const Srcs extends ReadonlyArray<ReadonlySignal<unknown>>, R>(
-  sources: Srcs,
-  fn: (...values: InferValues<Srcs>) => R,
-  options?: ReactiveOptions<R>,
-): ComputedSignal<R>;
-```
-
-Creates a `ComputedSignal` from an array of source signals. Each source's value is passed as a positional argument to the projector function; the computed re-evaluates whenever any source changes.
-
-```ts
-const price = signal(10);
-const quantity = signal(5);
-const discount = signal(0.1);
-
-const total = derived([price, quantity, discount], (p, q, d) => p * q * (1 - d));
-total.value; // 45
-```
-
-**Parameters**
-
-| Parameter | Type                                     | Description                             |
-| --------- | ---------------------------------------- | --------------------------------------- |
-| `sources` | `ReadonlyArray<ReadonlySignal<unknown>>` | Source signals to track                 |
-| `fn`      | `(...values) => R`                       | Projector; receives each source's value |
-| `options` | `ReactiveOptions<R>`                     | Optional `equals` for the result        |
-
-**Returns** — `ComputedSignal<R>`
+**Returns** — `Signal<T>`
 
 ---
 
@@ -178,11 +126,10 @@ sub.dispose(); // no-op — second call is safe
 
 **Parameters**
 
-| Parameter               | Type             | Description                                                                         |
-| ----------------------- | ---------------- | ----------------------------------------------------------------------------------- |
-| `fn`                    | `EffectCallback` | Runs immediately and on each dependency change; may return a cleanup function       |
-| `options.maxIterations` | `number`         | Per-effect limit for re-entrant loops. Overrides `configureStateit`. Default: `100` |
-| `options.onError`       | `(err) => void`  | Called when `fn` throws; effect is auto-disposed after the first error              |
+| Parameter               | Type             | Description                                                        |
+| ----------------------- | ---------------- | ------------------------------------------------------------------ |
+| `fn`                    | `EffectCallback` | Runs immediately and on each dependency change; may return a cleanup function |
+| `options.maxIterations` | `number`         | Per-effect limit for re-entrant loops. Default: `100`              |
 
 **Returns** — `Subscription`
 
@@ -194,7 +141,7 @@ sub.dispose(); // no-op — second call is safe
 function watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;
 ```
 
-Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). To watch a derived slice, compose with `store.select()` or `computed()`.
+Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). To watch a derived slice, pass an inline selector as the second argument or wrap with `computed()`.
 
 ```ts
 // Plain watch
@@ -202,9 +149,8 @@ const sub = watch(count, (next, prev) => console.log(prev, '→', next));
 count.value = 5; // fires
 sub.dispose();
 
-// Slice watch — compose with store.select()
-const nameSignal = userStore.select((s) => s.name);
-watch(nameSignal, (name) => console.log('name:', name));
+// Slice watch — inline selector overload
+watch(userStore, (s) => s.name, (name) => console.log('name:', name));
 ```
 
 **Parameters**
@@ -218,45 +164,6 @@ watch(nameSignal, (name) => console.log('name:', name));
 | `options.equals`    | `EqualityFn<T>`         | Custom equality for change detection. Default `Object.is`                                                                                                              |
 
 **Returns** — `Subscription`
-
----
-
-### `nextValue`
-
-```ts
-function nextValue<T>(
-  source: ReadonlySignal<T>,
-  predicate?: (v: T) => boolean,
-  options?: { signal?: AbortSignal },
-): Promise<T>;
-```
-
-Returns a `Promise` that resolves with the next value of `source` that satisfies the optional predicate. The watch subscription is disposed automatically — no cleanup required. Pass `options.signal` to cancel early.
-
-```ts
-const status = signal<'idle' | 'loading' | 'done'>('idle');
-
-// Wait for the next change
-const next = await nextValue(status);
-
-// Wait for a specific condition
-const done = await nextValue(status, (v) => v === 'done');
-
-// Abortable wait
-const controller = new AbortController();
-const p = nextValue(status, (v) => v === 'done', { signal: controller.signal });
-controller.abort(new Error('cancelled'));
-```
-
-**Parameters**
-
-| Parameter        | Type                | Description                                                       |
-| ---------------- | ------------------- | ----------------------------------------------------------------- |
-| `source`         | `ReadonlySignal<T>` | The signal to watch                                               |
-| `predicate`      | `(v: T) => boolean` | Optional filter; `Promise` only resolves when this returns `true` |
-| `options.signal` | `AbortSignal`       | Optional abort signal; rejects with `signal.reason` when aborted  |
-
-**Returns** — `Promise<T>`
 
 ---
 
@@ -327,12 +234,12 @@ effect(() => {
 function readonly<T>(sig: ReadonlySignal<T>): ReadonlySignal<T>;
 ```
 
-Returns a stable read-only view of a signal. Hides the setter at both type and runtime level. The wrapper is cached — repeated calls with the same signal return the same reference. There is no runtime Proxy.
+Returns a stable read-only view of a signal. Hides the setter at the type level. No proxy or wrapper is created — the original signal instance is returned as-is.
 
 ```ts
 const readCount = readonly(count);
 readCount.value; // ok
-readCount.peek(); // ok
+peek(readCount);  // ok — untracked read
 // readCount.value = 1; // TS compile error — no setter
 ```
 
@@ -341,29 +248,45 @@ readCount.peek(); // ok
 ### `toValue`
 
 ```ts
-function toValue<T>(v: T | ReadonlySignal<T>): T;
+function toValue<T>(v: T | ReadonlySignal<T> | (() => T)): T;
 ```
 
-Unwraps a value or signal. If `v` is a `ReadonlySignal`, returns `.value` (tracked if called inside an effect). Otherwise returns `v` as-is.
+Unwraps a value, signal, or function. If `v` is a `ReadonlySignal`, returns `.value` (tracked if called inside an effect). If `v` is a function, calls it and returns the result. Otherwise returns `v` as-is.
 
 ```ts
 toValue(10); // 10
 toValue(signal(10)); // 10 — tracked if inside effect
+toValue(() => 42); // 42
 ```
 
 ---
 
-### `peekValue`
+### `unwrapSignal`
 
 ```ts
-function peekValue<T>(v: T | ReadonlySignal<T>): T;
+function unwrapSignal<T>(input: T | ReadonlySignal<T>): T;
 ```
 
-Unwraps a value or signal without tracking. If `v` is a signal, returns `v.peek()`.
+Unwraps a signal or returns the value as-is. If `input` is a `ReadonlySignal`, reads its value (which **may track dependencies** if called inside an effect). For untracked reads, use {@link peek} instead.
 
 ```ts
-peekValue(10); // 10
-peekValue(signal(10)); // 10 — untracked
+unwrapSignal(10); // 10
+unwrapSignal(signal(10)); // 10 — tracked if inside effect
+```
+
+---
+
+### `peek`
+
+```ts
+function peek<T>(input: T | ReadonlySignal<T>): T;
+```
+
+Performs an untracked read of a signal value. This read will not register as a dependency for reactive evaluation. If `input` is not a signal, returns the value as-is.
+
+```ts
+peek(10); // 10
+peek(signal(10)); // 10 — untracked, no dependency registered
 ```
 
 ---
@@ -374,49 +297,31 @@ peekValue(signal(10)); // 10 — untracked
 function isSignal<T = unknown>(value: unknown): value is ReadonlySignal<T>;
 ```
 
-Type guard — returns `true` for any value created by `signal()`, `computed()`, `writable()`, `derived()`, or `store()`.
-
----
-
-### `isStore`
+Type guard that strictly returns `true` only for values created by `signal()` or `computed()`. Uses an internal symbol marker, so arbitrary objects with a `value` property will not pass. Note: `store()` return values do not carry the signal brand.
 
 ```ts
-function isStore<T extends object = Record<string, unknown>>(value: unknown): value is Store<T>;
-```
-
-Type guard — returns `true` only for values created by `store()`.
-
----
-
-### `shallowEqual`
-
-```ts
-const shallowEqual: EqualityFn<unknown>;
-```
-
-Compares own enumerable keys by reference (`Object.is`). This is the **default equality** used by `store()`. Export it to avoid reimplementation when composing custom `StoreOptions.equals`:
-
-```ts
-const s = store({ items: [] }, { equals: shallowEqual });
+isSignal(signal(42)); // true
+isSignal(computed(() => 1)); // true
+isSignal({ value: 42 }); // false — not a real signal
 ```
 
 ---
 
-### `configureStateit`
+### `isWritable`
 
 ```ts
-function configureStateit(opts: { maxEffectIterations?: number }): void;
+function isWritable<T = unknown>(value: unknown): value is Signal<T>;
 ```
 
-Configures global stateit behaviour. Call once at application startup.
+Type guard that returns `true` only when the value is a signal with a writable `.value` setter. Returns `false` for `computed()` signals (readonly) and plain objects.
 
 ```ts
-configureStateit({ maxEffectIterations: 200 });
-```
+const s = signal(0);
+const c = computed(() => s.value * 2);
 
-| Option                | Default | Description                                             |
-| --------------------- | ------- | ------------------------------------------------------- |
-| `maxEffectIterations` | `100`   | Maximum re-entrant iterations before an error is thrown |
+isWritable(s); // true
+isWritable(c); // false — computed has no setter
+```
 
 ---
 
@@ -428,14 +333,14 @@ configureStateit({ maxEffectIterations: 200 });
 function store<T extends object>(initial: T, options?: StoreOptions<T>): Store<T>;
 ```
 
-Creates a reactive store for the given object state. A `Store<T>` extends `Signal<T>`, so `effect()`, `computed()`, `watch()`, and all other signal primitives work natively on it.
+Creates a reactive store for the given object state. `effect()`, `computed()`, `watch()`, and all other signal primitives that accept `ReadonlySignal<T>` work with stores directly since `Store<T>` exposes a `.value` getter.
 
 **Parameters**
 
 | Parameter        | Type            | Description                                                                         |
 | ---------------- | --------------- | ----------------------------------------------------------------------------------- |
 | `initial`        | `T`             | The starting state (defensively copied; external mutations do not affect `reset()`) |
-| `options.equals` | `EqualityFn<T>` | Custom equality for top-level change detection. Default: `shallowEqual`             |
+| `options.equals` | `EqualityFn<T>` | Custom equality for change detection. Default: `Object.is`                          |
 
 **Returns** — `Store<T>`
 
@@ -460,28 +365,27 @@ interface Signal<T> extends ReadonlySignal<T> {
 
 ```ts
 interface ReadonlySignal<T> {
-  readonly [_SIGNAL_BRAND]: true;
   readonly value: T; // tracked getter
-  peek(): T; // untracked read
 }
 ```
 
 | Member        | Description                                               |
 | ------------- | --------------------------------------------------------- |
 | `value` (get) | Returns current value; tracked inside `effect`/`computed` |
-| `peek()`      | Returns current value without registering a dependency    |
 
 ---
 
 ### `ComputedSignal<T>`
 
 ```ts
-interface ComputedSignal<T> extends ReadonlySignal<T>, Disposable {
+interface ComputedSignal<T> extends ReadonlySignal<T> {
   readonly stale: boolean;
+  dispose(): void;
+  [Symbol.dispose](): void;
 }
 ```
 
-Returned by `computed()` and `derived()`. A read-only signal with an explicit dispose method and a `stale` flag.
+Returned by `computed()`. A read-only signal with an explicit dispose method and a `stale` flag.
 
 ```ts
 const doubled = computed(() => count.value * 2);
@@ -490,30 +394,6 @@ doubled.stale; // false — just computed
 count.value = 5;
 doubled.stale; // true — deps changed; not yet re-read
 doubled.dispose(); // stop tracking
-```
-
----
-
-### `WritableSignal<T>`
-
-```ts
-interface WritableSignal<T> extends Signal<T>, Disposable {
-  readonly stale: boolean;
-}
-```
-
-Returned by `writable()`. A bidirectional computed signal with an explicit dispose method, an `update(fn)` method, and a `stale` flag.
-
-```ts
-const fahrenheit = writable(
-  () => (celsius.value * 9) / 5 + 32,
-  (f) => {
-    celsius.value = ((f - 32) * 5) / 9;
-  },
-);
-fahrenheit.value = 100; // write
-fahrenheit.update((f) => f + 10); // update via fn
-fahrenheit.dispose(); // stop tracking getter
 ```
 
 ---
@@ -548,7 +428,7 @@ interface Disposable {
 }
 ```
 
-Implemented by `ComputedSignal<T>` and `WritableSignal<T>`. Supports the TC39 `using` declaration.
+Implemented by `ComputedSignal<T>`. Supports the TC39 `using` declaration.
 
 ---
 
@@ -577,14 +457,12 @@ The callback passed to `effect()`. May optionally return a `CleanupFn` that fire
 ```ts
 type EffectOptions = {
   maxIterations?: number;
-  onError?: (error: unknown) => void;
 };
 ```
 
-| Property        | Type            | Default | Description                                                                        |
-| --------------- | --------------- | ------- | ---------------------------------------------------------------------------------- |
-| `maxIterations` | `number`        | `100`   | Per-effect guard against infinite reactive loops; overrides `configureStateit`     |
-| `onError`       | `(err) => void` | —       | Error handler; effect is auto-disposed after the first throw when this is provided |
+| Property        | Type     | Default | Description                                              |
+| --------------- | -------- | ------- | -------------------------------------------------------- |
+| `maxIterations` | `number` | `100`   | Per-effect guard against infinite reactive loops         |
 
 ---
 
@@ -606,7 +484,7 @@ type ReactiveOptions<T> = {
 };
 ```
 
-Accepted by `signal()`, `computed()`, `writable()`, `derived()`, and `store()`.
+Accepted by `signal()`, `computed()`, and `store()`.
 
 ---
 
@@ -632,32 +510,21 @@ type WatchOptions<T> = {
 
 ### `Store<T>`
 
-A `Store<T>` IS a `Signal<T>` — all signal operations work on stores.
-
 ```ts
-interface Store<T extends object> extends Signal<T> {
-  readonly frozen: boolean;
+interface Store<T extends object> {
+  readonly value: T;
   patch(partial: Partial<T>): void;
-  update(fn: (s: T) => T): void;
+  update(fn: (state: T) => T): void;
   reset(): void;
-  select<U>(selector: (s: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U>;
-  freeze(): void;
 }
 ```
 
-### `Store<T>` Methods
-
-| Member                        | Description                                                                      |
-| ----------------------------- | -------------------------------------------------------------------------------- |
-| `.value` (get)                | Read current state (tracked)                                                     |
-| `.value` (set)                | Replace entire state (triggers notification if changed)                          |
-| `.peek()`                     | Read current state without tracking                                              |
-| `.update(fn)`                 | Receive a shallow copy of current state; return value replaces it                |
-| `.patch(partial)`             | Shallow-merge a `Partial<T>` into current state: `{ ...current, ...partial }`    |
-| `.reset()`                    | Restore the original `initial` state                                             |
-| `.select(selector, options?)` | Lazily derived `ComputedSignal<U>` from a slice of state; compose with `watch()` |
-| `.frozen`                     | `true` after `freeze()` has been called; further writes are ignored              |
-| `.freeze()`                   | Freeze the store; all subsequent writes are silently ignored                     |
+| Member            | Description                                                                   |
+| ----------------- | ----------------------------------------------------------------------------- |
+| `.value` (get)    | Read current state; tracked inside `effect`/`computed`                        |
+| `.patch(partial)` | Shallow-merge a `Partial<T>` into state: `{ ...current, ...partial }`         |
+| `.update(fn)`     | Receive current state; return value replaces it                               |
+| `.reset()`        | Restore the original `initial` state                                          |
 
 ---
 
@@ -669,75 +536,9 @@ type StoreOptions<T extends object> = {
 };
 ```
 
-| Property | Type            | Default        | Description                                    |
-| -------- | --------------- | -------------- | ---------------------------------------------- |
-| `equals` | `EqualityFn<T>` | `shallowEqual` | Custom equality for top-level change detection |
-
----
-
-### `Store<T>` — Method Details
-
-#### `patch`
-
-```ts
-patch(partial: Partial<T>): void
-```
-
-Shallow-merges `partial` onto the current state: `{ ...current, ...partial }`. No-op if frozen or if the resulting state is equal to the current state.
-
----
-
-#### `update`
-
-```ts
-update(fn: (s: T) => T): void
-```
-
-Receives a **shallow copy** of the current state. The return value replaces the state. No-op if frozen.
-
-```ts
-cart.update((s) => ({ ...s, count: s.count + 1 }));
-```
-
----
-
-#### `reset`
-
-```ts
-reset(): void
-```
-
-Restores the store to the `initial` argument that was passed to `store()`. The initial state is defensively copied at construction — external mutations cannot corrupt `reset()`. No-op if frozen or state is already equal.
-
----
-
-#### `select`
-
-```ts
-select<U>(selector: (s: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U>
-```
-
-Returns a lazily computed signal derived from a slice of this store's state. Compose with `watch()` to subscribe to slice changes:
-
-```ts
-const countSignal = s.select((st) => st.count);
-watch(countSignal, (count) => console.log('count:', count));
-```
-
----
-
-#### `freeze`
-
-```ts
-freeze(): void
-```
-
-Freezes the store. After `freeze()`:
-
-- `patch()`, `update()`, `reset()`, and direct `.value` assignment — silently ignored
-- `.value` — still readable; returns the last known state
-- `.frozen` — becomes `true`
-- Calling `freeze()` again is safe
+| Property | Type            | Default     | Description                                    |
+| -------- | --------------- | ----------- | ---------------------------------------------- |
+| `equals` | `EqualityFn<T>` | `Object.is` | Custom equality for top-level change detection |
 
 ## Notification Timing
 
@@ -763,42 +564,3 @@ batch(() => {
 ```
 
 Nested `batch()` calls merge into the outermost — only one flush occurs.
-
----
-
-## Testing Utilities
-
-### `_resetContextForTesting`
-
-```ts
-function _resetContextForTesting(): void;
-```
-
-Resets the shared reactive context (scope + batch queue). Use in `beforeEach`/`afterEach` to prevent state leaks between tests, especially when a test throws inside a `batch()` or `effect()` without cleaning up.
-
-```ts
-import { _resetContextForTesting } from '@vielzeug/stateit';
-
-beforeEach(() => _resetContextForTesting());
-```
-
----
-
-### `_SIGNAL_BRAND` / `_STORE_BRAND`
-
-```ts
-const _SIGNAL_BRAND: unique symbol;
-const _STORE_BRAND: unique symbol;
-```
-
-The internal brand symbols used by `isSignal()` and `isStore()`. Exported for use in test mocks that need to satisfy the type guard without creating a full signal/store:
-
-```ts
-import { _SIGNAL_BRAND } from '@vielzeug/stateit';
-
-const mockSignal = {
-  [_SIGNAL_BRAND]: true as const,
-  value: 42,
-  peek: () => 42,
-};
-```

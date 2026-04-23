@@ -45,7 +45,7 @@ export function serializeBodyKey(body: unknown): string {
   if (body === undefined || body === null) return 'null';
 
   // Note: FormData can't be consistently serialized; bodies with the same entry count
-  // will collide. Pass `dedupe: false` per-request to opt out.
+  // will collide. Avoid using FormData as a write `dedupeKey` signal source.
   if (body instanceof FormData) return `[FormData:${[...body.keys()].length}]`;
 
   if (body instanceof Blob) return `[Blob:${body.size}:${body.type}]`;

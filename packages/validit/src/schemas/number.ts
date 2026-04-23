@@ -1,7 +1,8 @@
 import type { MessageFn } from '../core';
 
-import { ErrorCode, resolveMessage, Schema } from '../core';
+import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
+import { createConstraintValidator } from './constraint-factories';
 
 export class NumberSchema extends Schema<number> {
   constructor() {
@@ -17,17 +18,14 @@ export class NumberSchema extends Schema<number> {
     minimum: number,
     message: MessageFn<{ min: number; value: number }> = (ctx) => _messages().number_min(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      (value as number) >= minimum
-        ? null
-        : [
-            {
-              code: ErrorCode.too_small,
-              message: resolveMessage(message, { min: minimum, value: value as number }),
-              params: { minimum },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<number, { min: number; value: number }>({
+        check: (value) => value >= minimum,
+        code: ErrorCode.too_small,
+        context: (value) => ({ min: minimum, value }),
+        message,
+        params: () => ({ minimum }),
+      }),
     );
   }
 
@@ -35,85 +33,73 @@ export class NumberSchema extends Schema<number> {
     maximum: number,
     message: MessageFn<{ max: number; value: number }> = (ctx) => _messages().number_max(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      (value as number) <= maximum
-        ? null
-        : [
-            {
-              code: ErrorCode.too_big,
-              message: resolveMessage(message, { max: maximum, value: value as number }),
-              params: { maximum },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<number, { max: number; value: number }>({
+        check: (value) => value <= maximum,
+        code: ErrorCode.too_big,
+        context: (value) => ({ max: maximum, value }),
+        message,
+        params: () => ({ maximum }),
+      }),
     );
   }
 
   int(message: MessageFn<{ value: number }> = () => _messages().number_int()): this {
-    return this._addValidator((value, path) =>
-      Number.isInteger(value as number)
-        ? null
-        : [{ code: ErrorCode.not_integer, message: resolveMessage(message, { value: value as number }), path }],
+    return this._addCoreValidator(
+      createConstraintValidator<number, { value: number }>({
+        check: (value) => Number.isInteger(value),
+        code: ErrorCode.not_integer,
+        context: (value) => ({ value }),
+        message,
+      }),
     );
   }
 
   positive(message: MessageFn<{ value: number }> = () => _messages().number_positive()): this {
-    return this._addValidator((value, path) =>
-      (value as number) > 0
-        ? null
-        : [
-            {
-              code: ErrorCode.too_small,
-              message: resolveMessage(message, { value: value as number }),
-              params: { exclusive: true, minimum: 0 },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<number, { value: number }>({
+        check: (value) => value > 0,
+        code: ErrorCode.too_small,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ exclusive: true, minimum: 0 }),
+      }),
     );
   }
 
   negative(message: MessageFn<{ value: number }> = () => _messages().number_negative()): this {
-    return this._addValidator((value, path) =>
-      (value as number) < 0
-        ? null
-        : [
-            {
-              code: ErrorCode.too_big,
-              message: resolveMessage(message, { value: value as number }),
-              params: { exclusive: true, maximum: 0 },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<number, { value: number }>({
+        check: (value) => value < 0,
+        code: ErrorCode.too_big,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ exclusive: true, maximum: 0 }),
+      }),
     );
   }
 
   nonNegative(message: MessageFn<{ value: number }> = () => _messages().number_non_negative()): this {
-    return this._addValidator((value, path) =>
-      (value as number) >= 0
-        ? null
-        : [
-            {
-              code: ErrorCode.too_small,
-              message: resolveMessage(message, { value: value as number }),
-              params: { minimum: 0 },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<number, { value: number }>({
+        check: (value) => value >= 0,
+        code: ErrorCode.too_small,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ minimum: 0 }),
+      }),
     );
   }
 
   nonPositive(message: MessageFn<{ value: number }> = () => _messages().number_non_positive()): this {
-    return this._addValidator((value, path) =>
-      (value as number) <= 0
-        ? null
-        : [
-            {
-              code: ErrorCode.too_big,
-              message: resolveMessage(message, { value: value as number }),
-              params: { maximum: 0 },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<number, { value: number }>({
+        check: (value) => value <= 0,
+        code: ErrorCode.too_big,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ maximum: 0 }),
+      }),
     );
   }
 
@@ -121,22 +107,19 @@ export class NumberSchema extends Schema<number> {
     step: number,
     message: MessageFn<{ step: number; value: number }> = (ctx) => _messages().number_multiple_of(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      Math.abs(Math.round((value as number) / step) - (value as number) / step) < 1e-9
-        ? null
-        : [
-            {
-              code: ErrorCode.not_multiple_of,
-              message: resolveMessage(message, { step, value: value as number }),
-              params: { step },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<number, { step: number; value: number }>({
+        check: (value) => Math.abs(Math.round(value / step) - value / step) < 1e-9,
+        code: ErrorCode.not_multiple_of,
+        context: (value) => ({ step, value }),
+        message,
+        params: () => ({ step }),
+      }),
     );
   }
 
   static coerce(): NumberSchema {
-    return new NumberSchema()._addPreprocessor((v) => {
+    return new NumberSchema()._addPreprocessor((v: unknown) => {
       if (typeof v === 'number') return v;
 
       if (typeof v === 'string') {
@@ -149,6 +132,3 @@ export class NumberSchema extends Schema<number> {
     });
   }
 }
-
-export const number = (): NumberSchema => new NumberSchema();
-export const coerceNumber = (): NumberSchema => NumberSchema.coerce();

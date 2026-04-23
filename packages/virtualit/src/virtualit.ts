@@ -120,6 +120,11 @@ export class Virtualizer {
     return this._count;
   }
 
+  /** Replace the visible-range callback without recreating the virtualizer. */
+  set onChangeCallback(fn: ((items: VirtualItem[], totalSize: number) => void) | undefined) {
+    this.onChange = fn;
+  }
+
   /** Setting count automatically rebuilds offsets and triggers a re-render. */
   set count(value: number) {
     const nextCount = toNonNegativeInt(value);
@@ -179,7 +184,11 @@ export class Virtualizer {
     this.destroy();
   }
 
-  /** Returns the currently visible virtual items. */
+  /**
+   * Returns the currently visible virtual items.
+   *
+   * Note: this list is populated after `attach()` runs and computes visibility.
+   */
   getVirtualItems(): VirtualItem[] {
     return this.virtualItems;
   }
@@ -314,6 +323,21 @@ export class Virtualizer {
   }
 
   private computeVisible(): void {
+    if (this._count === 0 || this.containerHeight <= 0) {
+      // Also notify when count > 0 but the environment cannot measure layout (e.g. jsdom).
+      // DOM adapters can choose a deterministic fallback rendering strategy in that case.
+      const shouldNotify =
+        this._count > 0 || this.virtualItems.length > 0 || this.prevRenderStart !== -1 || this.prevRenderEnd !== -1;
+
+      this.virtualItems = [];
+      this.prevRenderStart = -1;
+      this.prevRenderEnd = -1;
+
+      if (shouldNotify) this.onChange?.([], this.totalSize);
+
+      return;
+    }
+
     const start = this.scrollTop;
     const end = start + this.containerHeight;
 

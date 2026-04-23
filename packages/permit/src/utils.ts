@@ -1,63 +1,57 @@
-import type { PermitPrincipal, PrincipalInput, UserPrincipal } from './types';
+import type { PermitRule, UserPrincipal } from './types';
 
-import { ANONYMOUS, WILDCARD } from './constants';
-
-function normalize(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function isUserPrincipal(principal: PermitPrincipal): principal is UserPrincipal {
-  return principal.kind === 'user';
-}
-
-function toPrincipal(input: PrincipalInput): PermitPrincipal {
-  if (input == null) return { kind: 'anonymous' };
-
-  if (typeof input === 'object' && 'kind' in input) {
-    if (input.kind === 'anonymous') return input;
-
-    if (input.kind === 'user') {
-      if (typeof input.id !== 'string' || input.id.trim().length === 0) {
-        throw new Error('[permit] Invalid principal: user.id must be a non-empty string');
-      }
-
-      if (!Array.isArray(input.roles) || input.roles.some((role) => typeof role !== 'string')) {
-        throw new Error('[permit] Invalid principal: user.roles must be an array of strings');
-      }
-
-      return {
-        id: input.id,
-        kind: 'user',
-        roles: input.roles.map(normalize),
-      };
-    }
+/**
+ * Validate that a rule has required fields
+ */
+function validateRule<TAction extends string, TData>(rule: unknown): asserts rule is PermitRule<TAction, TData> {
+  if (typeof rule !== 'object' || !rule) {
+    throw new Error('[permit] Rule must be an object');
   }
 
-  if (typeof input === 'object' && 'id' in input && 'roles' in input) {
-    if (typeof input.id !== 'string' || input.id.trim().length === 0) {
-      throw new Error('[permit] Invalid principal: id must be a non-empty string');
-    }
+  const r = rule as Record<string, unknown>;
 
-    if (!Array.isArray(input.roles) || input.roles.some((role) => typeof role !== 'string')) {
-      throw new Error('[permit] Invalid principal: roles must be an array of strings');
-    }
-
-    return {
-      id: input.id,
-      kind: 'user',
-      roles: input.roles.map(normalize),
-    };
+  if (typeof r.role !== 'string' || !r.role.trim()) {
+    throw new Error('[permit] Rule.role must be a non-empty string');
   }
 
-  throw new Error('[permit] Invalid principal input');
-}
-
-function getRoles(principal: PermitPrincipal): Set<string> {
-  if (!isUserPrincipal(principal)) {
-    return new Set([ANONYMOUS, WILDCARD]);
+  if (typeof r.resource !== 'string' || !r.resource.trim()) {
+    throw new Error('[permit] Rule.resource must be a non-empty string');
   }
 
-  return new Set([...principal.roles, WILDCARD]);
+  if (typeof r.action !== 'string' || !r.action.trim()) {
+    throw new Error('[permit] Rule.action must be a non-empty string');
+  }
+
+  if (!['allow', 'deny'].includes(r.effect as string)) {
+    throw new Error('[permit] Rule.effect must be "allow" or "deny"');
+  }
+
+  if (r.priority !== undefined && typeof r.priority !== 'number') {
+    throw new Error('[permit] Rule.priority must be a number');
+  }
+
+  if (r.when !== undefined && typeof r.when !== 'function') {
+    throw new Error('[permit] Rule.when must be a function');
+  }
 }
 
-export { getRoles, isUserPrincipal, normalize, toPrincipal };
+/**
+ * Validate an authenticated principal
+ */
+function validateUserPrincipal(input: unknown): asserts input is UserPrincipal {
+  if (typeof input !== 'object' || !input) {
+    throw new Error('[permit] Invalid principal: expected { id: string, roles: string[] }');
+  }
+
+  const p = input as Record<string, unknown>;
+
+  if (typeof p.id !== 'string' || !p.id.trim()) {
+    throw new Error('[permit] Invalid principal: id must be a non-empty string');
+  }
+
+  if (!Array.isArray(p.roles) || p.roles.some((r) => typeof r !== 'string')) {
+    throw new Error('[permit] Invalid principal: roles must be an array of strings');
+  }
+}
+
+export { validateRule, validateUserPrincipal };

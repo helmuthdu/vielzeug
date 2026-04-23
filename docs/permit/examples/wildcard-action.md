@@ -1,4 +1,9 @@
-# Wildcard Action
+---
+title: 'Permit Examples — Wildcard Action'
+description: 'Grant all actions for a role/resource pair using WILDCARD.'
+---
+
+## Wildcard Action
 
 ```ts
 import { WILDCARD, createPermit } from '@vielzeug/permit';

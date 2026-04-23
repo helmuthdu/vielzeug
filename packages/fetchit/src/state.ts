@@ -8,24 +8,9 @@ export function makeState<T>(entry: {
 }): QueryState<T> {
   const { data, error, status, updatedAt } = entry;
 
-  return {
-    data,
-    error,
-    isError: status === 'error',
-    isIdle: status === 'idle',
-    isPending: status === 'pending',
-    isSuccess: status === 'success',
-    status,
-    updatedAt,
-  };
+  return { data, error, status, updatedAt };
 }
 
 export function dispatch<T>(observers: Set<(s: T) => void>, state: T): void {
-  observers.forEach((fn) => {
-    try {
-      fn(state);
-    } catch (err) {
-      console.error('[fetchit] observer threw', err);
-    }
-  });
+  observers.forEach((fn) => fn(state));
 }

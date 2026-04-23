@@ -1,4 +1,4 @@
-import { define, effect, html } from '@vielzeug/craftit';
+import { define, prop, effect, html } from '@vielzeug/craftit';
 
 import itemStyles from './breadcrumb-item.css?inline';
 
@@ -24,25 +24,27 @@ export type BitBreadcrumbItemProps = {
  */
 export const BREADCRUMB_ITEM_TAG = define<BitBreadcrumbItemProps>('bit-breadcrumb-item', {
   props: {
-    active: false,
-    href: '',
-    separator: '/',
+    active: prop.bool(),
+    href: prop.string(''),
+    separator: prop.string('/'),
   },
   setup(props) {
-    return html`
-      <li class="item" role="listitem">
-        <span class="separator" part="separator" aria-hidden="true">${props.separator}</span>
-        <a
-          class="link"
-          :href="${props.href}"
-          :aria-current="${() => (props.active.value ? 'page' : null)}"
-          :tabindex="${() => (props.active.value ? '-1' : null)}"
-          part="link">
-          <span class="icon"><slot name="icon"></slot></span>
-          <span class="label"><slot></slot></span>
-        </a>
-      </li>
-    `;
+    return {
+      render: () => html`
+        <li class="item" role="listitem">
+          <span class="separator" part="separator" aria-hidden="true">${props.separator}</span>
+          <a
+            class="link"
+            :href="${props.href}"
+            :aria-current="${() => (props.active.value ? 'page' : null)}"
+            :tabindex="${() => (props.active.value ? '-1' : null)}"
+            part="link">
+            <span class="icon"><slot name="icon"></slot></span>
+            <span class="label"><slot></slot></span>
+          </a>
+        </li>
+      `,
+    };
   },
   styles: [itemStyles],
 });
@@ -70,8 +72,8 @@ import componentStyles from './breadcrumb.css?inline';
  */
 export const BREADCRUMB_TAG = define<BitBreadcrumbProps>('bit-breadcrumb', {
   props: {
-    label: 'Breadcrumb',
-    separator: '',
+    label: prop.string('Breadcrumb'),
+    separator: prop.string(''),
   },
   setup(props, { host, slots }) {
     // ────────────────────────────────────────────────────────────────
@@ -103,13 +105,15 @@ export const BREADCRUMB_TAG = define<BitBreadcrumbProps>('bit-breadcrumb', {
       syncItems();
     });
 
-    return html`
-      <nav part="nav" :aria-label="${props.label}">
-        <ol role="list" part="list">
-          <slot></slot>
-        </ol>
-      </nav>
-    `;
+    return {
+      render: () => html`
+        <nav part="nav" :aria-label="${props.label}">
+          <ol role="list" part="list">
+            <slot></slot>
+          </ol>
+        </nav>
+      `,
+    };
   },
   styles: [componentStyles],
 });

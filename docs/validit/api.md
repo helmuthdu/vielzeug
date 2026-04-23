@@ -1,6 +1,6 @@
 ---
 title: Validit — API Reference
-description: Complete API reference for Validit schemas and methods.
+description: Complete reference for validit exports, v factories, schema methods, types, and errors.
 ---
 
 # Validit API Reference
@@ -11,7 +11,7 @@ description: Complete API reference for Validit schemas and methods.
 
 | Symbol             | Purpose                                 | Execution mode | Common gotcha                                         |
 | ------------------ | --------------------------------------- | -------------- | ----------------------------------------------------- |
-| `v.object()`       | Create typed object schema definitions  | Sync           | Use strict/passthrough intentionally for unknown keys |
+| `v.object()`       | Create typed object schema definitions  | Sync           | Unknown keys are rejected by default                  |
 | `safeParse()`      | Validate unknown input without throwing | Sync           | Always branch on success before using parsed data     |
 | `safeParseAsync()` | Validate async refinement pipelines     | Async          | Await result to capture async validation issues       |
 
@@ -22,27 +22,23 @@ import {
   ErrorCode,
   Schema,
   ValidationError,
-  any,
   configure,
-  nullable,
-  nullish,
-  optional,
-  preprocess,
-  resolveMessage,
-  unknown,
   v,
   type Infer,
   type InferOutput,
+  type TypeOf,
   type Issue,
   type MessageFn,
   type ParseResult,
+  type ValidateFn,
+  type AsyncValidateFn,
   type Messages,
 } from '@vielzeug/validit';
 ```
 
-`@vielzeug/validit` also exports flat schema factories and schema classes from `./schemas` (for example: `string`, `number`, `object`, `array`, `union`, `variant`, `enumOf`, `nativeEnum`, `instanceOf`, `coerceString`).
+`@vielzeug/validit` exports `v` as the canonical schema factory namespace.
 
-## v Factory
+## v Namespace
 
 ### Primitive Factories
 
@@ -55,8 +51,6 @@ import {
 - `v.nativeEnum(enumObj)`
 - `v.null()`
 - `v.undefined()`
-- `v.any()`
-- `v.unknown()`
 - `v.never()`
 
 ### Composite Factories
@@ -70,13 +64,6 @@ import {
 - `v.variant(discriminator, map)`
 - `v.lazy(getter)`
 - `v.instanceof(ClassCtor)`
-
-### Wrapper/Utility Factories
-
-- `v.optional(schema)`
-- `v.nullable(schema)`
-- `v.nullish(schema)`
-- `v.preprocess(fn, schema)`
 
 ### Coercion Factories
 
@@ -147,7 +134,7 @@ is(value: unknown): value is Output
 - `.min(length, message?)`
 - `.max(length, message?)`
 - `.length(exact, message?)`
-- `.nonempty(message?)`
+- `.nonEmpty(message?)`
 - `.startsWith(prefix, message?)`
 - `.endsWith(suffix, message?)`
 - `.includes(substr, message?)`
@@ -155,8 +142,8 @@ is(value: unknown): value is Output
 - `.email(message?)`
 - `.url(message?)`
 - `.uuid(message?)`
-- `.date(message?)`
-- `.datetime(message?)`
+- `.isoDate(message?)`
+- `.isoDateTime(message?)`
 - `.trim()`
 - `.lowercase()`
 - `.uppercase()`
@@ -188,7 +175,7 @@ is(value: unknown): value is Output
 - `.min(length, message?)`
 - `.max(length, message?)`
 - `.length(exact, message?)`
-- `.nonempty(message?)`
+- `.nonEmpty(message?)`
 
 ## ObjectSchema
 
@@ -200,13 +187,16 @@ is(value: unknown): value is Output
 - `.extend(extraShape)`
 - `.pick(...keys)`
 - `.omit(...keys)`
-- `.strip()`
-- `.passthrough()`
-- `.strict()`
+- `.relaxed()`
 
 Properties:
 
 - `.shape` (readonly)
+
+Behavior notes:
+
+- `v.object(...)` rejects unknown keys by default.
+- `.relaxed()` allows unknown keys and preserves them in output.
 
 ## TupleSchema
 
@@ -270,14 +260,15 @@ configure({
 
 ## Types
 
-### Infer and InferOutput
+### Infer, InferOutput, and TypeOf
 
 ```ts
 type User = Infer<typeof UserSchema>;
 type UserOut = InferOutput<typeof UserSchema>;
+type UserOut2 = TypeOf<typeof UserSchema>;
 ```
 
-Both extract schema output types.
+All three extract schema output types.
 
 ### ParseResult
 

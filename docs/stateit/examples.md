@@ -24,4 +24,4 @@ These examples are aligned with the current `@vielzeug/stateit` API.
 - [Framework Integration](./examples/framework-integration.md)
 - [Pattern: Shared Module Store](./examples/pattern-shared-module-store.md)
 - [Pattern: Batch for Complex Mutations](./examples/pattern-batch-for-complex-mutations.md)
-- [Pattern: `nextValue` in Async Workflows](./examples/pattern-nextvalue-in-async-workflows.md)
+- [Pattern: Async Workflows with watch](./examples/pattern-nextvalue-in-async-workflows.md)

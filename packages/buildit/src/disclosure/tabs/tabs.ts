@@ -1,21 +1,22 @@
 import {
-  define,
   computed,
   createContext,
+  define,
   html,
-  onMount,
+  prop,
   provide,
+  type ReadonlySignal,
   ref,
   signal,
-  type ReadonlySignal,
   watch,
 } from '@vielzeug/craftit';
 import { createListControl, createListKeyControl, createPressControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { sizableBundle, themableBundle, type PropsInput } from '../../inputs/shared/bundles';
+import { sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin } from '../../styles';
+import styles from './tabs.css?inline';
 
 /** Context provided by bit-tabs to its bit-tab-item and bit-tab-panel children. */
 export type TabsContext = {
@@ -27,8 +28,6 @@ export type TabsContext = {
 };
 /** Injection key for the tabs context. */
 export const TABS_CTX = createContext<TabsContext>('TabsContext');
-
-import styles from './tabs.css?inline';
 
 export type BitTabsEvents = {
   change: { value: string };
@@ -54,16 +53,6 @@ export type BitTabsProps = {
   /** Visual style variant */
   variant?: VisualVariant;
 };
-
-const tabsProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  activation: 'auto',
-  label: undefined,
-  orientation: 'horizontal',
-  value: undefined,
-  variant: undefined,
-} satisfies PropsInput<BitTabsProps>;
 
 /**
  * Tabs container. Manages tab selection and syncs state to child tab items and panels.
@@ -93,7 +82,15 @@ const tabsProps = {
  * ```
  */
 export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
-  props: tabsProps,
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    activation: prop.oneOf(['auto', 'manual'] as const, 'auto'),
+    label: undefined,
+    orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
+    value: { default: undefined as string | undefined, reflect: false }, // managed by host.bind (selectedValue derived state)
+    variant: undefined,
+  },
   setup(props, { emit, host }) {
     const shadowRoot = host.el.shadowRoot;
     const tablistRef = ref<HTMLElement>();
@@ -305,44 +302,46 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
     // Lifecycle
     // ────────────────────────────────────────────────────────────────
 
-    onMount(() => {
-      const syncSelection = () => {
-        ensureSelection();
-        updateIndicator();
-      };
+    return {
+      mount() {
+        const syncSelection = () => {
+          ensureSelection();
+          updateIndicator();
+        };
 
-      const tabsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
+        const tabsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
 
-      if (tabsSlot) {
-        tabsSlot.addEventListener('slotchange', syncSelection);
-      }
-
-      syncSelection();
-      requestAnimationFrame(syncSelection);
-
-      return () => {
         if (tabsSlot) {
-          tabsSlot.removeEventListener('slotchange', syncSelection);
+          tabsSlot.addEventListener('slotchange', syncSelection);
         }
-      };
-    });
 
-    return html`
-      <div class="tablist-wrapper">
-        <div
-          role="tablist"
-          ref="${tablistRef}"
-          part="tablist"
-          aria-orientation="${props.orientation}"
-          aria-label="${props.label}">
-          <slot name="tabs"></slot>
+        syncSelection();
+        requestAnimationFrame(syncSelection);
+
+        return () => {
+          if (tabsSlot) {
+            tabsSlot.removeEventListener('slotchange', syncSelection);
+          }
+        };
+      },
+
+      render: () => html`
+        <div class="tablist-wrapper">
+          <div
+            role="tablist"
+            ref="${tablistRef}"
+            part="tablist"
+            aria-orientation="${props.orientation}"
+            aria-label="${props.label}">
+            <slot name="tabs"></slot>
+          </div>
+          <div class="indicator" ref="${indicatorRef}" part="indicator"></div>
         </div>
-        <div class="indicator" ref="${indicatorRef}" part="indicator"></div>
-      </div>
-      <div class="panels" part="panels">
-        <slot></slot>
-      </div>
-    `;
+        <div class="panels" part="panels">
+          <slot></slot>
+        </div>
+      `,
+    };
   },
   styles: [colorThemeMixin, styles],
 });

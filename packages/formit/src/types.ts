@@ -10,28 +10,6 @@ export type FormValidator<TValues extends Record<string, unknown> = Record<strin
   signal: AbortSignal,
 ) => MaybePromise<Record<string, string> | undefined>;
 
-export type ValidateOptions<TValues extends Record<string, unknown> = Record<string, unknown>> =
-  | {
-      /**
-       * Restrict validation to these specific fields.
-       * @remarks The form-level `validator` is NOT run. Errors on unvisited fields are preserved unchanged.
-       * Pass an empty array to validate nothing.
-       */
-      fields: FlatKeyOf<TValues>[];
-      signal?: AbortSignal;
-    }
-  | {
-      /**
-       * Only validate fields that have been touched.
-       * @remarks Treated as a partial run — the form-level `validator` is NOT run.
-       */
-      onlyTouched: true;
-      signal?: AbortSignal;
-    }
-  | {
-      signal?: AbortSignal;
-    };
-
 export type SetOptions = {
   dirty?: boolean; // default: true
   touched?: boolean; // default: false
@@ -50,18 +28,11 @@ export type FormState<TValues extends Record<string, unknown> = Record<string, u
   submitCount: number;
 };
 
-export type SubmitOptions<TValues extends Record<string, unknown> = Record<string, unknown>> = {
-  /**
-   * Restrict validation to these specific fields.
-   * Note: only these fields are touched before validation.
-   */
-  fields?: FlatKeyOf<TValues>[];
-  signal?: AbortSignal;
-  /** Skip validation entirely and call the submit handler regardless of errors. */
-  skipValidation?: boolean;
+export type SubscribeOptions = {
+  immediate?: boolean;
 };
 
-/** The result returned by `form.validate()`. */
+/** The result returned by `form.validateAll()`, `form.validateTouched()`, or `form.validateFields()`. */
 export type ValidateResult = {
   /** Full current error map (all fields, not only the ones validated in this run). */
   errors: Record<string, string>;
@@ -122,7 +93,7 @@ export type BindResult<V = unknown> = {
   readonly dirty: boolean;
   readonly error: string | undefined;
   onBlur(): void;
-  onChange(event: unknown): void;
+  onChange(value: V): void;
   readonly touched: boolean;
   readonly value: V;
 };
@@ -141,10 +112,12 @@ export type FieldState<V = unknown> = {
 };
 
 export type FormOptions<TValues extends Record<string, unknown> = Record<string, unknown>> = {
+  /** Default bind behavior applied when `bind(name, config)` omits specific options. */
+  bindDefaults?: BindConfig;
   defaultValues?: TValues;
   validator?: FormValidator<TValues>;
   /** Field-level validators keyed by field name or dot-notation path. */
-  validators?: Record<string, FieldValidator | FieldValidator[]>;
+  validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator | FieldValidator[]>>;
 };
 
 export type BindConfig = {
@@ -153,58 +126,54 @@ export type BindConfig = {
   validateOnBlur?: boolean;
   /** Validate the field automatically after each value change. Default: false. */
   validateOnChange?: boolean;
-  valueExtractor?: (event: unknown) => unknown;
 };
 
 export interface Form<TValues extends Record<string, unknown> = Record<string, unknown>> {
-  array(name: FlatKeyOf<TValues> | string): ArrayFieldBatch;
+  array(name: FlatKeyOf<TValues>): ArrayFieldBatch;
   bind<K extends FlatKeyOf<TValues>>(name: K, config?: BindConfig): BindResult<TypeAtPath<TValues, K>>;
-  bind(name: string, config?: BindConfig): BindResult;
-  clearError(name: FlatKeyOf<TValues> | string): void;
+  clearError(name: FlatKeyOf<TValues>): void;
   dispose(): void;
   readonly disposed: boolean;
   readonly errors: Record<string, string>;
   field<K extends FlatKeyOf<TValues>>(name: K): FieldState<TypeAtPath<TValues, K>>;
-  field<V = unknown>(name: string): FieldState<V>;
   get<K extends FlatKeyOf<TValues>>(name: K): TypeAtPath<TValues, K>;
-  get<V = unknown>(name: string): V;
   readonly isDirty: boolean;
   readonly isSubmitting: boolean;
   readonly isTouched: boolean;
   readonly isValid: boolean;
   readonly isValidating: boolean;
-  patch(entries: DeepPartial<TValues>, options?: SetOptions): void;
-  reset(newValues?: DeepPartial<TValues>): void;
-  resetField(name: FlatKeyOf<TValues> | string): void;
+  /** Restore values from the current baseline and clear errors/touched/dirty. */
+  reset(): void;
+  /** Replace values and baseline in one operation. */
+  replace(newValues: DeepPartial<TValues>): void;
+  resetField(name: FlatKeyOf<TValues>): void;
   set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void;
-  set(name: string, value: unknown, options?: SetOptions): void;
-  setError(name: string, message: string): void;
-  setErrors(errors: Record<string, string>): void;
+  setError(name: FlatKeyOf<TValues>, message: string): void;
+  /** Merge specific fields into the current error map; pass `undefined` to clear a field. */
+  mergeErrors(errors: Partial<Record<FlatKeyOf<TValues>, string | undefined>>): void;
+  setErrors(errors: Partial<Record<FlatKeyOf<TValues>, string>>): void;
   readonly state: FormState<TValues>;
-  submit<TResult = void>(
-    handler: (values: TValues) => MaybePromise<TResult>,
-    options?: SubmitOptions<TValues>,
-  ): Promise<TResult>;
+  submit<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>, signal?: AbortSignal): Promise<TResult>;
   readonly submitCount: number;
-  subscribe(listener: (state: FormState<TValues>) => void, options?: { immediate?: boolean }): Unsubscribe;
-  subscribe<K extends FlatKeyOf<TValues>>(
+  subscribeForm(listener: (state: FormState<TValues>) => void, options?: SubscribeOptions): Unsubscribe;
+  subscribeField<K extends FlatKeyOf<TValues>>(
     name: K,
     listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
-    options?: { immediate?: boolean },
+    options?: SubscribeOptions,
   ): Unsubscribe;
-  subscribe<V = unknown>(
-    name: string,
-    listener: (state: FieldState<V>) => void,
-    options?: { immediate?: boolean },
-  ): Unsubscribe;
-  touch(name: string): void;
+  touch(name: FlatKeyOf<TValues>): void;
   touchAll(): void;
   /** Remove touched state from a single field without resetting its value. */
-  untouch(name: string): void;
+  untouch(name: FlatKeyOf<TValues>): void;
   /** Remove touched state from all fields without resetting values. */
   untouchAll(): void;
-  validate(options?: ValidateOptions<TValues>): Promise<ValidateResult>;
-  validateField(name: string, signal?: AbortSignal): Promise<string | undefined>;
+  /** Full validation: field validators + form validator. Replaces full error map. */
+  validateAll(signal?: AbortSignal): Promise<ValidateResult>;
+  /** Partial validation: touched field validators only. Preserves unvisited errors. */
+  validateTouched(signal?: AbortSignal): Promise<ValidateResult>;
+  /** Partial validation: specific field validators only. Preserves unvisited errors. */
+  validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>;
+  validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>;
   values(): TValues;
 }
 

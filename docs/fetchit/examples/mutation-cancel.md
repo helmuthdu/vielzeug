@@ -1,13 +1,13 @@
 ---
-title: 'Fetchit Examples — Mutation Cancel'
-description: 'Mutation Cancel examples for fetchit.'
+title: 'Fetchit Examples — Mutation Cancellation'
+description: 'Mutation cancellation examples for fetchit.'
 ---
 
-## Mutation Cancel
+## Mutation Cancellation
 
 ## Problem
 
-Implement mutation cancel in a production-friendly way with `@vielzeug/fetchit` while keeping setup and cleanup explicit.
+Implement mutation cancellation in a production-friendly way with `@vielzeug/fetchit` while keeping setup and cleanup explicit.
 
 ## Runnable Example
 
@@ -18,26 +18,30 @@ const api = createApi({ baseUrl: 'https://api.example.com' });
 const qc = createQuery();
 
 const uploadFile = createMutation(
-  (file: File) =>
+  ({ input, signal }: { input: File; signal?: AbortSignal }) =>
     api.post<UploadResult>('/upload', {
       body: (() => {
         const f = new FormData();
-        f.append('file', file);
+        f.append('file', input);
         return f;
       })(),
+      signal,
     }),
-  { onSuccess: () => qc.invalidate(['files']) },
 );
 
-// In a component — cancel on unmount to avoid state updates after destruction
-uploadFile.mutate(selectedFile);
-// ...on unmount:
-uploadFile.cancel();
-
-// Or drive cancellation via external signal
+// Cancellation is caller-owned
 const ac = new AbortController();
-uploadFile.mutate(selectedFile, { signal: ac.signal });
-ac.abort(); // same effect
+
+try {
+  const result = await uploadFile.mutate(selectedFile, { signal: ac.signal });
+  qc.invalidate(['files']);
+} catch (error) {
+  if (!(error instanceof DOMException && error.name === 'AbortError')) {
+    throw error;
+  }
+}
+
+ac.abort();
 ```
 
 ## Expected Output

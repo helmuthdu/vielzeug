@@ -1,4 +1,4 @@
-import { define, computed, defineField, html, inject, syncContextProps } from '@vielzeug/craftit';
+import { define, prop, computed, defineField, effect, html, inject } from '@vielzeug/craftit';
 
 import type { ButtonType, DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
@@ -11,15 +11,12 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { BUTTON_GROUP_CTX } from '../button-group/button-group';
-import {
-  disablableBundle,
-  loadableBundle,
-  type PropsInput,
-  roundableBundle,
-  sizableBundle,
-  themableBundle,
-} from '../shared/bundles';
+import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import componentStyles from './button.css?inline';
+
+const BUTTON_COLORS = ['primary', 'secondary', 'info', 'success', 'warning', 'error'] as const;
+const BUTTON_SIZES = ['sm', 'md', 'lg'] as const;
+const BUTTON_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
 
 /** Button component properties */
 export type BitButtonProps = ThemableProps &
@@ -109,16 +106,32 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
     rainbow: false,
     rel: undefined,
     target: undefined,
-    type: 'button',
-    variant: 'solid',
-  } satisfies PropsInput<BitButtonProps>,
+    type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
+    variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
+  },
   setup(props, { emit, host }) {
     // Reactively inherit size/variant/color from a parent bit-button-group when present.
-    syncContextProps(inject(BUTTON_GROUP_CTX), {
-      color: props.color,
-      size: props.size,
-      variant: props.variant,
-    });
+    const groupCtx = inject(BUTTON_GROUP_CTX);
+
+    if (groupCtx) {
+      effect(() => {
+        const color = groupCtx.color.value;
+        const size = groupCtx.size.value;
+        const variant = groupCtx.variant.value;
+
+        if (color !== undefined && BUTTON_COLORS.includes(color as (typeof BUTTON_COLORS)[number])) {
+          props.color.value = color as BitButtonProps['color'];
+        }
+
+        if (size !== undefined && BUTTON_SIZES.includes(size as (typeof BUTTON_SIZES)[number])) {
+          props.size.value = size as BitButtonProps['size'];
+        }
+
+        if (variant !== undefined && BUTTON_VARIANTS.includes(variant as (typeof BUTTON_VARIANTS)[number])) {
+          props.variant.value = variant as BitButtonProps['variant'];
+        }
+      });
+    }
 
     const isLink = computed(() => !!props.href.value);
     const isDisabled = computed(() => !!(props.disabled.value || props.loading.value));
@@ -172,36 +185,38 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
       },
     });
 
-    return html`
-      ${() =>
-        isLink.value
-          ? html`<a
-              part="button"
-              :href="${props.href}"
-              :target="${props.target}"
-              :rel="${props.rel}"
-              role="button"
-              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-              @click="${handleClick}">
-              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-              <slot name="prefix"></slot>
-              <span class="content" part="content"><slot></slot></span>
-              <slot name="suffix"></slot>
-            </a>`
-          : html`<button
-              part="button"
-              type="button"
-              ?disabled=${isDisabled}
-              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-              @click="${handleClick}">
-              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-              <slot name="prefix"></slot>
-              <span class="content" part="content"><slot></slot></span>
-              <slot name="suffix"></slot>
-            </button>`}
-    `;
+    return {
+      render: () => html`
+        ${() =>
+          isLink.value
+            ? html`<a
+                part="button"
+                :href="${props.href}"
+                :target="${props.target}"
+                :rel="${props.rel}"
+                role="button"
+                :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+                :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+                @click="${handleClick}">
+                <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+                <slot name="prefix"></slot>
+                <span class="content" part="content"><slot></slot></span>
+                <slot name="suffix"></slot>
+              </a>`
+            : html`<button
+                part="button"
+                type="button"
+                ?disabled=${isDisabled}
+                :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+                :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+                @click="${handleClick}">
+                <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+                <slot name="prefix"></slot>
+                <span class="content" part="content"><slot></slot></span>
+                <slot name="suffix"></slot>
+              </button>`}
+      `,
+    };
   },
   shadow: { delegatesFocus: true },
   styles: [

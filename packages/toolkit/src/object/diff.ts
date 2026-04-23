@@ -17,18 +17,18 @@ export type DiffResult<T extends Obj> = { [K in keyof T]?: T[K] | typeof DELETED
  * ```ts
  * import { diff, DELETED } from '@vielzeug/toolkit';
  *
- * diff({ a: 1, b: 2 }, { a: 1, b: 2, c: 3 }); // { c: DELETED }
- * diff({ a: 1, b: 99 }, { a: 1, b: 2 });       // { b: 99 }
+ * diff({ a: 1, b: 2, c: 3 }, { a: 1, b: 2 }); // { c: DELETED }
+ * diff({ a: 1, b: 2 }, { a: 1, b: 99 });       // { b: 99 }
  * ```
  *
- * @param curr - The current object.
  * @param prev - The previous object.
+ * @param curr - The current object.
  * @param [compareFn] - A custom function to compare values.
  * @returns An object containing new/modified/deleted properties.
  */
 export function diff<T extends Obj>(
-  curr?: T,
   prev?: T,
+  curr?: T,
   compareFn: (a: unknown, b: unknown) => boolean = isEqual,
 ): DiffResult<T> {
   if (!curr && !prev) return {};
@@ -40,7 +40,7 @@ export function diff<T extends Obj>(
     const _prev = prev?.[key];
 
     if (isObject(_curr) && isObject(_prev)) {
-      const nestedDiff = diff(_curr as Obj, _prev as Obj, compareFn);
+      const nestedDiff = diff(_prev as Obj, _curr as Obj, compareFn);
 
       if (Object.keys(nestedDiff).length > 0) {
         result[key] = nestedDiff;

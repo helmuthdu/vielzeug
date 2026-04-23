@@ -30,23 +30,28 @@ const statsPool = createWorker<Row, Stats>(
   { concurrency: 'auto' },
 );
 
-// Process 10 000 rows concurrently
-const rows: Row[] = loadDataset();
-const stats = await Promise.all(rows.map((row) => statsPool.run(row)));
-
-statsPool.dispose();
+async function processDataset(rows: Row[]): Promise<Stats[]> {
+  try {
+    const stats = await Promise.all(rows.map((row) => statsPool.run(row)));
+    return stats;
+  } finally {
+    statsPool.dispose();
+  }
+}
 ```
 
 ## Expected Output
 
 - The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- Large datasets are processed in parallel without blocking the main thread.
+- Uses auto-concurrency to scale with available CPU cores.
 
 ## Common Pitfalls
 
 - Forgetting cleanup/dispose calls can leak listeners or stale state.
 - Skipping explicit typing can hide integration issues until runtime.
 - Not handling error branches makes examples harder to adapt safely.
+- Not disposing the pool after processing can prevent the process from exiting.
 
 ## Related Recipes
 

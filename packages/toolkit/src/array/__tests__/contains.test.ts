@@ -1,4 +1,4 @@
-import { partial } from '../../function/fp';
+import { partial } from '../../function/partial';
 import { contains } from '../contains';
 
 describe('contains', () => {

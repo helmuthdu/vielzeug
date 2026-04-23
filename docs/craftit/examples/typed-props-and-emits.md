@@ -1,70 +1,63 @@
 ---
 title: 'Craftit Examples — Typed Props and Emits'
-description: 'Typed Props and Emits examples for craftit.'
+description: 'Typed Props and Emits examples for craftit using the defineProps + prop.* DSL.'
 ---
 
 ## Typed Props and Emits
 
 ## Problem
 
-Implement typed props and events in a production-friendly way with `@vielzeug/craftit` while keeping setup and cleanup explicit.
+Implement typed props and events in a production-friendly way with `@vielzeug/craftit` using the `defineProps` + `prop.*` DSL and setup-context `emit`.
 
 ## Runnable Example
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
 
 ```ts
-import { define, html } from '@vielzeug/craftit';
-
-type AlertBoxProps = {
-  message?: string;
-  open?: boolean;
-  variant?: 'primary' | 'danger';
-};
+import { define, defineProps, html, prop } from '@vielzeug/craftit';
 
 type AlertBoxEvents = {
   close: void;
 };
 
-define<AlertBoxProps, AlertBoxEvents>(
-  'alert-box',
-  {
-    props: {
-      message: 'Saved successfully',
-      open: true,
-      variant: 'primary',
-    },
-    setup({ emit, props }) {
-      return html`
+define<Record<string, never>, AlertBoxEvents>('alert-box', {
+  props: defineProps({
+    message: prop.string('Saved successfully'),
+    open: prop.bool(true),
+    variant: prop.oneOf(['primary', 'danger'] as const, 'primary'),
+  }),
+  setup(props, { emit }) {
+    return {
+      render: () => html`
         ${() =>
           props.open.value
             ? html`
                 <div :data-variant=${props.variant.value}>
-                  <span>${props.message.value}</span>
+                  <span>${props.message}</span>
                   <button @click=${() => emit('close')}>Close</button>
                 </div>
               `
             : ''}
-      `;
-    },
+      `,
+    };
   },
-);
+});
 ```
 
 ## Expected Output
 
 - The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- Prop values are correctly parsed from HTML attributes.
+- The `emit('close')` call is type-checked: no detail required since the payload is `void`.
 
 ## Common Pitfalls
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Forgetting `as const` on `prop.oneOf` arrays makes the type `string` instead of the union you want.
 - For no-detail events, prefer `void` payload types so calls stay ergonomic (`emit('close')`).
+- Host binding values must be signals or primitives — use `computed(...)` when you need a derived reactive value in a binding.
 
 ## Related Recipes
 
-- [Context Provider and Consumer](./context-provider-and-consumer.md)
+- [Props DSL](./propsof-builder-api.md)
 - [Counter Component](./counter-component.md)
 - [Form-Associated Rating Input](./form-associated-rating-input.md)

@@ -1,15 +1,13 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, handle, html, onMount, ref, signal, watch } from '@vielzeug/craftit';
+import { define, handle, html, prop, ref, signal, watch } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import type { PaddingSize, RoundedSize } from '../../types';
 
 import '../../content/icon/icon';
-import { type PropsInput } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, elevationMixin, roundedVariantMixin } from '../../styles';
-import { lockBackground, unlockBackground } from '../../utils/background-lock';
-import { useOverlay } from '../../utils/use-overlay';
+import { lockBackground, unlockBackground, useOverlay } from '../../utils';
 import componentStyles from './dialog.css?inline';
 
 type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
@@ -111,23 +109,20 @@ export type BitDialogProps = {
  * ```
  */
 
-/** Event schema for bit-dialog. */
-const dialogProps = {
-  backdrop: undefined,
-  dismissible: false,
-  elevation: undefined,
-  'initial-focus': undefined,
-  label: '',
-  open: false,
-  padding: undefined,
-  persistent: false,
-  'return-focus': true,
-  rounded: undefined,
-  size: 'md',
-} satisfies PropsInput<BitDialogProps>;
-
 export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', {
-  props: dialogProps,
+  props: {
+    backdrop: undefined,
+    dismissible: false,
+    elevation: undefined,
+    'initial-focus': undefined,
+    label: '',
+    open: false,
+    padding: undefined,
+    persistent: false,
+    'return-focus': true,
+    rounded: undefined,
+    size: prop.oneOf(['sm', 'md', 'lg', 'xl', 'full'] as const, 'md'),
+  },
   setup(props, { emit, host, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
     const isOpen = signal(false);
@@ -194,76 +189,6 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
     // Lifecycle: Setup Native Dialog Integration
     // ────────────────────────────────────────────────────────────────
 
-    onMount(() => {
-      const dialog = dialogRef.value;
-
-      if (!dialog) return;
-
-      // Sync prop changes → native dialog
-      watch(
-        props.open,
-        (open) => {
-          if (open) {
-            overlay.open({ reason: 'programmatic' });
-
-            return;
-          }
-
-          overlay.close({ reason: 'programmatic', restoreFocus: false });
-        },
-        { immediate: true },
-      );
-
-      // ────────────────────────────────────────────────────────────
-      // Event Handlers: Close, Escape, Backdrop Click
-      // ────────────────────────────────────────────────────────────
-
-      const handleNativeClose = () => {
-        unlockBackground();
-        host.el.removeAttribute('open');
-        isOpen.value = false;
-        restoreFocus();
-        emit('close', { reason: closeReason });
-        closeReason = 'programmatic';
-      };
-
-      const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
-        const closeAllowed = dispatchCloseRequest(reason);
-
-        if (!closeAllowed) return;
-
-        closeReason = reason;
-        overlay.close({ reason, restoreFocus: false });
-      };
-
-      const handleKeydown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape' && !props.persistent.value) {
-          e.preventDefault();
-          requestClose('escape');
-        }
-      };
-
-      const handleBackdropClick = (e: MouseEvent) => {
-        if (props.persistent.value) return;
-
-        // Click target is the <dialog> element itself (not the panel)
-        if (e.target === dialog) {
-          requestClose('outside-click');
-        }
-      };
-
-      handle(dialog, 'close', handleNativeClose);
-      handle(dialog, 'click', handleBackdropClick);
-      handle(dialog, 'keydown', handleKeydown);
-
-      return () => {
-        // Ensure the native dialog is closed on unmount to release top-layer
-        if (dialog.open) dialog.close();
-
-        unlockBackground();
-      };
-    });
-
     const handleDismiss = () => {
       const dialog = dialogRef.value;
 
@@ -277,33 +202,105 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
       overlay.close({ reason: 'trigger', restoreFocus: false });
     };
 
-    return html`
-      <dialog ref=${dialogRef} class="dialog" part="dialog" aria-label="${props.label}" aria-modal="true">
-        <div class="overlay" part="overlay" aria-hidden="true"></div>
-        <div class="panel" part="panel" :data-size="${props.size}">
-          <div class="header" part="header" ?hidden=${() => !hasHeader()}>
-            <slot name="header">
-              <span class="title" part="title">${props.label}</span>
-            </slot>
-            <button
-              class="close"
-              part="close"
-              type="button"
-              aria-label="Close dialog"
-              ?hidden=${() => !props.dismissible.value}
-              @click=${handleDismiss}>
-              <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
-            </button>
+    return {
+      mount() {
+        const dialog = dialogRef.value;
+
+        if (!dialog) return;
+
+        // Sync prop changes → native dialog
+        watch(
+          props.open,
+          (open) => {
+            if (open) {
+              overlay.open({ reason: 'programmatic' });
+
+              return;
+            }
+
+            overlay.close({ reason: 'programmatic', restoreFocus: false });
+          },
+          { immediate: true },
+        );
+
+        // ────────────────────────────────────────────────────────────
+        // Event Handlers: Close, Escape, Backdrop Click
+        // ────────────────────────────────────────────────────────────
+
+        const handleNativeClose = () => {
+          unlockBackground();
+          host.el.removeAttribute('open');
+          isOpen.value = false;
+          restoreFocus();
+          emit('close', { reason: closeReason });
+          closeReason = 'programmatic';
+        };
+
+        const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
+          const closeAllowed = dispatchCloseRequest(reason);
+
+          if (!closeAllowed) return;
+
+          closeReason = reason;
+          overlay.close({ reason, restoreFocus: false });
+        };
+
+        const handleKeydown = (e: KeyboardEvent) => {
+          if (e.key === 'Escape' && !props.persistent.value) {
+            e.preventDefault();
+            requestClose('escape');
+          }
+        };
+
+        const handleBackdropClick = (e: MouseEvent) => {
+          if (props.persistent.value) return;
+
+          // Click target is the <dialog> element itself (not the panel)
+          if (e.target === dialog) {
+            requestClose('outside-click');
+          }
+        };
+
+        handle(dialog, 'close', handleNativeClose);
+        handle(dialog, 'click', handleBackdropClick);
+        handle(dialog, 'keydown', handleKeydown);
+
+        return () => {
+          // Ensure the native dialog is closed on unmount to release top-layer
+          if (dialog.open) dialog.close();
+
+          unlockBackground();
+        };
+      },
+
+      render: () => html`
+        <dialog ref=${dialogRef} class="dialog" part="dialog" aria-label="${props.label}" aria-modal="true">
+          <div class="overlay" part="overlay" aria-hidden="true"></div>
+          <div class="panel" part="panel" :data-size="${props.size}">
+            <div class="header" part="header" ?hidden=${() => !hasHeader()}>
+              <slot name="header">
+                <span class="title" part="title">${props.label}</span>
+              </slot>
+              <button
+                class="close"
+                part="close"
+                type="button"
+                aria-label="Close dialog"
+                ?hidden=${() => !props.dismissible.value}
+                @click=${handleDismiss}>
+                <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
+              </button>
+            </div>
+            <div class="body" part="body">
+              <slot></slot>
+            </div>
+            <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
+              <slot name="footer"></slot>
+            </div>
           </div>
-          <div class="body" part="body">
-            <slot></slot>
-          </div>
-          <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
-            <slot name="footer"></slot>
-          </div>
-        </div>
-      </dialog>
-    `;
+        </dialog>
+      `,
+    };
   },
   styles: [elevationMixin, roundedVariantMixin, coarsePointerMixin, componentStyles],
 });

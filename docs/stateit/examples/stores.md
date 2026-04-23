@@ -16,7 +16,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 ### Basic Store
 
 ```ts
-import { store, watch, batch } from '@vielzeug/stateit';
+import { store, watch, batch, computed } from '@vielzeug/stateit';
 
 const cart = store({ items: [] as string[], total: 0 });
 
@@ -26,8 +26,8 @@ cart.patch({ total: 42 });
 // Updater function
 cart.update((s) => ({ ...s, items: [...s.items, 'apple'] }));
 
-// Watch a derived slice via select()
-const totalSignal = cart.select((s) => s.total);
+// Watch a derived slice via computed()
+const totalSignal = computed(() => cart.value.total);
 watch(totalSignal, (total) => console.log('total:', total));
 
 // Batch
@@ -37,20 +37,19 @@ batch(() => {
 });
 
 cart.reset();
-cart.freeze();
 ```
 
 ---
 
-### Slice Watch via `store.select()`
+### Slice Watch via `computed()` + `watch()`
 
 ```ts
-import { store, watch } from '@vielzeug/stateit';
+import { store, watch, computed } from '@vielzeug/stateit';
 
 const user = store({ id: 1, name: 'Alice', role: 'admin' });
 
 // Only fires when `name` changes — unrelated updates are ignored
-const nameSignal = user.select((s) => s.name);
+const nameSignal = computed(() => user.value.name);
 const sub = watch(nameSignal, (name, prev) => {
   console.log('name:', prev, '→', name);
 });
@@ -59,6 +58,7 @@ user.patch({ role: 'editor' }); // ← does NOT fire (name unchanged)
 user.patch({ name: 'Bob' }); // → "name: Alice → Bob"
 
 sub.dispose();
+nameSignal.dispose();
 ```
 
 ---
@@ -91,4 +91,4 @@ console.log(s.value); // { count: 0, label: 'default' }
 
 - [Framework Integration](./framework-integration.md)
 - [Pattern: Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)
-- [Pattern: `nextValue` in Async Workflows](./pattern-nextvalue-in-async-workflows.md)
+- [Pattern: Async Workflows with watch](./pattern-nextvalue-in-async-workflows.md)

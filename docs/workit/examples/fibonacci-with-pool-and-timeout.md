@@ -16,7 +16,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 Classic CPU-bound example with a safety timeout:
 
 ```ts
-import { createWorker } from '@vielzeug/workit';
+import { createWorker, TaskTimeoutError } from '@vielzeug/workit';
 
 const fibPool = createWorker<number, number>(
   function fib(n) {
@@ -26,9 +26,22 @@ const fibPool = createWorker<number, number>(
   { concurrency: 4, timeout: 5000 },
 );
 
+async function computeFibonacci(n: number): Promise<number | null> {
+  try {
+    return await fibPool.run(n);
+  } catch (error) {
+    if (error instanceof TaskTimeoutError) {
+      console.error(`Fibonacci(${n}) exceeded 5 second timeout`);
+      return null;
+    }
+    throw error;
+  }
+}
+
+// Usage
 const inputs = [30, 32, 34, 36, 38, 40];
-const results = await Promise.all(inputs.map((n) => fibPool.run(n)));
-console.log(results); // [832040, 2178309, 5702887, 14930352, 39088169, 102334155]
+const results = await Promise.all(inputs.map((n) => computeFibonacci(n)));
+console.log(results);
 
 fibPool.dispose();
 ```
@@ -36,13 +49,16 @@ fibPool.dispose();
 ## Expected Output
 
 - The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- Fibonacci values are computed concurrently across 4 worker threads.
+- Long-running computations are interrupted after 5 seconds.
+- Results are returned in the same order as inputs.
 
 ## Common Pitfalls
 
 - Forgetting cleanup/dispose calls can leak listeners or stale state.
 - Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Not handling timeout errors makes failures silent and hard to debug.
+- Not disposing the pool after processing can prevent process exit.
 
 ## Related Recipes
 

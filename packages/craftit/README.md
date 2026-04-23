@@ -24,10 +24,12 @@ define('my-counter', {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
 
-    return html`
-      <button @click=${() => count.value++}>Count: ${count}</button>
-      <p>Doubled: ${doubled}</p>
-    `;
+    return {
+      render: () => html`
+        <button @click=${() => count.value++}>Count: ${count}</button>
+        <p>Doubled: ${doubled}</p>
+      `,
+    };
   },
 });
 ```
@@ -36,10 +38,10 @@ define('my-counter', {
 
 - ✅ **Component authoring** — `define(tag, { props, setup, ... })`
 - ✅ **Signals included** — all `@vielzeug/stateit` exports are re-exported
-- ✅ **Reactive templates** — `html` tagged template with text/attr/prop/event/ref bindings
-- ✅ **Lifecycle helpers** — `onMount`, `onCleanup`, `onError`, `handle`, `watch`, `effect`, `fire.*`
-- ✅ **Typed component APIs** — `define`, `prop`, `typed`, setup-context `emit` and `slots`
-- ✅ **Context / DI** — `createContext`, `provide`, `inject`, `syncContextProps`
+- ✅ **Reactive templates** — `html` tagged template with text/attr/event/ref bindings
+- ✅ **Lifecycle helpers** — `onCleanup`, `handle`, `watch`, `effect`, `fire.*`
+- ✅ **Typed component APIs** — `define`, typed prop signals, setup-context `emit` and `slots`
+- ✅ **Context / DI** — `createContext`, `provide`, `inject`, `injectStrict`
 - ✅ **Form-associated controls** — `defineField` with `ElementInternals`
 - ✅ **Observer utilities (observers)** — `resizeObserver`, `intersectionObserver`, and `mediaObserver`
 - ✅ **List and raw helpers** — `each` and `raw` from the main entrypoint
@@ -64,11 +66,16 @@ define<{ disabled: boolean; label: string }, { change: string }>('name-input', {
     disabled: false,
     label: 'Name',
   },
-  setup({ emit, props }) {
-    return html`
-      <label>${props.label}</label>
-      <input :disabled=${props.disabled} @input=${(e: Event) => emit('change', (e.target as HTMLInputElement).value)} />
-    `;
+  setup(props, { emit }) {
+    return {
+      render: () => html`
+        <label>${props.label}</label>
+        <input
+          :disabled=${props.disabled}
+          @input=${(e: Event) => emit('change', (e.target as HTMLInputElement).value)}
+        />
+      `,
+    };
   },
 });
 ```
@@ -76,18 +83,20 @@ define<{ disabled: boolean; label: string }, { change: string }>('name-input', {
 ### List Rendering + Inline Conditions
 
 ```ts
-import { define, html, signal } from '@vielzeug/craftit';
+import { define, each, html, signal } from '@vielzeug/craftit';
 
 define('todo-list', {
   setup() {
     const todos = signal([{ id: 1, text: 'Write docs', done: false }]);
 
-    return html`
-      ${() =>
-        todos.value.length === 0
-          ? html`<p>No todos</p>`
-          : html`<ul>${each(todos, { key: (todo) => todo.id, render: (todo) => html`<li>${todo.text}</li>` })}</ul>`}
-    `;
+    return {
+      render: () => html`
+        ${() =>
+          todos.value.length === 0
+            ? html`<p>No todos</p>`
+            : html`<ul>${each(todos, { key: (todo) => todo.id, render: (todo) => html`<li>${todo.text}</li>` })}</ul>`}
+      `,
+    };
   },
 });
 ```
@@ -98,15 +107,17 @@ define('todo-list', {
 import { define, effect, html } from '@vielzeug/craftit';
 
 define('slot-panel', {
-  setup({ slots }) {
+  setup(_props, { slots }) {
     effect(() => {
       console.log('default elements:', slots.elements().value.length);
     });
 
-    return html`
-      ${() => (slots.has('header').value ? html`<slot name="header"></slot>` : html`<h2>Fallback header</h2>`)}
-      ${() => (slots.has().value ? html`<slot></slot>` : html`<p>No content yet</p>`)}
-    `;
+    return {
+      render: () => html`
+        ${() => (slots.has('header').value ? html`<slot name="header"></slot>` : html`<h2>Fallback header</h2>`)}
+        ${() => (slots.has().value ? html`<slot></slot>` : html`<p>No content yet</p>`)}
+      `,
+    };
   },
 });
 ```
@@ -124,30 +135,32 @@ define('email-field', {
     const value = signal('');
     const field = defineField({ value });
 
-    return html`
-      <input
-        type="email"
-        :value=${value}
-        @input=${(e: Event) => {
-          value.value = (e.target as HTMLInputElement).value;
-          field.setCustomValidity(value.value.includes('@') ? '' : 'Invalid email');
-        }}
-      />
-    `;
+    return {
+      render: () => html`
+        <input
+          type="email"
+          :value=${value}
+          @input=${(e: Event) => {
+            value.value = (e.target as HTMLInputElement).value;
+            field.setCustomValidity(value.value.includes('@') ? '' : 'Invalid email');
+          }}
+        />
+      `,
+    };
   },
 });
 ```
 
 ## API Summary
 
-- Components: `define`, `ComponentOptions`, `ComponentSetupContext`
-- Runtime: `onMount`, `onCleanup`, `onError`, `handle`, `aria`, `effect`, `watch`, `fire`
-- Props: `prop`, `typed`, `PropOptions`, `PropDef`, `InferPropsSignals`
+- Components: `define`, `ComponentDefinition`, `SetupContextBag`
+- Runtime: `onCleanup`, `handle`, `effect`, `watch`, `fire`
+- Props: `PropOptions`, `PropDef`, `PropsInput`, `InferPropsSignals`
 - Slots / emits: setup-context `slots`, setup-context `emit`, `EmitFn`
-- Context: `createContext`, `provide`, `inject`, `syncContextProps`, `InjectionKey`
-- Form: `defineField`, `FormFieldOptions`, `FormFieldCallbacks`, `FormFieldHandle`
-- Observers: `resizeObserver`, `intersectionObserver`, `mediaObserver`
-- Controls: `createFieldIds`
+- Context: `createContext`, `provide`, `inject`, `injectStrict`, `InjectionKey`
+- Form: `defineField`, `FormFieldOptions`, `FormFieldHandle`
+- Observers: `resizeObserve`, `intersectionObserve`, `mediaObserve`
+- Controls: `@vielzeug/craftit/controls`
 - Utilities: `html`, `css`, `createId`
 - Re-exported from stateit: `signal`, `computed`, `batch`, `untrack`, `readonly`, and more
 

@@ -1,6 +1,5 @@
 import type { Fn } from '../types';
 
-import { predict } from './predict';
 import { retry } from './retry';
 
 type AttemptOptions = {
@@ -40,7 +39,7 @@ export async function attempt<T extends Fn, R = Awaited<ReturnType<T>>>(
   { onError, timeout = 7000, times = 3 }: AttemptOptions = {},
 ): Promise<AttemptResult<R>> {
   try {
-    const value = await retry(() => predict<R>(() => fn(), { timeout }), { times });
+    const value = await retry(() => executeWithTimeout<R>(() => fn(), { timeout }), { times });
 
     return { ok: true, value };
   } catch (err) {
@@ -48,4 +47,23 @@ export async function attempt<T extends Fn, R = Awaited<ReturnType<T>>>(
 
     return { error: err, ok: false };
   }
+}
+
+/**
+ * Executes a function with a timeout by using AbortSignal.
+ * @internal
+ */
+function executeWithTimeout<T>(
+  fn: (signal: AbortSignal) => Promise<T>,
+  options: { signal?: AbortSignal; timeout?: number } = {},
+): Promise<T> {
+  const { signal, timeout = 7000 } = options;
+  const abortSignal = signal ? AbortSignal.any([AbortSignal.timeout(timeout), signal]) : AbortSignal.timeout(timeout);
+
+  return Promise.race([
+    fn(abortSignal),
+    new Promise<never>((_, reject) => {
+      abortSignal.addEventListener('abort', () => reject(abortSignal.reason), { once: true });
+    }),
+  ]);
 }

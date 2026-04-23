@@ -10,6 +10,13 @@ export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & 
 export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TestWorkerHandle<TInput, TOutput> {
   const calls: { input: TInput; output: TOutput }[] = [];
   let status: WorkerStatus = 'idle';
+  let running = false;
+  const queue: Array<{
+    input: TInput;
+    reject: (reason: unknown) => void;
+    resolve: (value: TOutput) => void;
+    signal?: AbortSignal;
+  }> = [];
 
   function createAbortError(signal: AbortSignal): unknown {
     if (signal.reason !== undefined) return signal.reason;
@@ -21,6 +28,41 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
     return new Error('Aborted');
   }
 
+  function updateStatus(): void {
+    if (status === 'terminated') return;
+
+    status = running || queue.length > 0 ? 'running' : 'idle';
+  }
+
+  async function processQueue(): Promise<void> {
+    while (queue.length > 0) {
+      const item = queue.shift();
+
+      if (!item) break;
+
+      if (item.signal?.aborted) {
+        item.reject(createAbortError(item.signal));
+        updateStatus();
+        continue;
+      }
+
+      running = true;
+      updateStatus();
+
+      try {
+        const output = await fn(item.input);
+
+        calls.push({ input: item.input, output });
+        item.resolve(output);
+      } catch (error) {
+        item.reject(error);
+      }
+
+      running = false;
+      updateStatus();
+    }
+  }
+
   return {
     get calls(): ReadonlyArray<{ input: TInput; output: TOutput }> {
       return calls;
@@ -30,6 +72,7 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
     },
     dispose(): void {
       status = 'terminated';
+      queue.length = 0;
     },
     run(input: TInput, options: RunOptions = {}): Promise<TOutput> {
       if (status === 'terminated') {
@@ -40,28 +83,22 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
         return Promise.reject(createAbortError(options.signal));
       }
 
-      status = 'running';
+      return new Promise<TOutput>((resolve, reject) => {
+        const item = { input, reject, resolve, signal: options.signal };
 
-      return Promise.resolve()
-        .then(() => fn(input))
-        .then((output) => {
-          calls.push({ input, output });
+        queue.push(item);
+        updateStatus();
 
-          if (status !== 'terminated') status = 'idle';
-
-          return output;
-        })
-        .catch((err: unknown) => {
-          if (status !== 'terminated') status = 'idle';
-
-          throw err;
-        });
+        if (!running) {
+          void processQueue();
+        }
+      });
     },
     get status(): WorkerStatus {
       return status;
     },
     [Symbol.dispose](): void {
-      status = 'terminated';
+      this.dispose();
     },
   };
 }

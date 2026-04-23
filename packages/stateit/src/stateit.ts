@@ -15,6 +15,7 @@ import type {
 // === CONSTANTS ===
 const UNINITIALIZED = Symbol('stateit.uninitialized');
 const DEFAULT_MAX_ITERATIONS = 100;
+const IS_SIGNAL = Symbol('stateit.is-signal');
 
 // === HELPERS ===
 const toSubscription = (dispose: () => void): Subscription =>
@@ -143,6 +144,7 @@ class ReactiveNode {
 class SignalImpl<T> extends ReactiveNode implements Signal<T> {
   private value_: T;
   private equals_: EqualityFn<T>;
+  [IS_SIGNAL] = true;
 
   constructor(initial: T, equals?: EqualityFn<T>) {
     super();
@@ -176,11 +178,12 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
   private deps_ = new Set<CleanupFn>();
   private compute_: () => T;
   private equals_: EqualityFn<T>;
+  [IS_SIGNAL] = true;
 
   private readonly onDepChange: EffectCallback = () => {
     if (this.disposed_) return;
 
-    if (this.subscribers.size === 0) {
+    if (!this.hasSubscribers()) {
       this.dirty_ = true;
 
       return;
@@ -248,6 +251,17 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
 export const signal = <T>(initial: T, options?: ReactiveOptions<T>): Signal<T> =>
   new SignalImpl(initial, options?.equals);
 
+/**
+ * Creates a computed signal that automatically recomputes when dependencies change.
+ *
+ * When called inside an effect, the computed signal is automatically disposed
+ * when the effect cleans up, preventing memory leaks from derived computations
+ * that only exist within the effect scope.
+ *
+ * @param compute - A function that returns the computed value
+ * @param options - Optional equality function and other reactive options
+ * @returns A readonly computed signal
+ */
 export const computed = <T>(compute: () => T, options?: ReactiveOptions<T>): ComputedSignal<T> => {
   const comp = new ComputedImpl(compute, options?.equals);
 
@@ -362,18 +376,14 @@ export const onCleanup = (fn: CleanupFn): void => {
   currentScope.cleanups.push(fn);
 };
 
-const watchBase = <T>(
-  source: ReadonlySignal<T>,
-  cb: (value: T, prev: T) => void,
-  watchOptions?: WatchOptions<T>,
-): Subscription => {
+const watchBase = <T>(get: () => T, cb: (value: T, prev: T) => void, watchOptions?: WatchOptions<T>): Subscription => {
   const equals = watchOptions?.equals ?? Object.is;
-  let prev = untrack(() => source.value);
+  let prev = untrack(get);
 
   if (watchOptions?.immediate) cb(prev, prev);
 
   const stop = effect(() => {
-    const next = source.value;
+    const next = get();
 
     if (equals(prev, next)) return;
 
@@ -408,18 +418,13 @@ function watch<S, T>(
   if (typeof maybeCb === 'function') {
     const selector = selectorOrCb as (value: S) => T;
     const cb = maybeCb as (value: T, prev: T) => void;
-    const selected = computed(() => selector(source.value));
-    const stop = watchBase(selected, cb, maybeOptions);
 
-    return toSubscription(() => {
-      stop();
-      selected.dispose();
-    });
+    return watchBase(() => selector(source.value), cb, maybeOptions);
   }
 
   const cb = selectorOrCb as (value: S, prev: S) => void;
 
-  return watchBase(source, cb, maybeCb as WatchOptions<S> | undefined);
+  return watchBase(() => source.value, cb, maybeCb as WatchOptions<S> | undefined);
 }
 
 export { watch };
@@ -432,11 +437,12 @@ export const store = <T extends object>(initial: T, storeOptions?: ReactiveOptio
 
   return {
     patch(partial: Partial<T>): void {
-      if (typeof partial !== 'object' || partial === null || Array.isArray(partial)) {
-        throw new TypeError('[stateit] store.patch() requires a plain object partial.');
-      }
+      ensureObject(partial, '[stateit] store.patch() requires a plain object partial.');
 
-      state.value = { ...state.value, ...partial };
+      const current = state.value;
+      const hasChange = (Object.keys(partial) as Array<keyof T>).some((k) => !Object.is(current[k], partial[k]));
+
+      if (hasChange) state.value = { ...current, ...partial };
     },
     reset(): void {
       state.value = clone(initialSnapshot);
@@ -450,10 +456,6 @@ export const store = <T extends object>(initial: T, storeOptions?: ReactiveOptio
     get value(): T {
       return state.value;
     },
-    set value(next: T) {
-      ensureObject(next, '[stateit] Store value must always be a plain object.');
-      state.value = next;
-    },
   };
 };
 
@@ -466,9 +468,7 @@ export const writable = <T>(input: Signal<T>): Signal<T> => input;
 export const isSignal = <T = unknown>(value: unknown): value is ReadonlySignal<T> => {
   if (typeof value !== 'object' || value === null) return false;
 
-  const candidate = value as Partial<ReadonlySignal<T>>;
-
-  return 'value' in candidate;
+  return IS_SIGNAL in value && (value as any)[IS_SIGNAL] === true;
 };
 
 export const isWritable = <T = unknown>(value: unknown): value is Signal<T> => {
@@ -477,7 +477,19 @@ export const isWritable = <T = unknown>(value: unknown): value is Signal<T> => {
   return Object.getOwnPropertyDescriptor(Object.getPrototypeOf(value), 'value')?.set !== undefined;
 };
 
-export const peekValue = <T>(input: T | ReadonlySignal<T>): T => (isSignal<T>(input) ? input.value : input);
+/**
+ * Unwraps a signal or returns the value as-is.
+ * If the input is a signal, reads its value (which may track dependencies).
+ * For untracked reads, use {@link peek} instead.
+ */
+export const unwrapSignal = <T>(input: T | ReadonlySignal<T>): T => (isSignal<T>(input) ? input.value : input);
+
+/**
+ * Performs an untracked read of a signal value.
+ * This read will not register as a dependency for reactive evaluation.
+ * If the input is not a signal, returns the value as-is.
+ */
+export const peek = <T>(input: T | ReadonlySignal<T>): T => untrack(() => unwrapSignal(input));
 
 export const toValue = <T>(input: T | ReadonlySignal<T> | (() => T)): T => {
   if (isSignal<T>(input)) return input.value;

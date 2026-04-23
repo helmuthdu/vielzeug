@@ -1,10 +1,10 @@
-import { define, computed, html, inject } from '@vielzeug/craftit';
+import { computed, define, html, inject } from '@vielzeug/craftit';
 import { type CheckableChangePayload, createCheckableFieldControl } from '@vielzeug/craftit/controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { formControlMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, type PropsInput, sizableBundle, themableBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { SWITCH_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -23,17 +23,6 @@ export type BitSwitchProps = CheckableProps &
     /** Helper text displayed below the switch */
     helper?: string;
   };
-
-const switchProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  checked: false,
-  error: '',
-  helper: '',
-  name: '',
-  value: { default: 'on', reflect: true },
-} satisfies PropsInput<BitSwitchProps>;
 
 /**
  * A toggle switch component for binary on/off states.
@@ -61,7 +50,16 @@ const switchProps = {
  */
 export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', {
   formAssociated: true,
-  props: switchProps,
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    checked: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
+    error: '',
+    helper: '',
+    name: '',
+    value: 'on',
+  },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
 
@@ -100,21 +98,23 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
       },
     });
 
-    return html`
-      <div class="switch-wrapper" part="switch">
-        <div class="switch-track" part="track">
-          <div class="switch-thumb" part="thumb"></div>
+    return {
+      render: () => html`
+        <div class="switch-wrapper" part="switch">
+          <div class="switch-track" part="track">
+            <div class="switch-thumb" part="thumb"></div>
+          </div>
         </div>
-      </div>
-      <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
-      <div
-        class="helper-text"
-        part="helper-text"
-        data-a11y-helper
-        id="${a11y.helperId}"
-        aria-live="polite"
-        hidden></div>
-    `;
+        <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
+        <div
+          class="helper-text"
+          part="helper-text"
+          data-a11y-helper
+          id="${a11y.helperId}"
+          aria-live="polite"
+          hidden></div>
+      `,
+    };
   },
   styles: [...formControlMixins, sizeVariantMixin(SWITCH_SIZE_PRESET), componentStyles],
 });

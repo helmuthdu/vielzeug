@@ -4,6 +4,8 @@ import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 describe('bit-combobox', () => {
   let fixture: Fixture<HTMLElement>;
 
+  type ComboboxHost = HTMLElement & { value?: string };
+
   beforeAll(async () => {
     await (() => import('./combobox'))();
   });
@@ -204,14 +206,14 @@ describe('bit-combobox', () => {
       await fixture.flush();
 
       expect(input.value).toBe('United States');
-      expect((fixture.element as unknown as { value: string }).value).toBe('us');
+      expect((fixture.element as ComboboxHost).value).toBe('us');
 
       await user.click(input);
       await fixture.flush();
       await user.press(input, 'Escape');
       await fixture.flush();
 
-      expect((fixture.element as unknown as { value: string }).value).toBe('us');
+      expect((fixture.element as ComboboxHost).value).toBe('us');
       expect(input.value).toBe('United States');
     });
 
@@ -236,7 +238,7 @@ describe('bit-combobox', () => {
       document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await fixture.flush();
 
-      expect((fixture.element as unknown as { value: string }).value).toBe('us');
+      expect((fixture.element as ComboboxHost).value).toBe('us');
       expect(input.value).toBe('United States');
     });
   });
@@ -590,14 +592,17 @@ describe('bit-combobox', () => {
     });
 
     it('uses array options prop from structured binding and updates reactively', async () => {
+      let optionsRef: ReturnType<typeof signal<Array<{ label: string; value: string }>>> | undefined;
+
       fixture = await mount(() => {
         const options = signal([
           { label: 'Alpha', value: 'a' },
           { label: 'Beta', value: 'b' },
         ]);
 
-        return html` <button @click=${() => (options.value = [{ label: 'Gamma', value: 'g' }])}>Update</button>
-          <bit-combobox options=${options}></bit-combobox>`;
+        optionsRef = options;
+
+        return html`<bit-combobox options=${options}></bit-combobox>`;
       });
 
       const combobox = fixture.query<HTMLElement>('bit-combobox')!;
@@ -612,7 +617,7 @@ describe('bit-combobox', () => {
         ),
       ).toEqual(['Alpha', 'Beta']);
 
-      await user.click(fixture.query<HTMLElement>('button')!);
+      optionsRef!.value = [{ label: 'Gamma', value: 'g' }];
       await fixture.flush();
       await user.click(input as HTMLInputElement);
       await fixture.flush();

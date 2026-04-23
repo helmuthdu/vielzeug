@@ -2,7 +2,6 @@ export * from './attempt';
 export * from './defer';
 export * from './parallel';
 export * from './pool';
-export * from './predict';
 export * from './queue';
 export * from './race';
 export * from './retry';

@@ -69,7 +69,7 @@ let currentStep = 0;
 
 // Validate current step
 async function validateCurrentStep() {
-  const { valid } = await wizardForm.validate({ fields: steps[currentStep].fields });
+  const { valid } = await wizardForm.validateFields(steps[currentStep].fields );
   return valid;
 }
 

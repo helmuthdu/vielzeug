@@ -7,15 +7,16 @@ import { toError } from './errors';
 import { getRetryConfig } from './retry';
 import { dispatch, makeState } from './state';
 
-export type MutationOptions<TData = unknown, TVariables = unknown> = RetryOptions & {
-  onError?: (error: Error, variables: TVariables) => void;
-  onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void;
-  onSuccess?: (data: TData, variables: TVariables) => void;
+export type MutationOptions = RetryOptions;
+
+export type MutationFnContext<TVariables> = {
+  input: TVariables;
+  signal?: AbortSignal;
 };
 
 export function createMutation<TData, TVariables = void>(
-  mutationFn: (variables: TVariables) => Promise<TData>,
-  mutOpts?: MutationOptions<TData, TVariables>,
+  mutationFn: (ctx: MutationFnContext<TVariables>) => Promise<TData>,
+  mutOpts?: MutationOptions,
 ) {
   let snap: { data: TData | undefined; error: Error | null; status: QueryStatus; updatedAt: number } = {
     data: undefined,
@@ -23,7 +24,7 @@ export function createMutation<TData, TVariables = void>(
     status: 'idle',
     updatedAt: 0,
   };
-  let currentAc: AbortController | null = null;
+  let currentRun = 0;
   const observers = new Set<(state: MutationState<TData>) => void>();
 
   function notify() {
@@ -31,65 +32,39 @@ export function createMutation<TData, TVariables = void>(
   }
 
   return {
-    cancel() {
-      if (snap.status !== 'pending') return;
-
-      currentAc?.abort();
-      currentAc = null;
-      snap = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
-      notify();
-    },
-
     getState(): MutationState<TData> {
       return makeState(snap);
     },
 
-    async mutate(variables: TVariables, callOpts?: RetryOptions & { signal?: AbortSignal }): Promise<TData> {
-      if (snap.status === 'pending') {
-        throw new Error('[fetchit] mutation already in flight — await the previous call or call cancel() first');
-      }
-
-      const retryOpts = getRetryConfig(
-        callOpts?.retry ?? mutOpts?.retry ?? 0,
-        callOpts?.retryDelay ?? mutOpts?.retryDelay,
-        callOpts?.shouldRetry ?? mutOpts?.shouldRetry,
-      );
-
-      currentAc = new AbortController();
-
-      const signal = callOpts?.signal ? AbortSignal.any([currentAc.signal, callOpts.signal]) : currentAc.signal;
+    async mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData> {
+      const retryOpts = getRetryConfig(mutOpts?.retry ?? 0, mutOpts?.retryDelay, mutOpts?.shouldRetry);
+      const signal = callOpts?.signal;
+      const run = ++currentRun;
 
       snap = { data: undefined, error: null, status: 'pending', updatedAt: 0 };
       notify();
 
       try {
-        const data = await retry(() => mutationFn(variables), { ...retryOpts, signal });
+        const data = await retry(() => mutationFn({ input: variables, signal }), { ...retryOpts, signal });
 
-        currentAc = null;
-        snap = { data, error: null, status: 'success', updatedAt: Date.now() };
-        notify();
-        mutOpts?.onSuccess?.(data, variables);
-        mutOpts?.onSettled?.(data, null, variables);
+        if (run === currentRun) {
+          snap = { data, error: null, status: 'success', updatedAt: Date.now() };
+          notify();
+        }
 
         return data;
       } catch (err) {
-        currentAc = null;
-
         const error = toError(err);
-        const isAborted = error.name === 'AbortError';
+        const nextState =
+          signal?.aborted || error.name === 'AbortError'
+            ? { data: undefined, error: null, status: 'idle' as const, updatedAt: 0 }
+            : { data: undefined, error, status: 'error' as const, updatedAt: Date.now() };
 
-        // cancel() already transitioned state to 'idle' and notified — don't override it
-        if (isAborted && snap.status === 'idle') throw error;
-
-        if (isAborted) {
-          snap = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
-        } else {
-          snap = { data: undefined, error, status: 'error', updatedAt: Date.now() };
-          mutOpts?.onError?.(error, variables);
-          mutOpts?.onSettled?.(undefined, error, variables);
+        if (run === currentRun) {
+          snap = nextState;
+          notify();
         }
 
-        notify();
         throw error;
       }
     },

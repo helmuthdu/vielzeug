@@ -42,5 +42,5 @@ export function applySettings(settings: UserSettings) {
 ## Related Recipes
 
 - [Framework Integration](./framework-integration.md)
-- [Pattern: `nextValue` in Async Workflows](./pattern-nextvalue-in-async-workflows.md)
+- [Pattern: Async Workflows with watch](./pattern-nextvalue-in-async-workflows.md)
 - [Pattern: Shared Module Store](./pattern-shared-module-store.md)

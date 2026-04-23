@@ -29,7 +29,7 @@ const searchForm = createForm({
 let searchTimeout: ReturnType<typeof setTimeout>;
 
 // Subscribe and debounce search
-searchForm.subscribe(() => {
+searchForm.subscribeForm(() => {
   clearTimeout(searchTimeout);
 
   const query = searchForm.get<string>('query');

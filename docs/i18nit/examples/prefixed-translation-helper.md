@@ -1,24 +1,23 @@
 ---
-title: 'I18nit Examples — Batched Catalog Updates'
-description: 'Batched Catalog Updates examples for i18nit.'
+title: 'I18nit Examples — Prefixed Translation Helper'
+description: 'Prefixed translation helper examples for i18nit.'
 ---
 
-## Batched Catalog Updates
+## Prefixed Translation Helper
 
 ## Problem
 
-Implement batched catalog updates in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
+Implement a prefixed translation helper in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
 
 ## Runnable Example
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
 
 ```ts
-i18n.batch(() => {
-  i18n.add('en', { nav: { about: 'About' } });
-  i18n.add('en', { nav: { contact: 'Contact' } });
-  i18n.add('en', { nav: { help: 'Help' } });
-});
+const auth = (key: string, vars?: Record<string, unknown>) => i18n.t(`auth.${key}`, vars);
+
+auth('login');
+auth('logout');
 ```
 
 ## Expected Output
@@ -35,5 +34,5 @@ i18n.batch(() => {
 ## Related Recipes
 
 - [Async Loading and Reload](./async-loading-and-reload.md)
+- [Catalog Replacement](./catalog-replacement.md)
 - [Diagnostics Hook](./diagnostics-hook.md)
-- [Framework Integration](./framework-integration.md)

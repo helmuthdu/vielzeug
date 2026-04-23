@@ -1,4 +1,4 @@
-import { effect as rawEffect, type CleanupFn, type ReadonlySignal, type Signal, untrack } from '@vielzeug/stateit';
+import { computed, effect as rawEffect, type CleanupFn, type ReadonlySignal, untrack } from '@vielzeug/stateit';
 
 import {
   CF_ID_ATTR,
@@ -6,13 +6,11 @@ import {
   type Binding,
   type EventBinding,
   type HtmlBinding,
-  type PropBinding,
   type RefBinding,
   listen,
   setAttr,
 } from './internal';
 import { propRegistry } from './props';
-import { bindPropertyModel, hasWritableValueSetter, toReactiveBindingSource } from './runtime';
 
 export type RegisterCleanup = (fn: CleanupFn) => void;
 
@@ -29,6 +27,12 @@ const getCachedTemplate = (html: string): HTMLTemplateElement => {
   if (!tpl) {
     tpl = document.createElement('template');
     tpl.innerHTML = html;
+
+    if (templateCache.size >= 100) {
+      const first = templateCache.keys().next().value;
+
+      if (first !== undefined) templateCache.delete(first);
+    }
 
     templateCache.set(html, tpl);
   }
@@ -85,16 +89,11 @@ export const findCommentMarker = (root: Node, marker: string): Comment | null =>
   return null;
 };
 
-export const createNodes = (htmlString: string): Node[] => Array.from(parseHTML(htmlString).childNodes);
-
-export const insertNodes = (marker: Comment, nodes: Node[], before: Node | null): void => {
-  if (marker.parentNode) {
-    for (const node of nodes) marker.parentNode.insertBefore(node, before);
-  }
-};
-
 const isStructuredValue = (value: unknown): value is object =>
   Array.isArray(value) || (typeof value === 'object' && value !== null);
+
+const isSignal = (val: unknown): val is ReadonlySignal<unknown> =>
+  typeof val === 'object' && val !== null && 'value' in val && typeof (val as { value?: unknown }).value !== 'function';
 
 const signalEffect = (
   signal: ReadonlySignal<unknown>,
@@ -115,17 +114,34 @@ export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, register
       return;
     }
 
-    // DOM attribute (when no prop registered, or prop reflects)
-    if (!meta || meta.reflect) {
+    // Keep common native form properties in sync when using :attr bindings.
+    if (!meta && binding.name === 'value') {
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+        (el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value = value == null ? '' : String(value);
+      }
+    }
+
+    if (!meta && binding.name === 'checked' && el instanceof HTMLInputElement) {
+      el.checked = Boolean(value);
+    }
+
+    // If no prop registered, apply as DOM attribute only
+    if (!meta) {
       if (binding.mode === 'bool') {
         el.toggleAttribute(binding.name, Boolean(value));
       } else {
         setAttr(el, binding.name, value);
       }
+
+      return;
     }
 
-    // Prop signal sync
-    if (!meta) return;
+    // Prop registered — sync both DOM attribute (if reflects) and signal
+    if (binding.mode === 'bool') {
+      el.toggleAttribute(binding.name, Boolean(value));
+    } else {
+      setAttr(el, binding.name, value);
+    }
 
     const parsedValue = isStructuredValue(value)
       ? value
@@ -150,34 +166,8 @@ export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, register
   }
 };
 
-export const applyPropBinding = (el: HTMLElement, binding: PropBinding, registerCleanup: RegisterCleanup) => {
-  const update = (value: unknown) => {
-    (el as any)[binding.name] = value;
-  };
-
-  if (binding.signal) signalEffect(binding.signal, update, registerCleanup);
-  else update(binding.value!);
-
-  bindPropertyModel(el, binding.name, binding.model, registerCleanup);
-};
-
 export const applyEventBinding = (el: HTMLElement, binding: EventBinding, registerCleanup: RegisterCleanup) => {
-  const { modifiers } = binding;
-  const listenerOptions = modifiers
-    ? { capture: !!modifiers.capture, once: !!modifiers.once, passive: !!modifiers.passive }
-    : undefined;
-
-  const wrappedHandler = (event: Event) => {
-    if (modifiers?.self && event.target !== event.currentTarget) return;
-
-    if (modifiers?.stop) event.stopPropagation();
-
-    if (modifiers?.prevent && !modifiers?.passive) event.preventDefault();
-
-    binding.handler(event);
-  };
-
-  registerCleanup(listen(el, binding.name, wrappedHandler, listenerOptions));
+  registerCleanup(listen(el, binding.name, binding.handler, binding.options));
 };
 
 export const applyRefBinding = (el: HTMLElement, binding: RefBinding, registerCleanup: RegisterCleanup) => {
@@ -185,7 +175,7 @@ export const applyRefBinding = (el: HTMLElement, binding: RefBinding, registerCl
 
   if (typeof ref === 'function') {
     ref(el as never);
-    registerCleanup(() => ref(null));
+    registerCleanup(() => ref(null as never));
 
     return;
   }
@@ -193,9 +183,9 @@ export const applyRefBinding = (el: HTMLElement, binding: RefBinding, registerCl
   if (Array.isArray(ref)) {
     ref.push(el);
     registerCleanup(() => {
-      const idx = ref.indexOf(el);
+      const i = ref.indexOf(el);
 
-      if (idx !== -1) ref.splice(idx, 1);
+      if (i !== -1) ref.splice(i, 1);
     });
 
     return;
@@ -203,11 +193,11 @@ export const applyRefBinding = (el: HTMLElement, binding: RefBinding, registerCl
 
   ref.value = el as never;
   registerCleanup(() => {
-    ref.value = null;
+    ref.value = null as never;
   });
 };
 
-type ElementBinding = AttrBinding | EventBinding | PropBinding | RefBinding;
+type ElementBinding = AttrBinding | EventBinding | RefBinding;
 
 export const applyBindingsWithTargets = (
   bindings: Binding[],
@@ -236,6 +226,13 @@ export const applyBindingsWithTargets = (
           registerCleanup,
         );
       }
+    } else if (b.type === 'directive') {
+      const found = targets.comments.get(id);
+
+      if (found) {
+        b.directive.mount(found, registerCleanup);
+        targets.comments.delete(id);
+      }
     } else if (b.type === 'html') {
       opts?.onHtml?.(b);
     } else {
@@ -260,8 +257,6 @@ export const applyBindingsWithTargets = (
         applyAttrBinding(el, b, registerCleanup);
       } else if (b.type === 'event') {
         applyEventBinding(el, b, registerCleanup);
-      } else if (b.type === 'prop') {
-        applyPropBinding(el, b, registerCleanup);
       } else if (b.type === 'ref') {
         applyRefBinding(el, b, registerCleanup);
       }
@@ -279,21 +274,13 @@ export const applyBindingsInContainer = (
 };
 
 export const createAttrBinding = (mode: 'bool' | 'attr', name: string, uid: string, value: unknown): AttrBinding => {
-  const source = toReactiveBindingSource(value);
+  if (typeof value === 'function') {
+    return { mode, name, signal: computed(value as () => unknown), type: 'attr', uid };
+  }
 
-  return source ? { mode, name, signal: source, type: 'attr', uid } : { mode, name, type: 'attr', uid, value };
-};
+  if (isSignal(value)) {
+    return { mode, name, signal: value as ReadonlySignal<unknown>, type: 'attr', uid };
+  }
 
-export const createPropBinding = (name: string, uid: string, value: unknown): PropBinding => {
-  const source = toReactiveBindingSource(value);
-
-  return source
-    ? {
-        model: hasWritableValueSetter(value) ? (value as Signal<unknown>) : undefined,
-        name,
-        signal: source,
-        type: 'prop',
-        uid,
-      }
-    : { name, type: 'prop', uid, value };
+  return { mode, name, type: 'attr', uid, value };
 };

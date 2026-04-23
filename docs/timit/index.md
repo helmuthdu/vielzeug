@@ -34,19 +34,19 @@ yarn add @vielzeug/timit
 ## Quick Start
 
 ```ts
-import { t } from '@vielzeug/timit';
+import { formatHuman, formatISO, now, shift, toZoned } from '@vielzeug/timit';
 
 // Get current time in a timezone
-const meeting = t.toZoned(t.now(), { tz: 'America/New_York' });
+const meeting = toZoned(now(), { tz: 'America/New_York' });
 
 // Add time (DST-safe)
-const reminder = t.shift(meeting, { minutes: -15 });
+const reminder = shift(meeting, { minutes: -15 });
 
 // Format for humans
-const text = t.formatHuman(reminder, { pattern: 'short', locale: 'en-US' });
+const text = formatHuman(reminder, { pattern: 'short', locale: 'en-US' });
 
 // Format for APIs/logs
-const stable = t.formatISO(reminder);
+const stable = formatISO(reminder);
 ```
 
 ## Why Timit?
@@ -58,7 +58,7 @@ Manual date handling breaks at daylight-saving boundaries, timezone edges, and D
 const reminder = new Date(meeting.getTime() - 15 * 60_000);
 
 // After — DST-safe, handles transitions correctly
-const reminder = t.shift(meeting, { minutes: -15 });
+const reminder = shift(meeting, { minutes: -15 });
 ```
 
 | Feature        | Timit                                       | date-fns | Day.js  | Native Date |
@@ -76,15 +76,15 @@ const reminder = t.shift(meeting, { minutes: -15 });
 
 ## Features
 
-- **`t` namespace** — grouped functions for IDE autocomplete
-- **Explicit parsing** — `t.parseLocal()` for plain local strings with required timezone
-- **DST-safe arithmetic** — `t.shift()` handles transitions correctly
-- **Timezone conversion** — `t.toZoned()`, `t.toInstant()` with full timezone support
-- **Formatting split by intent** — `t.formatHuman()` for UI, `t.formatISO()` for APIs/logs
-- **Range queries** — `t.within()` for inclusive time checks with normalized bounds
-- **Duration diffs** — `t.diff()` with granular control over units
+- **Named exports only** — minimal, tree-shakeable API surface
+- **Explicit local parsing** — plain local strings require `tz` in `toInstant()`/`toZoned()`
+- **DST-safe arithmetic** — `shift()` handles transitions correctly
+- **Timezone conversion** — `toZoned()`, `toInstant()` with full timezone support
+- **Formatting split by intent** — `formatHuman()` for UI, `formatISO()` for APIs/logs
+- **Range queries** — `within()` for inclusive time checks with normalized bounds
+- **Duration diffs** — `diff()` with granular control over units
 - **Intl integration** — formatting respects locale & calendar systems
-- **Tree-shaking friendly** — import `d` or individual functions
+- **Tree-shaking friendly** — import only the functions you use
 - **Polyfilled Temporal** — works in runtimes without native support via `@js-temporal/polyfill`
 - <PackageInfo package="timit" type="size" /> gzipped
 

@@ -1,4 +1,4 @@
-import { define, computed, effect, html, inject, signal } from '@vielzeug/craftit';
+import { define, prop, computed, effect, html, inject, signal } from '@vielzeug/craftit';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
@@ -45,9 +45,9 @@ export type BitTabPanelProps = {
  */
 export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
   props: {
-    active: false,
+    active: { default: false, reflect: false },
     lazy: false,
-    padding: 'md',
+    padding: prop.oneOf(['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const, 'md'),
     value: '',
   },
   setup(props, { host }) {
@@ -80,19 +80,21 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
     const panelId = () => `tabpanel-${props.value.value}`;
     const labelledById = () => `tab-${props.value.value}`;
 
-    return html`
-      <div
-        class="panel"
-        part="panel"
-        role="tabpanel"
-        :id="${panelId}"
-        :aria-labelledby="${labelledById}"
-        aria-hidden="${() => String(!isActive.value)}"
-        :style="--tab-panel-padding: ${paddingValue}"
-        tabindex="0">
-        ${() => (shouldRender.value ? html`<slot></slot>` : '')}
-      </div>
-    `;
+    return {
+      render: () => html`
+        <div
+          class="panel"
+          part="panel"
+          role="tabpanel"
+          id="${() => panelId()}"
+          aria-labelledby="${() => labelledById()}"
+          aria-hidden="${() => String(!isActive.value)}"
+          style="${() => `--tab-panel-padding: ${paddingValue.value}`}"
+          tabindex="0">
+          ${() => (shouldRender.value ? html`<slot></slot>` : '')}
+        </div>
+      `,
+    };
   },
   styles: [reducedMotionMixin, styles],
 });

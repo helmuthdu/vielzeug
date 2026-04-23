@@ -21,7 +21,6 @@ import {
   createSliderControl,
   createSpinnerControl,
   createTextField,
-  createValidationControl,
   type CheckableChangePayload,
   type OverlayCloseDetail,
   type OverlayCloseReason,
@@ -37,7 +36,6 @@ import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/c
 - `createTextField` - text-field controller with stable ids, validation hooks, and assistive state.
 - `createChoiceField` - choice-field controller for single/multi-select and CSV-backed form values.
 - `createCheckableFieldControl` - high-level checkbox/radio/switch controller that bundles checkable state, a11y wiring, and press handling.
-- `createValidationControl` - low-level validation trigger helper for form-associated elements that manage their own `defineField` lifecycle.
 - `createListControl` - keyboard/list focus navigation with rich result metadata.
 - `createListKeyControl` - keyboard adapter that maps arrow/home/end keys to a `ListControl`.
 - `createPressControl` - click/keydown press handler with key filtering and disabled state.
@@ -55,7 +53,6 @@ For normal field authoring, use the dedicated field helpers:
 - Use `createTextField(options)` for input-like fields with one string value: input, textarea, and similar controls.
 - Use `createChoiceField(options)` when the field owns a selected item list or CSV-style form value: select, combobox, multi-select, checkbox-group.
 - Use `createCheckableFieldControl(options)` for single checkable widgets: checkbox, radio, switch.
-- Use `createValidationControl(validateOn, field)` when building a form-associated element that manages its own `defineField` lifecycle directly (e.g. slider, rating).
 
 Everything else is a generic non-field primitive for interaction:
 
@@ -266,7 +263,6 @@ export {
   createSliderControl,
   createSpinnerControl,
   createTextField,
-  createValidationControl,
   type CheckableChangePayload,
   type OverlayCloseDetail,
   type OverlayCloseReason,

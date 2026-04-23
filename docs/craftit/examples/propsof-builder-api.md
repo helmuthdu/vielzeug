@@ -1,13 +1,13 @@
 ---
-title: 'Craftit Examples — Plain Props API'
-description: 'Examples demonstrating the define<Props> plain props API.'
+title: 'Craftit Examples — Props DSL'
+description: 'Examples demonstrating the defineProps + prop.* DSL.'
 ---
 
-## Plain Props API
+## Props DSL
 
 ## Problem
 
-Define typed component props directly in `define<Props>(..., { props })` without a separate schema builder.
+Define typed component props concisely using `defineProps` and `prop.*` helpers.
 
 ## Runnable Example
 
@@ -16,192 +16,148 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 ### Basic Usage
 
 ```ts
-import { define, html } from '@vielzeug/craftit';
+import { define, defineProps, html, prop } from '@vielzeug/craftit';
 
-type ButtonProps = {
-  count?: number;
-  customId?: number;
-  disabled?: boolean;
-  helperText?: string;
-  label?: string;
-  loading?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'solid' | 'outline';
-};
-
-define<ButtonProps>(
-  'x-button',
-  {
-    props: {
-      label: 'Button',
-      disabled: false,
-      count: 0,
-      size: 'md',
-      helperText: undefined,
-      customId: undefined,
-      loading: false,
-      variant: undefined,
-    },
-    setup({ props }) {
-      return html`
-        <button ?disabled=${props.disabled.value} :data-size=${props.size.value}>
-          ${props.count.value > 0 ? html`<span class="badge">${props.count.value}</span>` : ''}
-          ${props.label.value}
+define('x-button', {
+  props: defineProps({
+    label: prop.string('Button'),
+    disabled: prop.bool(false),
+    count: prop.number(0),
+    size: prop.oneOf(['sm', 'md', 'lg'] as const, 'md'),
+    variant: prop.oneOf(['solid', 'outline'] as const, 'solid'),
+  }),
+  setup(props) {
+    return {
+      render: () => html`
+        <button ?disabled=${props.disabled} :data-size=${props.size.value}>
+          ${props.count.value > 0 ? html`<span class="badge">${props.count}</span>` : ''}
+          ${props.label}
         </button>
-        ${props.helperText.value ? html`<small>${props.helperText.value}</small>` : ''}
-      `;
-    },
+      `,
+    };
   },
-);
+});
 ```
 
-### With `PropDef` options
+### With raw `PropDef` for advanced control
 
 ```ts
-import { define, html } from '@vielzeug/craftit';
+import { define, defineProps, html, prop } from '@vielzeug/craftit';
 
 define<{
   data?: Record<string, unknown>;
-  error?: string;
-  internalState?: number;
   timestamp?: number;
-  }>(
-  'x-data-component',
-  {
-    props: {
-      // Don't reflect complex objects to attributes
-      data: { default: {}, reflect: false },
+  internalState?: number;
+}>('x-data-component', {
+  props: {
+    // Don't reflect complex objects to attributes
+    data: { default: {} as Record<string, unknown>, reflect: false },
 
-      // Omit from DOM when empty
-      error: { default: '', omit: true },
-
-      // Custom parsing
-      timestamp: {
-        default: 0,
-        type: Number,
-        parse: (v) => v ? parseInt(v) : 0,
-      },
-
-      // Don't auto-reflect to attribute
-      internalState: { default: 0, type: Number, reflect: false },
+    // Custom parsing
+    timestamp: {
+      default: 0,
+      parse: (v) => (v ? parseInt(v) : 0),
+      reflect: true,
     },
-    setup({ props }) {
-      return html`<div>${props.internalState.value}</div>`;
-    },
+
+    // Don't auto-reflect to attribute
+    internalState: { default: 0, reflect: false },
   },
-);
+  setup(props) {
+    return { render: () => html`<div>${props.internalState}</div>` };
+  },
+});
 ```
 
-### Union props from the component type
+### Union props via `prop.oneOf`
 
 ```ts
-import { define, html } from '@vielzeug/craftit';
+import { define, defineProps, html, prop } from '@vielzeug/craftit';
 
-const COLORS = ['red', 'green', 'blue'] as const;
-const SIZES = ['sm', 'md', 'lg', 'xl'] as const;
-
-define<{
-    color?: (typeof COLORS)[number];
-    size?: (typeof SIZES)[number];
-  }>(
-  'x-colored-box',
-  {
-    props: {
-      color: 'red',
-      size: 'md',
-    },
-    setup({ props }) {
-      return html`
+define('x-colored-box', {
+  props: defineProps({
+    color: prop.oneOf(['red', 'green', 'blue'] as const, 'red'),
+    size: prop.oneOf(['sm', 'md', 'lg', 'xl'] as const, 'md'),
+  }),
+  setup(props) {
+    return {
+      render: () => html`
         <div style=${{ color: props.color.value, fontSize: `var(--size-${props.size.value})` }}>
           Component
         </div>
-      `;
-    },
+      `,
+    };
   },
-);
+});
 ```
 
 ## Expected Output
 
-- TypeScript provides full type inference from the `Props` generic
-- Prop values are still automatically parsed from HTML attributes
-- Optional props evaluate to `undefined` when not set
+- TypeScript infers exact types from each `prop.*` helper
+- Prop values are automatically parsed from HTML attributes
+- Omit props evaluated as their defaults when not set
 - Component renders without runtime type errors
 
 ## API Reference
 
-### Key Features
+### `prop` Helpers
 
-- **Type Safety**: Full TypeScript support from `define<Props>`
-- **Simple Defaults**: Plain values for common cases
-- **Advanced Options**: Inline `PropDef` objects for `parse`, `reflect`, and `omit`
-- **Validation**: Keep allowed values in the prop type and choose sensible defaults
-- **Optional Props**: Use `undefined` defaults for optional fields
-- **Customizable**: Inline `PropDef` objects for parsing, reflection, and behavior
+| Helper | Example | Inferred type |
+|---|---|---|
+| `prop.string(default)` | `prop.string('md')` | `string` (narrows to literal) |
+| `prop.bool(default?)` | `prop.bool(false)` | `boolean` |
+| `prop.number(default?)` | `prop.number(0)` | `number` |
+| `prop.oneOf(allowed, default)` | `prop.oneOf(['a','b'], 'a')` | union of allowed values |
+
+### `defineProps(defs)`
+
+Identity function that returns the defs object unchanged — exists purely for type inference convenience.
 
 ## Common Patterns
 
 ### Theme and Variant Customization
 
 ```ts
-define<{
-  color?: 'primary' | 'secondary' | 'accent' | 'neutral';
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'solid' | 'outline' | 'ghost';
-}>('x-themeable', {
-  props: {
-    color: 'primary',
-    variant: 'solid',
-    size: 'md',
-  },
+define('x-themeable', {
+  props: defineProps({
+    color: prop.oneOf(['primary', 'secondary', 'accent', 'neutral'] as const, 'primary'),
+    size: prop.oneOf(['sm', 'md', 'lg'] as const, 'md'),
+    variant: prop.oneOf(['solid', 'outline', 'ghost'] as const, 'solid'),
+  }),
   setup() {
-    return html`...`;
+    return { render: () => html`...` };
   },
-})
+});
 ```
 
 ### Form Integration
 
 ```ts
-define<{
-  disabled?: boolean;
-  name?: string;
-  placeholder?: string;
-  required?: boolean;
-  value?: string;
-}>('x-field', {
-  props: {
-    name: '',
-    value: '',
-    disabled: false,
-    required: false,
-    placeholder: undefined,
-  },
+define('x-field', {
+  props: defineProps({
+    name: prop.string(''),
+    value: prop.string(''),
+    disabled: prop.bool(false),
+    required: prop.bool(false),
+  }),
   setup() {
-    return html`...`;
+    return { render: () => html`...` };
   },
-})
+});
 ```
 
 ### Configuration Props
 
 ```ts
-define<{
-  itemsPerPage?: number;
-  maxItems?: number;
-  minItems?: number;
-  sortBy?: 'name' | 'date' | 'size';
-}>('x-configurable', {
-  props: {
-    itemsPerPage: 10,
-    minItems: 0,
-    maxItems: undefined,
-    sortBy: 'name',
-  },
+define('x-configurable', {
+  props: defineProps({
+    itemsPerPage: prop.number(10),
+    sortBy: prop.oneOf(['name', 'date', 'size'] as const, 'name'),
+  }),
   setup() {
-    return html`...`;
+    return { render: () => html`...` };
   },
-})
+});
 ```
 
 ## Related Recipes

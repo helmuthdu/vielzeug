@@ -42,6 +42,15 @@ const RegistrationSchema = v
   .refine((value) => value.password === value.confirmPassword, 'Passwords must match');
 ```
 
+## Quick Recipe: Strict by Default Objects
+
+```ts
+const Payload = v.object({ id: v.number().int() });
+
+Payload.safeParse({ id: 1, extra: true }); // failure: unrecognized_keys
+Payload.relaxed().safeParse({ id: 1, extra: true }); // success
+```
+
 ## Quick Recipe: Query Params
 
 ```ts

@@ -1,6 +1,6 @@
 ---
 title: I18nit — Usage Guide
-description: Messages, interpolation, pluralization, loading, scoping, formatting, and subscriptions for i18nit.
+description: Minimal translation, explicit pluralization, loading, unified formatting, and subscriptions for i18nit.
 ---
 
 # I18nit Usage Guide
@@ -33,16 +33,13 @@ i18n.t('nav.home');
 
 ## Variable Interpolation
 
-Interpolation supports nested object paths and array tokens.
+Interpolation supports plain and dot-path placeholders.
 
 ```ts
 const i18n = createI18n({
   locale: 'en',
   messages: {
     en: {
-      count: '{items.length} items',
-      first: 'First: {items[0]}',
-      joinAnd: '{items|and}',
       profile: 'User: {user.name}',
       welcome: 'Hello, {name}!',
     },
@@ -51,14 +48,11 @@ const i18n = createI18n({
 
 i18n.t('welcome', { name: 'Alice' });
 i18n.t('profile', { user: { name: 'Bob' } });
-i18n.t('first', { items: ['a', 'b'] });
-i18n.t('count', { items: ['a', 'b', 'c'] });
-i18n.t('joinAnd', { items: ['A', 'B', 'C'] });
 ```
 
 ## Pluralisation
 
-Plural messages must include `other`; optional forms depend on locale.
+Plural messages are explicit with `tp(key, count, vars?)`.
 
 ```ts
 const i18n = createI18n({
@@ -70,16 +64,16 @@ const i18n = createI18n({
   },
 });
 
-i18n.t('files', { count: 0 });
-i18n.t('files', { count: 1 });
-i18n.t('files', { count: 5 });
+i18n.tp('files', 0);
+i18n.tp('files', 1);
+i18n.tp('files', 5);
 ```
 
-If a plural key is used without `count`, runtime defaults to `0` (with a dev warning).
+Plural keys are resolved as `files.zero|one|two|few|many|other`.
 
 ## Async Loading
 
-Register loaders per locale and load on demand.
+Register loaders and choose strict switch vs tolerant preload.
 
 ```ts
 const i18n = createI18n({
@@ -91,60 +85,57 @@ const i18n = createI18n({
   },
 });
 
-await i18n.ensureLocale('de'); // preloads, does not switch locale
-await i18n.switchLocale('de'); // ensures locale, then switches atomically
+await i18n.preload('de'); // tolerant preload (no locale switch)
+await i18n.setLocale('de'); // strict switch (throws if missing)
 
-i18n.registerLoader('ja', () => import('./locales/ja.json'));
-await i18n.switchLocale('ja');
+i18n.setLoader('ja', () => import('./locales/ja.json'));
+await i18n.setLocale('ja');
 
-await i18n.reload('de'); // force refresh from loader if registered
+i18n.setCatalog('de', { greeting: 'Hallo!' }); // replace catalog
 ```
 
 Notes:
 
-- `ensureLocale()` is a no-op when the locale catalog is already loaded.
-- `switchLocale(locale)` is strict by default and rejects when no loader/catalog exists.
-- Use `'best-effort'` mode only when you intentionally allow untranslated states.
-- `reload(locale)` throws when no loader is registered.
+- `preload(locale)` is tolerant and does not throw for missing loaders.
+- `setLocale(locale)` is strict and throws if locale cannot be loaded.
+- `setCatalog(locale, messages)` fully replaces the locale catalog.
 
-## Scoping
-
-`scope(ns)` prefixes keys; `withLocale(locale)` binds translation locale without changing active locale.
+## Locale and Catalog Metadata
 
 ```ts
 const i18n = createI18n({
   locale: 'en',
+  loaders: {
+    de: () => import('./locales/de.json'),
+  },
   messages: {
-    en: {
-      auth: { login: 'Log in', logout: 'Log out' },
-      greeting: 'Hello',
-    },
-    fr: {
-      auth: { login: 'Connexion', logout: 'Déconnexion' },
-      greeting: 'Bonjour',
-    },
+    en: { greeting: 'Hello' },
   },
 });
 
-const auth = i18n.scope('auth');
-auth.t('login');
-
-const fr = i18n.withLocale('fr');
-fr.t('greeting');
-fr.scope('auth').t('logout');
+console.log(i18n.locale); // 'en'
+console.log(i18n.locales); // ['en']
+console.log(i18n.loadableLocales); // ['de']
+console.log(i18n.has('greeting')); // true
+console.log(i18n.has('missing')); // false
 ```
 
-## Formatting Helpers
+## Formatting
 
-Formatting helpers are locale-aware and backed by Intl APIs.
+Use one entrypoint for all Intl formatting needs.
 
 ```ts
-i18n.number(1234.56);
-i18n.currency(99.99, 'USD');
-i18n.date(new Date(), { dateStyle: 'long' });
-i18n.relative(-3, 'day');
-i18n.list(['Alice', 'Bob', 'Charlie']);
-i18n.list(['Alice', 'Bob'], 'or');
+const i18n = createI18n({
+  locale: 'en',
+  messages: { en: { greeting: 'Hello' } },
+});
+
+i18n.format({ kind: 'number', value: 1234.56 });
+i18n.format({ kind: 'currency', currency: 'USD', value: 99.99 });
+i18n.format({ kind: 'date', value: new Date(), options: { dateStyle: 'long' } });
+i18n.format({ kind: 'relative', value: -3, unit: 'day' });
+i18n.format({ kind: 'list', value: ['Alice', 'Bob', 'Charlie'] });
+i18n.format({ kind: 'list', value: ['Alice', 'Bob'], options: { type: 'or' } });
 ```
 
 ## Subscriptions
@@ -156,23 +147,51 @@ const stop = i18n.subscribe(({ locale, reason }) => {
   console.log(locale, reason); // reason: 'locale-change' | 'catalog-update'
 });
 
-const stopImmediate = i18n.subscribe(({ locale }) => {
-  initUI(locale);
-}, true);
+const stopImmediate = i18n.subscribe(({ locale }) => initUI(locale), true);
 
-i18n.batch(() => {
-  i18n.add('en', { nav: { about: 'About' } });
-  i18n.add('en', { nav: { contact: 'Contact' } });
-});
+i18n.setCatalog('en', { nav: { about: 'About' } });
 
 stop();
 stopImmediate();
 ```
 
+`subscribe(listener, true)` immediately emits a `locale-change` event for the current locale.
+
+## Diagnostics and Missing Keys
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  loaders: {
+    fr: () => fetch('/locales/fr').then((r) => r.json()),
+  },
+  onDiagnostic: (event) => {
+    if (event.kind === 'loader-error') {
+      console.warn('loader failed for', event.locale, event.error);
+    } else {
+      console.error('subscriber failed', event.error);
+    }
+  },
+  onMissing: (key, locale) => `[${locale}] missing: ${key}`,
+});
+
+i18n.t('unknown.key');
+```
+
+## Lifecycle
+
+```ts
+const i18n = createI18n({ locale: 'en' });
+
+i18n.dispose();
+
+// After dispose(), mutating/loading methods throw.
+```
+
 ## Best Practices
 
-- Type your primary locale and use `createI18n<T>()` for key autocomplete.
-- Use `switchLocale()` for user-triggered locale switches.
-- Use `batch()` around multiple `add()`/`replace()` operations to avoid extra re-renders.
-- Prefer `withLocale()` in SSR or multi-locale rendering pipelines.
+- Keep catalogs string-only and use `tp()` for all plural lookups.
+- Use `setLocale()` for user-triggered locale switches.
+- Use `preload()` for opportunistic loading during navigation.
+- Use `format()` instead of custom locale formatting utilities.
 - Use `onDiagnostic` to route loader failures and subscriber errors to observability tooling.

@@ -3,7 +3,7 @@ import { createPressControl } from '@vielzeug/craftit/controls';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
-import { disablableBundle, loadableBundle, type PropsInput, themableBundle } from '../../inputs/shared/bundles';
+import { disablableBundle, loadableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
 import componentStyles from './card.css?inline';
 
@@ -97,7 +97,7 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     orientation: undefined,
     padding: undefined,
     variant: undefined,
-  } satisfies PropsInput<BitCardProps>,
+  },
 
   setup(props, { emit, host, slots }) {
     host.bind({
@@ -150,28 +150,30 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     // Template
     // ────────────────────────────────────────────────────────────────
 
-    return html`
-      <div class="card" part="card">
-        <div class="loading-bar" part="loading-bar"></div>
-        <div class="card-media" part="media" ?hidden="${() => !slots.has('media').value}">
-          <slot name="media"></slot>
+    return {
+      render: () => html`
+        <div class="card" part="card">
+          <div class="loading-bar" part="loading-bar"></div>
+          <div class="card-media" part="media" ?hidden="${() => !slots.has('media').value}">
+            <slot name="media"></slot>
+          </div>
+          <div class="card-body" part="body">
+            <div class="card-header" part="header" ?hidden="${() => !slots.has('header').value}">
+              <slot name="header"></slot>
+            </div>
+            <div class="card-content" part="content" ?hidden="${() => !slots.has().value}">
+              <slot></slot>
+            </div>
+            <div class="card-footer" part="footer" ?hidden="${() => !slots.has('footer').value}">
+              <slot name="footer"></slot>
+            </div>
+            <div class="card-actions" part="actions" ?hidden="${() => !slots.has('actions').value}">
+              <slot name="actions"></slot>
+            </div>
+          </div>
         </div>
-        <div class="card-body" part="body">
-          <div class="card-header" part="header" ?hidden="${() => !slots.has('header').value}">
-            <slot name="header"></slot>
-          </div>
-          <div class="card-content" part="content" ?hidden="${() => !slots.has().value}">
-            <slot></slot>
-          </div>
-          <div class="card-footer" part="footer" ?hidden="${() => !slots.has('footer').value}">
-            <slot name="footer"></slot>
-          </div>
-          <div class="card-actions" part="actions" ?hidden="${() => !slots.has('actions').value}">
-            <slot name="actions"></slot>
-          </div>
-        </div>
-      </div>
-    `;
+      `,
+    };
   },
 
   styles: [...surfaceMixins, frostVariantMixin('.card'), reducedMotionMixin, componentStyles],

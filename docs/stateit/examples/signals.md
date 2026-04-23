@@ -54,35 +54,6 @@ tags.update((arr) => [...arr, 'tsx']); // ['ts', 'js', 'tsx']
 
 ---
 
-### Reactive Form Field with `writable`
-
-`writable` creates a bi-directional computed useful for adapting a store field to a form input:
-
-```ts
-import { signal, writable, effect } from '@vielzeug/stateit';
-
-const raw = signal('  Hello World  ');
-const trimmed = writable(
-  () => raw.value.trim(),
-  (v) => {
-    raw.value = v;
-  },
-);
-
-effect(() => console.log('trimmed:', trimmed.value));
-// → trimmed: Hello World
-
-trimmed.value = 'Updated';
-// raw.value === 'Updated', trimmed.value === 'Updated'
-
-raw.value = '  Spaces  ';
-// trimmed.value === 'Spaces'
-
-trimmed.dispose();
-```
-
----
-
 ### Async Loading State with Signals
 
 Manage loading, data, and error state reactively:
@@ -140,27 +111,6 @@ watch(
 
 ---
 
-### `nextValue` — Await the Next Matching Emission
-
-```ts
-import { signal, nextValue } from '@vielzeug/stateit';
-
-const status = signal<'idle' | 'loading' | 'done'>('idle');
-
-// Somewhere async:
-async function waitForCompletion() {
-  // Resolves on the next change (any value)
-  const next = await nextValue(status);
-  console.log('status changed to:', next);
-
-  // Or wait for a specific condition
-  const done = await nextValue(status, (v) => v === 'done');
-  console.log('done!', done);
-}
-```
-
----
-
 ### `using` Declarations — Automatic Disposal
 
 With the TC39 explicit resource management proposal (`using`), disposables are cleaned up automatically when their block exits:
@@ -179,24 +129,6 @@ const count = signal(0);
 }
 ```
 
----
-
-### Multi-Source `derived`
-
-```ts
-import { signal, derived } from '@vielzeug/stateit';
-
-const price = signal(100);
-const quantity = signal(3);
-const vat = signal(0.2);
-
-const total = derived([price, quantity, vat], (p, q, v) => +(p * q * (1 + v)).toFixed(2));
-
-console.log(total.value); // 360
-price.value = 200;
-console.log(total.value); // 720
-```
-
 ## Expected Output
 
 - The example runs without type errors in a standard TypeScript setup.
@@ -212,4 +144,4 @@ console.log(total.value); // 720
 
 - [Framework Integration](./framework-integration.md)
 - [Pattern: Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)
-- [Pattern: `nextValue` in Async Workflows](./pattern-nextvalue-in-async-workflows.md)
+- [Pattern: Async Workflows with watch](./pattern-nextvalue-in-async-workflows.md)

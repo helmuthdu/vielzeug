@@ -1,16 +1,16 @@
-import { define, computed, html, inject } from '@vielzeug/craftit';
+import { computed, define, html, inject } from '@vielzeug/craftit';
 import {
+  type CheckableChangePayload,
   createCheckableFieldControl,
   createListControl,
   createListKeyControl,
-  type CheckableChangePayload,
 } from '@vielzeug/craftit/controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
-import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -31,17 +31,6 @@ export type BitRadioProps = CheckableProps &
     /** Helper text displayed below the radio */
     helper?: string;
   };
-
-const radioProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  checked: false,
-  error: '',
-  helper: '',
-  name: '',
-  value: '',
-} satisfies PropsInput<BitRadioProps>;
 
 /**
  * A customizable radio button component for mutually exclusive selections.
@@ -68,7 +57,16 @@ const radioProps = {
  */
 export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
   formAssociated: true,
-  props: radioProps,
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    checked: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
+    error: '',
+    helper: '',
+    name: { default: '', reflect: false }, // managed by host.bind (effective name from radio-group)
+    value: '',
+  },
   setup(props, { emit, host }) {
     const groupCtx = inject(RADIO_GROUP_CTX);
     const formCtx = inject(FORM_CTX);
@@ -213,21 +211,23 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       },
     });
 
-    return html`
-      <div class="radio-wrapper" part="radio">
-        <div class="circle" part="circle">
-          <div class="dot" part="dot"></div>
+    return {
+      render: () => html`
+        <div class="radio-wrapper" part="radio">
+          <div class="circle" part="circle">
+            <div class="dot" part="dot"></div>
+          </div>
         </div>
-      </div>
-      <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
-      <div
-        class="helper-text"
-        part="helper-text"
-        data-a11y-helper
-        id="${a11y.helperId}"
-        aria-live="polite"
-        hidden></div>
-    `;
+        <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
+        <div
+          class="helper-text"
+          part="helper-text"
+          data-a11y-helper
+          id="${a11y.helperId}"
+          aria-live="polite"
+          hidden></div>
+      `,
+    };
   },
   styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],
 });

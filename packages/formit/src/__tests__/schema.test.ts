@@ -22,7 +22,7 @@ describe('fromSchema', () => {
       ...fromSchema(mockSchema),
     });
 
-    const { errors, valid } = await form.validate();
+    const { errors, valid } = await form.validateAll();
 
     expect(valid).toBe(false);
     expect(errors.email).toBe('Invalid email');
@@ -35,7 +35,7 @@ describe('fromSchema', () => {
       ...fromSchema(mockSchema),
     });
 
-    const { errors, valid } = await form.validate();
+    const { errors, valid } = await form.validateAll();
 
     expect(valid).toBe(true);
     expect(Object.keys(errors)).toHaveLength(0);
@@ -54,7 +54,7 @@ describe('fromSchema', () => {
       }),
     };
     const form = createForm({ defaultValues: { email: '' }, ...fromSchema(multiSchema) });
-    const { errors } = await form.validate();
+    const { errors } = await form.validateAll();
 
     expect(errors.email).toBe('First');
   });

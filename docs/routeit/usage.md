@@ -1,453 +1,230 @@
 ---
 title: Routeit — Usage Guide
-description: Routes, middleware, groups, navigation, and patterns for Routeit.
+description: Router setup, middleware, navigation, and state patterns for Routeit v3.
 ---
 
 # Routeit Usage Guide
 
 ::: tip New to Routeit?
-Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
+Start with the [Overview](./index.md), then use this page for the day-to-day API.
 :::
 
 [[toc]]
 
-## Basic Usage
-
-### Creating a Router
+## Create a Router
 
 ```ts
-import { createRouter } from '@vielzeug/routeit';
+import { createRouter, defineRoutes } from '@vielzeug/routeit';
 
-const router = createRouter();
-// base '/', no global middleware
-```
+const routes = defineRoutes({
+  home: {
+    path: '/',
+    handler: () => renderHome(),
+  },
+  login: {
+    path: '/login',
+    handler: () => renderLogin(),
+  },
+  dashboard: {
+    path: '/dashboard',
+    handler: () => renderDashboard(),
+    middleware: requireAuth,
+  },
+  userDetail: {
+    path: '/users/:id',
+    handler: ({ params }) => renderUser(params.id),
+    meta: { title: 'User' },
+  },
+  notFound: {
+    path: '*',
+    handler: () => renderNotFound(),
+  },
+});
 
-With options:
-
-```ts
 const router = createRouter({
-  base: '/app', // prefix for all routes
-  viewTransition: true, // use the View Transitions API when available
-  autoStart: true, // start immediately, no separate start() call needed
+  base: '/app',
+  middleware: logger,
+  routes,
+  viewTransition: true,
 });
 ```
 
-### Registering Routes
+`routes` is required. Route names come from the object keys, and object key order controls match precedence.
+
+## Define Routes Once
+
+Each route can provide four things:
+
+| Field | Purpose |
+| --- | --- |
+| `path` | Match pattern |
+| `handler` | Final route handler |
+| `middleware` | Route-specific middleware |
+| `meta` | Static data exposed on `ctx.meta` and route state |
+
+Use wildcard routes for fallback behavior:
 
 ```ts
-// Handler route — params are typed from the path literal
-router.on('/', () => renderHome());
-router.on('/users', () => renderUsers());
-router.on('/users/:id', ({ params }) => renderUser(params.id));
-
-// Middleware-only route (no handler — useful for hooks, guards, analytics)
-router.on('/checkout/*', { middleware: requireAuth });
-
-// Named route with meta
-router.on('/users/:id', ({ params }) => renderUser(params.id), {
-  name: 'userDetail',
-  meta: { title: 'User' },
-});
-
-// All registration methods are chainable
-router
-  .on('/', () => renderHome())
-  .on('/about', () => renderAbout())
-  .on('/contact', () => renderContact())
-  .start();
-```
-
-### Route Context
-
-Every handler and middleware receives a `RouteContext`:
-
-```ts
-router.on('/users/:id', (ctx) => {
-  ctx.params.id; // typed dynamic segment — e.g. '123'
-  ctx.query.page; // query param — e.g. '?page=2' → '2'
-  ctx.query.tags; // repeated key — e.g. '?tags=a&tags=b' → ['a', 'b']
-  ctx.pathname; // current pathname — '/users/123'
-  ctx.hash; // URL hash without '#'
-  ctx.meta; // static metadata from the route definition
-  ctx.locals; // mutable bag — pass data between middleware
-  ctx.navigate; // programmatic navigation from inside the handler
+const routes = defineRoutes({
+  docs: { path: '/docs/*', handler: () => renderDocs() },
+  notFound: { path: '*', handler: () => renderNotFound() },
 });
 ```
 
-### Starting and Stopping
+## Route Context
+
+Handlers and middleware receive a `RouteContext`:
 
 ```ts
-router.start(); // attach popstate listener, handle current URL
-router.stop(); // detach listener
-router.dispose(); // stop + clear all subscribers
-
-// autoStart skips the explicit start() call
-const router = createRouter({ autoStart: true });
-
-// Or with `using` (ES2022 Explicit Resource Management)
-using router = createRouter();
-router.on('/', () => renderHome()).start();
-// router.dispose() is called automatically when the block exits
-```
-
-## Route Groups
-
-Group routes that share a path prefix and optional middleware:
-
-```ts
-router.group(
-  '/admin',
-  (r) => {
-    r.on('/dashboard', () => renderDashboard());
-    r.on('/users', () => renderUsers());
-    r.on('/users/:id', ({ params }) => renderUser(params.id));
+userDetail: {
+  path: '/users/:id',
+  handler: (ctx) => {
+    ctx.params.id;
+    ctx.query.tab;
+    ctx.pathname;
+    ctx.hash;
+    ctx.meta;
+    ctx.locals;
+    ctx.navigate;
+    ctx.pushPath;
+    ctx.replacePath;
   },
-  { middleware: requireAuth },
-);
+}
 ```
 
-Groups are nestable:
-
-```ts
-router.group(
-  '/admin',
-  (r) => {
-    r.group(
-      '/reports',
-      (inner) => {
-        inner.on('/monthly', () => renderMonthly());
-        inner.on('/yearly', () => renderYearly());
-      },
-      { middleware: requireSuperAdmin },
-    );
-    r.on('/dashboard', () => renderDashboard());
-  },
-  { middleware: requireAuth },
-);
-```
-
-The `on()` overloads available inside `group()` match those on the router:
-
-```ts
-router.group('/api', (r) => {
-  r.on('/users', fetchUsers); // handler route
-  r.on('/hook', { middleware: log }); // middleware-only route
-});
-```
-
-## Typed Prefix Params
-
-When the group prefix contains path params, they are automatically typed inside `on()` handlers via the `RouteGroup<Prefix>` generic:
-
-```ts
-router.group('/projects/:projectId', (r) => {
-  // r is RouteGroup<'/projects/:projectId'>
-  r.on('/tasks/:taskId', ({ params }) => {
-    params.projectId; // ✓ string — from the prefix
-    params.taskId; // ✓ string — from this route
-    // params.missing // ✗ TypeScript error
-  });
-});
-```
-
-Nesting compounds the prefix, so deeply nested handlers get all ancestor params:
-
-```ts
-router.group('/orgs/:orgId', (r) => {
-  r.group('/projects/:projectId', (inner) => {
-    inner.on('/tasks/:taskId', ({ params }) => {
-      params.orgId; // ✓ typed
-      params.projectId; // ✓ typed
-      params.taskId; // ✓ typed
-    });
-  });
-});
-```
+`ctx.locals` is mutable and shared through the active middleware chain.
 
 ## Middleware
 
-Middleware receives the context and a `next` function. Call `next()` to continue; return without calling it to block the handler.
+Middleware wraps the handler using the familiar `async (ctx, next) => { ... }` shape.
 
 ```ts
-const logger: Middleware = async (ctx, next) => {
-  console.log('→', ctx.pathname);
+const requireAuth = async (ctx, next) => {
+  if (!session.user) {
+    await ctx.navigate({ name: 'login' }, { replace: true });
+    return;
+  }
+
   await next();
-  console.log('←', ctx.pathname);
 };
 
-const requireAuth: Middleware = async (ctx, next) => {
-  if (!isLoggedIn()) {
-    await ctx.navigate('/login', { replace: true });
-    return; // block — handler never runs
-  }
+const loadCurrentUser = async (ctx, next) => {
+  ctx.locals.user = await fetchCurrentUser();
   await next();
 };
 ```
 
-### Middleware Chain Order
+Order is fixed and simple:
 
 ```text
-Global middleware (RouterOptions.middleware or router.use())
+global middleware
   ↓
-Group middleware (group() options.middleware)
+route middleware
   ↓
-Route middleware (on() options.middleware)
-  ↓
-Route handler
+handler
 ```
 
-### Passing Data with `locals`
+### Error Boundaries
 
-Use `ctx.locals` to pass data from middleware to downstream middleware or the handler:
+Routeit no longer has a special `onError` hook. Wrap `await next()` in middleware instead.
 
 ```ts
-const loadUser: Middleware = async (ctx, next) => {
-  ctx.locals.user = await fetchUser(ctx.params.id);
-  await next();
+const boundary = async (ctx, next) => {
+  try {
+    await next();
+  } catch (error) {
+    reportRouteError(ctx.pathname, error);
+    await ctx.replacePath('/error');
+  }
 };
 
-router.on(
-  '/users/:id',
-  (ctx) => {
-    const user = ctx.locals.user as User; // already loaded by middleware
-    renderUser(user);
-  },
-  { middleware: loadUser },
-);
-```
-
-### Global Middleware
-
-```ts
-// Via options
-const router = createRouter({ middleware: logger });
-
-// After construction — appended after any middleware already registered
-router.use(analytics, errorTracker);
+const router = createRouter({
+  middleware: boundary,
+  routes,
+});
 ```
 
 ## Navigation
 
-### `navigate(target, options?)`
+### Named Navigation
 
 ```ts
-// Path string
-await router.navigate('/users/42');
-await router.navigate('/users/42', { replace: true });
-await router.navigate('/users/42', { state: { from: '/' } });
-
-// Named route
 await router.navigate({ name: 'userDetail', params: { id: '42' } });
-await router.navigate({ name: 'user', params: { id: '42' }, hash: 'activity' });
-await router.navigate({ name: 'search', query: { q: 'hello' } });
-
-// Force navigation even if the URL hasn't changed
-await router.navigate('/page', { force: true });
+await router.navigate({ name: 'userDetail', params: { id: '42' } }, { replace: true });
+await router.navigate({ name: 'search', query: { q: 'routeit' }, hash: 'results' });
 ```
 
-`navigate()` is async. Errors (e.g. unknown named route) become rejected Promises:
+### Raw Path Escape Hatches
 
 ```ts
-try {
-  await router.navigate({ name: 'nonExistent' });
-} catch (e) {
-  console.error(e); // '[routeit] Route "nonExistent" not found'
-}
+await router.pushPath('/marketing?utm_source=campaign');
+await router.replacePath('/checkout#payment');
 ```
+
+Use these when a destination does not belong in the route table. The primary API remains named navigation.
 
 ### Same-URL Deduplication
 
-By default, navigating to the current URL is a no-op — no new history entry is pushed and no handler re-runs. Override with `{ force: true }`:
-
 ```ts
-await router.navigate('/current-page'); // no-op
-await router.navigate('/current-page', { force: true }); // re-runs handler
+await router.navigate({ name: 'dashboard' });
+await router.navigate({ name: 'dashboard' }); // no-op
+await router.navigate({ name: 'dashboard' }, { force: true }); // re-runs
 ```
 
-### In-Handler Navigation
-
-Navigate from inside a handler or middleware using `ctx.navigate`:
+## URLs and Active State
 
 ```ts
-router.on(
-  '/profile',
-  async (ctx) => {
-    if (!ctx.locals.user) {
-      await ctx.navigate('/login', { replace: true });
-      return;
-    }
-    renderProfile(ctx.locals.user);
-  },
-  { middleware: requireAuth },
-);
+router.url('userDetail', { id: '42' });
+router.url('userDetail', { id: '42' }, { tab: 'profile' });
+
+router.isActive('userDetail');
+router.isActive('users', false);
 ```
 
-## Named Routes
-
-Attach a `name` to a route to navigate and build URLs without hard-coding paths:
-
-```ts
-router
-  .on('/', () => renderHome(), { name: 'home' })
-  .on('/users', () => renderUsers(), { name: 'userList' })
-  .on('/users/:id', ({ params }) => renderUser(params.id), { name: 'userDetail' })
-  .on('/users/:id/posts/:postId', ({ params }) => renderPost(params), { name: 'userPost' })
-  .start();
-
-// Navigate by name
-await router.navigate({ name: 'userDetail', params: { id: '42' } });
-await router.navigate({ name: 'userPost', params: { id: '1', postId: '99' } });
-
-// Build URLs
-router.url('userDetail', { id: '42' }); // '/users/42'
-router.url('userList', undefined, { page: '2' }); // '/users?page=2'
-router.isActive('userDetail'); // exact match by name
-router.isActive('userList', false); // prefix match by name
-```
-
-## URL Builder
-
-`url(nameOrPattern, params?, query?)` generates a URL and prepends the base path:
-
-```ts
-const router = createRouter({ base: '/app' });
-router.on('/users/:id', () => {}, { name: 'userDetail' }).start();
-
-router.url('/users/:id', { id: '42' }); // '/app/users/42'
-router.url('userDetail', { id: '42' }); // '/app/users/42'
-router.url('/search', undefined, { q: 'ts' }); // '/app/search?q=ts'
-router.url('/docs/:rest*', { rest: 'guide/intro' }); // '/app/docs/guide/intro'
-router.url('/products', undefined, { tags: ['a', 'b'] }); // '/app/products?tags=a&tags=b'
-```
-
-## `isActive`
-
-Check whether a path pattern or named route matches the current URL:
-
-```ts
-// Exact match (default)
-router.isActive('/users/:id'); // true when pathname is exactly '/users/42'
-router.isActive('userDetail'); // same, but by route name
-
-// Prefix match — useful for nav highlighting on parent items
-router.isActive('/admin', false); // true for '/admin', '/admin/users', etc.
-router.isActive('adminGroup', false); // same, by route name
-```
-
-## Route Metadata
-
-Attach static data to a route via `meta`. Use it for page titles, permission requirements, breadcrumbs, etc.:
-
-```ts
-router.on('/admin', renderAdmin, {
-  name: 'admin',
-  meta: { title: 'Admin', requiresAuth: true, roles: ['admin'] },
-  middleware: async (ctx, next) => {
-    if (!(ctx.meta as any)?.requiresAuth || isLoggedIn()) {
-      await next();
-    } else {
-      await ctx.navigate('/login', { replace: true });
-    }
-  },
-});
-```
-
-`ctx.meta` is also available on the `RouteState` emitted to `subscribe()` listeners, so you can update page titles reactively:
-
-```ts
-router.subscribe(({ meta }) => {
-  const m = meta as { title?: string } | undefined;
-  document.title = m?.title ?? 'My App';
-});
-```
+`isActive(name, false)` is useful for parent navigation items.
 
 ## Resolve Without Navigating
 
-`resolve(pathname)` synchronously finds the matching route — no navigation, no handler execution, no subscribers notified:
-
 ```ts
-const match = router.resolve('/users/42');
-// → { name: 'userDetail', params: { id: '42' }, meta: { title: 'User' } }
+const match = router.resolve('/app/users/42');
 
-const miss = router.resolve('/unknown');
-// → null
-
-// Useful for prefetching data before navigation
-const match = router.resolve(window.location.pathname);
 if (match?.name === 'userDetail') {
-  prefetch(`/api/users/${match.params.id}`);
+  prefetchUser(match.params.id);
 }
 ```
 
-## State & Subscriptions
+`resolve()` strips the configured base automatically.
 
-### `state` getter
-
-```ts
-const { pathname, params, query, hash, name, meta } = router.state;
-// Returns an immutable snapshot
-```
-
-### `subscribe(listener)`
-
-Called immediately with the current state, then after every navigation:
+## State and Subscriptions
 
 ```ts
-const unsubscribe = router.subscribe((state) => {
-  state.pathname; // '/users/42'
-  state.params; // { id: '42' }
-  state.query; // { page: '2' }
-  state.name; // 'userDetail'
-  state.meta; // { title: 'User' }
+router.subscribe((state) => {
+  document.title = (state.meta as { title?: string } | undefined)?.title ?? 'App';
 });
 
-unsubscribe(); // stop listening
+router.state.pathname;
+router.state.params;
+router.state.query;
+router.state.name;
 ```
 
-Subscriber errors are caught, logged to `console.error`, and do not affect other subscribers.
+The state object is frozen. A successful navigation replaces it with a new immutable snapshot.
 
-## Error Handling
-
-### `onError`
-
-Catches errors thrown by handlers or middleware. Receives the thrown value and the current `RouteContext`:
+## Lifecycle
 
 ```ts
-const router = createRouter({
-  onError: (error, ctx) => {
-    console.error('Route error at', ctx.pathname, error);
-    ctx.navigate('/error');
-  },
-});
+router.start();
+router.stop();
+router.dispose();
+
+const autoRouter = createRouter({ autoStart: true, routes });
 ```
 
-If no `onError` is provided, errors are logged to `console.error` and swallowed.
+`start()` is idempotent. `dispose()` prevents future router usage.
 
-### `onNotFound`
+## Design Changes From Older Routeit Versions
 
-Called when no registered route matches the current URL:
-
-```ts
-const router = createRouter({
-  onNotFound: ({ pathname }) => {
-    document.getElementById('app')!.innerHTML = `
-      <h1>404 — Not Found</h1>
-      <p>"${pathname}" does not exist.</p>
-    `;
-  },
-});
-```
-
-## View Transitions
-
-Wrap navigations in the [View Transition API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transitions_API) for animated page transitions:
-
-```ts
-// Enable globally
-const router = createRouter({ viewTransition: true });
-
-// Enable per navigation only
-await router.navigate('/about', { viewTransition: true });
-```
-
-Falls back to plain execution in environments that don't support `document.startViewTransition`.
+- `on()`, `group()`, and `use()` are gone.
+- Route names are mandatory for `navigate()`, `url()`, and `isActive()` because the route table always gives you one.
+- Not-found handling is a normal route, usually `path: '*'`.
+- Error handling lives in middleware instead of special router hooks.

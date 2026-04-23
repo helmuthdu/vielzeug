@@ -1,211 +1,75 @@
 ---
-title: 'Deposit Examples — Advanced Examples'
-description: 'Advanced TTL, transaction, batch, and migration examples for Deposit.'
+title: Deposit Examples — Advanced
+description: Transaction and migration patterns for advanced deposit usage.
 ---
 
-## Advanced Examples
-
-## Problem
-
-Implement advanced examples in a production-friendly way with `@vielzeug/deposit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/deposit` installed.
-
-### Session Cache with TTL
-
-Cache authentication data with automatic expiry. No manual expiry checks needed.
+## Atomic Multi-Table Transaction
 
 ```ts
-import { createLocalStorage, defineSchema, ttl } from '@vielzeug/deposit';
+import { createIndexedDB, type Schema } from '@vielzeug/deposit';
 
-interface Session {
-  id: string;
-  userId: string;
-  accessToken: string;
-  refreshToken: string;
-}
+type User = { id: number; name: string };
+type Post = { id: number; title: string; userId: number };
 
-const schema = defineSchema<{ sessions: Session }>({ sessions: { key: 'id' } });
-const cache = createLocalStorage({ dbName: 'auth', schema });
+const schema: Schema<{ users: User; posts: Post }> = {
+  users: { key: 'id' },
+  posts: { key: 'id' },
+};
 
-async function getOrRefreshSession(id: string): Promise<Session> {
-  return cache.getOrPut(
-    'sessions',
-    id,
-    async () => {
-      const res = await fetch('/api/auth/refresh');
-      const data = (await res.json()) as Session;
-      return data;
-    },
-    ttl.hours(1),
-  );
-}
+const db = createIndexedDB({ dbName: 'blog', version: 1, schema });
 
-// Invalidate on logout
-async function logout(id: string) {
-  await cache.delete('sessions', id);
-}
+await db.transaction(['users', 'posts'], async (tx) => {
+  await tx.put('users', { id: 1, name: 'Alice' });
+  await tx.put('posts', { id: 10, title: 'Hello', userId: 1 });
+});
 ```
 
----
-
-### Multi-Table Atomic Transaction
-
-An order is updated and a related audit log entry is created in a single atomic write.
+## Transaction Rollback on Error
 
 ```ts
-import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
+await db.put('users', { id: 2, name: 'Bob' });
 
-interface Order {
-  id: number;
-  userId: number;
-  status: 'pending' | 'shipped' | 'delivered';
-  total: number;
-}
-interface AuditLog {
-  id: number;
-  orderId: number;
-  action: string;
-  at: number;
-}
-
-const schema = defineSchema<{ orders: Order; audit: AuditLog }>({
-  orders: { key: 'id' },
-  audit: { key: 'id', indexes: ['orderId'] },
+await db.transaction(['users'], async (tx) => {
+  await tx.delete('users', 2);
+  throw new Error('abort transaction');
 });
 
-const db = createIndexedDB({ dbName: 'shop', version: 1, schema });
-
-async function shipOrder(orderId: number, auditId: number): Promise<void> {
-  await db.transaction(['orders', 'audit'], async (tx) => {
-    const order = await tx.get('orders', orderId);
-    if (!order) throw new Error(`Order ${orderId} not found`);
-    if (order.status !== 'pending') throw new Error('Order already processed');
-
-    await tx.patch('orders', orderId, { status: 'shipped' });
-    await tx.put('audit', { id: auditId, orderId, action: 'shipped', at: Date.now() });
-
-    // reads also work inside the transaction
-    const total = await tx.count('orders');
-    const recent = await tx.from('audit').orderBy('at', 'desc').limit(5).toArray();
-  });
-  // Either both writes happened, or neither did
-}
+// Bob still exists because the transaction was aborted.
+const bob = await db.get('users', 2);
 ```
 
----
-
-### Batch Operations
-
-Import, delete, and query records in bulk.
+## TTL Cache Entry
 
 ```ts
-import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
+import { createLocalStorage, ttl, type Schema } from '@vielzeug/deposit';
 
-interface Contact {
-  id: number;
-  name: string;
-  email: string;
-  group: string;
-}
+type CacheEntry = { id: string; value: string };
+const schema: Schema<{ cache: CacheEntry }> = { cache: { key: 'id' } };
 
-const schema = defineSchema<{ contacts: Contact }>({
-  contacts: { key: 'id', indexes: ['group'] },
-});
-
-const db = createIndexedDB({ dbName: 'crm', version: 1, schema });
-
-// Bulk import
-const imported: Contact[] = await fetch('/api/contacts').then((r) => r.json());
-await db.putMany('contacts', imported);
-
-// Fetch specific records by ID
-const selected = await db.getMany('contacts', [1, 7, 42]);
-
-// Bulk delete stale records
-const staleIds = (await db.from('contacts').equals('group', 'archived').toArray()).map((c) => c.id);
-await db.deleteMany('contacts', staleIds);
-
-// Numeric aggregation with reduce
-const totalCount = await db.from('contacts').count();
-const activeCount = await db
-  .from('contacts')
-  .filter((c) => c.group !== 'archived')
-  .count();
-
-// Find contacts by name substring
-const smiths = await db.from('contacts').contains('smith', ['name']).toArray();
-
-db.close();
+const db = createLocalStorage({ dbName: 'cache', schema });
+await db.put('cache', { id: 'k1', value: 'payload' }, ttl.seconds(30));
 ```
 
----
-
-### Schema Migration
-
-Add an index and a table when upgrading from v1 to v3.
+## IndexedDB Migration Hook
 
 ```ts
-import { createIndexedDB, defineSchema, type MigrationFn, storeField } from '@vielzeug/deposit';
+import { createIndexedDB, type MigrationFn, type Schema } from '@vielzeug/deposit';
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-}
-interface Tag {
-  id: number;
-  label: string;
-}
+type User = { id: number; name: string };
+const schema: Schema<{ users: User }> = { users: { key: 'id' } };
 
-const schema = defineSchema<{ users: User; tags: Tag }>({
-  users: { key: 'id', indexes: ['email', 'role'] },
-  tags: { key: 'id' },
-});
-
-const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
-  if (oldVersion < 2) {
-    tx.objectStore('users').createIndex('role', storeField('role'));
-  }
-  if (oldVersion < 3) {
-    db.createObjectStore('tags', { keyPath: storeField('id') });
+const migrationFn: MigrationFn = ({ db, oldVersion, tx }) => {
+  if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
+    tx.objectStore('users').createIndex('name', 'v.name', { unique: false });
   }
 };
 
-const db = createIndexedDB({ dbName: 'my-app', version: 3, schema, migrationFn });
-```
-
----
-
-### Inline Schema
-
-```ts
-import { createLocalStorage } from '@vielzeug/deposit';
-
-const db = createLocalStorage<{ items: { id: string; label: string; done: boolean } }>({
-  dbName: 'todos',
-  schema: { items: { key: 'id' } },
+const db = createIndexedDB({
+  dbName: 'blog',
+  migrationFn,
+  schema,
+  version: 2,
 });
 
-await db.put('items', { id: '1', label: 'Buy milk', done: false });
-const todo = await db.get('items', '1');
-// todo is typed as { id: string; label: string; done: boolean } | undefined
+void db;
 ```
-
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Basic Examples](./basic-examples.md)

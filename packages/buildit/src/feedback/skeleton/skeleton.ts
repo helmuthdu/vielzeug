@@ -1,9 +1,9 @@
-import { define, computed, html, onMount, signal, watch } from '@vielzeug/craftit';
+import { define, prop, computed, html, signal, watch } from '@vielzeug/craftit';
 import { intersectionObserver } from '@vielzeug/craftit/observers';
 
 import type { ComponentSize } from '../../types';
 
-import { type PropsInput, sizableBundle } from '../../inputs/shared/bundles';
+import { sizableBundle } from '../../inputs/shared/bundles';
 import { reducedMotionMixin } from '../../styles';
 import componentStyles from './skeleton.css?inline';
 
@@ -74,9 +74,9 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
     lines: 1,
     radius: undefined,
     striped: false,
-    variant: 'rect',
+    variant: prop.oneOf(['rect', 'circle', 'text'] as const, 'rect'),
     width: undefined,
-  } satisfies PropsInput<BitSkeletonProps>,
+  },
   setup(props, { host }) {
     const isPaused = signal(false);
     const lineCount = () => {
@@ -114,34 +114,36 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
       },
     });
 
-    onMount(() => {
-      const entry = intersectionObserver(host.el, { threshold: 0 });
+    return {
+      mount() {
+        const entry = intersectionObserver(host.el, { threshold: 0 });
 
-      watch(entry, (e) => {
-        const paused =
-          typeof e === 'object' && e !== null && 'isIntersecting' in e
-            ? !(e as IntersectionObserverEntry).isIntersecting
-            : false;
+        watch(entry, (e) => {
+          const paused =
+            typeof e === 'object' && e !== null && 'isIntersecting' in e
+              ? !(e as IntersectionObserverEntry).isIntersecting
+              : false;
 
-        isPaused.value = paused;
-      });
-    });
+          isPaused.value = paused;
+        });
+      },
 
-    return html`
-      <div class="stack" part="stack">
-        ${() =>
-          Array.from({ length: renderLineCount() }, (_, index) => {
-            const isLastLine =
-              props.variant.value === 'text' && renderLineCount() > 1 && index === renderLineCount() - 1;
+      render: () => html`
+        <div class="stack" part="stack">
+          ${() =>
+            Array.from({ length: renderLineCount() }, (_, index) => {
+              const isLastLine =
+                props.variant.value === 'text' && renderLineCount() > 1 && index === renderLineCount() - 1;
 
-            return html`<div
-              class="bone"
-              part="bone"
-              aria-hidden="true"
-              :data-last="${() => (isLastLine ? 'true' : null)}"></div>`;
-          })}
-      </div>
-    `;
+              return html`<div
+                class="bone"
+                part="bone"
+                aria-hidden="true"
+                :data-last="${() => (isLastLine ? 'true' : null)}"></div>`;
+            })}
+        </div>
+      `,
+    };
   },
   styles: [reducedMotionMixin, componentStyles],
 });

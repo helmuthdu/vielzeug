@@ -9,7 +9,7 @@ description: Practical lifecycle patterns for setup, cleanup, refs, and host wir
 
 ## Prefer Setup-Scope Reactivity
 
-Most component logic should live directly in `setup()` using `effect()` and `watch()`.
+Most component logic should live directly in `setup()` using `effect()`.
 
 ```ts
 import { define, effect, html, signal } from '@vielzeug/craftit';
@@ -22,12 +22,12 @@ define('counter-title', {
       document.title = `Count: ${count.value}`;
     });
 
-    return html`<button @click=${() => count.value++}>${count}</button>`;
+    return { render: () => html`<button @click=${() => count.value++}>${count}</button>` };
   },
 });
 ```
 
-Use `onMount()` only when you must wait for mount timing (for example platform observers or imperative third-party APIs).
+Use `mount()` on the returned `ComponentInstance` only when you must wait for the DOM to be ready (for example platform observers or imperative third-party APIs).
 
 ## Use `onElement()` for Ref-Driven Effects
 
@@ -52,7 +52,7 @@ define('focus-input', {
       return () => input.removeEventListener('keydown', onKeydown);
     });
 
-    return html`<input ref=${inputRef} />`;
+    return { render: () => html`<input ref=${inputRef} />` };
   },
 });
 ```
@@ -61,37 +61,31 @@ define('focus-input', {
 
 Use:
 
-- `host.bind({ attr: ... })`, `host.bind({ class: ... })`, and `host.bind({ on: ... })` for host wiring
+- `host.attr(name, signal)`, `host.class(map)`, `host.style(map)`, `host.prop(name, descriptor)`, `host.on(event, listener)` — one-liner helpers for individual bindings
+- `host.bind({ attr, class, on, prop, style })` — full config object when wiring multiple bindings together
 - `handle(target, event, listener)` for external targets (`window`, `document`, arbitrary elements)
 
+Host binding values must be **signals or primitives** — use `computed(...)` for derived reactive values.
+
 ```ts
-import { define, handle, html, onMount, signal } from '@vielzeug/craftit';
+import { computed, define, handle, html, signal } from '@vielzeug/craftit';
 
 define('toggle-host', {
-  setup({ host }) {
+  setup(_props, { host }) {
     const open = signal(false);
+    const expanded = computed(() => String(open.value));
 
     host.bind({
-      attr: {
-        'aria-expanded': () => String(open.value),
-        role: 'button',
-        tabindex: 0,
-      },
-      class: () => ({ 'is-open': open.value }),
-      on: {
-        click: () => {
-          open.value = !open.value;
-        },
-      },
+      attr: { 'aria-expanded': expanded, role: 'button', tabindex: 0 },
+      class: { 'is-open': open },
+      on: { click: () => { open.value = !open.value; } },
     });
 
-    onMount(() => {
-      handle(window, 'keydown', (e) => {
-        if (e.key === 'Escape') open.value = false;
-      });
+    handle(window, 'keydown', (e) => {
+      if (e.key === 'Escape') open.value = false;
     });
 
-    return html`<slot></slot>`;
+    return { render: () => html`<slot></slot>` };
   },
 });
 ```
@@ -101,66 +95,37 @@ define('toggle-host', {
 - Use `onCleanup(fn)` for one-time teardown owned by the component.
 - Use a mutable cleanup variable when a disposable resource is replaced over time.
 
-Inside `setup()`/lifecycle helpers, `onCleanup()` is owned by the component instance; inside plain stateit effects outside component runtime it follows effect teardown.
-
 ```ts
-import { define, html, onCleanup, onMount, signal } from '@vielzeug/craftit';
+import { define, html, onCleanup } from '@vielzeug/craftit';
 
-define(
-  'search-loader',
-  {
-    setup() {
-      const query = signal('');
-      let activeRequest: (() => void) | null = null;
+define('search-loader', {
+  setup() {
+    const query = signal('');
+    let activeRequest: (() => void) | null = null;
 
-      onMount(() => {
-        const runSearch = () => {
-          const controller = new AbortController();
+    effect(() => {
+      const controller = new AbortController();
+      activeRequest?.();
+      activeRequest = () => controller.abort();
+      fetch(`/api/search?q=${encodeURIComponent(query.value)}`, {
+        signal: controller.signal,
+      }).catch(() => {});
+    });
 
-          activeRequest?.();
-          activeRequest = () => controller.abort();
-          fetch(`/api/search?q=${encodeURIComponent(query.value)}`, { signal: controller.signal }).catch(() => {});
-        };
+    onCleanup(() => {
+      activeRequest?.();
+      activeRequest = null;
+    });
 
-        runSearch();
-      });
-
-      onCleanup(() => {
-        activeRequest?.();
-        activeRequest = null;
-      });
-
-      return html`<div>Searching…</div>`;
-    },
+    return { render: () => html`<div>Searching…</div>` };
   },
-);
-```
-
-## Error Handling Pattern
-
-Attach `onError()` once in setup to keep failures local to the component.
-
-```ts
-import { define, html, onError } from '@vielzeug/craftit';
-
-define(
-  'safe-widget',
-  {
-    setup() {
-      onError((err) => {
-        console.error('[my-widget]', err);
-      });
-
-      return html`<div>Safe widget</div>`;
-    },
-  },
-);
+});
 ```
 
 ## Quick Checklist
 
-- Keep reactive state/effects in setup scope first.
-- Use `onElement()` for ref-based imperative logic.
-- Keep host class/attrs/listeners in `host.bind(...)`.
-- Use `onMount()` only for mount-gated APIs.
+- Keep reactive state/effects in setup scope.
+- Use `onElement()` for ref-based imperative DOM logic.
+- Host bindings: use signals or primitives; use `computed(...)` for derived values.
+- Use one-liner helpers (`host.attr`, `host.class`, etc.) for single bindings; `host.bind(...)` for multi-binding config objects.
 - Return/attach cleanups for every listener or disposable resource.

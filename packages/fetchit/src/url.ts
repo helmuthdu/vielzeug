@@ -1,4 +1,6 @@
-export type ParamValue = string | number | boolean | undefined;
+type QueryScalar = string | number | boolean | null;
+
+export type ParamValue = QueryScalar | readonly QueryScalar[] | undefined;
 export type Params = Record<string, ParamValue>;
 
 // Type-safe path params: extracts {param} placeholders from a path string
@@ -13,7 +15,7 @@ type PathConfig<P extends string> = [ExtractPathParams<P>] extends [never]
 export type HttpRequestConfig<P extends string = string> = Omit<RequestInit, 'body' | 'method'> &
   PathConfig<P> & {
     body?: unknown;
-    dedupe?: boolean;
+    dedupeKey?: unknown;
     query?: Params;
     timeout?: number;
   };
@@ -38,11 +40,27 @@ export function buildUrl(base: string, path: string, params?: Params, query?: Pa
 
   if (!query) return url;
 
-  const qs = new URLSearchParams(
-    Object.entries(query)
-      .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => [k, String(v)]),
-  ).toString();
+  const qs = new URLSearchParams();
 
-  return qs ? `${url}${url.includes('?') ? '&' : '?'}${qs}` : url;
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        if (entry !== undefined) {
+          qs.append(key, entry === null ? '' : String(entry));
+        }
+      }
+
+      continue;
+    }
+
+    qs.append(key, value === null ? '' : String(value));
+  }
+
+  const queryString = qs.toString();
+
+  return queryString ? `${url}${url.includes('?') ? '&' : '?'}${queryString}` : url;
 }

@@ -1,10 +1,9 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, createId, handle, html, onMount, ref, signal, watch } from '@vielzeug/craftit';
+import { createId, define, handle, html, prop, ref, signal, watch } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import '../../content/icon/icon';
-import { type PropsInput } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { lockBackground, unlockBackground, useOverlay } from '../../utils';
 import styles from './drawer.css?inline';
@@ -106,23 +105,19 @@ export type BitDrawerProps = {
  * ```
  */
 
-/** Event schema for bit-drawer. */
-
-const drawerProps = {
-  backdrop: undefined,
-  dismissible: true,
-  'initial-focus': undefined,
-  label: undefined,
-  open: false,
-  persistent: false,
-  placement: 'right',
-  'return-focus': true,
-  size: undefined,
-  title: undefined,
-} satisfies PropsInput<BitDrawerProps>;
-
 export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', {
-  props: drawerProps,
+  props: {
+    backdrop: undefined,
+    dismissible: true,
+    'initial-focus': undefined,
+    label: undefined,
+    open: false,
+    persistent: false,
+    placement: prop.oneOf(['left', 'right', 'top', 'bottom'] as const, 'right'),
+    'return-focus': true,
+    size: undefined,
+    title: undefined,
+  },
   setup(props, { emit, host, slots }) {
     const drawerLabelId = createId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
@@ -215,108 +210,110 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
     // Lifecycle: Setup Drawer Integration
     // ────────────────────────────────────────────────────────────────
 
-    onMount(() => {
-      const dialog = dialogRef.value;
+    return {
+      mount() {
+        const dialog = dialogRef.value;
 
-      if (!dialog) return;
+        if (!dialog) return;
 
-      // Expose imperative API
-      const el = host.el as DrawerElement;
+        // Expose imperative API
+        const el = host.el as DrawerElement;
 
-      el.show = () => {
-        overlay.open({ reason: 'programmatic' });
-      };
+        el.show = () => {
+          overlay.open({ reason: 'programmatic' });
+        };
 
-      el.hide = () => {
-        overlay.close({ reason: 'programmatic', restoreFocus: false });
-      };
-
-      // ────────────────────────────────────────────────────────────
-      // Event Handlers: Native Close, Escape, Backdrop Click
-      // ────────────────────────────────────────────────────────────
-
-      const handleNativeClose = () => {
-        unlockBackground();
-        host.el.removeAttribute('open');
-        isOpen.value = false;
-        restoreFocus();
-        emit('close', { placement: props.placement.value ?? 'right', reason: closeReason });
-        closeReason = 'programmatic';
-      };
-
-      const handleCancel = (e: Event) => {
-        e.preventDefault();
-
-        if (props.persistent.value) return;
-
-        requestClose('escape');
-      };
-
-      const handleBackdropClick = (e: MouseEvent) => {
-        if (props.persistent.value) return;
-
-        if (e.target !== dialog) return; // Click inside panel
-
-        requestClose('outside-click');
-      };
-
-      // Sync open prop → native dialog
-      watch(
-        props.open,
-        (isOpen) => {
-          if (isOpen) {
-            overlay.open({ reason: 'programmatic' });
-
-            return;
-          }
-
+        el.hide = () => {
           overlay.close({ reason: 'programmatic', restoreFocus: false });
-        },
-        { immediate: true },
-      );
+        };
 
-      handle(dialog, 'close', handleNativeClose);
-      handle(dialog, 'cancel', handleCancel);
-      handle(dialog, 'click', handleBackdropClick);
+        // ────────────────────────────────────────────────────────────
+        // Event Handlers: Native Close, Escape, Backdrop Click
+        // ────────────────────────────────────────────────────────────
 
-      return () => {
-        if (dialog.open) {
+        const handleNativeClose = () => {
           unlockBackground();
-          dialog.close();
-        }
-      };
-    });
+          host.el.removeAttribute('open');
+          isOpen.value = false;
+          restoreFocus();
+          emit('close', { placement: props.placement.value ?? 'right', reason: closeReason });
+          closeReason = 'programmatic';
+        };
 
-    return html`
-      <dialog
-        ref=${dialogRef}
-        aria-modal="true"
-        :aria-label="${props.label}"
-        :aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}">
-        <div class="panel" part="panel" ref=${panelRef}>
-          <div class="header" part="header" ?hidden=${() => !hasHeader()}>
-            <span class="header-title" id="${drawerLabelId}">
-              <slot name="header">${props.title}</slot>
-            </span>
-            <button
-              class="close-btn"
-              part="close-btn"
-              type="button"
-              aria-label="Close"
-              ?hidden=${() => !props.dismissible.value}
-              @click=${handleCloseButtonClick}>
-              <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
-            </button>
+        const handleCancel = (e: Event) => {
+          e.preventDefault();
+
+          if (props.persistent.value) return;
+
+          requestClose('escape');
+        };
+
+        const handleBackdropClick = (e: MouseEvent) => {
+          if (props.persistent.value) return;
+
+          if (e.target !== dialog) return; // Click inside panel
+
+          requestClose('outside-click');
+        };
+
+        // Sync open prop → native dialog
+        watch(
+          props.open,
+          (isOpen) => {
+            if (isOpen) {
+              overlay.open({ reason: 'programmatic' });
+
+              return;
+            }
+
+            overlay.close({ reason: 'programmatic', restoreFocus: false });
+          },
+          { immediate: true },
+        );
+
+        handle(dialog, 'close', handleNativeClose);
+        handle(dialog, 'cancel', handleCancel);
+        handle(dialog, 'click', handleBackdropClick);
+
+        return () => {
+          if (dialog.open) {
+            unlockBackground();
+            dialog.close();
+          }
+        };
+      },
+
+      render: () => html`
+        <dialog
+          ref=${dialogRef}
+          aria-modal="true"
+          :aria-label="${props.label}"
+          :aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}">
+          <div class="panel" part="panel" ref=${panelRef}>
+            <div class="header" part="header" ?hidden=${() => !hasHeader()}>
+              <span class="header-title" id="${drawerLabelId}">
+                <slot name="header">${props.title}</slot>
+              </span>
+              <button
+                class="close-btn"
+                part="close-btn"
+                type="button"
+                aria-label="Close"
+                ?hidden=${() => !props.dismissible.value}
+                @click=${handleCloseButtonClick}>
+                <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
+              </button>
+            </div>
+            <div class="body" part="body">
+              <slot></slot>
+            </div>
+            <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
+              <slot name="footer"></slot>
+            </div>
           </div>
-          <div class="body" part="body">
-            <slot></slot>
-          </div>
-          <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
-            <slot name="footer"></slot>
-          </div>
-        </div>
-      </dialog>
-    `;
+        </dialog>
+      `,
+    };
   },
   styles: [elevationMixin, forcedColorsMixin, coarsePointerMixin, reducedMotionMixin, styles],
 });

@@ -1,12 +1,12 @@
-import { define, computed, html, inject } from '@vielzeug/craftit';
-import { createCheckableFieldControl, type CheckableChangePayload } from '@vielzeug/craftit/controls';
+import { computed, define, html, inject } from '@vielzeug/craftit';
+import { type CheckableChangePayload, createCheckableFieldControl } from '@vielzeug/craftit/controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
-import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -27,18 +27,6 @@ export type BitCheckboxProps = CheckableProps &
     /** Indeterminate state (partially checked) */
     indeterminate?: boolean;
   };
-
-const checkboxProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  checked: false,
-  error: '',
-  helper: '',
-  indeterminate: false,
-  name: '',
-  value: { default: 'on', reflect: true },
-} satisfies PropsInput<BitCheckboxProps>;
 
 /**
  * A customizable checkbox component with theme colors, sizes, and indeterminate state support.
@@ -66,7 +54,17 @@ const checkboxProps = {
  */
 export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-checkbox', {
   formAssociated: true,
-  props: checkboxProps,
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    checked: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
+    error: '',
+    helper: '',
+    indeterminate: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
+    name: '',
+    value: 'on',
+  },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
@@ -117,22 +115,24 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
       },
     });
 
-    return html`
-      <div class="checkbox-wrapper" part="checkbox">
-        <div class="box" part="box">
-          <bit-icon class="checkmark" name="check" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
-          <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+    return {
+      render: () => html`
+        <div class="checkbox-wrapper" part="checkbox">
+          <div class="box" part="box">
+            <bit-icon class="checkmark" name="check" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+            <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+          </div>
         </div>
-      </div>
-      <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
-      <div
-        class="helper-text"
-        part="helper-text"
-        data-a11y-helper
-        id="${a11y.helperId}"
-        aria-live="polite"
-        hidden></div>
-    `;
+        <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
+        <div
+          class="helper-text"
+          part="helper-text"
+          data-a11y-helper
+          id="${a11y.helperId}"
+          aria-live="polite"
+          hidden></div>
+      `,
+    };
   },
   styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],
 });

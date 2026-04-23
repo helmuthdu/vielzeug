@@ -1,6 +1,6 @@
 ---
 title: Routeit — Client-side router for TypeScript
-description: Lightweight, type-safe client-side router with typed path params, middleware, named routes, and a URL builder. Zero dependencies.
+description: Lightweight, type-safe client-side router with a declarative route table, middleware, and named navigation.
 ---
 
 <PackageBadges package="routeit" />
@@ -9,7 +9,7 @@ description: Lightweight, type-safe client-side router with typed path params, m
 
 # Routeit
 
-**Routeit** is a lightweight, framework-agnostic client-side router with typed path params, middleware, named routes, route groups, and a URL builder. Works in any browser environment.
+**Routeit** is a lightweight, framework-agnostic client-side router built around a single declarative route table. Define routes once, then navigate, resolve, and build links by route name.
 
 <!-- Search keywords: client router, typed routes, single-page app navigation, SPA navigation. -->
 
@@ -34,91 +34,98 @@ yarn add @vielzeug/routeit
 ## Quick Start
 
 ```ts
-import { createRouter } from '@vielzeug/routeit';
+import { createRouter, defineRoutes } from '@vielzeug/routeit';
 
-const router = createRouter();
+const router = createRouter({
+  routes: defineRoutes({
+    home: {
+      path: '/',
+      handler: () => renderHome(),
+    },
+    users: {
+      path: '/users',
+      handler: () => renderUsers(),
+    },
+    userDetail: {
+      path: '/users/:id',
+      handler: ({ params }) => renderUser(params.id),
+      meta: { title: 'User' },
+    },
+    notFound: {
+      path: '*',
+      handler: () => renderNotFound(),
+    },
+  }),
+});
 
-router
-  .on('/', () => renderHome())
-  .on('/users', () => renderUsers())
-  .on('/users/:id', ({ params }) => renderUser(params.id), { name: 'userDetail' })
-  .start();
-
-// Navigate programmatically
-await router.navigate('/users/42');
+router.start();
 await router.navigate({ name: 'userDetail', params: { id: '42' } });
 ```
 
 ## Why Routeit?
 
-Managing client-side navigation without a router means scattered `location.pathname` checks, manual `popstate` listeners, and duplicated history manipulation:
+Managing navigation by hand usually means duplicated path checks, manual `popstate` listeners, and scattered history writes. Routeit keeps the routing model in one place and makes route names the source of truth.
 
 ```ts
-// Before — manual history management
-window.addEventListener('popstate', () => {
-  if (location.pathname === '/') renderHome();
-  else if (location.pathname.startsWith('/users/')) {
-    const id = location.pathname.split('/')[2];
-    renderUser(id);
-  }
+const routes = defineRoutes({
+  home: { path: '/', handler: () => renderHome() },
+  userDetail: { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
+  notFound: { path: '*', handler: () => renderNotFound() },
 });
 
-// After — Routeit
-import { createRouter } from '@vielzeug/routeit';
-const router = createRouter();
-router
-  .on('/', () => renderHome())
-  .on('/users/:id', ({ params }) => renderUser(params.id))
-  .start();
+const router = createRouter({ routes });
 ```
 
-| Feature              | Routeit                                       | page.js | Navigo  |
-| -------------------- | --------------------------------------------- | ------- | ------- |
-| Bundle size          | <PackageInfo package="routeit" type="size" /> | ~1 kB   | ~5 kB   |
-| History mode         | ✅                                            | ✅      | ✅      |
-| Typed path params    | ✅                                            | ❌      | ❌      |
-| Named routes         | ✅                                            | ❌      | Partial |
-| Middleware           | ✅                                            | ✅      | ✅      |
-| Route groups         | ✅                                            | ❌      | ❌      |
-| View Transition API  | ✅                                            | ❌      | ❌      |
-| Zero dependencies    | ✅                                            | ✅      | ✅      |
+| Feature | Routeit | page.js | Navigo |
+| --- | --- | --- | --- |
+| Bundle size | <PackageInfo package="routeit" type="size" /> | ~1 kB | ~5 kB |
+| History mode | ✅ | ✅ | ✅ |
+| Typed path params | ✅ | ❌ | ❌ |
+| Named navigation | ✅ | ❌ | Partial |
+| Middleware | ✅ | ✅ | ✅ |
+| View Transition API | ✅ | ❌ | ❌ |
+| Zero dependencies | ✅ | ✅ | ✅ |
 
-**Use Routeit when** you need typed path params, named routes, and middleware in a lightweight, framework-agnostic client-side router.
+## Core Ideas
 
-**Consider React Router or TanStack Router** if you are building a React app that needs deep framework integration, file-based routing, or data loaders.
+- One declarative route table
+- Route names come from object keys
+- Named-route-first `navigate()`, `url()`, and `isActive()`
+- Wildcard routes handle not-found cases
+- Middleware handles guards, analytics, and error boundaries
+- Raw path escape hatches exist when needed with `pushPath()` and `replacePath()`
 
-## Features
+## Feature Highlights
 
-- **History mode routing** — HTML5 History API with base-path support
-- **Typed path params** — `PathParams<'/users/:id'>` inferred from the path literal at compile time
-- **Named wildcard params** — `/docs/:rest*` captures multi-segment paths as a single param
-- **Middleware** — global (`createRouter`/`use()`), per-group, and per-route; `ctx.locals` for passing data down the chain
-- **Route groups** — `group(prefix, definer, options?)` with typed prefix params propagated to nested handlers via `RouteGroup<Prefix>`
-- **Named routes** — navigate and build URLs by name, never hard-code paths
-- **URL builder** — `url(nameOrPattern, params?, query?)` with base-path awareness
-- **Async navigation** — `navigate()` returns a `Promise`; errors are rejections
-- **Same-URL deduplication** — skips redundant history pushes; `force: true` bypasses it
-- **Subscriptions** — `subscribe((state) => ...)` returns an unsubscribe function
-- **Resolve without navigating** — `resolve(pathname)` for prefetching and data loading
-- **Not-found & error hooks** — `onNotFound` and `onError` in router options
-- **View Transition API** — opt-in globally or per-navigation
-- **Disposable** — `[Symbol.dispose]()` for `using` declarations
-- **Lightweight** — <PackageInfo package="routeit" type="size" /> gzipped
+- **Typed path params** with `defineRoutes()`
+- **Middleware** at global and route scope
+- **Metadata** exposed through `ctx.meta` and route state
+- **Immutable state snapshots** through `router.state`
+- **Base-path support** for app subdirectories
+- **Same-URL deduplication** with optional `{ force: true }`
+- **Resolve without navigation** via `router.resolve()`
+- **View transitions** when the browser supports them
+
+## Documentation Map
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## Compatibility
 
-| Environment | Support                        |
-| ----------- | ------------------------------ |
-| Browser     | ✅                             |
-| Node.js     | ❌ (browser history/hash only) |
-| SSR         | ❌                             |
-| Deno        | ❌                             |
+| Environment | Support |
+| --- | --- |
+| Browser | ✅ |
+| Node.js | ❌ |
+| SSR | ❌ |
+| Deno | ❌ |
 
 ## Prerequisites
 
-- Browser runtime with History API or hash-based navigation.
-- Configure server rewrites so deep links resolve to the SPA entry point.
-- Register routes before calling `router.start()`.
+- Browser runtime with the History API
+- Server rewrites for deep-link support in SPAs
+- Route table defined before router startup
 
 ## See Also
 

@@ -6,7 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Secondary build: bundles all deposit internals into a single deposit.{js,cjs}
- * file (with @vielzeug/toolkit kept external). Run after the main vite build so
+ * file. Run after the main vite build so
  * it adds to dist/ rather than replacing it.
  */
 export default defineConfig({
@@ -19,7 +19,7 @@ export default defineConfig({
       name: 'deposit',
     },
     rolldownOptions: {
-      external: ['@vielzeug/toolkit'],
+      external: [],
       output: {
         minify: true,
       },

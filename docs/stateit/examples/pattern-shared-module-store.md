@@ -39,7 +39,7 @@ export async function login(credentials: Credentials) {
   s.patch({ loading: true });
   try {
     const { token, user } = await authenticate(credentials);
-    s.value = { token, user, loading: false };
+    s.update(() => ({ token, user, loading: false }));
   } catch {
     s.patch({ loading: false });
   }
@@ -65,4 +65,4 @@ export function logout() {
 
 - [Framework Integration](./framework-integration.md)
 - [Pattern: Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)
-- [Pattern: `nextValue` in Async Workflows](./pattern-nextvalue-in-async-workflows.md)
+- [Pattern: Async Workflows with watch](./pattern-nextvalue-in-async-workflows.md)

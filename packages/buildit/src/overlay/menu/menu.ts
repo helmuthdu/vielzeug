@@ -1,4 +1,4 @@
-import { define, computed, createId, css, effect, handle, html, onMount, signal, watch } from '@vielzeug/craftit';
+import { computed, createId, css, define, effect, handle, html, prop, signal, watch } from '@vielzeug/craftit';
 import {
   createPopupListControl,
   createPressControl,
@@ -9,8 +9,9 @@ import { flip, offset, positionFloat, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../../inputs/shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
+import componentStyles from './menu.css?inline';
 
 // ============================================
 // Types
@@ -46,8 +47,6 @@ export type BitMenuProps = {
 // Styles
 // ============================================
 
-import componentStyles from './menu.css?inline';
-
 const themeStyles = /* css */ css`
   ${colorThemeMixin}
   ${sizeVariantMixin}
@@ -63,9 +62,9 @@ const menuItemProps = {
   disabled: false,
   type: undefined,
   value: undefined,
-} satisfies PropsInput<BitMenuItemProps>;
+};
 
-export const MENU_ITEM_TAG = define<BitMenuItemProps, any>('bit-menu-item', {
+export const MENU_ITEM_TAG = define<BitMenuItemProps>('bit-menu-item', {
   props: menuItemProps,
   setup(props) {
     const isCheckable = () => props.type.value === 'checkbox' || props.type.value === 'radio';
@@ -85,113 +84,115 @@ export const MENU_ITEM_TAG = define<BitMenuItemProps, any>('bit-menu-item', {
       return '';
     };
 
-    return html`
-      <style>
-        @layer buildit.base {
-          :host {
-            display: block;
-            outline: none;
-          }
+    return {
+      render: () => html`
+        <style>
+          @layer buildit.base {
+            :host {
+              display: block;
+              outline: none;
+            }
 
-          .item {
-            align-items: center;
-            border-radius: 0;
-            cursor: pointer;
-            display: flex;
-            font-size: var(--text-sm);
-            gap: var(--size-2);
-            line-height: var(--leading-normal);
-            padding: var(--size-1-5) var(--size-3);
-            transition:
-              background var(--transition-fast),
-              color var(--transition-fast);
-            user-select: none;
-            white-space: nowrap;
-          }
+            .item {
+              align-items: center;
+              border-radius: 0;
+              cursor: pointer;
+              display: flex;
+              font-size: var(--text-sm);
+              gap: var(--size-2);
+              line-height: var(--leading-normal);
+              padding: var(--size-1-5) var(--size-3);
+              transition:
+                background var(--transition-fast),
+                color var(--transition-fast);
+              user-select: none;
+              white-space: nowrap;
+            }
 
-          :host(:first-of-type) .item {
-            border-radius: var(--rounded-sm) var(--rounded-sm) 0 0;
-          }
+            :host(:first-of-type) .item {
+              border-radius: var(--rounded-sm) var(--rounded-sm) 0 0;
+            }
 
-          :host(:last-child) .item {
-            border-radius: 0 0 var(--rounded-sm) var(--rounded-sm);
-          }
+            :host(:last-child) .item {
+              border-radius: 0 0 var(--rounded-sm) var(--rounded-sm);
+            }
 
-          :host(:first-of-type:last-child) .item {
-            border-radius: var(--rounded-sm);
-          }
+            :host(:first-of-type:last-child) .item {
+              border-radius: var(--rounded-sm);
+            }
 
-          :host(:not([disabled])) .item:hover {
-            background: var(--color-contrast-100);
-          }
+            :host(:not([disabled])) .item:hover {
+              background: var(--color-contrast-100);
+            }
 
-          :host(:focus-visible) .item {
-            background: color-mix(in srgb, var(--color-primary) 12%, var(--color-contrast-100));
-            color: var(--color-primary);
-          }
+            :host(:focus-visible) .item {
+              background: color-mix(in srgb, var(--color-primary) 12%, var(--color-contrast-100));
+              color: var(--color-primary);
+            }
 
-          /* Driven by JS via sync() — avoids :host() attribute selector edge-cases */
-          .item.is-checkable {
-            background: color-mix(in srgb, var(--color-contrast-900) 5%, var(--color-canvas));
-          }
+            /* Driven by JS via sync() — avoids :host() attribute selector edge-cases */
+            .item.is-checkable {
+              background: color-mix(in srgb, var(--color-contrast-900) 5%, var(--color-canvas));
+            }
 
-          .item.is-checked {
-            background: color-mix(in srgb, var(--color-primary) 18%, var(--color-canvas));
-            color: var(--color-primary);
-            font-weight: var(--font-medium);
-          }
+            .item.is-checked {
+              background: color-mix(in srgb, var(--color-primary) 18%, var(--color-canvas));
+              color: var(--color-primary);
+              font-weight: var(--font-medium);
+            }
 
-          :host([disabled]) .item {
-            color: var(--color-contrast-400);
-            cursor: not-allowed;
-            opacity: 0.6;
-            pointer-events: none;
-          }
+            :host([disabled]) .item {
+              color: var(--color-contrast-400);
+              cursor: not-allowed;
+              opacity: 0.6;
+              pointer-events: none;
+            }
 
-          .icon-slot {
-            display: contents;
-          }
+            .icon-slot {
+              display: contents;
+            }
 
-          .item-check {
-            align-items: center;
-            color: currentColor;
-            display: inline-flex;
-            flex-shrink: 0;
-            justify-content: center;
-            width: 1.25rem;
-          }
+            .item-check {
+              align-items: center;
+              color: currentColor;
+              display: inline-flex;
+              flex-shrink: 0;
+              justify-content: center;
+              width: 1.25rem;
+            }
 
-          .item-label {
-            flex: 1;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            .item-label {
+              flex: 1;
+              min-width: 0;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
           }
-        }
-        ${coarsePointerMixin}
-      </style>
-      ${() =>
-        isCheckable()
-          ? html`
-              <div
-                class="${() => `item${isCheckable() ? ' is-checkable' : ''}${isChecked() ? ' is-checked' : ''}`}"
-                tabindex="-1"
-                role="${itemRole}"
-                aria-checked="${() => String(isChecked())}"
-                aria-disabled="${props.disabled}">
-                <span class="item-check" aria-hidden="true">${checkIndicator}</span>
-                <span class="icon-slot"><slot name="icon"></slot></span>
-                <span class="item-label"><slot></slot></span>
-              </div>
-            `
-          : html`
-              <div class="item" tabindex="-1" role="menuitem" aria-disabled="${props.disabled}">
-                <span class="icon-slot"><slot name="icon"></slot></span>
-                <span class="item-label"><slot></slot></span>
-              </div>
-            `}
-    `;
+          ${coarsePointerMixin}
+        </style>
+        ${() =>
+          isCheckable()
+            ? html`
+                <div
+                  class="${() => `item${isCheckable() ? ' is-checkable' : ''}${isChecked() ? ' is-checked' : ''}`}"
+                  tabindex="-1"
+                  role="${itemRole}"
+                  aria-checked="${() => String(isChecked())}"
+                  aria-disabled="${props.disabled}">
+                  <span class="item-check" aria-hidden="true">${checkIndicator}</span>
+                  <span class="icon-slot"><slot name="icon"></slot></span>
+                  <span class="item-label"><slot></slot></span>
+                </div>
+              `
+            : html`
+                <div class="item" tabindex="-1" role="menuitem" aria-disabled="${props.disabled}">
+                  <span class="icon-slot"><slot name="icon"></slot></span>
+                  <span class="item-label"><slot></slot></span>
+                </div>
+              `}
+      `,
+    };
   },
 });
 
@@ -201,28 +202,24 @@ export const MENU_ITEM_TAG = define<BitMenuItemProps, any>('bit-menu-item', {
 
 export const SEPARATOR_TAG = define('bit-menu-separator', {
   setup() {
-    return html`<style>
-      @layer buildit.base {
-        :host {
-          display: block;
-          margin: var(--size-1) 0;
-          border-top: var(--border) solid var(--color-contrast-200);
-        }
-      }
-    </style>`;
+    return {
+      render: () =>
+        html`<style>
+          @layer buildit.base {
+            :host {
+              display: block;
+              margin: var(--size-1) 0;
+              border-top: var(--border) solid var(--color-contrast-200);
+            }
+          }
+        </style>`,
+    };
   },
 });
 
 // ============================================
 // Menu Component
 // ============================================
-
-const menuProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  placement: 'bottom-start',
-} satisfies PropsInput<BitMenuProps>;
 
 const isCheckableItemType = (value: string | null): value is BitMenuItemType =>
   value === 'checkbox' || value === 'radio';
@@ -241,7 +238,15 @@ const isCheckableItemType = (value: string | null): value is BitMenuItemType =>
  * ```
  */
 export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
-  props: menuProps,
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    placement: prop.oneOf(
+      ['bottom', 'bottom-start', 'bottom-end', 'top', 'top-start', 'top-end'] as const,
+      'bottom-start',
+    ),
+  },
   setup(props, { emit, host, slots }) {
     const menuId = createId('menu');
     const isOpenSignal = signal(false);
@@ -388,46 +393,6 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
-    onMount(() => {
-      const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="trigger"]');
-
-      panelEl = host.el.shadowRoot?.querySelector<HTMLElement>('.menu-panel') ?? null;
-
-      effect(() => {
-        if (!panelEl) return;
-
-        panelEl.toggleAttribute('data-open', isOpenSignal.value);
-      });
-
-      let triggerBinding: (() => void) | null = null;
-
-      function resolveTrigger() {
-        const assigned = triggerSlot?.assignedElements({ flatten: true });
-
-        triggerEl = (assigned?.[0] as HTMLElement | undefined) ?? null;
-
-        if (triggerEl) {
-          triggerBinding?.();
-          triggerBinding = popupList.syncTriggerAria(triggerEl);
-        } else {
-          triggerBinding?.();
-          triggerBinding = null;
-        }
-      }
-
-      watch(slots.elements('trigger'), resolveTrigger, { immediate: true });
-
-      const removeOutsideClick = popupList.bindOutsideClick(document);
-
-      handle(panelEl, 'keydown', handleMenuKeydown as EventListener);
-
-      return () => {
-        removeOutsideClick();
-        triggerBinding?.();
-        triggerBinding = null;
-      };
-    });
-
     host.bind({
       on: {
         click: (e: MouseEvent) => {
@@ -464,12 +429,54 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       },
     });
 
-    return html`
-      <slot name="trigger"></slot>
-      <div class="menu-panel" id="${menuId}" role="menu" aria-orientation="vertical">
-        <slot></slot>
-      </div>
-    `;
+    return {
+      mount() {
+        const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="trigger"]');
+
+        panelEl = host.el.shadowRoot?.querySelector<HTMLElement>('.menu-panel') ?? null;
+
+        effect(() => {
+          if (!panelEl) return;
+
+          panelEl.toggleAttribute('data-open', isOpenSignal.value);
+        });
+
+        let triggerBinding: (() => void) | null = null;
+
+        function resolveTrigger() {
+          const assigned = triggerSlot?.assignedElements({ flatten: true });
+
+          triggerEl = (assigned?.[0] as HTMLElement | undefined) ?? null;
+
+          if (triggerEl) {
+            triggerBinding?.();
+            triggerBinding = popupList.syncTriggerAria(triggerEl);
+          } else {
+            triggerBinding?.();
+            triggerBinding = null;
+          }
+        }
+
+        watch(slots.elements('trigger'), resolveTrigger, { immediate: true });
+
+        const removeOutsideClick = popupList.bindOutsideClick(document);
+
+        handle(panelEl, 'keydown', handleMenuKeydown as EventListener);
+
+        return () => {
+          removeOutsideClick();
+          triggerBinding?.();
+          triggerBinding = null;
+        };
+      },
+
+      render: () => html`
+        <slot name="trigger"></slot>
+        <div class="menu-panel" id="${menuId}" role="menu" aria-orientation="vertical">
+          <slot></slot>
+        </div>
+      `,
+    };
   },
   styles: [componentStyles, themeStyles],
 });

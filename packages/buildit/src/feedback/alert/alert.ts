@@ -3,7 +3,7 @@ import { define, html } from '@vielzeug/craftit';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import '../../content/icon/icon';
-import { type PropsInput, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { forcedColorsMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { awaitExit } from '../../utils/animation';
 import componentStyles from './alert.css?inline';
@@ -77,8 +77,8 @@ export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
     dismissible: false,
     heading: '',
     horizontal: false,
-    variant: undefined,
-  } satisfies PropsInput<BitAlertProps>,
+    variant: undefined as 'solid' | 'flat' | 'bordered' | undefined,
+  },
   setup(props, { emit, host, slots }) {
     const handleDismiss = (e: MouseEvent) => {
       if (!props.dismissible.value) return;
@@ -93,36 +93,38 @@ export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
 
     const alertRole = () => (props.color.value === 'error' ? 'alert' : 'status');
 
-    return html`
-      <div class="alert" :role="${alertRole}" part="alert">
-        <span class="icon" part="icon" aria-hidden="true" ?hidden="${() => !slots.has('icon').value}">
-          <slot name="icon"></slot>
-        </span>
-        <div class="header" part="header" ?hidden="${() => !props.heading.value}">
-          <span class="heading" part="heading">${props.heading}</span>
-          <span class="meta" part="meta">
-            <slot name="meta"></slot>
+    return {
+      render: () => html`
+        <div class="alert" :role="${alertRole}" part="alert">
+          <span class="icon" part="icon" aria-hidden="true" ?hidden="${() => !slots.has('icon').value}">
+            <slot name="icon"></slot>
           </span>
-        </div>
-        <div class="body" part="body">
-          <div class="content" part="content">
-            <slot></slot>
+          <div class="header" part="header" ?hidden="${() => !props.heading.value}">
+            <span class="heading" part="heading">${props.heading}</span>
+            <span class="meta" part="meta">
+              <slot name="meta"></slot>
+            </span>
           </div>
+          <div class="body" part="body">
+            <div class="content" part="content">
+              <slot></slot>
+            </div>
+          </div>
+          <div class="actions" part="actions" ?hidden="${() => !slots.has('actions').value}">
+            <slot name="actions"></slot>
+          </div>
+          <button
+            class="close"
+            part="close"
+            type="button"
+            aria-label="Dismiss alert"
+            ?hidden="${() => !props.dismissible.value}"
+            @click="${handleDismiss}">
+            <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
+          </button>
         </div>
-        <div class="actions" part="actions" ?hidden="${() => !slots.has('actions').value}">
-          <slot name="actions"></slot>
-        </div>
-        <button
-          class="close"
-          part="close"
-          type="button"
-          aria-label="Dismiss alert"
-          ?hidden="${() => !props.dismissible.value}"
-          @click="${handleDismiss}">
-          <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
-        </button>
-      </div>
-    `;
+      `,
+    };
   },
   styles: [
     ...formFieldMixins,

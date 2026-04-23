@@ -1,36 +1,64 @@
 ---
-title: 'Stateit Examples — Pattern: `nextValue` in Async Workflows'
-description: 'Pattern: `nextValue` in Async Workflows examples for stateit.'
+title: 'Stateit Examples — Pattern: Async Workflows with watch'
+description: 'Pattern: Bridging reactive state into async code using watch() in stateit.'
 ---
 
-## Pattern: `nextValue` in Async Workflows
+## Pattern: Async Workflows with `watch`
 
 ## Problem
 
-Implement pattern: `nextvalue` in async workflows in a production-friendly way with `@vielzeug/stateit` while keeping setup and cleanup explicit.
+Implement an async workflow that waits for a reactive value to reach a specific state — for example, waiting for a modal result before continuing.
 
 ## Runnable Example
 
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/stateit` installed.
-
-Use `nextValue` to bridge reactive state into async code without managing subscriptions manually:
+Use `watch` with a `Promise` wrapper to bridge reactive state into async code:
 
 ```ts
-import { store, nextValue } from '@vielzeug/stateit';
+import { store, computed, watch, untrack } from '@vielzeug/stateit';
+import type { ReadonlySignal } from '@vielzeug/stateit';
+
+function waitFor<T>(source: ReadonlySignal<T>, predicate: (v: T) => boolean): Promise<T> {
+  return new Promise((resolve) => {
+    const current = untrack(() => source.value);
+
+    if (predicate(current)) {
+      resolve(current);
+      return;
+    }
+
+    const stop = watch(source, (next) => {
+      if (predicate(next)) {
+        stop();
+        resolve(next);
+      }
+    });
+  });
+}
 
 const modalStore = store({ open: false, result: null as string | null });
+const resultSignal = computed(() => modalStore.value.result);
 
 export async function openModal(): Promise<string | null> {
   modalStore.patch({ open: true, result: null });
 
   // Wait until result is set (modal closed with a value)
-  const result = await nextValue(
-    modalStore.select((s) => s.result),
-    (v) => v !== null,
-  );
+  const result = await waitFor(resultSignal, (v) => v !== null);
 
   modalStore.patch({ open: false });
+  resultSignal.dispose();
   return result;
+}
+```
+
+For a single next-change with no predicate, `watch` with `once: true` is sufficient:
+
+```ts
+import { signal, watch } from '@vielzeug/stateit';
+
+const status = signal<'idle' | 'loading' | 'done'>('idle');
+
+function onNextChange(cb: (v: string) => void) {
+  watch(status, cb, { once: true });
 }
 ```
 

@@ -1,6 +1,6 @@
 import { resizeObserver } from '..';
 // noinspection HtmlUnknownAttribute
-import { html, onMount, ref } from '../../index';
+import { html, ref } from '../../index';
 import { mount } from '../../testing';
 
 describe('resizeObserver()', () => {
@@ -10,11 +10,12 @@ describe('resizeObserver()', () => {
     await mount(() => {
       const divRef = ref<HTMLDivElement>();
 
-      onMount(() => {
-        capturedSize = resizeObserver(divRef.value!);
-      });
-
-      return html`<div ref=${divRef}></div>`;
+      return {
+        mount() {
+          capturedSize = resizeObserver(divRef.value!);
+        },
+        render: () => html`<div ref=${divRef}></div>`,
+      };
     });
 
     expect(capturedSize.value).toEqual({ height: 0, width: 0 });
@@ -38,11 +39,12 @@ describe('resizeObserver()', () => {
       await mount(() => {
         const divRef = ref<HTMLDivElement>();
 
-        onMount(() => {
-          capturedSize = resizeObserver(divRef.value!);
-        });
-
-        return html`<div ref=${divRef}></div>`;
+        return {
+          mount() {
+            capturedSize = resizeObserver(divRef.value!);
+          },
+          render: () => html`<div ref=${divRef}></div>`,
+        };
       });
 
       if (!capturedCb) throw new Error('ResizeObserver callback not captured');
@@ -72,11 +74,12 @@ describe('resizeObserver()', () => {
       const { destroy } = await mount(() => {
         const divRef = ref<HTMLDivElement>();
 
-        onMount(() => {
-          resizeObserver(divRef.value!);
-        });
-
-        return html`<div ref=${divRef}></div>`;
+        return {
+          mount() {
+            resizeObserver(divRef.value!);
+          },
+          render: () => html`<div ref=${divRef}></div>`,
+        };
       });
 
       expect(disconnectSpy).not.toHaveBeenCalled();

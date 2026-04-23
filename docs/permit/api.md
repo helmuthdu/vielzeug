@@ -1,13 +1,23 @@
 ---
 title: Permit — API Reference
-description: API reference for the minimal permit policy engine.
+description: API reference for the minimal permit authorization engine.
 ---
+
+# Permit API Reference
 
 [[toc]]
 
-## Package Entry
+## At a Glance
 
-- `@vielzeug/permit`: factory, constants, policy and permit types
+| Symbol | Purpose |
+| --- | --- |
+| `createPermit(options?)` | Create a permit instance |
+| `permit.set(rule)` | Append one rule |
+| `permit.can(principal, resource, action, data?)` | Evaluate one decision |
+| `permit.forUser(principal)` | Create a principal-bound check function |
+| `permit.rules()` | Read current rules snapshot |
+| `permit.replace(rules)` | Replace all rules |
+| `permit.clear()` | Remove all rules |
 
 ## Constants
 
@@ -24,9 +34,8 @@ Signature:
 
 ### Options
 
-- `initial: PermitPolicy<TAction>`: initial policy rules to preload.
-- `predicates: Record<string, PermitPredicate<TData>>`: predicate registry used by `rule.when`.
-- `logger: (result, principal, resource, action, data?) => void`: audit callback after each `can` check.
+- `initial: readonly PermitRule<TAction, TData>[]`: initial rules to preload.
+- `logger: (context) => void`: audit callback after each `can` check.
 
 ## Permit Interface
 
@@ -51,7 +60,7 @@ Rule fields:
 - `action: TAction | '*'`
 - `effect: 'allow' | 'deny'`
 - `priority?: number` (default `0`)
-- `when?: string` (predicate id from `options.predicates`)
+- `when?: ({ principal, data }) => boolean`
 
 ### `can(principal, resource, action, data?)`
 
@@ -63,35 +72,43 @@ permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
 
 Accepted principal inputs:
 
-- `null` / `undefined` (anonymous)
-- `{ kind: 'anonymous' }`
-- `{ kind: 'user', id, roles }`
-- `{ id, roles }`
+- `null` for anonymous
+- `{ id, roles }` for authenticated users
 
 Invalid principal payloads throw.
 
-### `withUser(principal)`
+### `forUser(principal)`
 
-Returns a user-bound guard.
+Returns a user-bound permission function.
 
 ```ts
-const guard = permit.withUser({ id: 'u1', roles: ['editor'] });
-guard.can('posts', 'read');
+const can = permit.forUser({ id: 'u1', roles: ['editor'] });
+can('posts', 'read');
 ```
 
-### `exportPolicy()` / `importPolicy(policy)`
+### `rules()` / `replace(rules)`
 
-Export and restore JSON-serializable policy state.
+Read or replace the current rules.
 
 ```ts
-const policy = permit.exportPolicy();
-permit.clear();
-permit.importPolicy(policy);
+const rules = permit.rules();
+permit.replace(rules);
 ```
 
 ### `clear()`
 
 Remove all rules.
+
+## Logger Context
+
+When a logger is provided, Permit calls it with:
+
+- `action`
+- `data`
+- `decision`
+- `principal`
+- `resource`
+- `rule` (the winning rule, if any)
 
 ## Decision Model
 
@@ -106,11 +123,9 @@ This model is deterministic and independent of principal role ordering.
 
 - `PermissionData`
 - `PermitEffect`
-- `PermitRule<TAction>`
-- `PermitPolicy<TAction>`
+- `PermitRule<TAction, TData>`
 - `PermitPredicate<TData>`
-- `PermitPrincipal`
-- `PrincipalInput`
+- `Principal`
+- `UserPrincipal`
 - `Permit<TAction, TData>`
-- `PermitGuard<TAction, TData>`
 - `PermitOptions<TAction, TData>`

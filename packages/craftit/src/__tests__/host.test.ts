@@ -5,42 +5,63 @@ import {
   html,
   inject,
   injectStrict,
-  onMount,
   provide,
   signal,
-  syncContextProps,
   type ComponentDefinition,
   type InjectionKey,
   type ReadonlySignal,
 } from '../index';
-import { currentRuntime } from '../runtime';
-import { mount } from '../testing';
+import { currentElementOrThrow } from '../runtime';
+import { mount, type MountSetup } from '../testing';
 
-const register = (tag: string, setup: ComponentDefinition['setup'], options: Omit<ComponentDefinition, 'setup'> = {}) =>
-  define(tag, { setup, ...options });
+const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinition, 'setup'> = {}) =>
+  define(tag, {
+    ...options,
+    setup: (props, ctx) => {
+      const result = setup(props, ctx);
+
+      if (typeof result === 'object' && result && 'render' in result) {
+        return result;
+      }
+
+      // If result is HTMLResult, wrap it in a ComponentInstance
+      return {
+        render: () => result,
+      };
+    },
+  });
 
 describe('core/host.ts', () => {
   describe('Host bind API', () => {
     it('applies host attrs and classes from object-style config', async () => {
-      const { element, flush, query } = await mount((_props, { host }) => {
-        const open = signal(false);
+      const { element, flush } = await mount({
+        setup: (_props, { host }) => {
+          const open = signal(false);
 
-        host.bind({
-          attr: {
-            'aria-expanded': () => String(open.value),
-            role: 'button',
-          },
-          class: () => ({ 'is-open': open.value }),
-        });
+          host.bind({
+            attr: {
+              'aria-expanded': () => String(open.value),
+              role: 'button',
+            },
+            class: () => ({ 'is-open': open.value }),
+            on: {
+              click: () => {
+                open.value = true;
+              },
+            },
+          });
 
-        return html`<button @click=${() => (open.value = true)}>Open</button>`;
+          return {
+            render: () => html`<button>Open</button>`,
+          };
+        },
       });
 
       expect(element.getAttribute('role')).toBe('button');
       expect(element.getAttribute('aria-expanded')).toBe('false');
       expect(element.classList.contains('is-open')).toBe(false);
 
-      query('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      element.click();
       await flush();
 
       expect(element.getAttribute('aria-expanded')).toBe('true');
@@ -48,24 +69,26 @@ describe('core/host.ts', () => {
     });
 
     it('applies class records with static and reactive values', async () => {
-      const { element, flush } = await mount((_props, { host }) => {
-        const open = signal(false);
-        const active = signal(true);
+      const { element, flush } = await mount({
+        setup: (_props, { host }) => {
+          const open = signal(false);
+          const active = signal(true);
 
-        host.bind({
-          class: {
-            active,
-            open: () => open.value,
-            ready: true,
-          },
-        });
+          host.bind({
+            class: {
+              active,
+              open: () => open.value,
+              ready: true,
+            },
+          });
 
-        onMount(() => {
           open.value = true;
           active.value = false;
-        });
 
-        return html`<div></div>`;
+          return {
+            render: () => html`<div></div>`,
+          };
+        },
       });
 
       await flush();
@@ -76,21 +99,25 @@ describe('core/host.ts', () => {
     });
 
     it('prop binding exposes reactive get/set on the host element', async () => {
-      const { element, flush } = await mount((_props, { host }) => {
-        const internalValue = signal('initial');
+      const { element, flush } = await mount({
+        setup: (_props, { host }) => {
+          const internalValue = signal('initial');
 
-        host.bind({
-          prop: {
-            value: {
-              get: () => internalValue.value,
-              set: (v: unknown) => {
-                internalValue.value = String(v);
+          host.bind({
+            prop: {
+              value: {
+                get: () => internalValue.value,
+                set: (v: unknown) => {
+                  internalValue.value = String(v);
+                },
               },
             },
-          },
-        });
+          });
 
-        return html`<div>${internalValue}</div>`;
+          return {
+            render: () => html`<div>${internalValue}</div>`,
+          };
+        },
       });
 
       expect((element as HTMLElement & { value: string }).value).toBe('initial');
@@ -101,17 +128,49 @@ describe('core/host.ts', () => {
       expect((element as HTMLElement & { value: string }).value).toBe('updated');
     });
 
-    it('prop binding is cleaned up on component destroy', async () => {
-      const { destroy, element } = await mount((_props, { host }) => {
-        host.bind({
-          prop: {
-            value: {
-              get: () => 'alive',
-            },
-          },
-        });
+    it('supports one-liner host helpers for style and prop bindings', async () => {
+      const { element, flush } = await mount({
+        setup: (_props, { host }) => {
+          const color = signal('rgb(255, 0, 0)');
 
-        return html`<div></div>`;
+          host.style({ color });
+          host.prop('value', {
+            get: () => color.value,
+            set: (next: unknown) => {
+              color.value = String(next);
+            },
+          });
+
+          return {
+            render: () => html`<div></div>`,
+          };
+        },
+      });
+
+      expect((element as HTMLElement & { value: string }).value).toBe('rgb(255, 0, 0)');
+      expect(element.style.getPropertyValue('color')).toContain('255');
+
+      (element as HTMLElement & { value: string }).value = 'rgb(0, 128, 0)';
+      await flush();
+
+      expect(element.style.getPropertyValue('color')).toContain('128');
+    });
+
+    it('prop binding is cleaned up on component destroy', async () => {
+      const { destroy, element } = await mount({
+        setup: (_props, { host }) => {
+          host.bind({
+            prop: {
+              value: {
+                get: () => 'alive',
+              },
+            },
+          });
+
+          return {
+            render: () => html`<div></div>`,
+          };
+        },
       });
 
       expect((element as HTMLElement & { value?: string }).value).toBe('alive');
@@ -157,19 +216,24 @@ describe('core/host.ts', () => {
 
     it('supports listener options for host event bindings', async () => {
       let clicks = 0;
-      const { element } = await mount((_props, { host }) => {
-        host.bind(
-          {
-            on: {
-              click: () => {
-                clicks++;
+
+      const { element } = await mount({
+        setup: (_props, { host }) => {
+          host.bind(
+            {
+              on: {
+                click: () => {
+                  clicks++;
+                },
               },
             },
-          },
-          { once: true },
-        );
+            { once: true },
+          );
 
-        return html`<div>Host listener</div>`;
+          return {
+            render: () => html`<div>Host listener</div>`,
+          };
+        },
       });
 
       element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -185,11 +249,15 @@ describe('core/host.ts', () => {
         const ThemeKey = Symbol('theme') as InjectionKey<string>;
         let received: string | undefined;
 
-        await mount(() => {
-          provide(ThemeKey, 'dark');
-          received = inject(ThemeKey);
+        await mount({
+          setup: () => {
+            provide(ThemeKey, 'dark');
+            received = inject(ThemeKey);
 
-          return html`<div></div>`;
+            return {
+              render: () => html`<div></div>`,
+            };
+          },
         });
 
         expect(received).toBe('dark');
@@ -197,10 +265,15 @@ describe('core/host.ts', () => {
 
       it('returns the supplied fallback when the key has never been provided', async () => {
         const AbsentKey = Symbol('absent') as InjectionKey<string>;
-        const { query } = await mount(() => {
-          const value = inject(AbsentKey, 'fallback');
 
-          return html`<div>${value}</div>`;
+        const { query } = await mount({
+          setup: () => {
+            const value = inject(AbsentKey, 'fallback');
+
+            return {
+              render: () => html`<div>${value}</div>`,
+            };
+          },
         });
 
         expect(query('div')?.textContent).toBe('fallback');
@@ -210,10 +283,14 @@ describe('core/host.ts', () => {
         const MissingKey = Symbol('missing') as InjectionKey<string>;
         let received: string | undefined = 'sentinel';
 
-        await mount(() => {
-          received = inject(MissingKey);
+        await mount({
+          setup: () => {
+            received = inject(MissingKey);
 
-          return html`<div></div>`;
+            return {
+              render: () => html`<div></div>`,
+            };
+          },
         });
 
         expect(received).toBeUndefined();
@@ -260,11 +337,15 @@ describe('core/host.ts', () => {
         const ThemeKey = Symbol('theme') as InjectionKey<string>;
         let received!: string;
 
-        await mount(() => {
-          provide(ThemeKey, 'dark');
-          received = injectStrict(ThemeKey);
+        await mount({
+          setup: () => {
+            provide(ThemeKey, 'dark');
+            received = injectStrict(ThemeKey);
 
-          return html`<div></div>`;
+            return {
+              render: () => html`<div></div>`,
+            };
+          },
         });
 
         expect(received).toBe('dark');
@@ -274,14 +355,18 @@ describe('core/host.ts', () => {
         const MissingKey = Symbol('missing') as InjectionKey<string>;
         let captured: unknown;
 
-        await mount(() => {
-          try {
-            injectStrict(MissingKey);
-          } catch (err) {
-            captured = err;
-          }
+        await mount({
+          setup: () => {
+            try {
+              injectStrict(MissingKey);
+            } catch (err) {
+              captured = err;
+            }
 
-          return html`<div></div>`;
+            return {
+              render: () => html`<div></div>`,
+            };
+          },
         });
 
         expect(captured).toBeInstanceOf(Error);
@@ -307,10 +392,14 @@ describe('core/host.ts', () => {
           return html`<div class="info">${user?.name} (${user?.role})</div>`;
         });
 
-        const { element, flush } = await mount(() => {
-          provide(UserCtx, { name: 'Alice', role: 'admin' });
+        const { element, flush } = await mount({
+          setup: () => {
+            provide(UserCtx, { name: 'Alice', role: 'admin' });
 
-          return html`<${childTag}></${childTag}>`;
+            return {
+              render: () => html`<${childTag}></${childTag}>`,
+            };
+          },
         });
 
         await flush();
@@ -321,53 +410,6 @@ describe('core/host.ts', () => {
         expect(info?.textContent).toBe('Alice (admin)');
       });
     });
-
-    describe('syncContextProps()', () => {
-      it('writes context signal values into matching local prop signals on mount', async () => {
-        const GroupCtx = createContext<{ size: ReadonlySignal<string> }>();
-        const consumerTag = `test-scp-${Math.random().toString(36).slice(2)}`;
-
-        register(consumerTag, () => {
-          const size = signal('small');
-          const ctx = inject(GroupCtx);
-
-          syncContextProps(ctx, { size });
-
-          return html`<span class="size">${size}</span>`;
-        });
-
-        const { element, flush } = await mount(() => {
-          const groupSize = signal('large');
-
-          provide(GroupCtx, { size: groupSize });
-
-          return html`<${consumerTag}></${consumerTag}>`;
-        });
-
-        await flush();
-
-        const child = element.shadowRoot?.querySelector(consumerTag);
-
-        expect(child?.shadowRoot?.querySelector('.size')?.textContent).toBe('large');
-      });
-
-      it('is a no-op when the context value is undefined (key not provided by any ancestor)', async () => {
-        const MissingCtx = createContext<{ size: ReadonlySignal<string> }>();
-        let consumerSize!: ReturnType<typeof signal<string>>;
-
-        await mount(() => {
-          consumerSize = signal('medium');
-
-          const ctx = inject(MissingCtx);
-
-          syncContextProps(ctx, { size: consumerSize });
-
-          return html`<div></div>`;
-        });
-
-        expect(consumerSize.value).toBe('medium');
-      });
-    });
   });
 
   describe('Slots API', () => {
@@ -376,11 +418,15 @@ describe('core/host.ts', () => {
       let defaultAssigned!: ReadonlySignal<boolean>;
 
       const { flush } = await mount(
-        (_props, { slots }) => {
-          headerAssigned = slots.has('header');
-          defaultAssigned = slots.has();
+        {
+          setup: (_props, { slots }) => {
+            headerAssigned = slots.has('header');
+            defaultAssigned = slots.has();
 
-          return html`<slot name="header"></slot><slot></slot>`;
+            return {
+              render: () => html`<slot name="header"></slot><slot></slot>`,
+            };
+          },
         },
         { html: '<span slot="header">Title</span><span>Default content</span>' },
       );
@@ -395,10 +441,14 @@ describe('core/host.ts', () => {
       let triggerElements!: ReadonlySignal<Element[]>;
 
       const { flush } = await mount(
-        (_props, { slots }) => {
-          triggerElements = slots.elements('trigger');
+        {
+          setup: (_props, { slots }) => {
+            triggerElements = slots.elements('trigger');
 
-          return html`<slot name="trigger"></slot>`;
+            return {
+              render: () => html`<slot name="trigger"></slot>`,
+            };
+          },
         },
         { html: '<button slot="trigger">Open</button>' },
       );
@@ -412,12 +462,16 @@ describe('core/host.ts', () => {
     it('supports reactive side effects from namedElements without accidental dependency loops', async () => {
       const callback = vi.fn();
 
-      const { flush } = await mount((_props, { slots }) => {
-        effect(() => {
-          callback(slots.elements('nonexistent').value);
-        });
+      const { flush } = await mount({
+        setup: (_props, { slots }) => {
+          effect(() => {
+            callback(slots.elements('nonexistent').value);
+          });
 
-        return html`<div>No slots here</div>`;
+          return {
+            render: () => html`<div>No slots here</div>`,
+          };
+        },
       });
 
       await flush();
@@ -427,10 +481,15 @@ describe('core/host.ts', () => {
 
     it('updates slot signals when assigned light-DOM content changes', async () => {
       let defaultElements!: ReadonlySignal<Element[]>;
-      const { element, flush } = await mount((_props, { slots }) => {
-        defaultElements = slots.elements();
 
-        return html`<slot></slot>`;
+      const { element, flush } = await mount({
+        setup: (_props, { slots }) => {
+          defaultElements = slots.elements();
+
+          return {
+            render: () => html`<slot></slot>`,
+          };
+        },
       });
 
       await flush();
@@ -453,25 +512,25 @@ describe('core/host.ts', () => {
   });
 });
 
-describe('onMount slot timing', () => {
-  it('onMount callbacks run after slot assignment', async () => {
-    const onMountFn = vi.fn();
+describe('mount slot timing', () => {
+  it('mount callbacks run after slot assignment', async () => {
+    const mountFn = vi.fn();
 
     register('test-slot-timing-element', () => {
-      const host = currentRuntime().el;
+      const host = currentElementOrThrow();
 
-      onMount(() => {
-        onMountFn();
+      return {
+        mount() {
+          mountFn();
 
-        // During onMount, slots should be assignable and accessible
-        const slot = host.shadowRoot?.querySelector('slot');
-        const assigned = slot?.assignedElements();
+          const slot = host.shadowRoot?.querySelector('slot');
+          const assigned = slot?.assignedElements();
 
-        expect(assigned).toBeDefined();
-        expect(assigned?.length).toBeGreaterThanOrEqual(1);
-      });
-
-      return html`<slot></slot>`;
+          expect(assigned).toBeDefined();
+          expect(assigned?.length).toBeGreaterThanOrEqual(1);
+        },
+        render: () => html`<slot></slot>`,
+      };
     });
 
     const el = document.createElement('test-slot-timing-element');
@@ -481,24 +540,24 @@ describe('onMount slot timing', () => {
     el.appendChild(child);
     document.body.appendChild(el);
 
-    // onMount now runs on the next frame to ensure slot assignment has settled.
     await new Promise<void>((resolve) =>
       typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(() => resolve()) : setTimeout(resolve, 0),
     );
 
-    expect(onMountFn).toHaveBeenCalled();
+    expect(mountFn).toHaveBeenCalled();
     el.remove();
   });
 
-  it('slot signals receive assigned elements by onMount time', async () => {
+  it('slot signals receive assigned elements by mount time', async () => {
     const slotFn = vi.fn();
 
     register('test-slot-change-element', (_props, { slots }) => {
-      onMount(() => {
-        slotFn(slots.elements().value.length);
-      });
-
-      return html`<slot></slot>`;
+      return {
+        mount() {
+          slotFn(slots.elements().value.length);
+        },
+        render: () => html`<slot></slot>`,
+      };
     });
 
     const el = document.createElement('test-slot-change-element');
@@ -507,7 +566,6 @@ describe('onMount slot timing', () => {
     el.appendChild(child);
     document.body.appendChild(el);
 
-    // onMount now runs on the next frame to ensure slot assignment has settled.
     await new Promise<void>((resolve) =>
       typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(() => resolve()) : setTimeout(resolve, 0),
     );

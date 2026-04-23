@@ -1,7 +1,16 @@
-import { computed, createContext, createId, define, effect, html, inject, provide, signal } from '@vielzeug/craftit';
+import {
+  computed,
+  createContext,
+  createId,
+  define,
+  effect,
+  html,
+  inject,
+  prop,
+  provide,
+  signal,
+} from '@vielzeug/craftit';
 import { createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
-
-import type { PropsInput } from '../shared/bundles';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { mountFormContextSync } from '../shared/dom-sync';
@@ -52,19 +61,6 @@ export type RadioGroupContext = {
 
 export const RADIO_GROUP_CTX = createContext<RadioGroupContext | undefined>('BitRadioGroup');
 
-const radioGroupProps: PropsInput<BitRadioGroupProps> = {
-  color: undefined,
-  disabled: false,
-  error: undefined,
-  helper: undefined,
-  label: undefined,
-  name: undefined,
-  orientation: 'vertical',
-  required: false,
-  size: undefined,
-  value: '',
-};
-
 /** Events emitted by the radio-group component */
 export type BitRadioGroupEvents = {
   /** Emitted when the selection changes */
@@ -93,7 +89,18 @@ export type BitRadioGroupEvents = {
  * @slot - Place `bit-radio` elements here
  */
 export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('bit-radio-group', {
-  props: radioGroupProps,
+  props: {
+    color: undefined,
+    disabled: false,
+    error: undefined,
+    helper: undefined,
+    label: undefined,
+    name: undefined,
+    orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
+    required: false,
+    size: undefined,
+    value: { default: '', reflect: false }, // managed by host.bind (selectedValue derived state)
+  },
   setup(props, { emit, host, slots }) {
     const selectedValue = signal((props.value.value as string | undefined) ?? '');
     const isDisabled = computed(() => Boolean(props.disabled.value));
@@ -239,23 +246,25 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
     const hasError = () => Boolean(props.error.value);
     const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
-    return html`
-      <fieldset
-        role="radiogroup"
-        aria-required="${() => String(Boolean(props.required.value))}"
-        aria-invalid="${() => String(hasError())}"
-        aria-errormessage="${() => (hasError() ? errorId : null)}"
-        aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
-        <legend id="${legendId}" ?hidden=${() => !props.label.value}>
-          ${props.label}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
-        </legend>
-        <div class="radio-group-items" part="items">
-          <slot></slot>
-        </div>
-        <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError()}>${props.error}</div>
-        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper()}>${props.helper}</div>
-      </fieldset>
-    `;
+    return {
+      render: () => html`
+        <fieldset
+          role="radiogroup"
+          aria-required="${() => String(Boolean(props.required.value))}"
+          aria-invalid="${() => String(hasError())}"
+          aria-errormessage="${() => (hasError() ? errorId : null)}"
+          aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
+          <legend id="${legendId}" ?hidden=${() => !props.label.value}>
+            ${props.label}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
+          </legend>
+          <div class="radio-group-items" part="items">
+            <slot></slot>
+          </div>
+          <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError()}>${props.error}</div>
+          <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper()}>${props.helper}</div>
+        </fieldset>
+      `,
+    };
   },
   styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
 });

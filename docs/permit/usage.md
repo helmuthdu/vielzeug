@@ -1,7 +1,13 @@
 ---
 title: Permit — Usage Guide
-description: Build deterministic authorization policies with set/can and predicate IDs.
+description: Build deterministic authorization policies with set/can, wildcards, and runtime predicates.
 ---
+
+# Permit Usage Guide
+
+::: tip New to Permit?
+Start with the [Overview](./index.md), then use this page for day-to-day patterns.
+:::
 
 [[toc]]
 
@@ -13,7 +19,7 @@ import { createPermit } from '@vielzeug/permit';
 const permit = createPermit();
 ```
 
-## Define Policy with `set`
+## Define Rules with `set`
 
 ```ts
 permit
@@ -21,27 +27,51 @@ permit
   .set({ role: 'blocked', resource: 'posts', action: '*', effect: 'deny', priority: 100 });
 ```
 
-Rules are normalized (`trim + lowercase`) for role/resource/action.
+Each `set()` call appends a rule. Rules are evaluated by precedence, not insertion order.
 
-## Dynamic Conditions via Predicate IDs
+## Check Permissions
 
 ```ts
-const permit = createPermit<'update', { authorId: string }>({
-  predicates: {
-    isOwner: ({ principal, data }) => principal.id === data?.authorId,
-  },
-});
+const principal = { id: 'u1', roles: ['editor'] };
+
+permit.can(principal, 'posts', 'read');
+permit.can(principal, 'posts', 'delete');
+permit.can(null, 'posts', 'read');
+```
+
+`principal` must be either:
+
+- `null` for anonymous users
+- `{ id: string, roles: readonly string[] }` for authenticated users
+
+Malformed principal values throw errors.
+
+## Bind a User with `forUser`
+
+```ts
+const can = permit.forUser({ id: 'u1', roles: ['editor'] });
+
+can('posts', 'read');
+can('posts', 'update', { authorId: 'u1' });
+```
+
+`forUser()` returns a reusable function and snapshots the roles at binding time.
+
+## Use Dynamic Conditions with `when`
+
+```ts
+const permit = createPermit<'update', { authorId: string }>();
 
 permit.set({
   role: 'editor',
   resource: 'posts',
   action: 'update',
   effect: 'allow',
-  when: 'isOwner',
+  when: ({ principal, data }) => principal.id === data?.authorId,
 });
 ```
 
-Use predicate names instead of embedding functions in policy state.
+`when` only runs for authenticated principals. For anonymous (`null`) checks, `when` rules do not match.
 
 ## Anonymous and Wildcards
 
@@ -53,44 +83,58 @@ permit
   .set({ role: WILDCARD, resource: 'status', action: 'read', effect: 'allow' });
 ```
 
-`null` / `undefined` principal is treated as anonymous.
+Use `ANONYMOUS` for anonymous-only rules and `WILDCARD` for any role/resource/action.
 
-## Evaluate Permissions
-
-```ts
-const principal = { id: 'u1', roles: ['editor'] };
-
-permit.can(principal, 'posts', 'read');
-permit.can(principal, 'posts', 'update', { authorId: 'u1' });
-```
-
-Permit throws for malformed principal payloads (for example missing `roles`).
-
-## Use Bound Guards
+## Manage Rule Sets
 
 ```ts
-const guard = permit.withUser({ id: 'u1', roles: ['editor'] });
+const snapshot = permit.rules();
 
-guard.can('posts', 'read');
-```
-
-## Save and Restore Policy
-
-```ts
-const snapshot = permit.exportPolicy();
 permit.clear();
-permit.importPolicy(snapshot);
+permit.replace(snapshot);
 ```
 
-Policy payloads are JSON-serializable.
+`rules()` returns a copy, so mutating the returned array does not affect the internal state.
+
+## Logger and Auditing
+
+```ts
+const permit = createPermit({
+  logger: ({ action, decision, principal, resource, rule }) => {
+    const subject = principal === null ? 'anonymous' : principal.id;
+    console.log(subject, resource, action, decision, rule?.effect);
+  },
+});
+```
+
+The logger runs after each `can()` check and includes the winning rule when one exists.
 
 ## Decision Precedence
 
 Permit uses one deterministic model:
 
-1. Highest `priority` wins.
-2. For equal priority, more specific rules win.
-3. If still tied, any deny wins.
-4. No match means deny.
+1. If no rule matches, decision is deny.
+2. Higher `priority` wins.
+3. For equal `priority`, higher specificity wins (non-wildcards are more specific).
+4. For equal `priority` and specificity, deny overrides allow.
 
-This avoids role-order dependent authorization outcomes.
+## Exact Matching
+
+Permit uses exact string matching for role/resource/action.
+
+```ts
+permit.set({ role: 'admin', resource: 'posts', action: 'read', effect: 'allow' });
+
+permit.can({ id: 'u1', roles: ['admin'] }, 'posts', 'read'); // true
+permit.can({ id: 'u1', roles: ['ADMIN'] }, 'posts', 'read'); // false
+```
+
+Adopt one identifier convention (for example all lowercase) at your app boundary.
+
+## Best Practices
+
+- Keep roles and resources explicit and predictable.
+- Use `priority` sparingly for explicit overrides.
+- Keep `when` predicates pure and side-effect free.
+- Prefer one permit instance per app boundary and keep rules centralized.
+- Use `forUser()` for repeated checks in UI or request scopes.

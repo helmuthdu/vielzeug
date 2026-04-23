@@ -2,26 +2,24 @@
  * Component authoring API — define custom elements, props, and registration.
  */
 
-import type { Signal } from '@vielzeug/stateit';
-
 import { type ComponentHost, type ComponentSlots, createHost, createSlots } from './host';
-import { type EmitFn, type HTMLResult, createEmitFn, htmlResult, toKebab } from './internal';
+import { type EmitFn, createEmitFn, toKebab } from './internal';
 import {
   createProps,
   type InferPropsFromDefs,
   type InferPropsSignals,
+  prop,
   type PropDef,
   type PropInputDefs,
   type PropOptions,
   type PropsInput,
+  type PropsDef,
 } from './props';
-import { registerComponent } from './registration';
-import { currentRuntime } from './runtime';
+import { registerComponent, type ComponentInstance } from './registration';
 
-export { createProps, type PropsInput };
+export { createProps, type PropsDef, type PropsInput };
+export { prop };
 export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropOptions };
-
-// Deprecated use* functions removed — use SetupContext parameter instead
 
 /**
  * Setup context passed to the component setup function.
@@ -37,17 +35,13 @@ export type SetupContextBag<Emits extends Record<string, unknown> = Record<strin
 export type ComponentDefinition<
   Props extends Record<string, unknown> = Record<never, never>,
   Emits extends Record<string, unknown> = Record<string, never>,
-  PropDefs extends PropInputDefs = PropsInput<Props>,
 > = {
   /** Enable form association for the custom element */
   formAssociated?: boolean;
   /** Component properties and their metadata */
-  props?: PropDefs;
-  /** Main setup function where component logic is defined. Props are the first positional parameter. */
-  setup: (
-    props: { readonly [K in keyof InferPropsFromDefs<PropDefs>]-?: Signal<InferPropsFromDefs<PropDefs>[K]> },
-    ctx: SetupContextBag<Emits>,
-  ) => HTMLResult | string;
+  props?: PropsDef<Props>;
+  /** Main setup function where component logic is defined. Props are the first positional parameter. Returns a ComponentInstance with render and optional mount. */
+  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits>) => ComponentInstance;
   /** Shadow DOM configuration (mode is always 'open') */
   shadow?: Omit<ShadowRootInit, 'mode'>;
   /** Component-specific styles */
@@ -56,9 +50,8 @@ export type ComponentDefinition<
 
 export function define<
   Props extends Record<string, unknown> = Record<never, never>,
-  EventsType extends Record<string, unknown> = Record<string, never>,
-  PropDefs extends PropInputDefs = PropsInput<Props>,
->(tag: string, definition: ComponentDefinition<Props, EventsType, PropDefs> & { props?: PropDefs }): string {
+  Emits extends Record<string, unknown> = Record<string, never>,
+>(tag: string, definition: ComponentDefinition<Props, Emits>): string {
   const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
 
   const observedAttrs = propDefs ? Object.keys(propDefs).map(toKebab) : [];
@@ -66,25 +59,21 @@ export function define<
   return registerComponent(
     tag,
     () => {
-      const props = propDefs ? createProps(propDefs) : ({} as InferPropsSignals<InferPropsFromDefs<PropDefs>>);
+      const props = propDefs ? (createProps(propDefs) as InferPropsSignals<Props>) : ({} as InferPropsSignals<Props>);
       const host = createHost();
-      const emit = createEmitFn<EventsType>();
-      const slots = createSlots();
+      const emit = createEmitFn<Emits>();
 
-      // Store on runtime for lifecycle hooks (onMount, onCleanup, effect, etc.)
-      const runtime = currentRuntime();
+      let _slots: ComponentSlots | undefined;
+      const slots: ComponentSlots = {
+        elements: (name?: string) => (_slots ??= createSlots()).elements(name),
+        has: (name?: string) => (_slots ??= createSlots()).has(name),
+      };
 
-      runtime.host = host;
-      runtime.props = props as Record<string, Signal<unknown>>;
-      runtime.slots = slots;
-
-      const result = setup(props as any, {
+      return setup(props as any, {
         emit,
         host,
         slots,
       });
-
-      return typeof result === 'string' ? htmlResult(result) : result;
     },
     {
       formAssociated,

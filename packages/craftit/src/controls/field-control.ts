@@ -1,8 +1,8 @@
-import { computed, type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
+import { computed, type ReadonlySignal, type Signal, signal, watch } from '@vielzeug/stateit';
 
 import { defineField, type FormFieldHandle } from '../form';
 import { createId, ref } from '../internal';
-import { effect, handle, watch } from '../runtime';
+import { effect, handle } from '../runtime';
 import {
   createControlState,
   type ValidationReporter,
@@ -12,71 +12,55 @@ import {
 } from './internal/control-state';
 
 export type { FormControlValidationTrigger } from './internal/control-state';
-export { createValidationControl } from './internal/control-state';
 export type { ValidationReporter } from './internal/control-state';
 
-// Discriminated union types for text vs checkable variants
 export type TextFieldControlContext = ControlContextOptions;
 
-export type TextFieldOptions = Omit<ControlContextOptions, 'disabled' | 'validateOn'> & {
-  autocomplete?: ReadonlySignal<string | undefined>;
+export type FieldBaseOptions = {
   context?: TextFieldControlContext;
   disabled?: ReadonlySignal<boolean | undefined>;
-  elementRef?: { value: HTMLInputElement | HTMLTextAreaElement | null };
   error?: ReadonlySignal<string | undefined>;
   helper?: ReadonlySignal<string | undefined>;
-  inputmode?: ReadonlySignal<string | undefined>;
   label?: ReadonlySignal<string | undefined>;
   labelPlacement?: ReadonlySignal<'inset' | 'outside' | undefined>;
+  name?: ReadonlySignal<string | undefined>;
+  onReset?: () => void;
+  prefix: string;
+  validateOn?: ReadonlySignal<ControlValidationMode>;
+};
+
+export type TextFieldOptions = FieldBaseOptions & {
+  autocomplete?: ReadonlySignal<string | undefined>;
+  elementRef?: { value: HTMLInputElement | HTMLTextAreaElement | null };
+  inputmode?: ReadonlySignal<string | undefined>;
   maxLength?: ReadonlySignal<number | undefined>;
   minLength?: ReadonlySignal<number | undefined>;
-  name?: ReadonlySignal<string | undefined>;
   onBlur?: (event: FocusEvent) => void;
   onChange?: (event: Event, value: string) => void;
   onInput?: (event: Event, value: string) => void;
   onInputExtra?: (event: Event) => void;
-  onReset?: () => void;
   pattern?: ReadonlySignal<string | undefined>;
   placeholder?: ReadonlySignal<string | undefined>;
-  prefix: string;
   readOnly?: ReadonlySignal<boolean | undefined>;
   required?: ReadonlySignal<boolean | undefined>;
   rows?: ReadonlySignal<number | undefined>;
   type?: ReadonlySignal<string | undefined> | (() => string | undefined) | string;
-  validateOn?: ReadonlySignal<ControlValidationMode>;
   value: ReadonlySignal<string | undefined>;
 };
 
-export type ChoiceFieldOptions<T> = {
-  context?: TextFieldControlContext;
-  disabled?: ReadonlySignal<boolean | undefined>;
-  error?: ReadonlySignal<string | undefined>;
+export type ChoiceFieldOptions<T> = FieldBaseOptions & {
   getValue: (item: T) => string;
-  helper?: ReadonlySignal<string | undefined>;
-  label?: ReadonlySignal<string | undefined>;
-  labelPlacement?: ReadonlySignal<'inset' | 'outside' | undefined>;
   mapControlledValue: (value: string) => T;
   multiple?: ReadonlySignal<boolean | undefined>;
-  name?: ReadonlySignal<string | undefined>;
-  onReset?: () => void;
-  prefix: string;
-  validateOn?: ReadonlySignal<ControlValidationMode>;
   value: ReadonlySignal<string | undefined>;
 };
 
-export type CheckableStateOptions = ControlContextOptions & {
+export type CheckableStateOptions = FieldBaseOptions & {
   checked: ReadonlySignal<boolean | undefined>;
   clearIndeterminateFirst?: boolean;
-  error?: ReadonlySignal<string | undefined>;
   group?: { toggle: (value: string, originalEvent?: Event) => void };
-  helper?: ReadonlySignal<string | undefined>;
   indeterminate?: ReadonlySignal<boolean | undefined>;
-  label?: ReadonlySignal<string | undefined>;
-  labelPlacement?: ReadonlySignal<'inset' | 'outside' | undefined>;
-  name?: ReadonlySignal<string | undefined>;
-  onReset?: () => void;
   onToggle?: (payload: CheckableChangePayload) => void;
-  prefix: string;
   value: ReadonlySignal<string | undefined>;
 };
 
@@ -287,24 +271,15 @@ export const createCheckableState = (options: CheckableStateOptions): CheckableS
     );
   }
 
-  const field = defineField(
-    {
-      disabled: base.disabled,
-      toFormValue: (nextValue: string | null) => nextValue,
-      value: computed(() => {
-        if (indeterminate.value) return null;
+  const field = defineField({
+    disabled: base.disabled,
+    toFormValue: (nextValue: string | null) => nextValue,
+    value: computed(() => {
+      if (indeterminate.value) return null;
 
-        return checked.value ? (options.value.value ?? '') : null;
-      }),
-    },
-    {
-      onReset: () => {
-        checked.value = Boolean(options.checked.value);
-        indeterminate.value = Boolean(options.indeterminate?.value);
-        options.onReset?.();
-      },
-    },
-  );
+      return checked.value ? (options.value.value ?? '') : null;
+    }),
+  });
 
   const triggerValidation = bindTrigger(field);
 

@@ -29,7 +29,7 @@ const items = signal<string[]>([]);
 ```ts
 count.value; // read — tracked inside effect/computed
 count.value = 42; // write — notifies all dependents
-count.peek(); // read without registering a subscription
+peek(count); // read without registering a subscription
 count.update((n) => n + 1); // update via function — equivalent to count.value = count.value + 1
 ```
 
@@ -47,11 +47,45 @@ readCount.value; // fine — tracked read
 
 ### `toValue`
 
-Unwraps a plain value or signal transparently — useful in generic helpers:
+Unwraps a plain value, signal, or function transparently — useful in generic helpers:
 
 ```ts
 toValue(42); // 42
 toValue(signal(42)); // 42 (tracked if called inside effect)
+toValue(() => 42); // 42
+```
+
+### `unwrapSignal`
+
+Unwraps a plain value or signal. If `input` is a `ReadonlySignal`, its value is read (which **may track dependencies** if called inside an effect). For untracked reads, use `peek()` instead.
+
+```ts
+unwrapSignal(42); // 42
+unwrapSignal(signal(42)); // 42 (tracked if inside effect)
+```
+
+### `peek`
+
+Performs an untracked read of a signal value without registering a reactive dependency. Useful when you need to read a signal's current value from within an effect without creating a subscription.
+
+```ts
+peek(42); // 42
+peek(signal(42)); // 42 (untracked — no dependency registered)
+
+// Example: read a signal without causing re-runs
+effect(() => {
+  const currentId = id.value; // tracked — effect re-runs if id changes
+  const name = peek(() => users[currentId].name); // untracked — no re-run on users change
+  console.log(`${currentId}: ${name}`);
+});
+```
+
+This is equivalent to wrapping the read with `untrack()`:
+
+```ts
+// These are equivalent:
+peek(signal(42));
+untrack(() => signal(42).value);
 ```
 
 ## Effects
@@ -110,16 +144,12 @@ const sub = effect(
     // side-effectful code
   },
   {
-    maxIterations: 50, // override global limit for this effect
-    onError: (err) => {
-      // handle errors; effect is auto-disposed on throw
-      console.error('effect failed:', err);
-    },
+    maxIterations: 50, // override the default limit (100) for this effect
   },
 );
 ```
 
-> `maxIterations` guards against infinite reactive loops. The global default (`100`) can be changed with `configureStateit({ maxEffectIterations: N })`.
+> `maxIterations` guards against infinite reactive loops. Default: `100`.
 
 ### `untrack`
 
@@ -158,6 +188,20 @@ doubled.dispose();
 // or: using doubled = computed(...) — TC39 using declaration
 ```
 
+### Automatic Disposal Inside Effects
+
+When `computed()` is called inside an `effect()`, the computed signal is automatically disposed when the effect cleans up. This prevents memory leaks from derived computations that only exist within the effect scope:
+
+```ts
+effect(() => {
+  // This computed is automatically disposed when the effect is disposed
+  const derived = computed(() => expensiveCalc(source.value));
+  doSomething(derived.value);
+});
+```
+
+This behavior is an ergonomic convenience and works because `computed()` detects the active effect scope and registers itself for automatic cleanup.
+
 ### `stale` Property
 
 `ComputedSignal<T>` exposes a `.stale` boolean that is `true` when the cached value
@@ -173,16 +217,6 @@ console.log(sq.value); // 16 — triggers recompute
 console.log(sq.stale); // false
 ```
 
-### Lazy Computation
-
-Pass `{ lazy: true }` to defer the initial computation until the first `.value` read:
-
-```ts
-const expensive = computed(() => heavyCalculation(), { lazy: true });
-// `heavyCalculation` has NOT run yet
-expensive.value; // computes now
-```
-
 ### Chaining Computeds
 
 ```ts
@@ -192,63 +226,6 @@ const c = computed(() => b.value + 1); // 7
 
 a.value = 4;
 console.log(c.value); // 13
-```
-
-## `derived`
-
-`derived(sources, fn)` creates a `ComputedSignal` from an array of source signals.
-Each source's current value is passed as a positional argument to the projector
-function:
-
-```ts
-import { signal, derived } from '@vielzeug/stateit';
-
-const price = signal(10);
-const quantity = signal(5);
-const discount = signal(0.1);
-
-const total = derived([price, quantity, discount], (p, q, d) => p * q * (1 - d));
-
-console.log(total.value); // 45
-price.value = 20;
-console.log(total.value); // 90
-```
-
-## `writable`
-
-`writable(get, set)` creates a bi-directional computed — reads track the getter
-reactively, writes are forwarded to the custom setter. Useful for form adapters
-and transformations that need to write back to the source.
-
-```ts
-const firstName = signal('Alice');
-const upper = writable(
-  () => firstName.value.toUpperCase(),
-  (v) => {
-    firstName.value = v.toLowerCase();
-  },
-);
-
-console.log(upper.value); // 'ALICE'
-upper.value = 'BOB';
-console.log(firstName.value); // 'bob'
-
-upper.dispose(); // stop tracking getter
-```
-
-`WritableSignal<T>` also adds an `update(fn)` method and a `stale` property, identical to `ComputedSignal<T>`:
-
-```ts
-const celsius = signal(0);
-const fahrenheit = writable(
-  () => (celsius.value * 9) / 5 + 32,
-  (f) => {
-    celsius.value = ((f - 32) * 5) / 9;
-  },
-);
-
-fahrenheit.update((f) => f + 10); // increments by 10°F, forwards to celsius
-fahrenheit.stale; // false after a read; true after a dep change
 ```
 
 ## `watch` (Signals)
@@ -283,37 +260,20 @@ watch(list, (v) => renderList(v), { equals: (a, b) => a.length === b.length });
 
 ### Watching a Slice
 
-The `watch()` function has a single-source signature. To watch a derived slice,
-compose it with `store.select()` or `computed()`:
+`watch()` supports an optional selector as the second argument. Use it to watch a derived slice without creating an intermediate `computed()`:
 
 ```ts
-// ✅ preferred — compose with store.select()
-const nameSignal = userStore.select((s) => s.name);
+// Option 1: Inline selector (recommended for one-off watches)
+watch(
+  userStore,
+  (store) => store.name,
+  (name, prevName) => console.log('name:', prevName, '→', name),
+);
+
+// Option 2: Compose with computed() for reusable selectors
+const nameSignal = computed(() => userStore.value.name);
 watch(nameSignal, (name, prev) => console.log('name:', prev, '→', name));
-
-// ✅ also fine — use computed() for any transformation
-const isAdmin = computed(() => userStore.value.role === 'admin');
-watch(isAdmin, (v) => console.log('isAdmin:', v));
-```
-
-## `nextValue` — Async Watch
-
-`nextValue(source, predicate?)` returns a `Promise` that resolves the next time
-the source emits a value that satisfies the optional predicate. The underlying
-subscription is disposed automatically — no cleanup required.
-
-```ts
-import { signal, nextValue } from '@vielzeug/stateit';
-
-const status = signal<'idle' | 'loading' | 'done'>('idle');
-
-// Wait for the next emission (any change)
-const next = await nextValue(status);
-console.log(next); // 'loading' (or whatever was set first)
-
-// Wait for a specific condition
-const done = await nextValue(status, (v) => v === 'done');
-console.log(done); // 'done'
+nameSignal.dispose(); // dispose when no longer needed
 ```
 
 ## `batch` (Signals)
@@ -360,17 +320,15 @@ const s = store({ count: 0, user: null as User | null });
 ### With Options
 
 ```ts
-import { store, shallowEqual } from '@vielzeug/stateit';
-
 const s = store(
   { items: [] as Item[], filter: '' },
   {
-    equals: shallowEqual, // default; shown explicitly for clarity
+    equals: (a, b) => a.items === b.items && a.filter === b.filter,
   },
 );
 ```
 
-`equals` controls top-level change detection — two states that pass `equals` will not fire watchers. The default is `shallowEqual`.
+`equals` controls top-level change detection — two states that pass `equals` will not fire watchers. Default: `Object.is`.
 
 ## Reading State
 
@@ -394,21 +352,13 @@ s.patch({ count: 1 });
 
 ### Updater Function
 
-Receives a shallow copy of the current state; return value replaces it:
+Receives the current state; return value replaces it:
 
 ```ts
 s.update((current) => ({ ...current, count: current.count + 1 }));
 ```
 
-### Direct Assignment
-
-The store's `.value` setter is also available for full-state replacement:
-
-```ts
-s.value = { count: 100, user: null };
-```
-
-Both `patch()` and `update()` are no-ops when the resulting state is equal to the current state (determined by `StoreOptions.equals`, which defaults to `shallowEqual`).
+`patch()` and `update()` are no-ops when the resulting state passes the `equals` check configured on the store (default: `Object.is`).
 
 ## Resetting State
 
@@ -423,22 +373,29 @@ object cannot corrupt `reset()`.
 
 ## Derived Slices
 
-`store.select()` returns a lazily computed signal derived from a slice of the store's state:
+Use `computed()` to derive a signal from a slice of the store's state:
 
 ```ts
-const countSignal = s.select((s) => s.count);
+const countSignal = computed(() => s.value.count);
 console.log(countSignal.value); // 0
 
 // Compose with watch() to react to slice changes only
 const sub = watch(countSignal, (count, prev) => {
   console.log('count changed:', prev, '→', count);
 });
+
+// Clean up when done
+sub.dispose();
+countSignal.dispose();
 ```
 
-Selectors short-circuit by default (`Object.is` equality). Pass a custom `equals` option for arrays and objects:
+Pass a custom `equals` option for arrays and objects to avoid re-rendering when contents haven't changed:
 
 ```ts
-const items = s.select((state) => state.items, { equals: (a, b) => a.length === b.length });
+const items = computed(
+  () => s.value.items,
+  { equals: (a, b) => a.length === b.length },
+);
 ```
 
 ## Watching State
@@ -474,17 +431,16 @@ watch(s, (curr) => console.log('first change:', curr), { once: true });
 
 ### Slice Watch
 
-Compose `store.select()` with `watch()` to watch a derived slice:
+Use `watch`'s inline selector overload to watch a slice — only fires when the selected value changes:
 
 ```ts
 // Only fires when `count` changes — unrelated state changes are ignored
-const countSignal = s.select((state) => state.count);
-watch(countSignal, (count, prev) => console.log('count changed to', count));
+watch(s, (state) => state.count, (count, prev) => console.log('count changed to', count));
 
-// With custom equality
-const itemsSignal = s.select((state) => state.items);
-watch(itemsSignal, (items) => renderList(items), {
-  equals: (a, b) => a.length === b.length,
+// With computed() for a reusable or shareable slice signal
+const countSignal = computed(() => s.value.count);
+watch(countSignal, (count, prev) => console.log('count changed to', count), {
+  equals: (a, b) => a === b,
 });
 ```
 
@@ -506,20 +462,6 @@ const result = batch(() => {
 ```
 
 Nested `batch()` calls merge into the outermost — only one notification fires when the outermost batch completes.
-
-## Disposing / Freezing
-
-```ts
-s.freeze();
-```
-
-Freezes the store. After `freeze()`:
-
-- `patch()`, `update()`, `reset()` silently do nothing
-- `.value` is still readable
-- `s.frozen` returns `true`
-
-Use `freeze()` when you want to lock a store from further writes. It is not a replacement for disposing `effect()` / `watch()` subscriptions.
 
 ## Narrowing to Read-Only
 
@@ -544,20 +486,6 @@ const counter = createCounterService();
 counter.state.value.count; // readable
 // counter.state.value = ...; // TS compile error — read-only
 ```
-
-## Global Configuration
-
-Use `configureStateit` to adjust global defaults:
-
-```ts
-import { configureStateit } from '@vielzeug/stateit';
-
-configureStateit({ maxEffectIterations: 200 });
-```
-
-| Option                | Default | Description                                             |
-| --------------------- | ------- | ------------------------------------------------------- |
-| `maxEffectIterations` | `100`   | Guard against infinite reactive loops inside `effect()` |
 
 ## `Symbol.dispose` / `using` Declarations
 
@@ -600,15 +528,18 @@ effect(() => {
 });
 ```
 
-### 3. Compose `store.select()` with `watch()` for Slice Subscriptions
+### 3. Watch Slices with `watch()` Inline Selector or `computed()`
+
+Both approaches work; choose based on your preference:
 
 ```ts
-// ✅ slice subscription — only fires when count changes
-const countSignal = userStore.select((s) => s.count);
-watch(countSignal, (count) => console.log('count:', count));
+// ✅ inline selector — simple for one-off watches
+watch(userStore, (s) => s.count, (count) => console.log('count:', count));
 
-// ❌ old overload is no longer supported:
-// watch(userStore, (s) => s.count, (count) => { ... });
+// ✅ composed with computed() — better for shared/complex selections
+const countSignal = computed(() => userStore.value.count);
+watch(countSignal, (count) => console.log('count:', count));
+countSignal.dispose();
 ```
 
 ### 4. Batch Multiple Updates
@@ -653,22 +584,17 @@ effect(() => {
 ## Testing
 
 Stateit stores are plain objects — no special test utilities needed. Create a
-fresh store in `beforeEach` and `freeze()` it in `afterEach`.
+fresh store in `beforeEach` and dispose any active effects in `afterEach`.
 
 ```ts
-import { store, watch, _resetContextForTesting } from '@vielzeug/stateit';
+import { store, watch } from '@vielzeug/stateit';
 import type { Store } from '@vielzeug/stateit';
 
 describe('counter', () => {
   let s: Store<{ count: number }>;
 
   beforeEach(() => {
-    _resetContextForTesting(); // clear any leaked context between tests
     s = store({ count: 0 });
-  });
-
-  afterEach(() => {
-    s.freeze();
   });
 
   it('patches count', () => {
@@ -678,10 +604,11 @@ describe('counter', () => {
 
   it('notifies watcher on change', () => {
     const listener = vi.fn();
-    watch(s, listener);
+    const sub = watch(s, listener);
     s.patch({ count: 5 });
     // notifications are synchronous — no await needed
     expect(listener).toHaveBeenCalledWith({ count: 5 }, { count: 0 });
+    sub.dispose();
   });
 });
 ```

@@ -6,43 +6,29 @@ describe('Query Client', () => {
     vi.restoreAllMocks();
   });
 
-  // -----------------------------------------------------------------------
-  // Fetching & Caching
-  // -----------------------------------------------------------------------
-
   describe('Fetching & Caching', () => {
-    it('serves fresh data from cache without re-executing fn', async () => {
+    it('is stale by default and refetches on the next call', async () => {
       const qc = createQuery();
       let calls = 0;
-      const fn = async () => {
-        calls++;
 
-        return { id: 1 };
-      };
+      const fn = async () => ({ id: ++calls });
+
+      await qc.query({ fn, key: ['users', 1] });
+      await qc.query({ fn, key: ['users', 1] });
+
+      expect(calls).toBe(2);
+    });
+
+    it('serves fresh data from cache while staleTime is active', async () => {
+      const qc = createQuery();
+      let calls = 0;
+
+      const fn = async () => ({ id: ++calls });
 
       await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
       await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
 
       expect(calls).toBe(1);
-    });
-
-    it('refetches after staleTime expires', async () => {
-      vi.useFakeTimers();
-
-      const qc = createQuery();
-      let calls = 0;
-      const fn = async () => {
-        calls++;
-
-        return { id: calls };
-      };
-
-      await qc.query({ fn, key: ['data'], staleTime: 500 });
-      vi.advanceTimersByTime(501);
-      await qc.query({ fn, key: ['data'], staleTime: 500 });
-
-      expect(calls).toBe(2);
-      vi.useRealTimers();
     });
 
     it('deduplicates concurrent in-flight queries for the same key', async () => {
@@ -62,170 +48,73 @@ describe('Query Client', () => {
       expect(calls).toBe(1);
     });
 
-    it('passes an AbortSignal to fn via context object', async () => {
+    it('passes both key and AbortSignal to fn', async () => {
       const qc = createQuery();
-      let receivedSignal: AbortSignal | undefined;
+      let ctx: { key: readonly unknown[]; signal: AbortSignal } | undefined;
 
       await qc.query({
-        fn: async ({ signal }) => {
-          receivedSignal = signal;
+        fn: async (nextCtx) => {
+          ctx = nextCtx;
 
           return { id: 1 };
         },
-        key: ['signal-test'],
+        key: ['signal-test', 1],
       });
 
-      expect(receivedSignal).toBeInstanceOf(AbortSignal);
+      expect(ctx?.key).toEqual(['signal-test', 1]);
+      expect(ctx?.signal).toBeInstanceOf(AbortSignal);
     });
 
-    it('enabled:false skips fn, creates no phantom entry, and returns existing cache data if present', async () => {
+    it('prefetch() warms cache and subsequent query uses fresh cached data', async () => {
       const qc = createQuery();
-      let called = false;
+      let calls = 0;
 
-      // No cache — returns undefined without calling fn or creating an entry
-      const r1 = await qc.query({
-        enabled: false,
-        fn: async () => {
-          called = true;
+      const fn = async () => ({ id: ++calls });
 
-          return 1;
-        },
-        key: ['x'],
-      });
+      await qc.prefetch({ fn, key: ['users', 1], staleTime: 10_000 });
 
-      expect(r1).toBeUndefined();
-      expect(called).toBe(false);
-      expect(qc.getState(['x'])).toBeNull();
+      expect(qc.get(['users', 1])).toEqual({ id: 1 });
 
-      // With pre-seeded cache — returns existing data without calling fn
-      qc.set(['x'], { id: 99 });
+      const data = await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
 
-      const r2 = await qc.query({ enabled: false, fn: async () => ({ id: 0 }), key: ['x'] });
-
-      expect(r2).toEqual({ id: 99 });
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Callbacks
-  // -----------------------------------------------------------------------
-
-  describe('Callbacks', () => {
-    it('onSuccess fires with fetched data after a successful query', async () => {
-      const qc = createQuery();
-      const onSuccess = vi.fn();
-
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], onSuccess });
-
-      expect(onSuccess).toHaveBeenCalledWith({ id: 1 });
+      expect(data).toEqual({ id: 1 });
+      expect(calls).toBe(1);
     });
 
-    it('onError fires with the error when the query fails', async () => {
+    it('prefetch() swallows errors by default but stores error state', async () => {
       const qc = createQuery();
-      const onError = vi.fn();
 
-      await qc
-        .query({
+      await expect(
+        qc.prefetch({
           fn: async () => {
             throw new Error('boom');
           },
-          key: ['fail'],
-          onError,
-          retry: 0,
-        })
-        .catch(() => {});
+          key: ['prefetch-fail'],
+        }),
+      ).resolves.toBeUndefined();
 
-      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'boom' }));
+      expect(qc.getState(['prefetch-fail'])?.status).toBe('error');
+      expect(qc.getState(['prefetch-fail'])?.error?.message).toBe('boom');
     });
 
-    it('onSettled fires with data and null error on success', async () => {
+    it('prefetch({ throwOnError: true }) rethrows failures', async () => {
       const qc = createQuery();
-      const onSettled = vi.fn();
 
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['x'], onSettled });
-
-      expect(onSettled).toHaveBeenCalledWith({ id: 1 }, null);
-    });
-
-    it('onSettled fires with undefined and error on failure', async () => {
-      const qc = createQuery();
-      const onSettled = vi.fn();
-
-      await qc
-        .query({
+      await expect(
+        qc.prefetch({
           fn: async () => {
             throw new Error('boom');
           },
-          key: ['fail'],
-          onSettled,
-          retry: 0,
-        })
-        .catch(() => {});
-
-      expect(onSettled).toHaveBeenCalledWith(undefined, expect.objectContaining({ message: 'boom' }));
-    });
-
-    it('callbacks do not fire when the query is served from cache', async () => {
-      const qc = createQuery();
-      const onSuccess = vi.fn();
-
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], staleTime: 10_000 });
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], onSuccess, staleTime: 10_000 });
-
-      expect(onSuccess).not.toHaveBeenCalled();
-    });
-
-    it('only the triggering call fires callbacks — concurrent callers reuse the inflight promise', async () => {
-      const qc = createQuery();
-      const onSuccess1 = vi.fn();
-      const onSuccess2 = vi.fn();
-
-      await Promise.all([
-        qc.query({ fn: async () => ({ id: 1 }), key: ['x'], onSuccess: onSuccess1 }),
-        qc.query({ fn: async () => ({ id: 1 }), key: ['x'], onSuccess: onSuccess2 }),
-      ]);
-
-      expect(onSuccess1).toHaveBeenCalledTimes(1);
-      expect(onSuccess2).not.toHaveBeenCalled();
+          key: ['prefetch-fail-throw'],
+          throwOnError: true,
+        }),
+      ).rejects.toThrow('boom');
     });
   });
-
-  // -----------------------------------------------------------------------
-  // Prefetch
-  // -----------------------------------------------------------------------
-
-  describe('Prefetch', () => {
-    it('populates the cache and returns the fetched data', async () => {
-      const qc = createQuery();
-
-      const result = await qc.prefetch({ fn: async () => ({ id: 1, name: 'Test' }), key: ['users', 1] });
-
-      expect(result).toEqual({ id: 1, name: 'Test' });
-      expect(qc.get(['users', 1])).toEqual({ id: 1, name: 'Test' });
-    });
-
-    it('silently ignores errors and returns undefined — never throws', async () => {
-      const qc = createQuery();
-
-      const result = await qc.prefetch({
-        fn: async () => {
-          throw new Error('fail');
-        },
-        key: ['users', 1],
-        retry: 0,
-      });
-
-      expect(result).toBeUndefined();
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Retry
-  // -----------------------------------------------------------------------
 
   describe('Retry', () => {
     it('retries the fn up to the specified count before succeeding', async () => {
-      const qc = createQuery();
+      const qc = createQuery({ retry: 3 });
       let attempts = 0;
 
       await qc.query({
@@ -235,14 +124,13 @@ describe('Query Client', () => {
           return { id: 1 };
         },
         key: ['users', 1],
-        retry: 3,
       });
 
       expect(attempts).toBe(3);
     });
 
-    it('retry:false makes exactly one attempt then rejects', async () => {
-      const qc = createQuery();
+    it('retry:0 makes exactly one attempt then rejects', async () => {
+      const qc = createQuery({ retry: 0 });
       let attempts = 0;
 
       await expect(
@@ -252,17 +140,12 @@ describe('Query Client', () => {
             throw new Error('fail');
           },
           key: ['users', 1],
-          retry: 0,
         }),
       ).rejects.toThrow('fail');
 
       expect(attempts).toBe(1);
     });
   });
-
-  // -----------------------------------------------------------------------
-  // Data Management
-  // -----------------------------------------------------------------------
 
   describe('Data Management', () => {
     it('set/get round-trip with value and updater function', () => {
@@ -278,11 +161,7 @@ describe('Query Client', () => {
     it('invalidate() forces a re-fetch on the next query call', async () => {
       const qc = createQuery();
       let calls = 0;
-      const fn = async () => {
-        calls++;
-
-        return { id: 1 };
-      };
+      const fn = async () => ({ id: ++calls });
 
       await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
       qc.invalidate(['users', 1]);
@@ -309,26 +188,7 @@ describe('Query Client', () => {
       expect(qc.get(['a'])).toBeUndefined();
       expect(qc.get(['b'])).toBeUndefined();
     });
-
-    it('clear() keeps entries with active observers in cache (reset to idle) so subscriptions stay live', async () => {
-      const qc = createQuery();
-
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['x'], staleTime: 10_000 });
-
-      const states: QueryState[] = [];
-
-      qc.subscribe(['x'], (s) => states.push(s));
-      qc.clear();
-
-      // Entry remains accessible — subscriptions are not orphaned
-      expect(qc.getState(['x'])?.status).toBe('idle');
-      expect(states[states.length - 1]?.status).toBe('idle');
-    });
   });
-
-  // -----------------------------------------------------------------------
-  // Subscriptions & State
-  // -----------------------------------------------------------------------
 
   describe('Subscriptions & State', () => {
     it('getState() returns null before any query, then full shape after success', async () => {
@@ -341,10 +201,6 @@ describe('Query Client', () => {
       expect(qc.getState(['users', 1])).toMatchObject({
         data: { id: 1 },
         error: null,
-        isError: false,
-        isIdle: false,
-        isPending: false,
-        isSuccess: true,
         status: 'success',
       });
       expect(qc.getState(['users', 1])!.updatedAt).toBeGreaterThan(0);
@@ -359,12 +215,7 @@ describe('Query Client', () => {
       await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
       unsub();
 
-      const statuses = states.map((s) => s.status);
-
-      expect(statuses[0]).toBe('idle');
-      expect(statuses).toContain('pending');
-      expect(statuses[statuses.length - 1]).toBe('success');
-      expect(states[states.length - 1].data).toEqual({ id: 1 });
+      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'success']);
     });
 
     it('subscribe() fires idle -> pending -> error state transitions', async () => {
@@ -378,27 +229,11 @@ describe('Query Client', () => {
             throw new Error('boom');
           },
           key: ['fail'],
-          retry: 0,
         })
         .catch(() => {});
 
-      const statuses = states.map((s) => s.status);
-
-      expect(statuses[0]).toBe('idle');
-      expect(statuses).toContain('pending');
-      expect(statuses[statuses.length - 1]).toBe('error');
-      expect(states[states.length - 1].error?.message).toBe('boom');
-      expect(states[states.length - 1].isError).toBe(true);
-    });
-
-    it('set() notifies subscribers immediately with the new value', () => {
-      const qc = createQuery();
-      const states: QueryState[] = [];
-
-      qc.subscribe(['users', 1], (s) => states.push({ ...s }));
-      qc.set(['users', 1], { id: 1, name: 'Alice' });
-
-      expect(states[states.length - 1].data).toEqual({ id: 1, name: 'Alice' });
+      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'error']);
+      expect(states[2].error?.message).toBe('boom');
     });
 
     it('subscribe() cancels a pending GC timer to keep entry alive', async () => {
@@ -407,73 +242,10 @@ describe('Query Client', () => {
       const qc = createQuery({ gcTime: 1_000 });
 
       await qc.query({ fn: async () => ({ id: 1 }), key: ['x'] });
-      // GC timer is now ticking — subscribe before it fires
       qc.subscribe(['x'], () => {});
       vi.advanceTimersByTime(2_000);
 
-      // Entry should still be accessible because subscribe cancelled the GC timer
       expect(qc.get(['x'])).toEqual({ id: 1 });
-      vi.useRealTimers();
-    });
-
-    it('re-arms GC when the last subscriber unsubscribes from a successful entry', async () => {
-      vi.useFakeTimers();
-
-      const qc = createQuery({ gcTime: 1_000 });
-
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['x'] });
-
-      const unsub = qc.subscribe(['x'], () => {});
-
-      // While observed, GC should not evict the entry.
-      vi.advanceTimersByTime(2_000);
-      expect(qc.get(['x'])).toEqual({ id: 1 });
-
-      // Unsubscribe should start the GC timer again.
-      unsub();
-      vi.advanceTimersByTime(1_001);
-      expect(qc.get(['x'])).toBeUndefined();
-
-      vi.useRealTimers();
-    });
-
-    it('respects per-query gcTime override when GC is re-armed after unsubscribe', async () => {
-      vi.useFakeTimers();
-
-      const qc = createQuery({ gcTime: 10_000 });
-
-      await qc.query({ fn: async () => ({ id: 1 }), gcTime: 500, key: ['x'] });
-
-      const unsub = qc.subscribe(['x'], () => {});
-
-      unsub();
-
-      vi.advanceTimersByTime(501);
-      expect(qc.get(['x'])).toBeUndefined();
-
-      vi.useRealTimers();
-    });
-
-    it('evicts errored entries after gcTime', async () => {
-      vi.useFakeTimers();
-
-      const qc = createQuery({ gcTime: 1_000 });
-
-      await qc
-        .query({
-          fn: async () => {
-            throw new Error('boom');
-          },
-          key: ['err'],
-          retry: 0,
-        })
-        .catch(() => {});
-
-      expect(qc.getState(['err'])?.status).toBe('error');
-
-      vi.advanceTimersByTime(1_001);
-      expect(qc.getState(['err'])).toBeNull();
-
       vi.useRealTimers();
     });
 
@@ -488,129 +260,35 @@ describe('Query Client', () => {
       qc.invalidate(['users', 1]);
 
       expect(states[states.length - 1]?.status).toBe('idle');
-      expect(states[states.length - 1]?.data).toBeUndefined();
-      expect(qc.getState(['users', 1])).not.toBeNull(); // entry remains — subscribers are not orphaned
+      expect(qc.getState(['users', 1])).not.toBeNull();
       unsub();
     });
 
-    it('clear() notifies active subscribers with idle state before wiping the cache', async () => {
+    it('cancel() keeps previous data when aborting a refetch', async () => {
       const qc = createQuery();
 
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
+      qc.set(['users', 1], { id: 1, name: 'Alice' });
 
-      const states: QueryState[] = [];
-
-      qc.subscribe(['users', 1], (s) => states.push({ ...s }));
-
-      qc.clear();
-
-      const last = states[states.length - 1];
-
-      expect(last?.status).toBe('idle');
-      expect(last?.data).toBeUndefined();
-    });
-
-    it('cancel() transitions pending -> success when data exists and schedules GC', async () => {
-      vi.useFakeTimers();
-
-      const gcTime = 1_000;
-      const qc = createQuery({ gcTime });
-
-      let resolve!: (v: unknown) => void;
-      const pending = new Promise((r) => {
-        resolve = r;
+      let reject!: (error: unknown) => void;
+      const pending = new Promise<never>((_resolve, nextReject) => {
+        reject = nextReject;
       });
 
-      qc.query({ fn: () => pending as Promise<unknown>, key: ['x'] });
-      qc.set(['x'], { id: 42 }); // seed data so cancel transitions to 'success'
-      qc.cancel(['x']);
+      const queryPromise = qc.query({
+        fn: async ({ signal }) => {
+          signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
 
-      expect(qc.get(['x'])).toEqual({ id: 42 });
+          return pending;
+        },
+        key: ['users', 1],
+        staleTime: 0,
+      });
 
-      vi.advanceTimersByTime(gcTime + 1);
-      expect(qc.get(['x'])).toBeUndefined(); // GC fired and evicted the entry
-      vi.useRealTimers();
-      resolve(undefined);
-    });
-  });
+      qc.cancel(['users', 1]);
 
-  // -----------------------------------------------------------------------
-  // Key Serialization
-  // -----------------------------------------------------------------------
-
-  describe('Key Serialization', () => {
-    it('treats objects with different property order as the same cache key', async () => {
-      const qc = createQuery({ staleTime: 10_000 });
-      let calls = 0;
-      const fn = async () => {
-        calls++;
-
-        return { id: 1 };
-      };
-
-      await qc.query({ fn, key: ['users', { page: 1, role: 'admin' }] });
-      await qc.query({ fn, key: ['users', { page: 1, role: 'admin' }] });
-
-      expect(calls).toBe(1);
-    });
-
-    it('handles deeply nested objects as stable keys', async () => {
-      const qc = createQuery({ staleTime: 10_000 });
-      let calls = 0;
-      const fn = async () => {
-        calls++;
-
-        return { data: 'ok' };
-      };
-      const key = ['posts', { filters: { author: 'john', tags: ['a', 'b'] }, page: 1 }];
-
-      await qc.query({ fn, key });
-      await qc.query({ fn, key });
-
-      expect(calls).toBe(1);
-    });
-
-    it('filters undefined object values so {a:1,b:undefined} and {a:1} produce the same key', async () => {
-      const qc = createQuery({ staleTime: 10_000 });
-      let calls = 0;
-      const fn = async () => {
-        calls++;
-
-        return {};
-      };
-
-      await qc.query({ fn, key: ['x', { a: 1, b: undefined }] });
-      await qc.query({ fn, key: ['x', { a: 1 }] });
-
-      expect(calls).toBe(1);
-    });
-
-    it('serializes undefined array elements to a stable string', async () => {
-      const qc = createQuery({ staleTime: 10_000 });
-      let calls = 0;
-      const fn = async () => {
-        calls++;
-
-        return {};
-      };
-
-      await qc.query({ fn, key: ['x', undefined] });
-      await qc.query({ fn, key: ['x', undefined] });
-
-      expect(calls).toBe(1);
-    });
-
-    it('prefix invalidation clears all entries whose key starts with the given prefix', async () => {
-      const qc = createQuery();
-      const fn = async () => ({ id: 1 });
-
-      await qc.query({ fn, key: ['users', { page: 1 }] });
-      await qc.query({ fn, key: ['users', { page: 2 }] });
-
-      qc.invalidate(['users']);
-
-      expect(qc.get(['users', { page: 1 }])).toBeUndefined();
-      expect(qc.get(['users', { page: 2 }])).toBeUndefined();
+      await expect(queryPromise).rejects.toThrow(/aborted/i);
+      expect(qc.getState(['users', 1])?.status).toBe('success');
+      expect(qc.get(['users', 1])).toEqual({ id: 1, name: 'Alice' });
     });
   });
 });

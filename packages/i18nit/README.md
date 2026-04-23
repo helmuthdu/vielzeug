@@ -1,10 +1,10 @@
 # @vielzeug/i18nit
 
-> Lightweight, type-safe i18n with nested keys, lazy loaders, interpolation, pluralization, and reactive subscriptions.
+> Lightweight i18n runtime with nested keys, explicit pluralization, async loading, and unified Intl formatting.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/i18nit)](https://www.npmjs.com/package/@vielzeug/i18nit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`@vielzeug/i18nit` is a zero-dependency internationalization library for TypeScript. It combines typed key paths, fallback locale chains, async locale loading, and Intl formatting helpers.
+`@vielzeug/i18nit` is a zero-dependency internationalization library for TypeScript. It focuses on a small, explicit API: `t`, `tp`, `format`, `setCatalog`, `setLoader`, `preload`, and `setLocale`.
 
 ## Installation
 
@@ -14,12 +14,9 @@ pnpm add @vielzeug/i18nit
 # yarn add @vielzeug/i18nit
 ```
 
-## Entry Points
+## Entry Point
 
-| Entry | Purpose |
-| --- | --- |
-| `@vielzeug/i18nit` | Main API (`createI18n`, exported types) |
-| `@vielzeug/i18nit/core` | Core bundle entry |
+`@vielzeug/i18nit`
 
 ## Quick Start
 
@@ -32,7 +29,7 @@ const i18n = createI18n({
   messages: {
     de: {
       greeting: 'Hallo, {name}!',
-      inbox: { one: 'Eine Nachricht', other: '{count} Nachrichten' },
+      inbox: { one: 'Eine Nachricht', other: '{count} Nachrichten', zero: 'Keine Nachrichten' },
     },
     en: {
       greeting: 'Hello, {name}!',
@@ -43,34 +40,38 @@ const i18n = createI18n({
 });
 
 i18n.t('greeting', { name: 'Alice' });
-i18n.t('inbox', { count: 0 });
-i18n.t('inbox', { count: 3 });
+i18n.tp('inbox', 0);
+i18n.tp('inbox', 3);
 
-await i18n.switchLocale('de');
+await i18n.setLocale('de');
 i18n.t('nav.home'); // falls back to en
+
+i18n.format({ kind: 'currency', currency: 'EUR', value: 19.99 });
 ```
 
 ## Features
 
-- Typed translation keys from your message tree
 - Dot-notation nested key lookup
-- ICU-style interpolation with object/array path support
-- Plural messages (`zero/one/two/few/many/other`) via `Intl.PluralRules`
-- Locale chain fallback (`sr-Latn-RS -> sr-Latn -> sr`) + configured fallback locales
-- Async locale loading (`ensureLocale`, `switchLocale`, `registerLoader`, `reload`)
-- Catalog updates (`add` deep-merge, `replace` full replace)
-- Subscription API with batched notifications (`batch`, `subscribe`)
-- Intl format helpers (`number`, `date`, `list`, `relative`, `currency`)
-- Namespace and locale-bound views (`scope`, `withLocale`)
+- Simple interpolation (`{name}`, `{user.name}`)
+- Explicit plural translation via `tp()` and `Intl.PluralRules`
+- Locale chain fallback (`sr-Latn-RS -> sr-Latn -> sr`) plus configured fallbacks
+- Async locale loading (`setLoader`, tolerant `preload`, strict `setLocale`)
+- Catalog replacement (`setCatalog`)
+- Subscription API (`subscribe`)
+- Unified formatting API (`format`)
 - Diagnostic hooks (`onDiagnostic`) and missing-key hook (`onMissing`)
 
 ## API At a Glance
 
-- `createI18n<T>(options?) => I18n<T>`
-- `type BoundI18n<T>`
-- `type I18n<T>`
-- `type I18nOptions<T>`
-- `type Messages`, `TranslationKey`, `TranslationKeyParam`, `PluralKeys`, `NamespaceKeys`
+- `createI18n(options?) => I18n`
+- `i18n.t(key, vars?)`
+- `i18n.tp(key, count, vars?)`
+- `i18n.format(input)`
+- `i18n.setCatalog(locale, messages)`
+- `i18n.setLoader(locale, loader)`
+- `await i18n.preload(locale)`
+- `await i18n.setLocale(locale)`
+- `i18n.subscribe(listener, immediate?)`
 
 ## Documentation
 
@@ -78,6 +79,26 @@ i18n.t('nav.home'); // falls back to en
 - [Usage Guide](https://vielzeug.dev/i18nit/usage)
 - [API Reference](https://vielzeug.dev/i18nit/api)
 - [Examples](https://vielzeug.dev/i18nit/examples)
+
+## Release Notes
+
+### Version 3
+
+`@vielzeug/i18nit` is now a smaller, explicit runtime with a deliberately breaking API surface.
+
+- Removed bound views and namespacing helpers such as `withLocale()` and `scope()`.
+- Removed catalog mutation orchestration such as `add()`, `replace()`, `batch()`, and reload-style APIs.
+- Replaced plural auto-detection in `t()` with explicit `tp(key, count, vars?)`.
+- Replaced formatter helpers like `number()`, `currency()`, and `date()` with `format({ kind, ... })`.
+- Kept async locale loading, but narrowed it to `setLoader()`, tolerant `preload()`, and strict `setLocale()`.
+
+### Migration Notes
+
+- Replace `i18n.t('items', { count })` with `i18n.tp('items', count)` for plural branches.
+- Replace `i18n.switchLocale(locale)` with `await i18n.setLocale(locale)`.
+- Replace `i18n.ensureLocale(locale)` with `await i18n.preload(locale)` when you only want to warm the catalog.
+- Replace formatter helpers with `i18n.format({ kind: ... })`.
+- Replace `scope()` and `withLocale()` usage with local wrapper functions or separate per-request instances.
 
 ## License
 

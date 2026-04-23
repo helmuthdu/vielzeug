@@ -1,7 +1,7 @@
 export type Messages = {
-  array_length: (ctx: { exact: number }) => string;
-  array_max: (ctx: { max: number }) => string;
-  array_min: (ctx: { min: number }) => string;
+  array_length: (ctx: { exact: number; value: unknown[] }) => string;
+  array_max: (ctx: { max: number; value: unknown[] }) => string;
+  array_min: (ctx: { min: number; value: unknown[] }) => string;
   array_nonempty: () => string;
   array_type: () => string;
   boolean_type: () => string;

@@ -1,4 +1,9 @@
-# Rule Specificity
+---
+title: 'Permit Examples — Rule Specificity'
+description: 'Use specificity and priority to control wildcard behavior.'
+---
+
+## Rule Specificity
 
 `permit` no longer uses wildcard fallback modes. Use priority and specificity directly.
 

@@ -2,28 +2,22 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type {
-  BoundI18n,
-  DeepPartialMessages,
   DiagnosticEvent,
+  FormatInput,
+  FormatKind,
   I18n,
   I18nOptions,
   Loader,
   Locale,
   LocaleChangeEvent,
-  LocaleChangeListener,
   LocaleChangeReason,
   Messages,
-  MessageValue,
-  NamespaceKeys,
-  PluralForm,
-  PluralKeys,
-  PluralMessages,
-  SwitchMode,
-  TranslationKey,
-  TranslationKeyParam,
   Unsubscribe,
   Vars,
 } from './types';
+
+// ─── Diagnostic Helpers ────────────────────────────────────────────────────────
+export { isLoaderError, isSubscriberError } from './types';
 
 // ─── Instance & factory ───────────────────────────────────────────────────────
 export { createI18n } from './i18n';

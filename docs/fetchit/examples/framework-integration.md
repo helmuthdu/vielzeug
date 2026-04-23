@@ -34,10 +34,6 @@ function UserProfile({ userId }: { userId: number }) {
         error: null,
         status: 'idle',
         updatedAt: 0,
-        isPending: false,
-        isSuccess: false,
-        isError: false,
-        isIdle: true,
       },
   );
 
@@ -50,8 +46,8 @@ function UserProfile({ userId }: { userId: number }) {
     return unsub;
   }, [userId]);
 
-  if (state.isPending) return <div>Loading…</div>;
-  if (state.isError) return <div>Error: {state.error!.message}</div>;
+  if (state.status === 'pending') return <div>Loading…</div>;
+  if (state.status === 'error') return <div>Error: {state.error!.message}</div>;
   if (!state.data) return <div>Not found</div>;
   return <div>{state.data.name}</div>;
 }
@@ -66,12 +62,12 @@ const props = defineProps<{ userId: number }>();
 const api = createApi({ baseUrl: 'https://api.example.com' });
 const qc = createQuery({ staleTime: 5_000 });
 
-const state = ref({ data: null as User | null, isPending: false, error: null as Error | null });
+const state = ref({ data: null as User | null, status: 'idle' as 'idle' | 'pending' | 'success' | 'error', error: null as Error | null });
 let unsub: (() => void) | undefined;
 
 onMounted(() => {
   unsub = qc.subscribe<User>(['users', props.userId], (s) => {
-    state.value = { data: s.data ?? null, isPending: s.isPending, error: s.error };
+    state.value = { data: s.data ?? null, status: s.status, error: s.error };
   });
   qc.query({
     key: ['users', props.userId],
@@ -83,7 +79,7 @@ onUnmounted(() => unsub?.());
 </script>
 
 <template>
-  <div v-if="state.isPending">Loading…</div>
+  <div v-if="state.status === 'pending'">Loading…</div>
   <div v-else-if="state.error">Error: {{ state.error.message }}</div>
   <div v-else-if="state.data">{{ state.data.name }}</div>
   <div v-else>Not found</div>
@@ -101,11 +97,11 @@ onUnmounted(() => unsub?.());
   const qc  = createQuery({ staleTime: 5_000 });
 
   let data: User | undefined;
-  let isPending = true;
+  let status: 'idle' | 'pending' | 'success' | 'error' = 'idle';
   let error: Error | null = null;
 
   const unsub = qc.subscribe<User>(['users', userId], (s) => {
-    data = s.data; isPending = s.isPending; error = s.error;
+    data = s.data; status = s.status; error = s.error;
   });
 
   qc.query({
@@ -116,7 +112,7 @@ onUnmounted(() => unsub?.());
   onDestroy(unsub);
 </script>
 
-{#if isPending}
+{#if status === 'pending'}
   <div>Loading…</div>
 {:else if error}
   <div>Error: {error.message}</div>
@@ -148,7 +144,7 @@ class UserCard extends HTMLElement {
   }
 
   #render(state: QueryState<User>) {
-    this.innerHTML = state.isPending
+    this.innerHTML = state.status === 'pending'
       ? '<p>Loading…</p>'
       : state.error
         ? `<p>Error: ${state.error.message}</p>`
@@ -182,10 +178,6 @@ export function useUser(userId: number) {
         error: null,
         status: 'idle',
         updatedAt: 0,
-        isPending: false,
-        isSuccess: false,
-        isError: false,
-        isIdle: true,
       },
   );
 
@@ -203,8 +195,8 @@ export function useUser(userId: number) {
 
 // UserProfile.tsx
 function UserProfile({ userId }: { userId: number }) {
-  const { data, isPending, error } = useUser(userId);
-  if (isPending) return <div>Loading…</div>;
+  const { data, status, error } = useUser(userId);
+  if (status === 'pending') return <div>Loading…</div>;
   if (error) return <div>Error: {error.message}</div>;
   return data ? <div>{data.name}</div> : <div>Not found</div>;
 }
@@ -220,12 +212,12 @@ const qc = createQuery({ staleTime: 5_000 });
 
 export function useUser(userId: number) {
   const data = ref<User | null>(null);
-  const isPending = ref(true);
+  const status = ref<'idle' | 'pending' | 'success' | 'error'>('idle');
   const error = ref<Error | null>(null);
 
   const unsub = qc.subscribe<User>(['users', userId], (s) => {
     data.value = s.data ?? null;
-    isPending.value = s.isPending;
+    status.value = s.status;
     error.value = s.error;
   });
 
@@ -235,7 +227,7 @@ export function useUser(userId: number) {
   }).catch(() => {});
 
   onScopeDispose(unsub);
-  return { data, isPending, error };
+  return { data, status, error };
 }
 ```
 

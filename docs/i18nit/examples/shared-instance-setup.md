@@ -48,5 +48,5 @@ export const i18n = createI18n({
 ## Related Recipes
 
 - [Async Loading and Reload](./async-loading-and-reload.md)
-- [Batched Catalog Updates](./batched-catalog-updates.md)
+- [Catalog Replacement](./catalog-replacement.md)
 - [Diagnostics Hook](./diagnostics-hook.md)

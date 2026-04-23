@@ -45,15 +45,16 @@ user.update((state) => ({ ...state, count: state.count + 1 }));
 user.reset();
 ```
 
-## Watch Selector Overload
+## Watching State Slices
 
-No intermediate selector signal is required.
+Use `watch` with an inline selector to watch a derived slice — no intermediate signal needed:
 
 ```ts
 import { store, watch } from '@vielzeug/stateit';
 
 const cart = store({ count: 0, label: 'x' });
 
+// Only fires when count changes — label changes are ignored
 const stop = watch(
   cart,
   (state) => state.count,
@@ -91,6 +92,8 @@ store<T extends object>(initial: T, options?: { equals?: (a: T, b: T) => boolean
 readonly<T>(input: ReadonlySignal<T>): ReadonlySignal<T>;
 writable<T>(input: Signal<T>): Signal<T>;
 isSignal<T>(value: unknown): value is ReadonlySignal<T>;
-peekValue<T>(input: T | ReadonlySignal<T>): T;
+isWritable<T>(value: unknown): value is Signal<T>;
+unwrapSignal<T>(input: T | ReadonlySignal<T>): T;
+peek<T>(input: T | ReadonlySignal<T>): T;
 toValue<T>(input: T | ReadonlySignal<T> | (() => T)): T;
 ```

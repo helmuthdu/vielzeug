@@ -3,8 +3,6 @@ title: Fetchit — API Reference
 description: Complete API reference for the Fetchit HTTP client, query client, and standalone mutation.
 ---
 
-# Fetchit API Reference
-
 [[toc]]
 
 ## API At a Glance
@@ -20,23 +18,24 @@ description: Complete API reference for the Fetchit HTTP client, query client, a
 | Import                   | Purpose            |
 | ------------------------ | ------------------ |
 | `@vielzeug/fetchit`      | Main API and types |
-| `@vielzeug/fetchit/core` | Core bundle entry  |
 
 ## Core Functions
 
-### `createApi(options?)`
+### `createApi()`
+
+```ts
+createApi(options?: ApiClientOptions): ApiClient;
+```
 
 Creates an HTTP client. Returns an `ApiClient`.
 
 **Parameters — `ApiClientOptions`:**
 
-| Option    | Type                          | Default | Description                                                                   |
-| --------- | ----------------------------- | ------- | ----------------------------------------------------------------------------- |
-| `baseUrl` | `string`                      | `''`    | Base URL prepended to every request                                           |
-| `headers` | `Record<string, string>`      | `{}`    | Default headers sent with every request                                       |
-| `timeout` | `number`                      | `30000` | Request timeout in ms                                                         |
-| `dedupe`  | `boolean`                     | `false` | Deduplicate non-idempotent methods; GET/HEAD/OPTIONS/DELETE dedupe by default |
-| `logger`  | `(level, msg, meta?) => void` | —       | Optional logger; `level` is `'info'`, `'warn'`, or `'error'`                  |
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `baseUrl` | `string` | `''` | Base URL prepended to every request |
+| `headers` | `Record<string, string>` | `{}` | Default headers sent with every request |
+| `timeout` | `number` | `30000` | Request timeout in ms |
 
 **Returns:** `ApiClient`
 
@@ -49,7 +48,6 @@ const api = createApi({
   baseUrl: 'https://api.example.com',
   timeout: 10_000,
   headers: { Authorization: 'Bearer token' },
-  logger: (level, msg) => console.log(`[${level}] ${msg}`),
 });
 
 const user = await api.get<User>('/users/{id}', { params: { id: 1 } });
@@ -74,19 +72,23 @@ const created = await api.post<User>('/users', { body: newUser });
 
 ---
 
-### `createQuery(options?)`
+### `createQuery()`
+
+```ts
+createQuery(options?: QueryClientOptions): QueryClient;
+```
 
 Creates a query client with caching, deduplication, and reactive subscriptions. Returns a `QueryClient`.
 
 **Parameters — `QueryClientOptions`:**
 
-| Option        | Type                            | Default     | Description                                                                    |
-| ------------- | ------------------------------- | ----------- | ------------------------------------------------------------------------------ |
-| `staleTime`   | `number`                        | `0`         | ms a successful entry is served from cache before next `query()` refetches     |
-| `gcTime`      | `number`                        | `300000`    | ms before an unobserved cache entry is collected (`Infinity` disables GC); runs at `'background'` priority via the Scheduler API |
-| `retry`       | `number \| false`               | `1`         | Default retry attempts for all queries                                         |
-| `retryDelay`  | `number \| (attempt) => number` | exponential | Delay between retries; defaults to exponential backoff (1s → 2s → … up to 30s) |
-| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to skip retrying for a specific error class                     |
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `staleTime` | `number` | `0` | ms a successful entry is served from cache before next `query()` refetches |
+| `gcTime` | `number` | `300000` | ms before an unobserved cache entry is collected; `Infinity` disables GC |
+| `retry` | `number` | `1` | Default retry attempts for all queries |
+| `retryDelay` | `number \| (attempt) => number` | exponential | Delay between retries; defaults to exponential backoff |
+| `shouldRetry` | `(error, attempt) => boolean` | — | Return `false` to skip retrying for a specific error class |
 
 **Returns:** `QueryClient`
 
@@ -108,7 +110,7 @@ const user = await qc.query({
 | Method             | Signature                                     | Description                                                  |
 | ------------------ | --------------------------------------------- | ------------------------------------------------------------ |
 | `query`            | `<T>(options: QueryOptions<T>) => Promise<T>` | Fetch with caching and retry                                 |
-| `prefetch`         | `<T>(options) => Promise<T \| undefined>`     | Warm cache; never throws                                     |
+| `prefetch`         | `(options) => Promise<void>`                  | Warm cache using query semantics                             |
 | `get`              | `<T>(key) => T \| undefined`                  | Read cached data                                             |
 | `set`              | `<T>(key, data \| updater) => void`           | Set or update cached data                                    |
 | `getState`         | `<T>(key) => QueryState<T> \| null`           | Full state snapshot                                          |
@@ -122,51 +124,60 @@ const user = await qc.query({
 
 ---
 
-### `createMutation(fn, options?)`
+### `createMutation()`
+
+```ts
+createMutation<TData, TVariables = void>(
+  fn: (ctx: MutationFnContext<TVariables>) => Promise<TData>,
+  options?: MutationOptions,
+): Mutation<TData, TVariables>;
+```
 
 Creates a standalone, observable mutation handle. Returns a `Mutation<TData, TVariables>`.
 
 **Parameters:**
 
-- `fn: (variables: TVariables) => Promise<TData>` — The mutation function
-- `options?: MutationOptions<TData, TVariables>`
+- `fn: (ctx: MutationFnContext<TVariables>) => Promise<TData>` — The mutation function
+- `options?: MutationOptions`
 
 **`MutationOptions`:**
 
-| Option        | Type                               | Default     | Description                                                |
-| ------------- | ---------------------------------- | ----------- | ---------------------------------------------------------- |
-| `retry`       | `number \| false`                  | `false`     | Retry attempts on failure                                  |
-| `retryDelay`  | `number \| (attempt) => number`    | exponential | Delay between retries                                      |
-| `shouldRetry` | `(error, attempt) => boolean`      | —           | Return `false` to skip retrying for a specific error class |
-| `onSuccess`   | `(data, variables) => void`        | —           | Called after a successful mutation                         |
-| `onError`     | `(error, variables) => void`       | —           | Called after a failed mutation                             |
-| `onSettled`   | `(data, error, variables) => void` | —           | Always called after mutation completes                     |
+| Option        | Type                            | Default     | Description                                                |
+| ------------- | ------------------------------- | ----------- | ---------------------------------------------------------- |
+| `retry`       | `number`                        | `0`         | Retry attempts on failure                                  |
+| `retryDelay`  | `number \| (attempt) => number` | exponential | Delay between retries                                      |
+| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to skip retrying for a specific error class |
 
 **Returns:** `Mutation<TData, TVariables>` with:
 
 - `mutate(variables, opts?) => Promise<TData>`
-- `cancel() => void`
 - `getState() => MutationState<TData>`
 - `subscribe(listener) => Unsubscribe`
 - `reset() => void`
+
+`mutate()` accepts call-level options:
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `signal` | `AbortSignal` | Optional caller-owned cancellation signal for this invocation |
 
 **Example:**
 
 ```ts
 import { createMutation } from '@vielzeug/fetchit';
 
-const createUser = createMutation((data: NewUser) => api.post<User>('/users', { body: data }), {
-  onSuccess: (user) => qc.set(['users', user.id], user),
-  onSettled: () => qc.invalidate(['users']),
-});
+const createUser = createMutation(({ input, signal }: { input: NewUser; signal?: AbortSignal }) =>
+  api.post<User>('/users', { body: input, signal }),
+);
 
 const unsub = createUser.subscribe((state) => {
-  if (state.isPending) showSpinner();
-  if (state.isSuccess) hideSpinner();
-  if (state.isError) showError(state.error);
+  if (state.status === 'pending') showSpinner();
+  if (state.status === 'success') hideSpinner();
+  if (state.status === 'error') showError(state.error);
 });
 
 await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
+qc.invalidate(['users']);
 createUser.reset();
 unsub();
 ```
@@ -212,11 +223,13 @@ Config accepted by all `ApiClient` request methods. `P` is the URL path literal 
 type HttpRequestConfig<P extends string = string> = Omit<RequestInit, 'body' | 'method'> &
   PathConfig<P> & {
     body?: unknown; // Plain objects → JSON; BodyInit → passed through as-is
-    query?: Params; // Query string: { page: 1, role: 'admin' } → ?page=1&role=admin
-    dedupe?: boolean; // Override client-level deduplication for this request
+    query?: Params; // Supports scalars, arrays, and null
+    dedupeKey?: unknown; // Opt in to write dedupe with an explicit stable key
     timeout?: number; // Override client-level timeout (ms)
   };
 ```
+
+Idempotent reads (`GET`, `HEAD`, `OPTIONS`, `DELETE`) are deduplicated automatically by method + URL + payload-derived key. Non-idempotent writes are deduplicated only when `dedupeKey` is provided.
 
 `PathConfig<P>` resolves to `{ params: Record<ExtractPathParams<P>, string | number | boolean> }` when `P` contains `{placeholders}`, or `{ params?: never }` otherwise.
 
@@ -235,15 +248,20 @@ type QueryOptions<T> = {
   fn: (ctx: QueryFnContext) => Promise<T>;
   staleTime?: number;
   gcTime?: number;
-  enabled?: boolean;
-  retry?: number | false;
-  retryDelay?: number | ((attempt: number) => number);
-  shouldRetry?: (error: unknown, attempt: number) => boolean;
-  onSuccess?: (data: T) => void;
-  onError?: (error: Error) => void;
-  onSettled?: (data: T | undefined, error: Error | null) => void;
 };
 ```
+
+Retry behavior is configured on `createQuery(options)` and applies to all `query()` calls.
+
+### `PrefetchOptions<T>`
+
+```ts
+type PrefetchOptions<T> = QueryOptions<T> & {
+  throwOnError?: boolean;
+};
+```
+
+`prefetch()` uses the same cache/fetch semantics as `query()`, resolves to `void`, and swallows errors by default unless `throwOnError` is `true`.
 
 ## Types
 
@@ -279,10 +297,6 @@ type QueryState<T = unknown> = {
   error: Error | null;
   status: QueryStatus;
   updatedAt: number; // Date.now() timestamp of last transition to success/error
-  isPending: boolean;
-  isSuccess: boolean;
-  isError: boolean;
-  isIdle: boolean;
 };
 ```
 
@@ -296,10 +310,6 @@ type MutationState<TData = unknown> = {
   error: Error | null;
   status: QueryStatus;
   updatedAt: number;
-  isPending: boolean;
-  isSuccess: boolean;
-  isError: boolean;
-  isIdle: boolean;
 };
 ```
 
@@ -310,12 +320,8 @@ type ApiClientOptions = {
   baseUrl?: string;
   headers?: Record<string, string>;
   timeout?: number;
-  dedupe?: boolean;
-  logger?: (level: 'info' | 'warn' | 'error', msg: string, meta?: unknown) => void;
 };
 ```
-
-Logger levels: `'info'` for successful requests, `'warn'` for 4xx responses, `'error'` for 5xx responses and network failures.
 
 ### `QueryClientOptions`
 
@@ -323,22 +329,28 @@ Logger levels: `'info'` for successful requests, `'warn'` for 4xx responses, `'e
 type QueryClientOptions = {
   staleTime?: number;
   gcTime?: number;
-  retry?: number | false;
+  retry?: number;
   retryDelay?: number | ((attempt: number) => number);
   shouldRetry?: (error: unknown, attempt: number) => boolean;
 };
 ```
 
-### `MutationOptions<TData, TVariables>`
+### `MutationFnContext<TVariables>`
 
 ```ts
-type MutationOptions<TData, TVariables> = {
-  retry?: number | false;
+type MutationFnContext<TVariables> = {
+  input: TVariables;
+  signal?: AbortSignal;
+};
+```
+
+### `MutationOptions`
+
+```ts
+type MutationOptions = {
+  retry?: number;
   retryDelay?: number | ((attempt: number) => number);
   shouldRetry?: (error: unknown, attempt: number) => boolean;
-  onSuccess?: (data: TData, variables: TVariables) => void;
-  onError?: (error: Error, variables: TVariables) => void;
-  onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void;
 };
 ```
 
@@ -346,7 +358,7 @@ type MutationOptions<TData, TVariables> = {
 
 ```ts
 type RetryOptions = {
-  retry?: number | false;
+  retry?: number;
   retryDelay?: number | ((attempt: number) => number);
   shouldRetry?: (error: unknown, attempt: number) => boolean;
 };

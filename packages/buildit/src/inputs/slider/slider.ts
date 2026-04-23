@@ -1,23 +1,22 @@
 import {
-  define,
   computed,
   createId,
+  define,
   defineField,
   handle,
   html,
   inject,
-  onMount,
   ref,
   signal,
   syncAria,
   watch,
 } from '@vielzeug/craftit';
-import { createSliderControl, createValidationControl } from '@vielzeug/craftit/controls';
+import { createSliderControl } from '@vielzeug/craftit/controls';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { SLIDER_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -61,23 +60,6 @@ export type BitSliderProps = ThemableProps &
     /** Single-value mode a11y label override (e.g. "75%"). Overrides raw aria-valuenow. */
     'value-text'?: string;
   };
-
-const sliderProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  from: '0',
-  'from-value-text': undefined,
-  max: '100',
-  min: '0',
-  name: '',
-  range: false,
-  step: '1',
-  to: '100',
-  'to-value-text': undefined,
-  value: '0',
-  'value-text': undefined,
-} satisfies PropsInput<BitSliderProps>;
 
 /**
  * A slider for selecting a single numeric value or a numeric range.
@@ -124,7 +106,22 @@ const sliderProps = {
  */
 export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', {
   formAssociated: true,
-  props: sliderProps,
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    from: '0',
+    'from-value-text': undefined,
+    max: '100',
+    min: '0',
+    name: '',
+    range: false,
+    step: '1',
+    to: '100',
+    'to-value-text': undefined,
+    value: '0',
+    'value-text': undefined,
+  },
   setup(props, { emit, host, slots }) {
     // Treat `range` as static — determined at first render
     const isRange = props.range.value;
@@ -156,14 +153,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     const valueSignal = signal('0');
 
     if (!isRange) {
-      sliderFd = defineField(
-        { disabled: isDisabled, value: valueSignal },
-        {
-          onReset: () => {
-            valueSignal.value = '0';
-          },
-        },
-      );
+      sliderFd = defineField({ disabled: isDisabled, value: valueSignal });
       watch(
         props.value,
         (v) => {
@@ -193,30 +183,22 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       sliderFd = defineField<{
         from: number;
         to: number;
-      }>(
-        {
-          disabled: isDisabled,
-          toFormValue: ({ from, to }) => {
-            const name = props.name.value;
+      }>({
+        disabled: isDisabled,
+        toFormValue: ({ from, to }) => {
+          const name = props.name.value;
 
-            if (!name) return null;
+          if (!name) return null;
 
-            const fd = new FormData();
+          const fd = new FormData();
 
-            fd.append(`${name}[from]`, String(from));
-            fd.append(`${name}[to]`, String(to));
+          fd.append(`${name}[from]`, String(from));
+          fd.append(`${name}[to]`, String(to));
 
-            return fd;
-          },
-          value: computed(() => ({ from: startVal.value, to: endVal.value })),
+          return fd;
         },
-        {
-          onReset: () => {
-            startVal.value = sliderControl.snap(Number(props.from.value));
-            endVal.value = sliderControl.snap(Number(props.to.value));
-          },
-        },
-      );
+        value: computed(() => ({ from: startVal.value, to: endVal.value })),
+      });
       watch(
         props.from,
         (v) => {
@@ -259,9 +241,11 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     };
 
     // ── Range mode setup ──────────────────────────────────────────
-    const { triggerValidation } = createValidationControl(formCtx?.validateOn, {
-      reportValidity: () => sliderFd?.reportValidity() ?? false,
-    });
+    const triggerValidation = (on: 'blur' | 'change') => {
+      if (formCtx?.validateOn?.value === on) {
+        sliderFd?.reportValidity();
+      }
+    };
 
     const setupRangeMode = (container: HTMLDivElement) => {
       updateRangeCSS();
@@ -475,46 +459,48 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       );
     };
 
-    onMount(() => {
-      const container = containerRef.value;
+    return {
+      mount() {
+        const container = containerRef.value;
 
-      if (!container) return;
+        if (!container) return;
 
-      if (slots.has().value && labelRef.value) {
-        const labelId = createId('slider-label');
+        if (slots.has().value && labelRef.value) {
+          const labelId = createId('slider-label');
 
-        labelRef.value.id = labelId;
+          labelRef.value.id = labelId;
 
-        if (!isRange) labelledById.value = labelId;
-      }
+          if (!isRange) labelledById.value = labelId;
+        }
 
-      if (isRange) setupRangeMode(container);
-      else setupSingleMode(container);
-    });
+        if (isRange) setupRangeMode(container);
+        else setupSingleMode(container);
+      },
 
-    return html`
-      <div class="slider-container" part="slider" ref=${containerRef}>
-        <div class="slider-track" part="track">
-          <div class="slider-fill" part="fill"></div>
-          <div class="slider-thumb slider-thumb-sole" part="thumb"></div>
-          <div
-            class="slider-thumb slider-thumb-start"
-            part="thumb-start"
-            ref=${thumbStartRef}
-            role="slider"
-            tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-            id="${startId}"></div>
-          <div
-            class="slider-thumb slider-thumb-end"
-            part="thumb-end"
-            ref=${thumbEndRef}
-            role="slider"
-            tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-            id="${endId}"></div>
+      render: () => html`
+        <div class="slider-container" part="slider" ref=${containerRef}>
+          <div class="slider-track" part="track">
+            <div class="slider-fill" part="fill"></div>
+            <div class="slider-thumb slider-thumb-sole" part="thumb"></div>
+            <div
+              class="slider-thumb slider-thumb-start"
+              part="thumb-start"
+              ref=${thumbStartRef}
+              role="slider"
+              tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+              id="${startId}"></div>
+            <div
+              class="slider-thumb slider-thumb-end"
+              part="thumb-end"
+              ref=${thumbEndRef}
+              role="slider"
+              tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+              id="${endId}"></div>
+          </div>
         </div>
-      </div>
-      <span class="label" part="label" ref=${labelRef}><slot></slot></span>
-    `;
+        <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+      `,
+    };
   },
   styles: [
     disabledStateMixin(),

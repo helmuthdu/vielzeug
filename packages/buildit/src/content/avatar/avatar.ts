@@ -3,7 +3,7 @@ import { define, computed, effect, html, signal, watch } from '@vielzeug/craftit
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import '../icon/icon';
-import { type PropsInput, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import groupStyles from './avatar-group.css?inline';
 import componentStyles from './avatar.css?inline';
@@ -75,7 +75,7 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
     initials: undefined,
     src: undefined,
     status: undefined,
-  } satisfies PropsInput<BitAvatarProps>,
+  },
   setup(props) {
     const imgFailed = signal(false);
 
@@ -126,32 +126,34 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
     };
     const avatarRole = () => (avatarLabel() ? 'img' : null);
 
-    return html`
-      <span class="avatar" part="avatar" :aria-label="${avatarLabel}" :role="${avatarRole}">
+    return {
+      render: () => html`
+        <span class="avatar" part="avatar" :aria-label="${avatarLabel}" :role="${avatarRole}">
+          ${() =>
+            props.src.value
+              ? html`<img
+                  ref="${attachImgListeners}"
+                  part="img"
+                  :src="${props.src}"
+                  :alt="${props.alt}"
+                  ?hidden="${() => !showImage.value}"
+                  aria-hidden="true" />`
+              : ''}
+          ${() =>
+            showInitials.value
+              ? html`<span class="initials" part="initials" aria-hidden="true">${derivedInitials}</span>`
+              : ''}
+          ${() =>
+            showFallback.value
+              ? html`<bit-icon class="icon-fallback" part="fallback" name="user" size="50%"></bit-icon>`
+              : ''}
+        </span>
         ${() =>
-          props.src.value
-            ? html`<img
-                ref="${attachImgListeners}"
-                part="img"
-                :src="${props.src}"
-                :alt="${props.alt}"
-                ?hidden="${() => !showImage.value}"
-                aria-hidden="true" />`
+          props.status.value
+            ? html`<span class="status" part="status" :data-status="${props.status}" aria-hidden="true"></span>`
             : ''}
-        ${() =>
-          showInitials.value
-            ? html`<span class="initials" part="initials" aria-hidden="true">${derivedInitials}</span>`
-            : ''}
-        ${() =>
-          showFallback.value
-            ? html`<bit-icon class="icon-fallback" part="fallback" name="user" size="50%"></bit-icon>`
-            : ''}
-      </span>
-      ${() =>
-        props.status.value
-          ? html`<span class="status" part="status" :data-status="${props.status}" aria-hidden="true"></span>`
-          : ''}
-    `;
+      `,
+    };
   },
   styles: [
     colorThemeMixin,
@@ -203,7 +205,7 @@ export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', 
   props: {
     max: 5,
     total: undefined,
-  } satisfies PropsInput<BitAvatarGroupProps>,
+  },
   setup(props, { host, slots }) {
     const overflowCount = signal(0);
 
@@ -227,13 +229,15 @@ export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', 
     const overflowLabel = () => `+${overflowCount.value} more`;
     const overflowText = () => `+${overflowCount.value}`;
 
-    return html`
-      <slot></slot>
-      ${() =>
-        overflowCount.value > 0
-          ? html`<span class="overflow-badge" part="overflow" aria-label="${overflowLabel}"> ${overflowText} </span>`
-          : ''}
-    `;
+    return {
+      render: () => html`
+        <slot></slot>
+        ${() =>
+          overflowCount.value > 0
+            ? html`<span class="overflow-badge" part="overflow" aria-label="${overflowLabel}"> ${overflowText} </span>`
+            : ''}
+      `,
+    };
   },
   styles: [groupStyles],
 });

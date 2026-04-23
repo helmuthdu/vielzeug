@@ -1,10 +1,10 @@
 import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, computed, createId, html, onMount, signal, syncAria, watch } from '@vielzeug/craftit';
+import { computed, createId, define, html, prop, signal, syncAria, watch } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
-import { flip, offset, positionFloat, shift, type Placement } from '@vielzeug/floatit';
+import { flip, offset, type Placement, positionFloat, shift } from '@vielzeug/floatit';
 
-import { disablableBundle, type PropsInput } from '../../inputs/shared/bundles';
+import { disablableBundle } from '../../inputs/shared/bundles';
 import { reducedMotionMixin } from '../../styles';
 import styles from './popover.css?inline';
 
@@ -46,15 +46,6 @@ export type BitPopoverProps = {
   trigger?: string;
 };
 
-const popoverProps: PropsInput<BitPopoverProps> = {
-  ...disablableBundle,
-  label: undefined,
-  offset: PANEL_OFFSET,
-  open: undefined,
-  placement: 'bottom',
-  trigger: 'click',
-};
-
 /**
  * A floating informational or interactive panel anchored to a trigger element.
  * Unlike tooltips, popovers support arbitrary interactive content via slots.
@@ -87,7 +78,30 @@ const popoverProps: PropsInput<BitPopoverProps> = {
  * ```
  */
 export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popover', {
-  props: popoverProps,
+  props: {
+    ...disablableBundle,
+    label: undefined,
+    offset: PANEL_OFFSET,
+    open: undefined,
+    placement: prop.oneOf(
+      [
+        'top',
+        'top-start',
+        'top-end',
+        'bottom',
+        'bottom-start',
+        'bottom-end',
+        'left',
+        'left-start',
+        'left-end',
+        'right',
+        'right-start',
+        'right-end',
+      ] as const,
+      'bottom',
+    ),
+    trigger: 'click',
+  },
   setup(props, { emit, host, slots }) {
     const visible = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
@@ -190,123 +204,126 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
 
       close('trigger');
     }
-    onMount(() => {
-      const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-      let triggerBinding: (() => void) | null = null;
 
-      if (!triggerSlot) return;
+    return {
+      mount() {
+        const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+        let triggerBinding: (() => void) | null = null;
 
-      const bindEvents = () => {
-        triggerBinding?.();
-        triggerBinding = null;
+        if (!triggerSlot) return;
 
-        const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+        const bindEvents = () => {
+          triggerBinding?.();
+          triggerBinding = null;
 
-        if (!el) {
-          currentTrigger = null;
+          const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
-          return;
-        }
+          if (!el) {
+            currentTrigger = null;
 
-        currentTrigger = el;
+            return;
+          }
 
-        const removeAria = syncAria(el, {
-          controls: () => panelId,
-          disabled: () => String(isDisabled.value),
-          expanded: () => String(visible.value),
-          haspopup: 'dialog',
+          currentTrigger = el;
+
+          const removeAria = syncAria(el, {
+            controls: () => panelId,
+            disabled: () => String(isDisabled.value),
+            expanded: () => String(visible.value),
+            haspopup: 'dialog',
+          });
+
+          const cleanups: Array<() => void> = [];
+          const add = (
+            target: EventTarget,
+            event: string,
+            listener: EventListener,
+            options?: AddEventListenerOptions,
+          ) => {
+            target.addEventListener(event, listener, options);
+            cleanups.push(() => target.removeEventListener(event, listener, options));
+          };
+
+          const t = triggers.value;
+          const hasTrigger = (trigger: PopoverTrigger) => t.includes(trigger);
+
+          if (hasTrigger('click')) {
+            add(el, 'click', toggle as EventListener);
+            add(document, 'click', handleClickOutside as EventListener, { capture: true });
+          }
+
+          if (hasTrigger('hover')) {
+            add(el, 'pointerenter', () => open('trigger'));
+            add(el, 'pointerleave', () => close('trigger'));
+
+            if (panelEl) {
+              add(panelEl, 'pointerenter', () => open('trigger'));
+              add(panelEl, 'pointerleave', () => close('trigger'));
+            }
+          }
+
+          if (hasTrigger('focus')) {
+            add(el, 'focusin', () => open('trigger'));
+            add(el, 'focusout', handleFocusOut as EventListener);
+
+            if (panelEl) add(panelEl, 'focusout', handleFocusOut as EventListener);
+          }
+
+          add(document, 'keydown', handleKeydown as EventListener);
+
+          triggerBinding = () => {
+            removeAria();
+
+            for (const cleanup of cleanups) cleanup();
+
+            currentTrigger = null;
+          };
+        };
+
+        watch(slots.elements(), bindEvents, { immediate: true });
+        // Controlled mode
+        watch(props.open, (openVal) => {
+          if (openVal === undefined || openVal === null) return;
+
+          if (openVal) {
+            showFloat();
+            emit('open', { reason: 'programmatic' });
+          } else {
+            hideFloat();
+            emit('close', { reason: 'programmatic' });
+          }
+        });
+        watch(props.trigger, bindEvents);
+        watch(props.disabled, (isDisabled) => {
+          if (isDisabled) close('programmatic');
         });
 
-        const cleanups: Array<() => void> = [];
-        const add = (
-          target: EventTarget,
-          event: string,
-          listener: EventListener,
-          options?: AddEventListenerOptions,
-        ) => {
-          target.addEventListener(event, listener, options);
-          cleanups.push(() => target.removeEventListener(event, listener, options));
+        return () => {
+          triggerBinding?.();
+          triggerBinding = null;
+
+          if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
         };
+      },
 
-        const t = triggers.value;
-        const hasTrigger = (trigger: PopoverTrigger) => t.includes(trigger);
-
-        if (hasTrigger('click')) {
-          add(el, 'click', toggle as EventListener);
-          add(document, 'click', handleClickOutside as EventListener, { capture: true });
-        }
-
-        if (hasTrigger('hover')) {
-          add(el, 'pointerenter', () => open('trigger'));
-          add(el, 'pointerleave', () => close('trigger'));
-
-          if (panelEl) {
-            add(panelEl, 'pointerenter', () => open('trigger'));
-            add(panelEl, 'pointerleave', () => close('trigger'));
-          }
-        }
-
-        if (hasTrigger('focus')) {
-          add(el, 'focusin', () => open('trigger'));
-          add(el, 'focusout', handleFocusOut as EventListener);
-
-          if (panelEl) add(panelEl, 'focusout', handleFocusOut as EventListener);
-        }
-
-        add(document, 'keydown', handleKeydown as EventListener);
-
-        triggerBinding = () => {
-          removeAria();
-
-          for (const cleanup of cleanups) cleanup();
-
-          currentTrigger = null;
-        };
-      };
-
-      watch(slots.elements(), bindEvents, { immediate: true });
-      // Controlled mode
-      watch(props.open, (openVal) => {
-        if (openVal === undefined || openVal === null) return;
-
-        if (openVal) {
-          showFloat();
-          emit('open', { reason: 'programmatic' });
-        } else {
-          hideFloat();
-          emit('close', { reason: 'programmatic' });
-        }
-      });
-      watch(props.trigger, bindEvents);
-      watch(props.disabled, (isDisabled) => {
-        if (isDisabled) close('programmatic');
-      });
-
-      return () => {
-        triggerBinding?.();
-        triggerBinding = null;
-
-        if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
-      };
-    });
-
-    return html`
-      <slot></slot>
-      <div
-        class="panel"
-        part="panel"
-        id="${panelId}"
-        role="dialog"
-        aria-modal="false"
-        popover="manual"
-        :aria-label="${props.label}"
-        :aria-hidden="${() => String(!visible.value)}"
-        ref=${(el: HTMLElement) => {
-          panelEl = el;
-        }}>
-        <slot name="content"></slot>
-      </div>
-    `;
+      render: () => html`
+        <slot></slot>
+        <div
+          class="panel"
+          part="panel"
+          id="${panelId}"
+          role="dialog"
+          aria-modal="false"
+          popover="manual"
+          :aria-label="${props.label}"
+          :aria-hidden="${() => String(!visible.value)}"
+          ref=${(el: HTMLElement) => {
+            panelEl = el;
+          }}>
+          <slot name="content"></slot>
+        </div>
+      `,
+    };
   },
   styles: [reducedMotionMixin, styles],
 });

@@ -4,8 +4,12 @@
  * ⚠️ Requires DOM environment (browser / jsdom / happy-dom)
  */
 
-import { define, type ComponentDefinition } from '../component';
-import { _resetIdCounter } from '../internal';
+import type { Signal } from '@vielzeug/stateit';
+
+import type { ComponentInstance } from '../registration';
+
+import { define, type ComponentDefinition, type SetupContextBag } from '../component';
+import { _resetIdCounter, type HTMLResult } from '../internal';
 import { fire as runtimeFire } from '../runtime';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -65,7 +69,21 @@ export interface MountOptions {
 type TestComponentOptions<
   Props extends Record<string, unknown> = Record<string, never>,
   Events extends Record<string, unknown> = Record<string, unknown>,
-> = Omit<ComponentDefinition<Props, Events>, 'setup'> & Pick<ComponentDefinition<Props, Events>, 'setup'>;
+> = Omit<ComponentDefinition<Props, Events>, 'setup'> & {
+  setup: TestSetup<Props, Events>;
+};
+
+type TestSetup<
+  Props extends Record<string, unknown> = Record<string, never>,
+  Events extends Record<string, unknown> = Record<string, unknown>,
+> = (...args: Parameters<ComponentDefinition<Props, Events>['setup']>) => ComponentInstance | HTMLResult;
+
+type MountProps = { readonly [x: string]: Signal<unknown> };
+
+// Bivariant callback type keeps inline test callbacks ergonomic across varying setup context specializations.
+export type MountSetup = {
+  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => ComponentInstance | HTMLResult;
+}['bivarianceHack'];
 
 export interface WaitOptions {
   /** Maximum wait time in ms (default: 1000) */
@@ -184,7 +202,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: TestComponentOptions['setup'],
+  tagOrSetupOrOptions: MountSetup,
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
@@ -192,29 +210,49 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: string | TestComponentOptions['setup'] | TestComponentOptions<any, any>,
+  tagOrSetupOrOptions: string | MountSetup | TestComponentOptions<any, any>,
   options: MountOptions = {},
 ): Promise<Fixture<T>> {
   const { attrs = {}, componentOptions, container = document.body, html, props = {} } = options;
 
+  const normalizeSetup = <P extends Record<string, unknown>, E extends Record<string, unknown>>(
+    setup: TestSetup<P, E>,
+  ): ComponentDefinition<P, E>['setup'] => {
+    return (setupProps, setupCtx) => {
+      const result = setup(setupProps, setupCtx);
+
+      if (typeof result === 'object' && result && 'render' in result) {
+        return result;
+      }
+
+      return {
+        render: () => result,
+      };
+    };
+  };
+
   let tagName: string;
-  let inlineDefinition: TestComponentOptions<any, any> | undefined;
+  let inlineDefinition: ComponentDefinition<any, any> | undefined;
 
   if (typeof tagOrSetupOrOptions === 'string') {
     tagName = tagOrSetupOrOptions;
   } else if (typeof tagOrSetupOrOptions === 'function') {
     tagName = `trial-${++_componentTagCounter}`;
+
     inlineDefinition = {
       ...(componentOptions ?? {}),
-      setup: tagOrSetupOrOptions as TestComponentOptions<any, any>['setup'],
+      setup: normalizeSetup(tagOrSetupOrOptions as TestSetup<any, any>),
     };
   } else {
     tagName = `trial-${++_componentTagCounter}`;
-    inlineDefinition = tagOrSetupOrOptions;
+    inlineDefinition = {
+      ...tagOrSetupOrOptions,
+      setup: normalizeSetup(tagOrSetupOrOptions.setup),
+    };
   }
 
   if (inlineDefinition) {
-    define(tagName, inlineDefinition as TestComponentOptions<any, any>);
+    define(tagName, inlineDefinition);
   }
 
   const element = document.createElement(tagName) as T;

@@ -4,7 +4,6 @@ import {
   createContext,
   html,
   inject,
-  onMount,
   provide,
   signal,
   type ReadonlySignal,
@@ -158,86 +157,88 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
       },
     });
 
-    onMount(() => {
-      const el = host.el as SidebarElement;
+    return {
+      mount() {
+        const el = host.el as SidebarElement;
 
-      el.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
-      el.toggle = doToggle;
+        el.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
+        el.toggle = doToggle;
 
-      let mediaCleanup: (() => void) | undefined;
-      const observer = new MutationObserver(() => {
-        if (!host.el.hasAttribute('collapsed') && !isControlled.value) return;
+        let mediaCleanup: (() => void) | undefined;
+        const observer = new MutationObserver(() => {
+          if (!host.el.hasAttribute('collapsed') && !isControlled.value) return;
 
-        isControlled.value = true;
-        collapsedState.value = host.el.hasAttribute('collapsed');
-      });
+          isControlled.value = true;
+          collapsedState.value = host.el.hasAttribute('collapsed');
+        });
 
-      observer.observe(host.el, {
-        attributeFilter: ['collapsed'],
-        attributes: true,
-      });
+        observer.observe(host.el, {
+          attributeFilter: ['collapsed'],
+          attributes: true,
+        });
 
-      watch(
-        props.responsive,
-        (query) => {
+        watch(
+          props.responsive,
+          (query) => {
+            mediaCleanup?.();
+            mediaCleanup = undefined;
+
+            const mediaQuery = String(query ?? '').trim();
+
+            if (!mediaQuery) return;
+
+            const mql = window.matchMedia(mediaQuery);
+            const onChange = (event: MediaQueryListEvent) => {
+              setCollapsed(event.matches, 'responsive');
+            };
+
+            setCollapsed(mql.matches, 'responsive');
+            mql.addEventListener('change', onChange);
+
+            mediaCleanup = () => {
+              mql.removeEventListener('change', onChange);
+            };
+          },
+          { immediate: true },
+        );
+
+        return () => {
+          observer.disconnect();
           mediaCleanup?.();
-          mediaCleanup = undefined;
+        };
+      },
 
-          const mediaQuery = String(query ?? '').trim();
-
-          if (!mediaQuery) return;
-
-          const mql = window.matchMedia(mediaQuery);
-          const onChange = (event: MediaQueryListEvent) => {
-            setCollapsed(event.matches, 'responsive');
-          };
-
-          setCollapsed(mql.matches, 'responsive');
-          mql.addEventListener('change', onChange);
-
-          mediaCleanup = () => {
-            mql.removeEventListener('change', onChange);
-          };
-        },
-        { immediate: true },
-      );
-
-      return () => {
-        observer.disconnect();
-        mediaCleanup?.();
-      };
-    });
-
-    return html`
-      <nav aria-label="${props.label}" part="nav">
-        <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader() && !props.collapsible.value}>
-          <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
-            <slot name="logo"></slot>
-          </span>
-          <span class="sidebar-header-content">
-            <slot name="header"></slot>
-          </span>
-          <button
-            class="toggle-btn"
-            part="toggle-btn"
-            type="button"
-            ?hidden=${() => !props.collapsible.value}
-            aria-label="${() => (isCollapsed() ? 'Expand sidebar' : 'Collapse sidebar')}"
-            aria-expanded="${() => !isCollapsed()}"
-            @click="${doToggle}">
-            <span class="toggle-icon" aria-hidden="true">
-              <bit-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
+      render: () => html`
+        <nav aria-label="${props.label}" part="nav">
+          <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader() && !props.collapsible.value}>
+            <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
+              <slot name="logo"></slot>
             </span>
-          </button>
-        </div>
-        <div class="sidebar-content" part="content">
-          <slot></slot>
-        </div>
-        <div class="sidebar-footer" part="footer" ?hidden=${() => !hasFooter()}>
-          <slot name="footer"></slot>
-        </div>
-      </nav>
-    `;
+            <span class="sidebar-header-content">
+              <slot name="header"></slot>
+            </span>
+            <button
+              class="toggle-btn"
+              part="toggle-btn"
+              type="button"
+              ?hidden=${() => !props.collapsible.value}
+              aria-label="${() => (isCollapsed() ? 'Expand sidebar' : 'Collapse sidebar')}"
+              aria-expanded="${() => !isCollapsed()}"
+              @click="${doToggle}">
+              <span class="toggle-icon" aria-hidden="true">
+                <bit-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
+              </span>
+            </button>
+          </div>
+          <div class="sidebar-content" part="content">
+            <slot></slot>
+          </div>
+          <div class="sidebar-footer" part="footer" ?hidden=${() => !hasFooter()}>
+            <slot name="footer"></slot>
+          </div>
+        </nav>
+      `,
+    };
   },
   styles: [coarsePointerMixin, reducedMotionMixin, sidebarStyles],
 });
@@ -288,6 +289,7 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
     open: {
       default: undefined as boolean | undefined,
       parse: (value: string | null) => (value == null ? undefined : value === '' || value === 'true'),
+      reflect: false,
     },
   },
   setup(props, { host, slots }) {
@@ -322,30 +324,32 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
       },
     });
 
-    return html`
-      <details class="group" part="group" ?open=${isOpen}>
-        <summary
-          class="group-header"
-          part="group-header"
-          aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}"
-          @click=${(e: MouseEvent) => {
-            if (!props.collapsible.value) {
-              e.preventDefault();
-            }
-          }}>
-          <span class="group-icon" part="group-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
-            <slot name="icon"></slot>
-          </span>
-          <span class="group-label" part="group-label">${props.label}</span>
-          <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">
-            <bit-icon name="chevron-right" size="12" stroke-width="2" aria-hidden="true"></bit-icon>
-          </span>
-        </summary>
-        <div class="group-items" part="group-items" role="list">
-          <slot></slot>
-        </div>
-      </details>
-    `;
+    return {
+      render: () => html`
+        <details class="group" part="group" ?open=${isOpen}>
+          <summary
+            class="group-header"
+            part="group-header"
+            aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}"
+            @click=${(e: MouseEvent) => {
+              if (!props.collapsible.value) {
+                e.preventDefault();
+              }
+            }}>
+            <span class="group-icon" part="group-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
+              <slot name="icon"></slot>
+            </span>
+            <span class="group-label" part="group-label">${props.label}</span>
+            <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">
+              <bit-icon name="chevron-right" size="12" stroke-width="2" aria-hidden="true"></bit-icon>
+            </span>
+          </summary>
+          <div class="group-items" part="group-items" role="list">
+            <slot></slot>
+          </div>
+        </details>
+      `,
+    };
   },
   styles: [reducedMotionMixin, groupStyles],
 });
@@ -449,31 +453,39 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
       </span>
     `;
 
-    return html`
-      ${() => {
-        if (isLink()) {
-          return html`
-            <a
-              class="item"
-              part="item"
-              href="${props.href}"
-              :rel="${props.rel}"
-              :target="${props.target}"
-              aria-current="${() => (props.active.value ? 'page' : null)}">
-              ${renderItemContent()}
-            </a>
-          `;
-        } else if (props.disabled.value) {
-          return html` <div class="item" part="item" tabindex="-1" aria-disabled="true">${renderItemContent()}</div> `;
-        } else {
-          return html`
-            <button class="item" part="item" type="button" aria-current="${() => (props.active.value ? 'page' : null)}">
-              ${renderItemContent()}
-            </button>
-          `;
-        }
-      }}
-    `;
+    return {
+      render: () => html`
+        ${() => {
+          if (isLink()) {
+            return html`
+              <a
+                class="item"
+                part="item"
+                href="${props.href}"
+                :rel="${props.rel}"
+                :target="${props.target}"
+                aria-current="${() => (props.active.value ? 'page' : null)}">
+                ${renderItemContent()}
+              </a>
+            `;
+          } else if (props.disabled.value) {
+            return html`
+              <div class="item" part="item" tabindex="-1" aria-disabled="true">${renderItemContent()}</div>
+            `;
+          } else {
+            return html`
+              <button
+                class="item"
+                part="item"
+                type="button"
+                aria-current="${() => (props.active.value ? 'page' : null)}">
+                ${renderItemContent()}
+              </button>
+            `;
+          }
+        }}
+      `,
+    };
   },
   styles: [coarsePointerMixin, itemStyles],
 });

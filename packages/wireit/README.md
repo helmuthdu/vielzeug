@@ -300,6 +300,7 @@ export type {
 
 | Method                             | Description                                |
 | ---------------------------------- | ------------------------------------------ |
+| `set(token, provider, opts?)`      | **[Minimal]** Register a value, factory, or class (auto-detects) |
 | `register(token, provider, opts?)` | Register a full `Provider<T>`              |
 | `value(token, val, opts?)`         | Register a plain value                     |
 | `factory(token, fn, opts?)`        | Register a factory function                |
@@ -312,6 +313,9 @@ export type {
 
 | Method                       | Description                              |
 | ---------------------------- | ---------------------------------------- |
+| `resolve<T>(token)`          | **[Minimal]** Resolve asynchronously (handles both sync and async) |
+| `resolveAll(tokens)`         | **[Minimal]** Resolve a tuple of tokens asynchronously |
+| `resolveOptional<T>(token)`  | **[Minimal]** Resolve async or return `undefined` |
 | `get<T>(token)`              | Resolve synchronously — throws if async  |
 | `getAsync<T>(token)`         | Resolve asynchronously                   |
 | `getAll(tokens)`             | Resolve a tuple of tokens synchronously  |

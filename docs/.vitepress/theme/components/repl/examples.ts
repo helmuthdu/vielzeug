@@ -911,16 +911,16 @@ const queryClient = createQuery({ staleTime: 5000, gcTime: 300000 })
 // First call — hits the network
 console.log('First query...')
 const data1 = await queryClient.query({
-  queryKey: ['posts', 1],
-  queryFn: () => http.get('/posts/1'),
+  key: ['posts', 1],
+  fn: () => http.get('/posts/1'),
 })
 console.log('Data:', data1.title)
 
 // Second call — served from cache (within staleTime)
 console.log('Second query (cached)...')
 const data2 = await queryClient.query({
-  queryKey: ['posts', 1],
-  queryFn: () => http.get('/posts/1'),
+  key: ['posts', 1],
+  fn: () => http.get('/posts/1'),
 })
 console.log('Data:', data2.title)
 console.log('✓ Second request used cached data!')`,
@@ -934,8 +934,8 @@ const queryClient = createQuery()
 
 // Fetch and cache
 await queryClient.query({
-  queryKey: ['users'],
-  queryFn: () => http.get('/users'),
+  key: ['users'],
+  fn: () => http.get('/users'),
 })
 console.log('✓ Data cached for key: ["users"]')
 
@@ -943,8 +943,8 @@ queryClient.invalidate(['users'])
 console.log('✓ Cache invalidated for ["users"]')
 
 // Cache individual entries
-await queryClient.query({ queryKey: ['users', 1], queryFn: () => http.get('/users/1') })
-await queryClient.query({ queryKey: ['users', 2], queryFn: () => http.get('/users/2') })
+await queryClient.query({ key: ['users', 1], fn: () => http.get('/users/1') })
+await queryClient.query({ key: ['users', 2], fn: () => http.get('/users/2') })
 console.log('✓ Cached ["users", 1] and ["users", 2]')
 
 // Invalidate all 'users' queries via prefix
@@ -959,17 +959,8 @@ const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 
 // Standalone createMutation
 const createPost = createMutation(
-  (variables: { title: string; body: string; userId: number }) =>
-    http.post('/posts', { body: variables }),
-  {
-    onSuccess: (data, variables) => {
-      console.log('✓ Post created:', data.id)
-      console.log('  Title:', variables.title)
-    },
-    onError: (error) => {
-      console.error('✗ Mutation failed:', error.message)
-    },
-  }
+  ({ input, signal }: { input: { title: string; body: string; userId: number }; signal: AbortSignal }) =>
+    http.post('/posts', { body: input, signal }),
 )
 
 const result = await createPost.mutate({ title: 'New Post', body: 'Content', userId: 1 })
@@ -986,15 +977,14 @@ const queryClient = createQuery()
 const unsubscribe = queryClient.subscribe(['posts', 1], (state) => {
   console.log('Query state:', {
     status: state.status,
-    isSuccess: state.isSuccess,
-    isLoading: state.isLoading,
+    updatedAt: state.updatedAt,
   })
 })
 
 // Fetch triggers subscribers
 await queryClient.query({
-  queryKey: ['posts', 1],
-  queryFn: () => http.get('/posts/1'),
+  key: ['posts', 1],
+  fn: () => http.get('/posts/1'),
 })
 
 unsubscribe()
@@ -1973,35 +1963,40 @@ console.log('User can delete posts:', permit.check(user, 'posts', 'delete'))`,
   },
   routeit: {
     'basic-routing': {
-      code: `import { createRouter } from '@vielzeug/routeit'
+      code: `import { createRouter, defineRoutes } from '@vielzeug/routeit'
 
-const router = createRouter()
-
-router
-  .on('/', () => {
-    console.log('Home page')
+const router = createRouter({
+  routes: defineRoutes({
+    home: {
+      path: '/',
+      handler: () => console.log('Home page')
+    },
+    about: {
+      path: '/about',
+      handler: () => console.log('About page')
+    },
+    userDetail: {
+      path: '/users/:id',
+      handler: ({ params }) => console.log('User page - ID:', params.id)
+    },
+    notFound: {
+      path: '*',
+      handler: () => console.log('Not found')
+    }
   })
-  .on('/about', () => {
-    console.log('About page')
-  })
-  .on('/users/:id', ({ params }) => {
-    console.log('User page - ID:', params.id)
-  })
-  .start()
+})
 
-// Navigate
-console.log('Navigating to home...')
-router.navigate('/')
+router.start()
 
-console.log('\\nNavigating to about...')
-router.navigate('/about')
+console.log('Navigate to about')
+await router.navigate({ name: 'about' })
 
-console.log('\\nNavigating to user 123...')
-router.navigate('/users/123')`,
-      name: 'Basic Routing - Simple Navigation',
+console.log('Navigate to user 123')
+await router.navigate({ name: 'userDetail', params: { id: '123' } })`,
+      name: 'Basic Routing - Route Table',
     },
     'middleware-auth': {
-      code: `import { createRouter } from '@vielzeug/routeit'
+      code: `import { createRouter, defineRoutes } from '@vielzeug/routeit'
 
 // Mock auth service
 const authService = {
@@ -2013,7 +2008,7 @@ const authService = {
 const requireAuth = async (ctx, next) => {
   if (!authService.isAuthenticated) {
     console.log('❌ Not authenticated, redirecting to login')
-    ctx.navigate('/login')
+    await ctx.navigate({ name: 'login' }, { replace: true })
     return
   }
 
@@ -2022,32 +2017,45 @@ const requireAuth = async (ctx, next) => {
   await next()
 }
 
-const router = createRouter()
-
-router
-  .on('/login', () => {
-    console.log('📝 Login page')
+const router = createRouter({
+  routes: defineRoutes({
+    login: {
+      path: '/login',
+      handler: () => console.log('📝 Login page')
+    },
+    dashboard: {
+      path: '/dashboard',
+      middleware: requireAuth,
+      handler: (ctx) => console.log('📊 Dashboard - Welcome,', ctx.locals.user.name)
+    },
+    profile: {
+      path: '/profile',
+      middleware: requireAuth,
+      handler: (ctx) => {
+        console.log('👤 Profile for:', ctx.locals.user.name)
+        console.log('   User ID:', ctx.locals.user.id)
+        console.log('   Roles:', ctx.locals.user.roles)
+      }
+    },
+    notFound: {
+      path: '*',
+      handler: () => console.log('Not found')
+    }
   })
-  .on('/dashboard', (ctx) => {
-    console.log('📊 Dashboard - Welcome,', ctx.locals.user.name)
-  }, { middleware: requireAuth })
-  .on('/profile', (ctx) => {
-    console.log('👤 Profile for:', ctx.locals.user.name)
-    console.log('   User ID:', ctx.locals.user.id)
-    console.log('   Roles:', ctx.locals.user.roles)
-  }, { middleware: requireAuth })
-  .start()
+})
+
+router.start()
 
 // Try accessing protected routes
 console.log('\\n--- Accessing Dashboard ---')
-router.navigate('/dashboard')
+await router.navigate({ name: 'dashboard' })
 
 console.log('\\n--- Accessing Profile ---')
-router.navigate('/profile')`,
+await router.navigate({ name: 'profile' })`,
       name: 'Middleware - Authentication',
     },
     'middleware-chain': {
-      code: `import { createRouter } from '@vielzeug/routeit'
+      code: `import { createRouter, defineRoutes } from '@vielzeug/routeit'
 
 // Logger middleware
 const logger = async (ctx, next) => {
@@ -2081,35 +2089,59 @@ const loadData = async (ctx, next) => {
   await next()
 }
 
-const router = createRouter({ middleware: [logger] })
+const router = createRouter({
+  middleware: [logger],
+  routes: defineRoutes({
+    adminPanel: {
+      path: '/admin/panel',
+      middleware: [auth, requireAdmin, loadData],
+      handler: (ctx) => {
+        console.log('        🎯 Handler: Admin panel')
+        console.log('        User:', ctx.locals.user?.name)
+        console.log('        Data loaded:', ctx.locals.data?.loaded)
+      }
+    },
+    notFound: {
+      path: '*',
+      handler: () => console.log('Not found')
+    }
+  })
+})
 
-router
-  .on('/admin/panel', (ctx) => {
-    console.log('        🎯 Handler: Admin panel')
-    console.log('        User:', ctx.locals.user?.name)
-    console.log('        Data loaded:', ctx.locals.data?.loaded)
-  }, { middleware: [auth, requireAdmin, loadData] })
-  .start()
+router.start()
 
 console.log('Execution order:')
 console.log('Global → Route → Handler\\n')
-router.navigate('/admin/panel')`,
+await router.navigate({ name: 'adminPanel' })`,
       name: 'Middleware Chain - Execution Flow',
     },
     'named-routes': {
-      code: `import { createRouter } from '@vielzeug/routeit'
+      code: `import { createRouter, defineRoutes } from '@vielzeug/routeit'
 
-const router = createRouter()
+const router = createRouter({
+  routes: defineRoutes({
+    home: {
+      path: '/',
+      handler: () => console.log('🏠 Home')
+    },
+    userDetail: {
+      path: '/users/:id',
+      handler: ({ params }) => console.log('👤 User Detail - ID:', params.id)
+    },
+    postComment: {
+      path: '/posts/:postId/comments/:commentId',
+      handler: ({ params }) => {
+        console.log('💬 Post:', params.postId, 'Comment:', params.commentId)
+      }
+    },
+    notFound: {
+      path: '*',
+      handler: () => console.log('Not found')
+    }
+  })
+})
 
-router
-  .on('/', () => console.log('🏠 Home'), { name: 'home' })
-  .on('/users/:id', ({ params }) => {
-    console.log('👤 User Detail - ID:', params.id)
-  }, { name: 'userDetail' })
-  .on('/posts/:postId/comments/:commentId', ({ params }) => {
-    console.log('💬 Post:', params.postId, 'Comment:', params.commentId)
-  }, { name: 'postComment' })
-  .start()
+router.start()
 
 // Navigate by name
 console.log('Navigate to home:')
@@ -2131,167 +2163,164 @@ console.log('Comment URL:', router.url('postComment', {
       name: 'Named Routes - Type-Safe Navigation',
     },
     'nested-routes': {
-      code: `import { createRouter } from '@vielzeug/routeit'
+      code: `import { createRouter, defineRoutes } from '@vielzeug/routeit'
 
-const router = createRouter()
-
-router.group('/admin', (r) => {
-  r.on('/', () => {
-    console.log('📂 Admin section')
-  })
-  r.on('/dashboard', () => {
-    console.log('  📊 Admin Dashboard')
-  })
-  r.on('/users', () => {
-    console.log('  👥 User Management')
-  })
-  r.on('/settings', () => {
-    console.log('  ⚙️ Admin Settings')
-  })
-})
-
-router.group('/blog', (r) => {
-  r.on('/', () => {
-    console.log('📝 Blog section')
-  })
-  r.on('/posts/:id', ({ params }) => {
-    console.log('  📄 Post:', params.id)
-  })
-  r.on('/categories/:category', ({ params }) => {
-    console.log('  🏷️ Category:', params.category)
+const router = createRouter({
+  routes: defineRoutes({
+    adminDashboard: {
+      path: '/admin/dashboard',
+      handler: () => console.log('📊 Admin Dashboard')
+    },
+    adminUsers: {
+      path: '/admin/users',
+      handler: () => console.log('👥 Admin Users')
+    },
+    blogPost: {
+      path: '/blog/posts/:id',
+      handler: ({ params }) => console.log('📝 Post:', params.id)
+    },
+    notFound: {
+      path: '*',
+      handler: () => console.log('Not found')
+    }
   })
 })
 
 router.start()
 
-// Navigate to nested routes
-console.log('Admin routes:')
-router.navigate('/admin/dashboard')
-router.navigate('/admin/users')
-router.navigate('/admin/settings')
-
-console.log('\\nBlog routes:')
-router.navigate('/blog/posts/123')
-router.navigate('/blog/categories/javascript')`,
-      name: 'Nested Routes - Route Hierarchy',
+await router.navigate({ name: 'adminDashboard' })
+await router.navigate({ name: 'adminUsers' })
+await router.navigate({ name: 'blogPost', params: { id: '123' } })`,
+      name: 'Route Groups Replacement - Explicit Table Paths',
     },
     'query-params': {
-      code: `import { createRouter } from '@vielzeug/routeit'
+      code: `import { createRouter, defineRoutes } from '@vielzeug/routeit'
 
-const router = createRouter()
-
-router
-  .on('/search', ({ query }) => {
-    console.log('🔍 Search page')
-    console.log('   Query:', query.q)
-    console.log('   Page:', query.page || '1')
-    console.log('   Sort:', query.sort || 'relevance')
+const router = createRouter({
+  routes: defineRoutes({
+    search: {
+      path: '/search',
+      handler: ({ query }) => {
+        console.log('🔍 Search page')
+        console.log('   Query:', query.q)
+        console.log('   Page:', query.page || '1')
+        console.log('   Sort:', query.sort || 'relevance')
+      }
+    },
+    userPosts: {
+      path: '/users/:id/posts',
+      handler: ({ params, query }) => {
+        console.log('📝 User posts')
+        console.log('   User ID:', params.id)
+        console.log('   Status:', query.status)
+        console.log('   Limit:', query.limit || '10')
+      }
+    },
+    notFound: {
+      path: '*',
+      handler: () => console.log('Not found')
+    }
   })
-  .on('/products', ({ query, params }) => {
-    console.log('🛍️ Products page')
-    console.log('   Category:', query.category)
-    console.log('   Price range:', query.min, '-', query.max)
-    console.log('   Tags:', query.tags) // Array support
-  })
-  .on('/users/:id/posts', ({ params, query }) => {
-    console.log('📝 User posts')
-    console.log('   User ID:', params.id)
-    console.log('   Status:', query.status)
-    console.log('   Limit:', query.limit || '10')
-  })
-  .start()
+})
 
-// Navigate with query params
-console.log('Search with query:')
-router.navigate('/search?q=typescript&page=2&sort=recent')
+router.start()
 
-console.log('\\nProducts with filters:')
-router.navigate('/products?category=electronics&min=100&max=500&tags=sale&tags=new')
+await router.navigate({
+  name: 'search',
+  query: { q: 'typescript', page: '2', sort: 'recent' }
+})
 
-console.log('\\nUser posts:')
-router.navigate('/users/42/posts?status=published&limit=20')`,
+await router.navigate({
+  name: 'userPosts',
+  params: { id: '42' },
+  query: { status: 'published', limit: '20' }
+})`,
       name: 'Query Parameters - URL Parsing',
     },
     'route-context': {
-      code: `import { createRouter } from '@vielzeug/routeit'
+      code: `import { createRouter, defineRoutes } from '@vielzeug/routeit'
 
-const router = createRouter()
-
-router
-  .on('/users/:userId/posts/:postId', (ctx) => {
-    console.log('📄 Route Context:')
-    console.log('   Pathname:', ctx.pathname)
-    console.log('   Params:', ctx.params)
-    console.log('   Meta (static):', ctx.meta)
-    console.log('   User (from middleware):', ctx.locals.user)
-  }, {
-    meta: {
-      title: 'Post Detail',
-      requiresAuth: true,
-      breadcrumbs: ['Home', 'Users', 'Posts']
-    },
-    middleware: async (ctx, next) => {
-      // Store dynamic data in ctx.locals
-      ctx.locals.startTime = Date.now()
-
-      // Simulate user loading
-      ctx.locals.user = {
-        id: parseInt(ctx.params.userId),
-        name: 'Alice'
+const router = createRouter({
+  routes: defineRoutes({
+    postDetail: {
+      path: '/users/:userId/posts/:postId',
+      meta: {
+        title: 'Post Detail',
+        requiresAuth: true,
+        breadcrumbs: ['Home', 'Users', 'Posts']
+      },
+      middleware: async (ctx, next) => {
+        ctx.locals.startTime = Date.now()
+        ctx.locals.user = {
+          id: Number(ctx.params.userId),
+          name: 'Alice'
+        }
+        await next()
+        const elapsed = Date.now() - Number(ctx.locals.startTime)
+        console.log(\`\\n⏱️ Took \${elapsed}ms\`)
+      },
+      handler: (ctx) => {
+        console.log('📄 Route Context:')
+        console.log('   Pathname:', ctx.pathname)
+        console.log('   Params:', ctx.params)
+        console.log('   Meta (static):', ctx.meta)
+        console.log('   User (from middleware):', ctx.locals.user)
       }
-
-      await next()
-
-      // Log after handler
-      const elapsed = Date.now() - ctx.locals.startTime
-      console.log(\`\\n⏱️ Took \${elapsed}ms\`)
+    },
+    notFound: {
+      path: '*',
+      handler: () => console.log('Not found')
     }
   })
-  .start()
+})
 
-router.navigate('/users/42/posts/123?tab=comments&sort=recent')`,
+router.start()
+
+await router.navigate({
+  name: 'postDetail',
+  params: { userId: '42', postId: '123' },
+  query: { tab: 'comments', sort: 'recent' }
+})`,
       name: 'Route Context - Full Context Access',
     },
     'url-building': {
-      code: `import { createRouter } from '@vielzeug/routeit'
+      code: `import { createRouter, defineRoutes } from '@vielzeug/routeit'
 
-const router = createRouter({ base: '/app' })
-
-router
-  .on('/users/:id', () => {}, { name: 'user' })
-  .on('/posts/:postId/comments/:commentId', () => {}, { name: 'comment' })
-  .start()
+const router = createRouter({
+  base: '/app',
+  routes: defineRoutes({
+    user: { path: '/users/:id' },
+    comment: { path: '/posts/:postId/comments/:commentId' },
+    search: { path: '/search' },
+    notFound: { path: '*' }
+  })
+})
 
 console.log('🔗 URL Building Examples:\\n')
 
-// Build with params
-const userUrl = router.url('/users/:id', { id: '123' })
+const userUrl = router.url('user', { id: '123' })
 console.log('User URL:', userUrl)
 
-// Build with query params
-const searchUrl = router.url('/search', undefined, {
+const searchUrl = router.url('search', undefined, {
   q: 'typescript',
   page: '2',
   tags: ['tutorial', 'advanced']
 })
 console.log('Search URL:', searchUrl)
 
-// Build with both
 const profileUrl = router.url(
-  '/users/:id',
+  'user',
   { id: '456' },
   { tab: 'posts', sort: 'recent' }
 )
 console.log('Profile URL:', profileUrl)
 
-// Named routes
 const commentUrl = router.url('comment', {
   postId: '10',
   commentId: '25'
 })
 console.log('Comment URL:', commentUrl)
 
-// Named route with query
 const userPostsUrl = router.url('user', { id: '789' })
 console.log('User posts URL:', userPostsUrl)`,
       name: 'URL Building - Dynamic URLs',

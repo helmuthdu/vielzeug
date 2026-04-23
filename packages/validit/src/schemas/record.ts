@@ -13,6 +13,19 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     this.valueSchema = valueSchema;
   }
 
+  private _guardRecordInput(
+    value: unknown,
+  ): { ok: true; value: Record<string, unknown> } | { issues: Issue[]; ok: false } {
+    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+      return {
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().object_type(), path: [] }],
+        ok: false,
+      };
+    }
+
+    return { ok: true, value: value as Record<string, unknown> };
+  }
+
   private _parseRecordEntries(obj: Record<string, unknown>): { issues: Issue[]; output: Record<string, unknown> } {
     const issues: Issue[] = [];
     const output: Record<string, unknown> = {};
@@ -38,27 +51,21 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
   }
 
   protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().object_type(), path: [] }],
-      };
-    }
+    const guarded = this._guardRecordInput(value);
 
-    const { issues, output } = this._parseRecordEntries(value as Record<string, unknown>);
+    if (!guarded.ok) return { data: value, issues: guarded.issues };
+
+    const { issues, output } = this._parseRecordEntries(guarded.value);
 
     return { data: output, issues };
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().object_type(), path: [] }],
-      };
-    }
+    const guarded = this._guardRecordInput(value);
 
-    const obj = value as Record<string, unknown>;
+    if (!guarded.ok) return { data: value, issues: guarded.issues };
+
+    const obj = guarded.value;
     const keys = Object.keys(obj);
     const entryResults = await Promise.all(
       keys.map((key) =>
@@ -85,6 +92,3 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     return { data: output, issues };
   }
 }
-
-export const record = <K extends string, V>(keySchema: Schema<K>, valueSchema: Schema<V>): RecordSchema<K, V> =>
-  new RecordSchema(keySchema, valueSchema);

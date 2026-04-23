@@ -7,60 +7,46 @@ description: Complete API reference for @vielzeug/timit date/time functions.
 
 [[toc]]
 
-## Namespace Object
+## Import Style
 
-### `t` — Date/time operations
-
-All functions are grouped under the `t` namespace for discoverability and autocomplete.
+Timit uses named exports only.
 
 ```ts
-import { t } from '@vielzeug/timit';
+import {
+  diff,
+  formatHuman,
+  formatISO,
+  formatRange,
+  now,
+  shift,
+  toInstant,
+  toZoned,
+  within,
+} from '@vielzeug/timit';
 
-t.now('UTC');
-t.parseLocal('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
-t.toInstant(input, { tz: 'Europe/Berlin' });
-t.toZoned(instant, { tz: 'America/New_York' });
-t.shift(time, { hours: 1 });
-t.diff(start, end);
-t.within(value, start, end);
-t.formatHuman(time, { pattern: 'short' });
-t.formatISO(time);
-t.formatRange(start, end, { pattern: 'short' });
-```
-
-You can also import functions individually:
-
-```ts
-import { formatHuman, shift, toInstant } from '@vielzeug/timit';
+now('UTC');
+toInstant(input, { tz: 'Europe/Berlin' });
+toZoned(instant, { tz: 'America/New_York' });
+shift(time, { hours: 1 });
+diff(start, end);
+within(value, start, end);
+formatHuman(time, { pattern: 'short' });
+formatISO(time);
+formatRange(start, end, { pattern: 'short' });
 ```
 
 ## Functions
 
 ### Conversion Functions
 
-#### `t.parseLocal(input, options): Temporal.ZonedDateTime`
-
-Parse a plain local date/time string using an explicit timezone.
-
-```ts
-t.parseLocal('2026-03-21T10:15:30', { tz: 'America/New_York' });
-```
-
-Parameters:
-- `input: string` — Plain local date/time string without offset
-- `options: LocalTimeOptions` — Requires `tz`; optional `when` disambiguation
-
-Returns: `Temporal.ZonedDateTime`
-
-#### `t.toInstant(input, options?): Temporal.Instant`
+#### `toInstant(input, options?): Temporal.Instant`
 
 Normalize any supported input to a canonical timeline value.
 
 ```ts
-t.toInstant('2026-03-21T10:15:30Z');
-t.toInstant('2026-03-21T10:15:30', { tz: 'America/New_York' });
-t.toInstant(new Date());
-t.toInstant(1711011330000);
+toInstant('2026-03-21T10:15:30Z');
+toInstant('2026-03-21T10:15:30', { tz: 'America/New_York' });
+toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
 ```
 
 Parameters:
@@ -71,14 +57,17 @@ Returns: `Temporal.Instant`
 
 Notes:
 - Plain local strings require `options.tz`.
+- Zoned strings with bracketed zone annotations (for example `2026-03-21T10:15:30[America/New_York]`) are resolved using their embedded timezone.
+- ISO strings with explicit offsets (for example `+02:00` or `Z`) are parsed as absolute instants; `options.tz` does not reinterpret them.
 - Invalid strings throw a dedicated parse error.
+- `options.when` only applies when resolving local wall-clock values to an instant.
 
-#### `t.toZoned(input, options?): Temporal.ZonedDateTime`
+#### `toZoned(input, options?): Temporal.ZonedDateTime`
 
 View a time in a specific timezone.
 
 ```ts
-t.toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' });
+toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' });
 ```
 
 Parameters:
@@ -87,15 +76,20 @@ Parameters:
 
 Returns: `Temporal.ZonedDateTime`
 
+Notes:
+- Plain local strings (for example `2026-03-21` or `2026-03-21T10:15`) are interpreted in `options.tz`.
+- Zoned strings with bracketed zone annotations preserve their original instant and can optionally be displayed in `options.tz`.
+- Offset-bearing strings are first parsed as absolute instants, then displayed in the target timezone.
+
 ### Arithmetic Functions
 
-#### `t.shift(input, duration, options?): Temporal.ZonedDateTime`
+#### `shift(input, duration, options?): Temporal.ZonedDateTime`
 
 Add or subtract duration in one API.
 
 ```ts
-t.shift('2026-03-21T10:00:00Z', { hours: 2 });
-t.shift('2026-03-21T10:00:00Z', { hours: -1 });
+shift('2026-03-21T10:00:00Z', { hours: 2 });
+shift('2026-03-21T10:00:00Z', { hours: -1 });
 ```
 
 Parameters:
@@ -105,12 +99,12 @@ Parameters:
 
 Returns: `Temporal.ZonedDateTime`
 
-#### `t.diff(start, end, options?): Temporal.Duration`
+#### `diff(start, end, options?): Temporal.Duration`
 
 Compute duration between two times with optional rounding.
 
 ```ts
-t.diff(start, end, { largestUnit: 'hour', smallestUnit: 'minute' });
+diff(start, end, { largestUnit: 'hour', smallestUnit: 'minute' });
 ```
 
 Parameters:
@@ -122,21 +116,21 @@ Returns: `Temporal.Duration`
 
 ### Query Functions
 
-#### `t.now(tz?): Temporal.ZonedDateTime`
+#### `now(tz?): Temporal.ZonedDateTime`
 
 Get the current time in the given timezone (or system timezone).
 
 ```ts
-t.now();
-t.now('America/New_York');
+now();
+now('America/New_York');
 ```
 
-#### `t.within(input, start, end, options?): boolean`
+#### `within(input, start, end, options?): boolean`
 
 Check whether `input` is within an inclusive range.
 
 ```ts
-t.within('2026-03-21T11:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
+within('2026-03-21T11:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
 ```
 
 Notes:
@@ -144,12 +138,12 @@ Notes:
 
 ### Formatting Functions
 
-#### `t.formatHuman(input, options?): string`
+#### `formatHuman(input, options?): string`
 
 Format localized, user-facing output.
 
 ```ts
-t.formatHuman('2026-03-21T10:15:30Z', {
+formatHuman('2026-03-21T10:15:30Z', {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
@@ -162,21 +156,21 @@ Pattern options:
 - `'date-only'`
 - `'time-only'`
 
-#### `t.formatISO(input, options?): string`
+#### `formatISO(input, options?): string`
 
 Format canonical ISO-8601 output for logs and APIs.
 
 ```ts
-t.formatISO('2026-03-21T10:15:30Z');
+formatISO('2026-03-21T10:15:30Z');
 // => "2026-03-21T10:15:30Z"
 ```
 
-#### `t.formatRange(start, end, options?): string`
+#### `formatRange(start, end, options?): string`
 
 Format a localized range using `Intl.DateTimeFormat.formatRange` when available.
 
 ```ts
-t.formatRange(start, end, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
+formatRange(start, end, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
 ```
 
 ## Types
@@ -185,11 +179,9 @@ t.formatRange(start, end, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
 
 ```ts
 type TimeInput =
-  | Date
   | Temporal.Instant
   | Temporal.PlainDateTime
   | Temporal.ZonedDateTime
-  | number
   | string;
 ```
 
@@ -198,15 +190,6 @@ type TimeInput =
 ```ts
 interface TimeOptions {
   tz?: string;
-  when?: DateTimeDisambiguation;
-}
-```
-
-### `LocalTimeOptions`
-
-```ts
-interface LocalTimeOptions {
-  tz: string;
   when?: DateTimeDisambiguation;
 }
 ```

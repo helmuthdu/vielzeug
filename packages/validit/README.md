@@ -19,14 +19,12 @@ pnpm add @vielzeug/validit
 ```ts
 import { v, type Infer } from '@vielzeug/validit';
 
-const UserSchema = v
-  .object({
-    id: v.coerce.number().int().positive(),
-    name: v.string().min(1),
-    email: v.string().trim().email(),
-    role: v.union('admin', 'editor', 'viewer').default('viewer'),
-  })
-  .strict();
+const UserSchema = v.object({
+  id: v.coerce.number().int().positive(),
+  name: v.string().min(1),
+  email: v.string().trim().email(),
+  role: v.union('admin', 'editor', 'viewer').default('viewer'),
+});
 
 type User = Infer<typeof UserSchema>;
 
@@ -43,10 +41,10 @@ if (result.success) {
 ## Features
 
 - Chainable schema API for primitive and composite types
-- Full output type inference via `Infer<T>` / `InferOutput<T>`
+- Full output type inference via `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>`
 - Sync and async custom rules with `.refine()` / `.refineAsync()`
 - Built-in coercion via `v.coerce.string|number|boolean|date`
-- Object helpers: `.partial()`, `.required()`, `.pick()`, `.omit()`, `.extend()`, `.strict()`
+- Object helpers: `.partial()`, `.required()`, `.pick()`, `.omit()`, `.extend()`, `.relaxed()`
 - Union options: `v.union()`, `v.intersect()`, and discriminated `v.variant()`
 - Configurable global messages via `configure({ messages })`
 - Structured errors with `ValidationError`, `Issue`, and `error.flatten()`
@@ -98,9 +96,15 @@ const Account = v.object({
 
 ## API At A Glance
 
-- `v` namespace: `string`, `number`, `boolean`, `date`, `literal`, `enum`, `nativeEnum`, `object`, `array`, `tuple`, `record`, `union`, `intersect`, `variant`, `lazy`, `instanceof`, `never`, `any`, `unknown`, `null`, `undefined`
+- `v` namespace: `string`, `number`, `boolean`, `date`, `literal`, `enum`, `nativeEnum`, `object`, `array`, `tuple`, `record`, `union`, `intersect`, `variant`, `lazy`, `instanceof`, `never`, `null`, `undefined`
 - Base schema methods: `parse`, `safeParse`, `parseAsync`, `safeParseAsync`, `optional`, `nullable`, `nullish`, `required`, `default`, `catch`, `refine`, `refineAsync`, `transform`, `preprocess`, `describe`, `brand`, `is`
-- Errors and types: `ValidationError`, `ErrorCode`, `Issue`, `ParseResult<T>`, `MessageFn<Ctx>`, `Infer<T>`
+- Errors and types: `ValidationError`, `ErrorCode`, `Issue`, `ParseResult<T>`, `MessageFn<Ctx>`, `Infer<T>`, `InferOutput<T>`, `TypeOf<T>`
+
+## Notes
+
+- `v.object(...)` is strict by default and rejects unknown keys.
+- Use `.relaxed()` when you want unknown keys to pass through.
+- `v.union(...)` and `v.intersect(...)` accept both schemas and raw literal branches.
 
 ## Documentation
 

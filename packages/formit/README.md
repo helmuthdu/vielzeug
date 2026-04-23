@@ -41,7 +41,7 @@ const form = createForm({
 
 form.set('email', 'alice@example.com');
 
-const result = await form.validate();
+const result = await form.validateAll();
 console.log(result.valid, result.errors);
 
 try {
@@ -64,11 +64,12 @@ try {
 - Typed field paths (`FlatKeyOf`) and path value inference (`TypeAtPath`)
 - Plain-object flatten/unflatten for nested forms
 - Field validators (`validators`) and form validator (`validator`)
-- Partial validation via `validate({ fields })` or `validate({ onlyTouched: true })`
-- `submit` with double-submit protection (`SubmitError`)
+- Explicit validation methods: `validateAll`, `validateTouched`, `validateFields`
+- Deterministic submit flow: always touch-all + validate-all before handler (`SubmitError` on overlap)
 - Validation failure signaling via `FormValidationError`
-- Unified `subscribe()` for form-level and field-level observation
-- `bind()` helper with live getters
+- Explicit subscriptions: `subscribeForm()` and `subscribeField()`
+- Baseline-safe reset model: `reset()` and `replace(values)`
+- `bind()` helper with live getters and value-based `onChange(value)`
 - Array batch helper: `array(name).append/remove/move`
 - Standalone `toFormData(values)`
 
@@ -86,6 +87,12 @@ try {
 - [Usage Guide](https://vielzeug.dev/formit/usage)
 - [API Reference](https://vielzeug.dev/formit/api)
 - [Examples](https://vielzeug.dev/formit/examples)
+
+## Compatibility
+
+| Environment | Support |
+| --- | --- |
+| Browser | ✅ |
 
 ## License
 

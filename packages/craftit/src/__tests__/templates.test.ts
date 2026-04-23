@@ -4,10 +4,23 @@
  */
 
 import { computed, define, html, signal, type ComponentDefinition } from '../index';
-import { fire, mount } from '../testing';
+import { fire, mount, type MountSetup } from '../testing';
 
-const register = (tag: string, setup: ComponentDefinition['setup'], options: Omit<ComponentDefinition, 'setup'> = {}) =>
-  define(tag, { setup, ...options });
+const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinition, 'setup'> = {}) =>
+  define(tag, {
+    ...options,
+    setup: (props, ctx) => {
+      const result = setup(props, ctx);
+
+      if (typeof result === 'object' && result && 'render' in result) {
+        return result;
+      }
+
+      return {
+        render: () => result,
+      };
+    },
+  });
 
 describe('Template: HTML System', () => {
   describe('html Tagged Template', () => {
@@ -213,12 +226,18 @@ describe('Template: HTML System', () => {
       expect(clicked).toBe(true);
     });
 
-    it('should support .stop modifier', async () => {
+    it('should allow manual stopPropagation in handler', async () => {
       const calls: string[] = [];
       const { query } = await mount(
         () =>
           html`<div @click=${() => calls.push('parent')}>
-            <button @click.stop=${() => calls.push('child')}>Click</button>
+            <button
+              @click=${(e: MouseEvent) => {
+                e.stopPropagation();
+                calls.push('child');
+              }}>
+              Click
+            </button>
           </div>`,
       );
 
@@ -227,10 +246,18 @@ describe('Template: HTML System', () => {
       expect(calls).toEqual(['child']);
     });
 
-    it('should support .prevent modifier', async () => {
+    it('should allow manual preventDefault in handler', async () => {
       let prevented = false;
       const { query } = await mount(
-        () => html`<a href="#" @click.prevent=${(event: Event) => (prevented = event.defaultPrevented)}>Link</a>`,
+        () =>
+          html`<a
+            href="#"
+            @click=${(event: Event) => {
+              event.preventDefault();
+              prevented = event.defaultPrevented;
+            }}
+            >Link</a
+          >`,
       );
 
       query('a')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -238,31 +265,7 @@ describe('Template: HTML System', () => {
       expect(prevented).toBe(true);
     });
 
-    it('should support .self modifier', async () => {
-      let hostClicks = 0;
-      const { query } = await mount(
-        () => html`<div class="host" @click.self=${() => hostClicks++}><span class="child">Child</span></div>`,
-      );
-
-      query('.child')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(hostClicks).toBe(0);
-
-      query('.host')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(hostClicks).toBe(1);
-    });
-
-    it('should support .once modifier', async () => {
-      let clicks = 0;
-      const { query } = await mount(() => html`<button @click.once=${() => clicks++}>Click</button>`);
-      const button = query('button')!;
-
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-      expect(clicks).toBe(1);
-    });
-
-    it('should support combined modifiers with signal-backed dynamic handlers', async () => {
+    it('should support signal-backed dynamic handlers', async () => {
       const first = vi.fn();
       const second = vi.fn();
       const handler = signal<(event: Event) => void>((event) => first(event));
@@ -271,7 +274,16 @@ describe('Template: HTML System', () => {
       const { flush, query } = await mount(
         () => html`
           <div class="parent" @click=${() => parentClicks()}>
-            <a class="link" href="#" @click.stop.prevent=${handler}>Run</a>
+            <a
+              class="link"
+              href="#"
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handler.value(e);
+              }}
+              >Run</a
+            >
           </div>
         `,
       );
@@ -294,7 +306,6 @@ describe('Template: HTML System', () => {
       expect(first).toHaveBeenCalledTimes(1);
       expect(second).toHaveBeenCalledTimes(1);
       expect(parentClicks).toHaveBeenCalledTimes(0);
-      expect(secondEvent.defaultPrevented).toBe(true);
     });
   });
 
@@ -331,195 +342,39 @@ describe('Template: HTML System', () => {
   });
 });
 
-describe('Reflect: .property syntax', () => {
-  describe('Text input .value binding', () => {
-    it('should set initial value property from signal', async () => {
-      const { query } = await mount(() => {
-        const text = signal('hello');
-
-        return html`<input type="text" .value=${text} />`;
-      });
-
-      const input = query<HTMLInputElement>('input');
-
-      expect(input?.value).toBe('hello');
-    });
-
-    it('should update property when signal changes', async () => {
-      const { query } = await mount(() => {
-        const text = signal('hello');
-
-        return html`
-          <div>
-            <button @click=${() => (text.value = 'world')}>Update</button>
-            <input type="text" .value=${text} />
-          </div>
-        `;
-      });
-
-      const input = query('input') as HTMLInputElement;
-      const button = query('button');
-
-      expect(input.value).toBe('hello');
-
-      fire.click(button!);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(input.value).toBe('world');
-    });
-
-    it('should support computed values', async () => {
-      const { query } = await mount(() => {
-        const first = signal('hello');
-        const last = signal('world');
-        const fullName = computed(() => `${first.value} ${last.value}`);
-
-        return html`<input type="text" .value=${fullName} />`;
-      });
-
-      const input = query('input') as HTMLInputElement;
-
-      expect(input.value).toBe('hello world');
-    });
-
-    it('should support static values', async () => {
-      const { query } = await mount(() => html`<input type="text" .value=${'static value'} />`);
-
-      const input = query('input') as HTMLInputElement;
-
-      expect(input.value).toBe('static value');
-    });
-
-    it('should update source signal when input emits an input event', async () => {
+describe('Native value/checked sync via :value/:checked', () => {
+  it('should set input value via :value binding', async () => {
+    const { query } = await mount(() => {
       const text = signal('hello');
 
-      const { query } = await mount(() => html`<input type="text" .value=${text} />`);
-      const input = query('input') as HTMLInputElement;
-
-      input.value = 'changed';
-      input.dispatchEvent(new Event('input'));
-
-      expect(text.value).toBe('changed');
+      return html`<input type="text" :value=${text} />`;
     });
+
+    const input = query<HTMLInputElement>('input');
+
+    expect(input?.value).toBe('hello');
   });
 
-  describe('Checkbox .checked binding', () => {
-    it('should set checkbox checked property from signal', async () => {
-      const { query } = await mount(() => {
-        const checked = signal(true);
+  it('should update :value binding when signal changes', async () => {
+    const { flush, query } = await mount(() => {
+      const text = signal('hello');
 
-        return html`<input type="checkbox" .checked=${checked} />`;
-      });
-
-      const checkbox = query('input') as HTMLInputElement;
-
-      expect(checkbox.checked).toBe(true);
+      return html`
+        <div>
+          <button @click=${() => (text.value = 'world')}>Update</button>
+          <input type="text" :value=${text} />
+        </div>
+      `;
     });
 
-    it('should update checked property when signal changes', async () => {
-      const { query } = await mount(() => {
-        const checked = signal(false);
+    const input = query('input') as HTMLInputElement;
 
-        return html`
-          <div>
-            <button @click=${() => (checked.value = true)}>Check</button>
-            <input type="checkbox" .checked=${checked} />
-          </div>
-        `;
-      });
+    expect(input.value).toBe('hello');
 
-      const checkbox = query('input') as HTMLInputElement;
-      const button = query('button');
+    fire.click(query('button')!);
+    await flush();
 
-      expect(checkbox.checked).toBe(false);
-
-      fire.click(button!);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(checkbox.checked).toBe(true);
-    });
-
-    it('should support computed values for checked', async () => {
-      const { query } = await mount(() => {
-        const value = signal(5);
-        const isGreaterThanTen = computed(() => value.value > 10);
-
-        return html`<input type="checkbox" .checked=${isGreaterThanTen} />`;
-      });
-
-      const checkbox = query('input') as HTMLInputElement;
-
-      expect(checkbox.checked).toBe(false);
-    });
-
-    it('should update source signal when checked changes', async () => {
-      const checked = signal(false);
-
-      const { query } = await mount(() => html`<input type="checkbox" .checked=${checked} />`);
-      const checkbox = query('input') as HTMLInputElement;
-
-      checkbox.checked = true;
-      checkbox.dispatchEvent(new Event('change'));
-
-      expect(checked.value).toBe(true);
-    });
-  });
-
-  describe('Custom element property binding', () => {
-    it('should bind to custom element properties', async () => {
-      define('custom-prop-element', { setup: () => html`<div></div>` });
-
-      const { query } = await mount(() => {
-        const data = signal({ name: 'test', value: 42 });
-
-        return html`<custom-prop-element .data=${data} />`;
-      });
-
-      const customEl = query('custom-prop-element') as any;
-
-      expect(customEl.data).toEqual({ name: 'test', value: 42 });
-    });
-
-    it('should update custom properties reactively', async () => {
-      define('custom-prop-reactive', { setup: () => html`<div></div>` });
-
-      const { query } = await mount(() => {
-        const data = signal({ count: 1 });
-
-        return html`
-          <div>
-            <button @click=${() => (data.value = { count: 2 })}>Update</button>
-            <custom-prop-reactive .data=${data} />
-          </div>
-        `;
-      });
-
-      const customEl = query('custom-prop-reactive') as any;
-      const button = query('button');
-
-      expect(customEl.data).toEqual({ count: 1 });
-
-      fire.click(button!);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(customEl.data).toEqual({ count: 2 });
-    });
-  });
-
-  describe('Interaction with attribute bindings', () => {
-    it('should allow both attribute and property bindings on same element', async () => {
-      const { query } = await mount(() => {
-        const value = signal('hello');
-        const disabled = signal(false);
-
-        return html`<input type="text" .value=${value} ?disabled=${disabled} />`;
-      });
-
-      const input = query('input') as HTMLInputElement;
-
-      expect(input.value).toBe('hello');
-      expect(input.disabled).toBe(false);
-    });
+    expect(input.value).toBe('world');
   });
 });
 
@@ -543,8 +398,9 @@ describe('Reactive Bindings', () => {
 
     it('should handle boolean attributes correctly', async () => {
       const checked = signal(false);
+      const classes = computed(() => (checked.value ? 'checked' : ''));
 
-      register('test-boolean-attrs', () => html` <div class=${() => (checked.value ? 'checked' : '')}>State</div> `);
+      register('test-boolean-attrs', () => html` <div class=${classes}>State</div> `);
 
       const { flush, query } = await mount('test-boolean-attrs');
 
@@ -591,11 +447,9 @@ describe('Reactive Bindings', () => {
   describe('CSS Class Bindings', () => {
     it('should toggle CSS classes reactively', async () => {
       const completed = signal(false);
+      const classes = computed(() => (completed.value ? 'completed' : ''));
 
-      register(
-        'test-class-toggle',
-        () => html` <div class="${() => (completed.value ? 'completed' : '')}">Task</div> `,
-      );
+      register('test-class-toggle', () => html` <div class="${classes}">Task</div> `);
 
       const { flush, query } = await mount('test-class-toggle');
 
@@ -807,7 +661,7 @@ describe('Computed Values', () => {
         () => html`
           <input
             type="email"
-            :value=${() => email.value}
+            :value=${computed(() => email.value)}
             @input=${(e: Event) => (email.value = (e.target as HTMLInputElement).value)} />
           <span class="error">${error}</span>
         `,
@@ -843,7 +697,7 @@ describe('Computed Values', () => {
         () => html`
           <input
             type="password"
-            :value=${() => password.value}
+            :value=${computed(() => password.value)}
             @input=${(e: Event) => (password.value = (e.target as HTMLInputElement).value)} />
           <div class="strength">${strength}</div>
         `,

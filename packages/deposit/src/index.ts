@@ -1,7 +1,6 @@
 export { createIndexedDB } from './adapters/indexeddb';
 export { createLocalStorage } from './adapters/localstorage';
-export { ProjectedQuery, QueryBuilder } from './query';
-export { defineSchema, storeField } from './schema';
+export { QueryBuilder } from './query';
 export { ttl } from './ttl';
 export type {
   Adapter,

@@ -1,6 +1,4 @@
-import { computed, define, html, provide } from '@vielzeug/craftit';
-
-import type { PropsInput } from '../shared/bundles';
+import { computed, define, html, prop, provide } from '@vielzeug/craftit';
 
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './form.css?inline';
@@ -29,15 +27,6 @@ export type BitFormEvents = {
   submit: { formData: FormData; originalEvent: SubmitEvent };
 };
 
-const formProps: PropsInput<BitFormProps> = {
-  disabled: false,
-  novalidate: false,
-  orientation: 'vertical',
-  size: undefined,
-  validateOn: 'submit',
-  variant: undefined,
-};
-
 /**
  * A wrapper for standard HTML form that provides context to child bit-* form fields.
  * Manages shared state like size, variant, and validation timing.
@@ -64,7 +53,14 @@ const formProps: PropsInput<BitFormProps> = {
  * ```
  */
 export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
-  props: formProps,
+  props: {
+    disabled: false,
+    novalidate: false,
+    orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
+    size: undefined,
+    validateOn: prop.oneOf(['submit', 'change', 'blur', 'input'] as const, 'submit'),
+    variant: undefined,
+  },
   setup(props, { emit, host }) {
     const shadowRoot = host.el.shadowRoot;
 
@@ -95,16 +91,18 @@ export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
       emit('reset', { originalEvent: e });
     }
 
-    return html`
-      <form
-        part="form"
-        :novalidate="${props.novalidate}"
-        :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
-        @submit="${handleSubmit}"
-        @reset="${handleReset}">
-        <slot></slot>
-      </form>
-    `;
+    return {
+      render: () => html`
+        <form
+          part="form"
+          :novalidate="${props.novalidate}"
+          :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
+          @submit="${handleSubmit}"
+          @reset="${handleReset}">
+          <slot></slot>
+        </form>
+      `,
+    };
   },
   shadow: { delegatesFocus: false },
   styles: [componentStyles],

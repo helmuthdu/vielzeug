@@ -5,14 +5,14 @@ import { toReactiveBindingSource } from '../runtime';
 import { html } from '../template-compiler';
 
 describe('template caching', () => {
-  it('creates a fresh computed source for repeated getter functions', () => {
+  it('does not create reactive sources for plain getter functions', () => {
     const getter = () => 42;
 
     const first = toReactiveBindingSource(getter);
     const second = toReactiveBindingSource(getter);
 
-    expect(first).toBeDefined();
-    expect(second).not.toBe(first);
+    expect(first).toBeUndefined();
+    expect(second).toBeUndefined();
   });
 
   it('reuses html wrapper signal for function interpolations', () => {

@@ -1,7 +1,6 @@
-import { computed, signal, type Signal } from '@vielzeug/stateit';
+import { computed, signal, type Signal, watch } from '@vielzeug/stateit';
 
 import { defineField } from '../form';
-import { watch } from '../runtime';
 import {
   createAssistiveState,
   createBaseFieldHandle,
@@ -19,15 +18,7 @@ const parseChoiceFieldValues = (value: string | undefined): string[] => {
 };
 
 export const createChoiceField = <T>(options: ChoiceFieldOptions<T>): ChoiceFieldHandle<T> => {
-  const { bindTrigger, ...base } = createBaseFieldHandle({
-    context: options.context,
-    disabled: options.disabled,
-    label: options.label,
-    labelPlacement: options.labelPlacement,
-    name: options.name,
-    prefix: options.prefix,
-    validateOn: options.validateOn,
-  });
+  const { bindTrigger, ...base } = createBaseFieldHandle(options);
   const selectedItems = signal<T[]>([]);
   const isMultiple = computed(() => Boolean(options.multiple?.value));
   const selectedValues = computed(() => selectedItems.value.map((item) => options.getValue(item)));
@@ -109,18 +100,10 @@ export const createChoiceField = <T>(options: ChoiceFieldOptions<T>): ChoiceFiel
     replaceSelectedItems(values.map((value) => options.mapControlledValue(value)));
   };
 
-  const field = defineField(
-    {
-      disabled: base.disabled,
-      value: formValue,
-    },
-    {
-      onReset: () => {
-        clear();
-        options.onReset?.();
-      },
-    },
-  );
+  const field = defineField({
+    disabled: base.disabled,
+    value: formValue,
+  });
 
   const triggerValidation = bindTrigger(field);
 

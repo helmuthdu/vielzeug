@@ -43,5 +43,5 @@ const i18nWithDiagnostics = createI18n({
 ## Related Recipes
 
 - [Async Loading and Reload](./async-loading-and-reload.md)
-- [Batched Catalog Updates](./batched-catalog-updates.md)
+- [Catalog Replacement](./catalog-replacement.md)
 - [Framework Integration](./framework-integration.md)

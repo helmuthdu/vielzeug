@@ -28,7 +28,7 @@ export function useI18n() {
 
   return {
     locale: i18n.locale,
-    switchLocale: (locale: string) => i18n.switchLocale(locale),
+    setLocale: (locale: string) => i18n.setLocale(locale),
     t: i18n.t,
   };
 }
@@ -49,7 +49,7 @@ export function useI18n() {
 
   return {
     locale,
-    switchLocale: (next: string) => i18n.switchLocale(next),
+    setLocale: (next: string) => i18n.setLocale(next),
     t: (key: string, vars?: Record<string, unknown>) => i18n.t(key, vars),
   };
 }
@@ -71,5 +71,4 @@ export function useI18n() {
 ## Related Recipes
 
 - [Async Loading and Reload](./async-loading-and-reload.md)
-- [Batched Catalog Updates](./batched-catalog-updates.md)
 - [Diagnostics Hook](./diagnostics-hook.md)

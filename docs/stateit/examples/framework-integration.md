@@ -21,8 +21,8 @@ Stateit stays framework-agnostic, so the integration pattern is always the same:
 
 ```tsx [React]
 // store-hooks.ts
-import { useSyncExternalStore } from 'react';
-import { watch } from '@vielzeug/stateit';
+import { useSyncExternalStore, useMemo } from 'react';
+import { watch, computed } from '@vielzeug/stateit';
 import type { Store } from '@vielzeug/stateit';
 
 export function useStoreState<T extends object>(store: Store<T>): T {
@@ -37,7 +37,7 @@ export function useStoreState<T extends object>(store: Store<T>): T {
 }
 
 export function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U): U {
-  const sliceSignal = store.select(selector);
+  const sliceSignal = useMemo(() => computed(() => selector(store.value)), [store, selector]);
   return useSyncExternalStore(
     (notify) => {
       const sub = watch(sliceSignal, notify);
@@ -52,7 +52,7 @@ export function useStoreSelector<T extends object, U>(store: Store<T>, selector:
 ```ts [Vue 3]
 // composables/useStore.ts
 import { ref, onUnmounted, type Ref } from 'vue';
-import { watch } from '@vielzeug/stateit';
+import { watch, computed } from '@vielzeug/stateit';
 import type { Store } from '@vielzeug/stateit';
 
 export function useStoreState<T extends object>(store: Store<T>): Ref<T> {
@@ -65,19 +65,22 @@ export function useStoreState<T extends object>(store: Store<T>): Ref<T> {
 }
 
 export function useStoreSelector<T extends object, U>(store: Store<T>, selector: (state: T) => U): Ref<U> {
-  const sliceSignal = store.select(selector);
+  const sliceSignal = computed(() => selector(store.value));
   const selected = ref(sliceSignal.value) as Ref<U>;
   const sub = watch(sliceSignal, (next) => {
     selected.value = next;
   });
-  onUnmounted(() => sub.dispose());
+  onUnmounted(() => {
+    sub.dispose();
+    sliceSignal.dispose();
+  });
   return selected;
 }
 ```
 
 ```ts [Svelte]
 // lib/stateit-svelte.ts
-import { watch } from '@vielzeug/stateit';
+import { watch, computed } from '@vielzeug/stateit';
 import type { Store, ReadonlySignal } from '@vielzeug/stateit';
 import type { Readable } from 'svelte/store';
 
@@ -92,7 +95,9 @@ export function readable<T>(source: ReadonlySignal<T>): Readable<T> {
 }
 
 export function readableSelector<T extends object, U>(source: Store<T>, selector: (state: T) => U): Readable<U> {
-  return readable(source.select(selector));
+  const sliceSignal = computed(() => selector(source.value));
+  const r = readable(sliceSignal);
+  return r;
 }
 ```
 
@@ -156,5 +161,5 @@ For larger end-to-end examples, keep using the dedicated pages for [Signals](./s
 ## Related Recipes
 
 - [Pattern: Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)
-- [Pattern: `nextValue` in Async Workflows](./pattern-nextvalue-in-async-workflows.md)
+- [Pattern: Async Workflows with watch](./pattern-nextvalue-in-async-workflows.md)
 - [Pattern: Shared Module Store](./pattern-shared-module-store.md)

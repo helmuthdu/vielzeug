@@ -60,7 +60,7 @@ async function handleSubmit() {
     // Use toFormData to include the file attachment
     const response = await fetch('/api/contact', {
       method: 'POST',
-      body: form.toFormData(),
+      body: toFormData(form.values()),
     });
     return response.json();
   });

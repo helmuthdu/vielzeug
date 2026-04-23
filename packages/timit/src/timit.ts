@@ -7,25 +7,22 @@ export type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'rejec
 /**
  * Supported input types for date/time operations.
  * - Temporal types preserve timezone and disambiguation info
- * - Date is silently converted to Instant (timezone lost)
- * - Numbers are treated as epoch milliseconds
- * - ISO strings can have offset; plain strings require `tz` option
+ * - ISO strings can include offset/zone annotations
+ * - Plain local strings require `tz` option
  */
-export type TimeInput = Date | Temporal.Instant | Temporal.PlainDateTime | Temporal.ZonedDateTime | number | string;
+export type TimeInput = Temporal.Instant | Temporal.PlainDateTime | Temporal.ZonedDateTime | string;
 
 /**
  * Time zone and disambiguation options for conversions.
  * - `tz`: Time zone ID (e.g., 'America/New_York'). Defaults to system timezone.
+ *   Used to interpret plain-local inputs (Temporal.PlainDateTime and plain local strings)
+ *   and to choose display/view zone in toZoned/format helpers.
  * - `when`: How to resolve ambiguous local times during DST transitions.
+ *   Only applies when converting local wall-clock values to an instant.
  *   'earlier' | 'later' | 'compatible' (default) | 'reject'
  */
 export interface TimeOptions {
   tz?: string;
-  when?: DateTimeDisambiguation;
-}
-
-export interface LocalTimeOptions {
-  tz: string;
   when?: DateTimeDisambiguation;
 }
 
@@ -42,7 +39,6 @@ export interface DifferenceOptions extends TimeOptions {
 
 /**
  * Common formatting patterns for human-readable output.
- * - 'iso': Full ISO-8601 style (e.g., "Sunday, March 21, 2026, 10:15:30 AM")
  * - 'short': Compact style (e.g., "21/03/2026, 10:15 AM")
  * - 'long': Expanded style (e.g., "Sunday, March 21, 2026 at 10:15:30 AM")
  * - 'date-only': Just the date (e.g., "21/03/2026")
@@ -55,7 +51,7 @@ export type FormatPattern = 'short' | 'long' | 'date-only' | 'time-only';
  * - `pattern`: Preset format (covers 80% of common cases)
  * - `locale`: BCP 47 language tag for localization
  * - `tz`: Time zone for display (affects wall-clock time shown)
- * - `intl`: Escape hatch for advanced Intl.DateTimeFormatOptions
+ * - `intl`: Escape hatch for advanced Intl.DateTimeFormatOptions (overrides pattern fields)
  */
 export interface HumanFormatOptions {
   pattern?: FormatPattern;
@@ -64,7 +60,20 @@ export interface HumanFormatOptions {
   intl?: Intl.DateTimeFormatOptions;
 }
 
+type ParsedTimeInput =
+  | { kind: 'instant'; value: Temporal.Instant }
+  | { kind: 'local'; value: Temporal.PlainDateTime }
+  | { kind: 'zoned'; value: Temporal.ZonedDateTime };
+
 const DEFAULT_DISAMBIGUATION: DateTimeDisambiguation = 'compatible';
+const ERROR_PREFIX = '[timit]';
+const INVALID_TIME_STRING_MESSAGE =
+  'Invalid time string. Expected ISO instant, zoned date/time, or plain local date/time.';
+const MISSING_LOCAL_TIME_ZONE_MESSAGE = 'Local date/time input requires options.tz.';
+
+function fail(message: string): never {
+  throw new TypeError(`${ERROR_PREFIX} ${message}`);
+}
 
 function resolveTimeZone(tz?: string): string {
   return tz ?? Temporal.Now.timeZoneId();
@@ -78,8 +87,42 @@ function parsePlainDateTime(value: string): Temporal.PlainDateTime {
   }
 }
 
-function isPlainLocalLike(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}(?:$|T)/.test(value);
+function parseStringInput(input: string): ParsedTimeInput {
+  try {
+    return { kind: 'zoned', value: Temporal.ZonedDateTime.from(input) };
+  } catch {
+    // Continue to instant/local parsing.
+  }
+
+  try {
+    return { kind: 'instant', value: Temporal.Instant.from(input) };
+  } catch {
+    try {
+      return { kind: 'local', value: parsePlainDateTime(input) };
+    } catch {
+      fail(INVALID_TIME_STRING_MESSAGE);
+    }
+  }
+}
+
+function parseInput(input: TimeInput): ParsedTimeInput {
+  if (input instanceof Temporal.Instant) {
+    return { kind: 'instant', value: input };
+  }
+
+  if (input instanceof Temporal.ZonedDateTime) {
+    return { kind: 'zoned', value: input };
+  }
+
+  if (input instanceof Temporal.PlainDateTime) {
+    return { kind: 'local', value: input };
+  }
+
+  if (typeof input === 'string') {
+    return parseStringInput(input);
+  }
+
+  fail('Unsupported time input type.');
 }
 
 function toJsDate(instant: Temporal.Instant): Date {
@@ -111,87 +154,51 @@ export function now(tz?: string): Temporal.ZonedDateTime {
   return Temporal.Now.zonedDateTimeISO(resolveTimeZone(tz));
 }
 
-export function parseLocal(input: string, options: LocalTimeOptions): Temporal.ZonedDateTime {
-  return parsePlainDateTime(input).toZonedDateTime(options.tz, {
-    disambiguation: options.when ?? DEFAULT_DISAMBIGUATION,
-  });
-}
-
 export function toInstant(input: TimeInput, options: TimeOptions = {}): Temporal.Instant {
-  if (input instanceof Temporal.Instant) {
-    return input;
+  const parsed = parseInput(input);
+
+  if (parsed.kind === 'instant') {
+    return parsed.value;
   }
 
-  if (input instanceof Temporal.ZonedDateTime) {
-    return input.toInstant();
+  if (parsed.kind === 'zoned') {
+    return parsed.value.toInstant();
   }
 
-  if (input instanceof Temporal.PlainDateTime) {
-    if (!options.tz) {
-      throw new TypeError('Temporal.PlainDateTime input requires options.tz.');
-    }
-
-    return input
-      .toZonedDateTime(options.tz, {
-        disambiguation: options.when ?? DEFAULT_DISAMBIGUATION,
-      })
-      .toInstant();
+  if (!options.tz) {
+    fail(MISSING_LOCAL_TIME_ZONE_MESSAGE);
   }
 
-  if (input instanceof Date) {
-    return Temporal.Instant.fromEpochMilliseconds(input.getTime());
-  }
-
-  if (typeof input === 'number') {
-    return Temporal.Instant.fromEpochMilliseconds(input);
-  }
-
-  if (typeof input === 'string') {
-    try {
-      return Temporal.Instant.from(input);
-    } catch {
-      if (!isPlainLocalLike(input)) {
-        throw new TypeError('Invalid time string. Expected ISO instant or plain local date/time.');
-      }
-
-      if (!options.tz) {
-        throw new TypeError('Plain local date/time string requires options.tz.');
-      }
-
-      return parseLocal(input, {
-        tz: options.tz,
-        when: options.when,
-      }).toInstant();
-    }
-  }
-
-  throw new TypeError('Unsupported time input type.');
+  return parsed.value
+    .toZonedDateTime(options.tz, {
+      disambiguation: options.when ?? DEFAULT_DISAMBIGUATION,
+    })
+    .toInstant();
 }
 
 export function toZoned(input: TimeInput, options: TimeOptions = {}): Temporal.ZonedDateTime {
-  if (input instanceof Temporal.ZonedDateTime) {
-    if (!options.tz) {
-      return input;
-    }
-
-    const tz = resolveTimeZone(options.tz);
-
-    return input.withTimeZone(tz);
-  }
-
+  const parsed = parseInput(input);
   const tz = resolveTimeZone(options.tz);
 
-  if (input instanceof Temporal.PlainDateTime) {
+  if (parsed.kind === 'zoned') {
     if (!options.tz) {
-      throw new TypeError('Temporal.PlainDateTime input requires options.tz.');
+      return parsed.value;
     }
 
-    return input.toZonedDateTime(tz, {
+    return parsed.value.withTimeZone(tz);
+  }
+
+  if (parsed.kind === 'local') {
+    if (!options.tz) {
+      fail(MISSING_LOCAL_TIME_ZONE_MESSAGE);
+    }
+
+    return parsed.value.toZonedDateTime(tz, {
       disambiguation: options.when ?? DEFAULT_DISAMBIGUATION,
     });
   }
 
-  return toInstant(input, options).toZonedDateTimeISO(tz);
+  return parsed.value.toZonedDateTimeISO(tz);
 }
 
 export function shift(
@@ -251,36 +258,3 @@ export function formatRange(start: TimeInput, end: TimeInput, options: HumanForm
 
   return `${formatter.format(startDate)} - ${formatter.format(endDate)}`;
 }
-
-/**
- * Namespace object for date/time operations.
- * Provides a grouped API with explicit parsing and formatting modes.
- *
- * @example
- * ```ts
- * import { t } from '@vielzeug/timit';
- *
- * t.now('UTC')
- * t.toInstant('2026-03-21T10:15:30Z')
- * t.toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' })
- * t.parseLocal('2026-03-21T10:15:30', { tz: 'Europe/Berlin' })
- * t.shift(time, { hours: 1 })
- * t.diff(start, end)
- * t.within(time, start, end)
- * t.formatHuman(time, { pattern: 'short' })
- * t.formatISO(time)
- * t.formatRange(start, end)
- * ```
- */
-export const t = {
-  diff,
-  formatHuman,
-  formatISO,
-  formatRange,
-  now,
-  parseLocal,
-  shift,
-  toInstant,
-  toZoned,
-  within,
-} as const;

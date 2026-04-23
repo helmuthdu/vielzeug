@@ -9,11 +9,13 @@ description: Complete API reference for @vielzeug/wireit dependency injection co
 
 ## API At a Glance
 
-| Symbol                       | Purpose                             | Execution mode | Common gotcha                                               |
-| ---------------------------- | ----------------------------------- | -------------- | ----------------------------------------------------------- |
-| `createContainer()`          | Create a typed dependency container | Sync           | Avoid duplicate token registration without overwrite intent |
-| `container.get()/getAsync()` | Resolve sync/async providers        | Mixed          | Use getAsync for async factories                            |
-| `createTestContainer()`      | Create isolated test containers     | Sync           | Dispose test container after each test                      |
+| Symbol                                | Purpose                             | Execution mode | Common gotcha                                               |
+| ------------------------------------- | ----------------------------------- | -------------- | ----------------------------------------------------------- |
+| `createContainer()`                   | Create a typed dependency container | Sync           | Avoid duplicate token registration without overwrite intent |
+| `container.resolve()/resolveAll()` | **[Minimal]** Async-first resolution | Async          | Preferred for new code — handles sync & async uniformly    |
+| `container.set()`                  | **[Minimal]** Auto-detect provider type | Sync           | Preferred for new code — registers values, factories, classes |
+| `container.get()/getAsync()`           | Resolve sync/async providers        | Mixed          | Use getAsync for async factories, or resolve for unified API |
+| `createTestContainer()`                | Create isolated test containers     | Sync           | Dispose test container after each test                      |
 
 ## Package Exports
 
@@ -98,6 +100,31 @@ afterEach(() => dispose());
 ```
 
 ## Container Registration
+
+### `set(token, provider, opts?)` — **Minimal API**
+
+Register a value, factory function, or class. The container auto-detects the provider type:
+- Plain value → `{ useValue }`
+- Function → `{ useFactory }`
+- Class (constructor) → `{ useClass }`
+
+**Parameters:**
+
+- `token: Token<T>` — The injection token
+- `provider: T | ((...deps: Deps) => T | Promise<T>) | (new (...deps: Deps) => T)` — The provider (auto-detected)
+- `opts?: ProviderOptions<T, Deps>` — Optional lifetime, deps, dispose, and overwrite
+
+**Returns:** `this` (chainable)
+
+**Example:**
+
+```ts
+container.set(ConfigToken, { apiUrl: 'https://...' });
+container.set(DbToken, Database, { deps: [ConfigToken], dispose: (db) => db.close() });
+container.set(LogToken, () => new Logger());
+```
+
+---
 
 ### `register(token, provider, opts?)`
 
@@ -232,6 +259,71 @@ Remove all registrations and aliases from this container without calling dispose
 
 ## Container Resolution
 
+### `resolve<T>(token)` — **Minimal API**
+
+Resolve a token asynchronously. Handles both sync and async providers uniformly for a single, consistent resolution API.
+
+**Parameters:**
+
+- `token: Token<T>`
+
+**Returns:** `Promise<T>`
+
+**Throws:**
+
+- `ProviderNotFoundError` — No provider registered
+- `CircularDependencyError` — Circular dependency detected
+- `ContainerDisposedError` — Container has been disposed
+
+**Example:**
+
+```ts
+const config = await container.resolve(ConfigToken);
+const db = await container.resolve(DbToken); // works for both sync and async factories
+```
+
+---
+
+### `resolveAll(tokens)` — **Minimal API**
+
+Resolve a tuple of tokens asynchronously, returning a typed tuple. Always async to handle mixed sync/async providers uniformly.
+
+**Parameters:**
+
+- `tokens: [...T]` — A tuple of `Token<any>` values
+
+**Returns:** `Promise<TokenValues<T>>` — A promise resolving to a tuple matching the token types
+
+**Example:**
+
+```ts
+const [db, config] = await container.resolveAll([DbToken, ConfigToken]);
+//     ^IDatabase  ^AppConfig
+```
+
+---
+
+### `resolveOptional<T>(token)` — **Minimal API**
+
+Resolve a token asynchronously, returning `undefined` if not registered.
+
+**Parameters:**
+
+- `token: Token<T>`
+
+**Returns:** `Promise<T | undefined>`
+
+**Example:**
+
+```ts
+const cache = await container.resolveOptional(CacheToken);
+if (cache) {
+  await cache.initialize();
+}
+```
+
+---
+
 ### `get<T>(token)`
 
 Resolve a token synchronously.
@@ -246,7 +338,7 @@ Resolve a token synchronously.
 
 - `ProviderNotFoundError` — No provider registered
 - `CircularDependencyError` — Circular dependency detected
-- `AsyncProviderError` — Provider is async; use `getAsync()` instead
+- `AsyncProviderError` — Provider is async; use `getAsync()` or `resolve()` instead
 - `ContainerDisposedError` — Container has been disposed
 
 ---

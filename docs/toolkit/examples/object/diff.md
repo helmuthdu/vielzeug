@@ -74,10 +74,10 @@ diff(v1, v2);
 
 ## Implementation Notes
 
-- Returns properties from `b` that are different from `a`.
+- Returns properties from `curr` that are new or different from `prev`.
+- Properties that existed in `prev` but not in `curr` are marked with `DELETED` sentinel.
 - Uses deep equality (`isEqual`) for comparisons.
-- If a property exists in `a` but is missing in `b`, it is currently not included in the diff (use for "update/patch" logic).
-- Throws `TypeError` if either argument is not an object.
+- Handles nested objects recursively.
 
 ## See Also
 

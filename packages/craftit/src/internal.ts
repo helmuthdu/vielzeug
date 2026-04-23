@@ -1,6 +1,6 @@
 import { signal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { currentRuntime } from './runtime';
+import { currentElementOrThrow } from './runtime';
 
 export type Ref<T extends Element> = Signal<T | null>;
 
@@ -31,26 +31,10 @@ export type AttrBinding = {
   value?: unknown;
 };
 
-export type PropBinding = {
-  model?: Signal<unknown>;
-  name: string;
-  signal?: ReadonlySignal<unknown>;
-  type: 'prop';
-  uid: string;
-  value?: unknown;
-};
-
 export type EventBinding = {
   handler: (e: Event) => void;
-  modifiers?: {
-    capture?: boolean;
-    once?: boolean;
-    passive?: boolean;
-    prevent?: boolean;
-    self?: boolean;
-    stop?: boolean;
-  };
   name: string;
+  options?: AddEventListenerOptions;
   type: 'event';
   uid: string;
 };
@@ -61,19 +45,37 @@ export type RefBinding = {
   uid: string;
 };
 
+export type HtmlBindingPayload = {
+  bindings: Binding[];
+  html: string;
+};
+
+export type RuntimeDirective = {
+  mount: (anchor: Comment, registerCleanup: (fn: () => void) => void) => void;
+};
+
+export const DIRECTIVE: unique symbol = Symbol('craftit.directive');
+
+export type DirectiveResult = {
+  [DIRECTIVE]: RuntimeDirective;
+};
+
+export const isDirectiveResult = (value: unknown): value is DirectiveResult =>
+  typeof value === 'object' && value !== null && DIRECTIVE in value;
+
 export type HtmlBinding = {
-  keyed?: boolean;
-  signal: ReadonlySignal<{
-    bindings: Binding[];
-    html: string;
-    items?: Array<{ bindings: Binding[]; html: string }>;
-    keys?: (string | number)[];
-  }>;
+  signal: ReadonlySignal<HtmlBindingPayload>;
   type: 'html';
   uid: string;
 };
 
-export type Binding = TextBinding | AttrBinding | PropBinding | EventBinding | RefBinding | HtmlBinding;
+export type DirectiveBinding = {
+  directive: RuntimeDirective;
+  type: 'directive';
+  uid: string;
+};
+
+export type Binding = TextBinding | AttrBinding | EventBinding | RefBinding | HtmlBinding | DirectiveBinding;
 
 export interface HTMLResult {
   __bindings: Binding[];
@@ -114,8 +116,18 @@ export const isCssResult = (value: unknown): value is CSSResult =>
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const runAll = (fns: (() => void)[]): void => {
+  const errors: unknown[] = [];
+
   for (let i = fns.length - 1; i >= 0; i--) {
-    fns[i]();
+    try {
+      fns[i]();
+    } catch (err) {
+      errors.push(err);
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new AggregateError(errors, '[craftit:E13] One or more cleanup callbacks failed');
   }
 };
 
@@ -161,13 +173,17 @@ type KeysWithoutDetail<T extends Record<string, unknown>> = {
   [P in keyof T]: [T[P]] extends [NoDetail] ? P : never;
 }[keyof T];
 
-export type EmitFn<T extends Record<string, unknown>> = {
+type StrictEmitFn<T extends Record<string, unknown>> = {
   <K extends KeysWithoutDetail<T>>(event: K): void;
   <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): void;
 };
 
+type LooseEmitFn = (event: string, detail?: unknown) => void;
+
+export type EmitFn<T extends Record<string, unknown>> = StrictEmitFn<T> & LooseEmitFn;
+
 export const createEmitFn = <T extends Record<string, unknown>>(): EmitFn<T> => {
-  const el = currentRuntime().el;
+  const el = currentElementOrThrow();
 
   return ((event: keyof T, ...rest: unknown[]) => {
     fire.custom(el, String(event), rest.length > 0 ? { detail: rest[0] } : undefined);
@@ -228,7 +244,6 @@ export const _resetIdCounter = (): void => {
 
 export const createId = (prefix?: string): string => `${prefix ? `${prefix}-` : 'cft-'}${++_idCounter}`;
 
-export const EACH_SIGNAL: unique symbol = Symbol('craftit.eachSignal');
 export const CF_ID_ATTR = 'u';
 
 const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="([^"]+)"`, 'g');

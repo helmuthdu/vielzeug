@@ -6,5 +6,3 @@ export class NeverSchema extends Schema<never> {
     super([(_, path) => [{ code: ErrorCode.invalid_type, message: _messages().never_invalid(), path }]]);
   }
 }
-
-export const never = (): NeverSchema => new NeverSchema();

@@ -3,8 +3,6 @@ title: Dragit — Usage Guide
 description: Drop zones, sortable lists, accept patterns, MIME filtering, handles, dynamic lists, disabled state, and lifecycle management with Dragit.
 ---
 
-# Dragit Usage Guide
-
 ::: tip New to Dragit?
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
@@ -82,10 +80,22 @@ const zone = createDropZone({
 });
 ```
 
+`onDragEnter` follows native behavior and can fire multiple times while entering descendants. If you only need inactive→active transitions, prefer `onHoverChange`.
+
+Dragit also resets hover state on global `window` `drop`/`dragend` events to avoid stuck hover UI if the drag leaves the viewport.
+
 Reading the current state imperatively:
 
 ```ts
 console.log(zone.hovered); // boolean — true while dragging over
+```
+
+Or read the lightweight state object:
+
+```ts
+console.log(zone.state.hovered);
+console.log(zone.state.files); // accepted files from last drop
+console.log(zone.state.rejected); // rejected files from last drop
 ```
 
 ### dropEffect
@@ -106,7 +116,7 @@ const zone = createDropZone({
 `onDragOver` can override `dropEffect` dynamically per-frame if you need conditional feedback (e.g. `'move'` when Alt is held, `'copy'` otherwise).
 :::
 
-### Disabled state
+### Drop Zone Disabled State
 
 Pass `disabled` as a boolean or a function. When truthy, all drag events are silently ignored and hover state will not change.
 
@@ -128,7 +138,7 @@ The function form lets reactive frameworks pass a derived or computed value:
 disabled: () => isReadOnly.value;
 ```
 
-### Cleanup
+### Drop Zone Cleanup
 
 Call `destroy()` to remove all event listeners and reset internal state:
 
@@ -166,6 +176,7 @@ Every sortable item must carry a `data-sort-id` attribute (or a custom attribute
 ```ts
 const sortable = createSortable({
   element: document.getElementById('task-list')!,
+  axis: 'vertical', // or 'horizontal'
   onReorder: (ids) => {
     // ids is the new ordered array of identity attribute values
     // Only called when the order actually changed
@@ -179,6 +190,8 @@ const sortable = createSortable({
 - Sets `draggable="true"` on all `[data-sort-id]` children
 - Sets `role="listitem"` on each item and `role="list"` on the container
 - Removes both attributes on `destroy()`
+
+Keyboard reordering is intentionally out of scope for `createSortable`; build keyboard controls on top if your UX requires it.
 
 ### Drag handles
 
@@ -253,7 +266,7 @@ newItem.textContent = 'Deploy';
 listEl.appendChild(newItem);
 ```
 
-### Disabled state
+### Sortable Disabled State
 
 ```ts
 const sortable = createSortable({
@@ -270,7 +283,15 @@ When disabled, `dragstart` is blocked. If the sortable becomes disabled while a 
 
 ### Styling the placeholder
 
-While an item is being dragged, dragit inserts a `<div class="dragit-placeholder">` in the list to indicate the drop position. Only `height` is set inline (mirroring the dragged item). All visual styling is left to your CSS:
+While an item is being dragged, dragit inserts a `<div class="dragit-placeholder">` in the list to indicate the drop position by default. You can override the class name with `placeholderClass`. Only `height` is set inline (mirroring the dragged item). All visual styling is left to your CSS:
+
+```ts
+const sortable = createSortable({
+  element: listEl,
+  placeholderClass: 'my-drop-marker',
+  onReorder: saveOrder,
+});
+```
 
 ```css
 .dragit-placeholder {
@@ -282,6 +303,27 @@ While an item is being dragged, dragit inserts a `<div class="dragit-placeholder
 }
 ```
 
+### Reordering your backing array
+
+Use `applyReorder` to map `orderedIds` from `onReorder` back to your data array:
+
+```ts
+import { applyReorder, createSortable } from '@vielzeug/dragit';
+
+let items = [
+  { id: 'task-1', title: 'Design' },
+  { id: 'task-2', title: 'Develop' },
+  { id: 'task-3', title: 'Review' },
+];
+
+const sortable = createSortable({
+  element: listEl,
+  onReorder: (orderedIds) => {
+    items = applyReorder(items, orderedIds, (item) => item.id);
+  },
+});
+```
+
 The item being dragged has `opacity: 0` applied automatically while in flight (restored on drop or cancel). The `data-dragging` attribute is also set, which you can use for additional styling:
 
 ```css
@@ -291,7 +333,7 @@ The item being dragged has `opacity: 0` applied automatically while in flight (r
 }
 ```
 
-### Cleanup
+### Sortable Cleanup
 
 ```ts
 sortable.destroy();

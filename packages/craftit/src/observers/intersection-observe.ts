@@ -6,7 +6,7 @@ import { onCleanup } from '../runtime';
  * Observes an element's intersection with the viewport (or a given root) via
  * `IntersectionObserver`. Returns a `ReadonlySignal` that updates whenever the
  * intersection ratio changes.
- * Must be called inside an {@link onMount} callback.
+ * Must be called inside a `mount()` callback.
  */
 export const intersectionObserver = (
   el: Element,

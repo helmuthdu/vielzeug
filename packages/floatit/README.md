@@ -22,7 +22,7 @@ import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floati
 const reference = document.querySelector('#trigger')!;
 const floating = document.querySelector('#tooltip')!;
 
-await positionFloat(reference, floating, {
+positionFloat(reference, floating, {
   placement: 'top',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
@@ -50,7 +50,7 @@ cleanup();
 ## API Summary
 
 | Export | Description |
-|---|---|
+| --- | --- |
 | `positionFloat(reference, floating, options?)` | Compute and apply the floating position |
 | `computePosition(reference, floating, config?)` | Return `{ x, y, placement }` without mutating the DOM |
 | `autoUpdate(reference, floating, update, options?)` | Re-run positioning when layout conditions change |
@@ -61,18 +61,20 @@ cleanup();
 
 ## Usage Notes
 
-- `strategy` is part of the public option types but is not currently applied internally; position from viewport coordinates (typically with `position: fixed` CSS).
+- Positions are computed in viewport coordinates; use `position: fixed` on the floating element for expected alignment.
 - Middleware runs in order; the common chain is `offset()`, `flip()`, `shift()`, then `size()`.
+- At most one middleware should change placement in a single compute cycle (normally `flip()`).
 - Call the cleanup returned by `autoUpdate()` when the floating UI closes.
 - Use `autoUpdate(..., { observeFloating: false })` when observing floating-size changes would cause unnecessary update loops.
 - Use `computePosition()` when you want to apply transforms or animations yourself.
+- Browser-only runtime: `floatit` assumes `window`, `ResizeObserver`, and DOM elements are available.
 
 ## Documentation
 
 Full docs at **[vielzeug.dev/floatit](https://vielzeug.dev/floatit)**
 
 | | |
-|---|---|
+| --- | --- |
 | [Overview](https://vielzeug.dev/floatit/) | Installation, quick start, and feature overview |
 | [Usage Guide](https://vielzeug.dev/floatit/usage) | Placement, middleware, and lifecycle patterns |
 | [API Reference](https://vielzeug.dev/floatit/api) | Complete function signatures and types |
@@ -81,4 +83,3 @@ Full docs at **[vielzeug.dev/floatit](https://vielzeug.dev/floatit)**
 ## License
 
 MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
-

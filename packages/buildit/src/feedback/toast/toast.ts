@@ -1,9 +1,9 @@
-import { computed, define, each, html, onMount, ref, signal } from '@vielzeug/craftit';
+import { computed, define, prop, html, ref, signal } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
 import { reducedMotionMixin } from '../../styles';
-import { awaitExit } from '../../utils/animation';
+import { awaitExit } from '../../utils';
 import componentStyles from './toast.css?inline';
 
 /** Toast container properties */
@@ -123,7 +123,10 @@ function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
 export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
   props: {
     max: 5,
-    position: 'bottom-right',
+    position: prop.oneOf(
+      ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'] as const,
+      'bottom-right',
+    ),
   },
   setup(props, { emit, host }) {
     const toasts = signal<NormalizedToast[]>([]);
@@ -294,15 +297,6 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
       if (!isDismissing) processNextInQueue();
     };
 
-    onMount(() => {
-      const el = host.el as ToastElement;
-
-      el.add = addToast;
-      el.update = updateToast;
-      el.dismiss = removeToast;
-      el.clear = clearAll;
-    });
-
     const urgencyOf = (t: NormalizedToast) => t.urgency ?? (t.color === 'error' ? 'assertive' : 'polite');
     const politeToasts = computed(() => toasts.value.filter((t) => urgencyOf(t) === 'polite'));
     const assertiveToasts = computed(() => toasts.value.filter((t) => urgencyOf(t) === 'assertive'));
@@ -332,50 +326,55 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
       </div>
     `;
 
-    return html`
-      <div
-        class="toast-container"
-        ref=${containerRef}
-        @pointerenter=${() => setHovered(true)}
-        @pointerleave=${() => setHovered(false)}
-        @focusin=${() => {
-          focusPaused = true;
-          maybeUpdatePauseState();
-        }}
-        @focusout=${() => {
-          focusPaused = false;
-          maybeUpdatePauseState();
-        }}
-        part="container">
-        <!-- Polite live region: normal informational toasts -->
+    return {
+      mount() {
+        const el = host.el as ToastElement;
+
+        el.add = addToast;
+        el.update = updateToast;
+        el.dismiss = removeToast;
+        el.clear = clearAll;
+      },
+
+      render: () => html`
         <div
-          role="region"
-          aria-live="polite"
-          aria-relevant="additions removals"
-          aria-atomic="false"
-          aria-label="Notifications"
-          class="toast-live-region">
-          ${each(politeToasts, {
-            key: (toast) => toast.id,
-            render: renderToastItem,
-          })}
+          class="toast-container"
+          ref=${containerRef}
+          @pointerenter=${() => setHovered(true)}
+          @pointerleave=${() => setHovered(false)}
+          @focusin=${() => {
+            focusPaused = true;
+            maybeUpdatePauseState();
+          }}
+          @focusout=${() => {
+            focusPaused = false;
+            maybeUpdatePauseState();
+          }}
+          part="container">
+          <!-- Polite live region: normal informational toasts -->
+          <div
+            role="region"
+            aria-live="polite"
+            aria-relevant="additions removals"
+            aria-atomic="false"
+            aria-label="Notifications"
+            class="toast-live-region">
+            ${() => politeToasts.value.map(renderToastItem)}
+          </div>
+          <!-- Assertive live region: critical errors that interrupt immediately -->
+          <div
+            role="region"
+            aria-live="assertive"
+            aria-relevant="additions removals"
+            aria-atomic="false"
+            aria-label="Critical notifications"
+            class="toast-live-region">
+            ${() => assertiveToasts.value.map(renderToastItem)}
+          </div>
+          <slot></slot>
         </div>
-        <!-- Assertive live region: critical errors that interrupt immediately -->
-        <div
-          role="region"
-          aria-live="assertive"
-          aria-relevant="additions removals"
-          aria-atomic="false"
-          aria-label="Critical notifications"
-          class="toast-live-region">
-          ${each(assertiveToasts, {
-            key: (toast) => toast.id,
-            render: renderToastItem,
-          })}
-        </div>
-        <slot></slot>
-      </div>
-    `;
+      `,
+    };
   },
   styles: [reducedMotionMixin, componentStyles],
 });

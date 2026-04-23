@@ -10,16 +10,15 @@ import {
   html,
   inject,
   onCleanup,
-  onError,
-  onMount,
   provide,
+  prop,
   ref,
   refs,
   signal,
   type ComponentDefinition,
 } from '../index';
 import { intersectionObserver, mediaObserver, resizeObserver } from '../observers';
-import { currentRuntime } from '../runtime';
+import { currentElementOrThrow } from '../runtime';
 import { fire, mount, waitForEvent } from '../testing';
 
 const expectType = <T>(_value: T): void => {
@@ -32,7 +31,7 @@ describe('Core: Component Definition', () => {
       const tag = `test-basic-${Math.random().toString(36).slice(2)}`;
 
       define(tag, {
-        setup: () => html`<div>Hello</div>`,
+        setup: () => ({ render: () => html`<div>Hello</div>` }),
       });
 
       const el = document.createElement(tag);
@@ -50,7 +49,7 @@ describe('Core: Component Definition', () => {
       const { query } = await mount(() => {
         const count = signal(0);
 
-        return html`<div>${count}</div>`;
+        return { render: () => html`<div>${count}</div>` };
       });
 
       expect(query('div')?.textContent).toBe('0');
@@ -60,7 +59,7 @@ describe('Core: Component Definition', () => {
       const setup = () => {
         const count = signal(0);
 
-        return html`<div>${count}</div>`;
+        return { render: () => html`<div>${count}</div>` };
       };
 
       const { query: query1 } = await mount(setup);
@@ -74,12 +73,12 @@ describe('Core: Component Definition', () => {
       const tag = `test-dup-${Math.random().toString(36).slice(2)}`;
 
       define(tag, {
-        setup: () => html`<div>First</div>`,
+        setup: () => ({ render: () => html`<div>First</div>` }),
       });
 
       expect(() => {
         define(tag, {
-          setup: () => html`<div>Second</div>`,
+          setup: () => ({ render: () => html`<div>Second</div>` }),
         });
       }).toThrow('[craftit:E10]');
     });
@@ -88,18 +87,41 @@ describe('Core: Component Definition', () => {
       const tag = `test-dup-no-env-${Math.random().toString(36).slice(2)}`;
 
       define(tag, {
-        setup: () => html`<div>First</div>`,
+        setup: () => ({ render: () => html`<div>First</div>` }),
       });
 
       expect(() => {
         define(tag, {
-          setup: () => html`<div>Second</div>`,
+          setup: () => ({ render: () => html`<div>Second</div>` }),
         });
       }).toThrow('[craftit:E10]');
     });
   });
 
   describe('Component Props', () => {
+    it('supports  + prop helpers for typed defaults and parsing', async () => {
+      const { element, query } = await mount(
+        {
+          props: {
+            count: prop.number(0),
+            disabled: prop.bool(false),
+            size: prop.oneOf(['sm', 'md', 'lg'] as const, 'md'),
+          },
+          setup: (props) => {
+            return html`<div class="count">${props.count}</div>
+              <div class="size">${props.size}</div>`;
+          },
+        },
+        {
+          attrs: { count: '42', disabled: true, size: 'lg' },
+        },
+      );
+
+      expect(query('.count')?.textContent).toBe('42');
+      expect(query('.size')?.textContent).toBe('lg');
+      expect(element.hasAttribute('disabled')).toBe(true);
+    });
+
     it('should receive attributes as props', async () => {
       const { element } = await mount(
         {
@@ -197,7 +219,9 @@ describe('Core: Component Definition', () => {
           },
         },
         setup: (props) => {
-          return html`<div class="size">${() => String(props.size.value)}</div>`;
+          return {
+            render: () => html`<div class="size">${() => String(props.size.value)}</div>`,
+          };
         },
       });
 
@@ -205,7 +229,9 @@ describe('Core: Component Definition', () => {
         setup: () => {
           const size = signal('3');
 
-          return html`<${childTag} size=${size}></${childTag}>`;
+          return {
+            render: () => html`<${childTag} size=${size}></${childTag}>`,
+          };
         },
       });
 
@@ -243,7 +269,13 @@ describe('Core: Component Definition', () => {
       define<{ items: string[] }>(childTag, {
         props: { items: [] as string[] },
         setup: (props) => {
-          return html`<div class="items">${() => props.items.value?.join('|')}</div>`;
+          return {
+            render: () =>
+              html`<div class="items">
+                ${() =>
+                  Array.isArray(props.items.value) ? props.items.value.join('|') : String(props.items.value ?? '')}
+              </div>`,
+          };
         },
       });
 
@@ -251,12 +283,14 @@ describe('Core: Component Definition', () => {
         setup: () => {
           const items = signal<string[]>(['alpha', 'beta']);
 
-          return html`
-            <div>
-              <button @click=${() => (items.value = ['gamma', 'delta'])}>Update</button>
-              <${childTag} items=${items}></${childTag}>
-            </div>
-          `;
+          return {
+            render: () => html`
+              <div>
+                <button @click=${() => (items.value = ['gamma', 'delta'])}>Update</button>
+                <${childTag} items=${items}></${childTag}>
+              </div>
+            `,
+          };
         },
       });
 
@@ -264,12 +298,12 @@ describe('Core: Component Definition', () => {
       const child = query(childTag) as HTMLElement;
       const button = query('button');
 
-      expect(child.shadowRoot?.querySelector('.items')?.textContent).toBe('alpha|beta');
+      expect(child.shadowRoot?.querySelector('.items')?.textContent?.trim()).toBe('alpha|beta');
 
       fire.click(button!);
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(child.shadowRoot?.querySelector('.items')?.textContent).toBe('gamma|delta');
+      expect(child.shadowRoot?.querySelector('.items')?.textContent?.trim()).toBe('gamma|delta');
     });
   });
 
@@ -355,7 +389,9 @@ describe('Core: Component Definition', () => {
             emit('retry');
           };
 
-          return html`<button @click=${fire}>Emit</button>`;
+          return {
+            render: () => html`<button @click=${fire}>Emit</button>`,
+          };
         },
       });
 
@@ -379,12 +415,13 @@ describe('Core: Component Definition', () => {
 
       const { flush } = await mount(
         (_props, { slots }) => {
-          onMount(() => {
-            defaultAssigned = slots.has().value;
-            triggerAssigned = slots.has('trigger').value;
-          });
-
-          return html`<slot name="trigger"></slot><slot></slot>`;
+          return {
+            mount() {
+              defaultAssigned = slots.has().value;
+              triggerAssigned = slots.has('trigger').value;
+            },
+            render: () => html`<slot name="trigger"></slot><slot></slot>`,
+          };
         },
         { html: '<button slot="trigger">Open</button><span>Body</span>' },
       );
@@ -410,7 +447,9 @@ describe('Core: Component Definition', () => {
 
           const fireToggle = () => emit('toggle', { checked: !props.checked.value });
 
-          return html`<button @click=${fireToggle}>${props.label}</button>`;
+          return {
+            render: () => html`<button @click=${fireToggle}>${props.label}</button>`,
+          };
         },
       });
 
@@ -436,7 +475,9 @@ describe('Core: Component Definition', () => {
         setup: (props) => {
           expectType<import('@vielzeug/stateit').Signal<string | undefined>>(props.value);
 
-          return html`<div class="value">${() => props.value.value ?? ''}</div>`;
+          return {
+            render: () => html`<div class="value">${() => props.value.value ?? ''}</div>`,
+          };
         },
       });
 
@@ -453,7 +494,7 @@ describe('Core: Component Definition', () => {
           props: {
             data: { default: { a: '1' } as Record<string, string>, reflect: true },
           },
-          setup: () => html`<div>invalid</div>`,
+          setup: () => ({ render: () => html`<div>invalid</div>` }),
         });
       }).not.toThrow();
 
@@ -470,7 +511,7 @@ describe('Core: Component Definition', () => {
           props: {
             items: { default: ['x'] as string[], reflect: true },
           },
-          setup: () => html`<div>invalid</div>`,
+          setup: () => ({ render: () => html`<div>invalid</div>` }),
         });
       }).not.toThrow();
 
@@ -482,10 +523,12 @@ describe('Core: Component Definition', () => {
 
   it('should dispatch events via setup emit', async () => {
     const spy = vi.fn();
-    const { element, flush, query } = await mount((_props, { emit }) => {
-      const fire = () => emit('ping', { ok: true });
+    const { element, flush, query } = await mount({
+      setup: (_props, { emit }) => {
+        const fire = () => emit('ping', { ok: true });
 
-      return html`<button @click=${fire}>Ping</button>`;
+        return html`<button @click=${fire}>Ping</button>`;
+      },
     });
 
     element.addEventListener('ping', spy);
@@ -497,13 +540,13 @@ describe('Core: Component Definition', () => {
 
   describe('Error Handling', () => {
     it('should handle empty template', async () => {
-      const { shadow } = await mount(() => html``);
+      const { shadow } = await mount(() => ({ render: () => html`` }));
 
       expect(shadow).not.toBeNull();
     });
 
     it('should handle undefined return', async () => {
-      const { query } = await mount(() => html`<div>Test</div>`);
+      const { query } = await mount(() => ({ render: () => html`<div>Test</div>` }));
 
       expect(query('div')).not.toBeNull();
     });
@@ -515,7 +558,7 @@ describe('Core: Component Definition', () => {
       const { act, query } = await mount(() => {
         count = signal(0);
 
-        return html`<div>${count}</div>`;
+        return { render: () => html`<div>${count}</div>` };
       });
 
       expect(query('div')?.textContent).toBe('0');
@@ -553,7 +596,7 @@ describe('core/component.ts', () => {
         setup: () => {
           handle = defineField({ value: signal('initial') });
 
-          return html`<div></div>`;
+          return { render: () => html`<div></div>` };
         },
       });
 
@@ -570,7 +613,7 @@ describe('core/component.ts', () => {
         setup: () => {
           handle = defineField({ value: signal('') });
 
-          return html`<div></div>`;
+          return { render: () => html`<div></div>` };
         },
       });
 
@@ -593,30 +636,23 @@ describe('core/component.ts', () => {
             value: signal(42),
           });
 
-          return html`<div></div>`;
+          return { render: () => html`<div></div>` };
         },
       });
 
       expect(transformCalled).toBe(true);
     });
 
-    it('surfaces an error via onError when formAssociated is not enabled on the component', async () => {
-      let capturedError: unknown;
+    it('throws when formAssociated is not enabled on the component', async () => {
+      await expect(
+        mount({
+          setup: () => {
+            defineField({ value: signal('test') });
 
-      await mount({
-        setup: () => {
-          onError((err) => {
-            capturedError = err;
-          });
-          defineField({ value: signal('test') });
-
-          return html`<div></div>`;
-        },
-      });
-
-      expect(capturedError).toBeInstanceOf(Error);
-      expect((capturedError as Error).message).toContain('formAssociated: true');
-      expect((capturedError as Error).message).toContain('<');
+            return { render: () => html`<div></div>` };
+          },
+        }),
+      ).rejects.toThrow(/formAssociated: true/);
     });
   });
 
@@ -629,7 +665,7 @@ describe('core/component.ts', () => {
 
         setTimeout(() => typedEmit('value-changed', { value: 'hello' }), 50);
 
-        return html`<div></div>`;
+        return { render: () => html`<div></div>` };
       }) as ComponentDefinition['setup']);
 
       const event = await waitForEvent<CustomEvent<{ value: string }>>(element, 'value-changed');
@@ -641,7 +677,7 @@ describe('core/component.ts', () => {
       const { element } = await mount(((_props, { emit }) => {
         setTimeout(() => emit('ping'), 50);
 
-        return html`<div></div>`;
+        return { render: () => html`<div></div>` };
       }) as ComponentDefinition['setup']);
 
       const event = await waitForEvent<CustomEvent>(element, 'ping');
@@ -690,15 +726,13 @@ describe('component props & global helpers', () => {
     expect(query('.mode')?.textContent).toBe('dark');
   });
 
-  it('should provide all lifecycle and utility functions as global exports', async () => {
+  it('should provide core utility functions as global exports', async () => {
     let elementInstance: HTMLElement | undefined;
 
     const { element } = await mount(() => {
-      elementInstance = currentRuntime().el;
+      elementInstance = currentElementOrThrow();
 
-      expect(onMount).toBeDefined();
       expect(onCleanup).toBeDefined();
-      expect(onError).toBeDefined();
       expect(provide).toBeDefined();
       expect(inject).toBeDefined();
       expect(ref).toBeDefined();

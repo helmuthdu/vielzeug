@@ -61,4 +61,4 @@ define(
 
 - [Counter Component](./counter-component.md)
 - [Form-Associated Rating Input](./form-associated-rating-input.md)
-- [Observers in `onMount`](./observers-in-onmount.md)
+- [Observers in setup()](./observers-in-onmount.md)

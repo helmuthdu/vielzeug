@@ -41,10 +41,12 @@ define('my-counter', {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
 
-    return html`
-      <button @click=${() => count.value++}>Count: ${count}</button>
-      <p>Doubled: ${doubled}</p>
-    `;
+    return {
+      render: () => html`
+        <button @click=${() => count.value++}>Count: ${count}</button>
+        <p>Doubled: ${doubled}</p>
+      `,
+    };
   },
   styles: [
     css`
@@ -84,7 +86,7 @@ customElements.define('my-counter', MyCounter);
 define('my-counter', {
   setup() {
     const count = signal(0);
-    return html`<button @click=${() => count.value++}>${count}</button>`;
+    return { render: () => html`<button @click=${() => count.value++}>${count}</button>` };
   },
 });
 ```
@@ -109,12 +111,13 @@ define('my-counter', {
 - **Fine-grained reactivity** — Re-exports all signals from `@vielzeug/stateit`: `signal()`, `computed()`, `effect()`, `watch()`, `batch()`, `untrack()`, and more
 - **Template literals** — `html\`...\`` for declarative, reactive DOM updates with `:attr`, `@event`, `ref=`, and `.prop` bindings
 - **Styling helper** — `css\`...\`` for component styles used via `define(..., { styles })`
-- **Lifecycle hooks** — `onMount()`, `onCleanup()`, `onError()`, `handle()`, `watch()`, and `onElement()` for component lifecycle control
-- **Props** — typed props with `define<Props>(..., { props })` and inline `PropDef` options when needed
+- **Lifecycle hooks** — `onCleanup()`, `handle()`, and `onElement()` for component lifecycle control; `effect()` for component-aware reactivity
+- **Props DSL** — `defineProps(...)` + `prop.string/bool/number/oneOf` helpers for concise, typed props; raw `PropDef` objects for advanced control
+- **Host bindings** — `host.attr()`, `host.class()`, `host.style()`, `host.prop()`, `host.on()`, and `host.bind()` for reactive host element wiring
 - **Slots & Emits** — setup-context `slots` and setup-context `emit` with typed event schemas
 - **Refs** — `ref<T>()` and `refs<T>()` for DOM element references
-- **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation
-- **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
+- **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation; accepts `Signal<T>` or `ReadonlySignal<T>`
+- **Context / DI** — `provide()`, `inject()`, `createContext()` for dependency injection across component trees
 - **Accessibility** — stable ID helpers such as `createId()` from core
 - **Observers** — `resizeObserver()`, `intersectionObserver()`, and `mediaObserver()` from `@vielzeug/craftit/observers`
 - **Testing subpath** — `@vielzeug/craftit/testing` for `mount`, `fire`, `user`, `waitFor`, and cleanup helpers

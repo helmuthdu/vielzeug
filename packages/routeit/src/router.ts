@@ -1,340 +1,256 @@
-import { resolvePath, stripBase, readLocation, handleRoute } from './navigation';
-import {
-  buildUrl,
-  createPrefixURLPattern,
-  createURLPattern,
-  extractParamNames,
-  joinPaths,
-  matchRecordWithPattern,
-  normalizePath,
-  testRecordWithPattern,
-} from './path';
-import {
-  type GroupOptions,
-  type Middleware,
-  type NavigateOptions,
-  type NavigationTarget,
-  type ResolvedRoute,
-  type RouteContext,
-  type RouteGroup,
-  type RouteHandler,
-  type RouteOptions,
-  type RouteParams,
-  type RouteRecord,
-  type RouteState,
-  type RouterOptions,
-  type Unsubscribe,
-  type QueryParams,
-  type PathParams,
+import type {
+  DefinedRouteTable,
+  Middleware,
+  NamedNavigationTarget,
+  PathNavigateOptions,
+  PathParams,
+  QueryParams,
+  ResolvedRoute,
+  RouteRecord,
+  RouteState,
+  RouteTable,
+  RouteName,
+  RouterOptions,
+  Unsubscribe,
 } from './types';
 
-/** -------------------- Router -------------------- **/
+import { createRouteState, getRouteByName, handleRoute, readLocation, resolveTarget, stripBase } from './navigation';
+import { buildUrl, compileRouteSegments, matchRoute, matchesPrefix, normalizePath } from './path';
 
-export class Router {
+function normalizeMiddleware(input: Middleware | Middleware[] | undefined): Middleware[] {
+  if (!input) return [];
+
+  return Array.isArray(input) ? [...input] : [input];
+}
+
+export class Router<TRoutes extends RouteTable = RouteTable> {
   readonly #base: string;
-  readonly #records: RouteRecord[] = [];
-  readonly #routesByName = new Map<string, RouteRecord>();
-  readonly #routesByPath = new Map<string, RouteRecord>();
-  readonly #onNotFound?: RouteHandler;
-  readonly #onError?: (error: unknown, context: RouteContext) => void;
-  readonly #globalMiddleware: Middleware[];
+  readonly #records: readonly RouteRecord[];
+  readonly #routesByName: ReadonlyMap<string, RouteRecord>;
   readonly #useViewTransition: boolean;
+
+  #currentState: RouteState;
+  #disposed = false;
+  #lastHref = '/';
   readonly #listeners = new Set<(state: RouteState) => void>();
-  #isStarted = false;
-  #lastHref = '';
-  #navId = 0;
-  #currentState: RouteState = { hash: '', params: {}, pathname: '/', query: {} };
-  readonly #navigate: RouteContext['navigate'] = (target, options) => this.navigate(target, options);
-  readonly #onPopState: () => void;
+  #navigationId = 0;
+  #started = false;
+  readonly #unlistenPopState: () => void;
 
-  constructor(options: RouterOptions = {}) {
+  constructor(options: RouterOptions<TRoutes>) {
     this.#base = normalizePath(options.base ?? '/');
-    this.#onNotFound = options.onNotFound;
-    this.#onError = options.onError;
     this.#useViewTransition = options.viewTransition ?? false;
-    this.#globalMiddleware = ([] as Middleware[]).concat(options.middleware ?? []);
+    this.#records = this.#compileRecords(options);
+    this.#routesByName = new Map(this.#records.map((record) => [record.name, record]));
+    this.#currentState = createRouteState({
+      hash: '',
+      params: {},
+      pathname: '/',
+      query: {},
+    });
+    this.#unlistenPopState = this.#registerPopStateListener();
 
-    this.#onPopState = (): void => {
-      this.#lastHref = window.location.pathname + window.location.search;
-      void this.#handleRoute();
+    if (options.autoStart) this.start();
+  }
+
+  get state(): RouteState {
+    return this.#currentState;
+  }
+
+  #compileRecords(options: RouterOptions<TRoutes>): readonly RouteRecord[] {
+    const globalMiddleware = normalizeMiddleware(options.middleware);
+
+    return Object.entries(options.routes).map(([name, route]) => ({
+      handler: route.handler,
+      meta: route.meta,
+      middleware: [...globalMiddleware, ...normalizeMiddleware(route.middleware)],
+      name,
+      path: route.path,
+      segments: compileRouteSegments(route.path),
+    }));
+  }
+
+  #assertNotDisposed(): void {
+    if (this.#disposed) throw new Error('[routeit] Router is disposed');
+  }
+
+  #registerPopStateListener(): () => void {
+    const onPopState = (): void => {
+      if (!this.#started) return;
+
+      this.#lastHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      this.#runInBackground(this.#handleRoute());
     };
 
-    if (options.autoStart) queueMicrotask(() => this.start());
+    window.addEventListener('popstate', onPopState);
+
+    return () => window.removeEventListener('popstate', onPopState);
   }
 
-  /** -------------------- Route Registration -------------------- **/
-
-  /**
-   * Registers a route with a path and handler.
-   * Path params are typed from the path literal (e.g., '/users/:id' => ctx.params.id).
-   * Omit the handler (or pass only options) for middleware-only routes.
-   */
-  on<Path extends string, Meta = unknown>(
-    path: Path,
-    handler: RouteHandler<PathParams<Path>, Meta>,
-    options?: RouteOptions<Meta>,
-  ): this;
-  on<Path extends string, Meta = unknown>(path: Path, options?: RouteOptions<Meta>): this;
-  on<Path extends string, Meta = unknown>(
-    path: Path,
-    handlerOrOptions?: RouteHandler<PathParams<Path>, Meta> | RouteOptions<Meta>,
-    options?: RouteOptions<Meta>,
-  ): this {
-    if (typeof handlerOrOptions === 'function') {
-      this.#register(path, handlerOrOptions as RouteHandler, options as RouteOptions);
-    } else {
-      this.#register(path, undefined, (handlerOrOptions ?? options) as RouteOptions);
-    }
-
-    return this;
+  #notifyListeners(): void {
+    this.#listeners.forEach((listener) => listener(this.#currentState));
   }
 
-  /** Adds one or more global middleware after construction. */
-  use(...middleware: Middleware[]): this {
-    this.#globalMiddleware.push(...middleware);
-
-    return this;
+  #runInBackground(promise: Promise<void>): void {
+    void promise.catch((error) => {
+      queueMicrotask(() => {
+        throw error;
+      });
+    });
   }
 
-  /** Registers a group of routes sharing a common path prefix and optional middleware. */
-  group<Prefix extends string>(prefix: Prefix, definer: (r: RouteGroup<Prefix>) => void, options?: GroupOptions): this {
-    this.#buildGroup(normalizePath(prefix), ([] as Middleware[]).concat(options?.middleware ?? []), definer);
-
-    return this;
+  #isNavigationCurrent(id: number): boolean {
+    return id === this.#navigationId;
   }
 
-  #buildGroup(prefix: string, inherited: Middleware[], definer: (r: RouteGroup<string>) => void): void {
-    const r: RouteGroup<string> = {
-      group: (nestedPrefix, nestedDefiner, nestedOptions) => {
-        const fullPrefix = normalizePath(`${prefix}/${nestedPrefix}`);
-        const nestedMiddleware = [...inherited, ...([] as Middleware[]).concat(nestedOptions?.middleware ?? [])];
+  async #handleRoute(useTransition?: boolean): Promise<void> {
+    const navigationId = ++this.#navigationId;
 
-        this.#buildGroup(fullPrefix, nestedMiddleware, nestedDefiner);
-
-        return r;
+    await handleRoute({
+      base: this.#base,
+      isNavigationCurrent: () => this.#isNavigationCurrent(navigationId),
+      navigate: (target, options) => this.navigate(target as NamedNavigationTarget<TRoutes>, options),
+      notifyListeners: () => this.#notifyListeners(),
+      pushPath: (path, options) => this.pushPath(path, options),
+      records: this.#records,
+      replacePath: (path, options) => this.replacePath(path, options),
+      setCurrentState: (state) => {
+        this.#currentState = state;
       },
-      on: (path, handlerOrOptions?, opts?) => {
-        if (typeof handlerOrOptions === 'function') {
-          this.#register(`${prefix}/${path}`, handlerOrOptions as RouteHandler, opts as RouteOptions, inherited);
-        } else {
-          this.#register(`${prefix}/${path}`, undefined, (handlerOrOptions ?? opts) as RouteOptions, inherited);
-        }
-
-        return r;
-      },
-    };
-
-    definer(r);
+      useTransition,
+      useViewTransition: this.#useViewTransition,
+    });
   }
 
-  #register(
-    path: string,
-    handler: RouteHandler | undefined,
-    options?: RouteOptions,
-    inherited: Middleware[] = [],
-  ): void {
-    const fullPath = normalizePath(path);
-    const paramNames = extractParamNames(fullPath);
-    const routeMiddleware = ([] as Middleware[]).concat(options?.middleware ?? []);
-    const record: RouteRecord = {
-      handler,
-      meta: options?.meta,
-      middleware: [...inherited, ...routeMiddleware],
-      name: options?.name,
-      paramNames,
-      path: fullPath,
-      prefixUrlPattern: createPrefixURLPattern(fullPath),
-      urlPattern: createURLPattern(fullPath),
-    };
+  #resolveDestination(path: string): string {
+    const [pathWithQuery, hash = ''] = path.split('#');
+    const [pathname, search = ''] = pathWithQuery.split('?');
+    const joinedPath = normalizePath(`${this.#base}/${pathname}`);
 
-    this.#records.push(record);
-    this.#routesByPath.set(fullPath, record);
-
-    if (options?.name) {
-      if (this.#routesByName.has(options.name)) {
-        console.warn(`[routeit] Duplicate route name "${options.name}" — overwriting previous registration.`);
-      }
-
-      this.#routesByName.set(options.name, record);
-    }
+    return `${joinedPath}${search ? `?${search}` : ''}${hash ? `#${hash}` : ''}`;
   }
 
-  /** -------------------- Lifecycle -------------------- **/
+  async #navigateToPath(path: string, options: import('./types').NavigateOptions = {}): Promise<void> {
+    this.#assertNotDisposed();
 
-  start(): this {
-    if (this.#isStarted) return this;
-
-    this.#isStarted = true;
-    this.#lastHref = window.location.pathname + window.location.search;
-    window.addEventListener('popstate', this.#onPopState);
-    void this.#handleRoute();
-
-    return this;
-  }
-
-  stop(): this {
-    if (!this.#isStarted) return this;
-
-    this.#isStarted = false;
-    window.removeEventListener('popstate', this.#onPopState);
-
-    return this;
-  }
-
-  /** Stops the router and clears all subscriptions. Also called by the `using` declaration. */
-  dispose(): void {
-    this.stop();
-    this.#listeners.clear();
-  }
-
-  [Symbol.dispose](): void {
-    this.dispose();
-  }
-
-  /** -------------------- Navigation -------------------- **/
-
-  /**
-   * Navigates to a path or a named route.
-   * @example
-   * router.navigate('/users/123')
-   * router.navigate({ name: 'userDetail', params: { id: '123' } })
-   * router.navigate('/about', { replace: true })
-   */
-  async navigate(target: NavigationTarget, options: NavigateOptions = {}): Promise<void> {
-    const path = resolvePath(target, this.#routesByName);
-    const destination = joinPaths(this.#base, path);
+    const destination = this.#resolveDestination(path);
 
     if (!options.force && destination === this.#lastHref) return;
 
     this.#lastHref = destination;
 
-    window.history[options.replace ? 'replaceState' : 'pushState'](options.state ?? null, '', destination);
+    if (options.replace) {
+      window.history.replaceState(options.state, '', destination);
+    } else {
+      window.history.pushState(options.state, '', destination);
+    }
 
-    return this.#handleRoute(options.viewTransition);
+    await this.#handleRoute(options.viewTransition);
   }
 
-  /** -------------------- State -------------------- **/
+  /** Start listening to browser navigation and handle the current route once. */
+  start(): this {
+    this.#assertNotDisposed();
 
-  /** The current route state (pathname, params, query, hash, name, meta). */
-  get state(): RouteState {
-    const query = Object.fromEntries(
-      Object.entries(this.#currentState.query).map(([key, value]) => [key, Array.isArray(value) ? [...value] : value]),
-    );
+    if (this.#started) return this;
+
+    this.#started = true;
+    this.#lastHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    this.#runInBackground(this.#handleRoute());
+
+    return this;
+  }
+
+  /** Stop listening to browser navigation without disposing the router instance. */
+  stop(): void {
+    this.#assertNotDisposed();
+    this.#started = false;
+  }
+
+  /** Navigate using a named route target. */
+  navigate<Name extends RouteName<TRoutes>>(
+    target: Extract<NamedNavigationTarget<TRoutes>, { name: Name }>,
+    options?: import('./types').NavigateOptions,
+  ): Promise<void> {
+    const destination = resolveTarget(target, this.#routesByName);
+
+    return this.#navigateToPath(destination, options);
+  }
+
+  /** Raw path escape hatch for one-off destinations that do not belong in the route table. */
+  pushPath(path: string, options?: PathNavigateOptions): Promise<void> {
+    return this.#navigateToPath(path, options);
+  }
+
+  /** Raw path escape hatch that replaces the current history entry. */
+  replacePath(path: string, options?: PathNavigateOptions): Promise<void> {
+    return this.#navigateToPath(path, { ...options, replace: true });
+  }
+
+  /** Build a URL for a named route, including optional params and query string. */
+  url<Name extends RouteName<TRoutes>>(
+    name: Name,
+    params?: PathParams<TRoutes[Name]['path']>,
+    query?: QueryParams,
+  ): string {
+    const route = getRouteByName(name, this.#routesByName);
+
+    return buildUrl(this.#base, route.path, params, query);
+  }
+
+  /** Returns true when the current location matches the named route exactly or as a prefix. */
+  isActive<Name extends RouteName<TRoutes>>(name: Name, exact = true): boolean {
+    const route = getRouteByName(name, this.#routesByName);
+    const { pathname } = readLocation(this.#base);
+
+    return exact ? matchRoute(pathname, [route]).record != null : matchesPrefix(pathname, route);
+  }
+
+  /** Resolve a pathname to the matching named route without running middleware or handlers. */
+  resolve(pathname: string): ResolvedRoute | null {
+    const { params, record } = matchRoute(stripBase(normalizePath(pathname), this.#base), this.#records);
+
+    if (!record) return null;
 
     return {
-      ...this.#currentState,
-      params: { ...this.#currentState.params },
-      query,
+      meta: record.meta,
+      name: record.name,
+      params,
     };
   }
 
-  /**
-   * Subscribes to route changes. The listener is called immediately with the current state.
-   * Returns an unsubscribe function.
-   */
+  /** Subscribe to state changes. The listener is called immediately with the current state. */
   subscribe(listener: (state: RouteState) => void): Unsubscribe {
+    this.#assertNotDisposed();
     this.#listeners.add(listener);
+    listener(this.#currentState);
 
-    try {
-      listener(this.state);
-    } catch (e) {
-      console.error('[routeit] Listener error:', e);
-    }
-
-    return () => this.#listeners.delete(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
   }
 
-  /** -------------------- Utilities -------------------- **/
+  /** Dispose event listeners and prevent further router interaction. */
+  dispose(): void {
+    if (this.#disposed) return;
 
-  /**
-   * Generates a URL from a named route or path pattern with optional params and query.
-   * @example
-   * router.url('/users/:id', { id: '42' })
-   * router.url('userDetail', { id: '42' }, { tab: 'profile' })
-   */
-  url(nameOrPattern: string, params?: RouteParams, query?: QueryParams): string {
-    const record = this.#routesByName.get(nameOrPattern);
-
-    if (!record && !nameOrPattern.startsWith('/')) {
-      throw new Error(`[routeit] Route "${nameOrPattern}" not found`);
-    }
-
-    return buildUrl(this.#base, record ? record.path : nameOrPattern, params, query);
+    this.#disposed = true;
+    this.#started = false;
+    this.#listeners.clear();
+    this.#unlistenPopState();
   }
 
-  /**
-   * Returns true if the given path pattern or route name matches the current URL.
-   * Pass `false` as the second argument for prefix matching (e.g. to highlight parent nav items).
-   */
-  isActive(nameOrPattern: string, exact = true): boolean {
-    const { pathname } = readLocation(this.#base);
-    const record = this.#routesByName.get(nameOrPattern) ?? this.#routesByPath.get(normalizePath(nameOrPattern));
-
-    if (record) {
-      if (exact) return testRecordWithPattern(pathname, record.urlPattern);
-
-      return testRecordWithPattern(pathname, record.prefixUrlPattern);
-    }
-
-    const pattern = exact
-      ? createURLPattern(normalizePath(nameOrPattern))
-      : createPrefixURLPattern(normalizePath(nameOrPattern));
-
-    return testRecordWithPattern(pathname, pattern);
-  }
-
-  /**
-   * Synchronously resolves a pathname to the matching route without navigating. Returns null if no route matches.
-   * Automatically strips the base path, so callers can pass `window.location.pathname` directly.
-   */
-  resolve(pathname: string): ResolvedRoute | null {
-    const path = stripBase(pathname, this.#base);
-
-    for (const record of this.#records) {
-      const params = matchRecordWithPattern(path, record);
-
-      if (params) return { meta: record.meta, name: record.name, params };
-    }
-
-    return null;
-  }
-
-  /** -------------------- Private -------------------- **/
-
-  async #handleRoute(useTransition?: boolean): Promise<void> {
-    const id = ++this.#navId;
-
-    await handleRoute(
-      this.#base,
-      this.#records,
-      this.#globalMiddleware,
-      this.#onNotFound,
-      this.#onError,
-      this.#useViewTransition,
-      this.#navigate,
-      (state) => (this.#currentState = state),
-      () => this.#notifyListeners(),
-      () => id === this.#navId,
-      useTransition,
-    );
-  }
-
-  #notifyListeners(): void {
-    const s = this.state;
-
-    for (const listener of this.#listeners) {
-      try {
-        listener(s);
-      } catch (e) {
-        console.error('[routeit] Listener error:', e);
-      }
-    }
+  [Symbol.dispose](): void {
+    this.dispose();
   }
 }
 
-/** -------------------- Factory -------------------- **/
-
-/** Creates a new router instance. */
-export function createRouter(options?: RouterOptions): Router {
+export function createRouter<const TRoutes extends RouteTable>(options: RouterOptions<TRoutes>): Router<TRoutes> {
   return new Router(options);
+}
+
+export function defineRoutes<const TRoutes extends Record<string, { meta?: unknown; path: string }>>(
+  routes: DefinedRouteTable<TRoutes>,
+): DefinedRouteTable<TRoutes> {
+  return routes;
 }

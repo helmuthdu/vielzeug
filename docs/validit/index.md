@@ -1,6 +1,6 @@
 ---
 title: Validit — Schema validation for TypeScript
-description: Zero-dependency schema validation library with chainable schemas, async support, coercion, and full TypeScript inference.
+description: Zero-dependency schema validation library with chainable schemas, strict-by-default objects, async support, coercion, and full TypeScript inference.
 ---
 
 <PackageBadges package="validit" />
@@ -9,7 +9,7 @@ description: Zero-dependency schema validation library with chainable schemas, a
 
 # Validit
 
-`@vielzeug/validit` is a zero-dependency schema validation library for TypeScript projects. It gives you a fluent schema API, runtime validation, and precise output types with `Infer<T>`.
+`@vielzeug/validit` is a zero-dependency schema validation library for TypeScript projects. It gives you a fluent schema API, runtime validation, and precise output types with `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>`.
 
 <!-- Search keywords: validation schema, runtime validator, typed data parsing. -->
 
@@ -36,14 +36,12 @@ yarn add @vielzeug/validit
 ```ts
 import { v, type Infer } from '@vielzeug/validit';
 
-const UserSchema = v
-  .object({
-    id: v.coerce.number().int().positive(),
-    name: v.string().min(1),
-    email: v.string().trim().email(),
-    role: v.union('admin', 'editor', 'viewer').default('viewer'),
-  })
-  .strict();
+const UserSchema = v.object({
+  id: v.coerce.number().int().positive(),
+  name: v.string().min(1),
+  email: v.string().trim().email(),
+  role: v.union('admin', 'editor', 'viewer').default('viewer'),
+});
 
 type User = Infer<typeof UserSchema>;
 
@@ -104,11 +102,12 @@ if (!result.success) {
 ## Features
 
 - **Chainable schema factories**: primitives and composites (`string`, `number`, `object`, `array`, `tuple`, `record`, `union`, `intersect`, `variant`, `enum`, `nativeEnum`)
-- **Type inference**: `Infer<T>` and `InferOutput<T>` infer the parsed output type
+- **Type inference**: `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>` infer parsed output types
 - **Sync + async validation**: `.refine()` and `.refineAsync()` with `parse*` / `safeParse*`
-- **Preprocessing and coercion**: `schema.preprocess(...)`, `v.preprocess(...)`, and `v.coerce.*`
+- **Preprocessing and coercion**: `schema.preprocess(...)` and `v.coerce.*`
 - **Error ergonomics**: `ValidationError`, `Issue`, `ErrorCode`, and `error.flatten()`
-- **Object composition helpers**: `.partial()`, `.required()`, `.pick()`, `.omit()`, `.extend()`, `.strip()`, `.passthrough()`, `.strict()`
+- **Object composition helpers**: `.partial()`, `.required()`, `.pick()`, `.omit()`, `.extend()`, and `.relaxed()`
+- **Strict by default objects**: unknown keys are rejected unless `.relaxed()` is used
 - **Global message customization**: `configure({ messages })`
 - **Zero dependencies**: <PackageInfo package="validit" type="size" /> gzipped
 
@@ -123,6 +122,9 @@ if (!result.success) {
 
 ## See Also
 
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 - [Formit](/formit/)
 - [Fetchit](/fetchit/)
 - [Deposit](/deposit/)

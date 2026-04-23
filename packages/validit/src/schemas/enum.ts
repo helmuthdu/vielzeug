@@ -26,6 +26,3 @@ export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
     this.values = values;
   }
 }
-
-/** `enum` is a reserved word — use `enumOf` for the flat import API. */
-export const enumOf = <const T extends EnumValues>(values: T): EnumSchema<T> => new EnumSchema(values);

@@ -13,32 +13,31 @@ Start with the [Overview](./index.md) for a quick introduction, then use this pa
 
 ## Parsing Inputs
 
-Use `t.toInstant()` to normalize any time input to a canonical timeline value.
-For plain local strings, use `t.parseLocal()` or provide `tz` to `t.toInstant()`.
+Use `toInstant()` to normalize any supported input to a canonical timeline value.
+For plain local strings, provide `tz` to `toInstant()`.
 
 ```ts
-import { t } from '@vielzeug/timit';
+import { Temporal, toInstant, toZoned } from '@vielzeug/timit';
 
 // ISO strings with offset work automatically
-const a = t.toInstant('2026-03-21T10:15:30Z');
+const a = toInstant('2026-03-21T10:15:30Z');
 
 // Plain local strings require timezone context
-const b = t.toInstant('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
-const c = t.parseLocal('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
+const b = toInstant('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
+const c = toZoned('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
 
-// Dates, epoch numbers, and Temporal types work too
-const d = t.toInstant(new Date());
-const e = t.toInstant(1711011330000); // epoch ms
+// Temporal types work too
+const d = toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
 ```
 
 ## Time Zone Conversion
 
-Use `t.toZoned()` to view an instant in a target timezone: same moment, different wall-clock time.
+Use `toZoned()` to view an instant in a target timezone: same moment, different wall-clock time.
 
 ```ts
 const utc = '2026-03-21T10:15:30Z';
-const tokyo = t.toZoned(utc, { tz: 'Asia/Tokyo' });
-const newYork = t.toZoned(utc, { tz: 'America/New_York' });
+const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' });
+const newYork = toZoned(utc, { tz: 'America/New_York' });
 
 console.log(tokyo.hour);   // 19 (7:15 PM JST)
 console.log(newYork.hour); // 6  (6:15 AM EDT)
@@ -46,30 +45,30 @@ console.log(newYork.hour); // 6  (6:15 AM EDT)
 
 ## Date-Time Arithmetic
 
-`t.shift()` handles DST transitions correctly. Use positive durations to add and negative durations to subtract.
+`shift()` handles DST transitions correctly. Use positive durations to add and negative durations to subtract.
 
 ```ts
 // Spring forward (2026-03-08 02:00 → 03:00 EDT)
 const beforeDst = '2026-03-08T01:30:00-05:00[America/New_York]';
-const afterAdd = t.shift(beforeDst, { hours: 1 });
+const afterAdd = shift(beforeDst, { hours: 1 });
 // Result: 2026-03-08T03:30:00-04:00 (correctly skipped to 3:30 EDT)
 
 // Regular arithmetic
 const meeting = '2026-03-21T14:00:00Z';
-const reminder = t.shift(meeting, { hours: -1 });
+const reminder = shift(meeting, { hours: -1 });
 ```
 
 ## Duration Differences
 
-Use `t.diff()` to compute the duration between two times with optional rounding.
+Use `diff()` to compute the duration between two times with optional rounding.
 
 ```ts
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:30:00Z';
 
-const duration = t.diff(start, end, {
-  largestUnit: 'hours',
-  smallestUnit: 'minutes',
+const duration = diff(start, end, {
+  largestUnit: 'hour',
+  smallestUnit: 'minute',
 });
 
 console.log(duration.toString()); // PT2H30M
@@ -79,21 +78,21 @@ console.log(duration.minutes);    // 30
 
 ## Formatting
 
-Use `t.formatHuman()` for localized UI strings and `t.formatISO()` for stable machine output.
+Use `formatHuman()` for localized UI strings and `formatISO()` for stable machine output.
 
 ```ts
 const time = '2026-03-21T10:15:30Z';
 
 // Preset patterns (recommended)
-t.formatHuman(time, { pattern: 'short', locale: 'en-GB', tz: 'UTC' });
+formatHuman(time, { pattern: 'short', locale: 'en-GB', tz: 'UTC' });
 // → "21/03/2026, 10:15"
 
 // Canonical machine format
-t.formatISO(time);
+formatISO(time);
 // → "2026-03-21T10:15:30Z"
 
 // Advanced: escape hatch to Intl.DateTimeFormatOptions
-t.formatHuman(time, {
+formatHuman(time, {
   locale: 'de-DE',
   tz: 'Europe/Berlin',
   intl: { hour12: false, weekday: 'long' }
@@ -119,32 +118,32 @@ const now = '2026-03-21T11:00:00Z';
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-if (t.within(now, start, end)) {
+if (within(now, start, end)) {
   console.log('Meeting is happening now');
 }
 ```
 
-`t.within()` normalizes range bounds automatically, so reversed ranges still behave predictably.
+`within()` normalizes range bounds automatically, so reversed ranges still behave predictably.
 
 ## Current Time
 
 Get the current time in a specific timezone.
 
 ```ts
-const localTime = t.now();           // system timezone
-const londonTime = t.now('Europe/London');
-const sydneyTime = t.now('Australia/Sydney');
+const localTime = now();           // system timezone
+const londonTime = now('Europe/London');
+const sydneyTime = now('Australia/Sydney');
 ```
 
 ## Format Ranges
 
-Use `t.formatRange()` for human-friendly time spans.
+Use `formatRange()` for human-friendly time spans.
 
 ```ts
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-const text = t.formatRange(start, end, {
+const text = formatRange(start, end, {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
@@ -154,10 +153,9 @@ const text = t.formatRange(start, end, {
 
 ## Best Practices
 
-- Use `t.toInstant()` for timeline operations (comparisons, storage).
-- Use `t.toZoned()` when you need local wall-clock times (displaying to users).
-- Use `t.parseLocal()` for plain local strings.
-- Use `t.formatHuman()` for UI and `t.formatISO()` for APIs/logs.
+- Use `toInstant()` for timeline operations (comparisons, storage).
+- Use `toZoned()` when you need local wall-clock times (displaying to users).
+- Use `formatHuman()` for UI and `formatISO()` for APIs/logs.
 - Store times as instants (ISO strings); convert to zoned only for display.
 
 ## Common Patterns
@@ -166,17 +164,17 @@ const text = t.formatRange(start, end, {
 
 ```ts
 const userTz = 'America/New_York';
-const scheduledTime = t.toZoned(new Date('2026-04-15T14:00:00Z'), { tz: userTz });
+const scheduledTime = toZoned('2026-04-15T14:00:00Z', { tz: userTz });
 
-console.log(`Meeting: ${t.formatHuman(scheduledTime, { pattern: 'long' })}`);
+console.log(`Meeting: ${formatHuman(scheduledTime, { pattern: 'long' })}`);
 ```
 
 ### Calculate Elapsed Time
 
 ```ts
-const start = t.now();
+const start = now();
 // ... do work ...
-const elapsed = t.diff(start, t.now(), { largestUnit: 'seconds' });
+const elapsed = diff(start, now(), { largestUnit: 'second' });
 console.log(`Took ${elapsed.seconds}s`);
 ```
 
@@ -185,13 +183,13 @@ console.log(`Took ${elapsed.seconds}s`);
 ```ts
 const event = {
   title: 'Team Standup',
-  utc: t.toInstant('2026-03-21T09:00:00Z'),
+  utc: toInstant('2026-03-21T09:00:00Z'),
 };
 
 const timezones = ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo'];
 
 for (const tz of timezones) {
-  const local = t.toZoned(event.utc, { tz });
-  console.log(`${tz}: ${t.formatHuman(local, { pattern: 'short' })}`);
+  const local = toZoned(event.utc, { tz });
+  console.log(`${tz}: ${formatHuman(local, { pattern: 'short' })}`);
 }
 ```

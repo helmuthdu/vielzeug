@@ -1,30 +1,26 @@
 ---
-title: 'I18nit Examples — SSR Rendering with withLocale'
-description: 'SSR Rendering with withLocale examples for i18nit.'
+title: 'I18nit Examples — Catalog Replacement'
+description: 'Catalog replacement examples for i18nit.'
 ---
 
-## SSR Rendering with withLocale
+## Catalog Replacement
 
 ## Problem
 
-Implement ssr rendering with withlocale in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
+Implement catalog replacement in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
 
 ## Runnable Example
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
 
 ```ts
-function renderHtml(locale: string) {
-  const t = i18n.withLocale(locale).t;
-
-  return `
-    <html>
-      <body>
-        <h1>${t('greeting', { name: 'Guest' })}</h1>
-      </body>
-    </html>
-  `;
-}
+i18n.setCatalog('en', {
+  nav: {
+    about: 'About',
+    contact: 'Contact',
+    help: 'Help',
+  },
+});
 ```
 
 ## Expected Output
@@ -41,5 +37,5 @@ function renderHtml(locale: string) {
 ## Related Recipes
 
 - [Async Loading and Reload](./async-loading-and-reload.md)
-- [Batched Catalog Updates](./batched-catalog-updates.md)
 - [Diagnostics Hook](./diagnostics-hook.md)
+- [Framework Integration](./framework-integration.md)

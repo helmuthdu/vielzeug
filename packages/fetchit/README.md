@@ -1,14 +1,21 @@
 # @vielzeug/fetchit
 
-> Type-safe fetch primitives: HTTP client, query cache, and standalone mutations.
+> Type-safe HTTP client, cache, and lean mutation helper built on native `fetch`.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/fetchit)](https://www.npmjs.com/package/@vielzeug/fetchit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`@vielzeug/fetchit` provides three composable primitives built on native `fetch`:
+`@vielzeug/fetchit` keeps the surface small:
 
 - `createApi` for typed HTTP requests
-- `createQuery` for cached async queries with subscriptions
-- `createMutation` for observable write operations
+- `createQuery` for cached async reads with subscriptions
+- `createMutation` for tracked writes with caller-owned cancellation
+- `prefetch` on query clients for cache warming
+
+## Entry Point
+
+| Entry | Purpose |
+| --- | --- |
+| `@vielzeug/fetchit` | `createApi`, `createQuery`, `createMutation`, `HttpError`, and types |
 
 ## Installation
 
@@ -17,13 +24,6 @@ pnpm add @vielzeug/fetchit
 # npm install @vielzeug/fetchit
 # yarn add @vielzeug/fetchit
 ```
-
-## Entry Points
-
-| Entry | Purpose |
-| --- | --- |
-| `@vielzeug/fetchit` | Main API (`createApi`, `createQuery`, `createMutation`, `HttpError`, types) |
-| `@vielzeug/fetchit/core` | Core bundle entry |
 
 ## Quick Start
 
@@ -34,40 +34,50 @@ type User = { id: number; name: string };
 type NewUser = { name: string };
 
 const api = createApi({ baseUrl: 'https://api.example.com' });
-const qc = createQuery({ staleTime: 5_000 });
+const qc = createQuery({ retry: 2, staleTime: 5_000 });
 
 const user = await qc.query({
   key: ['users', 1],
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
 });
 
-const createUser = createMutation((payload: NewUser) => api.post<User>('/users', { body: payload }), {
-  onSuccess: () => qc.invalidate(['users']),
-});
+const createUser = createMutation(({ input, signal }: { input: NewUser; signal?: AbortSignal }) =>
+  api.post<User>('/users', { body: input, signal }),
+);
 
-await createUser.mutate({ name: 'Alice' });
+const nextUser = await createUser.mutate({ name: 'Alice' });
+qc.set(['users', nextUser.id], nextUser);
+qc.invalidate(['users']);
 ```
 
 ## Features
 
 - Type-safe path params from `'/path/{id}'` patterns
-- Request dedupe (idempotent methods by default, others opt-in)
-- Query cache with stale/fresh and GC control (`staleTime`, `gcTime`)
-- Query callbacks (`onSuccess`, `onError`, `onSettled`) per triggering call
-- Observable mutation state (`subscribe`, `getState`, `cancel`, `reset`)
-- Retry controls (`retry`, `retryDelay`, `shouldRetry`)
-- Interceptors for request/response middleware
+- Automatic read dedupe for idempotent requests
+- Explicit write dedupe with `dedupeKey` when you really need it
+- Query cache with `staleTime`, `gcTime`, subscriptions, invalidation, cancellation, and retry
+- Query cache prefetching for route/page warm-up flows
+- Retry controls with backoff hooks
+- Interceptors for auth, logging, and request transforms
 - Rich HTTP errors via `HttpError`
 - `[Symbol.dispose]` support on API and query clients
 
-## API At a Glance
+## Core API
 
 - `createApi(options?) => ApiClient`
 - `createQuery(options?) => QueryClient`
 - `createMutation(fn, options?) => Mutation`
 - `HttpError`
 
-## Docs
+```ts
+await qc.prefetch({
+  key: ['users', 1],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+  staleTime: 10_000,
+});
+```
+
+## Documentation
 
 - [Overview](https://vielzeug.dev/fetchit/)
 - [Usage Guide](https://vielzeug.dev/fetchit/usage)

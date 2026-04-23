@@ -250,6 +250,7 @@ const backgroundStyle = computed(() => {
           <div class="viewport-controls">
             <bit-button-group attached size="sm">
               <bit-button
+                size="sm"
                 icon-only
                 :variant="viewportSize === 'mobile' ? 'solid' : 'bordered'"
                 @click="setViewportSize('mobile')"
@@ -268,6 +269,7 @@ const backgroundStyle = computed(() => {
                 </svg>
               </bit-button>
               <bit-button
+                size="sm"
                 icon-only
                 :variant="viewportSize === 'tablet' ? 'solid' : 'bordered'"
                 @click="setViewportSize('tablet')"
@@ -286,6 +288,7 @@ const backgroundStyle = computed(() => {
                 </svg>
               </bit-button>
               <bit-button
+                size="sm"
                 icon-only
                 :variant="viewportSize === 'desktop' ? 'solid' : 'bordered'"
                 @click="setViewportSize('desktop')"
@@ -479,9 +482,7 @@ const backgroundStyle = computed(() => {
   overflow: auto;
   width: var(--size-full);
   background-color: var(--color-contrast-50);
-  background-image:
-    linear-gradient(to right, var(--color-contrast-100) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--color-contrast-100) 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--color-contrast-200) 1px, transparent 1px);
   background-size: 16px 16px;
   background-position: 0 0;
   min-height: 150px;

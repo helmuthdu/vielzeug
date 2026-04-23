@@ -9,7 +9,7 @@ description: Practical examples and recipes for i18nit.
 
 ## How to Use These Examples
 
-These examples cover locale switching, async loading, scoped translators, and SSR patterns.
+These examples cover locale switching, async loading, prefixed helpers, and SSR patterns.
 
 1. Start with the first example page to learn the baseline pattern.
 2. Move to advanced pages that match your framework or production scenario.
@@ -22,9 +22,9 @@ These examples are aligned with the current `@vielzeug/i18nit` API.
 - [Shared Instance Setup](./examples/shared-instance-setup.md)
 - [Framework Integration](./examples/framework-integration.md)
 - [Locale Switcher](./examples/locale-switcher.md)
-- [Scoped Translator](./examples/scoped-translator.md)
-- [Locale-bound Translator](./examples/locale-bound-translator.md)
-- [Batched Catalog Updates](./examples/batched-catalog-updates.md)
+- [Prefixed Translation Helper](./examples/prefixed-translation-helper.md)
+- [Per-request Locale Handling](./examples/per-request-locale-handling.md)
+- [Catalog Replacement](./examples/catalog-replacement.md)
 - [Async Loading and Reload](./examples/async-loading-and-reload.md)
-- [SSR Rendering with withLocale](./examples/ssr-rendering-with-withlocale.md)
+- [SSR Rendering](./examples/ssr-rendering.md)
 - [Diagnostics Hook](./examples/diagnostics-hook.md)

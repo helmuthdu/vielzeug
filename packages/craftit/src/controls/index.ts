@@ -1,6 +1,6 @@
 export { createCheckableFieldControl } from './checkable-control';
 
-export { createValidationControl, type CheckableChangePayload } from './field-control';
+export { type CheckableChangePayload } from './field-control';
 export { createTextField } from './text-field-control';
 export { createChoiceField } from './choice-field-control';
 

@@ -245,10 +245,10 @@ class TaskError extends WorkerError {
 }
 ```
 
-Thrown when the task function itself throws. The `message` is the stringified original error.
+Thrown when the task function itself throws. The `message` is the original error message. The error `name` and `stack` are also preserved when available from the Worker thread.
 
-::: warning
-For task failures inside the Worker, `message` is preserved and `cause` is usually `undefined` because Worker messages cross the structured clone boundary.
+::: info
+Unlike traditional RPC or serialization libraries, workit preserves the error name and stack trace across the worker boundary where possible. This aids debugging task failures without needing to inspect logs separately.
 :::
 
 ## Testing Utilities

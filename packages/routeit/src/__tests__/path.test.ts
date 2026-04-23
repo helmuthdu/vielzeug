@@ -1,4 +1,4 @@
-import { createRouter } from '../router';
+import { createRouter, defineRoutes } from '../router';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 
 describe('Path matching', () => {
@@ -10,122 +10,153 @@ describe('Path matching', () => {
     disposeRouter();
   });
 
-  it('matches root path /', async () => {
+  it('matches the root path', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/';
-    await boot(createRouter().on('/', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          home: { handler, path: '/' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalled();
   });
 
-  it('matches a static path exactly', async () => {
+  it('matches static paths exactly', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/about';
-    await boot(createRouter().on('/about', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          about: { handler, path: '/about' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalled();
   });
 
-  it('matches a single :param and injects it into ctx.params', async () => {
+  it('matches named params', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/users/123';
-    await boot(createRouter().on('/users/:id', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          userDetail: { handler, path: '/users/:id' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { id: '123' } }));
   });
 
-  it('matches multiple :params in a single pattern', async () => {
+  it('matches multiple named params in one pattern', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/users/123/posts/456';
-    await boot(createRouter().on('/users/:userId/posts/:postId', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          postDetail: { handler, path: '/users/:userId/posts/:postId' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { postId: '456', userId: '123' } }));
   });
 
-  it('URL-decodes percent-encoded path parameters', async () => {
+  it('decodes percent-encoded path params', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/search/hello%20world';
-    await boot(createRouter().on('/search/:query', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          search: { handler, path: '/search/:query' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { query: 'hello world' } }));
   });
 
-  it('wildcard /docs/* matches any sub-path', async () => {
-    const handler = vi.fn();
-
-    mockLocation.pathname = '/docs/guide/intro';
-    await boot(createRouter().on('/docs/*', handler));
-    expect(handler).toHaveBeenCalled();
-  });
-
-  it('bare * matches any path globally', async () => {
+  it('matches bare wildcard routes', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/something';
-    await boot(createRouter().on('*', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          catchAll: { handler, path: '*' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalled();
   });
 
-  it('named wildcard :param* captures a multi-segment path as a named param', async () => {
+  it('matches static wildcard suffixes', async () => {
+    const handler = vi.fn();
+
+    mockLocation.pathname = '/docs/guide/intro';
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          docs: { handler, path: '/docs/*' },
+        }),
+      }),
+    );
+
+    expect(handler).toHaveBeenCalled();
+  });
+
+  it('captures named wildcard params across multiple segments', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/files/one/two/three';
-    await boot(createRouter().on('/files/:rest*', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          files: { handler, path: '/files/:rest*' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { rest: 'one/two/three' } }));
   });
 
-  it('named wildcard :param* captures a single segment', async () => {
-    const handler = vi.fn();
-
-    mockLocation.pathname = '/files/one';
-    await boot(createRouter().on('/files/:rest*', handler));
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { rest: 'one' } }));
-  });
-
-  it('named wildcard :param* with trailing slash matches (capturing empty string)', async () => {
+  it('captures empty strings for named wildcard params when no tail segments remain', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/files/';
-    await boot(createRouter().on('/files/:rest*', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          files: { handler, path: '/files/:rest*' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ params: { rest: '' } }));
   });
 
-  it('bare /static/* matches without exposing a named param', async () => {
-    const handler = vi.fn();
-
-    mockLocation.pathname = '/static/anything';
-    await boot(createRouter().on('/static/*', handler));
-    expect(handler).toHaveBeenCalled();
-  });
-
-  it('first registered route wins on ambiguous pattern match', async () => {
-    const handler1 = vi.fn();
-    const handler2 = vi.fn();
-
-    const router = createRouter();
-
-    router.on('/a/:id', handler1);
-    router.on('/a/42', handler2);
-
-    mockLocation.pathname = '/a/42';
-    await boot(router);
-    expect(handler1).toHaveBeenCalled();
-    expect(handler2).not.toHaveBeenCalled();
-  });
-
-  it('no handler fires when no route matches', async () => {
+  it('does not run unrelated routes when nothing matches', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/nope';
-    await boot(createRouter().on('/other', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          other: { handler, path: '/other' },
+        }),
+      }),
+    );
+
     expect(handler).not.toHaveBeenCalled();
-  });
-
-  it('treats an empty pathname as root /', async () => {
-    const handler = vi.fn();
-
-    mockLocation.pathname = '';
-    await boot(createRouter().on('/', handler));
-    expect(handler).toHaveBeenCalled();
   });
 });

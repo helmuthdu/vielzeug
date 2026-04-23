@@ -3,13 +3,11 @@ export { createPermit } from './factory';
 export type {
   PermissionData,
   PermitEffect,
-  PermitGuard,
-  PermitPolicy,
+  PermitLoggerContext,
   PermitPredicate,
-  PermitPrincipal,
   PermitRule,
   Permit,
   PermitOptions,
-  PrincipalInput,
+  Principal,
   UserPrincipal,
 } from './types';

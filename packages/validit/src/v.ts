@@ -21,11 +21,9 @@ import { VariantSchema } from './schemas/variant';
  * The `v` namespace bundles all schema factories for convenience.
  *
  * Importing `v` pulls in the full library. For bundle-size-sensitive code,
- * prefer the named flat exports (`import { string, number, object } from '@vielzeug/validit'`)
- * which let bundlers tree-shake to only the schemas you use.
+ * prefer the named flat exports which let bundlers tree-shake to only the schemas you use.
  */
 export const v = {
-  any: (): Schema<any> => new Schema<any>([]),
   array: <T>(schema: Schema<T>): ArraySchema<T> => new ArraySchema(schema),
   boolean: (): BooleanSchema => new BooleanSchema(),
   coerce: {
@@ -46,12 +44,8 @@ export const v = {
     new NativeEnumSchema(enumObj),
   never: (): NeverSchema => new NeverSchema(),
   null: (): LiteralSchema<null> => new LiteralSchema(null),
-  nullable: <T>(schema: Schema<T>): Schema<T | null> => schema.nullable(),
-  nullish: <T>(schema: Schema<T>): Schema<T | null | undefined> => schema.nullish(),
   number: (): NumberSchema => new NumberSchema(),
   object: <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape),
-  optional: <T>(schema: Schema<T>): Schema<T | undefined> => schema.optional(),
-  preprocess: <T>(fn: (value: unknown) => unknown, schema: Schema<T>): Schema<T> => schema.preprocess(fn),
   record: <K extends string, V>(keySchema: Schema<K>, valueSchema: Schema<V>): RecordSchema<K, V> =>
     new RecordSchema(keySchema, valueSchema),
   string: (): StringSchema => new StringSchema(),
@@ -59,7 +53,6 @@ export const v = {
   undefined: (): LiteralSchema<undefined> => new LiteralSchema(undefined),
   union: <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(...items: T): UnionSchema<any> =>
     new UnionSchema(normalizeToSchemas(items)),
-  unknown: (): Schema<unknown> => new Schema<unknown>([]),
   variant: <K extends string, M extends Record<string, ObjectSchema<any>>>(
     discriminator: K,
     map: M,

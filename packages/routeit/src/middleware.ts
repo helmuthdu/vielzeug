@@ -1,29 +1,27 @@
 import type { Middleware, RouteContext, RouteHandler } from './types';
 
-/** -------------------- Middleware Execution -------------------- **/
-
+/** Executes a middleware stack and then the terminal route handler. */
 export async function runMiddleware(
   context: RouteContext,
-  globalMiddleware: Middleware[],
-  routeMiddleware: Middleware[],
+  middleware: readonly Middleware[],
   handler?: RouteHandler,
 ): Promise<void> {
-  const stack = [...globalMiddleware, ...routeMiddleware];
-  let index = -1;
+  async function dispatch(index: number): Promise<void> {
+    if (index < middleware.length) {
+      let called = false;
 
-  const dispatch = async (i: number): Promise<void> => {
-    if (i <= index) throw new Error('[routeit] next() called multiple times');
+      await middleware[index]!(context, async () => {
+        if (called) throw new Error('[routeit] next() called multiple times');
 
-    index = i;
-
-    if (i === stack.length) {
-      if (handler) await handler(context);
+        called = true;
+        await dispatch(index + 1);
+      });
 
       return;
     }
 
-    await stack[i](context, () => dispatch(i + 1));
-  };
+    if (handler) await handler(context);
+  }
 
   await dispatch(0);
 }

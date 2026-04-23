@@ -1,15 +1,13 @@
 ---
 title: Fetchit — HTTP client for TypeScript
-description: Type-safe HTTP client, query cache, and mutation primitives built on native fetch.
+description: Type-safe HTTP client, cache, and lean mutation helper built on native fetch.
 ---
 
 <PackageBadges package="fetchit" />
 
 <img src="/logo-fetchit.svg" alt="Fetchit logo" width="156" class="logo-highlight"/>
 
-# Fetchit
-
-`@vielzeug/fetchit` ships three composable primitives built on native `fetch`: `createApi`, `createQuery`, and `createMutation`.
+`@vielzeug/fetchit` ships a small set of composable primitives built on native `fetch`: `createApi`, `createQuery`, and `createMutation`.
 
 <!-- Search keywords: HTTP client, query cache, API data fetching. -->
 
@@ -44,11 +42,13 @@ const user = await qc.query({
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 42 }, signal }),
 });
 
-const createUser = createMutation((data: NewUser) => api.post<User>('/users', { body: data }), {
-  onSuccess: () => qc.invalidate(['users']),
-});
+const createUser = createMutation(({ input, signal }: { input: NewUser; signal?: AbortSignal }) =>
+  api.post<User>('/users', { body: input, signal }),
+);
 
-await createUser.mutate({ name: 'Alice' });
+const nextUser = await createUser.mutate({ name: 'Alice' });
+qc.set(['users', nextUser.id], nextUser);
+qc.invalidate(['users']);
 ```
 
 ## Why Fetchit?
@@ -82,14 +82,13 @@ const user = await api.get<User>('/users/{id}', { params: { id: userId } });
 ## Features
 
 - **Type-safe path params** — `{param}` placeholders extracted and validated at compile time
-- **HTTP client** — `createApi()` with base URL, global headers, timeout, interceptors, and deduplication
-- **Query cache** — `createQuery()` for stale-while-revalidate caching, prefix invalidation, and reactive subscriptions
-- **Query callbacks** — per-trigger-call `onSuccess`, `onError`, `onSettled`
-- **Standalone mutations** — `createMutation()` with lifecycle callbacks, retry, observable state, and `cancel()`
+- **HTTP client** — `createApi()` with base URL, global headers, timeout, interceptors, and safe deduplication
+- **Query cache** — `createQuery()` for stale-aware caching, prefix invalidation, and reactive subscriptions
+- **Standalone mutations** — `createMutation()` with retry, observable state, and caller-owned `AbortSignal`
 - **Request deduplication** — GET/HEAD/OPTIONS/DELETE dedupe concurrent identical calls by default
 - **Interceptors** — `use()` middleware for auth tokens, logging, and request transforms
 - **Retry with backoff** — configurable attempt count, exponential delay strategy, and `shouldRetry` predicate
-- **Abort support** — `QueryFnContext` passes an `AbortSignal` to every query function
+- **Abort support** — query and mutation functions both receive an `AbortSignal`
 - **Disposable** — both clients implement `[Symbol.dispose]` for `using` declarations
 - **Zero dependencies** — <PackageInfo package="fetchit" type="size" /> gzipped
 

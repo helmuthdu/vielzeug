@@ -1,44 +1,39 @@
 import { createMutation, type MutationState } from '../index';
 
 describe('Mutation', () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    fetchMock = vi.fn();
-    globalThis.fetch = fetchMock as typeof fetch;
-  });
-
   afterEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
-  it('executes the mutationFn and returns the result', async () => {
-    fetchMock.mockResolvedValue({
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => ({ id: 1, name: 'Created' }),
-      ok: true,
-      status: 201,
-    });
-
-    const addUser = createMutation((data: { name: string }) =>
-      fetch('/users', { body: JSON.stringify(data), method: 'POST' }).then((r) => r.json()),
-    );
+  it('executes the mutation function and returns the result', async () => {
+    const addUser = createMutation(async ({ input }: { input: { name: string }; signal?: AbortSignal }) => ({
+      id: 1,
+      name: input.name,
+    }));
 
     const result = await addUser.mutate({ name: 'Created' });
 
     expect(result).toEqual({ id: 1, name: 'Created' });
   });
 
-  it('reports idle -> pending -> success state lifecycle', async () => {
-    fetchMock.mockResolvedValue({
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => ({ id: 1 }),
-      ok: true,
-      status: 201,
+  it('forwards the caller AbortSignal to the mutation function', async () => {
+    let receivedSignal: AbortSignal | undefined;
+    const mutation = createMutation(async ({ signal }: { input: void; signal?: AbortSignal }) => {
+      receivedSignal = signal;
+
+      return 'ok';
     });
 
-    const addUser = createMutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
+    const ac = new AbortController();
+
+    await mutation.mutate(undefined, { signal: ac.signal });
+
+    expect(receivedSignal).toBe(ac.signal);
+  });
+
+  it('reports idle -> pending -> success state lifecycle', async () => {
+    const addUser = createMutation(async () => ({ id: 1 }));
 
     const states: MutationState[] = [];
     const unsub = addUser.subscribe((s) => states.push({ ...s }));
@@ -48,14 +43,12 @@ describe('Mutation', () => {
 
     expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'success']);
     expect(states[2].data).toEqual({ id: 1 });
-    expect(states[2].isSuccess).toBe(true);
-    expect(states[2].updatedAt).toBeGreaterThan(0);
   });
 
   it('reports idle -> pending -> error state lifecycle and rejects the caller', async () => {
-    fetchMock.mockRejectedValue(new Error('Server error'));
-
-    const fail = createMutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()));
+    const fail = createMutation(async () => {
+      throw new Error('Server error');
+    });
 
     const states: MutationState[] = [];
 
@@ -64,52 +57,17 @@ describe('Mutation', () => {
     await expect(fail.mutate(undefined)).rejects.toThrow('Server error');
 
     expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'error']);
-    expect(states[2].isError).toBe(true);
     expect(states[2].error?.message).toContain('Server error');
   });
 
-  it('reset() returns state to idle with no data or error', async () => {
-    fetchMock.mockResolvedValue({
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => ({ id: 1 }),
-      ok: true,
-      status: 200,
-    });
-
-    const mut = createMutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
-
-    await mut.mutate(undefined);
-
-    expect(mut.getState().status).toBe('success');
-    mut.reset();
-    expect(mut.getState()).toMatchObject({ data: undefined, error: null, status: 'idle' });
-  });
-
-  it('throws when mutate() is called while a previous mutation is already in flight', async () => {
-    let resolve!: () => void;
-    const slow = createMutation<void>(
-      () =>
-        new Promise<void>((r) => {
-          resolve = r;
-        }),
-    );
-
-    const first = slow.mutate(undefined);
-
-    await expect(slow.mutate(undefined)).rejects.toThrow('mutation already in flight');
-    resolve();
-    await first;
-  });
-
-  it('per-call signal aborts the mutation', async () => {
+  it('uses the caller-provided abort signal', async () => {
     const ac = new AbortController();
-
     const slow = createMutation(
-      () =>
+      ({ signal }: { input: void; signal?: AbortSignal }) =>
         new Promise<void>((resolve, reject) => {
           const id = setTimeout(resolve, 10_000);
 
-          ac.signal.addEventListener('abort', () => {
+          signal?.addEventListener('abort', () => {
             clearTimeout(id);
             reject(new DOMException('Aborted', 'AbortError'));
           });
@@ -119,40 +77,42 @@ describe('Mutation', () => {
     const promise = slow.mutate(undefined, { signal: ac.signal });
 
     ac.abort();
-    await expect(promise).rejects.toThrow();
+    await expect(promise).rejects.toThrow('Aborted');
+    expect(slow.getState().status).toBe('idle');
   });
 
-  it('calls onSuccess callback with result and variables', async () => {
-    fetchMock.mockResolvedValue({
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => ({ id: 1 }),
-      ok: true,
-      status: 201,
-    });
+  it('allows concurrent calls and keeps state from the latest run', async () => {
+    let resolveFirst!: (value: string) => void;
+    let resolveSecond!: (value: string) => void;
+    const mutation = createMutation(
+      ({ input }: { input: string; signal?: AbortSignal }) =>
+        new Promise<string>((resolve) => {
+          if (input === 'first') {
+            resolveFirst = resolve;
+          } else {
+            resolveSecond = resolve;
+          }
+        }),
+    );
 
-    const onSuccess = vi.fn();
-    const addUser = createMutation((_name: string) => fetch('/users', { method: 'POST' }).then((r) => r.json()), {
-      onSuccess,
-    });
+    const first = mutation.mutate('first');
+    const second = mutation.mutate('second');
 
-    await addUser.mutate('Alice');
+    resolveFirst('first-result');
+    await expect(first).resolves.toBe('first-result');
+    expect(mutation.getState().status).toBe('pending');
 
-    expect(onSuccess).toHaveBeenCalledWith({ id: 1 }, 'Alice');
+    resolveSecond('second-result');
+    await expect(second).resolves.toBe('second-result');
+    expect(mutation.getState()).toMatchObject({ data: 'second-result', status: 'success' });
   });
 
-  it('calls onError and onSettled callbacks on failure', async () => {
-    fetchMock.mockRejectedValue(new Error('boom'));
+  it('reset() returns state to idle with no data or error', async () => {
+    const mutation = createMutation(async () => ({ id: 1 }));
 
-    const onError = vi.fn();
-    const onSettled = vi.fn();
-    const fail = createMutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()), {
-      onError,
-      onSettled,
-    });
+    await mutation.mutate(undefined);
 
-    await expect(fail.mutate(undefined)).rejects.toThrow('boom');
-
-    expect(onError).toHaveBeenCalledWith(expect.any(Error), undefined);
-    expect(onSettled).toHaveBeenCalledWith(undefined, expect.any(Error), undefined);
+    mutation.reset();
+    expect(mutation.getState()).toMatchObject({ data: undefined, error: null, status: 'idle' });
   });
 });

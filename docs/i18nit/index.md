@@ -1,6 +1,6 @@
 ---
 title: I18nit — Internationalization for TypeScript
-description: Type-safe i18n for TypeScript with interpolation, pluralization, async loaders, and Intl formatting helpers.
+description: Minimal i18n for TypeScript with explicit pluralization, async locale loading, and unified Intl formatting.
 ---
 
 <PackageBadges package="i18nit" />
@@ -9,7 +9,7 @@ description: Type-safe i18n for TypeScript with interpolation, pluralization, as
 
 # I18nit
 
-`@vielzeug/i18nit` is a zero-dependency internationalization library with typed keys, nested message trees, fallback chains, and async locale loading.
+`@vielzeug/i18nit` is a zero-dependency internationalization runtime with nested message lookup, explicit plural translation, fallback chains, and async locale loading.
 
 <!-- Search keywords: localization runtime, translation catalog, i18n message formatting. -->
 
@@ -42,7 +42,7 @@ const i18n = createI18n({
   messages: {
     de: {
       greeting: 'Hallo, {name}!',
-      inbox: { one: 'Eine Nachricht', other: '{count} Nachrichten' },
+      inbox: { one: 'Eine Nachricht', other: '{count} Nachrichten', zero: 'Keine Nachrichten' },
     },
     en: {
       greeting: 'Hello, {name}!',
@@ -53,21 +53,26 @@ const i18n = createI18n({
 });
 
 i18n.t('greeting', { name: 'Alice' });
-i18n.t('inbox', { count: 0 });
-i18n.t('inbox', { count: 3 });
+i18n.tp('inbox', 0);
+i18n.tp('inbox', 3);
 
-await i18n.switchLocale('de');
+await i18n.setLocale('de');
 i18n.t('nav.home'); // falls back to en
+
+i18n.format({ kind: 'currency', currency: 'EUR', value: 19.99 });
 ```
 
 ## Why I18nit?
 
-Rolling your own i18n means hard-coded string lookups, no pluralisation, no type safety on translation keys, and no lazy loading for large locale bundles.
+Rolling your own i18n means hard-coded string lookups, no pluralisation strategy, no fallback chain, and ad hoc formatting scattered around the app.
 
 ```ts
-// Before — manual locale map (no type safety, no pluralisation)
+// Before — manual locale map (no fallback chain, no explicit plural strategy)
 const messages = {
-  en: { greeting: 'Hello, {name}!', items: '{count} items' },
+  en: {
+    greeting: 'Hello, {name}!',
+    items: { zero: 'No items', one: 'One item', other: '{count} items' },
+  },
   de: { greeting: 'Hallo, {name}!' },
 };
 let locale = 'en';
@@ -79,9 +84,10 @@ function t(key: string, vars?: Record<string, unknown>) {
 
 // After — I18nit
 import { createI18n } from '@vielzeug/i18nit';
-const i18n = createI18n<typeof messages.en>({ locale: 'en', messages });
-i18n.t('greeting', { name: 'Alice' }); // typed key, typed vars
-i18n.t('items', { count: 3 }); // typed + pluralised
+const i18n = createI18n({ fallback: 'en', locale: 'en', messages });
+i18n.t('greeting', { name: 'Alice' });
+i18n.tp('items', 3);
+i18n.format({ kind: 'number', value: 1234.56 });
 ```
 
 | Feature              | I18nit                                       | i18next    | typesafe-i18n |
@@ -95,22 +101,45 @@ i18n.t('items', { count: 3 }); // typed + pluralised
 | Async loaders        | ✅                                           | ✅         | ✅            |
 | Zero dependencies    | ✅                                           | ❌         | ✅            |
 
-**Use I18nit when** you want type-safe translation keys with full TypeScript inference, pluralisation, and Intl-based formatting — without a code generation step.
+**Use I18nit when** you want a small i18n runtime with nested key lookup, pluralisation, async locale loading, and Intl-based formatting.
 
 **Consider i18next** if you need its large plugin ecosystem (react-i18next, backend adapters) or are migrating an existing project.
 
 ## Features
 
-- Type-safe translation keys and namespace scoping
+- Minimal translation API: `t`, `tp`, `format`
 - Dot-notation lookups with fallback chains
-- Interpolation for nested vars and array tokens
+- Interpolation for nested vars
 - Plural messages driven by `Intl.PluralRules`
-- Async loading (`ensureLocale`, `switchLocale`, `registerLoader`, `reload`)
-- Catalog updates (`add`, `replace`) and notification batching (`batch`)
-- Locale-bound and namespace-bound views (`withLocale`, `scope`)
-- Intl formatting helpers (`number`, `date`, `list`, `relative`, `currency`)
+- Async loading with `setLoader`, `preload`, and strict `setLocale`
+- Catalog replacement via `setCatalog`
+- Unified Intl formatting via `format()`
+- Subscription API for locale and catalog changes
 - Diagnostics (`onDiagnostic`) and custom missing-key handling (`onMissing`)
 - Lightweight runtime — <PackageInfo package="i18nit" type="size" /> gzipped, zero dependencies
+
+## Core API
+
+```ts
+const i18n = createI18n({
+  fallback: 'en',
+  locale: 'en',
+  messages: {
+    en: {
+      inbox: {
+        one: 'One message',
+        other: '{count} messages',
+        zero: 'No messages',
+      },
+      welcome: 'Hello, {name}',
+    },
+  },
+});
+
+i18n.t('welcome', { name: 'Alice' });
+i18n.tp('inbox', 3);
+i18n.format({ kind: 'currency', currency: 'EUR', value: 19.99 });
+```
 
 ## Compatibility
 

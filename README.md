@@ -407,12 +407,8 @@ const api = createApi({
 
 // Create mutation for login
 const loginMutation = createMutation(
-  (values: { email: string; password: string }) =>
-    api.post('/auth/login', { body: values }).then((r) => r.json()),
-  {
-    onSuccess: (user) => Logit.success('Login successful!', user),
-    onError: (error) => Logit.error('Login failed:', error),
-  },
+  ({ input, signal }: { input: { email: string; password: string }; signal: AbortSignal }) =>
+    api.post('/auth/login', { body: input, signal }).then((r) => r.json()),
 );
 
 // Create form with validation
@@ -429,7 +425,14 @@ const form = createForm({
 });
 
 // Submit
-form.submit((values) => loginMutation.mutate(values));
+form.submit(async (values) => {
+  try {
+    const user = await loginMutation.mutate(values);
+    Logit.success('Login successful!', user);
+  } catch (error) {
+    Logit.error('Login failed:', error);
+  }
+});
 ```
 
 ## 🏗️ Development

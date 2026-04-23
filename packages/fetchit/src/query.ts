@@ -11,21 +11,22 @@ import { dispatch, makeState } from './state';
 const DEFAULT_GC = 5 * 60_000;
 
 export type QueryFnContext = {
+  key: QueryKey;
   signal: AbortSignal;
 };
 
 type QueryExecutor<T> = (ctx: QueryFnContext) => Promise<T>;
 
 export type QueryOptions<T> = {
-  enabled?: boolean;
   fn: QueryExecutor<T>;
   gcTime?: number;
   key: QueryKey;
-  onError?: (error: Error) => void;
-  onSettled?: (data: T | undefined, error: Error | null) => void;
-  onSuccess?: (data: T) => void;
   staleTime?: number;
-} & RetryOptions;
+};
+
+export type PrefetchOptions<T> = QueryOptions<T> & {
+  throwOnError?: boolean;
+};
 
 export type QueryClientOptions = {
   gcTime?: number;
@@ -43,15 +44,8 @@ type CacheEntry<T = unknown> = {
   updatedAt: number;
 };
 
-export const STALE_TIMES = {
-  always: 0,
-  long: 5 * 60_000,
-  never: Infinity,
-  short: 30_000,
-} as const;
-
 export function createQuery(opts?: QueryClientOptions) {
-  const staleTimeDefault = opts?.staleTime ?? Infinity;
+  const staleTimeDefault = opts?.staleTime ?? 0;
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
   const retryDefault = opts?.retry ?? DEFAULT_RETRY;
   const retryDelayDefault = opts?.retryDelay;
@@ -110,26 +104,10 @@ export function createQuery(opts?: QueryClientOptions) {
     return prefix.every((seg, i) => stableStringify(seg) === stableStringify(entryKey[i]));
   }
 
-  async function fetchQuery<T>(options: QueryOptions<T> & { enabled: false }): Promise<T | undefined>;
-  async function fetchQuery<T>(options: QueryOptions<T>): Promise<T>;
-  async function fetchQuery<T>(options: QueryOptions<T>): Promise<T | undefined> {
+  async function fetchQuery<T>(options: QueryOptions<T>): Promise<T> {
     if (_disposed) throw new Error('[fetchit] QueryClient has been disposed');
 
-    const {
-      enabled = true,
-      fn: queryFn,
-      gcTime = gcTimeDefault,
-      key: queryKey,
-      onError,
-      onSettled,
-      onSuccess,
-      retry: retryCount = retryDefault,
-      retryDelay = retryDelayDefault,
-      shouldRetry = shouldRetryDefault,
-      staleTime = staleTimeDefault,
-    } = options;
-
-    if (!enabled) return cache.get(queryKey)?.data as T | undefined;
+    const { fn: queryFn, gcTime = gcTimeDefault, key: queryKey, staleTime = staleTimeDefault } = options;
 
     const entry = ensureEntry<T>(queryKey, gcTime);
 
@@ -146,11 +124,11 @@ export function createQuery(opts?: QueryClientOptions) {
     entry.status = 'pending';
     notify(entry);
 
-    const retryOpts = getRetryConfig(retryCount, retryDelay, shouldRetry);
+    const retryOpts = getRetryConfig(retryDefault, retryDelayDefault, shouldRetryDefault);
 
     const p = (async () => {
       try {
-        const data = await retry(() => queryFn({ signal: controller.signal }), {
+        const data = await retry(() => queryFn({ key: queryKey, signal: controller.signal }), {
           ...retryOpts,
           signal: controller.signal,
         });
@@ -162,25 +140,21 @@ export function createQuery(opts?: QueryClientOptions) {
         entry.inflight = null;
         scheduleGc(entry);
         notify(entry);
-        // Callbacks belong to the call that initiated the fetch.
-        // Concurrent callers sharing this inflight promise get the result but not callbacks.
-        // For reactive state tracking across re-renders, use subscribe() instead.
-        onSuccess?.(data);
-        onSettled?.(data, null);
 
         return data;
       } catch (err) {
         const error = toError(err);
         const isAborted = controller.signal.aborted || error.name === 'AbortError';
 
-        // cancel() already nulled entry.inflight and set the terminal state — don't override it
         if (isAborted && entry.inflight === null) throw error;
 
         if (isAborted) {
-          entry.status = 'idle';
+          entry.status = entry.data !== undefined ? 'success' : 'idle';
           entry.error = null;
 
-          if (entry.observers.size === 0) {
+          if (entry.status === 'success') {
+            scheduleGc(entry);
+          } else if (entry.observers.size === 0) {
             cache.delete(queryKey);
           }
         } else {
@@ -194,11 +168,6 @@ export function createQuery(opts?: QueryClientOptions) {
         entry.inflight = null;
         notify(entry);
 
-        if (!isAborted) {
-          onError?.(error);
-          onSettled?.(undefined, error);
-        }
-
         throw error;
       }
     })();
@@ -206,10 +175,6 @@ export function createQuery(opts?: QueryClientOptions) {
     entry.inflight = { controller, promise: p };
 
     return p;
-  }
-
-  async function prefetch<T>(options: Omit<QueryOptions<T>, 'enabled'>): Promise<T | undefined> {
-    return fetchQuery<T>({ ...options, enabled: true }).catch(() => undefined);
   }
 
   function evictEntry(entry: CacheEntry) {
@@ -303,6 +268,16 @@ export function createQuery(opts?: QueryClientOptions) {
     }
   }
 
+  async function prefetchQuery<T>(options: PrefetchOptions<T>): Promise<void> {
+    const { throwOnError = false, ...queryOptions } = options;
+
+    try {
+      await fetchQuery(queryOptions);
+    } catch (error) {
+      if (throwOnError) throw error;
+    }
+  }
+
   return {
     cancel,
     clear: clearCache,
@@ -319,7 +294,7 @@ export function createQuery(opts?: QueryClientOptions) {
     get,
     getState,
     invalidate,
-    prefetch,
+    prefetch: prefetchQuery,
     query: fetchQuery,
     set,
     subscribe,

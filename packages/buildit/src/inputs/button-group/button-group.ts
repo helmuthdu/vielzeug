@@ -1,6 +1,6 @@
 import { define, createContext, html, provide, type ReadonlySignal } from '@vielzeug/craftit';
 
-import { type PropsInput, sizableBundle, themableBundle } from '../shared/bundles';
+import { sizableBundle, themableBundle } from '../shared/bundles';
 import styles from './button-group.css?inline';
 
 /** Button group properties */
@@ -60,7 +60,7 @@ export const BUTTON_GROUP_TAG = define<BitButtonGroupProps>('bit-button-group', 
     label: undefined,
     orientation: undefined,
     variant: undefined,
-  } satisfies PropsInput<BitButtonGroupProps>,
+  },
   setup(props) {
     provide(BUTTON_GROUP_CTX, {
       color: props.color!,
@@ -68,11 +68,13 @@ export const BUTTON_GROUP_TAG = define<BitButtonGroupProps>('bit-button-group', 
       variant: props.variant!,
     });
 
-    return html`
-      <div class="button-group" part="group" role="group" :aria-label="${props.label}">
-        <slot></slot>
-      </div>
-    `;
+    return {
+      render: () => html`
+        <div class="button-group" part="group" role="group" :aria-label="${props.label}">
+          <slot></slot>
+        </div>
+      `,
+    };
   },
   styles: [styles],
 });

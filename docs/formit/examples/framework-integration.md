@@ -25,7 +25,7 @@ function useForm(init: FormOptions) {
   const [form] = useState(() => createForm(init));
   const [state, setState] = useState(form.state);
 
-  useEffect(() => form.subscribe(setState), [form]);
+  useEffect(() => form.subscribeForm(setState), [form]);
 
   return { form, state };
 }
@@ -57,12 +57,24 @@ function LoginForm() {
         });
       }}>
       <div>
-        <input {...form.bind('email')} type="email" placeholder="Email" />
+        <input
+          type="email"
+          placeholder="Email"
+          value={String(form.bind('email').value ?? '')}
+          onBlur={form.bind('email').onBlur}
+          onChange={(e) => form.bind('email').onChange(e.target.value)}
+        />
         {state.errors['email'] && <span className="error">{state.errors['email']}</span>}
       </div>
 
       <div>
-        <input {...form.bind('password')} type="password" placeholder="Password" />
+        <input
+          type="password"
+          placeholder="Password"
+          value={String(form.bind('password').value ?? '')}
+          onBlur={form.bind('password').onBlur}
+          onChange={(e) => form.bind('password').onChange(e.target.value)}
+        />
         {state.errors['password'] && <span className="error">{state.errors['password']}</span>}
       </div>
 
@@ -84,7 +96,7 @@ export function useForm(init: FormOptions) {
   const state = ref(form.state);
   let unsubscribe;
 
-  onMounted(() => (unsubscribe = form.subscribe((s) => (state.value = s))));
+  onMounted(() => (unsubscribe = form.subscribeForm((s) => (state.value = s))));
   onUnmounted(() => unsubscribe?.());
 
   return { form, state };
@@ -122,14 +134,26 @@ const handleSubmit = async () => {
 <template>
   <form @submit.prevent="handleSubmit">
     <div>
-      <input v-bind="form.bind('email')" type="email" placeholder="Email" />
+      <input
+        type="email"
+        placeholder="Email"
+        :value="String(form.bind('email').value ?? '')"
+        @blur="form.bind('email').onBlur()"
+        @input="form.bind('email').onChange(($event.target as HTMLInputElement).value)"
+      />
       <span v-if="state.errors['email']" class="error">
         {{ state.errors['email'] }}
       </span>
     </div>
 
     <div>
-      <input v-bind="form.bind('password')" type="password" placeholder="Password" />
+      <input
+        type="password"
+        placeholder="Password"
+        :value="String(form.bind('password').value ?? '')"
+        @blur="form.bind('password').onBlur()"
+        @input="form.bind('password').onChange(($event.target as HTMLInputElement).value)"
+      />
       <span v-if="state.errors['password']" class="error">
         {{ state.errors['password'] }}
       </span>
@@ -162,7 +186,7 @@ const form = createForm({
 const state = writable(form.state);
 let unsubscribe;
 
-onMount(() => (unsubscribe = form.subscribe((s) => state.set(s))));
+onMount(() => (unsubscribe = form.subscribeForm((s) => state.set(s))));
 onDestroy(() => unsubscribe?.());
 
 async function handleSubmit() {
@@ -179,14 +203,26 @@ async function handleSubmit() {
 
 <form on:submit|preventDefault={handleSubmit}>
   <div>
-    <input {...form.bind('email')} type="email" placeholder="Email" />
+    <input
+      type="email"
+      placeholder="Email"
+      value={String(form.bind('email').value ?? '')}
+      on:blur={form.bind('email').onBlur}
+      on:input={(event) => form.bind('email').onChange((event.currentTarget as HTMLInputElement).value)}
+    />
     {#if $state.errors['email']}
       <span class="error">{$state.errors['email']}</span>
     {/if}
   </div>
 
   <div>
-    <input {...form.bind('password')} type="password" placeholder="Password" />
+    <input
+      type="password"
+      placeholder="Password"
+      value={String(form.bind('password').value ?? '')}
+      on:blur={form.bind('password').onBlur}
+      on:input={(event) => form.bind('password').onChange((event.currentTarget as HTMLInputElement).value)}
+    />
     {#if $state.errors['password']}
       <span class="error">{$state.errors['password']}</span>
     {/if}

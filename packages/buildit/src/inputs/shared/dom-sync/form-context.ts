@@ -10,7 +10,7 @@ export interface FormContextSyncProps {
 
 /**
  * Propagates form context `disabled`, `size`, and optionally `variant` to the
- * host element's attributes. Call this in setup or inside an `onMount` callback.
+ * host element's attributes. Call this in setup or in `mount()`.
  *
  * - `disabled` is tracked with a flag so that context-driven removal only
  *   clears the attribute when it was set by the context (not by the component).

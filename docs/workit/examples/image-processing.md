@@ -42,21 +42,26 @@ async function convertToGrayscale(imageData: ImageData): Promise<ImageData> {
   });
   return new ImageData(pixels, imageData.width, imageData.height);
 }
+
+// Don't forget to dispose when done:
+// imagePool.dispose();
 ```
 
 ## Expected Output
 
 - The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- Multiple images are processed in parallel via the concurrency pool.
+- Processing happens off the main thread without blocking renders.
 
 ## Common Pitfalls
 
 - Forgetting cleanup/dispose calls can leak listeners or stale state.
 - Skipping explicit typing can hide integration issues until runtime.
 - Not handling error branches makes examples harder to adapt safely.
+- Forgetting to transfer buffers reduces performance on large images.
 
 ## Related Recipes
 
-- [Cancellable Batch](./cancellable-batch.md)
+- [Using Transferables](./using-transferables.md)
 - [Data Transformation Pipeline](./data-transformation-pipeline.md)
 - [Fibonacci with Pool and Timeout](./fibonacci-with-pool-and-timeout.md)

@@ -14,12 +14,13 @@ Implement locale switcher in a production-friendly way with `@vielzeug/i18nit` w
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
 
 ```ts
-async function switchLocale(locale: string) {
-  await i18n.switchLocale(locale);
+async function changeLocale(locale: string) {
+  await i18n.preload(locale);
+  await i18n.setLocale(locale);
   render();
 }
 
-for (const locale of i18n.locales) {
+for (const locale of i18n.loadableLocales) {
   console.log(locale);
 }
 ```
@@ -38,5 +39,5 @@ for (const locale of i18n.locales) {
 ## Related Recipes
 
 - [Async Loading and Reload](./async-loading-and-reload.md)
-- [Batched Catalog Updates](./batched-catalog-updates.md)
+- [Catalog Replacement](./catalog-replacement.md)
 - [Diagnostics Hook](./diagnostics-hook.md)

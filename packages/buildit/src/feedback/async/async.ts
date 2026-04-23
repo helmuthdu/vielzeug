@@ -1,4 +1,4 @@
-import { define, html, onMount, signal, type Signal } from '@vielzeug/craftit';
+import { define, prop, html, signal, type Signal } from '@vielzeug/craftit';
 
 import '../../content/icon/icon';
 import { reducedMotionMixin } from '../../styles';
@@ -62,8 +62,7 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
     'error-description': undefined,
     'error-label': 'Something went wrong',
     retryable: false,
-    // Default to success so slotted content is visible without extra wiring.
-    status: 'success',
+    status: prop.oneOf(['idle', 'loading', 'empty', 'error', 'success'] as const, 'success'),
   },
   setup(props, { emit, host }) {
     const hasLoadingSlot = signal(false);
@@ -80,7 +79,7 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
 
     updateNamedSlotPresence();
 
-    onMount(() => {
+    const mount = () => {
       updateNamedSlotPresence();
 
       const observer = new MutationObserver(() => updateNamedSlotPresence());
@@ -88,7 +87,7 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       observer.observe(host.el, { attributeFilter: ['slot'], attributes: true, childList: true, subtree: true });
 
       return () => observer.disconnect();
-    });
+    };
 
     // Keep host accessibility state in sync with async status.
     host.bind({
@@ -200,7 +199,10 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       return renderSuccess();
     };
 
-    return html`${renderByStatus}`;
+    return {
+      mount,
+      render: () => html`${() => renderByStatus()}`,
+    };
   },
   styles: [reducedMotionMixin, componentStyles],
 });

@@ -1,25 +1,12 @@
-import { type ComputedSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
+import { type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { currentRuntime, effect } from './runtime';
+import { currentElementOrThrow, effect } from './runtime';
 
-/** @internal */
-export const formCallbackRegistry = new WeakMap<HTMLElement, FormFieldCallbacks>();
 /** @internal */
 export const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
 
-/**
- * Callbacks that hook into form lifecycle events. Can be passed directly to defineField
- * as a second argument to keep all form logic co-located.
- */
-export type FormFieldCallbacks = {
-  onAssociated?: (form: HTMLFormElement | null) => void;
-  onDisabled?: (disabled: boolean) => void;
-  onReset?: () => void;
-  onStateRestore?: (state: unknown, mode: 'autocomplete' | 'restore') => void;
-};
-
 export type FormFieldOptions<T = unknown> = {
-  disabled?: Signal<boolean> | ReadonlySignal<boolean> | ComputedSignal<boolean>;
+  disabled?: ReadonlySignal<boolean>;
   toFormValue?: (value: T) => File | FormData | string | null;
   value: Signal<T> | ReadonlySignal<T>;
 };
@@ -32,11 +19,8 @@ export type FormFieldHandle = {
   setValidity: ElementInternals['setValidity'];
 };
 
-export const defineField = <T = unknown>(
-  options: FormFieldOptions<T>,
-  callbacks?: FormFieldCallbacks,
-): FormFieldHandle => {
-  const host = currentRuntime().el;
+export const defineField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHandle => {
+  const host = currentElementOrThrow();
   const ctor = host.constructor as typeof HTMLElement & { formAssociated?: boolean };
 
   if (!ctor.formAssociated) {
@@ -49,7 +33,19 @@ export const defineField = <T = unknown>(
 
   internalsRegistry.set(host, internals);
 
-  const toFormValue = options.toFormValue ?? ((v: T) => (v == null ? '' : String(v)));
+  const toFormValue =
+    options.toFormValue ??
+    ((v: T): File | FormData | string | null => {
+      if (v == null) return null;
+
+      if (v instanceof File || v instanceof FormData) return v;
+
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint') {
+        return String(v);
+      }
+
+      return String(v);
+    });
 
   effect(() => {
     internals.setFormValue(toFormValue(options.value.value));
@@ -58,17 +54,12 @@ export const defineField = <T = unknown>(
   const disabled = options.disabled;
 
   if (disabled) {
-    effect(() => {
-      if (disabled.value) {
-        internals.states.add('disabled');
-      } else {
-        internals.states.delete('disabled');
-      }
-    });
-  }
+    const states = internals.states as CustomStateSet;
 
-  if (callbacks) {
-    formCallbackRegistry.set(host, { ...formCallbackRegistry.get(host), ...callbacks });
+    effect(() => {
+      if (disabled.value) states.add('disabled');
+      else states.delete('disabled');
+    });
   }
 
   const checkValidity = () => internals.checkValidity();

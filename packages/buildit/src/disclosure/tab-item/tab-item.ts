@@ -1,4 +1,4 @@
-import { define, computed, html, inject, syncContextProps } from '@vielzeug/craftit';
+import { define, computed, effect, html, inject } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -45,7 +45,7 @@ export type BitTabItemProps = {
  */
 export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
   props: {
-    active: false,
+    active: { default: false, reflect: false },
     color: undefined,
     disabled: false,
     size: undefined,
@@ -55,11 +55,19 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
   setup(props, { host }) {
     const tabsCtx = inject(TABS_CTX);
 
-    syncContextProps(tabsCtx, {
-      color: props.color,
-      size: props.size,
-      variant: props.variant,
-    });
+    if (tabsCtx) {
+      effect(() => {
+        const color = tabsCtx.color.value;
+        const size = tabsCtx.size.value;
+        const variant = tabsCtx.variant.value;
+
+        if (color !== undefined) props.color.value = color;
+
+        if (size !== undefined) props.size.value = size;
+
+        if (variant !== undefined) props.variant.value = variant;
+      });
+    }
 
     const isActive = computed(() =>
       tabsCtx ? !!tabsCtx.value.value && tabsCtx.value.value === props.value.value : props.active.value,
@@ -87,22 +95,24 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
     const tabId = () => `tab-${props.value.value}`;
     const controlsAttr = () => `tabpanel-${props.value.value}`;
 
-    return html`
-      <button
-        role="tab"
-        type="button"
-        part="tab"
-        :id="${tabId}"
-        aria-selected="${isActive}"
-        tabindex="${() => (isActive.value ? '0' : '-1')}"
-        aria-disabled="${isDisabled}"
-        :aria-controls="${controlsAttr}"
-        @click="${handleClick}">
-        <slot name="prefix"></slot>
-        <slot></slot>
-        <slot name="suffix"></slot>
-      </button>
-    `;
+    return {
+      render: () => html`
+        <button
+          role="tab"
+          type="button"
+          part="tab"
+          :id="${tabId}"
+          aria-selected="${isActive}"
+          tabindex="${() => (isActive.value ? '0' : '-1')}"
+          aria-disabled="${isDisabled}"
+          :aria-controls="${controlsAttr}"
+          @click="${handleClick}">
+          <slot name="prefix"></slot>
+          <slot></slot>
+          <slot name="suffix"></slot>
+        </button>
+      `,
+    };
   },
   styles: [colorThemeMixin, forcedColorsFocusMixin('button'), coarsePointerMixin, styles],
 });

@@ -2,6 +2,22 @@
 
 This log was last generated on Sat, 04 Apr 2026 13:30:02 GMT and should not be manually modified.
 
+## 3.0.0
+Sat, 25 Apr 2026 00:00:00 GMT
+
+### Breaking changes
+
+- Simplified the runtime to a minimal core centered on `t()`, `tp()`, `format()`, `setCatalog()`, `setLoader()`, `preload()`, and `setLocale()`.
+- Removed bound views and namespacing helpers such as `withLocale()` and `scope()`.
+- Removed catalog mutation orchestration such as `add()`, `replace()`, `batch()`, and loader refresh helpers.
+- Replaced formatter helper methods with the unified `format({ kind, ... })` API.
+- Tightened plural translation to explicit `tp(key, count, vars?)` calls instead of overloading `t()`.
+
+### Minor changes
+
+- Reduced interpolation to plain and dot-path placeholders.
+- Updated examples, API reference, and README migration guidance for the new minimal surface.
+
 ## 2.1.0
 Sat, 04 Apr 2026 13:30:02 GMT
 
@@ -57,4 +73,3 @@ Tue, 10 Feb 2026 21:31:26 GMT
 ### Minor changes
 
 - general improvements and bugfixes
-

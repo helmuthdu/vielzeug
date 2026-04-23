@@ -1,4 +1,4 @@
-import type { Locale, PluralForm } from './types';
+import type { FormatInput, Locale } from './types';
 
 /* -------------------- Cache Container -------------------- */
 
@@ -23,6 +23,9 @@ export function makeIntlCaches(): IntlCaches {
 
 /* -------------------- Cache Helpers -------------------- */
 
+/** Cache for serialized Intl formatter option keys to avoid repeated serialization. */
+const intlKeyCache = new WeakMap<object, string>();
+
 function intlFmt<F extends object>(cache: Map<string, F>, key: string, build: () => F): F {
   let fmt = cache.get(key);
 
@@ -36,92 +39,95 @@ function intlFmt<F extends object>(cache: Map<string, F>, key: string, build: ()
 
 /**
  * Builds a stable string key for an Intl formatter cache.
- * Call this once per formatter construction path — not on every format call — so key
- * serialization cost is paid only on cache misses.
+ * Options objects are memoized to avoid repeated JSON.stringify calls.
  */
 function intlKey(locale: string, options?: object): string {
-  return options ? `${locale}:${JSON.stringify(options, Object.keys(options).sort())}` : locale;
-}
+  if (!options) return locale;
 
-/* -------------------- Format Functions -------------------- */
+  let key = intlKeyCache.get(options);
 
-export function formatNumber(
-  caches: IntlCaches,
-  value: number,
-  options: Intl.NumberFormatOptions | undefined,
-  locale: Locale,
-): string {
-  const key = intlKey(locale, options);
-
-  try {
-    return intlFmt(caches.numberFormat, key, () => new Intl.NumberFormat(locale, options)).format(value);
-  } catch {
-    return String(value);
+  if (!key) {
+    key = JSON.stringify(options, Object.keys(options).sort());
+    intlKeyCache.set(options, key);
   }
+
+  return `${locale}:${key}`;
 }
 
-export function formatDate(
-  caches: IntlCaches,
-  value: Date | number,
-  options: Intl.DateTimeFormatOptions | undefined,
-  locale: Locale,
-): string {
-  const d = typeof value === 'number' ? new Date(value) : value;
-  const key = intlKey(locale, options);
+/* -------------------- Format Function -------------------- */
 
+export function format(caches: IntlCaches, locale: Locale, input: FormatInput): string {
   try {
-    return intlFmt(caches.dateFormat, key, () => new Intl.DateTimeFormat(locale, options)).format(d);
-  } catch {
-    return d.toString();
-  }
-}
+    if (input.kind === 'number') {
+      const key = intlKey(locale, input.options);
 
-export function formatRelative(
-  caches: IntlCaches,
-  value: number,
-  unit: Intl.RelativeTimeFormatUnit,
-  options: Intl.RelativeTimeFormatOptions | undefined,
-  locale: Locale,
-): string {
-  const key = intlKey(locale, options);
+      return intlFmt(caches.numberFormat, key, () => new Intl.NumberFormat(locale, input.options)).format(input.value);
+    }
 
-  try {
-    return intlFmt(caches.relativeTimeFormat, key, () => new Intl.RelativeTimeFormat(locale, options)).format(
-      value,
-      unit,
-    );
-  } catch {
-    return String(value);
-  }
-}
+    if (input.kind === 'currency') {
+      const options: Intl.NumberFormatOptions = { ...input.options, currency: input.currency, style: 'currency' };
+      const key = intlKey(locale, options);
 
-export function formatList(caches: IntlCaches, items: unknown[], locale: string, type: 'and' | 'or'): string {
-  if (items.length === 0) return '';
+      return intlFmt(caches.numberFormat, key, () => new Intl.NumberFormat(locale, options)).format(input.value);
+    }
 
-  const stringItems = items.map(String);
-  const intlType = type === 'and' ? 'conjunction' : 'disjunction';
+    if (input.kind === 'date') {
+      const date = typeof input.value === 'number' ? new Date(input.value) : input.value;
+      const key = intlKey(locale, input.options);
 
-  try {
+      return intlFmt(caches.dateFormat, key, () => new Intl.DateTimeFormat(locale, input.options)).format(date);
+    }
+
+    if (input.kind === 'relative') {
+      const key = intlKey(locale, input.options);
+
+      return intlFmt(caches.relativeTimeFormat, key, () => new Intl.RelativeTimeFormat(locale, input.options)).format(
+        input.value,
+        input.unit,
+      );
+    }
+
+    const items = input.value.map(String);
+
+    if (items.length === 0) return '';
+
+    const type = input.options?.type === 'or' ? 'disjunction' : 'conjunction';
+
     return intlFmt(
       caches.listFormat,
-      `${locale}:${intlType}`,
-      () => new Intl.ListFormat(locale, { style: 'long', type: intlType }),
-    ).format(stringItems);
+      `${locale}:${type}`,
+      () => new Intl.ListFormat(locale, { style: 'long', type }),
+    ).format(items);
   } catch {
-    // Fallback for environments without Intl.ListFormat
-    if (stringItems.length === 1) return stringItems[0];
+    if (input.kind === 'date') {
+      return typeof input.value === 'number' ? new Date(input.value).toString() : input.value.toString();
+    }
 
-    if (stringItems.length === 2) return `${stringItems[0]} ${type} ${stringItems[1]}`;
+    if (input.kind === 'list') {
+      const items = input.value.map(String);
 
-    return `${stringItems.slice(0, -1).join(', ')} ${type} ${stringItems.at(-1)}`;
+      if (items.length === 0) return '';
+
+      if (items.length === 1) return items[0];
+
+      const word = input.options?.type === 'or' ? 'or' : 'and';
+
+      if (items.length === 2) return `${items[0]} ${word} ${items[1]}`;
+
+      return `${items.slice(0, -1).join(', ')} ${word} ${items.at(-1)}`;
+    }
+
+    return String(input.value);
   }
 }
 
-export function getPluralForm(caches: IntlCaches, locale: Locale, count: number): PluralForm {
+/* -------------------- Plural Selection -------------------- */
+
+export function selectPluralForm(caches: IntlCaches, locale: Locale, count: number): string {
   const n = Math.floor(Math.abs(count));
 
   try {
-    return intlFmt(caches.pluralRules, locale, () => new Intl.PluralRules(locale)).select(n) as PluralForm;
+    return intlFmt(caches.pluralRules, locale, () => new Intl.PluralRules(locale)).select(n);
   } catch {
     return n === 1 ? 'one' : 'other';
   }

@@ -1,6 +1,6 @@
 import type { RouteContext } from '../types';
 
-import { createRouter } from '../router';
+import { createRouter, defineRoutes } from '../router';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 
 describe('Route context & middleware', () => {
@@ -12,13 +12,20 @@ describe('Route context & middleware', () => {
     disposeRouter();
   });
 
-  it('ctx exposes params, query, pathname, hash, locals, and navigate', async () => {
+  it('exposes params, query, pathname, hash, locals, and navigation helpers in ctx', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/users/42';
     mockLocation.search = '?tab=info';
     mockLocation.hash = '#hash';
-    await boot(createRouter().on('/users/:id', handler));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          userDetail: { handler, path: '/users/:id' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalledWith(
       expect.objectContaining({
         hash: 'hash',
@@ -26,330 +33,180 @@ describe('Route context & middleware', () => {
         navigate: expect.any(Function),
         params: { id: '42' },
         pathname: '/users/42',
+        pushPath: expect.any(Function),
         query: { tab: 'info' },
+        replacePath: expect.any(Function),
       }),
     );
   });
 
-  it('ctx.meta is populated from the route definition', async () => {
+  it('passes route meta into the route context', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/meta';
-    await boot(createRouter().on('/meta', handler, { meta: { data: 1 } }));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          metaPage: { handler, meta: { data: 1 }, path: '/meta' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ meta: { data: 1 } }));
   });
 
-  it('locals mutated by middleware are visible in the subsequent handler', async () => {
+  it('shares locals across middleware and the handler', async () => {
     const handler = vi.fn();
-    const mw = vi.fn(async (ctx: RouteContext, next: () => Promise<void>) => {
+    const middleware = vi.fn(async (ctx: RouteContext, next: () => Promise<void>) => {
       ctx.locals.user = 'alice';
       await next();
     });
 
     mockLocation.pathname = '/local';
-    await boot(createRouter().on('/local', handler, { middleware: [mw] }));
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          local: { handler, middleware, path: '/local' },
+        }),
+      }),
+    );
+
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ locals: { user: 'alice' } }));
   });
 
-  it('ctx.navigate() from inside a handler triggers a programmatic navigation', async () => {
-    const handler = vi.fn(async (ctx: RouteContext) => {
-      if (ctx.pathname === '/from') await ctx.navigate('/to');
+  it('runs global middleware before route middleware and the handler', async () => {
+    const calls: string[] = [];
+    const globalMiddleware = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
+      calls.push('global');
+      await next();
+    });
+    const routeMiddleware = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
+      calls.push('route');
+      await next();
     });
 
-    (globalThis as any).mockLocation.pathname = '/from';
-    await boot(createRouter().on('/from', handler).on('/to', vi.fn()));
+    mockLocation.pathname = '/global';
+    await boot(
+      createRouter({
+        middleware: [globalMiddleware],
+        routes: defineRoutes({
+          global: {
+            handler: () => {
+              calls.push('handler');
+            },
+            middleware: [routeMiddleware],
+            path: '/global',
+          },
+        }),
+      }),
+    );
 
-    expect(handler).toHaveBeenCalled();
+    expect(calls).toEqual(['global', 'route', 'handler']);
   });
 
-  it('ctx.navigate() in middleware can redirect and block the original handler', async () => {
-    const handler = vi.fn();
+  it('ctx.navigate() can redirect without continuing the original handler', async () => {
+    const source = vi.fn();
+    const target = vi.fn();
     const redirect = vi.fn(async (ctx: RouteContext) => {
-      await ctx.navigate('/redirect');
+      await ctx.navigate({ name: 'target' });
     });
 
-    (globalThis as any).mockLocation.pathname = '/from';
+    mockLocation.pathname = '/from';
     await boot(
-      createRouter()
-        .on('/from', handler, { middleware: [redirect] })
-        .on('/redirect', vi.fn()),
+      createRouter({
+        routes: defineRoutes({
+          from: { handler: source, middleware: [redirect], path: '/from' },
+          target: { handler: target, path: '/target' },
+        }),
+      }),
+    );
+
+    expect(source).not.toHaveBeenCalled();
+    expect(target).toHaveBeenCalled();
+  });
+
+  it('pushPath() can redirect to one-off raw destinations', async () => {
+    const target = vi.fn();
+    const redirect = vi.fn(async (ctx: RouteContext) => {
+      await ctx.pushPath('/target?mode=edit');
+    });
+
+    mockLocation.pathname = '/from';
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          from: { middleware: [redirect], path: '/from' },
+          target: { handler: target, path: '/target' },
+        }),
+      }),
+    );
+
+    expect(target).toHaveBeenCalledWith(expect.objectContaining({ query: { mode: 'edit' } }));
+  });
+
+  it('middleware that does not call next() blocks the handler', async () => {
+    const handler = vi.fn();
+    const middleware = vi.fn();
+
+    mockLocation.pathname = '/stop';
+    await boot(
+      createRouter({
+        routes: defineRoutes({
+          stop: { handler, middleware: [middleware], path: '/stop' },
+        }),
+      }),
     );
 
     expect(handler).not.toHaveBeenCalled();
   });
 
-  describe('Middleware chain', () => {
-    it('a single middleware runs before the handler', async () => {
-      const calls: string[] = [];
-      const mw = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('mw');
+  it('middleware can act as an error boundary for route handlers', async () => {
+    const caught = vi.fn();
+    const boundary = vi.fn(async (ctx: RouteContext, next: () => Promise<void>) => {
+      try {
         await next();
-      });
+      } catch (error) {
+        caught(error);
+        ctx.locals.errorHandled = true;
+      }
+    });
 
-      (globalThis as any).mockLocation.pathname = '/chain';
-      await boot(
-        createRouter().on(
-          '/chain',
-          () => {
-            calls.push('h');
+    mockLocation.pathname = '/boom';
+    await boot(
+      createRouter({
+        middleware: [boundary],
+        routes: defineRoutes({
+          boom: {
+            handler: () => {
+              throw new Error('boom');
+            },
+            path: '/boom',
           },
-          { middleware: [mw] },
-        ),
-      );
-      expect(calls).toEqual(['mw', 'h']);
-    });
-
-    it('array middleware runs in declaration order', async () => {
-      const calls: string[] = [];
-      const mw1 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('mw1');
-        await next();
-      });
-      const mw2 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('mw2');
-        await next();
-      });
-
-      (globalThis as any).mockLocation.pathname = '/order';
-      await boot(
-        createRouter().on(
-          '/order',
-          () => {
-            calls.push('h');
-          },
-          { middleware: [mw1, mw2] },
-        ),
-      );
-      expect(calls).toEqual(['mw1', 'mw2', 'h']);
-    });
-
-    it('middleware that omits next() blocks the handler', async () => {
-      const handler = vi.fn();
-      const mw = vi.fn();
-
-      (globalThis as any).mockLocation.pathname = '/stop';
-      await boot(createRouter().on('/stop', handler, { middleware: [mw] }));
-      expect(handler).not.toHaveBeenCalled();
-    });
-
-    it('async middleware is awaited before calling the handler', async () => {
-      const calls: string[] = [];
-      const mw = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        await new Promise((r) => setTimeout(r, 1));
-        calls.push('mw');
-        await next();
-      });
-
-      (globalThis as any).mockLocation.pathname = '/async';
-      await boot(
-        createRouter().on(
-          '/async',
-          () => {
-            calls.push('h');
-          },
-          { middleware: [mw] },
-        ),
-      );
-      expect(calls).toEqual(['mw', 'h']);
-    });
-
-    it('locals mutated by middleware are available to downstream middleware', async () => {
-      const calls: Array<number | string> = [];
-      const mw1 = vi.fn(async (ctx: RouteContext, next: () => Promise<void>) => {
-        ctx.locals.value = 1;
-        await next();
-      });
-      const mw2 = vi.fn(async (ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push(ctx.locals.value as string);
-        await next();
-      });
-
-      (globalThis as any).mockLocation.pathname = '/locals';
-      await boot(
-        createRouter().on(
-          '/locals',
-          () => {
-            calls.push('h');
-          },
-          { middleware: [mw1, mw2] },
-        ),
-      );
-      expect(calls).toEqual([1, 'h']);
-    });
-
-    it('global middleware (RouterOptions.middleware) runs before route-level middleware', async () => {
-      const calls: string[] = [];
-      const globalMw = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('global');
-        await next();
-      });
-      const routeMw = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('route');
-        await next();
-      });
-
-      (globalThis as any).mockLocation.pathname = '/global';
-      await boot(
-        createRouter({ middleware: [globalMw] }).on(
-          '/global',
-          () => {
-            calls.push('h');
-          },
-          { middleware: [routeMw] },
-        ),
-      );
-      expect(calls).toEqual(['global', 'route', 'h']);
-    });
-
-    it('global middleware runs before every route handler', async () => {
-      const calls: string[] = [];
-      const globalMw = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('global');
-        await next();
-      });
-
-      const router = createRouter({ middleware: [globalMw] });
-
-      (globalThis as any).mockLocation.pathname = '/a';
-      await boot(
-        router.on('/a', () => {
-          calls.push('a');
         }),
-      );
+      }),
+    );
 
-      router.on('/b', () => {
-        calls.push('b');
-      });
-      await router.navigate('/b');
+    expect(caught).toHaveBeenCalledWith(expect.objectContaining({ message: 'boom' }));
+  });
 
-      expect(calls).toEqual(['global', 'a', 'global', 'b']);
+  it('throws when next() is called multiple times', async () => {
+    const router = createRouter({
+      routes: defineRoutes({
+        invalid: {
+          middleware: [
+            async (_ctx: RouteContext, next: () => Promise<void>) => {
+              await next();
+              await next();
+            },
+          ],
+          path: '/invalid',
+        },
+      }),
     });
 
-    it('multiple global middleware run in declaration order', async () => {
-      const calls: string[] = [];
-      const g1 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('g1');
-        await next();
-      });
-      const g2 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('g2');
-        await next();
-      });
+    mockLocation.pathname = '/';
+    await boot(router);
 
-      (globalThis as any).mockLocation.pathname = '/multi';
-      await boot(
-        createRouter({ middleware: [g1, g2] }).on('/multi', () => {
-          calls.push('h');
-        }),
-      );
-      expect(calls).toEqual(['g1', 'g2', 'h']);
-    });
-
-    it('use() adds global middleware after construction', async () => {
-      const calls: string[] = [];
-      const g1 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('g1');
-        await next();
-      });
-      const g2 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('g2');
-        await next();
-      });
-
-      const router = createRouter({ middleware: [g1] });
-
-      router.use(g2);
-
-      (globalThis as any).mockLocation.pathname = '/use';
-      await boot(
-        router.on('/use', () => {
-          calls.push('h');
-        }),
-      );
-      expect(calls).toEqual(['g1', 'g2', 'h']);
-    });
-
-    it('use() accepts multiple middleware at once, all run in order', async () => {
-      const calls: string[] = [];
-      const g1 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('g1');
-        await next();
-      });
-      const g2 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('g2');
-        await next();
-      });
-
-      const router = createRouter({ middleware: [g1] });
-
-      router.use(g2, g1);
-
-      (globalThis as any).mockLocation.pathname = '/multiuse';
-      await boot(
-        router.on('/multiuse', () => {
-          calls.push('h');
-        }),
-      );
-      expect(calls).toEqual(['g1', 'g2', 'g1', 'h']);
-    });
-
-    it('use() middleware runs after middleware registered at construction', async () => {
-      const calls: string[] = [];
-      const g1 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('g1');
-        await next();
-      });
-      const g2 = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        calls.push('g2');
-        await next();
-      });
-
-      const router = createRouter({ middleware: [g1] });
-
-      router.use(g2);
-
-      (globalThis as any).mockLocation.pathname = '/after';
-      await boot(
-        router.on('/after', () => {
-          calls.push('h');
-        }),
-      );
-      expect(calls).toEqual(['g1', 'g2', 'h']);
-    });
-
-    it('middleware can redirect by calling ctx.navigate() without calling next()', async () => {
-      const handler = vi.fn();
-      const redirect = vi.fn(async (ctx: RouteContext) => {
-        await ctx.navigate('/redirect');
-      });
-
-      (globalThis as any).mockLocation.pathname = '/from';
-      await boot(
-        createRouter()
-          .on('/from', handler, { middleware: [redirect] })
-          .on('/redirect', vi.fn()),
-      );
-      expect(handler).not.toHaveBeenCalled();
-    });
-
-    it('throws when middleware calls next() more than once', async () => {
-      const onError = vi.fn();
-      const bad = vi.fn(async (_ctx: RouteContext, next: () => Promise<void>) => {
-        await next();
-        await next();
-      });
-
-      (globalThis as any).mockLocation.pathname = '/double-next';
-      await boot(
-        createRouter({ onError })
-          .on('/double-next', vi.fn(), { middleware: [bad] })
-          .on('/error', vi.fn()),
-      );
-
-      expect(onError).toHaveBeenCalledWith(
-        expect.objectContaining({ message: '[routeit] next() called multiple times' }),
-        expect.objectContaining({ pathname: '/double-next' }),
-      );
-    });
+    await expect(router.pushPath('/invalid')).rejects.toThrow('[routeit] next() called multiple times');
   });
 });

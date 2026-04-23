@@ -14,7 +14,7 @@ export class DateSchema extends Schema<Date> {
   }
 
   min(date: Date, message: MessageFn<{ min: Date; value: Date }> = (ctx) => _messages().date_min(ctx)): this {
-    return this._addValidator((value, path) =>
+    return this._addCoreValidator((value, path) =>
       (value as Date) >= date
         ? null
         : [{ code: ErrorCode.too_small, message: resolveMessage(message, { min: date, value: value as Date }), path }],
@@ -22,7 +22,7 @@ export class DateSchema extends Schema<Date> {
   }
 
   max(date: Date, message: MessageFn<{ max: Date; value: Date }> = (ctx) => _messages().date_max(ctx)): this {
-    return this._addValidator((value, path) =>
+    return this._addCoreValidator((value, path) =>
       (value as Date) <= date
         ? null
         : [{ code: ErrorCode.too_big, message: resolveMessage(message, { max: date, value: value as Date }), path }],
@@ -30,7 +30,7 @@ export class DateSchema extends Schema<Date> {
   }
 
   static coerce(): DateSchema {
-    return new DateSchema()._addPreprocessor((v) => {
+    return new DateSchema()._addPreprocessor((v: unknown) => {
       if (v instanceof Date) return v;
 
       if (typeof v === 'string' || typeof v === 'number') return new Date(v);
@@ -39,6 +39,3 @@ export class DateSchema extends Schema<Date> {
     });
   }
 }
-
-export const date = (): DateSchema => new DateSchema();
-export const coerceDate = (): DateSchema => DateSchema.coerce();

@@ -31,8 +31,12 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
     for (const element of Array.from(cachedListbox.querySelectorAll('.option'))) element.remove();
 
     const focused = deps.getFocusedIndex();
+    const renderItems =
+      virtualItems.length > 0
+        ? virtualItems
+        : currentOptions.map((_, index) => ({ height: 36, index, top: index * 36 }) satisfies VirtualItem);
 
-    for (const item of virtualItems) {
+    for (const item of renderItems) {
       const option = currentOptions[item.index];
 
       if (!option) continue;
@@ -44,11 +48,11 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
       optionElement.setAttribute('role', 'option');
       optionElement.id = `${deps.comboId}-opt-${item.index}`;
       optionElement.setAttribute('aria-selected', String(isSelected));
-      optionElement.setAttribute('aria-disabled', String(!!option.disabled));
+      optionElement.setAttribute('aria-disabled', String(option.disabled));
       optionElement.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
       optionElement.toggleAttribute('data-focused', focused === item.index);
       optionElement.toggleAttribute('data-selected', isSelected);
-      optionElement.toggleAttribute('data-disabled', !!option.disabled);
+      optionElement.toggleAttribute('data-disabled', option.disabled);
 
       if (option.iconEl) {
         const iconWrapper = document.createElement('span');

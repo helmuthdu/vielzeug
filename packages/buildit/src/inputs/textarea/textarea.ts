@@ -1,11 +1,11 @@
-import { define, effect, html, inject, onElement, ref } from '@vielzeug/craftit';
+import { define, effect, html, inject, onElement, prop, ref } from '@vielzeug/craftit';
 import { createTextField } from '@vielzeug/craftit/controls';
 
 import type { VisualVariant } from '../../types';
 import type { TextFieldProps } from '../shared/base-props';
 
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, roundableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
+import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { TEXTAREA_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -30,29 +30,6 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
   /** Number of visible text rows */
   rows?: number;
 };
-
-const textareaProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  ...roundableBundle,
-  'auto-resize': false,
-  error: { default: '' as string, omit: true, reflect: true },
-  fullwidth: false,
-  helper: '',
-  label: { default: '', reflect: true },
-  'label-placement': 'inset',
-  maxlength: undefined,
-  name: '',
-  'no-resize': false,
-  placeholder: { default: '', reflect: true },
-  readonly: false,
-  required: false,
-  resize: undefined,
-  rows: undefined,
-  value: '',
-  variant: undefined,
-} satisfies PropsInput<BitTextareaProps>;
 
 /**
  * A multi-line text input with label, helper text, character counter, and auto-resize.
@@ -86,7 +63,28 @@ const textareaProps = {
  */
 export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-textarea', {
   formAssociated: true,
-  props: textareaProps,
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    ...roundableBundle,
+    'auto-resize': false,
+    error: { default: '' as string, reflect: false },
+    fullwidth: false,
+    helper: '',
+    label: { default: '' },
+    'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
+    maxlength: undefined,
+    name: '',
+    'no-resize': false,
+    placeholder: { default: '' },
+    readonly: false,
+    required: false,
+    resize: undefined,
+    rows: undefined,
+    value: '',
+    variant: undefined,
+  },
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
 
@@ -152,9 +150,15 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       return syncLayout;
     });
 
-    const ariaDescribedBy = () => (assistive.value.errorText ? errorId : helperId);
+    host.bind({
+      attr: {
+        error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
+      },
+    });
+
+    const ariaDescribedBy = () => (assistive.value.errorText || assistive.value.helperText ? helperId : null);
     const ariaErrorMessage = () => (assistive.value.errorText ? errorId : null);
-    const ariaInvalid = () => String(!!assistive.value.errorText);
+    const ariaInvalid = () => (assistive.value.errorText ? 'true' : null);
     const ariaLabelledBy = () => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId);
     const counterClass = () =>
       assistive.value.counterAtLimit
@@ -167,31 +171,38 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
     const helperHidden = () => !assistive.value.errorText && !assistive.value.helperText;
     const helperText = () => assistive.value.errorText || assistive.value.helperText;
 
-    return html`
-      <div class="textarea-wrapper">
-        <label class="label-outside" for="${textareaId}" id="${labelOutsideId}" ref="${labelOutsideRef}" hidden></label>
-        <div class="field">
-          <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ref="${labelInsetRef}" hidden></label>
-          <textarea
-            ref="${textareaRef}"
-            id="${textareaId}"
-            :name="${props.name}"
-            :placeholder="${props.placeholder}"
-            :rows="${props.rows}"
-            :maxlength="${props.maxlength}"
-            ?disabled="${props.disabled}"
-            ?readonly="${props.readonly}"
-            ?required="${props.required}"
-            .value="${fieldValue}"
-            :aria-describedby="${ariaDescribedBy}"
-            :aria-errormessage="${ariaErrorMessage}"
-            :aria-invalid="${ariaInvalid}"
-            :aria-labelledby="${ariaLabelledBy}"></textarea>
+    return {
+      render: () => html`
+        <div class="textarea-wrapper">
+          <label
+            class="label-outside"
+            for="${textareaId}"
+            id="${labelOutsideId}"
+            ref="${labelOutsideRef}"
+            hidden></label>
+          <div class="field">
+            <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ref="${labelInsetRef}" hidden></label>
+            <textarea
+              ref="${textareaRef}"
+              id="${textareaId}"
+              :name="${props.name}"
+              :placeholder="${props.placeholder}"
+              :rows="${props.rows}"
+              :maxlength="${props.maxlength}"
+              ?disabled="${props.disabled}"
+              ?readonly="${props.readonly}"
+              ?required="${props.required}"
+              :value="${fieldValue}"
+              :aria-describedby="${ariaDescribedBy}"
+              :aria-errormessage="${ariaErrorMessage}"
+              :aria-invalid="${ariaInvalid}"
+              :aria-labelledby="${ariaLabelledBy}"></textarea>
+          </div>
+          <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
+          <div id="${helperId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">${helperText}</div>
         </div>
-        <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
-        <div id="${helperId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">${helperText}</div>
-      </div>
-    `;
+      `,
+    };
   },
   shadow: { delegatesFocus: true },
   styles: [

@@ -32,22 +32,29 @@ try {
 ### Global error logger
 
 ```ts
-const api = createApi({
-  baseUrl: 'https://api.example.com',
-  logger: (level, msg, meta) => {
-    if (level === 'error') Sentry.captureMessage(msg, { extra: { meta } });
-    else if (level === 'warn') console.warn(msg);
-  },
+const api = createApi({ baseUrl: 'https://api.example.com' });
+
+api.use(async (ctx, next) => {
+  try {
+    return await next(ctx);
+  } catch (error) {
+    Sentry.captureException(error, {
+      extra: { method: ctx.init.method, url: ctx.url },
+    });
+    throw error;
+  }
 });
 ```
 
 ### Mutation error state
 
 ```ts
-const mutation = createMutation((id: number) => api.delete(`/users/${id}`));
+const mutation = createMutation(({ input, signal }: { input: number; signal?: AbortSignal }) =>
+  api.delete(`/users/${input}`, { signal }),
+);
 
 mutation.subscribe((state) => {
-  if (state.isError) {
+  if (state.status === 'error') {
     // State is observable — no need for try/catch in UI
     toast.error(state.error!.message);
     mutation.reset();

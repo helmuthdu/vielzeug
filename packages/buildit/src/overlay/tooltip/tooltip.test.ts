@@ -23,6 +23,28 @@ describe('bit-tooltip', () => {
 
       expect(fixture.query('.tooltip')).toBeTruthy();
     });
+
+    it('renders prop content inside fallback text wrapper', async () => {
+      fixture = await mount('bit-tooltip', { attrs: { content: 'Line 1\nLine 2' } });
+
+      const text = fixture.query('.tooltip-text');
+
+      expect(text?.textContent).toContain('Line 1');
+      expect(text?.textContent).toContain('Line 2');
+    });
+
+    it('prefers named slot content over fallback text wrapper', async () => {
+      fixture = await mount('bit-tooltip', {
+        attrs: { content: 'Fallback text' },
+        html: '<button>Trigger</button><span slot="content">Slotted text</span>',
+      });
+
+      const contentSlot = fixture.query('slot[name="content"]') as HTMLSlotElement | null;
+      const assigned = contentSlot?.assignedElements({ flatten: true }) ?? [];
+
+      expect(assigned.length).toBe(1);
+      expect(assigned[0]?.textContent).toContain('Slotted text');
+    });
   });
 
   describe('Props', () => {

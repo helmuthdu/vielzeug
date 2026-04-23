@@ -1,4 +1,4 @@
-import { define, html } from '@vielzeug/craftit';
+import { define, prop, html } from '@vielzeug/craftit';
 
 import styles from './text.css?inline';
 
@@ -74,10 +74,10 @@ export const TEXT_TAG = define<BitTextProps>('bit-text', {
     align: undefined,
     as: undefined,
     color: undefined,
-    italic: false,
+    italic: prop.bool(),
     lines: { default: undefined as number | undefined },
     size: undefined,
-    truncate: false,
+    truncate: prop.bool(),
     variant: undefined,
     weight: undefined,
   },
@@ -96,7 +96,9 @@ export const TEXT_TAG = define<BitTextProps>('bit-text', {
       },
     });
 
-    return html`<slot></slot>`;
+    return {
+      render: () => html`<slot></slot>`,
+    };
   },
   styles: [styles],
 });

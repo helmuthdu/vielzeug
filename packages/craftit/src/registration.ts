@@ -1,11 +1,10 @@
 import { type CleanupFn, untrack } from '@vielzeug/stateit';
 
-import { formCallbackRegistry } from './form';
 import { type CSSResult, extractResult, type HTMLResult, loadStylesheet, runAll } from './internal';
 import { isReflecting, propRegistry } from './props';
-import { runtimeStack, type ComponentRuntime } from './runtime';
+import { type RuntimeScope, withCurrentElement, withRuntimeScope } from './runtime';
 import { applyBindingsInContainer, parseHTML, type RegisterCleanup } from './template-bindings';
-import { applyHtmlBinding, type KeyedNode } from './template-html';
+import { applyHtmlBinding } from './template-html';
 
 export type ComponentRegistrationOptions = {
   /** Indicates if this should be a form-associated element */
@@ -18,25 +17,32 @@ export type ComponentRegistrationOptions = {
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
-type ComponentSetupResult = HTMLResult;
+export type ComponentInstance = {
+  mount?: () => CleanupFn | void;
+  render: () => HTMLResult;
+};
+
+type ComponentCleanupState = {
+  cleanups: CleanupFn[];
+  el: HTMLElement;
+  styles?: (string | CSSStyleSheet | CSSResult)[];
+};
 
 class BaseElement extends HTMLElement {
   // Lifecycle: setup() runs once on first connect. _init() runs on every connect.
-  // On disconnect: cleanups run, DOM stays, mount fns are saved for replay.
-  // On reconnect: styles re-adopt, bindings re-apply, mount fns replay.
+  // On disconnect: cleanups run; on reconnect, styles and bindings are re-applied.
   static _options?: ComponentRegistrationOptions;
-  static _setup: () => ComponentSetupResult;
+  static _setup: () => ComponentInstance;
   static formAssociated = false;
   static observedAttributes: string[] = [];
 
   shadow: ShadowRoot;
-  private _appliedHtmlBindings = new Set<string>();
-  private _keyedStates = new Map<string, Map<string | number, KeyedNode>>();
-  private _mountFns: (() => CleanupFn | undefined | void)[] = [];
-  private _runtime: ComponentRuntime;
+  private _mounted = false;
+  private _state: ComponentCleanupState;
   private _rendered = false;
   private _setupDone = false;
-  private _template: ComponentSetupResult | null = null;
+  private _instance: ComponentInstance | null = null;
+  private _template: HTMLResult | null = null;
 
   constructor() {
     super();
@@ -44,11 +50,9 @@ class BaseElement extends HTMLElement {
     const options = (this.constructor as typeof BaseElement)._options;
 
     this.shadow = this.attachShadow({ mode: 'open', ...options?.shadow });
-    this._runtime = {
+    this._state = {
       cleanups: [],
       el: this,
-      errorHandlers: [],
-      onMount: [],
       styles: options?.styles,
     };
   }
@@ -83,107 +87,88 @@ class BaseElement extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    runAll(this._runtime.cleanups);
-    this._runtime.cleanups = [];
-    this._runtime.onMount = this._mountFns.slice();
-    this._appliedHtmlBindings.clear();
-    this._keyedStates.clear();
+    runAll(this._state.cleanups);
+    this._state.cleanups = [];
     this._rendered = false;
   }
 
-  formAssociatedCallback(form: HTMLFormElement | null): void {
-    formCallbackRegistry.get(this)?.onAssociated?.(form);
-  }
+  formAssociatedCallback(): void {}
 
-  formDisabledCallback(disabled: boolean): void {
-    formCallbackRegistry.get(this)?.onDisabled?.(disabled);
-  }
+  formDisabledCallback(): void {}
 
-  formResetCallback(): void {
-    formCallbackRegistry.get(this)?.onReset?.();
-  }
+  formResetCallback(): void {}
 
-  formStateRestoreCallback(state: unknown, mode: 'autocomplete' | 'restore'): void {
-    formCallbackRegistry.get(this)?.onStateRestore?.(state, mode);
-  }
+  formStateRestoreCallback(): void {}
 
   private _handleError(err: unknown): void {
-    if (this._runtime.errorHandlers.length > 0) {
-      for (const fn of this._runtime.errorHandlers) fn(err);
-    } else {
-      console.error(`[craftit:E3] <${this.localName}>`, err);
+    console.error(`[craftit:E3] <${this.localName}>`, err);
 
-      throw err instanceof Error ? err : new Error(String(err));
-    }
+    throw err instanceof Error ? err : new Error(String(err));
   }
 
   private _runSetup(): void {
     this._setupDone = true;
-    runtimeStack.push(this._runtime);
+
+    const setupScope: RuntimeScope = {
+      cleanups: [],
+    };
 
     try {
-      this._template = (this.constructor as typeof BaseElement)._setup();
+      this._instance = withRuntimeScope(setupScope, () =>
+        withCurrentElement(this, () => (this.constructor as typeof BaseElement)._setup()),
+      );
+
+      this._template = withRuntimeScope(setupScope, () => withCurrentElement(this, () => this._instance!.render()));
+
+      this._state.cleanups.push(...setupScope.cleanups);
     } catch (err) {
       this._handleError(err);
-    } finally {
-      runtimeStack.pop();
     }
   }
 
   private _init(): void {
-    const { styles } = this._runtime;
+    const { styles } = this._state;
 
     if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
 
-    if (this._template != null) {
+    if (!this._rendered && this._template != null) {
       const { bindings, html: htmlString } = extractResult(this._template);
+      const registerCleanup: RegisterCleanup = (fn) => this._state.cleanups.push(fn);
 
-      if (!this._rendered) {
-        this.shadow.replaceChildren(parseHTML(htmlString));
-        this._rendered = true;
-      }
+      this.shadow.replaceChildren(parseHTML(htmlString));
+      this._rendered = true;
 
       if (bindings.length) {
-        const registerCleanup: RegisterCleanup = (fn) => this._runtime.cleanups.push(fn);
-
         applyBindingsInContainer(this.shadow, bindings, registerCleanup, {
-          onHtml: (binding) => {
-            if (!this._appliedHtmlBindings.has(binding.uid)) {
-              this._appliedHtmlBindings.add(binding.uid);
-              applyHtmlBinding(this.shadow, binding, registerCleanup, this._keyedStates);
-            }
-          },
+          onHtml: (binding) => applyHtmlBinding(this.shadow, binding, registerCleanup),
         });
       }
     }
 
-    queueMicrotask(() => {
-      runtimeStack.push(this._runtime);
+    if (!this._mounted && this._instance?.mount) {
+      this._mounted = true;
 
-      try {
-        const mountFns = this._runtime.onMount;
+      queueMicrotask(() => {
+        try {
+          const mountScope: RuntimeScope = {
+            cleanups: this._state.cleanups,
+          };
 
-        this._mountFns = mountFns.slice();
+          const cleanup = withRuntimeScope(mountScope, () => withCurrentElement(this, () => this._instance!.mount!()));
 
-        for (const mountFn of mountFns) {
-          const cleanup = mountFn();
-
-          if (typeof cleanup === 'function') this._runtime.cleanups.push(cleanup);
+          if (typeof cleanup === 'function') this._state.cleanups.push(cleanup);
+        } catch (err) {
+          this._handleError(err);
         }
-      } catch (err) {
-        this._handleError(err);
-      } finally {
-        runtimeStack.pop();
-        this._runtime.onMount = [];
-      }
-    });
+      });
+    }
   }
 }
 
 /** @internal — use define() instead. */
 export function registerComponent(
   tag: string,
-  setup: () => ComponentSetupResult,
+  setup: () => ComponentInstance,
   options: ComponentRegistrationOptions = {},
 ): string {
   if (!tag) throw new Error('[craftit:E4] registerComponent(tag, ...) requires a tag name');

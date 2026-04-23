@@ -175,11 +175,11 @@ queryClient.invalidate(['user', id]);
 Type-safe LocalStorage and IndexedDB with schemas, TTL expiration, and a query builder.
 
 ```typescript
-import { createLocalStorage, defineSchema } from '@vielzeug/deposit';
+import { createLocalStorage, type Schema } from '@vielzeug/deposit';
 
 type User = { id: string; name: string; role: string };
 
-const schema = defineSchema<{ users: User }>({ users: { key: 'id', indexes: ['role'] } });
+const schema: Schema<{ users: User }> = { users: { key: 'id' } };
 const db = createLocalStorage({ dbName: 'myapp', schema });
 
 await db.put('users', { id: '1', name: 'Alice', role: 'admin' });

@@ -17,8 +17,8 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 const userId = 1;
 const key = ['users', userId];
 
-const updateUser = createMutation((patch: Partial<User>) =>
-  api.put<User>('/users/{id}', { params: { id: userId }, body: patch }),
+const updateUser = createMutation(({ input, signal }: { input: Partial<User>; signal?: AbortSignal }) =>
+  api.put<User>('/users/{id}', { params: { id: userId }, body: input, signal }),
 );
 
 // Apply optimistic update immediately

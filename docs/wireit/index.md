@@ -48,6 +48,32 @@ container
 const service = container.get(ServiceToken);
 ```
 
+## Minimal API (Recommended for New Code)
+
+For cleaner, more ergonomic code, use the simplified async-first methods:
+
+```ts
+import { createContainer, createToken } from '@vielzeug/wireit';
+
+const DbToken = createToken<Database>('Database');
+const ServiceToken = createToken<UserService>('UserService');
+
+const container = createContainer();
+
+// Auto-detects whether provider is a value, factory, or class
+container.set(DbToken, Database, { deps: [ConfigToken] });
+container.set(ServiceToken, UserService, { deps: [DbToken] });
+
+// Always async — handles both sync and async providers uniformly
+const service = await container.resolve(ServiceToken);
+const [db, service] = await container.resolveAll([DbToken, ServiceToken]);
+
+// Optional resolution
+const optional = await container.resolveOptional(MissingToken); // undefined
+```
+
+The minimal API (`set()`, `resolve()`, `resolveAll()`, `resolveOptional()`) provides a single, consistent surface for new code. See the [Usage Guide](./usage.md) for deeper patterns and the [API Reference](./api.md) for complete method signatures.
+
 ## Why Wireit?
 
 Manual dependency wiring gets hard to scale: constructors balloon, test setup repeats, and switching implementations requires touching many call sites.
@@ -91,13 +117,13 @@ const serviceAfter = container.get(SvcToken);
 - **Typed tokens** — `createToken<T>(description)` gives every dependency a compile-time type and a human-readable name
 - **Three registration styles** — `register()`, `factory()` shorthand, `bind()` shorthand, and `value()` for constants
 - **Lifetimes** — `singleton` (default), `transient`, and `scoped` per-child-container
-- **Async providers** — factories may return `Promise<T>`; resolve via `getAsync()` and `getAllAsync()`
+- **Async providers** — factories may return `Promise<T>`; resolve via `resolve()`, `getAsync()` and `getAllAsync()`
 - **Dispose hooks** — per-provider `dispose(instance)` called on `container.dispose()`; `[Symbol.asyncDispose]` for `await using`
 - **Child containers** — `createChild()` inherits registrations; scoped instances are isolated per child
 - **Scoped execution** — `runInScope(fn)` creates and auto-disposes a child container
 - **Aliases** — `alias(token, source)` maps interfaces to implementations, resolved through the full parent chain
-- **Batch resolution** — `getAll` and `getAllAsync` return typed tuples
-- **Optional resolution** — `getOptional` and `getOptionalAsync` return `undefined` when missing
+- **Batch resolution** — `resolveAll`, `getAll` and `getAllAsync` return typed tuples
+- **Optional resolution** — `resolveOptional`, `getOptional` and `getOptionalAsync` return `undefined` when missing
 - **Test utilities** — `createTestContainer()` and `container.mock()` for isolated unit tests
 - **Snapshot/Restore** — `snapshot()` / `restore()` for fine-grained test state control
 - **Debug** — `debug()` walks the full hierarchy and lists all tokens and aliases

@@ -5,14 +5,6 @@ description: 'API request and response validation examples with validit.'
 
 ## API Validation Examples
 
-## Problem
-
-Implement api validation examples in a production-friendly way with `@vielzeug/validit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/validit` installed.
-
 ### Request Body Validation
 
 ```ts
@@ -24,8 +16,7 @@ const CreateArticleSchema = v
     body: v.string().min(20),
     tags: v.array(v.string()).max(10).default([]),
     status: v.union('draft', 'published').default('draft'),
-  })
-  .strict();
+  });
 
 app.post('/articles', (req, res) => {
   const result = CreateArticleSchema.safeParse(req.body);
@@ -62,23 +53,29 @@ const query = QuerySchema.parse(req.query);
 const UserResponseSchema = v.object({
   id: v.number().int().positive(),
   email: v.string().email(),
-  createdAt: v.string().datetime(),
+  createdAt: v.string().isoDateTime(),
 });
 
 const payload = await service.getUser(id);
 const safePayload = UserResponseSchema.parse(payload);
 ```
 
-## Expected Output
+### Webhook Event Validation
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+```ts
+const WebhookSchema = v.variant('type', {
+  invoice_paid: v.object({ amount: v.number().positive(), invoiceId: v.string().uuid() }),
+  subscription_canceled: v.object({ reason: v.string(), subscriptionId: v.string().uuid() }),
+});
+
+const event = WebhookSchema.parse(req.body);
+```
 
 ## Common Pitfalls
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Assuming unknown keys are accepted in object payloads.
+- Using `safeParse()` with async-only schemas containing `.refineAsync()`.
+- Returning raw `ValidationError` messages to clients without shaping response fields.
 
 ## Related Recipes
 

@@ -14,6 +14,15 @@ function resolveDisabled(disabled: boolean | (() => boolean) | undefined): boole
   return typeof disabled === 'function' ? disabled() : disabled;
 }
 
+function asDisposable(destroy: () => void): Disposable {
+  return {
+    destroy,
+    [Symbol.dispose]() {
+      destroy();
+    },
+  };
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DropZoneOptions {
@@ -54,12 +63,22 @@ export interface DropZoneOptions {
   onHoverChange?: (hovered: boolean) => void;
 }
 
-export interface DropZone {
-  /** Whether the pointer is currently dragging over the zone. */
-  readonly hovered: boolean;
-  /** Programmatically release all listeners and state. */
+export interface Disposable {
   destroy(): void;
   [Symbol.dispose](): void;
+}
+
+export interface DropZoneState {
+  hovered: boolean;
+  files: File[];
+  rejected: File[];
+}
+
+export interface DropZone extends Disposable {
+  /** Whether the pointer is currently dragging over the zone. */
+  readonly hovered: boolean;
+  /** Last resolved drop state for accepted and rejected files. */
+  readonly state: Readonly<DropZoneState>;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -78,6 +97,11 @@ function matchesAccept(file: File, accept: string[]): boolean {
   });
 }
 
+/**
+ * DataTransferItem does not expose file names, so extension patterns (for example
+ * `.pdf`) cannot be validated during drag-over. We treat these as a permissive
+ * pre-check and perform exact filtering in `handleDrop` when `File` objects exist.
+ */
 function itemsMatchAccept(items: DataTransferItemList, accept: string[]): boolean {
   if (!accept.length) return true;
 
@@ -130,6 +154,11 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   } = options;
 
   let dragCounter = 0;
+  const state: DropZoneState = {
+    files: [],
+    hovered: false,
+    rejected: [],
+  };
 
   const isRejectedByFilter = (e: DragEvent): boolean => {
     if (!accept.length) return false;
@@ -144,7 +173,15 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
     dragCounter = Math.max(0, next);
 
-    if (dragCounter > 0 !== wasHovered) onHoverChange?.(dragCounter > 0);
+    const hovered = dragCounter > 0;
+
+    state.hovered = hovered;
+
+    if (hovered !== wasHovered) onHoverChange?.(hovered);
+  };
+
+  const resetHoverState = (): void => {
+    setDepth(0);
   };
 
   const handleDragEnter = (e: DragEvent): void => {
@@ -188,7 +225,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
   const handleDrop = (e: DragEvent): void => {
     e.preventDefault();
-    setDepth(0);
+    resetHoverState();
 
     if (resolveDisabled(disabled)) return;
 
@@ -203,6 +240,9 @@ export function createDropZone(options: DropZoneOptions): DropZone {
       (matchesAccept(f, accept) ? files : rejected).push(f);
     }
 
+    state.files = files;
+    state.rejected = rejected;
+
     if (files.length > 0) onDrop?.(files, e);
 
     if (rejected.length > 0) onDropRejected?.(rejected, e);
@@ -213,19 +253,26 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   element.addEventListener('dragleave', handleDragLeave);
   element.addEventListener('drop', handleDrop);
 
+  window.addEventListener('dragend', resetHoverState);
+  window.addEventListener('drop', resetHoverState);
+
   return {
-    destroy() {
+    ...asDisposable(() => {
       element.removeEventListener('dragenter', handleDragEnter);
       element.removeEventListener('dragover', handleDragOver);
       element.removeEventListener('dragleave', handleDragLeave);
       element.removeEventListener('drop', handleDrop);
-      dragCounter = 0;
-    },
+      window.removeEventListener('dragend', resetHoverState);
+      window.removeEventListener('drop', resetHoverState);
+      resetHoverState();
+      state.files = [];
+      state.rejected = [];
+    }),
     get hovered() {
       return dragCounter > 0;
     },
-    [Symbol.dispose]() {
-      this.destroy();
+    get state() {
+      return state;
     },
   };
 }
@@ -245,6 +292,10 @@ export interface SortableOptions {
    * @default 'data-sort-id'
    */
   itemAttribute?: string;
+  /** Sorting axis used to compute insertion position. @default 'vertical' */
+  axis?: 'vertical' | 'horizontal';
+  /** CSS class applied to the placeholder element. @default 'dragit-placeholder' */
+  placeholderClass?: string;
   /** Called with the new order of item ids after a successful drag, only when the order changed. */
   onReorder?: (orderedIds: string[]) => void;
   /**
@@ -259,13 +310,10 @@ export interface SortableOptions {
   onDragEnd?: (event: DragEvent) => void;
 }
 
-export interface Sortable {
-  destroy(): void;
-  [Symbol.dispose](): void;
-}
+export type Sortable = Disposable;
 
 /**
- * Makes a list of items sortable via mouse / touch drag.
+ * Makes a list of items sortable via native HTML drag interactions.
  *
  * Each direct child of `element` must carry the identity attribute
  * (`data-sort-id` by default, configurable via `itemAttribute`).
@@ -285,6 +333,7 @@ export interface Sortable {
  */
 export function createSortable(options: SortableOptions): Sortable {
   const {
+    axis = 'vertical',
     disabled,
     element,
     handle,
@@ -292,6 +341,7 @@ export function createSortable(options: SortableOptions): Sortable {
     onDragEnd: onDragEndCb,
     onDragStart: onDragStartCb,
     onReorder,
+    placeholderClass = 'dragit-placeholder',
   } = options;
 
   let draggedEl: HTMLElement | null = null;
@@ -324,7 +374,7 @@ export function createSortable(options: SortableOptions): Sortable {
   const createPlaceholder = (source: HTMLElement): HTMLElement => {
     const p = document.createElement('div');
 
-    p.className = 'dragit-placeholder';
+    p.className = placeholderClass;
     p.setAttribute('aria-hidden', 'true');
     p.style.height = `${source.offsetHeight}px`;
 
@@ -340,6 +390,9 @@ export function createSortable(options: SortableOptions): Sortable {
     if (!item) return;
 
     if (handle && !target.closest(handle)) return;
+
+    lastOverTarget = null;
+    lastInsertAfter = false;
 
     originalOrder = getOrderedIds();
     originalNextSibling = item.nextSibling;
@@ -368,7 +421,8 @@ export function createSortable(options: SortableOptions): Sortable {
     if (!target || target === draggedEl) return;
 
     const rect = target.getBoundingClientRect();
-    const insertAfter = e.clientY >= rect.top + rect.height / 2;
+    const insertAfter =
+      axis === 'vertical' ? e.clientY >= rect.top + rect.height / 2 : e.clientX >= rect.left + rect.width / 2;
 
     if (target === lastOverTarget && insertAfter === lastInsertAfter) return;
 
@@ -422,7 +476,7 @@ export function createSortable(options: SortableOptions): Sortable {
   observer.observe(element, { childList: true });
 
   return {
-    destroy() {
+    ...asDisposable(() => {
       observer.disconnect();
       element.removeEventListener('dragstart', handleDragStart);
       element.removeEventListener('dragover', handleDragOver);
@@ -436,6 +490,11 @@ export function createSortable(options: SortableOptions): Sortable {
       placeholder?.remove();
       draggedEl = null;
       placeholder = null;
+      originalNextSibling = null;
+      lastOverTarget = null;
+      lastInsertAfter = false;
+
+      element.removeAttribute('role');
 
       getItems().forEach((el) => {
         el.removeAttribute('draggable');
@@ -445,9 +504,30 @@ export function createSortable(options: SortableOptions): Sortable {
           el.querySelectorAll<HTMLElement>(handle).forEach((h) => h.removeAttribute('draggable'));
         }
       });
-    },
-    [Symbol.dispose]() {
-      this.destroy();
-    },
+    }),
   };
+}
+
+/**
+ * Applies a sortable id order to a data array.
+ * Unknown ids are ignored; items not present in `ids` are appended in original order.
+ */
+export function applyReorder<T>(items: T[], ids: string[], getId: (item: T) => string): T[] {
+  const byId = new Map(items.map((item) => [getId(item), item] as const));
+  const ordered: T[] = [];
+
+  for (const id of ids) {
+    const item = byId.get(id);
+
+    if (!item) continue;
+
+    ordered.push(item);
+    byId.delete(id);
+  }
+
+  for (const item of items) {
+    if (byId.has(getId(item))) ordered.push(item);
+  }
+
+  return ordered;
 }

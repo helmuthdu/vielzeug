@@ -11,6 +11,3 @@ export class InstanceOfSchema<T> extends Schema<T> {
     ]);
   }
 }
-
-/** `instanceof` is a reserved word — use `instanceOf` for the flat import API. */
-export const instanceOf = <T>(cls: new (...args: any[]) => T): InstanceOfSchema<T> => new InstanceOfSchema(cls);

@@ -1,13 +1,7 @@
 ---
-title: Formit — Usage Guide
+title: Formit - Usage Guide
 description: Fields, validation, submission, subscriptions, bind, reset, and advanced patterns for Formit.
 ---
-
-# Formit Usage Guide
-
-::: tip New to Formit?
-Start with the [Overview](./index.md) for a quick introduction, then use this page for implementation details.
-:::
 
 [[toc]]
 
@@ -27,50 +21,57 @@ const form = createForm({
 });
 
 form.set('profile.age', 30);
-form.patch({ profile: { name: 'Alice' } });
+form.set('profile.name', 'Alice');
 
 const email = form.get('email');
 const values = form.values();
 ```
 
-## Validation
+## Typed Paths
 
-Field validators run per field. Form validator runs on full validation only.
+Formit is path-typed first. Prefer a concrete values shape so field paths and value types are inferred.
 
 ```ts
-const form = createForm({
-  defaultValues: { confirmPassword: '', password: '' },
-  validators: {
-    password: (v) => (String(v).length < 8 ? 'Min 8 chars' : undefined),
-  },
-  validator: (values) => {
-    if (values['password'] !== values['confirmPassword']) {
-      return { confirmPassword: 'Passwords must match' };
-    }
+type Values = {
+  email: string;
+  profile: { age: number; name: string };
+};
 
-    return undefined;
-  },
+const form = createForm<Values>({
+  defaultValues: { email: '', profile: { age: 0, name: '' } },
 });
 
-await form.validateField('password');
+form.set('profile.age', 42);
+```
 
-await form.validate();
-await form.validate({ fields: ['password'] });
-await form.validate({ onlyTouched: true });
+Dynamic shape escape hatch:
+
+```ts
+const dynamicForm = createForm<Record<string, unknown>>({});
+dynamicForm.set('custom.field', 'value');
+```
+
+## Validation
+
+```ts
+await form.validateField('password');
+await form.validateAll();
+await form.validateTouched();
+await form.validateFields(['email', 'password']);
 
 const controller = new AbortController();
-await form.validate({ signal: controller.signal });
+await form.validateAll(controller.signal);
 controller.abort();
 ```
 
 Schema adapter:
 
 ```ts
-import { z } from 'zod';
+import { v } from '@vielzeug/validit';
 
-const schema = z.object({
-  age: z.number().min(18, 'Must be 18+'),
-  email: z.string().email('Invalid email'),
+const schema = v.object({
+  age: v.number().min(18, 'Must be 18+'),
+  email: v.string().email('Invalid email'),
 });
 
 const form = createForm({
@@ -99,23 +100,22 @@ try {
     throw error;
   }
 }
-
-await form.submit(saveDraft, { skipValidation: true });
-await form.submit(onSubmit, { fields: ['email', 'password'] });
 ```
+
+Submit always touches and validates all fields before calling the handler.
 
 ## Subscriptions
 
 ```ts
-const stopForm = form.subscribe((state) => {
+const stopForm = form.subscribeForm((state) => {
   console.log(state.isValid, state.isDirty, state.errors);
 });
 
-const stopEmail = form.watch('email', (field) => {
+const stopEmail = form.subscribeField('email', (field) => {
   console.log(field.value, field.error, field.touched, field.dirty);
 });
 
-form.watch('email', () => {}, { immediate: false });
+form.subscribeField('email', () => {}, { immediate: false });
 
 stopEmail();
 stopForm();
@@ -126,92 +126,48 @@ stopForm();
 ```ts
 const binding = form.bind('email');
 
-input.name = binding.name;
 input.value = String(binding.value ?? '');
 input.onblur = binding.onBlur;
-input.oninput = binding.onChange;
+input.oninput = (event) => {
+  binding.onChange((event.target as HTMLInputElement).value);
+};
 
-const fileBinding = form.bind('attachment', {
+const fileForm = createForm({ defaultValues: { attachment: null as File | null } });
+const fileBinding = fileForm.bind('attachment', {
   touchOnBlur: true,
   validateOnBlur: true,
-  valueExtractor: (e) => (e as { target: { files?: FileList } }).target.files?.[0] ?? null,
 });
+
+fileInput.onchange = (event) => {
+  fileBinding.onChange((event.target as HTMLInputElement).files?.[0] ?? null);
+};
 ```
 
-## Reset
+## Reset and Replace
 
 ```ts
 const form = createForm({ defaultValues: { email: '', name: '' } });
 
 form.reset();
-form.reset({ email: 'guest@example.com', name: 'Guest' });
+form.replace({ email: 'guest@example.com', name: 'Guest' });
 form.resetField('name');
 ```
 
-`reset(newValues)` updates both current values and the baseline used for dirty tracking.
-
-## Dirty and Touched State
-
-```ts
-form.touch('email');
-form.touch('email', 'password');
-form.touchAll();
-
-form.untouch('email');
-form.untouchAll();
-
-console.log(form.isDirty, form.isTouched);
-console.log(form.isFieldDirty('email'));
-console.log(form.isFieldTouched('email'));
-console.log(form.getError('email'));
-```
-
-## Arrays and Multi-select
+## Arrays and Files
 
 ```ts
 const form = createForm({ defaultValues: { tags: ['a'] } });
 
-form.appendField('tags', 'b');
-form.removeField('tags', 0);
-form.moveField('tags', 0, 1);
-```
-
-## File Uploads
-
-```ts
-const form = createForm({
-  defaultValues: { attachment: null as File | null, name: '' },
-});
-
-form.set('attachment', fileInput.files?.[0] ?? null);
-
-await form.submit(async () => {
-  await fetch('/upload', {
-    body: form.toFormData(),
-    method: 'POST',
-  });
-});
+form.array('tags').append('b');
+form.array('tags').remove(0);
+form.array('tags').move(0, 1);
 
 const fd = toFormData(form.values());
-```
-
-## Advanced Patterns
-
-```ts
-// Wizard step validation
-await form.validate({ fields: ['email'] });
-
-// Keep untouched-field errors while validating only touched fields
-await form.validate({ onlyTouched: true });
-
-// Autosave without validation
-await form.submit(saveDraft, { skipValidation: true });
 ```
 
 ## Best Practices
 
 - Keep validators pure and deterministic.
-- Prefer `watch(name, ...)` over full `subscribe(...)` when rendering one field.
-- Use `reset(newValues)` after loading server data to keep dirty baseline accurate.
-- Use `skipValidation` only for intentional flows like autosave.
-- Call `dispose()` when form lifecycle ends.
+- Prefer subscribeField(name, ...) over subscribeForm(...) for field-level rendering.
+- Use replace(values) after loading server data to set a new baseline.
+- Call dispose() when the form lifecycle ends.

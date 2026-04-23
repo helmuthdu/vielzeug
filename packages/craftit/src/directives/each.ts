@@ -1,16 +1,20 @@
-import { computed, type ReadonlySignal } from '@vielzeug/stateit';
+import { batch, effect as _effect, untrack, type CleanupFn, type ReadonlySignal } from '@vielzeug/stateit';
 
 import {
-  EACH_SIGNAL,
+  DIRECTIVE,
   createMarkerIdFactory,
   escapeHtml,
   extractResult,
   htmlResult,
   isHtmlResult,
   rekeyHtmlResult,
+  runAll,
   type Binding,
+  type DirectiveResult,
   type HTMLResult,
 } from '../internal';
+import { applyBindingsWithTargets, indexBindingTargets, parseHTML, type RegisterCleanup } from '../template-bindings';
+import { applyHtmlBinding } from '../template-html';
 
 const toResultEntry = (value: string | HTMLResult, getNextId: () => string): { bindings: Binding[]; html: string } =>
   isHtmlResult(value) ? rekeyHtmlResult(value, getNextId) : { bindings: [], html: escapeHtml(value) };
@@ -56,26 +60,11 @@ function renderKeyed<T>(
   return { bindings: allBindings, html, keys, rendered };
 }
 
-type EachSignalResult = {
-  [EACH_SIGNAL]: ReadonlySignal<{
-    bindings: Binding[];
-    html: string;
-    items?: Array<{ bindings: Binding[]; html: string }>;
-    keys?: (string | number)[];
-  }>;
-};
-
 export interface EachOptions<T> {
   fallback?: () => string | HTMLResult;
   key: (item: T, index: number) => string | number;
   render: (item: T, index: number) => string | HTMLResult;
 }
-
-export function each<T>(
-  source: ReadonlySignal<T[]>,
-  key: (item: T, index: number) => string | number,
-  render: (item: T, index: number) => string | HTMLResult,
-): EachSignalResult;
 
 /**
  * Renders a list with keyed DOM reconciliation for reactive sources.
@@ -99,34 +88,143 @@ export function each<T>(
  *   render: (item) => html`<li>${item.name}</li>`,
  * })}`
  */
-export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): EachSignalResult;
-export function each<T>(
-  source: ReadonlySignal<T[]>,
-  keyOrOptions: EachOptions<T> | ((item: T, index: number) => string | number),
-  render?: (item: T, index: number) => string | HTMLResult,
-): EachSignalResult {
-  const options: EachOptions<T> =
-    typeof keyOrOptions === 'function'
-      ? {
-          key: keyOrOptions,
-          render: render!,
-        }
-      : keyOrOptions;
+export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): DirectiveResult;
+export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): DirectiveResult {
   const { fallback, key, render: renderItem } = options;
 
-  return {
-    [EACH_SIGNAL]: computed(() => {
-      const raw = source.value;
+  const mount = (anchor: Comment, registerCleanup: RegisterCleanup): void => {
+    type KeyedNode = {
+      cleanups: CleanupFn[];
+      html: string;
+      nodes: Node[];
+    };
 
-      if (!raw.length) {
-        const er = fallback ? toHtmlResult(fallback()) : undefined;
+    const clearNodes = (nodes: Node[]): void => {
+      for (const node of nodes) {
+        (node as ChildNode).remove();
+      }
+    };
 
-        return er ? { ...extractResult(er), items: [], keys: [] } : { bindings: [], html: '', items: [], keys: [] };
+    let keyedNodes = new Map<string | number, KeyedNode>();
+    let fallbackNodes: Node[] = [];
+    let fallbackCleanups: CleanupFn[] = [];
+
+    const clearFallback = (): void => {
+      clearNodes(fallbackNodes);
+      fallbackNodes = [];
+      runAll(fallbackCleanups);
+      fallbackCleanups = [];
+    };
+
+    const clearKeyed = (): void => {
+      for (const [, node] of keyedNodes) {
+        clearNodes(node.nodes);
+        runAll(node.cleanups);
       }
 
-      const { bindings, html, keys, rendered } = renderKeyed(raw, renderItem, key);
+      keyedNodes.clear();
+    };
 
-      return { bindings, html, items: rendered, keys };
-    }),
+    const stop = _effect(() => {
+      const parent = anchor.parentNode;
+
+      if (!parent) return;
+
+      batch(() => {
+        const raw = source.value;
+
+        if (!raw.length) {
+          clearKeyed();
+          clearFallback();
+
+          if (!fallback) return;
+
+          const fallbackResult = extractResult(toHtmlResult(fallback()));
+          const parsed = parseHTML(fallbackResult.html);
+
+          fallbackNodes = Array.from(parsed.childNodes);
+          anchor.after(parsed);
+
+          const addFallbackCleanup: RegisterCleanup = (fn) => fallbackCleanups.push(fn);
+
+          applyBindingsWithTargets(fallbackResult.bindings, addFallbackCleanup, indexBindingTargets(fallbackNodes), {
+            onHtml: (binding) => applyHtmlBinding(parent as unknown as Node, binding, addFallbackCleanup),
+          });
+
+          return;
+        }
+
+        clearFallback();
+
+        const { keys, rendered } = renderKeyed(raw, renderItem, key);
+        const nextKeyed = new Map<string | number, KeyedNode>();
+        const ordered: Array<{ item: { bindings: Binding[]; html: string }; key: string | number; nodes: Node[] }> = [];
+
+        for (let i = 0; i < keys.length; i++) {
+          const nextKey = keys[i];
+          const item = rendered[i];
+          const existing = keyedNodes.get(nextKey);
+          let nodes: Node[];
+          const cleanups: CleanupFn[] = [];
+
+          if (existing && existing.html === item.html) {
+            nodes = existing.nodes;
+            runAll(existing.cleanups);
+          } else {
+            if (existing) {
+              clearNodes(existing.nodes);
+              runAll(existing.cleanups);
+            }
+
+            const parsed = parseHTML(item.html);
+
+            nodes = Array.from(parsed.childNodes);
+          }
+
+          ordered.push({ item, key: nextKey, nodes });
+          nextKeyed.set(nextKey, { cleanups, html: item.html, nodes });
+        }
+
+        for (const [oldKey, oldNode] of keyedNodes) {
+          if (!nextKeyed.has(oldKey)) {
+            clearNodes(oldNode.nodes);
+            runAll(oldNode.cleanups);
+          }
+        }
+
+        let cursor: Node = anchor;
+
+        for (const entry of ordered) {
+          for (const node of entry.nodes) {
+            parent.insertBefore(node, cursor.nextSibling);
+            cursor = node;
+          }
+
+          const targetNode = nextKeyed.get(entry.key);
+
+          if (!targetNode) continue;
+
+          const addItemCleanup: RegisterCleanup = (fn) => targetNode.cleanups.push(fn);
+
+          untrack(() => {
+            applyBindingsWithTargets(entry.item.bindings, addItemCleanup, indexBindingTargets(entry.nodes), {
+              onHtml: (binding) => applyHtmlBinding(parent as unknown as Node, binding, addItemCleanup),
+            });
+          });
+        }
+
+        keyedNodes = nextKeyed;
+      });
+    });
+
+    registerCleanup(stop);
+    registerCleanup(() => {
+      clearFallback();
+      clearKeyed();
+    });
+  };
+
+  return {
+    [DIRECTIVE]: { mount },
   };
 }

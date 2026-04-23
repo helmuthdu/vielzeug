@@ -28,10 +28,11 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     this._map = map;
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  private _resolveVariant(
+    value: unknown,
+  ): { matched: ObjectSchema<any>; obj: Record<string, unknown> } | { issues: Issue[] } {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return {
-        data: value,
         issues: [{ code: ErrorCode.invalid_type, message: _messages().variant_type(), path: [] }],
       };
     }
@@ -44,7 +45,6 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
       const expected = [...this._map.keys()];
 
       return {
-        data: value,
         issues: [
           {
             code: ErrorCode.invalid_variant,
@@ -58,48 +58,26 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
       };
     }
 
-    const result = matched.safeParse(value);
+    return { matched, obj };
+  }
+
+  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+    const resolved = this._resolveVariant(value);
+
+    if ('issues' in resolved) return { data: value, issues: resolved.issues };
+
+    const result = resolved.matched.safeParse(value);
 
     return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().variant_type(), path: [] }],
-      };
-    }
+    const resolved = this._resolveVariant(value);
 
-    const obj = value as Record<string, unknown>;
-    const discValue = obj[this._discriminator] as string;
-    const matched = this._map.get(discValue);
+    if ('issues' in resolved) return { data: value, issues: resolved.issues };
 
-    if (!matched) {
-      const expected = [...this._map.keys()];
-
-      return {
-        data: value,
-        issues: [
-          {
-            code: ErrorCode.invalid_variant,
-            message: _messages().variant_invalid_discriminator({
-              discriminator: this._discriminator,
-              expected,
-            }),
-            path: [],
-          },
-        ],
-      };
-    }
-
-    const result = await matched.safeParseAsync(value);
+    const result = await resolved.matched.safeParseAsync(value);
 
     return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
   }
 }
-
-export const variant = <K extends string, M extends Record<string, ObjectSchema<any>>>(
-  discriminator: K,
-  map: M,
-): VariantSchema<K, M> => new VariantSchema(discriminator, map);

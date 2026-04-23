@@ -6,7 +6,7 @@
    ======================================== */
 .tooltip {
   inset: unset;
-  padding: var(--size-0-5) var(--size-2);
+  padding: calc(var(--size-0-5) / 2) var(--size-2) var(--size-0-5);
   margin: 0;
   overflow: visible;
   border: var(--_tooltip-border-width, var(--border-0)) solid var(--_tooltip-border-color, transparent);
@@ -42,7 +42,7 @@
     line-height: var(--leading-normal);
     color: var(--_tooltip-fg);
     word-break: auto-phrase;
-    white-space: pre-line;
+    white-space: normal;
     pointer-events: none;
     background: var(--_tooltip-bg);
     border-radius: var(--tooltip-radius, var(--rounded-lg));
@@ -57,6 +57,11 @@
       transform var(--transition-normal) var(--ease-out),
       display var(--transition-fast) allow-discrete,
       overlay var(--transition-fast) allow-discrete;
+  }
+
+  .tooltip-text {
+    display: block;
+    white-space: pre-line;
   }
 
   .tooltip[data-placement='top'] {

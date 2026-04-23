@@ -1,4 +1,9 @@
-# Priority and Overrides
+---
+title: 'Permit Examples — Priority and Overrides'
+description: 'Model inheritance-like behavior with explicit priorities and deterministic outcomes.'
+---
+
+## Priority and Overrides
 
 `permit` uses explicit priorities instead of role inheritance chains.
 

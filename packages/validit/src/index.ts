@@ -3,10 +3,13 @@ export {
   Schema,
   ValidationError,
   type Infer,
+  type TypeOf,
   type InferOutput,
   type Issue,
   type MessageFn,
   type ParseResult,
+  type ValidateFn,
+  type AsyncValidateFn,
 } from './core';
 
 export { configure, type Messages } from './messages';

@@ -289,11 +289,6 @@ export function remoteList<T, F = Record<string, unknown>, S = { dir?: 'asc' | '
     subscribe(listener) {
       listeners.add(listener);
 
-      // optional: trigger an initial load on the first subscription
-      if (listeners.size === 1 && items.length === 0 && !loading) {
-        void update();
-      }
-
       return () => listeners.delete(listener);
     },
   };

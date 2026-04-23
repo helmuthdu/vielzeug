@@ -2,7 +2,6 @@ export * from './abs';
 export * from './allocate';
 export * from './average';
 export * from './clamp';
-export * from './distribute';
 export * from './linspace';
 export * from './max';
 export * from './median';

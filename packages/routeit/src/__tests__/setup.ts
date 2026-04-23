@@ -6,6 +6,14 @@ export const mockLocation = {
   search: '',
 };
 
+function assignMockUrl(url: string): void {
+  const parsed = new URL(url, 'https://routeit.test');
+
+  mockLocation.pathname = parsed.pathname;
+  mockLocation.search = parsed.search;
+  mockLocation.hash = parsed.hash;
+}
+
 export const mockHistory = {
   back: vi.fn(),
   forward: vi.fn(),
@@ -14,10 +22,10 @@ export const mockHistory = {
   // Without this, navigate() would re-read the old pathname from the mock and recurse
   // indefinitely when a middleware calls router.navigate() without awaiting next().
   pushState: vi.fn((_state: unknown, _title: string, url: string) => {
-    mockLocation.pathname = url;
+    assignMockUrl(url);
   }),
   replaceState: vi.fn((_state: unknown, _title: string, url: string) => {
-    mockLocation.pathname = url;
+    assignMockUrl(url);
   }),
 };
 

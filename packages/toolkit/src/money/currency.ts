@@ -34,9 +34,8 @@ export function currency(money: Money, options: CurrencyFormatOptions = {}): str
   // Get decimal places for currency (default to 2 for most currencies)
   const decimalPlaces = getCurrencyDecimals(money.currency);
 
-  // Convert bigint amount to decimal (divide by 10^decimalPlaces)
-  const divisor = 10 ** decimalPlaces;
-  const amount = Number(money.amount) / divisor;
+  // Convert bigint to decimal string without precision loss
+  const amount = moneyToDecimal(money.amount, decimalPlaces);
 
   const formatter = new Intl.NumberFormat(locale, {
     currency: money.currency,
@@ -47,6 +46,31 @@ export function currency(money: Money, options: CurrencyFormatOptions = {}): str
   });
 
   return formatter.format(amount);
+}
+
+/**
+ * Convert bigint money amount to decimal number without precision loss.
+ * Handles arbitrarily large values by avoiding Number conversion until final step.
+ *
+ * @internal
+ */
+function moneyToDecimal(amount: bigint, decimalPlaces: number): number {
+  if (amount === 0n) return 0;
+
+  const isNegative = amount < 0n;
+  const absAmount = isNegative ? -amount : amount;
+
+  // Convert to string and split at decimal boundary
+  const amountStr = absAmount.toString().padStart(Math.max(1, decimalPlaces), '0');
+  const wholeEndIdx = amountStr.length - decimalPlaces;
+  const wholeStr = wholeEndIdx > 0 ? amountStr.slice(0, wholeEndIdx) : '0';
+  const fracStr = decimalPlaces > 0 ? amountStr.slice(wholeEndIdx) : '';
+
+  // Reconstruct as decimal string, then convert to number
+  const decimalStr = fracStr ? `${wholeStr}.${fracStr}` : wholeStr;
+  const result = parseFloat(decimalStr);
+
+  return isNegative ? -result : result;
 }
 
 function getCurrencyDecimals(currencyCode: string): number {

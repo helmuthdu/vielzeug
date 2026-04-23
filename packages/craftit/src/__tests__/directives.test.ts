@@ -4,10 +4,23 @@
  */
 
 import { computed, define, each, html, raw, signal, type ComponentDefinition } from '../index';
-import { mount } from '../testing';
+import { mount, type MountSetup } from '../testing';
 
-const register = (tag: string, setup: ComponentDefinition['setup'], options: Omit<ComponentDefinition, 'setup'> = {}) =>
-  define(tag, { setup, ...options });
+const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinition, 'setup'> = {}) =>
+  define(tag, {
+    ...options,
+    setup: (props, ctx) => {
+      const result = setup(props, ctx);
+
+      if (typeof result === 'object' && result && 'render' in result) {
+        return result;
+      }
+
+      return {
+        render: () => result,
+      };
+    },
+  });
 
 describe('Directive: each()', () => {
   it('should render list items', async () => {
@@ -58,17 +71,13 @@ describe('Directive: each()', () => {
     expect(queryAll('li').length).toBe(3);
   });
 
-  it('should support the short-form overload', async () => {
+  it('should support options-based keyed rendering', async () => {
     const { queryAll } = await mount(() => {
       const items = signal([1, 2, 3]);
 
       return html`
         <ul>
-          ${each(
-            items,
-            (item) => item,
-            (item) => html`<li>${item * 2}</li>`,
-          )}
+          ${each(items, { key: (item) => item, render: (item) => html`<li>${item * 2}</li>` })}
         </ul>
       `;
     });
@@ -118,30 +127,7 @@ describe('Directive: each()', () => {
     expect(listItems[0].textContent).toBe('Alice');
     expect(listItems[1].textContent).toBe('Carol');
   });
-});
 
-describe('Directive: raw()', () => {
-  it('should render HTML without escaping', async () => {
-    const { query } = await mount(() => html`<div>${raw('<strong>bold</strong>')}</div>`);
-
-    expect(query('strong')?.textContent).toBe('bold');
-  });
-
-  it('should update reactively', async () => {
-    const content = signal('<b>one</b>');
-
-    const { flush, query } = await mount(() => html`<div>${raw(content)}</div>`);
-
-    expect(query('b')?.textContent).toBe('one');
-
-    content.value = '<i>two</i>';
-    await flush();
-    expect(query('i')?.textContent).toBe('two');
-    expect(query('b')).toBeNull();
-  });
-});
-
-describe('Keyed Reconciliation', () => {
   it('should preserve sibling nodes after each() block', async () => {
     const items = signal([
       { id: 1, value: 'A' },
@@ -302,5 +288,26 @@ describe('Keyed Reconciliation', () => {
     await flush();
     expect(query('.empty')).toBeNull();
     expect(queryAll('.item').map((node) => node.textContent)).toEqual(['B']);
+  });
+});
+
+describe('Directive: raw()', () => {
+  it('should render HTML without escaping', async () => {
+    const { query } = await mount(() => html`<div>${raw('<strong>bold</strong>')}</div>`);
+
+    expect(query('strong')?.textContent).toBe('bold');
+  });
+
+  it('should update reactively', async () => {
+    const content = signal('<b>one</b>');
+
+    const { flush, query } = await mount(() => html`<div>${raw(content)}</div>`);
+
+    expect(query('b')?.textContent).toBe('one');
+
+    content.value = '<i>two</i>';
+    await flush();
+    expect(query('i')?.textContent).toBe('two');
+    expect(query('b')).toBeNull();
   });
 });

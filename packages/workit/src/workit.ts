@@ -60,7 +60,11 @@ export class TaskError extends WorkerError {
   }
 }
 
-type SlotMessage<TOutput> = { id: number; ok: true; result: TOutput } | { error: string; id: number; ok: false };
+type SerializedError = { message: string; name: string; stack?: string };
+
+type SlotMessage<TOutput> =
+  | { id: number; ok: true; result: TOutput }
+  | { error: SerializedError; id: number; ok: false };
 
 type PendingTask<TOutput> = {
   id: number;
@@ -79,7 +83,7 @@ type QueueItem<TInput, TOutput> = {
 };
 
 function buildWorkerScript(fn: TaskFn<unknown, unknown>): string {
-  return `const __fn=(${fn.toString()});self.onmessage=async function(event){const{id,input}=event.data;try{const result=await __fn(input);self.postMessage({id,ok:true,result});}catch(error){self.postMessage({id,ok:false,error:error instanceof Error?error.message:String(error)});}};`;
+  return `const __fn=(${fn.toString()});self.onmessage=async function(event){const{id,input}=event.data;try{const result=await __fn(input);self.postMessage({id,ok:true,result});}catch(error){const e=error instanceof Error?error:new Error(String(error));self.postMessage({id,ok:false,error:{name:e.name,message:e.message,stack:e.stack}});}};`;
 }
 
 function createAbortError(signal: AbortSignal): unknown {
@@ -199,7 +203,15 @@ class Slot<TInput, TOutput> {
       if (event.data.ok) {
         pending.resolve(event.data.result);
       } else {
-        pending.reject(new TaskError(event.data.error));
+        const err = new TaskError(event.data.error.message);
+
+        err.name = event.data.error.name;
+
+        if (event.data.error.stack) {
+          (err as Error).stack = event.data.error.stack;
+        }
+
+        pending.reject(err);
       }
     };
 
@@ -358,7 +370,18 @@ class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
       if (!item) break;
 
       item.cleanupAbort?.();
-      slot.run(item.input, item.transfer).then(
+
+      let promise: Promise<TOutput>;
+
+      try {
+        promise = slot.run(item.input, item.transfer);
+      } catch (error) {
+        item.reject(error);
+        this.flush();
+        continue;
+      }
+
+      promise.then(
         (result) => {
           item.resolve(result);
           this.flush();

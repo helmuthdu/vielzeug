@@ -2,37 +2,36 @@ import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/
 
 import {
   CF_ID_ATTR,
-  EACH_SIGNAL,
+  DIRECTIVE,
   createMarkerIdFactory,
   escapeHtml,
   htmlResult,
+  isDirectiveResult,
   isHtmlResult,
   rekeyHtmlResult,
   type Binding,
-  type EventBinding,
   type HTMLResult,
   type Ref,
   type RefCallback,
 } from './internal';
 import { toReactiveBindingSource } from './runtime';
-import { createAttrBinding, createPropBinding } from './template-bindings';
+import { createAttrBinding } from './template-bindings';
 
 // Templates use the HTML as-is; no aggressive whitespace normalization
 
 // Slot patterns applied in priority order; first match wins
 const SLOT_PATTERNS = [
-  { kind: 'event' as const, regex: /\s+@([a-zA-Z_][-a-zA-Z0-9_.]*)\s*=\s*["']?$/ },
+  { kind: 'event' as const, regex: /\s+@([a-zA-Z_][-a-zA-Z0-9_.-]*)\s*=\s*["']?$/ },
   { kind: 'ref' as const, regex: /\s+ref\s*=\s*["']?$/ },
   { kind: 'boolAttr' as const, regex: /\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
-  { kind: 'prop' as const, regex: /\.([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
   { kind: 'attr' as const, regex: /\s+:?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/ },
 ] as const;
 
 type CompiledTemplateSlot = {
   kind: (typeof SLOT_PATTERNS)[number]['kind'] | 'node';
   mode?: 'attr' | 'bool';
-  modifiers?: EventBinding['modifiers'];
-  // For 'event' slots
+  modifiers?: string[];
+  // For 'event' and attribute slots
   name?: string;
   prefix: string;
   raw: string;
@@ -46,93 +45,53 @@ type CompiledTemplatePlan = {
 type HtmlWrapperSignal = ReadonlySignal<{
   bindings: Binding[];
   html: string;
-  items?: Array<{ bindings: Binding[]; html: string }>;
-  keys?: (string | number)[];
 }>;
 
 const templatePlanCache = new WeakMap<TemplateStringsArray, CompiledTemplatePlan>();
 const htmlGetterSignalCache = new WeakMap<() => unknown, HtmlWrapperSignal>();
 const htmlSignalWrapperCache = new WeakMap<ReadonlySignal<unknown>, HtmlWrapperSignal>();
 
-const parseEventDescriptor = (descriptor: string): { modifiers: EventBinding['modifiers']; name: string } => {
-  const [name, ...rawModifiers] = descriptor.split('.');
-  const modifiers: NonNullable<EventBinding['modifiers']> = {};
+const applyModifiers = (
+  handler: (e: Event) => void,
+  modifiers: string[],
+): { handler: (e: Event) => void; options?: AddEventListenerOptions } => {
+  let wrapped = handler;
 
-  for (const modifier of rawModifiers) {
-    if (modifier === 'capture') modifiers.capture = true;
-    else if (modifier === 'once') modifiers.once = true;
-    else if (modifier === 'passive') modifiers.passive = true;
-    else if (modifier === 'prevent') modifiers.prevent = true;
-    else if (modifier === 'self') modifiers.self = true;
-    else if (modifier === 'stop') modifiers.stop = true;
+  if (modifiers.includes('stop')) {
+    const prev = wrapped;
+
+    wrapped = (e) => {
+      e.stopPropagation();
+      prev(e);
+    };
   }
 
-  return { modifiers: Object.keys(modifiers).length ? modifiers : undefined, name };
-};
+  if (modifiers.includes('prevent')) {
+    const prev = wrapped;
 
-const buildTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan => {
-  const slots: CompiledTemplateSlot[] = [];
-
-  for (let i = 0; i < strings.length - 1; i++) {
-    const str = strings[i];
-    let matched = false;
-
-    for (const pattern of SLOT_PATTERNS) {
-      const m = pattern.regex.exec(str);
-
-      if (!m) continue;
-
-      const prefix = str.slice(0, -m[0].length);
-
-      matched = true;
-
-      if (pattern.kind === 'event') {
-        const parsed = parseEventDescriptor(m[1]);
-
-        slots.push({ kind: 'event', modifiers: parsed.modifiers, name: parsed.name, prefix, raw: str });
-      } else if (pattern.kind === 'ref') {
-        slots.push({ kind: 'ref', prefix, raw: str });
-      } else if (pattern.kind === 'boolAttr') {
-        slots.push({ kind: 'boolAttr', mode: 'bool', name: m[1], prefix, raw: str });
-      } else if (pattern.kind === 'prop') {
-        slots.push({ kind: 'prop', name: m[1], prefix, raw: str });
-      } else if (pattern.kind === 'attr') {
-        slots.push({ kind: 'attr', mode: 'attr', name: m[1], prefix, raw: str });
-      }
-
-      break;
-    }
-
-    if (!matched) {
-      slots.push({ kind: 'node', prefix: str, raw: str });
-    }
+    wrapped = (e) => {
+      e.preventDefault();
+      prev(e);
+    };
   }
 
-  return { slots, tail: strings[strings.length - 1] ?? '' };
-};
+  if (modifiers.includes('self')) {
+    const prev = wrapped;
 
-const getCompiledTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan => {
-  let plan = templatePlanCache.get(strings);
-
-  if (!plan) {
-    plan = buildTemplatePlan(strings);
-    templatePlanCache.set(strings, plan);
+    wrapped = (e) => {
+      if (e.target === e.currentTarget) prev(e);
+    };
   }
 
-  return plan;
-};
+  const options: AddEventListenerOptions = {};
 
-const getEachSignalSource = (
-  value: unknown,
-): ReadonlySignal<{
-  bindings: Binding[];
-  html: string;
-  items?: Array<{ bindings: Binding[]; html: string }>;
-  keys?: (string | number)[];
-}> | null => {
-  if (typeof value !== 'object' || value === null || !(EACH_SIGNAL in value)) return null;
+  if (modifiers.includes('capture')) options.capture = true;
 
-  return (value as { [EACH_SIGNAL]: ReadonlySignal<{ bindings: Binding[]; html: string }> })[EACH_SIGNAL];
+  if (modifiers.includes('once')) options.once = true;
+
+  if (modifiers.includes('passive')) options.passive = true;
+
+  return { handler: wrapped, ...(Object.keys(options).length ? { options } : {}) };
 };
 
 const resolveDirectiveValue = (value: unknown): string => {
@@ -181,29 +140,23 @@ const renderHtmlItems = (getter: () => unknown): { bindings: Binding[]; signal: 
 const createHtmlWrapperSignal = (
   value: unknown,
 ): {
-  keyed: boolean;
   signal: HtmlWrapperSignal;
 } | null => {
-  const eachSignal = getEachSignalSource(value);
   const source = toReactiveBindingSource(value);
 
-  if (eachSignal) {
-    return { keyed: true, signal: eachSignal };
-  }
-
-  if (typeof value === 'function' && source) {
+  if (typeof value === 'function') {
     const getter = value as () => unknown;
     const cached = htmlGetterSignalCache.get(getter);
 
     if (cached) {
-      return { keyed: false, signal: cached };
+      return { signal: cached };
     }
 
     const { signal: sig } = renderHtmlItems(getter);
 
     htmlGetterSignalCache.set(getter, sig);
 
-    return { keyed: false, signal: sig };
+    return { signal: sig };
   }
 
   if (isSignal(value) && source && isHtmlResult(source.value)) {
@@ -211,7 +164,7 @@ const createHtmlWrapperSignal = (
     const cached = htmlSignalWrapperCache.get(htmlSignal);
 
     if (cached) {
-      return { keyed: false, signal: cached };
+      return { signal: cached };
     }
 
     const wrapped = computed(() => {
@@ -228,13 +181,62 @@ const createHtmlWrapperSignal = (
 
     htmlSignalWrapperCache.set(htmlSignal, wrapped);
 
-    return {
-      keyed: false,
-      signal: wrapped,
-    };
+    return { signal: wrapped };
   }
 
   return null;
+};
+
+const buildTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan => {
+  const slots: CompiledTemplateSlot[] = [];
+
+  for (let i = 0; i < strings.length - 1; i++) {
+    const str = strings[i];
+    let matched = false;
+
+    for (const pattern of SLOT_PATTERNS) {
+      const m = pattern.regex.exec(str);
+
+      if (!m) continue;
+
+      const prefix = str.slice(0, -m[0].length);
+
+      matched = true;
+
+      if (pattern.kind === 'event') {
+        const parts = m[1].split('.');
+        const eventName = parts[0];
+        const modifiers = parts.slice(1);
+
+        slots.push({ kind: 'event', modifiers, name: eventName, prefix, raw: str });
+      } else if (pattern.kind === 'ref') {
+        slots.push({ kind: 'ref', prefix, raw: str });
+      } else if (pattern.kind === 'boolAttr') {
+        slots.push({ kind: 'boolAttr', mode: 'bool', name: m[1], prefix, raw: str });
+      } else if (pattern.kind === 'attr') {
+        slots.push({ kind: 'attr', mode: 'attr', name: m[1], prefix, raw: str });
+      }
+
+      break;
+    }
+
+    if (!matched) {
+      slots.push({ kind: 'node', prefix: str, raw: str });
+    }
+  }
+
+  return { slots, tail: strings[strings.length - 1] ?? '' };
+};
+
+const getCompiledTemplatePlan = (strings: TemplateStringsArray): CompiledTemplatePlan => {
+  let plan = templatePlanCache.get(strings);
+
+  if (!plan) {
+    plan = buildTemplatePlan(strings);
+    templatePlanCache.set(strings, plan);
+  }
+
+  return plan;
 };
 
 export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]): HTMLResult => {
@@ -263,34 +265,25 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
     if (slot.kind === 'event') {
       if (typeof value === 'function') {
         const id = getElementBindingId(slot.prefix);
+        const { handler, options } = applyModifiers(value as (e: Event) => void, slot.modifiers ?? []);
 
         result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-        bindings.push({
-          handler: value as (e: Event) => void,
-          modifiers: slot.modifiers,
-          name: slot.name!,
-          type: 'event',
-          uid: id,
-        });
+        bindings.push({ handler, name: slot.name!, options, type: 'event', uid: id });
       } else if (isSignal(value)) {
         // If a signal is passed to an event binding, we assume its current value
         // is the intended handler.
         const id = getElementBindingId(slot.prefix);
+        const signalHandler = (e: Event) => {
+          const currentHandler = (value as ReadonlySignal<unknown>).value;
+
+          if (typeof currentHandler === 'function') {
+            (currentHandler as (e: Event) => void)(e);
+          }
+        };
+        const { handler, options } = applyModifiers(signalHandler, slot.modifiers ?? []);
 
         result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-        bindings.push({
-          handler: (e: Event) => {
-            const currentHandler = (value as ReadonlySignal<unknown>).value;
-
-            if (typeof currentHandler === 'function') {
-              (currentHandler as (e: Event) => void)(e);
-            }
-          },
-          modifiers: slot.modifiers,
-          name: slot.name!,
-          type: 'event',
-          uid: id,
-        });
+        bindings.push({ handler, name: slot.name!, options, type: 'event', uid: id });
       } else result += slot.raw;
 
       continue;
@@ -319,16 +312,16 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
       continue;
     }
 
-    if (slot.kind === 'prop') {
-      const id = getElementBindingId(slot.prefix);
-
-      result += `${slot.prefix} ${CF_ID_ATTR}="${id}"`;
-      bindings.push(createPropBinding(slot.name!, id, value));
-      continue;
-    }
-
     if (slot.kind === 'node') {
       resetElementBindingId();
+
+      if (isDirectiveResult(value)) {
+        const id = getNextId();
+
+        result += `${slot.raw}<!--${id}-->`;
+        bindings.push({ directive: value[DIRECTIVE], type: 'directive', uid: id });
+        continue;
+      }
 
       const htmlWrapper = createHtmlWrapperSignal(value);
 
@@ -336,7 +329,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
         const id = getNextId();
 
         result += `${slot.raw}<!--${id}-->`;
-        bindings.push({ keyed: htmlWrapper.keyed, signal: htmlWrapper.signal, type: 'html', uid: id });
+        bindings.push({ signal: htmlWrapper.signal, type: 'html', uid: id });
         continue;
       }
 

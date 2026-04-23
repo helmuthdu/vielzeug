@@ -1,5 +1,5 @@
 import { createId } from '../internal';
-import { effect, onCleanup, onMount } from '../runtime';
+import { effect, onCleanup } from '../runtime';
 
 export type A11yTone = 'default' | 'error';
 
@@ -61,6 +61,36 @@ export function createA11yControl(host: HTMLElement, config: A11yControlConfig):
     return cachedHelperEl;
   };
 
+  const slotCleanupByElement = new Map<HTMLSlotElement, () => void>();
+
+  const syncSlotListeners = (labelElement: HTMLElement | null, helperElement: HTMLDivElement | null): void => {
+    const nextSlots = new Set<HTMLSlotElement>();
+
+    for (const container of [labelElement, helperElement]) {
+      if (!container) continue;
+
+      for (const slot of Array.from(container.querySelectorAll('slot'))) {
+        if (slot instanceof HTMLSlotElement) nextSlots.add(slot);
+      }
+    }
+
+    for (const [slot, cleanup] of slotCleanupByElement) {
+      if (nextSlots.has(slot)) continue;
+
+      cleanup();
+      slotCleanupByElement.delete(slot);
+    }
+
+    for (const slot of nextSlots) {
+      if (slotCleanupByElement.has(slot)) continue;
+
+      const slotHandler = () => sync();
+
+      slot.addEventListener('slotchange', slotHandler);
+      slotCleanupByElement.set(slot, () => slot.removeEventListener('slotchange', slotHandler));
+    }
+  };
+
   const sync = (): void => {
     const shadow = host.shadowRoot;
 
@@ -68,6 +98,9 @@ export function createA11yControl(host: HTMLElement, config: A11yControlConfig):
 
     const labelElement = getLabelElement();
     const helperElement = getHelperElement();
+
+    syncSlotListeners(labelElement, helperElement);
+
     const checked = config.checked?.();
     const invalid = config.invalid?.();
     const helperText = config.helperText?.();
@@ -116,46 +149,17 @@ export function createA11yControl(host: HTMLElement, config: A11yControlConfig):
     else setAttr(host, 'aria-invalid', String(invalid));
   };
 
-  // Effect for reactive config changes
+  // Keep ARIA in sync with reactive config changes.
   effect(() => {
     sync();
   });
 
-  // Watch for DOM mutations to label/helper content (slot changes, etc.)
-  onMount(() => {
-    const shadow = host.shadowRoot;
+  // Sync once after first render — DOM elements are not yet available during setup.
+  queueMicrotask(() => sync());
 
-    if (!shadow) return;
-
-    sync();
-
-    const labelElement = getLabelElement();
-    const helperElement = getHelperElement();
-
-    const elementsToWatch = [labelElement, helperElement].filter(Boolean) as HTMLElement[];
-
-    if (elementsToWatch.length === 0) return;
-
-    const observer = new MutationObserver(() => {
-      sync();
-    });
-
-    // Watch label and helper elements for content changes (including slot changes)
-    elementsToWatch.forEach((el) => {
-      observer.observe(el, { characterData: true, childList: true, subtree: true });
-
-      // Also listen for slotchange event to catch slot content updates
-      const slot = el.querySelector('slot') as HTMLSlotElement | null;
-
-      if (slot) {
-        const slotHandler = () => sync();
-
-        slot.addEventListener('slotchange', slotHandler);
-        onCleanup(() => slot.removeEventListener('slotchange', slotHandler));
-      }
-    });
-
-    onCleanup(() => observer.disconnect());
+  onCleanup(() => {
+    for (const cleanup of slotCleanupByElement.values()) cleanup();
+    slotCleanupByElement.clear();
   });
 
   return { helperId, labelId };

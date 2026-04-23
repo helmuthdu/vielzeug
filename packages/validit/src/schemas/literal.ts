@@ -15,9 +15,6 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
   }
 }
 
-export const literal = <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
-  new LiteralSchema(value);
-
 /* -------------------- Raw-or-schema helpers -------------------- */
 /* Used internally by union and intersect to accept raw literal values */
 

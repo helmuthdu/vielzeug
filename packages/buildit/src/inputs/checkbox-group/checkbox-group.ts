@@ -1,8 +1,8 @@
 import {
-  define,
   computed,
   createContext,
   createId,
+  define,
   effect,
   html,
   inject,
@@ -15,16 +15,16 @@ import { createChoiceField } from '@vielzeug/craftit/controls';
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle, type PropsInput } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import {
+  type ChoiceChangeDetail,
   createChoiceChangeDetail,
   getChoiceLabel,
   getSlottedByTag,
   setBooleanAttribute,
   setMaybeAttribute,
-  type ChoiceChangeDetail,
 } from '../shared/utils';
 import componentStyles from './checkbox-group.css?inline';
 
@@ -69,19 +69,6 @@ export type BitCheckboxGroupEvents = {
   change: ChoiceChangeDetail;
 };
 
-const checkboxGroupProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  error: '',
-  helper: '',
-  label: '',
-  name: '',
-  orientation: { default: 'vertical' as const, reflect: true },
-  required: false,
-  values: '',
-} satisfies PropsInput<BitCheckboxGroupProps>;
-
 /**
  * A fieldset wrapper that groups `bit-checkbox` elements, provides shared
  * `color` and `size` via context, and manages multi-value selection state.
@@ -105,7 +92,18 @@ const checkboxGroupProps = {
  */
 export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroupEvents>('bit-checkbox-group', {
   formAssociated: true,
-  props: checkboxGroupProps,
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    error: '',
+    helper: '',
+    label: '',
+    name: '',
+    orientation: { default: 'vertical' as const },
+    required: false,
+    values: '',
+  },
   setup(props, { emit, host, slots }) {
     const formCtx = inject(FORM_CTX);
 
@@ -204,23 +202,25 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     const hasError = () => Boolean(props.error.value);
     const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
-    return html`
-      <fieldset
-        role="group"
-        aria-required="${() => String(Boolean(props.required.value))}"
-        aria-invalid="${() => String(hasError())}"
-        aria-errormessage="${() => (hasError() ? errorId : null)}"
-        aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
-        <legend id="${legendId}" ?hidden=${() => !props.label.value}>
-          ${props.label}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
-        </legend>
-        <div class="checkbox-group-items" part="items">
-          <slot></slot>
-        </div>
-        <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError()}>${props.error}</div>
-        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper()}>${props.helper}</div>
-      </fieldset>
-    `;
+    return {
+      render: () => html`
+        <fieldset
+          role="group"
+          aria-required="${() => String(Boolean(props.required.value))}"
+          aria-invalid="${() => String(hasError())}"
+          aria-errormessage="${() => (hasError() ? errorId : null)}"
+          aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
+          <legend id="${legendId}" ?hidden=${() => !props.label.value}>
+            ${props.label}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
+          </legend>
+          <div class="checkbox-group-items" part="items">
+            <slot></slot>
+          </div>
+          <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError()}>${props.error}</div>
+          <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper()}>${props.helper}</div>
+        </fieldset>
+      `,
+    };
   },
   styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
 });

@@ -162,14 +162,14 @@ export type PopupListControl<T> = {
 
   /**
    * Sync ARIA attributes to the panel element.
-   * Must be called after panel element is available (usually in onMount).
+   * Must be called after panel element is available (usually in `mount()`).
    * Returns cleanup function.
    */
   syncPanelAria(panel: Element, config?: { listId?: string; role?: PopupListRole }): () => void;
 
   /**
    * Sync ARIA attributes to the trigger element.
-   * Must be called after trigger element is available (usually in onMount).
+   * Must be called after trigger element is available (usually in `mount()`).
    * Returns cleanup function.
    */
   syncTriggerAria(trigger: Element, config?: PopupListAriaSyncConfig): () => void;
@@ -223,10 +223,10 @@ export type PopupListControl<T> = {
  * });
  *
  * // Mount: sync ARIA to trigger
- * onMount(() => {
+ * mount() {
  *   const cleanup = popupList.syncTriggerAria(triggerEl!);
  *   onCleanup(cleanup);
- * });
+ * }
  *
  * // Keyboard events
  * function handleKeydown(e: KeyboardEvent) {

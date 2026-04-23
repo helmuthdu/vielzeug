@@ -406,17 +406,15 @@ export const fetchitTypes = `
 declare module '@vielzeug/fetchit' {
   export type ApiClientOptions = {
     baseUrl?: string;
-    dedupe?: boolean;
     headers?: Record<string, string>;
     timeout?: number;
-    logger?: (level: 'info' | 'warn' | 'error', msg: string, meta?: unknown) => void;
   };
 
   export type HttpRequestConfig<P extends string = string> = RequestInit & {
     body?: unknown;
-    query?: Record<string, string | number | boolean | undefined>;
+    query?: Record<string, string | number | boolean | null | readonly (string | number | boolean | null)[] | undefined>;
     params?: Record<string, string | number | boolean>;
-    dedupe?: boolean;
+    dedupeKey?: unknown;
     timeout?: number;
   };
 
@@ -442,23 +440,23 @@ declare module '@vielzeug/fetchit' {
   export type QueryClientOptions = {
     staleTime?: number;
     gcTime?: number;
+    retry?: number;
+    retryDelay?: number | ((attempt: number) => number);
+    shouldRetry?: (error: unknown, attempt: number) => boolean;
   };
 
   export type QueryOptions<T> = {
-    queryKey: unknown[];
-    queryFn: () => Promise<T>;
+    key: unknown[];
+    fn: (ctx: { key: unknown[]; signal: AbortSignal }) => Promise<T>;
     staleTime?: number;
-    enabled?: boolean;
+    gcTime?: number;
   };
 
   export type QueryState<T> = {
     data: T | undefined;
     error: Error | null;
-    status: 'pending' | 'success' | 'error';
-    isLoading: boolean;
-    isSuccess: boolean;
-    isError: boolean;
-    dataUpdatedAt: number;
+    status: 'idle' | 'pending' | 'success' | 'error';
+    updatedAt: number;
   };
 
   export function createQuery(opts?: QueryClientOptions): {
@@ -467,7 +465,6 @@ declare module '@vielzeug/fetchit' {
     getState<T>(key: unknown[]): QueryState<T> | null;
     set<T>(key: unknown[], data: T): void;
     invalidate(key: unknown[]): void;
-    prefetch<T>(options: Omit<QueryOptions<T>, 'enabled'>): Promise<T | undefined>;
     subscribe<T>(key: unknown[], listener: (state: QueryState<T>) => void): () => void;
     cancel(key: unknown[]): void;
     clear(): void;
@@ -476,32 +473,31 @@ declare module '@vielzeug/fetchit' {
     [Symbol.dispose](): void;
   };
 
-  export type MutationOptions<TData = unknown, TVariables = unknown> = {
-    onSuccess?: (data: TData, variables: TVariables) => void;
-    onError?: (error: Error, variables: TVariables) => void;
-    onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void;
-    retries?: number;
-    retryDelay?: number;
+  export type MutationOptions = {
+    retry?: number;
+    retryDelay?: number | ((attempt: number) => number);
+    shouldRetry?: (error: unknown, attempt: number) => boolean;
+  };
+
+  export type MutationFnContext<TVariables> = {
+    input: TVariables;
+    signal?: AbortSignal;
   };
 
   export type MutationState<TData = unknown> = {
     data: TData | undefined;
     error: Error | null;
     status: 'idle' | 'pending' | 'success' | 'error';
-    isIdle: boolean;
-    isPending: boolean;
-    isSuccess: boolean;
-    isError: boolean;
+    updatedAt: number;
   };
 
   export function createMutation<TData, TVariables = void>(
-    mutationFn: (variables: TVariables) => Promise<TData>,
-    opts?: MutationOptions<TData, TVariables>
+    mutationFn: (ctx: MutationFnContext<TVariables>) => Promise<TData>,
+    opts?: MutationOptions
   ): {
     mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData>;
     getState(): MutationState<TData>;
     reset(): void;
-    cancel(): void;
     subscribe(listener: (state: MutationState<TData>) => void): () => void;
   };
 
@@ -1056,77 +1052,110 @@ declare module '@vielzeug/wireit' {
 
 export const routeitTypes = `
 declare module '@vielzeug/routeit' {
+  export type MaybePromise<T> = T | Promise<T>;
   export type RouteParams = Record<string, string>;
   export type QueryParams = Record<string, string | string[]>;
-  export type RouterMode = 'history' | 'hash';
 
-  export type RouteContext<T = unknown> = {
-    params: RouteParams;
-    query: QueryParams;
-    pathname: string;
-    hash: string;
-    data?: T;
-    user?: unknown;
-    meta?: Record<string, unknown>;
-    navigate: (path: string, opts?: NavigateOptions) => void;
+  export type NavigateOptions = {
+    force?: boolean;
+    replace?: boolean;
+    state?: unknown;
+    viewTransition?: boolean;
   };
 
-  export type RouteHandler<T = unknown> = (
-    context: RouteContext<T>
-  ) => void | Promise<void>;
+  export type PathNavigateOptions = Omit<NavigateOptions, 'replace'>;
 
-  export type Middleware = (
-    context: RouteContext,
+  export type NavigationTarget = {
+    hash?: string;
+    name: string;
+    params?: RouteParams;
+    query?: QueryParams;
+  };
+
+  export type RouteContext<Params extends RouteParams = RouteParams, Meta = unknown> = {
+    readonly hash: string;
+    locals: Record<string, unknown>;
+    readonly meta?: Meta;
+    readonly navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
+    readonly params: Params;
+    readonly pathname: string;
+    readonly pushPath: (path: string, options?: PathNavigateOptions) => Promise<void>;
+    readonly query: QueryParams;
+    readonly replacePath: (path: string, options?: PathNavigateOptions) => Promise<void>;
+  };
+
+  export type RouteHandler<Params extends RouteParams = RouteParams, Meta = unknown> = (
+    context: RouteContext<Params, Meta>
+  ) => MaybePromise<void>;
+
+  export type Middleware<Meta = unknown> = (
+    context: RouteContext<RouteParams, Meta>,
     next: () => Promise<void>
   ) => void | Promise<void>;
 
-  export type RouteDefinition<T = unknown> = {
+  export type RouteDefinition<Path extends string = string, Meta = unknown> = {
     path: string;
-    handler: RouteHandler<T>;
-    name?: string;
-    data?: T;
-    middleware?: Middleware | Middleware[];
-    children?: RouteDefinition<T>[];
+    handler?: RouteHandler<Record<string, string>, Meta>;
+    meta?: Meta;
+    middleware?: Middleware<Meta> | Middleware<Meta>[];
   };
 
-  export type NavigateOptions = {
-    replace?: boolean;
-    state?: unknown;
-  };
+  export type RouteTable = Record<string, RouteDefinition<string, unknown>>;
 
-  export type RouterOptions = {
-    mode?: RouterMode;
+  export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
+    autoStart?: boolean;
     base?: string;
-    notFound?: RouteHandler;
     middleware?: Middleware | Middleware[];
+    routes: TRoutes;
+    viewTransition?: boolean;
   };
 
-  export class Router {
-    route(definition: RouteDefinition): Router;
-    routes(definitions: RouteDefinition[]): Router;
-    get(path: string, handler: RouteHandler): Router;
+  export type RouteState = {
+    readonly hash: string;
+    readonly meta?: unknown;
+    readonly name?: string;
+    readonly params: RouteParams;
+    readonly pathname: string;
+    readonly query: QueryParams;
+  };
+
+  export type ResolvedRoute = {
+    readonly meta?: unknown;
+    readonly name?: string;
+    readonly params: RouteParams;
+  };
+
+  export type Unsubscribe = () => void;
+
+  export class Router<TRoutes extends RouteTable = RouteTable> {
+    get state(): RouteState;
+
     start(): Router;
     stop(): void;
-    navigate(path: string, options?: NavigateOptions): void;
-    navigateTo(name: string, params?: RouteParams, query?: QueryParams): void;
-    back(): void;
-    forward(): void;
-    go(delta: number): void;
-    buildUrl(path: string, params?: RouteParams, query?: QueryParams): string;
-    urlFor(name: string, params?: RouteParams, query?: QueryParams): string;
-    isActive(pattern: string): boolean;
-    getCurrentPath(): string;
-    getCurrentQuery(): QueryParams;
-    getCurrentHash(): string;
-    getState(): { pathname: string; params: RouteParams; query: QueryParams };
-    getParams(): RouteParams;
-    link(href: string, text: string, attributes?: Record<string, string>): HTMLAnchorElement;
-    linkTo(name: string, params: RouteParams, text: string, attributes?: Record<string, string>): HTMLAnchorElement;
-    subscribe(listener: () => void): () => void;
-    debug(): { mode: RouterMode; base: string; routes: any[] };
+    navigate(target: NavigationTarget, options?: NavigateOptions): Promise<void>;
+    pushPath(path: string, options?: PathNavigateOptions): Promise<void>;
+    replacePath(path: string, options?: PathNavigateOptions): Promise<void>;
+    url(name: string, params?: RouteParams, query?: QueryParams): string;
+    isActive(name: string, exact?: boolean): boolean;
+    resolve(pathname: string): ResolvedRoute | null;
+    subscribe(listener: (state: RouteState) => void): Unsubscribe;
+    dispose(): void;
   }
 
-  export function createRouter(options?: RouterOptions): Router;
+  export function createRouter<const TRoutes extends RouteTable>(options: RouterOptions<TRoutes>): Router<TRoutes>;
+  export function defineRoutes<const TRoutes extends Record<string, { meta?: unknown; path: string }>>(
+    routes: {
+      [Name in keyof TRoutes]: RouteDefinition<
+        TRoutes[Name] extends { path: infer Path extends string } ? Path : never,
+        TRoutes[Name] extends { meta?: infer Meta } ? Meta : unknown
+      >;
+    }
+  ): {
+    [Name in keyof TRoutes]: RouteDefinition<
+      TRoutes[Name] extends { path: infer Path extends string } ? Path : never,
+      TRoutes[Name] extends { meta?: infer Meta } ? Meta : unknown
+    >;
+  };
 }
 `;
 

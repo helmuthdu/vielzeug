@@ -1,6 +1,6 @@
 ---
 title: Validit — Usage Guide
-description: Schema types, chaining, coercion, and advanced validation patterns for Validit.
+description: Schema composition, validation flows, strict object behavior, and async patterns in Validit.
 ---
 
 # Validit Usage Guide
@@ -10,6 +10,8 @@ description: Schema types, chaining, coercion, and advanced validation patterns 
 ## Basic Usage
 
 ```ts
+import { v } from '@vielzeug/validit';
+
 const UserSchema = v.object({
   name: v.string().min(1),
   email: v.string().email(),
@@ -24,17 +26,47 @@ if (!result.success) {
 }
 ```
 
+## v Namespace Factories
+
+`v` is the canonical factory namespace.
+
+```ts
+v.string();
+v.number();
+v.boolean();
+v.date();
+v.literal('active');
+v.enum(['draft', 'published'] as const);
+v.nativeEnum(StatusEnum);
+v.object({ id: v.number() });
+v.array(v.string());
+v.tuple([v.string(), v.number()] as const);
+v.record(v.string(), v.number());
+v.union(v.string(), v.number());
+v.union('admin', 'editor', 'viewer');
+v.intersect(v.object({ id: v.number() }), v.object({ createdAt: v.date() }));
+v.variant('type', {
+  ok: v.object({ data: v.string() }),
+  error: v.object({ message: v.string() }),
+});
+v.lazy(() => v.object({ next: v.null() }));
+v.instanceof(Date);
+v.never();
+v.null();
+v.undefined();
+```
+
 ## Primitive Schemas
 
 ### Strings
 
 ```ts
-v.string().min(3).max(40).nonempty();
+v.string().min(3).max(40).nonEmpty();
 v.string().email();
 v.string().url();
 v.string().uuid();
-v.string().date(); // YYYY-MM-DD
-v.string().datetime(); // ISO-like datetime
+v.string().isoDate(); // YYYY-MM-DD
+v.string().isoDateTime(); // ISO date-time
 v.string().startsWith('user_').endsWith('_id').includes('_');
 v.string().regex(/^[a-z0-9_-]+$/i);
 v.string().trim().lowercase(); // preprocess before validation
@@ -66,15 +98,16 @@ v.nativeEnum(StatusEnum);
 ### Objects, Arrays, Tuples, Records
 
 ```ts
-const Profile = v
-  .object({
-    id: v.number().int().positive(),
-    name: v.string().min(1),
-    tags: v.array(v.string()).max(10),
-    point: v.tuple([v.number(), v.number()] as const),
-    meta: v.record(v.string(), v.string()).optional(),
-  })
-  .strict();
+const Profile = v.object({
+  id: v.number().int().positive(),
+  name: v.string().min(1),
+  tags: v.array(v.string()).max(10),
+  point: v.tuple([v.number(), v.number()] as const),
+  meta: v.record(v.string(), v.string()).optional(),
+});
+
+// object() is strict by default (unknown keys fail)
+const RelaxedProfile = Profile.relaxed();
 ```
 
 ### Union, Intersect, Variant
@@ -91,7 +124,7 @@ const ApiResult = v.variant('type', {
 });
 ```
 
-## Validation Flow
+## Validation Methods
 
 ### parse and safeParse
 
@@ -125,7 +158,7 @@ await UniqueEmail.parseAsync('user@example.com');
 await UniqueEmail.safeParseAsync('user@example.com');
 ```
 
-## Modifiers
+## Nullability and Defaults
 
 ### optional, nullable, nullish
 
@@ -133,10 +166,6 @@ await UniqueEmail.safeParseAsync('user@example.com');
 v.string().optional();
 v.string().nullable();
 v.string().nullish();
-
-v.optional(v.string());
-v.nullable(v.string());
-v.nullish(v.string());
 ```
 
 ### required, default, catch
@@ -195,14 +224,42 @@ const NormalizedEmail = v
 ### preprocess
 
 ```ts
-const NumberFromQuery = preprocess(
-  (value) => (typeof value === 'string' ? Number(value) : value),
-  object({
+const NumberFromQuery = v
+  .object({
     page: v.number().int().min(1),
-  }),
-);
+  })
+  .preprocess((value) => {
+    if (value && typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+
+      return { ...obj, page: typeof obj.page === 'string' ? Number(obj.page) : obj.page };
+    }
+
+    return value;
+  });
 
 const NumberFromString = v.number().preprocess((value) => (typeof value === 'string' ? Number(value) : value));
+```
+
+## Object Composition and Unknown Keys
+
+```ts
+const Base = v.object({
+  id: v.number().int().positive(),
+  email: v.string().email(),
+  nickname: v.string().optional(),
+});
+
+const PublicUser = Base.pick('id', 'nickname');
+const InternalUser = Base.extend({ role: v.union('admin', 'editor', 'viewer') });
+const RequiredUser = Base.required();
+const PartialUser = Base.partial('email');
+
+// Strict by default
+Base.safeParse({ id: 1, email: 'a@b.com', extra: true }); // fails
+
+// Allow unknown keys
+Base.relaxed().safeParse({ id: 1, email: 'a@b.com', extra: true }); // succeeds
 ```
 
 ## Message Configuration
@@ -242,6 +299,13 @@ const Schema = v.object({
 type Output = Infer<typeof Schema>;
 ```
 
+Also available:
+
+```ts
+type Output2 = InferOutput<typeof Schema>;
+type Output3 = TypeOf<typeof Schema>;
+```
+
 ## Best Practices
 
 - Reuse schema instances instead of rebuilding per call.
@@ -249,3 +313,4 @@ type Output = Infer<typeof Schema>;
 - Use `parseAsync()` / `safeParseAsync()` whenever async refinements are present.
 - Prefer message functions for contextual errors.
 - Keep transforms at the end of schema chains.
+- Treat `v.object(...)` as strict-by-default and use `.relaxed()` deliberately.

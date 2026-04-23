@@ -29,7 +29,7 @@
  * ```
  */
 
-import type { PropsInput } from '@vielzeug/craftit';
+import {} from '@vielzeug/craftit';
 
 export type { PropsInput } from '@vielzeug/craftit';
 
@@ -40,16 +40,16 @@ import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
  * Exposes a `color` signal typed as `ThemeColor | undefined`.
  */
 export const themableBundle = {
-  color: undefined,
-} satisfies PropsInput<{ color?: ThemeColor }>;
+  color: undefined as ThemeColor | undefined,
+};
 
 /**
  * Prop bundle for components with discrete size variants.
  * Exposes a `size` signal typed as `ComponentSize | undefined`.
  */
 export const sizableBundle = {
-  size: undefined,
-} satisfies PropsInput<{ size?: ComponentSize }>;
+  size: undefined as ComponentSize | undefined,
+};
 
 /**
  * Prop bundle for interactive components that can be disabled.
@@ -57,7 +57,7 @@ export const sizableBundle = {
  */
 export const disablableBundle = {
   disabled: false,
-} satisfies PropsInput<{ disabled?: boolean }>;
+};
 
 /**
  * Prop bundle for components with a loading / busy state.
@@ -65,12 +65,20 @@ export const disablableBundle = {
  */
 export const loadableBundle = {
   loading: false,
-} satisfies PropsInput<{ loading?: boolean }>;
+};
 
 /**
  * Prop bundle for components with configurable border-radius.
  * Exposes a `rounded` signal typed as `RoundedSize | undefined`.
  */
 export const roundableBundle = {
-  rounded: undefined,
-} satisfies PropsInput<{ rounded?: RoundedSize }>;
+  rounded: undefined as RoundedSize | undefined,
+};
+
+/**
+ * Prop bundle for components with an elevation / box-shadow.
+ * Exposes a `elevation` signal typed as `number | undefined`.
+ */
+export const elevatableBundle = {
+  elevation: undefined,
+};

@@ -38,7 +38,7 @@ const profileForm = createForm({
 });
 
 // Conditional validation based on account type
-profileForm.subscribe(() => {
+profileForm.subscribeForm(() => {
   const accountType = profileForm.get<string>('accountType');
 
   if (accountType === 'business') {

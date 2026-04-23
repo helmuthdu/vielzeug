@@ -10,20 +10,20 @@ Format times respecting user locale, language, and timezone.
 ## Basic Locale Formatting
 
 ```ts
-import { t } from '@vielzeug/timit';
+import { formatHuman, formatISO, formatRange } from '@vielzeug/timit';
 
 const time = '2026-03-21T10:15:30Z';
 
 // English (US)
-t.formatHuman(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
+formatHuman(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
 // → "3/21/2026, 10:15 AM"
 
 // German
-t.formatHuman(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' });
+formatHuman(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' });
 // → "21.3.2026, 11:15"
 
 // Japanese
-t.formatHuman(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
+formatHuman(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
 // → "2026/3/21 19:15"
 ```
 
@@ -35,11 +35,11 @@ const time = '2026-03-21T10:15:30Z';
 const patterns = ['short', 'long', 'date-only', 'time-only'] as const;
 
 for (const pattern of patterns) {
-  const formatted = t.formatHuman(time, { pattern, locale: 'en-GB', tz: 'UTC' });
+  const formatted = formatHuman(time, { pattern, locale: 'en-GB', tz: 'UTC' });
   console.log(`${pattern.padEnd(10)} ${formatted}`);
 }
 
-console.log(`iso       ${t.formatISO(time)}`);
+console.log(`iso       ${formatISO(time)}`);
 
 // Output:
 // short      21/03/2026, 10:15
@@ -54,7 +54,7 @@ console.log(`iso       ${t.formatISO(time)}`);
 Use the `intl` option for custom `Intl.DateTimeFormatOptions`:
 
 ```ts
-t.formatHuman(time, {
+formatHuman(time, {
   locale: 'de-DE',
   tz: 'Europe/Berlin',
   pattern: 'short',
@@ -74,7 +74,7 @@ Format a span of time:
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-t.formatRange(start, end, {
+formatRange(start, end, {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
@@ -86,7 +86,7 @@ t.formatRange(start, end, {
 
 ```ts
 function formatUserTime(time: string, userLocale: string, userTz: string) {
-  return t.formatHuman(time, {
+  return formatHuman(time, {
     pattern: 'long',
     locale: userLocale,
     tz: userTz,

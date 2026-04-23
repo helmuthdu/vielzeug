@@ -29,34 +29,44 @@ const pool = createWorker<string, string>(
 function startBatch(urls: string[]) {
   const ac = new AbortController();
 
-  const promise = Promise.all(
+  const promise = Promise.allSettled(
     urls.map((url) =>
-      pool.run(url, { signal: ac.signal }).catch((err) => {
-        if (err instanceof DOMException && err.name === 'AbortError') return null;
-        throw err;
-      }),
+      pool
+        .run(url, { signal: ac.signal })
+        .catch((err) => {
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            console.log(`Batch cancelled: ${url}`);
+            return null;
+          }
+          console.error(`Failed to fetch ${url}:`, err);
+          throw err;
+        }),
     ),
   );
 
   return { result: promise, cancel: () => ac.abort() };
 }
 
-// Usage
-const batch = startBatch(urlList);
+// Usage:
+const batch = startBatch(['https://example.com/1', 'https://example.com/2']);
 // User navigates away:
 batch.cancel();
+// Queued tasks will reject with AbortError
 ```
 
 ## Expected Output
 
 - The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- Cancelling the batch stops queued tasks before they start.
+- In-flight tasks continue to completion (cannot be interrupted mid-request).
+- Cancelled tasks report AbortError for proper error handling.
 
 ## Common Pitfalls
 
 - Forgetting cleanup/dispose calls can leak listeners or stale state.
 - Skipping explicit typing can hide integration issues until runtime.
 - Not handling error branches makes examples harder to adapt safely.
+- Trying to cancel in-flight tasks (only queued tasks can be cancelled).
 
 ## Related Recipes
 

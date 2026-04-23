@@ -1,7 +1,8 @@
 import type { MessageFn } from '../core';
 
-import { ErrorCode, resolveMessage, Schema } from '../core';
+import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
+import { createConstraintValidator } from './constraint-factories';
 
 export class StringSchema extends Schema<string> {
   constructor() {
@@ -12,32 +13,26 @@ export class StringSchema extends Schema<string> {
   }
 
   min(length: number, message: MessageFn<{ min: number; value: string }> = (ctx) => _messages().string_min(ctx)): this {
-    return this._addValidator((value, path) =>
-      (value as string).length >= length
-        ? null
-        : [
-            {
-              code: ErrorCode.too_small,
-              message: resolveMessage(message, { min: length, value: value as string }),
-              params: { minimum: length },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<string, { min: number; value: string }>({
+        check: (value) => value.length >= length,
+        code: ErrorCode.too_small,
+        context: (value) => ({ min: length, value }),
+        message,
+        params: () => ({ minimum: length }),
+      }),
     );
   }
 
   max(length: number, message: MessageFn<{ max: number; value: string }> = (ctx) => _messages().string_max(ctx)): this {
-    return this._addValidator((value, path) =>
-      (value as string).length <= length
-        ? null
-        : [
-            {
-              code: ErrorCode.too_big,
-              message: resolveMessage(message, { max: length, value: value as string }),
-              params: { maximum: length },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<string, { max: number; value: string }>({
+        check: (value) => value.length <= length,
+        code: ErrorCode.too_big,
+        context: (value) => ({ max: length, value }),
+        message,
+        params: () => ({ maximum: length }),
+      }),
     );
   }
 
@@ -45,21 +40,18 @@ export class StringSchema extends Schema<string> {
     exact: number,
     message: MessageFn<{ exact: number; value: string }> = (ctx) => _messages().string_length(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      (value as string).length === exact
-        ? null
-        : [
-            {
-              code: ErrorCode.invalid_length,
-              message: resolveMessage(message, { exact, value: value as string }),
-              params: { exact },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<string, { exact: number; value: string }>({
+        check: (value) => value.length === exact,
+        code: ErrorCode.invalid_length,
+        context: (value) => ({ exact, value }),
+        message,
+        params: () => ({ exact }),
+      }),
     );
   }
 
-  nonempty(message: MessageFn<{ min: number; value: string }> = () => _messages().string_nonempty()): this {
+  nonEmpty(message: MessageFn<{ min: number; value: string }> = () => _messages().string_nonempty()): this {
     return this.min(1, message);
   }
 
@@ -67,17 +59,14 @@ export class StringSchema extends Schema<string> {
     prefix: string,
     message: MessageFn<{ prefix: string; value: string }> = (ctx) => _messages().string_starts_with(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      (value as string).startsWith(prefix)
-        ? null
-        : [
-            {
-              code: ErrorCode.invalid_string,
-              message: resolveMessage(message, { prefix, value: value as string }),
-              params: { prefix },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<string, { prefix: string; value: string }>({
+        check: (value) => value.startsWith(prefix),
+        code: ErrorCode.invalid_string,
+        context: (value) => ({ prefix, value }),
+        message,
+        params: () => ({ prefix }),
+      }),
     );
   }
 
@@ -85,17 +74,14 @@ export class StringSchema extends Schema<string> {
     suffix: string,
     message: MessageFn<{ suffix: string; value: string }> = (ctx) => _messages().string_ends_with(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      (value as string).endsWith(suffix)
-        ? null
-        : [
-            {
-              code: ErrorCode.invalid_string,
-              message: resolveMessage(message, { suffix, value: value as string }),
-              params: { suffix },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<string, { suffix: string; value: string }>({
+        check: (value) => value.endsWith(suffix),
+        code: ErrorCode.invalid_string,
+        context: (value) => ({ suffix, value }),
+        message,
+        params: () => ({ suffix }),
+      }),
     );
   }
 
@@ -103,152 +89,120 @@ export class StringSchema extends Schema<string> {
     substr: string,
     message: MessageFn<{ substr: string; value: string }> = (ctx) => _messages().string_includes(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      (value as string).includes(substr)
-        ? null
-        : [
-            {
-              code: ErrorCode.invalid_string,
-              message: resolveMessage(message, { substr, value: value as string }),
-              params: { includes: substr },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<string, { substr: string; value: string }>({
+        check: (value) => value.includes(substr),
+        code: ErrorCode.invalid_string,
+        context: (value) => ({ substr, value }),
+        message,
+        params: () => ({ includes: substr }),
+      }),
     );
   }
 
   regex(pattern: RegExp, message: MessageFn<{ value: string }> = (ctx) => _messages().string_regex(ctx)): this {
-    return this._addValidator((value, path) =>
-      pattern.test(value as string)
-        ? null
-        : [
-            {
-              code: ErrorCode.invalid_string,
-              message: resolveMessage(message, { value: value as string }),
-              params: { pattern: pattern.source },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<string, { value: string }>({
+        check: (value) => pattern.test(value),
+        code: ErrorCode.invalid_string,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ pattern: pattern.source }),
+      }),
     );
   }
 
   email(message: MessageFn<{ value: string }> = () => _messages().string_email()): this {
-    return this._addValidator((value, path) =>
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value as string)
-        ? null
-        : [
-            {
-              code: ErrorCode.invalid_string,
-              message: resolveMessage(message, { value: value as string }),
-              params: { format: 'email' },
-              path,
-            },
-          ],
+    return this._addCoreValidator(
+      createConstraintValidator<string, { value: string }>({
+        check: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+        code: ErrorCode.invalid_string,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ format: 'email' }),
+      }),
     );
   }
 
   url(message: MessageFn<{ value: string }> = () => _messages().string_url()): this {
-    return this._addValidator((value, path) => {
-      try {
-        new URL(value as string);
+    return this._addCoreValidator(
+      createConstraintValidator<string, { value: string }>({
+        check: (value) => {
+          try {
+            new URL(value);
 
-        return null;
-      } catch {
-        return [
-          {
-            code: ErrorCode.invalid_url,
-            message: resolveMessage(message, { value: value as string }),
-            params: { format: 'url' },
-            path,
-          },
-        ];
-      }
-    });
-  }
-
-  uuid(message: MessageFn<{ value: string }> = () => _messages().string_uuid()): this {
-    return this._addValidator((value, path) =>
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value as string)
-        ? null
-        : [
-            {
-              code: ErrorCode.invalid_string,
-              message: resolveMessage(message, { value: value as string }),
-              params: { format: 'uuid' },
-              path,
-            },
-          ],
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        code: ErrorCode.invalid_url,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ format: 'url' }),
+      }),
     );
   }
 
-  date(message: MessageFn<{ value: string }> = () => _messages().string_date()): this {
-    return this._addValidator((value, path) => {
-      const str = value as string;
-
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-        return [
-          {
-            code: ErrorCode.invalid_string,
-            message: resolveMessage(message, { value: str }),
-            params: { format: 'date' },
-            path,
-          },
-        ];
-      }
-
-      const d = new Date(str);
-      // Guard against roll-over dates like 2024-02-30 → 2024-03-01
-      const valid = !Number.isNaN(d.getTime()) && d.toISOString().startsWith(str);
-
-      return valid
-        ? null
-        : [
-            {
-              code: ErrorCode.invalid_string,
-              message: resolveMessage(message, { value: str }),
-              params: { format: 'date' },
-              path,
-            },
-          ];
-    });
+  uuid(message: MessageFn<{ value: string }> = () => _messages().string_uuid()): this {
+    return this._addCoreValidator(
+      createConstraintValidator<string, { value: string }>({
+        check: (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value),
+        code: ErrorCode.invalid_string,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ format: 'uuid' }),
+      }),
+    );
   }
 
-  datetime(message: MessageFn<{ value: string }> = () => _messages().string_datetime()): this {
-    return this._addValidator((value, path) => {
-      const str = value as string;
+  isoDate(message: MessageFn<{ value: string }> = () => _messages().string_date()): this {
+    return this._addCoreValidator(
+      createConstraintValidator<string, { value: string }>({
+        check: (value) => {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return false;
+          }
 
-      // Require at minimum YYYY-MM-DDTHH:MM structure before trying Date constructor
-      const valid = /^\d{4}-\d{2}-\d{2}T[\d:.Z+-]+$/.test(str) && !Number.isNaN(new Date(str).getTime());
+          const d = new Date(value);
 
-      return valid
-        ? null
-        : [
-            {
-              code: ErrorCode.invalid_string,
-              message: resolveMessage(message, { value: str }),
-              params: { format: 'datetime' },
-              path,
-            },
-          ];
-    });
+          // Guard against roll-over dates like 2024-02-30 → 2024-03-01
+          return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(value);
+        },
+        code: ErrorCode.invalid_string,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ format: 'iso-date' }),
+      }),
+    );
+  }
+
+  isoDateTime(message: MessageFn<{ value: string }> = () => _messages().string_datetime()): this {
+    return this._addCoreValidator(
+      createConstraintValidator<string, { value: string }>({
+        // Require at minimum YYYY-MM-DDTHH:MM structure before trying Date constructor
+        check: (value) => /^\d{4}-\d{2}-\d{2}T[\d:.Z+-]+$/.test(value) && !Number.isNaN(new Date(value).getTime()),
+        code: ErrorCode.invalid_string,
+        context: (value) => ({ value }),
+        message,
+        params: () => ({ format: 'iso-datetime' }),
+      }),
+    );
   }
 
   trim(): this {
-    return this._addPreprocessor((v) => (typeof v === 'string' ? v.trim() : v));
+    return this._addPreprocessor((v: unknown) => (typeof v === 'string' ? v.trim() : v));
   }
 
   lowercase(): this {
-    return this._addPreprocessor((v) => (typeof v === 'string' ? v.toLowerCase() : v));
+    return this._addPreprocessor((v: unknown) => (typeof v === 'string' ? v.toLowerCase() : v));
   }
 
   uppercase(): this {
-    return this._addPreprocessor((v) => (typeof v === 'string' ? v.toUpperCase() : v));
+    return this._addPreprocessor((v: unknown) => (typeof v === 'string' ? v.toUpperCase() : v));
   }
 
   static coerce(): StringSchema {
-    return new StringSchema()._addPreprocessor((v) => (v == null ? v : String(v)));
+    return new StringSchema()._addPreprocessor((v: unknown) => (v == null ? v : String(v)));
   }
 }
-
-export const string = (): StringSchema => new StringSchema();
-export const coerceString = (): StringSchema => StringSchema.coerce();

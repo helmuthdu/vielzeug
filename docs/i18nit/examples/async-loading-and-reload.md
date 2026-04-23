@@ -1,25 +1,25 @@
 ---
-title: 'I18nit Examples — Async Loading and Reload'
-description: 'Async Loading and Reload examples for i18nit.'
+title: 'I18nit Examples — Async Loading and Locale Switch'
+description: 'Async loading and strict locale switching examples for i18nit.'
 ---
 
-## Async Loading and Reload
+## Async Loading and Locale Switch
 
 ## Problem
 
-Implement async loading and reload in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
+Implement async loading and locale switching in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
 
 ## Runnable Example
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
 
 ```ts
-i18n.registerLoader('ja', () => import('./locales/ja.json'));
+i18n.setLoader('ja', () => import('./locales/ja.json'));
 
-await i18n.ensureLocale('ja'); // preload only
-await i18n.switchLocale('ja'); // switch after ensure
+await i18n.preload('ja'); // tolerant preload
+await i18n.setLocale('ja'); // strict switch
 
-await i18n.reload('ja'); // force refresh from loader
+i18n.setCatalog('ja', { greeting: 'こんにちは' }); // replace catalog
 ```
 
 ## Expected Output
@@ -35,6 +35,5 @@ await i18n.reload('ja'); // force refresh from loader
 
 ## Related Recipes
 
-- [Batched Catalog Updates](./batched-catalog-updates.md)
 - [Diagnostics Hook](./diagnostics-hook.md)
 - [Framework Integration](./framework-integration.md)

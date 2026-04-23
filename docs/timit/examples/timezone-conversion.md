@@ -10,13 +10,13 @@ Converting a time from one timezone to another while preserving the exact moment
 ## Basic Conversion
 
 ```ts
-import { t } from '@vielzeug/timit';
+import { formatHuman, now, toZoned } from '@vielzeug/timit';
 
 const utc = '2026-03-21T10:15:30Z';
 
-const tokyo = t.toZoned(utc, { tz: 'Asia/Tokyo' });
-const london = t.toZoned(utc, { tz: 'Europe/London' });
-const newyork = t.toZoned(utc, { tz: 'America/New_York' });
+const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' });
+const london = toZoned(utc, { tz: 'Europe/London' });
+const newyork = toZoned(utc, { tz: 'America/New_York' });
 
 console.log(tokyo.hour);   // 19 (7:15 PM JST)
 console.log(london.hour);  // 10 (10:15 AM GMT)
@@ -38,8 +38,8 @@ const timezones = [
 ];
 
 for (const tz of timezones) {
-  const local = t.toZoned(event, { tz });
-  const formatted = t.formatHuman(local, { pattern: 'long', tz });
+  const local = toZoned(event, { tz });
+  const formatted = formatHuman(local, { pattern: 'long', tz });
   console.log(`${tz.padEnd(20)} ${formatted}`);
 }
 ```
@@ -47,11 +47,11 @@ for (const tz of timezones) {
 ## Getting Current Time in a Timezone
 
 ```ts
-const now = t.now();           // Current time in system timezone
-const londonNow = t.now('Europe/London');
-const tokyoNow = t.now('Asia/Tokyo');
+const current = now();           // Current time in system timezone
+const londonNow = now('Europe/London');
+const tokyoNow = now('Asia/Tokyo');
 
-console.log(t.formatHuman(now, { pattern: 'short' }));
-console.log(t.formatHuman(londonNow, { pattern: 'short' }));
-console.log(t.formatHuman(tokyoNow, { pattern: 'short' }));
+console.log(formatHuman(current, { pattern: 'short' }));
+console.log(formatHuman(londonNow, { pattern: 'short' }));
+console.log(formatHuman(tokyoNow, { pattern: 'short' }));
 ```

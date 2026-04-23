@@ -36,27 +36,20 @@ describe('v.object()', () => {
   });
 
   describe('unknown key modes', () => {
-    it('strip (default) removes unknown keys', () => {
-      const parsed = User.parse({ extra: true, id: 1, name: 'Alice' } as any);
-
-      expect(parsed).toEqual({ id: 1, name: 'Alice' });
-      expect((parsed as any).extra).toBeUndefined();
-    });
-
-    it('passthrough() keeps unknown keys', () => {
-      const parsed = User.passthrough().parse({ extra: true, id: 1, name: 'Alice' } as any);
-
-      expect((parsed as any).extra).toBe(true);
-    });
-
-    it('strict() rejects unknown keys', () => {
-      const result = User.strict().safeParse({ extra: true, id: 1, name: 'Alice' } as any);
+    it('strict (default) rejects unknown keys', () => {
+      const result = User.safeParse({ extra: true, id: 1, name: 'Alice' } as any);
 
       expect(result.success).toBe(false);
 
       if (!result.success) {
         expect(result.error.issues[0].code).toBe('unrecognized_keys');
       }
+    });
+
+    it('relaxed() keeps unknown keys', () => {
+      const parsed = User.relaxed().parse({ extra: true, id: 1, name: 'Alice' } as any);
+
+      expect((parsed as any).extra).toBe(true);
     });
   });
 

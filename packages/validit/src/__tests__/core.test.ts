@@ -1,4 +1,4 @@
-import { type Infer, type InferOutput, ValidationError, v } from '../index';
+import { type Infer, type InferOutput, type TypeOf, ValidationError, v } from '../index';
 
 describe('ValidationError', () => {
   it('formats a root-level issue as "value: message [code]"', () => {
@@ -431,7 +431,7 @@ describe('describe()', () => {
       .describe('raw input')
       .transform((s) => s.toUpperCase());
 
-    expect((schema as any)._description).toBe('raw input');
+    expect(schema.description).toBe('raw input');
   });
 
   it('description getter returns undefined when not set', () => {
@@ -518,6 +518,18 @@ describe('Infer<> / InferOutput<>', () => {
 
     expect(schema.parse(val)).toBe('hello');
   });
+
+  it('TypeOf<T> is same as Infer<T>', () => {
+    const schema = v.object({ age: v.number(), name: v.string() });
+
+    type A = Infer<typeof schema>;
+    type B = TypeOf<typeof schema>;
+
+    const a: A = { age: 1, name: 'Alice' };
+    const b: B = { age: 1, name: 'Alice' };
+
+    expect(schema.parse(a)).toEqual(b);
+  });
 });
 
 describe('Schema.required()', () => {
@@ -535,9 +547,9 @@ describe('Schema.required()', () => {
   });
 });
 
-describe('v.optional() / v.nullable() / v.nullish() shorthands', () => {
-  it('v.optional(schema) is equivalent to schema.optional()', () => {
-    const a = v.optional(v.string());
+describe('schema optional/nullable/nullish modifiers', () => {
+  it('schema.optional() allows undefined', () => {
+    const a = v.string().optional();
     const b = v.string().optional();
 
     expect(a.parse(undefined)).toBeUndefined();
@@ -545,17 +557,17 @@ describe('v.optional() / v.nullable() / v.nullish() shorthands', () => {
     expect(b.parse(undefined)).toBeUndefined();
   });
 
-  it('v.nullable(schema) is equivalent to schema.nullable()', () => {
-    const a = v.nullable(v.string());
+  it('schema.nullable() allows null', () => {
+    const a = v.string().nullable();
 
     expect(a.parse(null)).toBeNull();
     expect(a.parse('hello')).toBe('hello');
     expect(() => a.parse(42 as any)).toThrow();
   });
 
-  it('v.optional works with object schemas', () => {
+  it('optional() works with object schemas', () => {
     const schema = v.object({
-      bio: v.optional(v.string()),
+      bio: v.string().optional(),
       name: v.string(),
     });
 
@@ -563,16 +575,21 @@ describe('v.optional() / v.nullable() / v.nullish() shorthands', () => {
     expect(schema.parse({ bio: 'hi', name: 'Alice' })).toEqual({ bio: 'hi', name: 'Alice' });
   });
 
-  it('v.nullish() allows undefined', () => {
-    expect(v.nullish(v.string()).parse(undefined)).toBeUndefined();
+  it('nullish() allows undefined', () => {
+    expect(v.string().nullish().parse(undefined)).toBeUndefined();
   });
 
-  it('v.nullish() allows null', () => {
-    expect(v.nullish(v.string()).parse(null)).toBeNull();
+  it('nullish() allows null', () => {
+    expect(v.string().nullish().parse(null)).toBeNull();
   });
 
-  it('v.nullish() still validates non-null/undefined values', () => {
-    expect(v.nullish(v.string()).parse('hello')).toBe('hello');
-    expect(() => v.nullish(v.string()).parse(42 as any)).toThrow();
+  it('nullish() still validates non-null/undefined values', () => {
+    expect(v.string().nullish().parse('hello')).toBe('hello');
+    expect(() =>
+      v
+        .string()
+        .nullish()
+        .parse(42 as any),
+    ).toThrow();
   });
 });

@@ -28,6 +28,10 @@ export interface Middleware {
 
 export interface ComputePositionConfig {
   placement?: Placement;
+  /**
+   * Middleware chain run in order.
+   * At most one middleware should change `state.placement` (typically `flip()`).
+   */
   middleware?: Array<Middleware | null | undefined | false>;
 }
 
@@ -81,6 +85,7 @@ function runPipeline(
   placement: Placement,
   reference: Element,
   floating: HTMLElement,
+  restartDepth = 0,
 ): ComputePositionResult {
   const refRect = toRect(reference.getBoundingClientRect());
   const floatRect = toRect(floating.getBoundingClientRect());
@@ -95,7 +100,13 @@ function runPipeline(
 
   // If a middleware (e.g. flip) changed the placement, restart once with the new one.
   if (state.placement !== placement) {
-    return runPipeline(mws, state.placement, reference, floating);
+    if (restartDepth >= 1) {
+      throw new Error(
+        '[floatit] Middleware changed placement more than once in a single compute cycle. Use at most one placement-changing middleware.',
+      );
+    }
+
+    return runPipeline(mws, state.placement, reference, floating, restartDepth + 1);
   }
 
   return { placement: state.placement, x: state.x, y: state.y };
@@ -298,7 +309,7 @@ export function autoUpdate(
   if (observeFloating) ro.observe(floating);
 
   return () => {
-    window.removeEventListener('scroll', scrollHandler, { capture: true } as EventListenerOptions);
+    window.removeEventListener('scroll', scrollHandler, { capture: true });
     window.removeEventListener('resize', update);
     vv?.removeEventListener('resize', update);
     vv?.removeEventListener('scroll', update);
@@ -311,13 +322,19 @@ export function autoUpdate(
 export interface FloatOptions {
   /** Preferred placement relative to the reference element. */
   placement?: Placement;
-  /** Middleware to modify positioning behavior. */
+  /**
+   * Middleware to modify positioning behavior.
+   * At most one middleware should change `state.placement` (typically `flip()`).
+   */
   middleware?: Array<Middleware | null | undefined | false>;
 }
 
 /**
  * Computes and applies the floating position to a floating element.
  * Sets `left`/`top` inline styles and returns the resolved placement.
+ *
+ * Coordinates are viewport-based, so the floating element should typically use
+ * `position: fixed` for the applied values to match the computed geometry.
  */
 export function positionFloat(reference: Element, floating: HTMLElement, options: FloatOptions = {}): Placement {
   const { placement, x, y } = computePosition(reference, floating, options);

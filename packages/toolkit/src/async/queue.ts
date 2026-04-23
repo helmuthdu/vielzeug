@@ -96,10 +96,24 @@ export function queue(options: { concurrency?: number } = {}) {
     },
 
     /**
-     * Clears all pending tasks from the queue
+     * Clears all pending tasks from the queue and rejects them.
+     * Running tasks are not affected.
+     * @param reason - The error reason for the rejection (defaults to 'Queue cleared')
      */
-    clear: (): void => {
-      tasks.length = 0;
+    clear: (reason?: unknown): void => {
+      const clearReason = reason ?? new Error('Queue cleared');
+
+      // Reject all queued tasks
+      for (const task of tasks.splice(0)) {
+        task.reject(clearReason);
+      }
+
+      // If queue is now idle, resolve idlePromise
+      if (activeCount === 0 && idleResolve) {
+        idleResolve();
+        idlePromise = null;
+        idleResolve = null;
+      }
     },
 
     /**

@@ -1,4 +1,9 @@
-# Bound Guard in UI Layer
+---
+title: 'Permit Examples — Bound Checker in UI Layer'
+description: 'Bind the current user once and reuse permission checks in a UI module.'
+---
+
+## Bound Checker in UI Layer
 
 ```ts
 import { createPermit } from '@vielzeug/permit';
@@ -10,12 +15,12 @@ permit
   .set({ role: 'editor', resource: 'posts', action: 'update', effect: 'allow' });
 
 export function usePostActions(user: { id: string; roles: string[] }) {
-  const guard = permit.withUser(user);
+  const can = permit.forUser(user);
 
   return {
-    canRead: guard.can('posts', 'read'),
-    canUpdate: guard.can('posts', 'update'),
-    canDelete: guard.can('posts', 'delete'),
+    canRead: can('posts', 'read'),
+    canUpdate: can('posts', 'update'),
+    canDelete: can('posts', 'delete'),
   };
 }
 ```

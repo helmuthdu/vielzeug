@@ -32,26 +32,32 @@ const user = await qc.query({
 });
 
 // CREATE
-const addUser = createMutation((data: NewUser) => api.post<User>('/users', { body: data }), {
-  onSuccess: (user) => {
-    qc.set(['users', user.id], user);
-    qc.invalidate(['users']);
-  },
-});
-await addUser.mutate({ name: 'Alice', email: 'alice@example.com' });
+const addUser = createMutation(({ input, signal }: { input: NewUser; signal?: AbortSignal }) =>
+  api.post<User>('/users', { body: input, signal }),
+);
+
+const created = await addUser.mutate({ name: 'Alice', email: 'alice@example.com' });
+qc.set(['users', created.id], created);
+qc.invalidate(['users']);
 
 // UPDATE
 const updateUser = createMutation(
-  ({ id, ...patch }: { id: number } & Partial<User>) => api.put<User>('/users/{id}', { params: { id }, body: patch }),
-  { onSuccess: (user) => qc.set(['users', user.id], user) },
+  ({ input, signal }: { input: { id: number } & Partial<User>; signal?: AbortSignal }) => {
+    const { id, ...patch } = input;
+    return api.put<User>('/users/{id}', { params: { id }, body: patch, signal });
+  },
 );
-await updateUser.mutate({ id: 1, name: 'Alice Smith' });
+
+const updated = await updateUser.mutate({ id: 1, name: 'Alice Smith' });
+qc.set(['users', updated.id], updated);
 
 // DELETE
-const deleteUser = createMutation((id: number) => api.delete(`/users/${id}`), {
-  onSuccess: (_, id) => qc.invalidate(['users']),
-});
+const deleteUser = createMutation(({ input, signal }: { input: number; signal?: AbortSignal }) =>
+  api.delete(`/users/${input}`, { signal }),
+);
+
 await deleteUser.mutate(1);
+qc.invalidate(['users']);
 ```
 
 ## Expected Output

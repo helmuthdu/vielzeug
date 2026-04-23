@@ -32,6 +32,3 @@ export class NativeEnumSchema<T extends NativeEnumObj> extends Schema<InferNativ
     this.enum = enumObj;
   }
 }
-
-export const nativeEnum = <T extends Record<string, string | number>>(enumObj: T): NativeEnumSchema<T> =>
-  new NativeEnumSchema(enumObj);

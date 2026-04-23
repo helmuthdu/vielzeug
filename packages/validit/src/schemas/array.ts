@@ -1,7 +1,8 @@
 import type { Issue, MessageFn } from '../core';
 
-import { ErrorCode, prependIssuePath, resolveMessage, Schema } from '../core';
+import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
+import { createConstraintValidator } from './constraint-factories';
 
 export class ArraySchema<T> extends Schema<T[]> {
   private readonly itemSchema: Schema<T>;
@@ -33,6 +34,8 @@ export class ArraySchema<T> extends Schema<T[]> {
       }
     }
 
+    issues.push(...this._runCoreValidators(items, []));
+
     return { data: items, issues };
   }
 
@@ -53,50 +56,60 @@ export class ArraySchema<T> extends Schema<T[]> {
       ),
     );
 
-    return { data: itemResults.map((r) => r.data), issues: itemResults.flatMap((r) => r.issues) };
+    const items = itemResults.map((r) => r.data);
+    const issues = itemResults.flatMap((r) => r.issues);
+
+    issues.push(...this._runCoreValidators(items, []));
+
+    return { data: items, issues };
   }
 
-  min(length: number, message: MessageFn<{ min: number }> = (ctx) => _messages().array_min(ctx)): this {
-    return this._addValidator((value, path) =>
-      (value as unknown[]).length >= length
-        ? null
-        : [
-            {
-              code: ErrorCode.too_small,
-              message: resolveMessage(message, { min: length }),
-              params: { minimum: length },
-              path,
-            },
-          ],
+  min(
+    length: number,
+    message: MessageFn<{ min: number; value: unknown[] }> = (ctx) => _messages().array_min(ctx),
+  ): this {
+    return this._addCoreValidator(
+      createConstraintValidator<unknown[], { min: number; value: unknown[] }>({
+        check: (value) => value.length >= length,
+        code: ErrorCode.too_small,
+        context: (value) => ({ min: length, value }),
+        message,
+        params: () => ({ minimum: length }),
+      }),
     );
   }
 
-  max(length: number, message: MessageFn<{ max: number }> = (ctx) => _messages().array_max(ctx)): this {
-    return this._addValidator((value, path) =>
-      (value as unknown[]).length <= length
-        ? null
-        : [
-            {
-              code: ErrorCode.too_big,
-              message: resolveMessage(message, { max: length }),
-              params: { maximum: length },
-              path,
-            },
-          ],
+  max(
+    length: number,
+    message: MessageFn<{ max: number; value: unknown[] }> = (ctx) => _messages().array_max(ctx),
+  ): this {
+    return this._addCoreValidator(
+      createConstraintValidator<unknown[], { max: number; value: unknown[] }>({
+        check: (value) => value.length <= length,
+        code: ErrorCode.too_big,
+        context: (value) => ({ max: length, value }),
+        message,
+        params: () => ({ maximum: length }),
+      }),
     );
   }
 
-  length(exact: number, message: MessageFn<{ exact: number }> = (ctx) => _messages().array_length(ctx)): this {
-    return this._addValidator((value, path) =>
-      (value as unknown[]).length === exact
-        ? null
-        : [{ code: ErrorCode.invalid_length, message: resolveMessage(message, { exact }), params: { exact }, path }],
+  length(
+    exact: number,
+    message: MessageFn<{ exact: number; value: unknown[] }> = (ctx) => _messages().array_length(ctx),
+  ): this {
+    return this._addCoreValidator(
+      createConstraintValidator<unknown[], { exact: number; value: unknown[] }>({
+        check: (value) => value.length === exact,
+        code: ErrorCode.invalid_length,
+        context: (value) => ({ exact, value }),
+        message,
+        params: () => ({ exact }),
+      }),
     );
   }
 
-  nonempty(message: MessageFn<{ min: number }> = () => _messages().array_nonempty()): this {
+  nonEmpty(message: MessageFn<{ min: number; value: unknown[] }> = () => _messages().array_nonempty()): this {
     return this.min(1, message);
   }
 }
-
-export const array = <T>(schema: Schema<T>): ArraySchema<T> => new ArraySchema(schema);

@@ -1,4 +1,4 @@
-import { define, computed, html, raw } from '@vielzeug/craftit';
+import { define, prop, computed, html, raw } from '@vielzeug/craftit';
 import * as lucideModule from 'lucide';
 
 import styles from './icon.css?inline';
@@ -85,12 +85,12 @@ export type BitIconProps = {
  */
 export const ICON_TAG = define<BitIconProps>('bit-icon', {
   props: {
-    absoluteStrokeWidth: false,
+    absoluteStrokeWidth: prop.bool(),
     label: undefined,
     name: undefined,
     size: { default: DEFAULT_SIZE as number | string, parse: parseSize },
-    solid: false,
-    strokeWidth: { default: DEFAULT_STROKE_WIDTH },
+    solid: prop.bool(),
+    strokeWidth: prop.number(DEFAULT_STROKE_WIDTH),
   },
   setup(props, { host }) {
     host.bind({
@@ -150,7 +150,9 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
       return `<svg ${svgAttrs}>${nodes}</svg>`;
     });
 
-    return html`${() => raw(markup.value)}`;
+    return {
+      render: () => html`${() => raw(markup.value)}`,
+    };
   },
   styles: [styles],
 });

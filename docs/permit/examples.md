@@ -1,13 +1,21 @@
 ---
 title: Permit — Examples
-description: Practical policy examples for permit's rule-based API.
+description: Practical examples and recipes for permit.
 ---
+
+# Permit Examples
 
 [[toc]]
 
 ## How to Use These Examples
 
-Each example is built around a single rule primitive (`set`) and deterministic checks (`can`).
+These examples cover the current rule model (`set` + `can`), deterministic precedence, and common application patterns.
+
+1. Start with the first examples to establish baseline usage.
+2. Move to precedence and wildcard examples to tune policy behavior.
+3. Use logger and rule-set examples to integrate auditing and testing workflows.
+
+All examples below are aligned with the current `@vielzeug/permit` API.
 
 ## Examples Overview
 
@@ -15,6 +23,6 @@ Each example is built around a single rule primitive (`set`) and deterministic c
 - [Priority and Overrides](./examples/inheritance-and-overrides.md)
 - [Wildcard Action](./examples/wildcard-action.md)
 - [Rule Specificity](./examples/disabling-wildcard-fallback.md)
-- [Bound Guard in UI Layer](./examples/bound-guard-in-ui-layer.md)
+- [Bound Checker in UI Layer](./examples/bound-guard-in-ui-layer.md)
 - [Logger for Auditing](./examples/logger-for-auditing.md)
-- [Policy Export/Import for Tests](./examples/snapshot-restore-for-test-isolation.md)
+- [Rule Snapshot/Replace for Tests](./examples/snapshot-restore-for-test-isolation.md)

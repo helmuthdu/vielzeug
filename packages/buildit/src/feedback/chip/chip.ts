@@ -149,16 +149,17 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
     checked: {
       default: undefined as BitChipComponentProps['checked'],
       parse: (value: string | null) => (value == null ? undefined : value !== 'false'),
+      reflect: false,
     },
-    color: { default: undefined as BitChipComponentProps['color'], reflect: true },
+    color: undefined as BitChipComponentProps['color'],
     'default-checked': false,
     disabled: false,
     label: undefined,
-    mode: 'static',
-    rounded: undefined,
-    size: undefined,
+    mode: 'static' as BitChipMode,
+    rounded: undefined as BitChipComponentProps['rounded'],
+    size: undefined as BitChipComponentProps['size'],
     value: undefined,
-    variant: undefined,
+    variant: undefined as BitChipComponentProps['variant'],
   },
 
   setup(props, { emit, host }) {
@@ -283,20 +284,21 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
     // ============================================
     // Render
     // ============================================
-    return html`
-      <slot></slot>
-      ${() => {
-        const mode = props.mode.value;
+    return {
+      render: () => html`
+        ${() => {
+          const mode = props.mode.value;
 
-        if (mode === 'selectable') return renderSelectableChip();
+          if (mode === 'selectable') return renderSelectableChip();
 
-        if (mode === 'action') return renderActionChip();
+          if (mode === 'action') return renderActionChip();
 
-        if (mode === 'removable') return renderRemovableChip();
+          if (mode === 'removable') return renderRemovableChip();
 
-        return renderStaticChip();
-      }}
-    `;
+          return renderStaticChip();
+        }}
+      `,
+    };
   },
   shadow: {},
   styles: [

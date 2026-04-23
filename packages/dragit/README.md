@@ -36,7 +36,7 @@ using zone = createDropZone({
 
 // Sortable list — reorder items via drag
 using sortable = createSortable({
-  container: document.getElementById('list')!,
+  element: document.getElementById('list')!,
   onReorder: (ids) => {
     saveOrder(ids);
   },
@@ -51,9 +51,12 @@ using sortable = createSortable({
 - ✅ **`onDropRejected`** — receive the files that didn't match `accept`, separate from accepted files
 - ✅ **Sortable lists** — reorders DOM children via native drag, emits only when order actually changes
 - ✅ **Drag handles** — scope dragging to a child selector via `handle`
-- ✅ **Dynamic lists** — `sortable.refresh()` syncs `draggable`/`role` after adding or removing items
+- ✅ **Dynamic lists** — `MutationObserver` keeps `draggable`/`role` in sync after adding or removing items
+- ✅ **Axis support** — choose vertical or horizontal midpoint logic via `axis`
+- ✅ **Custom placeholder class** — style drop markers with your own class name
 - ✅ **`[Symbol.dispose]`** — supports the `using` keyword for automatic teardown
 - ✅ **Reactive-friendly `disabled`** — pass `() => signal.value` for framework-derived state
+- ✅ **Array reorder helper** — `applyReorder(items, orderedIds, getId)` maps DOM order back to your data
 - ✅ **Zero dependencies**
 
 ## Usage
@@ -81,6 +84,8 @@ const zone = createDropZone({
 
 // Zone state
 console.log(zone.hovered); // boolean
+console.log(zone.state.files); // accepted files from last drop
+console.log(zone.state.rejected); // rejected files from last drop
 
 // Cleanup
 zone.destroy();
@@ -103,8 +108,10 @@ Each sortable item must carry a `data-sort-id` attribute. `createSortable` sets 
 import { createSortable } from '@vielzeug/dragit';
 
 const sortable = createSortable({
-  container: document.getElementById('list')!,
+  element: document.getElementById('list')!,
+  axis: 'vertical', // or 'horizontal'
   handle: '.drag-handle', // optional — scope drag to a child selector
+  placeholderClass: 'dragit-placeholder',
   disabled: () => isLocked,
   onDragStart: (id, event) => {
     console.log('dragging', id);
@@ -116,9 +123,6 @@ const sortable = createSortable({
     saveOrder(ids);
   }, // only fires when order changes
 });
-
-// After adding new items to the DOM:
-sortable.refresh();
 
 // Cleanup
 sortable.destroy();
@@ -143,7 +147,7 @@ Target `.dragit-placeholder` in your CSS to style the placeholder shown while dr
 Full docs at **[vielzeug.dev/dragit](https://vielzeug.dev/dragit)**
 
 | | |
-|---|---|
+| --- | --- |
 | [Usage Guide](https://vielzeug.dev/dragit/usage) | Drop zones, accept filtering, sortable lists |
 | [API Reference](https://vielzeug.dev/dragit/api) | Complete type signatures |
 | [Examples](https://vielzeug.dev/dragit/examples) | Real-world drag-and-drop patterns |

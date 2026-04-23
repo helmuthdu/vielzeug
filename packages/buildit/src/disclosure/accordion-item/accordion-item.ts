@@ -1,4 +1,4 @@
-import { define, html, inject, onMount, ref, syncContextProps } from '@vielzeug/craftit';
+import { define, effect, html, inject, ref } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -76,10 +76,16 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
     // Inherit size/variant from a parent bit-accordion when present.
     const accordionCtx = inject(ACCORDION_CTX);
 
-    syncContextProps(accordionCtx, {
-      size: props.size,
-      variant: props.variant,
-    });
+    if (accordionCtx) {
+      effect(() => {
+        const size = accordionCtx.size.value;
+        const variant = accordionCtx.variant.value;
+
+        if (size !== undefined) props.size.value = size;
+
+        if (variant !== undefined) props.variant.value = variant;
+      });
+    }
 
     const titleId = 'accordion-item-title';
     const detailsRef = ref<HTMLDetailsElement>();
@@ -98,94 +104,97 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
       }
     };
 
-    onMount(() => {
-      const details = detailsRef.value;
-      const summary = summaryRef.value;
+    return {
+      mount() {
+        const details = detailsRef.value;
+        const summary = summaryRef.value;
 
-      if (!details || !summary) return;
+        if (!details || !summary) return;
 
-      // Detect RTL by preferring the closest explicit dir="..." ancestor.
-      const checkRTL = () => {
-        let isRTL: boolean | undefined;
+        // Detect RTL by preferring the closest explicit dir="..." ancestor.
+        const checkRTL = () => {
+          let isRTL: boolean | undefined;
 
-        // 1) Closest ancestor dir always wins (supports local RTL sections).
-        let parent: HTMLElement | null = host.el;
+          // 1) Closest ancestor dir always wins (supports local RTL sections).
+          let parent: HTMLElement | null = host.el;
 
-        while (parent) {
-          const dir = parent.getAttribute('dir');
+          while (parent) {
+            const dir = parent.getAttribute('dir');
 
-          if (dir === 'rtl') {
-            isRTL = true;
-            break;
+            if (dir === 'rtl') {
+              isRTL = true;
+              break;
+            }
+
+            if (dir === 'ltr') {
+              isRTL = false;
+              break;
+            }
+
+            parent = parent.parentElement;
           }
 
-          if (dir === 'ltr') {
-            isRTL = false;
-            break;
+          // 2) Fallback to computed direction when no explicit dir is found.
+          if (isRTL === undefined) {
+            isRTL = getComputedStyle(host.el).direction === 'rtl';
           }
 
-          parent = parent.parentElement;
-        }
+          // 3) Keep markup simple for CSS targeting.
+          details.classList.toggle('rtl', isRTL);
+        };
 
-        // 2) Fallback to computed direction when no explicit dir is found.
-        if (isRTL === undefined) {
-          isRTL = getComputedStyle(host.el).direction === 'rtl';
-        }
+        // Check initially
+        checkRTL();
 
-        // 3) Keep markup simple for CSS targeting.
-        details.classList.toggle('rtl', isRTL);
-      };
+        // Re-check when DOM attributes change
+        const observer = new MutationObserver((mutations) => {
+          const dirChanged = mutations.some((m) => m.attributeName === 'dir');
 
-      // Check initially
-      checkRTL();
+          if (dirChanged) {
+            checkRTL();
+          }
+        });
 
-      // Re-check when DOM attributes change
-      const observer = new MutationObserver((mutations) => {
-        const dirChanged = mutations.some((m) => m.attributeName === 'dir');
+        observer.observe(document.documentElement, {
+          attributeFilter: ['dir'],
+          attributes: true,
+          subtree: true,
+        });
 
-        if (dirChanged) {
-          checkRTL();
-        }
-      });
+        details.addEventListener('toggle', handleToggle);
 
-      observer.observe(document.documentElement, {
-        attributeFilter: ['dir'],
-        attributes: true,
-        subtree: true,
-      });
+        return () => {
+          observer.disconnect();
+          details.removeEventListener('toggle', handleToggle);
+        };
+      },
 
-      details.addEventListener('toggle', handleToggle);
-
-      return () => {
-        observer.disconnect();
-        details.removeEventListener('toggle', handleToggle);
-      };
-    });
-
-    return html` <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
-      <summary
-        part="summary"
-        :aria-expanded="${() => String(props.expanded.value)}"
-        :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
-        ref="${summaryRef}">
-        <slot name="prefix"></slot>
-        <div class="header-content" part="header">
-          <span class="title" part="title" id="${titleId}">
-            <slot name="title"></slot>
-          </span>
-          <span class="subtitle" part="subtitle">
-            <slot name="subtitle"></slot>
-          </span>
-        </div>
-        <slot name="suffix"></slot>
-        <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
-      </summary>
-      <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
-        <div class="content-inner">
-          <slot></slot>
-        </div>
-      </div>
-    </details>`;
+      render: () =>
+        html` <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
+          <summary
+            part="summary"
+            :aria-expanded="${() => String(props.expanded.value)}"
+            :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
+            ref="${summaryRef}">
+            <slot name="prefix"></slot>
+            <div class="header-content" part="header">
+              <span class="title" part="title" id="${titleId}">
+                <slot name="title"></slot>
+              </span>
+              <span class="subtitle" part="subtitle">
+                <slot name="subtitle"></slot>
+              </span>
+            </div>
+            <slot name="suffix"></slot>
+            <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
+          </summary>
+          <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
+            <div class="content-inner">
+              <slot></slot>
+            </div>
+          </div>
+        </details>`,
+    };
   },
 
   styles: [coarsePointerMixin, styles],

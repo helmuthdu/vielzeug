@@ -13,18 +13,18 @@ Implement best practices in a production-friendly way with `@vielzeug/formit` wh
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/formit` installed.
 
-### 0. Schema-Validated Form (Zod / Valibot)
+### 0. Schema-Validated Form (Validit)
 
 Use `fromSchema()` to connect any `safeParse`-compatible schema:
 
 ```ts
-import { z } from 'zod';
+import { v } from '@vielzeug/validit';
 import { createForm, fromSchema, FormValidationError } from '@vielzeug/formit';
 
-const registrationSchema = z.object({
-  email: z.string().email('Invalid email'),
-  password: z.string().min(8, 'Min 8 characters'),
-  age: z.number().min(18, 'Must be 18 or older'),
+const registrationSchema = v.object({
+  email: v.string().email('Invalid email'),
+  password: v.string().min(8, 'Min 8 characters'),
+  age: v.number().min(18, 'Must be 18 or older'),
 });
 
 const form = createForm({
@@ -56,21 +56,27 @@ try {
 ```typescript
 // ✅ Good – cleanup in useEffect
 useEffect(() => {
-  const unsubscribe = form.subscribe(setState);
+  const unsubscribe = form.subscribeForm(setState);
   return unsubscribe; // Cleanup on unmount
 }, [form]);
 
 // ❌ Bad – memory leak
-form.subscribe(setState);
+form.subscribeForm(setState);
 ```
 
 ### 2. Use Field Bindings
 
 ```tsx
-// ✅ Good – one line
-<input {...form.bind('email')} />
+// ✅ Good - bind once, pass value explicitly
+const emailBinding = form.bind('email');
 
-// ❌ Verbose – manual wiring
+<input
+  value={String(emailBinding.value ?? '')}
+  onBlur={emailBinding.onBlur}
+  onChange={(e) => emailBinding.onChange(e.target.value)}
+/>
+
+// ❌ Verbose - manual wiring
 <input
   name="email"
   value={form.get('email')}

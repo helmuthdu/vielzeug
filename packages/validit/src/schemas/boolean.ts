@@ -12,7 +12,7 @@ export class BooleanSchema extends Schema<boolean> {
   }
 
   static coerce(): BooleanSchema {
-    return new BooleanSchema()._addPreprocessor((v) => {
+    return new BooleanSchema()._addPreprocessor((v: unknown) => {
       if (typeof v === 'boolean') return v;
 
       if (v === 'true' || v === '1' || v === 1) return true;
@@ -23,6 +23,3 @@ export class BooleanSchema extends Schema<boolean> {
     });
   }
 }
-
-export const boolean = (): BooleanSchema => new BooleanSchema();
-export const coerceBoolean = (): BooleanSchema => BooleanSchema.coerce();

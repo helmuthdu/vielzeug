@@ -25,8 +25,8 @@ describe('v.intersect()', () => {
   });
 
   it('works for object-level combined validation', () => {
-    const A = v.object({ id: v.number() });
-    const B = v.object({ name: v.string() });
+    const A = v.object({ id: v.number() }).relaxed();
+    const B = v.object({ name: v.string() }).relaxed();
     const schema = v.intersect(A, B);
 
     expect(schema.safeParse({ id: 1, name: 'Alice' }).success).toBe(true);

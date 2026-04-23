@@ -82,6 +82,18 @@ describe('computePosition', () => {
 
     expect(() => computePosition(reference, floating, { middleware: [null, undefined, false] })).not.toThrow();
   });
+
+  it('throws when placement keeps changing across restarts', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 });
+    const oscillate: Middleware = {
+      fn: (state) => ({ ...state, placement: state.placement === 'top' ? 'bottom' : 'top' }),
+      name: 'oscillate',
+    };
+
+    expect(() => computePosition(reference, floating, { middleware: [oscillate], placement: 'top' })).toThrow(
+      /placement more than once/i,
+    );
+  });
 });
 
 // ─── offset ───────────────────────────────────────────────────────────────────

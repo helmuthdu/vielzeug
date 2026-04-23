@@ -2,7 +2,7 @@ import { define, computed, html } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
-import { type PropsInput, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './badge.css?inline';
 
@@ -82,7 +82,7 @@ export const BADGE_TAG = define<BitBadgeProps>('bit-badge', {
     label: undefined,
     max: undefined,
     variant: undefined,
-  } satisfies PropsInput<BitBadgeProps>,
+  },
   setup(props) {
     const label = computed(() => {
       const count = props.count.value != null ? Number(props.count.value) : undefined;
@@ -95,12 +95,15 @@ export const BADGE_TAG = define<BitBadgeProps>('bit-badge', {
       return String(count);
     });
 
-    return html`<span class="badge" part="badge" aria-label="${props.label}">
-        <slot name="icon"></slot>
-        <span ?hidden="${() => label.value == null}">${label}</span>
-        <slot ?hidden="${() => label.value != null}"></slot>
-      </span>
-      <slot name="target"></slot>`;
+    return {
+      render: () =>
+        html`<span class="badge" part="badge" aria-label="${props.label}">
+            <slot name="icon"></slot>
+            <span ?hidden="${() => label.value == null}">${label}</span>
+            <slot ?hidden="${() => label.value != null}"></slot>
+          </span>
+          <slot name="target"></slot>`,
+    };
   },
   styles: [
     colorThemeMixin,

@@ -5,14 +5,6 @@ description: 'Form validation examples with validit.'
 
 ## Form Validation Examples
 
-## Problem
-
-Implement form validation examples in a production-friendly way with `@vielzeug/validit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/validit` installed.
-
 ### Registration Schema
 
 ```ts
@@ -33,6 +25,24 @@ export const RegistrationSchema = v
   .refine((value) => value.password === value.confirmPassword, 'Passwords must match');
 
 export type Registration = Infer<typeof RegistrationSchema>;
+```
+
+### Parsing Form Payloads
+
+```ts
+const payload: unknown = {
+  confirmPassword: 'Secret123',
+  email: 'ada@example.com',
+  name: 'Ada',
+  newsletter: 'true',
+  password: 'Secret123',
+};
+
+const FormInputSchema = RegistrationSchema.extend({
+  newsletter: v.coerce.boolean().default(false),
+});
+
+const parsed = FormInputSchema.safeParse(payload);
 ```
 
 ### Mapping Errors For UI
@@ -58,16 +68,19 @@ const ProfileSchema = v.object({
 });
 ```
 
-## Expected Output
+### Partial Updates (Patch Forms)
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+```ts
+const ProfilePatchSchema = ProfileSchema.partial();
+
+ProfilePatchSchema.parse({ bio: 'Updated bio' });
+```
 
 ## Common Pitfalls
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Using `.parse()` directly on user input without error handling.
+- Forgetting to call `.safeParseAsync()` when schemas include `.refineAsync()`.
+- Applying `.transform()` too early in a chain and losing type-specific methods.
 
 ## Related Recipes
 
