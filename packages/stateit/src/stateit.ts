@@ -114,10 +114,12 @@ class ReactiveNode {
   protected subscribers = new Set<EffectCallback>();
 
   protected track(): void {
-    if (!currentScope.effect || !currentScope.deps) return;
+    const { deps, effect } = currentScope;
 
-    this.subscribers.add(currentScope.effect);
-    currentScope.deps.add(() => this.subscribers.delete(currentScope.effect!));
+    if (!effect || !deps) return;
+
+    this.subscribers.add(effect);
+    deps.add(() => this.subscribers.delete(effect));
   }
 
   protected hasSubscribers(): boolean {
@@ -267,7 +269,13 @@ export const batch = <T>(fn: () => T): T => {
 
     return result;
   } catch (e) {
-    if (--batchDepth === 0) flushBatch();
+    if (--batchDepth === 0) {
+      try {
+        flushBatch();
+      } catch (flushError) {
+        throw new AggregateError([e, flushError], '[stateit] batch error with flush errors', { cause: flushError });
+      }
+    }
 
     throw e;
   }

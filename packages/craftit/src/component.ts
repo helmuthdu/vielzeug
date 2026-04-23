@@ -5,7 +5,7 @@
 import type { Signal } from '@vielzeug/stateit';
 
 import { type ComponentHost, type ComponentSlots, createHost, createSlots } from './host';
-import { type EmitFn, type HTMLResult, createEmitFn, toKebab } from './internal';
+import { type EmitFn, type HTMLResult, createEmitFn, htmlResult, toKebab } from './internal';
 import {
   createProps,
   type InferPropsFromDefs,
@@ -78,11 +78,13 @@ export function define<
       runtime.props = props as Record<string, Signal<unknown>>;
       runtime.slots = slots;
 
-      return setup(props as any, {
+      const result = setup(props as any, {
         emit,
         host,
         slots,
       });
+
+      return typeof result === 'string' ? htmlResult(result) : result;
     },
     {
       formAssociated,

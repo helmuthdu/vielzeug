@@ -18,7 +18,7 @@ export type ComponentRegistrationOptions = {
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
-type ComponentSetupResult = HTMLResult | string;
+type ComponentSetupResult = HTMLResult;
 
 class BaseElement extends HTMLElement {
   // Lifecycle: setup() runs once on first connect. _init() runs on every connect.

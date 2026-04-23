@@ -40,6 +40,7 @@ export { defineField, type FormFieldCallbacks, type FormFieldHandle, type FormFi
 export {
   createContext,
   inject,
+  injectStrict,
   provide,
   syncAria,
   syncContextProps,

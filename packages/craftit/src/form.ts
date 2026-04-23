@@ -40,7 +40,9 @@ export const defineField = <T = unknown>(
   const ctor = host.constructor as typeof HTMLElement & { formAssociated?: boolean };
 
   if (!ctor.formAssociated) {
-    throw new Error('[craftit:E8] defineField() requires define(..., { formAssociated: true, ... })');
+    throw new Error(
+      `[craftit:E8] defineField() requires define(..., { formAssociated: true, ... }) for <${host.localName}>`,
+    );
   }
 
   const internals = internalsRegistry.get(host) ?? host.attachInternals();

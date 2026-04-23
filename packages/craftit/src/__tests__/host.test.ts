@@ -4,6 +4,7 @@ import {
   effect,
   html,
   inject,
+  injectStrict,
   onMount,
   provide,
   signal,
@@ -120,6 +121,40 @@ describe('core/host.ts', () => {
       expect((element as HTMLElement & { value?: string }).value).toBeUndefined();
     });
 
+    it('keeps the latest prop binding active when overlapping bindings target the same property', async () => {
+      const tag = `test-host-bind-overlap-${Math.random().toString(36).slice(2)}`;
+
+      register(tag, (_props, { host }) => {
+        const baseCleanup = host.bind({
+          prop: {
+            value: {
+              get: () => 'base',
+            },
+          },
+        });
+
+        host.bind({
+          prop: {
+            value: {
+              get: () => 'override',
+            },
+          },
+        });
+
+        baseCleanup();
+
+        return html`<div>ok</div>`;
+      });
+
+      const { destroy, element } = await mount(tag);
+
+      expect((element as HTMLElement & { value?: string }).value).toBe('override');
+
+      destroy();
+
+      expect((element as HTMLElement & { value?: string }).value).toBeUndefined();
+    });
+
     it('supports listener options for host event bindings', async () => {
       let clicks = 0;
       const { element } = await mount((_props, { host }) => {
@@ -217,6 +252,40 @@ describe('core/host.ts', () => {
 
         expect(consumerValue).toBe(2);
         expect(consumerEl?.shadowRoot?.querySelector('.v')?.textContent).toBe('2');
+      });
+    });
+
+    describe('injectStrict()', () => {
+      it('returns the provided value when context exists', async () => {
+        const ThemeKey = Symbol('theme') as InjectionKey<string>;
+        let received!: string;
+
+        await mount(() => {
+          provide(ThemeKey, 'dark');
+          received = injectStrict(ThemeKey);
+
+          return html`<div></div>`;
+        });
+
+        expect(received).toBe('dark');
+      });
+
+      it('throws when context is missing', async () => {
+        const MissingKey = Symbol('missing') as InjectionKey<string>;
+        let captured: unknown;
+
+        await mount(() => {
+          try {
+            injectStrict(MissingKey);
+          } catch (err) {
+            captured = err;
+          }
+
+          return html`<div></div>`;
+        });
+
+        expect(captured).toBeInstanceOf(Error);
+        expect((captured as Error).message).toContain('[craftit:E11]');
       });
     });
 

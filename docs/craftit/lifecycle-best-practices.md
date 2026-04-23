@@ -101,6 +101,8 @@ define('toggle-host', {
 - Use `onCleanup(fn)` for one-time teardown owned by the component.
 - Use a mutable cleanup variable when a disposable resource is replaced over time.
 
+Inside `setup()`/lifecycle helpers, `onCleanup()` is owned by the component instance; inside plain stateit effects outside component runtime it follows effect teardown.
+
 ```ts
 import { define, html, onCleanup, onMount, signal } from '@vielzeug/craftit';
 

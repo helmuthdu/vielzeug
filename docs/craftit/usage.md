@@ -196,6 +196,8 @@ Use lifecycle helpers from the main entrypoint.
 
 For ref-driven effects, host wiring patterns, and cleanup replacement strategies, see [Lifecycle Best Practices](./lifecycle-best-practices.md).
 
+`onCleanup()` is dual-scope: inside a component runtime it is tied to host disconnect, while outside components it follows the enclosing reactive effect lifecycle.
+
 ```ts
 import {
   define,
@@ -376,7 +378,7 @@ define(
 ## Context (Provide / Inject)
 
 ```ts
-import { createContext, define, html, inject, provide, signal } from '@vielzeug/craftit';
+import { createContext, define, html, injectStrict, provide, signal } from '@vielzeug/craftit';
 
 const COUNT_CTX = createContext<ReturnType<typeof signal<number>>>('count');
 
@@ -397,7 +399,7 @@ define(
   'count-consumer',
   {
     setup() {
-      const count = inject(COUNT_CTX, signal(0));
+      const count = injectStrict(COUNT_CTX);
 
       return html`<p>Count: ${count}</p>`;
     },

@@ -616,6 +616,7 @@ describe('core/component.ts', () => {
 
       expect(capturedError).toBeInstanceOf(Error);
       expect((capturedError as Error).message).toContain('formAssociated: true');
+      expect((capturedError as Error).message).toContain('<');
     });
   });
 

@@ -209,4 +209,98 @@ describe('Keyed Reconciliation', () => {
     expect(updatedNodes.length).toBe(2);
     expect(updatedNodes[0].textContent).toBe('A-Updated');
   });
+
+  it('should move keyed nodes when item order changes', async () => {
+    const items = signal([
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+    ]);
+
+    register(
+      'test-keyed-reorder',
+      () =>
+        html`<div>
+          ${each(items, {
+            key: (item) => item.id,
+            render: (item) => html`<span class="item">${item.value}</span>`,
+          })}
+        </div>`,
+    );
+
+    const { flush, queryAll } = await mount('test-keyed-reorder');
+    const initialNodes = queryAll('.item');
+
+    items.value = [
+      { id: 2, value: 'B' },
+      { id: 1, value: 'A' },
+    ];
+    await flush();
+
+    const reorderedNodes = queryAll('.item');
+
+    expect(reorderedNodes.map((node) => node.textContent)).toEqual(['B', 'A']);
+    expect(reorderedNodes[0]).toBe(initialNodes[1]);
+    expect(reorderedNodes[1]).toBe(initialNodes[0]);
+  });
+
+  it('should replace item nodes when keyed item HTML changes and run ref cleanups', async () => {
+    const cleanupSpy = vi.fn();
+    const items = signal([{ id: 1, mode: 'button' as 'button' | 'link' }]);
+
+    register(
+      'test-keyed-html-replace',
+      () => html`
+        <div>
+          ${each(items, {
+            key: (item) => item.id,
+            render: (item) =>
+              item.mode === 'button'
+                ? html`<button class="entry" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</button>`
+                : html`<a class="entry" href="#" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</a>`,
+          })}
+        </div>
+      `,
+    );
+
+    const { flush, query } = await mount('test-keyed-html-replace');
+
+    expect(query('.entry')?.tagName).toBe('BUTTON');
+
+    items.value = [{ id: 1, mode: 'link' }];
+    await flush();
+
+    expect(query('.entry')?.tagName).toBe('A');
+    expect(cleanupSpy).toHaveBeenCalled();
+  });
+
+  it('should handle keyed list empty transitions and restore keyed nodes', async () => {
+    const items = signal([{ id: 1, value: 'A' }]);
+
+    register(
+      'test-keyed-empty-transition',
+      () => html`
+        <ul>
+          ${each(items, {
+            fallback: () => html`<li class="empty">Empty</li>`,
+            key: (item) => item.id,
+            render: (item) => html`<li class="item">${item.value}</li>`,
+          })}
+        </ul>
+      `,
+    );
+
+    const { flush, query, queryAll } = await mount('test-keyed-empty-transition');
+
+    expect(queryAll('.item')).toHaveLength(1);
+
+    items.value = [];
+    await flush();
+    expect(queryAll('.item')).toHaveLength(0);
+    expect(query('.empty')?.textContent).toBe('Empty');
+
+    items.value = [{ id: 2, value: 'B' }];
+    await flush();
+    expect(query('.empty')).toBeNull();
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['B']);
+  });
 });

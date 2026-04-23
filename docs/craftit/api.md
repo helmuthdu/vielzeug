@@ -269,11 +269,14 @@ Omit the name to address the default slot.
 - `createContext<T>(description?)`
 - `provide(key, value)`
 - `inject(key)` / `inject(key, fallback)`
+- `injectStrict(key)`
 - `syncContextProps(ctx, props)`
 
 Types:
 
 - `InjectionKey<T>`
+
+`injectStrict(key)` throws when no provider value is found, which is useful for required parent context contracts.
 
 ## Form-Associated API
 

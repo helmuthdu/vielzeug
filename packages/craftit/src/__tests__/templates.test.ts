@@ -261,6 +261,41 @@ describe('Template: HTML System', () => {
 
       expect(clicks).toBe(1);
     });
+
+    it('should support combined modifiers with signal-backed dynamic handlers', async () => {
+      const first = vi.fn();
+      const second = vi.fn();
+      const handler = signal<(event: Event) => void>((event) => first(event));
+      const parentClicks = vi.fn();
+
+      const { flush, query } = await mount(
+        () => html`
+          <div class="parent" @click=${() => parentClicks()}>
+            <a class="link" href="#" @click.stop.prevent=${handler}>Run</a>
+          </div>
+        `,
+      );
+
+      const link = query('.link') as HTMLAnchorElement;
+
+      const firstEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+      link.dispatchEvent(firstEvent);
+      expect(first).toHaveBeenCalledTimes(1);
+      expect(parentClicks).toHaveBeenCalledTimes(0);
+      expect(firstEvent.defaultPrevented).toBe(true);
+
+      handler.value = (event) => second(event);
+      await flush();
+
+      const secondEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+      link.dispatchEvent(secondEvent);
+      expect(first).toHaveBeenCalledTimes(1);
+      expect(second).toHaveBeenCalledTimes(1);
+      expect(parentClicks).toHaveBeenCalledTimes(0);
+      expect(secondEvent.defaultPrevented).toBe(true);
+    });
   });
 
   describe('Edge Cases', () => {

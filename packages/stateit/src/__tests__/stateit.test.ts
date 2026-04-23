@@ -1,4 +1,4 @@
-import { batch, computed, effect, onCleanup, signal, store, watch } from '../';
+import { batch, computed, effect, onCleanup, signal, store, untrack, watch } from '../';
 
 describe('stateit', () => {
   it('supports direct singleton primitives', () => {
@@ -135,5 +135,227 @@ describe('stateit', () => {
     expect(() => {
       ok.update(() => 1 as unknown as { count: number });
     }).toThrow(/must return a plain object/);
+  });
+
+  // === EDGE CASES ===
+
+  describe('track: cleanup captures subscribed effect, not current scope', () => {
+    it('nested effects do not leak subscriptions across scope boundaries', () => {
+      const a = signal(0);
+      const b = signal(0);
+      const outerLog: number[] = [];
+      const innerLog: number[] = [];
+
+      const stopOuter = effect(() => {
+        outerLog.push(a.value);
+
+        const stopInner = effect(() => {
+          innerLog.push(b.value);
+        });
+
+        onCleanup(stopInner);
+      });
+
+      // changing b should only notify inner
+      b.value = 1;
+      expect(innerLog).toEqual([0, 1]);
+      expect(outerLog).toEqual([0]);
+
+      // changing a re-runs outer and creates a fresh inner; old inner is cleaned up
+      a.value = 1;
+      expect(outerLog).toEqual([0, 1]);
+
+      // b change should still reach the new inner, not a stale one
+      const prevInnerLen = innerLog.length;
+
+      b.value = 2;
+      expect(innerLog.length).toBe(prevInnerLen + 1);
+
+      stopOuter();
+    });
+  });
+
+  describe('effect: loop guard', () => {
+    it('throws after maxIterations when effect re-triggers itself synchronously', () => {
+      const n = signal(0);
+
+      expect(() => {
+        effect(
+          () => {
+            if (n.value < 200) n.value++;
+          },
+          { maxIterations: 10 },
+        );
+      }).toThrow(/infinite effect loop/);
+    });
+
+    it('respects a custom maxIterations limit', () => {
+      const n = signal(0);
+
+      expect(() => {
+        effect(
+          () => {
+            if (n.value < 5) n.value++;
+          },
+          { maxIterations: 3 },
+        );
+      }).toThrow(/> 3 iterations/);
+    });
+  });
+
+  describe('computed: disposal semantics', () => {
+    it('stops updating after dispose and does not accumulate stale subscriptions', () => {
+      const n = signal(1);
+      const c = computed(() => n.value * 10);
+
+      expect(c.value).toBe(10);
+      c.dispose();
+
+      // must throw on read
+      expect(() => c.value).toThrow(/disposed/);
+    });
+
+    it('auto-disposes computed created inside an effect when the effect re-runs', () => {
+      const toggle = signal(false);
+      const inner = signal(0);
+      const computedLog: number[] = [];
+
+      const stop = effect(() => {
+        if (toggle.value) {
+          const c = computed(() => inner.value + 100);
+
+          computedLog.push(c.value);
+          // c is auto-disposed when this effect re-runs
+        }
+      });
+
+      toggle.value = true;
+      expect(computedLog).toEqual([100]);
+
+      // re-run by changing toggle again – previous computed must be disposed
+      inner.value = 5;
+      toggle.value = false;
+      toggle.value = true; // inner is now 5, so 5+100=105 again
+      expect(computedLog).toEqual([100, 105, 105]);
+
+      stop();
+    });
+  });
+
+  describe('watch: selector overload disposal', () => {
+    it('does not fire after stop()', () => {
+      const s = signal({ x: 0, y: 0 });
+      const log: number[] = [];
+
+      const stop = watch(
+        s,
+        (v) => v.x,
+        (next) => log.push(next),
+      );
+
+      s.value = { x: 1, y: 99 };
+      expect(log).toEqual([1]);
+
+      stop();
+      s.value = { x: 2, y: 0 };
+      expect(log).toEqual([1]); // no further calls
+    });
+
+    it('calling stop() twice does not throw', () => {
+      const s = signal(0);
+      const stop = watch(s, vi.fn());
+
+      expect(() => {
+        stop();
+        stop();
+      }).not.toThrow();
+    });
+  });
+
+  describe('batch: error handling', () => {
+    it('original error is thrown when fn throws with no flush error', () => {
+      const n = signal(0);
+      const log: number[] = [];
+
+      effect(() => {
+        log.push(n.value);
+      });
+
+      expect(() => {
+        batch(() => {
+          n.value = 1;
+          throw new Error('boom');
+        });
+      }).toThrow('boom');
+
+      // subscribers that were queued before the throw should still have fired
+      // (mutations happened; flush ran after the throw with no secondary error)
+      expect(log).toContain(1);
+    });
+
+    it('wraps both errors in AggregateError when fn AND flush both throw', () => {
+      const n = signal(0);
+
+      // Make the subscriber throw during flush
+      effect(() => {
+        if (n.value === 1) throw new Error('subscriber-boom');
+      });
+
+      let caught: unknown;
+
+      try {
+        batch(() => {
+          n.value = 1;
+          throw new Error('fn-boom');
+        });
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught).toBeInstanceOf(AggregateError);
+
+      const agg = caught as AggregateError;
+
+      expect(agg.errors[0]).toMatchObject({ message: 'fn-boom' });
+      expect(agg.errors[1]).toMatchObject({ message: 'subscriber-boom' });
+    });
+
+    it('multiple subscriber errors in a flush become AggregateError', () => {
+      const n = signal(0);
+
+      effect(() => {
+        if (n.value > 0) throw new Error('sub-a');
+      });
+      effect(() => {
+        if (n.value > 0) throw new Error('sub-b');
+      });
+
+      expect(() => {
+        batch(() => {
+          n.value = 1;
+        });
+      }).toThrow(AggregateError);
+    });
+  });
+
+  describe('untrack', () => {
+    it('reads inside untrack do not register as dependencies', () => {
+      const n = signal(0);
+      const log: number[] = [];
+
+      const stop = effect(() => {
+        // peek at n without subscribing
+        const v = untrack(() => n.value);
+
+        log.push(v);
+      });
+
+      // changing n should NOT re-run the effect
+      n.value = 1;
+      n.value = 2;
+      expect(log).toEqual([0]);
+
+      stop();
+    });
   });
 });

@@ -16,6 +16,7 @@ import { currentRuntime, effect, onCleanup, onMount, type HostEventListeners } f
 // ─────────────────────────────────────────────────────────────────────────────
 
 const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown> | string | symbol, unknown>>();
+const hostPropBindingOwners = new WeakMap<HTMLElement, Map<string, symbol>>();
 
 export type InjectionKey<T> = symbol & {
   readonly __craftit_injection_key?: T;
@@ -48,6 +49,16 @@ export function inject<T>(key: InjectionKey<T> | string | symbol, ...rest: [T?])
 
   return rest.length > 0 ? rest[0] : undefined;
 }
+
+export const injectStrict = <T>(key: InjectionKey<T> | string | symbol): T => {
+  const resolved = inject<T>(key);
+
+  if (resolved !== undefined) return resolved;
+
+  const host = currentRuntime().el;
+
+  throw new Error(`[craftit:E11] injectStrict(...) failed for key "${String(key)}" in <${host.localName}>`);
+};
 
 export function createContext<T>(description?: string): InjectionKey<T> {
   return Symbol(description) as InjectionKey<T>;
@@ -336,8 +347,15 @@ export const createHost = (): ComponentHost => {
       }
 
       if (config.prop) {
+        const propOwners = hostPropBindingOwners.get(el) ?? new Map<string, symbol>();
+
+        if (!hostPropBindingOwners.has(el)) hostPropBindingOwners.set(el, propOwners);
+
         for (const [key, descriptor] of Object.entries(config.prop)) {
           const { get, set } = descriptor;
+          const ownerToken = Symbol(key);
+
+          propOwners.set(key, ownerToken);
 
           Object.defineProperty(el, key, {
             configurable: true,
@@ -347,7 +365,12 @@ export const createHost = (): ComponentHost => {
           });
 
           disposers.push(() => {
+            if (propOwners.get(key) !== ownerToken) return;
+
+            propOwners.delete(key);
             delete (el as unknown as Record<string, unknown>)[key];
+
+            if (propOwners.size === 0) hostPropBindingOwners.delete(el);
           });
         }
       }
