@@ -172,8 +172,6 @@ describe('createOverlayControl', () => {
       },
     });
 
-    const cleanup = overlay.bindOutsideClick(document);
-
     overlay.open({ reason: 'trigger' });
     insideBoundary.click();
     expect(openState.value).toBe(true);
@@ -185,7 +183,6 @@ describe('createOverlayControl', () => {
     expect(openState.value).toBe(false);
     expect(closeReasons.at(-1)).toBe('outside-click');
 
-    cleanup();
     host.remove();
     panel.remove();
     outside.remove();
@@ -207,8 +204,6 @@ describe('createOverlayControl', () => {
       },
     });
 
-    const cleanup = overlay.bindOutsideClick(document);
-
     overlay.open({ reason: 'trigger' });
 
     const click = new MouseEvent('click', { bubbles: true });
@@ -218,7 +213,6 @@ describe('createOverlayControl', () => {
 
     expect(openState.value).toBe(false);
 
-    cleanup();
     host.remove();
     outside.remove();
   });

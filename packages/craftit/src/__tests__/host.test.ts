@@ -34,27 +34,25 @@ const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinit
 describe('core/host.ts', () => {
   describe('Host bind API', () => {
     it('applies host attrs and classes from object-style config', async () => {
-      const { element, flush } = await mount({
-        setup: (_props, { host }) => {
-          const open = signal(false);
+      const { element, flush } = await mount((_props, { host }) => {
+        const open = signal(false);
 
-          host.bind({
-            attr: {
-              'aria-expanded': () => String(open.value),
-              role: 'button',
+        host.bind({
+          attr: {
+            'aria-expanded': () => String(open.value),
+            role: 'button',
+          },
+          class: () => ({ 'is-open': open.value }),
+          on: {
+            click: () => {
+              open.value = true;
             },
-            class: () => ({ 'is-open': open.value }),
-            on: {
-              click: () => {
-                open.value = true;
-              },
-            },
-          });
+          },
+        });
 
-          return {
-            render: () => html`<button>Open</button>`,
-          };
-        },
+        return {
+          render: () => html`<button>Open</button>`,
+        };
       });
 
       expect(element.getAttribute('role')).toBe('button');
@@ -69,26 +67,24 @@ describe('core/host.ts', () => {
     });
 
     it('applies class records with static and reactive values', async () => {
-      const { element, flush } = await mount({
-        setup: (_props, { host }) => {
-          const open = signal(false);
-          const active = signal(true);
+      const { element, flush } = await mount((_props, { host }) => {
+        const open = signal(false);
+        const active = signal(true);
 
-          host.bind({
-            class: {
-              active,
-              open: () => open.value,
-              ready: true,
-            },
-          });
+        host.bind({
+          class: {
+            active,
+            open: () => open.value,
+            ready: true,
+          },
+        });
 
-          open.value = true;
-          active.value = false;
+        open.value = true;
+        active.value = false;
 
-          return {
-            render: () => html`<div></div>`,
-          };
-        },
+        return {
+          render: () => html`<div></div>`,
+        };
       });
 
       await flush();
@@ -99,25 +95,23 @@ describe('core/host.ts', () => {
     });
 
     it('prop binding exposes reactive get/set on the host element', async () => {
-      const { element, flush } = await mount({
-        setup: (_props, { host }) => {
-          const internalValue = signal('initial');
+      const { element, flush } = await mount((_props, { host }) => {
+        const internalValue = signal('initial');
 
-          host.bind({
-            prop: {
-              value: {
-                get: () => internalValue.value,
-                set: (v: unknown) => {
-                  internalValue.value = String(v);
-                },
+        host.bind({
+          prop: {
+            value: {
+              get: () => internalValue.value,
+              set: (v: unknown) => {
+                internalValue.value = String(v);
               },
             },
-          });
+          },
+        });
 
-          return {
-            render: () => html`<div>${internalValue}</div>`,
-          };
-        },
+        return {
+          render: () => html`<div>${internalValue}</div>`,
+        };
       });
 
       expect((element as HTMLElement & { value: string }).value).toBe('initial');
@@ -129,26 +123,24 @@ describe('core/host.ts', () => {
     });
 
     it('supports style and prop bindings via host.bind', async () => {
-      const { element, flush } = await mount({
-        setup: (_props, { host }) => {
-          const color = signal('rgb(255, 0, 0)');
+      const { element, flush } = await mount((_props, { host }) => {
+        const color = signal('rgb(255, 0, 0)');
 
-          host.bind({
-            prop: {
-              value: {
-                get: () => color.value,
-                set: (next: unknown) => {
-                  color.value = String(next);
-                },
+        host.bind({
+          prop: {
+            value: {
+              get: () => color.value,
+              set: (next: unknown) => {
+                color.value = String(next);
               },
             },
-            style: { color },
-          });
+          },
+          style: { color },
+        });
 
-          return {
-            render: () => html`<div></div>`,
-          };
-        },
+        return {
+          render: () => html`<div></div>`,
+        };
       });
 
       expect((element as HTMLElement & { value: string }).value).toBe('rgb(255, 0, 0)');
@@ -161,20 +153,18 @@ describe('core/host.ts', () => {
     });
 
     it('prop binding is cleaned up on component destroy', async () => {
-      const { destroy, element } = await mount({
-        setup: (_props, { host }) => {
-          host.bind({
-            prop: {
-              value: {
-                get: () => 'alive',
-              },
+      const { destroy, element } = await mount((_props, { host }) => {
+        host.bind({
+          prop: {
+            value: {
+              get: () => 'alive',
             },
-          });
+          },
+        });
 
-          return {
-            render: () => html`<div></div>`,
-          };
-        },
+        return {
+          render: () => html`<div></div>`,
+        };
       });
 
       expect((element as HTMLElement & { value?: string }).value).toBe('alive');
@@ -221,23 +211,21 @@ describe('core/host.ts', () => {
     it('supports listener options for host event bindings', async () => {
       let clicks = 0;
 
-      const { element } = await mount({
-        setup: (_props, { host }) => {
-          host.bind(
-            {
-              on: {
-                click: () => {
-                  clicks++;
-                },
+      const { element } = await mount((_props, { host }) => {
+        host.bind(
+          {
+            on: {
+              click: () => {
+                clicks++;
               },
             },
-            { once: true },
-          );
+          },
+          { once: true },
+        );
 
-          return {
-            render: () => html`<div>Host listener</div>`,
-          };
-        },
+        return {
+          render: () => html`<div>Host listener</div>`,
+        };
       });
 
       element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -253,15 +241,13 @@ describe('core/host.ts', () => {
         const ThemeKey = Symbol('theme') as InjectionKey<string>;
         let received: string | undefined;
 
-        await mount({
-          setup: () => {
-            provide(ThemeKey, 'dark');
-            received = inject(ThemeKey);
+        await mount(() => {
+          provide(ThemeKey, 'dark');
+          received = inject(ThemeKey);
 
-            return {
-              render: () => html`<div></div>`,
-            };
-          },
+          return {
+            render: () => html`<div></div>`,
+          };
         });
 
         expect(received).toBe('dark');
@@ -270,14 +256,12 @@ describe('core/host.ts', () => {
       it('returns the supplied fallback when the key has never been provided', async () => {
         const AbsentKey = Symbol('absent') as InjectionKey<string>;
 
-        const { query } = await mount({
-          setup: () => {
-            const value = inject(AbsentKey, 'fallback');
+        const { query } = await mount(() => {
+          const value = inject(AbsentKey, 'fallback');
 
-            return {
-              render: () => html`<div>${value}</div>`,
-            };
-          },
+          return {
+            render: () => html`<div>${value}</div>`,
+          };
         });
 
         expect(query('div')?.textContent).toBe('fallback');
@@ -287,14 +271,12 @@ describe('core/host.ts', () => {
         const MissingKey = Symbol('missing') as InjectionKey<string>;
         let received: string | undefined = 'sentinel';
 
-        await mount({
-          setup: () => {
-            received = inject(MissingKey);
+        await mount(() => {
+          received = inject(MissingKey);
 
-            return {
-              render: () => html`<div></div>`,
-            };
-          },
+          return {
+            render: () => html`<div></div>`,
+          };
         });
 
         expect(received).toBeUndefined();
@@ -341,15 +323,13 @@ describe('core/host.ts', () => {
         const ThemeKey = Symbol('theme') as InjectionKey<string>;
         let received!: string;
 
-        await mount({
-          setup: () => {
-            provide(ThemeKey, 'dark');
-            received = injectStrict(ThemeKey);
+        await mount(() => {
+          provide(ThemeKey, 'dark');
+          received = injectStrict(ThemeKey);
 
-            return {
-              render: () => html`<div></div>`,
-            };
-          },
+          return {
+            render: () => html`<div></div>`,
+          };
         });
 
         expect(received).toBe('dark');
@@ -359,18 +339,16 @@ describe('core/host.ts', () => {
         const MissingKey = Symbol('missing') as InjectionKey<string>;
         let captured: unknown;
 
-        await mount({
-          setup: () => {
-            try {
-              injectStrict(MissingKey);
-            } catch (err) {
-              captured = err;
-            }
+        await mount(() => {
+          try {
+            injectStrict(MissingKey);
+          } catch (err) {
+            captured = err;
+          }
 
-            return {
-              render: () => html`<div></div>`,
-            };
-          },
+          return {
+            render: () => html`<div></div>`,
+          };
         });
 
         expect(captured).toBeInstanceOf(Error);
@@ -396,14 +374,12 @@ describe('core/host.ts', () => {
           return html`<div class="info">${user?.name} (${user?.role})</div>`;
         });
 
-        const { element, flush } = await mount({
-          setup: () => {
-            provide(UserCtx, { name: 'Alice', role: 'admin' });
+        const { element, flush } = await mount(() => {
+          provide(UserCtx, { name: 'Alice', role: 'admin' });
 
-            return {
-              render: () => html`<${childTag}></${childTag}>`,
-            };
-          },
+          return {
+            render: () => html`<${childTag}></${childTag}>`,
+          };
         });
 
         await flush();
@@ -422,15 +398,13 @@ describe('core/host.ts', () => {
       let defaultAssigned!: ReadonlySignal<boolean>;
 
       const { flush } = await mount(
-        {
-          setup: (_props, { slots }) => {
-            headerAssigned = slots.has('header');
-            defaultAssigned = slots.has();
+        (_props, { slots }) => {
+          headerAssigned = slots.has('header');
+          defaultAssigned = slots.has();
 
-            return {
-              render: () => html`<slot name="header"></slot><slot></slot>`,
-            };
-          },
+          return {
+            render: () => html`<slot name="header"></slot><slot></slot>`,
+          };
         },
         { html: '<span slot="header">Title</span><span>Default content</span>' },
       );
@@ -445,14 +419,12 @@ describe('core/host.ts', () => {
       let triggerElements!: ReadonlySignal<Element[]>;
 
       const { flush } = await mount(
-        {
-          setup: (_props, { slots }) => {
-            triggerElements = slots.elements('trigger');
+        (_props, { slots }) => {
+          triggerElements = slots.elements('trigger');
 
-            return {
-              render: () => html`<slot name="trigger"></slot>`,
-            };
-          },
+          return {
+            render: () => html`<slot name="trigger"></slot>`,
+          };
         },
         { html: '<button slot="trigger">Open</button>' },
       );
@@ -466,16 +438,14 @@ describe('core/host.ts', () => {
     it('supports reactive side effects from namedElements without accidental dependency loops', async () => {
       const callback = vi.fn();
 
-      const { flush } = await mount({
-        setup: (_props, { slots }) => {
-          effect(() => {
-            callback(slots.elements('nonexistent').value);
-          });
+      const { flush } = await mount((_props, { slots }) => {
+        effect(() => {
+          callback(slots.elements('nonexistent').value);
+        });
 
-          return {
-            render: () => html`<div>No slots here</div>`,
-          };
-        },
+        return {
+          render: () => html`<div>No slots here</div>`,
+        };
       });
 
       await flush();
@@ -486,14 +456,12 @@ describe('core/host.ts', () => {
     it('updates slot signals when assigned light-DOM content changes', async () => {
       let defaultElements!: ReadonlySignal<Element[]>;
 
-      const { element, flush } = await mount({
-        setup: (_props, { slots }) => {
-          defaultElements = slots.elements();
+      const { element, flush } = await mount((_props, { slots }) => {
+        defaultElements = slots.elements();
 
-          return {
-            render: () => html`<slot></slot>`,
-          };
-        },
+        return {
+          render: () => html`<slot></slot>`,
+        };
       });
 
       await flush();

@@ -1,4 +1,4 @@
-import type { ComboboxOptionItem, ComboboxSelectionItem } from './combobox.types';
+import type { ComboboxOptionItem } from './combobox.types';
 
 export function parseSlottedOptions(elements: Element[]): ComboboxOptionItem[] {
   return elements
@@ -16,19 +16,6 @@ export function parseSlottedOptions(elements: Element[]): ComboboxOptionItem[] {
         '',
       value: el.getAttribute('value') ?? '',
     }));
-}
-
-export function backfillSelectionLabels(
-  selectedValues: ComboboxSelectionItem[],
-  allOptions: ComboboxOptionItem[],
-): ComboboxSelectionItem[] {
-  return selectedValues.map((selection) => {
-    if (selection.label) return selection;
-
-    const match = allOptions.find((option) => option.value === selection.value);
-
-    return match ? { label: match.label, value: selection.value } : selection;
-  });
 }
 
 export function filterOptions(options: ComboboxOptionItem[], query: string, noFilter: boolean): ComboboxOptionItem[] {

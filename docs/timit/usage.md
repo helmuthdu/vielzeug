@@ -11,6 +11,24 @@ Start with the [Overview](./index.md) for a quick introduction, then use this pa
 
 [[toc]]
 
+## Import Styles
+
+Timit supports both named imports and a convenience namespace.
+
+```ts
+import { now, shift, toZoned } from '@vielzeug/timit';
+// or
+import { d } from '@vielzeug/timit';
+
+const meetingA = toZoned(now(), { tz: 'America/New_York' });
+const meetingB = d.toZoned(d.now(), { tz: 'America/New_York' });
+
+const reminderA = shift(meetingA, { minutes: -15 });
+const reminderB = d.shift(meetingB, { minutes: -15 });
+```
+
+Prefer named imports when bundle size matters, since bundlers can tree-shake unused helpers more aggressively.
+
 ## Parsing Inputs
 
 Use `toInstant()` to normalize any supported input to a canonical timeline value.

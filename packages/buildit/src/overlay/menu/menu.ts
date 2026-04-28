@@ -286,6 +286,8 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       });
     }
 
+    const triggerRef = { value: null as HTMLElement | null };
+
     const popupList = createPopupListControl({
       ariaSync: { role: 'menu' },
       getBoundaryElement: () => host.el,
@@ -304,6 +306,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
         reference: () => triggerEl,
         update: updatePosition,
       },
+      triggerRef,
       setIndex: (index) => {
         focusedIndex = index;
 
@@ -441,32 +444,19 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
           panelEl.toggleAttribute('data-open', isOpenSignal.value);
         });
 
-        let triggerBinding: (() => void) | null = null;
-
         function resolveTrigger() {
           const assigned = triggerSlot?.assignedElements({ flatten: true });
 
           triggerEl = (assigned?.[0] as HTMLElement | undefined) ?? null;
-
-          if (triggerEl) {
-            triggerBinding?.();
-            triggerBinding = popupList.syncTriggerAria(triggerEl);
-          } else {
-            triggerBinding?.();
-            triggerBinding = null;
-          }
+          triggerRef.value = triggerEl;
         }
 
         watch(slots.elements('trigger'), resolveTrigger, { immediate: true });
 
-        const removeOutsideClick = popupList.bindOutsideClick(document);
-
         handle(panelEl, 'keydown', handleMenuKeydown as EventListener);
 
         return () => {
-          removeOutsideClick();
-          triggerBinding?.();
-          triggerBinding = null;
+          triggerRef.value = null;
         };
       },
 

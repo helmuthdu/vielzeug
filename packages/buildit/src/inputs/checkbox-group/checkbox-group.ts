@@ -109,20 +109,17 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
 
     mountFormContextSync(host.el, formCtx, props);
 
-    const choice = createChoiceField<string>({
+    const choice = createChoiceField({
       context: formCtx,
       disabled: props.disabled,
       error: props.error,
-      getValue: (value) => value,
       helper: props.helper,
-      label: props.label,
-      mapControlledValue: (value) => value,
       multiple: signal(true),
       name: props.name,
       prefix: 'checkbox-group',
       value: props.values,
     });
-    const checkedValues = choice.selectedItems;
+    const checkedValues = choice.selectedValues;
 
     const getCheckboxes = (): HTMLElement[] => getSlottedByTag(host.el, 'bit-checkbox');
     const getLabelForValue = (value: string): string => getChoiceLabel(getCheckboxes(), value);
@@ -133,7 +130,7 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     };
 
     const toggleCheckbox = (val: string, originalEvent?: Event) => {
-      choice.toggleItem(val);
+      choice.toggleValue(val);
       host.el.setAttribute('values', choice.formValue.value);
       choice.triggerValidation('change');
       emitChange(originalEvent);

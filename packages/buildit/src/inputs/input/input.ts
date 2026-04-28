@@ -149,22 +149,15 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       fieldId: inputId,
       helperId,
       labelInsetId,
-      labelInsetRef,
       labelOutsideId,
-      labelOutsideRef,
       value: fieldValue,
     } = createTextField({
-      autocomplete: props.autocomplete,
       context: formCtx,
       disabled: props.disabled,
       elementRef: inputRef,
       error: props.error,
       helper: props.helper,
-      inputmode: props.inputmode,
-      label: props.label,
-      labelPlacement: props['label-placement'],
       maxLength: props.maxlength,
-      minLength: props.minlength,
       name: props.name,
       onChange: (event, value) => {
         emit('change', { originalEvent: event, value });
@@ -172,12 +165,7 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       onInput: (event, value) => {
         emit('input', { originalEvent: event, value });
       },
-      pattern: props.pattern,
-      placeholder: props.placeholder,
       prefix: 'input',
-      readOnly: props.readonly,
-      required: props.required,
-      type: resolvedInputType,
       value: props.value,
     });
 
@@ -202,6 +190,8 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     const helperText = () => assistive.value.helperText;
     const errorHidden = () => !assistive.value.errorText;
     const errorText = () => assistive.value.errorText;
+    const outsideLabelHidden = () => !props.label.value || props['label-placement'].value !== 'outside';
+    const insetLabelHidden = () => !props.label.value || props['label-placement'].value !== 'inset';
     const counterNearLimit = () => (assistive.value.counterNearLimit && !assistive.value.counterAtLimit ? '' : null);
     const counterAtLimit = () => (assistive.value.counterAtLimit ? '' : null);
     const counterHidden = () => !assistive.value.hasCounter;
@@ -220,16 +210,14 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
             for="${inputId}"
             id="${labelOutsideId}"
             part="label"
-            ref="${labelOutsideRef}"
-            hidden></label>
+            ?hidden="${outsideLabelHidden}">${props.label}</label>
           <div class="field" part="field">
             <label
               class="label-inset"
               for="${inputId}"
               id="${labelInsetId}"
               part="label"
-              ref="${labelInsetRef}"
-              hidden></label>
+              ?hidden="${insetLabelHidden}">${props.label}</label>
             <div class="input-row" part="input-row">
               <slot name="prefix"></slot>
               <input

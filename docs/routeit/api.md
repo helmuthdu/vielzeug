@@ -1,9 +1,7 @@
 ---
 title: Routeit — API Reference
-description: Complete API reference for the declarative Routeit v3 router.
+description: Complete API reference for the declarative Routeit router.
 ---
-
-# Routeit API Reference
 
 [[toc]]
 
@@ -12,53 +10,60 @@ description: Complete API reference for the declarative Routeit v3 router.
 | Symbol | Purpose |
 | --- | --- |
 | `createRouter({ routes, ...options })` | Create a router from a route table |
-| `defineRoutes(routes)` | Preserve literal route definitions for better inference |
+| `createBrowserHistory()` | Create the default browser history driver |
 | `router.navigate({ name, ... })` | Navigate by route name |
+| `router.navigate({ path })` | Navigate by raw path target |
 | `router.url(name, params?, query?)` | Build a URL for a named route |
-| `router.pushPath(path)` | Push a raw path when it does not belong in the route table |
-| `router.replacePath(path)` | Replace the current history entry with a raw path |
 
 ## `createRouter(options)`
 
 ```ts
-import { createRouter, defineRoutes } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/routeit';
 
 const router = createRouter({
   base: '/app',
-  routes: defineRoutes({
+  routes: {
     home: { path: '/', handler: () => renderHome() },
-    userDetail: { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
+    dashboard: {
+      path: '/dashboard',
+      children: {
+        index: { index: true, handler: () => renderDashboardHome() },
+        settings: { path: 'settings', data: () => fetchSettings(), handler: ({ data }) => renderSettings(data) },
+      },
+    },
     notFound: { path: '*', handler: () => renderNotFound() },
-  }),
+  },
 });
 ```
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `base` | `string` | `'/'` | Base path prefix for all routes |
-| `middleware` | `Middleware \| Middleware[]` | `[]` | Global middleware prepended to every route |
+| `history` | `HistoryDriver` | `createBrowserHistory()` | History source used for reading locations and writing navigations |
+| `middleware` | `Middleware[]` | `[]` | Global middleware prepended to every route |
 | `routes` | `RouteTable` | required | Declarative route table. Object key order defines match precedence. |
 | `viewTransition` | `boolean` | `false` | Wrap navigations in the View Transition API when available |
-| `autoStart` | `boolean` | `false` | Start listening and handle the current URL immediately |
 
 **Returns:** `Router`
 
-## `defineRoutes(routes)`
+## Route Table
+
+Define routes as a plain object where keys become route names. TypeScript will infer route params from literal `path` strings.
 
 ```ts
-const routes = defineRoutes({
+const routes = {
   home: { path: '/' },
   userDetail: { path: '/users/:id' },
   files: { path: '/files/:rest*' },
-});
+};
 ```
 
-Use this helper when you want TypeScript to preserve each route's literal `path` string so `params` inference flows into handlers, `navigate()`, and `url()`.
+Nested routes are declared with `children`, and child names become compound names with dot notation.
 
-## Route Table Shape
+## Route Definition
 
 ```ts
-const routes = defineRoutes({
+const routes = {
   home: {
     path: '/',
     handler: () => renderHome(),
@@ -66,12 +71,23 @@ const routes = defineRoutes({
   dashboard: {
     path: '/dashboard',
     middleware: requireAuth,
-    handler: () => renderDashboard(),
+    children: {
+      index: {
+        index: true,
+        handler: () => renderDashboard(),
+      },
+      settings: {
+        path: 'settings',
+        data: async () => fetchSettings(),
+        handler: ({ data }) => renderSettings(data),
+      },
+    },
   },
   userDetail: {
     path: '/users/:id',
     meta: { section: 'users' },
-    handler: ({ params, meta }) => renderUser(params.id, meta),
+    data: async ({ params }) => fetchUser(params.id),
+    handler: ({ data }) => renderUser(data),
   },
   notFound: {
     path: '*',
@@ -84,26 +100,27 @@ Each route definition supports these fields:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `path` | `string` | Route pattern. Supports static paths, `:param`, `:param*`, and `*`. |
+| `path` | `string` | Route pattern. Supports static paths, `:param`, `:param*`, and `*`. Child paths are relative unless they start with `/`. |
+| `children` | `Record<string, RouteDefinition>` | Nested child routes. Child names are appended to the parent route name. |
+| `index` | `boolean` | Default child route that inherits the parent path. |
+| `data` | `DataFn` | Optional route data function. Runs after middleware and before the handler. |
 | `handler` | `RouteHandler` | Optional terminal handler |
-| `middleware` | `Middleware \| Middleware[]` | Optional route-specific middleware |
-| `meta` | `unknown` | Static metadata exposed on `ctx.meta` and `router.state.meta` |
+| `middleware` | `Middleware[]` | Optional route-specific middleware |
+| `meta` | `unknown` | Static metadata exposed on `router.state.matches.at(-1)?.meta` |
+
+## `createBrowserHistory()`
+
+```ts
+import { createBrowserHistory } from '@vielzeug/routeit';
+
+const history = createBrowserHistory();
+```
+
+Create the default `HistoryDriver` used by Routeit. Pass a custom driver to `createRouter({ history })` when you need memory-backed navigation for tests or a framework adapter.
 
 ## `Router`
 
 ### Lifecycle
-
-#### `router.start()`
-
-Start listening for `popstate` and handle the current URL once.
-
-**Returns:** `this`
-
-#### `router.stop()`
-
-Stop reacting to `popstate`. The router instance remains usable.
-
-**Returns:** `void`
 
 #### `router.dispose()`
 
@@ -130,23 +147,12 @@ await router.navigate({ name: 'search', query: { q: 'routeit' }, hash: 'results'
 
 **Returns:** `Promise<void>`
 
-Named navigation is the primary API. If you need a one-off destination outside the route table, use `pushPath()` or `replacePath()`.
-
-#### `router.pushPath(path, options?)`
+Named routes stay the primary API, but `navigate()` also accepts raw path targets.
 
 ```ts
-await router.pushPath('/marketing?utm_source=campaign');
+await router.navigate({ path: '/marketing?utm_source=campaign' });
+await router.navigate({ path: '/checkout#payment' }, { replace: true });
 ```
-
-Push a raw path to history and run the matching route.
-
-#### `router.replacePath(path, options?)`
-
-```ts
-await router.replacePath('/checkout#payment');
-```
-
-Replace the current history entry with a raw path and run the matching route.
 
 ### Route Helpers
 
@@ -175,11 +181,14 @@ Check whether the current pathname matches a named route exactly or by prefix.
 #### `router.resolve(pathname)`
 
 ```ts
-router.resolve('/app/users/42');
-// => { name: 'userDetail', params: { id: '42' }, meta: { section: 'users' } }
+router.resolve('/app/dashboard/settings');
+// => [
+//      { name: 'dashboard', ... },
+//      { name: 'dashboard.settings', ... },
+//    ]
 ```
 
-Resolve a pathname without running middleware, handlers, or subscribers.
+Resolve a pathname without running middleware, handlers, or subscribers. Returns the matched branch from root to leaf.
 
 **Returns:** `ResolvedRoute | null`
 
@@ -190,14 +199,19 @@ Resolve a pathname without running middleware, handlers, or subscribers.
 Current immutable route snapshot.
 
 ```ts
-const { pathname, params, query, hash, name, meta } = router.state;
+const { location, matches, status } = router.state;
+
+location.pathname;
+location.query;
+location.hash;
 ```
 
 #### `router.subscribe(listener)`
 
 ```ts
 const unsubscribe = router.subscribe((state) => {
-  document.title = (state.meta as { title?: string } | undefined)?.title ?? 'App';
+  const leaf = state.matches.at(-1);
+  document.title = (leaf?.meta as { title?: string } | undefined)?.title ?? 'App';
 });
 ```
 
@@ -210,16 +224,32 @@ The listener runs immediately with the current state, then after each successful
 ### `RouteContext<Params, Meta>`
 
 ```ts
-type RouteContext<Params extends RouteParams = RouteParams, Meta = unknown> = {
+type RouteContext<Params extends RouteParams = RouteParams> = {
+  readonly data?: unknown;
   readonly hash: string;
   locals: Record<string, unknown>;
-  readonly meta?: Meta;
   readonly navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
   readonly params: Params;
   readonly pathname: string;
-  readonly pushPath: (path: string, options?: PathNavigateOptions) => Promise<void>;
   readonly query: QueryParams;
-  readonly replacePath: (path: string, options?: PathNavigateOptions) => Promise<void>;
+};
+```
+
+`ctx.data` is only populated for the final route handler.
+
+### `DataFn<Params, Meta>`
+
+```ts
+type DataFn<Params extends RouteParams = RouteParams, Meta = unknown> = (
+  context: DataContext<Params, Meta>,
+) => unknown | Promise<unknown>;
+```
+
+### `DataContext<Params, Meta>`
+
+```ts
+type DataContext<Params extends RouteParams = RouteParams, Meta = unknown> = RouteContext<Params, Meta> & {
+  readonly signal: AbortSignal;
 };
 ```
 
@@ -242,10 +272,14 @@ type Middleware<Meta = unknown> = (
 
 Middleware ordering is simple: global middleware first, then route middleware, then the handler.
 
+If a route defines `data`, middleware still runs first. The effective order is global middleware, route middleware, data, then handler.
+
 ### `NavigationTarget`
 
 ```ts
 type NavigationTarget = {
+  path: string;
+} | {
   hash?: string;
   name: string;
   params?: RouteParams;
@@ -264,33 +298,36 @@ type NavigateOptions = {
 };
 ```
 
-### `PathNavigateOptions`
-
-```ts
-type PathNavigateOptions = Omit<NavigateOptions, 'replace'>;
-```
-
 ### `RouteState`
 
 ```ts
 type RouteState = {
-  readonly hash: string;
-  readonly meta?: unknown;
-  readonly name?: string;
+  readonly location: {
+    readonly hash: string;
+    readonly pathname: string;
+    readonly query: QueryParams;
+  };
+  readonly matches: readonly RouteMatch[];
+  readonly status: 'idle' | 'loading' | 'error';
+};
+```
+
+### `RouteMatch`
+
+```ts
+type RouteMatch = {
+  readonly data: unknown;
+  readonly meta: unknown;
+  readonly name: string;
   readonly params: RouteParams;
   readonly pathname: string;
-  readonly query: QueryParams;
 };
 ```
 
 ### `ResolvedRoute`
 
 ```ts
-type ResolvedRoute = {
-  readonly meta?: unknown;
-  readonly name?: string;
-  readonly params: RouteParams;
-};
+type ResolvedRoute = readonly RouteMatch[];
 ```
 
 ### `PathParams<T>`

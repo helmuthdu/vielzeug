@@ -806,7 +806,7 @@ export default defineConfig({
             { link: '/routeit/examples/auth-and-guards', text: 'Auth and Guards' },
             { link: '/routeit/examples/not-found-and-error-boundary', text: 'Not Found and Error Boundary' },
             { link: '/routeit/examples/base-path-deployment', text: 'Base Path Deployment' },
-            { link: '/routeit/examples/path-escape-hatches', text: 'Path Escape Hatches' },
+            { link: '/routeit/examples/raw-path-targets', text: 'Raw Path Targets' },
             { link: '/routeit/examples/same-url-deduplication', text: 'Same-URL Deduplication' },
             { link: '/routeit/examples/page-titles-from-meta', text: 'Page Titles from Meta' },
             { link: '/routeit/examples/view-transitions', text: 'View Transitions' },

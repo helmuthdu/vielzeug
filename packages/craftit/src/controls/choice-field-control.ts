@@ -1,4 +1,4 @@
-import { computed, signal, type Signal, watch } from '@vielzeug/stateit';
+import { computed, signal, watch } from '@vielzeug/stateit';
 
 import {
   createAssistiveState,
@@ -16,73 +16,67 @@ const parseChoiceFieldValues = (value: string | undefined): string[] => {
     .filter(Boolean);
 };
 
-export const createChoiceField = <T>(options: ChoiceFieldOptions<T>): ChoiceFieldHandle<T> => {
-  const selectedItems = signal<T[]>([]);
+export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandle => {
+  const selectedValues = signal<string[]>([]);
   const isMultiple = computed(() => Boolean(options.multiple?.value));
-  const selectedValues = computed(() => selectedItems.value.map((item) => options.getValue(item)));
   const formValue = computed(() =>
     isMultiple.value ? selectedValues.value.join(',') : (selectedValues.value[0] ?? ''),
   );
 
-  const normalizeSelectedItems = (items: T[]): T[] => {
-    const normalized = isMultiple.value ? items : items.slice(0, 1);
-    const uniqueItems: T[] = [];
+  const normalizeSelectedValues = (values: string[]): string[] => {
+    const normalized = isMultiple.value ? values : values.slice(0, 1);
+    const uniqueValues: string[] = [];
     const seen = new Set<string>();
 
-    for (const item of normalized) {
-      const value = options.getValue(item);
+    for (const value of normalized.map((entry) => String(entry ?? '')).filter(Boolean)) {
 
       if (seen.has(value)) continue;
 
       seen.add(value);
-      uniqueItems.push(item);
+      uniqueValues.push(value);
     }
 
-    return uniqueItems;
+    return uniqueValues;
   };
 
-  const replaceSelectedItems = (items: T[]): void => {
-    selectedItems.value = normalizeSelectedItems(items);
+  const setValues = (values: string[]): void => {
+    selectedValues.value = normalizeSelectedValues(values);
   };
 
   const clear = (): void => {
-    replaceSelectedItems([]);
+    setValues([]);
   };
 
   const removeValue = (value: string): void => {
-    selectedItems.value = selectedItems.value.filter((item) => options.getValue(item) !== value);
+    selectedValues.value = selectedValues.value.filter((current) => current !== value);
   };
 
-  const selectItem = (item: T): void => {
+  const selectValue = (value: string): void => {
     if (isMultiple.value) {
-      const value = options.getValue(item);
+      if (selectedValues.value.includes(value)) return;
 
-      if (selectedItems.value.some((current) => options.getValue(current) === value)) return;
-
-      replaceSelectedItems([...selectedItems.value, item]);
+      setValues([...selectedValues.value, value]);
 
       return;
     }
 
-    replaceSelectedItems([item]);
+    setValues([value]);
   };
 
-  const toggleItem = (item: T): void => {
+  const toggleValue = (value: string): void => {
     if (isMultiple.value) {
-      const value = options.getValue(item);
-
-      if (selectedItems.value.some((current) => options.getValue(current) === value)) {
+      if (selectedValues.value.includes(value)) {
         removeValue(value);
 
         return;
       }
 
-      replaceSelectedItems([...selectedItems.value, item]);
+      setValues([...selectedValues.value, value]);
 
       return;
     }
 
-    replaceSelectedItems([item]);
+    setValues([value]);
   };
 
   const syncControlledValue = (nextValue: unknown): void => {
@@ -95,10 +89,10 @@ export const createChoiceField = <T>(options: ChoiceFieldOptions<T>): ChoiceFiel
       return;
     }
 
-    replaceSelectedItems(values.map((value) => options.mapControlledValue(value)));
+    setValues(values);
   };
 
-  const { base, field, triggerValidation } = createFieldControlBase(options, { value: formValue });
+  const { base, triggerValidation } = createFieldControlBase(options, { value: formValue });
 
   const assistive = createAssistiveState({
     error: options.error,
@@ -121,16 +115,12 @@ export const createChoiceField = <T>(options: ChoiceFieldOptions<T>): ChoiceFiel
     ...base,
     assistive,
     clear,
-    field,
     formValue,
-    isMultiple,
-    isSelected: (value: string) => selectedItems.value.some((item) => options.getValue(item) === value),
     removeValue,
-    replaceSelectedItems,
-    selectedItems: selectedItems as Signal<T[]>,
     selectedValues,
-    selectItem,
-    toggleItem,
+    selectValue,
+    setValues,
+    toggleValue,
     triggerValidation,
   };
 };

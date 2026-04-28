@@ -1,6 +1,6 @@
 import type { RouteContext } from '../types';
 
-import { createRouter, defineRoutes } from '../router';
+import { createRouter } from '../router';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 
 describe('Route table', () => {
@@ -18,9 +18,9 @@ describe('Route table', () => {
     mockLocation.pathname = '/about';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           about: { handler, path: '/about' },
-        }),
+        },
       }),
     );
 
@@ -29,27 +29,25 @@ describe('Route table', () => {
 
   it('uses route keys as route names for url generation', () => {
     const router = createRouter({
-      routes: defineRoutes({
+      routes: {
         postDetail: { path: '/posts/:id' },
-      }),
+      },
     });
 
     expect(router.url('postDetail', { id: '99' })).toBe('/posts/99');
   });
 
-  it('passes route meta into the handler context', async () => {
-    const handler = vi.fn();
-
+  it('preserves route meta on match state', async () => {
     mockLocation.pathname = '/home';
-    await boot(
+    const router = await boot(
       createRouter({
-        routes: defineRoutes({
-          home: { handler, meta: { title: 'Home' }, path: '/home' },
-        }),
+        routes: {
+          home: { handler: vi.fn(), meta: { title: 'Home' }, path: '/home' },
+        },
       }),
     );
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ meta: { title: 'Home' } }));
+    expect(router.state.matches.at(-1)?.meta).toEqual({ title: 'Home' });
   });
 
   it('runs middleware-only routes without requiring a handler', async () => {
@@ -58,9 +56,9 @@ describe('Route table', () => {
     mockLocation.pathname = '/hook';
     await boot(
       createRouter({
-        routes: defineRoutes({
-          hook: { middleware, path: '/hook' },
-        }),
+        routes: {
+          hook: { middleware: [middleware], path: '/hook' },
+        },
       }),
     );
 
@@ -74,10 +72,10 @@ describe('Route table', () => {
     mockLocation.pathname = '/a/42';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           paramFirst: { handler: paramHandler, path: '/a/:id' },
           staticSecond: { handler: staticHandler, path: '/a/42' },
-        }),
+        },
       }),
     );
 
@@ -91,10 +89,10 @@ describe('Route table', () => {
     mockLocation.pathname = '/missing';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           home: { handler: vi.fn(), path: '/' },
           notFound: { handler: fallback, path: '*' },
-        }),
+        },
       }),
     );
 

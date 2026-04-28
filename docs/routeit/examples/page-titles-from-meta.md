@@ -8,12 +8,12 @@ description: Drive document.title from route metadata and state subscriptions.
 Store title hints in route `meta`, then apply them in a single subscription.
 
 ```ts
-import { createRouter, defineRoutes } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/routeit';
 
 type Meta = { title?: string };
 
 const router = createRouter({
-  routes: defineRoutes({
+  routes: {
     home: {
       path: '/',
       meta: { title: 'Home' } satisfies Meta,
@@ -34,15 +34,13 @@ const router = createRouter({
       meta: { title: 'Not Found' } satisfies Meta,
       handler: () => renderNotFound(),
     },
-  }),
+  },
 });
 
-router.subscribe(({ meta }) => {
-  const m = meta as Meta | undefined;
+router.subscribe((state) => {
+  const m = state.matches.at(-1)?.meta as Meta | undefined;
   document.title = m?.title ? `${m.title} - My App` : 'My App';
 });
-
-router.start();
 ```
 
-This pattern keeps page title logic centralized and deterministic.
+This pattern keeps page title logic centralized and deterministic. For nested routes, read `router.state.matches` and use the leaf route (or combine branch metadata for breadcrumb-style titles).

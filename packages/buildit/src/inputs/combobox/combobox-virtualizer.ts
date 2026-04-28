@@ -1,6 +1,6 @@
 import { createDomVirtualList, type VirtualItem } from '@vielzeug/virtualit/dom';
 
-import type { ComboboxOptionItem, ComboboxSelectionItem } from './combobox.types';
+import type { ComboboxOptionItem } from './combobox.types';
 
 type ComboboxVirtualizerDeps = {
   checkIconHTML: string;
@@ -10,7 +10,7 @@ type ComboboxVirtualizerDeps = {
   getIsMultiple: () => boolean;
   getListboxElement: () => HTMLElement | null;
   getSelectedValue: () => string;
-  getSelectedValues: () => ComboboxSelectionItem[];
+  getSelectedValues: () => string[];
   onSelectOption: (opt: ComboboxOptionItem, event?: Event) => void;
   setFocusedIndex: (index: number) => void;
 };
@@ -20,7 +20,7 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
   let cachedListbox: HTMLElement | null = null;
 
   function isSelectedOption(option: ComboboxOptionItem): boolean {
-    if (deps.getIsMultiple()) return deps.getSelectedValues().some((selected) => selected.value === option.value);
+    if (deps.getIsMultiple()) return deps.getSelectedValues().includes(option.value);
 
     return option.value === deps.getSelectedValue();
   }

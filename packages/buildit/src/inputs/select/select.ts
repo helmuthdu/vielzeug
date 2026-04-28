@@ -174,15 +174,11 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
 
     mountFormContextSync(host.el, formCtx, props);
 
-    const choice = createChoiceField<string>({
+    const choice = createChoiceField({
       context: formCtx,
       disabled: props.disabled,
       error: props.error,
-      getValue: (value) => value,
       helper: props.helper,
-      label: props.label,
-      labelPlacement: props['label-placement'],
-      mapControlledValue: (value) => value,
       multiple: props.multiple,
       name: props.name,
       prefix: 'select',
@@ -190,7 +186,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     });
     const assistiveText = choice.assistive;
     const { triggerValidation } = choice;
-    const selectedValues = choice.selectedItems;
+    const selectedValues = choice.selectedValues;
     const isDisabled = choice.disabled;
 
     // ────────────────────────────────────────────────────────────────
@@ -209,11 +205,12 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     // Accessibility & DOM References
     // ────────────────────────────────────────────────────────────────
 
-    const { fieldId: selectId, labelInsetId, labelInsetRef, labelOutsideId, labelOutsideRef } = choice;
+    const { fieldId: selectId, labelInsetId, labelOutsideId } = choice;
     const listboxId = `listbox-${selectId}`;
 
     let triggerEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
+    const triggerRef = { value: null as HTMLElement | null };
 
     // ────────────────────────────────────────────────────────────────
     // Option Reading from Slot
@@ -269,6 +266,8 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     const showChips = computed(() => props.multiple.value && selectedValues.value.length > 0);
     const triggerText = computed(() => displayLabel.value || props.placeholder.value || '');
     const hasLabel = computed(() => !!props.label.value);
+    const outsideLabelHidden = computed(() => !props.label.value || props['label-placement'].value !== 'outside');
+    const insetLabelHidden = computed(() => !props.label.value || props['label-placement'].value !== 'inset');
 
     function buildFlatList(opts: OptionItem[]): FlatRow[] {
       const flat: FlatRow[] = [];
@@ -327,7 +326,13 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     );
 
     const popupList = createPopupListControl({
-      ariaSync: { role: 'listbox' },
+      ariaSync: {
+        additional: {
+          invalid: () => !!props.error.value,
+          labelledby: () => (hasLabel.value ? `${labelOutsideId} ${labelInsetId}` : null),
+        },
+        role: 'listbox',
+      },
       getBoundaryElement: () => host.el,
       getIndex: () => focusedIndex.value,
       getItems: () => options.value,
@@ -347,6 +352,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
         reference: () => triggerEl,
         update: () => positioner.updatePosition(),
       },
+      triggerRef,
       setIndex: (index) => {
         focusedIndex.value = index;
         scrollFocusedIntoView();
@@ -382,9 +388,9 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
       if (opt.disabled) return;
 
       if (props.multiple.value) {
-        choice.toggleItem(opt.value);
+        choice.toggleValue(opt.value);
       } else {
-        choice.selectItem(opt.value);
+        choice.selectValue(opt.value);
         popupList.close();
       }
 
@@ -450,7 +456,6 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
       mount() {
         watch(slots.elements(), () => readOptions(), { immediate: true });
 
-        let cleanupAria: (() => void) | null = null;
         let onTriggerClick: ((event: MouseEvent) => void) | null = null;
         let onTriggerKeydown: ((event: KeyboardEvent) => void) | null = null;
 
@@ -469,43 +474,31 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
 
           triggerEl.addEventListener('click', onTriggerClick);
           triggerEl.addEventListener('keydown', onTriggerKeydown);
-
-          // Sync additional ARIA attributes beyond the standard ones
-          cleanupAria = popupList.syncTriggerAria(triggerEl, {
-            additional: {
-              invalid: () => !!props.error.value,
-              labelledby: () => (hasLabel.value ? `${labelOutsideId} ${labelInsetId}` : null),
-            },
-          });
         }
-
-        const cleanupClickOutside = popupList.bindOutsideClick(document);
 
         return () => {
           if (triggerEl && onTriggerClick) triggerEl.removeEventListener('click', onTriggerClick);
 
           if (triggerEl && onTriggerKeydown) triggerEl.removeEventListener('keydown', onTriggerKeydown);
-
-          cleanupAria?.();
-          cleanupClickOutside();
         };
       },
 
       render: () =>
         html`<slot style="display:none"></slot>
           <div class="select-wrapper">
-            <label class="label-outside" id="${labelOutsideId}" ref="${labelOutsideRef}" hidden></label>
+            <label class="label-outside" id="${labelOutsideId}" ?hidden="${outsideLabelHidden}">${props.label}</label>
             <div
               class="field"
               ref="${(el: HTMLElement) => {
                 triggerEl = el;
+                triggerRef.value = el;
               }}"
               role="combobox"
               tabindex="${tabIndexAttr}"
               aria-controls="${listboxId}"
               aria-expanded="false"
               aria-labelledby="${labelOutsideId} ${labelInsetId}">
-              <label class="label-inset" id="${labelInsetId}" ref="${labelInsetRef}" hidden></label>
+              <label class="label-inset" id="${labelInsetId}" ?hidden="${insetLabelHidden}">${props.label}</label>
               <div class="trigger-row">
                 <div class="chips-row" ?hidden="${() => !showChips.value}">
                   ${() =>

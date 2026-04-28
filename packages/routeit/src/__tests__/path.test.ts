@@ -1,4 +1,4 @@
-import { createRouter, defineRoutes } from '../router';
+import { createRouter } from '../router';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 
 describe('Path matching', () => {
@@ -16,9 +16,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           home: { handler, path: '/' },
-        }),
+        },
       }),
     );
 
@@ -31,9 +31,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/about';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           about: { handler, path: '/about' },
-        }),
+        },
       }),
     );
 
@@ -46,9 +46,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/users/123';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           userDetail: { handler, path: '/users/:id' },
-        }),
+        },
       }),
     );
 
@@ -61,9 +61,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/users/123/posts/456';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           postDetail: { handler, path: '/users/:userId/posts/:postId' },
-        }),
+        },
       }),
     );
 
@@ -76,9 +76,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/search/hello%20world';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           search: { handler, path: '/search/:query' },
-        }),
+        },
       }),
     );
 
@@ -91,9 +91,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/something';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           catchAll: { handler, path: '*' },
-        }),
+        },
       }),
     );
 
@@ -106,9 +106,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/docs/guide/intro';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           docs: { handler, path: '/docs/*' },
-        }),
+        },
       }),
     );
 
@@ -121,9 +121,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/files/one/two/three';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           files: { handler, path: '/files/:rest*' },
-        }),
+        },
       }),
     );
 
@@ -136,9 +136,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/files/';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           files: { handler, path: '/files/:rest*' },
-        }),
+        },
       }),
     );
 
@@ -151,9 +151,9 @@ describe('Path matching', () => {
     mockLocation.pathname = '/nope';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           other: { handler, path: '/other' },
-        }),
+        },
       }),
     );
 

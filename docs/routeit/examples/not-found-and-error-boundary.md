@@ -8,20 +8,20 @@ description: Model not-found pages and route errors using normal routes and midd
 Use `path: '*'` for not-found behavior and middleware for error boundaries.
 
 ```ts
-import { createRouter, defineRoutes } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/routeit';
 
 const errorBoundary = async (ctx, next) => {
   try {
     await next();
   } catch (error) {
     reportError(error, { path: ctx.pathname });
-    await ctx.replacePath('/error');
+    await ctx.navigate({ path: '/error' }, { replace: true });
   }
 };
 
 const router = createRouter({
-  middleware: errorBoundary,
-  routes: defineRoutes({
+  middleware: [errorBoundary],
+  routes: {
     home: {
       path: '/',
       handler: () => renderHome(),
@@ -34,10 +34,8 @@ const router = createRouter({
       path: '*',
       handler: () => renderNotFound(),
     },
-  }),
+  },
 });
-
-router.start();
 ```
 
 No special `onNotFound` or `onError` hooks are required.

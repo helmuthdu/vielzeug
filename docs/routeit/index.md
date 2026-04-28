@@ -1,15 +1,13 @@
 ---
 title: Routeit — Client-side router for TypeScript
-description: Lightweight, type-safe client-side router with a declarative route table, middleware, and named navigation.
+description: Lightweight, type-safe client-side router with nested routes, data loading, middleware, and named navigation.
 ---
 
 <PackageBadges package="routeit" />
 
 <img src="/logo-routeit.svg" alt="Routeit logo" width="156" class="logo-highlight"/>
 
-# Routeit
-
-**Routeit** is a lightweight, framework-agnostic client-side router built around a single declarative route table. Define routes once, then navigate, resolve, and build links by route name.
+**Routeit** is a lightweight, framework-agnostic client-side router built around a declarative route table. Define routes once, then navigate, resolve, load route data, and build links by route name.
 
 <!-- Search keywords: client router, typed routes, single-page app navigation, SPA navigation. -->
 
@@ -34,31 +32,35 @@ yarn add @vielzeug/routeit
 ## Quick Start
 
 ```ts
-import { createRouter, defineRoutes } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/routeit';
 
 const router = createRouter({
-  routes: defineRoutes({
+  routes: {
     home: {
       path: '/',
       handler: () => renderHome(),
     },
-    users: {
-      path: '/users',
-      handler: () => renderUsers(),
-    },
-    userDetail: {
-      path: '/users/:id',
-      handler: ({ params }) => renderUser(params.id),
-      meta: { title: 'User' },
+    dashboard: {
+      path: '/dashboard',
+      children: {
+        index: {
+          index: true,
+          handler: () => renderDashboardHome(),
+        },
+        settings: {
+          path: 'settings',
+          data: async () => fetchSettings(),
+          handler: ({ data }) => renderSettings(data),
+        },
+      },
     },
     notFound: {
       path: '*',
       handler: () => renderNotFound(),
     },
-  }),
+  },
 });
 
-router.start();
 await router.navigate({ name: 'userDetail', params: { id: '42' } });
 ```
 
@@ -67,11 +69,17 @@ await router.navigate({ name: 'userDetail', params: { id: '42' } });
 Managing navigation by hand usually means duplicated path checks, manual `popstate` listeners, and scattered history writes. Routeit keeps the routing model in one place and makes route names the source of truth.
 
 ```ts
-const routes = defineRoutes({
+const routes = {
   home: { path: '/', handler: () => renderHome() },
-  userDetail: { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
+  dashboard: {
+    path: '/dashboard',
+    children: {
+      index: { index: true, handler: () => renderDashboardHome() },
+      settings: { path: 'settings', handler: () => renderSettings() },
+    },
+  },
   notFound: { path: '*', handler: () => renderNotFound() },
-});
+};
 
 const router = createRouter({ routes });
 ```
@@ -89,21 +97,26 @@ const router = createRouter({ routes });
 ## Core Ideas
 
 - One declarative route table
-- Route names come from object keys
+- Nested routes with compound names like `dashboard.settings`
 - Named-route-first `navigate()`, `url()`, and `isActive()`
+- Route-scoped `data()` loaders for leaf and layout data
 - Wildcard routes handle not-found cases
 - Middleware handles guards, analytics, and error boundaries
-- Raw path escape hatches exist when needed with `pushPath()` and `replacePath()`
+- `navigate()` handles both named routes and raw path targets
 
 ## Feature Highlights
 
-- **Typed path params** with `defineRoutes()`
+- **Nested routes** with `children` and `index`
+- **Typed path params** with proper inference
 - **Middleware** at global and route scope
-- **Metadata** exposed through `ctx.meta` and route state
+- **Abortable route data** with `data()`
+- **Metadata** exposed through `router.state.matches.at(-1)?.meta`
 - **Immutable state snapshots** through `router.state`
+- **Matched branch state** through `router.state.matches`
 - **Base-path support** for app subdirectories
 - **Same-URL deduplication** with optional `{ force: true }`
 - **Resolve without navigation** via `router.resolve()`
+- **Pluggable history drivers** with browser-history default
 - **View transitions** when the browser supports them
 
 ## Documentation Map

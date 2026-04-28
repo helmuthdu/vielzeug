@@ -1,56 +1,92 @@
 import type {
-  DefinedRouteTable,
+  HistoryDriver,
   Middleware,
+  NavigateOptions,
   NamedNavigationTarget,
-  PathNavigateOptions,
   PathParams,
   QueryParams,
+  RawNavigationTarget,
   ResolvedRoute,
+  RouteBranchDef,
+  RouteDefinition,
+  RouteName,
+  RoutePathByName,
   RouteRecord,
   RouteState,
   RouteTable,
-  RouteName,
   RouterOptions,
   Unsubscribe,
 } from './types';
 
-import { createRouteState, getRouteByName, handleRoute, readLocation, resolveTarget, stripBase } from './navigation';
-import { buildUrl, compileRouteSegments, matchRoute, matchesPrefix, normalizePath } from './path';
+import {
+  createRouteState,
+  getRouteByName,
+  handleRoute,
+  readLocation,
+  resolveMatch,
+  resolveTarget,
+  stripBase,
+} from './navigation';
+import { buildUrl, compileRouteSegments, joinPaths, matchRoute, matchesPrefix, normalizePath } from './path';
 
-function normalizeMiddleware(input: Middleware | Middleware[] | undefined): Middleware[] {
-  if (!input) return [];
+/** Creates a history driver backed by the browser History API. */
+export function createBrowserHistory(): HistoryDriver {
+  return {
+    get location() {
+      return window.location;
+    },
+    push(url, state) {
+      window.history.pushState(state, '', url);
+    },
+    replace(url, state) {
+      window.history.replaceState(state, '', url);
+    },
+    subscribe(listener) {
+      window.addEventListener('popstate', listener);
 
-  return Array.isArray(input) ? [...input] : [input];
+      return () => window.removeEventListener('popstate', listener);
+    },
+  };
 }
 
 export class Router<TRoutes extends RouteTable = RouteTable> {
   readonly #base: string;
+  readonly #history: HistoryDriver;
   readonly #records: readonly RouteRecord[];
   readonly #routesByName: ReadonlyMap<string, RouteRecord>;
   readonly #useViewTransition: boolean;
 
+  #abortController: AbortController | null = null;
   #currentState: RouteState;
   #disposed = false;
   #lastHref = '/';
   readonly #listeners = new Set<(state: RouteState) => void>();
   #navigationId = 0;
-  #started = false;
-  readonly #unlistenPopState: () => void;
+  readonly #unlistenHistory: () => void;
 
   constructor(options: RouterOptions<TRoutes>) {
     this.#base = normalizePath(options.base ?? '/');
+    this.#history = options.history ?? createBrowserHistory();
     this.#useViewTransition = options.viewTransition ?? false;
     this.#records = this.#compileRecords(options);
-    this.#routesByName = new Map(this.#records.map((record) => [record.name, record]));
+    this.#routesByName = new Map(
+      this.#records.map((record) => [record.branchDefs[record.branchDefs.length - 1]!.name, record]),
+    );
     this.#currentState = createRouteState({
-      hash: '',
-      params: {},
-      pathname: '/',
-      query: {},
+      location: {
+        hash: '',
+        pathname: '/',
+        query: {},
+      },
+      matches: [],
+      status: 'idle',
     });
-    this.#unlistenPopState = this.#registerPopStateListener();
+    this.#unlistenHistory = this.#registerHistoryListener();
 
-    if (options.autoStart) this.start();
+    const { hash, pathname, search } = this.#history.location;
+
+    this.#lastHref = `${pathname}${search}${hash}`;
+    this.#runInBackground(this.#handleRoute());
   }
 
   get state(): RouteState {
@@ -58,33 +94,68 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
   }
 
   #compileRecords(options: RouterOptions<TRoutes>): readonly RouteRecord[] {
-    const globalMiddleware = normalizeMiddleware(options.middleware);
+    const globalMiddleware = [...(options.middleware ?? [])];
+    const records: RouteRecord[] = [];
 
-    return Object.entries(options.routes).map(([name, route]) => ({
-      handler: route.handler,
-      meta: route.meta,
-      middleware: [...globalMiddleware, ...normalizeMiddleware(route.middleware)],
-      name,
-      path: route.path,
-      segments: compileRouteSegments(route.path),
-    }));
+    const compile = (
+      name: string,
+      route: RouteDefinition,
+      ancestorPath: string,
+      ancestorBranchDefs: RouteBranchDef[],
+      ancestorMiddleware: Middleware[],
+    ): void => {
+      const ownPath = route.index
+        ? ancestorPath
+        : normalizePath(route.path ? joinPaths(ancestorPath, route.path) : ancestorPath);
+
+      const branchDefs: RouteBranchDef[] = [
+        ...ancestorBranchDefs,
+        {
+          dataFn: route.data,
+          handler: route.handler,
+          meta: route.meta,
+          name,
+        },
+      ];
+
+      const ownMiddleware = [...ancestorMiddleware, ...(route.middleware ?? [])];
+
+      if (route.children) {
+        for (const [childName, childRoute] of Object.entries(route.children)) {
+          compile(`${name}.${childName}`, childRoute, ownPath, branchDefs, ownMiddleware);
+        }
+      }
+
+      // Compile as a leaf record when it has a handler, or when it has no children
+      // (simple routes and wildcard fallbacks always need a record).
+      if (route.handler !== undefined || !route.children) {
+        records.push({
+          branchDefs,
+          middleware: [...globalMiddleware, ...ownMiddleware],
+          path: ownPath,
+          segments: compileRouteSegments(ownPath),
+        });
+      }
+    };
+
+    for (const [name, route] of Object.entries(options.routes)) {
+      compile(name, route, '/', [], []);
+    }
+
+    return records;
   }
 
   #assertNotDisposed(): void {
     if (this.#disposed) throw new Error('[routeit] Router is disposed');
   }
 
-  #registerPopStateListener(): () => void {
-    const onPopState = (): void => {
-      if (!this.#started) return;
+  #registerHistoryListener(): () => void {
+    return this.#history.subscribe(() => {
+      const { hash, pathname, search } = this.#history.location;
 
-      this.#lastHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      this.#lastHref = `${pathname}${search}${hash}`;
       this.#runInBackground(this.#handleRoute());
-    };
-
-    window.addEventListener('popstate', onPopState);
-
-    return () => window.removeEventListener('popstate', onPopState);
+    });
   }
 
   #notifyListeners(): void {
@@ -104,19 +175,26 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
   }
 
   async #handleRoute(useTransition?: boolean): Promise<void> {
+    this.#abortController?.abort();
+
+    const controller = new AbortController();
+
+    this.#abortController = controller;
+
     const navigationId = ++this.#navigationId;
 
     await handleRoute({
       base: this.#base,
+      history: this.#history,
       isNavigationCurrent: () => this.#isNavigationCurrent(navigationId),
-      navigate: (target, options) => this.navigate(target as NamedNavigationTarget<TRoutes>, options),
+      navigate: (target, options) =>
+        this.navigate(target as NamedNavigationTarget<TRoutes> | RawNavigationTarget, options),
       notifyListeners: () => this.#notifyListeners(),
-      pushPath: (path, options) => this.pushPath(path, options),
       records: this.#records,
-      replacePath: (path, options) => this.replacePath(path, options),
       setCurrentState: (state) => {
         this.#currentState = state;
       },
+      signal: controller.signal,
       useTransition,
       useViewTransition: this.#useViewTransition,
     });
@@ -130,7 +208,7 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     return `${joinedPath}${search ? `?${search}` : ''}${hash ? `#${hash}` : ''}`;
   }
 
-  async #navigateToPath(path: string, options: import('./types').NavigateOptions = {}): Promise<void> {
+  async #navigateToPath(path: string, options: NavigateOptions = {}): Promise<void> {
     this.#assertNotDisposed();
 
     const destination = this.#resolveDestination(path);
@@ -140,57 +218,25 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     this.#lastHref = destination;
 
     if (options.replace) {
-      window.history.replaceState(options.state, '', destination);
+      this.#history.replace(destination, options.state);
     } else {
-      window.history.pushState(options.state, '', destination);
+      this.#history.push(destination, options.state);
     }
 
     await this.#handleRoute(options.viewTransition);
   }
 
-  /** Start listening to browser navigation and handle the current route once. */
-  start(): this {
-    this.#assertNotDisposed();
-
-    if (this.#started) return this;
-
-    this.#started = true;
-    this.#lastHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    this.#runInBackground(this.#handleRoute());
-
-    return this;
-  }
-
-  /** Stop listening to browser navigation without disposing the router instance. */
-  stop(): void {
-    this.#assertNotDisposed();
-    this.#started = false;
-  }
-
   /** Navigate using a named route target. */
-  navigate<Name extends RouteName<TRoutes>>(
-    target: Extract<NamedNavigationTarget<TRoutes>, { name: Name }>,
-    options?: import('./types').NavigateOptions,
-  ): Promise<void> {
+  navigate(target: NamedNavigationTarget<TRoutes> | RawNavigationTarget, options?: NavigateOptions): Promise<void> {
     const destination = resolveTarget(target, this.#routesByName);
 
     return this.#navigateToPath(destination, options);
   }
 
-  /** Raw path escape hatch for one-off destinations that do not belong in the route table. */
-  pushPath(path: string, options?: PathNavigateOptions): Promise<void> {
-    return this.#navigateToPath(path, options);
-  }
-
-  /** Raw path escape hatch that replaces the current history entry. */
-  replacePath(path: string, options?: PathNavigateOptions): Promise<void> {
-    return this.#navigateToPath(path, { ...options, replace: true });
-  }
-
   /** Build a URL for a named route, including optional params and query string. */
   url<Name extends RouteName<TRoutes>>(
     name: Name,
-    params?: PathParams<TRoutes[Name]['path']>,
+    params?: PathParams<RoutePathByName<TRoutes, Name>>,
     query?: QueryParams,
   ): string {
     const route = getRouteByName(name, this.#routesByName);
@@ -201,22 +247,17 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
   /** Returns true when the current location matches the named route exactly or as a prefix. */
   isActive<Name extends RouteName<TRoutes>>(name: Name, exact = true): boolean {
     const route = getRouteByName(name, this.#routesByName);
-    const { pathname } = readLocation(this.#base);
+    const { pathname } = readLocation(this.#base, this.#history);
 
     return exact ? matchRoute(pathname, [route]).record != null : matchesPrefix(pathname, route);
   }
 
-  /** Resolve a pathname to the matching named route without running middleware or handlers. */
+  /** Resolve a pathname to the matching route branch without running middleware or handlers. */
   resolve(pathname: string): ResolvedRoute | null {
-    const { params, record } = matchRoute(stripBase(normalizePath(pathname), this.#base), this.#records);
+    const normalizedPathname = stripBase(normalizePath(pathname), this.#base);
+    const { branch } = resolveMatch(normalizedPathname, this.#records);
 
-    if (!record) return null;
-
-    return {
-      meta: record.meta,
-      name: record.name,
-      params,
-    };
+    return branch.length ? branch : null;
   }
 
   /** Subscribe to state changes. The listener is called immediately with the current state. */
@@ -235,9 +276,10 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     if (this.#disposed) return;
 
     this.#disposed = true;
-    this.#started = false;
     this.#listeners.clear();
-    this.#unlistenPopState();
+    this.#abortController?.abort();
+    this.#abortController = null;
+    this.#unlistenHistory();
   }
 
   [Symbol.dispose](): void {
@@ -247,10 +289,4 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
 
 export function createRouter<const TRoutes extends RouteTable>(options: RouterOptions<TRoutes>): Router<TRoutes> {
   return new Router(options);
-}
-
-export function defineRoutes<const TRoutes extends Record<string, { meta?: unknown; path: string }>>(
-  routes: DefinedRouteTable<TRoutes>,
-): DefinedRouteTable<TRoutes> {
-  return routes;
 }

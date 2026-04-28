@@ -8,10 +8,10 @@ description: Skip redundant history entries and rerun when needed with force.
 Routeit skips navigation when the computed destination equals the current URL.
 
 ```ts
-import { createRouter, defineRoutes } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/routeit';
 
 const router = createRouter({
-  routes: defineRoutes({
+  routes: {
     feed: {
       path: '/feed',
       handler: () => refreshFeed(),
@@ -20,10 +20,8 @@ const router = createRouter({
       path: '*',
       handler: () => renderNotFound(),
     },
-  }),
+  },
 });
-
-router.start();
 
 await router.navigate({ name: 'feed' });
 await router.navigate({ name: 'feed' }); // no-op

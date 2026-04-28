@@ -9,12 +9,11 @@ import { createTextField } from '../text-field-control';
 
 describe('field controls', () => {
   describe('createTextField()', () => {
-    it('creates a text field handle with stable ids and refs', async () => {
+    it('creates a text field handle with stable ids', async () => {
       let handle!: ReturnType<typeof createTextField>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           handle = createTextField({
             name: signal('email'),
             prefix: 'field',
@@ -23,24 +22,22 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       expect(handle.fieldId).toBe('field-email');
       expect(handle.errorId).toBe('error-field-email');
       expect(handle.helperId).toBe('helper-field-email');
       expect(handle.labelInsetId).toBe('label-field-email');
       expect(handle.labelOutsideId).toBe('label-field-email-outside');
-      expect(handle.labelInsetRef).toBeDefined();
-      expect(handle.labelOutsideRef).toBeDefined();
     });
 
     it('syncs its local value from the source signal', async () => {
       let handle!: ReturnType<typeof createTextField>;
       let value!: ReturnType<typeof signal<string>>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           value = signal('hello');
           handle = createTextField({
             prefix: 'test',
@@ -49,7 +46,8 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       expect(handle.value.value).toBe('hello');
       value.value = 'world';
@@ -59,9 +57,8 @@ describe('field controls', () => {
     it('normalizes undefined source values to an empty string', async () => {
       let handle!: ReturnType<typeof createTextField>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           handle = createTextField({
             prefix: 'test',
             value: signal<string | undefined>(undefined),
@@ -69,7 +66,8 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       expect(handle.value.value).toBe('');
     });
@@ -78,9 +76,8 @@ describe('field controls', () => {
       let handle!: ReturnType<typeof createTextField>;
       let value!: ReturnType<typeof signal<string>>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           value = signal('01234567');
           handle = createTextField({
             prefix: 'test',
@@ -89,7 +86,8 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       expect(handle.fieldId).toBeTruthy();
       expect(handle.helperId).toBeTruthy();
@@ -99,13 +97,12 @@ describe('field controls', () => {
       expect(handle.value.value).toBe('');
     });
 
-    it('merges local disabled with context disabled and uses context validateOn by default', async () => {
+    it('merges local disabled with context disabled', async () => {
       let handle!: ReturnType<typeof createTextField>;
       let contextDisabled!: ReturnType<typeof signal<boolean>>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           contextDisabled = signal(false);
 
           handle = createTextField({
@@ -120,10 +117,10 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       expect(handle.disabled.value).toBe(false);
-      expect(handle.validateOn?.value).toBe('change');
 
       contextDisabled.value = true;
       expect(handle.disabled.value).toBe(true);
@@ -131,16 +128,14 @@ describe('field controls', () => {
 
     it('throws without formAssociated', async () => {
       await expect(
-        mount({
-          setup: () => {
-            createTextField({
-              prefix: 'standalone',
-              validateOn: signal<'blur' | 'change' | 'submit' | undefined>('change'),
-              value: signal('initial'),
-            });
+        mount(() => {
+          createTextField({
+            prefix: 'standalone',
+            validateOn: signal<'blur' | 'change' | 'submit' | undefined>('change'),
+            value: signal('initial'),
+          });
 
-            return html`<div></div>`;
-          },
+          return html`<div></div>`;
         }),
       ).rejects.toThrow('formAssociated: true');
     });
@@ -148,14 +143,11 @@ describe('field controls', () => {
 
   describe('createChoiceField()', () => {
     it('normalizes controlled csv values and projects a form value', async () => {
-      let handle!: ReturnType<typeof createChoiceField<string>>;
+      let handle!: ReturnType<typeof createChoiceField>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           handle = createChoiceField({
-            getValue: (value) => value,
-            mapControlledValue: (value) => value,
             multiple: signal(true),
             prefix: 'choice',
             value: signal('us, gb ,, de'),
@@ -163,21 +155,20 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
-      expect(handle.selectedItems.value).toEqual(['us', 'gb', 'de']);
       expect(handle.selectedValues.value).toEqual(['us', 'gb', 'de']);
       expect(handle.formValue.value).toBe('us,gb,de');
     });
 
-    it('supports single and multiple selection helpers for object-backed items', async () => {
-      let handle!: ReturnType<typeof createChoiceField<{ label: string; value: string }>>;
+    it('supports single and multiple selection helpers', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
       let multiple!: ReturnType<typeof signal<boolean>>;
       let contextDisabled!: ReturnType<typeof signal<boolean>>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           multiple = signal(true);
           contextDisabled = signal(false);
           handle = createChoiceField({
@@ -187,9 +178,7 @@ describe('field controls', () => {
             },
             disabled: signal(false),
             error: signal<string | undefined>(''),
-            getValue: (item) => item.value,
             helper: signal<string | undefined>('Hint'),
-            mapControlledValue: (value) => ({ label: '', value }),
             multiple,
             prefix: 'choice',
             value: signal('alpha'),
@@ -197,22 +186,19 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
-      expect(handle.selectedItems.value).toEqual([{ label: '', value: 'alpha' }]);
-      expect(handle.validateOn?.value).toBe('blur');
+      expect(handle.selectedValues.value).toEqual(['alpha']);
 
-      handle.selectItem({ label: 'Beta', value: 'beta' });
+      handle.selectValue('beta');
       expect(handle.selectedValues.value).toEqual(['alpha', 'beta']);
 
-      handle.toggleItem({ label: 'Alpha', value: 'alpha' });
+      handle.toggleValue('alpha');
       expect(handle.selectedValues.value).toEqual(['beta']);
 
       multiple.value = false;
-      handle.replaceSelectedItems([
-        { label: 'One', value: 'one' },
-        { label: 'Two', value: 'two' },
-      ]);
+      handle.setValues(['one', 'two']);
       expect(handle.selectedValues.value).toEqual(['one']);
 
       contextDisabled.value = true;
@@ -318,9 +304,8 @@ describe('field controls', () => {
       let checked!: ReturnType<typeof signal<boolean>>;
       let indeterminate!: ReturnType<typeof signal<boolean>>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           checked = signal(true);
           indeterminate = signal(true);
           handle = createCheckableState({
@@ -333,7 +318,8 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       expect(handle.checked.value).toBe(true);
       expect(handle.indeterminate.value).toBe(true);
@@ -348,9 +334,8 @@ describe('field controls', () => {
     it('toggles checked state for standalone controls', async () => {
       let handle!: ReturnType<typeof createCheckableState>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           handle = createCheckableState({
             checked: signal(false),
             prefix: 'test',
@@ -359,7 +344,8 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       handle.toggle(new Event('change'));
       expect(handle.checked.value).toBe(true);
@@ -371,9 +357,8 @@ describe('field controls', () => {
     it('clears indeterminate before toggling when configured', async () => {
       let handle!: ReturnType<typeof createCheckableState>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           handle = createCheckableState({
             checked: signal(false),
             clearIndeterminateFirst: true,
@@ -384,7 +369,8 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       handle.toggle(new Event('change'));
       expect(handle.indeterminate.value).toBe(false);
@@ -394,9 +380,8 @@ describe('field controls', () => {
     it('does not toggle when disabled', async () => {
       let handle!: ReturnType<typeof createCheckableState>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           handle = createCheckableState({
             checked: signal(false),
             disabled: signal(true),
@@ -406,7 +391,8 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       handle.toggle(new Event('change'));
       expect(handle.checked.value).toBe(false);
@@ -417,9 +403,8 @@ describe('field controls', () => {
       const toggle = vi.fn();
       const onToggle = vi.fn();
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           handle = createCheckableState({
             checked: signal(false),
             group: { toggle },
@@ -431,7 +416,8 @@ describe('field controls', () => {
 
           return html`<div></div>`;
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       const event = new Event('change');
 

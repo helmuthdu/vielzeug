@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/routeit)](https://www.npmjs.com/package/@vielzeug/routeit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Routeit** is a lightweight, framework-agnostic router built around one model: define a route table once, then navigate, resolve, and build URLs by route name.
+**Routeit** is a lightweight, framework-agnostic router built around one model: define a route table once, then navigate, resolve, load route data, and build URLs by route name.
 
 ## Installation
 
@@ -17,53 +17,50 @@ pnpm add @vielzeug/routeit
 ## Quick Start
 
 ```ts
-import { createRouter, defineRoutes } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/routeit';
 
 const router = createRouter({
-  routes: defineRoutes({
+  routes: {
     home: {
       path: '/',
       handler: () => renderHome(),
     },
-    users: {
-      path: '/users',
-      handler: () => renderUsers(),
-    },
-    userDetail: {
-      path: '/users/:id',
-      handler: ({ params }) => renderUser(params.id),
-      meta: { title: 'User' },
+    dashboard: {
+      path: '/dashboard',
+      children: {
+        index: {
+          index: true,
+          handler: () => renderDashboardHome(),
+        },
+        settings: {
+          path: 'settings',
+          data: async () => fetchSettings(),
+          handler: ({ data }) => renderSettings(data),
+        },
+      },
     },
     notFound: {
       path: '*',
       handler: () => renderNotFound(),
     },
-  }),
+  },
 });
 
-router.start();
 await router.navigate({ name: 'userDetail', params: { id: '42' } });
 ```
 
 ## Features
 
 - Declarative route table only
+- Nested routes with `children` and `index`
 - Named-route-first `navigate()`, `url()`, and `isActive()`
-- Typed path params via `defineRoutes()`
-- Global and per-route middleware
-- Middleware-only routes and wildcard fallbacks
-- Raw path escape hatches with `pushPath()` and `replacePath()`
-- Base-path support
-- Same-URL deduplication with `{ force: true }`
-- Immutable route state snapshots
-- `resolve()` for match lookup without navigation
-- Optional View Transition API integration
+- Declarative route table only
 - Zero dependencies
 
 ## Route Definition
 
 ```ts
-const routes = defineRoutes({
+const routes = {
   home: {
     path: '/',
     handler: () => renderHome(),
@@ -74,12 +71,23 @@ const routes = defineRoutes({
   },
   dashboard: {
     path: '/dashboard',
-    handler: () => renderDashboard(),
     middleware: requireAuth,
+    children: {
+      index: {
+        index: true,
+        handler: () => renderDashboard(),
+      },
+      settings: {
+        path: 'settings',
+        data: async () => fetchSettings(),
+        handler: ({ data }) => renderSettings(data),
+      },
+    },
   },
   userDetail: {
     path: '/users/:id',
-    handler: ({ params, meta }) => renderUser(params.id, meta),
+    data: async ({ params }) => fetchUser(params.id),
+    handler: ({ data, meta }) => renderUser(data, meta),
     meta: { section: 'users' },
   },
   notFound: {
@@ -90,7 +98,7 @@ const routes = defineRoutes({
 
 const router = createRouter({
   base: '/app',
-  middleware: logger,
+  middleware: [logger],
   routes,
   viewTransition: true,
 });
@@ -111,25 +119,39 @@ const requireAuth = async (ctx, next) => {
 
 `ctx.locals` is shared across the middleware chain and the final handler. If you want not-found handling or error boundaries, model them as routes and middleware instead of special router hooks.
 
+## Data
+
+```ts
+const routes = {
+  userDetail: {
+    path: '/users/:id',
+    data: async ({ params, signal }) => fetchUser(params.id, { signal }),
+    handler: ({ data }) => renderUser(data),
+  },
+};
+```
+
+`data()` runs after middleware and before the final handler. Use middleware for redirects and access control, and keep `data()` focused on route-local fetching.
+
 ## Route Context
 
 Handlers and middleware receive a context with routing and navigation helpers:
 
 ```ts
 handler: (ctx) => {
+  ctx.data;
   ctx.pathname;
   ctx.params;
   ctx.query;
   ctx.hash;
-  ctx.meta;
   ctx.locals;
 
   // Named navigation
   ctx.navigate({ name: 'home' });
 
-  // Raw path escape hatches
-  ctx.pushPath('/campaign?utm_source=email');
-  ctx.replacePath('/checkout#payment');
+  // Raw path targets
+  ctx.navigate({ path: '/campaign?utm_source=email' });
+  ctx.navigate({ path: '/checkout#payment' }, { replace: true });
 }
 ```
 
@@ -138,40 +160,41 @@ handler: (ctx) => {
 ```ts
 await router.navigate({ name: 'userDetail', params: { id: '42' } });
 await router.navigate({ name: 'userDetail', params: { id: '42' } }, { replace: true });
-await router.pushPath('/marketing?source=campaign');
-await router.replacePath('/checkout#payment');
+await router.navigate({ path: '/marketing?source=campaign' });
+await router.navigate({ path: '/checkout#payment' }, { replace: true });
 
 router.url('userDetail', { id: '42' }, { tab: 'profile' });
 router.isActive('userDetail');
 router.isActive('users', false);
-router.resolve('/app/users/42');
+router.resolve('/app/dashboard/settings');
 ```
 
 ## State
 
 ```ts
 router.subscribe((state) => {
-  document.title = (state.meta as { title?: string } | undefined)?.title ?? 'App';
+  const leaf = state.matches.at(-1);
+  document.title = (leaf?.meta as { title?: string } | undefined)?.title ?? 'App';
 });
 
-router.state.pathname;
-router.state.params;
-router.state.query;
-router.state.name;
+router.state.location.pathname;
+router.state.location.query;
+router.state.location.hash;
+router.state.matches;
+router.state.status;
 ```
 
-`router.state` is an immutable snapshot. Each successful navigation replaces it with a new frozen object.
+`router.state` is an immutable snapshot. Each successful navigation replaces it with a new snapshot.
+
+Read active-route metadata from the leaf match (`router.state.matches.at(-1)?.meta`).
 
 ## API Summary
 
 | Symbol | Purpose |
 | --- | --- |
 | `createRouter({ routes, ...options })` | Create a router from a declarative route table |
-| `defineRoutes(routes)` | Preserve literal route definitions for better inference |
-| `router.start()` | Handle the current URL and start listening for `popstate` |
 | `router.navigate({ name, ... })` | Navigate by route name |
-| `router.pushPath(path)` | Raw path escape hatch that pushes history |
-| `router.replacePath(path)` | Raw path escape hatch that replaces history |
+| `router.navigate({ path })` | Navigate by raw path target |
 | `router.url(name, params?, query?)` | Build a URL for a named route |
 | `router.isActive(name, exact?)` | Check whether the current route matches a named route |
 | `router.resolve(pathname)` | Resolve a pathname without running middleware or handlers |

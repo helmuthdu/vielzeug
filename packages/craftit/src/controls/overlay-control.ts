@@ -1,6 +1,6 @@
 import { autoUpdate } from '@vielzeug/floatit';
 
-import { effect } from '../runtime';
+import { handle } from '../runtime';
 
 export type OverlayOpenReason = 'programmatic' | 'trigger';
 export type OverlayCloseReason = 'escape' | 'outside-click' | 'programmatic' | 'trigger';
@@ -27,30 +27,13 @@ export type OverlayControlOptions = {
 };
 
 export type OverlayControl = {
-  bindOutsideClick(target?: Document | HTMLElement, capture?: boolean): () => void;
   close(opts?: { reason?: OverlayCloseReason; restoreFocus?: boolean }): void;
   open(opts?: { reason?: OverlayOpenReason }): void;
   toggle(): void;
 };
 
 export const createOverlayControl = (options: OverlayControlOptions): OverlayControl => {
-  // Effect handles positioning lifecycle automatically
-  effect(() => {
-    if (!options.isOpen() || !options.positioner) return;
-
-    const reference = options.positioner.reference();
-    const floating = options.positioner.floating();
-
-    if (!reference || !floating) {
-      options.positioner.update();
-
-      return;
-    }
-
-    const cleanup = autoUpdate(reference, floating, () => options.positioner?.update());
-
-    return cleanup;
-  });
+  let positionerCleanup: (() => void) | null = null;
 
   const shouldRestoreFocus = (): boolean => {
     if (typeof options.restoreFocus === 'function') return options.restoreFocus();
@@ -64,7 +47,18 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     if (options.isDisabled?.() || options.isOpen()) return;
 
     options.setOpen(true, { reason });
-    requestAnimationFrame(() => options.positioner?.update());
+
+    if (options.positioner) {
+      const reference = options.positioner.reference();
+      const floating = options.positioner.floating();
+
+      if (reference && floating) {
+        positionerCleanup = autoUpdate(reference, floating, () => options.positioner?.update());
+      }
+
+      options.positioner.update();
+    }
+
     options.onOpen?.(reason);
   };
 
@@ -74,6 +68,11 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     if (!options.isOpen()) return;
 
     options.setOpen(false, { reason });
+
+    if (positionerCleanup) {
+      positionerCleanup();
+      positionerCleanup = null;
+    }
 
     const restore = opts.restoreFocus ?? shouldRestoreFocus();
 
@@ -92,8 +91,10 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     open({ reason: 'trigger' });
   };
 
-  const bindOutsideClick = (target: Document | HTMLElement = document, capture = true): (() => void) => {
-    const handler = (event: Event) => {
+  handle(
+    document,
+    'click',
+    (event: Event) => {
       if (!options.isOpen()) return;
 
       const eventTarget = (event as Event & { composedPath?: () => EventTarget[] }).composedPath?.()[0] ?? event.target;
@@ -105,15 +106,11 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
         options.getBoundaryElement()?.contains(el) || (options.getPanelElement?.() ?? null)?.contains(el) || false;
 
       if (!inside) close({ reason: 'outside-click' });
-    };
-
-    target.addEventListener('click', handler, { capture });
-
-    return () => target.removeEventListener('click', handler, { capture });
-  };
+    },
+    { capture: true },
+  );
 
   return {
-    bindOutsideClick,
     close,
     open,
     toggle,

@@ -29,7 +29,7 @@ export const mockHistory = {
   }),
 };
 
-// Keep compatibility with older tests that access mocks via globalThis.
+// Expose mocks on globalThis for simple cross-test access.
 Object.assign(globalThis as Record<string, unknown>, {
   mockHistory,
   mockLocation,
@@ -43,7 +43,19 @@ let activeRouter: Router | undefined;
 /** Starts the router and waits for the initial route handling to complete. */
 export async function boot(router: Router): Promise<Router> {
   activeRouter = router;
-  router.start();
+
+  const stateLocation = router.state.location;
+  const stateHasQuery = Object.keys(stateLocation.query).length > 0;
+  const mockHasQuery = mockLocation.search.length > 1;
+  const needsSync =
+    stateLocation.pathname !== mockLocation.pathname ||
+    stateLocation.hash !== mockLocation.hash.replace(/^#/, '') ||
+    stateHasQuery !== mockHasQuery;
+
+  if (needsSync) {
+    window.dispatchEvent(new Event('popstate'));
+  }
+
   await new Promise<void>((r) => setTimeout(r, 10));
 
   return router;

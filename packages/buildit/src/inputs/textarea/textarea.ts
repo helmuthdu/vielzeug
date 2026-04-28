@@ -107,8 +107,6 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       elementRef: textareaRef,
       error: props.error,
       helper: props.helper,
-      label: props.label,
-      labelPlacement: props['label-placement'],
       maxLength: props.maxlength,
       name: props.name,
       onChange: (event, value) => {
@@ -118,11 +116,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
         emit('input', { originalEvent: event, value });
       },
       onInputExtra: autoGrow,
-      placeholder: props.placeholder,
       prefix: 'textarea',
-      readOnly: props.readonly,
-      required: props.required,
-      rows: props.rows,
       value: props.value,
     });
     const {
@@ -131,9 +125,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       fieldId: textareaId,
       helperId,
       labelInsetId,
-      labelInsetRef,
       labelOutsideId,
-      labelOutsideRef,
       value: fieldValue,
     } = tf;
 
@@ -170,6 +162,8 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
     const counterText = () => assistive.value.counterText.replace(' / ', '/');
     const helperHidden = () => !assistive.value.errorText && !assistive.value.helperText;
     const helperText = () => assistive.value.errorText || assistive.value.helperText;
+    const outsideLabelHidden = () => !props.label.value || props['label-placement'].value !== 'outside';
+    const insetLabelHidden = () => !props.label.value || props['label-placement'].value !== 'inset';
 
     return {
       render: () => html`
@@ -178,10 +172,9 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
             class="label-outside"
             for="${textareaId}"
             id="${labelOutsideId}"
-            ref="${labelOutsideRef}"
-            hidden></label>
+            ?hidden="${outsideLabelHidden}">${props.label}</label>
           <div class="field">
-            <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ref="${labelInsetRef}" hidden></label>
+            <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ?hidden="${insetLabelHidden}">${props.label}</label>
             <textarea
               ref="${textareaRef}"
               id="${textareaId}"

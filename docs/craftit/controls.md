@@ -150,7 +150,7 @@ overlay.close({ reason: 'escape' });
 
 ## createPopupListControl()
 
-Use `createPopupListControl()` for popup widgets such as comboboxes, menus, and selects.
+Use `createPopupListControl()` for popup widgets such as comboboxes, menus, and selects. ARIA attributes on the trigger are synced automatically on first bind.
 
 ```ts
 const popupList = createPopupListControl({
@@ -175,11 +175,8 @@ const popupList = createPopupListControl({
 });
 
 popupList.handleListKeydown(event);
-popupList.syncTriggerAria(triggerRef.value!);
-popupList.syncPanelAria(panelRef.value!);
+popupList.syncTriggerAria(triggerRef.value!, { /* custom ARIA if needed */ });
 ```
-
-It exposes the composed `list` and `overlay` controls for advanced cases.
 
 ## createSliderControl()
 
@@ -269,7 +266,7 @@ It keeps selected items, derived form value, ids, and assistive state together.
 
 ## createCheckableFieldControl()
 
-Use `createCheckableFieldControl()` for checkbox, radio, and switch widgets.
+Use `createCheckableFieldControl()` for checkbox, radio, and switch widgets. ARIA attributes are automatically synced on the host element.
 
 ```ts
 const checkable = createCheckableFieldControl({
@@ -285,8 +282,10 @@ const checkable = createCheckableFieldControl({
 });
 
 checkable.control.checked.value;
+checkable.control.triggerValidation('change');
 checkable.press.handleClick(event);
-checkable.a11y.sync(controlElement);
+checkable.labelId;     // ARIA label element ID
+checkable.helperId;    // ARIA helper element ID
 ```
 
 ## See also

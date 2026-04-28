@@ -40,10 +40,6 @@ export const defineField = <T = unknown>(options: FormFieldOptions<T>): FormFiel
 
       if (v instanceof File || v instanceof FormData) return v;
 
-      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint') {
-        return String(v);
-      }
-
       return String(v);
     });
 

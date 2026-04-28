@@ -71,7 +71,7 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
       helper: props.helper,
       host: host.el,
       onToggle: (payload) => {
-        checkable.control.triggerValidation('change');
+        checkable.triggerValidation('change');
         emit('change', payload);
       },
       prefix: 'switch',
@@ -79,22 +79,22 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { a11y, control, press: pressControl } = checkable;
+    const { checked, disabled, handleClick, handleKeydown, helperId, labelId } = checkable;
 
     mountFormContextSync(host.el, formCtx, props);
 
     host.bind({
       attr: {
-        checked: control.checked,
-        tabindex: () => (control.disabled.value ? undefined : 0),
+        checked,
+        tabindex: () => (disabled.value ? undefined : 0),
       },
       class: () => ({
-        'is-checked': control.checked.value,
-        'is-disabled': control.disabled.value,
+        'is-checked': checked.value,
+        'is-disabled': disabled.value,
       }),
       on: {
-        click: pressControl.handleClick,
-        keydown: pressControl.handleKeydown,
+        click: handleClick,
+        keydown: handleKeydown,
       },
     });
 
@@ -105,14 +105,8 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
             <div class="switch-thumb" part="thumb"></div>
           </div>
         </div>
-        <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
-        <div
-          class="helper-text"
-          part="helper-text"
-          data-a11y-helper
-          id="${a11y.helperId}"
-          aria-live="polite"
-          hidden></div>
+        <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
+        <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
       `,
     };
   },

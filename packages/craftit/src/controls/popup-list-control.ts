@@ -1,7 +1,7 @@
-import type { ListControl } from './list-control';
-import type { OverlayCloseReason, OverlayControl, OverlayOpenReason } from './overlay-control';
+import type { OverlayCloseReason, OverlayOpenReason } from './overlay-control';
 
 import { syncAria } from '../host';
+import { onElement } from '../runtime';
 import { createListControl } from './list-control';
 import { createOverlayControl } from './overlay-control';
 
@@ -55,6 +55,8 @@ export type PopupListControlOptions<T> = {
   // ARIA
   /** Configuration for ARIA attributes */
   ariaSync?: PopupListAriaSyncConfig;
+  /** Ref-like trigger element used for internal ARIA syncing. */
+  triggerRef?: { value: HTMLElement | null };
 
   // Overlay
   /** Get the boundary element (for click-outside detection) */
@@ -118,9 +120,6 @@ export type PopupListControlOptions<T> = {
  * Provides methods to control the popup and list, and exposes underlying controls for advanced use.
  */
 export type PopupListControl<T> = {
-  // Overlay control methods
-  /** Bind outside-click listener for closing */
-  bindOutsideClick(target?: Document | HTMLElement, capture?: boolean): () => void;
   /** Close the popup */
   close(reason?: OverlayCloseReason): void;
 
@@ -137,18 +136,11 @@ export type PopupListControl<T> = {
   /** Move to last enabled item */
   last(): void;
 
-  // Expose underlying controls for advanced scenarios
-  /** The underlying list control (for manual navigation if needed) */
-  list: ListControl<T>;
-
   /** Move to next enabled item */
   next(): void;
 
   /** Open the popup */
   open(reason?: OverlayOpenReason): void;
-
-  /** The underlying overlay control (for manual control if needed) */
-  overlay: OverlayControl;
 
   /** Move to previous enabled item */
   prev(): void;
@@ -158,20 +150,6 @@ export type PopupListControl<T> = {
 
   /** Move to specific index */
   set(index: number): void;
-
-  /**
-   * Sync ARIA attributes to the panel element.
-   * Must be called after panel element is available (usually in `mount()`).
-   * Returns cleanup function.
-   */
-  syncPanelAria(panel: Element, config?: { listId?: string; role?: PopupListRole }): () => void;
-
-  /**
-   * Sync ARIA attributes to the trigger element.
-   * Must be called after trigger element is available (usually in `mount()`).
-   * Returns cleanup function.
-   */
-  syncTriggerAria(trigger: Element, config?: PopupListAriaSyncConfig): () => void;
 
   /** Toggle popup open/closed state */
   toggle(): void;
@@ -221,12 +199,6 @@ export type PopupListControl<T> = {
  *   listId: `${selectId}-listbox`,
  * });
  *
- * // Mount: sync ARIA to trigger
- * mount() {
- *   const cleanup = popupList.syncTriggerAria(triggerEl!);
- *   onCleanup(cleanup);
- * }
- *
  * // Keyboard events
  * function handleKeydown(e: KeyboardEvent) {
  *   if (popupList.handleListKeydown(e)) return; // Consumed by navigation
@@ -243,9 +215,9 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
     isItemDisabled: options.isItemDisabled,
     keys: options.keyboardMapping,
     loop: options.loop ?? true,
-    onInvoke: (action, result, event) => {
-      if (result.index >= 0) {
-        options.onNavigate?.(action, result.index, event);
+    onInvoke: (action, index, event) => {
+      if (index >= 0) {
+        options.onNavigate?.(action, index, event);
       }
     },
     setIndex: options.setIndex,
@@ -305,39 +277,25 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
     });
   };
 
-  const syncPanelAria = (panel: Element, config?: { listId?: string; role?: PopupListRole }): (() => void) => {
-    const role = config?.role ?? options.ariaSync?.role ?? 'listbox';
-    const listId = config?.listId ?? options.listId;
-    const roleConfig = getRoleConfig(role);
-
-    return syncAria(panel, {
-      'aria-orientation': 'vertical',
-      id: listId ?? undefined,
-      role: roleConfig.defaultPanelRole,
-    });
-  };
+  if (options.triggerRef) {
+    onElement(options.triggerRef, (trigger) => syncTriggerAria(trigger, options.ariaSync));
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Public API
   // ─────────────────────────────────────────────────────────────────────────
 
   return {
-    // Overlay methods
-    bindOutsideClick: (target, capture) => overlay.bindOutsideClick(target, capture),
     close: (reason) => overlay.close({ reason: reason ?? 'programmatic' }),
     first: () => list.first(),
     getActiveItem: () => list.getActiveItem(),
     handleListKeydown: (event) => list.handleKeydown(event),
     last: () => list.last(),
-    list,
     next: () => list.next(),
     open: (reason) => overlay.open({ reason: reason ?? 'programmatic' }),
-    overlay,
     prev: () => list.prev(),
     reset: () => list.reset(),
     set: (index) => list.set(index),
-    syncPanelAria,
-    syncTriggerAria,
     toggle: () => overlay.toggle(),
   };
 };

@@ -101,19 +101,19 @@ describe('Core: Component Definition', () => {
   describe('Component Props', () => {
     it('supports  + prop helpers for typed defaults and parsing', async () => {
       const { element, query } = await mount(
-        {
-          props: {
-            count: prop.number(0),
-            disabled: prop.bool(false),
-            size: prop.oneOf(['sm', 'md', 'lg'] as const, 'md'),
-          },
-          setup: (props) => {
-            return html`<div class="count">${props.count}</div>
-              <div class="size">${props.size}</div>`;
-          },
+        (props) => {
+          return html`<div class="count">${props.count}</div>
+            <div class="size">${props.size}</div>`;
         },
         {
           attrs: { count: '42', disabled: true, size: 'lg' },
+          componentOptions: {
+            props: {
+              count: prop.number(0),
+              disabled: prop.bool(false),
+              size: prop.oneOf(['sm', 'md', 'lg'] as const, 'md'),
+            },
+          },
         },
       );
 
@@ -123,18 +123,15 @@ describe('Core: Component Definition', () => {
     });
 
     it('should receive attributes as props', async () => {
-      const { element } = await mount(
-        {
+      const { element } = await mount(() => html`<div>Component</div>`, {
+        attrs: { size: 'large', variant: 'primary' },
+        componentOptions: {
           props: {
             size: 'small',
             variant: 'secondary',
           },
-          setup: () => html`<div>Component</div>`,
         },
-        {
-          attrs: { size: 'large', variant: 'primary' },
-        },
-      );
+      });
 
       expect(element.getAttribute('variant')).toBe('primary');
       expect(element.getAttribute('size')).toBe('large');
@@ -142,14 +139,12 @@ describe('Core: Component Definition', () => {
 
     it('should initialize prop signal from attribute', async () => {
       const { query } = await mount(
-        {
-          props: { count: 0 },
-          setup: (props) => {
-            return html`<div class="count">${props.count}</div>`;
-          },
+        (props) => {
+          return html`<div class="count">${props.count}</div>`;
         },
         {
           attrs: { count: '42' },
+          componentOptions: { props: { count: 0 } },
         },
       );
 
@@ -158,20 +153,20 @@ describe('Core: Component Definition', () => {
 
     it('should restore undefined for typed boolean props when the attribute is removed', async () => {
       const fixture = await mount(
-        {
-          props: {
-            open: {
-              default: undefined as boolean | undefined,
-              parse: (value: string | null) => (value == null ? undefined : value === '' || value === 'true'),
-              reflect: false,
-            },
-          },
-          setup: (props) => {
-            return html`<div class="value">${() => String(props.open.value)}</div>`;
-          },
+        (props) => {
+          return html`<div class="value">${() => String(props.open.value)}</div>`;
         },
         {
           attrs: { open: '' },
+          componentOptions: {
+            props: {
+              open: {
+                default: undefined as boolean | undefined,
+                parse: (value: string | null) => (value == null ? undefined : value === '' || value === 'true'),
+                reflect: false,
+              },
+            },
+          },
         },
       );
 
@@ -185,20 +180,20 @@ describe('Core: Component Definition', () => {
 
     it('should parse numbers from attributes when a typed descriptor uses Number', async () => {
       const { query } = await mount(
-        {
-          props: {
-            count: {
-              default: undefined as number | undefined,
-              parse: (value: string | null) => (value == null ? undefined : Number(value)),
-              reflect: false,
-            },
-          },
-          setup: (props) => {
-            return html`<div class="count">${() => String(props.count.value)}</div>`;
-          },
+        (props) => {
+          return html`<div class="count">${() => String(props.count.value)}</div>`;
         },
         {
           attrs: { count: '42' },
+          componentOptions: {
+            props: {
+              count: {
+                default: undefined as number | undefined,
+                parse: (value: string | null) => (value == null ? undefined : Number(value)),
+                reflect: false,
+              },
+            },
+          },
         },
       );
 
@@ -242,12 +237,12 @@ describe('Core: Component Definition', () => {
     });
 
     it('should keep attribute->prop sync after reconnect', async () => {
-      const fixture = await mount({
-        props: { count: 0 },
-        setup: (props) => {
+      const fixture = await mount(
+        (props) => {
           return html`<div class="count">${() => props.count.value}</div>`;
         },
-      });
+        { componentOptions: { props: { count: 0 } } },
+      );
 
       await fixture.attr('count', '1');
       expect(fixture.query('.count')?.textContent).toBe('1');
@@ -523,12 +518,10 @@ describe('Core: Component Definition', () => {
 
   it('should dispatch events via setup emit', async () => {
     const spy = vi.fn();
-    const { element, flush, query } = await mount({
-      setup: (_props, { emit }) => {
-        const fire = () => emit('ping', { ok: true });
+    const { element, flush, query } = await mount((_props, { emit }) => {
+      const fire = () => emit('ping', { ok: true });
 
-        return html`<button @click=${fire}>Ping</button>`;
-      },
+      return html`<button @click=${fire}>Ping</button>`;
     });
 
     element.addEventListener('ping', spy);
@@ -568,16 +561,14 @@ describe('Core: Component Definition', () => {
 
     it('should infer typed prop signals from setup context props', async () => {
       const { query } = await mount(
-        {
-          props: { count: 0 },
-          setup: (props) => {
-            expectType<ReturnType<typeof signal<number | undefined>>>(props.count);
+        (props) => {
+          expectType<ReturnType<typeof signal<number | undefined>>>(props.count);
 
-            return html`<div class="count">${props.count}</div>`;
-          },
+          return html`<div class="count">${props.count}</div>`;
         },
         {
           attrs: { count: '7' },
+          componentOptions: { props: { count: 0 } },
         },
       );
 
@@ -591,14 +582,14 @@ describe('core/component.ts', () => {
     it('returns a handle exposing checkValidity, reportValidity, and setValidity', async () => {
       let handle!: ReturnType<typeof defineField>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           handle = defineField({ value: signal('initial') });
 
           return { render: () => html`<div></div>` };
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       expect(typeof handle.checkValidity).toBe('function');
       expect(typeof handle.reportValidity).toBe('function');
@@ -608,14 +599,14 @@ describe('core/component.ts', () => {
     it('sets custom validity and allows reportValidity to reflect it', async () => {
       let handle!: ReturnType<typeof defineField>;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           handle = defineField({ value: signal('') });
 
           return { render: () => html`<div></div>` };
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       handle.setValidity({ valueMissing: true }, 'Required');
       expect(typeof handle.reportValidity()).toBe('boolean');
@@ -624,9 +615,8 @@ describe('core/component.ts', () => {
     it('calls toFormValue with the current signal value immediately', async () => {
       let transformCalled = false;
 
-      await mount({
-        formAssociated: true,
-        setup: () => {
+      await mount(
+        () => {
           defineField({
             toFormValue: (v) => {
               transformCalled = true;
@@ -638,19 +628,18 @@ describe('core/component.ts', () => {
 
           return { render: () => html`<div></div>` };
         },
-      });
+        { componentOptions: { formAssociated: true } },
+      );
 
       expect(transformCalled).toBe(true);
     });
 
     it('throws when formAssociated is not enabled on the component', async () => {
       await expect(
-        mount({
-          setup: () => {
-            defineField({ value: signal('test') });
+        mount(() => {
+          defineField({ value: signal('test') });
 
-            return { render: () => html`<div></div>` };
-          },
+          return { render: () => html`<div></div>` };
         }),
       ).rejects.toThrow(/formAssociated: true/);
     });
@@ -691,19 +680,19 @@ describe('core/component.ts', () => {
 describe('component props & global helpers', () => {
   it('should support direct default values in component props', async () => {
     const { query } = await mount(
-      {
-        props: {
-          active: { default: true, reflect: false },
-          count: 0,
-          label: 'default',
-        },
-        setup: (props) => {
-          return html`<div class="count">${props.count}</div>
-            <div class="label">${props.label}</div>`;
-        },
+      (props) => {
+        return html`<div class="count">${props.count}</div>
+          <div class="label">${props.label}</div>`;
       },
       {
         attrs: { count: '42', label: 'custom' },
+        componentOptions: {
+          props: {
+            active: { default: true, reflect: false },
+            count: 0,
+            label: 'default',
+          },
+        },
       },
     );
 
@@ -714,14 +703,18 @@ describe('component props & global helpers', () => {
   it('should support object defaults containing a default key via inline prop defs', async () => {
     const configDefault = { default: 'fallback', mode: 'dark' };
 
-    const { query } = await mount({
-      props: {
-        config: { default: configDefault as { default: string; mode: string } | undefined, reflect: false },
-      },
-      setup: (props) => {
+    const { query } = await mount(
+      (props) => {
         return html`<div class="mode">${() => props.config.value?.mode ?? ''}</div>`;
       },
-    });
+      {
+        componentOptions: {
+          props: {
+            config: { default: configDefault as { default: string; mode: string } | undefined, reflect: false },
+          },
+        },
+      },
+    );
 
     expect(query('.mode')?.textContent).toBe('dark');
   });

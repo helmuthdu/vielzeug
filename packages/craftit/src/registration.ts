@@ -33,7 +33,6 @@ type ComponentLifecycleState = {
   instance: ComponentInstance | null;
   mounted: boolean;
   rendered: boolean;
-  setupDone: boolean;
   template: HTMLResult | null;
 };
 
@@ -59,7 +58,6 @@ class BaseElement extends HTMLElement {
       instance: null,
       mounted: false,
       rendered: false,
-      setupDone: false,
       template: null,
     };
     this._state = {
@@ -72,7 +70,7 @@ class BaseElement extends HTMLElement {
 
   connectedCallback(): void {
     untrack(() => {
-      if (!this._lifecycle.setupDone) this._runSetup();
+      if (!this._lifecycle.instance) this._runSetup();
 
       this._init();
     });
@@ -106,14 +104,6 @@ class BaseElement extends HTMLElement {
     this._lifecycle.rendered = false;
   }
 
-  formAssociatedCallback(): void {}
-
-  formDisabledCallback(): void {}
-
-  formResetCallback(): void {}
-
-  formStateRestoreCallback(): void {}
-
   private _handleError(err: unknown): void {
     console.error(`[craftit:E3] <${this.localName}>`, err);
 
@@ -121,8 +111,6 @@ class BaseElement extends HTMLElement {
   }
 
   private _runSetup(): void {
-    this._lifecycle.setupDone = true;
-
     const setupScope: RuntimeScope = {
       cleanups: [],
     };
@@ -163,6 +151,7 @@ class BaseElement extends HTMLElement {
 
     if (!this._lifecycle.mounted && this._lifecycle.instance?.mount) {
       this._lifecycle.mounted = true;
+
       const token = ++this._state.mountToken;
 
       queueMicrotask(() => {

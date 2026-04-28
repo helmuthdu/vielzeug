@@ -258,3 +258,22 @@ export function formatRange(start: TimeInput, end: TimeInput, options: HumanForm
 
   return `${formatter.format(startDate)} - ${formatter.format(endDate)}`;
 }
+
+/**
+ * Convenience namespace for date/time helpers.
+ *
+ * Importing `d` pulls in the full library. For bundle-size-sensitive code,
+ * prefer named exports so bundlers can tree-shake unused helpers.
+ */
+export const d = {
+  diff,
+  formatHuman,
+  formatISO,
+  formatRange,
+  now,
+  shift,
+  Temporal,
+  toInstant,
+  toZoned,
+  within,
+};

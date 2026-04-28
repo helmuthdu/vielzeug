@@ -66,13 +66,6 @@ export interface MountOptions {
   componentOptions?: Omit<ComponentDefinition<any, any>, 'setup'>;
 }
 
-type TestComponentOptions<
-  Props extends Record<string, unknown> = Record<string, never>,
-  Events extends Record<string, unknown> = Record<string, unknown>,
-> = Omit<ComponentDefinition<Props, Events>, 'setup'> & {
-  setup: TestSetup<Props, Events>;
-};
-
 type TestSetup<
   Props extends Record<string, unknown> = Record<string, never>,
   Events extends Record<string, unknown> = Record<string, unknown>,
@@ -198,19 +191,15 @@ const withWindowErrorCapture = async <T>(action: () => Promise<T>): Promise<T> =
  * const { query } = await mount('my-counter');
  */
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: string,
+  tagOrSetup: string,
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: MountSetup,
+  tagOrSetup: MountSetup,
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: TestComponentOptions<any, any>,
-  options?: MountOptions,
-): Promise<Fixture<T>>;
-export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: string | MountSetup | TestComponentOptions<any, any>,
+  tagOrSetup: string | MountSetup,
   options: MountOptions = {},
 ): Promise<Fixture<T>> {
   const { attrs = {}, componentOptions, container = document.body, html, props = {} } = options;
@@ -234,20 +223,13 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   let tagName: string;
   let inlineDefinition: ComponentDefinition<any, any> | undefined;
 
-  if (typeof tagOrSetupOrOptions === 'string') {
-    tagName = tagOrSetupOrOptions;
-  } else if (typeof tagOrSetupOrOptions === 'function') {
-    tagName = `trial-${++_componentTagCounter}`;
-
-    inlineDefinition = {
-      ...(componentOptions ?? {}),
-      setup: normalizeSetup(tagOrSetupOrOptions as TestSetup<any, any>),
-    };
+  if (typeof tagOrSetup === 'string') {
+    tagName = tagOrSetup;
   } else {
     tagName = `trial-${++_componentTagCounter}`;
     inlineDefinition = {
-      ...tagOrSetupOrOptions,
-      setup: normalizeSetup(tagOrSetupOrOptions.setup),
+      ...(componentOptions ?? {}),
+      setup: normalizeSetup(tagOrSetup as TestSetup<any, any>),
     };
   }
 

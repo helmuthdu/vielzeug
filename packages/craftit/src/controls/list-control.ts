@@ -17,51 +17,29 @@ export type ListNavigationOptions<T> = {
   isItemDisabled?: (item: T, index: number) => boolean;
   keys?: Partial<Record<ListKeyAction, string[]>> | (() => Partial<Record<ListKeyAction, string[]>>);
   loop?: boolean;
-  onInvoke?: (action: ListKeyAction, result: ListControlResult, event: KeyboardEvent) => void;
+  onInvoke?: (action: ListKeyAction, index: number, event: KeyboardEvent) => void;
   setIndex: (index: number) => void;
 };
 
-export type ListControlResultReason = 'empty' | 'moved' | 'no-enabled-item' | 'unchanged';
-
-export type ListControlResult = {
-  index: number;
-  moved: boolean;
-  reason: ListControlResultReason;
-  wrapped: boolean;
-};
-
 export type ListControl<T> = {
-  first(): ListControlResult;
+  first(): number;
   getActiveItem(): T | undefined;
-  getEnabledIndex(index: number): ListControlResult;
   handleKeydown(event: KeyboardEvent): boolean;
-  last(): ListControlResult;
-  next(): ListControlResult;
-  prev(): ListControlResult;
+  last(): number;
+  next(): number;
+  prev(): number;
   reset(): void;
-  set(index: number): ListControlResult;
+  set(index: number): number;
 };
 
 export const createListControl = <T>(options: ListNavigationOptions<T>): ListControl<T> => {
   const isDisabled = (item: T, index: number): boolean =>
     options.isItemDisabled?.(item, index) ?? (item as any).disabled;
 
-  const result = (idx: number, current: number, wrapped = false): ListControlResult => {
-    const clamped = Math.max(idx, -1);
-    const moved = clamped >= 0 && clamped !== current;
-
-    return {
-      index: clamped,
-      moved,
-      reason: clamped < 0 ? 'empty' : moved ? 'moved' : 'unchanged',
-      wrapped,
-    };
-  };
-
-  const commitIndex = (idx: number, current: number, wrapped = false): ListControlResult => {
+  const commitIndex = (idx: number): number => {
     if (idx >= 0) options.setIndex(idx);
 
-    return result(idx, current, wrapped);
+    return idx;
   };
 
   const findEnabledIndex = (items: T[], start: number, direction: 'forward' | 'backward'): number => {
@@ -70,85 +48,75 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     return findBackward(items, start, (item, i) => !isDisabled(item, i));
   };
 
-  const first = (): ListControlResult => {
+  const first = (): number => {
     const items = options.getItems();
-    const current = options.getIndex();
 
-    if (!items.length) return result(-1, current);
+    if (!items.length) return -1;
 
     const idx = findEnabledIndex(items, 0, 'forward');
 
-    if (idx < 0) return { index: -1, moved: false, reason: 'no-enabled-item', wrapped: false };
+    if (idx < 0) return -1;
 
-    return commitIndex(idx, current);
+    return commitIndex(idx);
   };
 
-  const last = (): ListControlResult => {
+  const last = (): number => {
     const items = options.getItems();
-    const current = options.getIndex();
 
-    if (!items.length) return result(-1, current);
+    if (!items.length) return -1;
 
     const idx = findEnabledIndex(items, items.length - 1, 'backward');
 
-    if (idx < 0) return { index: -1, moved: false, reason: 'no-enabled-item', wrapped: false };
+    if (idx < 0) return -1;
 
-    return commitIndex(idx, current);
+    return commitIndex(idx);
   };
 
-  const set = (index: number): ListControlResult => {
+  const set = (index: number): number => {
     const items = options.getItems();
-    const current = options.getIndex();
 
-    if (!items.length) return result(-1, current);
+    if (!items.length) return -1;
 
     const clamped = Math.min(Math.max(index, 0), items.length - 1);
 
     if (isDisabled(items[clamped], clamped)) {
-      return { index: clamped, moved: false, reason: 'no-enabled-item', wrapped: false };
+      return options.getIndex();
     }
 
-    return commitIndex(clamped, current);
+    return commitIndex(clamped);
   };
 
-  const getEnabledIndex = (index: number): ListControlResult => {
+  const move = (direction: 'forward' | 'backward'): number => {
     const items = options.getItems();
     const current = options.getIndex();
 
-    if (!items.length) return result(-1, current);
+    if (!items.length) return -1;
 
-    const clamped = Math.min(Math.max(index, 0), items.length - 1);
-    const idx = findEnabledIndex(items, clamped, 'forward');
-
-    if (idx < 0) return { index: -1, moved: false, reason: 'no-enabled-item', wrapped: false };
-
-    return commitIndex(idx, current);
-  };
-
-  const move = (direction: 'forward' | 'backward'): ListControlResult => {
-    const items = options.getItems();
-    const current = options.getIndex();
-
-    if (!items.length) return result(-1, current);
-
-    const start = direction === 'forward' ? Math.max(0, current + 1) : current - 1;
+    const start =
+      current < 0
+        ? direction === 'forward'
+          ? 0
+          : items.length - 1
+        : direction === 'forward'
+          ? current + 1
+          : current - 1;
     const idx = findEnabledIndex(items, start, direction);
 
-    if (idx >= 0) return commitIndex(idx, current);
+    if (idx >= 0) return commitIndex(idx);
 
     if (options.loop) {
       const wrapStart = direction === 'forward' ? 0 : items.length - 1;
       const wrapped = findEnabledIndex(items, wrapStart, direction);
 
-      if (wrapped >= 0) return commitIndex(wrapped, current, true);
+      if (wrapped >= 0) return commitIndex(wrapped);
     }
 
-    return { index: current, moved: false, reason: 'unchanged', wrapped: false };
+    return current;
   };
 
-  const next = (): ListControlResult => move('forward');
+  const next = (): number => move('forward');
 
-  const prev = (): ListControlResult => move('backward');
+  const prev = (): number => move('backward');
 
   const getActiveItem = (): T | undefined => {
     const items = options.getItems();
@@ -186,9 +154,9 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     for (const action of ['next', 'prev', 'first', 'last'] as const) {
       for (const key of keys[action]) {
         keymap[key] = (keyboardEvent: KeyboardEvent) => {
-          const navResult = { first, last, next, prev }[action]();
+          const index = { first, last, next, prev }[action]();
 
-          options.onInvoke?.(action, navResult, keyboardEvent);
+          options.onInvoke?.(action, index, keyboardEvent);
         };
       }
     }
@@ -217,7 +185,6 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
   return {
     first,
     getActiveItem,
-    getEnabledIndex,
     handleKeydown,
     last,
     next,

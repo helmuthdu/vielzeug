@@ -81,7 +81,7 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
       host: host.el,
       indeterminate: props.indeterminate,
       onToggle: (payload) => {
-        checkable.control.triggerValidation('change');
+        checkable.triggerValidation('change');
 
         // In a checkbox-group, the group owns change emission/state updates.
         // Emitting here would bubble to the group and toggle a second time.
@@ -94,24 +94,24 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { a11y, control: controlHandle, press: pressControl } = checkable;
+    const { checked, disabled, handleClick, handleKeydown, helperId, indeterminate, labelId } = checkable;
 
     mountFormContextSync(host.el, formCtx, props);
 
     host.bind({
       attr: {
-        checked: controlHandle.checked,
-        indeterminate: controlHandle.indeterminate,
-        tabindex: () => (controlHandle.disabled.value ? undefined : 0),
+        checked,
+        indeterminate,
+        tabindex: () => (disabled.value ? undefined : 0),
       },
       class: () => ({
-        'is-checked': controlHandle.checked.value,
-        'is-disabled': controlHandle.disabled.value,
-        'is-indeterminate': controlHandle.indeterminate.value,
+        'is-checked': checked.value,
+        'is-disabled': disabled.value,
+        'is-indeterminate': indeterminate.value,
       }),
       on: {
-        click: pressControl.handleClick,
-        keydown: pressControl.handleKeydown,
+        click: handleClick,
+        keydown: handleKeydown,
       },
     });
 
@@ -123,14 +123,8 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
             <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
           </div>
         </div>
-        <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
-        <div
-          class="helper-text"
-          part="helper-text"
-          data-a11y-helper
-          id="${a11y.helperId}"
-          aria-live="polite"
-          hidden></div>
+        <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
+        <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
       `,
     };
   },

@@ -18,6 +18,7 @@ export type PathParams<T extends string> = [ParseParams<T>] extends [never]
 export type RouteParams = Record<string, string>;
 export type QueryParams = Record<string, string | string[]>;
 export type MaybePromise<T> = T | Promise<T>;
+export type NavigationStatus = 'idle' | 'loading' | 'error';
 
 export type NavigateOptions = {
   /** Navigate even if the destination URL matches the current URL */
@@ -30,78 +31,164 @@ export type NavigateOptions = {
   viewTransition?: boolean;
 };
 
-export type PathNavigateOptions = Omit<NavigateOptions, 'replace'>;
+export type RawNavigationTarget = {
+  path: string;
+};
 
-/** Named-route navigation target. Routeit v3 does not accept raw path strings here. */
-export type NavigationTarget = {
+/** Named-route navigation target. */
+export type NamedNavigationTargetBase = {
   hash?: string;
   name: string;
   params?: RouteParams;
   query?: QueryParams;
 };
 
-export type RouteContext<Params extends RouteParams = RouteParams, Meta = unknown> = {
+export type NavigationTarget = NamedNavigationTargetBase | RawNavigationTarget;
+
+export type RouteContext<Params extends RouteParams = RouteParams> = {
+  /** Result from the route's `data()` function. Available in the handler; undefined in middleware. */
+  readonly data?: unknown;
   readonly hash: string;
   /** Mutable bag for passing data between middlewares */
   locals: Record<string, unknown>;
-  readonly meta?: Meta;
+  /** Matched branch for the current navigation. Leaf node is the active route. */
+  readonly matches: RouteMatchBranch;
   readonly navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
   readonly params: Params;
   readonly pathname: string;
-  readonly pushPath: (path: string, options?: PathNavigateOptions) => Promise<void>;
   readonly query: QueryParams;
-  readonly replacePath: (path: string, options?: PathNavigateOptions) => Promise<void>;
+};
+
+/**
+ * Context passed to `data()` functions. Extends RouteContext with an AbortSignal
+ * that is cancelled automatically when a newer navigation supersedes this one.
+ */
+export type DataContext<Params extends RouteParams = RouteParams> = RouteContext<Params> & {
+  readonly signal: AbortSignal;
 };
 
 /** Handler may be sync or async — async return values are implicitly awaited by the router. */
-export type RouteHandler<Params extends RouteParams = RouteParams, Meta = unknown> = (
-  context: RouteContext<Params, Meta>,
+export type RouteHandler<Params extends RouteParams = RouteParams> = (
+  context: RouteContext<Params>,
 ) => MaybePromise<void>;
 
-/** Middleware function. Call `next()` to continue the chain; return without calling it to block navigation. */
-export type Middleware<Meta = unknown> = (
-  context: RouteContext<RouteParams, Meta>,
-  next: () => Promise<void>,
-) => void | Promise<void>;
+/**
+ * Data loader for a route. Runs after all middleware allows navigation.
+ * Cannot redirect — use middleware for auth/guard logic.
+ * Receives an AbortSignal that cancels when a newer navigation starts.
+ */
+export type DataFn<Params extends RouteParams = RouteParams> = (context: DataContext<Params>) => MaybePromise<unknown>;
 
-export type RouteDefinition<Path extends string = string, Meta = unknown> = {
-  handler?: RouteHandler<PathParams<Path>, Meta>;
-  meta?: Meta;
-  middleware?: Middleware<Meta> | Middleware<Meta>[];
+/** Middleware function. Call `next()` to continue the chain; return without calling it to block navigation. */
+export type Middleware = (context: RouteContext<RouteParams>, next: () => Promise<void>) => void | Promise<void>;
+
+export type RouteChildren = Record<string, RouteDefinition<string>>;
+
+export type RouteDefinition<Path extends string = string> = {
+  /** Nested child routes. Keys become part of the compound route name (e.g. `dashboard.settings`). */
+  children?: RouteChildren;
+  /** Data loader. Runs after middleware; result is available as `ctx.data` in the handler. */
+  data?: DataFn<PathParams<Path extends string ? Path : string>>;
+  handler?: RouteHandler<PathParams<Path extends string ? Path : string>>;
+  /** When true the route inherits the parent path (acts as the default child). */
+  index?: boolean;
+  meta?: unknown;
+  /** Use `middleware` for auth guards, analytics, and error boundaries. */
+  middleware?: Middleware[];
+  /** Path segment. Absolute for top-level routes, relative for children. Omit when `index: true`. */
+  path?: Path;
+};
+
+type JoinPath<Parent extends string, Child extends string> = Child extends `/${string}`
+  ? Child
+  : Parent extends '/'
+    ? `/${Child}`
+    : `${Parent}/${Child}`;
+
+type BuildPath<Parent extends string, Def extends RouteDefinition<string>> = Def extends { index: true }
+  ? Parent
+  : Def extends { path: infer Path extends string }
+    ? JoinPath<Parent, Path>
+    : Parent;
+
+type RouteEntry<Name extends string, Path extends string> = {
+  name: Name;
   path: Path;
 };
 
-type RouteTableShape = Record<string, { meta?: unknown; path: string }>;
+type ChildEntries<Children extends RouteChildren, Prefix extends string, ParentPath extends string> = {
+  [ChildName in keyof Children & string]:
+    | RouteEntry<`${Prefix}.${ChildName}`, BuildPath<ParentPath, Children[ChildName]>>
+    | (Children[ChildName] extends { children: infer Nested extends RouteChildren }
+        ? ChildEntries<Nested, `${Prefix}.${ChildName}`, BuildPath<ParentPath, Children[ChildName]>>
+        : never);
+}[keyof Children & string];
+
+type RouteEntries<TRoutes extends RouteTable> = {
+  [Name in keyof TRoutes & string]:
+    | RouteEntry<Name, BuildPath<'/', TRoutes[Name]>>
+    | (TRoutes[Name] extends { children: infer Children extends RouteChildren }
+        ? ChildEntries<Children, Name, BuildPath<'/', TRoutes[Name]>>
+        : never);
+}[keyof TRoutes & string];
+
+export type RoutePathByName<TRoutes extends RouteTable, Name extends string> =
+  Extract<RouteEntries<TRoutes>, { name: Name }> extends {
+    path: infer Path extends string;
+  }
+    ? Path
+    : string;
 
 export type RouteTable = Record<string, RouteDefinition<string, unknown>>;
 
-export type RouteName<TRoutes extends RouteTable> = keyof TRoutes & string;
+export type RouteName<TRoutes extends RouteTable> = RouteEntries<TRoutes>['name'];
 
 export type NamedNavigationTarget<TRoutes extends RouteTable> = {
   [Name in RouteName<TRoutes>]: {
     hash?: string;
     name: Name;
-    params?: PathParams<TRoutes[Name]['path']>;
+    params?: PathParams<RoutePathByName<TRoutes, Name>>;
     query?: QueryParams;
   };
 }[RouteName<TRoutes>];
 
-export type DefinedRouteTable<TRoutes extends RouteTableShape> = {
-  [Name in keyof TRoutes]: RouteDefinition<
-    TRoutes[Name] extends { path: infer Path extends string } ? Path : never,
-    TRoutes[Name] extends { meta?: infer Meta } ? Meta : unknown
-  >;
-};
-
 export type Unsubscribe = () => void;
 
+/** Pluggable history driver. Use `createBrowserHistory()` for standard SPAs. */
+export interface HistoryDriver {
+  readonly location: { readonly hash: string; readonly pathname: string; readonly search: string };
+  push(url: string, state?: unknown): void;
+  replace(url: string, state?: unknown): void;
+  /** Subscribe to location changes (e.g. popstate). Returns an unsubscribe function. */
+  subscribe(listener: () => void): () => void;
+}
+
+/** A single node in the matched route branch (root → leaf). */
+export type RouteMatch = {
+  /** Result of the route's `data()` function, or `undefined` if none was defined. */
+  readonly data: unknown;
+  readonly meta: unknown;
+  readonly name: string;
+  readonly params: RouteParams;
+  readonly pathname: string;
+};
+
+/** Ordered array of matched route nodes from the root layout down to the active leaf. */
+export type RouteMatchBranch = readonly RouteMatch[];
+
+export type RouteLocation = {
+  readonly hash: string;
+  readonly pathname: string;
+  readonly query: QueryParams;
+};
+
 export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
-  /** Start listening and handle the current URL immediately after construction, without a separate start() call (default: false) */
-  autoStart?: boolean;
   /** Base path for all routes (default: '/') */
   base?: string;
+  /** Custom history driver. Defaults to `createBrowserHistory()`. */
+  history?: HistoryDriver;
   /** Global middleware applied to every route. Use this to implement authentication, analytics, and error boundaries. */
-  middleware?: Middleware | Middleware[];
+  middleware?: Middleware[];
   /** Declarative route table. Object key order is preserved and determines match precedence. */
   routes: TRoutes;
   /** Wrap navigation in the View Transition API when available. Falls back to plain execution in unsupported environments. */
@@ -109,19 +196,14 @@ export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
 };
 
 export type RouteState = {
-  readonly hash: string;
-  readonly meta?: unknown;
-  readonly name?: string;
-  readonly params: RouteParams;
-  readonly pathname: string;
-  readonly query: QueryParams;
+  readonly location: RouteLocation;
+  /** Matched route branch from root to leaf, including per-node data loader results. */
+  readonly matches: RouteMatchBranch;
+  /** `idle` after a successful navigation, `error` when a data loader threw. */
+  readonly status: NavigationStatus;
 };
 
-export type ResolvedRoute = {
-  readonly meta?: unknown;
-  readonly name?: string;
-  readonly params: RouteParams;
-};
+export type ResolvedRoute = RouteMatchBranch;
 
 /** -------------------- Internal Types -------------------- **/
 
@@ -135,11 +217,18 @@ export type RouteSegment =
   | { kind: 'splat' }
   | { kind: 'static'; value: string };
 
-export type RouteRecord = {
+/** Static per-node definition stored on a compiled RouteRecord (root → leaf). */
+export type RouteBranchDef = {
+  dataFn?: DataFn;
   handler?: RouteHandler;
   meta?: unknown;
-  middleware: Middleware[];
   name: string;
+};
+
+export type RouteRecord = {
+  /** Ordered branch definitions from root to this leaf, used to build RouteMatchBranch at match time. */
+  branchDefs: readonly RouteBranchDef[];
+  middleware: Middleware[];
   path: string;
   segments: RouteSegment[];
 };

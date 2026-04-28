@@ -25,11 +25,6 @@ export type ComboboxOptionItem = {
   value: string;
 };
 
-export type ComboboxSelectionItem = {
-  label: string;
-  value: string;
-};
-
 export type BitComboboxProps = Omit<
   SelectableFieldProps<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>>,
   'label-placement' | 'value'

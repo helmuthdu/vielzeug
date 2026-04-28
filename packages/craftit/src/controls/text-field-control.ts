@@ -20,7 +20,7 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     { immediate: true },
   );
 
-  const { base, field, triggerValidation } = createFieldControlBase(options, { value });
+  const { base, triggerValidation } = createFieldControlBase(options, { value });
 
   const assistive = createAssistiveState({
     error: options.error,
@@ -58,7 +58,6 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     assistive,
     ...base,
     clear,
-    field,
     triggerValidation,
     value,
   };

@@ -189,7 +189,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
         if (input.value) {
           input.value = '';
         } else if (index > 0) {
-          const prevIndex = listControl.prev().index;
+          const prevIndex = listControl.prev();
           const prevInput = allInputs[prevIndex];
 
           if (prevInput) {

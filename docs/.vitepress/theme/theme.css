@@ -55,9 +55,8 @@
 }
 
 .logo-highlight {
-  float: left;
   padding: 1rem;
-  margin: 0.5rem 1.5rem 0.5rem 0;
+  margin: 0.5rem auto !important;
   background: var(--color-contrast-100);
   border: 1px solid var(--vp-c-divider);
   border-radius: 1rem;

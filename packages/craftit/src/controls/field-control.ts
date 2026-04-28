@@ -1,11 +1,10 @@
 import { computed, type ReadonlySignal, type Signal, signal, watch } from '@vielzeug/stateit';
 
-import { defineField, type FormFieldHandle, type FormFieldOptions } from '../form';
-import { createId, ref } from '../internal';
-import { effect, handle } from '../runtime';
+import { defineField, type FormFieldOptions } from '../form';
+import { createId } from '../internal';
+import { handle } from '../runtime';
 import {
   createControlState,
-  type ValidationReporter,
   type ControlContextOptions,
   type ControlValidationMode,
   type FormControlValidationTrigger,
@@ -21,36 +20,22 @@ export type FieldBaseOptions = {
   disabled?: ReadonlySignal<boolean | undefined>;
   error?: ReadonlySignal<string | undefined>;
   helper?: ReadonlySignal<string | undefined>;
-  label?: ReadonlySignal<string | undefined>;
-  labelPlacement?: ReadonlySignal<'inset' | 'outside' | undefined>;
   name?: ReadonlySignal<string | undefined>;
-  onReset?: () => void;
   prefix: string;
   validateOn?: ReadonlySignal<ControlValidationMode>;
 };
 
 export type TextFieldOptions = FieldBaseOptions & {
-  autocomplete?: ReadonlySignal<string | undefined>;
   elementRef?: { value: HTMLInputElement | HTMLTextAreaElement | null };
-  inputmode?: ReadonlySignal<string | undefined>;
   maxLength?: ReadonlySignal<number | undefined>;
-  minLength?: ReadonlySignal<number | undefined>;
   onBlur?: (event: FocusEvent) => void;
   onChange?: (event: Event, value: string) => void;
   onInput?: (event: Event, value: string) => void;
   onInputExtra?: (event: Event) => void;
-  pattern?: ReadonlySignal<string | undefined>;
-  placeholder?: ReadonlySignal<string | undefined>;
-  readOnly?: ReadonlySignal<boolean | undefined>;
-  required?: ReadonlySignal<boolean | undefined>;
-  rows?: ReadonlySignal<number | undefined>;
-  type?: ReadonlySignal<string | undefined> | (() => string | undefined) | string;
   value: ReadonlySignal<string | undefined>;
 };
 
-export type ChoiceFieldOptions<T> = FieldBaseOptions & {
-  getValue: (item: T) => string;
-  mapControlledValue: (value: string) => T;
+export type ChoiceFieldOptions = FieldBaseOptions & {
   multiple?: ReadonlySignal<boolean | undefined>;
   value: ReadonlySignal<string | undefined>;
 };
@@ -73,18 +58,12 @@ export type CheckableChangePayload = {
 export type FieldControlBaseHandle = {
   disabled: ReadonlySignal<boolean>;
   errorId: string;
-  field?: FormFieldHandle;
   fieldId: string;
   helperId: string;
   labelInsetId: string;
-  labelInsetRef: { value: HTMLLabelElement | null };
   labelOutsideId: string;
-  labelOutsideRef: { value: HTMLLabelElement | null };
   triggerValidation: (on: FormControlValidationTrigger) => void;
-  validateOn: ReadonlySignal<ControlValidationMode> | undefined;
 };
-
-export type FieldControlBaseCore = Omit<FieldControlBaseHandle, 'field' | 'triggerValidation'>;
 
 export type TextFieldHandle = FieldControlBaseHandle & {
   assistive: ReadonlySignal<AssistiveState>;
@@ -124,19 +103,15 @@ export type CheckableStateHandle = FieldControlBaseHandle & {
   value: Signal<string>;
 };
 
-export type ChoiceFieldHandle<T> = FieldControlBaseHandle & {
+export type ChoiceFieldHandle = FieldControlBaseHandle & {
   assistive: ReadonlySignal<AssistiveState>;
   clear: () => void;
-  field?: FormFieldHandle;
   formValue: ReadonlySignal<string>;
-  isMultiple: ReadonlySignal<boolean>;
-  isSelected: (value: string) => boolean;
   removeValue: (value: string) => void;
-  replaceSelectedItems: (items: T[]) => void;
-  selectedItems: Signal<T[]>;
   selectedValues: ReadonlySignal<string[]>;
-  selectItem: (item: T) => void;
-  toggleItem: (item: T) => void;
+  selectValue: (value: string) => void;
+  setValues: (values: string[]) => void;
+  toggleValue: (value: string) => void;
 };
 
 /**
@@ -157,59 +132,9 @@ const createFieldIds = (prefix: string, name?: string | null) => {
   };
 };
 
-export const createBaseFieldHandle = (
-  options: {
-    context?: TextFieldControlContext;
-    label?: ReadonlySignal<string | undefined>;
-    labelPlacement?: ReadonlySignal<'inset' | 'outside' | undefined>;
-    name?: ReadonlySignal<string | undefined>;
-    prefix: string;
-  } & ControlContextOptions,
-) => {
-  const controlState = createControlState(options);
-  const ids = createFieldIds(options.prefix, options.name?.value);
-  const labelInsetRef = ref<HTMLLabelElement>();
-  const labelOutsideRef = ref<HTMLLabelElement>();
-
-  const syncLabels = () => {
-    const placement = options.labelPlacement?.value ?? 'inset';
-    const text = options.label?.value ?? '';
-
-    if (labelInsetRef.value) {
-      labelInsetRef.value.textContent = text;
-      labelInsetRef.value.hidden = !text || placement !== 'inset';
-    }
-
-    if (labelOutsideRef.value) {
-      labelOutsideRef.value.textContent = text;
-      labelOutsideRef.value.hidden = !text || placement !== 'outside';
-    }
-  };
-
-  effect(syncLabels);
-
-  return {
-    bindTrigger:
-      (field: ValidationReporter): ((on: FormControlValidationTrigger) => void) =>
-      (on) =>
-        controlState.triggerValidation(field, on),
-    disabled: controlState.disabled,
-    errorId: ids.errorId,
-    fieldId: ids.fieldId,
-    helperId: ids.helperId,
-    labelInsetId: ids.labelInsetId,
-    labelInsetRef,
-    labelOutsideId: ids.labelOutsideId,
-    labelOutsideRef,
-    validateOn: controlState.validateOn,
-  };
-};
-
 export const createFieldControlBase = <T = unknown>(
   options: {
     context?: TextFieldControlContext;
-    label?: ReadonlySignal<string | undefined>;
-    labelPlacement?: ReadonlySignal<'inset' | 'outside' | undefined>;
     name?: ReadonlySignal<string | undefined>;
     prefix: string;
   } & ControlContextOptions,
@@ -217,11 +142,21 @@ export const createFieldControlBase = <T = unknown>(
     disabled?: FormFieldOptions<T>['disabled'];
   },
 ): {
-  base: FieldControlBaseCore;
-  field: FormFieldHandle;
+  base: Omit<FieldControlBaseHandle, 'triggerValidation'>;
   triggerValidation: (on: FormControlValidationTrigger) => void;
 } => {
-  const { bindTrigger, ...base } = createBaseFieldHandle(options);
+  const controlState = createControlState(options);
+  const ids = createFieldIds(options.prefix, options.name?.value);
+
+  const base: Omit<FieldControlBaseHandle, 'triggerValidation'> = {
+    disabled: controlState.disabled,
+    errorId: ids.errorId,
+    fieldId: ids.fieldId,
+    helperId: ids.helperId,
+    labelInsetId: ids.labelInsetId,
+    labelOutsideId: ids.labelOutsideId,
+  };
+
   const field = defineField<T>({
     ...fieldOptions,
     disabled: fieldOptions.disabled ?? base.disabled,
@@ -229,8 +164,7 @@ export const createFieldControlBase = <T = unknown>(
 
   return {
     base,
-    field,
-    triggerValidation: bindTrigger(field),
+    triggerValidation: (on) => controlState.triggerValidation(field, on),
   };
 };
 
@@ -257,6 +191,7 @@ export const createAssistiveState = (options: AssistiveOptions) => {
   });
 };
 
+/** @internal */
 export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): void => {
   const { element, onBlur, onChange, onInput, triggerValidation } = options;
 
@@ -277,6 +212,7 @@ export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): voi
   });
 };
 
+/** @internal */
 export const createCheckableState = (options: CheckableStateOptions): CheckableStateHandle => {
   const value = signal('');
   const checked = signal(Boolean(options.checked.value));
@@ -301,7 +237,7 @@ export const createCheckableState = (options: CheckableStateOptions): CheckableS
     );
   }
 
-  const { base, field, triggerValidation } = createFieldControlBase(options, {
+  const { base, triggerValidation } = createFieldControlBase(options, {
     toFormValue: (nextValue: string | null) => nextValue,
     value: computed(() => {
       if (indeterminate.value) return null;
@@ -349,7 +285,6 @@ export const createCheckableState = (options: CheckableStateOptions): CheckableS
     ...base,
     assistive,
     checked,
-    field,
     indeterminate,
     toggle,
     triggerValidation,

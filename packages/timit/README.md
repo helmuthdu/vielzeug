@@ -27,6 +27,20 @@ console.log(formatHuman(reminder, { pattern: 'short', locale: 'en-US', tz: 'Amer
 console.log(formatISO(reminder));
 ```
 
+Namespace style:
+
+```ts
+import { d } from '@vielzeug/timit';
+
+const meeting = d.toZoned('2026-03-21T10:30:00Z', { tz: 'America/New_York' });
+const reminder = d.shift(meeting, { minutes: -15 });
+
+console.log(d.formatHuman(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' }));
+console.log(d.formatISO(reminder));
+```
+
+Prefer named imports when bundle size matters.
+
 ## API Quick Reference
 
 ### Conversion
@@ -53,6 +67,10 @@ Notes:
 
 ### Exports
 - `Temporal` (from `@js-temporal/polyfill`) for advanced use
+- `d` namespace for convenience (`d.toInstant(...)`, `d.shift(...)`, etc.)
+
+Notes:
+- Prefer named exports when bundle size matters so bundlers can tree-shake unused helpers.
 
 ## Why timit?
 

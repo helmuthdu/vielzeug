@@ -8,7 +8,7 @@ description: Protect routes using global and route middleware.
 Implement auth checks in middleware and redirect unauthenticated users.
 
 ```ts
-import { createRouter, defineRoutes } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/routeit';
 
 const requireAuth = async (ctx, next) => {
   if (!session.currentUser) {
@@ -21,24 +21,22 @@ const requireAuth = async (ctx, next) => {
 };
 
 const router = createRouter({
-  routes: defineRoutes({
+  routes: {
     login: {
       path: '/login',
       handler: () => renderLogin(),
     },
     dashboard: {
       path: '/dashboard',
-      middleware: requireAuth,
+      middleware: [requireAuth],
       handler: (ctx) => renderDashboard(ctx.locals.user),
     },
     notFound: {
       path: '*',
       handler: () => renderNotFound(),
     },
-  }),
+  },
 });
-
-router.start();
 ```
 
 This keeps access rules near the route while preserving a clear handler pipeline.

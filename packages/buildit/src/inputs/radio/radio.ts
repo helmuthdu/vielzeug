@@ -118,7 +118,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
     });
 
     const activateSelf = (originalEvent?: Event): void => {
-      if (control.checked.value) return;
+      if (checkable.checked.value) return;
 
       if (groupCtx) {
         groupCtx.select(props.value.value ?? '', originalEvent);
@@ -126,7 +126,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
         return;
       }
 
-      control.toggle(originalEvent ?? new Event('change'));
+      checkable.toggle(originalEvent ?? new Event('change'));
     };
 
     const checkable = createCheckableFieldControl({
@@ -148,37 +148,37 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { a11y, control, press: pressControl } = checkable;
+    const { checked, disabled, handleKeydown, helperId, labelId, toggle } = checkable;
 
     mountFormContextSync(host.el, formCtx, props);
 
     host.bind({
       attr: {
-        checked: control.checked,
+        checked,
         color: effectiveColor,
-        disabled: () => (control.disabled.value ? true : undefined),
+        disabled: () => (disabled.value ? true : undefined),
         name: () => effectiveName.value || undefined,
         size: effectiveSize,
         tabindex: () => {
-          if (control.disabled.value) return undefined;
+          if (disabled.value) return undefined;
 
-          return control.checked.value ? 0 : -1;
+          return checked.value ? 0 : -1;
         },
       },
       class: () => ({
-        'is-checked': control.checked.value,
-        'is-disabled': control.disabled.value,
+        'is-checked': checked.value,
+        'is-disabled': disabled.value,
       }),
       on: {
         click: (e: MouseEvent) => {
-          if (control.disabled.value) return;
+          if (disabled.value) return;
 
           if (groupCtx) {
             groupCtx.select(props.value.value ?? '', e);
           } else {
             if (!effectiveName.value) return;
 
-            if (!control.checked.value) {
+            if (!checked.value) {
               const radioName = props.name.value;
               const allRadios = document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`);
 
@@ -186,7 +186,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
                 if (radio !== host.el) radio.removeAttribute('checked');
               });
 
-              control.toggle(e);
+              toggle(e);
             }
           }
         },
@@ -199,7 +199,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
 
           if (activeIndex === -1) return;
 
-          if (pressControl.handleKeydown(e)) return;
+          if (handleKeydown(e)) return;
 
           listControl.handleKeydown(e);
         },
@@ -213,14 +213,8 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
             <div class="dot" part="dot"></div>
           </div>
         </div>
-        <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
-        <div
-          class="helper-text"
-          part="helper-text"
-          data-a11y-helper
-          id="${a11y.helperId}"
-          aria-live="polite"
-          hidden></div>
+        <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
+        <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
       `,
     };
   },

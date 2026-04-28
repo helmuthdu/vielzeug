@@ -49,6 +49,20 @@ const text = formatHuman(reminder, { pattern: 'short', locale: 'en-US' });
 const stable = formatISO(reminder);
 ```
 
+Namespace style (convenience):
+
+```ts
+import { d } from '@vielzeug/timit';
+
+const meeting = d.toZoned(d.now(), { tz: 'America/New_York' });
+const reminder = d.shift(meeting, { minutes: -15 });
+
+const text = d.formatHuman(reminder, { pattern: 'short', locale: 'en-US' });
+const stable = d.formatISO(reminder);
+```
+
+Use named imports for the best tree-shaking in bundle-size-sensitive code.
+
 ## Why Timit?
 
 Manual date handling breaks at daylight-saving boundaries, timezone edges, and DST transitions.
@@ -76,7 +90,7 @@ const reminder = shift(meeting, { minutes: -15 });
 
 ## Features
 
-- **Named exports only** — minimal, tree-shakeable API surface
+- **Flexible imports** — use tree-shakeable named exports or the convenient `d` namespace
 - **Explicit local parsing** — plain local strings require `tz` in `toInstant()`/`toZoned()`
 - **DST-safe arithmetic** — `shift()` handles transitions correctly
 - **Timezone conversion** — `toZoned()`, `toInstant()` with full timezone support

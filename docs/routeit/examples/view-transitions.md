@@ -8,18 +8,16 @@ description: Enable and customize View Transition API navigation animations.
 Enable transitions globally or per navigation.
 
 ```ts
-import { createRouter, defineRoutes } from '@vielzeug/routeit';
+import { createRouter } from '@vielzeug/routeit';
 
 const router = createRouter({
   viewTransition: true,
-  routes: defineRoutes({
+  routes: {
     home: { path: '/', handler: () => renderHome() },
     settings: { path: '/settings', handler: () => renderSettings() },
     notFound: { path: '*', handler: () => renderNotFound() },
-  }),
+  },
 });
-
-router.start();
 
 // Global transitions are enabled by router option.
 await router.navigate({ name: 'settings' });

@@ -1,6 +1,6 @@
 import type { RouteContext } from '../types';
 
-import { createRouter, defineRoutes } from '../router';
+import { createRouter } from '../router';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 
 describe('Route context & middleware', () => {
@@ -20,9 +20,9 @@ describe('Route context & middleware', () => {
     mockLocation.hash = '#hash';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           userDetail: { handler, path: '/users/:id' },
-        }),
+        },
       }),
     );
 
@@ -33,26 +33,22 @@ describe('Route context & middleware', () => {
         navigate: expect.any(Function),
         params: { id: '42' },
         pathname: '/users/42',
-        pushPath: expect.any(Function),
         query: { tab: 'info' },
-        replacePath: expect.any(Function),
       }),
     );
   });
 
-  it('passes route meta into the route context', async () => {
-    const handler = vi.fn();
-
+  it('preserves route meta on match state', async () => {
     mockLocation.pathname = '/meta';
-    await boot(
+    const router = await boot(
       createRouter({
-        routes: defineRoutes({
-          metaPage: { handler, meta: { data: 1 }, path: '/meta' },
-        }),
+        routes: {
+          metaPage: { handler: vi.fn(), meta: { data: 1 }, path: '/meta' },
+        },
       }),
     );
 
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ meta: { data: 1 } }));
+    expect(router.state.matches.at(-1)?.meta).toEqual({ data: 1 });
   });
 
   it('shares locals across middleware and the handler', async () => {
@@ -65,9 +61,9 @@ describe('Route context & middleware', () => {
     mockLocation.pathname = '/local';
     await boot(
       createRouter({
-        routes: defineRoutes({
-          local: { handler, middleware, path: '/local' },
-        }),
+        routes: {
+          local: { handler, middleware: [middleware], path: '/local' },
+        },
       }),
     );
 
@@ -89,7 +85,7 @@ describe('Route context & middleware', () => {
     await boot(
       createRouter({
         middleware: [globalMiddleware],
-        routes: defineRoutes({
+        routes: {
           global: {
             handler: () => {
               calls.push('handler');
@@ -97,7 +93,7 @@ describe('Route context & middleware', () => {
             middleware: [routeMiddleware],
             path: '/global',
           },
-        }),
+        },
       }),
     );
 
@@ -114,10 +110,10 @@ describe('Route context & middleware', () => {
     mockLocation.pathname = '/from';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           from: { handler: source, middleware: [redirect], path: '/from' },
           target: { handler: target, path: '/target' },
-        }),
+        },
       }),
     );
 
@@ -125,19 +121,19 @@ describe('Route context & middleware', () => {
     expect(target).toHaveBeenCalled();
   });
 
-  it('pushPath() can redirect to one-off raw destinations', async () => {
+  it('navigate({ path }) can redirect to one-off raw destinations', async () => {
     const target = vi.fn();
     const redirect = vi.fn(async (ctx: RouteContext) => {
-      await ctx.pushPath('/target?mode=edit');
+      await ctx.navigate({ path: '/target?mode=edit' });
     });
 
     mockLocation.pathname = '/from';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           from: { middleware: [redirect], path: '/from' },
           target: { handler: target, path: '/target' },
-        }),
+        },
       }),
     );
 
@@ -151,9 +147,9 @@ describe('Route context & middleware', () => {
     mockLocation.pathname = '/stop';
     await boot(
       createRouter({
-        routes: defineRoutes({
+        routes: {
           stop: { handler, middleware: [middleware], path: '/stop' },
-        }),
+        },
       }),
     );
 
@@ -175,14 +171,14 @@ describe('Route context & middleware', () => {
     await boot(
       createRouter({
         middleware: [boundary],
-        routes: defineRoutes({
+        routes: {
           boom: {
             handler: () => {
               throw new Error('boom');
             },
             path: '/boom',
           },
-        }),
+        },
       }),
     );
 
@@ -191,7 +187,7 @@ describe('Route context & middleware', () => {
 
   it('throws when next() is called multiple times', async () => {
     const router = createRouter({
-      routes: defineRoutes({
+      routes: {
         invalid: {
           middleware: [
             async (_ctx: RouteContext, next: () => Promise<void>) => {
@@ -201,12 +197,12 @@ describe('Route context & middleware', () => {
           ],
           path: '/invalid',
         },
-      }),
+      },
     });
 
     mockLocation.pathname = '/';
     await boot(router);
 
-    await expect(router.pushPath('/invalid')).rejects.toThrow('[routeit] next() called multiple times');
+    await expect(router.navigate({ path: '/invalid' })).rejects.toThrow('[routeit] next() called multiple times');
   });
 });

@@ -1,13 +1,23 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { describe, expect, it } from 'vitest';
 
-import { diff, formatHuman, formatISO, formatRange, now, shift, toInstant, toZoned, within } from './timit';
+import { d, diff, formatHuman, formatISO, formatRange, now, shift, toInstant, toZoned, within } from './timit';
 
 describe('now', () => {
   it('creates a zoned date-time using the selected time zone', () => {
     const value = now('UTC');
 
     expect(value.timeZoneId).toBe('UTC');
+  });
+});
+
+describe('d namespace', () => {
+  it('exposes Temporal and helper methods under a single namespace', () => {
+    const value = d.now('UTC');
+
+    expect(value.timeZoneId).toBe('UTC');
+    expect(d.formatISO(value)).toBe(formatISO(value));
+    expect(d.Temporal).toBe(Temporal);
   });
 });
 

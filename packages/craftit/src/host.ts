@@ -118,15 +118,7 @@ export const syncAria = (target: Element, config: AriaConfig): (() => void) => {
       continue;
     }
 
-    if (isSignal(rawValue)) {
-      disposers.push(
-        effect(() => {
-          setA11yAttr(target, key, rawValue.value as string | number | boolean | null | undefined);
-        }),
-      );
-    } else {
-      setA11yAttr(target, key, rawValue as string | number | boolean | null | undefined);
-    }
+    setA11yAttr(target, key, rawValue as string | number | boolean | null | undefined);
   }
 
   return () => {

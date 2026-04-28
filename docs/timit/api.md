@@ -9,7 +9,7 @@ description: Complete API reference for @vielzeug/timit date/time functions.
 
 ## Import Style
 
-Timit uses named exports only.
+Timit supports both named exports and a convenience `d` namespace.
 
 ```ts
 import {
@@ -34,6 +34,24 @@ formatHuman(time, { pattern: 'short' });
 formatISO(time);
 formatRange(start, end, { pattern: 'short' });
 ```
+
+Convenience namespace:
+
+```ts
+import { d } from '@vielzeug/timit';
+
+d.now('UTC');
+d.toInstant(input, { tz: 'Europe/Berlin' });
+d.toZoned(instant, { tz: 'America/New_York' });
+d.shift(time, { hours: 1 });
+d.diff(start, end);
+d.within(value, start, end);
+d.formatHuman(time, { pattern: 'short' });
+d.formatISO(time);
+d.formatRange(start, end, { pattern: 'short' });
+```
+
+For bundle-size-sensitive code, prefer named exports so bundlers can tree-shake unused helpers.
 
 ## Functions
 
@@ -223,3 +241,5 @@ import { Temporal } from '@vielzeug/timit';
 ```
 
 `Temporal` is re-exported from `@js-temporal/polyfill` for advanced use cases.
+
+It is also available on the namespace import as `d.Temporal`.
