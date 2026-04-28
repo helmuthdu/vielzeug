@@ -98,7 +98,6 @@ const heavyCalc = memo((n: number) => {
 - [compose](./function/compose.md)
 - [curry](./function/curry.md)
 - [debounce](./function/debounce.md)
-- [fp](./function/fp.md)
 - [memo](./function/memo.md)
 - [once](./function/once.md)
 - [pipe](./function/pipe.md)

@@ -1,5 +1,5 @@
 import { computed, define, html, inject, prop, signal, watch } from '@vielzeug/craftit';
-import { createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
+import { createListControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -110,6 +110,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
     const listControl = createListControl({
       getIndex: () => focusedIndex.value,
       getItems: () => getInputs(),
+      keys: { next: ['ArrowRight'], prev: ['ArrowLeft'] },
       loop: false,
       setIndex: (index) => {
         focusedIndex.value = index;
@@ -118,11 +119,6 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
 
         inputs[index]?.focus();
       },
-    });
-
-    const otpListKeys = createListKeyControl({
-      control: listControl,
-      keys: { next: ['ArrowRight'], prev: ['ArrowLeft'] },
     });
 
     function getValue(): string {
@@ -205,7 +201,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
         emitOtpState(e, false);
         e.preventDefault();
       } else {
-        otpListKeys.handleKeydown(e);
+        listControl.handleKeydown(e);
       }
     }
     function handlePaste(e: ClipboardEvent) {

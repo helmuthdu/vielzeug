@@ -65,7 +65,7 @@ Use:
 - `host.bind({ attr, class, on, prop, style })` — full config object when wiring multiple bindings together
 - `handle(target, event, listener)` for external targets (`window`, `document`, arbitrary elements)
 
-Host binding values must be **signals or primitives** — use `computed(...)` for derived reactive values.
+Host binding values may be **signals, getter functions, or primitives**. Use `computed(...)` when you want a reusable derived signal.
 
 ```ts
 import { computed, define, handle, html, signal } from '@vielzeug/craftit';

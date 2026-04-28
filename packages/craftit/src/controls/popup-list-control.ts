@@ -3,7 +3,6 @@ import type { OverlayCloseReason, OverlayControl, OverlayOpenReason } from './ov
 
 import { syncAria } from '../host';
 import { createListControl } from './list-control';
-import { createListKeyControl } from './list-key-control';
 import { createOverlayControl } from './overlay-control';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -238,10 +237,17 @@ export type PopupListControl<T> = {
 export const createPopupListControl = <T>(options: PopupListControlOptions<T>): PopupListControl<T> => {
   // Create underlying list control
   const list = createListControl<T>({
+    disabled: () => !options.isOpen(),
     getIndex: options.getIndex,
     getItems: options.getItems,
     isItemDisabled: options.isItemDisabled,
+    keys: options.keyboardMapping,
     loop: options.loop ?? true,
+    onInvoke: (action, result, event) => {
+      if (result.index >= 0) {
+        options.onNavigate?.(action, result.index, event);
+      }
+    },
     setIndex: options.setIndex,
   });
 
@@ -257,20 +263,6 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
     positioner: options.positioner,
     restoreFocus: options.restoreFocus,
     setOpen: options.setOpen,
-  });
-
-  // Create list keyboard control
-  const listKeyControl = createListKeyControl({
-    control: list,
-    disabled: () => !options.isOpen(),
-    keys: options.keyboardMapping,
-    onInvoke: (action, result, event) => {
-      const navResult = result as { index: number };
-
-      if (navResult.index >= 0) {
-        options.onNavigate?.(action, navResult.index, event);
-      }
-    },
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -335,7 +327,7 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
     close: (reason) => overlay.close({ reason: reason ?? 'programmatic' }),
     first: () => list.first(),
     getActiveItem: () => list.getActiveItem(),
-    handleListKeydown: (event) => listKeyControl.handleKeydown(event),
+    handleListKeydown: (event) => list.handleKeydown(event),
     last: () => list.last(),
     list,
     next: () => list.next(),

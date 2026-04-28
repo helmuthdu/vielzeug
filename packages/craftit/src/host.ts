@@ -72,17 +72,14 @@ type AriaValue = string | number | boolean | null | undefined | (() => string | 
 
 type AriaConfig = Record<string, AriaValue>;
 
-const normalizeAriaKey = (key: string): string => {
+const normalizeKey = (key: string, forceAriaPrefix = true): string => {
   if (key === 'role' || key.startsWith('aria-')) return key;
 
-  return key.startsWith('aria') ? `aria-${key.slice(4).toLowerCase()}` : `aria-${key}`;
-};
-
-// Like normalizeAriaKey but passes unknown keys through unchanged (for host.bind.attr).
-const normalizeAttrKey = (key: string): string => {
-  if (key === 'role' || key.startsWith('aria-')) return key;
-
-  return key.startsWith('aria') ? `aria-${key.slice(4).toLowerCase()}` : key;
+  return key.startsWith('aria')
+    ? `aria-${key.slice(4).toLowerCase()}`
+    : forceAriaPrefix
+      ? `aria-${key}`
+      : key;
 };
 
 const setA11yAttr = (target: Element, key: string, value: string | number | boolean | null | undefined): void => {
@@ -111,7 +108,7 @@ export const syncAria = (target: Element, config: AriaConfig): (() => void) => {
   const disposers: Array<() => void> = [];
 
   for (const [rawKey, rawValue] of Object.entries(config)) {
-    const key = normalizeAriaKey(rawKey);
+    const key = normalizeKey(rawKey);
 
     if (typeof rawValue === 'function') {
       const getter = rawValue as () => string | number | boolean | null | undefined;
@@ -320,7 +317,7 @@ export const createHost = (): ComponentHost => {
 
     if (config.attr) {
       for (const [key, value] of Object.entries(config.attr)) {
-        const name = normalizeAttrKey(key);
+        const name = normalizeKey(key, false);
         const dispose = applyAttribute(el, name, value);
 
         if (dispose) disposers.push(dispose);

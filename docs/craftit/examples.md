@@ -1,27 +1,25 @@
 ---
 title: Craftit — Examples
-description: Practical examples and recipes for craftit.
+description: Practical examples and recipes for Craftit component authoring, context, forms, observers, and testing.
 ---
 
 [[toc]]
 
-## How to Use These Examples
+## How to use these examples
 
-These examples cover custom element definition, reactive templates, props, slots, and testing.
+These recipes are aligned with the current Craftit public API.
 
-1. Start with the first example page to learn the baseline pattern.
-2. Move to advanced pages that match your framework or production scenario.
-3. Keep the API page open while adapting snippets to your project.
+1. Start with the prop and counter examples if you're new to Craftit.
+2. Use the context, form, and observer examples once you're wiring real components.
+3. Keep the [API Reference](./api.md) or [Controls](./controls.md) page nearby when adapting a recipe.
 
-These examples are aligned with the current `@vielzeug/craftit` API.
+## Examples overview
 
-## Examples Overview
-
-- [Props DSL (`defineProps` + `prop.*`)](./examples/propsof-builder-api.md)
-- [Counter Component](./examples/counter-component.md)
-- [Search List with Directives](./examples/search-list-with-directives.md)
-- [Typed Props and Emits](./examples/typed-props-and-emits.md)
-- [Context Provider and Consumer](./examples/context-provider-and-consumer.md)
-- [Form-Associated Rating Input](./examples/form-associated-rating-input.md)
-- [Observers in setup()](./examples/observers-in-onmount.md)
-- [Test Example (`@vielzeug/craftit/testing`)](./examples/test-example-at-vielzeug-craftit-testing.md)
+- [Prop helpers and raw PropDef](./examples/propsof-builder-api.md)
+- [Counter component](./examples/counter-component.md)
+- [Search list with directives](./examples/search-list-with-directives.md)
+- [Typed props and emits](./examples/typed-props-and-emits.md)
+- [Context provider and consumer](./examples/context-provider-and-consumer.md)
+- [Form-associated rating input](./examples/form-associated-rating-input.md)
+- [Observers in mount()](./examples/observers-in-onmount.md)
+- [Testing with @vielzeug/craftit/testing](./examples/test-example-at-vielzeug-craftit-testing.md)

@@ -18,32 +18,30 @@ import { createContext, define, html, inject, provide, signal } from '@vielzeug/
 
 const THEME_CTX = createContext<ReturnType<typeof signal<'light' | 'dark'>>>('theme');
 
-define(
-  'theme-provider',
-  {
-    setup() {
-      const theme = signal<'light' | 'dark'>('light');
+define('theme-provider', {
+  setup() {
+    const theme = signal<'light' | 'dark'>('light');
 
-      provide(THEME_CTX, theme);
+    provide(THEME_CTX, theme);
 
-      return html`
+    return {
+      render: () => html`
         <button @click=${() => (theme.value = theme.value === 'light' ? 'dark' : 'light')}>Toggle theme</button>
         <slot></slot>
-      `;
-    },
+      `,
+    };
   },
-);
+});
 
-define(
-  'theme-label',
-  {
-    setup() {
-      const theme = inject(THEME_CTX, signal<'light' | 'dark'>('light'));
+define('theme-label', {
+  setup() {
+    const theme = inject(THEME_CTX, signal<'light' | 'dark'>('light'));
 
-      return html`<p>Theme: ${theme}</p>`;
-    },
+    return {
+      render: () => html`<p>Theme: ${theme}</p>`,
+    };
   },
-);
+});
 ```
 
 ## Expected Output
@@ -61,4 +59,4 @@ define(
 
 - [Counter Component](./counter-component.md)
 - [Form-Associated Rating Input](./form-associated-rating-input.md)
-- [Observers in setup()](./observers-in-onmount.md)
+- [Observers in mount()](./observers-in-onmount.md)

@@ -1,6 +1,5 @@
 import {
   effect as _effect,
-  isSignal,
   isWritable,
   type CleanupFn,
   type Signal,
@@ -83,12 +82,6 @@ export function handle(
   event: string,
   listener: EventListener,
   options?: AddEventListenerOptions,
-): void;
-export function handle(
-  target: EventTarget | null | undefined,
-  event: string,
-  listener: EventListener,
-  options?: AddEventListenerOptions,
 ): void {
   if (!target) return;
 
@@ -106,12 +99,6 @@ export const onElement = <T extends HTMLElement>(
 
     if (el) return callback(el);
   }, options);
-};
-
-export const toReactiveBindingSource = (value: unknown): ReadonlySignal<unknown> | undefined => {
-  if (isSignal(value)) return value as ReadonlySignal<unknown>;
-
-  return undefined;
 };
 
 export const hasWritableValueSetter = (value: unknown): value is Signal<unknown> => isWritable(value);

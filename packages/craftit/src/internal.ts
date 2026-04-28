@@ -96,7 +96,7 @@ export function htmlResult(html: string, bindings: Binding[] = []): HTMLResult {
 }
 
 export const isHtmlResult = (value: unknown): value is HTMLResult =>
-  typeof value === 'object' && !!value && (value as HTMLResult).__craftitHtmlResult === true;
+  typeof value === 'object' && value !== null && (value as HTMLResult).__craftitHtmlResult === true;
 
 export function extractResult(v: string | HTMLResult): { bindings: Binding[]; html: string } {
   return typeof v === 'string' ? { bindings: [], html: v } : { bindings: v.__bindings, html: v.__html };

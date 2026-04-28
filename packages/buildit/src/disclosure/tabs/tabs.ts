@@ -10,7 +10,7 @@ import {
   signal,
   watch,
 } from '@vielzeug/craftit';
-import { createListControl, createListKeyControl, createPressControl } from '@vielzeug/craftit/controls';
+import { createListControl, createPressControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -156,6 +156,19 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       getIndex: () => focusedIndex.value,
       getItems: () => getEnabledTabs(),
       isItemDisabled: (tab: HTMLElement) => tab.hasAttribute('disabled'),
+      keys: () => {
+        if (isVertical()) {
+          return {
+            next: ['ArrowDown'],
+            prev: ['ArrowUp'],
+          };
+        }
+
+        return {
+          next: ['ArrowRight', 'ArrowDown'],
+          prev: ['ArrowLeft', 'ArrowUp'],
+        };
+      },
       loop: true,
       setIndex: (index) => {
         focusedIndex.value = index;
@@ -255,23 +268,6 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       onPress: activateFocusedTab,
     });
 
-    const tabListKeys = createListKeyControl({
-      control: listControl,
-      keys: () => {
-        if (isVertical()) {
-          return {
-            next: ['ArrowDown'],
-            prev: ['ArrowUp'],
-          };
-        }
-
-        return {
-          next: ['ArrowRight', 'ArrowDown'],
-          prev: ['ArrowLeft', 'ArrowUp'],
-        };
-      },
-    });
-
     const handleKeydown = (e: KeyboardEvent) => {
       const tabs = getEnabledTabs();
 
@@ -286,7 +282,7 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
 
       if (focused >= 0) focusedIndex.value = focused;
 
-      if (tabListKeys.handleKeydown(e)) return;
+      if (listControl.handleKeydown(e)) return;
 
       manualActivationPress.handleKeydown(e);
     };

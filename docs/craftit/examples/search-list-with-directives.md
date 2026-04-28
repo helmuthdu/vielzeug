@@ -16,15 +16,14 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 ```ts
 import { computed, define, each, html, signal } from '@vielzeug/craftit';
 
-define(
-  'search-list',
-  {
-    setup() {
-      const query = signal('');
-      const items = signal(['Alice', 'Bob', 'Carol', 'Dave']);
-      const filtered = computed(() => items.value.filter((name) => name.toLowerCase().includes(query.value.toLowerCase())));
+define('search-list', {
+  setup() {
+    const query = signal('');
+    const items = signal(['Alice', 'Bob', 'Carol', 'Dave']);
+    const filtered = computed(() => items.value.filter((name) => name.toLowerCase().includes(query.value.toLowerCase())));
 
-      return html`
+    return {
+      render: () => html`
         <input :value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
 
         ${() =>
@@ -36,10 +35,10 @@ define(
                 })}
               </ul>`
             : html`<p>No matches</p>`}
-      `;
-    },
+      `,
+    };
   },
-);
+});
 ```
 
 ## Expected Output

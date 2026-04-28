@@ -63,11 +63,7 @@ export function define<
       const host = createHost();
       const emit = createEmitFn<Emits>();
 
-      let _slots: ComponentSlots | undefined;
-      const slots: ComponentSlots = {
-        elements: (name?: string) => (_slots ??= createSlots()).elements(name),
-        has: (name?: string) => (_slots ??= createSlots()).has(name),
-      };
+      const slots = createSlots();
 
       return setup(props as any, {
         emit,

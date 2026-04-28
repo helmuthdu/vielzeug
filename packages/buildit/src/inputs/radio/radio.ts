@@ -3,7 +3,6 @@ import {
   type CheckableChangePayload,
   createCheckableFieldControl,
   createListControl,
-  createListKeyControl,
 } from '@vielzeug/craftit/controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
@@ -105,20 +104,16 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
     const listControl = createListControl({
       getIndex: () => activeIndex,
       getItems: () => getRadioGroup(),
-      loop: true,
-      setIndex: (index) => {
-        activeIndex = index;
-        getRadioGroup()[index]?.focus();
-      },
-    });
-
-    const radioListKeys = createListKeyControl({
-      control: listControl,
       keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
+      loop: true,
       onInvoke: (_action, _result, event) => {
         const nextRadio = getRadioGroup()[activeIndex];
 
         if (nextRadio) selectRadio(nextRadio, event);
+      },
+      setIndex: (index) => {
+        activeIndex = index;
+        getRadioGroup()[index]?.focus();
       },
     });
 
@@ -206,7 +201,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
 
           if (pressControl.handleKeydown(e)) return;
 
-          radioListKeys.handleKeydown(e);
+          listControl.handleKeydown(e);
         },
       },
     });

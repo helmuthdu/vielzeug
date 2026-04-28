@@ -23,7 +23,6 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 | [`allocate`](./math/allocate.md)     | Distribute a bigint amount proportionally by ratios. |
 | [`average`](./math/average.md)       | Calculate the average of an array of numbers.        |
 | [`clamp`](./math/clamp.md)           | Clamp a number between a minimum and maximum value.  |
-| [`distribute`](./math/distribute.md) | Distribute a bigint amount evenly among N parties.   |
 | [`linspace`](./math/linspace.md)     | Generate an array of evenly-spaced numbers.          |
 | [`max`](./math/max.md)               | Find the maximum value in an array.                  |
 | [`median`](./math/median.md)         | Find the median value in an array of numbers.        |
@@ -97,7 +96,6 @@ distribute(100n, 3); // [34n, 33n, 33n]
 - [allocate](./math/allocate.md)
 - [average](./math/average.md)
 - [clamp](./math/clamp.md)
-- [distribute](./math/distribute.md)
 - [linspace](./math/linspace.md)
 - [max](./math/max.md)
 - [median](./math/median.md)
@@ -117,7 +115,6 @@ Math utilities provide essential tools for common mathematical operations. These
 | :----------------------------------- | :-------------------------------------------------- |
 | [`abs`](./math/abs.md)               | Get the absolute value of a number.                 |
 | [`allocate`](./math/allocate.md)     | Distribute amount proportionally by ratios.         |
-| [`distribute`](./math/distribute.md) | Distribute amount evenly among N parties.           |
 | [`sum`](./math/sum.md)               | Sum all values in an array.                         |
 | [`average`](./math/average.md)       | Calculate the average of an array of numbers.       |
 | [`median`](./math/median.md)         | Find the median value in an array of numbers.       |
@@ -170,7 +167,6 @@ range(0, 10, 2); // [0, 2, 4, 6, 8, 10]
 - [allocate](./math/allocate.md)
 - [average](./math/average.md)
 - [clamp](./math/clamp.md)
-- [distribute](./math/distribute.md)
 - [linspace](./math/linspace.md)
 - [max](./math/max.md)
 - [median](./math/median.md)

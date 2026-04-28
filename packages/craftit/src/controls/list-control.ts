@@ -1,10 +1,23 @@
+import { dispatchKeyboardAction } from './internal/keyboard-utils';
 import { findBackward, findForward } from './internal/validation-utils';
 
+export type ListKeyAction = 'first' | 'last' | 'next' | 'prev';
+
+const DEFAULT_KEYS: Record<ListKeyAction, string[]> = {
+  first: ['Home'],
+  last: ['End'],
+  next: ['ArrowDown'],
+  prev: ['ArrowUp'],
+};
+
 export type ListNavigationOptions<T> = {
+  disabled?: () => boolean;
   getIndex: () => number;
   getItems: () => T[];
   isItemDisabled?: (item: T, index: number) => boolean;
+  keys?: Partial<Record<ListKeyAction, string[]>> | (() => Partial<Record<ListKeyAction, string[]>>);
   loop?: boolean;
+  onInvoke?: (action: ListKeyAction, result: ListControlResult, event: KeyboardEvent) => void;
   setIndex: (index: number) => void;
 };
 
@@ -21,6 +34,7 @@ export type ListControl<T> = {
   first(): ListControlResult;
   getActiveItem(): T | undefined;
   getEnabledIndex(index: number): ListControlResult;
+  handleKeydown(event: KeyboardEvent): boolean;
   last(): ListControlResult;
   next(): ListControlResult;
   prev(): ListControlResult;
@@ -147,10 +161,64 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     options.setIndex(-1);
   };
 
+  // ── Keyboard handling ──────────────────────────────────────────────────────
+
+  const isKeyDisabled = (): boolean => Boolean(options.disabled?.());
+
+  const resolveKeys = (): Record<ListKeyAction, string[]> => {
+    const keys = typeof options.keys === 'function' ? options.keys() : options.keys;
+
+    return {
+      first: keys?.first ?? DEFAULT_KEYS.first,
+      last: keys?.last ?? DEFAULT_KEYS.last,
+      next: keys?.next ?? DEFAULT_KEYS.next,
+      prev: keys?.prev ?? DEFAULT_KEYS.prev,
+    };
+  };
+
+  let cachedKeymap: Record<string, (keyboardEvent: KeyboardEvent) => void> | null = null;
+  let cachedKeysRef: Partial<Record<ListKeyAction, string[]>> | undefined;
+
+  const buildKeymap = (): Record<string, (keyboardEvent: KeyboardEvent) => void> => {
+    const keys = resolveKeys();
+    const keymap: Record<string, (keyboardEvent: KeyboardEvent) => void> = {};
+
+    for (const action of ['next', 'prev', 'first', 'last'] as const) {
+      for (const key of keys[action]) {
+        keymap[key] = (keyboardEvent: KeyboardEvent) => {
+          const navResult = { first, last, next, prev }[action]();
+
+          options.onInvoke?.(action, navResult, keyboardEvent);
+        };
+      }
+    }
+
+    return keymap;
+  };
+
+  const getKeymap = (): Record<string, (keyboardEvent: KeyboardEvent) => void> => {
+    if (typeof options.keys === 'function') {
+      const currentKeys = options.keys();
+
+      if (currentKeys !== cachedKeysRef) {
+        cachedKeysRef = currentKeys;
+        cachedKeymap = buildKeymap();
+      }
+    } else if (!cachedKeymap) {
+      cachedKeymap = buildKeymap();
+    }
+
+    return cachedKeymap!;
+  };
+
+  const handleKeydown = (event: KeyboardEvent): boolean =>
+    dispatchKeyboardAction(event, { disabled: isKeyDisabled, keymap: getKeymap() });
+
   return {
     first,
     getActiveItem,
     getEnabledIndex,
+    handleKeydown,
     last,
     next,
     prev,

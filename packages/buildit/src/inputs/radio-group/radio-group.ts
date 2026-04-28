@@ -10,7 +10,7 @@ import {
   provide,
   signal,
 } from '@vielzeug/craftit';
-import { createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
+import { createListControl } from '@vielzeug/craftit/controls';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { mountFormContextSync } from '../shared/dom-sync';
@@ -196,25 +196,21 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
     const listControl = createListControl<HTMLElement>({
       getIndex: () => getEnabledRadios().indexOf(document.activeElement as HTMLElement),
       getItems: getEnabledRadios,
-      loop: true,
-      setIndex: (index) => {
-        const radio = getEnabledRadios()[index];
-
-        if (!radio) return;
-
-        radio.focus();
-      },
-    });
-
-    const radioGroupListKeys = createListKeyControl({
-      control: listControl,
       keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
+      loop: true,
       onInvoke: (_action, _result, event) => {
         const activeRadio = document.activeElement as HTMLElement | null;
 
         if (activeRadio?.tagName === 'BIT-RADIO') {
           selectRadio(activeRadio.getAttribute('value') ?? '', event);
         }
+      },
+      setIndex: (index) => {
+        const radio = getEnabledRadios()[index];
+
+        if (!radio) return;
+
+        radio.focus();
       },
     });
 
@@ -235,7 +231,7 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
 
           if (focused === -1) return;
 
-          radioGroupListKeys.handleKeydown(e);
+          listControl.handleKeydown(e);
         },
       },
     });

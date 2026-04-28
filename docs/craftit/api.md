@@ -1,22 +1,18 @@
 ---
 title: Craftit — API Reference
-description: API reference for Craftit main exports, directives, and testing utilities.
+description: Entry points and public API reference for @vielzeug/craftit, @vielzeug/craftit/controls, @vielzeug/craftit/observers, and @vielzeug/craftit/testing.
 ---
 
 [[toc]]
 
 ## Package Entry Points
 
-- `@vielzeug/craftit` — core API (stable)
-- `@vielzeug/craftit/controls` — headless interaction APIs
-- `@vielzeug/craftit/observers` — browser observer APIs
-- `@vielzeug/craftit/testing` — testing helpers
-
-## API At a Glance
-
-- `define()` — registers a component definition under a custom-element tag.
-- `html` — creates reactive templates; avoid building templates with string concatenation.
-- `defineProps` / `prop.*` — typed prop definition DSL.
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/craftit` | Core authoring/runtime API plus stateit re-exports |
+| `@vielzeug/craftit/controls` | Headless interaction controls |
+| `@vielzeug/craftit/observers` | Resize, intersection, and media-query observers |
+| `@vielzeug/craftit/testing` | DOM-oriented test helpers |
 
 ## Core Component API
 
@@ -28,75 +24,98 @@ define<Props, Events>(tag: string, definition: ComponentDefinition<Props, Events
 
 Registers a custom element and returns the tag name.
 
-If the tag already exists, Craftit throws to prevent accidental duplicate registrations.
+`definition` supports:
 
-## Field Authoring Controls
+- `props?: PropsDef<Props>`
+- `setup(props, ctx)`
+- `styles?: (string | CSSStyleSheet | CSSResult)[]`
+- `shadow?: Omit<ShadowRootInit, 'mode'>`
+- `formAssociated?: boolean`
 
-From `@vielzeug/craftit/controls`:
-
-- `createTextField(options)` — text field helper with ids, assistive state, validation wiring, and value tracking.
-- `createChoiceField(options)` — choice-field helper for select-like components and grouped values.
-- `createCheckableFieldControl(options)` — high-level checkable helper for checkbox, radio, and switch widgets.
-
-```ts
-import { define, html, signal } from '@vielzeug/craftit';
-
-define('my-counter', {
-  setup() {
-    const count = signal(0);
-
-    return { render: () => html`<button @click=${() => count.value++}>${count}</button>` };
-  },
-});
-```
-
-Use the setup context for host attribute, class, and event wiring.
+`setup()` receives:
 
 ```ts
-import { computed, define, html, signal } from '@vielzeug/craftit';
-
-define('example-card', {
-  setup(_props, { host }) {
-    const ready = signal(false);
-
-    host.attr('ready', computed(() => ready.value));
-
-    return { render: () => html`<slot></slot>` };
-  },
-});
+type SetupContextBag<Events> = {
+  emit: EmitFn<Events>;
+  host: ComponentHost;
+  slots: ComponentSlots;
+};
 ```
 
-For host attributes, classes, and host listeners, use `host.bind(...)`, `host.attr(...)`, `host.class(...)`, `host.style(...)`, `host.prop(...)`, and `host.on(...)` from the setup context.
+It must return a `ComponentInstance` with at least `render(): HTMLResult`.
 
 ## Runtime Helpers
 
-### Lifecycle
+### `effect(fn, options?)`
 
-- `onCleanup(fn)` — register cleanup.
-- `onElement(ref, fn, options?)` — element-scoped effect for nullable refs.
+Component-aware wrapper around stateit's `effect()`. Cleanups registered inside the effect are tied to the current Craftit runtime.
 
-`onCleanup()` is component-aware: inside component setup/mount it runs on unmount.
+### `handle(target, event, listener, options?)`
 
-### Reactivity
+```ts
+handle<K extends keyof HTMLElementEventMap>(
+  target: EventTarget | null | undefined,
+  event: K,
+  listener: (event: HTMLElementEventMap[K]) => void,
+  options?: AddEventListenerOptions,
+): void;
+```
 
-- `effect(fn, options?)` — component-aware wrapper around stateit `effect`.
-- `watch(source, cb, options?)` — import from `@vielzeug/craftit` (re-exported from `@vielzeug/stateit`).
+Adds an event listener and automatically removes it on cleanup.
 
-`watch` is intentionally not tied to the component runtime; it can be used anywhere.
+### `onCleanup(fn)`
 
-Signatures:
+Registers cleanup for the current component/runtime scope.
 
-- `watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription`
+### `onElement(ref, callback, options?)`
 
-### DOM/Event Utilities
+Runs `callback` when a `ref()` resolves to an element and re-runs if that element changes.
 
-- `handle(target, event, listener, options?)` — listener with auto-cleanup.
-- `host.bind({ attr, class, on, prop, style })` — full host wiring config object.
-- `host.attr(name, signal)`, `host.class(map)`, `host.style(map)`, `host.prop(name, descriptor)`, `host.on(event, listener)` — concise one-liner helpers.
+## Props API
 
-Prefer template `@event` bindings for inner DOM nodes; use `host.on(...)` or `handle()` for host-level interactions.
+Craftit does not expose `defineProps()`. Define props directly in the `props` object.
 
-## Template and Styling
+### `prop` helpers
+
+| Helper | Signature | Notes |
+| --- | --- | --- |
+| `prop.string(defaultValue)` | `PropDef<string>` | Reflects by default |
+| `prop.bool(defaultValue?)` | `PropDef<boolean>` | Empty string and `'true'` parse as `true` |
+| `prop.number(defaultValue?)` | `PropDef<number>` | Uses `Number(...)` parsing |
+| `prop.oneOf(allowed, defaultValue)` | `PropDef<T>` | Restricts to the provided string union |
+
+### Prop definitions
+
+```ts
+define('status-pill', {
+  props: {
+    label: prop.string('Ready'),
+    disabled: prop.bool(false),
+    retries: prop.number(0),
+    tone: prop.oneOf(['neutral', 'success', 'danger'] as const, 'neutral'),
+    internalValue: {
+      default: '',
+      reflect: false,
+      parse: (value) => value ?? '',
+    },
+  },
+  setup(props) {
+    return { render: () => html`${props.label}` };
+  },
+});
+```
+
+Prop values arrive in `setup()` as writable signals.
+
+Key exported types:
+
+- `type PropDef<T>`
+- `type PropOptions<T>`
+- `type PropsDef<T>`
+- `type PropsInput<T>`
+- `type InferPropsSignals<T>`
+
+## Template and Directives
 
 ### `html`
 
@@ -104,189 +123,93 @@ Prefer template `@event` bindings for inner DOM nodes; use `host.on(...)` or `ha
 html(strings: TemplateStringsArray, ...values: unknown[]): HTMLResult;
 ```
 
-Tagged template with reactive bindings.
+Supported binding styles include:
 
-For reactive attribute bindings (`:attr=${...}`), pass a signal, `computed(...)`, or getter function.
+- text interpolation: `${count}`
+- attribute binding: `:aria-label=${label}`
+- boolean attributes: `?disabled=${disabled}`
+- property binding: `.value=${value}`
+- event binding: `@click=${onClick}`
+- event modifiers: `@keydown.stop.prevent=${onKeydown}`
+- refs: `ref=${inputRef}`
 
 ### `css`
 
-```ts
-css(strings: TemplateStringsArray, ...values: unknown[]): CSSResult;
-```
+Tagged template helper for component styles.
 
-Returns `{ content: string; toString(): string }`.
+### `each(source, options)`
 
-## Props API
+List-rendering directive. For reactive sources, always provide a stable `key`.
 
-### `defineProps` + `prop.*`
+### `classMap(record)`
 
-The recommended way to declare props. Returns typed `PropDef` objects that feed directly into `define`:
+Builds a class string from booleans, signals, and getters.
 
-```ts
-import { define, defineProps, html, prop } from '@vielzeug/craftit';
+### `raw(value)`
 
-define('x-button', {
-  props: defineProps({
-    label: prop.string('Button'),
-    disabled: prop.bool(false),
-    size: prop.oneOf(['sm', 'md', 'lg'] as const, 'md'),
-    count: prop.number(0),
-  }),
-  setup(props) {
-    return {
-      render: () => html`
-        <button ?disabled=${props.disabled}>
-          ${props.label}
-          <span class=${`size-${props.size.value}`}>${props.count}</span>
-        </button>
-      `,
-    };
-  },
-});
-```
+Injects already-trusted HTML into the rendered output. Use only with sanitized content.
 
-#### `prop` helpers
+## Host and Slots
 
-| Helper | Signature | Default reflect |
-| --- | --- | --- |
-| `prop.string(defaultValue)` | `PropDef<T extends string>` | `true` |
-| `prop.bool(defaultValue?)` | `PropDef<boolean>` | `true` |
-| `prop.number(defaultValue?)` | `PropDef<number>` | `true` |
-| `prop.oneOf(allowed, defaultValue)` | `PropDef<T extends string>` | `true` |
+### Host bindings
 
-All helpers parse from HTML attributes automatically using sensible defaults.
+Setup context `host` exposes:
 
-#### Escaping to raw `PropDef`
+- `host.attr(name, value)`
+- `host.class(record)`
+- `host.style(record)`
+- `host.prop(name, descriptor)`
+- `host.on(event, listener)`
+- `host.bind({ attr, class, style, prop, on })`
 
-For advanced control (custom parsing, no reflection):
+Binding values may be signals, getter functions, or primitives.
+
+### `syncAria(target, config)`
+
+Reactively applies ARIA attributes to any element.
+
+### Slots API
 
 ```ts
-props: {
-  open: {
-    default: false,
-    parse: (v) => v === '' || v === 'true',
-    reflect: false,
-  },
-}
+type ComponentSlots = {
+  elements: (name?: string) => ReadonlySignal<Element[]>;
+  has: (name?: string) => ReadonlySignal<boolean>;
+};
 ```
 
-### Event typing with `define<Props, Events>()`
+Use `slots.has(name?)` for presence checks and `slots.elements(name?)` when you need the actual assigned elements.
 
-Declare component event payloads with the second `define` generic:
+### Typed emits
+
+`emit()` is typed from the second `define<Props, Events>()` generic.
 
 ```ts
 type Events = {
-  select: { value: string };
   close: void;
-};
-
-define<Record<string, never>, Events>('my-example', {
-  setup(_props, { emit }) {
-    emit('select', { value: 'alpha' });
-    emit('close');
-
-    return { render: () => html`` };
-  },
-});
-```
-
-## Slots and Emits
-
-### setup-context `emit`
-
-`setup(_props, { emit })` receives a typed emit function.
-
-```ts
-type EmitFn<T extends Record<string, unknown>> = {
-  <K extends KeysWithoutDetail<T>>(event: K): void;
-  <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): void;
+  select: { value: string };
 };
 ```
 
-Example:
+Then:
 
 ```ts
-type Events = { open: void; select: { value: string } };
-
-emit('open');
+emit('close');
 emit('select', { value: 'alpha' });
-```
-
-### setup-context `slots`
-
-`setup(_props, { slots })` receives first-class slot signals.
-
-```ts
-setup(_props, { slots }) {
-  slots.has().value;
-  slots.has('header').value;
-  slots.elements('trigger').value;
-  slots.elements().value;
-}
-```
-
-- `slots.has(name?)` — whether the given slot currently has assigned elements
-- `slots.elements(name?)` — flattened assigned elements for a slot name
-
-Omit the name to address the default slot.
-
-## Host Binding API
-
-### `HostBindingValue`
-
-Host bindings accept signals, getter functions, or primitive values:
-
-```ts
-// ✅ Signal
-host.attr('aria-expanded', isOpenSignal);
-
-// ✅ Primitive (static)
-host.attr('role', 'button');
-
-// ✅ Computed signal for derived reactive values
-host.attr('aria-label', computed(() => `${label.value} (${count.value})`));
-
-// ✅ Getter function
-host.attr('aria-label', () => label.value);
-```
-
-### One-liner helpers
-
-```ts
-host.attr('disabled', disabledSignal);
-host.class({ 'is-open': isOpenSignal });
-host.style({ color: themeSignal });
-host.prop('value', {
-  get: () => valueSignal.value,
-  set: (v) => { valueSignal.value = v; },
-});
-host.on('click', handleClick);
-```
-
-### `host.bind(config)` — full config object
-
-```ts
-host.bind({
-  attr: { 'aria-expanded': isOpenSignal, role: 'button' },
-  class: { 'is-open': isOpenSignal },
-  on: { click: handleClick },
-  prop: { value: { get: () => val.value, set: (v) => { val.value = v; } } },
-  style: { color: themeSignal },
-});
 ```
 
 ## Context API
 
 - `createContext<T>(description?)`
 - `provide(key, value)`
-- `inject(key)` / `inject(key, fallback)`
+- `inject(key)`
+- `inject(key, fallback)`
 - `injectStrict(key)`
 
-Types:
+Key exported type:
 
-- `InjectionKey<T>`
+- `type InjectionKey<T>`
 
-`injectStrict(key)` throws when no provider value is found.
+`injectStrict()` throws when no value can be resolved through the composed/shadow DOM parent chain.
 
 ## Form-Associated API
 
@@ -296,80 +219,97 @@ Types:
 defineField<T>(options: FormFieldOptions<T>): FormFieldHandle;
 ```
 
-Requires `define('tag-name', { formAssociated: true, ... })`; otherwise Craftit throws an explicit runtime error.
+Works only inside a component declared with `formAssociated: true`.
 
-Types:
+`FormFieldOptions<T>`:
 
-- `FormFieldOptions<T>`
-  - `value: Signal<T> | ReadonlySignal<T>`
-  - `toFormValue?: (value: T) => string | File | FormData | null` — defaults to `String(v)` for primitives, `null` for `null`/`undefined`
-  - `disabled?: Signal<boolean> | ReadonlySignal<boolean>`
-- `FormFieldHandle`
-  - `internals`, `setValidity`, `setCustomValidity`, `checkValidity`, `reportValidity`
+- `value: Signal<T> | ReadonlySignal<T>`
+- `disabled?: ReadonlySignal<boolean>`
+- `toFormValue?: (value: T) => string | File | FormData | null`
+
+`FormFieldHandle`:
+
+- `internals`
+- `checkValidity()`
+- `reportValidity()`
+- `setCustomValidity(message)`
+- `setValidity(...)`
 
 ## Controls APIs
 
-Import from `@vielzeug/craftit/controls`:
+Import from `@vielzeug/craftit/controls`.
 
-- `createListControl(options)`
-- `createOverlayControl(options)`
-- `createTextField(options)`
-- `createChoiceField(options)`
-- `createCheckableFieldControl(options)`
-- `createA11yControl(host, config)`
+### Field authoring controls
 
-Observer APIs are exported from `@vielzeug/craftit/observers`:
+- `createTextField(options)` — string value field wiring with ids, assistive state, validation triggering, and optional element lifecycle binding
+- `createChoiceField(options)` — select-like field wiring for single or multiple selections
+- `createCheckableFieldControl(options)` — checkbox/radio/switch control composition
 
-- `resizeObserver(el): ReadonlySignal<{ width: number; height: number }>`
-- `intersectionObserver(el, options?): ReadonlySignal<IntersectionObserverEntry | null>`
-- `mediaObserver(query): ReadonlySignal<boolean>`
+### Interaction controls
 
-## Utility APIs
+- `createListControl(options)` — enabled-item navigation plus `handleKeydown()`
+- `createPressControl(options)` — click/keyboard press abstraction
+- `createOverlayControl(options)` — open/close/toggle orchestration with reasons
+- `createPopupListControl(options)` — list navigation + overlay + ARIA sync for popup widgets
+- `createSliderControl(options)` — min/max/step snapping and keyboard math
+- `createSpinnerControl(options)` — numeric increment/decrement and keyboard step behavior
 
-- `createId(prefix?)`
-- `ref`, `refs`
-- Internal types: `HTMLResult`, `Directive`, `Ref`, `Refs`, `RefCallback`
+Exported types:
 
-## Directive APIs
+- `type CheckableChangePayload`
+- `type OverlayOpenReason`
+- `type OverlayCloseReason`
+- `type OverlayOpenDetail`
+- `type OverlayCloseDetail`
 
-### `each(source, options)`
+## Observer APIs
 
-- `options.render` renders each item.
-- Source must be reactive (`Signal<T[]>` or `() => T[]`).
-- `options.key` is required.
-- `options.fallback` renders when the list is empty.
+Import from `@vielzeug/craftit/observers`.
 
-```ts
-each(source, { render, key, fallback })
-```
+- `resizeObserver(element)` — returns a signal with `{ width, height }`
+- `intersectionObserver(element, options?)` — returns a signal with the latest `IntersectionObserverEntry | null`
+- `mediaObserver(query)` — returns a signal of whether the query matches
+
+These helpers must be called in `mount()` or another runtime where the observed DOM target already exists.
 
 ## Testing APIs
 
 Import from `@vielzeug/craftit/testing`.
 
-Primary exports:
+### Core helpers
 
 - `mount(...)`
 - `flush()`
-- `within(element)`
-- `fire` (event helpers)
-- `user` (interaction helpers)
-- `waitFor(...)`
-- `waitForEvent(...)`
-- `mock(tagName, template?)`
 - `cleanup()`
 - `install(afterEachHook)`
+- `within(element)`
+- `mock(tagName, template?)`
 
-`mount(...)` accepts:
+### Event helpers
 
-- a registered tag name
-- an inline setup function
-- an inline component options object
+- `fire.click(...)`, `fire.keyDown(...)`, `fire.input(...)`, `fire.custom(...)`, and related low-level DOM event helpers
+- `user.click(...)`, `user.type(...)`, `user.fill(...)`, `user.press(...)`, `user.select(...)`, and related async higher-level helpers
 
-## Stateit Re-Exports
+### Waiting helpers
 
-Craftit re-exports `@vielzeug/stateit` from its main entrypoint:
+- `waitFor(fn, options?)`
+- `waitForEvent(element, name, timeout?)`
 
-```ts
-import { batch, computed, signal, watch, readonly, untrack } from '@vielzeug/craftit';
-```
+## Stateit Re-exports
+
+Craftit re-exports the following directly from `@vielzeug/stateit`:
+
+- `batch`
+- `computed`
+- `isSignal`
+- `peek`
+- `readonly`
+- `signal`
+- `toValue`
+- `untrack`
+- `unwrapSignal`
+- `watch`
+- `writable`
+- `type ReadonlySignal`
+- `type Signal`
+- `type WatchOptions`

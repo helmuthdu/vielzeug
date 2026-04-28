@@ -1,19 +1,19 @@
 ---
 title: Craftit — Usage Guide
-description: Practical usage patterns for Craftit components, directives, and test utilities.
+description: Practical Craftit usage patterns for components, props, templates, slots, context, forms, controls, observers, and tests.
 ---
 
 ::: tip New to Craftit?
-Start with the [Overview](./index.md) for installation and a quick intro, then use this guide for day-to-day patterns.
+Start with the [Overview](./index.md) for the package surface, then use this page for day-to-day authoring patterns.
 :::
 
 [[toc]]
 
-## define
+## define and component structure
 
-`define(tag, definition)` registers that definition and returns the tag name.
+`define(tag, definition)` registers a custom element and returns the tag name.
 
-Registering the same tag twice throws to catch accidental duplicate definitions early.
+Your `setup()` function receives prop signals and a typed context bag, then returns a component instance with at least `render()`.
 
 ```ts
 import { define, html, signal } from '@vielzeug/craftit';
@@ -33,28 +33,11 @@ define('status-chip', {
 });
 ```
 
-With styles:
+Add `styles` and `formAssociated` when the component needs them.
 
-```ts
-import { css, define, html } from '@vielzeug/craftit';
+## signals and effects
 
-define('x-pill', {
-  setup: () => ({ render: () => html`<span><slot></slot></span>` }),
-  styles: [
-    css`
-      span {
-        border: 1px solid currentColor;
-        border-radius: 999px;
-        padding: 0.125rem 0.5rem;
-      }
-    `,
-  ],
-});
-```
-
-## Signals and State
-
-Craftit re-exports all of `@vielzeug/stateit`, so these work directly:
+Craftit re-exports the signal primitives from `@vielzeug/stateit`.
 
 ```ts
 import { batch, computed, effect, signal, watch } from '@vielzeug/craftit';
@@ -76,11 +59,48 @@ batch(() => {
 });
 ```
 
-`watch` is re-exported from `@vielzeug/stateit`. Use it anywhere; it is not tied to component lifecycle.
+Use `effect()` for component-owned reactive work. Use `watch()` when you want explicit previous/next values.
 
-## Template Bindings
+## prop definitions
 
-`html` supports text, attributes, events, and refs.
+Define props directly on the component. There is no `defineProps()` helper in the current public API.
+
+```ts
+import { define, html, prop } from '@vielzeug/craftit';
+
+define('x-button', {
+  props: {
+    label: prop.string('Button'),
+    disabled: prop.bool(false),
+    variant: prop.oneOf(['primary', 'secondary'] as const, 'primary'),
+    count: prop.number(0),
+    internalValue: {
+      default: '',
+      reflect: false,
+      parse: (value) => value ?? '',
+    },
+  },
+  setup(props) {
+    return {
+      render: () => html`
+        <button ?disabled=${props.disabled} :data-variant=${props.variant}>
+          ${props.label} (${props.count})
+        </button>
+      `,
+    };
+  },
+});
+```
+
+Use:
+
+- plain values for simple defaults
+- `prop.*` helpers for common reflected attribute parsing
+- raw `PropDef` objects when you need custom parsing or `reflect: false`
+
+## template bindings
+
+`html` supports text, attributes, booleans, properties, events, refs, and nested `HTMLResult` values.
 
 ```ts
 import { computed, define, html, ref, signal } from '@vielzeug/craftit';
@@ -95,9 +115,14 @@ define('profile-name', {
         <label :title=${computed(() => `Current: ${name.value}`)}>Name</label>
         <input
           ref=${inputRef}
-          :value=${name}
-          @input=${(e: Event) => (name.value = (e.target as HTMLInputElement).value)}
-          @keydown=${(e: KeyboardEvent) => console.log(e.key)}
+          .value=${name}
+          :aria-label=${() => `Current name ${name.value}`}
+          @input=${(event: Event) => {
+            name.value = (event.target as HTMLInputElement).value;
+          }}
+          @keydown.stop=${(event: KeyboardEvent) => {
+            console.log(event.key);
+          }}
         />
         <p>Hello ${name}</p>
       `,
@@ -106,54 +131,11 @@ define('profile-name', {
 });
 ```
 
-## Compact Field Authoring
+## directives
 
-For form controls, use Craftit controls to avoid repetitive wiring.
+Craftit publishes three core directives from the main entry point.
 
-```ts
-import { define, html, inject, ref } from '@vielzeug/craftit';
-import { createTextField } from '@vielzeug/craftit/controls';
-
-define<{ value?: string }>('x-input', {
-  props: { value: '' },
-  setup(props, { emit }) {
-    const formCtx = inject('FORM_CTX');
-    const inputRef = ref<HTMLInputElement>();
-    const field = createTextField({
-      context: formCtx,
-      elementRef: inputRef,
-      onInput: (event, value) => emit('input', { originalEvent: event, value }),
-      prefix: 'x-input',
-      value: props.value,
-    });
-
-    return { render: () => html`<input :value=${field.value} ref=${inputRef} />` };
-  },
-});
-```
-
-## Conditional Rendering
-
-```ts
-import { define, html, signal } from '@vielzeug/craftit';
-
-define('auth-banner', {
-  setup() {
-    const loggedIn = signal(false);
-
-    return {
-      render: () => html`
-        <button @click=${() => (loggedIn.value = !loggedIn.value)}>Toggle</button>
-        ${() => (loggedIn.value ? html`<p>Welcome back</p>` : html`<p>Please sign in</p>`)}
-      `,
-    };
-  },
-});
-```
-
-## `each`
-
-Reactive `each()` sources require an explicit `key` option. For frequently changing lists, prefer delegated events on a parent node.
+### `each`
 
 ```ts
 import { define, each, html, signal } from '@vielzeug/craftit';
@@ -161,21 +143,17 @@ import { define, each, html, signal } from '@vielzeug/craftit';
 define('task-list', {
   setup() {
     const tasks = signal([
-      { id: 1, text: 'Write tests', done: false },
-      { id: 2, text: 'Ship feature', done: true },
+      { id: 1, text: 'Write tests' },
+      { id: 2, text: 'Ship feature' },
     ]);
 
     return {
       render: () => html`
-        <ul @click=${(e: Event) => {
-          const target = (e.target as HTMLElement).closest<HTMLElement>('[data-task-id]');
-          if (!target) return;
-          console.log('clicked task', target.dataset.taskId);
-        }}>
+        <ul>
           ${each(tasks, {
             fallback: () => html`<li>No tasks</li>`,
             key: (task) => task.id,
-            render: (task) => html`<li data-task-id=${task.id}>${task.text}</li>`,
+            render: (task) => html`<li>${task.text}</li>`,
           })}
         </ul>
       `,
@@ -184,124 +162,45 @@ define('task-list', {
 });
 ```
 
-## Lifecycle and Runtime Helpers
-
-Use lifecycle helpers from the main entrypoint.
-
-For ref-driven effects, host wiring patterns, and cleanup strategies, see [Lifecycle Best Practices](./lifecycle-best-practices.md).
-
-`onCleanup()` is component-scoped: inside a component runtime it is tied to host disconnect.
+### `classMap`
 
 ```ts
-import { define, handle, html, onCleanup, signal } from '@vielzeug/craftit';
+import { classMap, define, html, signal } from '@vielzeug/craftit';
 
-define('window-size', {
-  setup(_props, { host }) {
-    const width = signal(window.innerWidth);
-    const ariaLabel = 'Window size watcher';
-    const ariaBusy = computed(() => String(width.value < 768));
-
-    host.bind({
-      attr: { 'aria-busy': ariaBusy, 'aria-label': ariaLabel, tabindex: 0 },
-      on: {
-        keydown: (e) => {
-          if ((e as KeyboardEvent).key === 'Enter') host.el.toggleAttribute('active');
-        },
-      },
-    });
-
-    handle(window, 'resize', () => {
-      width.value = window.innerWidth;
-    });
-
-    onCleanup(() => {
-      host.el.removeAttribute('active');
-    });
-
-    return { render: () => html`<p>Width: ${width}</p>` };
-  },
-});
-```
-
-## Props and Attributes
-
-Use `defineProps` + `prop.*` helpers for concise, fully typed prop definitions.
-
-### Declaring props with `defineProps` + `prop.*`
-
-```ts
-import { computed, define, defineProps, html, prop } from '@vielzeug/craftit';
-
-define('x-button', {
-  props: defineProps({
-    label: prop.string('Button'),
-    disabled: prop.bool(false),
-    variant: prop.oneOf(['primary', 'secondary'] as const, 'primary'),
-    count: prop.number(0),
-  }),
-  setup(props, { host }) {
-    host.attr('disabled', props.disabled);
+define('alert-banner', {
+  setup() {
+    const danger = signal(false);
 
     return {
       render: () => html`
-        <button ?disabled=${props.disabled} :data-variant=${props.variant}>
-          ${props.label}
-        </button>
+        <div class="${classMap({ danger, safe: () => !danger.value })}">Status</div>
       `,
     };
   },
 });
 ```
 
-### Custom parsing and reflection control
-
-When you need finer control use a raw `PropDef` object:
+### `raw`
 
 ```ts
-define<{ openState?: boolean | undefined }>('x-drawer', {
-  props: {
-    openState: {
-      default: undefined as boolean | undefined,
-      parse: (v) => (v == null ? undefined : v === '' || v === 'true'),
-      reflect: false,
-    },
-  },
-  setup(props) {
-    return { render: () => html`<slot></slot>` };
-  },
-});
-```
+import { define, html, raw, signal } from '@vielzeug/craftit';
 
-### Typed emits
+define('trusted-markup', {
+  setup() {
+    const content = signal('<strong>Trusted HTML</strong>');
 
-Declare event contracts with the second `define<Props, Events>` generic:
-
-```ts
-import { define, defineProps, html, prop } from '@vielzeug/craftit';
-
-type ButtonEvents = {
-  change: { variant: 'primary' | 'secondary' };
-};
-
-define<Record<string, never>, ButtonEvents>('x-button', {
-  props: defineProps({
-    variant: prop.oneOf(['primary', 'secondary'] as const, 'primary'),
-  }),
-  setup(props, { emit }) {
     return {
-      render: () => html`
-        <button @click=${() => emit('change', { variant: props.variant.value })}>
-          ${props.variant.value}
-        </button>
-      `,
+      render: () => html`<div>${raw(content)}</div>`,
     };
   },
 });
 ```
 
-## Host Bindings
+Use `raw()` only with content you already trust or sanitize.
 
-Host binding values must be **signals or primitives**. Use `computed(...)` for reactive derived values.
+## host bindings
+
+Use setup-context `host` when wiring the custom element itself.
 
 ```ts
 import { computed, define, html, signal } from '@vielzeug/craftit';
@@ -309,31 +208,49 @@ import { computed, define, html, signal } from '@vielzeug/craftit';
 define('x-toggle', {
   setup(_props, { host }) {
     const open = signal(false);
-    const expanded = computed(() => String(open.value));
 
-    host.attr('aria-expanded', expanded);
-    host.attr('role', 'button');
-    host.class({ 'is-open': open });
-    host.on('click', () => { open.value = !open.value; });
+    host.bind({
+      attr: {
+        'aria-expanded': computed(() => String(open.value)),
+        role: 'button',
+        tabindex: 0,
+      },
+      class: { 'is-open': open },
+      on: {
+        click: () => {
+          open.value = !open.value;
+        },
+        keydown: (event: KeyboardEvent) => {
+          if (event.key === 'Enter') open.value = !open.value;
+        },
+      },
+    });
 
     return { render: () => html`<slot></slot>` };
   },
 });
 ```
 
-## Slots
+Host binding values may be signals, getter functions, or primitives.
 
-Use setup-context `slots` to detect slot presence and render fallback UI.
+## slots and emits
+
+Use setup-context `slots` to inspect assigned content and setup-context `emit` for typed custom events.
 
 ```ts
 import { define, html } from '@vielzeug/craftit';
 
-define('x-panel', {
-  setup(_props, { slots }) {
+type PanelEvents = {
+  close: void;
+};
+
+define<Record<string, never>, PanelEvents>('x-panel', {
+  setup(_props, { emit, slots }) {
     return {
       render: () => html`
         <header>
           ${() => (slots.has('header').value ? html`<slot name="header"></slot>` : html`<h2>Fallback header</h2>`)}
+          <button @click=${() => emit('close')}>Close</button>
         </header>
         <section>
           ${() => (slots.has().value ? html`<slot></slot>` : html`<p>No content yet</p>`)}
@@ -344,7 +261,7 @@ define('x-panel', {
 });
 ```
 
-## Context (Provide / Inject)
+## context provide/inject
 
 ```ts
 import { createContext, define, html, injectStrict, provide, signal } from '@vielzeug/craftit';
@@ -369,9 +286,11 @@ define('count-consumer', {
 });
 ```
 
-## Form-Associated Elements
+Use `inject(key, fallback)` when the dependency is optional.
 
-`defineField` requires `define('tag-name', { formAssociated: true, ... })`.
+## form-associated elements
+
+`defineField()` requires `formAssociated: true` on the component definition.
 
 ```ts
 import { define, defineField, html, signal } from '@vielzeug/craftit';
@@ -380,27 +299,25 @@ define('x-rating', {
   formAssociated: true,
   setup() {
     const value = signal(0);
-
-    defineField({ value });
+    const field = defineField({ value, toFormValue: (next) => (next > 0 ? String(next) : null) });
 
     return {
       render: () => html`
         <button @click=${() => (value.value = 1)}>1</button>
         <button @click=${() => (value.value = 2)}>2</button>
         <button @click=${() => (value.value = 3)}>3</button>
+        <button @click=${() => field.setCustomValidity(value.value > 0 ? '' : 'Pick a rating')}>
+          Validate
+        </button>
       `,
     };
   },
 });
 ```
 
-`toFormValue` defaults to `String(v)` for primitives and `null` for `null`/`undefined`. Override it for custom serialisation:
+## platform observers
 
-```ts
-defineField({ value, toFormValue: (v) => JSON.stringify(v) });
-```
-
-## Platform Observers
+Observer helpers from `@vielzeug/craftit/observers` must run when the DOM target exists, which usually means inside `mount()`.
 
 ```ts
 import { define, effect, html, ref } from '@vielzeug/craftit';
@@ -412,12 +329,16 @@ define('x-observed', {
 
     return {
       mount() {
-        const size = resizeObserver(boxRef.value!);
+        const element = boxRef.value;
+
+        if (!element) return;
+
+        const size = resizeObserver(element);
+        const visible = intersectionObserver(element, { threshold: 0.5 });
         const dark = mediaObserver('(prefers-color-scheme: dark)');
-        const visible = intersectionObserver(boxRef.value!, { threshold: 0.5 });
 
         effect(() => {
-          console.log(size.value.width, dark.value, visible.value?.isIntersecting);
+          console.log(size.value.width, visible.value?.isIntersecting, dark.value);
         });
       },
       render: () => html`<div ref=${boxRef}>Observe me</div>`,
@@ -426,45 +347,60 @@ define('x-observed', {
 });
 ```
 
-## Controls
+## controls
 
-Use `@vielzeug/craftit/controls` when you need headless interaction logic.
-
-For field-focused guidance and per-control API details, see [Craftit Controls](./controls.md).
+Use `@vielzeug/craftit/controls` for reusable interaction logic rather than rewriting keyboard, overlay, or field state logic in every component.
 
 ```ts
-import { createListControl, createOverlayControl } from '@vielzeug/craftit/controls';
+import { createListControl, createOverlayControl, createPressControl } from '@vielzeug/craftit/controls';
 
-const nav = createListControl({
+const list = createListControl({
   getIndex: () => focusedIndex.value,
   getItems: () => options.value,
-  setIndex: (index) => { focusedIndex.value = index; },
+  keys: { next: ['ArrowDown'], prev: ['ArrowUp'] },
+  loop: true,
+  setIndex: (index) => {
+    focusedIndex.value = index;
+  },
 });
 
 const overlay = createOverlayControl({
-  getBoundaryElement: () => host,
+  getBoundaryElement: () => host.el,
+  getPanelElement: () => panelRef.value,
+  getTriggerElement: () => triggerRef.value,
   isOpen: () => open.value,
-  setOpen: (next, context) => { open.value = next; console.log(context.reason); },
+  setOpen: (next, context) => {
+    open.value = next;
+    console.log(context.reason);
+  },
 });
 
-const moveResult = nav.next();
-if (moveResult.reason === 'moved') focusedIndex.value = moveResult.index;
-overlay.open({ reason: 'trigger' });
+const press = createPressControl({
+  onPress: () => overlay.toggle(),
+});
 ```
 
-## Testing Utilities
+For field-specific helpers and per-control guidance, see [Controls](./controls.md).
+
+## testing utilities
+
+`@vielzeug/craftit/testing` is intended for DOM-capable test runners such as Vitest + jsdom.
 
 ```ts
-import { cleanup, mount, user, waitFor } from '@vielzeug/craftit/testing';
+import { cleanup, fire, install, mount, user, waitFor, waitForEvent } from '@vielzeug/craftit/testing';
 
-// afterEach(() => cleanup());
+install(afterEach);
 
 const fixture = await mount('my-counter');
 const button = fixture.query<HTMLButtonElement>('button')!;
 
-await user.click(button);
-await waitFor(() => fixture.query('button')?.textContent?.includes('1'));
+const changed = waitForEvent<CustomEvent<{ value: number }>>(fixture.element, 'change');
 
-fixture.destroy();
+await user.click(button);
+fire.keyDown(button, { key: 'Enter' });
+
+await waitFor(() => button.textContent?.includes('1'));
+await changed;
+
 cleanup();
 ```

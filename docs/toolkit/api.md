@@ -147,7 +147,6 @@ See [Function Examples](./examples/function.md) for detailed usage.
 | [`compose`](./examples/function/compose.md)           | Compose functions right-to-left         | `compose(f, g, h)`                        |
 | [`curry`](./examples/function/curry.md)               | Curry function with partial application | `curry(add)(1)(2)` → `3`                  |
 | [`debounce`](./examples/function/debounce.md)         | Delay execution until idle              | `debounce(fn, 300)`                       |
-| [`fp`](./examples/function/fp.md)                     | Functional programming pipeline wrapper | `fp(map, double)([1,2,3])`                |
 | [`memo`](./examples/function/memo.md)                 | Memoize/cache function results          | `memo(expensiveFn)`                       |
 | [`once`](./examples/function/once.md)                 | Execute function only once              | `once(fn)`                                |
 | [`pipe`](./examples/function/pipe.md)                 | Compose functions left-to-right         | `pipe(f, g, h)`                           |
@@ -190,7 +189,6 @@ See [Math Examples](./examples/math.md) for detailed usage.
 | Utility                                       | Description               | Example                                 |
 | --------------------------------------------- | ------------------------- | --------------------------------------- |
 | [`allocate`](./examples/math/allocate.md)     | Distribute proportionally | `allocate(100, [1,2,3])` → `[16,33,51]` |
-| [`distribute`](./examples/math/distribute.md) | Distribute evenly         | `distribute(100, 3)` → `[34,33,33]`     |
 
 ### Statistics
 

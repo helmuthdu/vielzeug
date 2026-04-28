@@ -45,6 +45,6 @@ define('simple-counter', {
 
 ## Related Recipes
 
-- [Props DSL](./propsof-builder-api.md)
+- [Prop helpers and raw PropDef](./propsof-builder-api.md)
 - [Form-Associated Rating Input](./form-associated-rating-input.md)
 - [Context Provider and Consumer](./context-provider-and-consumer.md)

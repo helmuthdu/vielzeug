@@ -1,5 +1,5 @@
 import { define, computed, createContext, html, provide, signal, type ReadonlySignal } from '@vielzeug/craftit';
-import { createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
+import { createListControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -105,7 +105,6 @@ export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-
     });
 
     // Group-level event and keyboard handling for WAI-ARIA Accordion pattern
-    const accordionListKeys = createListKeyControl({ control: listControl });
 
     host.bind({
       on: {
@@ -130,7 +129,7 @@ export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-
           if (focused === -1) return; // focus is not on a summary — let native handling proceed
 
           focusedIndex.value = focused;
-          accordionListKeys.handleKeydown(evt);
+          listControl.handleKeydown(evt);
         },
       },
     });

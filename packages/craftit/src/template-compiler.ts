@@ -14,7 +14,6 @@ import {
   type Ref,
   type RefCallback,
 } from './internal';
-import { toReactiveBindingSource } from './runtime';
 import { createAttrBinding } from './template-bindings';
 
 // Templates use the HTML as-is; no aggressive whitespace normalization
@@ -51,37 +50,25 @@ const templatePlanCache = new WeakMap<TemplateStringsArray, CompiledTemplatePlan
 const htmlGetterSignalCache = new WeakMap<() => unknown, HtmlWrapperSignal>();
 const htmlSignalWrapperCache = new WeakMap<ReadonlySignal<unknown>, HtmlWrapperSignal>();
 
+const MODIFIER_WRAPPERS: Record<string, (fn: (e: Event) => void) => (e: Event) => void> = {
+  prevent: (fn) => (e) => {
+    e.preventDefault();
+    fn(e);
+  },
+  self: (fn) => (e) => {
+    if (e.target === e.currentTarget) fn(e);
+  },
+  stop: (fn) => (e) => {
+    e.stopPropagation();
+    fn(e);
+  },
+};
+
 const applyModifiers = (
   handler: (e: Event) => void,
   modifiers: string[],
 ): { handler: (e: Event) => void; options?: AddEventListenerOptions } => {
-  let wrapped = handler;
-
-  if (modifiers.includes('stop')) {
-    const prev = wrapped;
-
-    wrapped = (e) => {
-      e.stopPropagation();
-      prev(e);
-    };
-  }
-
-  if (modifiers.includes('prevent')) {
-    const prev = wrapped;
-
-    wrapped = (e) => {
-      e.preventDefault();
-      prev(e);
-    };
-  }
-
-  if (modifiers.includes('self')) {
-    const prev = wrapped;
-
-    wrapped = (e) => {
-      if (e.target === e.currentTarget) prev(e);
-    };
-  }
+  const wrapped = modifiers.reduce((fn, m) => MODIFIER_WRAPPERS[m]?.(fn) ?? fn, handler);
 
   const options: AddEventListenerOptions = {};
 
@@ -142,8 +129,6 @@ const createHtmlWrapperSignal = (
 ): {
   signal: HtmlWrapperSignal;
 } | null => {
-  const source = toReactiveBindingSource(value);
-
   if (typeof value === 'function') {
     const getter = value as () => unknown;
     const cached = htmlGetterSignalCache.get(getter);
@@ -159,8 +144,8 @@ const createHtmlWrapperSignal = (
     return { signal: sig };
   }
 
-  if (isSignal(value) && source && isHtmlResult(source.value)) {
-    const htmlSignal = source;
+  if (isSignal(value) && isHtmlResult((value as ReadonlySignal<unknown>).value)) {
+    const htmlSignal = value as ReadonlySignal<unknown>;
     const cached = htmlSignalWrapperCache.get(htmlSignal);
 
     if (cached) {
