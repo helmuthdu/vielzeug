@@ -25,7 +25,16 @@ export type ComponentInstance = {
 type ComponentCleanupState = {
   cleanups: CleanupFn[];
   el: HTMLElement;
+  mountToken: number;
   styles?: (string | CSSStyleSheet | CSSResult)[];
+};
+
+type ComponentLifecycleState = {
+  instance: ComponentInstance | null;
+  mounted: boolean;
+  rendered: boolean;
+  setupDone: boolean;
+  template: HTMLResult | null;
 };
 
 class BaseElement extends HTMLElement {
@@ -37,12 +46,8 @@ class BaseElement extends HTMLElement {
   static observedAttributes: string[] = [];
 
   shadow: ShadowRoot;
-  private _mounted = false;
+  private _lifecycle: ComponentLifecycleState;
   private _state: ComponentCleanupState;
-  private _rendered = false;
-  private _setupDone = false;
-  private _instance: ComponentInstance | null = null;
-  private _template: HTMLResult | null = null;
 
   constructor() {
     super();
@@ -50,16 +55,24 @@ class BaseElement extends HTMLElement {
     const options = (this.constructor as typeof BaseElement)._options;
 
     this.shadow = this.attachShadow({ mode: 'open', ...options?.shadow });
+    this._lifecycle = {
+      instance: null,
+      mounted: false,
+      rendered: false,
+      setupDone: false,
+      template: null,
+    };
     this._state = {
       cleanups: [],
       el: this,
+      mountToken: 0,
       styles: options?.styles,
     };
   }
 
   connectedCallback(): void {
     untrack(() => {
-      if (!this._setupDone) this._runSetup();
+      if (!this._lifecycle.setupDone) this._runSetup();
 
       this._init();
     });
@@ -87,9 +100,10 @@ class BaseElement extends HTMLElement {
   }
 
   disconnectedCallback(): void {
+    this._state.mountToken++;
     runAll(this._state.cleanups);
     this._state.cleanups = [];
-    this._rendered = false;
+    this._lifecycle.rendered = false;
   }
 
   formAssociatedCallback(): void {}
@@ -107,18 +121,20 @@ class BaseElement extends HTMLElement {
   }
 
   private _runSetup(): void {
-    this._setupDone = true;
+    this._lifecycle.setupDone = true;
 
     const setupScope: RuntimeScope = {
       cleanups: [],
     };
 
     try {
-      this._instance = withRuntimeScope(setupScope, () =>
+      this._lifecycle.instance = withRuntimeScope(setupScope, () =>
         withCurrentElement(this, () => (this.constructor as typeof BaseElement)._setup()),
       );
 
-      this._template = withRuntimeScope(setupScope, () => withCurrentElement(this, () => this._instance!.render()));
+      this._lifecycle.template = withRuntimeScope(setupScope, () =>
+        withCurrentElement(this, () => this._lifecycle.instance!.render()),
+      );
 
       this._state.cleanups.push(...setupScope.cleanups);
     } catch (err) {
@@ -131,12 +147,12 @@ class BaseElement extends HTMLElement {
 
     if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
 
-    if (!this._rendered && this._template != null) {
-      const { bindings, html: htmlString } = extractResult(this._template);
+    if (!this._lifecycle.rendered && this._lifecycle.template != null) {
+      const { bindings, html: htmlString } = extractResult(this._lifecycle.template);
       const registerCleanup: RegisterCleanup = (fn) => this._state.cleanups.push(fn);
 
       this.shadow.replaceChildren(parseHTML(htmlString));
-      this._rendered = true;
+      this._lifecycle.rendered = true;
 
       if (bindings.length) {
         applyBindingsInContainer(this.shadow, bindings, registerCleanup, {
@@ -145,16 +161,21 @@ class BaseElement extends HTMLElement {
       }
     }
 
-    if (!this._mounted && this._instance?.mount) {
-      this._mounted = true;
+    if (!this._lifecycle.mounted && this._lifecycle.instance?.mount) {
+      this._lifecycle.mounted = true;
+      const token = ++this._state.mountToken;
 
       queueMicrotask(() => {
+        if (!this.isConnected || token !== this._state.mountToken) return;
+
         try {
           const mountScope: RuntimeScope = {
             cleanups: this._state.cleanups,
           };
 
-          const cleanup = withRuntimeScope(mountScope, () => withCurrentElement(this, () => this._instance!.mount!()));
+          const cleanup = withRuntimeScope(mountScope, () =>
+            withCurrentElement(this, () => this._lifecycle.instance!.mount!()),
+          );
 
           if (typeof cleanup === 'function') this._state.cleanups.push(cleanup);
         } catch (err) {

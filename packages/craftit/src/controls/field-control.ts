@@ -1,6 +1,6 @@
 import { computed, type ReadonlySignal, type Signal, signal, watch } from '@vielzeug/stateit';
 
-import { defineField, type FormFieldHandle } from '../form';
+import { defineField, type FormFieldHandle, type FormFieldOptions } from '../form';
 import { createId, ref } from '../internal';
 import { effect, handle } from '../runtime';
 import {
@@ -83,6 +83,8 @@ export type FieldControlBaseHandle = {
   triggerValidation: (on: FormControlValidationTrigger) => void;
   validateOn: ReadonlySignal<ControlValidationMode> | undefined;
 };
+
+export type FieldControlBaseCore = Omit<FieldControlBaseHandle, 'field' | 'triggerValidation'>;
 
 export type TextFieldHandle = FieldControlBaseHandle & {
   assistive: ReadonlySignal<AssistiveState>;
@@ -203,6 +205,35 @@ export const createBaseFieldHandle = (
   };
 };
 
+export const createFieldControlBase = <T = unknown>(
+  options: {
+    context?: TextFieldControlContext;
+    label?: ReadonlySignal<string | undefined>;
+    labelPlacement?: ReadonlySignal<'inset' | 'outside' | undefined>;
+    name?: ReadonlySignal<string | undefined>;
+    prefix: string;
+  } & ControlContextOptions,
+  fieldOptions: Omit<FormFieldOptions<T>, 'disabled'> & {
+    disabled?: FormFieldOptions<T>['disabled'];
+  },
+): {
+  base: FieldControlBaseCore;
+  field: FormFieldHandle;
+  triggerValidation: (on: FormControlValidationTrigger) => void;
+} => {
+  const { bindTrigger, ...base } = createBaseFieldHandle(options);
+  const field = defineField<T>({
+    ...fieldOptions,
+    disabled: fieldOptions.disabled ?? base.disabled,
+  });
+
+  return {
+    base,
+    field,
+    triggerValidation: bindTrigger(field),
+  };
+};
+
 export const createAssistiveState = (options: AssistiveOptions) => {
   return computed<AssistiveState>(() => {
     const value = options.value?.value ?? '';
@@ -248,7 +279,6 @@ export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): voi
 
 export const createCheckableState = (options: CheckableStateOptions): CheckableStateHandle => {
   const value = signal('');
-  const { bindTrigger, ...base } = createBaseFieldHandle(options);
   const checked = signal(Boolean(options.checked.value));
   const indeterminate = signal(Boolean(options.indeterminate?.value));
   const assistive = createAssistiveState({ error: options.error, helper: options.helper });
@@ -271,8 +301,7 @@ export const createCheckableState = (options: CheckableStateOptions): CheckableS
     );
   }
 
-  const field = defineField({
-    disabled: base.disabled,
+  const { base, field, triggerValidation } = createFieldControlBase(options, {
     toFormValue: (nextValue: string | null) => nextValue,
     value: computed(() => {
       if (indeterminate.value) return null;
@@ -280,8 +309,6 @@ export const createCheckableState = (options: CheckableStateOptions): CheckableS
       return checked.value ? (options.value.value ?? '') : null;
     }),
   });
-
-  const triggerValidation = bindTrigger(field);
 
   watch(
     options.value,

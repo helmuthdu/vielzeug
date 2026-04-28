@@ -46,12 +46,3 @@ export const createControlState = (options: ControlStateOptions) => {
     validateOn,
   };
 };
-
-export const createValidationControl = (
-  validateOn: ReadonlySignal<ControlValidationMode> | undefined,
-  field: ValidationReporter,
-) => {
-  return {
-    triggerValidation: (on: FormControlValidationTrigger): void => triggerValidationForField(validateOn, field, on),
-  };
-};

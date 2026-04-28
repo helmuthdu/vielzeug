@@ -17,7 +17,7 @@ import {
 } from './props';
 import { registerComponent, type ComponentInstance } from './registration';
 
-export { createProps, type PropsDef, type PropsInput };
+export { type PropsDef, type PropsInput };
 export { prop };
 export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropOptions };
 

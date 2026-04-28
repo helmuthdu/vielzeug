@@ -5,42 +5,9 @@ import { html, onElement, ref } from '../../index';
 import { mount } from '../../testing';
 import { createChoiceField } from '../choice-field-control';
 import { createAssistiveState, createCheckableState, mountTextFieldLifecycle } from '../field-control';
-import { createValidationControl } from '../internal/control-state';
 import { createTextField } from '../text-field-control';
 
 describe('field controls', () => {
-  describe('createValidationControl()', () => {
-    it('reports validity when trigger matches validation mode', () => {
-      const reportValidity = vi.fn();
-      const validateOn = signal<'blur' | 'change' | 'submit' | undefined>('change');
-      const validation = createValidationControl(validateOn, { reportValidity });
-
-      validation.triggerValidation('change');
-
-      expect(reportValidity).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not report validity when trigger does not match validation mode', () => {
-      const reportValidity = vi.fn();
-      const validateOn = signal<'blur' | 'change' | 'submit' | undefined>('submit');
-      const validation = createValidationControl(validateOn, { reportValidity });
-
-      validation.triggerValidation('blur');
-      validation.triggerValidation('change');
-
-      expect(reportValidity).not.toHaveBeenCalled();
-    });
-
-    it('does not report validity when validation mode is undefined', () => {
-      const reportValidity = vi.fn();
-      const validation = createValidationControl(undefined, { reportValidity });
-
-      validation.triggerValidation('change');
-
-      expect(reportValidity).not.toHaveBeenCalled();
-    });
-  });
-
   describe('createTextField()', () => {
     it('creates a text field handle with stable ids and refs', async () => {
       let handle!: ReturnType<typeof createTextField>;

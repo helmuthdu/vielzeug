@@ -9,7 +9,7 @@
 import { type ReadonlySignal, type Signal, isSignal, signal } from '@vielzeug/stateit';
 
 import { listen, setAttr } from './internal';
-import { currentElementOrThrow, effect, onCleanup } from './runtime';
+import { currentElementOrThrow, defer, effect, onCleanup } from './runtime';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTEXT API
@@ -75,11 +75,7 @@ type AriaConfig = Record<string, AriaValue>;
 const normalizeKey = (key: string, forceAriaPrefix = true): string => {
   if (key === 'role' || key.startsWith('aria-')) return key;
 
-  return key.startsWith('aria')
-    ? `aria-${key.slice(4).toLowerCase()}`
-    : forceAriaPrefix
-      ? `aria-${key}`
-      : key;
+  return key.startsWith('aria') ? `aria-${key.slice(4).toLowerCase()}` : forceAriaPrefix ? `aria-${key}` : key;
 };
 
 const setA11yAttr = (target: Element, key: string, value: string | number | boolean | null | undefined): void => {
@@ -239,7 +235,7 @@ export const createSlots = (): ComponentSlots => {
   // setup() runs before the template is rendered, so bind once now (if any slots
   // already exist) and schedule another pass after first render.
   bindAllSlots();
-  queueMicrotask(() => {
+  defer(() => {
     bindAllSlots();
     recomputeAllSlots();
   });
@@ -300,13 +296,8 @@ export type HostBindConfig = {
 };
 
 export type ComponentHost = {
-  attr: (name: string, value: HostBindingValue) => () => void;
   bind: (config: HostBindConfig, options?: AddEventListenerOptions) => () => void;
-  class: (value: (() => Record<string, boolean>) | Record<string, HostClassBindingValue>) => () => void;
   el: HTMLElement;
-  on: (event: string, listener: HostEventListener, options?: AddEventListenerOptions) => () => void;
-  prop: (name: string, descriptor: HostPropDescriptor) => () => void;
-  style: (map: Record<string, HostBindingValue>) => () => void;
 };
 
 export const createHost = (): ComponentHost => {
@@ -385,13 +376,8 @@ export const createHost = (): ComponentHost => {
   };
 
   return {
-    attr: (name, value) => bind({ attr: { [name]: value } }),
     bind,
-    class: (value) => bind({ class: value }),
     el,
-    on: (event, listener, options) => bind({ on: { [event]: listener } }, options),
-    prop: (name, descriptor) => bind({ prop: { [name]: descriptor } }),
-    style: (map) => bind({ style: map }),
   };
 };
 

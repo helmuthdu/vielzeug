@@ -128,17 +128,21 @@ describe('core/host.ts', () => {
       expect((element as HTMLElement & { value: string }).value).toBe('updated');
     });
 
-    it('supports one-liner host helpers for style and prop bindings', async () => {
+    it('supports style and prop bindings via host.bind', async () => {
       const { element, flush } = await mount({
         setup: (_props, { host }) => {
           const color = signal('rgb(255, 0, 0)');
 
-          host.style({ color });
-          host.prop('value', {
-            get: () => color.value,
-            set: (next: unknown) => {
-              color.value = String(next);
+          host.bind({
+            prop: {
+              value: {
+                get: () => color.value,
+                set: (next: unknown) => {
+                  color.value = String(next);
+                },
+              },
             },
+            style: { color },
           });
 
           return {

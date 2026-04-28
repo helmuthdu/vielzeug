@@ -1,10 +1,9 @@
 import { signal, watch } from '@vielzeug/stateit';
 
-import { defineField } from '../form';
 import { onElement } from '../runtime';
 import {
   createAssistiveState,
-  createBaseFieldHandle,
+  createFieldControlBase,
   mountTextFieldLifecycle,
   type TextFieldHandle,
   type TextFieldOptions,
@@ -12,9 +11,6 @@ import {
 
 export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
   const value = signal('');
-  const { bindTrigger, ...base } = createBaseFieldHandle({
-    ...options,
-  });
 
   watch(
     options.value,
@@ -24,12 +20,7 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     { immediate: true },
   );
 
-  const field = defineField({
-    disabled: base.disabled,
-    value,
-  });
-
-  const triggerValidation = bindTrigger(field);
+  const { base, field, triggerValidation } = createFieldControlBase(options, { value });
 
   const assistive = createAssistiveState({
     error: options.error,

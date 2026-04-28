@@ -1,5 +1,5 @@
 import { createId } from '../internal';
-import { effect, onCleanup } from '../runtime';
+import { defer, effect, onCleanup } from '../runtime';
 
 export type A11yTone = 'default' | 'error';
 
@@ -155,7 +155,7 @@ export function createA11yControl(host: HTMLElement, config: A11yControlConfig):
   });
 
   // Sync once after first render — DOM elements are not yet available during setup.
-  queueMicrotask(() => sync());
+  defer(() => sync());
 
   onCleanup(() => {
     for (const cleanup of slotCleanupByElement.values()) cleanup();

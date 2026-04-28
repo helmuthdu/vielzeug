@@ -63,6 +63,22 @@ const registerCleanup = (fn: CleanupFn): void => {
  */
 export const onCleanup = registerCleanup;
 
+/**
+ * Schedule work for the next microtask while honoring component cleanup.
+ * Useful for setup-time logic that depends on post-render DOM.
+ */
+export const defer = (fn: () => void): void => {
+  let cancelled = false;
+
+  queueMicrotask(() => {
+    if (!cancelled) fn();
+  });
+
+  registerCleanup(() => {
+    cancelled = true;
+  });
+};
+
 export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => {
   const dispose = _effect(fn, options);
 
