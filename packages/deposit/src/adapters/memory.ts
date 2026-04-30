@@ -1,0 +1,78 @@
+import type { Adapter, AnySchema, KeyOf, RecordOf } from '../types';
+
+import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
+import { AdapterCore } from './adapter-core';
+import { resolveRecordKey } from './schema-key';
+
+/* -------------------- MemoryAdapter -------------------- */
+
+class MemoryAdapter<S extends AnySchema> extends AdapterCore<S> {
+  private readonly tables = new Map<string, Map<string, StoredRecord<Record<string, unknown>>>>();
+  private readonly schema: S;
+
+  constructor(schema: S) {
+    super();
+    this.schema = schema;
+  }
+
+  private table<K extends keyof S>(table: K): Map<string, StoredRecord<Record<string, unknown>>> {
+    const name = String(table);
+    let store = this.tables.get(name);
+
+    if (!store) {
+      store = new Map();
+      this.tables.set(name, store);
+    }
+
+    return store;
+  }
+
+  async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
+    const raw = this.table(table).get(String(key));
+
+    if (!raw) return undefined;
+
+    const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
+
+    if (value === undefined) this.table(table).delete(String(key));
+
+    return value;
+  }
+
+  async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
+    const records: RecordOf<S, K>[] = [];
+
+    for (const [key, raw] of this.table(table)) {
+      const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
+
+      if (value !== undefined) {
+        records.push(value);
+      } else {
+        this.table(table).delete(key);
+      }
+    }
+
+    return records;
+  }
+
+  async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
+    const key = String(resolveRecordKey(this.schema, table, value));
+
+    this.table(table).set(key, wrapStored(value, ttl));
+  }
+
+  async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<void> {
+    this.table(table).delete(String(key));
+  }
+
+  async deleteAll<K extends keyof S>(table: K): Promise<void> {
+    this.table(table).clear();
+  }
+
+}
+
+/* -------------------- Factory -------------------- */
+
+export function createMemory<S extends AnySchema>(options: { schema: S }): Adapter<S> {
+  return new MemoryAdapter(options.schema);
+}

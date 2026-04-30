@@ -1,15 +1,15 @@
 import type {
+  AnySchema,
   IndexedDBHandle,
-  IndexedDBOptions,
-  KeyType,
+  KeyOf,
   MigrationFn,
-  RecordType,
-  Schema,
+  RecordOf,
   TransactionContext,
 } from '../types';
 
 import { QueryBuilder } from '../query';
-import { type Envelope, isEnvelope, readEnvelope, unwrap, wrap } from '../ttl';
+import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
+import { AdapterCore } from './adapter-core';
 
 /* -------------------- Module-level IDB helpers -------------------- */
 
@@ -20,23 +20,47 @@ function idbReq<R>(req: IDBRequest<R>): Promise<R> {
   });
 }
 
-function filterRecords<T>(raws: unknown[]): T[] {
-  const out: T[] = [];
+function filterRecords<T extends Record<string, unknown>>(raws: unknown[]): T[] {
+  return (raws as StoredRecord<T>[]).map(unwrapStored).filter((v): v is T => v !== undefined);
+}
 
-  for (const raw of raws) {
-    if (!isEnvelope(raw)) continue;
+function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let result: T | undefined;
+    let callbackError: unknown;
 
-    const v = unwrap(raw as Envelope<T>);
+    work()
+      .then((r) => {
+        result = r;
+      })
+      .catch((err) => {
+        callbackError = err;
 
-    if (v !== undefined) out.push(v);
-  }
+        try {
+          tx.abort();
+        } catch {
+          /* ignore */
+        }
+      });
 
-  return out;
+    tx.oncomplete = () =>
+      callbackError
+        ? reject(new Error(`deposit: transaction on "${scope}" failed`, { cause: callbackError }))
+        : resolve(result as T);
+    tx.onerror = () => reject(new Error(`deposit: transaction error on "${scope}"`, { cause: tx.error }));
+    tx.onabort = () => {
+      reject(
+        new Error(`deposit: transaction on "${scope}" was aborted`, {
+          cause: callbackError ?? tx.error,
+        }),
+      );
+    };
+  });
 }
 
 /* -------------------- IndexedDBAdapter -------------------- */
 
-class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
+class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements IndexedDBHandle<S> {
   private db: IDBDatabase | null = null;
   private connectPromise: Promise<void> | null = null;
   private closed = false;
@@ -45,15 +69,12 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
   private readonly version: number;
   private readonly migrationFn?: MigrationFn;
 
-  constructor(dbName: string, version: number, schema: S, migrationFn?: MigrationFn) {
-    this.dbName = dbName;
-    this.version = version;
-    this.schema = schema;
-    this.migrationFn = migrationFn;
-  }
-
-  from<K extends keyof S>(table: K): QueryBuilder<RecordType<S, K>> {
-    return new QueryBuilder<RecordType<S, K>>(() => this.getAll(table) as Promise<unknown[]>);
+  constructor(options: { dbName: string; migrationFn?: MigrationFn; schema: S; version: number }) {
+    super();
+    this.dbName = options.dbName;
+    this.version = options.version;
+    this.schema = options.schema;
+    this.migrationFn = options.migrationFn;
   }
 
   close(): void {
@@ -65,7 +86,6 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
 
   private connect(): Promise<void> {
     if (!this.connectPromise) {
-      this.closed = false;
       this.connectPromise = new Promise((resolve, reject) => {
         const request = indexedDB.open(this.dbName, this.version);
 
@@ -113,7 +133,7 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
 
         request.onerror = () => {
           this.connectPromise = null;
-          reject(new Error(`deposit: failed to open "${this.dbName}" (IndexedDB)`));
+          reject(new Error(`deposit: failed to open "${this.dbName}"`, { cause: request.error }));
         };
       });
     }
@@ -121,23 +141,24 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
     return this.connectPromise!;
   }
 
-  async get<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<RecordType<S, K> | undefined> {
+  async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
+    return this.withStore(table, 'readonly', async (store) => {
+      const raw = await idbReq<StoredRecord<RecordOf<S, K>> | undefined>(store.get(key as IDBValidKey));
+      return raw != null ? unwrapStored(raw) : undefined;
+    });
+  }
+
+  async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
     return this.withStore(table, 'readonly', async (store) =>
-      readEnvelope<RecordType<S, K>>(await idbReq<unknown>(store.get(key as IDBValidKey))),
+      filterRecords<RecordOf<S, K>>(await idbReq<unknown[]>(store.getAll())),
     );
   }
 
-  async getAll<K extends keyof S>(table: K): Promise<RecordType<S, K>[]> {
-    return this.withStore(table, 'readonly', async (store) =>
-      filterRecords<RecordType<S, K>>(await idbReq<Envelope<RecordType<S, K>>[]>(store.getAll())),
-    );
+  async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
+    await this.withStore(table, 'readwrite', (store) => idbReq(store.put(wrapStored(value, ttl))));
   }
 
-  async put<K extends keyof S>(table: K, value: RecordType<S, K>, ttl?: number): Promise<void> {
-    await this.withStore(table, 'readwrite', (store) => idbReq(store.put(wrap(value, ttl))));
-  }
-
-  async delete<K extends keyof S>(table: K, key: KeyType<S, K>): Promise<void> {
+  async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<void> {
     await this.withStore(table, 'readwrite', (store) => idbReq(store.delete(key as IDBValidKey)));
   }
 
@@ -145,61 +166,50 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
     await this.withStore(table, 'readwrite', (store) => idbReq<undefined>(store.clear()));
   }
 
-  async count<K extends keyof S>(table: K): Promise<number> {
-    return (await this.getAll(table)).length;
+  async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: number): Promise<void> {
+    await this.withStore(table, 'readwrite', async (store) => {
+      const requests = values.map((value) => idbReq(store.put(wrapStored(value, ttl))));
+      await Promise.all(requests);
+    });
   }
 
   async transaction<K extends keyof S>(
     tables: K[],
     fn: (tx: TransactionContext<S, K>) => Promise<void>,
   ): Promise<void> {
+    if (this.closed) throw new Error(`deposit: "${this.dbName}" is closed`);
     if (!this.db) await this.connect();
 
     const db = this.db;
 
     if (!db) throw new Error(`deposit: "${this.dbName}" is closed`);
 
-    return new Promise<void>((resolve, reject) => {
-      const idbTx = db.transaction(tables.map(String), 'readwrite');
-      let callbackError: unknown;
+    const idbTx = db.transaction(tables.map(String), 'readwrite');
+    const storeOf = <T extends K>(table: T) => idbTx.objectStore(String(table));
+    const read = <T extends K>(table: T, key: KeyOf<S, T>) =>
+      idbReq<StoredRecord<RecordOf<S, T>> | undefined>(storeOf(table).get(key as IDBValidKey)).then((raw) =>
+        raw != null ? unwrapStored(raw) : undefined,
+      );
+    const readAll = <T extends K>(table: T) =>
+      idbReq<unknown[]>(storeOf(table).getAll()).then(filterRecords<RecordOf<S, T>>);
 
-      const ctx: TransactionContext<S, K> = {
-        count: (table) => ctx.getAll(table).then((all) => all.length),
-        delete: (table, key) => idbReq(idbTx.objectStore(String(table)).delete(key as IDBValidKey)),
-        deleteAll: (table) => idbReq<undefined>(idbTx.objectStore(String(table)).clear()).then(() => undefined),
-        from: (table) => new QueryBuilder<RecordType<S, K>>(() => ctx.getAll(table) as Promise<unknown[]>),
-        get: (table, key) =>
-          idbReq<unknown>(idbTx.objectStore(String(table)).get(key as IDBValidKey)).then((raw) =>
-            readEnvelope<RecordType<S, K>>(raw),
-          ),
-        getAll: (table) =>
-          idbReq<unknown[]>(idbTx.objectStore(String(table)).getAll()).then(filterRecords<RecordType<S, K>>),
-        put: (table, value, ttl) =>
-          idbReq(idbTx.objectStore(String(table)).put(wrap(value, ttl))).then(() => undefined),
-      };
+    const ctx: TransactionContext<S, K> = {
+      count: (table) => ctx.getAll(table).then((all) => all.length),
+      delete: (table, key) => idbReq(storeOf(table).delete(key as IDBValidKey)),
+      deleteAll: (table) => idbReq<undefined>(storeOf(table).clear()).then(() => undefined),
+      from: (table) => new QueryBuilder<RecordOf<S, K>>(() => ctx.getAll(table) as Promise<unknown[]>),
+      get: (table, key) => read(table, key),
+      getAll: (table) => readAll(table),
+      has: (table, key) => ctx.get(table, key).then((v) => v !== undefined),
+      put: (table, value, ttl) => idbReq(storeOf(table).put(wrapStored(value, ttl))).then(() => undefined),
+      putAll: (table, values, ttl) => {
+        for (const value of values) storeOf(table).put(wrapStored(value, ttl));
+        return Promise.resolve();
+      },
+    };
 
-      fn(ctx).catch((err) => {
-        callbackError = err;
-
-        try {
-          idbTx.abort();
-        } catch {
-          /* ignore */
-        }
-      });
-
-      idbTx.oncomplete = () =>
-        callbackError
-          ? reject(new Error(`deposit: transaction on "${this.dbName}" failed`, { cause: callbackError }))
-          : resolve();
-      idbTx.onerror = () => reject(new Error(`deposit: transaction error on "${this.dbName}"`, { cause: idbTx.error }));
-      idbTx.onabort = () => {
-        reject(
-          new Error(`deposit: transaction on "${this.dbName}" was aborted`, {
-            cause: callbackError ?? idbTx.error,
-          }),
-        );
-      };
+    await runIdbTx(idbTx, this.dbName, async () => {
+      await fn(ctx);
     });
   }
 
@@ -211,7 +221,7 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
         // Ensure existing stores are part of the upgrade transaction.
         tx.objectStore(name);
       } else {
-        db.createObjectStore(name, { keyPath: `v.${keyPath}` });
+        db.createObjectStore(name, { keyPath });
       }
     }
   }
@@ -221,53 +231,28 @@ class IndexedDBAdapter<S extends Schema<any>> implements IndexedDBHandle<S> {
     mode: 'readonly' | 'readwrite',
     fn: (store: IDBObjectStore) => Promise<T>,
   ): Promise<T> {
+    if (this.closed) throw new Error(`deposit: "${this.dbName}" is closed`);
     if (!this.db) await this.connect();
 
     const db = this.db;
 
     if (!db) throw new Error(`deposit: "${this.dbName}" is closed`);
 
-    return new Promise<T>((resolve, reject) => {
-      const name = String(table);
-      const tx = db.transaction(name, mode);
-      const store = tx.objectStore(name);
+    const name = String(table);
+    const tx = db.transaction(name, mode);
+    const store = tx.objectStore(name);
 
-      let result: T | undefined;
-      let callbackError: unknown;
-
-      fn(store)
-        .then((r) => {
-          result = r;
-        })
-        .catch((err) => {
-          callbackError = err;
-
-          try {
-            tx.abort();
-          } catch {
-            /* ignore */
-          }
-        });
-
-      tx.oncomplete = () =>
-        callbackError
-          ? reject(new Error(`deposit: transaction on "${this.dbName}/${name}" failed`, { cause: callbackError }))
-          : resolve(result as T);
-      tx.onerror = () =>
-        reject(new Error(`deposit: transaction error on "${this.dbName}/${name}"`, { cause: tx.error }));
-      tx.onabort = () => {
-        reject(
-          new Error(`deposit: transaction on "${this.dbName}/${name}" was aborted`, {
-            cause: callbackError ?? tx.error,
-          }),
-        );
-      };
-    });
+    return runIdbTx(tx, `${this.dbName}/${name}`, () => fn(store));
   }
 }
 
 /* -------------------- Factory -------------------- */
 
-export function createIndexedDB<S extends Schema<any>>(options: IndexedDBOptions<S>): IndexedDBHandle<S> {
-  return new IndexedDBAdapter(options.dbName, options.version, options.schema, options.migrationFn);
+export function createIndexedDB<S extends AnySchema>(options: {
+  dbName: string;
+  migrationFn?: MigrationFn;
+  schema: S;
+  version: number;
+}): IndexedDBHandle<S> {
+  return new IndexedDBAdapter(options);
 }

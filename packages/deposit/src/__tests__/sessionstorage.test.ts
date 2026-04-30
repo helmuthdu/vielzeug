@@ -1,4 +1,4 @@
-import { createLocalStorage, type Adapter, type Schema } from '../index';
+import { createSessionStorage, type Adapter, type Schema } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -8,12 +8,12 @@ const userSchema: Schema<{ users: User }> = {
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-describe('LocalStorage adapter', () => {
+describe('SessionStorage adapter', () => {
   let db: Adapter<typeof userSchema>;
 
   beforeEach(() => {
-    localStorage.clear();
-    db = createLocalStorage({ dbName: 'LS', schema: userSchema });
+    sessionStorage.clear();
+    db = createSessionStorage({ dbName: 'SS', schema: userSchema });
   });
 
   test('put/get/delete/deleteAll/count', async () => {
@@ -75,9 +75,17 @@ describe('LocalStorage adapter', () => {
   });
 
   test('corrupted entries are removed lazily on read', async () => {
-    localStorage.setItem('LS:users:1', '{bad json');
+    sessionStorage.setItem('SS:users:1', '{bad json');
 
     expect(await db.get('users', 1)).toBeUndefined();
-    expect(localStorage.getItem('LS:users:1')).toBeNull();
+    expect(sessionStorage.getItem('SS:users:1')).toBeNull();
+  });
+
+  test('two instances share the same sessionStorage namespace', async () => {
+    const db2 = createSessionStorage({ dbName: 'SS', schema: userSchema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db2.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
   });
 });

@@ -10,20 +10,20 @@ Format times respecting user locale, language, and timezone.
 ## Basic Locale Formatting
 
 ```ts
-import { formatHuman, formatISO, formatRange } from '@vielzeug/timit';
+import { timit } from '@vielzeug/timit';
 
 const time = '2026-03-21T10:15:30Z';
 
 // English (US)
-formatHuman(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
+timit.format(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
 // → "3/21/2026, 10:15 AM"
 
 // German
-formatHuman(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' });
+timit.format(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' });
 // → "21.3.2026, 11:15"
 
 // Japanese
-formatHuman(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
+timit.format(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
 // → "2026/3/21 19:15"
 ```
 
@@ -32,17 +32,18 @@ formatHuman(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
 ```ts
 const time = '2026-03-21T10:15:30Z';
 
-const patterns = ['short', 'long', 'date-only', 'time-only'] as const;
+const patterns = ['short', 'medium', 'long', 'date-only', 'time-only'] as const;
 
 for (const pattern of patterns) {
-  const formatted = formatHuman(time, { pattern, locale: 'en-GB', tz: 'UTC' });
+  const formatted = timit.format(time, { pattern, locale: 'en-GB', tz: 'UTC' });
   console.log(`${pattern.padEnd(10)} ${formatted}`);
 }
 
-console.log(`iso       ${formatISO(time)}`);
+console.log(`iso       ${timit.formatIso(time)}`);
 
 // Output:
 // short      21/03/2026, 10:15
+// medium     21 Mar 2026, 10:15
 // long       Saturday, 21 March 2026 at 10:15:30
 // iso        2026-03-21T10:15:30Z
 // date-only  21/03/2026
@@ -54,7 +55,7 @@ console.log(`iso       ${formatISO(time)}`);
 Use the `intl` option for custom `Intl.DateTimeFormatOptions`:
 
 ```ts
-formatHuman(time, {
+timit.format(time, {
   locale: 'de-DE',
   tz: 'Europe/Berlin',
   pattern: 'short',
@@ -74,7 +75,7 @@ Format a span of time:
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-formatRange(start, end, {
+timit.formatRange(start, end, {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
@@ -86,7 +87,7 @@ formatRange(start, end, {
 
 ```ts
 function formatUserTime(time: string, userLocale: string, userTz: string) {
-  return formatHuman(time, {
+  return timit.format(time, {
     pattern: 'long',
     locale: userLocale,
     tz: userTz,

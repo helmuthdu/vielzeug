@@ -1,6 +1,6 @@
 # @vielzeug/deposit
 
-> Minimal typed browser storage with IndexedDB and LocalStorage backends.
+> Minimal typed browser storage with LocalStorage, SessionStorage, Cookie, IndexedDB, and in-memory backends.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/deposit)](https://www.npmjs.com/package/@vielzeug/deposit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -15,42 +15,63 @@ pnpm add @vielzeug/deposit
 ## Quick Start
 
 ```ts
-import { createLocalStorage, type Schema } from '@vielzeug/deposit';
+import { createIndexedDB, table } from '@vielzeug/deposit';
 
 type User = { id: number; name: string; age: number };
 
-const schema: Schema<{ users: User }> = {
-  users: { key: 'id' },
+const schema = {
+  users: table<User>('id'),
 };
 
-const db = createLocalStorage({ dbName: 'my-app', schema });
+const db = createIndexedDB({ dbName: 'my-app', version: 1, schema });
 
-await db.put('users', { id: 1, name: 'Alice', age: 30 });
-await db.put('users', { id: 2, name: 'Bob', age: 25 });
+await db.putAll('users', [
+  { id: 1, name: 'Alice', age: 30 },
+  { id: 2, name: 'Bob', age: 25 },
+]);
 
-const adults = await db.from('users').between('age', 18, 99).orderBy('name').toArray();
+const first = await db.from('users').between('age', 18, 99).orderBy('name').first();
+const exists = await db.has('users', 1);
 ```
 
 ## Why Deposit?
 
-- One typed interface for both LocalStorage and IndexedDB
-- Explicit schema keys per table (`Schema<S>`)
+- One typed interface for LocalStorage, SessionStorage, Cookie, IndexedDB, and in-memory
+- `table<T>()` schema factory — no boilerplate type annotations
 - Compact query API for common filtering/sorting/pagination
 - TTL on writes with lazy expiration
 - Atomic IndexedDB transactions for multi-step writes
+- In-memory adapter for tests and SSR environments
 
 ## API
 
 ### Factories
 
 - `createLocalStorage(options)`
+- `createSessionStorage(options)`
+- `createCookie(options)`
 - `createIndexedDB(options)`
+- `createMemory(options)`
+
+`createCookie(options)` supports:
+
+- `dbName` (required)
+- `schema` (required)
+- `path` (default `'/'`)
+- `sameSite` (default `'Strict'`)
+- `secure` (default `false`)
+
+### Schema helper
+
+- `table<T>(key)` — creates a typed schema entry
 
 ### Adapter methods
 
 - `get(table, key)`
 - `getAll(table)`
+- `has(table, key)`
 - `put(table, value, ttl?)`
+- `putAll(table, values, ttl?)`
 - `delete(table, key)`
 - `deleteAll(table)`
 - `count(table)`
@@ -63,13 +84,7 @@ const adults = await db.from('users').between('age', 18, 99).orderBy('name').toA
 
 ### Transaction context methods
 
-- `get(table, key)`
-- `getAll(table)`
-- `put(table, value, ttl?)`
-- `delete(table, key)`
-- `deleteAll(table)`
-- `count(table)`
-- `from(table)`
+- `get`, `getAll`, `has`, `put`, `putAll`, `delete`, `deleteAll`, `count`, `from`
 
 ### QueryBuilder methods
 
@@ -82,6 +97,7 @@ const adults = await db.from('users').between('age', 18, 99).orderBy('name').toA
 - `offset(n)`
 - `toArray()`
 - `count()`
+- `first()`
 
 ### TTL helper
 
@@ -95,7 +111,9 @@ await db.put('sessions', { id: 's1', userId: 1 }, ttl.minutes(30));
 
 - `Schema` only declares the key field per table (`{ key: 'id' }`).
 - `count()` is TTL-aware and excludes expired records.
-- LocalStorage has no transaction API.
+- LocalStorage, SessionStorage, Cookie, and Memory adapters do not expose transactions.
+- Cookie adapter is browser-only (`document.cookie`) and is best for small values.
+- Cookie TTL is evaluated lazily on read (`get`/`getAll`/`has`/`count`), then cleaned up.
 - Query operations run in memory on fetched table records.
 
 ## IndexedDB Transactions

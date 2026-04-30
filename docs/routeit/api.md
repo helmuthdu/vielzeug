@@ -70,7 +70,7 @@ const routes = {
   },
   dashboard: {
     path: '/dashboard',
-    middleware: requireAuth,
+    middleware: [requireAuth],
     children: {
       index: {
         index: true,
@@ -221,13 +221,14 @@ The listener runs immediately with the current state, then after each successful
 
 ## Core Types
 
-### `RouteContext<Params, Meta>`
+### `RouteContext<Params>`
 
 ```ts
 type RouteContext<Params extends RouteParams = RouteParams> = {
   readonly data?: unknown;
   readonly hash: string;
   locals: Record<string, unknown>;
+  readonly matches: RouteMatchBranch;
   readonly navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
   readonly params: Params;
   readonly pathname: string;
@@ -237,35 +238,37 @@ type RouteContext<Params extends RouteParams = RouteParams> = {
 
 `ctx.data` is only populated for the final route handler.
 
-### `DataFn<Params, Meta>`
+Read route metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
+
+### `DataFn<Params>`
 
 ```ts
-type DataFn<Params extends RouteParams = RouteParams, Meta = unknown> = (
-  context: DataContext<Params, Meta>,
+type DataFn<Params extends RouteParams = RouteParams> = (
+  context: DataContext<Params>,
 ) => unknown | Promise<unknown>;
 ```
 
-### `DataContext<Params, Meta>`
+### `DataContext<Params>`
 
 ```ts
-type DataContext<Params extends RouteParams = RouteParams, Meta = unknown> = RouteContext<Params, Meta> & {
+type DataContext<Params extends RouteParams = RouteParams> = RouteContext<Params> & {
   readonly signal: AbortSignal;
 };
 ```
 
-### `RouteHandler<Params, Meta>`
+### `RouteHandler<Params>`
 
 ```ts
-type RouteHandler<Params extends RouteParams = RouteParams, Meta = unknown> = (
-  context: RouteContext<Params, Meta>,
+type RouteHandler<Params extends RouteParams = RouteParams> = (
+  context: RouteContext<Params>,
 ) => void | Promise<void>;
 ```
 
-### `Middleware<Meta>`
+### `Middleware`
 
 ```ts
-type Middleware<Meta = unknown> = (
-  context: RouteContext<RouteParams, Meta>,
+type Middleware = (
+  context: RouteContext<RouteParams>,
   next: () => Promise<void>,
 ) => void | Promise<void>;
 ```

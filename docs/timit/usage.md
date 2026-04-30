@@ -11,41 +11,46 @@ Start with the [Overview](./index.md) for a quick introduction, then use this pa
 
 [[toc]]
 
-## Import Styles
+## Import Style
 
-Timit supports both named imports and a convenience namespace.
+Import the `timit` namespace for collision-free usage.
 
 ```ts
-import { now, shift, toZoned } from '@vielzeug/timit';
-// or
-import { d } from '@vielzeug/timit';
+import { timit } from '@vielzeug/timit';
 
-const meetingA = toZoned(now(), { tz: 'America/New_York' });
-const meetingB = d.toZoned(d.now(), { tz: 'America/New_York' });
-
-const reminderA = shift(meetingA, { minutes: -15 });
-const reminderB = d.shift(meetingB, { minutes: -15 });
+const meeting = timit.toZoned(timit.now(), { tz: 'America/New_York' });
+const reminder = timit.add(meeting, { minutes: -15 });
 ```
 
-Prefer named imports when bundle size matters, since bundlers can tree-shake unused helpers more aggressively.
+You can also destructure if you prefer short names in a local scope:
+
+```ts
+const { add, now, toZoned } = timit;
+```
 
 ## Parsing Inputs
 
+Use `parse()` when you need a local wall-clock value without timezone context.
 Use `toInstant()` to normalize any supported input to a canonical timeline value.
-For plain local strings, provide `tz` to `toInstant()`.
+For plain local values, provide `tz` to `toInstant()`.
 
 ```ts
-import { Temporal, toInstant, toZoned } from '@vielzeug/timit';
+import { Temporal } from '@js-temporal/polyfill';
+import { timit } from '@vielzeug/timit';
 
 // ISO strings with offset work automatically
-const a = toInstant('2026-03-21T10:15:30Z');
+const a = timit.toInstant('2026-03-21T10:15:30Z');
 
 // Plain local strings require timezone context
-const b = toInstant('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
-const c = toZoned('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
+const b = timit.toInstant('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
+const c = timit.toZoned('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
+
+// Parse local wall-clock value without a timezone
+const local = timit.parse('2026-03-21');
 
 // Temporal types work too
-const d = toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
+const d = timit.toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
+const e = timit.toInstant(Temporal.PlainDate.from('2026-03-21'), { tz: 'Europe/Berlin' });
 ```
 
 ## Time Zone Conversion
@@ -54,8 +59,8 @@ Use `toZoned()` to view an instant in a target timezone: same moment, different 
 
 ```ts
 const utc = '2026-03-21T10:15:30Z';
-const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' });
-const newYork = toZoned(utc, { tz: 'America/New_York' });
+const tokyo = timit.toZoned(utc, { tz: 'Asia/Tokyo' });
+const newYork = timit.toZoned(utc, { tz: 'America/New_York' });
 
 console.log(tokyo.hour);   // 19 (7:15 PM JST)
 console.log(newYork.hour); // 6  (6:15 AM EDT)
@@ -63,28 +68,29 @@ console.log(newYork.hour); // 6  (6:15 AM EDT)
 
 ## Date-Time Arithmetic
 
-`shift()` handles DST transitions correctly. Use positive durations to add and negative durations to subtract.
+`add()` handles DST transitions correctly. Use positive durations to add and negative durations to subtract.
+For absolute inputs (instants), omission of `tz` means results are viewed in the system timezone.
 
 ```ts
 // Spring forward (2026-03-08 02:00 → 03:00 EDT)
 const beforeDst = '2026-03-08T01:30:00-05:00[America/New_York]';
-const afterAdd = shift(beforeDst, { hours: 1 });
+const afterAdd = timit.add(beforeDst, { hours: 1 });
 // Result: 2026-03-08T03:30:00-04:00 (correctly skipped to 3:30 EDT)
 
 // Regular arithmetic
 const meeting = '2026-03-21T14:00:00Z';
-const reminder = shift(meeting, { hours: -1 });
+const reminder = timit.add(meeting, { hours: -1 });
 ```
 
 ## Duration Differences
 
-Use `diff()` to compute the duration between two times with optional rounding.
+Use `difference()` to compute the duration between two times with optional rounding.
 
 ```ts
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:30:00Z';
 
-const duration = diff(start, end, {
+const duration = timit.difference(start, end, {
   largestUnit: 'hour',
   smallestUnit: 'minute',
 });
@@ -96,21 +102,21 @@ console.log(duration.minutes);    // 30
 
 ## Formatting
 
-Use `formatHuman()` for localized UI strings and `formatISO()` for stable machine output.
+Use `format()` for localized UI strings and `formatIso()` for stable machine output.
 
 ```ts
 const time = '2026-03-21T10:15:30Z';
 
 // Preset patterns (recommended)
-formatHuman(time, { pattern: 'short', locale: 'en-GB', tz: 'UTC' });
+timit.format(time, { pattern: 'short', locale: 'en-GB', tz: 'UTC' });
 // → "21/03/2026, 10:15"
 
 // Canonical machine format
-formatISO(time);
+timit.formatIso(time);
 // → "2026-03-21T10:15:30Z"
 
 // Advanced: escape hatch to Intl.DateTimeFormatOptions
-formatHuman(time, {
+timit.format(time, {
   locale: 'de-DE',
   tz: 'Europe/Berlin',
   intl: { hour12: false, weekday: 'long' }
@@ -123,6 +129,7 @@ formatHuman(time, {
 | Pattern | Example | Use Case |
 |---------|---------|----------|
 | `'short'` | "21/03/2026, 10:15" | Quick lists |
+| `'medium'` | "21 Mar 2026, 10:15" | Balanced default |
 | `'long'` | "Saturday, March 21, 2026, 10:15:30" | Details |
 | `'date-only'` | "21/03/2026" | Calendars |
 | `'time-only'` | "10:15" | Clocks, timers |
@@ -136,7 +143,7 @@ const now = '2026-03-21T11:00:00Z';
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-if (within(now, start, end)) {
+if (timit.within(now, start, end)) {
   console.log('Meeting is happening now');
 }
 ```
@@ -148,9 +155,9 @@ if (within(now, start, end)) {
 Get the current time in a specific timezone.
 
 ```ts
-const localTime = now();           // system timezone
-const londonTime = now('Europe/London');
-const sydneyTime = now('Australia/Sydney');
+const localTime = timit.now();           // system timezone
+const londonTime = timit.now('Europe/London');
+const sydneyTime = timit.now('Australia/Sydney');
 ```
 
 ## Format Ranges
@@ -161,19 +168,19 @@ Use `formatRange()` for human-friendly time spans.
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-const text = formatRange(start, end, {
+const text = timit.formatRange(start, end, {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
 });
-// → "3/21/2026, 6:00 AM – 8:00 AM" (if Intl.formatRange supported)
+// → "3/21/2026, 6:00 AM – 8:00 AM"
 ```
 
 ## Best Practices
 
-- Use `toInstant()` for timeline operations (comparisons, storage).
-- Use `toZoned()` when you need local wall-clock times (displaying to users).
-- Use `formatHuman()` for UI and `formatISO()` for APIs/logs.
+- Use `timit.toInstant()` for timeline operations (comparisons, storage).
+- Use `timit.toZoned()` when you need local wall-clock times (displaying to users).
+- Use `timit.format()` for UI and `timit.formatIso()` for APIs/logs.
 - Store times as instants (ISO strings); convert to zoned only for display.
 
 ## Common Patterns
@@ -182,17 +189,17 @@ const text = formatRange(start, end, {
 
 ```ts
 const userTz = 'America/New_York';
-const scheduledTime = toZoned('2026-04-15T14:00:00Z', { tz: userTz });
+const scheduledTime = timit.toZoned('2026-04-15T14:00:00Z', { tz: userTz });
 
-console.log(`Meeting: ${formatHuman(scheduledTime, { pattern: 'long' })}`);
+console.log(`Meeting: ${timit.format(scheduledTime, { pattern: 'long' })}`);
 ```
 
 ### Calculate Elapsed Time
 
 ```ts
-const start = now();
+const start = timit.now();
 // ... do work ...
-const elapsed = diff(start, now(), { largestUnit: 'second' });
+const elapsed = timit.difference(start, timit.now(), { largestUnit: 'second' });
 console.log(`Took ${elapsed.seconds}s`);
 ```
 
@@ -201,13 +208,13 @@ console.log(`Took ${elapsed.seconds}s`);
 ```ts
 const event = {
   title: 'Team Standup',
-  utc: toInstant('2026-03-21T09:00:00Z'),
+  utc: timit.toInstant('2026-03-21T09:00:00Z'),
 };
 
 const timezones = ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo'];
 
 for (const tz of timezones) {
-  const local = toZoned(event.utc, { tz });
-  console.log(`${tz}: ${formatHuman(local, { pattern: 'short' })}`);
+  const local = timit.toZoned(event.utc, { tz });
+  console.log(`${tz}: ${timit.format(local, { pattern: 'short' })}`);
 }
 ```

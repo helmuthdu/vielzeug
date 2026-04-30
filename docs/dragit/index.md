@@ -9,7 +9,7 @@ description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, s
 
 # Dragit
 
-**Dragit** is a zero-dependency drag-and-drop library for the Document Object Model (DOM). It provides two focused primitives: a drop zone for file drag-and-drop with MIME type filtering and a sortable list for reordering elements. Both wrap the HTML Drag and Drop API with reliable hover state, full lifecycle management, and `using` keyword support.
+`@vielzeug/dragit` is a zero-dependency drag-and-drop library for the Document Object Model (DOM). It provides two focused primitives: a drop zone for file drag-and-drop with MIME type filtering and a sortable list for reordering elements. Both wrap the HTML Drag and Drop API with reliable hover state, full lifecycle management, and `using` keyword support.
 
 <!-- Search keywords: drag and drop helper, file drop zone, sortable list utility. -->
 

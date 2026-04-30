@@ -46,7 +46,7 @@ const router = createRouter({
   },
 });
 
-await router.navigate({ name: 'userDetail', params: { id: '42' } });
+await router.navigate({ name: 'dashboard.settings' });
 ```
 
 ## Features
@@ -54,7 +54,14 @@ await router.navigate({ name: 'userDetail', params: { id: '42' } });
 - Declarative route table only
 - Nested routes with `children` and `index`
 - Named-route-first `navigate()`, `url()`, and `isActive()`
-- Declarative route table only
+- Route-scoped `data()` loaders with `AbortSignal`
+- Global and per-route middleware
+- Raw path targets via `navigate({ path })`
+- Typed path params via literal route paths
+- Resolvable matches via `router.resolve(pathname)`
+- Base-path support for subdirectory deployments
+- Optional View Transition API integration
+- Immutable route state snapshots via `router.state`
 - Zero dependencies
 
 ## Route Definition
@@ -71,7 +78,7 @@ const routes = {
   },
   dashboard: {
     path: '/dashboard',
-    middleware: requireAuth,
+    middleware: [requireAuth],
     children: {
       index: {
         index: true,
@@ -87,7 +94,7 @@ const routes = {
   userDetail: {
     path: '/users/:id',
     data: async ({ params }) => fetchUser(params.id),
-    handler: ({ data, meta }) => renderUser(data, meta),
+    handler: ({ data }) => renderUser(data),
     meta: { section: 'users' },
   },
   notFound: {
@@ -144,6 +151,7 @@ handler: (ctx) => {
   ctx.params;
   ctx.query;
   ctx.hash;
+  ctx.matches;
   ctx.locals;
 
   // Named navigation
@@ -154,6 +162,8 @@ handler: (ctx) => {
   ctx.navigate({ path: '/checkout#payment' }, { replace: true });
 }
 ```
+
+Read active metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
 
 ## Navigation
 
@@ -193,12 +203,14 @@ Read active-route metadata from the leaf match (`router.state.matches.at(-1)?.me
 | Symbol | Purpose |
 | --- | --- |
 | `createRouter({ routes, ...options })` | Create a router from a declarative route table |
+| `createBrowserHistory()` | Create the default browser history driver |
 | `router.navigate({ name, ... })` | Navigate by route name |
 | `router.navigate({ path })` | Navigate by raw path target |
 | `router.url(name, params?, query?)` | Build a URL for a named route |
 | `router.isActive(name, exact?)` | Check whether the current route matches a named route |
 | `router.resolve(pathname)` | Resolve a pathname without running middleware or handlers |
 | `router.subscribe(listener)` | Observe immutable route state snapshots |
+| `router.dispose()` | Remove listeners and prevent future router interaction |
 
 ## Documentation
 

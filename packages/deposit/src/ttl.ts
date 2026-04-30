@@ -16,29 +16,21 @@ export const ttl = {
   seconds: (n: number) => n * 1000,
 } as const;
 
-/* -------------------- TTL Envelope (storage-layer only) -------------------- */
+/* -------------------- Storage record helpers (storage-layer only) -------------------- */
+
+/** @internal Flat record with an optional expiry timestamp merged at the top level. */
+export type StoredRecord<T extends Record<string, unknown>> = T & { __exp?: number };
 
 /** @internal */
-export type Envelope<T> = { __d: 1; exp?: number; v: T };
-
-/** @internal */
-export function wrap<T>(value: T, ttl?: number): Envelope<T> {
-  return ttl ? { __d: 1, exp: Date.now() + ttl, v: value } : { __d: 1, v: value };
+export function wrapStored<T extends Record<string, unknown>>(value: T, ttlMs?: number): StoredRecord<T> {
+  return ttlMs ? { ...value, __exp: Date.now() + ttlMs } : ({ ...value } as StoredRecord<T>);
 }
 
 /** @internal */
-export function unwrap<T>(env: Envelope<T>): T | undefined {
-  return env.exp !== undefined && Date.now() >= env.exp ? undefined : env.v;
-}
+export function unwrapStored<T extends Record<string, unknown>>(raw: StoredRecord<T>): T | undefined {
+  if (raw.__exp !== undefined && Date.now() >= raw.__exp) return undefined;
 
-/** @internal */
-export function isEnvelope(value: unknown): value is Envelope<unknown> {
-  return typeof value === 'object' && value !== null && (value as any).__d === 1 && 'v' in value;
-}
+  const { __exp: _, ...value } = raw;
 
-/** @internal */
-export function readEnvelope<T>(raw: unknown): T | undefined {
-  if (!raw || !isEnvelope(raw)) return undefined;
-
-  return unwrap(raw as Envelope<T>);
+  return value as T;
 }

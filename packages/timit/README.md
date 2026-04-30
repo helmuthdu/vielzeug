@@ -17,60 +17,46 @@ pnpm add @vielzeug/timit
 ## Quick Start
 
 ```ts
-import { formatHuman, formatISO, shift, toZoned } from '@vielzeug/timit';
+import { timit } from '@vielzeug/timit';
 
 const meeting = '2026-03-21T10:30:00Z';
-const meetingNY = toZoned(meeting, { tz: 'America/New_York' });
-const reminder = shift(meetingNY, { minutes: -15 });
+const meetingNY = timit.toZoned(meeting, { tz: 'America/New_York' });
+const reminder = timit.add(meetingNY, { minutes: -15 });
 
-console.log(formatHuman(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' }));
-console.log(formatISO(reminder));
+console.log(timit.format(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' }));
+console.log(timit.formatIso(reminder));
 ```
 
-Namespace style:
-
-```ts
-import { d } from '@vielzeug/timit';
-
-const meeting = d.toZoned('2026-03-21T10:30:00Z', { tz: 'America/New_York' });
-const reminder = d.shift(meeting, { minutes: -15 });
-
-console.log(d.formatHuman(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' }));
-console.log(d.formatISO(reminder));
-```
-
-Prefer named imports when bundle size matters.
+Destructure for short names in local scope: `const { add, format } = timit`.
 
 ## API Quick Reference
 
 ### Conversion
-- `toInstant(input, options?)` — Normalize to canonical timeline value
-- `toZoned(input, options?)` — View time in a specific timezone
 
-Notes:
-- `tz` is required for plain local inputs like `2026-03-21` or `2026-03-21T10:15`.
-- Zone-annotated local strings like `2026-03-21T10:15:30[America/New_York]` use the embedded timezone.
-- Offset-bearing strings like `2026-03-21T10:15:30+02:00` are treated as absolute instants.
+- `parse(input)` — Parse plain local date/time string to `Temporal.PlainDateTime`
+- `toInstant(input, options?)` — Normalize to canonical timeline value (`Temporal.Instant`)
+- `toZoned(input, options?)` — View time in a specific timezone (`Temporal.ZonedDateTime`)
+
+Input parsing rules:
+- `tz` is required for plain local inputs (`2026-03-21`, `2026-03-21T10:15`)
+- Zone-annotated strings (`2026-03-21T10:15:30[America/New_York]`) use the embedded timezone
+- Offset-bearing strings (`2026-03-21T10:15:30+02:00`) are treated as absolute instants
 
 ### Arithmetic
-- `shift(input, duration, options?)` — Add/subtract duration (DST-safe)
-- `diff(start, end, options?)` — Compute duration between two times
+
+- `add(input, duration, options?)` — Add/subtract duration, DST-safe, returns `Temporal.ZonedDateTime`
+- `difference(start, end, options?)` — Compute duration between two times, returns `Temporal.Duration`
 
 ### Queries
-- `now(tz?)` — Current time in timezone
-- `within(value, start, end, options?)` — Check if time is in range (auto-normalizes bounds)
+
+- `now(tz?)` — Current time in timezone (or system timezone)
+- `within(value, start, end, options?)` — Inclusive range check; auto-normalizes reversed bounds
 
 ### Formatting
-- `formatHuman(input, options?)` — Format localized string with `'short' | 'long' | 'date-only' | 'time-only'`
-- `formatISO(input, options?)` — Format canonical ISO-8601 string
-- `formatRange(start, end, options?)` — Format time span with browser `Intl.formatRange` fallback
 
-### Exports
-- `Temporal` (from `@js-temporal/polyfill`) for advanced use
-- `d` namespace for convenience (`d.toInstant(...)`, `d.shift(...)`, etc.)
-
-Notes:
-- Prefer named exports when bundle size matters so bundlers can tree-shake unused helpers.
+- `format(input, options?)` — Localized UI string; patterns: `'short' | 'medium' | 'long' | 'date-only' | 'time-only'`
+- `formatIso(input, options?)` — Canonical ISO-8601 string for APIs/logs
+- `formatRange(start, end, options?)` — Localized time span via `Intl.DateTimeFormat.formatRange`
 
 ## Why timit?
 
@@ -79,7 +65,6 @@ Notes:
 ✅ **Intl-integrated**: Locale formatting without boilerplate
 ✅ **Concise API**: Short, intuitive function names
 ✅ **Polyfilled**: Works in runtimes without native Temporal
-
 
 ## License
 

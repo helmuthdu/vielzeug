@@ -1,21 +1,27 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-export { Temporal };
-
 export type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
 
 /**
  * Supported input types for date/time operations.
  * - Temporal types preserve timezone and disambiguation info
  * - ISO strings can include offset/zone annotations
- * - Plain local strings require `tz` option
+ * - Plain local values (Temporal.PlainDate, Temporal.PlainDateTime, and plain local strings) require `tz` option
  */
-export type TimeInput = Temporal.Instant | Temporal.PlainDateTime | Temporal.ZonedDateTime | string;
+export type TimeInput =
+  | Temporal.Instant
+  | Temporal.PlainDate
+  | Temporal.PlainDateTime
+  | Temporal.ZonedDateTime
+  | string;
+
+type LocalTemporalInput = Temporal.PlainDate | Temporal.PlainDateTime;
+type AbsoluteTemporalInput = Temporal.Instant | Temporal.ZonedDateTime;
 
 /**
  * Time zone and disambiguation options for conversions.
  * - `tz`: Time zone ID (e.g., 'America/New_York'). Defaults to system timezone.
- *   Used to interpret plain-local inputs (Temporal.PlainDateTime and plain local strings)
+ *   Used to interpret plain-local inputs (Temporal.PlainDate, Temporal.PlainDateTime, and plain local strings)
  *   and to choose display/view zone in toZoned/format helpers.
  * - `when`: How to resolve ambiguous local times during DST transitions.
  *   Only applies when converting local wall-clock values to an instant.
@@ -40,11 +46,12 @@ export interface DifferenceOptions extends TimeOptions {
 /**
  * Common formatting patterns for human-readable output.
  * - 'short': Compact style (e.g., "21/03/2026, 10:15 AM")
+ * - 'medium': Default balanced style (e.g., "Mar 21, 2026, 10:15 AM")
  * - 'long': Expanded style (e.g., "Sunday, March 21, 2026 at 10:15:30 AM")
  * - 'date-only': Just the date (e.g., "21/03/2026")
  * - 'time-only': Just the time (e.g., "10:15 AM")
  */
-export type FormatPattern = 'short' | 'long' | 'date-only' | 'time-only';
+export type FormatPattern = 'short' | 'medium' | 'long' | 'date-only' | 'time-only';
 
 /**
  * Options for formatting times as human-readable strings.
@@ -60,16 +67,25 @@ export interface HumanFormatOptions {
   intl?: Intl.DateTimeFormatOptions;
 }
 
+export type TimeOptionsWithTz = TimeOptions & { tz: string };
+
 type ParsedTimeInput =
   | { kind: 'instant'; value: Temporal.Instant }
   | { kind: 'local'; value: Temporal.PlainDateTime }
   | { kind: 'zoned'; value: Temporal.ZonedDateTime };
 
-const DEFAULT_DISAMBIGUATION: DateTimeDisambiguation = 'compatible';
 const ERROR_PREFIX = '[timit]';
 const INVALID_TIME_STRING_MESSAGE =
   'Invalid time string. Expected ISO instant, zoned date/time, or plain local date/time.';
 const MISSING_LOCAL_TIME_ZONE_MESSAGE = 'Local date/time input requires options.tz.';
+const UNSUPPORTED_TIME_INPUT_MESSAGE = 'Unsupported time input type.';
+const FORMAT_PRESETS: Record<FormatPattern, Intl.DateTimeFormatOptions> = {
+  'date-only': { dateStyle: 'short' },
+  long: { dateStyle: 'full', timeStyle: 'long' },
+  medium: { dateStyle: 'medium', timeStyle: 'short' },
+  short: { dateStyle: 'short', timeStyle: 'short' },
+  'time-only': { timeStyle: 'short' },
+};
 
 function fail(message: string): never {
   throw new TypeError(`${ERROR_PREFIX} ${message}`);
@@ -79,30 +95,26 @@ function resolveTimeZone(tz?: string): string {
   return tz ?? Temporal.Now.timeZoneId();
 }
 
-function parsePlainDateTime(value: string): Temporal.PlainDateTime {
-  try {
-    return Temporal.PlainDateTime.from(value);
-  } catch {
-    return Temporal.PlainDate.from(value).toPlainDateTime();
-  }
-}
-
 function parseStringInput(input: string): ParsedTimeInput {
   try {
     return { kind: 'zoned', value: Temporal.ZonedDateTime.from(input) };
   } catch {
-    // Continue to instant/local parsing.
+    /* try next */
   }
 
   try {
     return { kind: 'instant', value: Temporal.Instant.from(input) };
   } catch {
-    try {
-      return { kind: 'local', value: parsePlainDateTime(input) };
-    } catch {
-      fail(INVALID_TIME_STRING_MESSAGE);
-    }
+    /* try next */
   }
+
+  try {
+    return { kind: 'local', value: Temporal.PlainDateTime.from(input) };
+  } catch {
+    /* try next */
+  }
+
+  fail(INVALID_TIME_STRING_MESSAGE);
 }
 
 function parseInput(input: TimeInput): ParsedTimeInput {
@@ -118,45 +130,30 @@ function parseInput(input: TimeInput): ParsedTimeInput {
     return { kind: 'local', value: input };
   }
 
+  if (input instanceof Temporal.PlainDate) {
+    return { kind: 'local', value: input.toPlainDateTime() };
+  }
+
   if (typeof input === 'string') {
     return parseStringInput(input);
   }
 
-  fail('Unsupported time input type.');
-}
-
-function toJsDate(instant: Temporal.Instant): Date {
-  return new Date(instant.epochMilliseconds);
-}
-
-function resolveFormatPattern(pattern?: FormatPattern): Intl.DateTimeFormatOptions {
-  if (!pattern) return { dateStyle: 'medium', timeStyle: 'short' };
-
-  const patterns: Record<FormatPattern, Intl.DateTimeFormatOptions> = {
-    'date-only': { dateStyle: 'short' },
-    long: { dateStyle: 'full', timeStyle: 'long' },
-    short: { dateStyle: 'short', timeStyle: 'short' },
-    'time-only': { timeStyle: 'short' },
-  };
-
-  return patterns[pattern];
+  fail(UNSUPPORTED_TIME_INPUT_MESSAGE);
 }
 
 function makeFormatter(options: HumanFormatOptions = {}): Intl.DateTimeFormat {
   return new Intl.DateTimeFormat(options.locale, {
-    ...resolveFormatPattern(options.pattern),
+    ...FORMAT_PRESETS[options.pattern ?? 'medium'],
     ...options.intl,
     timeZone: resolveTimeZone(options.tz),
   });
 }
 
-export function now(tz?: string): Temporal.ZonedDateTime {
+function now(tz?: string): Temporal.ZonedDateTime {
   return Temporal.Now.zonedDateTimeISO(resolveTimeZone(tz));
 }
 
-export function toInstant(input: TimeInput, options: TimeOptions = {}): Temporal.Instant {
-  const parsed = parseInput(input);
-
+function toInstantFromParsed(parsed: ParsedTimeInput, options: TimeOptions): Temporal.Instant {
   if (parsed.kind === 'instant') {
     return parsed.value;
   }
@@ -169,23 +166,14 @@ export function toInstant(input: TimeInput, options: TimeOptions = {}): Temporal
     fail(MISSING_LOCAL_TIME_ZONE_MESSAGE);
   }
 
-  return parsed.value
-    .toZonedDateTime(options.tz, {
-      disambiguation: options.when ?? DEFAULT_DISAMBIGUATION,
-    })
-    .toInstant();
+  return parsed.value.toZonedDateTime(options.tz, { disambiguation: options.when }).toInstant();
 }
 
-export function toZoned(input: TimeInput, options: TimeOptions = {}): Temporal.ZonedDateTime {
-  const parsed = parseInput(input);
+function toZonedFromParsed(parsed: ParsedTimeInput, options: TimeOptions): Temporal.ZonedDateTime {
   const tz = resolveTimeZone(options.tz);
 
   if (parsed.kind === 'zoned') {
-    if (!options.tz) {
-      return parsed.value;
-    }
-
-    return parsed.value.withTimeZone(tz);
+    return options.tz ? parsed.value.withTimeZone(tz) : parsed.value;
   }
 
   if (parsed.kind === 'local') {
@@ -193,86 +181,78 @@ export function toZoned(input: TimeInput, options: TimeOptions = {}): Temporal.Z
       fail(MISSING_LOCAL_TIME_ZONE_MESSAGE);
     }
 
-    return parsed.value.toZonedDateTime(tz, {
-      disambiguation: options.when ?? DEFAULT_DISAMBIGUATION,
-    });
+    return parsed.value.toZonedDateTime(tz, { disambiguation: options.when });
   }
 
   return parsed.value.toZonedDateTimeISO(tz);
 }
 
-export function shift(
-  input: TimeInput,
-  duration: Temporal.DurationLike,
-  options: TimeOptions = {},
-): Temporal.ZonedDateTime {
-  return toZoned(input, options).add(duration);
+function toInstant(input: LocalTemporalInput, options: TimeOptionsWithTz): Temporal.Instant;
+function toInstant(input: AbsoluteTemporalInput | string, options?: TimeOptions): Temporal.Instant;
+function toInstant(input: TimeInput, options: TimeOptions = {}): Temporal.Instant {
+  return toInstantFromParsed(parseInput(input), options);
 }
 
-export function diff(start: TimeInput, end: TimeInput, options: DifferenceOptions = {}): Temporal.Duration {
-  const { tz } = options;
-  const startDateTime = toZoned(start, { tz, when: options.when });
-  const endDateTime = toZoned(end, { tz, when: options.when });
-
-  return endDateTime.since(startDateTime, {
-    largestUnit: options.largestUnit,
-    roundingIncrement: options.roundingIncrement,
-    roundingMode: options.roundingMode,
-    smallestUnit: options.smallestUnit,
-  });
+function toZoned(input: LocalTemporalInput, options: TimeOptionsWithTz): Temporal.ZonedDateTime;
+function toZoned(input: AbsoluteTemporalInput | string, options?: TimeOptions): Temporal.ZonedDateTime;
+function toZoned(input: TimeInput, options: TimeOptions = {}): Temporal.ZonedDateTime {
+  return toZonedFromParsed(parseInput(input), options);
+}
+function add(input: TimeInput, duration: Temporal.DurationLike, options: TimeOptions = {}): Temporal.ZonedDateTime {
+  // For absolute inputs (instants), omission of options.tz uses the system timezone as the view context.
+  return toZonedFromParsed(parseInput(input), options).add(duration);
 }
 
-export function within(input: TimeInput, start: TimeInput, end: TimeInput, options: TimeOptions = {}): boolean {
-  const value = toInstant(input, options).epochNanoseconds;
-  const boundA = toInstant(start, options).epochNanoseconds;
-  const boundB = toInstant(end, options).epochNanoseconds;
-  const lower = boundA <= boundB ? boundA : boundB;
-  const upper = boundA <= boundB ? boundB : boundA;
+function difference(start: TimeInput, end: TimeInput, options: DifferenceOptions = {}): Temporal.Duration {
+  const { tz, when, ...sinceOptions } = options;
+  const startDateTime = toZonedFromParsed(parseInput(start), { tz, when });
+  const endDateTime = toZonedFromParsed(parseInput(end), { tz, when });
 
-  return value >= lower && value <= upper;
+  return endDateTime.since(startDateTime, sinceOptions);
 }
 
-export function formatHuman(input: TimeInput, options: HumanFormatOptions = {}): string {
-  const instant = toInstant(input, { tz: options.tz });
-  const formatter = makeFormatter(options);
+function within(input: TimeInput, start: TimeInput, end: TimeInput, options: TimeOptions = {}): boolean {
+  const value = toInstantFromParsed(parseInput(input), options);
+  let lower = toInstantFromParsed(parseInput(start), options);
+  let upper = toInstantFromParsed(parseInput(end), options);
 
-  return formatter.format(toJsDate(instant));
-}
-
-export function formatISO(input: TimeInput, options: TimeOptions = {}): string {
-  return toInstant(input, options).toString();
-}
-
-export function formatRange(start: TimeInput, end: TimeInput, options: HumanFormatOptions = {}): string {
-  const formatter = makeFormatter(options);
-  const startDate = toJsDate(toInstant(start, { tz: options.tz }));
-  const endDate = toJsDate(toInstant(end, { tz: options.tz }));
-
-  const formatterWithRange = formatter as Intl.DateTimeFormat & {
-    formatRange?: (startDate: Date, endDate: Date) => string;
-  };
-
-  if (typeof formatterWithRange.formatRange === 'function') {
-    return formatterWithRange.formatRange(startDate, endDate);
+  if (Temporal.Instant.compare(lower, upper) > 0) {
+    [lower, upper] = [upper, lower];
   }
 
-  return `${formatter.format(startDate)} - ${formatter.format(endDate)}`;
+  return Temporal.Instant.compare(lower, value) <= 0 && Temporal.Instant.compare(value, upper) <= 0;
 }
 
-/**
- * Convenience namespace for date/time helpers.
- *
- * Importing `d` pulls in the full library. For bundle-size-sensitive code,
- * prefer named exports so bundlers can tree-shake unused helpers.
- */
-export const d = {
-  diff,
-  formatHuman,
-  formatISO,
+function parse(input: string): Temporal.PlainDateTime {
+  return Temporal.PlainDateTime.from(input);
+}
+
+function format(input: TimeInput, options: HumanFormatOptions = {}): string {
+  const instant = toInstantFromParsed(parseInput(input), { tz: options.tz });
+
+  return makeFormatter(options).format(new Date(instant.epochMilliseconds));
+}
+
+function formatIso(input: TimeInput, options: TimeOptions = {}): string {
+  return toInstantFromParsed(parseInput(input), options).toString();
+}
+
+function formatRange(start: TimeInput, end: TimeInput, options: HumanFormatOptions = {}): string {
+  const formatter = makeFormatter(options);
+  const startDate = new Date(toInstantFromParsed(parseInput(start), { tz: options.tz }).epochMilliseconds);
+  const endDate = new Date(toInstantFromParsed(parseInput(end), { tz: options.tz }).epochMilliseconds);
+
+  return formatter.formatRange(startDate, endDate);
+}
+
+export const timit = {
+  add,
+  difference,
+  format,
+  formatIso,
   formatRange,
   now,
-  shift,
-  Temporal,
+  parse,
   toInstant,
   toZoned,
   within,

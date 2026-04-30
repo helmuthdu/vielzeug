@@ -43,6 +43,30 @@ describe('IndexedDB adapter', () => {
     expect(await db.getAll('users')).toEqual([]);
   });
 
+  test('has() returns true for existing and false for missing records', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db.has('users', 1)).toBe(true);
+    expect(await db.has('users', 99)).toBe(false);
+  });
+
+  test('has() respects TTL expiry', async () => {
+    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await delay(5);
+
+    expect(await db.has('users', 1)).toBe(false);
+  });
+
+  test('putAll() writes all records atomically', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+
+    expect(await db.count('users')).toBe(2);
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+  });
+
   test('TTL expiry is respected', async () => {
     await db.put('users', { id: 1, name: 'Alice' }, 1);
     await delay(5);

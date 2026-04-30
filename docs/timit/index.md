@@ -34,34 +34,22 @@ yarn add @vielzeug/timit
 ## Quick Start
 
 ```ts
-import { formatHuman, formatISO, now, shift, toZoned } from '@vielzeug/timit';
+import { timit } from '@vielzeug/timit';
 
 // Get current time in a timezone
-const meeting = toZoned(now(), { tz: 'America/New_York' });
+const meeting = timit.toZoned(timit.now(), { tz: 'America/New_York' });
 
 // Add time (DST-safe)
-const reminder = shift(meeting, { minutes: -15 });
+const reminder = timit.add(meeting, { minutes: -15 });
 
 // Format for humans
-const text = formatHuman(reminder, { pattern: 'short', locale: 'en-US' });
+const text = timit.format(reminder, { pattern: 'short', locale: 'en-US' });
 
 // Format for APIs/logs
-const stable = formatISO(reminder);
+const stable = timit.formatIso(reminder);
 ```
 
-Namespace style (convenience):
-
-```ts
-import { d } from '@vielzeug/timit';
-
-const meeting = d.toZoned(d.now(), { tz: 'America/New_York' });
-const reminder = d.shift(meeting, { minutes: -15 });
-
-const text = d.formatHuman(reminder, { pattern: 'short', locale: 'en-US' });
-const stable = d.formatISO(reminder);
-```
-
-Use named imports for the best tree-shaking in bundle-size-sensitive code.
+Use the `timit` namespace for explicit, collision-free usage.
 
 ## Why Timit?
 
@@ -72,7 +60,7 @@ Manual date handling breaks at daylight-saving boundaries, timezone edges, and D
 const reminder = new Date(meeting.getTime() - 15 * 60_000);
 
 // After — DST-safe, handles transitions correctly
-const reminder = shift(meeting, { minutes: -15 });
+const reminder = timit.add(meeting, { minutes: -15 });
 ```
 
 | Feature        | Timit                                       | date-fns | Day.js  | Native Date |
@@ -81,7 +69,7 @@ const reminder = shift(meeting, { minutes: -15 });
 | DST-safe math  | ✅ (Temporal)                               | Manual   | Manual  | ❌          |
 | Timezone aware | ✅ Full support                             | ✅       | ✅      | Partial     |
 | Immutable      | ✅                                          | ✅       | ✅      | ❌          |
-| Format presets | ✅ (`'short'`, `'long'`, etc.)              | ❌       | ❌      | ❌          |
+| Format presets | ✅ (`'short'`, `'medium'`, `'long'`, etc.)  | ❌       | ❌      | ❌          |
 | Type inference | ✅ Full TypeScript                          | Partial  | Partial | ❌          |
 
 **Use Timit when** you need reliable timezone handling, DST-safe arithmetic, and clean Temporal-based APIs without heavy dependencies.
@@ -90,15 +78,15 @@ const reminder = shift(meeting, { minutes: -15 });
 
 ## Features
 
-- **Flexible imports** — use tree-shakeable named exports or the convenient `d` namespace
-- **Explicit local parsing** — plain local strings require `tz` in `toInstant()`/`toZoned()`
-- **DST-safe arithmetic** — `shift()` handles transitions correctly
-- **Timezone conversion** — `toZoned()`, `toInstant()` with full timezone support
-- **Formatting split by intent** — `formatHuman()` for UI, `formatISO()` for APIs/logs
-- **Range queries** — `within()` for inclusive time checks with normalized bounds
-- **Duration diffs** — `diff()` with granular control over units
+- **Namespace import** — single `timit` object keeps all helpers collision-free
+- **Explicit local parsing** — `timit.parse()` for wall-clock values; plain local values require `tz` in `timit.toInstant()`/`timit.toZoned()`
+- **DST-safe arithmetic** — `timit.add()` handles transitions correctly
+- **Timezone conversion** — `timit.toZoned()`, `timit.toInstant()` with full timezone support
+- **Formatting split by intent** — `timit.format()` for UI, `timit.formatIso()` for APIs/logs
+- **Range queries** — `timit.within()` for inclusive time checks with normalized bounds
+- **Duration diffs** — `timit.difference()` with granular control over units
 - **Intl integration** — formatting respects locale & calendar systems
-- **Tree-shaking friendly** — import only the functions you use
+- **Destructurable** — `const { add, format } = timit` for short names in a local scope
 - **Polyfilled Temporal** — works in runtimes without native support via `@js-temporal/polyfill`
 - <PackageInfo package="timit" type="size" /> gzipped
 

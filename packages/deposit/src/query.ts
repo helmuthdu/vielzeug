@@ -30,6 +30,10 @@ export class QueryBuilder<T extends Record<string, unknown>> {
     return (await this.run()).length;
   }
 
+  async first(): Promise<T | undefined> {
+    return (await this.run())[0];
+  }
+
   private clone(op: (data: T[]) => T[]): QueryBuilder<T> {
     return new QueryBuilder<T>(this.source, [...this.ops, op as (data: unknown[]) => unknown[]]);
   }
@@ -40,8 +44,8 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 
   between<K extends keyof T>(
     field: K,
-    lower: T[K] extends number | string ? T[K] : never,
-    upper: T[K] extends number | string ? T[K] : never,
+    lower: NonNullable<T[K]> extends number | string ? NonNullable<T[K]> : never,
+    upper: NonNullable<T[K]> extends number | string ? NonNullable<T[K]> : never,
   ): QueryBuilder<T> {
     return this.clone((data) =>
       data.filter((r) => {

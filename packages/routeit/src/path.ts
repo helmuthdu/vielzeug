@@ -1,4 +1,4 @@
-import type { QueryParams, RouteParams, RouteRecord, RouteSegment } from './types';
+import type { QueryParams, RouteMatcher, RouteParams, RouteRecord } from './types';
 
 /** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {
@@ -11,65 +11,86 @@ export function joinPaths(base: string, path: string): string {
   return normalizePath(`${normalizePath(base)}/${normalizePath(path)}`);
 }
 
-function splitSegments(path: string): string[] {
+function escapeRegex(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function decodePart(value: string): string {
+  return decodeURIComponent(value);
+}
+
+export function compilePathMatcher(path: string): RouteMatcher {
   const normalized = normalizePath(path);
 
-  return normalized === '/' ? [] : normalized.slice(1).split('/');
-}
+  if (normalized === '/') {
+    return {
+      paramNames: [],
+      pattern: /^\/$/,
+      prefixPattern: /^\//,
+    };
+  }
 
-export function compileRouteSegments(path: string): RouteSegment[] {
-  return splitSegments(path).map((segment) => {
-    if (segment === '*') return { kind: 'splat' };
+  const paramNames: string[] = [];
+  const segments = normalized.slice(1).split('/');
+  const regexParts: string[] = ['^'];
+  const prefixParts: string[] = ['^'];
+
+  for (let i = 0; i < segments.length; i += 1) {
+    const segment = segments[i]!;
+
+    if (segment === '*') {
+      regexParts.push('(?:/.*)?');
+      break;
+    }
 
     if (segment.startsWith(':') && segment.endsWith('*')) {
-      return { kind: 'param-splat', name: segment.slice(1, -1) };
-    }
+      const name = segment.slice(1, -1);
 
-    if (segment.startsWith(':')) return { kind: 'param', name: segment.slice(1) };
-
-    return { kind: 'static', value: segment };
-  });
-}
-
-function decodeSegment(segment: string): string {
-  return decodeURIComponent(segment);
-}
-
-export function matchRecord(pathname: string, record: RouteRecord): RouteParams | null {
-  const pathnameSegments = splitSegments(pathname);
-  const params: RouteParams = {};
-
-  let pathnameIndex = 0;
-
-  for (let segmentIndex = 0; segmentIndex < record.segments.length; segmentIndex++) {
-    const segment = record.segments[segmentIndex];
-    const current = pathnameSegments[pathnameIndex];
-
-    if (segment.kind === 'splat') {
-      pathnameIndex = pathnameSegments.length;
+      paramNames.push(name);
+      regexParts.push(i === segments.length - 1 ? '(?:/(.*))?' : '/(.*)');
+      prefixParts.push('/.*');
       break;
     }
 
-    if (segment.kind === 'param-splat') {
-      params[segment.name] = pathnameSegments.slice(pathnameIndex).map(decodeSegment).join('/');
-      pathnameIndex = pathnameSegments.length;
-      break;
-    }
+    if (segment.startsWith(':')) {
+      const name = segment.slice(1);
 
-    if (current === undefined) return null;
-
-    if (segment.kind === 'static') {
-      if (segment.value !== current) return null;
-
-      pathnameIndex += 1;
+      paramNames.push(name);
+      regexParts.push('/([^/]+)');
+      prefixParts.push('/[^/]+');
       continue;
     }
 
-    params[segment.name] = decodeSegment(current);
-    pathnameIndex += 1;
+    const escaped = escapeRegex(segment);
+
+    regexParts.push(`/${escaped}`);
+    prefixParts.push(`/${escaped}`);
   }
 
-  return pathnameIndex === pathnameSegments.length ? params : null;
+  regexParts.push('$');
+  prefixParts.push('(?:/.*)?$');
+
+  return {
+    paramNames,
+    pattern: new RegExp(regexParts.join('')),
+    prefixPattern: new RegExp(prefixParts.join('')),
+  };
+}
+
+export function matchRecord(pathname: string, record: RouteRecord): RouteParams | null {
+  const match = record.matcher.pattern.exec(pathname);
+
+  if (!match) return null;
+
+  const params: RouteParams = {};
+
+  record.matcher.paramNames.forEach((name, index) => {
+    const value = match[index + 1];
+
+    params[name] = decodePart(value ?? '');
+  });
+
+  return params;
 }
 
 export function matchRoute(
@@ -86,23 +107,7 @@ export function matchRoute(
 }
 
 export function matchesPrefix(pathname: string, record: RouteRecord): boolean {
-  const pathnameSegments = splitSegments(pathname);
-
-  let pathnameIndex = 0;
-
-  for (const segment of record.segments) {
-    const current = pathnameSegments[pathnameIndex];
-
-    if (segment.kind === 'splat' || segment.kind === 'param-splat') return true;
-
-    if (current === undefined) return false;
-
-    if (segment.kind === 'static' && segment.value !== current) return false;
-
-    pathnameIndex += 1;
-  }
-
-  return true;
+  return record.matcher.prefixPattern.test(pathname);
 }
 
 /** Parse `?foo=a&foo=b&bar=c` into `{ foo: ['a', 'b'], bar: 'c' }`. */

@@ -1,6 +1,6 @@
-import { createLocalStorage, type Adapter, type Schema } from '../index';
+import { createCookie, type Adapter, type Schema } from '../index';
 
-type User = { age?: number; city?: string; id: number; name?: string };
+type User = { age?: number; id: number; name?: string };
 
 const userSchema: Schema<{ users: User }> = {
   users: { key: 'id' },
@@ -8,12 +8,20 @@ const userSchema: Schema<{ users: User }> = {
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-describe('LocalStorage adapter', () => {
+function clearAllCookies(): void {
+  for (const pair of document.cookie.split(';')) {
+    const name = pair.split('=')[0].trim();
+
+    if (name) document.cookie = `${name}=; max-age=0; path=/`;
+  }
+}
+
+describe('Cookie adapter', () => {
   let db: Adapter<typeof userSchema>;
 
   beforeEach(() => {
-    localStorage.clear();
-    db = createLocalStorage({ dbName: 'LS', schema: userSchema });
+    clearAllCookies();
+    db = createCookie({ dbName: 'CO', schema: userSchema });
   });
 
   test('put/get/delete/deleteAll/count', async () => {
@@ -40,13 +48,6 @@ describe('LocalStorage adapter', () => {
     expect(await db.has('users', 99)).toBe(false);
   });
 
-  test('has() respects TTL expiry', async () => {
-    await db.put('users', { id: 1, name: 'Alice' }, 1);
-    await delay(5);
-
-    expect(await db.has('users', 1)).toBe(false);
-  });
-
   test('putAll() writes all records', async () => {
     await db.putAll('users', [
       { id: 1, name: 'Alice' },
@@ -57,12 +58,19 @@ describe('LocalStorage adapter', () => {
     expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
   });
 
-  test('TTL expiry is respected', async () => {
+  test('TTL expiry is respected via __exp field', async () => {
     await db.put('users', { id: 1, name: 'Alice' }, 1);
     await delay(5);
 
     expect(await db.get('users', 1)).toBeUndefined();
     expect(await db.count('users')).toBe(0);
+  });
+
+  test('has() respects TTL expiry', async () => {
+    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await delay(5);
+
+    expect(await db.has('users', 1)).toBe(false);
   });
 
   test('query builder via from()', async () => {
@@ -74,10 +82,20 @@ describe('LocalStorage adapter', () => {
     expect(r).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
   });
 
-  test('corrupted entries are removed lazily on read', async () => {
-    localStorage.setItem('LS:users:1', '{bad json');
+  test('corrupted cookie values are cleaned up on read', async () => {
+    // Set a cookie with an invalid JSON value directly
+    document.cookie = `CO:users:99=${encodeURIComponent('{bad json')}; path=/`;
 
-    expect(await db.get('users', 1)).toBeUndefined();
-    expect(localStorage.getItem('LS:users:1')).toBeNull();
+    expect(await db.get('users', 99)).toBeUndefined();
+    // Cookie should be removed — it won't appear in getAll
+    expect(await db.getAll('users')).toEqual([]);
+  });
+
+  test('two instances share cookies under the same dbName', async () => {
+    const db2 = createCookie({ dbName: 'CO', schema: userSchema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db2.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
   });
 });

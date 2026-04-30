@@ -1,4 +1,4 @@
-import { createLocalStorage, type Adapter, type Schema } from '../index';
+import { createMemory, type Adapter, type Schema } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -8,12 +8,11 @@ const userSchema: Schema<{ users: User }> = {
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-describe('LocalStorage adapter', () => {
+describe('Memory adapter', () => {
   let db: Adapter<typeof userSchema>;
 
   beforeEach(() => {
-    localStorage.clear();
-    db = createLocalStorage({ dbName: 'LS', schema: userSchema });
+    db = createMemory({ schema: userSchema });
   });
 
   test('put/get/delete/deleteAll/count', async () => {
@@ -47,6 +46,14 @@ describe('LocalStorage adapter', () => {
     expect(await db.has('users', 1)).toBe(false);
   });
 
+  test('TTL expiry is respected', async () => {
+    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await delay(5);
+
+    expect(await db.get('users', 1)).toBeUndefined();
+    expect(await db.count('users')).toBe(0);
+  });
+
   test('putAll() writes all records', async () => {
     await db.putAll('users', [
       { id: 1, name: 'Alice' },
@@ -55,14 +62,6 @@ describe('LocalStorage adapter', () => {
 
     expect(await db.count('users')).toBe(2);
     expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
-  });
-
-  test('TTL expiry is respected', async () => {
-    await db.put('users', { id: 1, name: 'Alice' }, 1);
-    await delay(5);
-
-    expect(await db.get('users', 1)).toBeUndefined();
-    expect(await db.count('users')).toBe(0);
   });
 
   test('query builder via from()', async () => {
@@ -74,10 +73,11 @@ describe('LocalStorage adapter', () => {
     expect(r).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
   });
 
-  test('corrupted entries are removed lazily on read', async () => {
-    localStorage.setItem('LS:users:1', '{bad json');
+  test('each instance has isolated state', async () => {
+    const other = createMemory({ schema: userSchema });
 
-    expect(await db.get('users', 1)).toBeUndefined();
-    expect(localStorage.getItem('LS:users:1')).toBeNull();
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await other.count('users')).toBe(0);
   });
 });

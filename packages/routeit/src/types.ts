@@ -139,7 +139,7 @@ export type RoutePathByName<TRoutes extends RouteTable, Name extends string> =
     ? Path
     : string;
 
-export type RouteTable = Record<string, RouteDefinition<string, unknown>>;
+export type RouteTable = Record<string, RouteDefinition<string>>;
 
 export type RouteName<TRoutes extends RouteTable> = RouteEntries<TRoutes>['name'];
 
@@ -211,11 +211,11 @@ export type ViewTransitionDocument = Document & {
   startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
 };
 
-export type RouteSegment =
-  | { kind: 'param'; name: string }
-  | { kind: 'param-splat'; name: string }
-  | { kind: 'splat' }
-  | { kind: 'static'; value: string };
+export type RouteMatcher = {
+  paramNames: readonly string[];
+  pattern: RegExp;
+  prefixPattern: RegExp;
+};
 
 /** Static per-node definition stored on a compiled RouteRecord (root → leaf). */
 export type RouteBranchDef = {
@@ -228,7 +228,9 @@ export type RouteBranchDef = {
 export type RouteRecord = {
   /** Ordered branch definitions from root to this leaf, used to build RouteMatchBranch at match time. */
   branchDefs: readonly RouteBranchDef[];
+  hasData: boolean;
+  leaf: RouteBranchDef;
+  matcher: RouteMatcher;
   middleware: Middleware[];
   path: string;
-  segments: RouteSegment[];
 };

@@ -1,19 +1,19 @@
 ---
 title: Deposit Examples — Advanced
-description: Transaction and migration patterns for advanced deposit usage.
+description: Transaction, migration, bulk write, and testing patterns for advanced deposit usage.
 ---
 
 ## Atomic Multi-Table Transaction
 
 ```ts
-import { createIndexedDB, type Schema } from '@vielzeug/deposit';
+import { createIndexedDB, table } from '@vielzeug/deposit';
 
 type User = { id: number; name: string };
 type Post = { id: number; title: string; userId: number };
 
-const schema: Schema<{ users: User; posts: Post }> = {
-  users: { key: 'id' },
-  posts: { key: 'id' },
+const schema = {
+  users: table<User>('id'),
+  posts: table<Post>('id'),
 };
 
 const db = createIndexedDB({ dbName: 'blog', version: 1, schema });
@@ -29,38 +29,82 @@ await db.transaction(['users', 'posts'], async (tx) => {
 ```ts
 await db.put('users', { id: 2, name: 'Bob' });
 
-await db.transaction(['users'], async (tx) => {
-  await tx.delete('users', 2);
-  throw new Error('abort transaction');
-});
+try {
+  await db.transaction(['users'], async (tx) => {
+    await tx.delete('users', 2);
+    throw new Error('abort transaction');
+  });
+} catch {}
 
 // Bob still exists because the transaction was aborted.
 const bob = await db.get('users', 2);
 ```
 
+## Bulk Writes with putAll
+
+```ts
+import { createIndexedDB, table, ttl } from '@vielzeug/deposit';
+
+type Session = { id: string; userId: number };
+const schema = { sessions: table<Session>('id') };
+
+const db = createIndexedDB({ dbName: 'app', version: 1, schema });
+
+// All records written in one atomic transaction, all sharing the same TTL.
+await db.putAll('sessions', [
+  { id: 's1', userId: 1 },
+  { id: 's2', userId: 2 },
+], ttl.hours(2));
+
+console.log(await db.has('sessions', 's1')); // true
+```
+
 ## TTL Cache Entry
 
 ```ts
-import { createLocalStorage, ttl, type Schema } from '@vielzeug/deposit';
+import { createLocalStorage, table, ttl } from '@vielzeug/deposit';
 
 type CacheEntry = { id: string; value: string };
-const schema: Schema<{ cache: CacheEntry }> = { cache: { key: 'id' } };
+const schema = { cache: table<CacheEntry>('id') };
 
 const db = createLocalStorage({ dbName: 'cache', schema });
 await db.put('cache', { id: 'k1', value: 'payload' }, ttl.seconds(30));
 ```
 
+## Cookie Adapter with Security-Oriented Defaults
+
+```ts
+import { createCookie, table, ttl } from '@vielzeug/deposit';
+
+type Pref = { id: string; value: string };
+const schema = { prefs: table<Pref>('id') };
+
+const prefs = createCookie({
+  dbName: 'app',
+  path: '/',
+  sameSite: 'Strict',
+  schema,
+  secure: true,
+});
+
+await prefs.put('prefs', { id: 'theme', value: 'light' }, ttl.days(7));
+```
+
+Use cookie storage for very small values where cookie semantics are required. For larger records or heavier write rates, prefer IndexedDB or LocalStorage/SessionStorage.
+
+TTL in cookie adapter is evaluated by Deposit when records are read, not by cookie `max-age` attributes.
+
 ## IndexedDB Migration Hook
 
 ```ts
-import { createIndexedDB, type MigrationFn, type Schema } from '@vielzeug/deposit';
+import { createIndexedDB, table, type MigrationFn } from '@vielzeug/deposit';
 
 type User = { id: number; name: string };
-const schema: Schema<{ users: User }> = { users: { key: 'id' } };
+const schema = { users: table<User>('id') };
 
 const migrationFn: MigrationFn = ({ db, oldVersion, tx }) => {
   if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
-    tx.objectStore('users').createIndex('name', 'v.name', { unique: false });
+    tx.objectStore('users').createIndex('name', 'name', { unique: false });
   }
 };
 
@@ -70,6 +114,39 @@ const db = createIndexedDB({
   schema,
   version: 2,
 });
+```
 
-void db;
+## Testing with the Memory Adapter
+
+Swap any adapter for `createMemory` in test setup — no browser APIs, no cleanup boilerplate, TTL-accurate.
+
+```ts
+import { createMemory } from '@vielzeug/deposit';
+import { schema } from '../src/schema';
+
+describe('user repository', () => {
+  let db: ReturnType<typeof createMemory<typeof schema>>;
+
+  beforeEach(() => {
+    // A fresh isolated store for every test — no shared state.
+    db = createMemory({ schema });
+  });
+
+  test('can check existence without fetching the full record', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db.has('users', 1)).toBe(true);
+    expect(await db.has('users', 99)).toBe(false);
+  });
+
+  test('putAll seeds fixtures in one call', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+
+    const first = await db.from('users').orderBy('name', 'asc').first();
+    expect(first?.name).toBe('Alice');
+  });
+});
 ```

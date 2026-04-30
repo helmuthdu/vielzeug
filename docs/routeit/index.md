@@ -61,7 +61,7 @@ const router = createRouter({
   },
 });
 
-await router.navigate({ name: 'userDetail', params: { id: '42' } });
+await router.navigate({ name: 'dashboard.settings' });
 ```
 
 ## Why Routeit?

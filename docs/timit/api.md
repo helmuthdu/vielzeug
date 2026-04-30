@@ -7,64 +7,59 @@ description: Complete API reference for @vielzeug/timit date/time functions.
 
 [[toc]]
 
-## Import Style
+## At a Glance
 
-Timit supports both named exports and a convenience `d` namespace.
+| Method | Category | Returns |
+|--------|----------|---------|
+| `timit.now(tz?)` | Query | `Temporal.ZonedDateTime` |
+| `timit.parse(input)` | Conversion | `Temporal.PlainDateTime` |
+| `timit.toInstant(input, options?)` | Conversion | `Temporal.Instant` |
+| `timit.toZoned(input, options?)` | Conversion | `Temporal.ZonedDateTime` |
+| `timit.add(input, duration, options?)` | Arithmetic | `Temporal.ZonedDateTime` |
+| `timit.difference(start, end, options?)` | Arithmetic | `Temporal.Duration` |
+| `timit.within(input, start, end, options?)` | Query | `boolean` |
+| `timit.format(input, options?)` | Formatting | `string` |
+| `timit.formatIso(input, options?)` | Formatting | `string` |
+| `timit.formatRange(start, end, options?)` | Formatting | `string` |
 
-```ts
-import {
-  diff,
-  formatHuman,
-  formatISO,
-  formatRange,
-  now,
-  shift,
-  toInstant,
-  toZoned,
-  within,
-} from '@vielzeug/timit';
-
-now('UTC');
-toInstant(input, { tz: 'Europe/Berlin' });
-toZoned(instant, { tz: 'America/New_York' });
-shift(time, { hours: 1 });
-diff(start, end);
-within(value, start, end);
-formatHuman(time, { pattern: 'short' });
-formatISO(time);
-formatRange(start, end, { pattern: 'short' });
-```
-
-Convenience namespace:
+## Namespace Import
 
 ```ts
-import { d } from '@vielzeug/timit';
-
-d.now('UTC');
-d.toInstant(input, { tz: 'Europe/Berlin' });
-d.toZoned(instant, { tz: 'America/New_York' });
-d.shift(time, { hours: 1 });
-d.diff(start, end);
-d.within(value, start, end);
-d.formatHuman(time, { pattern: 'short' });
-d.formatISO(time);
-d.formatRange(start, end, { pattern: 'short' });
+import { timit } from '@vielzeug/timit';
 ```
 
-For bundle-size-sensitive code, prefer named exports so bundlers can tree-shake unused helpers.
+All methods live on the `timit` object. Destructure for short names in a local scope:
+
+```ts
+const { add, format, now } = timit;
+```
 
 ## Functions
 
 ### Conversion Functions
+
+#### `parse(input): Temporal.PlainDateTime`
+
+Parse a plain local date/time string into a `Temporal.PlainDateTime`.
+
+```ts
+timit.parse('2026-03-21');
+timit.parse('2026-03-21T10:15:30');
+```
+
+Parameters:
+- `input: string`
+
+Returns: `Temporal.PlainDateTime`
 
 #### `toInstant(input, options?): Temporal.Instant`
 
 Normalize any supported input to a canonical timeline value.
 
 ```ts
-toInstant('2026-03-21T10:15:30Z');
-toInstant('2026-03-21T10:15:30', { tz: 'America/New_York' });
-toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
+timit.toInstant('2026-03-21T10:15:30Z');
+timit.toInstant('2026-03-21T10:15:30', { tz: 'America/New_York' });
+timit.toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
 ```
 
 Parameters:
@@ -74,7 +69,7 @@ Parameters:
 Returns: `Temporal.Instant`
 
 Notes:
-- Plain local strings require `options.tz`.
+- Plain local values require `options.tz`.
 - Zoned strings with bracketed zone annotations (for example `2026-03-21T10:15:30[America/New_York]`) are resolved using their embedded timezone.
 - ISO strings with explicit offsets (for example `+02:00` or `Z`) are parsed as absolute instants; `options.tz` does not reinterpret them.
 - Invalid strings throw a dedicated parse error.
@@ -85,7 +80,7 @@ Notes:
 View a time in a specific timezone.
 
 ```ts
-toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' });
+timit.toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' });
 ```
 
 Parameters:
@@ -95,19 +90,19 @@ Parameters:
 Returns: `Temporal.ZonedDateTime`
 
 Notes:
-- Plain local strings (for example `2026-03-21` or `2026-03-21T10:15`) are interpreted in `options.tz`.
+- Plain local values (for example `Temporal.PlainDate.from('2026-03-21')`, `2026-03-21`, or `2026-03-21T10:15`) are interpreted in `options.tz`.
 - Zoned strings with bracketed zone annotations preserve their original instant and can optionally be displayed in `options.tz`.
 - Offset-bearing strings are first parsed as absolute instants, then displayed in the target timezone.
 
 ### Arithmetic Functions
 
-#### `shift(input, duration, options?): Temporal.ZonedDateTime`
+#### `add(input, duration, options?): Temporal.ZonedDateTime`
 
 Add or subtract duration in one API.
 
 ```ts
-shift('2026-03-21T10:00:00Z', { hours: 2 });
-shift('2026-03-21T10:00:00Z', { hours: -1 });
+timit.add('2026-03-21T10:00:00Z', { hours: 2 });
+timit.add('2026-03-21T10:00:00Z', { hours: -1 });
 ```
 
 Parameters:
@@ -117,12 +112,15 @@ Parameters:
 
 Returns: `Temporal.ZonedDateTime`
 
-#### `diff(start, end, options?): Temporal.Duration`
+Notes:
+- For absolute inputs (for example `Z`/offset strings or `Temporal.Instant`) without `options.tz`, output is viewed in the system timezone.
+
+#### `difference(start, end, options?): Temporal.Duration`
 
 Compute duration between two times with optional rounding.
 
 ```ts
-diff(start, end, { largestUnit: 'hour', smallestUnit: 'minute' });
+timit.difference(start, end, { largestUnit: 'hour', smallestUnit: 'minute' });
 ```
 
 Parameters:
@@ -139,8 +137,8 @@ Returns: `Temporal.Duration`
 Get the current time in the given timezone (or system timezone).
 
 ```ts
-now();
-now('America/New_York');
+timit.now();
+timit.now('America/New_York');
 ```
 
 #### `within(input, start, end, options?): boolean`
@@ -148,7 +146,7 @@ now('America/New_York');
 Check whether `input` is within an inclusive range.
 
 ```ts
-within('2026-03-21T11:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
+timit.within('2026-03-21T11:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
 ```
 
 Notes:
@@ -156,12 +154,12 @@ Notes:
 
 ### Formatting Functions
 
-#### `formatHuman(input, options?): string`
+#### `format(input, options?): string`
 
 Format localized, user-facing output.
 
 ```ts
-formatHuman('2026-03-21T10:15:30Z', {
+timit.format('2026-03-21T10:15:30Z', {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
@@ -170,25 +168,26 @@ formatHuman('2026-03-21T10:15:30Z', {
 
 Pattern options:
 - `'short'`
+- `'medium'` (default)
 - `'long'`
 - `'date-only'`
 - `'time-only'`
 
-#### `formatISO(input, options?): string`
+#### `formatIso(input, options?): string`
 
 Format canonical ISO-8601 output for logs and APIs.
 
 ```ts
-formatISO('2026-03-21T10:15:30Z');
+timit.formatIso('2026-03-21T10:15:30Z');
 // => "2026-03-21T10:15:30Z"
 ```
 
 #### `formatRange(start, end, options?): string`
 
-Format a localized range using `Intl.DateTimeFormat.formatRange` when available.
+Format a localized range using `Intl.DateTimeFormat.formatRange`.
 
 ```ts
-formatRange(start, end, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
+timit.formatRange(start, end, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
 ```
 
 ## Types
@@ -198,6 +197,7 @@ formatRange(start, end, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
 ```ts
 type TimeInput =
   | Temporal.Instant
+  | Temporal.PlainDate
   | Temporal.PlainDateTime
   | Temporal.ZonedDateTime
   | string;
@@ -227,19 +227,31 @@ interface DifferenceOptions extends TimeOptions {
 
 ```ts
 interface HumanFormatOptions {
-  pattern?: 'short' | 'long' | 'date-only' | 'time-only';
+  pattern?: 'short' | 'medium' | 'long' | 'date-only' | 'time-only';
   locale?: Intl.LocalesArgument;
   tz?: string;
   intl?: Intl.DateTimeFormatOptions;
 }
 ```
 
-## Temporal Export
+### `TimeOptionsWithTz`
+
+Convenience alias requiring `tz`. Enforced by TypeScript overloads on `toInstant` and `toZoned` for plain-local inputs.
 
 ```ts
-import { Temporal } from '@vielzeug/timit';
+type TimeOptionsWithTz = TimeOptions & { tz: string };
 ```
 
-`Temporal` is re-exported from `@js-temporal/polyfill` for advanced use cases.
+### `DateTimeDisambiguation`
 
-It is also available on the namespace import as `d.Temporal`.
+```ts
+type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
+```
+
+Used in `options.when` to resolve ambiguous wall-clock times during DST fall-back transitions. `'compatible'` is the Temporal default.
+
+### `FormatPattern`
+
+```ts
+type FormatPattern = 'short' | 'medium' | 'long' | 'date-only' | 'time-only';
+```

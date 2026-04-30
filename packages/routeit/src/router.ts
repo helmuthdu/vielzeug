@@ -1,33 +1,209 @@
 import type {
+  NavigationStatus,
   HistoryDriver,
   Middleware,
   NavigateOptions,
   NamedNavigationTarget,
+  NavigationTarget,
   PathParams,
   QueryParams,
   RawNavigationTarget,
   ResolvedRoute,
   RouteBranchDef,
+  RouteContext,
   RouteDefinition,
+  RouteLocation,
+  RouteMatch,
+  RouteMatchBranch,
   RouteName,
   RoutePathByName,
   RouteRecord,
+  RouteParams,
   RouteState,
   RouteTable,
   RouterOptions,
   Unsubscribe,
+  ViewTransitionDocument,
 } from './types';
 
-import {
-  createRouteState,
-  getRouteByName,
-  handleRoute,
-  readLocation,
-  resolveMatch,
-  resolveTarget,
-  stripBase,
-} from './navigation';
-import { buildUrl, compileRouteSegments, joinPaths, matchRoute, matchesPrefix, normalizePath } from './path';
+import { runMiddleware } from './middleware';
+import { buildUrl, compilePathMatcher, joinPaths, matchRoute, matchesPrefix, normalizePath, parseQuery } from './path';
+
+function getRouteByName(name: string, routesByName: ReadonlyMap<string, RouteRecord>): RouteRecord {
+  const route = routesByName.get(name);
+
+  if (route) return route;
+
+  const available = [...routesByName.keys()].join(', ');
+
+  throw new Error(
+    available
+      ? `[routeit] Unknown route name: ${name}. Available routes: ${available}`
+      : `[routeit] Unknown route name: ${name}`,
+  );
+}
+
+function createRouteState(input: {
+  location: RouteLocation;
+  matches: RouteMatchBranch;
+  status: NavigationStatus;
+}): RouteState {
+  return {
+    location: {
+      hash: input.location.hash,
+      pathname: input.location.pathname,
+      query: input.location.query,
+    },
+    matches: [...input.matches],
+    status: input.status,
+  };
+}
+
+function buildMatchBranch(
+  branchDefs: readonly RouteBranchDef[],
+  params: RouteParams,
+  pathname: string,
+  dataResults: unknown[],
+): RouteMatchBranch {
+  return branchDefs.map(
+    (def, i): RouteMatch => ({
+      data: dataResults[i],
+      meta: def.meta,
+      name: def.name,
+      params: { ...params },
+      pathname,
+    }),
+  );
+}
+
+function resolveMatch(
+  pathname: string,
+  records: readonly RouteRecord[],
+): {
+  branch: RouteMatchBranch;
+  params: RouteParams;
+  record?: RouteRecord;
+} {
+  const { params, record } = matchRoute(pathname, records);
+
+  if (!record) {
+    return {
+      branch: [],
+      params,
+    };
+  }
+
+  const branch = buildMatchBranch(
+    record.branchDefs,
+    params,
+    pathname,
+    record.branchDefs.map(() => undefined),
+  );
+
+  return {
+    branch,
+    params,
+    record,
+  };
+}
+
+function resolveTarget(target: NavigationTarget, routesByName: ReadonlyMap<string, RouteRecord>): string {
+  if ('path' in target) return target.path;
+
+  const route = getRouteByName(target.name, routesByName);
+  const path = buildUrl('/', route.path, target.params, target.query);
+
+  return target.hash ? `${path}#${target.hash}` : path;
+}
+
+function stripBase(pathname: string, base = '/'): string {
+  const normalizedPath = normalizePath(pathname);
+  const normalizedBase = normalizePath(base);
+
+  if (normalizedBase === '/') return normalizedPath;
+  if (normalizedPath === normalizedBase) return '/';
+
+  const prefix = `${normalizedBase}/`;
+
+  return normalizedPath.startsWith(prefix)
+    ? normalizePath(normalizedPath.slice(normalizedBase.length))
+    : normalizedPath;
+}
+
+function readLocation(
+  base: string,
+  history: HistoryDriver,
+): {
+  hash: string;
+  pathname: string;
+  query: QueryParams;
+} {
+  return {
+    hash: history.location.hash.replace(/^#/, ''),
+    pathname: stripBase(history.location.pathname || '/', base),
+    query: parseQuery(history.location.search || ''),
+  };
+}
+
+type CompiledRoutes = {
+  records: readonly RouteRecord[];
+  routesByName: ReadonlyMap<string, RouteRecord>;
+};
+
+function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoutes>): CompiledRoutes {
+  const globalMiddleware = [...(options.middleware ?? [])];
+  const records: RouteRecord[] = [];
+
+  const compile = (
+    name: string,
+    route: RouteDefinition,
+    ancestorPath: string,
+    ancestorBranchDefs: RouteBranchDef[],
+    ancestorMiddleware: Middleware[],
+  ): void => {
+    const ownPath = route.index ? ancestorPath : normalizePath(route.path ? joinPaths(ancestorPath, route.path) : ancestorPath);
+    const branchDefs: RouteBranchDef[] = [
+      ...ancestorBranchDefs,
+      {
+        dataFn: route.data,
+        handler: route.handler,
+        meta: route.meta,
+        name,
+      },
+    ];
+    const ownMiddleware = [...ancestorMiddleware, ...(route.middleware ?? [])];
+
+    if (route.children) {
+      for (const [childName, childRoute] of Object.entries(route.children)) {
+        compile(`${name}.${childName}`, childRoute, ownPath, branchDefs, ownMiddleware);
+      }
+    }
+
+    // Compile as a leaf record when it has a handler, or when it has no children
+    // (simple routes and wildcard fallbacks always need a record).
+    if (route.handler !== undefined || !route.children) {
+      const leaf = branchDefs[branchDefs.length - 1]!;
+
+      records.push({
+        branchDefs,
+        hasData: branchDefs.some((def) => def.dataFn != null),
+        leaf,
+        middleware: [...globalMiddleware, ...ownMiddleware],
+        matcher: compilePathMatcher(ownPath),
+        path: ownPath,
+      });
+    }
+  };
+
+  for (const [name, route] of Object.entries(options.routes)) {
+    compile(name, route, '/', [], []);
+  }
+
+  return {
+    records,
+    routesByName: new Map(records.map((record) => [record.leaf.name, record])),
+  };
+}
 
 /** Creates a history driver backed by the browser History API. */
 export function createBrowserHistory(): HistoryDriver {
@@ -65,13 +241,13 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
   readonly #unlistenHistory: () => void;
 
   constructor(options: RouterOptions<TRoutes>) {
+    const compiled = compileRoutes(options);
+
     this.#base = normalizePath(options.base ?? '/');
     this.#history = options.history ?? createBrowserHistory();
     this.#useViewTransition = options.viewTransition ?? false;
-    this.#records = this.#compileRecords(options);
-    this.#routesByName = new Map(
-      this.#records.map((record) => [record.branchDefs[record.branchDefs.length - 1]!.name, record]),
-    );
+    this.#records = compiled.records;
+    this.#routesByName = compiled.routesByName;
     this.#currentState = createRouteState({
       location: {
         hash: '',
@@ -91,58 +267,6 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
 
   get state(): RouteState {
     return this.#currentState;
-  }
-
-  #compileRecords(options: RouterOptions<TRoutes>): readonly RouteRecord[] {
-    const globalMiddleware = [...(options.middleware ?? [])];
-    const records: RouteRecord[] = [];
-
-    const compile = (
-      name: string,
-      route: RouteDefinition,
-      ancestorPath: string,
-      ancestorBranchDefs: RouteBranchDef[],
-      ancestorMiddleware: Middleware[],
-    ): void => {
-      const ownPath = route.index
-        ? ancestorPath
-        : normalizePath(route.path ? joinPaths(ancestorPath, route.path) : ancestorPath);
-
-      const branchDefs: RouteBranchDef[] = [
-        ...ancestorBranchDefs,
-        {
-          dataFn: route.data,
-          handler: route.handler,
-          meta: route.meta,
-          name,
-        },
-      ];
-
-      const ownMiddleware = [...ancestorMiddleware, ...(route.middleware ?? [])];
-
-      if (route.children) {
-        for (const [childName, childRoute] of Object.entries(route.children)) {
-          compile(`${name}.${childName}`, childRoute, ownPath, branchDefs, ownMiddleware);
-        }
-      }
-
-      // Compile as a leaf record when it has a handler, or when it has no children
-      // (simple routes and wildcard fallbacks always need a record).
-      if (route.handler !== undefined || !route.children) {
-        records.push({
-          branchDefs,
-          middleware: [...globalMiddleware, ...ownMiddleware],
-          path: ownPath,
-          segments: compileRouteSegments(ownPath),
-        });
-      }
-    };
-
-    for (const [name, route] of Object.entries(options.routes)) {
-      compile(name, route, '/', [], []);
-    }
-
-    return records;
   }
 
   #assertNotDisposed(): void {
@@ -183,21 +307,86 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
 
     const navigationId = ++this.#navigationId;
 
-    await handleRoute({
-      base: this.#base,
-      history: this.#history,
-      isNavigationCurrent: () => this.#isNavigationCurrent(navigationId),
-      navigate: (target, options) =>
-        this.navigate(target as NamedNavigationTarget<TRoutes> | RawNavigationTarget, options),
-      notifyListeners: () => this.#notifyListeners(),
-      records: this.#records,
-      setCurrentState: (state) => {
-        this.#currentState = state;
-      },
-      signal: controller.signal,
-      useTransition,
-      useViewTransition: this.#useViewTransition,
+    const location = readLocation(this.#base, this.#history);
+    const { branch: initialBranch, params, record } = resolveMatch(location.pathname, this.#records);
+    const isCurrent = (): boolean => this.#isNavigationCurrent(navigationId);
+
+    if (!isCurrent()) return;
+
+    this.#currentState = createRouteState({
+      location,
+      matches: initialBranch,
+      status: record?.hasData ? 'loading' : 'idle',
     });
+
+    const run = async (): Promise<void> => {
+      if (!record || !isCurrent()) return;
+
+      const context: RouteContext = {
+        hash: location.hash,
+        locals: {},
+        matches: initialBranch,
+        navigate: (target, options) =>
+          this.navigate(target as NamedNavigationTarget<TRoutes> | RawNavigationTarget, options),
+        params,
+        pathname: location.pathname,
+        query: location.query,
+      };
+
+      const terminal = async (ctx: RouteContext): Promise<void> => {
+        if (!isCurrent()) return;
+
+        let dataResults: unknown[] = record.branchDefs.map(() => undefined);
+        let status: NavigationStatus = 'idle';
+
+        if (record.hasData) {
+          try {
+            dataResults = await Promise.all(
+              record.branchDefs.map((def) => (def.dataFn ? def.dataFn({ ...ctx, signal: controller.signal }) : undefined)),
+            );
+          } catch (error) {
+            status = 'error';
+            this.#currentState = createRouteState({
+              location,
+              matches: buildMatchBranch(record.branchDefs, params, location.pathname, dataResults),
+              status,
+            });
+            throw error;
+          }
+        }
+
+        if (!isCurrent()) return;
+
+        const finalBranch = buildMatchBranch(record.branchDefs, params, location.pathname, dataResults);
+
+        this.#currentState = createRouteState({
+          location,
+          matches: finalBranch,
+          status,
+        });
+
+        if (record.leaf.handler) {
+          const leafData = dataResults[dataResults.length - 1];
+
+          await record.leaf.handler({ ...ctx, data: leafData, matches: finalBranch });
+        }
+      };
+
+      await runMiddleware(context, record.middleware, terminal);
+    };
+
+    const documentWithTransition = document as ViewTransitionDocument;
+    const shouldUseTransition = useTransition ?? this.#useViewTransition;
+
+    try {
+      if (shouldUseTransition && documentWithTransition.startViewTransition) {
+        await documentWithTransition.startViewTransition(run).finished;
+      } else {
+        await run();
+      }
+    } finally {
+      if (isCurrent()) this.#notifyListeners();
+    }
   }
 
   #resolveDestination(path: string): string {
