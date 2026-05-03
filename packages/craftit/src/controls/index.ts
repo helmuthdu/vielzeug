@@ -15,4 +15,5 @@ export {
 } from './overlay-control';
 export { createSpinnerControl } from './spinner-control';
 export { createSliderControl } from './slider-control';
+export { createSwipeControl, type SwipeAxis, type SwipeControl, type SwipeControlDetail } from './swipe-control';
 export { createPopupListControl } from './popup-list-control';

@@ -1,43 +1,41 @@
 ---
 title: 'I18nit Examples — Locale Switcher'
-description: 'Locale Switcher examples for i18nit.'
+description: 'Implement a locale switcher with preload, strict switching, and subscription-driven rerenders.'
 ---
 
 ## Locale Switcher
 
-## Problem
+This pattern keeps the UI responsive by warming catalogs before switching.
 
-Implement locale switcher in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
+## Example
 
 ```ts
+const stop = i18n.subscribe(({ locale }) => {
+  document.documentElement.lang = locale;
+  render();
+}, true);
+
 async function changeLocale(locale: string) {
   await i18n.preload(locale);
   await i18n.setLocale(locale);
-  render();
 }
 
 for (const locale of i18n.loadableLocales) {
   console.log(locale);
 }
+
+// later
+stop();
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- `preload()` is best-effort and never throws.
+- `setLocale()` is strict and rejects if the locale cannot be resolved.
+- `subscribe(..., true)` gives you one immediate `init` event for the current locale.
 
 ## Related Recipes
 
-- [Async Loading and Reload](./async-loading-and-reload.md)
+- [Async Loading and Preload](./async-loading-and-reload.md)
 - [Catalog Replacement](./catalog-replacement.md)
 - [Diagnostics Hook](./diagnostics-hook.md)

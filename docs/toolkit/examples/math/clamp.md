@@ -74,4 +74,4 @@ function setProgress(percent: number) {
 
 - [min](./min.md): Find the minimum value in a set.
 - [max](./max.md): Find the maximum value in a set.
-- [isWithin](../typed/isWithin.md): Check if a number is within a range without changing it.
+- [is](../typed/is.md): Use `is.number` for numeric guards before clamping.

@@ -7,7 +7,7 @@ describe('Mutation', () => {
   });
 
   it('executes the mutation function and returns the result', async () => {
-    const addUser = createMutation(async ({ input }: { input: { name: string }; signal?: AbortSignal }) => ({
+    const addUser = createMutation(async (input: { name: string }) => ({
       id: 1,
       name: input.name,
     }));
@@ -19,7 +19,7 @@ describe('Mutation', () => {
 
   it('forwards the caller AbortSignal to the mutation function', async () => {
     let receivedSignal: AbortSignal | undefined;
-    const mutation = createMutation(async ({ signal }: { input: void; signal?: AbortSignal }) => {
+    const mutation = createMutation(async (_input: void, signal: AbortSignal) => {
       receivedSignal = signal;
 
       return 'ok';
@@ -29,7 +29,8 @@ describe('Mutation', () => {
 
     await mutation.mutate(undefined, { signal: ac.signal });
 
-    expect(receivedSignal).toBe(ac.signal);
+    expect(receivedSignal).toBeDefined();
+    expect(receivedSignal?.aborted).toBe(false);
   });
 
   it('reports idle -> pending -> success state lifecycle', async () => {
@@ -63,11 +64,11 @@ describe('Mutation', () => {
   it('uses the caller-provided abort signal', async () => {
     const ac = new AbortController();
     const slow = createMutation(
-      ({ signal }: { input: void; signal?: AbortSignal }) =>
+      (_input: void, signal: AbortSignal) =>
         new Promise<void>((resolve, reject) => {
           const id = setTimeout(resolve, 10_000);
 
-          signal?.addEventListener('abort', () => {
+          signal.addEventListener('abort', () => {
             clearTimeout(id);
             reject(new DOMException('Aborted', 'AbortError'));
           });
@@ -81,11 +82,31 @@ describe('Mutation', () => {
     expect(slow.getState().status).toBe('idle');
   });
 
+  it('supports cancellation via mutation.cancel()', async () => {
+    const slow = createMutation(
+      (_input: void, signal: AbortSignal) =>
+        new Promise<void>((resolve, reject) => {
+          const id = setTimeout(resolve, 10_000);
+
+          signal.addEventListener('abort', () => {
+            clearTimeout(id);
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        }),
+    );
+
+    const promise = slow.mutate(undefined);
+
+    slow.cancel();
+    await expect(promise).rejects.toThrow('Aborted');
+    expect(slow.getState().status).toBe('idle');
+  });
+
   it('allows concurrent calls and keeps state from the latest run', async () => {
     let resolveFirst!: (value: string) => void;
     let resolveSecond!: (value: string) => void;
     const mutation = createMutation(
-      ({ input }: { input: string; signal?: AbortSignal }) =>
+      (input: string) =>
         new Promise<string>((resolve) => {
           if (input === 'first') {
             resolveFirst = resolve;

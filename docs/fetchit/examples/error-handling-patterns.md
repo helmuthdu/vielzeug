@@ -24,6 +24,8 @@ try {
   if (HttpError.is(err, 404)) return null;
   if (HttpError.is(err, 401)) return redirectToLogin();
   if (HttpError.is(err, 403)) return showForbidden();
+  if (HttpError.is(err) && err.kind === 'timeout') return toast.error('Request timed out');
+  if (HttpError.is(err) && err.kind === 'abort') return; // user canceled
   if (HttpError.is(err)) throw new Error(`Unexpected ${err.status}: ${err.url}`);
   throw err; // re-throw non-HTTP errors
 }
@@ -49,7 +51,7 @@ api.use(async (ctx, next) => {
 ### Mutation error state
 
 ```ts
-const mutation = createMutation(({ input, signal }: { input: number; signal?: AbortSignal }) =>
+const mutation = createMutation((input: number, signal: AbortSignal) =>
   api.delete(`/users/${input}`, { signal }),
 );
 

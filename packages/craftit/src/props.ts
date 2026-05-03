@@ -112,7 +112,8 @@ type PropMeta<T = unknown> = {
   signal: Signal<T>;
 };
 
-const createDefaultParser = <T>(defaultValue: T): ((value: string | null) => T) => {
+/** Infer attribute parser from default value type. */
+const inferParserFromValue = <T>(defaultValue: T): ((value: string | null) => T) => {
   return (value: string | null): T => {
     if (value == null) return defaultValue;
 
@@ -134,7 +135,8 @@ const registerProp = <T>(propName: string, attrName: string, defaultValue: T, op
 
   if (!propRegistry.has(el)) propRegistry.set(el, new Map());
 
-  const parse = options?.parse ?? createDefaultParser(defaultValue);
+  // Infer parser from default value type if not explicitly provided
+  const parse = options?.parse ?? inferParserFromValue<T>(defaultValue);
 
   const s = signal<T>(defaultValue);
   const hasPreUpgradeProperty = Object.prototype.hasOwnProperty.call(el, propName);

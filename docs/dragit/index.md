@@ -119,7 +119,7 @@ const zone = createDropZone({
 - **Drag handles** — scope dragging to a child selector via `handle`; whole item is draggable when omitted
 - **Auto-synced items** — a `MutationObserver` re-syncs `draggable` and `role` attributes when list items are added or removed
 - **`[Symbol.dispose]`** — both primitives support the `using` keyword for automatic cleanup
-- **Reactive-friendly `disabled`** — pass a boolean or `() => signal.value` to integrate with any reactive framework
+- **Reactive-friendly options** — pass booleans/arrays or getter functions for `disabled` and `accept`
 - **Zero dependencies** — <PackageInfo package="dragit" type="size" /> gzipped, <PackageInfo package="dragit" type="dependencies" /> dependencies
 
 ## Compatibility

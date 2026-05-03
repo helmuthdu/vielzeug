@@ -2,20 +2,15 @@
  * Tests for createA11yControl composable from the Craftit controls surface
  */
 import { html, signal } from '../../index';
-import { currentElementOrThrow } from '../../runtime';
 import { mount } from '../../testing';
 import { createA11yControl } from '../a11y-control';
 
 describe('createA11yControl', () => {
   it('sets the ARIA role on the host element during setup', async () => {
     const { element } = await mount(() => {
-      const host = currentElementOrThrow();
+      createA11yControl({ role: 'checkbox' });
 
-      createA11yControl(host, { role: 'checkbox' });
-
-      return {
-        render: () => html`<div></div>`,
-      };
+      return () => html`<div></div>`;
     });
 
     expect(element.getAttribute('role')).toBe('checkbox');
@@ -25,17 +20,13 @@ describe('createA11yControl', () => {
     let handle!: ReturnType<typeof createA11yControl>;
 
     await mount(() => {
-      const host = currentElementOrThrow();
-
-      handle = createA11yControl(host, {
+      handle = createA11yControl({
         helperId: 'my-helper',
         labelId: 'my-label',
         role: 'switch',
       });
 
-      return {
-        render: () => html`<div></div>`,
-      };
+      return () => html`<div></div>`;
     });
 
     expect(handle.labelId).toBe('my-label');
@@ -47,22 +38,14 @@ describe('createA11yControl', () => {
     let handleB!: ReturnType<typeof createA11yControl>;
 
     await mount(() => {
-      const host = currentElementOrThrow();
+      handleA = createA11yControl({ role: 'radio' });
 
-      handleA = createA11yControl(host, { role: 'radio' });
-
-      return {
-        render: () => html`<div></div>`,
-      };
+      return () => html`<div></div>`;
     });
     await mount(() => {
-      const host = currentElementOrThrow();
+      handleB = createA11yControl({ role: 'radio' });
 
-      handleB = createA11yControl(host, { role: 'radio' });
-
-      return {
-        render: () => html`<div></div>`,
-      };
+      return () => html`<div></div>`;
     });
 
     expect(handleA.labelId).not.toBe(handleB.labelId);
@@ -73,13 +56,9 @@ describe('createA11yControl', () => {
     const checked = signal<'true' | 'false' | undefined>('false');
 
     const { act, element } = await mount(() => {
-      const host = currentElementOrThrow();
+      createA11yControl({ checked: () => checked.value, role: 'checkbox' });
 
-      createA11yControl(host, { checked: () => checked.value, role: 'checkbox' });
-
-      return {
-        render: () => html`<div></div>`,
-      };
+      return () => html`<div></div>`;
     });
 
     expect(element.getAttribute('aria-checked')).toBe('false');
@@ -101,13 +80,9 @@ describe('createA11yControl', () => {
     const invalid = signal(false);
 
     const { act, element } = await mount(() => {
-      const host = currentElementOrThrow();
+      createA11yControl({ invalid: () => invalid.value, role: 'textbox' });
 
-      createA11yControl(host, { invalid: () => invalid.value, role: 'textbox' });
-
-      return {
-        render: () => html`<div></div>`,
-      };
+      return () => html`<div></div>`;
     });
 
     expect(element.getAttribute('aria-invalid')).toBe('false');
@@ -123,16 +98,14 @@ describe('createA11yControl', () => {
     const helperMsg = signal<string | undefined>(undefined);
 
     const { act, element } = await mount(() => {
-      const host = currentElementOrThrow();
-
-      createA11yControl(host, {
+      createA11yControl({
         helperId: 'desc-test',
         helperText: () => helperMsg.value,
         role: 'textbox',
       });
 
       // The composable queries [data-a11y-helper] from the shadow root
-      return { render: () => html`<div data-a11y-helper hidden></div>` };
+      return () => html`<div data-a11y-helper hidden></div>`;
     });
 
     // Before helper text is set, no aria-describedby
@@ -148,14 +121,12 @@ describe('createA11yControl', () => {
 
   it('reacts to label content being added and removed after mount', async () => {
     const { act, element } = await mount(() => {
-      const host = currentElementOrThrow();
-
-      createA11yControl(host, {
+      createA11yControl({
         labelId: 'dynamic-label',
         role: 'checkbox',
       });
 
-      return { render: () => html`<span data-a11y-label><slot></slot></span>` };
+      return () => html`<span data-a11y-label><slot></slot></span>`;
     });
 
     expect(element.hasAttribute('aria-labelledby')).toBe(false);
@@ -176,14 +147,12 @@ describe('createA11yControl', () => {
   it('wires aria-labelledby on initial mount when slotted label text already exists', async () => {
     const { element } = await mount(
       () => {
-        const host = currentElementOrThrow();
-
-        createA11yControl(host, {
+        createA11yControl({
           labelId: 'initial-label',
           role: 'checkbox',
         });
 
-        return { render: () => html`<span data-a11y-label><slot></slot></span>` };
+        return () => html`<span data-a11y-label><slot></slot></span>`;
       },
       { html: 'Accept terms' },
     );
@@ -194,14 +163,12 @@ describe('createA11yControl', () => {
 
   it('does not set aria-labelledby when the label marker has no content', async () => {
     const { element } = await mount(() => {
-      const host = currentElementOrThrow();
-
-      createA11yControl(host, {
+      createA11yControl({
         labelId: 'empty-label',
         role: 'switch',
       });
 
-      return { render: () => html`<span data-a11y-label><slot></slot></span>` };
+      return () => html`<span data-a11y-label><slot></slot></span>`;
     });
 
     expect(element.hasAttribute('aria-labelledby')).toBe(false);

@@ -11,6 +11,7 @@ description: Complete API reference for the declarative Routeit router.
 | --- | --- |
 | `createRouter({ routes, ...options })` | Create a router from a route table |
 | `createBrowserHistory()` | Create the default browser history driver |
+| `redirect(target, options?)` | Build redirect middleware for guard flows |
 | `router.navigate({ name, ... })` | Navigate by route name |
 | `router.navigate({ path })` | Navigate by raw path target |
 | `router.url(name, params?, query?)` | Build a URL for a named route |
@@ -190,7 +191,19 @@ router.resolve('/app/dashboard/settings');
 
 Resolve a pathname without running middleware, handlers, or subscribers. Returns the matched branch from root to leaf.
 
-**Returns:** `ResolvedRoute | null`
+**Returns:** `RouteMatchBranch | null`
+
+## `redirect(target, options?)`
+
+```ts
+import { redirect } from '@vielzeug/routeit';
+
+const requireAuth = redirect({ name: 'login' }, { replace: true });
+```
+
+Creates middleware that performs a redirect and short-circuits the chain.
+
+**Returns:** `Middleware`
 
 ### State
 
@@ -221,15 +234,21 @@ The listener runs immediately with the current state, then after each successful
 
 ## Core Types
 
-### `RouteContext<Params>`
+### `RouteContext<Params, TRoutes>`
 
 ```ts
-type RouteContext<Params extends RouteParams = RouteParams> = {
+type RouteContext<
+  Params extends RouteParams = RouteParams,
+  TRoutes extends RouteTable = RouteTable,
+> = {
   readonly data?: unknown;
   readonly hash: string;
   locals: Record<string, unknown>;
   readonly matches: RouteMatchBranch;
-  readonly navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
+  readonly navigate: (
+    target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
+    options?: NavigateOptions,
+  ) => Promise<void>;
   readonly params: Params;
   readonly pathname: string;
   readonly query: QueryParams;
@@ -240,35 +259,44 @@ type RouteContext<Params extends RouteParams = RouteParams> = {
 
 Read route metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
 
-### `DataFn<Params>`
+### `DataFn<Params, TRoutes>`
 
 ```ts
-type DataFn<Params extends RouteParams = RouteParams> = (
-  context: DataContext<Params>,
+type DataFn<
+  Params extends RouteParams = RouteParams,
+  TRoutes extends RouteTable = RouteTable,
+> = (
+  context: DataContext<Params, TRoutes>,
 ) => unknown | Promise<unknown>;
 ```
 
-### `DataContext<Params>`
+### `DataContext<Params, TRoutes>`
 
 ```ts
-type DataContext<Params extends RouteParams = RouteParams> = RouteContext<Params> & {
+type DataContext<
+  Params extends RouteParams = RouteParams,
+  TRoutes extends RouteTable = RouteTable,
+> = RouteContext<Params, TRoutes> & {
   readonly signal: AbortSignal;
 };
 ```
 
-### `RouteHandler<Params>`
+### `RouteHandler<Params, TRoutes>`
 
 ```ts
-type RouteHandler<Params extends RouteParams = RouteParams> = (
-  context: RouteContext<Params>,
+type RouteHandler<
+  Params extends RouteParams = RouteParams,
+  TRoutes extends RouteTable = RouteTable,
+> = (
+  context: RouteContext<Params, TRoutes>,
 ) => void | Promise<void>;
 ```
 
-### `Middleware`
+### `Middleware<TRoutes>`
 
 ```ts
-type Middleware = (
-  context: RouteContext<RouteParams>,
+type Middleware<TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<RouteParams, TRoutes>,
   next: () => Promise<void>,
 ) => void | Promise<void>;
 ```
@@ -276,6 +304,17 @@ type Middleware = (
 Middleware ordering is simple: global middleware first, then route middleware, then the handler.
 
 If a route defines `data`, middleware still runs first. The effective order is global middleware, route middleware, data, then handler.
+
+### `UntypedNamedNavigationTarget`
+
+```ts
+type UntypedNamedNavigationTarget = {
+  hash?: string;
+  name: string;
+  params?: RouteParams;
+  query?: QueryParams;
+};
+```
 
 ### `NavigationTarget`
 
@@ -327,10 +366,10 @@ type RouteMatch = {
 };
 ```
 
-### `ResolvedRoute`
+### `RouteMatchBranch`
 
 ```ts
-type ResolvedRoute = readonly RouteMatch[];
+type RouteMatchBranch = readonly RouteMatch[];
 ```
 
 ### `PathParams<T>`

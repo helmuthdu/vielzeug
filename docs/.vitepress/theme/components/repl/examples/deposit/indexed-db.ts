@@ -1,0 +1,4 @@
+export const indexedDbExample = {
+  code: "import { createIndexedDB, table } from '@vielzeug/deposit'\n\nconst db = createIndexedDB({\n  dbName: 'app-logs',\n  version: 1,\n  schema: {\n    logs: table('id'),\n  },\n})\n\nawait db.putAll('logs', [\n  { id: 1, level: 'info', message: 'App started', ts: Date.now() - 3000 },\n  { id: 2, level: 'warn', message: 'Slow query detected', ts: Date.now() - 2000 },\n  { id: 3, level: 'error', message: 'Request failed', ts: Date.now() - 1000 },\n  { id: 4, level: 'info', message: 'Request succeeded', ts: Date.now() },\n])\n\nconst errors = await db.query('logs').equals('level', 'error').toArray()\nconsole.log('Errors:', errors.map((l) => l.message))\n\nconst count = await db.count('logs')\nconsole.log('Total logs:', count)\n\ndb.close()",
+  name: 'IndexedDB Adapter',
+};

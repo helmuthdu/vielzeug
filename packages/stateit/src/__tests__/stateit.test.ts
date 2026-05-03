@@ -344,7 +344,7 @@ describe('stateit', () => {
       const log: number[] = [];
 
       const stop = effect(() => {
-        // peek at n without subscribing
+        // read n without subscribing
         const v = untrack(() => n.value);
 
         log.push(v);

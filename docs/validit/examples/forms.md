@@ -3,14 +3,18 @@ title: 'Validit Examples — Forms'
 description: 'Form validation examples with validit.'
 ---
 
-## Form Validation Examples
+## Form validation examples
 
-### Registration Schema
+### Problem
+
+Validate a registration form, normalize browser values, and expose errors in a shape that maps directly into field-level UI.
+
+### Runnable Example
 
 ```ts
 import { v, type Infer } from '@vielzeug/validit';
 
-export const RegistrationSchema = v
+const RegistrationSchema = v
   .object({
     name: v.string().min(1, 'Name is required'),
     email: v.string().trim().email('Invalid email address'),
@@ -25,11 +29,7 @@ export const RegistrationSchema = v
   .refine((value) => value.password === value.confirmPassword, 'Passwords must match');
 
 export type Registration = Infer<typeof RegistrationSchema>;
-```
 
-### Parsing Form Payloads
-
-```ts
 const payload: unknown = {
   confirmPassword: 'Secret123',
   email: 'ada@example.com',
@@ -43,21 +43,44 @@ const FormInputSchema = RegistrationSchema.extend({
 });
 
 const parsed = FormInputSchema.safeParse(payload);
-```
 
-### Mapping Errors For UI
+if (parsed.success) {
+  console.log(parsed.data);
+} else {
+  const { fieldErrors, formErrors } = parsed.error.flattenFirst();
 
-```ts
-const result = RegistrationSchema.safeParse(formData);
-
-if (!result.success) {
-  const { fieldErrors, formErrors } = result.error.flatten();
-  // fieldErrors => { email: ['Invalid email'], password: ['...'] }
-  // formErrors => ['Passwords must match']
+  console.log(fieldErrors);
+  console.log(formErrors);
 }
 ```
 
-### Optional Profile Fields
+### Expected Output
+
+```ts
+{
+  confirmPassword: 'Secret123',
+  email: 'ada@example.com',
+  name: 'Ada',
+  newsletter: true,
+  password: 'Secret123'
+}
+```
+
+If the passwords do not match, `formErrors` contains `['Passwords must match']` because the object-level refinement has no field path.
+
+### Common Pitfalls
+
+- Validating raw form payloads with `v.boolean()` instead of `v.coerce.boolean()`.
+- Expecting cross-field object refinements to appear under a field key instead of `formErrors`.
+- Using `flatten()` when the UI only needs the first message per field.
+
+### Related Recipes
+
+- [API](./api.md)
+- [Async](./async.md)
+- [Unions](./unions.md)
+
+## Optional profile fields
 
 ```ts
 const ProfileSchema = v.object({
@@ -68,22 +91,10 @@ const ProfileSchema = v.object({
 });
 ```
 
-### Partial Updates (Patch Forms)
+## Partial updates
 
 ```ts
 const ProfilePatchSchema = ProfileSchema.partial();
 
 ProfilePatchSchema.parse({ bio: 'Updated bio' });
 ```
-
-## Common Pitfalls
-
-- Using `.parse()` directly on user input without error handling.
-- Forgetting to call `.safeParseAsync()` when schemas include `.refineAsync()`.
-- Applying `.transform()` too early in a chain and losing type-specific methods.
-
-## Related Recipes
-
-- [API](./api.md)
-- [Async](./async.md)
-- [Unions](./unions.md)

@@ -39,7 +39,7 @@ export async function attempt<T extends Fn, R = Awaited<ReturnType<T>>>(
   { onError, timeout = 7000, times = 3 }: AttemptOptions = {},
 ): Promise<AttemptResult<R>> {
   try {
-    const value = await retry(() => executeWithTimeout<R>(() => fn(), { timeout }), { times });
+    const value = await retry(() => executeWithTimeout<R>((signal) => fn(signal), { timeout }), { times });
 
     return { ok: true, value };
   } catch (err) {

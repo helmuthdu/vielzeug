@@ -1,103 +1,196 @@
 export type Messages = {
-  array_length: (ctx: { exact: number; value: unknown[] }) => string;
-  array_max: (ctx: { max: number; value: unknown[] }) => string;
-  array_min: (ctx: { min: number; value: unknown[] }) => string;
-  array_nonempty: () => string;
-  array_type: () => string;
-  boolean_type: () => string;
-  date_max: (ctx: { max: Date; value: Date }) => string;
-  date_min: (ctx: { min: Date; value: Date }) => string;
-  date_type: () => string;
-  enum_invalid: (ctx: { values: readonly unknown[] }) => string;
-  instanceof_type: (ctx: { className: string }) => string;
-  literal_expected: (ctx: { expected: unknown }) => string;
-  never_invalid: () => string;
-  number_int: () => string;
-  number_max: (ctx: { max: number; value: number }) => string;
-  number_min: (ctx: { min: number; value: number }) => string;
-  number_multiple_of: (ctx: { step: number; value: number }) => string;
-  number_negative: () => string;
-  number_non_negative: () => string;
-  number_non_positive: () => string;
-  number_positive: () => string;
-  number_type: () => string;
-  object_type: () => string;
-  object_unrecognized_keys: (ctx: { keys: string[] }) => string;
-  refine_default: () => string;
-  string_date: () => string;
-  string_datetime: () => string;
-  string_email: () => string;
-  string_ends_with: (ctx: { suffix: string; value: string }) => string;
-  string_includes: (ctx: { substr: string; value: string }) => string;
-  string_length: (ctx: { exact: number; value: string }) => string;
-  string_max: (ctx: { max: number; value: string }) => string;
-  string_min: (ctx: { min: number; value: string }) => string;
-  string_nonempty: () => string;
-  string_regex: (ctx: { value: string }) => string;
-  string_starts_with: (ctx: { prefix: string; value: string }) => string;
-  string_type: () => string;
-  string_url: () => string;
-  string_uuid: () => string;
-  tuple_length: (ctx: { exact: number }) => string;
-  tuple_type: () => string;
-  union_invalid: () => string;
-  variant_invalid_discriminator: (ctx: { discriminator: string; expected: string[] }) => string;
-  variant_type: () => string;
+  array: {
+    length: (ctx: { exact: number; value: unknown[] }) => string;
+    max: (ctx: { max: number; value: unknown[] }) => string;
+    min: (ctx: { min: number; value: unknown[] }) => string;
+    nonEmpty: () => string;
+    type: () => string;
+    unique: () => string;
+  };
+  boolean: {
+    type: () => string;
+  };
+  date: {
+    max: (ctx: { max: Date; value: Date }) => string;
+    min: (ctx: { min: Date; value: Date }) => string;
+    type: () => string;
+  };
+  enum: {
+    invalid: (ctx: { values: readonly unknown[] }) => string;
+  };
+  instanceof: {
+    type: (ctx: { className: string }) => string;
+  };
+  literal: {
+    expected: (ctx: { expected: unknown }) => string;
+  };
+  never: {
+    invalid: () => string;
+  };
+  number: {
+    int: () => string;
+    max: (ctx: { max: number; value: number }) => string;
+    min: (ctx: { min: number; value: number }) => string;
+    multipleOf: (ctx: { step: number; value: number }) => string;
+    negative: () => string;
+    nonNegative: () => string;
+    nonPositive: () => string;
+    positive: () => string;
+    safe: () => string;
+    type: () => string;
+  };
+  object: {
+    type: () => string;
+    unrecognizedKeys: (ctx: { keys: string[] }) => string;
+  };
+  refine: {
+    default: () => string;
+  };
+  string: {
+    date: () => string;
+    dateTime: () => string;
+    email: () => string;
+    endsWith: (ctx: { suffix: string; value: string }) => string;
+    includes: (ctx: { substr: string; value: string }) => string;
+    ip: () => string;
+    length: (ctx: { exact: number; value: string }) => string;
+    max: (ctx: { max: number; value: string }) => string;
+    min: (ctx: { min: number; value: string }) => string;
+    nonEmpty: () => string;
+    regex: (ctx: { value: string }) => string;
+    startsWith: (ctx: { prefix: string; value: string }) => string;
+    type: () => string;
+    url: () => string;
+    uuid: () => string;
+  };
+  tuple: {
+    length: (ctx: { exact: number }) => string;
+    type: () => string;
+  };
+  union: {
+    invalid: () => string;
+  };
+  variant: {
+    invalidDiscriminator: (ctx: { discriminator: string; expected: string[] }) => string;
+    type: () => string;
+  };
+};
+
+export type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends Record<string, unknown> ? DeepPartial<T[K]> : T[K];
 };
 
 const _defaultMessages: Messages = {
-  array_length: ({ exact }) => `Must have exactly ${exact} items`,
-  array_max: ({ max }) => `Must have at most ${max} items`,
-  array_min: ({ min }) => `Must have at least ${min} items`,
-  array_nonempty: () => 'Cannot be empty',
-  array_type: () => 'Expected array',
-  boolean_type: () => 'Expected boolean',
-  date_max: ({ max }) => `Must be before ${max.toISOString()}`,
-  date_min: ({ min }) => `Must be after ${min.toISOString()}`,
-  date_type: () => 'Expected valid date',
-  enum_invalid: ({ values }) => `Expected one of: ${values.map((v) => JSON.stringify(v)).join(', ')}`,
-  instanceof_type: ({ className }) => `Expected instance of ${className}`,
-  literal_expected: ({ expected }) => `Expected ${JSON.stringify(expected)}`,
-  never_invalid: () => 'Value is not allowed',
-  number_int: () => 'Must be an integer',
-  number_max: ({ max }) => `Must be at most ${max}`,
-  number_min: ({ min }) => `Must be at least ${min}`,
-  number_multiple_of: ({ step }) => `Must be a multiple of ${step}`,
-  number_negative: () => 'Must be negative',
-  number_non_negative: () => 'Must be non-negative',
-  number_non_positive: () => 'Must be non-positive',
-  number_positive: () => 'Must be positive',
-  number_type: () => 'Expected number',
-  object_type: () => 'Expected object',
-  object_unrecognized_keys: ({ keys }) => `Unrecognized keys: ${keys.join(', ')}`,
-  refine_default: () => 'Invalid value',
-  string_date: () => 'Invalid date',
-  string_datetime: () => 'Invalid datetime',
-  string_email: () => 'Invalid email address',
-  string_ends_with: ({ suffix }) => `Must end with "${suffix}"`,
-  string_includes: ({ substr }) => `Must include "${substr}"`,
-  string_length: ({ exact }) => `Must be exactly ${exact} characters`,
-  string_max: ({ max }) => `Must be at most ${max} characters`,
-  string_min: ({ min }) => `Must be at least ${min} characters`,
-  string_nonempty: () => 'Cannot be empty',
-  string_regex: () => 'Invalid format',
-  string_starts_with: ({ prefix }) => `Must start with "${prefix}"`,
-  string_type: () => 'Expected string',
-  string_url: () => 'Invalid URL',
-  string_uuid: () => 'Invalid UUID',
-  tuple_length: ({ exact }) => `Expected tuple of length ${exact}`,
-  tuple_type: () => 'Expected array',
-  union_invalid: () => 'Does not match any of the expected types',
-  variant_invalid_discriminator: ({ discriminator, expected }) =>
-    `Invalid discriminator value at "${discriminator}": expected ${expected.map((k) => JSON.stringify(k)).join(' | ')}`,
-  variant_type: () => 'Expected object',
+  array: {
+    length: ({ exact }) => `Must have exactly ${exact} items`,
+    max: ({ max }) => `Must have at most ${max} items`,
+    min: ({ min }) => `Must have at least ${min} items`,
+    nonEmpty: () => 'Cannot be empty',
+    type: () => 'Expected array',
+    unique: () => 'All items must be unique',
+  },
+  boolean: {
+    type: () => 'Expected boolean',
+  },
+  date: {
+    max: ({ max }) => `Must be before ${max.toISOString()}`,
+    min: ({ min }) => `Must be after ${min.toISOString()}`,
+    type: () => 'Expected valid date',
+  },
+  enum: {
+    invalid: ({ values }) => `Expected one of: ${values.map((v) => JSON.stringify(v)).join(', ')}`,
+  },
+  instanceof: {
+    type: ({ className }) => `Expected instance of ${className}`,
+  },
+  literal: {
+    expected: ({ expected }) => `Expected ${JSON.stringify(expected)}`,
+  },
+  never: {
+    invalid: () => 'Value is not allowed',
+  },
+  number: {
+    int: () => 'Must be an integer',
+    max: ({ max }) => `Must be at most ${max}`,
+    min: ({ min }) => `Must be at least ${min}`,
+    multipleOf: ({ step }) => `Must be a multiple of ${step}`,
+    negative: () => 'Must be negative',
+    nonNegative: () => 'Must be non-negative',
+    nonPositive: () => 'Must be non-positive',
+    positive: () => 'Must be positive',
+    safe: () => 'Must be a safe integer',
+    type: () => 'Expected number',
+  },
+  object: {
+    type: () => 'Expected object',
+    unrecognizedKeys: ({ keys }) => `Unrecognized keys: ${keys.join(', ')}`,
+  },
+  refine: {
+    default: () => 'Invalid value',
+  },
+  string: {
+    date: () => 'Invalid date',
+    dateTime: () => 'Invalid datetime',
+    email: () => 'Invalid email address',
+    endsWith: ({ suffix }) => `Must end with "${suffix}"`,
+    includes: ({ substr }) => `Must include "${substr}"`,
+    ip: () => 'Invalid IP address',
+    length: ({ exact }) => `Must be exactly ${exact} characters`,
+    max: ({ max }) => `Must be at most ${max} characters`,
+    min: ({ min }) => `Must be at least ${min} characters`,
+    nonEmpty: () => 'Cannot be empty',
+    regex: () => 'Invalid format',
+    startsWith: ({ prefix }) => `Must start with "${prefix}"`,
+    type: () => 'Expected string',
+    url: () => 'Invalid URL',
+    uuid: () => 'Invalid UUID',
+  },
+  tuple: {
+    length: ({ exact }) => `Expected tuple of length ${exact}`,
+    type: () => 'Expected array',
+  },
+  union: {
+    invalid: () => 'Does not match any of the expected types',
+  },
+  variant: {
+    invalidDiscriminator: ({ discriminator, expected }) =>
+      `Invalid discriminator value at "${discriminator}": expected ${expected.map((k) => JSON.stringify(k)).join(' | ')}`,
+    type: () => 'Expected object',
+  },
 };
 
 let _activeMessages: Messages = _defaultMessages;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPartial<T>): T {
+  const out = { ...base } as Record<string, unknown>;
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) continue;
+
+    const baseValue = out[key];
+
+    if (isRecord(baseValue) && isRecord(value)) {
+      out[key] = mergeMessages(baseValue, value as DeepPartial<typeof baseValue>);
+    } else {
+      out[key] = value;
+    }
+  }
+
+  return out as T;
+}
+
 /** Override any subset of default validation messages globally. */
-export function configure(opts: { messages?: Partial<Messages> }): void {
-  if (opts.messages) _activeMessages = { ..._defaultMessages, ...opts.messages };
+export function configure(opts: { messages?: DeepPartial<Messages> }): void {
+  if (opts.messages) _activeMessages = mergeMessages(_defaultMessages, opts.messages);
+}
+
+/** Reset all messages to defaults. */
+export function reset(): void {
+  _activeMessages = _defaultMessages;
 }
 
 /** @internal — for use by schema files only. */

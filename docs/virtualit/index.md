@@ -9,7 +9,7 @@ description: Lightweight, framework-agnostic virtual list engine with variable h
 
 # Virtualit
 
-**Virtualit** is a framework-agnostic virtual list engine. It renders only the items visible in the viewport plus a configurable overscan buffer, keeping the DOM small regardless of how many items are in your dataset.
+`@vielzeug/virtualit` is a framework-agnostic virtual list engine. It renders only the items visible in the viewport plus a configurable overscan buffer, keeping the DOM small regardless of how many items are in your dataset.
 
 <!-- Search keywords: virtual list, windowed rendering, large list performance. -->
 
@@ -63,7 +63,7 @@ virt.destroy();
 
 ## Entry Points
 
-- `@vielzeug/virtualit` — core `Virtualizer` and `createVirtualizer` primitives.
+- `@vielzeug/virtualit` — core `createVirtualizer` controller.
 - `@vielzeug/virtualit/dom` — `createDomVirtualList` helper for dropdown/listbox-style DOM integrations.
 
 ## Why Virtualit?
@@ -113,11 +113,11 @@ const virt = createVirtualizer(scrollEl, {
 ## Features
 
 - **Framework-agnostic** — callback-based `onChange` connects to any rendering layer (React, Vue, Svelte, Lit, vanilla DOM)
-- **Fixed and variable heights** — pass a fixed number, a per-index estimator function, or call `measureElement()` after rendering for exact heights
-- **Batched measurements** — calling `measureElement()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
+- **Fixed and variable heights** — pass a fixed number, a per-index estimator function, or call `measure()` after rendering for exact heights
+- **Batched measurements** — calling `measure()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
 - **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
 - **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; both support `behavior: 'smooth'`
-- **Reactive setters** — assigning `virt.count` or `virt.estimateSize` rebuilds and re-renders automatically
+- **Atomic updates** — `virt.update(...)` lets you change count, estimator, overscan, and callback in one call
 - **Clamp-safe** — `scrollToIndex` silently clamps out-of-range indices rather than silently scrolling to the wrong position
 - **Disposable** — implements `[Symbol.dispose]` for `using` declarations
 - **Zero dependencies**
@@ -149,7 +149,7 @@ scrollTop = 90, containerHeight = 120 → visible items 2–5
 With overscan=3: render items 0–8
 ```
 
-The offset array is rebuilt (O(n)) only when item heights change: on `measureElement()` flush, `count` change, `estimateSize` change, or `invalidate()`. Scroll and resize events recompute the visible window without rebuilding offsets.
+The offset array is rebuilt (O(n)) only when item heights change: on `measure()` flush, `update({ count })`, `update({ estimateSize })`, or `invalidate()`. Scroll and resize events recompute the visible window without rebuilding offsets.
 
 ## See Also
 

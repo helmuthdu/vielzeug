@@ -183,4 +183,23 @@
     z-index: 1;
     transform: translateY(-50%);
   }
+
+  :host([sidebar-bottom-nav]) .item {
+    flex-direction: column;
+    gap: var(--size-0-5);
+    align-items: center;
+    justify-content: center;
+    min-height: unset;
+    padding: var(--size-1);
+    font-size: var(--text-xs);
+  }
+
+  :host([sidebar-bottom-nav]) .item-label {
+    width: 100%;
+    text-align: center;
+  }
+
+  :host([sidebar-bottom-nav]) .item-end {
+    display: none;
+  }
 }

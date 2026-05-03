@@ -1,6 +1,6 @@
 import type { Placement } from '@vielzeug/floatit';
 
-import { computed, createId, define, html, prop, signal, syncAria, watch } from '@vielzeug/craftit';
+import { computed, createId, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 import { computePosition, flip, offset, shift } from '@vielzeug/floatit';
 
@@ -230,100 +230,98 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
       if (e.key === 'Escape') overlay.close({ reason: 'escape', restoreFocus: false });
     }
 
-    return {
-      mount() {
-        const slot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-        let triggerBinding: (() => void) | null = null;
+    onMounted(() => {
+      const slot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      let triggerBinding: (() => void) | null = null;
 
-        if (!slot) return;
+      if (!slot) return;
 
-        const bindTriggerEvents = () => {
-          triggerBinding?.();
-          triggerBinding = null;
+      const bindTriggerEvents = () => {
+        triggerBinding?.();
+        triggerBinding = null;
 
-          const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+        const triggerEl = slot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
-          if (!triggerEl) return;
+        if (!triggerEl) return;
 
-          const removeAria = syncAria(triggerEl, {
-            describedby: () => tooltipId,
-          });
-
-          const cleanups: Array<() => void> = [];
-          const add = (
-            target: EventTarget,
-            event: string,
-            listener: EventListener,
-            options?: AddEventListenerOptions,
-          ) => {
-            target.addEventListener(event, listener, options);
-            cleanups.push(() => target.removeEventListener(event, listener, options));
-          };
-
-          const t = triggers.value;
-
-          if (t.includes('hover')) {
-            add(triggerEl, 'pointerenter', show as EventListener);
-            add(triggerEl, 'pointerleave', hide as EventListener);
-          }
-
-          if (t.includes('focus')) {
-            add(triggerEl, 'focusin', show as EventListener);
-            add(triggerEl, 'focusout', hide as EventListener);
-          }
-
-          if (t.includes('click')) {
-            add(triggerEl, 'click', toggleClick as EventListener);
-          }
-
-          // Keyboard escape to dismiss
-          add(document, 'keydown', handleKeydown as EventListener);
-
-          triggerBinding = () => {
-            removeAria();
-
-            for (const cleanup of cleanups) cleanup();
-          };
-        };
-
-        watch(slots.elements(), bindTriggerEvents, { immediate: true });
-        // Controlled mode: watch the `open` prop and show/hide accordingly
-        watch(props.open, (openVal) => {
-          if (openVal === undefined || openVal === null) return;
-
-          if (openVal) {
-            overlay.open({ reason: 'programmatic' });
-          } else {
-            overlay.close({ reason: 'programmatic', restoreFocus: false });
-          }
+        const removeAria = syncAria(triggerEl, {
+          describedby: () => tooltipId,
         });
 
-        return () => {
-          triggerBinding?.();
-          triggerBinding = null;
-
-          clearShowTimer();
-          clearHideTimer();
+        const cleanups: Array<() => void> = [];
+        const add = (
+          target: EventTarget,
+          event: string,
+          listener: EventListener,
+          options?: AddEventListenerOptions,
+        ) => {
+          target.addEventListener(event, listener, options);
+          cleanups.push(() => target.removeEventListener(event, listener, options));
         };
-      },
 
-      render: () => html`
-        <slot></slot>
-        <div
-          class="tooltip"
-          part="tooltip"
-          id="${tooltipId}"
-          role="tooltip"
-          popover="manual"
-          ref=${(el: HTMLElement) => {
-            tooltipEl = el;
-          }}
-          :data-placement="${activePlacement}"
-          :aria-hidden="${() => String(!visible.value)}">
-          <slot name="content"><span class="tooltip-text">${props.content}</span></slot>
-        </div>
-      `,
-    };
+        const t = triggers.value;
+
+        if (t.includes('hover')) {
+          add(triggerEl, 'pointerenter', show as EventListener);
+          add(triggerEl, 'pointerleave', hide as EventListener);
+        }
+
+        if (t.includes('focus')) {
+          add(triggerEl, 'focusin', show as EventListener);
+          add(triggerEl, 'focusout', hide as EventListener);
+        }
+
+        if (t.includes('click')) {
+          add(triggerEl, 'click', toggleClick as EventListener);
+        }
+
+        // Keyboard escape to dismiss
+        add(document, 'keydown', handleKeydown as EventListener);
+
+        triggerBinding = () => {
+          removeAria();
+
+          for (const cleanup of cleanups) cleanup();
+        };
+      };
+
+      watch(slots.elements(), bindTriggerEvents, { immediate: true });
+      // Controlled mode: watch the `open` prop and show/hide accordingly
+      watch(props.open, (openVal) => {
+        if (openVal === undefined || openVal === null) return;
+
+        if (openVal) {
+          overlay.open({ reason: 'programmatic' });
+        } else {
+          overlay.close({ reason: 'programmatic', restoreFocus: false });
+        }
+      });
+
+      return () => {
+        triggerBinding?.();
+        triggerBinding = null;
+
+        clearShowTimer();
+        clearHideTimer();
+      };
+    });
+
+    return () => html`
+      <slot></slot>
+      <div
+        class="tooltip"
+        part="tooltip"
+        id="${tooltipId}"
+        role="tooltip"
+        popover="manual"
+        ref=${(el: HTMLElement) => {
+          tooltipEl = el;
+        }}
+        :data-placement="${activePlacement}"
+        :aria-hidden="${() => String(!visible.value)}">
+        <slot name="content"><span class="tooltip-text">${props.content}</span></slot>
+      </div>
+    `;
   },
   styles: [forcedColorsMixin, styles],
 });

@@ -95,24 +95,22 @@ export const TAB_ITEM_TAG = define<BitTabItemProps>('bit-tab-item', {
     const tabId = () => `tab-${props.value.value}`;
     const controlsAttr = () => `tabpanel-${props.value.value}`;
 
-    return {
-      render: () => html`
-        <button
-          role="tab"
-          type="button"
-          part="tab"
-          :id="${tabId}"
-          aria-selected="${isActive}"
-          tabindex="${() => (isActive.value ? '0' : '-1')}"
-          aria-disabled="${isDisabled}"
-          :aria-controls="${controlsAttr}"
-          @click="${handleClick}">
-          <slot name="prefix"></slot>
-          <slot></slot>
-          <slot name="suffix"></slot>
-        </button>
-      `,
-    };
+    return () => html`
+      <button
+        role="tab"
+        type="button"
+        part="tab"
+        :id="${tabId}"
+        aria-selected="${isActive}"
+        tabindex="${() => (isActive.value ? '0' : '-1')}"
+        aria-disabled="${isDisabled}"
+        :aria-controls="${controlsAttr}"
+        @click="${handleClick}">
+        <slot name="prefix"></slot>
+        <slot></slot>
+        <slot name="suffix"></slot>
+      </button>
+    `;
   },
   styles: [colorThemeMixin, forcedColorsFocusMixin('button'), coarsePointerMixin, styles],
 });

@@ -347,5 +347,5 @@ const byName = group(users, u => u.name);
 ## See Also
 
 - [keyBy](./keyBy.md): Create a lookup map — one entry per key instead of arrays.
-- [fold](./fold.md): Reduce an array to a single value without an initial accumulator.
+- [sum](../math/sum.md): Aggregate grouped numeric values.
 - [sort](./sort.md): Sort before/after grouping.

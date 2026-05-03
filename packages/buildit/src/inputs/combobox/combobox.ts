@@ -1,4 +1,4 @@
-import { computed, define, effect, html, inject, prop, signal, untrack, watch } from '@vielzeug/craftit';
+import { computed, define, effect, html, inject, prop, signal, untrack, watch, onMounted } from '@vielzeug/craftit';
 import {
   createChoiceField,
   createPopupListControl,
@@ -66,7 +66,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     fullwidth: false,
     helper: undefined,
     label: undefined,
-    'label-placement': prop.oneOf(['inset', 'outside', 'hidden'] as const, 'outside'),
+    'label-placement': prop.oneOf(['inset', 'outside', 'hidden'] as const, 'inset'),
     loading: false,
     multiple: false,
     name: undefined,
@@ -521,202 +521,230 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     }
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
-    return {
-      mount() {
-        fieldEl = inputEl?.closest('.field') as HTMLElement | null;
-        dropdownEl = host.el.shadowRoot?.querySelector<HTMLElement>('.dropdown') ?? null;
-        listboxEl = host.el.shadowRoot?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
+    watch(slots.elements(), () => readOptions(), { immediate: true });
 
-        watch(slots.elements(), () => readOptions(), { immediate: true });
+    // Rebuild virtualizer when filtered options or open state changes
+    effect(() => {
+      const opts = filteredOptions.value;
+      const open = isOpen.value;
 
-        // Rebuild virtualizer when filtered options or open state changes
-        effect(() => {
-          const opts = filteredOptions.value;
-          const open = isOpen.value;
+      if (open && opts.length > 0) {
+        setupVirtualizer(opts, open);
+      } else {
+        domVirtualList.setItems(opts);
+      }
 
-          if (open && opts.length > 0) {
-            requestAnimationFrame(() => setupVirtualizer(opts, open));
-          } else {
-            domVirtualList.setItems(opts);
-          }
-        });
+      if (listboxEl) {
+        listboxEl.style.height = opts.length > 0 ? `${opts.length * 36}px` : '';
+      }
 
-        effect(() => {
-          if (!listboxEl) return;
+      if (open) {
+        positioner.updatePosition();
+      }
+    });
 
-          const open = isOpen.value;
+    effect(() => {
+      const open = isOpen.value;
+      const loading = isLoading();
+      const optionCount = filteredOptions.value.length;
+      const createLabel = creatableLabel.value;
 
-          for (const el of Array.from(listboxEl.querySelectorAll('.no-results,.no-results-create,.dropdown-loading'))) {
-            el.remove();
-          }
+      if (!listboxEl) return;
 
-          if (!open) {
-            updateRenderedItemState();
+      for (const el of Array.from(listboxEl.querySelectorAll('.no-results,.no-results-create,.dropdown-loading'))) {
+        el.remove();
+      }
 
-            return;
-          }
+      if (!open) {
+        updateRenderedItemState();
 
-          if (isLoading()) {
-            const loadingEl = document.createElement('div');
+        return;
+      }
 
-            loadingEl.className = 'dropdown-loading';
-            loadingEl.textContent = 'Loading...';
-            listboxEl.prepend(loadingEl);
-          } else if (filteredOptions.value.length === 0) {
-            if (creatableLabel.value) {
-              const createEl = document.createElement('button');
+      const visibleValues = new Set(filteredOptions.value.map((option) => option.value));
+      const visibleIndexByValue = new Map(filteredOptions.value.map((option, index) => [option.value, index]));
 
-              createEl.type = 'button';
-              createEl.className = 'no-results-create';
-              createEl.textContent = creatableLabel.value;
-              createEl.toggleAttribute('data-focused', focusedIndex.value === -1);
+      for (const optionEl of Array.from(listboxEl.querySelectorAll<HTMLElement>('.option'))) {
+        const optionValue = optionEl.getAttribute('data-option-value');
 
-              createEl.addEventListener('pointerdown', (e: PointerEvent) => {
-                e.preventDefault();
-              });
+        if (!optionValue) continue;
 
-              createEl.addEventListener('click', (e) => {
-                e.stopPropagation();
-                createOption(creatableLabel.value, e);
-              });
-              listboxEl.appendChild(createEl);
-            } else {
-              const noResults = document.createElement('div');
+        if (!visibleValues.has(optionValue)) {
+          optionEl.remove();
 
-              noResults.className = 'no-results';
-              noResults.setAttribute('role', 'presentation');
-              noResults.textContent = 'No results found';
-              listboxEl.appendChild(noResults);
-            }
-          }
+          continue;
+        }
 
-          updateRenderedItemState();
-        });
+        const visibleIndex = visibleIndexByValue.get(optionValue);
 
-        const renderedStateDeps = computed(
-          () =>
-            `${isOpen.value ? '1' : '0'}|${props.multiple.value ? '1' : '0'}|${focusedIndex.value}|${selectedValue.value}|${selectedValues.value.join(',')}`,
-        );
+        if (visibleIndex === undefined) continue;
 
-        watch(
-          renderedStateDeps,
-          () => {
-            if (!isOpen.value) return;
+        optionEl.id = `${comboId}-opt-${visibleIndex}`;
+        optionEl.style.transform = `translateY(${visibleIndex * 36}px)`;
+      }
 
-            updateRenderedItemState();
-          },
-          { immediate: true },
-        );
+      if (loading) {
+        const loadingEl = document.createElement('div');
 
-        return () => {
-          domVirtualList.destroy();
-        };
+        loadingEl.className = 'dropdown-loading';
+        loadingEl.textContent = 'Loading...';
+        listboxEl.prepend(loadingEl);
+      } else if (optionCount === 0) {
+        if (createLabel) {
+          const createEl = document.createElement('button');
+
+          createEl.type = 'button';
+          createEl.className = 'no-results-create';
+          createEl.textContent = createLabel;
+          createEl.toggleAttribute('data-focused', focusedIndex.value === -1);
+
+          createEl.addEventListener('pointerdown', (e: PointerEvent) => {
+            e.preventDefault();
+          });
+
+          createEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            createOption(createLabel, e);
+          });
+          listboxEl.appendChild(createEl);
+        } else {
+          const noResults = document.createElement('div');
+
+          noResults.className = 'no-results';
+          noResults.setAttribute('role', 'presentation');
+          noResults.textContent = 'No results found';
+          listboxEl.appendChild(noResults);
+        }
+      }
+
+      updateRenderedItemState();
+    });
+
+    const renderedStateDeps = computed(
+      () =>
+        `${isOpen.value ? '1' : '0'}|${props.multiple.value ? '1' : '0'}|${focusedIndex.value}|${selectedValue.value}|${selectedValues.value.join(',')}`,
+    );
+
+    watch(
+      renderedStateDeps,
+      () => {
+        if (!isOpen.value) return;
+
+        updateRenderedItemState();
       },
+      { immediate: true },
+    );
 
-      render: () => html`
-        <slot></slot>
-        <div class="combobox-wrapper" part="wrapper">
-          <label
-            class="label-outside"
-            for="${comboId}"
-            id="${labelOutsideId}"
-            ?hidden=${outsideLabelHidden}
-            part="label">
+    onMounted(() => {
+      fieldEl = inputEl?.closest('.field') as HTMLElement | null;
+      dropdownEl = host.el.shadowRoot?.querySelector<HTMLElement>('.dropdown') ?? null;
+      listboxEl = host.el.shadowRoot?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
+
+      return () => {
+        domVirtualList.destroy();
+      };
+    });
+
+    return () => html`
+      <slot></slot>
+      <div class="combobox-wrapper" part="wrapper">
+        <label class="label-outside" for="${comboId}" id="${labelOutsideId}" ?hidden=${outsideLabelHidden} part="label">
+          ${props.label}
+        </label>
+        <div
+          class="field"
+          part="field"
+          @click="${(e: MouseEvent) => {
+            fieldPress.handleClick(e);
+          }}">
+          <label class="label-inset" for="${comboId}" id="${labelInsetId}" ?hidden=${insetLabelHidden} part="label">
             ${props.label}
           </label>
-          <div
-            class="field"
-            part="field"
-            @click="${(e: MouseEvent) => {
-              fieldPress.handleClick(e);
-            }}">
-            <label class="label-inset" for="${comboId}" id="${labelInsetId}" ?hidden=${insetLabelHidden} part="label">
-              ${props.label}
-            </label>
-            <div class="field-row">
-              <div class="chips-row">
-                <!-- Keep chip list diffing isolated so input node identity stays stable. -->
-                <span class="chips-list">
-                  ${() =>
-                    (isMultiple() ? selectedValues.value : []).map(
-                      (value) => html`
-                        <bit-chip
-                          value=${value}
-                          label=${allOptions.value.find((option) => option.value === value)?.label ?? value}
-                          mode="removable"
-                          variant="flat"
-                          size="sm"
-                          color="${props.color}"
-                          @remove=${removeChip}>
-                          ${allOptions.value.find((option) => option.value === value)?.label ?? value}
-                        </bit-chip>
-                      `,
-                    )}
-                </span>
-                <input
-                  ref=${(el: HTMLInputElement | null) => {
-                    inputEl = el;
-                    triggerRef.value = el;
-
-                    if (!el) {
-                      fieldEl = null;
-
-                      return;
-                    }
-
-                    fieldEl = el.closest('.field') as HTMLElement | null;
-                  }}
-                  class="input"
-                  part="input"
-                  type="text"
-                  role="combobox"
-                  autocomplete="off"
-                  spellcheck="false"
-                  id="${comboId}"
-                  name="${props.name}"
-                  placeholder="${inputPlaceholder}"
-                  :disabled="${isDisabled}"
-                  @input=${handleInput}
-                  @keydown=${handleKeydown}
-                  @focus=${handleFocus}
-                  :value=${query} />
-              </div>
-              <button
-                class="clear-btn"
-                part="clear-btn"
-                type="button"
-                aria-label="Clear"
-                tabindex="-1"
-                ?hidden=${() => !hasValue()}
-                @click="${clearValue}">
-                <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
-              </button>
-              <span class="chevron" aria-hidden="true">
-                <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
-                <span class="loader" aria-label="Loading"></span>
+          <div class="field-row">
+            <div class="chips-row">
+              <!-- Keep chip list diffing isolated so input node identity stays stable. -->
+              <span class="chips-list">
+                ${() =>
+                  (isMultiple() ? selectedValues.value : []).map(
+                    (value) => html`
+                      <bit-chip
+                        value=${value}
+                        label=${allOptions.value.find((option) => option.value === value)?.label ?? value}
+                        mode="removable"
+                        variant="flat"
+                        size="sm"
+                        color="${props.color}"
+                        @remove=${removeChip}>
+                        ${allOptions.value.find((option) => option.value === value)?.label ?? value}
+                      </bit-chip>
+                    `,
+                  )}
               </span>
+              <input
+                ref=${(el: HTMLInputElement | null) => {
+                  inputEl = el;
+                  triggerRef.value = el;
+
+                  if (!el) {
+                    fieldEl = null;
+
+                    return;
+                  }
+
+                  fieldEl = el.closest('.field') as HTMLElement | null;
+                }}
+                class="input"
+                part="input"
+                type="text"
+                role="combobox"
+                autocomplete="off"
+                spellcheck="false"
+                id="${comboId}"
+                name="${props.name}"
+                placeholder="${inputPlaceholder}"
+                :aria-controls="${() => `${comboId}-listbox`}"
+                :aria-expanded="${() => String(isOpen.value)}"
+                :disabled="${isDisabled}"
+                @input=${handleInput}
+                @keydown=${handleKeydown}
+                @focus=${handleFocus}
+                :value=${query} />
             </div>
+            <button
+              class="clear-btn"
+              part="clear-btn"
+              type="button"
+              aria-label="Clear"
+              tabindex="-1"
+              ?hidden=${() => !hasValue()}
+              @click="${clearValue}">
+              <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
+            </button>
+            <span class="chevron" aria-hidden="true">
+              <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+              <span class="loader" aria-label="Loading"></span>
+            </span>
           </div>
-
-          <div class="dropdown" part="dropdown" id="${() => `${comboId}-dropdown`}" ?data-open=${() => isOpen.value}>
-            <div
-              role="listbox"
-              id="${() => `${comboId}-listbox`}"
-              aria-label="${() => props.label.value || props.placeholder.value || 'Options'}"></div>
-          </div>
-
-          <span
-            class="helper-text"
-            id="${helperId}"
-            part="helper-text"
-            aria-live="polite"
-            ?hidden=${() => !assistiveText.value.errorText && !assistiveText.value.helperText}
-            style="${() => (assistiveText.value.errorText ? 'color: var(--color-error);' : '')}"
-            >${() => assistiveText.value.errorText || assistiveText.value.helperText}</span
-          >
         </div>
-      `,
-    };
+
+        <div class="dropdown" part="dropdown" id="${() => `${comboId}-dropdown`}" ?data-open=${() => isOpen.value}>
+          <div
+            role="listbox"
+            id="${() => `${comboId}-listbox`}"
+            aria-label="${() => props.label.value || props.placeholder.value || 'Options'}"></div>
+        </div>
+
+        <span
+          class="helper-text"
+          id="${helperId}"
+          part="helper-text"
+          aria-live="polite"
+          ?hidden=${() => !assistiveText.value.errorText && !assistiveText.value.helperText}
+          style="${() => (assistiveText.value.errorText ? 'color: var(--color-error);' : '')}"
+          >${() => assistiveText.value.errorText || assistiveText.value.helperText}</span
+        >
+      </div>
+    `;
   },
   shadow: { delegatesFocus: true },
   styles: [

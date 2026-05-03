@@ -26,6 +26,7 @@ export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
   let timerController: AbortController | undefined;
   let lastArgs: Parameters<T> | undefined;
   let lastThis: ThisParameterType<T> | undefined;
+  const scheduler = new Scheduler();
 
   const clearTimer = () => {
     if (timerController !== undefined) {
@@ -36,7 +37,6 @@ export function debounce<T extends Fn>(fn: T, delay = 300): Debounced<T> {
 
   const scheduleInvoke = () => {
     const controller = new AbortController();
-    const scheduler = new Scheduler();
 
     timerController = controller;
     void scheduler

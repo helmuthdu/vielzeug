@@ -24,12 +24,10 @@ define('theme-provider', {
 
     provide(THEME_CTX, theme);
 
-    return {
-      render: () => html`
-        <button @click=${() => (theme.value = theme.value === 'light' ? 'dark' : 'light')}>Toggle theme</button>
-        <slot></slot>
-      `,
-    };
+    return () => html`
+      <button @click=${() => (theme.value = theme.value === 'light' ? 'dark' : 'light')}>Toggle theme</button>
+      <slot></slot>
+    `;
   },
 });
 
@@ -37,9 +35,7 @@ define('theme-label', {
   setup() {
     const theme = inject(THEME_CTX, signal<'light' | 'dark'>('light'));
 
-    return {
-      render: () => html`<p>Theme: ${theme}</p>`,
-    };
+    return () => html`<p>Theme: ${theme}</p>`;
   },
 });
 ```

@@ -11,7 +11,7 @@ export abstract class AdapterCore<S extends AnySchema> implements Adapter<S> {
   abstract getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
   abstract put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void>;
 
-  from<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>> {
+  query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>> {
     return new QueryBuilder<RecordOf<S, K>>(() => this.getAll(table) as Promise<unknown[]>);
   }
 
@@ -24,6 +24,6 @@ export abstract class AdapterCore<S extends AnySchema> implements Adapter<S> {
   }
 
   async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: number): Promise<void> {
-    for (const value of values) await this.put(table, value, ttl);
+    await Promise.all(values.map((value) => this.put(table, value, ttl)));
   }
 }

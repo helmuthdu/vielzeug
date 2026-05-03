@@ -2,7 +2,7 @@ import type { AnySchema, KeyOf, RecordOf } from '../types';
 
 import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
 import { AdapterCore } from './adapter-core';
-import { resolveRecordKey } from './schema-key';
+import { resolveRecordKey } from './resolve-key';
 
 /* -------------------- WebStorageAdapter -------------------- */
 
@@ -52,27 +52,30 @@ export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
     return this.readEntry<RecordOf<S, K>>(this.storageKey(table, String(key)));
   }
 
-  private forEachStorageKey(fn: (key: string) => void): void {
+  private storageKeys(): string[] {
     const storage = this.storage;
+    const keys: string[] = [];
 
     for (let i = 0; i < storage.length; i += 1) {
       const key = storage.key(i);
 
-      if (key !== null) fn(key);
+      if (key !== null) keys.push(key);
     }
+
+    return keys;
   }
 
   async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
     const prefix = this.tablePrefix(table);
     const records: RecordOf<S, K>[] = [];
 
-    this.forEachStorageKey((k) => {
-      if (!k.startsWith(prefix)) return;
+    for (const k of this.storageKeys()) {
+      if (!k.startsWith(prefix)) continue;
 
       const value = this.readEntry<RecordOf<S, K>>(k);
 
       if (value !== undefined) records.push(value);
-    });
+    }
 
     return records;
   }
@@ -90,12 +93,12 @@ export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
   async deleteAll<K extends keyof S>(table: K): Promise<void> {
     const prefix = this.tablePrefix(table);
 
-    this.forEachStorageKey((k) => {
+    for (const k of this.storageKeys()) {
       if (k.startsWith(prefix)) this.storage.removeItem(k);
-    });
+    }
   }
 
-  private readEntry<T>(storageKey: string): T | undefined {
+  private readEntry<T extends Record<string, unknown>>(storageKey: string): T | undefined {
     const raw = this.storage.getItem(storageKey);
 
     if (!raw) return undefined;
@@ -103,13 +106,13 @@ export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
     try {
       const parsed = JSON.parse(raw) as unknown;
 
-      if (typeof parsed !== 'object' || parsed === null) {
+      if (typeof parsed !== 'object' || parsed === null || !('v' in (parsed as object))) {
         this.storage.removeItem(storageKey);
 
         return undefined;
       }
 
-      const value = unwrapStored(parsed as StoredRecord<T & Record<string, unknown>>);
+      const value = unwrapStored(parsed as StoredRecord<T>);
 
       if (value === undefined) {
         this.storage.removeItem(storageKey);
@@ -130,7 +133,7 @@ export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
     let prefix = this.prefixCache.get(name);
 
     if (!prefix) {
-      prefix = `${encodeURIComponent(this.dbName)}:${encodeURIComponent(name)}:`;
+      prefix = `${encodeURIComponent(this.dbName)}~${encodeURIComponent(name)}~`;
       this.prefixCache.set(name, prefix);
     }
 

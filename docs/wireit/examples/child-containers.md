@@ -29,7 +29,8 @@ app.use(async (req, _res, next) => {
     scope.value(RequestToken, req);
     scope.value(UserToken, await authenticateRequest(req));
 
-    await scope.get(HandlerToken).handle(req);
+    const handler = await scope.resolve(HandlerToken);
+    await handler.handle(req);
   });
   next();
 });

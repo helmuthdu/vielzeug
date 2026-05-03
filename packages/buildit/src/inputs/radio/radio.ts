@@ -106,7 +106,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       getItems: () => getRadioGroup(),
       keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
       loop: true,
-      onInvoke: (_action, _result, event) => {
+      onNavigate: (_action, _index, event) => {
         const nextRadio = getRadioGroup()[activeIndex];
 
         if (nextRadio) selectRadio(nextRadio, event);
@@ -136,7 +136,6 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       ),
       error: props.error,
       helper: props.helper,
-      host: host.el,
       onPress: (_control, originalEvent) => {
         activateSelf(originalEvent);
       },
@@ -206,17 +205,15 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       },
     });
 
-    return {
-      render: () => html`
-        <div class="radio-wrapper" part="radio">
-          <div class="circle" part="circle">
-            <div class="dot" part="dot"></div>
-          </div>
+    return () => html`
+      <div class="radio-wrapper" part="radio">
+        <div class="circle" part="circle">
+          <div class="dot" part="dot"></div>
         </div>
-        <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
-        <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
-      `,
-    };
+      </div>
+      <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
+      <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
+    `;
   },
   styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],
 });

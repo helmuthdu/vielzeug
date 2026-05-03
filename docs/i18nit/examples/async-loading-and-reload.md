@@ -1,39 +1,38 @@
 ---
-title: 'I18nit Examples — Async Loading and Locale Switch'
-description: 'Async loading and strict locale switching examples for i18nit.'
+title: 'I18nit Examples — Async Loading and Preload'
+description: 'Register lazy locale loaders, best-effort preload catalogs, and switch locales strictly with i18nit.'
 ---
 
-## Async Loading and Locale Switch
+## Async Loading and Preload
 
-## Problem
+This is the main lazy-loading pattern for route-based or on-demand locale bundles.
 
-Implement async loading and locale switching in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
+## Example
 
 ```ts
-i18n.setLoader('ja', () => import('./locales/ja.json'));
+import { createI18n } from '@vielzeug/i18nit';
 
-await i18n.preload('ja'); // tolerant preload
+const i18n = createI18n({
+  locale: 'en',
+  messages: { en: { greeting: 'Hello!' } },
+});
+
+i18n.setLoader('ja', () => import('./locales/ja.json').then((m) => m.default));
+
+await i18n.preload('ja'); // best-effort preload
 await i18n.setLocale('ja'); // strict switch
 
 i18n.setCatalog('ja', { greeting: 'こんにちは' }); // replace catalog
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- `preload()` does not reject when a loader is missing or fails.
+- `setLocale()` does reject if the target locale still cannot be resolved.
+- `setLoader()` can be called at any time before switching.
 
 ## Related Recipes
 
 - [Diagnostics Hook](./diagnostics-hook.md)
 - [Framework Integration](./framework-integration.md)
+- [Locale Switcher](./locale-switcher.md)

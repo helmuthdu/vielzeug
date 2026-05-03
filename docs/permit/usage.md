@@ -25,6 +25,12 @@ const permit = createPermit();
 permit
   .set({ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' })
   .set({ role: 'blocked', resource: 'posts', action: '*', effect: 'deny', priority: 100 });
+
+// You can also register multiple rules in one call.
+permit.set([
+  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
+  { role: 'blocked', resource: 'posts', action: '*', effect: 'deny', priority: 100 },
+]);
 ```
 
 Each `set()` call appends a rule. Rules are evaluated by precedence, not insertion order.

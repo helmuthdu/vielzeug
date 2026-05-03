@@ -32,8 +32,7 @@ container.factory(
   },
 );
 
-// Must use getAsync for async providers
-const db = await container.getAsync(DbToken);
+const db = await container.resolve(DbToken);
 ```
 
 ### await using (AsyncDisposable)
@@ -52,7 +51,7 @@ async function bootstrap() {
     { dispose: (db) => db.close() },
   );
 
-  const app = container.get(AppToken);
+  const app = await container.resolve(AppToken);
   await app.start();
   // container.dispose() is called automatically when bootstrap() exits
 }

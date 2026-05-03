@@ -55,23 +55,20 @@ export type PopupListControlOptions<T> = {
   // ARIA
   /** Configuration for ARIA attributes */
   ariaSync?: PopupListAriaSyncConfig;
-  /** Ref-like trigger element used for internal ARIA syncing. */
-  triggerRef?: { value: HTMLElement | null };
-
   // Overlay
   /** Get the boundary element (for click-outside detection) */
   getBoundaryElement: () => HTMLElement | null;
+
   // List state
   /** Get the current focused index (-1 if none focused) */
   getIndex: () => number;
   /** Get all items in the list */
   getItems: () => T[];
-
   /** Get the panel element */
   getPanelElement: () => HTMLElement | null;
+
   /** Get the trigger element */
   getTriggerElement: () => HTMLElement | null;
-
   // Overlay state
   /** Check if disabled */
   isDisabled?: () => boolean;
@@ -79,9 +76,9 @@ export type PopupListControlOptions<T> = {
   // List navigation
   /** Check if an item is disabled */
   isItemDisabled?: (item: T, index: number) => boolean;
+
   /** Whether the popup is open */
   isOpen: () => boolean;
-
   /** Custom keyboard mappings for list navigation. Defaults to arrow keys. */
   keyboardMapping?:
     | (() => Partial<Record<'first' | 'last' | 'next' | 'prev', string[]>>)
@@ -113,6 +110,9 @@ export type PopupListControlOptions<T> = {
 
   /** Set open state */
   setOpen: (next: boolean, context: { reason: OverlayCloseReason | OverlayOpenReason }) => void;
+
+  /** Ref-like trigger element used for internal ARIA syncing. */
+  triggerRef?: { value: HTMLElement | null };
 };
 
 /**
@@ -215,7 +215,7 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
     isItemDisabled: options.isItemDisabled,
     keys: options.keyboardMapping,
     loop: options.loop ?? true,
-    onInvoke: (action, index, event) => {
+    onNavigate: (action, index, event) => {
       if (index >= 0) {
         options.onNavigate?.(action, index, event);
       }
@@ -244,7 +244,6 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
   const getRoleConfig = (role: PopupListRole = 'listbox') => {
     if (role === 'menu') {
       return {
-        defaultPanelRole: 'menu',
         defaultTriggerAttributes: {
           controls: () => options.listId,
           haspopup: 'menu' as const,
@@ -254,7 +253,6 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
     }
 
     return {
-      defaultPanelRole: 'listbox' as const,
       defaultTriggerAttributes: {
         controls: () => options.listId,
         haspopup: 'listbox' as const,
@@ -287,15 +285,15 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
 
   return {
     close: (reason) => overlay.close({ reason: reason ?? 'programmatic' }),
-    first: () => list.first(),
-    getActiveItem: () => list.getActiveItem(),
-    handleListKeydown: (event) => list.handleKeydown(event),
-    last: () => list.last(),
-    next: () => list.next(),
+    first: list.first,
+    getActiveItem: list.getActiveItem,
+    handleListKeydown: list.handleKeydown,
+    last: list.last,
+    next: list.next,
     open: (reason) => overlay.open({ reason: reason ?? 'programmatic' }),
-    prev: () => list.prev(),
-    reset: () => list.reset(),
-    set: (index) => list.set(index),
-    toggle: () => overlay.toggle(),
+    prev: list.prev,
+    reset: list.reset,
+    set: list.set,
+    toggle: overlay.toggle,
   };
 };

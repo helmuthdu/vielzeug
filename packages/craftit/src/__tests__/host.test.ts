@@ -5,6 +5,7 @@ import {
   html,
   inject,
   injectStrict,
+  onMounted,
   provide,
   signal,
   type ComponentDefinition,
@@ -20,14 +21,11 @@ const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinit
     setup: (props, ctx) => {
       const result = setup(props, ctx);
 
-      if (typeof result === 'object' && result && 'render' in result) {
+      if (typeof result === 'function') {
         return result;
       }
 
-      // If result is HTMLResult, wrap it in a ComponentInstance
-      return {
-        render: () => result,
-      };
+      return () => result;
     },
   });
 
@@ -50,9 +48,7 @@ describe('core/host.ts', () => {
           },
         });
 
-        return {
-          render: () => html`<button>Open</button>`,
-        };
+        return () => html`<button>Open</button>`;
       });
 
       expect(element.getAttribute('role')).toBe('button');
@@ -82,9 +78,7 @@ describe('core/host.ts', () => {
         open.value = true;
         active.value = false;
 
-        return {
-          render: () => html`<div></div>`,
-        };
+        return () => html`<div></div>`;
       });
 
       await flush();
@@ -109,9 +103,7 @@ describe('core/host.ts', () => {
           },
         });
 
-        return {
-          render: () => html`<div>${internalValue}</div>`,
-        };
+        return () => html`<div>${internalValue}</div>`;
       });
 
       expect((element as HTMLElement & { value: string }).value).toBe('initial');
@@ -138,9 +130,7 @@ describe('core/host.ts', () => {
           style: { color },
         });
 
-        return {
-          render: () => html`<div></div>`,
-        };
+        return () => html`<div></div>`;
       });
 
       expect((element as HTMLElement & { value: string }).value).toBe('rgb(255, 0, 0)');
@@ -162,9 +152,7 @@ describe('core/host.ts', () => {
           },
         });
 
-        return {
-          render: () => html`<div></div>`,
-        };
+        return () => html`<div></div>`;
       });
 
       expect((element as HTMLElement & { value?: string }).value).toBe('alive');
@@ -223,9 +211,7 @@ describe('core/host.ts', () => {
           { once: true },
         );
 
-        return {
-          render: () => html`<div>Host listener</div>`,
-        };
+        return () => html`<div>Host listener</div>`;
       });
 
       element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -245,9 +231,7 @@ describe('core/host.ts', () => {
           provide(ThemeKey, 'dark');
           received = inject(ThemeKey);
 
-          return {
-            render: () => html`<div></div>`,
-          };
+          return () => html`<div></div>`;
         });
 
         expect(received).toBe('dark');
@@ -259,9 +243,7 @@ describe('core/host.ts', () => {
         const { query } = await mount(() => {
           const value = inject(AbsentKey, 'fallback');
 
-          return {
-            render: () => html`<div>${value}</div>`,
-          };
+          return () => html`<div>${value}</div>`;
         });
 
         expect(query('div')?.textContent).toBe('fallback');
@@ -274,9 +256,7 @@ describe('core/host.ts', () => {
         await mount(() => {
           received = inject(MissingKey);
 
-          return {
-            render: () => html`<div></div>`,
-          };
+          return () => html`<div></div>`;
         });
 
         expect(received).toBeUndefined();
@@ -327,9 +307,7 @@ describe('core/host.ts', () => {
           provide(ThemeKey, 'dark');
           received = injectStrict(ThemeKey);
 
-          return {
-            render: () => html`<div></div>`,
-          };
+          return () => html`<div></div>`;
         });
 
         expect(received).toBe('dark');
@@ -346,9 +324,7 @@ describe('core/host.ts', () => {
             captured = err;
           }
 
-          return {
-            render: () => html`<div></div>`,
-          };
+          return () => html`<div></div>`;
         });
 
         expect(captured).toBeInstanceOf(Error);
@@ -377,9 +353,7 @@ describe('core/host.ts', () => {
         const { element, flush } = await mount(() => {
           provide(UserCtx, { name: 'Alice', role: 'admin' });
 
-          return {
-            render: () => html`<${childTag}></${childTag}>`,
-          };
+          return () => html`<${childTag}></${childTag}>`;
         });
 
         await flush();
@@ -402,9 +376,7 @@ describe('core/host.ts', () => {
           headerAssigned = slots.has('header');
           defaultAssigned = slots.has();
 
-          return {
-            render: () => html`<slot name="header"></slot><slot></slot>`,
-          };
+          return () => html`<slot name="header"></slot><slot></slot>`;
         },
         { html: '<span slot="header">Title</span><span>Default content</span>' },
       );
@@ -422,9 +394,7 @@ describe('core/host.ts', () => {
         (_props, { slots }) => {
           triggerElements = slots.elements('trigger');
 
-          return {
-            render: () => html`<slot name="trigger"></slot>`,
-          };
+          return () => html`<slot name="trigger"></slot>`;
         },
         { html: '<button slot="trigger">Open</button>' },
       );
@@ -443,9 +413,7 @@ describe('core/host.ts', () => {
           callback(slots.elements('nonexistent').value);
         });
 
-        return {
-          render: () => html`<div>No slots here</div>`,
-        };
+        return () => html`<div>No slots here</div>`;
       });
 
       await flush();
@@ -459,9 +427,7 @@ describe('core/host.ts', () => {
       const { element, flush } = await mount((_props, { slots }) => {
         defaultElements = slots.elements();
 
-        return {
-          render: () => html`<slot></slot>`,
-        };
+        return () => html`<slot></slot>`;
       });
 
       await flush();
@@ -491,18 +457,17 @@ describe('mount slot timing', () => {
     register('test-slot-timing-element', () => {
       const host = currentElementOrThrow();
 
-      return {
-        mount() {
-          mountFn();
+      onMounted(() => {
+        mountFn();
 
-          const slot = host.shadowRoot?.querySelector('slot');
-          const assigned = slot?.assignedElements();
+        const slot = host.shadowRoot?.querySelector('slot');
+        const assigned = slot?.assignedElements();
 
-          expect(assigned).toBeDefined();
-          expect(assigned?.length).toBeGreaterThanOrEqual(1);
-        },
-        render: () => html`<slot></slot>`,
-      };
+        expect(assigned).toBeDefined();
+        expect(assigned?.length).toBeGreaterThanOrEqual(1);
+      });
+
+      return () => html`<slot></slot>`;
     });
 
     const el = document.createElement('test-slot-timing-element');
@@ -524,12 +489,11 @@ describe('mount slot timing', () => {
     const slotFn = vi.fn();
 
     register('test-slot-change-element', (_props, { slots }) => {
-      return {
-        mount() {
-          slotFn(slots.elements().value.length);
-        },
-        render: () => html`<slot></slot>`,
-      };
+      onMounted(() => {
+        slotFn(slots.elements().value.length);
+      });
+
+      return () => html`<slot></slot>`;
     });
 
     const el = document.createElement('test-slot-change-element');

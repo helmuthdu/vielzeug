@@ -42,7 +42,7 @@ const user = await qc.query({
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 42 }, signal }),
 });
 
-const createUser = createMutation(({ input, signal }: { input: NewUser; signal?: AbortSignal }) =>
+const createUser = createMutation((input: NewUser, signal: AbortSignal) =>
   api.post<User>('/users', { body: input, signal }),
 );
 
@@ -84,7 +84,7 @@ const user = await api.get<User>('/users/{id}', { params: { id: userId } });
 - **Type-safe path params** — `{param}` placeholders extracted and validated at compile time
 - **HTTP client** — `createApi()` with base URL, global headers, timeout, interceptors, and safe deduplication
 - **Query cache** — `createQuery()` for stale-aware caching, prefix invalidation, and reactive subscriptions
-- **Standalone mutations** — `createMutation()` with retry, observable state, and caller-owned `AbortSignal`
+- **Standalone mutations** — `createMutation()` with retry, observable state, and built-in `cancel()`
 - **Request deduplication** — GET/HEAD/OPTIONS/DELETE dedupe concurrent identical calls by default
 - **Interceptors** — `use()` middleware for auth tokens, logging, and request transforms
 - **Retry with backoff** — configurable attempt count, exponential delay strategy, and `shouldRetry` predicate
@@ -100,6 +100,12 @@ const user = await api.get<User>('/users/{id}', { params: { id: userId } });
 | Node.js     | ✅      |
 | SSR         | ✅      |
 | Deno        | ✅      |
+
+## Documentation Map
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 

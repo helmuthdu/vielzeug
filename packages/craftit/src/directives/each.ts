@@ -7,6 +7,7 @@ import {
   extractResult,
   htmlResult,
   isHtmlResult,
+  removeNodes,
   rekeyHtmlResult,
   runAll,
   type Binding,
@@ -99,18 +100,12 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): D
       nodes: Node[];
     };
 
-    const clearNodes = (nodes: Node[]): void => {
-      for (const node of nodes) {
-        (node as ChildNode).remove();
-      }
-    };
-
     let keyedNodes = new Map<string | number, KeyedNode>();
     let fallbackNodes: Node[] = [];
     let fallbackCleanups: CleanupFn[] = [];
 
     const clearFallback = (): void => {
-      clearNodes(fallbackNodes);
+      removeNodes(fallbackNodes);
       fallbackNodes = [];
       runAll(fallbackCleanups);
       fallbackCleanups = [];
@@ -118,7 +113,7 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): D
 
     const clearKeyed = (): void => {
       for (const [, node] of keyedNodes) {
-        clearNodes(node.nodes);
+        removeNodes(node.nodes);
         runAll(node.cleanups);
       }
 
@@ -172,7 +167,7 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): D
             runAll(existing.cleanups);
           } else {
             if (existing) {
-              clearNodes(existing.nodes);
+              removeNodes(existing.nodes);
               runAll(existing.cleanups);
             }
 
@@ -187,7 +182,7 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): D
 
         for (const [oldKey, oldNode] of keyedNodes) {
           if (!nextKeyed.has(oldKey)) {
-            clearNodes(oldNode.nodes);
+            removeNodes(oldNode.nodes);
             runAll(oldNode.cleanups);
           }
         }

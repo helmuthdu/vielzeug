@@ -1,10 +1,18 @@
-import { type ScrollToIndexOptions, type VirtualItem, type Virtualizer, createVirtualizer } from '../virtualit';
+import {
+  DEFAULT_ESTIMATE_SIZE,
+  DEFAULT_OVERSCAN,
+  type ScrollToIndexOptions,
+  type VirtualItem,
+  type Virtualizer,
+  createVirtualizer,
+} from '../virtualit';
 
 export * from '../virtualit';
 
 export type DomVirtualListRenderArgs<T> = {
   items: T[];
   listEl: HTMLElement;
+  totalSize: number;
   virtualItems: VirtualItem[];
 };
 
@@ -40,17 +48,9 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
 
     const item = currentItems[index];
 
-    if (!item) return 36;
+    if (!item) return DEFAULT_ESTIMATE_SIZE;
 
     return options.estimateSize(index, item);
-  };
-
-  const applyListStyles = () => {
-    if (!listElRef || !virtualizer) return;
-
-    listElRef.style.height = `${virtualizer.getTotalSize()}px`;
-    listElRef.style.position = 'relative';
-    listElRef.style.contain = 'layout';
   };
 
   const clearAndReset = () => {
@@ -88,20 +88,32 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       virtualizer = createVirtualizer(scrollElRef, {
         count: currentItems.length,
         estimateSize: resolveEstimate,
-        onChange: (virtualItems) => {
+        onChange: (virtualItems, totalSize) => {
           if (!listElRef) return;
 
-          options.render({ items: currentItems, listEl: listElRef, virtualItems });
+          listElRef.style.height = `${totalSize}px`;
+          options.render({ items: currentItems, listEl: listElRef, totalSize, virtualItems });
         },
-        overscan: options.overscan ?? 3,
+        overscan: options.overscan ?? DEFAULT_OVERSCAN,
       });
+
+      listElRef.style.position = 'relative';
+      listElRef.style.contain = 'layout';
     } else {
-      if (lengthChanged) virtualizer.count = currentItems.length;
+      if (lengthChanged) virtualizer.update({ count: currentItems.length });
 
       if (remeasure) virtualizer.invalidate();
-    }
 
-    applyListStyles();
+      if (listElRef) {
+        listElRef.style.height = `${virtualizer.totalSize}px`;
+        options.render({
+          items: currentItems,
+          listEl: listElRef,
+          totalSize: virtualizer.totalSize,
+          virtualItems: virtualizer.items,
+        });
+      }
+    }
   };
 
   return {

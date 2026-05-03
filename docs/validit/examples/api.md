@@ -3,9 +3,13 @@ title: 'Validit Examples — API'
 description: 'API request and response validation examples with validit.'
 ---
 
-## API Validation Examples
+## API validation examples
 
-### Request Body Validation
+### Problem
+
+Validate request bodies, query parameters, and outbound service responses at the application boundary without duplicating ad-hoc checks.
+
+### Runnable Example
 
 ```ts
 import { v } from '@vielzeug/validit';
@@ -14,7 +18,7 @@ const CreateArticleSchema = v
   .object({
     title: v.string().min(5).max(200),
     body: v.string().min(20),
-    tags: v.array(v.string()).max(10).default([]),
+    tags: v.array(v.string().trim().min(1)).max(10).unique().default([]),
     status: v.union('draft', 'published').default('draft'),
   });
 
@@ -33,11 +37,7 @@ app.post('/articles', (req, res) => {
 
   return res.status(201).json({ data: result.data });
 });
-```
 
-### Query Parameter Validation
-
-```ts
 const QuerySchema = v.object({
   page: v.coerce.number().int().min(1).default(1),
   limit: v.coerce.number().int().min(1).max(100).default(20),
@@ -45,11 +45,7 @@ const QuerySchema = v.object({
 });
 
 const query = QuerySchema.parse(req.query);
-```
 
-### Response Validation
-
-```ts
 const UserResponseSchema = v.object({
   id: v.number().int().positive(),
   email: v.string().email(),
@@ -58,11 +54,7 @@ const UserResponseSchema = v.object({
 
 const payload = await service.getUser(id);
 const safePayload = UserResponseSchema.parse(payload);
-```
 
-### Webhook Event Validation
-
-```ts
 const WebhookSchema = v.variant('type', {
   invoice_paid: v.object({ amount: v.number().positive(), invoiceId: v.string().uuid() }),
   subscription_canceled: v.object({ reason: v.string(), subscriptionId: v.string().uuid() }),
@@ -71,13 +63,19 @@ const WebhookSchema = v.variant('type', {
 const event = WebhookSchema.parse(req.body);
 ```
 
-## Common Pitfalls
+### Expected Output
+
+- `result.data` is fully parsed and defaulted before it enters your handler logic.
+- Query parameters like `?page=2&limit=50` become numbers.
+- Invalid responses from downstream services fail immediately instead of leaking inconsistent shapes into the rest of the app.
+
+### Common Pitfalls
 
 - Assuming unknown keys are accepted in object payloads.
 - Using `safeParse()` with async-only schemas containing `.refineAsync()`.
 - Returning raw `ValidationError` messages to clients without shaping response fields.
 
-## Related Recipes
+### Related Recipes
 
 - [Async](./async.md)
 - [Forms](./forms.md)

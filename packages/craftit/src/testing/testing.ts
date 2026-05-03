@@ -6,7 +6,7 @@
 
 import type { Signal } from '@vielzeug/stateit';
 
-import type { ComponentInstance } from '../registration';
+import type { ComponentTemplate } from '../registration';
 
 import { define, type ComponentDefinition, type SetupContextBag } from '../component';
 import { _resetIdCounter, type HTMLResult } from '../internal';
@@ -69,13 +69,13 @@ export interface MountOptions {
 type TestSetup<
   Props extends Record<string, unknown> = Record<string, never>,
   Events extends Record<string, unknown> = Record<string, unknown>,
-> = (...args: Parameters<ComponentDefinition<Props, Events>['setup']>) => ComponentInstance | HTMLResult;
+> = (...args: Parameters<ComponentDefinition<Props, Events>['setup']>) => ComponentTemplate | HTMLResult;
 
 type MountProps = { readonly [x: string]: Signal<unknown> };
 
 // Bivariant callback type keeps inline test callbacks ergonomic across varying setup context specializations.
 export type MountSetup = {
-  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => ComponentInstance | HTMLResult;
+  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => ComponentTemplate | HTMLResult;
 }['bivarianceHack'];
 
 export interface WaitOptions {
@@ -210,13 +210,11 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     return (setupProps, setupCtx) => {
       const result = setup(setupProps, setupCtx);
 
-      if (typeof result === 'object' && result && 'render' in result) {
+      if (typeof result === 'function') {
         return result;
       }
 
-      return {
-        render: () => result,
-      };
+      return () => result;
     };
   };
 

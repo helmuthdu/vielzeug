@@ -17,7 +17,7 @@ export type ListNavigationOptions<T> = {
   isItemDisabled?: (item: T, index: number) => boolean;
   keys?: Partial<Record<ListKeyAction, string[]>> | (() => Partial<Record<ListKeyAction, string[]>>);
   loop?: boolean;
-  onInvoke?: (action: ListKeyAction, index: number, event: KeyboardEvent) => void;
+  onNavigate?: (action: ListKeyAction, index: number, event: KeyboardEvent) => void;
   setIndex: (index: number) => void;
 };
 
@@ -156,7 +156,7 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
         keymap[key] = (keyboardEvent: KeyboardEvent) => {
           const index = { first, last, next, prev }[action]();
 
-          options.onInvoke?.(action, index, keyboardEvent);
+          options.onNavigate?.(action, index, keyboardEvent);
         };
       }
     }

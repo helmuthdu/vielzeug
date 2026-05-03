@@ -1,19 +1,13 @@
 ---
 title: 'I18nit Examples — Framework Integration'
-description: 'React and Vue integration examples for I18nit.'
+description: 'React and Vue integration examples for the current i18nit runtime.'
 ---
 
 ## Framework Integration
 
-## Problem
+Start with [Shared Instance Setup](./shared-instance-setup.md), then bridge the runtime into your UI framework through subscriptions.
 
-Implement framework integration in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
-
-Start with [Shared Instance Setup](./shared-instance-setup.md), then expose the shared translator through framework-specific hooks or composables.
+## Example
 
 ::: code-group
 
@@ -24,12 +18,13 @@ import { i18n } from './i18n';
 export function useI18n() {
   const [, rerender] = useReducer((n) => n + 1, 0);
 
-  useEffect(() => i18n.subscribe(() => rerender()), []);
+  useEffect(() => i18n.subscribe(() => rerender(), true), []);
 
   return {
     locale: i18n.locale,
     setLocale: (locale: string) => i18n.setLocale(locale),
     t: i18n.t,
+    tp: i18n.tp,
   };
 }
 ```
@@ -43,7 +38,7 @@ export function useI18n() {
 
   const stop = i18n.subscribe(({ locale: next }) => {
     locale.value = next;
-  });
+  }, true);
 
   onScopeDispose(stop);
 
@@ -51,24 +46,21 @@ export function useI18n() {
     locale,
     setLocale: (next: string) => i18n.setLocale(next),
     t: (key: string, vars?: Record<string, unknown>) => i18n.t(key, vars),
+    tp: (key: string, count: number, vars?: Record<string, unknown>) => i18n.tp(key, count, vars),
   };
 }
 ```
 
 :::
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Keep one framework boundary that subscribes and triggers rerenders.
+- Wrap `t()` and `tp()` close to the UI layer instead of spreading raw instance access everywhere.
+- For SSR, create an i18n instance per request instead of using a module singleton.
 
 ## Related Recipes
 
-- [Async Loading and Reload](./async-loading-and-reload.md)
+- [Shared Instance Setup](./shared-instance-setup.md)
+- [Per-request Locale Handling](./per-request-locale-handling.md)
 - [Diagnostics Hook](./diagnostics-hook.md)

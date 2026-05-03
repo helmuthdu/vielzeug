@@ -147,8 +147,8 @@ const [senior, junior] = allocate(bonus, [5, 3]);
 
 ## See Also
 
-- [distribute](./distribute.md): Distribute amount evenly among N parties
-- [distribute](./distribute.md): Distribute a total into equal parts.
+- [sum](./sum.md): Validate that allocations add up to the source amount.
+- [percent](./percent.md): Convert shares into percentage-based displays.
 
 <style>
 .badges {

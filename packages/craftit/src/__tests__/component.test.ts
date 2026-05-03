@@ -9,6 +9,7 @@ import {
   defineField,
   html,
   inject,
+  onMounted,
   onCleanup,
   provide,
   prop,
@@ -31,7 +32,7 @@ describe('Core: Component Definition', () => {
       const tag = `test-basic-${Math.random().toString(36).slice(2)}`;
 
       define(tag, {
-        setup: () => ({ render: () => html`<div>Hello</div>` }),
+        setup: () => () => html`<div>Hello</div>`,
       });
 
       const el = document.createElement(tag);
@@ -49,7 +50,7 @@ describe('Core: Component Definition', () => {
       const { query } = await mount(() => {
         const count = signal(0);
 
-        return { render: () => html`<div>${count}</div>` };
+        return () => html`<div>${count}</div>`;
       });
 
       expect(query('div')?.textContent).toBe('0');
@@ -59,7 +60,7 @@ describe('Core: Component Definition', () => {
       const setup = () => {
         const count = signal(0);
 
-        return { render: () => html`<div>${count}</div>` };
+        return () => html`<div>${count}</div>`;
       };
 
       const { query: query1 } = await mount(setup);
@@ -73,12 +74,12 @@ describe('Core: Component Definition', () => {
       const tag = `test-dup-${Math.random().toString(36).slice(2)}`;
 
       define(tag, {
-        setup: () => ({ render: () => html`<div>First</div>` }),
+        setup: () => () => html`<div>First</div>`,
       });
 
       expect(() => {
         define(tag, {
-          setup: () => ({ render: () => html`<div>Second</div>` }),
+          setup: () => () => html`<div>Second</div>`,
         });
       }).toThrow('[craftit:E10]');
     });
@@ -87,12 +88,12 @@ describe('Core: Component Definition', () => {
       const tag = `test-dup-no-env-${Math.random().toString(36).slice(2)}`;
 
       define(tag, {
-        setup: () => ({ render: () => html`<div>First</div>` }),
+        setup: () => () => html`<div>First</div>`,
       });
 
       expect(() => {
         define(tag, {
-          setup: () => ({ render: () => html`<div>Second</div>` }),
+          setup: () => () => html`<div>Second</div>`,
         });
       }).toThrow('[craftit:E10]');
     });
@@ -214,9 +215,7 @@ describe('Core: Component Definition', () => {
           },
         },
         setup: (props) => {
-          return {
-            render: () => html`<div class="size">${() => String(props.size.value)}</div>`,
-          };
+          return () => html`<div class="size">${() => String(props.size.value)}</div>`;
         },
       });
 
@@ -224,9 +223,7 @@ describe('Core: Component Definition', () => {
         setup: () => {
           const size = signal('3');
 
-          return {
-            render: () => html`<${childTag} size=${size}></${childTag}>`,
-          };
+          return () => html`<${childTag} size=${size}></${childTag}>`;
         },
       });
 
@@ -264,13 +261,11 @@ describe('Core: Component Definition', () => {
       define<{ items: string[] }>(childTag, {
         props: { items: [] as string[] },
         setup: (props) => {
-          return {
-            render: () =>
-              html`<div class="items">
-                ${() =>
-                  Array.isArray(props.items.value) ? props.items.value.join('|') : String(props.items.value ?? '')}
-              </div>`,
-          };
+          return () =>
+            html`<div class="items">
+              ${() =>
+                Array.isArray(props.items.value) ? props.items.value.join('|') : String(props.items.value ?? '')}
+            </div>`;
         },
       });
 
@@ -278,14 +273,12 @@ describe('Core: Component Definition', () => {
         setup: () => {
           const items = signal<string[]>(['alpha', 'beta']);
 
-          return {
-            render: () => html`
+          return () => html`
               <div>
                 <button @click=${() => (items.value = ['gamma', 'delta'])}>Update</button>
                 <${childTag} items=${items}></${childTag}>
               </div>
-            `,
-          };
+            `;
         },
       });
 
@@ -384,9 +377,7 @@ describe('Core: Component Definition', () => {
             emit('retry');
           };
 
-          return {
-            render: () => html`<button @click=${fire}>Emit</button>`,
-          };
+          return () => html`<button @click=${fire}>Emit</button>`;
         },
       });
 
@@ -410,13 +401,12 @@ describe('Core: Component Definition', () => {
 
       const { flush } = await mount(
         (_props, { slots }) => {
-          return {
-            mount() {
-              defaultAssigned = slots.has().value;
-              triggerAssigned = slots.has('trigger').value;
-            },
-            render: () => html`<slot name="trigger"></slot><slot></slot>`,
-          };
+          onMounted(() => {
+            defaultAssigned = slots.has().value;
+            triggerAssigned = slots.has('trigger').value;
+          });
+
+          return () => html`<slot name="trigger"></slot><slot></slot>`;
         },
         { html: '<button slot="trigger">Open</button><span>Body</span>' },
       );
@@ -442,9 +432,7 @@ describe('Core: Component Definition', () => {
 
           const fireToggle = () => emit('toggle', { checked: !props.checked.value });
 
-          return {
-            render: () => html`<button @click=${fireToggle}>${props.label}</button>`,
-          };
+          return () => html`<button @click=${fireToggle}>${props.label}</button>`;
         },
       });
 
@@ -470,9 +458,7 @@ describe('Core: Component Definition', () => {
         setup: (props) => {
           expectType<import('@vielzeug/stateit').Signal<string | undefined>>(props.value);
 
-          return {
-            render: () => html`<div class="value">${() => props.value.value ?? ''}</div>`,
-          };
+          return () => html`<div class="value">${() => props.value.value ?? ''}</div>`;
         },
       });
 
@@ -489,7 +475,7 @@ describe('Core: Component Definition', () => {
           props: {
             data: { default: { a: '1' } as Record<string, string>, reflect: true },
           },
-          setup: () => ({ render: () => html`<div>invalid</div>` }),
+          setup: () => () => html`<div>invalid</div>`,
         });
       }).not.toThrow();
 
@@ -506,7 +492,7 @@ describe('Core: Component Definition', () => {
           props: {
             items: { default: ['x'] as string[], reflect: true },
           },
-          setup: () => ({ render: () => html`<div>invalid</div>` }),
+          setup: () => () => html`<div>invalid</div>`,
         });
       }).not.toThrow();
 
@@ -533,13 +519,13 @@ describe('Core: Component Definition', () => {
 
   describe('Error Handling', () => {
     it('should handle empty template', async () => {
-      const { shadow } = await mount(() => ({ render: () => html`` }));
+      const { shadow } = await mount(() => () => html``);
 
       expect(shadow).not.toBeNull();
     });
 
     it('should handle undefined return', async () => {
-      const { query } = await mount(() => ({ render: () => html`<div>Test</div>` }));
+      const { query } = await mount(() => () => html`<div>Test</div>`);
 
       expect(query('div')).not.toBeNull();
     });
@@ -551,7 +537,7 @@ describe('Core: Component Definition', () => {
       const { act, query } = await mount(() => {
         count = signal(0);
 
-        return { render: () => html`<div>${count}</div>` };
+        return () => html`<div>${count}</div>`;
       });
 
       expect(query('div')?.textContent).toBe('0');
@@ -586,7 +572,7 @@ describe('core/component.ts', () => {
         () => {
           handle = defineField({ value: signal('initial') });
 
-          return { render: () => html`<div></div>` };
+          return () => html`<div></div>`;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -603,7 +589,7 @@ describe('core/component.ts', () => {
         () => {
           handle = defineField({ value: signal('') });
 
-          return { render: () => html`<div></div>` };
+          return () => html`<div></div>`;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -626,7 +612,7 @@ describe('core/component.ts', () => {
             value: signal(42),
           });
 
-          return { render: () => html`<div></div>` };
+          return () => html`<div></div>`;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -639,7 +625,7 @@ describe('core/component.ts', () => {
         mount(() => {
           defineField({ value: signal('test') });
 
-          return { render: () => html`<div></div>` };
+          return () => html`<div></div>`;
         }),
       ).rejects.toThrow(/formAssociated: true/);
     });
@@ -654,7 +640,7 @@ describe('core/component.ts', () => {
 
         setTimeout(() => typedEmit('value-changed', { value: 'hello' }), 50);
 
-        return { render: () => html`<div></div>` };
+        return () => html`<div></div>`;
       }) as ComponentDefinition['setup']);
 
       const event = await waitForEvent<CustomEvent<{ value: string }>>(element, 'value-changed');
@@ -666,7 +652,7 @@ describe('core/component.ts', () => {
       const { element } = await mount(((_props, { emit }) => {
         setTimeout(() => emit('ping'), 50);
 
-        return { render: () => html`<div></div>` };
+        return () => html`<div></div>`;
       }) as ComponentDefinition['setup']);
 
       const event = await waitForEvent<CustomEvent>(element, 'ping');

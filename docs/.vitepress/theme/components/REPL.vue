@@ -68,7 +68,6 @@ const MONACO_CDN = 'https://unpkg.com/monaco-editor@0.55.1/min/vs';
 const STORAGE_PREFIX = 'vielzeug-repl-code-';
 
 const LIBRARY_DESCRIPTIONS = {
-  craftit: 'Lightweight, type-safe web components with reactive state.',
   deposit: 'Storage with schemas, TTL, and query building.',
   dragit: 'Framework-agnostic drag-and-drop primitives with file filtering and more.',
   eventit: 'Publish/Subscribe event bus with async support.',
@@ -89,7 +88,6 @@ const LIBRARY_DESCRIPTIONS = {
 } as const;
 
 const LIBRARY_LOADERS = {
-  craftit: () => import('@vielzeug/craftit'),
   deposit: () => import('@vielzeug/deposit'),
   dragit: () => import('@vielzeug/dragit'),
   eventit: () => import('@vielzeug/eventit'),
@@ -110,37 +108,7 @@ const LIBRARY_LOADERS = {
 } as const;
 
 const LIBRARY_EXPORTS = {
-  craftit: [
-    'define',
-    'signal',
-    'computed',
-    'effect',
-    'watch',
-    'batch',
-    'untrack',
-    'readonly',
-    'isSignal',
-    'toValue',
-    'html',
-    'css',
-    'prop',
-    'defineProps',
-    'ref',
-    'refs',
-    'provide',
-    'inject',
-    'createContext',
-    'defineSlots',
-    'defineEmits',
-    'onMount',
-    'onUnmount',
-    'onUpdated',
-    'onCleanup',
-    'handle',
-    'aria',
-    'field',
-  ],
-  deposit: ['createLocalStorage', 'createIndexedDB', 'defineSchema', 'ttl', 'storeField'],
+  deposit: ['createLocalStorage', 'createIndexedDB', 'createMemory', 'createSessionStorage', 'table', 'ttl'],
   dragit: ['createDropZone', 'createSortable'],
   eventit: ['createBus', 'BusDisposedError'],
   fetchit: ['createApi', 'createQuery', 'createMutation', 'HttpError', 'serializeKey'],
@@ -169,22 +137,10 @@ const LIBRARY_EXPORTS = {
     'onCleanup',
     'configureStateit',
   ],
-  timit: [
-    'Temporal',
-    'd',
-    'now',
-    'asInstant',
-    'asZoned',
-    'add',
-    'subtract',
-    'diff',
-    'within',
-    'format',
-    'formatRange',
-  ],
+  timit: ['timit', 'add', 'difference', 'format', 'formatIso', 'formatRange', 'now', 'parse', 'toInstant', 'toZoned', 'within'],
   toolkit: [],
   validit: ['v', 'ValidationError', 'ErrorCode'],
-  virtualit: ['createVirtualizer', 'Virtualizer'],
+  virtualit: ['createVirtualizer'],
   wireit: [
     'createContainer',
     'createToken',

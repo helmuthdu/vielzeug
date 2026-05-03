@@ -22,7 +22,11 @@ const api = createApi({
   baseUrl: 'https://api.example.com',
   timeout: 30_000, // default: 30 000 ms
   headers: { Authorization: 'Bearer token' },
+  fetch: globalThis.fetch, // optional
 });
+
+// Disable timeouts explicitly when needed
+const noTimeoutApi = createApi({ timeout: Infinity });
 ```
 
 ### HTTP Methods
@@ -177,6 +181,8 @@ const user = await qc.query({
   key: ['users', userId],
   fn: ({ key, signal }) => api.get<User>('/users/{id}', { params: { id: key[1] as number }, signal }),
   staleTime: 5_000,
+  retry: 3,
+  shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```
 
@@ -186,14 +192,17 @@ const user = await qc.query({
 | `fn` | `(ctx: QueryFnContext) => Promise<T>` | required | Data-fetching function; receives `{ key, signal }` |
 | `staleTime` | `number` | `0` | ms served from cache before the next `query()` call refetches |
 | `gcTime` | `number` | `300000` | ms before an unobserved entry is GC'd at background priority while unobserved |
+| `retry` | `number` | query-client default | Retry attempts for this specific query call |
+| `retryDelay` | `number \| (attempt) => number` | query-client default | Delay strategy for this specific query call |
+| `shouldRetry` | `(error, attempt) => boolean` | query-client default | Retry predicate for this specific query call |
 
-Retry behavior is configured on the query client (`createQuery({ retry, retryDelay, shouldRetry })`) rather than per query call.
+Per-query retry options override `createQuery()` defaults when provided.
 
 ::: tip Retry semantics
 `retry: 3` means **3 retries** (4 total attempts: 1 initial + 3 retries). `retry: 0` means 1 attempt only.
 :::
 
-### `prefetch(options)`
+### Prefetch
 
 Warms cache data ahead of use (for example, route hover or page transition preloads). It uses the same key/fn/staleness semantics as `query()` but resolves to `void`.
 
@@ -312,12 +321,12 @@ api.dispose(); // clears in-flight dedup map and interceptors
 
 ## Standalone Mutation
 
-`createMutation()` creates an observable, reusable mutation handle. Each call receives `{ input, signal }`. Cancellation is caller-owned: pass an `AbortSignal` when you need one.
+`createMutation()` creates an observable, reusable mutation handle. Each call receives `(input, signal)`. Cancellation can be done with `mutation.cancel()` or with a call-level `AbortSignal`.
 
 ```ts
 import { createMutation } from '@vielzeug/fetchit';
 
-const createUser = createMutation(({ input, signal }: { input: NewUser; signal?: AbortSignal }) =>
+const createUser = createMutation((input: NewUser, signal: AbortSignal) =>
   api.post<User>('/users', { body: input, signal }),
 );
 
@@ -326,9 +335,15 @@ qc.set(['users', user.id], user);
 qc.invalidate(['users']);
 ```
 
-### Caller-Owned Cancellation
+### Cancellation
 
 ```ts
+createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
+createUser.cancel();
+```
+
+```ts
+// External cancellation signal
 const controller = new AbortController();
 createUser.mutate({ name: 'Alice', email: 'alice@example.com' }, { signal: controller.signal });
 controller.abort();
@@ -365,6 +380,15 @@ HttpError.is(err, 401); // → true only for 401
 HttpError.is(err, 404); // → true only for 404
 ```
 
+`HttpError.kind` exposes a discriminated category: `'http' | 'network' | 'abort' | 'timeout'`.
+
+```ts
+if (HttpError.is(err)) {
+  if (err.kind === 'timeout') console.log('Timed out');
+  if (err.kind === 'abort') console.log('Cancelled');
+}
+```
+
 When a query errors, the `QueryState` transitions to `'error'` with the error on `state.error`. Aborted queries fall back to `'idle'` when no previous data exists, or back to `'success'` when a stale value was already cached.
 
 ## Common Patterns
@@ -375,7 +399,7 @@ When a query errors, the `QueryState` transitions to `'error'` with the error on
 // Apply optimistic update
 qc.set<User>(['users', 1], (old) => ({ ...old!, name: 'New Name' }));
 
-const updateUser = createMutation(({ input, signal }: { input: Partial<User>; signal?: AbortSignal }) =>
+const updateUser = createMutation((input: Partial<User>, signal: AbortSignal) =>
   api.put<User>('/users/{id}', { params: { id: 1 }, body: input, signal }),
 );
 

@@ -12,11 +12,11 @@ describe('pick', () => {
     expect(result).toBe(9);
   });
 
-  it('should use the default predicate (not nil) if none is provided', () => {
+  it('should use all items if no predicate is provided', () => {
     const arr = [null, undefined, 5, 0];
     const result = pick(arr, (x) => x, undefined);
 
-    expect(result).toBe(5);
+    expect(result).toBeNull();
   });
 
   it('should return undefined if no element matches the predicate', () => {

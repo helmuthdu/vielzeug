@@ -77,6 +77,7 @@ describe('data() loader', () => {
 
   it('stores the data result in router.state.matches leaf node', async () => {
     mockLocation.pathname = '/items/7';
+
     const router = await boot(
       createRouter({
         routes: {
@@ -104,6 +105,7 @@ describe('data() loader', () => {
     });
 
     mockLocation.pathname = '/fail';
+
     const router = await boot(
       createRouter({
         middleware: [boundary],
@@ -181,6 +183,7 @@ describe('Nested routes with children', () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/dashboard/settings';
+
     const router = await boot(
       createRouter({
         routes: {
@@ -222,6 +225,7 @@ describe('Nested routes with children', () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/dashboard/settings';
+
     const router = await boot(
       createRouter({
         routes: {
@@ -292,6 +296,7 @@ describe('Nested routes with children', () => {
 
   it('each branch node carries its own data loader result', async () => {
     mockLocation.pathname = '/dash/profile';
+
     const router = await boot(
       createRouter({
         routes: {

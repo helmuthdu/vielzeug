@@ -49,32 +49,30 @@ export const SEPARATOR_TAG = define<BitSeparatorProps>('bit-separator', {
     const roleAttr = () => (props.decorative.value ? 'none' : 'separator');
     const ariaHidden = () => (props.decorative.value ? 'true' : null);
 
-    return {
-      render: () => html`
-        ${() =>
-          props.label.value
-            ? html`
-                <div class="separator-wrapper" part="wrapper">
-                  <hr
-                    class="separator"
-                    part="separator"
-                    :role="${roleAttr}"
-                    :aria-hidden="${ariaHidden}"
-                    :aria-orientation="${() => props.orientation.value}" />
-                  <span class="separator-label" part="label">${() => props.label.value}</span>
-                  <hr class="separator" part="separator" :role="${roleAttr}" :aria-hidden="${ariaHidden}" />
-                </div>
-              `
-            : html`
+    return () => html`
+      ${() =>
+        props.label.value
+          ? html`
+              <div class="separator-wrapper" part="wrapper">
                 <hr
                   class="separator"
                   part="separator"
                   :role="${roleAttr}"
                   :aria-hidden="${ariaHidden}"
                   :aria-orientation="${() => props.orientation.value}" />
-              `}
-      `,
-    };
+                <span class="separator-label" part="label">${() => props.label.value}</span>
+                <hr class="separator" part="separator" :role="${roleAttr}" :aria-hidden="${ariaHidden}" />
+              </div>
+            `
+          : html`
+              <hr
+                class="separator"
+                part="separator"
+                :role="${roleAttr}"
+                :aria-hidden="${ariaHidden}"
+                :aria-orientation="${() => props.orientation.value}" />
+            `}
+    `;
   },
   styles: [colorThemeMixin, componentStyles],
 });

@@ -21,14 +21,12 @@ define('x-button', {
     variant: prop.oneOf(['solid', 'outline'] as const, 'solid'),
   },
   setup(props) {
-    return {
-      render: () => html`
-        <button ?disabled=${props.disabled} :data-size=${props.size} :data-variant=${props.variant}>
-          ${props.count.value > 0 ? html`<span class="badge">${props.count}</span>` : ''}
-          ${props.label}
-        </button>
-      `,
-    };
+    return () => html`
+      <button ?disabled=${props.disabled} :data-size=${props.size} :data-variant=${props.variant}>
+        ${props.count.value > 0 ? html`<span class="badge">${props.count}</span>` : ''}
+        ${props.label}
+      </button>
+    `;
   },
 });
 ```
@@ -53,9 +51,7 @@ define<{
     internalState: { default: 0, reflect: false },
   },
   setup(props) {
-    return {
-      render: () => html`<div>${props.internalState} at ${props.timestamp}</div>`,
-    };
+    return () => html`<div>${props.internalState} at ${props.timestamp}</div>`;
   },
 });
 ```

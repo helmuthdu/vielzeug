@@ -1,6 +1,6 @@
 ---
-title: Formit - Usage Guide
-description: Fields, validation, submission, subscriptions, bind, reset, and advanced patterns for Formit.
+title: Formit — Usage Guide
+description: Practical usage patterns for values, validation modes, submission, subscriptions, binding, and helpers.
 ---
 
 [[toc]]
@@ -8,6 +8,8 @@ description: Fields, validation, submission, subscriptions, bind, reset, and adv
 ## Basic Usage
 
 ```ts
+import { createForm } from '@vielzeug/formit';
+
 const form = createForm({
   defaultValues: {
     email: '',
@@ -55,18 +57,29 @@ dynamicForm.set('custom.field', 'value');
 
 ```ts
 await form.validateField('password');
-await form.validateAll();
-await form.validateTouched();
-await form.validateFields(['email', 'password']);
+await form.validate();
+await form.validate('touched');
+await form.validate(['email', 'password']);
 
 const controller = new AbortController();
-await form.validateAll(controller.signal);
+await form.validate(undefined, controller.signal);
 controller.abort();
+```
+
+Validation result structure:
+
+```ts
+const result = await form.validate(['email']);
+
+console.log(result.valid); // whole-form validity after this run
+console.log(result.errors); // scoped result for validated fields only
+console.log(result.allErrors); // full current error map
 ```
 
 Schema adapter:
 
 ```ts
+import { createForm, fromSchema } from '@vielzeug/formit';
 import { v } from '@vielzeug/validit';
 
 const schema = v.object({
@@ -83,6 +96,8 @@ const form = createForm({
 ## Submission
 
 ```ts
+import { FormValidationError, SubmitError } from '@vielzeug/formit';
+
 try {
   await form.submit(async (values) => {
     await fetch('/api/submit', {
@@ -102,7 +117,7 @@ try {
 }
 ```
 
-Submit always touches and validates all fields before calling the handler.
+Submit always touches all known fields and runs full validation before calling the handler.
 
 ## Subscriptions
 
@@ -115,7 +130,8 @@ const stopEmail = form.subscribeField('email', (field) => {
   console.log(field.value, field.error, field.touched, field.dirty);
 });
 
-form.subscribeField('email', () => {}, { immediate: false });
+// subscriptions are deferred by default; use sync:true when you need an immediate snapshot
+form.subscribeField('email', () => {}, { sync: true });
 
 stopEmail();
 stopForm();
@@ -143,6 +159,18 @@ fileInput.onchange = (event) => {
 };
 ```
 
+Global bind defaults:
+
+```ts
+const formWithDefaults = createForm({
+  bindDefaults: { touchOnBlur: true, validateOnBlur: true },
+  defaultValues: { email: '' },
+  validators: { email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined) },
+});
+
+const email = formWithDefaults.bind('email');
+```
+
 ## Reset and Replace
 
 ```ts
@@ -152,6 +180,8 @@ form.reset();
 form.replace({ email: 'guest@example.com', name: 'Guest' });
 form.resetField('name');
 ```
+
+When loading server data as the new source of truth, prefer `replace(values)` so subsequent `reset()` uses that new baseline.
 
 ## Arrays and Files
 
@@ -164,6 +194,8 @@ form.array('tags').move(0, 1);
 
 const fd = toFormData(form.values());
 ```
+
+`toFormData` is optimized for browser submit APIs and multipart uploads.
 
 ## Best Practices
 

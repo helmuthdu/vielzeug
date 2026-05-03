@@ -74,6 +74,28 @@ describe('bit-toast', () => {
       });
     });
 
+    it('closes toast when alert dispatches dismiss', async () => {
+      fixture = (await mount('bit-toast')) as typeof fixture;
+
+      const el = fixture.element as HTMLElement & { add(toast: ToastItem): void };
+
+      el.add({ dismissible: true, duration: 0, message: 'Closable' });
+      await fixture.flush();
+
+      const alert = fixture.query<HTMLElement>('bit-alert');
+
+      expect(alert).toBeTruthy();
+
+      alert!.dispatchEvent(new Event('dismiss', { bubbles: true, composed: true }));
+      await fixture.flush();
+
+      // Complete queued exit animation in jsdom.
+      fixture.query<HTMLElement>('.toast-wrapper.exiting')?.dispatchEvent(new Event('animationend'));
+      await fixture.flush();
+
+      expect(fixture.query('bit-alert')).toBeNull();
+    });
+
     it('does not leave active toasts stuck in exiting state on rapid remove + add', async () => {
       fixture = (await mount('bit-toast')) as typeof fixture;
 

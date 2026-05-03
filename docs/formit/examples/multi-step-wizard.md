@@ -60,16 +60,16 @@ const wizardForm = createForm({
 
 // Step configuration
 const steps = [
-  { title: 'Personal Info', fields: ['firstName', 'lastName', 'email'] },
-  { title: 'Address', fields: ['street', 'city', 'zipCode'] },
-  { title: 'Payment', fields: ['cardNumber', 'expiryDate', 'cvv'] },
-];
+  { title: 'Personal Info', fields: ['firstName', 'lastName', 'email'] as const },
+  { title: 'Address', fields: ['street', 'city', 'zipCode'] as const },
+  { title: 'Payment', fields: ['cardNumber', 'expiryDate', 'cvv'] as const },
+] as const;
 
 let currentStep = 0;
 
 // Validate current step
 async function validateCurrentStep() {
-  const { valid } = await wizardForm.validateFields(steps[currentStep].fields );
+  const { valid } = await wizardForm.validate([...steps[currentStep].fields]);
   return valid;
 }
 

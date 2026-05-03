@@ -3,8 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { html, onElement, ref } from '../../index';
 import { mount } from '../../testing';
+import { createCheckableState } from '../checkable-control';
 import { createChoiceField } from '../choice-field-control';
-import { createAssistiveState, createCheckableState, mountTextFieldLifecycle } from '../field-control';
+import { createAssistiveState, mountTextFieldLifecycle } from '../field-control';
 import { createTextField } from '../text-field-control';
 
 describe('field controls', () => {

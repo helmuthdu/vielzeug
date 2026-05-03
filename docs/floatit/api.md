@@ -75,7 +75,7 @@ Low-level positioning engine. Computes `{ x, y, placement }` without touching th
 
 - `reference: Element` — The anchor element
 - `floating: HTMLElement` — The floating element
-- `config?: ComputePositionConfig` — Optional configuration
+- `config?: FloatOptions` — Optional configuration
 
 **Returns:** `ComputePositionResult`
 
@@ -236,15 +236,6 @@ interface FloatOptions {
 }
 ```
 
-### `ComputePositionConfig`
-
-```ts
-interface ComputePositionConfig {
-  placement?: Placement;
-  middleware?: Array<Middleware | null | undefined | false>;
-}
-```
-
 ### `ComputePositionResult`
 
 ```ts
@@ -258,10 +249,7 @@ interface ComputePositionResult {
 ### `Middleware`
 
 ```ts
-interface Middleware {
-  name: string;
-  fn: (state: MiddlewareState) => MiddlewareState;
-}
+type Middleware = (state: MiddlewareState) => MiddlewareState;
 ```
 
 ### `MiddlewareState`

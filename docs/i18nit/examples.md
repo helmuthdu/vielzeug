@@ -1,6 +1,6 @@
 ---
 title: I18nit — Examples
-description: Practical examples and recipes for i18nit.
+description: Practical examples and recipes for shared instances, locale switching, SSR, and diagnostics with i18nit.
 ---
 
 # I18nit Examples
@@ -9,13 +9,13 @@ description: Practical examples and recipes for i18nit.
 
 ## How to Use These Examples
 
-These examples cover locale switching, async loading, prefixed helpers, and SSR patterns.
+These examples cover the common integration shapes for the current `@vielzeug/i18nit` API.
 
-1. Start with the first example page to learn the baseline pattern.
-2. Move to advanced pages that match your framework or production scenario.
-3. Keep the API page open while adapting snippets to your project.
+1. Start with a shared or per-request setup example.
+2. Add loading, switching, or diagnostics patterns as needed.
+3. Keep the usage and API pages open while adapting snippets.
 
-These examples are aligned with the current `@vielzeug/i18nit` API.
+All examples are aligned with the current `@vielzeug/i18nit` runtime.
 
 ## Examples Overview
 
@@ -25,6 +25,6 @@ These examples are aligned with the current `@vielzeug/i18nit` API.
 - [Prefixed Translation Helper](./examples/prefixed-translation-helper.md)
 - [Per-request Locale Handling](./examples/per-request-locale-handling.md)
 - [Catalog Replacement](./examples/catalog-replacement.md)
-- [Async Loading and Reload](./examples/async-loading-and-reload.md)
+- [Async Loading and Preload](./examples/async-loading-and-reload.md)
 - [SSR Rendering](./examples/ssr-rendering.md)
 - [Diagnostics Hook](./examples/diagnostics-hook.md)

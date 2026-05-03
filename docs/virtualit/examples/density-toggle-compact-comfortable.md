@@ -13,7 +13,7 @@ Implement density toggle (compact / comfortable) in a production-friendly way wi
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
 
-Use the `estimateSize` setter to switch between density modes. Measured heights from the previous mode are automatically cleared.
+Use `update({ estimateSize })` to switch between density modes. Measured heights from the previous mode are automatically cleared.
 
 ```ts
 import { createVirtualizer } from '@vielzeug/virtualit';
@@ -29,7 +29,7 @@ const virt = createVirtualizer(scrollEl, {
 
 document.getElementById('toggle-density')!.addEventListener('click', () => {
   mode = mode === 'compact' ? 'comfortable' : 'compact';
-  virt.estimateSize = DENSITY[mode];
+  virt.update({ estimateSize: DENSITY[mode] });
 });
 ```
 

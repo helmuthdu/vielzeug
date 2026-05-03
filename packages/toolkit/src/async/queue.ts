@@ -36,6 +36,7 @@ export function queue(options: { concurrency?: number } = {}) {
     reject: (error: unknown) => void;
     resolve: (value: unknown) => void;
   }> = [];
+  const scheduler = new Scheduler();
 
   let flushQueued = false;
 
@@ -43,8 +44,6 @@ export function queue(options: { concurrency?: number } = {}) {
     if (flushQueued) return;
 
     flushQueued = true;
-
-    const scheduler = new Scheduler();
 
     void scheduler.postTask(
       () => {

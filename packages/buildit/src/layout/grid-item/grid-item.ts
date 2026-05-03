@@ -6,6 +6,8 @@ import styles from './grid-item.css?inline';
 export type BitGridItemProps = {
   /** Align self vertically within the grid cell */
   align?: 'start' | 'center' | 'end' | 'stretch';
+  /** Named grid area to place the item into. */
+  area?: string;
   /** Explicit grid-column value — overrides col-span (e.g. '2 / 5', 'span 3', '1 / -1'). */
   col?: string;
   /** Span N columns. Use 'full' to span all columns (1 / -1). */
@@ -27,6 +29,7 @@ export type BitGridItemProps = {
  *
  * @element bit-grid-item
  *
+ * @attr {string} area - CSS grid-area value for named-area placement
  * @attr {string} col-span - Columns to span: '1'–'12' | 'full'
  * @attr {string} row-span - Rows to span: '1'–'6' | 'full'
  * @attr {string} col - CSS grid-column value (overrides col-span)
@@ -45,12 +48,17 @@ export type BitGridItemProps = {
  * <bit-grid-item col-span="full">Banner</bit-grid-item>
  *
  * @example
+ * <!-- Named area placement -->
+ * <bit-grid-item area="sidebar">Nav</bit-grid-item>
+ *
+ * @example
  * <!-- Explicit placement -->
  * <bit-grid-item col="2 / 5" row="1 / 3">Placed</bit-grid-item>
  */
 export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
   props: {
     align: undefined,
+    area: '',
     col: '',
     colSpan: undefined,
     justify: undefined,
@@ -68,7 +76,7 @@ export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
 
       if (span) return `span ${span}`;
 
-      return undefined;
+      return '';
     });
 
     const gridRow = computed(() => {
@@ -81,19 +89,18 @@ export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
 
       if (span) return `span ${span}`;
 
-      return undefined;
+      return '';
     });
 
     host.bind({
       style: {
+        gridArea: props.area,
         gridColumn,
         gridRow,
       },
     });
 
-    return {
-      render: () => html`<slot></slot>`,
-    };
+    return () => html`<slot></slot>`;
   },
   styles: [styles],
 });

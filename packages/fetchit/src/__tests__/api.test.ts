@@ -234,11 +234,22 @@ describe('HTTP Client', () => {
   });
 
   describe('Timeout & Errors', () => {
-    it('supports timeout edge values', async () => {
+    it('supports infinity timeout and rejects non-positive values', async () => {
       fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
 
-      await expect(createApi({ timeout: 0 }).get('/test')).resolves.toBeDefined();
       await expect(createApi({ timeout: Number.POSITIVE_INFINITY }).get('/test')).resolves.toBeDefined();
+      expect(() => createApi({ timeout: 0 })).toThrow(/timeout must be a positive number or Infinity/i);
+      expect(() => createApi({ timeout: -1 })).toThrow(/timeout must be a positive number or Infinity/i);
+    });
+
+    it('uses the provided fetch implementation when configured', async () => {
+      const localFetch = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
+      const http = createApi({ fetch: localFetch as typeof fetch });
+
+      await http.get('/test');
+
+      expect(localFetch).toHaveBeenCalledTimes(1);
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('wraps network errors in HttpError preserving url and method', async () => {

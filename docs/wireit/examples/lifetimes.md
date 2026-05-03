@@ -20,8 +20,8 @@ const CacheToken = createToken<Cache>('Cache');
 
 container.factory(CacheToken, () => new LRUCache({ max: 500 }));
 
-const a = container.get(CacheToken);
-const b = container.get(CacheToken);
+const a = await container.resolve(CacheToken);
+const b = await container.resolve(CacheToken);
 console.log(a === b); // true — same instance
 ```
 
@@ -32,8 +32,8 @@ const RequestIdToken = createToken<string>('RequestId');
 
 container.factory(RequestIdToken, () => crypto.randomUUID(), { lifetime: 'transient' });
 
-const id1 = container.get(RequestIdToken);
-const id2 = container.get(RequestIdToken);
+const id1 = await container.resolve(RequestIdToken);
+const id2 = await container.resolve(RequestIdToken);
 console.log(id1 === id2); // false — new UUID each time
 ```
 
@@ -47,7 +47,9 @@ container.bind(RequestContextToken, RequestContext, { lifetime: 'scoped' });
 const child1 = container.createChild();
 const child2 = container.createChild();
 
-console.log(child1.get(RequestContextToken) === child2.get(RequestContextToken)); // false
+const ctx1 = await child1.resolve(RequestContextToken);
+const ctx2 = await child2.resolve(RequestContextToken);
+console.log(ctx1 === ctx2); // false
 ```
 
 ## Expected Output

@@ -199,25 +199,23 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     const hasError = () => Boolean(props.error.value);
     const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
-    return {
-      render: () => html`
-        <fieldset
-          role="group"
-          aria-required="${() => String(Boolean(props.required.value))}"
-          aria-invalid="${() => String(hasError())}"
-          aria-errormessage="${() => (hasError() ? errorId : null)}"
-          aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
-          <legend id="${legendId}" ?hidden=${() => !props.label.value}>
-            ${props.label}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
-          </legend>
-          <div class="checkbox-group-items" part="items">
-            <slot></slot>
-          </div>
-          <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError()}>${props.error}</div>
-          <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper()}>${props.helper}</div>
-        </fieldset>
-      `,
-    };
+    return () => html`
+      <fieldset
+        role="group"
+        aria-required="${() => String(Boolean(props.required.value))}"
+        aria-invalid="${() => String(hasError())}"
+        aria-errormessage="${() => (hasError() ? errorId : null)}"
+        aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
+        <legend id="${legendId}" ?hidden=${() => !props.label.value}>
+          ${props.label}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
+        </legend>
+        <div class="checkbox-group-items" part="items">
+          <slot></slot>
+        </div>
+        <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError()}>${props.error}</div>
+        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper()}>${props.helper}</div>
+      </fieldset>
+    `;
   },
   styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin(), componentStyles],
 });

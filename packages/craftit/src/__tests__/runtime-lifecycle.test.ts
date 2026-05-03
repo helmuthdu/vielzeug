@@ -3,39 +3,42 @@
  * Tests for mount, onCleanup, and handle hooks
  */
 
-import { handle, html, onCleanup, signal } from '../index';
+import { handle, html, onCleanup, onMounted, signal } from '../index';
 import { mount } from '../testing';
 
 describe('Core: mount() lifecycle', () => {
   it('should run mount callback after component renders', async () => {
     const spy = vi.fn();
 
-    await mount(() => ({
-      mount: spy,
-      render: () => html`<div>Test</div>`,
-    }));
+    await mount(() => {
+      onMounted(spy);
+
+      return () => html`<div>Test</div>`;
+    });
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('should have access to DOM when mount runs', async () => {
     let hasElement = false;
 
-    await mount(() => ({
-      mount() {
+    await mount(() => {
+      onMounted(() => {
         hasElement = true;
-      },
-      render: () => html`<div>Test</div>`,
-    }));
+      });
+
+      return () => html`<div>Test</div>`;
+    });
     expect(hasElement).toBe(true);
   });
 
   it('should register mount cleanup that runs on unmount', async () => {
     const spy = vi.fn();
 
-    const { destroy } = await mount(() => ({
-      mount: () => spy,
-      render: () => html`<div>Test</div>`,
-    }));
+    const { destroy } = await mount(() => {
+      onMounted(() => spy);
+
+      return () => html`<div>Test</div>`;
+    });
 
     expect(spy).not.toHaveBeenCalled();
     destroy();
@@ -49,14 +52,13 @@ describe('Core: Lifecycle Order', () => {
     const { destroy } = await mount(() => {
       order.push('setup');
 
-      return {
-        mount() {
-          order.push('mount');
+      onMounted(() => {
+        order.push('mount');
 
-          return () => order.push('unmount');
-        },
-        render: () => html`<div>Test</div>`,
-      };
+        return () => order.push('unmount');
+      });
+
+      return () => html`<div>Test</div>`;
     });
 
     destroy();
@@ -70,7 +72,7 @@ describe('Core: onCleanup()', () => {
     const { destroy } = await mount(() => {
       onCleanup(spy);
 
-      return { render: () => html`<div>Test</div>` };
+      return () => html`<div>Test</div>`;
     });
 
     expect(spy).not.toHaveBeenCalled();
@@ -85,7 +87,7 @@ describe('Core: onCleanup()', () => {
         cleaned = true;
       });
 
-      return { render: () => html`<div>Test</div>` };
+      return () => html`<div>Test</div>`;
     });
 
     destroy();
@@ -98,7 +100,7 @@ describe('Core: onCleanup()', () => {
       onCleanup(() => calls.push(1));
       onCleanup(() => calls.push(2));
 
-      return { render: () => html`<div>Test</div>` };
+      return () => html`<div>Test</div>`;
     });
 
     destroy();
@@ -112,17 +114,16 @@ describe('Core: mount + cleanup integration', () => {
     const { destroy } = await mount(() => {
       const count = signal(0);
 
-      return {
-        mount() {
-          const interval = setInterval(() => {
-            count.value++;
-            effectRuns++;
-          }, 10);
+      onMounted(() => {
+        const interval = setInterval(() => {
+          count.value++;
+          effectRuns++;
+        }, 10);
 
-          return () => clearInterval(interval);
-        },
-        render: () => html`<div>${count}</div>`,
-      };
+        return () => clearInterval(interval);
+      });
+
+      return () => html`<div>${count}</div>`;
     });
 
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -140,8 +141,8 @@ describe('handle()', () => {
     let clickCount = 0;
     let btn!: HTMLButtonElement;
 
-    const { destroy } = await mount(() => ({
-      mount() {
+    const { destroy } = await mount(() => {
+      onMounted(() => {
         btn = document.createElement('button');
         document.body.appendChild(btn);
         handle(btn, 'click', () => {
@@ -149,9 +150,10 @@ describe('handle()', () => {
         });
 
         return () => btn.remove();
-      },
-      render: () => html`<div></div>`,
-    }));
+      });
+
+      return () => html`<div></div>`;
+    });
 
     btn.dispatchEvent(new Event('click'));
     expect(clickCount).toBe(1);
@@ -167,8 +169,8 @@ describe('imperative cleanup pattern', () => {
   it('disposes previous cleanup when replaced and latest cleanup on unmount', async () => {
     let disposed = 0;
 
-    const { destroy } = await mount(() => ({
-      mount() {
+    const { destroy } = await mount(() => {
+      onMounted(() => {
         let cleanup: (() => void) | null = null;
 
         const setCleanup = (next: (() => void) | null) => {
@@ -188,9 +190,10 @@ describe('imperative cleanup pattern', () => {
           cleanup?.();
           cleanup = null;
         });
-      },
-      render: () => html`<div></div>`,
-    }));
+      });
+
+      return () => html`<div></div>`;
+    });
 
     // Replacing cleanup disposes the previous one.
     expect(disposed).toBe(1);

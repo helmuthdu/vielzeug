@@ -15,7 +15,8 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./testing": {
+    "./test": {
+      "source": "./src/testing/index.ts",
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js",
       "require": "./dist/testing.cjs"

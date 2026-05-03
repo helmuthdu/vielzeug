@@ -57,7 +57,7 @@ can('status', 'read');
 ## API
 
 - `createPermit<TAction, TData>(options?)`
-- `permit.set(rule)`
+- `permit.set(rule | rules)`
 - `permit.can(principal, resource, action, data?)`
 - `permit.forUser(principal)(resource, action, data?)`
 - `permit.rules()`
@@ -85,7 +85,7 @@ Permit applies one deterministic model:
 | Symbol | Purpose |
 | --- | --- |
 | `createPermit({ initial?, logger? })` | Create a permit instance |
-| `permit.set(rule)` | Append one rule |
+| `permit.set(rule | rules)` | Append one or more rules |
 | `permit.can(principal, resource, action, data?)` | Evaluate one permission check |
 | `permit.forUser(principal)` | Create a user-bound checker function |
 | `permit.rules()` | Get a snapshot of current rules |

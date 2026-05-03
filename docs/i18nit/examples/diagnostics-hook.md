@@ -1,19 +1,17 @@
 ---
 title: 'I18nit Examples — Diagnostics Hook'
-description: 'Diagnostics Hook examples for i18nit.'
+description: 'Capture loader failures and subscriber errors through the i18nit diagnostics hook.'
 ---
 
 ## Diagnostics Hook
 
-## Problem
+The diagnostics hook is the central place for observability and error reporting.
 
-Implement diagnostics hook in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
+## Example
 
 ```ts
+import { createI18n, isLoaderError, isSubscriberError, type DiagnosticEvent } from '@vielzeug/i18nit';
+
 const i18nWithDiagnostics = createI18n({
   locale: 'en',
   loaders: {
@@ -27,21 +25,27 @@ const i18nWithDiagnostics = createI18n({
     }
   },
 });
+
+function report(event: DiagnosticEvent) {
+  if (isLoaderError(event)) {
+    console.warn('Loader failed for locale', event.locale, event.error);
+    return;
+  }
+
+  if (isSubscriberError(event)) {
+    console.error('Subscriber threw', event.error);
+  }
+}
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Loader failures from `preload()` are reported here and then swallowed.
+- Subscriber failures are isolated so one broken listener does not break the others.
+- Forward diagnostics into your logger, metrics system, or error tracker.
 
 ## Related Recipes
 
-- [Async Loading and Reload](./async-loading-and-reload.md)
+- [Async Loading and Preload](./async-loading-and-reload.md)
 - [Catalog Replacement](./catalog-replacement.md)
 - [Framework Integration](./framework-integration.md)

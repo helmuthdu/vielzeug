@@ -6,7 +6,7 @@ export type Side = 'top' | 'bottom' | 'left' | 'right';
 export type Alignment = 'start' | 'end';
 export type Placement = Side | `${Side}-${Alignment}`;
 
-interface Rect {
+export interface Rect {
   x: number;
   y: number;
   width: number;
@@ -21,12 +21,9 @@ export interface MiddlewareState {
   elements: { floating: HTMLElement; reference: Element };
 }
 
-export interface Middleware {
-  name: string;
-  fn: (state: MiddlewareState) => MiddlewareState;
-}
+export type Middleware = (state: MiddlewareState) => MiddlewareState;
 
-export interface ComputePositionConfig {
+export interface FloatOptions {
   placement?: Placement;
   /**
    * Middleware chain run in order.
@@ -34,6 +31,8 @@ export interface ComputePositionConfig {
    */
   middleware?: Array<Middleware | null | undefined | false>;
 }
+
+export type Cleanup = () => void;
 
 export interface ComputePositionResult {
   x: number;
@@ -69,47 +68,59 @@ function baseCoords(placement: Placement, ref: Rect, float: Rect): { x: number; 
   const side = getSide(placement);
   const align = getAlign(placement);
 
-  if (side === 'top') return { x: alignedOffset(align, ref.x, ref.width, float.width), y: ref.y - float.height };
-
-  if (side === 'bottom') return { x: alignedOffset(align, ref.x, ref.width, float.width), y: ref.y + ref.height };
-
-  if (side === 'left') return { x: ref.x - float.width, y: alignedOffset(align, ref.y, ref.height, float.height) };
-
-  /* right */ return { x: ref.x + ref.width, y: alignedOffset(align, ref.y, ref.height, float.height) };
+  switch (side) {
+    case 'bottom':
+      return { x: alignedOffset(align, ref.x, ref.width, float.width), y: ref.y + ref.height };
+    case 'left':
+      return { x: ref.x - float.width, y: alignedOffset(align, ref.y, ref.height, float.height) };
+    case 'right':
+      return { x: ref.x + ref.width, y: alignedOffset(align, ref.y, ref.height, float.height) };
+    case 'top':
+      return { x: alignedOffset(align, ref.x, ref.width, float.width), y: ref.y - float.height };
+  }
 }
 
 // ─── Pipeline ─────────────────────────────────────────────────────────────────
 
 function runPipeline(
   mws: Middleware[],
-  placement: Placement,
+  initialPlacement: Placement,
   reference: Element,
   floating: HTMLElement,
-  restartDepth = 0,
 ): ComputePositionResult {
-  const refRect = toRect(reference.getBoundingClientRect());
-  const floatRect = toRect(floating.getBoundingClientRect());
-  let state: MiddlewareState = {
-    ...baseCoords(placement, refRect, floatRect),
-    elements: { floating, reference },
-    placement,
-    rects: { floating: floatRect, reference: refRect },
-  };
+  let placement = initialPlacement;
+  let restarted = false;
 
-  for (const mw of mws) state = mw.fn(state);
+  while (true) {
+    const refRect = toRect(reference.getBoundingClientRect());
+    const floatRect = toRect(floating.getBoundingClientRect());
+    let state: MiddlewareState = {
+      ...baseCoords(placement, refRect, floatRect),
+      elements: { floating, reference },
+      placement,
+      rects: { floating: floatRect, reference: refRect },
+    };
 
-  // If a middleware (e.g. flip) changed the placement, restart once with the new one.
-  if (state.placement !== placement) {
-    if (restartDepth >= 1) {
+    for (const mw of mws) {
+      const previousPlacement = state.placement;
+
+      state = mw(state);
+
+      // Stop the current pass as soon as placement changes.
+      if (state.placement !== previousPlacement) break;
+    }
+
+    if (state.placement === placement) return { placement: state.placement, x: state.x, y: state.y };
+
+    if (restarted) {
       throw new Error(
         '[floatit] Middleware changed placement more than once in a single compute cycle. Use at most one placement-changing middleware.',
       );
     }
 
-    return runPipeline(mws, state.placement, reference, floating, restartDepth + 1);
+    placement = state.placement;
+    restarted = true;
   }
-
-  return { placement: state.placement, x: state.x, y: state.y };
 }
 
 // ─── computePosition ──────────────────────────────────────────────────────────
@@ -118,10 +129,8 @@ function runPipeline(
 export function computePosition(
   reference: Element,
   floating: HTMLElement,
-  config: ComputePositionConfig = {},
+  { middleware = [], placement = 'bottom' }: FloatOptions = {},
 ): ComputePositionResult {
-  const { middleware = [], placement = 'bottom' } = config;
-
   return runPipeline(middleware.filter(Boolean) as Middleware[], placement, reference, floating);
 }
 
@@ -129,17 +138,14 @@ export function computePosition(
 
 /** Adds a gap (in px) between the reference and the floating element. */
 export function offset(value: number): Middleware {
-  return {
-    fn(state) {
-      const side = getSide(state.placement);
+  return (state) => {
+    const side = getSide(state.placement);
 
-      return {
-        ...state,
-        x: state.x + (side === 'right' ? value : side === 'left' ? -value : 0),
-        y: state.y + (side === 'bottom' ? value : side === 'top' ? -value : 0),
-      };
-    },
-    name: 'offset',
+    return {
+      ...state,
+      x: state.x + (side === 'right' ? value : side === 'left' ? -value : 0),
+      y: state.y + (side === 'bottom' ? value : side === 'top' ? -value : 0),
+    };
   };
 }
 
@@ -152,32 +158,29 @@ export interface FlipOptions {
 export function flip(options: FlipOptions = {}): Middleware {
   const { padding = 0 } = options;
 
-  return {
-    fn(state) {
-      const {
-        placement,
-        rects: { floating },
-        x,
-        y,
-      } = state;
-      const side = getSide(placement);
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const overflows =
-        (side === 'top' && y < padding) ||
-        (side === 'bottom' && y + floating.height > vh - padding) ||
-        (side === 'left' && x < padding) ||
-        (side === 'right' && x + floating.width > vw - padding);
+  return (state) => {
+    const {
+      placement,
+      rects: { floating },
+      x,
+      y,
+    } = state;
+    const side = getSide(placement);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const overflows =
+      (side === 'top' && y < padding) ||
+      (side === 'bottom' && y + floating.height > vh - padding) ||
+      (side === 'left' && x < padding) ||
+      (side === 'right' && x + floating.width > vw - padding);
 
-      if (!overflows) return state;
+    if (!overflows) return state;
 
-      const align = getAlign(placement);
-      const opp = OPPOSITE[side];
-      const flipped = (align ? `${opp}-${align}` : opp) as Placement;
+    const align = getAlign(placement);
+    const opp = OPPOSITE[side];
+    const flipped = (align ? `${opp}-${align}` : opp) as Placement;
 
-      return { ...state, placement: flipped };
-    },
-    name: 'flip',
+    return { ...state, placement: flipped };
   };
 }
 
@@ -190,23 +193,20 @@ export interface ShiftOptions {
 export function shift(options: ShiftOptions = {}): Middleware {
   const { padding = 0 } = options;
 
-  return {
-    fn(state) {
-      const {
-        rects: { floating },
-        x,
-        y,
-      } = state;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+  return (state) => {
+    const {
+      rects: { floating },
+      x,
+      y,
+    } = state;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-      return {
-        ...state,
-        x: Math.min(Math.max(x, padding), vw - floating.width - padding),
-        y: Math.min(Math.max(y, padding), vh - floating.height - padding),
-      };
-    },
-    name: 'shift',
+    return {
+      ...state,
+      x: Math.min(Math.max(x, padding), vw - floating.width - padding),
+      y: Math.min(Math.max(y, padding), vh - floating.height - padding),
+    };
   };
 }
 
@@ -227,29 +227,26 @@ export interface SizeOptions {
 export function size(options: SizeOptions = {}): Middleware {
   const { apply, padding = 0 } = options;
 
-  return {
-    fn(state) {
-      const {
-        placement,
-        rects: { floating },
-        x,
-        y,
-      } = state;
-      const side = getSide(placement);
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+  return (state) => {
+    const {
+      placement,
+      rects: { reference: refRect },
+      x,
+      y,
+    } = state;
+    const side = getSide(placement);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-      const availableHeight =
-        side === 'bottom' ? vh - y - padding : side === 'top' ? y + floating.height - padding : vh - padding * 2;
+    const availableHeight =
+      side === 'bottom' ? vh - y - padding : side === 'top' ? refRect.y - padding : vh - padding * 2;
 
-      const availableWidth =
-        side === 'right' ? vw - x - padding : side === 'left' ? x + floating.width - padding : vw - padding * 2;
+    const availableWidth =
+      side === 'right' ? vw - x - padding : side === 'left' ? refRect.x - padding : vw - padding * 2;
 
-      apply?.({ availableHeight, availableWidth, elements: state.elements });
+    apply?.({ availableHeight, availableWidth, elements: state.elements });
 
-      return state;
-    },
-    name: 'size',
+    return state;
   };
 }
 
@@ -283,7 +280,7 @@ export function autoUpdate(
   floating: HTMLElement,
   update: () => void,
   { observeFloating = true, observeVisualViewport = true }: AutoUpdateOptions = {},
-): () => void {
+): Cleanup {
   update();
 
   // Use composedPath() instead of e.target — shadow DOM retargets e.target to
@@ -319,16 +316,6 @@ export function autoUpdate(
 
 // ─── positionFloat / float ────────────────────────────────────────────────────
 
-export interface FloatOptions {
-  /** Preferred placement relative to the reference element. */
-  placement?: Placement;
-  /**
-   * Middleware to modify positioning behavior.
-   * At most one middleware should change `state.placement` (typically `flip()`).
-   */
-  middleware?: Array<Middleware | null | undefined | false>;
-}
-
 /**
  * Computes and applies the floating position to a floating element.
  * Sets `left`/`top` inline styles and returns the resolved placement.
@@ -360,6 +347,6 @@ export function positionFloat(reference: Element, floating: HTMLElement, options
  * cleanup();
  * ```
  */
-export function float(reference: Element, floating: HTMLElement, options: FloatOptions = {}): () => void {
+export function float(reference: Element, floating: HTMLElement, options: FloatOptions = {}): Cleanup {
   return autoUpdate(reference, floating, () => positionFloat(reference, floating, options));
 }

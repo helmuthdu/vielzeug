@@ -1,8 +1,7 @@
 import {
-  type ArrayFieldBatch,
+  type ArrayField,
   type BindConfig,
   type BindResult,
-  type DeepPartial,
   type FieldState,
   type FieldValidator,
   type FlatKeyOf,
@@ -40,6 +39,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   const dirty = new Set<string>();
   let validatingCount = 0;
   let activeValidationCtrl: AbortController | null = null;
+  const fieldValidationCtrls = new Map<string, AbortController>();
   let isSubmitting = false;
   let submitCount = 0;
   const disposeController = new AbortController();
@@ -89,9 +89,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   function flush(): void {
     scheduled = false;
 
-    const state = buildState();
+    if (listeners.size > 0) {
+      const state = buildState();
 
-    for (const listener of listeners) listener(state);
+      for (const listener of listeners) listener(state);
+    }
 
     const toNotify = notifyAllFields ? fieldListeners.keys() : changedFields;
 
@@ -154,7 +156,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     store.set(key, value);
 
-    if (options.dirty ?? true) trackDirty(key, value);
+    if (options.track ?? true) trackDirty(key, value);
 
     if (options.touched) touched.add(key);
 
@@ -183,14 +185,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     scheduleNotify(key);
   }
 
-  function applyErrors(nextErrors: Record<string, string>): void {
-    fieldErrors.clear();
-    for (const [k, v] of Object.entries(nextErrors)) fieldErrors.set(k, v);
-  }
-
-  function setErrors(nextErrors: Partial<Record<FlatKeyOf<TValues>, string>>): void {
+  function replaceErrors(nextErrors: Partial<Record<FlatKeyOf<TValues>, string>>): void {
     ensureNotDisposed();
-    applyErrors(nextErrors as Record<string, string>);
+    fieldErrors.clear();
+    for (const [k, v] of Object.entries(nextErrors)) fieldErrors.set(k, v as string);
     scheduleNotify();
   }
 
@@ -205,37 +203,33 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     scheduleNotify();
   }
 
-  function touch(name: FlatKeyOf<TValues>): void {
+  function touch(name?: FlatKeyOf<TValues>): void {
     ensureNotDisposed();
 
-    const key = name as string;
+    if (name === undefined) {
+      for (const fieldName of store.keys()) touched.add(fieldName);
+      for (const fieldName of Object.keys(validators)) touched.add(fieldName);
+      scheduleNotify();
+    } else {
+      const key = name as string;
 
-    touched.add(key);
-    scheduleNotify(key);
+      touched.add(key);
+      scheduleNotify(key);
+    }
   }
 
-  function touchAll(): void {
+  function untouch(name?: FlatKeyOf<TValues>): void {
     ensureNotDisposed();
 
-    for (const name of store.keys()) touched.add(name);
-    for (const name of Object.keys(validators)) touched.add(name);
+    if (name === undefined) {
+      touched.clear();
+      scheduleNotify();
+    } else {
+      const key = name as string;
 
-    scheduleNotify();
-  }
-
-  function untouch(name: FlatKeyOf<TValues>): void {
-    ensureNotDisposed();
-
-    const key = name as string;
-
-    touched.delete(key);
-    scheduleNotify(key);
-  }
-
-  function untouchAll(): void {
-    ensureNotDisposed();
-    touched.clear();
-    scheduleNotify();
+      touched.delete(key);
+      scheduleNotify(key);
+    }
   }
 
   function resolveTouchedValidatorFields(): string[] {
@@ -266,6 +260,25 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     }
   }
 
+  function buildScopedErrors(fieldSet: Set<string>): Record<string, string> {
+    const out: Record<string, string> = {};
+
+    for (const name of fieldSet) {
+      const err = fieldErrors.get(name);
+
+      if (err !== undefined) out[name] = err;
+    }
+
+    return out;
+  }
+
+  function buildResult(fieldSet: Set<string>, mode: 'full' | 'partial'): ValidateResult {
+    const allErrors = Object.fromEntries(fieldErrors);
+    const errors = mode === 'full' ? allErrors : buildScopedErrors(fieldSet);
+
+    return { allErrors, errors, valid: fieldErrors.size === 0 };
+  }
+
   async function validateResolvedFields(
     fieldsToValidate: string[],
     mode: 'full' | 'partial',
@@ -273,23 +286,46 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   ): Promise<ValidateResult> {
     ensureNotDisposed();
 
-    activeValidationCtrl?.abort();
+    const fieldSet = new Set(fieldsToValidate);
+    const baseSignals: AbortSignal[] = signal ? [signal, disposeController.signal] : [disposeController.signal];
+
+    if (mode === 'full') {
+      // Full validation supersedes all running validations
+      activeValidationCtrl?.abort();
+      for (const ctrl of fieldValidationCtrls.values()) ctrl.abort();
+      fieldValidationCtrls.clear();
+    }
 
     const ctrl = new AbortController();
 
-    activeValidationCtrl = ctrl;
+    if (mode === 'full') activeValidationCtrl = ctrl;
 
-    const combinedSignal = signal
-      ? AbortSignal.any([signal, ctrl.signal, disposeController.signal])
-      : AbortSignal.any([ctrl.signal, disposeController.signal]);
+    // Per-field controllers for partial: concurrent field validations don't cancel each other
+    const localFieldCtrls = new Map<string, AbortController>();
+
+    for (const name of fieldSet) {
+      if (mode === 'partial') {
+        fieldValidationCtrls.get(name)?.abort();
+
+        const fieldCtrl = new AbortController();
+
+        fieldValidationCtrls.set(name, fieldCtrl);
+        localFieldCtrls.set(name, fieldCtrl);
+      } else {
+        localFieldCtrls.set(name, ctrl);
+      }
+    }
 
     validatingCount++;
     scheduleNotify();
 
     try {
-      const fieldSet = new Set(fieldsToValidate);
       const results = await Promise.all(
-        [...fieldSet].map(async (name) => [name, await runFieldValidators(name, combinedSignal)] as const),
+        [...fieldSet].map(async (name) => {
+          const fieldSignal = AbortSignal.any([localFieldCtrls.get(name)!.signal, ...baseSignals]);
+
+          return [name, await runFieldValidators(name, fieldSignal)] as const;
+        }),
       );
       const nextErrors: Record<string, string> = {};
 
@@ -299,44 +335,44 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
       if (mode === 'partial') {
         applyPartialErrors(fieldSet, nextErrors);
+        for (const name of fieldSet) fieldValidationCtrls.delete(name);
       } else {
-        Object.assign(nextErrors, await runFormValidator(combinedSignal));
-        applyErrors(nextErrors);
+        const formSignal = AbortSignal.any([ctrl.signal, ...baseSignals]);
+
+        Object.assign(nextErrors, await runFormValidator(formSignal));
+        fieldErrors.clear();
+        for (const [k, v] of Object.entries(nextErrors)) fieldErrors.set(k, v);
       }
 
-      return { errors: Object.fromEntries(fieldErrors), valid: fieldErrors.size === 0 };
+      return buildResult(fieldSet, mode);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        return { errors: Object.fromEntries(fieldErrors), valid: fieldErrors.size === 0 };
+        return buildResult(fieldSet, mode);
       }
 
       throw err;
     } finally {
-      if (activeValidationCtrl === ctrl) activeValidationCtrl = null;
+      if (mode === 'full' && activeValidationCtrl === ctrl) activeValidationCtrl = null;
 
       validatingCount--;
       scheduleNotify();
     }
   }
 
-  async function validateAll(signal?: AbortSignal): Promise<ValidateResult> {
-    return validateResolvedFields(Object.keys(validators), 'full', signal);
-  }
-
-  async function validateTouched(signal?: AbortSignal): Promise<ValidateResult> {
-    return validateResolvedFields(resolveTouchedValidatorFields(), 'partial', signal);
-  }
-
-  async function validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult> {
-    return validateResolvedFields(fields as string[], 'partial', signal);
+  async function validate(fields?: FlatKeyOf<TValues>[] | 'touched', signal?: AbortSignal): Promise<ValidateResult> {
+    if (fields === 'touched') {
+      return validateResolvedFields(resolveTouchedValidatorFields(), 'partial', signal);
+    } else if (fields === undefined) {
+      return validateResolvedFields(Object.keys(validators), 'full', signal);
+    } else {
+      return validateResolvedFields(fields as string[], 'partial', signal);
+    }
   }
 
   async function validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined> {
-    const key = name as string;
+    const { errors } = await validate([name], signal);
 
-    await validateFields([name], signal);
-
-    return fieldErrors.get(key);
+    return errors[name as string];
   }
 
   async function submit<TResult = void>(
@@ -352,8 +388,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     scheduleNotify();
 
     try {
-      touchAll();
-      await validateAll(signal);
+      touch();
+      await validate(undefined, signal);
 
       if (fieldErrors.size > 0) {
         throw new FormValidationError(Object.fromEntries(fieldErrors));
@@ -371,7 +407,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     listeners.add(listener);
 
-    if (options?.immediate !== false) listener(buildState());
+    if (options?.sync) listener(buildState());
 
     return () => listeners.delete(listener);
   }
@@ -389,7 +425,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     fieldListeners.set(key, bucket);
     bucket.add(listener as AnyFieldListener);
 
-    if (options?.immediate !== false) {
+    if (options?.sync) {
       listener(buildFieldState(key) as FieldState<TypeAtPath<TValues, K>>);
     }
 
@@ -434,7 +470,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     };
   }
 
-  function array(name: FlatKeyOf<TValues>): ArrayFieldBatch {
+  function array(name: FlatKeyOf<TValues>): ArrayField {
     ensureNotDisposed();
 
     const key = name as string;
@@ -481,7 +517,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     ensureNotDisposed();
 
     store.clear();
-    applyErrors({});
+    fieldErrors.clear();
     touched.clear();
     dirty.clear();
 
@@ -492,14 +528,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     scheduleNotify();
   }
 
-  function replace(newValues: DeepPartial<TValues>): void {
+  function replace(newValues: TValues): void {
     ensureNotDisposed();
 
     const flat = flattenValues(newValues as Record<string, unknown>);
 
     store.clear();
     baseline.clear();
-    applyErrors({});
+    fieldErrors.clear();
     touched.clear();
     dirty.clear();
 
@@ -521,6 +557,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     disposed = true;
     disposeController.abort();
     activeValidationCtrl?.abort();
+    for (const ctrl of fieldValidationCtrls.values()) ctrl.abort();
+    fieldValidationCtrls.clear();
     listeners.clear();
     fieldListeners.clear();
   }
@@ -555,11 +593,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     },
     mergeErrors,
     replace,
+    replaceErrors,
     reset,
     resetField,
     set,
     setError,
-    setErrors,
     get state() {
       return buildState();
     },
@@ -570,13 +608,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     subscribeField,
     subscribeForm,
     touch,
-    touchAll,
     untouch,
-    untouchAll,
-    validateAll,
+    validate,
     validateField,
-    validateFields,
-    validateTouched,
     values,
   };
 }

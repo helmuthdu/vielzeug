@@ -13,7 +13,7 @@ Implement infinite scroll (load more) in a production-friendly way with `@vielze
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
 
-Detect when the user scrolls near the end and load the next page. Update `count` to append new items seamlessly.
+Detect when the user scrolls near the end and load the next page. Update `count` through `update()` to append new items seamlessly.
 
 ```ts
 import { createVirtualizer } from '@vielzeug/virtualit';
@@ -28,7 +28,7 @@ async function loadMore() {
   await new Promise((r) => setTimeout(r, 500)); // simulate API call
   const start = items.length;
   items = [...items, ...Array.from({ length: PAGE_SIZE }, (_, i) => `Item ${start + i}`)];
-  virt.count = items.length;
+  virt.update({ count: items.length });
   loading = false;
 }
 

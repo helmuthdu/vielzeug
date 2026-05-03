@@ -13,7 +13,7 @@ export type Schema<S extends Record<string, Record<string, unknown>>> = {
   [K in keyof S]: SchemaEntry<S[K]>;
 };
 
-export type AnySchema = Schema<Record<string, Record<string, unknown>>>;
+export type AnySchema = Record<string, { key: string }>;
 
 export type MigrationContext = {
   db: IDBDatabase;
@@ -25,12 +25,15 @@ export type MigrationContext = {
 export type MigrationFn = (ctx: MigrationContext) => void;
 
 /** Extract the record type for a given table from a schema. */
-export type RecordOf<S extends Schema<any>, K extends keyof S> =
-  S[K] extends SchemaEntry<infer R> ? R & Record<string, unknown> : never;
+export type RecordOf<S extends Schema<any>, K extends keyof S> = S[K] extends SchemaEntry<infer R> ? R : never;
 
 /** Extract the key type for a given table from a schema. */
 export type KeyOf<S extends Schema<any>, K extends keyof S> =
   S[K] extends SchemaEntry<infer R> ? (S[K]['key'] extends keyof R ? R[S[K]['key']] : never) : never;
+
+type KeyFieldOf<T extends Record<string, unknown>> = {
+  [K in keyof T & string]-?: T[K] extends string | number ? K : never;
+}[keyof T & string];
 
 /**
  * Creates a typed `SchemaEntry` for use in a schema definition.
@@ -42,8 +45,8 @@ export type KeyOf<S extends Schema<any>, K extends keyof S> =
  * };
  * ```
  */
-export function table<T extends Record<string, unknown>>(key: keyof T & string): SchemaEntry<T> {
-  return { key };
+export function table<T extends Record<string, unknown>>(key: KeyFieldOf<T>): SchemaEntry<T> {
+  return { key: key as keyof T & string };
 }
 
 /* -------------------- Transaction context for IndexedDB -------------------- */
@@ -58,12 +61,12 @@ export type TransactionContext<S extends Schema<any>, K extends keyof S> = {
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<void>;
   deleteAll<T extends K>(table: T): Promise<void>;
-  from<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: number): Promise<void>;
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: number): Promise<void>;
+  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
 };
 
 /* -------------------- Adapter Interface -------------------- */
@@ -73,15 +76,15 @@ export interface Adapter<S extends Schema<any>> {
   count<K extends keyof S>(table: K): Promise<number>;
   delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<void>;
   deleteAll<K extends keyof S>(table: K): Promise<void>;
-  from<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
   get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
   getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
   has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
   put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void>;
   putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: number): Promise<void>;
+  query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
 }
 
 export interface IndexedDBHandle<S extends Schema<any>> extends Adapter<S> {
-  transaction<K extends keyof S>(tables: K[], fn: (tx: TransactionContext<S, K>) => Promise<void>): Promise<void>;
+  transaction<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>): Promise<R>;
   close(): void;
 }

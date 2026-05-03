@@ -33,7 +33,7 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
   ): { matched: ObjectSchema<any>; obj: Record<string, unknown> } | { issues: Issue[] } {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return {
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().variant_type(), path: [] }],
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().variant.type(), path: [] }],
       };
     }
 
@@ -48,7 +48,7 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
         issues: [
           {
             code: ErrorCode.invalid_variant,
-            message: _messages().variant_invalid_discriminator({
+            message: _messages().variant.invalidDiscriminator({
               discriminator: this._discriminator,
               expected,
             }),

@@ -8,7 +8,9 @@ import {
   signal,
   type ReadonlySignal,
   watch,
+  onMounted,
 } from '@vielzeug/craftit';
+import { resizeObserver } from '@vielzeug/craftit/observers';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
@@ -17,10 +19,55 @@ import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
 
 type SidebarVariant = 'floating' | 'inset';
 type SidebarCollapseSource = 'api' | 'responsive' | 'toggle';
+type SidebarMobileSource = 'api' | 'responsive' | 'toggle';
+type SidebarMode = 'bottom-nav' | 'collapsed' | 'default';
+
+type BottomNavItem = {
+  active: boolean;
+  disabled: boolean;
+  href?: string;
+  iconName?: string;
+  label: string;
+  source: HTMLElement;
+};
+
+const parseMaxWidthPx = (query: string | undefined): number | undefined => {
+  const value = String(query ?? '').trim();
+
+  if (!value) return undefined;
+
+  const match = /max-width\s*:\s*([0-9]+(?:\.[0-9]+)?)px/i.exec(value);
+
+  if (!match) return undefined;
+
+  const parsed = Number.parseFloat(match[1]);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const resolveContainerElement = (el: HTMLElement): HTMLElement | null => {
+  let container = el.parentElement;
+
+  while (container?.tagName.toLowerCase() === 'bit-grid-item') {
+    container = container.parentElement;
+  }
+
+  return container;
+};
+
+const readContainerWidth = (el: HTMLElement): number => {
+  const parentWidth = resolveContainerElement(el)?.clientWidth ?? 0;
+
+  if (parentWidth > 0) return parentWidth;
+
+  return el.offsetWidth;
+};
 
 /** Context provided by `bit-sidebar` to its `bit-sidebar-group` and `bit-sidebar-item` children. */
 export type SidebarContext = {
   collapsed: ReadonlySignal<boolean>;
+  mobileOpen: ReadonlySignal<boolean>;
+  mode: ReadonlySignal<SidebarMode>;
   variant: ReadonlySignal<SidebarVariant | undefined>;
 };
 
@@ -34,16 +81,23 @@ import sidebarStyles from './sidebar.css?inline';
 /** bit-sidebar element interface */
 export type SidebarElement = HTMLElement &
   BitSidebarProps & {
+    /** Close the drawer in bottom-nav mode. */
+    closeMobile(): void;
+    /** Open the drawer in bottom-nav mode. */
+    openMobile(): void;
     /** Set collapsed state imperatively. */
     setCollapsed(next: boolean): void;
     /** Toggle between collapsed and expanded. */
     toggle(): void;
+    /** Toggle the drawer in bottom-nav mode. */
+    toggleMobile(): void;
   };
 
 /** Sidebar component properties */
 
 export type BitSidebarEvents = {
   'collapsed-change': { collapsed: boolean; source: SidebarCollapseSource };
+  'mobile-open-change': { open: boolean; source: SidebarMobileSource };
 };
 
 export type BitSidebarGroupEvents = {
@@ -51,10 +105,14 @@ export type BitSidebarGroupEvents = {
 };
 
 export type BitSidebarProps = {
+  /** CSS media query that switches the sidebar to bottom navigation mode */
+  'bottom-nav-at'?: string;
   /** Controlled collapsed state */
   collapsed?: boolean;
   /** Whether the sidebar supports collapsing */
   collapsible?: boolean;
+  /** Evaluate responsive and bottom-nav breakpoints against container width only. */
+  'container-breakpoints'?: boolean;
   /** Initial collapsed state in uncontrolled mode */
   'default-collapsed'?: boolean;
   /**
@@ -111,11 +169,13 @@ export type BitSidebarProps = {
  */
 export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sidebar', {
   props: {
+    'bottom-nav-at': undefined,
     collapsed: {
       default: undefined as boolean | undefined,
       parse: (value: string | null) => (value == null ? undefined : value === '' || value === 'true'),
     },
     collapsible: false,
+    'container-breakpoints': false,
     'default-collapsed': false,
     label: 'Sidebar navigation',
     responsive: undefined,
@@ -130,11 +190,77 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
     const collapsedState = signal(
       isControlled.value ? host.el.hasAttribute('collapsed') : props['default-collapsed'].value,
     );
+    const isBottomNav = signal(false);
+    const isMobileOpen = signal(false);
+    const bottomNavItems = signal<BottomNavItem[]>([]);
+    const responsiveMediaMatches = signal(false);
+    const responsiveSizeMatches = signal(false);
+    const responsiveMaxWidthPx = signal<number | undefined>(parseMaxWidthPx(props.responsive.value));
+    const hasResponsiveQuery = signal(Boolean(String(props.responsive.value ?? '').trim()));
+    const bottomNavMediaMatches = signal(false);
+    const bottomNavSizeMatches = signal(false);
+    const bottomNavMaxWidthPx = signal<number | undefined>(parseMaxWidthPx(props['bottom-nav-at'].value));
+    const isPreviewMode = signal(false);
 
     const isCollapsed = () => collapsedState.value;
+    const mode = computed<SidebarMode>(() => {
+      if (isBottomNav.value) return 'bottom-nav';
+
+      return collapsedState.value ? 'collapsed' : 'default';
+    });
+
+    const applyResponsiveState = () => {
+      const useContainerBreakpoints = props['container-breakpoints'].value;
+      const responsiveMatched = useContainerBreakpoints
+        ? responsiveSizeMatches.value
+        : responsiveMediaMatches.value || responsiveSizeMatches.value;
+      const bottomMatched = useContainerBreakpoints
+        ? bottomNavSizeMatches.value
+        : bottomNavMediaMatches.value || bottomNavSizeMatches.value;
+
+      isBottomNav.value = bottomMatched;
+
+      if (!bottomMatched) {
+        setMobileOpen(false, 'responsive');
+      }
+
+      if (hasResponsiveQuery.value) {
+        setCollapsed(responsiveMatched, 'responsive');
+      }
+    };
+
+    const readBottomNavItems = () => {
+      const next = slots
+        .elements()
+        .value.filter(
+          (el): el is HTMLElement => el instanceof HTMLElement && el.tagName.toLowerCase() === 'bit-sidebar-item',
+        )
+        .map((el, index) => {
+          const iconSlotEl =
+            (el.querySelector(':scope > [slot="icon"]') as HTMLElement | null) ??
+            (el.querySelector('[slot="icon"]') as HTMLElement | null);
+          const directIconName =
+            iconSlotEl?.tagName.toLowerCase() === 'bit-icon' ? iconSlotEl.getAttribute('name') : null;
+          const nestedIconName = iconSlotEl?.querySelector('bit-icon')?.getAttribute('name') ?? null;
+          const rawLabel = (el.textContent ?? '').trim();
+
+          return {
+            active: el.hasAttribute('active'),
+            disabled: el.hasAttribute('disabled'),
+            href: el.getAttribute('href') ?? undefined,
+            iconName: directIconName ?? nestedIconName ?? undefined,
+            label: rawLabel || `Item ${index + 1}`,
+            source: el,
+          } satisfies BottomNavItem;
+        });
+
+      bottomNavItems.value = next;
+    };
 
     provide(SIDEBAR_CTX, {
-      collapsed: computed(() => collapsedState.value) as ReadonlySignal<boolean>,
+      collapsed: computed(() => !isBottomNav.value && collapsedState.value) as ReadonlySignal<boolean>,
+      mobileOpen: computed(() => isBottomNav.value && isMobileOpen.value) as ReadonlySignal<boolean>,
+      mode: mode as ReadonlySignal<SidebarMode>,
       variant: props.variant,
     });
 
@@ -147,98 +273,346 @@ export const SIDEBAR_TAG = define<BitSidebarProps, BitSidebarEvents>('bit-sideba
 
       emit('collapsed-change', { collapsed: next, source });
     };
+
+    const setMobileOpen = (next: boolean, source: SidebarMobileSource) => {
+      const open = Boolean(next);
+
+      if (!isBottomNav.value) {
+        if (isMobileOpen.value) {
+          isMobileOpen.value = false;
+        }
+
+        return;
+      }
+
+      if (isMobileOpen.value === open) return;
+
+      isMobileOpen.value = open;
+      emit('mobile-open-change', { open, source });
+    };
+
     const doToggle = () => {
       setCollapsed(!isCollapsed(), 'toggle');
     };
 
     host.bind({
       attr: {
-        'data-collapsed': () => (isCollapsed() ? true : undefined),
+        'data-bottom-nav': () => (isBottomNav.value ? true : undefined),
+        'data-collapsed': () => (isCollapsed() && !isBottomNav.value ? true : undefined),
+        'data-mobile-open': () => (isBottomNav.value && isMobileOpen.value ? true : undefined),
+        'data-preview-mode': () => (isPreviewMode.value ? true : undefined),
       },
     });
 
-    return {
-      mount() {
-        const el = host.el as SidebarElement;
+    onMounted(() => {
+      const el = host.el as SidebarElement;
 
-        el.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
-        el.toggle = doToggle;
+      el.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
+      el.toggle = doToggle;
+      el.openMobile = () => setMobileOpen(true, 'api');
+      el.closeMobile = () => setMobileOpen(false, 'api');
+      el.toggleMobile = () => setMobileOpen(!isMobileOpen.value, 'toggle');
 
-        let mediaCleanup: (() => void) | undefined;
-        const observer = new MutationObserver(() => {
-          if (!host.el.hasAttribute('collapsed') && !isControlled.value) return;
+      // Suppress transitions during initial layout so the sidebar doesn't
+      // animate from a collapsed/0 state before the first ResizeObserver fires.
+      host.el.setAttribute('data-no-transition', '');
 
-          isControlled.value = true;
-          collapsedState.value = host.el.hasAttribute('collapsed');
-        });
+      let transitionUnlocked = false;
+      const unlockTransition = () => {
+        if (transitionUnlocked) return;
 
-        observer.observe(host.el, {
-          attributeFilter: ['collapsed'],
-          attributes: true,
-        });
+        transitionUnlocked = true;
+        host.el.removeAttribute('data-no-transition');
+      };
 
-        watch(
-          props.responsive,
-          (query) => {
-            mediaCleanup?.();
-            mediaCleanup = undefined;
+      // Fallback: unlock after two frames in case ResizeObserver doesn't fire.
+      requestAnimationFrame(() => requestAnimationFrame(unlockTransition));
 
-            const mediaQuery = String(query ?? '').trim();
+      let mediaCleanup: (() => void) | undefined;
+      let bottomNavCleanup: (() => void) | undefined;
+      const itemObservers = new Map<HTMLElement, MutationObserver>();
+      const observer = new MutationObserver(() => {
+        if (!host.el.hasAttribute('collapsed') && !isControlled.value) return;
 
-            if (!mediaQuery) return;
+        isControlled.value = true;
+        collapsedState.value = host.el.hasAttribute('collapsed');
+      });
 
-            const mql = window.matchMedia(mediaQuery);
-            const onChange = (event: MediaQueryListEvent) => {
-              setCollapsed(event.matches, 'responsive');
-            };
+      observer.observe(host.el, {
+        attributeFilter: ['collapsed'],
+        attributes: true,
+      });
 
-            setCollapsed(mql.matches, 'responsive');
-            mql.addEventListener('change', onChange);
-
-            mediaCleanup = () => {
-              mql.removeEventListener('change', onChange);
-            };
-          },
-          { immediate: true },
-        );
-
-        return () => {
-          observer.disconnect();
+      watch(
+        props.responsive,
+        (query) => {
           mediaCleanup?.();
-        };
-      },
+          mediaCleanup = undefined;
 
-      render: () => html`
-        <nav aria-label="${props.label}" part="nav">
-          <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader() && !props.collapsible.value}>
-            <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
-              <slot name="logo"></slot>
+          const mediaQuery = String(query ?? '').trim();
+
+          hasResponsiveQuery.value = Boolean(mediaQuery);
+          responsiveMaxWidthPx.value = parseMaxWidthPx(mediaQuery);
+          responsiveMediaMatches.value = false;
+
+          const width = readContainerWidth(host.el);
+
+          responsiveSizeMatches.value =
+            width > 0 && responsiveMaxWidthPx.value != null ? width <= responsiveMaxWidthPx.value : false;
+          applyResponsiveState();
+
+          // For parseable max-width queries, keep behavior container-driven.
+          // This avoids preview viewport controls being overridden by window width.
+          if (props['container-breakpoints'].value && responsiveMaxWidthPx.value != null) {
+            return;
+          }
+
+          if (!mediaQuery) {
+            return;
+          }
+
+          const mql = window.matchMedia(mediaQuery);
+          const onChange = (event: MediaQueryListEvent) => {
+            responsiveMediaMatches.value = event.matches;
+            applyResponsiveState();
+          };
+
+          responsiveMediaMatches.value = mql.matches;
+          applyResponsiveState();
+          mql.addEventListener('change', onChange);
+
+          mediaCleanup = () => {
+            mql.removeEventListener('change', onChange);
+          };
+        },
+        { immediate: true },
+      );
+
+      watch(
+        props['bottom-nav-at'],
+        (query) => {
+          bottomNavCleanup?.();
+          bottomNavCleanup = undefined;
+
+          const mediaQuery = String(query ?? '').trim();
+
+          bottomNavMaxWidthPx.value = parseMaxWidthPx(mediaQuery);
+          bottomNavMediaMatches.value = false;
+
+          const width = readContainerWidth(host.el);
+
+          bottomNavSizeMatches.value =
+            width > 0 && bottomNavMaxWidthPx.value != null ? width <= bottomNavMaxWidthPx.value : false;
+          applyResponsiveState();
+
+          // For parseable max-width queries, keep behavior container-driven.
+          // This avoids preview viewport controls being overridden by window width.
+          if (props['container-breakpoints'].value && bottomNavMaxWidthPx.value != null) {
+            return;
+          }
+
+          if (!mediaQuery) {
+            return;
+          }
+
+          const mql = window.matchMedia(mediaQuery);
+          const onChange = (event: MediaQueryListEvent) => {
+            bottomNavMediaMatches.value = event.matches;
+            applyResponsiveState();
+          };
+
+          bottomNavMediaMatches.value = mql.matches;
+          applyResponsiveState();
+
+          mql.addEventListener('change', onChange);
+          bottomNavCleanup = () => {
+            mql.removeEventListener('change', onChange);
+          };
+        },
+        { immediate: true },
+      );
+
+      const stopResizeEffect =
+        typeof ResizeObserver === 'function'
+          ? (() => {
+              const hostSize = resizeObserver(host.el);
+              const wrapperEl = host.el.parentElement;
+              const containerEl = resolveContainerElement(host.el);
+              const wrapperSize = wrapperEl ? resizeObserver(wrapperEl) : undefined;
+              const parentSize = containerEl && containerEl !== wrapperEl ? resizeObserver(containerEl) : undefined;
+              let rafId: number | undefined;
+
+              const onResize = () => {
+                cancelAnimationFrame(rafId!);
+                rafId = requestAnimationFrame(() => {
+                  const resolvedContainer = resolveContainerElement(host.el);
+                  const width = readContainerWidth(host.el);
+                  const responsiveWasMatched = responsiveSizeMatches.value;
+                  const bottomNavWasMatched = bottomNavSizeMatches.value;
+                  const parentWidth = resolvedContainer?.clientWidth ?? 0;
+
+                  isPreviewMode.value = parentWidth > 0 && parentWidth < window.innerWidth;
+
+                  responsiveSizeMatches.value =
+                    width > 0 && responsiveMaxWidthPx.value != null ? width <= responsiveMaxWidthPx.value : false;
+                  bottomNavSizeMatches.value =
+                    width > 0 && bottomNavMaxWidthPx.value != null ? width <= bottomNavMaxWidthPx.value : false;
+
+                  if (
+                    responsiveWasMatched !== responsiveSizeMatches.value ||
+                    bottomNavWasMatched !== bottomNavSizeMatches.value
+                  ) {
+                    applyResponsiveState();
+                  }
+
+                  unlockTransition();
+                });
+              };
+
+              return watch(
+                computed(() => [
+                  hostSize.value.width,
+                  hostSize.value.height,
+                  wrapperSize?.value.width,
+                  wrapperSize?.value.height,
+                  parentSize?.value.width,
+                  parentSize?.value.height,
+                ]),
+                onResize,
+              );
+            })()
+          : undefined;
+
+      const bindItemObservers = (items: HTMLElement[]) => {
+        const set = new Set(items);
+
+        for (const [item, cleanup] of itemObservers) {
+          if (set.has(item)) continue;
+
+          cleanup.disconnect();
+          itemObservers.delete(item);
+        }
+
+        for (const item of items) {
+          if (itemObservers.has(item)) continue;
+
+          const itemObserver = new MutationObserver(() => {
+            // Only update if in bottom-nav mode to minimize re-renders
+            if (isBottomNav.value) {
+              readBottomNavItems();
+            }
+          });
+
+          // Only watch attributes that affect bottom-nav rendering; skip childList/subtree/characterData
+          itemObserver.observe(item, {
+            attributeFilter: ['active', 'disabled', 'href'],
+            attributes: true,
+          });
+          itemObservers.set(item, itemObserver);
+        }
+      };
+
+      watch(
+        slots.elements(),
+        (elements) => {
+          const directItems = elements.filter(
+            (el): el is HTMLElement => el instanceof HTMLElement && el.tagName.toLowerCase() === 'bit-sidebar-item',
+          );
+
+          bindItemObservers(directItems);
+          readBottomNavItems();
+        },
+        { immediate: true },
+      );
+
+      return () => {
+        observer.disconnect();
+        mediaCleanup?.();
+        bottomNavCleanup?.();
+        stopResizeEffect?.();
+
+        for (const itemObserver of itemObservers.values()) {
+          itemObserver.disconnect();
+        }
+
+        itemObservers.clear();
+      };
+    });
+
+    return () => html`
+      <button
+        class="mobile-backdrop"
+        part="mobile-backdrop"
+        type="button"
+        aria-label="Close sidebar"
+        ?hidden=${() => !isBottomNav.value || !isMobileOpen.value}
+        @click=${() => setMobileOpen(false, 'toggle')}></button>
+      <nav aria-label="${props.label}" part="nav">
+        <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader() && !props.collapsible.value}>
+          <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
+            <slot name="logo"></slot>
+          </span>
+          <span class="sidebar-header-content">
+            <slot name="header"></slot>
+          </span>
+          <button
+            class="toggle-btn"
+            part="toggle-btn"
+            type="button"
+            ?hidden=${() => !props.collapsible.value}
+            aria-label="${() => (isCollapsed() ? 'Expand sidebar' : 'Collapse sidebar')}"
+            aria-expanded="${() => !isCollapsed()}"
+            @click="${doToggle}">
+            <span class="toggle-icon" aria-hidden="true">
+              <bit-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
             </span>
-            <span class="sidebar-header-content">
-              <slot name="header"></slot>
-            </span>
-            <button
-              class="toggle-btn"
-              part="toggle-btn"
-              type="button"
-              ?hidden=${() => !props.collapsible.value}
-              aria-label="${() => (isCollapsed() ? 'Expand sidebar' : 'Collapse sidebar')}"
-              aria-expanded="${() => !isCollapsed()}"
-              @click="${doToggle}">
-              <span class="toggle-icon" aria-hidden="true">
-                <bit-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></bit-icon>
-              </span>
-            </button>
-          </div>
-          <div class="sidebar-content" part="content">
-            <slot></slot>
-          </div>
-          <div class="sidebar-footer" part="footer" ?hidden=${() => !hasFooter()}>
-            <slot name="footer"></slot>
-          </div>
-        </nav>
-      `,
-    };
+          </button>
+        </div>
+        <div class="sidebar-content" part="content">
+          <slot></slot>
+        </div>
+        <div class="sidebar-footer" part="footer" ?hidden=${() => !hasFooter()}>
+          <slot name="footer"></slot>
+        </div>
+      </nav>
+
+      <div class="bottom-bar" part="bottom-bar" ?hidden=${() => !isBottomNav.value}>
+        ${() =>
+          bottomNavItems.value.map((item) => {
+            const className = `bottom-tab${item.active ? ' bottom-tab-active' : ''}`;
+
+            if (item.href && !item.disabled) {
+              return html`
+                <a
+                  class="${className}"
+                  href="${item.href}"
+                  aria-current="${item.active ? 'page' : null}"
+                  data-active="${item.active ? 'true' : null}">
+                  <span class="bottom-tab-icon" aria-hidden="true" ?hidden=${() => !item.iconName}>
+                    <bit-icon :name="${item.iconName}" size="18" stroke-width="2"></bit-icon>
+                  </span>
+                  <span class="bottom-tab-label">${item.label}</span>
+                </a>
+              `;
+            }
+
+            return html`
+              <button
+                class="${className}"
+                type="button"
+                ?disabled=${item.disabled}
+                aria-current="${item.active ? 'page' : null}"
+                data-active="${item.active ? 'true' : null}"
+                @click=${() => item.source.click()}>
+                <span class="bottom-tab-icon" aria-hidden="true" ?hidden=${() => !item.iconName}>
+                  <bit-icon :name="${item.iconName}" size="18" stroke-width="2"></bit-icon>
+                </span>
+                <span class="bottom-tab-label">${item.label}</span>
+              </button>
+            `;
+          })}
+      </div>
+    `;
   },
   styles: [coarsePointerMixin, reducedMotionMixin, sidebarStyles],
 });
@@ -298,6 +672,8 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
 
     host.bind({
       attr: {
+        'sidebar-bottom-nav': () =>
+          sidebarCtx?.mode.value === 'bottom-nav' && !sidebarCtx?.mobileOpen.value ? true : undefined,
         'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
       },
     });
@@ -324,32 +700,30 @@ export const SIDEBAR_GROUP_TAG = define<BitSidebarGroupProps, BitSidebarGroupEve
       },
     });
 
-    return {
-      render: () => html`
-        <details class="group" part="group" ?open=${isOpen}>
-          <summary
-            class="group-header"
-            part="group-header"
-            aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}"
-            @click=${(e: MouseEvent) => {
-              if (!props.collapsible.value) {
-                e.preventDefault();
-              }
-            }}>
-            <span class="group-icon" part="group-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
-              <slot name="icon"></slot>
-            </span>
-            <span class="group-label" part="group-label">${props.label}</span>
-            <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">
-              <bit-icon name="chevron-right" size="12" stroke-width="2" aria-hidden="true"></bit-icon>
-            </span>
-          </summary>
-          <div class="group-items" part="group-items" role="list">
-            <slot></slot>
-          </div>
-        </details>
-      `,
-    };
+    return () => html`
+      <details class="group" part="group" ?open=${isOpen}>
+        <summary
+          class="group-header"
+          part="group-header"
+          aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}"
+          @click=${(e: MouseEvent) => {
+            if (!props.collapsible.value) {
+              e.preventDefault();
+            }
+          }}>
+          <span class="group-icon" part="group-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
+            <slot name="icon"></slot>
+          </span>
+          <span class="group-label" part="group-label">${props.label}</span>
+          <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">
+            <bit-icon name="chevron-right" size="12" stroke-width="2" aria-hidden="true"></bit-icon>
+          </span>
+        </summary>
+        <div class="group-items" part="group-items" role="list">
+          <slot></slot>
+        </div>
+      </details>
+    `;
   },
   styles: [reducedMotionMixin, groupStyles],
 });
@@ -437,6 +811,8 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
 
     host.bind({
       attr: {
+        'sidebar-bottom-nav': () =>
+          sidebarCtx?.mode.value === 'bottom-nav' && !sidebarCtx?.mobileOpen.value ? true : undefined,
         'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
       },
     });
@@ -453,39 +829,47 @@ export const SIDEBAR_ITEM_TAG = define<BitSidebarItemProps>('bit-sidebar-item', 
       </span>
     `;
 
-    return {
-      render: () => html`
-        ${() => {
-          if (isLink()) {
-            return html`
-              <a
-                class="item"
-                part="item"
-                href="${props.href}"
-                :rel="${props.rel}"
-                :target="${props.target}"
-                aria-current="${() => (props.active.value ? 'page' : null)}">
-                ${renderItemContent()}
-              </a>
-            `;
-          } else if (props.disabled.value) {
-            return html`
-              <div class="item" part="item" tabindex="-1" aria-disabled="true">${renderItemContent()}</div>
-            `;
-          } else {
-            return html`
-              <button
-                class="item"
-                part="item"
-                type="button"
-                aria-current="${() => (props.active.value ? 'page' : null)}">
-                ${renderItemContent()}
-              </button>
-            `;
-          }
-        }}
-      `,
-    };
+    return () => html`
+      ${() => {
+        if (isLink()) {
+          return html`
+            <a
+              class="item"
+              part="item"
+              href="${props.href}"
+              :rel="${props.rel}"
+              :target="${props.target}"
+              aria-current="${() => (props.active.value ? 'page' : null)}">
+              ${renderItemContent()}
+            </a>
+          `;
+        }
+
+        if (props.disabled.value) {
+          return html`
+            <div
+              class="item"
+              part="item"
+              aria-disabled="true"
+              tabindex="-1"
+              aria-current="${() => (props.active.value ? 'page' : null)}">
+              ${renderItemContent()}
+            </div>
+          `;
+        }
+
+        return html`
+          <button
+            class="item"
+            part="item"
+            type="button"
+            ?disabled="${props.disabled}"
+            aria-current="${() => (props.active.value ? 'page' : null)}">
+            ${renderItemContent()}
+          </button>
+        `;
+      }}
+    `;
   },
   styles: [coarsePointerMixin, itemStyles],
 });

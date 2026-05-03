@@ -1,4 +1,4 @@
-import { computed, define, html, inject, prop, signal, watch } from '@vielzeug/craftit';
+import { computed, define, html, inject, prop, signal, watch, onMounted } from '@vielzeug/craftit';
 import { createListControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
@@ -241,40 +241,38 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
       return props.separator.value != null ? Math.floor(len / 2) : -1;
     });
 
-    return {
-      mount() {
-        // Populate cells from value prop on mount
-        syncInputsFromValue(normalizedPropValue());
-      },
+    onMounted(() => {
+      // Populate cells from value prop on mount
+      syncInputsFromValue(normalizedPropValue());
+    });
 
-      render: () => html`
-        <div class="otp-group" part="group" role="group" :aria-label="${props.label}">
-          ${() =>
-            cells.value.map(
-              (i) => html`
-                ${() =>
-                  separatorIdx.value > 0 && i === separatorIdx.value
-                    ? html`<span class="separator" aria-hidden="true">${() => props.separator.value || '-'}</span>`
-                    : ''}
-                <input
-                  class="cell"
-                  part="cell"
-                  :type="${() => (props.masked.value ? 'password' : 'text')}"
-                  :inputmode="${() => (props.type.value === 'numeric' ? 'numeric' : 'text')}"
-                  maxlength="1"
-                  :autocomplete="${() => (i === 0 ? 'one-time-code' : 'off')}"
-                  :aria-label="${() => `Digit ${i + 1} of ${lengthValue.value}`}"
-                  :disabled="${() => (isDisabled.value ? true : null)}"
-                  :name="${() => (props.name.value ? `${props.name.value}[${i}]` : null)}"
-                  @input="${(e: Event) => handleInput(e, i)}"
-                  @keydown="${(e: KeyboardEvent) => handleKeydown(e, i)}"
-                  @paste="${(e: ClipboardEvent) => (i === 0 ? handlePaste(e) : e.preventDefault())}"
-                  @focus="${(e: FocusEvent) => (e.target as HTMLInputElement).select()}" />
-              `,
-            )}
-        </div>
-      `,
-    };
+    return () => html`
+      <div class="otp-group" part="group" role="group" :aria-label="${props.label}">
+        ${() =>
+          cells.value.map(
+            (i) => html`
+              ${() =>
+                separatorIdx.value > 0 && i === separatorIdx.value
+                  ? html`<span class="separator" aria-hidden="true">${() => props.separator.value || '-'}</span>`
+                  : ''}
+              <input
+                class="cell"
+                part="cell"
+                :type="${() => (props.masked.value ? 'password' : 'text')}"
+                :inputmode="${() => (props.type.value === 'numeric' ? 'numeric' : 'text')}"
+                maxlength="1"
+                :autocomplete="${() => (i === 0 ? 'one-time-code' : 'off')}"
+                :aria-label="${() => `Digit ${i + 1} of ${lengthValue.value}`}"
+                :disabled="${() => (isDisabled.value ? true : null)}"
+                :name="${() => (props.name.value ? `${props.name.value}[${i}]` : null)}"
+                @input="${(e: Event) => handleInput(e, i)}"
+                @keydown="${(e: KeyboardEvent) => handleKeydown(e, i)}"
+                @paste="${(e: ClipboardEvent) => (i === 0 ? handlePaste(e) : e.preventDefault())}"
+                @focus="${(e: FocusEvent) => (e.target as HTMLInputElement).select()}" />
+            `,
+          )}
+      </div>
+    `;
   },
   styles: [colorThemeMixin, sizeVariantMixin({}), forcedColorsFocusMixin('.cell'), styles],
 });

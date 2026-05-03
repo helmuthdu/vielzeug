@@ -28,6 +28,8 @@ export class IntersectSchema<T extends readonly Schema<any>[]> extends Schema<
 
     if (index === 0) {
       state.output = result.data;
+    } else if (result.data !== null && typeof result.data === 'object') {
+      Object.assign(state.output as object, result.data);
     }
   }
 
@@ -44,13 +46,10 @@ export class IntersectSchema<T extends readonly Schema<any>[]> extends Schema<
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+    const results = await Promise.all(this.schemas.map((s) => s.safeParseAsync(value)));
     const state: { issues: Issue[]; output: unknown } = { issues: [], output: value };
 
-    for (let i = 0; i < this.schemas.length; i++) {
-      const result = await this.schemas[i].safeParseAsync(value);
-
-      this._applyBranchResult(i, result, state);
-    }
+    results.forEach((result, i) => this._applyBranchResult(i, result, state));
 
     return { data: state.output, issues: state.issues };
   }

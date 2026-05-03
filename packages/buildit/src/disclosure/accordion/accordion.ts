@@ -134,9 +134,7 @@ export const ACCORDION_TAG = define<BitAccordionProps, BitAccordionEvents>('bit-
       },
     });
 
-    return {
-      render: () => html`<slot></slot>`,
-    };
+    return () => html`<slot></slot>`;
   },
 
   styles: [styles],

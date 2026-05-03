@@ -284,21 +284,19 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
     // ============================================
     // Render
     // ============================================
-    return {
-      render: () => html`
-        ${() => {
-          const mode = props.mode.value;
+    return () => html`
+      ${() => {
+        const mode = props.mode.value;
 
-          if (mode === 'selectable') return renderSelectableChip();
+        if (mode === 'selectable') return renderSelectableChip();
 
-          if (mode === 'action') return renderActionChip();
+        if (mode === 'action') return renderActionChip();
 
-          if (mode === 'removable') return renderRemovableChip();
+        if (mode === 'removable') return renderRemovableChip();
 
-          return renderStaticChip();
-        }}
-      `,
-    };
+        return renderStaticChip();
+      }}
+    `;
   },
   shadow: {},
   styles: [

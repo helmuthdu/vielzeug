@@ -1,4 +1,5 @@
-import type { QueryParams, RouteMatcher, RouteParams, RouteRecord } from './types';
+import type { RouteMatcher, RouteRecord } from './router-internal';
+import type { QueryParams, RouteParams } from './types';
 
 /** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {
@@ -8,15 +9,11 @@ export function normalizePath(path: string): string {
 }
 
 export function joinPaths(base: string, path: string): string {
-  return normalizePath(`${normalizePath(base)}/${normalizePath(path)}`);
+  return normalizePath(`${base}/${path}`);
 }
 
 function escapeRegex(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function decodePart(value: string): string {
-  return decodeURIComponent(value);
 }
 
 export function compilePathMatcher(path: string): RouteMatcher {
@@ -87,7 +84,7 @@ export function matchRecord(pathname: string, record: RouteRecord): RouteParams 
   record.matcher.paramNames.forEach((name, index) => {
     const value = match[index + 1];
 
-    params[name] = decodePart(value ?? '');
+    params[name] = decodeURIComponent(value ?? '');
   });
 
   return params;
@@ -112,16 +109,14 @@ export function matchesPrefix(pathname: string, record: RouteRecord): boolean {
 
 /** Parse `?foo=a&foo=b&bar=c` into `{ foo: ['a', 'b'], bar: 'c' }`. */
 export function parseQuery(queryString: string): QueryParams {
-  const search = new URLSearchParams(queryString.startsWith('?') ? queryString : `?${queryString}`);
+  const search = new URLSearchParams(queryString);
   const out: QueryParams = {};
 
-  search.forEach((value, key) => {
-    const existing = out[key];
+  for (const key of new Set(search.keys())) {
+    const values = search.getAll(key);
 
-    if (existing === undefined) out[key] = value;
-    else if (Array.isArray(existing)) existing.push(value);
-    else out[key] = [existing, value];
-  });
+    out[key] = values.length === 1 ? values[0]! : values;
+  }
 
   return out;
 }

@@ -7,12 +7,12 @@ export class BooleanSchema extends Schema<boolean> {
       (value, path) =>
         typeof value === 'boolean'
           ? null
-          : [{ code: ErrorCode.invalid_type, message: _messages().boolean_type(), path }],
+          : [{ code: ErrorCode.invalid_type, message: _messages().boolean.type(), path }],
     ]);
   }
 
   static coerce(): BooleanSchema {
-    return new BooleanSchema()._addPreprocessor((v: unknown) => {
+    return new BooleanSchema().preprocess((v: unknown) => {
       if (typeof v === 'boolean') return v;
 
       if (v === 'true' || v === '1' || v === 1) return true;

@@ -9,6 +9,7 @@ import {
   ref,
   signal,
   watch,
+  onMounted,
 } from '@vielzeug/craftit';
 import { createListControl, createPressControl } from '@vielzeug/craftit/controls';
 
@@ -298,46 +299,44 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
     // Lifecycle
     // ────────────────────────────────────────────────────────────────
 
-    return {
-      mount() {
-        const syncSelection = () => {
-          ensureSelection();
-          updateIndicator();
-        };
+    onMounted(() => {
+      const syncSelection = () => {
+        ensureSelection();
+        updateIndicator();
+      };
 
-        const tabsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
+      const tabsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
 
+      if (tabsSlot) {
+        tabsSlot.addEventListener('slotchange', syncSelection);
+      }
+
+      syncSelection();
+      requestAnimationFrame(syncSelection);
+
+      return () => {
         if (tabsSlot) {
-          tabsSlot.addEventListener('slotchange', syncSelection);
+          tabsSlot.removeEventListener('slotchange', syncSelection);
         }
+      };
+    });
 
-        syncSelection();
-        requestAnimationFrame(syncSelection);
-
-        return () => {
-          if (tabsSlot) {
-            tabsSlot.removeEventListener('slotchange', syncSelection);
-          }
-        };
-      },
-
-      render: () => html`
-        <div class="tablist-wrapper">
-          <div
-            role="tablist"
-            ref="${tablistRef}"
-            part="tablist"
-            aria-orientation="${props.orientation}"
-            aria-label="${props.label}">
-            <slot name="tabs"></slot>
-          </div>
-          <div class="indicator" ref="${indicatorRef}" part="indicator"></div>
+    return () => html`
+      <div class="tablist-wrapper">
+        <div
+          role="tablist"
+          ref="${tablistRef}"
+          part="tablist"
+          aria-orientation="${props.orientation}"
+          aria-label="${props.label}">
+          <slot name="tabs"></slot>
         </div>
-        <div class="panels" part="panels">
-          <slot></slot>
-        </div>
-      `,
-    };
+        <div class="indicator" ref="${indicatorRef}" part="indicator"></div>
+      </div>
+      <div class="panels" part="panels">
+        <slot></slot>
+      </div>
+    `;
   },
   styles: [colorThemeMixin, styles],
 });

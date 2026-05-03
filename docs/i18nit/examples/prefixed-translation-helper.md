@@ -1,38 +1,44 @@
 ---
 title: 'I18nit Examples — Prefixed Translation Helper'
-description: 'Prefixed translation helper examples for i18nit.'
+description: 'Build local prefix helpers on top of i18nit without adding more runtime surface.'
 ---
 
 ## Prefixed Translation Helper
 
-## Problem
+I18nit intentionally does not ship built-in namespacing helpers. A small local function is enough.
 
-Implement a prefixed translation helper in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
+## Example
 
 ```ts
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  locale: 'en',
+  messages: {
+    en: {
+      auth: {
+        login: 'Log in',
+        logout: 'Log out',
+        welcome: 'Hello, {name}',
+      },
+    },
+  },
+});
+
 const auth = (key: string, vars?: Record<string, unknown>) => i18n.t(`auth.${key}`, vars);
 
 auth('login');
 auth('logout');
+auth('welcome', { name: 'Alice' });
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Keep helpers local to the feature or module that owns the namespace.
+- This keeps the runtime small and avoids another abstraction layer.
 
 ## Related Recipes
 
-- [Async Loading and Reload](./async-loading-and-reload.md)
+- [Shared Instance Setup](./shared-instance-setup.md)
 - [Catalog Replacement](./catalog-replacement.md)
 - [Diagnostics Hook](./diagnostics-hook.md)

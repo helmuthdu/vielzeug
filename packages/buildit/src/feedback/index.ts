@@ -8,6 +8,8 @@ export { CHIP_TAG } from './chip/chip';
 export type { BitChipEvents, BitChipProps } from './chip/chip';
 export { PROGRESS_TAG } from './progress/progress';
 export type { BitProgressProps } from './progress/progress';
+export { PASSWORD_STRENGTH_TAG } from './password-strength/password-strength';
+export type { BitPasswordStrengthProps, PasswordStrengthLevel } from './password-strength/password-strength';
 export { SKELETON_TAG } from './skeleton/skeleton';
 export type { BitSkeletonProps } from './skeleton/skeleton';
 export { toast, TOAST_TAG } from './toast/toast';

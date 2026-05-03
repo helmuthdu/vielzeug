@@ -39,10 +39,10 @@ export type List<T, F, S> = {
   batch(
     mutator: (ctx: {
       goTo(p: number): void; // 1-based
+      search(q: string): void;
       setData?(d: readonly T[]): void; // local-only
       setFilter(f: F): void;
       setLimit(n: number): void;
-      setQuery(q: string): void;
       setSort(s?: S): void;
     }) => void,
   ): void;
@@ -154,6 +154,10 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
         goTo: (p) => {
           nextOffset = clamp(p - 1, view.length, nextLimit);
         },
+        search: (q) => {
+          nextQuery = q;
+          nextOffset = 0;
+        },
         setData: (d) => {
           nextData = [...d];
           nextOffset = 0;
@@ -163,10 +167,6 @@ export function list<T>(initialData: readonly T[], cfg: LocalConfig<T> = {}): Li
         },
         setLimit: (n) => {
           nextLimit = Math.max(1, n);
-        },
-        setQuery: (q) => {
-          nextQuery = q;
-          nextOffset = 0;
         },
         setSort: (s) => {
           nextSort = s;

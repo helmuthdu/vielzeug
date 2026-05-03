@@ -11,6 +11,10 @@
     width: 100%;
   }
 
+  :host([sidebar-bottom-nav]) {
+    display: none;
+  }
+
   .group {
     display: block;
   }
@@ -101,7 +105,7 @@
   .group-items {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--size-1);
+    gap: var(--size-2);
     min-width: 0;
   }
 

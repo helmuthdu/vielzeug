@@ -316,10 +316,10 @@ describe('Navigation', () => {
         base: '/app',
         routes: {
           dashboard: {
-            path: '/dashboard',
             children: {
               settings: { meta: { section: 'settings' }, path: 'settings' },
             },
+            path: '/dashboard',
           },
         },
       });

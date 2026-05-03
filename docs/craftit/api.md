@@ -22,16 +22,6 @@ description: Entry points and public API reference for @vielzeug/craftit, @vielz
 define<Props, Events>(tag: string, definition: ComponentDefinition<Props, Events>): string;
 ```
 
-Registers a custom element and returns the tag name.
-
-`definition` supports:
-
-- `props?: PropsDef<Props>`
-- `setup(props, ctx)`
-- `styles?: (string | CSSStyleSheet | CSSResult)[]`
-- `shadow?: Omit<ShadowRootInit, 'mode'>`
-- `formAssociated?: boolean`
-
 `setup()` receives:
 
 ```ts
@@ -42,7 +32,31 @@ type SetupContextBag<Events> = {
 };
 ```
 
-It must return a `ComponentInstance` with at least `render(): HTMLResult`.
+`setup()` returns a template function:
+
+```ts
+type ComponentTemplate = () => HTMLResult;
+```
+
+```ts
+define('observed-box', {
+  setup() {
+    const boxRef = ref<HTMLDivElement>();
+    const size = signal({ width: 0, height: 0 });
+
+    onMounted(() => {
+      if (!boxRef.value) return;
+      const observer = resizeObserver(boxRef.value);
+
+      effect(() => {
+        size.value = observer.value || { width: 0, height: 0 };
+      });
+    });
+
+    return () => html`<div ref=${boxRef}>${size.value.width}x${size.value.height}</div>`;
+  },
+});
+```
 
 ## Runtime Helpers
 
@@ -50,111 +64,50 @@ It must return a `ComponentInstance` with at least `render(): HTMLResult`.
 
 Component-aware wrapper around stateit's `effect()`. Cleanups registered inside the effect are tied to the current Craftit runtime.
 
-### `handle(target, event, listener, options?)`
+### `onMounted(fn)`
 
 ```ts
-handle<K extends keyof HTMLElementEventMap>(
-  target: EventTarget | null | undefined,
-  event: K,
-  listener: (event: HTMLElementEventMap[K]) => void,
-  options?: AddEventListenerOptions,
-): void;
+onMounted(fn: () => void | CleanupFn): void;
 ```
+
+Registers work that runs after the component template is mounted. Multiple calls are supported and run in registration order.
+
+### `handle(target, event, listener, options?)`
 
 Adds an event listener and automatically removes it on cleanup.
 
 ### `onCleanup(fn)`
 
-Registers cleanup for the current component/runtime scope.
+Registers teardown for the current component/runtime scope.
 
 ### `onElement(ref, callback, options?)`
 
-Runs `callback` when a `ref()` resolves to an element and re-runs if that element changes.
+Runs `callback` when a `ref()` resolves to an element and re-runs when that element changes.
 
 ## Props API
 
-Craftit does not expose `defineProps()`. Define props directly in the `props` object.
-
-### `prop` helpers
+Craftit does not expose `defineProps()`. Define props directly in `props`.
 
 | Helper | Signature | Notes |
 | --- | --- | --- |
 | `prop.string(defaultValue)` | `PropDef<string>` | Reflects by default |
 | `prop.bool(defaultValue?)` | `PropDef<boolean>` | Empty string and `'true'` parse as `true` |
 | `prop.number(defaultValue?)` | `PropDef<number>` | Uses `Number(...)` parsing |
-| `prop.oneOf(allowed, defaultValue)` | `PropDef<T>` | Restricts to the provided string union |
-
-### Prop definitions
-
-```ts
-define('status-pill', {
-  props: {
-    label: prop.string('Ready'),
-    disabled: prop.bool(false),
-    retries: prop.number(0),
-    tone: prop.oneOf(['neutral', 'success', 'danger'] as const, 'neutral'),
-    internalValue: {
-      default: '',
-      reflect: false,
-      parse: (value) => value ?? '',
-    },
-  },
-  setup(props) {
-    return { render: () => html`${props.label}` };
-  },
-});
-```
-
-Prop values arrive in `setup()` as writable signals.
-
-Key exported types:
-
-- `type PropDef<T>`
-- `type PropOptions<T>`
-- `type PropsDef<T>`
-- `type PropsInput<T>`
-- `type InferPropsSignals<T>`
+| `prop.oneOf(allowed, defaultValue)` | `PropDef<T>` | Restricts to provided string union |
 
 ## Template and Directives
 
-### `html`
-
-```ts
-html(strings: TemplateStringsArray, ...values: unknown[]): HTMLResult;
-```
-
-Supported binding styles include:
-
-- text interpolation: `${count}`
-- attribute binding: `:aria-label=${label}`
-- boolean attributes: `?disabled=${disabled}`
-- property binding: `.value=${value}`
-- event binding: `@click=${onClick}`
-- event modifiers: `@keydown.stop.prevent=${onKeydown}`
-- refs: `ref=${inputRef}`
-
-### `css`
-
-Tagged template helper for component styles.
-
-### `each(source, options)`
-
-List-rendering directive. For reactive sources, always provide a stable `key`.
-
-### `classMap(record)`
-
-Builds a class string from booleans, signals, and getters.
-
-### `raw(value)`
-
-Injects already-trusted HTML into the rendered output. Use only with sanitized content.
+- `html(strings, ...values): HTMLResult`
+- `css`
+- `each(source, options)`
+- `classMap(record)`
+- `raw(value)`
 
 ## Host and Slots
 
-### Host bindings
+Host API from setup context:
 
-Setup context `host` exposes:
-
+- `host.el`
 - `host.attr(name, value)`
 - `host.class(record)`
 - `host.style(record)`
@@ -162,40 +115,17 @@ Setup context `host` exposes:
 - `host.on(event, listener)`
 - `host.bind({ attr, class, style, prop, on })`
 
-Binding values may be signals, getter functions, or primitives.
+Other helpers:
 
-### `syncAria(target, config)`
+- `syncAria(target, config)`
+- `slots.has(name?)`
+- `slots.elements(name?)`
 
-Reactively applies ARIA attributes to any element.
+## Utilities
 
-### Slots API
-
-```ts
-type ComponentSlots = {
-  elements: (name?: string) => ReadonlySignal<Element[]>;
-  has: (name?: string) => ReadonlySignal<boolean>;
-};
-```
-
-Use `slots.has(name?)` for presence checks and `slots.elements(name?)` when you need the actual assigned elements.
-
-### Typed emits
-
-`emit()` is typed from the second `define<Props, Events>()` generic.
-
-```ts
-type Events = {
-  close: void;
-  select: { value: string };
-};
-```
-
-Then:
-
-```ts
-emit('close');
-emit('select', { value: 'alpha' });
-```
+- `ref<T>()`
+- `refs<T>()`
+- `createId(prefix?)`
 
 ## Context API
 
@@ -205,111 +135,54 @@ emit('select', { value: 'alpha' });
 - `inject(key, fallback)`
 - `injectStrict(key)`
 
-Key exported type:
-
-- `type InjectionKey<T>`
-
-`injectStrict()` throws when no value can be resolved through the composed/shadow DOM parent chain.
-
 ## Form-Associated API
 
-### `defineField(options)`
-
-```ts
-defineField<T>(options: FormFieldOptions<T>): FormFieldHandle;
-```
-
-Works only inside a component declared with `formAssociated: true`.
-
-`FormFieldOptions<T>`:
-
-- `value: Signal<T> | ReadonlySignal<T>`
-- `disabled?: ReadonlySignal<boolean>`
-- `toFormValue?: (value: T) => string | File | FormData | null`
-
-`FormFieldHandle`:
-
-- `internals`
-- `checkValidity()`
-- `reportValidity()`
-- `setCustomValidity(message)`
-- `setValidity(...)`
+- `defineField(options): FormFieldHandle`
+- `type FormFieldOptions<T>`
+- `type FormFieldHandle`
 
 ## Controls APIs
 
 Import from `@vielzeug/craftit/controls`.
 
-### Field authoring controls
-
-- `createTextField(options)` — string value field wiring with ids, assistive state, validation triggering, and optional element lifecycle binding
-- `createChoiceField(options)` — select-like field wiring for single or multiple selections
-- `createCheckableFieldControl(options)` — checkbox/radio/switch control composition
-
-### Interaction controls
-
-- `createListControl(options)` — enabled-item navigation plus `handleKeydown()`
-- `createPressControl(options)` — click/keyboard press abstraction
-- `createOverlayControl(options)` — open/close/toggle orchestration with reasons
-- `createPopupListControl(options)` — list navigation + overlay + ARIA sync for popup widgets
-- `createSliderControl(options)` — min/max/step snapping and keyboard math
-- `createSpinnerControl(options)` — numeric increment/decrement and keyboard step behavior
-
-Exported types:
-
-- `type CheckableChangePayload`
-- `type OverlayOpenReason`
-- `type OverlayCloseReason`
-- `type OverlayOpenDetail`
-- `type OverlayCloseDetail`
+- `createTextField(options)`
+- `createChoiceField(options)`
+- `createCheckableFieldControl(options)`
+- `createListControl(options)`
+- `createPressControl(options)`
+- `createSwipeControl(options)`
+- `createOverlayControl(options)`
+- `createPopupListControl(options)`
+- `createSliderControl(options)`
+- `createSpinnerControl(options)`
 
 ## Observer APIs
 
 Import from `@vielzeug/craftit/observers`.
 
-- `resizeObserver(element)` — returns a signal with `{ width, height }`
-- `intersectionObserver(element, options?)` — returns a signal with the latest `IntersectionObserverEntry | null`
-- `mediaObserver(query)` — returns a signal of whether the query matches
-
-These helpers must be called in `mount()` or another runtime where the observed DOM target already exists.
+- `resizeObserver(element)`
+- `intersectionObserver(element, options?)`
+- `mediaObserver(query)`
 
 ## Testing APIs
 
 Import from `@vielzeug/craftit/testing`.
 
-### Core helpers
-
-- `mount(...)`
-- `flush()`
-- `cleanup()`
 - `install(afterEachHook)`
+- `cleanup()`
+- `flush()`
+- `mount(...)`
 - `within(element)`
 - `mock(tagName, template?)`
-
-### Event helpers
-
-- `fire.click(...)`, `fire.keyDown(...)`, `fire.input(...)`, `fire.custom(...)`, and related low-level DOM event helpers
-- `user.click(...)`, `user.type(...)`, `user.fill(...)`, `user.press(...)`, `user.select(...)`, and related async higher-level helpers
-
-### Waiting helpers
-
-- `waitFor(fn, options?)`
+- `fire.*`
+- `user.*`
+- `waitFor(callback, options?)`
 - `waitForEvent(element, name, timeout?)`
 
 ## Stateit Re-exports
 
-Craftit re-exports the following directly from `@vielzeug/stateit`:
+Craftit re-exports these from `@vielzeug/stateit`:
 
-- `batch`
-- `computed`
-- `isSignal`
-- `peek`
-- `readonly`
-- `signal`
-- `toValue`
-- `untrack`
-- `unwrapSignal`
-- `watch`
-- `writable`
-- `type ReadonlySignal`
-- `type Signal`
-- `type WatchOptions`
+- `signal`, `computed`, `effect`, `watch`, `batch`, `untrack`
+- `readonly`, `writable`, `peek`, `toValue`, `unwrapSignal`, `isSignal`
+- `type Signal`, `type ReadonlySignal`, `type WatchOptions`

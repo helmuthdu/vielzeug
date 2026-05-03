@@ -1,10 +1,29 @@
-import type { Middleware, RouteContext, RouteHandler } from './types';
+import type {
+  Middleware,
+  NavigateOptions,
+  NamedNavigationTarget,
+  RawNavigationTarget,
+  RouteContext,
+  RouteHandler,
+  RouteParams,
+  RouteTable,
+} from './types';
+
+/** Build redirect middleware for common guard flows. */
+export function redirect<TRoutes extends RouteTable = RouteTable>(
+  target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
+  options?: NavigateOptions,
+): Middleware<TRoutes> {
+  return async (context) => {
+    await context.navigate(target, options);
+  };
+}
 
 /** Executes a middleware stack and then the terminal route handler. */
-export async function runMiddleware(
-  context: RouteContext,
-  middleware: readonly Middleware[],
-  handler?: RouteHandler,
+export async function runMiddleware<TRoutes extends RouteTable = RouteTable>(
+  context: RouteContext<RouteParams, TRoutes>,
+  middleware: readonly Middleware<TRoutes>[],
+  handler?: RouteHandler<RouteParams, TRoutes>,
 ): Promise<void> {
   async function dispatch(index: number): Promise<void> {
     if (index < middleware.length) {

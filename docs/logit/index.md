@@ -44,13 +44,12 @@ api.info('GET /users');
 
 const workerLog = createLogger({ logLevel: 'warn', namespace: 'worker' });
 
-await workerLog.group(
+await workerLog.groupCollapsed(
   'Job',
   async () => {
     await workerLog.time('process', () => runJob());
     workerLog.success('Done');
   },
-  true,
 );
 ```
 
@@ -89,7 +88,7 @@ api.info('GET /users', data); // filtered by log level, styled, optionally remot
 - Level filtering (`debug` to `off`) with `enabled()` checks
 - Namespace composition (`scope`) and isolated clones (`child`)
 - Styled browser output (`symbol`, `icon`, `text`)
-- `time()` and `group()` wrappers that auto-close on throw/reject
+- `time()`, `group()`, and `groupCollapsed()` wrappers that auto-close on throw/reject
 - Non-blocking remote forwarding with separate remote level threshold
 - `assert()` and `table()` passthrough helpers
 - Zero dependencies — <PackageInfo package="logit" type="size" /> gzipped

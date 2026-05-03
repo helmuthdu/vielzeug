@@ -18,14 +18,12 @@ Snap the floating element to the nearest 4px grid.
 ```ts
 import { positionFloat, flip, offset, type Middleware } from '@vielzeug/floatit';
 
-const snap = (grid: number): Middleware => ({
-  name: 'snap',
-  fn: (state) => ({
+const snap = (grid: number): Middleware =>
+  (state) => ({
     ...state,
     x: Math.round(state.x / grid) * grid,
     y: Math.round(state.y / grid) * grid,
-  }),
-});
+  });
 
 positionFloat(trigger, floating, {
   placement: 'bottom',

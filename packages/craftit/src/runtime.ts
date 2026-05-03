@@ -1,23 +1,25 @@
 import {
   effect as _effect,
-  isWritable,
   type CleanupFn,
-  type Signal,
   type EffectCallback,
   type EffectOptions,
   type ReadonlySignal,
   type Subscription,
 } from '@vielzeug/stateit';
 
-import { fire, type FireApi } from './internal';
+import { CRAFTIT_ERRORS } from './errors';
+import { fire } from './internal';
 
-export { fire, type FireApi };
+export { fire };
 
 let currentElement: HTMLElement | null = null;
 let currentScope: RuntimeScope | null = null;
 
+export type OnMountedCallback = () => CleanupFn | void;
+
 export type RuntimeScope = {
   cleanups: CleanupFn[];
+  mountCallbacks: OnMountedCallback[];
 };
 
 export const withCurrentElement = <T>(el: HTMLElement, fn: () => T): T => {
@@ -35,7 +37,7 @@ export const withCurrentElement = <T>(el: HTMLElement, fn: () => T): T => {
 export const currentElementOrThrow = (): HTMLElement => {
   if (currentElement) return currentElement;
 
-  throw new Error('[craftit:E1] lifecycle outside setup');
+  throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
 };
 
 /** @internal */
@@ -52,9 +54,17 @@ export const withRuntimeScope = <T>(scope: RuntimeScope, fn: () => T): T => {
 };
 
 const registerCleanup = (fn: CleanupFn): void => {
-  if (!currentScope) throw new Error('[craftit:E1] lifecycle outside setup');
+  if (!currentScope) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
 
   currentScope.cleanups.push(fn);
+};
+
+export const tryRegisterCleanup = (fn: CleanupFn): boolean => {
+  if (!currentScope) return false;
+
+  currentScope.cleanups.push(fn);
+
+  return true;
 };
 
 /**
@@ -64,25 +74,19 @@ const registerCleanup = (fn: CleanupFn): void => {
 export const onCleanup = registerCleanup;
 
 /**
- * Schedule work for the next microtask while honoring component cleanup.
- * Useful for setup-time logic that depends on post-render DOM.
+ * Register work to run after the component template mounts.
+ * Multiple callbacks are supported and run in registration order.
  */
-export const defer = (fn: () => void): void => {
-  let cancelled = false;
+export const onMounted = (fn: OnMountedCallback): void => {
+  if (!currentScope) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
 
-  queueMicrotask(() => {
-    if (!cancelled) fn();
-  });
-
-  registerCleanup(() => {
-    cancelled = true;
-  });
+  currentScope.mountCallbacks.push(fn);
 };
 
 export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => {
   const dispose = _effect(fn, options);
 
-  registerCleanup(dispose);
+  tryRegisterCleanup(dispose);
 
   return dispose;
 };
@@ -102,7 +106,7 @@ export function handle(
   if (!target) return;
 
   target.addEventListener(event, listener, options);
-  registerCleanup(() => target.removeEventListener(event, listener, options));
+  tryRegisterCleanup(() => target.removeEventListener(event, listener, options));
 }
 
 export const onElement = <T extends HTMLElement>(
@@ -116,5 +120,3 @@ export const onElement = <T extends HTMLElement>(
     if (el) return callback(el);
   }, options);
 };
-
-export const hasWritableValueSetter = (value: unknown): value is Signal<unknown> => isWritable(value);

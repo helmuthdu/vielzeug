@@ -1,51 +1,39 @@
-/**
- * @vielzeug/virtualit — Lightweight virtual list / infinite-scroll engine.
- *
- * Framework-agnostic: works with any DOM rendering layer.
- * Uses a `ResizeObserver` to re-measure the scroll container and a
- * `scroll` listener to update the visible window.
- */
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export interface VirtualItem {
-  /** Original item index in the full list */
-  index: number;
-  /** Pixel offset from the top of the virtual scroll area */
-  top: number;
-  /** Measured (or estimated) pixel height for this item */
   height: number;
+  index: number;
+  top: number;
 }
 
 export interface VirtualizerOptions {
-  /** Total number of items. */
   count: number;
-  /**
-   * Either a fixed row height or a per-index estimator function.
-   * Defaults to 36px.
-   */
   estimateSize?: number | ((index: number) => number);
-  /**
-   * Number of items to render outside the visible viewport on each side.
-   * Higher values reduce blank-flash during fast scroll at the cost of more DOM nodes.
-   * Defaults to 3.
-   */
-  overscan?: number;
-  /**
-   * Called whenever the visible range changes. Trigger your re-render here.
-   */
   onChange?: (items: VirtualItem[], totalSize: number) => void;
+  overscan?: number;
 }
 
+export type VirtualizerUpdateOptions = Partial<VirtualizerOptions>;
+
 export interface ScrollToIndexOptions {
-  /** 'start' | 'end' | 'center' | 'auto'. Defaults to 'auto'. */
   align?: 'start' | 'end' | 'center' | 'auto';
-  /** Scroll behaviour. Defaults to 'auto'. */
   behavior?: ScrollBehavior;
 }
 
-const DEFAULT_ESTIMATE_SIZE = 36;
-const DEFAULT_OVERSCAN = 3;
+export interface Virtualizer {
+  readonly count: number;
+  readonly estimateSize: number | ((index: number) => number);
+  readonly items: VirtualItem[];
+  readonly totalSize: number;
+  destroy: () => void;
+  invalidate: () => void;
+  measure: (index: number, size: number) => void;
+  scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
+  scrollToOffset: (offset: number, options?: { behavior?: ScrollBehavior }) => void;
+  update: (next: VirtualizerUpdateOptions) => void;
+  [Symbol.dispose]: () => void;
+}
+
+export const DEFAULT_ESTIMATE_SIZE = 36;
+export const DEFAULT_OVERSCAN = 3;
 
 function toNonNegativeInt(value: number, fallback = 0): number {
   if (!Number.isFinite(value)) return fallback;
@@ -59,365 +47,290 @@ function toPositiveNumber(value: number, fallback: number): number {
   return value;
 }
 
-function createEstimateSizeFn(
-  estimate: number | ((index: number) => number),
-  fallback = DEFAULT_ESTIMATE_SIZE,
-): (index: number) => number {
-  if (typeof estimate === 'number') {
-    const size = toPositiveNumber(estimate, fallback);
+function normalizeEstimate(estimate: VirtualizerOptions['estimateSize']): number | ((index: number) => number) {
+  if (typeof estimate === 'number') return toPositiveNumber(estimate, DEFAULT_ESTIMATE_SIZE);
 
-    return () => size;
-  }
+  if (typeof estimate === 'function') return estimate;
 
-  return (index: number) => toPositiveNumber(estimate(index), fallback);
+  return DEFAULT_ESTIMATE_SIZE;
 }
 
-// ─── Virtualizer ──────────────────────────────────────────────────────────────
-
-export class Virtualizer {
-  // mutable options
-  private _count: number;
-  private _estimateSizeFn: (index: number) => number;
-  private overscan: number;
-  private onChange: ((items: VirtualItem[], totalSize: number) => void) | undefined;
-
-  // internal state
-  private measuredHeights: Map<number, number> = new Map();
-  private virtualItems: VirtualItem[] = [];
-  private totalSize = 0;
-  private scrollOffsets: Float64Array = new Float64Array(0); // prefix-sum cache
-  private containerHeight = 0;
-  private scrollTop = 0;
-
-  // render range cache — reset in buildOffsets() so layout changes always re-render
-  private prevRenderStart = -1;
-  private prevRenderEnd = -1;
-
-  // cleanup handles
-  private attachedEl: HTMLElement | null = null;
-  private resizeObserver: ResizeObserver | null = null;
-  private scrollHandler: (() => void) | null = null;
-
-  // batching flag for measureElement
-  private pendingBuild = false;
-
-  constructor(options: VirtualizerOptions) {
-    this._count = toNonNegativeInt(options.count);
-
-    const est = options.estimateSize ?? DEFAULT_ESTIMATE_SIZE;
-
-    this._estimateSizeFn = createEstimateSizeFn(est);
-    this.overscan = toNonNegativeInt(options.overscan ?? DEFAULT_OVERSCAN, DEFAULT_OVERSCAN);
-    this.onChange = options.onChange;
-    // Build the offset table eagerly; computeVisible is deferred to attach()
-    // so the first onChange call always has a real containerHeight.
-    this.buildOffsets();
+function createEstimateFn(estimate: number | ((index: number) => number)): (index: number) => number {
+  if (typeof estimate === 'number') {
+    return () => estimate;
   }
 
-  // ─── Public API ───────────────────────────────────────────────────────────
+  return (index: number) => toPositiveNumber(estimate(index), DEFAULT_ESTIMATE_SIZE);
+}
 
-  get count(): number {
-    return this._count;
+export function createVirtualizer(el: HTMLElement, options: VirtualizerOptions): Virtualizer {
+  let count = toNonNegativeInt(options.count);
+  let estimateSize = normalizeEstimate(options.estimateSize);
+  let estimateFn = createEstimateFn(estimateSize);
+  let overscan = toNonNegativeInt(options.overscan ?? DEFAULT_OVERSCAN);
+  let onChange = options.onChange;
+
+  let items: VirtualItem[] = [];
+  let totalSize = 0;
+  let measuredSizes = new Float64Array(count);
+  let offsets = new Float64Array(count + 1);
+  let containerHeight = el.clientHeight;
+  let scrollTop = el.scrollTop;
+  let prevRenderStart = -1;
+  let prevRenderEnd = -1;
+  let pendingBuild = false;
+  let destroyed = false;
+
+  const scrollHandler = () => {
+    scrollTop = el.scrollTop;
+    computeVisible();
+  };
+
+  const resizeObserver = new ResizeObserver(() => {
+    containerHeight = el.clientHeight;
+    computeVisible();
+  });
+
+  function sizeAt(index: number): number {
+    const measured = measuredSizes[index] ?? 0;
+
+    return measured > 0 ? measured : estimateFn(index);
   }
 
-  /** Replace the visible-range callback without recreating the virtualizer. */
-  set onChangeCallback(fn: ((items: VirtualItem[], totalSize: number) => void) | undefined) {
-    this.onChange = fn;
+  function offsetAt(index: number): number {
+    return offsets[index] ?? 0;
   }
 
-  /** Setting count automatically rebuilds offsets and triggers a re-render. */
-  set count(value: number) {
-    const nextCount = toNonNegativeInt(value);
+  function clampScrollTop(offset: number): number {
+    const safeOffset = Number.isFinite(offset) ? offset : 0;
+    const maxOffset = Math.max(0, totalSize - containerHeight);
 
-    if (nextCount === this._count) return;
-
-    this._count = nextCount;
-    this.buildOffsets();
-
-    if (this.attachedEl) this.computeVisible();
+    return Math.min(maxOffset, Math.max(0, safeOffset));
   }
 
-  /**
-   * Update the size estimator. Clears all measured heights and re-renders.
-   * Useful when switching between row density modes (e.g. compact ↔ comfortable).
-   */
-  set estimateSize(fn: number | ((index: number) => number)) {
-    this._estimateSizeFn = createEstimateSizeFn(fn);
-    this.measuredHeights.clear();
-    this.buildOffsets();
+  function findFirstVisible(start: number): number {
+    let lo = 0;
+    let hi = count - 1;
 
-    if (this.attachedEl) this.computeVisible();
-  }
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
 
-  /** Start observing the scroll container. */
-  attach(el: HTMLElement): void {
-    this.teardown();
-
-    this.attachedEl = el;
-    this.containerHeight = el.clientHeight;
-    this.scrollTop = el.scrollTop;
-
-    this.scrollHandler = () => {
-      this.scrollTop = el.scrollTop;
-      this.computeVisible();
-    };
-    el.addEventListener('scroll', this.scrollHandler, { passive: true });
-
-    this.resizeObserver = new ResizeObserver(() => {
-      this.containerHeight = el.clientHeight;
-      // The offset table depends only on item heights, not container height —
-      // no need to rebuild it here, only recompute the visible window.
-      this.computeVisible();
-    });
-    this.resizeObserver.observe(el);
-
-    this.computeVisible();
-  }
-
-  /** Stop observing and remove all listeners. */
-  destroy(): void {
-    this.teardown();
-  }
-
-  /** Supports the Explicit Resource Management `using` keyword. */
-  [Symbol.dispose](): void {
-    this.destroy();
-  }
-
-  /**
-   * Returns the currently visible virtual items.
-   *
-   * Note: this list is populated after `attach()` runs and computes visibility.
-   */
-  getVirtualItems(): VirtualItem[] {
-    return this.virtualItems;
-  }
-
-  /** Total pixel height of the entire list (set as the spacer height). */
-  getTotalSize(): number {
-    return this.totalSize;
-  }
-
-  /**
-   * Record a measured height for a rendered item (for variable-height lists).
-   *
-   * Measurements are batched via microtask — safe to call for every item in a
-   * render loop without incurring O(n²) rebuilds.
-   */
-  measureElement(index: number, height: number): void {
-    const safeIndex = toNonNegativeInt(index, -1);
-    const safeHeight = toPositiveNumber(height, -1);
-
-    if (safeIndex < 0 || safeIndex >= this._count || safeHeight <= 0) return;
-
-    if (this.heightAt(safeIndex) === safeHeight) return;
-
-    this.measuredHeights.set(safeIndex, safeHeight);
-
-    if (!this.pendingBuild) {
-      this.pendingBuild = true;
-      queueMicrotask(() => {
-        this.pendingBuild = false;
-        this.buildOffsets();
-
-        if (this.attachedEl) this.computeVisible();
-      });
+      if (offsets[mid + 1] <= start) lo = mid + 1;
+      else hi = mid;
     }
+
+    return lo;
   }
 
-  /** Programmatically scroll to a specific index. */
-  scrollToIndex(index: number, options: ScrollToIndexOptions = {}): void {
-    const el = this.attachedEl;
+  function findLastVisible(end: number, firstVisible: number): number {
+    let lo = firstVisible;
+    let hi = count - 1;
 
-    if (!el || this._count <= 0) return;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+
+      if (offsets[mid] < end) lo = mid;
+      else hi = mid - 1;
+    }
+
+    return lo;
+  }
+
+  function emit(nextItems: VirtualItem[], nextTotalSize: number): void {
+    items = nextItems;
+    onChange?.(nextItems, nextTotalSize);
+  }
+
+  function rebuildOffsets(): void {
+    prevRenderStart = -1;
+    prevRenderEnd = -1;
+
+    const nextOffsets = new Float64Array(count + 1);
+
+    for (let i = 0; i < count; i++) {
+      nextOffsets[i + 1] = nextOffsets[i] + sizeAt(i);
+    }
+
+    offsets = nextOffsets;
+    totalSize = nextOffsets[count] ?? 0;
+  }
+
+  function computeVisible(): void {
+    if (destroyed) return;
+
+    if (count === 0 || containerHeight <= 0) {
+      const shouldNotify = count > 0 || prevRenderStart !== -1;
+
+      prevRenderStart = -1;
+      prevRenderEnd = -1;
+
+      if (shouldNotify) emit([], totalSize);
+
+      return;
+    }
+
+    const start = scrollTop;
+    const end = start + containerHeight;
+    const firstVisible = findFirstVisible(start);
+    const lastVisible = findLastVisible(end, firstVisible);
+    const renderStart = Math.max(0, firstVisible - overscan);
+    const renderEnd = Math.min(count - 1, lastVisible + overscan);
+
+    if (renderStart === prevRenderStart && renderEnd === prevRenderEnd) return;
+
+    prevRenderStart = renderStart;
+    prevRenderEnd = renderEnd;
+
+    const nextItems: VirtualItem[] = [];
+
+    for (let i = renderStart; i <= renderEnd; i++) {
+      nextItems.push({ height: sizeAt(i), index: i, top: offsetAt(i) });
+    }
+
+    emit(nextItems, totalSize);
+  }
+
+  function update(next: VirtualizerUpdateOptions): void {
+    if (destroyed) return;
+
+    let needsRebuild = false;
+
+    if (next.count !== undefined) {
+      const nextCount = toNonNegativeInt(next.count);
+
+      if (nextCount !== count) {
+        const nextMeasured = new Float64Array(nextCount);
+
+        nextMeasured.set(measuredSizes.subarray(0, Math.min(count, nextCount)));
+        measuredSizes = nextMeasured;
+        count = nextCount;
+        needsRebuild = true;
+      }
+    }
+
+    if (next.estimateSize !== undefined) {
+      estimateSize = normalizeEstimate(next.estimateSize);
+      estimateFn = createEstimateFn(estimateSize);
+      measuredSizes = new Float64Array(count);
+      needsRebuild = true;
+    }
+
+    if (next.overscan !== undefined) {
+      overscan = toNonNegativeInt(next.overscan);
+    }
+
+    if ('onChange' in next) {
+      onChange = next.onChange;
+    }
+
+    if (needsRebuild) rebuildOffsets();
+
+    computeVisible();
+  }
+
+  function measure(index: number, size: number): void {
+    if (destroyed) return;
+
+    const safeIndex = toNonNegativeInt(index, -1);
+    const safeSize = toPositiveNumber(size, -1);
+
+    if (safeIndex < 0 || safeIndex >= count || safeSize <= 0) return;
+
+    if (sizeAt(safeIndex) === safeSize) return;
+
+    measuredSizes[safeIndex] = safeSize;
+
+    if (pendingBuild) return;
+
+    pendingBuild = true;
+    queueMicrotask(() => {
+      pendingBuild = false;
+      rebuildOffsets();
+      computeVisible();
+    });
+  }
+
+  function invalidate(): void {
+    if (destroyed) return;
+
+    measuredSizes = new Float64Array(count);
+    rebuildOffsets();
+    computeVisible();
+  }
+
+  function scrollToIndex(index: number, options: ScrollToIndexOptions = {}): void {
+    if (destroyed || count <= 0) return;
 
     const safeIndex = Number.isFinite(index) ? Math.floor(index) : 0;
-    const clampedIndex = Math.max(0, Math.min(safeIndex, this._count - 1));
+    const clampedIndex = Math.max(0, Math.min(safeIndex, count - 1));
     const align = options.align ?? 'auto';
     const behavior = options.behavior ?? 'auto';
-    const itemTop = this.offsetAt(clampedIndex);
-    const itemHeight = this.heightAt(clampedIndex);
+    const itemTop = offsetAt(clampedIndex);
+    const itemHeight = sizeAt(clampedIndex);
 
     let targetScrollTop: number;
 
     if (align === 'start') {
       targetScrollTop = itemTop;
     } else if (align === 'end') {
-      targetScrollTop = itemTop + itemHeight - this.containerHeight;
+      targetScrollTop = itemTop + itemHeight - containerHeight;
     } else if (align === 'center') {
-      targetScrollTop = itemTop - (this.containerHeight - itemHeight) / 2;
+      targetScrollTop = itemTop - (containerHeight - itemHeight) / 2;
     } else {
-      // auto: scroll only if not already visible
       const visibleStart = el.scrollTop;
-      const visibleEnd = visibleStart + this.containerHeight;
+      const visibleEnd = visibleStart + containerHeight;
 
       if (itemTop >= visibleStart && itemTop + itemHeight <= visibleEnd) return;
 
-      targetScrollTop = itemTop < visibleStart ? itemTop : itemTop + itemHeight - this.containerHeight;
+      targetScrollTop = itemTop < visibleStart ? itemTop : itemTop + itemHeight - containerHeight;
     }
 
-    el.scrollTo({ behavior, top: this.clampScrollTop(targetScrollTop) });
+    el.scrollTo({ behavior, top: clampScrollTop(targetScrollTop) });
   }
 
-  /** Programmatically scroll to a specific pixel offset. */
-  scrollToOffset(offset: number, options: { behavior?: ScrollBehavior } = {}): void {
-    this.attachedEl?.scrollTo({
+  function scrollToOffset(offset: number, options: { behavior?: ScrollBehavior } = {}): void {
+    if (destroyed) return;
+
+    el.scrollTo({
       behavior: options.behavior ?? 'auto',
-      top: this.clampScrollTop(offset),
+      top: clampScrollTop(offset),
     });
   }
 
-  /**
-   * Invalidate all item measurements. Call after a font load or layout shift
-   * that changes item heights.
-   */
-  invalidate(): void {
-    this.measuredHeights.clear();
-    this.buildOffsets();
+  function destroy(): void {
+    if (destroyed) return;
 
-    if (this.attachedEl) this.computeVisible();
+    destroyed = true;
+    el.removeEventListener('scroll', scrollHandler);
+    resizeObserver.disconnect();
   }
 
-  // ─── Private Helpers ──────────────────────────────────────────────────────
+  rebuildOffsets();
+  el.addEventListener('scroll', scrollHandler, { passive: true });
+  resizeObserver.observe(el);
+  computeVisible();
 
-  private teardown(): void {
-    if (this.scrollHandler && this.attachedEl) {
-      this.attachedEl.removeEventListener('scroll', this.scrollHandler);
-      this.scrollHandler = null;
-    }
-
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = null;
-    this.attachedEl = null;
-  }
-
-  private heightAt(index: number): number {
-    return this.measuredHeights.get(index) ?? this._estimateSizeFn(index);
-  }
-
-  private offsetAt(index: number): number {
-    return this.scrollOffsets[index] ?? 0;
-  }
-
-  private clampScrollTop(offset: number): number {
-    const safeOffset = Number.isFinite(offset) ? offset : 0;
-    const maxOffset = Math.max(0, this.totalSize - this.containerHeight);
-
-    return Math.min(maxOffset, Math.max(0, safeOffset));
-  }
-
-  private buildOffsets(): void {
-    // Invalidate the render range cache: item positions may shift even when the
-    // visible index range stays the same (e.g. an item above grew taller).
-    this.prevRenderStart = -1;
-    this.prevRenderEnd = -1;
-
-    const offsets = new Float64Array(this._count + 1);
-
-    offsets[0] = 0;
-    for (let i = 0; i < this._count; i++) {
-      offsets[i + 1] = offsets[i] + this.heightAt(i);
-    }
-    this.scrollOffsets = offsets;
-    this.totalSize = offsets[this._count] ?? 0;
-  }
-
-  private computeVisible(): void {
-    if (this._count === 0 || this.containerHeight <= 0) {
-      // Also notify when count > 0 but the environment cannot measure layout (e.g. jsdom).
-      // DOM adapters can choose a deterministic fallback rendering strategy in that case.
-      const shouldNotify =
-        this._count > 0 || this.virtualItems.length > 0 || this.prevRenderStart !== -1 || this.prevRenderEnd !== -1;
-
-      this.virtualItems = [];
-      this.prevRenderStart = -1;
-      this.prevRenderEnd = -1;
-
-      if (shouldNotify) this.onChange?.([], this.totalSize);
-
-      return;
-    }
-
-    const start = this.scrollTop;
-    const end = start + this.containerHeight;
-
-    // Binary search for the first visible index
-    let lo = 0;
-    let hi = this._count - 1;
-
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-
-      if (this.scrollOffsets[mid + 1] <= start) lo = mid + 1;
-      else hi = mid;
-    }
-
-    const firstVisible = lo;
-
-    // Binary search for the last visible index
-    let lo2 = firstVisible;
-    let hi2 = this._count - 1;
-
-    while (lo2 < hi2) {
-      const mid = (lo2 + hi2 + 1) >> 1;
-
-      if (this.scrollOffsets[mid] < end) lo2 = mid;
-      else hi2 = mid - 1;
-    }
-
-    const lastVisible = lo2;
-    const renderStart = Math.max(0, firstVisible - this.overscan);
-    const renderEnd = Math.min(this._count - 1, lastVisible + this.overscan);
-
-    // Skip re-render when the range is unchanged (e.g. a sub-pixel scroll that
-    // doesn't cross an item boundary). The cache is reset in buildOffsets() so
-    // any layout change always produces at least one render.
-    if (renderStart === this.prevRenderStart && renderEnd === this.prevRenderEnd) return;
-
-    this.prevRenderStart = renderStart;
-    this.prevRenderEnd = renderEnd;
-
-    const items: VirtualItem[] = [];
-
-    for (let i = renderStart; i <= renderEnd; i++) {
-      items.push({ height: this.heightAt(i), index: i, top: this.scrollOffsets[i] });
-    }
-
-    this.virtualItems = items;
-    this.onChange?.(items, this.totalSize);
-  }
-}
-
-// ─── Convenience factory ──────────────────────────────────────────────────────
-
-/**
- * Creates and immediately attaches a `Virtualizer` to the given scroll container.
- *
- * @example
- * ```ts
- * import { createVirtualizer } from '@vielzeug/virtualit';
- *
- * const virt = createVirtualizer(scrollContainerEl, {
- *   count: items.length,
- *   estimateSize: 36,
- *   onChange: (virtualItems, totalSize) => {
- *     // update your rendered list
- *   },
- * });
- *
- * // Later:
- * virt.destroy();
- *
- * // Or, with the Explicit Resource Management proposal:
- * {
- *   using virt = createVirtualizer(scrollContainerEl, { ... });
- * } // virt.destroy() called automatically
- * ```
- */
-export function createVirtualizer(el: HTMLElement, options: VirtualizerOptions): Virtualizer {
-  const v = new Virtualizer(options);
-
-  v.attach(el);
-
-  return v;
+  return {
+    get count() {
+      return count;
+    },
+    destroy,
+    get estimateSize() {
+      return estimateSize;
+    },
+    invalidate,
+    get items() {
+      return items;
+    },
+    measure,
+    scrollToIndex,
+    scrollToOffset,
+    [Symbol.dispose]() {
+      destroy();
+    },
+    get totalSize() {
+      return totalSize;
+    },
+    update,
+  };
 }

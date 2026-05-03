@@ -1,10 +1,8 @@
-import { createMemory, type Adapter, type Schema } from '../index';
+import { createMemory, table, type Adapter } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
-const userSchema: Schema<{ users: User }> = {
-  users: { key: 'id' },
-};
+const userSchema = { users: table<User>('id') };
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -64,11 +62,11 @@ describe('Memory adapter', () => {
     expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
   });
 
-  test('query builder via from()', async () => {
+  test('query builder via query()', async () => {
     await db.put('users', { age: 25, id: 1, name: 'Alice' });
     await db.put('users', { age: 30, id: 2, name: 'Bob' });
 
-    const r = await db.from('users').between('age', 26, 40).toArray();
+    const r = await db.query('users').between('age', 26, 40).toArray();
 
     expect(r).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
   });

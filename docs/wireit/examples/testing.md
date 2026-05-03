@@ -20,7 +20,6 @@ import { createTestContainer } from '@vielzeug/wireit';
 
 describe('UserService', () => {
   let container: Container;
-  let dispose: () => Promise<void>;
   const mockDb = {
     users: {
       findById: vi.fn(),
@@ -29,16 +28,16 @@ describe('UserService', () => {
   };
 
   beforeEach(() => {
-    ({ container, dispose } = createTestContainer(appContainer));
+    container = createTestContainer(appContainer);
     container.value(DbToken, mockDb, { overwrite: true });
   });
 
-  afterEach(() => dispose());
+  afterEach(() => container.dispose());
 
   it('returns a user by id', async () => {
     mockDb.users.findById.mockResolvedValue({ id: '1', name: 'Alice' });
 
-    const svc = container.get(ServiceToken);
+    const svc = await container.resolve(ServiceToken);
     const user = await svc.getById('1');
 
     expect(user.name).toBe('Alice');
@@ -48,7 +47,7 @@ describe('UserService', () => {
   it('throws when user not found', async () => {
     mockDb.users.findById.mockResolvedValue(null);
 
-    const svc = container.get(ServiceToken);
+    const svc = await container.resolve(ServiceToken);
     await expect(svc.getById('unknown')).rejects.toThrow('User not found');
   });
 });
@@ -62,8 +61,8 @@ it('falls back to cache on DB error', async () => {
     users: { findById: vi.fn().mockRejectedValue(new Error('DB connection lost')) },
   };
 
-  const result = await container.mock(DbToken, brokenDb, async () => {
-    const svc = container.get(ServiceToken);
+  const result = await container.mock(DbToken, { useValue: brokenDb }, async () => {
+    const svc = await container.resolve(ServiceToken);
     return svc.getById('1'); // should return cached value
   });
 
@@ -75,7 +74,7 @@ it('falls back to cache on DB error', async () => {
 ### Testing async providers
 
 ```ts
-it('connects to the database on first get', async () => {
+it('connects to the database on first resolve', async () => {
   const mockConnect = vi.fn().mockResolvedValue(undefined);
   const fakeDb = { connect: mockConnect, query: vi.fn() };
 
@@ -88,7 +87,7 @@ it('connects to the database on first get', async () => {
       },
     },
     async () => {
-      const db = await container.getAsync(DbToken);
+      const db = await container.resolve(DbToken);
       expect(mockConnect).toHaveBeenCalledOnce();
     },
   );

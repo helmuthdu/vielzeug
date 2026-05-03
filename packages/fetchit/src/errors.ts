@@ -1,14 +1,11 @@
 export class HttpError extends Error {
   readonly name = 'HttpError';
+  readonly kind: 'abort' | 'http' | 'network' | 'timeout';
   readonly url: string;
   readonly method: string;
   readonly status?: number;
   readonly data?: unknown;
   readonly response?: Response;
-  /** True when the request failed due to a timeout (`AbortSignal.timeout`). */
-  readonly isTimeout: boolean;
-  /** True when the request was cancelled via an `AbortSignal`. */
-  readonly isAborted: boolean;
 
   constructor(opts: {
     cause?: unknown;
@@ -26,10 +23,26 @@ export class HttpError extends Error {
     this.data = opts.data;
     this.response = opts.response;
 
-    const causeName = opts.cause instanceof Error ? opts.cause.name : undefined;
+    this.kind =
+      opts.cause instanceof DOMException
+        ? opts.cause.name === 'TimeoutError'
+          ? 'timeout'
+          : opts.cause.name === 'AbortError'
+            ? 'abort'
+            : 'network'
+        : opts.status !== undefined
+          ? 'http'
+          : 'network';
+  }
 
-    this.isTimeout = causeName === 'TimeoutError';
-    this.isAborted = causeName === 'AbortError';
+  /** True when the request failed due to a timeout (`AbortSignal.timeout`). */
+  get isTimeout(): boolean {
+    return this.kind === 'timeout';
+  }
+
+  /** True when the request was cancelled via an `AbortSignal`. */
+  get isAborted(): boolean {
+    return this.kind === 'abort';
   }
 
   static fromResponse(res: Response, data: unknown, method: string, url: string): HttpError {
@@ -52,8 +65,4 @@ export class HttpError extends Error {
   static is(err: unknown, status?: number): err is HttpError {
     return err instanceof HttpError && (status === undefined || err.status === status);
   }
-}
-
-export function toError(e: unknown): Error {
-  return e instanceof Error ? e : new Error(String(e));
 }

@@ -1,18 +1,26 @@
 import { signal } from '@vielzeug/stateit';
 import { describe, expect, it } from 'vitest';
 
-import { toReactiveBindingSource } from '../runtime';
 import { html } from '../template-compiler';
 
 describe('template caching', () => {
-  it('does not create reactive sources for plain getter functions', () => {
+  it('reuses html wrapper signal for plain getter interpolations', () => {
     const getter = () => 42;
 
-    const first = toReactiveBindingSource(getter);
-    const second = toReactiveBindingSource(getter);
+    const first = html`<div>${getter}</div>`;
+    const second = html`<div>${getter}</div>`;
 
-    expect(first).toBeUndefined();
-    expect(second).toBeUndefined();
+    const firstBinding = first.__bindings.find((binding) => binding.type === 'html');
+    const secondBinding = second.__bindings.find((binding) => binding.type === 'html');
+
+    expect(firstBinding?.type).toBe('html');
+    expect(secondBinding?.type).toBe('html');
+
+    if (firstBinding?.type !== 'html' || secondBinding?.type !== 'html') {
+      throw new Error('Expected html bindings to be present');
+    }
+
+    expect(secondBinding.signal).toBe(firstBinding.signal);
   });
 
   it('reuses html wrapper signal for function interpolations', () => {

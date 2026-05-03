@@ -1,15 +1,13 @@
-import { createIndexedDB, type IndexedDBHandle, type Schema } from '../index';
+import { createIndexedDB, table, type IndexedDBHandle } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 type Post = { id: number; title: string; userId: number };
 
-const userSchema: Schema<{ users: User }> = {
-  users: { key: 'id' },
-};
+const userSchema = { users: table<User>('id') };
 
-const multiSchema: Schema<{ posts: Post; users: User }> = {
-  posts: { key: 'id' },
-  users: { key: 'id' },
+const multiSchema = {
+  posts: table<Post>('id'),
+  users: table<User>('id'),
 };
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -18,7 +16,7 @@ describe('IndexedDB adapter', () => {
   let db: IndexedDBHandle<typeof userSchema>;
 
   beforeEach(async () => {
-    db = createIndexedDB({ dbName: 'IDB', schema: userSchema, version: 1 });
+    db = createIndexedDB({ dbName: 'IDB', schema: userSchema, schemaVersion: 1 });
     await db.deleteAll('users');
   });
 
@@ -75,17 +73,17 @@ describe('IndexedDB adapter', () => {
     expect(await db.count('users')).toBe(0);
   });
 
-  test('query builder via from()', async () => {
+  test('query builder via query()', async () => {
     await db.put('users', { age: 25, id: 1, name: 'Alice' });
     await db.put('users', { age: 30, id: 2, name: 'Bob' });
 
-    const r = await db.from('users').between('age', 26, 40).toArray();
+    const r = await db.query('users').between('age', 26, 40).toArray();
 
     expect(r).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
   });
 
   test('transaction commits atomically across tables', async () => {
-    const multi = createIndexedDB({ dbName: 'Multi', schema: multiSchema, version: 1 });
+    const multi = createIndexedDB({ dbName: 'Multi', schema: multiSchema, schemaVersion: 1 });
 
     await multi.deleteAll('users');
     await multi.deleteAll('posts');
@@ -120,5 +118,19 @@ describe('IndexedDB adapter', () => {
     ).rejects.toThrow();
 
     expect(await db.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
+  });
+
+  test('transaction returns the callback result', async () => {
+    await db.put('users', { age: 30, id: 1, name: 'Alice' });
+
+    const user = await db.transaction(['users'] as const, async (tx) => {
+      const row = await tx.get('users', 1);
+
+      if (!row) throw new Error('missing user');
+
+      return row;
+    });
+
+    expect(user).toEqual({ age: 30, id: 1, name: 'Alice' });
   });
 });

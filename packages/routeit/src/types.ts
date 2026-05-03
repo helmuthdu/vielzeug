@@ -36,16 +36,16 @@ export type RawNavigationTarget = {
 };
 
 /** Named-route navigation target. */
-export type NamedNavigationTargetBase = {
+export type UntypedNamedNavigationTarget = {
   hash?: string;
   name: string;
   params?: RouteParams;
   query?: QueryParams;
 };
 
-export type NavigationTarget = NamedNavigationTargetBase | RawNavigationTarget;
+export type NavigationTarget = UntypedNamedNavigationTarget | RawNavigationTarget;
 
-export type RouteContext<Params extends RouteParams = RouteParams> = {
+export type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = {
   /** Result from the route's `data()` function. Available in the handler; undefined in middleware. */
   readonly data?: unknown;
   readonly hash: string;
@@ -53,7 +53,10 @@ export type RouteContext<Params extends RouteParams = RouteParams> = {
   locals: Record<string, unknown>;
   /** Matched branch for the current navigation. Leaf node is the active route. */
   readonly matches: RouteMatchBranch;
-  readonly navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
+  readonly navigate: (
+    target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
+    options?: NavigateOptions,
+  ) => Promise<void>;
   readonly params: Params;
   readonly pathname: string;
   readonly query: QueryParams;
@@ -63,13 +66,16 @@ export type RouteContext<Params extends RouteParams = RouteParams> = {
  * Context passed to `data()` functions. Extends RouteContext with an AbortSignal
  * that is cancelled automatically when a newer navigation supersedes this one.
  */
-export type DataContext<Params extends RouteParams = RouteParams> = RouteContext<Params> & {
+export type DataContext<
+  Params extends RouteParams = RouteParams,
+  TRoutes extends RouteTable = RouteTable,
+> = RouteContext<Params, TRoutes> & {
   readonly signal: AbortSignal;
 };
 
-/** Handler may be sync or async — async return values are implicitly awaited by the router. */
-export type RouteHandler<Params extends RouteParams = RouteParams> = (
-  context: RouteContext<Params>,
+/** Handler may be sync or async - async return values are implicitly awaited by the router. */
+export type RouteHandler<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<Params, TRoutes>,
 ) => MaybePromise<void>;
 
 /**
@@ -77,10 +83,15 @@ export type RouteHandler<Params extends RouteParams = RouteParams> = (
  * Cannot redirect — use middleware for auth/guard logic.
  * Receives an AbortSignal that cancels when a newer navigation starts.
  */
-export type DataFn<Params extends RouteParams = RouteParams> = (context: DataContext<Params>) => MaybePromise<unknown>;
+export type DataFn<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
+  context: DataContext<Params, TRoutes>,
+) => MaybePromise<unknown>;
 
 /** Middleware function. Call `next()` to continue the chain; return without calling it to block navigation. */
-export type Middleware = (context: RouteContext<RouteParams>, next: () => Promise<void>) => void | Promise<void>;
+export type Middleware<TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<RouteParams, TRoutes>,
+  next: () => Promise<void>,
+) => void | Promise<void>;
 
 export type RouteChildren = Record<string, RouteDefinition<string>>;
 
@@ -88,8 +99,8 @@ export type RouteDefinition<Path extends string = string> = {
   /** Nested child routes. Keys become part of the compound route name (e.g. `dashboard.settings`). */
   children?: RouteChildren;
   /** Data loader. Runs after middleware; result is available as `ctx.data` in the handler. */
-  data?: DataFn<PathParams<Path extends string ? Path : string>>;
-  handler?: RouteHandler<PathParams<Path extends string ? Path : string>>;
+  data?: DataFn<PathParams<Path>>;
+  handler?: RouteHandler<PathParams<Path>>;
   /** When true the route inherits the parent path (acts as the default child). */
   index?: boolean;
   meta?: unknown;
@@ -188,8 +199,8 @@ export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
   /** Custom history driver. Defaults to `createBrowserHistory()`. */
   history?: HistoryDriver;
   /** Global middleware applied to every route. Use this to implement authentication, analytics, and error boundaries. */
-  middleware?: Middleware[];
-  /** Declarative route table. Object key order is preserved and determines match precedence. */
+  middleware?: Middleware<TRoutes>[];
+  /** Declarative route table. Object key order determines match precedence - place specific routes before wildcards. */
   routes: TRoutes;
   /** Wrap navigation in the View Transition API when available. Falls back to plain execution in unsupported environments. */
   viewTransition?: boolean;
@@ -201,36 +212,4 @@ export type RouteState = {
   readonly matches: RouteMatchBranch;
   /** `idle` after a successful navigation, `error` when a data loader threw. */
   readonly status: NavigationStatus;
-};
-
-export type ResolvedRoute = RouteMatchBranch;
-
-/** -------------------- Internal Types -------------------- **/
-
-export type ViewTransitionDocument = Document & {
-  startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
-};
-
-export type RouteMatcher = {
-  paramNames: readonly string[];
-  pattern: RegExp;
-  prefixPattern: RegExp;
-};
-
-/** Static per-node definition stored on a compiled RouteRecord (root → leaf). */
-export type RouteBranchDef = {
-  dataFn?: DataFn;
-  handler?: RouteHandler;
-  meta?: unknown;
-  name: string;
-};
-
-export type RouteRecord = {
-  /** Ordered branch definitions from root to this leaf, used to build RouteMatchBranch at match time. */
-  branchDefs: readonly RouteBranchDef[];
-  hasData: boolean;
-  leaf: RouteBranchDef;
-  matcher: RouteMatcher;
-  middleware: Middleware[];
-  path: string;
 };

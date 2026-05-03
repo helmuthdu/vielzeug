@@ -20,7 +20,6 @@ description: Source-aligned API reference for @vielzeug/eventit and @vielzeug/ev
 | Import                   | Purpose                        |
 | ------------------------ | ------------------------------ |
 | `@vielzeug/eventit`      | Main runtime API and types     |
-| `@vielzeug/eventit/core` | Core bundle entry              |
 | `@vielzeug/eventit/test` | Test helpers (`createTestBus`) |
 
 ## Types

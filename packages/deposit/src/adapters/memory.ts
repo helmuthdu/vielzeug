@@ -2,12 +2,12 @@ import type { Adapter, AnySchema, KeyOf, RecordOf } from '../types';
 
 import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
 import { AdapterCore } from './adapter-core';
-import { resolveRecordKey } from './schema-key';
+import { resolveRecordKey } from './resolve-key';
 
 /* -------------------- MemoryAdapter -------------------- */
 
 class MemoryAdapter<S extends AnySchema> extends AdapterCore<S> {
-  private readonly tables = new Map<string, Map<string, StoredRecord<Record<string, unknown>>>>();
+  private readonly tables = new Map<string, Map<string, StoredRecord<unknown>>>();
   private readonly schema: S;
 
   constructor(schema: S) {
@@ -15,7 +15,7 @@ class MemoryAdapter<S extends AnySchema> extends AdapterCore<S> {
     this.schema = schema;
   }
 
-  private table<K extends keyof S>(table: K): Map<string, StoredRecord<Record<string, unknown>>> {
+  private table<K extends keyof S>(table: K): Map<string, StoredRecord<unknown>> {
     const name = String(table);
     let store = this.tables.get(name);
 
@@ -28,27 +28,29 @@ class MemoryAdapter<S extends AnySchema> extends AdapterCore<S> {
   }
 
   async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-    const raw = this.table(table).get(String(key));
+    const store = this.table(table);
+    const raw = store.get(String(key));
 
     if (!raw) return undefined;
 
     const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
 
-    if (value === undefined) this.table(table).delete(String(key));
+    if (value === undefined) store.delete(String(key));
 
     return value;
   }
 
   async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
+    const store = this.table(table);
     const records: RecordOf<S, K>[] = [];
 
-    for (const [key, raw] of this.table(table)) {
+    for (const [key, raw] of store) {
       const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
 
       if (value !== undefined) {
         records.push(value);
       } else {
-        this.table(table).delete(key);
+        store.delete(key);
       }
     }
 
@@ -68,7 +70,6 @@ class MemoryAdapter<S extends AnySchema> extends AdapterCore<S> {
   async deleteAll<K extends keyof S>(table: K): Promise<void> {
     this.table(table).clear();
   }
-
 }
 
 /* -------------------- Factory -------------------- */

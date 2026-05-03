@@ -103,7 +103,7 @@ describe('i18n — minimal runtime', () => {
     const handler = vi.fn<(event: LocaleChangeEvent) => void>();
 
     i18n.subscribe(handler, true);
-    expect(handler).toHaveBeenCalledWith({ locale: 'en', reason: 'locale-change' });
+    expect(handler).toHaveBeenCalledWith({ locale: 'en', reason: 'init' });
 
     await i18n.setLocale('fr');
     expect(handler).toHaveBeenCalledWith({ locale: 'fr', reason: 'locale-change' });

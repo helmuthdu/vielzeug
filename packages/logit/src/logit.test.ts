@@ -208,6 +208,13 @@ describe('Log Level Filtering', () => {
     log.setConfig({ logLevel: 'debug' });
     expect(log.enabled('warn')).toBe(true);
   });
+
+  it('logLevel "success" keeps info-level logs enabled', () => {
+    const { log, spies } = setup({ logLevel: 'success' });
+
+    log.info('i');
+    expect(spies.info).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ─── scope() and child() ──────────────────────────────────────────────────────
@@ -350,6 +357,20 @@ describe('Remote Logging', () => {
     log.info('msg');
     await vi.waitFor(() => expect(handler).toHaveBeenCalledWith('info', expect.objectContaining({ args: ['msg'] })));
   });
+
+  it('warns when remote handler throws', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { log } = setup({
+      remote: {
+        handler: () => {
+          throw new Error('remote boom');
+        },
+      },
+    });
+
+    log.info('msg');
+    await vi.waitFor(() => expect(warnSpy).toHaveBeenCalledWith('[logit] remote handler error:', expect.any(Error)));
+  });
 });
 
 // ─── Timers ───────────────────────────────────────────────────────────────────
@@ -390,8 +411,8 @@ describe('Timers', () => {
     expect(spies.timeEnd).toHaveBeenCalledWith('[db] query');
   });
 
-  it('fn still runs and value is returned when logLevel suppresses the timer', () => {
-    const { log, spies } = setup({ logLevel: 'info' });
+  it('fn still runs and value is returned when logLevel is off', () => {
+    const { log, spies } = setup({ logLevel: 'off' });
     const result = log.time('x', () => 'done');
 
     expect(result).toBe('done');
@@ -422,10 +443,10 @@ describe('Groups', () => {
     expect(spies.groupEnd).toHaveBeenCalledOnce();
   });
 
-  it('collapsed=true uses console.groupCollapsed', () => {
+  it('groupCollapsed(label, fn) uses console.groupCollapsed', () => {
     const { log, spies } = setup();
 
-    log.group('DETAILS', () => {}, true);
+    log.groupCollapsed('DETAILS', () => {});
     expect(spies.groupCollapsed).toHaveBeenCalledOnce();
     expect(spies.groupCollapsed.mock.calls[0][0]).toContain('DETAILS');
     expect(spies.groupEnd).toHaveBeenCalledOnce();
@@ -458,8 +479,17 @@ describe('Groups', () => {
     expect(spies.groupEnd).toHaveBeenCalledOnce();
   });
 
-  it('fn always runs and value is returned when the group wrapper is suppressed', () => {
+  it('group stays active at info level', () => {
     const { log, spies } = setup({ logLevel: 'info' });
+    const result = log.group('x', () => 'done');
+
+    expect(result).toBe('done');
+    expect(spies.group).toHaveBeenCalledOnce();
+    expect(spies.groupEnd).toHaveBeenCalledOnce();
+  });
+
+  it('fn always runs and value is returned when the group wrapper is suppressed', () => {
+    const { log, spies } = setup({ logLevel: 'off' });
     const result = log.group('x', () => 'done');
 
     expect(result).toBe('done');
@@ -494,6 +524,15 @@ describe('Table', () => {
     log.table([{}]);
     expect(spies.table).not.toHaveBeenCalled();
   });
+
+  it('adds namespace context using a group wrapper', () => {
+    const { log, spies } = setup({ namespace: 'App' });
+
+    log.table([{ id: 1 }]);
+    expect(spies.group).toHaveBeenCalledWith('[App]');
+    expect(spies.table).toHaveBeenCalledWith([{ id: 1 }], undefined);
+    expect(spies.groupEnd).toHaveBeenCalledOnce();
+  });
 });
 
 // ─── Assert ───────────────────────────────────────────────────────────────────
@@ -511,5 +550,12 @@ describe('Assert', () => {
 
     log.assert(false, 'x');
     expect(spies.assert).not.toHaveBeenCalled();
+  });
+
+  it('includes namespace prefix when set', () => {
+    const { log, spies } = setup({ namespace: 'App' });
+
+    log.assert(false, 'msg');
+    expect(spies.assert).toHaveBeenCalledWith(false, '[App]', 'msg');
   });
 });

@@ -21,7 +21,7 @@ import { createVirtualizer } from '@vielzeug/virtualit';
 const rows = Array.from({ length: 1_000 }, (_, i) => `Row ${i}`);
 let focusedIndex = 0;
 
-function paint(items = virt.getVirtualItems(), totalSize = virt.getTotalSize()) {
+function paint(items = virt.items, totalSize = virt.totalSize) {
   listEl.style.height = `${totalSize}px`;
   listEl.innerHTML = '';
 

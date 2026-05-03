@@ -22,21 +22,19 @@ define('search-list', {
     const items = signal(['Alice', 'Bob', 'Carol', 'Dave']);
     const filtered = computed(() => items.value.filter((name) => name.toLowerCase().includes(query.value.toLowerCase())));
 
-    return {
-      render: () => html`
-        <input :value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
+    return () => html`
+      <input :value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
 
-        ${() =>
-          filtered.value.length > 0
-            ? html`<ul>
-                ${each(filtered, {
-                  key: (_, i) => i,
-                  render: (name) => html`<li>${name}</li>`,
-                })}
-              </ul>`
-            : html`<p>No matches</p>`}
-      `,
-    };
+      ${() =>
+        filtered.value.length > 0
+          ? html`<ul>
+              ${each(filtered, {
+                key: (_, i) => i,
+                render: (name) => html`<li>${name}</li>`,
+              })}
+            </ul>`
+          : html`<p>No matches</p>`}
+    `;
   },
 });
 ```

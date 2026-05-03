@@ -3,8 +3,6 @@ title: Validit — Examples
 description: Real-world validation recipes and patterns for Validit.
 ---
 
-# Validit Examples
-
 [[toc]]
 
 ## How to Use These Examples
@@ -40,6 +38,8 @@ const RegistrationSchema = v
     confirmPassword: v.string(),
   })
   .refine((value) => value.password === value.confirmPassword, 'Passwords must match');
+
+const result = RegistrationSchema.safeParse(payload);
 ```
 
 ## Quick Recipe: Strict by Default Objects

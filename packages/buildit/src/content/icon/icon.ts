@@ -150,9 +150,7 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
       return `<svg ${svgAttrs}>${nodes}</svg>`;
     });
 
-    return {
-      render: () => html`${() => raw(markup.value)}`,
-    };
+    return () => html`${() => raw(markup.value)}`;
   },
   styles: [styles],
 });

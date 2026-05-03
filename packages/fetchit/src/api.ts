@@ -1,7 +1,7 @@
 import type { HttpRequestConfig, Params } from './url';
 
 import { HttpError } from './errors';
-import { CONTENT_TYPE_JSON, HEADER_CONTENT_TYPE, parseResponse } from './response';
+import { parseResponse } from './response';
 import { isBodyInit, serializeBodyKey, stableStringify } from './serialize';
 import { timeoutSignal } from './signals';
 import { buildUrl } from './url';
@@ -12,6 +12,7 @@ export type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promi
 
 export type ApiClientOptions = {
   baseUrl?: string;
+  fetch?: typeof globalThis.fetch;
   headers?: Record<string, string>;
   timeout?: number;
 };
@@ -22,7 +23,16 @@ const DEFAULT_TIMEOUT = 30_000;
 const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'DELETE']);
 
 export function createApi(opts: ApiClientOptions = {}) {
-  const { baseUrl = '', headers: initialHeaders = {}, timeout = DEFAULT_TIMEOUT } = opts;
+  const {
+    baseUrl = '',
+    fetch: fetchFn = globalThis.fetch,
+    headers: initialHeaders = {},
+    timeout = DEFAULT_TIMEOUT,
+  } = opts;
+
+  if (timeout <= 0 && timeout !== Number.POSITIVE_INFINITY) {
+    throw new TypeError('[fetchit] timeout must be a positive number or Infinity');
+  }
 
   const globalHeaders: Record<string, string> = Object.fromEntries(
     Object.entries(initialHeaders).map(([k, v]) => [k.toLowerCase(), v]),
@@ -31,7 +41,7 @@ export function createApi(opts: ApiClientOptions = {}) {
   const activeControllers = new Set<AbortController>();
   const interceptors: Interceptor[] = [];
   let pipeline: ((ctx: FetchContext) => Promise<Response>) | null = null;
-  let _disposed = false;
+  let disposed = false;
 
   function use(interceptor: Interceptor): () => void {
     interceptors.push(interceptor);
@@ -50,7 +60,7 @@ export function createApi(opts: ApiClientOptions = {}) {
   function getPipeline(): (ctx: FetchContext) => Promise<Response> {
     if (pipeline) return pipeline;
 
-    const base: (ctx: FetchContext) => Promise<Response> = (ctx) => fetch(ctx.url, ctx.init);
+    const base: (ctx: FetchContext) => Promise<Response> = (ctx) => fetchFn(ctx.url, ctx.init);
     const p =
       interceptors.length === 0
         ? base
@@ -64,13 +74,7 @@ export function createApi(opts: ApiClientOptions = {}) {
     return p;
   }
 
-  async function execute<T>(
-    init: RequestInit,
-    full: string,
-    m: string,
-    dedupeKey: string | undefined,
-    requestAc: AbortController,
-  ): Promise<T> {
+  async function execute<T>(init: RequestInit, full: string, m: string): Promise<T> {
     try {
       const res = await getPipeline()({ init, url: full });
       const parsed = await parseResponse(res);
@@ -84,10 +88,6 @@ export function createApi(opts: ApiClientOptions = {}) {
       if (err instanceof HttpError) throw err;
 
       throw HttpError.fromCause(err, m, full);
-    } finally {
-      if (dedupeKey) inFlight.delete(dedupeKey);
-
-      activeControllers.delete(requestAc);
     }
   }
 
@@ -96,7 +96,7 @@ export function createApi(opts: ApiClientOptions = {}) {
     url: P,
     config: HttpRequestConfig<P> = {} as HttpRequestConfig<P>,
   ) {
-    if (_disposed) throw new Error('[fetchit] ApiClient has been disposed');
+    if (disposed) throw new Error('[fetchit] ApiClient has been disposed');
 
     const full = buildUrl(baseUrl, url, config.params as Params | undefined, config.query);
     const m = method.toUpperCase();
@@ -145,22 +145,28 @@ export function createApi(opts: ApiClientOptions = {}) {
 
     if (body !== undefined && !isBodyInit(body)) {
       init.body = JSON.stringify(body);
-      init.headers = { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON, ...(init.headers as Record<string, string>) };
+      init.headers = { 'content-type': 'application/json', ...(init.headers as Record<string, string>) };
     } else if (body !== undefined) {
       init.body = body as BodyInit;
     }
 
-    const p = execute<T>(init, full, m, dedupeKey, requestAc);
+    const p = execute<T>(init, full, m);
 
     if (dedupeKey) inFlight.set(dedupeKey, p);
 
-    return p as Promise<T>;
+    try {
+      return (await p) as T;
+    } finally {
+      if (dedupeKey) inFlight.delete(dedupeKey);
+
+      activeControllers.delete(requestAc);
+    }
   }
 
   return {
     delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
     dispose(): void {
-      _disposed = true;
+      disposed = true;
       for (const ac of activeControllers) ac.abort();
       activeControllers.clear();
       inFlight.clear();
@@ -168,7 +174,7 @@ export function createApi(opts: ApiClientOptions = {}) {
       pipeline = null;
     },
     get disposed() {
-      return _disposed;
+      return disposed;
     },
     get: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('GET', url, cfg),
     headers(updates: Record<string, string | undefined>) {

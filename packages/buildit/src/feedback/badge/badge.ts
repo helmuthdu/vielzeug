@@ -95,15 +95,13 @@ export const BADGE_TAG = define<BitBadgeProps>('bit-badge', {
       return String(count);
     });
 
-    return {
-      render: () =>
-        html`<span class="badge" part="badge" aria-label="${props.label}">
-            <slot name="icon"></slot>
-            <span ?hidden="${() => label.value == null}">${label}</span>
-            <slot ?hidden="${() => label.value != null}"></slot>
-          </span>
-          <slot name="target"></slot>`,
-    };
+    return () =>
+      html`<span class="badge" part="badge" aria-label="${props.label}">
+          <slot name="icon"></slot>
+          <span ?hidden="${() => label.value == null}">${label}</span>
+          <slot ?hidden="${() => label.value != null}"></slot>
+        </span>
+        <slot name="target"></slot>`;
   },
   styles: [
     colorThemeMixin,

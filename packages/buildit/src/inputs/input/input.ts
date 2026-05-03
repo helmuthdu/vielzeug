@@ -202,73 +202,70 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       inputRef.value?.focus();
     };
 
-    return {
-      render: () => html`
-        <div class="input-wrapper" part="wrapper">
-          <label
-            class="label-outside"
-            for="${inputId}"
-            id="${labelOutsideId}"
-            part="label"
-            ?hidden="${outsideLabelHidden}">${props.label}</label>
-          <div class="field" part="field">
-            <label
-              class="label-inset"
-              for="${inputId}"
-              id="${labelInsetId}"
-              part="label"
-              ?hidden="${insetLabelHidden}">${props.label}</label>
-            <div class="input-row" part="input-row">
-              <slot name="prefix"></slot>
-              <input
-                part="input"
-                id="${inputId}"
-                :type="${resolvedInputType}"
-                :name="${props.name}"
-                :placeholder="${props.placeholder}"
-                :autocomplete="${props.autocomplete}"
-                :inputmode="${props.inputmode}"
-                :maxlength="${props.maxlength}"
-                :minlength="${props.minlength}"
-                :pattern="${props.pattern}"
-                ?disabled="${props.disabled}"
-                ?readonly="${props.readonly}"
-                ?required="${props.required}"
-                :value="${fieldValue}"
-                :aria-labelledby="${ariaLabelledBy}"
-                :aria-describedby="${ariaDescribedBy}"
-                :aria-errormessage="${ariaErrorMessage}"
-                :aria-invalid="${ariaInvalid}"
-                ref="${inputRef}" />
-              <slot name="suffix"></slot>
-              <button
-                class="pwd-toggle-btn"
-                part="pwd-toggle"
-                type="button"
-                :aria-label="${passwordToggleLabel}"
-                :aria-pressed="${passwordTogglePressed}"
-                tabindex="-1"
-                @click="${togglePassword}">
-                ${passwordToggleIcon}
-              </button>
-              <button aria-label="Clear" class="clear-btn" part="clear" tabindex="-1" type="button" @click="${clear}">
-                <bit-icon aria-hidden="true" name="x" size="12" stroke-width="2.5"></bit-icon>
-              </button>
-            </div>
-          </div>
-          <div class="helper-text" id="${helperId}" part="helper" ?hidden="${helperHidden}">${helperText}</div>
-          <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">${errorText}</div>
-          <div
-            class="char-counter"
-            part="char-counter"
-            :data-near-limit="${counterNearLimit}"
-            :data-at-limit="${counterAtLimit}"
-            ?hidden="${counterHidden}">
-            ${counterText}
+    return () => html`
+      <div class="input-wrapper" part="wrapper">
+        <label
+          class="label-outside"
+          for="${inputId}"
+          id="${labelOutsideId}"
+          part="label"
+          ?hidden="${outsideLabelHidden}"
+          >${props.label}</label
+        >
+        <div class="field" part="field">
+          <label class="label-inset" for="${inputId}" id="${labelInsetId}" part="label" ?hidden="${insetLabelHidden}"
+            >${props.label}</label
+          >
+          <div class="input-row" part="input-row">
+            <slot name="prefix"></slot>
+            <input
+              part="input"
+              id="${inputId}"
+              :type="${resolvedInputType}"
+              :name="${props.name}"
+              :placeholder="${props.placeholder}"
+              :autocomplete="${props.autocomplete}"
+              :inputmode="${props.inputmode}"
+              :maxlength="${props.maxlength}"
+              :minlength="${props.minlength}"
+              :pattern="${props.pattern}"
+              ?disabled="${props.disabled}"
+              ?readonly="${props.readonly}"
+              ?required="${props.required}"
+              :value="${fieldValue}"
+              :aria-labelledby="${ariaLabelledBy}"
+              :aria-describedby="${ariaDescribedBy}"
+              :aria-errormessage="${ariaErrorMessage}"
+              :aria-invalid="${ariaInvalid}"
+              ref="${inputRef}" />
+            <slot name="suffix"></slot>
+            <button
+              class="pwd-toggle-btn"
+              part="pwd-toggle"
+              type="button"
+              :aria-label="${passwordToggleLabel}"
+              :aria-pressed="${passwordTogglePressed}"
+              tabindex="-1"
+              @click="${togglePassword}">
+              ${passwordToggleIcon}
+            </button>
+            <button aria-label="Clear" class="clear-btn" part="clear" tabindex="-1" type="button" @click="${clear}">
+              <bit-icon aria-hidden="true" name="x" size="12" stroke-width="2.5"></bit-icon>
+            </button>
           </div>
         </div>
-      `,
-    };
+        <div class="helper-text" id="${helperId}" part="helper" ?hidden="${helperHidden}">${helperText}</div>
+        <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">${errorText}</div>
+        <div
+          class="char-counter"
+          part="char-counter"
+          :data-near-limit="${counterNearLimit}"
+          :data-at-limit="${counterAtLimit}"
+          ?hidden="${counterHidden}">
+          ${counterText}
+        </div>
+      </div>
+    `;
   },
   shadow: { delegatesFocus: true },
   styles: [

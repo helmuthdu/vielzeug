@@ -1,4 +1,4 @@
-import { define, effect, html } from '@vielzeug/craftit';
+import { define, effect, html, onMounted } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -157,50 +157,48 @@ export const TABLE_TAG = define<BitTableProps>('bit-table', {
     // HTML-parser foster-parenting which would eject <slot> elements from table
     // contexts.  All three issues — color themes, sticky headers, colspan —
     // require real <thead>/<tbody>/<tfoot>/<tr>/<th>/<td> in the shadow tree.
-    return {
-      mount() {
-        const scrollContainer = host.el.shadowRoot!.querySelector('.scroll-container')!;
+    onMounted(() => {
+      const scrollContainer = host.el.shadowRoot!.querySelector('.scroll-container')!;
 
-        const table = document.createElement('table');
-        const captionEl = document.createElement('caption');
-        const thead = document.createElement('thead');
-        const tbody = document.createElement('tbody');
-        const tfoot = document.createElement('tfoot');
+      const table = document.createElement('table');
+      const captionEl = document.createElement('caption');
+      const thead = document.createElement('thead');
+      const tbody = document.createElement('tbody');
+      const tfoot = document.createElement('tfoot');
 
-        // Keep part assignment imperative so template typing stays strict.
-        scrollContainer.setAttribute('part', 'scroll');
+      // Keep part assignment imperative so template typing stays strict.
+      scrollContainer.setAttribute('part', 'scroll');
 
-        table.setAttribute('part', 'table');
-        thead.setAttribute('part', 'head');
-        tbody.setAttribute('part', 'body');
-        tfoot.setAttribute('part', 'foot');
-        table.append(captionEl, thead, tbody, tfoot);
-        scrollContainer.appendChild(table);
+      table.setAttribute('part', 'table');
+      thead.setAttribute('part', 'head');
+      tbody.setAttribute('part', 'body');
+      tfoot.setAttribute('part', 'foot');
+      table.append(captionEl, thead, tbody, tfoot);
+      scrollContainer.appendChild(table);
 
-        // Sync caption text from prop
-        effect(() => {
-          captionEl.hidden = !(captionEl.textContent = props.caption.value ?? '');
-        });
+      // Sync caption text from prop
+      effect(() => {
+        captionEl.hidden = !(captionEl.textContent = props.caption.value ?? '');
+      });
 
-        // Initial build
-        let cleanupCellObservers = buildTable(host.el, thead, tbody, tfoot);
+      // Initial build
+      let cleanupCellObservers = buildTable(host.el, thead, tbody, tfoot);
 
-        // Rebuild whenever direct children change (rows added / removed / reordered)
-        const structureObserver = new MutationObserver(() => {
-          cleanupCellObservers();
-          cleanupCellObservers = buildTable(host.el, thead, tbody, tfoot);
-        });
+      // Rebuild whenever direct children change (rows added / removed / reordered)
+      const structureObserver = new MutationObserver(() => {
+        cleanupCellObservers();
+        cleanupCellObservers = buildTable(host.el, thead, tbody, tfoot);
+      });
 
-        structureObserver.observe(host.el, { childList: true });
+      structureObserver.observe(host.el, { childList: true });
 
-        return () => {
-          structureObserver.disconnect();
-          cleanupCellObservers();
-        };
-      },
+      return () => {
+        structureObserver.disconnect();
+        cleanupCellObservers();
+      };
+    });
 
-      render: () => html`<div class="scroll-container"></div>`,
-    };
+    return () => html`<div class="scroll-container"></div>`;
   },
   styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
 });

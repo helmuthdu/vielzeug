@@ -68,13 +68,11 @@ export const BUTTON_GROUP_TAG = define<BitButtonGroupProps>('bit-button-group', 
       variant: props.variant!,
     });
 
-    return {
-      render: () => html`
-        <div class="button-group" part="group" role="group" :aria-label="${props.label}">
-          <slot></slot>
-        </div>
-      `,
-    };
+    return () => html`
+      <div class="button-group" part="group" role="group" :aria-label="${props.label}">
+        <slot></slot>
+      </div>
+    `;
   },
   styles: [styles],
 });

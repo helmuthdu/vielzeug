@@ -3,9 +3,13 @@ title: 'Validit Examples — Async'
 description: 'Async validation examples using refineAsync with validit.'
 ---
 
-## Async Validation Examples
+## Async validation examples
 
-### Username Availability
+### Problem
+
+Validate values that depend on asynchronous checks such as uniqueness, account state, or external policy rules.
+
+### Runnable Example
 
 ```ts
 import { v } from '@vielzeug/validit';
@@ -19,11 +23,7 @@ const UsernameSchema = v
   }, 'Username already taken');
 
 const result = await UsernameSchema.safeParseAsync(input.username);
-```
 
-### Domain Validation
-
-```ts
 const CompanyEmailSchema = v
   .string()
   .email()
@@ -34,11 +34,7 @@ const CompanyEmailSchema = v
     },
     ({ value }) => `${value} is not an allowed company email`,
   );
-```
 
-### Async Object Refinement
-
-```ts
 const InviteSchema = v
   .object({
     workspaceId: v.string().uuid(),
@@ -49,11 +45,7 @@ const InviteSchema = v
   }, 'Invite already exists for this user and workspace');
 
 await InviteSchema.parseAsync(payload);
-```
 
-### Combining Sync and Async Rules
-
-```ts
 const TeamSlugSchema = v
   .string()
   .min(3)
@@ -66,18 +58,21 @@ const TeamSlugSchema = v
 await TeamSlugSchema.parseAsync('platform-team');
 ```
 
-### Important
+### Expected Output
 
-Use `parseAsync()` or `safeParseAsync()` when a schema contains async refinements.
+- `safeParseAsync()` returns the same success or failure shape as `safeParse()`, but after awaiting async refinements.
+- Sync validators still run first, so obviously invalid input can fail before the expensive async check.
 
-## Common Pitfalls
+### Common Pitfalls
 
-- Calling `.parse()` on schemas with `.refineAsync()`.
-- Running external side effects inside `.refineAsync()` that are not idempotent.
-- Forgetting to debounce or cache high-volume async checks.
+- Calling `.parse()` or `.safeParse()` on schemas with `.refineAsync()`.
+- Running side effects inside `.refineAsync()` that are not safe to retry.
+- Forgetting to debounce or batch high-volume availability checks in UI code.
 
-## Related Recipes
+### Related Recipes
 
 - [API](./api.md)
 - [Forms](./forms.md)
 - [Unions](./unions.md)
+
+Use `parseAsync()` or `safeParseAsync()` whenever the schema contains async refinements anywhere in the tree.

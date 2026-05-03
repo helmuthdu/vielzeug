@@ -30,7 +30,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     return [
       {
         code: ErrorCode.unrecognized_keys,
-        message: _messages().object_unrecognized_keys({ keys: unknownKeys }),
+        message: _messages().object.unrecognizedKeys({ keys: unknownKeys }),
         path: [],
       },
     ];
@@ -48,17 +48,12 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return {
         data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().object_type(), path: [] }],
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().object.type(), path: [] }],
       };
     }
 
     const obj = value as Record<string, unknown>;
-    const unknownKeyIssues = this._strictUnknownKeyIssues(obj);
-
-    if (unknownKeyIssues.length) return { data: value, issues: unknownKeyIssues };
-
-    // Parse known fields
-    const issues: Issue[] = [];
+    const issues: Issue[] = [...this._strictUnknownKeyIssues(obj)];
     const output: Record<string, unknown> = {};
 
     for (const key of Object.keys(this.shape)) {
@@ -80,14 +75,12 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return {
         data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().object_type(), path: [] }],
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().object.type(), path: [] }],
       };
     }
 
     const obj = value as Record<string, unknown>;
-    const unknownKeyIssues = this._strictUnknownKeyIssues(obj);
-
-    if (unknownKeyIssues.length) return { data: value, issues: unknownKeyIssues };
+    const issues: Issue[] = [...this._strictUnknownKeyIssues(obj)];
 
     // Async field parsing
     const keyResults = await Promise.all(
@@ -101,7 +94,6 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     );
 
     const output: Record<string, unknown> = {};
-    const issues: Issue[] = [];
 
     for (const r of keyResults) {
       if (r.issues.length === 0) output[r.key] = r.data;

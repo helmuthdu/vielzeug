@@ -15,7 +15,7 @@ import {
   type PropsInput,
   type PropsDef,
 } from './props';
-import { registerComponent, type ComponentInstance } from './registration';
+import { registerComponent, type ComponentTemplate } from './registration';
 
 export { type PropsDef, type PropsInput };
 export { prop };
@@ -40,8 +40,8 @@ export type ComponentDefinition<
   formAssociated?: boolean;
   /** Component properties and their metadata */
   props?: PropsDef<Props>;
-  /** Main setup function where component logic is defined. Props are the first positional parameter. Returns a ComponentInstance with render and optional mount. */
-  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits>) => ComponentInstance;
+  /** Main setup function where component logic is defined. Props are the first positional parameter. Returns a template function. */
+  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits>) => ComponentTemplate;
   /** Shadow DOM configuration (mode is always 'open') */
   shadow?: Omit<ShadowRootInit, 'mode'>;
   /** Component-specific styles */

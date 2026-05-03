@@ -182,82 +182,80 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
 
     const isNonInteractive = computed(() => isDisabled.value || isReadonly.value);
 
-    return {
-      render: () => html`
-        <div
-          class="wrapper"
-          role="spinbutton"
-          part="control"
-          :aria-valuenow="${() => parseValue() ?? null}"
-          :aria-valuemin="${() => props.min.value}"
-          :aria-valuemax="${() => props.max.value}"
-          :aria-label="${() => props.label.value}"
-          :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-          :aria-readonly="${() => (isReadonly.value ? 'true' : null)}"
-          @keydown="${handleKeydown}">
-          <button
-            type="button"
-            part="decrement-btn"
-            aria-label="Decrease"
-            ?disabled="${() => isNonInteractive.value || spinner.atMin()}"
-            @click="${(e: Event) => spinner.incrementBy(-(Number(props.step.value) || 1), e)}">
-            <bit-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
-          </button>
-          <bit-input
-            part="input"
-            type="text"
-            inputmode="decimal"
-            aria-hidden="true"
-            :value="${inputValue}"
-            :label="${() => props.label.value}"
-            :label-placement="${() => props['label-placement'].value}"
-            :placeholder="${() => props.placeholder.value}"
-            :color="${() => props.color.value}"
-            :size="${() => props.size.value}"
-            :variant="${() => props.variant.value}"
-            ?disabled="${isDisabled}"
-            ?readonly="${isReadonly}"
-            @input="${(e: Event) => {
-              const v = (
-                e as CustomEvent<{
-                  value?: string;
-                }>
-              ).detail?.value;
+    return () => html`
+      <div
+        class="wrapper"
+        role="spinbutton"
+        part="control"
+        :aria-valuenow="${() => parseValue() ?? null}"
+        :aria-valuemin="${() => props.min.value}"
+        :aria-valuemax="${() => props.max.value}"
+        :aria-label="${() => props.label.value}"
+        :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+        :aria-readonly="${() => (isReadonly.value ? 'true' : null)}"
+        @keydown="${handleKeydown}">
+        <button
+          type="button"
+          part="decrement-btn"
+          aria-label="Decrease"
+          ?disabled="${() => isNonInteractive.value || spinner.atMin()}"
+          @click="${(e: Event) => spinner.incrementBy(-(Number(props.step.value) || 1), e)}">
+          <bit-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
+        </button>
+        <bit-input
+          part="input"
+          type="text"
+          inputmode="decimal"
+          aria-hidden="true"
+          :value="${inputValue}"
+          :label="${() => props.label.value}"
+          :label-placement="${() => props['label-placement'].value}"
+          :placeholder="${() => props.placeholder.value}"
+          :color="${() => props.color.value}"
+          :size="${() => props.size.value}"
+          :variant="${() => props.variant.value}"
+          ?disabled="${isDisabled}"
+          ?readonly="${isReadonly}"
+          @input="${(e: Event) => {
+            const v = (
+              e as CustomEvent<{
+                value?: string;
+              }>
+            ).detail?.value;
 
-              if (typeof v !== 'string') return;
+            if (typeof v !== 'string') return;
 
-              inputValue.value = v;
+            inputValue.value = v;
 
-              const originalEvent = (e as CustomEvent<{ originalEvent?: Event }>).detail?.originalEvent ?? e;
+            const originalEvent = (e as CustomEvent<{ originalEvent?: Event }>).detail?.originalEvent ?? e;
 
-              emit('input', { originalEvent, value: parseValue() });
-            }}"
-            @change="${(e: Event) => {
-              const v = (
-                e as CustomEvent<{
-                  value?: string;
-                }>
-              ).detail?.value;
+            emit('input', { originalEvent, value: parseValue() });
+          }}"
+          @change="${(e: Event) => {
+            const v = (
+              e as CustomEvent<{
+                value?: string;
+              }>
+            ).detail?.value;
 
-              if (typeof v !== 'string') return;
+            if (typeof v !== 'string') return;
 
-              inputValue.value = v;
+            inputValue.value = v;
 
-              const originalEvent = (e as CustomEvent<{ originalEvent?: Event }>).detail?.originalEvent ?? e;
+            const originalEvent = (e as CustomEvent<{ originalEvent?: Event }>).detail?.originalEvent ?? e;
 
-              commit(parseValue(), originalEvent);
-            }}"></bit-input>
-          <button
-            type="button"
-            part="increment-btn"
-            aria-label="Increase"
-            ?disabled="${() => isNonInteractive.value || spinner.atMax()}"
-            @click="${(e: Event) => spinner.incrementBy(Number(props.step.value) || 1, e)}">
-            <bit-icon name="plus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
-          </button>
-        </div>
-      `,
-    };
+            commit(parseValue(), originalEvent);
+          }}"></bit-input>
+        <button
+          type="button"
+          part="increment-btn"
+          aria-label="Increase"
+          ?disabled="${() => isNonInteractive.value || spinner.atMax()}"
+          @click="${(e: Event) => spinner.incrementBy(Number(props.step.value) || 1, e)}">
+          <bit-icon name="plus" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
+        </button>
+      </div>
+    `;
   },
   styles: [disabledStateMixin(), styles],
 });

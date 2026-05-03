@@ -13,10 +13,8 @@ Implement standalone entry in a production-friendly way with `@vielzeug/eventit`
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
 
-When you need the standalone bundle export, import from `@vielzeug/eventit/core`:
-
 ```ts
-import { createBus } from '@vielzeug/eventit/core';
+import { createBus } from '@vielzeug/eventit';
 
 type WorkerEvents = {
   message: { id: string; body: string };

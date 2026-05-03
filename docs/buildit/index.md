@@ -76,11 +76,11 @@ For headless widget controllers (navigation/overlay/selection), use `@vielzeug/c
 
 **Disclosure:** `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`
 
-**Feedback:** `bit-alert`, `bit-async`, `bit-badge`, `bit-chip`, `bit-progress`, `bit-skeleton`, `bit-toast`
+**Feedback:** `bit-alert`, `bit-async`, `bit-badge`, `bit-chip`, `bit-password-strength`, `bit-progress`, `bit-skeleton`, `bit-toast`
 
 **Inputs:** `bit-button`, `bit-button-group`, `bit-checkbox`, `bit-checkbox-group`, `bit-combobox`, `bit-file-input`, `bit-form`, `bit-input`, `bit-number-input`, `bit-otp-input`, `bit-radio`, `bit-radio-group`, `bit-rating`, `bit-select`, `bit-slider`, `bit-switch`, `bit-textarea`
 
-**Layout:** `bit-box`, `bit-grid`, `bit-grid-item`, `bit-sidebar`
+**Layout:** `bit-box`, `bit-grid`, `bit-grid-item`, `bit-navbar`, `bit-sidebar`
 
 **Overlay:** `bit-dialog`, `bit-drawer`, `bit-menu`, `bit-popover`, `bit-tooltip`
 

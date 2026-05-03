@@ -1,4 +1,5 @@
 import { mediaObserver } from '..';
+import { onMounted } from '../../index';
 import { mount } from '../../testing';
 
 describe('mediaObserver()', () => {
@@ -10,12 +11,13 @@ describe('mediaObserver()', () => {
     window.matchMedia = vi.fn().mockReturnValue(mockMql);
 
     try {
-      await mount(() => ({
-        mount() {
+      await mount(() => {
+        onMounted(() => {
           capturedMatches = mediaObserver('(prefers-color-scheme: dark)');
-        },
-        render: () => '',
-      }));
+        });
+
+        return () => '';
+      });
 
       expect(capturedMatches.value).toBe(true);
     } finally {
@@ -39,12 +41,13 @@ describe('mediaObserver()', () => {
     window.matchMedia = vi.fn().mockReturnValue(mockMql);
 
     try {
-      await mount(() => ({
-        mount() {
+      await mount(() => {
+        onMounted(() => {
           capturedMatches = mediaObserver('(max-width: 768px)');
-        },
-        render: () => '',
-      }));
+        });
+
+        return () => '';
+      });
 
       expect(capturedMatches.value).toBe(false);
 
@@ -70,12 +73,13 @@ describe('mediaObserver()', () => {
     window.matchMedia = vi.fn().mockReturnValue(mockMql);
 
     try {
-      const { destroy } = await mount(() => ({
-        mount() {
+      const { destroy } = await mount(() => {
+        onMounted(() => {
           mediaObserver('(prefers-reduced-motion: reduce)');
-        },
-        render: () => '',
-      }));
+        });
+
+        return () => '';
+      });
 
       expect(removeEventListenerSpy).not.toHaveBeenCalled();
       destroy();

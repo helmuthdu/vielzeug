@@ -1,4 +1,11 @@
-import { computed, effect as rawEffect, type CleanupFn, type ReadonlySignal, untrack } from '@vielzeug/stateit';
+import {
+  computed,
+  effect as rawEffect,
+  isSignal,
+  type CleanupFn,
+  type ReadonlySignal,
+  untrack,
+} from '@vielzeug/stateit';
 
 import {
   CF_ID_ATTR,
@@ -19,29 +26,13 @@ export type BindingTargets = {
   elements: Map<string, HTMLElement>;
 };
 
-const templateCache = new Map<string, HTMLTemplateElement>();
+export const parseHTML = (html: string): DocumentFragment => {
+  const tpl = document.createElement('template');
 
-const getCachedTemplate = (html: string): HTMLTemplateElement => {
-  let tpl = templateCache.get(html);
+  tpl.innerHTML = html;
 
-  if (!tpl) {
-    tpl = document.createElement('template');
-    tpl.innerHTML = html;
-
-    if (templateCache.size >= 100) {
-      const first = templateCache.keys().next().value;
-
-      if (first !== undefined) templateCache.delete(first);
-    }
-
-    templateCache.set(html, tpl);
-  }
-
-  return tpl;
+  return tpl.content.cloneNode(true) as DocumentFragment;
 };
-
-export const parseHTML = (html: string): DocumentFragment =>
-  getCachedTemplate(html).content.cloneNode(true) as DocumentFragment;
 
 const collectBindingTarget = (node: Node, targets: BindingTargets): void => {
   if (node.nodeType === Node.COMMENT_NODE) {
@@ -91,9 +82,6 @@ export const findCommentMarker = (root: Node, marker: string): Comment | null =>
 
 const isStructuredValue = (value: unknown): value is object =>
   Array.isArray(value) || (typeof value === 'object' && value !== null);
-
-const isSignal = (val: unknown): val is ReadonlySignal<unknown> =>
-  typeof val === 'object' && val !== null && 'value' in val && typeof (val as { value?: unknown }).value !== 'function';
 
 const signalEffect = (
   signal: ReadonlySignal<unknown>,

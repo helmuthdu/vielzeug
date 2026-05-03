@@ -109,6 +109,106 @@ describe('bit-sidebar', () => {
       window.matchMedia = originalMatchMedia;
     }
   });
+
+  it('enters bottom-nav mode when bottom-nav-at query matches', async () => {
+    let changeHandler: ((event: MediaQueryListEvent) => void) | undefined;
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: (_: string, cb: (event: MediaQueryListEvent) => void) => {
+        changeHandler = cb;
+      },
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('bit-sidebar', { attrs: { 'bottom-nav-at': '(max-width: 768px)' } });
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-bottom-nav')).toBe(true);
+      expect(fixture.element.hasAttribute('data-collapsed')).toBe(false);
+
+      changeHandler?.({ matches: false } as MediaQueryListEvent);
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-bottom-nav')).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('supports openMobile/closeMobile/toggleMobile API in bottom-nav mode', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('bit-sidebar', {
+        attrs: { 'bottom-nav-at': '(max-width: 768px)' },
+      });
+
+      const el = fixture.element as HTMLElement & {
+        closeMobile(): void;
+        openMobile(): void;
+        toggleMobile(): void;
+      };
+
+      el.openMobile();
+      await fixture.flush();
+      expect(fixture.element.hasAttribute('data-mobile-open')).toBe(true);
+
+      el.toggleMobile();
+      await fixture.flush();
+      expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
+
+      el.openMobile();
+      await fixture.flush();
+      el.closeMobile();
+      await fixture.flush();
+      expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('renders bottom tabs only from direct sidebar-item children', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('bit-sidebar', {
+        attrs: { 'bottom-nav-at': '(max-width: 768px)' },
+        html: `
+          <bit-sidebar-item href="#" active>Home</bit-sidebar-item>
+          <bit-sidebar-item href="#">Search</bit-sidebar-item>
+          <bit-sidebar-group label="More">
+            <bit-sidebar-item href="#">Nested</bit-sidebar-item>
+          </bit-sidebar-group>
+        `,
+      });
+      await fixture.flush();
+
+      const bar = fixture.query('[part="bottom-bar"]');
+      const tabs = bar?.querySelectorAll('.bottom-tab') ?? [];
+
+      expect(tabs.length).toBe(2);
+      expect(bar?.textContent).toContain('Home');
+      expect(bar?.textContent).toContain('Search');
+      expect(bar?.textContent).not.toContain('Nested');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
 });
 
 describe('bit-sidebar-group', () => {

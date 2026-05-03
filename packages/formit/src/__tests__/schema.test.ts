@@ -22,7 +22,7 @@ describe('fromSchema', () => {
       ...fromSchema(mockSchema),
     });
 
-    const { errors, valid } = await form.validateAll();
+    const { errors, valid } = await form.validate();
 
     expect(valid).toBe(false);
     expect(errors.email).toBe('Invalid email');
@@ -35,7 +35,7 @@ describe('fromSchema', () => {
       ...fromSchema(mockSchema),
     });
 
-    const { errors, valid } = await form.validateAll();
+    const { errors, valid } = await form.validate();
 
     expect(valid).toBe(true);
     expect(Object.keys(errors)).toHaveLength(0);
@@ -54,8 +54,23 @@ describe('fromSchema', () => {
       }),
     };
     const form = createForm({ defaultValues: { email: '' }, ...fromSchema(multiSchema) });
-    const { errors } = await form.validateAll();
+    const { errors } = await form.validate();
 
     expect(errors.email).toBe('First');
+  });
+
+  test('root-level issues (path=[]) are stored under _form key', async () => {
+    const crossFieldSchema = {
+      safeParse: (_: unknown) => ({
+        error: {
+          issues: [{ message: 'Passwords do not match', path: [] }],
+        },
+        success: false as const,
+      }),
+    };
+    const form = createForm({ defaultValues: { confirm: '', password: '' }, ...fromSchema(crossFieldSchema) });
+    const { allErrors } = await form.validate();
+
+    expect(allErrors._form).toBe('Passwords do not match');
   });
 });

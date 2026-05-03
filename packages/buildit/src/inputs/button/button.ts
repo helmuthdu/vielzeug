@@ -185,38 +185,36 @@ export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-but
       },
     });
 
-    return {
-      render: () => html`
-        ${() =>
-          isLink.value
-            ? html`<a
-                part="button"
-                :href="${props.href}"
-                :target="${props.target}"
-                :rel="${props.rel}"
-                role="button"
-                :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-                :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-                @click="${handleClick}">
-                <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-                <slot name="prefix"></slot>
-                <span class="content" part="content"><slot></slot></span>
-                <slot name="suffix"></slot>
-              </a>`
-            : html`<button
-                part="button"
-                type="button"
-                ?disabled=${isDisabled}
-                :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-                :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-                @click="${handleClick}">
-                <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-                <slot name="prefix"></slot>
-                <span class="content" part="content"><slot></slot></span>
-                <slot name="suffix"></slot>
-              </button>`}
-      `,
-    };
+    return () => html`
+      ${() =>
+        isLink.value
+          ? html`<a
+              part="button"
+              :href="${props.href}"
+              :target="${props.target}"
+              :rel="${props.rel}"
+              role="button"
+              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+              @click="${handleClick}">
+              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+              <slot name="prefix"></slot>
+              <span class="content" part="content"><slot></slot></span>
+              <slot name="suffix"></slot>
+            </a>`
+          : html`<button
+              part="button"
+              type="button"
+              ?disabled=${isDisabled}
+              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+              @click="${handleClick}">
+              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+              <slot name="prefix"></slot>
+              <span class="content" part="content"><slot></slot></span>
+              <slot name="suffix"></slot>
+            </button>`}
+    `;
   },
   shadow: { delegatesFocus: true },
   styles: [

@@ -10,6 +10,7 @@ import {
   signal,
   syncAria,
   watch,
+  onMounted,
 } from '@vielzeug/craftit';
 import { createSliderControl } from '@vielzeug/craftit/controls';
 
@@ -282,7 +283,6 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
             const val = clientToValue(e.clientX);
 
             dragging = Math.abs(val - startVal.value) <= Math.abs(val - endVal.value) ? 'start' : 'end';
-            isDragging.value = true;
             (e.target as Element).setPointerCapture(e.pointerId);
             applyDrag(val);
           },
@@ -295,6 +295,9 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           () => !!dragging,
           (e: PointerEvent) => {
             e.preventDefault();
+
+            if (!isDragging.value) isDragging.value = true;
+
             applyDrag(clientToValue(e.clientX));
           },
         ),
@@ -459,48 +462,46 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       );
     };
 
-    return {
-      mount() {
-        const container = containerRef.value;
+    onMounted(() => {
+      const container = containerRef.value;
 
-        if (!container) return;
+      if (!container) return;
 
-        if (slots.has().value && labelRef.value) {
-          const labelId = createId('slider-label');
+      if (slots.has().value && labelRef.value) {
+        const labelId = createId('slider-label');
 
-          labelRef.value.id = labelId;
+        labelRef.value.id = labelId;
 
-          if (!isRange) labelledById.value = labelId;
-        }
+        if (!isRange) labelledById.value = labelId;
+      }
 
-        if (isRange) setupRangeMode(container);
-        else setupSingleMode(container);
-      },
+      if (isRange) setupRangeMode(container);
+      else setupSingleMode(container);
+    });
 
-      render: () => html`
-        <div class="slider-container" part="slider" ref=${containerRef}>
-          <div class="slider-track" part="track">
-            <div class="slider-fill" part="fill"></div>
-            <div class="slider-thumb slider-thumb-sole" part="thumb"></div>
-            <div
-              class="slider-thumb slider-thumb-start"
-              part="thumb-start"
-              ref=${thumbStartRef}
-              role="slider"
-              tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-              id="${startId}"></div>
-            <div
-              class="slider-thumb slider-thumb-end"
-              part="thumb-end"
-              ref=${thumbEndRef}
-              role="slider"
-              tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-              id="${endId}"></div>
-          </div>
+    return () => html`
+      <div class="slider-container" part="slider" ref=${containerRef}>
+        <div class="slider-track" part="track">
+          <div class="slider-fill" part="fill"></div>
+          <div class="slider-thumb slider-thumb-sole" part="thumb"></div>
+          <div
+            class="slider-thumb slider-thumb-start"
+            part="thumb-start"
+            ref=${thumbStartRef}
+            role="slider"
+            tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+            id="${startId}"></div>
+          <div
+            class="slider-thumb slider-thumb-end"
+            part="thumb-end"
+            ref=${thumbEndRef}
+            role="slider"
+            tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+            id="${endId}"></div>
         </div>
-        <span class="label" part="label" ref=${labelRef}><slot></slot></span>
-      `,
-    };
+      </div>
+      <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+    `;
   },
   styles: [
     disabledStateMixin(),

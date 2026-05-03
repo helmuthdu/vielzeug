@@ -2,20 +2,15 @@ export {
   batch,
   computed,
   isSignal,
-  peek,
-  readonly,
   signal,
-  toValue,
   untrack,
-  unwrapSignal,
   watch,
-  writable,
   type ReadonlySignal,
   type Signal,
   type WatchOptions,
 } from '@vielzeug/stateit';
 
-export { effect, handle, onCleanup, onElement } from './runtime';
+export { effect, handle, onCleanup, onElement, onMounted } from './runtime';
 
 export {
   define,
@@ -29,7 +24,7 @@ export {
   type SetupContextBag,
 } from './component';
 
-export type { ComponentInstance } from './registration';
+export type { ComponentTemplate } from './registration';
 
 export { defineField, type FormFieldHandle, type FormFieldOptions } from './form';
 

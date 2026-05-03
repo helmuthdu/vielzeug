@@ -1,8 +1,9 @@
 import { type CleanupFn, untrack } from '@vielzeug/stateit';
 
+import { CRAFTIT_ERRORS } from './errors';
 import { type CSSResult, extractResult, type HTMLResult, loadStylesheet, runAll } from './internal';
 import { isReflecting, propRegistry } from './props';
-import { type RuntimeScope, withCurrentElement, withRuntimeScope } from './runtime';
+import { type OnMountedCallback, type RuntimeScope, withCurrentElement, withRuntimeScope } from './runtime';
 import { applyBindingsInContainer, parseHTML, type RegisterCleanup } from './template-bindings';
 import { applyHtmlBinding } from './template-html';
 
@@ -17,30 +18,28 @@ export type ComponentRegistrationOptions = {
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
-export type ComponentInstance = {
-  mount?: () => CleanupFn | void;
-  render: () => HTMLResult;
-};
+export type ComponentTemplate = () => HTMLResult;
 
 type ComponentCleanupState = {
   cleanups: CleanupFn[];
   el: HTMLElement;
+  mountCallbacks: OnMountedCallback[];
   mountToken: number;
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
 type ComponentLifecycleState = {
-  instance: ComponentInstance | null;
-  mounted: boolean;
-  rendered: boolean;
-  template: HTMLResult | null;
+  mountedCallbacksRan: boolean;
+  setupDone: boolean;
+  templateMounted: boolean;
+  templateResult: HTMLResult | null;
 };
 
 class BaseElement extends HTMLElement {
   // Lifecycle: setup() runs once on first connect. _init() runs on every connect.
   // On disconnect: cleanups run; on reconnect, styles and bindings are re-applied.
   static _options?: ComponentRegistrationOptions;
-  static _setup: () => ComponentInstance;
+  static _setup: () => ComponentTemplate;
   static formAssociated = false;
   static observedAttributes: string[] = [];
 
@@ -55,14 +54,15 @@ class BaseElement extends HTMLElement {
 
     this.shadow = this.attachShadow({ mode: 'open', ...options?.shadow });
     this._lifecycle = {
-      instance: null,
-      mounted: false,
-      rendered: false,
-      template: null,
+      mountedCallbacksRan: false,
+      setupDone: false,
+      templateMounted: false,
+      templateResult: null,
     };
     this._state = {
       cleanups: [],
       el: this,
+      mountCallbacks: [],
       mountToken: 0,
       styles: options?.styles,
     };
@@ -70,7 +70,7 @@ class BaseElement extends HTMLElement {
 
   connectedCallback(): void {
     untrack(() => {
-      if (!this._lifecycle.instance) this._runSetup();
+      if (!this._lifecycle.setupDone) this._runSetup();
 
       this._init();
     });
@@ -101,11 +101,11 @@ class BaseElement extends HTMLElement {
     this._state.mountToken++;
     runAll(this._state.cleanups);
     this._state.cleanups = [];
-    this._lifecycle.rendered = false;
+    this._lifecycle.templateMounted = false;
   }
 
   private _handleError(err: unknown): void {
-    console.error(`[craftit:E3] <${this.localName}>`, err);
+    console.error(CRAFTIT_ERRORS.unhandledComponentError(this.localName), err);
 
     throw err instanceof Error ? err : new Error(String(err));
   }
@@ -113,18 +113,19 @@ class BaseElement extends HTMLElement {
   private _runSetup(): void {
     const setupScope: RuntimeScope = {
       cleanups: [],
+      mountCallbacks: [],
     };
 
     try {
-      this._lifecycle.instance = withRuntimeScope(setupScope, () =>
+      const template = withRuntimeScope(setupScope, () =>
         withCurrentElement(this, () => (this.constructor as typeof BaseElement)._setup()),
       );
 
-      this._lifecycle.template = withRuntimeScope(setupScope, () =>
-        withCurrentElement(this, () => this._lifecycle.instance!.render()),
-      );
+      this._lifecycle.templateResult = withRuntimeScope(setupScope, () => withCurrentElement(this, () => template()));
 
       this._state.cleanups.push(...setupScope.cleanups);
+      this._state.mountCallbacks.push(...setupScope.mountCallbacks);
+      this._lifecycle.setupDone = true;
     } catch (err) {
       this._handleError(err);
     }
@@ -135,12 +136,12 @@ class BaseElement extends HTMLElement {
 
     if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
 
-    if (!this._lifecycle.rendered && this._lifecycle.template != null) {
-      const { bindings, html: htmlString } = extractResult(this._lifecycle.template);
+    if (!this._lifecycle.templateMounted && this._lifecycle.templateResult != null) {
+      const { bindings, html: htmlString } = extractResult(this._lifecycle.templateResult);
       const registerCleanup: RegisterCleanup = (fn) => this._state.cleanups.push(fn);
 
       this.shadow.replaceChildren(parseHTML(htmlString));
-      this._lifecycle.rendered = true;
+      this._lifecycle.templateMounted = true;
 
       if (bindings.length) {
         applyBindingsInContainer(this.shadow, bindings, registerCleanup, {
@@ -149,8 +150,8 @@ class BaseElement extends HTMLElement {
       }
     }
 
-    if (!this._lifecycle.mounted && this._lifecycle.instance?.mount) {
-      this._lifecycle.mounted = true;
+    if (!this._lifecycle.mountedCallbacksRan && this._state.mountCallbacks.length > 0) {
+      this._lifecycle.mountedCallbacksRan = true;
 
       const token = ++this._state.mountToken;
 
@@ -158,15 +159,16 @@ class BaseElement extends HTMLElement {
         if (!this.isConnected || token !== this._state.mountToken) return;
 
         try {
-          const mountScope: RuntimeScope = {
-            cleanups: this._state.cleanups,
-          };
+          for (const callback of this._state.mountCallbacks) {
+            const mountScope: RuntimeScope = {
+              cleanups: this._state.cleanups,
+              mountCallbacks: [],
+            };
 
-          const cleanup = withRuntimeScope(mountScope, () =>
-            withCurrentElement(this, () => this._lifecycle.instance!.mount!()),
-          );
+            const cleanup = withRuntimeScope(mountScope, () => withCurrentElement(this, () => callback()));
 
-          if (typeof cleanup === 'function') this._state.cleanups.push(cleanup);
+            if (typeof cleanup === 'function') this._state.cleanups.push(cleanup);
+          }
         } catch (err) {
           this._handleError(err);
         }
@@ -178,13 +180,13 @@ class BaseElement extends HTMLElement {
 /** @internal — use define() instead. */
 export function registerComponent(
   tag: string,
-  setup: () => ComponentInstance,
+  setup: () => ComponentTemplate,
   options: ComponentRegistrationOptions = {},
 ): string {
-  if (!tag) throw new Error('[craftit:E4] registerComponent(tag, ...) requires a tag name');
+  if (!tag) throw new Error(CRAFTIT_ERRORS.defineRequiresTag);
 
   if (customElements.get(tag)) {
-    throw new Error(`[craftit:E10] define('${tag}', ...) called more than once`);
+    throw new Error(CRAFTIT_ERRORS.defineDuplicate(tag));
   }
 
   class Element extends BaseElement {

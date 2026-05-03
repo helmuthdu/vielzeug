@@ -48,6 +48,15 @@ const zone = createDropZone({
 });
 ```
 
+For reactive frameworks, `accept` can also be a getter:
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  accept: () => (isMediaMode.value ? ['image/*', 'video/*'] : ['application/pdf']),
+});
+```
+
 Files are pre-validated during drag via `dataTransfer.items` (MIME types and wildcards) — the cursor shows a `none` drop effect before the user even releases. Extension patterns (`.pdf`) can only be confirmed at drop time since `DataTransferItem` does not expose filenames, so they receive optimistic hover treatment.
 
 ### Hover state
@@ -63,25 +72,6 @@ const zone = createDropZone({
 });
 ```
 
-For more control, use `onDragEnter` and `onDragLeave` directly:
-
-```ts
-const zone = createDropZone({
-  element: dropEl,
-  onDragEnter: (event) => {
-    /* drag has entered */
-  },
-  onDragLeave: (event) => {
-    /* drag has left */
-  },
-  onDragOver: (event) => {
-    /* fires every frame while hovering */
-  },
-});
-```
-
-`onDragEnter` follows native behavior and can fire multiple times while entering descendants. If you only need inactive→active transitions, prefer `onHoverChange`.
-
 Dragit also resets hover state on global `window` `drop`/`dragend` events to avoid stuck hover UI if the drag leaves the viewport.
 
 Reading the current state imperatively:
@@ -90,12 +80,11 @@ Reading the current state imperatively:
 console.log(zone.hovered); // boolean — true while dragging over
 ```
 
-Or read the lightweight state object:
+Read the last resolved drop collections:
 
 ```ts
-console.log(zone.state.hovered);
-console.log(zone.state.files); // accepted files from last drop
-console.log(zone.state.rejected); // rejected files from last drop
+console.log(zone.files); // accepted files from last drop
+console.log(zone.rejected); // rejected files from last drop
 ```
 
 ### dropEffect
@@ -112,9 +101,7 @@ const zone = createDropZone({
 });
 ```
 
-::: tip
-`onDragOver` can override `dropEffect` dynamically per-frame if you need conditional feedback (e.g. `'move'` when Alt is held, `'copy'` otherwise).
-:::
+`dropEffect` is intentionally static for each drop zone instance. Create separate zones or toggle with `disabled` when you need different interaction modes.
 
 ### Drop Zone Disabled State
 
@@ -231,7 +218,7 @@ const sortable = createSortable({
     // id — the identity attribute value of the item being dragged
     listEl.classList.add('sorting');
   },
-  onDragEnd: (event) => {
+  onDragEnd: (id, event) => {
     listEl.classList.remove('sorting');
   },
   onReorder: (ids) => {
@@ -283,7 +270,7 @@ When disabled, `dragstart` is blocked. If the sortable becomes disabled while a 
 
 ### Styling the placeholder
 
-While an item is being dragged, dragit inserts a `<div class="dragit-placeholder">` in the list to indicate the drop position by default. You can override the class name with `placeholderClass`. Only `height` is set inline (mirroring the dragged item). All visual styling is left to your CSS:
+While an item is being dragged, dragit inserts a `<div class="dragit-placeholder">` in the list to indicate the drop position by default. You can override the class name with `placeholderClass`. For `axis: 'vertical'` the placeholder gets inline `height`; for `axis: 'horizontal'` it gets inline `width`. All visual styling is left to your CSS:
 
 ```ts
 const sortable = createSortable({
@@ -324,11 +311,11 @@ const sortable = createSortable({
 });
 ```
 
-The item being dragged has `opacity: 0` applied automatically while in flight (restored on drop or cancel). The `data-dragging` attribute is also set, which you can use for additional styling:
+The `data-dragging` attribute is set while an item is in flight, which you can style directly:
 
 ```css
 [data-dragging] {
-  /* opacity is already 0 — use for other effects */
+  opacity: 0.35;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 ```

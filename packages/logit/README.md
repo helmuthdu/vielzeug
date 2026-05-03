@@ -49,7 +49,7 @@ await log.time('sync-task', async () => {
 - Scoped logger composition via `scope(name)`
 - Independent logger cloning via `child(overrides?)`
 - Browser badge variants: `symbol`, `icon`, `text`
-- Callback wrappers: `time(label, fn)` and `group(label, fn, collapsed?)`
+- Callback wrappers: `time(label, fn)`, `group(label, fn)`, and `groupCollapsed(label, fn)`
 - Console passthrough helpers: `assert`, `table`
 - Remote log forwarding with independent threshold (`remote.logLevel`)
 - Zero runtime dependencies
@@ -85,7 +85,8 @@ const cfg = Logit.config; // snapshot copy
 - `logger.scope(name) => Logger`
 - `logger.child(overrides?) => Logger`
 - `logger.time(label, fn)`
-- `logger.group(label, fn, collapsed?)`
+- `logger.group(label, fn)`
+- `logger.groupCollapsed(label, fn)`
 
 ## Documentation
 

@@ -78,7 +78,6 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
       error: props.error,
       group: groupCtx,
       helper: props.helper,
-      host: host.el,
       indeterminate: props.indeterminate,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
@@ -115,18 +114,16 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
       },
     });
 
-    return {
-      render: () => html`
-        <div class="checkbox-wrapper" part="checkbox">
-          <div class="box" part="box">
-            <bit-icon class="checkmark" name="check" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
-            <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
-          </div>
+    return () => html`
+      <div class="checkbox-wrapper" part="checkbox">
+        <div class="box" part="box">
+          <bit-icon class="checkmark" name="check" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+          <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
         </div>
-        <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
-        <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
-      `,
-    };
+      </div>
+      <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
+      <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
+    `;
   },
   styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],
 });

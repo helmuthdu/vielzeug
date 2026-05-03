@@ -1,9 +1,7 @@
 ---
 title: Validit — Usage Guide
-description: Schema composition, validation flows, strict object behavior, and async patterns in Validit.
+description: Schema composition, parsing flows, strict object behavior, async refinements, and message customization in Validit.
 ---
-
-# Validit Usage Guide
 
 [[toc]]
 
@@ -13,24 +11,30 @@ description: Schema composition, validation flows, strict object behavior, and a
 import { v } from '@vielzeug/validit';
 
 const UserSchema = v.object({
-  name: v.string().min(1),
-  email: v.string().email(),
+  id: v.coerce.number().int().positive(),
+  name: v.string().trim().min(1),
+  email: v.string().trim().email(),
   age: v.number().int().min(18).optional(),
+  newsletter: v.coerce.boolean().default(false),
 });
 
 const parsed = UserSchema.parse(input);
 
 const result = UserSchema.safeParse(input);
 if (!result.success) {
-  console.log(result.error.flatten());
+  console.log(result.error.flattenFirst());
 }
 ```
 
-## v Namespace Factories
+`parse()` is useful once you already control the boundary. At external boundaries, prefer `safeParse()` so validation failures stay in the result instead of becoming thrown exceptions.
+
+## Schema Factories
 
 `v` is the canonical factory namespace.
 
 ```ts
+v.any();
+v.unknown();
 v.string();
 v.number();
 v.boolean();
@@ -56,6 +60,8 @@ v.null();
 v.undefined();
 ```
 
+Use `v.any()` when you want an unconstrained schema that only adds preprocess, refine, transform, or branding behavior. Use `v.unknown()` when you want the same runtime behavior but keep the output type as `unknown` until later transforms or refinements narrow it.
+
 ## Primitive Schemas
 
 ### Strings
@@ -67,9 +73,23 @@ v.string().url();
 v.string().uuid();
 v.string().isoDate(); // YYYY-MM-DD
 v.string().isoDateTime(); // ISO date-time
+v.string().ip(); // IPv4 or IPv6
 v.string().startsWith('user_').endsWith('_id').includes('_');
 v.string().regex(/^[a-z0-9_-]+$/i);
 v.string().trim().lowercase(); // preprocess before validation
+```
+
+String preprocessors run before validation. That means `v.string().trim().email()` trims first, then validates the resulting value.
+
+When multiple preprocessors are chained, they run in declaration order.
+
+```ts
+const Schema = v
+  .string()
+  .preprocess((value) => (typeof value === 'string' ? ` ${value} ` : value))
+  .preprocess((value) => (typeof value === 'string' ? value.trim() : value));
+
+Schema.parse('abc'); // 'abc'
 ```
 
 ### Numbers
@@ -81,21 +101,27 @@ v.number().negative();
 v.number().nonNegative();
 v.number().nonPositive();
 v.number().multipleOf(5);
+v.number().safe();
 ```
+
+`safe()` uses `Number.isSafeInteger()`, so it is intended for integer-like identifiers and counters rather than arbitrary floating-point values.
 
 ### Other Primitives
 
 ```ts
 v.boolean();
+v.coerce.boolean(); // true/false, 1/0, 'true'/'false', '1'/'0'
 v.date().min(new Date('2024-01-01')).max(new Date());
+v.coerce.date(); // string or number -> Date
 v.literal('active');
 v.enum(['draft', 'published'] as const);
+v.enum([200, 201, 204] as const);
 v.nativeEnum(StatusEnum);
 ```
 
-## Complex Schemas
+## Objects, Arrays, Tuples, and Records
 
-### Objects, Arrays, Tuples, Records
+### Objects
 
 ```ts
 const Profile = v.object({
@@ -110,7 +136,45 @@ const Profile = v.object({
 const RelaxedProfile = Profile.relaxed();
 ```
 
-### Union, Intersect, Variant
+`object()` is strict by default. Unknown keys produce an `unrecognized_keys` issue instead of being silently dropped.
+
+### Arrays
+
+```ts
+const TagsSchema = v.array(v.string().trim().min(1)).nonEmpty().unique();
+
+TagsSchema.parse(['docs', 'typescript']);
+```
+
+`unique()` uses JavaScript `Set` semantics. Primitive values compare by value, but objects compare by reference.
+
+### Tuples
+
+```ts
+const PointSchema = v.tuple([v.number(), v.number()] as const);
+
+const point = PointSchema.parse([12, 48]);
+// point: readonly [number, number]
+```
+
+### Records
+
+```ts
+const EnvSchema = v.record(v.string().regex(/^[A-Z_]+$/), v.string());
+
+EnvSchema.parse({ API_URL: 'https://example.com', MODE: 'prod' });
+```
+
+Record key schemas validate the string property names. If the key schema transforms a key, the parsed output uses the transformed key.
+
+```ts
+const NormalizedHeaders = v.record(v.string().trim().lowercase(), v.string());
+
+NormalizedHeaders.parse({ ' Content-Type ': 'application/json' });
+// => { 'content-type': 'application/json' }
+```
+
+## Union, Intersect, and Variant
 
 ```ts
 const Id = v.union(v.number(), v.string());
@@ -124,11 +188,15 @@ const ApiResult = v.variant('type', {
 });
 ```
 
-## Validation Methods
+`union()` and `intersect()` accept either schemas or raw literals. Raw literals are normalized to literal schemas internally.
 
-### parse and safeParse
+## Parsing and Validation Flow
+
+### `parse()` and `safeParse()`
 
 ```ts
+import { ValidationError } from '@vielzeug/validit';
+
 try {
   UserSchema.parse(input);
 } catch (error) {
@@ -143,7 +211,9 @@ if (!result.success) {
 }
 ```
 
-### parseAsync and safeParseAsync
+`parse()` throws only for validation failures and for misuse like calling `parse()` on a schema that contains async validators. `safeParse()` returns a discriminated union and never throws for validation failures.
+
+### `parseAsync()` and `safeParseAsync()`
 
 ```ts
 const UniqueEmail = v
@@ -158,9 +228,11 @@ await UniqueEmail.parseAsync('user@example.com');
 await UniqueEmail.safeParseAsync('user@example.com');
 ```
 
-## Nullability and Defaults
+If any branch of a schema uses `.refineAsync()`, use the async parse methods all the way through. Calling `parse()` on such a schema throws an error telling you to switch to `parseAsync()` or `safeParseAsync()`.
 
-### optional, nullable, nullish
+## Optional, Nullable, Default, and Catch
+
+### `optional()`, `nullable()`, and `nullish()`
 
 ```ts
 v.string().optional();
@@ -168,7 +240,7 @@ v.string().nullable();
 v.string().nullish();
 ```
 
-### required, default, catch
+### `required()`, `default()`, and `catch()`
 
 ```ts
 v.string().optional().required();
@@ -180,9 +252,54 @@ v.object({
 }).required();
 ```
 
-## Refinements
+`default()` applies only when the input is `undefined`. It does not replace `null` or other invalid values.
 
-### refine (sync)
+`catch()` returns a fallback when validation fails. It only catches `ValidationError`, not unrelated runtime errors.
+
+## Transforms, Preprocess, and Branding
+
+### `transform()`
+
+```ts
+const NormalizedEmail = v
+  .string()
+  .trim()
+  .email()
+  .transform((value) => value.toLowerCase());
+```
+
+`transform()` returns a new base `Schema<NewOutput>`. Apply type-specific methods like `.email()` or `.min()` before the transform.
+
+### `preprocess()`
+
+```ts
+const PaginationSchema = v.object({
+  page: v.number().int().min(1),
+  limit: v.number().int().min(1).max(100),
+}).preprocess((value) => {
+  if (!value || typeof value !== 'object') return value;
+
+  const input = value as Record<string, unknown>;
+
+  return {
+    ...input,
+    limit: typeof input.limit === 'string' ? Number(input.limit) : input.limit,
+    page: typeof input.page === 'string' ? Number(input.page) : input.page,
+  };
+});
+```
+
+### `brand()` and `describe()`
+
+```ts
+const UserId = v.number().int().positive().brand<'UserId'>().describe('Positive numeric user identifier');
+```
+
+`brand()` is compile-time only. `describe()` stores a string on the schema instance for tooling or documentation.
+
+## Async Validation
+
+### `refine()`
 
 ```ts
 const Password = v
@@ -192,7 +309,7 @@ const Password = v
   .refine((value) => /\d/.test(value), 'Must include a number');
 ```
 
-### refineAsync (async)
+### `refineAsync()`
 
 ```ts
 const Username = v
@@ -207,110 +324,87 @@ const Username = v
   );
 ```
 
-## Transform and Preprocess
-
-### transform
-
-```ts
-const NormalizedEmail = v
-  .string()
-  .trim()
-  .email()
-  .transform((value) => value.toLowerCase());
-```
-
-`transform()` returns `Schema<NewOutput>`, so apply type-specific validators before transforming.
-
-### preprocess
-
-```ts
-const NumberFromQuery = v
-  .object({
-    page: v.number().int().min(1),
-  })
-  .preprocess((value) => {
-    if (value && typeof value === 'object') {
-      const obj = value as Record<string, unknown>;
-
-      return { ...obj, page: typeof obj.page === 'string' ? Number(obj.page) : obj.page };
-    }
-
-    return value;
-  });
-
-const NumberFromString = v.number().preprocess((value) => (typeof value === 'string' ? Number(value) : value));
-```
-
-## Object Composition and Unknown Keys
-
-```ts
-const Base = v.object({
-  id: v.number().int().positive(),
-  email: v.string().email(),
-  nickname: v.string().optional(),
-});
-
-const PublicUser = Base.pick('id', 'nickname');
-const InternalUser = Base.extend({ role: v.union('admin', 'editor', 'viewer') });
-const RequiredUser = Base.required();
-const PartialUser = Base.partial('email');
-
-// Strict by default
-Base.safeParse({ id: 1, email: 'a@b.com', extra: true }); // fails
-
-// Allow unknown keys
-Base.relaxed().safeParse({ id: 1, email: 'a@b.com', extra: true }); // succeeds
-```
-
-## Message Configuration
-
-```ts
-configure({
-  messages: {
-    string_email: () => 'Please enter a valid email address',
-    number_min: ({ min }) => `Value must be at least ${min}`,
-  },
-});
-```
+Sync refinements and async refinements both receive the parsed value after preprocessors, defaults, and core schema validation.
 
 ## Error Handling
 
 ```ts
-const result = UserSchema.safeParse(input);
+const RegistrationSchema = v
+  .object({
+    password: v.string().min(8),
+    confirmPassword: v.string(),
+  })
+  .refine(({ password, confirmPassword }) => password === confirmPassword, 'Passwords must match');
+
+const result = RegistrationSchema.safeParse(input);
 
 if (!result.success) {
   for (const issue of result.error.issues) {
     console.log(issue.path.join('.'), issue.code, issue.message, issue.params);
   }
 
-  const { fieldErrors, formErrors } = result.error.flatten();
-  console.log(fieldErrors, formErrors);
+  const grouped = result.error.flatten();
+  const firstOnly = result.error.flattenFirst();
+
+  console.log(grouped.fieldErrors, grouped.formErrors);
+  console.log(firstOnly.fieldErrors, firstOnly.formErrors);
 }
 ```
+
+Cross-field object refinements usually land in `formErrors` because their issue path is empty.
+
+For machine handling, prefer checking `issue.code` and `issue.params` over matching human-readable messages.
+
+- `array.unique()` uses `not_unique`
+- `number.safe()` uses `not_safe`
+
+## Message Customization
+
+```ts
+import { configure, reset } from '@vielzeug/validit';
+
+configure({
+  messages: {
+    array: {
+      unique: () => 'Tags must be unique',
+    },
+    number: {
+      min: ({ min }) => `Value must be at least ${min}`,
+    },
+    string: {
+      email: () => 'Please enter a valid email address',
+      ip: () => 'Use a valid IPv4 or IPv6 address',
+    },
+  },
+});
+
+reset();
+```
+
+`configure()` deep-merges the provided message groups with the defaults. `reset()` restores the built-in defaults.
 
 ## Type Inference
 
 ```ts
+import { v, type Infer, type InferOutput, type TypeOf } from '@vielzeug/validit';
+
 const Schema = v.object({
   id: v.number(),
   email: v.string().email().optional(),
 });
 
 type Output = Infer<typeof Schema>;
-```
-
-Also available:
-
-```ts
 type Output2 = InferOutput<typeof Schema>;
 type Output3 = TypeOf<typeof Schema>;
 ```
+
+`Infer`, `InferOutput`, and `TypeOf` all resolve to the parsed output type of the schema.
 
 ## Best Practices
 
 - Reuse schema instances instead of rebuilding per call.
 - Use `safeParse()` for user input boundaries.
 - Use `parseAsync()` / `safeParseAsync()` whenever async refinements are present.
-- Prefer message functions for contextual errors.
+- Prefer message functions when the error needs dynamic values like `min`, `max`, or the offending input.
 - Keep transforms at the end of schema chains.
 - Treat `v.object(...)` as strict-by-default and use `.relaxed()` deliberately.

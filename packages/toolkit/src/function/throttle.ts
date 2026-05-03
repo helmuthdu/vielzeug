@@ -45,6 +45,7 @@ export function throttle<T extends Fn>(
   let lastArgs: Parameters<T> | undefined;
   let lastThis: ThisParameterType<T> | undefined;
   let lastResult: ReturnType<T> | undefined;
+  const scheduler = new Scheduler();
 
   const clearTimer = () => {
     if (timerController !== undefined) {
@@ -55,7 +56,6 @@ export function throttle<T extends Fn>(
 
   const scheduleTimer = (delayMs: number) => {
     const controller = new AbortController();
-    const scheduler = new Scheduler();
 
     timerController = controller;
     void scheduler

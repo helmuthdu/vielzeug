@@ -9,7 +9,7 @@ description: Practical lifecycle patterns for setup, cleanup, refs, and host wir
 
 ## Prefer Setup-Scope Reactivity
 
-Most component logic should live directly in `setup()` using `effect()`.
+Most component logic should live directly in `setup()` using signals and `effect()`.
 
 ```ts
 import { define, effect, html, signal } from '@vielzeug/craftit';
@@ -22,16 +22,43 @@ define('counter-title', {
       document.title = `Count: ${count.value}`;
     });
 
-    return { render: () => html`<button @click=${() => count.value++}>${count}</button>` };
+    return () => html`<button @click=${() => count.value++}>${count}</button>`;
   },
 });
 ```
 
-Use `mount()` on the returned `ComponentInstance` only when you must wait for the DOM to be ready (for example platform observers or imperative third-party APIs).
+## Run DOM Initialization with `onMounted()`
+
+Use `onMounted(fn)` for DOM-dependent initialization. Multiple `onMounted()` calls are supported and run in registration order.
+
+```ts
+import { define, html, onMounted, ref, signal } from '@vielzeug/craftit';
+
+define('my-tabs', {
+  setup(_props, { slots }) {
+    const activeTab = signal(0);
+    const containerRef = ref<HTMLElement>();
+
+    onMounted(() => {
+      const panels = slots.elements('panels').value;
+      if (panels.length > 0 && activeTab.value >= panels.length) {
+        activeTab.value = 0;
+      }
+    });
+
+    return () => html`
+      <div ref=${containerRef}>
+        <div role="tablist"><slot name="tabs"></slot></div>
+        <div role="tabpanel"><slot name="panels"></slot></div>
+      </div>
+    `;
+  },
+});
+```
 
 ## Use `onElement()` for Ref-Driven Effects
 
-`onElement(ref, callback)` is the cleanest way to react when a `ref` resolves and to auto-clean per element lifecycle.
+`onElement(ref, callback)` is ideal for imperative DOM logic tied to a specific referenced element.
 
 ```ts
 import { define, html, onElement, ref } from '@vielzeug/craftit';
@@ -52,20 +79,14 @@ define('focus-input', {
       return () => input.removeEventListener('keydown', onKeydown);
     });
 
-    return { render: () => html`<input ref=${inputRef} />` };
+    return () => html`<input ref=${inputRef} />`;
   },
 });
 ```
 
 ## Keep Host Wiring Explicit
 
-Use:
-
-- `host.attr(name, signal)`, `host.class(map)`, `host.style(map)`, `host.prop(name, descriptor)`, `host.on(event, listener)` — one-liner helpers for individual bindings
-- `host.bind({ attr, class, on, prop, style })` — full config object when wiring multiple bindings together
-- `handle(target, event, listener)` for external targets (`window`, `document`, arbitrary elements)
-
-Host binding values may be **signals, getter functions, or primitives**. Use `computed(...)` when you want a reusable derived signal.
+Use one-liner host helpers for individual bindings and `host.bind(...)` for grouped bindings.
 
 ```ts
 import { computed, define, handle, html, signal } from '@vielzeug/craftit';
@@ -78,54 +99,20 @@ define('toggle-host', {
     host.bind({
       attr: { 'aria-expanded': expanded, role: 'button', tabindex: 0 },
       class: { 'is-open': open },
-      on: { click: () => { open.value = !open.value; } },
+      on: { click: () => (open.value = !open.value) },
     });
 
     handle(window, 'keydown', (e) => {
       if (e.key === 'Escape') open.value = false;
     });
 
-    return { render: () => html`<slot></slot>` };
+    return () => html`<slot></slot>`;
   },
 });
 ```
 
 ## Pick the Right Cleanup Primitive
 
-- Use `onCleanup(fn)` for one-time teardown owned by the component.
-- Use a mutable cleanup variable when a disposable resource is replaced over time.
-
-```ts
-import { define, html, onCleanup } from '@vielzeug/craftit';
-
-define('search-loader', {
-  setup() {
-    const query = signal('');
-    let activeRequest: (() => void) | null = null;
-
-    effect(() => {
-      const controller = new AbortController();
-      activeRequest?.();
-      activeRequest = () => controller.abort();
-      fetch(`/api/search?q=${encodeURIComponent(query.value)}`, {
-        signal: controller.signal,
-      }).catch(() => {});
-    });
-
-    onCleanup(() => {
-      activeRequest?.();
-      activeRequest = null;
-    });
-
-    return { render: () => html`<div>Searching…</div>` };
-  },
-});
-```
-
-## Quick Checklist
-
-- Keep reactive state/effects in setup scope.
-- Use `onElement()` for ref-based imperative DOM logic.
-- Host bindings: use signals or primitives; use `computed(...)` for derived values.
-- Use one-liner helpers (`host.attr`, `host.class`, etc.) for single bindings; `host.bind(...)` for multi-binding config objects.
-- Return/attach cleanups for every listener or disposable resource.
+- Use `onCleanup(fn)` for component-owned teardown.
+- Use `onElement()` for per-element teardown.
+- Return cleanup from `onMounted()` when cleanup belongs to mount-time setup.

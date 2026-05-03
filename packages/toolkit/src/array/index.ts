@@ -1,6 +1,5 @@
 export * from './chunk';
 export * from './contains';
-export * from './fold';
 export * from './group';
 export * from './keyBy';
 export * from './list';

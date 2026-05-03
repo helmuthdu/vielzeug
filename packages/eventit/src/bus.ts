@@ -5,15 +5,14 @@ import { BusDisposedError } from './errors';
 export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   const subs = new Map<string, Set<Listener<unknown>>>();
   const disposeController = new AbortController();
+  const noop = () => {};
 
-  function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): () => void {
-    const mergedSignal = signal ? AbortSignal.any([disposeController.signal, signal]) : disposeController.signal;
+  function mergeSignal(signal?: AbortSignal): AbortSignal {
+    return signal ? AbortSignal.any([disposeController.signal, signal]) : disposeController.signal;
+  }
 
-    try {
-      mergedSignal.throwIfAborted();
-    } catch {
-      return () => {};
-    }
+  function onWithSignal<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal: AbortSignal): () => void {
+    if (signal.aborted) return noop;
 
     const l = listener as Listener<unknown>;
     let set = subs.get(event);
@@ -31,63 +30,78 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
       if (s?.size === 0) subs.delete(event);
 
-      mergedSignal.removeEventListener('abort', unsub);
+      signal.removeEventListener('abort', unsub);
     }
-    mergedSignal.addEventListener('abort', unsub, { once: true });
+    signal.addEventListener('abort', unsub, { once: true });
 
     return unsub;
+  }
+
+  function onceWithSignal<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal: AbortSignal): () => void {
+    let unsub: () => void = noop;
+
+    unsub = onWithSignal(
+      event,
+      (payload) => {
+        unsub();
+        listener(payload);
+      },
+      signal,
+    );
+
+    return unsub;
+  }
+
+  function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): () => void {
+    return onWithSignal(event, listener, mergeSignal(signal));
   }
 
   function once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): () => void {
-    let unsub: () => void = () => {};
-    const wrapper = (payload: T[K]) => {
-      unsub();
-      listener(payload);
-    };
-
-    unsub = on(event, wrapper as Listener<T[K]>, signal);
-
-    return unsub;
+    return onceWithSignal(event, listener, mergeSignal(signal));
   }
 
   function wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]> {
-    const mergedSignal = signal ? AbortSignal.any([disposeController.signal, signal]) : disposeController.signal;
+    const activeSignal = mergeSignal(signal);
 
-    try {
-      mergedSignal.throwIfAborted();
-    } catch (err) {
-      return Promise.reject(err);
-    }
+    if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
 
     return new Promise<T[K]>((resolve, reject) => {
       function onAbort() {
         unsub();
-        reject(mergedSignal.reason);
+        reject(activeSignal.reason);
       }
 
-      const unsub = once(event, (payload) => {
-        mergedSignal.removeEventListener('abort', onAbort);
-        resolve(payload);
-      });
+      const unsub = onceWithSignal(
+        event,
+        (payload) => {
+          activeSignal.removeEventListener('abort', onAbort);
+          resolve(payload);
+        },
+        activeSignal,
+      );
 
-      mergedSignal.addEventListener('abort', onAbort, { once: true });
+      activeSignal.addEventListener('abort', onAbort, { once: true });
     });
   }
 
   async function* events<K extends EventKey<T>>(event: K, signal?: AbortSignal): AsyncGenerator<T[K]> {
     const queue: T[K][] = [];
     let wake: (() => void) | undefined;
-    const mergedSignal = signal ? AbortSignal.any([disposeController.signal, signal]) : disposeController.signal;
+    const activeSignal = mergeSignal(signal);
 
-    if (mergedSignal.aborted) return;
+    if (activeSignal.aborted) return;
 
-    const unsub = on(event, (payload) => {
-      queue.push(payload);
-      wake?.();
-    });
+    const unsub = onWithSignal(
+      event,
+      (payload) => {
+        queue.push(payload);
+        wake?.();
+      },
+      activeSignal,
+    );
 
     try {
-      while (!mergedSignal.aborted) {
+      while (!activeSignal.aborted) {
         if (queue.length) {
           yield queue.shift()!;
           continue;
@@ -99,9 +113,9 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
         };
 
         wake = resolve;
-        mergedSignal.addEventListener('abort', abortHandler, { once: true });
+        activeSignal.addEventListener('abort', abortHandler, { once: true });
         await promise;
-        mergedSignal.removeEventListener('abort', abortHandler);
+        activeSignal.removeEventListener('abort', abortHandler);
         wake = undefined;
       }
     } finally {
@@ -114,11 +128,11 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
     const payload = (args as unknown[])[0];
 
-    options?.onEmit?.(event, payload as T[K]);
-
     const set = subs.get(event);
 
     if (!set?.size) return;
+
+    options?.onEmit?.(event, payload as T[K]);
 
     for (const listener of [...set]) {
       try {

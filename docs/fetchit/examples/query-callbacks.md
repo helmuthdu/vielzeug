@@ -32,15 +32,14 @@ await qc.query({
 
 stop();
 
-// Retry policy lives on the query client
-const retryingQc = createQuery({
-  retry: 3,
-  shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
-});
+// Retry policy can be set per query call
+const retryingQc = createQuery();
 
 await retryingQc.query({
   key: ['config'],
   fn: ({ signal }) => api.get('/config', { signal }),
+  retry: 3,
+  shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```
 

@@ -15,6 +15,18 @@ describe('createPermit()', () => {
     expect(permit.can({ id: 'u1', roles: ['admin'] }, 'posts', 'read')).toBe(true);
   });
 
+  it('supports setting multiple rules in one call', () => {
+    const permit = createPermit();
+
+    permit.set([
+      { action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' },
+      { action: 'delete', effect: 'allow', resource: 'posts', role: 'admin' },
+    ]);
+
+    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
+    expect(permit.can({ id: 'u2', roles: ['admin'] }, 'posts', 'delete')).toBe(true);
+  });
+
   it('uses exact matching for role, resource, and action', () => {
     const permit = createPermit();
 

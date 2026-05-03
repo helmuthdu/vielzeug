@@ -1,0 +1,4 @@
+export const optionalNullableExample = {
+  code: "import { v } from '@vielzeug/validit'\n\nconst schema = v.object({\n  required: v.string(),\n  optional: v.string().optional(),\n  nullable: v.string().nullable(),\n  withDefault: v.string().default('default value')\n})\n\n// Valid with minimum fields\nconst result1 = schema.safeParse({\n  required: 'value'\n})\nconsole.log('Minimal:', result1.success)\nif (result1.success) {\n  console.log('Data:', result1.data)\n}\n\n// With optional and nullable\nconst result2 = schema.safeParse({\n  required: 'value',\n  optional: 'optional value',\n  nullable: null\n})\nconsole.log('\\nWith optional:', result2.success)\n\n// Missing required field\nconst result3 = schema.safeParse({\n  optional: 'value'\n})\nconsole.log('Missing required:', result3.success)",
+  name: 'Optional and Nullable Fields',
+};

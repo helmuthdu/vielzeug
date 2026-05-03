@@ -1,5 +1,5 @@
-import { ErrorCode, Schema } from '../core';
-import { _messages } from '../messages';
+import { Schema } from '../core';
+import { buildEnumValidator } from './enum';
 
 type NativeEnumValue = string | number;
 type NativeEnumObj = Record<string, NativeEnumValue>;
@@ -14,21 +14,8 @@ export class NativeEnumSchema<T extends NativeEnumObj> extends Schema<InferNativ
     const values = Object.values(enumObj).filter(
       (v) => typeof v !== 'number' || !Object.hasOwn(enumObj, v),
     ) as NativeEnumValue[];
-    const set = new Set<unknown>(values);
 
-    super([
-      (value, path) =>
-        set.has(value)
-          ? null
-          : [
-              {
-                code: ErrorCode.invalid_enum,
-                message: _messages().enum_invalid({ values }),
-                params: { values },
-                path,
-              },
-            ],
-    ]);
+    super([buildEnumValidator(values)]);
     this.enum = enumObj;
   }
 }

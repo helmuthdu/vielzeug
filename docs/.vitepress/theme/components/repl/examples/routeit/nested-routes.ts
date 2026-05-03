@@ -1,0 +1,4 @@
+export const nestedRoutesExample = {
+  code: "import { createRouter } from '@vielzeug/routeit'\n\nconst router = createRouter({\n  routes: {\n    adminDashboard: {\n      path: '/admin/dashboard',\n      handler: () => console.log('📊 Admin Dashboard')\n    },\n    adminUsers: {\n      path: '/admin/users',\n      handler: () => console.log('👥 Admin Users')\n    },\n    blogPost: {\n      path: '/blog/posts/:id',\n      handler: ({ params }) => console.log('📝 Post:', params.id)\n    },\n    notFound: {\n      path: '*',\n      handler: () => console.log('Not found')\n    }\n  }\n})\n\n\nawait router.navigate({ name: 'adminDashboard' })\nawait router.navigate({ name: 'adminUsers' })\nawait router.navigate({ name: 'blogPost', params: { id: '123' } })",
+  name: 'Route Groups Replacement - Explicit Table Paths',
+};

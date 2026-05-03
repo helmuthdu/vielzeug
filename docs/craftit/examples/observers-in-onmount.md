@@ -1,35 +1,34 @@
 ---
-title: 'Craftit Examples — Observers in mount()'
-description: 'Current Craftit observer example using mount() and explicit DOM refs.'
+title: 'Craftit Examples — Observers in onMounted()'
+description: 'Current Craftit observer example using onMounted() and explicit DOM refs.'
 ---
 
-## Observers in mount()
+## Observers in onMounted()
 
-Observer helpers from `@vielzeug/craftit/observers` require real DOM nodes, so call them in `mount()` after refs have resolved.
+Observer helpers from `@vielzeug/craftit/observers` require real DOM nodes, so call them in `onMounted()` after refs have resolved.
 
 ```ts
-import { define, effect, html, ref } from '@vielzeug/craftit';
+import { define, effect, html, onMounted, ref } from '@vielzeug/craftit';
 import { mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';
 
 define('observed-panel', {
   setup() {
     const panel = ref<HTMLDivElement>();
 
-    return {
-      mount() {
-        const element = panel.value;
+    onMounted(() => {
+      const element = panel.value;
 
-        if (!element) return;
+      if (!element) return;
 
-        const size = resizeObserver(element);
-        const dark = mediaObserver('(prefers-color-scheme: dark)');
+      const size = resizeObserver(element);
+      const dark = mediaObserver('(prefers-color-scheme: dark)');
 
-        effect(() => {
-          console.log('panel width', size.value.width, 'dark mode', dark.value);
-        });
-      },
-      render: () => html`<div ref=${panel}>Resize me</div>`,
-    };
+      effect(() => {
+        console.log('panel width', size.value.width, 'dark mode', dark.value);
+      });
+    });
+
+    return () => html`<div ref=${panel}>Resize me</div>`;
   },
 });
 ```

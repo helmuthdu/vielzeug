@@ -1,5 +1,5 @@
 import { createId } from '../internal';
-import { defer, effect, onCleanup } from '../runtime';
+import { currentElementOrThrow, effect, onCleanup, onMounted } from '../runtime';
 
 export type A11yTone = 'default' | 'error';
 
@@ -28,7 +28,8 @@ const hasLabelContent = (labelElement: HTMLElement): boolean => {
   return (labelElement.textContent?.trim().length ?? 0) > 0;
 };
 
-export function createA11yControl(host: HTMLElement, config: A11yControlConfig): A11yControlHandle {
+export function createA11yControl(config: A11yControlConfig): A11yControlHandle {
+  const host = currentElementOrThrow();
   const labelId = config.labelId || createId('a11y-label');
   const helperId = config.helperId || createId('a11y-helper');
 
@@ -155,7 +156,7 @@ export function createA11yControl(host: HTMLElement, config: A11yControlConfig):
   });
 
   // Sync once after first render — DOM elements are not yet available during setup.
-  defer(() => sync());
+  onMounted(() => sync());
 
   onCleanup(() => {
     for (const cleanup of slotCleanupByElement.values()) cleanup();

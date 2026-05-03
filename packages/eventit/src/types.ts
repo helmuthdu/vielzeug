@@ -4,7 +4,7 @@ export type Listener<T> = (payload: T) => void;
 export type Unsubscribe = () => void;
 
 export type BusOptions<T extends EventMap = EventMap> = {
-  /** Called on every emit before listeners run. Useful for logging/tracing. */
+  /** Called before listeners run, only when the emitted event has listeners. */
   onEmit?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
   /** If provided, listener errors are forwarded here instead of re-thrown. */
   onError?: <K extends EventKey<T>>(err: unknown, event: K, payload: T[K]) => void;

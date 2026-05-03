@@ -39,6 +39,7 @@ describe('Route table', () => {
 
   it('preserves route meta on match state', async () => {
     mockLocation.pathname = '/home';
+
     const router = await boot(
       createRouter({
         routes: {

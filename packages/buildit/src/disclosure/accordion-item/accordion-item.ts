@@ -1,4 +1,4 @@
-import { define, effect, html, inject, ref } from '@vielzeug/craftit';
+import { define, effect, html, inject, ref, onMounted } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -104,97 +104,95 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
       }
     };
 
-    return {
-      mount() {
-        const details = detailsRef.value;
-        const summary = summaryRef.value;
+    onMounted(() => {
+      const details = detailsRef.value;
+      const summary = summaryRef.value;
 
-        if (!details || !summary) return;
+      if (!details || !summary) return;
 
-        // Detect RTL by preferring the closest explicit dir="..." ancestor.
-        const checkRTL = () => {
-          let isRTL: boolean | undefined;
+      // Detect RTL by preferring the closest explicit dir="..." ancestor.
+      const checkRTL = () => {
+        let isRTL: boolean | undefined;
 
-          // 1) Closest ancestor dir always wins (supports local RTL sections).
-          let parent: HTMLElement | null = host.el;
+        // 1) Closest ancestor dir always wins (supports local RTL sections).
+        let parent: HTMLElement | null = host.el;
 
-          while (parent) {
-            const dir = parent.getAttribute('dir');
+        while (parent) {
+          const dir = parent.getAttribute('dir');
 
-            if (dir === 'rtl') {
-              isRTL = true;
-              break;
-            }
-
-            if (dir === 'ltr') {
-              isRTL = false;
-              break;
-            }
-
-            parent = parent.parentElement;
+          if (dir === 'rtl') {
+            isRTL = true;
+            break;
           }
 
-          // 2) Fallback to computed direction when no explicit dir is found.
-          if (isRTL === undefined) {
-            isRTL = getComputedStyle(host.el).direction === 'rtl';
+          if (dir === 'ltr') {
+            isRTL = false;
+            break;
           }
 
-          // 3) Keep markup simple for CSS targeting.
-          details.classList.toggle('rtl', isRTL);
-        };
+          parent = parent.parentElement;
+        }
 
-        // Check initially
-        checkRTL();
+        // 2) Fallback to computed direction when no explicit dir is found.
+        if (isRTL === undefined) {
+          isRTL = getComputedStyle(host.el).direction === 'rtl';
+        }
 
-        // Re-check when DOM attributes change
-        const observer = new MutationObserver((mutations) => {
-          const dirChanged = mutations.some((m) => m.attributeName === 'dir');
+        // 3) Keep markup simple for CSS targeting.
+        details.classList.toggle('rtl', isRTL);
+      };
 
-          if (dirChanged) {
-            checkRTL();
-          }
-        });
+      // Check initially
+      checkRTL();
 
-        observer.observe(document.documentElement, {
-          attributeFilter: ['dir'],
-          attributes: true,
-          subtree: true,
-        });
+      // Re-check when DOM attributes change
+      const observer = new MutationObserver((mutations) => {
+        const dirChanged = mutations.some((m) => m.attributeName === 'dir');
 
-        details.addEventListener('toggle', handleToggle);
+        if (dirChanged) {
+          checkRTL();
+        }
+      });
 
-        return () => {
-          observer.disconnect();
-          details.removeEventListener('toggle', handleToggle);
-        };
-      },
+      observer.observe(document.documentElement, {
+        attributeFilter: ['dir'],
+        attributes: true,
+        subtree: true,
+      });
 
-      render: () =>
-        html` <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
-          <summary
-            part="summary"
-            :aria-expanded="${() => String(props.expanded.value)}"
-            :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
-            ref="${summaryRef}">
-            <slot name="prefix"></slot>
-            <div class="header-content" part="header">
-              <span class="title" part="title" id="${titleId}">
-                <slot name="title"></slot>
-              </span>
-              <span class="subtitle" part="subtitle">
-                <slot name="subtitle"></slot>
-              </span>
-            </div>
-            <slot name="suffix"></slot>
-            <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
-          </summary>
-          <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
-            <div class="content-inner">
-              <slot></slot>
-            </div>
+      details.addEventListener('toggle', handleToggle);
+
+      return () => {
+        observer.disconnect();
+        details.removeEventListener('toggle', handleToggle);
+      };
+    });
+
+    return () =>
+      html` <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
+        <summary
+          part="summary"
+          :aria-expanded="${() => String(props.expanded.value)}"
+          :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
+          ref="${summaryRef}">
+          <slot name="prefix"></slot>
+          <div class="header-content" part="header">
+            <span class="title" part="title" id="${titleId}">
+              <slot name="title"></slot>
+            </span>
+            <span class="subtitle" part="subtitle">
+              <slot name="subtitle"></slot>
+            </span>
           </div>
-        </details>`,
-    };
+          <slot name="suffix"></slot>
+          <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
+        </summary>
+        <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
+          <div class="content-inner">
+            <slot></slot>
+          </div>
+        </div>
+      </details>`;
   },
 
   styles: [coarsePointerMixin, styles],

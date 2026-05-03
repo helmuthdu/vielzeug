@@ -13,7 +13,7 @@ Implement variable height with measurement in a production-friendly way with `@v
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
 
-Report exact heights after rendering using `measureElement()`. All measurement calls within a single tick are coalesced into one rebuild.
+Report exact heights after rendering using `measure()`. All measurement calls within a single tick are coalesced into one rebuild.
 
 ```ts
 import { createVirtualizer } from '@vielzeug/virtualit';
@@ -43,7 +43,7 @@ const virt = createVirtualizer(scrollEl, {
     requestAnimationFrame(() => {
       for (const item of virtualItems) {
         const el = listEl.querySelector<HTMLElement>(`[data-index="${item.index}"]`);
-        if (el) virt.measureElement(item.index, el.offsetHeight);
+        if (el) virt.measure(item.index, el.offsetHeight);
       }
     });
   },

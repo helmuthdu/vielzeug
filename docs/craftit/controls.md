@@ -1,6 +1,6 @@
 ---
 title: Craftit Controls — Headless interaction APIs
-description: Stable headless controls from @vielzeug/craftit/controls for fields, lists, press handling, overlays, popup lists, sliders, and spinners.
+description: Stable headless controls from @vielzeug/craftit/controls for fields, lists, press handling, swipe gestures, overlays, popup lists, sliders, and spinners.
 ---
 
 This page documents the `@vielzeug/craftit/controls` entry point.
@@ -19,12 +19,14 @@ import {
   createPressControl,
   createSliderControl,
   createSpinnerControl,
+  createSwipeControl,
   createTextField,
   type CheckableChangePayload,
   type OverlayCloseDetail,
   type OverlayCloseReason,
   type OverlayOpenDetail,
   type OverlayOpenReason,
+  type SwipeAxis,
 } from '@vielzeug/craftit/controls';
 ```
 
@@ -35,6 +37,7 @@ import {
 - `createCheckableFieldControl` — authoring helper for checkbox, radio, and switch widgets
 - `createListControl` — enabled-item navigation plus keyboard dispatch
 - `createPressControl` — normalized pointer/keyboard press handling
+- `createSwipeControl` — pointer-axis swipe tracking with threshold-based commit/cancel
 - `createOverlayControl` — reason-aware open/close/toggle orchestration
 - `createPopupListControl` — popup list composition built from overlay + list + ARIA sync
 - `createSliderControl` — min/max/step math for slider-like widgets
@@ -52,6 +55,7 @@ Use the interaction primitives everywhere else:
 
 - `createListControl` for roving focus and enabled-item navigation
 - `createPressControl` for Enter/Space + click activation
+- `createSwipeControl` for pointer-driven dismiss or pan gestures
 - `createOverlayControl` for popup open/close behavior
 - `createPopupListControl` when you need popup navigation + overlay behavior together
 - `createSliderControl` for range math
@@ -122,6 +126,52 @@ const press = createPressControl({
 
 host.on('click', press.handleClick);
 host.on('keydown', press.handleKeydown);
+```
+
+## createSwipeControl()
+
+`createSwipeControl()` owns pointer capture, axis distance, threshold progress, and commit vs cancel flow for swipe-like gestures.
+
+```ts
+const swipe = createSwipeControl({
+  axis: () => 'x',
+  disabled: () => closing.value,
+  onMove: ({ distance, threshold }) => {
+    const progress = Math.min(Math.abs(distance) / threshold, 1);
+    panel.style.transform = `translateX(${distance}px)`;
+    panel.style.opacity = String(1 - progress * 0.4);
+  },
+  onCancel: () => {
+    resetStyles();
+  },
+  onCommit: () => {
+    finishDismiss();
+  },
+  shouldCommit: ({ distance, threshold }) => distance >= threshold,
+  threshold: () => 64,
+});
+
+host.on('pointerdown', swipe.handlePointerDown);
+host.on('pointermove', swipe.handlePointerMove);
+host.on('pointerup', swipe.handlePointerUp);
+host.on('pointercancel', swipe.handlePointerCancel);
+```
+
+Type surface:
+
+```ts
+type SwipeAxis = 'x' | 'y';
+
+type SwipeControlDetail = {
+  axis: SwipeAxis;
+  current: number;
+  distance: number;
+  event: PointerEvent;
+  pointerId: number;
+  progress: number;
+  start: number;
+  threshold: number;
+};
 ```
 
 ## createOverlayControl()

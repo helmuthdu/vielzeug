@@ -1,7 +1,6 @@
 import { assert } from '../function/assert';
 import { seek } from '../object/seek';
 import { IS_STRING_ERROR_MSG, isString } from '../typed/isString';
-import { IS_WITHIN_ERROR_MSG, isWithin } from '../typed/isWithin';
 
 /**
  * Performs a search on an array of objects, checking all values for a match with the search string.
@@ -22,7 +21,10 @@ import { IS_WITHIN_ERROR_MSG, isWithin } from '../typed/isWithin';
  */
 export function search<T>(array: T[], query: string, tone = 0.25): T[] {
   assert(isString(query), IS_STRING_ERROR_MSG, { args: { query }, type: TypeError });
-  assert(isWithin(tone, 0, 1), IS_WITHIN_ERROR_MSG, { args: { max: 1, min: 0, tone }, type: TypeError });
+  assert(typeof tone === 'number' && tone >= 0 && tone <= 1, 'Tone must be a number between 0 and 1', {
+    args: { tone },
+    type: TypeError,
+  });
 
   if (!query) return [...array];
 

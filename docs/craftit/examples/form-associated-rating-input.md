@@ -25,15 +25,13 @@ define('rating-input', {
     // A default toFormValue is applied: String(v) for primitives, null for null/undefined.
     const field = defineField({ value });
 
-    return {
-      render: () => html`
-        <button @click=${() => (value.value = 1)}>1</button>
-        <button @click=${() => (value.value = 2)}>2</button>
-        <button @click=${() => (value.value = 3)}>3</button>
-        <button @click=${() => field.reportValidity()}>Validate</button>
-        <p>Current: ${value}</p>
-      `,
-    };
+    return () => html`
+      <button @click=${() => (value.value = 1)}>1</button>
+      <button @click=${() => (value.value = 2)}>2</button>
+      <button @click=${() => (value.value = 3)}>3</button>
+      <button @click=${() => field.reportValidity()}>Validate</button>
+      <p>Current: ${value}</p>
+    `;
   },
 });
 ```
@@ -55,16 +53,14 @@ define<{ disabled?: boolean }>('rating-input-v2', {
       toFormValue: (v) => v.join(','),
     });
 
-    return {
-      render: () => html`
-        <button
-          ?disabled=${props.disabled}
-          @click=${() => field.setCustomValidity(value.value.length === 0 ? 'Please select a rating' : '')}
-        >
-          Validate
-        </button>
-      `,
-    };
+    return () => html`
+      <button
+        ?disabled=${props.disabled}
+        @click=${() => field.setCustomValidity(value.value.length === 0 ? 'Please select a rating' : '')}
+      >
+        Validate
+      </button>
+    `;
   },
 });
 ```
@@ -85,4 +81,4 @@ define<{ disabled?: boolean }>('rating-input-v2', {
 
 - [Prop helpers and raw PropDef](./propsof-builder-api.md)
 - [Counter Component](./counter-component.md)
-- [Observers in mount()](./observers-in-onmount.md)
+- [Observers in onMounted()](./observers-in-onmount.md)

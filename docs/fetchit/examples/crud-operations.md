@@ -32,7 +32,7 @@ const user = await qc.query({
 });
 
 // CREATE
-const addUser = createMutation(({ input, signal }: { input: NewUser; signal?: AbortSignal }) =>
+const addUser = createMutation((input: NewUser, signal: AbortSignal) =>
   api.post<User>('/users', { body: input, signal }),
 );
 
@@ -42,7 +42,7 @@ qc.invalidate(['users']);
 
 // UPDATE
 const updateUser = createMutation(
-  ({ input, signal }: { input: { id: number } & Partial<User>; signal?: AbortSignal }) => {
+  (input: { id: number } & Partial<User>, signal: AbortSignal) => {
     const { id, ...patch } = input;
     return api.put<User>('/users/{id}', { params: { id }, body: patch, signal });
   },
@@ -52,7 +52,7 @@ const updated = await updateUser.mutate({ id: 1, name: 'Alice Smith' });
 qc.set(['users', updated.id], updated);
 
 // DELETE
-const deleteUser = createMutation(({ input, signal }: { input: number; signal?: AbortSignal }) =>
+const deleteUser = createMutation((input: number, signal: AbortSignal) =>
   api.delete(`/users/${input}`, { signal }),
 );
 

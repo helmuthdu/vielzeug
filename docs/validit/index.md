@@ -1,6 +1,6 @@
 ---
 title: Validit — Schema validation for TypeScript
-description: Zero-dependency schema validation library with chainable schemas, strict-by-default objects, async support, coercion, and full TypeScript inference.
+description: Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
 ---
 
 <PackageBadges package="validit" />
@@ -38,9 +38,10 @@ import { v, type Infer } from '@vielzeug/validit';
 
 const UserSchema = v.object({
   id: v.coerce.number().int().positive(),
-  name: v.string().min(1),
+  name: v.string().trim().min(1),
   email: v.string().trim().email(),
   role: v.union('admin', 'editor', 'viewer').default('viewer'),
+  tags: v.array(v.string()).unique().default([]),
 });
 
 type User = Infer<typeof UserSchema>;
@@ -55,7 +56,7 @@ if (result.success) {
   const user: User = result.data;
   console.log(user.id); // 42
 } else {
-  const { fieldErrors, formErrors } = result.error.flatten();
+  const { fieldErrors, formErrors } = result.error.flattenFirst();
   console.log(fieldErrors, formErrors);
 }
 ```
@@ -86,14 +87,14 @@ if (!result.success) {
 }
 ```
 
-| Feature           | Validit                                       | Zod    | Yup     |
-| ----------------- | --------------------------------------------- | ------ | ------- |
+| Feature           | Validit                                     | Zod    | Yup     |
+| ----------------- | ------------------------------------------- | ------ | ------- |
 | Bundle size       | <PackageInfo package="validit" type="size" /> | ~62 kB | ~14 kB  |
-| Type inference    | ✅ `Infer<T>`                                 | ✅     | Partial |
-| Coercion API      | ✅ `v.coerce.*`                               | ✅     | ✅      |
-| Async validation  | ✅ `.refineAsync()`                           | ✅     | ✅      |
-| Error flattening  | ✅ Field + form                               | ✅     | Partial |
-| Zero dependencies | ✅                                            | ✅     | ❌      |
+| Type inference    | ✅ `Infer<T>`                               | ✅     | Partial |
+| Coercion API      | ✅ `v.coerce.*`                             | ✅     | ✅      |
+| Async validation  | ✅ `.refineAsync()`                         | ✅     | ✅      |
+| Error flattening  | ✅ `flatten()` + `flattenFirst()`           | ✅     | Partial |
+| Zero dependencies | ✅                                          | ✅     | ❌      |
 
 **Use Validit when** you want a fluent schema API with strong TypeScript inference, structured errors, and zero dependencies.
 
@@ -101,15 +102,16 @@ if (!result.success) {
 
 ## Features
 
-- **Chainable schema factories**: primitives and composites (`string`, `number`, `object`, `array`, `tuple`, `record`, `union`, `intersect`, `variant`, `enum`, `nativeEnum`)
+- **Schema factories**: primitives, collections, literals, unions, intersections, lazy schemas, discriminated variants, and enum helpers
 - **Type inference**: `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>` infer parsed output types
-- **Sync + async validation**: `.refine()` and `.refineAsync()` with `parse*` / `safeParse*`
-- **Preprocessing and coercion**: `schema.preprocess(...)` and `v.coerce.*`
-- **Error ergonomics**: `ValidationError`, `Issue`, `ErrorCode`, and `error.flatten()`
+- **Sync and async validation**: `.refine()` and `.refineAsync()` with `parse*` and `safeParse*`
+- **Preprocess and coerce**: `schema.preprocess(...)` plus `v.coerce.string()`, `number()`, `boolean()`, and `date()`
+- **Error ergonomics**: `ValidationError`, `Issue`, `ErrorCode`, `error.flatten()`, and `error.flattenFirst()`
 - **Object composition helpers**: `.partial()`, `.required()`, `.pick()`, `.omit()`, `.extend()`, and `.relaxed()`
 - **Strict by default objects**: unknown keys are rejected unless `.relaxed()` is used
-- **Global message customization**: `configure({ messages })`
-- **Zero dependencies**: <PackageInfo package="validit" type="size" /> gzipped
+- **Nested global message customization**: `configure({ messages })` and `reset()`
+- **Flexible roots**: `v.any()` and `v.unknown()` when you want to start from an unconstrained schema
+- **Zero dependencies**: no runtime dependencies, no adapter layer required
 
 ## Compatibility
 

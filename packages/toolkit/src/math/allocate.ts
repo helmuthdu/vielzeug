@@ -44,14 +44,13 @@ export function allocate(amount: number | bigint, ratios: number[] | number): (n
   }
 
   if (typeof amount === 'bigint') {
-    const baseShare = amount / BigInt(actualRatios.length);
-    const remainder = amount % BigInt(actualRatios.length);
-    const results: bigint[] = [];
+    const totalRatioBigInt = BigInt(totalRatio);
+    const results = Array.from(
+      { length: actualRatios.length - 1 },
+      (_, i) => (amount * BigInt(actualRatios[i])) / totalRatioBigInt,
+    );
 
-    for (let i = 0; i < actualRatios.length; i++) {
-      // Distribute remainder to first items
-      results.push(BigInt(i) < remainder ? baseShare + 1n : baseShare);
-    }
+    results.push(amount - results.reduce((s, v) => s + v, 0n));
 
     return results;
   }

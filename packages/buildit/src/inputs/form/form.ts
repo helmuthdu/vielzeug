@@ -91,18 +91,16 @@ export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
       emit('reset', { originalEvent: e });
     }
 
-    return {
-      render: () => html`
-        <form
-          part="form"
-          :novalidate="${props.novalidate}"
-          :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
-          @submit="${handleSubmit}"
-          @reset="${handleReset}">
-          <slot></slot>
-        </form>
-      `,
-    };
+    return () => html`
+      <form
+        part="form"
+        :novalidate="${props.novalidate}"
+        :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
+        @submit="${handleSubmit}"
+        @reset="${handleReset}">
+        <slot></slot>
+      </form>
+    `;
   },
   shadow: { delegatesFocus: false },
   styles: [componentStyles],

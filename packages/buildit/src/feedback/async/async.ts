@@ -1,4 +1,4 @@
-import { define, prop, html, signal, type Signal } from '@vielzeug/craftit';
+import { define, prop, html, signal, type Signal, onMounted } from '@vielzeug/craftit';
 
 import '../../content/icon/icon';
 import { reducedMotionMixin } from '../../styles';
@@ -199,10 +199,9 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       return renderSuccess();
     };
 
-    return {
-      mount,
-      render: () => html`${() => renderByStatus()}`,
-    };
+    onMounted(mount);
+
+    return () => html`${() => renderByStatus()}`;
   },
   styles: [reducedMotionMixin, componentStyles],
 });

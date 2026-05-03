@@ -55,7 +55,7 @@ using sortable = createSortable({
 - ✅ **Axis support** — choose vertical or horizontal midpoint logic via `axis`
 - ✅ **Custom placeholder class** — style drop markers with your own class name
 - ✅ **`[Symbol.dispose]`** — supports the `using` keyword for automatic teardown
-- ✅ **Reactive-friendly `disabled`** — pass `() => signal.value` for framework-derived state
+- ✅ **Reactive-friendly options** — pass functions for `disabled` and `accept`
 - ✅ **Array reorder helper** — `applyReorder(items, orderedIds, getId)` maps DOM order back to your data
 - ✅ **Zero dependencies**
 
@@ -68,7 +68,7 @@ import { createDropZone } from '@vielzeug/dragit';
 
 const zone = createDropZone({
   element: dropEl,
-  accept: ['image/*', '.pdf'],
+  accept: () => ['image/*', '.pdf'],
   dropEffect: 'copy', // 'copy' | 'move' | 'link' | 'none'
   disabled: () => isReadOnly,
   onDrop: (files, event) => {
@@ -82,10 +82,10 @@ const zone = createDropZone({
   },
 });
 
-// Zone state
+// Zone snapshot
 console.log(zone.hovered); // boolean
-console.log(zone.state.files); // accepted files from last drop
-console.log(zone.state.rejected); // rejected files from last drop
+console.log(zone.files); // accepted files from last drop
+console.log(zone.rejected); // rejected files from last drop
 
 // Cleanup
 zone.destroy();
@@ -116,8 +116,8 @@ const sortable = createSortable({
   onDragStart: (id, event) => {
     console.log('dragging', id);
   },
-  onDragEnd: (event) => {
-    console.log('drag ended');
+  onDragEnd: (id, event) => {
+    console.log('drag ended', id);
   },
   onReorder: (ids) => {
     saveOrder(ids);

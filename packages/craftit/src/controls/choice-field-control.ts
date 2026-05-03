@@ -25,18 +25,8 @@ export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandl
 
   const normalizeSelectedValues = (values: string[]): string[] => {
     const normalized = isMultiple.value ? values : values.slice(0, 1);
-    const uniqueValues: string[] = [];
-    const seen = new Set<string>();
 
-    for (const value of normalized.map((entry) => String(entry ?? '')).filter(Boolean)) {
-
-      if (seen.has(value)) continue;
-
-      seen.add(value);
-      uniqueValues.push(value);
-    }
-
-    return uniqueValues;
+    return [...new Set(normalized.map((entry) => String(entry ?? '')).filter(Boolean))];
   };
 
   const setValues = (values: string[]): void => {

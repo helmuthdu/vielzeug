@@ -8,7 +8,7 @@
 
 - `createApi` for typed HTTP requests
 - `createQuery` for cached async reads with subscriptions
-- `createMutation` for tracked writes with caller-owned cancellation
+- `createMutation` for tracked writes with built-in cancellation
 - `prefetch` on query clients for cache warming
 
 ## Entry Point
@@ -41,7 +41,7 @@ const user = await qc.query({
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
 });
 
-const createUser = createMutation(({ input, signal }: { input: NewUser; signal?: AbortSignal }) =>
+const createUser = createMutation((input: NewUser, signal: AbortSignal) =>
   api.post<User>('/users', { body: input, signal }),
 );
 
@@ -58,6 +58,10 @@ qc.invalidate(['users']);
 - Query cache with `staleTime`, `gcTime`, subscriptions, invalidation, cancellation, and retry
 - Query cache prefetching for route/page warm-up flows
 - Retry controls with backoff hooks
+- Mutation handlers use a flat signature: `(input, signal)`
+- Built-in mutation cancellation via `mutation.cancel()`
+- Optional `fetch` injection for tests/runtime adapters
+- Strict timeout semantics (`> 0` or `Infinity`)
 - Interceptors for auth, logging, and request transforms
 - Rich HTTP errors via `HttpError`
 - `[Symbol.dispose]` support on API and query clients

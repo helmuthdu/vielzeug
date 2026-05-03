@@ -37,7 +37,7 @@ Signature: `createLogger(initial?: LogitOptions | string): Logger`
 Core members:
 
 - Logging: `debug`, `trace`, `info`, `success`, `warn`, `error`
-- Utilities: `assert`, `table`, `time`, `group`
+- Utilities: `assert`, `table`, `time`, `group`, `groupCollapsed`
 - Composition: `scope(name)`, `child(overrides?)`
 - Configuration: `setConfig(opts)`, `config`, `enabled(level)`
 
@@ -46,7 +46,7 @@ Behavior notes:
 - `setConfig()` applies partial updates and returns the same logger.
 - `config` returns a snapshot copy (`remote` is also copied).
 - `enabled()` checks against current level threshold.
-- `time()` and `group()` always call `timeEnd`/`groupEnd` even on throw/reject.
+- `time()`, `group()`, and `groupCollapsed()` always call `timeEnd`/`groupEnd` even on throw/reject.
 
 ## Types
 
@@ -107,7 +107,8 @@ Resolved config shape exposed via `logger.config`:
 - `assert(condition, ...args)`
 - `table(data, properties?)`
 - `time(label, fn)`
-- `group(label, fn, collapsed?)`
+- `group(label, fn)`
+- `groupCollapsed(label, fn)`
 - `scope(name)`
 - `child(overrides?)`
 - `setConfig(opts)`

@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, type Signal, signal, watch } from '@vielzeug/stateit';
+import { computed, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
 import { defineField, type FormFieldOptions } from '../form';
 import { createId } from '../internal';
@@ -197,11 +197,17 @@ export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): voi
 
   if (onInput) {
     handle(element, 'input', (event: Event) => {
+      // Prevent the native composed event from bubbling out of the shadow DOM
+      // and being re-targeted onto the host element. The component emits its
+      // own structured CustomEvent so external listeners never need the raw one.
+      event.stopPropagation();
       onInput(event, element.value);
     });
   }
 
   handle(element, 'change', (event: Event) => {
+    // Same reason as above — suppress the native change event from escaping.
+    event.stopPropagation();
     onChange?.(event, element.value);
     triggerValidation?.('change');
   });
@@ -210,84 +216,4 @@ export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): voi
     onBlur?.(event as FocusEvent);
     triggerValidation?.('blur');
   });
-};
-
-/** @internal */
-export const createCheckableState = (options: CheckableStateOptions): CheckableStateHandle => {
-  const value = signal('');
-  const checked = signal(Boolean(options.checked.value));
-  const indeterminate = signal(Boolean(options.indeterminate?.value));
-  const assistive = createAssistiveState({ error: options.error, helper: options.helper });
-
-  watch(
-    options.checked,
-    (next) => {
-      checked.value = Boolean(next);
-    },
-    { immediate: true },
-  );
-
-  if (options.indeterminate) {
-    watch(
-      options.indeterminate,
-      (next) => {
-        indeterminate.value = Boolean(next);
-      },
-      { immediate: true },
-    );
-  }
-
-  const { base, triggerValidation } = createFieldControlBase(options, {
-    toFormValue: (nextValue: string | null) => nextValue,
-    value: computed(() => {
-      if (indeterminate.value) return null;
-
-      return checked.value ? (options.value.value ?? '') : null;
-    }),
-  });
-
-  watch(
-    options.value,
-    (next) => {
-      value.value = String(next ?? '');
-    },
-    { immediate: true },
-  );
-
-  const createPayload = (event: Event): CheckableChangePayload => ({
-    checked: checked.value,
-    originalEvent: event,
-    value: options.value.value ?? '',
-  });
-
-  const toggle = (event: Event): void => {
-    if (base.disabled.value) return;
-
-    if (options.group) {
-      indeterminate.value = false;
-      options.group.toggle(options.value.value ?? '', event);
-      options.onToggle?.(createPayload(event));
-
-      return;
-    }
-
-    if (options.clearIndeterminateFirst && indeterminate.value) {
-      indeterminate.value = false;
-    } else {
-      checked.value = !checked.value;
-      indeterminate.value = false;
-    }
-
-    options.onToggle?.(createPayload(event));
-  };
-
-  return {
-    ...base,
-    assistive,
-    checked,
-    indeterminate,
-    toggle,
-    triggerValidation,
-    value,
-  };
 };

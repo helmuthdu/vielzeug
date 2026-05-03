@@ -6,7 +6,7 @@ import { isObject } from '../typed/isObject';
 type ProxyOptions<T> = {
   deep?: boolean;
   get?: <K extends PropertyKey>(prop: K, val: unknown, target: T) => unknown;
-  set?: <K extends PropertyKey>(prop: K, curr: unknown, prev: unknown, target: T) => unknown;
+  set?: <K extends keyof T>(prop: K, curr: T[K], prev: T[K], target: T) => void;
   watch?: (keyof T)[];
 };
 // #endregion ProxyOptions
@@ -58,14 +58,16 @@ export function proxy<T extends Obj>(item: T, options: ProxyOptions<T>): T {
         return Reflect.set(target, prop, val, receiver);
       }
 
-      const prev = target[prop as keyof T];
-      const value = set ? set(prop, val, prev, target) : val;
+      const key = prop as keyof T;
+      const prev = target[key];
 
-      if (deep && isObject(value)) {
-        return Reflect.set(target, prop, proxy(value as unknown as T, options), receiver);
+      set?.(key, val as T[keyof T], prev, target);
+
+      if (deep && isObject(val)) {
+        return Reflect.set(target, prop, proxy(val as unknown as T, options), receiver);
       }
 
-      return Reflect.set(target, prop, value, receiver);
+      return Reflect.set(target, prop, val, receiver);
     },
   };
 

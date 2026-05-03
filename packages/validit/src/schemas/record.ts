@@ -18,7 +18,7 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
   ): { ok: true; value: Record<string, unknown> } | { issues: Issue[]; ok: false } {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return {
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().object_type(), path: [] }],
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().object.type(), path: [] }],
         ok: false,
       };
     }
@@ -41,7 +41,7 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
       const valResult = this.valueSchema.safeParse(obj[key]);
 
       if (valResult.success) {
-        output[key] = valResult.data;
+        output[keyResult.data] = valResult.data;
       } else {
         issues.push(...prependIssuePath(valResult.error.issues, key));
       }

@@ -80,21 +80,19 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
     const panelId = () => `tabpanel-${props.value.value}`;
     const labelledById = () => `tab-${props.value.value}`;
 
-    return {
-      render: () => html`
-        <div
-          class="panel"
-          part="panel"
-          role="tabpanel"
-          id="${() => panelId()}"
-          aria-labelledby="${() => labelledById()}"
-          aria-hidden="${() => String(!isActive.value)}"
-          style="${() => `--tab-panel-padding: ${paddingValue.value}`}"
-          tabindex="0">
-          ${() => (shouldRender.value ? html`<slot></slot>` : '')}
-        </div>
-      `,
-    };
+    return () => html`
+      <div
+        class="panel"
+        part="panel"
+        role="tabpanel"
+        id="${() => panelId()}"
+        aria-labelledby="${() => labelledById()}"
+        aria-hidden="${() => String(!isActive.value)}"
+        style="${() => `--tab-panel-padding: ${paddingValue.value}`}"
+        tabindex="0">
+        ${() => (shouldRender.value ? html`<slot></slot>` : '')}
+      </div>
+    `;
   },
   styles: [reducedMotionMixin, styles],
 });

@@ -17,7 +17,7 @@ export type {
 } from './types';
 
 // ─── Diagnostic Helpers ────────────────────────────────────────────────────────
-export { isLoaderError, isSubscriberError } from './types';
+export { isLoaderError, isSubscriberError } from './i18n';
 
 // ─── Instance & factory ───────────────────────────────────────────────────────
 export { createI18n } from './i18n';

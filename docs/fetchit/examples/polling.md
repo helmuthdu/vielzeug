@@ -16,7 +16,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 ```ts
 const qc = createQuery({ staleTime: 0 }); // always stale so each call hits the server
 
-function startPolling(key: QueryKey, fn: QueryOptions<unknown>['fn'], intervalMs: number) {
+function startPolling<T>(key: QueryKey, fn: QueryOptions<T>['fn'], intervalMs: number) {
   const tick = async () => {
     qc.invalidate(key);
     await qc.query({ key, fn }).catch(() => {});

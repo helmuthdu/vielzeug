@@ -18,19 +18,20 @@ export const ttl = {
 
 /* -------------------- Storage record helpers (storage-layer only) -------------------- */
 
-/** @internal Flat record with an optional expiry timestamp merged at the top level. */
-export type StoredRecord<T extends Record<string, unknown>> = T & { __exp?: number };
+/** @internal Envelope used by storage adapters. */
+export type StoredRecord<T> = {
+  e?: number;
+  v: T;
+};
 
 /** @internal */
 export function wrapStored<T extends Record<string, unknown>>(value: T, ttlMs?: number): StoredRecord<T> {
-  return ttlMs ? { ...value, __exp: Date.now() + ttlMs } : ({ ...value } as StoredRecord<T>);
+  return ttlMs ? { e: Date.now() + ttlMs, v: value } : { v: value };
 }
 
 /** @internal */
 export function unwrapStored<T extends Record<string, unknown>>(raw: StoredRecord<T>): T | undefined {
-  if (raw.__exp !== undefined && Date.now() >= raw.__exp) return undefined;
+  if (raw.e !== undefined && Date.now() >= raw.e) return undefined;
 
-  const { __exp: _, ...value } = raw;
-
-  return value as T;
+  return raw.v;
 }

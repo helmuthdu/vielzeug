@@ -12,6 +12,6 @@ export {
   type AsyncValidateFn,
 } from './core';
 
-export { configure, type Messages } from './messages';
+export { configure, reset, type Messages } from './messages';
 
 export { v } from './v';

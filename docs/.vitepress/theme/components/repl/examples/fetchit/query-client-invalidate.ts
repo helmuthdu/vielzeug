@@ -1,0 +1,4 @@
+export const queryClientInvalidateExample = {
+  code: "import { createQuery, createApi } from '@vielzeug/fetchit'\n\nconst http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })\nconst queryClient = createQuery()\n\n// Fetch and cache\nawait queryClient.query({\n  key: ['users'],\n  fn: () => http.get('/users'),\n})\nconsole.log('✓ Data cached for key: [\"users\"]')\n\nqueryClient.invalidate(['users'])\nconsole.log('✓ Cache invalidated for [\"users\"]')\n\n// Cache individual entries\nawait queryClient.query({ key: ['users', 1], fn: () => http.get('/users/1') })\nawait queryClient.query({ key: ['users', 2], fn: () => http.get('/users/2') })\nconsole.log('✓ Cached [\"users\", 1] and [\"users\", 2]')\n\n// Invalidate all 'users' queries via prefix\nqueryClient.invalidate(['users'])\nconsole.log('✓ All \"users\" queries invalidated')",
+  name: 'Query Client - Cache Invalidation',
+};

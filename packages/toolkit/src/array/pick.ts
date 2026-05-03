@@ -1,6 +1,5 @@
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-import { isNil } from '../typed/isNil';
 
 /**
  * Picks the first element from an array that satisfies a predicate function
@@ -26,7 +25,7 @@ export function pick<T, R = T>(
 ): R | undefined {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
-  const isValid = predicate ?? ((value: T) => !isNil(value));
+  const isValid = predicate ?? (() => true);
 
   for (let index = 0; index < array.length; index++) {
     if (isValid(array[index], index, array)) {

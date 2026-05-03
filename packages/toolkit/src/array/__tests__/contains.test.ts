@@ -1,4 +1,4 @@
-import { partial } from '../../function/partial';
+import { configure } from '../../function/configure';
 import { contains } from '../contains';
 
 describe('contains', () => {
@@ -37,10 +37,10 @@ describe('contains', () => {
     expect(() => contains(notArray as unknown as any, value)).toThrow(TypeError);
   });
 
-  it('should work with the contains in fp mode', () => {
+  it('should work with configured contains predicate', () => {
     const array = [1, 2, 3, { a: 1 }, 'hello'];
     const value = { a: 1 };
-    const containsValue = partial(contains, value);
+    const containsValue = configure(contains, value);
 
     expect(containsValue(array)).toBe(true);
   });

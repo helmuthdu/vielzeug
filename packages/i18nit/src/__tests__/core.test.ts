@@ -9,7 +9,7 @@ describe('core — minimal API', () => {
     });
 
     expect(i18n.locale).toBe('en');
-    expect(i18n.locales).toEqual(['en']);
+    expect(i18n.loadedLocales).toEqual(['en']);
     expect(i18n.loadableLocales).toEqual(['fr']);
   });
 

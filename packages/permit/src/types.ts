@@ -33,7 +33,7 @@ export type Permit<TAction extends string = string, TData extends PermissionData
   forUser(principal: UserPrincipal): (resource: string, action: TAction, data?: TData) => boolean;
   replace(rules: readonly PermitRule<TAction, TData>[]): Permit<TAction, TData>;
   rules(): PermitRule<TAction, TData>[];
-  set(rule: PermitRule<TAction, TData>): Permit<TAction, TData>;
+  set(rule: PermitRule<TAction, TData> | readonly PermitRule<TAction, TData>[]): Permit<TAction, TData>;
 };
 
 export type PermitLoggerContext<TAction extends string = string, TData extends PermissionData = PermissionData> = {

@@ -2,7 +2,7 @@
  * Core - Signal System Tests
  * Comprehensive tests for signals, computed, effects, watchers, and batching
  */
-import { batch, computed, effect, readonly, signal, toValue, untrack, watch, writable } from '../index';
+import { batch, computed, effect, signal, untrack, watch } from '../index';
 
 describe('Core: Signal System', () => {
   describe('signal()', () => {
@@ -26,7 +26,7 @@ describe('Core: Signal System', () => {
       expect(count.value).toBe(1);
     });
 
-    it('should support peek without tracking', () => {
+    it('should support untracked reads', () => {
       const count = signal(0);
 
       expect(untrack(() => count.value)).toBe(0);
@@ -87,31 +87,6 @@ describe('Core: Signal System', () => {
       expect(doubled.value).toBe(10);
       expect(doubled.value).toBe(10);
       expect(computeCount).toBe(1);
-    });
-  });
-
-  describe('readonly()', () => {
-    it('should expose a ReadonlySignal view of the same signal', () => {
-      const count = signal(5);
-      const readCount = readonly(count);
-
-      expect(readCount.value).toBe(5);
-      count.value = 10;
-      expect(readCount.value).toBe(10); // same underlying signal — stays in sync
-    });
-
-    it('should track changes reactively when read inside an effect', () => {
-      const count = signal(5);
-      const readCount = readonly(count);
-      let last = -1;
-      const stop = effect(() => {
-        last = readCount.value;
-      });
-
-      expect(last).toBe(5);
-      count.value = 99;
-      expect(last).toBe(99);
-      stop();
     });
   });
 
@@ -234,61 +209,6 @@ describe('Core: Signal System', () => {
       });
 
       expect(result).toBe(42);
-    });
-  });
-
-  describe('toValue()', () => {
-    it('should unwrap a signal to its current value', () => {
-      const count = signal(7);
-
-      expect(toValue(count)).toBe(7);
-    });
-
-    it('should return a plain value unchanged', () => {
-      expect(toValue(42)).toBe(42);
-      expect(toValue('hello')).toBe('hello');
-      expect(toValue(null)).toBe(null);
-    });
-
-    it('should track reads when called inside an effect', () => {
-      const count = signal(1);
-      let effectValue = -1;
-
-      effect(() => {
-        effectValue = toValue(count);
-      });
-      expect(effectValue).toBe(1);
-      count.value = 5;
-      expect(effectValue).toBe(5);
-    });
-  });
-
-  describe('writable()', () => {
-    it('should return the same writable signal instance', () => {
-      const count = signal(4);
-      const writableCount = writable(count);
-
-      expect(writableCount).toBe(count);
-      expect(writableCount.value).toBe(4);
-    });
-
-    it('should allow writes through the returned signal', () => {
-      const count = signal(4);
-      const writableCount = writable(count);
-
-      writableCount.value = 10;
-      expect(count.value).toBe(10);
-    });
-
-    it('should stay in sync with the original signal', () => {
-      const count = signal(3);
-      const writableCount = writable(count);
-
-      count.value = 5;
-      expect(writableCount.value).toBe(5);
-
-      writableCount.value = 8;
-      expect(count.value).toBe(8);
     });
   });
 });

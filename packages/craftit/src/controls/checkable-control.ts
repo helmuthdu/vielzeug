@@ -1,10 +1,16 @@
-import { createId } from '../internal';
-import { defer, effect, onCleanup } from '../runtime';
-import { createCheckableState, type CheckableStateHandle, type CheckableStateOptions } from './field-control';
+import { computed, signal, watch } from '@vielzeug/stateit';
+
+import { createA11yControl } from './a11y-control';
+import {
+  createAssistiveState,
+  createFieldControlBase,
+  type CheckableChangePayload,
+  type CheckableStateHandle,
+  type CheckableStateOptions,
+} from './field-control';
 import { createPressControl } from './press-control';
 
 export type CheckableFieldControlOptions = CheckableStateOptions & {
-  host: HTMLElement;
   onPress?: (control: CheckableStateHandle, originalEvent: Event) => void;
   role: 'checkbox' | 'radio' | 'switch';
 };
@@ -16,152 +22,95 @@ export type CheckableFieldControlHandle = CheckableStateHandle & {
   labelId: string;
 };
 
-const hasLabelContent = (labelElement: HTMLElement): boolean => {
-  const slot = labelElement.querySelector('slot');
+/** @internal */
+export const createCheckableState = (options: CheckableStateOptions): CheckableStateHandle => {
+  const value = signal('');
+  const checked = signal(Boolean(options.checked.value));
+  const indeterminate = signal(Boolean(options.indeterminate?.value));
+  const assistive = createAssistiveState({ error: options.error, helper: options.helper });
 
-  if (slot instanceof HTMLSlotElement) {
-    return slot.assignedNodes({ flatten: true }).some((node) => (node.textContent?.trim().length ?? 0) > 0);
+  watch(
+    options.checked,
+    (next) => {
+      checked.value = Boolean(next);
+    },
+    { immediate: true },
+  );
+
+  if (options.indeterminate) {
+    watch(
+      options.indeterminate,
+      (next) => {
+        indeterminate.value = Boolean(next);
+      },
+      { immediate: true },
+    );
   }
 
-  return (labelElement.textContent?.trim().length ?? 0) > 0;
+  const { base, triggerValidation } = createFieldControlBase(options, {
+    toFormValue: (nextValue: string | null) => nextValue,
+    value: computed(() => {
+      if (indeterminate.value) return null;
+
+      return checked.value ? (options.value.value ?? '') : null;
+    }),
+  });
+
+  watch(
+    options.value,
+    (next) => {
+      value.value = String(next ?? '');
+    },
+    { immediate: true },
+  );
+
+  const createPayload = (event: Event): CheckableChangePayload => ({
+    checked: checked.value,
+    originalEvent: event,
+    value: options.value.value ?? '',
+  });
+
+  const toggle = (event: Event): void => {
+    if (base.disabled.value) return;
+
+    if (options.group) {
+      indeterminate.value = false;
+      options.group.toggle(options.value.value ?? '', event);
+      options.onToggle?.(createPayload(event));
+
+      return;
+    }
+
+    if (options.clearIndeterminateFirst && indeterminate.value) {
+      indeterminate.value = false;
+    } else {
+      checked.value = !checked.value;
+      indeterminate.value = false;
+    }
+
+    options.onToggle?.(createPayload(event));
+  };
+
+  return {
+    ...base,
+    assistive,
+    checked,
+    indeterminate,
+    toggle,
+    triggerValidation,
+    value,
+  };
 };
 
 export const createCheckableFieldControl = (options: CheckableFieldControlOptions): CheckableFieldControlHandle => {
   const control = createCheckableState(options);
-  const host = options.host;
-
-  // Inline a11y control logic
-  const labelId = createId('a11y-label');
-  const helperId = createId('a11y-helper');
-
-  const setAttr = (element: Element, name: string, value: string): void => {
-    if (element.getAttribute(name) !== value) element.setAttribute(name, value);
-  };
-
-  const setText = (element: Node, value: string): void => {
-    if (element.textContent !== value) element.textContent = value;
-  };
-
-  setAttr(host, 'role', options.role);
-
-  let cachedLabelEl: HTMLElement | null = null;
-  let cachedHelperEl: HTMLDivElement | null = null;
-
-  const getLabelElement = (): HTMLElement | null => {
-    if (cachedLabelEl && cachedLabelEl.isConnected) return cachedLabelEl;
-
-    cachedLabelEl = host.shadowRoot?.querySelector('[data-a11y-label]') as HTMLElement | null;
-
-    return cachedLabelEl;
-  };
-
-  const getHelperElement = (): HTMLDivElement | null => {
-    if (cachedHelperEl && cachedHelperEl.isConnected) return cachedHelperEl;
-
-    cachedHelperEl = host.shadowRoot?.querySelector('[data-a11y-helper]') as HTMLDivElement | null;
-
-    return cachedHelperEl;
-  };
-
-  const slotCleanupByElement = new Map<HTMLSlotElement, () => void>();
-
-  const syncSlotListeners = (labelElement: HTMLElement | null, helperElement: HTMLDivElement | null): void => {
-    const nextSlots = new Set<HTMLSlotElement>();
-
-    for (const container of [labelElement, helperElement]) {
-      if (!container) continue;
-
-      for (const slot of Array.from(container.querySelectorAll('slot'))) {
-        if (slot instanceof HTMLSlotElement) nextSlots.add(slot);
-      }
-    }
-
-    for (const [slot, cleanup] of slotCleanupByElement) {
-      if (nextSlots.has(slot)) continue;
-
-      cleanup();
-      slotCleanupByElement.delete(slot);
-    }
-
-    for (const slot of nextSlots) {
-      if (slotCleanupByElement.has(slot)) continue;
-
-      const slotHandler = () => sync();
-
-      slot.addEventListener('slotchange', slotHandler);
-      slotCleanupByElement.set(slot, () => slot.removeEventListener('slotchange', slotHandler));
-    }
-  };
-
-  const sync = (): void => {
-    const shadow = host.shadowRoot;
-
-    if (!shadow) return;
-
-    const labelElement = getLabelElement();
-    const helperElement = getHelperElement();
-
-    syncSlotListeners(labelElement, helperElement);
-
-    const checked =
-      options.role === 'checkbox' && control.indeterminate.value ? 'mixed' : control.checked.value ? 'true' : 'false';
-    const invalid = !!control.assistive.value.errorText;
-    const helperText = control.assistive.value.errorText || control.assistive.value.helperText;
-
-    // Sync label
-    if (labelElement) {
-      if (labelElement.id !== labelId) labelElement.id = labelId;
-
-      if (hasLabelContent(labelElement)) setAttr(host, 'aria-labelledby', labelId);
-      else host.removeAttribute('aria-labelledby');
-    } else {
-      host.removeAttribute('aria-labelledby');
-    }
-
-    // Sync helper
-    if (helperElement) {
-      if (helperElement.id !== helperId) helperElement.id = helperId;
-
-      if (helperText) {
-        setText(helperElement, helperText);
-
-        if (helperElement.hidden) helperElement.hidden = false;
-
-        setAttr(host, 'aria-describedby', helperId);
-
-        if (invalid) setAttr(helperElement, 'role', 'alert');
-        else helperElement.removeAttribute('role');
-      } else {
-        setText(helperElement, '');
-
-        if (!helperElement.hidden) helperElement.hidden = true;
-
-        helperElement.removeAttribute('role');
-        host.removeAttribute('aria-describedby');
-      }
-    } else {
-      host.removeAttribute('aria-describedby');
-    }
-
-    // Sync checked
-    setAttr(host, 'aria-checked', checked);
-
-    // Sync invalid
-    if (invalid) setAttr(host, 'aria-invalid', 'true');
-    else host.removeAttribute('aria-invalid');
-  };
-
-  // Auto-sync ARIA with reactive state
-  effect(() => {
-    sync();
-  });
-
-  // Sync once after first render
-  defer(() => sync());
-
-  onCleanup(() => {
-    for (const cleanup of slotCleanupByElement.values()) cleanup();
-    slotCleanupByElement.clear();
+  const a11y = createA11yControl({
+    checked: () =>
+      options.role === 'checkbox' && control.indeterminate.value ? 'mixed' : control.checked.value ? 'true' : 'false',
+    helperText: () => control.assistive.value.errorText || control.assistive.value.helperText,
+    helperTone: () => (control.assistive.value.errorText ? 'error' : 'default'),
+    invalid: () => Boolean(control.assistive.value.errorText),
+    role: options.role,
   });
 
   const press = createPressControl({
@@ -181,7 +130,7 @@ export const createCheckableFieldControl = (options: CheckableFieldControlOption
     ...control,
     handleClick: press.handleClick,
     handleKeydown: press.handleKeydown,
-    helperId,
-    labelId,
+    helperId: a11y.helperId,
+    labelId: a11y.labelId,
   };
 };

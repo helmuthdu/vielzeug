@@ -73,11 +73,11 @@ const users = await parallel(3, userIds, async (id) => {
 ### With Index and Array Parameters
 
 ```typescript
-import { parallel } from '@vielzeug/toolkit';
+import { parallel, sleep } from '@vielzeug/toolkit';
 const items = ['a', 'b', 'c', 'd', 'e'];
 const results = await parallel(2, items, async (item, index, array) => {
   console.log(`Processing ${item} (${index + 1}/${array.length})`);
-  await delay(100);
+  await sleep(100);
   return item.toUpperCase();
 });
 console.log(results); // ['A', 'B', 'C', 'D', 'E']
@@ -85,5 +85,4 @@ console.log(results); // ['A', 'B', 'C', 'D', 'E']
 
 ## Related
 
-- [pool](./pool.md) – Generic promise pooling for rate limiting
 - [queue](./queue.md) – Task queue with monitoring

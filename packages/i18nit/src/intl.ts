@@ -21,11 +21,6 @@ export function makeIntlCaches(): IntlCaches {
   };
 }
 
-/* -------------------- Cache Helpers -------------------- */
-
-/** Cache for serialized Intl formatter option keys to avoid repeated serialization. */
-const intlKeyCache = new WeakMap<object, string>();
-
 function intlFmt<F extends object>(cache: Map<string, F>, key: string, build: () => F): F {
   let fmt = cache.get(key);
 
@@ -39,19 +34,18 @@ function intlFmt<F extends object>(cache: Map<string, F>, key: string, build: ()
 
 /**
  * Builds a stable string key for an Intl formatter cache.
- * Options objects are memoized to avoid repeated JSON.stringify calls.
  */
 function intlKey(locale: string, options?: object): string {
   if (!options) return locale;
 
-  let key = intlKeyCache.get(options);
+  const input = options as Record<string, unknown>;
+  const sorted: Record<string, unknown> = {};
 
-  if (!key) {
-    key = JSON.stringify(options, Object.keys(options).sort());
-    intlKeyCache.set(options, key);
+  for (const key of Object.keys(input).sort()) {
+    sorted[key] = input[key];
   }
 
-  return `${locale}:${key}`;
+  return `${locale}:${JSON.stringify(sorted)}`;
 }
 
 /* -------------------- Format Function -------------------- */
@@ -92,32 +86,19 @@ export function format(caches: IntlCaches, locale: Locale, input: FormatInput): 
     if (items.length === 0) return '';
 
     const type = input.options?.type === 'or' ? 'disjunction' : 'conjunction';
+    const style = input.options?.style ?? 'long';
 
     return intlFmt(
       caches.listFormat,
-      `${locale}:${type}`,
-      () => new Intl.ListFormat(locale, { style: 'long', type }),
+      `${locale}:${type}:${style}`,
+      () => new Intl.ListFormat(locale, { style, type }),
     ).format(items);
   } catch {
     if (input.kind === 'date') {
       return typeof input.value === 'number' ? new Date(input.value).toString() : input.value.toString();
     }
 
-    if (input.kind === 'list') {
-      const items = input.value.map(String);
-
-      if (items.length === 0) return '';
-
-      if (items.length === 1) return items[0];
-
-      const word = input.options?.type === 'or' ? 'or' : 'and';
-
-      if (items.length === 2) return `${items[0]} ${word} ${items[1]}`;
-
-      return `${items.slice(0, -1).join(', ')} ${word} ${items.at(-1)}`;
-    }
-
-    return String(input.value);
+    return input.kind === 'list' ? input.value.map(String).join(', ') : String(input.value);
   }
 }
 

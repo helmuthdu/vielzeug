@@ -1,5 +1,6 @@
 import { signal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
+import { CRAFTIT_ERRORS } from './errors';
 import { currentElementOrThrow } from './runtime';
 
 export type Ref<T extends Element> = Signal<T | null>;
@@ -127,7 +128,13 @@ export const runAll = (fns: (() => void)[]): void => {
   }
 
   if (errors.length > 0) {
-    throw new AggregateError(errors, '[craftit:E13] One or more cleanup callbacks failed');
+    throw new AggregateError(errors, CRAFTIT_ERRORS.cleanupFailed);
+  }
+};
+
+export const removeNodes = (nodes: Node[]): void => {
+  for (const node of nodes) {
+    (node as ChildNode).remove();
   }
 };
 
@@ -315,7 +322,7 @@ export const loadStylesheet = (style: string | CSSStyleSheet | CSSResult): CSSSt
   try {
     sheet.replaceSync(cssText);
   } catch (err) {
-    console.error(`[craftit:E2] style replace failed`, err);
+    console.error(CRAFTIT_ERRORS.styleReplaceFailed, err);
   }
 
   stylesheetStringCache.set(cssText, sheet);

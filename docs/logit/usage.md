@@ -47,7 +47,7 @@ const cfg: Readonly<LogitConfig> = Logit.config; // snapshot copy
 
 Level threshold order:
 
-- `debug` < `trace` < `info` < `success` < `warn` < `error` < `off`
+- `debug` < `trace` < `info` = `success` < `warn` < `error` < `off`
 
 ## Logging Methods
 

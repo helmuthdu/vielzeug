@@ -18,7 +18,7 @@ const api = createApi({ baseUrl: 'https://api.example.com' });
 const qc = createQuery();
 
 const uploadFile = createMutation(
-  ({ input, signal }: { input: File; signal?: AbortSignal }) =>
+  (input: File, signal: AbortSignal) =>
     api.post<UploadResult>('/upload', {
       body: (() => {
         const f = new FormData();
@@ -29,11 +29,11 @@ const uploadFile = createMutation(
     }),
 );
 
-// Cancellation is caller-owned
 const ac = new AbortController();
+const pending = uploadFile.mutate(selectedFile, { signal: ac.signal });
 
 try {
-  const result = await uploadFile.mutate(selectedFile, { signal: ac.signal });
+  const result = await pending;
   qc.invalidate(['files']);
 } catch (error) {
   if (!(error instanceof DOMException && error.name === 'AbortError')) {
@@ -41,6 +41,7 @@ try {
   }
 }
 
+uploadFile.cancel(); // internal cancellation
 ac.abort();
 ```
 

@@ -54,7 +54,7 @@ console.log(container.disposed); // false
 await container.dispose();
 
 console.log(container.disposed); // true
-// container.get(ConfigToken) — throws ContainerDisposedError
+// await container.resolve(ConfigToken) — throws ContainerDisposedError
 ```
 
 ## Expected Output

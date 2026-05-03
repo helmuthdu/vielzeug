@@ -129,10 +129,7 @@ You can write your own by returning a modified `MiddlewareState`:
 ```ts
 import type { Middleware } from '@vielzeug/floatit';
 
-const nudge = (px: number): Middleware => ({
-  name: 'nudge',
-  fn: (state) => ({ ...state, y: state.y + px }),
-});
+const nudge = (px: number): Middleware => (state) => ({ ...state, y: state.y + px });
 
 middleware: [offset(8), nudge(4), flip()];
 ```

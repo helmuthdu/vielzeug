@@ -16,6 +16,33 @@ import { resolvePath } from './helpers';
 import { interpolate } from './interpolate';
 import { format, makeIntlCaches, selectPluralForm } from './intl';
 
+// ─── Module-level defaults (stateless, shared across all instances) ────────────
+
+function defaultDiagnostic(event: DiagnosticEvent): void {
+  if (event.kind === 'subscriber-error') {
+    console.error('[i18nit] Subscriber threw:', event.error);
+
+    return;
+  }
+
+  console.warn('[i18nit] Loader error:', event.error);
+}
+
+function defaultOnMissing(key: string): string {
+  return key;
+}
+
+// ─── Type Guards ───────────────────────────────────────────────────────────────
+
+export const isLoaderError = (event: DiagnosticEvent): event is Extract<DiagnosticEvent, { kind: 'loader-error' }> =>
+  event.kind === 'loader-error';
+
+export const isSubscriberError = (
+  event: DiagnosticEvent,
+): event is Extract<DiagnosticEvent, { kind: 'subscriber-error' }> => event.kind === 'subscriber-error';
+
+// ─── Factory ──────────────────────────────────────────────────────────────────
+
 export function createI18n(config: I18nOptions = {}): I18n {
   let locale = config.locale ?? 'en';
   const fallbacks = Array.isArray(config.fallback) ? config.fallback : config.fallback ? [config.fallback] : [];
@@ -27,14 +54,15 @@ export function createI18n(config: I18nOptions = {}): I18n {
 
   let localesCache: Locale[] | null = null;
   let loadersCache: Locale[] | null = null;
+  let localeChainCache: Locale[] | null = null;
   let disposed = false;
 
-  const onMissing = config.onMissing ?? ((key: string) => key);
+  const onMissing = config.onMissing ?? defaultOnMissing;
   const onDiagnostic = config.onDiagnostic ?? defaultDiagnostic;
 
   if (config.messages) {
     for (const [loc, messages] of Object.entries(config.messages)) {
-      catalogs.set(loc, structuredClone(messages) as Messages);
+      catalogs.set(loc, structuredClone(messages));
     }
   }
 
@@ -42,16 +70,6 @@ export function createI18n(config: I18nOptions = {}): I18n {
     for (const [loc, loader] of Object.entries(config.loaders)) {
       loaders.set(loc, loader);
     }
-  }
-
-  function defaultDiagnostic(event: DiagnosticEvent): void {
-    if (event.kind === 'subscriber-error') {
-      console.error('[i18nit] Subscriber threw:', event.error);
-
-      return;
-    }
-
-    console.warn('[i18nit] Loader error:', event.error);
   }
 
   function diagnoseSubscriber(error: unknown): void {
@@ -71,6 +89,7 @@ export function createI18n(config: I18nOptions = {}): I18n {
   function invalidateCaches(): void {
     localesCache = null;
     loadersCache = null;
+    localeChainCache = null;
   }
 
   function notify(reason: LocaleChangeReason): void {
@@ -86,9 +105,15 @@ export function createI18n(config: I18nOptions = {}): I18n {
   }
 
   function getLocaleChain(loc: Locale): Locale[] {
+    localeChainCache ??= buildLocaleChain(loc);
+
+    return localeChainCache;
+  }
+
+  function buildLocaleChain(loc: Locale): Locale[] {
     const seen = new Set<Locale>();
 
-    const push = (value: Locale) => {
+    for (const value of [loc, ...fallbacks]) {
       seen.add(value);
 
       const parts = value.split('-');
@@ -96,10 +121,7 @@ export function createI18n(config: I18nOptions = {}): I18n {
       for (let i = parts.length - 1; i > 0; i--) {
         seen.add(parts.slice(0, i).join('-'));
       }
-    };
-
-    push(loc);
-    for (const fallback of fallbacks) push(fallback);
+    }
 
     return [...seen];
   }
@@ -116,14 +138,6 @@ export function createI18n(config: I18nOptions = {}): I18n {
     }
 
     return undefined;
-  }
-
-  function translate(key: string, vars: Vars | undefined, loc: Locale): string {
-    const message = findMessage(key, loc);
-
-    if (message === undefined) return onMissing(key, loc);
-
-    return interpolate(message, vars ?? {});
   }
 
   function loadOne(loc: Locale, strict: boolean): Promise<void> {
@@ -154,14 +168,6 @@ export function createI18n(config: I18nOptions = {}): I18n {
     return promise;
   }
 
-  function pluralMessageKey(baseKey: string, count: number): string {
-    if (count === 0) return `${baseKey}.zero`;
-
-    const form = selectPluralForm(caches, locale, count);
-
-    return `${baseKey}.${form}`;
-  }
-
   const api = {
     dispose: (): void => {
       if (disposed) return;
@@ -180,30 +186,35 @@ export function createI18n(config: I18nOptions = {}): I18n {
 
       return loadersCache;
     },
-    get locale(): Locale {
-      return locale;
-    },
-    get locales(): Locale[] {
+    get loadedLocales(): Locale[] {
       localesCache ??= [...catalogs.keys()];
 
       return localesCache;
     },
+    get locale(): Locale {
+      return locale;
+    },
     preload: async (loc: Locale): Promise<void> => {
       ensureNotDisposed('preload');
-      await loadOne(loc, false);
+
+      try {
+        await loadOne(loc, false);
+      } catch {
+        // loader errors are already routed through onDiagnostic inside loadOne
+      }
     },
     setCatalog: (loc: Locale, messages: Messages): void => {
       ensureNotDisposed('setCatalog');
 
       catalogs.set(loc, structuredClone(messages));
-      invalidateCaches();
+      localesCache = null;
 
       if (getLocaleChain(locale).includes(loc)) notify('catalog-update');
     },
     setLoader: (loc: Locale, loader: Loader): void => {
       ensureNotDisposed('setLoader');
       loaders.set(loc, loader);
-      invalidateCaches();
+      loadersCache = null;
     },
     setLocale: async (nextLocale: Locale): Promise<void> => {
       ensureNotDisposed('setLocale');
@@ -212,6 +223,7 @@ export function createI18n(config: I18nOptions = {}): I18n {
 
       await loadOne(nextLocale, true);
       locale = nextLocale;
+      localeChainCache = null;
       notify('locale-change');
     },
     subscribe: (listener: (event: LocaleChangeEvent) => void, immediate?: boolean): Unsubscribe => {
@@ -221,7 +233,7 @@ export function createI18n(config: I18nOptions = {}): I18n {
 
       if (immediate) {
         try {
-          listener({ locale, reason: 'locale-change' });
+          listener({ locale, reason: 'init' });
         } catch (error) {
           diagnoseSubscriber(error);
         }
@@ -236,10 +248,14 @@ export function createI18n(config: I18nOptions = {}): I18n {
     [Symbol.dispose]: (): void => {
       api.dispose();
     },
-    t: (key: string, vars?: Vars): string => translate(key, vars, locale),
+    t: (key: string, vars?: Vars): string => {
+      const message = findMessage(key, locale);
+
+      return message === undefined ? onMissing(key, locale) : interpolate(message, vars);
+    },
     tp: (key: string, count: number, vars?: Vars): string => {
       const context = { ...(vars ?? {}), count };
-      const selected = pluralMessageKey(key, count);
+      const selected = count === 0 ? `${key}.zero` : `${key}.${selectPluralForm(caches, locale, count)}`;
       const message = findMessage(selected, locale) ?? findMessage(`${key}.other`, locale);
 
       if (message === undefined) return onMissing(key, locale);

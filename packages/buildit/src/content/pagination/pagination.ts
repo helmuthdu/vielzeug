@@ -130,87 +130,85 @@ export const PAGINATION_TAG = define<BitPaginationProps, BitPaginationEvents>('b
     const isFirst = computed(() => (props.page.value || 1) <= 1);
     const isLast = computed(() => (props.page.value || 1) >= (props['total-pages'].value || 1));
 
-    return {
-      render: () => html`
-        <nav :aria-label="${props.label}" part="nav" @click=${handlePageClick}>
-          <ol class="pagination" part="list">
+    return () => html`
+      <nav :aria-label="${props.label}" part="nav" @click=${handlePageClick}>
+        <ol class="pagination" part="list">
+          ${() =>
+            props['show-first-last'].value
+              ? html`<li>
+                  <button
+                    type="button"
+                    class="nav-btn"
+                    part="first-btn"
+                    aria-label="First page"
+                    ?disabled=${isFirst}
+                    @click=${() => goTo(1)}>
+                    <bit-icon name="chevrons-left" size="16" aria-hidden="true"></bit-icon>
+                  </button>
+                </li>`
+              : ''}
+          ${() =>
+            props['show-prev-next'].value
+              ? html`<li>
+                  <button
+                    type="button"
+                    class="nav-btn"
+                    part="prev-btn"
+                    aria-label="Previous page"
+                    ?disabled=${isFirst}
+                    @click=${() => goTo((props.page.value || 1) - 1)}>
+                    <bit-icon name="chevron-left" size="16" aria-hidden="true"></bit-icon>
+                  </button>
+                </li>`
+              : ''}
+          <li style="display: contents;">
             ${() =>
-              props['show-first-last'].value
-                ? html`<li>
-                    <button
-                      type="button"
-                      class="nav-btn"
-                      part="first-btn"
-                      aria-label="First page"
-                      ?disabled=${isFirst}
-                      @click=${() => goTo(1)}>
-                      <bit-icon name="chevrons-left" size="16" aria-hidden="true"></bit-icon>
-                    </button>
-                  </li>`
-                : ''}
-            ${() =>
-              props['show-prev-next'].value
-                ? html`<li>
-                    <button
-                      type="button"
-                      class="nav-btn"
-                      part="prev-btn"
-                      aria-label="Previous page"
-                      ?disabled=${isFirst}
-                      @click=${() => goTo((props.page.value || 1) - 1)}>
-                      <bit-icon name="chevron-left" size="16" aria-hidden="true"></bit-icon>
-                    </button>
-                  </li>`
-                : ''}
-            <li style="display: contents;">
-              ${() =>
-                pageItems.value.map((item) => {
-                  if (item === 'ellipsis-start' || item === 'ellipsis-end') {
-                    return html`<span class="ellipsis" aria-hidden="true">&hellip;</span>`;
-                  }
+              pageItems.value.map((item) => {
+                if (item === 'ellipsis-start' || item === 'ellipsis-end') {
+                  return html`<span class="ellipsis" aria-hidden="true">&hellip;</span>`;
+                }
 
-                  const pg = item as number;
-                  const isCurrent = pg === (props.page.value || 1);
+                const pg = item as number;
+                const isCurrent = pg === (props.page.value || 1);
 
-                  return isCurrent
-                    ? html`<button type="button" part="page-btn" aria-label="Page ${pg}" aria-current="page">
-                        ${pg}
-                      </button>`
-                    : html`<button type="button" part="page-btn" aria-label="Page ${pg}">${pg}</button>`;
-                })}
-            </li>
-            ${() =>
-              props['show-prev-next'].value
-                ? html`<li>
-                    <button
-                      type="button"
-                      class="nav-btn"
-                      part="next-btn"
-                      aria-label="Next page"
-                      ?disabled=${isLast}
-                      @click=${() => goTo((props.page.value || 1) + 1)}>
-                      <bit-icon name="chevron-right" size="16" aria-hidden="true"></bit-icon>
-                    </button>
-                  </li>`
-                : ''}
-            ${() =>
-              props['show-first-last'].value
-                ? html`<li>
-                    <button
-                      type="button"
-                      class="nav-btn"
-                      part="last-btn"
-                      aria-label="Last page"
-                      ?disabled=${isLast}
-                      @click=${() => goTo(props['total-pages'].value || 1)}>
-                      <bit-icon name="chevrons-right" size="16" aria-hidden="true"></bit-icon>
-                    </button>
-                  </li>`
-                : ''}
-          </ol>
-        </nav>
-      `,
-    };
+                return isCurrent
+                  ? html`<button type="button" part="page-btn" aria-label="Page ${pg}" aria-current="page">
+                      ${pg}
+                    </button>`
+                  : html`<button type="button" part="page-btn" aria-label="Page ${pg}">${pg}</button>`;
+              })}
+          </li>
+          ${() =>
+            props['show-prev-next'].value
+              ? html`<li>
+                  <button
+                    type="button"
+                    class="nav-btn"
+                    part="next-btn"
+                    aria-label="Next page"
+                    ?disabled=${isLast}
+                    @click=${() => goTo((props.page.value || 1) + 1)}>
+                    <bit-icon name="chevron-right" size="16" aria-hidden="true"></bit-icon>
+                  </button>
+                </li>`
+              : ''}
+          ${() =>
+            props['show-first-last'].value
+              ? html`<li>
+                  <button
+                    type="button"
+                    class="nav-btn"
+                    part="last-btn"
+                    aria-label="Last page"
+                    ?disabled=${isLast}
+                    @click=${() => goTo(props['total-pages'].value || 1)}>
+                    <bit-icon name="chevrons-right" size="16" aria-hidden="true"></bit-icon>
+                  </button>
+                </li>`
+              : ''}
+        </ol>
+      </nav>
+    `;
   },
 
   styles: [coarsePointerMixin, colorThemeMixin, sizeVariantMixin(), componentStyles],

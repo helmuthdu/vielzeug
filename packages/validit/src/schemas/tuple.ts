@@ -17,7 +17,7 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>> {
   private _guardTupleInput(value: unknown): { ok: true; value: unknown[] } | { issues: Issue[]; ok: false } {
     if (!Array.isArray(value)) {
       return {
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().tuple_type(), path: [] }],
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().tuple.type(), path: [] }],
         ok: false,
       };
     }
@@ -27,7 +27,7 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>> {
         issues: [
           {
             code: ErrorCode.invalid_length,
-            message: _messages().tuple_length({ exact: this.items.length }),
+            message: _messages().tuple.length({ exact: this.items.length }),
             params: { exact: this.items.length },
             path: [],
           },

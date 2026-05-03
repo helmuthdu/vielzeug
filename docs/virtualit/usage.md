@@ -54,7 +54,8 @@ const domVirtualList = createDomVirtualList<Option>({
   getListElement: () => listboxEl,
   getScrollElement: () => dropdownEl,
   overscan: 4,
-  render: ({ items, listEl, virtualItems }) => {
+  render: ({ items, listEl, totalSize, virtualItems }) => {
+    listEl.style.height = `${totalSize}px`;
     for (const item of virtualItems) {
       const opt = items[item.index];
       if (!opt) continue;
@@ -72,7 +73,8 @@ const domVirtualList = createDomVirtualList<Option>({
 });
 
 // Keep this in sync when options or open state change
-domVirtualList.update(options, isOpen);
+domVirtualList.setItems(options);
+domVirtualList.setActive(isOpen);
 
 // Keyboard nav helper
 domVirtualList.scrollToIndex(focusedIndex, { align: 'auto' });
@@ -123,7 +125,7 @@ const virt = createVirtualizer(scrollEl, {
 
 ## Variable Heights — Measured
 
-For truly dynamic heights (e.g. text wrapping, embedded images), render items at their estimated size first, then report the actual measured height with `measureElement()`. Virtualit will coalesce all measurement calls within a single microtask tick into one offset rebuild.
+For truly dynamic heights (e.g. text wrapping, embedded images), render items at their estimated size first, then report the actual measured height with `measure()`. Virtualit will coalesce all measurement calls within a single microtask tick into one offset rebuild.
 
 ```ts
 const virt = createVirtualizer(scrollEl, {
@@ -145,7 +147,7 @@ const virt = createVirtualizer(scrollEl, {
     requestAnimationFrame(() => {
       for (const item of virtualItems) {
         const el = list.querySelector<HTMLElement>(`[data-index="${item.index}"]`);
-        if (el) virt.measureElement(item.index, el.offsetHeight);
+        if (el) virt.measure(item.index, el.offsetHeight);
       }
     });
   },
@@ -153,7 +155,7 @@ const virt = createVirtualizer(scrollEl, {
 ```
 
 ::: tip Measurement is idempotent
-`measureElement(index, height)` is a no-op when the new height matches the current effective height (measured or estimated). It is safe to call on every render without triggering unnecessary rebuilds.
+`measure(index, height)` is a no-op when the new height matches the current effective height (measured or estimated). It is safe to call on every render without triggering unnecessary rebuilds.
 :::
 
 ## Overscan
@@ -171,23 +173,28 @@ createVirtualizer(scrollEl, {
 });
 ```
 
-## Updating the Count
+## Updating Options
 
-When your data array grows or shrinks, assign to the `count` setter. The offset table is rebuilt and `onChange` fires immediately.
+When your data or render strategy changes, call `update()` with one or more option fields. Updates are applied atomically and trigger re-render when needed.
 
 ```ts
 // Load more data
 data.push(...newItems);
-virt.count = data.length;
+virt.update({ count: data.length });
+```
+
+```ts
+// Change multiple options together
+virt.update({ count: data.length, overscan: 5 });
 ```
 
 ## Switching Row Density
 
-Assigning `estimateSize` clears all previously measured heights, rebuilds offsets, and re-renders. This makes density switching (compact / comfortable / spacious views) a one-liner.
+Updating `estimateSize` clears all previously measured heights, rebuilds offsets, and re-renders. This makes density switching (compact / comfortable / spacious views) straightforward.
 
 ```ts
 function setDensity(mode: 'compact' | 'comfortable') {
-  virt.estimateSize = mode === 'compact' ? 32 : 48;
+  virt.update({ estimateSize: mode === 'compact' ? 32 : 48 });
 }
 ```
 
@@ -240,31 +247,28 @@ Call `invalidate()` after an event that changes item heights without a data chan
 document.fonts.ready.then(() => virt.invalidate());
 ```
 
-## Lifecycle — attach and destroy
+## Lifecycle — create and destroy
 
-`createVirtualizer(el, options)` attaches immediately. For cases where the scroll container is not available at construction time (e.g. a web component with a lazy shadow root), use the `Virtualizer` class directly:
+`createVirtualizer(el, options)` attaches immediately to the provided scroll container. If your container is replaced, destroy the old instance and create a new one.
 
 ```ts
-import { Virtualizer } from '@vielzeug/virtualit';
-
-// Create without attaching
-const virt = new Virtualizer({
+let virt = createVirtualizer(scrollContainerEl, {
   count: rows.length,
   estimateSize: 36,
   onChange: render,
 });
 
-// Later, once the element is mounted:
-virt.attach(scrollContainerEl);
-
-// To re-attach to a different element (e.g. dropdown re-mount):
-virt.attach(newScrollEl);
-
-// Teardown
-virt.destroy();
+function remount(nextScrollContainerEl: HTMLElement) {
+  virt.destroy();
+  virt = createVirtualizer(nextScrollContainerEl, {
+    count: rows.length,
+    estimateSize: 36,
+    onChange: render,
+  });
+}
 ```
 
-`destroy()` is idempotent — safe to call multiple times or when the element has already been removed from the DOM.
+`destroy()` is idempotent and safe to call multiple times.
 
 ### Explicit Resource Management
 
@@ -325,7 +329,7 @@ function VirtualList({ rows }: { rows: Row[] }) {
 
   // When rows change, update the count
   useEffect(() => {
-    if (virtRef.current) virtRef.current.count = rows.length;
+    virtRef.current?.update({ count: rows.length });
   }, [rows.length]);
 
   return (
@@ -374,7 +378,7 @@ onMounted(() => {
 watch(
   () => props.rows.length,
   (n) => {
-    if (virt) virt.count = n;
+    virt?.update({ count: n });
   },
 );
 
@@ -421,7 +425,7 @@ onUnmounted(() => virt?.destroy());
   });
 
   $effect(() => {
-    if (virt) virt.count = rows.length;
+    virt?.update({ count: rows.length });
   });
 </script>
 
@@ -476,7 +480,7 @@ class VirtualList extends LitElement {
   }
 
   updated() {
-    if (this.#virt) this.#virt.count = this.rows.length;
+    this.#virt?.update({ count: this.rows.length });
   }
 
   disconnectedCallback() {

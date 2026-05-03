@@ -1,107 +1,151 @@
 ---
-title: Formit - API Reference
-description: Complete API reference for the Formit form management library.
+title: Formit — API Reference
+description: Complete API reference for Formit form creation, validation, submission, subscriptions, and helpers.
 ---
 
 [[toc]]
 
-## createForm
+## API At a Glance
+
+| Symbol | Purpose |
+| --- | --- |
+| `createForm()` | Create a typed form controller |
+| `form.validate()` | Validate all, touched, or specific fields |
+| `form.submit()` | Deterministic submit flow with validation |
+| `form.bind()` | Read/write field binding with live getters |
+| `fromSchema()` | Adapt safe-parse-compatible schemas to Formit |
+| `toFormData()` | Serialize values into `FormData` |
+
+## Package Entry Point
+
+| Entry | Purpose |
+| --- | --- |
+| `@vielzeug/formit` | `createForm`, `fromSchema`, `toFormData`, error classes, and types |
+
+## createForm()
 
 ```ts
 function createForm<TValues extends Record<string, unknown>>(init?: FormOptions<TValues>): Form<TValues>;
 ```
 
+Creates a typed form controller.
+
 ### FormOptions
 
 ```ts
 interface FormOptions<TValues extends Record<string, unknown>> {
-  bindDefaults?: BindConfig;
   defaultValues?: TValues;
-  validator?: FormValidator<TValues>;
   validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator | FieldValidator[]>>;
+  validator?: FormValidator<TValues>;
+  bindDefaults?: BindConfig;
 }
 ```
 
-`validators` and value methods are path-typed from `TValues`. For dynamic forms, use a broader values type (for example `Record<string, unknown>`).
+| Field | Type | Description |
+| --- | --- | --- |
+| `defaultValues` | `TValues` | Initial values and dirty baseline |
+| `validators` | `Partial<Record<FlatKeyOf<TValues>, FieldValidator &#124; FieldValidator[]>>` | Field-level validators keyed by typed path |
+| `validator` | `FormValidator<TValues>` | Form-level validator returning an error map |
+| `bindDefaults` | `BindConfig` | Default behavior for `bind(name, config?)` |
+
+`validators` and form value APIs are path-typed from `TValues`. For dynamic forms, use a broader shape such as `Record<string, unknown>`.
 
 ## Values
 
-### get(name)
+### form.get(name)
 
 ```ts
 get<K extends FlatKeyOf<TValues>>(name: K): TypeAtPath<TValues, K>
 ```
 
-### set(name, value, options?)
+### form.set(name, value, options?)
 
 ```ts
 set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void
 ```
 
 ```ts
-interface SetOptions {
-  dirty?: boolean;   // default: true
+type SetOptions = {
+  track?: boolean;   // default: true
   touched?: boolean; // default: false
-}
+};
 ```
 
-### values()
+`track: false` writes a value without updating dirty tracking.
+
+### form.values()
 
 ```ts
 values(): TValues
 ```
 
+Returns a nested values object reconstructed from Formit's internal flat store.
+
 ## Field State
 
-### field(name)
+### form.field(name)
 
 ```ts
 field<K extends FlatKeyOf<TValues>>(name: K): FieldState<TypeAtPath<TValues, K>>
 ```
 
 ```ts
-interface FieldState<V = unknown> {
+type FieldState<V = unknown> = {
   value: V;
   error: string | undefined;
   touched: boolean;
   dirty: boolean;
-}
+};
 ```
 
-## Error Store
+## Error Management
 
 ```ts
 setError(name: FlatKeyOf<TValues>, message: string): void
 clearError(name: FlatKeyOf<TValues>): void
-setErrors(next: Partial<Record<FlatKeyOf<TValues>, string>>): void
 mergeErrors(next: Partial<Record<FlatKeyOf<TValues>, string | undefined>>): void
+replaceErrors(next: Partial<Record<FlatKeyOf<TValues>, string>>): void
 readonly errors: Record<string, string>
 ```
+
+- `mergeErrors` updates specific fields and clears only fields explicitly set to `undefined`.
+- `replaceErrors` replaces the full error map in one step.
 
 ## Touch
 
 ```ts
-touch(name: FlatKeyOf<TValues>): void
-touchAll(): void
-untouch(name: FlatKeyOf<TValues>): void
-untouchAll(): void
+touch(name?: FlatKeyOf<TValues>): void
+untouch(name?: FlatKeyOf<TValues>): void
 ```
+
+- `touch(name)` / `untouch(name)` targets a single field.
+- `touch()` / `untouch()` applies to all known fields.
 
 ## Validation
 
 ```ts
+validate(fields?: FlatKeyOf<TValues>[] | 'touched', signal?: AbortSignal): Promise<ValidateResult>
 validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>
-validateAll(signal?: AbortSignal): Promise<ValidateResult>
-validateTouched(signal?: AbortSignal): Promise<ValidateResult>
-validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>
 ```
 
+Validation modes:
+
+- `validate()` runs full validation: all field validators and the form validator.
+- `validate('touched')` validates touched fields only.
+- `validate(['email', 'password'])` validates only listed fields.
+
 ```ts
-interface ValidateResult {
+type ValidateResult = {
   valid: boolean;
   errors: Record<string, string>;
-}
+  allErrors: Record<string, string>;
+};
 ```
+
+- `errors` is scoped to the fields validated in that run.
+- `allErrors` is the full error map after the run.
+
+`signal` is optional and aborts the validation run.
 
 ## Submit
 
@@ -109,11 +153,14 @@ interface ValidateResult {
 submit<R>(handler: (values: TValues) => R | Promise<R>, signal?: AbortSignal): Promise<R>
 ```
 
-Submit behavior is fixed:
+Submit behavior:
 
-- always touchAll
-- always validateAll
-- throws FormValidationError when invalid
+- marks all known fields as touched
+- runs full validation (`validate()`)
+- throws `FormValidationError` when invalid
+- throws `SubmitError` when a concurrent submit is already running
+
+`signal` is optional and passed to validation.
 
 ## Subscriptions
 
@@ -127,9 +174,11 @@ subscribeField<K extends FlatKeyOf<TValues>>(
 ```
 
 ```ts
-type SubscribeOptions = { immediate?: boolean };
+type SubscribeOptions = { sync?: boolean };
 type Unsubscribe = () => void;
 ```
+
+Subscriptions are deferred by default. Pass `{ sync: true }` to fire immediately with a snapshot.
 
 ## Bind
 
@@ -138,22 +187,22 @@ bind<K extends FlatKeyOf<TValues>>(name: K, config?: BindConfig): BindResult<Typ
 ```
 
 ```ts
-interface BindConfig {
+type BindConfig = {
   touchOnBlur?: boolean;
   validateOnBlur?: boolean;
   validateOnChange?: boolean;
-}
+};
 ```
 
 ```ts
-interface BindResult<V = unknown> {
+type BindResult<V = unknown> = {
   readonly value: V;
   readonly error: string | undefined;
   readonly touched: boolean;
   readonly dirty: boolean;
   onBlur(): void;
   onChange(value: V): void;
-}
+};
 ```
 
 ## Arrays
@@ -166,16 +215,19 @@ array(name: FlatKeyOf<TValues>): {
 }
 ```
 
+Array helpers are no-ops when the current field value is not an array, except `append`, which initializes with a new array.
+
 ## Reset and Replace
 
 ```ts
 reset(): void
-replace(newValues: DeepPartial<TValues>): void
+replace(newValues: TValues): void
 resetField(name: FlatKeyOf<TValues>): void
 ```
 
-- reset(): restore values from current baseline.
-- replace(...): replace current values and baseline in one operation.
+- `reset()` restores current baseline and clears errors/touched/dirty.
+- `replace(values)` replaces both current values and baseline.
+- `resetField(name)` resets one field and clears its local state.
 
 ## Lifecycle
 
@@ -184,12 +236,16 @@ dispose(): void
 readonly disposed: boolean
 ```
 
+After `dispose()`, mutating APIs throw.
+
 ## Standalone Utilities
 
 ```ts
-fromSchema(schema): Pick<FormOptions<TValues>, 'validator'>
+fromSchema(schema): Pick<FormOptions, 'validator'>
 toFormData(values: Record<string, unknown>): FormData
 ```
+
+`fromSchema()` accepts safe-parse-compatible schemas (for example Validit, Zod, and similar adapters) and maps root-level schema issues to `_form`.
 
 ## Error Classes
 
@@ -216,4 +272,3 @@ Common exported types:
 - `ValidateResult`
 - `SetOptions`
 - `FlatKeyOf<TValues>` and `TypeAtPath<TValues, K>`
-- `DeepPartial<T>`

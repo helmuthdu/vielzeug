@@ -44,8 +44,12 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
       mountTextFieldLifecycle({
         element,
         onBlur: options.onBlur,
-        onChange: options.onChange,
+        onChange: (event, nextValue) => {
+          value.value = nextValue;
+          options.onChange?.(event, nextValue);
+        },
         onInput: (event, nextValue) => {
+          value.value = nextValue;
           options.onInputExtra?.(event);
           options.onInput?.(event, nextValue);
         },

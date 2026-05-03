@@ -2,7 +2,7 @@
 export { HttpError } from './errors';
 
 // Core types
-export type { MutationState, QueryKey, QueryState, QueryStatus, Unsubscribe } from './types';
+export type { AsyncState, MutationState, QueryKey, QueryState, QueryStatus, Unsubscribe } from './types';
 
 // Retry options
 export type { RetryOptions } from './retry';
@@ -20,4 +20,4 @@ export type { PrefetchOptions, QueryClient, QueryClientOptions, QueryFnContext, 
 
 // Mutation
 export { createMutation } from './mutation';
-export type { Mutation, MutationFnContext, MutationOptions } from './mutation';
+export type { Mutation, MutationFn, MutationOptions } from './mutation';

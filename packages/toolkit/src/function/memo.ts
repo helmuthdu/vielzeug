@@ -53,8 +53,10 @@ export function memo<T extends Fn>(
     const cached = cache.get(key);
 
     if (cached && (!ttl || now - cached.timestamp < ttl)) {
-      cache.delete(key);
-      cache.set(key, cached); // Move to end (most recently used)
+      if (maxSize) {
+        cache.delete(key);
+        cache.set(key, cached); // Move to end (most recently used)
+      }
 
       return cached.value;
     }

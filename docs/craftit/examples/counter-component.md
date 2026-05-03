@@ -20,15 +20,13 @@ define('simple-counter', {
   setup() {
     const count = signal(0);
 
-    return {
-      render: () => html`
-        <div>
-          <button @click=${() => count.value--}>-</button>
-          <strong>${count}</strong>
-          <button @click=${() => count.value++}>+</button>
-        </div>
-      `,
-    };
+    return () => html`
+      <div>
+        <button @click=${() => count.value--}>-</button>
+        <strong>${count}</strong>
+        <button @click=${() => count.value++}>+</button>
+      </div>
+    `;
   },
 });
 ```

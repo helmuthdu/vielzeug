@@ -126,34 +126,32 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
     };
     const avatarRole = () => (avatarLabel() ? 'img' : null);
 
-    return {
-      render: () => html`
-        <span class="avatar" part="avatar" :aria-label="${avatarLabel}" :role="${avatarRole}">
-          ${() =>
-            props.src.value
-              ? html`<img
-                  ref="${attachImgListeners}"
-                  part="img"
-                  :src="${props.src}"
-                  :alt="${props.alt}"
-                  ?hidden="${() => !showImage.value}"
-                  aria-hidden="true" />`
-              : ''}
-          ${() =>
-            showInitials.value
-              ? html`<span class="initials" part="initials" aria-hidden="true">${derivedInitials}</span>`
-              : ''}
-          ${() =>
-            showFallback.value
-              ? html`<bit-icon class="icon-fallback" part="fallback" name="user" size="50%"></bit-icon>`
-              : ''}
-        </span>
+    return () => html`
+      <span class="avatar" part="avatar" :aria-label="${avatarLabel}" :role="${avatarRole}">
         ${() =>
-          props.status.value
-            ? html`<span class="status" part="status" :data-status="${props.status}" aria-hidden="true"></span>`
+          props.src.value
+            ? html`<img
+                ref="${attachImgListeners}"
+                part="img"
+                :src="${props.src}"
+                :alt="${props.alt}"
+                ?hidden="${() => !showImage.value}"
+                aria-hidden="true" />`
             : ''}
-      `,
-    };
+        ${() =>
+          showInitials.value
+            ? html`<span class="initials" part="initials" aria-hidden="true">${derivedInitials}</span>`
+            : ''}
+        ${() =>
+          showFallback.value
+            ? html`<bit-icon class="icon-fallback" part="fallback" name="user" size="50%"></bit-icon>`
+            : ''}
+      </span>
+      ${() =>
+        props.status.value
+          ? html`<span class="status" part="status" :data-status="${props.status}" aria-hidden="true"></span>`
+          : ''}
+    `;
   },
   styles: [
     colorThemeMixin,
@@ -229,15 +227,13 @@ export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', 
     const overflowLabel = () => `+${overflowCount.value} more`;
     const overflowText = () => `+${overflowCount.value}`;
 
-    return {
-      render: () => html`
-        <slot></slot>
-        ${() =>
-          overflowCount.value > 0
-            ? html`<span class="overflow-badge" part="overflow" aria-label="${overflowLabel}"> ${overflowText} </span>`
-            : ''}
-      `,
-    };
+    return () => html`
+      <slot></slot>
+      ${() =>
+        overflowCount.value > 0
+          ? html`<span class="overflow-badge" part="overflow" aria-label="${overflowLabel}"> ${overflowText} </span>`
+          : ''}
+    `;
   },
   styles: [groupStyles],
 });

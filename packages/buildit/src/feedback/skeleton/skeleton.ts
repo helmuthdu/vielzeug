@@ -1,4 +1,4 @@
-import { define, prop, computed, html, signal, watch } from '@vielzeug/craftit';
+import { define, prop, computed, html, signal, watch, onMounted } from '@vielzeug/craftit';
 import { intersectionObserver } from '@vielzeug/craftit/observers';
 
 import type { ComponentSize } from '../../types';
@@ -114,36 +114,34 @@ export const SKELETON_TAG = define<BitSkeletonProps>('bit-skeleton', {
       },
     });
 
-    return {
-      mount() {
-        const entry = intersectionObserver(host.el, { threshold: 0 });
+    onMounted(() => {
+      const entry = intersectionObserver(host.el, { threshold: 0 });
 
-        watch(entry, (e) => {
-          const paused =
-            typeof e === 'object' && e !== null && 'isIntersecting' in e
-              ? !(e as IntersectionObserverEntry).isIntersecting
-              : false;
+      watch(entry, (e) => {
+        const paused =
+          typeof e === 'object' && e !== null && 'isIntersecting' in e
+            ? !(e as IntersectionObserverEntry).isIntersecting
+            : false;
 
-          isPaused.value = paused;
-        });
-      },
+        isPaused.value = paused;
+      });
+    });
 
-      render: () => html`
-        <div class="stack" part="stack">
-          ${() =>
-            Array.from({ length: renderLineCount() }, (_, index) => {
-              const isLastLine =
-                props.variant.value === 'text' && renderLineCount() > 1 && index === renderLineCount() - 1;
+    return () => html`
+      <div class="stack" part="stack">
+        ${() =>
+          Array.from({ length: renderLineCount() }, (_, index) => {
+            const isLastLine =
+              props.variant.value === 'text' && renderLineCount() > 1 && index === renderLineCount() - 1;
 
-              return html`<div
-                class="bone"
-                part="bone"
-                aria-hidden="true"
-                :data-last="${() => (isLastLine ? 'true' : null)}"></div>`;
-            })}
-        </div>
-      `,
-    };
+            return html`<div
+              class="bone"
+              part="bone"
+              aria-hidden="true"
+              :data-last="${() => (isLastLine ? 'true' : null)}"></div>`;
+          })}
+      </div>
+    `;
   },
   styles: [reducedMotionMixin, componentStyles],
 });

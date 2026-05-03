@@ -1,6 +1,6 @@
 ---
 title: I18nit — Internationalization for TypeScript
-description: Minimal i18n for TypeScript with explicit pluralization, async locale loading, and unified Intl formatting.
+description: Minimal i18n for TypeScript with explicit plural translation, best-effort locale loading, and unified Intl formatting.
 ---
 
 <PackageBadges package="i18nit" />
@@ -9,9 +9,9 @@ description: Minimal i18n for TypeScript with explicit pluralization, async loca
 
 # I18nit
 
-`@vielzeug/i18nit` is a zero-dependency internationalization runtime with nested message lookup, explicit plural translation, fallback chains, and async locale loading.
+`@vielzeug/i18nit` is a zero-dependency internationalization runtime with nested message lookup, explicit plural translation, locale fallback chains, and unified Intl formatting.
 
-<!-- Search keywords: localization runtime, translation catalog, i18n message formatting. -->
+<!-- Search keywords: localization runtime, translation catalog, i18n message formatting, locale loading, plural translation. -->
 
 ## Installation
 
@@ -39,11 +39,10 @@ import { createI18n } from '@vielzeug/i18nit';
 const i18n = createI18n({
   fallback: 'en',
   locale: 'en',
+  loaders: {
+    de: () => import('./locales/de.json').then((m) => m.default),
+  },
   messages: {
-    de: {
-      greeting: 'Hallo, {name}!',
-      inbox: { one: 'Eine Nachricht', other: '{count} Nachrichten', zero: 'Keine Nachrichten' },
-    },
     en: {
       greeting: 'Hello, {name}!',
       inbox: { zero: 'No messages', one: 'One message', other: '{count} messages' },
@@ -56,6 +55,7 @@ i18n.t('greeting', { name: 'Alice' });
 i18n.tp('inbox', 0);
 i18n.tp('inbox', 3);
 
+await i18n.preload('de');
 await i18n.setLocale('de');
 i18n.t('nav.home'); // falls back to en
 
@@ -93,7 +93,7 @@ i18n.format({ kind: 'number', value: 1234.56 });
 | Feature              | I18nit                                       | i18next    | typesafe-i18n |
 | -------------------- | -------------------------------------------- | ---------- | ------------- |
 | Bundle size          | <PackageInfo package="i18nit" type="size" /> | ~15 kB     | ~1 kB         |
-| Type-safe keys       | ✅                                           | ❌         | ✅            |
+| Type-safe keys       | ⏳ Planned                                   | ❌         | ✅            |
 | No code generation   | ✅                                           | ✅         | ❌            |
 | Pluralisation        | ✅ Intl.PluralRules                          | ✅         | ✅            |
 | Formatting helpers   | ✅ Intl-backed                               | ✅ Plugins | ❌            |
@@ -101,20 +101,19 @@ i18n.format({ kind: 'number', value: 1234.56 });
 | Async loaders        | ✅                                           | ✅         | ✅            |
 | Zero dependencies    | ✅                                           | ❌         | ✅            |
 
-**Use I18nit when** you want a small i18n runtime with nested key lookup, pluralisation, async locale loading, and Intl-based formatting.
+**Use I18nit when** you want a small i18n runtime with explicit translation rules, request-safe instances, runtime locale loading, and Intl-based formatting.
 
 **Consider i18next** if you need its large plugin ecosystem (react-i18next, backend adapters) or are migrating an existing project.
 
 ## Features
 
 - Minimal translation API: `t`, `tp`, `format`
-- Dot-notation lookups with fallback chains
-- Interpolation for nested vars
-- Plural messages driven by `Intl.PluralRules`
-- Async loading with `setLoader`, `preload`, and strict `setLocale`
-- Catalog replacement via `setCatalog`
-- Unified Intl formatting via `format()`
-- Subscription API for locale and catalog changes
+- Dot-notation lookups with locale fallback chains
+- Interpolation for plain and nested vars
+- Explicit plural messages driven by `Intl.PluralRules`
+- Best-effort preload plus strict locale switching
+- Catalog replacement and runtime loader registration
+- Subscription API for locale changes and active-chain catalog refreshes
 - Diagnostics (`onDiagnostic`) and custom missing-key handling (`onMissing`)
 - Lightweight runtime — <PackageInfo package="i18nit" type="size" /> gzipped, zero dependencies
 
@@ -141,6 +140,34 @@ i18n.tp('inbox', 3);
 i18n.format({ kind: 'currency', currency: 'EUR', value: 19.99 });
 ```
 
+## Message Shape
+
+Catalogs are recursive objects with string leaves:
+
+```ts
+const messages = {
+  en: {
+    auth: {
+      login: 'Log in',
+    },
+    inbox: {
+      zero: 'No messages',
+      one: 'One message',
+      other: '{count} messages',
+    },
+  },
+};
+```
+
+Use `t()` for direct keys like `auth.login` and `tp()` for plural namespaces like `inbox`.
+
+## Typical Usage
+
+- Create one shared instance for single-locale browser apps.
+- Create one instance per request for SSR or multi-tenant server code.
+- Use `setCatalog()` when catalogs come from the server or CMS at runtime.
+- Use `setLoader()` plus `preload()` or `setLocale()` for lazy locale bundles.
+
 ## Compatibility
 
 | Environment | Support |
@@ -152,6 +179,9 @@ i18n.format({ kind: 'currency', currency: 'EUR', value: 19.99 });
 
 ## See Also
 
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 - [Stateit](/stateit/)
 - [Craftit](/craftit/)
 - [Routeit](/routeit/)

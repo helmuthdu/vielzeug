@@ -174,37 +174,35 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
       return Array.from({ length: max }, (_, i) => i + 1);
     });
 
-    return {
-      render: () => html`
-        <div class="stars" part="stars" role="radiogroup" :aria-label="${props.label}" :aria-required="${() => null}">
-          ${() =>
-            stars.value.map(
-              (star) =>
-                html`<button
-                  class="star-btn"
-                  part="star"
-                  type="button"
-                  role="radio"
-                  :aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
-                  :aria-checked="${() => String(star === normalizedValue.value)}"
-                  :data-star="${star}"
-                  ?data-filled="${() => star <= displayValue.value}"
-                  :disabled="${() => (!isInteractive.value ? true : null)}"
-                  @click="${(e: Event) => select(star, e)}"
-                  @pointerenter="${() => {
-                    if (isInteractive.value) hovered.value = star;
-                  }}"
-                  @pointerleave="${() => {
-                    hovered.value = null;
-                  }}"
-                  @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
-                  <bit-icon name="star" size="var(--_star-size)" stroke-width="1.5" aria-hidden="true"></bit-icon>
-                </button>`,
-            )}
-          <div class="sparkle-layer"></div>
-        </div>
-      `,
-    };
+    return () => html`
+      <div class="stars" part="stars" role="radiogroup" :aria-label="${props.label}" :aria-required="${() => null}">
+        ${() =>
+          stars.value.map(
+            (star) =>
+              html`<button
+                class="star-btn"
+                part="star"
+                type="button"
+                role="radio"
+                :aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
+                :aria-checked="${() => String(star === normalizedValue.value)}"
+                :data-star="${star}"
+                ?data-filled="${() => star <= displayValue.value}"
+                :disabled="${() => (!isInteractive.value ? true : null)}"
+                @click="${(e: Event) => select(star, e)}"
+                @pointerenter="${() => {
+                  if (isInteractive.value) hovered.value = star;
+                }}"
+                @pointerleave="${() => {
+                  hovered.value = null;
+                }}"
+                @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
+                <bit-icon name="star" size="var(--_star-size)" stroke-width="1.5" aria-hidden="true"></bit-icon>
+              </button>`,
+          )}
+        <div class="sparkle-layer"></div>
+      </div>
+    `;
   },
   styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, styles],
 });

@@ -1,0 +1,4 @@
+export const storeTodoListExample = {
+  code: "import { store, computed } from '@vielzeug/stateit'\n\n\nconst todos = store({\n  items: [],\n  filter: 'all',\n})\n\nconst visible = todos.select((s) =>\n  s.filter === 'active' ? s.items.filter((t) => !t.done)\n  : s.filter === 'done' ? s.items.filter((t) => t.done)\n  : s.items\n)\n\n// Add todos\ntodos.update((s) => ({\n  ...s,\n  items: [\n    { id: 1, text: 'Learn stateit', done: false },\n    { id: 2, text: 'Build app', done: false },\n    { id: 3, text: 'Deploy', done: true },\n  ],\n}))\n\nconsole.log('All:', visible.value.map((t) => t.text))\n\ntodos.patch({ filter: 'active' })\nconsole.log('Active:', visible.value.map((t) => t.text))\n\ntodos.patch({ filter: 'done' })\nconsole.log('Done:', visible.value.map((t) => t.text))",
+  name: 'Store - Todo List',
+};

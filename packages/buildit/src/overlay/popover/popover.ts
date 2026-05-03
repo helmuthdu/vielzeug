@@ -1,6 +1,6 @@
 import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { computed, createId, define, html, prop, signal, syncAria, watch } from '@vielzeug/craftit';
+import { computed, createId, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 import { flip, offset, type Placement, positionFloat, shift } from '@vielzeug/floatit';
 
@@ -205,125 +205,123 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
       close('trigger');
     }
 
-    return {
-      mount() {
-        const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-        let triggerBinding: (() => void) | null = null;
+    onMounted(() => {
+      const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      let triggerBinding: (() => void) | null = null;
 
-        if (!triggerSlot) return;
+      if (!triggerSlot) return;
 
-        const bindEvents = () => {
-          triggerBinding?.();
-          triggerBinding = null;
+      const bindEvents = () => {
+        triggerBinding?.();
+        triggerBinding = null;
 
-          const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+        const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
-          if (!el) {
-            currentTrigger = null;
+        if (!el) {
+          currentTrigger = null;
 
-            return;
-          }
+          return;
+        }
 
-          currentTrigger = el;
+        currentTrigger = el;
 
-          const removeAria = syncAria(el, {
-            controls: () => panelId,
-            disabled: () => String(isDisabled.value),
-            expanded: () => String(visible.value),
-            haspopup: 'dialog',
-          });
-
-          const cleanups: Array<() => void> = [];
-          const add = (
-            target: EventTarget,
-            event: string,
-            listener: EventListener,
-            options?: AddEventListenerOptions,
-          ) => {
-            target.addEventListener(event, listener, options);
-            cleanups.push(() => target.removeEventListener(event, listener, options));
-          };
-
-          const t = triggers.value;
-          const hasTrigger = (trigger: PopoverTrigger) => t.includes(trigger);
-
-          if (hasTrigger('click')) {
-            add(el, 'click', toggle as EventListener);
-            add(document, 'click', handleClickOutside as EventListener, { capture: true });
-          }
-
-          if (hasTrigger('hover')) {
-            add(el, 'pointerenter', () => open('trigger'));
-            add(el, 'pointerleave', () => close('trigger'));
-
-            if (panelEl) {
-              add(panelEl, 'pointerenter', () => open('trigger'));
-              add(panelEl, 'pointerleave', () => close('trigger'));
-            }
-          }
-
-          if (hasTrigger('focus')) {
-            add(el, 'focusin', () => open('trigger'));
-            add(el, 'focusout', handleFocusOut as EventListener);
-
-            if (panelEl) add(panelEl, 'focusout', handleFocusOut as EventListener);
-          }
-
-          add(document, 'keydown', handleKeydown as EventListener);
-
-          triggerBinding = () => {
-            removeAria();
-
-            for (const cleanup of cleanups) cleanup();
-
-            currentTrigger = null;
-          };
-        };
-
-        watch(slots.elements(), bindEvents, { immediate: true });
-        // Controlled mode
-        watch(props.open, (openVal) => {
-          if (openVal === undefined || openVal === null) return;
-
-          if (openVal) {
-            showFloat();
-            emit('open', { reason: 'programmatic' });
-          } else {
-            hideFloat();
-            emit('close', { reason: 'programmatic' });
-          }
-        });
-        watch(props.trigger, bindEvents);
-        watch(props.disabled, (isDisabled) => {
-          if (isDisabled) close('programmatic');
+        const removeAria = syncAria(el, {
+          controls: () => panelId,
+          disabled: () => String(isDisabled.value),
+          expanded: () => String(visible.value),
+          haspopup: 'dialog',
         });
 
-        return () => {
-          triggerBinding?.();
-          triggerBinding = null;
-
-          if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
+        const cleanups: Array<() => void> = [];
+        const add = (
+          target: EventTarget,
+          event: string,
+          listener: EventListener,
+          options?: AddEventListenerOptions,
+        ) => {
+          target.addEventListener(event, listener, options);
+          cleanups.push(() => target.removeEventListener(event, listener, options));
         };
-      },
 
-      render: () => html`
-        <slot></slot>
-        <div
-          class="panel"
-          part="panel"
-          id="${panelId}"
-          role="dialog"
-          aria-modal="false"
-          popover="manual"
-          :aria-label="${props.label}"
-          :aria-hidden="${() => String(!visible.value)}"
-          ref=${(el: HTMLElement) => {
-            panelEl = el;
-          }}>
-          <slot name="content"></slot>
-        </div>
-      `,
-    };
+        const t = triggers.value;
+        const hasTrigger = (trigger: PopoverTrigger) => t.includes(trigger);
+
+        if (hasTrigger('click')) {
+          add(el, 'click', toggle as EventListener);
+          add(document, 'click', handleClickOutside as EventListener, { capture: true });
+        }
+
+        if (hasTrigger('hover')) {
+          add(el, 'pointerenter', () => open('trigger'));
+          add(el, 'pointerleave', () => close('trigger'));
+
+          if (panelEl) {
+            add(panelEl, 'pointerenter', () => open('trigger'));
+            add(panelEl, 'pointerleave', () => close('trigger'));
+          }
+        }
+
+        if (hasTrigger('focus')) {
+          add(el, 'focusin', () => open('trigger'));
+          add(el, 'focusout', handleFocusOut as EventListener);
+
+          if (panelEl) add(panelEl, 'focusout', handleFocusOut as EventListener);
+        }
+
+        add(document, 'keydown', handleKeydown as EventListener);
+
+        triggerBinding = () => {
+          removeAria();
+
+          for (const cleanup of cleanups) cleanup();
+
+          currentTrigger = null;
+        };
+      };
+
+      watch(slots.elements(), bindEvents, { immediate: true });
+      // Controlled mode
+      watch(props.open, (openVal) => {
+        if (openVal === undefined || openVal === null) return;
+
+        if (openVal) {
+          showFloat();
+          emit('open', { reason: 'programmatic' });
+        } else {
+          hideFloat();
+          emit('close', { reason: 'programmatic' });
+        }
+      });
+      watch(props.trigger, bindEvents);
+      watch(props.disabled, (isDisabled) => {
+        if (isDisabled) close('programmatic');
+      });
+
+      return () => {
+        triggerBinding?.();
+        triggerBinding = null;
+
+        if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
+      };
+    });
+
+    return () => html`
+      <slot></slot>
+      <div
+        class="panel"
+        part="panel"
+        id="${panelId}"
+        role="dialog"
+        aria-modal="false"
+        popover="manual"
+        :aria-label="${props.label}"
+        :aria-hidden="${() => String(!visible.value)}"
+        ref=${(el: HTMLElement) => {
+          panelEl = el;
+        }}>
+        <slot name="content"></slot>
+      </div>
+    `;
   },
   styles: [reducedMotionMixin, styles],
 });

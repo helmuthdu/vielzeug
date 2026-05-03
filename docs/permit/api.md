@@ -12,7 +12,7 @@ description: API reference for the minimal permit authorization engine.
 | Symbol | Purpose |
 | --- | --- |
 | `createPermit(options?)` | Create a permit instance |
-| `permit.set(rule)` | Append one rule |
+| `permit.set(rule | rules)` | Append one or more rules |
 | `permit.can(principal, resource, action, data?)` | Evaluate one decision |
 | `permit.forUser(principal)` | Create a principal-bound check function |
 | `permit.rules()` | Read current rules snapshot |
@@ -39,9 +39,9 @@ Signature:
 
 ## Permit Interface
 
-### `set(rule)`
+### `set(rule | rules)`
 
-Add one rule to the policy.
+Add one rule or multiple rules to the policy.
 
 ```ts
 permit.set({
@@ -51,6 +51,11 @@ permit.set({
   effect: 'allow',
   priority: 10,
 });
+
+permit.set([
+  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
+]);
 ```
 
 Rule fields:

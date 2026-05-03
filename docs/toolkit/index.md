@@ -1,17 +1,13 @@
 ---
 title: Toolkit — Utility library for TypeScript
-description: Tree-shakeable, zero-dependency utility library for arrays, objects, strings, async flows, dates, and math.
+description: Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, dates, money, random, and typed checks.
 ---
 
 <PackageBadges package="toolkit" />
 
 <img src="/logo-toolkit.svg" alt="Toolkit logo" width="156" class="logo-highlight"/>
 
-# Toolkit
-
-**Toolkit** is a comprehensive utility library with zero dependencies. It is tree-shakeable, so you only bundle what you import. It ships 75+ fully typed utilities for arrays, objects, strings, async flows, dates, math, money, random values, and runtime type checks.
-
-<!-- Search keywords: utility library, helper functions, TypeScript utilities. -->
+`@vielzeug/toolkit` is a compact utility package built for modern TypeScript projects. The API is intentionally small, composable, and fully tree-shakeable.
 
 ## Installation
 
@@ -34,88 +30,47 @@ yarn add @vielzeug/toolkit
 ## Quick Start
 
 ```ts
-import { chunk, group, keyBy, select, toggle, sort, debounce, retry, merge, is } from '@vielzeug/toolkit';
+import {
+  chunk,
+  queue,
+  retry,
+  merge,
+  configure,
+  select,
+  is,
+} from '@vielzeug/toolkit';
 
-// Arrays
-chunk([1, 2, 3, 4, 5], 2); // [[1,2],[3,4],[5]]
-group([{ type: 'a' }, { type: 'b' }, { type: 'a' }], (x) => x.type);
-// { a: [...], b: [...] }
-keyBy(
-  [
-    { id: 1, name: 'Alice' },
-    { id: 2, name: 'Bob' },
-  ],
-  'id',
-);
-// { '1': {id:1,name:'Alice'}, '2': {id:2,name:'Bob'} }
+const pages = chunk([1, 2, 3, 4, 5], 2);
 
-// Sort with object selectors
-sort(
-  [
-    { age: 30, name: 'Bob' },
-    { age: 30, name: 'Alice' },
-    { age: 25, name: 'Chris' },
-  ],
-  { age: 'desc', name: 'asc' },
-);
+const q = queue({ concurrency: 2 });
+await q.add(() => fetch('/api/a'));
 
-// Functions
-const fn = debounce(() => console.log('typed'), 300);
+const health = await retry(() => fetch('/api/health').then((r) => r.json()), {
+  times: 3,
+  delay: 250,
+});
 
-// Async
-const result = await retry(() => fetchData(), { times: 3, delay: 1000 });
+const cfg = merge('deep', { api: { host: 'localhost' } }, { api: { port: 3000 } });
 
-// Objects
-const merged = merge('deep', { a: { x: 1 } }, { a: { y: 2 } });
-// { a: { x: 1, y: 2 } }
+const doubleAll = configure(select, (n: number) => n * 2);
+const doubled = doubleAll([1, 2, 3]);
 
-// Type guards
-is.string('hello'); // true
-is.nil(null); // true
+if (is.object(cfg)) {
+  console.log(health, cfg);
+}
 ```
 
-## Why Toolkit?
+## Feature Areas
 
-Lodash ships ~70 kB even tree-shaken. Toolkit provides modern, tree-shakeable utilities with full TypeScript inference at a fraction of the size.
-
-```ts
-// Before - verbose native JS
-let groupedByCategory = {} as Record<string, typeof items>;
-
-groupedByCategory = items.reduce((acc, item) => {
-  const key = item.category;
-  (acc[key] = acc[key] || []).push(item);
-
-  return acc;
-}, groupedByCategory);
-
-// After - Toolkit
-import { group } from '@vielzeug/toolkit';
-const grouped = group(items, (item) => item.category);
-```
-
-| Feature           | Toolkit                                       | Lodash        | Radash |
-| ----------------- | --------------------------------------------- | ------------- | ------ |
-| Bundle size       | <PackageInfo package="toolkit" type="size" /> | ~26 kB        | ~5 kB  |
-| Tree-shakeable    | ✅ Always                                     | ✅ lodash-es  | ✅     |
-| TypeScript        | ✅ First-class                                | ⚠️ Via @types | ✅     |
-| Async utilities   | ✅                                            | ⚠️ Limited    | ✅     |
-| Zero dependencies | ✅                                            | ✅            | ✅     |
-
-**Use Toolkit when** you want utility functions with strong TypeScript types and minimal bundle impact.
-
-**Consider Lodash or Radash** if your codebase already depends on them and migration effort outweighs the type and bundle-size gains.
-
-## Features
-
-- **Arrays** — `chunk`, `group`, `keyBy`, `fold`, `select`, `toggle`, `replace`, `rotate`, `search`, `sort`, `contains`, `uniq`, `pick`, `list`, `remoteList`
-- **Async** — `retry`, `sleep`, `parallel`, `pool`, `queue`, `race`, `attempt`, `defer`, `waitFor`, `Scheduler`, `polyfillScheduler`
-- **Objects** — `merge`, `diff`, `get`, `seek`, `prune`, `proxy`, `stash`, `parseJSON`
-- **Strings** — `camelCase`, `kebabCase`, `pascalCase`, `snakeCase`, `truncate`, `similarity`
-- **Math** — `sum`, `average`, `median`, `min`, `max`, `clamp`, `round`, `range`, `percent`, `linspace`, `allocate`, `distribute`
-- **Dates** — `timeDiff`, `interval`, `expires`
-- **Functions** — `debounce`, `throttle`, `compose`, `pipe`, `curry`, `memo`, `once`, `compare`, `fp`
-- **Zero dependencies** — tree-shakeable; import only what you need
+- **Array**: `chunk`, `contains`, `group`, `keyBy`, `list`, `pick`, `remoteList`, `replace`, `rotate`, `search`, `select`, `sort`, `toggle`, `uniq`
+- **Async**: `attempt`, `defer`, `parallel`, `Scheduler`, `polyfillScheduler`, `queue`, `race`, `retry`, `sleep`, `waitFor`
+- **Object**: `stash`, `diff`, `merge`, `parseJSON`, `get`, `proxy`, `prune`, `seek`
+- **Function**: `assert`, `compare`, `compareBy`, `compose`, `configure`, `curry`, `debounce`, `memo`, `once`, `pipe`, `throttle`
+- **Math**: `abs`, `allocate`, `average`, `clamp`, `linspace`, `max`, `median`, `min`, `percent`, `range`, `round`, `sum`
+- **Date**: `expires`, `interval`, `timeDiff`
+- **Money**: `currency`, `exchange`
+- **Random**: `draw`, `random`, `shuffle`, `uuid`
+- **Typed Namespace**: `is.array`, `is.boolean`, `is.date`, `is.defined`, `is.empty`, `is.equal`, `is.fn`, `is.match`, `is.nil`, `is.number`, `is.object`, `is.primitive`, `is.promise`, `is.regex`, `is.string`, `is.typeOf`
 
 ## Compatibility
 
@@ -125,6 +80,12 @@ const grouped = group(items, (item) => item.category);
 | Node.js     | ✅      |
 | SSR         | ✅      |
 | Deno        | ✅      |
+
+## Documentation Map
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 

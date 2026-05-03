@@ -1,3 +1,4 @@
+import type { RouteBranchDef, RouteRecord } from './router-internal';
 import type {
   NavigationStatus,
   HistoryDriver,
@@ -8,8 +9,6 @@ import type {
   PathParams,
   QueryParams,
   RawNavigationTarget,
-  ResolvedRoute,
-  RouteBranchDef,
   RouteContext,
   RouteDefinition,
   RouteLocation,
@@ -17,13 +16,11 @@ import type {
   RouteMatchBranch,
   RouteName,
   RoutePathByName,
-  RouteRecord,
   RouteParams,
   RouteState,
   RouteTable,
   RouterOptions,
   Unsubscribe,
-  ViewTransitionDocument,
 } from './types';
 
 import { runMiddleware } from './middleware';
@@ -121,6 +118,7 @@ function stripBase(pathname: string, base = '/'): string {
   const normalizedBase = normalizePath(base);
 
   if (normalizedBase === '/') return normalizedPath;
+
   if (normalizedPath === normalizedBase) return '/';
 
   const prefix = `${normalizedBase}/`;
@@ -151,7 +149,7 @@ type CompiledRoutes = {
 };
 
 function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoutes>): CompiledRoutes {
-  const globalMiddleware = [...(options.middleware ?? [])];
+  const globalMiddleware = [...(options.middleware ?? [])] as unknown as Middleware[];
   const records: RouteRecord[] = [];
 
   const compile = (
@@ -159,9 +157,11 @@ function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoute
     route: RouteDefinition,
     ancestorPath: string,
     ancestorBranchDefs: RouteBranchDef[],
-    ancestorMiddleware: Middleware[],
+    ancestorMiddleware: RouteRecord['middleware'],
   ): void => {
-    const ownPath = route.index ? ancestorPath : normalizePath(route.path ? joinPaths(ancestorPath, route.path) : ancestorPath);
+    const ownPath = route.index
+      ? ancestorPath
+      : normalizePath(route.path ? joinPaths(ancestorPath, route.path) : ancestorPath);
     const branchDefs: RouteBranchDef[] = [
       ...ancestorBranchDefs,
       {
@@ -188,8 +188,8 @@ function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoute
         branchDefs,
         hasData: branchDefs.some((def) => def.dataFn != null),
         leaf,
-        middleware: [...globalMiddleware, ...ownMiddleware],
         matcher: compilePathMatcher(ownPath),
+        middleware: [...globalMiddleware, ...ownMiddleware],
         path: ownPath,
       });
     }
@@ -342,7 +342,9 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
         if (record.hasData) {
           try {
             dataResults = await Promise.all(
-              record.branchDefs.map((def) => (def.dataFn ? def.dataFn({ ...ctx, signal: controller.signal }) : undefined)),
+              record.branchDefs.map((def) =>
+                def.dataFn ? def.dataFn({ ...ctx, signal: controller.signal }) : undefined,
+              ),
             );
           } catch (error) {
             status = 'error';
@@ -373,6 +375,10 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
       };
 
       await runMiddleware(context, record.middleware, terminal);
+    };
+
+    type ViewTransitionDocument = Document & {
+      startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
     };
 
     const documentWithTransition = document as ViewTransitionDocument;
@@ -436,13 +442,13 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
   /** Returns true when the current location matches the named route exactly or as a prefix. */
   isActive<Name extends RouteName<TRoutes>>(name: Name, exact = true): boolean {
     const route = getRouteByName(name, this.#routesByName);
-    const { pathname } = readLocation(this.#base, this.#history);
+    const pathname = stripBase(normalizePath(this.#history.location.pathname), this.#base);
 
     return exact ? matchRoute(pathname, [route]).record != null : matchesPrefix(pathname, route);
   }
 
   /** Resolve a pathname to the matching route branch without running middleware or handlers. */
-  resolve(pathname: string): ResolvedRoute | null {
+  resolve(pathname: string): RouteMatchBranch | null {
     const normalizedPathname = stripBase(normalizePath(pathname), this.#base);
     const { branch } = resolveMatch(normalizedPathname, this.#records);
 

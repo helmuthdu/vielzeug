@@ -1,9 +1,10 @@
 import { type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
+import { CRAFTIT_ERRORS } from './errors';
 import { currentElementOrThrow, effect } from './runtime';
 
 /** @internal */
-export const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
+const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
 
 export type FormFieldOptions<T = unknown> = {
   disabled?: ReadonlySignal<boolean>;
@@ -24,9 +25,7 @@ export const defineField = <T = unknown>(options: FormFieldOptions<T>): FormFiel
   const ctor = host.constructor as typeof HTMLElement & { formAssociated?: boolean };
 
   if (!ctor.formAssociated) {
-    throw new Error(
-      `[craftit:E8] defineField() requires define(..., { formAssociated: true, ... }) for <${host.localName}>`,
-    );
+    throw new Error(CRAFTIT_ERRORS.defineFieldRequiresFormAssociated(host.localName));
   }
 
   const internals = internalsRegistry.get(host) ?? host.attachInternals();

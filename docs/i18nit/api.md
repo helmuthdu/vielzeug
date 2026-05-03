@@ -9,14 +9,14 @@ description: API reference for the minimal @vielzeug/i18nit runtime.
 
 ## API At a Glance
 
-| Symbol       | Purpose                                           | Execution mode | Common gotcha                                 |
-| ------------ | ------------------------------------------------- | -------------- | --------------------------------------------- |
-| `createI18n` | Create translation runtime and catalog store      | Sync           | Messages are string-only leaves               |
-| `t`          | Translate key with interpolation                  | Sync           | Missing key returns `onMissing(key, locale)`  |
-| `tp`         | Translate plural namespace with explicit `count`  | Sync           | Uses `key.zero/one/two/few/many/other` keys   |
-| `setLocale`  | Strict locale switch                              | Async          | Throws if locale is unavailable               |
-| `preload`    | Tolerant locale preload                           | Async          | Never throws when loader is missing           |
-| `format`     | Unified locale-aware formatting                   | Sync           | Use `kind` discriminator in input object      |
+| Symbol       | Purpose                                           | Execution mode | Common gotcha                                    |
+| ------------ | ------------------------------------------------- | -------------- | ------------------------------------------------ |
+| `createI18n` | Create translation runtime and catalog store      | Sync           | Messages are recursive objects with string leaves |
+| `t`          | Translate key with interpolation                  | Sync           | Missing key returns `onMissing(key, locale)`     |
+| `tp`         | Translate plural namespace with explicit `count`  | Sync           | Plural messages live under `key.zero|one|...`    |
+| `setLocale`  | Strict locale switch                              | Async          | Throws if locale is unavailable                  |
+| `preload`    | Best-effort locale preload                        | Async          | Never throws; loader errors only hit diagnostics |
+| `format`     | Unified locale-aware formatting                   | Sync           | Use the `kind` discriminator                     |
 
 ## Package Entry Point
 
@@ -33,6 +33,12 @@ Core exported types:
 - `FormatKind`, `FormatInput`
 - `DiagnosticEvent`
 - `I18nOptions`, `I18n`
+
+Supporting runtime exports:
+
+- `createI18n`
+- `isLoaderError`
+- `isSubscriberError`
 
 ## createI18n
 
@@ -51,12 +57,24 @@ Options:
 | `onMissing`    | `(key, locale) => string`| Missing-key resolver                         |
 | `onDiagnostic` | `(event) => void`        | Diagnostic sink for subscriber/loader errors |
 
+```ts
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  fallback: 'en',
+  locale: 'en',
+  messages: {
+    en: { greeting: 'Hello, {name}!' },
+  },
+});
+```
+
 ## I18n Interface
 
 ### Locale and Catalogs
 
 - `locale` (readonly): active locale
-- `locales`: loaded catalog locales
+- `loadedLocales`: loaded catalog locales
 - `loadableLocales`: locales with registered loaders
 - `setCatalog(locale, messages)`: replace locale catalog
 - `setLoader(locale, loader)`: register/replace loader
@@ -70,7 +88,7 @@ Options:
 ### Loading
 
 - `setLocale(locale)`: strict locale switch (throws if missing)
-- `preload(locale)`: tolerant preload (no throw if missing)
+- `preload(locale)`: best-effort preload (never throws)
 
 ### Formatting
 
@@ -78,7 +96,7 @@ Options:
 - `format({ kind: 'currency', value, currency, options? })`
 - `format({ kind: 'date', value, options? })`
 - `format({ kind: 'relative', value, unit, options? })`
-- `format({ kind: 'list', value, options?: { type?: 'and' | 'or' } })`
+- `format({ kind: 'list', value, options?: { style?: 'long' | 'short' | 'narrow', type?: 'and' | 'or' } })`
 
 ### Subscription and Lifecycle
 
@@ -86,6 +104,8 @@ Options:
 - `dispose()`
 - `[Symbol.dispose]()`
 - `[Symbol.asyncDispose]()`
+
+`subscribe(listener, true)` emits `{ locale, reason: 'init' }` immediately.
 
 ## Type Guards
 
@@ -113,8 +133,9 @@ function handleDiagnostic(event: DiagnosticEvent) {
 - Fallback chain: active locale -> BCP47 ancestors -> configured fallback locales.
 - Plural resolution uses `Intl.PluralRules` in `tp()` and tries `zero` first for `count === 0`.
 - `setLocale()` is strict and rejects if the locale cannot be loaded.
-- `preload()` is tolerant and never rejects for missing loaders.
-- Subscriber errors and loader errors route through `onDiagnostic` (or console defaults).
+- `preload()` is best-effort: it never rejects and routes loader failures to `onDiagnostic`.
+- `subscribe(listener, immediate)` emits `reason: 'init'` when `immediate=true` to distinguish initialization from locale changes.
+- `[Symbol.dispose]` / `[Symbol.asyncDispose]` require Explicit Resource Management support (Node 20.4+, TypeScript 5.2+).
 - After `dispose()`, mutating/loading methods throw: `setCatalog`, `setLoader`, `preload`, `setLocale`, `subscribe`.
 
 ## Message Shape

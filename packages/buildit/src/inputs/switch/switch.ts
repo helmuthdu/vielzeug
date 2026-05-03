@@ -69,7 +69,6 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
       disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)),
       error: props.error,
       helper: props.helper,
-      host: host.el,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
         emit('change', payload);
@@ -98,17 +97,15 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
       },
     });
 
-    return {
-      render: () => html`
-        <div class="switch-wrapper" part="switch">
-          <div class="switch-track" part="track">
-            <div class="switch-thumb" part="thumb"></div>
-          </div>
+    return () => html`
+      <div class="switch-wrapper" part="switch">
+        <div class="switch-track" part="track">
+          <div class="switch-thumb" part="thumb"></div>
         </div>
-        <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
-        <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
-      `,
-    };
+      </div>
+      <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
+      <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
+    `;
   },
   styles: [...formControlMixins, sizeVariantMixin(SWITCH_SIZE_PRESET), componentStyles],
 });

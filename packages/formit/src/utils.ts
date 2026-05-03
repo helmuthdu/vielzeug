@@ -11,10 +11,16 @@ export function isSameValue(a: unknown, b: unknown): boolean {
     return a.length === b.length && a.every((v, i) => isSameValue(v, b[i]));
   }
 
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const aKeys = Object.keys(a);
+
+    return aKeys.length === Object.keys(b).length && aKeys.every((k) => isSameValue(a[k], b[k]));
+  }
+
   return false;
 }
 
-function isPlainObject(val: unknown): val is Record<string, unknown> {
+export function isPlainObject(val: unknown): val is Record<string, unknown> {
   return val !== null && typeof val === 'object' && Object.getPrototypeOf(val) === Object.prototype;
 }
 

@@ -35,7 +35,8 @@ export type Logger = {
   debug: (...args: unknown[]) => void;
   enabled: (type: LogLevel) => boolean;
   error: (...args: unknown[]) => void;
-  group: <T>(label: string, fn: () => T, collapsed?: boolean) => T;
+  group: <T>(label: string, fn: () => T) => T;
+  groupCollapsed: <T>(label: string, fn: () => T) => T;
   info: (...args: unknown[]) => void;
   scope: (name: string) => Logger;
   setConfig: (opts: LogitOptions) => Logger;
@@ -53,7 +54,7 @@ const PRIORITY: Record<LogLevel, number> = {
   error: 5,
   info: 2,
   off: 6,
-  success: 3,
+  success: 2,
   trace: 1,
   warn: 4,
 };
@@ -62,16 +63,12 @@ const PRIORITY: Record<LogLevel, number> = {
 
 type Theme = { bg: string; border: string; color: string; icon?: string; symbol?: string };
 
-const isDarkMode = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-
 const THEME: Record<LogType | 'group' | 'ns', Theme> = {
   debug: { bg: '#616161', border: '#424242', color: '#fff', icon: '☕', symbol: '🅳' },
   error: { bg: '#d32f2f', border: '#c62828', color: '#fff', icon: '✘', symbol: '🅴' },
   group: { bg: '#546e7a', border: '#455a64', color: '#fff', icon: '⚭', symbol: '🅶' },
   info: { bg: '#1976d2', border: '#1565c0', color: '#fff', icon: 'ℹ', symbol: '🅸' },
-  ns: isDarkMode
-    ? { bg: '#fafafa', border: '#c7c7c7', color: '#000' }
-    : { bg: '#424242', border: '#212121', color: '#fff' },
+  ns: { bg: '#424242', border: '#212121', color: '#fff' },
   success: { bg: '#689f38', border: '#558b2f', color: '#fff', icon: '✔', symbol: '🆂' },
   trace: { bg: '#d81b60', border: '#c2185b', color: '#fff', icon: '⛢', symbol: '🆃' },
   warn: { bg: '#ffb300', border: '#ffa000', color: '#fff', icon: '⚠', symbol: '🆆' },
@@ -83,9 +80,7 @@ const NS_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-we
 
 const IS_NODE = typeof window === 'undefined';
 const NODE_PROCESS = (globalThis as typeof globalThis & { process?: { env?: { NODE_ENV?: string } } }).process;
-const IS_PROD = IS_NODE
-  ? NODE_PROCESS?.env?.NODE_ENV === 'production'
-  : (import.meta as any)?.env?.NODE_ENV === 'production';
+const IS_PROD = IS_NODE ? NODE_PROCESS?.env?.NODE_ENV === 'production' : (import.meta as ImportMeta).env.PROD;
 
 const ENV_BADGE = IS_PROD ? '🅿' : '🅳';
 
@@ -210,18 +205,13 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
       Promise.resolve()
         .then(() => handler(type, data))
-        .catch(() => {});
+        .catch((err: unknown) => {
+          console.warn('[logit] remote handler error:', err);
+        });
     }
   };
 
   const timeLabel = (label: string): string => (cfg.namespace ? `[${cfg.namespace}] ${label}` : label);
-
-  /* ---- child factory ---- */
-  const makeChild = (overrides: LogitOptions = {}): Logger => {
-    const { remote: overrideRemote, ...overrideRest } = overrides;
-
-    return createLogger({ ...cfg, ...overrideRest, remote: { ...cfg.remote, ...overrideRemote } });
-  };
 
   /* ---- group renderer ---- */
 
@@ -275,10 +265,22 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
   const logger: Logger = {
     assert: (condition: boolean, ...args: unknown[]): void => {
-      if (passes('error')) console.assert(condition, ...args);
+      if (!passes('error')) return;
+
+      if (cfg.namespace) {
+        console.assert(condition, `[${cfg.namespace}]`, ...args);
+
+        return;
+      }
+
+      console.assert(condition, ...args);
     },
 
-    child: makeChild,
+    child: (overrides: LogitOptions = {}): Logger => {
+      const { remote: overrideRemote, ...overrideRest } = overrides;
+
+      return createLogger({ ...cfg, ...overrideRest, remote: { ...cfg.remote, ...overrideRemote } });
+    },
 
     get config(): Readonly<LogitConfig> {
       return { ...cfg, remote: { ...cfg.remote } };
@@ -289,10 +291,31 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
     enabled: (type: LogLevel): boolean => passes(type),
     error: (...a) => emit('error', a),
 
-    group: <T>(label: string, fn: () => T, collapsed = false): T => {
-      if (!passes('debug')) return fn();
+    group: <T>(label: string, fn: () => T): T => {
+      if (cfg.logLevel === 'off') return fn();
 
-      renderGroup(collapsed, label);
+      renderGroup(false, label);
+
+      try {
+        const result = fn();
+
+        if (result instanceof Promise) {
+          return result.finally(() => console.groupEnd()) as T;
+        }
+
+        console.groupEnd();
+
+        return result;
+      } catch (e) {
+        console.groupEnd();
+        throw e;
+      }
+    },
+
+    groupCollapsed: <T>(label: string, fn: () => T): T => {
+      if (cfg.logLevel === 'off') return fn();
+
+      renderGroup(true, label);
 
       try {
         const result = fn();
@@ -312,7 +335,7 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
     info: (...a) => emit('info', a),
 
-    scope: (name: string): Logger => makeChild({ namespace: cfg.namespace ? `${cfg.namespace}.${name}` : name }),
+    scope: (name: string): Logger => logger.child({ namespace: cfg.namespace ? `${cfg.namespace}.${name}` : name }),
 
     setConfig: (opts: LogitOptions): Logger => {
       const { remote, ...rest } = opts;
@@ -326,11 +349,21 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
     success: (...a) => emit('success', a),
 
     table: (data: unknown, properties?: string[]): void => {
-      if (passes('debug')) console.table(data, properties);
+      if (!passes('debug')) return;
+
+      if (cfg.namespace) {
+        console.group(`[${cfg.namespace}]`);
+        console.table(data, properties);
+        console.groupEnd();
+
+        return;
+      }
+
+      console.table(data, properties);
     },
 
     time: <T>(label: string, fn: () => T): T => {
-      if (!passes('debug')) return fn();
+      if (cfg.logLevel === 'off') return fn();
 
       const tl = timeLabel(label);
 

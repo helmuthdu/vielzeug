@@ -1,13 +1,13 @@
 import type { PermissionData, Permit, PermitOptions, PermitRule, Principal, UserPrincipal } from './types';
 
 import { WILDCARD, ANONYMOUS } from './constants';
-import { validateRule, validateUserPrincipal } from './utils';
 
-type CompiledRule<TAction extends string = string, TData extends PermissionData = PermissionData> = PermitRule<
-  TAction,
-  TData
-> & {
+type InternalRule<TAction extends string, TData extends PermissionData> = PermitRule<TAction, TData> & {
   priority: number;
+};
+
+type CompiledEntry<TAction extends string = string, TData extends PermissionData = PermissionData> = {
+  rule: InternalRule<TAction, TData>;
   score: number;
 };
 
@@ -20,38 +20,74 @@ function specificity(rule: { action: string; resource: string; role: string }): 
 }
 
 /**
+ * Validate essential runtime fields that can bypass static typing.
+ */
+function validateRule<TAction extends string, TData extends PermissionData>(rule: PermitRule<TAction, TData>): void {
+  if (rule.effect !== 'allow' && rule.effect !== 'deny') {
+    throw new Error('[permit] Rule.effect must be "allow" or "deny"');
+  }
+
+  if (rule.when !== undefined && typeof rule.when !== 'function') {
+    throw new Error('[permit] Rule.when must be a function');
+  }
+}
+
+/**
+ * Validate an authenticated principal.
+ */
+function validateUserPrincipal(input: unknown): asserts input is UserPrincipal {
+  if (typeof input !== 'object' || !input) {
+    throw new Error('[permit] Invalid principal: expected { id: string, roles: string[] }');
+  }
+
+  const principal = input as Record<string, unknown>;
+
+  if (typeof principal.id !== 'string' || !principal.id.trim()) {
+    throw new Error('[permit] Invalid principal: id must be a non-empty string');
+  }
+
+  if (!Array.isArray(principal.roles) || principal.roles.some((role) => typeof role !== 'string')) {
+    throw new Error('[permit] Invalid principal: roles must be an array of strings');
+  }
+}
+
+/**
  * Compile a rule once so evaluation can stay minimal.
  */
-function compileRule<TAction extends string, TData extends PermissionData>(
-  rule: PermitRule<TAction, TData>,
-): CompiledRule<TAction, TData> {
-  validateRule<TAction, TData>(rule);
+function compileEntry<TAction extends string, TData extends PermissionData>(
+  source: PermitRule<TAction, TData>,
+): CompiledEntry<TAction, TData> {
+  validateRule<TAction, TData>(source);
+
+  const rule: InternalRule<TAction, TData> = {
+    ...source,
+    priority: source.priority ?? 0,
+  };
 
   return {
-    ...rule,
-    priority: rule.priority ?? 0,
+    rule,
     score: specificity(rule),
   };
 }
 
-function toPublicRule<TAction extends string, TData extends PermissionData>(
-  rule: CompiledRule<TAction, TData>,
+function cloneRule<TAction extends string, TData extends PermissionData>(
+  rule: InternalRule<TAction, TData>,
 ): PermitRule<TAction, TData> {
-  const { score: _score, ...publicRule } = rule;
-
-  return { ...publicRule };
+  return { ...rule };
 }
 
 /**
  * Check whether a rule applies to the current decision request.
  */
 function matchesRule<TAction extends string, TData extends PermissionData>(
-  rule: CompiledRule<TAction, TData>,
+  entry: CompiledEntry<TAction, TData>,
   principal: Principal,
   resource: string,
   action: TAction,
   data: TData | undefined,
 ): boolean {
+  const { rule } = entry;
+
   if (principal === null) {
     if (rule.role !== ANONYMOUS) return false;
   } else {
@@ -75,10 +111,62 @@ export function createPermit<TAction extends string = string, TData extends Perm
   opts: PermitOptions<TAction, TData> = {},
 ): Permit<TAction, TData> {
   const { initial = [], logger } = opts;
-  const rules: CompiledRule<TAction, TData>[] = [];
+  const entries: CompiledEntry<TAction, TData>[] = [];
 
-  function set(rule: PermitRule<TAction, TData>): Permit<TAction, TData> {
-    rules.push(compileRule(rule));
+  function evaluate(
+    principal: Principal,
+    resource: string,
+    action: TAction,
+    data?: TData,
+  ): CompiledEntry<TAction, TData> | undefined {
+    let winner: CompiledEntry<TAction, TData> | undefined;
+
+    for (const entry of entries) {
+      if (!matchesRule(entry, principal, resource, action, data)) continue;
+
+      if (!winner) {
+        winner = entry;
+        continue;
+      }
+
+      const entryPriority = entry.rule.priority;
+      const winnerPriority = winner.rule.priority;
+      const entryBeatsWinner =
+        entryPriority > winnerPriority ||
+        (entryPriority === winnerPriority && entry.score > winner.score) ||
+        (entryPriority === winnerPriority && entry.score === winner.score && entry.rule.effect === 'deny');
+
+      if (entryBeatsWinner) {
+        winner = entry;
+      }
+    }
+
+    return winner;
+  }
+
+  function logDecision(
+    principal: Principal,
+    resource: string,
+    action: TAction,
+    data: TData | undefined,
+    winner?: CompiledEntry<TAction, TData>,
+  ): void {
+    logger?.({
+      action,
+      data,
+      decision: winner?.rule.effect ?? 'deny',
+      principal,
+      resource,
+      rule: winner ? cloneRule(winner.rule) : undefined,
+    });
+  }
+
+  function set(rule: PermitRule<TAction, TData> | readonly PermitRule<TAction, TData>[]): Permit<TAction, TData> {
+    const nextRules = Array.isArray(rule) ? rule : [rule];
+
+    for (const nextRule of nextRules) {
+      entries.push(compileEntry(nextRule));
+    }
 
     return permit;
   }
@@ -88,52 +176,11 @@ export function createPermit<TAction extends string = string, TData extends Perm
       validateUserPrincipal(principal);
     }
 
-    let winner: CompiledRule<TAction, TData> | undefined;
-    let decision: 'allow' | 'deny' = 'deny';
+    const winner = evaluate(principal, resource, action, data);
 
-    for (const rule of rules) {
-      if (!matchesRule(rule, principal, resource, action, data)) continue;
+    logDecision(principal, resource, action, data, winner);
 
-      if (
-        !winner ||
-        rule.priority > winner.priority ||
-        (rule.priority === winner.priority && rule.score > winner.score)
-      ) {
-        winner = rule;
-        decision = rule.effect;
-
-        continue;
-      }
-
-      if (rule.priority === winner.priority && rule.score === winner.score && rule.effect === 'deny') {
-        winner = rule;
-        decision = 'deny';
-      }
-    }
-
-    if (!winner) {
-      logger?.({
-        action,
-        data,
-        decision: 'deny',
-        principal,
-        resource,
-        rule: undefined,
-      });
-
-      return false;
-    }
-
-    logger?.({
-      action,
-      data,
-      decision,
-      principal,
-      resource,
-      rule: toPublicRule(winner),
-    });
-
-    return decision === 'allow';
+    return winner?.rule.effect === 'allow';
   }
 
   function forUser(principal: UserPrincipal): (resource: string, action: TAction, data?: TData) => boolean {
@@ -144,25 +191,29 @@ export function createPermit<TAction extends string = string, TData extends Perm
       roles: [...principal.roles],
     };
 
-    return (resource, action, data) => can(boundPrincipal, resource, action, data);
+    return (resource, action, data) => {
+      const winner = evaluate(boundPrincipal, resource, action, data);
+
+      logDecision(boundPrincipal, resource, action, data, winner);
+
+      return winner?.rule.effect === 'allow';
+    };
   }
 
   function clear(): Permit<TAction, TData> {
-    rules.length = 0;
+    entries.length = 0;
 
     return permit;
   }
 
-  function rulesSnapshot(): PermitRule<TAction, TData>[] {
-    return rules.map((rule) => toPublicRule(rule));
+  function rules(): PermitRule<TAction, TData>[] {
+    return entries.map((entry) => cloneRule(entry.rule));
   }
 
   function replace(nextRules: readonly PermitRule<TAction, TData>[]): Permit<TAction, TData> {
-    clear();
+    entries.length = 0;
 
-    for (const rule of nextRules) {
-      set(rule);
-    }
+    set(nextRules);
 
     return permit;
   }
@@ -172,7 +223,7 @@ export function createPermit<TAction extends string = string, TData extends Perm
     clear,
     forUser,
     replace,
-    rules: rulesSnapshot,
+    rules,
     set,
   };
 

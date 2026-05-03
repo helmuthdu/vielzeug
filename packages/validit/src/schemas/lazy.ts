@@ -1,4 +1,4 @@
-import type { Issue, ParseResult } from '../core';
+import type { Issue } from '../core';
 
 import { Schema } from '../core';
 
@@ -10,17 +10,19 @@ export class LazySchema<T> extends Schema<T> {
     this.getter = getter;
   }
 
-  private _processParseResult(result: ParseResult<T>, fallback: unknown): { data: unknown; issues: Issue[] } {
+  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+    const result = this.getter().safeParse(value);
+
     if (result.success) return { data: result.data, issues: [] };
 
-    return { data: fallback, issues: result.error.issues };
-  }
-
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    return this._processParseResult(this.getter().safeParse(value), value);
+    return { data: value, issues: result.error.issues };
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    return this._processParseResult(await this.getter().safeParseAsync(value), value);
+    const result = await this.getter().safeParseAsync(value);
+
+    if (result.success) return { data: result.data, issues: [] };
+
+    return { data: value, issues: result.error.issues };
   }
 }

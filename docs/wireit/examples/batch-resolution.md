@@ -16,11 +16,9 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 ### Resolve multiple dependencies at once
 
 ```ts
-const [db, config, logger] = container.getAll([DbToken, ConfigToken, LoggerToken]);
+const [db, config, logger] = await container.resolveAll([DbToken, ConfigToken, LoggerToken]);
 // Types: [IDatabase, AppConfig, ILogger]
-
-// Async version
-const [db, cache] = await container.getAllAsync([DbToken, CacheToken]);
+const [db2, cache] = await container.resolveAll([DbToken, CacheToken]);
 ```
 
 ### Bootstrap function
@@ -30,11 +28,11 @@ async function bootstrap() {
   const container = createContainer();
   // ... register all providers ...
 
-  const [db, cache, queue] = await container.getAllAsync([DbToken, CacheToken, QueueToken]);
+  const [db, cache, queue] = await container.resolveAll([DbToken, CacheToken, QueueToken]);
 
   await Promise.all([db.migrate(), cache.warm(), queue.start()]);
 
-  return container.get(AppToken);
+  return container.resolve(AppToken);
 }
 ```
 

@@ -89,6 +89,5 @@ assert(isLoaded, 'Not loaded yet, continuing anyway...', { bypass: true });
 
 ## See Also
 
-- [assertParams](./assertParams.md): Validate function arguments against types.
-- [attempt](./attempt.md): Safely execute logic and ignore errors.
+- [attempt](../async/attempt.md): Execute async logic with retry + timeout semantics.
 - [isDefined](../typed/isDefined.md): Common check used within assertions.

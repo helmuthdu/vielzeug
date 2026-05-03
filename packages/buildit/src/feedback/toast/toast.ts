@@ -1,4 +1,7 @@
-import { computed, define, prop, html, ref, signal } from '@vielzeug/craftit';
+import type { SwipeControl } from '@vielzeug/craftit/controls';
+
+import { computed, define, prop, html, ref, signal, onMounted } from '@vielzeug/craftit';
+import { createSwipeControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -133,6 +136,69 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
     const exitingIds = signal<Set<string>>(new Set());
     const containerRef = ref<HTMLDivElement>();
 
+    // Per-toast swipe-to-dismiss controls
+    const swipeControls = new Map<string, SwipeControl>();
+
+    const createToastSwipe = (id: string): SwipeControl =>
+      createSwipeControl({
+        axis: () => 'x',
+        // Do not capture pointers for toast swipe gestures; capture can steal
+        // close-button clicks inside bit-alert when the gesture does not move.
+        captureTarget: () => null,
+        disabled: () => !(toasts.value.find((t) => t.id === id)?.dismissible ?? true),
+        onCancel: ({ event }) => {
+          const wrapper = event.currentTarget as HTMLElement;
+
+          wrapper.style.transition = '';
+          wrapper.style.transform = '';
+          wrapper.style.opacity = '';
+        },
+        onCommit: ({ distance, event }) => {
+          const wrapper = event.currentTarget as HTMLElement;
+          const dir = distance >= 0 ? 1 : -1;
+          const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+          const finish = () => {
+            wrapper.style.animation = 'none';
+            removeToast(id);
+          };
+
+          if (reducedMotion) {
+            wrapper.style.opacity = '0';
+            finish();
+
+            return;
+          }
+
+          wrapper.style.transition = 'transform 0.22s ease-out, opacity 0.22s ease-out';
+          void wrapper.offsetWidth;
+          wrapper.style.transform = `translateX(${dir * 120}%)`;
+          wrapper.style.opacity = '0';
+
+          const onTransitionEnd = (e: TransitionEvent) => {
+            if (e.target !== wrapper || e.propertyName !== 'transform') return;
+
+            wrapper.removeEventListener('transitionend', onTransitionEnd);
+            clearTimeout(fallback);
+            finish();
+          };
+
+          const fallback = setTimeout(() => {
+            wrapper.removeEventListener('transitionend', onTransitionEnd);
+            finish();
+          }, 300);
+
+          wrapper.addEventListener('transitionend', onTransitionEnd);
+        },
+        onMove: ({ distance, event }) => {
+          const wrapper = event.currentTarget as HTMLElement;
+
+          wrapper.style.transition = 'none';
+          wrapper.style.transform = `translateX(${distance}px)`;
+          wrapper.style.opacity = String(Math.max(0, 1 - Math.abs(distance) / 200));
+        },
+      });
+
     // Timer tracking: maps id → { remaining, startedAt, timeoutId }
     const timers = new Map<string, { remaining: number; startedAt: number; timeoutId: number }>();
 
@@ -200,6 +266,8 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
       const item: NormalizedToast = { dismissible: true, duration: 5000, ...toast, id };
       const maxToasts = props.max?.value ?? 5;
 
+      // Create swipe control before updating signal so renderToastItem can find it.
+      swipeControls.set(id, createToastSwipe(id));
       toasts.value = [...toasts.value, item].slice(-maxToasts);
       emit('add', { id });
 
@@ -237,6 +305,8 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
       const finalize = () => {
         setExiting(id, false);
         toasts.value = toasts.value.filter((t) => t.id !== id);
+
+        swipeControls.delete(id);
 
         // Clean up timer
         const timer = timers.get(id);
@@ -310,7 +380,11 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
       <div
         class="${() => (exitingIds.value.has(toast.id) ? 'toast-wrapper exiting' : 'toast-wrapper')}"
         data-toast-id=${toast.id}
-        part="toast-wrapper">
+        part="toast-wrapper"
+        @pointerdown=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerDown(e)}
+        @pointermove=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerMove(e)}
+        @pointerup=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerUp(e)}
+        @pointercancel=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerCancel(e)}>
         <bit-alert
           color=${toast.color || (toast.urgency === 'assertive' ? 'error' : 'primary')}
           variant=${toast.variant || 'solid'}
@@ -326,55 +400,53 @@ export const TOAST_TAG = define<BitToastProps, BitToastEvents>('bit-toast', {
       </div>
     `;
 
-    return {
-      mount() {
-        const el = host.el as ToastElement;
+    onMounted(() => {
+      const el = host.el as ToastElement;
 
-        el.add = addToast;
-        el.update = updateToast;
-        el.dismiss = removeToast;
-        el.clear = clearAll;
-      },
+      el.add = addToast;
+      el.update = updateToast;
+      el.dismiss = removeToast;
+      el.clear = clearAll;
+    });
 
-      render: () => html`
+    return () => html`
+      <div
+        class="toast-container"
+        ref=${containerRef}
+        @pointerenter=${() => setHovered(true)}
+        @pointerleave=${() => setHovered(false)}
+        @focusin=${() => {
+          focusPaused = true;
+          maybeUpdatePauseState();
+        }}
+        @focusout=${() => {
+          focusPaused = false;
+          maybeUpdatePauseState();
+        }}
+        part="container">
+        <!-- Polite live region: normal informational toasts -->
         <div
-          class="toast-container"
-          ref=${containerRef}
-          @pointerenter=${() => setHovered(true)}
-          @pointerleave=${() => setHovered(false)}
-          @focusin=${() => {
-            focusPaused = true;
-            maybeUpdatePauseState();
-          }}
-          @focusout=${() => {
-            focusPaused = false;
-            maybeUpdatePauseState();
-          }}
-          part="container">
-          <!-- Polite live region: normal informational toasts -->
-          <div
-            role="region"
-            aria-live="polite"
-            aria-relevant="additions removals"
-            aria-atomic="false"
-            aria-label="Notifications"
-            class="toast-live-region">
-            ${() => politeToasts.value.map(renderToastItem)}
-          </div>
-          <!-- Assertive live region: critical errors that interrupt immediately -->
-          <div
-            role="region"
-            aria-live="assertive"
-            aria-relevant="additions removals"
-            aria-atomic="false"
-            aria-label="Critical notifications"
-            class="toast-live-region">
-            ${() => assertiveToasts.value.map(renderToastItem)}
-          </div>
-          <slot></slot>
+          role="region"
+          aria-live="polite"
+          aria-relevant="additions removals"
+          aria-atomic="false"
+          aria-label="Notifications"
+          class="toast-live-region">
+          ${() => politeToasts.value.map(renderToastItem)}
         </div>
-      `,
-    };
+        <!-- Assertive live region: critical errors that interrupt immediately -->
+        <div
+          role="region"
+          aria-live="assertive"
+          aria-relevant="additions removals"
+          aria-atomic="false"
+          aria-label="Critical notifications"
+          class="toast-live-region">
+          ${() => assertiveToasts.value.map(renderToastItem)}
+        </div>
+        <slot></slot>
+      </div>
+    `;
   },
   styles: [reducedMotionMixin, componentStyles],
 });

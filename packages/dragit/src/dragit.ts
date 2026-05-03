@@ -36,7 +36,7 @@ export interface DropZoneOptions {
    *
    * When empty the zone accepts everything.
    */
-  accept?: string[];
+  accept?: string[] | (() => string[]);
   /**
    * When truthy, all drag events are ignored and hover state does not change.
    * Accepts a function for reactive framework integration.
@@ -48,17 +48,13 @@ export interface DropZoneOptions {
    * @default 'copy'
    */
   dropEffect?: DataTransfer['dropEffect'];
-  onDragEnter?: (event: DragEvent) => void;
-  onDragLeave?: (event: DragEvent) => void;
-  /** Called every `dragover` frame — use to set `dropEffect`. */
-  onDragOver?: (event: DragEvent) => void;
   /** Called when files are dropped. Receives accepted files only. */
   onDrop?: (files: File[], event: DragEvent) => void;
   /** Called when dropped files are rejected by the `accept` filter. */
   onDropRejected?: (files: File[], event: DragEvent) => void;
   /**
    * Called whenever hover state toggles.
-   * Replaces manual `onDragEnter` / `onDragLeave` for simple styling.
+   * Use this for drag-over styling.
    */
   onHoverChange?: (hovered: boolean) => void;
 }
@@ -68,17 +64,13 @@ export interface Disposable {
   [Symbol.dispose](): void;
 }
 
-export interface DropZoneState {
-  hovered: boolean;
-  files: File[];
-  rejected: File[];
-}
-
 export interface DropZone extends Disposable {
   /** Whether the pointer is currently dragging over the zone. */
   readonly hovered: boolean;
-  /** Last resolved drop state for accepted and rejected files. */
-  readonly state: Readonly<DropZoneState>;
+  /** Accepted files from the last drop. */
+  readonly files: readonly File[];
+  /** Rejected files from the last drop. */
+  readonly rejected: readonly File[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -95,6 +87,12 @@ function matchesAccept(file: File, accept: string[]): boolean {
 
     return file.type === p;
   });
+}
+
+function resolveAccept(accept: string[] | (() => string[]) | undefined): string[] {
+  if (accept === undefined) return [];
+
+  return typeof accept === 'function' ? accept() : accept;
 }
 
 /**
@@ -140,32 +138,20 @@ function itemsMatchAccept(items: DataTransferItemList, accept: string[]): boolea
  * ```
  */
 export function createDropZone(options: DropZoneOptions): DropZone {
-  const {
-    accept = [],
-    disabled,
-    dropEffect = 'copy',
-    element,
-    onDragEnter,
-    onDragLeave,
-    onDragOver,
-    onDrop,
-    onDropRejected,
-    onHoverChange,
-  } = options;
+  const { accept, disabled, dropEffect = 'copy', element, onDrop, onDropRejected, onHoverChange } = options;
 
   let dragCounter = 0;
-  const state: DropZoneState = {
-    files: [],
-    hovered: false,
-    rejected: [],
-  };
+  let files: File[] = [];
+  let rejected: File[] = [];
 
   const isRejectedByFilter = (e: DragEvent): boolean => {
-    if (!accept.length) return false;
+    const acceptedPatterns = resolveAccept(accept);
+
+    if (!acceptedPatterns.length) return false;
 
     const items = e.dataTransfer?.items;
 
-    return !!items?.length && !itemsMatchAccept(items, accept);
+    return !!items?.length && !itemsMatchAccept(items, acceptedPatterns);
   };
 
   const setDepth = (next: number): void => {
@@ -174,8 +160,6 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     dragCounter = Math.max(0, next);
 
     const hovered = dragCounter > 0;
-
-    state.hovered = hovered;
 
     if (hovered !== wasHovered) onHoverChange?.(hovered);
   };
@@ -196,7 +180,6 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     }
 
     setDepth(dragCounter + 1);
-    onDragEnter?.(e);
   };
 
   const handleDragOver = (e: DragEvent): void => {
@@ -211,16 +194,12 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     }
 
     if (e.dataTransfer) e.dataTransfer.dropEffect = dropEffect;
-
-    onDragOver?.(e);
   };
 
-  const handleDragLeave = (e: DragEvent): void => {
+  const handleDragLeave = (_e: DragEvent): void => {
     if (resolveDisabled(disabled)) return;
 
     setDepth(dragCounter - 1);
-
-    if (dragCounter === 0) onDragLeave?.(e);
   };
 
   const handleDrop = (e: DragEvent): void => {
@@ -233,19 +212,23 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
     if (!raw) return;
 
-    const files: File[] = [];
-    const rejected: File[] = [];
+    const acceptedFiles: File[] = [];
+    const rejectedFiles: File[] = [];
+    const acceptedPatterns = resolveAccept(accept);
 
     for (const f of Array.from(raw)) {
-      (matchesAccept(f, accept) ? files : rejected).push(f);
+      (matchesAccept(f, acceptedPatterns) ? acceptedFiles : rejectedFiles).push(f);
     }
 
-    state.files = files;
-    state.rejected = rejected;
+    const nextFiles = acceptedFiles;
+    const nextRejected = rejectedFiles;
 
-    if (files.length > 0) onDrop?.(files, e);
+    files = nextFiles;
+    rejected = nextRejected;
 
-    if (rejected.length > 0) onDropRejected?.(rejected, e);
+    if (nextFiles.length > 0) onDrop?.(nextFiles, e);
+
+    if (nextRejected.length > 0) onDropRejected?.(nextRejected, e);
   };
 
   element.addEventListener('dragenter', handleDragEnter);
@@ -265,14 +248,17 @@ export function createDropZone(options: DropZoneOptions): DropZone {
       window.removeEventListener('dragend', resetHoverState);
       window.removeEventListener('drop', resetHoverState);
       resetHoverState();
-      state.files = [];
-      state.rejected = [];
+      files = [];
+      rejected = [];
     }),
+    get files() {
+      return files;
+    },
     get hovered() {
       return dragCounter > 0;
     },
-    get state() {
-      return state;
+    get rejected() {
+      return rejected;
     },
   };
 }
@@ -307,10 +293,12 @@ export interface SortableOptions {
   /** Called when the user starts dragging an item. */
   onDragStart?: (id: string, event: DragEvent) => void;
   /** Called when a drag ends (whether dropped or cancelled). */
-  onDragEnd?: (event: DragEvent) => void;
+  onDragEnd?: (id: string, event: DragEvent) => void;
 }
 
-export type Sortable = Disposable;
+export interface Sortable extends Disposable {
+  readonly isDragging: boolean;
+}
 
 /**
  * Makes a list of items sortable via native HTML drag interactions.
@@ -376,7 +364,12 @@ export function createSortable(options: SortableOptions): Sortable {
 
     p.className = placeholderClass;
     p.setAttribute('aria-hidden', 'true');
-    p.style.height = `${source.offsetHeight}px`;
+
+    if (axis === 'horizontal') {
+      p.style.width = `${source.offsetWidth}px`;
+    } else {
+      p.style.height = `${source.offsetHeight}px`;
+    }
 
     return p;
   };
@@ -398,7 +391,6 @@ export function createSortable(options: SortableOptions): Sortable {
     originalNextSibling = item.nextSibling;
     draggedEl = item;
     draggedEl.setAttribute('data-dragging', '');
-    draggedEl.style.opacity = '0';
 
     placeholder = createPlaceholder(draggedEl);
     draggedEl.parentElement?.insertBefore(placeholder, draggedEl.nextSibling);
@@ -435,10 +427,11 @@ export function createSortable(options: SortableOptions): Sortable {
   const handleDragEnd = (e: DragEvent): void => {
     if (!draggedEl) return;
 
+    const draggedId = getId(draggedEl);
+
     const cancelled = e.dataTransfer?.dropEffect === 'none';
 
     draggedEl.removeAttribute('data-dragging');
-    draggedEl.style.opacity = '';
 
     if (placeholder?.parentElement) {
       if (cancelled) {
@@ -455,7 +448,7 @@ export function createSortable(options: SortableOptions): Sortable {
     lastOverTarget = null;
     originalNextSibling = null;
 
-    onDragEndCb?.(e);
+    onDragEndCb?.(draggedId, e);
 
     if (!cancelled && !resolveDisabled(disabled)) {
       const newOrder = getOrderedIds();
@@ -484,7 +477,6 @@ export function createSortable(options: SortableOptions): Sortable {
 
       if (draggedEl) {
         draggedEl.removeAttribute('data-dragging');
-        draggedEl.style.opacity = '';
       }
 
       placeholder?.remove();
@@ -505,6 +497,9 @@ export function createSortable(options: SortableOptions): Sortable {
         }
       });
     }),
+    get isDragging() {
+      return draggedEl !== null;
+    },
   };
 }
 

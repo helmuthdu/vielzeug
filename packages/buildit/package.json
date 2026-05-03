@@ -176,6 +176,12 @@
       "require": "./dist/menu.cjs",
       "types": "./dist/overlay/menu/menu.d.ts"
     },
+    "./navbar": {
+      "source": "./src/layout/navbar/navbar.ts",
+      "import": "./dist/navbar.js",
+      "require": "./dist/navbar.cjs",
+      "types": "./dist/layout/navbar/navbar.d.ts"
+    },
     "./number-input": {
       "source": "./src/inputs/number-input/number-input.ts",
       "import": "./dist/number-input.js",
@@ -199,6 +205,12 @@
       "import": "./dist/popover.js",
       "require": "./dist/popover.cjs",
       "types": "./dist/overlay/popover/popover.d.ts"
+    },
+    "./password-strength": {
+      "source": "./src/feedback/password-strength/password-strength.ts",
+      "import": "./dist/password-strength.js",
+      "require": "./dist/password-strength.cjs",
+      "types": "./dist/feedback/password-strength/password-strength.d.ts"
     },
     "./progress": {
       "source": "./src/feedback/progress/progress.ts",
@@ -236,12 +248,6 @@
       "require": "./dist/separator.cjs",
       "types": "./dist/content/separator/separator.d.ts"
     },
-    "./sidebar": {
-      "source": "./src/layout/sidebar/sidebar.ts",
-      "import": "./dist/sidebar.js",
-      "require": "./dist/sidebar.cjs",
-      "types": "./dist/layout/sidebar/sidebar.d.ts"
-    },
     "./skeleton": {
       "source": "./src/feedback/skeleton/skeleton.ts",
       "import": "./dist/skeleton.js",
@@ -253,6 +259,12 @@
       "import": "./dist/slider.js",
       "require": "./dist/slider.cjs",
       "types": "./dist/inputs/slider/slider.d.ts"
+    },
+    "./sidebar": {
+      "source": "./src/layout/sidebar/sidebar.ts",
+      "import": "./dist/sidebar.js",
+      "require": "./dist/sidebar.cjs",
+      "types": "./dist/layout/sidebar/sidebar.d.ts"
     },
     "./switch": {
       "source": "./src/inputs/switch/switch.ts",
@@ -327,11 +339,11 @@
     "@vielzeug/stateit": "workspace:*",
     "@vielzeug/toolkit": "workspace:*",
     "@vielzeug/virtualit": "workspace:*",
-    "lucide": "^1.12.0"
+    "lucide": "^1.14.0"
   },
   "devDependencies": {
     "@custom-elements-manifest/analyzer": "^0.11.0",
-    "axe-core": "^4.11.3",
+    "axe-core": "^4.11.4",
     "browserslist": "^4.28.2",
     "lightningcss": "^1.32.0",
     "typescript": "~6.0.3",

@@ -47,6 +47,7 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
       optionElement.className = 'option';
       optionElement.setAttribute('role', 'option');
       optionElement.id = `${deps.comboId}-opt-${item.index}`;
+      optionElement.setAttribute('data-option-value', option.value);
       optionElement.setAttribute('aria-selected', String(isSelected));
       optionElement.setAttribute('aria-disabled', String(option.disabled));
       optionElement.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;

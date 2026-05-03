@@ -16,9 +16,7 @@ const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinit
         return result;
       }
 
-      return {
-        render: () => result,
-      };
+      return () => result;
     },
   });
 

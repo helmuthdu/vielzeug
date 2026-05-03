@@ -1,0 +1,190 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import { applyReorder, createDropZone, createSortable } from './dragit';
+
+function createDragEvent(
+  type: string,
+  dataTransfer?: {
+    dropEffect?: DataTransfer['dropEffect'];
+    effectAllowed?: DataTransfer['effectAllowed'];
+    files?: File[];
+    items?: Array<{ kind: string; type: string }>;
+    setData?: (format: string, data: string) => void;
+  },
+): DragEvent {
+  const event = new Event(type, { bubbles: true, cancelable: true }) as DragEvent;
+
+  if (dataTransfer) {
+    Object.defineProperty(event, 'dataTransfer', {
+      configurable: true,
+      value: dataTransfer,
+    });
+  }
+
+  return event;
+}
+
+describe('createDropZone', () => {
+  it('exposes flattened files/rejected snapshots', () => {
+    const element = document.createElement('div');
+    const zone = createDropZone({ element });
+
+    const accepted = new File(['hello'], 'a.txt', { type: 'text/plain' });
+    const rejected = new File(['img'], 'a.png', { type: 'image/png' });
+    const event = createDragEvent('drop', {
+      files: [accepted, rejected],
+      items: [
+        { kind: 'file', type: accepted.type },
+        { kind: 'file', type: rejected.type },
+      ],
+    });
+
+    zone.destroy();
+
+    const filteredZone = createDropZone({
+      accept: ['text/plain'],
+      element,
+    });
+
+    element.dispatchEvent(event);
+
+    expect(filteredZone.files).toEqual([accepted]);
+    expect(filteredZone.rejected).toEqual([rejected]);
+  });
+
+  it('supports reactive accept getter at drop time', () => {
+    const element = document.createElement('div');
+    let accept = ['image/*'];
+
+    const zone = createDropZone({
+      accept: () => accept,
+      element,
+    });
+
+    const image = new File(['img'], 'x.png', { type: 'image/png' });
+    const text = new File(['txt'], 'x.txt', { type: 'text/plain' });
+
+    element.dispatchEvent(
+      createDragEvent('drop', {
+        files: [image, text],
+        items: [
+          { kind: 'file', type: image.type },
+          { kind: 'file', type: text.type },
+        ],
+      }),
+    );
+    expect(zone.files).toEqual([image]);
+    expect(zone.rejected).toEqual([text]);
+
+    accept = ['text/plain'];
+    element.dispatchEvent(
+      createDragEvent('drop', {
+        files: [image, text],
+        items: [
+          { kind: 'file', type: image.type },
+          { kind: 'file', type: text.type },
+        ],
+      }),
+    );
+
+    expect(zone.files).toEqual([text]);
+    expect(zone.rejected).toEqual([image]);
+  });
+
+  it('keeps hover false when drag payload is rejected by filter', () => {
+    const element = document.createElement('div');
+    const zone = createDropZone({
+      accept: ['image/*'],
+      element,
+    });
+
+    element.dispatchEvent(
+      createDragEvent('dragenter', {
+        dropEffect: 'copy',
+        items: [{ kind: 'file', type: 'text/plain' }],
+      }),
+    );
+
+    expect(zone.hovered).toBe(false);
+  });
+});
+
+describe('createSortable', () => {
+  it('sizes placeholder width for horizontal axis', () => {
+    const element = document.createElement('ul');
+    const first = document.createElement('li');
+    const second = document.createElement('li');
+
+    first.setAttribute('data-sort-id', 'a');
+    second.setAttribute('data-sort-id', 'b');
+    element.append(first, second);
+
+    Object.defineProperty(first, 'offsetWidth', { configurable: true, value: 120 });
+    Object.defineProperty(first, 'offsetHeight', { configurable: true, value: 40 });
+
+    createSortable({
+      axis: 'horizontal',
+      element,
+    });
+
+    first.dispatchEvent(
+      createDragEvent('dragstart', {
+        effectAllowed: 'move',
+        setData: vi.fn(),
+      }),
+    );
+
+    const placeholder = element.querySelector('.dragit-placeholder') as HTMLElement;
+
+    expect(placeholder).toBeTruthy();
+    expect(placeholder.style.width).toBe('120px');
+  });
+
+  it('provides drag id on drag end and exposes isDragging', () => {
+    const element = document.createElement('ul');
+    const first = document.createElement('li');
+    const second = document.createElement('li');
+    const onDragEnd = vi.fn();
+
+    first.setAttribute('data-sort-id', 'a');
+    second.setAttribute('data-sort-id', 'b');
+    element.append(first, second);
+
+    const sortable = createSortable({
+      element,
+      onDragEnd,
+    });
+
+    first.dispatchEvent(
+      createDragEvent('dragstart', {
+        effectAllowed: 'move',
+        setData: vi.fn(),
+      }),
+    );
+
+    expect(sortable.isDragging).toBe(true);
+
+    first.dispatchEvent(
+      createDragEvent('dragend', {
+        dropEffect: 'move',
+      }),
+    );
+
+    expect(sortable.isDragging).toBe(false);
+    expect(onDragEnd).toHaveBeenCalledWith('a', expect.any(Event));
+  });
+});
+
+describe('applyReorder', () => {
+  it('reorders known ids and appends unknown remainder in original order', () => {
+    const items = [
+      { id: 'a', value: 1 },
+      { id: 'b', value: 2 },
+      { id: 'c', value: 3 },
+    ];
+
+    const result = applyReorder(items, ['c', 'x', 'a'], (item) => item.id);
+
+    expect(result.map((item) => item.id)).toEqual(['c', 'a', 'b']);
+  });
+});

@@ -12,7 +12,7 @@ Start with the [Overview](./index.md), then use this page for the day-to-day API
 ## Create a Router
 
 ```ts
-import { createRouter } from '@vielzeug/routeit';
+import { createRouter, redirect } from '@vielzeug/routeit';
 
 const routes = {
   home: {
@@ -127,14 +127,7 @@ userDetail: {
 Middleware wraps the handler using the familiar `async (ctx, next) => { ... }` shape.
 
 ```ts
-const requireAuth = async (ctx, next) => {
-  if (!session.user) {
-    await ctx.navigate({ name: 'login' }, { replace: true });
-    return;
-  }
-
-  await next();
-};
+const requireAuth = redirect({ name: 'login' }, { replace: true });
 
 const loadCurrentUser = async (ctx, next) => {
   ctx.locals.user = await fetchCurrentUser();
@@ -156,17 +149,10 @@ handler
 
 ### Guards
 
-Routeit does not need a separate `beforeEnter`. Use middleware for auth checks, redirects, analytics, and boundaries.
+Use middleware for auth checks, redirects, analytics, and boundaries.
 
 ```ts
-const requireAuth = async (ctx, next) => {
-  if (!session.user) {
-    await ctx.navigate({ name: 'login' }, { replace: true });
-    return;
-  }
-
-  await next();
-};
+const requireAuth = redirect({ name: 'login' }, { replace: true });
 ```
 
 ### Data Loading
@@ -185,7 +171,7 @@ const routes = {
 
 ### Error Boundaries
 
-Routeit no longer has a special `onError` hook. Wrap `await next()` in middleware instead.
+Wrap `await next()` in middleware.
 
 ```ts
 const boundary = async (ctx, next) => {

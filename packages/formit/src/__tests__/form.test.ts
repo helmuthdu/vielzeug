@@ -92,10 +92,10 @@ describe('set', () => {
     expect(snapshots.at(-1)).toBe(1);
   });
 
-  test('set with dirty:false does not mark the field dirty', () => {
+  test('set with track:false does not mark the field dirty', () => {
     const form = createForm({ defaultValues: { x: 1 } });
 
-    form.set('x', 99, { dirty: false });
+    form.set('x', 99, { track: false });
     expect(form.field('x').dirty).toBe(false);
   });
 
@@ -248,13 +248,13 @@ describe('dirty & touched', () => {
     expect(form.state.isTouched).toBe(true);
   });
 
-  test('touchAll marks every known field as touched', () => {
+  test('touch() without args marks every known field as touched', () => {
     const form = createForm({
       defaultValues: { a: 1, b: 2 },
       validators: { c: () => undefined },
     });
 
-    form.touchAll();
+    form.touch();
     expect(form.field('a').touched).toBe(true);
     expect(form.field('b').touched).toBe(true);
     expect(form.field('c').touched).toBe(true);
@@ -271,12 +271,12 @@ describe('dirty & touched', () => {
     expect(form.get('a')).toBe(1);
   });
 
-  test('untouchAll removes touched state from all fields without resetting values', () => {
+  test('untouch() without args removes touched state from all fields', () => {
     const form = createForm({ defaultValues: { a: 1, b: 2 } });
 
     form.set('a', 99);
-    form.touchAll();
-    form.untouchAll();
+    form.touch();
+    form.untouch();
     expect(form.isTouched).toBe(false);
     // values and dirty state are preserved
     expect(form.get('a')).toBe(99);
@@ -339,9 +339,13 @@ describe('field', () => {
     const form = createForm({ defaultValues: { x: 42 } });
     let last: ReturnType<typeof form.field> | undefined;
 
-    form.subscribeField('x', (p) => {
-      last = p;
-    });
+    form.subscribeField(
+      'x',
+      (p) => {
+        last = p;
+      },
+      { sync: true },
+    );
     expect(form.field('x')).toEqual(last);
   });
 });
@@ -387,27 +391,27 @@ describe('errors', () => {
     expect(form.field('a').error).toBe('Err A');
   });
 
-  test('setErrors replaces the entire error map', () => {
+  test('replaceErrors replaces the entire error map', () => {
     const form = createForm<Record<string, unknown>>({});
 
     form.setError('old', 'Old error');
-    form.setErrors({ email: 'Invalid', name: 'Required' });
+    form.replaceErrors({ email: 'Invalid', name: 'Required' });
     expect(form.field('old').error).toBeUndefined();
     expect(form.state.errors).toEqual({ email: 'Invalid', name: 'Required' });
   });
 
-  test('setErrors with empty object clears all errors', () => {
+  test('replaceErrors with empty object clears all errors', () => {
     const form = createForm<Record<string, unknown>>({});
 
     form.setError('x', 'Oops');
-    form.setErrors({});
+    form.replaceErrors({});
     expect(Object.keys(form.state.errors)).toHaveLength(0);
   });
 
   test('mergeErrors updates only listed fields and preserves others', () => {
     const form = createForm<Record<string, unknown>>({});
 
-    form.setErrors({ a: 'Err A', b: 'Err B' });
+    form.replaceErrors({ a: 'Err A', b: 'Err B' });
     form.mergeErrors({ b: 'Err B2', c: 'Err C' });
 
     expect(form.state.errors).toEqual({ a: 'Err A', b: 'Err B2', c: 'Err C' });
@@ -416,7 +420,7 @@ describe('errors', () => {
   test('mergeErrors clears only fields explicitly set to undefined', () => {
     const form = createForm<Record<string, unknown>>({});
 
-    form.setErrors({ a: 'Err A', b: 'Err B' });
+    form.replaceErrors({ a: 'Err A', b: 'Err B' });
     form.mergeErrors({ a: undefined });
 
     expect(form.state.errors).toEqual({ b: 'Err B' });
@@ -441,7 +445,7 @@ describe('errors', () => {
     await nextTick();
     expect(form.state.isValid).toBe(false);
 
-    form.setErrors({});
+    form.replaceErrors({});
     await nextTick();
     expect(form.state.isValid).toBe(true);
   });
@@ -484,21 +488,21 @@ describe('validation', () => {
     expect(await form.validateField('pw')).toBe('Too short');
   });
 
-  test('validateAll() runs every field validator and the form-level validator', async () => {
+  test('validate() runs every field validator and the form-level validator', async () => {
     const form = createForm({
       defaultValues: { confirm: 'xyz', password: '' },
       validator: (vals) => (vals.password !== vals.confirm ? { confirm: 'Must match' } : undefined),
       validators: { password: (v) => (!v ? 'Required' : undefined) },
     });
 
-    const { errors, valid } = await form.validateAll();
+    const { errors, valid } = await form.validate();
 
     expect(valid).toBe(false);
     expect(errors.password).toBe('Required');
     expect(errors.confirm).toBe('Must match');
   });
 
-  test('validateTouched() skips untouched fields', async () => {
+  test("validate('touched') skips untouched fields", async () => {
     const form = createForm({
       validators: {
         email: (v) => (!v ? 'Required' : undefined),
@@ -508,24 +512,24 @@ describe('validation', () => {
 
     form.touch('name');
 
-    const { errors } = await form.validateTouched();
+    const { errors } = await form.validate('touched');
 
     expect(errors.name).toBe('Required');
     expect(errors.email).toBeUndefined();
   });
 
-  test('validateFields([]) validates nothing (empty partial)', async () => {
+  test('validate([]) validates nothing (empty partial)', async () => {
     const form = createForm({
       validators: { name: (v) => (!v ? 'Required' : undefined) },
     });
-    const { errors, valid } = await form.validateFields([]);
+    const { errors, valid } = await form.validate([]);
 
     expect(valid).toBe(true);
     expect(Object.keys(errors)).toHaveLength(0);
     expect(form.field('name').error).toBeUndefined();
   });
 
-  test('validateFields(fields) validates only those fields', async () => {
+  test('validate(fields) validates only those fields', async () => {
     const form = createForm({
       validators: {
         age: (v) => (!v ? 'Age required' : undefined),
@@ -534,7 +538,7 @@ describe('validation', () => {
       },
     });
 
-    const { errors } = await form.validateFields(['name', 'email']);
+    const { errors } = await form.validate(['name', 'email']);
 
     expect(errors.name).toBe('Name required');
     expect(errors.email).toBe('Email required');
@@ -555,7 +559,7 @@ describe('validation', () => {
     expect(form.field('x').error).toBeUndefined();
   });
 
-  test('validateAll() sets isValidating during async validation', async () => {
+  test('validate() sets isValidating during async validation', async () => {
     let seenTrue = false;
     const form = createForm({
       validators: {
@@ -566,7 +570,7 @@ describe('validation', () => {
     form.subscribeForm((s) => {
       if (s.isValidating) seenTrue = true;
     });
-    await form.validateAll();
+    await form.validate();
     expect(seenTrue).toBe(true);
     expect(form.state.isValidating).toBe(false);
   });
@@ -679,17 +683,7 @@ describe('submit', () => {
 // ---------------------------------------------------------------------------
 
 describe('subscribe', () => {
-  test('subscribe fires immediately with the current state', () => {
-    const form = createForm({ defaultValues: { x: 1 } });
-    let called = 0;
-
-    form.subscribeForm(() => {
-      called++;
-    });
-    expect(called).toBe(1);
-  });
-
-  test('subscribe with immediate:false does not fire on registration', () => {
+  test('subscribe with sync:true fires immediately with the current state', () => {
     const form = createForm({ defaultValues: { x: 1 } });
     let called = 0;
 
@@ -697,19 +691,29 @@ describe('subscribe', () => {
       () => {
         called++;
       },
-      { immediate: false },
+      { sync: true },
     );
+    expect(called).toBe(1);
+  });
+
+  test('subscribe does not fire on registration by default', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+    let called = 0;
+
+    form.subscribeForm(() => {
+      called++;
+    });
     expect(called).toBe(0);
   });
 
-  test('subscribe fires again after any state change', async () => {
+  test('subscribe fires when state changes', async () => {
     const form = createForm({ defaultValues: { x: 1 } });
     const counts: number[] = [];
 
     form.subscribeForm((s) => counts.push(s.isDirty ? 1 : 0));
     form.set('x', 2);
     await nextTick();
-    expect(counts.length).toBeGreaterThan(1);
+    expect(counts).toContain(1);
   });
 
   test('unsubscribing stops future notifications', async () => {
@@ -724,27 +728,27 @@ describe('subscribe', () => {
     expect(count).toBe(initial);
   });
 
-  test('field subscribe fires immediately with the current field payload', () => {
+  test('field subscribe with sync:true fires immediately with the current field payload', () => {
     const form = createForm({ defaultValues: { name: 'Alice' } });
     let payload: unknown;
 
-    form.subscribeField('name', (p) => {
-      payload = p;
-    });
+    form.subscribeField(
+      'name',
+      (p) => {
+        payload = p;
+      },
+      { sync: true },
+    );
     expect((payload as { value: unknown }).value).toBe('Alice');
   });
 
-  test('field subscribe with immediate:false does not fire on registration', () => {
+  test('field subscribe does not fire on registration by default', () => {
     const form = createForm({ defaultValues: { x: 1 } });
     let count = 0;
 
-    form.subscribeField(
-      'x',
-      () => {
-        count++;
-      },
-      { immediate: false },
-    );
+    form.subscribeField('x', () => {
+      count++;
+    });
     expect(count).toBe(0);
   });
 

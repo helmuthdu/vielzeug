@@ -7,11 +7,13 @@ description: Complete API reference for the Fetchit HTTP client, query client, a
 
 ## API At a Glance
 
-| Symbol          | Purpose                                              | Execution mode | Common gotcha                                       |
-| --------------- | ---------------------------------------------------- | -------------- | --------------------------------------------------- |
-| `createApi()`   | Create an HTTP client with defaults and interceptors | Sync           | Set a baseUrl to avoid relative path surprises      |
-| `createQuery()` | Create cache/query orchestration utilities           | Sync           | Invalidate keys after mutations to avoid stale data |
-| `mutate()`      | Run standalone async mutations with status tracking  | Async          | Surface server errors via typed HttpError handling  |
+| Symbol              | Purpose                                              | Execution mode | Common gotcha                                       |
+| ------------------- | ---------------------------------------------------- | -------------- | --------------------------------------------------- |
+| `createApi()`       | Create an HTTP client with defaults and interceptors | Sync           | Set a baseUrl to avoid relative path surprises      |
+| `createQuery()`     | Create cache/query orchestration utilities           | Sync           | Invalidate keys after mutations to avoid stale data |
+| `createMutation()`  | Create tracked write handles with cancellation       | Sync           | `mutationFn` receives `(input, signal)`             |
+| `mutation.mutate()` | Execute a mutation run and update mutation state     | Async          | Use `mutation.cancel()` or external `AbortSignal`   |
+| `HttpError`         | Structured HTTP/network/abort/timeout errors         | Sync           | Prefer `HttpError.is(err, status?)` for narrowing   |
 
 ## Package Entry Points
 
@@ -34,8 +36,9 @@ Creates an HTTP client. Returns an `ApiClient`.
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `baseUrl` | `string` | `''` | Base URL prepended to every request |
+| `fetch` | `typeof globalThis.fetch` | `globalThis.fetch` | Optional custom fetch implementation |
 | `headers` | `Record<string, string>` | `{}` | Default headers sent with every request |
-| `timeout` | `number` | `30000` | Request timeout in ms |
+| `timeout` | `number` | `30000` | Request timeout in ms; must be `> 0` or `Infinity` |
 
 **Returns:** `ApiClient`
 
@@ -48,6 +51,7 @@ const api = createApi({
   baseUrl: 'https://api.example.com',
   timeout: 10_000,
   headers: { Authorization: 'Bearer token' },
+  fetch: globalThis.fetch,
 });
 
 const user = await api.get<User>('/users/{id}', { params: { id: 1 } });
@@ -102,6 +106,8 @@ const qc = createQuery({ staleTime: 5_000, gcTime: 300_000 });
 const user = await qc.query({
   key: ['users', 1],
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+  retry: 3,
+  shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```
 
@@ -128,7 +134,7 @@ const user = await qc.query({
 
 ```ts
 createMutation<TData, TVariables = void>(
-  fn: (ctx: MutationFnContext<TVariables>) => Promise<TData>,
+  fn: (input: TVariables, signal: AbortSignal) => Promise<TData>,
   options?: MutationOptions,
 ): Mutation<TData, TVariables>;
 ```
@@ -137,8 +143,10 @@ Creates a standalone, observable mutation handle. Returns a `Mutation<TData, TVa
 
 **Parameters:**
 
-- `fn: (ctx: MutationFnContext<TVariables>) => Promise<TData>` — The mutation function
+- `fn: (input: TVariables, signal: AbortSignal) => Promise<TData>` — The mutation function
 - `options?: MutationOptions`
+
+`signal` is always provided by Fetchit.
 
 **`MutationOptions`:**
 
@@ -151,6 +159,7 @@ Creates a standalone, observable mutation handle. Returns a `Mutation<TData, TVa
 **Returns:** `Mutation<TData, TVariables>` with:
 
 - `mutate(variables, opts?) => Promise<TData>`
+- `cancel() => void`
 - `getState() => MutationState<TData>`
 - `subscribe(listener) => Unsubscribe`
 - `reset() => void`
@@ -159,14 +168,14 @@ Creates a standalone, observable mutation handle. Returns a `Mutation<TData, TVa
 
 | Option | Type | Description |
 | --- | --- | --- |
-| `signal` | `AbortSignal` | Optional caller-owned cancellation signal for this invocation |
+| `signal` | `AbortSignal` | Optional external signal merged with mutation-local cancellation |
 
 **Example:**
 
 ```ts
 import { createMutation } from '@vielzeug/fetchit';
 
-const createUser = createMutation(({ input, signal }: { input: NewUser; signal?: AbortSignal }) =>
+const createUser = createMutation((input: NewUser, signal: AbortSignal) =>
   api.post<User>('/users', { body: input, signal }),
 );
 
@@ -189,6 +198,7 @@ Thrown for non-2xx HTTP responses and network-level failures (timeout, abort, co
 `HttpError` extends `Error` and includes:
 
 - `name`, `url`, `method`, `status`, `data`, `response`
+- `kind` (`'http' | 'network' | 'abort' | 'timeout'`)
 - `isTimeout` and `isAborted`
 - `fromResponse(res, data, method, url)`
 - `fromCause(cause, method, url)`
@@ -248,10 +258,13 @@ type QueryOptions<T> = {
   fn: (ctx: QueryFnContext) => Promise<T>;
   staleTime?: number;
   gcTime?: number;
+  retry?: number;
+  retryDelay?: number | ((attempt: number) => number);
+  shouldRetry?: (error: unknown, attempt: number) => boolean;
 };
 ```
 
-Retry behavior is configured on `createQuery(options)` and applies to all `query()` calls.
+Per-call `retry`, `retryDelay`, and `shouldRetry` override query-client defaults.
 
 ### `PrefetchOptions<T>`
 
@@ -300,6 +313,17 @@ type QueryState<T = unknown> = {
 };
 ```
 
+### `AsyncState<T>`
+
+```ts
+type AsyncState<T = unknown> = {
+  data: T | undefined;
+  error: Error | null;
+  status: QueryStatus;
+  updatedAt: number;
+};
+```
+
 ### `MutationState<TData>`
 
 Like `QueryState<T>` but `data` is always `undefined` while `status === 'pending'` — mutations do not carry stale data during an in-flight call.
@@ -318,6 +342,7 @@ type MutationState<TData = unknown> = {
 ```ts
 type ApiClientOptions = {
   baseUrl?: string;
+  fetch?: typeof globalThis.fetch;
   headers?: Record<string, string>;
   timeout?: number;
 };
@@ -335,13 +360,10 @@ type QueryClientOptions = {
 };
 ```
 
-### `MutationFnContext<TVariables>`
+### `MutationFn<TData, TVariables>`
 
 ```ts
-type MutationFnContext<TVariables> = {
-  input: TVariables;
-  signal?: AbortSignal;
-};
+type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 ```
 
 ### `MutationOptions`

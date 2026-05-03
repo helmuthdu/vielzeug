@@ -1,23 +1,15 @@
 ---
 title: Formit — Form state management for TypeScript
-description: Framework-agnostic typed form state with validation, deterministic submission flow, subscriptions, and form-data helpers.
+description: Framework-agnostic typed form state with path-safe fields, unified validation API, deterministic submit flow, and browser-friendly helpers.
 ---
 
 <PackageBadges package="formit" />
 
 <img src="/logo-formit.svg" alt="Formit logo" width="156" class="logo-highlight"/>
 
-# Formit
+`@vielzeug/formit` is a typed, framework-agnostic form controller for values, errors, dirty and touched state, validation, and submission.
 
-@vielzeug/formit is a typed, framework-agnostic form controller for values, validation, dirty/touched state, and submit orchestration.
-
-## Highlights
-
-- Typed field paths with compile-time value inference
-- Explicit validation methods: validateAll, validateTouched, validateFields
-- Explicit subscriptions: subscribeForm and subscribeField
-- Baseline-safe reset/replace model
-- Browser-first utilities: bind, array helpers, toFormData
+<!-- Search keywords: typed form state, validation, submit orchestration, form controller. -->
 
 ## Installation
 
@@ -50,7 +42,11 @@ const form = createForm({
   },
 });
 
-const { valid, errors } = await form.validateAll();
+const { valid, errors } = await form.validate();
+
+if (!valid) {
+  console.log(errors);
+}
 
 try {
   await form.submit(async (values) => {
@@ -67,20 +63,64 @@ try {
 }
 ```
 
+## Why Formit?
+
+Native form handling quickly grows repetitive when you need typed values, deterministic submit behavior, and granular subscriptions.
+
+```ts
+// Before: manual state and ad-hoc validation sequencing
+const errors: Record<string, string> = {};
+
+if (!email.includes('@')) errors.email = 'Invalid email';
+if (password.length < 8) errors.password = 'Too short';
+
+if (Object.keys(errors).length === 0) {
+  await submit({ email, password });
+}
+
+// After: one form controller with explicit transitions
+const form = createForm({ defaultValues: { email: '', password: '' }, validators: { email: isEmail, password: min8 } });
+await form.validate();
+await form.submit(submit);
+```
+
+| Feature | Formit | React Hook Form | VeeValidate |
+| --- | --- | --- | --- |
+| Bundle size | <PackageInfo package="formit" type="size" /> | ~9 kB | ~16 kB |
+| Framework-agnostic | ✅ | React only | Vue only |
+| Typed dot-path APIs | ✅ | Partial | Partial |
+| Unified validation entrypoint | ✅ | ❌ | ❌ |
+| Form + field subscriptions | ✅ | ✅ | ✅ |
+| Zero dependencies | ✅ | ❌ | ❌ |
+
+**Use Formit when** you want one typed form controller that works across frameworks or in vanilla apps with explicit, predictable state transitions.
+
+**Consider framework-specific alternatives when** you need deeply integrated framework bindings and are not sharing form logic across runtimes.
+
+## Features
+
+- Typed field paths with compile-time value inference
+- Unified validation API: `validate()`, `validate('touched')`, and `validate(fields)`
+- Single-field validation with `validateField(name)`
+- Explicit subscriptions: subscribeForm and subscribeField
+- Baseline-safe reset/replace model
+- Browser-first utilities: `bind`, array helpers, `toFormData`
+- Schema adapter via `fromSchema(schema)`
+
 ## Compatibility
 
 | Environment | Support |
 | ----------- | ------- |
 | Browser     | ✅      |
 
-## Why Formit?
-
-Use Formit when you want a typed form controller with explicit state transitions and deterministic submit behavior.
-
-Consider alternatives when you need dynamic, runtime-only field shapes without TypeScript path inference.
-
-## See Also
+## Documentation Map
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+
+## See Also
+
+- [Validit](/validit/)
+- [Fetchit](/fetchit/)
+- [Stateit](/stateit/)

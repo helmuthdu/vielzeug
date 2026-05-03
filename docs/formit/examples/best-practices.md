@@ -134,7 +134,7 @@ if (state.isDirty) {
 if (Object.keys(state.errors).length === 0) {
   /* ... */
 }
-if (state.dirty.size > 0) {
+if (state.dirtyFields.length > 0) {
   /* ... */
 }
 ```

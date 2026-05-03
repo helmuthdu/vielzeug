@@ -1,13 +1,7 @@
 import { batch, untrack, effect as _effect, type CleanupFn } from '@vielzeug/stateit';
 
-import { runAll, type HtmlBinding } from './internal';
+import { removeNodes, runAll, type HtmlBinding } from './internal';
 import { applyBindingsInContainer, findCommentMarker, parseHTML, type RegisterCleanup } from './template-bindings';
-
-const removeNodes = (nodes: Node[]): void => {
-  for (const node of nodes) {
-    (node as ChildNode).remove();
-  }
-};
 
 /**
  * Sets up the reactive effect for an html-binding marker using full fragment replacement.

@@ -19,7 +19,6 @@ pnpm add @vielzeug/eventit
 | Entry | Purpose |
 | --- | --- |
 | `@vielzeug/eventit` | Main runtime (`createBus`, types, `BusDisposedError`) |
-| `@vielzeug/eventit/core` | Core bundle entry |
 | `@vielzeug/eventit/test` | Testing helper (`createTestBus`) |
 
 ## Quick Start

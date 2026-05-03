@@ -1,3 +1,5 @@
+import { createAbortError } from './_internal';
+
 export type TaskFn<TInput, TOutput> = (input: TInput) => TOutput | Promise<TOutput>;
 
 export type WorkerStatus = 'idle' | 'running' | 'terminated';
@@ -21,6 +23,8 @@ export type WorkerHandle<TInput, TOutput> = {
   /** Number of worker slots. */
   readonly concurrency: number;
   dispose(): void;
+  /** Wait for all in-flight and queued tasks to settle, then resolve. */
+  drain(): Promise<void>;
   /**
    * Execute the task function.
    *
@@ -28,6 +32,8 @@ export type WorkerHandle<TInput, TOutput> = {
    * scope. It cannot close over variables from the surrounding module.
    */
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
+  /** Number of queued tasks waiting to run. */
+  readonly size: number;
   /** Current state. */
   readonly status: WorkerStatus;
 };
@@ -54,9 +60,9 @@ export class TerminatedError extends WorkerError {
 }
 
 export class TaskError extends WorkerError {
-  constructor(message: string, cause?: unknown) {
+  constructor(message: string, name?: string, cause?: unknown) {
     super(message, cause);
-    this.name = 'TaskError';
+    this.name = name ?? 'TaskError';
   }
 }
 
@@ -86,16 +92,6 @@ function buildWorkerScript(fn: TaskFn<unknown, unknown>): string {
   return `const __fn=(${fn.toString()});self.onmessage=async function(event){const{id,input}=event.data;try{const result=await __fn(input);self.postMessage({id,ok:true,result});}catch(error){const e=error instanceof Error?error:new Error(String(error));self.postMessage({id,ok:false,error:{name:e.name,message:e.message,stack:e.stack}});}};`;
 }
 
-function createAbortError(signal: AbortSignal): unknown {
-  if (signal.reason !== undefined) return signal.reason;
-
-  if (typeof DOMException === 'function') {
-    return new DOMException('Aborted', 'AbortError');
-  }
-
-  return new Error('Aborted');
-}
-
 function resolveConcurrency(value: WorkerOptions['concurrency']): number {
   if (value === undefined) return 1;
 
@@ -113,8 +109,8 @@ function resolveConcurrency(value: WorkerOptions['concurrency']): number {
 function resolveTimeout(value: WorkerOptions['timeout']): number | undefined {
   if (value === undefined) return undefined;
 
-  if (!Number.isFinite(value) || value < 0) {
-    throw new WorkerError('[workit] `timeout` must be a finite number greater than or equal to 0');
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new WorkerError('[workit] `timeout` must be a finite number greater than 0');
   }
 
   return value;
@@ -130,7 +126,7 @@ function createNativeWorker(fn: TaskFn<unknown, unknown>): Worker {
     const url = URL.createObjectURL(blob);
 
     try {
-      return new Worker(url, { type: 'module' });
+      return new Worker(url);
     } finally {
       URL.revokeObjectURL(url);
     }
@@ -161,7 +157,14 @@ class Slot<TInput, TOutput> {
       return Promise.reject(new TerminatedError());
     }
 
-    const worker = this.ensureWorker();
+    let worker: Worker;
+
+    try {
+      worker = this.ensureWorker();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+
     const id = ++this.taskId;
 
     return new Promise<TOutput>((resolve, reject) => {
@@ -180,7 +183,7 @@ class Slot<TInput, TOutput> {
       try {
         worker.postMessage({ id, input }, transfer);
       } catch (error) {
-        this.failPending(new TaskError(error instanceof Error ? error.message : String(error), error));
+        this.failPending(new WorkerError(error instanceof Error ? error.message : String(error), error));
       }
     });
   }
@@ -203,9 +206,7 @@ class Slot<TInput, TOutput> {
       if (event.data.ok) {
         pending.resolve(event.data.result);
       } else {
-        const err = new TaskError(event.data.error.message);
-
-        err.name = event.data.error.name;
+        const err = new TaskError(event.data.error.message, event.data.error.name, undefined);
 
         if (event.data.error.stack) {
           (err as Error).stack = event.data.error.stack;
@@ -216,7 +217,7 @@ class Slot<TInput, TOutput> {
     };
 
     worker.onerror = (event: ErrorEvent) => {
-      this.restart(new TaskError(event.message));
+      this.restart(new WorkerError(event.message));
     };
   }
 
@@ -244,14 +245,6 @@ class Slot<TInput, TOutput> {
   private restart(reason: unknown): void {
     this.stopWorker();
     this.failPending(reason);
-
-    if (this.disposed) return;
-
-    try {
-      this.ensureWorker();
-    } catch {
-      // Defer the worker creation error to the next run(). The failing task has already settled.
-    }
   }
 
   private stopWorker(): void {
@@ -276,6 +269,10 @@ class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
 
   get concurrency(): number {
     return this.slots.length;
+  }
+
+  get size(): number {
+    return this.queue.length;
   }
 
   get status(): WorkerStatus {
@@ -343,6 +340,20 @@ class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
 
   [Symbol.dispose](): void {
     this.dispose();
+  }
+
+  drain(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const check = (): void => {
+        if (this.queue.length === 0 && this.slots.every((slot) => !slot.running)) {
+          resolve();
+        } else {
+          setTimeout(check, 0);
+        }
+      };
+
+      check();
+    });
   }
 
   private nextItem(): QueueItem<TInput, TOutput> | undefined {

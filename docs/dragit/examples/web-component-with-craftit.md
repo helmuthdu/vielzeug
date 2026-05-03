@@ -14,32 +14,31 @@ Implement web component with craftit in a production-friendly way with `@vielzeu
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/dragit` installed.
 
 ```ts
-import { define, html, onCleanup, onMount, ref, signal } from '@vielzeug/craftit';
+import { define, html, onCleanup, ref, signal } from '@vielzeug/craftit';
 import { createDropZone } from '@vielzeug/dragit';
 
 define('my-dropzone', (props) => {
   const isDragging = signal(false);
   const dropzoneRef = ref<HTMLElement>();
 
-  onMount(() => {
-    const el = dropzoneRef.value!;
-
-    const zone = createDropZone({
-      element: el,
-      accept: ['image/*'],
-      onDrop: (files) => {
-        /* handle upload */
-      },
-      onHoverChange: (hovered) => {
-        isDragging.value = hovered;
-      },
-    });
-
-    onCleanup(() => zone.destroy());
-  });
-
   return {
-    template: html`
+    mount() {
+      const el = dropzoneRef.value!;
+
+      const zone = createDropZone({
+        element: el,
+        accept: ['image/*'],
+        onDrop: (files) => {
+          /* handle upload */
+        },
+        onHoverChange: (hovered) => {
+          isDragging.value = hovered;
+        },
+      });
+
+      onCleanup(() => zone.destroy());
+    },
+    render: () => html`
       <div ref=${dropzoneRef} class="dropzone" :class=${{ 'drag-over': () => isDragging.value }}>
         <slot>Drop images here</slot>
       </div>

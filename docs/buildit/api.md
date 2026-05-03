@@ -72,9 +72,11 @@ import '@vielzeug/buildit/grid-item';
 import '@vielzeug/buildit/icon';
 import '@vielzeug/buildit/input';
 import '@vielzeug/buildit/menu';
+import '@vielzeug/buildit/navbar';
 import '@vielzeug/buildit/number-input';
 import '@vielzeug/buildit/otp-input';
 import '@vielzeug/buildit/pagination';
+import '@vielzeug/buildit/password-strength';
 import '@vielzeug/buildit/popover';
 import '@vielzeug/buildit/progress';
 import '@vielzeug/buildit/radio';
@@ -122,6 +124,7 @@ Use the following pages as the canonical per-component API source.
 - [Async (bit-async)](./components/async.md)
 - [Badge](./components/badge.md)
 - [Chip](./components/chip.md)
+- [Password Strength](./components/password-strength.md)
 - [Progress](./components/progress.md)
 - [Skeleton](./components/skeleton.md)
 - [Toast](./components/toast.md)
@@ -168,6 +171,7 @@ Use the following pages as the canonical per-component API source.
 
 - [Box](./components/box.md)
 - [Grid (+ Grid Item)](./components/grid.md)
+- [Navbar](./components/navbar.md)
 - [Sidebar](./components/sidebar.md)
 
 ## Notes

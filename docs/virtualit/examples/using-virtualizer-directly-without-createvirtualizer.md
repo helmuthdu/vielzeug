@@ -1,43 +1,46 @@
 ---
-title: 'Virtualit Examples — Using `Virtualizer` Directly (Without `createVirtualizer`)'
-description: 'Using `Virtualizer` Directly (Without `createVirtualizer`) examples for virtualit.'
+title: 'Virtualit Examples — Recreate on Remount'
+description: 'Recreate on remount examples for virtualit.'
 ---
 
-## Using `Virtualizer` Directly (Without `createVirtualizer`)
+## Recreate on Remount
 
 ## Problem
 
-Implement using `virtualizer` directly (without `createvirtualizer`) in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+Implement remount-safe virtualization in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
 
 ## Runnable Example
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
 
-Useful in component frameworks where the scroll container is not available at construction time.
+Useful when a component recreates its scroll container (for example, dropdown reopen or portal remount).
 
 ```ts
-import { Virtualizer } from '@vielzeug/virtualit';
+import { createVirtualizer, type Virtualizer } from '@vielzeug/virtualit';
 
-// Build the instance when data is ready — no element needed yet
-const virt = new Virtualizer({
-  count: rows.length,
-  estimateSize: 36,
-  onChange: render,
-});
+let virt: Virtualizer | null = null;
 
 // Attach once the component mounts
 function onMount(scrollEl: HTMLElement) {
-  virt.attach(scrollEl);
+  virt = createVirtualizer(scrollEl, {
+    count: rows.length,
+    estimateSize: 36,
+    onChange: render,
+  });
 }
 
-// The virtualizer can be re-attached to a new container
+// Recreate for a new container
 function onReopen(newScrollEl: HTMLElement) {
-  virt.count = rows.length; // sync count before re-attaching
-  virt.attach(newScrollEl);
+  virt?.destroy();
+  virt = createVirtualizer(newScrollEl, {
+    count: rows.length,
+    estimateSize: 36,
+    onChange: render,
+  });
 }
 
 function onDestroy() {
-  virt.destroy();
+  virt?.destroy();
 }
 ```
 

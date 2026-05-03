@@ -40,6 +40,7 @@ describe('Route context & middleware', () => {
 
   it('preserves route meta on match state', async () => {
     mockLocation.pathname = '/meta';
+
     const router = await boot(
       createRouter({
         routes: {

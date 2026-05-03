@@ -14,14 +14,13 @@ Implement timing and grouping in a production-friendly way with `@vielzeug/logit
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/logit` installed.
 
 ```ts
-const result = await Logit.group(
+const result = await Logit.groupCollapsed(
   'Checkout',
   async () => {
     Logit.info('validating cart');
 
     return Logit.time('process-order', () => processOrder(cart));
   },
-  true,
 );
 ```
 

@@ -19,11 +19,9 @@ import { VariantSchema } from './schemas/variant';
 
 /**
  * The `v` namespace bundles all schema factories for convenience.
- *
- * Importing `v` pulls in the full library. For bundle-size-sensitive code,
- * prefer the named flat exports which let bundlers tree-shake to only the schemas you use.
  */
 export const v = {
+  any: (): Schema<any> => new Schema(),
   array: <T>(schema: Schema<T>): ArraySchema<T> => new ArraySchema(schema),
   boolean: (): BooleanSchema => new BooleanSchema(),
   coerce: {
@@ -53,6 +51,7 @@ export const v = {
   undefined: (): LiteralSchema<undefined> => new LiteralSchema(undefined),
   union: <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(...items: T): UnionSchema<any> =>
     new UnionSchema(normalizeToSchemas(items)),
+  unknown: (): Schema<unknown> => new Schema(),
   variant: <K extends string, M extends Record<string, ObjectSchema<any>>>(
     discriminator: K,
     map: M,

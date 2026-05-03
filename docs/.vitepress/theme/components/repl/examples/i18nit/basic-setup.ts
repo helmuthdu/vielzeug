@@ -1,0 +1,18 @@
+export const basicSetupExample = {
+  code: `import { createI18n } from '@vielzeug/i18nit'
+
+const i18n = createI18n({
+  locale: 'en',
+  fallback: 'en',
+  messages: {
+    en: { hello: 'Hello', welcome: 'Welcome, {name}!' },
+    es: { hello: 'Hola', welcome: 'Bienvenido, {name}!' },
+  },
+})
+
+console.log('EN:', i18n.t('hello'))
+await i18n.setLocale('es')
+console.log('ES:', i18n.t('hello'))
+console.log(i18n.t('welcome', { name: 'Alice' }))`,
+  name: 'Basic Setup - Initialize i18n',
+};

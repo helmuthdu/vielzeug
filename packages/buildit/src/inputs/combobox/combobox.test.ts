@@ -244,6 +244,32 @@ describe('bit-combobox', () => {
   });
 
   describe('Accessibility', () => {
+    it('uses inset label placement by default', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+
+      const insetLabel = fixture.query<HTMLElement>('.label-inset');
+      const outsideLabel = fixture.query<HTMLElement>('.label-outside');
+
+      expect(insetLabel?.hidden).toBe(false);
+      expect(outsideLabel?.hidden).toBe(true);
+    });
+
+    it('shows outside label when label-placement is outside', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country', 'label-placement': 'outside' },
+        html: optionsHtml,
+      });
+
+      const insetLabel = fixture.query<HTMLElement>('.label-inset');
+      const outsideLabel = fixture.query<HTMLElement>('.label-outside');
+
+      expect(insetLabel?.hidden).toBe(true);
+      expect(outsideLabel?.hidden).toBe(false);
+    });
+
     it('uses proper combobox and listbox roles', async () => {
       fixture = await mount('bit-combobox', {
         attrs: { label: 'Country' },
@@ -352,6 +378,69 @@ describe('bit-combobox', () => {
 
       expect(optionTexts.some((text) => text.includes('Germany'))).toBe(true);
       expect(optionTexts.some((text) => text.includes('United States'))).toBe(false);
+    });
+
+    it('shrinks list height when search narrows results', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: `
+          <bit-combobox-option value="us">United States</bit-combobox-option>
+          <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
+          <bit-combobox-option value="de">Germany</bit-combobox-option>
+          <bit-combobox-option value="ca">Canada</bit-combobox-option>
+          <bit-combobox-option value="jp">Japan</bit-combobox-option>
+          <bit-combobox-option value="br">Brazil</bit-combobox-option>
+        `,
+      });
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const listbox = fixture.query<HTMLElement>('[role="listbox"]')!;
+      const initialHeight = Number.parseFloat(listbox.style.height || '0');
+
+      expect(initialHeight).toBeGreaterThan(0);
+
+      await user.type(input, 'ger');
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const filteredHeight = Number.parseFloat(listbox.style.height || '0');
+
+      expect(fixture.queryAll<HTMLElement>('.option').length).toBe(1);
+      expect(filteredHeight).toBeLessThan(initialHeight);
+      expect(filteredHeight).toBe(36);
+    });
+
+    it('repositions filtered results to the top when the match was originally later in the list', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: `
+          <bit-combobox-option value="us">United States</bit-combobox-option>
+          <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
+          <bit-combobox-option value="de">Germany</bit-combobox-option>
+          <bit-combobox-option value="ca">Canada</bit-combobox-option>
+        `,
+      });
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      await user.type(input, 'king');
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const options = fixture.queryAll<HTMLElement>('.option');
+
+      expect(options).toHaveLength(1);
+      expect(options[0]?.textContent).toContain('United Kingdom');
+      expect(options[0]?.style.transform).toContain('translateY(0px)');
     });
 
     it('continues searching in the docs multiselect flow after selecting the first item', async () => {

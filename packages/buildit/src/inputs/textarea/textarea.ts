@@ -119,15 +119,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
       prefix: 'textarea',
       value: props.value,
     });
-    const {
-      assistive,
-      errorId,
-      fieldId: textareaId,
-      helperId,
-      labelInsetId,
-      labelOutsideId,
-      value: fieldValue,
-    } = tf;
+    const { assistive, errorId, fieldId: textareaId, helperId, labelInsetId, labelOutsideId, value: fieldValue } = tf;
 
     onElement(textareaRef, (textareaEl) => {
       const syncLayout = effect(() => {
@@ -165,37 +157,35 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
     const outsideLabelHidden = () => !props.label.value || props['label-placement'].value !== 'outside';
     const insetLabelHidden = () => !props.label.value || props['label-placement'].value !== 'inset';
 
-    return {
-      render: () => html`
-        <div class="textarea-wrapper">
-          <label
-            class="label-outside"
-            for="${textareaId}"
-            id="${labelOutsideId}"
-            ?hidden="${outsideLabelHidden}">${props.label}</label>
-          <div class="field">
-            <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ?hidden="${insetLabelHidden}">${props.label}</label>
-            <textarea
-              ref="${textareaRef}"
-              id="${textareaId}"
-              :name="${props.name}"
-              :placeholder="${props.placeholder}"
-              :rows="${props.rows}"
-              :maxlength="${props.maxlength}"
-              ?disabled="${props.disabled}"
-              ?readonly="${props.readonly}"
-              ?required="${props.required}"
-              :value="${fieldValue}"
-              :aria-describedby="${ariaDescribedBy}"
-              :aria-errormessage="${ariaErrorMessage}"
-              :aria-invalid="${ariaInvalid}"
-              :aria-labelledby="${ariaLabelledBy}"></textarea>
-          </div>
-          <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
-          <div id="${helperId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">${helperText}</div>
+    return () => html`
+      <div class="textarea-wrapper">
+        <label class="label-outside" for="${textareaId}" id="${labelOutsideId}" ?hidden="${outsideLabelHidden}"
+          >${props.label}</label
+        >
+        <div class="field">
+          <label class="label-inset" for="${textareaId}" id="${labelInsetId}" ?hidden="${insetLabelHidden}"
+            >${props.label}</label
+          >
+          <textarea
+            ref="${textareaRef}"
+            id="${textareaId}"
+            :name="${props.name}"
+            :placeholder="${props.placeholder}"
+            :rows="${props.rows}"
+            :maxlength="${props.maxlength}"
+            ?disabled="${props.disabled}"
+            ?readonly="${props.readonly}"
+            ?required="${props.required}"
+            :value="${fieldValue}"
+            :aria-describedby="${ariaDescribedBy}"
+            :aria-errormessage="${ariaErrorMessage}"
+            :aria-invalid="${ariaInvalid}"
+            :aria-labelledby="${ariaLabelledBy}"></textarea>
         </div>
-      `,
-    };
+        <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
+        <div id="${helperId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">${helperText}</div>
+      </div>
+    `;
   },
   shadow: { delegatesFocus: true },
   styles: [

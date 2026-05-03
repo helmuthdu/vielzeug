@@ -1,7 +1,5 @@
 import { autoUpdate } from '@vielzeug/floatit';
 
-import { handle } from '../runtime';
-
 export type OverlayOpenReason = 'programmatic' | 'trigger';
 export type OverlayCloseReason = 'escape' | 'outside-click' | 'programmatic' | 'trigger';
 export type OverlayCloseDetail = { reason: OverlayCloseReason };
@@ -32,8 +30,33 @@ export type OverlayControl = {
   toggle(): void;
 };
 
+// Module-level document click listener management for outside-click dismissal
+const activeOverlayListeners = new Set<(event: Event) => void>();
+let documentClickUnsubscribe: (() => void) | null = null;
+
+const ensureDocumentClickListener = (): void => {
+  if (documentClickUnsubscribe) return; // Already attached
+
+  const handler = (event: Event) => {
+    for (const listener of activeOverlayListeners) listener(event);
+  };
+
+  document.addEventListener('click', handler, { capture: true });
+  documentClickUnsubscribe = () => {
+    document.removeEventListener('click', handler, { capture: true });
+    documentClickUnsubscribe = null;
+  };
+};
+
+const removeDocumentClickListener = (): void => {
+  if (activeOverlayListeners.size === 0 && documentClickUnsubscribe) {
+    documentClickUnsubscribe();
+  }
+};
+
 export const createOverlayControl = (options: OverlayControlOptions): OverlayControl => {
   let positionerCleanup: (() => void) | null = null;
+  let clickListener: ((event: Event) => void) | null = null;
 
   const shouldRestoreFocus = (): boolean => {
     if (typeof options.restoreFocus === 'function') return options.restoreFocus();
@@ -91,24 +114,34 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     open({ reason: 'trigger' });
   };
 
-  handle(
-    document,
-    'click',
-    (event: Event) => {
-      if (!options.isOpen()) return;
+  clickListener = (event: Event) => {
+    if (!options.isOpen()) return;
 
-      const eventTarget = (event as Event & { composedPath?: () => EventTarget[] }).composedPath?.()[0] ?? event.target;
-      const el = eventTarget instanceof Node ? eventTarget : null;
+    const eventTarget = (event as Event & { composedPath?: () => EventTarget[] }).composedPath?.()[0] ?? event.target;
+    const el = eventTarget instanceof Node ? eventTarget : null;
 
-      if (!el) return;
+    if (!el) return;
 
-      const inside =
-        options.getBoundaryElement()?.contains(el) || (options.getPanelElement?.() ?? null)?.contains(el) || false;
+    const inside =
+      options.getBoundaryElement()?.contains(el) || (options.getPanelElement?.() ?? null)?.contains(el) || false;
 
-      if (!inside) close({ reason: 'outside-click' });
-    },
-    { capture: true },
-  );
+    if (!inside) close({ reason: 'outside-click' });
+  };
+
+  // Register click listener on open, unregister on close
+  const originalSetOpen = options.setOpen;
+
+  options.setOpen = (next: boolean, context: { reason: OverlayOpenReason | OverlayCloseReason }) => {
+    originalSetOpen(next, context);
+
+    if (next && clickListener) {
+      activeOverlayListeners.add(clickListener);
+      ensureDocumentClickListener();
+    } else if (!next && clickListener) {
+      activeOverlayListeners.delete(clickListener);
+      removeDocumentClickListener();
+    }
+  };
 
   return {
     close,

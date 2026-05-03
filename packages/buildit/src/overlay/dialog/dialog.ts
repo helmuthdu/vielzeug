@@ -1,6 +1,6 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, handle, html, prop, ref, signal, watch } from '@vielzeug/craftit';
+import { define, handle, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import type { PaddingSize, RoundedSize } from '../../types';
@@ -202,105 +202,103 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
       overlay.close({ reason: 'trigger', restoreFocus: false });
     };
 
-    return {
-      mount() {
-        const dialog = dialogRef.value;
+    onMounted(() => {
+      const dialog = dialogRef.value;
 
-        if (!dialog) return;
+      if (!dialog) return;
 
-        // Sync prop changes → native dialog
-        watch(
-          props.open,
-          (open) => {
-            if (open) {
-              overlay.open({ reason: 'programmatic' });
+      // Sync prop changes → native dialog
+      watch(
+        props.open,
+        (open) => {
+          if (open) {
+            overlay.open({ reason: 'programmatic' });
 
-              return;
-            }
-
-            overlay.close({ reason: 'programmatic', restoreFocus: false });
-          },
-          { immediate: true },
-        );
-
-        // ────────────────────────────────────────────────────────────
-        // Event Handlers: Close, Escape, Backdrop Click
-        // ────────────────────────────────────────────────────────────
-
-        const handleNativeClose = () => {
-          unlockBackground();
-          host.el.removeAttribute('open');
-          isOpen.value = false;
-          restoreFocus();
-          emit('close', { reason: closeReason });
-          closeReason = 'programmatic';
-        };
-
-        const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
-          const closeAllowed = dispatchCloseRequest(reason);
-
-          if (!closeAllowed) return;
-
-          closeReason = reason;
-          overlay.close({ reason, restoreFocus: false });
-        };
-
-        const handleKeydown = (e: KeyboardEvent) => {
-          if (e.key === 'Escape' && !props.persistent.value) {
-            e.preventDefault();
-            requestClose('escape');
+            return;
           }
-        };
 
-        const handleBackdropClick = (e: MouseEvent) => {
-          if (props.persistent.value) return;
+          overlay.close({ reason: 'programmatic', restoreFocus: false });
+        },
+        { immediate: true },
+      );
 
-          // Click target is the <dialog> element itself (not the panel)
-          if (e.target === dialog) {
-            requestClose('outside-click');
-          }
-        };
+      // ────────────────────────────────────────────────────────────
+      // Event Handlers: Close, Escape, Backdrop Click
+      // ────────────────────────────────────────────────────────────
 
-        handle(dialog, 'close', handleNativeClose);
-        handle(dialog, 'click', handleBackdropClick);
-        handle(dialog, 'keydown', handleKeydown);
+      const handleNativeClose = () => {
+        unlockBackground();
+        host.el.removeAttribute('open');
+        isOpen.value = false;
+        restoreFocus();
+        emit('close', { reason: closeReason });
+        closeReason = 'programmatic';
+      };
 
-        return () => {
-          // Ensure the native dialog is closed on unmount to release top-layer
-          if (dialog.open) dialog.close();
+      const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
+        const closeAllowed = dispatchCloseRequest(reason);
 
-          unlockBackground();
-        };
-      },
+        if (!closeAllowed) return;
 
-      render: () => html`
-        <dialog ref=${dialogRef} class="dialog" part="dialog" aria-label="${props.label}" aria-modal="true">
-          <div class="overlay" part="overlay" aria-hidden="true"></div>
-          <div class="panel" part="panel" :data-size="${props.size}">
-            <div class="header" part="header" ?hidden=${() => !hasHeader()}>
-              <slot name="header">
-                <span class="title" part="title">${props.label}</span>
-              </slot>
-              <button
-                class="close"
-                part="close"
-                type="button"
-                aria-label="Close dialog"
-                ?hidden=${() => !props.dismissible.value}
-                @click=${handleDismiss}>
-                <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
-              </button>
-            </div>
-            <div class="body" part="body">
-              <slot></slot>
-            </div>
-            <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
-              <slot name="footer"></slot>
-            </div>
+        closeReason = reason;
+        overlay.close({ reason, restoreFocus: false });
+      };
+
+      const handleKeydown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && !props.persistent.value) {
+          e.preventDefault();
+          requestClose('escape');
+        }
+      };
+
+      const handleBackdropClick = (e: MouseEvent) => {
+        if (props.persistent.value) return;
+
+        // Click target is the <dialog> element itself (not the panel)
+        if (e.target === dialog) {
+          requestClose('outside-click');
+        }
+      };
+
+      handle(dialog, 'close', handleNativeClose);
+      handle(dialog, 'click', handleBackdropClick);
+      handle(dialog, 'keydown', handleKeydown);
+
+      return () => {
+        // Ensure the native dialog is closed on unmount to release top-layer
+        if (dialog.open) dialog.close();
+
+        unlockBackground();
+      };
+    });
+
+    return () => html`
+      <dialog ref=${dialogRef} class="dialog" part="dialog" aria-label="${props.label}" aria-modal="true">
+        <div class="overlay" part="overlay" aria-hidden="true"></div>
+        <div class="panel" part="panel" :data-size="${props.size}">
+          <div class="header" part="header" ?hidden=${() => !hasHeader()}>
+            <slot name="header">
+              <span class="title" part="title">${props.label}</span>
+            </slot>
+            <button
+              class="close"
+              part="close"
+              type="button"
+              aria-label="Close dialog"
+              ?hidden=${() => !props.dismissible.value}
+              @click=${handleDismiss}>
+              <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
+            </button>
           </div>
-        </dialog>
-      `,
-    };
+          <div class="body" part="body">
+            <slot></slot>
+          </div>
+          <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
+            <slot name="footer"></slot>
+          </div>
+        </div>
+      </dialog>
+    `;
   },
   styles: [elevationMixin, roundedVariantMixin, coarsePointerMixin, componentStyles],
 });

@@ -22,10 +22,10 @@ export type RemoteList<T, F, S> = BaseList<T> & {
   batch(
     mutator: (ctx: {
       goTo(p: number): void; // 1-based
+      search(q: string): void;
       setData?(d: readonly T[]): void; // local-only
       setFilter(f: F): void;
       setLimit(n: number): void;
-      setQuery(q: string): void;
       setSort(s?: S): void;
     }) => void,
   ): Promise<void>;
@@ -185,16 +185,16 @@ export function remoteList<T, F = Record<string, unknown>, S = { dir?: 'asc' | '
         goTo: (p: number) => {
           nextPage = Math.max(1, p | 0);
         },
+        search: (q: string) => {
+          nextSearch = q;
+          nextPage = 1;
+        },
         setFilter: (f: F) => {
           nextFilter = f;
           nextPage = 1;
         },
         setLimit: (n) => {
           nextLimit = Math.max(1, n);
-          nextPage = 1;
-        },
-        setQuery: (q: string) => {
-          nextSearch = q;
           nextPage = 1;
         },
         setSort: (s?: S) => {

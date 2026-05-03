@@ -1,6 +1,6 @@
 import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { computed, define, html, inject, prop, signal, watch } from '@vielzeug/craftit';
+import { computed, define, html, inject, prop, signal, watch, onMounted } from '@vielzeug/craftit';
 import { createChoiceField, createPopupListControl } from '@vielzeug/craftit/controls';
 
 import type { VisualVariant } from '../../types';
@@ -169,7 +169,11 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
       };
     }
 
-    const options = computed(() => props.options.value?.map(normalizeOption) ?? slottedOptions.value);
+    const options = computed(() => {
+      const explicitOptions = props.options.value;
+
+      return Array.isArray(explicitOptions) ? explicitOptions.map(normalizeOption) : slottedOptions.value;
+    });
     const formCtx = inject(FORM_CTX);
 
     mountFormContextSync(host.el, formCtx, props);
@@ -352,7 +356,6 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
         reference: () => triggerEl,
         update: () => positioner.updatePosition(),
       },
-      triggerRef,
       setIndex: (index) => {
         focusedIndex.value = index;
         scrollFocusedIntoView();
@@ -360,6 +363,7 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
       setOpen: (next) => {
         isOpen.value = next;
       },
+      triggerRef,
     });
 
     function openPopup(reason: 'programmatic' | 'trigger' = 'programmatic') {
@@ -452,129 +456,127 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     const triggerValueClass = () => `trigger-value ${displayLabel.value ? '' : 'trigger-placeholder'}`;
     const helperStyle = () => (assistiveText.value.errorText ? 'color: var(--color-error);' : '');
 
-    return {
-      mount() {
-        watch(slots.elements(), () => readOptions(), { immediate: true });
+    watch(slots.elements(), () => readOptions(), { immediate: true });
 
-        let onTriggerClick: ((event: MouseEvent) => void) | null = null;
-        let onTriggerKeydown: ((event: KeyboardEvent) => void) | null = null;
+    onMounted(() => {
+      let onTriggerClick: ((event: MouseEvent) => void) | null = null;
+      let onTriggerKeydown: ((event: KeyboardEvent) => void) | null = null;
 
-        if (triggerEl) {
-          onTriggerClick = (event: MouseEvent) => {
-            event.stopPropagation();
+      if (triggerEl) {
+        onTriggerClick = (event: MouseEvent) => {
+          event.stopPropagation();
 
-            if (isDisabled.value) return;
+          if (isDisabled.value) return;
 
-            if (isOpen.value) popupList.close('trigger');
-            else openPopup('trigger');
-          };
-          onTriggerKeydown = (event: KeyboardEvent) => {
-            handleTriggerKeydown(event);
-          };
-
-          triggerEl.addEventListener('click', onTriggerClick);
-          triggerEl.addEventListener('keydown', onTriggerKeydown);
-        }
-
-        return () => {
-          if (triggerEl && onTriggerClick) triggerEl.removeEventListener('click', onTriggerClick);
-
-          if (triggerEl && onTriggerKeydown) triggerEl.removeEventListener('keydown', onTriggerKeydown);
+          if (isOpen.value) popupList.close('trigger');
+          else openPopup('trigger');
         };
-      },
+        onTriggerKeydown = (event: KeyboardEvent) => {
+          handleTriggerKeydown(event);
+        };
 
-      render: () =>
-        html`<slot style="display:none"></slot>
-          <div class="select-wrapper">
-            <label class="label-outside" id="${labelOutsideId}" ?hidden="${outsideLabelHidden}">${props.label}</label>
-            <div
-              class="field"
-              ref="${(el: HTMLElement) => {
-                triggerEl = el;
-                triggerRef.value = el;
-              }}"
-              role="combobox"
-              tabindex="${tabIndexAttr}"
-              aria-controls="${listboxId}"
-              aria-expanded="false"
-              aria-labelledby="${labelOutsideId} ${labelInsetId}">
-              <label class="label-inset" id="${labelInsetId}" ?hidden="${insetLabelHidden}">${props.label}</label>
-              <div class="trigger-row">
-                <div class="chips-row" ?hidden="${() => !showChips.value}">
-                  ${() =>
-                    selectedChipItems.value.map(
-                      (item) => html`
-                        <bit-chip
-                          value="${item.value}"
-                          label="${item.label}"
-                          mode="removable"
-                          variant="flat"
-                          size="sm"
-                          color="${props.color}"
-                          @remove="${removeChip}">
-                          ${item.label}
-                        </bit-chip>
-                      `,
-                    )}
-                </div>
-                <span class="${triggerValueClass}" ?hidden="${showChips}">${triggerText}</span>
+        triggerEl.addEventListener('click', onTriggerClick);
+        triggerEl.addEventListener('keydown', onTriggerKeydown);
+      }
+
+      return () => {
+        if (triggerEl && onTriggerClick) triggerEl.removeEventListener('click', onTriggerClick);
+
+        if (triggerEl && onTriggerKeydown) triggerEl.removeEventListener('keydown', onTriggerKeydown);
+      };
+    });
+
+    return () =>
+      html`<slot style="display:none"></slot>
+        <div class="select-wrapper">
+          <label class="label-outside" id="${labelOutsideId}" ?hidden="${outsideLabelHidden}">${props.label}</label>
+          <div
+            class="field"
+            ref="${(el: HTMLElement) => {
+              triggerEl = el;
+              triggerRef.value = el;
+            }}"
+            role="combobox"
+            tabindex="${tabIndexAttr}"
+            aria-controls="${listboxId}"
+            :aria-expanded="${() => String(isOpen.value)}"
+            aria-labelledby="${labelOutsideId} ${labelInsetId}">
+            <label class="label-inset" id="${labelInsetId}" ?hidden="${insetLabelHidden}">${props.label}</label>
+            <div class="trigger-row">
+              <div class="chips-row" ?hidden="${() => !showChips.value}">
+                ${() =>
+                  selectedChipItems.value.map(
+                    (item) => html`
+                      <bit-chip
+                        value="${item.value}"
+                        label="${item.label}"
+                        mode="removable"
+                        variant="flat"
+                        size="sm"
+                        color="${props.color}"
+                        @remove="${removeChip}">
+                        ${item.label}
+                      </bit-chip>
+                    `,
+                  )}
               </div>
-              <span class="trigger-icon" aria-hidden="true">
-                <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
-                <span class="loader" aria-label="Loading"></span>
-              </span>
+              <span class="${triggerValueClass}" ?hidden="${showChips}">${triggerText}</span>
             </div>
-            <div
-              class="helper-text"
-              aria-live="polite"
-              ?hidden="${() => !assistiveText.value.errorText && !assistiveText.value.helperText}"
-              style="${helperStyle}">
-              ${() => assistiveText.value.errorText || assistiveText.value.helperText}
-            </div>
+            <span class="trigger-icon" aria-hidden="true">
+              <bit-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
+              <span class="loader" aria-label="Loading"></span>
+            </span>
           </div>
           <div
-            class="dropdown"
-            ?data-open="${isOpen}"
-            role="listbox"
-            id="${listboxId}"
-            aria-label="Options"
-            ref="${(el: HTMLElement) => {
-              dropdownEl = el;
-            }}">
-            <div class="dropdown-loading" ?hidden="${() => !isLoading.value}">Loading…</div>
-            <div class="dropdown-empty" ?hidden="${() => isLoading.value || options.value.length > 0}">No options</div>
-            <div class="options-list" ?hidden="${() => isLoading.value || options.value.length === 0}">
-              ${() =>
-                flatRows.value.map((row) =>
-                  row.type === 'group'
-                    ? html`<div class="optgroup-label" role="presentation">${row.label}</div>`
-                    : html`<div
-                        class="option"
-                        role="option"
-                        id="${`${selectId}-opt-${row.idx}`}"
-                        data-option-index="${String(row.idx)}"
-                        data-option-value="${row.opt.value}"
-                        aria-selected="${() => String(selectedValues.value.includes(row.opt.value))}"
-                        aria-disabled="${() => String(row.opt.disabled)}"
-                        ?data-focused="${() => focusedIndex.value === row.idx}"
-                        ?data-selected="${() => selectedValues.value.includes(row.opt.value)}"
-                        ?data-disabled="${() => row.opt.disabled}"
-                        @click="${(e: MouseEvent) => {
-                          e.stopPropagation();
-                          selectOption(row.opt, e);
-                        }}"
-                        @pointerenter="${() => {
-                          focusedIndex.value = row.idx;
-                        }}">
-                        <span>${row.opt.label}</span>
-                        <span class="option-check" aria-hidden="true">
-                          <bit-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
-                        </span>
-                      </div>`,
-                )}
-            </div>
-          </div>`,
-    };
+            class="helper-text"
+            aria-live="polite"
+            ?hidden="${() => !assistiveText.value.errorText && !assistiveText.value.helperText}"
+            style="${helperStyle}">
+            ${() => assistiveText.value.errorText || assistiveText.value.helperText}
+          </div>
+        </div>
+        <div
+          class="dropdown"
+          ?data-open="${isOpen}"
+          role="listbox"
+          id="${listboxId}"
+          aria-label="Options"
+          ref="${(el: HTMLElement) => {
+            dropdownEl = el;
+          }}">
+          <div class="dropdown-loading" ?hidden="${() => !isLoading.value}">Loading…</div>
+          <div class="dropdown-empty" ?hidden="${() => isLoading.value || options.value.length > 0}">No options</div>
+          <div class="options-list" ?hidden="${() => isLoading.value || options.value.length === 0}">
+            ${() =>
+              flatRows.value.map((row) =>
+                row.type === 'group'
+                  ? html`<div class="optgroup-label" role="presentation">${row.label}</div>`
+                  : html`<div
+                      class="option"
+                      role="option"
+                      id="${`${selectId}-opt-${row.idx}`}"
+                      data-option-index="${String(row.idx)}"
+                      data-option-value="${row.opt.value}"
+                      aria-selected="${() => String(selectedValues.value.includes(row.opt.value))}"
+                      aria-disabled="${() => String(row.opt.disabled)}"
+                      ?data-focused="${() => focusedIndex.value === row.idx}"
+                      ?data-selected="${() => selectedValues.value.includes(row.opt.value)}"
+                      ?data-disabled="${() => row.opt.disabled}"
+                      @click="${(e: MouseEvent) => {
+                        e.stopPropagation();
+                        selectOption(row.opt, e);
+                      }}"
+                      @pointerenter="${() => {
+                        focusedIndex.value = row.idx;
+                      }}">
+                      <span>${row.opt.label}</span>
+                      <span class="option-check" aria-hidden="true">
+                        <bit-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></bit-icon>
+                      </span>
+                    </div>`,
+              )}
+          </div>
+        </div>`;
   },
   shadow: { delegatesFocus: true },
   styles: [

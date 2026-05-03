@@ -63,7 +63,7 @@ permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' 
 
 ## Core Ideas
 
-- One rule primitive: `permit.set(rule)`
+- One rule primitive: `permit.set(rule | rules)`
 - One decision method: `permit.can(principal, resource, action, data?)`
 - Explicit wildcard support with `WILDCARD`
 - Anonymous checks via `null` principal plus `ANONYMOUS` role rules

@@ -55,10 +55,10 @@ process('  hello  '); // 'HELLO!'
 ### Asynchronous Pipeline
 
 ```ts
-import { pipe, delay } from '@vielzeug/toolkit';
+import { pipe, sleep } from '@vielzeug/toolkit';
 
 const fetchUser = async (id: number) => {
-  await delay(10);
+  await sleep(10);
   return { id, name: 'Alice' };
 };
 
@@ -78,4 +78,4 @@ await getUserName(1); // 'Alice'
 ## See Also
 
 - [compose](./compose.md): Functional composition from right to left.
-- [fp](./fp.md): Wrap functions for better functional programming support.
+- [configure](./configure.md): Preconfigure trailing arguments for unary composition.

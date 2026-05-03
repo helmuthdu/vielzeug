@@ -36,19 +36,17 @@ define<AlertBoxProps, AlertBoxEvents>('alert-box', {
       emit('close');
     };
 
-    return {
-      render: () => html`
-        ${() =>
-          props.open.value
-            ? html`
-                <div :data-variant=${props.variant}>
-                  <span>${props.message}</span>
-                  <button @click=${close}>Close</button>
-                </div>
-              `
-            : ''}
-      `,
-    };
+    return () => html`
+      ${() =>
+        props.open.value
+          ? html`
+              <div :data-variant=${props.variant}>
+                <span>${props.message}</span>
+                <button @click=${close}>Close</button>
+              </div>
+            `
+          : ''}
+    `;
   },
 });
 ```

@@ -17,7 +17,7 @@ export class UnionSchema<T extends readonly Schema<any>[]> extends Schema<InferO
       issues: [
         {
           code: ErrorCode.invalid_union,
-          message: _messages().union_invalid(),
+          message: _messages().union.invalid(),
           params: { errors },
           path: [],
         },

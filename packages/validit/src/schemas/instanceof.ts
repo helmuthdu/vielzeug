@@ -7,7 +7,7 @@ export class InstanceOfSchema<T> extends Schema<T> {
       (value, path) =>
         value instanceof cls
           ? null
-          : [{ code: ErrorCode.invalid_type, message: _messages().instanceof_type({ className: cls.name }), path }],
+          : [{ code: ErrorCode.invalid_type, message: _messages().instanceof.type({ className: cls.name }), path }],
     ]);
   }
 }

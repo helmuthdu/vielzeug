@@ -2,7 +2,6 @@ import type { Predicate } from '../types';
 
 import { assert } from '../function/assert';
 import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
-import { isNil } from '../typed/isNil';
 
 /**
  * Selects elements from an array based on a callback function and an optional predicate function.
@@ -29,7 +28,7 @@ export function select<T, R>(
 ): R[] {
   assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
-  const isValid = predicate ?? ((value: T) => !isNil(value));
+  const isValid = predicate ?? (() => true);
   const result: R[] = [];
 
   for (let index = 0; index < array.length; index++) {

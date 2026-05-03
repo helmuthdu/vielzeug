@@ -85,10 +85,7 @@ describe('computePosition', () => {
 
   it('throws when placement keeps changing across restarts', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 });
-    const oscillate: Middleware = {
-      fn: (state) => ({ ...state, placement: state.placement === 'top' ? 'bottom' : 'top' }),
-      name: 'oscillate',
-    };
+    const oscillate: Middleware = (state) => ({ ...state, placement: state.placement === 'top' ? 'bottom' : 'top' });
 
     expect(() => computePosition(reference, floating, { middleware: [oscillate], placement: 'top' })).toThrow(
       /placement more than once/i,
@@ -290,6 +287,20 @@ describe('size', () => {
 
     expect(() => computePosition(reference, floating, { middleware: [size()], placement: 'bottom' })).not.toThrow();
   });
+
+  it('calls size apply once with final placement after flip', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 720 }, { height: 80, width: 80 });
+    const apply = vi.fn();
+
+    const result = computePosition(reference, floating, {
+      middleware: [flip(), size({ apply })],
+      placement: 'bottom',
+    });
+
+    expect(result.placement).toBe('top');
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(apply.mock.calls[0][0].availableHeight).toBe(720);
+  });
 });
 
 // ─── positionFloat ────────────────────────────────────────────────────────────
@@ -378,14 +389,13 @@ describe('float', () => {
 describe('custom middleware', () => {
   it('can be composed with built-ins', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const snap = (grid: number): Middleware => ({
-      fn: (state) => ({
+    const snap =
+      (grid: number): Middleware =>
+      (state) => ({
         ...state,
         x: Math.round(state.x / grid) * grid,
         y: Math.round(state.y / grid) * grid,
-      }),
-      name: 'snap',
-    });
+      });
     const { x, y } = computePosition(reference, floating, {
       middleware: [snap(10)],
       placement: 'bottom',

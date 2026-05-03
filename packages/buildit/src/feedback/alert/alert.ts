@@ -93,38 +93,36 @@ export const ALERT_TAG = define<BitAlertProps, BitAlertEvents>('bit-alert', {
 
     const alertRole = () => (props.color.value === 'error' ? 'alert' : 'status');
 
-    return {
-      render: () => html`
-        <div class="alert" :role="${alertRole}" part="alert">
-          <span class="icon" part="icon" aria-hidden="true" ?hidden="${() => !slots.has('icon').value}">
-            <slot name="icon"></slot>
+    return () => html`
+      <div class="alert" :role="${alertRole}" part="alert">
+        <span class="icon" part="icon" aria-hidden="true" ?hidden="${() => !slots.has('icon').value}">
+          <slot name="icon"></slot>
+        </span>
+        <div class="header" part="header" ?hidden="${() => !props.heading.value}">
+          <span class="heading" part="heading">${props.heading}</span>
+          <span class="meta" part="meta">
+            <slot name="meta"></slot>
           </span>
-          <div class="header" part="header" ?hidden="${() => !props.heading.value}">
-            <span class="heading" part="heading">${props.heading}</span>
-            <span class="meta" part="meta">
-              <slot name="meta"></slot>
-            </span>
-          </div>
-          <div class="body" part="body">
-            <div class="content" part="content">
-              <slot></slot>
-            </div>
-          </div>
-          <div class="actions" part="actions" ?hidden="${() => !slots.has('actions').value}">
-            <slot name="actions"></slot>
-          </div>
-          <button
-            class="close"
-            part="close"
-            type="button"
-            aria-label="Dismiss alert"
-            ?hidden="${() => !props.dismissible.value}"
-            @click="${handleDismiss}">
-            <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
-          </button>
         </div>
-      `,
-    };
+        <div class="body" part="body">
+          <div class="content" part="content">
+            <slot></slot>
+          </div>
+        </div>
+        <div class="actions" part="actions" ?hidden="${() => !slots.has('actions').value}">
+          <slot name="actions"></slot>
+        </div>
+        <button
+          class="close"
+          part="close"
+          type="button"
+          aria-label="Dismiss alert"
+          ?hidden="${() => !props.dismissible.value}"
+          @click="${handleDismiss}">
+          <bit-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></bit-icon>
+        </button>
+      </div>
+    `;
   },
   styles: [
     ...formFieldMixins,

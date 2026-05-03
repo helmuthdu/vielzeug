@@ -1,17 +1,13 @@
 ---
 title: 'I18nit Examples — Shared Instance Setup'
-description: 'Shared Instance Setup examples for i18nit.'
+description: 'Create a shared browser-side i18nit instance with built-in catalogs and lazy locale loaders.'
 ---
 
 ## Shared Instance Setup
 
-## Problem
+Use one shared instance when your app runs in a single browser session and changing the locale globally is the intended behavior.
 
-Implement shared instance setup in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
+## Example
 
 ```ts
 import { createI18n } from '@vielzeug/i18nit';
@@ -20,8 +16,8 @@ export const i18n = createI18n({
   fallback: 'en',
   locale: 'en',
   loaders: {
-    de: () => import('./locales/de.json'),
-    fr: () => import('./locales/fr.json'),
+    de: () => import('./locales/de.json').then((m) => m.default),
+    fr: () => import('./locales/fr.json').then((m) => m.default),
   },
   messages: {
     en: {
@@ -32,21 +28,21 @@ export const i18n = createI18n({
     },
   },
 });
+
+await i18n.preload('fr');
+
+i18n.t('greeting', { name: 'Alice' });
+i18n.tp('inbox', 3);
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Shared instances are best for client-only apps where locale state is global.
+- `preload()` is safe to call opportunistically and never throws.
+- `setLocale()` should still be used for user-visible locale switches.
 
 ## Related Recipes
 
-- [Async Loading and Reload](./async-loading-and-reload.md)
+- [Async Loading and Preload](./async-loading-and-reload.md)
 - [Catalog Replacement](./catalog-replacement.md)
 - [Diagnostics Hook](./diagnostics-hook.md)

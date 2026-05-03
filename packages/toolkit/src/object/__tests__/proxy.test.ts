@@ -3,7 +3,7 @@ import { proxy } from '../proxy';
 describe('proxy', () => {
   it('should call set when a property is set', () => {
     const obj = { a: 1 };
-    const set = vi.fn((_prop, val) => val);
+    const set = vi.fn();
     const proxied = proxy(obj, { set });
 
     proxied.a = 2;
@@ -25,7 +25,7 @@ describe('proxy', () => {
 
   it('should handle deep proxies when deep option is true', () => {
     const obj = { a: { b: 1 } };
-    const set = vi.fn((_prop, val) => val);
+    const set = vi.fn();
     const proxied = proxy(obj, { deep: true, set });
 
     proxied.a.b = 2;
@@ -36,7 +36,7 @@ describe('proxy', () => {
 
   it('should not proxy properties not in watch', () => {
     const obj = { a: 1, b: 2 };
-    const set = vi.fn(() => 3);
+    const set = vi.fn();
     const proxied = proxy(obj, { set, watch: ['a'] });
 
     proxied.b = 3;
@@ -45,19 +45,19 @@ describe('proxy', () => {
     expect(obj.b).toBe(3);
   });
 
-  it('should return the modified value from set', () => {
+  it('should ignore set return values and persist original assigned value', () => {
     const obj = { a: 1 };
-    const set = vi.fn((_prop, val) => val * 2);
+    const set = vi.fn(() => 999);
     const proxied = proxy(obj, { set });
 
     proxied.a = 2;
 
-    expect(obj.a).toBe(4);
+    expect(obj.a).toBe(2);
   });
 
   it('should handle nested objects with deep option', () => {
     const obj = { a: { b: { c: 1 } } };
-    const set = vi.fn((_prop, val) => val);
+    const set = vi.fn();
     const proxied = proxy(obj, { deep: true, set });
 
     proxied.a.b.c = 2;
@@ -68,7 +68,7 @@ describe('proxy', () => {
 
   it('should not proxy non-object values', () => {
     const obj = { a: 1 };
-    const set = vi.fn((_prop, val) => val);
+    const set = vi.fn();
     const proxied = proxy(obj, { deep: true, set });
 
     proxied.a = 2;
@@ -90,7 +90,7 @@ describe('proxy', () => {
 
   it('should not call set or get for unobserved properties', () => {
     const obj = { a: 1, b: 2 };
-    const set = vi.fn((_prop, val) => val * 2);
+    const set = vi.fn();
     const get = vi.fn((_prop, val) => val / 2);
     const proxied = proxy(obj, { get, set, watch: ['a'] });
 

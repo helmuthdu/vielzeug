@@ -12,11 +12,11 @@ describe('select', () => {
     expect(result).toEqual([9, 16]);
   });
 
-  it('should use the default predicate (not nil) if none is provided', () => {
+  it('should include all items if no predicate is provided', () => {
     const arr = [null, undefined, 5, 0];
     const result = select(arr, (x) => x, undefined);
 
-    expect(result).toEqual([5, 0]);
+    expect(result).toEqual([null, undefined, 5, 0]);
   });
 
   it('should return an empty array if no element matches the predicate', () => {

@@ -70,11 +70,11 @@ const setViewportSize = (size: ViewportSize) => {
 const getViewportWidth = computed(() => {
   switch (viewportSize.value) {
     case 'mobile':
-      return '375px';
+      return 'calc(375px + (var(--size-4) * 2))';
     case 'tablet':
-      return '768px';
+      return 'calc(768px + (var(--size-4) * 2))';
     case 'desktop':
-      return '1280px';
+      return 'calc(1280px + (var(--size-4) * 2))';
     case 'full':
     default:
       return '100%';

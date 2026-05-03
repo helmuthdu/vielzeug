@@ -1,46 +1,48 @@
 ---
 title: 'I18nit Examples — SSR Rendering'
-description: 'SSR rendering examples for i18nit without locale-bound views.'
+description: 'Render translated HTML on the server with per-request i18nit instances.'
 ---
 
 ## SSR Rendering
 
-## Problem
+Server rendering should use a fresh instance for each request and fully resolve the locale before generating HTML.
 
-Implement SSR rendering in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
+## Example
 
 ```ts
-function renderHtml(locale: string) {
-  const t = (key: string, vars?: Record<string, unknown>) => i18n.t(key, vars);
+import { createI18n } from '@vielzeug/i18nit';
+
+export async function renderDocument(locale: string) {
+  const i18n = createI18n({
+    fallback: 'en',
+    locale,
+    loaders: {
+      en: () => import('./locales/en.json').then((m) => m.default),
+      fr: () => import('./locales/fr.json').then((m) => m.default),
+    },
+  });
+
+  await i18n.setLocale(locale);
 
   return `
-    <html>
+    <!doctype html>
+    <html lang="${i18n.locale}">
       <body>
-        <h1>${t('greeting', { name: 'Guest' })}</h1>
+        <h1>${i18n.t('title')}</h1>
+        <p>${i18n.tp('notifications', 3)}</p>
       </body>
     </html>
   `;
 }
-
-await i18n.setLocale(locale);
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Avoid a module-level singleton here.
+- The returned HTML should already reflect the request locale.
+- If locale loading fails, let the request fail or fall back explicitly in your server layer.
 
 ## Related Recipes
 
-- [Async Loading and Reload](./async-loading-and-reload.md)
+- [Async Loading and Preload](./async-loading-and-reload.md)
 - [Diagnostics Hook](./diagnostics-hook.md)

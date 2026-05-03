@@ -26,6 +26,6 @@ These examples are aligned with the current `@vielzeug/virtualit` and `@vielzeug
 - [Keyboard Navigation](./examples/keyboard-navigation.md)
 - [Restore Scroll Position](./examples/restore-scroll-position.md)
 - [Density Toggle (Compact / Comfortable)](./examples/density-toggle-compact-comfortable.md)
-- [Using `Virtualizer` Directly (Without `createVirtualizer`)](./examples/using-virtualizer-directly-without-createvirtualizer.md)
+- [Recreate on Remount](./examples/using-virtualizer-directly-without-createvirtualizer.md)
 - [DOM Virtual List Combobox Pattern](./examples/dom-virtual-list-combobox-pattern.md)
 - [Explicit Resource Management (`using`)](./examples/explicit-resource-management-using.md)

@@ -23,7 +23,7 @@ function makeContainer(clientHeight = 200): HTMLElement {
 }
 
 describe('createDomVirtualList', () => {
-  test('renders virtual items when enabled with items', async () => {
+  test('renders virtual items when enabled with items', () => {
     const scrollEl = makeContainer(120);
     const listEl = document.createElement('div');
     const render = vi.fn();
@@ -37,7 +37,46 @@ describe('createDomVirtualList', () => {
     domList.setItems(['a', 'b', 'c', 'd']);
 
     expect(render).toHaveBeenCalled();
-    expect(listEl.style.height).not.toBe('');
+    expect(listEl.style.height).toBe('144px');
+    expect(listEl.style.position).toBe('relative');
+    expect(listEl.style.contain).toBe('layout');
+
+    domList.destroy();
+  });
+
+  test('render callback receives totalSize', () => {
+    const scrollEl = makeContainer(120);
+    const listEl = document.createElement('div');
+    const render = vi.fn();
+    const domList = createDomVirtualList<string>({
+      estimateSize: 20,
+      getListElement: () => listEl,
+      getScrollElement: () => scrollEl,
+      render,
+    });
+
+    domList.setItems(['a', 'b', 'c']);
+
+    expect(render).toHaveBeenCalled();
+    expect(render.mock.calls[0]?.[0]?.totalSize).toBe(60);
+    domList.destroy();
+  });
+
+  test('updates list height when items shrink', () => {
+    const scrollEl = makeContainer(120);
+    const listEl = document.createElement('div');
+    const domList = createDomVirtualList<string>({
+      estimateSize: 36,
+      getListElement: () => listEl,
+      getScrollElement: () => scrollEl,
+      render: () => {},
+    });
+
+    domList.setItems(['a', 'b', 'c', 'd']);
+    expect(listEl.style.height).toBe('144px');
+
+    domList.setItems(['a']);
+    expect(listEl.style.height).toBe('36px');
 
     domList.destroy();
   });
@@ -85,5 +124,6 @@ describe('createDomVirtualList', () => {
     domList.scrollToIndex(10, { align: 'start' });
 
     expect(scrollEl.scrollTop).toBeGreaterThan(0);
+    domList.destroy();
   });
 });

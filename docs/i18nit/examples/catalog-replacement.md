@@ -1,41 +1,49 @@
 ---
 title: 'I18nit Examples — Catalog Replacement'
-description: 'Catalog replacement examples for i18nit.'
+description: 'Replace a locale catalog at runtime and react to active-chain updates through subscriptions.'
 ---
 
 ## Catalog Replacement
 
-## Problem
+Use `setCatalog()` when messages come from a CMS, feature flag system, or live configuration source.
 
-Implement catalog replacement in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
+## Example
 
 ```ts
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
+  fallback: 'en',
+  locale: 'en',
+  messages: {
+    en: {
+      dashboard: {
+        heading: 'Dashboard',
+      },
+    },
+  },
+});
+
+i18n.subscribe(({ reason }) => {
+  if (reason === 'catalog-update') renderApp();
+});
+
 i18n.setCatalog('en', {
-  nav: {
-    about: 'About',
-    contact: 'Contact',
-    help: 'Help',
+  dashboard: {
+    heading: 'Workspace',
+    subtitle: 'Everything in one place',
   },
 });
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- `setCatalog()` fully replaces the locale catalog.
+- If the updated locale is not part of the active fallback chain, subscribers are not notified.
+- Use this instead of mutating nested message objects in place.
 
 ## Related Recipes
 
-- [Async Loading and Reload](./async-loading-and-reload.md)
+- [Async Loading and Preload](./async-loading-and-reload.md)
 - [Diagnostics Hook](./diagnostics-hook.md)
 - [Framework Integration](./framework-integration.md)

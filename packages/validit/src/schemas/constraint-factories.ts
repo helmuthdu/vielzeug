@@ -5,9 +5,9 @@ import { resolveMessage } from '../core';
 type ConstraintSpec<Value, Ctx extends Record<string, unknown>> = {
   check: (value: Value) => boolean;
   code: ErrorCode;
-  context: (value: Value) => Ctx;
+  context?: Omit<Ctx, 'value'>;
   message: MessageFn<Ctx>;
-  params?: (value: Value) => Record<string, unknown> | undefined;
+  params?: Record<string, unknown> | ((value: Value) => Record<string, unknown> | undefined);
 };
 
 export function createConstraintValidator<Value, Ctx extends Record<string, unknown>>(
@@ -22,11 +22,11 @@ export function createConstraintValidator<Value, Ctx extends Record<string, unkn
 
     const issue: Issue = {
       code: spec.code,
-      message: resolveMessage(spec.message, spec.context(typed)),
+      message: resolveMessage(spec.message, { ...spec.context, value: typed } as unknown as Ctx),
       path,
     };
 
-    const params = spec.params?.(typed);
+    const params = typeof spec.params === 'function' ? spec.params(typed) : spec.params;
 
     if (params) {
       issue.params = params;

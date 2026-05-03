@@ -1,5 +1,6 @@
 import type { RunOptions, TaskFn, WorkerHandle, WorkerStatus } from '../workit';
 
+import { createAbortError } from '../_internal';
 import { TerminatedError } from '../workit';
 
 export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & {
@@ -17,16 +18,6 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
     resolve: (value: TOutput) => void;
     signal?: AbortSignal;
   }> = [];
-
-  function createAbortError(signal: AbortSignal): unknown {
-    if (signal.reason !== undefined) return signal.reason;
-
-    if (typeof DOMException === 'function') {
-      return new DOMException('Aborted', 'AbortError');
-    }
-
-    return new Error('Aborted');
-  }
 
   function updateStatus(): void {
     if (status === 'terminated') return;
@@ -72,7 +63,21 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
     },
     dispose(): void {
       status = 'terminated';
+      for (const item of queue) item.reject(new TerminatedError());
       queue.length = 0;
+    },
+    drain(): Promise<void> {
+      return new Promise<void>((resolve) => {
+        const check = (): void => {
+          if (queue.length === 0 && !running) {
+            resolve();
+          } else {
+            setTimeout(check, 0);
+          }
+        };
+
+        check();
+      });
     },
     run(input: TInput, options: RunOptions = {}): Promise<TOutput> {
       if (status === 'terminated') {
@@ -93,6 +98,9 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
           void processQueue();
         }
       });
+    },
+    get size(): number {
+      return queue.length;
     },
     get status(): WorkerStatus {
       return status;

@@ -1,12 +1,10 @@
-import { createLocalStorage, type Schema, ttl } from '../index';
+import { createLocalStorage, table, ttl } from '../index';
 
 /* -------------------- Shared fixtures -------------------- */
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
-const userSchema: Schema<{ users: User }> = {
-  users: { key: 'id' },
-};
+const userSchema = { users: table<User>('id') };
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 

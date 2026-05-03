@@ -6,10 +6,11 @@
  * - Host element binding (reflect) for attributes, classes, and host listeners
  */
 
-import { type ReadonlySignal, type Signal, isSignal, signal } from '@vielzeug/stateit';
+import { effect as rawEffect, type ReadonlySignal, type Signal, isSignal, signal } from '@vielzeug/stateit';
 
-import { listen, setAttr } from './internal';
-import { currentElementOrThrow, defer, effect, onCleanup } from './runtime';
+import { CRAFTIT_ERRORS } from './errors';
+import { listen, setAttr, toKebab } from './internal';
+import { currentElementOrThrow, effect, onCleanup, onMounted, tryRegisterCleanup } from './runtime';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTEXT API
@@ -57,7 +58,7 @@ export const injectStrict = <T>(key: InjectionKey<T> | string | symbol): T => {
 
   const host = currentElementOrThrow();
 
-  throw new Error(`[craftit:E11] injectStrict(...) failed for key "${String(key)}" in <${host.localName}>`);
+  throw new Error(CRAFTIT_ERRORS.injectStrictFailed(String(key), host.localName));
 };
 
 export function createContext<T>(description?: string): InjectionKey<T> {
@@ -71,6 +72,10 @@ export function createContext<T>(description?: string): InjectionKey<T> {
 type AriaValue = string | number | boolean | null | undefined | (() => string | number | boolean | null | undefined);
 
 type AriaConfig = Record<string, AriaValue>;
+
+type SyncAriaOptions = {
+  autoCleanup?: boolean;
+};
 
 const normalizeKey = (key: string, forceAriaPrefix = true): string => {
   if (key === 'role' || key.startsWith('aria-')) return key;
@@ -100,7 +105,8 @@ const setA11yAttr = (target: Element, key: string, value: string | number | bool
  *   disabled: () => isDisabled.value,
  * });
  */
-export const syncAria = (target: Element, config: AriaConfig): (() => void) => {
+export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaOptions = {}): (() => void) => {
+  const { autoCleanup = true } = options;
   const disposers: Array<() => void> = [];
 
   for (const [rawKey, rawValue] of Object.entries(config)) {
@@ -110,7 +116,7 @@ export const syncAria = (target: Element, config: AriaConfig): (() => void) => {
       const getter = rawValue as () => string | number | boolean | null | undefined;
 
       disposers.push(
-        effect(() => {
+        rawEffect(() => {
           setA11yAttr(target, key, getter());
         }),
       );
@@ -121,9 +127,13 @@ export const syncAria = (target: Element, config: AriaConfig): (() => void) => {
     setA11yAttr(target, key, rawValue as string | number | boolean | null | undefined);
   }
 
-  return () => {
+  const cleanup = () => {
     while (disposers.length > 0) disposers.pop()?.();
   };
+
+  if (autoCleanup) tryRegisterCleanup(cleanup);
+
+  return cleanup;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,6 +186,16 @@ export const createSlots = (): ComponentSlots => {
     return s;
   };
 
+  const areElementsEqual = (prev: Element[], next: Element[]): boolean => {
+    if (prev.length !== next.length) return false;
+
+    for (let i = 0; i < prev.length; i++) {
+      if (prev[i] !== next[i]) return false;
+    }
+
+    return true;
+  };
+
   const recomputeSlot = (name: string): void => {
     const normalized = normalizeSlotName(name);
     const slotsForName = slotNodesByName.get(normalized);
@@ -187,8 +207,14 @@ export const createSlots = (): ComponentSlots => {
       }
     }
 
-    ensureElementSignal(normalized).value = assigned;
-    ensurePresenceSignal(normalized).value = assigned.length > 0;
+    const elements = ensureElementSignal(normalized);
+
+    if (!areElementsEqual(elements.value, assigned)) elements.value = assigned;
+
+    const hasElements = assigned.length > 0;
+    const presence = ensurePresenceSignal(normalized);
+
+    if (presence.value !== hasElements) presence.value = hasElements;
   };
 
   const bindSlot = (slotEl: HTMLSlotElement): void => {
@@ -227,7 +253,7 @@ export const createSlots = (): ComponentSlots => {
   // setup() runs before the template is rendered, so bind once now (if any slots
   // already exist) and schedule another pass after first render.
   bindAllSlots();
-  defer(() => {
+  onMounted(() => {
     bindAllSlots();
     recomputeAllSlots();
   });
@@ -393,9 +419,22 @@ function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue
 }
 
 function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
+  // Normalize camelCase property names to kebab-case for CSS setProperty.
+  // CSS custom properties (--foo) are already kebab-case, so leave them as-is.
+  const cssName = name.startsWith('--') ? name : toKebab(name);
+
+  // Track whether this binding has ever written a value to the inline style.
+  // This prevents removeProperty() from wiping an external inline style that
+  // the component never set (e.g. user-authored style="grid-area: main;").
+  let owned = false;
+
   const setStyle = (v: any) => {
-    if (v != null) host.style.setProperty(name, String(v));
-    else host.style.removeProperty(name);
+    if (v != null && v !== '') {
+      owned = true;
+      host.style.setProperty(cssName, String(v));
+    } else if (owned) {
+      host.style.removeProperty(cssName);
+    }
   };
 
   return applyReactiveBinding(value, setStyle);

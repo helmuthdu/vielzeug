@@ -9,6 +9,7 @@ import {
   onCleanup,
   ref,
   signal,
+  onMounted,
 } from '@vielzeug/craftit';
 import { createPressControl } from '@vielzeug/craftit/controls';
 import { createDropZone } from '@vielzeug/dragit';
@@ -240,132 +241,126 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
     // ============================================
     // Template
     // ============================================
-    return {
-      mount() {
-        const inp = inputRef.value!;
-        const dz = dropzoneRef.value!;
-        let skipNextClick = false;
-        const pressControl = createPressControl({
-          disabled: () => isDisabled.value,
-          onPress: () => {
-            inp.click();
-          },
-        });
+    onMounted(() => {
+      const inp = inputRef.value!;
+      const dz = dropzoneRef.value!;
+      let skipNextClick = false;
+      const pressControl = createPressControl({
+        disabled: () => isDisabled.value,
+        onPress: () => {
+          inp.click();
+        },
+      });
 
-        // Native input → add files
-        handle(inp, 'change', (e: Event) => {
-          const input = e.target as HTMLInputElement;
+      // Native input → add files
+      handle(inp, 'change', (e: Event) => {
+        const input = e.target as HTMLInputElement;
 
-          if (input.files?.length) addFiles(Array.from(input.files), e);
+        if (input.files?.length) addFiles(Array.from(input.files), e);
 
-          input.value = ''; // reset so the same file triggers change again
-        });
-        // Click dropzone → open file picker
-        handle(dz, 'click', (e: MouseEvent) => {
-          if (e.target === inp) return;
+        input.value = ''; // reset so the same file triggers change again
+      });
+      // Click dropzone → open file picker
+      handle(dz, 'click', (e: MouseEvent) => {
+        if (e.target === inp) return;
 
-          if (skipNextClick) {
-            skipNextClick = false;
+        if (skipNextClick) {
+          skipNextClick = false;
 
-            return;
-          }
+          return;
+        }
 
-          if (!isDisabled.value) inp.click();
-        });
-        // Keyboard: Enter / Space → open picker
-        handle(dz, 'keydown', (e: KeyboardEvent) => {
-          skipNextClick = pressControl.handleKeydown(e) && e.key === 'Enter';
-        });
+        if (!isDisabled.value) inp.click();
+      });
+      // Keyboard: Enter / Space → open picker
+      handle(dz, 'keydown', (e: KeyboardEvent) => {
+        skipNextClick = pressControl.handleKeydown(e) && e.key === 'Enter';
+      });
 
-        const dropZone = createDropZone({
-          disabled: () => isDisabled.value,
-          element: dz,
-          onDrop: (droppedFiles, e) => addFiles(droppedFiles, e),
-          onHoverChange: (hovered) => {
-            isDragging.value = hovered;
-          },
-        });
+      const dropZone = createDropZone({
+        disabled: () => isDisabled.value,
+        element: dz,
+        onDrop: (droppedFiles, e) => addFiles(droppedFiles, e),
+        onHoverChange: (hovered) => {
+          isDragging.value = hovered;
+        },
+      });
 
-        onCleanup(() => dropZone.destroy());
-      },
+      onCleanup(() => dropZone.destroy());
+    });
 
-      render: () => html`
-        <div class="file-input-wrapper" part="wrapper">
-          <label class="label-outside" id="${labelId}" part="label" ?hidden=${() => !props.label.value}
-            >${props.label}</label
-          >
-          <div
-            class="dropzone"
-            part="dropzone"
-            ref=${dropzoneRef}
-            role="button"
-            :tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-            :aria-disabled="${() => String(isDisabled.value)}"
-            :aria-label="${() => (!props.label.value ? 'File upload drop zone' : null)}"
-            :aria-labelledby="${() => (props.label.value ? labelId : null)}"
-            aria-describedby="${helperId}">
-            <input
-              type="file"
-              ref=${inputRef}
-              part="input"
-              id="${fileInputId}"
-              :accept="${props.accept}"
-              ?multiple="${props.multiple}"
-              ?required="${props.required}"
-              ?disabled="${isDisabled}"
-              :name="${props.name}"
-              hidden
-              inert
-              tabindex="-1" />
-            <div class="dropzone-content">
-              <span class="dropzone-icon" aria-hidden="true">
-                <bit-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></bit-icon>
-              </span>
-              <span class="dropzone-title">Drop files here or <u>click to browse</u></span>
-              <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
-            </div>
-          </div>
-          <ul class="file-list" role="list" aria-label="Selected files" ?hidden=${() => files.value.length === 0}>
-            ${() =>
-              files.value.map(
-                (file: File) => html`
-                  <li class="file-item">
-                    <span class="file-icon" aria-hidden="true">
-                      <bit-icon name="file" size="18" stroke-width="1.75" aria-hidden="true"></bit-icon>
-                    </span>
-                    <span class="file-meta">
-                      <span class="file-name" title="${file.name}">${file.name}</span>
-                      <span class="file-size">${formatBytes(file.size)}</span>
-                    </span>
-                    <button
-                      class="file-remove"
-                      type="button"
-                      aria-label="${`Remove ${file.name}`}"
-                      @click=${(e: Event) => removeFile(file, e)}>
-                      <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
-                    </button>
-                  </li>
-                `,
-              )}
-          </ul>
-          <div
-            class="helper-text"
-            id="${helperId}"
-            part="helper"
-            ?hidden=${() => isInvalid.value || !props.helper.value}>
-            ${props.helper}
-          </div>
-          <div
-            class="helper-text helper-text-error"
-            id="${errorId}"
-            role="alert"
-            part="error"
-            ?hidden=${() => !isInvalid.value}>
-            ${() => props.error.value ?? ''}
+    return () => html`
+      <div class="file-input-wrapper" part="wrapper">
+        <label class="label-outside" id="${labelId}" part="label" ?hidden=${() => !props.label.value}
+          >${props.label}</label
+        >
+        <div
+          class="dropzone"
+          part="dropzone"
+          ref=${dropzoneRef}
+          role="button"
+          :tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+          :aria-disabled="${() => String(isDisabled.value)}"
+          :aria-label="${() => (!props.label.value ? 'File upload drop zone' : null)}"
+          :aria-labelledby="${() => (props.label.value ? labelId : null)}"
+          aria-describedby="${helperId}">
+          <input
+            type="file"
+            ref=${inputRef}
+            part="input"
+            id="${fileInputId}"
+            :accept="${props.accept}"
+            ?multiple="${props.multiple}"
+            ?required="${props.required}"
+            ?disabled="${isDisabled}"
+            :name="${props.name}"
+            hidden
+            inert
+            tabindex="-1" />
+          <div class="dropzone-content">
+            <span class="dropzone-icon" aria-hidden="true">
+              <bit-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></bit-icon>
+            </span>
+            <span class="dropzone-title">Drop files here or <u>click to browse</u></span>
+            <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
           </div>
         </div>
-      `,
-    };
+        <ul class="file-list" role="list" aria-label="Selected files" ?hidden=${() => files.value.length === 0}>
+          ${() =>
+            files.value.map(
+              (file: File) => html`
+                <li class="file-item">
+                  <span class="file-icon" aria-hidden="true">
+                    <bit-icon name="file" size="18" stroke-width="1.75" aria-hidden="true"></bit-icon>
+                  </span>
+                  <span class="file-meta">
+                    <span class="file-name" title="${file.name}">${file.name}</span>
+                    <span class="file-size">${formatBytes(file.size)}</span>
+                  </span>
+                  <button
+                    class="file-remove"
+                    type="button"
+                    aria-label="${`Remove ${file.name}`}"
+                    @click=${(e: Event) => removeFile(file, e)}>
+                    <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
+                  </button>
+                </li>
+              `,
+            )}
+        </ul>
+        <div class="helper-text" id="${helperId}" part="helper" ?hidden=${() => isInvalid.value || !props.helper.value}>
+          ${props.helper}
+        </div>
+        <div
+          class="helper-text helper-text-error"
+          id="${errorId}"
+          role="alert"
+          part="error"
+          ?hidden=${() => !isInvalid.value}>
+          ${() => props.error.value ?? ''}
+        </div>
+      </div>
+    `;
   },
   shadow: { delegatesFocus: true },
   styles: [

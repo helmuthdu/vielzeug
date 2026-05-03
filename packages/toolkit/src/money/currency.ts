@@ -10,6 +10,9 @@ export type CurrencyFormatOptions = {
   style?: 'symbol' | 'code' | 'name'; // Display style
 };
 
+const currencyDecimalsCache = new Map<string, number>();
+const currencyFormatterCache = new Map<string, Intl.NumberFormat>();
+
 /**
  * Formats a monetary amount as a currency string with proper locale and symbol.
  * Handles decimal places automatically based on currency.
@@ -37,13 +40,26 @@ export function currency(money: Money, options: CurrencyFormatOptions = {}): str
   // Convert bigint to decimal string without precision loss
   const amount = moneyToDecimal(money.amount, decimalPlaces);
 
-  const formatter = new Intl.NumberFormat(locale, {
-    currency: money.currency,
-    currencyDisplay: style,
-    maximumFractionDigits: maximumFractionDigits ?? decimalPlaces,
-    minimumFractionDigits: minimumFractionDigits ?? decimalPlaces,
-    style: 'currency',
-  });
+  const key = [
+    locale,
+    money.currency,
+    style,
+    maximumFractionDigits ?? decimalPlaces,
+    minimumFractionDigits ?? decimalPlaces,
+  ].join('|');
+  const formatter =
+    currencyFormatterCache.get(key) ??
+    new Intl.NumberFormat(locale, {
+      currency: money.currency,
+      currencyDisplay: style,
+      maximumFractionDigits: maximumFractionDigits ?? decimalPlaces,
+      minimumFractionDigits: minimumFractionDigits ?? decimalPlaces,
+      style: 'currency',
+    });
+
+  if (!currencyFormatterCache.has(key)) {
+    currencyFormatterCache.set(key, formatter);
+  }
 
   return formatter.format(amount);
 }
@@ -74,8 +90,15 @@ function moneyToDecimal(amount: bigint, decimalPlaces: number): number {
 }
 
 function getCurrencyDecimals(currencyCode: string): number {
-  return (
+  if (currencyDecimalsCache.has(currencyCode)) {
+    return currencyDecimalsCache.get(currencyCode)!;
+  }
+
+  const decimals =
     new Intl.NumberFormat('en', { currency: currencyCode, style: 'currency' }).resolvedOptions()
-      .maximumFractionDigits ?? 2
-  );
+      .maximumFractionDigits ?? 2;
+
+  currencyDecimalsCache.set(currencyCode, decimals);
+
+  return decimals;
 }

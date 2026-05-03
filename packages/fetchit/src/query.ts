@@ -3,10 +3,8 @@ import { stash, retry } from '@vielzeug/toolkit';
 import type { RetryOptions } from './retry';
 import type { QueryKey, QueryState, QueryStatus, Unsubscribe } from './types';
 
-import { toError } from './errors';
 import { DEFAULT_RETRY, getRetryConfig } from './retry';
 import { stableStringify } from './serialize';
-import { dispatch, makeState } from './state';
 
 const DEFAULT_GC = 5 * 60_000;
 
@@ -15,14 +13,12 @@ export type QueryFnContext = {
   signal: AbortSignal;
 };
 
-type QueryExecutor<T> = (ctx: QueryFnContext) => Promise<T>;
-
 export type QueryOptions<T> = {
-  fn: QueryExecutor<T>;
+  fn: (ctx: QueryFnContext) => Promise<T>;
   gcTime?: number;
   key: QueryKey;
   staleTime?: number;
-};
+} & RetryOptions;
 
 export type PrefetchOptions<T> = QueryOptions<T> & {
   throwOnError?: boolean;
@@ -50,20 +46,27 @@ export function createQuery(opts?: QueryClientOptions) {
   const retryDefault = opts?.retry ?? DEFAULT_RETRY;
   const retryDelayDefault = opts?.retryDelay;
   const shouldRetryDefault = opts?.shouldRetry;
-  let _disposed = false;
+  let disposed = false;
 
-  const cache = stash<CacheEntry, QueryKey>({ hash: stableStringify });
+  const cache = stash<CacheEntry, QueryKey>({
+    hash: stableStringify,
+    onError: (error) => {
+      const name = error instanceof Error ? error.name : undefined;
 
-  function makeEntry<T>(key: QueryKey, gcTime: number): CacheEntry<T> {
+      if (name === 'AbortError') {
+        return;
+      }
+
+      console.error('[fetchit] Query cache GC scheduler error', error);
+    },
+  });
+
+  function toState<T>(entry: CacheEntry<T>): QueryState<T> {
     return {
-      data: undefined,
-      error: null,
-      gcTime,
-      inflight: null,
-      key,
-      observers: new Set(),
-      status: 'idle',
-      updatedAt: 0,
+      data: entry.data,
+      error: entry.error,
+      status: entry.status,
+      updatedAt: entry.updatedAt,
     };
   }
 
@@ -71,7 +74,16 @@ export function createQuery(opts?: QueryClientOptions) {
     let e = cache.get(key) as CacheEntry<T> | undefined;
 
     if (!e) {
-      e = makeEntry<T>(key, gcTime);
+      e = {
+        data: undefined,
+        error: null,
+        gcTime,
+        inflight: null,
+        key,
+        observers: new Set(),
+        status: 'idle',
+        updatedAt: 0,
+      };
       cache.set(key, e as CacheEntry<unknown>);
     }
 
@@ -79,7 +91,9 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function notify<T>(entry: CacheEntry<T>) {
-    dispatch(entry.observers, makeState(entry));
+    const state = toState(entry);
+
+    entry.observers.forEach((listener) => listener(state));
   }
 
   function scheduleGc<T>(entry: CacheEntry<T>) {
@@ -98,16 +112,24 @@ export function createQuery(opts?: QueryClientOptions) {
     cache.cancelGc(entry.key);
   }
 
-  function isKeyOrPrefix(entryKey: QueryKey, prefix: QueryKey): boolean {
-    if (prefix.length > entryKey.length) return false;
+  function isKeyOrPrefix(entryKey: QueryKey, prefixHash: readonly string[]): boolean {
+    if (prefixHash.length > entryKey.length) return false;
 
-    return prefix.every((seg, i) => stableStringify(seg) === stableStringify(entryKey[i]));
+    return prefixHash.every((seg, i) => seg === stableStringify(entryKey[i]));
   }
 
   async function fetchQuery<T>(options: QueryOptions<T>): Promise<T> {
-    if (_disposed) throw new Error('[fetchit] QueryClient has been disposed');
+    if (disposed) throw new Error('[fetchit] QueryClient has been disposed');
 
-    const { fn: queryFn, gcTime = gcTimeDefault, key: queryKey, staleTime = staleTimeDefault } = options;
+    const {
+      fn: queryFn,
+      gcTime = gcTimeDefault,
+      key: queryKey,
+      retry: retryCount = retryDefault,
+      retryDelay = retryDelayDefault,
+      shouldRetry = shouldRetryDefault,
+      staleTime = staleTimeDefault,
+    } = options;
 
     const entry = ensureEntry<T>(queryKey, gcTime);
 
@@ -124,7 +146,7 @@ export function createQuery(opts?: QueryClientOptions) {
     entry.status = 'pending';
     notify(entry);
 
-    const retryOpts = getRetryConfig(retryDefault, retryDelayDefault, shouldRetryDefault);
+    const retryOpts = getRetryConfig(retryCount, retryDelay, shouldRetry);
 
     const p = (async () => {
       try {
@@ -143,9 +165,10 @@ export function createQuery(opts?: QueryClientOptions) {
 
         return data;
       } catch (err) {
-        const error = toError(err);
+        const error = err instanceof Error ? err : new Error(String(err));
         const isAborted = controller.signal.aborted || error.name === 'AbortError';
 
+        // cancel() already cleared inflight and notified listeners.
         if (isAborted && entry.inflight === null) throw error;
 
         if (isAborted) {
@@ -191,8 +214,10 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function invalidate(key: QueryKey) {
+    const prefixHash = key.map(stableStringify);
+
     for (const [, entry] of cache.entries()) {
-      if (isKeyOrPrefix(entry.key, key)) evictEntry(entry);
+      if (isKeyOrPrefix(entry.key, prefixHash)) evictEntry(entry);
     }
   }
 
@@ -226,7 +251,7 @@ export function createQuery(opts?: QueryClientOptions) {
   function getState<T>(key: QueryKey): QueryState<T> | null {
     const entry = cache.get(key) as CacheEntry<T> | undefined;
 
-    return entry ? makeState(entry) : null;
+    return entry ? toState(entry) : null;
   }
 
   function subscribe<T = unknown>(key: QueryKey, listener: (state: QueryState<T>) => void): Unsubscribe {
@@ -234,7 +259,7 @@ export function createQuery(opts?: QueryClientOptions) {
 
     cache.cancelGc(key);
     entry.observers.add(listener);
-    listener(makeState(entry));
+    listener(toState(entry));
 
     return () => {
       entry.observers.delete(listener);
@@ -282,14 +307,14 @@ export function createQuery(opts?: QueryClientOptions) {
     cancel,
     clear: clearCache,
     dispose(): void {
-      _disposed = true;
+      disposed = true;
       for (const [, entry] of cache.entries()) {
         cleanupEntry(entry);
       }
       cache.clear();
     },
     get disposed() {
-      return _disposed;
+      return disposed;
     },
     get,
     getState,

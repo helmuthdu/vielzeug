@@ -7,7 +7,7 @@
 `@vielzeug/formit` gives you a typed form controller with:
 
 - typed `get` / `set` for dot-notation field paths
-- field-level and form-level validation
+- unified validation entrypoint: `validate()`, `validate('touched')`, `validate(fields)`
 - dirty/touched/error tracking
 - `submit` orchestration with typed errors
 - form and field subscriptions
@@ -41,7 +41,7 @@ const form = createForm({
 
 form.set('email', 'alice@example.com');
 
-const result = await form.validateAll();
+const result = await form.validate();
 console.log(result.valid, result.errors);
 
 try {
@@ -64,14 +64,17 @@ try {
 - Typed field paths (`FlatKeyOf`) and path value inference (`TypeAtPath`)
 - Plain-object flatten/unflatten for nested forms
 - Field validators (`validators`) and form validator (`validator`)
-- Explicit validation methods: `validateAll`, `validateTouched`, `validateFields`
+- Unified validation API with mode selection (`validate()` / `validate('touched')` / `validate(fields)`)
+- Single-field validation with `validateField(name)`
 - Deterministic submit flow: always touch-all + validate-all before handler (`SubmitError` on overlap)
 - Validation failure signaling via `FormValidationError`
 - Explicit subscriptions: `subscribeForm()` and `subscribeField()`
 - Baseline-safe reset model: `reset()` and `replace(values)`
 - `bind()` helper with live getters and value-based `onChange(value)`
 - Array batch helper: `array(name).append/remove/move`
+- Explicit error map controls: `setError`, `mergeErrors`, `replaceErrors`, `clearError`
 - Standalone `toFormData(values)`
+- Schema adapter helper: `fromSchema(schema)`
 
 ## Core API
 

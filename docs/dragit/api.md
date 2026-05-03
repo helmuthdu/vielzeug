@@ -30,12 +30,9 @@ interface Disposable {
 ```ts
 interface DropZoneOptions {
   element: HTMLElement;
-  accept?: string[];
+  accept?: string[] | (() => string[]);
   disabled?: boolean | (() => boolean);
   dropEffect?: DataTransfer['dropEffect'];
-  onDragEnter?: (event: DragEvent) => void;
-  onDragLeave?: (event: DragEvent) => void;
-  onDragOver?: (event: DragEvent) => void;
   onDrop?: (files: File[], event: DragEvent) => void;
   onDropRejected?: (files: File[], event: DragEvent) => void;
   onHoverChange?: (hovered: boolean) => void;
@@ -47,17 +44,8 @@ interface DropZoneOptions {
 ```ts
 interface DropZone extends Disposable {
   readonly hovered: boolean;
-  readonly state: Readonly<DropZoneState>;
-}
-```
-
-### `DropZoneState`
-
-```ts
-interface DropZoneState {
-  hovered: boolean;
-  files: File[];
-  rejected: File[];
+  readonly files: readonly File[];
+  readonly rejected: readonly File[];
 }
 ```
 
@@ -72,7 +60,7 @@ interface SortableOptions {
   placeholderClass?: string;
   disabled?: boolean | (() => boolean);
   onDragStart?: (id: string, event: DragEvent) => void;
-  onDragEnd?: (event: DragEvent) => void;
+  onDragEnd?: (id: string, event: DragEvent) => void;
   onReorder?: (orderedIds: string[]) => void;
 }
 ```
@@ -80,7 +68,9 @@ interface SortableOptions {
 ### `Sortable`
 
 ```ts
-interface Sortable extends Disposable {}
+interface Sortable extends Disposable {
+  readonly isDragging: boolean;
+}
 ```
 
 ---
@@ -96,15 +86,12 @@ Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` hand
 | Option           | Type                                        | Default  | Description                                                                                                                                                |
 | ---------------- | ------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `element`        | `HTMLElement`                               | —        | **Required.** The element to attach drag listeners to.                                                                                                     |
-| `accept`         | `string[]`                                  | `[]`     | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`). |
+| `accept`         | `string[] \| (() => string[])`             | `[]`     | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`). |
 | `disabled`       | `boolean \| (() => boolean)`                | —        | When truthy, all drag events are ignored and hover state does not change. Accepts a boolean or a function for reactive framework integration.              |
 | `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`      | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                   |
-| `onDragEnter`    | `(event: DragEvent) => void`                | —        | Called on each `dragenter` event while entering descendants. Use `onHoverChange(true)` to react only to inactive→active transition.                        |
-| `onDragLeave`    | `(event: DragEvent) => void`                | —        | Called when a drag fully leaves the element. Counter-based — not called when leaving a child.                                                              |
-| `onDragOver`     | `(event: DragEvent) => void`                | —        | Called every `dragover` frame. Use to set a dynamic `dropEffect`.                                                                                          |
 | `onDrop`         | `(files: File[], event: DragEvent) => void` | —        | Called with accepted files only. Not called if all dropped files are rejected.                                                                             |
 | `onDropRejected` | `(files: File[], event: DragEvent) => void` | —        | Called with files that did not match `accept`. Not called if all files are accepted.                                                                       |
-| `onHoverChange`  | `(hovered: boolean) => void`                | —        | Called when hover state toggles. Equivalent to combining `onDragEnter` and `onDragLeave` for simple styling.                                               |
+| `onHoverChange`  | `(hovered: boolean) => void`                | —        | Called when hover state toggles. Use this callback for drag-over styling.                                                                                  |
 
 **Returns:** `DropZone`
 
@@ -139,15 +126,17 @@ const zone = createDropZone({
 
 `true` when a drag is currently over the zone. Updated synchronously by the internal counter — safe to read at any time.
 
-### `zone.state`
+### `zone.files`
 
-`readonly state: Readonly<DropZoneState>`
+`readonly files: readonly File[]`
 
-Exposes lightweight drop-zone state:
+Accepted files from the last drop.
 
-- `hovered`: same value as `zone.hovered`
-- `files`: accepted files from the last drop
-- `rejected`: rejected files from the last drop
+### `zone.rejected`
+
+`readonly rejected: readonly File[]`
+
+Rejected files from the last drop.
 
 ```ts
 console.log(zone.hovered); // false initially
@@ -196,7 +185,7 @@ Makes the direct children of a container element reorderable via drag. Each item
 | `placeholderClass` | `string` | `'dragit-placeholder'` | CSS class applied to the generated placeholder element while dragging. |
 | `disabled` | `boolean \| (() => boolean)` | — | When truthy, `dragstart` is blocked. If a drag is in progress when disabled becomes truthy, `onReorder` will not fire at drag end. |
 | `onDragStart` | `(id: string, event: DragEvent) => void` | — | Called at the start of a drag. `id` is the identity attribute value of the item being dragged. |
-| `onDragEnd` | `(event: DragEvent) => void` | — | Called when a drag ends, whether completed or cancelled. |
+| `onDragEnd` | `(id: string, event: DragEvent) => void` | — | Called when a drag ends, whether completed or cancelled. |
 | `onReorder` | `(orderedIds: string[]) => void` | — | Called with the new order of identity values after a successful drop. Only fires when the order actually changed. |
 
 **Returns:** `Sortable`
@@ -208,7 +197,7 @@ const sortable = createSortable({
   onDragStart: (id) => {
     listEl.classList.add('sorting');
   },
-  onDragEnd: () => {
+  onDragEnd: (id) => {
     listEl.classList.remove('sorting');
   },
   onReorder: (ids) => {
@@ -220,6 +209,12 @@ const sortable = createSortable({
 ---
 
 ## `Sortable` Interface
+
+### `sortable.isDragging`
+
+`readonly isDragging: boolean`
+
+`true` while an item drag is in progress.
 
 ### `sortable.destroy()`
 
@@ -247,7 +242,7 @@ Dragit reads and writes the following DOM attributes:
 | `draggable` | `createSortable` init / `MutationObserver` | `destroy()` | Enables native drag on each item (or its handle when `handle` is set). |
 | `role="list"` | `createSortable` init | `destroy()` | Accessibility role on the container. |
 | `role="listitem"` | `createSortable` init / `MutationObserver` | `destroy()` | Accessibility role on each item. |
-| `data-dragging` | During drag | `dragend` / `destroy()` | Applied to the item currently being dragged. The item is hidden (`opacity: 0`) automatically while dragging. |
+| `data-dragging` | During drag | `dragend` / `destroy()` | Applied to the item currently being dragged. Use it as your styling hook for visual drag state. |
 | `aria-hidden="true"` | On placeholder creation | Placeholder removal | Applied to the `.dragit-placeholder` element. |
 
 ## CSS Classes

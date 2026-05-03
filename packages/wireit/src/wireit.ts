@@ -13,7 +13,7 @@
  *   .factory(DbToken, () => new Database(process.env.DB_URL!))
  *   .bind(ServiceToken, UserService, { deps: [DbToken] });
  *
- * const service = container.get(ServiceToken);
+ * const service = await container.resolve(ServiceToken);
  * ```
  */
 
@@ -41,9 +41,6 @@ export type FactoryProvider<T, Deps extends unknown[] = any[]> = BaseProvider<T,
 };
 
 export type Provider<T> = ValueProvider<T> | ClassProvider<T> | FactoryProvider<T>;
-
-/** Opaque handle returned by `snapshot()` and accepted by `restore()`. */
-export type Snapshot = { readonly __snapshot: never };
 
 /** Options for `factory()` and `bind()`. Can be imported for userland higher-order helpers. */
 export type ProviderOptions<T, Deps extends unknown[] = any[]> = BaseProvider<T, Deps> & {
@@ -83,13 +80,6 @@ export class ProviderNotFoundError extends Error {
   }
 }
 
-export class AsyncProviderError extends Error {
-  constructor(token: Token<any>) {
-    super(`Provider for token "${tokenName(token)}" is async. Use getAsync() instead.`);
-    this.name = 'AsyncProviderError';
-  }
-}
-
 export class AliasCycleError extends Error {
   constructor(cycle: Token<any>[]) {
     super(`Alias cycle detected: ${cycle.map(tokenName).join(' → ')}`);
@@ -115,6 +105,12 @@ type Registration<T = unknown> = {
 
 type SnapshotData = [Map<Token<any>, Registration<any>>, Map<Token<any>, Token<any>>];
 
+/** Opaque handle returned by `snapshot()` and accepted by `restore()`. */
+export type Snapshot = {
+  readonly aliases: ReadonlyMap<Token<any>, Token<any>>;
+  readonly registry: ReadonlyMap<Token<any>, Registration<any>>;
+};
+
 /** -------------------- Container -------------------- **/
 
 export class Container {
@@ -139,11 +135,8 @@ export class Container {
    * Register a provider for a token.
    * Both `useClass` and `useFactory` default to `singleton` lifetime.
    * Re-registering an existing token throws — pass `{ overwrite: true }` to replace intentionally.
-   * @example
-   * container.register(UserService, { useClass: UserServiceImpl, deps: [Database] });
-   * container.register(Config, { useFactory: () => loadConfig() });
    */
-  register<T>(token: Token<T>, provider: Provider<T>, { overwrite = false } = {}): this {
+  #register<T>(token: Token<T>, provider: Provider<T>, { overwrite = false } = {}): this {
     this.#assertNotDisposed();
 
     if (!overwrite && this.#registry.has(token)) {
@@ -168,7 +161,7 @@ export class Container {
    * container.value(Config, { apiUrl: 'https://api.example.com' });
    */
   value<T>(token: Token<T>, val: T, opts?: { overwrite?: boolean }): this {
-    return this.register(token, { useValue: val }, opts);
+    return this.#register(token, { useValue: val }, opts);
   }
 
   /**
@@ -185,7 +178,7 @@ export class Container {
   ): this {
     const { overwrite, ...providerOpts } = opts ?? {};
 
-    return this.register(token, { useFactory: fn, ...providerOpts } as FactoryProvider<T>, { overwrite });
+    return this.#register(token, { useFactory: fn, ...providerOpts } as FactoryProvider<T>, { overwrite });
   }
 
   /**
@@ -201,7 +194,7 @@ export class Container {
   ): this {
     const { overwrite, ...providerOpts } = opts ?? {};
 
-    return this.register(token, { useClass: cls, ...providerOpts } as ClassProvider<T>, { overwrite });
+    return this.#register(token, { useClass: cls, ...providerOpts } as ClassProvider<T>, { overwrite });
   }
 
   /**
@@ -247,13 +240,26 @@ export class Container {
     if (this.#disposed) return;
 
     this.#disposed = true;
+
+    const hooks: Promise<void>[] = [];
+
     for (const reg of [...this.#registry.values(), ...this.#retired]) {
       const { instance, provider, resolved } = reg;
 
       if (resolved && 'dispose' in provider && provider.dispose) {
-        await provider.dispose(instance as any);
+        hooks.push(Promise.resolve().then(() => provider.dispose!(instance as any)));
       }
     }
+
+    if (hooks.length > 0) {
+      const outcomes = await Promise.allSettled(hooks);
+      const failures = outcomes.filter((o): o is PromiseRejectedResult => o.status === 'rejected').map((o) => o.reason);
+
+      if (failures.length > 0) {
+        throw new AggregateError(failures, 'One or more dispose hooks failed.');
+      }
+    }
+
     this.#retired = [];
     this.#registry.clear();
     this.#aliases.clear();
@@ -272,73 +278,6 @@ export class Container {
     return this.#getRegistration(this.#resolveAlias(token)) !== undefined;
   }
 
-  /**
-   * Resolve a token synchronously.
-   * @throws {AsyncProviderError} if the provider is async — use `getAsync()` instead
-   * @throws {ProviderNotFoundError} if no provider is registered
-   * @throws {CircularDependencyError} if a circular dependency is detected
-   * @throws {ContainerDisposedError} if this container has been disposed
-   */
-  get<T>(token: Token<T>): T {
-    this.#assertNotDisposed();
-
-    return this.#resolve(token, [], new Set());
-  }
-
-  /**
-   * Resolve a token asynchronously.
-   * @throws {ContainerDisposedError} if this container has been disposed
-   */
-  async getAsync<T>(token: Token<T>): Promise<T> {
-    this.#assertNotDisposed();
-
-    return this.#resolveAsync(token, [], new Set());
-  }
-
-  /**
-   * Resolve multiple tokens at once, returning a typed tuple.
-   * @example
-   * const [db, svc] = container.getAll([DbToken, ServiceToken]);
-   */
-  getAll<T extends readonly Token<any>[]>(tokens: [...T]): TokenValues<T> {
-    this.#assertNotDisposed();
-
-    return tokens.map((t) => this.get(t)) as unknown as TokenValues<T>;
-  }
-
-  /**
-   * Resolve multiple tokens at once asynchronously, returning a typed tuple.
-   * @example
-   * const [db, svc] = await container.getAllAsync([DbToken, ServiceToken]);
-   */
-  async getAllAsync<T extends readonly Token<any>[]>(tokens: [...T]): Promise<TokenValues<T>> {
-    this.#assertNotDisposed();
-
-    return Promise.all(tokens.map((t) => this.getAsync(t))) as unknown as Promise<TokenValues<T>>;
-  }
-
-  /** Resolve a token, returning `undefined` if not registered. */
-  getOptional<T>(token: Token<T>): T | undefined {
-    try {
-      return this.get(token);
-    } catch (e) {
-      if (e instanceof ProviderNotFoundError) return undefined;
-
-      throw e;
-    }
-  }
-
-  /** Resolve a token asynchronously, returning `undefined` if not registered. */
-  async getOptionalAsync<T>(token: Token<T>): Promise<T | undefined> {
-    try {
-      return await this.getAsync(token);
-    } catch (e) {
-      if (e instanceof ProviderNotFoundError) return undefined;
-
-      throw e;
-    }
-  }
-
   /* ---- Hierarchy ---- */
 
   /**
@@ -346,7 +285,7 @@ export class Container {
    * `scoped` providers will create one instance per child container.
    * @example
    * const child = container.createChild();
-   * child.register(RequestContext, { useValue: ctx });
+   * child.value(RequestContext, ctx);
    */
   createChild(): Container {
     this.#assertNotDisposed();
@@ -359,7 +298,7 @@ export class Container {
    * @example
    * await container.runInScope(async (scope) => {
    *   scope.value(RequestId, generateId());
-   *   const service = scope.get(RequestScopedService);
+   *   const service = await scope.resolve(RequestScopedService);
    *   await service.process();
    * });
    */
@@ -374,50 +313,22 @@ export class Container {
   }
 
   /**
-   * Temporarily replace a token's registration with a mock value or provider,
+   * Temporarily replace a token's registration with a mock provider,
    * then restore the original (including any cached singleton instance) after `fn` returns.
    * @example
-   * const result = await container.mock(DbToken, fakeDb, () => svc.doWork());
-   * // Or with a full provider:
+   * const result = await container.mock(DbToken, { useValue: fakeDb }, () => svc.doWork());
    * await container.mock(DbToken, { useFactory: () => createInMemoryDb() }, fn);
    */
-  async mock<T, R>(token: Token<T>, mock: T | Provider<T>, fn: () => Promise<R> | R): Promise<R> {
+  async mock<T, R>(token: Token<T>, provider: Provider<T>, fn: () => Promise<R> | R): Promise<R> {
     const snap = this.snapshot();
-    const provider: Provider<T> = isProvider<T>(mock) ? mock : { useValue: mock };
 
-    this.register(token, provider, { overwrite: true });
+    this.#register(token, provider, { overwrite: true });
 
     try {
       return await fn();
     } finally {
       this.restore(snap);
     }
-  }
-
-  /* ---- Convenience API (Minimal Surface) ---- */
-
-  /**
-   * Simplified registration for common use cases.
-   * Shorthand that detects whether to use class, factory, or value registration.
-   * @example
-   * container.set(DbToken, () => new Database());
-   * container.set(ConfigToken, { host: 'localhost' });
-   * container.set(SvcToken, ServiceImpl, { deps: [DbToken] });
-   */
-  set<T>(
-    token: Token<T>,
-    source: T | ((...args: any[]) => T | Promise<T>) | (new (...args: any[]) => T),
-    opts?: ProviderOptions<T>,
-  ): this {
-    if (typeof source === 'function') {
-      const fn = source as any;
-      // Try to detect if it's a class or factory
-      const isClass = /^class\s/.test(fn.toString()) || fn.prototype?.constructor === fn;
-
-      return isClass ? this.bind(token, fn, opts) : this.factory(token, fn, opts);
-    }
-
-    return this.value(token, source, opts);
   }
 
   /**
@@ -428,7 +339,9 @@ export class Container {
    * const [db, cache] = await container.resolveAll([DbToken, CacheToken]);
    */
   async resolve<T>(token: Token<T>): Promise<T> {
-    return this.getAsync(token);
+    this.#assertNotDisposed();
+
+    return this.#resolveAsync(token, [], new Set());
   }
 
   /**
@@ -437,7 +350,9 @@ export class Container {
    * const [db, logger, config] = await container.resolveAll([DbToken, LoggerToken, ConfigToken]);
    */
   async resolveAll<T extends readonly Token<any>[]>(tokens: [...T]): Promise<TokenValues<T>> {
-    return this.getAllAsync(tokens);
+    this.#assertNotDisposed();
+
+    return Promise.all(tokens.map((t) => this.resolve(t))) as unknown as Promise<TokenValues<T>>;
   }
 
   /**
@@ -447,7 +362,13 @@ export class Container {
    * if (cache) { ... }
    */
   async resolveOptional<T>(token: Token<T>): Promise<T | undefined> {
-    return this.getOptionalAsync(token);
+    try {
+      return await this.resolve(token);
+    } catch (e) {
+      if (e instanceof ProviderNotFoundError) return undefined;
+
+      throw e;
+    }
   }
 
   /* ---- Snapshot / Restore ---- */
@@ -460,7 +381,10 @@ export class Container {
   snapshot(): Snapshot {
     this.#assertNotDisposed();
 
-    return [new Map(this.#registry), new Map(this.#aliases)] as unknown as Snapshot;
+    return {
+      aliases: new Map(this.#aliases),
+      registry: new Map(this.#registry),
+    };
   }
 
   /**
@@ -470,7 +394,8 @@ export class Container {
   restore(snap: Snapshot): this {
     this.#assertNotDisposed();
 
-    const [registry, aliases] = snap as unknown as SnapshotData;
+    const registry = snap.registry as SnapshotData[0];
+    const aliases = snap.aliases as SnapshotData[1];
 
     // Track resolved registrations that are being replaced
     for (const [token, currentReg] of this.#registry.entries()) {
@@ -488,15 +413,32 @@ export class Container {
   }
 
   /** Get debug information about all registered tokens and aliases, including inherited ones from parent containers. */
-  debug(): { aliases: Array<[string, string]>; tokens: string[] } {
-    const seenTokens = new Map<Token<any>, string>();
+  debug(): {
+    aliases: Array<[string, string]>;
+    tokens: Array<{ lifetime: Lifetime; name: string; provider: 'class' | 'factory' | 'value'; resolved: boolean }>;
+  } {
+    const seenTokens = new Map<
+      Token<any>,
+      { lifetime: Lifetime; name: string; provider: 'class' | 'factory' | 'value'; resolved: boolean }
+    >();
     const seenAliases = new Map<Token<any>, [string, string]>();
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let c: Container | undefined = this;
 
     while (c) {
-      for (const t of c.#registry.keys()) {
-        if (!seenTokens.has(t)) seenTokens.set(t, tokenName(t));
+      for (const [t, reg] of c.#registry.entries()) {
+        if (!seenTokens.has(t)) {
+          const provider =
+            'useValue' in reg.provider ? 'value' : 'useClass' in reg.provider ? 'class' : ('factory' as const);
+          const lifetime = 'lifetime' in reg.provider ? (reg.provider.lifetime ?? 'singleton') : 'singleton';
+
+          seenTokens.set(t, {
+            lifetime,
+            name: tokenName(t),
+            provider,
+            resolved: reg.resolved ?? false,
+          });
+        }
       }
       for (const [from, to] of c.#aliases.entries()) {
         if (!seenAliases.has(from)) seenAliases.set(from, [tokenName(from), tokenName(to)]);
@@ -567,63 +509,6 @@ export class Container {
     }
 
     return reg;
-  }
-
-  #resolve<T>(token: Token<T>, stack: Token<any>[], seen: Set<Token<any>>): T {
-    const resolved = this.#resolveAlias(token);
-
-    if (seen.has(resolved)) throw new CircularDependencyError([...stack, resolved]);
-
-    const reg = this.#getRegistration(resolved);
-
-    if (!reg) throw new ProviderNotFoundError(resolved);
-
-    const { provider } = reg;
-
-    if ('useValue' in provider) return (provider as ValueProvider<T>).useValue;
-
-    const p = provider as ClassProvider<T> | FactoryProvider<T>;
-    const { deps = [], lifetime = 'singleton' } = p;
-
-    stack.push(resolved);
-    seen.add(resolved);
-
-    const build = (): T => {
-      const args = (deps as Token<any>[]).map((dep) => this.#resolve(dep, stack, seen));
-      const result =
-        'useClass' in p
-          ? new (p as ClassProvider<T>).useClass(...args)
-          : ((p as FactoryProvider<T>).useFactory(...args) as T);
-
-      if (result instanceof Promise) throw new AsyncProviderError(resolved);
-
-      return result;
-    };
-
-    try {
-      if (lifetime === 'scoped' && this.#parent) {
-        const localReg = this.#localReg(resolved, provider);
-
-        if (!localReg.resolved) {
-          localReg.instance = build();
-          localReg.resolved = true;
-        }
-
-        return localReg.instance as T;
-      }
-
-      if (lifetime === 'transient') return build();
-
-      if (!reg.resolved) {
-        reg.instance = build();
-        reg.resolved = true;
-      }
-
-      return reg.instance as T;
-    } finally {
-      stack.pop();
-      seen.delete(resolved);
-    }
   }
 
   async #resolveAsync<T>(token: Token<T>, stack: Token<any>[], seen: Set<Token<any>>): Promise<T> {
@@ -700,25 +585,14 @@ export function createContainer(): Container {
 /** -------------------- Testing Helpers -------------------- **/
 
 /**
- * Create a child test container with automatic cleanup.
+ * Create an isolated child test container.
  * Registrations in the child are isolated from the base container.
- * Call the returned `dispose()` to run dispose hooks and clean up.
  * @example
- * const { container, dispose } = createTestContainer();
- * container.value(Config, testConfig);
+ * const testContainer = createTestContainer();
+ * testContainer.value(Config, testConfig);
  * // ... run tests
- * await dispose();
+ * await testContainer.dispose();
  */
-export function createTestContainer(base?: Container) {
-  const child = (base ?? Container.create()).createChild();
-
-  return {
-    container: child,
-    dispose: () => child.dispose(),
-  };
-}
-function isProvider<T>(value: unknown): value is Provider<T> {
-  return (
-    typeof value === 'object' && value !== null && ('useValue' in value || 'useClass' in value || 'useFactory' in value)
-  );
+export function createTestContainer(base?: Container): Container {
+  return (base ?? Container.create()).createChild();
 }
