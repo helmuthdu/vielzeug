@@ -4,6 +4,7 @@ export const mockLocation = {
   hash: '',
   pathname: '/',
   search: '',
+  state: null as unknown,
 };
 
 function assignMockUrl(url: string): void {
@@ -21,11 +22,13 @@ export const mockHistory = {
   // Simulate real browser behaviour: pushState/replaceState update the current URL.
   // Without this, navigate() would re-read the old pathname from the mock and recurse
   // indefinitely when a middleware calls router.navigate() without awaiting next().
-  pushState: vi.fn((_state: unknown, _title: string, url: string) => {
+  pushState: vi.fn((state: unknown, _title: string, url: string) => {
     assignMockUrl(url);
+    mockLocation.state = state;
   }),
-  replaceState: vi.fn((_state: unknown, _title: string, url: string) => {
+  replaceState: vi.fn((state: unknown, _title: string, url: string) => {
     assignMockUrl(url);
+    mockLocation.state = state;
   }),
 };
 
@@ -71,4 +74,5 @@ export function resetMocks(): void {
   mockLocation.pathname = '/';
   mockLocation.search = '';
   mockLocation.hash = '';
+  mockLocation.state = null;
 }

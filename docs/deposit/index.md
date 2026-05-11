@@ -13,7 +13,7 @@ description: Typed browser storage with a compact API for LocalStorage, SessionS
 
 - `createLocalStorage()` for lightweight browser persistence
 - `createSessionStorage()` for tab-scoped persistence
-- `createCookie()` for tiny cookie-backed values
+- `createCookie()` for small browser state that should ride with requests
 - `createIndexedDB()` for transactional storage
 - `createMemory()` for tests and SSR environments
 
@@ -48,21 +48,21 @@ const schema = {
   users: table<User>('id'),
 };
 
-const db = createIndexedDB({ dbName: 'app', version: 1, schema });
+const db = createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
 
 await db.put('users', { id: 1, name: 'Alice', age: 30 });
-const first = await db.from('users').between('age', 18, 99).first();
+const first = await db.query('users').between('age', 18, 99).first();
 ```
 
 ## Why Deposit?
 
 Native browser storage APIs are powerful but inconsistent and repetitive to use directly.
 
-- Typed table schemas via `Schema<S>` and `table<T>()`
+- Typed table schemas via `table<T>()`
 - Five backends behind one interface (`createLocalStorage`, `createSessionStorage`, `createCookie`, `createIndexedDB`, `createMemory`)
 - Compact query builder for common read patterns
 - TTL on writes
-- Atomic multi-table transactions (IndexedDB)
+- Atomic multi-table transactions and cross-tab updates (IndexedDB)
 
 ```ts
 import { createLocalStorage, table } from '@vielzeug/deposit';
@@ -99,6 +99,8 @@ await local.put('users', { id: 1, name: 'Alice', age: 30 });
 - **TTL support** — auto-expire records via `ttl.ms/seconds/minutes/hours/days`
 - **Bulk writes** — `putAll()` for atomic batch inserts
 - **Existence check** — `has()` without loading the full record
+- **Record utilities** — `forEach`, `getOrPut`, `update`, `deleteWhere`
+- **Reactivity** — `observe(table, listener)` with immediate snapshot and unsubscribe
 - **Transactional writes** — `transaction()` with rollback on callback failure
 - **In-memory adapter** — browser-free, zero-setup; ideal for tests and SSR
 - **Zero dependencies** — small and easy to audit
@@ -115,7 +117,7 @@ Notes:
 
 - `createLocalStorage` requires `localStorage`.
 - `createSessionStorage` requires `sessionStorage`.
-- `createCookie` requires `document.cookie`.
+- `createCookie` requires `document` and is browser-only.
 - `createIndexedDB` requires `indexedDB`.
 - `createMemory` has no environment requirements.
 

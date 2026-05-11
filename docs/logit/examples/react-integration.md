@@ -21,9 +21,11 @@ const log = Logit.scope('UserProfile');
 
 export function UserProfile({ userId }: { userId: string }) {
   useEffect(() => {
-    log.debug('mounted', { userId });
+    // pin userId once — every call in this effect includes it automatically
+    const scopedLog = log.withBindings({ userId });
+    scopedLog.debug('mounted');
 
-    return () => log.debug('unmounted', { userId });
+    return () => scopedLog.debug('unmounted');
   }, [userId]);
 
   return null;

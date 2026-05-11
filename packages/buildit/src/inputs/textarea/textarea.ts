@@ -1,4 +1,4 @@
-import { define, effect, html, inject, onElement, prop, ref } from '@vielzeug/craftit';
+import { define, effect, html, inject, live, onElement, prop, ref } from '@vielzeug/craftit';
 import { createTextField } from '@vielzeug/craftit/controls';
 
 import type { VisualVariant } from '../../types';
@@ -176,7 +176,7 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
             ?disabled="${props.disabled}"
             ?readonly="${props.readonly}"
             ?required="${props.required}"
-            :value="${fieldValue}"
+            :value="${live(fieldValue)}"
             :aria-describedby="${ariaDescribedBy}"
             :aria-errormessage="${ariaErrorMessage}"
             :aria-invalid="${ariaInvalid}"

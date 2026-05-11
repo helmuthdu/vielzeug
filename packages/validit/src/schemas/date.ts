@@ -4,7 +4,7 @@ import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 import { createConstraintValidator } from './constraint-factories';
 
-export class DateSchema extends Schema<Date> {
+export class DateSchema<Input = Date> extends Schema<Date, Input> {
   constructor() {
     super([
       (value, path) =>
@@ -36,7 +36,7 @@ export class DateSchema extends Schema<Date> {
     );
   }
 
-  static coerce(): DateSchema {
+  static coerce(): DateSchema<unknown> {
     return new DateSchema().preprocess((v: unknown) => {
       if (v instanceof Date) return v;
 

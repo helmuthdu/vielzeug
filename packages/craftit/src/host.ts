@@ -16,14 +16,14 @@ import { currentElementOrThrow, effect, onCleanup, onMounted, tryRegisterCleanup
 // CONTEXT API
 // ─────────────────────────────────────────────────────────────────────────────
 
-const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown> | string | symbol, unknown>>();
+const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown>, unknown>>();
 const hostPropBindingOwners = new WeakMap<HTMLElement, Map<string, symbol>>();
 
 export type InjectionKey<T> = symbol & {
   readonly __craftit_injection_key?: T;
 };
 
-export const provide = <T>(key: InjectionKey<T> | string | symbol, value: T): void => {
+export const provide = <T>(key: InjectionKey<T>, value: T): void => {
   const el = currentElementOrThrow();
 
   if (!contextRegistry.has(el)) contextRegistry.set(el, new Map());
@@ -31,9 +31,9 @@ export const provide = <T>(key: InjectionKey<T> | string | symbol, value: T): vo
   contextRegistry.get(el)!.set(key, value);
 };
 
-export function inject<T>(key: InjectionKey<T> | string | symbol): T | undefined;
-export function inject<T>(key: InjectionKey<T> | string | symbol, fallback: T): T;
-export function inject<T>(key: InjectionKey<T> | string | symbol, ...rest: [T?]): T | undefined {
+export function inject<T>(key: InjectionKey<T>): T | undefined;
+export function inject<T>(key: InjectionKey<T>, fallback: T): T;
+export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
   let node: Node | null = currentElementOrThrow();
 
   while (node) {
@@ -51,7 +51,7 @@ export function inject<T>(key: InjectionKey<T> | string | symbol, ...rest: [T?])
   return rest.length > 0 ? rest[0] : undefined;
 }
 
-export const injectStrict = <T>(key: InjectionKey<T> | string | symbol): T => {
+export const injectStrict = <T>(key: InjectionKey<T>): T => {
   const resolved = inject<T>(key);
 
   if (resolved !== undefined) return resolved;
@@ -77,10 +77,16 @@ type SyncAriaOptions = {
   autoCleanup?: boolean;
 };
 
-const normalizeKey = (key: string, forceAriaPrefix = true): string => {
+const toAriaAttr = (key: string): string => {
   if (key === 'role' || key.startsWith('aria-')) return key;
 
-  return key.startsWith('aria') ? `aria-${key.slice(4).toLowerCase()}` : forceAriaPrefix ? `aria-${key}` : key;
+  return key.startsWith('aria') ? `aria-${key.slice(4).toLowerCase()}` : `aria-${key}`;
+};
+
+const toHostAttr = (key: string): string => {
+  if (key === 'role' || key.startsWith('aria-')) return key;
+
+  return key.startsWith('aria') ? `aria-${key.slice(4).toLowerCase()}` : key;
 };
 
 const setA11yAttr = (target: Element, key: string, value: string | number | boolean | null | undefined): void => {
@@ -110,7 +116,7 @@ export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaO
   const disposers: Array<() => void> = [];
 
   for (const [rawKey, rawValue] of Object.entries(config)) {
-    const key = normalizeKey(rawKey);
+    const key = toAriaAttr(rawKey);
 
     if (typeof rawValue === 'function') {
       const getter = rawValue as () => string | number | boolean | null | undefined;
@@ -157,33 +163,28 @@ export type ComponentSlots = {
 export const createSlots = (): ComponentSlots => {
   const host = currentElementOrThrow();
 
-  const presenceSignals = new Map<string, Signal<boolean>>();
-  const elementSignals = new Map<string, Signal<Element[]>>();
+  type SlotEntry = {
+    elements: Signal<Element[]>;
+    presence: Signal<boolean>;
+  };
+
+  const slotSignals = new Map<string, SlotEntry>();
   const slotNodesByName = new Map<string, Set<HTMLSlotElement>>();
   const slotCleanupMap = new Map<HTMLSlotElement, () => void>();
 
-  const ensurePresenceSignal = (name: string): Signal<boolean> => {
+  const ensureSlotEntry = (name: string): SlotEntry => {
     const normalized = normalizeSlotName(name);
-    let s = presenceSignals.get(normalized);
+    let entry = slotSignals.get(normalized);
 
-    if (!s) {
-      s = signal(false);
-      presenceSignals.set(normalized, s);
+    if (!entry) {
+      entry = {
+        elements: signal<Element[]>([]),
+        presence: signal(false),
+      };
+      slotSignals.set(normalized, entry);
     }
 
-    return s;
-  };
-
-  const ensureElementSignal = (name: string): Signal<Element[]> => {
-    const normalized = normalizeSlotName(name);
-    let s = elementSignals.get(normalized);
-
-    if (!s) {
-      s = signal<Element[]>([]);
-      elementSignals.set(normalized, s);
-    }
-
-    return s;
+    return entry;
   };
 
   const areElementsEqual = (prev: Element[], next: Element[]): boolean => {
@@ -207,14 +208,13 @@ export const createSlots = (): ComponentSlots => {
       }
     }
 
-    const elements = ensureElementSignal(normalized);
+    const entry = ensureSlotEntry(normalized);
 
-    if (!areElementsEqual(elements.value, assigned)) elements.value = assigned;
+    if (!areElementsEqual(entry.elements.value, assigned)) entry.elements.value = assigned;
 
     const hasElements = assigned.length > 0;
-    const presence = ensurePresenceSignal(normalized);
 
-    if (presence.value !== hasElements) presence.value = hasElements;
+    if (entry.presence.value !== hasElements) entry.presence.value = hasElements;
   };
 
   const bindSlot = (slotEl: HTMLSlotElement): void => {
@@ -247,9 +247,6 @@ export const createSlots = (): ComponentSlots => {
     }
   };
 
-  ensurePresenceSignal(SLOT_DEFAULT);
-  ensureElementSignal(SLOT_DEFAULT);
-
   // setup() runs before the template is rendered, so bind once now (if any slots
   // already exist) and schedule another pass after first render.
   bindAllSlots();
@@ -266,8 +263,8 @@ export const createSlots = (): ComponentSlots => {
   });
 
   return {
-    elements: (name?: string) => ensureElementSignal(normalizeSlotName(name)),
-    has: (name?: string) => ensurePresenceSignal(normalizeSlotName(name)),
+    elements: (name?: string) => ensureSlotEntry(normalizeSlotName(name)).elements,
+    has: (name?: string) => ensureSlotEntry(normalizeSlotName(name)).presence,
   };
 };
 
@@ -326,7 +323,7 @@ export const createHost = (): ComponentHost => {
 
     if (config.attr) {
       for (const [key, value] of Object.entries(config.attr)) {
-        const name = normalizeKey(key, false);
+        const name = toHostAttr(key);
         const dispose = applyAttribute(el, name, value);
 
         if (dispose) disposers.push(dispose);

@@ -112,10 +112,20 @@ export function parseQuery(queryString: string): QueryParams {
   const search = new URLSearchParams(queryString);
   const out: QueryParams = {};
 
-  for (const key of new Set(search.keys())) {
-    const values = search.getAll(key);
+  for (const [key, value] of search.entries()) {
+    const existing = out[key];
 
-    out[key] = values.length === 1 ? values[0]! : values;
+    if (existing === undefined) {
+      out[key] = value;
+      continue;
+    }
+
+    if (Array.isArray(existing)) {
+      existing.push(value);
+      continue;
+    }
+
+    out[key] = [existing, value];
   }
 
   return out;

@@ -1,6 +1,6 @@
 ---
 title: Workit — Usage Guide
-description: How to use workit for task functions, single workers, pools, timeouts, AbortSignal, transferables, status, and testing.
+description: How to use workit for task functions, single workers, pools, maxQueue back-pressure, timeouts, AbortSignal, transferables, status, and testing.
 ---
 
 ::: tip
@@ -78,12 +78,35 @@ pool.dispose();
 const autoPool = createWorker<number, number>((n) => n ** 2, { concurrency: 'auto' });
 ```
 
-## Timeouts
+## Queue Back-Pressure (`maxQueue`)
 
-Set `timeout` (in milliseconds) to automatically reject tasks that run too long. A `TaskTimeoutError` is thrown.
+Set `maxQueue` to cap how many tasks can wait in the queue. When the queue is full, `run()` rejects with `WorkerError` code `'queue_full'`.
 
 ```ts
-import { createWorker, TaskTimeoutError } from '@vielzeug/workit';
+import { createWorker, WorkerError } from '@vielzeug/workit';
+
+const worker = createWorker<number, number>((n) => n * 2, {
+  concurrency: 1,
+  maxQueue: 100,
+});
+
+try {
+  await worker.run(1);
+} catch (error) {
+  if (error instanceof WorkerError && error.code === 'queue_full') {
+    console.error('Back-pressure triggered, queue is full');
+  }
+}
+```
+
+Use `maxQueue: 'auto'` to default to `concurrency * 2`.
+
+## Timeouts
+
+Set `timeout` (in milliseconds) to automatically reject tasks that run too long. A `WorkerError` with code `'timeout'` is thrown.
+
+```ts
+import { createWorker, WorkerError } from '@vielzeug/workit';
 
 const worker = createWorker<number, number>((ms) => new Promise((resolve) => setTimeout(() => resolve(ms), ms)), {
   timeout: 1000,
@@ -92,7 +115,7 @@ const worker = createWorker<number, number>((ms) => new Promise((resolve) => set
 try {
   await worker.run(5000); // will reject after 1 s
 } catch (err) {
-  if (err instanceof TaskTimeoutError) {
+  if (err instanceof WorkerError && err.code === 'timeout') {
     console.error('Task timed out');
   }
 }
@@ -185,6 +208,51 @@ console.log(worker.status); // 'idle'
 worker.dispose();
 console.log(worker.status); // 'terminated'
 ```
+
+## Stats
+
+Use lightweight counters for visibility and load monitoring:
+
+- `completed`: successful tasks since creation
+- `utilization`: active slot ratio from `0` to `1`
+- `size`: queued task count
+
+```ts
+import { createWorker } from '@vielzeug/workit';
+
+const pool = createWorker<number, number>((n) => n + 1, { concurrency: 4 });
+
+console.log(pool.completed); // 0
+console.log(pool.utilization); // 0
+console.log(pool.size); // 0
+
+const p = pool.run(1);
+console.log(pool.utilization); // > 0 while running
+
+await p;
+console.log(pool.completed); // 1
+```
+
+## Graceful Shutdown (`close`)
+
+Use `close()` to finish queued/in-flight work before terminating workers:
+
+```ts
+import { createWorker } from '@vielzeug/workit';
+
+const worker = createWorker<number, number>((n) => n * 2, { concurrency: 1 });
+
+const p1 = worker.run(1);
+const p2 = worker.run(2);
+
+await worker.close();
+
+await p1;
+await p2;
+console.log(worker.status); // 'terminated'
+```
+
+Use `dispose()` for immediate forceful termination.
 
 ## Runtime Availability
 

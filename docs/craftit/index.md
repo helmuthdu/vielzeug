@@ -49,9 +49,10 @@ define('my-counter', {
 
 - Signal-first runtime with `signal`, `computed`, `watch`, `batch`, and related stateit APIs
 - Functional component authoring via `define(tag, { props, setup, styles, formAssociated })`
+- Props via `prop.*` helpers or raw `PropDef` objects; shared bundles can type against `PropsDef<...>`
 - Setup returns a template function: `return () => html\`...\``
 - Lifecycle hooks: `onMounted()`, `onCleanup()`, `onElement()`, `effect()`
-- Directives: `each`, `classMap`, `raw`
+- Directives: `each`, `classMap`, `styleMap`, `guard`, `when`, `live`, `until`, `raw`
 - Host bindings: `host.attr`, `host.class`, `host.style`, `host.prop`, `host.on`, `host.bind`
 - Form-associated helpers with `defineField()`
 - Headless controls (`@vielzeug/craftit/controls`)

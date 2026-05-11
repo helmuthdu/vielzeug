@@ -6,7 +6,7 @@ description: 'Build blog permissions with allow/deny rules, ownership checks, an
 ## Blog Roles
 
 ```ts
-import { ANONYMOUS, createPermit } from '@vielzeug/permit';
+import { ANONYMOUS, createPermit, owns } from '@vielzeug/permit';
 
 const permit = createPermit<'read' | 'create' | 'update' | 'delete', { authorId: string }>();
 
@@ -18,7 +18,7 @@ permit
     resource: 'posts',
     action: 'update',
     effect: 'allow',
-    when: ({ principal, data }) => principal.id === data?.authorId,
+    when: owns('authorId'),
   })
   .set({ role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' })
   .set({ role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' });

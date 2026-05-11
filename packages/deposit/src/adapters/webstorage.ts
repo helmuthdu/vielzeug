@@ -1,8 +1,7 @@
-import type { AnySchema, KeyOf, RecordOf } from '../types';
+import type { Adapter, AnySchema, KeyOf, RecordOf } from '../types';
 
 import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
 import { AdapterCore } from './adapter-core';
-import { resolveRecordKey } from './resolve-key';
 
 /* -------------------- WebStorageAdapter -------------------- */
 
@@ -14,7 +13,7 @@ export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
   private readonly dbName: string;
   private readonly getStorage: () => Storage;
   private readonly prefixCache: Map<string, string>;
-  private readonly schema: S;
+  protected readonly schema: S;
   private readonly storageLabel: string;
 
   constructor(dbName: string, schema: S, getStorage: () => Storage, storageLabel: string) {
@@ -24,6 +23,23 @@ export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
     this.prefixCache = new Map();
     this.getStorage = getStorage;
     this.storageLabel = storageLabel;
+
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      const dbPrefix = `${encodeURIComponent(this.dbName)}~`;
+
+      window.addEventListener('storage', (event: StorageEvent) => {
+        if (!event.key || !event.key.startsWith(dbPrefix)) return;
+
+        const tail = event.key.slice(dbPrefix.length);
+        const end = tail.indexOf('~');
+
+        if (end === -1) return;
+
+        const tableName = decodeURIComponent(tail.slice(0, end)) as keyof S;
+
+        this.notify(tableName);
+      });
+    }
   }
 
   private get storage(): Storage {
@@ -65,13 +81,16 @@ export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
     return keys;
   }
 
-  async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
+  private tableKeys<K extends keyof S>(table: K): string[] {
     const prefix = this.tablePrefix(table);
+
+    return this.storageKeys().filter((k) => k.startsWith(prefix));
+  }
+
+  async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
     const records: RecordOf<S, K>[] = [];
 
-    for (const k of this.storageKeys()) {
-      if (!k.startsWith(prefix)) continue;
-
+    for (const k of this.tableKeys(table)) {
       const value = this.readEntry<RecordOf<S, K>>(k);
 
       if (value !== undefined) records.push(value);
@@ -81,21 +100,23 @@ export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
   }
 
   async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
-    const key = resolveRecordKey(this.schema, table, value);
+    const key = this.resolveRecordKey(table, value);
 
     this.writeItem(this.storageKey(table, String(key)), wrapStored(value, ttl));
+    this.notify(table);
   }
 
   async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<void> {
     this.storage.removeItem(this.storageKey(table, String(key)));
+    this.notify(table);
   }
 
   async deleteAll<K extends keyof S>(table: K): Promise<void> {
-    const prefix = this.tablePrefix(table);
-
-    for (const k of this.storageKeys()) {
-      if (k.startsWith(prefix)) this.storage.removeItem(k);
+    for (const k of this.tableKeys(table)) {
+      this.storage.removeItem(k);
     }
+
+    this.notify(table);
   }
 
   private readEntry<T extends Record<string, unknown>>(storageKey: string): T | undefined {
@@ -143,4 +164,12 @@ export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
   private storageKey<K extends keyof S>(table: K, key: string): string {
     return this.tablePrefix(table) + encodeURIComponent(key);
   }
+}
+
+export function createLocalStorage<S extends AnySchema>(options: { dbName: string; schema: S }): Adapter<S> {
+  return new WebStorageAdapter(options.dbName, options.schema, () => localStorage, 'localStorage');
+}
+
+export function createSessionStorage<S extends AnySchema>(options: { dbName: string; schema: S }): Adapter<S> {
+  return new WebStorageAdapter(options.dbName, options.schema, () => sessionStorage, 'sessionStorage');
 }

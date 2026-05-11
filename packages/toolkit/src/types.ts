@@ -1,7 +1,7 @@
 /** A function that tears down a subscription or listener registration. */
 export type Unsubscribe = () => void;
 
-export type Fn = (...args: any[]) => any;
+export type Fn<Args extends unknown[] = unknown[], Result = unknown> = (...args: Args) => Result;
 
 export type Obj = Record<string, unknown>;
 
@@ -10,7 +10,3 @@ export type Predicate<T> = (value: T, index: number, array: readonly T[]) => boo
 export type Sorter<T> = (a: T, b: T) => number;
 
 export type Primitive = string | number | boolean;
-
-// #region Selector
-export type Selector<T> = keyof T | ((item: T) => Primitive);
-// #endregion Selector

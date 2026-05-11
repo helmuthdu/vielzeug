@@ -1,30 +1,31 @@
 ---
-title: configure
-description: Preconfigure all arguments except the first for composition-friendly unary functions.
+title: partial
+description: Preconfigure leading arguments for composition-friendly functions.
 ---
 
-# configure
+# partial
 
-`configure` adapts a multi-argument function into a unary function by pre-filling every argument except the first.
+`partial` pre-fills leading arguments and returns a new function.
 
 ## Signature
 
 ```ts
-configure<F extends Fn>(callback: F, ...args: RemoveFirstParameter<F>): (collection: FirstParameter<F>) => ReturnType<F>
+partial<F extends Fn>(fn: F, ...args: unknown[]): (...rest: unknown[]) => ReturnType<F>
 ```
 
 ## Example
 
 ```ts
-import { configure, select } from '@vielzeug/toolkit';
+import { partial } from '@vielzeug/toolkit';
 
-const doubleAll = configure(select, (n: number) => n * 2);
+const add = (a: number, b: number) => a + b;
+const addTwo = partial(add, 2);
 
-const result = doubleAll([1, 2, 3]);
-// [2, 4, 6]
+const result = addTwo(3);
+// 5
 ```
 
 ## Why Use It?
 
-- Great for `pipe`/`compose` flows where unary functions are easiest to chain.
+- Great for `pipe`/`compose` flows where partially applied functions are easiest to chain.
 - Keeps call sites clear when reusing callbacks with the same fixed arguments.

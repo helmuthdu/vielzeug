@@ -34,7 +34,15 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
     const renderItems =
       virtualItems.length > 0
         ? virtualItems
-        : currentOptions.map((_, index) => ({ height: 36, index, top: index * 36 }) satisfies VirtualItem);
+        : currentOptions.map(
+            (_, index) =>
+              ({
+                end: (index + 1) * 36,
+                index,
+                size: 36,
+                start: index * 36,
+              }) satisfies VirtualItem,
+          );
 
     for (const item of renderItems) {
       const option = currentOptions[item.index];
@@ -50,7 +58,7 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
       optionElement.setAttribute('data-option-value', option.value);
       optionElement.setAttribute('aria-selected', String(isSelected));
       optionElement.setAttribute('aria-disabled', String(option.disabled));
-      optionElement.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
+      optionElement.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);`;
       optionElement.toggleAttribute('data-focused', focused === item.index);
       optionElement.toggleAttribute('data-selected', isSelected);
       optionElement.toggleAttribute('data-disabled', option.disabled);
@@ -121,7 +129,7 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
     estimateSize: 36,
     getListElement: deps.getListboxElement,
     getScrollElement: deps.getDropdownElement,
-    overscan: 4,
+    overscan: { end: 4, start: 4 },
     render: ({ items, listEl, virtualItems }) => {
       currentOptions = items;
       cachedListbox = listEl;
@@ -131,8 +139,10 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
 
   function setupVirtualizer(options: ComboboxOptionItem[], isOpen: boolean) {
     currentOptions = options;
-    domVirtualList.setActive(isOpen);
+    cachedListbox = null;
+    domVirtualList.destroy();
     domVirtualList.setItems(currentOptions);
+    domVirtualList.setActive(isOpen);
   }
 
   return { domVirtualList, setupVirtualizer, updateRenderedItemState };

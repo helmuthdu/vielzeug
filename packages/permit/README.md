@@ -17,7 +17,7 @@ pnpm add @vielzeug/permit
 ## Quick Start
 
 ```ts
-import { ANONYMOUS, WILDCARD, createPermit } from '@vielzeug/permit';
+import { ANONYMOUS, WILDCARD, createPermit, owns } from '@vielzeug/permit';
 
 const permit = createPermit<'read' | 'update', { authorId: string }>();
 
@@ -28,7 +28,7 @@ permit
     resource: 'posts',
     action: 'update',
     effect: 'allow',
-    when: ({ principal, data }) => principal.id === data?.authorId,
+    when: owns('authorId'),
   })
   .set({ role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 })
   .set({ role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' })
@@ -36,11 +36,13 @@ permit
 
 const principal = { id: 'u1', roles: ['editor'] };
 
-const can = permit.forUser(principal);
+const bound = permit.forUser(principal, true);
 
 permit.can(principal, 'posts', 'read');
 permit.can(principal, 'posts', 'update', { authorId: 'u1' });
-can('status', 'read');
+bound.can('status', 'read');
+bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
+bound.explain('posts', 'delete');
 ```
 
 ## Features
@@ -50,7 +52,12 @@ can('status', 'read');
 - Deterministic precedence (priority -> specificity -> deny-overrides)
 - Anonymous support via `null` principal and `ANONYMOUS` role constant
 - Wildcards for role/resource/action via `WILDCARD`
-- User-bound checks with `forUser()`
+- Multi-action checks with `canAll()` and `canAny()`
+- Action filtering with `allowedActions()`
+- Explainable denials with `explain()` and deny reasons
+- User-bound checks with `forUser(principal, cache?)`
+- Ownership helper via `owns(attributeKey)`
+- Optional principal attributes for ABAC checks
 - Auditable decisions through logger context
 - Zero dependencies
 
@@ -59,10 +66,15 @@ can('status', 'read');
 - `createPermit<TAction, TData>(options?)`
 - `permit.set(rule | rules)`
 - `permit.can(principal, resource, action, data?)`
-- `permit.forUser(principal)(resource, action, data?)`
+- `permit.canAll(principal, resource, actions, data?)`
+- `permit.canAny(principal, resource, actions, data?)`
+- `permit.allowedActions(principal, resource, data?)`
+- `permit.explain(principal, resource, action, data?)`
+- `permit.forUser(principal, cache?) -> BoundPermit`
 - `permit.rules()`
 - `permit.replace(rules)`
 - `permit.clear()`
+- `owns(attributeKey)`
 
 ## Decision Model
 
@@ -87,10 +99,15 @@ Permit applies one deterministic model:
 | `createPermit({ initial?, logger? })` | Create a permit instance |
 | `permit.set(rule | rules)` | Append one or more rules |
 | `permit.can(principal, resource, action, data?)` | Evaluate one permission check |
-| `permit.forUser(principal)` | Create a user-bound checker function |
+| `permit.canAll(principal, resource, actions, data?)` | Require all actions to pass |
+| `permit.canAny(principal, resource, actions, data?)` | Require at least one action to pass |
+| `permit.allowedActions(principal, resource, data?)` | List allowed concrete actions |
+| `permit.explain(principal, resource, action, data?)` | Return structured decision diagnostics |
+| `permit.forUser(principal, cache?)` | Create a user-bound permit object |
 | `permit.rules()` | Get a snapshot of current rules |
 | `permit.replace(rules)` | Replace the entire rule set |
 | `permit.clear()` | Remove all rules |
+| `owns(attributeKey)` | Create an ownership predicate |
 
 ## Documentation
 

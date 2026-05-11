@@ -261,6 +261,7 @@ describe('Navigation', () => {
         expect.objectContaining({
           location: {
             hash: '',
+            historyState: null,
             pathname: '/items/42',
             query: { q: 'test' },
           },

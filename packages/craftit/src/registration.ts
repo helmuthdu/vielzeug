@@ -1,10 +1,36 @@
-import { type CleanupFn, untrack } from '@vielzeug/stateit';
+import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@vielzeug/stateit';
 
 import { CRAFTIT_ERRORS } from './errors';
-import { type CSSResult, extractResult, type HTMLResult, loadStylesheet, runAll } from './internal';
-import { isReflecting, propRegistry } from './props';
-import { type OnMountedCallback, type RuntimeScope, withCurrentElement, withRuntimeScope } from './runtime';
-import { applyBindingsInContainer, parseHTML, type RegisterCleanup } from './template-bindings';
+import { createHost, createSlots, type ComponentHost, type ComponentSlots } from './host';
+import {
+  createEmitFn,
+  type CSSResult,
+  type EmitFn,
+  extractResult,
+  type HTMLResult,
+  loadStylesheet,
+  toKebab,
+} from './internal';
+import {
+  createProps,
+  isReflecting,
+  prop,
+  propRegistry,
+  type InferPropsFromDefs,
+  type InferPropsSignals,
+  type PropDef,
+  type PropInputDefs,
+  type PropOptions,
+  type PropsDef,
+} from './props';
+import {
+  type OnMountedCallback,
+  type RuntimeScope,
+  type UpdatedCallbackBox,
+  withCurrentElement,
+  withRuntimeScope,
+} from './runtime';
+import { applyBindingsInContainer, parseHTML } from './template-bindings';
 import { applyHtmlBinding } from './template-html';
 
 export type ComponentRegistrationOptions = {
@@ -20,19 +46,16 @@ export type ComponentRegistrationOptions = {
 
 export type ComponentTemplate = () => HTMLResult;
 
-type ComponentCleanupState = {
-  cleanups: CleanupFn[];
-  el: HTMLElement;
+type ComponentState = {
   mountCallbacks: OnMountedCallback[];
-  mountToken: number;
-  styles?: (string | CSSStyleSheet | CSSResult)[];
-};
-
-type ComponentLifecycleState = {
   mountedCallbacksRan: boolean;
+  mountToken: number;
+  scope: Scope;
   setupDone: boolean;
+  styles?: (string | CSSStyleSheet | CSSResult)[];
   templateMounted: boolean;
   templateResult: HTMLResult | null;
+  updated: UpdatedCallbackBox;
 };
 
 class BaseElement extends HTMLElement {
@@ -44,8 +67,7 @@ class BaseElement extends HTMLElement {
   static observedAttributes: string[] = [];
 
   shadow: ShadowRoot;
-  private _lifecycle: ComponentLifecycleState;
-  private _state: ComponentCleanupState;
+  private _component: ComponentState;
 
   constructor() {
     super();
@@ -53,24 +75,22 @@ class BaseElement extends HTMLElement {
     const options = (this.constructor as typeof BaseElement)._options;
 
     this.shadow = this.attachShadow({ mode: 'open', ...options?.shadow });
-    this._lifecycle = {
+    this._component = {
+      mountCallbacks: [],
       mountedCallbacksRan: false,
+      mountToken: 0,
+      scope: _scope(),
       setupDone: false,
+      styles: options?.styles,
       templateMounted: false,
       templateResult: null,
-    };
-    this._state = {
-      cleanups: [],
-      el: this,
-      mountCallbacks: [],
-      mountToken: 0,
-      styles: options?.styles,
+      updated: { callbacks: [], queued: false },
     };
   }
 
   connectedCallback(): void {
     untrack(() => {
-      if (!this._lifecycle.setupDone) this._runSetup();
+      if (!this._component.setupDone) this._runSetup();
 
       this._init();
     });
@@ -98,10 +118,10 @@ class BaseElement extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    this._state.mountToken++;
-    runAll(this._state.cleanups);
-    this._state.cleanups = [];
-    this._lifecycle.templateMounted = false;
+    this._component.mountToken++;
+    this._component.scope.dispose();
+    this._component.scope = _scope();
+    this._component.templateMounted = false;
   }
 
   private _handleError(err: unknown): void {
@@ -111,63 +131,79 @@ class BaseElement extends HTMLElement {
   }
 
   private _runSetup(): void {
+    // Temporary box collects updated-callbacks registered during setup; merged
+    // into this._component.updated after setup succeeds.
+    const setupUpdated: UpdatedCallbackBox = { callbacks: [], queued: false };
     const setupScope: RuntimeScope = {
-      cleanups: [],
+      element: this,
       mountCallbacks: [],
+      updated: setupUpdated,
     };
 
     try {
-      const template = withRuntimeScope(setupScope, () =>
-        withCurrentElement(this, () => (this.constructor as typeof BaseElement)._setup()),
-      );
+      this._component.scope.run(() => {
+        const template = withRuntimeScope(setupScope, () =>
+          withCurrentElement(this, () => (this.constructor as typeof BaseElement)._setup()),
+        );
 
-      this._lifecycle.templateResult = withRuntimeScope(setupScope, () => withCurrentElement(this, () => template()));
+        this._component.templateResult = withRuntimeScope(setupScope, () => withCurrentElement(this, () => template()));
+      });
 
-      this._state.cleanups.push(...setupScope.cleanups);
-      this._state.mountCallbacks.push(...setupScope.mountCallbacks);
-      this._lifecycle.setupDone = true;
+      this._component.mountCallbacks.push(...setupScope.mountCallbacks);
+      this._component.updated.callbacks.push(...setupUpdated.callbacks);
+      this._component.setupDone = true;
     } catch (err) {
       this._handleError(err);
     }
   }
 
   private _init(): void {
-    const { styles } = this._state;
+    const { styles } = this._component;
 
     if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
 
-    if (!this._lifecycle.templateMounted && this._lifecycle.templateResult != null) {
-      const { bindings, html: htmlString } = extractResult(this._lifecycle.templateResult);
-      const registerCleanup: RegisterCleanup = (fn) => this._state.cleanups.push(fn);
+    if (!this._component.templateMounted && this._component.templateResult != null) {
+      const { bindings, html: htmlString } = extractResult(this._component.templateResult);
 
       this.shadow.replaceChildren(parseHTML(htmlString));
-      this._lifecycle.templateMounted = true;
+      this._component.templateMounted = true;
 
       if (bindings.length) {
-        applyBindingsInContainer(this.shadow, bindings, registerCleanup, {
-          onHtml: (binding) => applyHtmlBinding(this.shadow, binding, registerCleanup),
+        this._component.scope.run(() => {
+          applyBindingsInContainer(this.shadow, bindings, _onCleanup, {
+            onHtml: (binding) => applyHtmlBinding(this.shadow, binding, _onCleanup),
+          });
         });
       }
     }
 
-    if (!this._lifecycle.mountedCallbacksRan && this._state.mountCallbacks.length > 0) {
-      this._lifecycle.mountedCallbacksRan = true;
+    if (!this._component.mountedCallbacksRan && this._component.mountCallbacks.length > 0) {
+      this._component.mountedCallbacksRan = true;
 
-      const token = ++this._state.mountToken;
+      const token = ++this._component.mountToken;
 
       queueMicrotask(() => {
-        if (!this.isConnected || token !== this._state.mountToken) return;
+        if (!this.isConnected || token !== this._component.mountToken) return;
 
         try {
-          for (const callback of this._state.mountCallbacks) {
-            const mountScope: RuntimeScope = {
-              cleanups: this._state.cleanups,
-              mountCallbacks: [],
-            };
+          for (const callback of this._component.mountCallbacks) {
+            this._component.scope.run(() => {
+              withRuntimeScope(
+                {
+                  element: this,
+                  mountCallbacks: [],
+                  // Share the same updated box so effects inside mount callbacks
+                  // schedule on the same queued flag as the component itself.
+                  updated: this._component.updated,
+                },
+                () =>
+                  withCurrentElement(this, () => {
+                    const cleanup = callback();
 
-            const cleanup = withRuntimeScope(mountScope, () => withCurrentElement(this, () => callback()));
-
-            if (typeof cleanup === 'function') this._state.cleanups.push(cleanup);
+                    if (typeof cleanup === 'function') _onCleanup(cleanup);
+                  }),
+              );
+            });
           }
         } catch (err) {
           this._handleError(err);
@@ -177,12 +213,11 @@ class BaseElement extends HTMLElement {
   }
 }
 
-/** @internal — use define() instead. */
-export function registerComponent(
+const defineComponent = (
   tag: string,
   setup: () => ComponentTemplate,
   options: ComponentRegistrationOptions = {},
-): string {
+): string => {
   if (!tag) throw new Error(CRAFTIT_ERRORS.defineRequiresTag);
 
   if (customElements.get(tag)) {
@@ -199,4 +234,66 @@ export function registerComponent(
   customElements.define(tag, Element);
 
   return tag;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUBLIC COMPONENT AUTHORING API (absorbed from component.ts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { prop };
+export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropOptions, PropsDef };
+
+/**
+ * Setup context passed as the second argument to the component setup function.
+ */
+export type SetupContextBag<Emits extends Record<string, unknown> = Record<string, unknown>> = {
+  emit: EmitFn<Emits>;
+  host: ComponentHost;
+  slots: ComponentSlots;
+};
+
+export type ComponentDefinition<
+  Props extends Record<string, unknown> = Record<never, never>,
+  Emits extends Record<string, unknown> = Record<string, never>,
+> = {
+  /** Enable form association for the custom element */
+  formAssociated?: boolean;
+  /** Component properties and their metadata */
+  props?: PropsDef<Props>;
+  /** Main setup function. Props are the first positional parameter, context bag is second. Returns a template function. */
+  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits>) => ComponentTemplate;
+  /** Shadow DOM configuration (mode is always 'open') */
+  shadow?: Omit<ShadowRootInit, 'mode'>;
+  /** Component-specific styles */
+  styles?: (string | CSSStyleSheet | CSSResult)[];
+};
+
+const createSetupProps = <Props extends Record<string, unknown>>(
+  defs: PropsDef<Props> | undefined,
+): InferPropsSignals<Props> => {
+  if (!defs) return {} as InferPropsSignals<Props>;
+
+  return createProps(defs) as InferPropsSignals<Props>;
+};
+
+export function define<
+  Props extends Record<string, unknown> = Record<never, never>,
+  Emits extends Record<string, unknown> = Record<string, never>,
+>(tag: string, definition: ComponentDefinition<Props, Emits>): string {
+  const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
+
+  const observedAttrs = propDefs ? Object.keys(propDefs).map(toKebab) : [];
+
+  return defineComponent(
+    tag,
+    () => {
+      const props = createSetupProps(propDefs);
+      const host = createHost();
+      const emit = createEmitFn<Emits>();
+      const slots = createSlots();
+
+      return setup(props, { emit, host, slots });
+    },
+    { formAssociated, observedAttrs, shadow: shadowOptions, styles },
+  );
 }

@@ -3,27 +3,25 @@ title: Locale Formatting
 description: Formatting times for different locales and languages with Timit.
 ---
 
-# Locale Formatting
-
 Format times respecting user locale, language, and timezone.
 
 ## Basic Locale Formatting
 
 ```ts
-import { timit } from '@vielzeug/timit';
+import { formatHuman, formatISO, formatRange } from '@vielzeug/timit';
 
 const time = '2026-03-21T10:15:30Z';
 
 // English (US)
-timit.format(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
+formatHuman(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
 // → "3/21/2026, 10:15 AM"
 
 // German
-timit.format(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' });
+formatHuman(time, { pattern: 'short', locale: 'de-DE', tz: 'Europe/Berlin' });
 // → "21.3.2026, 11:15"
 
 // Japanese
-timit.format(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
+formatHuman(time, { pattern: 'short', locale: 'ja-JP', tz: 'Asia/Tokyo' });
 // → "2026/3/21 19:15"
 ```
 
@@ -35,11 +33,11 @@ const time = '2026-03-21T10:15:30Z';
 const patterns = ['short', 'medium', 'long', 'date-only', 'time-only'] as const;
 
 for (const pattern of patterns) {
-  const formatted = timit.format(time, { pattern, locale: 'en-GB', tz: 'UTC' });
+  const formatted = formatHuman(time, { pattern, locale: 'en-GB', tz: 'UTC' });
   console.log(`${pattern.padEnd(10)} ${formatted}`);
 }
 
-console.log(`iso       ${timit.formatIso(time)}`);
+console.log(`iso       ${formatISO(time)}`);
 
 // Output:
 // short      21/03/2026, 10:15
@@ -55,7 +53,7 @@ console.log(`iso       ${timit.formatIso(time)}`);
 Use the `intl` option for custom `Intl.DateTimeFormatOptions`:
 
 ```ts
-timit.format(time, {
+formatHuman(time, {
   locale: 'de-DE',
   tz: 'Europe/Berlin',
   pattern: 'short',
@@ -75,7 +73,7 @@ Format a span of time:
 const start = '2026-03-21T10:00:00Z';
 const end = '2026-03-21T12:00:00Z';
 
-timit.formatRange(start, end, {
+formatRange(start, end, {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
@@ -87,7 +85,7 @@ timit.formatRange(start, end, {
 
 ```ts
 function formatUserTime(time: string, userLocale: string, userTz: string) {
-  return timit.format(time, {
+  return formatHuman(time, {
     pattern: 'long',
     locale: userLocale,
     tz: userTz,

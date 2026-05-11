@@ -3,8 +3,6 @@ title: DST-safe Arithmetic
 description: Handling daylight-saving time transitions with Timit arithmetic.
 ---
 
-# DST-safe Arithmetic
-
 When adding or subtracting time, DST transitions are handled automatically.
 
 ## Spring Forward (Gap)
@@ -12,13 +10,13 @@ When adding or subtracting time, DST transitions are handled automatically.
 In North America, on March 8, 2026, at 2:00 AM EST, clocks spring forward to 3:00 AM EDT.
 
 ```ts
-import { timit } from '@vielzeug/timit';
+import { difference, shift, toInstant, toZoned } from '@vielzeug/timit';
 
 // One hour before the transition
 const before = '2026-03-08T01:30:00-05:00[America/New_York]';
 
 // Add 1 hour — should jump to 3:30 EDT (not 2:30)
-const after = timit.add(before, { hours: 1 });
+const after = shift(before, { hours: 1 });
 
 console.log(after.toString());
 // → 2026-03-08T03:30:00-04:00[America/New_York]
@@ -30,10 +28,10 @@ In North America, on November 1, 2026, at 2:00 AM EDT, clocks fall back to 1:00 
 
 ```ts
 // First occurrence: 1:30 AM EDT
-const first = timit.toInstant('2026-11-01T01:30:00-04:00[America/New_York]');
+const first = toInstant('2026-11-01T01:30:00-04:00[America/New_York]');
 
 // Convert to different representation
-const zoned = timit.toZoned(first, { tz: 'America/New_York', when: 'earlier' });
+const zoned = toZoned(first, { tz: 'America/New_York', when: 'earlier' });
 console.log(zoned.toString());
 // → 2026-11-01T01:30:00-04:00[America/New_York] (EDT, first occurrence)
 ```
@@ -47,7 +45,7 @@ Without DST awareness, you'd calculate incorrect times:
 const wrongReminder = new Date(meeting.getTime() - 30 * 60_000);
 
 // ✅ Correct: Timit handles DST
-const rightReminder = timit.add(meeting, { minutes: -30 });
+const rightReminder = shift(meeting, { minutes: -30 }, { tz: 'America/New_York' });
 ```
 
 ## Compare Instants Across DST
@@ -56,6 +54,6 @@ const rightReminder = timit.add(meeting, { minutes: -30 });
 const beforeDst = '2026-03-08T01:30:00-05:00[America/New_York]';
 const afterDst = '2026-03-08T04:00:00-04:00[America/New_York]';
 
-const duration = timit.difference(beforeDst, afterDst);
+const duration = difference(beforeDst, afterDst, { tz: 'America/New_York' });
 console.log(duration.toString()); // PT2H30M — correct!
 ```

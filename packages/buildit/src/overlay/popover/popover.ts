@@ -150,7 +150,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
         placement: props.placement.value,
       });
 
-      if (panelEl) panelEl.dataset.placement = resolvedPlacement;
+      if (panelEl) panelEl.dataset.placement = resolvedPlacement.placement;
     }
     /** Show the panel and start auto-updating its position. */
     function showFloat() {

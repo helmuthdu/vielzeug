@@ -1,6 +1,6 @@
 # @vielzeug/deposit
 
-> Minimal typed browser storage with LocalStorage, SessionStorage, IndexedDB, and in-memory backends.
+> Minimal typed browser storage with LocalStorage, SessionStorage, Cookie, IndexedDB, and in-memory backends.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/deposit)](https://www.npmjs.com/package/@vielzeug/deposit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -36,7 +36,7 @@ const exists = await db.has('users', 1);
 
 ## Why Deposit?
 
-- One typed interface for LocalStorage, SessionStorage, IndexedDB, and in-memory
+- One typed interface for LocalStorage, SessionStorage, Cookie, IndexedDB, and in-memory
 - `table<T>()` schema factory — no schema type annotations
 - Compact query API for common filtering/sorting/pagination
 - TTL on writes with lazy expiration
@@ -49,6 +49,7 @@ const exists = await db.has('users', 1);
 
 - `createLocalStorage(options)`
 - `createSessionStorage(options)`
+- `createCookie(options)`
 - `createIndexedDB(options)`
 - `createMemory(options)`
 
@@ -60,13 +61,18 @@ const exists = await db.has('users', 1);
 
 - `get(table, key)`
 - `getAll(table)`
+- `forEach(table, fn)`
 - `has(table, key)`
+- `getOrPut(table, key, fallback, ttl?)`
 - `put(table, value, ttl?)`
 - `putAll(table, values, ttl?)`
+- `update(table, key, changes, ttl?)`
 - `delete(table, key)`
+- `deleteWhere(table, predicate)`
 - `deleteAll(table)`
 - `count(table)`
 - `query(table)`
+- `observe(table, listener)`
 
 ### IndexedDB-only
 
@@ -75,7 +81,7 @@ const exists = await db.has('users', 1);
 
 ### Transaction context methods
 
-- `get`, `getAll`, `has`, `put`, `putAll`, `delete`, `deleteAll`, `count`, `query`
+- `get`, `getAll`, `forEach`, `has`, `getOrPut`, `put`, `putAll`, `update`, `delete`, `deleteWhere`, `deleteAll`, `count`, `query`
 
 ### QueryBuilder methods
 
@@ -102,9 +108,12 @@ await db.put('sessions', { id: 's1', userId: 1 }, ttl.minutes(30));
 
 - Schema objects only declare the key field per table (`{ key: 'id' }`).
 - `count()` is TTL-aware and excludes expired records.
-- LocalStorage, SessionStorage, and Memory adapters do not expose transactions.
+- `createCookie()` is browser-only and best for small persisted state that should travel with requests.
+- `createLocalStorage`, `createSessionStorage`, and `createMemory` do not expose transactions.
 - Query operations run in memory on fetched table records.
 - `QueryBuilder.count()` ignores pagination and returns the full number of matching records.
+- `observe(table, listener)` emits an immediate snapshot, then updates after table mutations.
+- IndexedDB observers propagate across tabs/windows via `BroadcastChannel` when available.
 
 ## IndexedDB Transactions
 

@@ -98,6 +98,7 @@ const form = createForm({
 ```ts
 import { FormValidationError, SubmitError } from '@vielzeug/formit';
 
+// Option A: throw-based
 try {
   await form.submit(async (values) => {
     await fetch('/api/submit', {
@@ -115,11 +116,23 @@ try {
     throw error;
   }
 }
+
+// Option B: callback-based (no try/catch needed)
+await form.submit(
+  async (values) => {
+    await fetch('/api/submit', {
+      body: JSON.stringify(values),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+  },
+  (errors) => console.log('Validation failed:', errors),
+);
 ```
 
 Submit always touches all known fields and runs full validation before calling the handler.
 
-## Subscriptions
+## Subscriptions and Watch
 
 ```ts
 const stopForm = form.subscribeForm((state) => {
@@ -135,6 +148,10 @@ form.subscribeField('email', () => {}, { sync: true });
 
 stopEmail();
 stopForm();
+
+// watch: shorthand for subscribeField that only delivers the value
+const stopWatch = form.watch('email', (v) => updatePreview(v), { sync: true });
+stopWatch();
 ```
 
 ## Bind
@@ -159,7 +176,23 @@ fileInput.onchange = (event) => {
 };
 ```
 
-Global bind defaults:
+Global bind defaults via `mode`:
+
+```ts
+// mode pre-populates bindDefaults for all bind() calls
+const form = createForm({
+  mode: 'onBlur', // 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'
+  defaultValues: { email: '' },
+  validators: { email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined) },
+});
+
+// No per-field config needed — validateOnBlur is inherited from mode
+const email = form.bind('email');
+```
+
+Explicit `bindDefaults` always takes precedence over `mode`.
+
+Global bind defaults via `bindDefaults` (for fine-grained control):
 
 ```ts
 const formWithDefaults = createForm({
@@ -171,7 +204,7 @@ const formWithDefaults = createForm({
 const email = formWithDefaults.bind('email');
 ```
 
-## Reset and Replace
+## Reset, Replace, and Remove
 
 ```ts
 const form = createForm({ defaultValues: { email: '', name: '' } });
@@ -179,6 +212,9 @@ const form = createForm({ defaultValues: { email: '', name: '' } });
 form.reset();
 form.replace({ email: 'guest@example.com', name: 'Guest' });
 form.resetField('name');
+
+// removeField: drops value, baseline, state, and validator entirely
+form.removeField('name'); // use for conditional fields that are unmounted
 ```
 
 When loading server data as the new source of truth, prefer `replace(values)` so subsequent `reset()` uses that new baseline.
@@ -188,9 +224,14 @@ When loading server data as the new source of truth, prefer `replace(values)` so
 ```ts
 const form = createForm({ defaultValues: { tags: ['a'] } });
 
-form.array('tags').append('b');
-form.array('tags').remove(0);
-form.array('tags').move(0, 1);
+// All 7 array helpers
+form.array('tags').append('z');       // ['a', 'z']
+form.array('tags').prepend('first');  // ['first', 'a', 'z']
+form.array('tags').insert(1, 'mid');  // ['first', 'mid', 'a', 'z']
+form.array('tags').swap(0, 2);        // ['a', 'mid', 'first', 'z']
+form.array('tags').replace(1, 'new'); // ['a', 'new', 'first', 'z']
+form.array('tags').remove(3);         // ['a', 'new', 'first']
+form.array('tags').move(0, 2);        // ['new', 'first', 'a']
 
 const fd = toFormData(form.values());
 ```
@@ -200,6 +241,9 @@ const fd = toFormData(form.values());
 ## Best Practices
 
 - Keep validators pure and deterministic.
-- Prefer subscribeField(name, ...) over subscribeForm(...) for field-level rendering.
-- Use replace(values) after loading server data to set a new baseline.
-- Call dispose() when the form lifecycle ends.
+- Use `mode: 'onBlur'` or `mode: 'onTouched'` for most user-facing forms; reserve `mode: 'onChange'` for real-time search or filter forms.
+- Prefer `subscribeField(name, ...)` or `watch(name, ...)` over `subscribeForm(...)` for field-level rendering.
+- Use `replace(values)` after loading server data to set a new baseline.
+- Use `removeField(name)` when unmounting conditional fields so their state does not leak into validation.
+- Use the `onInvalid` callback in `submit()` when you want to scroll to errors or show a toast without try/catch.
+- Call `dispose()` when the form lifecycle ends.

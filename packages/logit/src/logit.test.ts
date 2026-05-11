@@ -5,8 +5,8 @@ import { createLogger, Logit } from './logit';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Create a fresh logger and spy on all console methods. */
-function setup(opts = {}) {
-  const log = createLogger({ environment: false, logLevel: 'debug', timestamp: false, ...opts });
+function setup(opts = {}, bindings = {}) {
+  const log = createLogger({ logLevel: 'debug', timestamp: false, ...opts }, bindings);
   const spies = {
     assert: vi.spyOn(console, 'assert').mockImplementation(() => {}),
     error: vi.spyOn(console, 'error').mockImplementation(() => {}),
@@ -53,6 +53,8 @@ describe('createLogger', () => {
     expect(typeof Logit.info).toBe('function');
     expect(typeof Logit.scope).toBe('function');
     expect(typeof Logit.child).toBe('function');
+    expect(typeof Logit.withBindings).toBe('function');
+    expect(typeof Logit.fatal).toBe('function');
   });
 });
 
@@ -64,7 +66,7 @@ describe('configure() / config', () => {
 
     log.setConfig({ logLevel: 'warn' });
     expect(log.config.logLevel).toBe('warn');
-    expect(log.config.variant).toBe('symbol'); // default preserved
+    expect(log.config.variant).toBe('symbol');
   });
 
   it('merges remote config rather than replacing it wholesale', () => {
@@ -72,9 +74,8 @@ describe('configure() / config', () => {
     const { log } = setup();
 
     log.setConfig({ remote: { handler, logLevel: 'warn' } });
-    log.setConfig({ remote: { logLevel: 'error' } }); // update level only
+    log.setConfig({ remote: { logLevel: 'error' } });
 
-    // handler survives the second config call
     expect(log.config.remote.handler).toBe(handler);
     expect(log.config.remote.logLevel).toBe('error');
   });
@@ -85,7 +86,7 @@ describe('configure() / config', () => {
 
     cfg.logLevel = 'off';
 
-    expect(log.config.logLevel).toBe('debug'); // unchanged
+    expect(log.config.logLevel).toBe('debug');
   });
 
   it('configure() returns the logger for fluent chaining', () => {
@@ -96,43 +97,66 @@ describe('configure() / config', () => {
   });
 });
 
-// ─── Emit ─────────────────────────────────────────────────────────────────────
+// ─── Call signature ───────────────────────────────────────────────────────────
 
-describe('Emit', () => {
-  it('routes each type to the correct console method', () => {
+describe('Call signature', () => {
+  it('log.info("message") — string-only form', () => {
     const { log, spies } = setup();
 
-    log.debug('d');
-    log.success('s');
-    log.trace('t');
-    log.info('i');
-    log.warn('w');
-    log.error('e');
-    expect(spies.log).toHaveBeenCalledTimes(2); // debug + success → console.log
-    expect(spies.trace).toHaveBeenCalledTimes(1);
-    expect(spies.info).toHaveBeenCalledTimes(1);
-    expect(spies.warn).toHaveBeenCalledTimes(1);
-    expect(spies.error).toHaveBeenCalledTimes(1);
-  });
-
-  it('forwards all user arguments verbatim after the format prefix', () => {
-    const { log, spies } = setup();
-
-    log.info('msg', 42, null, undefined, { nested: true });
+    log.info('hello');
 
     const call = spies.info.mock.calls[0];
 
-    expect(call[0]).toMatch(/%c.*%c/);
-    expect(call.slice(-5)).toEqual(['msg', 42, null, undefined, { nested: true }]);
+    // last arg is the message string
+    expect(call[call.length - 1]).toBe('hello');
   });
 
-  it('handles zero args and falsy values without throwing', () => {
+  it('log.info(context, "message") — context-first form', () => {
+    const { log, spies } = setup();
+
+    log.info({ requestId: 'abc' }, 'hello');
+
+    const call = spies.info.mock.calls[0];
+
+    expect(call[call.length - 2]).toEqual({ requestId: 'abc' });
+    expect(call[call.length - 1]).toBe('hello');
+  });
+
+  it('log.info() — zero-arg form does not throw', () => {
     const { log, spies } = setup();
 
     log.info();
-    log.warn(null, undefined, 0, false, '');
     expect(spies.info).toHaveBeenCalledTimes(1);
-    expect(spies.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('log.error(new Error()) — auto-serializes Error, uses err.message', () => {
+    const { log, spies } = setup();
+    const err = new Error('boom');
+
+    log.error(err);
+
+    const call = spies.error.mock.calls[0];
+    const ctx = call[call.length - 2] as any;
+
+    expect(ctx.err.message).toBe('boom');
+    expect(ctx.err.name).toBe('Error');
+    expect(typeof ctx.err.stack).toBe('string');
+    expect(call[call.length - 1]).toBe('boom');
+  });
+
+  it('log.error(new Error(), "override") — message override respected', () => {
+    const { log, spies } = setup();
+    const err = new Error('original');
+
+    log.error(err, 'custom');
+
+    const call = spies.error.mock.calls[0];
+
+    expect(call[call.length - 1]).toBe('custom');
+
+    const ctx = call[call.length - 2] as any;
+
+    expect(ctx.err.message).toBe('original');
   });
 
   it('includes namespace in the format string when set', () => {
@@ -140,13 +164,6 @@ describe('Emit', () => {
 
     log.info('x');
     expect(spies.info.mock.calls[0][0]).toContain('MyApp');
-  });
-
-  it('omits namespace segment entirely when namespace is empty', () => {
-    const { log, spies } = setup({ namespace: '' });
-
-    log.info('x');
-    expect(spies.info.mock.calls[0][0]).not.toMatch(/%c\s*%c/);
   });
 
   it.each(['text', 'icon', 'symbol'] as const)('variant "%s" produces a valid format string', (variant) => {
@@ -161,6 +178,22 @@ describe('Emit', () => {
 // ─── Log Level Filtering ──────────────────────────────────────────────────────
 
 describe('Log Level Filtering', () => {
+  it('routes each type to the correct console method', () => {
+    const { log, spies } = setup();
+
+    log.debug('d');
+    log.trace('t');
+    log.info('i');
+    log.warn('w');
+    log.error('e');
+    log.fatal('f');
+    expect(spies.log).toHaveBeenCalledTimes(1); // debug
+    expect(spies.trace).toHaveBeenCalledTimes(1);
+    expect(spies.info).toHaveBeenCalledTimes(1);
+    expect(spies.warn).toHaveBeenCalledTimes(1);
+    expect(spies.error).toHaveBeenCalledTimes(2); // error + fatal → console.error
+  });
+
   it('suppresses calls below the configured level', () => {
     const { log, spies } = setup({ logLevel: 'warn' });
 
@@ -174,11 +207,19 @@ describe('Log Level Filtering', () => {
     expect(spies.error).toHaveBeenCalledTimes(1);
   });
 
+  it('fatal is above error in priority', () => {
+    const { log, spies } = setup({ logLevel: 'error' });
+
+    log.error('e');
+    log.fatal('f');
+    expect(spies.error).toHaveBeenCalledTimes(2);
+  });
+
   it('logLevel "off" suppresses all output including utilities', () => {
     const { log, spies } = setup({ logLevel: 'off' });
 
     log.debug('x');
-    log.error('x');
+    log.fatal('x');
     log.table([{}]);
     log.time('x', () => {});
     log.group('x', () => {});
@@ -195,13 +236,14 @@ describe('Log Level Filtering', () => {
   it('enabled() reflects the current logLevel threshold', () => {
     const { log } = setup({ logLevel: 'warn' });
 
+    expect(log.enabled('fatal')).toBe(true);
     expect(log.enabled('error')).toBe(true);
     expect(log.enabled('warn')).toBe(true);
     expect(log.enabled('info')).toBe(false);
     expect(log.enabled('debug')).toBe(false);
   });
 
-  it('enabled() updates live after config() changes the level', () => {
+  it('enabled() updates live after setConfig() changes the level', () => {
     const { log } = setup({ logLevel: 'error' });
 
     expect(log.enabled('warn')).toBe(false);
@@ -209,8 +251,8 @@ describe('Log Level Filtering', () => {
     expect(log.enabled('warn')).toBe(true);
   });
 
-  it('logLevel "success" keeps info-level logs enabled', () => {
-    const { log, spies } = setup({ logLevel: 'success' });
+  it('logLevel "info" keeps info-level logs enabled', () => {
+    const { log, spies } = setup({ logLevel: 'info' });
 
     log.info('i');
     expect(spies.info).toHaveBeenCalledTimes(1);
@@ -225,7 +267,7 @@ describe('scope() and child()', () => {
 
     log.scope('api').info('call');
     expect(spies.info.mock.calls[0][0]).toContain('Global.api');
-    expect(log.config.namespace).toBe('Global'); // parent unchanged
+    expect(log.config.namespace).toBe('Global');
   });
 
   it('scope() works when the parent has no namespace', () => {
@@ -242,7 +284,7 @@ describe('scope() and child()', () => {
     expect(spies.warn.mock.calls[0][0]).toContain('api.auth');
   });
 
-  it('scope() bakes in the namespace at call time — later parent changes are ignored', () => {
+  it('scope() bakes in the namespace at call time', () => {
     const { log, spies } = setup({ namespace: 'A' });
     const scoped = log.scope('sub');
 
@@ -284,10 +326,178 @@ describe('scope() and child()', () => {
   });
 });
 
+// ─── withBindings() ───────────────────────────────────────────────────────────
+
+describe('withBindings()', () => {
+  it('pinned fields are merged into every log call', () => {
+    const { log, spies } = setup();
+    const child = log.withBindings({ requestId: 'abc' });
+
+    child.info('hello');
+
+    const call = spies.info.mock.calls[0];
+
+    // context object should be the second-to-last arg, message last
+    expect(call[call.length - 2]).toEqual(expect.objectContaining({ requestId: 'abc' }));
+    expect(call[call.length - 1]).toBe('hello');
+  });
+
+  it('per-call context merges with bindings — call-site wins on collision', () => {
+    const { log, spies } = setup();
+    const child = log.withBindings({ extra: 'x', requestId: 'base' });
+
+    child.info({ requestId: 'override' }, 'msg');
+
+    const ctx = spies.info.mock.calls[0][spies.info.mock.calls[0].length - 2] as any;
+
+    expect(ctx.requestId).toBe('override');
+    expect(ctx.extra).toBe('x');
+  });
+
+  it('bindings getter returns snapshot', () => {
+    const parent = createLogger();
+    const child = parent.withBindings({ userId: 1 });
+
+    expect(child.bindings).toEqual({ userId: 1 });
+  });
+
+  it('parent bindings are not affected by withBindings()', () => {
+    const parent = createLogger();
+
+    parent.withBindings({ userId: 1 });
+    expect(parent.bindings).toEqual({});
+  });
+
+  it('bindings are inherited through child()', () => {
+    const { log } = setup();
+    const withCtx = log.withBindings({ requestId: 'abc' });
+    const scoped = withCtx.child({ logLevel: 'error' });
+
+    expect(scoped.bindings).toEqual({ requestId: 'abc' });
+  });
+
+  it('withBindings() on a withBindings() child merges additively', () => {
+    const { log } = setup();
+    const a = log.withBindings({ a: 1 });
+    const b = a.withBindings({ b: 2 });
+
+    expect(b.bindings).toEqual({ a: 1, b: 2 });
+  });
+
+  it('no context object emitted when only message is logged with no bindings', () => {
+    const { log, spies } = setup();
+
+    log.info('hello');
+
+    const call = spies.info.mock.calls[0];
+
+    // should only be format-string + style args + the message; no context obj before message
+    expect(call[call.length - 1]).toBe('hello');
+    expect(typeof call[call.length - 2]).not.toBe('object');
+  });
+});
+
+// ─── Fatal level ──────────────────────────────────────────────────────────────
+
+describe('Fatal level', () => {
+  it('fatal() routes to console.error', () => {
+    const { log, spies } = setup();
+
+    log.fatal('critical');
+    expect(spies.error).toHaveBeenCalledTimes(1);
+  });
+
+  it('fatal() accepts (context, message) form', () => {
+    const { log, spies } = setup();
+
+    log.fatal({ service: 'api' }, 'terminating');
+
+    const call = spies.error.mock.calls[0];
+
+    expect(call[call.length - 2]).toEqual({ service: 'api' });
+    expect(call[call.length - 1]).toBe('terminating');
+  });
+
+  it('fatal() accepts Error auto-serialization', () => {
+    const { log, spies } = setup();
+    const err = new Error('fatal boom');
+
+    log.fatal(err);
+
+    const ctx = spies.error.mock.calls[0][spies.error.mock.calls[0].length - 2] as any;
+
+    expect(ctx.err.message).toBe('fatal boom');
+  });
+
+  it('fatal is above error — logLevel "error" still shows fatal', () => {
+    const { log, spies } = setup({ logLevel: 'error' });
+
+    log.warn('no');
+    log.error('yes');
+    log.fatal('yes');
+    expect(spies.warn).not.toHaveBeenCalled();
+    expect(spies.error).toHaveBeenCalledTimes(2);
+  });
+
+  it('fatal is suppressed at logLevel "off"', () => {
+    const { log, spies } = setup({ logLevel: 'off' });
+
+    log.fatal('x');
+    expect(spies.error).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Error serialization ─────────────────────────────────────────────────────
+
+describe('Error serialization', () => {
+  it('Error passed as first arg is serialized into context.err', () => {
+    const { log, spies } = setup();
+
+    log.error(new Error('boom'));
+
+    const call = spies.error.mock.calls[0];
+    const ctx = call[call.length - 2] as any;
+
+    expect(ctx.err).toEqual(expect.objectContaining({ message: 'boom', name: 'Error' }));
+  });
+
+  it('custom Error subclass name is preserved', () => {
+    class DatabaseError extends Error {
+      constructor(msg: string) {
+        super(msg);
+        this.name = 'DatabaseError';
+      }
+    }
+
+    const { log, spies } = setup();
+
+    log.error(new DatabaseError('connection lost'));
+
+    const ctx = spies.error.mock.calls[0][spies.error.mock.calls[0].length - 2] as any;
+
+    expect(ctx.err.name).toBe('DatabaseError');
+  });
+
+  it('err is included in remote payload context', async () => {
+    const handler = vi.fn();
+    const { log } = setup({ remote: { handler, logLevel: 'debug' } });
+
+    log.error(new Error('remote err'));
+    await vi.waitFor(() =>
+      expect(handler).toHaveBeenCalledWith(
+        'error',
+        expect.objectContaining({
+          context: expect.objectContaining({ err: expect.objectContaining({ message: 'remote err' }) }),
+        }),
+      ),
+    );
+  });
+});
+
 // ─── Remote Logging ───────────────────────────────────────────────────────────
 
 describe('Remote Logging', () => {
-  it('dispatches to remote handler with full metadata above threshold', async () => {
+  it('dispatches structured RemoteLogData above threshold', async () => {
     const handler = vi.fn();
     const { log } = setup({
       namespace: 'App',
@@ -295,16 +505,18 @@ describe('Remote Logging', () => {
       timestamp: true,
     });
 
-    log.debug('below threshold'); // should NOT fire remote
+    log.debug('below threshold');
     await vi.waitFor(() => expect(handler).not.toHaveBeenCalled());
 
-    log.info('message');
+    log.info({ userId: 42 }, 'user action');
     await vi.waitFor(() =>
       expect(handler).toHaveBeenCalledWith(
         'info',
         expect.objectContaining({
-          args: ['message'],
+          context: { userId: 42 },
           env: expect.stringMatching(/production|development/),
+          level: 'info',
+          message: 'user action',
           namespace: 'App',
           timestamp: expect.any(String),
         }),
@@ -317,12 +529,12 @@ describe('Remote Logging', () => {
     const { log, spies } = setup({ logLevel: 'debug', remote: { handler, logLevel: 'warn' } });
 
     log.info('i');
-    expect(spies.info).toHaveBeenCalled(); // console logs it
-    await vi.waitFor(() => expect(handler).not.toHaveBeenCalled()); // remote doesn't
+    expect(spies.info).toHaveBeenCalled();
+    await vi.waitFor(() => expect(handler).not.toHaveBeenCalled());
 
     log.warn('w');
     expect(spies.warn).toHaveBeenCalled();
-    await vi.waitFor(() => expect(handler).toHaveBeenCalledWith('warn', expect.objectContaining({ args: ['w'] })));
+    await vi.waitFor(() => expect(handler).toHaveBeenCalledWith('warn', expect.objectContaining({ message: 'w' })));
   });
 
   it('remote config can be updated dynamically', async () => {
@@ -334,10 +546,10 @@ describe('Remote Logging', () => {
 
     log.setConfig({ remote: { handler, logLevel: 'warn' } });
     log.warn('w2');
-    await vi.waitFor(() => expect(handler).toHaveBeenCalledWith('warn', expect.objectContaining({ args: ['w2'] })));
+    await vi.waitFor(() => expect(handler).toHaveBeenCalledWith('warn', expect.objectContaining({ message: 'w2' })));
   });
 
-  it('omits namespace and timestamp from remote data when not configured', async () => {
+  it('omits context and timestamp from remote data when not configured', async () => {
     const handler = vi.fn();
     const { log } = setup({ remote: { handler, logLevel: 'debug' }, timestamp: false });
 
@@ -345,17 +557,17 @@ describe('Remote Logging', () => {
     await vi.waitFor(() =>
       expect(handler).toHaveBeenCalledWith(
         'info',
-        expect.objectContaining({ namespace: undefined, timestamp: undefined }),
+        expect.objectContaining({ context: undefined, namespace: undefined, timestamp: undefined }),
       ),
     );
   });
 
   it('fires handler when only a handler is set — logLevel defaults to debug', async () => {
     const handler = vi.fn();
-    const { log } = setup({ remote: { handler } }); // no explicit logLevel
+    const { log } = setup({ remote: { handler } });
 
     log.info('msg');
-    await vi.waitFor(() => expect(handler).toHaveBeenCalledWith('info', expect.objectContaining({ args: ['msg'] })));
+    await vi.waitFor(() => expect(handler).toHaveBeenCalledWith('info', expect.objectContaining({ message: 'msg' })));
   });
 
   it('warns when remote handler throws', async () => {
@@ -370,6 +582,20 @@ describe('Remote Logging', () => {
 
     log.info('msg');
     await vi.waitFor(() => expect(warnSpy).toHaveBeenCalledWith('[logit] remote handler error:', expect.any(Error)));
+  });
+
+  it('bindings are included in remote context', async () => {
+    const handler = vi.fn();
+    const { log } = setup({ remote: { handler, logLevel: 'debug' } });
+    const req = log.withBindings({ requestId: 'xyz' });
+
+    req.info('msg');
+    await vi.waitFor(() =>
+      expect(handler).toHaveBeenCalledWith(
+        'info',
+        expect.objectContaining({ context: expect.objectContaining({ requestId: 'xyz' }) }),
+      ),
+    );
   });
 });
 
@@ -403,7 +629,7 @@ describe('Timers', () => {
     expect(spies.timeEnd).toHaveBeenCalledWith('op');
   });
 
-  it('prefixes the label with [namespace] when set to avoid collisions', () => {
+  it('prefixes the label with [namespace] when set', () => {
     const { log, spies } = setup({ namespace: 'db' });
 
     log.time('query', () => {});
@@ -488,7 +714,7 @@ describe('Groups', () => {
     expect(spies.groupEnd).toHaveBeenCalledOnce();
   });
 
-  it('fn always runs and value is returned when the group wrapper is suppressed', () => {
+  it('fn still runs and value is returned when suppressed at "off"', () => {
     const { log, spies } = setup({ logLevel: 'off' });
     const result = log.group('x', () => 'done');
 

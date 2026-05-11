@@ -16,7 +16,7 @@ const schema = {
   posts: table<Post>('id'),
 };
 
-const db = createIndexedDB({ dbName: 'blog', version: 1, schema });
+const db = createIndexedDB({ dbName: 'blog', schemaVersion: 1, schema });
 
 await db.transaction(['users', 'posts'], async (tx) => {
   await tx.put('users', { id: 1, name: 'Alice' });
@@ -48,7 +48,7 @@ import { createIndexedDB, table, ttl } from '@vielzeug/deposit';
 type Session = { id: string; userId: number };
 const schema = { sessions: table<Session>('id') };
 
-const db = createIndexedDB({ dbName: 'app', version: 1, schema });
+const db = createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
 
 // All records written in one atomic transaction, all sharing the same TTL.
 await db.putAll('sessions', [
@@ -71,29 +71,6 @@ const db = createLocalStorage({ dbName: 'cache', schema });
 await db.put('cache', { id: 'k1', value: 'payload' }, ttl.seconds(30));
 ```
 
-## Cookie Adapter with Security-Oriented Defaults
-
-```ts
-import { createCookie, table, ttl } from '@vielzeug/deposit';
-
-type Pref = { id: string; value: string };
-const schema = { prefs: table<Pref>('id') };
-
-const prefs = createCookie({
-  dbName: 'app',
-  path: '/',
-  sameSite: 'Strict',
-  schema,
-  secure: true,
-});
-
-await prefs.put('prefs', { id: 'theme', value: 'light' }, ttl.days(7));
-```
-
-Use cookie storage for very small values where cookie semantics are required. For larger records or heavier write rates, prefer IndexedDB or LocalStorage/SessionStorage.
-
-TTL in cookie adapter is evaluated by Deposit when records are read, not by cookie `max-age` attributes.
-
 ## IndexedDB Migration Hook
 
 ```ts
@@ -102,7 +79,7 @@ import { createIndexedDB, table, type MigrationFn } from '@vielzeug/deposit';
 type User = { id: number; name: string };
 const schema = { users: table<User>('id') };
 
-const migrationFn: MigrationFn = ({ db, oldVersion, tx }) => {
+const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
     tx.objectStore('users').createIndex('name', 'name', { unique: false });
   }
@@ -110,9 +87,9 @@ const migrationFn: MigrationFn = ({ db, oldVersion, tx }) => {
 
 const db = createIndexedDB({
   dbName: 'blog',
-  migrationFn,
+  migrate,
   schema,
-  version: 2,
+  schemaVersion: 2,
 });
 ```
 
@@ -145,7 +122,7 @@ describe('user repository', () => {
       { id: 2, name: 'Bob' },
     ]);
 
-    const first = await db.from('users').orderBy('name', 'asc').first();
+    const first = await db.query('users').orderBy('name', 'asc').first();
     expect(first?.name).toBe('Alice');
   });
 });

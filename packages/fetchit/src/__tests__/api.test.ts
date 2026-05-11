@@ -274,5 +274,49 @@ describe('HTTP Client', () => {
       expect(err).toMatchObject({ data: { error: 'Not found' }, status: 404 });
       expect(HttpError.is(err, 404)).toBe(true);
     });
+
+    it('HttpError.headers provides shorthand access to response headers', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue({
+        headers: new Headers({ 'content-type': 'application/json', 'x-request-id': 'abc123' }),
+        json: async () => ({ error: 'gone' }),
+        ok: false,
+        status: 410,
+        statusText: 'Gone',
+      });
+
+      const err = await http.get('/old').catch((e) => e);
+
+      expect(HttpError.is(err)).toBe(true);
+      expect(err.headers).toBeInstanceOf(Headers);
+      expect(err.headers?.get('x-request-id')).toBe('abc123');
+    });
+
+    it('cancelAll() aborts all in-flight requests', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+      let aborted = false;
+
+      fetchMock.mockImplementation(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => {
+              aborted = true;
+              reject(new DOMException('Aborted', 'AbortError'));
+            });
+          }),
+      );
+
+      const p = http.get('/slow').catch(() => {});
+
+      http.cancelAll();
+      await p;
+
+      expect(aborted).toBe(true);
+      // Client should still be usable after cancelAll
+      expect(http.disposed).toBe(false);
+      fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));
+      await expect(http.get('/test')).resolves.toBeDefined();
+    });
   });
 });

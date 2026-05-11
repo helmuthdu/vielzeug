@@ -1,7 +1,7 @@
+export { createCookie } from './adapters/cookie';
 export { createIndexedDB } from './adapters/indexeddb';
-export { createLocalStorage } from './adapters/localstorage';
+export { createLocalStorage, createSessionStorage } from './adapters/webstorage';
 export { createMemory } from './adapters/memory';
-export { createSessionStorage } from './adapters/sessionstorage';
 export type { QueryBuilder } from './query';
 export { table } from './types';
 export { ttl } from './ttl';
@@ -11,6 +11,7 @@ export type {
   KeyOf,
   MigrationContext,
   MigrationFn,
+  Observer,
   RecordOf,
   TransactionContext,
 } from './types';

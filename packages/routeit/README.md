@@ -54,11 +54,20 @@ await router.navigate({ name: 'dashboard.settings' });
 - Declarative route table only
 - Nested routes with `children` and `index`
 - Named-route-first `navigate()`, `url()`, and `isActive()`
+- Lazy-load route modules on first navigation
+- Declarative `redirect` field for permanent URL aliases
+- Search param validation and coercion via `coerceSearch`
 - Route-scoped `data()` loaders with `AbortSignal`
+- Hover-prefetch via `router.preload()`
+- Leave guards via `router.beforeLeave()`
 - Global and per-route middleware
+- History entry state readable as `ctx.historyState`
+- Error from failed data loaders exposed on `router.state.error`
+- Scroll restoration via the `scroll` option
 - Raw path targets via `navigate({ path })`
 - Typed path params via literal route paths
 - Resolvable matches via `router.resolve(pathname)`
+- Memory history for SSR, tests, and non-browser runtimes
 - Base-path support for subdirectory deployments
 - Optional View Transition API integration
 - Immutable route state snapshots via `router.state`
@@ -114,12 +123,14 @@ const router = createRouter({
 ## Middleware
 
 ```ts
-const requireAuth = async (ctx, next) => {
-  if (!session.user) {
-    await ctx.navigate({ name: 'login' }, { replace: true });
-    return;
-  }
+import { redirect } from '@vielzeug/routeit';
 
+// Redirect helper — short-circuits the middleware chain
+const requireAuth = redirect({ name: 'login' }, { replace: true });
+
+// Manual middleware
+const loadUser = async (ctx, next) => {
+  ctx.locals.user = await fetchCurrentUser();
   await next();
 };
 ```
@@ -138,6 +149,54 @@ const routes = {
 };
 ```
 
+## Lazy Routes
+
+```ts
+const routes = {
+  settings: {
+    path: '/settings',
+    lazy: () => import('./pages/Settings'),
+  },
+};
+```
+
+The factory is called at most once. The resolved `handler`, `data`, and `meta` replace the static definition.
+
+## Search Param Validation
+
+```ts
+const routes = {
+  search: {
+    path: '/search',
+    coerceSearch: (raw) => ({
+      q: String(raw.q ?? ''),
+      page: Math.max(1, Number(raw.page ?? 1)),
+    }),
+    handler: ({ query }) => renderSearch(query.q, query.page),
+  },
+};
+```
+
+## Leave Guards
+
+```ts
+const removeGuard = router.beforeLeave(async () => {
+  if (!form.isDirty) return true;
+  return confirm('Discard changes?');
+});
+
+// Remove when no longer needed:
+removeGuard();
+```
+
+## Prefetching
+
+```ts
+anchor.addEventListener('mouseenter', () => {
+  router.preload('userDetail', { id: '42' });
+});
+```
+
 `data()` runs after middleware and before the final handler. Use middleware for redirects and access control, and keep `data()` focused on route-local fetching.
 
 ## Route Context
@@ -146,20 +205,17 @@ Handlers and middleware receive a context with routing and navigation helpers:
 
 ```ts
 handler: (ctx) => {
-  ctx.data;
+  ctx.data;         // result of this route's data()
   ctx.pathname;
   ctx.params;
-  ctx.query;
+  ctx.query;        // validated + coerced when coerceSearch is set
   ctx.hash;
+  ctx.historyState; // value from navigate({ ... }, { state: ... })
   ctx.matches;
   ctx.locals;
 
-  // Named navigation
   ctx.navigate({ name: 'home' });
-
-  // Raw path targets
   ctx.navigate({ path: '/campaign?utm_source=email' });
-  ctx.navigate({ path: '/checkout#payment' }, { replace: true });
 }
 ```
 
@@ -190,13 +246,29 @@ router.subscribe((state) => {
 router.state.location.pathname;
 router.state.location.query;
 router.state.location.hash;
+router.state.location.historyState; // state from the current history entry
 router.state.matches;
-router.state.status;
+router.state.status;  // 'idle' | 'loading' | 'error'
+router.state.error;   // only set when status === 'error'
 ```
 
 `router.state` is an immutable snapshot. Each successful navigation replaces it with a new snapshot.
 
-Read active-route metadata from the leaf match (`router.state.matches.at(-1)?.meta`).
+## Testing
+
+Use `createMemoryHistory` to test routers without a browser:
+
+```ts
+import { createMemoryHistory, createRouter } from '@vielzeug/routeit';
+
+const history = createMemoryHistory('/dashboard');
+const router = createRouter({ history, routes });
+
+await new Promise((r) => setTimeout(r, 0));
+assert(router.state.location.pathname === '/dashboard');
+
+router.dispose();
+```
 
 ## API Summary
 
@@ -204,11 +276,15 @@ Read active-route metadata from the leaf match (`router.state.matches.at(-1)?.me
 | --- | --- |
 | `createRouter({ routes, ...options })` | Create a router from a declarative route table |
 | `createBrowserHistory()` | Create the default browser history driver |
+| `createMemoryHistory(initialPath?)` | Create an in-memory history driver (SSR / tests) |
+| `redirect(target, options?)` | Build redirect middleware for guard flows |
 | `router.navigate({ name, ... })` | Navigate by route name |
 | `router.navigate({ path })` | Navigate by raw path target |
 | `router.url(name, params?, query?)` | Build a URL for a named route |
 | `router.isActive(name, exact?)` | Check whether the current route matches a named route |
 | `router.resolve(pathname)` | Resolve a pathname without running middleware or handlers |
+| `router.preload(name, params?)` | Eagerly run data loaders without navigating |
+| `router.beforeLeave(blocker)` | Register a leave guard |
 | `router.subscribe(listener)` | Observe immutable route state snapshots |
 | `router.dispose()` | Remove listeners and prevent future router interaction |
 

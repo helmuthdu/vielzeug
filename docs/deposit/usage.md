@@ -1,6 +1,6 @@
 ---
 title: Deposit — Usage Guide
-description: Practical patterns for using Deposit with LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory.
+description: Practical patterns for using Deposit with LocalStorage, SessionStorage, IndexedDB, and Memory.
 ---
 
 ::: tip New to Deposit?
@@ -27,21 +27,7 @@ const schema = {
 };
 ```
 
-Record and key types are inferred from `table<T>()` — no `Schema<{...}>` annotation required. `typeof schema` serves as the schema type wherever needed.
-
-::: details Legacy annotation style
-The explicit `Schema<S>` type annotation is still supported if you prefer it:
-
-```ts
-import { type Schema } from '@vielzeug/deposit';
-
-const schema: Schema<{ users: User; posts: Post }> = {
-  users: { key: 'id' },
-  posts: { key: 'id' },
-};
-```
-
-:::
+Record and key types are inferred from `table<T>()`. `typeof schema` serves as the schema type wherever needed.
 
 ## Create an Adapter
 
@@ -65,7 +51,7 @@ const session = createSessionStorage({ dbName: 'app', schema });
 
 Use this adapter for tab-scoped persistence that resets when the tab or window closes.
 
-### Cookie Adapter
+### Cookie
 
 ```ts
 import { createCookie } from '@vielzeug/deposit';
@@ -75,26 +61,17 @@ const cookie = createCookie({
   path: '/',
   sameSite: 'Strict',
   schema,
-  secure: true,
 });
 ```
 
-Use this adapter for very small values that you explicitly want in cookies. Each record is stored as one cookie entry.
-
-Defaults:
-
-- `path: '/'`
-- `sameSite: 'Strict'`
-- `secure: false`
-
-TTL behavior for cookie adapter is lazy and record-level: expired records are filtered on read and then removed.
+Use this adapter for small browser state that should be available through cookies. It is browser-only, so it is a good fit when you want persistence without relying on Web Storage APIs.
 
 ### IndexedDB
 
 ```ts
 import { createIndexedDB } from '@vielzeug/deposit';
 
-const idb = createIndexedDB({ dbName: 'app', version: 1, schema });
+const idb = createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
 ```
 
 Use this adapter when you need atomic transactions or larger datasets.
@@ -164,7 +141,7 @@ Available helpers: `ttl.ms`, `ttl.seconds`, `ttl.minutes`, `ttl.hours`, `ttl.day
 
 ```ts
 const result = await local
-  .from('users')
+  .query('users')
   .between('age', 18, 99)
   .startsWith('name', 'a', { ignoreCase: true })
   .orderBy('name', 'asc')
@@ -172,7 +149,7 @@ const result = await local
   .offset(0)
   .toArray();
 
-const count = await local.from('users').equals('age', 30).count();
+const count = await local.query('users').equals('age', 30).count();
 ```
 
 Queries are composed lazily and run when `toArray()`, `count()`, or `first()` is called.
@@ -183,9 +160,45 @@ Queries are composed lazily and run when `toArray()`, `count()`, or `first()` is
 
 ```ts
 const youngest = await local
-  .from('users')
+  .query('users')
   .orderBy('age', 'asc')
   .first();
+```
+
+## Reactive Reads
+
+`observe(table, listener)` emits the current snapshot immediately and then emits again after table mutations.
+
+```ts
+const stop = idb.observe('users', (rows) => {
+  console.log('users changed', rows);
+});
+
+await idb.put('users', { id: 1, name: 'Alice', age: 30 });
+stop();
+```
+
+IndexedDB observers propagate across tabs/windows via `BroadcastChannel` when available. LocalStorage observers also react to cross-tab writes via the browser `storage` event.
+
+## Update and Upsert-Like Helpers
+
+```ts
+await idb.update('users', 1, { age: 31 });
+
+const user = await idb.getOrPut('users', 2, () => ({
+  id: 2,
+  name: 'Bob',
+  age: 26,
+}));
+
+const removed = await idb.deleteWhere('users', (value) => value.age < 21);
+
+await idb.forEach('users', (value) => {
+  console.log(value.name);
+});
+
+void user;
+void removed;
 ```
 
 ## Run IndexedDB Transactions
@@ -210,7 +223,7 @@ If the callback throws, the transaction is aborted and changes are rolled back.
 ```ts
 import { createIndexedDB, type MigrationFn } from '@vielzeug/deposit';
 
-const migrationFn: MigrationFn = ({ db, oldVersion, tx }) => {
+const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
     // Example: add an index during upgrade.
     tx.objectStore('users').createIndex('name', 'name', { unique: false });
@@ -219,13 +232,13 @@ const migrationFn: MigrationFn = ({ db, oldVersion, tx }) => {
 
 const db = createIndexedDB({
   dbName: 'app',
-  migrationFn,
+  migrate,
   schema,
-  version: 2,
+  schemaVersion: 2,
 });
 ```
 
-Increase `version` to trigger `migrationFn` during `onupgradeneeded`.
+Increase `schemaVersion` to trigger `migrate` during `onupgradeneeded`.
 
 ## Operational Notes
 
@@ -235,8 +248,7 @@ Increase `version` to trigger `migrationFn` during `onupgradeneeded`.
 - Call `close()` on IndexedDB handles in long-lived contexts when shutting down.
 - `createMemory()` state is scoped to the instance; each call returns an isolated store.
 - `createSessionStorage()` is tab-scoped and clears when the tab/window is closed.
-- `createCookie()` requires `document.cookie` and is constrained by browser cookie size/count limits.
-- Cookie TTL is not enforced via cookie expiration attributes; it is enforced by Deposit during reads.
+- `observe()` emits an immediate snapshot first; unsubscribe when no longer needed.
 
 ## Testing with the Memory Adapter
 
@@ -274,7 +286,7 @@ import { schema } from './schema';
 
 function createStorage(): Adapter<typeof schema> {
   if (typeof indexedDB !== 'undefined') {
-    return createIndexedDB({ dbName: 'app', version: 1, schema });
+    return createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
   }
 
   if (typeof localStorage !== 'undefined') {

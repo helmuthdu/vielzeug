@@ -3,6 +3,7 @@ export {
   Schema,
   ValidationError,
   type Infer,
+  type InferInput,
   type TypeOf,
   type InferOutput,
   type Issue,

@@ -91,6 +91,18 @@ api.headers({ Authorization: `Bearer ${newToken}` });
 api.headers({ Authorization: undefined });
 ```
 
+### Cancelling In-Flight Requests
+
+`cancelAll()` aborts every active request without disposing the client. The client stays usable for new requests immediately after.
+
+```ts
+// Route change — drop all pending background fetches
+api.cancelAll();
+
+// Client is still alive and ready
+const fresh = await api.get<Config>('/config');
+```
+
 ### Request Deduplication
 
 GET, HEAD, OPTIONS, and DELETE requests are deduplicated automatically. Writes are never deduplicated unless you pass an explicit `dedupeKey`.
@@ -164,11 +176,13 @@ An interceptor can short-circuit the chain by returning a `Response` without cal
 import { createQuery } from '@vielzeug/fetchit';
 
 const qc = createQuery({
-  staleTime: 0, // default: 0 — data is immediately stale
-  gcTime: 300_000, // default: 5 min — GC runs at background priority once an entry is unobserved
-  retry: 1, // default: 1 retry attempt
+  staleTime: 0,          // default: 0 — data is immediately stale
+  gcTime: 300_000,       // default: 5 min — GC runs at background priority once an entry is unobserved
+  retry: 1,              // default: 1 retry attempt
   retryDelay: undefined, // default: exponential backoff (1s → 2s → 4s → … up to 30s)
-  shouldRetry: undefined, // default: undefined — retries all errors
+  shouldRetry: undefined,// default: undefined — retries all errors
+  refetchOnFocus: false, // default: false — revalidate stale entries when tab regains focus
+  refetchOnReconnect: false, // default: false — revalidate stale entries on network reconnect
 });
 ```
 
@@ -195,12 +209,52 @@ const user = await qc.query({
 | `retry` | `number` | query-client default | Retry attempts for this specific query call |
 | `retryDelay` | `number \| (attempt) => number` | query-client default | Delay strategy for this specific query call |
 | `shouldRetry` | `(error, attempt) => boolean` | query-client default | Retry predicate for this specific query call |
+| `enabled` | `boolean` | `true` | Skip the fetch when `false`; entry stays `'idle'` and existing data is returned |
+| `initialData` | `T \| () => T \| undefined` | — | Pre-seed the cache as a successful entry when no data exists |
+| `placeholderData` | `T \| () => T \| undefined` | — | Shown as `data` to subscribers while the entry is fetching; not stored in cache |
 
 Per-query retry options override `createQuery()` defaults when provided.
 
 ::: tip Retry semantics
 `retry: 3` means **3 retries** (4 total attempts: 1 initial + 3 retries). `retry: 0` means 1 attempt only.
 :::
+
+### Conditional Fetching
+
+Set `enabled: false` to skip the fetch. The entry stays `'idle'` and any cached data is returned. Useful for dependent queries or fields that should not load until the user interacts.
+
+```ts
+// Only fetch posts once a userId is known
+const posts = await qc.query({
+  key: ['users', userId, 'posts'],
+  fn: ({ signal }) => api.get<Post[]>('/posts', { query: { userId }, signal }),
+  enabled: userId != null,
+});
+```
+
+### Seeding Cache Data
+
+`initialData` pre-populates the cache as a successful entry before the first fetch. If data already exists the value is ignored. Subject to normal `staleTime` checks.
+
+```ts
+// Seed a detail entry from an already-cached list
+const user = await qc.query({
+  key: ['users', id],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }),
+  staleTime: 30_000,
+  initialData: () => qc.get<User[]>(['users'])?.find((u) => u.id === id),
+});
+```
+
+`placeholderData` shows a temporary value to subscribers while the real fetch is in-flight. It is **not** written to the cache.
+
+```ts
+const user = await qc.query({
+  key: ['users', id],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }),
+  placeholderData: { id, name: 'Loading…' },
+});
+```
 
 ### Prefetch
 
@@ -246,18 +300,29 @@ const state = qc.getState<User>(['users', 1]);
 // → { data, error, status, updatedAt }
 ```
 
-### `subscribe(key, listener)`
+### `subscribe(key, listener, opts?)`
 
 Subscribes to live `QueryState` updates for a key. Fires immediately with the current state. Returns an unsubscribe function.
 
 ```ts
 const unsub = qc.subscribe<User>(['users', 1], (state) => {
   console.log(state.status); // 'idle' | 'pending' | 'success' | 'error'
-  console.log(state.data); // T | undefined
-  console.log(state.error); // Error | null
+  console.log(state.data);   // T | undefined
+  console.log(state.error);  // Error | null
 });
 
 unsub(); // stop listening
+```
+
+Pass a `select` function to transform data before the listener receives it. The listener is only called when the **selected value**, status, or error changes — redundant notifications are skipped.
+
+```ts
+// Only notified when the user's name changes, not on unrelated field updates
+const unsub = qc.subscribe<User, string>(
+  ['users', 1],
+  (state) => renderName(state.data),
+  { select: (user) => user?.name },
+);
 ```
 
 Subscribing keeps the cache entry alive (cancels any pending GC timer). When the last subscriber leaves, `'idle'` entries are removed immediately; non-idle entries start a new `gcTime` countdown.
@@ -286,6 +351,20 @@ Clears every cache entry. Active subscribers are notified with an `'idle'` state
 ```ts
 qc.clear(); // good to call on logout
 ```
+
+### Background Revalidation
+
+Enable automatic revalidation of stale observed entries when the tab regains focus or the network reconnects.
+
+```ts
+const qc = createQuery({
+  staleTime: 30_000,
+  refetchOnFocus: true,      // revalidate when document becomes visible
+  refetchOnReconnect: true,  // revalidate when navigator comes online
+});
+```
+
+Only entries that are **observed** (have active subscribers) and whose data has become **stale** are refetched. `qc.dispose()` removes the event listeners.
 
 ### Stable Key Serialization
 
@@ -323,17 +402,37 @@ api.dispose(); // clears in-flight dedup map and interceptors
 
 `createMutation()` creates an observable, reusable mutation handle. Each call receives `(input, signal)`. Cancellation can be done with `mutation.cancel()` or with a call-level `AbortSignal`.
 
+The returned mutation state is a discriminated union keyed by `status`: `idle` and `pending` carry `data: undefined`, `success` carries the resolved `data`, and `error` carries the failure on `error`.
+
 ```ts
 import { createMutation } from '@vielzeug/fetchit';
 
-const createUser = createMutation((input: NewUser, signal: AbortSignal) =>
-  api.post<User>('/users', { body: input, signal }),
+const createUser = createMutation(
+  (input: NewUser, signal: AbortSignal) => api.post<User>('/users', { body: input, signal }),
+  {
+    onSuccess: (user) => {
+      qc.set(['users', user.id], user);
+      qc.invalidate(['users']);
+    },
+    onError: (err) => toast.error(err.message),
+    onSettled: () => hideSpinner(),
+  },
 );
 
 const user = await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
-qc.set(['users', user.id], user);
-qc.invalidate(['users']);
 ```
+
+### Lifecycle Callbacks
+
+Callbacks are defined on the mutation, not the call site. They fire after each `mutate()` run.
+
+| Callback | Signature | Called when |
+| --- | --- | --- |
+| `onSuccess` | `(data: TData) => void \| Promise<void>` | The run succeeds |
+| `onError` | `(error: Error) => void \| Promise<void>` | The run fails (not aborted) |
+| `onSettled` | `(data, error) => void \| Promise<void>` | After every run regardless of outcome |
+
+Callback errors (sync throws and async rejections) are swallowed and never affect the `mutate()` result.
 
 ### Cancellation
 
@@ -386,6 +485,15 @@ HttpError.is(err, 404); // → true only for 404
 if (HttpError.is(err)) {
   if (err.kind === 'timeout') console.log('Timed out');
   if (err.kind === 'abort') console.log('Cancelled');
+}
+```
+
+`HttpError.headers` gives direct access to response headers without optional-chaining through `err.response`.
+
+```ts
+if (HttpError.is(err)) {
+  const retryAfter = err.headers?.get('retry-after');
+  const requestId  = err.headers?.get('x-request-id');
 }
 ```
 

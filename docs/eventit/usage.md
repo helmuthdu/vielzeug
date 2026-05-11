@@ -53,6 +53,26 @@ bus.once('user:logout', () => {
 });
 ```
 
+### `removeAllListeners()` — Bulk unsubscribe
+
+Remove listeners for one event, or all listeners across the bus.
+
+```ts
+bus.removeAllListeners('user:login');
+bus.removeAllListeners(); // all events
+```
+
+### `eventNames()` — Introspect active subscriptions
+
+Get a snapshot of event keys that currently have listeners.
+
+```ts
+bus.on('user:login', handler);
+bus.on('user:logout', handler);
+
+console.log(bus.eventNames()); // ['user:login', 'user:logout']
+```
+
 ### AbortSignal
 
 Pass an `AbortSignal` as the third argument to `on()` or `once()`. The listener is automatically removed when the signal aborts — no manual `unsub()` call needed.
@@ -97,6 +117,20 @@ const signal = AbortSignal.timeout(5_000);
 const { userId } = await bus.wait('user:login', signal);
 ```
 
+### `waitAny()`
+
+`waitAny()` resolves with the first event that fires from a list and returns both the winning event key and payload.
+
+```ts
+const result = await bus.waitAny(['user:login', 'user:logout'] as const);
+
+if (result.event === 'user:login') {
+  console.log(result.payload.userId);
+}
+```
+
+Like `wait()`, it rejects when the bus is disposed or when the provided signal aborts.
+
 ## Async Iteration
 
 `events()` returns an `AsyncGenerator` that yields every future emit of an event. It terminates when the bus is disposed or the provided signal aborts.
@@ -140,13 +174,13 @@ const bus = createBus<AppEvents>({
 - `event` — the event key that was being emitted
 - `payload` — the payload, typed to `T[K]` for the specific event
 
-### `onEmit` hook
+### `onDispatch` hook
 
-`onEmit` is called before any listeners run on every emission. Both `event` and `payload` are **fully typed** to the specific event that fired — no casts needed.
+`onDispatch` is called before listeners run for events that currently have subscribers. Both `event` and `payload` are **fully typed** to the specific event that fired — no casts needed.
 
 ```ts
 const bus = createBus<AppEvents>({
-  onEmit: (event, payload) => {
+  onDispatch: (event, payload) => {
     // payload is typed to T[K] for the specific event
     console.debug(`[bus emit] ${event}`, payload);
   },
@@ -154,7 +188,7 @@ const bus = createBus<AppEvents>({
 ```
 
 ::: tip
-`createTestBus` composes your `onEmit` hook with its own recording behavior.
+`createTestBus` composes your `onDispatch` hook with its own recording behavior.
 :::
 
 ## Dispose & Cleanup
@@ -200,6 +234,8 @@ bus.listenerCount(); // 3 — total across all events
 
 This is useful for debugging, assertions in tests, or conditional emit optimizations.
 
+You can combine this with `eventNames()` when you need a quick snapshot of which channels are active.
+
 ### `using` keyword
 
 `Bus` implements `[Symbol.dispose]`, so it works with the `using` keyword (TypeScript 5.2+, `"lib": ["esnext"]`):
@@ -236,7 +272,7 @@ bus.reset(); // clear recorded payloads, keep listeners active
 bus.dispose(); // clear listeners and recorded payloads
 ```
 
-`createTestBus` accepts the full `BusOptions<T>` including `onEmit` — your hook is composed with the internal recording.
+`createTestBus` accepts the full `BusOptions<T>` including `onDispatch` — your hook is composed with the internal recording.
 
 Use `using` for automatic cleanup in test cases:
 

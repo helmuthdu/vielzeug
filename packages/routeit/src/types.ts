@@ -20,6 +20,12 @@ export type QueryParams = Record<string, string | string[]>;
 export type MaybePromise<T> = T | Promise<T>;
 export type NavigationStatus = 'idle' | 'loading' | 'error';
 
+/** Return value from a `coerceSearch` function. Return a normalized/coerced search object. */
+export type CoerceSearchFn<Q extends QueryParams = QueryParams> = (raw: QueryParams) => Q;
+
+/** Blocker callback for `beforeLeave`. Return `true` to allow the navigation, `false` to cancel it. */
+export type BeforeLeaveBlocker = () => MaybePromise<boolean>;
+
 export type NavigateOptions = {
   /** Navigate even if the destination URL matches the current URL */
   force?: boolean;
@@ -49,6 +55,8 @@ export type RouteContext<Params extends RouteParams = RouteParams, TRoutes exten
   /** Result from the route's `data()` function. Available in the handler; undefined in middleware. */
   readonly data?: unknown;
   readonly hash: string;
+  /** State stored on the history entry that triggered this navigation. */
+  readonly historyState: unknown;
   /** Mutable bag for passing data between middlewares */
   locals: Record<string, unknown>;
   /** Matched branch for the current navigation. Leaf node is the active route. */
@@ -98,16 +106,22 @@ export type RouteChildren = Record<string, RouteDefinition<string>>;
 export type RouteDefinition<Path extends string = string> = {
   /** Nested child routes. Keys become part of the compound route name (e.g. `dashboard.settings`). */
   children?: RouteChildren;
+  /** Normalize/coerce search params for this route. Throwing keeps the original search params unchanged. */
+  coerceSearch?: CoerceSearchFn;
   /** Data loader. Runs after middleware; result is available as `ctx.data` in the handler. */
   data?: DataFn<PathParams<Path>>;
   handler?: RouteHandler<PathParams<Path>>;
   /** When true the route inherits the parent path (acts as the default child). */
   index?: boolean;
+  /** Lazy-load the route module. The resolved export replaces handler/data/meta. */
+  lazy?: () => Promise<Pick<RouteDefinition<Path>, 'data' | 'handler' | 'meta'>>;
   meta?: unknown;
   /** Use `middleware` for auth guards, analytics, and error boundaries. */
   middleware?: Middleware[];
   /** Path segment. Absolute for top-level routes, relative for children. Omit when `index: true`. */
   path?: Path;
+  /** Declarative redirect. Resolved before middleware runs. */
+  redirect?: UntypedNamedNavigationTarget | RawNavigationTarget;
 };
 
 type JoinPath<Parent extends string, Child extends string> = Child extends `/${string}`
@@ -165,9 +179,14 @@ export type NamedNavigationTarget<TRoutes extends RouteTable> = {
 
 export type Unsubscribe = () => void;
 
-/** Pluggable history driver. Use `createBrowserHistory()` for standard SPAs. */
+/** Pluggable history driver. Use `createBrowserHistory()` for standard SPAs, `createMemoryHistory()` for SSR/tests. */
 export interface HistoryDriver {
-  readonly location: { readonly hash: string; readonly pathname: string; readonly search: string };
+  readonly location: {
+    readonly hash: string;
+    readonly pathname: string;
+    readonly search: string;
+    readonly state: unknown;
+  };
   push(url: string, state?: unknown): void;
   replace(url: string, state?: unknown): void;
   /** Subscribe to location changes (e.g. popstate). Returns an unsubscribe function. */
@@ -189,6 +208,8 @@ export type RouteMatchBranch = readonly RouteMatch[];
 
 export type RouteLocation = {
   readonly hash: string;
+  /** State object stored on the history entry (mirrors `history.state`). */
+  readonly historyState: unknown;
   readonly pathname: string;
   readonly query: QueryParams;
 };
@@ -202,11 +223,15 @@ export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
   middleware?: Middleware<TRoutes>[];
   /** Declarative route table. Object key order determines match precedence - place specific routes before wildcards. */
   routes: TRoutes;
+  /** Called after every successful navigation with the scroll position to restore, or null to scroll to top. */
+  scroll?: (to: RouteState, from: RouteState | null) => { x: number; y: number } | null | undefined;
   /** Wrap navigation in the View Transition API when available. Falls back to plain execution in unsupported environments. */
   viewTransition?: boolean;
 };
 
 export type RouteState = {
+  /** The error thrown by a `data()` function. Only set when `status === 'error'`. */
+  readonly error?: unknown;
   readonly location: RouteLocation;
   /** Matched route branch from root to leaf, including per-node data loader results. */
   readonly matches: RouteMatchBranch;

@@ -1,22 +1,30 @@
 /* -------------------- Types -------------------- */
 
-export type LogType = 'debug' | 'trace' | 'info' | 'success' | 'warn' | 'error';
+export type LogType = 'debug' | 'trace' | 'info' | 'warn' | 'error' | 'fatal';
 export type LogLevel = LogType | 'off';
 export type Variant = 'text' | 'symbol' | 'icon';
+export type Bindings = Record<string, unknown>;
 
 export type RemoteHandler = (type: LogType, data: RemoteLogData) => void;
 
 export type RemoteOptions = { handler?: RemoteHandler; logLevel?: LogLevel };
 
+export type SerializedError = {
+  message: string;
+  name: string;
+  stack?: string;
+};
+
 export type RemoteLogData = {
-  args: unknown[];
+  context?: Bindings;
   env: 'production' | 'development';
+  level: LogType;
+  message?: string;
   namespace?: string;
   timestamp?: string;
 };
 
 export type LogitOptions = {
-  environment?: boolean;
   logLevel?: LogLevel;
   namespace?: string;
   remote?: RemoteOptions;
@@ -30,21 +38,25 @@ export type LogitConfig = Omit<Required<LogitOptions>, 'remote'> & { remote: Res
 
 export type Logger = {
   assert: (condition: boolean, ...args: unknown[]) => void;
+  readonly bindings: Readonly<Bindings>;
+  /** Create a config-only child (overrides logLevel, namespace, etc.) */
   child: (overrides?: LogitOptions) => Logger;
   readonly config: Readonly<LogitConfig>;
-  debug: (...args: unknown[]) => void;
+  debug: (msgOrCtx?: string | Bindings, msg?: string) => void;
   enabled: (type: LogLevel) => boolean;
-  error: (...args: unknown[]) => void;
+  error: (msgOrCtx?: string | Bindings | Error, msg?: string) => void;
+  fatal: (msgOrCtx?: string | Bindings | Error, msg?: string) => void;
   group: <T>(label: string, fn: () => T) => T;
   groupCollapsed: <T>(label: string, fn: () => T) => T;
-  info: (...args: unknown[]) => void;
+  info: (msgOrCtx?: string | Bindings, msg?: string) => void;
   scope: (name: string) => Logger;
   setConfig: (opts: LogitOptions) => Logger;
-  success: (...args: unknown[]) => void;
   table: (data: unknown, properties?: string[]) => void;
   time: <T>(label: string, fn: () => T) => T;
-  trace: (...args: unknown[]) => void;
-  warn: (...args: unknown[]) => void;
+  trace: (msgOrCtx?: string | Bindings, msg?: string) => void;
+  warn: (msgOrCtx?: string | Bindings | Error, msg?: string) => void;
+  /** Create a child with pinned context fields emitted on every log line */
+  withBindings: (bindings: Bindings) => Logger;
 };
 
 /* -------------------- Priority -------------------- */
@@ -52,9 +64,9 @@ export type Logger = {
 const PRIORITY: Record<LogLevel, number> = {
   debug: 0,
   error: 5,
+  fatal: 6,
   info: 2,
-  off: 6,
-  success: 2,
+  off: 7,
   trace: 1,
   warn: 4,
 };
@@ -66,32 +78,69 @@ type Theme = { bg: string; border: string; color: string; icon?: string; symbol?
 const THEME: Record<LogType | 'group' | 'ns', Theme> = {
   debug: { bg: '#616161', border: '#424242', color: '#fff', icon: '☕', symbol: '🅳' },
   error: { bg: '#d32f2f', border: '#c62828', color: '#fff', icon: '✘', symbol: '🅴' },
+  fatal: { bg: '#4a148c', border: '#38006b', color: '#fff', icon: '💀', symbol: '🅵' },
   group: { bg: '#546e7a', border: '#455a64', color: '#fff', icon: '⚭', symbol: '🅶' },
   info: { bg: '#1976d2', border: '#1565c0', color: '#fff', icon: 'ℹ', symbol: '🅸' },
   ns: { bg: '#424242', border: '#212121', color: '#fff' },
-  success: { bg: '#689f38', border: '#558b2f', color: '#fff', icon: '✔', symbol: '🆂' },
   trace: { bg: '#d81b60', border: '#c2185b', color: '#fff', icon: '⛢', symbol: '🆃' },
   warn: { bg: '#ffb300', border: '#ffa000', color: '#fff', icon: '⚠', symbol: '🆆' },
 };
 
 const NS_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter; padding: 0 4px;';
 
-/* -------------------- createLogger -------------------- */
+/* -------------------- Env -------------------- */
 
 const IS_NODE = typeof window === 'undefined';
 const NODE_PROCESS = (globalThis as typeof globalThis & { process?: { env?: { NODE_ENV?: string } } }).process;
 const IS_PROD = IS_NODE ? NODE_PROCESS?.env?.NODE_ENV === 'production' : (import.meta as ImportMeta).env.PROD;
 
-const ENV_BADGE = IS_PROD ? '🅿' : '🅳';
-
 const LOG_METHOD: Record<LogType, 'log' | 'info' | 'warn' | 'error' | 'trace'> = {
   debug: 'log',
   error: 'error',
+  fatal: 'error',
   info: 'info',
-  success: 'log',
   trace: 'trace',
   warn: 'warn',
 };
+
+/* -------------------- Argument parsing -------------------- */
+
+/** Serialize an Error into a plain object that survives JSON.stringify. */
+function serializeError(err: Error): SerializedError {
+  return { message: err.message, name: err.name, stack: err.stack };
+}
+
+/**
+ * Parse the variadic call signature into a structured { message, context }.
+ *
+ * Supported call forms:
+ *   log.info()
+ *   log.info('message')
+ *   log.info({ key: 'val' }, 'message')
+ *   log.error(new Error('boom'))              → context.err = SerializedError, message = err.message
+ *   log.error(new Error('boom'), 'override')  → message overridden, context.err kept
+ */
+function parseArgs(
+  msgOrCtx: string | Bindings | Error | undefined,
+  msg: string | undefined,
+): { context: Bindings | undefined; message: string | undefined } {
+  if (msgOrCtx === undefined) return { context: undefined, message: undefined };
+
+  if (msgOrCtx instanceof Error) {
+    return {
+      context: { err: serializeError(msgOrCtx) },
+      message: msg ?? msgOrCtx.message,
+    };
+  }
+
+  if (typeof msgOrCtx === 'string') {
+    return { context: undefined, message: msgOrCtx };
+  }
+
+  return { context: msgOrCtx as Bindings, message: msg };
+}
+
+/* -------------------- createLogger -------------------- */
 
 /**
  * Creates an independent logger instance with its own isolated configuration.
@@ -99,23 +148,27 @@ const LOG_METHOD: Record<LogType, 'log' | 'info' | 'warn' | 'error' | 'trace'> =
  * @example
  * ```ts
  * const log = createLogger({ logLevel: 'info', namespace: 'App' });
- * log.info('Hello');
+ * log.info('server started');
+ * log.info({ port: 3000 }, 'listening');
+ * log.error(new Error('boom'));
  *
- * const apiLog = log.scope('api');
- * apiLog.warn('slow request');
+ * const reqLog = log.withBindings({ requestId: 'abc-123' });
+ * reqLog.info('GET /users');  // always includes requestId
  * ```
  */
-export function createLogger(initial: LogitOptions | string = {}): Logger {
+export function createLogger(initial: LogitOptions | string = {}, initialBindings: Bindings = {}): Logger {
   const opts: LogitOptions = typeof initial === 'string' ? { namespace: initial } : initial;
   const cfg: LogitConfig = {
-    environment: true,
     logLevel: 'debug',
     namespace: '',
     timestamp: true,
     variant: 'symbol',
     ...opts,
-    remote: { logLevel: 'debug', ...opts.remote }, // 'debug' default means a handler just works; set 'off' explicitly to disable
+    remote: { logLevel: 'debug', ...opts.remote },
   };
+
+  // Pinned context fields merged into every emission
+  const ownBindings: Bindings = { ...initialBindings };
 
   /* ---- helpers ---- */
 
@@ -145,21 +198,38 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
     }
   };
 
-  const emitNode = (type: LogType, ns: string, stamp: string, args: unknown[]): void => {
-    const meta = [badge(type)];
+  const mergeContext = (callCtx: Bindings | undefined): Bindings | undefined => {
+    const hasOwn = Object.keys(ownBindings).length > 0;
 
-    if (cfg.environment) meta.push(ENV_BADGE);
+    if (!hasOwn && !callCtx) return undefined;
 
-    if (ns) meta.push(`[${ns}]`);
-
-    if (stamp) meta.push(stamp);
-
-    const method = console[LOG_METHOD[type]] as (...a: unknown[]) => void;
-
-    method(`${meta.join(' | ')} |`, ...args);
+    return { ...ownBindings, ...callCtx };
   };
 
-  const emitBrowser = (type: LogType, ns: string, stamp: string, args: unknown[]): void => {
+  const buildConsolePayload = (message: string | undefined, context: Bindings | undefined): unknown[] => {
+    const merged = mergeContext(context);
+    const out: unknown[] = [];
+
+    if (merged) out.push(merged);
+
+    if (message !== undefined) out.push(message);
+
+    if (out.length === 0) out.push(undefined);
+
+    return out;
+  };
+
+  const buildEmitPrefix = (type: LogType, ns: string, stamp: string): { fmt: string; parts: string[] } => {
+    if (IS_NODE) {
+      const meta = [badge(type)];
+
+      if (ns) meta.push(`[${ns}]`);
+
+      if (stamp) meta.push(stamp);
+
+      return { fmt: `${meta.join(' | ')} |`, parts: [] };
+    }
+
     let fmt = `%c${badge(type)}%c`;
     const parts: string[] = [style(type), ''];
 
@@ -168,37 +238,45 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
       parts.push(style('ns', `; ${NS_STYLE}`), '');
     }
 
-    if (cfg.environment) {
-      fmt += ` %c${ENV_BADGE}%c`;
-      parts.push('color: darkgray', '');
-    }
-
     if (stamp) {
       fmt += ` %c${stamp}%c`;
       parts.push('color: gray', '');
     }
 
-    const method = console[LOG_METHOD[type]] as (...a: unknown[]) => void;
-
-    method(fmt, ...parts, ...args);
+    return { fmt, parts };
   };
 
-  const emit = (type: LogType, args: unknown[]): void => {
+  const emitConsole = (
+    type: LogType,
+    ns: string,
+    stamp: string,
+    message: string | undefined,
+    context: Bindings | undefined,
+  ): void => {
+    const { fmt, parts } = buildEmitPrefix(type, ns, stamp);
+    const method = console[LOG_METHOD[type]] as (...a: unknown[]) => void;
+
+    method(fmt, ...parts, ...buildConsolePayload(message, context));
+  };
+
+  const emit = (type: LogType, msgOrCtx: string | Bindings | Error | undefined, msg: string | undefined): void => {
     if (!passes(type)) return;
 
+    const { context, message } = parseArgs(msgOrCtx, msg);
     const ns = cfg.namespace;
     const stamp = cfg.timestamp ? ts() : '';
 
-    if (IS_NODE) emitNode(type, ns, stamp, args);
-    else emitBrowser(type, ns, stamp, args);
+    emitConsole(type, ns, stamp, message, context);
 
-    /* remote dispatch — snapshot data now, dispatch in microtask to avoid blocking caller */
+    /* remote dispatch — snapshot now, fire in microtask */
     const { handler, logLevel } = cfg.remote;
 
     if (handler && PRIORITY[logLevel] <= PRIORITY[type]) {
       const data: RemoteLogData = {
-        args,
+        context: mergeContext(context),
         env: IS_PROD ? 'production' : 'development',
+        level: type,
+        message,
         namespace: ns || undefined,
         timestamp: cfg.timestamp ? new Date().toISOString() : undefined,
       };
@@ -213,36 +291,29 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
   const timeLabel = (label: string): string => (cfg.namespace ? `[${cfg.namespace}] ${label}` : label);
 
-  /* ---- group renderer ---- */
-
-  const renderGroupNode = (collapsed: boolean, label: string, ns: string, stamp: string): void => {
+  const renderGroup = (collapsed: boolean, label: string): void => {
+    const ns = cfg.namespace;
+    const stamp = cfg.timestamp ? ts() : '';
     const fn = collapsed ? console.groupCollapsed : console.group;
-    const meta = [badge('group')];
 
-    if (cfg.environment) meta.push(ENV_BADGE);
+    if (IS_NODE) {
+      const meta = [badge('group'), label];
 
-    meta.push(label);
+      if (ns) meta.push(`[${ns}]`);
 
-    if (ns) meta.push(`[${ns}]`);
+      if (stamp) meta.push(stamp);
 
-    if (stamp) meta.push(stamp);
+      fn(meta.join(' | '));
 
-    fn(meta.join(' | '));
-  };
+      return;
+    }
 
-  const renderGroupBrowser = (collapsed: boolean, label: string, ns: string, stamp: string): void => {
-    const fn = collapsed ? console.groupCollapsed : console.group;
     let fmt = `%c${label}%c`;
     const parts: string[] = [style('group', '; margin-right: 6px; padding: 1px 3px 0'), ''];
 
     if (ns) {
       fmt += ` %c${ns}%c`;
       parts.push(style('ns', `; ${NS_STYLE}; margin-right: 6px`), '');
-    }
-
-    if (cfg.environment) {
-      fmt += ` %c${ENV_BADGE}%c`;
-      parts.push('color: darkgray; margin-right: 6px', '');
     }
 
     if (stamp) {
@@ -253,12 +324,23 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
     fn(fmt, ...parts);
   };
 
-  const renderGroup = (collapsed: boolean, label: string): void => {
-    const ns = cfg.namespace;
-    const stamp = cfg.timestamp ? ts() : '';
+  const wrapGroup = <T>(collapsed: boolean, label: string, fn: () => T): T => {
+    if (cfg.logLevel === 'off') return fn();
 
-    if (IS_NODE) renderGroupNode(collapsed, label, ns, stamp);
-    else renderGroupBrowser(collapsed, label, ns, stamp);
+    renderGroup(collapsed, label);
+
+    try {
+      const result = fn();
+
+      if (result instanceof Promise) return result.finally(() => console.groupEnd()) as T;
+
+      console.groupEnd();
+
+      return result;
+    } catch (e) {
+      console.groupEnd();
+      throw e;
+    }
   };
 
   /* ---- public API ---- */
@@ -276,64 +358,30 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
       console.assert(condition, ...args);
     },
 
+    get bindings(): Readonly<Bindings> {
+      return { ...ownBindings };
+    },
+
     child: (overrides: LogitOptions = {}): Logger => {
       const { remote: overrideRemote, ...overrideRest } = overrides;
 
-      return createLogger({ ...cfg, ...overrideRest, remote: { ...cfg.remote, ...overrideRemote } });
+      return createLogger({ ...cfg, ...overrideRest, remote: { ...cfg.remote, ...overrideRemote } }, ownBindings);
     },
 
     get config(): Readonly<LogitConfig> {
       return { ...cfg, remote: { ...cfg.remote } };
     },
 
-    debug: (...a) => emit('debug', a),
+    debug: (m?, s?) => emit('debug', m, s),
 
     enabled: (type: LogLevel): boolean => passes(type),
-    error: (...a) => emit('error', a),
+    error: (m?, s?) => emit('error', m as string | Bindings | Error | undefined, s),
+    fatal: (m?, s?) => emit('fatal', m as string | Bindings | Error | undefined, s),
 
-    group: <T>(label: string, fn: () => T): T => {
-      if (cfg.logLevel === 'off') return fn();
+    group: (label, fn) => wrapGroup(false, label, fn),
 
-      renderGroup(false, label);
-
-      try {
-        const result = fn();
-
-        if (result instanceof Promise) {
-          return result.finally(() => console.groupEnd()) as T;
-        }
-
-        console.groupEnd();
-
-        return result;
-      } catch (e) {
-        console.groupEnd();
-        throw e;
-      }
-    },
-
-    groupCollapsed: <T>(label: string, fn: () => T): T => {
-      if (cfg.logLevel === 'off') return fn();
-
-      renderGroup(true, label);
-
-      try {
-        const result = fn();
-
-        if (result instanceof Promise) {
-          return result.finally(() => console.groupEnd()) as T;
-        }
-
-        console.groupEnd();
-
-        return result;
-      } catch (e) {
-        console.groupEnd();
-        throw e;
-      }
-    },
-
-    info: (...a) => emit('info', a),
+    groupCollapsed: (label, fn) => wrapGroup(true, label, fn),
+    info: (m?, s?) => emit('info', m, s),
 
     scope: (name: string): Logger => logger.child({ namespace: cfg.namespace ? `${cfg.namespace}.${name}` : name }),
 
@@ -346,7 +394,6 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
 
       return logger;
     },
-    success: (...a) => emit('success', a),
 
     table: (data: unknown, properties?: string[]): void => {
       if (!passes('debug')) return;
@@ -372,9 +419,7 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
       try {
         const result = fn();
 
-        if (result instanceof Promise) {
-          return result.finally(() => console.timeEnd(tl)) as T;
-        }
+        if (result instanceof Promise) return result.finally(() => console.timeEnd(tl)) as T;
 
         console.timeEnd(tl);
 
@@ -385,8 +430,10 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
       }
     },
 
-    trace: (...a) => emit('trace', a),
-    warn: (...a) => emit('warn', a),
+    trace: (m?, s?) => emit('trace', m, s),
+
+    warn: (m?, s?) => emit('warn', m as string | Bindings | Error | undefined, s),
+    withBindings: (bindings: Bindings): Logger => createLogger(cfg, { ...ownBindings, ...bindings }),
   };
 
   return logger;
@@ -401,6 +448,8 @@ export function createLogger(initial: LogitOptions | string = {}): Logger {
  * ```ts
  * import { Logit } from '@vielzeug/logit';
  * Logit.info('Hello');
+ * Logit.error(new Error('boom'));
+ * Logit.fatal({ requestId: 'x' }, 'unrecoverable');
  * ```
  */
 export const Logit = createLogger();

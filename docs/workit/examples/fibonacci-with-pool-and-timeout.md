@@ -16,7 +16,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 Classic CPU-bound example with a safety timeout:
 
 ```ts
-import { createWorker, TaskTimeoutError } from '@vielzeug/workit';
+import { createWorker, WorkerError } from '@vielzeug/workit';
 
 const fibPool = createWorker<number, number>(
   function fib(n) {
@@ -30,7 +30,7 @@ async function computeFibonacci(n: number): Promise<number | null> {
   try {
     return await fibPool.run(n);
   } catch (error) {
-    if (error instanceof TaskTimeoutError) {
+    if (error instanceof WorkerError && error.code === 'timeout') {
       console.error(`Fibonacci(${n}) exceeded 5 second timeout`);
       return null;
     }

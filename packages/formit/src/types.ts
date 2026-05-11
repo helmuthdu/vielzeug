@@ -99,8 +99,12 @@ export type BindResult<V = unknown> = {
 
 export type ArrayField = {
   append(value: unknown): void;
+  insert(index: number, value: unknown): void;
   move(from: number, to: number): void;
+  prepend(value: unknown): void;
   remove(index: number): void;
+  replace(index: number, value: unknown): void;
+  swap(a: number, b: number): void;
 };
 
 export type FieldState<V = unknown> = {
@@ -114,10 +118,20 @@ export type FormOptions<TValues extends Record<string, unknown> = Record<string,
   /** Default bind behavior applied when `bind(name, config)` omits specific options. */
   bindDefaults?: BindConfig;
   defaultValues?: TValues;
+  /**
+   * Global validation trigger mode. Sets `bindDefaults` unless explicit `bindDefaults` are also provided.
+   * - `'onSubmit'` (default) — validates only on submit
+   * - `'onBlur'` — validates each field on blur
+   * - `'onChange'` — validates each field on every change
+   * - `'onTouched'` — validates on blur first, then on every change once touched
+   */
+  mode?: ValidationMode;
   validator?: FormValidator<TValues>;
   /** Field-level validators keyed by field name or dot-notation path. */
   validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator | FieldValidator[]>>;
 };
+
+export type ValidationMode = 'onChange' | 'onBlur' | 'onTouched' | 'onSubmit';
 
 export type BindConfig = {
   touchOnBlur?: boolean;
@@ -146,6 +160,8 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   /** Replace values and baseline in one operation. */
   replace(newValues: TValues): void;
   resetField(name: FlatKeyOf<TValues>): void;
+  /** Remove a field entirely: drops value, dirty, touched, error, and any registered validator. */
+  removeField(name: FlatKeyOf<TValues>): void;
   set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void;
   setError(name: FlatKeyOf<TValues>, message: string): void;
   /** Merge specific fields into the current error map; pass `undefined` to clear a field. */
@@ -153,7 +169,10 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   /** Replace the entire error map. */
   replaceErrors(errors: Partial<Record<FlatKeyOf<TValues>, string>>): void;
   readonly state: FormState<TValues>;
-  submit<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>, signal?: AbortSignal): Promise<TResult>;
+  submit<TResult = void>(
+    handler: (values: TValues) => MaybePromise<TResult>,
+    onInvalid?: (errors: Record<string, string>) => MaybePromise<void>,
+  ): Promise<TResult | void>;
   readonly submitCount: number;
   subscribeForm(listener: (state: FormState<TValues>) => void, options?: SubscribeOptions): Unsubscribe;
   subscribeField<K extends FlatKeyOf<TValues>>(
@@ -161,12 +180,15 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
     listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
     options?: SubscribeOptions,
   ): Unsubscribe;
-  touch(name: FlatKeyOf<TValues>): void;
-  /** Mark field(s) as touched. Omit name to mark all fields. */
+  /** Subscribe to a single field's value changes. Returns current value and a teardown. */
+  watch<K extends FlatKeyOf<TValues>>(
+    name: K,
+    callback: (value: TypeAtPath<TValues, K>) => void,
+    options?: SubscribeOptions,
+  ): Unsubscribe;
   touch(name?: FlatKeyOf<TValues>): void;
   /** Unmark field(s) as touched. Omit name to unmark all. */
   untouch(name?: FlatKeyOf<TValues>): void;
-  /** Full validation: field validators + form validator. Replaces full error map. */
   /** Validate form or specific fields. validate() = all; validate('touched') = touched; validate(fields) = list. */
   validate(fields?: FlatKeyOf<TValues>[] | 'touched', signal?: AbortSignal): Promise<ValidateResult>;
   validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>;

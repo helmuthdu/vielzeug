@@ -45,6 +45,11 @@ export class HttpError extends Error {
     return this.kind === 'abort';
   }
 
+  /** Response headers. Shorthand for `err.response?.headers`. */
+  get headers(): Headers | undefined {
+    return this.response?.headers;
+  }
+
   static fromResponse(res: Response, data: unknown, method: string, url: string): HttpError {
     return new HttpError({
       data,

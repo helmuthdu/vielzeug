@@ -29,63 +29,7 @@ const items = signal<string[]>([]);
 ```ts
 count.value; // read — tracked inside effect/computed
 count.value = 42; // write — notifies all dependents
-peek(count); // read without registering a subscription
-count.update((n) => n + 1); // update via function — equivalent to count.value = count.value + 1
-```
-
-### `readonly`
-
-Narrows a `Signal<T>` to its read-only `ReadonlySignal<T>` interface at the type level. Useful for exposing a signal at API boundaries where callers should observe but not mutate:
-
-```ts
-const count = signal(0);
-const readCount: ReadonlySignal<number> = readonly(count);
-
-readCount.value; // fine — tracked read
-// readCount.value = 1; // TS compile error — no write access
-```
-
-### `toValue`
-
-Unwraps a plain value, signal, or function transparently — useful in generic helpers:
-
-```ts
-toValue(42); // 42
-toValue(signal(42)); // 42 (tracked if called inside effect)
-toValue(() => 42); // 42
-```
-
-### `unwrapSignal`
-
-Unwraps a plain value or signal. If `input` is a `ReadonlySignal`, its value is read (which **may track dependencies** if called inside an effect). For untracked reads, use `peek()` instead.
-
-```ts
-unwrapSignal(42); // 42
-unwrapSignal(signal(42)); // 42 (tracked if inside effect)
-```
-
-### `peek`
-
-Performs an untracked read of a signal value without registering a reactive dependency. Useful when you need to read a signal's current value from within an effect without creating a subscription.
-
-```ts
-peek(42); // 42
-peek(signal(42)); // 42 (untracked — no dependency registered)
-
-// Example: read a signal without causing re-runs
-effect(() => {
-  const currentId = id.value; // tracked — effect re-runs if id changes
-  const name = peek(() => users[currentId].name); // untracked — no re-run on users change
-  console.log(`${currentId}: ${name}`);
-});
-```
-
-This is equivalent to wrapping the read with `untrack()`:
-
-```ts
-// These are equivalent:
-peek(signal(42));
-untrack(() => signal(42).value);
+untrack(() => count.value); // read without registering a subscription
 ```
 
 ## Effects
@@ -203,20 +147,6 @@ effect(() => {
 This behavior is an ergonomic convenience and works because `computed()` detects the active effect scope and registers itself for automatic cleanup.
 
 ### `stale` Property
-
-`ComputedSignal<T>` exposes a `.stale` boolean that is `true` when the cached value
-is out-of-date (deps have changed but the value hasn't been re-read yet) or after it
-has been disposed:
-
-```ts
-const sq = computed(() => count.value ** 2);
-console.log(sq.stale); // false — just computed
-count.value = 4;
-console.log(sq.stale); // true — deps changed; value not yet re-read
-console.log(sq.value); // 16 — triggers recompute
-console.log(sq.stale); // false
-```
-
 ### Chaining Computeds
 
 ```ts
@@ -303,11 +233,63 @@ batch(() => {
 If the callback throws, pending notifications are still flushed after the error;
 the original error is re-thrown with the flush errors suppressed.
 
+## `scope`
+
+`scope()` creates an isolated cleanup context that is not tied to any reactive effect. Use it when you want to collect teardown callbacks and release them all at once — without needing an effect or a component lifecycle hook.
+
+```ts
+import { scope, onCleanup } from '@vielzeug/stateit';
+
+const s = scope();
+
+s.run(() => {
+  const id = setInterval(() => tick(), 1000);
+  onCleanup(() => clearInterval(id));
+
+  const ws = new WebSocket('wss://example.com');
+  onCleanup(() => ws.close());
+});
+
+// Later — tears down all cleanups in LIFO order:
+s.dispose();
+```
+
+`scope.run()` can be called multiple times to incrementally register cleanups into the same scope. The `using` declaration auto-disposes at block end:
+
+```ts
+{
+  using s = scope();
+  s.run(() => {
+    onCleanup(() => console.log('cleaned up'));
+  });
+} // ← scope.dispose() called here automatically
+```
+
+**Inside craftit components**, `scope()` is available via `@vielzeug/craftit` and is useful for managing sub-scoped cleanup (e.g., an animation controller or WebSocket owned by one part of a component):
+
+```ts
+import { scope, onCleanup, effect } from '@vielzeug/craftit';
+
+define('my-component', {
+  setup() {
+    const animScope = scope();
+    onCleanup(() => animScope.dispose()); // tie sub-scope to component lifetime
+
+    onMounted(() => {
+      animScope.run(() => {
+        const raf = requestAnimationFrame(animate);
+        onCleanup(() => cancelAnimationFrame(raf));
+      });
+    });
+
+    return () => html`...`;
+  },
+});
+```
+
 ## Stores
 
-A `Store<T>` **is** a `Signal<T>` — it extends `Signal` and adds structured
-state helpers. Every signal primitive (`computed`, `effect`, `watch`, `batch`,
-`untrack`, `readonly`, `toValue`) works on stores directly.
+A `Store<T>` adds structured state helpers on top of a `.value` getter. Every signal primitive (`computed`, `effect`, `watch`, `batch`, `untrack`) works on stores directly.
 
 ## Creating a Store
 
@@ -316,19 +298,6 @@ import { store } from '@vielzeug/stateit';
 
 const s = store({ count: 0, user: null as User | null });
 ```
-
-### With Options
-
-```ts
-const s = store(
-  { items: [] as Item[], filter: '' },
-  {
-    equals: (a, b) => a.items === b.items && a.filter === b.filter,
-  },
-);
-```
-
-`equals` controls top-level change detection — two states that pass `equals` will not fire watchers. Default: `Object.is`.
 
 ## Reading State
 
@@ -465,14 +434,23 @@ Nested `batch()` calls merge into the outermost — only one notification fires 
 
 ## Narrowing to Read-Only
 
-To expose a store at API boundaries where consumers should observe but not mutate, narrow it to `ReadonlySignal<T>`:
+To expose a store at API boundaries where consumers should observe but not mutate, type the public field as `ReadonlySignal<T>`:
 
 ```ts
-function createCounterService() {
+import { store } from '@vielzeug/stateit';
+import type { ReadonlySignal } from '@vielzeug/stateit';
+
+type CounterService = {
+  state: ReadonlySignal<{ count: number }>;
+  increment(): void;
+  decrement(): void;
+};
+
+function createCounterService(): CounterService {
   const s = store({ count: 0 });
 
   return {
-    state: readonly(s),
+    state: s,
     increment() {
       s.update((st) => ({ count: st.count + 1 }));
     },

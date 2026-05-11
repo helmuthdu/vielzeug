@@ -15,7 +15,7 @@ These recipes are aligned with the current Craftit public API.
 
 ## Examples overview
 
-- [Prop helpers and raw PropDef](./examples/propsof-builder-api.md)
+- [Prop helpers and raw PropsDef](./examples/propsof-builder-api.md)
 - [Counter component](./examples/counter-component.md)
 - [Search list with directives](./examples/search-list-with-directives.md)
 - [Typed props and emits](./examples/typed-props-and-emits.md)

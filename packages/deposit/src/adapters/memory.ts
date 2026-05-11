@@ -2,13 +2,12 @@ import type { Adapter, AnySchema, KeyOf, RecordOf } from '../types';
 
 import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
 import { AdapterCore } from './adapter-core';
-import { resolveRecordKey } from './resolve-key';
 
 /* -------------------- MemoryAdapter -------------------- */
 
 class MemoryAdapter<S extends AnySchema> extends AdapterCore<S> {
   private readonly tables = new Map<string, Map<string, StoredRecord<unknown>>>();
-  private readonly schema: S;
+  protected readonly schema: S;
 
   constructor(schema: S) {
     super();
@@ -58,17 +57,20 @@ class MemoryAdapter<S extends AnySchema> extends AdapterCore<S> {
   }
 
   async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
-    const key = String(resolveRecordKey(this.schema, table, value));
+    const key = String(this.resolveRecordKey(table, value));
 
     this.table(table).set(key, wrapStored(value, ttl));
+    this.notify(table);
   }
 
   async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<void> {
     this.table(table).delete(String(key));
+    this.notify(table);
   }
 
   async deleteAll<K extends keyof S>(table: K): Promise<void> {
     this.table(table).clear();
+    this.notify(table);
   }
 }
 

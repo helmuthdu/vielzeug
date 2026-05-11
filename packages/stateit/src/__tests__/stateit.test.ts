@@ -1,4 +1,4 @@
-import { batch, computed, effect, onCleanup, signal, store, untrack, watch } from '../';
+import { batch, computed, effect, isSignal, onCleanup, scope, signal, store, untrack, watch } from '../';
 
 describe('stateit', () => {
   it('supports direct singleton primitives', () => {
@@ -64,8 +64,8 @@ describe('stateit', () => {
     expect(cleanB).toHaveBeenCalledTimes(1);
   });
 
-  it('onCleanup throws outside active effect', () => {
-    expect(() => onCleanup(() => {})).toThrow(/inside an active effect/);
+  it('onCleanup throws outside active effect or scope', () => {
+    expect(() => onCleanup(() => {})).toThrow(/active effect or scope/);
   });
 
   it('watch supports selector overload and auto-disposes internal computed', () => {
@@ -121,6 +121,12 @@ describe('stateit', () => {
     user.reset();
 
     expect(user.value).toEqual({ count: 0, profile: { name: 'Ada' } });
+  });
+
+  it('store is branded as a signal', () => {
+    const user = store({ count: 0 });
+
+    expect(isSignal(user)).toBe(true);
   });
 
   it('store throws when misused with non-object values', () => {
@@ -356,6 +362,182 @@ describe('stateit', () => {
       expect(log).toEqual([0]);
 
       stop();
+    });
+  });
+
+  describe('scope', () => {
+    it('collects and runs cleanups on dispose (LIFO order)', () => {
+      const s = scope();
+      const log: string[] = [];
+
+      s.run(() => {
+        onCleanup(() => log.push('a'));
+        onCleanup(() => log.push('b'));
+      });
+
+      expect(log).toEqual([]);
+      s.dispose();
+      expect(log).toEqual(['b', 'a']);
+    });
+
+    it('dispose is idempotent', () => {
+      const s = scope();
+      const log: number[] = [];
+
+      s.run(() => onCleanup(() => log.push(1)));
+      s.dispose();
+      s.dispose();
+      expect(log).toEqual([1]);
+    });
+
+    it('run after dispose throws', () => {
+      const s = scope();
+
+      s.dispose();
+      expect(() => s.run(() => {})).toThrow(/disposed scope/);
+    });
+
+    it('cleanups registered inside scope.run are isolated from enclosing effect', () => {
+      const n = signal(0);
+      const scopeLog: number[] = [];
+      const effectLog: number[] = [];
+      const s = scope();
+
+      const stop = effect(() => {
+        void n.value;
+        s.run(() => onCleanup(() => scopeLog.push(1)));
+        onCleanup(() => effectLog.push(1));
+      });
+
+      n.value = 1; // re-run: effect teardown fires effectLog, not scopeLog
+      stop();
+
+      expect(effectLog).toEqual([1, 1]); // once on re-run, once on stop
+      expect(scopeLog).toEqual([]); // scope untouched until dispose
+
+      s.dispose();
+      expect(scopeLog).toEqual([1, 1]); // registered twice across two effect runs
+    });
+
+    it('supports using declaration via Symbol.dispose', () => {
+      const log: string[] = [];
+
+      {
+        using s = scope();
+
+        s.run(() => onCleanup(() => log.push('done')));
+      }
+
+      expect(log).toEqual(['done']);
+    });
+  });
+
+  describe('computed: glitch-free propagation', () => {
+    it('effect always observes a consistent signal+computed snapshot', () => {
+      const n = signal(1);
+      const doubled = computed(() => n.value * 2);
+      const seen: Array<[number, number]> = [];
+
+      const stop = effect(() => {
+        seen.push([n.value, doubled.value]);
+      });
+
+      n.value = 5;
+      stop();
+
+      // every snapshot must be internally consistent
+      for (const [raw, derived] of seen) {
+        expect(derived).toBe(raw * 2);
+      }
+
+      // final state must be correct
+      expect(seen.at(-1)).toEqual([5, 10]);
+    });
+
+    it('does not re-run an effect when a computed dependency changes but the computed value stays equal', () => {
+      const n = signal(0);
+      const parity = computed(() => n.value % 2);
+      const seen: number[] = [];
+
+      const stop = effect(() => {
+        seen.push(parity.value);
+      });
+
+      n.value = 2;
+      n.value = 4;
+
+      expect(seen).toEqual([0]);
+
+      n.value = 5;
+      expect(seen).toEqual([0, 1]);
+
+      stop();
+      parity.dispose();
+    });
+
+    it('computed with no subscribers stays lazy and never glitches', () => {
+      const a = signal(2);
+      const b = computed(() => a.value * 3);
+
+      a.value = 10;
+      expect(b.value).toBe(30);
+    });
+
+    it('conditional computed unsubscribes from stale branches', () => {
+      const toggle = signal(true);
+      const left = signal(1);
+      const right = signal(10);
+      const selected = computed(() => (toggle.value ? left.value : right.value));
+      const seen: number[] = [];
+
+      const stop = effect(() => {
+        seen.push(selected.value);
+      });
+
+      expect(seen).toEqual([1]);
+
+      // Switch branch and then update only the stale dependency.
+      toggle.value = false;
+      expect(seen).toEqual([1, 10]);
+
+      left.value = 2;
+      expect(seen).toEqual([1, 10]);
+
+      right.value = 11;
+      expect(seen).toEqual([1, 10, 11]);
+
+      stop();
+      selected.dispose();
+    });
+  });
+
+  describe('computed: cycle detection', () => {
+    it('throws on circular computed dependency', () => {
+      // proxy.fn is patched after both computeds exist so the cycle is wired at read time
+      const proxy = { fn: (): number => 0 };
+      const a = computed(() => proxy.fn() + 1);
+      const b = computed(() => a.value + 1);
+
+      proxy.fn = () => b.value; // a now depends on b which depends on a
+
+      expect(() => a.value).toThrow(/computed cycle detected/);
+
+      a.dispose();
+      b.dispose();
+    });
+  });
+
+  describe('watch: once semantics', () => {
+    it('once + custom equals does not hit TDZ during initial run', () => {
+      const s = signal(1);
+      const spy = vi.fn();
+
+      expect(() => {
+        watch(s, spy, { equals: () => false, once: true });
+      }).not.toThrow();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(1, 1);
     });
   });
 });

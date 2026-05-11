@@ -83,10 +83,11 @@ define('auto-save-field', {
 
 ## Features
 
-- Signals included: `signal`, `computed`, `watch`, `batch`, `untrack`, `readonly`, `writable`, and related primitives
+- Signals included: `signal`, `computed`, `watch`, `batch`, `untrack`, `scope`, and related primitives from `@vielzeug/stateit`
 - Component authoring: `define(tag, { props, setup, styles, formAssociated })`
-- Lifecycle hooks: `onMounted`, `onCleanup`, `onElement`, `effect`, `handle`
-- Directives: `each`, `classMap`, `raw`
+- Props: `prop.*` helpers and raw `PropDef` objects; shared bundles can type against `PropsDef<...>`
+- Lifecycle hooks: `onMounted`, `onCleanup`, `onElement`, `effect`, `handle` (auto-cleans inside setup/scope; returns manual cleanup outside it)
+- Directives: `each`, `classMap`, `styleMap`, `guard`, `when`, `live`, `until`, `raw`
 - Host/slot APIs: `host.bind`, `syncAria`, `slots.has`, `slots.elements`
 - Form-associated elements: `defineField()`
 - Published subpaths: `@vielzeug/craftit/controls`, `@vielzeug/craftit/observers`, `@vielzeug/craftit/testing`
@@ -95,9 +96,9 @@ define('auto-save-field', {
 
 | Area | Exports |
 | --- | --- |
-| Component authoring | `define`, `prop`, `type ComponentDefinition`, `type SetupContextBag` |
+| Component authoring | `define`, `prop`, `type ComponentDefinition`, `type SetupContextBag`, `type PropsDef`, `type PropDef` |
 | Runtime | `onMounted`, `effect`, `handle`, `onCleanup`, `onElement` |
-| Templates and directives | `html`, `css`, `each`, `classMap`, `raw` |
+| Templates and directives | `html`, `css`, `each`, `classMap`, `styleMap`, `guard`, `when`, `live`, `until`, `raw` |
 | Element references | `ref`, `refs`, `createId` |
 | Context and slots | `createContext`, `provide`, `inject`, `injectStrict`, `syncAria` |
 | Form | `defineField`, `type FormFieldOptions`, `type FormFieldHandle` |

@@ -71,8 +71,12 @@ v.string().min(3).max(40).nonEmpty();
 v.string().email();
 v.string().url();
 v.string().uuid();
+v.string().ulid();
+v.string().cuid2();
+v.string().jwt();
 v.string().isoDate(); // YYYY-MM-DD
 v.string().isoDateTime(); // ISO date-time
+v.string().duration(); // ISO 8601 duration
 v.string().ip(); // IPv4 or IPv6
 v.string().startsWith('user_').endsWith('_id').includes('_');
 v.string().regex(/^[a-z0-9_-]+$/i);
@@ -102,6 +106,7 @@ v.number().nonNegative();
 v.number().nonPositive();
 v.number().multipleOf(5);
 v.number().safe();
+v.number().finite();
 ```
 
 `safe()` uses `Number.isSafeInteger()`, so it is intended for integer-like identifiers and counters rather than arbitrary floating-point values.
@@ -113,6 +118,8 @@ v.boolean();
 v.coerce.boolean(); // true/false, 1/0, 'true'/'false', '1'/'0'
 v.date().min(new Date('2024-01-01')).max(new Date());
 v.coerce.date(); // string or number -> Date
+v.bigint().positive();
+v.coerce.bigint(); // number/string integer -> bigint
 v.literal('active');
 v.enum(['draft', 'published'] as const);
 v.enum([200, 201, 204] as const);
@@ -134,9 +141,12 @@ const Profile = v.object({
 
 // object() is strict by default (unknown keys fail)
 const RelaxedProfile = Profile.relaxed();
+const StrippedProfile = Profile.strip();
 ```
 
 `object()` is strict by default. Unknown keys produce an `unrecognized_keys` issue instead of being silently dropped.
+
+Use `.strip()` when you want to ignore unknown keys, and `.relaxed()` when you want to preserve unknown keys.
 
 ### Arrays
 
@@ -152,6 +162,7 @@ TagsSchema.parse(['docs', 'typescript']);
 
 ```ts
 const PointSchema = v.tuple([v.number(), v.number()] as const);
+const HeadTailSchema = v.tuple([v.string()] as const).rest(v.number());
 
 const point = PointSchema.parse([12, 48]);
 // point: readonly [number, number]
@@ -326,6 +337,27 @@ const Username = v
 
 Sync refinements and async refinements both receive the parsed value after preprocessors, defaults, and core schema validation.
 
+### `superRefine()` and `superRefineAsync()`
+
+```ts
+const PasswordSchema = v
+  .object({
+    password: v.string().min(8),
+    confirmPassword: v.string(),
+  })
+  .superRefine(({ password, confirmPassword }, ctx) => {
+    if (password !== confirmPassword) {
+      ctx.addIssue({
+        code: ErrorCode.custom,
+        message: 'Passwords must match',
+        path: ['confirmPassword'],
+      });
+    }
+  });
+```
+
+Use these when you need multiple issues or explicit issue paths/codes.
+
 ## Error Handling
 
 ```ts
@@ -345,9 +377,11 @@ if (!result.success) {
 
   const grouped = result.error.flatten();
   const firstOnly = result.error.flattenFirst();
+  const nested = result.error.format();
 
   console.log(grouped.fieldErrors, grouped.formErrors);
   console.log(firstOnly.fieldErrors, firstOnly.formErrors);
+  console.log(nested);
 }
 ```
 
@@ -357,6 +391,7 @@ For machine handling, prefer checking `issue.code` and `issue.params` over match
 
 - `array.unique()` uses `not_unique`
 - `number.safe()` uses `not_safe`
+- `number.finite()` uses `not_finite`
 
 ## Message Customization
 
@@ -386,7 +421,7 @@ reset();
 ## Type Inference
 
 ```ts
-import { v, type Infer, type InferOutput, type TypeOf } from '@vielzeug/validit';
+import { v, type Infer, type InferInput, type InferOutput, type TypeOf } from '@vielzeug/validit';
 
 const Schema = v.object({
   id: v.number(),
@@ -394,6 +429,7 @@ const Schema = v.object({
 });
 
 type Output = Infer<typeof Schema>;
+type Input = InferInput<typeof Schema>;
 type Output2 = InferOutput<typeof Schema>;
 type Output3 = TypeOf<typeof Schema>;
 ```

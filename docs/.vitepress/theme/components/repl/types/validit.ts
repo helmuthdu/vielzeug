@@ -1,2 +1,145 @@
-export const validitTypes =
-  "\ndeclare module '@vielzeug/validit' {\n  export const ErrorCode: {\n    custom: 'custom';\n    invalid_date: 'invalid_date';\n    invalid_enum: 'invalid_enum';\n    invalid_length: 'invalid_length';\n    invalid_literal: 'invalid_literal';\n    invalid_string: 'invalid_string';\n    invalid_type: 'invalid_type';\n    invalid_union: 'invalid_union';\n    invalid_url: 'invalid_url';\n    invalid_variant: 'invalid_variant';\n    not_integer: 'not_integer';\n    not_multiple_of: 'not_multiple_of';\n    not_safe: 'not_safe';\n    not_unique: 'not_unique';\n    too_big: 'too_big';\n    too_small: 'too_small';\n    unrecognized_keys: 'unrecognized_keys';\n  };\n\n  export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];\n\n  export type Issue = {\n    code: ErrorCode | (string & {});\n    message: string;\n    params?: Record<string, unknown>;\n    path: (string | number)[];\n  };\n\n  export class ValidationError extends Error {\n    readonly issues: Issue[];\n    flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] };\n    flattenFirst(): { fieldErrors: Record<string, string>; formErrors: string[] };\n    static is(value: unknown): value is ValidationError;\n  }\n\n  export type ParseResult<T> =\n    | { data: T; success: true }\n    | { error: ValidationError; success: false };\n\n  export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> =\n    | string\n    | ((ctx: Ctx) => string);\n\n  export class Schema<T = unknown> {\n    parse(value: unknown): T;\n    safeParse(value: unknown): ParseResult<T>;\n    parseAsync(value: unknown): Promise<T>;\n    safeParseAsync(value: unknown): Promise<ParseResult<T>>;\n    refine(check: (value: T) => boolean, message?: MessageFn<{ value: T }>): this;\n    refineAsync(check: (value: T) => Promise<boolean>, message?: MessageFn<{ value: T }>): this;\n    optional(): Schema<T | undefined>;\n    nullable(): Schema<T | null>;\n    nullish(): Schema<T | null | undefined>;\n    required(): Schema<Exclude<T, undefined>>;\n    default(value: T | (() => T)): this;\n    catch(value: T | (() => T)): this;\n    transform<U>(fn: (value: T) => U): Schema<U>;\n    preprocess(fn: (value: unknown) => unknown): this;\n    describe(description: string): this;\n    readonly description: string | undefined;\n    brand<Brand extends string>(): Schema<T & { __brand: Brand }>;\n    is(value: unknown): value is T;\n  }\n\n  export type InferOutput<T> = T extends Schema<infer O> ? O : never;\n  export type Infer<T> = InferOutput<T>;\n  export type TypeOf<T> = InferOutput<T>;\n\n  export type Messages = Record<string, unknown>;\n\n  export function configure(opts: { messages?: Record<string, unknown> }): void;\n  export function reset(): void;\n\n  export const v: {\n    any(): Schema<any>;\n    unknown(): Schema<unknown>;\n    array<T>(schema: Schema<T>): Schema<T[]>;\n    boolean(): Schema<boolean>;\n    coerce: {\n      boolean(): Schema<boolean>;\n      date(): Schema<Date>;\n      number(): Schema<number>;\n      string(): Schema<string>;\n    };\n    date(): Schema<Date>;\n    enum<T extends readonly [string | number, ...(string | number)[]]>(values: T): Schema<T[number]>;\n    instanceof<T>(cls: new (...args: any[]) => T): Schema<T>;\n    intersect<T extends readonly [unknown, unknown, ...unknown[]]>(...items: T): Schema<any>;\n    lazy<T>(getter: () => Schema<T>): Schema<T>;\n    literal<T extends string | number | boolean | null | undefined>(value: T): Schema<T>;\n    nativeEnum<T extends Record<string, string | number>>(enumObj: T): Schema<T[keyof T]>;\n    never(): Schema<never>;\n    null(): Schema<null>;\n    number(): Schema<number>;\n    object<T extends Record<string, Schema<any>>>(shape: T): Schema<any>;\n    record<K extends string, V>(keySchema: Schema<K>, valueSchema: Schema<V>): Schema<Record<K, V>>;\n    string(): Schema<string>;\n    tuple<T extends readonly Schema<any>[]>(items: T): Schema<any>;\n    undefined(): Schema<undefined>;\n    union<T extends readonly [unknown, unknown, ...unknown[]]>(...items: T): Schema<any>;\n    variant<K extends string, M extends Record<string, Schema<any>>>(discriminator: K, map: M): Schema<any>;\n  };\n}\n";
+export const validitTypes = String.raw`
+declare module '@vielzeug/validit' {
+  export const ErrorCode: {
+    custom: 'custom';
+    invalid_base64: 'invalid_base64';
+    invalid_bigint: 'invalid_bigint';
+    invalid_date: 'invalid_date';
+    invalid_duration: 'invalid_duration';
+    invalid_enum: 'invalid_enum';
+    invalid_length: 'invalid_length';
+    invalid_literal: 'invalid_literal';
+    invalid_string: 'invalid_string';
+    invalid_type: 'invalid_type';
+    invalid_union: 'invalid_union';
+    invalid_url: 'invalid_url';
+    invalid_variant: 'invalid_variant';
+    not_finite: 'not_finite';
+    not_integer: 'not_integer';
+    not_multiple_of: 'not_multiple_of';
+    not_safe: 'not_safe';
+    not_unique: 'not_unique';
+    too_big: 'too_big';
+    too_small: 'too_small';
+    unrecognized_keys: 'unrecognized_keys';
+  };
+
+  export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+
+  export type Issue = {
+    code: ErrorCode | (string & {});
+    message: string;
+    params?: Record<string, unknown>;
+    path: (string | number)[];
+  };
+
+  export type FormattedErrors = {
+    _errors: string[];
+    [key: string]: FormattedErrors | string[];
+  };
+
+  export class ValidationError extends Error {
+    readonly issues: Issue[];
+    flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] };
+    flattenFirst(): { fieldErrors: Record<string, string>; formErrors: string[] };
+    format(): FormattedErrors;
+    static is(value: unknown): value is ValidationError;
+  }
+
+  export type ParseResult<T> =
+    | { data: T; success: true }
+    | { error: ValidationError; success: false };
+
+  export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> =
+    | string
+    | ((ctx: Ctx) => string);
+
+  export class Schema<Output = unknown, Input = Output> {
+    parse(value: Input): Output;
+    safeParse(value: Input): ParseResult<Output>;
+    parseAsync(value: Input): Promise<Output>;
+    safeParseAsync(value: Input): Promise<ParseResult<Output>>;
+
+    refine(check: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this;
+    refineAsync(check: (value: Output) => Promise<boolean>, message?: MessageFn<{ value: Output }>): this;
+    superRefine(
+      check: (
+        value: Output,
+        ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
+      ) => void,
+    ): this;
+    superRefineAsync(
+      check: (
+        value: Output,
+        ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
+      ) => Promise<void>,
+    ): this;
+
+    optional(): Schema<Output | undefined, Input | undefined>;
+    nullable(): Schema<Output | null, Input | null>;
+    nullish(): Schema<Output | null | undefined, Input | null | undefined>;
+    required(): Schema<Exclude<Output, undefined>, Exclude<Input, undefined>>;
+
+    default(value: Output | (() => Output)): this;
+    catch(value: Output | (() => Output)): this;
+    transform<U>(fn: (value: Output) => U): Schema<U, Input>;
+    preprocess(fn: (value: unknown) => unknown): this;
+
+    describe(description: string): this;
+    readonly description: string | undefined;
+    brand<Brand extends string>(): Schema<Output & { __brand: Brand }, Input>;
+    readonly(): Schema<Readonly<Output>, Input>;
+    is(value: unknown): value is Output;
+  }
+
+  export type InferOutput<T> = T extends Schema<infer O, any> ? O : never;
+  export type InferInput<T> = T extends Schema<any, infer I> ? I : never;
+  export type Infer<T> = InferOutput<T>;
+  export type TypeOf<T> = InferOutput<T>;
+
+  export type Messages = Record<string, unknown>;
+  export function configure(opts: { messages?: Record<string, unknown> }): void;
+  export function reset(): void;
+
+  export const v: {
+    any(): Schema<any>;
+    unknown(): Schema<unknown>;
+
+    string(): Schema<string>;
+    number(): Schema<number>;
+    boolean(): Schema<boolean>;
+    date(): Schema<Date>;
+    bigint(): Schema<bigint>;
+
+    literal<T extends string | number | boolean | null | undefined>(value: T): Schema<T>;
+    enum<T extends readonly [string | number, ...(string | number)[]]>(values: T): Schema<T[number]>;
+    nativeEnum<T extends Record<string, string | number>>(enumObj: T): Schema<T[keyof T]>;
+    null(): Schema<null>;
+    undefined(): Schema<undefined>;
+    never(): Schema<never>;
+
+    object<T extends Record<string, Schema<any>>>(shape: T): Schema<any>;
+    array<T>(schema: Schema<T>): Schema<T[]>;
+    set<T>(schema: Schema<T>): Schema<Set<T>>;
+    map<K, V>(keySchema: Schema<K>, valueSchema: Schema<V>): Schema<Map<K, V>>;
+    tuple<T extends readonly Schema<any>[]>(items: T): Schema<any>;
+    record<K extends string, V>(keySchema: Schema<K>, valueSchema: Schema<V>): Schema<Record<K, V>>;
+
+    union<T extends readonly [unknown, unknown, ...unknown[]]>(...items: T): Schema<any>;
+    intersect<T extends readonly [unknown, unknown, ...unknown[]]>(...items: T): Schema<any>;
+    variant<K extends string, M extends Record<string, Schema<any>>>(discriminator: K, map: M): Schema<any>;
+
+    lazy<T>(getter: () => Schema<T>): Schema<T>;
+    instanceof<T>(cls: new (...args: any[]) => T): Schema<T>;
+    readonly<T>(schema: Schema<T>): Schema<Readonly<T>>;
+
+    coerce: {
+      string(): Schema<string, unknown>;
+      number(): Schema<number, unknown>;
+      boolean(): Schema<boolean, unknown>;
+      date(): Schema<Date, unknown>;
+      bigint(): Schema<bigint, unknown>;
+    };
+  };
+}
+`;

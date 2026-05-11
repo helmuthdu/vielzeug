@@ -32,7 +32,7 @@ yarn add @vielzeug/permit
 ## Quick Start
 
 ```ts
-import { ANONYMOUS, WILDCARD, createPermit } from '@vielzeug/permit';
+import { ANONYMOUS, WILDCARD, createPermit, owns } from '@vielzeug/permit';
 
 const permit = createPermit<'read' | 'update', { authorId: string }>();
 
@@ -43,18 +43,23 @@ permit
     resource: 'posts',
     action: 'update',
     effect: 'allow',
-    when: ({ principal, data }) => principal.id === data?.authorId,
+    when: owns('authorId'),
   })
   .set({ role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 })
   .set({ role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' });
 
 permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
 permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' });
+
+const bound = permit.forUser({ id: 'u1', roles: ['editor'] }, true);
+
+bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
+bound.explain('posts', 'update', { authorId: 'u2' });
 ```
 
 ## Why Permit?
 
-- Minimal API: `set`, `can`, `forUser`, `rules`, `replace`, `clear`
+- Minimal API: `set`, `can`, `canAll`, `canAny`, `allowedActions`, `explain`, `forUser`, `rules`, `replace`, `clear`
 - Deterministic precedence model
 - Deny-overrides at top precedence
 - Runtime predicates directly on rules
@@ -64,10 +69,12 @@ permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' 
 ## Core Ideas
 
 - One rule primitive: `permit.set(rule | rules)`
-- One decision method: `permit.can(principal, resource, action, data?)`
+- Decision methods: `permit.can`, `permit.canAll`, `permit.canAny`, `permit.explain`
+- Action enumeration: `permit.allowedActions(principal, resource, data?)`
 - Explicit wildcard support with `WILDCARD`
 - Anonymous checks via `null` principal plus `ANONYMOUS` role rules
-- Optional user-bound function via `permit.forUser(principal)`
+- Ownership helper via `owns(attributeKey)`
+- Principal-bound API via `permit.forUser(principal, cache?)`
 
 ## See Also
 

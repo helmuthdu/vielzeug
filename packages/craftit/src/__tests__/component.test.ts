@@ -81,7 +81,7 @@ describe('Core: Component Definition', () => {
         define(tag, {
           setup: () => () => html`<div>Second</div>`,
         });
-      }).toThrow('[craftit:E10]');
+      }).toThrow("define('");
     });
 
     it('should throw on repeated registration even without process env', () => {
@@ -95,7 +95,7 @@ describe('Core: Component Definition', () => {
         define(tag, {
           setup: () => () => html`<div>Second</div>`,
         });
-      }).toThrow('[craftit:E10]');
+      }).toThrow("define('");
     });
   });
 

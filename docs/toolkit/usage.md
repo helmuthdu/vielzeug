@@ -10,10 +10,12 @@ description: Practical usage patterns for the current Toolkit API.
 ### Named Imports (Recommended)
 
 ```ts
-import { chunk, group, retry } from '@vielzeug/toolkit';
+import { chunk, groupBy, indexBy, pick, retry } from '@vielzeug/toolkit';
 
 const pages = chunk([1, 2, 3, 4, 5], 2);
-const byRole = group(users, (u) => u.role);
+const byRole = groupBy(users, (u) => u.role);
+const byId = indexBy(users, (u) => u.id);
+const user = pick({ id: 1, name: 'Alice', role: 'admin' }, ['id', 'name']);
 const result = await retry(() => fetch('/api').then((r) => r.json()), { times: 2 });
 ```
 
@@ -29,15 +31,15 @@ import * as toolkit from '@vielzeug/toolkit';
 ### Arrays
 
 ```ts
-import { select, sort, toggle, uniq, list } from '@vielzeug/toolkit';
+import { filterMap, groupBy, indexBy, partition, sort, toggle, uniq, zip } from '@vielzeug/toolkit';
 
 const values = [null, 1, 2, 3];
 
-// select now maps all items unless you pass a predicate
-const mapped = select(values, (n) => n == null ? 0 : n * 2); // [0, 2, 4, 6]
+// filterMap maps values and skips undefined results
+const mapped = filterMap(values, (n) => (n == null ? 0 : n * 2)); // [0, 2, 4, 6]
 
-// pass predicate when you want filtering
-const filtered = select(values, (n) => n!, (n) => n != null); // [1, 2, 3]
+// return undefined to filter an item out
+const filtered = filterMap(values, (n) => (n == null ? undefined : n)); // [1, 2, 3]
 
 const sorted = sort(
   [
@@ -51,32 +53,39 @@ const sorted = sort(
 const tags = toggle(['ts', 'node'], 'ts'); // ['node']
 const deduped = uniq([1, 1, 2, 3]); // [1, 2, 3]
 
-const pager = list(data, { limit: 10 });
-pager.search('alice', { immediate: true });
+// newer helpers
+const parts = partition([1, 2, 3, 4], (n) => n % 2 === 0); // [[2, 4], [1, 3]]
+const zipped = zip(['a', 'b'], [1, 2]); // [['a', 1], ['b', 2]]
+const byRole = groupBy([{ role: 'admin' }, { role: 'user' }], (item) => item.role);
+const byId = indexBy([{ id: 1 }, { id: 2 }], (item) => item.id);
 ```
 
 ### Objects
 
 ```ts
-import { merge, diff, get, prune, parseJSON, seek } from '@vielzeug/toolkit';
+import { deepMerge, diff, get, prune, parseJSON, seek, pick, omit, mapValues, shallowMerge } from '@vielzeug/toolkit';
 
 const prev = { api: { host: 'localhost', port: 3000 } };
-const curr = merge('deep', prev, { api: { port: 4000 } });
+const curr = deepMerge(prev, { api: { port: 4000 } });
+const shallow = shallowMerge(prev, { api: { port: 4000 } });
 
 const changes = diff(prev, curr); // { api: { port: 4000 } }
 const port = get(curr, 'api.port'); // 4000
 const clean = prune({ a: 1, b: null, c: '' }); // { a: 1 }
 const parsed = parseJSON('{"ok":true}', { defaultValue: { ok: false } });
 const found = seek(curr, 'localhost', 0.6);
+
+const publicUser = pick({ id: 1, name: 'Alice', password: 'secret' }, ['id', 'name']);
+const internalUser = omit({ id: 1, name: 'Alice', password: 'secret' }, ['password']);
+const renamed = mapValues({ a: 1, b: 2 }, (value) => value * 10);
 ```
 
 ### Functions
 
 ```ts
-import { configure, compose, debounce, memo, once, pipe, throttle } from '@vielzeug/toolkit';
-import { select } from '@vielzeug/toolkit';
+import { compose, debounce, memo, once, partial, pipe, throttle, negate, tap } from '@vielzeug/toolkit';
 
-const doubleAll = configure(select, (n: number) => n * 2);
+const doubleAll = partial((values: number[], factor: number) => values.map((n) => n * factor), 2);
 const doubled = doubleAll([1, 2, 3]); // [2, 4, 6]
 
 const toUpperTrimmed = pipe(
@@ -93,12 +102,14 @@ const loadOnce = once(() => initApp());
 const expensive = memo((a: number, b: number) => a * b);
 const onInput = debounce((q: string) => console.log(q), 300);
 const onScroll = throttle(() => console.log(window.scrollY), 100);
+const odds = [1, 2, 3, 4, 5].filter(negate((n: number) => n % 2 === 0));
+const value = tap(42, (n) => console.log('debug', n));
 ```
 
 ### Async
 
 ```ts
-import { attempt, parallel, queue, race, retry, sleep, waitFor } from '@vielzeug/toolkit';
+import { attempt, parallel, queue, retry, sleep, waitFor, timeout, memoizeAsync } from '@vielzeug/toolkit';
 
 const attempted = await attempt(async (signal) => {
   const res = await fetch('/api/user', { signal });
@@ -112,10 +123,12 @@ const a = q.add(() => fetch('/a').then((r) => r.text()));
 const b = q.add(() => fetch('/b').then((r) => r.text()));
 await q.onIdle();
 
-await race(fetch('/fast').then((r) => r.text()), 250);
 await retry(() => fetch('/health').then((r) => r.json()), { times: 3, delay: 200 });
 await sleep(100);
 await waitFor(() => document.querySelector('#app') !== null, { timeout: 3_000 });
+
+const fetchJSON = memoizeAsync((url: string) => fetch(url).then((r) => r.json()));
+const payload = await timeout(fetchJSON('/api/profile'), 3_000);
 
 await Promise.all([a, b]);
 ```
@@ -172,29 +185,30 @@ const value = cache.get(['user', 1]);
 ### React
 
 ```tsx
-import { debounce, list } from '@vielzeug/toolkit';
+import { debounce, filterMap } from '@vielzeug/toolkit';
 import { useMemo } from 'react';
 
-const pager = useMemo(() => list(data, { limit: 20 }), [data]);
-const onSearch = useMemo(() => debounce((q: string) => pager.search(q), 250), [pager]);
+const visible = useMemo(() => filterMap(data, (item) => (item.hidden ? undefined : item)), [data]);
+const onSearch = useMemo(() => debounce((q: string) => console.log(q), 250), []);
 ```
 
 ### Vue
 
 ```ts
 import { computed, ref } from 'vue';
-import { group } from '@vielzeug/toolkit';
+import { groupBy } from '@vielzeug/toolkit';
 
 const users = ref<User[]>([]);
-const byRole = computed(() => group(users.value, (u) => u.role));
+const byRole = computed(() => groupBy(users.value, (u) => u.role));
 ```
 
 ## Best Practices
 
 - Prefer named imports from `@vielzeug/toolkit`.
-- Use `configure` when adapting multi-arg APIs to unary composition flows.
+- `pick` selects object properties only (`pick(obj, keys)`).
+- Use `partial` when adapting multi-arg APIs to unary composition flows.
 - For cancellation-aware async work, pass `AbortSignal` through your callback stack.
-- Keep `list` and `remoteList` updates batched when mutating multiple controls.
+- Reactive list models moved to `@vielzeug/sourceit`.
 
 ## Performance Tips
 

@@ -133,4 +133,87 @@ describe('IndexedDB adapter', () => {
 
     expect(user).toEqual({ age: 30, id: 1, name: 'Alice' });
   });
+
+  test('adapter methods: update/getOrPut/deleteWhere/forEach/observe', async () => {
+    const snapshots: User[][] = [];
+    const done = new Promise<void>((resolve) => {
+      const stop = db.observe('users', (rows) => {
+        snapshots.push(rows);
+
+        if (snapshots.length === 3) {
+          stop();
+          resolve();
+        }
+      });
+    });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await db.update('users', 1, { city: 'Paris' });
+    await db.getOrPut('users', 2, () => ({ id: 2, name: 'Bob' }));
+
+    const deleted = await db.deleteWhere('users', (u) => u.id === 2);
+
+    const ids: number[] = [];
+
+    await db.forEach('users', (u) => {
+      ids.push(u.id);
+    });
+
+    await done;
+
+    expect(deleted).toBe(1);
+    expect(ids).toEqual([1]);
+    expect(await db.get('users', 1)).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
+    expect(snapshots[0]).toEqual([]);
+  });
+
+  test('transaction context methods: update/getOrPut/deleteWhere/forEach', async () => {
+    await db.transaction(['users'] as const, async (tx) => {
+      await tx.getOrPut('users', 1, { id: 1, name: 'Alice' });
+      await tx.update('users', 1, { city: 'Paris' });
+      await tx.getOrPut('users', 2, { id: 2, name: 'Bob' });
+
+      const ids: number[] = [];
+
+      await tx.forEach('users', (u) => {
+        ids.push(u.id);
+      });
+
+      expect(ids).toEqual([1, 2]);
+
+      const deleted = await tx.deleteWhere('users', (u) => u.id === 2);
+
+      expect(deleted).toBe(1);
+    });
+
+    expect(await db.getAll('users')).toEqual([{ city: 'Paris', id: 1, name: 'Alice' }]);
+  });
+
+  test('BroadcastChannel propagates mutations to a second adapter instance', async () => {
+    const db2 = createIndexedDB({ dbName: 'IDB', schema: userSchema, schemaVersion: 1 });
+
+    // Drain the initial empty snapshot before writing so the test is timing-safe.
+    await new Promise<void>((resolve) => {
+      const stop = db2.observe('users', () => {
+        stop();
+        resolve();
+      });
+    });
+
+    // After the initial snapshot is drained, observe and write.
+    const updated = new Promise<User[]>((resolve) => {
+      const stop = db2.observe('users', (rows) => {
+        if (rows.length > 0) {
+          stop();
+          resolve(rows);
+        }
+      });
+    });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await updated).toEqual([{ id: 1, name: 'Alice' }]);
+
+    db2.close();
+  });
 });

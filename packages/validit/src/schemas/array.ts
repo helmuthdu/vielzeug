@@ -12,27 +12,53 @@ export class ArraySchema<T> extends Schema<T[]> {
     this.itemSchema = itemSchema;
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    if (!Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().array.type(), path: [] }],
-      };
-    }
+  private _invalidArray(value: unknown): { data: unknown; issues: Issue[] } {
+    return {
+      data: value,
+      issues: [{ code: ErrorCode.invalid_type, message: _messages().array.type(), path: [] }],
+    };
+  }
 
+  private _parseItemsSync(items: unknown[]): { data: T[]; issues: Issue[] } {
     const issues: Issue[] = [];
-    const items: T[] = [];
+    const parsed: T[] = [];
 
-    for (let i = 0; i < value.length; i++) {
-      const result = this.itemSchema.safeParse(value[i]);
+    for (let i = 0; i < items.length; i++) {
+      const result = this.itemSchema.safeParse(items[i]);
 
       if (result.success) {
-        items.push(result.data);
+        parsed.push(result.data);
       } else {
         issues.push(...prependIssuePath(result.error.issues, i));
-        items.push(value[i] as T);
+        parsed.push(items[i] as T);
       }
     }
+
+    return { data: parsed, issues };
+  }
+
+  private async _parseItemsAsync(items: unknown[]): Promise<{ data: T[]; issues: Issue[] }> {
+    const itemResults = await Promise.all(
+      items.map((item, i) =>
+        this.itemSchema.safeParseAsync(item).then((result) => ({
+          data: result.success ? result.data : (item as T),
+          issues: result.success ? [] : prependIssuePath(result.error.issues, i),
+        })),
+      ),
+    );
+
+    return {
+      data: itemResults.map((r) => r.data),
+      issues: itemResults.flatMap((r) => r.issues),
+    };
+  }
+
+  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+    if (!Array.isArray(value)) {
+      return this._invalidArray(value);
+    }
+
+    const { data: items, issues } = this._parseItemsSync(value);
 
     issues.push(...this._runCoreValidators(items));
 
@@ -41,23 +67,10 @@ export class ArraySchema<T> extends Schema<T[]> {
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
     if (!Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().array.type(), path: [] }],
-      };
+      return this._invalidArray(value);
     }
 
-    const itemResults = await Promise.all(
-      value.map((item, i) =>
-        this.itemSchema.safeParseAsync(item).then((result) => ({
-          data: result.success ? result.data : (item as T),
-          issues: result.success ? [] : prependIssuePath(result.error.issues, i),
-        })),
-      ),
-    );
-
-    const items = itemResults.map((r) => r.data);
-    const issues = itemResults.flatMap((r) => r.issues);
+    const { data: items, issues } = await this._parseItemsAsync(value);
 
     issues.push(...this._runCoreValidators(items));
 

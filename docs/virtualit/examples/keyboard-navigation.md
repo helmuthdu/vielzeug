@@ -27,7 +27,7 @@ function paint(items = virt.items, totalSize = virt.totalSize) {
 
   for (const item of items) {
     const el = document.createElement('div');
-    el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;height:36px;`;
+    el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
     el.style.background = item.index === focusedIndex ? 'var(--highlight)' : '';
     el.textContent = rows[item.index];
     listEl.appendChild(el);

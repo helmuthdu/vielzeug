@@ -1,7 +1,15 @@
 import type { RunOptions, TaskFn, WorkerHandle, WorkerStatus } from '../workit';
 
 import { createAbortError } from '../_internal';
-import { TerminatedError } from '../workit';
+import { WorkerError } from '../workit';
+
+function rejectAsync<T = never>(reason: unknown): Promise<T> {
+  return new Promise<T>((_, reject) => {
+    setTimeout(() => {
+      reject(reason);
+    }, 0);
+  });
+}
 
 export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & {
   /** Recorded { input, output } pairs for every successful run(), in call order. */
@@ -10,47 +18,73 @@ export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & 
 
 export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TestWorkerHandle<TInput, TOutput> {
   const calls: { input: TInput; output: TOutput }[] = [];
-  let status: WorkerStatus = 'idle';
+  let closePromise: Promise<void> | undefined;
+  let completed = 0;
+  const idleResolvers: Array<() => void> = [];
   let running = false;
+  let terminated = false;
   const queue: Array<{
+    cleanupAbort?: () => void;
     input: TInput;
     reject: (reason: unknown) => void;
     resolve: (value: TOutput) => void;
     signal?: AbortSignal;
   }> = [];
 
-  function updateStatus(): void {
-    if (status === 'terminated') return;
+  function status(): WorkerStatus {
+    if (terminated) return 'terminated';
 
-    status = running || queue.length > 0 ? 'running' : 'idle';
+    return running || queue.length > 0 ? 'running' : 'idle';
+  }
+
+  function notifyIdleIfReady(): void {
+    if (terminated || running || queue.length > 0 || idleResolvers.length === 0) return;
+
+    const resolvers = idleResolvers.splice(0, idleResolvers.length);
+
+    for (const resolve of resolvers) {
+      resolve();
+    }
+  }
+
+  function waitForIdle(): Promise<void> {
+    if (terminated || (!running && queue.length === 0)) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      idleResolvers.push(resolve);
+    });
   }
 
   async function processQueue(): Promise<void> {
-    while (queue.length > 0) {
+    while (!terminated && queue.length > 0) {
       const item = queue.shift();
 
       if (!item) break;
 
       if (item.signal?.aborted) {
+        item.cleanupAbort?.();
         item.reject(createAbortError(item.signal));
-        updateStatus();
+        notifyIdleIfReady();
         continue;
       }
 
       running = true;
-      updateStatus();
+      item.cleanupAbort?.();
 
       try {
         const output = await fn(item.input);
 
         calls.push({ input: item.input, output });
+        completed += 1;
         item.resolve(output);
       } catch (error) {
         item.reject(error);
       }
 
       running = false;
-      updateStatus();
+      notifyIdleIfReady();
     }
   }
 
@@ -58,41 +92,77 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
     get calls(): ReadonlyArray<{ input: TInput; output: TOutput }> {
       return calls;
     },
+    close(): Promise<void> {
+      if (terminated) {
+        return Promise.resolve();
+      }
+
+      if (closePromise) {
+        return closePromise;
+      }
+
+      closePromise = waitForIdle().then(() => {
+        this.dispose();
+      });
+
+      return closePromise;
+    },
+    get completed(): number {
+      return completed;
+    },
     get concurrency(): number {
       return 1;
     },
     dispose(): void {
-      status = 'terminated';
-      for (const item of queue) item.reject(new TerminatedError());
-      queue.length = 0;
-    },
-    drain(): Promise<void> {
-      return new Promise<void>((resolve) => {
-        const check = (): void => {
-          if (queue.length === 0 && !running) {
-            resolve();
-          } else {
-            setTimeout(check, 0);
-          }
-        };
+      if (terminated) return;
 
-        check();
-      });
+      terminated = true;
+      for (const item of queue) {
+        item.cleanupAbort?.();
+        item.reject(new WorkerError('terminated', '[workit] Worker was terminated'));
+      }
+      queue.length = 0;
+      notifyIdleIfReady();
     },
     run(input: TInput, options: RunOptions = {}): Promise<TOutput> {
-      if (status === 'terminated') {
-        return Promise.reject(new TerminatedError());
+      if (terminated) {
+        return rejectAsync(new WorkerError('terminated', '[workit] Worker was terminated'));
       }
 
       if (options.signal?.aborted) {
-        return Promise.reject(createAbortError(options.signal));
+        return rejectAsync(createAbortError(options.signal));
       }
 
       return new Promise<TOutput>((resolve, reject) => {
-        const item = { input, reject, resolve, signal: options.signal };
+        const item: {
+          cleanupAbort?: () => void;
+          input: TInput;
+          reject: (reason: unknown) => void;
+          resolve: (value: TOutput) => void;
+          signal?: AbortSignal;
+        } = { input, reject, resolve, signal: options.signal };
+
+        if (options.signal) {
+          const onAbort = () => {
+            const index = queue.indexOf(item);
+
+            if (index === -1) return;
+
+            queue.splice(index, 1);
+            item.cleanupAbort?.();
+            reject(createAbortError(options.signal!));
+            notifyIdleIfReady();
+          };
+
+          item.cleanupAbort = () => {
+            options.signal!.removeEventListener('abort', onAbort);
+            item.cleanupAbort = undefined;
+          };
+
+          options.signal.addEventListener('abort', onAbort, { once: true });
+        }
 
         queue.push(item);
-        updateStatus();
 
         if (!running) {
           void processQueue();
@@ -103,10 +173,13 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
       return queue.length;
     },
     get status(): WorkerStatus {
-      return status;
+      return status();
     },
     [Symbol.dispose](): void {
       this.dispose();
+    },
+    get utilization(): number {
+      return Number(running);
     },
   };
 }

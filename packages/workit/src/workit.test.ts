@@ -1,5 +1,9 @@
 import { createTestWorker } from './test/test';
-import { createWorker, TaskError, TaskTimeoutError, TerminatedError, WorkerError } from './workit';
+import { createWorker, WorkerError } from './workit';
+
+async function expectWorkerErrorCode<T>(promise: Promise<T>, code: string): Promise<void> {
+  await expect(promise).rejects.toMatchObject({ code });
+}
 
 describe('createWorker', () => {
   describe('execution', () => {
@@ -62,6 +66,42 @@ describe('createWorker', () => {
 
     it('rejects invalid timeout values', () => {
       expect(() => createWorker<number, number>((n) => n, { timeout: -1 })).toThrow(WorkerError);
+      expect(() => createWorker<number, number>((n) => n, { timeout: 0 })).toThrow(WorkerError);
+    });
+
+    it('rejects invalid maxQueue values', () => {
+      expect(() => createWorker<number, number>((n) => n, { maxQueue: 0 })).toThrow(WorkerError);
+      expect(() => createWorker<number, number>((n) => n, { maxQueue: 1.5 })).toThrow(WorkerError);
+    });
+  });
+
+  describe('queue limits', () => {
+    it('rejects when queue is full', async () => {
+      const worker = createWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 20)), {
+        concurrency: 1,
+        maxQueue: 1,
+      });
+
+      const running = worker.run(undefined);
+      const queued = worker.run(undefined);
+
+      try {
+        await worker.run(undefined);
+        throw new Error('Expected queue_full rejection');
+      } catch (error) {
+        expect((error as WorkerError).code).toBe('queue_full');
+      }
+
+      await running;
+      await queued;
+      worker.dispose();
+    });
+
+    it('supports maxQueue auto', () => {
+      const worker = createWorker<number, number>((n) => n, { concurrency: 2, maxQueue: 'auto' });
+
+      expect(worker.size).toBe(0);
+      worker.dispose();
     });
   });
 
@@ -79,7 +119,7 @@ describe('createWorker', () => {
 
       expect(worker.status).toBe('running');
       worker.dispose();
-      await expect(promise).rejects.toThrow(TerminatedError);
+      await expectWorkerErrorCode(promise, 'terminated');
     });
 
     it('is idle after a task completes', async () => {
@@ -129,7 +169,7 @@ describe('createWorker', () => {
       const worker = createWorker<number, number>((n) => n);
 
       worker.dispose();
-      await expect(worker.run(1)).rejects.toThrow(TerminatedError);
+      await expectWorkerErrorCode(worker.run(1), 'terminated');
     });
 
     it('rejects the in-flight task', async () => {
@@ -137,7 +177,7 @@ describe('createWorker', () => {
       const promise = worker.run(undefined);
 
       worker.dispose();
-      await expect(promise).rejects.toThrow(TerminatedError);
+      await expectWorkerErrorCode(promise, 'terminated');
     });
 
     it('rejects all queued tasks', async () => {
@@ -146,8 +186,8 @@ describe('createWorker', () => {
       const queued = pool.run(undefined);
 
       pool.dispose();
-      await expect(running).rejects.toThrow(TerminatedError);
-      await expect(queued).rejects.toThrow(TerminatedError);
+      await expectWorkerErrorCode(running, 'terminated');
+      await expectWorkerErrorCode(queued, 'terminated');
     });
 
     it('is idempotent', () => {
@@ -165,6 +205,58 @@ describe('createWorker', () => {
     });
   });
 
+  describe('lifecycle', () => {
+    it('close() drains running and queued tasks then terminates', async () => {
+      const worker = createWorker<number, number>((n) => new Promise((resolve) => setTimeout(() => resolve(n), 20)), {
+        concurrency: 1,
+      });
+
+      const p1 = worker.run(1);
+      const p2 = worker.run(2);
+      const closePromise = worker.close();
+
+      await expect(p1).resolves.toBe(1);
+      await expect(p2).resolves.toBe(2);
+      await closePromise;
+      expect(worker.status).toBe('terminated');
+      await expectWorkerErrorCode(worker.run(3), 'terminated');
+    });
+
+    it('close() is idempotent', async () => {
+      const worker = createWorker<number, number>((n) => n);
+      const c1 = worker.close();
+      const c2 = worker.close();
+
+      await expect(c1).resolves.toBeUndefined();
+      await expect(c2).resolves.toBeUndefined();
+      expect(worker.status).toBe('terminated');
+    });
+  });
+
+  describe('stats', () => {
+    it('tracks completed tasks', async () => {
+      const worker = createWorker<number, number>((n) => n + 1);
+
+      expect(worker.completed).toBe(0);
+      await worker.run(1);
+      await worker.run(2);
+      expect(worker.completed).toBe(2);
+      worker.dispose();
+    });
+
+    it('tracks utilization while running', async () => {
+      const worker = createWorker<void, void>(() => new Promise(() => {}));
+      const promise = worker.run(undefined);
+
+      await Promise.resolve();
+
+      expect(worker.utilization).toBe(1);
+      worker.dispose();
+      await expectWorkerErrorCode(promise, 'terminated');
+      expect(worker.utilization).toBe(0);
+    });
+  });
+
   describe('error handling', () => {
     it('wraps Error throws in TaskError with the original message', async () => {
       const worker = createWorker<void, never>(() => {
@@ -172,8 +264,9 @@ describe('createWorker', () => {
       });
       const err = await worker.run(undefined).catch((e) => e);
 
-      expect(err).toBeInstanceOf(TaskError);
-      expect((err as TaskError).message).toBe('task failed');
+      expect(err).toBeInstanceOf(WorkerError);
+      expect((err as WorkerError).code).toBe('task');
+      expect((err as WorkerError).message).toBe('task failed');
       worker.dispose();
     });
 
@@ -183,8 +276,9 @@ describe('createWorker', () => {
       });
       const err = await worker.run(undefined).catch((e) => e);
 
-      expect(err).toBeInstanceOf(TaskError);
-      expect((err as TaskError).message).toBe('oops');
+      expect(err).toBeInstanceOf(WorkerError);
+      expect((err as WorkerError).code).toBe('task');
+      expect((err as WorkerError).message).toBe('oops');
       worker.dispose();
     });
 
@@ -195,7 +289,7 @@ describe('createWorker', () => {
         return n;
       });
 
-      await expect(worker.run(-1)).rejects.toThrow(TaskError);
+      await expectWorkerErrorCode(worker.run(-1), 'task');
       await expect(worker.run(5)).resolves.toBe(5);
       worker.dispose();
     });
@@ -222,18 +316,18 @@ describe('createWorker', () => {
     });
 
     it('all exported error types extend WorkerError', () => {
-      expect(new WorkerError('x')).toBeInstanceOf(WorkerError);
-      expect(new TaskError('x')).toBeInstanceOf(WorkerError);
-      expect(new TerminatedError()).toBeInstanceOf(WorkerError);
-      expect(new TaskTimeoutError(100)).toBeInstanceOf(WorkerError);
+      expect(new WorkerError('task', 'x')).toBeInstanceOf(WorkerError);
+      expect(new WorkerError('timeout', 'x')).toBeInstanceOf(WorkerError);
+      expect(new WorkerError('terminated', 'x')).toBeInstanceOf(WorkerError);
+      expect(new WorkerError('queue_full', 'x')).toBeInstanceOf(WorkerError);
     });
   });
 
   describe('timeout', () => {
-    it('rejects with TaskTimeoutError after the timeout expires', async () => {
+    it('rejects with timeout code after the timeout expires', async () => {
       const worker = createWorker<void, void>(() => new Promise(() => {}), { timeout: 30 });
 
-      await expect(worker.run(undefined)).rejects.toThrow(TaskTimeoutError);
+      await expectWorkerErrorCode(worker.run(undefined), 'timeout');
       worker.dispose();
     }, 1000);
 
@@ -247,7 +341,7 @@ describe('createWorker', () => {
     it('status is idle after a timeout', async () => {
       const worker = createWorker<void, void>(() => new Promise(() => {}), { timeout: 30 });
 
-      await expect(worker.run(undefined)).rejects.toThrow(TaskTimeoutError);
+      await expectWorkerErrorCode(worker.run(undefined), 'timeout');
       expect(worker.status).toBe('idle');
       worker.dispose();
     }, 1000);
@@ -255,7 +349,7 @@ describe('createWorker', () => {
     it('slot is reused after a timeout', async () => {
       const worker = createWorker<number, number>((n) => (n === 0 ? new Promise(() => {}) : n), { timeout: 30 });
 
-      await expect(worker.run(0)).rejects.toThrow(TaskTimeoutError);
+      await expectWorkerErrorCode(worker.run(0), 'timeout');
       await expect(worker.run(42)).resolves.toBe(42);
       worker.dispose();
     }, 1000);
@@ -276,7 +370,7 @@ describe('createWorker', () => {
         { timeout: 10 },
       );
 
-      await expect(worker.run('timeout')).rejects.toThrow(TaskTimeoutError);
+      await expectWorkerErrorCode(worker.run('timeout'), 'timeout');
       await expect(worker.run('fresh')).resolves.toBe(1);
       worker.dispose();
     }, 1000);
@@ -399,7 +493,7 @@ describe('createTestWorker', () => {
       const worker = createTestWorker<number, number>((n) => n);
 
       worker.dispose();
-      await expect(worker.run(1)).rejects.toThrow(TerminatedError);
+      await expectWorkerErrorCode(worker.run(1), 'terminated');
     });
 
     it('rejects immediately when signal is already aborted', async () => {
@@ -452,6 +546,32 @@ describe('createTestWorker', () => {
       const worker = createTestWorker<number, number>((n) => n);
 
       expect(worker.concurrency).toBe(1);
+    });
+
+    it('tracks completed and utilization', async () => {
+      const worker = createTestWorker<number, number>((n) => n + 1);
+
+      expect(worker.completed).toBe(0);
+
+      const task = worker.run(1);
+
+      expect(worker.utilization).toBe(1);
+      await expect(task).resolves.toBe(2);
+      expect(worker.completed).toBe(1);
+      expect(worker.utilization).toBe(0);
+    });
+
+    it('close() drains and terminates', async () => {
+      const worker = createTestWorker<number, number>(
+        (n) => new Promise((resolve) => setTimeout(() => resolve(n), 20)),
+      );
+      const p1 = worker.run(1);
+      const p2 = worker.run(2);
+
+      await worker.close();
+      await expect(p1).resolves.toBe(1);
+      await expect(p2).resolves.toBe(2);
+      expect(worker.status).toBe('terminated');
     });
   });
 });

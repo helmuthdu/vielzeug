@@ -21,6 +21,7 @@ These examples are aligned with the current `@vielzeug/dragit` API.
 
 - [File upload drop zone](./examples/file-upload-drop-zone.md)
 - [Sortable list](./examples/sortable-list.md)
+- [Connected kanban with keyboard sorting](./examples/connected-kanban-keyboard-sorting.md)
 - [Framework Integration](./examples/framework-integration.md)
 - [Web Component with craftit](./examples/web-component-with-craftit.md)
 - [Combined: sortable with inline editing](./examples/combined-sortable-with-inline-editing.md)

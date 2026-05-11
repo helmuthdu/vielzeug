@@ -3,20 +3,18 @@ title: Timezone Conversion
 description: Converting times between different timezones with Timit.
 ---
 
-# Timezone Conversion
-
 Converting a time from one timezone to another while preserving the exact moment in time.
 
 ## Basic Conversion
 
 ```ts
-import { timit } from '@vielzeug/timit';
+import { formatHuman, now, toZoned } from '@vielzeug/timit';
 
 const utc = '2026-03-21T10:15:30Z';
 
-const tokyo = timit.toZoned(utc, { tz: 'Asia/Tokyo' });
-const london = timit.toZoned(utc, { tz: 'Europe/London' });
-const newyork = timit.toZoned(utc, { tz: 'America/New_York' });
+const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' });
+const london = toZoned(utc, { tz: 'Europe/London' });
+const newyork = toZoned(utc, { tz: 'America/New_York' });
 
 console.log(tokyo.hour);   // 19 (7:15 PM JST)
 console.log(london.hour);  // 10 (10:15 AM GMT)
@@ -38,8 +36,8 @@ const timezones = [
 ];
 
 for (const tz of timezones) {
-  const local = timit.toZoned(event, { tz });
-  const formatted = timit.format(local, { pattern: 'long', tz });
+  const local = toZoned(event, { tz });
+  const formatted = formatHuman(local, { pattern: 'long', tz });
   console.log(`${tz.padEnd(20)} ${formatted}`);
 }
 ```
@@ -47,11 +45,11 @@ for (const tz of timezones) {
 ## Getting Current Time in a Timezone
 
 ```ts
-const current = timit.now();           // Current time in system timezone
-const londonNow = timit.now('Europe/London');
-const tokyoNow = timit.now('Asia/Tokyo');
+const current = now('UTC');
+const londonNow = now('Europe/London');
+const tokyoNow = now('Asia/Tokyo');
 
-console.log(timit.format(current, { pattern: 'short' }));
-console.log(timit.format(londonNow, { pattern: 'short' }));
-console.log(timit.format(tokyoNow, { pattern: 'short' }));
+console.log(formatHuman(current, { pattern: 'short', tz: 'UTC' }));
+console.log(formatHuman(londonNow, { pattern: 'short', tz: 'Europe/London' }));
+console.log(formatHuman(tokyoNow, { pattern: 'short', tz: 'Asia/Tokyo' }));
 ```

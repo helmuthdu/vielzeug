@@ -32,15 +32,17 @@ yarn add @vielzeug/toolkit
 ```ts
 import {
   chunk,
+  pick,
   queue,
   retry,
-  merge,
-  configure,
-  select,
+  deepMerge,
+  partial,
+  filterMap,
   is,
 } from '@vielzeug/toolkit';
 
 const pages = chunk([1, 2, 3, 4, 5], 2);
+const user = pick({ id: 1, name: 'Alice', role: 'admin' }, ['id', 'name']);
 
 const q = queue({ concurrency: 2 });
 await q.add(() => fetch('/api/a'));
@@ -50,27 +52,28 @@ const health = await retry(() => fetch('/api/health').then((r) => r.json()), {
   delay: 250,
 });
 
-const cfg = merge('deep', { api: { host: 'localhost' } }, { api: { port: 3000 } });
+const cfg = deepMerge({ api: { host: 'localhost' } }, { api: { port: 3000 } });
 
-const doubleAll = configure(select, (n: number) => n * 2);
+const doubleAll = partial((values: number[], factor: number) => values.map((n) => n * factor), 2);
 const doubled = doubleAll([1, 2, 3]);
 
 if (is.object(cfg)) {
-  console.log(health, cfg);
+  console.log(health, cfg, user);
 }
 ```
 
 ## Feature Areas
 
-- **Array**: `chunk`, `contains`, `group`, `keyBy`, `list`, `pick`, `remoteList`, `replace`, `rotate`, `search`, `select`, `sort`, `toggle`, `uniq`
-- **Async**: `attempt`, `defer`, `parallel`, `Scheduler`, `polyfillScheduler`, `queue`, `race`, `retry`, `sleep`, `waitFor`
-- **Object**: `stash`, `diff`, `merge`, `parseJSON`, `get`, `proxy`, `prune`, `seek`
-- **Function**: `assert`, `compare`, `compareBy`, `compose`, `configure`, `curry`, `debounce`, `memo`, `once`, `pipe`, `throttle`
-- **Math**: `abs`, `allocate`, `average`, `clamp`, `linspace`, `max`, `median`, `min`, `percent`, `range`, `round`, `sum`
+- **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `sample`, `take/drop`, `union/intersection`, `zip/unzip`, and more
+- **Async**: `attempt`, `memoizeAsync`, `abortable`, `timeout`, `parallel`, `queue`, `Scheduler`, `retry`, `waitFor`
+- **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `entries`, `fromEntries`, `keys`, `values`, `deepClone`, `deepMerge`, `shallowMerge`, `defaults`, plus core APIs
+- **Function**: `partial`, `negate`, `and/or/not`, `tap`, `identity`, `constant`, composition, memoization, and rate limiting
+- **Math**: `lerp`, `normalize`, `mod`, `gcd/lcm`, `variance`, `standardDeviation`, plus existing numeric helpers
 - **Date**: `expires`, `interval`, `timeDiff`
 - **Money**: `currency`, `exchange`
 - **Random**: `draw`, `random`, `shuffle`, `uuid`
-- **Typed Namespace**: `is.array`, `is.boolean`, `is.date`, `is.defined`, `is.empty`, `is.equal`, `is.fn`, `is.match`, `is.nil`, `is.number`, `is.object`, `is.primitive`, `is.promise`, `is.regex`, `is.string`, `is.typeOf`
+- **Typed Namespace**: `is.array`, `is.boolean`, `is.date`, `is.defined`, `is.empty`, `is.equal`, `is.fn`, `is.greaterThan`, `is.greaterThanOrEqual`, `is.lessThan`, `is.lessThanOrEqual`, `is.match`, `is.nil`, `is.number`, `is.object`, `is.primitive`, `is.promise`, `is.regex`, `is.string`, `is.typeOf`, `is.within`
+- **Typed Predicates**: standalone numeric helpers `isGreaterThan`, `isGreaterThanOrEqual`, `isLessThan`, `isLessThanOrEqual`, `isWithin`
 
 ## Compatibility
 

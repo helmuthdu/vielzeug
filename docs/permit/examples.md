@@ -9,13 +9,13 @@ description: Practical examples and recipes for permit.
 
 ## How to Use These Examples
 
-These examples cover the current rule model (`set` + `can`), deterministic precedence, and common application patterns.
+These examples cover the current rule model (`set` + decision APIs), deterministic precedence, and common application patterns.
 
 1. Start with the first examples to establish baseline usage.
 2. Move to precedence and wildcard examples to tune policy behavior.
 3. Use logger and rule-set examples to integrate auditing and testing workflows.
 
-All examples below are aligned with the current `@vielzeug/permit` API.
+All examples below are aligned with the current `@vielzeug/permit` API, including `forUser(..., cache?)`, `allowedActions()`, and `explain()`.
 
 ## Examples Overview
 

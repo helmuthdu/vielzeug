@@ -3,7 +3,20 @@
  * Tests for core craftit directives: each, raw
  */
 
-import { computed, define, each, html, raw, signal, type ComponentDefinition } from '../index';
+import {
+  computed,
+  define,
+  each,
+  guard,
+  html,
+  live,
+  raw,
+  signal,
+  styleMap,
+  until,
+  when,
+  type ComponentDefinition,
+} from '../index';
 import { mount, type MountSetup } from '../testing';
 
 const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinition, 'setup'> = {}) =>
@@ -307,5 +320,141 @@ describe('Directive: raw()', () => {
     await flush();
     expect(query('i')?.textContent).toBe('two');
     expect(query('b')).toBeNull();
+  });
+});
+
+describe('Directive: styleMap()', () => {
+  it('should render style declarations from mixed reactive values', async () => {
+    const color = signal('rgb(255, 0, 0)');
+    const width = signal(12);
+
+    const { flush, query } = await mount(
+      () =>
+        html`<div class="box" :style=${styleMap({ color, display: 'block', width: () => `${width.value}px` })}></div>`,
+    );
+
+    const box = query<HTMLElement>('.box');
+
+    expect(box?.getAttribute('style')).toContain('color:rgb(255, 0, 0)');
+    expect(box?.getAttribute('style')).toContain('display:block');
+    expect(box?.getAttribute('style')).toContain('width:12px');
+
+    color.value = 'rgb(0, 0, 255)';
+    width.value = 24;
+    await flush();
+
+    expect(box?.getAttribute('style')).toContain('color:rgb(0, 0, 255)');
+    expect(box?.getAttribute('style')).toContain('width:24px');
+  });
+});
+
+describe('Directive: when()', () => {
+  it('should switch branches reactively', async () => {
+    const enabled = signal(true);
+    const { flush, query } = await mount(
+      () =>
+        html`<section>
+          ${when(
+            enabled,
+            () => html`<p class="on">On</p>`,
+            () => html`<p class="off">Off</p>`,
+          )}
+        </section>`,
+    );
+
+    expect(query('.on')?.textContent).toBe('On');
+
+    enabled.value = false;
+    await flush();
+
+    expect(query('.off')?.textContent).toBe('Off');
+    expect(query('.on')).toBeNull();
+  });
+});
+
+describe('Directive: guard()', () => {
+  it('should only recompute when dependency tuple changes', async () => {
+    const trigger = signal(1);
+    const other = signal(0);
+    let renders = 0;
+
+    const { flush, query } = await mount(
+      () =>
+        html`<div class="value">
+          ${guard([trigger], () => {
+            renders++;
+
+            return html`<span>${trigger.value}</span>`;
+          })}
+        </div>`,
+    );
+
+    expect(query('.value span')?.textContent).toBe('1');
+    expect(renders).toBe(1);
+
+    other.value = 1;
+    await flush();
+    expect(renders).toBe(1);
+
+    trigger.value = 2;
+    await flush();
+    expect(renders).toBe(2);
+    expect(query('.value span')?.textContent).toBe('2');
+  });
+});
+
+describe('Directive: live()', () => {
+  it('should not clobber user-typed input when app state is stale', async () => {
+    const model = signal('server');
+    const { query } = await mount(() => html`<input class="field" :value=${live(model)} @input=${() => undefined} />`);
+
+    const input = query<HTMLInputElement>('.field');
+
+    if (!input) throw new Error('Expected input to be rendered');
+
+    input.value = 'user-typed';
+
+    model.value = 'server';
+
+    expect(input.value).toBe('user-typed');
+  });
+
+  it('should not clobber user-checked input when app state is stale', async () => {
+    const model = signal(true);
+    const { flush, query } = await mount(
+      () => html`<input class="field" type="checkbox" ?checked=${live(model)} @change=${() => undefined} />`,
+    );
+
+    const input = query<HTMLInputElement>('.field');
+
+    if (!input) throw new Error('Expected input to be rendered');
+
+    input.checked = false;
+
+    model.value = true;
+    await flush();
+
+    expect(input.checked).toBe(false);
+  });
+});
+
+describe('Directive: until()', () => {
+  it('should render placeholder until promise resolves', async () => {
+    let resolvePromise!: (value: ReturnType<typeof html>) => void;
+    const deferred = new Promise<ReturnType<typeof html>>((resolve) => {
+      resolvePromise = resolve;
+    });
+    const { flush, query } = await mount(
+      () => html`<div>${until(deferred, html`<span class="loading">Loading</span>`)}</div>`,
+    );
+
+    expect(query('.loading')?.textContent).toBe('Loading');
+
+    resolvePromise(html`<span class="done">Done</span>`);
+
+    await flush();
+
+    expect(query('.done')?.textContent).toBe('Done');
+    expect(query('.loading')).toBeNull();
   });
 });

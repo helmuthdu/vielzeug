@@ -106,6 +106,9 @@ define('toggle-host', {
       if (e.key === 'Escape') open.value = false;
     });
 
+    // handle() auto-registers cleanup when called inside setup()/scope.run().
+    // If you call it elsewhere, keep the returned cleanup function and dispose it manually.
+
     return () => html`<slot></slot>`;
   },
 });

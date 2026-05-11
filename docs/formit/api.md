@@ -11,8 +11,12 @@ description: Complete API reference for Formit form creation, validation, submis
 | --- | --- |
 | `createForm()` | Create a typed form controller |
 | `form.validate()` | Validate all, touched, or specific fields |
+| `form.validateField()` | Validate a single field |
 | `form.submit()` | Deterministic submit flow with validation |
+| `form.watch()` | Subscribe to a field's live value |
 | `form.bind()` | Read/write field binding with live getters |
+| `form.array()` | Append, prepend, insert, remove, move, swap, replace array items |
+| `form.removeField()` | Drop a field and its state/validator entirely |
 | `fromSchema()` | Adapt safe-parse-compatible schemas to Formit |
 | `toFormData()` | Serialize values into `FormData` |
 
@@ -37,6 +41,7 @@ interface FormOptions<TValues extends Record<string, unknown>> {
   defaultValues?: TValues;
   validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator | FieldValidator[]>>;
   validator?: FormValidator<TValues>;
+  mode?: ValidationMode;
   bindDefaults?: BindConfig;
 }
 ```
@@ -46,7 +51,8 @@ interface FormOptions<TValues extends Record<string, unknown>> {
 | `defaultValues` | `TValues` | Initial values and dirty baseline |
 | `validators` | `Partial<Record<FlatKeyOf<TValues>, FieldValidator &#124; FieldValidator[]>>` | Field-level validators keyed by typed path |
 | `validator` | `FormValidator<TValues>` | Form-level validator returning an error map |
-| `bindDefaults` | `BindConfig` | Default behavior for `bind(name, config?)` |
+| `mode` | `ValidationMode` | Global validation trigger — see [Validation Mode](#validation-mode) |
+| `bindDefaults` | `BindConfig` | Default behavior for `bind(name, config?)`. Takes precedence over `mode`. |
 
 `validators` and form value APIs are path-typed from `TValues`. For dynamic forms, use a broader shape such as `Record<string, unknown>`.
 
@@ -150,17 +156,31 @@ type ValidateResult = {
 ## Submit
 
 ```ts
-submit<R>(handler: (values: TValues) => R | Promise<R>, signal?: AbortSignal): Promise<R>
+submit<R>(
+  handler: (values: TValues) => R | Promise<R>,
+  onInvalid?: (errors: Record<string, string>) => void | Promise<void>,
+): Promise<R | void>
 ```
 
 Submit behavior:
 
 - marks all known fields as touched
 - runs full validation (`validate()`)
-- throws `FormValidationError` when invalid
+- if invalid and `onInvalid` is provided — calls `onInvalid(errors)` and returns `undefined`
+- if invalid and `onInvalid` is omitted — throws `FormValidationError`
 - throws `SubmitError` when a concurrent submit is already running
 
-`signal` is optional and passed to validation.
+```ts
+// Throw-based (onInvalid omitted)
+try {
+  await form.submit(save);
+} catch (e) {
+  if (e instanceof FormValidationError) scrollToFirst(e.errors);
+}
+
+// Callback-based (no try/catch needed)
+await form.submit(save, (errors) => scrollToFirst(errors));
+```
 
 ## Subscriptions
 
@@ -179,6 +199,23 @@ type Unsubscribe = () => void;
 ```
 
 Subscriptions are deferred by default. Pass `{ sync: true }` to fire immediately with a snapshot.
+
+## Watch
+
+```ts
+watch<K extends FlatKeyOf<TValues>>(
+  name: K,
+  callback: (value: TypeAtPath<TValues, K>) => void,
+  options?: SubscribeOptions,
+): Unsubscribe
+```
+
+Shorthand for `subscribeField` that delivers just the field's current value. Supports `{ sync: true }` for an immediate initial call.
+
+```ts
+const stop = form.watch('email', (v) => updatePreview(v), { sync: true });
+stop(); // unsubscribe
+```
 
 ## Bind
 
@@ -208,14 +245,34 @@ type BindResult<V = unknown> = {
 ## Arrays
 
 ```ts
-array(name: FlatKeyOf<TValues>): {
-  append(value: unknown): void;
-  remove(index: number): void;
-  move(from: number, to: number): void;
-}
+array(name: FlatKeyOf<TValues>): ArrayField
 ```
 
-Array helpers are no-ops when the current field value is not an array, except `append`, which initializes with a new array.
+```ts
+type ArrayField = {
+  append(value: unknown): void;    // add to end
+  prepend(value: unknown): void;   // add to front
+  insert(index: number, value: unknown): void;  // insert at index
+  remove(index: number): void;     // remove by index
+  move(from: number, to: number): void;         // reorder
+  swap(a: number, b: number): void;             // exchange two items
+  replace(index: number, value: unknown): void; // overwrite at index
+};
+```
+
+All methods are no-ops when the current field value is not an array, except `append` and `prepend`, which initialize with a new single-item array.
+
+```ts
+const items = form.array('items');
+
+items.append({ id: 4, label: 'D' });
+items.prepend({ id: 0, label: 'First' });
+items.insert(1, { id: 99, label: 'Mid' });
+items.swap(0, 2);
+items.replace(1, { id: 1, label: 'Updated' });
+items.remove(0);
+items.move(1, 3);
+```
 
 ## Reset and Replace
 
@@ -223,11 +280,45 @@ Array helpers are no-ops when the current field value is not an array, except `a
 reset(): void
 replace(newValues: TValues): void
 resetField(name: FlatKeyOf<TValues>): void
+removeField(name: FlatKeyOf<TValues>): void
 ```
 
 - `reset()` restores current baseline and clears errors/touched/dirty.
 - `replace(values)` replaces both current values and baseline.
-- `resetField(name)` resets one field and clears its local state.
+- `resetField(name)` resets one field to its baseline value and clears its local state.
+- `removeField(name)` drops the field entirely: removes its value, baseline entry, dirty/touched/error state, and registered validator. Subsequent `reset()` will not restore the field. Use this for conditional fields that are unmounted.
+
+## Validation Mode
+
+```ts
+type ValidationMode = 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched';
+```
+
+Set `mode` in `FormOptions` to control when validation is triggered globally. It pre-populates `bindDefaults`, so every `bind()` call inherits the behavior without explicit per-field config.
+
+| Mode | Validates on blur | Validates on change | Notes |
+| --- | --- | --- | --- |
+| `'onSubmit'` (default) | ❌ | ❌ | Validates only during `submit()` |
+| `'onBlur'` | ✅ | ❌ | Validates when a field loses focus |
+| `'onChange'` | ❌ | ✅ | Validates after every value change |
+| `'onTouched'` | ✅ | ✅ | Validates on blur first, then on every change |
+
+Explicit `bindDefaults` always takes precedence over `mode`.
+
+```ts
+const form = createForm({
+  mode: 'onBlur',
+  defaultValues: { email: '', name: '' },
+  validators: {
+    email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
+    name: (v) => (!v ? 'Required' : undefined),
+  },
+});
+
+// All bind() calls now inherit validateOnBlur: true automatically
+const emailBinding = form.bind('email');
+const nameBinding = form.bind('name');
+```
 
 ## Lifecycle
 
@@ -270,5 +361,6 @@ Common exported types:
 - `FieldState<V>`
 - `BindConfig` and `BindResult<V>`
 - `ValidateResult`
+- `ValidationMode`
 - `SetOptions`
 - `FlatKeyOf<TValues>` and `TypeAtPath<TValues, K>`

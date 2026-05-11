@@ -93,6 +93,8 @@ Creates a query client with caching, deduplication, and reactive subscriptions. 
 | `retry` | `number` | `1` | Default retry attempts for all queries |
 | `retryDelay` | `number \| (attempt) => number` | exponential | Delay between retries; defaults to exponential backoff |
 | `shouldRetry` | `(error, attempt) => boolean` | — | Return `false` to skip retrying for a specific error class |
+| `refetchOnFocus` | `boolean` | `false` | Revalidate stale observed entries when the document regains focus |
+| `refetchOnReconnect` | `boolean` | `false` | Revalidate stale observed entries when the network comes back online |
 
 **Returns:** `QueryClient`
 
@@ -120,7 +122,7 @@ const user = await qc.query({
 | `get`              | `<T>(key) => T \| undefined`                  | Read cached data                                             |
 | `set`              | `<T>(key, data \| updater) => void`           | Set or update cached data                                    |
 | `getState`         | `<T>(key) => QueryState<T> \| null`           | Full state snapshot                                          |
-| `subscribe`        | `<T>(key, listener) => Unsubscribe`           | Subscribe to state changes; fires immediately                |
+| `subscribe`        | `<T, S>(key, listener, opts?) => Unsubscribe` | Subscribe to state changes; optional `select` transform      |
 | `invalidate`       | `(key) => void`                               | Evict key/prefix (observed keys reset to `idle`)             |
 | `cancel`           | `(key) => void`                               | Cancel in-flight request; state → `'idle'` or `'success'`    |
 | `clear`            | `() => void`                                  | Clear all entries; notifies active subscribers with `'idle'` |
@@ -135,7 +137,7 @@ const user = await qc.query({
 ```ts
 createMutation<TData, TVariables = void>(
   fn: (input: TVariables, signal: AbortSignal) => Promise<TData>,
-  options?: MutationOptions,
+  options?: MutationOptions<TData>,
 ): Mutation<TData, TVariables>;
 ```
 
@@ -144,17 +146,20 @@ Creates a standalone, observable mutation handle. Returns a `Mutation<TData, TVa
 **Parameters:**
 
 - `fn: (input: TVariables, signal: AbortSignal) => Promise<TData>` — The mutation function
-- `options?: MutationOptions`
+- `options?: MutationOptions<TData>`
 
 `signal` is always provided by Fetchit.
 
-**`MutationOptions`:**
+**`MutationOptions<TData>`:**
 
-| Option        | Type                            | Default     | Description                                                |
-| ------------- | ------------------------------- | ----------- | ---------------------------------------------------------- |
-| `retry`       | `number`                        | `0`         | Retry attempts on failure                                  |
-| `retryDelay`  | `number \| (attempt) => number` | exponential | Delay between retries                                      |
-| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to skip retrying for a specific error class |
+| Option        | Type                                              | Default     | Description                                                |
+| ------------- | ------------------------------------------------- | ----------- | ---------------------------------------------------------- |
+| `retry`       | `number`                                          | `0`         | Retry attempts on failure                                  |
+| `retryDelay`  | `number \| (attempt) => number`                   | exponential | Delay between retries                                      |
+| `shouldRetry` | `(error, attempt) => boolean`                     | —           | Return `false` to skip retrying for a specific error class |
+| `onSuccess`   | `(data: TData) => void \| Promise<void>`          | —           | Called after a successful run; errors are swallowed        |
+| `onError`     | `(error: Error) => void \| Promise<void>`         | —           | Called after a failed run (not aborted); errors swallowed  |
+| `onSettled`   | `(data, error) => void \| Promise<void>`          | —           | Called after every run regardless of outcome               |
 
 **Returns:** `Mutation<TData, TVariables>` with:
 
@@ -199,7 +204,8 @@ Thrown for non-2xx HTTP responses and network-level failures (timeout, abort, co
 
 - `name`, `url`, `method`, `status`, `data`, `response`
 - `kind` (`'http' | 'network' | 'abort' | 'timeout'`)
-- `isTimeout` and `isAborted`
+- `isTimeout` and `isAborted` (getters derived from `kind`)
+- `headers` — shorthand getter for `err.response?.headers`
 - `fromResponse(res, data, method, url)`
 - `fromCause(cause, method, url)`
 - `is(err, status?)`
@@ -219,6 +225,8 @@ try {
   if (HttpError.is(err)) {
     if (err.isTimeout) console.log('Request timed out');
     if (err.isAborted) console.log('Request was cancelled');
+    // Access response headers directly
+    const requestId = err.headers?.get('x-request-id');
   }
 }
 ```
@@ -258,6 +266,9 @@ type QueryOptions<T> = {
   fn: (ctx: QueryFnContext) => Promise<T>;
   staleTime?: number;
   gcTime?: number;
+  enabled?: boolean;                         // false → skip fetch, stay 'idle'
+  initialData?: T | (() => T | undefined);   // seed cache when no data exists
+  placeholderData?: T | (() => T | undefined); // shown while fetching, not stored
   retry?: number;
   retryDelay?: number | ((attempt: number) => number);
   shouldRetry?: (error: unknown, attempt: number) => boolean;
@@ -326,15 +337,14 @@ type AsyncState<T = unknown> = {
 
 ### `MutationState<TData>`
 
-Like `QueryState<T>` but `data` is always `undefined` while `status === 'pending'` — mutations do not carry stale data during an in-flight call.
+Discriminated by `status`. Mutations never expose stale data while a run is in flight: `idle` and `pending` carry `data: undefined`, `error` carries `error: Error`, and `success` carries `data: TData`.
 
 ```ts
-type MutationState<TData = unknown> = {
-  data: TData | undefined;
-  error: Error | null;
-  status: QueryStatus;
-  updatedAt: number;
-};
+type MutationState<TData = unknown> =
+  | { readonly status: 'idle'; readonly data: undefined; readonly error: null; readonly updatedAt: number }
+  | { readonly status: 'pending'; readonly data: undefined; readonly error: null; readonly updatedAt: number }
+  | { readonly status: 'error'; readonly data: undefined; readonly error: Error; readonly updatedAt: number }
+  | { readonly status: 'success'; readonly data: TData; readonly error: null; readonly updatedAt: number };
 ```
 
 ### `ApiClientOptions`
@@ -357,6 +367,8 @@ type QueryClientOptions = {
   retry?: number;
   retryDelay?: number | ((attempt: number) => number);
   shouldRetry?: (error: unknown, attempt: number) => boolean;
+  refetchOnFocus?: boolean;
+  refetchOnReconnect?: boolean;
 };
 ```
 
@@ -366,13 +378,16 @@ type QueryClientOptions = {
 type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 ```
 
-### `MutationOptions`
+### `MutationOptions<TData>`
 
 ```ts
-type MutationOptions = {
+type MutationOptions<TData = unknown> = {
   retry?: number;
   retryDelay?: number | ((attempt: number) => number);
   shouldRetry?: (error: unknown, attempt: number) => boolean;
+  onSuccess?: (data: TData) => void | Promise<void>;
+  onError?: (error: Error) => void | Promise<void>;
+  onSettled?: (data: TData | undefined, error: Error | null) => void | Promise<void>;
 };
 ```
 

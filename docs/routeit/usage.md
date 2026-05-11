@@ -71,8 +71,11 @@ Each route can provide these fields:
 | `index` | Default child route that inherits the parent path |
 | `data` | Abortable route data function that runs after middleware |
 | `handler` | Final route handler |
-| `middleware` | Route-specific middleware |
+| `lazy` | Lazy-load the module. Called once; result fills `handler`, `data`, `meta`. |
 | `meta` | Static data exposed on `router.state.matches.at(-1)?.meta` |
+| `middleware` | Route-specific middleware |
+| `redirect` | Declarative permanent redirect. Resolved before middleware runs. |
+| `coerceSearch` | Coerce search params. Return value replaces `ctx.query`. |
 
 Use wildcard routes for fallback behavior:
 
@@ -107,11 +110,12 @@ Handlers and middleware receive a `RouteContext`:
 userDetail: {
   path: '/users/:id',
   handler: (ctx) => {
-    ctx.data;
+    ctx.data;         // result of this route's data()
     ctx.params.id;
     ctx.query.tab;
     ctx.pathname;
     ctx.hash;
+    ctx.historyState; // value from navigate({ ... }, { state: ... })
     ctx.locals;
     ctx.navigate;
   },
@@ -155,6 +159,15 @@ Use middleware for auth checks, redirects, analytics, and boundaries.
 const requireAuth = redirect({ name: 'login' }, { replace: true });
 ```
 
+For permanent URL aliases, use the declarative `redirect` field instead of middleware:
+
+```ts
+const routes = {
+  profile: { path: '/profile', redirect: { name: 'userDetail' } },
+  userDetail: { path: '/users/:id', handler: renderUser },
+};
+```
+
 ### Data Loading
 
 Use `data()` for route-local data acquisition. It receives the same route context plus an `AbortSignal`.
@@ -169,9 +182,41 @@ const routes = {
 };
 ```
 
+### Lazy Routes
+
+Defer loading a route module until first navigation. The factory is called at most once.
+
+```ts
+const routes = {
+  settings: {
+    path: '/settings',
+    lazy: () => import('./pages/Settings'),
+  },
+};
+```
+
+The resolved object may contain `handler`, `data`, and/or `meta`. Any present field overwrites the static definition.
+
+### Search Param Validation
+
+Validate and coerce `ctx.query` per route. Throw to leave the raw query unchanged.
+
+```ts
+const routes = {
+  search: {
+    path: '/search',
+    coerceSearch: (raw) => ({
+      q: String(raw.q ?? ''),
+      page: Math.max(1, Number(raw.page ?? 1)),
+    }),
+    handler: ({ query }) => renderSearch(query.q, query.page),
+  },
+};
+```
+
 ### Error Boundaries
 
-Wrap `await next()` in middleware.
+Wrap `await next()` in middleware. The thrown error is also stored on `router.state.error`.
 
 ```ts
 const boundary = async (ctx, next) => {
@@ -187,6 +232,11 @@ const router = createRouter({
   middleware: [boundary],
   routes,
 });
+
+// Check after navigation:
+if (router.state.status === 'error') {
+  console.error(router.state.error);
+}
 ```
 
 ## Navigation
@@ -209,12 +259,51 @@ await router.navigate({ path: '/checkout#payment' }, { replace: true });
 
 Use these when a destination does not belong in the route table. The same `navigate()` method covers named routes and raw path targets.
 
+### History State
+
+Attach arbitrary state to a history entry and read it back via `ctx.historyState` or `router.state.location.historyState`.
+
+```ts
+await router.navigate({ name: 'userDetail', params: { id: '42' } }, { state: { from: 'search' } });
+
+// In the handler:
+handler: (ctx) => {
+  console.log(ctx.historyState); // { from: 'search' }
+}
+```
+
 ### Same-URL Deduplication
 
 ```ts
 await router.navigate({ name: 'dashboard' });
 await router.navigate({ name: 'dashboard' }); // no-op
 await router.navigate({ name: 'dashboard' }, { force: true }); // re-runs
+```
+
+### Prefetching
+
+Eagerly run data loaders without navigating — useful for hover-prefetch:
+
+```ts
+anchor.addEventListener('mouseenter', () => {
+  router.preload('userDetail', { id: '42' });
+});
+```
+
+Concurrent calls for the same route+params are deduplicated. A subsequent `navigate()` re-runs the loaders with a fresh signal.
+
+### Leave Guards
+
+Block navigation until the user confirms — useful for unsaved-changes forms:
+
+```ts
+const removeGuard = router.beforeLeave(async () => {
+  if (!form.isDirty) return true;
+  return confirm('Discard changes?');
+});
+
+// Remove when the component unmounts:
+removeGuard();
 ```
 
 ## URLs and Active State
@@ -252,13 +341,62 @@ router.subscribe((state) => {
 router.state.location.pathname;
 router.state.location.query;
 router.state.location.hash;
+router.state.location.historyState; // state from the current history entry
 router.state.matches;
-router.state.status;
+router.state.status;  // 'idle' | 'loading' | 'error'
+router.state.error;   // only set when status === 'error'
 ```
 
 The state object is immutable. A successful navigation replaces it with a new snapshot.
 
 `router.state.matches` contains the matched branch from root to leaf. Access route metadata via the leaf match: `state.matches.at(-1)?.meta`.
+
+## Scroll Restoration
+
+Provide a `scroll` callback to control scroll position after each navigation:
+
+```ts
+const router = createRouter({
+  routes,
+  scroll: (to, from) => {
+    // Return null to scroll to top
+    // Return { x, y } for a specific position
+    // Return undefined to do nothing
+    return null;
+  },
+});
+```
+
+The callback receives the incoming state and the previous state, making it possible to implement saved-position restore:
+
+```ts
+const scrollPositions = new Map<string, { x: number; y: number }>();
+
+router.subscribe((state) => {
+  scrollPositions.set(state.location.pathname, { x: window.scrollX, y: window.scrollY });
+});
+
+const router = createRouter({
+  routes,
+  scroll: (to, _from) => scrollPositions.get(to.location.pathname) ?? null,
+});
+```
+
+## Testing
+
+Use `createMemoryHistory` to test routers without a browser:
+
+```ts
+import { createMemoryHistory, createRouter } from '@vielzeug/routeit';
+
+const history = createMemoryHistory('/dashboard');
+const router = createRouter({ history, routes });
+
+await new Promise((r) => setTimeout(r, 0));
+assert(router.state.location.pathname === '/dashboard');
+
+router.dispose();
+```
 
 ## Cleanup
 

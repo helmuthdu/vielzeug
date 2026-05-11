@@ -25,13 +25,18 @@ container.bind(HandlerToken, RequestHandler, { deps: [DbToken, UserToken] });
 
 // Express middleware
 app.use(async (req, _res, next) => {
-  await container.runInScope(async (scope) => {
+  const scope = container.createChild();
+
+  try {
     scope.value(RequestToken, req);
     scope.value(UserToken, await authenticateRequest(req));
 
     const handler = await scope.resolve(HandlerToken);
     await handler.handle(req);
-  });
+  } finally {
+    await scope.dispose();
+  }
+
   next();
 });
 ```
@@ -40,15 +45,18 @@ app.use(async (req, _res, next) => {
 
 ```ts
 async function handleTenantRequest(tenantId: string, action: () => Promise<void>) {
-  await container.runInScope(async (scope) => {
+  const scope = container.createChild();
+
+  try {
     const tenantConfig = await loadTenantConfig(tenantId);
     scope.value(TenantConfigToken, tenantConfig);
     scope.factory(DbToken, (cfg) => new Database(cfg.connectionString), {
       deps: [TenantConfigToken],
-      overwrite: true,
     });
     await action();
-  });
+  } finally {
+    await scope.dispose();
+  }
 }
 ```
 
@@ -65,6 +73,6 @@ async function handleTenantRequest(tenantId: string, action: () => Promise<void>
 
 ## Related Recipes
 
-- [Aliases](./aliases.md)
+- [Lifetimes](./lifetimes.md)
 - [Async Providers](./async-providers.md)
 - [Basic Setup](./basic-setup.md)

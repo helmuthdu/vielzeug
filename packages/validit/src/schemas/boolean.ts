@@ -1,7 +1,7 @@
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 
-export class BooleanSchema extends Schema<boolean> {
+export class BooleanSchema<Input = boolean> extends Schema<boolean, Input> {
   constructor() {
     super([
       (value, path) =>
@@ -11,7 +11,7 @@ export class BooleanSchema extends Schema<boolean> {
     ]);
   }
 
-  static coerce(): BooleanSchema {
+  static coerce(): BooleanSchema<unknown> {
     return new BooleanSchema().preprocess((v: unknown) => {
       if (typeof v === 'boolean') return v;
 

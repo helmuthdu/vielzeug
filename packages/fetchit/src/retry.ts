@@ -21,10 +21,10 @@ export function getRetryConfig(
   userDelay: number | ((attempt: number) => number) | undefined,
   shouldRetry?: (error: unknown, attempt: number) => boolean,
 ) {
-  // retry:0 = "no retries" = exactly 1 total attempt (times: 1 in toolkit terms)
+  // retry:0 = "no retries" = exactly 1 total attempt
   // retry:n = "n retries"  = n+1 total attempts
-  const times = retryCount + 1;
-  const base = { shouldRetry, times };
+  const attempts = retryCount + 1;
+  const base = { shouldRetry, times: attempts };
 
   if (typeof userDelay === 'function') return { ...base, retryDelay: userDelay };
 

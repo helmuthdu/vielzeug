@@ -164,6 +164,11 @@ export function createApi(opts: ApiClientOptions = {}) {
   }
 
   return {
+    cancelAll(): void {
+      for (const ac of [...activeControllers]) ac.abort();
+      activeControllers.clear();
+      inFlight.clear();
+    },
     delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
     dispose(): void {
       disposed = true;

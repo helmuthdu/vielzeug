@@ -1,30 +1,100 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { autoUpdate, computePosition, float, flip, offset, positionFloat, shift, size, type Middleware } from './index';
+import {
+  arrow,
+  autoPlacement,
+  autoUpdate,
+  computePosition,
+  detectOverflow,
+  float,
+  flip,
+  getArrowData,
+  getHideData,
+  getMiddlewareData,
+  hide,
+  inline,
+  offset,
+  positionFloat,
+  shift,
+  size,
+  type Middleware,
+  type MiddlewareState,
+} from './index';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 type RectInit = { height?: number; width?: number; x?: number; y?: number };
 
+function createDomRect(init: RectInit = {}): DOMRect {
+  const x = init.x ?? 0;
+  const y = init.y ?? 0;
+  const width = init.width ?? 0;
+  const height = init.height ?? 0;
+
+  return {
+    bottom: y + height,
+    height,
+    left: x,
+    right: x + width,
+    toJSON: () => ({}),
+    top: y,
+    width,
+    x,
+    y,
+  } as DOMRect;
+}
+
 function makeElements(refInit: RectInit, floatInit: RectInit = {}) {
   const reference = document.createElement('div');
   const floating = document.createElement('div');
 
-  for (const [el, init] of [
-    [reference, refInit],
-    [floating, floatInit],
-  ] as const) {
-    const r = { bottom: 0, height: 0, left: 0, right: 0, top: 0, width: 0, x: 0, y: 0, ...init };
-
-    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({ ...r, toJSON: () => ({}) } as DOMRect);
-  }
+  vi.spyOn(reference, 'getBoundingClientRect').mockReturnValue(createDomRect(refInit));
+  vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect(floatInit));
 
   return { floating, reference };
+}
+
+function makeArrow(init: RectInit = {}) {
+  const element = document.createElement('div');
+
+  vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(createDomRect(init));
+
+  return element;
+}
+
+function makeVirtualReference(init: RectInit) {
+  const rect = createDomRect(init);
+
+  return {
+    getBoundingClientRect: vi.fn(() => rect),
+    getClientRects: vi.fn(() => [rect] as unknown as DOMRectList),
+  };
 }
 
 function setViewport(width = 1024, height = 768) {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: height });
+  Object.defineProperty(window, 'visualViewport', {
+    configurable: true,
+    value: {
+      addEventListener: vi.fn(),
+      height,
+      offsetLeft: 0,
+      offsetTop: 0,
+      removeEventListener: vi.fn(),
+      width,
+    },
+  });
+}
+
+function withState(
+  state: Partial<MiddlewareState> &
+    Pick<MiddlewareState, 'elements' | 'rects' | 'x' | 'y' | 'placement' | 'initialPlacement'>,
+): MiddlewareState {
+  return {
+    middlewareData: {},
+    ...state,
+  };
 }
 
 // ─── computePosition ──────────────────────────────────────────────────────────
@@ -37,91 +107,114 @@ describe('computePosition', () => {
     const result = computePosition(reference, floating);
 
     expect(result.placement).toBe('bottom');
-    expect(result.y).toBe(340); // ref.y + ref.height
-    expect(result.x).toBe(210); // 200 + (100 - 80) / 2
+    expect(result.y).toBe(340);
+    expect(result.x).toBe(210);
   });
 
   it('positions top', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const { x, y } = computePosition(reference, floating, { placement: 'top' });
 
-    expect(y).toBe(270); // ref.y - float.height
-    expect(x).toBe(210); // centered
+    expect(y).toBe(270);
+    expect(x).toBe(210);
   });
 
-  it('positions left', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 50 });
-    const { x, y } = computePosition(reference, floating, { placement: 'left' });
-
-    expect(x).toBe(150); // ref.x - float.width
-    expect(y).toBe(305); // 300 + (40 - 30) / 2
-  });
-
-  it('positions right', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 50 });
-    const { x, y } = computePosition(reference, floating, { placement: 'right' });
-
-    expect(x).toBe(300); // ref.x + ref.width
-    expect(y).toBe(305); // centered
-  });
-
-  it('aligns start', () => {
+  it('aligns start and end', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
 
     expect(computePosition(reference, floating, { placement: 'bottom-start' }).x).toBe(200);
+    expect(computePosition(reference, floating, { placement: 'bottom-end' }).x).toBe(220);
   });
 
-  it('aligns end', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-
-    expect(computePosition(reference, floating, { placement: 'bottom-end' }).x).toBe(220); // 200 + 100 - 80
-  });
-
-  it('silently ignores null/undefined/false in middleware array', () => {
+  it('silently ignores nullish middleware entries', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 });
 
     expect(() => computePosition(reference, floating, { middleware: [null, undefined, false] })).not.toThrow();
   });
 
-  it('throws when placement keeps changing across restarts', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 });
-    const oscillate: Middleware = (state) => ({ ...state, placement: state.placement === 'top' ? 'bottom' : 'top' });
+  it('collects middlewareData from custom middleware', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 50, y: 100 }, { height: 20, width: 20 });
+    const mark: Middleware = () => ({ data: { custom: { ok: true } } });
+    const result = computePosition(reference, floating, { middleware: [mark] });
 
-    expect(() => computePosition(reference, floating, { middleware: [oscillate], placement: 'top' })).toThrow(
-      /placement more than once/i,
-    );
+    expect(result.middlewareData.custom).toEqual({ ok: true });
+  });
+
+  it('throws when middleware resets too many times', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 50, y: 100 }, { height: 20, width: 20 });
+    const loop: Middleware = () => ({ reset: true });
+
+    expect(() => computePosition(reference, floating, { middleware: [loop] })).toThrow(/too many resets/i);
+  });
+
+  it('supports virtual references', () => {
+    const virtualReference = makeVirtualReference({ height: 40, width: 100, x: 200, y: 300 });
+    const floating = document.createElement('div');
+
+    vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 30, width: 80 }));
+
+    const result = computePosition(virtualReference, floating, { placement: 'bottom' });
+
+    expect(result.x).toBe(210);
+    expect(result.y).toBe(340);
+  });
+});
+
+// ─── detectOverflow ───────────────────────────────────────────────────────────
+
+describe('detectOverflow', () => {
+  beforeEach(() => setViewport());
+
+  it('returns positive overflow offsets', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 0, y: 0 }, { height: 30, width: 80 });
+    const state = withState({
+      elements: { floating, reference },
+      initialPlacement: 'bottom',
+      placement: 'bottom',
+      rects: {
+        floating: { height: 30, width: 80, x: 0, y: 0 },
+        reference: { height: 40, width: 100, x: 0, y: 0 },
+      },
+      x: 980,
+      y: 760,
+    });
+
+    expect(detectOverflow(state)).toEqual({ bottom: 22, left: -980, right: 36, top: -760 });
+  });
+
+  it('supports per-side padding', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 0, y: 0 }, { height: 30, width: 80 });
+    const state = withState({
+      elements: { floating, reference },
+      initialPlacement: 'bottom',
+      placement: 'bottom',
+      rects: {
+        floating: { height: 30, width: 80, x: 0, y: 0 },
+        reference: { height: 40, width: 100, x: 0, y: 0 },
+      },
+      x: 10,
+      y: 10,
+    });
+
+    expect(detectOverflow(state, { padding: { left: 8, top: 4 } })).toEqual({
+      bottom: -728,
+      left: -2,
+      right: -934,
+      top: -6,
+    });
   });
 });
 
 // ─── offset ───────────────────────────────────────────────────────────────────
 
 describe('offset', () => {
-  it('pushes down for bottom', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 0, y: 0 }, { height: 30, width: 80 });
-    const { y } = computePosition(reference, floating, { middleware: [offset(8)], placement: 'bottom' });
+  it('moves along the main axis', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 100, y: 200 }, { height: 30, width: 80 });
 
-    expect(y).toBe(48); // 40 + 8
-  });
-
-  it('pushes up for top', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 0, y: 200 }, { height: 30, width: 80 });
-    const { y } = computePosition(reference, floating, { middleware: [offset(8)], placement: 'top' });
-
-    expect(y).toBe(162); // 200 - 30 - 8
-  });
-
-  it('pushes right for right', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 100, y: 0 }, { height: 30, width: 80 });
-    const { x } = computePosition(reference, floating, { middleware: [offset(8)], placement: 'right' });
-
-    expect(x).toBe(208); // 100 + 100 + 8
-  });
-
-  it('pushes left for left', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 0 }, { height: 30, width: 80 });
-    const { x } = computePosition(reference, floating, { middleware: [offset(8)], placement: 'left' });
-
-    expect(x).toBe(112); // 200 - 80 - 8
+    expect(computePosition(reference, floating, { middleware: [offset(8)], placement: 'bottom' }).y).toBe(248);
+    expect(computePosition(reference, floating, { middleware: [offset(8)], placement: 'top' }).y).toBe(162);
+    expect(computePosition(reference, floating, { middleware: [offset(8)], placement: 'left' }).x).toBe(12);
+    expect(computePosition(reference, floating, { middleware: [offset(8)], placement: 'right' }).x).toBe(208);
   });
 });
 
@@ -130,46 +223,56 @@ describe('offset', () => {
 describe('flip', () => {
   beforeEach(() => setViewport());
 
-  it('keeps placement when no overflow', () => {
+  it('keeps placement when there is no overflow', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const { placement } = computePosition(reference, floating, { middleware: [flip()], placement: 'bottom' });
 
-    expect(placement).toBe('bottom');
+    expect(computePosition(reference, floating, { middleware: [flip()], placement: 'bottom' }).placement).toBe(
+      'bottom',
+    );
   });
 
-  it('flips to top when bottom overflows viewport', () => {
+  it('flips to the opposite side by default', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 720 }, { height: 30, width: 80 });
-    const { placement } = computePosition(reference, floating, { middleware: [flip()], placement: 'bottom' });
 
-    expect(placement).toBe('top');
+    expect(computePosition(reference, floating, { middleware: [flip()], placement: 'bottom-start' }).placement).toBe(
+      'top-start',
+    );
   });
 
-  it('flips to bottom when top overflows viewport', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 10 }, { height: 30, width: 80 });
-    const { placement } = computePosition(reference, floating, { middleware: [flip()], placement: 'top' });
+  it('supports explicit fallback placements', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 980, y: 720 }, { height: 80, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [flip({ fallbackPlacements: ['left', 'top'] })],
+      placement: 'right',
+    });
 
-    expect(placement).toBe('bottom');
+    expect(result.placement).toBe('left');
   });
+});
 
-  it('respects padding option', () => {
-    // bottom edge of float: 740 + 80 = 820 > 768 - 10 = 758, so should flip
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 700 }, { height: 80, width: 80 });
-    const { placement } = computePosition(reference, floating, {
-      middleware: [flip({ padding: 10 })],
+// ─── autoPlacement ────────────────────────────────────────────────────────────
+
+describe('autoPlacement', () => {
+  beforeEach(() => setViewport());
+
+  it('chooses the placement with the most space', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 20, y: 700 }, { height: 60, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [autoPlacement()],
       placement: 'bottom',
     });
 
-    expect(placement).toBe('top');
+    expect(result.placement).toBe('right');
   });
 
-  it('preserves alignment suffix when flipping', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 720 }, { height: 30, width: 80 });
-    const { placement } = computePosition(reference, floating, {
-      middleware: [flip()],
-      placement: 'bottom-start',
+  it('respects allowed placements', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 20, y: 700 }, { height: 60, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [autoPlacement({ allowedPlacements: ['left', 'right'] })],
+      placement: 'bottom',
     });
 
-    expect(placement).toBe('top-start');
+    expect(['left', 'right']).toContain(result.placement);
   });
 });
 
@@ -178,29 +281,22 @@ describe('flip', () => {
 describe('shift', () => {
   beforeEach(() => setViewport());
 
-  it('clamps right overflow', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 990, y: 300 }, { height: 30, width: 80 });
-    const { x } = computePosition(reference, floating, { middleware: [shift()], placement: 'bottom-start' });
+  it('clamps overflowing coordinates', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 990, y: 760 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, { middleware: [shift()], placement: 'bottom-start' });
 
-    expect(x).toBe(1024 - 80); // 944
+    expect(result.x).toBe(944);
+    expect(result.y).toBe(738);
   });
 
-  it('clamps left overflow', () => {
-    // bottom-end: x = ref.x + ref.width - float.width = 5 + 20 - 80 = -55 → clamped to 0
+  it('supports per-side padding', () => {
     const { floating, reference } = makeElements({ height: 40, width: 20, x: 5, y: 300 }, { height: 30, width: 80 });
-    const { x } = computePosition(reference, floating, { middleware: [shift()], placement: 'bottom-end' });
-
-    expect(x).toBe(0);
-  });
-
-  it('respects padding', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 990, y: 300 }, { height: 30, width: 80 });
-    const { x } = computePosition(reference, floating, {
-      middleware: [shift({ padding: 8 })],
-      placement: 'bottom-start',
+    const result = computePosition(reference, floating, {
+      middleware: [shift({ padding: { left: 8 } })],
+      placement: 'bottom-end',
     });
 
-    expect(x).toBe(1024 - 80 - 8); // 936
+    expect(result.x).toBe(8);
   });
 });
 
@@ -209,49 +305,26 @@ describe('shift', () => {
 describe('size', () => {
   beforeEach(() => setViewport());
 
-  it('reports available height below for bottom placement', () => {
-    // ref bottom = 380, float starts at y = 380
-    const { floating, reference } = makeElements(
-      { height: 40, width: 100, x: 200, y: 340 },
-      { height: 100, width: 80 },
-    );
-    let capturedHeight = 0;
+  it('reports available height below and above', () => {
+    const below = makeElements({ height: 40, width: 100, x: 200, y: 340 }, { height: 100, width: 80 });
+    const above = makeElements({ height: 40, width: 100, x: 200, y: 400 }, { height: 100, width: 80 });
+    let belowHeight = 0;
+    let aboveHeight = 0;
 
-    computePosition(reference, floating, {
-      middleware: [
-        size({
-          apply: ({ availableHeight }) => {
-            capturedHeight = availableHeight;
-          },
-        }),
-      ],
+    computePosition(below.reference, below.floating, {
+      middleware: [size({ apply: ({ availableHeight }) => void (belowHeight = availableHeight) })],
       placement: 'bottom',
     });
-    expect(capturedHeight).toBe(768 - 380); // 388
-  });
-
-  it('reports available height above for top placement', () => {
-    // y = 400 - 100 = 300; y + height = 400
-    const { floating, reference } = makeElements(
-      { height: 40, width: 100, x: 200, y: 400 },
-      { height: 100, width: 80 },
-    );
-    let capturedHeight = 0;
-
-    computePosition(reference, floating, {
-      middleware: [
-        size({
-          apply: ({ availableHeight }) => {
-            capturedHeight = availableHeight;
-          },
-        }),
-      ],
+    computePosition(above.reference, above.floating, {
+      middleware: [size({ apply: ({ availableHeight }) => void (aboveHeight = availableHeight) })],
       placement: 'top',
     });
-    expect(capturedHeight).toBe(400); // y + float.height = 300 + 100
+
+    expect(belowHeight).toBe(388);
+    expect(aboveHeight).toBe(400);
   });
 
-  it('respects padding', () => {
+  it('respects per-side padding', () => {
     const { floating, reference } = makeElements(
       { height: 40, width: 100, x: 200, y: 340 },
       { height: 100, width: 80 },
@@ -260,38 +333,17 @@ describe('size', () => {
 
     computePosition(reference, floating, {
       middleware: [
-        size({
-          apply: ({ availableHeight }) => {
-            capturedHeight = availableHeight;
-          },
-          padding: 8,
-        }),
+        size({ apply: ({ availableHeight }) => void (capturedHeight = availableHeight), padding: { bottom: 8 } }),
       ],
       placement: 'bottom',
     });
-    expect(capturedHeight).toBe(768 - 380 - 8); // 380
+
+    expect(capturedHeight).toBe(380);
   });
 
-  it('calls apply with correct elements', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const apply = vi.fn();
-
-    computePosition(reference, floating, { middleware: [size({ apply })], placement: 'bottom' });
-    expect(apply).toHaveBeenCalledOnce();
-    expect(apply.mock.calls[0][0].elements.floating).toBe(floating);
-    expect(apply.mock.calls[0][0].elements.reference).toBe(reference);
-  });
-
-  it('does not call apply when omitted', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-
-    expect(() => computePosition(reference, floating, { middleware: [size()], placement: 'bottom' })).not.toThrow();
-  });
-
-  it('calls size apply once with final placement after flip', () => {
+  it('runs once after a flip reset', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 720 }, { height: 80, width: 80 });
     const apply = vi.fn();
-
     const result = computePosition(reference, floating, {
       middleware: [flip(), size({ apply })],
       placement: 'bottom',
@@ -303,34 +355,106 @@ describe('size', () => {
   });
 });
 
+// ─── arrow ────────────────────────────────────────────────────────────────────
+
+describe('arrow', () => {
+  beforeEach(() => setViewport());
+
+  it('provides x data for vertical placements', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const result = computePosition(reference, floating, {
+      middleware: [arrow({ element: makeArrow({ height: 10, width: 10 }) })],
+      placement: 'bottom',
+    });
+
+    expect(result.middlewareData.arrow).toEqual({ centerOffset: 0, x: 35 });
+  });
+
+  it('provides y data for horizontal placements', () => {
+    const { floating, reference } = makeElements({ height: 100, width: 40, x: 300, y: 200 }, { height: 80, width: 30 });
+    const result = computePosition(reference, floating, {
+      middleware: [arrow({ element: makeArrow({ height: 10, width: 10 }) })],
+      placement: 'right',
+    });
+
+    expect(result.middlewareData.arrow).toEqual({ centerOffset: 0, y: 35 });
+  });
+});
+
+// ─── hide ─────────────────────────────────────────────────────────────────────
+
+describe('hide', () => {
+  beforeEach(() => setViewport());
+
+  it('reports referenceHidden when the reference is fully clipped', () => {
+    const { floating, reference } = makeElements(
+      { height: 40, width: 100, x: -140, y: 300 },
+      { height: 30, width: 80 },
+    );
+    const result = computePosition(reference, floating, {
+      middleware: [hide()],
+      placement: 'bottom',
+    });
+
+    expect(result.middlewareData.hide).toMatchObject({ referenceHidden: true });
+  });
+
+  it('reports escaped when the floating element is fully clipped', () => {
+    const { floating, reference } = makeElements(
+      { height: 40, width: 100, x: 950, y: 300 },
+      { height: 30, width: 200 },
+    );
+    const result = computePosition(reference, floating, {
+      middleware: [offset(100), hide({ strategy: 'escaped' })],
+      placement: 'right',
+    });
+
+    expect(result.middlewareData.hide).toMatchObject({ escaped: true });
+  });
+});
+
+// ─── inline ───────────────────────────────────────────────────────────────────
+
+describe('inline', () => {
+  beforeEach(() => setViewport());
+
+  it('chooses the client rect containing the pointer', () => {
+    const reference = document.createElement('span');
+    const floating = document.createElement('div');
+    const first = createDomRect({ height: 20, width: 50, x: 100, y: 100 });
+    const second = createDomRect({ height: 20, width: 60, x: 200, y: 100 });
+
+    vi.spyOn(reference, 'getBoundingClientRect').mockReturnValue(
+      createDomRect({ height: 20, width: 160, x: 100, y: 100 }),
+    );
+    vi.spyOn(reference, 'getClientRects').mockReturnValue([first, second] as unknown as DOMRectList);
+    vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 30, width: 40 }));
+
+    const result = computePosition(reference, floating, {
+      middleware: [inline({ x: 220, y: 110 })],
+      placement: 'bottom',
+    });
+
+    expect(result.x).toBe(210);
+    expect(result.y).toBe(120);
+  });
+});
+
 // ─── positionFloat ────────────────────────────────────────────────────────────
 
 describe('positionFloat', () => {
   beforeEach(() => setViewport());
 
-  it('applies left/top inline styles', () => {
+  it('applies left/top inline styles and returns the full result', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-
-    positionFloat(reference, floating);
-    expect(floating.style.left).toBe('210px');
-    expect(floating.style.top).toBe('340px');
-  });
-
-  it('returns the resolved placement', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-
-    expect(positionFloat(reference, floating, { placement: 'top' })).toBe('top');
-  });
-
-  it('returns flipped placement when flip middleware fires', () => {
-    // reference near bottom; bottom float overflows
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 720 }, { height: 30, width: 80 });
-    const placement = positionFloat(reference, floating, {
-      middleware: [flip()],
-      placement: 'bottom',
+    const result = positionFloat(reference, floating, {
+      middleware: [hide()],
     });
 
-    expect(placement).toBe('top');
+    expect(floating.style.left).toBe('210px');
+    expect(floating.style.top).toBe('340px');
+    expect(result).toMatchObject({ placement: 'bottom', x: 210, y: 340 });
+    expect(result.middlewareData.hide).toBeDefined();
   });
 });
 
@@ -340,7 +464,7 @@ describe('autoUpdate', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('calls update immediately on registration', () => {
-    const { floating, reference } = makeElements({});
+    const { floating, reference } = makeElements({}, {});
     const update = vi.fn();
     const cleanup = autoUpdate(reference, floating, update);
 
@@ -348,17 +472,37 @@ describe('autoUpdate', () => {
     cleanup();
   });
 
-  it('returns a cleanup that removes event listeners', () => {
-    const { floating, reference } = makeElements({});
-
-    vi.spyOn(window, 'removeEventListener');
-
+  it('supports animation frame updates', () => {
+    const { floating, reference } = makeElements({}, {});
     const update = vi.fn();
-    const cleanup = autoUpdate(reference, floating, update);
+    let frameCallback: FrameRequestCallback | undefined;
 
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+      frameCallback = cb;
+
+      return 1;
+    });
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+
+    const cleanup = autoUpdate(reference, floating, update, { animationFrame: true });
+
+    frameCallback?.(16);
+    expect(update).toHaveBeenCalledTimes(2);
     cleanup();
-    expect(window.removeEventListener).toHaveBeenCalledWith('resize', update);
-    expect(window.removeEventListener).toHaveBeenCalledWith('scroll', expect.any(Function), expect.anything());
+    expect(window.cancelAnimationFrame).toHaveBeenCalledWith(1);
+  });
+
+  it('works with virtual references', () => {
+    const virtualReference = makeVirtualReference({ height: 40, width: 100, x: 200, y: 300 });
+    const floating = document.createElement('div');
+    const update = vi.fn();
+
+    vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 30, width: 80 }));
+
+    const cleanup = autoUpdate(virtualReference, floating, update);
+
+    expect(update).toHaveBeenCalledOnce();
+    cleanup();
   });
 });
 
@@ -374,34 +518,53 @@ describe('float', () => {
     expect(floating.style.top).toBe('340px');
     cleanup();
   });
-
-  it('returns a cleanup function', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const cleanup = float(reference, floating);
-
-    expect(typeof cleanup).toBe('function');
-    cleanup();
-  });
 });
 
-// ─── Custom middleware ─────────────────────────────────────────────────────────
+// ─── Custom middleware ────────────────────────────────────────────────────────
 
 describe('custom middleware', () => {
-  it('can be composed with built-ins', () => {
+  it('can modify coordinates and return data', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const snap =
       (grid: number): Middleware =>
-      (state) => ({
-        ...state,
-        x: Math.round(state.x / grid) * grid,
-        y: Math.round(state.y / grid) * grid,
+      ({ x, y }) => ({
+        data: { snap: { grid } },
+        x: Math.round(x / grid) * grid,
+        y: Math.round(y / grid) * grid,
       });
-    const { x, y } = computePosition(reference, floating, {
+
+    const result = computePosition(reference, floating, {
       middleware: [snap(10)],
       placement: 'bottom',
     });
 
-    expect(x % 10).toBe(0);
-    expect(y % 10).toBe(0);
+    expect(result.x % 10).toBe(0);
+    expect(result.y % 10).toBe(0);
+    expect(result.middlewareData.snap).toEqual({ grid: 10 });
+  });
+});
+
+// ─── typed middleware data helpers ───────────────────────────────────────────
+
+describe('middleware data helpers', () => {
+  beforeEach(() => setViewport());
+
+  it('returns typed middleware data for arrow/hide helpers', () => {
+    const { floating, reference } = makeElements(
+      { height: 40, width: 100, x: -140, y: 300 },
+      { height: 30, width: 80 },
+    );
+    const result = computePosition(reference, floating, {
+      middleware: [arrow({ element: makeArrow({ height: 10, width: 10 }) }), hide()],
+      placement: 'bottom',
+    });
+
+    const arrowData = getArrowData(result);
+    const hideData = getHideData(result);
+    const genericArrowData = getMiddlewareData<{ centerOffset: number; x?: number; y?: number }>(result, 'arrow');
+
+    expect(arrowData?.centerOffset).toBeTypeOf('number');
+    expect(hideData?.referenceHidden).toBe(true);
+    expect(genericArrowData?.centerOffset).toBe(0);
   });
 });

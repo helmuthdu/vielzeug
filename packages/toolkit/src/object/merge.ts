@@ -3,16 +3,6 @@ import type { Obj } from '../types';
 import { isArray } from '../typed/isArray';
 import { isObject } from '../typed/isObject';
 
-// #region MergeStrategy
-type MergeStrategy =
-  | 'deep'
-  | 'shallow'
-  | 'lastWins'
-  | 'arrayConcat'
-  | 'arrayReplace'
-  | ((target: any, source: any) => any);
-// #endregion MergeStrategy
-
 type DeepMerge<T, U> = T extends Obj
   ? U extends Obj
     ? {
@@ -35,70 +25,7 @@ type Merge<T extends Obj[]> = T extends [infer First, ...infer Rest]
     : Obj
   : Obj;
 
-/**
- * Merges multiple objects based on a specified merge strategy.
- *
- * @example
- * ```ts
- * const obj1 = { a: 1, b: { x: 10, y: "hello" }, c: [1] };
- * const obj2 = { b: { y: 20, z: true }, c: [2] };
- * const obj3 = { d: false, c: [3] };
- *
- * merge("deep", obj1, obj2, obj3); // { a: 1, b: { x: 10, y: 20, z: true }, c: [1, 2, 3], d: false }
- * merge("shallow", obj1, obj2, obj3); // { a: 1, b: { y: 20, z: true }, c: [3], d: false }
- * ```
- *
- * @param [strategy='deep'] - The merging strategy to use.
- * @param items - The objects to merge.
- * @returns A new merged object.
- */
-export function merge<T extends Obj[]>(strategy: MergeStrategy = 'deep', ...items: [...T]): Merge<T> {
-  if (items.length === 0) return {} as Merge<T>;
-
-  if (strategy === 'shallow') {
-    return Object.assign({}, ...items) as Merge<T>;
-  }
-
-  return items.reduce((acc, obj) => mergeObjects(acc, obj, strategy) as unknown as Merge<T>, {} as Merge<T>);
-}
-
-/**
- * Merges objects deeply. Shorthand for `merge('deep', ...items)`.
- *
- * @example
- * ```ts
- * deepMerge({ a: { x: 1 } }, { a: { y: 2 } }); // { a: { x: 1, y: 2 } }
- * ```
- */
-export function deepMerge<T extends Obj[]>(...items: [...T]): Merge<T> {
-  return merge('deep', ...items) as Merge<T>;
-}
-
-/**
- * Merges objects shallowly. Shorthand for `merge('shallow', ...items)`.
- *
- * @example
- * ```ts
- * shallowMerge({ a: 1, b: { x: 1 } }, { b: { y: 2 } }); // { a: 1, b: { y: 2 } }
- * ```
- */
-export function shallowMerge<T extends Obj[]>(...items: [...T]): Merge<T> {
-  return merge('shallow', ...items) as Merge<T>;
-}
-
-/**
- * Deeply merges two objects based on the provided strategy.
- *
- * - Uses **direct property access** for performance.
- * - **Avoids redundant deep merging** where unnecessary.
- * - Optimized **array merging strategies**.
- *
- * @param target - The target object.
- * @param source - The source object.
- * @param strategy - The merge strategy.
- * @returns A new merged object.
- */
-function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, strategy: MergeStrategy): DeepMerge<T, U> {
+function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U): DeepMerge<T, U> {
   if (!isObject(source)) return source as DeepMerge<T, U>;
 
   const result = { ...target } as DeepMerge<T, U>;
@@ -109,40 +36,29 @@ function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, strate
 
     (result as any)[key] =
       isArray(sourceValue) && isArray(targetValue)
-        ? handleArrayMerge(targetValue, sourceValue, strategy)
+        ? [...targetValue, ...sourceValue]
         : isObject(sourceValue) && isObject(targetValue)
-          ? mergeObjects(targetValue as Obj, sourceValue as Obj, strategy)
-          : applyMergeStrategy(targetValue, sourceValue, strategy);
+          ? mergeObjects(targetValue as Obj, sourceValue as Obj)
+          : sourceValue;
   }
 
   return result;
 }
 
 /**
- * Optimized array merge based on strategy.
- *
- * - `"arrayConcat"` → Concatenates arrays.
- * - `"arrayReplace"` → Replaces the existing array.
- * - Default: Concatenates arrays (same as `"arrayConcat"`).
+ * Deeply merges all provided objects.
  */
-function handleArrayMerge<T, U>(targetArray: T[] | undefined, sourceArray: U[], strategy: MergeStrategy): (T | U)[] {
-  if (!targetArray) return sourceArray;
+export function deepMerge<T extends Obj[]>(...items: [...T]): Merge<T> {
+  if (items.length === 0) return {} as Merge<T>;
 
-  if (strategy === 'arrayConcat') return targetArray.concat(sourceArray as any);
-
-  if (strategy === 'arrayReplace') return sourceArray;
-
-  return [...targetArray, ...sourceArray];
+  return items.reduce((acc, obj) => mergeObjects(acc, obj) as unknown as Merge<T>, {} as Merge<T>);
 }
 
 /**
- * Determines the appropriate value to assign based on the merge strategy.
- *
- * - `"lastWins"` → Overwrites with the latest value.
- * - Custom functions → Allows user-defined behavior.
+ * Shallowly merges all provided objects.
  */
-function applyMergeStrategy<T, U>(target: T, source: U, strategy: MergeStrategy): T | U {
-  if (typeof strategy === 'function') return strategy(target, source);
+export function shallowMerge<T extends Obj[]>(...items: [...T]): Merge<T> {
+  if (items.length === 0) return {} as Merge<T>;
 
-  return strategy === 'lastWins' || source !== undefined ? source : target;
+  return Object.assign({}, ...items) as Merge<T>;
 }

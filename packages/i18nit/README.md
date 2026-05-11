@@ -6,11 +6,11 @@
 
 `@vielzeug/i18nit` keeps the surface deliberately small:
 
-- `createI18n` for creating an isolated translation runtime
-- `t` for direct translation lookup with interpolation
-- `tp` for explicit plural branches
-- `format` for locale-aware numbers, currency, dates, relative time, and lists
-- `setCatalog`, `setLoader`, `preload`, and `setLocale` for catalog management
+- `createI18n` for creating an isolated translation runtime — schema-generic for typed key inference
+- `t` for direct translation lookup with interpolation and optional context variants
+- `tp` for explicit plural branches with ordinal support
+- `format` for locale-aware numbers, currency, dates, relative time, lists, and durations
+- `setCatalog`, `mergeCatalog`, `setLoader`, `preload`, and `setLocale` for catalog management
 
 ## Entry Point
 
@@ -34,10 +34,7 @@ import { createI18n } from '@vielzeug/i18nit';
 const i18n = createI18n({
   fallback: 'en',
   locale: 'en',
-  loaders: {
-    de: () => import('./locales/de.json').then((m) => m.default),
-  },
-  messages: {
+  catalogs: {
     en: {
       greeting: 'Hello, {name}!',
       inbox: {
@@ -46,38 +43,55 @@ const i18n = createI18n({
         other: '{count} messages',
       },
       nav: { home: 'Home' },
+      position: {
+        one: '{count}st place',
+        two: '{count}nd place',
+        few: '{count}rd place',
+        other: '{count}th place',
+      },
     },
+    de: () => import('./locales/de.json').then((m) => m.default),
   },
 });
 
+// typed dot-notation keys inferred from the catalogs schema
 i18n.t('greeting', { name: 'Alice' });
+
+// ordinal plural
+i18n.tp('position', 1, undefined, true); // '1st place'
 i18n.tp('inbox', 3);
 
-await i18n.preload('de');
+// deep-merge without discarding existing keys
+i18n.mergeCatalog('en', { nav: { about: 'About' } });
+
 await i18n.setLocale('de');
 
 i18n.format({ kind: 'currency', currency: 'EUR', value: 19.99 });
+i18n.format({ kind: 'duration', value: { hours: 1, minutes: 30 } });
 ```
 
 ## Features
 
 - Nested key lookup via dot notation
+- Typed key inference — `createI18n` is generic, `t` and `tp` accept inferred dot-notation keys
 - Interpolation for plain and nested variables
-- Explicit plural translation with `tp()` and `Intl.PluralRules`
+- Explicit plural translation with `tp()` and `Intl.PluralRules`, including ordinal support
+- Context sub-keys accessible via dot notation (`invite.female`) — no extra option needed
 - Locale cascade through BCP 47 parents plus configured fallback locales
 - Best-effort preloading and strict locale switching
-- Runtime catalog replacement and loader registration
-- Locale-aware formatting through one `format()` entry point
+- Deep-merge catalog updates with `mergeCatalog()` alongside full replacement via `setCatalog()`
+- Locale-aware formatting through one `format()` entry point: numbers, currency, dates, relative time, lists, and durations
 - Subscription and diagnostics hooks for UI integration and observability
 - Zero runtime dependencies
 
 ## Core API
 
-- `createI18n(options?) => I18n`
+- `createI18n(options?) => I18n<M>`
 - `i18n.t(key, vars?)`
-- `i18n.tp(key, count, vars?)`
-- `i18n.format(input)`
-- `i18n.setCatalog(locale, messages)`
+- `i18n.tp(key, count, vars?, ordinal?)` — pass `true` for ordinal plural rules
+- `i18n.format(input)` — kinds: `number`, `currency`, `date`, `relative`, `list`, `duration`
+- `i18n.setCatalog(locale, messages)` — replace catalog
+- `i18n.mergeCatalog(locale, messages)` — deep-merge into existing catalog
 - `i18n.setLoader(locale, loader)`
 - `await i18n.preload(locale)`
 - `await i18n.setLocale(locale)`

@@ -1,41 +1,32 @@
 import { retry } from '@vielzeug/toolkit';
 
 import type { RetryOptions } from './retry';
-import type { MutationState, QueryStatus, Unsubscribe } from './types';
+import type { MutationState, Unsubscribe } from './types';
 
 import { getRetryConfig } from './retry';
 
-export type MutationOptions = RetryOptions;
+export type MutationOptions<TData = unknown> = RetryOptions & {
+  /** Called after a failed run, before `mutate()` rejects. */
+  onError?: (error: Error) => void | Promise<void>;
+  /** Called after every run regardless of outcome. */
+  onSettled?: (data: TData | undefined, error: Error | null) => void | Promise<void>;
+  /** Called after a successful run, before `mutate()` resolves. */
+  onSuccess?: (data: TData) => void | Promise<void>;
+};
 
 export type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 
 export function createMutation<TData, TVariables = void>(
   mutationFn: MutationFn<TData, TVariables>,
-  mutOpts?: MutationOptions,
+  mutOpts?: MutationOptions<TData>,
 ) {
-  let snap: { data: TData | undefined; error: Error | null; status: QueryStatus; updatedAt: number } = {
-    data: undefined,
-    error: null,
-    status: 'idle',
-    updatedAt: 0,
-  };
+  let snap: MutationState<TData> = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
   let currentRun = 0;
   let activeController: AbortController | null = null;
   const observers = new Set<(state: MutationState<TData>) => void>();
 
-  function toState(): MutationState<TData> {
-    return {
-      data: snap.data,
-      error: snap.error,
-      status: snap.status,
-      updatedAt: snap.updatedAt,
-    };
-  }
-
   function notify() {
-    const state = toState();
-
-    observers.forEach((listener) => listener(state));
+    observers.forEach((l) => l(snap));
   }
 
   return {
@@ -44,7 +35,7 @@ export function createMutation<TData, TVariables = void>(
     },
 
     getState(): MutationState<TData> {
-      return toState();
+      return snap;
     },
 
     async mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData> {
@@ -69,6 +60,16 @@ export function createMutation<TData, TVariables = void>(
           notify();
         }
 
+        // Fire lifecycle callbacks — sync throws and async rejections are both swallowed.
+        await Promise.all([
+          Promise.resolve()
+            .then(() => mutOpts?.onSuccess?.(data))
+            .catch(() => {}),
+          Promise.resolve()
+            .then(() => mutOpts?.onSettled?.(data, null))
+            .catch(() => {}),
+        ]);
+
         return data;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
@@ -80,6 +81,17 @@ export function createMutation<TData, TVariables = void>(
         if (run === currentRun) {
           snap = nextState;
           notify();
+        }
+
+        if (nextState.status === 'error') {
+          await Promise.all([
+            Promise.resolve()
+              .then(() => mutOpts?.onError?.(error))
+              .catch(() => {}),
+            Promise.resolve()
+              .then(() => mutOpts?.onSettled?.(undefined, error))
+              .catch(() => {}),
+          ]);
         }
 
         throw error;
@@ -97,7 +109,7 @@ export function createMutation<TData, TVariables = void>(
 
     subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe {
       observers.add(listener);
-      listener(toState());
+      listener(snap);
 
       return () => observers.delete(listener);
     },

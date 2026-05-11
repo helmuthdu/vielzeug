@@ -1,16 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  AliasCycleError,
   CircularDependencyError,
   type Container,
   ContainerDisposedError,
   createContainer,
-  createTestContainer,
   createToken,
+  MultipleProvidersError,
   ProviderNotFoundError,
-  type Token,
-  type TokenValues,
 } from './wireit';
 
 describe('createToken', () => {
@@ -49,55 +46,29 @@ describe('Container - registration and resolution', () => {
     await expect(container.resolve(F)).resolves.toBe(42);
   });
 
-  it('throws when replacing without overwrite, preserves original value', async () => {
+  it('throws when replacing existing token without multi', () => {
     const T = createToken<string>('T');
 
     container.value(T, 'original');
+
     expect(() => container.value(T, 'replacement')).toThrow(/already registered/);
-    await expect(container.resolve(T)).resolves.toBe('original');
   });
 
-  it('overwrites with overwrite=true', async () => {
-    const T = createToken<string>('T');
+  it('supports multi-provider tokens through resolveMany', async () => {
+    const Validator = createToken<string>('Validator');
 
-    container.value(T, 'first');
-    container.value(T, 'second', { overwrite: true });
+    container.value(Validator, 'a', { multi: true });
+    container.value(Validator, 'b', { multi: true });
 
-    await expect(container.resolve(T)).resolves.toBe('second');
+    await expect(container.resolveMany(Validator)).resolves.toEqual(['a', 'b']);
+    await expect(container.resolve(Validator)).rejects.toThrow(MultipleProvidersError);
   });
 
-  it('unregister removes token', async () => {
-    const T = createToken<string>('T');
+  it('throws ProviderNotFoundError for unregistered token', async () => {
+    const Missing = createToken<string>('Missing');
 
-    container.value(T, 'v').unregister(T);
-
-    await expect(container.resolve(T)).rejects.toThrow(ProviderNotFoundError);
-  });
-
-  it('clear removes registrations and aliases', async () => {
-    const Source = createToken<string>('Source');
-    const Alias = createToken<string>('Alias');
-
-    container.value(Source, 'v').alias(Alias, Source);
-    container.clear();
-
-    expect(container.has(Source)).toBe(false);
-    await expect(container.resolve(Alias)).rejects.toThrow(ProviderNotFoundError);
-  });
-
-  it('resolveAll returns typed tuple and resolveOptional handles missing', async () => {
-    const A = createToken<string>('A');
-    const B = createToken<number>('B');
-    const Missing = createToken<boolean>('Missing');
-
-    container.value(A, 'hello').value(B, 7);
-
-    const result = await container.resolveAll([A, B]);
-    const typed: TokenValues<[typeof A, typeof B]> = result;
-
-    expect(typed[0]).toBe('hello');
-    expect(typed[1]).toBe(7);
-    await expect(container.resolveOptional(Missing)).resolves.toBeUndefined();
+    await expect(container.resolve(Missing)).rejects.toThrow(ProviderNotFoundError);
+    await expect(container.resolveMany(Missing)).resolves.toEqual([]);
   });
 });
 
@@ -194,33 +165,6 @@ describe('Container - dependencies and cycles', () => {
   });
 });
 
-describe('Container - aliasing', () => {
-  let container: Container;
-
-  beforeEach(() => {
-    container = createContainer();
-  });
-
-  it('resolves aliases and alias chains', async () => {
-    const A = createToken<string>('A');
-    const B = createToken<string>('B');
-    const C = createToken<string>('C');
-
-    container.value(A, 'v').alias(B, A).alias(C, B);
-
-    await expect(container.resolve(C)).resolves.toBe('v');
-  });
-
-  it('detects alias cycles', async () => {
-    const A = createToken<string>('A');
-    const B = createToken<string>('B');
-
-    container.alias(A, B).alias(B, A);
-
-    await expect(container.resolve(A)).rejects.toThrow(AliasCycleError);
-  });
-});
-
 describe('Container - async behavior', () => {
   let container: Container;
 
@@ -260,80 +204,48 @@ describe('Container - async behavior', () => {
     await expect(container.resolve(T)).rejects.toThrow('transient');
     await expect(container.resolve(T)).resolves.toBe('ok');
   });
-});
 
-describe('Container - snapshot, mock, and test utilities', () => {
-  let container: Container;
+  it('runs init hook once for singleton providers', async () => {
+    const order: string[] = [];
+    const T = createToken<{ id: string }>('Init');
 
-  beforeEach(() => {
-    container = createContainer();
-  });
+    container.factory(
+      T,
+      () => {
+        order.push('create');
 
-  it('snapshot/restore preserves original singleton instance', async () => {
-    let n = 0;
-    const T = createToken<object>('T');
+        return { id: 'x' };
+      },
+      {
+        init: () => {
+          order.push('init');
+        },
+      },
+    );
 
-    container.factory(T, () => ({ id: ++n }));
+    await container.resolve(T);
+    await container.resolve(T);
 
-    const original = await container.resolve(T);
-    const snap = container.snapshot();
-
-    container.value(T, { id: 999 }, { overwrite: true });
-    container.restore(snap);
-
-    const restored = await container.resolve(T);
-
-    expect(restored).toBe(original);
-    expect(n).toBe(1);
-  });
-
-  it('mock temporarily replaces provider and restores afterward', async () => {
-    const T = createToken<string>('T');
-
-    container.value(T, 'real');
-
-    const during = await container.mock(T, { useValue: 'mocked' }, () => container.resolve(T));
-
-    expect(during).toBe('mocked');
-    await expect(container.resolve(T)).resolves.toBe('real');
-  });
-
-  it('createTestContainer returns an isolated child container', async () => {
-    const base = createContainer();
-    const T = createToken<string>('T');
-
-    base.value(T, 'base');
-
-    const child = createTestContainer(base);
-
-    child.value(T, 'child', { overwrite: true });
-
-    await expect(child.resolve(T)).resolves.toBe('child');
-    await expect(base.resolve(T)).resolves.toBe('base');
-
-    await child.dispose();
-    expect(child.disposed).toBe(true);
+    expect(order).toEqual(['create', 'init']);
   });
 });
 
 describe('Container - dispose and lifecycle guards', () => {
-  it('runs dispose hooks for resolved instances and retired replacements', async () => {
+  it('runs dispose hooks for resolved instances', async () => {
     const log: string[] = [];
     const T = createToken<object>('T');
     const container = createContainer();
 
     container.factory(T, () => ({}), {
       dispose: () => {
-        log.push('first');
+        log.push('disposed');
       },
     });
 
     await container.resolve(T);
-    container.value(T, {}, { overwrite: true });
-
     await container.dispose();
 
-    expect(log).toContain('first');
+    expect(log).toContain('disposed');
   });
 
   it('aggregates dispose hook failures and still marks container disposed', async () => {
@@ -359,7 +271,7 @@ describe('Container - dispose and lifecycle guards', () => {
     expect(container.disposed).toBe(true);
   });
 
-  it('throws ContainerDisposedError for read/write operations after dispose', async () => {
+  it('throws ContainerDisposedError after dispose', async () => {
     const T = createToken<string>('T');
     const container = createContainer();
 
@@ -367,36 +279,9 @@ describe('Container - dispose and lifecycle guards', () => {
     await container.dispose();
 
     await expect(container.resolve(T)).rejects.toThrow(ContainerDisposedError);
-    expect(() => container.has(T)).toThrow(ContainerDisposedError);
     expect(() => container.value(T, 'x')).toThrow(ContainerDisposedError);
     expect(() => container.factory(T, () => 'x')).toThrow(ContainerDisposedError);
     expect(() => container.bind(T, class {})).toThrow(ContainerDisposedError);
-    expect(() => container.alias(T, T)).toThrow(ContainerDisposedError);
-    expect(() => container.unregister(T)).toThrow(ContainerDisposedError);
     expect(() => container.createChild()).toThrow(ContainerDisposedError);
-  });
-});
-
-describe('Container - debug', () => {
-  it('returns provider metadata for tokens and aliases', () => {
-    const container = createContainer();
-    const Value = createToken<string>('Value');
-    const Alias = createToken<string>('Alias');
-
-    container.value(Value, 'v').alias(Alias, Value);
-
-    const debug = container.debug();
-
-    expect(debug.aliases).toContainEqual(['Alias', 'Value']);
-    expect(debug.tokens).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          lifetime: 'singleton',
-          name: 'Value',
-          provider: 'value',
-          resolved: false,
-        }),
-      ]),
-    );
   });
 });

@@ -36,6 +36,7 @@ import { createForm, FormValidationError } from '@vielzeug/formit';
 
 const form = createForm({
   defaultValues: { email: '', password: '' },
+  mode: 'onBlur', // validate automatically on blur
   validators: {
     email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
     password: (v) => (String(v).length < 8 ? 'Min 8 chars' : undefined),
@@ -48,6 +49,13 @@ if (!valid) {
   console.log(errors);
 }
 
+// Option A: callback — no try/catch needed
+await form.submit(
+  async (values) => { /* save */ },
+  (errors) => console.log('Validation failed:', errors),
+);
+
+// Option B: throw-based
 try {
   await form.submit(async (values) => {
     await fetch('/api/login', {
@@ -89,7 +97,12 @@ await form.submit(submit);
 | Bundle size | <PackageInfo package="formit" type="size" /> | ~9 kB | ~16 kB |
 | Framework-agnostic | ✅ | React only | Vue only |
 | Typed dot-path APIs | ✅ | Partial | Partial |
+| Global validation mode | ✅ | ✅ | ✅ |
 | Unified validation entrypoint | ✅ | ❌ | ❌ |
+| `onInvalid` submit callback | ✅ | ✅ | ✅ |
+| Live field watch | ✅ | ✅ | ✅ |
+| Full array helpers | ✅ | ✅ | ✅ |
+| Conditional field removal | ✅ | ✅ | Partial |
 | Form + field subscriptions | ✅ | ✅ | ✅ |
 | Zero dependencies | ✅ | ❌ | ❌ |
 
@@ -102,9 +115,14 @@ await form.submit(submit);
 - Typed field paths with compile-time value inference
 - Unified validation API: `validate()`, `validate('touched')`, and `validate(fields)`
 - Single-field validation with `validateField(name)`
-- Explicit subscriptions: subscribeForm and subscribeField
+- Global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
+- `submit(onValid, onInvalid?)` — optional error callback avoids try/catch
+- `watch(name, callback)` — live value streaming without subscription boilerplate
+- `removeField(name)` — clean conditional field lifecycle
+- Full array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
+- Explicit subscriptions: `subscribeForm` and `subscribeField`
 - Baseline-safe reset/replace model
-- Browser-first utilities: `bind`, array helpers, `toFormData`
+- Browser-first utilities: `bind`, `toFormData`
 - Schema adapter via `fromSchema(schema)`
 
 ## Compatibility

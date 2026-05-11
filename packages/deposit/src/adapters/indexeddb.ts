@@ -3,7 +3,6 @@ import type { AnySchema, IndexedDBHandle, KeyOf, MigrationFn, RecordOf, Transact
 import { QueryBuilder } from '../query';
 import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
 import { AdapterCore } from './adapter-core';
-import { resolveRecordKey } from './resolve-key';
 
 /* -------------------- Module-level IDB helpers -------------------- */
 
@@ -74,9 +73,10 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
   private db: IDBDatabase | null = null;
   private connectPromise: Promise<void> | null = null;
   private closed = false;
+  private readonly channel?: BroadcastChannel;
   private readonly dbName: string;
   private readonly migrate?: MigrationFn;
-  private readonly schema: S;
+  protected readonly schema: S;
   private readonly schemaVersion: number;
 
   constructor(options: { dbName: string; migrate?: MigrationFn; schema: S; schemaVersion: number }) {
@@ -85,6 +85,13 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
     this.migrate = options.migrate;
     this.schema = options.schema;
     this.schemaVersion = options.schemaVersion;
+
+    if (typeof BroadcastChannel !== 'undefined') {
+      this.channel = new BroadcastChannel(`deposit:${this.dbName}`);
+      this.channel.onmessage = (event: MessageEvent<{ table: string }>) => {
+        this.notify(event.data.table as keyof S);
+      };
+    }
   }
 
   close(): void {
@@ -92,6 +99,7 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
     this.db?.close();
     this.db = null;
     this.connectPromise = null;
+    this.channel?.close();
   }
 
   private connect(): Promise<void> {
@@ -152,10 +160,18 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
   }
 
   async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-    return this.withStore(table, 'readonly', async (store) => {
+    return this.withStore(table, 'readwrite', async (store) => {
       const raw = await idbReq<StoredRecord<RecordOf<S, K>> | undefined>(store.get(key as IDBValidKey));
 
-      return raw == null ? undefined : unwrapStored(raw);
+      if (raw == null) return undefined;
+
+      const value = unwrapStored(raw);
+
+      if (value === undefined) {
+        await idbReq(store.delete(key as IDBValidKey));
+      }
+
+      return value;
     });
   }
 
@@ -164,29 +180,33 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
   }
 
   async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
-    const key = resolveRecordKey(this.schema, table, value) as IDBValidKey;
+    const key = this.resolveRecordKey(table, value) as IDBValidKey;
 
     await this.withStore(table, 'readwrite', (store) => idbReq(store.put(wrapStored(value, ttl), key)));
+    this.broadcast(table);
   }
 
   async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<void> {
     await this.withStore(table, 'readwrite', (store) => idbReq(store.delete(key as IDBValidKey)));
+    this.broadcast(table);
   }
 
   async deleteAll<K extends keyof S>(table: K): Promise<void> {
     await this.withStore(table, 'readwrite', (store) => idbReq<undefined>(store.clear()));
+    this.broadcast(table);
   }
 
   async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: number): Promise<void> {
     await this.withStore(table, 'readwrite', async (store) => {
       await Promise.all(
         values.map((value) => {
-          const key = resolveRecordKey(this.schema, table, value) as IDBValidKey;
+          const key = this.resolveRecordKey(table, value) as IDBValidKey;
 
           return idbReq(store.put(wrapStored(value, ttl), key));
         }),
       );
     });
+    this.broadcast(table);
   }
 
   async transaction<K extends keyof S, R>(
@@ -210,6 +230,26 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
       count: (table) => ctx.getAll(table).then((all) => all.length),
       delete: (table, key) => idbReq(storeOf(table).delete(key as IDBValidKey)),
       deleteAll: (table) => idbReq<undefined>(storeOf(table).clear()).then(() => undefined),
+      deleteWhere: async (table, predicate) => {
+        const all = await ctx.getAll(table);
+        let deleted = 0;
+
+        for (const row of all) {
+          if (!predicate(row)) continue;
+
+          await ctx.delete(table, this.resolveRecordKey(table, row));
+          deleted += 1;
+        }
+
+        return deleted;
+      },
+      forEach: async (table, fn) => {
+        const all = await ctx.getAll(table);
+
+        for (let i = 0; i < all.length; i += 1) {
+          await fn(all[i], i);
+        }
+      },
       get: (table, key) =>
         idbReq<StoredRecord<RecordOf<S, typeof table>> | undefined>(storeOf(table).get(key as IDBValidKey)).then(
           (raw) => {
@@ -223,24 +263,55 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
           },
         ),
       getAll: (table) => readAll(table),
+      getOrPut: async (table, key, fallback, ttl) => {
+        const existing = await ctx.get(table, key);
+
+        if (existing) return existing;
+
+        const value = typeof fallback === 'function' ? (fallback as () => RecordOf<S, typeof table>)() : fallback;
+
+        await ctx.put(table, value, ttl);
+
+        return value;
+      },
       has: (table, key) => ctx.get(table, key).then((v) => v !== undefined),
       put: (table, value, ttl) => {
-        const key = resolveRecordKey(this.schema, table, value) as IDBValidKey;
+        const key = this.resolveRecordKey(table, value) as IDBValidKey;
 
         return idbReq(storeOf(table).put(wrapStored(value, ttl), key)).then(() => undefined);
       },
       putAll: (table, values, ttl) =>
         Promise.all(
           values.map((value) => {
-            const key = resolveRecordKey(this.schema, table, value) as IDBValidKey;
+            const key = this.resolveRecordKey(table, value) as IDBValidKey;
 
             return idbReq(storeOf(table).put(wrapStored(value, ttl), key));
           }),
         ).then(() => undefined),
       query: (table) => new QueryBuilder<RecordOf<S, K>>(() => ctx.getAll(table) as Promise<unknown[]>),
+      update: async (table, key, changes, ttl) => {
+        const current = await ctx.get(table, key);
+
+        if (!current) return undefined;
+
+        const merged = { ...current, ...changes } as RecordOf<S, typeof table>;
+
+        await ctx.put(table, merged, ttl);
+
+        return merged;
+      },
     };
 
-    return runIdbTx(idbTx, this.dbName, () => fn(ctx));
+    const result = await runIdbTx(idbTx, this.dbName, () => fn(ctx));
+
+    for (const table of tables) this.broadcast(table);
+
+    return result;
+  }
+
+  private broadcast<K extends keyof S>(table: K): void {
+    this.notify(table);
+    this.channel?.postMessage({ table: String(table) });
   }
 
   private createObjectStores(db: IDBDatabase): void {

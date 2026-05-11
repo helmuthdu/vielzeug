@@ -1,7 +1,7 @@
 import { autoUpdate } from '@vielzeug/floatit';
 
 export type OverlayOpenReason = 'programmatic' | 'trigger';
-export type OverlayCloseReason = 'escape' | 'outside-click' | 'programmatic' | 'trigger';
+export type OverlayCloseReason = 'escape' | 'outside-click' | 'programmatic' | 'swipe' | 'trigger';
 export type OverlayCloseDetail = { reason: OverlayCloseReason };
 export type OverlayOpenDetail = { reason: OverlayOpenReason };
 
@@ -64,12 +64,25 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     return options.restoreFocus ?? true;
   };
 
+  // Local wrapper — handles click-listener registration without mutating options.
+  const commitOpen = (next: boolean, context: { reason: OverlayOpenReason | OverlayCloseReason }): void => {
+    options.setOpen(next, context);
+
+    if (next && clickListener) {
+      activeOverlayListeners.add(clickListener);
+      ensureDocumentClickListener();
+    } else if (!next && clickListener) {
+      activeOverlayListeners.delete(clickListener);
+      removeDocumentClickListener();
+    }
+  };
+
   const open = (opts: { reason?: OverlayOpenReason } = {}): void => {
     const reason = opts.reason ?? 'programmatic';
 
     if (options.isDisabled?.() || options.isOpen()) return;
 
-    options.setOpen(true, { reason });
+    commitOpen(true, { reason });
 
     if (options.positioner) {
       const reference = options.positioner.reference();
@@ -90,7 +103,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
     if (!options.isOpen()) return;
 
-    options.setOpen(false, { reason });
+    commitOpen(false, { reason });
 
     if (positionerCleanup) {
       positionerCleanup();
@@ -126,21 +139,6 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
       options.getBoundaryElement()?.contains(el) || (options.getPanelElement?.() ?? null)?.contains(el) || false;
 
     if (!inside) close({ reason: 'outside-click' });
-  };
-
-  // Register click listener on open, unregister on close
-  const originalSetOpen = options.setOpen;
-
-  options.setOpen = (next: boolean, context: { reason: OverlayOpenReason | OverlayCloseReason }) => {
-    originalSetOpen(next, context);
-
-    if (next && clickListener) {
-      activeOverlayListeners.add(clickListener);
-      ensureDocumentClickListener();
-    } else if (!next && clickListener) {
-      activeOverlayListeners.delete(clickListener);
-      removeDocumentClickListener();
-    }
   };
 
   return {

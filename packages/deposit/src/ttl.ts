@@ -25,12 +25,14 @@ export type StoredRecord<T> = {
 };
 
 /** @internal */
-export function wrapStored<T extends Record<string, unknown>>(value: T, ttlMs?: number): StoredRecord<T> {
-  return ttlMs ? { e: Date.now() + ttlMs, v: value } : { v: value };
+export function wrapStored<T>(value: T, ttlMs?: number): StoredRecord<T> {
+  if (ttlMs === undefined) return { v: value };
+
+  return { e: Date.now() + ttlMs, v: value };
 }
 
 /** @internal */
-export function unwrapStored<T extends Record<string, unknown>>(raw: StoredRecord<T>): T | undefined {
+export function unwrapStored<T>(raw: StoredRecord<T>): T | undefined {
   if (raw.e !== undefined && Date.now() >= raw.e) return undefined;
 
   return raw.v;

@@ -43,10 +43,13 @@ if (result.success) {
 
 - Strict-by-default objects with `.relaxed()` for explicit passthrough behavior
 - Primitive, collection, union, intersection, enum, lazy, and variant schema factories
-- Full output inference via `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>`
+- Input/output inference via `InferInput<T>`, `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>`
 - Sync and async custom rules with `.refine()` and `.refineAsync()`
-- Built-in coercion via `v.coerce.string()`, `v.coerce.number()`, `v.coerce.boolean()`, and `v.coerce.date()`
+- Advanced multi-issue validation via `.superRefine()` and `.superRefineAsync()`
+- Built-in coercion via `v.coerce.string()`, `v.coerce.number()`, `v.coerce.boolean()`, `v.coerce.date()`, and `v.coerce.bigint()`
+- Expanded schema coverage via `v.bigint()`, `v.set()`, and `v.map()`
 - Default, fallback, preprocess, transform, branding, and runtime type-guard helpers
+- Readonly helper via `v.readonly(schema)` for type-level immutability
 - Nested global message configuration via `configure({ messages })` plus `reset()`
 - Structured errors with `ValidationError`, `Issue`, `error.flatten()`, and `error.flattenFirst()`
 - Zero dependencies
@@ -61,11 +64,14 @@ if (result.success) {
 - `v.number()`
 - `v.boolean()`
 - `v.date()`
+- `v.bigint()`
 - `v.literal(value)`
 - `v.enum(values)`
 - `v.nativeEnum(enumObj)`
 - `v.object(shape)`
 - `v.array(itemSchema)`
+- `v.set(itemSchema)`
+- `v.map(keySchema, valueSchema)`
 - `v.tuple(items)`
 - `v.record(keySchema, valueSchema)`
 - `v.union(...branches)`
@@ -73,6 +79,7 @@ if (result.success) {
 - `v.variant(discriminator, map)`
 - `v.lazy(getter)`
 - `v.instanceof(Ctor)`
+- `v.readonly(schema)`
 - `v.never()`, `v.null()`, `v.undefined()`
 
 ### Validation flow
@@ -174,11 +181,12 @@ if (!result.success) {
 
 ## API At A Glance
 
-- String methods: `min`, `max`, `length`, `nonEmpty`, `startsWith`, `endsWith`, `includes`, `regex`, `email`, `url`, `uuid`, `isoDate`, `isoDateTime`, `ip`, `trim`, `lowercase`, `uppercase`
-- Number methods: `min`, `max`, `int`, `positive`, `negative`, `nonNegative`, `nonPositive`, `multipleOf`, `safe`
+- String methods: `min`, `max`, `length`, `nonEmpty`, `startsWith`, `endsWith`, `includes`, `regex`, `email`, `url`, `uuid`, `isoDate`, `isoDateTime`, `ip`, `cuid`, `cuid2`, `ulid`, `nanoid`, `base64`, `base64url`, `hex`, `hexColor`, `emoji`, `jwt`, `time`, `duration`, `semver`, `slug`, `numeric`, `trim`, `lowercase`, `uppercase`
+- Number methods: `min`, `max`, `int`, `positive`, `negative`, `nonNegative`, `nonPositive`, `multipleOf`, `safe`, `finite`
 - Array methods: `min`, `max`, `length`, `nonEmpty`, `unique`
-- Object helpers: `partial`, `required`, `extend`, `pick`, `omit`, `relaxed`
-- Errors and types: `ValidationError`, `ErrorCode`, `Issue`, `ParseResult<T>`, `Messages`, `Infer<T>`, `InferOutput<T>`, `TypeOf<T>`
+- Object helpers: `partial`, `required`, `extend`, `pick`, `omit`, `relaxed`, `strip`
+- Tuple helpers: `rest`
+- Errors and types: `ValidationError`, `ErrorCode`, `Issue`, `ParseResult<T>`, `Messages`, `InferInput<T>`, `Infer<T>`, `InferOutput<T>`, `TypeOf<T>`
 
 ## Notes
 
@@ -188,6 +196,7 @@ if (!result.success) {
 - `array.unique()` uses JavaScript `Set` semantics, so objects are compared by reference.
 - `array.unique()` emits `not_unique` issue codes.
 - `number.safe()` emits `not_safe` issue codes.
+- `number.finite()` emits `not_finite` issue codes.
 - `default()` only applies when the input is `undefined`, not on `null` or other invalid values.
 - `v.record(keySchema, valueSchema)` uses parsed keys in output (sync and async parsing).
 

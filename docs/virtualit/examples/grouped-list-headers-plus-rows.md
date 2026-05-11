@@ -39,7 +39,7 @@ const virt = createVirtualizer(scrollEl, {
       const row = flatList[item.index];
       const el = document.createElement('div');
 
-      el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;`;
 
       if (row.type === 'header') {
         el.className = 'group-header';

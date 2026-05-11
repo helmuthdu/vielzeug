@@ -8,8 +8,8 @@ import type { Signal } from '@vielzeug/stateit';
 
 import type { ComponentTemplate } from '../registration';
 
-import { define, type ComponentDefinition, type SetupContextBag } from '../component';
 import { _resetIdCounter, type HTMLResult } from '../internal';
+import { define, type ComponentDefinition, type SetupContextBag } from '../registration';
 import { fire as runtimeFire } from '../runtime';
 
 // ─── Types ───────────────────────────────────────────────────────────────────

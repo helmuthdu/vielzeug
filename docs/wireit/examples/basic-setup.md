@@ -31,6 +31,33 @@ container
   .value(ConfigToken, { apiUrl: process.env.API_URL!, timeout: 5000 })
   .factory(DbToken, (config) => new Database(config.apiUrl), { deps: [ConfigToken] })
   .bind(ServiceToken, UserService, { deps: [DbToken, LoggerToken] });
+
+const service = await container.resolve(ServiceToken);
+```
+
+### Organizing registration by plain functions
+
+For larger apps, compose plain setup functions instead of module abstractions:
+
+```ts
+function registerInfra(c: ReturnType<typeof createContainer>) {
+  c.value(ConfigToken, { apiUrl: process.env.API_URL!, timeout: 5000 });
+  c.factory(DbToken, (cfg) => new Database(cfg.apiUrl), {
+    deps: [ConfigToken],
+    init: (db) => db.connect(),
+    dispose: (db) => db.close(),
+  });
+}
+
+function registerApp(c: ReturnType<typeof createContainer>) {
+  c.bind(ServiceToken, UserService, { deps: [DbToken, LoggerToken] });
+}
+
+const container = createContainer();
+registerInfra(container);
+registerApp(container);
+
+const service = await container.resolve(ServiceToken);
 ```
 
 ## Expected Output
@@ -46,6 +73,6 @@ container
 
 ## Related Recipes
 
-- [Aliases](./aliases.md)
 - [Async Providers](./async-providers.md)
-- [Batch Resolution](./batch-resolution.md)
+- [Child Containers](./child-containers.md)
+- [Lifetimes](./lifetimes.md)

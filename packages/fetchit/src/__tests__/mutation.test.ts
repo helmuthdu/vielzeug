@@ -136,4 +136,74 @@ describe('Mutation', () => {
     mutation.reset();
     expect(mutation.getState()).toMatchObject({ data: undefined, error: null, status: 'idle' });
   });
+
+  describe('lifecycle callbacks', () => {
+    it('onSuccess is called with the resolved data', async () => {
+      let received: unknown;
+      const mutation = createMutation(async () => ({ id: 1 }), {
+        onSuccess: (data) => {
+          received = data;
+        },
+      });
+
+      await mutation.mutate(undefined);
+      expect(received).toEqual({ id: 1 });
+    });
+
+    it('onError is called with the rejection error', async () => {
+      let received: Error | undefined;
+      const mutation = createMutation(
+        async () => {
+          throw new Error('boom');
+        },
+        {
+          onError: (err) => {
+            received = err;
+          },
+        },
+      );
+
+      await mutation.mutate(undefined).catch(() => {});
+      expect(received?.message).toBe('boom');
+    });
+
+    it('onSettled is called after success with data and null error', async () => {
+      const calls: Array<[unknown, Error | null]> = [];
+      const mutation = createMutation(async () => ({ id: 1 }), {
+        onSettled: (data, error) => {
+          calls.push([data, error]);
+        },
+      });
+
+      await mutation.mutate(undefined);
+      expect(calls).toEqual([[{ id: 1 }, null]]);
+    });
+
+    it('onSettled is called after failure with undefined data and the error', async () => {
+      const calls: Array<[unknown, Error | null]> = [];
+      const mutation = createMutation(
+        async () => {
+          throw new Error('fail');
+        },
+        {
+          onSettled: (data, error) => {
+            calls.push([data, error]);
+          },
+        },
+      );
+
+      await mutation.mutate(undefined).catch(() => {});
+      expect(calls[0]).toEqual([undefined, expect.objectContaining({ message: 'fail' })]);
+    });
+
+    it('callback errors do not suppress the original result', async () => {
+      const mutation = createMutation(async () => ({ id: 1 }), {
+        onSuccess: () => {
+          throw new Error('callback error');
+        },
+      });
+
+      await expect(mutation.mutate(undefined)).resolves.toEqual({ id: 1 });
+    });
+  });
 });

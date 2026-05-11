@@ -4,7 +4,7 @@ import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 import { createConstraintValidator } from './constraint-factories';
 
-export class NumberSchema extends Schema<number> {
+export class NumberSchema<Input = number> extends Schema<number, Input> {
   constructor() {
     super([
       (value, path) =>
@@ -124,7 +124,18 @@ export class NumberSchema extends Schema<number> {
     );
   }
 
-  static coerce(): NumberSchema {
+  finite(message: MessageFn<{ value: number }> = () => 'Must be finite'): this {
+    return this._addCoreValidator(
+      createConstraintValidator<number, { value: number }>({
+        check: (value) => Number.isFinite(value),
+        code: ErrorCode.not_finite,
+        message,
+        params: { finite: true },
+      }),
+    );
+  }
+
+  static coerce(): NumberSchema<unknown> {
     return new NumberSchema().preprocess((v: unknown) => {
       if (typeof v === 'number') return v;
 

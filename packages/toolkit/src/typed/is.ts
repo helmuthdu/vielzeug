@@ -5,6 +5,10 @@ import { isDefined } from './isDefined';
 import { isEmpty } from './isEmpty';
 import { isEqual } from './isEqual';
 import { isFunction } from './isFunction';
+import { isGreaterThan } from './isGreaterThan';
+import { isGreaterThanOrEqual } from './isGreaterThanOrEqual';
+import { isLessThan } from './isLessThan';
+import { isLessThanOrEqual } from './isLessThanOrEqual';
 import { isMatch } from './isMatch';
 import { isNil } from './isNil';
 import { isNumber } from './isNumber';
@@ -13,6 +17,7 @@ import { isPrimitive } from './isPrimitive';
 import { isPromise } from './isPromise';
 import { isRegex } from './isRegex';
 import { isString } from './isString';
+import { isWithin } from './isWithin';
 import { typeOf } from './typeOf';
 
 /**
@@ -44,6 +49,14 @@ export const is = {
   equal: isEqual,
   /** `true` if value is a function */
   fn: isFunction,
+  /** `true` if `left > right` */
+  greaterThan: isGreaterThan,
+  /** `true` if `left >= right` */
+  greaterThanOrEqual: isGreaterThanOrEqual,
+  /** `true` if `left < right` */
+  lessThan: isLessThan,
+  /** `true` if `left <= right` */
+  lessThanOrEqual: isLessThanOrEqual,
   /** Partial deep-match: `true` if `object` contains all of `source`'s properties */
   match: isMatch,
   /** `true` if value is null or undefined */
@@ -62,4 +75,6 @@ export const is = {
   string: isString,
   /** Returns the runtime type tag of the value */
   typeOf,
+  /** `true` if value is within [min, max] */
+  within: isWithin,
 };

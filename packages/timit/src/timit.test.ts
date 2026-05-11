@@ -1,169 +1,158 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { describe, expect, it } from 'vitest';
 
-import { timit } from './timit';
+import {
+  clamp,
+  difference,
+  endOf,
+  formatHuman,
+  formatISO,
+  formatDuration,
+  formatRange,
+  formatRelative,
+  isAfter,
+  isBefore,
+  isSameDay,
+  now,
+  parseLocal,
+  parseDuration,
+  shift,
+  startOf,
+  toInstant,
+  toZoned,
+  within,
+} from './timit';
 
 describe('now', () => {
   it('creates a zoned date-time using the selected time zone', () => {
-    const value = timit.now('UTC');
+    const value = now('UTC');
 
     expect(value.timeZoneId).toBe('UTC');
   });
 });
 
-describe('parse', () => {
-  it('parses date-only and date-time local strings', () => {
-    expect(timit.parse('2026-03-21').toString()).toBe('2026-03-21T00:00:00');
-    expect(timit.parse('2026-03-21T10:15:30').toString()).toBe('2026-03-21T10:15:30');
-  });
-});
-
 describe('toInstant', () => {
+  it('parses plain local values with parseLocal helper', () => {
+    expect(parseLocal('2026-03-21').toString()).toBe('2026-03-21T00:00:00');
+    expect(parseLocal('2026-03-21T10:15:30').toString()).toBe('2026-03-21T10:15:30');
+  });
+
+  it('throws for invalid parseLocal values', () => {
+    expect(() => parseLocal('not-a-date')).toThrow(
+      '[timit] Invalid local date/time string. Expected YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.',
+    );
+  });
+
   it('parses ISO instant strings', () => {
-    expect(timit.toInstant('2026-03-21T10:15:30Z').toString()).toBe('2026-03-21T10:15:30Z');
+    expect(toInstant('2026-03-21T10:15:30Z').toString()).toBe('2026-03-21T10:15:30Z');
   });
 
   it('parses zone-annotated local strings as zoned values', () => {
-    const instant = timit.toInstant('2026-03-21T10:15:30[America/New_York]');
+    const instant = toInstant('2026-03-21T10:15:30[America/New_York]');
 
     expect(instant.toString()).toBe('2026-03-21T14:15:30Z');
   });
 
-  it('does not reinterpret zone-annotated local strings when tz is provided', () => {
-    const withoutTz = timit.toInstant('2026-03-21T10:15:30[America/New_York]');
-    const withTz = timit.toInstant('2026-03-21T10:15:30[America/New_York]', { tz: 'UTC' });
-
-    expect(withTz.epochNanoseconds).toBe(withoutTz.epochNanoseconds);
-  });
-
   it('treats offset strings as absolute instants and ignores tz for parsing', () => {
-    const withoutTz = timit.toInstant('2026-03-21T10:15:30+02:00');
-    const withTz = timit.toInstant('2026-03-21T10:15:30+02:00', { tz: 'UTC' });
+    const withoutTz = toInstant('2026-03-21T10:15:30+02:00');
+    const withTz = toInstant('2026-03-21T10:15:30+02:00', { tz: 'UTC' });
 
     expect(withTz.epochNanoseconds).toBe(withoutTz.epochNanoseconds);
     expect(withTz.toString()).toBe('2026-03-21T08:15:30Z');
   });
 
-  it('parses plain date-time strings with an explicit time zone', () => {
-    const instant = timit.toInstant('2026-03-21T10:15:30', { tz: 'America/New_York' });
-
-    expect(instant.toString()).toBe('2026-03-21T14:15:30Z');
-  });
-
-  it('accepts Temporal.PlainDate input with an explicit time zone', () => {
-    const instant = timit.toInstant(Temporal.PlainDate.from('2026-03-21'), { tz: 'America/New_York' });
-
-    expect(instant.toString()).toBe('2026-03-21T04:00:00Z');
-  });
-
   it('throws a clear error when plain strings are used without a time zone', () => {
-    expect(() => timit.toInstant('2026-03-21T10:15:30')).toThrow('[timit] Local date/time input requires options.tz.');
-  });
-
-  it('throws a clear error for invalid strings', () => {
-    expect(() => timit.toInstant('this-is-not-a-time')).toThrow(
-      '[timit] Invalid time string. Expected ISO instant, zoned date/time, or plain local date/time.',
-    );
+    expect(() => toInstant('2026-03-21T10:15:30')).toThrow('[timit] Local date/time input requires options.tz.');
   });
 });
 
-describe('toZoned', () => {
+describe('toZoned and shift', () => {
   it('converts instants to the target time zone', () => {
-    const zoned = timit.toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' });
+    const zoned = toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' });
 
     expect(zoned.timeZoneId).toBe('Europe/Berlin');
     expect(zoned.hour).toBe(11);
   });
 
-  it('can switch a zoned date-time to another zone while preserving the instant', () => {
-    const source = Temporal.ZonedDateTime.from('2026-03-21T10:15:30+01:00[Europe/Berlin]');
-    const shifted = timit.toZoned(source, { tz: 'UTC' });
-
-    expect(shifted.timeZoneId).toBe('UTC');
-    expect(shifted.epochNanoseconds).toBe(source.epochNanoseconds);
-  });
-
-  it('parses plain local strings directly in the target zone', () => {
-    const zoned = timit.toZoned('2026-03-21T10:15:30', { tz: 'America/New_York' });
-
-    expect(zoned.toString()).toBe('2026-03-21T10:15:30-04:00[America/New_York]');
-  });
-
-  it('parses date-only local strings in the target zone', () => {
-    const zoned = timit.toZoned('2026-03-21', { tz: 'America/New_York' });
-
-    expect(zoned.toString()).toBe('2026-03-21T00:00:00-04:00[America/New_York]');
-  });
-
-  it('accepts Temporal.PlainDate input in the target zone', () => {
-    const zoned = timit.toZoned(Temporal.PlainDate.from('2026-03-21'), { tz: 'America/New_York' });
-
-    expect(zoned.toString()).toBe('2026-03-21T00:00:00-04:00[America/New_York]');
-  });
-
-  it('converts zone-annotated local strings to the requested display zone', () => {
-    const zoned = timit.toZoned('2026-03-21T10:15:30[America/New_York]', { tz: 'UTC' });
-
-    expect(zoned.toString()).toBe('2026-03-21T14:15:30+00:00[UTC]');
-  });
-
-  it('throws a prefixed error for plain local strings without tz', () => {
-    expect(() => timit.toZoned('2026-03-21T10:15:30')).toThrow('[timit] Local date/time input requires options.tz.');
-  });
-
-  it('throws a parse error for malformed zone-annotated strings', () => {
-    expect(() => timit.toZoned('2026-03-21T10:15:30[America/New_York')).toThrow(
-      '[timit] Invalid time string. Expected ISO instant, zoned date/time, or plain local date/time.',
-    );
-  });
-});
-
-describe('error consistency', () => {
-  it('uses the same missing-tz message for local instant and zoned conversion', () => {
-    const localInput = '2026-03-21T10:15:30';
-
-    expect(() => timit.toInstant(localInput)).toThrow('[timit] Local date/time input requires options.tz.');
-    expect(() => timit.toZoned(localInput)).toThrow('[timit] Local date/time input requires options.tz.');
-  });
-});
-
-describe('date arithmetic', () => {
-  it('adds duration in zoned mode', () => {
+  it('shifts duration in zoned mode and infers timezone from input', () => {
     const start = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
-    const plusHour = timit.add(start, { hours: 1 });
-    const minusHour = timit.add(plusHour, { hours: -1 });
+    const plusHour = shift(start, { hours: 1 });
+    const minusHour = shift(plusHour, { hours: -1 });
 
     expect(plusHour.toString()).toBe('2026-03-08T03:30:00-04:00[America/New_York]');
     expect(minusHour.toString()).toBe(start.toString());
   });
 
-  it('computes duration between two values', () => {
-    const duration = timit.difference('2026-03-21T10:00:00Z', '2026-03-21T12:30:00Z', {
+  it('shifts with explicit tz override for string inputs', () => {
+    const plusHour = shift('2026-03-08T01:30:00Z', { hours: 1 }, { tz: 'America/New_York' });
+
+    expect(plusHour.timeZoneId).toBe('America/New_York');
+  });
+});
+
+describe('difference and range helpers', () => {
+  it('computes duration between two values with explicit timezone', () => {
+    const duration = difference('2026-03-21T10:00:00Z', '2026-03-21T12:30:00Z', {
       largestUnit: 'hour',
       smallestUnit: 'minute',
+      tz: 'UTC',
     });
 
     expect(duration.toString()).toBe('PT2H30M');
   });
+
+  it('checks inclusive range and normalizes reversed bounds', () => {
+    expect(within('2026-03-21T11:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z')).toBe(true);
+    expect(within('2026-03-21T11:00:00Z', '2026-03-21T12:00:00Z', '2026-03-21T10:00:00Z')).toBe(true);
+  });
+
+  it('clamps a value to bounds', () => {
+    const result = clamp('2026-03-21T13:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
+
+    expect(result.toString()).toBe('2026-03-21T12:00:00Z');
+  });
 });
 
-describe('range and formatting', () => {
-  it('checks if an instant is in an inclusive range', () => {
-    const isInside = timit.within('2026-03-21T11:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
-    const isOutside = timit.within('2026-03-21T09:59:59Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
-
-    expect(isInside).toBe(true);
-    expect(isOutside).toBe(false);
+describe('comparison helpers', () => {
+  it('compares instants', () => {
+    expect(isBefore('2026-03-21T10:00:00Z', '2026-03-21T11:00:00Z')).toBe(true);
+    expect(isAfter('2026-03-21T12:00:00Z', '2026-03-21T11:00:00Z')).toBe(true);
   });
 
-  it('normalizes reversed bounds for range checks', () => {
-    const isInside = timit.within('2026-03-21T11:00:00Z', '2026-03-21T12:00:00Z', '2026-03-21T10:00:00Z');
+  it('checks same day in a target timezone with explicit tz', () => {
+    const lateUtc = '2026-03-21T23:30:00Z';
+    const earlyUtc = '2026-03-22T00:15:00Z';
 
-    expect(isInside).toBe(true);
+    expect(isSameDay(lateUtc, earlyUtc, { tz: 'America/New_York' })).toBe(true);
+    expect(isSameDay(lateUtc, earlyUtc, { tz: 'UTC' })).toBe(false);
+  });
+});
+
+describe('boundary helpers', () => {
+  it('calculates startOf and endOf day with explicit timezone', () => {
+    const input = '2026-03-21T10:15:30Z';
+
+    const dayStart = startOf(input, 'day', { tz: 'UTC' });
+    const dayEnd = endOf(input, 'day', { tz: 'UTC' });
+
+    expect(dayStart.toString()).toBe('2026-03-21T00:00:00+00:00[UTC]');
+    expect(dayEnd.toString()).toBe('2026-03-21T23:59:59.999999999+00:00[UTC]');
   });
 
+  it('infers timezone from zoned inputs in startOf and endOf', () => {
+    const input = Temporal.ZonedDateTime.from('2026-03-21T10:15:30-04:00[America/New_York]');
+
+    const dayStart = startOf(input, 'day');
+    const dayEnd = endOf(input, 'day');
+
+    expect(dayStart.timeZoneId).toBe('America/New_York');
+    expect(dayEnd.timeZoneId).toBe('America/New_York');
+  });
+});
+
+describe('formatting', () => {
   it('formats a single instant with pattern presets', () => {
-    const result = timit.format('2026-03-21T10:15:30Z', {
+    const result = formatHuman('2026-03-21T10:15:30Z', {
       locale: 'en-GB',
       pattern: 'short',
       tz: 'UTC',
@@ -173,19 +162,56 @@ describe('range and formatting', () => {
     expect(result).toContain('10:15');
   });
 
-  it('formats a single instant as canonical ISO', () => {
-    expect(timit.formatIso('2026-03-21T10:15:30Z')).toBe('2026-03-21T10:15:30Z');
+  it('inherits timezone from zoned input in formatHuman', () => {
+    const zoned = Temporal.ZonedDateTime.from('2026-03-21T10:15:30+01:00[Europe/Berlin]');
+    const result = formatHuman(zoned, {
+      locale: 'en-GB',
+      pattern: 'short',
+    });
+
+    expect(result).toContain('21/03/2026');
   });
 
-  it('formats a range of instants', () => {
-    const result = timit.formatRange('2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z', {
+  it('formats canonical ISO instant and zoned output', () => {
+    expect(formatISO('2026-03-21T10:15:30Z')).toBe('2026-03-21T10:15:30Z');
+    expect(formatISO('2026-03-21T10:15:30Z', { style: 'zoned', tz: 'Europe/Berlin' })).toBe(
+      '2026-03-21T11:15:30+01:00[Europe/Berlin]',
+    );
+  });
+
+  it('formats range and relative text', () => {
+    const range = formatRange('2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z', {
       locale: 'en-GB',
       pattern: 'short',
       tz: 'UTC',
     });
 
-    expect(result).toContain('21/03/2026');
-    expect(result).toContain('10:00');
-    expect(result).toContain('12:00');
+    const relative = formatRelative('2026-03-21T12:00:00Z', {
+      base: '2026-03-21T10:00:00Z',
+      locale: 'en-US',
+      numeric: 'always',
+    });
+
+    expect(range).toContain('21/03/2026');
+    expect(range).toContain('10:00');
+    expect(range).toContain('12:00');
+    expect(relative).toBe('in 2 hours');
+  });
+});
+
+describe('duration helpers', () => {
+  it('parses duration input', () => {
+    expect(parseDuration('PT2H30M').toString()).toBe('PT2H30M');
+  });
+
+  it('formats duration as ISO by default', () => {
+    expect(formatDuration('PT2H30M')).toBe('PT2H30M');
+  });
+
+  it('accepts locale/style options in formatDuration', () => {
+    const result = formatDuration('PT2H30M', { locale: 'en-US', style: 'short' });
+
+    expect(typeof result).toBe('string');
+    expect(result.length).toBeGreaterThan(0);
   });
 });

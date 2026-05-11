@@ -13,11 +13,32 @@ Implement async providers in a production-friendly way with `@vielzeug/wireit` w
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/wireit` installed.
 
-### Database connection
+### Database connection with `init` hook
+
+Separate construction from initialization using the `init` lifecycle hook. The factory creates the instance; `init` runs once before the first consumer receives it.
 
 ```ts
 const DbToken = createToken<IDatabase>('Database');
 
+container.factory(
+  DbToken,
+  (config) => new PostgresClient({ connectionString: config.dbUrl }),
+  {
+    deps: [ConfigToken],
+    lifetime: 'singleton',
+    init: (db) => db.connect(),
+    dispose: (db) => db.end(),
+  },
+);
+
+const db = await container.resolve(DbToken);
+```
+
+### Inline async factory (alternative)
+
+For one-off cases where separating `init` would be awkward, an async factory still works:
+
+```ts
 container.factory(
   DbToken,
   async (config) => {
@@ -25,14 +46,8 @@ container.factory(
     await db.connect();
     return db;
   },
-  {
-    deps: [ConfigToken],
-    lifetime: 'singleton',
-    dispose: (db) => db.end(),
-  },
+  { deps: [ConfigToken], dispose: (db) => db.end() },
 );
-
-const db = await container.resolve(DbToken);
 ```
 
 ### await using (AsyncDisposable)
@@ -70,6 +85,6 @@ async function bootstrap() {
 
 ## Related Recipes
 
-- [Aliases](./aliases.md)
 - [Basic Setup](./basic-setup.md)
 - [Batch Resolution](./batch-resolution.md)
+- [Dispose Lifecycle](./dispose-lifecycle.md)

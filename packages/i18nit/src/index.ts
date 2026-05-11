@@ -3,6 +3,8 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type {
   DiagnosticEvent,
+  DurationFormatOptions,
+  DurationValue,
   FormatInput,
   FormatKind,
   I18n,
@@ -11,6 +13,8 @@ export type {
   Locale,
   LocaleChangeEvent,
   LocaleChangeReason,
+  MessageBranchKeys,
+  MessageLeafKeys,
   Messages,
   Unsubscribe,
   Vars,

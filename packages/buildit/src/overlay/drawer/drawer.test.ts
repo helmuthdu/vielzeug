@@ -141,6 +141,53 @@ describe('bit-drawer', () => {
 
       expect(fixture.query('dialog[open]')).toBeFalsy();
     });
+
+    it('keeps outward drag position when swipe-close overshoots panel size', async () => {
+      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+
+      const panel = fixture.query<HTMLElement>('.panel');
+      const dragHandle = fixture.query<HTMLElement>('.drag-handle');
+
+      expect(panel).toBeTruthy();
+      expect(dragHandle).toBeTruthy();
+
+      Object.defineProperty(panel!, 'offsetWidth', {
+        configurable: true,
+        get: () => 200,
+      });
+
+      dragHandle!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
+      dragHandle!.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 300, pointerId: 1 }));
+      await fixture.flush();
+
+      expect(panel!.style.transform).toBe('translateX(300px)');
+      expect(panel!.style.opacity).toBe('0.2');
+    });
+
+    it('commits close on pointerup when release crosses swipe threshold', async () => {
+      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+
+      const panel = fixture.query<HTMLElement>('.panel');
+      const dragHandle = fixture.query<HTMLElement>('.drag-handle');
+
+      expect(panel).toBeTruthy();
+      expect(dragHandle).toBeTruthy();
+
+      Object.defineProperty(panel!, 'offsetWidth', {
+        configurable: true,
+        get: () => 200,
+      });
+
+      dragHandle!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 7 }));
+      // Move stays below threshold so commit does not happen on pointermove.
+      dragHandle!.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 20, pointerId: 7 }));
+      // Release crosses threshold and should commit without snapping back.
+      dragHandle!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 90, pointerId: 7 }));
+      await fixture.flush();
+
+      expect(panel!.style.transform).toBe('translateX(200px)');
+      expect(panel!.style.opacity).toBe('0.2');
+    });
   });
 
   // ─── Events ──────────────────────────────────────────────────────────────────

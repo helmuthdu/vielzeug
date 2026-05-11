@@ -19,7 +19,7 @@ import { createI18n } from '@vielzeug/i18nit';
 const i18n = createI18n({
   fallback: 'en',
   locale: 'en',
-  messages: {
+  catalogs: {
     en: {
       greeting: 'Hello, {name}!',
       nav: { home: 'Home' },
@@ -61,7 +61,7 @@ Interpolation supports plain and dot-path placeholders.
 ```ts
 const i18n = createI18n({
   locale: 'en',
-  messages: {
+  catalogs: {
     en: {
       profile: 'User: {user.name}',
       welcome: 'Hello, {name}!',
@@ -82,7 +82,7 @@ Plural messages are explicit with `tp(key, count, vars?)`.
 ```ts
 const i18n = createI18n({
   locale: 'en',
-  messages: {
+  catalogs: {
     en: {
       files: { zero: 'No files', one: 'One file', other: '{count} files' },
     },
@@ -98,6 +98,31 @@ Plural keys are resolved as `files.zero|one|two|few|many|other`.
 
 `tp()` is intentionally explicit. `t()` never inspects `count` or applies plural rules.
 
+## Ordinal Plurals
+
+Pass `{ ordinal: true }` to `tp()` to use `Intl.PluralRules` with `type: 'ordinal'` (1st, 2nd, 3rd …).
+
+```ts
+const i18n = createI18n({
+  locale: 'en',
+  catalogs: {
+    en: {
+      position: {
+        one: '{count}st place',
+        two: '{count}nd place',
+        few: '{count}rd place',
+        other: '{count}th place',
+      },
+    },
+  },
+});
+
+i18n.tp('position', 1, undefined, true); // '1st place'
+i18n.tp('position', 2, undefined, true); // '2nd place'
+i18n.tp('position', 3, undefined, true); // '3rd place'
+i18n.tp('position', 4, undefined, true); // '4th place'
+```
+
 ## Fallback Resolution
 
 Lookup order is:
@@ -110,7 +135,7 @@ Lookup order is:
 const i18n = createI18n({
   fallback: ['en-GB', 'en'],
   locale: 'pt-BR',
-  messages: {
+  catalogs: {
     en: { nav: { home: 'Home' } },
     'en-GB': { nav: { home: 'Home' } },
     pt: { nav: { account: 'Conta' } },
@@ -128,8 +153,8 @@ Register loaders and choose strict switching versus best-effort preload.
 ```ts
 const i18n = createI18n({
   locale: 'en',
-  messages: { en: { greeting: 'Hello!' } },
-  loaders: {
+  catalogs: {
+    en: { greeting: 'Hello!' },
     de: () => import('./locales/de.json').then((m) => m.default),
     fr: () => import('./locales/fr.json').then((m) => m.default),
   },
@@ -152,20 +177,27 @@ Notes:
 
 ## Catalog Management
 
-Use `setCatalog()` when your application fetches or rebuilds message objects at runtime.
+Use `setCatalog()` for a full replacement or `mergeCatalog()` for incremental updates.
 
 ```ts
 const i18n = createI18n({
   locale: 'en',
-  messages: {
-    en: { title: 'Dashboard' },
+  catalogs: {
+    en: { nav: { home: 'Home' }, title: 'Dashboard' },
   },
 });
 
+// Replace entire catalog
 i18n.setCatalog('en', {
   title: 'Workspace',
   subtitle: 'Welcome back',
 });
+
+// Deep-merge — nav.home is preserved, nav.about is added
+i18n.mergeCatalog('en', { nav: { about: 'About' } });
+
+console.log(i18n.t('nav.home'));  // 'Home'
+console.log(i18n.t('nav.about')); // 'About'
 ```
 
 If the updated locale is part of the active fallback chain, subscribers receive `reason: 'catalog-update'`.
@@ -175,11 +207,9 @@ If the updated locale is part of the active fallback chain, subscribers receive 
 ```ts
 const i18n = createI18n({
   locale: 'en',
-  loaders: {
-    de: () => import('./locales/de.json').then((m) => m.default),
-  },
-  messages: {
+  catalogs: {
     en: { greeting: 'Hello' },
+    de: () => import('./locales/de.json').then((m) => m.default),
   },
 });
 
@@ -202,7 +232,7 @@ Use one entrypoint for all Intl formatting needs.
 ```ts
 const i18n = createI18n({
   locale: 'en',
-  messages: { en: { greeting: 'Hello' } },
+  catalogs: { en: { greeting: 'Hello' } },
 });
 
 i18n.format({ kind: 'number', value: 1234.56 });
@@ -211,7 +241,8 @@ i18n.format({ kind: 'date', value: new Date(), options: { dateStyle: 'long' } })
 i18n.format({ kind: 'relative', value: -3, unit: 'day' });
 i18n.format({ kind: 'list', value: ['Alice', 'Bob', 'Charlie'] });
 i18n.format({ kind: 'list', value: ['Alice', 'Bob'], options: { type: 'or' } });
-i18n.format({ kind: 'list', value: ['A', 'B'], options: { style: 'short', type: 'and' } });
+i18n.format({ kind: 'duration', value: { hours: 1, minutes: 30 } });
+i18n.format({ kind: 'duration', value: { minutes: 5, seconds: 9 }, options: { style: 'short' } });
 ```
 
 Supported kinds:
@@ -221,6 +252,21 @@ Supported kinds:
 - `date`
 - `relative`
 - `list`
+- `duration`
+
+### Duration formatting
+
+`duration` uses `Intl.DurationFormat` when available in the runtime (V8 12.3+ / Chrome 117+ / Node 22+). In older environments it falls back to a compact string like `1h 30m`.
+
+```ts
+i18n.format({
+  kind: 'duration',
+  value: { hours: 2, minutes: 0 },
+  options: { style: 'long' },
+});
+// 'Intl.DurationFormat' available: '2 hours'
+// fallback: '2h'
+```
 
 ## Subscriptions
 
@@ -248,7 +294,7 @@ Listeners are wrapped so subscriber errors are routed through `onDiagnostic` ins
 ```ts
 const i18n = createI18n({
   locale: 'en',
-  loaders: {
+  catalogs: {
     fr: () => fetch('/locales/fr').then((r) => r.json()),
   },
   onDiagnostic: (event) => {
@@ -276,7 +322,7 @@ i18n.dispose();
 // After dispose(), mutating/loading methods throw.
 ```
 
-The runtime also exposes `[Symbol.dispose]()` and `[Symbol.asyncDispose]()` for environments that support explicit resource management.
+The runtime also exposes `[Symbol.dispose]()` for environments that support explicit resource management.
 
 ## Server-side and Request Scope
 
@@ -289,7 +335,7 @@ export async function renderPage(locale: string) {
   const i18n = createI18n({
     fallback: 'en',
     locale,
-    loaders: {
+    catalogs: {
       en: () => import('./locales/en.json').then((m) => m.default),
       fr: () => import('./locales/fr.json').then((m) => m.default),
     },
@@ -304,6 +350,9 @@ export async function renderPage(locale: string) {
 ## Best Practices
 
 - Keep catalogs string-only and use `tp()` for all plural lookups.
+- Use `mergeCatalog()` for incremental server-pushed translations; use `setCatalog()` for full replacements.
+- Use dot-notation keys (`invite.female`) to access context sub-keys — no extra option needed.
+- Use ordinal plurals (`tp(key, n, undefined, true)`) for rank or sequence text.
 - Use `setLocale()` for user-triggered locale switches.
 - Use `preload()` for opportunistic loading during navigation or route warm-up.
 - Use `format()` instead of custom locale formatting utilities.

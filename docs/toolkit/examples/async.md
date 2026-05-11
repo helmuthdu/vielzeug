@@ -3,31 +3,36 @@ title: Toolkit — Async Examples
 description: Async utility examples for Toolkit.
 ---
 
-# Async Utilities
+## Async Utilities
 
 ## Quick Reference
 
+- [abortable](./async/abortable.md)
 - [attempt](./async/attempt.md)
 - [defer](./async/defer.md)
+- [memoizeAsync](./async/memoizeAsync.md)
 - [parallel](./async/parallel.md)
 - [queue](./async/queue.md)
-- [race](./async/race.md)
+- [race (removed)](./async/race.md)
 - [retry](./async/retry.md)
 - [scheduler](./async/scheduler.md)
 - [sleep](./async/sleep.md)
+- [timeout](./async/timeout.md)
 - [waitFor](./async/waitFor.md)
 
 ## Common Patterns
 
 ```ts
 import {
+  abortable,
   attempt,
   defer,
+  memoizeAsync,
   parallel,
   queue,
-  race,
   retry,
   sleep,
+  timeout,
   waitFor,
 } from '@vielzeug/toolkit';
 
@@ -43,7 +48,8 @@ const a = q.add(() => fetch('/api/a').then((r) => r.text()));
 const b = q.add(() => fetch('/api/b').then((r) => r.text()));
 await q.onIdle();
 
-const delayed = await race(fetch('/api/fast').then((r) => r.text()), 250);
+await sleep(250);
+const delayed = await fetch('/api/fast').then((r) => r.text());
 
 const resilient = await retry(() => fetch('/api/health').then((r) => r.json()), {
   times: 3,
@@ -57,6 +63,17 @@ const deferred = defer<string>();
 setTimeout(() => deferred.resolve('done'), 50);
 const value = await deferred.promise;
 
+const fetchProfile = memoizeAsync((id: number) =>
+  fetch(`/api/users/${id}`).then((r) => r.json()),
+);
+
+const [profileA, profileB] = await Promise.all([fetchProfile(1), fetchProfile(1)]);
+const guarded = timeout(fetch('/api/slow').then((r) => r.json()), 2_000);
+
+const controller = new AbortController();
+const cancellable = abortable(fetch('/api/cancel').then((r) => r.json()), controller.signal);
+controller.abort(new Error('cancelled'));
+
 await Promise.all([a, b]);
-console.log(result, jobs, delayed, resilient, value);
+console.log(result, jobs, delayed, resilient, value, profileA, profileB, guarded, cancellable);
 ```

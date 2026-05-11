@@ -19,7 +19,6 @@ import { Logit } from '@vielzeug/logit';
 const isProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
 
 Logit.setConfig({
-  environment: true,
   logLevel: isProd ? 'warn' : 'debug',
   timestamp: true,
   variant: 'symbol',
@@ -27,8 +26,9 @@ Logit.setConfig({
     ? {
         logLevel: 'error',
         handler: async (type, data) => {
+          // data: { level, message, context, env, namespace?, timestamp? }
           await fetch('/api/logs', {
-            body: JSON.stringify({ level: type, ...data }),
+            body: JSON.stringify(data),
             method: 'POST',
           });
         },

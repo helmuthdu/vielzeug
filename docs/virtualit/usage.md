@@ -51,9 +51,10 @@ const domVirtualList = createDomVirtualList<Option>({
     for (const el of Array.from(listEl.querySelectorAll('.option'))) el.remove();
   },
   estimateSize: 36,
+  gap: 6,
   getListElement: () => listboxEl,
   getScrollElement: () => dropdownEl,
-  overscan: 4,
+  overscan: { start: 4, end: 4 },
   render: ({ items, listEl, totalSize, virtualItems }) => {
     listEl.style.height = `${totalSize}px`;
     for (const item of virtualItems) {
@@ -63,7 +64,7 @@ const domVirtualList = createDomVirtualList<Option>({
       const row = document.createElement('button');
       row.type = 'button';
       row.className = 'option';
-      row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
+      row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);`;
       row.textContent = opt.label;
       row.disabled = !!opt.disabled;
       row.addEventListener('click', () => selectOption(opt));
@@ -101,7 +102,7 @@ const virt = createVirtualizer(scrollEl, {
 
     for (const item of virtualItems) {
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;height:36px;`;
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
       el.textContent = data[item.index].name;
       list.appendChild(el);
     }
@@ -138,7 +139,7 @@ const virt = createVirtualizer(scrollEl, {
     for (const item of virtualItems) {
       const el = document.createElement('div');
       el.dataset.index = String(item.index);
-      el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;`;
       el.innerHTML = rows[item.index].html;
       list.appendChild(el);
     }
@@ -166,11 +167,83 @@ const virt = createVirtualizer(scrollEl, {
 createVirtualizer(scrollEl, {
   count: 1_000,
   estimateSize: 36,
-  overscan: 5, // render 5 extra items above and below the visible window (default: 3)
+  overscan: { start: 5, end: 5 }, // render 5 extra items above and below the visible window (default: 3)
   onChange: () => {
     /* ... */
   },
 });
+```
+
+You can also set asymmetric overscan:
+
+```ts
+createVirtualizer(scrollEl, {
+  count: 1_000,
+  estimateSize: 36,
+  overscan: { start: 8, end: 2 },
+  onChange: () => {
+    /* ... */
+  },
+});
+```
+
+## Horizontal Lists
+
+Set `horizontal: true` to virtualize along the X axis.
+
+```ts
+const virt = createVirtualizer(scrollEl, {
+  count: chips.length,
+  estimateSize: 120,
+  horizontal: true,
+  onChange: (virtualItems, totalSize) => {
+    list.style.width = `${totalSize}px`;
+
+    for (const item of virtualItems) {
+      const chip = document.createElement('button');
+      chip.style.cssText = `position:absolute;left:${item.start}px;top:0;width:${item.size}px;`;
+      chip.textContent = chips[item.index].label;
+      list.appendChild(chip);
+    }
+  },
+});
+```
+
+## Window Scroll Target
+
+`createVirtualizer` accepts `window` as the scroll target.
+
+```ts
+const virt = createVirtualizer(window, {
+  count: rows.length,
+  estimateSize: 40,
+  initialOffset: 320,
+  onChange: (virtualItems, totalSize) => {
+    spacer.style.height = `${totalSize}px`;
+    renderRows(virtualItems);
+  },
+});
+```
+
+## Scroll State Hooks
+
+Use `onScrollingChange`, `onScrollEnd`, and `isScrolling` when you need active-scroll UI states.
+
+```ts
+const virt = createVirtualizer(scrollEl, {
+  count: rows.length,
+  estimateSize: 36,
+  onScrollingChange: (next) => {
+    scrollEl.dataset.scrolling = String(next);
+  },
+  onScrollEnd: (offset) => {
+    sessionStorage.setItem('lastOffset', String(offset));
+  },
+});
+
+if (virt.isScrolling) {
+  // e.g. pause expensive row effects
+}
 ```
 
 ## Updating Options
@@ -185,7 +258,7 @@ virt.update({ count: data.length });
 
 ```ts
 // Change multiple options together
-virt.update({ count: data.length, overscan: 5 });
+virt.update({ count: data.length, overscan: { start: 5, end: 5 } });
 ```
 
 ## Switching Row Density
@@ -246,6 +319,10 @@ Call `invalidate()` after an event that changes item heights without a data chan
 ```ts
 document.fonts.ready.then(() => virt.invalidate());
 ```
+
+On variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If you need an exact post-layout position after heights change, remeasure affected rows or call `invalidate()` before scrolling again.
+
+For same-length updates, call `setItems()` (DOM adapter) or `update()` (core) and remeasure affected rows as needed.
 
 ## Lifecycle — create and destroy
 
@@ -315,7 +392,7 @@ function VirtualList({ rows }: { rows: Row[] }) {
 
         for (const item of virtualItems) {
           const el = document.createElement('div');
-          el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;height:36px;`;
+          el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
           el.textContent = rows[item.index]?.label ?? '';
           listEl.appendChild(el);
         }
@@ -367,7 +444,7 @@ onMounted(() => {
 
       for (const item of virtualItems) {
         const el = document.createElement('div');
-        el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;height:36px;`;
+        el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
         el.textContent = props.rows[item.index]?.label ?? '';
         listEl.appendChild(el);
       }
@@ -414,7 +491,7 @@ onUnmounted(() => virt?.destroy());
 
         for (const item of virtualItems) {
           const el = document.createElement('div');
-          el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;height:36px;`;
+          el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
           el.textContent = rows[item.index]?.label ?? '';
           listEl.appendChild(el);
         }
@@ -471,7 +548,7 @@ class VirtualList extends LitElement {
 
         for (const item of virtualItems) {
           const el = document.createElement('div');
-          el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;height:36px;`;
+          el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
           el.textContent = this.rows[item.index]?.label ?? '';
           listEl.appendChild(el);
         }

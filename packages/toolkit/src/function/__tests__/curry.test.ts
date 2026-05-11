@@ -1,6 +1,14 @@
 import { curry } from '../curry';
 
 describe('curry', () => {
+  it('preserves curried argument flow in the type system', () => {
+    const join = (left: string, right: string) => `${left}:${right}`;
+    const curriedJoin = curry(join);
+
+    expectTypeOf(curriedJoin).returns.not.toBeAny();
+    expect(curriedJoin('a')('b')).toBe('a:b');
+  });
+
   it('should curry a function', () => {
     const add: (a: number, b: number, c: number) => number = (a, b, c) => a + b + c;
     const curriedAdd = curry(add);

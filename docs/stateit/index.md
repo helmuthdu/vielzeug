@@ -145,23 +145,19 @@ count.value = 1; // notifies automatically
 
 ### Signals
 
-- **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`, `.update(fn)`, use `peek(signal)` for untracked reads
-- **`computed(fn, options?)`** — lazy derived signal; recomputes when deps change; call `.dispose()` to stop tracking
+- **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`; use `untrack(fn)` for non-subscribing reads
+- **`computed(fn, options?)`** — lazy derived signal; glitch-free: effects always observe a consistent snapshot; call `.dispose()` to stop tracking
 - **`effect(fn, options?)`** — side-effect that re-runs when any signal read inside it changes; returns a `Subscription`
 - **`watch(source, cb, options?)`** — explicit subscription that fires only when the value changes; returns a `Subscription`
-- **`untrack(fn)`** — read signals inside an effect without creating subscriptions
-- **`readonly(sig)`** — narrows a signal to a `ReadonlySignal<T>` view (identity, no proxy)
-- **`writable(sig)`** — identity cast asserting a signal is intentionally writable; type-only marker
-- **`unwrapSignal(v)`** — unwrap a plain value or signal; tracks dependencies if reading a signal
-- **`peek(v)`** — unwrap a signal without tracking; perform untracked reads in effects
-- **`toValue(v)`** — unwrap a plain value, signal, or function transparently
 - **`batch(fn)`** — flush all notifications once after bulk updates
-- **`onCleanup(fn)`** — register teardown from inside an effect without using the return value
-- **`isSignal(v)`** / **`isWritable(v)`** — type guards
+- **`untrack(fn)`** — read signals inside an effect without creating subscriptions
+- **`onCleanup(fn)`** — register teardown from inside an effect or `scope` without using the return value
+- **`scope()`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release everything with `scope.dispose()`
+- **`isSignal(v)`** — type guard
 
 ### Stores
 
-- **`store(init, options?)`** — structured reactive object container
+- **`store(init)`** — structured reactive object container
 - **`.patch(partial)`** — shallow-merge a `Partial<T>` into state
 - **`.update(fn)`** — derive next state from current via an updater function
 - **`.reset()`** — restore the initial state baseline
@@ -170,11 +166,13 @@ count.value = 1; // notifies automatically
 ### Ergonomics
 
 - **`Subscription`** — all dispose handles support `.dispose()`, direct call `()`, and `[Symbol.dispose]` (`using` declarations)
+- **`Scope`** — all scope handles support `.dispose()` and `[Symbol.dispose]` (`using` declarations)
 - **`EffectOptions`** — per-effect `maxIterations` guard against infinite reactive loops
 
 ### Reliability & Type Safety
 
 - **Strict signal detection** — `isSignal()` uses an internal symbol marker, not duck-typing
+- **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
 - **Consistent error handling** — all errors prefixed with `[stateit]` and aggregated when multiple occur
 - **Infinite loop detection** — configurable guard against effect re-entry cycles (default: 100 iterations)
 - **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect

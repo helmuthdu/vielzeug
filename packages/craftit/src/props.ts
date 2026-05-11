@@ -10,12 +10,10 @@ export type PropOptions<T> = {
   reflect?: boolean;
 };
 
-export type PropsInput<T extends Record<string, unknown>> = {
+export type PropsDef<T extends Record<string, unknown>> = {
   // Keep default authoring ergonomic: plain `undefined` is a valid default for any prop.
   [K in keyof Required<T>]: T[K] | undefined | PropDef<T[K] | undefined>;
 };
-
-export type PropsDef<T extends Record<string, unknown>> = PropsInput<T>;
 
 export type PropDef<T> = PropOptions<T> & { readonly default: T };
 export type PropInputDefs = Record<string, unknown | PropDef<unknown>>;
@@ -25,6 +23,21 @@ export const prop = {
     return {
       default: defaultValue,
       parse: (value) => value === '' || value === 'true',
+      reflect: true,
+    };
+  },
+  json<T>(defaultValue: T): PropDef<T> {
+    return {
+      default: defaultValue,
+      parse: (value) => {
+        if (value == null || value === '') return defaultValue;
+
+        try {
+          return JSON.parse(value) as T;
+        } catch {
+          return defaultValue;
+        }
+      },
       reflect: true,
     };
   },

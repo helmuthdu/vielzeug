@@ -45,21 +45,39 @@ const i18n = createI18n({
   messages: {
     en: {
       greeting: 'Hello, {name}!',
+      invite: { female: 'Invite her', male: 'Invite him' },
       inbox: { zero: 'No messages', one: 'One message', other: '{count} messages' },
       nav: { home: 'Home' },
+      position: {
+        one: '{count}st place',
+        two: '{count}nd place',
+        few: '{count}rd place',
+        other: '{count}th place',
+      },
     },
   },
 });
 
+// typed dot-notation keys inferred from the messages schema
 i18n.t('greeting', { name: 'Alice' });
+
+// context variants: tries invite.female, falls back to invite
+i18n.t('invite', undefined, { context: 'female' });
+
+// ordinal plural
+i18n.tp('position', 1, undefined, { ordinal: true }); // '1st place'
 i18n.tp('inbox', 0);
 i18n.tp('inbox', 3);
+
+// deep-merge without discarding existing keys
+i18n.mergeCatalog('en', { nav: { about: 'About' } });
 
 await i18n.preload('de');
 await i18n.setLocale('de');
 i18n.t('nav.home'); // falls back to en
 
 i18n.format({ kind: 'currency', currency: 'EUR', value: 19.99 });
+i18n.format({ kind: 'duration', value: { hours: 1, minutes: 30 } });
 ```
 
 ## Why I18nit?
@@ -79,13 +97,9 @@ let locale = 'en';
 function t(key: string, vars?: Record<string, unknown>) {
   let msg = (messages as any)[locale]?.[key] ?? key; // no type safety
   if (vars) msg = msg.replace(/{(\w+)}/g, (_: string, k: string) => String(vars[k] ?? k));
-  return msg;
-}
-
-// After — I18nit
+  catalogs: {
 import { createI18n } from '@vielzeug/i18nit';
 const i18n = createI18n({ fallback: 'en', locale: 'en', messages });
-i18n.t('greeting', { name: 'Alice' });
 i18n.tp('items', 3);
 i18n.format({ kind: 'number', value: 1234.56 });
 ```
@@ -93,24 +107,25 @@ i18n.format({ kind: 'number', value: 1234.56 });
 | Feature              | I18nit                                       | i18next    | typesafe-i18n |
 | -------------------- | -------------------------------------------- | ---------- | ------------- |
 | Bundle size          | <PackageInfo package="i18nit" type="size" /> | ~15 kB     | ~1 kB         |
-| Type-safe keys       | ⏳ Planned                                   | ❌         | ✅            |
+| Type-safe keys       | ✅ Inferred from schema                       | ❌         | ✅            |
 | No code generation   | ✅                                           | ✅         | ❌            |
-| Pluralisation        | ✅ Intl.PluralRules                          | ✅         | ✅            |
-| Formatting helpers   | ✅ Intl-backed                               | ✅ Plugins | ❌            |
-| BCP47 locale cascade | ✅                                           | ✅         | ❌            |
+    de: () => import('./locales/de.json').then((m) => m.default),
+| Pluralisation        | ✅ Intl.PluralRules (cardinal + ordinal)      | ✅         | ✅            |
+| Dot-notation context | ✅                                           | ✅         | ❌            |
+| Formatting helpers   | ✅ Intl-backed (incl. duration)               | ✅ Plugins | ❌            |
+// typed dot-notation keys inferred from the catalogs schema
 | Async loaders        | ✅                                           | ✅         | ✅            |
 | Zero dependencies    | ✅                                           | ❌         | ✅            |
-
-**Use I18nit when** you want a small i18n runtime with explicit translation rules, request-safe instances, runtime locale loading, and Intl-based formatting.
-
 **Consider i18next** if you need its large plugin ecosystem (react-i18next, backend adapters) or are migrating an existing project.
-
+i18n.tp('position', 1, undefined, true); // '1st place'
 ## Features
 
 - Minimal translation API: `t`, `tp`, `format`
+// deep-merge without discarding unrelated keys
 - Dot-notation lookups with locale fallback chains
 - Interpolation for plain and nested vars
-- Explicit plural messages driven by `Intl.PluralRules`
+- Context sub-keys accessible via dot notation (`invite.female`) — no extra option needed
+- Deep-merge catalog updates via `mergeCatalog()` alongside full replacement via `setCatalog()`
 - Best-effort preload plus strict locale switching
 - Catalog replacement and runtime loader registration
 - Subscription API for locale changes and active-chain catalog refreshes

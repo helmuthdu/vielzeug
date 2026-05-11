@@ -17,7 +17,8 @@ Structure stores as plain modules — no class registration or plugin needed:
 
 ```ts
 // stores/auth.store.ts
-import { store, computed, readonly } from '@vielzeug/stateit';
+import { store, computed } from '@vielzeug/stateit';
+import type { ReadonlySignal } from '@vielzeug/stateit';
 
 type AuthState = {
   token: string | null;
@@ -32,7 +33,7 @@ export const isAuthenticated = computed(() => !!s.value.token);
 export const currentUser = computed(() => s.value.user);
 
 // Public read-only view — callers can observe but not mutate
-export const authStore = readonly(s);
+export const authStore: ReadonlySignal<AuthState> = s;
 
 // Mutations (exported as functions, not methods)
 export async function login(credentials: Credentials) {

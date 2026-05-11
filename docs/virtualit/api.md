@@ -12,8 +12,8 @@ description: Complete API reference for the Virtualit virtual list engine.
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
 | `createVirtualizer()` | Create an attached virtual list controller | Sync | It attaches immediately |
-| `virtualizer.update()` | Atomically update options | Sync | Use this for `count`, `estimateSize`, `overscan`, `onChange` |
-| `virtualizer.measure()` | Record measured item height | Sync (batched rebuild) | Measurements are applied after microtask flush |
+| `virtualizer.update()` | Atomically update options | Sync | Use this for `count`, `estimateSize`, `gap`, `overscan`, callbacks |
+| `virtualizer.measure()` | Record measured item size | Sync (batched rebuild) | Measurements are applied after microtask flush |
 | `createDomVirtualList()` | DOM-first wrapper for dropdown/listbox UIs | Sync | Keep `setItems()` and `setActive()` in sync with UI state |
 
 ## Package Exports
@@ -21,7 +21,9 @@ description: Complete API reference for the Virtualit virtual list engine.
 ```ts
 export { createVirtualizer } from '@vielzeug/virtualit';
 export type {
+  Overscan,
   ScrollToIndexOptions,
+  VirtualKey,
   VirtualItem,
   Virtualizer,
   VirtualizerOptions,
@@ -39,7 +41,7 @@ export type {
 
 ## Core API
 
-### `createVirtualizer(el, options)`
+### `createVirtualizer(target, options)`
 
 Creates and immediately attaches a virtualizer to the provided scroll container.
 
@@ -49,14 +51,15 @@ import { createVirtualizer } from '@vielzeug/virtualit';
 const virt = createVirtualizer(scrollEl, {
   count: rows.length,
   estimateSize: 36,
-  overscan: 4,
+  gap: 8,
+  overscan: { start: 4, end: 4 },
   onChange: (items, totalSize) => {
     listEl.style.height = `${totalSize}px`;
     listEl.innerHTML = '';
 
     for (const item of items) {
       const row = document.createElement('div');
-      row.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;height:${item.height}px;`;
+      row.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:${item.size}px;`;
       row.textContent = rows[item.index]?.label ?? '';
       listEl.appendChild(row);
     }
@@ -68,7 +71,7 @@ const virt = createVirtualizer(scrollEl, {
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `el` | `HTMLElement` | Scroll container to observe |
+| `target` | `HTMLElement \| Window` | Scroll target to observe |
 | `options` | `VirtualizerOptions` | Initial options |
 
 #### `VirtualizerOptions`
@@ -77,8 +80,15 @@ const virt = createVirtualizer(scrollEl, {
 | --- | --- | --- | --- |
 | `count` | `number` | required | Total item count |
 | `estimateSize` | `number \| (index: number) => number` | `36` | Fixed size or per-index estimate |
-| `overscan` | `number` | `3` | Extra items rendered above and below viewport |
+| `gap` | `number` | `0` | Pixel gap inserted between adjacent items |
+| `getItemKey` | `(index: number) => string \| number` | `index => index` | Stable key mapping for measurement cache |
+| `horizontal` | `boolean` | `false` | Use X axis instead of Y axis |
+| `initialOffset` | `number` | `undefined` | Initial scroll position set on attach |
+| `overscan` | `{ start?: number; end?: number }` | `{ start: 3, end: 3 }` | Asymmetric overscan configuration |
 | `onChange` | `(items: VirtualItem[], totalSize: number) => void` | `undefined` | Called when render window changes |
+| `onScrollingChange` | `(isScrolling: boolean) => void` | `undefined` | Called on scroll state transitions |
+| `onScrollEnd` | `(offset: number) => void` | `undefined` | Called after debounced scroll end |
+| `scrollEndDelay` | `number` | `120` | Debounce delay for scroll-end detection |
 
 ## `Virtualizer` Interface
 
@@ -86,7 +96,9 @@ const virt = createVirtualizer(scrollEl, {
 interface Virtualizer {
   readonly count: number;
   readonly estimateSize: number | ((index: number) => number);
+  readonly isScrolling: boolean;
   readonly items: VirtualItem[];
+  readonly scrollOffset: number;
   readonly totalSize: number;
 
   update(next: VirtualizerUpdateOptions): void;
@@ -118,9 +130,9 @@ Atomically updates one or more options.
 ```ts
 virt.update({ count: rows.length });
 virt.update({ estimateSize: 40 });
-virt.update({ overscan: 5 });
+virt.update({ overscan: { start: 5, end: 5 } });
 virt.update({ onChange: render });
-virt.update({ count: 5_000, estimateSize: 32, overscan: 2 });
+virt.update({ count: 5_000, estimateSize: 32, overscan: { start: 2, end: 2 } });
 ```
 
 ### `measure(index, size)`
@@ -137,6 +149,8 @@ for (const item of virt.items) {
 ### `scrollToIndex(index, options?)`
 
 Scrolls to an item index. Out-of-range indices are clamped.
+
+For variable-size lists, the target offset is computed from the current estimate plus any measured rows already in cache. If item heights changed, remeasure or call `invalidate()` before relying on the exact final offset.
 
 ```ts
 virt.scrollToIndex(0, { align: 'start' });
@@ -190,7 +204,7 @@ const domList = createDomVirtualList<Row>({
 
     for (const item of virtualItems) {
       const row = document.createElement('div');
-      row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
+      row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);`;
       row.textContent = items[item.index]?.label ?? '';
       listEl.appendChild(row);
     }
@@ -208,9 +222,12 @@ domList.setActive(isOpen);
 interface DomVirtualListOptions<T> {
   clear?: (listEl: HTMLElement) => void;
   estimateSize: number | ((index: number, item: T) => number);
+  gap?: number;
+  getItemKey?: (item: T, index: number) => string | number;
+  horizontal?: boolean;
   getListElement: () => HTMLElement | null;
-  getScrollElement: () => HTMLElement | null;
-  overscan?: number;
+  getScrollElement: () => HTMLElement | Window | null;
+  overscan?: { start?: number; end?: number };
   render: (args: DomVirtualListRenderArgs<T>) => void;
 }
 ```
@@ -247,9 +264,10 @@ interface DomVirtualListSetItemsOptions {
 
 ```ts
 interface VirtualItem {
-  height: number;
+  end: number;
   index: number;
-  top: number;
+  size: number;
+  start: number;
 }
 ```
 

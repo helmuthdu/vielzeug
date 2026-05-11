@@ -11,9 +11,9 @@ Wireit is a small, typed IoC container designed for async-first codebases.
 
 - Typed symbol tokens via `createToken<T>()`
 - Explicit registration via `value`, `factory`, and `bind`
-- Single async resolution model via `resolve*`
+- Single async resolution model via `resolve` and `resolveMany`
 - Hierarchical containers for request scoping
-- Built-in snapshot/mocking helpers for tests
+- Predictable lifecycle via `init`, `dispose`, and `disposed`
 
 ## Quick Example
 

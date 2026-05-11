@@ -10,6 +10,7 @@ function createDragEvent(
     files?: File[];
     items?: Array<{ kind: string; type: string }>;
     setData?: (format: string, data: string) => void;
+    setDragImage?: (image: Element, x: number, y: number) => void;
   },
 ): DragEvent {
   const event = new Event(type, { bubbles: true, cancelable: true }) as DragEvent;
@@ -22,6 +23,10 @@ function createDragEvent(
   }
 
   return event;
+}
+
+function createKeyboardEvent(key: string): KeyboardEvent {
+  return new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key });
 }
 
 describe('createDropZone', () => {
@@ -122,7 +127,7 @@ describe('createSortable', () => {
     Object.defineProperty(first, 'offsetWidth', { configurable: true, value: 120 });
     Object.defineProperty(first, 'offsetHeight', { configurable: true, value: 40 });
 
-    createSortable({
+    const sortable = createSortable({
       axis: 'horizontal',
       element,
     });
@@ -138,6 +143,14 @@ describe('createSortable', () => {
 
     expect(placeholder).toBeTruthy();
     expect(placeholder.style.width).toBe('120px');
+
+    first.dispatchEvent(
+      createDragEvent('dragend', {
+        dropEffect: 'move',
+      }),
+    );
+
+    sortable.destroy();
   });
 
   it('provides drag id on drag end and exposes isDragging', () => {
@@ -172,6 +185,117 @@ describe('createSortable', () => {
 
     expect(sortable.isDragging).toBe(false);
     expect(onDragEnd).toHaveBeenCalledWith('a', expect.any(Event));
+
+    sortable.destroy();
+  });
+
+  it('supports cross-list transfer for matching groups', () => {
+    const left = document.createElement('ul');
+    const right = document.createElement('ul');
+    const l1 = document.createElement('li');
+    const l2 = document.createElement('li');
+    const r1 = document.createElement('li');
+    const leftReorder = vi.fn();
+    const rightReorder = vi.fn();
+
+    l1.setAttribute('data-sort-id', 'l1');
+    l2.setAttribute('data-sort-id', 'l2');
+    r1.setAttribute('data-sort-id', 'r1');
+    left.append(l1, l2);
+    right.append(r1);
+
+    const leftSortable = createSortable({
+      element: left,
+      group: 'board',
+      onReorder: leftReorder,
+    });
+    const rightSortable = createSortable({
+      element: right,
+      group: 'board',
+      onReorder: rightReorder,
+    });
+
+    l1.dispatchEvent(
+      createDragEvent('dragstart', {
+        effectAllowed: 'move',
+        setData: vi.fn(),
+      }),
+    );
+
+    right.dispatchEvent(
+      createDragEvent('dragover', {
+        dropEffect: 'move',
+      }),
+    );
+
+    l1.dispatchEvent(
+      createDragEvent('dragend', {
+        dropEffect: 'move',
+      }),
+    );
+
+    expect(leftReorder).toHaveBeenCalledWith(['l2']);
+    expect(rightReorder).toHaveBeenCalledWith(['r1', 'l1']);
+
+    leftSortable.destroy();
+    rightSortable.destroy();
+  });
+
+  it('supports keyboard reordering with arrow keys', () => {
+    const element = document.createElement('ul');
+    const first = document.createElement('li');
+    const second = document.createElement('li');
+    const third = document.createElement('li');
+    const onReorder = vi.fn();
+
+    first.setAttribute('data-sort-id', 'a');
+    second.setAttribute('data-sort-id', 'b');
+    third.setAttribute('data-sort-id', 'c');
+    element.append(first, second, third);
+
+    const sortable = createSortable({
+      element,
+      onReorder,
+    });
+
+    second.dispatchEvent(createKeyboardEvent('ArrowDown'));
+
+    expect(onReorder).toHaveBeenCalledWith(['a', 'c', 'b']);
+
+    sortable.destroy();
+  });
+
+  it('uses custom drag image callback when provided', () => {
+    const element = document.createElement('ul');
+    const first = document.createElement('li');
+    const preview = document.createElement('div');
+    const setDragImage = vi.fn();
+
+    first.setAttribute('data-sort-id', 'a');
+    element.append(first);
+
+    const sortable = createSortable({
+      dragImage: () => preview,
+      element,
+    });
+
+    first.dispatchEvent(
+      createDragEvent('dragstart', {
+        effectAllowed: 'move',
+        setData: vi.fn(),
+        setDragImage,
+      }),
+    );
+
+    expect(setDragImage).toHaveBeenCalledWith(preview, 0, 0);
+
+    first.dispatchEvent(
+      createDragEvent('dragend', {
+        dropEffect: 'move',
+      }),
+    );
+
+    sortable.destroy();
   });
 });
 

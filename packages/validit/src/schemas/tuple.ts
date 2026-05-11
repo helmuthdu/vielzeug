@@ -1,17 +1,41 @@
-import type { Issue } from '../core';
+import type { Issue, ParseResult } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
 export type TupleSchemas = readonly [Schema<any>, ...Schema<any>[]];
-export type InferTuple<T extends TupleSchemas> = { readonly [K in keyof T]: T[K] extends Schema<infer O> ? O : never };
+export type InferTuple<T extends TupleSchemas, R extends Schema<any> | null = null> =
+  R extends Schema<infer O>
+    ? readonly [...{ [K in keyof T]: T[K] extends Schema<infer V> ? V : never }, ...O[]]
+    : { readonly [K in keyof T]: T[K] extends Schema<infer V> ? V : never };
 
-export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>> {
+export class TupleSchema<T extends TupleSchemas, R extends Schema<any> | null = null> extends Schema<InferTuple<T, R>> {
   readonly items: T;
+  private readonly restSchema: R;
 
-  constructor(items: T) {
+  constructor(items: T, restSchema: R = null as R) {
     super([]);
     this.items = items;
+    this.restSchema = restSchema;
+  }
+
+  private _pushTupleItemResult(
+    output: unknown[],
+    issues: Issue[],
+    index: number,
+    source: unknown,
+    result: ParseResult<unknown>,
+  ): void {
+    if (result.success) {
+      output.push(result.data);
+    } else {
+      issues.push(...prependIssuePath(result.error.issues, index));
+      output.push(source);
+    }
+  }
+
+  rest<U>(schema: Schema<U>): TupleSchema<T, Schema<U>> {
+    return this._copyStateTo(new TupleSchema(this.items, schema));
   }
 
   private _guardTupleInput(value: unknown): { ok: true; value: unknown[] } | { issues: Issue[]; ok: false } {
@@ -22,13 +46,27 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>> {
       };
     }
 
-    if (value.length !== this.items.length) {
+    if (this.restSchema === null && value.length !== this.items.length) {
       return {
         issues: [
           {
             code: ErrorCode.invalid_length,
             message: _messages().tuple.length({ exact: this.items.length }),
             params: { exact: this.items.length },
+            path: [],
+          },
+        ],
+        ok: false,
+      };
+    }
+
+    if (this.restSchema !== null && value.length < this.items.length) {
+      return {
+        issues: [
+          {
+            code: ErrorCode.invalid_length,
+            message: _messages().tuple.length({ exact: this.items.length }),
+            params: { minimum: this.items.length },
             path: [],
           },
         ],
@@ -51,11 +89,14 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>> {
     for (let i = 0; i < this.items.length; i++) {
       const result = this.items[i].safeParse(tupleValue[i]);
 
-      if (result.success) {
-        output.push(result.data);
-      } else {
-        issues.push(...prependIssuePath(result.error.issues, i));
-        output.push(tupleValue[i]);
+      this._pushTupleItemResult(output, issues, i, tupleValue[i], result);
+    }
+
+    if (this.restSchema !== null) {
+      for (let i = this.items.length; i < tupleValue.length; i++) {
+        const result = this.restSchema.safeParse(tupleValue[i]);
+
+        this._pushTupleItemResult(output, issues, i, tupleValue[i], result);
       }
     }
 
@@ -72,12 +113,28 @@ export class TupleSchema<T extends TupleSchemas> extends Schema<InferTuple<T>> {
     const itemResults = await Promise.all(
       this.items.map((schema, i) =>
         schema.safeParseAsync(tupleValue[i]).then((result) => ({
-          data: result.success ? result.data : tupleValue[i],
-          issues: result.success ? [] : prependIssuePath(result.error.issues, i),
+          index: i,
+          result,
+          source: tupleValue[i],
         })),
       ),
     );
 
-    return { data: itemResults.map((r) => r.data), issues: itemResults.flatMap((r) => r.issues) };
+    const output: unknown[] = [];
+    const issues: Issue[] = [];
+
+    for (const itemResult of itemResults) {
+      this._pushTupleItemResult(output, issues, itemResult.index, itemResult.source, itemResult.result);
+    }
+
+    if (this.restSchema !== null) {
+      for (let i = this.items.length; i < tupleValue.length; i++) {
+        const result = await this.restSchema.safeParseAsync(tupleValue[i]);
+
+        this._pushTupleItemResult(output, issues, i, tupleValue[i], result);
+      }
+    }
+
+    return { data: output, issues };
   }
 }

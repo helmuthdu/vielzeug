@@ -68,6 +68,12 @@
       "require": "./dist/badge.cjs",
       "types": "./dist/feedback/badge/badge.d.ts"
     },
+    "./password-strength": {
+      "source": "./src/feedback/password-strength/password-strength.ts",
+      "import": "./dist/password-strength.js",
+      "require": "./dist/password-strength.cjs",
+      "types": "./dist/feedback/password-strength/password-strength.d.ts"
+    },
     "./box": {
       "source": "./src/layout/box/box.ts",
       "import": "./dist/box.js",
@@ -205,12 +211,6 @@
       "import": "./dist/popover.js",
       "require": "./dist/popover.cjs",
       "types": "./dist/overlay/popover/popover.d.ts"
-    },
-    "./password-strength": {
-      "source": "./src/feedback/password-strength/password-strength.ts",
-      "import": "./dist/password-strength.js",
-      "require": "./dist/password-strength.cjs",
-      "types": "./dist/feedback/password-strength/password-strength.d.ts"
     },
     "./progress": {
       "source": "./src/feedback/progress/progress.ts",

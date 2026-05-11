@@ -13,6 +13,8 @@ description: Source-aligned API reference for @vielzeug/eventit and @vielzeug/ev
 | ----------------- | --------------------------------------- | -------------- | --------------------------------------------- |
 | `createBus()`     | Create a typed event bus instance       | Sync           | Use a strict event map to avoid payload drift |
 | `bus.wait()`      | Await a one-time event occurrence       | Async          | Handle timeout/cancellation for long waits    |
+| `bus.waitAny()`   | Await the first event from many         | Async          | Result is a discriminated union by event key  |
+| `bus.eventNames()`| Inspect events with active listeners    | Sync           | Snapshot reflects current subscriptions       |
 | `createTestBus()` | Create deterministic test bus utilities | Sync           | Reset emitted events between test cases       |
 
 ## Package Entry Points
@@ -29,9 +31,10 @@ description: Source-aligned API reference for @vielzeug/eventit and @vielzeug/ev
 - `Listener<T>`: `(payload: T) => void`
 - `Unsubscribe`: `() => void`
 - `BusOptions<T>`:
-  - `onEmit(event, payload)` called before listeners run
+  - `onDispatch(event, payload)` called before listeners run
   - `onError(err, event, payload)` called for listener errors (instead of re-throw)
-- `Bus<T>`: typed runtime bus (`on`, `once`, `emit`, `wait`, `events`, `listenerCount`, `dispose`)
+- `WaitAnyResult<T, K>`: typed union result for `waitAny()` (`{ event, payload }`)
+- `Bus<T>`: typed runtime bus (`on`, `once`, `emit`, `wait`, `waitAny`, `events`, `listenerCount`, `eventNames`, `removeAllListeners`, `dispose`)
 - `TestBus<T>`: `Bus<T>` plus `emitted(event)` and `reset()`
 
 ### `BusDisposedError`
@@ -61,7 +64,7 @@ type AppEvents = {
 };
 
 const bus = createBus<AppEvents>({
-  onEmit: (event, payload) => console.debug('[bus]', event, payload),
+  onDispatch: (event, payload) => console.debug('[bus]', event, payload),
   onError: (err, event, payload) => console.error('[bus] error in', event, err, payload),
 });
 ```
@@ -155,6 +158,34 @@ const login = await bus.wait('user:login');
 
 // With timeout
 const timedLogin = await bus.wait('user:login', AbortSignal.timeout(5_000));
+```
+
+---
+
+### `bus.waitAny()`
+
+Signature: `waitAny(events, signal?) => Promise<{ event, payload }>`
+
+Waits for the first emitted event among a list of event keys.
+
+| Parameter | Type                      | Description             |
+| --------- | ------------------------- | ----------------------- |
+| `events`  | `readonly K[]`            | Event keys to race      |
+| `signal`  | `AbortSignal`             | Optional abort signal   |
+
+**Returns:** `Promise<WaitAnyResult<T, K>>`
+
+**Rejects when:**
+
+- The bus is disposed before any listed event fires — rejects with `BusDisposedError`
+- The provided `signal` aborts — rejects with `signal.reason`
+
+```ts
+const winner = await bus.waitAny(['user:login', 'user:logout'] as const);
+
+if (winner.event === 'user:login') {
+  console.log(winner.payload.userId);
+}
 ```
 
 ---
@@ -266,6 +297,38 @@ bus.dispose();
 bus.listenerCount(); // 0
 ```
 
+---
+
+### `bus.eventNames()`
+
+Signature: `eventNames() => EventKey<T>[]`
+
+Returns a snapshot of event keys that currently have at least one active listener.
+
+```ts
+bus.on('user:login', handler1);
+bus.on('user:logout', handler2);
+
+bus.eventNames(); // ['user:login', 'user:logout']
+```
+
+---
+
+### `bus.removeAllListeners()`
+
+Signature: `removeAllListeners(event?) => void`
+
+Removes all listeners for one event, or all listeners for all events when called without arguments.
+
+| Parameter | Type                     | Description                                     |
+| --------- | ------------------------ | ----------------------------------------------- |
+| `event`   | `EventKey<T>` (optional) | Specific event key; omit to clear all listeners |
+
+```ts
+bus.removeAllListeners('user:login');
+bus.removeAllListeners(); // remove everything
+```
+
 ## Testing Utilities
 
 Import from `@vielzeug/eventit/test`.
@@ -282,7 +345,7 @@ Behavior:
 - `emitted(event)` returns a snapshot array
 - `reset()` clears records without removing listeners
 - `dispose()` clears listeners and records
-- Accepts full `BusOptions<T>` including `onEmit` and `onError`
+- Accepts full `BusOptions<T>` including `onDispatch` and `onError`
 
 | Parameter | Type            | Description                                     |
 | --------- | --------------- | ----------------------------------------------- |

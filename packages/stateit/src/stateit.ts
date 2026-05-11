@@ -33,15 +33,19 @@ export type WatchOptions<T> = {
   once?: boolean;
 };
 
-export interface Store<T extends object> {
-  readonly value: T;
+export interface Store<T extends object> extends ReadonlySignal<T> {
   patch(partial: Partial<T>): void;
   update(fn: (state: T) => T): void;
   reset(): void;
 }
 
+export interface Scope {
+  readonly run: <T>(fn: () => T) => T;
+  readonly dispose: () => void;
+  readonly [Symbol.dispose]: () => void;
+}
+
 // === CONSTANTS ===
-const UNINITIALIZED = Symbol('stateit.uninitialized');
 const DEFAULT_MAX_ITERATIONS = 100;
 const IS_SIGNAL = Symbol('stateit.is-signal');
 
@@ -54,6 +58,9 @@ const ensureObject = (value: unknown, message: string): void => {
     throw new TypeError(message);
   }
 };
+
+// Identifies computed.onDepChange callbacks for routing into the dedicated computed subscriber queue.
+const computedHandlers = new WeakSet<EffectCallback>();
 
 // === UNIFIED ERROR HANDLING ===
 const runAll = (items: Iterable<() => void>, context: string): void => {
@@ -104,39 +111,84 @@ const withScope = <T>(
 
 // === BATCH QUEUE ===
 let batchDepth = 0;
-const batchQueue = new Set<EffectCallback>();
+const batchComputedQueue = new Set<EffectCallback>();
+const batchEffectQueue = new Set<EffectCallback>();
 
 const flushBatch = (): void => {
-  while (batchQueue.size > 0) {
-    const pending = [...batchQueue];
+  let iterations = 0;
 
-    batchQueue.clear();
+  while (batchComputedQueue.size > 0 || batchEffectQueue.size > 0) {
+    if (++iterations > DEFAULT_MAX_ITERATIONS) {
+      throw new Error(`[stateit] infinite batch loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
+    }
 
-    runAll(pending, 'subscriber errors');
+    // Phase 1: computed handlers mark dirty state before any effect reads.
+    if (batchComputedQueue.size > 0) {
+      const computedPending = [...batchComputedQueue];
+
+      batchComputedQueue.clear();
+
+      for (const fn of computedPending) fn();
+    }
+
+    // Phase 2: effect runners with full error aggregation.
+    if (batchEffectQueue.size > 0) {
+      const effectsPending = [...batchEffectQueue];
+
+      batchEffectQueue.clear();
+
+      runAll(effectsPending, 'subscriber errors');
+    }
   }
 };
 
 // === BASE REACTIVE NODE ===
 class ReactiveNode {
-  protected subscribers = new Set<EffectCallback>();
+  private computedSubs_ = new Set<EffectCallback>();
+  private effectSubs_ = new Set<EffectCallback>();
+
+  protected get hasSubscribers(): boolean {
+    return this.computedSubs_.size > 0 || this.effectSubs_.size > 0;
+  }
 
   protected track(): void {
     if (!currentEffect || !currentDeps) return;
 
-    this.subscribers.add(currentEffect);
-    currentDeps.add(() => this.subscribers.delete(currentEffect!));
+    const self = currentEffect;
+
+    if (computedHandlers.has(self)) {
+      this.computedSubs_.add(self);
+      currentDeps.add(() => this.computedSubs_.delete(self));
+    } else {
+      this.effectSubs_.add(self);
+      currentDeps.add(() => this.effectSubs_.delete(self));
+    }
   }
 
   protected notify(): void {
-    if (this.subscribers.size === 0) return;
+    const hasComputed = this.computedSubs_.size > 0;
+    const hasEffects = this.effectSubs_.size > 0;
+
+    if (!hasComputed && !hasEffects) return;
 
     if (batchDepth > 0) {
-      for (const fn of this.subscribers) batchQueue.add(fn);
+      for (const fn of this.computedSubs_) batchComputedQueue.add(fn);
+      for (const fn of this.effectSubs_) batchEffectQueue.add(fn);
 
       return;
     }
 
-    runAll([...this.subscribers], 'subscriber errors');
+    // Phase 1: propagate dirty marks through the computed chain.
+    if (hasComputed) {
+      const computedPending = [...this.computedSubs_];
+
+      for (const fn of computedPending) fn();
+    }
+
+    // Phase 2: run effects with full error aggregation.
+    if (hasEffects) {
+      runAll([...this.effectSubs_], 'subscriber errors');
+    }
   }
 }
 
@@ -168,8 +220,10 @@ class SignalImpl<T> extends ReactiveNode implements Signal<T> {
 
 // === COMPUTED IMPLEMENTATION ===
 class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
-  private value_: T | typeof UNINITIALIZED = UNINITIALIZED;
+  private hasValue_ = false;
+  private value_!: T;
   private dirty_ = true;
+  private computing_ = false;
   private disposed_ = false;
   private deps_ = new Set<CleanupFn>();
   private compute_: () => T;
@@ -179,7 +233,7 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
   private readonly onDepChange: EffectCallback = () => {
     if (this.disposed_) return;
 
-    if (!this.subscribers.size) {
+    if (!this.hasSubscribers) {
       this.dirty_ = true;
 
       return;
@@ -192,23 +246,35 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
     super();
     this.compute_ = compute;
     this.equals_ = equals ?? Object.is;
+    computedHandlers.add(this.onDepChange);
   }
 
   private recompute(): boolean {
+    if (this.computing_) {
+      throw new Error('[stateit] computed cycle detected');
+    }
+
     for (const unsub of this.deps_) unsub();
     this.deps_.clear();
 
-    const next = withScope(this.onDepChange, this.deps_, null, this.compute_);
+    this.computing_ = true;
 
-    this.dirty_ = false;
+    try {
+      const next = withScope(this.onDepChange, this.deps_, null, this.compute_);
 
-    if (this.value_ === UNINITIALIZED || !this.equals_(this.value_ as T, next)) {
-      this.value_ = next;
+      this.dirty_ = false;
 
-      return true;
+      if (!this.hasValue_ || !this.equals_(this.value_, next)) {
+        this.hasValue_ = true;
+        this.value_ = next;
+
+        return true;
+      }
+
+      return false;
+    } finally {
+      this.computing_ = false;
     }
-
-    return false;
   }
 
   get value(): T {
@@ -220,13 +286,14 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
 
     this.track();
 
-    return this.value_ as T;
+    return this.value_;
   }
 
   dispose(): void {
     if (this.disposed_) return;
 
     this.disposed_ = true;
+    computedHandlers.delete(this.onDepChange);
     for (const unsub of this.deps_) unsub();
     this.deps_.clear();
   }
@@ -294,6 +361,8 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
   const maxIterations = options?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
 
   const teardown = (): void => {
+    if (!cleanup && deps.size === 0) return;
+
     const callbacks = cleanup ? [cleanup, ...deps] : [...deps];
 
     cleanup = undefined;
@@ -354,19 +423,66 @@ export const untrack = <T>(fn: () => T): T => withScope(null, null, null, fn);
 
 export const onCleanup = (fn: CleanupFn): void => {
   if (currentCleanups === null) {
-    throw new Error('[stateit] onCleanup() must be called from inside an active effect.');
+    throw new Error('[stateit] onCleanup() must be called from within an active effect or scope.');
   }
 
   currentCleanups.push(fn);
 };
 
+export const scope = (): Scope => {
+  const cleanups: CleanupFn[] = [];
+  let disposed = false;
+
+  const run = <T>(fn: () => T): T => {
+    if (disposed) throw new Error('[stateit] Cannot run inside a disposed scope.');
+
+    const prev = currentCleanups;
+
+    currentCleanups = cleanups;
+
+    try {
+      return fn();
+    } finally {
+      currentCleanups = prev;
+    }
+  };
+
+  const dispose = (): void => {
+    if (disposed) return;
+
+    disposed = true;
+
+    const errors: unknown[] = [];
+
+    for (let i = cleanups.length - 1; i >= 0; i--) {
+      try {
+        cleanups[i]();
+      } catch (e) {
+        errors.push(e);
+      }
+    }
+
+    cleanups.length = 0;
+
+    if (errors.length === 1) throw errors[0];
+
+    if (errors.length > 1) throw new AggregateError(errors, '[stateit] scope cleanup errors');
+  };
+
+  return { dispose, run, [Symbol.dispose]: dispose };
+};
+
 const watchBase = <T>(get: () => T, cb: (value: T, prev: T) => void, watchOptions?: WatchOptions<T>): Subscription => {
   const equals = watchOptions?.equals ?? Object.is;
   let prev = untrack(get);
+  let shouldStop = false;
 
   if (watchOptions?.immediate) cb(prev, prev);
 
-  const stop = effect(() => {
+  let stop!: Subscription;
+
+  // eslint-disable-next-line prefer-const
+  stop = effect(() => {
     const next = get();
 
     if (equals(prev, next)) return;
@@ -376,8 +492,16 @@ const watchBase = <T>(get: () => T, cb: (value: T, prev: T) => void, watchOption
     prev = next;
     cb(next, old);
 
-    if (watchOptions?.once) stop();
+    if (watchOptions?.once) {
+      if (stop) {
+        stop();
+      } else {
+        shouldStop = true;
+      }
+    }
   });
+
+  if (shouldStop) stop();
 
   return stop;
 };
@@ -418,8 +542,8 @@ export const store = <T extends object>(initial: T): Store<T> => {
 
   const initialSnapshot = structuredClone(initial);
   const state = signal(structuredClone(initial));
-
-  return {
+  const api: Store<T> & { [IS_SIGNAL]: true } = {
+    [IS_SIGNAL]: true,
     patch(partial: Partial<T>): void {
       ensureObject(partial, '[stateit] store.patch() requires a plain object partial.');
 
@@ -441,6 +565,8 @@ export const store = <T extends object>(initial: T): Store<T> => {
       return state.value;
     },
   };
+
+  return api;
 };
 
 // === TYPE HELPERS ===

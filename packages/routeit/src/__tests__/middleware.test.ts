@@ -29,6 +29,7 @@ describe('Route context & middleware', () => {
     expect(handler).toHaveBeenCalledWith(
       expect.objectContaining({
         hash: 'hash',
+        historyState: null,
         locals: {},
         navigate: expect.any(Function),
         params: { id: '42' },

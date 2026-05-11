@@ -1,6 +1,6 @@
 ---
 title: Deposit Examples — Basic
-description: Core usage examples for localStorage, sessionStorage, cookie, IndexedDB, and memory adapters.
+description: Core usage examples for localStorage, sessionStorage, IndexedDB, and memory adapters.
 ---
 
 ## Define a Schema with table()
@@ -57,26 +57,6 @@ await db.put('drafts', { id: 'd1', body: 'hello' });
 console.log(await db.get('drafts', 'd1'));
 ```
 
-## Cookie Adapter
-
-```ts
-import { createCookie, table } from '@vielzeug/deposit';
-
-type Pref = { id: string; value: string };
-const schema = { prefs: table<Pref>('id') };
-
-const db = createCookie({
-  dbName: 'prefs',
-  path: '/',
-  sameSite: 'Strict',
-  schema,
-  secure: true,
-});
-
-await db.put('prefs', { id: 'locale', value: 'en-US' });
-console.log(await db.get('prefs', 'locale'));
-```
-
 ## IndexedDB
 
 ```ts
@@ -85,9 +65,9 @@ import { createIndexedDB, table } from '@vielzeug/deposit';
 type Product = { id: number; name: string; price: number };
 const schema = { products: table<Product>('id') };
 
-const db = createIndexedDB({ dbName: 'catalog', version: 1, schema });
+const db = createIndexedDB({ dbName: 'catalog', schemaVersion: 1, schema });
 await db.put('products', { id: 1, name: 'Keyboard', price: 99 });
-const pricey = await db.from('products').between('price', 50, 200).toArray();
+const pricey = await db.query('products').between('price', 50, 200).toArray();
 console.log(pricey);
 ```
 
@@ -122,18 +102,18 @@ console.log(await db.has('users', 99)); // false
 
 ```ts
 const page = await db
-  .from('products')
+  .query('products')
   .startsWith('name', 'k', { ignoreCase: true })
   .orderBy('price', 'asc')
   .limit(10)
   .offset(0)
   .toArray();
 
-const total = await db.from('products').count();
+const total = await db.query('products').count();
 
 // Get the single cheapest matching product
 const cheapest = await db
-  .from('products')
+  .query('products')
   .startsWith('name', 'k', { ignoreCase: true })
   .orderBy('price', 'asc')
   .first();

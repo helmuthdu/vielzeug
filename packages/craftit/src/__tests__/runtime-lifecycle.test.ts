@@ -3,7 +3,7 @@
  * Tests for mount, onCleanup, and handle hooks
  */
 
-import { handle, html, onCleanup, onMounted, signal } from '../index';
+import { effect, handle, html, onCleanup, onMounted, onUpdated, signal } from '../index';
 import { mount } from '../testing';
 
 describe('Core: mount() lifecycle', () => {
@@ -133,6 +133,57 @@ describe('Core: mount + cleanup integration', () => {
     destroy();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(effectRuns).toBe(runsBeforeUnmount);
+  });
+});
+
+describe('Core: onUpdated()', () => {
+  it('runs after reactive effects flush', async () => {
+    const count = signal(0);
+    const spy = vi.fn();
+
+    const { flush } = await mount(() => {
+      effect(() => {
+        void count.value;
+      });
+
+      onUpdated(() => {
+        spy(count.value);
+      });
+
+      return () => html`<div>${count}</div>`;
+    });
+
+    count.value = 1;
+    await flush();
+
+    expect(spy).toHaveBeenCalled();
+    expect(spy).toHaveBeenLastCalledWith(1);
+  });
+
+  it('supports multiple onUpdated callbacks', async () => {
+    const count = signal(0);
+    const calls: string[] = [];
+
+    const { flush } = await mount(() => {
+      effect(() => {
+        void count.value;
+      });
+
+      onUpdated(() => calls.push('a'));
+      onUpdated(() => calls.push('b'));
+
+      return () => html`<div>${count}</div>`;
+    });
+
+    count.value = 1;
+    await flush();
+
+    expect(calls).toContain('a');
+    expect(calls).toContain('b');
+  });
+
+  it('throws when used outside setup', () => {
+    expect(() => onUpdated(() => undefined)).toThrow();
   });
 });
 

@@ -12,19 +12,15 @@ export type TestBus<T extends EventMap> = Bus<T> & {
 
 export function createTestBus<T extends EventMap>(options?: BusOptions<T>): TestBus<T> {
   const records = new Map<string, unknown[]>();
-  const userOnEmit = options?.onEmit;
-  const { onEmit: _, ...busOptions } = options ?? {};
+  const userOnDispatch = options?.onDispatch;
+  const { onDispatch: _, ...busOptions } = options ?? {};
   const bus = createBus<T>(busOptions);
 
   function record<K extends EventKey<T>>(event: K, payload: T[K]): void {
-    let list = records.get(event);
+    const list = records.get(event);
 
-    if (!list) {
-      list = [];
-      records.set(event, list);
-    }
-
-    list.push(payload);
+    if (list) list.push(payload);
+    else records.set(event, [payload]);
   }
 
   function emitted<K extends EventKey<T>>(event: K): T[K][] {
@@ -42,23 +38,26 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
     const payload = (args as unknown[])[0] as T[K];
 
     record(event, payload);
-    userOnEmit?.(event, payload);
+    userOnDispatch?.(event, payload);
     bus.emit(event, ...args);
   }
 
-  const overrides = {
+  return {
     dispose,
+    get disposed() {
+      return bus.disposed;
+    },
     emit,
     emitted,
+    eventNames: () => bus.eventNames(),
+    events: (event, signal) => bus.events(event, signal),
+    listenerCount: (event) => bus.listenerCount(event),
+    on: (event, listener, signal) => bus.on(event, listener, signal),
+    once: (event, listener, signal) => bus.once(event, listener, signal),
+    removeAllListeners: (event) => bus.removeAllListeners(event),
     reset: () => records.clear(),
     [Symbol.dispose]: dispose,
+    wait: (event, signal) => bus.wait(event, signal),
+    waitAny: (events, signal) => bus.waitAny(events, signal),
   };
-
-  return new Proxy(bus, {
-    get(target, prop, receiver) {
-      if (prop in overrides) return Reflect.get(overrides, prop, receiver);
-
-      return Reflect.get(target, prop, receiver);
-    },
-  }) as TestBus<T>;
 }

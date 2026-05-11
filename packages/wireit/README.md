@@ -1,8 +1,8 @@
 # @vielzeug/wireit
 
-> Lightweight async-first dependency injection container for TypeScript.
+> Minimal async-first dependency injection container for TypeScript.
 
-Wireit is a zero-dependency IoC container built around typed tokens.
+Wireit is a zero-dependency IoC container built around typed tokens and a small core API.
 
 ## Installation
 
@@ -35,33 +35,20 @@ const service = await container.resolve(ServiceToken);
 
 ### Registration
 
-- `value(token, value, opts?)`
-- `factory(token, fn, opts?)`
-- `bind(token, cls, opts?)`
-- `alias(token, source)`
-- `unregister(token)`
-- `clear()`
+- `value(token, value, { multi? })`
+- `factory(token, fn, { deps?, lifetime?, init?, dispose?, multi? })`
+- `bind(token, cls, { deps?, lifetime?, init?, dispose?, multi? })`
 
-### Resolution (async-first)
+### Resolution
 
 - `resolve(token)`
-- `resolveAll(tokens)`
-- `resolveOptional(token)`
-- `has(token)`
+- `resolveMany(token)`
 
 ### Lifecycle
 
 - `createChild()`
-- `runInScope(fn)`
 - `dispose()`
 - `disposed`
-
-### Testing
-
-- `createTestContainer(base?)` returns a child container
-- `mock(token, provider, fn)`
-- `snapshot()` / `restore(snapshot)`
-- `debug()`
 
 ## Lifetimes
 
@@ -71,50 +58,36 @@ const service = await container.resolve(ServiceToken);
 | `transient` | New instance for each resolution |
 | `scoped` | One instance per child container |
 
-## Examples
-
-### Async provider
+## Multi-provider token
 
 ```ts
-container.factory(DbToken, async () => {
-  const db = new Database(process.env.DB_URL!);
-  await db.connect();
-  return db;
+container.value(ValidatorToken, new EmailValidator(), { multi: true });
+container.value(ValidatorToken, new PhoneValidator(), { multi: true });
+
+const validators = await container.resolveMany(ValidatorToken);
+```
+
+## Async provider with init/dispose
+
+```ts
+container.factory(DbToken, () => new Database(process.env.DB_URL!), {
+  init: (db) => db.connect(),
+  dispose: (db) => db.close(),
 });
 
 const db = await container.resolve(DbToken);
-```
-
-### Scoped execution
-
-```ts
-await container.runInScope(async (scope) => {
-  scope.value(RequestIdToken, crypto.randomUUID());
-  const handler = await scope.resolve(RequestHandlerToken);
-  await handler.handle();
-});
-```
-
-### Temporary mock
-
-```ts
-await container.mock(DbToken, { useValue: fakeDb }, async () => {
-  const service = await container.resolve(ServiceToken);
-  await service.sync();
-});
 ```
 
 ## Exports
 
 ```ts
 export {
-  AliasCycleError,
   CircularDependencyError,
   Container,
   ContainerDisposedError,
   createContainer,
-  createTestContainer,
   createToken,
+  MultipleProvidersError,
   ProviderNotFoundError,
 } from '@vielzeug/wireit';
 
@@ -124,9 +97,7 @@ export type {
   Lifetime,
   Provider,
   ProviderOptions,
-  Snapshot,
   Token,
-  TokenValues,
   ValueProvider,
 } from '@vielzeug/wireit';
 ```

@@ -55,13 +55,44 @@ Malformed principal values throw errors.
 ## Bind a User with `forUser`
 
 ```ts
-const can = permit.forUser({ id: 'u1', roles: ['editor'] });
+const bound = permit.forUser({ id: 'u1', roles: ['editor'] }, true);
 
-can('posts', 'read');
-can('posts', 'update', { authorId: 'u1' });
+bound.can('posts', 'read');
+bound.can('posts', 'update', { authorId: 'u1' });
 ```
 
-`forUser()` returns a reusable function and snapshots the roles at binding time.
+`forUser()` returns a reusable bound permit object and snapshots roles/attributes at binding time.
+With `cache = true`, repeated checks for the same `(resource, action, data)` reuse the decision.
+
+## Check Multiple Actions
+
+```ts
+permit.canAll({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], { authorId: 'u1' });
+permit.canAny({ id: 'u1', roles: ['editor'] }, 'posts', ['update', 'delete'], { authorId: 'u1' });
+```
+
+Use `canAll()` when every action must pass, and `canAny()` when one passing action is enough.
+
+## List Allowed Actions
+
+```ts
+const actions = permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u1' });
+```
+
+`allowedActions()` returns concrete actions that are currently allowed for the principal.
+Wildcard actions are not enumerable and are skipped.
+
+## Explain Denials and Winners
+
+```ts
+const decision = permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'delete');
+
+if (!decision.allowed) {
+  console.log(decision.reason); // 'no-matching-rule' | 'explicit-deny'
+}
+```
+
+`explain()` returns a discriminated union that includes the winning rule for allow decisions and explicit deny decisions.
 
 ## Use Dynamic Conditions with `when`
 
@@ -78,6 +109,38 @@ permit.set({
 ```
 
 `when` only runs for authenticated principals. For anonymous (`null`) checks, `when` rules do not match.
+
+### Ownership Checks with `owns`
+
+```ts
+import { createPermit, owns } from '@vielzeug/permit';
+
+const permit = createPermit<'update', { authorId: string }>();
+
+permit.set({
+  role: 'editor',
+  resource: 'posts',
+  action: 'update',
+  effect: 'allow',
+  when: owns('authorId'),
+});
+```
+
+`owns()` is a convenience helper for the common `principal.id === data[attributeKey]` pattern.
+
+### Attribute-Based Conditions (ABAC)
+
+```ts
+permit.set({
+  role: 'editor',
+  resource: 'posts',
+  action: 'publish',
+  effect: 'allow',
+  when: ({ principal }) => principal.attributes?.tier === 'pro',
+});
+```
+
+`principal.attributes` can store arbitrary user metadata for runtime policy checks.
 
 ## Anonymous and Wildcards
 
@@ -143,4 +206,4 @@ Adopt one identifier convention (for example all lowercase) at your app boundary
 - Use `priority` sparingly for explicit overrides.
 - Keep `when` predicates pure and side-effect free.
 - Prefer one permit instance per app boundary and keep rules centralized.
-- Use `forUser()` for repeated checks in UI or request scopes.
+- Use `forUser({ ... }, true)` for repeated checks in UI or request scopes.

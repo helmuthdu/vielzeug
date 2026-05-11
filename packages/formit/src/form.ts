@@ -16,8 +16,17 @@ import {
   type TypeAtPath,
   type Unsubscribe,
   type ValidateResult,
+  type ValidationMode,
 } from './types';
 import { flattenValues, isSameValue, unflattenValues } from './utils';
+
+const MODE_BIND_DEFAULTS: Record<ValidationMode, BindConfig> = {
+  onBlur: { touchOnBlur: true, validateOnBlur: true, validateOnChange: false },
+  onChange: { touchOnBlur: true, validateOnBlur: false, validateOnChange: true },
+  onSubmit: { touchOnBlur: true, validateOnBlur: false, validateOnChange: false },
+  // onTouched validates on change only after the field has been touched.
+  onTouched: { touchOnBlur: true, validateOnBlur: true, validateOnChange: true },
+};
 
 export function createForm<TValues extends Record<string, unknown> = Record<string, unknown>>(
   init: FormOptions<TValues> = {},
@@ -29,7 +38,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   }
 
   const formValidator = init.validator;
-  const bindDefaults = init.bindDefaults ?? {};
+  const mode: ValidationMode = init.mode ?? 'onSubmit';
+
+  // Resolve bindDefaults: explicit bindDefaults > mode > safe defaults
+  const bindDefaults: BindConfig = init.bindDefaults ?? MODE_BIND_DEFAULTS[mode];
+  const useTouchedMode = init.bindDefaults === undefined && mode === 'onTouched';
 
   const baseline = new Map<string, unknown>(Object.entries(flattenValues(init.defaultValues ?? {})));
   const store = new Map<string, unknown>(baseline);
@@ -49,6 +62,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   const listeners = new Set<LocalListener>();
   const fieldListeners = new Map<string, Set<AnyFieldListener>>();
+  const arrayHelpers = new Map<string, ArrayField>();
 
   let scheduled = false;
   const changedFields = new Set<string>();
@@ -65,6 +79,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       isValidating: validatingCount > 0,
       submitCount,
     };
+  }
+
+  function allKnownFields(): Set<string> {
+    return new Set([...store.keys(), ...Object.keys(validators)]);
   }
 
   function buildFieldState(name: string): FieldState<unknown> {
@@ -188,7 +206,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   function replaceErrors(nextErrors: Partial<Record<FlatKeyOf<TValues>, string>>): void {
     ensureNotDisposed();
     fieldErrors.clear();
-    for (const [k, v] of Object.entries(nextErrors)) fieldErrors.set(k, v as string);
+    for (const [k, v] of Object.entries(nextErrors)) {
+      if (typeof v === 'string') fieldErrors.set(k, v);
+    }
     scheduleNotify();
   }
 
@@ -207,8 +227,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     ensureNotDisposed();
 
     if (name === undefined) {
-      for (const fieldName of store.keys()) touched.add(fieldName);
-      for (const fieldName of Object.keys(validators)) touched.add(fieldName);
+      for (const fieldName of allKnownFields()) touched.add(fieldName);
       scheduleNotify();
     } else {
       const key = name as string;
@@ -377,8 +396,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   async function submit<TResult = void>(
     onSubmit: (values: TValues) => MaybePromise<TResult>,
-    signal?: AbortSignal,
-  ): Promise<TResult> {
+    onInvalid?: (errors: Record<string, string>) => MaybePromise<void>,
+  ): Promise<TResult | void> {
     ensureNotDisposed();
 
     if (isSubmitting) throw new SubmitError();
@@ -389,10 +408,18 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     try {
       touch();
-      await validate(undefined, signal);
+      await validate();
 
       if (fieldErrors.size > 0) {
-        throw new FormValidationError(Object.fromEntries(fieldErrors));
+        const errors = Object.fromEntries(fieldErrors);
+
+        if (onInvalid) {
+          await onInvalid(errors);
+
+          return;
+        }
+
+        throw new FormValidationError(errors);
       }
 
       return await onSubmit(values());
@@ -459,7 +486,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       onChange: (value: TypeAtPath<TValues, K>) => {
         set(name, value);
 
-        if (doValidateOnChange) void validateField(name).catch(() => undefined);
+        const shouldValidateOnChange =
+          doValidateOnChange && (!useTouchedMode || config?.validateOnChange !== undefined || touched.has(key));
+
+        if (shouldValidateOnChange) void validateField(name).catch(() => undefined);
       },
       get touched() {
         return touched.has(key);
@@ -474,12 +504,25 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     ensureNotDisposed();
 
     const key = name as string;
+    const cached = arrayHelpers.get(key);
 
-    return {
+    if (cached) return cached;
+
+    const helpers: ArrayField = {
       append(value: unknown): void {
         const current = store.get(key);
 
         set(name, (Array.isArray(current) ? [...current, value] : [value]) as TypeAtPath<TValues, typeof name>);
+      },
+      insert(index: number, value: unknown): void {
+        const current = store.get(key);
+
+        if (!Array.isArray(current)) return;
+
+        const next = [...current];
+
+        next.splice(index, 0, value);
+        set(name, next as TypeAtPath<TValues, typeof name>);
       },
       move(from: number, to: number): void {
         const current = store.get(key);
@@ -491,6 +534,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         next.splice(to, 0, next.splice(from, 1)[0]);
         set(name, next as TypeAtPath<TValues, typeof name>);
       },
+      prepend(value: unknown): void {
+        const current = store.get(key);
+
+        set(name, (Array.isArray(current) ? [value, ...current] : [value]) as TypeAtPath<TValues, typeof name>);
+      },
       remove(index: number): void {
         const current = store.get(key);
 
@@ -498,7 +546,31 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
         set(name, current.filter((_, i) => i !== index) as TypeAtPath<TValues, typeof name>);
       },
+      replace(index: number, value: unknown): void {
+        const current = store.get(key);
+
+        if (!Array.isArray(current)) return;
+
+        const next = [...current];
+
+        next[index] = value;
+        set(name, next as TypeAtPath<TValues, typeof name>);
+      },
+      swap(a: number, b: number): void {
+        const current = store.get(key);
+
+        if (!Array.isArray(current)) return;
+
+        const next = [...current];
+
+        [next[a], next[b]] = [next[b], next[a]];
+        set(name, next as TypeAtPath<TValues, typeof name>);
+      },
     };
+
+    arrayHelpers.set(key, helpers);
+
+    return helpers;
   }
 
   function resetField(name: FlatKeyOf<TValues>): void {
@@ -511,6 +583,29 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     touched.delete(key);
     fieldErrors.delete(key);
     scheduleNotify(key);
+  }
+
+  function removeField(name: FlatKeyOf<TValues>): void {
+    ensureNotDisposed();
+
+    const key = name as string;
+
+    store.delete(key);
+    baseline.delete(key);
+    dirty.delete(key);
+    touched.delete(key);
+    fieldErrors.delete(key);
+    delete validators[key];
+    arrayHelpers.delete(key);
+    scheduleNotify(key);
+  }
+
+  function watch<K extends FlatKeyOf<TValues>>(
+    name: K,
+    callback: (value: TypeAtPath<TValues, K>) => void,
+    options?: SubscribeOptions,
+  ): Unsubscribe {
+    return subscribeField(name, (state) => callback(state.value as TypeAtPath<TValues, K>), options);
   }
 
   function reset(): void {
@@ -592,6 +687,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       return validatingCount > 0;
     },
     mergeErrors,
+    removeField,
     replace,
     replaceErrors,
     reset,
@@ -612,5 +708,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     validate,
     validateField,
     values,
+    watch,
   };
 }

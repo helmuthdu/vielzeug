@@ -7,6 +7,7 @@ import {
   untrack,
 } from '@vielzeug/stateit';
 
+import { isLiveSignal } from './directives/live';
 import {
   CF_ID_ATTR,
   type AttrBinding,
@@ -58,15 +59,13 @@ const walkBindingTargets = (root: Node, visit: (node: Node) => void): void => {
   while (walker.nextNode()) visit(walker.currentNode);
 };
 
-const scanBindingTargets = (nodes: Iterable<Node>): BindingTargets => {
+export const indexBindingTargets = (nodes: Iterable<Node>): BindingTargets => {
   const targets: BindingTargets = { comments: new Map(), elements: new Map() };
 
   for (const node of nodes) walkBindingTargets(node, (current) => collectBindingTarget(current, targets));
 
   return targets;
 };
-
-export const indexBindingTargets = (nodes: Iterable<Node>): BindingTargets => scanBindingTargets(nodes);
 
 export const findCommentMarker = (root: Node, marker: string): Comment | null => {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
@@ -83,6 +82,60 @@ export const findCommentMarker = (root: Node, marker: string): Comment | null =>
 const isStructuredValue = (value: unknown): value is object =>
   Array.isArray(value) || (typeof value === 'object' && value !== null);
 
+const isNativeFormInput = (el: HTMLElement): el is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
+  el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement;
+
+type LiveWriteState = { last: unknown };
+
+const applyFormValue = (
+  el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+  value: unknown,
+  isLive: boolean | undefined,
+  state: LiveWriteState,
+): void => {
+  const next = value == null ? '' : String(value);
+
+  if (isLive && state.last !== undefined && !Object.is(el.value, state.last) && !Object.is(el.value, next)) return;
+
+  el.value = next;
+
+  if (isLive) state.last = next;
+};
+
+const applyCheckedValue = (
+  el: HTMLInputElement,
+  value: unknown,
+  isLive: boolean | undefined,
+  state: LiveWriteState,
+): void => {
+  const next = Boolean(value);
+
+  if (isLive && state.last !== undefined && el.checked !== Boolean(state.last) && el.checked !== next) return;
+
+  el.checked = next;
+
+  if (isLive) state.last = next;
+};
+
+type PropMetaLike = { parse: (v: string | null) => unknown; signal: { value: unknown } };
+
+const syncRegisteredProp = (_el: HTMLElement, meta: PropMetaLike, binding: AttrBinding, value: unknown): void => {
+  const parsed = isStructuredValue(value)
+    ? value
+    : meta.parse(
+        binding.mode === 'bool' ? (value ? '' : null) : value == null || value === false ? null : String(value),
+      );
+
+  if (
+    !Object.is(
+      untrack(() => meta.signal.value),
+      parsed,
+    )
+  ) {
+    meta.signal.value = parsed as never;
+  }
+};
+
 const signalEffect = (
   signal: ReadonlySignal<unknown>,
   update: (v: unknown) => void,
@@ -91,60 +144,37 @@ const signalEffect = (
   registerCleanup(rawEffect(() => update(signal.value)));
 };
 
-export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, registerCleanup: RegisterCleanup) => {
-  const meta = propRegistry.get(el)?.get(binding.name);
+export const applyAttrBinding = (el: HTMLElement, binding: AttrBinding, registerCleanup: RegisterCleanup): void => {
+  const meta = propRegistry.get(el)?.get(binding.name) as PropMetaLike | undefined;
+  const liveState: LiveWriteState = { last: undefined };
 
-  const update = (value: unknown) => {
-    // Structured data (object/array) without a registered prop — set as JS property
+  const update = (value: unknown): void => {
     if (!meta && isStructuredValue(value)) {
-      (el as any)[binding.name] = value;
+      (el as unknown as Record<string, unknown>)[binding.name] = value;
 
       return;
     }
 
-    // Keep common native form properties in sync when using :attr bindings.
-    if (!meta && binding.name === 'value') {
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
-        (el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value = value == null ? '' : String(value);
-      }
+    if (!meta && binding.name === 'value' && isNativeFormInput(el)) {
+      applyFormValue(el, value, binding.live, liveState);
+
+      return;
     }
 
     if (!meta && binding.name === 'checked' && el instanceof HTMLInputElement) {
-      el.checked = Boolean(value);
-    }
-
-    // If no prop registered, apply as DOM attribute only
-    if (!meta) {
-      if (binding.mode === 'bool') {
-        el.toggleAttribute(binding.name, Boolean(value));
-      } else {
-        setAttr(el, binding.name, value);
-      }
+      applyCheckedValue(el, value, binding.live, liveState);
 
       return;
     }
 
-    // Prop registered — sync both DOM attribute (if reflects) and signal
-    if (binding.mode === 'bool') {
-      el.toggleAttribute(binding.name, Boolean(value));
-    } else {
-      setAttr(el, binding.name, value);
+    if (!meta) {
+      if (binding.mode === 'bool') el.toggleAttribute(binding.name, Boolean(value));
+      else setAttr(el, binding.name, value);
+
+      return;
     }
 
-    const parsedValue = isStructuredValue(value)
-      ? value
-      : meta.parse(
-          binding.mode === 'bool' ? (value ? '' : null) : value == null || value === false ? null : String(value),
-        );
-
-    if (
-      !Object.is(
-        untrack(() => meta.signal.value),
-        parsedValue,
-      )
-    ) {
-      meta.signal.value = parsedValue as never;
-    }
+    syncRegisteredProp(el, meta, binding, value);
   };
 
   if (binding.signal) {
@@ -262,6 +292,10 @@ export const applyBindingsInContainer = (
 };
 
 export const createAttrBinding = (mode: 'bool' | 'attr', name: string, uid: string, value: unknown): AttrBinding => {
+  if (isLiveSignal(value)) {
+    return { live: true, mode, name, signal: value as ReadonlySignal<unknown>, type: 'attr', uid };
+  }
+
   if (typeof value === 'function') {
     return { mode, name, signal: computed(value as () => unknown), type: 'attr', uid };
   }

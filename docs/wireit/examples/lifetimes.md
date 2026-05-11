@@ -65,6 +65,5 @@ console.log(ctx1 === ctx2); // false
 
 ## Related Recipes
 
-- [Aliases](./aliases.md)
 - [Async Providers](./async-providers.md)
 - [Basic Setup](./basic-setup.md)

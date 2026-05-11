@@ -5,6 +5,7 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
@@ -77,14 +78,15 @@
     }
   },
   "scripts": {
-    "build": "vite build && pnpm run build:core && pnpm run build:types",
+    "build": "pnpm run verify:exports && vite build && pnpm run build:core && pnpm run build:types",
     "build:core": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "pnpm run verify:exports && vitest",
+    "verify:exports": "node ./scripts/check-exports.mjs"
   },
   "publishConfig": {
     "access": "public",

@@ -34,7 +34,7 @@ const virt = createVirtualizer(scrollEl, {
       const el = document.createElement('div');
       el.dataset.index = String(item.index);
       el.className = 'message';
-      el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;padding:8px;`;
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;padding:8px;`;
       el.textContent = messages[item.index].content;
       listEl.appendChild(el);
     }

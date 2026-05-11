@@ -36,23 +36,27 @@ Signature: `createLogger(initial?: LogitOptions | string): Logger`
 
 Core members:
 
-- Logging: `debug`, `trace`, `info`, `success`, `warn`, `error`
+- Logging: `debug`, `trace`, `info`, `warn`, `error`, `fatal`
 - Utilities: `assert`, `table`, `time`, `group`, `groupCollapsed`
-- Composition: `scope(name)`, `child(overrides?)`
+- Composition: `scope(name)`, `child(overrides?)`, `withBindings(bindings)`
+- Context: `bindings` (readonly snapshot)
 - Configuration: `setConfig(opts)`, `config`, `enabled(level)`
 
 Behavior notes:
 
 - `setConfig()` applies partial updates and returns the same logger.
 - `config` returns a snapshot copy (`remote` is also copied).
+- `bindings` returns a snapshot of pinned context fields.
 - `enabled()` checks against current level threshold.
 - `time()`, `group()`, and `groupCollapsed()` always call `timeEnd`/`groupEnd` even on throw/reject.
+- `fatal()` routes to `console.error` and is above `error` in priority.
+- Passing an `Error` as the first arg auto-serializes it into `context.err`.
 
 ## Types
 
 ### LogType
 
-`'debug' | 'trace' | 'info' | 'success' | 'warn' | 'error'`
+`'debug' | 'trace' | 'info' | 'warn' | 'error' | 'fatal'`
 
 ### LogLevel
 
@@ -62,14 +66,28 @@ Behavior notes:
 
 `'text' | 'symbol' | 'icon'`
 
+### Bindings
+
+`Record<string, unknown>` — key-value context pinned to a logger via `withBindings()`.
+
+### SerializedError
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `message` | `string` | Error message |
+| `name` | `string` | Error class name |
+| `stack` | `string?` | Stack trace |
+
 ### RemoteLogData
 
-| Field       | Type                            | Description                |
-| ----------- | ------------------------------- | -------------------------- |
-| `args`      | `unknown[]`                     | Original user log args     |
-| `env`       | `'production' \| 'development'` | Runtime env marker         |
-| `namespace` | `string?`                       | Effective namespace        |
-| `timestamp` | `string?`                       | ISO timestamp when enabled |
+| Field | Type | Description |
+| --- | --- | --- |
+| `level` | `LogType` | Log level |
+| `message` | `string?` | Log message |
+| `context` | `Bindings?` | Merged bindings + per-call context |
+| `env` | `'production' \| 'development'` | Runtime env marker |
+| `namespace` | `string?` | Effective namespace |
+| `timestamp` | `string?` | ISO timestamp when enabled |
 
 ### RemoteHandler
 
@@ -89,7 +107,6 @@ Behavior notes:
 | `logLevel`    | `LogLevel?`      | Console threshold        |
 | `variant`     | `Variant?`       | Badge style              |
 | `timestamp`   | `boolean?`       | Include timestamp        |
-| `environment` | `boolean?`       | Include env badge        |
 | `namespace`   | `string?`        | Namespace prefix         |
 | `remote`      | `RemoteOptions?` | Remote forwarding config |
 
@@ -101,16 +118,28 @@ Resolved config shape exposed via `logger.config`:
 
 ### Logger
 
+Logging methods accept `(msgOrCtx?, msg?)` — three call forms:
+
+```ts
+log.info('message')
+log.info({ key: 'value' }, 'message')
+log.error(new Error('boom'))           // context.err auto-populated
+log.error(new Error('boom'), 'override')
+```
+
 `Logger` methods:
 
-- `debug(...args)`, `trace(...args)`, `info(...args)`, `success(...args)`, `warn(...args)`, `error(...args)`
+- `debug(msgOrCtx?, msg?)`, `trace(msgOrCtx?, msg?)`, `info(msgOrCtx?, msg?)`
+- `warn(msgOrCtx?, msg?)`, `error(msgOrCtx?, msg?)`, `fatal(msgOrCtx?, msg?)`
 - `assert(condition, ...args)`
 - `table(data, properties?)`
 - `time(label, fn)`
 - `group(label, fn)`
 - `groupCollapsed(label, fn)`
-- `scope(name)`
-- `child(overrides?)`
-- `setConfig(opts)`
-- `enabled(level)`
-- `config` (readonly snapshot)
+- `scope(name)` — namespaced child
+- `child(overrides?)` — config-override child, inherits bindings
+- `withBindings(bindings)` — pinned-context child
+- `bindings` — readonly snapshot of pinned fields
+- `setConfig(opts)` — partial update, returns logger
+- `enabled(level)` — boolean threshold check
+- `config` — readonly snapshot

@@ -1,4 +1,4 @@
-import { define, html, inject, prop, ref, signal } from '@vielzeug/craftit';
+import { define, html, inject, live, prop, ref, signal } from '@vielzeug/craftit';
 import { createTextField } from '@vielzeug/craftit/controls';
 
 import type { InputType, VisualVariant } from '../../types';
@@ -232,7 +232,7 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
               ?disabled="${props.disabled}"
               ?readonly="${props.readonly}"
               ?required="${props.required}"
-              :value="${fieldValue}"
+              :value="${live(fieldValue)}"
               :aria-labelledby="${ariaLabelledBy}"
               :aria-describedby="${ariaDescribedBy}"
               :aria-errormessage="${ariaErrorMessage}"

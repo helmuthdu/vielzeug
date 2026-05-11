@@ -36,7 +36,7 @@ function ensureController() {
     estimateSize: 36,
     getListElement: () => document.querySelector<HTMLElement>('[role="listbox"]'),
     getScrollElement: () => document.querySelector<HTMLElement>('.dropdown'),
-    overscan: 4,
+    overscan: { start: 4, end: 4 },
     render: ({ items, listEl, virtualItems }) => {
       for (const item of virtualItems) {
         const opt = items[item.index];
@@ -45,7 +45,7 @@ function ensureController() {
         const row = document.createElement('button');
         row.type = 'button';
         row.className = 'option';
-        row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
+        row.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);`;
         row.textContent = opt.label;
         row.disabled = !!opt.disabled;
         row.addEventListener('click', () => {

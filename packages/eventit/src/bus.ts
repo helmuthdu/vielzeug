@@ -1,6 +1,11 @@
-import type { Bus, BusOptions, EventKey, EventMap, Listener } from './types';
+import type { Bus, BusOptions, EventKey, EventMap, Listener, WaitAnyResult } from './types';
 
-import { BusDisposedError } from './errors';
+export class BusDisposedError extends Error {
+  override name = 'BusDisposedError';
+  constructor() {
+    super('Bus is disposed');
+  }
+}
 
 export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   const subs = new Map<string, Set<Listener<unknown>>>();
@@ -66,21 +71,9 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
 
     return new Promise<T[K]>((resolve, reject) => {
-      function onAbort() {
-        unsub();
-        reject(activeSignal.reason);
-      }
+      onceWithSignal(event, (payload) => resolve(payload), activeSignal);
 
-      const unsub = onceWithSignal(
-        event,
-        (payload) => {
-          activeSignal.removeEventListener('abort', onAbort);
-          resolve(payload);
-        },
-        activeSignal,
-      );
-
-      activeSignal.addEventListener('abort', onAbort, { once: true });
+      activeSignal.addEventListener('abort', () => reject(activeSignal.reason), { once: true });
     });
   }
 
@@ -124,15 +117,13 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   }
 
   function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void {
-    if (disposeController.signal.aborted) return;
-
     const payload = (args as unknown[])[0];
 
     const set = subs.get(event);
 
     if (!set?.size) return;
 
-    options?.onEmit?.(event, payload as T[K]);
+    options?.onDispatch?.(event, payload as T[K]);
 
     for (const listener of [...set]) {
       try {
@@ -154,6 +145,42 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     return total;
   }
 
+  function removeAllListeners(event?: EventKey<T>): void {
+    if (event !== undefined) {
+      subs.delete(event);
+    } else {
+      subs.clear();
+    }
+  }
+
+  function eventNames(): EventKey<T>[] {
+    return [...subs.keys()] as EventKey<T>[];
+  }
+
+  function waitAny<K extends readonly EventKey<T>[]>(eventList: K, signal?: AbortSignal): Promise<WaitAnyResult<T, K>> {
+    const activeSignal = mergeSignal(signal);
+
+    if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
+
+    return new Promise<WaitAnyResult<T, K>>((resolve, reject) => {
+      const raceController = new AbortController();
+      const raceSignal = AbortSignal.any([activeSignal, raceController.signal]);
+
+      activeSignal.addEventListener('abort', () => reject(activeSignal.reason), { once: true });
+
+      for (const event of eventList) {
+        onceWithSignal(
+          event as EventKey<T>,
+          (payload) => {
+            raceController.abort();
+            resolve({ event, payload } as WaitAnyResult<T, K>);
+          },
+          raceSignal,
+        );
+      }
+    });
+  }
+
   function dispose(): void {
     if (disposeController.signal.aborted) return;
 
@@ -167,11 +194,14 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
       return disposeController.signal.aborted;
     },
     emit,
+    eventNames,
     events,
     listenerCount,
     on,
     once,
+    removeAllListeners,
     [Symbol.dispose]: dispose,
     wait,
+    waitAny,
   };
 }

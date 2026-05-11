@@ -79,6 +79,6 @@ define<{ disabled?: boolean }>('rating-input-v2', {
 
 ## Related Recipes
 
-- [Prop helpers and raw PropDef](./propsof-builder-api.md)
+- [Prop helpers and raw PropsDef](./propsof-builder-api.md)
 - [Counter Component](./counter-component.md)
 - [Observers in onMounted()](./observers-in-onmount.md)

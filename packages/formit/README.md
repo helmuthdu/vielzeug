@@ -8,8 +8,10 @@
 
 - typed `get` / `set` for dot-notation field paths
 - unified validation entrypoint: `validate()`, `validate('touched')`, `validate(fields)`
+- global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
 - dirty/touched/error tracking
-- `submit` orchestration with typed errors
+- `submit(onValid, onInvalid?)` orchestration with optional error callback
+- `watch(name, cb)` for live field value streaming
 - form and field subscriptions
 
 ## Installation
@@ -44,6 +46,7 @@ form.set('email', 'alice@example.com');
 const result = await form.validate();
 console.log(result.valid, result.errors);
 
+// Option A — catch-based (throws FormValidationError on invalid)
 try {
   await form.submit(async (values) => {
     await fetch('/api/login', {
@@ -57,6 +60,12 @@ try {
     console.log(err.errors);
   }
 }
+
+// Option B — callback-based (no throw on invalid)
+await form.submit(
+  async (values) => { /* save */ },
+  (errors) => { console.log('invalid', errors); },
+);
 ```
 
 ## Features
@@ -64,14 +73,18 @@ try {
 - Typed field paths (`FlatKeyOf`) and path value inference (`TypeAtPath`)
 - Plain-object flatten/unflatten for nested forms
 - Field validators (`validators`) and form validator (`validator`)
-- Unified validation API with mode selection (`validate()` / `validate('touched')` / `validate(fields)`)
+- Unified validation API: `validate()` / `validate('touched')` / `validate(fields)`
 - Single-field validation with `validateField(name)`
-- Deterministic submit flow: always touch-all + validate-all before handler (`SubmitError` on overlap)
+- Global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
+- Deterministic submit flow: touch-all + validate-all before handler (`SubmitError` on overlap)
+- Optional `onInvalid` callback in `submit(onValid, onInvalid?)` — no need to catch
+- `watch(name, cb, options?)` — live value streaming without subscription boilerplate
+- `removeField(name)` — cleanly drops value, state, and validator for conditional fields
 - Validation failure signaling via `FormValidationError`
 - Explicit subscriptions: `subscribeForm()` and `subscribeField()`
 - Baseline-safe reset model: `reset()` and `replace(values)`
 - `bind()` helper with live getters and value-based `onChange(value)`
-- Array batch helper: `array(name).append/remove/move`
+- Array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
 - Explicit error map controls: `setError`, `mergeErrors`, `replaceErrors`, `clearError`
 - Standalone `toFormData(values)`
 - Schema adapter helper: `fromSchema(schema)`

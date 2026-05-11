@@ -33,7 +33,7 @@ doubled.dispose();
 
 ## Store As Small Recipe
 
-`store()` is a thin object helper over `signal()` with immutable-style updates.
+`store()` is a thin object helper over `signal()` with immutable-style updates. Stores are branded signals, so they work anywhere a `ReadonlySignal<T>` is accepted.
 
 ```ts
 import { store } from '@vielzeug/stateit';
@@ -88,12 +88,7 @@ watch<S, T>(
 batch<T>(fn: () => T): T;
 untrack<T>(fn: () => T): T;
 onCleanup(fn: () => void): void;
-store<T extends object>(initial: T, options?: { equals?: (a: T, b: T) => boolean }): Store<T>;
-readonly<T>(input: ReadonlySignal<T>): ReadonlySignal<T>;
-writable<T>(input: Signal<T>): Signal<T>;
+scope(): Scope;
+store<T extends object>(initial: T): Store<T>;
 isSignal<T>(value: unknown): value is ReadonlySignal<T>;
-isWritable<T>(value: unknown): value is Signal<T>;
-unwrapSignal<T>(input: T | ReadonlySignal<T>): T;
-peek<T>(input: T | ReadonlySignal<T>): T;
-toValue<T>(input: T | ReadonlySignal<T> | (() => T)): T;
 ```

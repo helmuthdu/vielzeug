@@ -4,9 +4,22 @@ export type TaskFn<TInput, TOutput> = (input: TInput) => TOutput | Promise<TOutp
 
 export type WorkerStatus = 'idle' | 'running' | 'terminated';
 
+export type WorkerErrorCode =
+  | 'invalid_options'
+  | 'post_message_failed'
+  | 'queue_full'
+  | 'task'
+  | 'terminated'
+  | 'timeout'
+  | 'worker_create_failed'
+  | 'worker_runtime'
+  | 'worker_unavailable';
+
 export type WorkerOptions = {
   /** Number of concurrent worker slots. Default: 1. Pass 'auto' to use navigator.hardwareConcurrency when available. */
   concurrency?: number | 'auto';
+  /** Maximum queued tasks before run() rejects with QueueFullError. */
+  maxQueue?: number | 'auto';
   /** Abort tasks after this many milliseconds. Default: none. */
   timeout?: number;
 };
@@ -20,11 +33,13 @@ export type RunOptions = {
 
 export type WorkerHandle<TInput, TOutput> = {
   [Symbol.dispose](): void;
+  /** Gracefully stop by waiting for queued/in-flight tasks to finish, then terminate workers. */
+  close(): Promise<void>;
+  /** Number of completed tasks. */
+  readonly completed: number;
   /** Number of worker slots. */
   readonly concurrency: number;
   dispose(): void;
-  /** Wait for all in-flight and queued tasks to settle, then resolve. */
-  drain(): Promise<void>;
   /**
    * Execute the task function.
    *
@@ -36,33 +51,17 @@ export type WorkerHandle<TInput, TOutput> = {
   readonly size: number;
   /** Current state. */
   readonly status: WorkerStatus;
+  /** Fraction of worker slots currently executing a task. */
+  readonly utilization: number;
 };
 
 export class WorkerError extends Error {
-  constructor(message: string, cause?: unknown) {
+  readonly code: WorkerErrorCode;
+
+  constructor(code: WorkerErrorCode, message: string, cause?: unknown) {
     super(message, { cause });
     this.name = 'WorkerError';
-  }
-}
-
-export class TaskTimeoutError extends WorkerError {
-  constructor(ms: number) {
-    super(`[workit] Task timed out after ${ms}ms`);
-    this.name = 'TaskTimeoutError';
-  }
-}
-
-export class TerminatedError extends WorkerError {
-  constructor() {
-    super('[workit] Worker was terminated');
-    this.name = 'TerminatedError';
-  }
-}
-
-export class TaskError extends WorkerError {
-  constructor(message: string, name?: string, cause?: unknown) {
-    super(message, cause);
-    this.name = name ?? 'TaskError';
+    this.code = code;
   }
 }
 
@@ -92,6 +91,14 @@ function buildWorkerScript(fn: TaskFn<unknown, unknown>): string {
   return `const __fn=(${fn.toString()});self.onmessage=async function(event){const{id,input}=event.data;try{const result=await __fn(input);self.postMessage({id,ok:true,result});}catch(error){const e=error instanceof Error?error:new Error(String(error));self.postMessage({id,ok:false,error:{name:e.name,message:e.message,stack:e.stack}});}};`;
 }
 
+function rejectAsync<T = never>(reason: unknown): Promise<T> {
+  return new Promise<T>((_, reject) => {
+    setTimeout(() => {
+      reject(reason);
+    }, 0);
+  });
+}
+
 function resolveConcurrency(value: WorkerOptions['concurrency']): number {
   if (value === undefined) return 1;
 
@@ -100,25 +107,52 @@ function resolveConcurrency(value: WorkerOptions['concurrency']): number {
   }
 
   if (!Number.isInteger(value) || value < 1) {
-    throw new WorkerError('[workit] `concurrency` must be a positive integer or "auto"');
+    throw new WorkerError('invalid_options', '[workit] `concurrency` must be a positive integer or "auto"');
   }
 
   return value;
 }
 
-function resolveTimeout(value: WorkerOptions['timeout']): number | undefined {
-  if (value === undefined) return undefined;
+function resolveOptions(options: WorkerOptions = {}): {
+  concurrency: number;
+  maxQueue: number | undefined;
+  timeout: number | undefined;
+} {
+  const concurrency = resolveConcurrency(options.concurrency);
+  const { maxQueue: value, timeout } = options;
 
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new WorkerError('[workit] `timeout` must be a finite number greater than 0');
+  let resolvedTimeout: number | undefined;
+
+  if (timeout !== undefined) {
+    if (!Number.isFinite(timeout) || timeout <= 0) {
+      throw new WorkerError('invalid_options', '[workit] `timeout` must be a finite number greater than 0');
+    }
+
+    resolvedTimeout = timeout;
   }
 
-  return value;
+  let maxQueue: number | undefined;
+
+  if (value === undefined) {
+    return { concurrency, maxQueue: undefined, timeout: resolvedTimeout };
+  }
+
+  if (value === 'auto') {
+    maxQueue = concurrency * 2;
+  } else {
+    if (!Number.isInteger(value) || value < 1) {
+      throw new WorkerError('invalid_options', '[workit] `maxQueue` must be a positive integer or "auto"');
+    }
+
+    maxQueue = value;
+  }
+
+  return { concurrency, maxQueue, timeout: resolvedTimeout };
 }
 
 function createNativeWorker(fn: TaskFn<unknown, unknown>): Worker {
   if (typeof globalThis.Worker !== 'function') {
-    throw new WorkerError('[workit] Worker API is unavailable in this runtime');
+    throw new WorkerError('worker_unavailable', '[workit] Worker API is unavailable in this runtime');
   }
 
   try {
@@ -131,7 +165,7 @@ function createNativeWorker(fn: TaskFn<unknown, unknown>): Worker {
       URL.revokeObjectURL(url);
     }
   } catch (error) {
-    throw new WorkerError('[workit] Failed to create Worker', error);
+    throw new WorkerError('worker_create_failed', '[workit] Failed to create Worker', error);
   }
 }
 
@@ -154,7 +188,7 @@ class Slot<TInput, TOutput> {
 
   run(input: TInput, transfer: Transferable[] = []): Promise<TOutput> {
     if (this.disposed) {
-      return Promise.reject(new TerminatedError());
+      return rejectAsync(new WorkerError('terminated', '[workit] Worker was terminated'));
     }
 
     let worker: Worker;
@@ -162,7 +196,7 @@ class Slot<TInput, TOutput> {
     try {
       worker = this.ensureWorker();
     } catch (error) {
-      return Promise.reject(error);
+      return rejectAsync(error);
     }
 
     const id = ++this.taskId;
@@ -174,7 +208,7 @@ class Slot<TInput, TOutput> {
         pending.timer = setTimeout(() => {
           if (this.pending?.id !== id) return;
 
-          this.restart(new TaskTimeoutError(this.timeout!));
+          this.restart(new WorkerError('timeout', `[workit] Task timed out after ${this.timeout}ms`));
         }, this.timeout);
       }
 
@@ -183,7 +217,9 @@ class Slot<TInput, TOutput> {
       try {
         worker.postMessage({ id, input }, transfer);
       } catch (error) {
-        this.failPending(new WorkerError(error instanceof Error ? error.message : String(error), error));
+        this.failPending(
+          new WorkerError('post_message_failed', error instanceof Error ? error.message : String(error), error),
+        );
       }
     });
   }
@@ -191,7 +227,7 @@ class Slot<TInput, TOutput> {
   terminate(): void {
     this.disposed = true;
     this.stopWorker();
-    this.failPending(new TerminatedError());
+    this.failPending(new WorkerError('terminated', '[workit] Worker was terminated'));
   }
 
   private bindWorker(worker: Worker): void {
@@ -206,7 +242,9 @@ class Slot<TInput, TOutput> {
       if (event.data.ok) {
         pending.resolve(event.data.result);
       } else {
-        const err = new TaskError(event.data.error.message, event.data.error.name, undefined);
+        const err = new WorkerError('task', event.data.error.message);
+
+        err.name = event.data.error.name;
 
         if (event.data.error.stack) {
           (err as Error).stack = event.data.error.stack;
@@ -217,7 +255,7 @@ class Slot<TInput, TOutput> {
     };
 
     worker.onerror = (event: ErrorEvent) => {
-      this.restart(new WorkerError(event.message));
+      this.restart(new WorkerError('worker_runtime', event.message));
     };
   }
 
@@ -256,15 +294,24 @@ class Slot<TInput, TOutput> {
 }
 
 class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
+  private closePromise?: Promise<void>;
+  private completedCount = 0;
+  private draining = false;
+  private readonly idleResolvers: Array<() => void> = [];
+  private readonly maxQueue: number | undefined;
   private readonly queue: QueueItem<TInput, TOutput>[] = [];
   private readonly slots: Slot<TInput, TOutput>[];
   private terminated = false;
 
   constructor(fn: TaskFn<TInput, TOutput>, options: WorkerOptions = {}) {
-    const timeout = resolveTimeout(options.timeout);
-    const concurrency = resolveConcurrency(options.concurrency);
+    const { concurrency, maxQueue, timeout } = resolveOptions(options);
 
+    this.maxQueue = maxQueue;
     this.slots = Array.from({ length: concurrency }, () => new Slot(fn, timeout));
+  }
+
+  get completed(): number {
+    return this.completedCount;
   }
 
   get concurrency(): number {
@@ -283,15 +330,44 @@ class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
     return 'idle';
   }
 
+  get utilization(): number {
+    const active = this.slots.reduce((count, slot) => count + Number(slot.running), 0);
+
+    return active / this.slots.length;
+  }
+
+  close(): Promise<void> {
+    if (this.terminated) {
+      return Promise.resolve();
+    }
+
+    if (this.closePromise) {
+      return this.closePromise;
+    }
+
+    this.closePromise = this.waitForIdle().then(() => {
+      this.dispose();
+    });
+
+    return this.closePromise;
+  }
+
   run(input: TInput, options: RunOptions = {}): Promise<TOutput> {
     const { signal, transfer = [] } = options;
 
     if (this.terminated) {
-      return Promise.reject(new TerminatedError());
+      return rejectAsync(new WorkerError('terminated', '[workit] Worker was terminated'));
     }
 
     if (signal?.aborted) {
-      return Promise.reject(createAbortError(signal));
+      return rejectAsync(createAbortError(signal));
+    }
+
+    // Attempt immediate dispatch first so maxQueue only counts true waiting tasks.
+    this.drainLoop();
+
+    if (this.maxQueue !== undefined && this.queue.length >= this.maxQueue) {
+      return rejectAsync(new WorkerError('queue_full', `[workit] Queue is full (${this.maxQueue})`));
     }
 
     return new Promise<TOutput>((resolve, reject) => {
@@ -306,6 +382,7 @@ class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
           this.queue.splice(index, 1);
           item.cleanupAbort?.();
           reject(createAbortError(signal));
+          this.notifyIdleIfReady();
         };
 
         item.cleanupAbort = () => {
@@ -317,7 +394,7 @@ class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
       }
 
       this.queue.push(item);
-      this.flush();
+      this.scheduleDrain();
     });
   }
 
@@ -334,26 +411,14 @@ class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
       const item = this.queue.shift()!;
 
       item.cleanupAbort?.();
-      item.reject(new TerminatedError());
+      item.reject(new WorkerError('terminated', '[workit] Worker was terminated'));
     }
+
+    this.notifyIdleIfReady();
   }
 
   [Symbol.dispose](): void {
     this.dispose();
-  }
-
-  drain(): Promise<void> {
-    return new Promise<void>((resolve) => {
-      const check = (): void => {
-        if (this.queue.length === 0 && this.slots.every((slot) => !slot.running)) {
-          resolve();
-        } else {
-          setTimeout(check, 0);
-        }
-      };
-
-      check();
-    });
   }
 
   private nextItem(): QueueItem<TInput, TOutput> | undefined {
@@ -370,7 +435,17 @@ class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
     }
   }
 
-  private flush(): void {
+  private scheduleDrain(): void {
+    if (this.terminated || this.draining) return;
+
+    this.draining = true;
+    queueMicrotask(() => {
+      this.draining = false;
+      this.drainLoop();
+    });
+  }
+
+  private drainLoop(): void {
     if (this.terminated) return;
 
     for (const slot of this.slots) {
@@ -381,28 +456,46 @@ class WorkitImpl<TInput, TOutput> implements WorkerHandle<TInput, TOutput> {
       if (!item) break;
 
       item.cleanupAbort?.();
-
-      let promise: Promise<TOutput>;
-
-      try {
-        promise = slot.run(item.input, item.transfer);
-      } catch (error) {
-        item.reject(error);
-        this.flush();
-        continue;
-      }
-
-      promise.then(
+      slot.run(item.input, item.transfer).then(
         (result) => {
+          this.completedCount += 1;
           item.resolve(result);
-          this.flush();
+          this.scheduleDrain();
+          this.notifyIdleIfReady();
         },
         (error: unknown) => {
           item.reject(error);
-          this.flush();
+          this.scheduleDrain();
+          this.notifyIdleIfReady();
         },
       );
     }
+
+    this.notifyIdleIfReady();
+  }
+
+  private isIdle(): boolean {
+    return !this.terminated && this.queue.length === 0 && this.slots.every((slot) => !slot.running);
+  }
+
+  private notifyIdleIfReady(): void {
+    if (!this.isIdle() || this.idleResolvers.length === 0) return;
+
+    const resolvers = this.idleResolvers.splice(0, this.idleResolvers.length);
+
+    for (const resolve of resolvers) {
+      resolve();
+    }
+  }
+
+  private waitForIdle(): Promise<void> {
+    if (this.terminated || this.isIdle()) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      this.idleResolvers.push(resolve);
+    });
   }
 }
 

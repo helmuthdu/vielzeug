@@ -1,5 +1,6 @@
 import { batch, effect as _effect, untrack, type CleanupFn, type ReadonlySignal } from '@vielzeug/stateit';
 
+import { CRAFTIT_ERRORS } from '../errors';
 import {
   DIRECTIVE,
   createMarkerIdFactory,
@@ -45,7 +46,7 @@ function renderKeyed<T>(
     const nextKey = keyFn(items[i], i);
 
     if (seenKeys.has(nextKey)) {
-      throw new Error(`[craftit:each] Duplicate key "${String(nextKey)}" at index ${i}.`);
+      throw new Error(CRAFTIT_ERRORS.eachDuplicateKey(String(nextKey), i));
     }
 
     seenKeys.add(nextKey);

@@ -88,9 +88,19 @@ const router = createRouter({ routes });
 | --- | --- | --- | --- |
 | Bundle size | <PackageInfo package="routeit" type="size" /> | ~1 kB | ~5 kB |
 | History mode | ✅ | ✅ | ✅ |
+| Memory history (SSR / tests) | ✅ | ❌ | ❌ |
 | Typed path params | ✅ | ❌ | ❌ |
 | Named navigation | ✅ | ❌ | Partial |
 | Middleware | ✅ | ✅ | ✅ |
+| Data loaders with AbortSignal | ✅ | ❌ | ❌ |
+| Lazy route loading | ✅ | ❌ | ❌ |
+| Declarative redirects | ✅ | ❌ | ❌ |
+| Search param validation | ✅ | ❌ | ❌ |
+| Error in state | ✅ | ❌ | ❌ |
+| History state in context | ✅ | ❌ | ❌ |
+| Leave guards | ✅ | ❌ | ❌ |
+| Route prefetching | ✅ | ❌ | ❌ |
+| Scroll restoration | ✅ | ❌ | ❌ |
 | View Transition API | ✅ | ❌ | ❌ |
 | Zero dependencies | ✅ | ✅ | ✅ |
 
@@ -98,6 +108,17 @@ const router = createRouter({ routes });
 
 - One declarative route table
 - Nested routes with compound names like `dashboard.settings`
+- Lazy-load route modules on first navigation
+- Named-route-first navigation, URL building, and active-route detection
+- Middleware for guards, analytics, and error boundaries
+- Per-route `data()` loaders with abort signals
+- Typed and coercible search params via `coerceSearch`
+- Leave guards to block navigation from dirty forms
+- Hover-prefetch via `router.preload()`
+- Scroll restoration via the `scroll` option
+- History entry state readable as `ctx.historyState`
+- Errors from data loaders exposed on `router.state.error`
+- Memory history for SSR and tests — no browser globals required
 - Named-route-first `navigate()`, `url()`, and `isActive()`
 - Route-scoped `data()` loaders for leaf and layout data
 - Wildcard routes handle not-found cases

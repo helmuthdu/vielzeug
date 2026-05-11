@@ -2,8 +2,12 @@ import type { Fn } from '../types';
 
 import { assert } from './assert';
 
-type FirstParameters<T> = T extends [infer First extends Fn, ...any] ? Parameters<First> : never;
-type LastReturnType<T> = T extends [...any, infer Last extends Fn] ? ReturnType<Last> : never;
+type FirstParameters<T extends readonly Fn[]> = T extends [infer First extends Fn, ...unknown[]]
+  ? Parameters<First>
+  : never;
+type LastReturnType<T extends readonly Fn[]> = T extends [...unknown[], infer Last extends Fn]
+  ? ReturnType<Last>
+  : never;
 
 /**
  * Pipes multiple functions into a single function. It starts from the leftmost function and proceeds to the right.
@@ -22,7 +26,7 @@ type LastReturnType<T> = T extends [...any, infer Last extends Fn] ? ReturnType<
  *
  * @returns A new function that is the pipe of the input functions.
  */
-export function pipe<T extends Fn[]>(...fns: T): (...args: FirstParameters<T>) => LastReturnType<T> {
+export function pipe<T extends readonly [Fn, ...Fn[]]>(...fns: T): (...args: FirstParameters<T>) => LastReturnType<T> {
   assert(fns.length > 0, 'pipe requires at least one function', { args: { fns } });
 
   const [firstFn, ...restFns] = fns;

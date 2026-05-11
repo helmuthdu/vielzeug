@@ -41,6 +41,7 @@ import {
   reset,
   v,
   type Infer,
+  type InferInput,
   type InferOutput,
   type TypeOf,
   type Issue,
@@ -75,6 +76,8 @@ import {
 
 - `v.object(shape)`
 - `v.array(itemSchema)`
+- `v.set(itemSchema)`
+- `v.map(keySchema, valueSchema)`
 - `v.tuple(items)`
 - `v.record(keySchema, valueSchema)`
 - `v.union(a, b, ...rest)`
@@ -89,10 +92,16 @@ import {
 - `v.coerce.number()`
 - `v.coerce.boolean()`
 - `v.coerce.date()`
+- `v.coerce.bigint()`
+
+### Utility Factories
+
+- `v.bigint()`
+- `v.readonly(schema)`
 
 ## Schema
 
-All schema classes inherit from `Schema<Output>`.
+All schema classes inherit from `Schema<Output, Input>`.
 
 ### Validation
 
@@ -138,6 +147,20 @@ refineAsync(
   check: (value: Output) => Promise<boolean>,
   message?: MessageFn<{ value: Output }>,
 ): this
+
+superRefine(
+  check: (
+    value: Output,
+    ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
+  ) => void,
+): this
+
+superRefineAsync(
+  check: (
+    value: Output,
+    ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
+  ) => Promise<void>,
+): this
 ```
 
 - `refine()` is sync only.
@@ -146,11 +169,12 @@ refineAsync(
 ### Transform and Metadata
 
 ```ts
-transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput>
+transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input>
 preprocess(fn: (value: unknown) => unknown): this
 describe(description: string): this
 readonly description: string | undefined
-brand<Brand extends string>(): Schema<Output & { __brand: Brand }>
+brand<Brand extends string>(): Schema<Output & { __brand: Brand }, Input>
+readonly(): Schema<Readonly<Output>, Input>
 is(value: unknown): value is Output
 ```
 
@@ -177,6 +201,21 @@ is(value: unknown): value is Output
 - `.trim()`
 - `.lowercase()`
 - `.uppercase()`
+- `.cuid()`
+- `.cuid2()`
+- `.ulid()`
+- `.nanoid()`
+- `.base64()`
+- `.base64url()`
+- `.hex()`
+- `.hexColor()`
+- `.emoji()`
+- `.jwt()`
+- `.time()`
+- `.duration()`
+- `.semver()`
+- `.slug()`
+- `.numeric()`
 
 Notes:
 
@@ -196,6 +235,7 @@ Notes:
 - `.nonPositive(message?)`
 - `.multipleOf(step, message?)`
 - `.safe(message?)`
+- `.finite(message?)`
 
 `safe()` checks `Number.isSafeInteger(value)`.
 
@@ -231,6 +271,7 @@ Notes:
 - `.pick(...keys)`
 - `.omit(...keys)`
 - `.relaxed()`
+- `.strip()`
 
 Properties:
 
@@ -240,13 +281,15 @@ Behavior notes:
 
 - `v.object(...)` rejects unknown keys by default.
 - `.relaxed()` allows unknown keys and preserves them in output.
+- `.strip()` ignores unknown keys in output.
 
 ## TupleSchema
 
 `v.tuple(items)` validates fixed-length arrays with per-index schemas.
 
 - Input must be an array.
-- Input length must match the tuple length exactly.
+- Input length must match the tuple length exactly by default.
+- `.rest(schema)` allows variadic tail items validated by `schema`.
 
 ## RecordSchema
 
@@ -293,6 +336,9 @@ v.record(v.string().trim().lowercase(), v.string()).parse({ ' X-ID ': '1' });
 
 - `v.lazy(getter)` for recursive schemas
 - `v.instanceof(Ctor)` for class instance checks
+- `v.bigint()` for bigint values and constraints
+- `v.set(itemSchema)` for typed sets
+- `v.map(keySchema, valueSchema)` for typed maps
 - `v.enum(values)` for string or number tuples
 - `v.nativeEnum(enumObj)` for TS native enums
 - `v.literal(value)` for exact value match
@@ -328,15 +374,16 @@ reset();
 
 ## Types
 
-### Infer, InferOutput, and TypeOf
+### Infer, InferInput, InferOutput, and TypeOf
 
 ```ts
 type User = Infer<typeof UserSchema>;
+type UserIn = InferInput<typeof UserSchema>;
 type UserOut = InferOutput<typeof UserSchema>;
 type UserOut2 = TypeOf<typeof UserSchema>;
 ```
 
-All three extract schema output types.
+`InferInput<T>` extracts the accepted input type, while `Infer`, `InferOutput`, and `TypeOf` extract output types.
 
 ### ParseResult
 
@@ -368,6 +415,7 @@ type Issue = {
 - `.issues: Issue[]`
 - `.flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] }`
 - `.flattenFirst(): { fieldErrors: Record<string, string>; formErrors: string[] }`
+- `.format(): { _errors: string[]; [key: string]: ... }`
 - `ValidationError.is(value): value is ValidationError`
 
 ### ErrorCode
@@ -375,7 +423,10 @@ type Issue = {
 Built-in codes:
 
 - `custom`
+- `invalid_base64`
+- `invalid_bigint`
 - `invalid_date`
+- `invalid_duration`
 - `invalid_enum`
 - `invalid_length`
 - `invalid_literal`
@@ -384,6 +435,7 @@ Built-in codes:
 - `invalid_union`
 - `invalid_url`
 - `invalid_variant`
+- `not_finite`
 - `not_integer`
 - `not_multiple_of`
 - `not_safe`

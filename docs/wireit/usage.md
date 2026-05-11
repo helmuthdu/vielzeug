@@ -21,23 +21,34 @@ container.factory(DbToken, (cfg) => new Database(cfg.dbUrl), { deps: [ConfigToke
 container.bind(ServiceToken, UserService, { deps: [DbToken] });
 ```
 
-Use `overwrite: true` for intentional replacement.
+Register multiple providers under one token with `multi: true`:
 
 ```ts
-container.value(ConfigToken, nextConfig, { overwrite: true });
+container.value(ValidatorToken, new EmailValidator(), { multi: true });
+container.value(ValidatorToken, new PhoneValidator(), { multi: true });
+```
+
+Run post-construction logic with `init`, and cleanup with `dispose`:
+
+```ts
+container.factory(DbToken, () => new Database(process.env.DB_URL!), {
+  init: (db) => db.connect(),
+  dispose: (db) => db.close(),
+});
 ```
 
 ## Resolution
 
 ```ts
 const service = await container.resolve(ServiceToken);
-const [db, cfg] = await container.resolveAll([DbToken, ConfigToken]);
-const maybeCache = await container.resolveOptional(CacheToken);
+const validators = await container.resolveMany(ValidatorToken);
 ```
+
+`resolve()` is strict and throws if a token has multiple providers. Use `resolveMany()` for multi-provider tokens.
 
 ## Lifetimes
 
-- `singleton`: one instance per container
+- `singleton`: one instance per container (default)
 - `transient`: new instance per resolution
 - `scoped`: one instance per child container
 
@@ -55,16 +66,6 @@ child.value(UserToken, req.user);
 const handler = await child.resolve(RequestHandlerToken);
 ```
 
-## Scoped Execution
-
-```ts
-await container.runInScope(async (scope) => {
-  scope.value(RequestIdToken, crypto.randomUUID());
-  const handler = await scope.resolve(RequestHandlerToken);
-  await handler.handle();
-});
-```
-
 ## Async Providers
 
 ```ts
@@ -77,38 +78,16 @@ container.factory(DbToken, async () => {
 const db = await container.resolve(DbToken);
 ```
 
-## Aliases
+## Disposal
 
 ```ts
-container.bind(ConsoleLoggerToken, ConsoleLogger);
-container.alias(ILoggerToken, ConsoleLoggerToken);
+const container = createContainer();
 
-const logger = await container.resolve(ILoggerToken);
-```
-
-## Testing
-
-### Test container
-
-```ts
-const testContainer = createTestContainer(appContainer);
-testContainer.value(DbToken, fakeDb, { overwrite: true });
-afterEach(() => testContainer.dispose());
-```
-
-### Mock
-
-```ts
-await container.mock(DbToken, { useValue: fakeDb }, async () => {
-  const service = await container.resolve(ServiceToken);
-  await service.sync();
+container.factory(DbToken, () => new Database(process.env.DB_URL!), {
+  init: (db) => db.connect(),
+  dispose: (db) => db.close(),
 });
-```
 
-### Snapshot / restore
-
-```ts
-const snap = container.snapshot();
-container.value(DbToken, fakeDb, { overwrite: true });
-container.restore(snap);
+await container.resolve(DbToken);
+await container.dispose();
 ```

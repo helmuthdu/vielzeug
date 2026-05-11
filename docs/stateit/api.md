@@ -13,7 +13,12 @@ description: Complete type signatures, parameter docs, and return values for eve
 | --------------- | ---------------------------------------- | -------------- | ------------------------------------------------------------- |
 | `signal()`      | Create reactive primitive values         | Sync           | Write signals inside batch/effect-safe flows                  |
 | `computed()`    | Derive memoized values from dependencies | Sync           | Avoid side effects inside computed callbacks                  |
-| `store()`       | Create object-like state container       | Sync           | Mutate through provided APIs to keep notifications consistent |
+| `effect()`      | Run and re-run side effects              | Sync           | Dispose when no longer needed to prevent memory leaks         |
+| `watch()`       | Subscribe to value changes               | Sync           | Does not fire immediately unlike `effect()`                   |
+| `batch()`       | Coalesce multiple writes                 | Sync           | Nested batches merge into the outermost                       |
+| `untrack()`     | Read without subscribing                 | Sync           | Only suppresses dependency registration, value is still read  |
+| `scope()`       | Isolated cleanup context                 | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO      |
+| `store()`       | Create object-like state container       | Sync           | Store is a branded signal; use `.patch()`, `.update()`, `.reset()` |
 
 ## Signal Primitives
 
@@ -23,13 +28,13 @@ description: Complete type signatures, parameter docs, and return values for eve
 function signal<T>(initial: T, options?: ReactiveOptions<T>): Signal<T>;
 ```
 
-Creates a reactive atom. Read `.value` inside an `effect` or `computed` to subscribe. Write `.value = next` to update and notify dependents. Use `.peek()` to read without tracking. Use `.update(fn)` to derive the next value from the current one.
+Creates a reactive atom. Read `.value` inside an `effect` or `computed` to subscribe. Write `.value = next` to update and notify dependents.
 
 ```ts
 const count = signal(0);
 count.value; // 0 — tracked read
 count.value = 1; // notifies dependents
-count.update((n) => n + 1); // 2 — shorthand for count.value = count.value + 1
+count.value = count.value + 1; // 2
 ```
 
 **Parameters**
@@ -49,7 +54,9 @@ count.update((n) => n + 1); // 2 — shorthand for count.value = count.value + 1
 function computed<T>(compute: () => T, options?: ReactiveOptions<T>): ComputedSignal<T>;
 ```
 
-Creates a lazy derived read-only signal. The `compute` function runs on the first `.value` read (or at construction if `lazy` is not set) and again after any dependency changes (pull-on-read). Call `.dispose()` to detach from dependencies.
+Creates a lazy derived read-only signal. The `compute` function runs on the first `.value` read and again after any dependency changes. Propagation is **glitch-free**: when a signal that multiple computed nodes share changes, all computed nodes are marked dirty before any subscribed effects run — effects always observe a consistent snapshot.
+
+Call `.dispose()` to detach from dependencies.
 
 ```ts
 const count = signal(3);
@@ -62,7 +69,7 @@ doubled.dispose(); // stop tracking
 // or: using doubled = computed(...) — TC39 using declaration
 ```
 
-When `options.equals` is provided, downstream subscribers are suppressed if the recomputed value equals the previous value. This resolves diamond-dependency scenarios.
+When `options.equals` is provided, downstream subscribers are suppressed if the recomputed value equals the previous value.
 
 **Parameters**
 
@@ -72,33 +79,6 @@ When `options.equals` is provided, downstream subscribers are suppressed if the 
 | `options.equals` | `EqualityFn<T>` | Suppress downstream if result is unchanged. Default: `Object.is`      |
 
 **Returns** — `ComputedSignal<T>`
-
----
-
-### `writable`
-
-```ts
-function writable<T>(input: Signal<T>): Signal<T>;
-```
-
-Identity function — returns the input unchanged. Acts as a typed marker at API boundaries where a signal is intentionally meant to be written to. No proxy or wrapper is created.
-
-```ts
-const count = signal(0);
-const exposed: ReadonlySignal<number> = readonly(count);
-
-// Restore write access where you own the signal
-const mutable = writable(count);
-mutable.value = 5;
-```
-
-**Parameters**
-
-| Parameter | Type        | Description                       |
-| --------- | ----------- | --------------------------------- |
-| `input`   | `Signal<T>` | The writable signal to pass through |
-
-**Returns** — `Signal<T>`
 
 ---
 
@@ -213,80 +193,20 @@ effect(() => {
 function onCleanup(fn: CleanupFn): void;
 ```
 
-Registers a cleanup function within the currently running effect. The cleanup runs before the next re-execution and when the effect is disposed. Allows nested helpers to register teardown without needing the effect's return value.
+Registers a cleanup function within the currently active effect **or** `scope`. When called inside an `effect`, the cleanup runs before the next re-execution and when the effect is disposed. When called inside `scope.run()`, the cleanup runs when `scope.dispose()` is called.
 
 ```ts
 function useInterval(ms: number) {
   const id = setInterval(() => console.log('tick'), ms);
-  onCleanup(() => clearInterval(id));
+  onCleanup(() => clearInterval(id)); // works in both effect and scope contexts
 }
 
-effect(() => {
-  useInterval(1000); // cleanup registered automatically
-});
-```
+// Inside an effect:
+effect(() => { useInterval(1000); });
 
----
-
-### `readonly`
-
-```ts
-function readonly<T>(sig: ReadonlySignal<T>): ReadonlySignal<T>;
-```
-
-Returns a stable read-only view of a signal. Hides the setter at the type level. No proxy or wrapper is created — the original signal instance is returned as-is.
-
-```ts
-const readCount = readonly(count);
-readCount.value; // ok
-peek(readCount);  // ok — untracked read
-// readCount.value = 1; // TS compile error — no setter
-```
-
----
-
-### `toValue`
-
-```ts
-function toValue<T>(v: T | ReadonlySignal<T> | (() => T)): T;
-```
-
-Unwraps a value, signal, or function. If `v` is a `ReadonlySignal`, returns `.value` (tracked if called inside an effect). If `v` is a function, calls it and returns the result. Otherwise returns `v` as-is.
-
-```ts
-toValue(10); // 10
-toValue(signal(10)); // 10 — tracked if inside effect
-toValue(() => 42); // 42
-```
-
----
-
-### `unwrapSignal`
-
-```ts
-function unwrapSignal<T>(input: T | ReadonlySignal<T>): T;
-```
-
-Unwraps a signal or returns the value as-is. If `input` is a `ReadonlySignal`, reads its value (which **may track dependencies** if called inside an effect). For untracked reads, use {@link peek} instead.
-
-```ts
-unwrapSignal(10); // 10
-unwrapSignal(signal(10)); // 10 — tracked if inside effect
-```
-
----
-
-### `peek`
-
-```ts
-function peek<T>(input: T | ReadonlySignal<T>): T;
-```
-
-Performs an untracked read of a signal value. This read will not register as a dependency for reactive evaluation. If `input` is not a signal, returns the value as-is.
-
-```ts
-peek(10); // 10
-peek(signal(10)); // 10 — untracked, no dependency registered
+// Inside a scope:
+const s = scope();
+s.run(() => { useInterval(5000); }); // cleanup runs on s.dispose()
 ```
 
 ---
@@ -297,30 +217,13 @@ peek(signal(10)); // 10 — untracked, no dependency registered
 function isSignal<T = unknown>(value: unknown): value is ReadonlySignal<T>;
 ```
 
-Type guard that strictly returns `true` only for values created by `signal()` or `computed()`. Uses an internal symbol marker, so arbitrary objects with a `value` property will not pass. Note: `store()` return values do not carry the signal brand.
+Type guard that returns `true` for values created by `signal()`, `computed()`, or `store()`. Uses an internal symbol marker, so arbitrary objects with a `value` property will not pass.
 
 ```ts
 isSignal(signal(42)); // true
 isSignal(computed(() => 1)); // true
+isSignal(store({ value: 42 })); // true
 isSignal({ value: 42 }); // false — not a real signal
-```
-
----
-
-### `isWritable`
-
-```ts
-function isWritable<T = unknown>(value: unknown): value is Signal<T>;
-```
-
-Type guard that returns `true` only when the value is a signal with a writable `.value` setter. Returns `false` for `computed()` signals (readonly) and plain objects.
-
-```ts
-const s = signal(0);
-const c = computed(() => s.value * 2);
-
-isWritable(s); // true
-isWritable(c); // false — computed has no setter
 ```
 
 ---
@@ -330,17 +233,16 @@ isWritable(c); // false — computed has no setter
 ### `store`
 
 ```ts
-function store<T extends object>(initial: T, options?: StoreOptions<T>): Store<T>;
+function store<T extends object>(initial: T): Store<T>;
 ```
 
-Creates a reactive store for the given object state. `effect()`, `computed()`, `watch()`, and all other signal primitives that accept `ReadonlySignal<T>` work with stores directly since `Store<T>` exposes a `.value` getter.
+Creates a reactive store for the given object state. `Store<T>` is a branded signal, so `effect()`, `computed()`, `watch()`, and all other signal primitives that accept `ReadonlySignal<T>` work with stores directly.
 
 **Parameters**
 
-| Parameter        | Type            | Description                                                                         |
-| ---------------- | --------------- | ----------------------------------------------------------------------------------- |
-| `initial`        | `T`             | The starting state (defensively copied; external mutations do not affect `reset()`) |
-| `options.equals` | `EqualityFn<T>` | Custom equality for change detection. Default: `Object.is`                          |
+| Parameter | Type | Description                                                                         |
+| --------- | ---- | ----------------------------------------------------------------------------------- |
+| `initial` | `T`  | The starting state (defensively copied; external mutations do not affect `reset()`) |
 
 **Returns** — `Store<T>`
 
@@ -350,12 +252,11 @@ Creates a reactive store for the given object state. `effect()`, `computed()`, `
 
 ### `Signal<T>`
 
-The base readable/writable reactive primitive. All other signal types extend this.
+The base readable/writable reactive primitive.
 
 ```ts
 interface Signal<T> extends ReadonlySignal<T> {
-  value: T; // notifying setter
-  update(fn: (current: T) => T): void; // shorthand for value = fn(value)
+  value: T; // notifying setter — write triggers downstream notifications
 }
 ```
 
@@ -379,22 +280,33 @@ interface ReadonlySignal<T> {
 
 ```ts
 interface ComputedSignal<T> extends ReadonlySignal<T> {
-  readonly stale: boolean;
   dispose(): void;
   [Symbol.dispose](): void;
 }
 ```
 
-Returned by `computed()`. A read-only signal with an explicit dispose method and a `stale` flag.
+Returned by `computed()`. A read-only signal with an explicit dispose method.
 
 ```ts
 const doubled = computed(() => count.value * 2);
 doubled.value; // read
-doubled.stale; // false — just computed
-count.value = 5;
-doubled.stale; // true — deps changed; not yet re-read
 doubled.dispose(); // stop tracking
+// or: using doubled = computed(...)
 ```
+
+---
+
+### `Scope`
+
+```ts
+interface Scope {
+  readonly run: <T>(fn: () => T) => T;
+  readonly dispose: () => void;
+  readonly [Symbol.dispose]: () => void;
+}
+```
+
+Returned by `scope()`. `run(fn)` activates the scope so that `onCleanup()` calls inside `fn` register on this scope. `dispose()` runs all registered cleanups in **LIFO order** and is idempotent.
 
 ---
 
@@ -484,7 +396,7 @@ type ReactiveOptions<T> = {
 };
 ```
 
-Accepted by `signal()`, `computed()`, and `store()`.
+Accepted by `signal()` and `computed()`.
 
 ---
 
@@ -511,7 +423,7 @@ type WatchOptions<T> = {
 ### `Store<T>`
 
 ```ts
-interface Store<T extends object> {
+interface Store<T extends object> extends ReadonlySignal<T> {
   readonly value: T;
   patch(partial: Partial<T>): void;
   update(fn: (state: T) => T): void;
@@ -521,24 +433,12 @@ interface Store<T extends object> {
 
 | Member            | Description                                                                   |
 | ----------------- | ----------------------------------------------------------------------------- |
-| `.value` (get)    | Read current state; tracked inside `effect`/`computed`                        |
+| `.value` (get)    | Read current state; tracked inside `effect`/`computed`; store is a signal too |
 | `.patch(partial)` | Shallow-merge a `Partial<T>` into state: `{ ...current, ...partial }`         |
 | `.update(fn)`     | Receive current state; return value replaces it                               |
 | `.reset()`        | Restore the original `initial` state                                          |
 
 ---
-
-### `StoreOptions<T>`
-
-```ts
-type StoreOptions<T extends object> = {
-  equals?: EqualityFn<T>;
-};
-```
-
-| Property | Type            | Default     | Description                                    |
-| -------- | --------------- | ----------- | ---------------------------------------------- |
-| `equals` | `EqualityFn<T>` | `Object.is` | Custom equality for top-level change detection |
 
 ## Notification Timing
 

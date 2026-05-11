@@ -152,6 +152,14 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     let dropdownEl: HTMLElement | null = null;
     let listboxEl: HTMLElement | null = null;
 
+    function syncPopupElements() {
+      const root = host.el.shadowRoot;
+
+      fieldEl = root?.querySelector<HTMLElement>('.field') ?? null;
+      dropdownEl = root?.querySelector<HTMLElement>('.dropdown') ?? null;
+      listboxEl = root?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
+    }
+
     function getLiveInput(): HTMLInputElement | null {
       const liveInput = host.el.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]') ?? null;
 
@@ -213,9 +221,12 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
       }
     }
 
-    const filteredOptions = computed<ComboboxOptionItem[]>(() => {
-      return filterOptions(allOptions.value, query.value, isNoFilter());
+    const filteredOptions = signal<ComboboxOptionItem[]>([]);
+
+    effect(() => {
+      filteredOptions.value = filterOptions(allOptions.value, query.value, isNoFilter());
     });
+
     // "Create" option shown when creatable + query doesn't match any existing option
     const creatableLabel = computed(() => {
       return getCreatableLabel(query.value, isCreatable(), filteredOptions.value);
@@ -247,8 +258,16 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
 
     // ── Positioning (shared positioner) ──────────────────────────────────────
     const positioner = createDropdownPositioner(
-      () => fieldEl,
-      () => dropdownEl,
+      () => {
+        syncPopupElements();
+
+        return fieldEl;
+      },
+      () => {
+        syncPopupElements();
+
+        return dropdownEl;
+      },
     );
 
     const popupList = createPopupListControl({
@@ -481,6 +500,8 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
       }
     }
     function scrollFocusedIntoView() {
+      syncPopupElements();
+
       if (focusedIndex.value >= 0) {
         domVirtualList.scrollToIndex(focusedIndex.value, { align: 'auto' });
 
@@ -498,10 +519,18 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     const { domVirtualList, setupVirtualizer, updateRenderedItemState } = createComboboxVirtualizer({
       checkIconHTML,
       comboId,
-      getDropdownElement: () => dropdownEl,
+      getDropdownElement: () => {
+        syncPopupElements();
+
+        return dropdownEl;
+      },
       getFocusedIndex: () => untrack(() => focusedIndex.value),
       getIsMultiple: () => untrack(() => isMultiple()),
-      getListboxElement: () => listboxEl,
+      getListboxElement: () => {
+        syncPopupElements();
+
+        return listboxEl;
+      },
       getSelectedValue: () => untrack(() => selectedValue.value),
       getSelectedValues: () => untrack(() => selectedValues.value),
       onSelectOption: selectOption,
@@ -525,6 +554,8 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
 
     // Rebuild virtualizer when filtered options or open state changes
     effect(() => {
+      syncPopupElements();
+
       const opts = filteredOptions.value;
       const open = isOpen.value;
 
@@ -544,6 +575,8 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     });
 
     effect(() => {
+      syncPopupElements();
+
       const open = isOpen.value;
       const loading = isLoading();
       const optionCount = filteredOptions.value.length;
@@ -636,9 +669,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     );
 
     onMounted(() => {
-      fieldEl = inputEl?.closest('.field') as HTMLElement | null;
-      dropdownEl = host.el.shadowRoot?.querySelector<HTMLElement>('.dropdown') ?? null;
-      listboxEl = host.el.shadowRoot?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
+      syncPopupElements();
 
       return () => {
         domVirtualList.destroy();

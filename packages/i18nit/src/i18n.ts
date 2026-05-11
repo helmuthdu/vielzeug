@@ -7,6 +7,8 @@ import type {
   Locale,
   LocaleChangeEvent,
   LocaleChangeReason,
+  MessageBranchKeys,
+  MessageLeafKeys,
   Messages,
   Unsubscribe,
   Vars,
@@ -41,13 +43,33 @@ export const isSubscriberError = (
   event: DiagnosticEvent,
 ): event is Extract<DiagnosticEvent, { kind: 'subscriber-error' }> => event.kind === 'subscriber-error';
 
+function mergeMessages(base: Messages, incoming: Messages): Messages {
+  const next: Messages = structuredClone(base);
+
+  for (const [key, value] of Object.entries(incoming)) {
+    if (typeof value === 'string') {
+      next[key] = value;
+      continue;
+    }
+
+    const current = next[key];
+
+    next[key] =
+      typeof current === 'object' && current !== null
+        ? mergeMessages(current as Messages, value)
+        : structuredClone(value);
+  }
+
+  return next;
+}
+
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
-export function createI18n(config: I18nOptions = {}): I18n {
+export function createI18n<M extends Messages = Messages>(config: I18nOptions<M> = {}): I18n<M> {
   let locale = config.locale ?? 'en';
   const fallbacks = Array.isArray(config.fallback) ? config.fallback : config.fallback ? [config.fallback] : [];
-  const catalogs = new Map<Locale, Messages>();
-  const loaders = new Map<Locale, Loader>();
+  const catalogs = new Map<Locale, M>();
+  const loaders = new Map<Locale, Loader<M>>();
   const loading = new Map<Locale, Promise<void>>();
   const subscribers = new Set<(event: LocaleChangeEvent) => void>();
   const caches = makeIntlCaches();
@@ -60,24 +82,14 @@ export function createI18n(config: I18nOptions = {}): I18n {
   const onMissing = config.onMissing ?? defaultOnMissing;
   const onDiagnostic = config.onDiagnostic ?? defaultDiagnostic;
 
-  if (config.messages) {
-    for (const [loc, messages] of Object.entries(config.messages)) {
-      catalogs.set(loc, structuredClone(messages));
+  if (config.catalogs) {
+    for (const [loc, entry] of Object.entries(config.catalogs)) {
+      if (typeof entry === 'function') {
+        loaders.set(loc, entry as Loader<M>);
+      } else {
+        catalogs.set(loc, structuredClone(entry));
+      }
     }
-  }
-
-  if (config.loaders) {
-    for (const [loc, loader] of Object.entries(config.loaders)) {
-      loaders.set(loc, loader);
-    }
-  }
-
-  function diagnoseSubscriber(error: unknown): void {
-    onDiagnostic({ error, kind: 'subscriber-error' });
-  }
-
-  function diagnoseLoader(error: unknown, loc: Locale): void {
-    onDiagnostic({ error, kind: 'loader-error', locale: loc });
   }
 
   function ensureNotDisposed(methodName: string): void {
@@ -99,7 +111,7 @@ export function createI18n(config: I18nOptions = {}): I18n {
       try {
         listener(event);
       } catch (error) {
-        diagnoseSubscriber(error);
+        onDiagnostic({ error, kind: 'subscriber-error' });
       }
     }
   }
@@ -156,7 +168,7 @@ export function createI18n(config: I18nOptions = {}): I18n {
 
         if (!disposed) api.setCatalog(loc, messages);
       } catch (error) {
-        diagnoseLoader(error, loc);
+        onDiagnostic({ error, kind: 'loader-error', locale: loc });
         throw error;
       } finally {
         loading.delete(loc);
@@ -180,7 +192,7 @@ export function createI18n(config: I18nOptions = {}): I18n {
       invalidateCaches();
     },
     format: (input: FormatInput): string => format(caches, locale, input),
-    has: (key: string): boolean => findMessage(key, locale) !== undefined,
+    has: <K extends MessageLeafKeys<M>>(key: K): boolean => findMessage(String(key), locale) !== undefined,
     get loadableLocales(): Locale[] {
       loadersCache ??= [...loaders.keys()];
 
@@ -194,6 +206,17 @@ export function createI18n(config: I18nOptions = {}): I18n {
     get locale(): Locale {
       return locale;
     },
+    mergeCatalog: (loc: Locale, messages: M): void => {
+      ensureNotDisposed('mergeCatalog');
+
+      const current = catalogs.get(loc);
+      const merged = current ? (mergeMessages(current, messages) as M) : structuredClone(messages);
+
+      catalogs.set(loc, merged);
+      localesCache = null;
+
+      if (getLocaleChain(locale).includes(loc)) notify('catalog-update');
+    },
     preload: async (loc: Locale): Promise<void> => {
       ensureNotDisposed('preload');
 
@@ -203,7 +226,7 @@ export function createI18n(config: I18nOptions = {}): I18n {
         // loader errors are already routed through onDiagnostic inside loadOne
       }
     },
-    setCatalog: (loc: Locale, messages: Messages): void => {
+    setCatalog: (loc: Locale, messages: M): void => {
       ensureNotDisposed('setCatalog');
 
       catalogs.set(loc, structuredClone(messages));
@@ -211,7 +234,7 @@ export function createI18n(config: I18nOptions = {}): I18n {
 
       if (getLocaleChain(locale).includes(loc)) notify('catalog-update');
     },
-    setLoader: (loc: Locale, loader: Loader): void => {
+    setLoader: (loc: Locale, loader: Loader<M>): void => {
       ensureNotDisposed('setLoader');
       loaders.set(loc, loader);
       loadersCache = null;
@@ -235,34 +258,36 @@ export function createI18n(config: I18nOptions = {}): I18n {
         try {
           listener({ locale, reason: 'init' });
         } catch (error) {
-          diagnoseSubscriber(error);
+          onDiagnostic({ error, kind: 'subscriber-error' });
         }
       }
 
       return () => subscribers.delete(listener);
     },
     [Symbol.asyncDispose]: async (): Promise<void> => {
-      await Promise.allSettled([...loading.values()]);
+      const pendingLoads = [...loading.values()];
+
+      await Promise.allSettled(pendingLoads);
       api.dispose();
     },
     [Symbol.dispose]: (): void => {
       api.dispose();
     },
-    t: (key: string, vars?: Vars): string => {
-      const message = findMessage(key, locale);
+    t: <K extends MessageLeafKeys<M> | MessageBranchKeys<M>>(key: K, vars?: Vars): string => {
+      const message = findMessage(String(key), locale);
 
-      return message === undefined ? onMissing(key, locale) : interpolate(message, vars);
+      return message === undefined ? onMissing(String(key), locale) : interpolate(message, vars);
     },
-    tp: (key: string, count: number, vars?: Vars): string => {
+    tp: <K extends MessageBranchKeys<M>>(key: K, count: number, vars?: Vars, ordinal = false): string => {
       const context = { ...(vars ?? {}), count };
-      const selected = count === 0 ? `${key}.zero` : `${key}.${selectPluralForm(caches, locale, count)}`;
-      const message = findMessage(selected, locale) ?? findMessage(`${key}.other`, locale);
+      const baseKey = String(key);
+      const form = selectPluralForm(caches, locale, count, ordinal);
+      const selected = !ordinal && count === 0 ? `${baseKey}.zero` : `${baseKey}.${form}`;
+      const message = findMessage(selected, locale) ?? findMessage(`${baseKey}.other`, locale);
 
-      if (message === undefined) return onMissing(key, locale);
-
-      return interpolate(message, context);
+      return message === undefined ? onMissing(baseKey, locale) : interpolate(message, context);
     },
-  } satisfies I18n;
+  } satisfies I18n<M>;
 
   return api;
 }

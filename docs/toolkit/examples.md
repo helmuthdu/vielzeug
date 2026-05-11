@@ -21,9 +21,9 @@ Use these examples as copy/paste starting points for real applications.
 ## Quick Example
 
 ```ts
-import { chunk, configure, queue, retry, select } from '@vielzeug/toolkit';
+import { chunk, partial, queue, retry } from '@vielzeug/toolkit';
 
-const doubleAll = configure(select, (n: number) => n * 2);
+const doubleAll = partial((values: number[], factor: number) => values.map((n) => n * factor), 2);
 const pages = chunk(doubleAll([1, 2, 3, 4, 5]), 2);
 
 const q = queue({ concurrency: 2 });

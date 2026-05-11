@@ -83,12 +83,18 @@ const user = await api.get<User>('/users/{id}', { params: { id: userId } });
 
 - **Type-safe path params** — `{param}` placeholders extracted and validated at compile time
 - **HTTP client** — `createApi()` with base URL, global headers, timeout, interceptors, and safe deduplication
+- **`api.cancelAll()`** — abort all in-flight requests without disposing the client
 - **Query cache** — `createQuery()` for stale-aware caching, prefix invalidation, and reactive subscriptions
+- **Conditional fetching** — `enabled`, `initialData`, and `placeholderData` on every `query()` call
+- **`select` on subscribe** — transform data and skip redundant re-renders when the slice is unchanged
+- **Background revalidation** — `refetchOnFocus` and `refetchOnReconnect` on the query client
 - **Standalone mutations** — `createMutation()` with retry, observable state, and built-in `cancel()`
+- **Mutation lifecycle callbacks** — `onSuccess`, `onError`, `onSettled` on the mutation definition
 - **Request deduplication** — GET/HEAD/OPTIONS/DELETE dedupe concurrent identical calls by default
 - **Interceptors** — `use()` middleware for auth tokens, logging, and request transforms
 - **Retry with backoff** — configurable attempt count, exponential delay strategy, and `shouldRetry` predicate
 - **Abort support** — query and mutation functions both receive an `AbortSignal`
+- **`HttpError.headers`** — shorthand access to response headers without optional chaining
 - **Disposable** — both clients implement `[Symbol.dispose]` for `using` declarations
 - **Zero dependencies** — <PackageInfo package="fetchit" type="size" /> gzipped
 

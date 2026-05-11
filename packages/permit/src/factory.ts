@@ -1,4 +1,13 @@
-import type { PermissionData, Permit, PermitOptions, PermitRule, Principal, UserPrincipal } from './types';
+import type {
+  BoundPermit,
+  PermissionData,
+  Permit,
+  PermitDecision,
+  PermitOptions,
+  PermitRule,
+  Principal,
+  UserPrincipal,
+} from './types';
 
 import { WILDCARD, ANONYMOUS } from './constants';
 
@@ -144,13 +153,21 @@ export function createPermit<TAction extends string = string, TData extends Perm
     return winner;
   }
 
-  function logDecision(
+  function explain(
     principal: Principal,
     resource: string,
     action: TAction,
-    data: TData | undefined,
-    winner?: CompiledEntry<TAction, TData>,
-  ): void {
+    data?: TData,
+  ): PermitDecision<TAction, TData> {
+    // Validation once at the start
+    if (principal !== null) {
+      validateUserPrincipal(principal);
+    }
+
+    // Evaluate decision
+    const winner = evaluate(principal, resource, action, data);
+
+    // Log (centralized)
     logger?.({
       action,
       data,
@@ -159,6 +176,59 @@ export function createPermit<TAction extends string = string, TData extends Perm
       resource,
       rule: winner ? cloneRule(winner.rule) : undefined,
     });
+
+    // Build decision result
+    let decision: PermitDecision<TAction, TData>;
+
+    if (!winner) {
+      decision = { allowed: false, reason: 'no-matching-rule' };
+    } else if (winner.rule.effect === 'deny') {
+      decision = { allowed: false, reason: 'explicit-deny', rule: cloneRule(winner.rule) };
+    } else {
+      decision = { allowed: true, rule: cloneRule(winner.rule) };
+    }
+
+    return decision;
+  }
+
+  function can(principal: Principal, resource: string, action: TAction, data?: TData): boolean {
+    return explain(principal, resource, action, data).allowed;
+  }
+
+  function canAll(principal: Principal, resource: string, actions: TAction[], data?: TData): boolean {
+    return actions.every((action) => can(principal, resource, action, data));
+  }
+
+  function canAny(principal: Principal, resource: string, actions: TAction[], data?: TData): boolean {
+    return actions.some((action) => can(principal, resource, action, data));
+  }
+
+  function allowedActions(principal: Principal, resource: string, data?: TData): TAction[] {
+    if (principal !== null) {
+      validateUserPrincipal(principal);
+    }
+
+    const allowed: TAction[] = [];
+    const seenActions = new Set<TAction>();
+
+    // Collect unique non-wildcard actions from matching rules
+    for (const entry of entries) {
+      if (entry.rule.action === WILDCARD) continue;
+
+      const action = entry.rule.action as TAction;
+
+      if (seenActions.has(action)) continue;
+
+      if (!matchesRule(entry, principal, resource, action, data)) continue;
+
+      seenActions.add(action);
+
+      if (can(principal, resource, action, data)) {
+        allowed.push(action);
+      }
+    }
+
+    return allowed;
   }
 
   function set(rule: PermitRule<TAction, TData> | readonly PermitRule<TAction, TData>[]): Permit<TAction, TData> {
@@ -171,33 +241,84 @@ export function createPermit<TAction extends string = string, TData extends Perm
     return permit;
   }
 
-  function can(principal: Principal, resource: string, action: TAction, data?: TData): boolean {
-    if (principal !== null) {
-      validateUserPrincipal(principal);
-    }
-
-    const winner = evaluate(principal, resource, action, data);
-
-    logDecision(principal, resource, action, data, winner);
-
-    return winner?.rule.effect === 'allow';
-  }
-
-  function forUser(principal: UserPrincipal): (resource: string, action: TAction, data?: TData) => boolean {
+  function forUser(principal: UserPrincipal, cache?: boolean): BoundPermit<TAction, TData> {
     validateUserPrincipal(principal);
 
     const boundPrincipal: UserPrincipal = {
+      attributes: principal.attributes ? { ...principal.attributes } : undefined,
       id: principal.id,
       roles: [...principal.roles],
     };
+    const decisionCache = cache ? new Map<string, PermitDecision<TAction, TData>>() : undefined;
 
-    return (resource, action, data) => {
-      const winner = evaluate(boundPrincipal, resource, action, data);
+    function explainBound(resource: string, action: TAction, data?: TData): PermitDecision<TAction, TData> {
+      if (!decisionCache) {
+        return explain(boundPrincipal, resource, action, data);
+      }
 
-      logDecision(boundPrincipal, resource, action, data, winner);
+      const cacheKey = `${resource}:${action}:${JSON.stringify(data ?? null)}`;
+      const cached = decisionCache.get(cacheKey);
 
-      return winner?.rule.effect === 'allow';
+      if (cached) {
+        return cached;
+      }
+
+      const decision = explain(boundPrincipal, resource, action, data);
+
+      decisionCache.set(cacheKey, decision);
+
+      return decision;
+    }
+
+    function canBound(resource: string, action: TAction, data?: TData): boolean {
+      return explainBound(resource, action, data).allowed;
+    }
+
+    function canAllBound(resource: string, actions: TAction[], data?: TData): boolean {
+      return actions.every((action) => canBound(resource, action, data));
+    }
+
+    function canAnyBound(resource: string, actions: TAction[], data?: TData): boolean {
+      return actions.some((action) => canBound(resource, action, data));
+    }
+
+    function allowedActionsBound(resource: string, data?: TData): TAction[] {
+      const allowed: TAction[] = [];
+      const seenActions = new Set<TAction>();
+
+      for (const entry of entries) {
+        if (entry.rule.action === WILDCARD) continue;
+
+        const entryAction = entry.rule.action as TAction;
+
+        if (seenActions.has(entryAction)) continue;
+
+        if (!matchesRule(entry, boundPrincipal, resource, entryAction, data)) continue;
+
+        seenActions.add(entryAction);
+
+        if (canBound(resource, entryAction, data)) {
+          allowed.push(entryAction);
+        }
+      }
+
+      return allowed;
+    }
+
+    const boundPerm: BoundPermit<TAction, TData> = {
+      allowedActions: allowedActionsBound,
+      can: canBound,
+      canAll: canAllBound,
+      canAny: canAnyBound,
+      clear,
+      explain: explainBound,
+      forUser,
+      replace,
+      rules,
+      set,
     };
+
+    return boundPerm;
   }
 
   function clear(): Permit<TAction, TData> {
@@ -219,8 +340,12 @@ export function createPermit<TAction extends string = string, TData extends Perm
   }
 
   const permit: Permit<TAction, TData> = {
+    allowedActions,
     can,
+    canAll,
+    canAny,
     clear,
+    explain,
     forUser,
     replace,
     rules,

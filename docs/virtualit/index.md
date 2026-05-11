@@ -50,7 +50,7 @@ const virt = createVirtualizer(scrollEl, {
 
     for (const item of virtualItems) {
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;`;
       el.textContent = `Row ${item.index}`;
       list.appendChild(el);
     }
@@ -87,9 +87,9 @@ const virt = createVirtualizer(scrollEl, {
   onChange: (virtualItems, totalSize) => {
     list.style.height = `${totalSize}px`;
     list.innerHTML = '';
-    for (const { index, top } of virtualItems) {
+    for (const { index, start } of virtualItems) {
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;top:${top}px;height:36px;`;
+      el.style.cssText = `position:absolute;top:${start}px;height:36px;`;
       el.textContent = items[index].name;
       list.appendChild(el);
     }
@@ -108,7 +108,7 @@ const virt = createVirtualizer(scrollEl, {
 
 **Use Virtualit when** you need to render large lists in a framework-agnostic environment with precise control over item measurement and scroll position.
 
-**Consider TanStack Virtual** if you need its React/Vue/Solid adapters, horizontal virtualisation, or window-based (not container-based) virtualisation.
+**Consider TanStack Virtual** if you need its framework adapters and ecosystem integration.
 
 ## Features
 
@@ -117,6 +117,10 @@ const virt = createVirtualizer(scrollEl, {
 - **Batched measurements** — calling `measure()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
 - **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
 - **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; both support `behavior: 'smooth'`
+- **Horizontal + window targets** — supports both element and `window` scrolling, in vertical or horizontal mode
+- **Keyed measurement stability** — use stable keys with `getItemKey` + `measure()`
+- **Asymmetric overscan + gap** — tune start/end overscan independently and add inter-item spacing
+- **Scroll-state hooks** — `onScrollingChange`, `onScrollEnd`, `isScrolling`, and configurable `scrollEndDelay`
 - **Atomic updates** — `virt.update(...)` lets you change count, estimator, overscan, and callback in one call
 - **Clamp-safe** — `scrollToIndex` silently clamps out-of-range indices rather than silently scrolling to the wrong position
 - **Disposable** — implements `[Symbol.dispose]` for `using` declarations

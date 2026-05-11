@@ -12,15 +12,15 @@ describe('values', () => {
       defaultValues: { age: 25, flag: true, name: 'Alice', score: 3.14 },
     });
 
-    expect(form.get<number>('age')).toBe(25);
-    expect(form.get<boolean>('flag')).toBe(true);
-    expect(form.get<number>('score')).toBe(3.14);
-    expect(form.get<string>('name')).toBe('Alice');
+    expect(form.get('age')).toBe(25);
+    expect(form.get('flag')).toBe(true);
+    expect(form.get('score')).toBe(3.14);
+    expect(form.get('name')).toBe('Alice');
   });
 
   test('plain objects are flattened; arrays are stored by reference', () => {
     const tags = ['js', 'ts'];
-    const form = createForm({ defaultValues: { profile: { city: 'NYC' }, tags } });
+    const form = createForm<Record<string, unknown>>({ defaultValues: { profile: { city: 'NYC' }, tags } });
 
     // plain objects are flattened — the parent key is not stored
     expect(form.get('profile')).toBeUndefined();
@@ -249,7 +249,7 @@ describe('dirty & touched', () => {
   });
 
   test('touch() without args marks every known field as touched', () => {
-    const form = createForm({
+    const form = createForm<Record<string, unknown>>({
       defaultValues: { a: 1, b: 2 },
       validators: { c: () => undefined },
     });
@@ -400,6 +400,13 @@ describe('errors', () => {
     expect(form.state.errors).toEqual({ email: 'Invalid', name: 'Required' });
   });
 
+  test('replaceErrors ignores undefined values in the provided map', () => {
+    const form = createForm<Record<string, unknown>>({});
+
+    form.replaceErrors({ skip: undefined as unknown as string, valid: 'Error' });
+    expect(form.state.errors).toEqual({ valid: 'Error' });
+  });
+
   test('replaceErrors with empty object clears all errors', () => {
     const form = createForm<Record<string, unknown>>({});
 
@@ -458,7 +465,7 @@ describe('errors', () => {
 describe('validation', () => {
   test('validateField runs per-field validators and returns the error message', async () => {
     const form = createForm({
-      validators: { email: (v) => (!String(v).includes('@') ? 'Invalid format' : undefined) },
+      validators: { email: (v: unknown) => (!String(v).includes('@') ? 'Invalid format' : undefined) },
     });
 
     form.set('email', 'notanemail');
@@ -467,7 +474,7 @@ describe('validation', () => {
 
   test('validateField returns undefined when the field is valid', async () => {
     const form = createForm({
-      validators: { email: (v) => (!String(v).includes('@') ? 'Invalid' : undefined) },
+      validators: { email: (v: unknown) => (!String(v).includes('@') ? 'Invalid' : undefined) },
     });
 
     form.set('email', 'a@b.com');
@@ -477,7 +484,10 @@ describe('validation', () => {
   test('validators are run in order; first failing rule wins', async () => {
     const form = createForm({
       validators: {
-        pw: [(v) => (!v ? 'Required' : undefined), (v) => (String(v).length < 8 ? 'Too short' : undefined)],
+        pw: [
+          (v: unknown) => (!v ? 'Required' : undefined),
+          (v: unknown) => (String(v).length < 8 ? 'Too short' : undefined),
+        ],
       },
     });
 
@@ -492,7 +502,7 @@ describe('validation', () => {
     const form = createForm({
       defaultValues: { confirm: 'xyz', password: '' },
       validator: (vals) => (vals.password !== vals.confirm ? { confirm: 'Must match' } : undefined),
-      validators: { password: (v) => (!v ? 'Required' : undefined) },
+      validators: { password: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
     const { errors, valid } = await form.validate();
@@ -505,8 +515,8 @@ describe('validation', () => {
   test("validate('touched') skips untouched fields", async () => {
     const form = createForm({
       validators: {
-        email: (v) => (!v ? 'Required' : undefined),
-        name: (v) => (!v ? 'Required' : undefined),
+        email: (v: unknown) => (!v ? 'Required' : undefined),
+        name: (v: unknown) => (!v ? 'Required' : undefined),
       },
     });
 
@@ -520,7 +530,7 @@ describe('validation', () => {
 
   test('validate([]) validates nothing (empty partial)', async () => {
     const form = createForm({
-      validators: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
     const { errors, valid } = await form.validate([]);
 
@@ -532,9 +542,9 @@ describe('validation', () => {
   test('validate(fields) validates only those fields', async () => {
     const form = createForm({
       validators: {
-        age: (v) => (!v ? 'Age required' : undefined),
-        email: (v) => (!v ? 'Email required' : undefined),
-        name: (v) => (!v ? 'Name required' : undefined),
+        age: (v: unknown) => (!v ? 'Age required' : undefined),
+        email: (v: unknown) => (!v ? 'Email required' : undefined),
+        name: (v: unknown) => (!v ? 'Name required' : undefined),
       },
     });
 
@@ -547,7 +557,7 @@ describe('validation', () => {
 
   test('validateField stores the result in the error map', async () => {
     const form = createForm({
-      validators: { x: (v) => (v !== 1 ? 'Must be 1' : undefined) },
+      validators: { x: (v: unknown) => (v !== 1 ? 'Must be 1' : undefined) },
     });
 
     form.set('x', 2);
@@ -600,7 +610,7 @@ describe('submit', () => {
   test('calls onSubmit with the typed values when valid', async () => {
     const form = createForm({
       defaultValues: { age: 30, name: 'Alice' },
-      validators: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
     const received: unknown[] = [];
@@ -622,7 +632,7 @@ describe('submit', () => {
   test('throws FormValidationError and marks all fields touched on validation failure', async () => {
     const form = createForm({
       defaultValues: { name: '' },
-      validators: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
     await expect(form.submit(async () => {})).rejects.toBeInstanceOf(FormValidationError);
@@ -631,7 +641,7 @@ describe('submit', () => {
 
   test('FormValidationError carries the field-level error map', async () => {
     const form = createForm({
-      validators: { email: (v) => (!v ? 'Required' : undefined) },
+      validators: { email: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
     try {
@@ -654,8 +664,8 @@ describe('submit', () => {
   test('submit validates all fields and marks them touched', async () => {
     const form = createForm({
       validators: {
-        email: (v) => (!v ? 'Email required' : undefined),
-        name: (v) => (!v ? 'Name required' : undefined),
+        email: (v: unknown) => (!v ? 'Email required' : undefined),
+        name: (v: unknown) => (!v ? 'Name required' : undefined),
       },
     });
 
@@ -856,7 +866,7 @@ describe('bind', () => {
   test('error getter returns the current error for the field', async () => {
     const form = createForm({
       defaultValues: { name: '' },
-      validators: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
     await form.validateField('name');
@@ -918,7 +928,7 @@ describe('bind', () => {
     const form = createForm({
       bindDefaults: { touchOnBlur: false, validateOnChange: true },
       defaultValues: { name: '' },
-      validators: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
     const binding = form.bind('name');
@@ -935,7 +945,7 @@ describe('bind', () => {
     const form = createForm({
       bindDefaults: { touchOnBlur: false, validateOnChange: false },
       defaultValues: { name: '' },
-      validators: { name: (v) => (!v ? 'Required' : undefined) },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
     const binding = form.bind('name', { touchOnBlur: true, validateOnChange: true });
@@ -1146,5 +1156,317 @@ describe('array field utilities', () => {
     const form = createForm({ defaultValues: { x: 1 } });
 
     expect(() => form.array('x').move(0, 1)).not.toThrow();
+  });
+
+  test('array(name).prepend adds an item to the front', () => {
+    const form = createForm({ defaultValues: { tags: ['b', 'c'] } });
+
+    form.array('tags').prepend('a');
+    expect(form.get('tags')).toEqual(['a', 'b', 'c']);
+  });
+
+  test('array(name).prepend creates the array when field is not yet set', () => {
+    const form = createForm<Record<string, unknown>>({});
+
+    form.array('tags').prepend('first');
+    expect(form.get('tags')).toEqual(['first']);
+  });
+
+  test('array(name).insert adds an item at the given index', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'c'] } });
+
+    form.array('tags').insert(1, 'b');
+    expect(form.get('tags')).toEqual(['a', 'b', 'c']);
+  });
+
+  test('array(name).insert is a no-op when the field is not an array', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    expect(() => form.array('x').insert(0, 'v')).not.toThrow();
+    expect(form.get('x')).toBe(1);
+  });
+
+  test('array(name).swap exchanges two items by index', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b', 'c'] } });
+
+    form.array('tags').swap(0, 2);
+    expect(form.get('tags')).toEqual(['c', 'b', 'a']);
+  });
+
+  test('array(name).swap is a no-op when the field is not an array', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    expect(() => form.array('x').swap(0, 1)).not.toThrow();
+  });
+
+  test('array(name).replace replaces the item at the given index', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b', 'c'] } });
+
+    form.array('tags').replace(1, 'z');
+    expect(form.get('tags')).toEqual(['a', 'z', 'c']);
+  });
+
+  test('array(name).replace is a no-op when the field is not an array', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    expect(() => form.array('x').replace(0, 'v')).not.toThrow();
+    expect(form.get('x')).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// removeField
+// ---------------------------------------------------------------------------
+
+describe('removeField', () => {
+  test('removes the field value from the store', () => {
+    const form = createForm({ defaultValues: { age: 25, name: 'Alice' } });
+
+    form.removeField('name');
+    expect(form.get('name')).toBeUndefined();
+    expect(form.get('age')).toBe(25);
+  });
+
+  test('removes the field from the baseline so reset() no longer restores it', () => {
+    const form = createForm({ defaultValues: { email: '', name: '' } });
+
+    form.set('name', 'Bob');
+    form.removeField('name');
+    form.reset();
+    expect(form.get('name')).toBeUndefined();
+    expect(form.get('email')).toBe('');
+  });
+
+  test('clears dirty, touched, and error state for that field', () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+
+    form.set('name', 'Bob');
+    form.touch('name');
+    form.setError('name', 'Too long');
+    form.removeField('name');
+    expect(form.field('name').dirty).toBe(false);
+    expect(form.field('name').touched).toBe(false);
+    expect(form.field('name').error).toBeUndefined();
+  });
+
+  test('removes the field validator so validation no longer runs for that field', async () => {
+    const form = createForm({
+      validators: {
+        email: (v: unknown) => (!v ? 'Required' : undefined),
+        name: (v: unknown) => (!v ? 'Required' : undefined),
+      },
+    });
+
+    form.removeField('name');
+
+    const { errors } = await form.validate();
+
+    expect(errors.name).toBeUndefined();
+    expect(errors.email).toBe('Required');
+  });
+
+  test('does not affect other fields', () => {
+    const form = createForm({ defaultValues: { age: 30, name: 'Alice' } });
+
+    form.set('age', 99);
+    form.touch('age');
+    form.removeField('name');
+    expect(form.get('age')).toBe(99);
+    expect(form.field('age').dirty).toBe(true);
+    expect(form.field('age').touched).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// watch
+// ---------------------------------------------------------------------------
+
+describe('watch', () => {
+  test('fires the callback when the field value changes', async () => {
+    const form = createForm({ defaultValues: { name: '' } });
+    const values: string[] = [];
+
+    form.watch('name', (v: unknown) => values.push(v as string));
+    form.set('name', 'Alice');
+    await new Promise<void>((r) => queueMicrotask(r));
+    expect(values).toContain('Alice');
+  });
+
+  test('sync:true fires immediately with the current value', () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+    let seen: unknown;
+
+    form.watch(
+      'name',
+      (v: unknown) => {
+        seen = v;
+      },
+      { sync: true },
+    );
+    expect(seen).toBe('Alice');
+  });
+
+  test('returns an unsubscribe that stops future notifications', async () => {
+    const form = createForm({ defaultValues: { x: 0 } });
+    let count = 0;
+    const unsub = form.watch('x', () => {
+      count++;
+    });
+
+    unsub();
+    form.set('x', 1);
+    await new Promise<void>((r) => queueMicrotask(r));
+    expect(count).toBe(0);
+  });
+
+  test('does not fire when an unrelated field changes', async () => {
+    const form = createForm({ defaultValues: { a: 1, b: 2 } });
+    let count = 0;
+
+    form.watch('b', () => {
+      count++;
+    });
+    form.set('a', 99);
+    await new Promise<void>((r) => queueMicrotask(r));
+    expect(count).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validation mode
+// ---------------------------------------------------------------------------
+
+describe('validation mode', () => {
+  test("mode:'onSubmit' (default) does not validate on blur or change", async () => {
+    const form = createForm({
+      defaultValues: { name: '' },
+      mode: 'onSubmit',
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+    const binding = form.bind('name');
+
+    binding.onBlur();
+    binding.onChange('');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(form.field('name').error).toBeUndefined();
+  });
+
+  test("mode:'onBlur' triggers validation on blur", async () => {
+    const form = createForm({
+      defaultValues: { name: '' },
+      mode: 'onBlur',
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+
+    form.bind('name').onBlur();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(form.field('name').error).toBe('Required');
+  });
+
+  test("mode:'onChange' triggers validation on every change", async () => {
+    const form = createForm({
+      defaultValues: { name: '' },
+      mode: 'onChange',
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+
+    form.bind('name').onChange('');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(form.field('name').error).toBe('Required');
+  });
+
+  test("mode:'onTouched' validates on blur and then on change", async () => {
+    const form = createForm({
+      defaultValues: { name: '' },
+      mode: 'onTouched',
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+    const binding = form.bind('name');
+
+    // before first blur, changes should not validate yet
+    binding.onChange('');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(form.field('name').error).toBeUndefined();
+
+    // blur first triggers validation
+    binding.onBlur();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(form.field('name').error).toBe('Required');
+
+    // subsequent change also validates
+    binding.onChange('Alice');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(form.field('name').error).toBeUndefined();
+  });
+
+  test('explicit bindDefaults takes precedence over mode', async () => {
+    const form = createForm({
+      bindDefaults: { validateOnBlur: false, validateOnChange: false },
+      defaultValues: { name: '' },
+      mode: 'onChange',
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+
+    form.bind('name').onChange('');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(form.field('name').error).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// submit with onInvalid callback
+// ---------------------------------------------------------------------------
+
+describe('submit onInvalid callback', () => {
+  test('calls onInvalid with errors instead of throwing when validation fails', async () => {
+    const form = createForm({
+      validators: { email: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+    let captured: Record<string, string> | undefined;
+
+    await form.submit(
+      async () => {},
+      (errors) => {
+        captured = errors;
+      },
+    );
+    expect(captured).toEqual({ email: 'Required' });
+  });
+
+  test('does not throw FormValidationError when onInvalid is provided', async () => {
+    const form = createForm({
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+
+    await expect(
+      form.submit(
+        async () => {},
+        () => {},
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  test('still calls onSubmit when form is valid', async () => {
+    const form = createForm({
+      defaultValues: { name: 'Alice' },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+    let submitted = false;
+
+    await form.submit(
+      async () => {
+        submitted = true;
+      },
+      () => {},
+    );
+    expect(submitted).toBe(true);
+  });
+
+  test('throws FormValidationError when onInvalid is omitted (existing behaviour)', async () => {
+    const form = createForm({
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+
+    await expect(form.submit(async () => {})).rejects.toBeInstanceOf(FormValidationError);
   });
 });

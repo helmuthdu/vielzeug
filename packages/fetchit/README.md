@@ -56,10 +56,16 @@ qc.invalidate(['users']);
 - Automatic read dedupe for idempotent requests
 - Explicit write dedupe with `dedupeKey` when you really need it
 - Query cache with `staleTime`, `gcTime`, subscriptions, invalidation, cancellation, and retry
+- `enabled`, `initialData`, and `placeholderData` on every `query()` call
+- `select` on `subscribe()` — transform data and skip redundant notifications
+- `refetchOnFocus` and `refetchOnReconnect` on the query client
 - Query cache prefetching for route/page warm-up flows
 - Retry controls with backoff hooks
 - Mutation handlers use a flat signature: `(input, signal)`
+- Mutation lifecycle callbacks: `onSuccess`, `onError`, `onSettled`
 - Built-in mutation cancellation via `mutation.cancel()`
+- `api.cancelAll()` aborts all in-flight requests without disposing the client
+- `HttpError.headers` shorthand for `err.response?.headers`
 - Optional `fetch` injection for tests/runtime adapters
 - Strict timeout semantics (`> 0` or `Infinity`)
 - Interceptors for auth, logging, and request transforms

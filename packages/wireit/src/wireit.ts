@@ -1,20 +1,5 @@
 /**
- * Wireit — Lightweight typed dependency injection container
- *
- * @example
- * ```ts
- * import { createContainer, createToken } from '@vielzeug/wireit';
- *
- * const DbToken = createToken<Database>('Database');
- * const ServiceToken = createToken<UserService>('UserService');
- * const container = createContainer();
- *
- * container
- *   .factory(DbToken, () => new Database(process.env.DB_URL!))
- *   .bind(ServiceToken, UserService, { deps: [DbToken] });
- *
- * const service = await container.resolve(ServiceToken);
- * ```
+ * Wireit — Lightweight typed dependency injection container.
  */
 
 /** -------------------- Types -------------------- **/
@@ -25,10 +10,12 @@ export type Lifetime = 'singleton' | 'transient' | 'scoped';
 
 export type ValueProvider<T> = { useValue: T };
 
-/** Shared fields for class and factory providers. */
+type DependencyRef<T> = Token<T>;
+
 type BaseProvider<T, Deps extends unknown[] = any[]> = {
-  deps?: { [K in keyof Deps]: Token<Deps[K]> };
+  deps?: { [K in keyof Deps]: DependencyRef<Deps[K]> };
   dispose?: (instance: T) => void | Promise<void>;
+  init?: (instance: T) => void | Promise<void>;
   lifetime?: Lifetime;
 };
 
@@ -42,22 +29,12 @@ export type FactoryProvider<T, Deps extends unknown[] = any[]> = BaseProvider<T,
 
 export type Provider<T> = ValueProvider<T> | ClassProvider<T> | FactoryProvider<T>;
 
-/** Options for `factory()` and `bind()`. Can be imported for userland higher-order helpers. */
 export type ProviderOptions<T, Deps extends unknown[] = any[]> = BaseProvider<T, Deps> & {
-  overwrite?: boolean;
-};
-
-/** Extracts the value types from a tuple of tokens, preserving position. */
-export type TokenValues<T extends readonly Token<any>[]> = {
-  [K in keyof T]: T[K] extends Token<infer V> ? V : never;
+  multi?: boolean;
 };
 
 /** -------------------- Token -------------------- **/
 
-/**
- * Creates a typed token for dependency injection.
- * The description is required — it appears in error messages and `debug()` output.
- */
 export function createToken<T>(description: string): Token<T> {
   return Symbol(description) as Token<T>;
 }
@@ -68,7 +45,7 @@ const tokenName = (t: Token<any>): string => t.description ?? 'anonymous';
 
 export class CircularDependencyError extends Error {
   constructor(path: Token<any>[]) {
-    super(`Circular dependency detected: ${path.map(tokenName).join(' → ')}`);
+    super(`Circular dependency detected: ${path.map(tokenName).join(' -> ')}`);
     this.name = 'CircularDependencyError';
   }
 }
@@ -80,10 +57,10 @@ export class ProviderNotFoundError extends Error {
   }
 }
 
-export class AliasCycleError extends Error {
-  constructor(cycle: Token<any>[]) {
-    super(`Alias cycle detected: ${cycle.map(tokenName).join(' → ')}`);
-    this.name = 'AliasCycleError';
+export class MultipleProvidersError extends Error {
+  constructor(token: Token<any>, count: number) {
+    super(`Token "${tokenName(token)}" has ${count} providers. Use resolveMany().`);
+    this.name = 'MultipleProvidersError';
   }
 }
 
@@ -103,20 +80,11 @@ type Registration<T = unknown> = {
   resolved?: boolean;
 };
 
-type SnapshotData = [Map<Token<any>, Registration<any>>, Map<Token<any>, Token<any>>];
-
-/** Opaque handle returned by `snapshot()` and accepted by `restore()`. */
-export type Snapshot = {
-  readonly aliases: ReadonlyMap<Token<any>, Token<any>>;
-  readonly registry: ReadonlyMap<Token<any>, Registration<any>>;
-};
-
 /** -------------------- Container -------------------- **/
 
 export class Container {
-  #registry = new Map<Token<any>, Registration<any>>();
-  #aliases = new Map<Token<any>, Token<any>>();
-  #retired: Registration<any>[] = [];
+  #registry = new Map<Token<any>, Registration<any>[]>();
+  #scoped = new Map<Registration<any>, Registration<any>>();
   #parent?: Container;
   #disposed = false;
 
@@ -124,106 +92,56 @@ export class Container {
     this.#parent = parent;
   }
 
-  /** Create a new root dependency injection container. */
   static create(): Container {
     return new Container();
   }
 
   /* ---- Registration ---- */
 
-  /**
-   * Register a provider for a token.
-   * Both `useClass` and `useFactory` default to `singleton` lifetime.
-   * Re-registering an existing token throws — pass `{ overwrite: true }` to replace intentionally.
-   */
-  #register<T>(token: Token<T>, provider: Provider<T>, { overwrite = false } = {}): this {
+  #register<T>(token: Token<T>, provider: Provider<T>, { multi = false } = {}): this {
     this.#assertNotDisposed();
 
-    if (!overwrite && this.#registry.has(token)) {
-      throw new Error(`Token "${tokenName(token)}" is already registered. Use { overwrite: true } to replace it.`);
-    }
-
-    // Track the replaced registration for later cleanup
     const prev = this.#registry.get(token);
 
-    if (prev?.resolved) {
-      this.#retired.push(prev);
+    if (multi) {
+      const next = prev ? [...prev, { provider }] : [{ provider }];
+
+      this.#registry.set(token, next);
+
+      return this;
     }
 
-    this.#registry.set(token, { provider });
+    if (prev && prev.length > 0) {
+      throw new Error(`Token "${tokenName(token)}" is already registered.`);
+    }
+
+    this.#registry.set(token, [{ provider }]);
 
     return this;
   }
 
-  /**
-   * Register a plain value.
-   * @example
-   * container.value(Config, { apiUrl: 'https://api.example.com' });
-   */
-  value<T>(token: Token<T>, val: T, opts?: { overwrite?: boolean }): this {
+  value<T>(token: Token<T>, val: T, opts?: { multi?: boolean }): this {
     return this.#register(token, { useValue: val }, opts);
   }
 
-  /**
-   * Register a factory function.
-   * Shorthand for `register(token, { useFactory: fn, ...opts })`.
-   * @example
-   * container.factory(DbToken, () => new Database(env.DB_URL));
-   * container.factory(SvcToken, (db) => new Svc(db), { deps: [DbToken], lifetime: 'transient' });
-   */
   factory<T, Deps extends unknown[] = any[]>(
     token: Token<T>,
     fn: (...deps: Deps) => T | Promise<T>,
     opts?: ProviderOptions<T, Deps>,
   ): this {
-    const { overwrite, ...providerOpts } = opts ?? {};
+    const { multi, ...providerOpts } = opts ?? {};
 
-    return this.#register(token, { useFactory: fn, ...providerOpts } as FactoryProvider<T>, { overwrite });
+    return this.#register(token, { useFactory: fn, ...providerOpts } as FactoryProvider<T>, { multi });
   }
 
-  /**
-   * Bind a class to a token.
-   * Shorthand for `register(token, { useClass: cls, ...opts })`.
-   * @example
-   * container.bind(ServiceToken, ServiceImpl, { deps: [DbToken] });
-   */
   bind<T, Deps extends unknown[] = any[]>(
     token: Token<T>,
     cls: new (...args: Deps) => T,
     opts?: ProviderOptions<T, Deps>,
   ): this {
-    const { overwrite, ...providerOpts } = opts ?? {};
+    const { multi, ...providerOpts } = opts ?? {};
 
-    return this.#register(token, { useClass: cls, ...providerOpts } as ClassProvider<T>, { overwrite });
-  }
-
-  /**
-   * Make `token` an alias that resolves to `source`.
-   * @example
-   * container.alias(IUserService, UserServiceImpl);
-   */
-  alias<T>(token: Token<T>, source: Token<T>): this {
-    this.#assertNotDisposed();
-    this.#aliases.set(token, source);
-
-    return this;
-  }
-
-  /** Remove a registration. */
-  unregister<T>(token: Token<T>): this {
-    this.#assertNotDisposed();
-    this.#registry.delete(token);
-
-    return this;
-  }
-
-  /** Clear all registrations and aliases in this container without running dispose hooks. */
-  clear(): this {
-    this.#assertNotDisposed();
-    this.#registry.clear();
-    this.#aliases.clear();
-
-    return this;
+    return this.#register(token, { useClass: cls, ...providerOpts } as ClassProvider<T>, { multi });
   }
 
   /* ---- Lifecycle ---- */
@@ -232,18 +150,15 @@ export class Container {
     return this.#disposed;
   }
 
-  /**
-   * Dispose all singleton/scoped instances by calling their `dispose` hooks (if any),
-   * then clear all registrations. Calling `dispose()` multiple times is safe (idempotent).
-   */
   async dispose(): Promise<void> {
     if (this.#disposed) return;
 
     this.#disposed = true;
 
     const hooks: Promise<void>[] = [];
+    const regs = [...this.#registry.values()].flat();
 
-    for (const reg of [...this.#registry.values(), ...this.#retired]) {
+    for (const reg of [...regs, ...this.#scoped.values()]) {
       const { instance, provider, resolved } = reg;
 
       if (resolved && 'dispose' in provider && provider.dispose) {
@@ -260,9 +175,8 @@ export class Container {
       }
     }
 
-    this.#retired = [];
+    this.#scoped.clear();
     this.#registry.clear();
-    this.#aliases.clear();
   }
 
   [Symbol.asyncDispose](): Promise<void> {
@@ -271,185 +185,26 @@ export class Container {
 
   /* ---- Resolution ---- */
 
-  /** Check if a token is registered (including parent containers). */
-  has(token: Token<any>): boolean {
-    this.#assertNotDisposed();
-
-    return this.#getRegistration(this.#resolveAlias(token)) !== undefined;
-  }
-
-  /* ---- Hierarchy ---- */
-
-  /**
-   * Create a child container that inherits all registrations from this container.
-   * `scoped` providers will create one instance per child container.
-   * @example
-   * const child = container.createChild();
-   * child.value(RequestContext, ctx);
-   */
   createChild(): Container {
     this.#assertNotDisposed();
 
     return new Container(this);
   }
 
-  /**
-   * Run a function inside a scoped child container that is automatically disposed afterwards.
-   * @example
-   * await container.runInScope(async (scope) => {
-   *   scope.value(RequestId, generateId());
-   *   const service = await scope.resolve(RequestScopedService);
-   *   await service.process();
-   * });
-   */
-  async runInScope<T>(fn: (scope: Container) => Promise<T> | T): Promise<Awaited<T>> {
-    const scope = this.createChild();
-
-    try {
-      return await fn(scope);
-    } finally {
-      await scope.dispose();
-    }
-  }
-
-  /**
-   * Temporarily replace a token's registration with a mock provider,
-   * then restore the original (including any cached singleton instance) after `fn` returns.
-   * @example
-   * const result = await container.mock(DbToken, { useValue: fakeDb }, () => svc.doWork());
-   * await container.mock(DbToken, { useFactory: () => createInMemoryDb() }, fn);
-   */
-  async mock<T, R>(token: Token<T>, provider: Provider<T>, fn: () => Promise<R> | R): Promise<R> {
-    const snap = this.snapshot();
-
-    this.#register(token, provider, { overwrite: true });
-
-    try {
-      return await fn();
-    } finally {
-      this.restore(snap);
-    }
-  }
-
-  /**
-   * Resolve a token asynchronously (works for both sync and async providers).
-   * This is the primary resolution method in a greenfield design.
-   * @example
-   * const config = await container.resolve(ConfigToken);
-   * const [db, cache] = await container.resolveAll([DbToken, CacheToken]);
-   */
   async resolve<T>(token: Token<T>): Promise<T> {
     this.#assertNotDisposed();
 
-    return this.#resolveAsync(token, [], new Set());
+    return this.#resolveToken(token, [], new Set());
   }
 
-  /**
-   * Resolve multiple tokens, returning a typed tuple.
-   * @example
-   * const [db, logger, config] = await container.resolveAll([DbToken, LoggerToken, ConfigToken]);
-   */
-  async resolveAll<T extends readonly Token<any>[]>(tokens: [...T]): Promise<TokenValues<T>> {
+  async resolveMany<T>(token: Token<T>): Promise<T[]> {
     this.#assertNotDisposed();
 
-    return Promise.all(tokens.map((t) => this.resolve(t))) as unknown as Promise<TokenValues<T>>;
-  }
+    const regs = this.#getRegistrations(token) as Registration<T>[];
 
-  /**
-   * Resolve a token, returning `undefined` if not registered.
-   * @example
-   * const cache = await container.resolveOptional(CacheToken);
-   * if (cache) { ... }
-   */
-  async resolveOptional<T>(token: Token<T>): Promise<T | undefined> {
-    try {
-      return await this.resolve(token);
-    } catch (e) {
-      if (e instanceof ProviderNotFoundError) return undefined;
+    if (regs.length === 0) return [];
 
-      throw e;
-    }
-  }
-
-  /* ---- Snapshot / Restore ---- */
-
-  /**
-   * Take a snapshot of all current local registrations and aliases, including cached instances.
-   * Useful for temporarily overriding providers in tests.
-   * @see restore
-   */
-  snapshot(): Snapshot {
-    this.#assertNotDisposed();
-
-    return {
-      aliases: new Map(this.#aliases),
-      registry: new Map(this.#registry),
-    };
-  }
-
-  /**
-   * Restore registrations and aliases from a previous snapshot.
-   * @see snapshot
-   */
-  restore(snap: Snapshot): this {
-    this.#assertNotDisposed();
-
-    const registry = snap.registry as SnapshotData[0];
-    const aliases = snap.aliases as SnapshotData[1];
-
-    // Track resolved registrations that are being replaced
-    for (const [token, currentReg] of this.#registry.entries()) {
-      const restoredReg = registry.get(token);
-
-      if (currentReg.resolved && (!restoredReg || restoredReg !== currentReg)) {
-        this.#retired.push(currentReg);
-      }
-    }
-
-    this.#registry = new Map(registry);
-    this.#aliases = new Map(aliases);
-
-    return this;
-  }
-
-  /** Get debug information about all registered tokens and aliases, including inherited ones from parent containers. */
-  debug(): {
-    aliases: Array<[string, string]>;
-    tokens: Array<{ lifetime: Lifetime; name: string; provider: 'class' | 'factory' | 'value'; resolved: boolean }>;
-  } {
-    const seenTokens = new Map<
-      Token<any>,
-      { lifetime: Lifetime; name: string; provider: 'class' | 'factory' | 'value'; resolved: boolean }
-    >();
-    const seenAliases = new Map<Token<any>, [string, string]>();
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let c: Container | undefined = this;
-
-    while (c) {
-      for (const [t, reg] of c.#registry.entries()) {
-        if (!seenTokens.has(t)) {
-          const provider =
-            'useValue' in reg.provider ? 'value' : 'useClass' in reg.provider ? 'class' : ('factory' as const);
-          const lifetime = 'lifetime' in reg.provider ? (reg.provider.lifetime ?? 'singleton') : 'singleton';
-
-          seenTokens.set(t, {
-            lifetime,
-            name: tokenName(t),
-            provider,
-            resolved: reg.resolved ?? false,
-          });
-        }
-      }
-      for (const [from, to] of c.#aliases.entries()) {
-        if (!seenAliases.has(from)) seenAliases.set(from, [tokenName(from), tokenName(to)]);
-      }
-      c = c.#parent;
-    }
-
-    return {
-      aliases: Array.from(seenAliases.values()),
-      tokens: Array.from(seenTokens.values()),
-    };
+    return Promise.all(regs.map((reg) => this.#resolveRegistration(token, reg, [], new Set())));
   }
 
   /** -------------------- Private -------------------- **/
@@ -458,95 +213,80 @@ export class Container {
     if (this.#disposed) throw new ContainerDisposedError();
   }
 
-  // Walk the full container chain (child-wins) to find an alias target.
-  #findAlias(token: Token<any>): Token<any> | undefined {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let c: Container | undefined = this;
+  #getRegistrations<T>(token: Token<T>): Registration<T>[] {
+    const local = this.#registry.get(token) as Registration<T>[] | undefined;
 
-    while (c) {
-      if (c.#aliases.has(token)) return c.#aliases.get(token);
+    if (local) return local;
 
-      c = c.#parent;
+    return this.#parent ? this.#parent.#getRegistrations(token) : [];
+  }
+
+  #scopedReg<T>(source: Registration<T>): Registration<T> {
+    let local = this.#scoped.get(source) as Registration<T> | undefined;
+
+    if (!local) {
+      local = { provider: source.provider };
+      this.#scoped.set(source, local);
     }
 
-    return undefined;
+    return local;
   }
 
-  // Resolves alias chains, walking parent containers and detecting cycles.
-  // Aliases defined in any ancestor are visible to descendant containers.
-  #resolveAlias<T>(token: Token<T>): Token<T> {
-    const visited = new Set<Token<any>>();
-    const path: Token<any>[] = [];
-    let current: Token<any> = token;
+  async #resolveToken<T>(token: Token<T>, stack: Token<any>[], seen: Set<Token<any>>): Promise<T> {
+    if (seen.has(token)) throw new CircularDependencyError([...stack, token]);
 
-    for (;;) {
-      const target = this.#findAlias(current);
+    const regs = this.#getRegistrations(token) as Registration<T>[];
 
-      if (!target) break;
+    if (regs.length === 0) throw new ProviderNotFoundError(token);
 
-      if (visited.has(current)) throw new AliasCycleError([...path, current]);
+    if (regs.length > 1) throw new MultipleProvidersError(token, regs.length);
 
-      visited.add(current);
-      path.push(current);
-      current = target;
-    }
-
-    return current as Token<T>;
+    return this.#resolveRegistration(token, regs[0], stack, seen);
   }
 
-  // Looks up a registration by an already-resolved (non-alias) token, walking the parent chain.
-  #getRegistration<T>(resolved: Token<T>): Registration<T> | undefined {
-    return this.#registry.get(resolved) ?? (this.#parent ? this.#parent.#getRegistration(resolved) : undefined);
-  }
-
-  // Gets or creates a local registration entry (used for scoped caching in children).
-  #localReg<T>(token: Token<T>, provider: Provider<T>): Registration<T> {
-    let reg = this.#registry.get(token) as Registration<T> | undefined;
-
-    if (!reg) {
-      reg = { provider };
-      this.#registry.set(token, reg);
-    }
-
-    return reg;
-  }
-
-  async #resolveAsync<T>(token: Token<T>, stack: Token<any>[], seen: Set<Token<any>>): Promise<T> {
-    const resolved = this.#resolveAlias(token);
-
-    if (seen.has(resolved)) throw new CircularDependencyError([...stack, resolved]);
-
-    const reg = this.#getRegistration(resolved);
-
-    if (!reg) throw new ProviderNotFoundError(resolved);
-
+  async #resolveRegistration<T>(
+    token: Token<T>,
+    reg: Registration<T>,
+    stack: Token<any>[],
+    seen: Set<Token<any>>,
+  ): Promise<T> {
     const { provider } = reg;
 
-    if ('useValue' in provider) return (provider as ValueProvider<T>).useValue;
+    if ('useValue' in provider) return provider.useValue;
 
     const p = provider as ClassProvider<T> | FactoryProvider<T>;
     const { deps = [], lifetime = 'singleton' } = p;
 
-    stack.push(resolved);
-    seen.add(resolved);
+    const cacheReg =
+      lifetime === 'scoped' && this.#parent ? this.#scopedReg(reg) : lifetime === 'singleton' ? reg : undefined;
+
+    if (cacheReg?.resolved) return cacheReg.instance as T;
+
+    if (cacheReg?.promise) return cacheReg.promise;
+
+    stack.push(token);
+    seen.add(token);
 
     const build = async (): Promise<T> => {
-      const args = await Promise.all(
-        (deps as Token<any>[]).map((dep) => this.#resolveAsync(dep, [...stack], new Set(seen))),
-      );
+      const args = await Promise.all((deps as Token<any>[]).map((dep) => this.#resolveToken(dep, stack, seen)));
 
-      return (
+      const created = (
         'useClass' in p
           ? new (p as ClassProvider<T>).useClass(...args)
           : await (p as FactoryProvider<T>).useFactory(...args)
       ) as T;
+
+      if ('init' in p && p.init) {
+        await p.init(created);
+      }
+
+      return created;
     };
 
-    // Deduplicates concurrent singleton resolutions using a shared in-flight promise.
-    const cache = (cacheReg: Registration<T>): Promise<T> => {
-      if (cacheReg.resolved) return Promise.resolve(cacheReg.instance as T);
+    try {
+      if (!cacheReg) return await build();
 
-      cacheReg.promise ??= build()
+      cacheReg.promise = build()
         .then((inst) => {
           cacheReg.instance = inst;
           cacheReg.resolved = true;
@@ -557,42 +297,16 @@ export class Container {
           cacheReg.promise = undefined;
         });
 
-      return cacheReg.promise;
-    };
-
-    try {
-      if (lifetime === 'scoped' && this.#parent) return cache(this.#localReg(resolved, provider));
-
-      return lifetime === 'singleton' ? cache(reg) : build();
+      return await cacheReg.promise;
     } finally {
       stack.pop();
-      seen.delete(resolved);
+      seen.delete(token);
     }
   }
 }
 
 /** -------------------- Factory -------------------- **/
 
-/**
- * Create a new root dependency injection container.
- * @example
- * const container = createContainer();
- */
 export function createContainer(): Container {
   return Container.create();
-}
-
-/** -------------------- Testing Helpers -------------------- **/
-
-/**
- * Create an isolated child test container.
- * Registrations in the child are isolated from the base container.
- * @example
- * const testContainer = createTestContainer();
- * testContainer.value(Config, testConfig);
- * // ... run tests
- * await testContainer.dispose();
- */
-export function createTestContainer(base?: Container): Container {
-  return (base ?? Container.create()).createChild();
 }

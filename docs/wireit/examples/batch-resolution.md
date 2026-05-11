@@ -13,12 +13,34 @@ Implement batch resolution in a production-friendly way with `@vielzeug/wireit` 
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/wireit` installed.
 
-### Resolve multiple dependencies at once
+### Resolve multiple dependencies with `Promise.all`
 
 ```ts
-const [db, config, logger] = await container.resolveAll([DbToken, ConfigToken, LoggerToken]);
-// Types: [IDatabase, AppConfig, ILogger]
-const [db2, cache] = await container.resolveAll([DbToken, CacheToken]);
+const [db, config, logger] = await Promise.all([
+  container.resolve(DbToken),
+  container.resolve(ConfigToken),
+  container.resolve(LoggerToken),
+]);
+```
+
+### Resolve all providers on a multi-provider token
+
+For tokens registered with `{ multi: true }`, use `resolveMany` instead of `resolveAll`:
+
+```ts
+const ValidatorToken = createToken<Validator>('Validator');
+
+container.bind(ValidatorToken, EmailValidator, { multi: true });
+container.bind(ValidatorToken, PhoneValidator, { multi: true });
+container.bind(ValidatorToken, LengthValidator, { multi: true });
+
+// resolveMany returns an array — one value per registered provider in order
+const validators = await container.resolveMany(ValidatorToken);
+// [EmailValidator, PhoneValidator, LengthValidator]
+
+for (const validator of validators) {
+  await validator.validate(input);
+}
 ```
 
 ### Bootstrap function
@@ -28,7 +50,11 @@ async function bootstrap() {
   const container = createContainer();
   // ... register all providers ...
 
-  const [db, cache, queue] = await container.resolveAll([DbToken, CacheToken, QueueToken]);
+  const [db, cache, queue] = await Promise.all([
+    container.resolve(DbToken),
+    container.resolve(CacheToken),
+    container.resolve(QueueToken),
+  ]);
 
   await Promise.all([db.migrate(), cache.warm(), queue.start()]);
 
@@ -49,6 +75,6 @@ async function bootstrap() {
 
 ## Related Recipes
 
-- [Aliases](./aliases.md)
-- [Async Providers](./async-providers.md)
 - [Basic Setup](./basic-setup.md)
+- [Async Providers](./async-providers.md)
+- [Child Containers](./child-containers.md)

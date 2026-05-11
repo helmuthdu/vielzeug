@@ -16,9 +16,9 @@ description: Complete type signatures and documentation for createWorker, Worker
 ## Package Exports
 
 ```ts
-export { createWorker, TaskError, TaskTimeoutError, TerminatedError, WorkerError } from '@vielzeug/workit';
+export { createWorker, WorkerError } from '@vielzeug/workit';
 
-export type { RunOptions, TaskFn, WorkerHandle, WorkerOptions, WorkerStatus } from '@vielzeug/workit';
+export type { RunOptions, TaskFn, WorkerErrorCode, WorkerHandle, WorkerOptions, WorkerStatus } from '@vielzeug/workit';
 
 export { createTestWorker } from '@vielzeug/workit/test';
 export type { TestWorkerHandle } from '@vielzeug/workit/test';
@@ -55,12 +55,14 @@ type WorkerStatus = 'idle' | 'running' | 'terminated';
 ```ts
 type WorkerOptions = {
   concurrency?: number | 'auto';
+  maxQueue?: number | 'auto';
   timeout?: number;
 };
 ```
 
 - `concurrency`: `number | 'auto'`, defaults to `1`. `'auto'` uses `navigator.hardwareConcurrency` when available.
-- `timeout`: `number | undefined`. Milliseconds before a task rejects with `TaskTimeoutError`. The timed-out worker is recycled.
+- `maxQueue`: `number | 'auto' | undefined`. Queue capacity before `run()` rejects with `WorkerError` code `'queue_full'`. `'auto'` resolves to `concurrency * 2`.
+- `timeout`: `number | undefined`. Milliseconds before a task rejects with `WorkerError` code `'timeout'`.
 
 ---
 
@@ -84,10 +86,14 @@ type RunOptions = {
 
 ```ts
 type WorkerHandle<TInput, TOutput> = {
+  close(): Promise<void>;
+  readonly completed: number;
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
   dispose(): void;
   readonly concurrency: number;
+  readonly size: number;
   readonly status: WorkerStatus;
+  readonly utilization: number;
   [Symbol.dispose](): void;
 };
 ```
@@ -110,7 +116,7 @@ Creates a worker (or pool) that executes `fn` in a Web Worker. `createWorker()` 
 | Parameter | Type                      | Description                                                              |
 | --------- | ------------------------- | ------------------------------------------------------------------------ |
 | `fn`      | `TaskFn<TInput, TOutput>` | The task function. Must be self-contained — no closure over outer scope. |
-| `options` | `WorkerOptions`           | Optional configuration (`concurrency`, `timeout`).                       |
+| `options` | `WorkerOptions`           | Optional configuration (`concurrency`, `maxQueue`, `timeout`).           |
 
 Returns `WorkerHandle<TInput, TOutput>`.
 
@@ -123,7 +129,7 @@ import { createWorker } from '@vielzeug/workit';
 const worker = createWorker<string, string>((text) => text.toUpperCase());
 
 // Pool of 4
-const pool = createWorker<number, number>((n) => n ** 2, { concurrency: 4, timeout: 3000 });
+const pool = createWorker<number, number>((n) => n ** 2, { concurrency: 4, maxQueue: 'auto', timeout: 3000 });
 ```
 
 ## WorkerHandle Interface
@@ -136,11 +142,12 @@ Dispatches a task to the next available worker slot. If all slots are busy, the 
 
 Rejects with:
 
-- `TaskTimeoutError` — if `timeout` is configured and the task exceeds it
-- `TerminatedError` — if `dispose()` was called before or during the task
-- `TaskError` — if the task function throws
+- `WorkerError` code `'queue_full'` — if `maxQueue` is configured and the queue is already full
+- `WorkerError` code `'timeout'` — if `timeout` is configured and the task exceeds it
+- `WorkerError` code `'terminated'` — if `dispose()` was called before or during the task
+- `WorkerError` code `'task'` — if the task function throws
 - `DOMException` (AbortError) — if the provided `signal` is aborted before the task starts
-- `WorkerError` — if the Worker API is unavailable when the task starts
+- `WorkerError` code `'worker_unavailable'`, `'worker_create_failed'`, or `'worker_runtime'` — worker runtime/setup failures
 
 ::: warning
 The task function is serialized via `.toString()` and runs in an isolated scope. It cannot close over variables from the surrounding module. Keep task functions entirely self-contained.
@@ -152,7 +159,23 @@ The task function is serialized via `.toString()` and runs in an isolated scope.
 
 `dispose(): void`
 
-Terminates all worker threads and rejects any pending or in-flight tasks with `TerminatedError`. After calling `dispose()`, `status` becomes `'terminated'` and further calls to `run()` reject immediately.
+Terminates all worker threads and rejects any pending or in-flight tasks with `WorkerError` code `'terminated'`. After calling `dispose()`, `status` becomes `'terminated'` and further calls to `run()` reject immediately.
+
+---
+
+### `close()`
+
+`close(): Promise<void>`
+
+Graceful shutdown. Waits until queued and in-flight tasks settle, then terminates all workers.
+
+---
+
+### `completed`
+
+`readonly completed: number`
+
+Total number of successfully completed tasks since handle creation.
 
 ---
 
@@ -164,11 +187,27 @@ The number of worker slots configured for this handle (always ≥ 1).
 
 ---
 
+### `size`
+
+`readonly size: number`
+
+Current queue depth (tasks waiting to start).
+
+---
+
 ### `status`
 
 `readonly status: WorkerStatus`
 
 The current state of the worker handle. See [`WorkerStatus`](#workerstatus).
+
+---
+
+### `utilization`
+
+`readonly utilization: number`
+
+Current active-slot ratio from `0` to `1`.
 
 ---
 
@@ -185,71 +224,41 @@ Alias for `dispose()`. Enables the ES2025 explicit resource management `using` k
 } // automatically disposed here
 ```
 
-## Error Classes
+## Error Model
 
-All error classes extend `WorkerError`, so a single `catch` can cover every workit error:
+Workit uses a single error class: `WorkerError`.
 
 ```ts
-import { WorkerError, TaskTimeoutError, TerminatedError, TaskError } from '@vielzeug/workit';
+class WorkerError extends Error {
+  readonly code: WorkerErrorCode;
+}
+```
+
+Use `instanceof WorkerError` plus `err.code` for branching:
+
+```ts
+import { WorkerError } from '@vielzeug/workit';
 
 try {
   await worker.run(input);
 } catch (err) {
-  if (err instanceof WorkerError) {
-    // handles TaskTimeoutError, TerminatedError, or TaskError
+  if (err instanceof WorkerError && err.code === 'timeout') {
+    // task exceeded timeout
   }
 }
 ```
 
----
+Supported `WorkerErrorCode` values:
 
-### `WorkerError`
-
-```ts
-class WorkerError extends Error {}
-```
-
-Base class for all workit errors. Use `instanceof WorkerError` to catch any error thrown by this library.
-
----
-
-### `TaskTimeoutError`
-
-```txt
-class TaskTimeoutError extends WorkerError {
-  constructor(ms: number)
-}
-```
-
-Thrown when a task exceeds the configured `timeout`. The error message includes the configured limit in milliseconds.
-
----
-
-### `TerminatedError`
-
-```txt
-class TerminatedError extends WorkerError {
-  constructor()
-}
-```
-
-Thrown when `run()` is called on a disposed handle, or when `dispose()` is called while a task is in flight.
-
----
-
-### `TaskError`
-
-```txt
-class TaskError extends WorkerError {
-  constructor(message: string, cause?: unknown)
-}
-```
-
-Thrown when the task function itself throws. The `message` is the original error message. The error `name` and `stack` are also preserved when available from the Worker thread.
-
-::: info
-Unlike traditional RPC or serialization libraries, workit preserves the error name and stack trace across the worker boundary where possible. This aids debugging task failures without needing to inspect logs separately.
-:::
+- `'invalid_options'`
+- `'post_message_failed'`
+- `'queue_full'`
+- `'task'`
+- `'terminated'`
+- `'timeout'`
+- `'worker_create_failed'`
+- `'worker_runtime'`
+- `'worker_unavailable'`
 
 ## Testing Utilities
 

@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/eventit)](https://www.npmjs.com/package/@vielzeug/eventit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`@vielzeug/eventit` is a zero-dependency event bus for TypeScript. Define an event map once and get type-safe `emit`, `on`, `once`, `wait`, and `events` APIs with proper payload inference.
+`@vielzeug/eventit` is a zero-dependency event bus for TypeScript. Define an event map once and get type-safe `emit`, `on`, `once`, `wait`, `waitAny`, and `events` APIs with proper payload inference.
 
 ## Installation
 
@@ -41,6 +41,11 @@ bus.emit('user:login', { email: 'alice@example.com', userId: '42' });
 bus.emit('user:logout');
 
 const nextLogin = await bus.wait('user:login');
+const nextSessionEvent = await bus.waitAny(['user:login', 'user:logout'] as const);
+
+if (nextSessionEvent.event === 'user:login') {
+  console.log(nextSessionEvent.payload.userId);
+}
 
 try {
   await bus.wait('user:login', AbortSignal.timeout(1_000));
@@ -56,10 +61,12 @@ try {
 - Typed event maps with strict payload checks
 - `void` events with no payload argument
 - Persistent (`on`) and one-shot (`once`) subscriptions
+- Listener management via unsubscribe handles, `removeAllListeners`, and `eventNames`
 - Promise-based waiting via `wait`
+- Multi-event waiting via `waitAny`
 - Async streaming via `events`
 - `AbortSignal` support for listeners and async waits
-- Optional `onEmit` and `onError` hooks
+- Optional `onDispatch` and `onError` hooks
 - `listenerCount` for per-event and total counts
 - `dispose` + `[Symbol.dispose]` for explicit or `using` cleanup
 
@@ -90,7 +97,7 @@ bus.dispose();
 - `createBus<T>(options?: BusOptions<T>): Bus<T>`
 - `createTestBus<T>(options?: BusOptions<T>): TestBus<T>`
 - `BusDisposedError`
-- `type Bus<T>`, `BusOptions<T>`, `EventMap`, `EventKey<T>`, `Listener<T>`, `Unsubscribe`
+- `type Bus<T>`, `BusOptions<T>`, `WaitAnyResult<T, K>`, `EventMap`, `EventKey<T>`, `Listener<T>`, `Unsubscribe`
 
 ## Documentation
 

@@ -74,9 +74,54 @@ Registers work that runs after the component template is mounted. Multiple calls
 
 ### `handle(target, event, listener, options?)`
 
-Adds an event listener and automatically removes it on cleanup.
+Adds an event listener and automatically removes it on cleanup when called inside component setup or another Craftit runtime scope.
+
+If you call it outside a runtime scope, Craftit returns a manual cleanup function and emits a one-time warning in development.
 
 ### `onCleanup(fn)`
+
+```ts
+onCleanup(fn: CleanupFn): void;
+```
+
+Registers a cleanup function to be called when the component disconnects. Must be called synchronously during component `setup()` or inside `scope.run()`. Cleanup functions run in **LIFO order**.
+
+```ts
+define('my-el', {
+  setup() {
+    const ws = new WebSocket('wss://...');
+    onCleanup(() => ws.close()); // runs on disconnect
+
+    return () => html`...`;
+  },
+});
+```
+
+### `scope()`
+
+```ts
+scope(): Scope;
+```
+
+Re-exported from `@vielzeug/stateit`. Creates an isolated cleanup context. Use inside component `setup()` to manage sub-scoped teardown independently from the component lifetime.
+
+```ts
+define('my-el', {
+  setup() {
+    const sub = scope();
+    onCleanup(() => sub.dispose()); // tie sub-scope to component lifetime
+
+    onMounted(() => {
+      sub.run(() => {
+        const id = setInterval(tick, 200);
+        onCleanup(() => clearInterval(id));
+      });
+    });
+
+    return () => html`...`;
+  },
+});
+```
 
 Registers teardown for the current component/runtime scope.
 
@@ -86,7 +131,9 @@ Runs `callback` when a `ref()` resolves to an element and re-runs when that elem
 
 ## Props API
 
-Craftit does not expose `defineProps()`. Define props directly in `props`.
+Craftit does not expose `defineProps()`. Define props directly in `props` using `prop.*` helpers or raw `PropDef` objects.
+
+Shared prop bundles should type against `PropsDef<T>`.
 
 | Helper | Signature | Notes |
 | --- | --- | --- |
@@ -95,13 +142,29 @@ Craftit does not expose `defineProps()`. Define props directly in `props`.
 | `prop.number(defaultValue?)` | `PropDef<number>` | Uses `Number(...)` parsing |
 | `prop.oneOf(allowed, defaultValue)` | `PropDef<T>` | Restricts to provided string union |
 
+When you need custom parsing or `reflect: false`, use a raw `PropDef` object:
+
+```ts
+props: {
+  label: { default: 'Save', reflect: false },
+  count: { default: 0, parse: (value) => (value == null ? 0 : Number(value)) },
+}
+```
+
 ## Template and Directives
 
 - `html(strings, ...values): HTMLResult`
 - `css`
 - `each(source, options)`
 - `classMap(record)`
+- `styleMap(record)`
+- `guard(deps, render)`
+- `when(condition, truthy, falsy?)`
+- `live(signal)`
+- `until(promise, placeholder?, onError?)`
 - `raw(value)`
+
+`live(signal)` is intended for form-control bindings such as `:value` or `:checked` when you want to avoid clobbering user edits with stale app-state writes.
 
 ## Host and Slots
 

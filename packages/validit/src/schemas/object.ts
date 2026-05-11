@@ -8,12 +8,12 @@ export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T
 
 export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> {
   readonly shape: T;
-  private readonly _relaxed: boolean;
+  private readonly _unknownKeyMode: 'passthrough' | 'strict' | 'strip';
 
-  constructor(shape: T, relaxed: boolean = false) {
+  constructor(shape: T, unknownKeyMode: 'passthrough' | 'strict' | 'strip' = 'strict') {
     super([]);
     this.shape = shape;
-    this._relaxed = relaxed;
+    this._unknownKeyMode = unknownKeyMode;
   }
 
   private _unknownKeys(obj: Record<string, unknown>): string[] {
@@ -21,7 +21,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   private _strictUnknownKeyIssues(obj: Record<string, unknown>): Issue[] {
-    if (this._relaxed) return [];
+    if (this._unknownKeyMode !== 'strict') return [];
 
     const unknownKeys = this._unknownKeys(obj);
 
@@ -37,24 +37,47 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   private _copyRelaxedUnknownKeys(obj: Record<string, unknown>, output: Record<string, unknown>): void {
-    if (!this._relaxed) return;
+    if (this._unknownKeyMode !== 'passthrough') return;
 
     for (const key of this._unknownKeys(obj)) {
       output[key] = obj[key];
     }
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+  private _guardObjectInput(
+    value: unknown,
+  ): { obj: Record<string, unknown>; ok: true } | { issues: Issue[]; ok: false } {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return {
-        data: value,
         issues: [{ code: ErrorCode.invalid_type, message: _messages().object.type(), path: [] }],
+        ok: false,
       };
     }
 
-    const obj = value as Record<string, unknown>;
-    const issues: Issue[] = [...this._strictUnknownKeyIssues(obj)];
-    const output: Record<string, unknown> = {};
+    return { obj: value as Record<string, unknown>, ok: true };
+  }
+
+  private _createObjectParseContext(obj: Record<string, unknown>): {
+    issues: Issue[];
+    output: Record<string, unknown>;
+  } {
+    return {
+      issues: [...this._strictUnknownKeyIssues(obj)],
+      output: {},
+    };
+  }
+
+  private _rebuildWith<U extends ObjectShape>(shape: U, unknownKeyMode = this._unknownKeyMode): ObjectSchema<U> {
+    return this._copyStateTo(new ObjectSchema(shape, unknownKeyMode));
+  }
+
+  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+    const guarded = this._guardObjectInput(value);
+
+    if (!guarded.ok) return { data: value, issues: guarded.issues };
+
+    const { obj } = guarded;
+    const { issues, output } = this._createObjectParseContext(obj);
 
     for (const key of Object.keys(this.shape)) {
       const result = this.shape[key].safeParse(obj[key]);
@@ -72,15 +95,12 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().object.type(), path: [] }],
-      };
-    }
+    const guarded = this._guardObjectInput(value);
 
-    const obj = value as Record<string, unknown>;
-    const issues: Issue[] = [...this._strictUnknownKeyIssues(obj)];
+    if (!guarded.ok) return { data: value, issues: guarded.issues };
+
+    const { obj } = guarded;
+    const { issues, output } = this._createObjectParseContext(obj);
 
     // Async field parsing
     const keyResults = await Promise.all(
@@ -92,8 +112,6 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
         })),
       ),
     );
-
-    const output: Record<string, unknown> = {};
 
     for (const r of keyResults) {
       if (r.issues.length === 0) output[r.key] = r.data;
@@ -113,49 +131,31 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   partial<K extends keyof T>(...keys: K[]): ObjectSchema<any> {
     const targetKeys = keys.length > 0 ? new Set(keys as string[]) : null;
 
-    return this._copyStateTo(
-      new ObjectSchema(
-        Object.fromEntries(
-          Object.entries(this.shape).map(([k, s]) => [k, targetKeys === null || targetKeys.has(k) ? s.optional() : s]),
-        ) as any,
-        this._relaxed,
-      ),
+    return this._rebuildWith(
+      Object.fromEntries(
+        Object.entries(this.shape).map(([k, s]) => [k, targetKeys === null || targetKeys.has(k) ? s.optional() : s]),
+      ) as any,
     );
   }
 
   required(): ObjectSchema<{ [K in keyof T]: Schema<Exclude<InferOutput<T[K]>, undefined>> }> {
-    return this._copyStateTo(
-      new ObjectSchema(
-        Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
-        this._relaxed,
-      ),
-    );
+    return this._rebuildWith(Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any);
   }
 
   extend<U extends ObjectShape>(extra: U): ObjectSchema<Omit<T, keyof U> & U> {
-    return this._copyStateTo(new ObjectSchema({ ...this.shape, ...extra } as any, this._relaxed));
+    return this._rebuildWith({ ...this.shape, ...extra } as any);
   }
 
   pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>> {
     const keySet = new Set(keys as string[]);
 
-    return this._copyStateTo(
-      new ObjectSchema(
-        Object.fromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any,
-        this._relaxed,
-      ),
-    );
+    return this._rebuildWith(Object.fromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any);
   }
 
   omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>> {
     const keySet = new Set(keys as string[]);
 
-    return this._copyStateTo(
-      new ObjectSchema(
-        Object.fromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any,
-        this._relaxed,
-      ),
-    );
+    return this._rebuildWith(Object.fromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any);
   }
 
   /**
@@ -163,8 +163,11 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
    * Default is strict mode (rejects unknown keys).
    */
   relaxed(): Schema<InferObject<T> & Record<string, unknown>> {
-    return this._copyStateTo(new ObjectSchema(this.shape, true)) as unknown as Schema<
-      InferObject<T> & Record<string, unknown>
-    >;
+    return this._rebuildWith(this.shape, 'passthrough') as unknown as Schema<InferObject<T> & Record<string, unknown>>;
+  }
+
+  /** Ignore unknown keys (strip mode). */
+  strip(): ObjectSchema<T> {
+    return this._rebuildWith(this.shape, 'strip');
   }
 }

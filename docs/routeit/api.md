@@ -11,10 +11,13 @@ description: Complete API reference for the declarative Routeit router.
 | --- | --- |
 | `createRouter({ routes, ...options })` | Create a router from a route table |
 | `createBrowserHistory()` | Create the default browser history driver |
+| `createMemoryHistory(initialPath?)` | Create an in-memory history driver (SSR / tests) |
 | `redirect(target, options?)` | Build redirect middleware for guard flows |
 | `router.navigate({ name, ... })` | Navigate by route name |
 | `router.navigate({ path })` | Navigate by raw path target |
 | `router.url(name, params?, query?)` | Build a URL for a named route |
+| `router.preload(name, params?)` | Eagerly run data loaders without navigating |
+| `router.beforeLeave(blocker)` | Register a leave guard |
 
 ## `createRouter(options)`
 
@@ -43,6 +46,7 @@ const router = createRouter({
 | `history` | `HistoryDriver` | `createBrowserHistory()` | History source used for reading locations and writing navigations |
 | `middleware` | `Middleware[]` | `[]` | Global middleware prepended to every route |
 | `routes` | `RouteTable` | required | Declarative route table. Object key order defines match precedence. |
+| `scroll` | `(to, from) => { x, y } \| null \| undefined` | — | Called after each navigation. Return `null` to scroll to top, `{ x, y }` for a specific position, or `undefined` to do nothing. |
 | `viewTransition` | `boolean` | `false` | Wrap navigations in the View Transition API when available |
 
 **Returns:** `Router`
@@ -106,8 +110,11 @@ Each route definition supports these fields:
 | `index` | `boolean` | Default child route that inherits the parent path. |
 | `data` | `DataFn` | Optional route data function. Runs after middleware and before the handler. |
 | `handler` | `RouteHandler` | Optional terminal handler |
+| `lazy` | `() => Promise<{ handler?, data?, meta? }>` | Lazy-load the route module. Called once; result replaces `handler`, `data`, and `meta` in place. |
 | `middleware` | `Middleware[]` | Optional route-specific middleware |
 | `meta` | `unknown` | Static metadata exposed on `router.state.matches.at(-1)?.meta` |
+| `redirect` | `NavigationTarget` | Declarative redirect. Resolved before middleware runs; uses `replaceState` so the original URL is never added to history. |
+| `coerceSearch` | `(raw: QueryParams) => QueryParams` | Coerce search params. Return value replaces `ctx.query`. Throwing leaves the raw query unchanged. |
 
 ## `createBrowserHistory()`
 
@@ -117,7 +124,27 @@ import { createBrowserHistory } from '@vielzeug/routeit';
 const history = createBrowserHistory();
 ```
 
-Create the default `HistoryDriver` used by Routeit. Pass a custom driver to `createRouter({ history })` when you need memory-backed navigation for tests or a framework adapter.
+Create the default `HistoryDriver` backed by the browser History API.
+
+## `createMemoryHistory(initialPath?)`
+
+```ts
+import { createMemoryHistory } from '@vielzeug/routeit';
+
+// Tests
+const router = createRouter({
+  history: createMemoryHistory('/dashboard'),
+  routes,
+});
+
+// SSR
+const router = createRouter({
+  history: createMemoryHistory(request.url),
+  routes,
+});
+```
+
+Create an in-memory `HistoryDriver`. No browser globals required — suitable for SSR, unit tests, and non-browser runtimes (Electron, Capacitor). The optional `initialPath` defaults to `'/'`.
 
 ## `Router`
 
@@ -193,6 +220,36 @@ Resolve a pathname without running middleware, handlers, or subscribers. Returns
 
 **Returns:** `RouteMatchBranch | null`
 
+#### `router.preload(name, params?)`
+
+```ts
+// Hover-prefetch
+anchor.addEventListener('mouseenter', () => {
+  router.preload('userDetail', { id: '42' });
+});
+```
+
+Eagerly runs the data loaders for a named route without navigating. Useful for hover-prefetch. Concurrent calls for the same route+params are deduplicated. Results are discarded; a subsequent `navigate()` will run the loaders again with a fresh `AbortSignal`.
+
+**Returns:** `Promise<void>`
+
+#### `router.beforeLeave(blocker)`
+
+```ts
+// Guard unsaved-changes forms
+const remove = router.beforeLeave(async () => {
+  if (!form.isDirty) return true;
+  return confirm('Leave without saving?');
+});
+
+// Remove the guard when the form unmounts
+remove();
+```
+
+Register a leave guard called before every navigation attempt. Return `true` to allow, `false` to cancel. Only one guard is active at a time — calling `beforeLeave` again replaces the previous one. Returns an unsubscribe function.
+
+**Returns:** `() => void`
+
 ## `redirect(target, options?)`
 
 ```ts
@@ -212,12 +269,18 @@ Creates middleware that performs a redirect and short-circuits the chain.
 Current immutable route snapshot.
 
 ```ts
-const { location, matches, status } = router.state;
+const { location, matches, status, error } = router.state;
 
 location.pathname;
 location.query;
 location.hash;
+location.historyState; // value passed to navigate({ ... }, { state: ... })
+
+// When status === 'error':
+console.error(error);
 ```
+
+`error` is only set when `status === 'error'`. It holds the exact value thrown by the failing `data()` function.
 
 #### `router.subscribe(listener)`
 
@@ -243,6 +306,8 @@ type RouteContext<
 > = {
   readonly data?: unknown;
   readonly hash: string;
+  /** State stored on the history entry that triggered this navigation. */
+  readonly historyState: unknown;
   locals: Record<string, unknown>;
   readonly matches: RouteMatchBranch;
   readonly navigate: (
@@ -344,13 +409,19 @@ type NavigateOptions = {
 
 ```ts
 type RouteState = {
-  readonly location: {
-    readonly hash: string;
-    readonly pathname: string;
-    readonly query: QueryParams;
-  };
+  /** The value thrown by a `data()` function. Only set when `status === 'error'`. */
+  readonly error?: unknown;
+  readonly location: RouteLocation;
   readonly matches: readonly RouteMatch[];
   readonly status: 'idle' | 'loading' | 'error';
+};
+
+type RouteLocation = {
+  readonly hash: string;
+  /** State stored on the history entry that triggered this navigation. */
+  readonly historyState: unknown;
+  readonly pathname: string;
+  readonly query: QueryParams;
 };
 ```
 
@@ -398,4 +469,6 @@ type FileParams = PathParams<'/files/:rest*'>;
 - Routeit no longer exposes imperative registration methods like `on()`, `group()`, or `use()`.
 - Route names come from the route-table object keys.
 - Not-found handling is just another route, typically `path: '*'`.
-- Error handling is best implemented as middleware that wraps `await next()`.
+- Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.state.error`.
+- Declarative `redirect` on a route definition is distinct from the `redirect()` middleware helper. The former is for permanent alias redirects; the latter for conditional guards.
+- `lazy` factories are called at most once per `RouteRecord`. The loaded handler/data/meta are stored directly on the branch def.

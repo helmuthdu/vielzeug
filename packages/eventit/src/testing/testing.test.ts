@@ -68,3 +68,43 @@ describe('createTestBus', () => {
     expect(bus.emitted('count')).toEqual([]);
   });
 });
+
+/** -------------------- TestBus passthrough methods -------------------- **/
+
+describe('removeAllListeners', () => {
+  it('removes all listeners; records are preserved', () => {
+    const bus = createTestBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.emit('count', 1);
+    bus.removeAllListeners('count');
+    bus.emit('count', 2); // no listeners — no dispatch, but still recorded
+    expect(bus.listenerCount('count')).toBe(0);
+    expect(bus.emitted('count')).toEqual([1, 2]);
+  });
+});
+
+describe('eventNames', () => {
+  it('reflects active listeners on the test bus', () => {
+    const bus = createTestBus<TestEvents>();
+
+    expect(bus.eventNames()).toEqual([]);
+    bus.on('greet', vi.fn());
+    expect(bus.eventNames()).toContain('greet');
+  });
+});
+
+describe('waitAny', () => {
+  it('resolves and records the winning event payload', async () => {
+    const bus = createTestBus<TestEvents>();
+    const p = bus.waitAny(['count', 'greet']);
+
+    bus.emit('count', 7);
+
+    const result = await p;
+
+    expect(result.event).toBe('count');
+    expect(result.payload).toBe(7);
+    expect(bus.emitted('count')).toEqual([7]);
+  });
+});

@@ -1,4 +1,4 @@
-import { define, prop, html, signal, type Signal, onMounted } from '@vielzeug/craftit';
+import { define, prop, html, signal, type Signal, onMounted, when } from '@vielzeug/craftit';
 
 import '../../content/icon/icon';
 import { reducedMotionMixin } from '../../styles';
@@ -148,7 +148,7 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       if (status === 'loading') {
         return html`
           <div class="region" role="status">
-            ${() => (hasLoadingSlot.value ? html`<slot name="loading"></slot>` : renderLoadingFallback())}
+            ${when(hasLoadingSlot, () => html`<slot name="loading"></slot>`, renderLoadingFallback)}
           </div>
         `;
       }
@@ -156,16 +156,18 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       if (status === 'empty') {
         return html`
           <div class="region">
-            ${() =>
-              hasEmptySlot.value
-                ? html`<slot name="empty"></slot>`
-                : renderDefaultState({
-                    description: props['empty-description'],
-                    icon: 'inbox',
-                    label: props['empty-label'],
-                    role: 'status',
-                    stateClass: 'empty-state',
-                  })}
+            ${when(
+              hasEmptySlot,
+              () => html`<slot name="empty"></slot>`,
+              () =>
+                renderDefaultState({
+                  description: props['empty-description'],
+                  icon: 'inbox',
+                  label: props['empty-label'],
+                  role: 'status',
+                  stateClass: 'empty-state',
+                }),
+            )}
           </div>
         `;
       }
@@ -173,25 +175,28 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       if (status === 'error') {
         return html`
           <div class="region">
-            ${() =>
-              hasErrorSlot.value
-                ? html`<slot name="error"></slot>`
-                : renderDefaultState({
-                    action: () =>
-                      props.retryable!.value
-                        ? html`
-                            <button class="retry-btn" type="button" @click=${() => emit('retry')}>
-                              <bit-icon name="refresh-cw" size="1em" stroke-width="2" aria-hidden="true"></bit-icon>
-                              Try again
-                            </button>
-                          `
-                        : '',
-                    description: props['error-description'],
-                    icon: 'triangle-alert',
-                    label: props['error-label'],
-                    role: 'alert',
-                    stateClass: 'error-state',
-                  })}
+            ${when(
+              hasErrorSlot,
+              () => html`<slot name="error"></slot>`,
+              () =>
+                renderDefaultState({
+                  action: () =>
+                    when(
+                      () => Boolean(props.retryable!.value),
+                      () => html`
+                        <button class="retry-btn" type="button" @click=${() => emit('retry')}>
+                          <bit-icon name="refresh-cw" size="1em" stroke-width="2" aria-hidden="true"></bit-icon>
+                          Try again
+                        </button>
+                      `,
+                    ),
+                  description: props['error-description'],
+                  icon: 'triangle-alert',
+                  label: props['error-label'],
+                  role: 'alert',
+                  stateClass: 'error-state',
+                }),
+            )}
           </div>
         `;
       }

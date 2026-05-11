@@ -23,40 +23,33 @@ Creates a root container.
 const container = createContainer();
 ```
 
-### createTestContainer(base?)
-
-Creates an isolated child container for tests.
-
-```ts
-const testContainer = createTestContainer(appContainer);
-afterEach(() => testContainer.dispose());
-```
-
 ## Container Registration
 
 ### value(token, value, opts?)
 
 Registers a plain value provider.
 
+Options:
+
+- `multi?: boolean`
+
 ### factory(token, fn, opts?)
 
 Registers a factory provider.
+
+Options:
+
+- `deps?: Token[]`
+- `lifetime?: 'singleton' | 'transient' | 'scoped'`
+- `init?: (instance) => void | Promise<void>`
+- `dispose?: (instance) => void | Promise<void>`
+- `multi?: boolean`
 
 ### bind(token, cls, opts?)
 
 Registers a class provider.
 
-### alias(token, source)
-
-Maps one token to another token.
-
-### unregister(token)
-
-Removes a local registration.
-
-### clear()
-
-Clears local registrations and aliases without disposal.
+Options are identical to `factory(...)`.
 
 ## Container Resolution
 
@@ -64,21 +57,21 @@ Clears local registrations and aliases without disposal.
 
 Asynchronously resolves a token.
 
-### resolveAll(tokens)
+Throws:
 
-Asynchronously resolves multiple tokens as a typed tuple.
+- `ProviderNotFoundError` when the token is not registered
+- `MultipleProvidersError` when the token has multiple providers
+- `CircularDependencyError` on dependency cycles
+
+### resolveMany(token)
+
+Asynchronously resolves all providers registered for a token.
 
 ```ts
-const [db, logger] = await container.resolveAll([DbToken, LoggerToken]);
+const validators = await container.resolveMany(ValidatorToken);
 ```
 
-### resolveOptional(token)
-
-Asynchronously resolves a token, returning `undefined` when missing.
-
-### has(token)
-
-Checks whether the token is resolvable (local or parent).
+Returns an empty array when the token has no providers.
 
 ## Container Lifecycle
 
@@ -86,47 +79,21 @@ Checks whether the token is resolvable (local or parent).
 
 Creates a child container inheriting parent registrations.
 
-### runInScope(fn)
-
-Runs a callback in an auto-disposed child container.
-
 ### dispose()
 
 Disposes resolved singleton and scoped instances.
+
+If one or more dispose hooks fail, `dispose()` throws `AggregateError`.
 
 ### disposed
 
 Readonly boolean indicating disposal state.
 
-## Testing Utilities
-
-### mock(token, provider, fn)
-
-Temporarily overrides a provider for the callback duration.
-
-```ts
-await container.mock(DbToken, { useValue: fakeDb }, async () => {
-  await service.run();
-});
-```
-
-### snapshot()
-
-Captures local registrations and aliases.
-
-### restore(snapshot)
-
-Restores a captured snapshot.
-
-### debug()
-
-Returns token and alias metadata, including provider kind, lifetime, and resolution state.
-
 ## Errors
 
 - `ProviderNotFoundError`
+- `MultipleProvidersError`
 - `CircularDependencyError`
-- `AliasCycleError`
 - `ContainerDisposedError`
 
 ## Types
@@ -138,5 +105,3 @@ Returns token and alias metadata, including provider kind, lifetime, and resolut
 - `FactoryProvider<T, Deps>`
 - `Provider<T>`
 - `ProviderOptions<T, Deps>`
-- `TokenValues<T>`
-- `Snapshot`

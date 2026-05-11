@@ -291,4 +291,153 @@ describe('Query Client', () => {
       expect(qc.get(['users', 1])).toEqual({ id: 1, name: 'Alice' });
     });
   });
+
+  describe('enabled / initialData / placeholderData', () => {
+    it('enabled:false skips the fetch and keeps entry idle', async () => {
+      const qc = createQuery();
+      let calls = 0;
+
+      await qc.query({ enabled: false, fn: async () => ({ id: ++calls }), key: ['x'] });
+
+      expect(calls).toBe(0);
+      expect(qc.getState(['x'])?.status).toBe('idle');
+    });
+
+    it('enabled:false returns existing cached data without refetching', async () => {
+      const qc = createQuery();
+
+      qc.set(['x'], { id: 99 });
+
+      const data = await qc.query({ enabled: false, fn: async () => ({ id: 1 }), key: ['x'] });
+
+      expect(data).toEqual({ id: 99 });
+    });
+
+    it('initialData seeds the cache as success without a network call', async () => {
+      const qc = createQuery();
+      let calls = 0;
+
+      const data = await qc.query({
+        fn: async () => ({ id: ++calls }),
+        initialData: { id: 42 },
+        key: ['user', 1],
+        staleTime: 10_000,
+      });
+
+      expect(data).toEqual({ id: 42 });
+      expect(calls).toBe(0);
+      expect(qc.getState(['user', 1])?.status).toBe('success');
+    });
+
+    it('initialData as factory function is called lazily', async () => {
+      const qc = createQuery();
+      let factoryCalls = 0;
+
+      await qc.query({
+        fn: async () => ({ id: 1 }),
+        initialData: () => {
+          factoryCalls++;
+
+          return { id: 99 };
+        },
+        key: ['user', 2],
+        staleTime: 10_000,
+      });
+
+      expect(factoryCalls).toBe(1);
+      expect(qc.get(['user', 2])).toEqual({ id: 99 });
+    });
+
+    it('initialData is ignored when data already exists in cache', async () => {
+      const qc = createQuery();
+
+      qc.set(['user', 3], { id: 1 });
+      await qc.query({
+        fn: async () => ({ id: 2 }),
+        initialData: { id: 99 },
+        key: ['user', 3],
+        staleTime: 10_000,
+      });
+
+      expect(qc.get(['user', 3])).toEqual({ id: 1 });
+    });
+
+    it('placeholderData is visible in subscriber state while pending', async () => {
+      const qc = createQuery();
+
+      let resolveQuery!: (v: { id: number }) => void;
+      const pending = new Promise<{ id: number }>((res) => {
+        resolveQuery = res;
+      });
+
+      const states: Array<{ data: unknown; status: string }> = [];
+
+      qc.subscribe(['user', 4], (s) => states.push({ data: s.data, status: s.status }));
+
+      const queryPromise = qc.query({
+        fn: () => pending,
+        key: ['user', 4],
+        placeholderData: { id: 0 },
+      });
+
+      // Pending state should expose placeholder
+      expect(states.at(-1)).toMatchObject({ data: { id: 0 }, status: 'pending' });
+
+      resolveQuery({ id: 7 });
+      await queryPromise;
+
+      // After resolution placeholder is replaced by real data
+      expect(states.at(-1)).toMatchObject({ data: { id: 7 }, status: 'success' });
+    });
+  });
+
+  describe('subscribe with select', () => {
+    it('select transforms the data seen by the listener', async () => {
+      const qc = createQuery();
+
+      qc.set(['user', 1], { id: 1, name: 'Alice' });
+
+      const names: (string | undefined)[] = [];
+      const unsub = qc.subscribe<{ id: number; name: string }, string>(['user', 1], (s) => names.push(s.data), {
+        select: (d) => d?.name,
+      });
+
+      expect(names).toEqual(['Alice']);
+      unsub();
+    });
+
+    it('select deduplicates notifications when selected value is unchanged', async () => {
+      const qc = createQuery();
+      let calls = 0;
+
+      qc.set(['user', 1], { id: 1, name: 'Alice', role: 'admin' });
+
+      const unsub = qc.subscribe<{ id: number; name: string; role: string }, string>(['user', 1], () => calls++, {
+        select: (d) => d?.name,
+      });
+
+      // Update only `role` — name unchanged, listener must NOT fire again
+      qc.set(['user', 1], { id: 1, name: 'Alice', role: 'editor' });
+
+      expect(calls).toBe(1); // only the initial fire
+
+      // Update `name` — listener MUST fire
+      qc.set(['user', 1], { id: 1, name: 'Bob', role: 'editor' });
+      expect(calls).toBe(2);
+
+      unsub();
+    });
+
+    it('select still notifies on status changes even when data is unchanged', async () => {
+      const qc = createQuery();
+      const statuses: string[] = [];
+
+      qc.subscribe<{ id: number }, { id: number }>(['user', 1], (s) => statuses.push(s.status), { select: (d) => d });
+
+      await qc.query({ fn: async () => ({ id: 1 }), key: ['user', 1] }).catch(() => {});
+
+      expect(statuses).toContain('pending');
+      expect(statuses).toContain('success');
+    });
+  });
 });

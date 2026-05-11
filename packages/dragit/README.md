@@ -37,6 +37,10 @@ using zone = createDropZone({
 // Sortable list — reorder items via drag
 using sortable = createSortable({
   element: document.getElementById('list')!,
+  group: 'kanban',
+  keyboard: true,
+  autoScroll: { edgeThreshold: 40, speed: 24 },
+  dragImage: (id, item) => item,
   onReorder: (ids) => {
     saveOrder(ids);
   },
@@ -53,6 +57,10 @@ using sortable = createSortable({
 - ✅ **Drag handles** — scope dragging to a child selector via `handle`
 - ✅ **Dynamic lists** — `MutationObserver` keeps `draggable`/`role` in sync after adding or removing items
 - ✅ **Axis support** — choose vertical or horizontal midpoint logic via `axis`
+- ✅ **Connected lists** — move items across containers with shared `group`
+- ✅ **Keyboard sorting** — reorder focused items with Arrow keys and Home/End
+- ✅ **Auto-scroll** — scroll container/viewport near edges while dragging
+- ✅ **Custom drag preview** — provide `dragImage` to control native drag ghost
 - ✅ **Custom placeholder class** — style drop markers with your own class name
 - ✅ **`[Symbol.dispose]`** — supports the `using` keyword for automatic teardown
 - ✅ **Reactive-friendly options** — pass functions for `disabled` and `accept`
@@ -109,8 +117,12 @@ import { createSortable } from '@vielzeug/dragit';
 
 const sortable = createSortable({
   element: document.getElementById('list')!,
+  group: 'kanban',
   axis: 'vertical', // or 'horizontal'
   handle: '.drag-handle', // optional — scope drag to a child selector
+  keyboard: true, // default: true
+  autoScroll: true, // or { edgeThreshold, speed }
+  dragImage: (id, item, event) => item,
   placeholderClass: 'dragit-placeholder',
   disabled: () => isLocked,
   onDragStart: (id, event) => {

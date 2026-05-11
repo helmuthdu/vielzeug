@@ -32,9 +32,15 @@ describe('intl — unified format + plural helper', () => {
     expect(i18n.format({ kind: 'list', options: { type: 'or' }, value: ['A', 'B'] })).toBe('A or B');
   });
 
+  test('format(duration) returns a non-empty string', () => {
+    const i18n = createI18n({ locale: 'en' });
+
+    expect(i18n.format({ kind: 'duration', value: { hours: 1, minutes: 5, seconds: 9 } })).toBeTruthy();
+  });
+
   test('tp() resolves plural branch from key namespace', () => {
     const i18n = createI18n({
-      messages: {
+      catalogs: {
         en: {
           inbox: {
             one: 'One message',

@@ -11,6 +11,7 @@ export const componentManifest = [
   { name: 'async', source: './src/feedback/async/async' },
   { name: 'avatar', source: './src/content/avatar/avatar' },
   { name: 'badge', source: './src/feedback/badge/badge' },
+  { name: 'password-strength', source: './src/feedback/password-strength/password-strength' },
   { name: 'box', source: './src/layout/box/box' },
   { name: 'breadcrumb', source: './src/content/breadcrumb/breadcrumb' },
   { name: 'button', source: './src/inputs/button/button' },

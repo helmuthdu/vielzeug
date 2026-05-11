@@ -328,7 +328,7 @@ describe('core/host.ts', () => {
         });
 
         expect(captured).toBeInstanceOf(Error);
-        expect((captured as Error).message).toContain('[craftit:E11]');
+        expect((captured as Error).message).toContain('injectStrict()');
       });
     });
 

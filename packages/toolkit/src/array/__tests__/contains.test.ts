@@ -1,4 +1,4 @@
-import { configure } from '../../function/configure';
+import { partial } from '../../function/partial';
 import { contains } from '../contains';
 
 describe('contains', () => {
@@ -40,7 +40,7 @@ describe('contains', () => {
   it('should work with configured contains predicate', () => {
     const array = [1, 2, 3, { a: 1 }, 'hello'];
     const value = { a: 1 };
-    const containsValue = configure(contains, value);
+    const containsValue = partial(contains, value);
 
     expect(containsValue(array)).toBe(true);
   });

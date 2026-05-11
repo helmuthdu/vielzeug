@@ -9,14 +9,14 @@
  * @example
  * ```ts
  * import { define } from '@vielzeug/craftit';
- * import { themableBundle, sizableBundle, disablableBundle, type PropsInput } from '../shared/bundles';
+ * import { themableBundle, sizableBundle, disablableBundle, type PropsDef } from '../shared/bundles';
  *
  * const myProps = {
  *   ...themableBundle,
  *   ...sizableBundle,
  *   ...disablableBundle,
  *   label: '',
- * } satisfies PropsInput<{ color?: string; disabled?: boolean; label?: string; size?: string }>;
+ * } satisfies PropsDef<{ color?: string; disabled?: boolean; label?: string; size?: string }>;
  *
  * define('my-el', {
  *   props: myProps,
@@ -29,9 +29,7 @@
  * ```
  */
 
-import {} from '@vielzeug/craftit';
-
-export type { PropsInput } from '@vielzeug/craftit';
+export type { PropsDef } from '@vielzeug/craftit';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 

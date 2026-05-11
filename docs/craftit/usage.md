@@ -82,6 +82,8 @@ For ref-driven DOM work, prefer `onElement()`.
 
 Define props directly on the component. There is no `defineProps()` helper.
 
+Use `prop.*` helpers for common cases, or raw `PropDef` objects when you need custom parsing or `reflect: false`.
+
 ```ts
 import { define, html, prop } from '@vielzeug/craftit';
 
@@ -132,21 +134,44 @@ define('profile-name', {
 
 ## directives
 
+`html` supports `each`, `classMap`, `styleMap`, `guard`, `when`, `live`, `until`, and `raw`.
+
 ```ts
-import { classMap, define, each, html, signal } from '@vielzeug/craftit';
+import { classMap, define, each, html, signal, styleMap, when } from '@vielzeug/craftit';
 
 define('task-list', {
   setup() {
     const tasks = signal([{ id: 1, text: 'Write tests' }]);
+    const active = signal(true);
 
     return () => html`
-      <ul class="${classMap({ ready: () => tasks.value.length > 0 })}">
+      <ul
+        class="${classMap({ ready: () => tasks.value.length > 0 })}"
+        :style=${styleMap({ opacity: () => (active.value ? 1 : 0.5) })}
+      >
+        ${when(() => active.value, () => html`<li>Active</li>`, () => html`<li>Paused</li>`)}
         ${each(tasks, {
           key: (task) => task.id,
           render: (task) => html`<li>${task.text}</li>`,
         })}
       </ul>
     `;
+  },
+});
+```
+
+## live form bindings
+
+Use `live(signal)` for inputs that should preserve in-progress user edits instead of overwriting the DOM on stale writes.
+
+```ts
+import { define, html, live, signal } from '@vielzeug/craftit';
+
+define('live-search', {
+  setup() {
+    const query = signal('');
+
+    return () => html`<input :value=${live(query)} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />`;
   },
 });
 ```

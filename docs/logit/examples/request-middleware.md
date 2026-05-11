@@ -19,6 +19,8 @@ import { Logit } from '@vielzeug/logit';
 const httpLog = Logit.scope('http');
 
 export function requestLogger(req, res, next) {
+  // pin request-scoped fields to every log call in this handler
+  const reqLog = httpLog.withBindings({ requestId: req.id, ip: req.ip });
   const start = Date.now();
   const label = `${req.method} ${req.path}`;
 
@@ -26,7 +28,7 @@ export function requestLogger(req, res, next) {
     const duration = `${Date.now() - start}ms`;
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
 
-    httpLog[level](`${res.statusCode} ${label}`, { duration, ip: req.ip });
+    reqLog[level]({ status: res.statusCode, duration }, label);
   });
 
   next();

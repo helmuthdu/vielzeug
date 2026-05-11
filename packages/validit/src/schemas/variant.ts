@@ -20,7 +20,11 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     const map = new Map<string, ObjectSchema<any>>();
 
     for (const [tag, schema] of Object.entries(variantMap)) {
-      map.set(tag, schema.extend({ [discriminator]: new LiteralSchema(tag) }));
+      const discriminatorShape = {
+        [discriminator]: new LiteralSchema(tag),
+      } as unknown as Record<K, Schema<any>>;
+
+      map.set(tag, schema.extend(discriminatorShape));
     }
 
     super([]);

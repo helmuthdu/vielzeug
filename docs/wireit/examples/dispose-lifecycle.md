@@ -13,21 +13,18 @@ Implement dispose lifecycle in a production-friendly way with `@vielzeug/wireit`
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/wireit` installed.
 
-### Clean shutdown
+### Clean shutdown with init and dispose
+
+Use `init` for async setup and `dispose` for cleanup — the container calls both at the right time:
 
 ```ts
 const container = createContainer();
 
 container
-  .factory(
-    DbToken,
-    async () => {
-      const db = new Database(env.DB_URL);
-      await db.connect();
-      return db;
-    },
-    { dispose: (db) => db.close() },
-  )
+  .factory(DbToken, () => new Database(env.DB_URL), {
+    init: (db) => db.connect(),
+    dispose: (db) => db.close(),
+  })
   .factory(CacheToken, () => new RedisCache(env.REDIS_URL), {
     dispose: (cache) => cache.quit(),
   })
@@ -35,10 +32,17 @@ container
     dispose: (q) => q.drain(),
   });
 
-// Graceful shutdown
+// All dispose hooks run in parallel; if any fail, an AggregateError is thrown.
 process.on('SIGTERM', async () => {
   console.log('Shutting down...');
-  await container.dispose(); // runs all dispose hooks in registration order
+  try {
+    await container.dispose();
+  } catch (err) {
+    if (err instanceof AggregateError) {
+      console.error('Some dispose hooks failed:', err.errors);
+    }
+    throw err;
+  }
   process.exit(0);
 });
 ```
@@ -70,6 +74,5 @@ console.log(container.disposed); // true
 
 ## Related Recipes
 
-- [Aliases](./aliases.md)
 - [Async Providers](./async-providers.md)
 - [Basic Setup](./basic-setup.md)

@@ -9,6 +9,7 @@ import {
   prop,
   provide,
   signal,
+  when,
 } from '@vielzeug/craftit';
 import { createListControl } from '@vielzeug/craftit/controls';
 
@@ -250,7 +251,10 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
         aria-errormessage="${() => (hasError() ? errorId : null)}"
         aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
         <legend id="${legendId}" ?hidden=${() => !props.label.value}>
-          ${props.label}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
+          ${props.label}${when(
+            () => Boolean(props.required.value),
+            () => html`<span aria-hidden="true"> *</span>`,
+          )}
         </legend>
         <div class="radio-group-items" part="items">
           <slot></slot>

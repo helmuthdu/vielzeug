@@ -43,24 +43,8 @@ export function createA11yControl(config: A11yControlConfig): A11yControlHandle 
 
   setAttr(host, 'role', config.role);
 
-  let cachedLabelEl: HTMLElement | null = null;
-  let cachedHelperEl: HTMLDivElement | null = null;
-
-  const getLabelElement = (): HTMLElement | null => {
-    if (cachedLabelEl && cachedLabelEl.isConnected) return cachedLabelEl;
-
-    cachedLabelEl = host.shadowRoot?.querySelector('[data-a11y-label]') as HTMLElement | null;
-
-    return cachedLabelEl;
-  };
-
-  const getHelperElement = (): HTMLDivElement | null => {
-    if (cachedHelperEl && cachedHelperEl.isConnected) return cachedHelperEl;
-
-    cachedHelperEl = host.shadowRoot?.querySelector('[data-a11y-helper]') as HTMLDivElement | null;
-
-    return cachedHelperEl;
-  };
+  let labelEl: HTMLElement | null = null;
+  let helperEl: HTMLDivElement | null = null;
 
   const slotCleanupByElement = new Map<HTMLSlotElement, () => void>();
 
@@ -97,8 +81,8 @@ export function createA11yControl(config: A11yControlConfig): A11yControlHandle 
 
     if (!shadow) return;
 
-    const labelElement = getLabelElement();
-    const helperElement = getHelperElement();
+    const labelElement = labelEl;
+    const helperElement = helperEl;
 
     syncSlotListeners(labelElement, helperElement);
 
@@ -155,8 +139,12 @@ export function createA11yControl(config: A11yControlConfig): A11yControlHandle 
     sync();
   });
 
-  // Sync once after first render — DOM elements are not yet available during setup.
-  onMounted(() => sync());
+  // Query shadow DOM refs once after first render, then sync.
+  onMounted(() => {
+    labelEl = (host.shadowRoot?.querySelector('[data-a11y-label]') ?? null) as HTMLElement | null;
+    helperEl = (host.shadowRoot?.querySelector('[data-a11y-helper]') ?? null) as HTMLDivElement | null;
+    sync();
+  });
 
   onCleanup(() => {
     for (const cleanup of slotCleanupByElement.values()) cleanup();

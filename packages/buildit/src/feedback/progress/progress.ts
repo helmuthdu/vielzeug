@@ -1,4 +1,4 @@
-import { define, prop, computed, effect, html } from '@vielzeug/craftit';
+import { define, prop, computed, effect, html, styleMap, when } from '@vielzeug/craftit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -103,64 +103,67 @@ export const PROGRESS_TAG = define<BitProgressProps>('bit-progress', {
 
     const ariaValueNow = () => (props.indeterminate.value ? null : String(props.value.value));
     const ariaLabel = () => props.label.value ?? props.title.value ?? 'Progress';
-    const circularStyle = () => `--_circ:${CIRC}px`;
+    const circularStyle = styleMap({ '--_circ': `${CIRC}px` });
     const strokeDasharray = () => (props.indeterminate.value ? undefined : `${CIRC}px`);
     const strokeDashoffset = () => (props.indeterminate.value ? undefined : `${dashoffset.value}px`);
-    const linearFillStyle = () => (!props.indeterminate.value ? `width:${percent.value}` : null);
+    const linearFillStyle = styleMap({ width: () => (!props.indeterminate.value ? percent.value : null) });
 
     effect(() => {
       host.el.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
     });
 
     return () => html`
-      ${() =>
-        props.type.value === 'circular'
-          ? html` <div
-              class="circular-track"
-              role="progressbar"
-              :aria-valuenow="${ariaValueNow}"
-              aria-valuemin="0"
-              :aria-valuemax="${props.max}"
-              :aria-label="${ariaLabel}"
-              :aria-valuetext="${props['value-text']}"
-              :style="${circularStyle}">
-              <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <circle class="circle-bg" cx="50" cy="50" r="${RADIUS}"></circle>
-                <circle
-                  class="circle-fill"
-                  cx="50"
-                  cy="50"
-                  r="${RADIUS}"
-                  :stroke-dasharray="${strokeDasharray}"
-                  :stroke-dashoffset="${strokeDashoffset}"></circle>
-              </svg>
-              <div class="circular-inner">
-                <span class="circular-label">${() => props.label.value ?? ''}</span>
-                <span class="circular-title">${() => props.title.value ?? ''}</span>
-              </div>
-            </div>`
-          : html` <div class="wrapper">
-              <div class="header">
-                <span class="progress-title">${() => props.title.value ?? ''}</span>
-                <span class="end-label header-label">${() => props.label.value ?? ''}</span>
-              </div>
-              <div class="bar-row">
-                <div class="track-outer">
-                  <div
-                    class="track"
-                    role="progressbar"
-                    :aria-valuenow="${ariaValueNow}"
-                    aria-valuemin="0"
-                    :aria-valuemax="${props.max}"
-                    :aria-label="${ariaLabel}"
-                    :aria-valuetext="${props['value-text']}">
-                    <div class="fill" part="fill" :style="${linearFillStyle}"></div>
-                  </div>
-                  <span class="floating-label">${props['floating-label']}</span>
+      ${when(
+        () => props.type.value === 'circular',
+        () =>
+          html` <div
+            class="circular-track"
+            role="progressbar"
+            :aria-valuenow="${ariaValueNow}"
+            aria-valuemin="0"
+            :aria-valuemax="${props.max}"
+            :aria-label="${ariaLabel}"
+            :aria-valuetext="${props['value-text']}"
+            :style="${circularStyle}">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle class="circle-bg" cx="50" cy="50" r="${RADIUS}"></circle>
+              <circle
+                class="circle-fill"
+                cx="50"
+                cy="50"
+                r="${RADIUS}"
+                :stroke-dasharray="${strokeDasharray}"
+                :stroke-dashoffset="${strokeDashoffset}"></circle>
+            </svg>
+            <div class="circular-inner">
+              <span class="circular-label">${() => props.label.value ?? ''}</span>
+              <span class="circular-title">${() => props.title.value ?? ''}</span>
+            </div>
+          </div>`,
+        () =>
+          html` <div class="wrapper">
+            <div class="header">
+              <span class="progress-title">${() => props.title.value ?? ''}</span>
+              <span class="end-label header-label">${() => props.label.value ?? ''}</span>
+            </div>
+            <div class="bar-row">
+              <div class="track-outer">
+                <div
+                  class="track"
+                  role="progressbar"
+                  :aria-valuenow="${ariaValueNow}"
+                  aria-valuemin="0"
+                  :aria-valuemax="${props.max}"
+                  :aria-label="${ariaLabel}"
+                  :aria-valuetext="${props['value-text']}">
+                  <div class="fill" part="fill" :style="${linearFillStyle}"></div>
                 </div>
-                <span class="end-label row-label">${() => props.label.value ?? ''}</span>
+                <span class="floating-label">${props['floating-label']}</span>
               </div>
-            </div>`}
+              <span class="end-label row-label">${() => props.label.value ?? ''}</span>
+            </div>
+          </div>`,
+      )}
     `;
   },
 

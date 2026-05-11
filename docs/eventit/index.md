@@ -9,7 +9,7 @@ description: Zero-dependency typed event bus with subscribe/emit, wait(), async 
 
 # Eventit
 
-`@vielzeug/eventit` is a zero-dependency typed event bus. Define your event map once and get type-safe `emit`, `on`, `once`, `wait`, and `events` APIs with payload inference.
+`@vielzeug/eventit` is a zero-dependency typed event bus. Define your event map once and get type-safe `emit`, `on`, `once`, `wait`, `waitAny`, and `events` APIs with payload inference.
 
 <!-- Search keywords: event bus, pub-sub, typed message dispatch. -->
 
@@ -51,6 +51,11 @@ bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
 bus.emit('user:logout');
 
 const nextLogin = await bus.wait('user:login');
+const nextSessionChange = await bus.waitAny(['user:login', 'user:logout'] as const);
+
+if (nextSessionChange.event === 'user:login') {
+  console.log(nextSessionChange.payload.userId);
+}
 
 for await (const payload of bus.events('user:login', AbortSignal.timeout(5_000))) {
   console.log(payload.email);
@@ -109,10 +114,12 @@ for await (const event of bus.events('cart:updated')) {
 
 - **Typed event maps** for strict event/payload correctness
 - **Persistent + one-shot listeners** with `on` and `once`
+- **Listener management APIs** with unsubscribe handles, `removeAllListeners`, and `eventNames`
 - **Async event coordination** with `wait`
+- **First-event racing** with `waitAny`
 - **Async streaming** with `events`
 - **Abort-aware APIs** for lifecycle-safe teardown
-- **`onEmit` and `onError` hooks** for logging and resilience
+- **`onDispatch` and `onError` hooks** for logging and resilience
 - **`dispose` and `[Symbol.dispose]`** for deterministic cleanup
 - **Testing helper** via `@vielzeug/eventit/test`
 - **Zero dependencies** — <PackageInfo package="eventit" type="size" /> gzipped, <PackageInfo package="eventit" type="dependencies" /> dependencies

@@ -39,10 +39,10 @@ define('simple-counter', {
 ## Common Pitfalls
 
 - Storing transient UI state in props is unnecessary; use `signal()` inside `setup()` for local state.
-- Forgetting cleanup/dispose calls can leak listeners or stale state; use `onCleanup()` or `handle()`.
+- Forgetting cleanup/dispose calls can leak listeners or stale state; use `onCleanup()`, or `handle()` inside setup/scope so cleanup is registered automatically.
 
 ## Related Recipes
 
-- [Prop helpers and raw PropDef](./propsof-builder-api.md)
+- [Prop helpers and raw PropsDef](./propsof-builder-api.md)
 - [Form-Associated Rating Input](./form-associated-rating-input.md)
 - [Context Provider and Consumer](./context-provider-and-consumer.md)

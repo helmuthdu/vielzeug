@@ -1,9 +1,9 @@
 ---
-title: 'Craftit Examples — Prop helpers and raw PropDef'
+title: 'Craftit Examples — Prop helpers and raw PropsDef'
 description: 'Examples demonstrating current Craftit prop authoring with prop.* helpers and raw PropDef objects.'
 ---
 
-## Prop helpers and raw PropDef
+## Prop helpers and raw PropsDef
 
 Craftit defines props directly on the component. Use `prop.*` for the common cases and raw `PropDef` objects when you need custom parsing or `reflect: false`.
 

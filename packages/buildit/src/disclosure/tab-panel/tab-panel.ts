@@ -1,4 +1,4 @@
-import { define, prop, computed, effect, html, inject, signal } from '@vielzeug/craftit';
+import { define, prop, computed, effect, html, inject, signal, styleMap, when } from '@vielzeug/craftit';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
@@ -77,6 +77,7 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
 
     // shouldRender: true if not lazy OR has been active at least once
     const shouldRender = computed(() => !props.lazy.value || hasBeenActive.value);
+    const panelStyle = styleMap({ '--tab-panel-padding': paddingValue });
     const panelId = () => `tabpanel-${props.value.value}`;
     const labelledById = () => `tab-${props.value.value}`;
 
@@ -88,9 +89,9 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
         id="${() => panelId()}"
         aria-labelledby="${() => labelledById()}"
         aria-hidden="${() => String(!isActive.value)}"
-        style="${() => `--tab-panel-padding: ${paddingValue.value}`}"
+        :style="${panelStyle}"
         tabindex="0">
-        ${() => (shouldRender.value ? html`<slot></slot>` : '')}
+        ${when(shouldRender, () => html`<slot></slot>`)}
       </div>
     `;
   },

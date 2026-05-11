@@ -41,7 +41,7 @@ const virt = createVirtualizer(scrollEl, {
 
     for (const item of virtualItems) {
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;height:40px;line-height:40px;padding:0 12px;`;
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:40px;line-height:40px;padding:0 12px;`;
       el.textContent = items[item.index] ?? 'Loading…';
       listEl.appendChild(el);
     }

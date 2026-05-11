@@ -186,6 +186,18 @@ describe('emit', () => {
     expect(onError.mock.calls[0]).toEqual([expect.any(Error), 'count', 99]);
     expect(after).toHaveBeenCalledWith(99);
   });
+
+  it('calls onDispatch only when listeners exist', () => {
+    const onDispatch = vi.fn();
+    const bus = createBus<TestEvents>({ onDispatch });
+
+    bus.emit('count', 1); // no listeners, no dispatch
+    bus.on('count', vi.fn());
+    bus.emit('count', 2);
+
+    expect(onDispatch).toHaveBeenCalledOnce();
+    expect(onDispatch).toHaveBeenCalledWith('count', 2);
+  });
 });
 
 /** -------------------- wait -------------------- **/
@@ -402,5 +414,217 @@ describe('listenerCount', () => {
     bus.on('count', vi.fn());
     bus.dispose();
     expect(bus.listenerCount()).toBe(0);
+  });
+});
+
+/** -------------------- removeAllListeners -------------------- **/
+
+describe('removeAllListeners', () => {
+  it('removes all listeners for a specific event; other events are unaffected', () => {
+    const bus = createBus<TestEvents>();
+    const onCount = vi.fn();
+    const onGreet = vi.fn();
+
+    bus.on('count', onCount);
+    bus.on('count', vi.fn());
+    bus.on('greet', onGreet);
+    bus.removeAllListeners('count');
+    bus.emit('count', 1);
+    bus.emit('greet', { name: 'Alice' });
+    expect(onCount).not.toHaveBeenCalled();
+    expect(onGreet).toHaveBeenCalledOnce();
+  });
+
+  it('removes all listeners across all events when called without an argument', () => {
+    const bus = createBus<TestEvents>();
+    const onCount = vi.fn();
+    const onGreet = vi.fn();
+
+    bus.on('count', onCount);
+    bus.on('greet', onGreet);
+    bus.removeAllListeners();
+    bus.emit('count', 1);
+    bus.emit('greet', { name: 'Alice' });
+    expect(onCount).not.toHaveBeenCalled();
+    expect(onGreet).not.toHaveBeenCalled();
+  });
+
+  it('resets listenerCount to 0 for the targeted scope', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.on('count', vi.fn());
+    bus.on('greet', vi.fn());
+    bus.removeAllListeners('count');
+    expect(bus.listenerCount('count')).toBe(0);
+    expect(bus.listenerCount('greet')).toBe(1);
+    bus.removeAllListeners();
+    expect(bus.listenerCount()).toBe(0);
+  });
+
+  it('is a no-op when there are no listeners', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.removeAllListeners('count')).not.toThrow();
+    expect(() => bus.removeAllListeners()).not.toThrow();
+  });
+});
+
+/** -------------------- eventNames -------------------- **/
+
+describe('eventNames', () => {
+  it('returns an empty array when no listeners are registered', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(bus.eventNames()).toEqual([]);
+  });
+
+  it('returns each active event name exactly once regardless of listener count', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.on('count', vi.fn());
+    bus.on('greet', vi.fn());
+
+    const names = bus.eventNames();
+
+    expect(names).toContain('count');
+    expect(names).toContain('greet');
+    expect(names).toHaveLength(2);
+    expect(names).not.toContain('toggle');
+  });
+
+  it('excludes an event once its last listener is removed', () => {
+    const bus = createBus<TestEvents>();
+    const unsub = bus.on('count', vi.fn());
+
+    expect(bus.eventNames()).toContain('count');
+    unsub();
+    expect(bus.eventNames()).not.toContain('count');
+  });
+
+  it('returns an empty array after dispose', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', vi.fn());
+    bus.on('greet', vi.fn());
+    bus.dispose();
+    expect(bus.eventNames()).toEqual([]);
+  });
+
+  it('reflects additions and removals dynamically', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(bus.eventNames()).toHaveLength(0);
+    bus.on('toggle', vi.fn());
+    expect(bus.eventNames()).toEqual(['toggle']);
+    bus.removeAllListeners('toggle');
+    expect(bus.eventNames()).toHaveLength(0);
+  });
+});
+
+/** -------------------- waitAny -------------------- **/
+
+describe('waitAny', () => {
+  it('resolves with { event, payload } for whichever listed event fires first', async () => {
+    const bus = createBus<TestEvents>();
+    const p = bus.waitAny(['count', 'greet']);
+
+    bus.emit('count', 42);
+
+    const result = await p;
+
+    expect(result.event).toBe('count');
+    expect(result.payload).toBe(42);
+  });
+
+  it('resolves for the second event when the first does not fire', async () => {
+    const bus = createBus<TestEvents>();
+    const p = bus.waitAny(['count', 'greet']);
+
+    bus.emit('greet', { name: 'Bob' });
+
+    const result = await p;
+
+    expect(result.event).toBe('greet');
+    expect((result.payload as { name: string }).name).toBe('Bob');
+  });
+
+  it('is one-shot — resolves only once even if more events fire afterward', async () => {
+    const bus = createBus<TestEvents>();
+    const results: unknown[] = [];
+    const p = bus.waitAny(['count', 'greet']).then((r) => results.push(r));
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+    bus.emit('greet', { name: 'Alice' });
+    await p;
+    expect(results).toHaveLength(1);
+  });
+
+  it('cleans up all remaining listeners after one event resolves', async () => {
+    const bus = createBus<TestEvents>();
+    const p = bus.waitAny(['count', 'greet']);
+
+    expect(bus.listenerCount()).toBe(2);
+    bus.emit('count', 1);
+    await p;
+    expect(bus.listenerCount()).toBe(0);
+  });
+
+  it('handles void events — payload is undefined', async () => {
+    const bus = createBus<TestEvents>();
+    const p = bus.waitAny(['toggle', 'count']);
+
+    bus.emit('toggle');
+
+    const result = await p;
+
+    expect(result.event).toBe('toggle');
+    expect(result.payload).toBeUndefined();
+  });
+
+  it('rejects immediately when the bus is already disposed', async () => {
+    const bus = createBus<TestEvents>();
+
+    bus.dispose();
+    await expect(bus.waitAny(['count', 'greet'])).rejects.toBeInstanceOf(BusDisposedError);
+  });
+
+  it('rejects when the bus is disposed before any event fires', async () => {
+    const bus = createBus<TestEvents>();
+    const p = bus.waitAny(['count', 'greet']);
+
+    bus.dispose();
+    await expect(p).rejects.toBeInstanceOf(BusDisposedError);
+  });
+
+  it('rejects immediately when signal is already aborted', async () => {
+    const bus = createBus<TestEvents>();
+    const controller = new AbortController();
+
+    controller.abort(new Error('cancelled'));
+    await expect(bus.waitAny(['count'], controller.signal)).rejects.toThrow('cancelled');
+  });
+
+  it('rejects when signal aborts mid-flight', async () => {
+    const bus = createBus<TestEvents>();
+    const controller = new AbortController();
+    const p = bus.waitAny(['count', 'greet'], controller.signal);
+
+    controller.abort(new Error('cancelled'));
+    await expect(p).rejects.toThrow('cancelled');
+  });
+
+  it('a single-event list behaves identically to wait()', async () => {
+    const bus = createBus<TestEvents>();
+    const p = bus.waitAny(['count']);
+
+    bus.emit('count', 99);
+
+    const result = await p;
+
+    expect(result.event).toBe('count');
+    expect(result.payload).toBe(99);
   });
 });

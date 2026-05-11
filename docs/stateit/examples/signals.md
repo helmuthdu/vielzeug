@@ -39,17 +39,17 @@ isEven.dispose();
 
 ---
 
-### `signal.update()` — Derive Next Value in Place
+### Updating Signal Values
 
 ```ts
 import { signal } from '@vielzeug/stateit';
 
 const count = signal(0);
-count.update((n) => n + 1); // 1
-count.update((n) => n * 2); // 2
+count.value = count.value + 1; // 1
+count.value = count.value * 2; // 2
 
 const tags = signal(['ts', 'js']);
-tags.update((arr) => [...arr, 'tsx']); // ['ts', 'js', 'tsx']
+tags.value = [...tags.value, 'tsx']; // ['ts', 'js', 'tsx']
 ```
 
 ---

@@ -14,9 +14,15 @@ export type QueryFnContext = {
 };
 
 export type QueryOptions<T> = {
+  /** When `false` the fetch is skipped and the entry stays `'idle'`. Defaults to `true`. */
+  enabled?: boolean;
   fn: (ctx: QueryFnContext) => Promise<T>;
   gcTime?: number;
+  /** Pre-seed the cache as a successful entry when no data exists. Subject to normal staleTime checks. */
+  initialData?: T | (() => T | undefined);
   key: QueryKey;
+  /** Shown as `data` while the entry is fetching. Not stored in cache. */
+  placeholderData?: T | (() => T | undefined);
   staleTime?: number;
 } & RetryOptions;
 
@@ -26,16 +32,23 @@ export type PrefetchOptions<T> = QueryOptions<T> & {
 
 export type QueryClientOptions = {
   gcTime?: number;
+  /** Revalidate stale observed entries when the document regains focus. */
+  refetchOnFocus?: boolean;
+  /** Revalidate stale observed entries when the network comes back online. */
+  refetchOnReconnect?: boolean;
   staleTime?: number;
 } & RetryOptions;
 
 type CacheEntry<T = unknown> = {
   data: T | undefined;
   error: Error | null;
+  fn: ((ctx: QueryFnContext) => Promise<T>) | undefined;
   gcTime: number;
   inflight: { controller: AbortController; promise: Promise<T> } | null;
   key: QueryKey;
   observers: Set<(state: QueryState<T>) => void>;
+  placeholderData: T | undefined;
+  staleTime: number;
   status: QueryStatus;
   updatedAt: number;
 };
@@ -63,7 +76,7 @@ export function createQuery(opts?: QueryClientOptions) {
 
   function toState<T>(entry: CacheEntry<T>): QueryState<T> {
     return {
-      data: entry.data,
+      data: entry.data !== undefined ? entry.data : entry.placeholderData,
       error: entry.error,
       status: entry.status,
       updatedAt: entry.updatedAt,
@@ -77,10 +90,13 @@ export function createQuery(opts?: QueryClientOptions) {
       e = {
         data: undefined,
         error: null,
+        fn: undefined,
         gcTime,
         inflight: null,
         key,
         observers: new Set(),
+        placeholderData: undefined,
+        staleTime: staleTimeDefault,
         status: 'idle',
         updatedAt: 0,
       };
@@ -118,13 +134,20 @@ export function createQuery(opts?: QueryClientOptions) {
     return prefixHash.every((seg, i) => seg === stableStringify(entryKey[i]));
   }
 
+  function resolveValue<T>(v: T | (() => T | undefined) | undefined): T | undefined {
+    return typeof v === 'function' ? (v as () => T | undefined)() : v;
+  }
+
   async function fetchQuery<T>(options: QueryOptions<T>): Promise<T> {
     if (disposed) throw new Error('[fetchit] QueryClient has been disposed');
 
     const {
+      enabled = true,
       fn: queryFn,
       gcTime = gcTimeDefault,
+      initialData,
       key: queryKey,
+      placeholderData,
       retry: retryCount = retryDefault,
       retryDelay = retryDelayDefault,
       shouldRetry = shouldRetryDefault,
@@ -134,6 +157,29 @@ export function createQuery(opts?: QueryClientOptions) {
     const entry = ensureEntry<T>(queryKey, gcTime);
 
     entry.gcTime = gcTime;
+    entry.fn = queryFn;
+    entry.staleTime = staleTime;
+
+    // Seed cache from initialData if no data exists yet.
+    if (initialData !== undefined && entry.data === undefined) {
+      const initVal = resolveValue(initialData);
+
+      if (initVal !== undefined) {
+        entry.data = initVal;
+        entry.status = 'success';
+        entry.updatedAt = Date.now();
+      }
+    }
+
+    // Attach placeholderData for visual fill while pending.
+    if (placeholderData !== undefined) {
+      entry.placeholderData = resolveValue(placeholderData);
+    }
+
+    // Skip fetch when explicitly disabled.
+    if (!enabled) {
+      return entry.data as T;
+    }
 
     if (entry.status === 'success' && Date.now() - entry.updatedAt < staleTime) {
       return entry.data as T;
@@ -254,15 +300,50 @@ export function createQuery(opts?: QueryClientOptions) {
     return entry ? toState(entry) : null;
   }
 
-  function subscribe<T = unknown>(key: QueryKey, listener: (state: QueryState<T>) => void): Unsubscribe {
+  function subscribe<T = unknown, S = T>(
+    key: QueryKey,
+    listener: (state: QueryState<S>) => void,
+    opts?: { select?: (data: T | undefined) => S | undefined },
+  ): Unsubscribe {
     const entry = ensureEntry<T>(key);
+    const select = opts?.select;
 
     cache.cancelGc(key);
-    entry.observers.add(listener);
-    listener(toState(entry));
+
+    let internalListener: (state: QueryState<T>) => void;
+
+    if (select) {
+      // Wrap listener: only fire when the selected value, status, or error changes.
+      let prevSelected: S | undefined = select(entry.data);
+      let prevStatus = entry.status;
+      let prevError = entry.error;
+
+      internalListener = (state: QueryState<T>) => {
+        const selected = select(state.data);
+
+        if (Object.is(selected, prevSelected) && state.status === prevStatus && Object.is(state.error, prevError)) {
+          return;
+        }
+
+        prevSelected = selected;
+        prevStatus = state.status;
+        prevError = state.error;
+        listener({ ...state, data: selected } as unknown as QueryState<S>);
+      };
+
+      // Fire immediately with the initial selected state.
+      const init = toState(entry);
+
+      listener({ ...init, data: select(init.data) } as unknown as QueryState<S>);
+    } else {
+      internalListener = listener as unknown as (state: QueryState<T>) => void;
+      listener(toState(entry) as unknown as QueryState<S>);
+    }
+
+    entry.observers.add(internalListener as unknown as (state: QueryState<unknown>) => void);
 
     return () => {
-      entry.observers.delete(listener);
+      entry.observers.delete(internalListener as unknown as (state: QueryState<unknown>) => void);
 
       if (entry.observers.size === 0 && entry.status === 'idle') {
         cache.delete(key);
@@ -303,11 +384,47 @@ export function createQuery(opts?: QueryClientOptions) {
     }
   }
 
+  function refetchStaleEntries() {
+    for (const [, entry] of cache.entries()) {
+      if (
+        entry.observers.size > 0 &&
+        entry.fn !== undefined &&
+        entry.status === 'success' &&
+        Date.now() - entry.updatedAt >= entry.staleTime
+      ) {
+        fetchQuery({ fn: entry.fn as (ctx: QueryFnContext) => Promise<unknown>, key: entry.key, staleTime: 0 }).catch(
+          () => {},
+        );
+      }
+    }
+  }
+
+  // refetchOnFocus / refetchOnReconnect event wiring.
+  let focusHandler: (() => void) | null = null;
+  let reconnectHandler: (() => void) | null = null;
+
+  if (opts?.refetchOnFocus && typeof document !== 'undefined') {
+    focusHandler = () => {
+      if (document.visibilityState === 'visible') refetchStaleEntries();
+    };
+    document.addEventListener('visibilitychange', focusHandler);
+  }
+
+  if (opts?.refetchOnReconnect && typeof window !== 'undefined') {
+    reconnectHandler = refetchStaleEntries;
+    window.addEventListener('online', reconnectHandler);
+  }
+
   return {
     cancel,
     clear: clearCache,
     dispose(): void {
       disposed = true;
+
+      if (focusHandler) document.removeEventListener('visibilitychange', focusHandler);
+
+      if (reconnectHandler) window.removeEventListener('online', reconnectHandler);
+
       for (const [, entry] of cache.entries()) {
         cleanupEntry(entry);
       }

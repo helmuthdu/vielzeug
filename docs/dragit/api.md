@@ -54,14 +54,27 @@ interface DropZone extends Disposable {
 ```ts
 interface SortableOptions {
   element: HTMLElement;
+  group?: string;
   handle?: string;
+  keyboard?: boolean;
   itemAttribute?: string;
   axis?: 'vertical' | 'horizontal';
+  autoScroll?: boolean | AutoScrollOptions;
+  dragImage?: HTMLElement | ((id: string, item: HTMLElement, event: DragEvent) => HTMLElement | null | undefined);
   placeholderClass?: string;
   disabled?: boolean | (() => boolean);
   onDragStart?: (id: string, event: DragEvent) => void;
   onDragEnd?: (id: string, event: DragEvent) => void;
   onReorder?: (orderedIds: string[]) => void;
+}
+```
+
+### `AutoScrollOptions`
+
+```ts
+interface AutoScrollOptions {
+  edgeThreshold?: number;
+  speed?: number;
 }
 ```
 
@@ -179,9 +192,13 @@ Makes the direct children of a container element reorderable via drag. Each item
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `element` | `HTMLElement` | — | **Required.** The container whose identity-attribute children become sortable. |
+| `group` | `string` | — | Connects sortable lists. Containers with the same group name can exchange items. |
 | `handle` | `string` | — | CSS selector for a drag handle inside each item. When omitted, the whole item is draggable. `draggable` is set on the handle element, not the item. |
+| `keyboard` | `boolean` | `true` | Enables keyboard reordering (Arrow keys + Home/End) for focused items. |
 | `itemAttribute` | `string` | `'data-sort-id'` | The attribute used to read each item's stable identity. Can be any attribute name. |
 | `axis` | `'vertical' \| 'horizontal'` | `'vertical'` | Axis used to compute placeholder insertion midpoint (`clientY` for vertical, `clientX` for horizontal). |
+| `autoScroll` | `boolean \| AutoScrollOptions` | `true` | Auto-scrolls near container/viewport edges while dragging. |
+| `dragImage` | `HTMLElement \| ((id, item, event) => HTMLElement \| null \| undefined)` | — | Custom native drag preview element passed to `dataTransfer.setDragImage()`. |
 | `placeholderClass` | `string` | `'dragit-placeholder'` | CSS class applied to the generated placeholder element while dragging. |
 | `disabled` | `boolean \| (() => boolean)` | — | When truthy, `dragstart` is blocked. If a drag is in progress when disabled becomes truthy, `onReorder` will not fire at drag end. |
 | `onDragStart` | `(id: string, event: DragEvent) => void` | — | Called at the start of a drag. `id` is the identity attribute value of the item being dragged. |
@@ -193,6 +210,7 @@ Makes the direct children of a container element reorderable via drag. Each item
 ```ts
 const sortable = createSortable({
   element: listEl,
+  group: 'kanban',
   handle: '.drag-handle',
   onDragStart: (id) => {
     listEl.classList.add('sorting');

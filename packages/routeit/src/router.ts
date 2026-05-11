@@ -1,10 +1,12 @@
 import type { RouteBranchDef, RouteRecord } from './router-internal';
 import type {
-  NavigationStatus,
+  BeforeLeaveBlocker,
+  CoerceSearchFn,
   HistoryDriver,
   Middleware,
   NavigateOptions,
   NamedNavigationTarget,
+  NavigationStatus,
   NavigationTarget,
   PathParams,
   QueryParams,
@@ -15,8 +17,8 @@ import type {
   RouteMatch,
   RouteMatchBranch,
   RouteName,
-  RoutePathByName,
   RouteParams,
+  RoutePathByName,
   RouteState,
   RouteTable,
   RouterOptions,
@@ -25,6 +27,8 @@ import type {
 
 import { runMiddleware } from './middleware';
 import { buildUrl, compilePathMatcher, joinPaths, matchRoute, matchesPrefix, normalizePath, parseQuery } from './path';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getRouteByName(name: string, routesByName: ReadonlyMap<string, RouteRecord>): RouteRecord {
   const route = routesByName.get(name);
@@ -41,19 +45,25 @@ function getRouteByName(name: string, routesByName: ReadonlyMap<string, RouteRec
 }
 
 function createRouteState(input: {
+  error?: unknown;
   location: RouteLocation;
   matches: RouteMatchBranch;
   status: NavigationStatus;
 }): RouteState {
-  return {
+  const state: RouteState = {
     location: {
       hash: input.location.hash,
+      historyState: input.location.historyState,
       pathname: input.location.pathname,
       query: input.location.query,
     },
     matches: [...input.matches],
     status: input.status,
   };
+
+  if (input.error !== undefined) (state as { error?: unknown }).error = input.error;
+
+  return state;
 }
 
 function buildMatchBranch(
@@ -76,32 +86,10 @@ function buildMatchBranch(
 function resolveMatch(
   pathname: string,
   records: readonly RouteRecord[],
-): {
-  branch: RouteMatchBranch;
-  params: RouteParams;
-  record?: RouteRecord;
-} {
+): { params: RouteParams; record?: RouteRecord } {
   const { params, record } = matchRoute(pathname, records);
 
-  if (!record) {
-    return {
-      branch: [],
-      params,
-    };
-  }
-
-  const branch = buildMatchBranch(
-    record.branchDefs,
-    params,
-    pathname,
-    record.branchDefs.map(() => undefined),
-  );
-
-  return {
-    branch,
-    params,
-    record,
-  };
+  return { params, record };
 }
 
 function resolveTarget(target: NavigationTarget, routesByName: ReadonlyMap<string, RouteRecord>): string {
@@ -128,16 +116,10 @@ function stripBase(pathname: string, base = '/'): string {
     : normalizedPath;
 }
 
-function readLocation(
-  base: string,
-  history: HistoryDriver,
-): {
-  hash: string;
-  pathname: string;
-  query: QueryParams;
-} {
+function readLocation(base: string, history: HistoryDriver): RouteLocation {
   return {
     hash: history.location.hash.replace(/^#/, ''),
+    historyState: history.location.state,
     pathname: stripBase(history.location.pathname || '/', base),
     query: parseQuery(history.location.search || ''),
   };
@@ -162,11 +144,13 @@ function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoute
     const ownPath = route.index
       ? ancestorPath
       : normalizePath(route.path ? joinPaths(ancestorPath, route.path) : ancestorPath);
+
     const branchDefs: RouteBranchDef[] = [
       ...ancestorBranchDefs,
       {
         dataFn: route.data,
         handler: route.handler,
+        lazy: route.lazy,
         meta: route.meta,
         name,
       },
@@ -179,18 +163,19 @@ function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoute
       }
     }
 
-    // Compile as a leaf record when it has a handler, or when it has no children
-    // (simple routes and wildcard fallbacks always need a record).
-    if (route.handler !== undefined || !route.children) {
+    if (route.handler !== undefined || route.lazy !== undefined || route.redirect !== undefined || !route.children) {
       const leaf = branchDefs[branchDefs.length - 1]!;
 
       records.push({
         branchDefs,
+        coerceSearch: route.coerceSearch as CoerceSearchFn | undefined,
         hasData: branchDefs.some((def) => def.dataFn != null),
+        hasLazy: branchDefs.some((def) => def.lazy != null),
         leaf,
         matcher: compilePathMatcher(ownPath),
         middleware: [...globalMiddleware, ...ownMiddleware],
         path: ownPath,
+        redirect: route.redirect,
       });
     }
   };
@@ -201,15 +186,17 @@ function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoute
 
   return {
     records,
-    routesByName: new Map(records.map((record) => [record.leaf.name, record])),
+    routesByName: new Map(records.map((r) => [r.leaf.name, r])),
   };
 }
+
+// ─── History drivers ──────────────────────────────────────────────────────────
 
 /** Creates a history driver backed by the browser History API. */
 export function createBrowserHistory(): HistoryDriver {
   return {
     get location() {
-      return window.location;
+      return window.location as HistoryDriver['location'] & typeof window.location;
     },
     push(url, state) {
       window.history.pushState(state, '', url);
@@ -225,19 +212,61 @@ export function createBrowserHistory(): HistoryDriver {
   };
 }
 
+type MemoryLocation = { hash: string; pathname: string; search: string; state: unknown };
+
+/** Creates an in-memory history driver. Suitable for SSR, tests, and non-browser environments. */
+export function createMemoryHistory(initialPath = '/'): HistoryDriver {
+  const parsed = new URL(initialPath, 'http://localhost');
+  const stack: MemoryLocation[] = [
+    { hash: parsed.hash, pathname: parsed.pathname, search: parsed.search, state: null },
+  ];
+  let cursor = 0;
+  const listeners = new Set<() => void>();
+
+  return {
+    get location(): MemoryLocation {
+      return stack[cursor]!;
+    },
+    push(url, state = null) {
+      const p = new URL(url, 'http://localhost');
+
+      stack.splice(cursor + 1);
+      stack.push({ hash: p.hash, pathname: p.pathname, search: p.search, state });
+      cursor = stack.length - 1;
+      listeners.forEach((l) => l());
+    },
+    replace(url, state = null) {
+      const p = new URL(url, 'http://localhost');
+
+      stack[cursor] = { hash: p.hash, pathname: p.pathname, search: p.search, state };
+      listeners.forEach((l) => l());
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
+// ─── Router ───────────────────────────────────────────────────────────────────
+
 export class Router<TRoutes extends RouteTable = RouteTable> {
   readonly #base: string;
   readonly #history: HistoryDriver;
   readonly #records: readonly RouteRecord[];
   readonly #routesByName: ReadonlyMap<string, RouteRecord>;
+  readonly #scroll?: RouterOptions['scroll'];
   readonly #useViewTransition: boolean;
 
   #abortController: AbortController | null = null;
+  #beforeLeave: BeforeLeaveBlocker | null = null;
   #currentState: RouteState;
   #disposed = false;
   #lastHref = '/';
   readonly #listeners = new Set<(state: RouteState) => void>();
   #navigationId = 0;
+  readonly #preloadCache = new Map<string, Promise<void>>();
   readonly #unlistenHistory: () => void;
 
   constructor(options: RouterOptions<TRoutes>) {
@@ -246,14 +275,11 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     this.#base = normalizePath(options.base ?? '/');
     this.#history = options.history ?? createBrowserHistory();
     this.#useViewTransition = options.viewTransition ?? false;
+    this.#scroll = options.scroll;
     this.#records = compiled.records;
     this.#routesByName = compiled.routesByName;
     this.#currentState = createRouteState({
-      location: {
-        hash: '',
-        pathname: '/',
-        query: {},
-      },
+      location: { hash: '', historyState: null, pathname: '/', query: {} },
       matches: [],
       status: 'idle',
     });
@@ -276,8 +302,11 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
   #registerHistoryListener(): () => void {
     return this.#history.subscribe(() => {
       const { hash, pathname, search } = this.#history.location;
+      const newHref = `${pathname}${search}${hash}`;
 
-      this.#lastHref = `${pathname}${search}${hash}`;
+      if (newHref === this.#lastHref) return;
+
+      this.#lastHref = newHref;
       this.#runInBackground(this.#handleRoute());
     });
   }
@@ -298,7 +327,79 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     return id === this.#navigationId;
   }
 
-  async #handleRoute(useTransition?: boolean): Promise<void> {
+  async #hydrateLazy(record: RouteRecord): Promise<void> {
+    if (!record.hasLazy) return;
+
+    (record as { hasLazy: boolean }).hasLazy = false;
+
+    for (const def of record.branchDefs) {
+      if (!def.lazy) continue;
+
+      const lazyFn = def.lazy;
+
+      def.lazy = undefined;
+
+      const mod = await lazyFn();
+
+      if (mod.handler !== undefined) def.handler = mod.handler;
+
+      if (mod.data !== undefined) def.dataFn = mod.data;
+
+      if (mod.meta !== undefined) def.meta = mod.meta;
+    }
+
+    (record as { hasData: boolean }).hasData = record.branchDefs.some((d) => d.dataFn != null);
+  }
+
+  async #prepareRoute(location: RouteLocation): Promise<{
+    branch: RouteMatchBranch;
+    location: RouteLocation;
+    params: RouteParams;
+    record?: RouteRecord;
+    redirectTo?: string;
+  }> {
+    const { params, record } = resolveMatch(location.pathname, this.#records);
+
+    if (!record) {
+      return { branch: [], location, params };
+    }
+
+    if (record.redirect) {
+      return {
+        branch: [],
+        location,
+        params,
+        record,
+        redirectTo: resolveTarget(record.redirect, this.#routesByName),
+      };
+    }
+
+    if (record.coerceSearch) {
+      try {
+        const coerced = record.coerceSearch(location.query);
+
+        (location as { query: QueryParams }).query = coerced;
+      } catch {
+        // Keep raw query when coercion fails.
+      }
+    }
+
+    await this.#hydrateLazy(record);
+
+    return {
+      branch: buildMatchBranch(
+        record.branchDefs,
+        params,
+        location.pathname,
+        record.branchDefs.map(() => undefined),
+      ),
+      location,
+      params,
+      record,
+    };
+  }
+
+  async #handleRoute(useTransition?: boolean, redirectDepth = 0): Promise<void> {
     this.#abortController?.abort();
 
     const controller = new AbortController();
@@ -306,12 +407,21 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     this.#abortController = controller;
 
     const navigationId = ++this.#navigationId;
-
-    const location = readLocation(this.#base, this.#history);
-    const { branch: initialBranch, params, record } = resolveMatch(location.pathname, this.#records);
+    const prevState = this.#currentState;
+    const prepared = await this.#prepareRoute(readLocation(this.#base, this.#history));
     const isCurrent = (): boolean => this.#isNavigationCurrent(navigationId);
 
     if (!isCurrent()) return;
+
+    if (prepared.redirectTo) {
+      if (redirectDepth >= 10) throw new Error('[routeit] Redirect loop detected');
+
+      await this.#navigateToPath(prepared.redirectTo, { replace: true }, redirectDepth + 1);
+
+      return;
+    }
+
+    const { branch: initialBranch, location, params, record } = prepared;
 
     this.#currentState = createRouteState({
       location,
@@ -324,6 +434,7 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
 
       const context: RouteContext = {
         hash: location.hash,
+        historyState: location.historyState,
         locals: {},
         matches: initialBranch,
         navigate: (target, options) =>
@@ -349,6 +460,7 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
           } catch (error) {
             status = 'error';
             this.#currentState = createRouteState({
+              error,
               location,
               matches: buildMatchBranch(record.branchDefs, params, location.pathname, dataResults),
               status,
@@ -361,11 +473,7 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
 
         const finalBranch = buildMatchBranch(record.branchDefs, params, location.pathname, dataResults);
 
-        this.#currentState = createRouteState({
-          location,
-          matches: finalBranch,
-          status,
-        });
+        this.#currentState = createRouteState({ location, matches: finalBranch, status });
 
         if (record.leaf.handler) {
           const leafData = dataResults[dataResults.length - 1];
@@ -391,24 +499,46 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
         await run();
       }
     } finally {
-      if (isCurrent()) this.#notifyListeners();
+      if (isCurrent()) {
+        this.#notifyListeners();
+        this.#applyScroll(this.#currentState, prevState);
+      }
+    }
+  }
+
+  #applyScroll(to: RouteState, from: RouteState | null): void {
+    if (!this.#scroll || typeof window === 'undefined') return;
+
+    const pos = this.#scroll(to, from);
+
+    if (pos) {
+      window.scrollTo(pos.x, pos.y);
+    } else if (pos === null) {
+      window.scrollTo(0, 0);
     }
   }
 
   #resolveDestination(path: string): string {
     const [pathWithQuery, hash = ''] = path.split('#');
-    const [pathname, search = ''] = pathWithQuery.split('?');
+    const [pathname, search = ''] = pathWithQuery!.split('?');
     const joinedPath = normalizePath(`${this.#base}/${pathname}`);
 
     return `${joinedPath}${search ? `?${search}` : ''}${hash ? `#${hash}` : ''}`;
   }
 
-  async #navigateToPath(path: string, options: NavigateOptions = {}): Promise<void> {
+  async #navigateToPath(path: string, options: NavigateOptions = {}, redirectDepth = 0): Promise<void> {
     this.#assertNotDisposed();
 
     const destination = this.#resolveDestination(path);
 
     if (!options.force && destination === this.#lastHref) return;
+
+    // Check leave blocker before mutating history.
+    if (this.#beforeLeave) {
+      const allowed = await this.#beforeLeave();
+
+      if (!allowed) return;
+    }
 
     this.#lastHref = destination;
 
@@ -418,10 +548,10 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
       this.#history.push(destination, options.state);
     }
 
-    await this.#handleRoute(options.viewTransition);
+    await this.#handleRoute(options.viewTransition, redirectDepth);
   }
 
-  /** Navigate using a named route target. */
+  /** Navigate using a named route target or a raw path target. */
   navigate(target: NamedNavigationTarget<TRoutes> | RawNavigationTarget, options?: NavigateOptions): Promise<void> {
     const destination = resolveTarget(target, this.#routesByName);
 
@@ -450,9 +580,98 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
   /** Resolve a pathname to the matching route branch without running middleware or handlers. */
   resolve(pathname: string): RouteMatchBranch | null {
     const normalizedPathname = stripBase(normalizePath(pathname), this.#base);
-    const { branch } = resolveMatch(normalizedPathname, this.#records);
+    const { params, record } = resolveMatch(normalizedPathname, this.#records);
+
+    if (!record) return null;
+
+    const branch = buildMatchBranch(
+      record.branchDefs,
+      params,
+      normalizedPathname,
+      record.branchDefs.map(() => undefined),
+    );
 
     return branch.length ? branch : null;
+  }
+
+  /**
+   * Eagerly execute the data loaders for a named route without navigating.
+   * Useful for hover-prefetch. Results are discarded; calling navigate() afterward
+   * will run the loaders again with a fresh AbortSignal.
+   */
+  async preload<Name extends RouteName<TRoutes>>(
+    name: Name,
+    params?: PathParams<RoutePathByName<TRoutes, Name>>,
+  ): Promise<void> {
+    const route = getRouteByName(name, this.#routesByName);
+    const cacheKey = buildUrl(this.#base, route.path, params as RouteParams);
+
+    if (this.#preloadCache.has(cacheKey)) return this.#preloadCache.get(cacheKey);
+
+    const signal = new AbortController().signal;
+    const work = (async (): Promise<void> => {
+      let destination = cacheKey;
+
+      for (let i = 0; i < 10; i += 1) {
+        const parsed = new URL(destination, 'http://localhost');
+        const location: RouteLocation = {
+          hash: parsed.hash.replace(/^#/, ''),
+          historyState: null,
+          pathname: stripBase(parsed.pathname, this.#base),
+          query: parseQuery(parsed.search),
+        };
+        const prepared = await this.#prepareRoute(location);
+
+        if (prepared.redirectTo) {
+          destination = this.#resolveDestination(prepared.redirectTo);
+          continue;
+        }
+
+        if (!prepared.record?.hasData) return;
+
+        await Promise.all(
+          prepared.record.branchDefs.map((def) =>
+            def.dataFn
+              ? def.dataFn({
+                  data: undefined,
+                  hash: prepared.location.hash,
+                  historyState: null,
+                  locals: {},
+                  matches: prepared.branch,
+                  navigate: () => Promise.resolve(),
+                  params: prepared.params,
+                  pathname: prepared.location.pathname,
+                  query: prepared.location.query,
+                  signal,
+                })
+              : undefined,
+          ),
+        );
+
+        return;
+      }
+
+      throw new Error('[routeit] preload redirect loop detected');
+    })();
+
+    this.#preloadCache.set(cacheKey, work);
+    work.finally(() => this.#preloadCache.delete(cacheKey));
+
+    return work;
+  }
+
+  /**
+   * Register a leave guard. Called before every navigation attempt.
+   * Return `false` to cancel; `true` to allow. Only one guard is active at a time.
+   * Returns a function that removes the guard.
+   */
+  beforeLeave(blocker: BeforeLeaveBlocker): Unsubscribe {
+    this.#assertNotDisposed();
+    this.#beforeLeave = blocker;
+
+    return () => {
+      if (this.#beforeLeave === blocker) this.#beforeLeave = null;
+    };
   }
 
   /** Subscribe to state changes. The listener is called immediately with the current state. */
@@ -471,6 +690,7 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
     if (this.#disposed) return;
 
     this.#disposed = true;
+    this.#beforeLeave = null;
     this.#listeners.clear();
     this.#abortController?.abort();
     this.#abortController = null;

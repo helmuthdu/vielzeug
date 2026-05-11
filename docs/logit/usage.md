@@ -29,7 +29,6 @@ Use `setConfig()` for partial updates; unspecified fields remain unchanged.
 
 ```ts
 Logit.setConfig({
-  environment: true,
   logLevel: 'warn',
   namespace: 'App',
   timestamp: true,
@@ -47,17 +46,31 @@ const cfg: Readonly<LogitConfig> = Logit.config; // snapshot copy
 
 Level threshold order:
 
-- `debug` < `trace` < `info` = `success` < `warn` < `error` < `off`
+- `debug` < `trace` < `info` < `warn` < `error` < `fatal` < `off`
+
+## Call Signature
+
+All log methods share a consistent overloaded signature:
+
+```ts
+log.info('message')
+log.info({ key: 'value' }, 'message')   // context object first, message second
+log.error(new Error('boom'))             // Error auto-serialized into context.err
+log.error(new Error('boom'), 'override') // message override, err still in context
+log.info()                               // zero-arg form — logs without message
+```
+
+The `context` object and per-call args are merged with any pinned `withBindings()` context before emission.
 
 ## Logging Methods
 
 ```ts
 Logit.debug('debug details');
 Logit.trace('trace details');
-Logit.info('server started', { port: 3000 });
-Logit.success('user created', { id: 42 });
+Logit.info({ port: 3000 }, 'server started');
 Logit.warn('cache stale');
-Logit.error('request failed', new Error('timeout'));
+Logit.error(new Error('timeout'));           // auto-serialized
+Logit.fatal({ service: 'db' }, 'terminating'); // above error, use for unrecoverable state
 
 Logit.assert(Boolean(process.env.API_URL), 'Missing API URL');
 Logit.table([{ id: 1, name: 'Alice' }], ['id', 'name']);
@@ -69,6 +82,33 @@ Use `enabled()` to avoid expensive debug payload creation:
 if (Logit.enabled('debug')) {
   Logit.debug('diagnostics', buildLargePayload());
 }
+```
+
+## Pinned Bindings
+
+`withBindings(fields)` returns a child logger where the given fields are merged into every log call. This is the idiomatic way to attach per-request or per-user context.
+
+```ts
+const api = Logit.scope('api');
+
+// typical use: per-request context in a server handler
+const reqLog = api.withBindings({ requestId: 'abc-123', userId: 42 });
+reqLog.info('GET /users');          // always includes requestId and userId
+reqLog.warn({ slow: true }, 'query took 2s'); // call-site fields merged in
+```
+
+The parent logger is not affected. Bindings stack additively through chained `withBindings()` calls:
+
+```ts
+const base = Logit.withBindings({ service: 'api' });
+const req  = base.withBindings({ requestId: 'xyz' });
+// req emits both service and requestId on every call
+```
+
+`bindings` getter returns a snapshot of the currently pinned fields:
+
+```ts
+console.log(reqLog.bindings); // { requestId: 'abc-123', userId: 42 }
 ```
 
 ## Scoped Loggers
@@ -108,7 +148,7 @@ Logit.setConfig({
     logLevel: 'warn',
     handler: async (type, data: RemoteLogData) => {
       await fetch('/api/logs', {
-        body: JSON.stringify({ level: type, ...data }),
+        body: JSON.stringify(data),
         method: 'POST',
       });
     },
@@ -116,20 +156,28 @@ Logit.setConfig({
 });
 ```
 
-Remote payload:
+Remote payload shape (`RemoteLogData`):
 
-- `args`
-- `env` (`development` or `production`)
-- `namespace?`
-- `timestamp?`
+| Field | Type | Description |
+| --- | --- | --- |
+| `level` | `LogType` | Log level string |
+| `message` | `string?` | Log message |
+| `context` | `object?` | Merged bindings + per-call context (includes `err` for Errors) |
+| `env` | `'development' \| 'production'` | Runtime environment |
+| `namespace` | `string?` | Logger namespace |
+| `timestamp` | `string?` | ISO timestamp when enabled |
+
+If a handler throws, a `console.warn` is emitted — remote errors never propagate to the caller.
 
 ## Best Practices
 
 - Create one scoped logger per module boundary.
-- Set `logLevel` from environment (`debug` in dev, `warn/error` in prod).
+- Use `withBindings()` to pin request/session context instead of repeating fields on each call.
+- Set `logLevel` from environment (`debug` in dev, `warn`/`error` in prod).
 - Use `enabled()` before expensive payload construction.
 - Keep remote handlers resilient; network failures should not block app flow.
-- Prefer `child()` for temporary overrides (tests, one-off tasks).
+- Prefer `child()` for temporary config overrides (tests, one-off tasks).
+- Use `fatal()` only for genuinely unrecoverable states; it maps to `console.error` and remote.
 
 ## Testing
 

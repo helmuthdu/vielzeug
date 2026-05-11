@@ -14,7 +14,6 @@ type DrawerBackdrop = 'opaque' | 'blur' | 'transparent';
 type DrawerSwipeConfig = {
   axis: SwipeAxis;
   closingDistance: (distance: number) => number;
-  exitTransform: (panel: HTMLElement) => string;
   translate: (distance: number) => string;
 };
 
@@ -22,25 +21,21 @@ const drawerSwipeConfig: Record<DrawerPlacement, DrawerSwipeConfig> = {
   bottom: {
     axis: 'y',
     closingDistance: (distance) => Math.max(0, distance),
-    exitTransform: (panel) => `translateY(${panel.offsetHeight}px)`,
     translate: (distance) => `translateY(${distance}px)`,
   },
   left: {
     axis: 'x',
     closingDistance: (distance) => Math.max(0, -distance),
-    exitTransform: (panel) => `translateX(-${panel.offsetWidth}px)`,
     translate: (distance) => `translateX(${distance}px)`,
   },
   right: {
     axis: 'x',
     closingDistance: (distance) => Math.max(0, distance),
-    exitTransform: (panel) => `translateX(${panel.offsetWidth}px)`,
     translate: (distance) => `translateX(${distance}px)`,
   },
   top: {
     axis: 'y',
     closingDistance: (distance) => Math.max(0, -distance),
-    exitTransform: (panel) => `translateY(-${panel.offsetHeight}px)`,
     translate: (distance) => `translateY(${distance}px)`,
   },
 };
@@ -176,6 +171,10 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       return Math.min(96, Math.max(36, panelSize * 0.18));
     };
 
+    const shouldCommitSwipeClose = (distance: number, threshold: number) => {
+      return getSwipeConfig().closingDistance(distance) >= threshold;
+    };
+
     const finalizeSwipeClose = (panel: HTMLElement) => {
       if (!isSwipeClosing) return;
 
@@ -200,12 +199,16 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       requestClose('swipe');
     };
 
-    const startSwipeClose = (panel: HTMLElement, swipe: DrawerSwipeConfig) => {
+    const startSwipeClose = (panel: HTMLElement, swipe: DrawerSwipeConfig, committedDistance: number) => {
       if (isSwipeClosing) return;
 
       isSwipeClosing = true;
 
-      const exitTransform = swipe.exitTransform(panel);
+      const panelSize = swipe.axis === 'x' ? panel.offsetWidth : panel.offsetHeight;
+      // Preserve overshoot so closing continues from the dragged position instead of snapping back.
+      const exitDistance =
+        committedDistance >= 0 ? Math.max(committedDistance, panelSize) : Math.min(committedDistance, -panelSize);
+      const exitTransform = swipe.translate(exitDistance);
 
       // Commit the current drag position first so the magnetic snap continues
       // from the finger instead of jumping back to rest.
@@ -249,17 +252,27 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
     const swipe = createSwipeControl({
       axis: () => getSwipeConfig().axis,
       disabled: () => isSwipeClosing,
-      onCancel: () => {
-        const panel = panelRef.value;
-
-        if (panel) resetPanelDragStyles(panel);
-      },
-      onCommit: () => {
+      onCancel: ({ distance, threshold }) => {
         const panel = panelRef.value;
 
         if (!panel) return;
 
-        startSwipeClose(panel, getSwipeConfig());
+        // If the release event crosses the threshold (without an intervening
+        // move event), commit close instead of snapping back to rest first.
+        if (shouldCommitSwipeClose(distance, threshold)) {
+          startSwipeClose(panel, getSwipeConfig(), distance);
+
+          return;
+        }
+
+        resetPanelDragStyles(panel);
+      },
+      onCommit: ({ distance }) => {
+        const panel = panelRef.value;
+
+        if (!panel) return;
+
+        startSwipeClose(panel, getSwipeConfig(), distance);
       },
       onMove: ({ distance, threshold }) => {
         const panel = panelRef.value;
@@ -275,9 +288,7 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
         panel.style.transform = swipeConfig.translate(distance);
         panel.style.opacity = String(1 - progress * 0.4);
       },
-      shouldCommit: ({ distance, threshold }) => {
-        return getSwipeConfig().closingDistance(distance) >= threshold;
-      },
+      shouldCommit: ({ distance, threshold }) => shouldCommitSwipeClose(distance, threshold),
       threshold: () => {
         const panel = panelRef.value;
 
@@ -424,6 +435,8 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
 
       const handleBackdropClick = (e: MouseEvent) => {
         if (props.persistent.value) return;
+
+        if (swipe.isActive() || isSwipeClosing) return;
 
         if (e.target !== dialog) return; // Click inside panel
 

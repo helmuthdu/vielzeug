@@ -59,6 +59,6 @@ define<AlertBoxProps, AlertBoxEvents>('alert-box', {
 
 ## Related recipes
 
-- [Prop helpers and raw PropDef](./propsof-builder-api.md)
+- [Prop helpers and raw PropsDef](./propsof-builder-api.md)
 - [Counter component](./counter-component.md)
 - [Form-associated rating input](./form-associated-rating-input.md)

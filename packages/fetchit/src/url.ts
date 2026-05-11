@@ -24,17 +24,13 @@ export function buildUrl(base: string, path: string, params?: Params, query?: Pa
   const baseClean = base.replace(/\/+$/, '');
   let pathClean = path.replace(/^\/+/, '');
 
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined) {
-        pathClean = pathClean.replaceAll(`{${key}}`, encodeURIComponent(String(value)));
-      }
-    }
-  }
+  pathClean = pathClean.replace(/\{([^}]+)\}/g, (_, key: string) => {
+    const val = params?.[key];
 
-  const unresolved = pathClean.match(/\{[^}]+\}/g);
+    if (val === undefined) throw new Error(`[fetchit] unresolved path param {${key}} in '${path}'`);
 
-  if (unresolved) throw new Error(`[fetchit] unresolved path params ${unresolved.join(', ')} in '${path}'`);
+    return encodeURIComponent(String(val));
+  });
 
   const url = baseClean && pathClean ? `${baseClean}/${pathClean}` : baseClean || pathClean;
 

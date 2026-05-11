@@ -1,6 +1,7 @@
 import {
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
+  type Overscan,
   type ScrollToIndexOptions,
   type VirtualItem,
   type Virtualizer,
@@ -19,9 +20,12 @@ export type DomVirtualListRenderArgs<T> = {
 export type DomVirtualListOptions<T> = {
   clear?: (listEl: HTMLElement) => void;
   estimateSize: number | ((index: number, item: T) => number);
+  gap?: number;
+  getItemKey?: (item: T, index: number) => number | string;
   getListElement: () => HTMLElement | null;
-  getScrollElement: () => HTMLElement | null;
-  overscan?: number;
+  getScrollElement: () => HTMLElement | Window | null;
+  horizontal?: boolean;
+  overscan?: Overscan;
   render: (args: DomVirtualListRenderArgs<T>) => void;
 };
 
@@ -40,7 +44,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   let currentItems: T[] = [];
   let isActive = true;
   let listElRef: HTMLElement | null = null;
-  let scrollElRef: HTMLElement | null = null;
+  let scrollElRef: HTMLElement | Window | null = null;
   let virtualizer: Virtualizer | null = null;
 
   const resolveEstimate = (index: number): number => {
@@ -53,6 +57,14 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     return options.estimateSize(index, item);
   };
 
+  const getCoreItemKey = options.getItemKey
+    ? (index: number) => {
+        const item = currentItems[index];
+
+        return item ? options.getItemKey!(item, index) : index;
+      }
+    : undefined;
+
   const clearAndReset = () => {
     if (!listElRef) return;
 
@@ -60,11 +72,36 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     else listElRef.textContent = '';
 
     listElRef.style.height = '';
+    listElRef.style.width = '';
     listElRef.style.position = '';
     listElRef.style.contain = '';
   };
 
-  const ensureVirtualizer = (remeasure: boolean, lengthChanged: boolean) => {
+  const applyListSize = (totalSize: number) => {
+    if (!listElRef) return;
+
+    if (options.horizontal) {
+      listElRef.style.width = `${totalSize}px`;
+      listElRef.style.height = '';
+    } else {
+      listElRef.style.height = `${totalSize}px`;
+      listElRef.style.width = '';
+    }
+  };
+
+  const renderFromChange = (virtualItems: VirtualItem[], totalSize: number) => {
+    if (!listElRef) return;
+
+    applyListSize(totalSize);
+    options.render({
+      items: currentItems,
+      listEl: listElRef,
+      totalSize,
+      virtualItems,
+    });
+  };
+
+  const syncVirtualizer = (remeasure: boolean) => {
     const nextScroll = options.getScrollElement();
     const nextList = options.getListElement();
 
@@ -88,32 +125,28 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       virtualizer = createVirtualizer(scrollElRef, {
         count: currentItems.length,
         estimateSize: resolveEstimate,
-        onChange: (virtualItems, totalSize) => {
-          if (!listElRef) return;
-
-          listElRef.style.height = `${totalSize}px`;
-          options.render({ items: currentItems, listEl: listElRef, totalSize, virtualItems });
-        },
-        overscan: options.overscan ?? DEFAULT_OVERSCAN,
+        gap: options.gap,
+        getItemKey: getCoreItemKey,
+        horizontal: options.horizontal,
+        onChange: (virtualItems, totalSize) => renderFromChange(virtualItems, totalSize),
+        overscan: options.overscan ?? { end: DEFAULT_OVERSCAN, start: DEFAULT_OVERSCAN },
       });
 
       listElRef.style.position = 'relative';
       listElRef.style.contain = 'layout';
-    } else {
-      if (lengthChanged) virtualizer.update({ count: currentItems.length });
 
-      if (remeasure) virtualizer.invalidate();
-
-      if (listElRef) {
-        listElRef.style.height = `${virtualizer.totalSize}px`;
-        options.render({
-          items: currentItems,
-          listEl: listElRef,
-          totalSize: virtualizer.totalSize,
-          virtualItems: virtualizer.items,
-        });
-      }
+      return;
     }
+
+    virtualizer.update({
+      count: currentItems.length,
+      estimateSize: (index) => resolveEstimate(index),
+      getItemKey: getCoreItemKey,
+      horizontal: options.horizontal,
+      overscan: options.overscan,
+    });
+
+    if (remeasure) virtualizer.invalidate();
   };
 
   return {
@@ -127,15 +160,11 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     },
     setActive(active) {
       isActive = active;
-
-      ensureVirtualizer(false, false);
+      syncVirtualizer(false);
     },
     setItems(items, setItemsOptions = {}) {
-      const lengthChanged = currentItems.length !== items.length;
-
       currentItems = items;
-
-      ensureVirtualizer(!!setItemsOptions.remeasure, lengthChanged);
+      syncVirtualizer(!!setItemsOptions.remeasure);
     },
   };
 }

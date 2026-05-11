@@ -24,6 +24,9 @@ export type TextBinding = {
 };
 
 export type AttrBinding = {
+  /** When true the binding uses live-write semantics: stale app-state writes are
+   * skipped if the DOM value has diverged from the last programmatic write. */
+  live?: true;
   mode: 'bool' | 'attr';
   name: string;
   signal?: ReadonlySignal<unknown>;

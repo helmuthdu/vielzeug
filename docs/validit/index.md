@@ -3,13 +3,15 @@ title: Validit — Schema validation for TypeScript
 description: Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="validit" />
 
 <img src="/logo-validit.svg" alt="Validit logo" width="156" class="logo-highlight"/>
 
 # Validit
 
-`@vielzeug/validit` is a zero-dependency schema validation library for TypeScript projects. It gives you a fluent schema API, runtime validation, and precise output types with `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>`.
+`@vielzeug/validit` is a zero-dependency schema validation library for TypeScript projects. It gives you a fluent schema API, runtime validation, and precise input/output typing with `InferInput<T>`, `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>`.
 
 <!-- Search keywords: validation schema, runtime validator, typed data parsing. -->
 
@@ -87,14 +89,14 @@ if (!result.success) {
 }
 ```
 
-| Feature           | Validit                                     | Zod    | Yup     |
-| ----------------- | ------------------------------------------- | ------ | ------- |
+| Feature           | Validit                                      | Zod    | Yup     |
+| ----------------- | -------------------------------------------- | ------ | ------- |
 | Bundle size       | <PackageInfo package="validit" type="size" /> | ~62 kB | ~14 kB  |
-| Type inference    | ✅ `Infer<T>`                               | ✅     | Partial |
-| Coercion API      | ✅ `v.coerce.*`                             | ✅     | ✅      |
-| Async validation  | ✅ `.refineAsync()`                         | ✅     | ✅      |
-| Error flattening  | ✅ `flatten()` + `flattenFirst()`           | ✅     | Partial |
-| Zero dependencies | ✅                                          | ✅     | ❌      |
+| Type inference    | ✅ `Infer<T>`                                | ✅     | Partial |
+| Coercion API      | ✅ `v.coerce.*`                              | ✅     | ✅      |
+| Async validation  | ✅ `.refineAsync()`                          | ✅     | ✅      |
+| Error flattening  | ✅ `flatten()` + `flattenFirst()`            | ✅     | Partial |
+| Zero dependencies | ✅                                           | ✅     | ❌      |
 
 **Use Validit when** you want a fluent schema API with strong TypeScript inference, structured errors, and zero dependencies.
 
@@ -103,11 +105,14 @@ if (!result.success) {
 ## Features
 
 - **Schema factories**: primitives, collections, literals, unions, intersections, lazy schemas, discriminated variants, and enum helpers
-- **Type inference**: `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>` infer parsed output types
+- **Input/output inference**: `InferInput<T>` for accepted inputs plus `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>` for parsed outputs
 - **Sync and async validation**: `.refine()` and `.refineAsync()` with `parse*` and `safeParse*`
+- **Advanced validation hooks**: `.superRefine()` and `.superRefineAsync()` for multi-issue/path-aware validation
 - **Preprocess and coerce**: `schema.preprocess(...)` plus `v.coerce.string()`, `number()`, `boolean()`, and `date()`
+- **Expanded schema coverage**: `v.bigint()`, `v.set()`, and `v.map()`
 - **Error ergonomics**: `ValidationError`, `Issue`, `ErrorCode`, `error.flatten()`, and `error.flattenFirst()`
-- **Object composition helpers**: `.partial()`, `.required()`, `.pick()`, `.omit()`, `.extend()`, and `.relaxed()`
+- **Object and tuple composition**: object `.strip()`/`.relaxed()` modes and tuple `.rest()`
+- **String and number format constraints**: validators like `.ulid()`, `.jwt()`, `.duration()`, and `.finite()`
 - **Strict by default objects**: unknown keys are rejected unless `.relaxed()` is used
 - **Nested global message customization**: `configure({ messages })` and `reset()`
 - **Flexible roots**: `v.any()` and `v.unknown()` when you want to start from an unconstrained schema
@@ -130,3 +135,5 @@ if (!result.success) {
 - [Formit](/formit/)
 - [Fetchit](/fetchit/)
 - [Deposit](/deposit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

@@ -14,10 +14,15 @@ description: API reference for the minimal permit authorization engine.
 | `createPermit(options?)` | Create a permit instance |
 | `permit.set(rule | rules)` | Append one or more rules |
 | `permit.can(principal, resource, action, data?)` | Evaluate one decision |
-| `permit.forUser(principal)` | Create a principal-bound check function |
+| `permit.canAll(principal, resource, actions, data?)` | Require all actions to be allowed |
+| `permit.canAny(principal, resource, actions, data?)` | Require at least one allowed action |
+| `permit.allowedActions(principal, resource, data?)` | List allowed concrete actions |
+| `permit.explain(principal, resource, action, data?)` | Return decision with deny reason |
+| `permit.forUser(principal, cache?)` | Create a principal-bound permit object |
 | `permit.rules()` | Read current rules snapshot |
 | `permit.replace(rules)` | Replace all rules |
 | `permit.clear()` | Remove all rules |
+| `owns(attributeKey)` | Create an ownership predicate |
 
 ## Constants
 
@@ -82,13 +87,72 @@ Accepted principal inputs:
 
 Invalid principal payloads throw.
 
-### `forUser(principal)`
+### `canAll(principal, resource, actions, data?)`
 
-Returns a user-bound permission function.
+Returns `true` only if all actions are allowed.
 
 ```ts
-const can = permit.forUser({ id: 'u1', roles: ['editor'] });
-can('posts', 'read');
+permit.canAll({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], { authorId: 'u1' });
+```
+
+### `canAny(principal, resource, actions, data?)`
+
+Returns `true` if at least one action is allowed.
+
+```ts
+permit.canAny({ id: 'u1', roles: ['editor'] }, 'posts', ['update', 'delete'], { authorId: 'u1' });
+```
+
+### `allowedActions(principal, resource, data?)`
+
+Returns concrete actions currently allowed for a principal/resource pair.
+Wildcard actions are not enumerable, so wildcard entries are skipped.
+
+```ts
+const actions = permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u1' });
+```
+
+### `explain(principal, resource, action, data?)`
+
+Returns an explicit decision object.
+
+```ts
+const decision = permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'delete');
+
+if (!decision.allowed) {
+  console.log(decision.reason); // 'no-matching-rule' | 'explicit-deny'
+}
+```
+
+### `forUser(principal, cache?)`
+
+Returns a principal-bound permit object.
+
+```ts
+const bound = permit.forUser({ id: 'u1', roles: ['editor'] }, true);
+
+bound.can('posts', 'read');
+bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
+bound.allowedActions('posts', { authorId: 'u1' });
+bound.explain('posts', 'delete');
+```
+
+`cache = true` enables per-user decision caching by `(resource, action, serialized-data)`.
+
+### `owns(attributeKey)`
+
+Creates a predicate that compares `principal.id` to `data[attributeKey]`.
+
+```ts
+import { owns } from '@vielzeug/permit';
+
+permit.set({
+  role: 'editor',
+  resource: 'posts',
+  action: 'update',
+  effect: 'allow',
+  when: owns('authorId'),
+});
 ```
 
 ### `rules()` / `replace(rules)`
@@ -132,5 +196,7 @@ This model is deterministic and independent of principal role ordering.
 - `PermitPredicate<TData>`
 - `Principal`
 - `UserPrincipal`
+- `PermitDecision<TAction, TData>`
+- `BoundPermit<TAction, TData>`
 - `Permit<TAction, TData>`
 - `PermitOptions<TAction, TData>`
