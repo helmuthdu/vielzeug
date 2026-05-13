@@ -122,11 +122,7 @@ Use two breakpoints to get the full three-state behavior:
     }
   </style>
 
-  <bit-navbar
-    sticky
-    breakpoint="(max-width: 640px)"
-    mobile-sidebar="#docs-shell-sidebar"
-    label="Workspace navigation">
+  <bit-navbar sticky breakpoint="(max-width: 640px)" mobile-sidebar="#docs-shell-sidebar" label="Workspace navigation">
     <span slot="logo" style="font-weight: var(--font-semibold);">Workspace</span>
     <bit-navbar-item slot="start" href="#" active>Dashboard</bit-navbar-item>
     <bit-navbar-item href="#">Projects</bit-navbar-item>
@@ -135,11 +131,7 @@ Use two breakpoints to get the full three-state behavior:
   </bit-navbar>
 
   <div class="shell-body">
-    <bit-grid
-      class="shell-grid"
-      areas="'sidebar main'"
-      fullwidth
-      gap="none">
+    <bit-grid class="shell-grid" areas="'sidebar main'" fullwidth gap="none">
       <bit-grid-item area="sidebar">
         <bit-sidebar
           id="docs-shell-sidebar"
@@ -180,7 +172,8 @@ Use two breakpoints to get the full three-state behavior:
 
       <bit-grid-item area="main" class="shell-content">
         <bit-text>
-          Resize preview width: desktop uses full sidebar, tablet collapses, and mobile turns sidebar into bottom tabs. The navbar hamburger opens the mobile drawer.
+          Resize preview width: desktop uses full sidebar, tablet collapses, and mobile turns sidebar into bottom tabs.
+          The navbar hamburger opens the mobile drawer.
         </bit-text>
       </bit-grid-item>
     </bit-grid>
@@ -490,15 +483,15 @@ bit-sidebar-item {
 
 ### `bit-sidebar` Attributes
 
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `collapsed` | `boolean` | — | Controlled collapsed state |
-| `default-collapsed` | `boolean` | `false` | Initial collapsed state in uncontrolled mode |
-| `collapsible` | `boolean` | `false` | Shows the collapse/expand toggle button in the header |
-| `responsive` | `string` | — | Media query that enables compact (collapsed) sidebar mode |
-| `bottom-nav-at` | `string` | — | Media query that switches to mobile bottom-nav + drawer mode |
-| `variant` | `string` | — | Visual variant: `'floating'` \| `'inset'` |
-| `label` | `string` | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark |
+| Attribute           | Type      | Default                | Description                                                  |
+| ------------------- | --------- | ---------------------- | ------------------------------------------------------------ |
+| `collapsed`         | `boolean` | —                      | Controlled collapsed state                                   |
+| `default-collapsed` | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                 |
+| `collapsible`       | `boolean` | `false`                | Shows the collapse/expand toggle button in the header        |
+| `responsive`        | `string`  | —                      | Media query that enables compact (collapsed) sidebar mode    |
+| `bottom-nav-at`     | `string`  | —                      | Media query that switches to mobile bottom-nav + drawer mode |
+| `variant`           | `string`  | —                      | Visual variant: `'floating'` \| `'inset'`                    |
+| `label`             | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                        |
 
 ### `bit-sidebar` Slots
 
@@ -511,20 +504,20 @@ bit-sidebar-item {
 
 ### `bit-sidebar` Events
 
-| Event | Detail | Description |
-| --- | --- | --- |
-| `collapsed-change` | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested |
-| `mobile-open-change` | `{ open: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when the bottom-nav drawer open state changes |
+| Event                | Detail                                                              | Description                                         |
+| -------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
+| `collapsed-change`   | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested     |
+| `mobile-open-change` | `{ open: boolean; source: 'toggle' \| 'responsive' \| 'api' }`      | Fired when the bottom-nav drawer open state changes |
 
 ### `bit-sidebar` Methods
 
-| Method | Description |
-| --- | --- |
-| `setCollapsed(next)` | Set collapsed state |
-| `toggle()` | Toggle between collapsed / expanded |
-| `openMobile()` | Open the bottom-nav drawer |
-| `closeMobile()` | Close the bottom-nav drawer |
-| `toggleMobile()` | Toggle the bottom-nav drawer |
+| Method               | Description                         |
+| -------------------- | ----------------------------------- |
+| `setCollapsed(next)` | Set collapsed state                 |
+| `toggle()`           | Toggle between collapsed / expanded |
+| `openMobile()`       | Open the bottom-nav drawer          |
+| `closeMobile()`      | Close the bottom-nav drawer         |
+| `toggleMobile()`     | Toggle the bottom-nav drawer        |
 
 ### `bit-sidebar` CSS Custom Properties
 
@@ -539,12 +532,12 @@ bit-sidebar-item {
 
 ### `bit-sidebar-group` Attributes
 
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `label` | `string` | `''` | Visible group label text |
-| `collapsible` | `boolean` | `false` | Adds a toggle button to collapse/expand the group's items |
-| `default-open` | `boolean` | `true` | Initial open state for uncontrolled collapsible groups |
-| `open` | `boolean` | — | Controlled group open state |
+| Attribute      | Type      | Default | Description                                               |
+| -------------- | --------- | ------- | --------------------------------------------------------- |
+| `label`        | `string`  | `''`    | Visible group label text                                  |
+| `collapsible`  | `boolean` | `false` | Adds a toggle button to collapse/expand the group's items |
+| `default-open` | `boolean` | `true`  | Initial open state for uncontrolled collapsible groups    |
+| `open`         | `boolean` | —       | Controlled group open state                               |
 
 ### `bit-sidebar-group` Slots
 
@@ -563,13 +556,13 @@ bit-sidebar-item {
 
 ### `bit-sidebar-item` Attributes
 
-| Attribute  | Type      | Default | Description                                                              |
-| ---------- | --------- | ------- | ------------------------------------------------------------------------ |
-| `href`     | `string`  | —       | URL — renders an `<a>` when set, otherwise a `<button>`                  |
-| `active`   | `boolean` | `false` | Marks the item as the current page (`aria-current="page"`)               |
-| `disabled` | `boolean` | `false` | Disables the item and forces button rendering                            |
-| `rel`      | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)                     |
-| `target`   | `string`  | —       | `target` attribute on the inner `<a>` (link items only)                  |
+| Attribute  | Type      | Default | Description                                                |
+| ---------- | --------- | ------- | ---------------------------------------------------------- |
+| `href`     | `string`  | —       | URL — renders an `<a>` when set, otherwise a `<button>`    |
+| `active`   | `boolean` | `false` | Marks the item as the current page (`aria-current="page"`) |
+| `disabled` | `boolean` | `false` | Disables the item and forces button rendering              |
+| `rel`      | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)       |
+| `target`   | `string`  | —       | `target` attribute on the inner `<a>` (link items only)    |
 
 ### `bit-sidebar-item` Slots
 

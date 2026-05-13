@@ -225,7 +225,9 @@ const popupList = createPopupListControl({
 });
 
 popupList.handleListKeydown(event);
-popupList.syncTriggerAria(triggerRef.value!, { /* custom ARIA if needed */ });
+popupList.syncTriggerAria(triggerRef.value!, {
+  /* custom ARIA if needed */
+});
 ```
 
 ## createSliderControl()
@@ -334,8 +336,8 @@ const checkable = createCheckableFieldControl({
 checkable.control.checked.value;
 checkable.control.triggerValidation('change');
 checkable.press.handleClick(event);
-checkable.labelId;     // ARIA label element ID
-checkable.helperId;    // ARIA helper element ID
+checkable.labelId; // ARIA label element ID
+checkable.helperId; // ARIA helper element ID
 ```
 
 ## See also

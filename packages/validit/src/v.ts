@@ -9,7 +9,6 @@ import { IntersectSchema } from './schemas/intersect';
 import { LazySchema } from './schemas/lazy';
 import { LiteralSchema, type NormalizeItems, type RawOrSchema, normalizeToSchemas } from './schemas/literal';
 import { MapSchema } from './schemas/map';
-import { NativeEnumSchema } from './schemas/native-enum';
 import { NeverSchema } from './schemas/never';
 import { NumberSchema } from './schemas/number';
 import { ObjectSchema, type ObjectShape } from './schemas/object';
@@ -46,13 +45,10 @@ export const v = {
   literal: <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
     new LiteralSchema(value),
   map: <K, V>(keySchema: Schema<K>, valueSchema: Schema<V>): MapSchema<K, V> => new MapSchema(keySchema, valueSchema),
-  nativeEnum: <T extends Record<string, string | number>>(enumObj: T): NativeEnumSchema<T> =>
-    new NativeEnumSchema(enumObj),
   never: (): NeverSchema => new NeverSchema(),
   null: (): LiteralSchema<null> => new LiteralSchema(null),
   number: (): NumberSchema => new NumberSchema(),
   object: <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape),
-  readonly: <T>(schema: Schema<T>): Schema<Readonly<T>> => schema.readonly(),
   record: <K extends string, V>(keySchema: Schema<K>, valueSchema: Schema<V>): RecordSchema<K, V> =>
     new RecordSchema(keySchema, valueSchema),
   set: <T>(schema: Schema<T>): SetSchema<T> => new SetSchema(schema),

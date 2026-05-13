@@ -3,6 +3,8 @@ title: Eventit — Typed event bus for TypeScript
 description: Zero-dependency typed event bus with subscribe/emit, wait(), async streams, AbortSignal support, and test helpers.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="eventit" />
 
 <img src="/logo-eventit.svg" alt="Eventit logo" width="156" class="logo-highlight"/>
@@ -57,7 +59,7 @@ if (nextSessionChange.event === 'user:login') {
   console.log(nextSessionChange.payload.userId);
 }
 
-for await (const payload of bus.events('user:login', AbortSignal.timeout(5_000))) {
+for await (const payload of bus.events('user:login', { signal: AbortSignal.timeout(5_000) })) {
   console.log(payload.email);
 }
 
@@ -133,8 +135,16 @@ for await (const event of bus.events('cart:updated')) {
 | SSR         | ✅      |
 | Deno        | ✅      |
 
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
+
 ## See Also
 
 - [Stateit](/stateit/)
 - [Routeit](/routeit/)
 - [Workit](/workit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

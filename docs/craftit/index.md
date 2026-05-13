@@ -3,6 +3,8 @@ title: Craftit — Web component authoring with signals
 description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, controls, observers, and testing utilities.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="craftit" />
 
 <img src="/logo-craftit.svg" alt="Craftit logo" width="156" class="logo-highlight"/>
@@ -10,6 +12,26 @@ description: Functional custom-element authoring with typed props, reactive temp
 # Craftit
 
 Craftit is a custom-element authoring library built on `@vielzeug/stateit`.
+
+<!-- Search keywords: custom elements authoring, reactive web components, signal-based templates. -->
+
+## Installation
+
+::: code-group
+
+```sh [pnpm]
+pnpm add @vielzeug/craftit
+```
+
+```sh [npm]
+npm install @vielzeug/craftit
+```
+
+```sh [yarn]
+yarn add @vielzeug/craftit
+```
+
+:::
 
 ## Quick Start
 
@@ -28,9 +50,7 @@ define('my-counter', {
     host.class({ 'is-positive': () => count.value > 0 });
 
     return () => html`
-      <button @click=${() => (count.value += props.step.value)}>
-        ${props.label}: ${count}
-      </button>
+      <button @click=${() => (count.value += props.step.value)}>${props.label}: ${count}</button>
       <p>Doubled: ${doubled}</p>
     `;
   },
@@ -44,6 +64,25 @@ define('my-counter', {
   ],
 });
 ```
+
+## Why Craftit?
+
+Craftit keeps custom elements functional and signal-driven while still giving you direct control over templates, lifecycle hooks, host bindings, and form-associated behavior.
+
+| Feature                    | Craftit                                       | Lit                           | Stencil           |
+| -------------------------- | --------------------------------------------- | ----------------------------- | ----------------- |
+| Bundle size                | <PackageInfo package="craftit" type="size" /> | ~12 kB                        | ~60 kB+ toolchain |
+| Signal-first runtime       | ✅                                            | ❌ (separate signals package) | ❌                |
+| Functional component setup | ✅                                            | Partial                       | ❌                |
+| Typed prop helpers         | ✅                                            | Partial                       | ✅                |
+| Host binding helpers       | ✅                                            | Partial                       | Partial           |
+| Form-associated helpers    | ✅                                            | Manual                        | Partial           |
+| Headless controls package  | ✅                                            | ❌                            | ❌                |
+| Zero dependencies          | ✅                                            | ✅                            | ❌                |
+
+**Use Craftit when** you want typed, signal-driven custom elements with minimal runtime overhead and no framework lock-in.
+
+**Consider Lit or Stencil when** you need their ecosystem-specific tooling, decorators, or compiler-first workflows.
 
 ## Features
 
@@ -59,17 +98,34 @@ define('my-counter', {
 - Observers (`@vielzeug/craftit/observers`)
 - Testing utilities (`@vielzeug/craftit/testing`)
 
-## Package Entry Points
+### Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/craftit` | Core component API, directives, utilities, and stateit re-exports |
-| `@vielzeug/craftit/controls` | Headless controls for fields, navigation, overlays, press, sliders, and spinners |
-| `@vielzeug/craftit/observers` | `resizeObserver`, `intersectionObserver`, `mediaObserver` |
-| `@vielzeug/craftit/testing` | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers |
+| Import                        | Purpose                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| `@vielzeug/craftit`           | Core component API, directives, utilities, and stateit re-exports                |
+| `@vielzeug/craftit/controls`  | Headless controls for fields, navigation, overlays, press, sliders, and spinners |
+| `@vielzeug/craftit/observers` | `resizeObserver`, `intersectionObserver`, `mediaObserver`                        |
+| `@vielzeug/craftit/testing`   | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                       |
+
+## Compatibility
+
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ✅      |
+| SSR         | ✅      |
+| Deno        | ✅      |
+
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 
-- [Usage Guide](./usage.md)
-- [Lifecycle Best Practices](./lifecycle-best-practices.md)
-- [API Reference](./api.md)
+- [Buildit](../buildit/index.md) for prebuilt accessible components powered by Craftit.
+- [Stateit](../stateit/index.md) for reactive state used inside Craftit components.
+- [Formit](../formit/index.md) for typed form state that integrates with Craftit controls.
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

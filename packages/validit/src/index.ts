@@ -2,15 +2,18 @@ export {
   ErrorCode,
   Schema,
   ValidationError,
+  type CheckContext,
+  type CheckFnResult,
+  type FormattedErrors,
   type Infer,
   type InferInput,
-  type TypeOf,
   type InferOutput,
   type Issue,
   type MessageFn,
   type ParseResult,
   type ValidateFn,
-  type AsyncValidateFn,
+  prependIssuePath,
+  resolveMessage,
 } from './core';
 
 export { configure, reset, type Messages } from './messages';

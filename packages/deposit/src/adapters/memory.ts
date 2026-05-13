@@ -1,81 +1,90 @@
-import type { Adapter, AnySchema, KeyOf, RecordOf } from '../types';
+import type { Adapter, AnySchema, KeyOf, RecordOf, TtlMs } from '../types';
 
+import { createAdapterRuntime } from '../adapter-core';
 import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
-import { AdapterCore } from './adapter-core';
 
-/* -------------------- MemoryAdapter -------------------- */
+function getTableStore(tables: Map<string, Map<string, StoredRecord<unknown>>>, table: string) {
+  let store = tables.get(table);
 
-class MemoryAdapter<S extends AnySchema> extends AdapterCore<S> {
-  private readonly tables = new Map<string, Map<string, StoredRecord<unknown>>>();
-  protected readonly schema: S;
-
-  constructor(schema: S) {
-    super();
-    this.schema = schema;
+  if (!store) {
+    store = new Map();
+    tables.set(table, store);
   }
 
-  private table<K extends keyof S>(table: K): Map<string, StoredRecord<unknown>> {
-    const name = String(table);
-    let store = this.tables.get(name);
-
-    if (!store) {
-      store = new Map();
-      this.tables.set(name, store);
-    }
-
-    return store;
-  }
-
-  async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-    const store = this.table(table);
-    const raw = store.get(String(key));
-
-    if (!raw) return undefined;
-
-    const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
-
-    if (value === undefined) store.delete(String(key));
-
-    return value;
-  }
-
-  async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
-    const store = this.table(table);
-    const records: RecordOf<S, K>[] = [];
-
-    for (const [key, raw] of store) {
-      const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
-
-      if (value !== undefined) {
-        records.push(value);
-      } else {
-        store.delete(key);
-      }
-    }
-
-    return records;
-  }
-
-  async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
-    const key = String(this.resolveRecordKey(table, value));
-
-    this.table(table).set(key, wrapStored(value, ttl));
-    this.notify(table);
-  }
-
-  async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<void> {
-    this.table(table).delete(String(key));
-    this.notify(table);
-  }
-
-  async deleteAll<K extends keyof S>(table: K): Promise<void> {
-    this.table(table).clear();
-    this.notify(table);
-  }
+  return store;
 }
 
-/* -------------------- Factory -------------------- */
+export function createMemory<S extends AnySchema>(schema: S): Adapter<S> {
+  const tables = new Map<string, Map<string, StoredRecord<unknown>>>();
+  const recordKey = <K extends keyof S>(table: K, value: RecordOf<S, K>): KeyOf<S, K> => {
+    const keyField = String(schema[table].key);
+    const keyValue = (value as Record<string, unknown>)[keyField];
 
-export function createMemory<S extends AnySchema>(options: { schema: S }): Adapter<S> {
-  return new MemoryAdapter(options.schema);
+    if (keyValue === undefined || keyValue === null) {
+      throw new Error(`deposit: missing required key field "${keyField}" in record for table "${String(table)}"`);
+    }
+
+    return keyValue as KeyOf<S, K>;
+  };
+
+  return createAdapterRuntime(schema, {
+    async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      return getTableStore(tables, String(table)).delete(String(key));
+    },
+    async deleteAll<K extends keyof S>(table: K): Promise<number> {
+      const store = getTableStore(tables, String(table));
+      const deleted = store.size;
+
+      store.clear();
+
+      return deleted;
+    },
+    async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
+      const store = getTableStore(tables, String(table));
+      const raw = store.get(String(key));
+
+      if (!raw) return undefined;
+
+      const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
+
+      if (value === undefined) {
+        store.delete(String(key));
+      }
+
+      return value;
+    },
+    async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
+      const store = getTableStore(tables, String(table));
+      const records: RecordOf<S, K>[] = [];
+      const expiredKeys: string[] = [];
+
+      for (const [key, raw] of store) {
+        const value = unwrapStored(raw as StoredRecord<RecordOf<S, K>>);
+
+        if (value === undefined) {
+          expiredKeys.push(key);
+
+          continue;
+        }
+
+        records.push(value);
+      }
+
+      for (const key of expiredKeys) {
+        store.delete(key);
+      }
+
+      return records;
+    },
+    async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
+      getTableStore(tables, String(table)).set(String(recordKey(table, value)), wrapStored(value, ttl));
+    },
+    async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
+      const store = getTableStore(tables, String(table));
+
+      for (const value of values) {
+        store.set(String(recordKey(table, value)), wrapStored(value, ttl));
+      }
+    },
+  }).adapter;
 }

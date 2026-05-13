@@ -1,12 +1,9 @@
 import { createMemoryHistory, createRouter } from '../router';
-
-async function settle(): Promise<void> {
-  await new Promise<void>((r) => setTimeout(r, 10));
-}
+import { settle } from './test-utils';
 
 describe('scroll restoration', () => {
   it('calls scroll callback after navigation', async () => {
-    const scroll = vi.fn(() => null);
+    const scroll = vi.fn(() => 'top');
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
@@ -24,13 +21,13 @@ describe('scroll restoration', () => {
     router.dispose();
   });
 
-  it('calls window.scrollTo(0,0) when scroll returns null', async () => {
+  it('calls window.scrollTo(0,0) when scroll returns top', async () => {
     const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
       routes: { home: { path: '/' }, page: { path: '/page' } },
-      scroll: () => null,
+      scroll: () => 'top',
     });
 
     await settle();
@@ -59,7 +56,7 @@ describe('scroll restoration', () => {
   });
 
   it('receives to and from states in the scroll callback', async () => {
-    const scroll = vi.fn(() => null);
+    const scroll = vi.fn(() => 'top');
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
@@ -74,7 +71,24 @@ describe('scroll restoration', () => {
     const [to, from] = scroll.mock.calls.at(-1)!;
 
     expect(to.location.pathname).toBe('/page');
-    expect(from?.location.pathname).toBe('/');
+    expect(from.location.pathname).toBe('/');
+    router.dispose();
+  });
+
+  it('does not scroll when scroll returns preserve', async () => {
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: { home: { path: '/' }, page: { path: '/page' } },
+      scroll: () => 'preserve',
+    });
+
+    await settle();
+    await router.navigate({ path: '/page' });
+
+    expect(scrollToSpy).not.toHaveBeenCalled();
+    scrollToSpy.mockRestore();
     router.dispose();
   });
 });

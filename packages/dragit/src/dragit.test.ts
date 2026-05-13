@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { applyReorder, createDropZone, createSortable } from './dragit';
+import { applyReorder, createDropZone, createSortable, createSortableScope } from './dragit';
 
 function createDragEvent(
   type: string,
   dataTransfer?: {
+    clientX?: number;
+    clientY?: number;
     dropEffect?: DataTransfer['dropEffect'];
     effectAllowed?: DataTransfer['effectAllowed'];
     files?: File[];
@@ -18,8 +20,29 @@ function createDragEvent(
   if (dataTransfer) {
     Object.defineProperty(event, 'dataTransfer', {
       configurable: true,
-      value: dataTransfer,
+      value: {
+        dropEffect: dataTransfer.dropEffect,
+        effectAllowed: dataTransfer.effectAllowed,
+        files: dataTransfer.files,
+        items: dataTransfer.items,
+        setData: dataTransfer.setData,
+        setDragImage: dataTransfer.setDragImage,
+      },
     });
+
+    if (typeof dataTransfer.clientX === 'number') {
+      Object.defineProperty(event, 'clientX', {
+        configurable: true,
+        value: dataTransfer.clientX,
+      });
+    }
+
+    if (typeof dataTransfer.clientY === 'number') {
+      Object.defineProperty(event, 'clientY', {
+        configurable: true,
+        value: dataTransfer.clientY,
+      });
+    }
   }
 
   return event;
@@ -189,7 +212,7 @@ describe('createSortable', () => {
     sortable.destroy();
   });
 
-  it('supports cross-list transfer for matching groups', () => {
+  it('supports cross-list transfer within a shared scope', () => {
     const left = document.createElement('ul');
     const right = document.createElement('ul');
     const l1 = document.createElement('li');
@@ -197,6 +220,7 @@ describe('createSortable', () => {
     const r1 = document.createElement('li');
     const leftReorder = vi.fn();
     const rightReorder = vi.fn();
+    const scope = createSortableScope();
 
     l1.setAttribute('data-sort-id', 'l1');
     l2.setAttribute('data-sort-id', 'l2');
@@ -206,13 +230,13 @@ describe('createSortable', () => {
 
     const leftSortable = createSortable({
       element: left,
-      group: 'board',
       onReorder: leftReorder,
+      scope,
     });
     const rightSortable = createSortable({
       element: right,
-      group: 'board',
       onReorder: rightReorder,
+      scope,
     });
 
     l1.dispatchEvent(
@@ -296,6 +320,74 @@ describe('createSortable', () => {
     );
 
     sortable.destroy();
+  });
+
+  it('requires sync after dynamic list changes', () => {
+    const element = document.createElement('ul');
+    const first = document.createElement('li');
+    const second = document.createElement('li');
+
+    first.setAttribute('data-sort-id', 'a');
+    second.setAttribute('data-sort-id', 'b');
+    element.append(first);
+
+    const sortable = createSortable({ element });
+
+    element.append(second);
+
+    expect(second.getAttribute('draggable')).toBeNull();
+
+    sortable.sync();
+
+    expect(second.getAttribute('draggable')).toBe('true');
+
+    sortable.destroy();
+  });
+
+  it('cancels teardown during an active drag and restores the original order', () => {
+    const element = document.createElement('ul');
+    const first = document.createElement('li');
+    const second = document.createElement('li');
+    const third = document.createElement('li');
+
+    first.setAttribute('data-sort-id', 'a');
+    second.setAttribute('data-sort-id', 'b');
+    third.setAttribute('data-sort-id', 'c');
+    element.append(first, second, third);
+
+    Object.defineProperty(third, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 100, height: 100, left: 0, right: 100, top: 0, width: 100 }),
+    });
+
+    const onReorder = vi.fn();
+    const sortable = createSortable({
+      element,
+      onReorder,
+    });
+
+    first.dispatchEvent(
+      createDragEvent('dragstart', {
+        effectAllowed: 'move',
+        setData: vi.fn(),
+      }),
+    );
+
+    third.dispatchEvent(
+      createDragEvent('dragover', {
+        clientY: 90,
+        dropEffect: 'move',
+      }),
+    );
+
+    sortable.destroy();
+
+    expect(Array.from(element.children).map((child) => (child as HTMLElement).getAttribute('data-sort-id'))).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
+    expect(onReorder).not.toHaveBeenCalled();
   });
 });
 

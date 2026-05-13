@@ -28,23 +28,17 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
   function renderVirtualItems(virtualItems: VirtualItem[]) {
     if (!cachedListbox) return;
 
+    if (virtualItems.length === 0) {
+      for (const element of Array.from(cachedListbox.querySelectorAll('.option'))) element.remove();
+
+      return;
+    }
+
     for (const element of Array.from(cachedListbox.querySelectorAll('.option'))) element.remove();
 
     const focused = deps.getFocusedIndex();
-    const renderItems =
-      virtualItems.length > 0
-        ? virtualItems
-        : currentOptions.map(
-            (_, index) =>
-              ({
-                end: (index + 1) * 36,
-                index,
-                size: 36,
-                start: index * 36,
-              }) satisfies VirtualItem,
-          );
 
-    for (const item of renderItems) {
+    for (const item of virtualItems) {
       const option = currentOptions[item.index];
 
       if (!option) continue;
@@ -140,9 +134,9 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
   function setupVirtualizer(options: ComboboxOptionItem[], isOpen: boolean) {
     currentOptions = options;
     cachedListbox = null;
-    domVirtualList.destroy();
-    domVirtualList.setItems(currentOptions);
     domVirtualList.setActive(isOpen);
+
+    if (isOpen) domVirtualList.setItems(currentOptions);
   }
 
   return { domVirtualList, setupVirtualizer, updateRenderedItemState };

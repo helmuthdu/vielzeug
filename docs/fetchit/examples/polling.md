@@ -5,13 +5,11 @@ description: 'Polling examples for fetchit.'
 
 ## Polling
 
-## Problem
+### Problem
 
-Implement polling in a production-friendly way with `@vielzeug/fetchit` while keeping setup and cleanup explicit.
+You need to refresh data on a fixed interval — showing the latest server state without WebSockets or server-sent events. The interval must pause when the component is destroyed.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/fetchit` installed.
+### Solution
 
 ```ts
 const qc = createQuery({ staleTime: 0 }); // always stale so each call hits the server
@@ -38,18 +36,15 @@ qc.subscribe<Job>(['job', jobId], (state) => {
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Polling continues even when the browser tab is hidden, wasting bandwidth. Pause on `document.visibilitychange` and resume when the tab becomes visible again.
+- The interval is measured from the start of each request, not from completion. If a request takes longer than the interval, the next fetch starts immediately with no idle gap.
+- Failing to stop polling on component teardown causes fetch callbacks to fire on unmounted state. Always call `query.stopPolling()` in the cleanup function.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Signals (Stateit)](/stateit/examples/signals)
 
 - [Authentication](./authentication.md)
 - [CRUD Operations](./crud-operations.md)

@@ -1,7 +1,9 @@
 ---
 title: Dragit — Drag-and-drop primitives for the DOM
-description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles — zero dependencies.
+description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.
 ---
+
+<!-- markdownlint-disable MD025 MD033 MD060 -->
 
 <PackageBadges package="dragit" />
 
@@ -117,7 +119,8 @@ const zone = createDropZone({
 - **`onDropRejected`** — separate callback for files that didn't match `accept`; enables rejection UX without extra filtering logic
 - **Sortable lists** — reorders DOM children with a placeholder indicator; fires `onReorder` only when the order actually changes
 - **Drag handles** — scope dragging to a child selector via `handle`; whole item is draggable when omitted
-- **Auto-synced items** — a `MutationObserver` re-syncs `draggable` and `role` attributes when list items are added or removed
+- **Explicit connected scopes** — lists only exchange items when they share a `createSortableScope()` instance
+- **Explicit DOM sync** — call `sortable.sync()` after DOM mutations instead of relying on hidden observers
 - **`[Symbol.dispose]`** — both primitives support the `using` keyword for automatic cleanup
 - **Reactive-friendly options** — pass booleans/arrays or getter functions for `disabled` and `accept`
 - **Zero dependencies** — <PackageInfo package="dragit" type="size" /> gzipped, <PackageInfo package="dragit" type="dependencies" /> dependencies
@@ -131,14 +134,22 @@ const zone = createDropZone({
 | SSR         | ❌ (DOM only) |
 | Deno        | ❌            |
 
-## Prerequisites
+### Prerequisites
 
 - Browser runtime with HTML Drag and Drop API support.
 - Render targets must be real DOM elements before calling `createDropZone()` or `createSortable()`.
 - Provide accessible labels and keyboard alternatives for drag interactions in production UIs.
+
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 
 - [Floatit](/floatit/)
 - [Craftit](/craftit/)
 - [Buildit](/buildit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

@@ -3,35 +3,9 @@
  * Tests for core craftit directives: each, raw
  */
 
-import {
-  computed,
-  define,
-  each,
-  guard,
-  html,
-  live,
-  raw,
-  signal,
-  styleMap,
-  until,
-  when,
-  type ComponentDefinition,
-} from '../index';
-import { mount, type MountSetup } from '../testing';
-
-const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinition, 'setup'> = {}) =>
-  define(tag, {
-    ...options,
-    setup: (props, ctx) => {
-      const result = setup(props, ctx);
-
-      if (typeof result === 'object' && result && 'render' in result) {
-        return result;
-      }
-
-      return () => result;
-    },
-  });
+import { computed, define, each, guard, html, live, raw, resource, signal, styleMap, when } from '../index';
+import { mount, type MountSetup, waitFor } from '../testing';
+import { register } from './test-utils';
 
 describe('Directive: each()', () => {
   it('should render list items', async () => {
@@ -438,23 +412,134 @@ describe('Directive: live()', () => {
   });
 });
 
-describe('Directive: until()', () => {
-  it('should render placeholder until promise resolves', async () => {
-    let resolvePromise!: (value: ReturnType<typeof html>) => void;
-    const deferred = new Promise<ReturnType<typeof html>>((resolve) => {
-      resolvePromise = resolve;
+describe('Directive: resource()', () => {
+  it('should show pending state then resolved data', async () => {
+    let resolve!: (value: string) => void;
+    const p = new Promise<string>((res) => {
+      resolve = res;
     });
-    const { flush, query } = await mount(
-      () => html`<div>${until(deferred, html`<span class="loading">Loading</span>`)}</div>`,
-    );
+
+    const { flush, query } = await mount(() => {
+      const data = resource(
+        () => null,
+        () => p,
+      );
+
+      return html`
+        <div>
+          <span class="loading">${() => (data.value.pending ? 'Loading' : '')}</span>
+          <span class="done">${() => String(data.value.data ?? '')}</span>
+        </div>
+      `;
+    });
 
     expect(query('.loading')?.textContent).toBe('Loading');
+    expect(query('.done')?.textContent).toBe('');
 
-    resolvePromise(html`<span class="done">Done</span>`);
+    resolve('Hello');
+    await waitFor(async () => {
+      await flush();
 
-    await flush();
+      return query('.done')?.textContent === 'Hello' && query('.loading')?.textContent === '';
+    });
+    expect(query('.loading')?.textContent).toBe('');
+  });
 
-    expect(query('.done')?.textContent).toBe('Done');
-    expect(query('.loading')).toBeNull();
+  it('should cancel in-flight request when deps change', async () => {
+    let abortCount = 0;
+    const id = signal(1);
+
+    const { act, query } = await mount(() => {
+      const data = resource(
+        () => id.value,
+        (currentId, signal) => {
+          signal.addEventListener('abort', () => {
+            abortCount++;
+          });
+
+          return new Promise<string>((resolve) => {
+            setTimeout(() => {
+              if (!signal.aborted) resolve(`user-${currentId}`);
+            }, 5000);
+          });
+        },
+      );
+
+      return html`
+        <div>
+          ${when(
+            () => data.value.pending,
+            () => html`<span class="pending">…</span>`,
+          )}
+        </div>
+      `;
+    });
+
+    expect(query('.pending')).not.toBeNull();
+
+    await act(() => {
+      id.value = 2;
+    });
+
+    expect(abortCount).toBe(1);
+  });
+
+  it('should capture error state when fetcher rejects', async () => {
+    const { flush, query } = await mount(() => {
+      const data = resource(
+        () => null,
+        () => Promise.reject(new Error('network error')),
+      );
+
+      return html`
+        <div>
+          <span class="error">${() => (data.value.error as Error | undefined)?.message ?? ''}</span>
+        </div>
+      `;
+    });
+
+    await waitFor(async () => {
+      await flush();
+
+      return query('.error')?.textContent === 'network error';
+    });
+  });
+
+  it('should preserve previous data when reload fails', async () => {
+    const id = signal(1);
+
+    const { act, flush, query } = await mount(() => {
+      const data = resource(
+        () => id.value,
+        async (currentId) => {
+          if (currentId === 1) return 'user-1';
+
+          throw new Error('network error');
+        },
+      );
+
+      return html`
+        <div>
+          <span class="done">${() => String(data.value.data ?? '')}</span>
+          <span class="error">${() => (data.value.error as Error | undefined)?.message ?? ''}</span>
+        </div>
+      `;
+    });
+
+    await waitFor(async () => {
+      await flush();
+
+      return query('.done')?.textContent === 'user-1';
+    });
+
+    await act(() => {
+      id.value = 2;
+    });
+
+    await waitFor(async () => {
+      await flush();
+
+      return query('.done')?.textContent === 'user-1' && query('.error')?.textContent === 'network error';
+    });
   });
 });

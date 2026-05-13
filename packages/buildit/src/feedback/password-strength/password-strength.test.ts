@@ -112,8 +112,7 @@ describe('bit-password-strength', () => {
 
     it('reacts to dynamic value changes', async () => {
       fixture = await mount('bit-password-strength', { attrs: { value: 'abc' } });
-      fixture.element.setAttribute('value', 'Abcdef12!');
-      await fixture.flush();
+      await fixture.attr('value', 'Abcdef12!');
 
       expect(fixture.queryAll('.segment.active').length).toBe(3);
       expect(fixture.element.getAttribute('data-level')).toBe('good');
@@ -145,8 +144,7 @@ describe('bit-password-strength', () => {
 
     it('reacts to dynamic score updates', async () => {
       fixture = await mount('bit-password-strength', { attrs: { score: '1' } });
-      fixture.element.setAttribute('score', '4');
-      await fixture.flush();
+      await fixture.attr('score', '4');
 
       expect(fixture.queryAll('.segment.active').length).toBe(4);
       expect(fixture.element.getAttribute('data-level')).toBe('strong');

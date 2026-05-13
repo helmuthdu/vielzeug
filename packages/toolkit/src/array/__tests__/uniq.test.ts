@@ -8,7 +8,7 @@ describe('uniq', () => {
   it('should work with objects and a key', () => {
     const arrObj = [{ id: 1 }, { id: 2 }, { id: 2 }, { id: 3 }, { id: 3 }, { id: 3 }];
 
-    expect(uniq(arrObj, 'id')).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
+    expect(uniq(arrObj, (item) => item.id)).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
   });
 
   it('should work with a custom function', () => {

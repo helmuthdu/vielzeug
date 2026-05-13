@@ -1,13 +1,13 @@
 ---
 title: Dragit — Usage Guide
-description: Drop zones, sortable lists, connected groups, keyboard sorting, and cleanup patterns with Dragit.
+description: Drop zones, sortable lists, explicit connected scopes, keyboard sorting, and cleanup patterns with Dragit.
 ---
+
+[[toc]]
 
 ::: tip New to Dragit?
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-[[toc]]
 
 ## Drop Zone
 
@@ -79,7 +79,7 @@ createDropZone({
 });
 ```
 
-### Disabled state
+### Sortable disabled state
 
 ```ts
 createDropZone({
@@ -89,7 +89,7 @@ createDropZone({
 });
 ```
 
-### Cleanup
+### Sortable cleanup
 
 ```ts
 zone.destroy();
@@ -146,11 +146,13 @@ Focus an item and use arrow keys to move it. `Home` and `End` move to boundaries
 
 ### Connected lists
 
-Use the same `group` value to move items between containers:
+Create a shared scope when items should move between containers:
 
 ```ts
-createSortable({ element: todoEl, group: 'board', onReorder: saveTodoOrder });
-createSortable({ element: doneEl, group: 'board', onReorder: saveDoneOrder });
+const boardScope = createSortableScope();
+
+createSortable({ element: todoEl, onReorder: saveTodoOrder, scope: boardScope });
+createSortable({ element: doneEl, onReorder: saveDoneOrder, scope: boardScope });
 ```
 
 ### Auto-scroll and drag preview
@@ -158,10 +160,12 @@ createSortable({ element: doneEl, group: 'board', onReorder: saveDoneOrder });
 ```ts
 createSortable({
   element: listEl,
-  autoScroll: { edgeThreshold: 40, speed: 24 },
+  autoScroll: { edgeThreshold: 40, speed: 24, viewport: true },
   dragImage: (id, item) => item,
 });
 ```
+
+Viewport scrolling is opt-in. Container scrolling stays enabled by default.
 
 ### Lifecycle hooks
 
@@ -190,13 +194,14 @@ createSortable({
 
 ### Dynamic lists
 
-The `MutationObserver` keeps sortable attributes in sync automatically.
+Call `sortable.sync()` after adding, removing, or replacing sortable items.
 
 ```ts
 const item = document.createElement('li');
 item.dataset.sortId = 'task-4';
 item.textContent = 'Deploy';
 listEl.appendChild(item);
+sortable.sync();
 ```
 
 ### Disabled state
@@ -251,3 +256,122 @@ sortable.destroy();
 // or:
 using sortable = createSortable({ element: listEl, onReorder: saveOrder });
 ```
+
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useRef } from 'react';
+import { createSortable, applyReorder } from '@vielzeug/dragit';
+
+function SortableList({ initialItems }: { initialItems: { id: string; text: string }[] }) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const items = useRef(initialItems);
+
+  useEffect(() => {
+    const sortable = createSortable({
+      element: listRef.current!,
+      onReorder: (orderedIds) => {
+        items.current = applyReorder(items.current, orderedIds, (i) => i.id);
+      },
+    });
+    return () => sortable.destroy();
+  }, []);
+
+  return (
+    <ul ref={listRef}>
+      {initialItems.map((item) => (
+        <li key={item.id} data-sort-id={item.id}>{item.text}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+```ts [Vue 3]
+import { ref, onMounted, onUnmounted } from 'vue';
+import { createSortable, applyReorder, type Sortable } from '@vielzeug/dragit';
+
+function useSortable(items: { id: string; text: string }[]) {
+  const listRef = ref<HTMLElement | null>(null);
+  const orderedItems = ref(items);
+  let sortable: Sortable | null = null;
+
+  onMounted(() => {
+    sortable = createSortable({
+      element: listRef.value!,
+      onReorder: (ids) => {
+        orderedItems.value = applyReorder(orderedItems.value, ids, (i) => i.id);
+      },
+    });
+  });
+
+  onUnmounted(() => sortable?.destroy());
+  return { listRef, orderedItems };
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { createSortable, applyReorder } from '@vielzeug/dragit';
+
+  export let initialItems: { id: string; text: string }[] = [];
+  let items = initialItems;
+  let listEl: HTMLUListElement;
+
+  onMount(() => {
+    const sortable = createSortable({
+      element: listEl,
+      onReorder: (ids) => { items = applyReorder(items, ids, (i) => i.id); },
+    });
+    return () => sortable.destroy();
+  });
+</script>
+
+<ul bind:this={listEl}>
+  {#each items as item (item.id)}
+    <li data-sort-id={item.id}>{item.text}</li>
+  {/each}
+</ul>
+```
+
+:::
+
+### Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Working with Other Vielzeug Libraries
+
+### With Craftit
+
+Use Dragit in custom web components by attaching behavior in component lifecycle hooks.
+
+```ts
+import { createSortable } from '@vielzeug/dragit';
+import { define, onMounted, html } from '@vielzeug/craftit';
+
+define('task-list', {
+  setup(_props, { host }) {
+    onMounted(() => {
+      const sortable = createSortable({ element: host.el, onReorder: (ids) => save(ids) });
+      return () => sortable.destroy();
+    });
+    return () => html`<slot></slot>`;
+  },
+});
+```
+
+## Best Practices
+
+- Attach `createDropZone` and `createSortable` after the container element is in the DOM — use `onMounted` in component frameworks.
+- Call `.destroy()` in the cleanup phase of your framework (useEffect return, onUnmounted, onDestroy) to prevent memory leaks.
+- Use `data-sort-id` attributes that match your data's identity field — do not use DOM index as an identifier.
+- Prefer `applyReorder()` over manual array splicing to keep your data array in sync with DOM order.
+- Use `createSortableScope()` only when items should genuinely move between containers.
+- Use drag handles (`.handle` selector) when the full item surface area conflicts with other interactions such as text selection.
+- Test keyboard reordering explicitly — Dragit sets `tabindex` on items and supports arrow keys by default.

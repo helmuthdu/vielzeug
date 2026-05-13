@@ -14,6 +14,7 @@ import {
 import {
   createProps,
   isReflecting,
+  normalizePropDefinition,
   prop,
   propRegistry,
   type InferPropsFromDefs,
@@ -23,15 +24,8 @@ import {
   type PropOptions,
   type PropsDef,
 } from './props';
-import {
-  type OnMountedCallback,
-  type RuntimeScope,
-  type UpdatedCallbackBox,
-  withCurrentElement,
-  withRuntimeScope,
-} from './runtime';
-import { applyBindingsInContainer, parseHTML } from './template-bindings';
-import { applyHtmlBinding } from './template-html';
+import { type OnMountedCallback, type RuntimeScope, withCurrentElement, withRuntimeScope } from './runtime';
+import { applyBindingsInContainer, applyHtmlBinding, parseHTML } from './template-bindings';
 
 export type ComponentRegistrationOptions = {
   /** Indicates if this should be a form-associated element */
@@ -55,11 +49,14 @@ type ComponentState = {
   styles?: (string | CSSStyleSheet | CSSResult)[];
   templateMounted: boolean;
   templateResult: HTMLResult | null;
-  updated: UpdatedCallbackBox;
 };
 
 class BaseElement extends HTMLElement {
-  // Lifecycle: setup() runs once on first connect. _init() runs on every connect.
+  // Lifecycle: setup() runs on first connect (initializes scope + calls user setup).
+  // _init() runs on every connect (applies initial attributes to reset prop state).
+  // disconnectedCallback() disposes scope to run effect cleanups, then recreates it.
+  // This means setup() re-runs on reconnect. Future optimization: track "mounted" state
+  // separately to avoid re-running setup() on reconnect while still running cleanups.
   // On disconnect: cleanups run; on reconnect, styles and bindings are re-applied.
   static _options?: ComponentRegistrationOptions;
   static _setup: () => ComponentTemplate;
@@ -84,7 +81,6 @@ class BaseElement extends HTMLElement {
       styles: options?.styles,
       templateMounted: false,
       templateResult: null,
-      updated: { callbacks: [], queued: false },
     };
   }
 
@@ -119,9 +115,16 @@ class BaseElement extends HTMLElement {
 
   disconnectedCallback(): void {
     this._component.mountToken++;
+    // Dispose and recreate scope to run all effect cleanups
     this._component.scope.dispose();
     this._component.scope = _scope();
+    // Reset mount state for fresh mount callbacks on reconnect
+    this._component.mountCallbacks = [];
+    this._component.mountedCallbacksRan = false;
     this._component.templateMounted = false;
+    this._component.templateResult = null;
+    // Reset setupDone to re-run setup() on reconnect, ensuring effects are re-registered
+    this._component.setupDone = false;
   }
 
   private _handleError(err: unknown): void {
@@ -131,13 +134,9 @@ class BaseElement extends HTMLElement {
   }
 
   private _runSetup(): void {
-    // Temporary box collects updated-callbacks registered during setup; merged
-    // into this._component.updated after setup succeeds.
-    const setupUpdated: UpdatedCallbackBox = { callbacks: [], queued: false };
     const setupScope: RuntimeScope = {
       element: this,
       mountCallbacks: [],
-      updated: setupUpdated,
     };
 
     try {
@@ -150,7 +149,6 @@ class BaseElement extends HTMLElement {
       });
 
       this._component.mountCallbacks.push(...setupScope.mountCallbacks);
-      this._component.updated.callbacks.push(...setupUpdated.callbacks);
       this._component.setupDone = true;
     } catch (err) {
       this._handleError(err);
@@ -192,9 +190,6 @@ class BaseElement extends HTMLElement {
                 {
                   element: this,
                   mountCallbacks: [],
-                  // Share the same updated box so effects inside mount callbacks
-                  // schedule on the same queued flag as the component itself.
-                  updated: this._component.updated,
                 },
                 () =>
                   withCurrentElement(this, () => {
@@ -282,12 +277,25 @@ export function define<
 >(tag: string, definition: ComponentDefinition<Props, Emits>): string {
   const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
 
-  const observedAttrs = propDefs ? Object.keys(propDefs).map(toKebab) : [];
+  // Normalize props at define-time for early error feedback
+  const normalizedPropDefs: PropsDef<Props> | undefined = (() => {
+    if (!propDefs) return undefined;
+
+    const normalized: PropInputDefs = {};
+
+    for (const [key, def] of Object.entries(propDefs)) {
+      normalized[key] = normalizePropDefinition(def);
+    }
+
+    return normalized as PropsDef<Props>;
+  })();
+
+  const observedAttrs = normalizedPropDefs ? Object.keys(normalizedPropDefs).map(toKebab) : [];
 
   return defineComponent(
     tag,
     () => {
-      const props = createSetupProps(propDefs);
+      const props = createSetupProps(normalizedPropDefs);
       const host = createHost();
       const emit = createEmitFn<Emits>();
       const slots = createSlots();

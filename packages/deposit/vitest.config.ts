@@ -14,6 +14,11 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    environmentOptions: {
+      jsdom: {
+        url: 'https://deposit.test',
+      },
+    },
     globals: true,
     name: 'deposit',
     setupFiles: [resolve(__dirname, './vitest.setup.ts'), 'fake-indexeddb/auto'],

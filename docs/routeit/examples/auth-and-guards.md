@@ -40,3 +40,9 @@ const router = createRouter({
 ```
 
 This keeps access rules near the route while preserving a clear handler pipeline.
+
+### Related
+
+- [Route Table Basics](./route-table-basics.md)
+- [RBAC with Permit](/permit/)
+- [Shared Store (Stateit)](/stateit/examples/pattern-shared-module-store)

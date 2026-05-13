@@ -5,49 +5,38 @@ description: 'Testing examples for logit.'
 
 ## Testing
 
-## Problem
+### Problem
 
-Implement testing in a production-friendly way with `@vielzeug/logit` while keeping setup and cleanup explicit.
+You want to assert in unit tests that specific messages were logged at the right level — without writing to a real console, file, or external service.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/logit` installed.
+### Solution
 
 ```ts
 import { Logit } from '@vielzeug/logit';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
-beforeEach(() => {
-  Logit.setConfig({ logLevel: 'off' });
-});
+import { afterEach, expect, it, vi } from 'vitest';
 
 afterEach(() => {
-  Logit.setConfig({ logLevel: 'debug' });
   vi.restoreAllMocks();
 });
 
 it('emits errors when enabled', () => {
-  Logit.setConfig({ logLevel: 'error' });
+  const log = Logit.child({ logLevel: 'error' });
   const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-  Logit.error('failure');
+  log.error('failure');
 
   expect(spy).toHaveBeenCalled();
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Asserting only on the final console payload can be brittle. Prefer checking the message and structured context arguments rather than the exact badge formatting.
+- Remote handlers run asynchronously. If a test covers remote forwarding, await the microtask that delivers the handler call before asserting.
+- Log level filtering applies in tests. If the test logger is created with `logLevel: 'error'`, `logger.debug()` calls produce no output — ensure the test logger level matches the calls under test.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)

@@ -22,10 +22,7 @@ The `filterMap` utility maps and filters an array in a single pass. Return `unde
 ## API
 
 ```ts
-function filterMap<T, R>(
-  array: T[],
-  callback: (item: T, index: number, array: T[]) => R | undefined,
-): R[];
+function filterMap<T, R>(array: T[], callback: (item: T, index: number, array: T[]) => R | undefined): R[];
 ```
 
 ### Parameters
@@ -60,7 +57,7 @@ const result = filterMap(numbers, (x) => (x > 20 ? x * 2 : undefined));
 import { parallel } from '@vielzeug/toolkit';
 
 const ids = [1, 2, 3];
-const details = await parallel(3, ids, async (id) => fetchUser(id));
+const details = await parallel(ids, async (id) => fetchUser(id), { limit: 3 });
 ```
 
 :::

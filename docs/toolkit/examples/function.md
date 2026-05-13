@@ -15,7 +15,6 @@ description: Function utility examples for Toolkit.
 - [constant](./function/constant.md)
 - [curry](./function/curry.md)
 - [debounce](./function/debounce.md)
-- [flip (removed)](./function/flip.md)
 - [identity](./function/identity.md)
 - [memo](./function/memo.md)
 - [negate](./function/negate.md)
@@ -63,7 +62,10 @@ const add = (a: number, b: number) => a + b;
 const curriedAdd = curry(add);
 
 const double = partial((value: number, factor: number) => value * factor, 2);
-const isWorkingAge = and<number>((age) => age >= 18, (age) => age < 65);
+const isWorkingAge = and<number>(
+  (age) => age >= 18,
+  (age) => age < 65,
+);
 
 const expensive = memo((n: number) => n * n);
 const identityValue = identity('ok');
@@ -77,18 +79,18 @@ const onScroll = throttle(() => console.log('scroll'), 100);
 
 console.log(
   sortUsers,
-  trimUpper,
-  trimUpperRtl,
-  curriedAdd,
-  double,
-  expensive,
+  trimUpper('  alice  '),
+  trimUpperRtl('  alice  '),
+  curriedAdd(2)(3),
+  double(8),
+  expensive(4),
   identityValue,
-  alwaysFive,
+  alwaysFive(),
   odds,
   ratio,
   observed,
-  isWorkingAge,
-  initOnce,
+  isWorkingAge(32, 0, [32]),
+  initOnce(),
   onInput,
   onScroll,
 );

@@ -45,12 +45,8 @@ export const compare = (a: unknown, b: unknown): number => {
     return at === bt ? 0 : at > bt ? 1 : -1;
   }
 
-  if (typeof a === 'object' && typeof b === 'object') {
-    const aString = JSON.stringify(a);
-    const bString = JSON.stringify(b);
-
-    return aString.localeCompare(bString);
-  }
-
-  return String(a).localeCompare(String(b));
+  // For any other types (objects, arrays, functions, etc.), throw to prevent silent bugs
+  throw new TypeError(
+    `Cannot compare values of type ${typeof a} and ${typeof b}. Use primitive types or explicit comparison functions.`,
+  );
 };

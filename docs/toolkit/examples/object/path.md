@@ -1,8 +1,3 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.1.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-2617_B-success" alt="Size">
-</div>
-
 # get
 
 The `get` utility safely retrieves a nested value from an object using a dot-notation path string. It prevents runtime errors when accessing properties of `undefined` or `null` intermediate objects and supports an optional default value.
@@ -103,4 +98,4 @@ get(obj, 'e.f.g', undefined, { throwOnMissing: true }); // throws Error
 ## See Also
 
 - [seek](./seek.md): Recursively search object values by similarity score.
-- [merge](./merge.md): Combine multiple objects together.
+- [defaults](./defaults.md): Apply fallback values before reading a nested path.

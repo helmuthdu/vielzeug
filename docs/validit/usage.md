@@ -8,7 +8,7 @@ description: Schema composition, parsing flows, strict object behavior, async re
 ## Basic Usage
 
 ```ts
-import { v } from '@vielzeug/validit';
+import { flattenFirstErrors, v } from '@vielzeug/validit';
 
 const UserSchema = v.object({
   id: v.coerce.number().int().positive(),
@@ -22,7 +22,7 @@ const parsed = UserSchema.parse(input);
 
 const result = UserSchema.safeParse(input);
 if (!result.success) {
-  console.log(result.error.flattenFirst());
+  console.log(flattenFirstErrors(result.error));
 }
 ```
 
@@ -60,7 +60,7 @@ v.null();
 v.undefined();
 ```
 
-Use `v.any()` when you want an unconstrained schema that only adds preprocess, refine, transform, or branding behavior. Use `v.unknown()` when you want the same runtime behavior but keep the output type as `unknown` until later transforms or refinements narrow it.
+Use `v.any()` when you want an unconstrained schema that only adds preprocess, check, transform, or branding behavior. Use `v.unknown()` when you want the same runtime behavior but keep the output type as `unknown` until later transforms or checks narrow it.
 
 ## Primitive Schemas
 
@@ -230,7 +230,7 @@ if (!result.success) {
 const UniqueEmail = v
   .string()
   .email()
-  .refineAsync(async (value) => {
+  .check(async (value) => {
     const exists = await db.users.exists({ email: value });
     return !exists;
   }, 'Email already exists');
@@ -239,7 +239,7 @@ await UniqueEmail.parseAsync('user@example.com');
 await UniqueEmail.safeParseAsync('user@example.com');
 ```
 
-If any branch of a schema uses `.refineAsync()`, use the async parse methods all the way through. Calling `parse()` on such a schema throws an error telling you to switch to `parseAsync()` or `safeParseAsync()`.
+If any branch of a schema uses async `check()`, use the async parse methods all the way through. Calling `parse()` on such a schema throws an error telling you to switch to `parseAsync()` or `safeParseAsync()`.
 
 ## Optional, Nullable, Default, and Catch
 
@@ -284,20 +284,22 @@ const NormalizedEmail = v
 ### `preprocess()`
 
 ```ts
-const PaginationSchema = v.object({
-  page: v.number().int().min(1),
-  limit: v.number().int().min(1).max(100),
-}).preprocess((value) => {
-  if (!value || typeof value !== 'object') return value;
+const PaginationSchema = v
+  .object({
+    page: v.number().int().min(1),
+    limit: v.number().int().min(1).max(100),
+  })
+  .preprocess((value) => {
+    if (!value || typeof value !== 'object') return value;
 
-  const input = value as Record<string, unknown>;
+    const input = value as Record<string, unknown>;
 
-  return {
-    ...input,
-    limit: typeof input.limit === 'string' ? Number(input.limit) : input.limit,
-    page: typeof input.page === 'string' ? Number(input.page) : input.page,
-  };
-});
+    return {
+      ...input,
+      limit: typeof input.limit === 'string' ? Number(input.limit) : input.limit,
+      page: typeof input.page === 'string' ? Number(input.page) : input.page,
+    };
+  });
 ```
 
 ### `brand()` and `describe()`
@@ -310,23 +312,23 @@ const UserId = v.number().int().positive().brand<'UserId'>().describe('Positive 
 
 ## Async Validation
 
-### `refine()`
+### `check()`
 
 ```ts
 const Password = v
   .string()
   .min(8)
-  .refine((value) => /[A-Z]/.test(value), 'Must include uppercase')
-  .refine((value) => /\d/.test(value), 'Must include a number');
+  .check((value) => /[A-Z]/.test(value), 'Must include uppercase')
+  .check((value) => /\d/.test(value), 'Must include a number');
 ```
 
-### `refineAsync()`
+### `check()` with async validation
 
 ```ts
 const Username = v
   .string()
   .min(3)
-  .refineAsync(
+  .check(
     async (value) => {
       const taken = await db.users.exists({ username: value });
       return !taken;
@@ -335,9 +337,9 @@ const Username = v
   );
 ```
 
-Sync refinements and async refinements both receive the parsed value after preprocessors, defaults, and core schema validation.
+Sync and async checks both receive the parsed value after preprocessors, defaults, and core schema validation.
 
-### `superRefine()` and `superRefineAsync()`
+### `ctx.addIssue()` for multi-issue validation
 
 ```ts
 const PasswordSchema = v
@@ -345,7 +347,7 @@ const PasswordSchema = v
     password: v.string().min(8),
     confirmPassword: v.string(),
   })
-  .superRefine(({ password, confirmPassword }, ctx) => {
+  .check(({ password, confirmPassword }, ctx) => {
     if (password !== confirmPassword) {
       ctx.addIssue({
         code: ErrorCode.custom,
@@ -356,7 +358,7 @@ const PasswordSchema = v
   });
 ```
 
-Use these when you need multiple issues or explicit issue paths/codes.
+Use `ctx.addIssue()` when you need multiple issues or explicit issue paths/codes.
 
 ## Error Handling
 
@@ -366,7 +368,7 @@ const RegistrationSchema = v
     password: v.string().min(8),
     confirmPassword: v.string(),
   })
-  .refine(({ password, confirmPassword }) => password === confirmPassword, 'Passwords must match');
+  .check(({ password, confirmPassword }) => password === confirmPassword, 'Passwords must match');
 
 const result = RegistrationSchema.safeParse(input);
 
@@ -376,7 +378,7 @@ if (!result.success) {
   }
 
   const grouped = result.error.flatten();
-  const firstOnly = result.error.flattenFirst();
+  const firstOnly = flattenFirstErrors(result.error);
   const nested = result.error.format();
 
   console.log(grouped.fieldErrors, grouped.formErrors);
@@ -421,7 +423,7 @@ reset();
 ## Type Inference
 
 ```ts
-import { v, type Infer, type InferInput, type InferOutput, type TypeOf } from '@vielzeug/validit';
+import { v, type Infer, type InferInput } from '@vielzeug/validit';
 
 const Schema = v.object({
   id: v.number(),
@@ -430,11 +432,137 @@ const Schema = v.object({
 
 type Output = Infer<typeof Schema>;
 type Input = InferInput<typeof Schema>;
-type Output2 = InferOutput<typeof Schema>;
-type Output3 = TypeOf<typeof Schema>;
 ```
 
-`Infer`, `InferOutput`, and `TypeOf` all resolve to the parsed output type of the schema.
+`Infer` resolves to the parsed output type of the schema.
+
+## Framework Integration
+
+Validit is a pure-utility library. Use it at data boundaries — form submission handlers, API response parsers, and URL query param validators.
+
+::: code-group
+
+```tsx [React]
+import { v } from '@vielzeug/validit';
+
+const LoginSchema = v.object({
+  email: v.string().email(),
+  password: v.string().min(8),
+});
+
+type LoginValues = typeof LoginSchema extends { parse(x: unknown): infer T } ? T : never;
+
+function LoginForm() {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.currentTarget));
+    const result = LoginSchema.safeParse(data);
+    if (!result.ok) {
+      console.error(result.errors);
+      return;
+    }
+    await login(result.value);
+  }
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+```ts [Vue 3]
+import { reactive } from 'vue';
+import { v } from '@vielzeug/validit';
+
+const ContactSchema = v.object({
+  name: v.string().min(1),
+  email: v.string().email(),
+});
+
+function useContactForm() {
+  const errors = reactive<Record<string, string | undefined>>({});
+
+  async function submit(values: unknown) {
+    const result = ContactSchema.safeParse(values);
+    if (!result.ok) {
+      for (const issue of result.errors.issues ?? []) {
+        errors[issue.path?.[0] ?? ''] = String(issue.message);
+      }
+      return;
+    }
+    await sendContact(result.value);
+  }
+
+  return { errors, submit };
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { v } from '@vielzeug/validit';
+
+  const FormSchema = v.object({ name: v.string().min(1), email: v.string().email() });
+  let errors: Record<string, string> = {};
+
+  async function handleSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target as HTMLFormElement));
+    const result = FormSchema.safeParse(data);
+    if (!result.ok) {
+      errors = {};
+      // map issues to field errors
+      return;
+    }
+    await send(result.value);
+  }
+</script>
+
+<form on:submit={handleSubmit}>...</form>
+```
+
+:::
+
+
+### Pitfalls
+
+- **React:** `new FormData(e.currentTarget)` only captures inputs with a `name` attribute — unnamed inputs are silently omitted from validation. Always name every form input.
+- **Vue 3:** Deleting keys from a `reactive` object with `delete errors[k]` works for Vue's reactivity, but you must use `reactive` (not `ref`) for the error object to get per-key deletion tracking.
+- **Svelte:** `$:` reactive statements that depend on `errors` re-run after every keystroke when validate is called on-input — debounce validation calls in high-frequency scenarios.
+
+## Working with Other Vielzeug Libraries
+
+### With Formit
+
+Use `schemaValidator()` to share one schema between Formit validation and static typing.
+
+```ts
+import { createForm, schemaValidator } from '@vielzeug/formit';
+import { v } from '@vielzeug/validit';
+
+const schema = v.object({
+  email: v.string().email(),
+  password: v.string().min(8),
+});
+
+const form = createForm({
+  defaultValues: { email: '', password: '' },
+  validator: schemaValidator(schema),
+});
+```
+
+### With Fetchit
+
+Validate API response payloads at the data boundary.
+
+```ts
+import { createApi } from '@vielzeug/fetchit';
+import { v } from '@vielzeug/validit';
+
+const UserSchema = v.object({ id: v.number(), name: v.string(), email: v.string().email() });
+const api = createApi({ baseUrl: 'https://api.example.com' });
+
+async function getUser(id: number) {
+  const raw = await api.get<unknown>(`/users/{id}`, { params: { id } });
+  return UserSchema.parse(raw); // throws on unexpected shape
+}
+```
 
 ## Best Practices
 

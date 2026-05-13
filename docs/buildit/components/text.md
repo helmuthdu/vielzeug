@@ -178,14 +178,14 @@ Use semantic colors to convey meaning and maintain consistency.
 
 Automatic text colors that adapt to your theme. Each value maps to a semantic `--text-color-*` token from the theme.
 
-| `color`    | Token                      | Contrast step          | WCAG                |
-| ---------- | -------------------------- | ---------------------- | ------------------- |
-| `heading`  | `--text-color-heading`     | `--color-contrast-900` | AAA                 |
-| `body`     | `--text-color-body`        | `--color-contrast-800` | AAA                 |
-| `muted`    | `--text-color-secondary`   | `--color-contrast-600` | AA                  |
-| `tertiary` | `--text-color-tertiary`    | `--color-contrast-500` | AA (large text)     |
-| `disabled` | `--text-color-disabled`    | `--color-contrast-400` | decorative only     |
-| `contrast` | `--text-color-contrast`    | `--color-contrast-100` | for dark backgrounds|
+| `color`    | Token                    | Contrast step          | WCAG                 |
+| ---------- | ------------------------ | ---------------------- | -------------------- |
+| `heading`  | `--text-color-heading`   | `--color-contrast-900` | AAA                  |
+| `body`     | `--text-color-body`      | `--color-contrast-800` | AAA                  |
+| `muted`    | `--text-color-secondary` | `--color-contrast-600` | AA                   |
+| `tertiary` | `--text-color-tertiary`  | `--color-contrast-500` | AA (large text)      |
+| `disabled` | `--text-color-disabled`  | `--color-contrast-400` | decorative only      |
+| `contrast` | `--text-color-contrast`  | `--color-contrast-100` | for dark backgrounds |
 
 <ComponentPreview center vertical>
 
@@ -409,28 +409,28 @@ Show file information with truncation using width constraints.
 
 ### Attributes
 
-| Attribute  | Type                                                                                                                                    | Default | Description                                                                                                               |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                                                   | —       | Text variant style                                                                                                        |
-| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'`                                                                                        | —       | Font size. `variant="heading"` resolves against `--heading-*` tokens; all other variants resolve against `--text-*` tokens |
-| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                                          | —       | Font weight (falls back to variant default, then `normal`)                                                                |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'tertiary' \| 'disabled' \| 'contrast'` | — | Text color (falls back to variant default, then `inherit`)                                                           |
-| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                            | —       | Text alignment (forces `display: block`)                                                                                  |
-| `truncate` | `boolean`                                                                                                                               | —       | Single-line truncation with ellipsis                                                                                      |
-| `lines`    | `number`                                                                                                                                | —       | Clamp to N lines with ellipsis (multi-line truncation)                                                                    |
-| `italic`   | `boolean`                                                                                                                               | —       | Italic font style                                                                                                         |
-| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                         | —       | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level`                                                     |
+| Attribute  | Type                                                                                                                                                  | Default | Description                                                                                                                |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                                                                 | —       | Text variant style                                                                                                         |
+| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'`                                                                                                       | —       | Font size. `variant="heading"` resolves against `--heading-*` tokens; all other variants resolve against `--text-*` tokens |
+| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                                                        | —       | Font weight (falls back to variant default, then `normal`)                                                                 |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'tertiary' \| 'disabled' \| 'contrast'` | —       | Text color (falls back to variant default, then `inherit`)                                                                 |
+| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                                          | —       | Text alignment (forces `display: block`)                                                                                   |
+| `truncate` | `boolean`                                                                                                                                             | —       | Single-line truncation with ellipsis                                                                                       |
+| `lines`    | `number`                                                                                                                                              | —       | Clamp to N lines with ellipsis (multi-line truncation)                                                                     |
+| `italic`   | `boolean`                                                                                                                                             | —       | Italic font style                                                                                                          |
+| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                                         | —       | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level`                                                      |
 
 ### Variant Defaults
 
-| Variant    | Default size          | Default weight        | Default color                    | Line height               | Letter spacing            |
-| ---------- | --------------------- | --------------------- | -------------------------------- | ------------------------- | ------------------------- |
-| `body`     | `--text-base` (16px)  | `--font-normal` (400) | `--text-color-body` (contrast-800)    | `--leading-normal` (1.5)  | `normal`                  |
-| `heading`  | `--heading-md` (24px) | `--font-semibold` (600) | `--text-color-heading` (contrast-900) | `--leading-tight` (1.15)  | `--tracking-header` (-0.025em) |
-| `label`    | `--text-sm` (14px)    | `--font-medium` (500) | `--text-color-heading` (contrast-900) | `--leading-snug` (1.375)  | `normal`                  |
-| `caption`  | `--text-sm` (14px)    | `--font-normal` (400) | `--text-color-secondary` (contrast-600) | `--leading-normal` (1.5) | `normal`                 |
-| `overline` | `--text-xs` (12px)    | `--font-semibold` (600) | `--text-color-body` (contrast-800) | `--leading-none` (1)    | `0.08em`                  |
-| `code`     | `--text-sm` (14px)    | `--font-normal` (400) | `--text-color-body` (contrast-800)    | `--leading-normal` (1.5)  | `normal`                  |
+| Variant    | Default size          | Default weight          | Default color                           | Line height              | Letter spacing                 |
+| ---------- | --------------------- | ----------------------- | --------------------------------------- | ------------------------ | ------------------------------ |
+| `body`     | `--text-base` (16px)  | `--font-normal` (400)   | `--text-color-body` (contrast-800)      | `--leading-normal` (1.5) | `normal`                       |
+| `heading`  | `--heading-md` (24px) | `--font-semibold` (600) | `--text-color-heading` (contrast-900)   | `--leading-tight` (1.15) | `--tracking-header` (-0.025em) |
+| `label`    | `--text-sm` (14px)    | `--font-medium` (500)   | `--text-color-heading` (contrast-900)   | `--leading-snug` (1.375) | `normal`                       |
+| `caption`  | `--text-sm` (14px)    | `--font-normal` (400)   | `--text-color-secondary` (contrast-600) | `--leading-normal` (1.5) | `normal`                       |
+| `overline` | `--text-xs` (12px)    | `--font-semibold` (600) | `--text-color-body` (contrast-800)      | `--leading-none` (1)     | `0.08em`                       |
+| `code`     | `--text-sm` (14px)    | `--font-normal` (400)   | `--text-color-body` (contrast-800)      | `--leading-normal` (1.5) | `normal`                       |
 
 ### Slots
 

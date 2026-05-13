@@ -57,7 +57,7 @@ define<AlertBoxProps, AlertBoxEvents>('alert-box', {
 - `prop.oneOf(...)` should use `as const` or the type widens to `string`.
 - Prop values in `setup()` are writable signals, so updates like `props.open.value = false` are valid.
 
-## Related recipes
+### Related
 
 - [Prop helpers and raw PropsDef](./propsof-builder-api.md)
 - [Counter component](./counter-component.md)

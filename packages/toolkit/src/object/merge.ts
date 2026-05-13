@@ -31,6 +31,11 @@ function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U): DeepM
   const result = { ...target } as DeepMerge<T, U>;
 
   for (const key of Object.keys(source)) {
+    // Guard against prototype pollution: skip dangerous keys
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      continue;
+    }
+
     const sourceValue = source[key];
     const targetValue = result[key];
 

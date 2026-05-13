@@ -20,8 +20,5 @@ const safeUser = pick(user, ['id', 'name', 'role']);
 ## Signature
 
 ```ts
-function pick<T extends Record<string, unknown>, K extends keyof T>(
-  obj: T,
-  selectedKeys: readonly K[],
-): Pick<T, K>;
+function pick<T extends Record<string, unknown>, K extends keyof T>(obj: T, selectedKeys: readonly K[]): Pick<T, K>;
 ```

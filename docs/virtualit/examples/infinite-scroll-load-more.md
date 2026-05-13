@@ -5,13 +5,11 @@ description: 'Infinite Scroll (Load More) examples for virtualit.'
 
 ## Infinite Scroll (Load More)
 
-## Problem
+### Problem
 
-Implement infinite scroll (load more) in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+The full dataset is too large to load at once. As the user scrolls near the bottom, the next page should be fetched and appended — extending the list without remounting it.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
+### Solution
 
 Detect when the user scrolls near the end and load the next page. Update `count` through `update()` to append new items seamlessly.
 
@@ -57,18 +55,16 @@ const virt = createVirtualizer(scrollEl, {
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Off-by-one in the scroll-end check (`>` vs `>=`) causes a double-trigger or a missed trigger at the boundary. Verify the comparison against `count - threshold`, not `count - 1`.
+- Not gating the load with an `isLoading` flag triggers duplicate fetches when the user is near the bottom while a request is in flight.
+- After loading the last page, `update({ count })` with the same count as before does not trigger a re-render. Handle the "all pages loaded" state explicitly and stop observing scroll.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [CRUD Operations (Fetchit)](/fetchit/examples/crud-operations)
+- [Polling (Fetchit)](/fetchit/examples/polling)
 
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
 - [Density Toggle (Compact / Comfortable)](./density-toggle-compact-comfortable.md)

@@ -5,13 +5,11 @@ description: 'Query subscription examples for fetchit.'
 
 ## Query Subscriptions
 
-## Problem
+### Problem
 
-Implement query subscriptions in a production-friendly way with `@vielzeug/fetchit` while keeping setup and cleanup explicit.
+You want to react to every state transition of a query — data arriving, loading starting, an error being thrown — from a single subscription point rather than checking state in a render loop.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/fetchit` installed.
+### Solution
 
 Subscriptions give one stable mental model for UI state: subscribe once, render from `QueryState`, and trigger reads imperatively.
 
@@ -20,7 +18,7 @@ const api = createApi({ baseUrl: 'https://api.example.com' });
 const qc = createQuery({ staleTime: 5_000 });
 
 const stop = qc.subscribe<User>(['users', userId], (state) => {
-  if (state.status === 'pending') renderSpinner();
+  if (state.isFetching) renderSpinner();
   if (state.status === 'error') toast.error(state.error!.message);
   if (state.status === 'success') renderUser(state.data!);
 });
@@ -38,23 +36,19 @@ const retryingQc = createQuery();
 await retryingQc.query({
   key: ['config'],
   fn: ({ signal }) => api.get('/config', { signal }),
-  retry: 3,
+  attempts: 3,
   shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- The `onData` callback fires on every successful response, including background revalidations. Avoid one-time side effects (analytics events, success toasts) inside it without a `hasNotified` guard.
+- Subscribing in a render cycle without returning an unsubscribe function leaks the listener. Always clean up in `useEffect`'s return function or `onUnmounted`.
+- The callback is not debounced. Rapid successive state changes (e.g., polling + manual refresh) fire the callback for each — guard with a ref if only the latest value matters.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Authentication](./authentication.md)
 - [CRUD Operations](./crud-operations.md)

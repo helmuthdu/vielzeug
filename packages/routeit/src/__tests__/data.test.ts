@@ -1,16 +1,15 @@
-import { createRouter } from '../router';
+/**
+ * data() loaders — passing results to handlers, context shape, loading state.
+ */
+import { createMemoryHistory, createRouter } from '../router';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
+import { settle } from './test-utils';
 
 describe('data() loader', () => {
-  beforeEach(() => {
-    resetMocks();
-  });
+  beforeEach(resetMocks);
+  afterEach(disposeRouter);
 
-  afterEach(() => {
-    disposeRouter();
-  });
-
-  it('runs the data function and passes the result to the handler via ctx.data', async () => {
+  it('passes the resolved value to the handler as ctx.data', async () => {
     const handler = vi.fn();
 
     mockLocation.pathname = '/profile';
@@ -29,7 +28,7 @@ describe('data() loader', () => {
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: { user: 'alice' } }));
   });
 
-  it('data function receives params and query', async () => {
+  it('receives params, query, and an AbortSignal', async () => {
     const dataFn = vi.fn(async () => null);
 
     mockLocation.pathname = '/users/42';
@@ -55,27 +54,7 @@ describe('data() loader', () => {
     );
   });
 
-  it('data function receives an AbortSignal', async () => {
-    let capturedSignal: AbortSignal | undefined;
-
-    mockLocation.pathname = '/';
-    await boot(
-      createRouter({
-        routes: {
-          home: {
-            data: async ({ signal }) => {
-              capturedSignal = signal;
-            },
-            path: '/',
-          },
-        },
-      }),
-    );
-
-    expect(capturedSignal).toBeInstanceOf(AbortSignal);
-  });
-
-  it('stores the data result in router.state.matches leaf node', async () => {
+  it('stores the data result in the leaf node of router.state.matches', async () => {
     mockLocation.pathname = '/items/7';
 
     const router = await boot(
@@ -90,232 +69,42 @@ describe('data() loader', () => {
       }),
     );
 
-    const leaf = router.state.matches[router.state.matches.length - 1];
-
-    expect(leaf?.data).toEqual({ id: '7' });
+    expect(router.state.matches.at(-1)?.data).toEqual({ id: '7' });
   });
 
-  it('sets status to error and re-throws when a data function throws', async () => {
-    const boundary = vi.fn(async (_ctx: unknown, next: () => Promise<void>) => {
-      try {
-        await next();
-      } catch {
-        // swallow
-      }
+  it('emits loading state to subscribers while data is in-flight', async () => {
+    const history = createMemoryHistory('/');
+    let release: (() => void) | undefined;
+    const dataStarted = new Promise<void>((resolve) => {
+      release = resolve;
     });
-
-    mockLocation.pathname = '/fail';
-
-    const router = await boot(
-      createRouter({
-        middleware: [boundary],
-        routes: {
-          fail: {
-            data: async () => {
-              throw new Error('data error');
-            },
-            path: '/fail',
-          },
-        },
-      }),
-    );
-
-    expect(router.state.status).toBe('error');
-  });
-
-  it('ctx.data is undefined in middleware (data runs after middleware chain)', async () => {
-    let dataInMiddleware: unknown = 'NOT_CHECKED';
-
-    mockLocation.pathname = '/';
-    await boot(
-      createRouter({
-        routes: {
-          home: {
-            data: async () => ({ value: 42 }),
-            handler: vi.fn(),
-            middleware: [
-              async (ctx, next) => {
-                dataInMiddleware = ctx.data;
-                await next();
-              },
-            ],
-            path: '/',
-          },
-        },
-      }),
-    );
-
-    expect(dataInMiddleware).toBeUndefined();
-  });
-});
-
-describe('Nested routes with children', () => {
-  beforeEach(() => {
-    resetMocks();
-  });
-
-  afterEach(() => {
-    disposeRouter();
-  });
-
-  it('compiles and matches nested child routes', async () => {
-    const settingsHandler = vi.fn();
-
-    mockLocation.pathname = '/dashboard/settings';
-    await boot(
-      createRouter({
-        routes: {
-          dashboard: {
-            children: {
-              settings: { handler: settingsHandler, path: 'settings' },
-            },
-            path: '/dashboard',
-          },
-          notFound: { handler: vi.fn(), path: '*' },
-        },
-      }),
-    );
-
-    expect(settingsHandler).toHaveBeenCalled();
-  });
-
-  it('child route name is prefixed with parent name using dot notation', async () => {
-    const handler = vi.fn();
-
-    mockLocation.pathname = '/dashboard/settings';
-
-    const router = await boot(
-      createRouter({
-        routes: {
-          dashboard: {
-            children: {
-              settings: { handler, path: 'settings' },
-            },
-            path: '/dashboard',
-          },
-        },
-      }),
-    );
-
-    expect(router.state.matches.at(-1)?.name).toBe('dashboard.settings');
-  });
-
-  it('index child inherits the parent path', async () => {
-    const indexHandler = vi.fn();
-
-    mockLocation.pathname = '/dashboard';
-    await boot(
-      createRouter({
-        routes: {
-          dashboard: {
-            children: {
-              index: { handler: indexHandler, index: true },
-              settings: { handler: vi.fn(), path: 'settings' },
-            },
-            path: '/dashboard',
-          },
-        },
-      }),
-    );
-
-    expect(indexHandler).toHaveBeenCalled();
-  });
-
-  it('match branch contains all ancestor nodes root to leaf', async () => {
-    const handler = vi.fn();
-
-    mockLocation.pathname = '/dashboard/settings';
-
-    const router = await boot(
-      createRouter({
-        routes: {
-          dashboard: {
-            children: {
-              settings: { handler, path: 'settings' },
-            },
-            path: '/dashboard',
-          },
-        },
-      }),
-    );
-
-    const names = router.state.matches.map((m) => m.name);
-
-    expect(names).toEqual(['dashboard', 'dashboard.settings']);
-  });
-
-  it('parent middleware runs before child middleware and handler', async () => {
-    const calls: string[] = [];
-
-    mockLocation.pathname = '/parent/child';
-    await boot(
-      createRouter({
-        routes: {
-          parent: {
-            children: {
-              child: {
-                handler: () => calls.push('handler'),
-                middleware: [
-                  async (_ctx, next) => {
-                    calls.push('child-mw');
-                    await next();
-                  },
-                ],
-                path: 'child',
-              },
-            },
-            middleware: [
-              async (_ctx, next) => {
-                calls.push('parent-mw');
-                await next();
-              },
-            ],
-            path: '/parent',
-          },
-        },
-      }),
-    );
-
-    expect(calls).toEqual(['parent-mw', 'child-mw', 'handler']);
-  });
-
-  it('url() and navigate() work with nested route compound names', async () => {
     const router = createRouter({
+      history,
       routes: {
-        dashboard: {
-          children: {
-            settings: { path: 'settings' },
+        home: { path: '/' },
+        page: {
+          data: async () => {
+            await dataStarted;
+
+            return { ok: true };
           },
-          path: '/dashboard',
+          path: '/page',
         },
       },
     });
+    const statuses: string[] = [];
 
-    expect(router.url('dashboard.settings' as never)).toBe('/dashboard/settings');
-  });
+    await settle();
+    router.subscribe((state) => statuses.push(state.status));
 
-  it('each branch node carries its own data loader result', async () => {
-    mockLocation.pathname = '/dash/profile';
+    const pendingNavigation = router.navigate({ path: '/page' });
 
-    const router = await boot(
-      createRouter({
-        routes: {
-          dash: {
-            children: {
-              profile: {
-                data: async () => ({ page: 'profile' }),
-                handler: vi.fn(),
-                path: 'profile',
-              },
-            },
-            data: async () => ({ layout: 'dashboard' }),
-            path: '/dash',
-          },
-        },
-      }),
-    );
+    await new Promise<void>((r) => setTimeout(r, 0));
+    expect(statuses).toContain('loading');
 
-    expect(router.state.matches[0]?.data).toEqual({ layout: 'dashboard' });
-    expect(router.state.matches[1]?.data).toEqual({ page: 'profile' });
+    release?.();
+    await pendingNavigation;
+    expect(statuses.at(-1)).toBe('idle');
+    router.dispose();
   });
 });

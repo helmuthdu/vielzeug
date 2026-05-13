@@ -1,4 +1,31 @@
 export const indexedDbExample = {
-  code: "import { createIndexedDB, table } from '@vielzeug/deposit'\n\nconst db = createIndexedDB({\n  dbName: 'app-logs',\n  version: 1,\n  schema: {\n    logs: table('id'),\n  },\n})\n\nawait db.putAll('logs', [\n  { id: 1, level: 'info', message: 'App started', ts: Date.now() - 3000 },\n  { id: 2, level: 'warn', message: 'Slow query detected', ts: Date.now() - 2000 },\n  { id: 3, level: 'error', message: 'Request failed', ts: Date.now() - 1000 },\n  { id: 4, level: 'info', message: 'Request succeeded', ts: Date.now() },\n])\n\nconst errors = await db.query('logs').equals('level', 'error').toArray()\nconsole.log('Errors:', errors.map((l) => l.message))\n\nconst count = await db.count('logs')\nconsole.log('Total logs:', count)\n\ndb.close()",
+  code: `import { createIndexedDB, table } from '@vielzeug/deposit'
+
+const schema = {
+  logs: table('id'),
+}
+
+const db = createIndexedDB({
+  dbName: 'app-logs',
+  schema,
+  schemaVersion: 1,
+})
+
+await db.putAll('logs', [
+  { id: 1, level: 'info', message: 'App started', ts: Date.now() - 3000 },
+  { id: 2, level: 'warn', message: 'Slow query detected', ts: Date.now() - 2000 },
+  { id: 3, level: 'error', message: 'Request failed', ts: Date.now() - 1000 },
+  { id: 4, level: 'info', message: 'Request succeeded', ts: Date.now() },
+])
+
+await db.transaction(['logs'] as const, async (tx) => {
+  await tx.put('logs', { id: 5, level: 'info', message: 'IndexedDB transaction committed', ts: Date.now() })
+})
+
+const errors = await db.query('logs').equals('level', 'error').toArray()
+console.log('Errors:', errors.map((entry) => entry.message))
+console.log('Total logs:', await db.count('logs'))
+
+db.dispose()`,
   name: 'IndexedDB Adapter',
 };

@@ -1,3 +1,6 @@
+import type { ResponseType } from './response';
+import type { StableValue } from './types';
+
 type QueryScalar = string | number | boolean | null;
 
 export type ParamValue = QueryScalar | readonly QueryScalar[] | undefined;
@@ -12,12 +15,23 @@ type PathConfig<P extends string> = [ExtractPathParams<P>] extends [never]
   ? { params?: never }
   : { params: Record<ExtractPathParams<P>, string | number | boolean> };
 
-export type HttpRequestConfig<P extends string = string> = Omit<RequestInit, 'body' | 'method'> &
-  PathConfig<P> & {
-    body?: unknown;
-    dedupeKey?: unknown;
-    query?: Params;
-    timeout?: number;
+export type FetchitRequestConfig<P extends string = string> = PathConfig<P> & {
+  /** Request body. Plain objects → JSON. BodyInit values passed as-is. */
+  body?: unknown;
+  /** Explicit deduplication key for non-idempotent requests. */
+  dedupeKey?: StableValue;
+  /** Query string parameters. */
+  query?: Params;
+  /** Response parsing strategy. */
+  responseType?: ResponseType;
+  /** Request timeout in ms. Overrides client default. */
+  timeout?: number;
+};
+
+export type HttpRequestConfig<P extends string = string> = FetchitRequestConfig<P> &
+  Omit<RequestInit, 'body' | 'method' | 'signal'> & {
+    /** External abort signal merged with internal cancellation. */
+    signal?: AbortSignal;
   };
 
 export function buildUrl(base: string, path: string, params?: Params, query?: Params): string {

@@ -7,12 +7,12 @@
 `@vielzeug/formit` gives you a typed form controller with:
 
 - typed `get` / `set` for dot-notation field paths
-- unified validation entrypoint: `validate()`, `validate('touched')`, `validate(fields)`
+- explicit validation methods: `validateAll()`, `validateTouched()`, `validateFields(fields)`
 - global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
 - dirty/touched/error tracking
-- `submit(onValid, onInvalid?)` orchestration with optional error callback
-- `watch(name, cb)` for live field value streaming
+- `submit(handler)` orchestration that returns an explicit success/error result
 - form and field subscriptions
+- stable frozen snapshots for `form.state` and `form.field(name)`
 
 ## Installation
 
@@ -26,12 +26,12 @@ pnpm add @vielzeug/formit
 
 | Entry | Purpose |
 | --- | --- |
-| `@vielzeug/formit` | `createForm`, `fromSchema`, `toFormData`, types, and error classes |
+| `@vielzeug/formit` | `createForm`, `schemaValidator`, `toFormData`, and types |
 
 ## Quick Start
 
 ```ts
-import { createForm, FormValidationError } from '@vielzeug/formit';
+import { createForm } from '@vielzeug/formit';
 
 const form = createForm({
   defaultValues: { email: '', password: '' },
@@ -43,29 +43,20 @@ const form = createForm({
 
 form.set('email', 'alice@example.com');
 
-const result = await form.validate();
+const result = await form.validateAll();
 console.log(result.valid, result.errors);
 
-// Option A — catch-based (throws FormValidationError on invalid)
-try {
-  await form.submit(async (values) => {
-    await fetch('/api/login', {
-      body: JSON.stringify(values),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-    });
+const submission = await form.submit(async (values) => {
+  await fetch('/api/login', {
+    body: JSON.stringify(values),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
   });
-} catch (err) {
-  if (err instanceof FormValidationError) {
-    console.log(err.errors);
-  }
-}
+});
 
-// Option B — callback-based (no throw on invalid)
-await form.submit(
-  async (values) => { /* save */ },
-  (errors) => { console.log('invalid', errors); },
-);
+if (!submission.ok && submission.type === 'validation') {
+  console.log(submission.errors);
+}
 ```
 
 ## Features
@@ -73,29 +64,41 @@ await form.submit(
 - Typed field paths (`FlatKeyOf`) and path value inference (`TypeAtPath`)
 - Plain-object flatten/unflatten for nested forms
 - Field validators (`validators`) and form validator (`validator`)
-- Unified validation API: `validate()` / `validate('touched')` / `validate(fields)`
+- Schema integration via `schemaValidator(schema)` for `safeParse`-compatible validators
+- Explicit validation API: `validateAll()` / `validateTouched()` / `validateFields(fields)` / `validateField(name)`
+  - `validateAll()` runs all field validators **and** the form-level validator (`validator`); clears all prior errors
+  - `validateTouched()` and `validateFields(fields)` run only the targeted field validators; form-level errors from a prior `validateAll()` are preserved in `form.state.errors` until the next `validateAll()`, `resetErrors()`, or `clearError()`
+  - `validateField(name)` validates only the single field validator
 - Single-field validation with `validateField(name)`
 - Global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
-- Deterministic submit flow: touch-all + validate-all before handler (`SubmitError` on overlap)
-- Optional `onInvalid` callback in `submit(onValid, onInvalid?)` — no need to catch
-- `watch(name, cb, options?)` — live value streaming without subscription boilerplate
+- Deterministic submit flow: touch-all + validate-all before handler with `SubmitResult`
 - `removeField(name)` — cleanly drops value, state, and validator for conditional fields
-- Validation failure signaling via `FormValidationError`
-- Explicit subscriptions: `subscribeForm()` and `subscribeField()`
+- Explicit synchronous subscriptions: `subscribe()` and `subscribeField()`
+- Stable snapshot semantics for external stores (`useSyncExternalStore`, Vue `shallowRef`, Svelte store protocol)
 - Baseline-safe reset model: `reset()` and `replace(values)`
-- `bind()` helper with live getters and value-based `onChange(value)`
+- `batch(fn)` for grouped synchronous updates
+- `setValidator(name, validator?)` for dynamic forms (validator registration only; does not mutate current errors)
+- `bind()` helper for vanilla DOM integration with live getters and value-based `onChange(value)`
 - Array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
-- Explicit error map controls: `setError`, `mergeErrors`, `replaceErrors`, `clearError`
+- Explicit error map controls: `setError`, `resetErrors`
+- Explicit touched controls: `touch(name)`, `untouch(name)`, `touchAll()`, `untouchAll()`
 - Standalone `toFormData(values)`
-- Schema adapter helper: `fromSchema(schema)`
 
 ## Core API
 
 - `createForm(init?)`
-- `fromSchema(schema)`
 - `toFormData(values)`
-- `FormValidationError`
-- `SubmitError`
+- `SubmitResult`
+
+## Framework Interop
+
+Formit stays framework-agnostic and exposes subscription + snapshot primitives that map cleanly to framework reactivity:
+
+- React: `useSyncExternalStore(() => subscribe..., () => form.state)`
+- Vue: `shallowRef(form.state)` updated from `subscribe(...)`
+- Svelte: `{ subscribe: (run) => form.subscribe(run, { sync: true }) }`
+
+`form.state` and `form.field(name)` return stable frozen snapshots, so reference identity only changes after relevant mutations.
 
 ## Documentation
 

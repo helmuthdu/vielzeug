@@ -12,7 +12,6 @@ describe('public api', () => {
     expect(toolkit.sample).toBeTypeOf('function');
     expect(toolkit.partial).toBeTypeOf('function');
     expect(toolkit.and).toBeTypeOf('function');
-    expect(toolkit.predict).toBeTypeOf('function');
     expect(toolkit.isGreaterThan).toBeTypeOf('function');
   });
 
@@ -25,6 +24,7 @@ describe('public api', () => {
     expect('flip' in toolkit).toBe(false);
     expect('race' in toolkit).toBe(false);
     expect('batch' in toolkit).toBe(false);
+    expect('predict' in toolkit).toBe(false);
   });
 
   it('keeps subpath barrels aligned with the current API', () => {
@@ -44,9 +44,12 @@ describe('public api', () => {
     expect('flip' in functionApi).toBe(false);
 
     expect('waitFor' in asyncApi).toBe(true);
-    expect('predict' in asyncApi).toBe(true);
+    expect('predict' in asyncApi).toBe(false);
     expect('race' in asyncApi).toBe(false);
     expect('batch' in asyncApi).toBe(false);
+    expect('memoizeAsync' in asyncApi).toBe(false);
+
+    expect('proxy' in toolkit).toBe(false);
 
     expect('isGreaterThan' in typedApi).toBe(true);
     expect('isLessThanOrEqual' in typedApi).toBe(true);

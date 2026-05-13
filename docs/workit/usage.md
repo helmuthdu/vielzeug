@@ -3,11 +3,11 @@ title: Workit — Usage Guide
 description: How to use workit for task functions, single workers, pools, maxQueue back-pressure, timeouts, AbortSignal, transferables, status, and testing.
 ---
 
+[[toc]]
+
 ::: tip
 New to Workit? Start with the [Overview](./index.md) for a quick introduction.
 :::
-
-[[toc]]
 
 ## Task Functions
 
@@ -171,7 +171,7 @@ const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 // Transfer the buffer — zero-copy move to the worker
 const { pixels } = await worker.run(
   { pixels: imageData.data, width: imageData.width, height: imageData.height },
-  { transfer: [imageData.data.buffer] },
+  { transferables: [imageData.data.buffer] },
 );
 
 worker.dispose();
@@ -344,3 +344,139 @@ describe('add worker', () => {
   const result = await worker.run(21); // 42
 }
 ```
+
+## Framework Integration
+
+Workit workers are plain async functions — wrap them in a hook or composable to integrate with your framework's lifecycle.
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useRef, useState } from 'react';
+import { createWorkerPool, type WorkerPool } from '@vielzeug/workit';
+
+function useWorkerPool<TInput, TOutput>(fn: (input: TInput) => TOutput, size = 2) {
+  const poolRef = useRef<WorkerPool<TInput, TOutput> | null>(null);
+
+  useEffect(() => {
+    poolRef.current = createWorkerPool(fn, { size });
+    return () => { poolRef.current?.close(); };
+  }, []);
+
+  return poolRef;
+}
+
+function ImageProcessor() {
+  const poolRef = useWorkerPool((buf: ArrayBuffer) => processImage(buf), 4);
+  const [result, setResult] = useState<string | null>(null);
+
+  async function handleUpload(file: File) {
+    const buf = await file.arrayBuffer();
+    const output = await poolRef.current!.run(buf);
+    setResult(output);
+  }
+
+  return <button onClick={() => handleUpload(selectedFile)}>Process</button>;
+}
+```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { createWorkerPool } from '@vielzeug/workit';
+import { onScopeDispose, ref } from 'vue';
+
+const pool = createWorkerPool((n: number) => n * n, { size: 2 });
+onScopeDispose(() => pool.close());
+
+const result = ref<number | null>(null);
+
+async function runTask(n: number) {
+  result.value = await pool.run(n);
+}
+</script>
+
+<template>
+  <button @click="runTask(9)">Square</button>
+  <p>{{ result }}</p>
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { createWorkerPool } from '@vielzeug/workit';
+  import { onDestroy } from 'svelte';
+
+  const pool = createWorkerPool((n: number) => n * n, { size: 2 });
+  onDestroy(() => pool.close());
+
+  let result: number | null = null;
+
+  async function runTask() {
+    result = await pool.run(9);
+  }
+</script>
+
+<button on:click={runTask}>Square</button>
+<p>{result}</p>
+```
+
+:::
+
+### Pitfalls
+
+- **React:** Initializing the pool with `createWorkerPool(fn, ...)` directly in the component body (not inside `useEffect` or `useRef`) creates a new pool on every render. Always use `useRef` for stable initialization.
+- **Vue 3:** Creating the pool inside a `watch` or `computed` callback instead of at the top level of `setup()` can result in multiple pools being created. Always create at the top level and register `onScopeDispose` immediately.
+- **Svelte:** The pool created at the top of `<script>` starts immediately — if the component is conditionally rendered with `{#if}`, the pool is created when the component mounts. This is correct. Ensure `onDestroy` is called to close it when the component is removed.
+
+## Working with Other Vielzeug Libraries
+
+### With Eventit
+
+Emit progress events from a worker task and consume them on the main thread.
+
+```ts
+import { createWorker } from '@vielzeug/workit';
+import { createBus } from '@vielzeug/eventit';
+
+const bus = createBus<{ progress: number }>();
+bus.on('progress', (pct) => console.log(`${pct}%`));
+
+const worker = createWorker(async (items: string[]) => {
+  for (let i = 0; i < items.length; i++) {
+    await processItem(items[i]!);
+    bus.emit('progress', Math.round((i / items.length) * 100));
+  }
+  return items.length;
+});
+```
+
+### With Stateit
+
+Track worker pool status in a reactive signal to drive UI state.
+
+```ts
+import { createWorkerPool } from '@vielzeug/workit';
+import { signal, computed } from '@vielzeug/stateit';
+
+const pool = createWorkerPool(heavyTask, { size: 4 });
+const stats = signal(pool.stats());
+
+// Refresh stats after each task
+const isBusy = computed(() => stats().active > 0);
+
+async function runTask(input: number) {
+  const result = await pool.run(input);
+  stats.set(pool.stats());
+  return result;
+}
+```
+
+## Best Practices
+
+- Use `createWorkerPool()` rather than a single worker for CPU-bound tasks — multiple workers prevent head-of-line blocking.
+- Set `maxQueue` to bound memory usage when consumers are slower than producers.
+- Pass large binary data (images, audio, WASM buffers) as `Transferable` to avoid copying.
+- Use `AbortSignal` to cancel long-running tasks when the user navigates away.
+- Always call `close()` in framework cleanup callbacks to terminate worker threads and free resources.
+- Keep worker task functions pure — avoid closures over mutable main-thread state since workers run in isolated threads.
+- Use `createTestWorker()` in unit tests to run tasks synchronously without spinning up real worker threads.

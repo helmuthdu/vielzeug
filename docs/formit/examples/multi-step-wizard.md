@@ -5,13 +5,11 @@ description: 'Multi-Step Wizard examples for formit.'
 
 ## Multi-Step Wizard
 
-## Problem
+### Problem
 
-Implement multi-step wizard in a production-friendly way with `@vielzeug/formit` while keeping setup and cleanup explicit.
+A long form is split into pages that users move through sequentially. Each page is validated before advancing, the user can go back to edit earlier pages, and the final step submits the complete dataset.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/formit` installed.
+### Solution
 
 Multi-step form with step-by-step validation.
 
@@ -36,25 +34,18 @@ const wizardForm = createForm({
   validators: {
     firstName: (v) => (!v ? 'First name is required' : undefined),
     lastName: (v) => (!v ? 'Last name is required' : undefined),
-    email: [
-      (v) => (!v ? 'Email is required' : undefined),
-      (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
-    ],
+    email: (v) => (!v ? 'Email is required' : v && !String(v).includes('@') ? 'Invalid email' : undefined),
     street: (v) => (!v ? 'Street is required' : undefined),
     city: (v) => (!v ? 'City is required' : undefined),
-    zipCode: [
-      (v) => (!v ? 'ZIP code is required' : undefined),
-      (v) => (v && !/^\d{5}$/.test(String(v)) ? 'Invalid ZIP code' : undefined),
-    ],
-    cardNumber: [
-      (v) => (!v ? 'Card number is required' : undefined),
-      (v) => (v && !/^\d{16}$/.test(String(v).replace(/\s/g, '')) ? 'Invalid card number' : undefined),
-    ],
+    zipCode: (v) => (!v ? 'ZIP code is required' : v && !/^\d{5}$/.test(String(v)) ? 'Invalid ZIP code' : undefined),
+    cardNumber: (v) =>
+      !v
+        ? 'Card number is required'
+        : v && !/^\d{16}$/.test(String(v).replace(/\s/g, ''))
+          ? 'Invalid card number'
+          : undefined,
     expiryDate: (v) => (!v ? 'Expiry date is required' : undefined),
-    cvv: [
-      (v) => (!v ? 'CVV is required' : undefined),
-      (v) => (v && !/^\d{3,4}$/.test(String(v)) ? 'Invalid CVV' : undefined),
-    ],
+    cvv: (v) => (!v ? 'CVV is required' : v && !/^\d{3,4}$/.test(String(v)) ? 'Invalid CVV' : undefined),
   },
 });
 
@@ -69,7 +60,7 @@ let currentStep = 0;
 
 // Validate current step
 async function validateCurrentStep() {
-  const { valid } = await wizardForm.validate([...steps[currentStep].fields]);
+  const { valid } = await wizardForm.validateFields([...steps[currentStep].fields]);
   return valid;
 }
 
@@ -86,7 +77,7 @@ async function nextStep() {
 async function submitWizard() {
   const isValid = await validateCurrentStep();
   if (isValid) {
-    await wizardForm.submit(async (values) => {
+    const result = await wizardForm.submit(async (values) => {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,6 +85,10 @@ async function submitWizard() {
       });
       return response.json();
     });
+
+    if (!result.ok) {
+      return;
+    }
   }
 }
 
@@ -102,18 +97,16 @@ function updateStepUI() {
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Navigating backward does not re-trigger validation for already-completed steps. If you want to re-surface stale errors on return, call `form.validate()` explicitly when the user goes back.
+- `form.submit()` validates all fields across all steps, not just the current one. This is correct for final submission but call `form.validateField(name)` for per-step validation.
+- Storing the current step in a URL parameter without syncing it to form state can show the wrong step when the user navigates with the browser back button.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Routing Between Steps (Routeit)](/routeit/examples/route-table-basics)
+- [Schema Validation with Validit](/validit/)
 
 - [Best Practices](./best-practices.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)

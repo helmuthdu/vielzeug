@@ -1,114 +1,140 @@
 type Predicate<T> = (value: T, index: number, array: T[]) => boolean;
-type QueryOpKind = 'filter' | 'page' | 'sort';
 type QueryOp<T> = {
-  kind: QueryOpKind;
-  run: (data: T[]) => T[];
+  apply: (data: T[]) => T[];
 };
+type ComparableFieldKeys<T extends Record<string, unknown>> = {
+  [K in keyof T]-?: Extract<NonNullable<T[K]>, number | string> extends never ? never : K;
+}[keyof T];
 
 /* -------------------- QueryBuilder -------------------- */
 
-export class QueryBuilder<T extends Record<string, unknown>> {
-  private readonly source: () => Promise<unknown[]>;
-  private readonly ops: ReadonlyArray<QueryOp<T>>;
-
-  /**
-   * @internal — obtain a QueryBuilder via `adapter.query(table)`, not by constructing directly.
-   */
-  constructor(source: () => Promise<unknown[]>, ops: ReadonlyArray<QueryOp<T>> = []) {
-    this.source = source;
-    this.ops = ops;
-  }
-
-  private async run(includePageOps = true): Promise<T[]> {
-    let data: unknown[] = await this.source();
-
-    for (const op of this.ops) {
-      if (!includePageOps && op.kind === 'page') continue;
-
-      data = op.run(data as T[]);
-    }
-
-    return data as T[];
-  }
-
-  async toArray(): Promise<T[]> {
-    return this.run();
-  }
-
-  async count(): Promise<number> {
-    return (await this.run(false)).length;
-  }
-
-  async first(): Promise<T | undefined> {
-    return (await this.run())[0];
-  }
-
-  private clone(kind: QueryOpKind, run: (data: T[]) => T[]): QueryBuilder<T> {
-    return new QueryBuilder<T>(this.source, [...this.ops, { kind, run }]);
-  }
-
-  equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T> {
-    return this.clone('filter', (data) => data.filter((r) => r[field] === value));
-  }
-
-  between<K extends keyof T>(
+export interface QueryBuilder<T extends Record<string, unknown>> {
+  between<K extends ComparableFieldKeys<T>>(
     field: K,
-    lower: NonNullable<T[K]> extends number | string ? NonNullable<T[K]> : never,
-    upper: NonNullable<T[K]> extends number | string ? NonNullable<T[K]> : never,
-  ): QueryBuilder<T> {
-    return this.clone('filter', (data) =>
-      data.filter((r) => {
-        const val = r[field] as number | string;
+    lower: Extract<NonNullable<T[K]>, number | string>,
+    upper: Extract<NonNullable<T[K]>, number | string>,
+  ): QueryBuilder<T>;
+  /** Counts records after all chained query operations. */
+  count(): Promise<number>;
+  equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
+  filter(fn: Predicate<T>): QueryBuilder<T>;
+  first(): Promise<T | undefined>;
+  limit(n: number): QueryBuilder<T>;
+  offset(n: number): QueryBuilder<T>;
+  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
+  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T>;
+  toArray(): Promise<T[]>;
+}
 
-        return val >= lower && val <= upper;
-      }),
-    );
+async function applyOps<T extends Record<string, unknown>>(
+  source: () => Promise<T[]>,
+  ops: ReadonlyArray<QueryOp<T>>,
+): Promise<T[]> {
+  let data = await source();
+
+  for (const op of ops) {
+    data = op.apply(data);
   }
 
-  startsWith<K extends keyof T>(
-    field: K,
-    prefix: string,
-    { ignoreCase = false }: { ignoreCase?: boolean } = {},
-  ): QueryBuilder<T> {
-    const lowerPrefix = ignoreCase ? prefix.toLowerCase() : prefix;
+  return data;
+}
 
-    return this.clone('filter', (data) =>
-      data.filter((r) => {
-        const value = r[field];
-
-        if (typeof value !== 'string') return false;
-
-        const str = ignoreCase ? value.toLowerCase() : value;
-
-        return str.startsWith(lowerPrefix);
-      }),
-    );
+function assertNonNegativeInteger(value: number, name: string): number {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`deposit: ${name} must be a non-negative integer`);
   }
 
-  filter(fn: Predicate<T>): QueryBuilder<T> {
-    return this.clone('filter', (data) => data.filter(fn));
-  }
+  return value;
+}
 
-  orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): QueryBuilder<T> {
-    return this.clone('sort', (data) => {
-      const sign = direction === 'asc' ? 1 : -1;
+function createClone<T extends Record<string, unknown>>(
+  source: () => Promise<T[]>,
+  ops: ReadonlyArray<QueryOp<T>>,
+): QueryBuilder<T> {
+  const clone = (op: QueryOp<T>): QueryBuilder<T> => createQueryBuilder(source, [...ops, op]);
 
-      return [...data].sort((a, b) => {
-        const av = a[field] as number | string;
-        const bv = b[field] as number | string;
+  return {
+    between<K extends ComparableFieldKeys<T>>(
+      field: K,
+      lower: Extract<NonNullable<T[K]>, number | string>,
+      upper: Extract<NonNullable<T[K]>, number | string>,
+    ): QueryBuilder<T> {
+      return clone({
+        apply: (data) =>
+          data.filter((record) => {
+            const value = record[field] as number | string;
 
-        if (av === bv) return 0;
-
-        return av > bv ? sign : -sign;
+            return value >= lower && value <= upper;
+          }),
       });
-    });
-  }
+    },
+    count(): Promise<number> {
+      return applyOps(source, ops).then((records) => records.length);
+    },
+    equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T> {
+      return clone({ apply: (data) => data.filter((record) => record[field] === value) });
+    },
+    filter(fn: Predicate<T>): QueryBuilder<T> {
+      return clone({ apply: (data) => data.filter(fn) });
+    },
+    first(): Promise<T | undefined> {
+      return applyOps(source, ops).then((records) => records[0]);
+    },
+    limit(n: number): QueryBuilder<T> {
+      const safeN = assertNonNegativeInteger(n, 'query.limit');
 
-  limit(n: number): QueryBuilder<T> {
-    return this.clone('page', (data) => data.slice(0, n));
-  }
+      return clone({ apply: (data) => data.slice(0, safeN) });
+    },
+    offset(n: number): QueryBuilder<T> {
+      const safeN = assertNonNegativeInteger(n, 'query.offset');
 
-  offset(n: number): QueryBuilder<T> {
-    return this.clone('page', (data) => data.slice(n));
-  }
+      return clone({ apply: (data) => data.slice(safeN) });
+    },
+    orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): QueryBuilder<T> {
+      return clone({
+        apply: (data) => {
+          const sign = direction === 'asc' ? 1 : -1;
+
+          return [...data].sort((left, right) => {
+            const a = left[field] as number | string;
+            const b = right[field] as number | string;
+
+            if (a === b) return 0;
+
+            return a > b ? sign : -sign;
+          });
+        },
+      });
+    },
+    startsWith<K extends keyof T>(
+      field: K,
+      prefix: string,
+      { ignoreCase = false }: { ignoreCase?: boolean } = {},
+    ): QueryBuilder<T> {
+      const needle = ignoreCase ? prefix.toLowerCase() : prefix;
+
+      return clone({
+        apply: (data) =>
+          data.filter((record) => {
+            const value = record[field];
+
+            if (typeof value !== 'string') return false;
+
+            const haystack = ignoreCase ? value.toLowerCase() : value;
+
+            return haystack.startsWith(needle);
+          }),
+      });
+    },
+    toArray(): Promise<T[]> {
+      return applyOps(source, ops);
+    },
+  };
+}
+
+export function createQueryBuilder<T extends Record<string, unknown>>(
+  source: () => Promise<T[]>,
+  ops: ReadonlyArray<QueryOp<T>> = [],
+): QueryBuilder<T> {
+  return createClone(source, ops);
 }

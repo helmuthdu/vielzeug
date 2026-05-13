@@ -29,7 +29,14 @@ describe('TupleSchema.rest()', () => {
   test('rejects when required items are missing', () => {
     const schema = v.tuple([v.string(), v.number()] as const).rest(v.boolean());
 
-    expect(schema.safeParse(['only-one']).success).toBe(false);
+    const result = schema.safeParse(['only-one']);
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues[0].params).toEqual({ minimum: 2 });
+      expect(result.error.issues[0].message).toContain('at least 2');
+    }
   });
 
   test('async parse with rest', async () => {
@@ -55,22 +62,8 @@ describe('TupleSchema.rest()', () => {
   });
 });
 
-describe('ObjectSchema.strip()', () => {
-  test('silently removes unknown keys', () => {
-    const schema = v.object({ name: v.string() }).strip();
-    const result = schema.parse({ extra: 'ignored', name: 'Alice' });
-
-    expect(result).toEqual({ name: 'Alice' });
-    expect('extra' in result).toBe(false);
-  });
-
-  test('does not error on unknown keys', () => {
-    const schema = v.object({ id: v.number() }).strip();
-
-    expect(schema.safeParse({ id: 1, unknown: true }).success).toBe(true);
-  });
-
-  test('strict mode still rejects unknown keys', () => {
+describe('ObjectSchema unknown-key modes', () => {
+  test('strict (default) rejects unknown keys', () => {
     const schema = v.object({ id: v.number() });
 
     expect(schema.safeParse({ extra: true, id: 1 }).success).toBe(false);
@@ -82,12 +75,14 @@ describe('ObjectSchema.strip()', () => {
     expect((result as any).extra).toBe('kept');
   });
 
-  test('strip() survives partial/extend/pick/omit', () => {
-    const base = v.object({ a: v.string(), b: v.number() }).strip();
-    const extended = base.extend({ c: v.boolean() });
+  test('relaxed mode survives extend/pick/omit', () => {
+    const base = v.object({ a: v.string(), b: v.number() }).relaxed();
+    const extended = (base as any).extend({ c: v.boolean() });
     const result = extended.parse({ a: 'x', b: 1, c: true, unknown: 99 });
 
-    expect(result).toEqual({ a: 'x', b: 1, c: true });
-    expect('unknown' in result).toBe(false);
+    expect(result.a).toBe('x');
+    expect(result.b).toBe(1);
+    expect(result.c).toBe(true);
+    expect((result as any).unknown).toBe(99);
   });
 });

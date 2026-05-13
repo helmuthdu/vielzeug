@@ -5,13 +5,11 @@ description: 'React Integration examples for workit.'
 
 ## React Integration
 
-## Problem
+### Problem
 
-Implement react integration in a production-friendly way with `@vielzeug/workit` while keeping setup and cleanup explicit.
+A React component needs to offload expensive computation to a worker pool. The pool must be created once, survive re-renders, and be closed when the component unmounts.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/workit` installed.
+### Solution
 
 Off-load processing from React components without blocking renders:
 
@@ -72,22 +70,20 @@ export function SortedList({ data }: { data: number[] }) {
 }
 ```
 
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
 - Worker is properly disposed on component unmount.
 - Errors are caught and displayed.
 - Pending state is correctly managed through cancellation tokens.
 
-## Common Pitfalls
+### Pitfalls
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Creating `createWorkerPool` inside the component body (not in `useRef` or `useEffect`) spawns new Worker threads on every render.
+- `poolRef.current` is `null` between `useEffect` cleanup and the next setup. Guard calls with `poolRef.current?.run()` rather than the non-null assertion `poolRef.current!.run()`.
+- Workers do not share the main thread's module scope. Functions passed to the worker run in isolation — avoid closures that capture main-thread variables, as they are serialized and lose their references.
 - Creating workers without memoization causes unnecessary recreations.
 
-## Related Recipes
+### Related
+- [Data Transformation Pipeline](./data-transformation-pipeline)
+- [Async Workflows (Stateit)](/stateit/examples/pattern-nextvalue-in-async-workflows)
 
 - [Cancellable Batch](./cancellable-batch.md)
 - [Data Transformation Pipeline](./data-transformation-pipeline.md)

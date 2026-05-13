@@ -51,17 +51,7 @@ snakeCase(input); // 'hello_world_from_vielzeug'
 ### Formatting & Comparison
 
 ```ts
-import {
-  endsWith,
-  escape,
-  pad,
-  similarity,
-  startsWith,
-  titleCase,
-  truncate,
-  unescape,
-  words,
-} from '@vielzeug/toolkit';
+import { endsWith, escape, pad, similarity, startsWith, titleCase, truncate, unescape, words } from '@vielzeug/toolkit';
 
 // Truncate
 const longText = 'Vielzeug is a Swiss-army knife for TypeScript developers.';

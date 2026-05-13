@@ -268,8 +268,8 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 export interface SortableOptions {
   /** Container element whose direct-child items are sortable. */
   element: HTMLElement;
-  /** Group name for connected sortable containers. Matching groups can exchange items. */
-  group?: string;
+  /** Shared scope for connected sortable containers. Containers only exchange items within the same scope. */
+  scope?: SortableScope;
   /**
    * Selector for the drag handle inside each item.
    * When omitted the whole item is the handle.
@@ -309,124 +309,208 @@ export interface SortableOptions {
 
 export interface Sortable extends Disposable {
   readonly isDragging: boolean;
+  sync(): void;
 }
+
+export interface SortableScope {}
 
 export interface AutoScrollOptions {
   /** Distance in pixels from an edge that triggers auto-scroll. @default 32 */
   edgeThreshold?: number;
   /** Pixels scrolled per dragover frame while near an edge. @default 18 */
   speed?: number;
+  /** Scroll the sortable container while dragging near its edges. @default true */
+  container?: boolean;
+  /** Scroll the viewport while dragging near the window edges. @default false */
+  viewport?: boolean;
 }
 
 interface SortableController {
   element: HTMLElement;
   getOrderedIds: () => string[];
-  group?: string;
   isDisabled: () => boolean;
-  onReorder?: (orderedIds: string[]) => void;
+  notifyDragEnd: (id: string, event: DragEvent) => void;
+  notifyDragStart: (id: string, event: DragEvent) => void;
+  notifyReorder: (orderedIds: string[]) => void;
+}
+
+interface SortableScopeState {
+  active: ActiveSortableDrag | null;
+  controllers: Set<SortableController>;
 }
 
 interface ActiveSortableDrag {
   draggedEl: HTMLElement;
   draggedId: string;
+  hideFrame: number | null;
   initialOrders: Map<SortableController, string[]>;
   originalNextSibling: ChildNode | null;
+  originalDisplay: string;
   originalParent: HTMLElement;
   placeholder: HTMLElement;
   source: SortableController;
+  target: SortableController | null;
 }
 
-const sortableGroups = new Map<string, Set<SortableController>>();
-let activeSortableDrag: ActiveSortableDrag | null = null;
+const HANDLE_ATTR = 'data-dragit-handle';
+const ITEM_ATTR = 'data-dragit-item';
+const sortableScopeStates = new WeakMap<SortableScope, SortableScopeState>();
 
-function resolveAutoScrollOptions(autoScroll: boolean | AutoScrollOptions | undefined): AutoScrollOptions | null {
+interface ResolvedAutoScrollOptions {
+  container: boolean;
+  edgeThreshold: number;
+  speed: number;
+  viewport: boolean;
+}
+
+function createSortableScopeState(): SortableScopeState {
+  return {
+    active: null,
+    controllers: new Set(),
+  };
+}
+
+function getSortableScopeState(scope: SortableScope): SortableScopeState {
+  const existing = sortableScopeStates.get(scope);
+
+  if (existing) return existing;
+
+  const state = createSortableScopeState();
+
+  sortableScopeStates.set(scope, state);
+
+  return state;
+}
+
+export function createSortableScope(): SortableScope {
+  const scope: SortableScope = {};
+
+  sortableScopeStates.set(scope, createSortableScopeState());
+
+  return scope;
+}
+
+function resolveAutoScrollOptions(autoScroll: boolean | AutoScrollOptions | undefined): ResolvedAutoScrollOptions | null {
   if (autoScroll === false) return null;
 
   if (autoScroll === true || autoScroll === undefined) {
-    return { edgeThreshold: 32, speed: 18 };
+    return {
+      container: true,
+      edgeThreshold: 32,
+      speed: 18,
+      viewport: false,
+    };
   }
 
   return {
+    container: autoScroll.container ?? true,
     edgeThreshold: autoScroll.edgeThreshold ?? 32,
     speed: autoScroll.speed ?? 18,
+    viewport: autoScroll.viewport ?? false,
   };
+}
+
+function hasOrderChanged(before: string[], after: string[]): boolean {
+  return after.length !== before.length || after.some((id, index) => id !== before[index]);
+}
+
+function restoreDraggedElement(active: ActiveSortableDrag): void {
+  if (active.hideFrame !== null) {
+    cancelAnimationFrame(active.hideFrame);
+    active.hideFrame = null;
+  }
+
+  active.draggedEl.style.display = active.originalDisplay;
+  active.draggedEl.removeAttribute('data-dragging');
+}
+
+function finishActiveDrag(scope: SortableScopeState, event: DragEvent, forceCancel = false): void {
+  const active = scope.active;
+
+  if (!active) return;
+
+  const targetController = active.target;
+  const targetElement = active.placeholder.parentElement;
+  const canCommit =
+    !forceCancel &&
+    !!event.dataTransfer &&
+    event.dataTransfer.dropEffect !== 'none' &&
+    !!targetController &&
+    scope.controllers.has(targetController) &&
+    !active.source.isDisabled() &&
+    !targetController.isDisabled() &&
+    !!targetElement;
+
+  restoreDraggedElement(active);
+
+  if (canCommit && targetElement) {
+    targetElement.insertBefore(active.draggedEl, active.placeholder);
+  } else {
+    active.originalParent.insertBefore(active.draggedEl, active.originalNextSibling);
+  }
+
+  active.placeholder.remove();
+  scope.active = null;
+
+  active.source.notifyDragEnd(active.draggedId, event);
+
+  for (const [controller, beforeOrder] of active.initialOrders) {
+    if (!scope.controllers.has(controller)) continue;
+
+    const afterOrder = controller.getOrderedIds();
+
+    if (!hasOrderChanged(beforeOrder, afterOrder)) continue;
+
+    controller.notifyReorder(afterOrder);
+  }
 }
 
 function maybeAutoScroll(
   event: DragEvent,
   container: HTMLElement,
   axis: 'vertical' | 'horizontal',
-  options: AutoScrollOptions | null,
+  options: ResolvedAutoScrollOptions | null,
 ): void {
   if (!options) return;
 
-  const threshold = options.edgeThreshold ?? 32;
-  const speed = options.speed ?? 18;
+  const { container: scrollContainer, edgeThreshold: threshold, speed, viewport } = options;
   const rect = container.getBoundingClientRect();
 
   if (axis === 'vertical') {
-    if (event.clientY < rect.top + threshold) {
+    if (scrollContainer && event.clientY < rect.top + threshold) {
       container.scrollTop -= speed;
-    } else if (event.clientY > rect.bottom - threshold) {
+    } else if (scrollContainer && event.clientY > rect.bottom - threshold) {
       container.scrollTop += speed;
     }
 
-    if (event.clientY < threshold) {
+    if (viewport && event.clientY < threshold) {
       window.scrollBy({ left: 0, top: -speed });
-    } else if (event.clientY > window.innerHeight - threshold) {
+    } else if (viewport && event.clientY > window.innerHeight - threshold) {
       window.scrollBy({ left: 0, top: speed });
     }
 
     return;
   }
 
-  if (event.clientX < rect.left + threshold) {
+  if (scrollContainer && event.clientX < rect.left + threshold) {
     container.scrollLeft -= speed;
-  } else if (event.clientX > rect.right - threshold) {
+  } else if (scrollContainer && event.clientX > rect.right - threshold) {
     container.scrollLeft += speed;
   }
 
-  if (event.clientX < threshold) {
+  if (viewport && event.clientX < threshold) {
     window.scrollBy({ left: -speed, top: 0 });
-  } else if (event.clientX > window.innerWidth - threshold) {
+  } else if (viewport && event.clientX > window.innerWidth - threshold) {
     window.scrollBy({ left: speed, top: 0 });
   }
 }
 
-function registerSortableGroup(group: string | undefined, controller: SortableController): void {
-  if (!group) return;
+function canReceiveActiveDrag(scope: SortableScopeState, controller: SortableController): boolean {
+  const active = scope.active;
 
-  const set = sortableGroups.get(group);
+  if (!active) return false;
 
-  if (set) {
-    set.add(controller);
-
-    return;
-  }
-
-  sortableGroups.set(group, new Set([controller]));
-}
-
-function unregisterSortableGroup(group: string | undefined, controller: SortableController): void {
-  if (!group) return;
-
-  const set = sortableGroups.get(group);
-
-  if (!set) return;
-
-  set.delete(controller);
-
-  if (set.size === 0) sortableGroups.delete(group);
-}
-
-function canReceiveActiveDrag(controller: SortableController): boolean {
-  if (!activeSortableDrag) return false;
-
-  if (activeSortableDrag.source === controller) return true;
-
-  if (!activeSortableDrag.source.group || !controller.group) return false;
-
-  return activeSortableDrag.source.group === controller.group;
+  return !active.source.isDisabled() && !controller.isDisabled();
 }
 
 function applyKeyboardReorder(
@@ -476,7 +560,7 @@ function applyKeyboardReorder(
 
   const nextOrder = getOrderedIds();
 
-  if (nextOrder.length !== prevOrder.length || nextOrder.some((id, i) => id !== prevOrder[i])) {
+  if (hasOrderChanged(prevOrder, nextOrder)) {
     onReorder?.(nextOrder);
   }
 
@@ -506,19 +590,15 @@ export function createSortable(options: SortableOptions): Sortable {
   const {
     autoScroll = true,
     axis = 'vertical',
-    disabled,
-    dragImage,
     element,
-    group,
     handle,
     itemAttribute = 'data-sort-id',
     keyboard = true,
-    onDragEnd: onDragEndCb,
-    onDragStart: onDragStartCb,
-    onReorder,
     placeholderClass = 'dragit-placeholder',
+    scope = createSortableScope(),
   } = options;
   const autoScrollOptions = resolveAutoScrollOptions(autoScroll);
+  const sortableScope = getSortableScopeState(scope);
 
   const getItems = (): HTMLElement[] =>
     Array.from(element.children).filter((c) => (c as HTMLElement).hasAttribute(itemAttribute)) as HTMLElement[];
@@ -527,17 +607,40 @@ export function createSortable(options: SortableOptions): Sortable {
 
   const getId = (el: HTMLElement): string => el.getAttribute(itemAttribute) ?? '';
 
-  const refreshItems = (): void => {
+  const syncItems = (): void => {
+    element.querySelectorAll<HTMLElement>(`[${HANDLE_ATTR}]`).forEach((handleEl) => {
+      handleEl.removeAttribute(HANDLE_ATTR);
+      handleEl.removeAttribute('draggable');
+    });
+
     getItems().forEach((el) => {
+      el.setAttribute(ITEM_ATTR, '');
       el.setAttribute('role', 'listitem');
       el.tabIndex = 0;
 
       if (handle) {
         el.removeAttribute('draggable');
-        el.querySelectorAll<HTMLElement>(handle).forEach((h) => h.setAttribute('draggable', 'true'));
+        el.querySelectorAll<HTMLElement>(handle).forEach((handleEl) => {
+          handleEl.setAttribute(HANDLE_ATTR, '');
+          handleEl.setAttribute('draggable', 'true');
+        });
       } else {
         el.setAttribute('draggable', 'true');
       }
+    });
+  };
+
+  const cleanupItems = (): void => {
+    element.querySelectorAll<HTMLElement>(`[${HANDLE_ATTR}]`).forEach((handleEl) => {
+      handleEl.removeAttribute(HANDLE_ATTR);
+      handleEl.removeAttribute('draggable');
+    });
+
+    element.querySelectorAll<HTMLElement>(`[${ITEM_ATTR}]`).forEach((item) => {
+      item.removeAttribute(ITEM_ATTR);
+      item.removeAttribute('draggable');
+      item.removeAttribute('role');
+      item.removeAttribute('tabindex');
     });
   };
 
@@ -559,49 +662,24 @@ export function createSortable(options: SortableOptions): Sortable {
   const controller: SortableController = {
     element,
     getOrderedIds,
-    group,
-    isDisabled: () => resolveDisabled(disabled),
-    onReorder,
+    isDisabled: () => resolveDisabled(options.disabled),
+    notifyDragEnd: (id, event) => {
+      options.onDragEnd?.(id, event);
+    },
+    notifyDragStart: (id, event) => {
+      options.onDragStart?.(id, event);
+    },
+    notifyReorder: (orderedIds) => {
+      options.onReorder?.(orderedIds);
+    },
   };
 
-  registerSortableGroup(group, controller);
-
-  const finalizeDrag = (event: DragEvent): void => {
-    const active = activeSortableDrag;
-
-    if (!active || active.source !== controller) return;
-
-    const cancelled = event.dataTransfer?.dropEffect === 'none';
-    const { draggedEl, draggedId, originalNextSibling, originalParent, placeholder } = active;
-
-    draggedEl.removeAttribute('data-dragging');
-
-    if (cancelled || !placeholder.parentElement) {
-      originalParent.insertBefore(draggedEl, originalNextSibling);
-    } else {
-      placeholder.parentElement.insertBefore(draggedEl, placeholder);
-    }
-
-    placeholder.remove();
-    onDragEndCb?.(draggedId, event);
-
-    for (const [nextController, beforeOrder] of active.initialOrders) {
-      if (nextController.isDisabled()) continue;
-
-      const afterOrder = nextController.getOrderedIds();
-
-      if (afterOrder.length === beforeOrder.length && !afterOrder.some((id, i) => id !== beforeOrder[i])) continue;
-
-      nextController.onReorder?.(afterOrder);
-    }
-
-    activeSortableDrag = null;
-  };
+  sortableScope.controllers.add(controller);
 
   const handleDragStart = (e: DragEvent): void => {
-    if (activeSortableDrag) return;
+    if (sortableScope.active) return;
 
-    if (resolveDisabled(disabled)) return;
+    if (controller.isDisabled()) return;
 
     const target = e.target as HTMLElement;
     const item = target.closest<HTMLElement>(`[${itemAttribute}]`);
@@ -615,53 +693,59 @@ export function createSortable(options: SortableOptions): Sortable {
     if (!originalParent) return;
 
     const placeholder = createPlaceholder(item);
-    const peers = group ? sortableGroups.get(group) : undefined;
     const initialOrders = new Map<SortableController, string[]>();
+    const originalNextSibling = item.nextSibling;
 
-    initialOrders.set(controller, getOrderedIds());
-
-    if (peers) {
-      for (const peer of peers) {
-        if (peer === controller) continue;
-
-        initialOrders.set(peer, peer.getOrderedIds());
-      }
+    for (const peer of sortableScope.controllers) {
+      initialOrders.set(peer, peer.getOrderedIds());
     }
 
     item.setAttribute('data-dragging', '');
-    originalParent.insertBefore(placeholder, item.nextSibling);
+    originalParent.insertBefore(placeholder, originalNextSibling);
 
-    activeSortableDrag = {
+    sortableScope.active = {
       draggedEl: item,
       draggedId: getId(item),
+      hideFrame:
+        typeof requestAnimationFrame === 'function'
+          ? requestAnimationFrame(() => {
+              if (sortableScope.active?.draggedEl !== item) return;
+
+              item.style.display = 'none';
+              if (sortableScope.active) sortableScope.active.hideFrame = null;
+            })
+          : null,
       initialOrders,
-      originalNextSibling: item.nextSibling,
+      originalNextSibling,
+      originalDisplay: item.style.display,
       originalParent,
       placeholder,
       source: controller,
+      target: controller,
     };
 
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', getId(item));
 
-      if (dragImage) {
-        const preview = typeof dragImage === 'function' ? dragImage(getId(item), item, e) : dragImage;
+      if (options.dragImage) {
+        const preview =
+          typeof options.dragImage === 'function' ? options.dragImage(getId(item), item, e) : options.dragImage;
 
         if (preview) e.dataTransfer.setDragImage(preview, 0, 0);
       }
     }
 
-    onDragStartCb?.(getId(item), e);
+    controller.notifyDragStart(getId(item), e);
   };
 
   const handleDragOver = (e: DragEvent): void => {
-    if (!canReceiveActiveDrag(controller)) return;
+    if (!canReceiveActiveDrag(sortableScope, controller)) return;
 
     e.preventDefault();
     maybeAutoScroll(e, element, axis, autoScrollOptions);
 
-    const active = activeSortableDrag;
+    const active = sortableScope.active;
 
     if (!active) return;
 
@@ -674,6 +758,8 @@ export function createSortable(options: SortableOptions): Sortable {
         element.appendChild(placeholder);
       }
 
+      active.target = controller;
+
       return;
     }
 
@@ -684,14 +770,24 @@ export function createSortable(options: SortableOptions): Sortable {
       axis === 'vertical' ? e.clientY >= rect.top + rect.height / 2 : e.clientX >= rect.left + rect.width / 2;
 
     element.insertBefore(placeholder, insertAfter ? target.nextSibling : target);
+    active.target = controller;
+  };
+
+  const handleDrop = (e: DragEvent): void => {
+    if (!canReceiveActiveDrag(sortableScope, controller)) return;
+
+    e.preventDefault();
+    if (sortableScope.active) sortableScope.active.target = controller;
   };
 
   const handleDragEnd = (e: DragEvent): void => {
-    finalizeDrag(e);
+    if (sortableScope.active?.source !== controller) return;
+
+    finishActiveDrag(sortableScope, e);
   };
 
   const handleKeydown = (e: KeyboardEvent): void => {
-    if (!keyboard || resolveDisabled(disabled)) return;
+    if (!keyboard || controller.isDisabled()) return;
 
     const tagName = (e.target as HTMLElement | null)?.tagName;
 
@@ -701,55 +797,44 @@ export function createSortable(options: SortableOptions): Sortable {
 
     if (!item || !element.contains(item)) return;
 
-    const changed = applyKeyboardReorder(item, element, getItems, getOrderedIds, e.key, axis, onReorder);
+    const changed = applyKeyboardReorder(item, element, getItems, getOrderedIds, e.key, axis, options.onReorder);
 
     if (!changed) return;
 
     e.preventDefault();
   };
 
-  refreshItems();
+  syncItems();
 
   element.setAttribute('role', 'list');
   element.addEventListener('dragstart', handleDragStart);
   element.addEventListener('dragover', handleDragOver);
+  element.addEventListener('drop', handleDrop);
   element.addEventListener('dragend', handleDragEnd);
   element.addEventListener('keydown', handleKeydown);
 
-  const observer = new MutationObserver(() => refreshItems());
-
-  observer.observe(element, { childList: true });
-
   return {
     ...asDisposable(() => {
-      if (activeSortableDrag?.source === controller) {
+      if (sortableScope.active && (sortableScope.active.source === controller || sortableScope.active.target === controller)) {
         const syntheticEnd = new Event('dragend', { bubbles: true, cancelable: true }) as DragEvent;
 
-        finalizeDrag(syntheticEnd);
+        finishActiveDrag(sortableScope, syntheticEnd, true);
       }
 
-      unregisterSortableGroup(group, controller);
-      observer.disconnect();
+      sortableScope.controllers.delete(controller);
       element.removeEventListener('dragstart', handleDragStart);
       element.removeEventListener('dragover', handleDragOver);
+      element.removeEventListener('drop', handleDrop);
       element.removeEventListener('dragend', handleDragEnd);
       element.removeEventListener('keydown', handleKeydown);
 
       element.removeAttribute('role');
-
-      getItems().forEach((el) => {
-        el.removeAttribute('draggable');
-        el.removeAttribute('role');
-        el.removeAttribute('tabindex');
-
-        if (handle) {
-          el.querySelectorAll<HTMLElement>(handle).forEach((h) => h.removeAttribute('draggable'));
-        }
-      });
+      cleanupItems();
     }),
     get isDragging() {
-      return activeSortableDrag?.source === controller;
+      return sortableScope.active?.source === controller;
     },
+    sync: syncItems,
   };
 }
 

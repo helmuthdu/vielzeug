@@ -186,8 +186,8 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 
 ### Events
 
-| Event        | Detail             | Description                        |
-| ------------ | ------------------ | ---------------------------------- |
+| Event    | Detail             | Description                        |
+| -------- | ------------------ | ---------------------------------- |
 | `change` | `{ page: number }` | Fired when the user selects a page |
 
 ### CSS Custom Properties

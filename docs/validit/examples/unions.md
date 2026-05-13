@@ -63,7 +63,7 @@ StatusSchema.parse(Status.Draft);
 - Assuming intersection merges incompatible values automatically.
 - Using `variant` maps where branch values are not object schemas.
 
-### Related Recipes
+### Related
 
 - [API](./api.md)
 - [Async](./async.md)

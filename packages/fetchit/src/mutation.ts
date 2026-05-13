@@ -1,11 +1,29 @@
-import { retry } from '@vielzeug/toolkit';
-
 import type { RetryOptions } from './retry';
-import type { MutationState, Unsubscribe } from './types';
+import type { MutationState, SyncStore, Unsubscribe } from './types';
 
-import { getRetryConfig } from './retry';
+import { runWithRetry } from './retry';
+
+const IDLE_STATE: MutationState<unknown> = {
+  data: undefined,
+  error: null,
+  isFetching: false,
+  status: 'idle',
+  updatedAt: undefined,
+};
+
+function createPendingState<TData>(): MutationState<TData> {
+  return {
+    data: undefined,
+    error: null,
+    isFetching: true,
+    status: 'pending',
+    updatedAt: undefined,
+  };
+}
 
 export type MutationOptions<TData = unknown> = RetryOptions & {
+  /** Called when a lifecycle callback throws. Does not affect mutate() result. Optional for development/debugging. */
+  onCallbackError?: (error: Error) => void;
   /** Called after a failed run, before `mutate()` rejects. */
   onError?: (error: Error) => void | Promise<void>;
   /** Called after every run regardless of outcome. */
@@ -16,22 +34,50 @@ export type MutationOptions<TData = unknown> = RetryOptions & {
 
 export type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
 export function createMutation<TData, TVariables = void>(
   mutationFn: MutationFn<TData, TVariables>,
   mutOpts?: MutationOptions<TData>,
-) {
-  let snap: MutationState<TData> = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
+): Mutation<TData, TVariables> {
+  let snap: MutationState<TData> = IDLE_STATE as MutationState<TData>;
   let currentRun = 0;
-  let activeController: AbortController | null = null;
+  let activeRun: { controller: AbortController; promise: Promise<unknown> } | null = null;
   const observers = new Set<(state: MutationState<TData>) => void>();
+  let cachedStore: SyncStore<MutationState<TData>> | null = null;
 
   function notify() {
     observers.forEach((l) => l(snap));
   }
 
+  async function safeCall(fn: (() => void | Promise<void>) | undefined): Promise<void> {
+    try {
+      await fn?.();
+    } catch (err) {
+      if (mutOpts?.onCallbackError) {
+        try {
+          mutOpts.onCallbackError(toError(err));
+        } catch {
+          // Silently ignore errors in error handler itself.
+        }
+      }
+    }
+  }
+
+  async function fireSettled(data: TData | undefined, error: Error | null): Promise<void> {
+    await safeCall(() => mutOpts?.onSettled?.(data, error));
+  }
+
   return {
-    cancel() {
-      activeController?.abort();
+    async cancel(): Promise<void> {
+      const run = activeRun;
+
+      if (!run) return;
+
+      run.controller.abort();
+      await run.promise.catch(() => {});
     },
 
     getState(): MutationState<TData> {
@@ -39,71 +85,68 @@ export function createMutation<TData, TVariables = void>(
     },
 
     async mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData> {
-      const retryOpts = getRetryConfig(mutOpts?.retry ?? 0, mutOpts?.retryDelay, mutOpts?.shouldRetry);
       const localController = new AbortController();
-
-      activeController = localController;
 
       const signal = callOpts?.signal
         ? AbortSignal.any([callOpts.signal, localController.signal])
         : localController.signal;
       const run = ++currentRun;
 
-      snap = { data: undefined, error: null, status: 'pending', updatedAt: 0 };
+      snap = createPendingState();
       notify();
 
-      try {
-        const data = await retry(() => mutationFn(variables, signal), { ...retryOpts, signal });
+      const operation = (async () => {
+        try {
+          const data = await runWithRetry(
+            () => mutationFn(variables, signal),
+            mutOpts?.attempts ?? 1,
+            mutOpts?.retryDelay,
+            mutOpts?.shouldRetry,
+            signal,
+          );
 
-        if (run === currentRun) {
-          snap = { data, error: null, status: 'success', updatedAt: Date.now() };
-          notify();
+          if (run === currentRun) {
+            snap = { data, error: null, isFetching: false, status: 'success', updatedAt: Date.now() };
+            notify();
+          }
+
+          await safeCall(() => mutOpts?.onSuccess?.(data));
+
+          await fireSettled(data, null);
+
+          return data;
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          const isAborted = signal.aborted || error.name === 'AbortError';
+
+          if (run === currentRun) {
+            snap = isAborted
+              ? (IDLE_STATE as MutationState<TData>)
+              : { data: undefined, error, isFetching: false, status: 'error', updatedAt: Date.now() };
+            notify();
+          }
+
+          if (!isAborted) {
+            await safeCall(() => mutOpts?.onError?.(error));
+          }
+
+          await fireSettled(undefined, isAborted ? null : error);
+
+          throw error;
+        } finally {
+          if (activeRun?.controller === localController) {
+            activeRun = null;
+          }
         }
+      })();
 
-        // Fire lifecycle callbacks — sync throws and async rejections are both swallowed.
-        await Promise.all([
-          Promise.resolve()
-            .then(() => mutOpts?.onSuccess?.(data))
-            .catch(() => {}),
-          Promise.resolve()
-            .then(() => mutOpts?.onSettled?.(data, null))
-            .catch(() => {}),
-        ]);
+      activeRun = { controller: localController, promise: operation };
 
-        return data;
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        const nextState =
-          signal.aborted || error.name === 'AbortError'
-            ? { data: undefined, error: null, status: 'idle' as const, updatedAt: 0 }
-            : { data: undefined, error, status: 'error' as const, updatedAt: Date.now() };
-
-        if (run === currentRun) {
-          snap = nextState;
-          notify();
-        }
-
-        if (nextState.status === 'error') {
-          await Promise.all([
-            Promise.resolve()
-              .then(() => mutOpts?.onError?.(error))
-              .catch(() => {}),
-            Promise.resolve()
-              .then(() => mutOpts?.onSettled?.(undefined, error))
-              .catch(() => {}),
-          ]);
-        }
-
-        throw error;
-      } finally {
-        if (activeController === localController) {
-          activeController = null;
-        }
-      }
+      return operation;
     },
 
     reset() {
-      snap = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
+      snap = IDLE_STATE as MutationState<TData>;
       notify();
     },
 
@@ -113,7 +156,50 @@ export function createMutation<TData, TVariables = void>(
 
       return () => observers.delete(listener);
     },
+
+    toStore(): SyncStore<MutationState<TData>> {
+      if (cachedStore) return cachedStore;
+
+      let snapshot: MutationState<TData> = snap;
+
+      cachedStore = {
+        peek() {
+          return snapshot;
+        },
+
+        subscribe(onStoreChange) {
+          let isFirst = true;
+
+          const listener = (state: MutationState<TData>) => {
+            snapshot = state;
+
+            // React external stores should not notify during subscription setup.
+            if (isFirst) {
+              isFirst = false;
+
+              return;
+            }
+
+            onStoreChange();
+          };
+
+          observers.add(listener);
+          listener(snap);
+
+          return () => observers.delete(listener);
+        },
+      };
+
+      return cachedStore;
+    },
   };
 }
 
-export type Mutation<TData, TVariables = void> = ReturnType<typeof createMutation<TData, TVariables>>;
+export interface Mutation<TData, TVariables = void> {
+  cancel(): Promise<void>;
+  getState(): MutationState<TData>;
+  mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData>;
+  reset(): void;
+  subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe;
+  toStore(): SyncStore<MutationState<TData>>;
+}

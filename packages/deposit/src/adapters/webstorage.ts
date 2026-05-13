@@ -1,175 +1,212 @@
-import type { Adapter, AnySchema, KeyOf, RecordOf } from '../types';
+import type { Adapter, AnySchema, KeyOf, RecordOf, TtlMs } from '../types';
 
-import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
-import { AdapterCore } from './adapter-core';
+import { createAdapterRuntime } from '../adapter-core';
+import { decodeStorageTableFromKey, encodeStorageKey, encodeStorageTablePrefix } from '../internal';
+import { parseStored, unwrapStored, wrapStored } from '../ttl';
 
-/* -------------------- WebStorageAdapter -------------------- */
+function createWebStorageAdapter<S extends AnySchema>(
+  dbName: string,
+  schema: S,
+  getStorage: () => Storage,
+  storageLabel: string,
+): Adapter<S> {
+  let storageListener: ((event: StorageEvent) => void) | undefined;
 
-/**
- * Shared implementation for localStorage and sessionStorage adapters.
- * Accepts a `getStorage` provider so the same class serves both backends.
- */
-export class WebStorageAdapter<S extends AnySchema> extends AdapterCore<S> {
-  private readonly dbName: string;
-  private readonly getStorage: () => Storage;
-  private readonly prefixCache: Map<string, string>;
-  protected readonly schema: S;
-  private readonly storageLabel: string;
-
-  constructor(dbName: string, schema: S, getStorage: () => Storage, storageLabel: string) {
-    super();
-    this.dbName = dbName;
-    this.schema = schema;
-    this.prefixCache = new Map();
-    this.getStorage = getStorage;
-    this.storageLabel = storageLabel;
-
-    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-      const dbPrefix = `${encodeURIComponent(this.dbName)}~`;
-
-      window.addEventListener('storage', (event: StorageEvent) => {
-        if (!event.key || !event.key.startsWith(dbPrefix)) return;
-
-        const tail = event.key.slice(dbPrefix.length);
-        const end = tail.indexOf('~');
-
-        if (end === -1) return;
-
-        const tableName = decodeURIComponent(tail.slice(0, end)) as keyof S;
-
-        this.notify(tableName);
-      });
-    }
-  }
-
-  private get storage(): Storage {
+  const storage = (): Storage => {
     try {
-      return this.getStorage();
+      return getStorage();
     } catch {
       throw new Error(
-        `deposit: ${this.storageLabel} is not available in this environment (private browsing or sandboxed iframe?)`,
+        `deposit: ${storageLabel} is not available in this environment (private browsing or sandboxed iframe?)`,
       );
     }
-  }
+  };
 
-  private writeItem(storageKey: string, value: unknown): void {
+  const tryGetStorage = (): Storage | undefined => {
     try {
-      this.storage.setItem(storageKey, JSON.stringify(value));
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-        throw new Error(`deposit: ${this.storageLabel} quota exceeded while writing record`, { cause: err });
+      return getStorage();
+    } catch {
+      return undefined;
+    }
+  };
+
+  const writeItem = (storageKey: string, value: unknown): void => {
+    try {
+      storage().setItem(storageKey, JSON.stringify(value));
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        throw new Error(`deposit: ${storageLabel} quota exceeded while writing record`, { cause: error });
       }
 
-      throw err;
+      throw error;
     }
-  }
+  };
 
-  async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-    return this.readEntry<RecordOf<S, K>>(this.storageKey(table, String(key)));
-  }
-
-  private storageKeys(): string[] {
-    const storage = this.storage;
+  const storageKeys = (): string[] => {
+    const target = storage();
     const keys: string[] = [];
 
-    for (let i = 0; i < storage.length; i += 1) {
-      const key = storage.key(i);
+    for (let index = 0; index < target.length; index += 1) {
+      const key = target.key(index);
 
       if (key !== null) keys.push(key);
     }
 
     return keys;
-  }
+  };
 
-  private tableKeys<K extends keyof S>(table: K): string[] {
-    const prefix = this.tablePrefix(table);
+  const recordKey = <K extends keyof S>(table: K, value: RecordOf<S, K>): KeyOf<S, K> => {
+    const keyField = String(schema[table].key);
+    const keyValue = (value as Record<string, unknown>)[keyField];
 
-    return this.storageKeys().filter((k) => k.startsWith(prefix));
-  }
-
-  async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
-    const records: RecordOf<S, K>[] = [];
-
-    for (const k of this.tableKeys(table)) {
-      const value = this.readEntry<RecordOf<S, K>>(k);
-
-      if (value !== undefined) records.push(value);
+    if (keyValue === undefined || keyValue === null) {
+      throw new Error(`deposit: missing required key field "${keyField}" in record for table "${String(table)}"`);
     }
 
-    return records;
-  }
+    return keyValue as KeyOf<S, K>;
+  };
 
-  async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
-    const key = this.resolveRecordKey(table, value);
-
-    this.writeItem(this.storageKey(table, String(key)), wrapStored(value, ttl));
-    this.notify(table);
-  }
-
-  async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<void> {
-    this.storage.removeItem(this.storageKey(table, String(key)));
-    this.notify(table);
-  }
-
-  async deleteAll<K extends keyof S>(table: K): Promise<void> {
-    for (const k of this.tableKeys(table)) {
-      this.storage.removeItem(k);
-    }
-
-    this.notify(table);
-  }
-
-  private readEntry<T extends Record<string, unknown>>(storageKey: string): T | undefined {
-    const raw = this.storage.getItem(storageKey);
+  const readEntry = <T extends Record<string, unknown>>(
+    storageKey: string,
+    removeWhenInvalid: boolean,
+  ): T | undefined => {
+    const raw = storage().getItem(storageKey);
 
     if (!raw) return undefined;
 
     try {
-      const parsed = JSON.parse(raw) as unknown;
+      const parsed = parseStored<T>(JSON.parse(raw) as unknown);
 
-      if (typeof parsed !== 'object' || parsed === null || !('v' in (parsed as object))) {
-        this.storage.removeItem(storageKey);
+      if (!parsed) {
+        if (removeWhenInvalid) storage().removeItem(storageKey);
 
         return undefined;
       }
 
-      const value = unwrapStored(parsed as StoredRecord<T>);
+      const value = unwrapStored(parsed);
 
-      if (value === undefined) {
-        this.storage.removeItem(storageKey);
-
-        return undefined;
+      if (value === undefined && removeWhenInvalid) {
+        storage().removeItem(storageKey);
       }
 
       return value;
     } catch {
-      this.storage.removeItem(storageKey);
+      if (removeWhenInvalid) storage().removeItem(storageKey);
 
       return undefined;
     }
+  };
+
+  const runtime = createAdapterRuntime(schema, {
+    async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      const target = storage();
+      const storageKey = encodeStorageKey(dbName, String(table), String(key));
+      const exists = target.getItem(storageKey) !== null;
+
+      if (exists) target.removeItem(storageKey);
+
+      return exists;
+    },
+    async deleteAll<K extends keyof S>(table: K): Promise<number> {
+      const target = storage();
+      const prefix = encodeStorageTablePrefix(dbName, String(table));
+      let deleted = 0;
+
+      // Walk backwards because Storage is a live indexed collection.
+      for (let index = target.length - 1; index >= 0; index -= 1) {
+        const key = target.key(index);
+
+        if (!key || !key.startsWith(prefix)) continue;
+
+        target.removeItem(key);
+        deleted += 1;
+      }
+
+      return deleted;
+    },
+    dispose() {
+      if (typeof window !== 'undefined' && storageListener) {
+        window.removeEventListener('storage', storageListener);
+      }
+    },
+    async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
+      return readEntry<RecordOf<S, K>>(encodeStorageKey(dbName, String(table), String(key)), true);
+    },
+    async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
+      const target = storage();
+      const records: RecordOf<S, K>[] = [];
+      const expiredKeys: string[] = [];
+      const prefix = encodeStorageTablePrefix(dbName, String(table));
+
+      for (const storageKey of storageKeys()) {
+        if (!storageKey.startsWith(prefix)) continue;
+
+        const value = readEntry<RecordOf<S, K>>(storageKey, false);
+
+        if (value === undefined) {
+          expiredKeys.push(storageKey);
+
+          continue;
+        }
+
+        records.push(value);
+      }
+
+      for (const storageKey of expiredKeys) {
+        target.removeItem(storageKey);
+      }
+
+      return records;
+    },
+    async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
+      writeItem(encodeStorageKey(dbName, String(table), String(recordKey(table, value))), wrapStored(value, ttl));
+    },
+    async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
+      for (const value of values) {
+        writeItem(encodeStorageKey(dbName, String(table), String(recordKey(table, value))), wrapStored(value, ttl));
+      }
+    },
+  });
+
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    storageListener = (event: StorageEvent) => {
+      const expectedStorage = tryGetStorage();
+
+      if (event.storageArea && expectedStorage && event.storageArea !== expectedStorage) return;
+
+      if (event.key === null) {
+        for (const table of Object.keys(schema)) {
+          runtime.notify(table as keyof S);
+        }
+
+        return;
+      }
+
+      const tableName = decodeStorageTableFromKey(dbName, event.key);
+
+      if (tableName) runtime.notify(tableName as keyof S);
+    };
+
+    window.addEventListener('storage', storageListener);
   }
 
-  private tablePrefix<K extends keyof S>(table: K): string {
-    const name = String(table);
-    let prefix = this.prefixCache.get(name);
-
-    if (!prefix) {
-      prefix = `${encodeURIComponent(this.dbName)}~${encodeURIComponent(name)}~`;
-      this.prefixCache.set(name, prefix);
-    }
-
-    return prefix;
-  }
-
-  private storageKey<K extends keyof S>(table: K, key: string): string {
-    return this.tablePrefix(table) + encodeURIComponent(key);
-  }
+  return runtime.adapter;
 }
 
-export function createLocalStorage<S extends AnySchema>(options: { dbName: string; schema: S }): Adapter<S> {
-  return new WebStorageAdapter(options.dbName, options.schema, () => localStorage, 'localStorage');
+export function createLocalStorage<S extends AnySchema>(dbName: string, schema: S): Adapter<S> {
+  return createWebStorageAdapter(
+    dbName,
+    schema,
+    () => (typeof window !== 'undefined' ? window.localStorage : localStorage),
+    'localStorage',
+  );
 }
 
-export function createSessionStorage<S extends AnySchema>(options: { dbName: string; schema: S }): Adapter<S> {
-  return new WebStorageAdapter(options.dbName, options.schema, () => sessionStorage, 'sessionStorage');
+export function createSessionStorage<S extends AnySchema>(dbName: string, schema: S): Adapter<S> {
+  return createWebStorageAdapter(
+    dbName,
+    schema,
+    () => (typeof window !== 'undefined' ? window.sessionStorage : sessionStorage),
+    'sessionStorage',
+  );
 }

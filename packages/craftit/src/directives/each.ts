@@ -2,7 +2,6 @@ import { batch, effect as _effect, untrack, type CleanupFn, type ReadonlySignal 
 
 import { CRAFTIT_ERRORS } from '../errors';
 import {
-  DIRECTIVE,
   createMarkerIdFactory,
   escapeHtml,
   extractResult,
@@ -16,7 +15,7 @@ import {
   type HTMLResult,
 } from '../internal';
 import { applyBindingsWithTargets, indexBindingTargets, parseHTML, type RegisterCleanup } from '../template-bindings';
-import { applyHtmlBinding } from '../template-html';
+import { applyHtmlBinding } from '../template-bindings';
 
 const toResultEntry = (value: string | HTMLResult, getNextId: () => string): { bindings: Binding[]; html: string } =>
   isHtmlResult(value) ? rekeyHtmlResult(value, getNextId) : { bindings: [], html: escapeHtml(value) };
@@ -220,7 +219,5 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): D
     });
   };
 
-  return {
-    [DIRECTIVE]: { mount },
-  };
+  return { __craftitDirective: true, mount };
 }

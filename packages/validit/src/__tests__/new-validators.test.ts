@@ -6,6 +6,7 @@ describe('StringSchema - new format validators', () => {
   test('cuid() accepts valid-looking CUIDs', () => {
     expect(v.string().cuid().safeParse('c1234567890').success).toBe(true);
     expect(v.string().cuid().safeParse('notcuid').success).toBe(false);
+    expect(v.string().cuid().safeParse('C1234567890').success).toBe(false);
   });
 
   test('cuid2() accepts 24-char lower-alphanumeric starting with a letter', () => {
@@ -26,6 +27,7 @@ describe('StringSchema - new format validators', () => {
   test('base64() validates base64 strings', () => {
     expect(v.string().base64().safeParse('SGVsbG8=').success).toBe(true);
     expect(v.string().base64().safeParse('not!base64$$').success).toBe(false);
+      expect(v.string().base64().safeParse('').success).toBe(false);
   });
 
   test('base64url() validates url-safe base64', () => {
@@ -107,8 +109,8 @@ describe('Schema.readonly()', () => {
     expect(result).toEqual({ id: 1 });
   });
 
-  test('v.readonly() helper works', () => {
-    const schema = v.readonly(v.array(v.string()));
+  test('schema.readonly() works on composed schemas', () => {
+    const schema = v.array(v.string()).readonly();
 
     expect(schema.parse(['a', 'b'])).toEqual(['a', 'b']);
   });

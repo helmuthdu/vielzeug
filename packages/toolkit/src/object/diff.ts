@@ -31,7 +31,7 @@ export function diff<T extends Obj>(
   curr?: T,
   compareFn: (a: unknown, b: unknown) => boolean = isEqual,
 ): DiffResult<T> {
-  if (!curr && !prev) return {};
+  if (curr == null && prev == null) return {};
 
   const result: Record<string, unknown> = {};
 

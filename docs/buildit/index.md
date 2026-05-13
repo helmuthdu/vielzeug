@@ -3,6 +3,8 @@ title: Buildit — Web component library
 description: Accessible, themeable web components built with Craftit for framework and vanilla DOM apps.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="buildit" />
 
 <img src="/logo-buildit.svg" alt="Buildit logo" width="156" class="logo-highlight"/>
@@ -58,7 +60,7 @@ import '@vielzeug/buildit/styles';
 import '@vielzeug/buildit';
 ```
 
-## Package Entry Points
+### Package Entry Points
 
 | Import                     | Purpose                                   |
 | -------------------------- | ----------------------------------------- |
@@ -70,7 +72,7 @@ Component registration happens through side-effect imports such as `@vielzeug/bu
 
 For headless widget controllers (navigation/overlay/selection), use `@vielzeug/craftit/controls`.
 
-## Components
+### Components
 
 **Content:** `bit-avatar`, `bit-breadcrumb`, `bit-card`, `bit-pagination`, `bit-separator`, `bit-table`, `bit-text`
 
@@ -128,7 +130,7 @@ Every project needs UI primitives. Buildit provides accessible web components th
 | SSR         | ❌ (DOM only) |
 | Deno        | ❌            |
 
-## Prerequisites
+### Prerequisites
 
 - Browser runtime with Custom Elements support.
 - Import `@vielzeug/buildit/styles` before rendering components.
@@ -136,6 +138,11 @@ Every project needs UI primitives. Buildit provides accessible web components th
 
 ## See Also
 
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 - [Craftit](/craftit/)
 - [Floatit](/floatit/)
 - [Formit](/formit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

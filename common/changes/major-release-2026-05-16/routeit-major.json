@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/routeit",
+      "comment": "Release a new major version with router state and middleware refinements, updated navigation semantics, and breaking API/doc alignment changes.",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/routeit"
+}

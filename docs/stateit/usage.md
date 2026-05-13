@@ -3,13 +3,11 @@ title: Stateit — Usage Guide
 description: Concepts, patterns, and best practices for @vielzeug/stateit — signals, effects, computed, and stores.
 ---
 
-# Stateit Usage Guide
+[[toc]]
 
 ::: tip New to Stateit?
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-[[toc]]
 
 ## Signals
 
@@ -29,8 +27,24 @@ const items = signal<string[]>([]);
 ```ts
 count.value; // read — tracked inside effect/computed
 count.value = 42; // write — notifies all dependents
-untrack(() => count.value); // read without registering a subscription
+count.peek(); // read without registering a subscription
+untrack(() => count.value); // equivalent escape hatch for arbitrary reads
 ```
+
+### External Store Interop
+
+Every signal exposes a small external-store interface:
+
+```ts
+const unsubscribe = count.subscribe(() => {
+  console.log('changed:', count.value);
+});
+
+count.value = 1;
+unsubscribe();
+```
+
+`subscribe()` does not fire immediately on subscription. It only fires after the value changes, which matches React's `useSyncExternalStore()` contract.
 
 ## Effects
 
@@ -80,20 +94,7 @@ const sub = effect(() => {
 });
 ```
 
-### Effect Options
-
-```ts
-const sub = effect(
-  () => {
-    // side-effectful code
-  },
-  {
-    maxIterations: 50, // override the default limit (100) for this effect
-  },
-);
-```
-
-> `maxIterations` guards against infinite reactive loops. Default: `100`.
+Stateit includes a built-in loop guard (100 iterations) to protect against accidental self-triggering effect cycles.
 
 ### `untrack`
 
@@ -146,7 +147,20 @@ effect(() => {
 
 This behavior is an ergonomic convenience and works because `computed()` detects the active effect scope and registers itself for automatic cleanup.
 
-### `stale` Property
+### `peek`
+
+Computed signals also support `.peek()` for non-tracked reads:
+
+```ts
+const total = computed(() => subtotal.value + tax.value);
+
+effect(() => {
+  console.log('tracked total', total.value);
+});
+
+const snapshot = total.peek();
+```
+
 ### Chaining Computeds
 
 ```ts
@@ -181,29 +195,23 @@ sub.dispose();
 // Fire once immediately on subscription
 watch(count, (v) => console.log(v), { immediate: true });
 
-// Auto-unsubscribe after the first change
-watch(count, (v) => console.log('once:', v), { once: true });
-
 // Custom equality — suppress callback when result is considered equal
 watch(list, (v) => renderList(v), { equals: (a, b) => a.length === b.length });
 ```
 
 ### Watching a Slice
 
-`watch()` supports an optional selector as the second argument. Use it to watch a derived slice without creating an intermediate `computed()`:
+Use a getter function when you want to watch a derived slice directly:
 
 ```ts
-// Option 1: Inline selector (recommended for one-off watches)
-watch(
-  userStore,
-  (store) => store.name,
-  (name, prevName) => console.log('name:', prevName, '→', name),
-);
+watch(() => userStore.value.name, (name, prevName) => {
+  console.log('name:', prevName, '→', name);
+});
 
-// Option 2: Compose with computed() for reusable selectors
+// For reusable derived values, keep using computed()
 const nameSignal = computed(() => userStore.value.name);
 watch(nameSignal, (name, prev) => console.log('name:', prev, '→', name));
-nameSignal.dispose(); // dispose when no longer needed
+nameSignal.dispose();
 ```
 
 ## `batch` (Signals)
@@ -232,6 +240,95 @@ batch(() => {
 
 If the callback throws, pending notifications are still flushed after the error;
 the original error is re-thrown with the flush errors suppressed.
+
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useSyncExternalStore } from 'react';
+import { signal, computed, effect, type ReadonlySignal } from '@vielzeug/stateit';
+
+// Generic hook — works with any signal or computed
+function useSignalValue<T>(source: ReadonlySignal<T>): T {
+  return useSyncExternalStore(source.subscribe, () => source.value);
+}
+
+// Usage in a component
+const count = signal(0);
+const doubled = computed(() => count.value * 2);
+
+function Counter() {
+  const value = useSignalValue(count);
+  const doubledValue = useSignalValue(doubled);
+
+  return (
+    <div>
+      <p>{value} × 2 = {doubledValue}</p>
+      <button onClick={() => count.value++}>Increment</button>
+    </div>
+  );
+}
+```
+
+```ts [Vue 3]
+import { customRef, onScopeDispose } from 'vue';
+import { signal, computed, watch, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
+
+// Composable for read/write signals
+function useSignal<T>(source: Signal<T>) {
+  return customRef<T>((track, trigger) => ({
+    get() {
+      track();
+      return source.value;
+    },
+    set(value) {
+      source.value = value;
+      trigger();
+    },
+  }));
+}
+
+// Composable for read-only signals and computeds
+function useSignalValue<T>(source: ReadonlySignal<T>) {
+  const stop = watch(source, () => {}, { immediate: true });
+  onScopeDispose(() => stop.dispose());
+  return customRef<T>((track) => ({
+    get() {
+      track();
+      return source.value;
+    },
+    set(value) {
+      void value;
+    },
+  }));
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { signal, computed, toStore } from '@vielzeug/stateit';
+
+  // toStore() adapts any signal to the Svelte store contract
+  const count = signal(0);
+  const doubled = computed(() => count.value * 2);
+
+  const countStore = toStore(count);
+  const doubledStore = toStore(doubled);
+  // Use $countStore and $doubledStore in the template
+</script>
+
+<p>{$countStore} × 2 = {$doubledStore}</p>
+<button on:click={() => count.value++}>Increment</button>
+```
+
+:::
+
+### Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
 
 ## `scope`
 
@@ -361,10 +458,7 @@ countSignal.dispose();
 Pass a custom `equals` option for arrays and objects to avoid re-rendering when contents haven't changed:
 
 ```ts
-const items = computed(
-  () => s.value.items,
-  { equals: (a, b) => a.length === b.length },
-);
+const items = computed(() => s.value.items, { equals: (a, b) => a.length === b.length });
 ```
 
 ## Watching State
@@ -392,19 +486,22 @@ watch(
 );
 ```
 
-When `once: true`, the watcher auto-unsubscribes after the first notification:
+To auto-stop after the first change, dispose manually inside the callback:
 
 ```ts
-watch(s, (curr) => console.log('first change:', curr), { once: true });
+const stop = watch(s, (curr) => {
+  console.log('first change:', curr);
+  stop();
+});
 ```
 
 ### Slice Watch
 
-Use `watch`'s inline selector overload to watch a slice — only fires when the selected value changes:
+Use a getter source to watch a slice — only fires when the derived value changes:
 
 ```ts
 // Only fires when `count` changes — unrelated state changes are ignored
-watch(s, (state) => state.count, (count, prev) => console.log('count changed to', count));
+watch(() => s.value.count, (count, prev) => console.log('count changed to', count));
 
 // With computed() for a reusable or shareable slice signal
 const countSignal = computed(() => s.value.count);
@@ -434,10 +531,10 @@ Nested `batch()` calls merge into the outermost — only one notification fires 
 
 ## Narrowing to Read-Only
 
-To expose a store at API boundaries where consumers should observe but not mutate, type the public field as `ReadonlySignal<T>`:
+To expose a store at API boundaries where consumers should observe but not mutate, wrap it with `readonly()`:
 
 ```ts
-import { store } from '@vielzeug/stateit';
+import { readonly, store } from '@vielzeug/stateit';
 import type { ReadonlySignal } from '@vielzeug/stateit';
 
 type CounterService = {
@@ -450,7 +547,7 @@ function createCounterService(): CounterService {
   const s = store({ count: 0 });
 
   return {
-    state: s,
+    state: readonly(s),
     increment() {
       s.update((st) => ({ count: st.count + 1 }));
     },
@@ -467,7 +564,7 @@ counter.state.value.count; // readable
 
 ## `Symbol.dispose` / `using` Declarations
 
-All `Subscription` and `Disposable` handles implement `[Symbol.dispose]`,
+All `Subscription`, `ComputedSignal`, and `Scope` handles implement `[Symbol.dispose]`,
 enabling the TC39 [explicit resource management](https://github.com/tc39/proposal-explicit-resource-management) syntax:
 
 ```ts
@@ -476,6 +573,27 @@ enabling the TC39 [explicit resource management](https://github.com/tc39/proposa
   using doubled = computed(() => count.value * 2);
   // both are automatically disposed when the block exits
 }
+```
+
+## Working with Other Vielzeug Libraries
+
+### With Sourceit
+
+Use Stateit signals for local UI intent and Sourceit for remote/list data orchestration.
+
+```ts
+import { signal } from '@vielzeug/stateit';
+import { createRemoteSource } from '@vielzeug/sourceit';
+
+const search = signal('');
+const source = createRemoteSource({
+  fetch: ({ page }) => api.items.list({ page, search: search.value }),
+});
+
+search.subscribe(() => {
+  source.page(1);
+  void source.refresh();
+});
 ```
 
 ## Best Practices
@@ -506,13 +624,13 @@ effect(() => {
 });
 ```
 
-### 3. Watch Slices with `watch()` Inline Selector or `computed()`
+### 3. Watch Slices with Getter Sources or `computed()`
 
-Both approaches work; choose based on your preference:
+Both approaches work; choose based on reuse needs:
 
 ```ts
-// ✅ inline selector — simple for one-off watches
-watch(userStore, (s) => s.count, (count) => console.log('count:', count));
+// ✅ getter source — simple for one-off watches
+watch(() => userStore.value.count, (count) => console.log('count:', count));
 
 // ✅ composed with computed() — better for shared/complex selections
 const countSignal = computed(() => userStore.value.count);

@@ -39,51 +39,95 @@ pool.dispose();
 
 - ✅ Fully typed inputs and outputs
 - ✅ Web Worker backed execution for CPU-heavy tasks
-- ✅ Configurable pooling via `concurrency`
-- ✅ Task timeouts with worker recycling
+- ✅ Configurable worker pooling via `concurrency`
+- ✅ Bounded queue via `maxQueue` with backpressure rejection
+- ✅ Task timeouts with automatic worker recycling
 - ✅ Queued-task cancellation via `AbortSignal`
-- ✅ Transferables support
-- ✅ `WorkerError` hierarchy for library failures
-- ✅ `createTestWorker` for in-process tests
-- ✅ `[Symbol.dispose]` support
+- ✅ Zero-copy transferables support
+- ✅ Graceful shutdown via `close()`
+- ✅ Typed `WorkerError` with `.code` discriminant
+- ✅ `createTestWorker` helper for in-process testing
+- ✅ `[Symbol.dispose]` and `[Symbol.asyncDispose]` support
 - ✅ Zero dependencies
 
 ## Runtime Model
 
 - `createWorker()` is safe to call in any runtime.
 - `run()` requires a real Worker implementation and rejects with `WorkerError` when the Worker API is unavailable.
-- Task functions are serialized with `.toString()` and must be self-contained.
+- Task functions are serialized with `.toString()` and must be self-contained — they cannot close over variables from the surrounding module.
 
 ## API
 
 ```ts
-import { createWorker, TaskError, TaskTimeoutError, TerminatedError, WorkerError } from '@vielzeug/workit';
-import type { RunOptions, TaskFn, WorkerHandle, WorkerOptions, WorkerStatus } from '@vielzeug/workit';
+import { createWorker, WorkerError } from '@vielzeug/workit';
+import type { RunOptions, TaskFn, WorkerErrorCode, WorkerHandle, WorkerOptions, WorkerStatus } from '@vielzeug/workit';
 
 type WorkerOptions = {
-  concurrency?: number | 'auto';
-  timeout?: number;
+  concurrency?: number | 'auto'; // Default: 1. 'auto' uses navigator.hardwareConcurrency.
+  maxQueue?: number | 'auto';    // Default: unbounded. 'auto' is concurrency * 2.
+  timeout?: number;              // Milliseconds. Must be > 0.
+};
+
+type RunOptions = {
+  signal?: AbortSignal;          // Cancels a queued task; in-flight tasks cannot be cancelled.
+  transferables?: Transferable[]; // Transferred to the worker thread (zero-copy).
 };
 
 type WorkerHandle<TInput, TOutput> = {
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
-  dispose(): void;
-  readonly concurrency: number;
-  readonly status: WorkerStatus;
+  close(): Promise<void>;         // Drain then terminate.
+  dispose(): void;                // Terminate immediately.
+  readonly completed: number;     // Successfully completed task count.
+  readonly concurrency: number;   // Number of worker slots.
+  readonly size: number;          // Queued task count.
+  readonly status: WorkerStatus;  // 'idle' | 'running' | 'terminated'
+  readonly utilization: number;   // Active slots / total slots (0–1).
+  [Symbol.asyncDispose](): Promise<void>;
   [Symbol.dispose](): void;
 };
+
+// All library errors. Discriminate on `.code`.
+type WorkerErrorCode = 'invalid_options' | 'queue_full' | 'task' | 'terminated' | 'timeout' | 'worker';
+class WorkerError extends Error {
+  readonly code: WorkerErrorCode;
+}
 ```
+
+### Error handling
+
+All errors thrown by workit are `WorkerError` instances. Use `.code` to discriminate:
+
+```ts
+try {
+  await worker.run(input);
+} catch (err) {
+  if (err instanceof WorkerError) {
+    switch (err.code) {
+      case 'task':      /* the task function threw */ break;
+      case 'timeout':   /* task exceeded timeout */   break;
+      case 'terminated':/* pool was disposed */       break;
+      case 'queue_full':/* maxQueue reached */        break;
+      case 'worker':    /* worker-level failure */    break;
+    }
+  }
+}
+```
+
+For `code: 'task'`, the original error is preserved as `err.cause`.
 
 ## Testing
 
+`createTestWorker` runs the task function in-process, so no real Workers are required. It implements the full `WorkerHandle` contract including queuing, `close()`, `AbortSignal` cancellation, and `maxQueue`. Transferable semantics are not emulated (no structured-clone boundary), which is expected for in-process execution.
+
 ```ts
 import { createTestWorker } from '@vielzeug/workit/test';
+import type { TestWorkerHandle, TestWorkerOptions } from '@vielzeug/workit/test';
 
-const worker = createTestWorker<number, number>((n) => n * 3);
+const worker = createTestWorker<number, number>((n) => n * 3, { maxQueue: 10 });
 
 await worker.run(7);
 console.log(worker.calls); // [{ input: 7, output: 21 }]
-worker.dispose();
+await worker.close();
 ```
 
 ## Documentation

@@ -5,13 +5,11 @@ description: 'Form with Conditional Fields examples for formit.'
 
 ## Form with Conditional Fields
 
-## Problem
+### Problem
 
-Implement form with conditional fields in a production-friendly way with `@vielzeug/formit` while keeping setup and cleanup explicit.
+Some fields should only appear when another field has a specific value — for example, a "Company name" field that is hidden unless the user selects "Business account". Hidden fields must not contribute to validation.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/formit` installed.
+### Solution
 
 Form with fields that show/hide based on other field values.
 
@@ -30,46 +28,46 @@ const profileForm = createForm({
   },
   validators: {
     name: (v) => (!v ? 'Name is required' : undefined),
-    email: [
-      (v) => (!v ? 'Email is required' : undefined),
-      (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
-    ],
+    email: (v) => {
+      if (!v) return 'Email is required';
+      if (!String(v).includes('@')) return 'Invalid email';
+    },
   },
 });
 
 // Conditional validation based on account type
-profileForm.subscribeForm(() => {
-  const accountType = profileForm.get<string>('accountType');
+profileForm.subscribe(() => {
+  const accountType = profileForm.get('accountType');
 
   if (accountType === 'business') {
     if (!profileForm.get('companyName')) {
       profileForm.setError('companyName', 'Company name is required');
     } else {
-      profileForm.setError('companyName');
+      profileForm.clearError('companyName');
     }
     if (!profileForm.get('vatNumber')) {
       profileForm.setError('vatNumber', 'VAT number is required');
     } else {
-      profileForm.setError('vatNumber');
+      profileForm.clearError('vatNumber');
     }
-    const businessEmail = profileForm.get<string>('businessEmail');
+    const businessEmail = profileForm.get('businessEmail');
     if (!businessEmail) {
       profileForm.setError('businessEmail', 'Business email is required');
     } else if (!businessEmail.includes('@')) {
       profileForm.setError('businessEmail', 'Invalid email');
     } else {
-      profileForm.setError('businessEmail');
+      profileForm.clearError('businessEmail');
     }
   } else {
-    profileForm.setError('companyName');
-    profileForm.setError('vatNumber');
-    profileForm.setError('businessEmail');
+    profileForm.clearError('companyName');
+    profileForm.clearError('vatNumber');
+    profileForm.clearError('businessEmail');
   }
 });
 
 // Submit
 async function submitProfile() {
-  await profileForm.submit(async (values) => {
+  const result = await profileForm.submit(async (values) => {
     const payload: Record<string, unknown> = {
       accountType: values['accountType'],
       name: values['name'],
@@ -90,21 +88,20 @@ async function submitProfile() {
 
     return response.json();
   });
+
+  if (!result.ok) {
+    return;
+  }
 }
 ```
 
-## Expected Output
+### Pitfalls
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- A hidden field's value is still included in `form.values` and submitted unless you call `removeField(name)`. Hide the UI element but also remove the field if it should not be submitted.
+- Validators on conditional fields still run even when the field is hidden if you did not remove it. This can surface validation errors that the user cannot see or act on.
+- Setting up a `subscribeField` listener for a field that does not yet exist is a no-op. Register subscriptions after `addField()`, not before.
 
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Best Practices](./best-practices.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)

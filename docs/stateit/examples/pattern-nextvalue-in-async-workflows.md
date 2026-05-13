@@ -5,28 +5,27 @@ description: 'Pattern: Bridging reactive state into async code using watch() in 
 
 ## Pattern: Async Workflows with `watch`
 
-## Problem
+### Problem
 
 Implement an async workflow that waits for a reactive value to reach a specific state — for example, waiting for a modal result before continuing.
 
-## Runnable Example
+### Solution
 
 Use `watch` with a `Promise` wrapper to bridge reactive state into async code:
 
 ```ts
-import { store, computed, watch, untrack } from '@vielzeug/stateit';
-import type { ReadonlySignal } from '@vielzeug/stateit';
+import { store, watch, untrack } from '@vielzeug/stateit';
 
-function waitFor<T>(source: ReadonlySignal<T>, predicate: (v: T) => boolean): Promise<T> {
+function waitFor<T>(get: () => T, predicate: (v: T) => boolean): Promise<T> {
   return new Promise((resolve) => {
-    const current = untrack(() => source.value);
+    const current = untrack(get);
 
     if (predicate(current)) {
       resolve(current);
       return;
     }
 
-    const stop = watch(source, (next) => {
+    const stop = watch(get, (next) => {
       if (predicate(next)) {
         stop();
         resolve(next);
@@ -36,45 +35,42 @@ function waitFor<T>(source: ReadonlySignal<T>, predicate: (v: T) => boolean): Pr
 }
 
 const modalStore = store({ open: false, result: null as string | null });
-const resultSignal = computed(() => modalStore.value.result);
 
 export async function openModal(): Promise<string | null> {
   modalStore.patch({ open: true, result: null });
 
   // Wait until result is set (modal closed with a value)
-  const result = await waitFor(resultSignal, (v) => v !== null);
+  const result = await waitFor(() => modalStore.value.result, (v) => v !== null);
 
   modalStore.patch({ open: false });
-  resultSignal.dispose();
   return result;
 }
 ```
 
-For a single next-change with no predicate, `watch` with `once: true` is sufficient:
+For a single next-change with no predicate, stop the subscription after the first callback:
 
 ```ts
 import { signal, watch } from '@vielzeug/stateit';
 
 const status = signal<'idle' | 'loading' | 'done'>('idle');
 
-function onNextChange(cb: (v: string) => void) {
-  watch(status, cb, { once: true });
+function onNextChange(cb: (value: 'idle' | 'loading' | 'done') => void) {
+  const stop = watch(status, (value, prev) => {
+    cb(value);
+    if (value !== prev) stop();
+  });
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `watch()` does not fire on setup by default. Use `{ immediate: true }` when you need an initial synchronous invocation.
+- If the signal changes while the async callback is still running, the callback is invoked again concurrently. Use a cancel-previous pattern or a lock to prevent overlapping executions.
+- Rejections inside a `watch` async callback are not propagated to the `watch` caller. Always `catch` inside the async handler to avoid silent unhandled rejection warnings.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+### Related
 
-## Related Recipes
-
-- [Framework Integration](./framework-integration.md)
+- [Usage Guide](../usage.md#framework-integration)
 - [Pattern: Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)
 - [Pattern: Shared Module Store](./pattern-shared-module-store.md)

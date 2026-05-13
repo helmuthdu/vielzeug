@@ -205,7 +205,12 @@ Add `multiple` to allow selecting more than one option. Each selected value is s
 <ComponentPreview vertical>
 
 ```html
-<bit-combobox id="combobox-multiselect-demo" label="Technologies" multiple placeholder="Search…" style="max-width: 300px;">
+<bit-combobox
+  id="combobox-multiselect-demo"
+  label="Technologies"
+  multiple
+  placeholder="Search…"
+  style="max-width: 300px;">
   <bit-combobox-option value="ts">TypeScript</bit-combobox-option>
   <bit-combobox-option value="rust">Rust</bit-combobox-option>
   <bit-combobox-option value="go">Go</bit-combobox-option>
@@ -356,11 +361,7 @@ Set the `options` property directly in JavaScript to provide options without usi
 
 ```js
 const cb = document.querySelector('bit-combobox');
-cb.options = [
-  { value: 'ts' },
-  { value: 'rust', label: 'Rust' },
-  { value: 'go', label: 'Go', disabled: true },
-];
+cb.options = [{ value: 'ts' }, { value: 'rust', label: 'Rust' }, { value: 'go', label: 'Go', disabled: true }];
 ```
 
 Assigning a new array to `options` updates the dropdown immediately. When both `<bit-combobox-option>` children and `options` are present, the JS property takes precedence.
@@ -479,12 +480,12 @@ cb.addEventListener('close', (e) => {
 
 ### Events
 
-| Event    | Detail                                               | Description                                       |
-| -------- | ---------------------------------------------------- | ------------------------------------------------- |
-| `change` | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when selected value(s) change |
-| `open`   | `{ reason: 'trigger' \| 'programmatic' }`            | Emitted when the dropdown opens                   |
-| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' }` | Emitted when the dropdown closes |
-| `search` | `{ query: string }`                                  | Emitted on every keystroke in the text input      |
+| Event    | Detail                                                                         | Description                                  |
+| -------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
+| `change` | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when selected value(s) change        |
+| `open`   | `{ reason: 'trigger' \| 'programmatic' }`                                      | Emitted when the dropdown opens              |
+| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' }`                    | Emitted when the dropdown closes             |
+| `search` | `{ query: string }`                                                            | Emitted on every keystroke in the text input |
 
 ### CSS Custom Properties
 

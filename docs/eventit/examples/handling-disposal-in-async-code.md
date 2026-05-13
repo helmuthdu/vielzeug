@@ -5,13 +5,11 @@ description: 'Handling disposal in async code examples for eventit.'
 
 ## Handling disposal in async code
 
-## Problem
+### Problem
 
-Implement handling disposal in async code in a production-friendly way with `@vielzeug/eventit` while keeping setup and cleanup explicit.
+Your async function is awaiting a bus event when the bus gets disposed mid-flight. Without explicit handling, `wait()` rejects with `BusDisposedError` and the unhandled rejection crashes the caller.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
+### Solution
 
 Use `BusDisposedError` for `instanceof` checks instead of string matching:
 
@@ -29,19 +27,15 @@ async function waitForLogin(bus: Bus<AppEvents>) {
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Checking `err.message === 'Bus is disposed'` instead of `err instanceof BusDisposedError` breaks when the message changes or the class is minified. Always use `instanceof`.
+- Catching `BusDisposedError` without re-throwing other errors silently swallows unexpected failures. Only catch the specific class and let everything else propagate.
+- A disposed bus silently drops all `emit()` calls. Code that expects post-disposal emissions to arrive will hang indefinitely.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
 - [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)

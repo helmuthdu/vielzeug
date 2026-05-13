@@ -1,6 +1,4 @@
-/** @vielzeug/floatit — Lightweight floating element positioning. */
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+/** @vielzeug/floatit - Lightweight floating element positioning. */
 
 export type Side = 'top' | 'bottom' | 'left' | 'right';
 export type Alignment = 'start' | 'end';
@@ -28,9 +26,26 @@ export interface SideObject {
 }
 
 export type Padding = number | Partial<SideObject>;
-export type Boundary = Element | Rect;
-export type ElementContext = 'floating' | 'reference';
-export type MiddlewareData = Record<string, unknown>;
+type Boundary = Element | Rect;
+
+export interface ArrowData {
+  x?: number;
+  y?: number;
+  centerOffset: number;
+}
+
+export interface HideData {
+  escaped?: boolean;
+  escapedOffsets?: SideObject;
+  referenceHidden?: boolean;
+  referenceHiddenOffsets?: SideObject;
+}
+
+export interface MiddlewareData {
+  arrow?: ArrowData;
+  hide?: HideData;
+  [key: string]: unknown;
+}
 
 export interface MiddlewareState {
   x: number;
@@ -42,7 +57,10 @@ export interface MiddlewareState {
   middlewareData: MiddlewareData;
 }
 
-export type MiddlewareReset = true | { placement?: Placement; rects?: true | MiddlewareState['rects'] };
+export type MiddlewareReset = {
+  placement?: Placement;
+  rects?: true | MiddlewareState['rects'];
+};
 
 export interface MiddlewareResult {
   x?: number;
@@ -59,8 +77,6 @@ export interface FloatOptions {
   middleware?: Array<Middleware | null | undefined | false>;
 }
 
-export type Cleanup = () => void;
-
 export interface ComputePositionResult {
   x: number;
   y: number;
@@ -68,7 +84,7 @@ export interface ComputePositionResult {
   middlewareData: MiddlewareData;
 }
 
-// ─── Internal helpers ─────────────────────────────────────────────────────────
+export type Cleanup = () => void;
 
 const OPPOSITE: Record<Side, Side> = { bottom: 'top', left: 'right', right: 'left', top: 'bottom' };
 
@@ -168,16 +184,6 @@ function mergeState(state: MiddlewareState, result: MiddlewareResult | void): Mi
   };
 }
 
-function getPlacementOverflow(
-  state: MiddlewareState,
-  placement: Placement,
-  options: DetectOverflowOptions = {},
-): SideObject {
-  const { x, y } = baseCoords(placement, state.rects.reference, state.rects.floating);
-
-  return detectOverflow({ ...state, placement, x, y }, options);
-}
-
 function totalOverflow(overflow: SideObject): number {
   return (
     Math.max(overflow.top, 0) + Math.max(overflow.right, 0) + Math.max(overflow.bottom, 0) + Math.max(overflow.left, 0)
@@ -242,26 +248,7 @@ function sameRect(a: Rect, b: Rect): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
-// ─── detectOverflow ───────────────────────────────────────────────────────────
-
-export interface DetectOverflowOptions {
-  /** Viewport by default. May be a specific element or a custom rect. */
-  boundary?: Boundary;
-  /** Which box to measure for overflow. Defaults to `floating`. */
-  elementContext?: ElementContext;
-  /** Accepts a single number or per-side padding. */
-  padding?: Padding;
-}
-
-/**
- * Returns per-side overflow offsets relative to the configured boundary.
- * Positive values overflow, negative values still have available space.
- */
-export function detectOverflow(state: MiddlewareState, options: DetectOverflowOptions = {}): SideObject {
-  const boundary = getBoundaryRect(options.boundary);
-  const padding = toSideObject(options.padding);
-  const rect = options.elementContext === 'reference' ? state.rects.reference : getFloatingRect(state);
-
+function detectOverflowAtRect(rect: Rect, boundary: Rect, padding: SideObject): SideObject {
   return {
     bottom: rect.y + rect.height - (boundary.y + boundary.height - padding.bottom),
     left: boundary.x + padding.left - rect.x,
@@ -270,25 +257,48 @@ export function detectOverflow(state: MiddlewareState, options: DetectOverflowOp
   };
 }
 
-// ─── Pipeline ─────────────────────────────────────────────────────────────────
+export interface DetectOverflowOptions {
+  boundary?: Element | Rect;
+  padding?: Padding;
+}
 
-function runPipeline(
-  mws: Middleware[],
-  initialPlacement: Placement,
+export function detectOverflow(state: MiddlewareState, options: DetectOverflowOptions = {}): SideObject {
+  const boundary = getBoundaryRect(options.boundary);
+  const padding = toSideObject(options.padding);
+
+  return detectOverflowAtRect(getFloatingRect(state), boundary, padding);
+}
+
+function getPlacementOverflow(
+  state: MiddlewareState,
+  placement: Placement,
+  options: DetectOverflowOptions = {},
+): SideObject {
+  const { x, y } = baseCoords(placement, state.rects.reference, state.rects.floating);
+  const boundary = getBoundaryRect(options.boundary);
+  const padding = toSideObject(options.padding);
+  const rect = { ...state.rects.floating, x, y };
+
+  return detectOverflowAtRect(rect, boundary, padding);
+}
+
+export function computePosition(
   reference: ReferenceElement,
   floating: HTMLElement,
+  { middleware = [], placement = 'bottom' }: FloatOptions = {},
 ): ComputePositionResult {
-  let placement = initialPlacement;
+  const mws = middleware.filter(Boolean) as Middleware[];
+  let currentPlacement = placement;
   let middlewareData: MiddlewareData = {};
   let rects = getRects(reference, floating);
 
   for (let resets = 0; resets < 50; resets += 1) {
     let state: MiddlewareState = {
-      ...baseCoords(placement, rects.reference, rects.floating),
+      ...baseCoords(currentPlacement, rects.reference, rects.floating),
       elements: { floating, reference },
-      initialPlacement,
+      initialPlacement: placement,
       middlewareData,
-      placement,
+      placement: currentPlacement,
       rects,
     };
 
@@ -308,49 +318,60 @@ function runPipeline(
       return { middlewareData: state.middlewareData, placement: state.placement, x: state.x, y: state.y };
     }
 
-    if (reset === true || reset.rects === true) {
+    if (reset.rects === true) {
       rects = getRects(reference, floating);
     } else if (reset.rects) {
       rects = reset.rects;
     }
 
-    placement = reset === true ? state.placement : (reset.placement ?? state.placement);
+    currentPlacement = reset.placement ?? state.placement;
   }
 
   throw new Error('[floatit] Middleware triggered too many resets in a single compute cycle.');
 }
 
-// ─── computePosition ──────────────────────────────────────────────────────────
+export type OffsetConfig = {
+  crossAxis?: number;
+  mainAxis?: number;
+};
 
-/** Computes the position of a floating element relative to a reference element. */
-export function computePosition(
-  reference: ReferenceElement,
-  floating: HTMLElement,
-  { middleware = [], placement = 'bottom' }: FloatOptions = {},
-): ComputePositionResult {
-  return runPipeline(middleware.filter(Boolean) as Middleware[], placement, reference, floating);
+export type OffsetValue = number | OffsetConfig | ((state: MiddlewareState) => number | OffsetConfig);
+
+function resolveOffsetConfig(value: OffsetValue, state: MiddlewareState): Required<OffsetConfig> {
+  const raw = typeof value === 'function' ? value(state) : value;
+
+  if (typeof raw === 'number') {
+    return { crossAxis: 0, mainAxis: raw };
+  }
+
+  return {
+    crossAxis: raw.crossAxis ?? 0,
+    mainAxis: raw.mainAxis ?? 0,
+  };
 }
 
-// ─── Middlewares ──────────────────────────────────────────────────────────────
-
-/** Adds a gap (in px) between the reference and the floating element. */
-export function offset(value: number): Middleware {
+export function offset(value: OffsetValue): Middleware {
   return (state) => {
     const side = getSide(state.placement);
+    const { crossAxis, mainAxis } = resolveOffsetConfig(value, state);
 
-    return {
-      x: state.x + (side === 'right' ? value : side === 'left' ? -value : 0),
-      y: state.y + (side === 'bottom' ? value : side === 'top' ? -value : 0),
-    };
+    switch (side) {
+      case 'bottom':
+        return { x: state.x + crossAxis, y: state.y + mainAxis };
+      case 'left':
+        return { x: state.x - mainAxis, y: state.y + crossAxis };
+      case 'right':
+        return { x: state.x + mainAxis, y: state.y + crossAxis };
+      case 'top':
+        return { x: state.x + crossAxis, y: state.y - mainAxis };
+    }
   };
 }
 
 export interface FlipOptions extends DetectOverflowOptions {
-  /** Placements to try when the preferred placement overflows. */
   fallbackPlacements?: Placement[];
 }
 
-/** Flips the floating element to a fallback placement when the current one overflows. */
 export function flip(options: FlipOptions = {}): Middleware {
   return (state) => {
     const currentOverflow = detectOverflow(state, options);
@@ -384,11 +405,9 @@ export function flip(options: FlipOptions = {}): Middleware {
 }
 
 export interface AutoPlacementOptions extends DetectOverflowOptions {
-  /** Placements eligible for selection. Defaults to the four base sides. */
   allowedPlacements?: Placement[];
 }
 
-/** Chooses the placement with the most usable space. Do not combine with `flip()`. */
 export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
   return (state) => {
     const padding = toSideObject(options.padding);
@@ -418,7 +437,6 @@ export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
 
 export type ShiftOptions = DetectOverflowOptions;
 
-/** Shifts the floating element to keep it within the configured boundary. */
 export function shift(options: ShiftOptions = {}): Middleware {
   return (state) => {
     const overflow = detectOverflow(state, options);
@@ -437,11 +455,9 @@ export interface SizeApplyArgs {
 }
 
 export interface SizeOptions extends DetectOverflowOptions {
-  /** Called with available dimensions — use to resize the floating element. */
   apply?: (args: SizeApplyArgs) => void;
 }
 
-/** Provides available width/height based on the current placement and boundary. */
 export function size(options: SizeOptions = {}): Middleware {
   const { apply } = options;
 
@@ -472,20 +488,11 @@ export function size(options: SizeOptions = {}): Middleware {
   };
 }
 
-export interface ArrowData {
-  x?: number;
-  y?: number;
-  centerOffset: number;
-}
-
 export interface ArrowOptions {
-  /** Arrow element inside the floating element. */
   element: HTMLElement;
-  /** Keep the arrow away from the floating element edges. */
   padding?: Padding;
 }
 
-/** Computes arrow coordinates for a child arrow element. */
 export function arrow({ element, padding = 0 }: ArrowOptions): Middleware {
   return (state) => {
     const side = getSide(state.placement);
@@ -498,7 +505,7 @@ export function arrow({ element, padding = 0 }: ArrowOptions): Middleware {
       const maxX = Math.max(minX, state.rects.floating.width - arrowRect.width - inset.right);
       const x = clamp(idealX, minX, maxX);
 
-      return { data: { arrow: { centerOffset: idealX - x, x } satisfies ArrowData } };
+      return { data: { arrow: { centerOffset: idealX - x, x } } };
     }
 
     const idealY = state.rects.reference.y + state.rects.reference.height / 2 - state.y - arrowRect.height / 2;
@@ -506,85 +513,46 @@ export function arrow({ element, padding = 0 }: ArrowOptions): Middleware {
     const maxY = Math.max(minY, state.rects.floating.height - arrowRect.height - inset.bottom);
     const y = clamp(idealY, minY, maxY);
 
-    return { data: { arrow: { centerOffset: idealY - y, y } satisfies ArrowData } };
+    return { data: { arrow: { centerOffset: idealY - y, y } } };
   };
 }
 
-export interface HideData {
-  escaped?: boolean;
-  escapedOffsets?: SideObject;
-  referenceHidden?: boolean;
-  referenceHiddenOffsets?: SideObject;
-}
-
-export interface MiddlewareDataCarrier {
-  middlewareData: MiddlewareData;
-}
-
-/** Gets typed middleware data from either compute/position results or middleware state. */
-export function getMiddlewareData<T>(carrier: MiddlewareDataCarrier, key: string): T | undefined {
-  return carrier.middlewareData[key] as T | undefined;
-}
-
-/** Gets typed arrow middleware data. */
-export function getArrowData(carrier: MiddlewareDataCarrier): ArrowData | undefined {
-  return getMiddlewareData<ArrowData>(carrier, 'arrow');
-}
-
-/** Gets typed hide middleware data. */
-export function getHideData(carrier: MiddlewareDataCarrier): HideData | undefined {
-  return getMiddlewareData<HideData>(carrier, 'hide');
-}
-
 export interface HideOptions extends DetectOverflowOptions {
-  strategy?: 'referenceHidden' | 'escaped';
+  strategy?: 'referenceHidden' | 'escaped' | 'both';
 }
 
-/** Reports whether the reference or floating element should be hidden. */
 export function hide(options: HideOptions = {}): Middleware {
-  const { strategy = 'referenceHidden' } = options;
+  const strategy = options.strategy ?? 'both';
 
   return (state) => {
-    const previous = (state.middlewareData.hide as HideData | undefined) ?? {};
+    const boundary = getBoundaryRect(options.boundary);
+    const padding = toSideObject(options.padding);
+    const next: HideData = {};
 
-    if (strategy === 'escaped') {
-      const escapedOffsets = detectOverflow(state, options);
+    if (strategy === 'escaped' || strategy === 'both') {
+      const escapedOffsets = detectOverflowAtRect(getFloatingRect(state), boundary, padding);
 
-      return {
-        data: {
-          hide: {
-            ...previous,
-            escaped: isFullyClipped(getFloatingRect(state), escapedOffsets),
-            escapedOffsets,
-          } satisfies HideData,
-        },
-      };
+      next.escaped = isFullyClipped(getFloatingRect(state), escapedOffsets);
+      next.escapedOffsets = escapedOffsets;
     }
 
-    const referenceHiddenOffsets = detectOverflow(state, { ...options, elementContext: 'reference' });
+    if (strategy === 'referenceHidden' || strategy === 'both') {
+      const referenceHiddenOffsets = detectOverflowAtRect(state.rects.reference, boundary, padding);
 
-    return {
-      data: {
-        hide: {
-          ...previous,
-          referenceHidden: isFullyClipped(state.rects.reference, referenceHiddenOffsets),
-          referenceHiddenOffsets,
-        } satisfies HideData,
-      },
-    };
+      next.referenceHidden = isFullyClipped(state.rects.reference, referenceHiddenOffsets);
+      next.referenceHiddenOffsets = referenceHiddenOffsets;
+    }
+
+    return { data: { hide: next } };
   };
 }
 
 export interface InlineOptions {
-  /** Pointer x position used to choose a specific inline client rect. */
   x?: number;
-  /** Pointer y position used to choose a specific inline client rect. */
   y?: number;
-  /** Padding used when selecting a disjoint rect. */
   padding?: Padding;
 }
 
-/** Improves placement for inline elements that span multiple client rects. */
 export function inline(options: InlineOptions = {}): Middleware {
   return (state) => {
     const rects = getClientRects(state.elements.reference);
@@ -627,21 +595,12 @@ export function inline(options: InlineOptions = {}): Middleware {
   };
 }
 
-// ─── autoUpdate ───────────────────────────────────────────────────────────────
-
 export interface AutoUpdateOptions {
-  /** Whether to observe size changes on the floating element itself. Defaults to `true`. */
   observeFloating?: boolean;
-  /** Whether to observe `window.visualViewport` resize/scroll changes. Defaults to `true`. */
   observeVisualViewport?: boolean;
-  /** Continuously update on every animation frame. Useful for animated references. */
   animationFrame?: boolean;
 }
 
-/**
- * Automatically calls `update` whenever the floating element's position may have
- * changed (viewport resize, scroll events, resize observation, or animation frames).
- */
 export function autoUpdate(
   reference: ReferenceElement,
   floating: HTMLElement,
@@ -692,29 +651,35 @@ export function autoUpdate(
   };
 }
 
-// ─── positionFloat / float ────────────────────────────────────────────────────
-
-/**
- * Computes and applies the floating position to a floating element.
- * Sets `left`/`top` inline styles and returns the full compute result.
- */
-export function positionFloat(
-  reference: ReferenceElement,
-  floating: HTMLElement,
-  options: FloatOptions = {},
-): ComputePositionResult {
-  const result = computePosition(reference, floating, options);
-
-  floating.style.left = `${result.x}px`;
-  floating.style.top = `${result.y}px`;
-
-  return result;
+export interface FloatRuntimeOptions extends FloatOptions, AutoUpdateOptions {
+  apply?: (result: ComputePositionResult, elements: { floating: HTMLElement; reference: ReferenceElement }) => void;
 }
 
-/**
- * Positions a floating element relative to a reference element and keeps it in
- * sync as the viewport or elements change. Returns a cleanup function.
- */
-export function float(reference: ReferenceElement, floating: HTMLElement, options: FloatOptions = {}): Cleanup {
-  return autoUpdate(reference, floating, () => positionFloat(reference, floating, options));
+function applyDefault(result: ComputePositionResult, elements: { floating: HTMLElement }): void {
+  elements.floating.style.left = `${result.x}px`;
+  elements.floating.style.top = `${result.y}px`;
+}
+
+export function float(
+  reference: ReferenceElement,
+  floating: HTMLElement,
+  {
+    animationFrame,
+    apply = applyDefault,
+    middleware,
+    observeFloating,
+    observeVisualViewport,
+    placement,
+  }: FloatRuntimeOptions = {},
+): Cleanup {
+  return autoUpdate(
+    reference,
+    floating,
+    () => {
+      const result = computePosition(reference, floating, { middleware, placement });
+
+      apply(result, { floating, reference });
+    },
+    { animationFrame, observeFloating, observeVisualViewport },
+  );
 }

@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/toolkit",
+      "comment": "Release a new major version with broad utility API cleanup, performance optimizations, and breaking changes to align helper contracts.",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/toolkit"
+}

@@ -9,6 +9,7 @@ import { i18nitTypes } from './i18nit';
 import { logitTypes } from './logit';
 import { permitTypes } from './permit';
 import { routeitTypes } from './routeit';
+import { sourceitTypes } from './sourceit';
 import { stateitTypes } from './stateit';
 import { timitTypes } from './timit';
 import { toolkitTypes } from './toolkit';
@@ -29,6 +30,7 @@ export const libraryTypes = {
   logit: logitTypes,
   permit: permitTypes,
   routeit: routeitTypes,
+  sourceit: sourceitTypes,
   stateit: stateitTypes,
   timit: timitTypes,
   validit: validitTypes,

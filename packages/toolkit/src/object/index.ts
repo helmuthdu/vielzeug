@@ -15,7 +15,6 @@ export * from './omit';
 export * from './parseJSON';
 export * from './path';
 export * from './pick';
-export * from './proxy';
 export * from './prune';
 export * from './seek';
 export * from './values';

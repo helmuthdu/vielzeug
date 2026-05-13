@@ -1,175 +1,175 @@
-import type { Adapter, AnySchema, KeyOf, RecordOf } from '../types';
+import type { Adapter, AnySchema, KeyOf, RecordOf, TtlMs } from '../types';
 
-import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
-import { AdapterCore } from './adapter-core';
-
-/* -------------------- CookieAdapter -------------------- */
+import { createAdapterRuntime } from '../adapter-core';
+import { encodeStorageKey, encodeStorageTablePrefix } from '../internal';
+import { parseStored, unwrapStored, wrapStored } from '../ttl';
 
 export interface CookieOptions {
-  /** Defaults to `'/'` */
+  /** Defaults to '/' */
   path?: string;
-  /** Defaults to `'Strict'` */
+  /** Defaults to 'Strict' */
   sameSite?: 'Lax' | 'None' | 'Strict';
-  /** Defaults to `false` */
+  /** Defaults to false */
   secure?: boolean;
 }
 
-class CookieAdapter<S extends AnySchema> extends AdapterCore<S> {
-  private readonly dbName: string;
-  private readonly cookiePath: string;
-  private readonly sameSite: string;
-  private readonly secure: boolean;
-  protected readonly schema: S;
+const MAX_COOKIE_BYTES = 3800;
 
-  constructor(dbName: string, schema: S, options: CookieOptions = {}) {
-    super();
-    this.dbName = dbName;
-    this.schema = schema;
-    this.cookiePath = options.path ?? '/';
-    this.sameSite = options.sameSite ?? 'Strict';
-    this.secure = options.secure ?? false;
+export function createCookie<S extends AnySchema>(dbName: string, schema: S, options: CookieOptions = {}): Adapter<S> {
+  const cookiePath = options.path ?? '/';
+  const sameSite = options.sameSite ?? 'Strict';
+  const secure = options.secure ?? false;
+  const textEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : undefined;
+
+  if (sameSite === 'None' && !secure) {
+    throw new Error('deposit: cookies with SameSite=None must also be Secure');
   }
 
-  /* -------------------- Cookie key helpers -------------------- */
-
-  private cookieKey<K extends keyof S>(table: K, key: string): string {
-    return `${encodeURIComponent(this.dbName)}~${encodeURIComponent(String(table))}~${encodeURIComponent(key)}`;
-  }
-
-  private tablePrefix<K extends keyof S>(table: K): string {
-    return `${encodeURIComponent(this.dbName)}~${encodeURIComponent(String(table))}~`;
-  }
-
-  /* -------------------- Raw cookie access -------------------- */
-
-  private readCookies(): Record<string, string> {
+  const readCookies = (): Record<string, string> => {
     if (typeof document === 'undefined') return {};
 
     return Object.fromEntries(
       document.cookie
         .split(';')
-        .map((c) => c.trim())
+        .map((cookie) => cookie.trim())
         .filter(Boolean)
-        .map((c) => {
-          const eq = c.indexOf('=');
+        .map((cookie) => {
+          const separator = cookie.indexOf('=');
 
-          return eq === -1 ? [c, ''] : [c.slice(0, eq), c.slice(eq + 1)];
+          return separator === -1 ? [cookie, ''] : [cookie.slice(0, separator), cookie.slice(separator + 1)];
         }),
     );
-  }
+  };
 
-  private writeCookie(name: string, value: string, maxAgeMs?: number): void {
+  const recordKey = <K extends keyof S>(table: K, value: RecordOf<S, K>): KeyOf<S, K> => {
+    const keyField = String(schema[table].key);
+    const keyValue = (value as Record<string, unknown>)[keyField];
+
+    if (keyValue === undefined || keyValue === null) {
+      throw new Error(`deposit: missing required key field "${keyField}" in record for table "${String(table)}"`);
+    }
+
+    return keyValue as KeyOf<S, K>;
+  };
+
+  const deleteCookie = (name: string): void => {
+    if (typeof document === 'undefined') return;
+
+    document.cookie = `${name}=; path=${cookiePath}; Max-Age=0; SameSite=${sameSite}${secure ? '; Secure' : ''}`;
+  };
+
+  const writeCookie = (name: string, value: string, ttl?: TtlMs): void => {
     if (typeof document === 'undefined') {
       throw new Error('deposit: cookie adapter requires a browser environment');
     }
 
-    const parts = [`${name}=${value}`, `path=${this.cookiePath}`, `SameSite=${this.sameSite}`];
+    const parts = [`${name}=${value}`, `path=${cookiePath}`, `SameSite=${sameSite}`];
 
-    if (maxAgeMs !== undefined) {
-      parts.push(`Max-Age=${Math.ceil(maxAgeMs / 1000)}`);
+    if (ttl !== undefined) {
+      parts.push(`Max-Age=${Math.ceil(ttl / 1000)}`);
     }
 
-    if (this.secure) parts.push('Secure');
+    if (secure) parts.push('Secure');
 
-    document.cookie = parts.join('; ');
-  }
+    const cookie = parts.join('; ');
+    const cookieBytes = textEncoder ? textEncoder.encode(cookie).length : unescape(encodeURIComponent(cookie)).length;
 
-  private deleteCookie(name: string): void {
-    if (typeof document === 'undefined') return;
+    if (cookieBytes > MAX_COOKIE_BYTES) {
+      throw new Error(`deposit: cookie record exceeds safe size limit (${MAX_COOKIE_BYTES} bytes)`);
+    }
 
-    // Setting Max-Age=0 removes the cookie immediately.
-    document.cookie = `${name}=; path=${this.cookiePath}; Max-Age=0; SameSite=${this.sameSite}`;
-  }
+    document.cookie = cookie;
+  };
 
-  private readEntry<T>(name: string, cookies: Record<string, string>): T | undefined {
+  const readEntry = <T>(name: string, cookies: Record<string, string>): T | undefined => {
     const raw = cookies[name];
 
     if (!raw) return undefined;
 
     try {
-      const parsed = JSON.parse(decodeURIComponent(raw)) as unknown;
+      const parsed = parseStored<T>(JSON.parse(decodeURIComponent(raw)) as unknown);
 
-      if (typeof parsed !== 'object' || parsed === null || !('v' in (parsed as object))) {
-        this.deleteCookie(name);
+      if (!parsed) {
+        deleteCookie(name);
 
         return undefined;
       }
 
-      const value = unwrapStored(parsed as StoredRecord<T>);
+      const value = unwrapStored(parsed);
 
       if (value === undefined) {
-        this.deleteCookie(name);
-
-        return undefined;
+        deleteCookie(name);
       }
 
       return value;
     } catch {
-      this.deleteCookie(name);
+      deleteCookie(name);
 
       return undefined;
     }
-  }
+  };
 
-  /* -------------------- Adapter methods -------------------- */
+  return createAdapterRuntime(schema, {
+    async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      const cookies = readCookies();
+      const cookieKey = encodeStorageKey(dbName, String(table), String(key));
 
-  async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-    const name = this.cookieKey(table, String(key));
+      if (!(cookieKey in cookies)) return false;
 
-    return this.readEntry<RecordOf<S, K>>(name, this.readCookies());
-  }
+      deleteCookie(cookieKey);
 
-  async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
-    const prefix = this.tablePrefix(table);
-    const cookies = this.readCookies();
-    const records: RecordOf<S, K>[] = [];
+      return true;
+    },
+    async deleteAll<K extends keyof S>(table: K): Promise<number> {
+      const prefix = encodeStorageTablePrefix(dbName, String(table));
+      let deleted = 0;
 
-    for (const name of Object.keys(cookies)) {
-      if (!name.startsWith(prefix)) continue;
+      for (const name of Object.keys(readCookies())) {
+        if (!name.startsWith(prefix)) continue;
 
-      const value = this.readEntry<RecordOf<S, K>>(name, cookies);
+        deleteCookie(name);
+        deleted += 1;
+      }
 
-      if (value !== undefined) records.push(value);
-    }
+      return deleted;
+    },
+    async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
+      return readEntry<RecordOf<S, K>>(encodeStorageKey(dbName, String(table), String(key)), readCookies());
+    },
+    async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
+      const prefix = encodeStorageTablePrefix(dbName, String(table));
+      const cookies = readCookies();
+      const records: RecordOf<S, K>[] = [];
 
-    return records;
-  }
+      for (const name of Object.keys(cookies)) {
+        if (!name.startsWith(prefix)) continue;
 
-  async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttlMs?: number): Promise<void> {
-    const key = String(this.resolveRecordKey(table, value));
-    const name = this.cookieKey(table, key);
-    const envelope = wrapStored(value, ttlMs);
+        const value = readEntry<RecordOf<S, K>>(name, cookies);
 
-    this.writeCookie(name, encodeURIComponent(JSON.stringify(envelope)), ttlMs);
-    this.notify(table);
-  }
+        if (value !== undefined) records.push(value);
+      }
 
-  async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<void> {
-    this.deleteCookie(this.cookieKey(table, String(key)));
-    this.notify(table);
-  }
+      return records;
+    },
+    async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
+      const key = recordKey(table, value);
 
-  async deleteAll<K extends keyof S>(table: K): Promise<void> {
-    const prefix = this.tablePrefix(table);
+      writeCookie(
+        encodeStorageKey(dbName, String(table), String(key)),
+        encodeURIComponent(JSON.stringify(wrapStored(value, ttl))),
+        ttl,
+      );
+    },
+    async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
+      for (const value of values) {
+        const key = recordKey(table, value);
 
-    for (const name of Object.keys(this.readCookies())) {
-      if (name.startsWith(prefix)) this.deleteCookie(name);
-    }
-
-    this.notify(table);
-  }
-}
-
-/* -------------------- Factory -------------------- */
-
-export function createCookie<S extends AnySchema>(options: {
-  dbName: string;
-  path?: string;
-  sameSite?: 'Lax' | 'None' | 'Strict';
-  schema: S;
-  secure?: boolean;
-}): Adapter<S> {
-  const { dbName, schema, ...cookieOptions } = options;
-
-  return new CookieAdapter(dbName, schema, cookieOptions);
+        writeCookie(
+          encodeStorageKey(dbName, String(table), String(key)),
+          encodeURIComponent(JSON.stringify(wrapStored(value, ttl))),
+          ttl,
+        );
+      }
+    },
+  }).adapter;
 }

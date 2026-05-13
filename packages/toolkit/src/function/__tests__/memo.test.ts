@@ -60,10 +60,67 @@ describe('memoize', () => {
 
   it('should use contentHash resolver', () => {
     const mockFn = vi.fn((obj: { a: number }) => obj.a);
-    const memoizedFn = memo(mockFn, { resolver: (obj: { a: number }) => `obj-${obj.a}` });
+    const memoizedFn = memo(mockFn, { key: (obj: { a: number }) => `obj-${obj.a}` });
 
     expect(memoizedFn({ a: 1 })).toBe(1);
     expect(memoizedFn({ a: 1 })).toBe(1);
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('deduplicates in-flight async calls', async () => {
+    const mockFn = vi.fn(async (value: number) => value * 3);
+    const memoizedFn = memo(mockFn);
+
+    const [first, second] = await Promise.all([memoizedFn(2), memoizedFn(2)]);
+
+    expect(first).toBe(6);
+    expect(second).toBe(6);
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('evicts rejected async results', async () => {
+    const mockFn = vi
+      .fn<(...args: [number]) => Promise<number>>()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(9);
+    const memoizedFn = memo(mockFn);
+
+    await expect(memoizedFn(3)).rejects.toThrow('boom');
+    await expect(memoizedFn(3)).resolves.toBe(9);
+    expect(mockFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws a clear error for non-serializable arguments without a custom key', () => {
+    const memoizedFn = memo((value: unknown) => value);
+    const circular: { self?: unknown } = {};
+
+    circular.self = circular;
+
+    expect(() => memoizedFn(circular)).toThrow(
+      '[toolkit/memo] Failed to serialize memo arguments. Provide options.key for non-serializable arguments. Reason: Converting circular structure to JSON',
+    );
+  });
+
+  it('supports non-serializable arguments with a custom key', () => {
+    const mockFn = vi.fn((value: { id: string; self?: unknown }) => ({ id: value.id }));
+    const memoizedFn = memo(mockFn, { key: () => 'singleton' });
+    const circular: { id: string; self?: unknown } = { id: 'one' };
+
+    circular.self = circular;
+
+    const first = memoizedFn(circular);
+    const second = memoizedFn(circular);
+
+    expect(first).toEqual({ id: 'one' });
+    expect(second).toBe(first);
+    expect(mockFn).toHaveBeenCalledTimes(1);
+
+    const anotherCircular: { id: string; self?: unknown } = { id: 'two' };
+
+    anotherCircular.self = anotherCircular;
+
+    // A constant key intentionally aliases all inputs to the same cached result.
+    expect(memoizedFn(anotherCircular)).toBe(first);
     expect(mockFn).toHaveBeenCalledTimes(1);
   });
 });

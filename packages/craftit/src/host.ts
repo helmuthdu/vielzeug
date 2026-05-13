@@ -17,7 +17,6 @@ import { currentElementOrThrow, effect, onCleanup, onMounted, tryRegisterCleanup
 // ─────────────────────────────────────────────────────────────────────────────
 
 const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown>, unknown>>();
-const hostPropBindingOwners = new WeakMap<HTMLElement, Map<string, symbol>>();
 
 export type InjectionKey<T> = symbol & {
   readonly __craftit_injection_key?: T;
@@ -172,16 +171,15 @@ export const createSlots = (): ComponentSlots => {
   const slotNodesByName = new Map<string, Set<HTMLSlotElement>>();
   const slotCleanupMap = new Map<HTMLSlotElement, () => void>();
 
-  const ensureSlotEntry = (name: string): SlotEntry => {
-    const normalized = normalizeSlotName(name);
-    let entry = slotSignals.get(normalized);
+  const ensureSlotEntry = (normalizedName: string): SlotEntry => {
+    let entry = slotSignals.get(normalizedName);
 
     if (!entry) {
       entry = {
         elements: signal<Element[]>([]),
         presence: signal(false),
       };
-      slotSignals.set(normalized, entry);
+      slotSignals.set(normalizedName, entry);
     }
 
     return entry;
@@ -335,15 +333,8 @@ export const createHost = (): ComponentHost => {
     }
 
     if (config.prop) {
-      const propOwners = hostPropBindingOwners.get(el) ?? new Map<string, symbol>();
-
-      if (!hostPropBindingOwners.has(el)) hostPropBindingOwners.set(el, propOwners);
-
       for (const [key, descriptor] of Object.entries(config.prop)) {
         const { get, set } = descriptor;
-        const ownerToken = Symbol(key);
-
-        propOwners.set(key, ownerToken);
 
         Object.defineProperty(el, key, {
           configurable: true,
@@ -353,12 +344,11 @@ export const createHost = (): ComponentHost => {
         });
 
         disposers.push(() => {
-          if (propOwners.get(key) !== ownerToken) return;
+          const descriptor = Object.getOwnPropertyDescriptor(el, key);
 
-          propOwners.delete(key);
+          if (!descriptor || descriptor.get !== get || descriptor.set !== set) return;
+
           delete (el as unknown as Record<string, unknown>)[key];
-
-          if (propOwners.size === 0) hostPropBindingOwners.delete(el);
         });
       }
     }

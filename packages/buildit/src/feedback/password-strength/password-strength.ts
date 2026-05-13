@@ -1,4 +1,4 @@
-import { computed, define, effect, html } from '@vielzeug/craftit';
+import { computed, define, html } from '@vielzeug/craftit';
 import { prop } from '@vielzeug/craftit';
 
 import { reducedMotionMixin } from '../../styles';
@@ -95,6 +95,14 @@ export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-passw
       return 1;
     };
 
+    const computeLevel = (): PasswordStrengthLevel => {
+      const external = props.score.value ?? -1;
+      const finalScore =
+        external >= 0 ? Math.max(0, Math.min(4, Math.trunc(external))) : computeScore(props.value.value ?? '');
+
+      return levels[finalScore];
+    };
+
     const score = computed<0 | 1 | 2 | 3 | 4>(() => {
       // score >= 0 means an external override was provided
       const external = props.score.value ?? -1;
@@ -106,14 +114,12 @@ export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-passw
       return computeScore(props.value.value ?? '');
     });
 
-    const level = computed<PasswordStrengthLevel>(() => levels[score.value]);
-
     const levelLabel = computed<string>(() => {
       const custom = props.labels.value;
 
       if (Array.isArray(custom) && custom.length === 5) return String(custom[score.value] ?? '');
 
-      return defaultLabels[level.value];
+      return defaultLabels[computeLevel()];
     });
 
     const ariaValueText = computed<string | null>(() => {
@@ -122,8 +128,11 @@ export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-passw
       return levelLabel.value || null;
     });
 
-    effect(() => {
-      host.el.setAttribute('data-level', level.value);
+    // Sync level change to data-level attribute reactively
+    host.bind({
+      attr: {
+        'data-level': () => computeLevel(),
+      },
     });
 
     const segClass = (threshold: number) => () => `segment${score.value >= threshold ? ' active' : ''}`;

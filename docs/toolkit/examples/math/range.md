@@ -1,8 +1,3 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-184_B-success" alt="Size">
-</div>
-
 # range
 
 The `range` utility generates an array of numbers starting from a base value up to (but not including) an end value, using a specified step increment. It is highly versatile for creating numeric sequences, loops, or lookup tables.
@@ -62,10 +57,10 @@ range(10, 0, -2); // [10, 8, 6, 4, 2]
 ### Advanced Usage (Loops)
 
 ```ts
-import { range, map } from '@vielzeug/toolkit';
+import { range } from '@vielzeug/toolkit';
 
 // Create 5 localized dates
-const dates = map(range(0, 5), (day) => {
+const dates = range(0, 5).map((day) => {
   const d = new Date();
   d.setDate(d.getDate() + day);
   return d;
@@ -80,6 +75,6 @@ const dates = map(range(0, 5), (day) => {
 
 ## See Also
 
-- [list](../array/list.md): Create more complex data structures from arrays.
+- [Sourceit Overview](/sourceit/): Build reactive paginated data sources.
 - [clamp](./clamp.md): Restrict a number to a specific range.
 - [sum](./sum.md): Calculate the total of a generated range.

@@ -49,7 +49,9 @@ describe('merge', () => {
     const pollutedObject = JSON.parse('{ "__proto__": { "polluted": "yes" } }');
     const safeObject = deepMerge({}, pollutedObject);
 
-    expect(({} as any).polluted).toBeUndefined();
+    // The dangerous key should be skipped entirely
+    expect(Object.prototype).not.toHaveProperty('polluted' as any);
+    expect(Object.getPrototypeOf(safeObject)).not.toHaveProperty('polluted' as any);
     expect(safeObject).not.toHaveProperty('__proto__');
   });
 });

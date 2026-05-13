@@ -1,9 +1,7 @@
 export const permissionChecksExample = {
   code: `import { createPermit } from '@vielzeug/permit'
 
-const permit = createPermit()
-
-permit.set([
+const permit = createPermit([
   { role: 'editor', resource: 'articles', action: 'read', effect: 'allow' },
   { role: 'editor', resource: 'articles', action: 'create', effect: 'allow' },
   { role: 'editor', resource: 'articles', action: 'update', effect: 'allow' },
@@ -16,6 +14,7 @@ const viewer = { id: '2', roles: ['viewer'] }
 
 console.log('Editor can read:', permit.can(editor, 'articles', 'read'))
 console.log('Editor can delete:', permit.can(editor, 'articles', 'delete'))
-console.log('Viewer can create:', permit.can(viewer, 'articles', 'create'))`,
+console.log('Viewer can create:', permit.can(viewer, 'articles', 'create'))
+console.log('Explain delete:', permit.explain(editor, 'articles', 'delete'))`,
   name: 'Permission Checks',
 };

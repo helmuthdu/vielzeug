@@ -5,13 +5,11 @@ description: 'Variable Height with Measurement examples for virtualit.'
 
 ## Variable Height with Measurement
 
-## Problem
+### Problem
 
-Implement variable height with measurement in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+Row heights vary based on content (e.g., multi-line text, embedded images). The virtualizer cannot compute offsets upfront — it must accept measured heights reported after each row renders.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
+### Solution
 
 Report exact heights after rendering using `measure()`. All measurement calls within a single tick are coalesced into one rebuild.
 
@@ -52,18 +50,14 @@ const virt = createVirtualizer(scrollEl, {
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `measure(index, height)` must be called after the row's DOM is rendered and its height is stable. Calling it before render with an estimate triggers two layout passes per row.
+- Call `measure()` in `onMounted`/`firstUpdated` or a `ResizeObserver` — not in a scroll event handler, where it causes a measurement/layout loop.
+- If a row's height changes after initial measurement (e.g., a "show more" expansion), call `measure()` again. The virtualizer does not observe DOM height changes automatically.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
 - [Density Toggle (Compact / Comfortable)](./density-toggle-compact-comfortable.md)

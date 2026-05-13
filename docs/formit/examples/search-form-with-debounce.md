@@ -5,13 +5,11 @@ description: 'Search Form with Debounce examples for formit.'
 
 ## Search Form with Debounce
 
-## Problem
+### Problem
 
-Implement search form with debounce in a production-friendly way with `@vielzeug/formit` while keeping setup and cleanup explicit.
+A search input should trigger an API query as the user types, but not on every keystroke. Requests must be debounced so only the final value after a pause is sent, and stale responses must be ignored.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/formit` installed.
+### Solution
 
 Search form with debounced API calls.
 
@@ -29,10 +27,10 @@ const searchForm = createForm({
 let searchTimeout: ReturnType<typeof setTimeout>;
 
 // Subscribe and debounce search
-searchForm.subscribeForm(() => {
+searchForm.subscribe(() => {
   clearTimeout(searchTimeout);
 
-  const query = searchForm.get<string>('query');
+  const query = searchForm.get('query');
 
   if (!query || query.length < 2) {
     updateResultsUI([]);
@@ -59,18 +57,14 @@ function updateResultsUI(results: unknown[]) {
 }
 ```
 
-## Expected Output
+### Pitfalls
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- The debounced function captures the field value via closure. If the component unmounts between the delay and the function firing, the API call still runs and may update unmounted state. Cancel on unmount.
+- Using `subscribeForm` to trigger the search fires the callback on every field change, including programmatic writes. Add a dirty check if you only want user-initiated changes to trigger a search.
+- Each keystroke must cancel the previous pending debounce timer, not create a new one. Use a single stable debounced function reference rather than creating a new one per event.
 
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [CRUD Operations (Fetchit)](/fetchit/examples/crud-operations)
 
 - [Best Practices](./best-practices.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)

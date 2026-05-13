@@ -136,6 +136,4 @@ for (const [key, value] of c.entries()) {
 ## See Also
 
 - [memo](../function/memo.md): Memoize function results.
-- [merge](./merge.md): Deep merge objects.
-
-
+- [deepClone](./deepClone.md): Clone cached values before mutating them.

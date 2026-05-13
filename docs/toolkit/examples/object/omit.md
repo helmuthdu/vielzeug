@@ -20,8 +20,5 @@ const publicUser = omit(user, ['password']);
 ## Signature
 
 ```ts
-function omit<T extends Record<string, unknown>, K extends keyof T>(
-  obj: T,
-  omittedKeys: readonly K[],
-): Omit<T, K>;
+function omit<T extends Record<string, unknown>, K extends keyof T>(obj: T, omittedKeys: readonly K[]): Omit<T, K>;
 ```

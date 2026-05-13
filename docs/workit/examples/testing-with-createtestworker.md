@@ -5,13 +5,11 @@ description: 'Testing with createTestWorker examples for workit.'
 
 ## Testing with createTestWorker
 
-## Problem
+### Problem
 
-Implement testing with createTestWorker in a production-friendly way with `@vielzeug/workit` while keeping setup and cleanup explicit.
+You want to unit-test the logic inside a worker task function without spawning real Web Workers or relying on the browser's `Worker` API — running the task synchronously in the test process.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/workit` installed.
+### Solution
 
 ```ts
 import { createTestWorker } from '@vielzeug/workit/test';
@@ -57,21 +55,16 @@ describe('math worker', () => {
 });
 ```
 
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
 - Call history can be inspected for verification and debugging.
 - Errors are properly caught and tested.
 
-## Common Pitfalls
+### Pitfalls
 
-- Forgetting cleanup/dispose calls can leave test state hanging.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-- Relying on test worker for production behavior validation (tests run in-process, not in actual Workers).
+- `createTestWorker` runs the task function synchronously in the test process. If your task relies on browser-only APIs (e.g., `OffscreenCanvas`, `ImageData`), those are unavailable in a Node.js test environment.
+- `createTestWorker` does not enforce Worker serialization constraints. A task that passes non-serializable values (functions, class instances) will work in tests but fail at runtime with a real Worker.
+- Timeouts configured on the real `WorkerPool` are not honoured by `createTestWorker`. Test timeout behavior with a real worker and `vi.useFakeTimers` instead.
 
-## Related Recipes
+### Related
 
 - [Cancellable Batch](./cancellable-batch.md)
 - [Data Transformation Pipeline](./data-transformation-pipeline.md)

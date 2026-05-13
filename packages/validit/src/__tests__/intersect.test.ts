@@ -33,6 +33,16 @@ describe('v.intersect()', () => {
     expect(schema.safeParse({ id: 1 }).success).toBe(false);
   });
 
+    it('deep-merges nested object fields from all branches', () => {
+      const A = v.object({ nested: v.object({ a: v.string() }).relaxed() }).relaxed();
+      const B = v.object({ nested: v.object({ b: v.number() }).relaxed() }).relaxed();
+      const schema = v.intersect(A, B);
+      const result = schema.parse({ nested: { a: 'hello', b: 42 } });
+
+      expect((result as any).nested.a).toBe('hello');
+      expect((result as any).nested.b).toBe(42);
+    });
+
   it('accepts raw literal values as shorthand for v.literal()', () => {
     const schema = v.intersect('hello', 'hello');
 
@@ -43,8 +53,8 @@ describe('v.intersect()', () => {
 
 describe('v.intersect() — async', () => {
   it('runs async refinements on all branches', async () => {
-    const a = v.string().refineAsync(async (s) => s.length >= 3, 'Too short');
-    const b = v.string().refineAsync(async (s) => s.length <= 10, 'Too long');
+    const a = v.string().check(async (s) => s.length >= 3 || 'Too short');
+    const b = v.string().check(async (s) => s.length <= 10 || 'Too long');
     const schema = v.intersect(a, b);
 
     expect(await schema.parseAsync('hello')).toBe('hello');
@@ -52,7 +62,7 @@ describe('v.intersect() — async', () => {
   });
 
   it('refine() runs in parseAsync', async () => {
-    const schema = v.intersect(v.string(), v.string().min(1)).refine((v) => v !== 'forbidden', 'Forbidden value');
+    const schema = v.intersect(v.string(), v.string().min(1)).check((v) => v !== 'forbidden' || 'Forbidden value');
     const result = await schema.safeParseAsync('forbidden');
 
     expect(result.success).toBe(false);

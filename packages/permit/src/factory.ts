@@ -1,7 +1,7 @@
 import type {
   BoundPermit,
-  PermissionData,
   Permit,
+  PermitCheck,
   PermitDecision,
   PermitOptions,
   PermitRule,
@@ -11,13 +11,14 @@ import type {
 
 import { WILDCARD, ANONYMOUS } from './constants';
 
-type InternalRule<TAction extends string, TData extends PermissionData> = PermitRule<TAction, TData> & {
+type InternalRule<TAction extends string, TData> = PermitRule<TAction, TData> & {
   priority: number;
 };
 
-type CompiledEntry<TAction extends string = string, TData extends PermissionData = PermissionData> = {
+type CompiledEntry<TAction extends string = string, TData = unknown> = {
   rule: InternalRule<TAction, TData>;
   score: number;
+  source: PermitRule<TAction, TData>;
 };
 
 /**
@@ -31,9 +32,25 @@ function specificity(rule: { action: string; resource: string; role: string }): 
 /**
  * Validate essential runtime fields that can bypass static typing.
  */
-function validateRule<TAction extends string, TData extends PermissionData>(rule: PermitRule<TAction, TData>): void {
+function validateRule<TAction extends string, TData>(rule: PermitRule<TAction, TData>): void {
+  if (typeof rule.role !== 'string' || !rule.role.trim()) {
+    throw new Error('[permit] Rule.role must be a non-empty string');
+  }
+
+  if (typeof rule.resource !== 'string' || !rule.resource.trim()) {
+    throw new Error('[permit] Rule.resource must be a non-empty string');
+  }
+
+  if (typeof rule.action !== 'string' || !(rule.action as string).trim()) {
+    throw new Error('[permit] Rule.action must be a non-empty string');
+  }
+
   if (rule.effect !== 'allow' && rule.effect !== 'deny') {
     throw new Error('[permit] Rule.effect must be "allow" or "deny"');
+  }
+
+  if (rule.priority !== undefined && (typeof rule.priority !== 'number' || !Number.isFinite(rule.priority))) {
+    throw new Error('[permit] Rule.priority must be a finite number');
   }
 
   if (rule.when !== undefined && typeof rule.when !== 'function') {
@@ -63,32 +80,33 @@ function validateUserPrincipal(input: unknown): asserts input is UserPrincipal {
 /**
  * Compile a rule once so evaluation can stay minimal.
  */
-function compileEntry<TAction extends string, TData extends PermissionData>(
+function compileEntry<TAction extends string, TData>(
   source: PermitRule<TAction, TData>,
 ): CompiledEntry<TAction, TData> {
   validateRule<TAction, TData>(source);
 
+  const ruleSource: PermitRule<TAction, TData> = { ...source };
+
   const rule: InternalRule<TAction, TData> = {
-    ...source,
-    priority: source.priority ?? 0,
+    ...ruleSource,
+    priority: ruleSource.priority ?? 0,
   };
 
   return {
     rule,
     score: specificity(rule),
+    source: ruleSource,
   };
 }
 
-function cloneRule<TAction extends string, TData extends PermissionData>(
-  rule: InternalRule<TAction, TData>,
-): PermitRule<TAction, TData> {
+function cloneRule<TAction extends string, TData>(rule: PermitRule<TAction, TData>): PermitRule<TAction, TData> {
   return { ...rule };
 }
 
 /**
  * Check whether a rule applies to the current decision request.
  */
-function matchesRule<TAction extends string, TData extends PermissionData>(
+function matchesRule<TAction extends string, TData>(
   entry: CompiledEntry<TAction, TData>,
   principal: Principal,
   resource: string,
@@ -116,11 +134,54 @@ function matchesRule<TAction extends string, TData extends PermissionData>(
   return rule.when({ data, principal });
 }
 
-export function createPermit<TAction extends string = string, TData extends PermissionData = PermissionData>(
-  opts: PermitOptions<TAction, TData> = {},
+function matchesRuleScope<TAction extends string, TData>(
+  entry: CompiledEntry<TAction, TData>,
+  principal: Principal,
+  resource: string,
+): boolean {
+  const { rule } = entry;
+
+  if (principal === null) {
+    if (rule.role !== ANONYMOUS) return false;
+  } else {
+    if (rule.role === ANONYMOUS) return false;
+
+    if (rule.role !== WILDCARD && !principal.roles.includes(rule.role)) return false;
+  }
+
+  if (rule.resource !== WILDCARD && rule.resource !== resource) return false;
+
+  return true;
+}
+
+function matchesRuleData<TAction extends string, TData>(
+  entry: CompiledEntry<TAction, TData>,
+  principal: Principal,
+  data: TData | undefined,
+): boolean {
+  if (!entry.rule.when) {
+    return true;
+  }
+
+  if (principal === null) {
+    return false;
+  }
+
+  return entry.rule.when({ data, principal });
+}
+
+function validatePrincipal(principal: Principal): void {
+  if (principal !== null) {
+    validateUserPrincipal(principal);
+  }
+}
+
+export function createPermit<TAction extends string = string, TData = unknown>(
+  rules: readonly PermitRule<TAction, TData>[] = [],
+  options: PermitOptions<TAction, TData> = {},
 ): Permit<TAction, TData> {
-  const { initial = [], logger } = opts;
-  const entries: CompiledEntry<TAction, TData>[] = [];
+  const { logger } = options;
+  const entries: CompiledEntry<TAction, TData>[] = rules.map((rule) => compileEntry(rule));
 
   function evaluate(
     principal: Principal,
@@ -153,59 +214,133 @@ export function createPermit<TAction extends string = string, TData extends Perm
     return winner;
   }
 
+  function toDecision(winner: CompiledEntry<TAction, TData> | undefined): PermitDecision<TAction, TData> {
+    if (!winner) {
+      return { allowed: false, reason: 'no-matching-rule' };
+    }
+
+    if (winner.rule.effect === 'deny') {
+      return { allowed: false, reason: 'explicit-deny', rule: cloneRule(winner.source) };
+    }
+
+    return { allowed: true, rule: cloneRule(winner.source) };
+  }
+
+  function logDecision(
+    principal: Principal,
+    resource: string,
+    action: TAction,
+    data: TData | undefined,
+    winner: CompiledEntry<TAction, TData> | undefined,
+  ): void {
+    if (!logger) {
+      return;
+    }
+
+    logger({
+      action,
+      data,
+      decision: winner?.rule.effect ?? 'deny',
+      principal,
+      resource,
+      rule: winner ? cloneRule(winner.source) : undefined,
+    });
+  }
+
+  function decide(
+    principal: Principal,
+    resource: string,
+    action: TAction,
+    data?: TData,
+    options?: { log?: boolean; validated?: boolean },
+  ): PermitDecision<TAction, TData> {
+    if (!options?.validated) {
+      validatePrincipal(principal);
+    }
+
+    const winner = evaluate(principal, resource, action, data);
+
+    if (options?.log) {
+      logDecision(principal, resource, action, data, winner);
+    }
+
+    return toDecision(winner);
+  }
+
   function explain(
     principal: Principal,
     resource: string,
     action: TAction,
     data?: TData,
   ): PermitDecision<TAction, TData> {
-    // Validation once at the start
-    if (principal !== null) {
-      validateUserPrincipal(principal);
-    }
-
-    // Evaluate decision
-    const winner = evaluate(principal, resource, action, data);
-
-    // Log (centralized)
-    logger?.({
-      action,
-      data,
-      decision: winner?.rule.effect ?? 'deny',
-      principal,
-      resource,
-      rule: winner ? cloneRule(winner.rule) : undefined,
-    });
-
-    // Build decision result
-    let decision: PermitDecision<TAction, TData>;
-
-    if (!winner) {
-      decision = { allowed: false, reason: 'no-matching-rule' };
-    } else if (winner.rule.effect === 'deny') {
-      decision = { allowed: false, reason: 'explicit-deny', rule: cloneRule(winner.rule) };
-    } else {
-      decision = { allowed: true, rule: cloneRule(winner.rule) };
-    }
-
-    return decision;
+    return decide(principal, resource, action, data, { log: true });
   }
 
   function can(principal: Principal, resource: string, action: TAction, data?: TData): boolean {
-    return explain(principal, resource, action, data).allowed;
+    return decide(principal, resource, action, data, { log: true }).allowed;
   }
 
-  function canAll(principal: Principal, resource: string, actions: TAction[], data?: TData): boolean {
-    return actions.every((action) => can(principal, resource, action, data));
+  function canAll(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean {
+    if (actions.length === 0) {
+      return true;
+    }
+
+    validatePrincipal(principal);
+
+    return actions.every((action) => decide(principal, resource, action, data, { log: true, validated: true }).allowed);
   }
 
-  function canAny(principal: Principal, resource: string, actions: TAction[], data?: TData): boolean {
-    return actions.some((action) => can(principal, resource, action, data));
+  function canAny(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean {
+    if (actions.length === 0) {
+      return false;
+    }
+
+    validatePrincipal(principal);
+
+    return actions.some((action) => decide(principal, resource, action, data, { log: true, validated: true }).allowed);
   }
 
-  function allowedActions(principal: Principal, resource: string, data?: TData): TAction[] {
-    if (principal !== null) {
-      validateUserPrincipal(principal);
+  function checkAll(
+    principal: Principal,
+    checks: readonly PermitCheck<TAction, TData>[],
+  ): PermitDecision<TAction, TData>[] {
+    if (checks.length === 0) {
+      return [];
+    }
+
+    validatePrincipal(principal);
+
+    return checks.map((check) =>
+      decide(principal, check.resource, check.action, check.data, { log: true, validated: true }),
+    );
+  }
+
+  function uniqueActions(actions: readonly TAction[]): TAction[] {
+    const seen = new Set<TAction>();
+    const output: TAction[] = [];
+
+    for (const action of actions) {
+      if (seen.has(action)) continue;
+
+      seen.add(action);
+      output.push(action);
+    }
+
+    return output;
+  }
+
+  function allowedActionsFor(
+    principal: Principal,
+    resource: string,
+    data?: TData,
+    knownActions?: readonly TAction[],
+  ): TAction[] {
+    validatePrincipal(principal);
+
+    if (knownActions && knownActions.length > 0) {
+      return uniqueActions(knownActions).filter(
+        (action) => decide(principal, resource, action, data, { validated: true }).allowed,
+      );
     }
 
     const allowed: TAction[] = [];
@@ -223,7 +358,7 @@ export function createPermit<TAction extends string = string, TData extends Perm
 
       seenActions.add(action);
 
-      if (can(principal, resource, action, data)) {
+      if (decide(principal, resource, action, data, { validated: true }).allowed) {
         allowed.push(action);
       }
     }
@@ -231,78 +366,82 @@ export function createPermit<TAction extends string = string, TData extends Perm
     return allowed;
   }
 
-  function set(rule: PermitRule<TAction, TData> | readonly PermitRule<TAction, TData>[]): Permit<TAction, TData> {
-    const nextRules = Array.isArray(rule) ? rule : [rule];
-
-    for (const nextRule of nextRules) {
-      entries.push(compileEntry(nextRule));
-    }
-
-    return permit;
+  function allowedActions(
+    principal: Principal,
+    resource: string,
+    data?: TData,
+    knownActions?: readonly TAction[],
+  ): TAction[] {
+    return allowedActionsFor(principal, resource, data, knownActions);
   }
 
-  function forUser(principal: UserPrincipal, cache?: boolean): BoundPermit<TAction, TData> {
+  function rulesInScope(principal: Principal, resource: string, data?: TData): PermitRule<TAction, TData>[] {
+    validatePrincipal(principal);
+
+    const matchedRules: PermitRule<TAction, TData>[] = [];
+
+    for (const entry of entries) {
+      if (!matchesRuleScope(entry, principal, resource)) {
+        continue;
+      }
+
+      if (data !== undefined && !matchesRuleData(entry, principal, data)) {
+        continue;
+      }
+
+      matchedRules.push(cloneRule(entry.source));
+    }
+
+    return matchedRules;
+  }
+
+  function forUser(principal: UserPrincipal): BoundPermit<TAction, TData> {
     validateUserPrincipal(principal);
 
     const boundPrincipal: UserPrincipal = {
-      attributes: principal.attributes ? { ...principal.attributes } : undefined,
+      attributes: principal.attributes ? structuredClone(principal.attributes) : undefined,
       id: principal.id,
       roles: [...principal.roles],
     };
-    const decisionCache = cache ? new Map<string, PermitDecision<TAction, TData>>() : undefined;
-
-    function explainBound(resource: string, action: TAction, data?: TData): PermitDecision<TAction, TData> {
-      if (!decisionCache) {
-        return explain(boundPrincipal, resource, action, data);
-      }
-
-      const cacheKey = `${resource}:${action}:${JSON.stringify(data ?? null)}`;
-      const cached = decisionCache.get(cacheKey);
-
-      if (cached) {
-        return cached;
-      }
-
-      const decision = explain(boundPrincipal, resource, action, data);
-
-      decisionCache.set(cacheKey, decision);
-
-      return decision;
-    }
 
     function canBound(resource: string, action: TAction, data?: TData): boolean {
-      return explainBound(resource, action, data).allowed;
+      return decide(boundPrincipal, resource, action, data, { log: true, validated: true }).allowed;
     }
 
-    function canAllBound(resource: string, actions: TAction[], data?: TData): boolean {
-      return actions.every((action) => canBound(resource, action, data));
-    }
-
-    function canAnyBound(resource: string, actions: TAction[], data?: TData): boolean {
-      return actions.some((action) => canBound(resource, action, data));
-    }
-
-    function allowedActionsBound(resource: string, data?: TData): TAction[] {
-      const allowed: TAction[] = [];
-      const seenActions = new Set<TAction>();
-
-      for (const entry of entries) {
-        if (entry.rule.action === WILDCARD) continue;
-
-        const entryAction = entry.rule.action as TAction;
-
-        if (seenActions.has(entryAction)) continue;
-
-        if (!matchesRule(entry, boundPrincipal, resource, entryAction, data)) continue;
-
-        seenActions.add(entryAction);
-
-        if (canBound(resource, entryAction, data)) {
-          allowed.push(entryAction);
-        }
+    function canAllBound(resource: string, actions: readonly TAction[], data?: TData): boolean {
+      if (actions.length === 0) {
+        return true;
       }
 
-      return allowed;
+      return actions.every(
+        (action) => decide(boundPrincipal, resource, action, data, { log: true, validated: true }).allowed,
+      );
+    }
+
+    function canAnyBound(resource: string, actions: readonly TAction[], data?: TData): boolean {
+      if (actions.length === 0) {
+        return false;
+      }
+
+      return actions.some(
+        (action) => decide(boundPrincipal, resource, action, data, { log: true, validated: true }).allowed,
+      );
+    }
+
+    function allowedActionsBound(resource: string, data?: TData, knownActions?: readonly TAction[]): TAction[] {
+      return allowedActionsFor(boundPrincipal, resource, data, knownActions);
+    }
+
+    function explainBound(resource: string, action: TAction, data?: TData): PermitDecision<TAction, TData> {
+      return decide(boundPrincipal, resource, action, data, { log: true, validated: true });
+    }
+
+    function checkAllBound(checks: readonly PermitCheck<TAction, TData>[]): PermitDecision<TAction, TData>[] {
+      return checkAll(boundPrincipal, checks);
+    }
+
+    function rulesInScopeBound(resource: string, data?: TData): PermitRule<TAction, TData>[] {
+      return rulesInScope(boundPrincipal, resource, data);
     }
 
     const boundPerm: BoundPermit<TAction, TData> = {
@@ -310,33 +449,13 @@ export function createPermit<TAction extends string = string, TData extends Perm
       can: canBound,
       canAll: canAllBound,
       canAny: canAnyBound,
-      clear,
+      checkAll: checkAllBound,
       explain: explainBound,
       forUser,
-      replace,
-      rules,
-      set,
+      rulesInScope: rulesInScopeBound,
     };
 
     return boundPerm;
-  }
-
-  function clear(): Permit<TAction, TData> {
-    entries.length = 0;
-
-    return permit;
-  }
-
-  function rules(): PermitRule<TAction, TData>[] {
-    return entries.map((entry) => cloneRule(entry.rule));
-  }
-
-  function replace(nextRules: readonly PermitRule<TAction, TData>[]): Permit<TAction, TData> {
-    entries.length = 0;
-
-    set(nextRules);
-
-    return permit;
   }
 
   const permit: Permit<TAction, TData> = {
@@ -344,17 +463,11 @@ export function createPermit<TAction extends string = string, TData extends Perm
     can,
     canAll,
     canAny,
-    clear,
+    checkAll,
     explain,
     forUser,
-    replace,
-    rules,
-    set,
+    rulesInScope,
   };
-
-  if (initial.length > 0) {
-    replace(initial);
-  }
 
   return permit;
 }

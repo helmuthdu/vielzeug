@@ -3,48 +3,107 @@ title: Floatit — Lightweight floating element positioning
 description: Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="floatit" />
 
 <img src="/logo-floatit.svg" alt="Floatit logo" width="156" class="logo-highlight"/>
 
 # Floatit
 
-Floatit is a small DOM positioning engine for floating UI. It provides a direct API for computing positions, a higher-level API for applying styles, and middleware for collision handling, arrows, hiding, inline text anchors, and dynamic sizing.
+`@vielzeug/floatit` is a small DOM positioning engine for floating UI. It provides a direct API for computing positions, a high-level follow API, and middleware for collision handling, arrows, hiding, inline text anchors, and dynamic sizing.
+
+<!-- Search keywords: tooltip positioning, popover placement, floating element middleware. -->
+
+## Installation
+
+::: code-group
+
+```sh [pnpm]
+pnpm add @vielzeug/floatit
+```
+
+```sh [npm]
+npm install @vielzeug/floatit
+```
+
+```sh [yarn]
+yarn add @vielzeug/floatit
+```
+
+:::
 
 ## Quick Start
 
 ```ts
-import { arrow, autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { arrow, autoUpdate, flip, offset, shift, computePosition } from '@vielzeug/floatit';
 
 const reference = document.querySelector<HTMLElement>('#trigger')!;
 const floating = document.querySelector<HTMLElement>('#tooltip')!;
 const arrowEl = floating.querySelector<HTMLElement>('.arrow')!;
 
 const cleanup = autoUpdate(reference, floating, () => {
-  const result = positionFloat(reference, floating, {
+  const result = computePosition(reference, floating, {
     placement: 'top',
     middleware: [offset(8), flip(), shift({ padding: 6 }), arrow({ element: arrowEl, padding: 6 })],
   });
 
+  floating.style.left = `${result.x}px`;
+  floating.style.top = `${result.y}px`;
   floating.dataset.placement = result.placement;
 });
 
 cleanup();
 ```
 
+## Why Floatit?
+
+Positioning floating UI by hand quickly turns into repeated math for viewport boundaries, arrow offsets, and scroll/resize tracking.
+
+| Feature                  | Floatit                                       | Floating UI | Popper  |
+| ------------------------ | --------------------------------------------- | ----------- | ------- |
+| Bundle size              | <PackageInfo package="floatit" type="size" /> | ~10 kB      | ~6 kB   |
+| Middleware pipeline      | ✅                                            | ✅          | ✅      |
+| Direct compute API       | ✅                                            | ✅          | ✅      |
+| High-level follow API    | ✅                                            | ✅          | Partial |
+| Inline anchor middleware | ✅                                            | ✅          | ❌      |
+| Auto-update helpers      | ✅                                            | ✅          | ✅      |
+| Framework agnostic       | ✅                                            | ✅          | ✅      |
+| Zero dependencies        | ✅                                            | ✅          | ✅      |
+
+**Use Floatit when** you want a lightweight, DOM-first positioning engine with direct control and no framework adapter requirements.
+
+**Consider larger alternatives when** you need their existing integration ecosystem or migration compatibility.
+
 ## Features
 
 - `computePosition()` returns `x`, `y`, `placement`, and `middlewareData`
-- `positionFloat()` applies styles and returns the same full result
-- `float()` covers the common position-and-follow case with one call
+- `float()` covers the common position-and-follow case and applies `left`/`top` by default
 - `detectOverflow()` powers both built-in and custom overflow middleware
 - Built-in middleware: `offset`, `flip`, `autoPlacement`, `shift`, `size`, `arrow`, `hide`, and `inline`
 - Per-side padding support across overflow-aware middleware
 - `autoUpdate()` supports scroll, resize, ResizeObserver, visualViewport, and animation-frame tracking
 - Zero dependencies
 
-## When To Use Floatit
+## Compatibility
 
-Use Floatit when you want a small DOM-only positioning engine and direct control over your floating UI behavior.
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ❌      |
+| SSR         | ❌      |
+| Deno        | ❌      |
 
-Choose a larger library when you specifically need framework adapters or non-DOM platform abstractions.
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
+
+## See Also
+
+- [Buildit](/buildit/)
+- [Dragit](/dragit/)
+- [Craftit](/craftit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

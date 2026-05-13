@@ -3,54 +3,23 @@ import {
   onCleanup as _onCleanup,
   type CleanupFn,
   type EffectCallback,
-  type EffectOptions,
   type ReadonlySignal,
   type Subscription,
 } from '@vielzeug/stateit';
 
 import { CRAFTIT_ERRORS } from './errors';
-import { fire } from './internal';
+import { fire, listen as listenInternal } from './internal';
 
 export { fire };
 
 let currentElement: HTMLElement | null = null;
 let currentScope: RuntimeScope | null = null;
-let hasWarnedHandleOutsideScope = false;
 
 export type OnMountedCallback = () => CleanupFn | void;
-export type OnUpdatedCallback = () => void;
-
-/**
- * Mutable box shared across all RuntimeScope objects that belong to the same
- * component instance. Mutations to `queued` are visible everywhere that holds
- * the same reference, preventing duplicate microtask scheduling when effects
- * fire from mount callbacks.
- */
-export type UpdatedCallbackBox = {
-  callbacks: OnUpdatedCallback[];
-  queued: boolean;
-};
 
 export type RuntimeScope = {
   element: HTMLElement;
   mountCallbacks: OnMountedCallback[];
-  updated: UpdatedCallbackBox;
-};
-
-const scheduleUpdatedCallbacks = (scope: RuntimeScope): void => {
-  const { element, updated } = scope;
-
-  if (updated.callbacks.length === 0 || updated.queued) return;
-
-  updated.queued = true;
-
-  queueMicrotask(() => {
-    updated.queued = false;
-
-    for (const callback of updated.callbacks) {
-      withCurrentElement(element, callback);
-    }
-  });
 };
 
 export const withCurrentElement = <T>(el: HTMLElement, fn: () => T): T => {
@@ -108,80 +77,64 @@ export const onMounted = (fn: OnMountedCallback): void => {
   currentScope.mountCallbacks.push(fn);
 };
 
-/**
- * Register post-update work that runs after reactive updates flush.
- * Does NOT fire during setup-time effect initialization — only on subsequent
- * reactive re-runs.
- */
-export const onUpdated = (fn: OnUpdatedCallback): void => {
-  if (!currentScope) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
-
-  currentScope.updated.callbacks.push(fn);
-};
-
-export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => {
-  const scopeForEffect = currentScope;
-  // Guard: don't fire onUpdated callbacks during the initial setup-time run.
-  let mounted = false;
+export const effect = (fn: EffectCallback): Subscription => {
   const dispose = _effect(() => {
-    const cleanup = fn();
-
-    if (mounted && scopeForEffect) scheduleUpdatedCallbacks(scopeForEffect);
-
-    mounted = true;
-
-    return cleanup;
-  }, options);
+    return fn();
+  });
 
   tryRegisterCleanup(dispose);
 
   return dispose;
 };
 
-export function handle<K extends keyof HTMLElementEventMap>(
+export function on<K extends keyof HTMLElementEventMap>(
+  target: EventTarget | null | undefined,
+  event: K,
+  listener: (e: HTMLElementEventMap[K]) => void,
+  options?: AddEventListenerOptions,
+): void;
+export function on(
+  target: EventTarget | null | undefined,
+  event: string,
+  listener: EventListener,
+  options?: AddEventListenerOptions,
+): void {
+  if (!currentScope) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
+
+  if (!target) return;
+
+  const cleanup = listenInternal(target, event, listener, options);
+
+  tryRegisterCleanup(cleanup);
+}
+
+/**
+ * Attaches an event listener and returns a disposal function.
+ * Unlike `on()`, this does not require a runtime scope and cleanup must be
+ * managed manually by calling the returned function.
+ */
+export function listen<K extends keyof HTMLElementEventMap>(
   target: EventTarget | null | undefined,
   event: K,
   listener: (e: HTMLElementEventMap[K]) => void,
   options?: AddEventListenerOptions,
 ): () => void;
-export function handle(
+export function listen(
   target: EventTarget | null | undefined,
   event: string,
   listener: EventListener,
   options?: AddEventListenerOptions,
 ): () => void {
-  const cleanup = () => {
-    if (!target) return;
-
-    target.removeEventListener(event, listener, options);
-  };
-
-  if (!target) return cleanup;
-
-  target.addEventListener(event, listener, options);
-
-  const autoCleanupRegistered = tryRegisterCleanup(cleanup);
-
-  if (!autoCleanupRegistered && !hasWarnedHandleOutsideScope) {
-    hasWarnedHandleOutsideScope = true;
-
-    // Surface accidental scope leaks: listener is active, but caller must dispose manually.
-    console.warn(
-      '[craftit] handle() called outside component setup/scope; auto-cleanup is disabled. Call the returned cleanup function manually.',
-    );
-  }
-
-  return cleanup;
+  return listenInternal(target, event, listener, options);
 }
 
 export const onElement = <T extends HTMLElement>(
   ref: ReadonlySignal<T | null>,
   callback: (el: T) => CleanupFn | undefined | void,
-  options?: EffectOptions,
 ): Subscription => {
   return effect(() => {
     const el = ref.value;
 
     if (el) return callback(el);
-  }, options);
+  });
 };

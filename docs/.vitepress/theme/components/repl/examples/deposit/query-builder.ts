@@ -1,4 +1,29 @@
 export const queryBuilderExample = {
-  code: "import { createLocalStorage, table } from '@vielzeug/deposit'\n\nconst db = createLocalStorage({\n  dbName: 'shop',\n  schema: {\n    products: table('id'),\n  },\n})\n\nawait db.putAll('products', [\n  { id: 1, name: 'Laptop', price: 999, category: 'electronics', inStock: true },\n  { id: 2, name: 'Mouse', price: 29, category: 'electronics', inStock: true },\n  { id: 3, name: 'Desk', price: 299, category: 'furniture', inStock: false },\n  { id: 4, name: 'Chair', price: 199, category: 'furniture', inStock: true },\n  { id: 5, name: 'Monitor', price: 399, category: 'electronics', inStock: true },\n])\n\nconst affordable = await db\n  .query('products')\n  .equals('category', 'electronics')\n  .filter((p) => p.inStock && p.price < 500)\n  .orderBy('price', 'asc')\n  .toArray()\nconsole.log('Affordable electronics in stock:', affordable.map((p) => p.name))\n\nconst all = await db.query('products').toArray()\nconst grouped = all.reduce((acc, p) => { ;(acc[p.category] ??= []).push(p); return acc }, {})\nconsole.log('By category:')\nfor (const [category, items] of Object.entries(grouped)) {\n  console.log(`  ${category}: ${items.length} items`)\n}",
+  code: `import { createLocalStorage, table } from '@vielzeug/deposit'
+
+const schema = {
+  products: table('id'),
+}
+
+const db = createLocalStorage('shop', schema)
+
+await db.putAll('products', [
+  { id: 1, name: 'Laptop', price: 999, category: 'electronics', inStock: true },
+  { id: 2, name: 'Mouse', price: 29, category: 'electronics', inStock: true },
+  { id: 3, name: 'Desk', price: 299, category: 'furniture', inStock: false },
+  { id: 4, name: 'Chair', price: 199, category: 'furniture', inStock: true },
+  { id: 5, name: 'Monitor', price: 399, category: 'electronics', inStock: true },
+])
+
+const affordable = await db
+  .query('products')
+  .equals('category', 'electronics')
+  .filter((product) => product.inStock)
+  .between('price', 0, 500)
+  .orderBy('price', 'asc')
+  .toArray()
+
+console.log('Affordable electronics in stock:', affordable.map((product) => product.name))
+console.log('Matching count:', await db.query('products').equals('category', 'electronics').count())`,
   name: 'Query Builder - Advanced Queries',
 };

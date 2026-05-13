@@ -1,6 +1,7 @@
 import type { Issue, ParseResult, Schema as BaseSchema } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
+import { _messages } from '../messages';
 
 export class MapSchema<K, V> extends Schema<Map<K, V>> {
   private readonly keySchema: BaseSchema<K>;
@@ -15,7 +16,7 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
   private _invalidMap(value: unknown): { data: unknown; issues: Issue[] } {
     return {
       data: value,
-      issues: [{ code: ErrorCode.invalid_type, message: 'Expected map', path: [] }],
+      issues: [{ code: ErrorCode.invalid_type, message: _messages().map.type(), path: [] }],
     };
   }
 

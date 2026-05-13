@@ -5,13 +5,11 @@ description: 'Counter Component example for craftit.'
 
 ## Counter Component
 
-## Problem
+### Problem
 
-Implement a counter component in a production-friendly way with `@vielzeug/craftit`.
+You want to understand the minimal Craftit component before adding routing, directives, or shared state. A self-contained counter covers the full cycle: reactive signal, DOM binding, and event handling.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
+### Solution
 
 ```ts
 import { define, html, signal } from '@vielzeug/craftit';
@@ -30,19 +28,3 @@ define('simple-counter', {
   },
 });
 ```
-
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- Clicking `-` and `+` updates the displayed count reactively.
-
-## Common Pitfalls
-
-- Storing transient UI state in props is unnecessary; use `signal()` inside `setup()` for local state.
-- Forgetting cleanup/dispose calls can leak listeners or stale state; use `onCleanup()`, or `handle()` inside setup/scope so cleanup is registered automatically.
-
-## Related Recipes
-
-- [Prop helpers and raw PropsDef](./propsof-builder-api.md)
-- [Form-Associated Rating Input](./form-associated-rating-input.md)
-- [Context Provider and Consumer](./context-provider-and-consumer.md)

@@ -65,7 +65,7 @@ export class TupleSchema<T extends TupleSchemas, R extends Schema<any> | null = 
         issues: [
           {
             code: ErrorCode.invalid_length,
-            message: _messages().tuple.length({ exact: this.items.length }),
+            message: _messages().tuple.min({ min: this.items.length }),
             params: { minimum: this.items.length },
             path: [],
           },

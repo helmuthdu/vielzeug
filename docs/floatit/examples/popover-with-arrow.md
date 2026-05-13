@@ -5,10 +5,10 @@ description: 'Popover with Arrow examples for floatit.'
 
 ## Popover with Arrow
 
-## Runnable Example
+### Solution
 
 ```ts
-import { arrow, autoUpdate, flip, getArrowData, getHideData, hide, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { arrow, autoUpdate, flip, hide, offset, computePosition, shift } from '@vielzeug/floatit';
 
 const trigger = document.querySelector<HTMLElement>('#btn')!;
 const popover = document.querySelector<HTMLElement>('#popover')!;
@@ -17,24 +17,21 @@ const arrowEl = popover.querySelector<HTMLElement>('.arrow')!;
 let cleanup: (() => void) | null = null;
 
 function update() {
-  const result = positionFloat(trigger, popover, {
+  const result = computePosition(trigger, popover, {
     placement: 'top',
-    middleware: [
-      offset(12),
-      flip(),
-      shift({ padding: 8 }),
-      arrow({ element: arrowEl, padding: 8 }),
-      hide(),
-    ],
+    middleware: [offset(12), flip(), shift({ padding: 8 }), arrow({ element: arrowEl, padding: 8 }), hide()],
   });
+
+  popover.style.left = `${result.x}px`;
+  popover.style.top = `${result.y}px`;
 
   popover.dataset.placement = result.placement;
 
-  const arrowData = getArrowData(result);
+  const arrowData = result.middlewareData.arrow as { x?: number; y?: number } | undefined;
   arrowEl.style.left = arrowData?.x != null ? `${arrowData.x}px` : '';
   arrowEl.style.top = arrowData?.y != null ? `${arrowData.y}px` : '';
 
-  const hideData = getHideData(result);
+  const hideData = result.middlewareData.hide as { escaped?: boolean; referenceHidden?: boolean } | undefined;
   popover.style.visibility = hideData?.referenceHidden ? 'hidden' : 'visible';
 }
 

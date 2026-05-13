@@ -1,6 +1,6 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail, SwipeAxis } from '@vielzeug/craftit/controls';
 
-import { createId, define, handle, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
+import { createId, define, on, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
 import { createOverlayControl, createSwipeControl } from '@vielzeug/craftit/controls';
 
 import '../../content/icon/icon';
@@ -11,6 +11,7 @@ import styles from './drawer.css?inline';
 type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
 type DrawerSize = 'sm' | 'lg' | 'full';
 type DrawerBackdrop = 'opaque' | 'blur' | 'transparent';
+type DrawerDragHandlePlacement = 'outside' | 'inset';
 type DrawerSwipeConfig = {
   axis: SwipeAxis;
   closingDistance: (distance: number) => number;
@@ -60,6 +61,8 @@ export type BitDrawerProps = {
   backdrop?: DrawerBackdrop;
   /** Show the close (×) button in the header (default: true) */
   dismissible?: boolean;
+  /** Drag handle position used for swipe-to-close gestures */
+  'drag-handle-placement'?: DrawerDragHandlePlacement;
   /**
    * CSS selector for the element inside the drawer that should receive focus on open.
    * Defaults to native dialog focus management (first focusable element).
@@ -103,6 +106,7 @@ export type BitDrawerProps = {
  * @attr {string} title - Visible header title text
  * @attr {string} label - Invisible aria-label (for drawers without a visible title)
  * @attr {boolean} dismissible - Show the close (×) button (default: true)
+ * @attr {string} drag-handle-placement - 'outside' (default) | 'inset'
  * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {boolean} persistent - Prevent backdrop-click from closing (default: false)
  *
@@ -137,6 +141,7 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
   props: {
     backdrop: undefined,
     dismissible: true,
+    'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'outside'),
     'initial-focus': undefined,
     label: undefined,
     open: false,
@@ -157,8 +162,11 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
     let isSwipeClosing = false;
     let swipeCloseTimer: ReturnType<typeof setTimeout> | undefined;
 
-    // Header is visible when there is slot content, a title prop, or a close button
-    const hasHeader = () => slots.has('header').value || !!props.title.value || props.dismissible.value;
+    const getHeaderText = () => props.label.value ?? props.title.value ?? '';
+    const hasHeaderTitle = () => slots.has('header').value || !!getHeaderText();
+
+    // Header is visible when there is slot content, a text label, or a close button.
+    const hasHeader = () => hasHeaderTitle() || props.dismissible.value;
     const hasFooter = () => slots.has('footer').value;
 
     const getPlacement = (): DrawerPlacement => props.placement.value || 'right';
@@ -458,9 +466,9 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
         { immediate: true },
       );
 
-      handle(dialog, 'close', handleNativeClose);
-      handle(dialog, 'cancel', handleCancel);
-      handle(dialog, 'click', handleBackdropClick);
+      on(dialog, 'close', handleNativeClose);
+      on(dialog, 'cancel', handleCancel);
+      on(dialog, 'click', handleBackdropClick);
 
       // Drag-to-close handlers — scoped to the handle element only so interactions
       // with panel content don't accidentally start a drag.
@@ -468,10 +476,10 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       const dragHandleEl = panel?.querySelector<HTMLElement>('[part="drag-handle"]');
 
       if (dragHandleEl) {
-        handle(dragHandleEl, 'pointerdown', swipe.handlePointerDown);
-        handle(dragHandleEl, 'pointermove', swipe.handlePointerMove);
-        handle(dragHandleEl, 'pointerup', swipe.handlePointerUp);
-        handle(dragHandleEl, 'pointercancel', swipe.handlePointerCancel);
+        on(dragHandleEl, 'pointerdown', swipe.handlePointerDown);
+        on(dragHandleEl, 'pointermove', swipe.handlePointerMove);
+        on(dragHandleEl, 'pointerup', swipe.handlePointerUp);
+        on(dragHandleEl, 'pointercancel', swipe.handlePointerCancel);
       }
 
       return () => {
@@ -486,13 +494,13 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       <dialog
         ref=${dialogRef}
         aria-modal="true"
-        :aria-label="${props.label}"
+        :aria-label="${() => props.label.value ?? null}"
         :aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}">
         <div class="panel" part="panel" ref=${panelRef}>
           <div class="drag-handle" part="drag-handle" aria-label="Drag to close" role="button"></div>
           <div class="header" part="header" ?hidden=${() => !hasHeader()}>
-            <span class="header-title" id="${drawerLabelId}">
-              <slot name="header">${props.title}</slot>
+            <span class="header-title" id="${drawerLabelId}" ?hidden=${() => !hasHeaderTitle()}>
+              <slot name="header">${() => getHeaderText()}</slot>
             </span>
             <button
               class="close-btn"

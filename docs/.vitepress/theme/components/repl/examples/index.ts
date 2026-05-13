@@ -8,6 +8,7 @@ import { i18nitExamples } from './i18nit';
 import { logitExamples } from './logit';
 import { permitExamples } from './permit';
 import { routeitExamples } from './routeit';
+import { sourceitExamples } from './sourceit';
 import { stateitExamples } from './stateit';
 import { timitExamples } from './timit';
 import { toolkitExamples } from './toolkit';
@@ -27,6 +28,7 @@ export const examples = {
   logit: logitExamples,
   permit: permitExamples,
   routeit: routeitExamples,
+  sourceit: sourceitExamples,
   stateit: stateitExamples,
   timit: timitExamples,
   toolkit: toolkitExamples,

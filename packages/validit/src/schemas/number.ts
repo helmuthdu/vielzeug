@@ -1,8 +1,7 @@
 import type { MessageFn } from '../core';
 
-import { ErrorCode, Schema } from '../core';
+import { ErrorCode, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
-import { createConstraintValidator } from './constraint-factories';
 
 export class NumberSchema<Input = number> extends Schema<number, Input> {
   constructor() {
@@ -18,121 +17,162 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
     minimum: number,
     message: MessageFn<{ min: number; value: number }> = (ctx) => _messages().number.min(ctx),
   ): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { min: number; value: number }>({
-        check: (value) => value >= minimum,
-        code: ErrorCode.too_small,
-        context: { min: minimum },
-        message,
-        params: { minimum },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed >= minimum) return null;
+
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { min: minimum, value: typed }),
+          params: { minimum },
+          path,
+        },
+      ];
+    });
   }
 
   max(
     maximum: number,
     message: MessageFn<{ max: number; value: number }> = (ctx) => _messages().number.max(ctx),
   ): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { max: number; value: number }>({
-        check: (value) => value <= maximum,
-        code: ErrorCode.too_big,
-        context: { max: maximum },
-        message,
-        params: { maximum },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed <= maximum) return null;
+
+      return [
+        {
+          code: ErrorCode.too_big,
+          message: resolveMessage(message, { max: maximum, value: typed }),
+          params: { maximum },
+          path,
+        },
+      ];
+    });
   }
 
   int(message: MessageFn<{ value: number }> = () => _messages().number.int()): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { value: number }>({
-        check: (value) => Number.isInteger(value),
-        code: ErrorCode.not_integer,
-        message,
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (Number.isInteger(typed)) return null;
+
+      return [{ code: ErrorCode.invalid_integer, message: resolveMessage(message, { value: typed }), path }];
+    });
   }
 
   positive(message: MessageFn<{ value: number }> = () => _messages().number.positive()): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { value: number }>({
-        check: (value) => value > 0,
-        code: ErrorCode.too_small,
-        message,
-        params: { exclusive: true, minimum: 0 },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed > 0) return null;
+
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { value: typed }),
+          params: { exclusive: true, minimum: 0 },
+          path,
+        },
+      ];
+    });
   }
 
   negative(message: MessageFn<{ value: number }> = () => _messages().number.negative()): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { value: number }>({
-        check: (value) => value < 0,
-        code: ErrorCode.too_big,
-        message,
-        params: { exclusive: true, maximum: 0 },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed < 0) return null;
+
+      return [
+        {
+          code: ErrorCode.too_big,
+          message: resolveMessage(message, { value: typed }),
+          params: { exclusive: true, maximum: 0 },
+          path,
+        },
+      ];
+    });
   }
 
   nonNegative(message: MessageFn<{ value: number }> = () => _messages().number.nonNegative()): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { value: number }>({
-        check: (value) => value >= 0,
-        code: ErrorCode.too_small,
-        message,
-        params: { minimum: 0 },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed >= 0) return null;
+
+      return [
+        { code: ErrorCode.too_small, message: resolveMessage(message, { value: typed }), params: { minimum: 0 }, path },
+      ];
+    });
   }
 
   nonPositive(message: MessageFn<{ value: number }> = () => _messages().number.nonPositive()): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { value: number }>({
-        check: (value) => value <= 0,
-        code: ErrorCode.too_big,
-        message,
-        params: { maximum: 0 },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed <= 0) return null;
+
+      return [
+        { code: ErrorCode.too_big, message: resolveMessage(message, { value: typed }), params: { maximum: 0 }, path },
+      ];
+    });
   }
 
   multipleOf(
     step: number,
     message: MessageFn<{ step: number; value: number }> = (ctx) => _messages().number.multipleOf(ctx),
   ): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { step: number; value: number }>({
-        check: (value) => Math.abs(Math.round(value / step) - value / step) < 1e-9,
-        code: ErrorCode.not_multiple_of,
-        context: { step },
-        message,
-        params: { step },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (Math.abs(Math.round(typed / step) - typed / step) < 1e-9) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_multiple_of,
+          message: resolveMessage(message, { step, value: typed }),
+          params: { step },
+          path,
+        },
+      ];
+    });
   }
 
   safe(message: MessageFn<{ value: number }> = () => _messages().number.safe()): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { value: number }>({
-        check: (value) => Number.isSafeInteger(value),
-        code: ErrorCode.not_safe,
-        message,
-        params: { safe: true },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (Number.isSafeInteger(typed)) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_safe,
+          message: resolveMessage(message, { value: typed }),
+          params: { safe: true },
+          path,
+        },
+      ];
+    });
   }
 
-  finite(message: MessageFn<{ value: number }> = () => 'Must be finite'): this {
-    return this._addCoreValidator(
-      createConstraintValidator<number, { value: number }>({
-        check: (value) => Number.isFinite(value),
-        code: ErrorCode.not_finite,
-        message,
-        params: { finite: true },
-      }),
-    );
+  finite(message: MessageFn<{ value: number }> = () => _messages().number.finite()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (Number.isFinite(typed)) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_finite,
+          message: resolveMessage(message, { value: typed }),
+          params: { finite: true },
+          path,
+        },
+      ];
+    });
   }
 
   static coerce(): NumberSchema<unknown> {

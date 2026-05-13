@@ -20,8 +20,5 @@ const [even, odd] = partition([1, 2, 3, 4, 5], (n) => n % 2 === 0);
 ## Signature
 
 ```ts
-function partition<T>(
-  array: T[],
-  predicate: (item: T, index: number, array: T[]) => boolean,
-): [T[], T[]];
+function partition<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): [T[], T[]];
 ```

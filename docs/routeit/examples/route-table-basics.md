@@ -49,3 +49,9 @@ const href = router.url('userDetail', { id: '42' }, { tab: 'profile' });
 ```
 
 Use object key order to control precedence for ambiguous routes. Nested children get compound names like `dashboard.settings`.
+
+### Related
+
+- [Auth and Guards](./auth-and-guards.md)
+- [Page State (Stateit)](/stateit/examples/pattern-shared-module-store)
+- [Not Found and Error Boundary](./not-found-and-error-boundary.md)

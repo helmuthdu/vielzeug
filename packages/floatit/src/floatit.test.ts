@@ -8,13 +8,9 @@ import {
   detectOverflow,
   float,
   flip,
-  getArrowData,
-  getHideData,
-  getMiddlewareData,
   hide,
   inline,
   offset,
-  positionFloat,
   shift,
   size,
   type Middleware,
@@ -216,6 +212,23 @@ describe('offset', () => {
     expect(computePosition(reference, floating, { middleware: [offset(8)], placement: 'left' }).x).toBe(12);
     expect(computePosition(reference, floating, { middleware: [offset(8)], placement: 'right' }).x).toBe(208);
   });
+
+  it('supports cross-axis and function values', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 100, y: 200 }, { height: 30, width: 80 });
+    const objectValue = computePosition(reference, floating, {
+      middleware: [offset({ crossAxis: 5, mainAxis: 8 })],
+      placement: 'bottom',
+    });
+    const functionValue = computePosition(reference, floating, {
+      middleware: [offset((state) => ({ crossAxis: state.placement === 'right' ? 4 : 0, mainAxis: 8 }))],
+      placement: 'right',
+    });
+
+    expect(objectValue.x).toBe(115);
+    expect(objectValue.y).toBe(248);
+    expect(functionValue.x).toBe(208);
+    expect(functionValue.y).toBe(209);
+  });
 });
 
 // ─── flip ─────────────────────────────────────────────────────────────────────
@@ -386,7 +399,7 @@ describe('arrow', () => {
 describe('hide', () => {
   beforeEach(() => setViewport());
 
-  it('reports referenceHidden when the reference is fully clipped', () => {
+  it('reports referenceHidden and escaped by default', () => {
     const { floating, reference } = makeElements(
       { height: 40, width: 100, x: -140, y: 300 },
       { height: 30, width: 80 },
@@ -396,7 +409,7 @@ describe('hide', () => {
       placement: 'bottom',
     });
 
-    expect(result.middlewareData.hide).toMatchObject({ referenceHidden: true });
+    expect(result.middlewareData.hide).toMatchObject({ escaped: true, referenceHidden: true });
   });
 
   it('reports escaped when the floating element is fully clipped', () => {
@@ -405,7 +418,7 @@ describe('hide', () => {
       { height: 30, width: 200 },
     );
     const result = computePosition(reference, floating, {
-      middleware: [offset(100), hide({ strategy: 'escaped' })],
+      middleware: [offset(100), hide()],
       placement: 'right',
     });
 
@@ -437,24 +450,6 @@ describe('inline', () => {
 
     expect(result.x).toBe(210);
     expect(result.y).toBe(120);
-  });
-});
-
-// ─── positionFloat ────────────────────────────────────────────────────────────
-
-describe('positionFloat', () => {
-  beforeEach(() => setViewport());
-
-  it('applies left/top inline styles and returns the full result', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const result = positionFloat(reference, floating, {
-      middleware: [hide()],
-    });
-
-    expect(floating.style.left).toBe('210px');
-    expect(floating.style.top).toBe('340px');
-    expect(result).toMatchObject({ placement: 'bottom', x: 210, y: 340 });
-    expect(result.middlewareData.hide).toBeDefined();
   });
 });
 
@@ -511,11 +506,23 @@ describe('autoUpdate', () => {
 describe('float', () => {
   beforeEach(() => setViewport());
 
-  it('positions the floating element immediately', () => {
+  it('applies default left/top styles immediately', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const cleanup = float(reference, floating, { placement: 'bottom' });
 
+    expect(floating.style.left).toBe('210px');
     expect(floating.style.top).toBe('340px');
+    cleanup();
+  });
+
+  it('supports a custom apply function', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const apply = vi.fn();
+    const cleanup = float(reference, floating, { apply, middleware: [hide()] });
+
+    expect(apply).toHaveBeenCalledOnce();
+    expect(apply.mock.calls[0][0]).toMatchObject({ placement: 'bottom', x: 210, y: 340 });
+    expect(apply.mock.calls[0][0].middlewareData.hide).toBeDefined();
     cleanup();
   });
 });
@@ -544,12 +551,12 @@ describe('custom middleware', () => {
   });
 });
 
-// ─── typed middleware data helpers ───────────────────────────────────────────
+// ─── middleware data shape ───────────────────────────────────────────────────
 
-describe('middleware data helpers', () => {
+describe('middleware data', () => {
   beforeEach(() => setViewport());
 
-  it('returns typed middleware data for arrow/hide helpers', () => {
+  it('contains arrow and hide middleware data', () => {
     const { floating, reference } = makeElements(
       { height: 40, width: 100, x: -140, y: 300 },
       { height: 30, width: 80 },
@@ -559,12 +566,11 @@ describe('middleware data helpers', () => {
       placement: 'bottom',
     });
 
-    const arrowData = getArrowData(result);
-    const hideData = getHideData(result);
-    const genericArrowData = getMiddlewareData<{ centerOffset: number; x?: number; y?: number }>(result, 'arrow');
+    const arrowData = result.middlewareData.arrow as { centerOffset: number; x?: number; y?: number } | undefined;
+    const hideData = result.middlewareData.hide as { escaped?: boolean; referenceHidden?: boolean } | undefined;
 
     expect(arrowData?.centerOffset).toBeTypeOf('number');
     expect(hideData?.referenceHidden).toBe(true);
-    expect(genericArrowData?.centerOffset).toBe(0);
+    expect(arrowData?.centerOffset).toBe(0);
   });
 });

@@ -1,5 +1,5 @@
 import type { RouteMatcher, RouteRecord } from './router-internal';
-import type { QueryParams, RouteParams } from './types';
+import type { QueryParams, RouteParams, RouteTable } from './types';
 
 /** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {
@@ -23,7 +23,7 @@ export function compilePathMatcher(path: string): RouteMatcher {
     return {
       paramNames: [],
       pattern: /^\/$/,
-      prefixPattern: /^\//,
+      prefixPattern: /^\/$/,
     };
   }
 
@@ -36,12 +36,26 @@ export function compilePathMatcher(path: string): RouteMatcher {
     const segment = segments[i]!;
 
     if (segment === '*') {
+      if (i !== segments.length - 1) {
+        throw new Error(`[routeit] Wildcard "*" must be the final segment in path: ${path}`);
+      }
+
       regexParts.push('(?:/.*)?');
       break;
     }
 
     if (segment.startsWith(':') && segment.endsWith('*')) {
+      if (i !== segments.length - 1) {
+        throw new Error(`[routeit] Wildcard param must be final segment in path: ${path}`);
+      }
+
       const name = segment.slice(1, -1);
+
+      if (!/^\w+$/.test(name)) {
+        throw new Error(
+          `[routeit] Invalid param name ":${name}" in path "${path}". Param names must only contain word characters (a–z, A–Z, 0–9, _).`,
+        );
+      }
 
       paramNames.push(name);
       regexParts.push(i === segments.length - 1 ? '(?:/(.*))?' : '/(.*)');
@@ -51,6 +65,12 @@ export function compilePathMatcher(path: string): RouteMatcher {
 
     if (segment.startsWith(':')) {
       const name = segment.slice(1);
+
+      if (!/^\w+$/.test(name)) {
+        throw new Error(
+          `[routeit] Invalid param name ":${name}" in path "${path}". Param names must only contain word characters (a–z, A–Z, 0–9, _).`,
+        );
+      }
 
       paramNames.push(name);
       regexParts.push('/([^/]+)');
@@ -74,7 +94,10 @@ export function compilePathMatcher(path: string): RouteMatcher {
   };
 }
 
-export function matchRecord(pathname: string, record: RouteRecord): RouteParams | null {
+export function matchRecord<TRoutes extends RouteTable = RouteTable>(
+  pathname: string,
+  record: RouteRecord<TRoutes>,
+): RouteParams | null {
   const match = record.matcher.pattern.exec(pathname);
 
   if (!match) return null;
@@ -103,7 +126,23 @@ export function matchRoute(
   return { params: {} };
 }
 
-export function matchesPrefix(pathname: string, record: RouteRecord): boolean {
+export function matchRouteFor<TRoutes extends RouteTable = RouteTable>(
+  pathname: string,
+  records: readonly RouteRecord<TRoutes>[],
+): { params: RouteParams; record?: RouteRecord<TRoutes> } {
+  for (const record of records) {
+    const params = matchRecord(pathname, record);
+
+    if (params) return { params, record };
+  }
+
+  return { params: {} };
+}
+
+export function matchesPrefix<TRoutes extends RouteTable = RouteTable>(
+  pathname: string,
+  record: RouteRecord<TRoutes>,
+): boolean {
   return record.matcher.prefixPattern.test(pathname);
 }
 

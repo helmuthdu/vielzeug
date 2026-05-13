@@ -5,13 +5,11 @@ description: 'Stores examples for stateit.'
 
 ## Stores
 
-## Problem
+### Problem
 
-Implement stores in a production-friendly way with `@vielzeug/stateit` while keeping setup and cleanup explicit.
+You have several related signals and computed values for a single feature. Keeping them as loose module-level variables makes the boundaries unclear — grouping them into a store object organizes ownership.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/stateit` installed.
+### Solution
 
 ### Basic Store
 
@@ -41,16 +39,14 @@ cart.reset();
 
 ---
 
-### Slice Watch via `computed()` + `watch()`
+### Slice Watch via Getter + `watch()`
 
 ```ts
-import { store, watch, computed } from '@vielzeug/stateit';
+import { store, watch } from '@vielzeug/stateit';
 
 const user = store({ id: 1, name: 'Alice', role: 'admin' });
 
-// Only fires when `name` changes — unrelated updates are ignored
-const nameSignal = computed(() => user.value.name);
-const sub = watch(nameSignal, (name, prev) => {
+const sub = watch(() => user.value.name, (name, prev) => {
   console.log('name:', prev, '→', name);
 });
 
@@ -58,7 +54,6 @@ user.patch({ role: 'editor' }); // ← does NOT fire (name unchanged)
 user.patch({ name: 'Bob' }); // → "name: Alice → Bob"
 
 sub.dispose();
-nameSignal.dispose();
 ```
 
 ---
@@ -68,6 +63,8 @@ nameSignal.dispose();
 `reset()` restores the state passed to `store()` and protects it from external mutation:
 
 ```ts
+import { store } from '@vielzeug/stateit';
+
 const s = store({ count: 0, label: 'default' });
 s.patch({ count: 10, label: 'modified' });
 console.log(s.value); // { count: 10, label: 'modified' }
@@ -76,19 +73,17 @@ s.reset();
 console.log(s.value); // { count: 0, label: 'default' }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Computed values are recalculated lazily when accessed, not eagerly when dependencies change. Reading a computed in a `setTimeout` may return a stale value if it has not been accessed since the last signal update.
+- Exporting a writable store directly allows external code to mutate it and bypass your invariants. Export `readonly(store)` and explicit mutation functions instead.
+- Creating a store inside a factory function called multiple times creates independent instances. This is correct for per-component stores but wrong for shared module stores — create module-level stores outside any function.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+### Related
+- [Signals](./signals)
+- [Craftit Reactivity](/craftit/)
 
-## Related Recipes
-
-- [Framework Integration](./framework-integration.md)
+- [Usage Guide](../usage.md#framework-integration)
 - [Pattern: Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)
 - [Pattern: Async Workflows with watch](./pattern-nextvalue-in-async-workflows.md)

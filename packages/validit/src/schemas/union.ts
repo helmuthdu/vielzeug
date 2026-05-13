@@ -26,17 +26,19 @@ export class UnionSchema<T extends readonly Schema<any>[]> extends Schema<InferO
   }
 
   protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    const branchResults = this.schemas.map((s) => s.safeParse(value));
-    const success = branchResults.find((r) => r.success);
+    const branchErrors: Issue[][] = [];
 
-    if (success) {
-      return { data: (success as { data: InferOutput<T[number]> }).data, issues: [] };
+    for (const schema of this.schemas) {
+      const result = schema.safeParse(value);
+
+      if (result.success) {
+        return { data: result.data, issues: [] };
+      }
+
+      branchErrors.push(result.error.issues);
     }
 
-    return this._invalidUnionResult(
-      value,
-      branchResults.map((r) => (!r.success ? r.error.issues : [])),
-    );
+    return this._invalidUnionResult(value, branchErrors);
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
@@ -45,9 +47,7 @@ export class UnionSchema<T extends readonly Schema<any>[]> extends Schema<InferO
     for (const schema of this.schemas) {
       const result = await schema.safeParseAsync(value);
 
-      if (result.success) {
-        return { data: result.data, issues: [] };
-      }
+      if (result.success) return { data: result.data, issues: [] };
 
       branchErrors.push(result.error.issues);
     }

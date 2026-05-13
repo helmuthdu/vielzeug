@@ -3,22 +3,9 @@
  * Tests for the core HTML template system, attribute binding, event handling, and lifecycle
  */
 
-import { computed, define, html, signal, type ComponentDefinition } from '../index';
-import { fire, mount, type MountSetup } from '../testing';
-
-const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinition, 'setup'> = {}) =>
-  define(tag, {
-    ...options,
-    setup: (props, ctx) => {
-      const result = setup(props, ctx);
-
-      if (typeof result === 'object' && result && 'render' in result) {
-        return result;
-      }
-
-      return () => result;
-    },
-  });
+import { computed, html, signal } from '../index';
+import { fire, mount } from '../testing';
+import { register } from './test-utils';
 
 describe('Template: HTML System', () => {
   describe('html Tagged Template', () => {

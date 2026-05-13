@@ -1,8 +1,5 @@
 import { createMemoryHistory, createRouter } from '../router';
-
-async function settle(): Promise<void> {
-  await new Promise<void>((r) => setTimeout(r, 10));
-}
+import { settle } from './test-utils';
 
 describe('lazy routes', () => {
   it('loads handler from lazy module on first navigation', async () => {
@@ -78,5 +75,110 @@ describe('lazy routes', () => {
     await settle();
     expect(router.state.matches.at(-1)?.meta).toEqual({ title: 'Lazy Page' });
     router.dispose();
+  });
+
+  it('keeps lazy hydration consistent across overlapping navigations', async () => {
+    let resolveLazy: (() => void) | null = null;
+    const lazyReady = new Promise<void>((resolve) => {
+      resolveLazy = resolve;
+    });
+    const dataFn = vi.fn(async () => ({ loaded: true }));
+    const handler = vi.fn();
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: {
+          lazy: async () => {
+            await lazyReady;
+
+            return { data: dataFn, handler };
+          },
+          path: '/page/:id',
+        },
+      },
+    });
+
+    await settle();
+
+    const first = router.navigate({ path: '/page/a' });
+    const second = router.navigate({ path: '/page/b' });
+
+    resolveLazy?.();
+
+    await Promise.all([first, second]);
+
+    expect(dataFn).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(router.state.location.pathname).toBe('/page/b');
+    router.dispose();
+  });
+
+  it('retries the lazy factory after a failed import', async () => {
+    let attempt = 0;
+    const handler = vi.fn();
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: {
+          lazy: async () => {
+            attempt++;
+
+            if (attempt === 1) throw new Error('network error');
+
+            return { handler };
+          },
+          path: '/page',
+        },
+      },
+    });
+
+    await settle();
+
+    // First navigation fails because the lazy factory throws.
+    await expect(router.navigate({ path: '/page' })).rejects.toThrow('network error');
+    expect(attempt).toBe(1);
+    expect(handler).not.toHaveBeenCalled();
+
+    // Second navigation retries; record must not be permanently poisoned.
+    await router.navigate({ path: '/page' });
+    expect(attempt).toBe(2);
+    expect(handler).toHaveBeenCalledTimes(1);
+    router.dispose();
+  });
+
+  it('dispose during in-flight navigation stops state updates', async () => {
+    // Use a data loader so timing is controlled via settle() rather than
+    // synchronising with internal microtask scheduling in #hydrateLazy.
+    let resolveData!: (v: unknown) => void;
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: {
+          data: () => new Promise<unknown>((resolve) => { resolveData = resolve; }),
+          path: '/page',
+        },
+      },
+    });
+
+    await settle();
+
+    const nav = router.navigate({ path: '/page' });
+
+    // Let the navigation reach the data-loading phase before we dispose.
+    await settle();
+
+    router.dispose();
+    resolveData({ ok: true });
+
+    await nav.catch(() => undefined);
+
+    // After dispose, the router is dead; subscriptions must throw.
+    expect(() => router.subscribe(vi.fn())).toThrow('[routeit] Router is disposed');
   });
 });

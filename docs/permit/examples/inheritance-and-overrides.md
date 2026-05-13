@@ -10,11 +10,10 @@ description: 'Model inheritance-like behavior with explicit priorities and deter
 ```ts
 import { createPermit } from '@vielzeug/permit';
 
-const permit = createPermit();
-
-permit
-  .set({ role: 'staff', resource: 'posts', action: 'read', effect: 'allow', priority: 10 })
-  .set({ role: 'suspended', resource: 'posts', action: 'read', effect: 'deny', priority: 100 });
+const permit = createPermit([
+  { role: 'staff', resource: 'posts', action: 'read', effect: 'allow', priority: 10 },
+  { role: 'suspended', resource: 'posts', action: 'read', effect: 'deny', priority: 100 },
+]);
 
 // The result is deterministic regardless of role array ordering.
 permit.can({ id: 'u1', roles: ['staff', 'suspended'] }, 'posts', 'read'); // false

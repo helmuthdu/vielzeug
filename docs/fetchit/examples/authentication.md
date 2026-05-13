@@ -5,13 +5,11 @@ description: 'Authentication examples for fetchit.'
 
 ## Authentication
 
-## Problem
+### Problem
 
-Implement authentication in a production-friendly way with `@vielzeug/fetchit` while keeping setup and cleanup explicit.
+Every request to your API needs a valid `Authorization` header, and when the server responds with 401 the token must be refreshed and the original request retried — without duplicating this logic at each call site.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/fetchit` installed.
+### Solution
 
 ```ts
 const api = createApi({ baseUrl: 'https://api.example.com' });
@@ -30,7 +28,7 @@ function logout() {
 ### Auto Token Refresh via Interceptor
 
 ```ts
-const dispose = api.use(async (ctx, next) => {
+const stopRefreshing = api.use(async (ctx, next) => {
   try {
     return await next(ctx);
   } catch (err) {
@@ -46,18 +44,16 @@ const dispose = api.use(async (ctx, next) => {
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Storing the auth token in a module-level variable leaks across requests in SSR environments. Use request-scoped storage (e.g., `AsyncLocalStorage`) in server contexts.
+- A token refresh race condition occurs when two concurrent 401s both start a refresh. Guard with a shared in-flight promise: the first refresh stores it; subsequent calls await the same promise.
+- After a successful refresh, the interceptor must replay the original failed request with the new token — not just update the global header for future requests.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Request Middleware Logging (Logit)](/logit/examples/request-middleware)
+- [RBAC Guards (Permit)](/permit/)
 
 - [CRUD Operations](./crud-operations.md)
 - [Disposal](./disposal.md)

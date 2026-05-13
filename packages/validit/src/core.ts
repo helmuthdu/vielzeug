@@ -5,25 +5,24 @@ import { _messages } from './messages';
 export const ErrorCode = {
   custom: 'custom',
   invalid_base64: 'invalid_base64',
-  invalid_bigint: 'invalid_bigint',
   invalid_date: 'invalid_date',
   invalid_duration: 'invalid_duration',
   invalid_enum: 'invalid_enum',
+  invalid_finite: 'invalid_finite',
+  invalid_integer: 'invalid_integer',
+  invalid_keys: 'invalid_keys',
   invalid_length: 'invalid_length',
   invalid_literal: 'invalid_literal',
+  invalid_multiple_of: 'invalid_multiple_of',
+  invalid_safe: 'invalid_safe',
   invalid_string: 'invalid_string',
   invalid_type: 'invalid_type',
   invalid_union: 'invalid_union',
+  invalid_unique: 'invalid_unique',
   invalid_url: 'invalid_url',
   invalid_variant: 'invalid_variant',
-  not_finite: 'not_finite',
-  not_integer: 'not_integer',
-  not_multiple_of: 'not_multiple_of',
-  not_safe: 'not_safe',
-  not_unique: 'not_unique',
   too_big: 'too_big',
   too_small: 'too_small',
-  unrecognized_keys: 'unrecognized_keys',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -39,42 +38,113 @@ export type Issue = {
   path: (string | number)[];
 };
 
-export type ValidateFn = (value: unknown, path: (string | number)[]) => Issue[] | null;
-export type AsyncValidateFn = (value: unknown, path: (string | number)[]) => Promise<Issue[] | null>;
+/** A validator function. May return issues synchronously or as a Promise for async validation. */
+export type ValidateFn = (value: unknown, path: (string | number)[]) => Issue[] | null | Promise<Issue[] | null>;
 
 type Preprocessor = (value: unknown) => unknown;
 type Postprocessor = (value: unknown) => unknown;
 
 type PreparedInput = { skip: true; value: null | undefined } | { skip: false; value: unknown };
 
-interface SchemaState {
-  asyncValidators: AsyncValidateFn[];
+export type CheckContext = { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void };
+
+/**
+ * Return type for `.check()` callbacks.
+ *
+ * - `void | null | undefined | true` — validation passed
+ * - `false` — validation failed; uses the default "Invalid value" message
+ * - `string` — validation failed; the string becomes the error message
+ *
+ * Use `ctx.addIssue()` for structured errors with custom codes and params.
+ */
+export type CheckFnResult = void | null | undefined | boolean | string;
+
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value == null || typeof value !== 'object') return false;
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return prototype === Object.prototype || prototype === null;
+}
+
+function resolveIssuePath(basePath: (string | number)[], issuePath?: (string | number)[]): (string | number)[] {
+  return issuePath === undefined ? basePath : [...basePath, ...issuePath];
+}
+
+function materializeValue<T>(value: T): T {
+  if (value == null || typeof value !== 'object') return value;
+
+  if (Array.isArray(value)) {
+    return value.map((item) => materializeValue(item)) as T;
+  }
+
+  if (value instanceof Date) {
+    return new Date(value.getTime()) as T;
+  }
+
+  if (value instanceof Map) {
+    const out = new Map<unknown, unknown>();
+
+    for (const [key, mapValue] of value.entries()) {
+      out.set(materializeValue(key), materializeValue(mapValue));
+    }
+
+    return out as T;
+  }
+
+  if (value instanceof Set) {
+    return new Set([...value.values()].map((item) => materializeValue(item))) as T;
+  }
+
+  if (isPlainObject(value)) {
+    const out: Record<string, unknown> = {};
+
+    for (const [key, entry] of Object.entries(value)) {
+      out[key] = materializeValue(entry);
+    }
+
+    return out as T;
+  }
+
+  // Preserve unsupported runtime objects (functions, class instances, DOM handles, etc.)
+  // without throwing. Users can pass factories for stricter per-call construction.
+  return value;
+}
+
+interface SchemaState<TOutput = unknown> {
+  /**
+   * Framework-defined validators passed to the constructor (type checks, coercions).
+   * Always run first, sequentially, with early-exit on invalid_type.
+   */
   coreValidators: ValidateFn[];
+  /**
+   * User-added validators from _addValidator() — constraint methods (.min, .max, .email…)
+   * and .check() callbacks. Run after coreValidators pass.
+   * In async contexts these run in parallel.
+   */
+  validators: ValidateFn[];
   postprocessors: Postprocessor[];
   preprocessors: Preprocessor[];
-  userValidators: ValidateFn[];
   isOptional: boolean;
   isNullable: boolean;
   description?: string;
-  defaultValue?: () => any;
-  catch?: () => any;
+  defaultValue?: () => TOutput;
+  catch?: () => TOutput;
 }
 
-function defaultState(): SchemaState {
+function defaultState<TOutput>(): SchemaState<TOutput> {
   return {
-    asyncValidators: [],
     coreValidators: [],
     isNullable: false,
     isOptional: false,
     postprocessors: [],
     preprocessors: [],
-    userValidators: [],
+    validators: [],
   };
 }
 
-function cloneState(state: SchemaState): SchemaState {
+function cloneState<TOutput>(state: SchemaState<TOutput>): SchemaState<TOutput> {
   return {
-    asyncValidators: [...state.asyncValidators],
     catch: state.catch,
     coreValidators: [...state.coreValidators],
     defaultValue: state.defaultValue,
@@ -83,7 +153,7 @@ function cloneState(state: SchemaState): SchemaState {
     isOptional: state.isOptional,
     postprocessors: [...state.postprocessors],
     preprocessors: [...state.preprocessors],
-    userValidators: [...state.userValidators],
+    validators: [...state.validators],
   };
 }
 
@@ -105,6 +175,18 @@ function formatIssues(issues: Issue[]): string {
     .join('\n');
 }
 
+function normalizeCheckResult(result: CheckFnResult, path: (string | number)[], ctxIssues: Issue[]): Issue[] | null {
+  const issues = [...ctxIssues];
+
+  if (result === false) {
+    issues.push({ code: ErrorCode.custom, message: _messages().check.default(), path });
+  } else if (typeof result === 'string') {
+    issues.push({ code: ErrorCode.custom, message: result, path });
+  }
+
+  return issues.length ? issues : null;
+}
+
 export class ValidationError extends Error {
   readonly issues: Issue[];
 
@@ -120,8 +202,9 @@ export class ValidationError extends Error {
   }
 
   /**
-   * Returns flat field/form error maps — ready for form UIs without boilerplate.
+   * Returns flat field/form error maps ready for form UIs.
    * `fieldErrors` keys are full dotted paths (e.g. `"address.zip"`).
+   * Fields may have multiple errors.
    */
   flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] } {
     const fieldErrors: Record<string, string[]> = {};
@@ -142,12 +225,15 @@ export class ValidationError extends Error {
     return { fieldErrors, formErrors };
   }
 
-  /** Like flatten() but returns only the first error per field for form UIs. */
+  /**
+   * Like `flatten()` but keeps only the first error per field.
+   * Convenient for single-error-per-field form UIs.
+   */
   flattenFirst(): { fieldErrors: Record<string, string>; formErrors: string[] } {
     const { fieldErrors, formErrors } = this.flatten();
 
     return {
-      fieldErrors: Object.fromEntries(Object.entries(fieldErrors).map(([k, v]) => [k, v[0]])),
+      fieldErrors: Object.fromEntries(Object.entries(fieldErrors).map(([k, v]) => [k, v[0]!])),
       formErrors,
     };
   }
@@ -166,9 +252,8 @@ export class ValidationError extends Error {
 
       for (const segment of issue.path) {
         const key = String(segment);
-        const existing = node[key];
 
-        if (!existing || Array.isArray(existing)) {
+        if (!node[key]) {
           node[key] = { _errors: [] };
         }
 
@@ -192,36 +277,28 @@ export type FormattedErrors = {
 /* -------------------- Base Schema -------------------- */
 
 export class Schema<Output = unknown, Input = Output> {
-  protected state: SchemaState;
+  protected state: SchemaState<Output>;
 
   constructor(coreValidators: ValidateFn[] = []) {
     this.state = {
-      ...defaultState(),
+      ...defaultState<Output>(),
       coreValidators: [...coreValidators],
     };
   }
 
   parse(value: unknown): Output {
-    if (this._hasAsyncValidators()) {
-      throw new Error('Schema contains async validators. Use parseAsync() or safeParseAsync() instead of parse().');
-    }
-
     return this._withCatch(() => {
       const prepared = this._prepareInput(value);
 
       if (prepared.skip) return prepared.value as Output;
 
-      // Phase 3: Core validation
       const core = this._parseValueSync(prepared.value);
-      const hasInvalidTypeIssue = core.issues.some((issue) => issue.code === ErrorCode.invalid_type);
-
-      // Phase 4: User validators
-      const userIssues = !hasInvalidTypeIssue ? this._runUserValidators(core.data) : [];
-      const allIssues = [...core.issues, ...userIssues];
+      const hasInvalidType = core.issues.some((i) => i.code === ErrorCode.invalid_type && i.path.length === 0);
+      const validationIssues = !hasInvalidType ? this._runSyncValidators(core.data) : [];
+      const allIssues = [...core.issues, ...validationIssues];
 
       if (allIssues.length) throw new ValidationError(allIssues);
 
-      // Phase 5: Postprocess
       return this._runPostprocessors(core.data) as Output;
     });
   }
@@ -243,12 +320,9 @@ export class Schema<Output = unknown, Input = Output> {
       if (prepared.skip) return prepared.value as Output;
 
       const core = await this._parseValueAsync(prepared.value);
-      const hasInvalidTypeIssue = core.issues.some((issue) => issue.code === ErrorCode.invalid_type);
-
-      const canRunUserValidators = !hasInvalidTypeIssue;
-      const syncIssues = canRunUserValidators ? this._runUserValidators(core.data) : [];
-      const asyncIssues = canRunUserValidators ? await this._runAsyncValidators(core.data) : [];
-      const allIssues = [...core.issues, ...syncIssues, ...asyncIssues];
+      const hasInvalidType = core.issues.some((i) => i.code === ErrorCode.invalid_type && i.path.length === 0);
+      const validationIssues = !hasInvalidType ? await this._runAllValidators(core.data) : [];
+      const allIssues = [...core.issues, ...validationIssues];
 
       if (allIssues.length) throw new ValidationError(allIssues);
 
@@ -266,78 +340,47 @@ export class Schema<Output = unknown, Input = Output> {
     }
   }
 
-  /** Sync-only custom validator. Throws at first parse if given an async function. */
-  refine(
-    check: (value: Output) => boolean,
-    message: MessageFn<{ value: Output }> = () => _messages().refine.default(),
-  ): this {
-    return this.superRefine((value, ctx) => {
-      const result: unknown = check(value);
+  /**
+   * Adds a custom validation step.
+   *
+   * The callback receives the typed value and a `ctx` object.
+   * Return `void`/`null`/`undefined`/`true` to pass.
+   * Return `false` to fail with the default message.
+   * Return a `string` to fail with that string as the message.
+   * Use `ctx.addIssue()` for structured errors with custom codes and params.
+   *
+   * Async callbacks (or callbacks returning a Promise) are supported
+   * but require `parseAsync()` / `safeParseAsync()`.
+   *
+   * @example
+   * // Inline condition
+   * v.string().check(s => s.startsWith('http') || 'Must start with http')
+   *
+   * // Async check
+   * v.string().check(async (id) => await exists(id) || 'Not found')
+   *
+   * // Structured error via ctx
+   * v.string().check((s, ctx) => { ctx.addIssue({ code: 'custom', message: '...' }) })
+   */
+  check(fn: (value: Output, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
+    const validator: ValidateFn = (value, path) => {
+      const ctxIssues: Issue[] = [];
+      const ctx: CheckContext = {
+        addIssue: (issue) => {
+          ctxIssues.push({ ...issue, path: resolveIssuePath(path, issue.path) });
+        },
+      };
+
+      const result = fn(value as Output, ctx);
 
       if (result instanceof Promise) {
-        throw new Error('refine() only accepts sync functions. Use refineAsync() for async validation.');
+        return result.then((r) => normalizeCheckResult(r, path, ctxIssues));
       }
 
-      if (!result) {
-        ctx.addIssue({ code: ErrorCode.custom, message: resolveMessage(message, { value }) });
-      }
-    });
-  }
+      return normalizeCheckResult(result, path, ctxIssues);
+    };
 
-  /** Async custom validator — deferred to parseAsync(). */
-  refineAsync(
-    check: (value: Output) => Promise<boolean>,
-    message: MessageFn<{ value: Output }> = () => _messages().refine.default(),
-  ): this {
-    return this.superRefineAsync(async (value, ctx) => {
-      const ok = await check(value as Output);
-
-      if (!ok) {
-        ctx.addIssue({ code: ErrorCode.custom, message: resolveMessage(message, { value: value as Output }) });
-      }
-    });
-  }
-
-  /** Sync multi-issue validator with full path/code control. */
-  superRefine(
-    check: (
-      value: Output,
-      ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
-    ) => void,
-  ): this {
-    return this._addUserValidator((value, path) => {
-      const issues: Issue[] = [];
-      const ctx = {
-        addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => {
-          issues.push({ ...issue, path: issue.path ?? path });
-        },
-      };
-
-      check(value as Output, ctx);
-
-      return issues.length ? issues : null;
-    });
-  }
-
-  /** Async multi-issue validator with full path/code control. */
-  superRefineAsync(
-    check: (
-      value: Output,
-      ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
-    ) => Promise<void>,
-  ): this {
-    return this._addAsyncValidator(async (value, path) => {
-      const issues: Issue[] = [];
-      const ctx = {
-        addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => {
-          issues.push({ ...issue, path: issue.path ?? path });
-        },
-      };
-
-      await check(value as Output, ctx);
-
-      return issues.length ? issues : null;
-    });
+    return this._addValidator(validator);
   }
 
   /** Allows undefined. */
@@ -377,20 +420,30 @@ export class Schema<Output = unknown, Input = Output> {
     return cloned;
   }
 
+  /**
+   * Supplies a value when input is `undefined`.
+   * Non-function values are materialized per parse call to avoid shared mutable references.
+   */
   default(defaultValue: Output | (() => Output)): this {
     const cloned = this._clone();
 
     cloned.state.defaultValue =
-      typeof defaultValue === 'function' ? (defaultValue as () => Output) : () => defaultValue;
+      typeof defaultValue === 'function'
+        ? (defaultValue as () => Output)
+        : () => materializeValue(defaultValue);
 
     return cloned;
   }
 
-  /** Returns a fallback value on ANY validation failure instead of throwing. */
+  /**
+   * Returns a fallback value on ANY validation failure instead of throwing.
+   * Non-function values are materialized per failure to avoid shared mutable references.
+   */
   catch(fallback: Output | (() => Output)): this {
     const cloned = this._clone();
 
-    cloned.state.catch = typeof fallback === 'function' ? (fallback as () => Output) : () => fallback;
+    cloned.state.catch =
+      typeof fallback === 'function' ? (fallback as () => Output) : () => materializeValue(fallback);
 
     return cloned;
   }
@@ -403,15 +456,13 @@ export class Schema<Output = unknown, Input = Output> {
     return next;
   }
 
-  private _prepareInput(value: unknown): PreparedInput {
-    const withDefault = value === undefined && this.state.defaultValue ? this.state.defaultValue() : value;
-    const processed = this._runPreprocessors(withDefault);
+  /** Prepend a transformation step before validation. */
+  preprocess(fn: (value: unknown) => unknown): this {
+    const cloned = this._clone();
 
-    if ((this.state.isOptional && processed === undefined) || (this.state.isNullable && processed === null)) {
-      return { skip: true, value: processed };
-    }
+    cloned.state.preprocessors.push(fn);
 
-    return { skip: false, value: processed };
+    return cloned;
   }
 
   /** Attach a description for documentation or tooling generation. */
@@ -443,15 +494,6 @@ export class Schema<Output = unknown, Input = Output> {
     return this.safeParse(value).success;
   }
 
-  /** Prepend a transformation step before validation. */
-  preprocess(fn: (value: unknown) => unknown): this {
-    const cloned = this._clone();
-
-    cloned.state.preprocessors.push(fn);
-
-    return cloned;
-  }
-
   protected _withCatch<T>(fn: () => T): T {
     if (!this.state.catch) return fn();
 
@@ -476,8 +518,16 @@ export class Schema<Output = unknown, Input = Output> {
     }
   }
 
-  private _hasAsyncValidators(): boolean {
-    return this.state.asyncValidators.length > 0;
+  private _prepareInput(value: unknown): PreparedInput {
+    // Preprocessors run first on the raw input, then defaults fill in remaining undefineds.
+    const processed = this._runPreprocessors(value);
+    const withDefault = processed === undefined && this.state.defaultValue ? this.state.defaultValue() : processed;
+
+    if ((this.state.isOptional && withDefault === undefined) || (this.state.isNullable && withDefault === null)) {
+      return { skip: true, value: withDefault };
+    }
+
+    return { skip: false, value: withDefault };
   }
 
   protected _runPreprocessors(value: unknown): unknown {
@@ -500,70 +550,72 @@ export class Schema<Output = unknown, Input = Output> {
     return current;
   }
 
-  private _runValidators(validators: ValidateFn[], value: unknown, stopOnInvalidType: boolean): Issue[] {
+  private _runSyncValidators(value: unknown): Issue[] {
     const issues: Issue[] = [];
 
-    for (const validate of validators) {
+    for (const validate of [...this.state.coreValidators, ...this.state.validators]) {
       const result = validate(value, []);
+
+      if (result instanceof Promise) {
+        throw new Error(
+          'A check() callback returned a Promise in a sync parse context. Use parseAsync() or safeParseAsync() for async validation.',
+        );
+      }
 
       if (result) {
         issues.push(...result);
 
-        if (stopOnInvalidType && result.some((i: Issue) => i.code === ErrorCode.invalid_type)) break;
+        if (result.some((i: Issue) => i.code === ErrorCode.invalid_type)) break;
       }
     }
 
     return issues;
   }
 
-  protected _runUserValidators(value: unknown): Issue[] {
-    return this._runValidators(this.state.userValidators, value, false);
-  }
+  protected async _runAllValidators(value: unknown): Promise<Issue[]> {
+    const issues: Issue[] = [];
 
-  protected _runCoreValidators(value: unknown): Issue[] {
-    return this._runValidators(this.state.coreValidators, value, true);
-  }
+    // Core validators (type checks) run first, sequentially, with early-exit.
+    for (const validate of this.state.coreValidators) {
+      const result = await validate(value, []);
 
-  protected async _runAsyncValidators(value: unknown): Promise<Issue[]> {
-    const results = await Promise.all(this.state.asyncValidators.map((fn) => fn(value, [])));
+      if (result) {
+        issues.push(...result);
 
-    return results.flatMap((r: Issue[] | null) => r ?? []);
+        if (result.some((i: Issue) => i.code === ErrorCode.invalid_type)) return issues;
+      }
+    }
+
+    // User validators (constraints + check() callbacks) run in parallel once type is confirmed.
+    if (this.state.validators.length > 0) {
+      const results = await Promise.all(this.state.validators.map((fn) => fn(value, [])));
+
+      for (const result of results) {
+        if (result) issues.push(...result);
+      }
+    }
+
+    return issues;
   }
 
   protected _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    return { data: value, issues: this._runCoreValidators(value) };
+    return { data: value, issues: [] };
   }
 
   protected async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
     return this._parseValueSync(value);
   }
 
-  protected _addCoreValidator(validator: ValidateFn): this {
+  protected _addValidator(validator: ValidateFn): this {
     const cloned = this._clone();
 
-    cloned.state.coreValidators.push(validator);
-
-    return cloned;
-  }
-
-  protected _addUserValidator(validator: ValidateFn): this {
-    const cloned = this._clone();
-
-    cloned.state.userValidators.push(validator);
-
-    return cloned;
-  }
-
-  protected _addAsyncValidator(fn: AsyncValidateFn): this {
-    const cloned = this._clone();
-
-    cloned.state.asyncValidators.push(fn);
+    cloned.state.validators.push(validator);
 
     return cloned;
   }
 
   protected _copyStateTo<T extends Schema<any>>(target: T): T {
-    target.state = cloneState(this.state);
+    target.state = cloneState(this.state) as SchemaState<any>;
 
     return target;
   }
@@ -579,11 +631,8 @@ export class Schema<Output = unknown, Input = Output> {
 
 export type InferOutput<T> = T extends Schema<infer O> ? O : never;
 
-/** Infers the accepted input type for a schema. */
+/** Infers the accepted input type for a schema (differs from output for coercing schemas). */
 export type InferInput<T> = T extends Schema<any, infer I> ? I : never;
 
-/** Alias for InferOutput — infers the output type of a schema. */
+/** Alias for InferOutput — infers the validated output type of a schema. */
 export type Infer<T> = InferOutput<T>;
-
-/** Alias for InferOutput — aligns with common schema-library naming. */
-export type TypeOf<T> = InferOutput<T>;

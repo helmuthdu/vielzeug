@@ -88,6 +88,7 @@ export default defineConfig({
               { link: '/deposit/', text: 'Deposit' },
               { link: '/eventit/', text: 'Eventit' },
               { link: '/fetchit/', text: 'Fetchit' },
+              { link: '/sourceit/', text: 'Sourceit' },
               { link: '/stateit/', text: 'Stateit' },
             ],
             text: 'Data & State',
@@ -447,7 +448,6 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/dragit/examples/framework-integration', text: 'Framework Integration' },
             {
               link: '/dragit/examples/combined-sortable-with-inline-editing',
               text: 'Combined: sortable with inline editing',
@@ -497,7 +497,6 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/eventit/examples/framework-integration', text: 'Framework Integration' },
             { link: '/eventit/examples/awaiting-a-one-time-event', text: 'Awaiting a one-time event' },
             { link: '/eventit/examples/custom-error-boundary', text: 'Custom error boundary' },
             { link: '/eventit/examples/handling-disposal-in-async-code', text: 'Handling disposal in async code' },
@@ -548,7 +547,6 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/fetchit/examples/framework-integration', text: 'Framework Integration' },
             { link: '/fetchit/examples/authentication', text: 'Authentication' },
             { link: '/fetchit/examples/crud-operations', text: 'CRUD Operations' },
             { link: '/fetchit/examples/disposal', text: 'Disposal' },
@@ -567,12 +565,14 @@ export default defineConfig({
         { link: '/floatit/', text: 'Overview' },
         {
           items: [
-            { link: '/floatit/usage#placement', text: 'Placement' },
-            { link: '/floatit/usage#positionfloat', text: 'positionFloat' },
+            { link: '/floatit/usage#positioning-apis', text: 'Positioning APIs' },
+            { link: '/floatit/usage#float', text: 'float' },
             { link: '/floatit/usage#computeposition', text: 'computePosition' },
-            { link: '/floatit/usage#middleware', text: 'Middleware' },
+            { link: '/floatit/usage#middleware-model', text: 'Middleware Model' },
+            { link: '/floatit/usage#built-in-middleware', text: 'Built-in Middleware' },
+            { link: '/floatit/usage#middleware-order', text: 'Middleware Order' },
+            { link: '/floatit/usage#virtual-references', text: 'Virtual References' },
             { link: '/floatit/usage#autoupdate', text: 'autoUpdate' },
-            { link: '/floatit/usage#common-patterns', text: 'Common Patterns' },
           ],
           link: '/floatit/usage',
           text: 'Usage Guide',
@@ -643,8 +643,6 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/formit/examples/framework-integration', text: 'Framework Integration' },
-            { link: '/formit/examples/best-practices', text: 'Best Practices' },
             { link: '/formit/examples/contact-form-with-file-upload', text: 'Contact Form with File Upload' },
             { link: '/formit/examples/dynamic-form-fields', text: 'Dynamic Form Fields' },
             { link: '/formit/examples/form-with-conditional-fields', text: 'Form with Conditional Fields' },
@@ -652,7 +650,6 @@ export default defineConfig({
             { link: '/formit/examples/multi-step-wizard', text: 'Multi-Step Wizard' },
             { link: '/formit/examples/registration-form', text: 'Registration Form' },
             { link: '/formit/examples/search-form-with-debounce', text: 'Search Form with Debounce' },
-            { link: '/formit/examples/see-also', text: 'See Also' },
           ],
           link: '/formit/examples',
           text: 'Examples',
@@ -662,7 +659,7 @@ export default defineConfig({
         { link: '/guide/', text: 'Getting Started' },
         {
           items: [
-            { link: '/guide/docs-style-guide', text: 'Documentation Style Guide' },
+            { link: '/guide/docs-template', text: 'Documentation Template' },
             { link: '/guide/building-a-typed-form-flow', text: 'Building a Typed Form Flow' },
             { link: '/guide/state-and-routing', text: 'State and Routing' },
           ],
@@ -708,7 +705,6 @@ export default defineConfig({
         {
           items: [
             { link: '/i18nit/examples/shared-instance-setup', text: 'Shared Instance Setup' },
-            { link: '/i18nit/examples/framework-integration', text: 'Framework Integration' },
             { link: '/i18nit/examples/locale-switcher', text: 'Locale Switcher' },
             { link: '/i18nit/examples/prefixed-translation-helper', text: 'Prefixed Translation Helper' },
             { link: '/i18nit/examples/per-request-locale-handling', text: 'Per-request Locale Handling' },
@@ -764,16 +760,15 @@ export default defineConfig({
         { link: '/permit/', text: 'Overview' },
         {
           items: [
-            { link: '/permit/usage#basic-setup', text: 'Basic Setup' },
-            { link: '/permit/usage#define-rules-with-set', text: 'Define Rules' },
+            { link: '/permit/usage#create-a-permit', text: 'Create Permit' },
             { link: '/permit/usage#check-permissions', text: 'Check Permissions' },
             { link: '/permit/usage#bind-a-user-with-foruser', text: 'forUser()' },
+            { link: '/permit/usage#batch-decisions-with-checkall', text: 'checkAll()' },
+            { link: '/permit/usage#inspect-rule-scope-with-rulesinscope', text: 'rulesInScope()' },
             { link: '/permit/usage#use-dynamic-conditions-with-when', text: 'Dynamic Predicates' },
             { link: '/permit/usage#anonymous-and-wildcards', text: 'Anonymous & Wildcards' },
-            { link: '/permit/usage#manage-rule-sets', text: 'Rule Set Management' },
             { link: '/permit/usage#logger-and-auditing', text: 'Logger / Auditing' },
             { link: '/permit/usage#decision-precedence', text: 'Decision Precedence' },
-            { link: '/permit/usage#best-practices', text: 'Best Practices' },
           ],
           link: '/permit/usage',
           text: 'Usage Guide',
@@ -858,6 +853,47 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/sourceit/': [
+        { link: '/sourceit/', text: 'Overview' },
+        {
+          items: [
+            { link: '/sourceit/usage#create-a-local-source', text: 'Local Source' },
+            { link: '/sourceit/usage#create-a-remote-source', text: 'Remote Source' },
+            { link: '/sourceit/usage#read-model', text: 'Read Model' },
+            { link: '/sourceit/usage#url-query-param-sync', text: 'Query Param Sync' },
+            { link: '/sourceit/usage#selector-subscriptions', text: 'Selector Subscriptions' },
+            { link: '/sourceit/usage#framework-integration', text: 'Framework Integration' },
+            { link: '/sourceit/usage#local-source-in-ui-state', text: 'Local Source in UI State' },
+            { link: '/sourceit/usage#remote-source-with-async-lifecycle', text: 'Remote Source Async Lifecycle' },
+            { link: '/sourceit/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/sourceit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/sourceit/api#core-factories', text: 'Core Factories' },
+            { link: '/sourceit/api#shared-source-shape', text: 'Shared Source Shape' },
+            { link: '/sourceit/api#localsource-methods', text: 'LocalSource Methods' },
+            { link: '/sourceit/api#remotesource-methods', text: 'RemoteSource Methods' },
+            { link: '/sourceit/api#utilities', text: 'Utilities' },
+            { link: '/sourceit/api#types', text: 'Types' },
+          ],
+          link: '/sourceit/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/sourceit/examples/local-pagination-and-filtering', text: 'Local Pagination and Filtering' },
+            { link: '/sourceit/examples/sourceit-with-stateit', text: 'Reactive Controls with Stateit' },
+            { link: '/sourceit/examples/remote-search-with-url-state', text: 'Remote Search with URL State' },
+            { link: '/sourceit/examples/sourceit-with-fetchit', text: 'Remote Data with Fetchit' },
+            { link: '/sourceit/examples/sourceit-with-routeit', text: 'URL-Synced List with Routeit' },
+          ],
+          link: '/sourceit/examples',
+          text: 'Examples',
+        },
+      ],
       '/stateit/': [
         { link: '/stateit/', text: 'Overview' },
         {
@@ -895,7 +931,6 @@ export default defineConfig({
           items: [
             { link: '/stateit/examples/signals', text: 'Signals' },
             { link: '/stateit/examples/stores', text: 'Stores' },
-            { link: '/stateit/examples/framework-integration', text: 'Framework Integration' },
             {
               link: '/stateit/examples/pattern-batch-for-complex-mutations',
               text: 'Pattern: Batch for Complex Mutations',
@@ -1000,9 +1035,8 @@ export default defineConfig({
                 { link: '/toolkit/examples/array/intersection', text: 'intersection' },
                 { link: '/toolkit/examples/array/keyBy', text: 'indexBy' },
                 { link: '/toolkit/examples/array/last', text: 'last' },
-                { link: '/toolkit/examples/array/list', text: 'list (moved)' },
                 { link: '/toolkit/examples/array/partition', text: 'partition' },
-                { link: '/toolkit/examples/array/remoteList', text: 'remoteList (moved)' },
+                { link: '/sourceit/examples/local-pagination-and-filtering', text: 'Sourceit: local source' },
                 { link: '/toolkit/examples/array/replace', text: 'replace' },
                 { link: '/toolkit/examples/array/rotate', text: 'rotate' },
                 { link: '/toolkit/examples/array/sampleSize', text: 'sample' },
@@ -1025,8 +1059,8 @@ export default defineConfig({
                 { link: '/toolkit/examples/async/abortable', text: 'abortable' },
                 { link: '/toolkit/examples/async/attempt', text: 'attempt' },
                 { link: '/toolkit/examples/async/defer', text: 'defer' },
-                { link: '/toolkit/examples/async/memoizeAsync', text: 'memoizeAsync' },
                 { link: '/toolkit/examples/async/parallel', text: 'parallel' },
+                { link: '/toolkit/examples/async/predict', text: 'predict' },
                 { link: '/toolkit/examples/async/queue', text: 'queue' },
                 { link: '/toolkit/examples/async/retry', text: 'retry' },
                 { link: '/toolkit/examples/async/scheduler', text: 'scheduler' },
@@ -1076,7 +1110,6 @@ export default defineConfig({
                 { link: '/toolkit/examples/object/parseJSON', text: 'parseJSON' },
                 { link: '/toolkit/examples/object/path', text: 'path' },
                 { link: '/toolkit/examples/object/pick', text: 'pick' },
-                { link: '/toolkit/examples/object/proxy', text: 'proxy' },
                 { link: '/toolkit/examples/object/prune', text: 'prune' },
                 { link: '/toolkit/examples/object/seek', text: 'seek' },
                 { link: '/toolkit/examples/object/stash', text: 'stash' },
@@ -1343,6 +1376,7 @@ export default defineConfig({
             { link: '/wireit/examples/lifetimes', text: 'Lifetimes' },
             { link: '/wireit/examples/async-providers', text: 'Async Providers' },
             { link: '/wireit/examples/child-containers', text: 'Child Containers' },
+            { link: '/wireit/examples/multi-providers', text: 'Multi Providers' },
             { link: '/wireit/examples/batch-resolution', text: 'Batch Resolution' },
             { link: '/wireit/examples/dispose-lifecycle', text: 'Dispose Lifecycle' },
           ],
@@ -1389,7 +1423,7 @@ export default defineConfig({
             { link: '/workit/examples/image-processing', text: 'Image Processing' },
             { link: '/workit/examples/react-integration', text: 'React Integration' },
             { link: '/workit/examples/testing-with-createtestworker', text: 'Testing' },
-            { link: '/workit/examples/using-external-scripts-importscripts', text: 'importScripts' },
+            { link: '/workit/examples/using-transferables', text: 'Using Transferables' },
           ],
           link: '/workit/examples',
           text: 'Examples',
@@ -1423,6 +1457,7 @@ export default defineConfig({
         '@vielzeug/logit': resolve(__dirname, '../../packages/logit/src'),
         '@vielzeug/permit': resolve(__dirname, '../../packages/permit/src'),
         '@vielzeug/routeit': resolve(__dirname, '../../packages/routeit/src'),
+        '@vielzeug/sourceit': resolve(__dirname, '../../packages/sourceit/src'),
         '@vielzeug/stateit': resolve(__dirname, '../../packages/stateit/src'),
         '@vielzeug/timit': resolve(__dirname, '../../packages/timit/src'),
         '@vielzeug/toolkit': resolve(__dirname, '../../packages/toolkit/src'),

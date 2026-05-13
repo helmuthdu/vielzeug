@@ -5,13 +5,11 @@ description: 'Form-Associated Rating Input example using defineField with a writ
 
 ## Form-Associated Rating Input
 
-## Problem
+### Problem
 
 Implement a form-associated rating input using `defineField` with a `signal` for two-way form binding.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
+### Solution
 
 ```ts
 import { define, defineField, html, signal } from '@vielzeug/craftit';
@@ -56,29 +54,10 @@ define<{ disabled?: boolean }>('rating-input-v2', {
     return () => html`
       <button
         ?disabled=${props.disabled}
-        @click=${() => field.setCustomValidity(value.value.length === 0 ? 'Please select a rating' : '')}
-      >
+        @click=${() => field.setCustomValidity(value.value.length === 0 ? 'Please select a rating' : '')}>
         Validate
       </button>
     `;
   },
 });
 ```
-
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The form value is submitted alongside native form fields.
-- Calling `defineField()` without `formAssociated: true` on `define(..., { ... })` throws at runtime.
-
-## Common Pitfalls
-
-- `defineField` must be called during `setup()`, not inside `mount()`.
-- `toFormValue` defaults to `String(v)` for primitives and `null` for `null`/`undefined` — override only when you need custom serialisation.
-- Disabled state should be passed via `disabled: props.disabled` so `ElementInternals` tracks it natively.
-
-## Related Recipes
-
-- [Prop helpers and raw PropsDef](./propsof-builder-api.md)
-- [Counter Component](./counter-component.md)
-- [Observers in onMounted()](./observers-in-onmount.md)

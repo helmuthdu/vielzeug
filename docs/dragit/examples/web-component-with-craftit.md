@@ -5,13 +5,11 @@ description: 'Web Component with craftit examples for dragit.'
 
 ## Web Component with craftit
 
-## Problem
+### Problem
 
-Implement web component with craftit in a production-friendly way with `@vielzeug/dragit` while keeping setup and cleanup explicit.
+You are building a Craftit web component that contains a sortable list. The drag-and-drop lifecycle must be tied to the component's own mount and unmount so it does not leak after the element is removed from the DOM.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/dragit` installed.
+### Solution
 
 ```ts
 import { define, html, onCleanup, ref, signal } from '@vielzeug/craftit';
@@ -47,19 +45,16 @@ define('my-dropzone', (props) => {
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `makeSortable()` must be called after the element is connected to the DOM — inside `onMounted`, not the constructor. The scroll container does not exist before connection.
+- Each Craftit component instance needs its own sortable instance. Sharing one across instances causes them to manipulate each other's DOM.
+- Return the sortable's `dispose` from `onMounted` so Craftit calls it in `disconnectedCallback` automatically.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [With Craftit Component (Floatit)](/floatit/examples/with-craftit-component)
 
 - [Combined: sortable with inline editing](./combined-sortable-with-inline-editing.md)
 - [File upload drop zone](./file-upload-drop-zone.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)

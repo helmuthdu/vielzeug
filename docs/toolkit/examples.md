@@ -23,7 +23,7 @@ Use these examples as copy/paste starting points for real applications.
 ```ts
 import { chunk, partial, queue, retry } from '@vielzeug/toolkit';
 
-const doubleAll = partial((values: number[], factor: number) => values.map((n) => n * factor), 2);
+const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
 const pages = chunk(doubleAll([1, 2, 3, 4, 5]), 2);
 
 const q = queue({ concurrency: 2 });

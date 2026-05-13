@@ -5,13 +5,11 @@ description: 'Dropdown / Select examples for floatit.'
 
 ## Dropdown / Select
 
-## Problem
+### Problem
 
-Implement dropdown / select in a production-friendly way with `@vielzeug/floatit` while keeping setup and cleanup explicit.
+A custom select dropdown must align its panel to the trigger button, match the trigger's width, and flip above the trigger when there is not enough room below the viewport fold.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/floatit` installed.
+### Solution
 
 Match the dropdown width to the trigger and flip up when there is not enough room below.
 
@@ -50,18 +48,15 @@ function close() {
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- The `flip` middleware flips to the opposite side when space is insufficient. If the trigger is near the viewport center, the dropdown may alternate sides on resize. Define a stable preferred placement.
+- Matching the dropdown width to the trigger via `getBoundingClientRect().width` returns 0 if the reference element is hidden or has `visibility: hidden`. Ensure the trigger is visible before measuring.
+- `autoUpdate` fires on scroll and resize. Throttle position updates if the dropdown contains heavy content that re-paints on repositioning.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [DOM Virtual List Combobox Pattern (Virtualit)](/virtualit/examples/dom-virtual-list-combobox-pattern)
 
 - [Context Menu](./context-menu.md)
 - [Custom Middleware](./custom-middleware.md)

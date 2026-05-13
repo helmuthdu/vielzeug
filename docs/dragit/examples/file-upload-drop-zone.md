@@ -5,13 +5,11 @@ description: 'File upload drop zone examples for dragit.'
 
 ## File upload drop zone
 
-## Problem
+### Problem
 
-Implement file upload drop zone in a production-friendly way with `@vielzeug/dragit` while keeping setup and cleanup explicit.
+Users need to upload files by dragging from the OS file browser. The drop target should highlight on hover, reject wrong MIME types, and pass accepted files to your upload handler.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/dragit` installed.
+### Solution
 
 A minimal file drop zone with hover feedback and type filtering:
 
@@ -60,19 +58,15 @@ using zone = createDropZone({
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `dragover` must call `e.preventDefault()` to mark the element as a valid drop target. Without it, `drop` never fires.
+- `e.dataTransfer.files` is a `FileList`, not an array. Convert with `Array.from()` before filtering or mapping.
+- `e.dataTransfer.items[i].type` can be an empty string for files with unknown MIME types. Always provide a fallback to avoid silently rejecting valid files.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Combined: sortable with inline editing](./combined-sortable-with-inline-editing.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)
 - [Sortable list](./sortable-list.md)

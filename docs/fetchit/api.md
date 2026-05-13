@@ -17,9 +17,9 @@ description: Complete API reference for the Fetchit HTTP client, query client, a
 
 ## Package Entry Points
 
-| Import                   | Purpose            |
-| ------------------------ | ------------------ |
-| `@vielzeug/fetchit`      | Main API and types |
+| Import              | Purpose            |
+| ------------------- | ------------------ |
+| `@vielzeug/fetchit` | Main API and types |
 
 ## Core Functions
 
@@ -33,12 +33,12 @@ Creates an HTTP client. Returns an `ApiClient`.
 
 **Parameters — `ApiClientOptions`:**
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `baseUrl` | `string` | `''` | Base URL prepended to every request |
-| `fetch` | `typeof globalThis.fetch` | `globalThis.fetch` | Optional custom fetch implementation |
-| `headers` | `Record<string, string>` | `{}` | Default headers sent with every request |
-| `timeout` | `number` | `30000` | Request timeout in ms; must be `> 0` or `Infinity` |
+| Option    | Type                      | Default            | Description                                        |
+| --------- | ------------------------- | ------------------ | -------------------------------------------------- |
+| `baseUrl` | `string`                  | `''`               | Base URL prepended to every request                |
+| `fetch`   | `typeof globalThis.fetch` | `globalThis.fetch` | Optional custom fetch implementation               |
+| `headers` | `Record<string, string>`  | `{}`               | Default headers sent with every request            |
+| `timeout` | `number`                  | `30000`            | Request timeout in ms; must be `> 0` or `Infinity` |
 
 **Returns:** `ApiClient`
 
@@ -86,15 +86,15 @@ Creates a query client with caching, deduplication, and reactive subscriptions. 
 
 **Parameters — `QueryClientOptions`:**
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `staleTime` | `number` | `0` | ms a successful entry is served from cache before next `query()` refetches |
-| `gcTime` | `number` | `300000` | ms before an unobserved cache entry is collected; `Infinity` disables GC |
-| `retry` | `number` | `1` | Default retry attempts for all queries |
-| `retryDelay` | `number \| (attempt) => number` | exponential | Delay between retries; defaults to exponential backoff |
-| `shouldRetry` | `(error, attempt) => boolean` | — | Return `false` to skip retrying for a specific error class |
-| `refetchOnFocus` | `boolean` | `false` | Revalidate stale observed entries when the document regains focus |
-| `refetchOnReconnect` | `boolean` | `false` | Revalidate stale observed entries when the network comes back online |
+| Option               | Type                            | Default     | Description                                                                |
+| -------------------- | ------------------------------- | ----------- | -------------------------------------------------------------------------- |
+| `staleTime`          | `number`                        | `0`         | ms a successful entry is served from cache before next `query()` refetches |
+| `gcTime`             | `number`                        | `300000`    | ms before an unobserved cache entry is collected; `Infinity` disables GC   |
+| `retry`              | `number`                        | `1`         | Default retry attempts for all queries                                     |
+| `retryDelay`         | `number \| (attempt) => number` | exponential | Delay between retries; defaults to exponential backoff                     |
+| `shouldRetry`        | `(error, attempt) => boolean`   | —           | Return `false` to skip retrying for a specific error class                 |
+| `refetchOnFocus`     | `boolean`                       | `false`     | Revalidate stale observed entries when the document regains focus          |
+| `refetchOnReconnect` | `boolean`                       | `false`     | Revalidate stale observed entries when the network comes back online       |
 
 **Returns:** `QueryClient`
 
@@ -123,7 +123,7 @@ const user = await qc.query({
 | `set`              | `<T>(key, data \| updater) => void`           | Set or update cached data                                    |
 | `getState`         | `<T>(key) => QueryState<T> \| null`           | Full state snapshot                                          |
 | `subscribe`        | `<T, S>(key, listener, opts?) => Unsubscribe` | Subscribe to state changes; optional `select` transform      |
-| `invalidate`       | `(key) => void`                               | Evict key/prefix (observed keys reset to `idle`)             |
+| `invalidate`       | `(key) => void`                               | Evict key/prefix (observed entries with a query fn background-revalidate; fn-less entries reset to `idle`) |
 | `cancel`           | `(key) => void`                               | Cancel in-flight request; state → `'idle'` or `'success'`    |
 | `clear`            | `() => void`                                  | Clear all entries; notifies active subscribers with `'idle'` |
 | `dispose`          | `() => void`                                  | Cancel all in-flight requests and clear all timers           |
@@ -152,14 +152,14 @@ Creates a standalone, observable mutation handle. Returns a `Mutation<TData, TVa
 
 **`MutationOptions<TData>`:**
 
-| Option        | Type                                              | Default     | Description                                                |
-| ------------- | ------------------------------------------------- | ----------- | ---------------------------------------------------------- |
-| `retry`       | `number`                                          | `0`         | Retry attempts on failure                                  |
-| `retryDelay`  | `number \| (attempt) => number`                   | exponential | Delay between retries                                      |
-| `shouldRetry` | `(error, attempt) => boolean`                     | —           | Return `false` to skip retrying for a specific error class |
-| `onSuccess`   | `(data: TData) => void \| Promise<void>`          | —           | Called after a successful run; errors are swallowed        |
-| `onError`     | `(error: Error) => void \| Promise<void>`         | —           | Called after a failed run (not aborted); errors swallowed  |
-| `onSettled`   | `(data, error) => void \| Promise<void>`          | —           | Called after every run regardless of outcome               |
+| Option        | Type                                      | Default     | Description                                                |
+| ------------- | ----------------------------------------- | ----------- | ---------------------------------------------------------- |
+| `retry`       | `number`                                  | `0`         | Retry attempts on failure                                  |
+| `retryDelay`  | `number \| (attempt) => number`           | exponential | Delay between retries                                      |
+| `shouldRetry` | `(error, attempt) => boolean`             | —           | Return `false` to skip retrying for a specific error class |
+| `onSuccess`   | `(data: TData) => void \| Promise<void>`  | —           | Called after a successful run; errors are swallowed        |
+| `onError`     | `(error: Error) => void \| Promise<void>` | —           | Called after a failed run (not aborted); errors swallowed  |
+| `onSettled`   | `(data, error) => void \| Promise<void>`  | —           | Called after every run regardless of outcome               |
 
 **Returns:** `Mutation<TData, TVariables>` with:
 
@@ -171,8 +171,8 @@ Creates a standalone, observable mutation handle. Returns a `Mutation<TData, TVa
 
 `mutate()` accepts call-level options:
 
-| Option | Type | Description |
-| --- | --- | --- |
+| Option   | Type          | Description                                                      |
+| -------- | ------------- | ---------------------------------------------------------------- |
 | `signal` | `AbortSignal` | Optional external signal merged with mutation-local cancellation |
 
 **Example:**
@@ -247,7 +247,7 @@ type HttpRequestConfig<P extends string = string> = Omit<RequestInit, 'body' | '
   };
 ```
 
-Idempotent reads (`GET`, `HEAD`, `OPTIONS`, `DELETE`) are deduplicated automatically by method + URL + payload-derived key. Non-idempotent writes are deduplicated only when `dedupeKey` is provided.
+Idempotent reads (`GET`, `HEAD`, `OPTIONS`, `DELETE`) are deduplicated automatically when the method, URL, merged effective headers, and `responseType` are all identical. Non-idempotent writes are deduplicated only when `dedupeKey` is provided.
 
 `PathConfig<P>` resolves to `{ params: Record<ExtractPathParams<P>, string | number | boolean> }` when `P` contains `{placeholders}`, or `{ params?: never }` otherwise.
 
@@ -266,8 +266,8 @@ type QueryOptions<T> = {
   fn: (ctx: QueryFnContext) => Promise<T>;
   staleTime?: number;
   gcTime?: number;
-  enabled?: boolean;                         // false → skip fetch, stay 'idle'
-  initialData?: T | (() => T | undefined);   // seed cache when no data exists
+  enabled?: boolean; // false → skip fetch, stay 'idle'
+  initialData?: T | (() => T | undefined); // seed cache when no data exists
   placeholderData?: T | (() => T | undefined); // shown while fetching, not stored
   retry?: number;
   retryDelay?: number | ((attempt: number) => number);

@@ -20,18 +20,18 @@ pnpm add @vielzeug/toolkit
 import {
   chunk,
   pick,
-  group,
+  groupBy,
   queue,
   retry,
-  merge,
-  configure,
-  select,
+  deepMerge,
+  partial,
+  filterMap,
   currency,
   is,
 } from '@vielzeug/toolkit';
 
 const pages = chunk([1, 2, 3, 4, 5], 2);
-const byRole = group(users, (u) => u.role);
+const byRole = groupBy(users, (u) => u.role);
 const safe = pick({ id: 1, name: 'Alice', role: 'admin' }, ['id', 'name']);
 
 const q = queue({ concurrency: 2 });
@@ -42,10 +42,10 @@ const data = await retry(() => fetch('/api/health').then((r) => r.json()), {
   delay: 200,
 });
 
-const cfg = merge('deep', { api: { host: 'localhost' } }, { api: { port: 3000 } });
+const cfg = deepMerge({ api: { host: 'localhost' } }, { api: { port: 3000 } });
 
-const doubleAll = configure(select, (n: number) => n * 2);
-const doubled = doubleAll([1, 2, 3]);
+const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
+const doubled = filterMap(doubleAll([1, 2, 3]), (n) => (n > 2 ? n : undefined));
 
 const price = currency({ amount: 123456n, currency: 'USD' }); // $1,234.56
 
@@ -58,11 +58,11 @@ if (is.string(price)) {
 
 ### Array
 
-`chunk`, `compact`, `contains`, `countBy`, `difference`, `drop`, `dropLast`, `first`, `flatten`, `group`, `intersection`, `keyBy`, `last`, `list`, `partition`, `remoteList`, `replace`, `rotate`, `sampleSize`, `search`, `select`, `sort`, `take`, `takeLast`, `toggle`, `union`, `uniq`, `unzip`, `zip`
+`chunk`, `compact`, `contains`, `countBy`, `difference`, `drop`, `dropLast`, `filterMap`, `first`, `flatten`, `groupBy`, `indexBy`, `intersection`, `last`, `partition`, `replace`, `rotate`, `sample`, `search`, `sort`, `take`, `takeLast`, `toggle`, `union`, `uniq`, `unzip`, `zip`
 
 ### Async
 
-`abortable`, `attempt`, `batch`, `defer`, `memoizeAsync`, `parallel`, `Scheduler`, `polyfillScheduler`, `queue`, `race`, `retry`, `sleep`, `timeout`, `waitFor`
+`abortable`, `attempt`, `defer`, `parallel`, `predict`, `Scheduler`, `polyfillScheduler`, `queue`, `retry`, `sleep`, `timeout`, `waitFor`
 
 ### Date
 
@@ -70,7 +70,7 @@ if (is.string(price)) {
 
 ### Function
 
-`assert`, `compare`, `compareBy`, `compose`, `configure`, `constant`, `curry`, `debounce`, `flip`, `identity`, `memo`, `negate`, `once`, `pipe`, `tap`, `throttle`
+`assert`, `compare`, `compareBy`, `compose`, `constant`, `curry`, `debounce`, `identity`, `memo`, `negate`, `once`, `partial`, `pipe`, `and`, `or`, `not`, `tap`, `throttle`
 
 ### Math
 
@@ -82,7 +82,7 @@ if (is.string(price)) {
 
 ### Object
 
-`stash`, `deepClone`, `defaults`, `diff`, `entries`, `filterValues`, `fromEntries`, `get` (from `path.ts`), `has`, `invert`, `keys`, `mapKeys`, `mapValues`, `merge`, `omit`, `parseJSON`, `pick`, `proxy`, `prune`, `seek`, `values`
+`stash`, `deepClone`, `defaults`, `diff`, `entries`, `filterValues`, `fromEntries`, `get` (from `path.ts`), `has`, `invert`, `keys`, `mapKeys`, `mapValues`, `deepMerge`, `shallowMerge`, `omit`, `parseJSON`, `pick`, `prune`, `seek`, `values`
 
 ### Random
 
@@ -94,7 +94,7 @@ if (is.string(price)) {
 
 ### Typed
 
-`isEven`, `isGe`, `isGt`, `isLe`, `isLt`, `isNegative`, `isOdd`, `isPositive`, `isWithin`, `isZero`
+`isGreaterThan`, `isGreaterThanOrEqual`, `isLessThan`, `isLessThanOrEqual`, `isWithin`
 
 ### Typed Namespace
 

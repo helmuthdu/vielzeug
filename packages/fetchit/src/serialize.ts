@@ -54,29 +54,3 @@ export function stableStringify(value: unknown): string {
 
   return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(rec[k])}`).join(',')}}`;
 }
-
-export function serializeBodyKey(body: unknown): string {
-  if (body === undefined || body === null) return 'null';
-
-  // Note: FormData can't be consistently serialized; bodies with the same entry count
-  // will collide. Avoid using FormData as a write `dedupeKey` signal source.
-  if (body instanceof FormData) return `[FormData:${[...body.keys()].length}]`;
-
-  if (body instanceof Blob) return `[Blob:${body.size}:${body.type}]`;
-
-  if (body instanceof URLSearchParams) return `[URLSearchParams:${body.toString()}]`;
-
-  if (body instanceof ArrayBuffer) return `[ArrayBuffer:${body.byteLength}]`;
-
-  if (ArrayBuffer.isView(body)) return `[ArrayBufferView:${(body as ArrayBufferView).byteLength}]`;
-
-  if (typeof body === 'string') return body;
-
-  try {
-    return stableStringify(body);
-  } catch {
-    // Circular or unserializable reference — use fallback for dedup purposes.
-    // JSON.stringify(body) in request() will throw the real TypeError.
-    return '[Object]';
-  }
-}

@@ -5,13 +5,11 @@ description: 'Module Logger Pattern examples for logit.'
 
 ## Module Logger Pattern
 
-## Problem
+### Problem
 
-Implement module logger pattern in a production-friendly way with `@vielzeug/logit` while keeping setup and cleanup explicit.
+Log entries from different modules are mixed in the output, making it hard to filter by origin. Each module should create its own logger with a fixed namespace so entries can be filtered without additional context.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/logit` installed.
+### Solution
 
 ```ts
 import { Logit } from '@vielzeug/logit';
@@ -26,18 +24,14 @@ log.api.info('GET /users');
 log.auth.warn('token expiring');
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Using the same namespace string in two different modules makes their log entries indistinguishable. Use hierarchical namespaces (e.g., `app:orders:service`) to ensure uniqueness.
+- Creating the logger at module load time means its namespace and bindings are fixed for that module instance. Prefer request-scoped child loggers when fields vary per request.
+- Structured context is first-argument only: use `logger.info({ userId }, 'event')`. String-first calls accept only the message.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Production Setup](./production-setup.md)

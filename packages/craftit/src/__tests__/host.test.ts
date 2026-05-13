@@ -1,6 +1,5 @@
 import {
   createContext,
-  define,
   effect,
   html,
   inject,
@@ -8,26 +7,12 @@ import {
   onMounted,
   provide,
   signal,
-  type ComponentDefinition,
   type InjectionKey,
   type ReadonlySignal,
 } from '../index';
 import { currentElementOrThrow } from '../runtime';
-import { mount, type MountSetup } from '../testing';
-
-const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinition, 'setup'> = {}) =>
-  define(tag, {
-    ...options,
-    setup: (props, ctx) => {
-      const result = setup(props, ctx);
-
-      if (typeof result === 'function') {
-        return result;
-      }
-
-      return () => result;
-    },
-  });
+import { mount } from '../testing';
+import { register } from './test-utils';
 
 describe('core/host.ts', () => {
   describe('Host bind API', () => {

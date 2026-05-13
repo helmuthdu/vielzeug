@@ -5,13 +5,19 @@ description: Complete type signatures and documentation for createWorker, Worker
 
 [[toc]]
 
+## Package Entry Point
+
+| Import               | Purpose                |
+| -------------------- | ---------------------- |
+| `@vielzeug/workit`   | Main exports and types |
+
 ## API At a Glance
 
-| Symbol               | Purpose                              | Execution mode | Common gotcha                                      |
-| -------------------- | ------------------------------------ | -------------- | -------------------------------------------------- |
-| `createWorker()`     | Create a typed worker or worker pool | Sync           | Task functions must be self-contained              |
-| `worker.run()`       | Execute a typed task in a Worker     | Async          | Pass transferables for large buffers when possible |
-| `createTestWorker()` | Run worker tasks in-process for tests| Async          | Use call recording assertions to verify behavior   |
+| Symbol               | Purpose                               | Execution mode | Common gotcha                                      |
+| -------------------- | ------------------------------------- | -------------- | -------------------------------------------------- |
+| `createWorker()`     | Create a typed worker or worker pool  | Sync           | Task functions must be self-contained              |
+| `worker.run()`       | Execute a typed task in a Worker      | Async          | Pass transferables for large buffers when possible |
+| `createTestWorker()` | Run worker tasks in-process for tests | Async          | Use call recording assertions to verify behavior   |
 
 ## Package Exports
 
@@ -71,14 +77,12 @@ type WorkerOptions = {
 ```ts
 type RunOptions = {
   signal?: AbortSignal;
-  transfer?: Transferable[];
+  transferables?: Transferable[];
 };
 ```
 
-| Property   | Type             | Description                                                  |
-| ---------- | ---------------- | ------------------------------------------------------------ |
-| `signal`   | `AbortSignal`    | Cancel a queued task. In-flight tasks cannot be interrupted. |
-| `transfer` | `Transferable[]` | Objects to move (not copy) to the worker thread.             |
+- `signal`: `AbortSignal` — cancel a queued task. In-flight tasks cannot be interrupted.
+- `transferables`: `Transferable[]` — objects to move (not copy) to the worker thread.
 
 ---
 
@@ -86,6 +90,8 @@ type RunOptions = {
 
 ```ts
 type WorkerHandle<TInput, TOutput> = {
+  [Symbol.asyncDispose](): Promise<void>;
+  [Symbol.dispose](): void;
   close(): Promise<void>;
   readonly completed: number;
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
@@ -94,7 +100,6 @@ type WorkerHandle<TInput, TOutput> = {
   readonly size: number;
   readonly status: WorkerStatus;
   readonly utilization: number;
-  [Symbol.dispose](): void;
 };
 ```
 
@@ -147,7 +152,7 @@ Rejects with:
 - `WorkerError` code `'terminated'` — if `dispose()` was called before or during the task
 - `WorkerError` code `'task'` — if the task function throws
 - `DOMException` (AbortError) — if the provided `signal` is aborted before the task starts
-- `WorkerError` code `'worker_unavailable'`, `'worker_create_failed'`, or `'worker_runtime'` — worker runtime/setup failures
+- `WorkerError` code `'worker'` — worker runtime/setup failures
 
 ::: warning
 The task function is serialized via `.toString()` and runs in an isolated scope. It cannot close over variables from the surrounding module. Keep task functions entirely self-contained.
@@ -251,14 +256,11 @@ try {
 Supported `WorkerErrorCode` values:
 
 - `'invalid_options'`
-- `'post_message_failed'`
 - `'queue_full'`
 - `'task'`
 - `'terminated'`
 - `'timeout'`
-- `'worker_create_failed'`
-- `'worker_runtime'`
-- `'worker_unavailable'`
+- `'worker'`
 
 ## Testing Utilities
 

@@ -1,19 +1,17 @@
 ---
 title: 'Dragit Examples — Connected kanban with keyboard sorting'
-description: 'Connected multi-list sortable example with group transfer and keyboard reordering.'
+description: 'Connected multi-list sortable example with an explicit shared scope and keyboard reordering.'
 ---
 
 ## Connected kanban with keyboard sorting
 
-## Problem
+### Problem
 
 Implement connected sortable columns where cards can move across lists and also be reordered with the keyboard.
 
-## Runnable Example
+### Solution
 
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/dragit` installed.
-
-Two connected lists using the same `group` value (`board`) plus keyboard reorder support:
+Two connected lists using the same `createSortableScope()` instance plus keyboard reorder support:
 
 ```html
 <section class="board">
@@ -86,10 +84,11 @@ Two connected lists using the same `group` value (`board`) plus keyboard reorder
 ```
 
 ```ts
-import { createSortable } from '@vielzeug/dragit';
+import { createSortable, createSortableScope } from '@vielzeug/dragit';
 
 const todoEl = document.getElementById('todo-list')!;
 const doneEl = document.getElementById('done-list')!;
+const boardScope = createSortableScope();
 
 const saveTodoOrder = (ids: string[]) => {
   console.log('Todo order:', ids);
@@ -101,42 +100,30 @@ const saveDoneOrder = (ids: string[]) => {
 
 using todoSortable = createSortable({
   element: todoEl,
-  group: 'board',
   handle: '.handle',
   keyboard: true,
-  autoScroll: { edgeThreshold: 40, speed: 24 },
+  autoScroll: { edgeThreshold: 40, speed: 24, viewport: true },
   onReorder: saveTodoOrder,
+  scope: boardScope,
 });
 
 using doneSortable = createSortable({
   element: doneEl,
-  group: 'board',
   handle: '.handle',
   keyboard: true,
   onReorder: saveDoneOrder,
+  scope: boardScope,
 });
 ```
 
 Keyboard behavior:
 
 - Focus any card.
-- Use arrow keys to move it by one position.
+- Use arrow keys to move it by one position within its current list.
 - Use `Home` and `End` to move to list boundaries.
 
-## Expected Output
+### Related
 
-- Dragging cards between columns updates the target list and source list orders.
-- Keyboard moves reorder focused items without additional wiring.
-- `onReorder` for each list only fires when that list order changed.
-
-## Common Pitfalls
-
-- Lists must share the same `group` string to allow cross-list movement.
-- Every sortable item still needs a stable identity attribute (`data-sort-id` by default).
-- If your app uses strict read-only modes, wire `disabled` to block drag and keyboard reorder consistently.
-
-## Related Recipes
-
-- [Sortable list](./sortable-list.md)
-- [Combined: sortable with inline editing](./combined-sortable-with-inline-editing.md)
-- [Framework Integration](./framework-integration.md)
+- [Sortable List](./sortable-list.md)
+- [Combined Sortable with Inline Editing](./combined-sortable-with-inline-editing.md)
+- [Keyboard Navigation (Virtualit)](/virtualit/examples/keyboard-navigation)

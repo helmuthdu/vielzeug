@@ -1,16 +1,15 @@
 import type { Obj } from '../types';
 
-type AssertOptions = { args?: Obj; bypass?: boolean; type?: ErrorConstructor };
+type AssertOptions = { args?: Obj; type?: ErrorConstructor };
 
 /**
- * Asserts that a condition is true. Throws (or warns, with `bypass`) otherwise.
+ * Asserts that a condition is true.
  *
  * @example
  * ```ts
  * assert(Array.isArray([]));                      // ok
  * assert(x > 0, 'x must be positive');            // throws if false
  * assert(x > 0, 'x must be positive', { args: { x } });
- * assert(ok, 'not ok', { bypass: true });         // logs warning instead of throwing
  * assertAll([cond1, cond2], 'One failed');         // throws if any is false
  * ```
  *
@@ -18,22 +17,19 @@ type AssertOptions = { args?: Obj; bypass?: boolean; type?: ErrorConstructor };
  * @param [message] - Error message (default: `'Assertion failed'`).
  * @param [options.type] - Error class to throw (default: `Error`).
  * @param [options.args] - Debugging info appended to the message.
- * @param [options.bypass] - Log a warning instead of throwing.
- *
- * @throws {Error} If `condition` is false and `bypass` is not set.
+ * @throws {Error} If `condition` is false.
  */
 export function assert(
   condition: boolean,
   message = 'Assertion failed',
-  { args, bypass = false, type = Error }: AssertOptions = {},
+  { args, type = Error }: AssertOptions = {},
 ): void {
   if (condition) return;
 
   const errorDetails = args ? `\nArguments: ${JSON.stringify(args, null, 2)}` : '';
   const fullMessage = `${message}${errorDetails}`;
 
-  if (bypass) console.warn(fullMessage);
-  else throw new type(fullMessage);
+  throw new type(fullMessage);
 }
 
 /**

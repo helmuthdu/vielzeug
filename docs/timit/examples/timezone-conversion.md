@@ -10,14 +10,14 @@ Converting a time from one timezone to another while preserving the exact moment
 ```ts
 import { formatHuman, now, toZoned } from '@vielzeug/timit';
 
-const utc = '2026-03-21T10:15:30Z';
+const utc = Temporal.Instant.from('2026-03-21T10:15:30Z');
 
 const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' });
 const london = toZoned(utc, { tz: 'Europe/London' });
 const newyork = toZoned(utc, { tz: 'America/New_York' });
 
-console.log(tokyo.hour);   // 19 (7:15 PM JST)
-console.log(london.hour);  // 10 (10:15 AM GMT)
+console.log(tokyo.hour); // 19 (7:15 PM JST)
+console.log(london.hour); // 10 (10:15 AM GMT)
 console.log(newyork.hour); // 5  (5:15 AM EDT)
 ```
 
@@ -26,14 +26,9 @@ All three represent the **exact same moment** in time, just displayed differentl
 ## Display in Multiple Timezones
 
 ```ts
-const event = '2026-04-15T14:00:00Z';
+const event = Temporal.Instant.from('2026-04-15T14:00:00Z');
 
-const timezones = [
-  'America/New_York',
-  'Europe/Berlin',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-];
+const timezones = ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo', 'Australia/Sydney'];
 
 for (const tz of timezones) {
   const local = toZoned(event, { tz });

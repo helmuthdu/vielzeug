@@ -5,13 +5,11 @@ description: 'Data Transformation Pipeline examples for workit.'
 
 ## Data Transformation Pipeline
 
-## Problem
+### Problem
 
-Implement data transformation pipeline in a production-friendly way with `@vielzeug/workit` while keeping setup and cleanup explicit.
+You need to apply a sequence of CPU-bound transforms to a large dataset — parsing, filtering, aggregating — without blocking the main thread and freezing the UI.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/workit` installed.
+### Solution
 
 Apply CPU-bound transforms to large datasets without blocking the UI:
 
@@ -40,21 +38,9 @@ async function processDataset(rows: Row[]): Promise<Stats[]> {
 }
 ```
 
-## Expected Output
+### Related
 
-- The example runs without type errors in a standard TypeScript setup.
-- Large datasets are processed in parallel without blocking the main thread.
-- Uses auto-concurrency to scale with available CPU cores.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-- Not disposing the pool after processing can prevent the process from exiting.
-
-## Related Recipes
-
-- [Cancellable Batch](./cancellable-batch.md)
-- [Fibonacci with Pool and Timeout](./fibonacci-with-pool-and-timeout.md)
 - [Image Processing](./image-processing.md)
+- [Using Transferables](./using-transferables.md)
+- [Cancellable Batch](./cancellable-batch.md)
+- [Async Workflows (Stateit)](/stateit/examples/pattern-nextvalue-in-async-workflows)

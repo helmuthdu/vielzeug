@@ -48,7 +48,8 @@ A responsive navigation bar with desktop and mobile layouts, plus sticky and flo
 <ComponentPreview>
 
 ```html
-<div style="height: 220px; width: 100%; overflow: auto; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg);">
+<div
+  style="height: 220px; width: 100%; overflow: auto; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg);">
   <bit-navbar sticky label="Main navigation">
     <span slot="logo" style="font-weight: var(--font-semibold);">Brand</span>
     <bit-navbar-item href="#" active>Home</bit-navbar-item>
@@ -68,7 +69,9 @@ A responsive navigation bar with desktop and mobile layouts, plus sticky and flo
 <ComponentPreview>
 
 ```html
-<div class="navbar-floating-preview" style="height: 260px; width: 100%; position: relative; overflow: auto; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg);">
+<div
+  class="navbar-floating-preview"
+  style="height: 260px; width: 100%; position: relative; overflow: auto; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg);">
   <style>
     .navbar-floating-preview bit-navbar[data-mode='floating'] {
       position: absolute !important;
@@ -105,7 +108,9 @@ When both are set, the navbar starts as floating and switches to full-width stic
 <ComponentPreview>
 
 ```html
-<div class="navbar-floating-sticky-preview" style="height: 320px; width: 100%; position: relative; display: block; overflow: auto; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg);">
+<div
+  class="navbar-floating-sticky-preview"
+  style="height: 320px; width: 100%; position: relative; display: block; overflow: auto; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg);">
   <style>
     .navbar-floating-sticky-preview bit-navbar[data-mode='floating'] {
       position: absolute !important;
@@ -231,7 +236,9 @@ Recommended app-shell pattern:
       margin: var(--size-3) 0 var(--size-3) var(--size-3);
     }
 
-    .navbar-sidebar-shell .shell-grid:has(.shell-sidebar[variant='floating'][data-bottom-nav][data-mobile-open]) .shell-panel {
+    .navbar-sidebar-shell
+      .shell-grid:has(.shell-sidebar[variant='floating'][data-bottom-nav][data-mobile-open])
+      .shell-panel {
       transform: translateX(calc(var(--shell-drawer-width) + var(--size-2) + var(--shell-push-gap)));
     }
   </style>
@@ -262,7 +269,13 @@ Recommended app-shell pattern:
     </bit-grid-item>
 
     <bit-grid-item area="panel" class="shell-panel">
-      <bit-navbar floating variant="glass" breakpoint="(max-width: 640px)" container-breakpoints mobile-sidebar="#app-shell-sidebar" label="Workspace navigation">
+      <bit-navbar
+        floating
+        variant="glass"
+        breakpoint="(max-width: 640px)"
+        container-breakpoints
+        mobile-sidebar="#app-shell-sidebar"
+        label="Workspace navigation">
         <span slot="logo" style="font-weight: var(--font-semibold);">Workspace</span>
         <bit-navbar-item slot="start" href="#" active>Dashboard</bit-navbar-item>
         <bit-navbar-item href="#">Projects</bit-navbar-item>
@@ -271,7 +284,10 @@ Recommended app-shell pattern:
       </bit-navbar>
 
       <main class="shell-content">
-        <bit-text>Desktop keeps the sidebar as a dedicated left rail while the right shell contains a floating navbar and content. On mobile, opening the sidebar drawer pushes the entire right shell sideways.</bit-text>
+        <bit-text
+          >Desktop keeps the sidebar as a dedicated left rail while the right shell contains a floating navbar and
+          content. On mobile, opening the sidebar drawer pushes the entire right shell sideways.</bit-text
+        >
       </main>
     </bit-grid-item>
   </bit-grid>
@@ -320,44 +336,44 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 
 ### `bit-navbar` Attributes
 
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `label` | `string` | `'Main navigation'` | Accessible nav landmark label |
-| `sticky` | `boolean` | `false` | Enables sticky mode |
-| `floating` | `boolean` | `false` | Enables floating mode |
-| `scroll-threshold` | `number` | `80` | Scroll px threshold for floating+sticky transition |
-| `breakpoint` | `string` | `'(max-width: 768px)'` | Media query used for mobile mode |
-| `container-breakpoints` | `boolean` | `false` | Evaluates parseable `max-width` breakpoints against the navbar container width |
-| `variant` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'glass' \| 'frost'` | — | Surface style variant |
-| `color` | `ThemeColor` | — | Theme color |
-| `rounded` | `RoundedSize` | — | Border radius token |
-| `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'` | — | Elevation shadow level |
+| Attribute               | Type                                                                 | Default                | Description                                                                    |
+| ----------------------- | -------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
+| `label`                 | `string`                                                             | `'Main navigation'`    | Accessible nav landmark label                                                  |
+| `sticky`                | `boolean`                                                            | `false`                | Enables sticky mode                                                            |
+| `floating`              | `boolean`                                                            | `false`                | Enables floating mode                                                          |
+| `scroll-threshold`      | `number`                                                             | `80`                   | Scroll px threshold for floating+sticky transition                             |
+| `breakpoint`            | `string`                                                             | `'(max-width: 768px)'` | Media query used for mobile mode                                               |
+| `container-breakpoints` | `boolean`                                                            | `false`                | Evaluates parseable `max-width` breakpoints against the navbar container width |
+| `variant`               | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'glass' \| 'frost'` | —                      | Surface style variant                                                          |
+| `color`                 | `ThemeColor`                                                         | —                      | Theme color                                                                    |
+| `rounded`               | `RoundedSize`                                                        | —                      | Border radius token                                                            |
+| `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                             | —                      | Elevation shadow level                                                         |
 
 ### `bit-navbar` Slots
 
-| Slot | Description |
-| --- | --- |
-| `logo` | Brand mark/logo |
-| `start` | Left-aligned desktop content |
-| (default) | Center desktop content |
-| `end` | Right-aligned desktop content |
+| Slot          | Description                          |
+| ------------- | ------------------------------------ |
+| `logo`        | Brand mark/logo                      |
+| `start`       | Left-aligned desktop content         |
+| (default)     | Center desktop content               |
+| `end`         | Right-aligned desktop content        |
 | `mobile-menu` | Mobile-only expandable content panel |
 
 ### `bit-navbar` Events
 
-| Event | Detail | Description |
-| --- | --- | --- |
+| Event                | Detail              | Description                               |
+| -------------------- | ------------------- | ----------------------------------------- |
 | `mobile-menu-change` | `{ open: boolean }` | Fired when mobile menu open state changes |
 
 ### `bit-navbar-item` Attributes
 
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `href` | `string` | — | Link URL (renders anchor when set) |
-| `active` | `boolean` | `false` | Marks item as current page (`aria-current="page"`) |
-| `disabled` | `boolean` | `false` | Disables interaction |
-| `rel` | `string` | — | Link relationship when `href` is set |
-| `target` | `string` | — | Link target when `href` is set |
+| Attribute  | Type      | Default | Description                                        |
+| ---------- | --------- | ------- | -------------------------------------------------- |
+| `href`     | `string`  | —       | Link URL (renders anchor when set)                 |
+| `active`   | `boolean` | `false` | Marks item as current page (`aria-current="page"`) |
+| `disabled` | `boolean` | `false` | Disables interaction                               |
+| `rel`      | `string`  | —       | Link relationship when `href` is set               |
+| `target`   | `string`  | —       | Link target when `href` is set                     |
 
 ## Related Components
 

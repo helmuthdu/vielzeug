@@ -1,5 +1,21 @@
 import { createApi, HttpError } from '../index';
 
+async function getHttpError<T>(promise: Promise<T>, status?: number): Promise<HttpError> {
+  try {
+    await promise;
+  } catch (error) {
+    if (!HttpError.is(error, status)) {
+      throw new Error(`Expected promise to reject with HttpError${status === undefined ? '' : ` (${status})`}`, {
+        cause: error,
+      });
+    }
+
+    return error;
+  }
+
+  throw new Error('Expected promise to reject with HttpError');
+}
+
 describe('HTTP Client', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -116,6 +132,34 @@ describe('HTTP Client', () => {
 
       await expect(http.delete('/users/1')).resolves.toBeUndefined();
     });
+
+    it('throws for unsupported success content-type in auto mode', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(
+        new Response('raw-bytes', {
+          headers: { 'content-type': 'application/octet-stream' },
+          status: 200,
+        }),
+      );
+
+      await expect(http.get('/binary')).rejects.toThrow(/unsupported response content-type/i);
+    });
+
+    it('parses binary responses when responseType is explicit', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(
+        new Response('raw-bytes', {
+          headers: { 'content-type': 'application/octet-stream' },
+          status: 200,
+        }),
+      );
+
+      const data = await http.get<Blob>('/binary', { responseType: 'blob' });
+
+      expect(data).toMatchObject({ size: 9, type: 'application/octet-stream' });
+    });
   });
 
   describe('Headers & Interceptors', () => {
@@ -175,6 +219,140 @@ describe('HTTP Client', () => {
       await expect(http.get<{ mocked: boolean }>('/anything')).resolves.toEqual({ mocked: true });
       expect(fetchMock).not.toHaveBeenCalled();
     });
+
+    it('applies interceptors added after the first request', async () => {
+      const http = createApi();
+
+      fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+
+      await http.get('/before');
+
+      const trace: string[] = [];
+
+      http.use(async (ctx, next) => {
+        trace.push('before');
+
+        const res = await next(ctx);
+
+        trace.push('after');
+
+        return res;
+      });
+
+      await http.get('/after');
+
+      expect(trace).toEqual(['before', 'after']);
+    });
+
+    it('removes interceptor effects after unsubscribe', async () => {
+      const http = createApi();
+      const trace: string[] = [];
+
+      fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+
+      const unsubscribe = http.use(async (ctx, next) => {
+        trace.push('intercept');
+
+        return next(ctx);
+      });
+
+      await http.get('/with-interceptor');
+      unsubscribe();
+      await http.get('/without-interceptor');
+
+      expect(trace).toEqual(['intercept']);
+    });
+  });
+
+  describe('Error Classification', () => {
+    it('classifies kind as "abort" when the signal is aborted and cause is a non-DOMException', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+      const ac = new AbortController();
+
+      // Interceptor that rejects with a plain Error on abort (simulates third-party interceptors)
+      http.use(async (ctx) => {
+        return new Promise<never>((_, reject) => {
+          ctx.init.signal?.addEventListener('abort', () => reject(new Error('User cancelled')));
+        });
+      });
+
+      const promise = http.get('/users/1', { signal: ac.signal });
+
+      ac.abort();
+
+      const err: HttpError = await getHttpError(promise);
+
+      expect(err.kind).toBe('abort');
+      expect(err.isAborted).toBe(true);
+    });
+
+    it('classifies timeout aborts as kind "timeout" when transport throws a generic error', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com', timeout: 5 });
+
+      fetchMock.mockImplementation(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            // Simulate a transport that throws a plain Error on abort, not the timeout
+            // DOMException. The library must still classify this as 'timeout' via signal.reason.
+            init.signal?.addEventListener('abort', () => reject(new Error('Request cancelled')));
+          }),
+      );
+
+      const err: HttpError = await getHttpError(http.get('/slow'));
+
+      expect(err.kind).toBe('timeout');
+      expect(err.isTimeout).toBe(true);
+    });
+
+    it('classifies timeout aborts as kind "timeout" when transport propagates the DOMException cause', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com', timeout: 5 });
+
+      fetchMock.mockImplementation(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(new DOMException('Timed out', 'TimeoutError')));
+          }),
+      );
+
+      const err: HttpError = await getHttpError(http.get('/slow'));
+
+      expect(err.kind).toBe('timeout');
+      expect(err.isTimeout).toBe(true);
+    });
+
+    it('classifies kind as "network" for errors without a status or abort signal', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+
+      const err: HttpError = await getHttpError(http.get('/users/1'));
+
+      expect(err.kind).toBe('network');
+      expect(err.isTimeout).toBe(false);
+      expect(err.isAborted).toBe(false);
+    });
+
+    it('classifies kind as "abort" when an external signal aborts before the timeout fires', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com', timeout: 30_000 });
+      const ac = new AbortController();
+
+      fetchMock.mockImplementation(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+          }),
+      );
+
+      const promise = http.get('/slow', { signal: ac.signal });
+
+      ac.abort();
+
+      const err: HttpError = await getHttpError(promise);
+
+      expect(err.kind).toBe('abort');
+      expect(err.isAborted).toBe(true);
+      expect(err.isTimeout).toBe(false);
+    });
   });
 
   describe('Deduplication', () => {
@@ -203,6 +381,17 @@ describe('HTTP Client', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
+    it('does not pass dedupeKey through to fetch RequestInit', async () => {
+      const http = createApi();
+
+      fetchMock.mockResolvedValue(jsonResponse({ id: 1 }));
+
+      await http.post('/users', { body: { name: 'A' }, dedupeKey: ['create-user', 'A'] });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect('dedupeKey' in fetchMock.mock.calls[0][1]).toBe(false);
+    });
+
     it('deduplicates non-idempotent requests when dedupeKey is explicit', async () => {
       const http = createApi();
 
@@ -220,26 +409,71 @@ describe('HTTP Client', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    it('always deduplicates idempotent reads', async () => {
+    it('does not deduplicate concurrent reads when responseType differs', async () => {
       const http = createApi();
 
       fetchMock.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
       );
 
-      await Promise.all([http.get('/users/1'), http.get('/users/1')]);
+      await Promise.all([http.get('/users/1', { responseType: 'json' }), http.get('/users/1', { responseType: 'text' })]);
 
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not deduplicate concurrent reads when per-request headers differ', async () => {
+      const http = createApi();
+
+      fetchMock.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
+      );
+
+      await Promise.all([
+        http.get('/users/1', { headers: { 'accept-language': 'en' } }),
+        http.get('/users/1', { headers: { 'accept-language': 'de' } }),
+      ]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('deduplicates concurrent reads when headers and responseType are identical', async () => {
+      const http = createApi();
+
+      fetchMock.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
+      );
+
+      const [r1, r2] = await Promise.all([
+        http.get('/users/1', { headers: { 'x-trace': 'abc' }, responseType: 'json' }),
+        http.get('/users/1', { headers: { 'x-trace': 'abc' }, responseType: 'json' }),
+      ]);
+
+      expect(r1).toEqual({ id: 1 });
+      expect(r2).toEqual({ id: 1 });
       expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not deduplicate idempotent reads with different URLs', async () => {
+      const http = createApi();
+
+      fetchMock.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
+      );
+
+      await Promise.all([http.get('/users/1'), http.get('/users/2')]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('Timeout & Errors', () => {
-    it('supports infinity timeout and rejects non-positive values', async () => {
+    it('supports infinity timeout and rejects invalid timeout values', async () => {
       fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
 
       await expect(createApi({ timeout: Number.POSITIVE_INFINITY }).get('/test')).resolves.toBeDefined();
       expect(() => createApi({ timeout: 0 })).toThrow(/timeout must be a positive number or Infinity/i);
       expect(() => createApi({ timeout: -1 })).toThrow(/timeout must be a positive number or Infinity/i);
+      expect(() => createApi({ timeout: Number.NaN })).toThrow(/timeout must be a positive number or Infinity/i);
     });
 
     it('uses the provided fetch implementation when configured', async () => {
@@ -257,7 +491,7 @@ describe('HTTP Client', () => {
 
       fetchMock.mockRejectedValue(new Error('Network error'));
 
-      const err = await http.get('/users/1').catch((error) => error);
+      const err: HttpError = await getHttpError(http.get('/users/1'));
 
       expect(err).toBeInstanceOf(HttpError);
       expect(err).toMatchObject({ method: 'GET', url: 'https://api.example.com/users/1' });
@@ -268,7 +502,7 @@ describe('HTTP Client', () => {
 
       fetchMock.mockResolvedValue(jsonResponse({ error: 'Not found' }, 404));
 
-      const err = await http.get('/users/999').catch((error) => error);
+      const err: HttpError = await getHttpError(http.get('/users/999'), 404);
 
       expect(err).toBeInstanceOf(HttpError);
       expect(err).toMatchObject({ data: { error: 'Not found' }, status: 404 });
@@ -286,11 +520,18 @@ describe('HTTP Client', () => {
         statusText: 'Gone',
       });
 
-      const err = await http.get('/old').catch((e) => e);
+      const err: HttpError = await getHttpError(http.get('/old'));
 
-      expect(HttpError.is(err)).toBe(true);
       expect(err.headers).toBeInstanceOf(Headers);
       expect(err.headers?.get('x-request-id')).toBe('abc123');
+    });
+
+    it('[Symbol.dispose] delegates to dispose()', () => {
+      const http = createApi();
+
+      expect(http.disposed).toBe(false);
+      http[Symbol.dispose]();
+      expect(http.disposed).toBe(true);
     });
 
     it('cancelAll() aborts all in-flight requests', async () => {

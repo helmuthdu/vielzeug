@@ -5,6 +5,10 @@ describe('diff', () => {
     expect(diff()).toEqual({});
   });
 
+  it('should return an empty object if both inputs are null', () => {
+    expect(diff(null as any, null as any)).toEqual({});
+  });
+
   it('should return the current object if the previous object is undefined', () => {
     const curr = { a: 1, b: 2 };
 

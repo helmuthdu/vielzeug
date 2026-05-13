@@ -3,6 +3,8 @@ title: Virtualit — Virtual list engine for TypeScript
 description: Lightweight, framework-agnostic virtual list engine with variable heights, smooth scrolling, and zero dependencies.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="virtualit" />
 
 <img src="/logo-virtualit.svg" alt="Virtualit logo" width="156" class="logo-highlight"/>
@@ -61,7 +63,7 @@ const virt = createVirtualizer(scrollEl, {
 virt.destroy();
 ```
 
-## Entry Points
+### Entry Points
 
 - `@vielzeug/virtualit` — core `createVirtualizer` controller.
 - `@vielzeug/virtualit/dom` — `createDomVirtualList` helper for dropdown/listbox-style DOM integrations.
@@ -115,6 +117,7 @@ const virt = createVirtualizer(scrollEl, {
 - **Framework-agnostic** — callback-based `onChange` connects to any rendering layer (React, Vue, Svelte, Lit, vanilla DOM)
 - **Fixed and variable heights** — pass a fixed number, a per-index estimator function, or call `measure()` after rendering for exact heights
 - **Batched measurements** — calling `measure()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
+- **Stable-key reflow** — call `refresh()` after reorder/filter changes to rebuild offsets without discarding measured sizes
 - **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
 - **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; both support `behavior: 'smooth'`
 - **Horizontal + window targets** — supports both element and `window` scrolling, in vertical or horizontal mode
@@ -135,17 +138,17 @@ const virt = createVirtualizer(scrollEl, {
 | SSR         | ❌ (DOM only) |
 | Deno        | ❌            |
 
-## Prerequisites
+### Prerequisites
 
 - Browser DOM environment with scroll container measurement.
 - A fixed-height scroll container with `overflow: auto` and a positioned inner list layer.
 - Item renderer that applies absolute positioning from virtual item offsets.
 
-## How It Works
+### How It Works
 
 Virtualit maintains a `Float64Array` prefix-sum of item offsets. On every scroll event it runs two binary searches — one for the first visible index, one for the last — to determine the render window in O(log n) time. Only the items within that window (plus `overscan` on each side) are passed to `onChange`.
 
-```
+```text
 Items:    [0]  [1]  [2]  [3]  [4]  [5]  [6]  ...
 Offsets:   0   36   72  108  144  180  216  ...
 
@@ -153,10 +156,18 @@ scrollTop = 90, containerHeight = 120 → visible items 2–5
 With overscan=3: render items 0–8
 ```
 
-The offset array is rebuilt (O(n)) only when item heights change: on `measure()` flush, `update({ count })`, `update({ estimateSize })`, or `invalidate()`. Scroll and resize events recompute the visible window without rebuilding offsets.
+The offset array is rebuilt (O(n)) only when layout inputs change: on `measure()` flush, `refresh()`, `update({ count })`, `update({ estimateSize })`, or `invalidate()`. Scroll and resize events recompute the visible window without rebuilding offsets.
+
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 
 - [Buildit](/buildit/)
 - [Craftit](/craftit/)
 - [Dragit](/dragit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

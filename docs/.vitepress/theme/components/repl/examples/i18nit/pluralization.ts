@@ -3,7 +3,7 @@ export const pluralizationExample = {
 
 const i18n = createI18n({
   locale: 'en',
-  messages: {
+  catalogs: {
     en: {
       items: {
         zero: 'No items',
@@ -14,8 +14,8 @@ const i18n = createI18n({
   },
 })
 
-console.log(i18n.tp('items', 0))
-console.log(i18n.tp('items', 1))
-console.log(i18n.tp('items', 3))`,
+console.log(i18n.t('items', { count: 0 }))
+console.log(i18n.t('items', { count: 1 }))
+console.log(i18n.t('items', { count: 3 }))`,
   name: 'Pluralization Rules',
 };

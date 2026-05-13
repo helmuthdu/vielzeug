@@ -3,15 +3,14 @@ export { createPermit } from './factory';
 export { owns } from './helpers';
 export type {
   BoundPermit,
-  PermissionData,
   Permit,
+  PermitCheck,
   PermitDecision,
-  PermitEffect,
   PermitLoggerContext,
   PermitOptions,
   PermitPredicate,
   PermitRule,
-  PredicateContext,
   Principal,
+  RuleContext,
   UserPrincipal,
 } from './types';

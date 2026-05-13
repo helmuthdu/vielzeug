@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/virtualit)](https://www.npmjs.com/package/@vielzeug/virtualit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Virtualit** renders only the items visible in the viewport plus a configurable overscan buffer. It uses a `ResizeObserver` for automatic container remeasurement and a passive `scroll` listener to keep the visible window in sync — no framework required.
+**Virtualit** renders only the items visible in the viewport plus a configurable overscan buffer. It uses a `ResizeObserver` for container size changes and a passive `scroll` listener to keep the visible window in sync — no framework required.
 
 ## Installation
 
@@ -46,6 +46,7 @@ virt.destroy();
 - ✅ **Framework-agnostic** — callback-based `onChange`; works with React, Vue, Svelte, Lit, or vanilla DOM
 - ✅ **Fixed and variable sizes** — pass a number or a per-index estimator; call `measure()` for exact size capture
 - ✅ **Batched measurements** — measurement calls within a single tick are coalesced into one rebuild via `queueMicrotask`
+- ✅ **Stable-key reflow** — `refresh()` rebuilds offsets after reorder/filter changes without discarding measured sizes
 - ✅ **Skipped re-renders** — `onChange` is not fired when a scroll event doesn't cross an item boundary
 - ✅ **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel-level control; both support `behavior: 'smooth'`; variable-height lists use current estimates until rows are measured
 - ✅ **Atomic updates** — `update()` can change count, estimator, overscan, callbacks, and scroll behavior config together
@@ -116,7 +117,9 @@ virt.scrollToIndex(50, { align: 'start', behavior: 'smooth' });
 virt.scrollToOffset(1440, { behavior: 'smooth' });
 ```
 
-For variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If row sizes changed materially, remeasure affected items first or call `invalidate()` and then scroll again.
+For variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If row sizes changed materially, call `invalidate()` and then scroll again.
+
+If the same logical rows were reordered or filtered while keeping stable keys, call `refresh()` to rebuild offsets without dropping measured sizes.
 
 ### Updating the List
 
@@ -126,6 +129,9 @@ virt.update({ count: newItems.length });
 
 // Switch row density (e.g. compact ↔ comfortable view)
 virt.update({ estimateSize: isDense ? 32 : 48 });
+
+// Rebuild after reordering stable-key rows
+virt.refresh();
 
 // Recompute after a font swap or layout shift
 virt.invalidate();
@@ -181,6 +187,7 @@ Returns a `Virtualizer` instance.
 - `scrollOffset`: `readonly number` — current scroll offset.
 - `isScrolling`: `readonly boolean` — true while in active scrolling window.
 - `measure(i, h)`: `(index: number, size: number) => void` — record exact item size; batched per microtask.
+- `refresh()`: `() => void` — rebuild offsets and re-render while keeping measured sizes.
 - `scrollToIndex(i, opts?)`: `(index, ScrollToIndexOptions) => void` — scroll to an item.
 - `scrollToOffset(px, opts?)`: `(offset, { behavior? }) => void` — scroll to a pixel offset.
 - `invalidate()`: `() => void` — clear measured sizes and re-render.

@@ -14,13 +14,12 @@ Validate request bodies, query parameters, and outbound service responses at the
 ```ts
 import { v } from '@vielzeug/validit';
 
-const CreateArticleSchema = v
-  .object({
-    title: v.string().min(5).max(200),
-    body: v.string().min(20),
-    tags: v.array(v.string().trim().min(1)).max(10).unique().default([]),
-    status: v.union('draft', 'published').default('draft'),
-  });
+const CreateArticleSchema = v.object({
+  title: v.string().min(5).max(200),
+  body: v.string().min(20),
+  tags: v.array(v.string().trim().min(1)).max(10).unique().default([]),
+  status: v.union('draft', 'published').default('draft'),
+});
 
 app.post('/articles', (req, res) => {
   const result = CreateArticleSchema.safeParse(req.body);
@@ -72,10 +71,10 @@ const event = WebhookSchema.parse(req.body);
 ### Common Pitfalls
 
 - Assuming unknown keys are accepted in object payloads.
-- Using `safeParse()` with async-only schemas containing `.refineAsync()`.
+- Using `safeParse()` with async-only schemas containing async `check()`.
 - Returning raw `ValidationError` messages to clients without shaping response fields.
 
-### Related Recipes
+### Related
 
 - [Async](./async.md)
 - [Forms](./forms.md)

@@ -13,7 +13,7 @@ In North America, on March 8, 2026, at 2:00 AM EST, clocks spring forward to 3:0
 import { difference, shift, toInstant, toZoned } from '@vielzeug/timit';
 
 // One hour before the transition
-const before = '2026-03-08T01:30:00-05:00[America/New_York]';
+const before = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
 
 // Add 1 hour — should jump to 3:30 EDT (not 2:30)
 const after = shift(before, { hours: 1 });
@@ -28,7 +28,7 @@ In North America, on November 1, 2026, at 2:00 AM EDT, clocks fall back to 1:00 
 
 ```ts
 // First occurrence: 1:30 AM EDT
-const first = toInstant('2026-11-01T01:30:00-04:00[America/New_York]');
+const first = toInstant(Temporal.ZonedDateTime.from('2026-11-01T01:30:00-04:00[America/New_York]'));
 
 // Convert to different representation
 const zoned = toZoned(first, { tz: 'America/New_York', when: 'earlier' });
@@ -51,8 +51,8 @@ const rightReminder = shift(meeting, { minutes: -30 }, { tz: 'America/New_York' 
 ## Compare Instants Across DST
 
 ```ts
-const beforeDst = '2026-03-08T01:30:00-05:00[America/New_York]';
-const afterDst = '2026-03-08T04:00:00-04:00[America/New_York]';
+const beforeDst = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
+const afterDst = Temporal.ZonedDateTime.from('2026-03-08T04:00:00-04:00[America/New_York]');
 
 const duration = difference(beforeDst, afterDst, { tz: 'America/New_York' });
 console.log(duration.toString()); // PT2H30M — correct!

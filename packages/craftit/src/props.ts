@@ -38,7 +38,7 @@ export const prop = {
           return defaultValue;
         }
       },
-      reflect: true,
+      reflect: false,
     };
   },
   number(defaultValue = 0): PropDef<number> {
@@ -76,13 +76,28 @@ export const prop = {
 const isPropDef = (value: unknown): value is PropDef<unknown> =>
   typeof value === 'object' && value !== null && 'default' in value;
 
+const isStructuredValue = (value: unknown): boolean =>
+  Array.isArray(value) || (typeof value === 'object' && value !== null);
+
 export function normalizePropDefinition<T>(value: T | PropDef<T>): PropDef<T> {
   if (isPropDef(value)) {
     const descriptor = value as PropDef<T>;
+    const reflect = descriptor.reflect ?? true;
+
+    if (reflect && isStructuredValue(descriptor.default)) {
+      throw new Error('Structured prop defaults cannot use reflect:true. Set reflect:false and sync explicitly.');
+    }
 
     return {
       ...descriptor,
-      reflect: descriptor.reflect ?? true,
+      reflect,
+    };
+  }
+
+  if (isStructuredValue(value)) {
+    return {
+      default: value as T,
+      reflect: false,
     };
   }
 
@@ -125,20 +140,24 @@ type PropMeta<T = unknown> = {
   signal: Signal<T>;
 };
 
+const parseBoolean = <T>(value: string | null): T => (value === '' || value === 'true') as T;
+const parseNumber = <T>(value: string | null): T => Number(value) as T;
+const parseString = <T>(value: string | null): T => value as unknown as T;
+
+const PARSER_BY_TYPE: Record<string, <T>(value: string | null) => T> = {
+  boolean: parseBoolean,
+  number: parseNumber,
+  string: parseString,
+};
+
 /** Infer attribute parser from default value type. */
 const inferParserFromValue = <T>(defaultValue: T): ((value: string | null) => T) => {
   return (value: string | null): T => {
     if (value == null) return defaultValue;
 
-    if (typeof defaultValue === 'boolean') {
-      return (value === '' || value === 'true') as T;
-    }
+    const parser = PARSER_BY_TYPE[typeof defaultValue];
 
-    if (typeof defaultValue === 'number') {
-      return Number(value) as T;
-    }
-
-    return value as unknown as T;
+    return parser ? (parser(value) as T) : (value as unknown as T);
   };
 };
 
@@ -216,7 +235,11 @@ export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals
   const props = {} as Record<string, Signal<unknown>>;
 
   for (const [name, def] of Object.entries(defs)) {
-    const descriptor = normalizePropDefinition(def);
+    // Ensure definition is normalized (should have been done at define-time, but this is a safety measure)
+    const descriptor =
+      typeof def === 'object' && def !== null && 'default' in def
+        ? (def as PropDef<unknown>)
+        : normalizePropDefinition(def);
     const attrName = toKebab(name);
 
     props[name] = registerProp(name, attrName, descriptor.default, descriptor);

@@ -16,6 +16,7 @@
       color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
     );
     --_panel-bleed: var(--size-8);
+    --_drag-handle-inset: calc(var(--size-1) * -1);
 
     display: contents;
   }
@@ -247,6 +248,7 @@
     position: absolute;
     z-index: 10;
     pointer-events: all;
+    touch-action: none;
     cursor: grab;
   }
 
@@ -292,6 +294,24 @@
   /* Bottom drawer — handle at top (opposite side) */
   :host([placement='bottom']) .drag-handle {
     top: calc(var(--_panel-bleed) * -1);
+  }
+
+  /* Inset drag-handle placement keeps the handle fully inside the panel. */
+  :host([drag-handle-placement='inset'][placement='left']) .drag-handle {
+    right: var(--_drag-handle-inset);
+  }
+
+  :host([drag-handle-placement='inset'][placement='right']) .drag-handle,
+  :host([drag-handle-placement='inset']:not([placement])) .drag-handle {
+    left: var(--_drag-handle-inset);
+  }
+
+  :host([drag-handle-placement='inset'][placement='top']) .drag-handle {
+    bottom: var(--_drag-handle-inset);
+  }
+
+  :host([drag-handle-placement='inset'][placement='bottom']) .drag-handle {
+    top: var(--_drag-handle-inset);
   }
 
   /* Visual indicator — subtle bar in the center */

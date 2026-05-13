@@ -5,13 +5,11 @@ description: 'Streaming with `events()` examples for eventit.'
 
 ## Streaming with `events()`
 
-## Problem
+### Problem
 
-Implement streaming with `events()` in a production-friendly way with `@vielzeug/eventit` while keeping setup and cleanup explicit.
+You need to consume a continuous stream of events as an async iterable — processing each one in sequence with `for await` instead of registering a callback that runs in parallel.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
+### Solution
 
 Process an ongoing sequence of events as an async generator:
 
@@ -22,7 +20,7 @@ async function watchCart() {
   // Stop streaming after 30 seconds of inactivity (extend pattern)
   let timeout = setTimeout(() => controller.abort(), 30_000);
 
-  for await (const { items, total } of appBus.events('cart:updated', controller.signal)) {
+  for await (const { items, total } of appBus.events('cart:updated', { signal: controller.signal, maxBuffer: 20 })) {
     clearTimeout(timeout);
     timeout = setTimeout(() => controller.abort(), 30_000);
     renderCart(items, total);
@@ -30,19 +28,16 @@ async function watchCart() {
 }
 ```
 
-## Expected Output
+### Pitfalls
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- `events()` starts listening when iteration begins (the first `next()` call), not when the generator object is created. Events emitted between construction and first iteration are lost.
+- Breaking out of the `for await` loop with `break` or `return` does not dispose the bus. Call `bus.dispose()` explicitly or wrap the loop in `try/finally`.
+- If the bus is disposed while the generator is awaiting the next event, the generator throws `BusDisposedError`. Wrap the `for await` in a try/catch to handle graceful teardown.
 
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Async Workflows with watch (Stateit)](/stateit/examples/pattern-nextvalue-in-async-workflows)
+- [Polling (Fetchit)](/fetchit/examples/polling)
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
 - [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)

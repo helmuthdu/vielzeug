@@ -298,22 +298,22 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 
 ### Events
 
-| Event    | Detail                                  | Description                                                                                                                   |
-| -------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `select` | `{ value: string, checked?: boolean }`  | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items                    |
-| `open`   | `{ reason: 'programmatic' \| 'trigger' }`                                     | Emitted when the panel opens.                                                                                                 |
-| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }` | Emitted when the panel closes.                                                                                                |
+| Event    | Detail                                                                   | Description                                                                                               |
+| -------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `select` | `{ value: string, checked?: boolean }`                                   | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items |
+| `open`   | `{ reason: 'programmatic' \| 'trigger' }`                                | Emitted when the panel opens.                                                                             |
+| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }` | Emitted when the panel closes.                                                                            |
 
 ### CSS Custom Properties (`bit-menu`)
 
-| Property                 | Description                | Default        |
-| ------------------------ | -------------------------- | -------------- |
-| `--menu-panel-min-width` | Minimum width of the panel | `10rem`        |
-| `--menu-panel-radius`    | Border radius of the panel | `--rounded-lg` |
-| `--menu-panel-shadow`    | Box shadow of the panel    | `--shadow-xl`  |
-| `--menu-panel-bg`        | Panel background surface   | mixed contrast surface |
-| `--menu-panel-border-color` | Panel border color      | subtle mixed contrast |
-| `--menu-panel-blur`      | Panel blur amount          | `--blur-md`    |
+| Property                    | Description                | Default                |
+| --------------------------- | -------------------------- | ---------------------- |
+| `--menu-panel-min-width`    | Minimum width of the panel | `10rem`                |
+| `--menu-panel-radius`       | Border radius of the panel | `--rounded-lg`         |
+| `--menu-panel-shadow`       | Box shadow of the panel    | `--shadow-xl`          |
+| `--menu-panel-bg`           | Panel background surface   | mixed contrast surface |
+| `--menu-panel-border-color` | Panel border color         | subtle mixed contrast  |
+| `--menu-panel-blur`         | Panel blur amount          | `--blur-md`            |
 
 ## Accessibility
 

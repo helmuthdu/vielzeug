@@ -1,36 +1,70 @@
 ---
-title: 'Eventit Examples — Custom error boundary'
-description: 'Custom error boundary examples for eventit.'
+title: 'Eventit Examples — Custom Error Boundary'
+description: 'Collect and report listener errors from an Eventit bus without stopping other listeners.'
 ---
 
-## Custom error boundary
+## Custom Error Boundary
 
-## Problem
+### Problem
 
-Implement custom error boundary in a production-friendly way with `@vielzeug/eventit` while keeping setup and cleanup explicit.
+A listener that throws will silently swallow the error unless you provide a global `onError` handler. Without one, Eventit rethrows inside `emit`, which can break the call site and prevent other listeners from running.
 
-## Runnable Example
+### Solution
 
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
+Pass an `onError` handler to `createBus`. The handler receives the thrown error, the event name, and the emitted payload, so you can log, report, or collect errors without interrupting delivery to the remaining listeners.
 
-Collect errors across an event bus session with typed context:
+```ts
+import { createBus } from '@vielzeug/eventit';
 
-Use `onError` to collect listener failures while allowing remaining listeners to continue.
-For each failure, Eventit passes `err`, the emitted `event`, and that event's `payload`.
+interface AppEvents {
+  'order:placed': { orderId: string; amount: number };
+  'order:failed': { orderId: string; reason: string };
+}
 
-## Expected Output
+const errors: Array<{ err: unknown; event: string; payload: unknown }> = [];
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+const bus = createBus<AppEvents>({
+  onError(err, event, payload) {
+    // Collect instead of rethrowing — other listeners continue
+    errors.push({ err, event, payload });
+    console.error(`[bus] listener error on "${String(event)}"`, err);
+  },
+});
 
-## Common Pitfalls
+// Listener A — well-behaved
+bus.on('order:placed', ({ orderId, amount }) => {
+  console.log(`Order ${orderId} placed for $${amount}`);
+});
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+// Listener B — buggy: throws on large amounts
+bus.on('order:placed', ({ amount }) => {
+  if (amount > 999) throw new Error('Amount exceeds limit');
+  processPayment(amount);
+});
 
-## Related Recipes
+// Listener C — also well-behaved; runs even when B throws
+bus.on('order:placed', ({ orderId }) => {
+  sendConfirmationEmail(orderId);
+});
+
+// Emit: A and C run successfully; B throws, onError is called, delivery continues
+bus.emit('order:placed', { orderId: 'abc-1', amount: 1500 });
+
+// errors[0] === { err: Error('Amount exceeds limit'), event: 'order:placed', payload: { orderId: 'abc-1', amount: 1500 } }
+console.log('Collected errors:', errors.length); // 1
+
+function processPayment(_amount: number) { /* ... */ }
+function sendConfirmationEmail(_id: string) { /* ... */ }
+```
+
+### Pitfalls
+
+- **Not providing `onError` means errors re-throw from `emit`.** If you call `emit` in a fire-and-forget context (e.g., a UI event handler), an uncaught throw can cause an unhandled exception or break downstream listeners on that same call.
+- **`onError` does not convert `emit` into a promise.** You cannot `await` listener errors — they are delivered synchronously via the callback. Use a collector array (as shown above) or send errors to a monitoring service.
+- **`onError` applies to synchronous throws only.** If a listener returns a Promise that later rejects, that rejection is not caught by `onError` — handle async listener errors with `.catch()` inside the listener itself.
+
+### Related
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
-- [Framework Integration](./framework-integration.md)
 - [Handling disposal in async code](./handling-disposal-in-async-code.md)
+- [Framework Integration](../usage.md#framework-integration)

@@ -1,4 +1,4 @@
-import type { PermissionData, PermitPredicate } from './types';
+import type { PermitPredicate } from './types';
 
 /**
  * Creates a predicate for checking ownership: matches when the principal's ID
@@ -8,21 +8,21 @@ import type { PermissionData, PermitPredicate } from './types';
  *
  * @example
  * ```ts
- * permit.set({
- *   role: 'editor',
- *   resource: 'posts',
- *   action: 'update',
- *   effect: 'allow',
- *   when: owns('authorId'),
- * });
+ * const permit = createPermit([
+ *   {
+ *     role: 'editor',
+ *     resource: 'posts',
+ *     action: 'update',
+ *     effect: 'allow',
+ *     when: owns('authorId'),
+ *   },
+ * ]);
  *
  * // Allows if: principal.id === data.authorId
  * permit.can(editor, 'posts', 'update', { authorId: editor.id }); // true
  * ```
  */
-export function owns<TData extends PermissionData = PermissionData>(
-  attributeKey: keyof TData & string,
-): PermitPredicate<TData> {
+export function owns<TData = unknown>(attributeKey: keyof TData & string): PermitPredicate<TData> {
   return ({ data, principal }) => {
     if (!data || typeof data !== 'object') return false;
 

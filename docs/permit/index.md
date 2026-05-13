@@ -3,6 +3,8 @@ title: Permit — Deterministic authorization for TypeScript
 description: Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="permit" />
 
 <img src="/logo-permit.svg" alt="Permit logo" width="156" class="logo-highlight"/>
@@ -10,6 +12,8 @@ description: Minimal authorization engine with deterministic precedence, wildcar
 # Permit
 
 `@vielzeug/permit` is a small authorization engine for role/resource/action checks.
+
+<!-- Search keywords: RBAC rules engine, authorization checks, typed permissions. -->
 
 ## Installation
 
@@ -34,53 +38,68 @@ yarn add @vielzeug/permit
 ```ts
 import { ANONYMOUS, WILDCARD, createPermit, owns } from '@vielzeug/permit';
 
-const permit = createPermit<'read' | 'update', { authorId: string }>();
-
-permit
-  .set({ role: 'editor', resource: 'posts', action: 'read', effect: 'allow' })
-  .set({
+const permit = createPermit<'read' | 'update', { authorId: string }>([
+  { role: 'editor', resource: 'posts', action: 'read', effect: 'allow' },
+  {
     role: 'editor',
     resource: 'posts',
     action: 'update',
     effect: 'allow',
     when: owns('authorId'),
-  })
-  .set({ role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 })
-  .set({ role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' });
+  },
+  { role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 },
+  { role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' },
+]);
 
 permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
 permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' });
 
-const bound = permit.forUser({ id: 'u1', roles: ['editor'] }, true);
+const bound = permit.forUser({ id: 'u1', roles: ['editor'] });
 
 bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
 bound.explain('posts', 'update', { authorId: 'u2' });
+bound.checkAll([
+  { resource: 'posts', action: 'read' },
+  { resource: 'posts', action: 'update', data: { authorId: 'u1' } },
+]);
+bound.rulesInScope('posts');
 ```
 
 ## Why Permit?
 
-- Minimal API: `set`, `can`, `canAll`, `canAny`, `allowedActions`, `explain`, `forUser`, `rules`, `replace`, `clear`
+- Minimal API: `can`, `canAll`, `canAny`, `checkAll`, `allowedActions`, `explain`, `rulesInScope`, `forUser`
 - Deterministic precedence model
 - Deny-overrides at top precedence
 - Runtime predicates directly on rules
 - Exact matching with explicit wildcards
 - Zero dependencies
 
-## Core Ideas
+| Feature                           | Permit                                       | CASL    | AccessControl        |
+| --------------------------------- | -------------------------------------------- | ------- | -------------------- |
+| Bundle size                       | <PackageInfo package="permit" type="size" /> | ~11 kB  | ~7 kB                |
+| Typed rule contracts              | ✅                                           | Partial | Partial              |
+| Deterministic deny precedence     | ✅                                           | ✅      | ✅                   |
+| Rule predicates with request data | ✅                                           | ✅      | ⚠️ (manual patterns) |
+| Wildcard action support           | ✅                                           | ✅      | ✅                   |
+| Principal-bound API               | ✅ (`forUser`)                               | Partial | ❌                   |
+| Explainable decisions             | ✅                                           | Partial | ❌                   |
+| Zero dependencies                 | ✅                                           | ❌      | ❌                   |
 
-- One rule primitive: `permit.set(rule | rules)`
+**Use Permit when** you want predictable authorization decisions with typed rules and explicit introspection APIs.
+
+**Consider larger policy frameworks when** you need ecosystem-specific integrations or policy storage outside application code.
+
+## Features
+
+- One rule primitive: `PermitRule` passed to `createPermit(rules)`
 - Decision methods: `permit.can`, `permit.canAll`, `permit.canAny`, `permit.explain`
-- Action enumeration: `permit.allowedActions(principal, resource, data?)`
+- Batch decisions: `permit.checkAll(principal, checks)`
+- Rule introspection: `permit.rulesInScope(principal, resource, data?)`
+- Action enumeration: `permit.allowedActions(principal, resource, data?, knownActions?)`
 - Explicit wildcard support with `WILDCARD`
 - Anonymous checks via `null` principal plus `ANONYMOUS` role rules
 - Ownership helper via `owns(attributeKey)`
-- Principal-bound API via `permit.forUser(principal, cache?)`
-
-## See Also
-
-- [Usage Guide](./usage.md)
-- [API Reference](./api.md)
-- [Examples](./examples.md)
+- Principal-bound API via `permit.forUser(principal)`
 
 ## Compatibility
 
@@ -90,3 +109,17 @@ bound.explain('posts', 'update', { authorId: 'u2' });
 | Node.js     | ✅      |
 | SSR         | ✅      |
 | Deno        | ✅      |
+
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
+
+## See Also
+
+- [Routeit](../routeit/index.md) for route-level authorization middleware.
+- [Logit](../logit/index.md) for structured audit logs of permission checks.
+- [Eventit](../eventit/index.md) for event-driven permission workflows.
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

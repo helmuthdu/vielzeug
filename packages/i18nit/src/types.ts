@@ -1,126 +1,95 @@
 export type Locale = string;
-export type Vars = Record<string, unknown>;
 export type Unsubscribe = () => void;
 
-export type Messages = { [key: string]: string | Messages };
+export interface Messages {
+  [key: string]: string | Messages;
+}
+export type TranslateVars = Record<string, unknown>;
 
-type StringKey<T> = Extract<keyof T, string>;
-type DotJoin<P extends string, K extends string> = P extends '' ? K : `${P}.${K}`;
-type PrevDepth = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+export type Loader<M extends Messages = Messages> = (locale: Locale) => Promise<M>;
+
+export type LocaleSource<M extends Messages = Messages> = M | Loader<M>;
+
+export type PluralTranslateOptions = {
+  ordinal?: boolean;
+  vars?: TranslateVars;
+};
+
+export type SupportedLocalesOptions = {
+  sorted?: boolean;
+};
+
+export type MissingInfo =
+  | { key: string; locale: Locale; type: 'key' }
+  | { key: string; locale: Locale; type: 'var'; varName: string };
+
+export type I18nSnapshot = {
+  readonly locale: Locale;
+  readonly version: number;
+};
+
+export type AnyKey = string & {};
+
+export type SubscribeOptions = {
+  immediate?: boolean;
+};
+
+// ─── Key inference ────────────────────────────────────────────────────────────
+// Depth tuple prevents infinite recursion on recursive `Messages` type.
+type Depth = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 export type MessageLeafKeys<T, P extends string = '', D extends number = 7> = [D] extends [0]
   ? never
   : T extends string
     ? P
     : T extends Record<string, unknown>
-      ? {
-          [K in StringKey<T>]: MessageLeafKeys<T[K], DotJoin<P, K>, PrevDepth[D]>;
-        }[StringKey<T>]
+      ? { [K in string & keyof T]: MessageLeafKeys<T[K], P extends '' ? K : `${P}.${K}`, Depth[D]> }[string & keyof T]
       : never;
 
 export type MessageBranchKeys<T, P extends string = '', D extends number = 7> = [D] extends [0]
   ? never
   : T extends Record<string, unknown>
     ? {
-        [K in StringKey<T>]: T[K] extends string
+        [K in string & keyof T]: T[K] extends string
           ? never
-          : DotJoin<P, K> | MessageBranchKeys<T[K], DotJoin<P, K>, PrevDepth[D]>;
-      }[StringKey<T>]
+          : (P extends '' ? K : `${P}.${K}`) | MessageBranchKeys<T[K], P extends '' ? K : `${P}.${K}`, Depth[D]>;
+      }[string & keyof T]
     : never;
 
-export type Loader<M extends Messages = Messages> = (locale: Locale) => Promise<M>;
-
-export type LocaleChangeReason = 'locale-change' | 'catalog-update' | 'init';
-export type LocaleChangeEvent = { locale: Locale; reason: LocaleChangeReason };
-
-export type DiagnosticEvent =
-  | { error: unknown; kind: 'subscriber-error' }
-  | { error: unknown; kind: 'loader-error'; locale: Locale };
-
-export type DurationValue = Partial<
-  Record<
-    | 'years'
-    | 'months'
-    | 'weeks'
-    | 'days'
-    | 'hours'
-    | 'minutes'
-    | 'seconds'
-    | 'milliseconds'
-    | 'microseconds'
-    | 'nanoseconds',
-    number
-  >
->;
-
-export type DurationFormatOptions = {
-  hours?: 'numeric' | '2-digit';
-  milliseconds?: 'numeric';
-  minutes?: 'numeric' | '2-digit';
-  nanoseconds?: 'numeric';
-  seconds?: 'numeric' | '2-digit';
-  style?: 'digital' | 'long' | 'narrow' | 'short';
-};
-
-export type FormatInput =
-  | {
-      kind: 'number';
-      options?: Intl.NumberFormatOptions;
-      value: number;
-    }
-  | {
-      currency: string;
-      kind: 'currency';
-      options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>;
-      value: number;
-    }
-  | {
-      kind: 'date';
-      options?: Intl.DateTimeFormatOptions;
-      value: Date | number;
-    }
-  | {
-      kind: 'relative';
-      options?: Intl.RelativeTimeFormatOptions;
-      unit: Intl.RelativeTimeFormatUnit;
-      value: number;
-    }
-  | {
-      kind: 'list';
-      options?: { style?: 'long' | 'short' | 'narrow'; type?: 'and' | 'or' };
-      value: unknown[];
-    }
-  | {
-      kind: 'duration';
-      options?: DurationFormatOptions;
-      value: DurationValue;
-    };
-
-export type FormatKind = FormatInput['kind'];
-
+// ─── Config ───────────────────────────────────────────────────────────────────
+/**
+ * Configuration for i18n instances.
+ * When `M` is not explicitly provided, it defaults to the broad `Messages` type,
+ * allowing heterogeneous catalogs. When `M` is explicit, strict type checking applies.
+ */
 export type I18nOptions<M extends Messages = Messages> = {
-  catalogs?: Record<Locale, M | Loader<M>>;
+  /** Locale registry. Values can be static messages or async loaders. */
+  catalogs?: Record<Locale, LocaleSource<M>>;
   fallback?: Locale | Locale[];
   locale?: Locale;
-  onDiagnostic?: (event: DiagnosticEvent) => void;
-  onMissing?: (key: string, locale: Locale) => string;
+  onMissing?: (info: MissingInfo) => string;
+  onSubscriberError?: (error: unknown) => void;
 };
 
+// ─── Public interface ─────────────────────────────────────────────────────────
 export type I18n<M extends Messages = Messages> = {
-  [Symbol.asyncDispose](): Promise<void>;
-  [Symbol.dispose](): void;
-  dispose(): void;
-  format(input: FormatInput): string;
-  has<K extends MessageLeafKeys<M>>(key: K): boolean;
-  readonly loadableLocales: Locale[];
-  readonly loadedLocales: Locale[];
+  /** Snapshot version starts at 0 and increments by 1 per observable change. */
+  getSnapshot(): I18nSnapshot;
+  getSupportedLocales(options?: SupportedLocalesOptions): Locale[];
+  /** Check if a key exists. Accepts literal keys from M, or any dynamic string. */
+  has(key: MessageLeafKeys<M> | AnyKey): boolean;
   readonly locale: Locale;
-  mergeCatalog(locale: Locale, messages: M): void;
   preload(locale: Locale): Promise<void>;
-  setCatalog(locale: Locale, messages: M): void;
-  setLoader(locale: Locale, loader: Loader<M>): void;
+  register(locale: Locale, source: LocaleSource<M>): void;
   setLocale(locale: Locale): Promise<void>;
-  subscribe(listener: (event: LocaleChangeEvent) => void, immediate?: boolean): Unsubscribe;
-  t<K extends MessageLeafKeys<M> | MessageBranchKeys<M>>(key: K, vars?: Vars): string;
-  tp<K extends MessageBranchKeys<M>>(key: K, count: number, vars?: Vars, ordinal?: boolean): string;
+  /**
+   * Subscribes to locale/catalog changes.
+   * - Default: callback runs only on changes.
+   * - `{ immediate: true }`: callback runs immediately with current snapshot and on every change.
+   */
+  subscribe(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions): Unsubscribe;
+  /** Get a translation. Accepts literal keys from M, or any dynamic string. */
+  t(key: MessageLeafKeys<M> | AnyKey, vars?: TranslateVars): string;
+  /** Get a pluralized translation from branch keys. */
+  tp(key: MessageBranchKeys<M> | AnyKey, count: number, options?: PluralTranslateOptions): string;
 };

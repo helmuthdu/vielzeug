@@ -8,7 +8,7 @@
       "comments": {
         "minor": [
           {
-            "comment": "General Improvements and Bugfixes",
+            "comment": "Greenfield deposit redesign: schema uses `table()`, storage adapters are `createMemory`, `createLocalStorage`, `createSessionStorage`, `createCookie`, and `createIndexedDB`, table access uses `query()`, all adapters expose `dispose()`, `deleteAll()` returns deleted record counts, transactions return callback results, and the public CRUD/query surface is reduced to the current minimal API.",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "commit": "4cc6f710c57769113ae7d6e3bef2c25a9ac359f3"
           }

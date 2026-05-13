@@ -189,9 +189,9 @@ Use the `open` attribute to programmatically show or hide the popover.
 
 ### Events
 
-| Event   | Detail | Description                 |
-| ------- | ------ | --------------------------- |
-| `open`  | `{ reason: 'programmatic' \| 'trigger' }`                                     | Fired when the panel opens  |
+| Event   | Detail                                                                   | Description                 |
+| ------- | ------------------------------------------------------------------------ | --------------------------- |
+| `open`  | `{ reason: 'programmatic' \| 'trigger' }`                                | Fired when the panel opens  |
 | `close` | `{ reason: 'programmatic' \| 'trigger' \| 'escape' \| 'outside-click' }` | Fired when the panel closes |
 
 ### CSS Custom Properties

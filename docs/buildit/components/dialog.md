@@ -336,11 +336,11 @@ dialog.addEventListener('close-request', (e) => {
 
 ### Events
 
-| Event   | Detail | Description                                    |
-| ------- | ------ | ---------------------------------------------- |
-| `open`          | `{ reason: 'programmatic' }`                                                | Fired once when the dialog transitions to open |
+| Event           | Detail                                                                   | Description                                    |
+| --------------- | ------------------------------------------------------------------------ | ---------------------------------------------- |
+| `open`          | `{ reason: 'programmatic' }`                                             | Fired once when the dialog transitions to open |
 | `close`         | `{ reason: 'programmatic' \| 'trigger' \| 'escape' \| 'outside-click' }` | Fired when the dialog closes                   |
-| `close-request` | `{ reason: 'trigger' \| 'escape' \| 'outside-click' }`                     | Fired before close and can be prevented        |
+| `close-request` | `{ reason: 'trigger' \| 'escape' \| 'outside-click' }`                   | Fired before close and can be prevented        |
 
 ### Slots
 

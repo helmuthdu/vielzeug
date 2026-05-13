@@ -13,10 +13,6 @@ You don't need to adopt the whole ecosystem. Pick the packages you need and impo
 The [REPL](/repl.html) lets you run any package in the browser without installing anything.
 :::
 
-## Documentation Standards
-
-- [Documentation Style Guide](./docs-style-guide.md)
-
 ## Integration Guides
 
 - [Building a Typed Form Flow](./building-a-typed-form-flow.md) - Validit + Formit + Fetchit
@@ -175,15 +171,15 @@ queryClient.invalidate(['user', id]);
 Type-safe LocalStorage and IndexedDB with schemas, TTL expiration, and a query builder.
 
 ```typescript
-import { createLocalStorage, type Schema } from '@vielzeug/deposit';
+import { createLocalStorage, table } from '@vielzeug/deposit';
 
 type User = { id: string; name: string; role: string };
 
-const schema: Schema<{ users: User }> = { users: { key: 'id' } };
-const db = createLocalStorage({ dbName: 'myapp', schema });
+const schema = { users: table<User>('id') };
+const db = createLocalStorage('myapp', schema);
 
 await db.put('users', { id: '1', name: 'Alice', role: 'admin' });
-const admins = await db.from('users').equals('role', 'admin').toArray();
+const admins = await db.query('users').equals('role', 'admin').toArray();
 ```
 
 **Start here if** you need structured, queryable storage that survives page reloads.
@@ -198,16 +194,17 @@ Hash and History router with type-safe params, middleware, async handlers, and V
 import { createRouter } from '@vielzeug/routeit';
 
 const router = createRouter({
-  // Guard all routes with a middleware
-  middleware: async (ctx, next) => {
-    if (!isLoggedIn()) return router.navigate('/login');
-    await next();
+  routes: {
+    home: { path: '/', handler: () => renderHome() },
+    login: { path: '/login', handler: () => renderLogin() },
+    userDetail: { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
+    notFound: { path: '*', handler: () => render404() },
   },
+  middleware: [async (ctx, next) => {
+    if (!isLoggedIn() && ctx.pathname !== '/login') return ctx.navigate({ path: '/login' });
+    await next();
+  }],
 });
-
-router.on('/', () => renderHome()).on('/users/:id', ({ params }) => renderUser(params.id));
-
-router.start();
 ```
 
 **Start here if** you need client-side routing without a frontend framework.
@@ -219,13 +216,17 @@ router.start();
 Role-based access control with wildcard support, dynamic permission functions, and anonymous user handling.
 
 ```typescript
-import { createPermit } from '@vielzeug/permit';
+import { createPermit, owns } from '@vielzeug/permit';
 
-const permit = createPermit();
-permit.define('admin', 'posts', { create: true, update: true, delete: true });
-permit.define('user', 'posts', { create: true });
+const permit = createPermit<'create' | 'update' | 'delete', { authorId: string }>([
+  { role: 'admin', resource: 'posts', action: 'create', effect: 'allow' },
+  { role: 'admin', resource: 'posts', action: 'update', effect: 'allow' },
+  { role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' },
+  { role: 'user', resource: 'posts', action: 'create', effect: 'allow' },
+  { role: 'user', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
+]);
 
-if (!permit.check(currentUser, 'posts', 'delete')) {
+if (!permit.can(currentUser, 'posts', 'delete')) {
   throw new ForbiddenError();
 }
 ```
@@ -245,10 +246,10 @@ const LoggerToken = createToken<Logger>('Logger');
 const ApiToken = createToken<ApiService>('ApiService');
 
 const container = createContainer();
-container.register(LoggerToken, { useClass: ConsoleLogger, lifetime: 'singleton' });
-container.register(ApiToken, { useClass: ApiService, deps: [LoggerToken] });
+container.factory(LoggerToken, () => new ConsoleLogger(), { lifetime: 'singleton' });
+container.factory(ApiToken, (logger) => new ApiService(logger), { deps: [LoggerToken] });
 
-const api = container.get(ApiToken);
+const api = await container.resolve(ApiToken);
 ```
 
 **Start here if** you want clean service wiring without coupling classes to each other.
@@ -257,7 +258,7 @@ const api = container.get(ApiToken);
 
 ### Utilities — [Toolkit](/toolkit/)
 
-Over 100 tree-shakeable utilities — array, object, string, math, async, date helpers. Nothing you don't import, nothing you pay for.
+75+ tree-shakeable utilities — array, object, string, math, async, date helpers. Nothing you don't import, nothing you pay for.
 
 ```typescript
 import { debounce, group, clamp, isEqual } from '@vielzeug/toolkit';
@@ -276,21 +277,30 @@ const unchanged = isEqual(prev, next);
 
 | Package                  | What it does                                                                                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
-| **[Logit](/logit/)**     | Structured logging with scoped loggers, log levels, and styled console output                   |
-| **[i18nit](/i18nit/)**   | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
-| **[Eventit](/eventit/)** | Typed event bus for decoupled, reactive inter-module communication                              |
-| **[Workit](/workit/)**   | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
+| **[Logit](/logit/)**         | Structured logging with scoped loggers, log levels, and styled console output                   |
+| **[i18nit](/i18nit/)**       | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
+| **[Eventit](/eventit/)**     | Typed event bus for decoupled, reactive inter-module communication                              |
+| **[Workit](/workit/)**       | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
+| **[Dragit](/dragit/)**       | Framework-agnostic drag-and-drop with drop zones, MIME filtering, and sortable lists            |
+| **[Floatit](/floatit/)**     | Floating element positioning for tooltips, dropdowns, menus, and popovers                       |
+| **[Sourceit](/sourceit/)**   | Typed local and remote data sources for pagination, filtering, sorting, and search              |
+| **[Timit](/timit/)**         | Date parsing, timezone conversion, DST-safe arithmetic, and Intl formatting                     |
+| **[Virtualit](/virtualit/)** | Virtual list engine with variable heights, smooth scrolling, and zero dependencies              |
 
 ## Packages That Work Well Together
 
 | Combination           | Why                                                                                       |
 | --------------------- | ----------------------------------------------------------------------------------------- |
-| **Stateit + Craftit** | Craftit templates are powered by Stateit signals — same reactive primitives, zero glue    |
-| **Validit + Formit**  | Pass a Validit schema directly as a field validator — one schema serves both form and API |
-| **Fetchit + Stateit** | Fetch remote data with caching, push results into a signal for reactive rendering         |
-| **Deposit + Fetchit** | Persist query results in IndexedDB for offline-capable apps                               |
-| **Permit + Routeit**  | Check permissions in router middleware before the route handler ever runs                 |
-| **Wireit + Logit**    | Register a scoped logger per service in your DI container                                 |
+| **Stateit + Craftit**       | Craftit templates are powered by Stateit signals — same reactive primitives, zero glue                   |
+| **Validit + Formit**        | Pass a Validit schema directly as a field validator — one schema serves both form and API                |
+| **Fetchit + Stateit**       | Fetch remote data with caching, push results into a signal for reactive rendering                        |
+| **Deposit + Fetchit**       | Persist query results in IndexedDB for offline-capable apps                                              |
+| **Permit + Routeit**        | Check permissions in router middleware before the route handler ever runs                                |
+| **Wireit + Logit**          | Register a scoped logger per service in your DI container                                                |
+| **Sourceit + Fetchit**      | Use Fetchit as the HTTP transport inside a `createRemoteSource` for pagination and search with caching   |
+| **Virtualit + Floatit**     | Render a virtualised list inside a Floatit-positioned dropdown for high-item-count comboboxes            |
+| **Dragit + Virtualit**      | Combine sortable drag handles with a virtual list for large reorderable datasets                         |
+| **Sourceit + Routeit**      | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                   |
 
 ## Philosophy
 

@@ -5,13 +5,11 @@ description: 'Awaiting a one-time event examples for eventit.'
 
 ## Awaiting a one-time event
 
-## Problem
+### Problem
 
-Implement awaiting a one-time event in a production-friendly way with `@vielzeug/eventit` while keeping setup and cleanup explicit.
+You need to wait for a single event to fire before continuing — without polling, without a callback, and without coupling the waiting code to the emitting code directly.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
+### Solution
 
 Use `wait()` for async coordination between modules:
 
@@ -29,19 +27,15 @@ function onAuthSuccess(user: User) {
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- If the event fires before `wait()` is called, `wait()` hangs forever — there is no replay buffer. Ensure the emitter always fires after the listener is registered.
+- Calling `wait()` in a loop without awaiting creates multiple concurrent pending waits that all resolve with the same first emission. Await each one sequentially.
+- If the bus is disposed before the event fires, `wait()` rejects with `BusDisposedError`. Always handle this rejection in async code that awaits events on a scoped bus.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)
 - [Handling disposal in async code](./handling-disposal-in-async-code.md)

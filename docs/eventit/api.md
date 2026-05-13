@@ -3,19 +3,17 @@ title: Eventit — API Reference
 description: Source-aligned API reference for @vielzeug/eventit and @vielzeug/eventit/test.
 ---
 
-# Eventit API Reference
-
 [[toc]]
 
 ## API At a Glance
 
-| Symbol            | Purpose                                 | Execution mode | Common gotcha                                 |
-| ----------------- | --------------------------------------- | -------------- | --------------------------------------------- |
-| `createBus()`     | Create a typed event bus instance       | Sync           | Use a strict event map to avoid payload drift |
-| `bus.wait()`      | Await a one-time event occurrence       | Async          | Handle timeout/cancellation for long waits    |
-| `bus.waitAny()`   | Await the first event from many         | Async          | Result is a discriminated union by event key  |
-| `bus.eventNames()`| Inspect events with active listeners    | Sync           | Snapshot reflects current subscriptions       |
-| `createTestBus()` | Create deterministic test bus utilities | Sync           | Reset emitted events between test cases       |
+| Symbol             | Purpose                                 | Execution mode | Common gotcha                                 |
+| ------------------ | --------------------------------------- | -------------- | --------------------------------------------- |
+| `createBus()`      | Create a typed event bus instance       | Sync           | Use a strict event map to avoid payload drift |
+| `bus.wait()`       | Await a one-time event occurrence       | Async          | Handle timeout/cancellation for long waits    |
+| `bus.waitAny()`    | Await the first event from many         | Async          | Result is a discriminated union by event key  |
+| `bus.eventNames()` | Inspect events with active listeners    | Sync           | Snapshot reflects current subscriptions       |
+| `createTestBus()`  | Create deterministic test bus utilities | Sync           | Reset emitted events between test cases       |
 
 ## Package Entry Points
 
@@ -168,10 +166,10 @@ Signature: `waitAny(events, signal?) => Promise<{ event, payload }>`
 
 Waits for the first emitted event among a list of event keys.
 
-| Parameter | Type                      | Description             |
-| --------- | ------------------------- | ----------------------- |
-| `events`  | `readonly K[]`            | Event keys to race      |
-| `signal`  | `AbortSignal`             | Optional abort signal   |
+| Parameter | Type           | Description           |
+| --------- | -------------- | --------------------- |
+| `events`  | `readonly K[]` | Event keys to race    |
+| `signal`  | `AbortSignal`  | Optional abort signal |
 
 **Returns:** `Promise<WaitAnyResult<T, K>>`
 
@@ -192,14 +190,12 @@ if (winner.event === 'user:login') {
 
 ### `bus.events()`
 
-Signature: `events(event, signal?) => AsyncGenerator<payload>`
+Signature: `events(event, options?) => AsyncGenerator<payload>`
 
 Returns an `AsyncGenerator` that yields payloads for every future emit of `event`. Pull-based — only proceeds when the `for await` loop body is ready.
 
-| Parameter | Type          | Description                       |
-| --------- | ------------- | --------------------------------- |
-| `event`   | `K`           | Event key to stream               |
-| `signal`  | `AbortSignal` | Optional early-termination signal |
+- `event: K` — event key to stream
+- `options?: { signal?: AbortSignal; maxBuffer?: number }` — optional early termination and buffering
 
 **Terminates when:**
 
@@ -214,7 +210,7 @@ for await (const payload of bus.events('cart:updated')) {
 
 // Stop early
 const ctl = new AbortController();
-for await (const payload of bus.events('data:loaded', ctl.signal)) {
+for await (const payload of bus.events('data:loaded', { signal: ctl.signal, maxBuffer: 50 })) {
   if (payload.count === 0) ctl.abort();
 }
 ```

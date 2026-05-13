@@ -1,25 +1,3 @@
-export function isSameValue(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-
-  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
-
-  if (a instanceof File && b instanceof File) return a.name === b.name && a.size === b.size;
-
-  if (a instanceof Blob && b instanceof Blob) return a.size === b.size;
-
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((v, i) => isSameValue(v, b[i]));
-  }
-
-  if (isPlainObject(a) && isPlainObject(b)) {
-    const aKeys = Object.keys(a);
-
-    return aKeys.length === Object.keys(b).length && aKeys.every((k) => isSameValue(a[k], b[k]));
-  }
-
-  return false;
-}
-
 export function isPlainObject(val: unknown): val is Record<string, unknown> {
   return val !== null && typeof val === 'object' && Object.getPrototypeOf(val) === Object.prototype;
 }

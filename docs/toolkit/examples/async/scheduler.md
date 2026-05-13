@@ -31,11 +31,11 @@ function polyfillScheduler(): void;
 
 ## Parameters — `postTask`
 
-| Option       | Type           | Default         | Description                                                                                     |
-| ------------ | -------------- | --------------- | ----------------------------------------------------------------------------------------------- |
-| `delay`      | `number`       | `0`             | Milliseconds to wait before running the callback                                                |
-| `priority`   | `TaskPriority` | `'user-visible'` | Scheduling hint: `'background'` runs after other work, `'user-blocking'` runs as soon as possible |
-| `signal`     | `AbortSignal`  | —               | Cancel the task; the returned promise rejects with the signal's `reason`                        |
+| Option     | Type           | Default          | Description                                                                                       |
+| ---------- | -------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
+| `delay`    | `number`       | `0`              | Milliseconds to wait before running the callback                                                  |
+| `priority` | `TaskPriority` | `'user-visible'` | Scheduling hint: `'background'` runs after other work, `'user-blocking'` runs as soon as possible |
+| `signal`   | `AbortSignal`  | —                | Cancel the task; the returned promise rejects with the signal's `reason`                          |
 
 ## Returns
 
@@ -118,11 +118,9 @@ import { Scheduler } from '@vielzeug/toolkit';
 export function scheduleCleanup(fn: () => void, delayMs: number, signal: AbortSignal): void {
   const scheduler = new Scheduler();
 
-  void scheduler
-    .postTask(fn, { delay: delayMs, priority: 'background', signal })
-    .catch(() => {
-      // expected when cancelled
-    });
+  void scheduler.postTask(fn, { delay: delayMs, priority: 'background', signal }).catch(() => {
+    // expected when cancelled
+  });
 }
 ```
 
@@ -134,4 +132,3 @@ The polyfill faithfully implements the `delay` and `signal` options using `setTi
 
 - [sleep](./sleep.md) – Simple promise-based delay
 - [waitFor](./waitFor.md) – Poll a condition until true
-

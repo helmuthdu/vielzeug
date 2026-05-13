@@ -47,11 +47,11 @@ const exists = await db.has('users', 1);
 
 ### Factories
 
-- `createLocalStorage(options)`
-- `createSessionStorage(options)`
-- `createCookie(options)`
+- `createLocalStorage(dbName, schema)`
+- `createSessionStorage(dbName, schema)`
+- `createCookie(dbName, schema, options?)`
 - `createIndexedDB(options)`
-- `createMemory(options)`
+- `createMemory(schema)`
 
 ### Schema helper
 
@@ -61,23 +61,24 @@ const exists = await db.has('users', 1);
 
 - `get(table, key)`
 - `getAll(table)`
+- `iterate(table)`
 - `forEach(table, fn)`
 - `has(table, key)`
-- `getOrPut(table, key, fallback, ttl?)`
+- `getOrPut(table, value, ttl?)`
 - `put(table, value, ttl?)`
 - `putAll(table, values, ttl?)`
 - `update(table, key, changes, ttl?)`
-- `delete(table, key)`
+- `delete(table, key)` -> `Promise<boolean>`
 - `deleteWhere(table, predicate)`
-- `deleteAll(table)`
+- `deleteAll(table)` -> `Promise<number>`
 - `count(table)`
 - `query(table)`
-- `observe(table, listener)`
+- `observe(table, listener, options?)`
+- `dispose()`
 
 ### IndexedDB-only
 
 - `transaction(tables, fn)`
-- `close()`
 
 ### Transaction context methods
 
@@ -93,7 +94,7 @@ const exists = await db.has('users', 1);
 - `limit(n)`
 - `offset(n)`
 - `toArray()`
-- `count()` (ignores `limit()` and `offset()`)
+- `count()`
 - `first()`
 
 ### TTL helper
@@ -104,15 +105,24 @@ import { ttl } from '@vielzeug/deposit';
 await db.put('sessions', { id: 's1', userId: 1 }, ttl.minutes(30));
 ```
 
+TTL helpers return a branded `TtlMs` value, so raw numbers are not accepted by typed call sites.
+
 ## Usage Notes
 
 - Schema objects only declare the key field per table (`{ key: 'id' }`).
 - `count()` is TTL-aware and excludes expired records.
-- `createCookie()` is browser-only and best for small persisted state that should travel with requests.
+- `createCookie(dbName, schema, options?)` is browser-only and best for small persisted state that should travel with requests.
 - `createLocalStorage`, `createSessionStorage`, and `createMemory` do not expose transactions.
 - Query operations run in memory on fetched table records.
-- `QueryBuilder.count()` ignores pagination and returns the full number of matching records.
-- `observe(table, listener)` emits an immediate snapshot, then updates after table mutations.
+- `iterate(table)` returns an `AsyncIterable` and supports early-exit `for await...of` flows.
+- `QueryBuilder.count()` returns the size of the fully transformed query result (same pipeline as `toArray()`).
+- `limit(n)` and `offset(n)` require non-negative integers and throw on invalid values.
+- TTL values must be finite and non-negative; invalid TTL input throws.
+- `delete(table, key)` returns `true` only when a record existed and was removed.
+- `deleteAll(table)` returns the number of records removed.
+- All adapters expose `dispose()`; IndexedDB no longer has a separate `close()` API.
+- Cookie observers are local to the current adapter instance; cookie changes from other tabs cannot be observed.
+- `observe(table, listener, options?)` emits an immediate snapshot by default, then updates after table mutations.
 - IndexedDB observers propagate across tabs/windows via `BroadcastChannel` when available.
 
 ## IndexedDB Transactions

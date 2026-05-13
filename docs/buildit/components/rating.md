@@ -124,17 +124,17 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 
 ### Attributes
 
-| Attribute  | Type                                                                      | Default | Description                                 |
-| ---------- | ------------------------------------------------------------------------- | ------- | ------------------------------------------- |
-| `value`    | `number`                                                                  | `0`     | Current selected rating                     |
-| `max`      | `number`                                                                  | `5`     | Total number of stars                       |
-| `readonly` | `boolean`                                                                 | `false` | Prevents user interaction; shows value only |
+| Attribute  | Type                                                                      | Default | Description                                  |
+| ---------- | ------------------------------------------------------------------------- | ------- | -------------------------------------------- |
+| `value`    | `number`                                                                  | `0`     | Current selected rating                      |
+| `max`      | `number`                                                                  | `5`     | Total number of stars                        |
+| `readonly` | `boolean`                                                                 | `false` | Prevents user interaction; shows value only  |
 | `solid`    | `boolean`                                                                 | `false` | Fills selected stars instead of outline-only |
-| `disabled` | `boolean`                                                                 | `false` | Disables the rating input                   |
-| `label`    | `string`                                                                  | —       | Accessible label for the rating group       |
-| `name`     | `string`                                                                  | —       | Form field name                             |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Star highlight color                        |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Star size                                   |
+| `disabled` | `boolean`                                                                 | `false` | Disables the rating input                    |
+| `label`    | `string`                                                                  | —       | Accessible label for the rating group        |
+| `name`     | `string`                                                                  | —       | Form field name                              |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Star highlight color                         |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Star size                                    |
 
 ### Events
 

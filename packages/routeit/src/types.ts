@@ -19,6 +19,16 @@ export type RouteParams = Record<string, string>;
 export type QueryParams = Record<string, string | string[]>;
 export type MaybePromise<T> = T | Promise<T>;
 export type NavigationStatus = 'idle' | 'loading' | 'error';
+export type IsActiveOptions = {
+  /** Require an exact pathname match. Defaults to prefix matching. */
+  exact?: boolean;
+};
+export type ScrollPosition = { x: number; y: number };
+export type ScrollDecision = ScrollPosition | 'preserve' | 'top';
+export type RouterErrorSource = 'initial-navigation' | 'history-listener' | 'preload';
+export type RouterErrorContext = {
+  readonly source: RouterErrorSource;
+};
 
 /** Return value from a `coerceSearch` function. Return a normalized/coerced search object. */
 export type CoerceSearchFn<Q extends QueryParams = QueryParams> = (raw: QueryParams) => Q;
@@ -101,28 +111,55 @@ export type Middleware<TRoutes extends RouteTable = RouteTable> = (
   next: () => Promise<void>,
 ) => void | Promise<void>;
 
-export type RouteChildren = Record<string, RouteDefinition<string>>;
-
-export type RouteDefinition<Path extends string = string> = {
+type RouteCommon = {
   /** Nested child routes. Keys become part of the compound route name (e.g. `dashboard.settings`). */
   children?: RouteChildren;
-  /** Normalize/coerce search params for this route. Throwing keeps the original search params unchanged. */
-  coerceSearch?: CoerceSearchFn;
-  /** Data loader. Runs after middleware; result is available as `ctx.data` in the handler. */
-  data?: DataFn<PathParams<Path>>;
-  handler?: RouteHandler<PathParams<Path>>;
-  /** When true the route inherits the parent path (acts as the default child). */
-  index?: boolean;
-  /** Lazy-load the route module. The resolved export replaces handler/data/meta. */
-  lazy?: () => Promise<Pick<RouteDefinition<Path>, 'data' | 'handler' | 'meta'>>;
   meta?: unknown;
   /** Use `middleware` for auth guards, analytics, and error boundaries. */
   middleware?: Middleware[];
-  /** Path segment. Absolute for top-level routes, relative for children. Omit when `index: true`. */
-  path?: Path;
-  /** Declarative redirect. Resolved before middleware runs. */
-  redirect?: UntypedNamedNavigationTarget | RawNavigationTarget;
 };
+
+type PathRouteShape<Path extends string = string> = {
+  index?: false;
+  /** Path segment. Absolute for top-level routes, relative for children. */
+  path: Path;
+};
+
+type IndexRouteShape = {
+  /** When true the route inherits the parent path (acts as the default child). */
+  index: true;
+  path?: never;
+};
+
+type RoutePathShape<Path extends string = string> = PathRouteShape<Path> | IndexRouteShape;
+
+type ContentRouteDefinition<Path extends string = string> = RouteCommon &
+  RoutePathShape<Path> & {
+    /** Normalize/coerce search params for this route. Throwing keeps the original search params unchanged. */
+    coerceSearch?: CoerceSearchFn;
+    /** Data loader. Runs after middleware; result is available as `ctx.data` in the handler. */
+    data?: DataFn<PathParams<Path>>;
+    handler?: RouteHandler<PathParams<Path>>;
+    /** Lazy-load the route module. The resolved export replaces handler/data/meta. */
+    lazy?: () => Promise<Pick<ContentRouteDefinition<Path>, 'data' | 'handler' | 'meta'>>;
+    redirect?: never;
+  };
+
+type RedirectRouteDefinition<Path extends string = string> = RouteCommon &
+  RoutePathShape<Path> & {
+    coerceSearch?: never;
+    data?: never;
+    handler?: never;
+    lazy?: never;
+    /** Declarative redirect. Resolved before middleware runs. */
+    redirect: UntypedNamedNavigationTarget | RawNavigationTarget;
+  };
+
+export type RouteChildren = Record<string, RouteDefinition<string>>;
+
+export type RouteDefinition<Path extends string = string> =
+  | ContentRouteDefinition<Path>
+  | RedirectRouteDefinition<Path>;
 
 type JoinPath<Parent extends string, Child extends string> = Child extends `/${string}`
   ? Child
@@ -221,10 +258,12 @@ export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
   history?: HistoryDriver;
   /** Global middleware applied to every route. Use this to implement authentication, analytics, and error boundaries. */
   middleware?: Middleware<TRoutes>[];
+  /** Optional sink for non-awaited/background router errors (initial navigation, popstate, preload). */
+  onError?: (error: unknown, context: RouterErrorContext) => void;
   /** Declarative route table. Object key order determines match precedence - place specific routes before wildcards. */
   routes: TRoutes;
-  /** Called after every successful navigation with the scroll position to restore, or null to scroll to top. */
-  scroll?: (to: RouteState, from: RouteState | null) => { x: number; y: number } | null | undefined;
+  /** Called after every successful navigation. Return `top`, `preserve`, or explicit coordinates. */
+  scroll?: (to: RouteState, from: RouteState) => ScrollDecision;
   /** Wrap navigation in the View Transition API when available. Falls back to plain execution in unsupported environments. */
   viewTransition?: boolean;
 };

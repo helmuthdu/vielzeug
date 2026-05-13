@@ -2,7 +2,6 @@ import { computed, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/
 
 import {
   CF_ID_ATTR,
-  DIRECTIVE,
   createMarkerIdFactory,
   escapeHtml,
   htmlResult,
@@ -304,7 +303,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
         const id = getNextId();
 
         result += `${slot.raw}<!--${id}-->`;
-        bindings.push({ directive: value[DIRECTIVE], type: 'directive', uid: id });
+        bindings.push({ directive: value, type: 'directive', uid: id });
         continue;
       }
 

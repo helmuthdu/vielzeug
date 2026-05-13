@@ -3,7 +3,7 @@ export const namespacesExample = {
 
 const i18n = createI18n({
   locale: 'en',
-  messages: {
+  catalogs: {
     en: {
       common: { hello: 'Hello' },
       errors: { notFound: 'Not found' },

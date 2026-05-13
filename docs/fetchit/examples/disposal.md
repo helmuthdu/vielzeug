@@ -5,21 +5,15 @@ description: 'Disposal examples for fetchit.'
 
 ## Disposal
 
-## Problem
+### Problem
 
-Implement disposal in a production-friendly way with `@vielzeug/fetchit` while keeping setup and cleanup explicit.
+A component starts an HTTP request and is unmounted before the response arrives. Continuing to update state on a destroyed component produces warnings or errors — you need to cancel in-flight requests on teardown.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/fetchit` installed.
+### Solution
 
 ```ts
-// Using declarations (TypeScript 5.2+)
-{
-  using api = createApi({ baseUrl: 'https://api.example.com' });
-  using qc = createQuery();
-  // Automatically disposed at end of block
-}
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc = createQuery();
 
 // Manual disposal — good for singleton cleanup on logout
 function cleanup() {
@@ -28,18 +22,14 @@ function cleanup() {
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Aborting via `AbortController` cancels the network request but does not prevent state updates that were queued before the abort. Guard setters with a mounted/active flag.
+- Calling `client.dispose()` cancels all in-flight requests and rejects new ones. Dispose only a component-scoped client — never a shared singleton.
+- `AbortError` does not subclass `Error` in all environments. Check `err.name === 'AbortError'` rather than `err instanceof AbortError` for reliable detection.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Authentication](./authentication.md)
 - [CRUD Operations](./crud-operations.md)

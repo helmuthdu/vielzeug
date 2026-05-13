@@ -1,13 +1,12 @@
 /**
- * Core - Lifecycle Hooks Tests
- * Tests for mount, onCleanup, and handle hooks
+ * Runtime lifecycle tests
  */
 
-import { effect, handle, html, onCleanup, onMounted, onUpdated, signal } from '../index';
+import { on, html, onCleanup, onMounted, signal } from '../index';
 import { mount } from '../testing';
 
-describe('Core: mount() lifecycle', () => {
-  it('should run mount callback after component renders', async () => {
+describe('runtime lifecycle: onMounted', () => {
+  it('runs mount callback after component renders', async () => {
     const spy = vi.fn();
 
     await mount(() => {
@@ -18,7 +17,7 @@ describe('Core: mount() lifecycle', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it('should have access to DOM when mount runs', async () => {
+  it('provides DOM access when mount callback runs', async () => {
     let hasElement = false;
 
     await mount(() => {
@@ -31,7 +30,7 @@ describe('Core: mount() lifecycle', () => {
     expect(hasElement).toBe(true);
   });
 
-  it('should register mount cleanup that runs on unmount', async () => {
+  it('runs mount cleanup on unmount', async () => {
     const spy = vi.fn();
 
     const { destroy } = await mount(() => {
@@ -46,8 +45,8 @@ describe('Core: mount() lifecycle', () => {
   });
 });
 
-describe('Core: Lifecycle Order', () => {
-  it('should execute in correct order: setup → mount → unmount', async () => {
+describe('runtime lifecycle: execution order', () => {
+  it('executes setup -> mount -> unmount in order', async () => {
     const order: string[] = [];
     const { destroy } = await mount(() => {
       order.push('setup');
@@ -66,8 +65,8 @@ describe('Core: Lifecycle Order', () => {
   });
 });
 
-describe('Core: onCleanup()', () => {
-  it('should run when component unmounts', async () => {
+describe('runtime lifecycle: onCleanup', () => {
+  it('runs callbacks when component unmounts', async () => {
     const spy = vi.fn();
     const { destroy } = await mount(() => {
       onCleanup(spy);
@@ -80,7 +79,7 @@ describe('Core: onCleanup()', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it('should clean up resources', async () => {
+  it('supports resource cleanup side effects', async () => {
     let cleaned = false;
     const { destroy } = await mount(() => {
       onCleanup(() => {
@@ -94,7 +93,7 @@ describe('Core: onCleanup()', () => {
     expect(cleaned).toBe(true);
   });
 
-  it('should support multiple onCleanup callbacks', async () => {
+  it('runs multiple cleanup callbacks in LIFO order', async () => {
     const calls: number[] = [];
     const { destroy } = await mount(() => {
       onCleanup(() => calls.push(1));
@@ -108,8 +107,8 @@ describe('Core: onCleanup()', () => {
   });
 });
 
-describe('Core: mount + cleanup integration', () => {
-  it('should cleanup effects on unmount', async () => {
+describe('runtime lifecycle: mount + cleanup integration', () => {
+  it('stops mount-owned async work on unmount', async () => {
     let effectRuns = 0;
     const { destroy } = await mount(() => {
       const count = signal(0);
@@ -136,59 +135,8 @@ describe('Core: mount + cleanup integration', () => {
   });
 });
 
-describe('Core: onUpdated()', () => {
-  it('runs after reactive effects flush', async () => {
-    const count = signal(0);
-    const spy = vi.fn();
-
-    const { flush } = await mount(() => {
-      effect(() => {
-        void count.value;
-      });
-
-      onUpdated(() => {
-        spy(count.value);
-      });
-
-      return () => html`<div>${count}</div>`;
-    });
-
-    count.value = 1;
-    await flush();
-
-    expect(spy).toHaveBeenCalled();
-    expect(spy).toHaveBeenLastCalledWith(1);
-  });
-
-  it('supports multiple onUpdated callbacks', async () => {
-    const count = signal(0);
-    const calls: string[] = [];
-
-    const { flush } = await mount(() => {
-      effect(() => {
-        void count.value;
-      });
-
-      onUpdated(() => calls.push('a'));
-      onUpdated(() => calls.push('b'));
-
-      return () => html`<div>${count}</div>`;
-    });
-
-    count.value = 1;
-    await flush();
-
-    expect(calls).toContain('a');
-    expect(calls).toContain('b');
-  });
-
-  it('throws when used outside setup', () => {
-    expect(() => onUpdated(() => undefined)).toThrow();
-  });
-});
-
-describe('handle()', () => {
-  it('should attach an event listener and clean it up on unmount', async () => {
+describe('on()', () => {
+  it('attaches listener and cleans it up on unmount', async () => {
     let clickCount = 0;
     let btn!: HTMLButtonElement;
 
@@ -196,7 +144,7 @@ describe('handle()', () => {
       onMounted(() => {
         btn = document.createElement('button');
         document.body.appendChild(btn);
-        handle(btn, 'click', () => {
+        on(btn, 'click', () => {
           clickCount++;
         });
 

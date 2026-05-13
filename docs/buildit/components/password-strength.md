@@ -91,27 +91,27 @@ Set the property `show-label` to `false` if you only want the visual bar while p
 
 ### Attributes
 
-| Attribute    | Type       | Default               | Description                                 |
-| ------------ | ---------- | --------------------- | ------------------------------------------- |
-| `value`      | `string`   | `''`                  | Password string to evaluate                 |
-| `score`      | `number`   | computed from `value` | Optional external score override (`0..4`)   |
-| `show-label` | `boolean`  | `true`                | Show visible textual level feedback         |
-| `label`      | `string`   | `Password strength`   | Accessible name for assistive technologies  |
+| Attribute    | Type      | Default               | Description                                |
+| ------------ | --------- | --------------------- | ------------------------------------------ |
+| `value`      | `string`  | `''`                  | Password string to evaluate                |
+| `score`      | `number`  | computed from `value` | Optional external score override (`0..4`)  |
+| `show-label` | `boolean` | `true`                | Show visible textual level feedback        |
+| `label`      | `string`  | `Password strength`   | Accessible name for assistive technologies |
 
 ### CSS Custom Properties
 
-| Property                              | Default                              | Description                        |
-| ------------------------------------- | ------------------------------------ | ---------------------------------- |
-| `--password-strength-height`          | `0.375rem`                           | Segment bar height                 |
-| `--password-strength-gap`             | `0.25rem`                            | Gap between segments               |
-| `--password-strength-radius`          | `var(--rounded-full)`                | Segment corner radius              |
-| `--password-strength-track-bg`        | `var(--color-contrast-300)`          | Inactive segment color             |
-| `--password-strength-label-size`      | `var(--text-sm)`                     | Visible label font size            |
-| `--password-strength-label-color`     | `currentColor`                       | Visible label color                |
-| `--password-strength-weak-color`      | `var(--color-warning-500)`           | Active color for weak score        |
-| `--password-strength-fair-color`      | `var(--color-warning-600)`           | Active color for fair score        |
-| `--password-strength-good-color`      | `var(--color-success-500)`           | Active color for good score        |
-| `--password-strength-strong-color`    | `var(--color-success-600)`           | Active color for strong score      |
+| Property                           | Default                     | Description                   |
+| ---------------------------------- | --------------------------- | ----------------------------- |
+| `--password-strength-height`       | `0.375rem`                  | Segment bar height            |
+| `--password-strength-gap`          | `0.25rem`                   | Gap between segments          |
+| `--password-strength-radius`       | `var(--rounded-full)`       | Segment corner radius         |
+| `--password-strength-track-bg`     | `var(--color-contrast-300)` | Inactive segment color        |
+| `--password-strength-label-size`   | `var(--text-sm)`            | Visible label font size       |
+| `--password-strength-label-color`  | `currentColor`              | Visible label color           |
+| `--password-strength-weak-color`   | `var(--color-warning-500)`  | Active color for weak score   |
+| `--password-strength-fair-color`   | `var(--color-warning-600)`  | Active color for fair score   |
+| `--password-strength-good-color`   | `var(--color-success-500)`  | Active color for good score   |
+| `--password-strength-strong-color` | `var(--color-success-600)`  | Active color for strong score |
 
 ## Accessibility
 

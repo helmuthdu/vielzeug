@@ -1,8 +1,26 @@
 import type { InferOutput, Issue } from '../core';
 
-import { Schema } from '../core';
+import { Schema, isPlainObject } from '../core';
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
+
+/**
+ * Recursively merges `source` into `target`.
+ * Plain objects are merged key-by-key; all other values take the `source` value.
+ */
+function deepMerge(target: unknown, source: unknown): unknown {
+  if (isPlainObject(target) && isPlainObject(source)) {
+    const result: Record<string, unknown> = { ...target };
+
+    for (const [key, val] of Object.entries(source)) {
+      result[key] = deepMerge(target[key], val);
+    }
+
+    return result;
+  }
+
+  return source;
+}
 
 /** All schemas must pass — intersection semantics. */
 export class IntersectSchema<T extends readonly Schema<any>[]> extends Schema<
@@ -26,11 +44,7 @@ export class IntersectSchema<T extends readonly Schema<any>[]> extends Schema<
       return;
     }
 
-    if (index === 0) {
-      state.output = result.data;
-    } else if (result.data !== null && typeof result.data === 'object') {
-      Object.assign(state.output as object, result.data);
-    }
+    state.output = index === 0 ? result.data : deepMerge(state.output, result.data);
   }
 
   protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {

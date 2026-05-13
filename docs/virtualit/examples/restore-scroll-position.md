@@ -5,13 +5,11 @@ description: 'Restore Scroll Position examples for virtualit.'
 
 ## Restore Scroll Position
 
-## Problem
+### Problem
 
-Implement restore scroll position in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+When a user navigates away from a long virtual list and returns, the list should restore their previous scroll position rather than resetting to the top.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
+### Solution
 
 Save and restore scroll position using `scrollToOffset()`.
 
@@ -42,18 +40,14 @@ if (saved) virt.scrollToOffset(Number(saved));
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `scrollToOffset()` is a no-op if the scroll container has not been laid out yet (height is 0). Call it inside `onMounted`/`firstUpdated` or after the next animation frame.
+- Saving scroll position on every `scroll` event is expensive. Save only on `scrollend` or before navigation events, not on every pixel of movement.
+- Saved offsets are absolute pixel values. If `estimateSize` or the row count changes between sessions, the same offset no longer points to the same logical item. Save the nearest item index instead.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
 - [Density Toggle (Compact / Comfortable)](./density-toggle-compact-comfortable.md)

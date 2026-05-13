@@ -1,39 +1,22 @@
 # @vielzeug/i18nit
 
-> Lightweight i18n runtime with nested keys, explicit plural translation, best-effort locale loading, and unified Intl formatting.
-
-[![npm version](https://img.shields.io/npm/v/@vielzeug/i18nit)](https://www.npmjs.com/package/@vielzeug/i18nit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-`@vielzeug/i18nit` keeps the surface deliberately small:
-
-- `createI18n` for creating an isolated translation runtime — schema-generic for typed key inference
-- `t` for direct translation lookup with interpolation and optional context variants
-- `tp` for explicit plural branches with ordinal support
-- `format` for locale-aware numbers, currency, dates, relative time, lists, and durations
-- `setCatalog`, `mergeCatalog`, `setLoader`, `preload`, and `setLocale` for catalog management
-
-## Entry Point
-
-| Entry | Purpose |
-| --- | --- |
-| `@vielzeug/i18nit` | `createI18n`, diagnostic guards, runtime types, and the full translation API |
+Minimal i18n runtime with typed keys, explicit locale sources, and framework-friendly subscriptions.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/i18nit
-# npm install @vielzeug/i18nit
-# yarn add @vielzeug/i18nit
 ```
 
 ## Quick Start
 
 ```ts
 import { createI18n } from '@vielzeug/i18nit';
+import { createFormatter } from '@vielzeug/i18nit/format';
 
 const i18n = createI18n({
-  fallback: 'en',
   locale: 'en',
+  fallback: 'en',
   catalogs: {
     en: {
       greeting: 'Hello, {name}!',
@@ -42,76 +25,154 @@ const i18n = createI18n({
         one: 'One message',
         other: '{count} messages',
       },
-      nav: { home: 'Home' },
-      position: {
-        one: '{count}st place',
-        two: '{count}nd place',
-        few: '{count}rd place',
-        other: '{count}th place',
-      },
     },
     de: () => import('./locales/de.json').then((m) => m.default),
   },
 });
 
-// typed dot-notation keys inferred from the catalogs schema
-i18n.t('greeting', { name: 'Alice' });
-
-// ordinal plural
-i18n.tp('position', 1, undefined, true); // '1st place'
-i18n.tp('inbox', 3);
-
-// deep-merge without discarding existing keys
-i18n.mergeCatalog('en', { nav: { about: 'About' } });
-
+await i18n.preload('de');
 await i18n.setLocale('de');
 
-i18n.format({ kind: 'currency', currency: 'EUR', value: 19.99 });
-i18n.format({ kind: 'duration', value: { hours: 1, minutes: 30 } });
+i18n.t('greeting', { name: 'Alice' });
+i18n.tp('inbox', 3);
+
+const fmt = createFormatter(i18n);
+fmt.currency(19.99, 'EUR');
 ```
-
-## Features
-
-- Nested key lookup via dot notation
-- Typed key inference — `createI18n` is generic, `t` and `tp` accept inferred dot-notation keys
-- Interpolation for plain and nested variables
-- Explicit plural translation with `tp()` and `Intl.PluralRules`, including ordinal support
-- Context sub-keys accessible via dot notation (`invite.female`) — no extra option needed
-- Locale cascade through BCP 47 parents plus configured fallback locales
-- Best-effort preloading and strict locale switching
-- Deep-merge catalog updates with `mergeCatalog()` alongside full replacement via `setCatalog()`
-- Locale-aware formatting through one `format()` entry point: numbers, currency, dates, relative time, lists, and durations
-- Subscription and diagnostics hooks for UI integration and observability
-- Zero runtime dependencies
 
 ## Core API
 
-- `createI18n(options?) => I18n<M>`
+- `createI18n(options?)`
 - `i18n.t(key, vars?)`
-- `i18n.tp(key, count, vars?, ordinal?)` — pass `true` for ordinal plural rules
-- `i18n.format(input)` — kinds: `number`, `currency`, `date`, `relative`, `list`, `duration`
-- `i18n.setCatalog(locale, messages)` — replace catalog
-- `i18n.mergeCatalog(locale, messages)` — deep-merge into existing catalog
-- `i18n.setLoader(locale, loader)`
-- `await i18n.preload(locale)`
-- `await i18n.setLocale(locale)`
-- `i18n.subscribe(listener, immediate?)`
+- `i18n.tp(key, count, options?)`
+- `i18n.preload(locale)`
+- `i18n.setLocale(locale)`
+- `i18n.register(locale, source)`
+- `i18n.getSnapshot()`
+- `i18n.subscribe(callback, options?)`
+- `i18n.getSupportedLocales(options?)`
+- `i18n.has(leafKey)`
+
+## Translation options
 
 ```ts
-const stop = i18n.subscribe(({ locale, reason }) => {
-  console.log(locale, reason);
-}, true);
-
-stop();
+type PluralTranslateOptions = {
+  ordinal?: boolean;
+  vars?: Record<string, unknown>;
+};
 ```
 
-## Documentation
+- Leaf keys use `t('greeting', vars)`.
+- Branch keys use `tp('inbox', 3, options?)`.
 
-- [Overview](https://vielzeug.dev/i18nit/)
-- [Usage Guide](https://vielzeug.dev/i18nit/usage)
-- [API Reference](https://vielzeug.dev/i18nit/api)
-- [Examples](https://vielzeug.dev/i18nit/examples)
+## Missing handling
 
-## License
+A single callback handles missing keys and missing interpolation variables.
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu/vielzeug) — part of the Vielzeug monorepo.
+Default behavior:
+
+- missing keys return the key string
+- missing interpolation vars keep the original placeholder (for example `{name}`)
+
+```ts
+const i18n = createI18n({
+  onMissing(info) {
+    if (info.type === 'var') return `<${info.varName}>`;
+
+    return `[missing:${info.key}]`;
+  },
+});
+```
+
+## Subscriber error handling
+
+By default, exceptions thrown inside `subscribe` callbacks are swallowed so the store
+stays stable. Provide `onSubscriberError` to observe or log those failures:
+
+```ts
+const i18n = createI18n({
+  onSubscriberError(error) {
+    console.error('[i18n] subscriber threw:', error);
+  },
+});
+```
+
+## Listing supported locales
+
+`getSupportedLocales()` returns locales in registration order.
+Pass `{ sorted: true }` for a deterministic code-point-sorted list:
+
+```ts
+i18n.getSupportedLocales();                // ['en', 'fr', 'de'] — insertion order
+i18n.getSupportedLocales({ sorted: true }); // ['de', 'en', 'fr'] — code-point order
+```
+
+## Framework integration
+
+`i18nit` is framework-agnostic and exposes a single subscription primitive:
+
+- `subscribe(callback, options?)`
+  - default: change-only notifications (React external store style)
+  - `{ immediate: true }`: immediate callback + change notifications (Svelte/Vue/Solid friendly)
+
+Use these directly rather than package-level framework adapters.
+
+```ts
+const unsubscribe = i18n.subscribe((snapshot) => {
+  const { locale, version } = snapshot;
+  console.log(locale, version);
+});
+
+unsubscribe();
+```
+
+::: code-group
+
+```tsx [React]
+import { useSyncExternalStore } from 'react';
+
+export function useI18n() {
+  const snapshot = useSyncExternalStore(i18n.subscribe, i18n.getSnapshot, i18n.getSnapshot);
+
+  return {
+    locale: snapshot.locale,
+    t: i18n.t,
+    setLocale: i18n.setLocale,
+  };
+}
+```
+
+```ts [Vue]
+import { onUnmounted, shallowRef } from 'vue';
+
+const snapshot = shallowRef(i18n.getSnapshot());
+
+const stop = i18n.subscribe((next) => {
+  snapshot.value = next;
+}, { immediate: true });
+
+onUnmounted(stop);
+```
+
+```ts [Svelte]
+import type { Readable } from 'svelte/store';
+import type { I18nSnapshot } from '@vielzeug/i18nit';
+
+export const i18nStore: Readable<I18nSnapshot> = {
+  subscribe: (run) => i18n.subscribe(run, { immediate: true }),
+};
+```
+
+:::
+
+For more complete framework samples, see:
+
+- `docs/i18nit/examples/framework-integration.md`
+
+## Formatting
+
+Formatting lives in `@vielzeug/i18nit/format` and can bind to:
+
+- a static locale string
+- an i18n-like source with `locale`
+- a getter function that returns a locale

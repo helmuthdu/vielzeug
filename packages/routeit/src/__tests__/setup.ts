@@ -19,16 +19,17 @@ export const mockHistory = {
   back: vi.fn(),
   forward: vi.fn(),
   go: vi.fn(),
-  // Simulate real browser behaviour: pushState/replaceState update the current URL.
-  // Without this, navigate() would re-read the old pathname from the mock and recurse
-  // indefinitely when a middleware calls router.navigate() without awaiting next().
+  state: null as unknown,
+  // Simulate real browser behaviour: pushState/replaceState update the current URL and
+  // history.state. Without URL updates, navigate() would re-read the old pathname and
+  // recurse indefinitely when middleware calls router.navigate() without awaiting next().
   pushState: vi.fn((state: unknown, _title: string, url: string) => {
     assignMockUrl(url);
-    mockLocation.state = state;
+    mockHistory.state = state;
   }),
   replaceState: vi.fn((state: unknown, _title: string, url: string) => {
     assignMockUrl(url);
-    mockLocation.state = state;
+    mockHistory.state = state;
   }),
 };
 
@@ -75,4 +76,5 @@ export function resetMocks(): void {
   mockLocation.search = '';
   mockLocation.hash = '';
   mockLocation.state = null;
+  mockHistory.state = null;
 }

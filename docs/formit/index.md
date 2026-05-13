@@ -3,9 +3,13 @@ title: Formit — Form state management for TypeScript
 description: Framework-agnostic typed form state with path-safe fields, unified validation API, deterministic submit flow, and browser-friendly helpers.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="formit" />
 
 <img src="/logo-formit.svg" alt="Formit logo" width="156" class="logo-highlight"/>
+
+# Formit
 
 `@vielzeug/formit` is a typed, framework-agnostic form controller for values, errors, dirty and touched state, validation, and submission.
 
@@ -32,7 +36,7 @@ yarn add @vielzeug/formit
 ## Quick Start
 
 ```ts
-import { createForm, FormValidationError } from '@vielzeug/formit';
+import { createForm } from '@vielzeug/formit';
 
 const form = createForm({
   defaultValues: { email: '', password: '' },
@@ -43,31 +47,30 @@ const form = createForm({
   },
 });
 
-const { valid, errors } = await form.validate();
+const { valid, errors } = await form.validateAll();
 
 if (!valid) {
   console.log(errors);
 }
 
-// Option A: callback — no try/catch needed
-await form.submit(
-  async (values) => { /* save */ },
-  (errors) => console.log('Validation failed:', errors),
-);
-
-// Option B: throw-based
-try {
-  await form.submit(async (values) => {
-    await fetch('/api/login', {
-      body: JSON.stringify(values),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-    });
+const submission = await form.submit(async (values) => {
+  await fetch('/api/login', {
+    body: JSON.stringify(values),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
   });
-} catch (error) {
-  if (error instanceof FormValidationError) {
-    console.log(error.errors);
+});
+
+if (!submission.ok) {
+  if (submission.type === 'validation') {
+    console.log(submission.errors);
   }
+}
+
+const second = await form.submit(async () => {});
+
+if (!second.ok && second.type === 'concurrent') {
+  console.log('Submission already in progress');
 }
 ```
 
@@ -88,23 +91,23 @@ if (Object.keys(errors).length === 0) {
 
 // After: one form controller with explicit transitions
 const form = createForm({ defaultValues: { email: '', password: '' }, validators: { email: isEmail, password: min8 } });
-await form.validate();
+await form.validateAll();
 await form.submit(submit);
 ```
 
-| Feature | Formit | React Hook Form | VeeValidate |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="formit" type="size" /> | ~9 kB | ~16 kB |
-| Framework-agnostic | ✅ | React only | Vue only |
-| Typed dot-path APIs | ✅ | Partial | Partial |
-| Global validation mode | ✅ | ✅ | ✅ |
-| Unified validation entrypoint | ✅ | ❌ | ❌ |
-| `onInvalid` submit callback | ✅ | ✅ | ✅ |
-| Live field watch | ✅ | ✅ | ✅ |
-| Full array helpers | ✅ | ✅ | ✅ |
-| Conditional field removal | ✅ | ✅ | Partial |
-| Form + field subscriptions | ✅ | ✅ | ✅ |
-| Zero dependencies | ✅ | ❌ | ❌ |
+| Feature                       | Formit                                       | React Hook Form | VeeValidate |
+| ----------------------------- | -------------------------------------------- | --------------- | ----------- |
+| Bundle size                   | <PackageInfo package="formit" type="size" /> | ~9 kB           | ~16 kB      |
+| Framework-agnostic            | ✅                                           | React only      | Vue only    |
+| Typed dot-path APIs           | ✅                                           | Partial         | Partial     |
+| Global validation mode        | ✅                                           | ✅              | ✅          |
+| Unified validation entrypoint | ✅                                           | ❌              | ❌          |
+| Result-based submit flow      | ✅                                           | ❌              | ❌          |
+| Live field observation        | ✅                                           | ✅              | ✅          |
+| Full array helpers            | ✅                                           | ✅              | ✅          |
+| Conditional field removal     | ✅                                           | ✅              | Partial     |
+| Form + field subscriptions    | ✅                                           | ✅              | ✅          |
+| Zero dependencies             | ✅                                           | ❌              | ❌          |
 
 **Use Formit when** you want one typed form controller that works across frameworks or in vanilla apps with explicit, predictable state transitions.
 
@@ -113,17 +116,19 @@ await form.submit(submit);
 ## Features
 
 - Typed field paths with compile-time value inference
-- Unified validation API: `validate()`, `validate('touched')`, and `validate(fields)`
+- Explicit validation API: `validateAll()`, `validateTouched()`, and `validateFields(fields)`
 - Single-field validation with `validateField(name)`
 - Global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
-- `submit(onValid, onInvalid?)` — optional error callback avoids try/catch
-- `watch(name, callback)` — live value streaming without subscription boilerplate
+- `submit(handler)` — returns `{ ok: true, value }` or `{ ok: false, errors }`
+- Schema integration via `schemaValidator(schema)` for `safeParse`-compatible validators
 - `removeField(name)` — clean conditional field lifecycle
 - Full array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
-- Explicit subscriptions: `subscribeForm` and `subscribeField`
+- Explicit synchronous subscriptions: `subscribe` and `subscribeField`
+- Stable frozen snapshots for `form.state` and `form.field(name)` (external-store friendly)
+- Explicit touched and error controls: `touch`, `untouch`, `touchAll`, `untouchAll`, `setError`, `resetErrors`
+- Mutation batching with `batch(fn)` and dynamic field validators via `setValidator(name, validator?)`
 - Baseline-safe reset/replace model
-- Browser-first utilities: `bind`, `toFormData`
-- Schema adapter via `fromSchema(schema)`
+- Browser-first utilities: vanilla-DOM `bind`, `toFormData`
 
 ## Compatibility
 
@@ -131,7 +136,7 @@ await form.submit(submit);
 | ----------- | ------- |
 | Browser     | ✅      |
 
-## Documentation Map
+## Documentation
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
@@ -142,3 +147,5 @@ await form.submit(submit);
 - [Validit](/validit/)
 - [Fetchit](/fetchit/)
 - [Stateit](/stateit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

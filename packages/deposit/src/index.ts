@@ -13,5 +13,6 @@ export type {
   MigrationFn,
   Observer,
   RecordOf,
+  TtlMs,
   TransactionContext,
 } from './types';

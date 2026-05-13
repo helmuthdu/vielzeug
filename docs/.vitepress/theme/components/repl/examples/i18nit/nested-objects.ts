@@ -3,7 +3,7 @@ export const nestedObjectsExample = {
 
 const i18n = createI18n({
   locale: 'en',
-  messages: {
+  catalogs: {
     en: {
       user: { profile: { title: 'User Profile' } },
       app: { nav: { home: 'Home' } },

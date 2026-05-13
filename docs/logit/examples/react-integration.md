@@ -5,13 +5,11 @@ description: 'React Integration examples for logit.'
 
 ## React Integration
 
-## Problem
+### Problem
 
-Implement react integration in a production-friendly way with `@vielzeug/logit` while keeping setup and cleanup explicit.
+Components deep in a React tree need to log without importing the logger directly. A context-based logger makes the same instance available everywhere without prop-drilling.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/logit` installed.
+### Solution
 
 ```tsx
 import { Logit } from '@vielzeug/logit';
@@ -32,18 +30,14 @@ export function UserProfile({ userId }: { userId: string }) {
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Creating a new logger inside the component body (not in a context) runs on every render, generating a new instance each time. Always create loggers outside the component or memoize them.
+- `useContext(LogContext)` falls back to the default value passed to `createContext` when rendered outside a `Provider`. Ensure the default is a valid logger, not `null`.
+- Logging inside the component body (not in `useEffect`) fires on every render, including React Strict Mode's double-invocations in development.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)

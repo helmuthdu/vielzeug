@@ -5,14 +5,29 @@ description: Entry points and public API reference for @vielzeug/craftit, @vielz
 
 [[toc]]
 
+## API At a Glance
+
+| Symbol             | Purpose                                        | Execution mode | Common gotcha                                         |
+| ------------------ | ---------------------------------------------- | -------------- | ----------------------------------------------------- |
+| `define()`         | Register a custom element with reactive setup  | Sync           | Tag must contain a hyphen; call before first use      |
+| `html`             | Tagged template literal that returns HTMLResult | Sync           | Expressions must be signals, functions, or primitives |
+| `effect()`         | Component-scoped reactive side effect          | Sync           | Runs inside component lifetime — auto-cleaned up      |
+| `onMounted()`      | DOM-ready callback after template mounts       | Sync           | DOM queries inside setup() run before mount           |
+| `onCleanup()`      | Register teardown for component disconnect     | Sync           | Must be called synchronously during setup             |
+| `onElement()`      | Run callback when a ref resolves to an element | Sync           | Re-runs when the element reference changes            |
+| `prop.*`           | Typed prop helpers (string, bool, number, …)   | Sync           | Prop values are signals — read `.value`               |
+| `provide/inject`   | Context API for parent-to-descendant sharing   | Sync           | Call `provide()` during setup, not in onMounted       |
+| `ref()`            | Reactive reference to a DOM element            | Sync           | Value is null until after first mount                 |
+| `createContext()`  | Create a typed injection key                   | Sync           | Context is scoped to the component tree               |
+
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/craftit` | Core authoring/runtime API plus stateit re-exports |
-| `@vielzeug/craftit/controls` | Headless interaction controls |
-| `@vielzeug/craftit/observers` | Resize, intersection, and media-query observers |
-| `@vielzeug/craftit/testing` | DOM-oriented test helpers |
+| Import                        | Purpose                                            |
+| ----------------------------- | -------------------------------------------------- |
+| `@vielzeug/craftit`           | Core authoring/runtime API plus stateit re-exports |
+| `@vielzeug/craftit/controls`  | Headless interaction controls                      |
+| `@vielzeug/craftit/observers` | Resize, intersection, and media-query observers    |
+| `@vielzeug/craftit/testing`   | DOM-oriented test helpers                          |
 
 ## Core Component API
 
@@ -135,12 +150,12 @@ Craftit does not expose `defineProps()`. Define props directly in `props` using 
 
 Shared prop bundles should type against `PropsDef<T>`.
 
-| Helper | Signature | Notes |
-| --- | --- | --- |
-| `prop.string(defaultValue)` | `PropDef<string>` | Reflects by default |
-| `prop.bool(defaultValue?)` | `PropDef<boolean>` | Empty string and `'true'` parse as `true` |
-| `prop.number(defaultValue?)` | `PropDef<number>` | Uses `Number(...)` parsing |
-| `prop.oneOf(allowed, defaultValue)` | `PropDef<T>` | Restricts to provided string union |
+| Helper                              | Signature          | Notes                                     |
+| ----------------------------------- | ------------------ | ----------------------------------------- |
+| `prop.string(defaultValue)`         | `PropDef<string>`  | Reflects by default                       |
+| `prop.bool(defaultValue?)`          | `PropDef<boolean>` | Empty string and `'true'` parse as `true` |
+| `prop.number(defaultValue?)`        | `PropDef<number>`  | Uses `Number(...)` parsing                |
+| `prop.oneOf(allowed, defaultValue)` | `PropDef<T>`       | Restricts to provided string union        |
 
 When you need custom parsing or `reflect: false`, use a raw `PropDef` object:
 
@@ -247,5 +262,4 @@ Import from `@vielzeug/craftit/testing`.
 Craftit re-exports these from `@vielzeug/stateit`:
 
 - `signal`, `computed`, `effect`, `watch`, `batch`, `untrack`
-- `readonly`, `writable`, `peek`, `toValue`, `unwrapSignal`, `isSignal`
-- `type Signal`, `type ReadonlySignal`, `type WatchOptions`
+- `isSignal`, `type Signal`, `type ReadonlySignal`, `type WatchOptions`

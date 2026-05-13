@@ -25,7 +25,7 @@ export const once = <T extends Fn>(fn: T): T & { reset: () => void } => {
 
   const wrappedFn = ((...args: Parameters<T>): ReturnType<T> => {
     if (!called) {
-      result = fn(...args);
+      result = fn(...args) as ReturnType<T>;
       called = true;
     }
 

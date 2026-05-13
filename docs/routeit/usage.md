@@ -3,16 +3,16 @@ title: Routeit — Usage Guide
 description: Router setup, middleware, data loading, nested routes, and state patterns for Routeit.
 ---
 
+[[toc]]
+
 ::: tip New to Routeit?
 Start with the [Overview](./index.md), then use this page for the day-to-day API.
 :::
 
-[[toc]]
-
 ## Create a Router
 
 ```ts
-import { createRouter, redirect } from '@vielzeug/routeit';
+import { createRouter, redirectTo } from '@vielzeug/routeit';
 
 const routes = {
   home: {
@@ -53,6 +53,7 @@ const routes = {
 const router = createRouter({
   base: '/app',
   middleware: [logger],
+  onError: (error, context) => reportError(error, context.source),
   routes,
   viewTransition: true,
 });
@@ -64,18 +65,18 @@ const router = createRouter({
 
 Each route can provide these fields:
 
-| Field | Purpose |
-| --- | --- |
-| `path` | Match pattern |
-| `children` | Nested child routes |
-| `index` | Default child route that inherits the parent path |
-| `data` | Abortable route data function that runs after middleware |
-| `handler` | Final route handler |
-| `lazy` | Lazy-load the module. Called once; result fills `handler`, `data`, `meta`. |
-| `meta` | Static data exposed on `router.state.matches.at(-1)?.meta` |
-| `middleware` | Route-specific middleware |
-| `redirect` | Declarative permanent redirect. Resolved before middleware runs. |
-| `coerceSearch` | Coerce search params. Return value replaces `ctx.query`. |
+| Field          | Purpose                                                                    |
+| -------------- | -------------------------------------------------------------------------- |
+| `path`         | Match pattern                                                              |
+| `children`     | Nested child routes                                                        |
+| `index`        | Default child route that inherits the parent path                          |
+| `data`         | Abortable route data function that runs after middleware                   |
+| `handler`      | Final route handler                                                        |
+| `lazy`         | Lazy-load the module. Called once; result fills `handler`, `data`, `meta`. |
+| `meta`         | Static data exposed on `router.state.matches.at(-1)?.meta`                 |
+| `middleware`   | Route-specific middleware                                                  |
+| `redirect`     | Declarative permanent redirect. Resolved before middleware runs.           |
+| `coerceSearch` | Coerce search params. Return value replaces `ctx.query`.                   |
 
 Use wildcard routes for fallback behavior:
 
@@ -131,7 +132,7 @@ userDetail: {
 Middleware wraps the handler using the familiar `async (ctx, next) => { ... }` shape.
 
 ```ts
-const requireAuth = redirect({ name: 'login' }, { replace: true });
+const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 
 const loadCurrentUser = async (ctx, next) => {
   ctx.locals.user = await fetchCurrentUser();
@@ -156,7 +157,7 @@ handler
 Use middleware for auth checks, redirects, analytics, and boundaries.
 
 ```ts
-const requireAuth = redirect({ name: 'login' }, { replace: true });
+const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 ```
 
 For permanent URL aliases, use the declarative `redirect` field instead of middleware:
@@ -269,7 +270,7 @@ await router.navigate({ name: 'userDetail', params: { id: '42' } }, { state: { f
 // In the handler:
 handler: (ctx) => {
   console.log(ctx.historyState); // { from: 'search' }
-}
+};
 ```
 
 ### Same-URL Deduplication
@@ -313,10 +314,11 @@ router.url('userDetail', { id: '42' });
 router.url('userDetail', { id: '42' }, { tab: 'profile' });
 
 router.isActive('userDetail');
-router.isActive('users', false);
+router.isActive('users');
+router.isActive('users', { exact: true });
 ```
 
-`isActive(name, false)` is useful for parent navigation items.
+`isActive(name)` is useful for parent navigation items.
 
 ## Resolve Without Navigating
 
@@ -343,8 +345,8 @@ router.state.location.query;
 router.state.location.hash;
 router.state.location.historyState; // state from the current history entry
 router.state.matches;
-router.state.status;  // 'idle' | 'loading' | 'error'
-router.state.error;   // only set when status === 'error'
+router.state.status; // 'idle' | 'loading' | 'error'
+router.state.error; // only set when status === 'error'
 ```
 
 The state object is immutable. A successful navigation replaces it with a new snapshot.
@@ -359,10 +361,10 @@ Provide a `scroll` callback to control scroll position after each navigation:
 const router = createRouter({
   routes,
   scroll: (to, from) => {
-    // Return null to scroll to top
+    // Return 'top' to scroll to top
     // Return { x, y } for a specific position
-    // Return undefined to do nothing
-    return null;
+    // Return 'preserve' to do nothing
+    return 'top';
   },
 });
 ```
@@ -378,7 +380,7 @@ router.subscribe((state) => {
 
 const router = createRouter({
   routes,
-  scroll: (to, _from) => scrollPositions.get(to.location.pathname) ?? null,
+  scroll: (to, _from) => scrollPositions.get(to.location.pathname) ?? 'top',
 });
 ```
 
@@ -405,3 +407,150 @@ router.dispose();
 ```
 
 Remove listeners, clear subscribers, and prevent future router usage.
+
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useSyncExternalStore } from 'react';
+import { createRouter, createBrowserHistory } from '@vielzeug/routeit';
+
+const router = createRouter({
+  history: createBrowserHistory(),
+  routes: {
+    home: { path: '/', handler: () => null },
+    about: { path: '/about', handler: () => null },
+  },
+});
+
+function useRouterState() {
+  return useSyncExternalStore(
+    (notify) => router.subscribe(() => notify()),
+    () => router.state,
+  );
+}
+
+function App() {
+  const { location, matches } = useRouterState();
+  const current = matches.at(-1);
+  return (
+    <div>
+      <nav>
+        <a href="/" onClick={(e) => { e.preventDefault(); router.navigate({ name: 'home' }); }}>Home</a>
+        <a href="/about" onClick={(e) => { e.preventDefault(); router.navigate({ name: 'about' }); }}>About</a>
+      </nav>
+      <main>{current?.route.name}</main>
+    </div>
+  );
+}
+```
+
+```ts [Vue 3]
+import { shallowRef, onScopeDispose } from 'vue';
+import { createRouter, createBrowserHistory } from '@vielzeug/routeit';
+
+const router = createRouter({
+  history: createBrowserHistory(),
+  routes: {
+    home: { path: '/', handler: () => null },
+    about: { path: '/about', handler: () => null },
+  },
+});
+
+function useRouter() {
+  const state = shallowRef(router.state);
+  const stop = router.subscribe(() => { state.value = router.state; });
+  onScopeDispose(() => stop());
+  return { state, navigate: router.navigate.bind(router) };
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { createRouter, createBrowserHistory } from '@vielzeug/routeit';
+
+  const router = createRouter({
+    history: createBrowserHistory(),
+    routes: {
+      home: { path: '/', handler: () => null },
+      about: { path: '/about', handler: () => null },
+    },
+  });
+
+  let state = router.state;
+  const stop = router.subscribe(() => { state = router.state; });
+  onDestroy(() => { stop(); router.dispose(); });
+</script>
+
+<nav>
+  <a href="/" on:click|preventDefault={() => router.navigate({ name: 'home' })}>Home</a>
+</nav>
+<main>{state.matches.at(-1)?.route.name}</main>
+```
+
+:::
+
+
+### Pitfalls
+
+- **React:** Returning `router.currentRoute()` directly as the snapshot function works correctly because Routeit always returns the same object reference for the current route — but ensure the function is stable (defined outside the component).
+- **Vue 3:** Use `shallowRef` not `ref` for the route object — deep reactivity on a route object is unnecessary and adds overhead.
+- **Svelte:** Not calling `unsub()` in `onDestroy` causes the router to retain a reference to a destroyed component's callback, leading to errors when the route changes after unmount.
+
+## Working with Other Vielzeug Libraries
+
+### With Permit
+
+Use permit inside Routeit middleware to guard protected routes.
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+import { createPermit } from '@vielzeug/permit';
+
+type User = { id: string; roles: string[] };
+
+const permit = createPermit([
+  { role: 'admin', resource: 'settings', action: 'view', effect: 'allow' },
+]);
+
+const router = createRouter({
+  routes: {
+    settings: { path: '/settings', handler: () => renderSettings() },
+  },
+  middleware: [(ctx, next) => {
+    const user: User = getSessionUser();
+    if (!permit.can(user, 'settings', 'view')) {
+      return ctx.navigate({ path: '/login', replace: true });
+    }
+    return next();
+  }],
+});
+```
+
+### With Stateit
+
+Sync router state to a Stateit signal for reactive UI outside the router's subscription.
+
+```ts
+import { createRouter } from '@vielzeug/routeit';
+import { signal } from '@vielzeug/stateit';
+
+const router = createRouter({ /* ... */ });
+const currentRoute = signal(router.state.matches.at(-1)?.route.name ?? '');
+
+router.subscribe(() => {
+  currentRoute.value = router.state.matches.at(-1)?.route.name ?? '';
+});
+```
+
+## Best Practices
+
+- Define the route table once at app startup and import it where needed — avoid building route tables at runtime.
+- Use named navigation (`router.navigate({ name: 'settings' })`) over raw paths to detect broken links at compile time.
+- Put auth and permission guards in middleware, not in route handlers.
+- Use `data()` loaders for per-route data fetching with AbortSignal — avoid fetching inside handlers.
+- Call `router.dispose()` when unmounting the app (tests, SSR responses) to prevent background listeners.
+- Use `createMemoryHistory()` for server-side rendering and tests; never reference `window.history` directly.
+- Use `router.preload()` on hover for navigation that is likely to be followed immediately.

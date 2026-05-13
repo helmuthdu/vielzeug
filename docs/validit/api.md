@@ -5,21 +5,27 @@ description: Complete reference for validit exports, v factories, schema methods
 
 [[toc]]
 
+## Package Entry Point
+
+| Import                | Purpose                |
+| --------------------- | ---------------------- |
+| `@vielzeug/validit`   | Main exports and types |
+
 ## API At a Glance
 
-| Symbol             | Purpose                                 | Execution mode | Common gotcha                                         |
-| ------------------ | --------------------------------------- | -------------- | ----------------------------------------------------- |
-| `v.object()`       | Create typed object schema definitions  | Sync           | Unknown keys are rejected by default                  |
-| `safeParse()`      | Validate unknown input without throwing | Sync           | Always branch on success before using parsed data     |
-| `safeParseAsync()` | Validate async refinement pipelines     | Async          | Await result to capture async validation issues       |
-| `configure()`      | Override global validation messages     | Sync           | Message keys are nested groups, not flat string keys  |
+| Symbol             | Purpose                                 | Execution mode | Common gotcha                                        |
+| ------------------ | --------------------------------------- | -------------- | ---------------------------------------------------- |
+| `v.object()`       | Create typed object schema definitions  | Sync           | Unknown keys are rejected by default                 |
+| `safeParse()`      | Validate unknown input without throwing | Sync           | Always branch on success before using parsed data    |
+| `safeParseAsync()` | Validate async check pipelines          | Async          | Await result to capture async validation issues      |
+| `configure()`      | Override global validation messages     | Sync           | Message keys are nested groups, not flat string keys |
 
 ## Most Used First
 
 ### External boundaries
 
 - Use `safeParse()` when validating request payloads, form input, query params, or external API responses.
-- Use `safeParseAsync()` when any part of the schema tree uses `.refineAsync()`.
+- Use `safeParseAsync()` when any part of the schema tree uses async `check()` validation.
 - Use `parse()` and `parseAsync()` when validation failure should be exceptional and you want a thrown `ValidationError`.
 
 ### Common composition flow
@@ -27,7 +33,7 @@ description: Complete reference for validit exports, v factories, schema methods
 1. Start with a factory from `v`.
 2. Add built-in constraints like `.min()` or `.email()`.
 3. Add `preprocess()`, `default()`, `optional()`, or `nullable()` as needed.
-4. Add `.refine()` or `.refineAsync()` for domain-specific rules.
+4. Add `.check()` for domain-specific rules.
 5. Add `transform()` only after type-specific validators are complete.
 
 ## Package Exports
@@ -35,6 +41,7 @@ description: Complete reference for validit exports, v factories, schema methods
 ```ts
 import {
   ErrorCode,
+  flattenFirstErrors,
   Schema,
   ValidationError,
   configure,
@@ -42,8 +49,6 @@ import {
   v,
   type Infer,
   type InferInput,
-  type InferOutput,
-  type TypeOf,
   type Issue,
   type MessageFn,
   type ParseResult,
@@ -97,7 +102,6 @@ import {
 ### Utility Factories
 
 - `v.bigint()`
-- `v.readonly(schema)`
 
 ## Schema
 
@@ -138,33 +142,17 @@ catch(fallback: Output | (() => Output)): this
 ### Custom Validation
 
 ```ts
-refine(
-  check: (value: Output) => boolean,
-  message?: MessageFn<{ value: Output }>,
-): this
-
-refineAsync(
-  check: (value: Output) => Promise<boolean>,
-  message?: MessageFn<{ value: Output }>,
-): this
-
-superRefine(
+check(
   check: (
     value: Output,
     ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
-  ) => void,
-): this
-
-superRefineAsync(
-  check: (
-    value: Output,
-    ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
-  ) => Promise<void>,
+  ) => boolean | Issue | Issue[] | null | undefined | Promise<boolean | Issue | Issue[] | null | undefined>,
+  message?: MessageFn<{ value: Output }>,
 ): this
 ```
 
-- `refine()` is sync only.
-- `refineAsync()` stores async checks used by `parseAsync()` and `safeParseAsync()`.
+- `check()` supports sync and async validation.
+- Return `false` to use the default message, return an `Issue` or `Issue[]` for custom issues, or use `ctx.addIssue()` for explicit path control.
 
 ### Transform and Metadata
 
@@ -374,16 +362,14 @@ reset();
 
 ## Types
 
-### Infer, InferInput, InferOutput, and TypeOf
+### Infer and InferInput
 
 ```ts
 type User = Infer<typeof UserSchema>;
 type UserIn = InferInput<typeof UserSchema>;
-type UserOut = InferOutput<typeof UserSchema>;
-type UserOut2 = TypeOf<typeof UserSchema>;
 ```
 
-`InferInput<T>` extracts the accepted input type, while `Infer`, `InferOutput`, and `TypeOf` extract output types.
+`InferInput<T>` extracts the accepted input type, while `Infer<T>` extracts output types.
 
 ### ParseResult
 
@@ -414,9 +400,10 @@ type Issue = {
 
 - `.issues: Issue[]`
 - `.flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] }`
-- `.flattenFirst(): { fieldErrors: Record<string, string>; formErrors: string[] }`
 - `.format(): { _errors: string[]; [key: string]: ... }`
 - `ValidationError.is(value): value is ValidationError`
+
+`flattenFirstErrors(error)` is exported as a utility to map field errors to a single first message per field.
 
 ### ErrorCode
 

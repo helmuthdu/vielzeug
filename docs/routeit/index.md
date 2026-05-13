@@ -3,9 +3,13 @@ title: Routeit — Client-side router for TypeScript
 description: Lightweight, type-safe client-side router with nested routes, data loading, middleware, and named navigation.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="routeit" />
 
 <img src="/logo-routeit.svg" alt="Routeit logo" width="156" class="logo-highlight"/>
+
+# Routeit
 
 **Routeit** is a lightweight, framework-agnostic client-side router built around a declarative route table. Define routes once, then navigate, resolve, load route data, and build links by route name.
 
@@ -84,27 +88,27 @@ const routes = {
 const router = createRouter({ routes });
 ```
 
-| Feature | Routeit | page.js | Navigo |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="routeit" type="size" /> | ~1 kB | ~5 kB |
-| History mode | ✅ | ✅ | ✅ |
-| Memory history (SSR / tests) | ✅ | ❌ | ❌ |
-| Typed path params | ✅ | ❌ | ❌ |
-| Named navigation | ✅ | ❌ | Partial |
-| Middleware | ✅ | ✅ | ✅ |
-| Data loaders with AbortSignal | ✅ | ❌ | ❌ |
-| Lazy route loading | ✅ | ❌ | ❌ |
-| Declarative redirects | ✅ | ❌ | ❌ |
-| Search param validation | ✅ | ❌ | ❌ |
-| Error in state | ✅ | ❌ | ❌ |
-| History state in context | ✅ | ❌ | ❌ |
-| Leave guards | ✅ | ❌ | ❌ |
-| Route prefetching | ✅ | ❌ | ❌ |
-| Scroll restoration | ✅ | ❌ | ❌ |
-| View Transition API | ✅ | ❌ | ❌ |
-| Zero dependencies | ✅ | ✅ | ✅ |
+| Feature                       | Routeit                                       | page.js | Navigo  |
+| ----------------------------- | --------------------------------------------- | ------- | ------- |
+| Bundle size                   | <PackageInfo package="routeit" type="size" /> | ~1 kB   | ~5 kB   |
+| History mode                  | ✅                                            | ✅      | ✅      |
+| Memory history (SSR / tests)  | ✅                                            | ❌      | ❌      |
+| Typed path params             | ✅                                            | ❌      | ❌      |
+| Named navigation              | ✅                                            | ❌      | Partial |
+| Middleware                    | ✅                                            | ✅      | ✅      |
+| Data loaders with AbortSignal | ✅                                            | ❌      | ❌      |
+| Lazy route loading            | ✅                                            | ❌      | ❌      |
+| Declarative redirects         | ✅                                            | ❌      | ❌      |
+| Search param validation       | ✅                                            | ❌      | ❌      |
+| Error in state                | ✅                                            | ❌      | ❌      |
+| History state in context      | ✅                                            | ❌      | ❌      |
+| Leave guards                  | ✅                                            | ❌      | ❌      |
+| Route prefetching             | ✅                                            | ❌      | ❌      |
+| Scroll restoration            | ✅                                            | ❌      | ❌      |
+| View Transition API           | ✅                                            | ❌      | ❌      |
+| Zero dependencies             | ✅                                            | ✅      | ✅      |
 
-## Core Ideas
+## Features
 
 - One declarative route table
 - Nested routes with compound names like `dashboard.settings`
@@ -125,7 +129,7 @@ const router = createRouter({ routes });
 - Middleware handles guards, analytics, and error boundaries
 - `navigate()` handles both named routes and raw path targets
 
-## Feature Highlights
+### Feature Highlights
 
 - **Nested routes** with `children` and `index`
 - **Typed path params** with proper inference
@@ -140,29 +144,31 @@ const router = createRouter({ routes });
 - **Pluggable history drivers** with browser-history default
 - **View transitions** when the browser supports them
 
-## Documentation Map
-
-- [Usage Guide](./usage.md)
-- [API Reference](./api.md)
-- [Examples](./examples.md)
-
 ## Compatibility
 
 | Environment | Support |
-| --- | --- |
-| Browser | ✅ |
-| Node.js | ❌ |
-| SSR | ❌ |
-| Deno | ❌ |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ❌      |
+| SSR         | ❌      |
+| Deno        | ❌      |
 
-## Prerequisites
+### Prerequisites
 
 - Browser runtime with the History API
 - Server rewrites for deep-link support in SPAs
 - Route table defined before router startup
+
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 
 - [Stateit](/stateit/)
 - [Permit](/permit/)
 - [Eventit](/eventit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

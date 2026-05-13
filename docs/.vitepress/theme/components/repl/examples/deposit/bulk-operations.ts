@@ -1,4 +1,23 @@
 export const bulkOperationsExample = {
-  code: "import { createLocalStorage, table } from '@vielzeug/deposit'\n\nconst db = createLocalStorage({\n  dbName: 'bulk-demo',\n  schema: {\n    items: table('id'),\n  },\n})\n\nconst items = Array.from({ length: 10 }, (_, i) => ({\n  id: i + 1,\n  value: +(Math.random() * 1000).toFixed(2),\n}))\n\nawait db.putAll('items', items)\nconsole.log('Inserted', items.length, 'items')\n\n// Delete individual items\nawait db.delete('items', 1)\nawait db.delete('items', 2)\nawait db.delete('items', 3)\nconsole.log('Deleted 3 items')\nconsole.log('Remaining:', await db.count('items'))",
+  code: `import { createLocalStorage, table } from '@vielzeug/deposit'
+
+const schema = {
+  items: table('id'),
+}
+
+const db = createLocalStorage('bulk-demo', schema)
+
+const items = Array.from({ length: 10 }, (_, index) => ({
+  id: index + 1,
+  value: +(Math.random() * 1000).toFixed(2),
+}))
+
+await db.putAll('items', items)
+console.log('Inserted', items.length, 'items')
+
+const deleted = await db.deleteWhere('items', (item) => item.id <= 3)
+console.log('Deleted items:', deleted)
+console.log('Remaining count:', await db.count('items'))
+console.log('First remaining item:', await db.query('items').orderBy('id', 'asc').first())`,
   name: 'Bulk Operations',
 };

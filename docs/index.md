@@ -56,6 +56,9 @@ features:
   - title: '@vielzeug/stateit'
     details: "<img src='/logo-stateit.svg' class='logo-highlight-smaller' alt='Stateit Logo' width='72'/>Tiny, framework-agnostic state management with reactive subscriptions."
     link: /stateit/
+  - title: '@vielzeug/sourceit'
+    details: "<img src='/logo-sourceit.svg' class='logo-highlight-smaller' alt='Sourceit Logo' width='72'/>Reactive local and remote query sources with pagination, filtering, sorting, and search."
+    link: /sourceit/
   - title: '@vielzeug/timit'
     details: "<img src='/logo-timit.svg' class='logo-highlight-smaller' alt='Timit Logo' width='72'/>Temporal-powered date and time utilities for modern TypeScript apps."
     link: /timit/

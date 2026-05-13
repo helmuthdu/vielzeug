@@ -5,19 +5,25 @@ description: Complete API reference for the declarative Routeit router.
 
 [[toc]]
 
-## At a Glance
+## Package Entry Point
 
-| Symbol | Purpose |
-| --- | --- |
-| `createRouter({ routes, ...options })` | Create a router from a route table |
-| `createBrowserHistory()` | Create the default browser history driver |
-| `createMemoryHistory(initialPath?)` | Create an in-memory history driver (SSR / tests) |
-| `redirect(target, options?)` | Build redirect middleware for guard flows |
-| `router.navigate({ name, ... })` | Navigate by route name |
-| `router.navigate({ path })` | Navigate by raw path target |
-| `router.url(name, params?, query?)` | Build a URL for a named route |
-| `router.preload(name, params?)` | Eagerly run data loaders without navigating |
-| `router.beforeLeave(blocker)` | Register a leave guard |
+| Import                | Purpose                |
+| --------------------- | ---------------------- |
+| `@vielzeug/routeit`   | Main exports and types |
+
+## API At a Glance
+
+| Symbol                                 | Purpose                                          |
+| -------------------------------------- | ------------------------------------------------ |
+| `createRouter({ routes, ...options })` | Create a router from a route table               |
+| `createBrowserHistory()`               | Create the default browser history driver        |
+| `createMemoryHistory(initialPath?)`    | Create an in-memory history driver (SSR / tests) |
+| `redirectTo(target, options?)`         | Build redirect middleware for guard flows        |
+| `router.navigate({ name, ... })`       | Navigate by route name                           |
+| `router.navigate({ path })`            | Navigate by raw path target                      |
+| `router.url(name, params?, query?)`    | Build a URL for a named route                    |
+| `router.preload(name, params?)`        | Eagerly run data loaders without navigating      |
+| `router.beforeLeave(blocker)`          | Register a leave guard                           |
 
 ## `createRouter(options)`
 
@@ -40,14 +46,15 @@ const router = createRouter({
 });
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `base` | `string` | `'/'` | Base path prefix for all routes |
-| `history` | `HistoryDriver` | `createBrowserHistory()` | History source used for reading locations and writing navigations |
-| `middleware` | `Middleware[]` | `[]` | Global middleware prepended to every route |
-| `routes` | `RouteTable` | required | Declarative route table. Object key order defines match precedence. |
-| `scroll` | `(to, from) => { x, y } \| null \| undefined` | — | Called after each navigation. Return `null` to scroll to top, `{ x, y }` for a specific position, or `undefined` to do nothing. |
-| `viewTransition` | `boolean` | `false` | Wrap navigations in the View Transition API when available |
+| Option           | Type                           | Default                  | Description                                                                                                                                      |
+| ---------------- | ------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `base`           | `string`                       | `'/'`                    | Base path prefix for all routes                                                                                                                  |
+| `history`        | `HistoryDriver`                | `createBrowserHistory()` | History source used for reading locations and writing navigations                                                                                |
+| `middleware`     | `Middleware[]`                 | `[]`                     | Global middleware prepended to every route                                                                                                       |
+| `onError`        | `(error, context) => void`     | —                        | Optional sink for non-awaited/background router errors (`initial-navigation`, `history-listener`, `preload`)                                     |
+| `routes`         | `RouteTable`                   | required                 | Declarative route table. Object key order defines match precedence.                                                                              |
+| `scroll`         | `(to, from) => ScrollDecision` | —                        | Called after each navigation. Return `'top'` to scroll to top, `'preserve'` to keep the current position, or `{ x, y }` for a specific position. |
+| `viewTransition` | `boolean`                      | `false`                  | Wrap navigations in the View Transition API when available                                                                                       |
 
 **Returns:** `Router`
 
@@ -103,18 +110,18 @@ const routes = {
 
 Each route definition supports these fields:
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `path` | `string` | Route pattern. Supports static paths, `:param`, `:param*`, and `*`. Child paths are relative unless they start with `/`. |
-| `children` | `Record<string, RouteDefinition>` | Nested child routes. Child names are appended to the parent route name. |
-| `index` | `boolean` | Default child route that inherits the parent path. |
-| `data` | `DataFn` | Optional route data function. Runs after middleware and before the handler. |
-| `handler` | `RouteHandler` | Optional terminal handler |
-| `lazy` | `() => Promise<{ handler?, data?, meta? }>` | Lazy-load the route module. Called once; result replaces `handler`, `data`, and `meta` in place. |
-| `middleware` | `Middleware[]` | Optional route-specific middleware |
-| `meta` | `unknown` | Static metadata exposed on `router.state.matches.at(-1)?.meta` |
-| `redirect` | `NavigationTarget` | Declarative redirect. Resolved before middleware runs; uses `replaceState` so the original URL is never added to history. |
-| `coerceSearch` | `(raw: QueryParams) => QueryParams` | Coerce search params. Return value replaces `ctx.query`. Throwing leaves the raw query unchanged. |
+| Field          | Type                                        | Description                                                                                                               |
+| -------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `path`         | `string`                                    | Route pattern. Supports static paths, `:param`, `:param*`, and `*`. Child paths are relative unless they start with `/`.  |
+| `children`     | `Record<string, RouteDefinition>`           | Nested child routes. Child names are appended to the parent route name.                                                   |
+| `index`        | `boolean`                                   | Default child route that inherits the parent path.                                                                        |
+| `data`         | `DataFn`                                    | Optional route data function. Runs after middleware and before the handler.                                               |
+| `handler`      | `RouteHandler`                              | Optional terminal handler                                                                                                 |
+| `lazy`         | `() => Promise<{ handler?, data?, meta? }>` | Lazy-load the route module. Called once; result replaces `handler`, `data`, and `meta` in place.                          |
+| `middleware`   | `Middleware[]`                              | Optional route-specific middleware                                                                                        |
+| `meta`         | `unknown`                                   | Static metadata exposed on `router.state.matches.at(-1)?.meta`                                                            |
+| `redirect`     | `NavigationTarget`                          | Declarative redirect. Resolved before middleware runs; uses `replaceState` so the original URL is never added to history. |
+| `coerceSearch` | `(raw: QueryParams) => QueryParams`         | Coerce search params. Return value replaces `ctx.query`. Throwing leaves the raw query unchanged.                         |
 
 ## `createBrowserHistory()`
 
@@ -166,12 +173,12 @@ await router.navigate({ name: 'userDetail', params: { id: '42' } }, { replace: t
 await router.navigate({ name: 'search', query: { q: 'routeit' }, hash: 'results' });
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `replace` | `boolean` | `false` | Use `replaceState` instead of `pushState` |
-| `state` | `unknown` | — | History state payload |
-| `viewTransition` | `boolean` | — | Override the router-level setting for this navigation |
-| `force` | `boolean` | `false` | Re-run even when the destination URL is already current |
+| Option           | Type      | Default | Description                                             |
+| ---------------- | --------- | ------- | ------------------------------------------------------- |
+| `replace`        | `boolean` | `false` | Use `replaceState` instead of `pushState`               |
+| `state`          | `unknown` | —       | History state payload                                   |
+| `viewTransition` | `boolean` | —       | Override the router-level setting for this navigation   |
+| `force`          | `boolean` | `false` | Re-run even when the destination URL is already current |
 
 **Returns:** `Promise<void>`
 
@@ -195,11 +202,12 @@ Build a base-aware URL for a named route.
 
 **Returns:** `string`
 
-#### `router.isActive(name, exact?)`
+#### `router.isActive(name, options?)`
 
 ```ts
 router.isActive('userDetail');
-router.isActive('users', false);
+router.isActive('users');
+router.isActive('users', { exact: true });
 ```
 
 Check whether the current pathname matches a named route exactly or by prefix.
@@ -246,16 +254,16 @@ const remove = router.beforeLeave(async () => {
 remove();
 ```
 
-Register a leave guard called before every navigation attempt. Return `true` to allow, `false` to cancel. Only one guard is active at a time — calling `beforeLeave` again replaces the previous one. Returns an unsubscribe function.
+Register a leave guard called before user-triggered navigation attempts. Return `true` to allow, `false` to cancel. Multiple guards can be registered; navigation is blocked if any guard returns `false`. Internal declarative redirects bypass leave guards.
 
 **Returns:** `() => void`
 
-## `redirect(target, options?)`
+## `redirectTo(target, options?)`
 
 ```ts
-import { redirect } from '@vielzeug/routeit';
+import { redirectTo } from '@vielzeug/routeit';
 
-const requireAuth = redirect({ name: 'login' }, { replace: true });
+const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 ```
 
 Creates middleware that performs a redirect and short-circuits the chain.
@@ -300,10 +308,7 @@ The listener runs immediately with the current state, then after each successful
 ### `RouteContext<Params, TRoutes>`
 
 ```ts
-type RouteContext<
-  Params extends RouteParams = RouteParams,
-  TRoutes extends RouteTable = RouteTable,
-> = {
+type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = {
   readonly data?: unknown;
   readonly hash: string;
   /** State stored on the history entry that triggered this navigation. */
@@ -327,10 +332,7 @@ Read route metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
 ### `DataFn<Params, TRoutes>`
 
 ```ts
-type DataFn<
-  Params extends RouteParams = RouteParams,
-  TRoutes extends RouteTable = RouteTable,
-> = (
+type DataFn<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
   context: DataContext<Params, TRoutes>,
 ) => unknown | Promise<unknown>;
 ```
@@ -338,10 +340,10 @@ type DataFn<
 ### `DataContext<Params, TRoutes>`
 
 ```ts
-type DataContext<
-  Params extends RouteParams = RouteParams,
-  TRoutes extends RouteTable = RouteTable,
-> = RouteContext<Params, TRoutes> & {
+type DataContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = RouteContext<
+  Params,
+  TRoutes
+> & {
   readonly signal: AbortSignal;
 };
 ```
@@ -349,10 +351,7 @@ type DataContext<
 ### `RouteHandler<Params, TRoutes>`
 
 ```ts
-type RouteHandler<
-  Params extends RouteParams = RouteParams,
-  TRoutes extends RouteTable = RouteTable,
-> = (
+type RouteHandler<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
   context: RouteContext<Params, TRoutes>,
 ) => void | Promise<void>;
 ```
@@ -384,14 +383,16 @@ type UntypedNamedNavigationTarget = {
 ### `NavigationTarget`
 
 ```ts
-type NavigationTarget = {
-  path: string;
-} | {
-  hash?: string;
-  name: string;
-  params?: RouteParams;
-  query?: QueryParams;
-};
+type NavigationTarget =
+  | {
+      path: string;
+    }
+  | {
+      hash?: string;
+      name: string;
+      params?: RouteParams;
+      query?: QueryParams;
+    };
 ```
 
 ### `NavigateOptions`
@@ -455,14 +456,14 @@ type FileParams = PathParams<'/files/:rest*'>;
 
 ## Pattern Rules
 
-| Pattern | Example | Meaning |
-| --- | --- | --- |
-| `/about` | `/about` | Exact static path |
-| `/users/:id` | `/users/42` | Single named param |
-| `/users/:userId/posts/:postId` | `/users/1/posts/2` | Multiple named params |
-| `/docs/*` | `/docs/guide/intro` | Wildcard suffix without a named capture |
-| `/files/:rest*` | `/files/a/b/c` | Wildcard suffix captured as one named param |
-| `*` | anything | Global catch-all |
+| Pattern                        | Example             | Meaning                                     |
+| ------------------------------ | ------------------- | ------------------------------------------- |
+| `/about`                       | `/about`            | Exact static path                           |
+| `/users/:id`                   | `/users/42`         | Single named param                          |
+| `/users/:userId/posts/:postId` | `/users/1/posts/2`  | Multiple named params                       |
+| `/docs/*`                      | `/docs/guide/intro` | Wildcard suffix without a named capture     |
+| `/files/:rest*`                | `/files/a/b/c`      | Wildcard suffix captured as one named param |
+| `*`                            | anything            | Global catch-all                            |
 
 ## Design Notes
 
@@ -470,5 +471,5 @@ type FileParams = PathParams<'/files/:rest*'>;
 - Route names come from the route-table object keys.
 - Not-found handling is just another route, typically `path: '*'`.
 - Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.state.error`.
-- Declarative `redirect` on a route definition is distinct from the `redirect()` middleware helper. The former is for permanent alias redirects; the latter for conditional guards.
+- Declarative `redirect` on a route definition is distinct from the `redirectTo()` middleware helper. The former is for permanent alias redirects; the latter for conditional guards.
 - `lazy` factories are called at most once per `RouteRecord`. The loaded handler/data/meta are stored directly on the branch def.

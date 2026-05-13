@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/buildit",
+      "comment": "Release a new major version with reactive component updates across disclosure, feedback, inputs, and overlay primitives, including breaking API and behavior refinements.",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/buildit"
+}

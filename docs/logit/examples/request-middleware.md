@@ -5,13 +5,11 @@ description: 'Request Middleware examples for logit.'
 
 ## Request Middleware
 
-## Problem
+### Problem
 
-Implement request middleware in a production-friendly way with `@vielzeug/logit` while keeping setup and cleanup explicit.
+Every log entry produced during an HTTP request should carry the request ID and authenticated user ID — without threading a logger parameter through every function that runs during the request.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/logit` installed.
+### Solution
 
 ```ts
 import { Logit } from '@vielzeug/logit';
@@ -35,18 +33,16 @@ export function requestLogger(req, res, next) {
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `withBindings()` returns a new instance — it does not mutate in place. Assigning it back to a module-level variable replaces the logger for all callers. Use `AsyncLocalStorage` to scope a logger per request.
+- The request ID must be generated before the logger is created for the request. Middleware that runs after the logging middleware means early log entries do not carry the request ID.
+- Using `console.log` alongside the structured logger bypasses the transport and formatter, producing mixed formats in log aggregators.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Authentication (Fetchit)](/fetchit/examples/authentication)
+- [Request Scoping (Eventit)](/eventit/examples/request-scoping)
 
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)

@@ -10,10 +10,8 @@ description: Async utility examples for Toolkit.
 - [abortable](./async/abortable.md)
 - [attempt](./async/attempt.md)
 - [defer](./async/defer.md)
-- [memoizeAsync](./async/memoizeAsync.md)
 - [parallel](./async/parallel.md)
 - [queue](./async/queue.md)
-- [race (removed)](./async/race.md)
 - [retry](./async/retry.md)
 - [scheduler](./async/scheduler.md)
 - [sleep](./async/sleep.md)
@@ -27,7 +25,7 @@ import {
   abortable,
   attempt,
   defer,
-  memoizeAsync,
+  memo,
   parallel,
   queue,
   retry,
@@ -36,12 +34,15 @@ import {
   waitFor,
 } from '@vielzeug/toolkit';
 
-const result = await attempt(async (signal) => {
-  const res = await fetch('/api/user', { signal });
-  return res.json();
-}, { times: 2, timeout: 5_000 });
+const result = await attempt(
+  async (signal) => {
+    const res = await fetch('/api/user', { signal });
+    return res.json();
+  },
+  { times: 2, timeout: 5_000 },
+);
 
-const jobs = await parallel(3, [1, 2, 3, 4], async (n) => n * 2);
+const jobs = await parallel([1, 2, 3, 4], async (n) => n * 2, { limit: 3 });
 
 const q = queue({ concurrency: 2 });
 const a = q.add(() => fetch('/api/a').then((r) => r.text()));
@@ -63,15 +64,19 @@ const deferred = defer<string>();
 setTimeout(() => deferred.resolve('done'), 50);
 const value = await deferred.promise;
 
-const fetchProfile = memoizeAsync((id: number) =>
-  fetch(`/api/users/${id}`).then((r) => r.json()),
-);
+const fetchProfile = memo((id: number) => fetch(`/api/users/${id}`).then((r) => r.json()));
 
 const [profileA, profileB] = await Promise.all([fetchProfile(1), fetchProfile(1)]);
-const guarded = timeout(fetch('/api/slow').then((r) => r.json()), 2_000);
+const guarded = timeout(
+  fetch('/api/slow').then((r) => r.json()),
+  2_000,
+);
 
 const controller = new AbortController();
-const cancellable = abortable(fetch('/api/cancel').then((r) => r.json()), controller.signal);
+const cancellable = abortable(
+  fetch('/api/cancel').then((r) => r.json()),
+  controller.signal,
+);
 controller.abort(new Error('cancelled'));
 
 await Promise.all([a, b]);

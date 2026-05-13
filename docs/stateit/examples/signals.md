@@ -5,13 +5,11 @@ description: 'Signals examples for stateit.'
 
 ## Signals
 
-## Problem
+### Problem
 
-Implement signals in a production-friendly way with `@vielzeug/stateit` while keeping setup and cleanup explicit.
+You want to understand the core Stateit primitive: `signal()`. This is the starting point for the reactivity model before computed values, effects, or stores.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/stateit` installed.
+### Solution
 
 ### Counter with `computed` and `effect`
 
@@ -45,11 +43,11 @@ isEven.dispose();
 import { signal } from '@vielzeug/stateit';
 
 const count = signal(0);
-count.value = count.value + 1; // 1
-count.value = count.value * 2; // 2
+count.update((value) => value + 1); // 1
+count.update((value) => value * 2); // 2
 
 const tags = signal(['ts', 'js']);
-tags.value = [...tags.value, 'tsx']; // ['ts', 'js', 'tsx']
+tags.update((value) => [...value, 'tsx']); // ['ts', 'js', 'tsx']
 ```
 
 ---
@@ -90,7 +88,7 @@ async function fetchItems() {
 
 ---
 
-### One-Time Watch with `once`
+### One-Time Watch with Explicit Stop
 
 Subscribe to the first change only, then auto-unsubscribe:
 
@@ -99,14 +97,10 @@ import { signal, watch } from '@vielzeug/stateit';
 
 const authToken = signal<string | null>(null);
 
-watch(
-  authToken,
-  (token) => {
-    console.log('First login:', token);
-    // subscription is already disposed automatically
-  },
-  { once: true },
-);
+const stop = watch(authToken, (token) => {
+  console.log('First login:', token);
+  stop();
+});
 ```
 
 ---
@@ -129,19 +123,17 @@ const count = signal(0);
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Signal updates are reference-based. Mutating an object in place (for example, pushing into an array) does not notify subscribers — assign a new value or use `update()` to produce a new reference.
+- `effect()` runs immediately on creation. If it has side effects (DOM mutations, network calls), it fires before the component is fully initialized. Use a `mounted` flag to defer.
+- Creating a `computed()` inside a component render function without memoization creates a new computed instance on every render, leaking watchers. Create computeds at module scope or in the component setup phase.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+### Related
+- [Stores](./stores)
+- [Craftit Reactivity](/craftit/)
 
-## Related Recipes
-
-- [Framework Integration](./framework-integration.md)
+- [Usage Guide](../usage.md#framework-integration)
 - [Pattern: Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)
 - [Pattern: Async Workflows with watch](./pattern-nextvalue-in-async-workflows.md)

@@ -1,36 +1,28 @@
-import type { FormOptions, SafeParseSchema } from '../types';
+import { FORM_ERROR, type FormValidator, type SafeParseSchema } from '../types';
 
 /**
- * Convert any `safeParse`-compatible schema (Zod, Valibot, …) into a `validator` option
- * ready to spread into `createForm`. Keeps the formit core dependency-free.
+ * Adapts a `safeParse`-compatible schema (Zod, Valibot, Standard Schema) into a
+ * `FormValidator` that can be passed to `createForm({ validator: schemaValidator(schema) })`.
  *
- * Root-level issues (path: []) are mapped to the reserved `_form` key.
- *
- * @example
- * ```ts
- * import { z } from 'zod';
- * const schema = z.object({ email: z.string().email() });
- * const form = createForm({ defaultValues: { email: '' }, ...fromSchema(schema) });
- * ```
+ * Root-level issues (path `[]`) are stored under the `_form` key.
+ * When multiple issues target the same path, the first one wins.
  */
-export function fromSchema(schema: SafeParseSchema): Pick<FormOptions, 'validator'> {
-  return {
-    validator: (values) => {
-      const result = schema.safeParse(values);
+export function schemaValidator<TValues extends Record<string, unknown>>(
+  schema: SafeParseSchema,
+): FormValidator<TValues> {
+  return (values) => {
+    const result = schema.safeParse(values);
 
-      if (result.success) return undefined;
+    if (result.success) return undefined;
 
-      const errors: Record<string, string> = {};
+    const errors: Record<string, string> = {};
 
-      for (const issue of result.error.issues) {
-        // Root-level issues (path=[]) are stored under '_form'
-        const key = issue.path.join('.') || '_form';
+    for (const issue of result.error.issues) {
+      const key = issue.path.join('.') || FORM_ERROR;
 
-        // First issue per path wins
-        if (!errors[key]) errors[key] = issue.message;
-      }
+      if (!errors[key]) errors[key] = issue.message;
+    }
 
-      return errors;
-    },
+    return errors;
   };
 }

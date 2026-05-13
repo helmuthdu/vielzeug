@@ -37,15 +37,10 @@ describe('compare', () => {
     expect(compare(d2, d1)).toBeLessThan(0);
   });
 
-  it('returns 0 for equal objects', () => {
-    expect(compare({ a: 1 }, { a: 1 })).toBe(0);
-    expect(compare([1, 2], [1, 2])).toBe(0);
-  });
-
-  it('returns positive or negative for different objects', () => {
-    expect(compare({ a: 2 }, { a: 1 })).toBeGreaterThan(0);
-    expect(compare({ a: 1 }, { a: 2 })).toBeLessThan(0);
-    expect(compare([2, 1], [1, 2])).not.toBe(0);
+  it('throws for objects', () => {
+    expect(() => compare({ a: 1 }, { a: 1 })).toThrow(TypeError);
+    expect(() => compare([1, 2], [1, 2])).toThrow(TypeError);
+    expect(() => compare({ a: 2 }, { a: 1 })).toThrow(TypeError);
   });
 
   it('returns 1 if first value is undefined', () => {
@@ -58,7 +53,8 @@ describe('compare', () => {
     expect(compare('a', undefined)).toBe(-1);
   });
 
-  it('returns 0 for different types not handled explicitly', () => {
-    expect(compare(1, '1')).toBe(0);
+  it('throws for mixed types', () => {
+    expect(() => compare(1, '1')).toThrow(TypeError);
+    expect(() => compare(1, {})).toThrow(TypeError);
   });
 });

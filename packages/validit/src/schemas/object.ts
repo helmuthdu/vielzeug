@@ -1,6 +1,6 @@
 import type { InferOutput, Issue } from '../core';
 
-import { ErrorCode, prependIssuePath, Schema } from '../core';
+import { type CheckContext, type CheckFnResult, ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
 export type ObjectShape = Record<string, Schema<any>>;
@@ -8,12 +8,12 @@ export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T
 
 export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> {
   readonly shape: T;
-  private readonly _unknownKeyMode: 'passthrough' | 'strict' | 'strip';
+  private readonly _isRelaxed: boolean;
 
-  constructor(shape: T, unknownKeyMode: 'passthrough' | 'strict' | 'strip' = 'strict') {
+  constructor(shape: T, isRelaxed = false) {
     super([]);
     this.shape = shape;
-    this._unknownKeyMode = unknownKeyMode;
+    this._isRelaxed = isRelaxed;
   }
 
   private _unknownKeys(obj: Record<string, unknown>): string[] {
@@ -21,7 +21,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   private _strictUnknownKeyIssues(obj: Record<string, unknown>): Issue[] {
-    if (this._unknownKeyMode !== 'strict') return [];
+    if (this._isRelaxed) return [];
 
     const unknownKeys = this._unknownKeys(obj);
 
@@ -29,15 +29,15 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
     return [
       {
-        code: ErrorCode.unrecognized_keys,
-        message: _messages().object.unrecognizedKeys({ keys: unknownKeys }),
+        code: ErrorCode.invalid_keys,
+        message: _messages().object.invalidKeys({ keys: unknownKeys }),
         path: [],
       },
     ];
   }
 
   private _copyRelaxedUnknownKeys(obj: Record<string, unknown>, output: Record<string, unknown>): void {
-    if (this._unknownKeyMode !== 'passthrough') return;
+    if (!this._isRelaxed) return;
 
     for (const key of this._unknownKeys(obj)) {
       output[key] = obj[key];
@@ -67,8 +67,8 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     };
   }
 
-  private _rebuildWith<U extends ObjectShape>(shape: U, unknownKeyMode = this._unknownKeyMode): ObjectSchema<U> {
-    return this._copyStateTo(new ObjectSchema(shape, unknownKeyMode));
+  private _rebuildWith<U extends ObjectShape>(shape: U, isRelaxed = this._isRelaxed): ObjectSchema<U> {
+    return this._copyStateTo(new ObjectSchema(shape, isRelaxed));
   }
 
   protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
@@ -85,6 +85,8 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
       if (result.success) {
         output[key] = result.data;
       } else {
+        // Failed field keys are intentionally omitted from parsed output so
+        // object-level checks can branch on key presence.
         issues.push(...prependIssuePath(result.error.issues, key));
       }
     }
@@ -114,7 +116,9 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     );
 
     for (const r of keyResults) {
-      if (r.issues.length === 0) output[r.key] = r.data;
+      if (r.issues.length === 0) {
+        output[r.key] = r.data;
+      }
 
       issues.push(...r.issues);
     }
@@ -163,11 +167,17 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
    * Default is strict mode (rejects unknown keys).
    */
   relaxed(): Schema<InferObject<T> & Record<string, unknown>> {
-    return this._rebuildWith(this.shape, 'passthrough') as unknown as Schema<InferObject<T> & Record<string, unknown>>;
+    return this._rebuildWith(this.shape, true) as unknown as Schema<InferObject<T> & Record<string, unknown>>;
   }
 
-  /** Ignore unknown keys (strip mode). */
-  strip(): ObjectSchema<T> {
-    return this._rebuildWith(this.shape, 'strip');
+  /**
+   * Adds a cross-field validation step.
+   *
+   * The callback receives the best-effort parsed output. Fields that failed
+   * their own validation are omitted, so the value is typed as `Partial<InferObject<T>>`.
+   * Check `'key' in value` before accessing fields that may be missing.
+   */
+  override check(fn: (value: Partial<InferObject<T>>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
+    return super.check(fn as unknown as (value: InferObject<T>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>);
   }
 }

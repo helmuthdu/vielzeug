@@ -3,7 +3,7 @@ export const variableInterpolationExample = {
 
 const i18n = createI18n({
   locale: 'en',
-  messages: {
+  catalogs: {
     en: {
       greeting: 'Hello, {name}!',
       deep: 'User: {user.name}',
@@ -11,7 +11,7 @@ const i18n = createI18n({
   },
 })
 
-console.log(i18n.t('greeting', { name: 'Bob' }))
-console.log(i18n.t('deep', { user: { name: 'Alice' } }))`,
+console.log(i18n.t('greeting', { vars: { name: 'Bob' } }))
+console.log(i18n.t('deep', { vars: { user: { name: 'Alice' } } }))`,
   name: 'Variable Interpolation',
 };

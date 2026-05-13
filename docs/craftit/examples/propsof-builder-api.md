@@ -23,8 +23,7 @@ define('x-button', {
   setup(props) {
     return () => html`
       <button ?disabled=${props.disabled} :data-size=${props.size} :data-variant=${props.variant}>
-        ${props.count.value > 0 ? html`<span class="badge">${props.count}</span>` : ''}
-        ${props.label}
+        ${props.count.value > 0 ? html`<span class="badge">${props.count}</span>` : ''} ${props.label}
       </button>
     `;
   },
@@ -63,7 +62,7 @@ define<{
 - Use `reflect: false` when the value is internal-only or not serializable.
 - Use a custom `parse` function when HTML attribute values need non-default coercion.
 
-## Related recipes
+### Related
 
 - [Typed props and emits](./typed-props-and-emits.md)
 - [Counter component](./counter-component.md)

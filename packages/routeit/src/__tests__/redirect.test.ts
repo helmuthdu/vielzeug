@@ -1,8 +1,5 @@
 import { createMemoryHistory, createRouter } from '../router';
-
-async function settle(): Promise<void> {
-  await new Promise<void>((r) => setTimeout(r, 10));
-}
+import { settle } from './test-utils';
 
 describe('declarative redirect', () => {
   it('redirects to the target route on match', async () => {
@@ -75,6 +72,25 @@ describe('declarative redirect', () => {
 
     await settle();
     await expect(router.navigate({ path: '/a' })).rejects.toThrow('Redirect loop detected');
+    router.dispose();
+  });
+
+  it('does not run beforeLeave blockers for declarative redirects', async () => {
+    const handler = vi.fn();
+    const history = createMemoryHistory('/old');
+    const router = createRouter({
+      history,
+      routes: {
+        new: { handler, path: '/new' },
+        old: { path: '/old', redirect: { path: '/new' } },
+      },
+    });
+
+    router.beforeLeave(async () => false);
+    await settle();
+
+    expect(router.state.location.pathname).toBe('/new');
+    expect(handler).toHaveBeenCalled();
     router.dispose();
   });
 });

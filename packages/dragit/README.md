@@ -37,7 +37,6 @@ using zone = createDropZone({
 // Sortable list — reorder items via drag
 using sortable = createSortable({
   element: document.getElementById('list')!,
-  group: 'kanban',
   keyboard: true,
   autoScroll: { edgeThreshold: 40, speed: 24 },
   dragImage: (id, item) => item,
@@ -55,11 +54,11 @@ using sortable = createSortable({
 - ✅ **`onDropRejected`** — receive the files that didn't match `accept`, separate from accepted files
 - ✅ **Sortable lists** — reorders DOM children via native drag, emits only when order actually changes
 - ✅ **Drag handles** — scope dragging to a child selector via `handle`
-- ✅ **Dynamic lists** — `MutationObserver` keeps `draggable`/`role` in sync after adding or removing items
+- ✅ **Explicit DOM sync** — call `sortable.sync()` after adding or removing sortable items
 - ✅ **Axis support** — choose vertical or horizontal midpoint logic via `axis`
-- ✅ **Connected lists** — move items across containers with shared `group`
+- ✅ **Connected lists** — move items across containers with an explicit shared scope
 - ✅ **Keyboard sorting** — reorder focused items with Arrow keys and Home/End
-- ✅ **Auto-scroll** — scroll container/viewport near edges while dragging
+- ✅ **Auto-scroll** — scroll the container by default, opt into viewport scrolling only when needed
 - ✅ **Custom drag preview** — provide `dragImage` to control native drag ghost
 - ✅ **Custom placeholder class** — style drop markers with your own class name
 - ✅ **`[Symbol.dispose]`** — supports the `using` keyword for automatic teardown
@@ -117,11 +116,10 @@ import { createSortable } from '@vielzeug/dragit';
 
 const sortable = createSortable({
   element: document.getElementById('list')!,
-  group: 'kanban',
   axis: 'vertical', // or 'horizontal'
   handle: '.drag-handle', // optional — scope drag to a child selector
   keyboard: true, // default: true
-  autoScroll: true, // or { edgeThreshold, speed }
+  autoScroll: true, // or { edgeThreshold, speed, viewport }
   dragImage: (id, item, event) => item,
   placeholderClass: 'dragit-placeholder',
   disabled: () => isLocked,
@@ -139,7 +137,12 @@ const sortable = createSortable({
 // Cleanup
 sortable.destroy();
 // or: using sortable = createSortable(...)
+
+// After adding or removing sortable items:
+sortable.sync();
 ```
+
+Create a shared scope only when multiple containers should exchange items.
 
 ### Styling the drop indicator
 

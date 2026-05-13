@@ -39,7 +39,7 @@ define('observed-panel', {
 - `resizeObserver()` and `intersectionObserver()` need an actual element, not a nullable ref.
 - `mediaObserver()` is DOM-only as well because it uses `window.matchMedia`.
 
-## Related recipes
+### Related
 
 - [Context provider and consumer](./context-provider-and-consumer.md)
 - [Counter component](./counter-component.md)

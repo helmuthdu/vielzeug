@@ -1,90 +1,121 @@
 import type { RunOptions, TaskFn, WorkerHandle, WorkerStatus } from '../workit';
 
 import { createAbortError } from '../_internal';
+import { TaskQueue, type TaskQueueItem } from '../_task-queue';
 import { WorkerError } from '../workit';
 
-function rejectAsync<T = never>(reason: unknown): Promise<T> {
-  return new Promise<T>((_, reject) => {
-    setTimeout(() => {
-      reject(reason);
-    }, 0);
-  });
-}
+export type TestWorkerOptions = {
+  maxQueue?: number | 'auto';
+};
 
 export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & {
   /** Recorded { input, output } pairs for every successful run(), in call order. */
   readonly calls: ReadonlyArray<{ input: TInput; output: TOutput }>;
 };
 
-export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TestWorkerHandle<TInput, TOutput> {
+function resolveMaxQueue(value: TestWorkerOptions['maxQueue']): number | undefined {
+  if (value === undefined) return undefined;
+
+  if (value === 'auto') {
+    return 2;
+  }
+
+  if (!Number.isInteger(value) || value < 1) {
+    throw new WorkerError('invalid_options', '[workit/test] `maxQueue` must be a positive integer or "auto"');
+  }
+
+  return value;
+}
+
+export function createTestWorker<TInput, TOutput>(
+  fn: TaskFn<TInput, TOutput>,
+  options: TestWorkerOptions = {},
+): TestWorkerHandle<TInput, TOutput> {
   const calls: { input: TInput; output: TOutput }[] = [];
   let closePromise: Promise<void> | undefined;
   let completed = 0;
-  const idleResolvers: Array<() => void> = [];
+  let activeItem: TaskQueueItem<TInput, TOutput> | null = null;
+  let activeRejected = false;
+  const queue = new TaskQueue<TInput, TOutput>();
+  const maxQueue = resolveMaxQueue(options.maxQueue);
+  let processing = false;
   let running = false;
   let terminated = false;
-  const queue: Array<{
-    cleanupAbort?: () => void;
-    input: TInput;
-    reject: (reason: unknown) => void;
-    resolve: (value: TOutput) => void;
-    signal?: AbortSignal;
-  }> = [];
+
+  function isIdle(): boolean {
+    return !terminated && !running && queue.size === 0;
+  }
 
   function status(): WorkerStatus {
     if (terminated) return 'terminated';
 
-    return running || queue.length > 0 ? 'running' : 'idle';
+    return running || queue.size > 0 ? 'running' : 'idle';
   }
 
-  function notifyIdleIfReady(): void {
-    if (terminated || running || queue.length > 0 || idleResolvers.length === 0) return;
-
-    const resolvers = idleResolvers.splice(0, idleResolvers.length);
-
-    for (const resolve of resolvers) {
-      resolve();
-    }
-  }
-
-  function waitForIdle(): Promise<void> {
-    if (terminated || (!running && queue.length === 0)) {
-      return Promise.resolve();
-    }
-
-    return new Promise<void>((resolve) => {
-      idleResolvers.push(resolve);
-    });
-  }
-
-  async function processQueue(): Promise<void> {
-    while (!terminated && queue.length > 0) {
+  function nextItem(): TaskQueueItem<TInput, TOutput> | undefined {
+    while (queue.size > 0) {
       const item = queue.shift();
 
-      if (!item) break;
+      if (!item) return undefined;
 
       if (item.signal?.aborted) {
         item.cleanupAbort?.();
         item.reject(createAbortError(item.signal));
-        notifyIdleIfReady();
         continue;
       }
 
-      running = true;
-      item.cleanupAbort?.();
+      return item;
+    }
+  }
 
-      try {
-        const output = await fn(item.input);
+  function waitForIdle(): Promise<void> {
+    if (terminated || isIdle()) {
+      return Promise.resolve();
+    }
 
-        calls.push({ input: item.input, output });
-        completed += 1;
-        item.resolve(output);
-      } catch (error) {
-        item.reject(error);
+    return queue.waitForIdle(() => isIdle());
+  }
+
+  async function drainLoop(): Promise<void> {
+    if (processing || terminated) return;
+
+    processing = true;
+
+    try {
+      while (!terminated) {
+        const item = nextItem();
+
+        if (!item) break;
+
+        running = true;
+        activeRejected = false;
+        activeItem = item;
+        item.cleanupAbort?.();
+
+        try {
+          const output = await fn(item.input);
+
+          if (terminated || activeItem !== item || activeRejected) continue;
+
+          calls.push({ input: item.input, output });
+          completed += 1;
+          item.resolve(output);
+        } catch (error) {
+          if (terminated || activeItem !== item || activeRejected) continue;
+
+          item.reject(new WorkerError('task', error instanceof Error ? error.message : String(error), error));
+        } finally {
+          if (activeItem === item) {
+            activeItem = null;
+          }
+
+          running = false;
+          queue.notifyIdleIfReady(() => isIdle());
+        }
       }
-
-      running = false;
-      notifyIdleIfReady();
+    } finally {
+      processing = false;
+      queue.notifyIdleIfReady(() => isIdle());
     }
   }
 
@@ -117,41 +148,60 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
       if (terminated) return;
 
       terminated = true;
-      for (const item of queue) {
+
+      if (activeItem) {
+        activeRejected = true;
+        activeItem.reject(new WorkerError('terminated', '[workit] Worker was terminated'));
+        activeItem = null;
+      }
+
+      running = false;
+
+      while (queue.size > 0) {
+        const item = queue.shift()!;
+
         item.cleanupAbort?.();
         item.reject(new WorkerError('terminated', '[workit] Worker was terminated'));
       }
-      queue.length = 0;
-      notifyIdleIfReady();
+
+      queue.notifyIdleIfReady(() => isIdle());
     },
     run(input: TInput, options: RunOptions = {}): Promise<TOutput> {
       if (terminated) {
-        return rejectAsync(new WorkerError('terminated', '[workit] Worker was terminated'));
+        return Promise.reject(new WorkerError('terminated', '[workit] Worker was terminated'));
+      }
+
+      if (closePromise) {
+        return Promise.reject(new WorkerError('terminated', '[workit] Worker is closing'));
       }
 
       if (options.signal?.aborted) {
-        return rejectAsync(createAbortError(options.signal));
+        return Promise.reject(createAbortError(options.signal));
+      }
+
+      const item: TaskQueueItem<TInput, TOutput> = {
+        input,
+        reject: () => {},
+        resolve: () => {},
+        signal: options.signal,
+        transferables: options.transferables ?? [],
+      };
+
+      if (!queue.enqueue(item, maxQueue)) {
+        return Promise.reject(new WorkerError('queue_full', `[workit] Queue is full (${maxQueue})`));
       }
 
       return new Promise<TOutput>((resolve, reject) => {
-        const item: {
-          cleanupAbort?: () => void;
-          input: TInput;
-          reject: (reason: unknown) => void;
-          resolve: (value: TOutput) => void;
-          signal?: AbortSignal;
-        } = { input, reject, resolve, signal: options.signal };
+        item.reject = reject;
+        item.resolve = resolve;
 
         if (options.signal) {
           const onAbort = () => {
-            const index = queue.indexOf(item);
+            if (!queue.remove(item)) return;
 
-            if (index === -1) return;
-
-            queue.splice(index, 1);
             item.cleanupAbort?.();
             reject(createAbortError(options.signal!));
-            notifyIdleIfReady();
+            queue.notifyIdleIfReady(() => isIdle());
           };
 
           item.cleanupAbort = () => {
@@ -162,18 +212,17 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
           options.signal.addEventListener('abort', onAbort, { once: true });
         }
 
-        queue.push(item);
-
-        if (!running) {
-          void processQueue();
-        }
+        void drainLoop();
       });
     },
     get size(): number {
-      return queue.length;
+      return queue.size;
     },
     get status(): WorkerStatus {
       return status();
+    },
+    [Symbol.asyncDispose](): Promise<void> {
+      return this.close();
     },
     [Symbol.dispose](): void {
       this.dispose();

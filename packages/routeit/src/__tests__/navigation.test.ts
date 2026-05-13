@@ -1,5 +1,6 @@
-import { createRouter } from '../router';
+import { createMemoryHistory, createRouter } from '../router';
 import { boot, disposeRouter, mockHistory, mockLocation, resetMocks } from './setup';
+import { settle } from './test-utils';
 
 const routes = {
   about: { path: '/about' },
@@ -209,6 +210,24 @@ describe('Navigation', () => {
       expect(mockHistory.replaceState).toHaveBeenCalledWith(undefined, '', '/target?mode=edit');
       expect(target).toHaveBeenCalledTimes(2);
     });
+
+    it('does not duplicate the base segment when navigating with a base-prefixed raw path', async () => {
+      const handler = vi.fn();
+      const router = createRouter({
+        base: '/app',
+        routes: {
+          about: { handler, path: '/about' },
+        },
+      });
+
+      mockLocation.pathname = '/app';
+      await boot(router);
+
+      await router.navigate({ path: '/app/about' });
+
+      expect(mockHistory.pushState).toHaveBeenCalledWith(undefined, '', '/app/about');
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Lifecycle', () => {
@@ -308,7 +327,8 @@ describe('Navigation', () => {
 
       expect(router.url('userDetail', { id: '42' }, { tab: 'profile' })).toBe('/users/42?tab=profile');
       expect(router.isActive('userDetail')).toBe(true);
-      expect(router.isActive('users', false)).toBe(true);
+      expect(router.isActive('users')).toBe(true);
+      expect(router.isActive('users', { exact: true })).toBe(false);
       expect(router.isActive('home')).toBe(false);
     });
 
@@ -344,6 +364,26 @@ describe('Navigation', () => {
       expect(router.resolve('/app/missing')).toBeNull();
     });
 
+    it('returns null from resolve for redirect routes', () => {
+      const router = createRouter({
+        routes: {
+          current: { path: '/current' },
+          legacy: { path: '/legacy', redirect: { name: 'current' } },
+        },
+      });
+
+      expect(router.resolve('/legacy')).toBeNull();
+      expect(router.resolve('/current')).toEqual([
+        {
+          data: undefined,
+          meta: undefined,
+          name: 'current',
+          params: {},
+          pathname: '/current',
+        },
+      ]);
+    });
+
     it('throws helpful errors for unknown route names', () => {
       const router = createRouter({
         routes: {
@@ -355,6 +395,72 @@ describe('Navigation', () => {
       expect(() => router.url('missing' as never)).toThrow(
         '[routeit] Unknown route name: missing. Available routes: about, home',
       );
+    });
+  });
+
+  describe('Concurrency', () => {
+    it('a superseded navigation does not update router state', async () => {
+      const history = createMemoryHistory('/');
+      const router = createRouter({
+        history,
+        routes: {
+          fast: { path: '/fast' },
+          home: { path: '/' },
+          slow: {
+            data: () => new Promise<void>((r) => setTimeout(r, 30)),
+            path: '/slow',
+          },
+        },
+      });
+
+      await settle();
+
+      // Start slow navigation, immediately navigate away before data resolves.
+      const slowNav = router.navigate({ path: '/slow' });
+
+      await router.navigate({ path: '/fast' });
+      await slowNav;
+
+      expect(router.state.location.pathname).toBe('/fast');
+      router.dispose();
+    });
+
+    it('aborts data loader signal when a navigation is superseded', async () => {
+      let firstSignal: AbortSignal | undefined;
+      let releaseSlow: (() => void) | null = null;
+      const slowGate = new Promise<void>((resolve) => {
+        releaseSlow = resolve;
+      });
+      const history = createMemoryHistory('/');
+      const router = createRouter({
+        history,
+        routes: {
+          fast: { path: '/fast' },
+          slow: {
+            data: async ({ signal }) => {
+              firstSignal = signal;
+              await slowGate;
+
+              return null;
+            },
+            path: '/slow',
+          },
+        },
+      });
+
+      await settle();
+
+      const slowNav = router.navigate({ path: '/slow' });
+
+      await settle();
+      await router.navigate({ path: '/fast' });
+
+      releaseSlow?.();
+      await slowNav;
+
+      expect(firstSignal?.aborted).toBe(true);
+      expect(router.state.location.pathname).toBe('/fast');
+      router.dispose();
     });
   });
 });

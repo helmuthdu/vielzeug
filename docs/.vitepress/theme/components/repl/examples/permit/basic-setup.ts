@@ -1,9 +1,7 @@
 export const basicSetupExample = {
   code: `import { createPermit } from '@vielzeug/permit'
 
-const permit = createPermit()
-
-permit.set([
+const permit = createPermit([
   { role: 'admin', resource: 'users', action: 'read', effect: 'allow' },
   { role: 'admin', resource: 'users', action: 'create', effect: 'allow' },
   { role: 'admin', resource: 'users', action: 'update', effect: 'allow' },
@@ -15,5 +13,5 @@ permit.set([
 
 const admin = { id: '1', roles: ['admin'] }
 console.log('Admin can delete users:', permit.can(admin, 'users', 'delete'))`,
-  name: 'Basic Setup - Rule Registration',
+  name: 'Basic Setup - Immutable Rules',
 };

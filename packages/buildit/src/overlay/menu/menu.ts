@@ -17,7 +17,7 @@ import {
   type OverlayCloseDetail,
   type OverlayOpenDetail,
 } from '@vielzeug/craftit/controls';
-import { flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { computePosition, flip, offset, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -289,10 +289,13 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
     function updatePosition() {
       if (!panelEl || !triggerEl) return;
 
-      positionFloat(triggerEl, panelEl, {
+      const result = computePosition(triggerEl, panelEl, {
         middleware: [offset(4), flip({ padding: 6 }), shift({ padding: 6 })],
         placement: props.placement.value,
       });
+
+      panelEl.style.left = `${result.x}px`;
+      panelEl.style.top = `${result.y}px`;
     }
 
     const triggerRef = { value: null as HTMLElement | null };

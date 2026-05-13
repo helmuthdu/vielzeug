@@ -5,13 +5,11 @@ description: 'Recreate on remount examples for virtualit.'
 
 ## Recreate on Remount
 
-## Problem
+### Problem
 
-Implement remount-safe virtualization in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+The scroll container is recreated at runtime — for example, when a dropdown reopens or a portal remounts. The virtualizer from the previous mount is stale and must be replaced with a fresh instance.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
+### Solution
 
 Useful when a component recreates its scroll container (for example, dropdown reopen or portal remount).
 
@@ -46,18 +44,14 @@ function onDestroy() {
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- The old virtualizer must be destroyed before creating a new one for the same container. Two concurrent instances both write `style.height` on the list element, causing a conflict.
+- Recreating inside a `ResizeObserver` fires on every size change. Guard with a destroyed flag so the observer does not recreate the virtualizer after explicit teardown.
+- The new instance's `scroll` listener must be registered on the fresh container element, not a stale reference captured before the container was recreated.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
 - [Density Toggle (Compact / Comfortable)](./density-toggle-compact-comfortable.md)

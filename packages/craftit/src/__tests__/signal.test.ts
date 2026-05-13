@@ -159,12 +159,22 @@ describe('Core: Signal System', () => {
       expect(values).toEqual([3, 12, 30]);
     });
 
-    it('should support once for a derived signal', () => {
+    it('should support explicit one-shot watch for a derived signal', () => {
       const count = signal(0);
       const parity = computed(() => count.value % 2);
       const values: number[] = [];
+      let stop!: () => void;
 
-      watch(parity, (val) => values.push(val), { immediate: true, once: true });
+      // eslint-disable-next-line prefer-const
+      stop = watch(
+        parity,
+        (val, prev) => {
+          values.push(val);
+
+          if (val !== prev) stop();
+        },
+        { immediate: true },
+      );
       count.value = 1;
       count.value = 2;
 

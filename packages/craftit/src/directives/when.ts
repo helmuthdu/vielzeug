@@ -27,4 +27,4 @@ export function when(
 
     return falsy ? falsy() : '';
   });
-}
+} // Note: when returns HtmlResult (not DirectiveResult)

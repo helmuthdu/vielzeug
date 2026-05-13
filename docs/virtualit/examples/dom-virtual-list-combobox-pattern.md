@@ -5,13 +5,11 @@ description: 'Use @vielzeug/virtualit/dom to virtualize a combobox/listbox popup
 
 ## DOM Virtual List Combobox Pattern
 
-## Problem
+### Problem
 
 Virtualize a popup listbox (combobox/dropdown style) without hand-wiring `Virtualizer` attach, count updates, and teardown every time the popup opens or closes.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
+### Solution
 
 Use `createDomVirtualList` so your component only needs to call `setItems(items)` and `setActive(isOpen)` with a DOM render callback.
 
@@ -38,6 +36,8 @@ function ensureController() {
     getScrollElement: () => document.querySelector<HTMLElement>('.dropdown'),
     overscan: { start: 4, end: 4 },
     render: ({ items, listEl, virtualItems }) => {
+      listEl.replaceChildren();
+
       for (const item of virtualItems) {
         const opt = items[item.index];
         if (!opt) continue;
@@ -61,8 +61,8 @@ function ensureController() {
 
 function openDropdown() {
   isOpen = true;
-  ensureController().setItems(options);
   ensureController().setActive(isOpen);
+  ensureController().setItems(options);
 }
 
 function closeDropdown() {
@@ -83,20 +83,8 @@ function destroyCombobox() {
 
 ---
 
-## Expected Output
+### Related
 
-- Opening the dropdown only renders the visible option window plus overscan.
-- Keyboard focus movement can keep the focused option visible with `scrollToIndex(..., { align: 'auto' })`.
-- Closing and destroying cleanly tear down the virtualizer.
-
-## Common Pitfalls
-
-- Returning `null` from `getScrollElement`/`getListElement` while open prevents activation.
-- Forgetting `setItems(items)` or `setActive(isOpen)` on open/close leaves stale DOM state.
-- Mixing non-virtual state rows with `.option` rows without a clear strategy can make `clear` remove the wrong nodes.
-
-## Related Recipes
-
+- [Dropdown Select (Floatit)](/floatit/examples/dropdown-select)
 - [Keyboard Navigation](./keyboard-navigation.md)
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
-- [Using `Virtualizer` Directly (Without `createVirtualizer`)](./using-virtualizer-directly-without-createvirtualizer.md)

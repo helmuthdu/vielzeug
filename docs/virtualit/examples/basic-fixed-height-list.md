@@ -5,13 +5,11 @@ description: 'Basic Fixed-Height List examples for virtualit.'
 
 ## Basic Fixed-Height List
 
-## Problem
+### Problem
 
-Implement basic fixed-height list in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+You need to render thousands of list items efficiently. Every row is the same height, so the offset table can be computed once without measuring individual elements.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
+### Solution
 
 The simplest case: every row is the same height. The offset table is built once and never needs rebuilding.
 
@@ -49,18 +47,14 @@ const virt = createVirtualizer(scrollEl, {
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Calling `createVirtualizer` before the scroll container is in the DOM gives it a scroll height of 0, disabling virtualization entirely. Always create it inside `onMounted` or `firstUpdated`.
+- Passing a new options object with a different `count` to a second `createVirtualizer` call creates a fresh instance, losing scroll position. Use `virt.update({ count })` for data changes.
+- Not setting an explicit `height` on the scroll container makes it expand to fit all rendered rows, removing the scroll and disabling virtualization.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Density Toggle (Compact / Comfortable)](./density-toggle-compact-comfortable.md)
 - [Explicit Resource Management (`using`)](./explicit-resource-management-using.md)

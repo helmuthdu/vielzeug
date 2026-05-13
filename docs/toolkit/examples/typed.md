@@ -87,7 +87,3 @@ console.log(normalize('  hi  '), ok, match, tag, predicates);
 - [isLessThan](./typed/isLessThan.md)
 - [isLessThanOrEqual](./typed/isLessThanOrEqual.md)
 - [isWithin](./typed/isWithin.md)
-
-## Removed Predicates
-
-The following legacy pages are kept as migration notes only: `isEven`, `isOdd`, `isPositive`, `isNegative`, `isZero`, `isGe`, `isGt`, `isLe`, `isLt`.

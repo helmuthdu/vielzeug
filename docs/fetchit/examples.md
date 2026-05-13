@@ -5,25 +5,14 @@ description: Practical examples and recipes for fetchit.
 
 [[toc]]
 
-## How to Use These Examples
+## Examples
 
-These examples cover API clients, query caching, tracked mutations, auth, file uploads, and polling.
-
-1. Start with the first example page to learn the baseline pattern.
-2. Move to advanced pages that match your framework or production scenario.
-3. Keep the API page open while adapting snippets to your project.
-
-These examples are aligned with the current `@vielzeug/fetchit` API.
-
-## Examples Overview
-
-- [Framework Integration](./examples/framework-integration.md)
-- [CRUD Operations](./examples/crud-operations.md)
-- [Authentication](./examples/authentication.md)
-- [Optimistic Updates](./examples/optimistic-updates.md)
-- [Polling](./examples/polling.md)
+- [Crud Operations](./examples/crud-operations.md)
 - [Error Handling Patterns](./examples/error-handling-patterns.md)
-- [File Uploads](./examples/file-uploads.md)
+- [Authentication](./examples/authentication.md)
+- [Polling](./examples/polling.md)
 - [Disposal](./examples/disposal.md)
-- [Query Subscriptions](./examples/query-callbacks.md)
-- [Mutation Cancellation](./examples/mutation-cancel.md)
+- [Query Callbacks](./examples/query-callbacks.md)
+- [File Uploads](./examples/file-uploads.md)
+- [Mutation Cancel](./examples/mutation-cancel.md)
+- [Optimistic Updates](./examples/optimistic-updates.md)

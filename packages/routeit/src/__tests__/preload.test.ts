@@ -1,8 +1,8 @@
+/**
+ * preload() — warm data loaders without navigating.
+ */
 import { createMemoryHistory, createRouter } from '../router';
-
-async function settle(): Promise<void> {
-  await new Promise<void>((r) => setTimeout(r, 10));
-}
+import { settle } from './test-utils';
 
 describe('preload', () => {
   it('calls data loaders without navigating', async () => {
@@ -60,6 +60,36 @@ describe('preload', () => {
     await router.preload('user', { id: '99' } as never);
 
     expect(dataFn).toHaveBeenCalledWith(expect.objectContaining({ params: { id: '99' } }));
+    router.dispose();
+  });
+
+  it('is retryable after a failed attempt', async () => {
+    let calls = 0;
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      onError: vi.fn(),
+      routes: {
+        home: { path: '/' },
+        page: {
+          data: async () => {
+            calls++;
+
+            if (calls < 2) throw new Error('temporary failure');
+
+            return { ok: true };
+          },
+          path: '/page',
+        },
+      },
+    });
+
+    await settle();
+
+    await expect(router.preload('page')).rejects.toThrow('temporary failure');
+    // Cache should be cleared after a failure — second call invokes the loader again.
+    await router.preload('page');
+    expect(calls).toBe(2);
     router.dispose();
   });
 });

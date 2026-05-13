@@ -3,11 +3,11 @@ title: Craftit — Usage Guide
 description: Practical Craftit usage patterns for components, props, templates, slots, context, forms, controls, observers, and tests.
 ---
 
+[[toc]]
+
 ::: tip New to Craftit?
 Start with the [Overview](./index.md) for the package surface, then use this page for day-to-day authoring patterns.
 :::
-
-[[toc]]
 
 ## define and component structure
 
@@ -23,9 +23,7 @@ define('status-chip', {
     const online = signal(true);
 
     return () => html`
-      <button @click=${() => (online.value = !online.value)}>
-        ${() => (online.value ? 'Online' : 'Offline')}
-      </button>
+      <button @click=${() => (online.value = !online.value)}>${() => (online.value ? 'Online' : 'Offline')}</button>
     `;
   },
 });
@@ -96,9 +94,7 @@ define('x-button', {
   },
   setup(props) {
     return () => html`
-      <button ?disabled=${props.disabled} :data-variant=${props.variant}>
-        ${props.label} (${props.count})
-      </button>
+      <button ?disabled=${props.disabled} :data-variant=${props.variant}>${props.label} (${props.count})</button>
     `;
   },
 });
@@ -124,8 +120,7 @@ define('profile-name', {
         :aria-label=${() => `Current name ${name.value}`}
         @input=${(event: Event) => {
           name.value = (event.target as HTMLInputElement).value;
-        }}
-      />
+        }} />
       <p>Hello ${name}</p>
     `;
   },
@@ -147,9 +142,12 @@ define('task-list', {
     return () => html`
       <ul
         class="${classMap({ ready: () => tasks.value.length > 0 })}"
-        :style=${styleMap({ opacity: () => (active.value ? 1 : 0.5) })}
-      >
-        ${when(() => active.value, () => html`<li>Active</li>`, () => html`<li>Paused</li>`)}
+        :style=${styleMap({ opacity: () => (active.value ? 1 : 0.5) })}>
+        ${when(
+          () => active.value,
+          () => html`<li>Active</li>`,
+          () => html`<li>Paused</li>`,
+        )}
         ${each(tasks, {
           key: (task) => task.id,
           render: (task) => html`<li>${task.text}</li>`,
@@ -171,7 +169,10 @@ define('live-search', {
   setup() {
     const query = signal('');
 
-    return () => html`<input :value=${live(query)} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />`;
+    return () =>
+      html`<input
+        :value=${live(query)}
+        @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />`;
   },
 });
 ```
@@ -252,3 +253,138 @@ define('x-observed', {
   },
 });
 ```
+
+## Framework Integration
+
+Craftit components are standard custom elements and work natively in any framework without adapters.
+
+::: code-group
+
+```tsx [React]
+// React 19+ supports custom elements natively.
+// For earlier versions, use react-to-webcomponent or a thin wrapper.
+import '@vielzeug/buildit'; // or your own craftit components
+
+// React 19 — custom element props are passed directly
+function App() {
+  return (
+    <div>
+      <x-toggle aria-label="Open menu" />
+      <count-provider>
+        <count-consumer />
+      </count-provider>
+    </div>
+  );
+}
+```
+
+```ts [Vue 3]
+// Vue 3 resolves custom elements by tag name automatically.
+// Mark your tags as custom elements so Vue does not warn about unknown components.
+// vite.config.ts: vue({ template: { compilerOptions: { isCustomElement: (t) => t.includes('-') } } })
+
+// In a component:
+// <template>
+//   <x-toggle :aria-label="label" @click="handleClick" />
+//   <count-provider>
+//     <count-consumer />
+//   </count-provider>
+// </template>
+```
+
+```svelte [Svelte]
+<!-- Svelte supports custom elements out of the box. -->
+<script>
+  import '@vielzeug/buildit'; // or your own craftit components
+  let label = 'Open menu';
+</script>
+
+<x-toggle aria-label={label} on:click={handleClick} />
+<count-provider>
+  <count-consumer />
+</count-provider>
+```
+
+:::
+
+
+### Pitfalls
+
+- **React:** Complex object props cannot be passed as JSX attributes — they serialize to `[object Object]`. Use a `ref` and set them imperatively inside `useEffect`.
+- **Vue 3:** Without `isCustomElement` in your Vite config, Vue 3 logs "Unknown custom element" warnings for every Craftit component. Set it once in `vite.config.ts`.
+- **Svelte:** Custom event names emitted via `dispatchEvent()` must match exactly in `on:event-name` — Svelte does not normalize casing.
+
+## Working with Other Vielzeug Libraries
+
+### With Floatit
+
+Use `floatit` to position tooltips and popovers inside a craftit component.
+
+```ts
+import { define, html, onMounted, ref } from '@vielzeug/craftit';
+import { computePosition, offset, flip } from '@vielzeug/floatit';
+
+define('x-tooltip', {
+  setup() {
+    const triggerRef = ref<HTMLElement>();
+    const tooltipRef = ref<HTMLElement>();
+
+    onMounted(() => {
+      const trigger = triggerRef.value!;
+      const tooltip = tooltipRef.value!;
+      computePosition(trigger, tooltip, { middleware: [offset(6), flip()] }).then(({ x, y }) => {
+        Object.assign(tooltip.style, { left: `${x}px`, top: `${y}px`, position: 'absolute' });
+      });
+    });
+
+    return () => html`
+      <button ref=${triggerRef}>Hover me</button>
+      <div ref=${tooltipRef} role="tooltip"><slot></slot></div>
+    `;
+  },
+});
+```
+
+### With Formit
+
+Use `formit` for form state and validation inside a craftit form component.
+
+```ts
+import { define, html } from '@vielzeug/craftit';
+import { createForm } from '@vielzeug/formit';
+
+define('login-form', {
+  setup() {
+    const form = createForm({
+      defaultValues: { email: '', password: '' },
+      validators: {
+        email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
+      },
+    });
+
+    return () => html`
+      <form @submit=${async (e: SubmitEvent) => {
+        e.preventDefault();
+        await form.submit(async (values) => fetch('/api/login', { method: 'POST', body: JSON.stringify(values) }));
+      }}>
+        <input
+          name="email"
+          .value=${form.field('email').state.value}
+          @input=${(e: Event) => form.set('email', (e.target as HTMLInputElement).value)} />
+        <button type="submit">Login</button>
+      </form>
+    `;
+  },
+});
+```
+
+## Best Practices
+
+- Prefer `onMounted()` for DOM-dependent work and `setup()` for reactive logic.
+- Use `effect()` inside `setup()` — not inside `onMounted()` — to keep reactive subscriptions tied to component lifetime.
+- Use `onElement(ref, cb)` instead of `onMounted` when the work is tied to a single DOM node.
+- Bind host attributes and classes via `host.bind()` rather than mutating the element directly.
+- Provide context at the nearest ancestor — avoid global context singletons.
+- Call `onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, event listeners).
+- Use `live(signal)` for form inputs to prevent clobbering user-in-progress edits.
+- Test with `@vielzeug/craftit/testing` helpers (`mount`, `flush`, `waitFor`) rather than direct DOM manipulation.

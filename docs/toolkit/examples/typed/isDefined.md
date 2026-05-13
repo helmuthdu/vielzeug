@@ -1,8 +1,3 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-64_B-success" alt="Size">
-</div>
-
 # isDefined
 
 The `isDefined` utility is a type guard that checks if a value is NOT `undefined` or `null`. It is essential for safely handling optional values and cleaning up data sets.
@@ -50,12 +45,12 @@ isDefined(undefined); // false
 ### Filtering Arrays
 
 ```ts
-import { isDefined, filter } from '@vielzeug/toolkit';
+import { isDefined } from '@vielzeug/toolkit';
 
 const data = ['a', undefined, 'b', null, 'c'];
 
 // TypeScript correctly infers the result as string[]
-const cleanData = filter(data, isDefined);
+const cleanData = data.filter(isDefined);
 // ['a', 'b', 'c']
 ```
 
@@ -68,4 +63,4 @@ const cleanData = filter(data, isDefined);
 
 - [isNil](./isNil.md): The inverse check (returns true for null/undefined).
 - [isEmpty](./isEmpty.md): Check if a value is empty (includes length checks).
-- [select](../array/select.md): Filter array elements, keeping only defined values.
+- [filterMap](../array/select.md): Build a new array while skipping `undefined` results.

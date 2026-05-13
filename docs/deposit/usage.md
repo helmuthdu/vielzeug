@@ -3,13 +3,11 @@ title: Deposit — Usage Guide
 description: Practical patterns for using Deposit with LocalStorage, SessionStorage, IndexedDB, and Memory.
 ---
 
+[[toc]]
+
 ::: tip New to Deposit?
 Start with the [Overview](./index.md) for installation and quick context, then use this page for end-to-end usage patterns.
 :::
-
-# Deposit Usage Guide
-
-[[toc]]
 
 ## Define a Schema
 
@@ -36,7 +34,7 @@ Record and key types are inferred from `table<T>()`. `typeof schema` serves as t
 ```ts
 import { createLocalStorage } from '@vielzeug/deposit';
 
-const local = createLocalStorage({ dbName: 'app', schema });
+const local = createLocalStorage('app', schema);
 ```
 
 Use this adapter for simple browser persistence where transactional behavior is not required.
@@ -46,7 +44,7 @@ Use this adapter for simple browser persistence where transactional behavior is 
 ```ts
 import { createSessionStorage } from '@vielzeug/deposit';
 
-const session = createSessionStorage({ dbName: 'app', schema });
+const session = createSessionStorage('app', schema);
 ```
 
 Use this adapter for tab-scoped persistence that resets when the tab or window closes.
@@ -56,11 +54,9 @@ Use this adapter for tab-scoped persistence that resets when the tab or window c
 ```ts
 import { createCookie } from '@vielzeug/deposit';
 
-const cookie = createCookie({
-  dbName: 'app',
+const cookie = createCookie('app', schema, {
   path: '/',
   sameSite: 'Strict',
-  schema,
 });
 ```
 
@@ -81,10 +77,10 @@ Use this adapter when you need atomic transactions or larger datasets.
 ```ts
 import { createMemory } from '@vielzeug/deposit';
 
-const mem = createMemory({ schema });
+const mem = createMemory(schema);
 ```
 
-Use this adapter in tests, SSR environments, or wherever browser storage APIs are unavailable. Each `createMemory()` call returns a fully isolated instance — no `dbName` is needed. The interface is identical to the browser adapters.
+Use this adapter in tests, SSR environments, or wherever browser storage APIs are unavailable. Each `createMemory(schema)` call returns a fully isolated instance — no `dbName` is needed. The interface is identical to the browser adapters.
 
 ## Basic CRUD
 
@@ -159,15 +155,12 @@ Queries are composed lazily and run when `toArray()`, `count()`, or `first()` is
 `first()` resolves after applying all preceding operators, returning the first match or `undefined`.
 
 ```ts
-const youngest = await local
-  .query('users')
-  .orderBy('age', 'asc')
-  .first();
+const youngest = await local.query('users').orderBy('age', 'asc').first();
 ```
 
 ## Reactive Reads
 
-`observe(table, listener)` emits the current snapshot immediately and then emits again after table mutations.
+`observe(table, listener, options?)` emits the current snapshot immediately by default and then emits again after table mutations.
 
 ```ts
 const stop = idb.observe('users', (rows) => {
@@ -185,11 +178,11 @@ IndexedDB observers propagate across tabs/windows via `BroadcastChannel` when av
 ```ts
 await idb.update('users', 1, { age: 31 });
 
-const user = await idb.getOrPut('users', 2, () => ({
+const user = await idb.getOrPut('users', {
   id: 2,
   name: 'Bob',
   age: 26,
-}));
+});
 
 const removed = await idb.deleteWhere('users', (value) => value.age < 21);
 
@@ -245,7 +238,7 @@ Increase `schemaVersion` to trigger `migrate` during `onupgradeneeded`.
 - `count()` returns live records (TTL-expired records are excluded).
 - Query operations run in memory over records returned from the backend.
 - Keep transaction callbacks focused on DB operations for predictable atomicity.
-- Call `close()` on IndexedDB handles in long-lived contexts when shutting down.
+- Call `dispose()` on IndexedDB handles in long-lived contexts when shutting down.
 - `createMemory()` state is scoped to the instance; each call returns an isolated store.
 - `createSessionStorage()` is tab-scoped and clears when the tab/window is closed.
 - `observe()` emits an immediate snapshot first; unsubscribe when no longer needed.
@@ -259,9 +252,11 @@ import { createMemory } from '@vielzeug/deposit';
 import { schema } from '../src/schema';
 
 // No localStorage mocks, no fake-indexeddb — just a plain Map under the hood.
-const db = createMemory({ schema });
+const db = createMemory(schema);
 
-beforeEach(() => db.deleteAll('users'));
+beforeEach(async () => {
+  await db.deleteAll('users');
+});
 
 test('creates a user', async () => {
   await db.put('users', { id: 1, name: 'Alice', age: 30 });
@@ -290,18 +285,143 @@ function createStorage(): Adapter<typeof schema> {
   }
 
   if (typeof localStorage !== 'undefined') {
-    return createLocalStorage({ dbName: 'app', schema });
+    return createLocalStorage('app', schema);
   }
 
   if (typeof sessionStorage !== 'undefined') {
-    return createSessionStorage({ dbName: 'app', schema });
+    return createSessionStorage('app', schema);
   }
 
   if (typeof document !== 'undefined') {
-    return createCookie({ dbName: 'app', schema });
+    return createCookie('app', schema);
   }
 
   // SSR or test environment
-  return createMemory({ schema });
+  return createMemory(schema);
 }
 ```
+
+## Framework Integration
+
+Deposit is framework-agnostic. Use `observe()` with framework-specific subscriptions to bridge reactivity.
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useState } from 'react';
+import { createLocalStorage, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string; age: number };
+const schema = { users: table<User>('id') };
+const store = createLocalStorage('app', schema);
+
+function useUsers() {
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const stop = store.observe('users', setUsers);
+    return () => stop();
+  }, []);
+
+  return users;
+}
+```
+
+```ts [Vue 3]
+import { ref, onScopeDispose } from 'vue';
+import { createLocalStorage, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string; age: number };
+const schema = { users: table<User>('id') };
+const store = createLocalStorage('app', schema);
+
+function useUsers() {
+  const users = ref<User[]>([]);
+  const stop = store.observe('users', (rows) => { users.value = rows; });
+  onScopeDispose(() => stop());
+  return users;
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { createLocalStorage, table } from '@vielzeug/deposit';
+
+  type User = { id: number; name: string; age: number };
+  const schema = { users: table<User>('id') };
+  const store = createLocalStorage('app', schema);
+
+  let users: User[] = [];
+  const stop = store.observe('users', (rows) => { users = rows; });
+  onDestroy(() => stop());
+</script>
+
+{#each users as user}
+  <p>{user.name}</p>
+{/each}
+```
+
+:::
+
+### Pitfalls
+
+- **React:** Calling `openStore()` inside a render without `useRef` or `useMemo` creates a new store handle on every render — use `useRef` to hold the reference.
+- **Vue 3:** Reading stored values in `setup()` (synchronously) always returns `undefined` — always read inside `onMounted` since IndexedDB is async.
+- **Svelte:** Writing to a Svelte `writable` from within an async `onMount` after the component is destroyed will throw — check if the component is still mounted before updating.
+
+## Working with Other Vielzeug Libraries
+
+### With Validit
+
+Use Validit to validate data before writing it to storage.
+
+```ts
+import { createLocalStorage, table } from '@vielzeug/deposit';
+import { v } from '@vielzeug/validit';
+
+type User = { id: number; name: string; age: number };
+const schema = { users: table<User>('id') };
+const store = createLocalStorage('app', schema);
+
+const UserSchema = v.object({
+  id: v.number(),
+  name: v.string().min(1),
+  age: v.number().min(0).max(120),
+});
+
+async function saveUser(data: unknown) {
+  const result = UserSchema.safeParse(data);
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  await store.put('users', result.value);
+}
+```
+
+### With Stateit
+
+Bridge store observations to Stateit signals for reactive UI.
+
+```ts
+import { createLocalStorage, table } from '@vielzeug/deposit';
+import { signal, effect } from '@vielzeug/stateit';
+
+type User = { id: number; name: string; age: number };
+const schema = { users: table<User>('id') };
+const db = createLocalStorage('app', schema);
+
+const users = signal<User[]>([]);
+db.observe('users', (rows) => { users.value = rows; });
+
+effect(() => console.log('users updated:', users.value.length));
+```
+
+## Best Practices
+
+- Use `createMemory()` in tests — it is isolated, synchronous, and has no side effects.
+- Prefer `createIndexedDB()` for data sets larger than a few kilobytes or when you need atomic transactions.
+- Call `dispose()` on IndexedDB adapters during app teardown to release the database connection.
+- Unsubscribe `observe()` listeners when the component unmounts to prevent stale updates.
+- Use TTL for cache-like data; avoid TTL for user data that should persist indefinitely.
+- Run `putAll()` for bulk writes — it performs one transaction instead of one per record.
+- Keep `migrate()` callbacks forward-only; do not mutate data for versions already in production.
+- Use `createMemory()` in SSR environments where browser APIs are unavailable.

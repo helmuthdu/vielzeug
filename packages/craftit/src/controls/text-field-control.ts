@@ -1,6 +1,5 @@
 import { signal, watch } from '@vielzeug/stateit';
 
-import { onElement } from '../runtime';
 import {
   createAssistiveState,
   createFieldControlBase,
@@ -40,22 +39,27 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
   };
 
   if (options.elementRef) {
-    onElement(options.elementRef, (element) => {
-      mountTextFieldLifecycle({
-        element,
-        onBlur: options.onBlur,
-        onChange: (event, nextValue) => {
-          value.value = nextValue;
-          options.onChange?.(event, nextValue);
-        },
-        onInput: (event, nextValue) => {
-          value.value = nextValue;
-          options.onInputExtra?.(event);
-          options.onInput?.(event, nextValue);
-        },
-        triggerValidation,
-      });
-    });
+    watch(
+      () => options.elementRef?.value,
+      (element) => {
+        if (!element) return;
+
+        return mountTextFieldLifecycle({
+          element,
+          onBlur: options.onBlur,
+          onChange: (event, nextValue) => {
+            value.value = nextValue;
+            options.onChange?.(event, nextValue);
+          },
+          onInput: (event, nextValue) => {
+            value.value = nextValue;
+            options.onInputExtra?.(event);
+            options.onInput?.(event, nextValue);
+          },
+          triggerValidation,
+        });
+      },
+    );
   }
 
   return {

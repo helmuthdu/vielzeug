@@ -10,7 +10,7 @@ import { createPermit } from '@vielzeug/permit';
 
 const audit: string[] = [];
 
-const permit = createPermit({
+const permit = createPermit([{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }], {
   logger: ({ action, decision, principal, resource, rule }) => {
     const identity = principal === null ? 'anonymous' : principal.id;
     const matched = rule ? `${rule.role}:${rule.effect}` : 'no-match';
@@ -18,8 +18,12 @@ const permit = createPermit({
   },
 });
 
-permit.set({ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' });
-
 permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
 ```
+
+### Related
+
+- [Request Middleware (Logit)](/logit/examples/request-middleware)
+- [Auth and Guards (Routeit)](/routeit/examples/auth-and-guards)
+- [Blog Roles](./blog-roles.md)

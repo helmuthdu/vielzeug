@@ -5,17 +5,16 @@ description: 'Optimistic Updates examples for fetchit.'
 
 ## Optimistic Updates
 
-## Problem
+### Problem
 
-Implement optimistic updates in a production-friendly way with `@vielzeug/fetchit` while keeping setup and cleanup explicit.
+To feel instant, the UI should reflect a mutation's expected result immediately — before the server confirms it. If the server rejects the change, the UI must roll back to the previous state.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/fetchit` installed.
+### Solution
 
 ```ts
 const userId = 1;
 const key = ['users', userId];
+const patch = { name: 'Updated Name' };
 
 const updateUser = createMutation((input: Partial<User>, signal: AbortSignal) =>
   api.put<User>('/users/{id}', { params: { id: userId }, body: input, signal }),
@@ -37,18 +36,15 @@ try {
 // updateUser.cancel();
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- After applying an optimistic update, the UI shows stale data until the server confirms. Always set a pending/loading indicator so the user knows a mutation is in flight.
+- If the rollback function closes over stale state captured before the optimistic write, nested updates can produce an incorrect rollback target. Capture the previous value immediately before mutating.
+- Concurrent mutations on the same resource each apply and roll back independently. The rollback order may not match the mutation order. Use a sequential mutation queue for the same resource key.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Batch Mutations (Stateit)](/stateit/examples/pattern-batch-for-complex-mutations)
 
 - [Authentication](./authentication.md)
 - [CRUD Operations](./crud-operations.md)

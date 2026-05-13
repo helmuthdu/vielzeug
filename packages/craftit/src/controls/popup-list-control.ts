@@ -1,7 +1,8 @@
+import { watch } from '@vielzeug/stateit';
+
 import type { OverlayCloseReason, OverlayOpenReason } from './overlay-control';
 
 import { syncAria } from '../host';
-import { onElement } from '../runtime';
 import { createListControl } from './list-control';
 import { createOverlayControl } from './overlay-control';
 
@@ -276,7 +277,14 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
   };
 
   if (options.triggerRef) {
-    onElement(options.triggerRef, (trigger) => syncTriggerAria(trigger, options.ariaSync));
+    watch(
+      () => options.triggerRef?.value,
+      (trigger) => {
+        if (!trigger) return;
+
+        return syncTriggerAria(trigger, options.ariaSync);
+      },
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────

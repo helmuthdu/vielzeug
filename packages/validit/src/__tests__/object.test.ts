@@ -42,7 +42,7 @@ describe('v.object()', () => {
       expect(result.success).toBe(false);
 
       if (!result.success) {
-        expect(result.error.issues[0].code).toBe('unrecognized_keys');
+        expect(result.error.issues[0].code).toBe('invalid_keys');
       }
     });
 
@@ -76,7 +76,7 @@ describe('v.object()', () => {
     });
 
     it('partial() preserves refinements', () => {
-      const base = User.refine((d) => d.name !== 'admin', 'Reserved name');
+      const base = User.check((d) => d.name !== 'admin' || 'Reserved name');
 
       expect(() => base.partial().parse({ name: 'admin' })).toThrow('Reserved name');
     });
@@ -91,7 +91,7 @@ describe('v.object()', () => {
     });
 
     it('required() preserves refinements', () => {
-      const base = User.partial().refine((d) => d.name !== 'admin', 'Reserved name');
+      const base = User.partial().check((d) => d.name !== 'admin' || 'Reserved name');
 
       expect(() => base.required().parse({ id: 1, name: 'admin' })).toThrow('Reserved name');
     });
@@ -116,7 +116,7 @@ describe('v.object()', () => {
     });
 
     it('preserves refinements', () => {
-      const refined = User.refine((d) => d.name !== 'admin', 'Reserved name');
+      const refined = User.check((d) => d.name !== 'admin' || 'Reserved name');
 
       expect(() => refined.extend({ role: v.string() }).parse({ id: 1, name: 'admin', role: 'x' })).toThrow(
         'Reserved name',
@@ -146,7 +146,7 @@ describe('v.object()', () => {
     });
 
     it('pick() and omit() preserve refinements', () => {
-      const refined = Full.refine((d) => d.email.includes('@'), 'Invalid email format');
+      const refined = Full.check((d) => d.email.includes('@') || 'Invalid email format');
 
       expect(() => refined.pick('email').parse({ email: 'bad' })).toThrow('Invalid email format');
       expect(() => refined.omit('id').parse({ email: 'bad', name: 'Alice' })).toThrow('Invalid email format');
@@ -222,8 +222,8 @@ describe('ObjectSchema optional/nullable guards', () => {
 });
 
 describe('ObjectSchema shape-transform methods preserve metadata', () => {
-  it('pick() preserves refine() validators', () => {
-    const schema = v.object({ a: v.string(), b: v.number() }).refine(() => false, 'always fails');
+  it('pick() preserves check() validators', () => {
+    const schema = v.object({ a: v.string(), b: v.number() }).check(() => 'always fails');
 
     expect(schema.pick('a').safeParse({ a: 'hello' }).success).toBe(false);
   });

@@ -21,9 +21,7 @@ description: Array utility examples for Toolkit.
 - [intersection](./array/intersection.md)
 - [indexBy](./array/keyBy.md)
 - [last](./array/last.md)
-- [list (moved to @vielzeug/sourceit)](./array/list.md)
 - [partition](./array/partition.md)
-- [remoteList (moved to @vielzeug/sourceit)](./array/remoteList.md)
 - [replace](./array/replace.md)
 - [rotate](./array/rotate.md)
 - [sample](./array/sampleSize.md)
@@ -47,7 +45,7 @@ const deduped = uniq(raw); // [1, 2, 3, 4]
 const compacted = compact([0, 1, null, 2, undefined, 3]); // [1, 2, 3]
 
 const mapped = filterMap(deduped, (n) => n * 2); // [2, 4, 6, 8]
-const filtered = filterMap(deduped, (n) => n * 2, (n) => n > 2); // [6, 8]
+const filtered = filterMap(deduped, (n) => (n > 2 ? n * 2 : undefined)); // [6, 8]
 
 const pages = chunk(mapped, 2); // [[2,4], [6,8]]
 
@@ -71,4 +69,5 @@ console.log(byRole, byId, pages, sorted, tags, compacted, admins, members, paire
 ## Notes
 
 - `filterMap` maps values and skips only `undefined` results.
-- Use `list` and `remoteList` from `@vielzeug/sourceit` for reactive pagination/search.
+- `compact` removes all falsy values, including `0`, `''`, and `false`.
+- For reactive pagination/search sources, use Sourceit: [overview](/sourceit/) and [usage](/sourceit/usage).

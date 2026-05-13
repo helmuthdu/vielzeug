@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/craftit",
+      "comment": "Release a new major version with greenfield runtime and directive refactors, improved binding and lifecycle behavior, and breaking API cleanup for controls and reactivity.",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/craftit"
+}

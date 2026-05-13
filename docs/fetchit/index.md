@@ -3,9 +3,13 @@ title: Fetchit — HTTP client for TypeScript
 description: Type-safe HTTP client, cache, and lean mutation helper built on native fetch.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="fetchit" />
 
 <img src="/logo-fetchit.svg" alt="Fetchit logo" width="156" class="logo-highlight"/>
+
+# Fetchit
 
 `@vielzeug/fetchit` ships a small set of composable primitives built on native `fetch`: `createApi`, `createQuery`, and `createMutation`.
 
@@ -107,7 +111,7 @@ const user = await api.get<User>('/users/{id}', { params: { id: userId } });
 | SSR         | ✅      |
 | Deno        | ✅      |
 
-## Documentation Map
+## Documentation
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
@@ -118,3 +122,5 @@ const user = await api.get<User>('/users/{id}', { params: { id: userId } });
 - [Validit](/validit/)
 - [Formit](/formit/)
 - [Stateit](/stateit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

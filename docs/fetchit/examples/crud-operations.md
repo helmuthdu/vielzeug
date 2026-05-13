@@ -5,13 +5,11 @@ description: 'CRUD Operations examples for fetchit.'
 
 ## CRUD Operations
 
-## Problem
+### Problem
 
-Implement crud operations in a production-friendly way with `@vielzeug/fetchit` while keeping setup and cleanup explicit.
+You need to perform the full create, read, update, delete lifecycle against a REST resource with typed request and response bodies, sharing a single base URL configuration.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/fetchit` installed.
+### Solution
 
 ```ts
 import { createApi, createMutation, createQuery } from '@vielzeug/fetchit';
@@ -41,37 +39,33 @@ qc.set(['users', created.id], created);
 qc.invalidate(['users']);
 
 // UPDATE
-const updateUser = createMutation(
-  (input: { id: number } & Partial<User>, signal: AbortSignal) => {
-    const { id, ...patch } = input;
-    return api.put<User>('/users/{id}', { params: { id }, body: patch, signal });
-  },
-);
+const updateUser = createMutation((input: { id: number } & Partial<User>, signal: AbortSignal) => {
+  const { id, ...patch } = input;
+  return api.put<User>('/users/{id}', { params: { id }, body: patch, signal });
+});
 
 const updated = await updateUser.mutate({ id: 1, name: 'Alice Smith' });
 qc.set(['users', updated.id], updated);
 
 // DELETE
 const deleteUser = createMutation((input: number, signal: AbortSignal) =>
-  api.delete(`/users/${input}`, { signal }),
+  api.delete('/users/{id}', { params: { id: input }, signal }),
 );
 
 await deleteUser.mutate(1);
 qc.invalidate(['users']);
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Query keys must be stable across renders. Building them with `Date.now()` or random values bypasses the cache and triggers a fresh fetch on every call.
+- `mutation.run()` does not automatically invalidate related queries. Call `query.invalidate()` or `query.refresh()` after a successful mutation to reflect the server change.
+- `DELETE` responses often return 204 with no body. Attempting to parse an empty body as JSON throws. Handle the no-content case explicitly before parsing.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Shared Module Store (Stateit)](/stateit/examples/pattern-shared-module-store)
+- [Optimistic Updates](./optimistic-updates)
 
 - [Authentication](./authentication.md)
 - [Disposal](./disposal.md)

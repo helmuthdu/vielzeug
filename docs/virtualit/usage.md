@@ -3,13 +3,11 @@ title: Virtualit — Usage Guide
 description: Fixed and variable heights, measurement, programmatic scrolling, and framework integration for Virtualit.
 ---
 
-# Virtualit Usage Guide
+[[toc]]
 
 ::: tip New to Virtualit?
 Start with the [Overview](./index.md) for installation and a quick introduction, then come back here for in-depth patterns.
 :::
-
-[[toc]]
 
 ## DOM Layout Requirements
 
@@ -52,6 +50,7 @@ const domVirtualList = createDomVirtualList<Option>({
   },
   estimateSize: 36,
   gap: 6,
+  getItemKey: (_index, option) => option.value,
   getListElement: () => listboxEl,
   getScrollElement: () => dropdownEl,
   overscan: { start: 4, end: 4 },
@@ -80,9 +79,16 @@ domVirtualList.setActive(isOpen);
 // Keyboard nav helper
 domVirtualList.scrollToIndex(focusedIndex, { align: 'auto' });
 
+// Optional variable-height measurement for rendered rows
+domVirtualList.measure(renderedIndex, rowEl.offsetHeight);
+
 // Component teardown
 domVirtualList.destroy();
 ```
+
+For variable-height rows, pass `getItemKey` whenever the same logical items can be reordered, filtered, or reinserted. Without stable keys, `createDomVirtualList` clears measured heights on each `setItems()` call by design.
+
+Use `domVirtualList.invalidate()` when many row heights changed and you want to discard all cached measurements.
 
 ::: tip Migration note
 If you previously managed `createVirtualizer`, attach/destroy, and list-height styles manually for a dropdown/listbox, you can move that glue code into `createDomVirtualList` and keep rendering logic in a single `render` callback.
@@ -259,6 +265,9 @@ virt.update({ count: data.length });
 ```ts
 // Change multiple options together
 virt.update({ count: data.length, overscan: { start: 5, end: 5 } });
+
+// Rebuild after reordering/filtering stable-key rows
+virt.refresh();
 ```
 
 ## Switching Row Density
@@ -320,9 +329,9 @@ Call `invalidate()` after an event that changes item heights without a data chan
 document.fonts.ready.then(() => virt.invalidate());
 ```
 
-On variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If you need an exact post-layout position after heights change, remeasure affected rows or call `invalidate()` before scrolling again.
+On variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If you need an exact post-layout position after heights change, call `invalidate()` before scrolling again.
 
-For same-length updates, call `setItems()` (DOM adapter) or `update()` (core) and remeasure affected rows as needed.
+For same-length updates, call `setItems()` (DOM adapter) or `update()` (core). If the rendered height of rows changed, call `invalidate()` before scrolling again.
 
 ## Lifecycle — create and destroy
 
@@ -361,16 +370,13 @@ function remount(nextScrollContainerEl: HTMLElement) {
 
 Virtualit is rendering-layer agnostic. The pattern is always the same: create the virtualizer when your scroll container is mounted, re-render your DOM in `onChange`, and call `destroy()` on unmount.
 
-### React
+::: code-group
 
-```tsx
+```tsx [React]
 import { createVirtualizer, type Virtualizer } from '@vielzeug/virtualit';
 import { useEffect, useRef } from 'react';
 
-interface Row {
-  id: number;
-  label: string;
-}
+interface Row { id: number; label: string; }
 
 function VirtualList({ rows }: { rows: Row[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -380,7 +386,6 @@ function VirtualList({ rows }: { rows: Row[] }) {
   useEffect(() => {
     const scrollEl = scrollRef.current;
     const listEl = listRef.current;
-
     if (!scrollEl || !listEl) return;
 
     const virt = createVirtualizer(scrollEl, {
@@ -389,7 +394,6 @@ function VirtualList({ rows }: { rows: Row[] }) {
       onChange: (virtualItems, totalSize) => {
         listEl.style.height = `${totalSize}px`;
         listEl.innerHTML = '';
-
         for (const item of virtualItems) {
           const el = document.createElement('div');
           el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
@@ -398,16 +402,11 @@ function VirtualList({ rows }: { rows: Row[] }) {
         }
       },
     });
-
     virtRef.current = virt;
-
     return () => virt.destroy();
   }, []); // attach once
 
-  // When rows change, update the count
-  useEffect(() => {
-    virtRef.current?.update({ count: rows.length });
-  }, [rows.length]);
+  useEffect(() => { virtRef.current?.update({ count: rows.length }); }, [rows.length]);
 
   return (
     <div ref={scrollRef} style={{ height: 400, overflow: 'auto', position: 'relative' }}>
@@ -417,31 +416,25 @@ function VirtualList({ rows }: { rows: Row[] }) {
 }
 ```
 
-### Vue 3
-
-```vue
+```vue [Vue 3]
 <script setup lang="ts">
 import { createVirtualizer, type Virtualizer } from '@vielzeug/virtualit';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps<{ rows: { id: number; label: string }[] }>();
-
 const scrollRef = ref<HTMLElement | null>(null);
 const listRef = ref<HTMLElement | null>(null);
 let virt: Virtualizer | null = null;
 
 onMounted(() => {
   if (!scrollRef.value || !listRef.value) return;
-
   const listEl = listRef.value;
-
   virt = createVirtualizer(scrollRef.value, {
     count: props.rows.length,
     estimateSize: 36,
     onChange: (virtualItems, totalSize) => {
       listEl.style.height = `${totalSize}px`;
       listEl.innerHTML = '';
-
       for (const item of virtualItems) {
         const el = document.createElement('div');
         el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
@@ -451,14 +444,7 @@ onMounted(() => {
     },
   });
 });
-
-watch(
-  () => props.rows.length,
-  (n) => {
-    virt?.update({ count: n });
-  },
-);
-
+watch(() => props.rows.length, (n) => { virt?.update({ count: n }); });
 onUnmounted(() => virt?.destroy());
 </script>
 
@@ -469,14 +455,11 @@ onUnmounted(() => virt?.destroy());
 </template>
 ```
 
-### Svelte 5
-
-```svelte
+```svelte [Svelte]
 <script lang="ts">
   import { createVirtualizer, type Virtualizer } from '@vielzeug/virtualit';
 
   let { rows }: { rows: { id: number; label: string }[] } = $props();
-
   let scrollEl: HTMLElement;
   let listEl: HTMLElement;
   let virt: Virtualizer;
@@ -488,7 +471,6 @@ onUnmounted(() => virt?.destroy());
       onChange: (virtualItems, totalSize) => {
         listEl.style.height = `${totalSize}px`;
         listEl.innerHTML = '';
-
         for (const item of virtualItems) {
           const el = document.createElement('div');
           el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
@@ -497,13 +479,10 @@ onUnmounted(() => virt?.destroy());
         }
       },
     });
-
     return () => virt.destroy();
   });
 
-  $effect(() => {
-    virt?.update({ count: rows.length });
-  });
+  $effect(() => { virt?.update({ count: rows.length }); });
 </script>
 
 <div bind:this={scrollEl} style="height:400px;overflow:auto;position:relative;">
@@ -511,41 +490,27 @@ onUnmounted(() => virt?.destroy());
 </div>
 ```
 
-### Lit / Web Components
-
-```ts
+```ts [Web Components]
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { createVirtualizer, type Virtualizer } from '@vielzeug/virtualit';
 
 @customElement('virtual-list')
 class VirtualList extends LitElement {
-  static styles = css`
-    .scroll {
-      height: 400px;
-      overflow: auto;
-      position: relative;
-    }
-    .list {
-      position: relative;
-    }
-  `;
+  static styles = css`.scroll{height:400px;overflow:auto;position:relative;}.list{position:relative;}`;
 
   @property({ type: Array }) rows: { label: string }[] = [];
-
   #virt: Virtualizer | null = null;
 
   firstUpdated() {
     const scrollEl = this.renderRoot.querySelector<HTMLElement>('.scroll')!;
     const listEl = this.renderRoot.querySelector<HTMLElement>('.list')!;
-
     this.#virt = createVirtualizer(scrollEl, {
       count: this.rows.length,
       estimateSize: 36,
       onChange: (virtualItems, totalSize) => {
         listEl.style.height = `${totalSize}px`;
         listEl.innerHTML = '';
-
         for (const item of virtualItems) {
           const el = document.createElement('div');
           el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
@@ -556,21 +521,66 @@ class VirtualList extends LitElement {
     });
   }
 
-  updated() {
-    this.#virt?.update({ count: this.rows.length });
-  }
-
-  disconnectedCallback() {
-    this.#virt?.destroy();
-    super.disconnectedCallback();
-  }
-
-  render() {
-    return html`
-      <div class="scroll">
-        <div class="list"></div>
-      </div>
-    `;
-  }
+  updated() { this.#virt?.update({ count: this.rows.length }); }
+  disconnectedCallback() { this.#virt?.destroy(); super.disconnectedCallback(); }
+  render() { return html`<div class="scroll"><div class="list"></div></div>`; }
 }
 ```
+
+:::
+
+
+### Pitfalls
+
+- **React:** Putting `rows` in the `useEffect` dependency array causes the virtualizer to be destroyed and recreated on every data update. Only include the scroll element reference. Call `virt.update({ count })` from a separate `useEffect` for data changes.
+- **Vue 3:** `ref.value` is `null` inside `setup()` — the DOM doesn't exist yet. Always create the virtualizer inside `onMounted`, not in `setup()`.
+- **Svelte:** In Svelte 5, `$effect` with `bind:this` runs after the DOM is painted. The `bind:this` variable is available when the `$effect` runs — no extra tick needed.
+- **Web Components:** `firstUpdated` fires once after the first render. Use `updated()` for subsequent prop changes — Lit calls it every time `rows` changes.
+
+## Working with Other Vielzeug Libraries
+
+### With Craftit
+
+Build a virtualizing custom element using Craftit for the component shell and Virtualit for the rendering engine.
+
+```ts
+import { define, html, onMounted, ref } from '@vielzeug/craftit';
+import { createVirtualizer } from '@vielzeug/virtualit';
+
+define('virtual-list', {
+  setup() {
+    const scrollRef = ref<HTMLElement>();
+    const listRef = ref<HTMLElement>();
+
+    onMounted(() => {
+      if (!scrollRef.value || !listRef.value) return;
+      const listEl = listRef.value;
+      const virt = createVirtualizer(scrollRef.value, {
+        count: 1000,
+        estimateSize: 40,
+        onChange: (items, totalSize) => {
+          listEl.style.height = `${totalSize}px`;
+          listEl.innerHTML = items.map((i) => `<div style="position:absolute;top:${i.start}px;height:40px;">Row ${i.index}</div>`).join('');
+        },
+      });
+      return () => virt.destroy();
+    });
+
+    return () => html`
+      <div ref=${scrollRef} style="height:400px;overflow:auto;position:relative">
+        <div ref=${listRef} style="position:relative"></div>
+      </div>
+    `;
+  },
+});
+```
+
+## Best Practices
+
+- Always provide `count` and `estimateSize` as a starting point, even for variable-height lists — measurements refine the estimates.
+- Call `destroy()` in the framework cleanup callback (useEffect return, onUnmounted, onDestroy) to free resize observers.
+- Use `overscan` to pre-render rows above and below the visible area to reduce blank flicker during fast scrolling.
+- Prefer `scrollToIndex()` with `align: 'start'` for programmatic navigation; use `align: 'center'` for focus management.
+- Use `createDomVirtualList()` for comboboxes, listboxes, and selects — it manages the container DOM for you.
+- Invalidate measurements with `invalidate()` when item content changes size (e.g., after expanding an accordion row).
+- For very large lists (>100k items), set a narrower `overscan` to limit DOM node count at any one time.

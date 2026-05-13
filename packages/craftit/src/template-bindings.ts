@@ -1,4 +1,5 @@
 import {
+  batch,
   computed,
   effect as rawEffect,
   isSignal,
@@ -16,6 +17,8 @@ import {
   type HtmlBinding,
   type RefBinding,
   listen,
+  removeNodes,
+  runAll,
   setAttr,
 } from './internal';
 import { propRegistry } from './props';
@@ -117,9 +120,9 @@ const applyCheckedValue = (
   if (isLive) state.last = next;
 };
 
-type PropMetaLike = { parse: (v: string | null) => unknown; signal: { value: unknown } };
+type PropMetaLike = { parse: (v: string | null) => unknown; reflect: boolean; signal: { value: unknown } };
 
-const syncRegisteredProp = (_el: HTMLElement, meta: PropMetaLike, binding: AttrBinding, value: unknown): void => {
+const syncRegisteredProp = (el: HTMLElement, meta: PropMetaLike, binding: AttrBinding, value: unknown): void => {
   const parsed = isStructuredValue(value)
     ? value
     : meta.parse(
@@ -133,6 +136,15 @@ const syncRegisteredProp = (_el: HTMLElement, meta: PropMetaLike, binding: AttrB
     )
   ) {
     meta.signal.value = parsed as never;
+  }
+
+  // When reflect:false the prop signal has no reflect-effect; write the attribute
+  // directly so the DOM stays in sync with template bindings.
+  if (!meta.reflect) {
+    if (isStructuredValue(value)) return;
+
+    if (binding.mode === 'bool') el.toggleAttribute(binding.name, Boolean(value));
+    else setAttr(el, binding.name, value);
   }
 };
 
@@ -305,4 +317,68 @@ export const createAttrBinding = (mode: 'bool' | 'attr', name: string, uid: stri
   }
 
   return { mode, name, type: 'attr', uid, value };
+};
+
+/**
+ * Sets up the reactive effect for an html-binding marker using full fragment replacement.
+ */
+export const applyHtmlBinding = (root: Node, b: HtmlBinding, registerCleanup: RegisterCleanup): void => {
+  const found = findCommentMarker(root, b.uid);
+
+  if (!found) return;
+
+  const marker = document.createComment('html-binding');
+
+  found.replaceWith(marker);
+
+  let currentCleanups: CleanupFn[] = [];
+  const registerInnerCleanup: RegisterCleanup = (fn) => currentCleanups.push(fn);
+  const runCurrentCleanups = () => {
+    runAll(currentCleanups);
+    currentCleanups = [];
+  };
+  let lastHtml: string | null = null;
+  let lastInsertedNodes: Node[] = [];
+
+  const stop = rawEffect(() => {
+    batch(() => {
+      let data: HtmlBinding['signal']['value'];
+
+      try {
+        data = b.signal.value;
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('[stateit] Cannot read disposed computed signal')) return;
+
+        throw error;
+      }
+
+      if (data.html === lastHtml) {
+        return;
+      }
+
+      lastHtml = data.html;
+      runCurrentCleanups();
+
+      const { bindings, html } = data;
+      const container = (marker.parentElement || root) as ParentNode;
+
+      untrack(() => {
+        batch(() => {
+          removeNodes(lastInsertedNodes);
+
+          const parsed = parseHTML(html);
+
+          lastInsertedNodes = Array.from(parsed.childNodes);
+          marker.after(parsed);
+        });
+
+        applyBindingsInContainer(container, bindings, registerInnerCleanup, {
+          onHtml: (binding) => applyHtmlBinding(container as unknown as Node, binding, registerInnerCleanup),
+        });
+      });
+    });
+  });
+
+  registerCleanup(stop);
+  registerCleanup(runCurrentCleanups);
 };

@@ -241,6 +241,37 @@ describe('bit-combobox', () => {
       expect((fixture.element as ComboboxHost).value).toBe('us');
       expect(input.value).toBe('United States');
     });
+
+    it('keeps previous selection when typing without committing a new option', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      await fixture.flush();
+
+      expect((fixture.element as ComboboxHost).value).toBe('us');
+
+      await user.click(input);
+      await fixture.flush();
+      await user.type(input, 'Ger');
+      await fixture.flush();
+
+      expect((fixture.element as ComboboxHost).value).toBe('us');
+
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.flush();
+
+      expect((fixture.element as ComboboxHost).value).toBe('us');
+      expect(input.value).toBe('United States');
+    });
   });
 
   describe('Accessibility', () => {
@@ -623,7 +654,7 @@ describe('bit-combobox', () => {
       expect(detail.originalEvent).toBeDefined();
     });
 
-    it('updates option selected state immediately in multiple mode without reopening', async () => {
+    it('filters already-selected options from multiselect results without reopening', async () => {
       fixture = await mount('bit-combobox', {
         attrs: { label: 'Country', multiple: '' },
         html: optionsHtml,
@@ -651,21 +682,73 @@ describe('bit-combobox', () => {
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
-      expect(usOption.hasAttribute('data-selected')).toBe(true);
+      expect(
+        fixture.queryAll<HTMLElement>('.option').some((opt) => opt.textContent?.includes('United States')),
+      ).toBe(false);
+      expect(fixture.queryAll('.option')).toHaveLength(2);
 
-      await user.click(gbOption);
+      const updatedGbOption = fixture
+        .queryAll<HTMLElement>('.option')
+        .find((opt) => opt.textContent?.includes('United Kingdom')) as HTMLElement;
+
+      expect(updatedGbOption).toBeTruthy();
+
+      await user.click(updatedGbOption);
       await fixture.flush();
 
-      expect(usOption.hasAttribute('data-selected')).toBe(true);
-      expect(gbOption.hasAttribute('data-selected')).toBe(true);
-      expect(fixture.queryAll('.option[data-selected]').length).toBe(2);
+      const remainingOptionTexts = fixture.queryAll<HTMLElement>('.option').map((opt) => opt.textContent ?? '');
 
-      await user.click(usOption);
+      expect(remainingOptionTexts.some((text) => text.includes('United States'))).toBe(false);
+      expect(remainingOptionTexts.some((text) => text.includes('United Kingdom'))).toBe(false);
+      expect(remainingOptionTexts.some((text) => text.includes('Germany'))).toBe(true);
+      expect(fixture.queryAll('.option')).toHaveLength(1);
+    });
+
+    it('pre-focuses the selected option when reopening the dropdown in single-select mode', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country', value: 'gb' },
+        html: optionsHtml,
+      });
       await fixture.flush();
 
-      expect(usOption.hasAttribute('data-selected')).toBe(false);
-      expect(gbOption.hasAttribute('data-selected')).toBe(true);
-      expect(fixture.queryAll('.option[data-selected]').length).toBe(1);
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const focused = fixture.query<HTMLElement>('.option[data-focused]');
+
+      expect(focused).toBeTruthy();
+      expect(focused?.textContent).toContain('United Kingdom');
+    });
+
+    it('keeps the selected option visually marked when reopening in single-select mode', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.queryAll<HTMLElement>('.option')[1]!);
+      await fixture.flush();
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const selectedOption = fixture
+        .queryAll<HTMLElement>('.option')
+        .find((option) => option.textContent?.includes('United Kingdom'));
+
+      expect(selectedOption).toBeTruthy();
+      expect(selectedOption?.getAttribute('aria-selected')).toBe('true');
+      expect(selectedOption?.hasAttribute('data-selected')).toBe(true);
     });
 
     it('normalizes csv values in single mode to the first value', async () => {

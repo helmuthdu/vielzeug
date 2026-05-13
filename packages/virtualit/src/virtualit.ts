@@ -1,10 +1,10 @@
 export type VirtualKey = number | string;
 
 export interface VirtualItem {
-  end: number;
   index: number;
-  size: number;
   start: number;
+  end: number;
+  size: number;
 }
 
 export type Overscan = { end?: number; start?: number };
@@ -23,7 +23,17 @@ export interface VirtualizerOptions {
   scrollEndDelay?: number;
 }
 
-export type VirtualizerUpdateOptions = Partial<VirtualizerOptions>;
+export type VirtualizerUpdateOptions = {
+  count?: number;
+  estimateSize?: number | ((index: number) => number);
+  gap?: number;
+  getItemKey?: (index: number) => VirtualKey;
+  onChange?: (items: VirtualItem[], totalSize: number) => void;
+  onScrollEnd?: (offset: number) => void;
+  onScrollingChange?: (isScrolling: boolean) => void;
+  overscan?: Overscan;
+  scrollEndDelay?: number;
+};
 
 export interface ScrollToIndexOptions {
   align?: 'start' | 'end' | 'center' | 'auto';
@@ -32,7 +42,6 @@ export interface ScrollToIndexOptions {
 
 export interface Virtualizer {
   readonly count: number;
-  readonly estimateSize: number | ((index: number) => number);
   readonly isScrolling: boolean;
   readonly items: VirtualItem[];
   readonly scrollOffset: number;
@@ -40,15 +49,25 @@ export interface Virtualizer {
   destroy: () => void;
   invalidate: () => void;
   measure: (index: number, size: number) => void;
+  refresh: () => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
   scrollToOffset: (offset: number, options?: { behavior?: ScrollBehavior }) => void;
   update: (next: VirtualizerUpdateOptions) => void;
   [Symbol.dispose]: () => void;
 }
 
-export const DEFAULT_ESTIMATE_SIZE = 36;
-export const DEFAULT_OVERSCAN = 3;
-export const DEFAULT_SCROLL_END_DELAY = 120;
+const DEFAULT_ESTIMATE_SIZE = 36;
+const DEFAULT_OVERSCAN = 3;
+const DEFAULT_SCROLL_END_DELAY = 120;
+
+type ScrollTarget = HTMLElement | Window;
+
+type AxisIO = {
+  attach: (onScroll: () => void, onResize: () => void) => () => void;
+  readOffset: () => number;
+  readViewportSize: () => number;
+  writeOffset: (offset: number, behavior: ScrollBehavior) => void;
+};
 
 function toNonNegativeInt(value: number, fallback = 0): number {
   if (!Number.isFinite(value)) return fallback;
@@ -85,19 +104,60 @@ function normalizeOverscan(overscan: Overscan | undefined): { end: number; start
   };
 }
 
-function isWindowTarget(target: HTMLElement | Window): target is Window {
+function isWindowTarget(target: ScrollTarget): target is Window {
   return 'innerHeight' in target && 'innerWidth' in target && !('clientHeight' in target);
 }
 
-export function createVirtualizer(target: HTMLElement | Window, options: VirtualizerOptions): Virtualizer {
+function createAxisIO(target: ScrollTarget, horizontal: boolean): AxisIO {
   const isWindow = isWindowTarget(target);
+
+  if (isWindow) {
+    return {
+      attach(onScroll, onResize) {
+        target.addEventListener('scroll', onScroll, { passive: true });
+        target.addEventListener('resize', onResize, { passive: true });
+
+        return () => {
+          target.removeEventListener('scroll', onScroll);
+          target.removeEventListener('resize', onResize);
+        };
+      },
+      readOffset: horizontal ? () => target.scrollX : () => target.scrollY,
+      readViewportSize: horizontal ? () => target.innerWidth : () => target.innerHeight,
+      writeOffset: (offset, behavior) => {
+        target.scrollTo(horizontal ? { behavior, left: offset } : { behavior, top: offset });
+      },
+    };
+  }
+
+  return {
+    attach(onScroll, onResize) {
+      const resizeObserver = new ResizeObserver(onResize);
+
+      target.addEventListener('scroll', onScroll, { passive: true });
+      resizeObserver.observe(target);
+
+      return () => {
+        target.removeEventListener('scroll', onScroll);
+        resizeObserver.disconnect();
+      };
+    },
+    readOffset: horizontal ? () => target.scrollLeft : () => target.scrollTop,
+    readViewportSize: horizontal ? () => target.clientWidth : () => target.clientHeight,
+    writeOffset: (offset, behavior) => {
+      target.scrollTo(horizontal ? { behavior, left: offset } : { behavior, top: offset });
+    },
+  };
+}
+
+export function createVirtualizer(target: ScrollTarget, options: VirtualizerOptions): Virtualizer {
+  const axis = createAxisIO(target, !!options.horizontal);
 
   let count = toNonNegativeInt(options.count);
   let estimateSize = normalizeEstimate(options.estimateSize);
   let estimateFn = createEstimateFn(estimateSize);
   let gap = toNonNegativeInt(options.gap ?? 0);
   let getItemKey = options.getItemKey ?? ((index: number) => index);
-  let horizontal = !!options.horizontal;
   let overscan = normalizeOverscan(options.overscan);
   let scrollEndDelay = toNonNegativeInt(options.scrollEndDelay ?? DEFAULT_SCROLL_END_DELAY, DEFAULT_SCROLL_END_DELAY);
   let onChange = options.onChange;
@@ -110,46 +170,13 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
   let isScrolling = false;
   const measuredByKey = new Map<VirtualKey, number>();
   let offsets = new Float64Array(count + 1);
-  let viewportSize = 0;
+  let viewportSize = axis.readViewportSize();
   let prevRenderStart = -1;
   let prevRenderEnd = -1;
   let prevTotalSize = -1;
   let pendingBuild = false;
   let destroyed = false;
   let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
-
-  let readViewportSize = () => 0;
-  let readOffset = () => 0;
-  let writeOffset = (_offset: number, _behavior: ScrollBehavior) => {};
-
-  const resizeObserver = !isWindow
-    ? new ResizeObserver(() => {
-        viewportSize = readViewportSize();
-        computeVisible();
-      })
-    : null;
-
-  function configureAxisIO(): void {
-    if (isWindow) {
-      readViewportSize = horizontal ? () => target.innerWidth : () => target.innerHeight;
-      readOffset = horizontal ? () => target.scrollX : () => target.scrollY;
-      writeOffset = (offset, behavior) => {
-        const clamped = clampScrollOffset(offset);
-
-        target.scrollTo(horizontal ? { behavior, left: clamped } : { behavior, top: clamped });
-      };
-
-      return;
-    }
-
-    readViewportSize = horizontal ? () => target.clientWidth : () => target.clientHeight;
-    readOffset = horizontal ? () => target.scrollLeft : () => target.scrollTop;
-    writeOffset = (offset, behavior) => {
-      const clamped = clampScrollOffset(offset);
-
-      target.scrollTo(horizontal ? { behavior, left: clamped } : { behavior, top: clamped });
-    };
-  }
 
   function keyAt(index: number): VirtualKey {
     return getItemKey(index);
@@ -199,14 +226,14 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
   }
 
   function onScroll(): void {
-    scrollOffset = readOffset();
+    scrollOffset = clampScrollOffset(axis.readOffset());
     setScrolling(true);
     scheduleScrollEnd();
     computeVisible();
   }
 
   function onResize(): void {
-    viewportSize = readViewportSize();
+    viewportSize = axis.readViewportSize();
     computeVisible();
   }
 
@@ -255,6 +282,17 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
     onChange?.(nextItems, totalSize);
   }
 
+  function syncScrollOffset(): void {
+    const rawOffset = axis.readOffset();
+    const nextOffset = clampScrollOffset(rawOffset);
+
+    if (nextOffset === scrollOffset) return;
+
+    scrollOffset = nextOffset;
+
+    if (rawOffset !== nextOffset) axis.writeOffset(nextOffset, 'auto');
+  }
+
   function rebuildOffsets(): void {
     prevRenderStart = -1;
     prevRenderEnd = -1;
@@ -272,14 +310,15 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
   function computeVisible(): void {
     if (destroyed) return;
 
+    syncScrollOffset();
+
     if (count === 0 || viewportSize <= 0) {
-      const shouldNotify = count > 0 || prevRenderStart !== -1 || prevTotalSize !== totalSize;
-
-      prevRenderStart = -1;
-      prevRenderEnd = -1;
-      prevTotalSize = totalSize;
-
-      if (shouldNotify) emit([]);
+      if (prevRenderStart !== -1 || prevTotalSize !== totalSize) {
+        prevRenderStart = -1;
+        prevRenderEnd = -1;
+        prevTotalSize = totalSize;
+        emit([]);
+      }
 
       return;
     }
@@ -308,6 +347,7 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
 
   function applyOptions(next: VirtualizerUpdateOptions): void {
     let needsRebuild = false;
+    let needsCompute = false;
 
     if ('count' in next && next.count !== undefined) {
       const nextCount = toNonNegativeInt(next.count);
@@ -315,6 +355,7 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
       if (nextCount !== count) {
         count = nextCount;
         needsRebuild = true;
+        needsCompute = true;
       }
     }
 
@@ -326,6 +367,7 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
         estimateFn = createEstimateFn(estimateSize);
         measuredByKey.clear();
         needsRebuild = true;
+        needsCompute = true;
       }
     }
 
@@ -335,32 +377,32 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
       if (nextGap !== gap) {
         gap = nextGap;
         needsRebuild = true;
+        needsCompute = true;
       }
     }
 
     if ('getItemKey' in next && next.getItemKey) {
-      getItemKey = next.getItemKey;
-      measuredByKey.clear();
-      needsRebuild = true;
-    }
-
-    if ('horizontal' in next && next.horizontal !== undefined) {
-      const nextHorizontal = !!next.horizontal;
-
-      if (nextHorizontal !== horizontal) {
-        horizontal = nextHorizontal;
-        configureAxisIO();
-        viewportSize = readViewportSize();
-        scrollOffset = readOffset();
+      if (next.getItemKey !== getItemKey) {
+        getItemKey = next.getItemKey;
+        measuredByKey.clear();
+        needsRebuild = true;
+        needsCompute = true;
       }
     }
 
     if ('overscan' in next) {
-      overscan = normalizeOverscan(next.overscan);
+      const nextOverscan = normalizeOverscan(next.overscan);
+
+      if (nextOverscan.start !== overscan.start || nextOverscan.end !== overscan.end) {
+        overscan = nextOverscan;
+        needsCompute = true;
+      }
     }
 
     if ('scrollEndDelay' in next && next.scrollEndDelay !== undefined) {
-      scrollEndDelay = toNonNegativeInt(next.scrollEndDelay, DEFAULT_SCROLL_END_DELAY);
+      const nextScrollEndDelay = toNonNegativeInt(next.scrollEndDelay, DEFAULT_SCROLL_END_DELAY);
+
+      if (nextScrollEndDelay !== scrollEndDelay) scrollEndDelay = nextScrollEndDelay;
     }
 
     if ('onChange' in next) onChange = next.onChange;
@@ -369,14 +411,9 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
 
     if ('onScrollingChange' in next) onScrollingChange = next.onScrollingChange;
 
-    if ('initialOffset' in next && next.initialOffset !== undefined) {
-      writeOffset(next.initialOffset, 'auto');
-      scrollOffset = readOffset();
-    }
-
     if (needsRebuild) rebuildOffsets();
 
-    computeVisible();
+    if (needsCompute || needsRebuild) computeVisible();
   }
 
   function update(next: VirtualizerUpdateOptions): void {
@@ -388,7 +425,9 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
   function measure(index: number, size: number): void {
     if (destroyed) return;
 
-    const safeIndex = toNonNegativeInt(index, -1);
+    if (!Number.isFinite(index)) return;
+
+    const safeIndex = Math.floor(index);
 
     if (safeIndex < 0 || safeIndex >= count) return;
 
@@ -416,6 +455,13 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
     if (destroyed) return;
 
     measuredByKey.clear();
+    rebuildOffsets();
+    computeVisible();
+  }
+
+  function refresh(): void {
+    if (destroyed) return;
+
     rebuildOffsets();
     computeVisible();
   }
@@ -448,13 +494,13 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
       targetOffset = itemStart < visibleStart ? itemStart : itemEnd - viewportSize;
     }
 
-    writeOffset(targetOffset, behavior);
+    axis.writeOffset(clampScrollOffset(targetOffset), behavior);
   }
 
   function scrollToOffset(offset: number, options: { behavior?: ScrollBehavior } = {}): void {
     if (destroyed) return;
 
-    writeOffset(offset, options.behavior ?? 'auto');
+    axis.writeOffset(clampScrollOffset(offset), options.behavior ?? 'auto');
   }
 
   function destroy(): void {
@@ -462,33 +508,19 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
 
     destroyed = true;
     clearScrollEndTimer();
-
-    if (isWindow) {
-      target.removeEventListener('scroll', onScroll);
-      target.removeEventListener('resize', onResize);
-    } else {
-      target.removeEventListener('scroll', onScroll);
-      resizeObserver?.disconnect();
-    }
+    detachTarget();
   }
 
-  configureAxisIO();
-  viewportSize = readViewportSize();
   rebuildOffsets();
 
-  if (isWindow) {
-    target.addEventListener('scroll', onScroll, { passive: true });
-    target.addEventListener('resize', onResize, { passive: true });
-  } else {
-    target.addEventListener('scroll', onScroll, { passive: true });
-    resizeObserver?.observe(target);
-  }
-
   if (options.initialOffset !== undefined) {
-    writeOffset(options.initialOffset, 'auto');
+    axis.writeOffset(clampScrollOffset(options.initialOffset), 'auto');
   }
 
-  scrollOffset = readOffset();
+  scrollOffset = clampScrollOffset(axis.readOffset());
+
+  const detachTarget = axis.attach(onScroll, onResize);
+
   computeVisible();
 
   return {
@@ -496,9 +528,6 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
       return count;
     },
     destroy,
-    get estimateSize() {
-      return estimateSize;
-    },
     invalidate,
     get isScrolling() {
       return isScrolling;
@@ -507,6 +536,7 @@ export function createVirtualizer(target: HTMLElement | Window, options: Virtual
       return items;
     },
     measure,
+    refresh,
     get scrollOffset() {
       return scrollOffset;
     },

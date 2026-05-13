@@ -1,6 +1,5 @@
 import type { Fn } from '../types';
 
-import { Scheduler } from '../async/scheduler';
 import { assert } from './assert';
 
 export type ThrottleOptions = {
@@ -40,33 +39,21 @@ export function throttle<T extends Fn>(
   const leading = options.leading ?? true;
   const trailing = options.trailing ?? false;
 
-  let timerController: AbortController | undefined;
+  let timerId: number | undefined;
   let lastInvokeTime = 0;
   let lastArgs: Parameters<T> | undefined;
   let lastThis: ThisParameterType<T> | undefined;
   let lastResult: ReturnType<T> | undefined;
-  const scheduler = new Scheduler();
 
   const clearTimer = () => {
-    if (timerController !== undefined) {
-      timerController.abort();
-      timerController = undefined;
+    if (timerId !== undefined) {
+      clearTimeout(timerId);
+      timerId = undefined;
     }
   };
 
   const scheduleTimer = (delayMs: number) => {
-    const controller = new AbortController();
-
-    timerController = controller;
-    void scheduler
-      .postTask(timerExpired, {
-        delay: delayMs,
-        priority: 'user-visible',
-        signal: controller.signal,
-      })
-      .catch(() => {
-        // Aborts are expected when throttle is rescheduled or canceled.
-      });
+    timerId = setTimeout(timerExpired, delayMs) as unknown as number;
   };
 
   const invoke = (now: number) => {
@@ -80,7 +67,7 @@ export function throttle<T extends Fn>(
 
     lastArgs = undefined;
     lastThis = undefined;
-    lastResult = fn.apply(ctx as any, args);
+    lastResult = fn.apply(ctx as any, args) as ReturnType<T>;
 
     return lastResult;
   };
@@ -118,7 +105,7 @@ export function throttle<T extends Fn>(
     if (rem <= 0) {
       // Window elapsed: invoke now
       invoke(now);
-    } else if (trailing && !timerController) {
+    } else if (trailing && !timerId) {
       // Schedule trailing call if not already scheduled
       scheduleTimer(rem);
     }
@@ -140,7 +127,7 @@ export function throttle<T extends Fn>(
   };
 
   // Pending if a trailing call is scheduled OR there are queued args.
-  throttled.pending = () => lastArgs !== undefined || timerController !== undefined;
+  throttled.pending = () => lastArgs !== undefined || timerId !== undefined;
 
   return throttled;
 }
