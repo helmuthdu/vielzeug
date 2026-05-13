@@ -43,8 +43,8 @@ describe('v.intersect()', () => {
 
 describe('v.intersect() — async', () => {
   it('runs async refinements on all branches', async () => {
-    const a = v.string().refineAsync(async (s) => s.length >= 3, 'Too short');
-    const b = v.string().refineAsync(async (s) => s.length <= 10, 'Too long');
+    const a = v.string().check(async (s) => s.length >= 3 || 'Too short');
+    const b = v.string().check(async (s) => s.length <= 10 || 'Too long');
     const schema = v.intersect(a, b);
 
     expect(await schema.parseAsync('hello')).toBe('hello');
@@ -52,7 +52,7 @@ describe('v.intersect() — async', () => {
   });
 
   it('refine() runs in parseAsync', async () => {
-    const schema = v.intersect(v.string(), v.string().min(1)).refine((v) => v !== 'forbidden', 'Forbidden value');
+    const schema = v.intersect(v.string(), v.string().min(1)).check((v) => v !== 'forbidden' || 'Forbidden value');
     const result = await schema.safeParseAsync('forbidden');
 
     expect(result.success).toBe(false);

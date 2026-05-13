@@ -85,6 +85,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/sourceit",
+      "projectFolder": "packages/sourceit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/toolkit",
       "projectFolder": "packages/toolkit",
       "shouldPublish": true,

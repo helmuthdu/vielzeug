@@ -21,9 +21,7 @@ description: Array utility examples for Toolkit.
 - [intersection](./array/intersection.md)
 - [indexBy](./array/keyBy.md)
 - [last](./array/last.md)
-- [list (moved to @vielzeug/sourceit)](./array/list.md)
 - [partition](./array/partition.md)
-- [remoteList (moved to @vielzeug/sourceit)](./array/remoteList.md)
 - [replace](./array/replace.md)
 - [rotate](./array/rotate.md)
 - [sample](./array/sampleSize.md)
@@ -71,4 +69,4 @@ console.log(byRole, byId, pages, sorted, tags, compacted, admins, members, paire
 ## Notes
 
 - `filterMap` maps values and skips only `undefined` results.
-- Use `list` and `remoteList` from `@vielzeug/sourceit` for reactive pagination/search.
+- For reactive pagination/search sources, use Sourceit: [overview](/sourceit/) and [usage](/sourceit/usage).

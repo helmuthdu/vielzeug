@@ -308,7 +308,8 @@ describe('Navigation', () => {
 
       expect(router.url('userDetail', { id: '42' }, { tab: 'profile' })).toBe('/users/42?tab=profile');
       expect(router.isActive('userDetail')).toBe(true);
-      expect(router.isActive('users', false)).toBe(true);
+      expect(router.isActive('users')).toBe(true);
+      expect(router.isActive('users', { exact: true })).toBe(false);
       expect(router.isActive('home')).toBe(false);
     });
 

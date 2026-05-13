@@ -3,15 +3,15 @@ import { describe, expect, test } from 'vitest';
 import { ErrorCode, ValidationError } from '../core';
 import { v } from '../v';
 
-describe('superRefine', () => {
+describe('check()', () => {
   test('passes when check adds no issues', () => {
-    const schema = v.string().superRefine(() => {});
+    const schema = v.string().check(() => {});
 
     expect(schema.parse('hello')).toBe('hello');
   });
 
   test('reports single addIssue call', () => {
-    const schema = v.string().superRefine((value, ctx) => {
+    const schema = v.string().check((value, ctx) => {
       if (value !== 'ok') {
         ctx.addIssue({ code: ErrorCode.custom, message: 'Not ok' });
       }
@@ -28,7 +28,7 @@ describe('superRefine', () => {
   });
 
   test('reports multiple addIssue calls', () => {
-    const schema = v.object({ a: v.string(), b: v.string() }).superRefine(({ a, b }, ctx) => {
+    const schema = v.object({ a: v.string(), b: v.string() }).check(({ a, b }, ctx) => {
       if (a === b) {
         ctx.addIssue({ code: ErrorCode.custom, message: 'a and b must differ', path: ['a'] });
         ctx.addIssue({ code: ErrorCode.custom, message: 'a and b must differ', path: ['b'] });
@@ -47,7 +47,7 @@ describe('superRefine', () => {
   });
 
   test('passes explicit path through to issue', () => {
-    const schema = v.object({ confirm: v.string(), password: v.string() }).superRefine(({ confirm, password }, ctx) => {
+    const schema = v.object({ confirm: v.string(), password: v.string() }).check(({ confirm, password }, ctx) => {
       if (password !== confirm) {
         ctx.addIssue({ code: ErrorCode.custom, message: 'Mismatch', path: ['confirm'] });
       }
@@ -65,7 +65,7 @@ describe('superRefine', () => {
   });
 
   test('defaults path to schema root when not specified', () => {
-    const schema = v.string().superRefine((_, ctx) => {
+    const schema = v.string().check((_, ctx) => {
       ctx.addIssue({ code: ErrorCode.custom, message: 'Root error' });
     });
 
@@ -79,15 +79,15 @@ describe('superRefine', () => {
   });
 });
 
-describe('superRefineAsync', () => {
+describe('check() async', () => {
   test('passes when async check adds no issues', async () => {
-    const schema = v.string().superRefineAsync(async () => {});
+    const schema = v.string().check(async () => {});
 
     await expect(schema.parseAsync('hello')).resolves.toBe('hello');
   });
 
   test('reports issues from async check', async () => {
-    const schema = v.string().superRefineAsync(async (value, ctx) => {
+    const schema = v.string().check(async (value, ctx) => {
       await Promise.resolve();
 
       if (value.length < 5) {
@@ -128,7 +128,7 @@ describe('ValidationError.format()', () => {
   });
 
   test('root-level issues appear in _errors', () => {
-    const schema = v.string().superRefine((_, ctx) => {
+    const schema = v.string().check((_, ctx) => {
       ctx.addIssue({ code: ErrorCode.custom, message: 'Root problem' });
     });
 

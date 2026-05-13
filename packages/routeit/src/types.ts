@@ -19,6 +19,16 @@ export type RouteParams = Record<string, string>;
 export type QueryParams = Record<string, string | string[]>;
 export type MaybePromise<T> = T | Promise<T>;
 export type NavigationStatus = 'idle' | 'loading' | 'error';
+export type IsActiveOptions = {
+  /** Require an exact pathname match. Defaults to prefix matching. */
+  exact?: boolean;
+};
+export type ScrollPosition = { x: number; y: number };
+export type ScrollDecision = ScrollPosition | 'preserve' | 'top';
+export type RouterErrorSource = 'initial-navigation' | 'history-listener' | 'preload';
+export type RouterErrorContext = {
+  readonly source: RouterErrorSource;
+};
 
 /** Return value from a `coerceSearch` function. Return a normalized/coerced search object. */
 export type CoerceSearchFn<Q extends QueryParams = QueryParams> = (raw: QueryParams) => Q;
@@ -221,10 +231,12 @@ export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
   history?: HistoryDriver;
   /** Global middleware applied to every route. Use this to implement authentication, analytics, and error boundaries. */
   middleware?: Middleware<TRoutes>[];
+  /** Optional sink for non-awaited/background router errors (initial navigation, popstate, preload). */
+  onError?: (error: unknown, context: RouterErrorContext) => void;
   /** Declarative route table. Object key order determines match precedence - place specific routes before wildcards. */
   routes: TRoutes;
-  /** Called after every successful navigation with the scroll position to restore, or null to scroll to top. */
-  scroll?: (to: RouteState, from: RouteState | null) => { x: number; y: number } | null | undefined;
+  /** Called after every successful navigation. Return `top`, `preserve`, or explicit coordinates. */
+  scroll?: (to: RouteState, from: RouteState | null) => ScrollDecision;
   /** Wrap navigation in the View Transition API when available. Falls back to plain execution in unsupported environments. */
   viewTransition?: boolean;
 };

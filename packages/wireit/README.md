@@ -1,103 +1,64 @@
-# @vielzeug/wireit
+# Wireit
 
-> Minimal async-first dependency injection container for TypeScript.
+Wireit is a small, typed dependency injection container for TypeScript.
 
-Wireit is a zero-dependency IoC container built around typed tokens and a small core API.
+## Features
 
-## Installation
-
-```sh
-pnpm add @vielzeug/wireit
-# npm install @vielzeug/wireit
-# yarn add @vielzeug/wireit
-```
+- Typed symbol tokens with `createToken<T>()`
+- Value and factory providers
+- `singleton`, `transient`, and `scoped` lifetimes
+- Hierarchical child containers
+- Async resolution and lifecycle cleanup
 
 ## Quick Start
 
 ```ts
 import { createContainer, createToken } from '@vielzeug/wireit';
 
-const ConfigToken = createToken<{ dbUrl: string }>('Config');
-const DbToken = createToken<Database>('Database');
-const ServiceToken = createToken<UserService>('UserService');
+const Logger = createToken<{ log(message: string): void }>('Logger');
+const Service = createToken<{ run(): Promise<void> }>('Service');
 
 const container = createContainer();
 
-container
-  .value(ConfigToken, { dbUrl: process.env.DB_URL! })
-  .factory(DbToken, (config) => new Database(config.dbUrl), { deps: [ConfigToken] })
-  .bind(ServiceToken, UserService, { deps: [DbToken] });
+container.value(Logger, {
+  log(message) {
+    console.log(message);
+  },
+});
 
-const service = await container.resolve(ServiceToken);
+container.factory(Service, (logger) => {
+  return {
+    async run() {
+      logger.log('started');
+    },
+  };
+}, {
+  deps: [Logger],
+});
+
+await container.resolve(Service);
 ```
 
 ## Core API
 
-### Registration
-
-- `value(token, value, { multi? })`
-- `factory(token, fn, { deps?, lifetime?, init?, dispose?, multi? })`
-- `bind(token, cls, { deps?, lifetime?, init?, dispose?, multi? })`
-
-### Resolution
-
-- `resolve(token)`
-- `resolveMany(token)`
-
-### Lifecycle
-
-- `createChild()`
-- `dispose()`
-- `disposed`
+- `createToken(description)` creates a typed symbol token.
+- `createContainer()` creates a root container.
+- `container.value(token, value, opts?)` registers a constant provider.
+- `container.factory(token, fn, opts?)` registers a factory provider.
+- `container.resolve(token)` resolves a single provider.
+- `container.resolveMany(token)` resolves all providers for a token.
+- `container.resolveOptional(token)` returns `undefined` when a token is missing.
+- `container.createChild()` creates a child container.
+- `container.dispose()` disposes resolved instances and marks the container unusable.
 
 ## Lifetimes
 
-| Lifetime | Behavior |
-| --- | --- |
-| `singleton` (default) | One instance per container |
-| `transient` | New instance for each resolution |
-| `scoped` | One instance per child container |
+- `singleton` caches one instance per container registration.
+- `transient` creates a new instance every time.
+- `scoped` caches one instance per child container and fails on the root container.
 
-## Multi-provider token
+## Documentation
 
-```ts
-container.value(ValidatorToken, new EmailValidator(), { multi: true });
-container.value(ValidatorToken, new PhoneValidator(), { multi: true });
-
-const validators = await container.resolveMany(ValidatorToken);
-```
-
-## Async provider with init/dispose
-
-```ts
-container.factory(DbToken, () => new Database(process.env.DB_URL!), {
-  init: (db) => db.connect(),
-  dispose: (db) => db.close(),
-});
-
-const db = await container.resolve(DbToken);
-```
-
-## Exports
-
-```ts
-export {
-  CircularDependencyError,
-  Container,
-  ContainerDisposedError,
-  createContainer,
-  createToken,
-  MultipleProvidersError,
-  ProviderNotFoundError,
-} from '@vielzeug/wireit';
-
-export type {
-  ClassProvider,
-  FactoryProvider,
-  Lifetime,
-  Provider,
-  ProviderOptions,
-  Token,
-  ValueProvider,
-} from '@vielzeug/wireit';
-```
+- [Usage Guide](../../docs/wireit/usage.md)
+- [API Reference](../../docs/wireit/api.md)
+- [Examples](../../docs/wireit/examples.md)

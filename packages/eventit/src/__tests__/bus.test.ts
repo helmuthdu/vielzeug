@@ -187,16 +187,17 @@ describe('emit', () => {
     expect(after).toHaveBeenCalledWith(99);
   });
 
-  it('calls onDispatch only when listeners exist', () => {
+  it('calls onDispatch on every emit regardless of listeners', () => {
     const onDispatch = vi.fn();
     const bus = createBus<TestEvents>({ onDispatch });
 
-    bus.emit('count', 1); // no listeners, no dispatch
+    bus.emit('count', 1); // no listeners, but still calls onDispatch
     bus.on('count', vi.fn());
     bus.emit('count', 2);
 
-    expect(onDispatch).toHaveBeenCalledOnce();
-    expect(onDispatch).toHaveBeenCalledWith('count', 2);
+    expect(onDispatch).toHaveBeenCalledTimes(2);
+    expect(onDispatch.mock.calls[0]).toEqual(['count', 1]);
+    expect(onDispatch.mock.calls[1]).toEqual(['count', 2]);
   });
 });
 
@@ -347,7 +348,7 @@ describe('events', () => {
     const controller = new AbortController();
     const results: number[] = [];
     const done = (async () => {
-      for await (const val of bus.events('count', controller.signal)) results.push(val);
+      for await (const val of bus.events('count', { signal: controller.signal })) results.push(val);
     })();
 
     bus.emit('count', 1);
@@ -604,7 +605,7 @@ describe('waitAny', () => {
     const controller = new AbortController();
 
     controller.abort(new Error('cancelled'));
-    await expect(bus.waitAny(['count'], controller.signal)).rejects.toThrow('cancelled');
+    await expect(bus.waitAny(['count', 'greet'], controller.signal)).rejects.toThrow('cancelled');
   });
 
   it('rejects when signal aborts mid-flight', async () => {
@@ -614,17 +615,5 @@ describe('waitAny', () => {
 
     controller.abort(new Error('cancelled'));
     await expect(p).rejects.toThrow('cancelled');
-  });
-
-  it('a single-event list behaves identically to wait()', async () => {
-    const bus = createBus<TestEvents>();
-    const p = bus.waitAny(['count']);
-
-    bus.emit('count', 99);
-
-    const result = await p;
-
-    expect(result.event).toBe('count');
-    expect(result.payload).toBe(99);
   });
 });

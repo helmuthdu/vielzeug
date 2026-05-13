@@ -58,14 +58,13 @@ export type RuntimeDirective = {
   mount: (anchor: Comment, registerCleanup: (fn: () => void) => void) => void;
 };
 
-export const DIRECTIVE: unique symbol = Symbol('craftit.directive');
-
-export type DirectiveResult = {
-  [DIRECTIVE]: RuntimeDirective;
-};
+export type DirectiveResult = RuntimeDirective;
 
 export const isDirectiveResult = (value: unknown): value is DirectiveResult =>
-  typeof value === 'object' && value !== null && DIRECTIVE in value;
+  typeof value === 'object' &&
+  value !== null &&
+  'mount' in value &&
+  typeof (value as RuntimeDirective).mount === 'function';
 
 export type HtmlBinding = {
   signal: ReadonlySignal<HtmlBindingPayload>;
@@ -156,11 +155,13 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
 };
 
 export const listen = (
-  el: EventTarget,
+  el: EventTarget | null | undefined,
   name: string,
   handler: (e: any) => void,
   options?: AddEventListenerOptions,
 ): (() => void) => {
+  if (!el) return () => {};
+
   const listener: EventListener = handler as EventListener;
 
   el.addEventListener(name, listener, options);

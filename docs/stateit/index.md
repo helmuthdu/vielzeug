@@ -147,7 +147,7 @@ count.value = 1; // notifies automatically
 
 - **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`; use `untrack(fn)` for non-subscribing reads
 - **`computed(fn, options?)`** — lazy derived signal; glitch-free: effects always observe a consistent snapshot; call `.dispose()` to stop tracking
-- **`effect(fn, options?)`** — side-effect that re-runs when any signal read inside it changes; returns a `Subscription`
+- **`effect(fn)`** — side-effect that re-runs when any signal read inside it changes; returns a `Subscription`
 - **`watch(source, cb, options?)`** — explicit subscription that fires only when the value changes; returns a `Subscription`
 - **`batch(fn)`** — flush all notifications once after bulk updates
 - **`untrack(fn)`** — read signals inside an effect without creating subscriptions
@@ -167,14 +167,14 @@ count.value = 1; // notifies automatically
 
 - **`Subscription`** — all dispose handles support `.dispose()`, direct call `()`, and `[Symbol.dispose]` (`using` declarations)
 - **`Scope`** — all scope handles support `.dispose()` and `[Symbol.dispose]` (`using` declarations)
-- **`EffectOptions`** — per-effect `maxIterations` guard against infinite reactive loops
+- **Built-in loop guard** — internal protection against infinite reactive loops (100 iterations)
 
 ### Reliability & Type Safety
 
 - **Strict signal detection** — `isSignal()` uses an internal symbol marker, not duck-typing
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
 - **Consistent error handling** — all errors prefixed with `[stateit]` and aggregated when multiple occur
-- **Infinite loop detection** — configurable guard against effect re-entry cycles (default: 100 iterations)
+- **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations)
 - **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect
 
 ## Compatibility

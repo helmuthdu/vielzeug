@@ -85,7 +85,7 @@ const renamed = mapValues({ a: 1, b: 2 }, (value) => value * 10);
 ```ts
 import { compose, debounce, memo, once, partial, pipe, throttle, negate, tap } from '@vielzeug/toolkit';
 
-const doubleAll = partial((values: number[], factor: number) => values.map((n) => n * factor), 2);
+const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
 const doubled = doubleAll([1, 2, 3]); // [2, 4, 6]
 
 const toUpperTrimmed = pipe(
@@ -109,14 +109,14 @@ const value = tap(42, (n) => console.log('debug', n));
 ### Async
 
 ```ts
-import { attempt, parallel, queue, retry, sleep, waitFor, timeout, memoizeAsync } from '@vielzeug/toolkit';
+import { attempt, parallel, queue, retry, sleep, waitFor, timeout, memo } from '@vielzeug/toolkit';
 
 const attempted = await attempt(async (signal) => {
   const res = await fetch('/api/user', { signal });
   return res.json();
 }, { times: 2, timeout: 5_000 });
 
-const values = await parallel(3, [1, 2, 3, 4], async (n) => n * 2);
+const values = await parallel([1, 2, 3, 4], async (n) => n * 2, { limit: 3 });
 
 const q = queue({ concurrency: 2 });
 const a = q.add(() => fetch('/a').then((r) => r.text()));
@@ -127,7 +127,7 @@ await retry(() => fetch('/health').then((r) => r.json()), { times: 3, delay: 200
 await sleep(100);
 await waitFor(() => document.querySelector('#app') !== null, { timeout: 3_000 });
 
-const fetchJSON = memoizeAsync((url: string) => fetch(url).then((r) => r.json()));
+const fetchJSON = memo((url: string) => fetch(url).then((r) => r.json()));
 const payload = await timeout(fetchJSON('/api/profile'), 3_000);
 
 await Promise.all([a, b]);
@@ -208,7 +208,7 @@ const byRole = computed(() => groupBy(users.value, (u) => u.role));
 - `pick` selects object properties only (`pick(obj, keys)`).
 - Use `partial` when adapting multi-arg APIs to unary composition flows.
 - For cancellation-aware async work, pass `AbortSignal` through your callback stack.
-- Reactive list models moved to `@vielzeug/sourceit`.
+- Use `createLocalSource` and `createRemoteSource` from `@vielzeug/sourceit` for reactive paginated sources.
 
 ## Performance Tips
 

@@ -25,10 +25,10 @@ Each `createLogger()` call is independent.
 
 ## Configuration
 
-Use `setConfig()` for partial updates; unspecified fields remain unchanged.
+Use `child()` to derive immutable logger variants.
 
 ```ts
-Logit.setConfig({
+const AppLog = Logit.child({
   logLevel: 'warn',
   namespace: 'App',
   timestamp: true,
@@ -41,12 +41,12 @@ Logit.setConfig({
   },
 });
 
-const cfg: Readonly<LogitConfig> = Logit.config; // snapshot copy
+const cfg: Readonly<LogitConfig> = AppLog.config; // snapshot copy
 ```
 
 Level threshold order:
 
-- `debug` < `trace` < `info` < `warn` < `error` < `fatal` < `off`
+- `debug` < `info` < `warn` < `error` < `fatal` < `off`
 
 ## Call Signature
 
@@ -57,7 +57,6 @@ log.info('message')
 log.info({ key: 'value' }, 'message')   // context object first, message second
 log.error(new Error('boom'))             // Error auto-serialized into context.err
 log.error(new Error('boom'), 'override') // message override, err still in context
-log.info()                               // zero-arg form — logs without message
 ```
 
 The `context` object and per-call args are merged with any pinned `withBindings()` context before emission.
@@ -66,14 +65,10 @@ The `context` object and per-call args are merged with any pinned `withBindings(
 
 ```ts
 Logit.debug('debug details');
-Logit.trace('trace details');
 Logit.info({ port: 3000 }, 'server started');
 Logit.warn('cache stale');
 Logit.error(new Error('timeout'));           // auto-serialized
 Logit.fatal({ service: 'db' }, 'terminating'); // above error, use for unrecoverable state
-
-Logit.assert(Boolean(process.env.API_URL), 'Missing API URL');
-Logit.table([{ id: 1, name: 'Alice' }], ['id', 'name']);
 ```
 
 Use `enabled()` to avoid expensive debug payload creation:
@@ -142,7 +137,7 @@ Child and parent configs remain independent after creation.
 Remote forwarding is asynchronous and non-blocking. Remote and console thresholds are independent.
 
 ```ts
-Logit.setConfig({
+const NetLog = Logit.child({
   logLevel: 'debug',
   remote: {
     logLevel: 'warn',
@@ -176,7 +171,7 @@ If a handler throws, a `console.warn` is emitted — remote errors never propaga
 - Set `logLevel` from environment (`debug` in dev, `warn`/`error` in prod).
 - Use `enabled()` before expensive payload construction.
 - Keep remote handlers resilient; network failures should not block app flow.
-- Prefer `child()` for temporary config overrides (tests, one-off tasks).
+- Prefer `child()` for explicit logger variants (tests, one-off tasks, module scopes).
 - Use `fatal()` only for genuinely unrecoverable states; it maps to `console.error` and remote.
 
 ## Testing
@@ -184,22 +179,17 @@ If a handler throws, a `console.warn` is emitted — remote errors never propaga
 In tests, silence logs globally or per suite and spy only what you assert.
 
 ```ts
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
-beforeEach(() => {
-  Logit.setConfig({ logLevel: 'off' });
-});
+import { afterEach, expect, it, vi } from 'vitest';
 
 afterEach(() => {
-  Logit.setConfig({ logLevel: 'debug' });
   vi.restoreAllMocks();
 });
 
 it('logs errors when enabled', () => {
-  Logit.setConfig({ logLevel: 'error' });
+  const log = Logit.child({ logLevel: 'error' });
   const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-  Logit.error('boom');
+  log.error('boom');
 
   expect(spy).toHaveBeenCalled();
 });

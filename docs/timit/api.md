@@ -14,9 +14,10 @@ import {
   endOf,
   formatDuration,
   formatHuman,
-  formatISO,
+  formatInstant,
   formatRange,
   formatRelative,
+  formatZoned,
   isAfter,
   isBefore,
   isSameDay,
@@ -45,11 +46,12 @@ import {
 | `clamp(value, start, end, options?)` | Query | `Temporal.Instant` |
 | `isBefore(a, b, options?)` | Comparison | `boolean` |
 | `isAfter(a, b, options?)` | Comparison | `boolean` |
-| `isSameDay(a, b, options)` | Comparison | `boolean` |
+| `isSameDay(a, b, options?)` | Comparison | `boolean` |
 | `startOf(input, unit, options)` | Boundary | `Temporal.ZonedDateTime` |
 | `endOf(input, unit, options)` | Boundary | `Temporal.ZonedDateTime` |
 | `formatHuman(input, options?)` | Formatting | `string` |
-| `formatISO(input, options?)` | Formatting | `string` |
+| `formatInstant(input, options?)` | Formatting | `string` |
+| `formatZoned(input, options?)` | Formatting | `string` |
 | `formatRange(start, end, options?)` | Formatting | `string` |
 | `formatRelative(input, options?)` | Formatting | `string` |
 | `parseDuration(input)` | Duration | `Temporal.Duration` |
@@ -79,22 +81,21 @@ parseLocal('2026-03-21T10:15:30');
 Normalize supported inputs to a canonical timeline value.
 
 ```ts
-toInstant('2026-03-21T10:15:30Z');
-toInstant('2026-03-21T10:15:30', { tz: 'America/New_York' });
+toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
+toInstant(parseLocal('2026-03-21T10:15:30'), { tz: 'America/New_York' });
 ```
 
 Notes:
 
 - Plain local values require `options.tz`.
-- Zoned strings with bracketed zones use embedded timezone.
-- Offset strings are absolute and not reinterpreted by `tz`.
+- Core APIs are Temporal-first; string parsing is intentionally explicit via `parseLocal`.
 
 ### `toZoned(input, options): Temporal.ZonedDateTime`
 
 Render a time in a specific timezone.
 
 ```ts
-toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' });
+toZoned(Temporal.Instant.from('2026-03-21T10:15:30Z'), { tz: 'Europe/Berlin' });
 ```
 
 `options.tz` is required.
@@ -104,14 +105,14 @@ toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' });
 DST-safe add/subtract helper.
 
 ```ts
-shift('2026-03-21T10:00:00Z', { hours: -1 }, { tz: 'UTC' });
+shift(Temporal.Instant.from('2026-03-21T10:00:00Z'), { hours: -1 }, { tz: 'UTC' });
 shift(Temporal.ZonedDateTime.from('2026-03-21T10:00:00+01:00[Europe/Berlin]'), { hours: -1 });
 ```
 
 Notes:
 
 - `options.tz` is optional for zoned inputs and inferred from input timezone.
-- `options.tz` is required for local string/plain inputs.
+- `options.tz` is required for local/plain inputs.
 
 ### `difference(start, end, options): Temporal.Duration`
 
@@ -131,7 +132,12 @@ Inclusive range check with automatic bound normalization.
 
 ### `clamp(value, start, end, options?): Temporal.Instant`
 
-Clamp input to range bounds.
+Clamp input to range bounds. Returns `Temporal.Instant` — project to any timezone as needed.
+
+```ts
+const clamped = clamp(value, start, end);
+clamped.toZonedDateTimeISO('UTC');
+```
 
 ### `isBefore(a, b, options?): boolean`
 
@@ -143,7 +149,7 @@ Returns true when `a > b` on timeline.
 
 ### `isSameDay(a, b, options): boolean`
 
-Compares wall-clock day in `options.tz`.
+Compares wall-clock day. Infers timezone from `ZonedDateTime` inputs; requires `options.tz` for non-zoned inputs. Throws when inputs are zoned in different timezones without explicit `options.tz`.
 
 ## Boundary Helpers
 
@@ -152,8 +158,8 @@ Compares wall-clock day in `options.tz`.
 Snap to start of a unit.
 
 ```ts
-startOf('2026-03-21T10:15:30Z', 'day', { tz: 'UTC' });
-startOf('2026-03-21T10:15:30Z', 'week', { tz: 'UTC', weekStartsOn: 1 });
+startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
+startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'week', { tz: 'UTC', weekStartsOn: 1 });
 startOf(Temporal.ZonedDateTime.from('2026-03-21T10:15:30-04:00[America/New_York]'), 'day');
 ```
 
@@ -162,7 +168,7 @@ startOf(Temporal.ZonedDateTime.from('2026-03-21T10:15:30-04:00[America/New_York]
 Snap to end of a unit (`startOf(nextUnit) - 1ns`).
 
 ```ts
-endOf('2026-03-21T10:15:30Z', 'day', { tz: 'UTC' });
+endOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
 ```
 
 For zoned inputs, `options.tz` is optional and inferred from input timezone.
@@ -183,7 +189,7 @@ Supported units:
 Localized UI formatting with presets.
 
 ```ts
-formatHuman('2026-03-21T10:15:30Z', {
+formatHuman(Temporal.Instant.from('2026-03-21T10:15:30Z'), {
   pattern: 'short',
   locale: 'en-GB',
   tz: 'UTC',
@@ -198,19 +204,26 @@ Patterns:
 - `'date-only'`
 - `'time-only'`
 
-### `formatISO(input, options?): string`
+### `formatInstant(input, options?): string`
 
-Machine-friendly ISO formatting.
+Produces a UTC ISO-8601 instant string.
 
 ```ts
-formatISO('2026-03-21T10:15:30Z');
-formatISO('2026-03-21T10:15:30Z', { style: 'zoned', tz: 'Europe/Berlin' });
+formatInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
+// → '2026-03-21T10:15:30Z'
 ```
 
-`style`:
+### `formatZoned(input, options?): string`
 
-- `'instant'` (default)
-- `'zoned'`
+Produces a zoned ISO-8601 string. Infers timezone from `ZonedDateTime` inputs; requires `options.tz` otherwise.
+
+```ts
+formatZoned(Temporal.Instant.from('2026-03-21T10:15:30Z'), { tz: 'Europe/Berlin' });
+// → '2026-03-21T11:15:30+01:00[Europe/Berlin]'
+
+formatZoned(Temporal.ZonedDateTime.from('2026-03-21T10:15:30+01:00[Europe/Berlin]'));
+// → '2026-03-21T10:15:30+01:00[Europe/Berlin]'
+```
 
 ### `formatRange(start, end, options?): string`
 
@@ -221,8 +234,8 @@ Localized range formatting via `Intl.DateTimeFormat.formatRange`.
 Relative text using `Intl.RelativeTimeFormat`.
 
 ```ts
-formatRelative('2026-03-21T12:00:00Z', {
-  base: '2026-03-21T10:00:00Z',
+formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), {
+  base: Temporal.Instant.from('2026-03-21T10:00:00Z'),
   numeric: 'always',
 });
 // => "in 2 hours"
@@ -255,15 +268,5 @@ type TimeInput =
   | Temporal.Instant
   | Temporal.PlainDate
   | Temporal.PlainDateTime
-  | Temporal.ZonedDateTime
-  | string;
-
-type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
-
-interface TimeOptions {
-  tz?: string;
-  when?: DateTimeDisambiguation;
-}
-
-type TimeOptionsWithTz = TimeOptions & { tz: string };
+  | Temporal.ZonedDateTime;
 ```

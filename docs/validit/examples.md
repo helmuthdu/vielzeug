@@ -33,11 +33,11 @@ const RegistrationSchema = v
     password: v
       .string()
       .min(8)
-      .refine((value) => /[A-Z]/.test(value), 'Must contain an uppercase letter')
-      .refine((value) => /\d/.test(value), 'Must contain a number'),
+      .check((value) => /[A-Z]/.test(value), 'Must contain an uppercase letter')
+      .check((value) => /\d/.test(value), 'Must contain a number'),
     confirmPassword: v.string(),
   })
-  .refine((value) => value.password === value.confirmPassword, 'Passwords must match');
+  .check((value) => value.password === value.confirmPassword, 'Passwords must match');
 
 const result = RegistrationSchema.safeParse(payload);
 ```
@@ -69,7 +69,7 @@ const parsed = QuerySchema.parse(req.query);
 const UsernameSchema = v
   .string()
   .min(3)
-  .refineAsync(async (value) => {
+  .check(async (value) => {
     const exists = await db.users.exists({ username: value });
     return !exists;
   }, 'Username is already taken');

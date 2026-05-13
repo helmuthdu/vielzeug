@@ -2,7 +2,7 @@ import { computed, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
 import { defineField, type FormFieldOptions } from '../form';
 import { createId } from '../internal';
-import { handle } from '../runtime';
+import { listen } from '../runtime';
 import {
   createControlState,
   type ControlContextOptions,
@@ -192,28 +192,39 @@ export const createAssistiveState = (options: AssistiveOptions) => {
 };
 
 /** @internal */
-export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): void => {
+export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): (() => void) => {
   const { element, onBlur, onChange, onInput, triggerValidation } = options;
+  const disposers: Array<() => void> = [];
 
   if (onInput) {
-    handle(element, 'input', (event: Event) => {
-      // Prevent the native composed event from bubbling out of the shadow DOM
-      // and being re-targeted onto the host element. The component emits its
-      // own structured CustomEvent so external listeners never need the raw one.
-      event.stopPropagation();
-      onInput(event, element.value);
-    });
+    disposers.push(
+      listen(element, 'input', (event: Event) => {
+        // Prevent the native composed event from bubbling out of the shadow DOM
+        // and being re-targeted onto the host element. The component emits its
+        // own structured CustomEvent so external listeners never need the raw one.
+        event.stopPropagation();
+        onInput(event, element.value);
+      }),
+    );
   }
 
-  handle(element, 'change', (event: Event) => {
-    // Same reason as above — suppress the native change event from escaping.
-    event.stopPropagation();
-    onChange?.(event, element.value);
-    triggerValidation?.('change');
-  });
+  disposers.push(
+    listen(element, 'change', (event: Event) => {
+      // Same reason as above — suppress the native change event from escaping.
+      event.stopPropagation();
+      onChange?.(event, element.value);
+      triggerValidation?.('change');
+    }),
+  );
 
-  handle(element, 'blur', (event: Event) => {
-    onBlur?.(event as FocusEvent);
-    triggerValidation?.('blur');
-  });
+  disposers.push(
+    listen(element, 'blur', (event: Event) => {
+      onBlur?.(event as FocusEvent);
+      triggerValidation?.('blur');
+    }),
+  );
+
+  return () => {
+    for (const dispose of disposers) dispose();
+  };
 };

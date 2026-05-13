@@ -1,0 +1,4 @@
+export const remoteSourceBasicsExample = {
+  code: "import { createRemoteSource } from '@vielzeug/sourceit'\n\nconst dataset = Array.from({ length: 12 }, (_, i) => ({\n  id: i + 1,\n  name: `Issue ${i + 1}`\n}))\n\nconst source = createRemoteSource({\n  fetch: async ({ limit, page, search }) => {\n    const offset = (page - 1) * limit\n    const filtered = search\n      ? dataset.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))\n      : dataset\n\n    return {\n      items: filtered.slice(offset, offset + limit),\n      total: filtered.length,\n    }\n  },\n  limit: 5,\n})\n\nsource.refresh()\nawait source.ready()\nconsole.log('Initial:', source.current, source.meta)\n\nsource.search('1', true)\nawait source.ready()\nconsole.log('Search results:', source.current, source.meta)\n\nconsole.log('Snapshot:', source.snapshot())\nconsole.log('Query params:', source.toQueryParams())",
+  name: 'Remote Source Basics',
+};

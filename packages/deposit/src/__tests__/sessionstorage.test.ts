@@ -11,7 +11,7 @@ describe('SessionStorage adapter', () => {
 
   beforeEach(() => {
     sessionStorage.clear();
-    db = createSessionStorage({ dbName: 'SS', schema: userSchema });
+    db = createSessionStorage('SS', userSchema);
   });
 
   test('put/get/delete/deleteAll/count', async () => {
@@ -80,7 +80,7 @@ describe('SessionStorage adapter', () => {
   });
 
   test('two instances share the same sessionStorage namespace', async () => {
-    const db2 = createSessionStorage({ dbName: 'SS', schema: userSchema });
+    const db2 = createSessionStorage('SS', userSchema);
 
     await db.put('users', { id: 1, name: 'Alice' });
 

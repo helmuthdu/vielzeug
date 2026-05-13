@@ -10,7 +10,7 @@ Converting a time from one timezone to another while preserving the exact moment
 ```ts
 import { formatHuman, now, toZoned } from '@vielzeug/timit';
 
-const utc = '2026-03-21T10:15:30Z';
+const utc = Temporal.Instant.from('2026-03-21T10:15:30Z');
 
 const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' });
 const london = toZoned(utc, { tz: 'Europe/London' });
@@ -26,7 +26,7 @@ All three represent the **exact same moment** in time, just displayed differentl
 ## Display in Multiple Timezones
 
 ```ts
-const event = '2026-04-15T14:00:00Z';
+const event = Temporal.Instant.from('2026-04-15T14:00:00Z');
 
 const timezones = [
   'America/New_York',

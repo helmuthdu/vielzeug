@@ -92,4 +92,56 @@ describe('beforeLeave', () => {
     expect(pathnameAtBlockTime).toBe('/');
     router.dispose();
   });
+
+  it('runs all registered blockers and blocks when any rejects', async () => {
+    const handler = vi.fn();
+    const first = vi.fn(async () => true);
+    const second = vi.fn(async () => false);
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: { handler, path: '/page' },
+      },
+    });
+
+    await settle();
+    router.beforeLeave(first);
+    router.beforeLeave(second);
+
+    await router.navigate({ path: '/page' });
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(handler).not.toHaveBeenCalled();
+    router.dispose();
+  });
+
+  it('uses a blocker snapshot for deterministic execution order', async () => {
+    const second = vi.fn(async () => true);
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: { handler: vi.fn(), path: '/page' },
+      },
+    });
+
+    await settle();
+
+    const removeSecond = router.beforeLeave(second);
+
+    router.beforeLeave(async () => {
+      removeSecond();
+
+      return true;
+    });
+
+    await router.navigate({ path: '/page' });
+
+    expect(second).toHaveBeenCalledTimes(1);
+    router.dispose();
+  });
 });

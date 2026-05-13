@@ -24,6 +24,10 @@ export function predict<T>(
   const { signal, timeout = 7000 } = options;
   const abortSignal = signal ? AbortSignal.any([AbortSignal.timeout(timeout), signal]) : AbortSignal.timeout(timeout);
 
+  if (abortSignal.aborted) {
+    return Promise.reject(abortSignal.reason);
+  }
+
   return Promise.race([
     fn(abortSignal),
     new Promise<never>((_, reject) => {

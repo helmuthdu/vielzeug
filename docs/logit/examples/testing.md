@@ -15,22 +15,17 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 ```ts
 import { Logit } from '@vielzeug/logit';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
-beforeEach(() => {
-  Logit.setConfig({ logLevel: 'off' });
-});
+import { afterEach, expect, it, vi } from 'vitest';
 
 afterEach(() => {
-  Logit.setConfig({ logLevel: 'debug' });
   vi.restoreAllMocks();
 });
 
 it('emits errors when enabled', () => {
-  Logit.setConfig({ logLevel: 'error' });
+  const log = Logit.child({ logLevel: 'error' });
   const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-  Logit.error('failure');
+  log.error('failure');
 
   expect(spy).toHaveBeenCalled();
 });

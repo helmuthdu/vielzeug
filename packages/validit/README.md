@@ -17,7 +17,7 @@ pnpm add @vielzeug/validit
 ## Quick Start
 
 ```ts
-import { v, type Infer } from '@vielzeug/validit';
+import { flattenFirstErrors, v, type Infer } from '@vielzeug/validit';
 
 const UserSchema = v.object({
   id: v.coerce.number().int().positive(),
@@ -35,7 +35,7 @@ if (result.success) {
   const user: User = result.data;
   console.log(user.id); // 42
 } else {
-  console.log(result.error.flattenFirst());
+  console.log(flattenFirstErrors(result.error));
 }
 ```
 
@@ -43,15 +43,13 @@ if (result.success) {
 
 - Strict-by-default objects with `.relaxed()` for explicit passthrough behavior
 - Primitive, collection, union, intersection, enum, lazy, and variant schema factories
-- Input/output inference via `InferInput<T>`, `Infer<T>`, `InferOutput<T>`, and `TypeOf<T>`
-- Sync and async custom rules with `.refine()` and `.refineAsync()`
-- Advanced multi-issue validation via `.superRefine()` and `.superRefineAsync()`
+- Input/output inference via `InferInput<T>` and `Infer<T>`
+- Unified custom rules with `.check()` for sync and async validation
 - Built-in coercion via `v.coerce.string()`, `v.coerce.number()`, `v.coerce.boolean()`, `v.coerce.date()`, and `v.coerce.bigint()`
 - Expanded schema coverage via `v.bigint()`, `v.set()`, and `v.map()`
 - Default, fallback, preprocess, transform, branding, and runtime type-guard helpers
-- Readonly helper via `v.readonly(schema)` for type-level immutability
 - Nested global message configuration via `configure({ messages })` plus `reset()`
-- Structured errors with `ValidationError`, `Issue`, `error.flatten()`, and `error.flattenFirst()`
+- Structured errors with `ValidationError`, `Issue`, `error.flatten()`, and `flattenFirstErrors(error)`
 - Zero dependencies
 
 ## Core API
@@ -79,7 +77,6 @@ if (result.success) {
 - `v.variant(discriminator, map)`
 - `v.lazy(getter)`
 - `v.instanceof(Ctor)`
-- `v.readonly(schema)`
 - `v.never()`, `v.null()`, `v.undefined()`
 
 ### Validation flow
@@ -87,7 +84,7 @@ if (result.success) {
 - `parse(value)` throws `ValidationError` on failure
 - `safeParse(value)` returns `{ success, data | error }`
 - `parseAsync(value)` and `safeParseAsync(value)` run async refinements
-- `refineAsync()` requires the async parse methods
+- Async `check()` functions require the async parse methods
 
 ### Common modifiers
 
@@ -138,18 +135,18 @@ Payload.relaxed().parse({ id: 1, email: 'a@b.com', extra: true });
 // => { id: 1, email: 'a@b.com', extra: true }
 ```
 
-### `refine()` vs `refineAsync()`
+### `check()`
 
 ```ts
 const PasswordSchema = v
   .string()
   .min(8)
-  .refine((value) => /[A-Z]/.test(value), 'Must contain an uppercase letter');
+  .check((value) => /[A-Z]/.test(value), 'Must contain an uppercase letter');
 
 const UniqueEmailSchema = v
   .string()
   .email()
-  .refineAsync(async (value) => {
+  .check(async (value) => {
     const exists = await db.users.exists({ email: value });
 
     return !exists;
@@ -167,12 +164,12 @@ const RegistrationSchema = v
     password: v.string().min(8),
     confirmPassword: v.string(),
   })
-  .refine(({ password, confirmPassword }) => password === confirmPassword, 'Passwords must match');
+  .check(({ password, confirmPassword }) => password === confirmPassword, 'Passwords must match');
 
 const result = RegistrationSchema.safeParse(input);
 
 if (!result.success) {
-  const { fieldErrors, formErrors } = result.error.flattenFirst();
+  const { fieldErrors, formErrors } = flattenFirstErrors(result.error);
 
   console.log(fieldErrors);
   console.log(formErrors);
@@ -186,7 +183,7 @@ if (!result.success) {
 - Array methods: `min`, `max`, `length`, `nonEmpty`, `unique`
 - Object helpers: `partial`, `required`, `extend`, `pick`, `omit`, `relaxed`, `strip`
 - Tuple helpers: `rest`
-- Errors and types: `ValidationError`, `ErrorCode`, `Issue`, `ParseResult<T>`, `Messages`, `InferInput<T>`, `Infer<T>`, `InferOutput<T>`, `TypeOf<T>`
+- Errors and types: `ValidationError`, `ErrorCode`, `Issue`, `ParseResult<T>`, `Messages`, `InferInput<T>`, `Infer<T>`
 
 ## Notes
 

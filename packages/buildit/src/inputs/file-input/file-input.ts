@@ -3,9 +3,9 @@ import {
   createId,
   define,
   defineField,
-  handle,
   html,
   inject,
+  on,
   onCleanup,
   ref,
   signal,
@@ -253,7 +253,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
       });
 
       // Native input → add files
-      handle(inp, 'change', (e: Event) => {
+      on(inp, 'change', (e: Event) => {
         const input = e.target as HTMLInputElement;
 
         if (input.files?.length) addFiles(Array.from(input.files), e);
@@ -261,7 +261,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
         input.value = ''; // reset so the same file triggers change again
       });
       // Click dropzone → open file picker
-      handle(dz, 'click', (e: MouseEvent) => {
+      on(dz, 'click', (e: MouseEvent) => {
         if (e.target === inp) return;
 
         if (skipNextClick) {
@@ -273,7 +273,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
         if (!isDisabled.value) inp.click();
       });
       // Keyboard: Enter / Space → open picker
-      handle(dz, 'keydown', (e: KeyboardEvent) => {
+      on(dz, 'keydown', (e: KeyboardEvent) => {
         skipNextClick = pressControl.handleKeydown(e) && e.key === 'Enter';
       });
 

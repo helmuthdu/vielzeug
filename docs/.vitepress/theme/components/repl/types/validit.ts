@@ -41,10 +41,14 @@ declare module '@vielzeug/validit' {
   export class ValidationError extends Error {
     readonly issues: Issue[];
     flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] };
-    flattenFirst(): { fieldErrors: Record<string, string>; formErrors: string[] };
     format(): FormattedErrors;
     static is(value: unknown): value is ValidationError;
   }
+
+  export function flattenFirstErrors(error: ValidationError): {
+    fieldErrors: Record<string, string>;
+    formErrors: string[];
+  };
 
   export type ParseResult<T> =
     | { data: T; success: true }
@@ -60,21 +64,13 @@ declare module '@vielzeug/validit' {
     parseAsync(value: Input): Promise<Output>;
     safeParseAsync(value: Input): Promise<ParseResult<Output>>;
 
-    refine(check: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this;
-    refineAsync(check: (value: Output) => Promise<boolean>, message?: MessageFn<{ value: Output }>): this;
-    superRefine(
+    check(
       check: (
         value: Output,
         ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
-      ) => void,
+      ) => boolean | Issue | Issue[] | null | undefined | Promise<boolean | Issue | Issue[] | null | undefined>,
+      message?: MessageFn<{ value: Output }>,
     ): this;
-    superRefineAsync(
-      check: (
-        value: Output,
-        ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
-      ) => Promise<void>,
-    ): this;
-
     optional(): Schema<Output | undefined, Input | undefined>;
     nullable(): Schema<Output | null, Input | null>;
     nullish(): Schema<Output | null | undefined, Input | null | undefined>;
@@ -92,10 +88,8 @@ declare module '@vielzeug/validit' {
     is(value: unknown): value is Output;
   }
 
-  export type InferOutput<T> = T extends Schema<infer O, any> ? O : never;
   export type InferInput<T> = T extends Schema<any, infer I> ? I : never;
-  export type Infer<T> = InferOutput<T>;
-  export type TypeOf<T> = InferOutput<T>;
+  export type Infer<T> = T extends Schema<infer O, any> ? O : never;
 
   export type Messages = Record<string, unknown>;
   export function configure(opts: { messages?: Record<string, unknown> }): void;
@@ -131,7 +125,6 @@ declare module '@vielzeug/validit' {
 
     lazy<T>(getter: () => Schema<T>): Schema<T>;
     instanceof<T>(cls: new (...args: any[]) => T): Schema<T>;
-    readonly<T>(schema: Schema<T>): Schema<Readonly<T>>;
 
     coerce: {
       string(): Schema<string, unknown>;

@@ -80,6 +80,6 @@ const dates = map(range(0, 5), (day) => {
 
 ## See Also
 
-- [list](../array/list.md): Create more complex data structures from arrays.
+- [Sourceit Overview](/sourceit/): Build reactive paginated data sources.
 - [clamp](./clamp.md): Restrict a number to a specific range.
 - [sum](./sum.md): Calculate the total of a generated range.

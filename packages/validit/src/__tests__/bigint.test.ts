@@ -14,7 +14,7 @@ describe('BigIntSchema', () => {
 
     expect(result.success).toBe(false);
 
-    if (!result.success) expect(result.error.issues[0]!.code).toBe('invalid_bigint');
+    if (!result.success) expect(result.error.issues[0]!.code).toBe('invalid_type');
   });
 
   test('min() constraint', () => {

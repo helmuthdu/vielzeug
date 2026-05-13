@@ -1,12 +1,12 @@
-import { stash, retry } from '@vielzeug/toolkit';
-
 import type { RetryOptions } from './retry';
-import type { QueryKey, QueryState, QueryStatus, Unsubscribe } from './types';
+import type { QueryKey, QueryState, Unsubscribe } from './types';
 
-import { DEFAULT_RETRY, getRetryConfig } from './retry';
+import { DEFAULT_ATTEMPTS, runWithRetry } from './retry';
 import { stableStringify } from './serialize';
 
 const DEFAULT_GC = 5 * 60_000;
+
+type EntryStatus = 'idle' | 'success' | 'error';
 
 export type QueryFnContext = {
   key: QueryKey;
@@ -14,15 +14,13 @@ export type QueryFnContext = {
 };
 
 export type QueryOptions<T> = {
-  /** When `false` the fetch is skipped and the entry stays `'idle'`. Defaults to `true`. */
+  /** When `false` the fetch is skipped and the entry stays in its current state. Defaults to `true`. */
   enabled?: boolean;
   fn: (ctx: QueryFnContext) => Promise<T>;
   gcTime?: number;
   /** Pre-seed the cache as a successful entry when no data exists. Subject to normal staleTime checks. */
   initialData?: T | (() => T | undefined);
   key: QueryKey;
-  /** Shown as `data` while the entry is fetching. Not stored in cache. */
-  placeholderData?: T | (() => T | undefined);
   staleTime?: number;
 } & RetryOptions;
 
@@ -39,93 +37,186 @@ export type QueryClientOptions = {
   staleTime?: number;
 } & RetryOptions;
 
+type QueryObserver<T, S> = {
+  listener: (state: QueryState<S>) => void;
+  placeholderData?: S | (() => S | undefined);
+  previous?: QueryState<S>;
+  select?: (data: T | undefined) => S | undefined;
+};
+
 type CacheEntry<T = unknown> = {
   data: T | undefined;
   error: Error | null;
   fn: ((ctx: QueryFnContext) => Promise<T>) | undefined;
   gcTime: number;
+  hash: string;
   inflight: { controller: AbortController; promise: Promise<T> } | null;
+  isFetching: boolean;
   key: QueryKey;
-  observers: Set<(state: QueryState<T>) => void>;
-  placeholderData: T | undefined;
+  observers: Set<QueryObserver<T, unknown>>;
   staleTime: number;
-  status: QueryStatus;
-  updatedAt: number;
+  status: EntryStatus;
+  updatedAt: number | undefined;
 };
+
+function resolveValue<T>(v: T | (() => T | undefined) | undefined): T | undefined {
+  return typeof v === 'function' ? (v as () => T | undefined)() : v;
+}
 
 export function createQuery(opts?: QueryClientOptions) {
   const staleTimeDefault = opts?.staleTime ?? 0;
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
-  const retryDefault = opts?.retry ?? DEFAULT_RETRY;
+  const attemptsDefault = opts?.attempts ?? DEFAULT_ATTEMPTS;
   const retryDelayDefault = opts?.retryDelay;
   const shouldRetryDefault = opts?.shouldRetry;
+
   let disposed = false;
 
-  const cache = stash<CacheEntry, QueryKey>({
-    hash: stableStringify,
-    onError: (error) => {
-      const name = error instanceof Error ? error.name : undefined;
+  const entries = new Map<string, CacheEntry>();
+  const gcTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-      if (name === 'AbortError') {
-        return;
-      }
+  function toBaseState<T>(entry: CacheEntry<T>): QueryState<T> {
+    if (entry.status === 'success') {
+      return {
+        data: entry.data as T,
+        error: null,
+        isFetching: entry.isFetching,
+        status: 'success',
+        updatedAt: entry.updatedAt as number,
+      };
+    }
 
-      console.error('[fetchit] Query cache GC scheduler error', error);
-    },
-  });
+    if (entry.status === 'error') {
+      return {
+        data: entry.data,
+        error: entry.error as Error,
+        isFetching: entry.isFetching,
+        status: 'error',
+        updatedAt: entry.updatedAt as number,
+      };
+    }
 
-  function toState<T>(entry: CacheEntry<T>): QueryState<T> {
+    if (entry.isFetching) {
+      return {
+        data: undefined,
+        error: null,
+        isFetching: true,
+        status: 'pending',
+        updatedAt: undefined,
+      };
+    }
+
     return {
-      data: entry.data !== undefined ? entry.data : entry.placeholderData,
-      error: entry.error,
-      status: entry.status,
-      updatedAt: entry.updatedAt,
+      data: undefined,
+      error: null,
+      isFetching: false,
+      status: 'idle',
+      updatedAt: undefined,
     };
   }
 
-  function ensureEntry<T>(key: QueryKey, gcTime = gcTimeDefault): CacheEntry<T> {
-    let e = cache.get(key) as CacheEntry<T> | undefined;
+  function toObserverState<T, S>(entry: CacheEntry<T>, observer: QueryObserver<T, S>): QueryState<S> {
+    const base = toBaseState(entry);
+    const selected = observer.select ? observer.select(base.data as T | undefined) : (base.data as S | undefined);
+    const data =
+      selected !== undefined || base.status !== 'pending'
+        ? selected
+        : resolveValue(observer.placeholderData as S | (() => S | undefined) | undefined);
 
-    if (!e) {
-      e = {
-        data: undefined,
-        error: null,
-        fn: undefined,
-        gcTime,
-        inflight: null,
-        key,
-        observers: new Set(),
-        placeholderData: undefined,
-        staleTime: staleTimeDefault,
-        status: 'idle',
-        updatedAt: 0,
-      };
-      cache.set(key, e as CacheEntry<unknown>);
-    }
-
-    return e;
+    return { ...base, data } as QueryState<S>;
   }
 
   function notify<T>(entry: CacheEntry<T>) {
-    const state = toState(entry);
+    for (const observer of entry.observers) {
+      const typed = observer as QueryObserver<T, unknown>;
+      const next = toObserverState(entry, typed);
+      const prev = typed.previous;
 
-    entry.observers.forEach((listener) => listener(state));
+      if (
+        prev &&
+        prev.status === next.status &&
+        prev.isFetching === next.isFetching &&
+        prev.updatedAt === next.updatedAt &&
+        Object.is(prev.error, next.error) &&
+        Object.is(prev.data, next.data)
+      ) {
+        continue;
+      }
+
+      typed.previous = next;
+      typed.listener(next);
+    }
+  }
+
+  function getHash(key: QueryKey): string {
+    return stableStringify(key);
+  }
+
+  function cancelGc(hash: string) {
+    const timer = gcTimers.get(hash);
+
+    if (!timer) return;
+
+    clearTimeout(timer);
+    gcTimers.delete(hash);
   }
 
   function scheduleGc<T>(entry: CacheEntry<T>) {
-    cache.cancelGc(entry.key);
+    cancelGc(entry.hash);
 
-    // Keep observed entries alive. GC is re-armed when the last observer unsubscribes.
     if (entry.observers.size > 0) {
       return;
     }
 
-    cache.scheduleGc(entry.key, entry.gcTime);
+    if (entry.gcTime === 0) {
+      entries.delete(entry.hash);
+
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const current = entries.get(entry.hash);
+
+      if (!current || current.observers.size > 0 || current.isFetching) {
+        return;
+      }
+
+      entries.delete(entry.hash);
+      gcTimers.delete(entry.hash);
+    }, entry.gcTime);
+
+    gcTimers.set(entry.hash, timer);
   }
 
-  function cleanupEntry(entry: CacheEntry) {
+  function ensureEntry<T>(key: QueryKey, gcTime = gcTimeDefault): CacheEntry<T> {
+    const hash = getHash(key);
+    let entry = entries.get(hash) as CacheEntry<T> | undefined;
+
+    if (!entry) {
+      entry = {
+        data: undefined,
+        error: null,
+        fn: undefined,
+        gcTime,
+        hash,
+        inflight: null,
+        isFetching: false,
+        key,
+        observers: new Set(),
+        staleTime: staleTimeDefault,
+        status: 'idle',
+        updatedAt: undefined,
+      };
+      entries.set(hash, entry as CacheEntry<unknown>);
+    }
+
+    return entry;
+  }
+
+  function deleteEntry<T>(entry: CacheEntry<T>) {
     entry.inflight?.controller.abort();
-    cache.cancelGc(entry.key);
+    cancelGc(entry.hash);
+    entries.delete(entry.hash);
   }
 
   function isKeyOrPrefix(entryKey: QueryKey, prefixHash: readonly string[]): boolean {
@@ -134,21 +225,16 @@ export function createQuery(opts?: QueryClientOptions) {
     return prefixHash.every((seg, i) => seg === stableStringify(entryKey[i]));
   }
 
-  function resolveValue<T>(v: T | (() => T | undefined) | undefined): T | undefined {
-    return typeof v === 'function' ? (v as () => T | undefined)() : v;
-  }
-
   async function fetchQuery<T>(options: QueryOptions<T>): Promise<T> {
     if (disposed) throw new Error('[fetchit] QueryClient has been disposed');
 
     const {
+      attempts = attemptsDefault,
       enabled = true,
       fn: queryFn,
       gcTime = gcTimeDefault,
       initialData,
       key: queryKey,
-      placeholderData,
-      retry: retryCount = retryDefault,
       retryDelay = retryDelayDefault,
       shouldRetry = shouldRetryDefault,
       staleTime = staleTimeDefault,
@@ -160,51 +246,58 @@ export function createQuery(opts?: QueryClientOptions) {
     entry.fn = queryFn;
     entry.staleTime = staleTime;
 
-    // Seed cache from initialData if no data exists yet.
     if (initialData !== undefined && entry.data === undefined) {
       const initVal = resolveValue(initialData);
 
       if (initVal !== undefined) {
         entry.data = initVal;
+        entry.error = null;
         entry.status = 'success';
         entry.updatedAt = Date.now();
       }
     }
 
-    // Attach placeholderData for visual fill while pending.
-    if (placeholderData !== undefined) {
-      entry.placeholderData = resolveValue(placeholderData);
-    }
-
-    // Skip fetch when explicitly disabled.
     if (!enabled) {
       return entry.data as T;
     }
 
-    if (entry.status === 'success' && Date.now() - entry.updatedAt < staleTime) {
+    if (
+      entry.status === 'success' &&
+      entry.updatedAt !== undefined &&
+      Date.now() - entry.updatedAt < staleTime &&
+      !entry.isFetching
+    ) {
       return entry.data as T;
     }
 
     if (entry.inflight) return entry.inflight.promise;
 
     const controller = new AbortController();
+    const prev = {
+      data: entry.data,
+      error: entry.error,
+      status: entry.status,
+      updatedAt: entry.updatedAt,
+    };
 
-    entry.status = 'pending';
+    entry.isFetching = true;
     notify(entry);
 
-    const retryOpts = getRetryConfig(retryCount, retryDelay, shouldRetry);
-
-    const p = (async () => {
+    const promise = (async () => {
       try {
-        const data = await retry(() => queryFn({ key: queryKey, signal: controller.signal }), {
-          ...retryOpts,
-          signal: controller.signal,
-        });
+        const data = await runWithRetry(
+          () => queryFn({ key: queryKey, signal: controller.signal }),
+          attempts,
+          retryDelay,
+          shouldRetry,
+          controller.signal,
+        );
 
         entry.data = data;
+        entry.error = null;
         entry.status = 'success';
         entry.updatedAt = Date.now();
-        entry.error = null;
+        entry.isFetching = false;
         entry.inflight = null;
         scheduleGc(entry);
         notify(entry);
@@ -214,65 +307,68 @@ export function createQuery(opts?: QueryClientOptions) {
         const error = err instanceof Error ? err : new Error(String(err));
         const isAborted = controller.signal.aborted || error.name === 'AbortError';
 
-        // cancel() already cleared inflight and notified listeners.
-        if (isAborted && entry.inflight === null) throw error;
-
         if (isAborted) {
-          entry.status = entry.data !== undefined ? 'success' : 'idle';
-          entry.error = null;
-
-          if (entry.status === 'success') {
-            scheduleGc(entry);
-          } else if (entry.observers.size === 0) {
-            cache.delete(queryKey);
-          }
+          entry.data = prev.data;
+          entry.error = prev.error;
+          entry.status = prev.status;
+          entry.updatedAt = prev.updatedAt;
         } else {
-          entry.status = 'error';
           entry.error = error;
+          entry.status = 'error';
           entry.updatedAt = Date.now();
-          entry.gcTime = gcTime;
-          scheduleGc(entry);
         }
 
+        entry.isFetching = false;
         entry.inflight = null;
-        notify(entry);
+
+        if (entry.observers.size === 0 && entry.status === 'idle' && entry.data === undefined) {
+          deleteEntry(entry);
+        } else {
+          scheduleGc(entry);
+          notify(entry);
+        }
 
         throw error;
       }
     })();
 
-    entry.inflight = { controller, promise: p };
+    entry.inflight = { controller, promise };
 
-    return p;
+    return promise;
   }
 
-  function evictEntry(entry: CacheEntry) {
-    cleanupEntry(entry);
+  function evictEntry<T>(entry: CacheEntry<T>) {
+    entry.inflight?.controller.abort();
 
     if (entry.observers.size > 0) {
+      entry.inflight = null;
+      entry.isFetching = false;
       entry.status = 'idle';
       entry.data = undefined;
       entry.error = null;
+      entry.updatedAt = undefined;
       notify(entry);
-    } else {
-      cache.delete(entry.key);
+
+      return;
     }
+
+    deleteEntry(entry);
   }
 
   function invalidate(key: QueryKey) {
     const prefixHash = key.map(stableStringify);
 
-    for (const [, entry] of cache.entries()) {
-      if (isKeyOrPrefix(entry.key, prefixHash)) evictEntry(entry);
+    for (const [, entry] of entries) {
+      if (isKeyOrPrefix(entry.key, prefixHash)) {
+        evictEntry(entry);
+      }
     }
   }
 
   function clearCache() {
-    for (const [, entry] of cache.entries()) {
+    for (const [, entry] of entries) {
       evictEntry(entry);
     }
-    // evictEntry intentionally keeps entries with active observers in the cache
-    // (reset to idle). Do not call cache.clear() here — it would orphan live subscriptions.
   }
 
   function set<T>(key: QueryKey, data: T, opts?: { gcTime?: number }): void;
@@ -283,70 +379,50 @@ export function createQuery(opts?: QueryClientOptions) {
 
     entry.data =
       typeof dataOrUpdater === 'function' ? (dataOrUpdater as (old: T | undefined) => T)(entry.data) : dataOrUpdater;
-    entry.updatedAt = Date.now();
+    entry.error = null;
     entry.status = 'success';
+    entry.updatedAt = Date.now();
     entry.gcTime = gcTime;
     scheduleGc(entry);
     notify(entry);
   }
 
   function get<T>(key: QueryKey): T | undefined {
-    return cache.get(key)?.data as T | undefined;
+    return (entries.get(getHash(key))?.data as T | undefined) ?? undefined;
   }
 
   function getState<T>(key: QueryKey): QueryState<T> | null {
-    const entry = cache.get(key) as CacheEntry<T> | undefined;
+    const entry = entries.get(getHash(key)) as CacheEntry<T> | undefined;
 
-    return entry ? toState(entry) : null;
+    if (!entry) return null;
+
+    return toBaseState(entry);
   }
 
   function subscribe<T = unknown, S = T>(
     key: QueryKey,
     listener: (state: QueryState<S>) => void,
-    opts?: { select?: (data: T | undefined) => S | undefined },
+    opts?: { placeholderData?: S | (() => S | undefined); select?: (data: T | undefined) => S | undefined },
   ): Unsubscribe {
     const entry = ensureEntry<T>(key);
-    const select = opts?.select;
+    const observer: QueryObserver<T, S> = {
+      listener,
+      placeholderData: opts?.placeholderData,
+      select: opts?.select,
+    };
 
-    cache.cancelGc(key);
+    cancelGc(entry.hash);
 
-    let internalListener: (state: QueryState<T>) => void;
+    observer.previous = toObserverState(entry, observer);
+    listener(observer.previous);
 
-    if (select) {
-      // Wrap listener: only fire when the selected value, status, or error changes.
-      let prevSelected: S | undefined = select(entry.data);
-      let prevStatus = entry.status;
-      let prevError = entry.error;
-
-      internalListener = (state: QueryState<T>) => {
-        const selected = select(state.data);
-
-        if (Object.is(selected, prevSelected) && state.status === prevStatus && Object.is(state.error, prevError)) {
-          return;
-        }
-
-        prevSelected = selected;
-        prevStatus = state.status;
-        prevError = state.error;
-        listener({ ...state, data: selected } as unknown as QueryState<S>);
-      };
-
-      // Fire immediately with the initial selected state.
-      const init = toState(entry);
-
-      listener({ ...init, data: select(init.data) } as unknown as QueryState<S>);
-    } else {
-      internalListener = listener as unknown as (state: QueryState<T>) => void;
-      listener(toState(entry) as unknown as QueryState<S>);
-    }
-
-    entry.observers.add(internalListener as unknown as (state: QueryState<unknown>) => void);
+    entry.observers.add(observer as QueryObserver<T, unknown>);
 
     return () => {
-      entry.observers.delete(internalListener as unknown as (state: QueryState<unknown>) => void);
+      entry.observers.delete(observer as QueryObserver<T, unknown>);
 
-      if (entry.observers.size === 0 && entry.status === 'idle') {
-        cache.delete(key);
+      if (entry.observers.size === 0 && entry.status === 'idle' && !entry.isFetching && entry.data === undefined) {
+        deleteEntry(entry);
       } else if (entry.observers.size === 0) {
         scheduleGc(entry);
       }
@@ -354,24 +430,11 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function cancel(key: QueryKey) {
-    const entry = cache.get(key);
+    const entry = entries.get(getHash(key));
 
-    if (!entry) return;
+    if (!entry?.inflight) return;
 
-    entry.inflight?.controller.abort();
-    entry.inflight = null;
-
-    if (entry.status === 'pending') {
-      entry.status = entry.data !== undefined ? 'success' : 'idle';
-
-      if (entry.status === 'success') {
-        scheduleGc(entry);
-      }
-
-      notify(entry);
-
-      if (entry.status === 'idle' && entry.observers.size === 0) cache.delete(key);
-    }
+    entry.inflight.controller.abort();
   }
 
   async function prefetchQuery<T>(options: PrefetchOptions<T>): Promise<void> {
@@ -385,21 +448,24 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function refetchStaleEntries() {
-    for (const [, entry] of cache.entries()) {
+    for (const [, entry] of entries) {
       if (
         entry.observers.size > 0 &&
         entry.fn !== undefined &&
+        !entry.isFetching &&
         entry.status === 'success' &&
+        entry.updatedAt !== undefined &&
         Date.now() - entry.updatedAt >= entry.staleTime
       ) {
-        fetchQuery({ fn: entry.fn as (ctx: QueryFnContext) => Promise<unknown>, key: entry.key, staleTime: 0 }).catch(
-          () => {},
-        );
+        fetchQuery({
+          fn: entry.fn as (ctx: QueryFnContext) => Promise<unknown>,
+          key: entry.key,
+          staleTime: 0,
+        }).catch(() => {});
       }
     }
   }
 
-  // refetchOnFocus / refetchOnReconnect event wiring.
   let focusHandler: (() => void) | null = null;
   let reconnectHandler: (() => void) | null = null;
 
@@ -425,10 +491,16 @@ export function createQuery(opts?: QueryClientOptions) {
 
       if (reconnectHandler) window.removeEventListener('online', reconnectHandler);
 
-      for (const [, entry] of cache.entries()) {
-        cleanupEntry(entry);
+      for (const [, entry] of entries) {
+        entry.inflight?.controller.abort();
       }
-      cache.clear();
+
+      for (const [, timer] of gcTimers) {
+        clearTimeout(timer);
+      }
+
+      gcTimers.clear();
+      entries.clear();
     },
     get disposed() {
       return disposed;
@@ -440,9 +512,6 @@ export function createQuery(opts?: QueryClientOptions) {
     query: fetchQuery,
     set,
     subscribe,
-    [Symbol.dispose]() {
-      this.dispose();
-    },
   };
 }
 

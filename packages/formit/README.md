@@ -7,11 +7,10 @@
 `@vielzeug/formit` gives you a typed form controller with:
 
 - typed `get` / `set` for dot-notation field paths
-- unified validation entrypoint: `validate()`, `validate('touched')`, `validate(fields)`
+- explicit validation methods: `validateAll()`, `validateTouched()`, `validateFields(fields)`
 - global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
 - dirty/touched/error tracking
 - `submit(onValid, onInvalid?)` orchestration with optional error callback
-- `watch(name, cb)` for live field value streaming
 - form and field subscriptions
 
 ## Installation
@@ -26,7 +25,7 @@ pnpm add @vielzeug/formit
 
 | Entry | Purpose |
 | --- | --- |
-| `@vielzeug/formit` | `createForm`, `fromSchema`, `toFormData`, types, and error classes |
+| `@vielzeug/formit` | `createForm`, `schemaValidator`, `toFormData`, types, and error classes |
 
 ## Quick Start
 
@@ -43,7 +42,7 @@ const form = createForm({
 
 form.set('email', 'alice@example.com');
 
-const result = await form.validate();
+const result = await form.validateAll();
 console.log(result.valid, result.errors);
 
 // Option A — catch-based (throws FormValidationError on invalid)
@@ -73,26 +72,25 @@ await form.submit(
 - Typed field paths (`FlatKeyOf`) and path value inference (`TypeAtPath`)
 - Plain-object flatten/unflatten for nested forms
 - Field validators (`validators`) and form validator (`validator`)
-- Unified validation API: `validate()` / `validate('touched')` / `validate(fields)`
+- Schema integration via `schemaValidator(schema)` for `safeParse`-compatible validators
+- Explicit validation API: `validateAll()` / `validateTouched()` / `validateFields(fields)`
 - Single-field validation with `validateField(name)`
 - Global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
 - Deterministic submit flow: touch-all + validate-all before handler (`SubmitError` on overlap)
 - Optional `onInvalid` callback in `submit(onValid, onInvalid?)` — no need to catch
-- `watch(name, cb, options?)` — live value streaming without subscription boilerplate
 - `removeField(name)` — cleanly drops value, state, and validator for conditional fields
 - Validation failure signaling via `FormValidationError`
-- Explicit subscriptions: `subscribeForm()` and `subscribeField()`
+- Explicit synchronous subscriptions: `subscribeForm()` and `subscribeField()`
 - Baseline-safe reset model: `reset()` and `replace(values)`
-- `bind()` helper with live getters and value-based `onChange(value)`
+- `bind()` helper for vanilla DOM integration with live getters and value-based `onChange(value)`
 - Array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
-- Explicit error map controls: `setError`, `mergeErrors`, `replaceErrors`, `clearError`
+- Explicit error map controls: `setError`, `setErrors`
+- Explicit touched controls: `touch(name)`, `untouch(name)`, `touchAll()`, `untouchAll()`
 - Standalone `toFormData(values)`
-- Schema adapter helper: `fromSchema(schema)`
 
 ## Core API
 
 - `createForm(init?)`
-- `fromSchema(schema)`
 - `toFormData(values)`
 - `FormValidationError`
 - `SubmitError`

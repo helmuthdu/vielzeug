@@ -1,6 +1,4 @@
 import {
-  DEFAULT_ESTIMATE_SIZE,
-  DEFAULT_OVERSCAN,
   type Overscan,
   type ScrollToIndexOptions,
   type VirtualItem,
@@ -9,6 +7,9 @@ import {
 } from '../virtualit';
 
 export * from '../virtualit';
+
+const DEFAULT_ESTIMATE_SIZE = 36;
+const DEFAULT_OVERSCAN = 3;
 
 export type DomVirtualListRenderArgs<T> = {
   items: T[];
@@ -21,7 +22,6 @@ export type DomVirtualListOptions<T> = {
   clear?: (listEl: HTMLElement) => void;
   estimateSize: number | ((index: number, item: T) => number);
   gap?: number;
-  getItemKey?: (item: T, index: number) => number | string;
   getListElement: () => HTMLElement | null;
   getScrollElement: () => HTMLElement | Window | null;
   horizontal?: boolean;
@@ -29,15 +29,11 @@ export type DomVirtualListOptions<T> = {
   render: (args: DomVirtualListRenderArgs<T>) => void;
 };
 
-export type DomVirtualListSetItemsOptions = {
-  remeasure?: boolean;
-};
-
 export type DomVirtualListController<T> = {
   destroy: () => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
   setActive: (active: boolean) => void;
-  setItems: (items: T[], options?: DomVirtualListSetItemsOptions) => void;
+  setItems: (items: T[]) => void;
 };
 
 export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomVirtualListController<T> {
@@ -56,14 +52,6 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
 
     return options.estimateSize(index, item);
   };
-
-  const getCoreItemKey = options.getItemKey
-    ? (index: number) => {
-        const item = currentItems[index];
-
-        return item ? options.getItemKey!(item, index) : index;
-      }
-    : undefined;
 
   const clearAndReset = () => {
     if (!listElRef) return;
@@ -101,7 +89,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     });
   };
 
-  const syncVirtualizer = (remeasure: boolean) => {
+  const syncVirtualizer = () => {
     const nextScroll = options.getScrollElement();
     const nextList = options.getListElement();
 
@@ -126,7 +114,6 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
         count: currentItems.length,
         estimateSize: resolveEstimate,
         gap: options.gap,
-        getItemKey: getCoreItemKey,
         horizontal: options.horizontal,
         onChange: (virtualItems, totalSize) => renderFromChange(virtualItems, totalSize),
         overscan: options.overscan ?? { end: DEFAULT_OVERSCAN, start: DEFAULT_OVERSCAN },
@@ -140,13 +127,12 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
 
     virtualizer.update({
       count: currentItems.length,
-      estimateSize: (index) => resolveEstimate(index),
-      getItemKey: getCoreItemKey,
-      horizontal: options.horizontal,
+      estimateSize: resolveEstimate,
+      gap: options.gap,
       overscan: options.overscan,
     });
 
-    if (remeasure) virtualizer.invalidate();
+    virtualizer.invalidate();
   };
 
   return {
@@ -160,11 +146,11 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     },
     setActive(active) {
       isActive = active;
-      syncVirtualizer(false);
+      syncVirtualizer();
     },
-    setItems(items, setItemsOptions = {}) {
+    setItems(items) {
       currentItems = items;
-      syncVirtualizer(!!setItemsOptions.remeasure);
+      syncVirtualizer();
     },
   };
 }

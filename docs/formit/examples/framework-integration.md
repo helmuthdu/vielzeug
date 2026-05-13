@@ -15,6 +15,8 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 Complete examples showing how to integrate Formit with different frameworks using custom hooks/composables for reusability.
 
+In component frameworks, drive re-renders from `subscribeForm()` or `subscribeField()` and use `form.field(...)`, `form.set(...)`, and `form.touch(...)` inside the view layer. `bind()` is intended for vanilla DOM integration.
+
 ::: code-group
 
 ```tsx [React Hook]
@@ -43,6 +45,9 @@ function LoginForm() {
     },
   });
 
+  const email = form.field('email');
+  const password = form.field('password');
+
   return (
     <form
       onSubmit={(e) => {
@@ -60,9 +65,9 @@ function LoginForm() {
         <input
           type="email"
           placeholder="Email"
-          value={String(form.bind('email').value ?? '')}
-          onBlur={form.bind('email').onBlur}
-          onChange={(e) => form.bind('email').onChange(e.target.value)}
+          value={String(email.value ?? '')}
+          onBlur={() => form.touch('email')}
+          onChange={(e) => form.set('email', e.target.value)}
         />
         {state.errors['email'] && <span className="error">{state.errors['email']}</span>}
       </div>
@@ -71,9 +76,9 @@ function LoginForm() {
         <input
           type="password"
           placeholder="Password"
-          value={String(form.bind('password').value ?? '')}
-          onBlur={form.bind('password').onBlur}
-          onChange={(e) => form.bind('password').onChange(e.target.value)}
+          value={String(password.value ?? '')}
+          onBlur={() => form.touch('password')}
+          onChange={(e) => form.set('password', e.target.value)}
         />
         {state.errors['password'] && <span className="error">{state.errors['password']}</span>}
       </div>
@@ -137,9 +142,9 @@ const handleSubmit = async () => {
       <input
         type="email"
         placeholder="Email"
-        :value="String(form.bind('email').value ?? '')"
-        @blur="form.bind('email').onBlur()"
-        @input="form.bind('email').onChange(($event.target as HTMLInputElement).value)"
+        :value="String(form.field('email').value ?? '')"
+        @blur="form.touch('email')"
+        @input="form.set('email', ($event.target as HTMLInputElement).value)"
       />
       <span v-if="state.errors['email']" class="error">
         {{ state.errors['email'] }}
@@ -150,9 +155,9 @@ const handleSubmit = async () => {
       <input
         type="password"
         placeholder="Password"
-        :value="String(form.bind('password').value ?? '')"
-        @blur="form.bind('password').onBlur()"
-        @input="form.bind('password').onChange(($event.target as HTMLInputElement).value)"
+        :value="String(form.field('password').value ?? '')"
+        @blur="form.touch('password')"
+        @input="form.set('password', ($event.target as HTMLInputElement).value)"
       />
       <span v-if="state.errors['password']" class="error">
         {{ state.errors['password'] }}
@@ -206,9 +211,9 @@ async function handleSubmit() {
     <input
       type="email"
       placeholder="Email"
-      value={String(form.bind('email').value ?? '')}
-      on:blur={form.bind('email').onBlur}
-      on:input={(event) => form.bind('email').onChange((event.currentTarget as HTMLInputElement).value)}
+      value={String(form.field('email').value ?? '')}
+      on:blur={() => form.touch('email')}
+      on:input={(event) => form.set('email', (event.currentTarget as HTMLInputElement).value)}
     />
     {#if $state.errors['email']}
       <span class="error">{$state.errors['email']}</span>
@@ -219,9 +224,9 @@ async function handleSubmit() {
     <input
       type="password"
       placeholder="Password"
-      value={String(form.bind('password').value ?? '')}
-      on:blur={form.bind('password').onBlur}
-      on:input={(event) => form.bind('password').onChange((event.currentTarget as HTMLInputElement).value)}
+      value={String(form.field('password').value ?? '')}
+      on:blur={() => form.touch('password')}
+      on:input={(event) => form.set('password', (event.currentTarget as HTMLInputElement).value)}
     />
     {#if $state.errors['password']}
       <span class="error">{$state.errors['password']}</span>

@@ -54,7 +54,7 @@ const health = await retry(() => fetch('/api/health').then((r) => r.json()), {
 
 const cfg = deepMerge({ api: { host: 'localhost' } }, { api: { port: 3000 } });
 
-const doubleAll = partial((values: number[], factor: number) => values.map((n) => n * factor), 2);
+const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
 const doubled = doubleAll([1, 2, 3]);
 
 if (is.object(cfg)) {
@@ -65,7 +65,7 @@ if (is.object(cfg)) {
 ## Feature Areas
 
 - **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `sample`, `take/drop`, `union/intersection`, `zip/unzip`, and more
-- **Async**: `attempt`, `memoizeAsync`, `abortable`, `timeout`, `parallel`, `queue`, `Scheduler`, `retry`, `waitFor`
+- **Async**: `attempt`, `predict`, `abortable`, `timeout`, `parallel`, `queue`, `Scheduler`, `retry`, `waitFor`
 - **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `entries`, `fromEntries`, `keys`, `values`, `deepClone`, `deepMerge`, `shallowMerge`, `defaults`, plus core APIs
 - **Function**: `partial`, `negate`, `and/or/not`, `tap`, `identity`, `constant`, composition, memoization, and rate limiting
 - **Math**: `lerp`, `normalize`, `mod`, `gcd/lcm`, `variance`, `standardDeviation`, plus existing numeric helpers

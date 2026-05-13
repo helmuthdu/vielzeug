@@ -12,7 +12,7 @@ Start with the [Overview](./index.md), then use this page for the day-to-day API
 ## Create a Router
 
 ```ts
-import { createRouter, redirect } from '@vielzeug/routeit';
+import { createRouter, redirectTo } from '@vielzeug/routeit';
 
 const routes = {
   home: {
@@ -53,6 +53,7 @@ const routes = {
 const router = createRouter({
   base: '/app',
   middleware: [logger],
+  onError: (error, context) => reportError(error, context.source),
   routes,
   viewTransition: true,
 });
@@ -131,7 +132,7 @@ userDetail: {
 Middleware wraps the handler using the familiar `async (ctx, next) => { ... }` shape.
 
 ```ts
-const requireAuth = redirect({ name: 'login' }, { replace: true });
+const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 
 const loadCurrentUser = async (ctx, next) => {
   ctx.locals.user = await fetchCurrentUser();
@@ -156,7 +157,7 @@ handler
 Use middleware for auth checks, redirects, analytics, and boundaries.
 
 ```ts
-const requireAuth = redirect({ name: 'login' }, { replace: true });
+const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 ```
 
 For permanent URL aliases, use the declarative `redirect` field instead of middleware:
@@ -313,10 +314,11 @@ router.url('userDetail', { id: '42' });
 router.url('userDetail', { id: '42' }, { tab: 'profile' });
 
 router.isActive('userDetail');
-router.isActive('users', false);
+router.isActive('users');
+router.isActive('users', { exact: true });
 ```
 
-`isActive(name, false)` is useful for parent navigation items.
+`isActive(name)` is useful for parent navigation items.
 
 ## Resolve Without Navigating
 
@@ -359,10 +361,10 @@ Provide a `scroll` callback to control scroll position after each navigation:
 const router = createRouter({
   routes,
   scroll: (to, from) => {
-    // Return null to scroll to top
+    // Return 'top' to scroll to top
     // Return { x, y } for a specific position
-    // Return undefined to do nothing
-    return null;
+    // Return 'preserve' to do nothing
+    return 'top';
   },
 });
 ```
@@ -378,7 +380,7 @@ router.subscribe((state) => {
 
 const router = createRouter({
   routes,
-  scroll: (to, _from) => scrollPositions.get(to.location.pathname) ?? null,
+  scroll: (to, _from) => scrollPositions.get(to.location.pathname) ?? 'top',
 });
 ```
 

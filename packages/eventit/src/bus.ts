@@ -9,6 +9,7 @@ export class BusDisposedError extends Error {
 
 export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   const subs = new Map<string, Set<Listener<unknown>>>();
+  const unsubscribes = new Map<string, Set<() => void>>();
   const disposeController = new AbortController();
   const noop = () => {};
 
@@ -28,6 +29,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     }
 
     set.add(l);
+
     function unsub() {
       const s = subs.get(event);
 
@@ -36,7 +38,26 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
       if (s?.size === 0) subs.delete(event);
 
       signal.removeEventListener('abort', unsub);
+
+      // Clean up from unsubscribes tracking
+      const unsubSet = unsubscribes.get(event);
+
+      if (unsubSet) {
+        unsubSet.delete(unsub);
+
+        if (unsubSet.size === 0) unsubscribes.delete(event);
+      }
     }
+
+    // Track unsubscribe for cleanup in removeAllListeners
+    let unsubSet = unsubscribes.get(event);
+
+    if (!unsubSet) {
+      unsubSet = new Set();
+      unsubscribes.set(event, unsubSet);
+    }
+
+    unsubSet.add(unsub);
     signal.addEventListener('abort', unsub, { once: true });
 
     return unsub;
@@ -71,22 +92,39 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
 
     return new Promise<T[K]>((resolve, reject) => {
-      onceWithSignal(event, (payload) => resolve(payload), activeSignal);
+      function onAbort() {
+        reject(activeSignal.reason);
+      }
 
-      activeSignal.addEventListener('abort', () => reject(activeSignal.reason), { once: true });
+      onceWithSignal(
+        event,
+        (payload) => {
+          activeSignal.removeEventListener('abort', onAbort);
+          resolve(payload);
+        },
+        activeSignal,
+      );
+
+      activeSignal.addEventListener('abort', onAbort, { once: true });
     });
   }
 
-  async function* events<K extends EventKey<T>>(event: K, signal?: AbortSignal): AsyncGenerator<T[K]> {
+  async function* events<K extends EventKey<T>>(
+    event: K,
+    options?: { maxBuffer?: number; signal?: AbortSignal },
+  ): AsyncGenerator<T[K]> {
     const queue: T[K][] = [];
     let wake: (() => void) | undefined;
-    const activeSignal = mergeSignal(signal);
+    const activeSignal = mergeSignal(options?.signal);
+    const maxBuffer = options?.maxBuffer ?? Infinity;
 
     if (activeSignal.aborted) return;
 
     const unsub = onWithSignal(
       event,
       (payload) => {
+        if (queue.length >= maxBuffer) queue.shift(); // drop oldest if buffer full
+
         queue.push(payload);
         wake?.();
       },
@@ -119,11 +157,12 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void {
     const payload = (args as unknown[])[0];
 
+    // Fire dispatch hook on every emit
+    options?.onDispatch?.(event as string, payload);
+
     const set = subs.get(event);
 
     if (!set?.size) return;
-
-    options?.onDispatch?.(event, payload as T[K]);
 
     for (const listener of [...set]) {
       try {
@@ -147,8 +186,23 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
   function removeAllListeners(event?: EventKey<T>): void {
     if (event !== undefined) {
+      // Call all unsubscribes for the specific event to clean up signal listeners
+      const unsubSet = unsubscribes.get(event);
+
+      if (unsubSet) {
+        for (const unsub of unsubSet) unsub();
+
+        unsubscribes.delete(event);
+      }
+
       subs.delete(event);
     } else {
+      // Call all unsubscribes for all events
+      for (const unsubSet of unsubscribes.values()) {
+        for (const unsub of unsubSet) unsub();
+      }
+
+      unsubscribes.clear();
       subs.clear();
     }
   }
@@ -157,7 +211,10 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     return [...subs.keys()] as EventKey<T>[];
   }
 
-  function waitAny<K extends readonly EventKey<T>[]>(eventList: K, signal?: AbortSignal): Promise<WaitAnyResult<T, K>> {
+  function waitAny<K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
+    eventList: K,
+    signal?: AbortSignal,
+  ): Promise<WaitAnyResult<T, K>> {
     const activeSignal = mergeSignal(signal);
 
     if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
@@ -166,12 +223,17 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
       const raceController = new AbortController();
       const raceSignal = AbortSignal.any([activeSignal, raceController.signal]);
 
-      activeSignal.addEventListener('abort', () => reject(activeSignal.reason), { once: true });
+      function onAbort() {
+        reject(activeSignal.reason);
+      }
+
+      activeSignal.addEventListener('abort', onAbort, { once: true });
 
       for (const event of eventList) {
         onceWithSignal(
           event as EventKey<T>,
           (payload) => {
+            activeSignal.removeEventListener('abort', onAbort);
             raceController.abort();
             resolve({ event, payload } as WaitAnyResult<T, K>);
           },
@@ -186,6 +248,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
 
     disposeController.abort(new BusDisposedError());
     subs.clear();
+    unsubscribes.clear();
   }
 
   return {

@@ -18,7 +18,7 @@ import { Logit } from '@vielzeug/logit';
 
 const isProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
 
-Logit.setConfig({
+export const appLog = Logit.child({
   logLevel: isProd ? 'warn' : 'debug',
   timestamp: true,
   variant: 'symbol',
@@ -33,7 +33,7 @@ Logit.setConfig({
           });
         },
       }
-    : {},
+    : undefined,
 });
 ```
 

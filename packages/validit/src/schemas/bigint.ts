@@ -1,103 +1,137 @@
 import type { MessageFn } from '../core';
 
-import { ErrorCode, Schema } from '../core';
-import { createConstraintValidator } from './constraint-factories';
+import { ErrorCode, resolveMessage, Schema } from '../core';
+import { _messages } from '../messages';
 
 export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   constructor() {
     super([
       (value, path) =>
-        typeof value === 'bigint' ? null : [{ code: ErrorCode.invalid_bigint, message: 'Expected bigint', path }],
+        typeof value === 'bigint' ? null : [{ code: ErrorCode.invalid_type, message: _messages().bigint.type(), path }],
     ]);
   }
 
   min(
     minimum: bigint,
-    message: MessageFn<{ min: bigint; value: bigint }> = ({ min }) => `Must be at least ${min}`,
+    message: MessageFn<{ min: bigint; value: bigint }> = (ctx) => _messages().bigint.min(ctx),
   ): this {
-    return this._addCoreValidator(
-      createConstraintValidator<bigint, { min: bigint; value: bigint }>({
-        check: (value) => value >= minimum,
-        code: ErrorCode.too_small,
-        context: { min: minimum },
-        message,
-        params: { minimum },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as bigint;
+
+      if (typed >= minimum) return null;
+
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { min: minimum, value: typed }),
+          params: { minimum },
+          path,
+        },
+      ];
+    });
   }
 
   max(
     maximum: bigint,
-    message: MessageFn<{ max: bigint; value: bigint }> = ({ max }) => `Must be at most ${max}`,
+    message: MessageFn<{ max: bigint; value: bigint }> = (ctx) => _messages().bigint.max(ctx),
   ): this {
-    return this._addCoreValidator(
-      createConstraintValidator<bigint, { max: bigint; value: bigint }>({
-        check: (value) => value <= maximum,
-        code: ErrorCode.too_big,
-        context: { max: maximum },
-        message,
-        params: { maximum },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as bigint;
+
+      if (typed <= maximum) return null;
+
+      return [
+        {
+          code: ErrorCode.too_big,
+          message: resolveMessage(message, { max: maximum, value: typed }),
+          params: { maximum },
+          path,
+        },
+      ];
+    });
   }
 
-  positive(message: MessageFn<{ value: bigint }> = () => 'Must be positive'): this {
-    return this._addCoreValidator(
-      createConstraintValidator<bigint, { value: bigint }>({
-        check: (value) => value > 0n,
-        code: ErrorCode.too_small,
-        message,
-        params: { exclusive: true, minimum: 0n },
-      }),
-    );
+  positive(message: MessageFn<{ value: bigint }> = () => _messages().bigint.positive()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as bigint;
+
+      if (typed > 0n) return null;
+
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { value: typed }),
+          params: { exclusive: true, minimum: 0n },
+          path,
+        },
+      ];
+    });
   }
 
-  negative(message: MessageFn<{ value: bigint }> = () => 'Must be negative'): this {
-    return this._addCoreValidator(
-      createConstraintValidator<bigint, { value: bigint }>({
-        check: (value) => value < 0n,
-        code: ErrorCode.too_big,
-        message,
-        params: { exclusive: true, maximum: 0n },
-      }),
-    );
+  negative(message: MessageFn<{ value: bigint }> = () => _messages().bigint.negative()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as bigint;
+
+      if (typed < 0n) return null;
+
+      return [
+        {
+          code: ErrorCode.too_big,
+          message: resolveMessage(message, { value: typed }),
+          params: { exclusive: true, maximum: 0n },
+          path,
+        },
+      ];
+    });
   }
 
-  nonNegative(message: MessageFn<{ value: bigint }> = () => 'Must be non-negative'): this {
-    return this._addCoreValidator(
-      createConstraintValidator<bigint, { value: bigint }>({
-        check: (value) => value >= 0n,
-        code: ErrorCode.too_small,
-        message,
-        params: { minimum: 0n },
-      }),
-    );
+  nonNegative(message: MessageFn<{ value: bigint }> = () => _messages().bigint.nonNegative()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as bigint;
+
+      if (typed >= 0n) return null;
+
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { value: typed }),
+          params: { minimum: 0n },
+          path,
+        },
+      ];
+    });
   }
 
-  nonPositive(message: MessageFn<{ value: bigint }> = () => 'Must be non-positive'): this {
-    return this._addCoreValidator(
-      createConstraintValidator<bigint, { value: bigint }>({
-        check: (value) => value <= 0n,
-        code: ErrorCode.too_big,
-        message,
-        params: { maximum: 0n },
-      }),
-    );
+  nonPositive(message: MessageFn<{ value: bigint }> = () => _messages().bigint.nonPositive()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as bigint;
+
+      if (typed <= 0n) return null;
+
+      return [
+        { code: ErrorCode.too_big, message: resolveMessage(message, { value: typed }), params: { maximum: 0n }, path },
+      ];
+    });
   }
 
   multipleOf(
     step: bigint,
-    message: MessageFn<{ step: bigint; value: bigint }> = ({ step }) => `Must be a multiple of ${step}`,
+    message: MessageFn<{ step: bigint; value: bigint }> = (ctx) => _messages().bigint.multipleOf(ctx),
   ): this {
-    return this._addCoreValidator(
-      createConstraintValidator<bigint, { step: bigint; value: bigint }>({
-        check: (value) => value % step === 0n,
-        code: ErrorCode.not_multiple_of,
-        context: { step },
-        message,
-        params: { step },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as bigint;
+
+      if (typed % step === 0n) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_multiple_of,
+          message: resolveMessage(message, { step, value: typed }),
+          params: { step },
+          path,
+        },
+      ];
+    });
   }
 
   static coerce(): BigIntSchema<unknown> {

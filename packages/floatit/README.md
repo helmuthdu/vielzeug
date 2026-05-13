@@ -15,17 +15,20 @@ pnpm add @vielzeug/floatit
 ## Quick Start
 
 ```ts
-import { arrow, autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { arrow, autoUpdate, computePosition, flip, offset, shift } from '@vielzeug/floatit';
 
 const reference = document.querySelector<HTMLElement>('#trigger')!;
 const floating = document.querySelector<HTMLElement>('#tooltip')!;
 const arrowEl = floating.querySelector<HTMLElement>('.arrow')!;
 
 const cleanup = autoUpdate(reference, floating, () => {
-  const result = positionFloat(reference, floating, {
+  const result = computePosition(reference, floating, {
     placement: 'top',
     middleware: [offset(8), flip(), shift({ padding: 6 }), arrow({ element: arrowEl, padding: 6 })],
   });
+
+  floating.style.left = `${result.x}px`;
+  floating.style.top = `${result.y}px`;
 
   floating.dataset.placement = result.placement;
 });
@@ -35,12 +38,11 @@ cleanup();
 
 ## Features
 
-- `positionFloat()` applies `left` and `top` and returns the full compute result
 - `computePosition()` returns `x`, `y`, `placement`, and `middlewareData`
 - Main APIs accept both DOM elements and virtual references
 - `detectOverflow()` is available for custom middleware
-- Typed middleware-data helpers: `getMiddlewareData`, `getArrowData`, `getHideData`
 - Built-in middleware: `offset`, `flip`, `autoPlacement`, `shift`, `size`, `arrow`, `hide`, and `inline`
+- `float()` covers the common position-and-follow case and applies `left`/`top` by default
 - `autoUpdate()` supports resize, scroll, visualViewport, and `animationFrame`
 - Zero dependencies
 
@@ -48,14 +50,11 @@ cleanup();
 
 | Export | Description |
 | --- | --- |
-| `positionFloat(reference, floating, options?)` | Compute, apply styles, and return the full result |
 | `computePosition(reference, floating, options?)` | Return `x`, `y`, `placement`, and `middlewareData` |
+| `float(reference, floating, options?)` | Position immediately and keep following with optional custom `apply` |
 | `autoUpdate(reference, floating, update, options?)` | Re-run positioning when layout conditions change |
 | `detectOverflow(state, options?)` | Return per-side overflow offsets |
-| `getMiddlewareData(carrier, key)` | Get typed middleware data by key |
-| `getArrowData(carrier)` | Get typed `middlewareData.arrow` |
-| `getHideData(carrier)` | Get typed `middlewareData.hide` |
-| `offset(value)` | Add distance between reference and floating element |
+| `offset(value)` | Add distance between reference and floating element (main/cross axis) |
 | `flip(options?)` | Move to a fallback placement when the current one overflows |
 | `autoPlacement(options?)` | Choose the placement with the most space |
 | `shift(options?)` | Clamp the floating element inside a boundary |
@@ -74,4 +73,4 @@ cleanup();
 
 ## Documentation
 
-Full docs at https://vielzeug.dev/floatit
+Full docs at [vielzeug.dev/floatit](https://vielzeug.dev/floatit)

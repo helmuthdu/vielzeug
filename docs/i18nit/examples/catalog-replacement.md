@@ -1,13 +1,9 @@
 ---
-title: 'I18nit Examples — Catalog Replacement'
-description: 'Replace a locale catalog at runtime and react to active-chain updates through subscriptions.'
+title: 'I18nit Examples — Source Replacement'
+description: 'Replace locale sources at runtime and react via store snapshots.'
 ---
 
-## Catalog Replacement
-
-Use `setCatalog()` when messages come from a CMS, feature flag system, or live configuration source.
-
-## Example
+## Source Replacement
 
 ```ts
 import { createI18n } from '@vielzeug/i18nit';
@@ -15,20 +11,18 @@ import { createI18n } from '@vielzeug/i18nit';
 const i18n = createI18n({
   fallback: 'en',
   locale: 'en',
-  messages: {
+  catalogs: {
     en: {
-      dashboard: {
-        heading: 'Dashboard',
-      },
+      dashboard: { heading: 'Dashboard' },
     },
   },
 });
 
-i18n.subscribe(({ reason }) => {
-  if (reason === 'catalog-update') renderApp();
+i18n.subscribe(() => {
+  renderApp(i18n.getSnapshot());
 });
 
-i18n.setCatalog('en', {
+i18n.register('en', {
   dashboard: {
     heading: 'Workspace',
     subtitle: 'Everything in one place',
@@ -38,12 +32,5 @@ i18n.setCatalog('en', {
 
 ## Notes
 
-- `setCatalog()` fully replaces the locale catalog.
-- If the updated locale is not part of the active fallback chain, subscribers are not notified.
-- Use this instead of mutating nested message objects in place.
-
-## Related Recipes
-
-- [Async Loading and Preload](./async-loading-and-reload.md)
-- [Diagnostics Hook](./diagnostics-hook.md)
-- [Framework Integration](./framework-integration.md)
+- `register()` is the single runtime source mutation API.
+- Subscribers re-read state from `getSnapshot()`.

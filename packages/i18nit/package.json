@@ -14,6 +14,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./format": {
+      "source": "./src/format.ts",
+      "types": "./dist/format.d.ts",
+      "import": "./dist/format.js",
+      "require": "./dist/format.cjs"
     }
   },
   "scripts": {

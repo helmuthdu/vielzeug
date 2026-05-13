@@ -32,7 +32,7 @@ yarn add @vielzeug/timit
 ## Quick Start
 
 ```ts
-import { formatHuman, formatISO, now, shift, toZoned } from '@vielzeug/timit';
+import { formatHuman, formatInstant, now, shift, toZoned } from '@vielzeug/timit';
 
 // Get current time in a timezone
 const meeting = toZoned(now('UTC'), { tz: 'America/New_York' });
@@ -43,8 +43,8 @@ const reminder = shift(meeting, { minutes: -15 });
 // Format for humans
 const text = formatHuman(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' });
 
-// Format for APIs/logs
-const stable = formatISO(reminder);
+// Format for APIs/logs (instant string)
+const stable = formatInstant(reminder);
 ```
 
 ## Why Timit?
@@ -77,7 +77,7 @@ const reminder = shift(meeting, { minutes: -15 });
 - **Explicit local parsing** — `parseLocal()` for wall-clock values; local inputs require `tz` when converting
 - **DST-safe arithmetic** — `shift()` handles transitions correctly
 - **Timezone conversion** — `toZoned()`, `toInstant()` with full timezone support
-- **Formatting split by intent** — `formatHuman()` for UI, `formatISO()` for APIs/logs
+- **Formatting split by intent** — `formatHuman()` for UI, `formatInstant()` for instant strings, `formatZoned()` for zoned strings
 - **Range + comparison helpers** — `within()`, `clamp()`, `isBefore()`, `isAfter()`, `isSameDay()`
 - **Boundary helpers** — `startOf()` and `endOf()` for day/week/month/year-style snapping
 - **Relative and duration formatting** — `formatRelative()` and `formatDuration()`

@@ -34,32 +34,36 @@ yarn add @vielzeug/permit
 ```ts
 import { ANONYMOUS, WILDCARD, createPermit, owns } from '@vielzeug/permit';
 
-const permit = createPermit<'read' | 'update', { authorId: string }>();
-
-permit
-  .set({ role: 'editor', resource: 'posts', action: 'read', effect: 'allow' })
-  .set({
+const permit = createPermit<'read' | 'update', { authorId: string }>([
+  { role: 'editor', resource: 'posts', action: 'read', effect: 'allow' },
+  {
     role: 'editor',
     resource: 'posts',
     action: 'update',
     effect: 'allow',
     when: owns('authorId'),
-  })
-  .set({ role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 })
-  .set({ role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' });
+  },
+  { role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 },
+  { role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' },
+]);
 
 permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
 permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' });
 
-const bound = permit.forUser({ id: 'u1', roles: ['editor'] }, true);
+const bound = permit.forUser({ id: 'u1', roles: ['editor'] });
 
 bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
 bound.explain('posts', 'update', { authorId: 'u2' });
+bound.checkAll([
+  { resource: 'posts', action: 'read' },
+  { resource: 'posts', action: 'update', data: { authorId: 'u1' } },
+]);
+bound.rulesFor('posts');
 ```
 
 ## Why Permit?
 
-- Minimal API: `set`, `can`, `canAll`, `canAny`, `allowedActions`, `explain`, `forUser`, `rules`, `replace`, `clear`
+- Minimal API: `can`, `canAll`, `canAny`, `checkAll`, `allowedActions`, `explain`, `rulesFor`, `forUser`
 - Deterministic precedence model
 - Deny-overrides at top precedence
 - Runtime predicates directly on rules
@@ -68,13 +72,15 @@ bound.explain('posts', 'update', { authorId: 'u2' });
 
 ## Core Ideas
 
-- One rule primitive: `permit.set(rule | rules)`
+- One rule primitive: `PermitRule` passed to `createPermit(rules)`
 - Decision methods: `permit.can`, `permit.canAll`, `permit.canAny`, `permit.explain`
-- Action enumeration: `permit.allowedActions(principal, resource, data?)`
+- Batch decisions: `permit.checkAll(principal, checks)`
+- Rule introspection: `permit.rulesFor(principal, resource)`
+- Action enumeration: `permit.allowedActions(principal, resource, data?, knownActions?)`
 - Explicit wildcard support with `WILDCARD`
 - Anonymous checks via `null` principal plus `ANONYMOUS` role rules
 - Ownership helper via `owns(attributeKey)`
-- Principal-bound API via `permit.forUser(principal, cache?)`
+- Principal-bound API via `permit.forUser(principal)`
 
 ## See Also
 

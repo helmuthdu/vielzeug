@@ -77,4 +77,23 @@ describe('declarative redirect', () => {
     await expect(router.navigate({ path: '/a' })).rejects.toThrow('Redirect loop detected');
     router.dispose();
   });
+
+  it('does not run beforeLeave blockers for declarative redirects', async () => {
+    const handler = vi.fn();
+    const history = createMemoryHistory('/old');
+    const router = createRouter({
+      history,
+      routes: {
+        new: { handler, path: '/new' },
+        old: { path: '/old', redirect: { path: '/new' } },
+      },
+    });
+
+    router.beforeLeave(async () => false);
+    await settle();
+
+    expect(router.state.location.pathname).toBe('/new');
+    expect(handler).toHaveBeenCalled();
+    router.dispose();
+  });
 });

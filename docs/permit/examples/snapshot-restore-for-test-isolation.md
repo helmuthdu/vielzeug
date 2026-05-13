@@ -1,24 +1,22 @@
 ---
-title: 'Permit Examples — Rule Snapshot/Replace for Test Isolation'
-description: 'Use rules() and replace() to keep tests isolated and deterministic.'
+title: 'Permit Examples — Fresh Permit Per Test'
+description: 'Use a permit factory to keep tests isolated and deterministic with immutable rules.'
 ---
 
-## Rule Snapshot/Replace for Test Isolation
+## Fresh Permit Per Test
 
 ```ts
 import { createPermit } from '@vielzeug/permit';
 
-const permit = createPermit();
+function createTestPermit() {
+  return createPermit([{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }]);
+}
 
-permit.set({ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' });
-
-const baselineRules = permit.rules();
+let permit = createTestPermit();
 
 beforeEach(() => {
-  permit.replace(baselineRules);
+  permit = createTestPermit();
 });
 
-afterEach(() => {
-  permit.clear();
-});
+permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 ```

@@ -1,5 +1,5 @@
+import { memo } from '../../function/memo';
 import { abortable } from '../abortable';
-import { memoizeAsync } from '../memoizeAsync';
 import { timeout } from '../timeout';
 
 describe('async extras', () => {
@@ -18,7 +18,7 @@ describe('async extras', () => {
 
   it('memoizes async work and deduplicates in-flight calls', async () => {
     const fn = vi.fn(async (value: number) => value * 2);
-    const memoized = memoizeAsync(fn);
+    const memoized = memo(fn);
 
     const [first, second] = await Promise.all([memoized(2), memoized(2)]);
 

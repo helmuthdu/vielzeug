@@ -19,7 +19,7 @@ class WorkerMock {
   onerror: ((event: ErrorEvent) => void) | null = null;
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
   readonly #init: Promise<void>;
-  #innerOnMessage: ((event: MessageEvent<{ id: number; input: unknown }>) => void | Promise<void>) | null = null;
+  #innerOnMessage: ((event: MessageEvent<{ input: unknown }>) => void | Promise<void>) | null = null;
   #terminated = false;
 
   constructor(url: string) {
@@ -29,7 +29,7 @@ class WorkerMock {
 
     this.#init = blob.text().then((script) => {
       const selfScope = {
-        onmessage: null as ((event: MessageEvent<{ id: number; input: unknown }>) => void | Promise<void>) | null,
+        onmessage: null as ((event: MessageEvent<{ input: unknown }>) => void | Promise<void>) | null,
         postMessage: (data: unknown) => {
           if (this.#terminated) return;
 
@@ -43,16 +43,20 @@ class WorkerMock {
     });
   }
 
-  postMessage(data: { id: number; input: unknown }, _transfer?: Transferable[]): void {
-    void this.#init.then(async () => {
-      if (this.#terminated || !this.#innerOnMessage) return;
+  postMessage(data: { input: unknown }, _transfer?: Transferable[] | StructuredSerializeOptions): void {
+    void this.#init
+      .then(async () => {
+        if (this.#terminated || !this.#innerOnMessage) return;
 
-      try {
-        await this.#innerOnMessage({ data } as MessageEvent<{ id: number; input: unknown }>);
-      } catch (error) {
+        try {
+          await this.#innerOnMessage({ data } as MessageEvent<{ input: unknown }>);
+        } catch (error) {
+          this.onerror?.({ message: error instanceof Error ? error.message : String(error) } as ErrorEvent);
+        }
+      })
+      .catch((error) => {
         this.onerror?.({ message: error instanceof Error ? error.message : String(error) } as ErrorEvent);
-      }
-    });
+      });
   }
 
   terminate(): void {

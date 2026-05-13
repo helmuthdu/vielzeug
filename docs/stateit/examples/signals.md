@@ -90,7 +90,7 @@ async function fetchItems() {
 
 ---
 
-### One-Time Watch with `once`
+### One-Time Watch with Explicit Stop
 
 Subscribe to the first change only, then auto-unsubscribe:
 
@@ -99,13 +99,12 @@ import { signal, watch } from '@vielzeug/stateit';
 
 const authToken = signal<string | null>(null);
 
-watch(
+const stop = watch(
   authToken,
   (token) => {
     console.log('First login:', token);
-    // subscription is already disposed automatically
+    stop();
   },
-  { once: true },
 );
 ```
 

@@ -13,7 +13,8 @@ Use named imports for tree-shaking and discoverability.
 import {
   clamp,
   formatHuman,
-  formatISO,
+  formatInstant,
+  formatZoned,
   formatRelative,
   now,
   shift,
@@ -45,7 +46,7 @@ const tokyo = toZoned(instant, { tz: 'Asia/Tokyo' });
 ```ts
 import { shift } from '@vielzeug/timit';
 
-const before = '2026-03-08T01:30:00-05:00[America/New_York]';
+const before = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
 const after = shift(before, { hours: 1 });
 
 console.log(after.toString());
@@ -57,14 +58,24 @@ console.log(after.toString());
 ```ts
 import { clamp, difference, within } from '@vielzeug/timit';
 
-const duration = difference('2026-03-21T10:00:00Z', '2026-03-21T12:30:00Z', {
+const duration = difference(Temporal.Instant.from('2026-03-21T10:00:00Z'), Temporal.Instant.from('2026-03-21T12:30:00Z'), {
   tz: 'UTC',
   largestUnit: 'hour',
   smallestUnit: 'minute',
 });
 
-const inWindow = within('2026-03-21T11:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
-const bounded = clamp('2026-03-21T13:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
+const inWindow = within(
+  Temporal.Instant.from('2026-03-21T11:00:00Z'),
+  Temporal.Instant.from('2026-03-21T10:00:00Z'),
+  Temporal.Instant.from('2026-03-21T12:00:00Z'),
+);
+// clamp returns Temporal.Instant — project to a timezone as needed
+const clamped = clamp(
+  Temporal.Instant.from('2026-03-21T13:00:00Z'),
+  Temporal.Instant.from('2026-03-21T10:00:00Z'),
+  Temporal.Instant.from('2026-03-21T12:00:00Z'),
+);
+const bounded = clamped.toZonedDateTimeISO('UTC');
 ```
 
 ## Comparison Helpers
@@ -72,9 +83,11 @@ const bounded = clamp('2026-03-21T13:00:00Z', '2026-03-21T10:00:00Z', '2026-03-2
 ```ts
 import { isAfter, isBefore, isSameDay } from '@vielzeug/timit';
 
-isBefore('2026-03-21T10:00:00Z', '2026-03-21T11:00:00Z');
-isAfter('2026-03-21T12:00:00Z', '2026-03-21T11:00:00Z');
-isSameDay('2026-03-21T23:30:00Z', '2026-03-22T00:15:00Z', { tz: 'America/New_York' });
+isBefore(Temporal.Instant.from('2026-03-21T10:00:00Z'), Temporal.Instant.from('2026-03-21T11:00:00Z'));
+isAfter(Temporal.Instant.from('2026-03-21T12:00:00Z'), Temporal.Instant.from('2026-03-21T11:00:00Z'));
+isSameDay(Temporal.Instant.from('2026-03-21T23:30:00Z'), Temporal.Instant.from('2026-03-22T00:15:00Z'), {
+  tz: 'America/New_York',
+});
 ```
 
 ## Start and End Boundaries
@@ -82,10 +95,10 @@ isSameDay('2026-03-21T23:30:00Z', '2026-03-22T00:15:00Z', { tz: 'America/New_Yor
 ```ts
 import { endOf, startOf } from '@vielzeug/timit';
 
-const dayStart = startOf('2026-03-21T10:15:30Z', 'day', { tz: 'UTC' });
-const dayEnd = endOf('2026-03-21T10:15:30Z', 'day', { tz: 'UTC' });
+const dayStart = startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
+const dayEnd = endOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
 
-const weekStart = startOf('2026-03-21T10:15:30Z', 'week', {
+const weekStart = startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'week', {
   tz: 'Europe/Berlin',
   weekStartsOn: 1,
 });
@@ -93,25 +106,25 @@ const weekStart = startOf('2026-03-21T10:15:30Z', 'week', {
 
 ## Formatting
 
-Use `formatHuman()` for UI, `formatISO()` for machine output, `formatRelative()` for UX copy.
+Use `formatHuman()` for UI, `formatInstant()`/`formatZoned()` for machine output, `formatRelative()` for UX copy.
 
 ```ts
-import { formatHuman, formatISO, formatRange, formatRelative } from '@vielzeug/timit';
+import { formatHuman, formatInstant, formatRange, formatRelative, formatZoned } from '@vielzeug/timit';
 
-const instant = '2026-03-21T10:15:30Z';
+const instant = Temporal.Instant.from('2026-03-21T10:15:30Z');
 
 formatHuman(instant, { pattern: 'short', locale: 'en-GB', tz: 'UTC' });
-formatISO(instant);
-formatISO(instant, { style: 'zoned', tz: 'Europe/Berlin' });
+formatInstant(instant);
+formatZoned(instant, { tz: 'Europe/Berlin' });
 
-formatRange('2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z', {
+formatRange(Temporal.Instant.from('2026-03-21T10:00:00Z'), Temporal.Instant.from('2026-03-21T12:00:00Z'), {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
 });
 
-formatRelative('2026-03-21T12:00:00Z', {
-  base: '2026-03-21T10:00:00Z',
+formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), {
+  base: Temporal.Instant.from('2026-03-21T10:00:00Z'),
   locale: 'en-US',
   numeric: 'always',
 });
@@ -129,6 +142,7 @@ const text = formatDuration(duration, { locale: 'en-US', style: 'short' });
 ## Best Practices
 
 - Store instants (`Temporal.Instant`) in persistence and APIs.
+- Use Temporal constructors (`Temporal.Instant.from`, `Temporal.ZonedDateTime.from`) at system boundaries.
 - Convert to zoned values only for user-facing rendering.
 - Pass `tz` whenever converting local wall-clock values.
-- Use `formatHuman` for UI and `formatISO` for transport/logging.
+- Use `formatHuman` for UI, `formatInstant` for transport/logging, and `formatZoned` for zoned ISO strings.

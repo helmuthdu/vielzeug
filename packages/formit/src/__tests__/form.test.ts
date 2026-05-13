@@ -1,7 +1,5 @@
 import { createForm, FormValidationError, SubmitError } from '../index';
 
-const nextTick = () => new Promise<void>((r) => queueMicrotask(r));
-
 // ---------------------------------------------------------------------------
 // Values — storage, typing, and shape
 // ---------------------------------------------------------------------------
@@ -22,7 +20,7 @@ describe('values', () => {
     const tags = ['js', 'ts'];
     const form = createForm<Record<string, unknown>>({ defaultValues: { profile: { city: 'NYC' }, tags } });
 
-    // plain objects are flattened — the parent key is not stored
+    // parent paths are not flattened to keys — returns undefined
     expect(form.get('profile')).toBeUndefined();
     expect(form.get('profile.city')).toBe('NYC');
     // arrays are leaf values — stored by reference
@@ -80,13 +78,12 @@ describe('values', () => {
 // ---------------------------------------------------------------------------
 
 describe('set', () => {
-  test('set stores a value and schedules a notification', async () => {
+  test('set stores a value and notifies synchronously', async () => {
     const form = createForm({ defaultValues: { count: 0 } });
     const snapshots: number[] = [];
 
     form.subscribeForm((s) => snapshots.push(s.isDirty ? 1 : 0));
     form.set('count', 42);
-    await nextTick();
 
     expect(form.get('count')).toBe(42);
     expect(snapshots.at(-1)).toBe(1);
@@ -95,7 +92,7 @@ describe('set', () => {
   test('set with track:false does not mark the field dirty', () => {
     const form = createForm({ defaultValues: { x: 1 } });
 
-    form.set('x', 99, { track: false });
+    form.set('x', 99, { dirty: false });
     expect(form.field('x').dirty).toBe(false);
   });
 
@@ -234,17 +231,15 @@ describe('dirty & touched', () => {
     expect(form.field('x').dirty).toBe(false);
   });
 
-  test('snapshot isDirty / isTouched flags reflect aggregate state', async () => {
+  test('snapshot isDirty / isTouched flags reflect aggregate state', () => {
     const form = createForm({ defaultValues: { a: 1, b: 2 } });
 
     expect(form.state.isDirty).toBe(false);
 
     form.set('a', 99);
-    await nextTick();
     expect(form.state.isDirty).toBe(true);
 
     form.touch('b');
-    await nextTick();
     expect(form.state.isTouched).toBe(true);
   });
 
@@ -254,7 +249,7 @@ describe('dirty & touched', () => {
       validators: { c: () => undefined },
     });
 
-    form.touch();
+    form.touchAll();
     expect(form.field('a').touched).toBe(true);
     expect(form.field('b').touched).toBe(true);
     expect(form.field('c').touched).toBe(true);
@@ -275,9 +270,9 @@ describe('dirty & touched', () => {
     const form = createForm({ defaultValues: { a: 1, b: 2 } });
 
     form.set('a', 99);
-    form.touch();
-    form.untouch();
-    expect(form.isTouched).toBe(false);
+    form.touchAll();
+    form.untouchAll();
+    expect(form.state.isTouched).toBe(false);
     // values and dirty state are preserved
     expect(form.get('a')).toBe(99);
     expect(form.field('a').dirty).toBe(true);
@@ -286,18 +281,18 @@ describe('dirty & touched', () => {
   test('top-level isValid / isDirty / isTouched getters mirror state flags', () => {
     const form = createForm({ defaultValues: { x: 1 } });
 
-    expect(form.isValid).toBe(true);
-    expect(form.isDirty).toBe(false);
-    expect(form.isTouched).toBe(false);
+    expect(form.state.isValid).toBe(true);
+    expect(form.state.isDirty).toBe(false);
+    expect(form.state.isTouched).toBe(false);
 
     form.set('x', 2);
-    expect(form.isDirty).toBe(true);
+    expect(form.state.isDirty).toBe(true);
 
     form.touch('x');
-    expect(form.isTouched).toBe(true);
+    expect(form.state.isTouched).toBe(true);
 
     form.setError('x', 'Bad');
-    expect(form.isValid).toBe(false);
+    expect(form.state.isValid).toBe(false);
   });
 
   test('Date values compare by timestamp for dirty tracking', () => {
@@ -373,7 +368,7 @@ describe('errors', () => {
     const form = createForm<Record<string, unknown>>({});
 
     form.setError('email', 'Bad');
-    form.clearError('email');
+    form.setError('email', undefined);
     expect(form.field('email').error).toBeUndefined();
   });
 
@@ -395,7 +390,7 @@ describe('errors', () => {
     const form = createForm<Record<string, unknown>>({});
 
     form.setError('old', 'Old error');
-    form.replaceErrors({ email: 'Invalid', name: 'Required' });
+    form.setErrors({ email: 'Invalid', name: 'Required' });
     expect(form.field('old').error).toBeUndefined();
     expect(form.state.errors).toEqual({ email: 'Invalid', name: 'Required' });
   });
@@ -403,7 +398,7 @@ describe('errors', () => {
   test('replaceErrors ignores undefined values in the provided map', () => {
     const form = createForm<Record<string, unknown>>({});
 
-    form.replaceErrors({ skip: undefined as unknown as string, valid: 'Error' });
+    form.setErrors({ skip: undefined as unknown as string, valid: 'Error' });
     expect(form.state.errors).toEqual({ valid: 'Error' });
   });
 
@@ -411,24 +406,24 @@ describe('errors', () => {
     const form = createForm<Record<string, unknown>>({});
 
     form.setError('x', 'Oops');
-    form.replaceErrors({});
+    form.setErrors({});
     expect(Object.keys(form.state.errors)).toHaveLength(0);
   });
 
-  test('mergeErrors updates only listed fields and preserves others', () => {
+  test('setErrors replaces the entire map (no merge semantics)', () => {
     const form = createForm<Record<string, unknown>>({});
 
-    form.replaceErrors({ a: 'Err A', b: 'Err B' });
-    form.mergeErrors({ b: 'Err B2', c: 'Err C' });
+    form.setErrors({ a: 'Err A', b: 'Err B' });
+    form.setErrors({ b: 'Err B2', c: 'Err C' });
 
-    expect(form.state.errors).toEqual({ a: 'Err A', b: 'Err B2', c: 'Err C' });
+    expect(form.state.errors).toEqual({ b: 'Err B2', c: 'Err C' });
   });
 
-  test('mergeErrors clears only fields explicitly set to undefined', () => {
+  test('setErrors omits undefined values', () => {
     const form = createForm<Record<string, unknown>>({});
 
-    form.replaceErrors({ a: 'Err A', b: 'Err B' });
-    form.mergeErrors({ a: undefined });
+    form.setErrors({ a: 'Err A', b: 'Err B' });
+    form.setErrors({ a: undefined, b: 'Err B' });
 
     expect(form.state.errors).toEqual({ b: 'Err B' });
   });
@@ -438,22 +433,20 @@ describe('errors', () => {
 
     form.setError('a', 'Err A');
     form.setError('b', 'Err B');
-    form.clearError('a');
+    form.setError('a', undefined);
     expect(form.state.errors).toEqual({ b: 'Err B' });
-    expect(form.isValid).toBe(false);
+    expect(form.state.isValid).toBe(false);
   });
 
-  test('isValid reflects whether the error map is empty', async () => {
+  test('isValid reflects whether the error map is empty', () => {
     const form = createForm({ defaultValues: { name: 'Alice' } });
 
     expect(form.state.isValid).toBe(true);
 
     form.setError('name', 'Too short');
-    await nextTick();
     expect(form.state.isValid).toBe(false);
 
-    form.replaceErrors({});
-    await nextTick();
+    form.setErrors({});
     expect(form.state.isValid).toBe(true);
   });
 });
@@ -484,10 +477,7 @@ describe('validation', () => {
   test('validators are run in order; first failing rule wins', async () => {
     const form = createForm({
       validators: {
-        pw: [
-          (v: unknown) => (!v ? 'Required' : undefined),
-          (v: unknown) => (String(v).length < 8 ? 'Too short' : undefined),
-        ],
+        pw: (v: unknown) => (!v ? 'Required' : String(v).length < 8 ? 'Too short' : undefined),
       },
     });
 
@@ -505,14 +495,14 @@ describe('validation', () => {
       validators: { password: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
-    const { errors, valid } = await form.validate();
+    const { errors, valid } = await form.validateAll();
 
     expect(valid).toBe(false);
     expect(errors.password).toBe('Required');
     expect(errors.confirm).toBe('Must match');
   });
 
-  test("validate('touched') skips untouched fields", async () => {
+  test('validateTouched() skips untouched fields', async () => {
     const form = createForm({
       validators: {
         email: (v: unknown) => (!v ? 'Required' : undefined),
@@ -522,17 +512,17 @@ describe('validation', () => {
 
     form.touch('name');
 
-    const { errors } = await form.validate('touched');
+    const { errors } = await form.validateTouched();
 
     expect(errors.name).toBe('Required');
     expect(errors.email).toBeUndefined();
   });
 
-  test('validate([]) validates nothing (empty partial)', async () => {
+  test('validateFields([]) validates nothing (empty partial)', async () => {
     const form = createForm({
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
-    const { errors, valid } = await form.validate([]);
+    const { errors, valid } = await form.validateFields([]);
 
     expect(valid).toBe(true);
     expect(Object.keys(errors)).toHaveLength(0);
@@ -548,7 +538,7 @@ describe('validation', () => {
       },
     });
 
-    const { errors } = await form.validate(['name', 'email']);
+    const { errors } = await form.validateFields(['name', 'email']);
 
     expect(errors.name).toBe('Name required');
     expect(errors.email).toBe('Email required');
@@ -580,7 +570,7 @@ describe('validation', () => {
     form.subscribeForm((s) => {
       if (s.isValidating) seenTrue = true;
     });
-    await form.validate();
+    await form.validateAll();
     expect(seenTrue).toBe(true);
     expect(form.state.isValidating).toBe(false);
   });
@@ -716,17 +706,16 @@ describe('subscribe', () => {
     expect(called).toBe(0);
   });
 
-  test('subscribe fires when state changes', async () => {
+  test('subscribe fires when state changes', () => {
     const form = createForm({ defaultValues: { x: 1 } });
     const counts: number[] = [];
 
     form.subscribeForm((s) => counts.push(s.isDirty ? 1 : 0));
     form.set('x', 2);
-    await nextTick();
     expect(counts).toContain(1);
   });
 
-  test('unsubscribing stops future notifications', async () => {
+  test('unsubscribing stops future notifications', () => {
     const form = createForm({ defaultValues: { x: 1 } });
     let count = 0;
     const unsub = form.subscribeForm(() => count++);
@@ -734,7 +723,6 @@ describe('subscribe', () => {
 
     unsub();
     form.set('x', 2);
-    await new Promise<void>((r) => queueMicrotask(r));
     expect(count).toBe(initial);
   });
 
@@ -762,7 +750,7 @@ describe('subscribe', () => {
     expect(count).toBe(0);
   });
 
-  test('field subscribe only fires when the subscribed field changes', async () => {
+  test('field subscribe only fires when the subscribed field changes', () => {
     const form = createForm({ defaultValues: { a: 1, b: 2 } });
     let bCount = 0;
 
@@ -773,11 +761,10 @@ describe('subscribe', () => {
     const initial = bCount;
 
     form.set('a', 99);
-    await new Promise<void>((r) => queueMicrotask(r));
     expect(bCount).toBe(initial);
   });
 
-  test('field subscribe payload reflects current error and touched state', async () => {
+  test('field subscribe payload reflects current error and touched state', () => {
     const form = createForm({ defaultValues: { email: '' } });
     const payloads: { error?: string; touched: boolean }[] = [];
 
@@ -785,7 +772,6 @@ describe('subscribe', () => {
 
     form.setError('email', 'Invalid');
     form.touch('email');
-    await new Promise<void>((r) => queueMicrotask(r));
 
     const last = payloads.at(-1)!;
 
@@ -801,7 +787,7 @@ describe('subscribe', () => {
     // no error expected — internal bucket should be removed
   });
 
-  test('multiple independent field listeners on one field all fire', async () => {
+  test('multiple independent field listeners on one field all fire', () => {
     const form = createForm({ defaultValues: { x: 0 } });
     let a = 0;
     let b = 0;
@@ -817,7 +803,6 @@ describe('subscribe', () => {
     const bInit = b;
 
     form.set('x', 1);
-    await new Promise<void>((r) => queueMicrotask(r));
     expect(a).toBeGreaterThan(aInit);
     expect(b).toBeGreaterThan(bInit);
   });
@@ -1099,7 +1084,7 @@ describe('clearError', () => {
 
     form.setError('email', 'Invalid');
     form.setError('name', 'Required');
-    form.clearError('email');
+    form.setError('email', undefined);
     expect(form.field('email').error).toBeUndefined();
     expect(form.field('name').error).toBe('Required');
   });
@@ -1259,7 +1244,7 @@ describe('removeField', () => {
 
     form.removeField('name');
 
-    const { errors } = await form.validate();
+    const { errors } = await form.validateAll();
 
     expect(errors.name).toBeUndefined();
     expect(errors.email).toBe('Required');
@@ -1278,17 +1263,16 @@ describe('removeField', () => {
 });
 
 // ---------------------------------------------------------------------------
-// watch
+// subscribeField value-only pattern
 // ---------------------------------------------------------------------------
 
-describe('watch', () => {
-  test('fires the callback when the field value changes', async () => {
+describe('subscribeField value-only pattern', () => {
+  test('fires the callback when the field value changes', () => {
     const form = createForm({ defaultValues: { name: '' } });
     const values: string[] = [];
 
-    form.watch('name', (v: unknown) => values.push(v as string));
+    form.subscribeField('name', (state) => values.push(String(state.value)));
     form.set('name', 'Alice');
-    await new Promise<void>((r) => queueMicrotask(r));
     expect(values).toContain('Alice');
   });
 
@@ -1296,38 +1280,36 @@ describe('watch', () => {
     const form = createForm({ defaultValues: { name: 'Alice' } });
     let seen: unknown;
 
-    form.watch(
+    form.subscribeField(
       'name',
-      (v: unknown) => {
-        seen = v;
+      (state) => {
+        seen = state.value;
       },
       { sync: true },
     );
     expect(seen).toBe('Alice');
   });
 
-  test('returns an unsubscribe that stops future notifications', async () => {
+  test('returns an unsubscribe that stops future notifications', () => {
     const form = createForm({ defaultValues: { x: 0 } });
     let count = 0;
-    const unsub = form.watch('x', () => {
+    const unsub = form.subscribeField('x', () => {
       count++;
     });
 
     unsub();
     form.set('x', 1);
-    await new Promise<void>((r) => queueMicrotask(r));
     expect(count).toBe(0);
   });
 
-  test('does not fire when an unrelated field changes', async () => {
+  test('does not fire when an unrelated field changes', () => {
     const form = createForm({ defaultValues: { a: 1, b: 2 } });
     let count = 0;
 
-    form.watch('b', () => {
+    form.subscribeField('b', () => {
       count++;
     });
     form.set('a', 99);
-    await new Promise<void>((r) => queueMicrotask(r));
     expect(count).toBe(0);
   });
 });

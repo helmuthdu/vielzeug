@@ -16,7 +16,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 Usage inside a [@vielzeug/craftit](/craftit/) component with automatic `autoUpdate` cleanup.
 
 ```ts
-import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { autoUpdate, computePosition, flip, offset, shift } from '@vielzeug/floatit';
 import { define, onMount, signal } from '@vielzeug/craftit';
 
 define('my-tooltip', {
@@ -27,10 +27,13 @@ define('my-tooltip', {
 
   function update() {
     if (!tooltipEl) return;
-    positionFloat(host.el, tooltipEl, {
+    const result = computePosition(host.el, tooltipEl, {
       placement: 'top',
       middleware: [offset(8), flip(), shift({ padding: 6 })],
     });
+
+    tooltipEl.style.left = `${result.x}px`;
+    tooltipEl.style.top = `${result.y}px`;
   }
 
   onMount(() => {

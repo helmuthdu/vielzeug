@@ -17,7 +17,7 @@ describe('Cookie adapter', () => {
       if (name) document.cookie = `${name}=; Max-Age=0; path=/`;
     }
 
-    db = createCookie({ dbName: 'CK', schema: userSchema });
+    db = createCookie('CK', userSchema);
   });
 
   test('put/get/delete/deleteAll/count', async () => {
@@ -123,7 +123,7 @@ describe('Cookie adapter', () => {
   });
 
   test('two instances sharing the same dbName see the same data', async () => {
-    const db2 = createCookie({ dbName: 'CK', schema: userSchema });
+    const db2 = createCookie('CK', userSchema);
 
     await db.put('users', { id: 1, name: 'Alice' });
 
@@ -137,10 +137,8 @@ describe('Cookie adapter', () => {
   });
 
   test('options: secure and sameSite are passed through', async () => {
-    const strictDb = createCookie({
-      dbName: 'strict',
+    const strictDb = createCookie('strict', userSchema, {
       sameSite: 'Lax',
-      schema: userSchema,
       secure: true,
     });
 

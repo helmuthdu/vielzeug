@@ -115,6 +115,7 @@ const routes = {
 const router = createRouter({
   base: '/app',
   middleware: [logger],
+  onError: (error, context) => reportError(error, context.source),
   routes,
   viewTransition: true,
 });
@@ -123,10 +124,10 @@ const router = createRouter({
 ## Middleware
 
 ```ts
-import { redirect } from '@vielzeug/routeit';
+import { redirectTo } from '@vielzeug/routeit';
 
 // Redirect helper — short-circuits the middleware chain
-const requireAuth = redirect({ name: 'login' }, { replace: true });
+const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 
 // Manual middleware
 const loadUser = async (ctx, next) => {
@@ -189,6 +190,8 @@ const removeGuard = router.beforeLeave(async () => {
 removeGuard();
 ```
 
+Leave guards only apply to user-triggered `navigate()` calls. Internal declarative route redirects bypass guards.
+
 ## Prefetching
 
 ```ts
@@ -231,7 +234,8 @@ await router.navigate({ path: '/checkout#payment' }, { replace: true });
 
 router.url('userDetail', { id: '42' }, { tab: 'profile' });
 router.isActive('userDetail');
-router.isActive('users', false);
+router.isActive('users');
+router.isActive('users', { exact: true });
 router.resolve('/app/dashboard/settings');
 ```
 
@@ -277,14 +281,15 @@ router.dispose();
 | `createRouter({ routes, ...options })` | Create a router from a declarative route table |
 | `createBrowserHistory()` | Create the default browser history driver |
 | `createMemoryHistory(initialPath?)` | Create an in-memory history driver (SSR / tests) |
-| `redirect(target, options?)` | Build redirect middleware for guard flows |
+| `redirectTo(target, options?)` | Build redirect middleware for guard flows |
 | `router.navigate({ name, ... })` | Navigate by route name |
 | `router.navigate({ path })` | Navigate by raw path target |
 | `router.url(name, params?, query?)` | Build a URL for a named route |
-| `router.isActive(name, exact?)` | Check whether the current route matches a named route |
+| `router.isActive(name, options?)` | Check whether the current route matches a named route |
 | `router.resolve(pathname)` | Resolve a pathname without running middleware or handlers |
 | `router.preload(name, params?)` | Eagerly run data loaders without navigating |
 | `router.beforeLeave(blocker)` | Register a leave guard |
+| `onError(error, context)` | Receive non-awaited/background router errors |
 | `router.subscribe(listener)` | Observe immutable route state snapshots |
 | `router.dispose()` | Remove listeners and prevent future router interaction |
 

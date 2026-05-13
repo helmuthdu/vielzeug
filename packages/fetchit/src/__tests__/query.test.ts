@@ -114,7 +114,7 @@ describe('Query Client', () => {
 
   describe('Retry', () => {
     it('retries the fn up to the specified count before succeeding', async () => {
-      const qc = createQuery({ retry: 3 });
+      const qc = createQuery({ attempts: 3 });
       let attempts = 0;
 
       await qc.query({
@@ -129,8 +129,8 @@ describe('Query Client', () => {
       expect(attempts).toBe(3);
     });
 
-    it('retry:0 makes exactly one attempt then rejects', async () => {
-      const qc = createQuery({ retry: 0 });
+    it('attempts:1 makes exactly one attempt then rejects', async () => {
+      const qc = createQuery({ attempts: 1 });
       let attempts = 0;
 
       await expect(
@@ -292,7 +292,7 @@ describe('Query Client', () => {
     });
   });
 
-  describe('enabled / initialData / placeholderData', () => {
+  describe('enabled / initialData', () => {
     it('enabled:false skips the fetch and keeps entry idle', async () => {
       const qc = createQuery();
       let calls = 0;
@@ -372,12 +372,11 @@ describe('Query Client', () => {
 
       const states: Array<{ data: unknown; status: string }> = [];
 
-      qc.subscribe(['user', 4], (s) => states.push({ data: s.data, status: s.status }));
+      qc.subscribe(['user', 4], (s) => states.push({ data: s.data, status: s.status }), { placeholderData: { id: 0 } });
 
       const queryPromise = qc.query({
         fn: () => pending,
         key: ['user', 4],
-        placeholderData: { id: 0 },
       });
 
       // Pending state should expose placeholder

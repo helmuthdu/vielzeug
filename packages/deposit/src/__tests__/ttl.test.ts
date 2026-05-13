@@ -31,13 +31,29 @@ describe('ttl helpers', () => {
     expect(ttl.days(1)).toBe(86_400_000);
   });
 
-  test('ttl helpers can be used with put', async () => {
-    localStorage.clear();
+  test('ttl helpers reject invalid inputs', () => {
+    expect(() => ttl.ms(-1)).toThrow('ttl.ms expected a finite non-negative number');
+    expect(() => ttl.seconds(Number.NaN)).toThrow('ttl.seconds expected a finite non-negative number');
+    expect(() => ttl.minutes(Number.POSITIVE_INFINITY)).toThrow('ttl.minutes expected a finite non-negative number');
+  });
 
-    const db = createLocalStorage({ dbName: 'TtlHelper', schema: userSchema });
+  test('ttl helpers can be used with put', async () => {
+    window.localStorage.clear();
+
+    const db = createLocalStorage('TtlHelper', userSchema);
 
     await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
     await delay(5);
     expect(await db.get('users', 1)).toBeUndefined();
+  });
+
+  test('put rejects invalid ttl values', async () => {
+    window.localStorage.clear();
+
+    const db = createLocalStorage('TtlHelper', userSchema);
+
+    await expect(db.put('users', { id: 1, name: 'Alice' }, Number.NaN)).rejects.toThrow(
+      'wrapStored expected a finite non-negative number',
+    );
   });
 });

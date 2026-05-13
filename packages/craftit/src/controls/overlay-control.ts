@@ -34,11 +34,28 @@ export type OverlayControl = {
 const activeOverlayListeners = new Set<(event: Event) => void>();
 let documentClickUnsubscribe: (() => void) | null = null;
 
+const isDisposedComputedSignalError = (error: unknown): boolean =>
+  error instanceof Error && error.message.includes('[stateit] Cannot read disposed computed signal');
+
 const ensureDocumentClickListener = (): void => {
   if (documentClickUnsubscribe) return; // Already attached
 
   const handler = (event: Event) => {
-    for (const listener of activeOverlayListeners) listener(event);
+    for (const listener of [...activeOverlayListeners]) {
+      try {
+        listener(event);
+      } catch (error) {
+        if (isDisposedComputedSignalError(error)) {
+          activeOverlayListeners.delete(listener);
+
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    removeDocumentClickListener();
   };
 
   document.addEventListener('click', handler, { capture: true });
@@ -66,7 +83,18 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
   // Local wrapper — handles click-listener registration without mutating options.
   const commitOpen = (next: boolean, context: { reason: OverlayOpenReason | OverlayCloseReason }): void => {
-    options.setOpen(next, context);
+    try {
+      options.setOpen(next, context);
+    } catch (error) {
+      if (isDisposedComputedSignalError(error) && clickListener) {
+        activeOverlayListeners.delete(clickListener);
+        removeDocumentClickListener();
+
+        return;
+      }
+
+      throw error;
+    }
 
     if (next && clickListener) {
       activeOverlayListeners.add(clickListener);

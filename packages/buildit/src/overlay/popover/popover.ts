@@ -2,7 +2,7 @@ import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/co
 
 import { computed, createId, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
-import { flip, offset, type Placement, positionFloat, shift } from '@vielzeug/floatit';
+import { computePosition, flip, offset, type Placement, shift } from '@vielzeug/floatit';
 
 import { disablableBundle } from '../../inputs/shared/bundles';
 import { reducedMotionMixin } from '../../styles';
@@ -145,12 +145,14 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     function updatePosition() {
       if (!panelEl || !currentTrigger) return;
 
-      const resolvedPlacement = positionFloat(currentTrigger, panelEl, {
+      const resolvedPlacement = computePosition(currentTrigger, panelEl, {
         middleware: [offset(props.offset.value ?? PANEL_OFFSET), flip(), shift({ padding: 8 })],
         placement: props.placement.value,
       });
 
-      if (panelEl) panelEl.dataset.placement = resolvedPlacement.placement;
+      panelEl.style.left = `${resolvedPlacement.x}px`;
+      panelEl.style.top = `${resolvedPlacement.y}px`;
+      panelEl.dataset.placement = resolvedPlacement.placement;
     }
     /** Show the panel and start auto-updating its position. */
     function showFloat() {

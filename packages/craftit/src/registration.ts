@@ -14,6 +14,7 @@ import {
 import {
   createProps,
   isReflecting,
+  normalizePropDefinition,
   prop,
   propRegistry,
   type InferPropsFromDefs,
@@ -23,15 +24,8 @@ import {
   type PropOptions,
   type PropsDef,
 } from './props';
-import {
-  type OnMountedCallback,
-  type RuntimeScope,
-  type UpdatedCallbackBox,
-  withCurrentElement,
-  withRuntimeScope,
-} from './runtime';
-import { applyBindingsInContainer, parseHTML } from './template-bindings';
-import { applyHtmlBinding } from './template-html';
+import { type OnMountedCallback, type RuntimeScope, withCurrentElement, withRuntimeScope } from './runtime';
+import { applyBindingsInContainer, applyHtmlBinding, parseHTML } from './template-bindings';
 
 export type ComponentRegistrationOptions = {
   /** Indicates if this should be a form-associated element */
@@ -55,7 +49,6 @@ type ComponentState = {
   styles?: (string | CSSStyleSheet | CSSResult)[];
   templateMounted: boolean;
   templateResult: HTMLResult | null;
-  updated: UpdatedCallbackBox;
 };
 
 class BaseElement extends HTMLElement {
@@ -84,7 +77,6 @@ class BaseElement extends HTMLElement {
       styles: options?.styles,
       templateMounted: false,
       templateResult: null,
-      updated: { callbacks: [], queued: false },
     };
   }
 
@@ -121,7 +113,11 @@ class BaseElement extends HTMLElement {
     this._component.mountToken++;
     this._component.scope.dispose();
     this._component.scope = _scope();
+    this._component.mountCallbacks = [];
+    this._component.mountedCallbacksRan = false;
+    this._component.setupDone = false;
     this._component.templateMounted = false;
+    this._component.templateResult = null;
   }
 
   private _handleError(err: unknown): void {
@@ -131,13 +127,9 @@ class BaseElement extends HTMLElement {
   }
 
   private _runSetup(): void {
-    // Temporary box collects updated-callbacks registered during setup; merged
-    // into this._component.updated after setup succeeds.
-    const setupUpdated: UpdatedCallbackBox = { callbacks: [], queued: false };
     const setupScope: RuntimeScope = {
       element: this,
       mountCallbacks: [],
-      updated: setupUpdated,
     };
 
     try {
@@ -150,7 +142,6 @@ class BaseElement extends HTMLElement {
       });
 
       this._component.mountCallbacks.push(...setupScope.mountCallbacks);
-      this._component.updated.callbacks.push(...setupUpdated.callbacks);
       this._component.setupDone = true;
     } catch (err) {
       this._handleError(err);
@@ -192,9 +183,6 @@ class BaseElement extends HTMLElement {
                 {
                   element: this,
                   mountCallbacks: [],
-                  // Share the same updated box so effects inside mount callbacks
-                  // schedule on the same queued flag as the component itself.
-                  updated: this._component.updated,
                 },
                 () =>
                   withCurrentElement(this, () => {
@@ -281,6 +269,12 @@ export function define<
   Emits extends Record<string, unknown> = Record<string, never>,
 >(tag: string, definition: ComponentDefinition<Props, Emits>): string {
   const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
+
+  if (propDefs) {
+    for (const def of Object.values(propDefs)) {
+      normalizePropDefinition(def);
+    }
+  }
 
   const observedAttrs = propDefs ? Object.keys(propDefs).map(toKebab) : [];
 

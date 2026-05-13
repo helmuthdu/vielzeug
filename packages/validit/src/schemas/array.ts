@@ -1,8 +1,7 @@
 import type { Issue, MessageFn } from '../core';
 
-import { ErrorCode, prependIssuePath, Schema } from '../core';
+import { ErrorCode, prependIssuePath, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
-import { createConstraintValidator } from './constraint-factories';
 
 export class ArraySchema<T> extends Schema<T[]> {
   private readonly itemSchema: Schema<T>;
@@ -60,8 +59,6 @@ export class ArraySchema<T> extends Schema<T[]> {
 
     const { data: items, issues } = this._parseItemsSync(value);
 
-    issues.push(...this._runCoreValidators(items));
-
     return { data: items, issues };
   }
 
@@ -72,8 +69,6 @@ export class ArraySchema<T> extends Schema<T[]> {
 
     const { data: items, issues } = await this._parseItemsAsync(value);
 
-    issues.push(...this._runCoreValidators(items));
-
     return { data: items, issues };
   }
 
@@ -81,45 +76,60 @@ export class ArraySchema<T> extends Schema<T[]> {
     length: number,
     message: MessageFn<{ min: number; value: unknown[] }> = (ctx) => _messages().array.min(ctx),
   ): this {
-    return this._addCoreValidator(
-      createConstraintValidator<unknown[], { min: number; value: unknown[] }>({
-        check: (value) => value.length >= length,
-        code: ErrorCode.too_small,
-        context: { min: length },
-        message,
-        params: { minimum: length },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as unknown[];
+
+      if (typed.length >= length) return null;
+
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { min: length, value: typed }),
+          params: { minimum: length },
+          path,
+        },
+      ];
+    });
   }
 
   max(
     length: number,
     message: MessageFn<{ max: number; value: unknown[] }> = (ctx) => _messages().array.max(ctx),
   ): this {
-    return this._addCoreValidator(
-      createConstraintValidator<unknown[], { max: number; value: unknown[] }>({
-        check: (value) => value.length <= length,
-        code: ErrorCode.too_big,
-        context: { max: length },
-        message,
-        params: { maximum: length },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as unknown[];
+
+      if (typed.length <= length) return null;
+
+      return [
+        {
+          code: ErrorCode.too_big,
+          message: resolveMessage(message, { max: length, value: typed }),
+          params: { maximum: length },
+          path,
+        },
+      ];
+    });
   }
 
   length(
     exact: number,
     message: MessageFn<{ exact: number; value: unknown[] }> = (ctx) => _messages().array.length(ctx),
   ): this {
-    return this._addCoreValidator(
-      createConstraintValidator<unknown[], { exact: number; value: unknown[] }>({
-        check: (value) => value.length === exact,
-        code: ErrorCode.invalid_length,
-        context: { exact },
-        message,
-        params: { exact },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as unknown[];
+
+      if (typed.length === exact) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_length,
+          message: resolveMessage(message, { exact, value: typed }),
+          params: { exact },
+          path,
+        },
+      ];
+    });
   }
 
   nonEmpty(message: MessageFn<{ min: number; value: unknown[] }> = () => _messages().array.nonEmpty()): this {
@@ -127,13 +137,19 @@ export class ArraySchema<T> extends Schema<T[]> {
   }
 
   unique(message: MessageFn<{ value: unknown[] }> = () => _messages().array.unique()): this {
-    return this._addCoreValidator(
-      createConstraintValidator<unknown[], { value: unknown[] }>({
-        check: (value) => new Set(value).size === value.length,
-        code: ErrorCode.not_unique,
-        message,
-        params: { unique: true },
-      }),
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as unknown[];
+
+      if (new Set(typed).size === typed.length) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_unique,
+          message: resolveMessage(message, { value: typed }),
+          params: { unique: true },
+          path,
+        },
+      ];
+    });
   }
 }

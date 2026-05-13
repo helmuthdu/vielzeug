@@ -36,7 +36,7 @@ Record and key types are inferred from `table<T>()`. `typeof schema` serves as t
 ```ts
 import { createLocalStorage } from '@vielzeug/deposit';
 
-const local = createLocalStorage({ dbName: 'app', schema });
+const local = createLocalStorage('app', schema);
 ```
 
 Use this adapter for simple browser persistence where transactional behavior is not required.
@@ -46,7 +46,7 @@ Use this adapter for simple browser persistence where transactional behavior is 
 ```ts
 import { createSessionStorage } from '@vielzeug/deposit';
 
-const session = createSessionStorage({ dbName: 'app', schema });
+const session = createSessionStorage('app', schema);
 ```
 
 Use this adapter for tab-scoped persistence that resets when the tab or window closes.
@@ -56,11 +56,9 @@ Use this adapter for tab-scoped persistence that resets when the tab or window c
 ```ts
 import { createCookie } from '@vielzeug/deposit';
 
-const cookie = createCookie({
-  dbName: 'app',
+const cookie = createCookie('app', schema, {
   path: '/',
   sameSite: 'Strict',
-  schema,
 });
 ```
 
@@ -81,10 +79,10 @@ Use this adapter when you need atomic transactions or larger datasets.
 ```ts
 import { createMemory } from '@vielzeug/deposit';
 
-const mem = createMemory({ schema });
+const mem = createMemory(schema);
 ```
 
-Use this adapter in tests, SSR environments, or wherever browser storage APIs are unavailable. Each `createMemory()` call returns a fully isolated instance — no `dbName` is needed. The interface is identical to the browser adapters.
+Use this adapter in tests, SSR environments, or wherever browser storage APIs are unavailable. Each `createMemory(schema)` call returns a fully isolated instance — no `dbName` is needed. The interface is identical to the browser adapters.
 
 ## Basic CRUD
 
@@ -167,7 +165,7 @@ const youngest = await local
 
 ## Reactive Reads
 
-`observe(table, listener)` emits the current snapshot immediately and then emits again after table mutations.
+`observe(table, listener, options?)` emits the current snapshot immediately by default and then emits again after table mutations.
 
 ```ts
 const stop = idb.observe('users', (rows) => {
@@ -259,7 +257,7 @@ import { createMemory } from '@vielzeug/deposit';
 import { schema } from '../src/schema';
 
 // No localStorage mocks, no fake-indexeddb — just a plain Map under the hood.
-const db = createMemory({ schema });
+const db = createMemory(schema);
 
 beforeEach(() => db.deleteAll('users'));
 
@@ -290,18 +288,18 @@ function createStorage(): Adapter<typeof schema> {
   }
 
   if (typeof localStorage !== 'undefined') {
-    return createLocalStorage({ dbName: 'app', schema });
+    return createLocalStorage('app', schema);
   }
 
   if (typeof sessionStorage !== 'undefined') {
-    return createSessionStorage({ dbName: 'app', schema });
+    return createSessionStorage('app', schema);
   }
 
   if (typeof document !== 'undefined') {
-    return createCookie({ dbName: 'app', schema });
+    return createCookie('app', schema);
   }
 
   // SSR or test environment
-  return createMemory({ schema });
+  return createMemory(schema);
 }
 ```

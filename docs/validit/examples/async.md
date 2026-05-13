@@ -1,6 +1,6 @@
 ---
 title: 'Validit Examples — Async'
-description: 'Async validation examples using refineAsync with validit.'
+description: 'Async validation examples using check() with validit.'
 ---
 
 ## Async validation examples
@@ -17,7 +17,7 @@ import { v } from '@vielzeug/validit';
 const UsernameSchema = v
   .string()
   .min(3)
-  .refineAsync(async (value) => {
+  .check(async (value) => {
     const exists = await db.users.exists({ username: value });
     return !exists;
   }, 'Username already taken');
@@ -27,7 +27,7 @@ const result = await UsernameSchema.safeParseAsync(input.username);
 const CompanyEmailSchema = v
   .string()
   .email()
-  .refineAsync(
+  .check(
     async (value) => {
       const domain = value.split('@')[1] ?? '';
       return allowedDomains.has(domain.toLowerCase());
@@ -40,7 +40,7 @@ const InviteSchema = v
     workspaceId: v.string().uuid(),
     email: v.string().email(),
   })
-  .refineAsync(async ({ workspaceId, email }) => {
+  .check(async ({ workspaceId, email }) => {
     return !(await db.invites.exists({ workspaceId, email }));
   }, 'Invite already exists for this user and workspace');
 
@@ -50,7 +50,7 @@ const TeamSlugSchema = v
   .string()
   .min(3)
   .regex(/^[a-z0-9-]+$/)
-  .refineAsync(async (value) => {
+  .check(async (value) => {
     const exists = await db.teams.exists({ slug: value });
     return !exists;
   }, 'Slug already in use');
@@ -65,8 +65,8 @@ await TeamSlugSchema.parseAsync('platform-team');
 
 ### Common Pitfalls
 
-- Calling `.parse()` or `.safeParse()` on schemas with `.refineAsync()`.
-- Running side effects inside `.refineAsync()` that are not safe to retry.
+- Calling `.parse()` or `.safeParse()` on schemas with async `check()` functions.
+- Running side effects inside async `check()` functions that are not safe to retry.
 - Forgetting to debounce or batch high-volume availability checks in UI code.
 
 ### Related Recipes
@@ -75,4 +75,4 @@ await TeamSlugSchema.parseAsync('platform-team');
 - [Forms](./forms.md)
 - [Unions](./unions.md)
 
-Use `parseAsync()` or `safeParseAsync()` whenever the schema contains async refinements anywhere in the tree.
+Use `parseAsync()` or `safeParseAsync()` whenever the schema contains async `check()` functions anywhere in the tree.

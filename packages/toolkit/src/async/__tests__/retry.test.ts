@@ -46,28 +46,28 @@ describe('retry', () => {
     expect(sleep).toHaveBeenCalledWith(500);
   });
 
-  it('should apply exponential backoff', async () => {
+  it('supports per-attempt delay functions', async () => {
     const mockFn = vi
       .fn()
       .mockRejectedValueOnce(new Error('failure'))
       .mockRejectedValueOnce(new Error('failure'))
       .mockResolvedValueOnce('success');
 
-    await retry(mockFn, { backoff: 2, delay: 100, times: 3 });
+    await retry(mockFn, { delay: (attempt) => 100 * 2 ** attempt, times: 3 });
     expect(sleep).toHaveBeenNthCalledWith(1, 100);
     expect(sleep).toHaveBeenNthCalledWith(2, 200);
   });
 
-  it('should support custom backoff function', async () => {
+  it('supports custom linear delay functions', async () => {
     const mockFn = vi
       .fn()
       .mockRejectedValueOnce(new Error('failure'))
       .mockRejectedValueOnce(new Error('failure'))
       .mockResolvedValueOnce('success');
 
-    const customBackoff = (attempt: number, delay: number) => delay + attempt * 100;
+    const customDelay = (attempt: number) => 100 + attempt * 100;
 
-    await retry(mockFn, { backoff: customBackoff, delay: 100, times: 3 });
+    await retry(mockFn, { delay: customDelay, times: 3 });
 
     // First attempt fails, delay is 100.
     // Next delay = 100 + 1*100 = 200.
@@ -86,7 +86,7 @@ describe('retry', () => {
     expect(err.name).toBe('AbortError');
   });
 
-  it('retryDelay: uses a custom per-attempt delay function (0-based)', async () => {
+  it('delay function receives a 0-based failure count', async () => {
     const mockFn = vi
       .fn()
       .mockRejectedValueOnce(new Error('fail'))
@@ -94,16 +94,16 @@ describe('retry', () => {
       .mockResolvedValueOnce('success');
     const retryDelay = vi.fn((attempt: number) => (attempt + 1) * 100);
 
-    await retry(mockFn, { retryDelay, times: 3 });
+    await retry(mockFn, { delay: retryDelay, times: 3 });
 
     expect(sleep).toHaveBeenNthCalledWith(1, 100); // attempt 0 → 100 ms
     expect(sleep).toHaveBeenNthCalledWith(2, 200); // attempt 1 → 200 ms
   });
 
-  it('retryDelay: supersedes delay and backoff', async () => {
+  it('delay function takes precedence over static delay behavior', async () => {
     const mockFn = vi.fn().mockRejectedValueOnce(new Error('fail')).mockResolvedValueOnce('ok');
 
-    await retry(mockFn, { backoff: 10, delay: 999, retryDelay: () => 42, times: 3 });
+    await retry(mockFn, { delay: () => 42, times: 3 });
 
     expect(sleep).toHaveBeenCalledTimes(1);
     expect(sleep).toHaveBeenCalledWith(42);

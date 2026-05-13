@@ -152,6 +152,47 @@ Use the `header` slot to replace the default title bar and the `footer` slot for
 
 </ComponentPreview>
 
+## Drag Handle Placement
+
+Use `drag-handle-placement` to control whether the swipe handle sits outside the panel edge or inset inside it.
+
+<ComponentPreview center>
+
+```html
+<bit-button id="open-handle-outside">Outside handle</bit-button>
+<bit-button id="open-handle-inset">Inset handle</bit-button>
+
+<bit-drawer
+  id="drawer-handle-outside"
+  label="Outside drag handle"
+  placement="right"
+  drag-handle-placement="outside"
+  dismissible>
+  <p>Default behavior. The drag handle sits outside the drawer edge.</p>
+</bit-drawer>
+
+<bit-drawer
+  id="drawer-handle-inset"
+  label="Inset drag handle"
+  placement="right"
+  drag-handle-placement="inset"
+  dismissible>
+  <p>Inset behavior. The drag handle stays inside the drawer edge.</p>
+</bit-drawer>
+
+<script>
+  document.getElementById('open-handle-outside').addEventListener('click', function () {
+    document.getElementById('drawer-handle-outside').setAttribute('open', '');
+  });
+
+  document.getElementById('open-handle-inset').addEventListener('click', function () {
+    document.getElementById('drawer-handle-inset').setAttribute('open', '');
+  });
+</script>
+```
+
+</ComponentPreview>
+
 ## Backdrop Styles (`backdrop`)
 
 Use `backdrop` to match dialog behavior:
@@ -221,6 +262,7 @@ Use `backdrop` to match dialog behavior:
 | `placement`   | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'` | Edge the drawer slides in from                    |
 | `size`        | `'sm' \| 'md' \| 'lg' \| 'full'`         | `'md'`    | Panel width (or height for top/bottom placements) |
 | `label`       | `string`                                 | —         | Accessible title shown in the header bar          |
+| `drag-handle-placement` | `'outside' \| 'inset'`             | `'outside'` | Position of the swipe drag handle                 |
 | `dismissible` | `boolean`                                | `true`    | Shows a close (×) button in the header            |
 | `backdrop`    | `'opaque' \| 'blur' \| 'transparent'`   | `'opaque'` | Backdrop style, matching `bit-dialog`               |
 | `persistent`  | `boolean`                                | `false`   | Prevents backdrop click from requesting close      |

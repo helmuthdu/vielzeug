@@ -14,7 +14,7 @@ describe('QueryBuilder (via query)', () => {
   let db: Adapter<typeof schema>;
 
   beforeEach(async () => {
-    db = createMemory({ schema });
+    db = createMemory(schema);
     await db.putAll('rows', rowsData);
   });
 
@@ -51,12 +51,37 @@ describe('QueryBuilder (via query)', () => {
     expect(await db.query('rows').offset(1).toArray()).toEqual([rowsData[1], rowsData[2]]);
   });
 
+  test('limit and offset reject invalid values', async () => {
+    await expect(() => db.query('rows').limit(-1)).toThrow('query.limit must be a non-negative integer');
+    await expect(() => db.query('rows').limit(1.5)).toThrow('query.limit must be a non-negative integer');
+    await expect(() => db.query('rows').offset(-1)).toThrow('query.offset must be a non-negative integer');
+    await expect(() => db.query('rows').offset(Number.NaN)).toThrow('query.offset must be a non-negative integer');
+  });
+
   test('count', async () => {
     expect(await db.query('rows').equals('city', 'Paris').count()).toBe(2);
   });
 
   test('count ignores pagination', async () => {
     expect(await db.query('rows').orderBy('age', 'asc').limit(1).count()).toBe(3);
+  });
+
+  test('count ignores sorting even for index-aware filters', async () => {
+    const toArrayCount = (
+      await db
+        .query('rows')
+        .orderBy('age', 'desc')
+        .filter((row, index) => row.id === index + 1)
+        .toArray()
+    ).length;
+    const count = await db
+      .query('rows')
+      .orderBy('age', 'desc')
+      .filter((row, index) => row.id === index + 1)
+      .count();
+
+    expect(toArrayCount).toBe(1);
+    expect(count).toBe(3);
   });
 
   test('first', async () => {

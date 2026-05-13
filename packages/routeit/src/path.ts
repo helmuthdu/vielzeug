@@ -23,7 +23,7 @@ export function compilePathMatcher(path: string): RouteMatcher {
     return {
       paramNames: [],
       pattern: /^\/$/,
-      prefixPattern: /^\//,
+      prefixPattern: /^\/$/,
     };
   }
 

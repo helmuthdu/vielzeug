@@ -2,8 +2,6 @@
  * Wireit — Lightweight typed dependency injection container.
  */
 
-/** -------------------- Types -------------------- **/
-
 export type Token<T = unknown> = symbol & { __type?: T };
 
 export type Lifetime = 'singleton' | 'transient' | 'scoped';
@@ -15,31 +13,22 @@ type DependencyRef<T> = Token<T>;
 type BaseProvider<T, Deps extends unknown[] = any[]> = {
   deps?: { [K in keyof Deps]: DependencyRef<Deps[K]> };
   dispose?: (instance: T) => void | Promise<void>;
-  init?: (instance: T) => void | Promise<void>;
   lifetime?: Lifetime;
-};
-
-export type ClassProvider<T, Deps extends unknown[] = any[]> = BaseProvider<T, Deps> & {
-  useClass: new (...args: Deps) => T;
 };
 
 export type FactoryProvider<T, Deps extends unknown[] = any[]> = BaseProvider<T, Deps> & {
   useFactory: (...deps: Deps) => T | Promise<T>;
 };
 
-export type Provider<T> = ValueProvider<T> | ClassProvider<T> | FactoryProvider<T>;
+export type Provider<T> = ValueProvider<T> | FactoryProvider<T>;
 
 export type ProviderOptions<T, Deps extends unknown[] = any[]> = BaseProvider<T, Deps> & {
   multi?: boolean;
 };
 
-/** -------------------- Token -------------------- **/
-
 export function createToken<T>(description: string): Token<T> {
   return Symbol(description) as Token<T>;
 }
-
-/** -------------------- Errors -------------------- **/
 
 const tokenName = (t: Token<any>): string => t.description ?? 'anonymous';
 
@@ -71,8 +60,6 @@ export class ContainerDisposedError extends Error {
   }
 }
 
-/** -------------------- Internal -------------------- **/
-
 type Registration<T = unknown> = {
   instance?: T;
   promise?: Promise<T>;
@@ -80,38 +67,32 @@ type Registration<T = unknown> = {
   resolved?: boolean;
 };
 
-/** -------------------- Container -------------------- **/
-
 export class Container {
   #registry = new Map<Token<any>, Registration<any>[]>();
   #scoped = new Map<Registration<any>, Registration<any>>();
   #parent?: Container;
   #disposed = false;
 
-  private constructor(parent?: Container) {
+  constructor(parent?: Container) {
     this.#parent = parent;
   }
 
-  static create(): Container {
-    return new Container();
+  #assertNotDisposed(): void {
+    if (this.#disposed) throw new ContainerDisposedError();
   }
-
-  /* ---- Registration ---- */
 
   #register<T>(token: Token<T>, provider: Provider<T>, { multi = false } = {}): this {
     this.#assertNotDisposed();
 
-    const prev = this.#registry.get(token);
+    const existing = this.#registry.get(token);
 
     if (multi) {
-      const next = prev ? [...prev, { provider }] : [{ provider }];
-
-      this.#registry.set(token, next);
+      this.#registry.set(token, existing ? [...existing, { provider }] : [{ provider }]);
 
       return this;
     }
 
-    if (prev && prev.length > 0) {
+    if (existing && existing.length > 0) {
       throw new Error(`Token "${tokenName(token)}" is already registered.`);
     }
 
@@ -134,56 +115,9 @@ export class Container {
     return this.#register(token, { useFactory: fn, ...providerOpts } as FactoryProvider<T>, { multi });
   }
 
-  bind<T, Deps extends unknown[] = any[]>(
-    token: Token<T>,
-    cls: new (...args: Deps) => T,
-    opts?: ProviderOptions<T, Deps>,
-  ): this {
-    const { multi, ...providerOpts } = opts ?? {};
-
-    return this.#register(token, { useClass: cls, ...providerOpts } as ClassProvider<T>, { multi });
-  }
-
-  /* ---- Lifecycle ---- */
-
   get disposed(): boolean {
     return this.#disposed;
   }
-
-  async dispose(): Promise<void> {
-    if (this.#disposed) return;
-
-    this.#disposed = true;
-
-    const hooks: Promise<void>[] = [];
-    const regs = [...this.#registry.values()].flat();
-
-    for (const reg of [...regs, ...this.#scoped.values()]) {
-      const { instance, provider, resolved } = reg;
-
-      if (resolved && 'dispose' in provider && provider.dispose) {
-        hooks.push(Promise.resolve().then(() => provider.dispose!(instance as any)));
-      }
-    }
-
-    if (hooks.length > 0) {
-      const outcomes = await Promise.allSettled(hooks);
-      const failures = outcomes.filter((o): o is PromiseRejectedResult => o.status === 'rejected').map((o) => o.reason);
-
-      if (failures.length > 0) {
-        throw new AggregateError(failures, 'One or more dispose hooks failed.');
-      }
-    }
-
-    this.#scoped.clear();
-    this.#registry.clear();
-  }
-
-  [Symbol.asyncDispose](): Promise<void> {
-    return this.dispose();
-  }
-
-  /* ---- Resolution ---- */
 
   createChild(): Container {
     this.#assertNotDisposed();
@@ -204,16 +138,59 @@ export class Container {
 
     if (regs.length === 0) return [];
 
-    return Promise.all(regs.map((reg) => this.#resolveRegistration(token, reg, [], new Set())));
+    return Promise.all(regs.map((reg) => this.#resolveRegistration(token, reg, [token], new Set([token]))));
   }
 
-  /** -------------------- Private -------------------- **/
+  async resolveOptional<T>(token: Token<T>): Promise<T | undefined> {
+    try {
+      return await this.resolve(token);
+    } catch (error) {
+      if (error instanceof ProviderNotFoundError) return undefined;
 
-  #assertNotDisposed(): void {
-    if (this.#disposed) throw new ContainerDisposedError();
+      throw error;
+    }
+  }
+
+  async dispose(): Promise<void> {
+    if (this.#disposed) return;
+
+    this.#disposed = true;
+
+    const hooks: Promise<void>[] = [];
+    const registrations = [...this.#registry.values()].flat();
+
+    for (const reg of [...registrations, ...this.#scoped.values()]) {
+      const { instance, provider, resolved } = reg;
+
+      if (resolved && 'dispose' in provider && provider.dispose) {
+        hooks.push(Promise.resolve().then(() => provider.dispose!(instance as any)));
+      }
+    }
+
+    if (hooks.length > 0) {
+      const outcomes = await Promise.allSettled(hooks);
+      const failures = outcomes
+        .filter((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected')
+        .map((outcome) => outcome.reason);
+
+      if (failures.length > 0) {
+        throw new AggregateError(failures, 'One or more dispose hooks failed.');
+      }
+    }
+
+    this.#scoped.clear();
+    this.#registry.clear();
+  }
+
+  [Symbol.asyncDispose](): Promise<void> {
+    return this.dispose();
   }
 
   #getRegistrations<T>(token: Token<T>): Registration<T>[] {
+    if (this.#parent) {
+      this.#parent.#assertNotDisposed();
+    }
+
     const local = this.#registry.get(token) as Registration<T>[] | undefined;
 
     if (local) return local;
@@ -241,7 +218,7 @@ export class Container {
 
     if (regs.length > 1) throw new MultipleProvidersError(token, regs.length);
 
-    return this.#resolveRegistration(token, regs[0], stack, seen);
+    return this.#resolveRegistration(token, regs[0], [...stack, token], new Set([...seen, token]));
   }
 
   async #resolveRegistration<T>(
@@ -254,59 +231,50 @@ export class Container {
 
     if ('useValue' in provider) return provider.useValue;
 
-    const p = provider as ClassProvider<T> | FactoryProvider<T>;
-    const { deps = [], lifetime = 'singleton' } = p;
+    const { deps = [], lifetime = 'singleton' } = provider;
 
-    const cacheReg =
-      lifetime === 'scoped' && this.#parent ? this.#scopedReg(reg) : lifetime === 'singleton' ? reg : undefined;
+    if (lifetime === 'scoped' && !this.#parent) {
+      throw new Error(`Token "${tokenName(token)}" uses scoped lifetime but was resolved on the root container.`);
+    }
+
+    const cacheReg = lifetime === 'singleton' ? reg : lifetime === 'scoped' ? this.#scopedReg(reg) : undefined;
 
     if (cacheReg?.resolved) return cacheReg.instance as T;
 
     if (cacheReg?.promise) return cacheReg.promise;
 
-    stack.push(token);
-    seen.add(token);
-
     const build = async (): Promise<T> => {
-      const args = await Promise.all((deps as Token<any>[]).map((dep) => this.#resolveToken(dep, stack, seen)));
+      const nextStack = [...stack, token];
+      const nextSeen = new Set(seen);
 
-      const created = (
-        'useClass' in p
-          ? new (p as ClassProvider<T>).useClass(...args)
-          : await (p as FactoryProvider<T>).useFactory(...args)
-      ) as T;
+      nextSeen.add(token);
 
-      if ('init' in p && p.init) {
-        await p.init(created);
-      }
+      const args = await Promise.all(
+        (deps as Token<any>[]).map((dep) => this.#resolveToken(dep, nextStack, new Set(nextSeen))),
+      );
+
+      const created = await (provider as FactoryProvider<T>).useFactory(...args);
 
       return created;
     };
 
-    try {
-      if (!cacheReg) return await build();
+    if (!cacheReg) return build();
 
-      cacheReg.promise = build()
-        .then((inst) => {
-          cacheReg.instance = inst;
-          cacheReg.resolved = true;
+    cacheReg.promise = build()
+      .then((instance) => {
+        cacheReg.instance = instance;
+        cacheReg.resolved = true;
 
-          return inst;
-        })
-        .finally(() => {
-          cacheReg.promise = undefined;
-        });
+        return instance;
+      })
+      .finally(() => {
+        cacheReg.promise = undefined;
+      });
 
-      return await cacheReg.promise;
-    } finally {
-      stack.pop();
-      seen.delete(token);
-    }
+    return cacheReg.promise;
   }
 }
 
-/** -------------------- Factory -------------------- **/
-
 export function createContainer(): Container {
-  return Container.create();
+  return new Container();
 }

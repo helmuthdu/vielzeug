@@ -3,23 +3,21 @@ export type Unsubscribe = () => void;
 
 export type MaybePromise<T> = T | PromiseLike<T>;
 
-export type FieldValidator<V = unknown> = (value: V, signal: AbortSignal) => MaybePromise<string | undefined>;
+export type FieldValidator<V = unknown> = (value: V, signal?: AbortSignal) => MaybePromise<string | undefined>;
 
 export type FormValidator<TValues extends Record<string, unknown> = Record<string, unknown>> = (
   values: TValues,
-  signal: AbortSignal,
-) => MaybePromise<Record<string, string> | undefined>;
+  signal?: AbortSignal,
+) => MaybePromise<Partial<Record<ErrorKeyOf<TValues>, string>> | undefined>;
 
 export type SetOptions = {
-  touched?: boolean; // default: false
   /** Whether to update dirty tracking. Default: true. */
-  track?: boolean;
+  dirty?: boolean;
+  touched?: boolean; // default: false
 };
 
 /** Generic form state snapshot. `TValues` types the `dirtyFields` array as typed dot-notation keys. */
-export type FormState<TValues extends Record<string, unknown> = Record<string, unknown>> = {
-  /** Flat dot-notation keys of all fields that differ from their default value. */
-  dirtyFields: FlatKeyOf<TValues>[];
+export type FormState = {
   errors: Record<string, string>;
   isDirty: boolean;
   isSubmitting: boolean;
@@ -34,11 +32,9 @@ export type SubscribeOptions = {
   sync?: boolean;
 };
 
-/** The result returned by `form.validate(...)`. */
+/** The result returned by `form.validateAll()`, `form.validateTouched()`, and `form.validateFields(...)`. */
 export type ValidateResult = {
-  /** Full form error map after this run (all fields, including ones not validated here). */
-  allErrors: Record<string, string>;
-  /** Errors scoped to only the fields validated in this run. For full `validate()`, equals `allErrors`. */
+  /** Errors scoped to only the fields validated in this run. */
   errors: Record<string, string>;
   /** Whether the entire form error map is empty after this run. */
   valid: boolean;
@@ -79,6 +75,9 @@ export type TypeAtPath<T, K extends string> = K extends `${infer Head}.${infer T
   : K extends keyof T
     ? T[K]
     : unknown;
+
+/** Field error keys include field paths plus reserved `_form` for root-level/form-level issues. */
+export type ErrorKeyOf<TValues extends Record<string, unknown>> = FlatKeyOf<TValues> | '_form';
 
 /** Structural interface for Zod/Valibot/Standard-Schema-compatible schemas. */
 export type SafeParseSchema = {
@@ -126,9 +125,10 @@ export type FormOptions<TValues extends Record<string, unknown> = Record<string,
    * - `'onTouched'` — validates on blur first, then on every change once touched
    */
   mode?: ValidationMode;
+  /** Form-level validator. Use `schemaValidator(schema)` to adapt a safeParse-compatible schema. */
   validator?: FormValidator<TValues>;
   /** Field-level validators keyed by field name or dot-notation path. */
-  validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator | FieldValidator[]>>;
+  validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator>>;
 };
 
 export type ValidationMode = 'onChange' | 'onBlur' | 'onTouched' | 'onSubmit';
@@ -139,22 +139,21 @@ export type BindConfig = {
   validateOnBlur?: boolean;
   /** Validate the field automatically after each value change. Default: false. */
   validateOnChange?: boolean;
+  /** Validate on change only after the field has been touched at least once. */
+  validateOnChangeAfterTouch?: boolean;
 };
 
 export interface Form<TValues extends Record<string, unknown> = Record<string, unknown>> {
   array(name: FlatKeyOf<TValues>): ArrayField;
+  /**
+   * Returns a live binding object for a field.
+   * @note Vanilla-JS helper — not reactive in component frameworks. Use a framework adapter for reactivity.
+   */
   bind<K extends FlatKeyOf<TValues>>(name: K, config?: BindConfig): BindResult<TypeAtPath<TValues, K>>;
-  clearError(name: FlatKeyOf<TValues>): void;
   dispose(): void;
   readonly disposed: boolean;
-  readonly errors: Record<string, string>;
   field<K extends FlatKeyOf<TValues>>(name: K): FieldState<TypeAtPath<TValues, K>>;
   get<K extends FlatKeyOf<TValues>>(name: K): TypeAtPath<TValues, K>;
-  readonly isDirty: boolean;
-  readonly isSubmitting: boolean;
-  readonly isTouched: boolean;
-  readonly isValid: boolean;
-  readonly isValidating: boolean;
   /** Restore values from the current baseline and clear errors/touched/dirty. */
   reset(): void;
   /** Replace values and baseline in one operation. */
@@ -163,34 +162,35 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   /** Remove a field entirely: drops value, dirty, touched, error, and any registered validator. */
   removeField(name: FlatKeyOf<TValues>): void;
   set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void;
-  setError(name: FlatKeyOf<TValues>, message: string): void;
-  /** Merge specific fields into the current error map; pass `undefined` to clear a field. */
-  mergeErrors(errors: Partial<Record<FlatKeyOf<TValues>, string | undefined>>): void;
-  /** Replace the entire error map. */
-  replaceErrors(errors: Partial<Record<FlatKeyOf<TValues>, string>>): void;
-  readonly state: FormState<TValues>;
+  /** Set one field error. Pass `undefined` to clear that field. */
+  setError(name: ErrorKeyOf<TValues>, message?: string): void;
+  /** Replace the entire error map. Use `undefined` values to omit entries. */
+  setErrors(errors: Partial<Record<ErrorKeyOf<TValues>, string | undefined>>): void;
+  /** Mark a field as touched. */
+  touch(name: FlatKeyOf<TValues>): void;
+  /** Mark a field as untouched. */
+  untouch(name: FlatKeyOf<TValues>): void;
+  /** Mark all known fields (store + validators) as touched. */
+  touchAll(): void;
+  /** Mark all fields as untouched. */
+  untouchAll(): void;
+  readonly state: FormState;
   submit<TResult = void>(
     handler: (values: TValues) => MaybePromise<TResult>,
     onInvalid?: (errors: Record<string, string>) => MaybePromise<void>,
   ): Promise<TResult | void>;
-  readonly submitCount: number;
-  subscribeForm(listener: (state: FormState<TValues>) => void, options?: SubscribeOptions): Unsubscribe;
+  subscribeForm(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe;
   subscribeField<K extends FlatKeyOf<TValues>>(
     name: K,
     listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
     options?: SubscribeOptions,
   ): Unsubscribe;
-  /** Subscribe to a single field's value changes. Returns current value and a teardown. */
-  watch<K extends FlatKeyOf<TValues>>(
-    name: K,
-    callback: (value: TypeAtPath<TValues, K>) => void,
-    options?: SubscribeOptions,
-  ): Unsubscribe;
-  touch(name?: FlatKeyOf<TValues>): void;
-  /** Unmark field(s) as touched. Omit name to unmark all. */
-  untouch(name?: FlatKeyOf<TValues>): void;
-  /** Validate form or specific fields. validate() = all; validate('touched') = touched; validate(fields) = list. */
-  validate(fields?: FlatKeyOf<TValues>[] | 'touched', signal?: AbortSignal): Promise<ValidateResult>;
+  /** Validate all registered field validators and the optional form validator. */
+  validateAll(signal?: AbortSignal): Promise<ValidateResult>;
+  /** Validate only touched fields. */
+  validateTouched(signal?: AbortSignal): Promise<ValidateResult>;
+  /** Validate only the provided fields. */
+  validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>;
   validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>;
   values(): TValues;
 }

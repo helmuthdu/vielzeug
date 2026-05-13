@@ -36,25 +36,14 @@ const wizardForm = createForm({
   validators: {
     firstName: (v) => (!v ? 'First name is required' : undefined),
     lastName: (v) => (!v ? 'Last name is required' : undefined),
-    email: [
-      (v) => (!v ? 'Email is required' : undefined),
-      (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
-    ],
+    email: (v) => (!v ? 'Email is required' : v && !String(v).includes('@') ? 'Invalid email' : undefined),
     street: (v) => (!v ? 'Street is required' : undefined),
     city: (v) => (!v ? 'City is required' : undefined),
-    zipCode: [
-      (v) => (!v ? 'ZIP code is required' : undefined),
-      (v) => (v && !/^\d{5}$/.test(String(v)) ? 'Invalid ZIP code' : undefined),
-    ],
-    cardNumber: [
-      (v) => (!v ? 'Card number is required' : undefined),
-      (v) => (v && !/^\d{16}$/.test(String(v).replace(/\s/g, '')) ? 'Invalid card number' : undefined),
-    ],
+    zipCode: (v) => (!v ? 'ZIP code is required' : v && !/^\d{5}$/.test(String(v)) ? 'Invalid ZIP code' : undefined),
+    cardNumber: (v) =>
+      !v ? 'Card number is required' : v && !/^\d{16}$/.test(String(v).replace(/\s/g, '')) ? 'Invalid card number' : undefined,
     expiryDate: (v) => (!v ? 'Expiry date is required' : undefined),
-    cvv: [
-      (v) => (!v ? 'CVV is required' : undefined),
-      (v) => (v && !/^\d{3,4}$/.test(String(v)) ? 'Invalid CVV' : undefined),
-    ],
+    cvv: (v) => (!v ? 'CVV is required' : v && !/^\d{3,4}$/.test(String(v)) ? 'Invalid CVV' : undefined),
   },
 });
 
@@ -69,7 +58,7 @@ let currentStep = 0;
 
 // Validate current step
 async function validateCurrentStep() {
-  const { valid } = await wizardForm.validate([...steps[currentStep].fields]);
+  const { valid } = await wizardForm.validateFields([...steps[currentStep].fields]);
   return valid;
 }
 

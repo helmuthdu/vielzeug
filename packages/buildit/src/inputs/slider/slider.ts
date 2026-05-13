@@ -3,7 +3,7 @@ import {
   createId,
   define,
   defineField,
-  handle,
+  on,
   html,
   inject,
   ref,
@@ -272,7 +272,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
         triggerValidation('change');
       };
 
-      handle(
+      on(
         container,
         'pointerdown',
         guard(
@@ -288,7 +288,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      handle(
+      on(
         container,
         'pointermove',
         guard(
@@ -302,7 +302,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      handle(
+      on(
         container,
         'pointerup',
         guard(
@@ -338,7 +338,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       const thumbEndEl = thumbEndRef.value;
 
       if (thumbStartEl) {
-        handle(
+        on(
           thumbStartEl,
           'keydown',
           makeThumbKeydown(
@@ -358,7 +358,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       }
 
       if (thumbEndEl) {
-        handle(
+        on(
           thumbEndEl,
           'keydown',
           makeThumbKeydown(
@@ -396,7 +396,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       };
       let isPointerDragging = false;
 
-      handle(
+      on(
         container,
         'pointerdown',
         guard(
@@ -409,7 +409,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      handle(
+      on(
         container,
         'pointermove',
         guard(
@@ -423,7 +423,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      handle(
+      on(
         container,
         'pointerup',
         guard(
@@ -436,7 +436,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      handle(
+      on(
         host.el,
         'keydown',
         guard(

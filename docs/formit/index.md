@@ -43,7 +43,7 @@ const form = createForm({
   },
 });
 
-const { valid, errors } = await form.validate();
+const { valid, errors } = await form.validateAll();
 
 if (!valid) {
   console.log(errors);
@@ -88,7 +88,7 @@ if (Object.keys(errors).length === 0) {
 
 // After: one form controller with explicit transitions
 const form = createForm({ defaultValues: { email: '', password: '' }, validators: { email: isEmail, password: min8 } });
-await form.validate();
+await form.validateAll();
 await form.submit(submit);
 ```
 
@@ -100,7 +100,7 @@ await form.submit(submit);
 | Global validation mode | ✅ | ✅ | ✅ |
 | Unified validation entrypoint | ✅ | ❌ | ❌ |
 | `onInvalid` submit callback | ✅ | ✅ | ✅ |
-| Live field watch | ✅ | ✅ | ✅ |
+| Live field observation | ✅ | ✅ | ✅ |
 | Full array helpers | ✅ | ✅ | ✅ |
 | Conditional field removal | ✅ | ✅ | Partial |
 | Form + field subscriptions | ✅ | ✅ | ✅ |
@@ -113,17 +113,17 @@ await form.submit(submit);
 ## Features
 
 - Typed field paths with compile-time value inference
-- Unified validation API: `validate()`, `validate('touched')`, and `validate(fields)`
+- Explicit validation API: `validateAll()`, `validateTouched()`, and `validateFields(fields)`
 - Single-field validation with `validateField(name)`
 - Global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
 - `submit(onValid, onInvalid?)` — optional error callback avoids try/catch
-- `watch(name, callback)` — live value streaming without subscription boilerplate
+- Schema integration via `schemaValidator(schema)` for `safeParse`-compatible validators
 - `removeField(name)` — clean conditional field lifecycle
 - Full array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
-- Explicit subscriptions: `subscribeForm` and `subscribeField`
+- Explicit synchronous subscriptions: `subscribeForm` and `subscribeField`
+- Explicit touched and error controls: `touch`, `untouch`, `touchAll`, `untouchAll`, `setError`, `setErrors`
 - Baseline-safe reset/replace model
-- Browser-first utilities: `bind`, `toFormData`
-- Schema adapter via `fromSchema(schema)`
+- Browser-first utilities: vanilla-DOM `bind`, `toFormData`
 
 ## Compatibility
 

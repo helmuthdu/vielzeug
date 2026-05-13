@@ -80,7 +80,7 @@ export function throttle<T extends Fn>(
 
     lastArgs = undefined;
     lastThis = undefined;
-    lastResult = fn.apply(ctx as any, args);
+    lastResult = fn.apply(ctx as any, args) as ReturnType<T>;
 
     return lastResult;
   };

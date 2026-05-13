@@ -10,8 +10,8 @@ describe('LocalStorage adapter', () => {
   let db: Adapter<typeof userSchema>;
 
   beforeEach(() => {
-    localStorage.clear();
-    db = createLocalStorage({ dbName: 'LS', schema: userSchema });
+    window.localStorage.clear();
+    db = createLocalStorage('LS', userSchema);
   });
 
   test('put/get/delete/deleteAll/count', async () => {
@@ -73,9 +73,26 @@ describe('LocalStorage adapter', () => {
   });
 
   test('corrupted entries are removed lazily on read', async () => {
-    localStorage.setItem('LS~users~1', '{bad json');
+    window.localStorage.setItem('LS~users~1', '{bad json');
 
     expect(await db.get('users', 1)).toBeUndefined();
-    expect(localStorage.getItem('LS~users~1')).toBeNull();
+    expect(window.localStorage.getItem('LS~users~1')).toBeNull();
+  });
+
+  test('storage clear event notifies observers', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const snapshots: User[][] = [];
+    const stop = db.observe('users', (rows) => {
+      snapshots.push(rows);
+    });
+
+    window.localStorage.clear();
+    window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    await Promise.resolve();
+    stop();
+
+    expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
+    expect(snapshots[1]).toEqual([]);
   });
 });

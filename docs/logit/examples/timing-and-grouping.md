@@ -14,6 +14,8 @@ Implement timing and grouping in a production-friendly way with `@vielzeug/logit
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/logit` installed.
 
 ```ts
+import { Logit } from '@vielzeug/logit';
+
 const result = await Logit.groupCollapsed(
   'Checkout',
   async () => {

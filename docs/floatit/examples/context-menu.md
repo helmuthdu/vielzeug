@@ -16,7 +16,7 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 Right-click context menu pinned to the cursor position using a virtual reference element.
 
 ```ts
-import { flip, positionFloat, shift } from '@vielzeug/floatit';
+import { computePosition, flip, shift } from '@vielzeug/floatit';
 
 const menu = document.querySelector<HTMLElement>('#context-menu')!;
 
@@ -30,10 +30,13 @@ document.addEventListener('contextmenu', (e) => {
 
   menu.style.display = 'block';
 
-  positionFloat(virtualRef as Element, menu, {
+  const result = computePosition(virtualRef, menu, {
     placement: 'bottom-start',
     middleware: [flip(), shift({ padding: 8 })],
   });
+
+  menu.style.left = `${result.x}px`;
+  menu.style.top = `${result.y}px`;
 });
 
 document.addEventListener('click', () => {

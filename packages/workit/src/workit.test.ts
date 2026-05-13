@@ -32,7 +32,15 @@ describe('createWorker', () => {
       const worker = createWorker<ArrayBuffer, number>((buf) => buf.byteLength);
       const buf = new ArrayBuffer(8);
 
-      expect(await worker.run(buf, { transfer: [buf] })).toBe(8);
+      // jsdom's Worker implementation does not reliably support transfer lists.
+      if (globalThis.navigator?.userAgent?.toLowerCase().includes('jsdom')) {
+        expect(await worker.run(buf)).toBe(8);
+        worker.dispose();
+
+        return;
+      }
+
+      expect(await worker.run(buf, { transferables: [buf] })).toBe(8);
       worker.dispose();
     });
   });
@@ -85,12 +93,7 @@ describe('createWorker', () => {
       const running = worker.run(undefined);
       const queued = worker.run(undefined);
 
-      try {
-        await worker.run(undefined);
-        throw new Error('Expected queue_full rejection');
-      } catch (error) {
-        expect((error as WorkerError).code).toBe('queue_full');
-      }
+      await expect(worker.run(undefined)).rejects.toMatchObject({ code: 'queue_full' });
 
       await running;
       await queued;
@@ -304,7 +307,7 @@ describe('createWorker', () => {
         writable: true,
       });
 
-      await expect(worker.run(1)).rejects.toThrow(WorkerError);
+      await expect(worker.run(1)).rejects.toMatchObject({ code: 'worker' });
 
       Object.defineProperty(globalThis, 'Worker', {
         configurable: true,

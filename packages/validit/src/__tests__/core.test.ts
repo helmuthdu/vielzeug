@@ -1,4 +1,4 @@
-import { type Infer, type InferOutput, type TypeOf, ValidationError, v } from '../index';
+import { type Infer, ValidationError, v } from '../index';
 
 describe('ValidationError', () => {
   it('formats a root-level issue as "value: message [code]"', () => {
@@ -41,7 +41,7 @@ describe('ValidationError', () => {
   it('flatten() separates field errors from form-level errors', () => {
     const result = v
       .object({ email: v.string().email(), name: v.string().min(2) })
-      .refine((d) => d.name !== 'admin', 'Reserved name')
+      .check((d) => d.name !== 'admin' || 'Reserved name')
       .safeParse({ email: 'bad', name: 'admin' });
 
     expect(result.success).toBe(false);
@@ -78,6 +78,18 @@ describe('ValidationError', () => {
 
       expect(fieldErrors['address.zip']).toEqual(['Invalid format']);
       expect(fieldErrors.address).toBeUndefined();
+    }
+  });
+
+  it('flattenFirst() returns only the first error per field', () => {
+    const result = v.object({ tag: v.string().min(3).max(1) }).safeParse({ tag: 'ab' });
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const { fieldErrors } = result.error.flattenFirst();
+
+      expect(typeof fieldErrors.tag).toBe('string');
     }
   });
 });
@@ -150,8 +162,8 @@ describe('parseAsync() / safeParseAsync()', () => {
     expect(await v.string().min(2).parseAsync('hi')).toBe('hi');
   });
 
-  it('runs async refine with refineAsync', async () => {
-    const schema = v.number().refineAsync(async (n) => n > 0, 'Must be positive');
+  it('runs async check', async () => {
+    const schema = v.number().check(async (n) => n > 0 || 'Must be positive');
 
     expect(await schema.parseAsync(1)).toBe(1);
     await expect(schema.parseAsync(-1)).rejects.toThrow('Must be positive');
@@ -297,19 +309,26 @@ describe('catch()', () => {
   });
 });
 
-describe('refine()', () => {
-  it('adds sync custom validation', () => {
-    const schema = v.number().refine((n) => n % 2 === 0, 'Must be even');
+describe('check()', () => {
+  it('adds sync custom validation via string return', () => {
+    const schema = v.number().check((n) => n % 2 === 0 || 'Must be even');
 
     expect(schema.parse(4)).toBe(4);
     expect(() => schema.parse(3)).toThrow('Must be even');
   });
 
+  it('false return uses default message', () => {
+    const schema = v.number().check((n) => n % 2 === 0 || false);
+
+    expect(schema.parse(4)).toBe(4);
+    expect(() => schema.parse(3)).toThrow('Invalid value');
+  });
+
   it('chains multiple refinements', () => {
     const schema = v
       .string()
-      .refine((s) => s.includes('@'), 'Must contain @')
-      .refine((s) => s.includes('.'), 'Must contain .');
+      .check((s) => s.includes('@') || 'Must contain @')
+      .check((s) => s.includes('.') || 'Must contain .');
 
     expect(schema.parse('a@b.c')).toBe('a@b.c');
     expect(() => schema.parse('nope')).toThrow('Must contain @');
@@ -318,51 +337,44 @@ describe('refine()', () => {
   it('works for cross-field object validation', () => {
     const schema = v
       .object({ confirm: v.string(), password: v.string() })
-      .refine((d) => d.password === d.confirm, 'Passwords must match');
+      .check((d) => d.password === d.confirm || 'Passwords must match');
 
     expect(schema.parse({ confirm: 'abc', password: 'abc' })).toEqual({ confirm: 'abc', password: 'abc' });
     expect(() => schema.parse({ confirm: 'xyz', password: 'abc' })).toThrow('Passwords must match');
   });
 
-  it('message function receives the failing value', () => {
-    const schema = v.number().refine(
-      (n) => n > 0,
-      ({ value }) => `${value} is not positive`,
-    );
+  it('inline error string receives the value via closure', () => {
+    const schema = v.number().check((n) => n > 0 || `${n} is not positive`);
 
     expect(() => schema.parse(-5)).toThrow('-5 is not positive');
   });
 
-  it('throws at first parse when given an async function', () => {
+  it('throws at validation time when given an async function in sync parse', () => {
     const asyncFn = async (_v: string): Promise<boolean> => true;
-    const schema = v.string().refine(asyncFn as unknown as (v: string) => boolean);
+    const schema = v.string().check(asyncFn as unknown as (v: string) => boolean);
 
-    expect(() => schema.parse('hello')).toThrow('refine() only accepts sync functions');
+    expect(() => schema.parse('hello')).toThrow('returned a Promise');
   });
 });
 
-describe('refineAsync()', () => {
+describe('check() async', () => {
   it('defers to parseAsync and resolves correctly', async () => {
-    const schema = v.string().refineAsync(async (s) => {
-      await new Promise((r) => setTimeout(r, 1));
-
-      return s.length >= 3;
-    }, 'Too short');
+    const schema = v.string().check(async (s) => s.length >= 3 || 'Too short');
 
     expect(await schema.parseAsync('hello')).toBe('hello');
     await expect(schema.parseAsync('hi')).rejects.toThrow('Too short');
   });
 
   it('throws when used with sync parse()', async () => {
-    const schema = v.string().refineAsync(async () => true);
+    const schema = v.string().check(async () => true);
 
-    expect(() => schema.parse('x')).toThrow('async validators');
+    expect(() => schema.parse('x')).toThrow('returned a Promise');
   });
 
   it('cross-field async refinement on object', async () => {
     const schema = v
       .object({ confirm: v.string(), password: v.string() })
-      .refineAsync(async (d) => d.password === d.confirm, 'Passwords must match');
+      .check(async (d) => d.password === d.confirm || 'Passwords must match');
 
     expect(await schema.parseAsync({ confirm: 'abc', password: 'abc' })).toEqual({
       confirm: 'abc',
@@ -371,21 +383,18 @@ describe('refineAsync()', () => {
     await expect(schema.parseAsync({ confirm: 'xyz', password: 'abc' })).rejects.toThrow('Passwords must match');
   });
 
-  it('parseAsync also runs sync refine validators', async () => {
+  it('parseAsync also runs sync check validators', async () => {
     const schema = v
       .object({ confirm: v.string(), password: v.string() })
-      .refine((d) => d.password === d.confirm, 'Passwords must match');
+      .check((d) => d.password === d.confirm || 'Passwords must match');
     const ok = await schema.parseAsync({ confirm: 'abc', password: 'abc' });
 
     expect(ok).toEqual({ confirm: 'abc', password: 'abc' });
     await expect(schema.parseAsync({ confirm: 'xyz', password: 'abc' })).rejects.toThrow('Passwords must match');
   });
 
-  it('message function receives the failing value', async () => {
-    const schema = v.string().refineAsync(
-      async (s) => s.length >= 3,
-      ({ value }) => `"${value}" is too short`,
-    );
+  it('inline string message has access to the value via closure', async () => {
+    const schema = v.string().check(async (s) => s.length >= 3 || `"${s}" is too short`);
 
     await expect(schema.parseAsync('hi')).rejects.toThrow('"hi" is too short');
   });
@@ -458,7 +467,7 @@ describe('brand()', () => {
   });
 });
 
-describe('Infer<> / InferOutput<>', () => {
+describe('Infer<>', () => {
   it('infers primitives', () => {
     const s = v.string();
 
@@ -509,26 +518,14 @@ describe('Infer<> / InferOutput<>', () => {
     expect(schema.parse(nul)).toBeNull();
   });
 
-  it('InferOutput<T> is same as Infer<T> for plain schemas', () => {
-    const schema = v.string();
-
-    type Out = InferOutput<typeof schema>;
-
-    const val: Out = 'hello';
-
-    expect(schema.parse(val)).toBe('hello');
-  });
-
-  it('TypeOf<T> is same as Infer<T>', () => {
+  it('is the canonical output inference utility', () => {
     const schema = v.object({ age: v.number(), name: v.string() });
 
-    type A = Infer<typeof schema>;
-    type B = TypeOf<typeof schema>;
+    type T = Infer<typeof schema>;
 
-    const a: A = { age: 1, name: 'Alice' };
-    const b: B = { age: 1, name: 'Alice' };
+    const value: T = { age: 1, name: 'Alice' };
 
-    expect(schema.parse(a)).toEqual(b);
+    expect(schema.parse(value)).toEqual(value);
   });
 });
 

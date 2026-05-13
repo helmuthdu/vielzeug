@@ -70,14 +70,14 @@ stop();
 
 - `onCleanup()` throws when called outside an active effect.
 - Reading a disposed computed signal throws.
-- Store misuse (non-object values) throws.
+- Store constructor/patch misuse (non-object values) throws.
 
 ## API
 
 ```ts
 signal<T>(initial: T, options?: { equals?: (a: T, b: T) => boolean }): Signal<T>;
 computed<T>(compute: () => T, options?: { equals?: (a: T, b: T) => boolean }): ComputedSignal<T>;
-effect(fn: () => void | (() => void), options?: { maxIterations?: number }): Subscription;
+effect(fn: () => void | (() => void)): Subscription;
 watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;
 watch<S, T>(
   source: ReadonlySignal<S>,

@@ -1,8 +1,8 @@
 import type { AnySchema, IndexedDBHandle, KeyOf, MigrationFn, RecordOf, TransactionContext } from '../types';
 
-import { QueryBuilder } from '../query';
+import { createObserverHub, ensureRecordKey, resolveRecordKey } from '../internal';
+import { createQueryBuilder } from '../query';
 import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
-import { AdapterCore } from './adapter-core';
 
 /* -------------------- Module-level IDB helpers -------------------- */
 
@@ -18,9 +18,10 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
     let result: T | undefined;
     let callbackError: unknown;
 
-    work()
-      .then((r) => {
-        result = r;
+    Promise.resolve()
+      .then(work)
+      .then((value) => {
+        result = value;
       })
       .catch((err) => {
         callbackError = err;
@@ -47,40 +48,83 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
   });
 }
 
-async function readAllFromStore<T extends Record<string, unknown>>(store: IDBObjectStore): Promise<T[]> {
+async function deleteWhereInStore<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  predicate: (record: T) => boolean,
+): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    let count = 0;
+    const request = store.openCursor();
+
+    request.onerror = () => reject(request.error ?? new Error('deposit: IndexedDB cursor request failed'));
+    request.onsuccess = () => {
+      const cursor = request.result;
+
+      if (!cursor) {
+        resolve(count);
+
+        return;
+      }
+
+      const raw = cursor.value as StoredRecord<T>;
+      const value = unwrapStored(raw);
+
+      if (value === undefined || predicate(value)) {
+        const deleteRequest = cursor.delete();
+
+        deleteRequest.onerror = () =>
+          reject(deleteRequest.error ?? new Error('deposit: IndexedDB delete request failed'));
+        deleteRequest.onsuccess = () => {
+          if (value !== undefined) count += 1;
+
+          cursor.continue();
+        };
+
+        return;
+      }
+
+      cursor.continue();
+    };
+  });
+}
+
+async function scanStore<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+): Promise<{ expiredKeys: IDBValidKey[]; records: T[] }> {
   const [raws, keys] = await Promise.all([
     idbReq<StoredRecord<T>[]>(store.getAll()),
     idbReq<IDBValidKey[]>(store.getAllKeys()),
   ]);
-  const results: T[] = [];
+  const expiredKeys: IDBValidKey[] = [];
+  const records: T[] = [];
 
-  for (let i = 0; i < raws.length; i++) {
-    const value = unwrapStored(raws[i]);
+  for (let index = 0; index < raws.length; index += 1) {
+    const value = unwrapStored(raws[index]);
 
     if (value !== undefined) {
-      results.push(value);
+      records.push(value);
     } else {
-      store.delete(keys[i]);
+      expiredKeys.push(keys[index]);
     }
   }
 
-  return results;
+  return { expiredKeys, records };
 }
 
 /* -------------------- IndexedDBAdapter -------------------- */
 
-class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements IndexedDBHandle<S> {
-  private db: IDBDatabase | null = null;
-  private connectPromise: Promise<void> | null = null;
-  private closed = false;
+class IndexedDBAdapter<S extends AnySchema> implements IndexedDBHandle<S> {
   private readonly channel?: BroadcastChannel;
   private readonly dbName: string;
+  private db: IDBDatabase | null = null;
   private readonly migrate?: MigrationFn;
-  protected readonly schema: S;
+  private readonly observers = createObserverHub<S>((table) => this.getAll(table));
+  private readonly schema: S;
   private readonly schemaVersion: number;
+  private connectPromise: Promise<void> | null = null;
+  private closed = false;
 
   constructor(options: { dbName: string; migrate?: MigrationFn; schema: S; schemaVersion: number }) {
-    super();
     this.dbName = options.dbName;
     this.migrate = options.migrate;
     this.schema = options.schema;
@@ -89,9 +133,22 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
     if (typeof BroadcastChannel !== 'undefined') {
       this.channel = new BroadcastChannel(`deposit:${this.dbName}`);
       this.channel.onmessage = (event: MessageEvent<{ table: string }>) => {
-        this.notify(event.data.table as keyof S);
+        this.observers.notify(event.data.table as keyof S);
       };
     }
+  }
+
+  observe<K extends keyof S>(
+    table: K,
+    listener: (records: RecordOf<S, K>[]) => void,
+    options?: { immediate?: boolean },
+  ): () => void {
+    return this.observers.observe(table, listener, options);
+  }
+
+  dispose(): void {
+    this.observers.dispose();
+    this.close();
   }
 
   close(): void {
@@ -102,7 +159,7 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
     this.channel?.close();
   }
 
-  private connect(): Promise<void> {
+  private async connect(): Promise<void> {
     if (!this.connectPromise) {
       this.connectPromise = new Promise((resolve, reject) => {
         const request = indexedDB.open(this.dbName, this.schemaVersion);
@@ -111,7 +168,6 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
           const db = request.result;
           const tx = request.transaction!;
 
-          // Run user migration first — it may drop/recreate stores before deposit ensures schema.
           if (this.migrate) {
             try {
               this.migrate({
@@ -133,7 +189,6 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
             }
           }
 
-          // After migration, ensure all stores declared in the schema exist.
           this.createObjectStores(db);
         };
 
@@ -156,33 +211,71 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
       });
     }
 
-    return this.connectPromise!;
+    return this.connectPromise;
   }
 
   async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-    return this.withStore(table, 'readwrite', async (store) => {
+    const value = await this.withStore(table, 'readonly', async (store) => {
       const raw = await idbReq<StoredRecord<RecordOf<S, K>> | undefined>(store.get(key as IDBValidKey));
 
       if (raw == null) return undefined;
 
-      const value = unwrapStored(raw);
-
-      if (value === undefined) {
-        await idbReq(store.delete(key as IDBValidKey));
-      }
-
-      return value;
+      return unwrapStored(raw);
     });
+
+    if (value !== undefined) return value;
+
+    await this.withStore(table, 'readwrite', async (store) => {
+      const raw = await idbReq<StoredRecord<RecordOf<S, K>> | undefined>(store.get(key as IDBValidKey));
+
+      if (raw == null) return;
+
+      if (unwrapStored(raw) !== undefined) return;
+
+      await idbReq(store.delete(key as IDBValidKey));
+    });
+
+    return undefined;
   }
 
   async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
-    return this.withStore(table, 'readwrite', (store) => readAllFromStore<RecordOf<S, K>>(store));
+    const scanned = await this.withStore(table, 'readonly', (store) => scanStore<RecordOf<S, K>>(store));
+
+    if (scanned.expiredKeys.length > 0) {
+      await this.withStore(table, 'readwrite', async (store) => {
+        for (const key of scanned.expiredKeys) {
+          const raw = await idbReq<StoredRecord<RecordOf<S, K>> | undefined>(store.get(key));
+
+          if (raw == null) continue;
+
+          if (unwrapStored(raw) !== undefined) continue;
+
+          await idbReq(store.delete(key));
+        }
+      });
+    }
+
+    return scanned.records;
   }
 
   async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
-    const key = this.resolveRecordKey(table, value) as IDBValidKey;
+    const key = resolveRecordKey(this.schema, table, value) as IDBValidKey;
 
     await this.withStore(table, 'readwrite', (store) => idbReq(store.put(wrapStored(value, ttl), key)));
+    this.broadcast(table);
+  }
+
+  async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: number): Promise<void> {
+    await this.withStore(table, 'readwrite', async (store) => {
+      await Promise.all(
+        values.map((value) => {
+          const key = resolveRecordKey(this.schema, table, value) as IDBValidKey;
+
+          return idbReq(store.put(wrapStored(value, ttl), key));
+        }),
+      );
+    });
+
     this.broadcast(table);
   }
 
@@ -196,17 +289,72 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
     this.broadcast(table);
   }
 
-  async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: number): Promise<void> {
-    await this.withStore(table, 'readwrite', async (store) => {
-      await Promise.all(
-        values.map((value) => {
-          const key = this.resolveRecordKey(table, value) as IDBValidKey;
+  async deleteWhere<K extends keyof S>(table: K, predicate: (record: RecordOf<S, K>) => boolean): Promise<number> {
+    const deleted = await this.withStore(table, 'readwrite', (store) =>
+      deleteWhereInStore<RecordOf<S, K>>(store, predicate),
+    );
 
-          return idbReq(store.put(wrapStored(value, ttl), key));
-        }),
-      );
-    });
-    this.broadcast(table);
+    if (deleted > 0) this.broadcast(table);
+
+    return deleted;
+  }
+
+  async forEach<K extends keyof S>(table: K, fn: (record: RecordOf<S, K>) => void | Promise<void>): Promise<void> {
+    const all = await this.getAll(table);
+
+    for (const record of all) {
+      await fn(record);
+    }
+  }
+
+  async has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+    return (await this.get(table, key)) !== undefined;
+  }
+
+  async count<K extends keyof S>(table: K): Promise<number> {
+    return (await this.getAll(table)).length;
+  }
+
+  async getOrPut<K extends keyof S>(
+    table: K,
+    key: KeyOf<S, K>,
+    fallback: RecordOf<S, K> | (() => RecordOf<S, K>),
+    ttl?: number,
+  ): Promise<RecordOf<S, K>> {
+    const existing = await this.get(table, key);
+
+    if (existing) return existing;
+
+    const value = typeof fallback === 'function' ? fallback() : fallback;
+
+    ensureRecordKey(this.schema, table, key, value, 'getOrPut');
+
+    await this.put(table, value, ttl);
+
+    return value;
+  }
+
+  async update<K extends keyof S>(
+    table: K,
+    key: KeyOf<S, K>,
+    changes: Partial<RecordOf<S, K>>,
+    ttl?: number,
+  ): Promise<RecordOf<S, K> | undefined> {
+    const current = await this.get(table, key);
+
+    if (!current) return undefined;
+
+    const merged = { ...current, ...changes } as RecordOf<S, K>;
+
+    ensureRecordKey(this.schema, table, key, merged, 'update');
+
+    await this.put(table, merged, ttl);
+
+    return merged;
+  }
+
+  query<K extends keyof S>(table: K) {
+    return createQueryBuilder<RecordOf<S, K>>(() => this.getAll(table) as Promise<unknown[]>);
   }
 
   async transaction<K extends keyof S, R>(
@@ -224,30 +372,26 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
     const idbTx = db.transaction(tables.map(String), 'readwrite');
     const storeOf = <T extends K>(table: T) => idbTx.objectStore(String(table));
     const readAll = <T extends K>(table: T): Promise<RecordOf<S, T>[]> =>
-      readAllFromStore<RecordOf<S, T>>(storeOf(table));
+      scanStore<RecordOf<S, T>>(storeOf(table)).then(async ({ expiredKeys, records }) => {
+        for (const key of expiredKeys) {
+          await idbReq(storeOf(table).delete(key));
+        }
+
+        return records;
+      });
 
     const ctx: TransactionContext<S, K> = {
-      count: (table) => ctx.getAll(table).then((all) => all.length),
+      count: (table) => ctx.getAll(table).then((records) => records.length),
       delete: (table, key) => idbReq(storeOf(table).delete(key as IDBValidKey)),
       deleteAll: (table) => idbReq<undefined>(storeOf(table).clear()).then(() => undefined),
       deleteWhere: async (table, predicate) => {
-        const all = await ctx.getAll(table);
-        let deleted = 0;
-
-        for (const row of all) {
-          if (!predicate(row)) continue;
-
-          await ctx.delete(table, this.resolveRecordKey(table, row));
-          deleted += 1;
-        }
-
-        return deleted;
+        return deleteWhereInStore<RecordOf<S, typeof table>>(storeOf(table), predicate);
       },
       forEach: async (table, fn) => {
         const all = await ctx.getAll(table);
 
-        for (let i = 0; i < all.length; i += 1) {
-          await fn(all[i], i);
+        for (const record of all) {
+          await fn(record);
         }
       },
       get: (table, key) =>
@@ -257,46 +401,52 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
 
             const value = unwrapStored(raw);
 
-            if (value === undefined) storeOf(table).delete(key as IDBValidKey);
+            if (value === undefined) {
+              return idbReq(storeOf(table).delete(key as IDBValidKey)).then(() => undefined);
+            }
 
             return value;
           },
         ),
       getAll: (table) => readAll(table),
-      getOrPut: async (table, key, fallback, ttl) => {
+      getOrPut: async (table, key, fallback, ttlMs) => {
         const existing = await ctx.get(table, key);
 
         if (existing) return existing;
 
         const value = typeof fallback === 'function' ? (fallback as () => RecordOf<S, typeof table>)() : fallback;
 
-        await ctx.put(table, value, ttl);
+        ensureRecordKey(this.schema, table, key, value, 'getOrPut');
+
+        await ctx.put(table, value, ttlMs);
 
         return value;
       },
-      has: (table, key) => ctx.get(table, key).then((v) => v !== undefined),
-      put: (table, value, ttl) => {
-        const key = this.resolveRecordKey(table, value) as IDBValidKey;
+      has: (table, key) => ctx.get(table, key).then((value) => value !== undefined),
+      put: (table, value, ttlMs) => {
+        const key = resolveRecordKey(this.schema, table, value) as IDBValidKey;
 
-        return idbReq(storeOf(table).put(wrapStored(value, ttl), key)).then(() => undefined);
+        return idbReq(storeOf(table).put(wrapStored(value, ttlMs), key)).then(() => undefined);
       },
-      putAll: (table, values, ttl) =>
+      putAll: (table, values, ttlMs) =>
         Promise.all(
           values.map((value) => {
-            const key = this.resolveRecordKey(table, value) as IDBValidKey;
+            const key = resolveRecordKey(this.schema, table, value) as IDBValidKey;
 
-            return idbReq(storeOf(table).put(wrapStored(value, ttl), key));
+            return idbReq(storeOf(table).put(wrapStored(value, ttlMs), key));
           }),
         ).then(() => undefined),
-      query: (table) => new QueryBuilder<RecordOf<S, K>>(() => ctx.getAll(table) as Promise<unknown[]>),
-      update: async (table, key, changes, ttl) => {
+      query: (table) => createQueryBuilder<RecordOf<S, K>>(() => ctx.getAll(table) as Promise<unknown[]>),
+      update: async (table, key, changes, ttlMs) => {
         const current = await ctx.get(table, key);
 
         if (!current) return undefined;
 
         const merged = { ...current, ...changes } as RecordOf<S, typeof table>;
 
-        await ctx.put(table, merged, ttl);
+        ensureRecordKey(this.schema, table, key, merged, 'update');
+
+        await ctx.put(table, merged, ttlMs);
 
         return merged;
       },
@@ -304,13 +454,14 @@ class IndexedDBAdapter<S extends AnySchema> extends AdapterCore<S> implements In
 
     const result = await runIdbTx(idbTx, this.dbName, () => fn(ctx));
 
-    for (const table of tables) this.broadcast(table);
+    for (const table of new Set(tables)) this.broadcast(table);
 
     return result;
   }
 
   private broadcast<K extends keyof S>(table: K): void {
-    this.notify(table);
+    this.observers.notify(table);
+
     this.channel?.postMessage({ table: String(table) });
   }
 

@@ -320,9 +320,9 @@ Call `invalidate()` after an event that changes item heights without a data chan
 document.fonts.ready.then(() => virt.invalidate());
 ```
 
-On variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If you need an exact post-layout position after heights change, remeasure affected rows or call `invalidate()` before scrolling again.
+On variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If you need an exact post-layout position after heights change, call `invalidate()` before scrolling again.
 
-For same-length updates, call `setItems()` (DOM adapter) or `update()` (core) and remeasure affected rows as needed.
+For same-length updates, call `setItems()` (DOM adapter) or `update()` (core). If the rendered height of rows changed, call `invalidate()` before scrolling again.
 
 ## Lifecycle — create and destroy
 

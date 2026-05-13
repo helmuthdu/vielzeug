@@ -1,293 +1,296 @@
 import type {
-  DiagnosticEvent,
-  FormatInput,
   I18n,
   I18nOptions,
   Loader,
   Locale,
-  LocaleChangeEvent,
-  LocaleChangeReason,
+  LocaleSource,
   MessageBranchKeys,
   MessageLeafKeys,
   Messages,
+  MissingInfo,
+  SubscribeOptions,
+  TranslateOptions,
+  TranslateVars,
   Unsubscribe,
-  Vars,
 } from './types';
 
-import { resolvePath } from './helpers';
-import { interpolate } from './interpolate';
-import { format, makeIntlCaches, selectPluralForm } from './intl';
+type PluralCaches = Map<string, Intl.PluralRules>;
+type LocaleRecord<M extends Messages> =
+  | { kind: 'dynamic'; loader: Loader<M>; messages?: M }
+  | { kind: 'static'; messages: M };
 
-// ─── Module-level defaults (stateless, shared across all instances) ────────────
+const INTERPOLATION_PATTERN = /\{([\p{ID_Continue}\-.]+)\}/gu;
 
-function defaultDiagnostic(event: DiagnosticEvent): void {
-  if (event.kind === 'subscriber-error') {
-    console.error('[i18nit] Subscriber threw:', event.error);
+function canon(locale: string): string {
+  try {
+    return Intl.getCanonicalLocales(locale)[0] ?? locale;
+  } catch {
+    return locale;
+  }
+}
 
-    return;
+function resolvePath(obj: Record<string, unknown>, path: string): unknown {
+  let value: unknown = obj;
+
+  for (const part of path.split('.')) {
+    if (value == null || typeof value !== 'object') return undefined;
+
+    if (!Object.hasOwn(value as object, part)) return undefined;
+
+    value = (value as Record<string, unknown>)[part];
   }
 
-  console.warn('[i18nit] Loader error:', event.error);
+  return value;
 }
 
-function defaultOnMissing(key: string): string {
-  return key;
+function buildLocaleChain(locale: Locale, fallback: Locale[]): Locale[] {
+  const seen = new Set<Locale>();
+
+  for (const value of [locale, ...fallback]) {
+    seen.add(value);
+
+    const parts = value.split('-');
+
+    for (let i = parts.length - 1; i > 0; i--) {
+      seen.add(parts.slice(0, i).join('-'));
+    }
+  }
+
+  return [...seen];
 }
 
-// ─── Type Guards ───────────────────────────────────────────────────────────────
+function selectPluralForm(cache: PluralCaches, locale: Locale, count: number, ordinal: boolean): string {
+  const key = `${locale}:${ordinal ? 'ordinal' : 'cardinal'}`;
+  let rules = cache.get(key);
 
-export const isLoaderError = (event: DiagnosticEvent): event is Extract<DiagnosticEvent, { kind: 'loader-error' }> =>
-  event.kind === 'loader-error';
-
-export const isSubscriberError = (
-  event: DiagnosticEvent,
-): event is Extract<DiagnosticEvent, { kind: 'subscriber-error' }> => event.kind === 'subscriber-error';
-
-function mergeMessages(base: Messages, incoming: Messages): Messages {
-  const next: Messages = structuredClone(base);
-
-  for (const [key, value] of Object.entries(incoming)) {
-    if (typeof value === 'string') {
-      next[key] = value;
-      continue;
+  if (!rules) {
+    try {
+      rules = new Intl.PluralRules(locale, { type: ordinal ? 'ordinal' : 'cardinal' });
+    } catch {
+      return count === 1 ? 'one' : 'other';
     }
 
-    const current = next[key];
-
-    next[key] =
-      typeof current === 'object' && current !== null
-        ? mergeMessages(current as Messages, value)
-        : structuredClone(value);
+    cache.set(key, rules);
   }
 
-  return next;
+  return rules.select(count);
 }
 
-// ─── Factory ──────────────────────────────────────────────────────────────────
+function interpolate(
+  template: string,
+  vars: TranslateVars | undefined,
+  key: string,
+  locale: Locale,
+  onMissing: (info: MissingInfo) => string,
+): string {
+  if (!template.includes('{')) return template;
+
+  return template.replace(INTERPOLATION_PATTERN, (_match, varName: string) => {
+    const value = vars != null ? resolvePath(vars, varName) : undefined;
+
+    if (value == null) {
+      return onMissing({ key, locale, type: 'var', varName });
+    }
+
+    return String(value);
+  });
+}
 
 export function createI18n<M extends Messages = Messages>(config: I18nOptions<M> = {}): I18n<M> {
-  let locale = config.locale ?? 'en';
-  const fallbacks = Array.isArray(config.fallback) ? config.fallback : config.fallback ? [config.fallback] : [];
-  const catalogs = new Map<Locale, M>();
-  const loaders = new Map<Locale, Loader<M>>();
+  let locale = canon(config.locale ?? 'en');
+  const fallback = Array.isArray(config.fallback)
+    ? config.fallback.map(canon)
+    : config.fallback
+      ? [canon(config.fallback)]
+      : [];
+
+  const registry = new Map<Locale, LocaleRecord<M>>();
   const loading = new Map<Locale, Promise<void>>();
-  const subscribers = new Set<(event: LocaleChangeEvent) => void>();
-  const caches = makeIntlCaches();
+  const subscribers = new Set<() => void>();
+  const pluralCache: PluralCaches = new Map();
+  const chainCache = new Map<Locale, Locale[]>();
+  const onMissing = config.onMissing ?? ((info: MissingInfo) => (info.type === 'key' ? info.key : ''));
 
-  let localesCache: Locale[] | null = null;
-  let loadersCache: Locale[] | null = null;
-  let localeChainCache: Locale[] | null = null;
-  let disposed = false;
+  let version = 0;
+  let switchId = 0;
 
-  const onMissing = config.onMissing ?? defaultOnMissing;
-  const onDiagnostic = config.onDiagnostic ?? defaultDiagnostic;
+  const getChain = (fromLocale: Locale): Locale[] => {
+    const cached = chainCache.get(fromLocale);
 
-  if (config.catalogs) {
-    for (const [loc, entry] of Object.entries(config.catalogs)) {
-      if (typeof entry === 'function') {
-        loaders.set(loc, entry as Loader<M>);
-      } else {
-        catalogs.set(loc, structuredClone(entry));
-      }
-    }
-  }
+    if (cached) return cached;
 
-  function ensureNotDisposed(methodName: string): void {
-    if (disposed) {
-      throw new Error(`[i18nit] Cannot call ${methodName}() after dispose().`);
-    }
-  }
+    const chain = buildLocaleChain(fromLocale, fallback);
 
-  function invalidateCaches(): void {
-    localesCache = null;
-    loadersCache = null;
-    localeChainCache = null;
-  }
+    chainCache.set(fromLocale, chain);
 
-  function notify(reason: LocaleChangeReason): void {
-    const event: LocaleChangeEvent = { locale, reason };
+    return chain;
+  };
+
+  const isInActiveChain = (loc: Locale): boolean => getChain(locale).includes(loc);
+
+  const bump = (): void => {
+    version++;
 
     for (const listener of subscribers) {
       try {
-        listener(event);
-      } catch (error) {
-        onDiagnostic({ error, kind: 'subscriber-error' });
+        listener();
+      } catch {
+        // Ignore failing subscribers so the store remains stable.
       }
     }
-  }
+  };
 
-  function getLocaleChain(loc: Locale): Locale[] {
-    localeChainCache ??= buildLocaleChain(loc);
+  const getMessages = (loc: Locale): M | undefined => {
+    const entry = registry.get(loc);
 
-    return localeChainCache;
-  }
+    if (!entry) return undefined;
 
-  function buildLocaleChain(loc: Locale): Locale[] {
-    const seen = new Set<Locale>();
+    return entry.kind === 'static' ? entry.messages : entry.messages;
+  };
 
-    for (const value of [loc, ...fallbacks]) {
-      seen.add(value);
+  const findValue = (key: string, fromLocale: Locale): unknown => {
+    for (const candidate of getChain(fromLocale)) {
+      const messages = getMessages(candidate);
 
-      const parts = value.split('-');
+      if (!messages) continue;
 
-      for (let i = parts.length - 1; i > 0; i--) {
-        seen.add(parts.slice(0, i).join('-'));
-      }
-    }
+      const value = resolvePath(messages, key);
 
-    return [...seen];
-  }
-
-  function findMessage(key: string, loc: Locale): string | undefined {
-    for (const localeInChain of getLocaleChain(loc)) {
-      const catalog = catalogs.get(localeInChain);
-
-      if (!catalog) continue;
-
-      const value = resolvePath(catalog, key);
-
-      if (typeof value === 'string') return value;
+      if (value !== undefined) return value;
     }
 
     return undefined;
+  };
+
+  const findMessage = (key: string, fromLocale: Locale): string | undefined => {
+    const value = findValue(key, fromLocale);
+
+    return typeof value === 'string' ? value : undefined;
+  };
+
+  const register = (loc: Locale, source: LocaleSource<M>): void => {
+    const normalized = canon(loc);
+
+    if (typeof source === 'function') {
+      registry.set(normalized, { kind: 'dynamic', loader: source as Loader<M> });
+    } else {
+      registry.set(normalized, { kind: 'static', messages: source as M });
+    }
+
+    if (isInActiveChain(normalized)) bump();
+  };
+
+  if (config.catalogs) {
+    for (const [loc, source] of Object.entries(config.catalogs)) {
+      register(loc, source as LocaleSource<M>);
+    }
   }
 
-  function loadOne(loc: Locale, strict: boolean): Promise<void> {
-    if (loading.has(loc)) return loading.get(loc)!;
+  const preload = async (loc: Locale): Promise<void> => {
+    const normalized = canon(loc);
+    const entry = registry.get(normalized);
 
-    if (catalogs.has(loc)) return Promise.resolve();
+    if (!entry) {
+      throw new Error(`[i18nit] Missing locale source for locale "${normalized}".`);
+    }
 
-    const loader = loaders.get(loc);
+    if (entry.kind === 'static') return;
 
-    if (!loader)
-      return strict ? Promise.reject(new Error(`[i18nit] Missing loader for locale "${loc}".`)) : Promise.resolve();
+    if (entry.messages) return;
 
-    const promise = (async () => {
-      try {
-        const messages = await loader(loc);
+    const active = loading.get(normalized);
 
-        if (!disposed) api.setCatalog(loc, messages);
-      } catch (error) {
-        onDiagnostic({ error, kind: 'loader-error', locale: loc });
-        throw error;
-      } finally {
-        loading.delete(loc);
-      }
+    if (active) {
+      await active;
+
+      return;
+    }
+
+    const task = (async () => {
+      const messages = await entry.loader(normalized);
+      const latest = registry.get(normalized);
+
+      // Only apply the loaded messages if the locale source is still dynamic.
+      if (!latest || latest.kind !== 'dynamic') return;
+
+      latest.messages = messages;
     })();
 
-    loading.set(loc, promise);
+    loading.set(normalized, task);
 
-    return promise;
-  }
+    try {
+      await task;
+    } finally {
+      loading.delete(normalized);
+    }
+  };
 
-  const api = {
-    dispose: (): void => {
-      if (disposed) return;
-
-      disposed = true;
-      subscribers.clear();
-      catalogs.clear();
-      loaders.clear();
-      loading.clear();
-      invalidateCaches();
+  return {
+    getSnapshot() {
+      return { locale, version };
     },
-    format: (input: FormatInput): string => format(caches, locale, input),
-    has: <K extends MessageLeafKeys<M>>(key: K): boolean => findMessage(String(key), locale) !== undefined,
-    get loadableLocales(): Locale[] {
-      loadersCache ??= [...loaders.keys()];
 
-      return loadersCache;
-    },
-    get loadedLocales(): Locale[] {
-      localesCache ??= [...catalogs.keys()];
+    getSupportedLocales(options?: { sorted?: boolean }): Locale[] {
+      const locales = [...registry.keys()];
 
-      return localesCache;
+      return options?.sorted ? locales.sort() : locales;
     },
+
+    has(key: MessageLeafKeys<M> | MessageBranchKeys<M>): boolean {
+      return findValue(String(key), locale) !== undefined;
+    },
+
     get locale(): Locale {
       return locale;
     },
-    mergeCatalog: (loc: Locale, messages: M): void => {
-      ensureNotDisposed('mergeCatalog');
 
-      const current = catalogs.get(loc);
-      const merged = current ? (mergeMessages(current, messages) as M) : structuredClone(messages);
+    preload,
 
-      catalogs.set(loc, merged);
-      localesCache = null;
+    register,
 
-      if (getLocaleChain(locale).includes(loc)) notify('catalog-update');
+    async setLocale(next: Locale): Promise<void> {
+      const normalized = canon(next);
+
+      if (locale === normalized) return;
+
+      const id = ++switchId;
+
+      await preload(normalized);
+
+      if (id !== switchId) return;
+
+      locale = normalized;
+      bump();
     },
-    preload: async (loc: Locale): Promise<void> => {
-      ensureNotDisposed('preload');
 
-      try {
-        await loadOne(loc, false);
-      } catch {
-        // loader errors are already routed through onDiagnostic inside loadOne
-      }
-    },
-    setCatalog: (loc: Locale, messages: M): void => {
-      ensureNotDisposed('setCatalog');
-
-      catalogs.set(loc, structuredClone(messages));
-      localesCache = null;
-
-      if (getLocaleChain(locale).includes(loc)) notify('catalog-update');
-    },
-    setLoader: (loc: Locale, loader: Loader<M>): void => {
-      ensureNotDisposed('setLoader');
-      loaders.set(loc, loader);
-      loadersCache = null;
-    },
-    setLocale: async (nextLocale: Locale): Promise<void> => {
-      ensureNotDisposed('setLocale');
-
-      if (nextLocale === locale) return;
-
-      await loadOne(nextLocale, true);
-      locale = nextLocale;
-      localeChainCache = null;
-      notify('locale-change');
-    },
-    subscribe: (listener: (event: LocaleChangeEvent) => void, immediate?: boolean): Unsubscribe => {
-      ensureNotDisposed('subscribe');
-
+    subscribe(listener: () => void, options?: SubscribeOptions): Unsubscribe {
       subscribers.add(listener);
 
-      if (immediate) {
-        try {
-          listener({ locale, reason: 'init' });
-        } catch (error) {
-          onDiagnostic({ error, kind: 'subscriber-error' });
-        }
-      }
+      if (options?.immediate) listener();
 
       return () => subscribers.delete(listener);
     },
-    [Symbol.asyncDispose]: async (): Promise<void> => {
-      const pendingLoads = [...loading.values()];
 
-      await Promise.allSettled(pendingLoads);
-      api.dispose();
-    },
-    [Symbol.dispose]: (): void => {
-      api.dispose();
-    },
-    t: <K extends MessageLeafKeys<M> | MessageBranchKeys<M>>(key: K, vars?: Vars): string => {
-      const message = findMessage(String(key), locale);
+    t(key: MessageLeafKeys<M> | MessageBranchKeys<M>, options?: TranslateOptions): string {
+      const base = String(key);
+      const count = options?.count;
 
-      return message === undefined ? onMissing(String(key), locale) : interpolate(message, vars);
-    },
-    tp: <K extends MessageBranchKeys<M>>(key: K, count: number, vars?: Vars, ordinal = false): string => {
-      const context = { ...(vars ?? {}), count };
-      const baseKey = String(key);
-      const form = selectPluralForm(caches, locale, count, ordinal);
-      const selected = !ordinal && count === 0 ? `${baseKey}.zero` : `${baseKey}.${form}`;
-      const message = findMessage(selected, locale) ?? findMessage(`${baseKey}.other`, locale);
+      if (typeof count === 'number') {
+        const ordinal = options?.ordinal === true;
+        const form = selectPluralForm(pluralCache, locale, count, ordinal);
+        const selectedKey = !ordinal && count === 0 ? `${base}.zero` : `${base}.${form}`;
+        const message = findMessage(selectedKey, locale) ?? findMessage(`${base}.other`, locale);
 
-      return message === undefined ? onMissing(baseKey, locale) : interpolate(message, context);
-    },
-  } satisfies I18n<M>;
+        return message === undefined
+          ? onMissing({ key: base, locale, type: 'key' })
+          : interpolate(message, { ...(options?.vars ?? {}), count }, base, locale, onMissing);
+      }
 
-  return api;
+      const message = findMessage(base, locale);
+
+      return message === undefined
+        ? onMissing({ key: base, locale, type: 'key' })
+        : interpolate(message, options?.vars, base, locale, onMissing);
+    },
+  };
 }

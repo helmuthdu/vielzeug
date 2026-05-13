@@ -72,7 +72,7 @@ const event = WebhookSchema.parse(req.body);
 ### Common Pitfalls
 
 - Assuming unknown keys are accepted in object payloads.
-- Using `safeParse()` with async-only schemas containing `.refineAsync()`.
+- Using `safeParse()` with async-only schemas containing async `check()`.
 - Returning raw `ValidationError` messages to clients without shaping response fields.
 
 ### Related Recipes

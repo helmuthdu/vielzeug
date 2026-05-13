@@ -467,7 +467,7 @@ describe('Core: Component Definition', () => {
       expect(query('.value')?.textContent).toBe('');
     });
 
-    it('should allow object prop with reflect: true at define-time', async () => {
+    it('should reject object prop with reflect: true at define-time', async () => {
       const tag = `test-reflect-structured-object-${Math.random().toString(36).slice(2)}`;
 
       expect(() => {
@@ -477,14 +477,10 @@ describe('Core: Component Definition', () => {
           },
           setup: () => () => html`<div>invalid</div>`,
         });
-      }).not.toThrow();
-
-      const { element } = await mount(tag);
-
-      expect(element.getAttribute('data')).toBe('[object Object]');
+      }).toThrow();
     });
 
-    it('should allow array prop with reflect: true at define-time', async () => {
+    it('should reject array prop with reflect: true at define-time', async () => {
       const tag = `test-reflect-structured-array-${Math.random().toString(36).slice(2)}`;
 
       expect(() => {
@@ -494,11 +490,7 @@ describe('Core: Component Definition', () => {
           },
           setup: () => () => html`<div>invalid</div>`,
         });
-      }).not.toThrow();
-
-      const { element } = await mount(tag);
-
-      expect(element.getAttribute('items')).toBe('x');
+      }).toThrow();
     });
   });
 

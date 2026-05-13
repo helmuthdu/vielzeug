@@ -1,14 +1,9 @@
-import type { Fn } from '../types';
-
-type RemoveFirstParameter<T extends Fn> = T extends (first: unknown, ...rest: infer Rest) => unknown ? Rest : never;
-type FirstParameter<T extends Fn> = T extends (first: infer First, ...rest: unknown[]) => unknown ? First : never;
-
 /**
- * Partially applies every argument except the first and returns a unary function.
+ * Partially applies leading arguments and returns a function expecting the rest.
  */
-export const partial = <F extends Fn>(
-  callback: F,
-  ...args: RemoveFirstParameter<F>
-): ((value: FirstParameter<F>) => ReturnType<F>) => {
-  return (value: FirstParameter<F>) => callback(value, ...args);
+export const partial = <Bound extends unknown[], Rest extends unknown[], Return>(
+  callback: (...args: [...Bound, ...Rest]) => Return,
+  ...boundArgs: Bound
+): ((...restArgs: Rest) => Return) => {
+  return (...restArgs: Rest) => callback(...boundArgs, ...restArgs);
 };

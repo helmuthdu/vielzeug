@@ -36,16 +36,15 @@ Signature: `createLogger(initial?: LogitOptions | string): Logger`
 
 Core members:
 
-- Logging: `debug`, `trace`, `info`, `warn`, `error`, `fatal`
-- Utilities: `assert`, `table`, `time`, `group`, `groupCollapsed`
+- Logging: `debug`, `info`, `warn`, `error`, `fatal`
+- Utilities: `time`, `group`, `groupCollapsed`
 - Composition: `scope(name)`, `child(overrides?)`, `withBindings(bindings)`
 - Context: `bindings` (readonly snapshot)
-- Configuration: `setConfig(opts)`, `config`, `enabled(level)`
+- Configuration: `config`, `enabled(level)`
 
 Behavior notes:
 
-- `setConfig()` applies partial updates and returns the same logger.
-- `config` returns a snapshot copy (`remote` is also copied).
+- `config` returns a snapshot copy (`remote` is also copied when present).
 - `bindings` returns a snapshot of pinned context fields.
 - `enabled()` checks against current level threshold.
 - `time()`, `group()`, and `groupCollapsed()` always call `timeEnd`/`groupEnd` even on throw/reject.
@@ -56,7 +55,7 @@ Behavior notes:
 
 ### LogType
 
-`'debug' | 'trace' | 'info' | 'warn' | 'error' | 'fatal'`
+`'debug' | 'info' | 'warn' | 'error' | 'fatal'`
 
 ### LogLevel
 
@@ -114,7 +113,18 @@ Behavior notes:
 
 Resolved config shape exposed via `logger.config`:
 
-`Omit<Required<LogitOptions>, 'remote'> & { remote: { handler?: RemoteHandler; logLevel: LogLevel } }`
+```ts
+type LogitConfig = {
+	logLevel: LogLevel;
+	namespace: string;
+	timestamp: boolean;
+	variant: Variant;
+	remote?: {
+		handler: RemoteHandler;
+		logLevel: LogLevel;
+	};
+};
+```
 
 ### Logger
 
@@ -129,17 +139,14 @@ log.error(new Error('boom'), 'override')
 
 `Logger` methods:
 
-- `debug(msgOrCtx?, msg?)`, `trace(msgOrCtx?, msg?)`, `info(msgOrCtx?, msg?)`
+- `debug(msgOrCtx?, msg?)`, `info(msgOrCtx?, msg?)`
 - `warn(msgOrCtx?, msg?)`, `error(msgOrCtx?, msg?)`, `fatal(msgOrCtx?, msg?)`
-- `assert(condition, ...args)`
-- `table(data, properties?)`
 - `time(label, fn)`
 - `group(label, fn)`
 - `groupCollapsed(label, fn)`
 - `scope(name)` — namespaced child
-- `child(overrides?)` — config-override child, inherits bindings
+- `child(overrides?)` — immutable config-override child, inherits bindings
 - `withBindings(bindings)` — pinned-context child
 - `bindings` — readonly snapshot of pinned fields
-- `setConfig(opts)` — partial update, returns logger
 - `enabled(level)` — boolean threshold check
 - `config` — readonly snapshot

@@ -29,8 +29,8 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
     return [
       {
-        code: ErrorCode.unrecognized_keys,
-        message: _messages().object.unrecognizedKeys({ keys: unknownKeys }),
+        code: ErrorCode.invalid_keys,
+        message: _messages().object.invalidKeys({ keys: unknownKeys }),
         path: [],
       },
     ];

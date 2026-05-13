@@ -16,12 +16,12 @@ description: Complete API reference for the current Toolkit surface.
 | Category | Exports |
 | --- | --- |
 | Array | `chunk`, `compact`, `contains`, `countBy`, `difference`, `drop`, `dropLast`, `filterMap`, `first`, `flatten`, `groupBy`, `indexBy`, `intersection`, `last`, `partition`, `replace`, `rotate`, `sample`, `search`, `sort`, `take`, `takeLast`, `toggle`, `union`, `uniq`, `unzip`, `zip` |
-| Async | `abortable`, `attempt`, `defer`, `memoizeAsync`, `parallel`, `queue`, `retry`, `sleep`, `timeout`, `waitFor`, `Scheduler`, `polyfillScheduler` |
+| Async | `abortable`, `attempt`, `defer`, `parallel`, `predict`, `queue`, `retry`, `sleep`, `timeout`, `waitFor`, `Scheduler`, `polyfillScheduler` |
 | Date | `expires`, `interval`, `timeDiff` |
 | Function | `assert`, `compare`, `compareBy`, `compose`, `constant`, `curry`, `debounce`, `identity`, `memo`, `negate`, `once`, `partial`, `pipe`, `and`, `or`, `not`, `tap`, `throttle` |
 | Math | `abs`, `allocate`, `average`, `clamp`, `gcd`, `lcm`, `lerp`, `linspace`, `max`, `median`, `min`, `mod`, `normalize`, `percent`, `range`, `round`, `standardDeviation`, `sum`, `variance` |
 | Money | `currency`, `exchange`, `Money` |
-| Object | `stash`, `deepClone`, `defaults`, `diff`, `deepMerge`, `shallowMerge`, `entries`, `filterValues`, `fromEntries`, `get`, `has`, `invert`, `keys`, `mapKeys`, `mapValues`, `omit`, `parseJSON`, `pick`, `proxy`, `prune`, `seek`, `values` |
+| Object | `stash`, `deepClone`, `defaults`, `diff`, `deepMerge`, `shallowMerge`, `entries`, `filterValues`, `fromEntries`, `get`, `has`, `invert`, `keys`, `mapKeys`, `mapValues`, `omit`, `parseJSON`, `pick`, `prune`, `seek`, `values` |
 | Random | `draw`, `random`, `shuffle`, `uuid` |
 | String | `camelCase`, `endsWith`, `escape`, `kebabCase`, `pad`, `pascalCase`, `similarity`, `snakeCase`, `startsWith`, `titleCase`, `truncate`, `unescape`, `words` |
 | Typed | `is` namespace, `isGreaterThan`, `isGreaterThanOrEqual`, `isLessThan`, `isLessThanOrEqual`, `isWithin` |
@@ -61,8 +61,8 @@ description: Complete API reference for the current Toolkit surface.
 - `abortable(promise, signal)`
 - `attempt(fn, options?)`
 - `defer<T>()`
-- `memoizeAsync(fn, options?)`
-- `parallel(limit, array, callback, signal?)`
+- `parallel(array, callback, options?)`
+- `predict(fn, options?)`
 - `queue(options?)`
 - `retry(fn, options?)`
 - `sleep(timeout)`
@@ -146,7 +146,6 @@ description: Complete API reference for the current Toolkit surface.
 - `omit(obj, keys)`
 - `parseJSON(json, options?)`
 - `pick(obj, keys)`
-- `proxy(item, options)`
 - `prune(value)`
 - `seek(item, query, tone?)`
 - `values(obj)`
@@ -181,4 +180,4 @@ description: Complete API reference for the current Toolkit surface.
 
 ## Note
 
-Reactive list helpers such as `list()` and `remoteList()` now live in `@vielzeug/sourceit`.
+Reactive paginated source models are available in `@vielzeug/sourceit` via `createLocalSource()` and `createRemoteSource()`.

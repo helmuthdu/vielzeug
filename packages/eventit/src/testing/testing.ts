@@ -38,7 +38,7 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
     const payload = (args as unknown[])[0] as T[K];
 
     record(event, payload);
-    userOnDispatch?.(event, payload);
+    userOnDispatch?.(event as string, payload);
     bus.emit(event, ...args);
   }
 
@@ -50,7 +50,7 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
     emit,
     emitted,
     eventNames: () => bus.eventNames(),
-    events: (event, signal) => bus.events(event, signal),
+    events: (event, options) => bus.events(event, options),
     listenerCount: (event) => bus.listenerCount(event),
     on: (event, listener, signal) => bus.on(event, listener, signal),
     once: (event, listener, signal) => bus.once(event, listener, signal),

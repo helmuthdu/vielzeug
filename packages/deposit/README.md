@@ -47,11 +47,11 @@ const exists = await db.has('users', 1);
 
 ### Factories
 
-- `createLocalStorage(options)`
-- `createSessionStorage(options)`
-- `createCookie(options)`
+- `createLocalStorage(dbName, schema)`
+- `createSessionStorage(dbName, schema)`
+- `createCookie(dbName, schema, options?)`
 - `createIndexedDB(options)`
-- `createMemory(options)`
+- `createMemory(schema)`
 
 ### Schema helper
 
@@ -72,7 +72,7 @@ const exists = await db.has('users', 1);
 - `deleteAll(table)`
 - `count(table)`
 - `query(table)`
-- `observe(table, listener)`
+- `observe(table, listener, options?)`
 
 ### IndexedDB-only
 
@@ -108,11 +108,13 @@ await db.put('sessions', { id: 's1', userId: 1 }, ttl.minutes(30));
 
 - Schema objects only declare the key field per table (`{ key: 'id' }`).
 - `count()` is TTL-aware and excludes expired records.
-- `createCookie()` is browser-only and best for small persisted state that should travel with requests.
+- `createCookie(dbName, schema, options?)` is browser-only and best for small persisted state that should travel with requests.
 - `createLocalStorage`, `createSessionStorage`, and `createMemory` do not expose transactions.
 - Query operations run in memory on fetched table records.
 - `QueryBuilder.count()` ignores pagination and returns the full number of matching records.
-- `observe(table, listener)` emits an immediate snapshot, then updates after table mutations.
+- `limit(n)` and `offset(n)` require non-negative integers and throw on invalid values.
+- TTL values must be finite and non-negative; invalid TTL input throws.
+- `observe(table, listener, options?)` emits an immediate snapshot by default, then updates after table mutations.
 - IndexedDB observers propagate across tabs/windows via `BroadcastChannel` when available.
 
 ## IndexedDB Transactions

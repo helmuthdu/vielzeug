@@ -3,8 +3,6 @@ title: Floatit — API Reference
 description: Complete API reference for the Floatit floating positioning library.
 ---
 
-# Floatit API Reference
-
 [[toc]]
 
 ## Core Functions
@@ -13,23 +11,18 @@ description: Complete API reference for the Floatit floating positioning library
 
 Positions the floating element immediately and keeps it in sync. Returns a cleanup function.
 
+By default it writes `left` and `top` styles. Pass `apply` to customize rendering.
+
 ```ts
 const cleanup = float(trigger, tooltip, {
+  apply(result, { floating }) {
+    floating.style.left = `${result.x}px`;
+    floating.style.top = `${result.y}px`;
+    floating.dataset.placement = result.placement;
+  },
   placement: 'top',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
-```
-
-### `positionFloat(reference, floating, options?)`
-
-Computes the position, applies `left` and `top`, and returns the full result including `middlewareData`.
-
-```ts
-const result = positionFloat(trigger, popover, {
-  middleware: [arrow({ element: arrowEl }), hide()],
-});
-
-popover.dataset.placement = result.placement;
 ```
 
 ### `computePosition(reference, floating, options?)`
@@ -56,7 +49,7 @@ Supported triggers:
 
 ### `detectOverflow(state, options?)`
 
-Returns per-side overflow offsets for either the floating or reference rect.
+Returns per-side overflow offsets for the floating rect.
 
 Positive numbers mean overflow. Negative numbers mean remaining available space.
 
@@ -66,35 +59,17 @@ const overflow = detectOverflow(state, {
 });
 ```
 
-### `getMiddlewareData(carrier, key)`
-
-Gets typed middleware data from either `computePosition` / `positionFloat` results or middleware state.
-
-```ts
-const arrowData = getMiddlewareData<ArrowData>(result, 'arrow');
-```
-
-### `getArrowData(carrier)`
-
-Typed helper for `middlewareData.arrow`.
-
-```ts
-const arrowData = getArrowData(result);
-```
-
-### `getHideData(carrier)`
-
-Typed helper for `middlewareData.hide`.
-
-```ts
-const hideData = getHideData(result);
-```
-
 ## Middleware
 
 ### `offset(value)`
 
-Adds distance along the main axis.
+Adds distance along the main axis, cross axis, or both.
+
+```ts
+offset(8);
+offset({ mainAxis: 8, crossAxis: 4 });
+offset((state) => ({ mainAxis: state.placement.startsWith('top') ? 12 : 8 }));
+```
 
 ### `flip(options?)`
 
@@ -146,7 +121,7 @@ const result = computePosition(trigger, popover, {
   middleware: [arrow({ element: arrowEl, padding: 6 })],
 });
 
-const arrowData = getArrowData(result);
+const arrowData = result.middlewareData.arrow as ArrowData | undefined;
 ```
 
 ### `hide(options?)`
@@ -155,7 +130,7 @@ Provides visibility metadata in `middlewareData.hide`.
 
 Options:
 
-- `strategy?: 'referenceHidden' | 'escaped'`
+- `strategy?: 'referenceHidden' | 'escaped' | 'both'` (default: `'both'`)
 - `padding?: Padding`
 - `boundary?: Element | Rect`
 
@@ -212,7 +187,7 @@ interface MiddlewareResult {
   y?: number;
   placement?: Placement;
   data?: Record<string, unknown>;
-  reset?: true | { placement?: Placement; rects?: true | { reference: Rect; floating: Rect } };
+  reset?: { placement?: Placement; rects?: true | { reference: Rect; floating: Rect } };
 }
 ```
 
@@ -244,7 +219,7 @@ interface VirtualReference {
 type ReferenceElement = Element | VirtualReference;
 ```
 
-`computePosition`, `positionFloat`, `float`, and `autoUpdate` all accept `ReferenceElement`.
+`computePosition`, `float`, and `autoUpdate` all accept `ReferenceElement`.
 
 ### `AutoUpdateOptions`
 

@@ -9,7 +9,7 @@ description: Practical examples and recipes for working with dates and times usi
 
 ## How to Use These Examples
 
-These examples cover real-world scenarios: timezone conversion, scheduling, formatting, and arithmetic with DST handling.
+These examples cover real-world scenarios: timezone conversion, scheduling, human and relative formatting, and arithmetic with DST handling.
 
 1. Start with "Timezone Conversion" for basics.
 2. Move to "DST-safe Arithmetic" for transition-safe scheduling.

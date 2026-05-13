@@ -12,7 +12,7 @@ export {
   type WatchOptions,
 } from '@vielzeug/stateit';
 
-export { effect, handle, onCleanup, onElement, onMounted, onUpdated } from './runtime';
+export { effect, listen, on, onCleanup, onElement, onMounted } from './runtime';
 
 export {
   define,
@@ -52,7 +52,7 @@ export { styleMap } from './directives/styleMap';
 export { when } from './directives/when';
 export { guard } from './directives/guard';
 export { live } from './directives/live';
-export { until } from './directives/until';
+export { resource, type ResourceState } from './directives/resource';
 export { raw } from './directives/raw';
 
 export {

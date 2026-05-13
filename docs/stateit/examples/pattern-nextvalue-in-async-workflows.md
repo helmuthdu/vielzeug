@@ -50,7 +50,7 @@ export async function openModal(): Promise<string | null> {
 }
 ```
 
-For a single next-change with no predicate, `watch` with `once: true` is sufficient:
+For a single next-change with no predicate, stop the subscription after the first callback:
 
 ```ts
 import { signal, watch } from '@vielzeug/stateit';
@@ -58,7 +58,10 @@ import { signal, watch } from '@vielzeug/stateit';
 const status = signal<'idle' | 'loading' | 'done'>('idle');
 
 function onNextChange(cb: (v: string) => void) {
-  watch(status, cb, { once: true });
+  const stop = watch(status, (value, prev) => {
+    cb(value);
+    if (value !== prev) stop();
+  });
 }
 ```
 

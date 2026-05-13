@@ -41,7 +41,7 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
 
   if (options.elementRef) {
     onElement(options.elementRef, (element) => {
-      mountTextFieldLifecycle({
+      return mountTextFieldLifecycle({
         element,
         onBlur: options.onBlur,
         onChange: (event, nextValue) => {

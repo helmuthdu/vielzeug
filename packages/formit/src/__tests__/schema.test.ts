@@ -1,6 +1,6 @@
-import { createForm, fromSchema } from '../index';
+import { createForm, schemaValidator } from '../index';
 
-describe('fromSchema', () => {
+describe('schemaValidator', () => {
   const mockSchema = {
     safeParse: (data: unknown) => {
       const v = data as { age: number; email: string };
@@ -16,13 +16,13 @@ describe('fromSchema', () => {
     },
   };
 
-  test('converts a safeParse-compatible schema into a validator option', async () => {
+  test('converts a safeParse-compatible schema into a form validator', async () => {
     const form = createForm({
       defaultValues: { age: 15, email: 'notvalid' },
-      ...fromSchema(mockSchema),
+      validator: schemaValidator(mockSchema),
     });
 
-    const { errors, valid } = await form.validate();
+    const { errors, valid } = await form.validateAll();
 
     expect(valid).toBe(false);
     expect(errors.email).toBe('Invalid email');
@@ -32,10 +32,10 @@ describe('fromSchema', () => {
   test('returns undefined (no errors) when schema validation passes', async () => {
     const form = createForm({
       defaultValues: { age: 25, email: 'alice@example.com' },
-      ...fromSchema(mockSchema),
+      validator: schemaValidator(mockSchema),
     });
 
-    const { errors, valid } = await form.validate();
+    const { errors, valid } = await form.validateAll();
 
     expect(valid).toBe(true);
     expect(Object.keys(errors)).toHaveLength(0);
@@ -53,8 +53,8 @@ describe('fromSchema', () => {
         success: false as const,
       }),
     };
-    const form = createForm({ defaultValues: { email: '' }, ...fromSchema(multiSchema) });
-    const { errors } = await form.validate();
+    const form = createForm({ defaultValues: { email: '' }, validator: schemaValidator(multiSchema) });
+    const { errors } = await form.validateAll();
 
     expect(errors.email).toBe('First');
   });
@@ -68,9 +68,12 @@ describe('fromSchema', () => {
         success: false as const,
       }),
     };
-    const form = createForm({ defaultValues: { confirm: '', password: '' }, ...fromSchema(crossFieldSchema) });
-    const { allErrors } = await form.validate();
+    const form = createForm({
+      defaultValues: { confirm: '', password: '' },
+      validator: schemaValidator(crossFieldSchema),
+    });
+    const { errors } = await form.validateAll();
 
-    expect(allErrors._form).toBe('Passwords do not match');
+    expect(errors._form).toBe('Passwords do not match');
   });
 });

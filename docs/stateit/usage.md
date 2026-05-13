@@ -80,20 +80,7 @@ const sub = effect(() => {
 });
 ```
 
-### Effect Options
-
-```ts
-const sub = effect(
-  () => {
-    // side-effectful code
-  },
-  {
-    maxIterations: 50, // override the default limit (100) for this effect
-  },
-);
-```
-
-> `maxIterations` guards against infinite reactive loops. Default: `100`.
+Stateit includes a built-in loop guard (100 iterations) to protect against accidental self-triggering effect cycles.
 
 ### `untrack`
 
@@ -180,9 +167,6 @@ sub.dispose();
 ```ts
 // Fire once immediately on subscription
 watch(count, (v) => console.log(v), { immediate: true });
-
-// Auto-unsubscribe after the first change
-watch(count, (v) => console.log('once:', v), { once: true });
 
 // Custom equality — suppress callback when result is considered equal
 watch(list, (v) => renderList(v), { equals: (a, b) => a.length === b.length });
@@ -392,10 +376,13 @@ watch(
 );
 ```
 
-When `once: true`, the watcher auto-unsubscribes after the first notification:
+To auto-stop after the first change, dispose manually inside the callback:
 
 ```ts
-watch(s, (curr) => console.log('first change:', curr), { once: true });
+const stop = watch(s, (curr) => {
+  console.log('first change:', curr);
+  stop();
+});
 ```
 
 ### Slice Watch

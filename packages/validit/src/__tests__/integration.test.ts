@@ -10,16 +10,16 @@ describe('complex schemas', () => {
         password: v
           .string()
           .min(8)
-          .refine((s) => /[A-Z]/.test(s), 'Must contain uppercase')
-          .refine((s) => /[0-9]/.test(s), 'Must contain number'),
-        terms: v.boolean().refine((b) => b === true, 'Must accept terms'),
+          .check((s) => /[A-Z]/.test(s) || 'Must contain uppercase')
+          .check((s) => /[0-9]/.test(s) || 'Must contain number'),
+        terms: v.boolean().check((b) => b === true || 'Must accept terms'),
         username: v
           .string()
           .min(3)
           .max(20)
           .regex(/^[a-zA-Z0-9_]+$/),
       })
-      .refine((d) => d.password === d.confirmPassword, 'Passwords must match');
+      .check((d) => d.password === d.confirmPassword || 'Passwords must match');
 
     const valid = {
       age: 25,

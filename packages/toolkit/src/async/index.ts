@@ -1,7 +1,6 @@
 export * from './abortable';
 export * from './attempt';
 export * from './defer';
-export * from './memoizeAsync';
 export * from './parallel';
 export * from './predict';
 export * from './queue';

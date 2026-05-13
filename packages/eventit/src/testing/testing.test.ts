@@ -78,7 +78,7 @@ describe('removeAllListeners', () => {
     bus.on('count', vi.fn());
     bus.emit('count', 1);
     bus.removeAllListeners('count');
-    bus.emit('count', 2); // no listeners — no dispatch, but still recorded
+    bus.emit('count', 2); // no listeners, but emission is still recorded
     expect(bus.listenerCount('count')).toBe(0);
     expect(bus.emitted('count')).toEqual([1, 2]);
   });

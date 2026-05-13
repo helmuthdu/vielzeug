@@ -27,7 +27,7 @@ import { createLocalStorage, table } from '@vielzeug/deposit';
 type User = { id: number; name: string };
 const schema = { users: table<User>('id') };
 
-const db = createLocalStorage({ dbName: 'demo', schema });
+const db = createLocalStorage('demo', schema);
 await db.put('users', { id: 1, name: 'Alice' });
 console.log(await db.getAll('users'));
 ```
@@ -40,7 +40,7 @@ import { createLocalStorage, table, ttl } from '@vielzeug/deposit';
 type Session = { id: string; userId: number };
 const schema = { sessions: table<Session>('id') };
 
-const db = createLocalStorage({ dbName: 'demo-ttl', schema });
+const db = createLocalStorage('demo-ttl', schema);
 await db.put('sessions', { id: 's1', userId: 1 }, ttl.minutes(30));
 ```
 
@@ -52,7 +52,7 @@ import { createSessionStorage, table } from '@vielzeug/deposit';
 type Draft = { id: string; body: string };
 const schema = { drafts: table<Draft>('id') };
 
-const db = createSessionStorage({ dbName: 'editor', schema });
+const db = createSessionStorage('editor', schema);
 await db.put('drafts', { id: 'd1', body: 'hello' });
 console.log(await db.get('drafts', 'd1'));
 ```
@@ -79,7 +79,7 @@ import { createMemory, table } from '@vielzeug/deposit';
 type User = { id: number; name: string };
 const schema = { users: table<User>('id') };
 
-const db = createMemory({ schema });
+const db = createMemory(schema);
 await db.put('users', { id: 1, name: 'Alice' });
 console.log(await db.getAll('users'));
 ```

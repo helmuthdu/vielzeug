@@ -40,9 +40,9 @@ describe('contains', () => {
   it('should work with configured contains predicate', () => {
     const array = [1, 2, 3, { a: 1 }, 'hello'];
     const value = { a: 1 };
-    const containsValue = partial(contains, value);
+    const containsInArray = partial(contains, array);
 
-    expect(containsValue(array)).toBe(true);
+    expect(containsInArray(value)).toBe(true);
   });
 
   it('should return false for an empty array', () => {

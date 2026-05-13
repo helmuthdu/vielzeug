@@ -55,29 +55,6 @@ describe('createDomVirtualList', () => {
     domList.destroy();
   });
 
-  test('supports keyed item sizing by passing getItemKey', () => {
-    const scrollEl = makeContainer(120);
-    const listEl = document.createElement('div');
-    const rows = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
-    const render = vi.fn(({ virtualItems }) => {
-      for (const item of virtualItems) {
-        if (rows[item.index]?.id === 'b') item.size = 40;
-      }
-    });
-
-    const domList = createDomVirtualList<{ id: string }>({
-      estimateSize: 20,
-      getItemKey: (item) => item.id,
-      getListElement: () => listEl,
-      getScrollElement: () => scrollEl,
-      render,
-    });
-
-    domList.setItems(rows);
-    expect(render).toHaveBeenCalled();
-    domList.destroy();
-  });
-
   test('horizontal mode writes width instead of height', () => {
     const scrollEl = makeContainer(120, 120);
     const listEl = document.createElement('div');
@@ -145,7 +122,7 @@ describe('createDomVirtualList', () => {
     expect(listEl.style.contain).toBe('');
 
     domList.setActive(true);
-    domList.setItems([], { remeasure: true });
+    domList.setItems([]);
     expect(clear).toHaveBeenCalledTimes(2);
   });
 });

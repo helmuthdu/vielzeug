@@ -12,7 +12,7 @@ description: Complete API reference for the Virtualit virtual list engine.
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
 | `createVirtualizer()` | Create an attached virtual list controller | Sync | It attaches immediately |
-| `virtualizer.update()` | Atomically update options | Sync | Use this for `count`, `estimateSize`, `gap`, `overscan`, callbacks |
+| `virtualizer.update()` | Atomically update live options | Sync | Use this for `count`, `estimateSize`, `gap`, `overscan`, callbacks |
 | `virtualizer.measure()` | Record measured item size | Sync (batched rebuild) | Measurements are applied after microtask flush |
 | `createDomVirtualList()` | DOM-first wrapper for dropdown/listbox UIs | Sync | Keep `setItems()` and `setActive()` in sync with UI state |
 
@@ -35,7 +35,6 @@ export type {
   DomVirtualListController,
   DomVirtualListOptions,
   DomVirtualListRenderArgs,
-  DomVirtualListSetItemsOptions,
 } from '@vielzeug/virtualit/dom';
 ```
 
@@ -95,7 +94,6 @@ const virt = createVirtualizer(scrollEl, {
 ```ts
 interface Virtualizer {
   readonly count: number;
-  readonly estimateSize: number | ((index: number) => number);
   readonly isScrolling: boolean;
   readonly items: VirtualItem[];
   readonly scrollOffset: number;
@@ -135,6 +133,8 @@ virt.update({ onChange: render });
 virt.update({ count: 5_000, estimateSize: 32, overscan: { start: 2, end: 2 } });
 ```
 
+`update()` accepts live runtime options only. `initialOffset` and `horizontal` are creation-time options.
+
 ### `measure(index, size)`
 
 Records measured height for variable-size rows. Rebuilds are batched in a microtask.
@@ -150,7 +150,7 @@ for (const item of virt.items) {
 
 Scrolls to an item index. Out-of-range indices are clamped.
 
-For variable-size lists, the target offset is computed from the current estimate plus any measured rows already in cache. If item heights changed, remeasure or call `invalidate()` before relying on the exact final offset.
+For variable-size lists, the target offset is computed from the current estimate plus any measured rows already in cache. If item heights changed, call `invalidate()` before relying on the exact final offset.
 
 ```ts
 virt.scrollToIndex(0, { align: 'start' });
@@ -223,7 +223,6 @@ interface DomVirtualListOptions<T> {
   clear?: (listEl: HTMLElement) => void;
   estimateSize: number | ((index: number, item: T) => number);
   gap?: number;
-  getItemKey?: (item: T, index: number) => string | number;
   horizontal?: boolean;
   getListElement: () => HTMLElement | null;
   getScrollElement: () => HTMLElement | Window | null;
@@ -250,11 +249,7 @@ interface DomVirtualListController<T> {
   destroy(): void;
   scrollToIndex(index: number, options?: ScrollToIndexOptions): void;
   setActive(active: boolean): void;
-  setItems(items: T[], options?: DomVirtualListSetItemsOptions): void;
-}
-
-interface DomVirtualListSetItemsOptions {
-  remeasure?: boolean;
+  setItems(items: T[]): void;
 }
 ```
 

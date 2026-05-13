@@ -29,6 +29,9 @@ export class IntersectSchema<T extends readonly Schema<any>[]> extends Schema<
     if (index === 0) {
       state.output = result.data;
     } else if (result.data !== null && typeof result.data === 'object') {
+      // Shallow merge: later schemas win for conflicting top-level keys.
+      // All schemas still validate against the original input, so validation
+      // is correct intersection semantics. The merge only affects transformed output.
       Object.assign(state.output as object, result.data);
     }
   }

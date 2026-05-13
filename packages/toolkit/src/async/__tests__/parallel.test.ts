@@ -6,30 +6,34 @@ describe('parallel', () => {
   describe('basic functionality', () => {
     it('should process all items and return ordered results', async () => {
       const input = [1, 2, 3, 4, 5];
-      const results = await parallel(2, input, async (n) => n * 2);
+      const results = await parallel(input, async (n) => n * 2, { limit: 2 });
 
       expect(results).toEqual([2, 4, 6, 8, 10]);
     });
 
     it('should maintain order regardless of completion time', async () => {
       const delays = [50, 10, 30, 5, 20];
-      const results = await parallel(3, delays, async (delay, index) => {
-        await new Promise((resolve) => setTimeout(resolve, delay));
+      const results = await parallel(
+        delays,
+        async (delay, index) => {
+          await new Promise((resolve) => setTimeout(resolve, delay));
 
-        return index;
-      });
+          return index;
+        },
+        { limit: 3 },
+      );
 
       expect(results).toEqual([0, 1, 2, 3, 4]);
     });
 
     it('should work with empty array', async () => {
-      const results = await parallel(2, [], async (n) => n);
+      const results = await parallel([], async (n) => n, { limit: 2 });
 
       expect(results).toEqual([]);
     });
 
     it('should work with single item', async () => {
-      const results = await parallel(2, [42], async (n) => n * 2);
+      const results = await parallel([42], async (n) => n * 2, { limit: 2 });
 
       expect(results).toEqual([84]);
     });
@@ -40,16 +44,20 @@ describe('parallel', () => {
       let concurrentCount = 0;
       let maxConcurrent = 0;
 
-      const results = await parallel(2, [1, 2, 3, 4, 5], async (n) => {
-        concurrentCount++;
-        maxConcurrent = Math.max(maxConcurrent, concurrentCount);
+      const results = await parallel(
+        [1, 2, 3, 4, 5],
+        async (n) => {
+          concurrentCount++;
+          maxConcurrent = Math.max(maxConcurrent, concurrentCount);
 
-        await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 10));
 
-        concurrentCount--;
+          concurrentCount--;
 
-        return n;
-      });
+          return n;
+        },
+        { limit: 2 },
+      );
 
       expect(maxConcurrent).toBe(2);
       expect(results).toEqual([1, 2, 3, 4, 5]);
@@ -58,19 +66,23 @@ describe('parallel', () => {
     it('should handle limit of 1 (sequential)', async () => {
       const order: number[] = [];
 
-      await parallel(1, [1, 2, 3], async (n) => {
-        order.push(n);
-        await new Promise((resolve) => setTimeout(resolve, 10));
+      await parallel(
+        [1, 2, 3],
+        async (n) => {
+          order.push(n);
+          await new Promise((resolve) => setTimeout(resolve, 10));
 
-        return n;
-      });
+          return n;
+        },
+        { limit: 1 },
+      );
 
       expect(order).toEqual([1, 2, 3]);
     });
 
     it('should handle limit greater than array length', async () => {
       const input = [1, 2, 3];
-      const results = await parallel(10, input, async (n) => n * 2);
+      const results = await parallel(input, async (n) => n * 2, { limit: 10 });
 
       expect(results).toEqual([2, 4, 6]);
     });
@@ -81,11 +93,15 @@ describe('parallel', () => {
       const input = ['a', 'b', 'c'];
       const calls: Array<[string, number, string[]]> = [];
 
-      await parallel(2, input, async (item, index, array) => {
-        calls.push([item, index, array]);
+      await parallel(
+        input,
+        async (item, index, array) => {
+          calls.push([item, index, array]);
 
-        return item;
-      });
+          return item;
+        },
+        { limit: 2 },
+      );
 
       expect(calls).toEqual([
         ['a', 0, input],
@@ -97,20 +113,24 @@ describe('parallel', () => {
 
   describe('error handling', () => {
     it('should throw error if limit is less than 1', async () => {
-      await expect(parallel(0, [1, 2, 3], async (n) => n)).rejects.toThrow('Limit must be at least 1');
+      await expect(parallel([1, 2, 3], async (n) => n, { limit: 0 })).rejects.toThrow('Limit must be at least 1');
 
-      await expect(parallel(-1, [1, 2, 3], async (n) => n)).rejects.toThrow('Limit must be at least 1');
+      await expect(parallel([1, 2, 3], async (n) => n, { limit: -1 })).rejects.toThrow('Limit must be at least 1');
     });
 
     it('should propagate errors from callback', async () => {
       await expect(
-        parallel(2, [1, 2, 3], async (n) => {
-          if (n === 2) {
-            throw new Error('Test error');
-          }
+        parallel(
+          [1, 2, 3],
+          async (n) => {
+            if (n === 2) {
+              throw new Error('Test error');
+            }
 
-          return n;
-        }),
+            return n;
+          },
+          { limit: 2 },
+        ),
       ).rejects.toThrow('Test error');
     });
 
@@ -118,16 +138,20 @@ describe('parallel', () => {
       const processed: number[] = [];
 
       await expect(
-        parallel(2, [1, 2, 3, 4, 5], async (n) => {
-          processed.push(n);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+        parallel(
+          [1, 2, 3, 4, 5],
+          async (n) => {
+            processed.push(n);
+            await new Promise((resolve) => setTimeout(resolve, 10));
 
-          if (n === 3) {
-            throw new Error('Error at 3');
-          }
+            if (n === 3) {
+              throw new Error('Error at 3');
+            }
 
-          return n;
-        }),
+            return n;
+          },
+          { limit: 2 },
+        ),
       ).rejects.toThrow('Error at 3');
 
       // Should not process all items after error
@@ -141,7 +165,9 @@ describe('parallel', () => {
 
       controller.abort();
 
-      await expect(parallel(2, [1, 2, 3], async (n) => n, controller.signal)).rejects.toThrow('Aborted');
+      await expect(parallel([1, 2, 3], async (n) => n, { limit: 2, signal: controller.signal })).rejects.toThrow(
+        'aborted',
+      );
     });
 
     it('should abort processing when signal is triggered', async () => {
@@ -152,7 +178,6 @@ describe('parallel', () => {
 
       await expect(
         parallel(
-          2,
           [1, 2, 3, 4, 5],
           async (n) => {
             processed.push(n);
@@ -160,9 +185,9 @@ describe('parallel', () => {
 
             return n;
           },
-          controller.signal,
+          { limit: 2, signal: controller.signal },
         ),
-      ).rejects.toThrow('Aborted');
+      ).rejects.toThrow('aborted');
 
       // Should not process all items
       expect(processed.length).toBeLessThan(5);
@@ -171,7 +196,7 @@ describe('parallel', () => {
     it('should complete successfully if not aborted', async () => {
       const controller = new AbortController();
 
-      const results = await parallel(2, [1, 2, 3], async (n) => n * 2, controller.signal);
+      const results = await parallel([1, 2, 3], async (n) => n * 2, { limit: 2, signal: controller.signal });
 
       expect(results).toEqual([2, 4, 6]);
     });
@@ -186,7 +211,7 @@ describe('parallel', () => {
         return `data-${url}`;
       });
 
-      const results = await parallel(2, urls, fetchMock);
+      const results = await parallel(urls, fetchMock, { limit: 2 });
 
       expect(results).toEqual(['data-url1', 'data-url2', 'data-url3', 'data-url4', 'data-url5']);
       expect(fetchMock).toHaveBeenCalledTimes(5);
@@ -196,11 +221,15 @@ describe('parallel', () => {
       const items = Array.from({ length: 100 }, (_, i) => i);
       const startTime = Date.now();
 
-      const results = await parallel(10, items, async (n) => {
-        await new Promise((resolve) => setTimeout(resolve, 5));
+      const results = await parallel(
+        items,
+        async (n) => {
+          await new Promise((resolve) => setTimeout(resolve, 5));
 
-        return n * 2;
-      });
+          return n * 2;
+        },
+        { limit: 10 },
+      );
 
       const duration = Date.now() - startTime;
 
@@ -217,15 +246,19 @@ describe('parallel', () => {
       const items = [1, 2, 3, 4, 5];
 
       await expect(
-        parallel(2, items, async (n) => {
-          await new Promise((resolve) => setTimeout(resolve, 5));
+        parallel(
+          items,
+          async (n) => {
+            await new Promise((resolve) => setTimeout(resolve, 5));
 
-          if (n === 4) {
-            throw new Error('Failed at 4');
-          }
+            if (n === 4) {
+              throw new Error('Failed at 4');
+            }
 
-          return n * 2;
-        }),
+            return n * 2;
+          },
+          { limit: 2 },
+        ),
       ).rejects.toThrow('Failed at 4');
     });
   });

@@ -99,3 +99,51 @@ describe('historyState in location', () => {
     router.dispose();
   });
 });
+
+describe('onError callback', () => {
+  it('reports initial navigation errors through onError', async () => {
+    const onError = vi.fn();
+    const history = createMemoryHistory('/fail');
+    const router = createRouter({
+      history,
+      onError,
+      routes: {
+        fail: {
+          data: async () => {
+            throw new Error('boom');
+          },
+          path: '/fail',
+        },
+      },
+    });
+
+    await settle();
+
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'initial-navigation' });
+    router.dispose();
+  });
+
+  it('reports preload failures through onError', async () => {
+    const onError = vi.fn();
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      onError,
+      routes: {
+        fail: {
+          data: async () => {
+            throw new Error('prefetch fail');
+          },
+          path: '/fail',
+        },
+        home: { path: '/' },
+      },
+    });
+
+    await settle();
+
+    await expect(router.preload('fail')).rejects.toThrow('prefetch fail');
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'preload' });
+    router.dispose();
+  });
+});

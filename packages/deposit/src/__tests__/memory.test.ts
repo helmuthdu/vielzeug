@@ -10,7 +10,7 @@ describe('Memory adapter', () => {
   let db: Adapter<typeof userSchema>;
 
   beforeEach(() => {
-    db = createMemory({ schema: userSchema });
+    db = createMemory(userSchema);
   });
 
   test('put/get/delete/deleteAll/count', async () => {
@@ -72,7 +72,7 @@ describe('Memory adapter', () => {
   });
 
   test('each instance has isolated state', async () => {
-    const other = createMemory({ schema: userSchema });
+    const other = createMemory(userSchema);
 
     await db.put('users', { id: 1, name: 'Alice' });
 
@@ -148,5 +148,64 @@ describe('Memory adapter', () => {
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
     ]);
+  });
+
+  test('deleteWhere() emits a single observer update', async () => {
+    await db.putAll('users', [
+      { age: 20, id: 1, name: 'Alice' },
+      { age: 30, id: 2, name: 'Bob' },
+      { age: 40, id: 3, name: 'Charlie' },
+    ]);
+
+    const snapshots: User[][] = [];
+    const stop = db.observe('users', (rows) => {
+      snapshots.push(rows);
+    });
+
+    await db.deleteWhere('users', (u) => (u.age ?? 0) >= 30);
+    await Promise.resolve();
+    stop();
+
+    expect(snapshots).toEqual([
+      [
+        { age: 20, id: 1, name: 'Alice' },
+        { age: 30, id: 2, name: 'Bob' },
+        { age: 40, id: 3, name: 'Charlie' },
+      ],
+      [{ age: 20, id: 1, name: 'Alice' }],
+    ]);
+  });
+
+  test('observer listener errors do not block other listeners', async () => {
+    const goodSnapshots: User[][] = [];
+    const bad = new Error('boom');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const stopBad = db.observe(
+      'users',
+      () => {
+        throw bad;
+      },
+      { immediate: false },
+    );
+
+    const stopGood = db.observe(
+      'users',
+      (rows) => {
+        goodSnapshots.push(rows);
+      },
+      { immediate: false },
+    );
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await Promise.resolve();
+
+    stopBad();
+    stopGood();
+
+    expect(goodSnapshots).toEqual([[{ id: 1, name: 'Alice' }]]);
+    expect(errorSpy).toHaveBeenCalledWith('[deposit] observer notification failed', bad);
+
+    errorSpy.mockRestore();
   });
 });

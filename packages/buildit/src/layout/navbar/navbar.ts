@@ -2,9 +2,9 @@ import {
   computed,
   createContext,
   define,
-  handle,
   html,
   inject,
+  listen,
   onMounted,
   provide,
   signal,
@@ -312,7 +312,7 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
       el.openMobileMenu = openMobileMenu;
       el.toggleMobileMenu = toggleMobileMenu;
 
-      const stopScroll = handle(
+      const stopScroll = listen(
         window,
         'scroll',
         () => {
@@ -321,7 +321,7 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
         { passive: true },
       );
       const stopContainerScroll = scrollContainer
-        ? handle(
+        ? listen(
             scrollContainer,
             'scroll',
             () => {
@@ -330,7 +330,7 @@ export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', 
             { passive: true },
           )
         : undefined;
-      const stopEscape = handle(host.el, 'keydown', (event: KeyboardEvent) => {
+      const stopEscape = listen(host.el, 'keydown', (event: KeyboardEvent) => {
         if (event.key !== 'Escape' || !isMobileMenuOpen.value) return;
 
         closeMobileMenu();

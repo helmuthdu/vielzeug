@@ -85,7 +85,7 @@ When `options.equals` is provided, downstream subscribers are suppressed if the 
 ### `effect`
 
 ```ts
-function effect(fn: EffectCallback, options?: EffectOptions): Subscription;
+function effect(fn: EffectCallback): Subscription;
 ```
 
 Runs `fn` immediately and re-runs it whenever any signal read inside it changes. If `fn` returns a function, that function is called as cleanup before each re-run and on final dispose. Returns a `Subscription` — dispose is idempotent.
@@ -106,10 +106,9 @@ sub.dispose(); // no-op — second call is safe
 
 **Parameters**
 
-| Parameter               | Type             | Description                                                        |
-| ----------------------- | ---------------- | ------------------------------------------------------------------ |
-| `fn`                    | `EffectCallback` | Runs immediately and on each dependency change; may return a cleanup function |
-| `options.maxIterations` | `number`         | Per-effect limit for re-entrant loops. Default: `100`              |
+| Parameter | Type             | Description                                                        |
+| --------- | ---------------- | ------------------------------------------------------------------ |
+| `fn`      | `EffectCallback` | Runs immediately and on each dependency change; may return a cleanup function |
 
 **Returns** — `Subscription`
 
@@ -140,7 +139,6 @@ watch(userStore, (s) => s.name, (name) => console.log('name:', name));
 | `source`            | `ReadonlySignal<T>`     | The signal or store to watch                                                                                                                                           |
 | `cb`                | `(value, prev) => void` | Called on each change with new and previous values                                                                                                                     |
 | `options.immediate` | `boolean`               | Fire once immediately on subscription. Default `false`                                                                                                                 |
-| `options.once`      | `boolean`               | Auto-unsubscribe after the first change. Default `false`. When combined with `immediate`, the immediate call does not count — the callback may fire up to twice total. |
 | `options.equals`    | `EqualityFn<T>`         | Custom equality for change detection. Default `Object.is`                                                                                                              |
 
 **Returns** — `Subscription`
@@ -364,20 +362,6 @@ The callback passed to `effect()`. May optionally return a `CleanupFn` that fire
 
 ---
 
-### `EffectOptions`
-
-```ts
-type EffectOptions = {
-  maxIterations?: number;
-};
-```
-
-| Property        | Type     | Default | Description                                              |
-| --------------- | -------- | ------- | -------------------------------------------------------- |
-| `maxIterations` | `number` | `100`   | Per-effect guard against infinite reactive loops         |
-
----
-
 ### `EqualityFn<T>`
 
 ```ts
@@ -405,16 +389,14 @@ Accepted by `signal()` and `computed()`.
 ```ts
 type WatchOptions<T> = {
   immediate?: boolean;
-  once?: boolean;
   equals?: EqualityFn<T>;
 };
 ```
 
-| Property    | Type            | Default     | Description                                                                                                         |
-| ----------- | --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------- |
-| `immediate` | `boolean`       | `false`     | Fire once immediately on subscription; both `value` and `prev` are the current value                                |
-| `once`      | `boolean`       | `false`     | Auto-unsubscribe after the first _change_ fires. When combined with `immediate`, the immediate call does not count. |
-| `equals`    | `EqualityFn<T>` | `Object.is` | Custom equality for change detection                                                                                |
+| Property    | Type            | Default     | Description                                                                          |
+| ----------- | --------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `immediate` | `boolean`       | `false`     | Fire once immediately on subscription; both `value` and `prev` are the current value |
+| `equals`    | `EqualityFn<T>` | `Object.is` | Custom equality for change detection                                                 |
 
 ---
 

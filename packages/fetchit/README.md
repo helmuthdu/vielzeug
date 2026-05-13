@@ -34,7 +34,7 @@ type User = { id: number; name: string };
 type NewUser = { name: string };
 
 const api = createApi({ baseUrl: 'https://api.example.com' });
-const qc = createQuery({ retry: 2, staleTime: 5_000 });
+const qc = createQuery({ attempts: 3, staleTime: 5_000 });
 
 const user = await qc.query({
   key: ['users', 1],
@@ -55,15 +55,16 @@ qc.invalidate(['users']);
 - Type-safe path params from `'/path/{id}'` patterns
 - Automatic read dedupe for idempotent requests
 - Explicit write dedupe with `dedupeKey` when you really need it
-- Query cache with `staleTime`, `gcTime`, subscriptions, invalidation, cancellation, and retry
-- `enabled`, `initialData`, and `placeholderData` on every `query()` call
+- Query cache with `staleTime`, `gcTime`, subscriptions, invalidation, cancellation, and retry controls
+- `enabled` and `initialData` on every `query()` call
+- Per-subscriber `placeholderData` via `subscribe()` options
 - `select` on `subscribe()` — transform data and skip redundant notifications
 - `refetchOnFocus` and `refetchOnReconnect` on the query client
 - Query cache prefetching for route/page warm-up flows
 - Retry controls with backoff hooks
 - Mutation handlers use a flat signature: `(input, signal)`
 - Mutation lifecycle callbacks: `onSuccess`, `onError`, `onSettled`
-- Built-in mutation cancellation via `mutation.cancel()`
+- Built-in mutation cancellation via `await mutation.cancel()`
 - `api.cancelAll()` aborts all in-flight requests without disposing the client
 - `HttpError.headers` shorthand for `err.response?.headers`
 - Optional `fetch` injection for tests/runtime adapters

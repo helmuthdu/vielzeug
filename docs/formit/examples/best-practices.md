@@ -15,11 +15,11 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 
 ### 0. Schema-Validated Form (Validit)
 
-Use `fromSchema()` to connect any `safeParse`-compatible schema:
+Use `schemaValidator(schema)` to connect any `safeParse`-compatible schema:
 
 ```ts
 import { v } from '@vielzeug/validit';
-import { createForm, fromSchema, FormValidationError } from '@vielzeug/formit';
+import { createForm, FormValidationError, schemaValidator } from '@vielzeug/formit';
 
 const registrationSchema = v.object({
   email: v.string().email('Invalid email'),
@@ -29,7 +29,7 @@ const registrationSchema = v.object({
 
 const form = createForm({
   defaultValues: { email: '', password: '', age: 0 },
-  ...fromSchema(registrationSchema),
+  validator: schemaValidator(registrationSchema),
   // Per-field validators run on every validateField() call
   validators: {
     email: (v) => (!v ? 'Email is required' : undefined),
@@ -64,10 +64,10 @@ useEffect(() => {
 form.subscribeForm(setState);
 ```
 
-### 2. Use Field Bindings
+### 2. Use bind() Only for Vanilla DOM
 
 ```tsx
-// ✅ Good - bind once, pass value explicitly
+// ✅ Good - plain DOM / non-reactive usage
 const emailBinding = form.bind('email');
 
 <input
@@ -76,10 +76,10 @@ const emailBinding = form.bind('email');
   onChange={(e) => emailBinding.onChange(e.target.value)}
 />
 
-// ❌ Verbose - manual wiring
+// ✅ In frameworks, prefer explicit reactive reads and writes
 <input
   name="email"
-  value={form.get('email')}
+  value={String(form.field('email').value ?? '')}
   onChange={(e) => form.set('email', e.target.value)}
   onBlur={() => form.touch('email')}
 />
@@ -109,7 +109,7 @@ try {
 {
   form.field('email').touched && state.errors['email'] && <span>{state.errors['email']}</span>;
 }
-// or use bind() which exposes a live `touched` getter:
+// or in vanilla DOM code, use bind() which exposes a live `touched` getter:
 const binding = form.bind('email');
 binding.touched; // read fresh each render
 
@@ -119,7 +119,7 @@ binding.touched; // read fresh each render
 }
 ```
 
-### 5. Use `isValid` / `isDirty` / `isTouched` Flags
+### 5. Use State Flags
 
 ```typescript
 // ✅ Good – use computed flags
@@ -132,9 +132,6 @@ if (state.isDirty) {
 
 // ❌ Verbose – manual checks
 if (Object.keys(state.errors).length === 0) {
-  /* ... */
-}
-if (state.dirtyFields.length > 0) {
   /* ... */
 }
 ```

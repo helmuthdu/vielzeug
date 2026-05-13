@@ -1,36 +1,21 @@
 ---
 title: Wireit
-description: Async-first typed dependency injection for TypeScript.
+description: Typed dependency injection for TypeScript.
 ---
 
 # Wireit
 
-Wireit is a small, typed IoC container designed for async-first codebases.
+Wireit is a compact dependency injection container built around typed symbol tokens, factory registration, and explicit container scopes.
 
-## Why Wireit
+## What it gives you
 
-- Typed symbol tokens via `createToken<T>()`
-- Explicit registration via `value`, `factory`, and `bind`
-- Single async resolution model via `resolve` and `resolveMany`
-- Hierarchical containers for request scoping
-- Predictable lifecycle via `init`, `dispose`, and `disposed`
+- Small core API
+- Typed dependency contracts
+- Async-first resolution
+- Child containers for scope boundaries
+- Explicit disposal
 
-## Quick Example
-
-```ts
-import { createContainer, createToken } from '@vielzeug/wireit';
-
-const RepoToken = createToken<UserRepo>('UserRepo');
-const ServiceToken = createToken<UserService>('UserService');
-
-const container = createContainer();
-container.bind(RepoToken, UserRepoImpl);
-container.bind(ServiceToken, UserService, { deps: [RepoToken] });
-
-const service = await container.resolve(ServiceToken);
-```
-
-## Next Steps
+## Start Here
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)

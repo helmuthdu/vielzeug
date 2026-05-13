@@ -3,26 +3,26 @@ import type { RunOptions, TaskFn, WorkerHandle, WorkerStatus } from '../workit';
 import { createAbortError } from '../_internal';
 import { WorkerError } from '../workit';
 
-function rejectAsync<T = never>(reason: unknown): Promise<T> {
-  return new Promise<T>((_, reject) => {
-    setTimeout(() => {
-      reject(reason);
-    }, 0);
-  });
-}
+export type TestWorkerOptions = {
+  maxQueue?: number | 'auto';
+};
 
 export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & {
   /** Recorded { input, output } pairs for every successful run(), in call order. */
   readonly calls: ReadonlyArray<{ input: TInput; output: TOutput }>;
 };
 
-export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TestWorkerHandle<TInput, TOutput> {
+export function createTestWorker<TInput, TOutput>(
+  fn: TaskFn<TInput, TOutput>,
+  options: TestWorkerOptions = {},
+): TestWorkerHandle<TInput, TOutput> {
   const calls: { input: TInput; output: TOutput }[] = [];
   let closePromise: Promise<void> | undefined;
   let completed = 0;
   const idleResolvers: Array<() => void> = [];
   let running = false;
   let terminated = false;
+  const maxQueue = options.maxQueue === 'auto' ? 2 : options.maxQueue;
   const queue: Array<{
     cleanupAbort?: () => void;
     input: TInput;
@@ -126,11 +126,15 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
     },
     run(input: TInput, options: RunOptions = {}): Promise<TOutput> {
       if (terminated) {
-        return rejectAsync(new WorkerError('terminated', '[workit] Worker was terminated'));
+        return Promise.reject(new WorkerError('terminated', '[workit] Worker was terminated'));
       }
 
       if (options.signal?.aborted) {
-        return rejectAsync(createAbortError(options.signal));
+        return Promise.reject(createAbortError(options.signal));
+      }
+
+      if (maxQueue !== undefined && queue.length >= maxQueue) {
+        return Promise.reject(new WorkerError('queue_full', `[workit] Queue is full (${maxQueue})`));
       }
 
       return new Promise<TOutput>((resolve, reject) => {
@@ -174,6 +178,9 @@ export function createTestWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): 
     },
     get status(): WorkerStatus {
       return status();
+    },
+    [Symbol.asyncDispose](): Promise<void> {
+      return this.close();
     },
     [Symbol.dispose](): void {
       this.dispose();

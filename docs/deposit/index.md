@@ -11,11 +11,11 @@ description: Typed browser storage with a compact API for LocalStorage, SessionS
 
 `@vielzeug/deposit` is a compact, typed browser storage library with five interchangeable adapters:
 
-- `createLocalStorage()` for lightweight browser persistence
-- `createSessionStorage()` for tab-scoped persistence
-- `createCookie()` for small browser state that should ride with requests
+- `createLocalStorage(dbName, schema)` for lightweight browser persistence
+- `createSessionStorage(dbName, schema)` for tab-scoped persistence
+- `createCookie(dbName, schema, options?)` for small browser state that should ride with requests
 - `createIndexedDB()` for transactional storage
-- `createMemory()` for tests and SSR environments
+- `createMemory(schema)` for tests and SSR environments
 
 <!-- Search keywords: browser storage library, IndexedDB wrapper, LocalStorage utility, in-memory storage. -->
 
@@ -72,7 +72,7 @@ localStorage.setItem('users:1', JSON.stringify({ id: 1, name: 'Alice' }));
 
 // After: typed schema + consistent adapter API
 const schema = { users: table<User>('id') };
-const local = createLocalStorage({ dbName: 'app', schema });
+const local = createLocalStorage('app', schema);
 await local.put('users', { id: 1, name: 'Alice', age: 30 });
 ```
 
@@ -100,7 +100,7 @@ await local.put('users', { id: 1, name: 'Alice', age: 30 });
 - **Bulk writes** — `putAll()` for atomic batch inserts
 - **Existence check** — `has()` without loading the full record
 - **Record utilities** — `forEach`, `getOrPut`, `update`, `deleteWhere`
-- **Reactivity** — `observe(table, listener)` with immediate snapshot and unsubscribe
+- **Reactivity** — `observe(table, listener, options?)` with immediate snapshot and unsubscribe
 - **Transactional writes** — `transaction()` with rollback on callback failure
 - **In-memory adapter** — browser-free, zero-setup; ideal for tests and SSR
 - **Zero dependencies** — small and easy to audit

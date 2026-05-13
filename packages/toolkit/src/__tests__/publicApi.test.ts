@@ -47,6 +47,9 @@ describe('public api', () => {
     expect('predict' in asyncApi).toBe(true);
     expect('race' in asyncApi).toBe(false);
     expect('batch' in asyncApi).toBe(false);
+    expect('memoizeAsync' in asyncApi).toBe(false);
+
+    expect('proxy' in toolkit).toBe(false);
 
     expect('isGreaterThan' in typedApi).toBe(true);
     expect('isLessThanOrEqual' in typedApi).toBe(true);

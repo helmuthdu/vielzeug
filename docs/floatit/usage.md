@@ -3,24 +3,9 @@ title: Floatit — Usage Guide
 description: Placement, middleware composition, overflow handling, and lifecycle patterns for Floatit.
 ---
 
-# Floatit Usage Guide
-
 [[toc]]
 
 ## Positioning APIs
-
-### `positionFloat`
-
-`positionFloat` computes the position, applies `left` and `top`, and returns the full result.
-
-```ts
-const result = positionFloat(reference, floating, {
-  placement: 'top',
-  middleware: [offset(8), flip(), shift({ padding: 6 })],
-});
-
-floating.dataset.placement = result.placement;
-```
 
 ### `computePosition`
 
@@ -39,8 +24,14 @@ floating.style.transform = `translate(${result.x}px, ${result.y}px)`;
 
 `float` is the high-level API for the common case.
 
+By default it writes `left` and `top`. Use `apply` for custom rendering.
+
 ```ts
 const cleanup = float(reference, floating, {
+  apply(result, { floating }) {
+    floating.style.transform = `translate(${result.x}px, ${result.y}px)`;
+    floating.dataset.placement = result.placement;
+  },
   placement: 'bottom-start',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
@@ -78,6 +69,12 @@ Available return fields:
 ### `offset`
 
 Adds a gap along the main axis.
+
+```ts
+offset(8);
+offset({ mainAxis: 8, crossAxis: 4 });
+offset((state) => ({ mainAxis: state.placement.startsWith('top') ? 12 : 8 }));
+```
 
 ### `flip`
 
@@ -125,11 +122,11 @@ middleware: [
 Produces coordinates for an arrow element.
 
 ```ts
-const result = positionFloat(reference, floating, {
+const result = computePosition(reference, floating, {
   middleware: [arrow({ element: arrowEl, padding: 6 })],
 });
 
-const arrowData = getArrowData(result);
+const arrowData = result.middlewareData.arrow as { x?: number; y?: number } | undefined;
 if (arrowData?.x != null) arrowEl.style.left = `${arrowData.x}px`;
 if (arrowData?.y != null) arrowEl.style.top = `${arrowData.y}px`;
 ```
@@ -140,10 +137,10 @@ Reports whether the reference is clipped or the floating element has escaped.
 
 ```ts
 const result = computePosition(reference, floating, {
-  middleware: [hide(), hide({ strategy: 'escaped' })],
+  middleware: [hide()],
 });
 
-const hideData = getHideData(result);
+const hideData = result.middlewareData.hide as { escaped?: boolean; referenceHidden?: boolean } | undefined;
 floating.style.visibility = hideData?.referenceHidden ? 'hidden' : 'visible';
 ```
 
@@ -188,7 +185,7 @@ const cursorReference = {
   }),
 };
 
-const result = positionFloat(cursorReference, menu, {
+const result = computePosition(cursorReference, menu, {
   middleware: [flip(), shift({ padding: 8 })],
 });
 
@@ -201,10 +198,12 @@ menu.dataset.placement = result.placement;
 
 ```ts
 const cleanup = autoUpdate(reference, floating, () => {
-  const result = positionFloat(reference, floating, {
+  const result = computePosition(reference, floating, {
     middleware: [offset(8), flip(), shift({ padding: 6 }), arrow({ element: arrowEl })],
   });
 
+  floating.style.left = `${result.x}px`;
+  floating.style.top = `${result.y}px`;
   floating.dataset.placement = result.placement;
 }, {
   animationFrame: false,

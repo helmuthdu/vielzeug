@@ -12,7 +12,7 @@ Validate a registration form, normalize browser values, and expose errors in a s
 ### Runnable Example
 
 ```ts
-import { v, type Infer } from '@vielzeug/validit';
+import { flattenFirstErrors, v, type Infer } from '@vielzeug/validit';
 
 const RegistrationSchema = v
   .object({
@@ -21,12 +21,12 @@ const RegistrationSchema = v
     password: v
       .string()
       .min(8, 'Password must be at least 8 characters')
-      .refine((value) => /[A-Z]/.test(value), 'Add at least one uppercase letter')
-      .refine((value) => /\d/.test(value), 'Add at least one number'),
+      .check((value) => /[A-Z]/.test(value), 'Add at least one uppercase letter')
+      .check((value) => /\d/.test(value), 'Add at least one number'),
     confirmPassword: v.string(),
     newsletter: v.boolean().default(false),
   })
-  .refine((value) => value.password === value.confirmPassword, 'Passwords must match');
+  .check((value) => value.password === value.confirmPassword, 'Passwords must match');
 
 export type Registration = Infer<typeof RegistrationSchema>;
 
@@ -47,7 +47,7 @@ const parsed = FormInputSchema.safeParse(payload);
 if (parsed.success) {
   console.log(parsed.data);
 } else {
-  const { fieldErrors, formErrors } = parsed.error.flattenFirst();
+  const { fieldErrors, formErrors } = flattenFirstErrors(parsed.error);
 
   console.log(fieldErrors);
   console.log(formErrors);
@@ -66,7 +66,7 @@ if (parsed.success) {
 }
 ```
 
-If the passwords do not match, `formErrors` contains `['Passwords must match']` because the object-level refinement has no field path.
+If the passwords do not match, `formErrors` contains `['Passwords must match']` because the object-level check has no field path.
 
 ### Common Pitfalls
 

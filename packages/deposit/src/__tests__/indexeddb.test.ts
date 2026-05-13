@@ -12,6 +12,26 @@ const multiSchema = {
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+function rawStoreCount(dbName: string, storeName: string): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    const request = indexedDB.open(dbName);
+
+    request.onerror = () => reject(request.error ?? new Error('failed to open database'));
+    request.onsuccess = () => {
+      const rawDb = request.result;
+      const tx = rawDb.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const countRequest = store.count();
+
+      countRequest.onerror = () => reject(countRequest.error ?? new Error('failed to count records'));
+      countRequest.onsuccess = () => resolve(countRequest.result);
+      tx.oncomplete = () => rawDb.close();
+      tx.onabort = () => reject(tx.error ?? new Error('count transaction aborted'));
+      tx.onerror = () => reject(tx.error ?? new Error('count transaction failed'));
+    };
+  });
+}
+
 describe('IndexedDB adapter', () => {
   let db: IndexedDBHandle<typeof userSchema>;
 
@@ -71,6 +91,14 @@ describe('IndexedDB adapter', () => {
 
     expect(await db.get('users', 1)).toBeUndefined();
     expect(await db.count('users')).toBe(0);
+  });
+
+  test('get() lazily removes expired raw records', async () => {
+    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await delay(5);
+
+    expect(await db.get('users', 1)).toBeUndefined();
+    expect(await rawStoreCount('IDB', 'users')).toBe(0);
   });
 
   test('query builder via query()', async () => {

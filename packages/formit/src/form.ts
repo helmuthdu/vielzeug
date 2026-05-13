@@ -6,9 +6,11 @@ import {
   type FieldValidator,
   type FlatKeyOf,
   type Form,
+  type ErrorKeyOf,
   FormValidationError,
   type FormOptions,
   type FormState,
+  type FormValidator,
   type MaybePromise,
   type SetOptions,
   type SubscribeOptions,
@@ -18,31 +20,52 @@ import {
   type ValidateResult,
   type ValidationMode,
 } from './types';
-import { flattenValues, isSameValue, unflattenValues } from './utils';
+import { flattenValues, unflattenValues } from './utils';
 
 const MODE_BIND_DEFAULTS: Record<ValidationMode, BindConfig> = {
-  onBlur: { touchOnBlur: true, validateOnBlur: true, validateOnChange: false },
-  onChange: { touchOnBlur: true, validateOnBlur: false, validateOnChange: true },
-  onSubmit: { touchOnBlur: true, validateOnBlur: false, validateOnChange: false },
-  // onTouched validates on change only after the field has been touched.
-  onTouched: { touchOnBlur: true, validateOnBlur: true, validateOnChange: true },
+  onBlur: { touchOnBlur: true, validateOnBlur: true, validateOnChange: false, validateOnChangeAfterTouch: false },
+  onChange: {
+    touchOnBlur: true,
+    validateOnBlur: false,
+    validateOnChange: true,
+    validateOnChangeAfterTouch: false,
+  },
+  onSubmit: {
+    touchOnBlur: true,
+    validateOnBlur: false,
+    validateOnChange: false,
+    validateOnChangeAfterTouch: false,
+  },
+  onTouched: {
+    touchOnBlur: true,
+    validateOnBlur: true,
+    validateOnChange: false,
+    validateOnChangeAfterTouch: true,
+  },
 };
+
+function isAbortError(err: unknown): boolean {
+  return err instanceof Error && err.name === 'AbortError';
+}
+
+function composeSignal(...signals: Array<AbortSignal | undefined>): AbortSignal {
+  const active = signals.filter((s): s is AbortSignal => s !== undefined);
+
+  return active.length === 1 ? active[0] : AbortSignal.any(active);
+}
 
 export function createForm<TValues extends Record<string, unknown> = Record<string, unknown>>(
   init: FormOptions<TValues> = {},
 ): Form<TValues> {
-  const validators: Record<string, FieldValidator<unknown>[]> = {};
+  const validators: Record<string, FieldValidator<unknown>> = {};
 
   for (const [name, rule] of Object.entries(init.validators ?? {})) {
-    validators[name] = Array.isArray(rule) ? (rule as FieldValidator<unknown>[]) : [rule as FieldValidator<unknown>];
+    validators[name] = rule as FieldValidator<unknown>;
   }
 
-  const formValidator = init.validator;
+  const formValidator: FormValidator<TValues> | undefined = init.validator;
   const mode: ValidationMode = init.mode ?? 'onSubmit';
-
-  // Resolve bindDefaults: explicit bindDefaults > mode > safe defaults
   const bindDefaults: BindConfig = init.bindDefaults ?? MODE_BIND_DEFAULTS[mode];
-  const useTouchedMode = init.bindDefaults === undefined && mode === 'onTouched';
 
   const baseline = new Map<string, unknown>(Object.entries(flattenValues(init.defaultValues ?? {})));
   const store = new Map<string, unknown>(baseline);
@@ -51,26 +74,38 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   const touched = new Set<string>();
   const dirty = new Set<string>();
   let validatingCount = 0;
-  let activeValidationCtrl: AbortController | null = null;
-  const fieldValidationCtrls = new Map<string, AbortController>();
   let isSubmitting = false;
   let submitCount = 0;
   const disposeController = new AbortController();
 
-  type LocalListener = (state: FormState<TValues>) => void;
+  // Per-field abort controllers: only the specific field being validated is cancelled on re-run.
+  const fieldCtrls = new Map<string, AbortController>();
+  // Controller for full-form validation runs (validateAll / submit).
+  let fullRunCtrl: AbortController | null = null;
+
+  type LocalListener = (state: FormState) => void;
   type AnyFieldListener = (payload: FieldState<unknown>) => void;
 
   const listeners = new Set<LocalListener>();
   const fieldListeners = new Map<string, Set<AnyFieldListener>>();
-  const arrayHelpers = new Map<string, ArrayField>();
 
-  let scheduled = false;
-  const changedFields = new Set<string>();
-  let notifyAllFields = false;
+  /** Synchronously notify all form listeners and relevant field listeners. */
+  function notifyAll(field?: string): void {
+    if (listeners.size > 0) {
+      const state = buildState();
 
-  function buildState(): FormState<TValues> {
+      for (const listener of listeners) listener(state);
+    }
+
+    if (field !== undefined) {
+      notifyField(field);
+    } else {
+      for (const name of fieldListeners.keys()) notifyField(name);
+    }
+  }
+
+  function buildState(): FormState {
     return {
-      dirtyFields: [...dirty] as FlatKeyOf<TValues>[],
       errors: Object.fromEntries(fieldErrors),
       isDirty: dirty.size > 0,
       isSubmitting,
@@ -81,8 +116,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     };
   }
 
-  function allKnownFields(): Set<string> {
-    return new Set([...store.keys(), ...Object.keys(validators)]);
+  function allKnownFields(): string[] {
+    return [...new Set([...store.keys(), ...Object.keys(validators)])];
   }
 
   function buildFieldState(name: string): FieldState<unknown> {
@@ -104,53 +139,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     for (const fn of bucket) fn(payload);
   }
 
-  function flush(): void {
-    scheduled = false;
-
-    if (listeners.size > 0) {
-      const state = buildState();
-
-      for (const listener of listeners) listener(state);
-    }
-
-    const toNotify = notifyAllFields ? fieldListeners.keys() : changedFields;
-
-    for (const name of toNotify) notifyField(name);
-    changedFields.clear();
-    notifyAllFields = false;
-  }
-
-  function scheduleNotify(field?: string): void {
-    if (field !== undefined) {
-      changedFields.add(field);
-    } else {
-      notifyAllFields = true;
-    }
-
-    if (scheduled) return;
-
-    scheduled = true;
-    queueMicrotask(flush);
-  }
-
-  async function runFieldValidators(name: string, signal: AbortSignal): Promise<string | undefined> {
-    const fieldValidators = validators[name];
-
-    if (!fieldValidators) return undefined;
-
-    const value = store.get(name);
-
-    for (const validator of fieldValidators) {
-      if (signal.aborted) throw signal.reason;
-
-      const result = await validator(value, signal);
-
-      if (typeof result === 'string') return result;
-    }
-
-    return undefined;
-  }
-
   function get<K extends FlatKeyOf<TValues>>(name: K): TypeAtPath<TValues, K> {
     return store.get(name as string) as TypeAtPath<TValues, K>;
   }
@@ -160,11 +148,19 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   }
 
   function trackDirty(name: string, value: unknown): void {
-    if (isSameValue(baseline.get(name), value)) {
-      dirty.delete(name);
-    } else {
-      dirty.add(name);
-    }
+    const base = baseline.get(name);
+    // Deep comparison only for Date/File/Blob; reference equality for everything else.
+    const equal =
+      base instanceof Date && value instanceof Date
+        ? base.getTime() === value.getTime()
+        : base instanceof File && value instanceof File
+          ? base.name === value.name && base.size === value.size
+          : base instanceof Blob && value instanceof Blob
+            ? base.size === value.size
+            : base === value;
+
+    if (equal) dirty.delete(name);
+    else dirty.add(name);
   }
 
   function set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options: SetOptions = {}): void {
@@ -174,88 +170,68 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     store.set(key, value);
 
-    if (options.track ?? true) trackDirty(key, value);
+    if (options.dirty ?? true) trackDirty(key, value);
 
     if (options.touched) touched.add(key);
 
-    scheduleNotify(key);
+    notifyAll(key);
   }
 
   function field<K extends FlatKeyOf<TValues>>(name: K): FieldState<TypeAtPath<TValues, K>> {
     return buildFieldState(name as string) as FieldState<TypeAtPath<TValues, K>>;
   }
 
-  function setError(name: FlatKeyOf<TValues>, message: string): void {
+  function setError(name: ErrorKeyOf<TValues>, message?: string): void {
     ensureNotDisposed();
 
     const key = name as string;
 
-    fieldErrors.set(key, message);
-    scheduleNotify(key);
+    if (typeof message === 'string') fieldErrors.set(key, message);
+    else fieldErrors.delete(key);
+
+    notifyAll(key);
   }
 
-  function clearError(name: FlatKeyOf<TValues>): void {
-    ensureNotDisposed();
-
-    const key = name as string;
-
-    fieldErrors.delete(key);
-    scheduleNotify(key);
-  }
-
-  function replaceErrors(nextErrors: Partial<Record<FlatKeyOf<TValues>, string>>): void {
+  function setErrors(nextErrors: Partial<Record<ErrorKeyOf<TValues>, string | undefined>>): void {
     ensureNotDisposed();
     fieldErrors.clear();
+
     for (const [k, v] of Object.entries(nextErrors)) {
       if (typeof v === 'string') fieldErrors.set(k, v);
     }
-    scheduleNotify();
+
+    notifyAll();
   }
 
-  function mergeErrors(nextErrors: Partial<Record<FlatKeyOf<TValues>, string | undefined>>): void {
+  function touch(name: FlatKeyOf<TValues>): void {
     ensureNotDisposed();
-
-    for (const [name, message] of Object.entries(nextErrors) as Array<[string, string | undefined]>) {
-      if (message === undefined) fieldErrors.delete(name);
-      else fieldErrors.set(name, message);
-    }
-
-    scheduleNotify();
+    touched.add(name as string);
+    notifyAll(name as string);
   }
 
-  function touch(name?: FlatKeyOf<TValues>): void {
+  function untouch(name: FlatKeyOf<TValues>): void {
     ensureNotDisposed();
-
-    if (name === undefined) {
-      for (const fieldName of allKnownFields()) touched.add(fieldName);
-      scheduleNotify();
-    } else {
-      const key = name as string;
-
-      touched.add(key);
-      scheduleNotify(key);
-    }
+    touched.delete(name as string);
+    notifyAll(name as string);
   }
 
-  function untouch(name?: FlatKeyOf<TValues>): void {
+  function touchAll(): void {
     ensureNotDisposed();
+    for (const name of allKnownFields()) touched.add(name);
+    notifyAll();
+  }
 
-    if (name === undefined) {
-      touched.clear();
-      scheduleNotify();
-    } else {
-      const key = name as string;
-
-      touched.delete(key);
-      scheduleNotify(key);
-    }
+  function untouchAll(): void {
+    ensureNotDisposed();
+    touched.clear();
+    notifyAll();
   }
 
   function resolveTouchedValidatorFields(): string[] {
     return Object.keys(validators).filter((name) => touched.has(name));
   }
 
-  async function runFormValidator(signal: AbortSignal): Promise<Record<string, string>> {
+  async function runFormValidatorInternal(signal: AbortSignal): Promise<Record<string, string>> {
     if (!formValidator) return {};
 
     if (signal.aborted) throw signal.reason;
@@ -265,18 +241,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     if (result) {
       for (const [name, msg] of Object.entries(result)) {
-        if (msg) out[name] = msg;
+        if (typeof msg === 'string') out[name] = msg;
       }
     }
 
     return out;
-  }
-
-  function applyPartialErrors(fields: Set<string>, next: Record<string, string>): void {
-    for (const name of fields) {
-      if (next[name] !== undefined) fieldErrors.set(name, next[name]);
-      else fieldErrors.delete(name);
-    }
   }
 
   function buildScopedErrors(fieldSet: Set<string>): Record<string, string> {
@@ -291,105 +260,139 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     return out;
   }
 
-  function buildResult(fieldSet: Set<string>, mode: 'full' | 'partial'): ValidateResult {
-    const allErrors = Object.fromEntries(fieldErrors);
-    const errors = mode === 'full' ? allErrors : buildScopedErrors(fieldSet);
-
-    return { allErrors, errors, valid: fieldErrors.size === 0 };
-  }
-
-  async function validateResolvedFields(
-    fieldsToValidate: string[],
+  /**
+   * Core validation runner. Does NOT touch `validatingCount` — callers that need
+   * to reflect `isValidating` must increment/decrement around this call.
+   *
+   * `mode:'full'` cancels all ongoing validation and runs every field + form validator.
+   * `mode:'partial'` only cancels and re-runs the specific fields provided.
+   */
+  async function runValidationCore(
+    fields: string[],
     mode: 'full' | 'partial',
-    signal?: AbortSignal,
+    externalSignal?: AbortSignal,
   ): Promise<ValidateResult> {
-    ensureNotDisposed();
-
-    const fieldSet = new Set(fieldsToValidate);
-    const baseSignals: AbortSignal[] = signal ? [signal, disposeController.signal] : [disposeController.signal];
+    const fieldSet = new Set(fields);
+    const runFieldCtrls = new Map<string, AbortController>();
+    let fullCtrl: AbortController | null = null;
 
     if (mode === 'full') {
-      // Full validation supersedes all running validations
-      activeValidationCtrl?.abort();
-      for (const ctrl of fieldValidationCtrls.values()) ctrl.abort();
-      fieldValidationCtrls.clear();
-    }
+      for (const ctrl of fieldCtrls.values()) ctrl.abort();
+      fieldCtrls.clear();
+      fullRunCtrl?.abort();
+      fullCtrl = new AbortController();
+      fullRunCtrl = fullCtrl;
+    } else {
+      for (const name of fieldSet) {
+        fieldCtrls.get(name)?.abort();
 
-    const ctrl = new AbortController();
+        const ctrl = new AbortController();
 
-    if (mode === 'full') activeValidationCtrl = ctrl;
-
-    // Per-field controllers for partial: concurrent field validations don't cancel each other
-    const localFieldCtrls = new Map<string, AbortController>();
-
-    for (const name of fieldSet) {
-      if (mode === 'partial') {
-        fieldValidationCtrls.get(name)?.abort();
-
-        const fieldCtrl = new AbortController();
-
-        fieldValidationCtrls.set(name, fieldCtrl);
-        localFieldCtrls.set(name, fieldCtrl);
-      } else {
-        localFieldCtrls.set(name, ctrl);
+        fieldCtrls.set(name, ctrl);
+        runFieldCtrls.set(name, ctrl);
       }
     }
 
-    validatingCount++;
-    scheduleNotify();
+    const baseSignal = fullCtrl
+      ? composeSignal(fullCtrl.signal, externalSignal, disposeController.signal)
+      : composeSignal(externalSignal, disposeController.signal);
 
     try {
       const results = await Promise.all(
         [...fieldSet].map(async (name) => {
-          const fieldSignal = AbortSignal.any([localFieldCtrls.get(name)!.signal, ...baseSignals]);
+          const sig = mode === 'partial' ? composeSignal(runFieldCtrls.get(name)!.signal, baseSignal) : baseSignal;
 
-          return [name, await runFieldValidators(name, fieldSignal)] as const;
+          const validator = validators[name];
+
+          if (!validator) return [name, undefined] as const;
+
+          if (sig.aborted) throw sig.reason;
+
+          const result = await validator(store.get(name), sig);
+
+          return [name, typeof result === 'string' ? result : undefined] as const;
         }),
       );
+
       const nextErrors: Record<string, string> = {};
 
       for (const [name, msg] of results) {
         if (msg !== undefined) nextErrors[name] = msg;
       }
 
-      if (mode === 'partial') {
-        applyPartialErrors(fieldSet, nextErrors);
-        for (const name of fieldSet) fieldValidationCtrls.delete(name);
-      } else {
-        const formSignal = AbortSignal.any([ctrl.signal, ...baseSignals]);
-
-        Object.assign(nextErrors, await runFormValidator(formSignal));
+      if (mode === 'full') {
+        Object.assign(nextErrors, await runFormValidatorInternal(baseSignal));
         fieldErrors.clear();
         for (const [k, v] of Object.entries(nextErrors)) fieldErrors.set(k, v);
+
+        return { errors: Object.fromEntries(fieldErrors), valid: fieldErrors.size === 0 };
       }
 
-      return buildResult(fieldSet, mode);
+      for (const name of fieldSet) {
+        if (nextErrors[name] !== undefined) fieldErrors.set(name, nextErrors[name]);
+        else fieldErrors.delete(name);
+      }
+
+      return { errors: buildScopedErrors(fieldSet), valid: fieldErrors.size === 0 };
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        return buildResult(fieldSet, mode);
+      if (isAbortError(err)) {
+        return {
+          errors: mode === 'full' ? Object.fromEntries(fieldErrors) : buildScopedErrors(fieldSet),
+          valid: fieldErrors.size === 0,
+        };
       }
 
       throw err;
     } finally {
-      if (mode === 'full' && activeValidationCtrl === ctrl) activeValidationCtrl = null;
+      if (fullCtrl && fullRunCtrl === fullCtrl) fullRunCtrl = null;
 
-      validatingCount--;
-      scheduleNotify();
+      for (const [name, ctrl] of runFieldCtrls) {
+        if (fieldCtrls.get(name) === ctrl) fieldCtrls.delete(name);
+      }
     }
   }
 
-  async function validate(fields?: FlatKeyOf<TValues>[] | 'touched', signal?: AbortSignal): Promise<ValidateResult> {
-    if (fields === 'touched') {
-      return validateResolvedFields(resolveTouchedValidatorFields(), 'partial', signal);
-    } else if (fields === undefined) {
-      return validateResolvedFields(Object.keys(validators), 'full', signal);
-    } else {
-      return validateResolvedFields(fields as string[], 'partial', signal);
+  async function validateAll(signal?: AbortSignal): Promise<ValidateResult> {
+    ensureNotDisposed();
+    validatingCount++;
+    notifyAll();
+
+    try {
+      return await runValidationCore(Object.keys(validators), 'full', signal);
+    } finally {
+      validatingCount--;
+      notifyAll();
+    }
+  }
+
+  async function validateTouched(signal?: AbortSignal): Promise<ValidateResult> {
+    ensureNotDisposed();
+    validatingCount++;
+    notifyAll();
+
+    try {
+      return await runValidationCore(resolveTouchedValidatorFields(), 'partial', signal);
+    } finally {
+      validatingCount--;
+      notifyAll();
+    }
+  }
+
+  async function validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult> {
+    ensureNotDisposed();
+    validatingCount++;
+    notifyAll();
+
+    try {
+      return await runValidationCore(fields as string[], 'partial', signal);
+    } finally {
+      validatingCount--;
+      notifyAll();
     }
   }
 
   async function validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined> {
-    const { errors } = await validate([name], signal);
+    const { errors } = await validateFields([name], signal);
 
     return errors[name as string];
   }
@@ -404,11 +407,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     submitCount++;
     isSubmitting = true;
-    scheduleNotify();
+    notifyAll();
 
     try {
-      touch();
-      await validate();
+      touchAll();
+      // Run validation without updating validatingCount — isSubmitting already signals busy state.
+      await runValidationCore(Object.keys(validators), 'full');
 
       if (fieldErrors.size > 0) {
         const errors = Object.fromEntries(fieldErrors);
@@ -425,7 +429,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       return await onSubmit(values());
     } finally {
       isSubmitting = false;
-      scheduleNotify();
+      notifyAll();
     }
   }
 
@@ -470,6 +474,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     const touchOnBlur = config?.touchOnBlur ?? bindDefaults.touchOnBlur ?? true;
     const doValidateOnBlur = config?.validateOnBlur ?? bindDefaults.validateOnBlur ?? false;
     const doValidateOnChange = config?.validateOnChange ?? bindDefaults.validateOnChange ?? false;
+    const doValidateOnChangeAfterTouch =
+      config?.validateOnChangeAfterTouch ?? bindDefaults.validateOnChangeAfterTouch ?? false;
 
     return {
       get dirty() {
@@ -486,8 +492,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       onChange: (value: TypeAtPath<TValues, K>) => {
         set(name, value);
 
-        const shouldValidateOnChange =
-          doValidateOnChange && (!useTouchedMode || config?.validateOnChange !== undefined || touched.has(key));
+        const shouldValidateOnChange = doValidateOnChange || (doValidateOnChangeAfterTouch && touched.has(key));
 
         if (shouldValidateOnChange) void validateField(name).catch(() => undefined);
       },
@@ -504,11 +509,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     ensureNotDisposed();
 
     const key = name as string;
-    const cached = arrayHelpers.get(key);
 
-    if (cached) return cached;
-
-    const helpers: ArrayField = {
+    return {
       append(value: unknown): void {
         const current = store.get(key);
 
@@ -567,10 +569,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         set(name, next as TypeAtPath<TValues, typeof name>);
       },
     };
-
-    arrayHelpers.set(key, helpers);
-
-    return helpers;
   }
 
   function resetField(name: FlatKeyOf<TValues>): void {
@@ -582,7 +580,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     dirty.delete(key);
     touched.delete(key);
     fieldErrors.delete(key);
-    scheduleNotify(key);
+    notifyAll(key);
   }
 
   function removeField(name: FlatKeyOf<TValues>): void {
@@ -596,16 +594,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     touched.delete(key);
     fieldErrors.delete(key);
     delete validators[key];
-    arrayHelpers.delete(key);
-    scheduleNotify(key);
-  }
-
-  function watch<K extends FlatKeyOf<TValues>>(
-    name: K,
-    callback: (value: TypeAtPath<TValues, K>) => void,
-    options?: SubscribeOptions,
-  ): Unsubscribe {
-    return subscribeField(name, (state) => callback(state.value as TypeAtPath<TValues, K>), options);
+    notifyAll(key);
   }
 
   function reset(): void {
@@ -620,7 +609,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       store.set(name, value);
     }
 
-    scheduleNotify();
+    notifyAll();
   }
 
   function replace(newValues: TValues): void {
@@ -639,7 +628,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       baseline.set(name, value);
     }
 
-    scheduleNotify();
+    notifyAll();
   }
 
   let disposed = false;
@@ -651,9 +640,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   function dispose(): void {
     disposed = true;
     disposeController.abort();
-    activeValidationCtrl?.abort();
-    for (const ctrl of fieldValidationCtrls.values()) ctrl.abort();
-    fieldValidationCtrls.clear();
+    for (const ctrl of fieldCtrls.values()) ctrl.abort();
+    fullRunCtrl?.abort();
+    fieldCtrls.clear();
     listeners.clear();
     fieldListeners.clear();
   }
@@ -661,53 +650,33 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   return {
     array,
     bind,
-    clearError,
     dispose,
     get disposed() {
       return disposed;
     },
-    get errors() {
-      return Object.fromEntries(fieldErrors);
-    },
     field,
     get,
-    get isDirty() {
-      return dirty.size > 0;
-    },
-    get isSubmitting() {
-      return isSubmitting;
-    },
-    get isTouched() {
-      return touched.size > 0;
-    },
-    get isValid() {
-      return fieldErrors.size === 0;
-    },
-    get isValidating() {
-      return validatingCount > 0;
-    },
-    mergeErrors,
     removeField,
     replace,
-    replaceErrors,
     reset,
     resetField,
     set,
     setError,
+    setErrors,
     get state() {
       return buildState();
     },
     submit,
-    get submitCount() {
-      return submitCount;
-    },
     subscribeField,
     subscribeForm,
     touch,
+    touchAll,
     untouch,
-    validate,
+    untouchAll,
+    validateAll,
     validateField,
+    validateFields,
+    validateTouched,
     values,
-    watch,
   };
 }

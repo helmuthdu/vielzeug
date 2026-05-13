@@ -3,19 +3,17 @@ title: Deposit — API Reference
 description: Complete API reference for the Deposit browser storage adapters and query builder.
 ---
 
-# Deposit API Reference
-
 [[toc]]
 
 ## API At a Glance
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createLocalStorage()` | Local browser storage adapter | Sync factory, async methods | Requires `localStorage` availability |
-| `createSessionStorage()` | Tab-scoped browser storage adapter | Sync factory, async methods | Requires `sessionStorage` availability |
-| `createCookie()` | Cookie-backed browser storage adapter | Sync factory, async methods | Requires `document` and is browser-only |
+| `createLocalStorage(dbName, schema)` | Local browser storage adapter | Sync factory, async methods | Requires `localStorage` availability |
+| `createSessionStorage(dbName, schema)` | Tab-scoped browser storage adapter | Sync factory, async methods | Requires `sessionStorage` availability |
+| `createCookie(dbName, schema, options?)` | Cookie-backed browser storage adapter | Sync factory, async methods | Requires `document` and is browser-only |
 | `createIndexedDB()` | IndexedDB adapter with transactions | Sync factory, async methods | `schemaVersion` must increase to run migrations |
-| `createMemory()` | In-memory adapter for tests and SSR | Sync factory, async methods | State is scoped to the instance; not persisted |
+| `createMemory(schema)` | In-memory adapter for tests and SSR | Sync factory, async methods | State is scoped to the instance; not persisted |
 | `table<T>(key)` | Creates a typed schema entry | Sync | — |
 | `query(table)` | Build chainable in-memory queries | Async execution | Filters run over fetched records |
 
@@ -83,10 +81,7 @@ type UserKey   = KeyOf<typeof schema, 'users'>;    // number
 ### createLocalStorage
 
 ```ts
-createLocalStorage<S>(options: {
-  dbName: string;
-  schema: S;
-}): Adapter<S>
+createLocalStorage<S>(dbName: string, schema: S): Adapter<S>
 ```
 
 Creates a LocalStorage-backed adapter.
@@ -94,10 +89,7 @@ Creates a LocalStorage-backed adapter.
 ### createSessionStorage
 
 ```ts
-createSessionStorage<S>(options: {
-  dbName: string;
-  schema: S;
-}): Adapter<S>
+createSessionStorage<S>(dbName: string, schema: S): Adapter<S>
 ```
 
 Creates a SessionStorage-backed adapter.
@@ -105,13 +97,15 @@ Creates a SessionStorage-backed adapter.
 ### createCookie
 
 ```ts
-createCookie<S>(options: {
-  dbName: string;
-  schema: S;
-  path?: string;
-  sameSite?: 'Lax' | 'None' | 'Strict';
-  secure?: boolean;
-}): Adapter<S>
+createCookie<S>(
+  dbName: string,
+  schema: S,
+  options?: {
+    path?: string;
+    sameSite?: 'Lax' | 'None' | 'Strict';
+    secure?: boolean;
+  },
+): Adapter<S>
 ```
 
 Creates a cookie-backed adapter for browser environments.
@@ -147,9 +141,7 @@ Creates an IndexedDB-backed adapter with transactions and migration support.
 ### createMemory
 
 ```ts
-createMemory<S>(options: {
-  schema: S;
-}): Adapter<S>
+createMemory<S>(schema: S): Adapter<S>
 ```
 
 Creates an in-memory adapter backed by a `Map`. No `dbName` required; each call returns an isolated instance.
@@ -196,7 +188,11 @@ interface Adapter<S> {
   deleteAll<K extends keyof S>(table: K): Promise<void>;
   count<K extends keyof S>(table: K): Promise<number>;
   query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
-  observe<K extends keyof S>(table: K, listener: (rows: RecordOf<S, K>[]) => void): () => void;
+  observe<K extends keyof S>(
+    table: K,
+    listener: (value: RecordOf<S, K>[]) => void,
+    options?: { immediate?: boolean },
+  ): () => void;
 }
 ```
 
@@ -267,6 +263,12 @@ class QueryBuilder<T extends Record<string, unknown>> {
 
 Query pipelines are lazy and execute only on `toArray()` / `count()` / `first()`.
 
+Validation rules:
+
+- `limit(n)` requires `n` to be a non-negative integer.
+- `offset(n)` requires `n` to be a non-negative integer.
+- `count()` applies filters only and ignores sorting/pagination directives.
+
 ## TTL Helper
 
 ```ts
@@ -280,6 +282,12 @@ const ttl = {
 ```
 
 Use TTL by passing one of these values as the third argument to `put(table, value, ttl)`.
+
+Validation rules:
+
+- All TTL helper inputs must be finite and non-negative.
+- Invalid TTL input throws synchronously from `ttl.*(...)`.
+- Passing an invalid `ttl` value directly to write methods also throws.
 
 ## Error Behavior
 

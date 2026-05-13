@@ -107,8 +107,8 @@ describe('Schema.readonly()', () => {
     expect(result).toEqual({ id: 1 });
   });
 
-  test('v.readonly() helper works', () => {
-    const schema = v.readonly(v.array(v.string()));
+  test('schema.readonly() works on composed schemas', () => {
+    const schema = v.array(v.string()).readonly();
 
     expect(schema.parse(['a', 'b'])).toEqual(['a', 'b']);
   });

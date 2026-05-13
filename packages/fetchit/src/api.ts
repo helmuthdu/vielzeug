@@ -2,7 +2,7 @@ import type { HttpRequestConfig, Params } from './url';
 
 import { HttpError } from './errors';
 import { parseResponse } from './response';
-import { isBodyInit, serializeBodyKey, stableStringify } from './serialize';
+import { isBodyInit, stableStringify } from './serialize';
 import { timeoutSignal } from './signals';
 import { buildUrl } from './url';
 
@@ -40,28 +40,29 @@ export function createApi(opts: ApiClientOptions = {}) {
   const inFlight = new Map<string, Promise<unknown>>();
   const activeControllers = new Set<AbortController>();
   const interceptors: Interceptor[] = [];
-  let pipeline: ((ctx: FetchContext) => Promise<Response>) | null = null;
   let disposed = false;
+  let cachedPipeline: ((ctx: FetchContext) => Promise<Response>) | null = null;
 
   function use(interceptor: Interceptor): () => void {
     interceptors.push(interceptor);
-    pipeline = null;
+    cachedPipeline = null;
 
     return () => {
       const i = interceptors.indexOf(interceptor);
 
       if (i !== -1) {
         interceptors.splice(i, 1);
-        pipeline = null;
+        cachedPipeline = null;
       }
     };
   }
 
   function getPipeline(): (ctx: FetchContext) => Promise<Response> {
-    if (pipeline) return pipeline;
-
     const base: (ctx: FetchContext) => Promise<Response> = (ctx) => fetchFn(ctx.url, ctx.init);
-    const p =
+
+    if (cachedPipeline) return cachedPipeline;
+
+    cachedPipeline =
       interceptors.length === 0
         ? base
         : interceptors.reduceRight<(ctx: FetchContext) => Promise<Response>>(
@@ -69,15 +70,18 @@ export function createApi(opts: ApiClientOptions = {}) {
             base,
           );
 
-    pipeline = p;
-
-    return p;
+    return cachedPipeline;
   }
 
-  async function execute<T>(init: RequestInit, full: string, m: string): Promise<T> {
+  async function execute<T>(
+    init: RequestInit,
+    full: string,
+    m: string,
+    responseType: HttpRequestConfig['responseType'],
+  ): Promise<T> {
     try {
       const res = await getPipeline()({ init, url: full });
-      const parsed = await parseResponse(res);
+      const parsed = await parseResponse(res, responseType ?? 'auto', { strict: res.ok });
 
       if (!res.ok) {
         throw HttpError.fromResponse(res, parsed, m, full);
@@ -105,6 +109,7 @@ export function createApi(opts: ApiClientOptions = {}) {
       headers,
       params, // excluded from ...rest — already consumed by buildUrl above
       query, // excluded from ...rest — already consumed by buildUrl above
+      responseType,
       signal: extSignal,
       timeout: cfgTimeout,
       ...rest // clean RequestInit passthrough
@@ -118,7 +123,7 @@ export function createApi(opts: ApiClientOptions = {}) {
       : undefined;
     const mergedHeaders = { ...globalHeaders, ...perRequestHeaders };
     const dedupeKey = shouldAutoDedupe
-      ? `${m}:${full}:${stableStringify(mergedHeaders)}:${serializeBodyKey(body)}`
+      ? `${m}:${full}`
       : config.dedupeKey !== undefined
         ? `${m}:${stableStringify(config.dedupeKey)}`
         : undefined;
@@ -150,7 +155,7 @@ export function createApi(opts: ApiClientOptions = {}) {
       init.body = body as BodyInit;
     }
 
-    const p = execute<T>(init, full, m);
+    const p = execute<T>(init, full, m, responseType);
 
     if (dedupeKey) inFlight.set(dedupeKey, p);
 
@@ -176,7 +181,7 @@ export function createApi(opts: ApiClientOptions = {}) {
       activeControllers.clear();
       inFlight.clear();
       interceptors.length = 0;
-      pipeline = null;
+      cachedPipeline = null;
     },
     get disposed() {
       return disposed;
@@ -194,9 +199,6 @@ export function createApi(opts: ApiClientOptions = {}) {
     post: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('POST', url, cfg),
     put: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PUT', url, cfg),
     request,
-    [Symbol.dispose]() {
-      this.dispose();
-    },
     use,
   };
 }

@@ -137,10 +137,6 @@ describe('stateit', () => {
     expect(() => {
       ok.patch(null as unknown as Partial<{ count: number }>);
     }).toThrow(/plain object partial/);
-
-    expect(() => {
-      ok.update(() => 1 as unknown as { count: number });
-    }).toThrow(/must return a plain object/);
   });
 
   // === EDGE CASES ===
@@ -182,30 +178,14 @@ describe('stateit', () => {
   });
 
   describe('effect: loop guard', () => {
-    it('throws after maxIterations when effect re-triggers itself synchronously', () => {
+    it('throws after the built-in loop cap when effect re-triggers itself synchronously', () => {
       const n = signal(0);
 
       expect(() => {
-        effect(
-          () => {
-            if (n.value < 200) n.value++;
-          },
-          { maxIterations: 10 },
-        );
+        effect(() => {
+          if (n.value < 200) n.value++;
+        });
       }).toThrow(/infinite effect loop/);
-    });
-
-    it('respects a custom maxIterations limit', () => {
-      const n = signal(0);
-
-      expect(() => {
-        effect(
-          () => {
-            if (n.value < 5) n.value++;
-          },
-          { maxIterations: 3 },
-        );
-      }).toThrow(/> 3 iterations/);
     });
   });
 
@@ -433,6 +413,26 @@ describe('stateit', () => {
   });
 
   describe('computed: glitch-free propagation', () => {
+    it('effect subscribed to both source and computed runs exactly once per write', () => {
+      const n = signal(1);
+      const doubled = computed(() => n.value * 2);
+      const runs: number[] = [];
+
+      const stop = effect(() => {
+        void n.value;
+        void doubled.value;
+        runs.push(1);
+      });
+
+      expect(runs).toHaveLength(1);
+
+      n.value = 5;
+      expect(runs).toHaveLength(2);
+
+      stop();
+      doubled.dispose();
+    });
+
     it('effect always observes a consistent signal+computed snapshot', () => {
       const n = signal(1);
       const doubled = computed(() => n.value * 2);
@@ -452,6 +452,26 @@ describe('stateit', () => {
 
       // final state must be correct
       expect(seen.at(-1)).toEqual([5, 10]);
+    });
+
+    it('effect subscribed to source + multiple computeds observes a consistent final snapshot', () => {
+      const n = signal(1);
+      const doubled = computed(() => n.value * 2);
+      const tripled = computed(() => n.value * 3);
+      const seen: Array<[number, number, number]> = [];
+
+      const stop = effect(() => {
+        seen.push([n.value, doubled.value, tripled.value]);
+      });
+
+      n.value = 5;
+
+      expect(seen).toHaveLength(2);
+      expect(seen.at(-1)).toEqual([5, 10, 15]);
+
+      stop();
+      doubled.dispose();
+      tripled.dispose();
     });
 
     it('does not re-run an effect when a computed dependency changes but the computed value stays equal', () => {
@@ -509,6 +529,30 @@ describe('stateit', () => {
       stop();
       selected.dispose();
     });
+
+    it('cascade writes are not suppressed when an effect subscribes to both source and derived signal', () => {
+      const x = signal(0);
+      const y = signal(0);
+      const seen: Array<[number, number]> = [];
+
+      const stopB = effect(() => {
+        seen.push([x.value, y.value]);
+      });
+
+      const stopA = effect(() => {
+        if (x.value === 1) {
+          y.value = 7;
+        }
+      });
+
+      x.value = 1;
+
+      expect(seen.at(-1)).toEqual([1, 7]);
+      expect(seen).toContainEqual([1, 0]);
+
+      stopB();
+      stopA();
+    });
   });
 
   describe('computed: cycle detection', () => {
@@ -527,14 +571,12 @@ describe('stateit', () => {
     });
   });
 
-  describe('watch: once semantics', () => {
-    it('once + custom equals does not hit TDZ during initial run', () => {
+  describe('watch: immediate semantics', () => {
+    it('immediate calls back once with current value as next and prev', () => {
       const s = signal(1);
       const spy = vi.fn();
 
-      expect(() => {
-        watch(s, spy, { equals: () => false, once: true });
-      }).not.toThrow();
+      watch(s, spy, { immediate: true });
 
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy).toHaveBeenCalledWith(1, 1);

@@ -57,29 +57,29 @@ dynamicForm.set('custom.field', 'value');
 
 ```ts
 await form.validateField('password');
-await form.validate();
-await form.validate('touched');
-await form.validate(['email', 'password']);
+await form.validateAll();
+await form.validateTouched();
+await form.validateFields(['email', 'password']);
 
 const controller = new AbortController();
-await form.validate(undefined, controller.signal);
+await form.validateAll(controller.signal);
 controller.abort();
 ```
 
 Validation result structure:
 
 ```ts
-const result = await form.validate(['email']);
+const result = await form.validateFields(['email']);
 
 console.log(result.valid); // whole-form validity after this run
 console.log(result.errors); // scoped result for validated fields only
-console.log(result.allErrors); // full current error map
+// For full runs (validateAll()), result.errors is the full current error map.
 ```
 
-Schema adapter:
+Schema integration:
 
 ```ts
-import { createForm, fromSchema } from '@vielzeug/formit';
+import { createForm, schemaValidator } from '@vielzeug/formit';
 import { v } from '@vielzeug/validit';
 
 const schema = v.object({
@@ -89,7 +89,7 @@ const schema = v.object({
 
 const form = createForm({
   defaultValues: { age: 0, email: '' },
-  ...fromSchema(schema),
+  validator: schemaValidator(schema),
 });
 ```
 
@@ -132,7 +132,7 @@ await form.submit(
 
 Submit always touches all known fields and runs full validation before calling the handler.
 
-## Subscriptions and Watch
+## Subscriptions
 
 ```ts
 const stopForm = form.subscribeForm((state) => {
@@ -143,18 +143,32 @@ const stopEmail = form.subscribeField('email', (field) => {
   console.log(field.value, field.error, field.touched, field.dirty);
 });
 
-// subscriptions are deferred by default; use sync:true when you need an immediate snapshot
+// subscriptions fire synchronously; use sync:true when you also want the current snapshot immediately
 form.subscribeField('email', () => {}, { sync: true });
 
 stopEmail();
 stopForm();
 
-// watch: shorthand for subscribeField that only delivers the value
-const stopWatch = form.watch('email', (v) => updatePreview(v), { sync: true });
-stopWatch();
+// Value-only pattern via subscribeField
+const stopPreview = form.subscribeField('email', (field) => updatePreview(String(field.value ?? '')), { sync: true });
+stopPreview();
+```
+
+## Touched and Error Controls
+
+```ts
+form.touch('email');
+form.untouch('email');
+form.touchAll();
+form.untouchAll();
+
+form.setError('email', 'Invalid email');
+form.setErrors({ email: 'Invalid email', password: 'Too short' });
 ```
 
 ## Bind
+
+`bind()` is a vanilla-DOM convenience helper. In React, Vue, Svelte, and similar frameworks, prefer subscriptions plus explicit `form.field(...)`, `form.set(...)`, and `form.touch(...)` calls.
 
 ```ts
 const binding = form.bind('email');
@@ -242,7 +256,7 @@ const fd = toFormData(form.values());
 
 - Keep validators pure and deterministic.
 - Use `mode: 'onBlur'` or `mode: 'onTouched'` for most user-facing forms; reserve `mode: 'onChange'` for real-time search or filter forms.
-- Prefer `subscribeField(name, ...)` or `watch(name, ...)` over `subscribeForm(...)` for field-level rendering.
+- Prefer `subscribeField(name, ...)` over `subscribeForm(...)` for field-level rendering.
 - Use `replace(values)` after loading server data to set a new baseline.
 - Use `removeField(name)` when unmounting conditional fields so their state does not leak into validation.
 - Use the `onInvalid` callback in `submit()` when you want to scroll to errors or show a toast without try/catch.

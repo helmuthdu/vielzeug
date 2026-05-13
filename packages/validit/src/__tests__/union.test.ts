@@ -92,7 +92,7 @@ describe('v.union() — sync returns branch output', () => {
 
 describe('v.union() — async', () => {
   it('runs async refinements inside branches', async () => {
-    const a = v.string().refineAsync(async (s) => s.startsWith('a'), 'Must start with a');
+    const a = v.string().check(async (s) => s.startsWith('a') || 'Must start with a');
     const b = v.number();
     const schema = v.union(a, b);
 
@@ -104,8 +104,8 @@ describe('v.union() — async', () => {
     expect(result.success).toBe(false);
   });
 
-  it('refine() runs in parseAsync', async () => {
-    const schema = v.union(v.string(), v.number()).refine((v) => v !== 0, 'Must not be zero');
+  it('check() runs in parseAsync', async () => {
+    const schema = v.union(v.string(), v.number()).check((v) => v !== 0 || 'Must not be zero');
     const result = await schema.safeParseAsync(0);
 
     expect(result.success).toBe(false);

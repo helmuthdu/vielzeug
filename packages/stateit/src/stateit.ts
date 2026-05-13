@@ -23,14 +23,9 @@ export interface ComputedSignal<T> extends ReadonlySignal<T> {
   [Symbol.dispose](): void;
 }
 
-export type EffectOptions = {
-  maxIterations?: number;
-};
-
 export type WatchOptions<T> = {
   equals?: EqualityFn<T>;
   immediate?: boolean;
-  once?: boolean;
 };
 
 export interface Store<T extends object> extends ReadonlySignal<T> {
@@ -59,10 +54,6 @@ const ensureObject = (value: unknown, message: string): void => {
   }
 };
 
-// Identifies computed.onDepChange callbacks for routing into the dedicated computed subscriber queue.
-const computedHandlers = new WeakSet<EffectCallback>();
-
-// === UNIFIED ERROR HANDLING ===
 const runAll = (items: Iterable<() => void>, context: string): void => {
   const errors: unknown[] = [];
 
@@ -81,22 +72,26 @@ const runAll = (items: Iterable<() => void>, context: string): void => {
   }
 };
 
-// === GLOBAL REACTIVE GRAPH ===
-let currentEffect: EffectCallback | null = null;
+// === GLOBAL TRACKING STATE ===
+let currentEffect: EffectRunner | null = null;
+let currentComputed: ComputedImpl<any> | null = null;
 let currentDeps: Set<CleanupFn> | null = null;
 let currentCleanups: CleanupFn[] | null = null;
 
-const withScope = <T>(
-  effect: EffectCallback | null,
+const withTracking = <T>(
+  effect: EffectRunner | null,
+  computed: ComputedImpl<any> | null,
   deps: Set<CleanupFn> | null,
   cleanups: CleanupFn[] | null,
   fn: () => T,
 ): T => {
   const prevEffect = currentEffect;
+  const prevComputed = currentComputed;
   const prevDeps = currentDeps;
   const prevCleanups = currentCleanups;
 
   currentEffect = effect;
+  currentComputed = computed;
   currentDeps = deps;
   currentCleanups = cleanups;
 
@@ -104,91 +99,138 @@ const withScope = <T>(
     return fn();
   } finally {
     currentEffect = prevEffect;
+    currentComputed = prevComputed;
     currentDeps = prevDeps;
     currentCleanups = prevCleanups;
   }
 };
 
-// === BATCH QUEUE ===
+// === NOTIFICATION QUEUES ===
 let batchDepth = 0;
-const batchComputedQueue = new Set<EffectCallback>();
-const batchEffectQueue = new Set<EffectCallback>();
+const pendingEffects = new Set<EffectRunner>();
+const pendingDirtyComputeds = new Set<ComputedImpl<any>>();
 
-const flushBatch = (): void => {
+const queueEffectsFromNode = (node: ReactiveNode): void => {
+  const dirtyComputeds: ComputedImpl<any>[] = [...node.computedSubscribers()];
+  const seenComputeds = new Set<ComputedImpl<any>>();
+
+  for (const eff of node.effectSubscribers()) {
+    pendingEffects.add(eff);
+  }
+
+  while (dirtyComputeds.length > 0) {
+    const computed = dirtyComputeds.pop()!;
+
+    if (seenComputeds.has(computed)) continue;
+
+    seenComputeds.add(computed);
+
+    if (!computed.markDirty()) continue;
+
+    pendingDirtyComputeds.add(computed);
+
+    for (const downstream of computed.computedSubscribers()) {
+      dirtyComputeds.push(downstream);
+    }
+  }
+};
+
+const flushDirtyComputeds = (): void => {
+  while (pendingDirtyComputeds.size > 0) {
+    const dirtyComputeds = [...pendingDirtyComputeds];
+
+    pendingDirtyComputeds.clear();
+
+    for (const computed of dirtyComputeds) {
+      if (!computed.hasAnySubscribers()) continue;
+
+      const changed = computed.refreshIfDirty();
+
+      if (!changed) continue;
+
+      for (const eff of computed.effectSubscribers()) {
+        pendingEffects.add(eff);
+      }
+
+      for (const downstream of computed.computedSubscribers()) {
+        if (downstream.markDirty()) {
+          pendingDirtyComputeds.add(downstream);
+        }
+      }
+    }
+  }
+};
+
+const flushEffects = (): void => {
   let iterations = 0;
 
-  while (batchComputedQueue.size > 0 || batchEffectQueue.size > 0) {
+  while (pendingEffects.size > 0 || pendingDirtyComputeds.size > 0) {
     if (++iterations > DEFAULT_MAX_ITERATIONS) {
-      throw new Error(`[stateit] infinite batch loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
+      throw new Error(`[stateit] infinite flush loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
     }
 
-    // Phase 1: computed handlers mark dirty state before any effect reads.
-    if (batchComputedQueue.size > 0) {
-      const computedPending = [...batchComputedQueue];
-
-      batchComputedQueue.clear();
-
-      for (const fn of computedPending) fn();
+    if (pendingDirtyComputeds.size > 0) {
+      flushDirtyComputeds();
     }
 
-    // Phase 2: effect runners with full error aggregation.
-    if (batchEffectQueue.size > 0) {
-      const effectsPending = [...batchEffectQueue];
+    if (pendingEffects.size === 0) continue;
 
-      batchEffectQueue.clear();
+    const effectsToRun = [...pendingEffects];
 
-      runAll(effectsPending, 'subscriber errors');
-    }
+    pendingEffects.clear();
+    runAll(effectsToRun, 'subscriber errors');
+  }
+};
+
+const notifyNodeChange = (node: ReactiveNode): void => {
+  if (!node.hasAnySubscribers()) return;
+
+  queueEffectsFromNode(node);
+
+  if (batchDepth === 0) {
+    flushEffects();
   }
 };
 
 // === BASE REACTIVE NODE ===
 class ReactiveNode {
-  private computedSubs_ = new Set<EffectCallback>();
-  private effectSubs_ = new Set<EffectCallback>();
-
-  protected get hasSubscribers(): boolean {
-    return this.computedSubs_.size > 0 || this.effectSubs_.size > 0;
-  }
+  private computedSubs_ = new Set<ComputedImpl<any>>();
+  private effectSubs_ = new Set<EffectRunner>();
 
   protected track(): void {
-    if (!currentEffect || !currentDeps) return;
+    if (!currentDeps) return;
 
-    const self = currentEffect;
+    if (currentComputed !== null) {
+      const owner = currentComputed;
 
-    if (computedHandlers.has(self)) {
-      this.computedSubs_.add(self);
-      currentDeps.add(() => this.computedSubs_.delete(self));
-    } else {
-      this.effectSubs_.add(self);
-      currentDeps.add(() => this.effectSubs_.delete(self));
-    }
-  }
-
-  protected notify(): void {
-    const hasComputed = this.computedSubs_.size > 0;
-    const hasEffects = this.effectSubs_.size > 0;
-
-    if (!hasComputed && !hasEffects) return;
-
-    if (batchDepth > 0) {
-      for (const fn of this.computedSubs_) batchComputedQueue.add(fn);
-      for (const fn of this.effectSubs_) batchEffectQueue.add(fn);
+      this.computedSubs_.add(owner);
+      currentDeps.add(() => this.computedSubs_.delete(owner));
 
       return;
     }
 
-    // Phase 1: propagate dirty marks through the computed chain.
-    if (hasComputed) {
-      const computedPending = [...this.computedSubs_];
+    if (currentEffect !== null) {
+      const owner = currentEffect;
 
-      for (const fn of computedPending) fn();
+      this.effectSubs_.add(owner);
+      currentDeps.add(() => this.effectSubs_.delete(owner));
     }
+  }
 
-    // Phase 2: run effects with full error aggregation.
-    if (hasEffects) {
-      runAll([...this.effectSubs_], 'subscriber errors');
-    }
+  protected notify(): void {
+    notifyNodeChange(this);
+  }
+
+  hasAnySubscribers(): boolean {
+    return this.computedSubs_.size > 0 || this.effectSubs_.size > 0;
+  }
+
+  computedSubscribers(): ReadonlySet<ComputedImpl<any>> {
+    return this.computedSubs_;
+  }
+
+  effectSubscribers(): ReadonlySet<EffectRunner> {
+    return this.effectSubs_;
   }
 }
 
@@ -230,23 +272,22 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
   private equals_: EqualityFn<T>;
   [IS_SIGNAL] = true;
 
-  private readonly onDepChange: EffectCallback = () => {
-    if (this.disposed_) return;
-
-    if (!this.hasSubscribers) {
-      this.dirty_ = true;
-
-      return;
-    }
-
-    if (this.recompute()) this.notify();
-  };
-
   constructor(compute: () => T, equals?: EqualityFn<T>) {
     super();
     this.compute_ = compute;
     this.equals_ = equals ?? Object.is;
-    computedHandlers.add(this.onDepChange);
+  }
+
+  markDirty(): boolean {
+    if (this.disposed_ || this.dirty_) return false;
+
+    this.dirty_ = true;
+
+    return true;
+  }
+
+  refreshIfDirty(): boolean {
+    return this.dirty_ ? this.recompute() : false;
   }
 
   private recompute(): boolean {
@@ -260,7 +301,7 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
     this.computing_ = true;
 
     try {
-      const next = withScope(this.onDepChange, this.deps_, null, this.compute_);
+      const next = withTracking(null, this, this.deps_, null, this.compute_);
 
       this.dirty_ = false;
 
@@ -282,7 +323,7 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
       throw new Error('[stateit] Cannot read disposed computed signal');
     }
 
-    if (this.dirty_) this.recompute();
+    this.refreshIfDirty();
 
     this.track();
 
@@ -293,7 +334,7 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
     if (this.disposed_) return;
 
     this.disposed_ = true;
-    computedHandlers.delete(this.onDepChange);
+
     for (const unsub of this.deps_) unsub();
     this.deps_.clear();
   }
@@ -303,27 +344,17 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
   }
 }
 
+type EffectRunner = () => void;
+
 // === CORE API ===
 
 export const signal = <T>(initial: T, options?: ReactiveOptions<T>): Signal<T> =>
   new SignalImpl(initial, options?.equals);
 
-/**
- * Creates a computed signal that automatically recomputes when dependencies change.
- *
- * When called inside an effect, the computed signal is automatically disposed
- * when the effect cleans up, preventing memory leaks from derived computations
- * that only exist within the effect scope.
- *
- * @param compute - A function that returns the computed value
- * @param options - Optional equality function and other reactive options
- * @returns A readonly computed signal
- */
 export const computed = <T>(compute: () => T, options?: ReactiveOptions<T>): ComputedSignal<T> => {
   const comp = new ComputedImpl(compute, options?.equals);
 
-  // Auto-dispose when created inside effect
-  if (currentEffect !== null && currentCleanups !== null) {
+  if (currentCleanups !== null) {
     onCleanup(() => comp.dispose());
   }
 
@@ -333,32 +364,45 @@ export const computed = <T>(compute: () => T, options?: ReactiveOptions<T>): Com
 export const batch = <T>(fn: () => T): T => {
   batchDepth++;
 
+  let result: T | undefined;
+  let bodyError: unknown;
+
   try {
-    const result = fn();
-
-    if (--batchDepth === 0) flushBatch();
-
-    return result;
+    result = fn();
   } catch (e) {
-    if (--batchDepth === 0) {
-      try {
-        flushBatch();
-      } catch (flushError) {
-        throw new AggregateError([e, flushError], '[stateit] batch error with flush errors', { cause: flushError });
-      }
-    }
-
-    throw e;
+    bodyError = e;
   }
+
+  batchDepth--;
+
+  if (batchDepth === 0) {
+    try {
+      flushEffects();
+    } catch (flushError) {
+      if (bodyError !== undefined) {
+        const aggregate = new AggregateError([bodyError, flushError], '[stateit] batch error with flush errors');
+
+        (aggregate as Error & { cause?: unknown }).cause = flushError;
+        throw aggregate;
+      }
+
+      throw flushError instanceof Error ? flushError : new Error(String(flushError));
+    }
+  }
+
+  if (bodyError !== undefined) {
+    throw bodyError instanceof Error ? bodyError : new Error(String(bodyError));
+  }
+
+  return result as T;
 };
 
-export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => {
+export const effect = (fn: EffectCallback): Subscription => {
   let cleanup: CleanupFn | undefined;
   const deps = new Set<CleanupFn>();
   let isRunning = false;
   let isDirty = false;
   let isDisposed = false;
-  const maxIterations = options?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
 
   const teardown = (): void => {
     if (!cleanup && deps.size === 0) return;
@@ -371,7 +415,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
     runAll(callbacks, 'effect teardown errors');
   };
 
-  const run = (): void => {
+  const run: EffectRunner = (): void => {
     if (isDisposed) return;
 
     if (isRunning) {
@@ -386,17 +430,19 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
       let iterations = 0;
 
       do {
-        if (++iterations > maxIterations) {
-          throw new Error(`[stateit] infinite effect loop (> ${maxIterations} iterations)`);
+        if (++iterations > DEFAULT_MAX_ITERATIONS) {
+          throw new Error(`[stateit] infinite effect loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
         }
 
         isDirty = false;
         teardown();
 
         const localCleanups: CleanupFn[] = [];
-        const returnedCleanup = withScope(run, deps, localCleanups, fn);
+        const returnedCleanup = withTracking(run, null, deps, localCleanups, fn);
 
-        if (returnedCleanup) localCleanups.push(returnedCleanup);
+        if (typeof returnedCleanup === 'function') {
+          localCleanups.push(returnedCleanup);
+        }
 
         if (localCleanups.length > 0) {
           cleanup = () => {
@@ -419,7 +465,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
   });
 };
 
-export const untrack = <T>(fn: () => T): T => withScope(null, null, null, fn);
+export const untrack = <T>(fn: () => T): T => withTracking(null, null, null, null, fn);
 
 export const onCleanup = (fn: CleanupFn): void => {
   if (currentCleanups === null) {
@@ -436,15 +482,7 @@ export const scope = (): Scope => {
   const run = <T>(fn: () => T): T => {
     if (disposed) throw new Error('[stateit] Cannot run inside a disposed scope.');
 
-    const prev = currentCleanups;
-
-    currentCleanups = cleanups;
-
-    try {
-      return fn();
-    } finally {
-      currentCleanups = prev;
-    }
+    return withTracking(null, null, null, cleanups, fn);
   };
 
   const dispose = (): void => {
@@ -452,21 +490,8 @@ export const scope = (): Scope => {
 
     disposed = true;
 
-    const errors: unknown[] = [];
-
-    for (let i = cleanups.length - 1; i >= 0; i--) {
-      try {
-        cleanups[i]();
-      } catch (e) {
-        errors.push(e);
-      }
-    }
-
+    runAll([...cleanups].reverse(), 'scope cleanup errors');
     cleanups.length = 0;
-
-    if (errors.length === 1) throw errors[0];
-
-    if (errors.length > 1) throw new AggregateError(errors, '[stateit] scope cleanup errors');
   };
 
   return { dispose, run, [Symbol.dispose]: dispose };
@@ -475,14 +500,10 @@ export const scope = (): Scope => {
 const watchBase = <T>(get: () => T, cb: (value: T, prev: T) => void, watchOptions?: WatchOptions<T>): Subscription => {
   const equals = watchOptions?.equals ?? Object.is;
   let prev = untrack(get);
-  let shouldStop = false;
 
   if (watchOptions?.immediate) cb(prev, prev);
 
-  let stop!: Subscription;
-
-  // eslint-disable-next-line prefer-const
-  stop = effect(() => {
+  return effect(() => {
     const next = get();
 
     if (equals(prev, next)) return;
@@ -491,19 +512,7 @@ const watchBase = <T>(get: () => T, cb: (value: T, prev: T) => void, watchOption
 
     prev = next;
     cb(next, old);
-
-    if (watchOptions?.once) {
-      if (stop) {
-        stop();
-      } else {
-        shouldStop = true;
-      }
-    }
   });
-
-  if (shouldStop) stop();
-
-  return stop;
 };
 
 function watch<T>(
@@ -556,10 +565,7 @@ export const store = <T extends object>(initial: T): Store<T> => {
       state.value = structuredClone(initialSnapshot);
     },
     update(fn: (current: T) => T): void {
-      const next = fn(untrack(() => state.value));
-
-      ensureObject(next, '[stateit] store.update() must return a plain object.');
-      state.value = next;
+      state.value = fn(untrack(() => state.value));
     },
     get value(): T {
       return state.value;

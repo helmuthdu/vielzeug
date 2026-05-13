@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/virtualit)](https://www.npmjs.com/package/@vielzeug/virtualit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Virtualit** renders only the items visible in the viewport plus a configurable overscan buffer. It uses a `ResizeObserver` for automatic container remeasurement and a passive `scroll` listener to keep the visible window in sync — no framework required.
+**Virtualit** renders only the items visible in the viewport plus a configurable overscan buffer. It uses a `ResizeObserver` for container size changes and a passive `scroll` listener to keep the visible window in sync — no framework required.
 
 ## Installation
 
@@ -116,7 +116,7 @@ virt.scrollToIndex(50, { align: 'start', behavior: 'smooth' });
 virt.scrollToOffset(1440, { behavior: 'smooth' });
 ```
 
-For variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If row sizes changed materially, remeasure affected items first or call `invalidate()` and then scroll again.
+For variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If row sizes changed materially, call `invalidate()` and then scroll again.
 
 ### Updating the List
 

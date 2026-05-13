@@ -67,6 +67,18 @@ describe('bit-drawer', () => {
       expect(fixture.query('.header-title')?.textContent?.trim()).toContain('Settings');
     });
 
+    it('renders label prop as header fallback text', async () => {
+      fixture = await mount('bit-drawer', { attrs: { label: 'Settings panel' } });
+
+      expect(fixture.query('.header-title')?.textContent?.trim()).toContain('Settings panel');
+    });
+
+    it('does not render undefined text in header when no label or title is provided', async () => {
+      fixture = await mount('bit-drawer');
+
+      expect(fixture.query('.header')?.textContent).not.toContain('undefined');
+    });
+
     it('renders footer slot content', async () => {
       fixture = await mount('bit-drawer', {
         html: '<button slot="footer">Save</button>',
@@ -109,6 +121,12 @@ describe('bit-drawer', () => {
       fixture = await mount('bit-drawer', { attrs: { backdrop: 'transparent' } });
 
       expect(fixture.element.getAttribute('backdrop')).toBe('transparent');
+    });
+
+    it('reflects drag-handle-placement attribute on host', async () => {
+      fixture = await mount('bit-drawer', { attrs: { 'drag-handle-placement': 'inset' } });
+
+      expect(fixture.element.getAttribute('drag-handle-placement')).toBe('inset');
     });
   });
 

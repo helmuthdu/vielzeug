@@ -116,6 +116,34 @@ describe('HTTP Client', () => {
 
       await expect(http.delete('/users/1')).resolves.toBeUndefined();
     });
+
+    it('throws for unsupported success content-type in auto mode', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(
+        new Response('raw-bytes', {
+          headers: { 'content-type': 'application/octet-stream' },
+          status: 200,
+        }),
+      );
+
+      await expect(http.get('/binary')).rejects.toThrow(/unsupported response content-type/i);
+    });
+
+    it('parses binary responses when responseType is explicit', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(
+        new Response('raw-bytes', {
+          headers: { 'content-type': 'application/octet-stream' },
+          status: 200,
+        }),
+      );
+
+      const data = await http.get<Blob>('/binary', { responseType: 'blob' });
+
+      expect(data).toMatchObject({ size: 9, type: 'application/octet-stream' });
+    });
   });
 
   describe('Headers & Interceptors', () => {
@@ -174,6 +202,49 @@ describe('HTTP Client', () => {
 
       await expect(http.get<{ mocked: boolean }>('/anything')).resolves.toEqual({ mocked: true });
       expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('applies interceptors added after the first request', async () => {
+      const http = createApi();
+
+      fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+
+      await http.get('/before');
+
+      const trace: string[] = [];
+
+      http.use(async (ctx, next) => {
+        trace.push('before');
+
+        const res = await next(ctx);
+
+        trace.push('after');
+
+        return res;
+      });
+
+      await http.get('/after');
+
+      expect(trace).toEqual(['before', 'after']);
+    });
+
+    it('removes interceptor effects after unsubscribe', async () => {
+      const http = createApi();
+      const trace: string[] = [];
+
+      fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+
+      const unsubscribe = http.use(async (ctx, next) => {
+        trace.push('intercept');
+
+        return next(ctx);
+      });
+
+      await http.get('/with-interceptor');
+      unsubscribe();
+      await http.get('/without-interceptor');
+
+      expect(trace).toEqual(['intercept']);
     });
   });
 

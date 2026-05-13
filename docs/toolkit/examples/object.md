@@ -34,7 +34,6 @@ The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug
 - [`omit`](./object/omit.md): Create a new object excluding selected keys.
 - [`parseJSON`](./object/parseJSON.md): Safely parse JSON strings with optional fallback value.
 - [`get`](./object/path.md): Safely access nested properties using dot-notation strings.
-- [`proxy`](./object/proxy.md): Object proxy with get/set intercept hooks.
 - [`prune`](./object/prune.md): Recursively remove null/undefined/empty values.
 - [`seek`](./object/seek.md): Recursively search nested values by similarity threshold.
 - [`values`](./object/values.md): Typed wrapper for Object.values.
@@ -127,7 +126,6 @@ myCache.size(); // 1
 - [omit](./object/omit.md)
 - [parseJSON](./object/parseJSON.md)
 - [get](./object/path.md)
-- [proxy](./object/proxy.md)
 - [prune](./object/prune.md)
 - [seek](./object/seek.md)
 - [values](./object/values.md)

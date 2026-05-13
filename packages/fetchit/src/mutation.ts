@@ -1,11 +1,11 @@
-import { retry } from '@vielzeug/toolkit';
-
 import type { RetryOptions } from './retry';
 import type { MutationState, Unsubscribe } from './types';
 
-import { getRetryConfig } from './retry';
+import { runWithRetry } from './retry';
 
 export type MutationOptions<TData = unknown> = RetryOptions & {
+  /** Called when a lifecycle callback throws. Does not affect mutate() result. Optional for development/debugging. */
+  onCallbackError?: (error: Error) => void;
   /** Called after a failed run, before `mutate()` rejects. */
   onError?: (error: Error) => void | Promise<void>;
   /** Called after every run regardless of outcome. */
@@ -16,22 +16,45 @@ export type MutationOptions<TData = unknown> = RetryOptions & {
 
 export type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
 export function createMutation<TData, TVariables = void>(
   mutationFn: MutationFn<TData, TVariables>,
   mutOpts?: MutationOptions<TData>,
-) {
-  let snap: MutationState<TData> = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
+): Mutation<TData, TVariables> {
+  let snap: MutationState<TData> = { data: undefined, error: null, status: 'idle', updatedAt: undefined };
   let currentRun = 0;
-  let activeController: AbortController | null = null;
+  let activeRun: { controller: AbortController; promise: Promise<unknown> } | null = null;
   const observers = new Set<(state: MutationState<TData>) => void>();
 
   function notify() {
     observers.forEach((l) => l(snap));
   }
 
+  async function fireSettled(data: TData | undefined, error: Error | null): Promise<void> {
+    try {
+      await mutOpts?.onSettled?.(data, error);
+    } catch (err) {
+      if (mutOpts?.onCallbackError) {
+        try {
+          mutOpts.onCallbackError(toError(err));
+        } catch {
+          // Silently ignore errors in error handler itself.
+        }
+      }
+    }
+  }
+
   return {
-    cancel() {
-      activeController?.abort();
+    async cancel(): Promise<void> {
+      const run = activeRun;
+
+      if (!run) return;
+
+      run.controller.abort();
+      await run.promise.catch(() => {});
     },
 
     getState(): MutationState<TData> {
@@ -39,71 +62,88 @@ export function createMutation<TData, TVariables = void>(
     },
 
     async mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData> {
-      const retryOpts = getRetryConfig(mutOpts?.retry ?? 0, mutOpts?.retryDelay, mutOpts?.shouldRetry);
       const localController = new AbortController();
-
-      activeController = localController;
 
       const signal = callOpts?.signal
         ? AbortSignal.any([callOpts.signal, localController.signal])
         : localController.signal;
       const run = ++currentRun;
 
-      snap = { data: undefined, error: null, status: 'pending', updatedAt: 0 };
+      snap = { data: undefined, error: null, status: 'pending', updatedAt: undefined };
       notify();
 
-      try {
-        const data = await retry(() => mutationFn(variables, signal), { ...retryOpts, signal });
+      const operation = (async () => {
+        try {
+          const data = await runWithRetry(
+            () => mutationFn(variables, signal),
+            mutOpts?.attempts ?? 1,
+            mutOpts?.retryDelay,
+            mutOpts?.shouldRetry,
+            signal,
+          );
 
-        if (run === currentRun) {
-          snap = { data, error: null, status: 'success', updatedAt: Date.now() };
-          notify();
+          if (run === currentRun) {
+            snap = { data, error: null, status: 'success', updatedAt: Date.now() };
+            notify();
+          }
+
+          try {
+            await mutOpts?.onSuccess?.(data);
+          } catch (err) {
+            if (mutOpts?.onCallbackError) {
+              try {
+                mutOpts.onCallbackError(toError(err));
+              } catch {
+                // Silently ignore errors in error handler itself.
+              }
+            }
+          }
+
+          await fireSettled(data, null);
+
+          return data;
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          const isAborted = signal.aborted || error.name === 'AbortError';
+
+          if (run === currentRun) {
+            snap = isAborted
+              ? { data: undefined, error: null, status: 'idle', updatedAt: undefined }
+              : { data: undefined, error, status: 'error', updatedAt: Date.now() };
+            notify();
+          }
+
+          if (!isAborted) {
+            try {
+              await mutOpts?.onError?.(error);
+            } catch (err) {
+              if (mutOpts?.onCallbackError) {
+                try {
+                  mutOpts.onCallbackError(toError(err));
+                } catch {
+                  // Silently ignore errors in error handler itself.
+                }
+              }
+            }
+          }
+
+          await fireSettled(undefined, isAborted ? null : error);
+
+          throw error;
+        } finally {
+          if (activeRun?.controller === localController) {
+            activeRun = null;
+          }
         }
+      })();
 
-        // Fire lifecycle callbacks — sync throws and async rejections are both swallowed.
-        await Promise.all([
-          Promise.resolve()
-            .then(() => mutOpts?.onSuccess?.(data))
-            .catch(() => {}),
-          Promise.resolve()
-            .then(() => mutOpts?.onSettled?.(data, null))
-            .catch(() => {}),
-        ]);
+      activeRun = { controller: localController, promise: operation };
 
-        return data;
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        const nextState =
-          signal.aborted || error.name === 'AbortError'
-            ? { data: undefined, error: null, status: 'idle' as const, updatedAt: 0 }
-            : { data: undefined, error, status: 'error' as const, updatedAt: Date.now() };
-
-        if (run === currentRun) {
-          snap = nextState;
-          notify();
-        }
-
-        if (nextState.status === 'error') {
-          await Promise.all([
-            Promise.resolve()
-              .then(() => mutOpts?.onError?.(error))
-              .catch(() => {}),
-            Promise.resolve()
-              .then(() => mutOpts?.onSettled?.(undefined, error))
-              .catch(() => {}),
-          ]);
-        }
-
-        throw error;
-      } finally {
-        if (activeController === localController) {
-          activeController = null;
-        }
-      }
+      return operation;
     },
 
     reset() {
-      snap = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
+      snap = { data: undefined, error: null, status: 'idle', updatedAt: undefined };
       notify();
     },
 
@@ -116,4 +156,10 @@ export function createMutation<TData, TVariables = void>(
   };
 }
 
-export type Mutation<TData, TVariables = void> = ReturnType<typeof createMutation<TData, TVariables>>;
+export interface Mutation<TData, TVariables = void> {
+  cancel(): Promise<void>;
+  getState(): MutationState<TData>;
+  mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData>;
+  reset(): void;
+  subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe;
+}

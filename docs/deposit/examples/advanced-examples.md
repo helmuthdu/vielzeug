@@ -67,7 +67,7 @@ import { createLocalStorage, table, ttl } from '@vielzeug/deposit';
 type CacheEntry = { id: string; value: string };
 const schema = { cache: table<CacheEntry>('id') };
 
-const db = createLocalStorage({ dbName: 'cache', schema });
+const db = createLocalStorage('cache', schema);
 await db.put('cache', { id: 'k1', value: 'payload' }, ttl.seconds(30));
 ```
 
@@ -102,11 +102,11 @@ import { createMemory } from '@vielzeug/deposit';
 import { schema } from '../src/schema';
 
 describe('user repository', () => {
-  let db: ReturnType<typeof createMemory<typeof schema>>;
+  let db: ReturnType<typeof createMemory>;
 
   beforeEach(() => {
     // A fresh isolated store for every test — no shared state.
-    db = createMemory({ schema });
+    db = createMemory(schema);
   });
 
   test('can check existence without fetching the full record', async () => {

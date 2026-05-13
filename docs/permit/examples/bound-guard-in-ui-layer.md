@@ -8,14 +8,13 @@ description: 'Bind the current user once and reuse permission checks in a UI mod
 ```ts
 import { createPermit } from '@vielzeug/permit';
 
-const permit = createPermit();
-
-permit
-  .set({ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' })
-  .set({ role: 'editor', resource: 'posts', action: 'update', effect: 'allow' });
+const permit = createPermit([
+  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
+]);
 
 export function usePostActions(user: { id: string; roles: string[] }) {
-  const bound = permit.forUser(user, true);
+  const bound = permit.forUser(user);
 
   return {
     actions: bound.allowedActions('posts'),

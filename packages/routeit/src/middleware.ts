@@ -10,7 +10,7 @@ import type {
 } from './types';
 
 /** Build redirect middleware for common guard flows. */
-export function redirect<TRoutes extends RouteTable = RouteTable>(
+export function redirectTo<TRoutes extends RouteTable = RouteTable>(
   target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
   options?: NavigateOptions,
 ): Middleware<TRoutes> {

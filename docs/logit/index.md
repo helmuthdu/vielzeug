@@ -99,7 +99,6 @@ api.info('GET /users', data); // filtered by log level, styled, optionally remot
 - `time()`, `group()`, and `groupCollapsed()` wrappers that auto-close on throw/reject
 - Structured remote payload: `{ level, message, context, env, namespace?, timestamp? }`
 - Non-blocking remote forwarding with separate remote level threshold
-- `assert()` and `table()` passthrough helpers
 - Zero dependencies — <PackageInfo package="logit" type="size" /> gzipped
 
 ## Compatibility

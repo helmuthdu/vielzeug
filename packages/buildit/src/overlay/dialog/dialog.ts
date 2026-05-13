@@ -1,6 +1,6 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, handle, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
+import { define, on, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import type { PaddingSize, RoundedSize } from '../../types';
@@ -260,9 +260,9 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
         }
       };
 
-      handle(dialog, 'close', handleNativeClose);
-      handle(dialog, 'click', handleBackdropClick);
-      handle(dialog, 'keydown', handleKeydown);
+      on(dialog, 'close', handleNativeClose);
+      on(dialog, 'click', handleBackdropClick);
+      on(dialog, 'keydown', handleKeydown);
 
       return () => {
         // Ensure the native dialog is closed on unmount to release top-layer

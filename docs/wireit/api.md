@@ -1,107 +1,79 @@
 ---
 title: Wireit API Reference
-description: API reference for @vielzeug/wireit.
+description: API reference for the Wireit dependency injection container.
 ---
 
 # API Reference
 
-## Factory Functions
+## createToken(description)
 
-### createToken(description)
-
-Creates a typed token.
+Creates a typed symbol token.
 
 ```ts
-const DbToken = createToken<IDatabase>('Database');
+const Service = createToken<Service>('Service');
 ```
 
-### createContainer()
+## createContainer()
 
-Creates a root container.
+Creates a new root container.
 
 ```ts
 const container = createContainer();
 ```
 
-## Container Registration
+## Container
 
-### value(token, value, opts?)
+### `container.value(token, value, opts?)`
 
-Registers a plain value provider.
+Registers a constant provider.
 
-Options:
-
-- `multi?: boolean`
-
-### factory(token, fn, opts?)
+### `container.factory(token, fn, opts?)`
 
 Registers a factory provider.
 
-Options:
-
-- `deps?: Token[]`
-- `lifetime?: 'singleton' | 'transient' | 'scoped'`
-- `init?: (instance) => void | Promise<void>`
-- `dispose?: (instance) => void | Promise<void>`
-- `multi?: boolean`
-
-### bind(token, cls, opts?)
-
-Registers a class provider.
-
-Options are identical to `factory(...)`.
-
-## Container Resolution
-
-### resolve(token)
-
-Asynchronously resolves a token.
-
-Throws:
-
-- `ProviderNotFoundError` when the token is not registered
-- `MultipleProvidersError` when the token has multiple providers
-- `CircularDependencyError` on dependency cycles
-
-### resolveMany(token)
-
-Asynchronously resolves all providers registered for a token.
-
 ```ts
-const validators = await container.resolveMany(ValidatorToken);
+container.factory(Service, (logger) => new ServiceImpl(logger), {
+  deps: [Logger],
+  lifetime: 'singleton',
+});
 ```
 
-Returns an empty array when the token has no providers.
+### `container.resolve(token)`
 
-## Container Lifecycle
+Resolves a single provider.
 
-### createChild()
+### `container.resolveMany(token)`
 
-Creates a child container inheriting parent registrations.
+Resolves every provider registered for a token.
 
-### dispose()
+### `container.resolveOptional(token)`
 
-Disposes resolved singleton and scoped instances.
+Resolves a token when available and returns `undefined` when no provider exists.
 
-If one or more dispose hooks fail, `dispose()` throws `AggregateError`.
+### `container.createChild()`
 
-### disposed
+Creates a child container that can inherit registrations from its parent.
 
-Readonly boolean indicating disposal state.
+### `container.dispose()`
 
-## Errors
+Disposes resolved instances and prevents further use.
 
-- `ProviderNotFoundError`
-- `MultipleProvidersError`
-- `CircularDependencyError`
-- `ContainerDisposedError`
+### `container.disposed`
+
+Returns `true` after disposal.
 
 ## Types
 
 - `Token<T>`
 - `Lifetime`
-- `ValueProvider<T>`
-- `ClassProvider<T, Deps>`
-- `FactoryProvider<T, Deps>`
 - `Provider<T>`
 - `ProviderOptions<T, Deps>`
+- `ValueProvider<T>`
+- `FactoryProvider<T, Deps>`
+
+## Errors
+
+- `CircularDependencyError`
+- `ProviderNotFoundError`
+- `MultipleProvidersError`
+- `ContainerDisposedError`
