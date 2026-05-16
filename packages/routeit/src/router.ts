@@ -464,6 +464,7 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
       // Collect all lazy modules before mutating the record so that a failed
       // import leaves the record intact and the next navigation can retry.
       type LazyMod = Awaited<ReturnType<NonNullable<RouteBranchDef['lazy']>>>;
+
       const resolved: Array<{ def: RouteBranchDef; mod: LazyMod }> = [];
 
       for (const def of record.branchDefs) {

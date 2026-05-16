@@ -77,6 +77,7 @@ describe('default and catch', () => {
     const schema = v.object({ tags: v.array(v.string()) }).default({ tags: [] });
 
     const first = schema.parse(undefined);
+
     first.tags.push('x');
 
     const second = schema.parse(undefined);
@@ -88,6 +89,7 @@ describe('default and catch', () => {
     const schema = v.object({ tags: v.array(v.string()) }).catch({ tags: [] });
 
     const first = schema.parse('bad' as any);
+
     first.tags.push('x');
 
     const second = schema.parse('bad' as any);

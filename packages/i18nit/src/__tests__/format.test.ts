@@ -114,9 +114,7 @@ describe('createFormatter', () => {
       IntlExt.DurationFormat = undefined;
 
       try {
-        expect(createFormatter('en').duration({ weeks: 1, days: 1, hours: 2 }, { style: 'digital' })).toBe(
-          '194:00:00',
-        );
+        expect(createFormatter('en').duration({ days: 1, hours: 2, weeks: 1 }, { style: 'digital' })).toBe('194:00:00');
       } finally {
         IntlExt.DurationFormat = original;
       }
@@ -129,7 +127,7 @@ describe('createFormatter', () => {
       IntlExt.DurationFormat = undefined;
 
       try {
-        expect(createFormatter('en').duration({ years: 1, months: 2, hours: 3 }, { style: 'digital' })).toBe(
+        expect(createFormatter('en').duration({ hours: 3, months: 2, years: 1 }, { style: 'digital' })).toBe(
           '1y 2mo 3h',
         );
       } finally {

@@ -105,16 +105,18 @@ describe('createDomVirtualList', () => {
         { id: 'b', size: 20 },
         { id: 'c', size: 20 },
       ];
-      const render = vi.fn(({ listEl, virtualItems }: { listEl: HTMLElement; virtualItems: Array<{ index: number }> }) => {
-        listEl.textContent = '';
+      const render = vi.fn(
+        ({ listEl, virtualItems }: { listEl: HTMLElement; virtualItems: Array<{ index: number }> }) => {
+          listEl.textContent = '';
 
-        for (const item of virtualItems) {
-          const row = document.createElement('div');
+          for (const item of virtualItems) {
+            const row = document.createElement('div');
 
-          row.dataset.index = String(item.index);
-          listEl.appendChild(row);
-        }
-      });
+            row.dataset.index = String(item.index);
+            listEl.appendChild(row);
+          }
+        },
+      );
 
       const domList = createDomVirtualList<{ id: string; size: number }>({
         estimateSize: (_index, item) => item.size,
@@ -299,7 +301,11 @@ describe('createDomVirtualList', () => {
     test('forwards invalidate to the underlying virtualizer', async () => {
       const scrollEl = makeContainer(120);
       const listEl = document.createElement('div');
-      const rows = [{ id: 'a', size: 20 }, { id: 'b', size: 20 }, { id: 'c', size: 20 }];
+      const rows = [
+        { id: 'a', size: 20 },
+        { id: 'b', size: 20 },
+        { id: 'c', size: 20 },
+      ];
       const domList = createDomVirtualList<{ id: string; size: number }>({
         estimateSize: (_index, item) => item.size,
         getItemKey: (_index, item) => item.id,

@@ -160,7 +160,10 @@ describe('lazy routes', () => {
       routes: {
         home: { path: '/' },
         page: {
-          data: () => new Promise<unknown>((resolve) => { resolveData = resolve; }),
+          data: () =>
+            new Promise<unknown>((resolve) => {
+              resolveData = resolve;
+            }),
           path: '/page',
         },
       },

@@ -167,10 +167,9 @@ describe('stateit', () => {
     });
 
     it('preserves the original computed error when dependency cleanup also throws', () => {
-      let value!: ReturnType<typeof computed<number>>;
       let shouldThrow = false;
 
-      value = computed(() => {
+      const value = computed(() => {
         if (!shouldThrow) {
           return 0;
         }

@@ -52,8 +52,8 @@ export interface Scope {
 // === CONSTANTS ===
 const DEFAULT_MAX_ITERATIONS = 100;
 const IS_SIGNAL = Symbol('stateit.is-signal');
-const OBSERVABLE_SYMBOL: unique symbol =
-  (Symbol as typeof Symbol & { observable?: symbol }).observable ?? Symbol.for('observable');
+const OBSERVABLE_SYMBOL: unique symbol = ((Symbol as typeof Symbol & { observable?: symbol }).observable ??
+  Symbol.for('observable')) as never;
 
 export const observableSymbol = OBSERVABLE_SYMBOL;
 
@@ -439,7 +439,8 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
       const cleanupErrors = runCleanupAndCollectErrors(this.deps_);
 
       this.deps_.clear();
-      rethrowWithCleanupErrors(error, cleanupErrors, 'computed failed dependency cleanup errors');
+
+      return rethrowWithCleanupErrors(error, cleanupErrors, 'computed failed dependency cleanup errors');
     } finally {
       this.computing_ = false;
     }
@@ -586,7 +587,7 @@ export const effect = (fn: EffectCallback): Subscription => {
         teardown();
 
         const localCleanups: CleanupFn[] = [];
-        let returnedCleanup: CleanupFn | void;
+        let returnedCleanup: CleanupFn | void = undefined;
 
         try {
           returnedCleanup = withTracking(run, null, deps, localCleanups, fn);

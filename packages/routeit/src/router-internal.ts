@@ -10,9 +10,7 @@ export type RouteMatcher = {
 export type RouteBranchDef = {
   dataFn?: DataFn;
   handler?: RouteHandler;
-  lazy?: () => Promise<
-    Pick<{ data?: DataFn; handler?: RouteHandler; meta?: unknown }, 'data' | 'handler' | 'meta'>
-  >;
+  lazy?: () => Promise<Pick<{ data?: DataFn; handler?: RouteHandler; meta?: unknown }, 'data' | 'handler' | 'meta'>>;
   meta?: unknown;
   name: string;
 };

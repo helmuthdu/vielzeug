@@ -285,6 +285,7 @@ export function createIndexedDB<S extends AnySchema>(options: {
         if (!parsed) return undefined;
 
         const value = unwrapStored(parsed);
+
         return value;
       },
       async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
@@ -378,6 +379,7 @@ export function createIndexedDB<S extends AnySchema>(options: {
           if (!parsed) return undefined;
 
           const value = unwrapStored(parsed);
+
           return value;
         },
         async getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]> {

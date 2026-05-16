@@ -682,9 +682,9 @@ describe('bit-combobox', () => {
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
-      expect(
-        fixture.queryAll<HTMLElement>('.option').some((opt) => opt.textContent?.includes('United States')),
-      ).toBe(false);
+      expect(fixture.queryAll<HTMLElement>('.option').some((opt) => opt.textContent?.includes('United States'))).toBe(
+        false,
+      );
       expect(fixture.queryAll('.option')).toHaveLength(2);
 
       const updatedGbOption = fixture

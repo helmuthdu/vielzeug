@@ -312,6 +312,7 @@ export interface Sortable extends Disposable {
   sync(): void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface SortableScope {}
 
 export interface AutoScrollOptions {
@@ -390,7 +391,9 @@ export function createSortableScope(): SortableScope {
   return scope;
 }
 
-function resolveAutoScrollOptions(autoScroll: boolean | AutoScrollOptions | undefined): ResolvedAutoScrollOptions | null {
+function resolveAutoScrollOptions(
+  autoScroll: boolean | AutoScrollOptions | undefined,
+): ResolvedAutoScrollOptions | null {
   if (autoScroll === false) return null;
 
   if (autoScroll === true || autoScroll === undefined) {
@@ -712,12 +715,13 @@ export function createSortable(options: SortableOptions): Sortable {
               if (sortableScope.active?.draggedEl !== item) return;
 
               item.style.display = 'none';
+
               if (sortableScope.active) sortableScope.active.hideFrame = null;
             })
           : null,
       initialOrders,
-      originalNextSibling,
       originalDisplay: item.style.display,
+      originalNextSibling,
       originalParent,
       placeholder,
       source: controller,
@@ -777,6 +781,7 @@ export function createSortable(options: SortableOptions): Sortable {
     if (!canReceiveActiveDrag(sortableScope, controller)) return;
 
     e.preventDefault();
+
     if (sortableScope.active) sortableScope.active.target = controller;
   };
 
@@ -815,7 +820,10 @@ export function createSortable(options: SortableOptions): Sortable {
 
   return {
     ...asDisposable(() => {
-      if (sortableScope.active && (sortableScope.active.source === controller || sortableScope.active.target === controller)) {
+      if (
+        sortableScope.active &&
+        (sortableScope.active.source === controller || sortableScope.active.target === controller)
+      ) {
         const syntheticEnd = new Event('dragend', { bubbles: true, cancelable: true }) as DragEvent;
 
         finishActiveDrag(sortableScope, syntheticEnd, true);

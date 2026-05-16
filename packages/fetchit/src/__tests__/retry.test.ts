@@ -57,6 +57,7 @@ describe('runWithRetry', () => {
     await vi.runAllTimersAsync();
 
     await expect(promise).resolves.toBe('ok');
+
     const retryDelays = timeoutSpy.mock.calls
       .slice(startIndex)
       .map((call) => call[1])

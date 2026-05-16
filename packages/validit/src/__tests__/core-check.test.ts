@@ -41,7 +41,11 @@ describe('check() sync', () => {
   });
 
   it('treats ctx.addIssue({ path }) as relative to current schema path', () => {
-    const schema = v.object({ user: v.object({ email: v.string() }).check((_, ctx) => ctx.addIssue({ code: ErrorCode.custom, message: 'Bad nested field', path: ['email'] })) });
+    const schema = v.object({
+      user: v
+        .object({ email: v.string() })
+        .check((_, ctx) => ctx.addIssue({ code: ErrorCode.custom, message: 'Bad nested field', path: ['email'] })),
+    });
 
     const result = schema.safeParse({ user: { email: 'ok@example.com' } });
 
@@ -62,7 +66,9 @@ describe('check() sync', () => {
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.message === 'Name is required for cross-field checks')).toBe(true);
+      expect(result.error.issues.some((issue) => issue.message === 'Name is required for cross-field checks')).toBe(
+        true,
+      );
     }
   });
 

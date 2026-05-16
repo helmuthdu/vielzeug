@@ -78,6 +78,7 @@ function buildFromTemplate(template: Intl.NumberFormatPart[], integerPart: strin
         output += integerPart;
         replacedInteger = true;
       }
+
       continue;
     }
 
@@ -85,6 +86,7 @@ function buildFromTemplate(template: Intl.NumberFormatPart[], integerPart: strin
       if (hasFraction) {
         output += part.value;
       }
+
       continue;
     }
 
@@ -92,6 +94,7 @@ function buildFromTemplate(template: Intl.NumberFormatPart[], integerPart: strin
       if (hasFraction) {
         output += fractionPart;
       }
+
       continue;
     }
 
@@ -139,6 +142,7 @@ function trimFraction(value: string, minimumDigits: number): string {
   }
 
   let end = value.length;
+
   while (end > minimumDigits && value[end - 1] === '0') {
     end--;
   }
@@ -146,7 +150,9 @@ function trimFraction(value: string, minimumDigits: number): string {
   return value.slice(0, end);
 }
 
-function validateStyle(style: CurrencyFormatOptions['style']): asserts style is NonNullable<CurrencyFormatOptions['style']> {
+function validateStyle(
+  style: CurrencyFormatOptions['style'],
+): asserts style is NonNullable<CurrencyFormatOptions['style']> {
   if (style !== 'symbol' && style !== 'code') {
     throw new RangeError(`Unsupported currency style: ${String(style)}`);
   }
@@ -186,6 +192,7 @@ function getCurrencyTemplate(
   });
 
   const template = formatter.formatToParts(isNegative ? -1.1 : 1.1);
+
   currencyTemplateCache.set(key, template);
 
   return template;
@@ -217,6 +224,7 @@ function pow10(exponent: number): bigint {
   }
 
   const computed = 10n ** BigInt(exponent);
+
   pow10Cache.set(exponent, computed);
 
   return computed;

@@ -1,10 +1,4 @@
-import type {
-  Middleware,
-  NavigateOptions,
-  NamedNavigationTarget,
-  RawNavigationTarget,
-  RouteTable,
-} from './types';
+import type { Middleware, NavigateOptions, NamedNavigationTarget, RawNavigationTarget, RouteTable } from './types';
 
 /** Build redirect middleware for common guard flows. */
 export function redirectTo<TRoutes extends RouteTable = RouteTable>(

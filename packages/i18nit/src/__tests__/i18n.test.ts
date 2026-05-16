@@ -398,11 +398,13 @@ describe('createI18n', () => {
 
       const firstPreload = i18n.preload('fr');
 
-      i18n.register('fr', () =>
-        new Promise((resolve) => {
-          secondCalls++;
-          resolveSecond = resolve;
-        }),
+      i18n.register(
+        'fr',
+        () =>
+          new Promise((resolve) => {
+            secondCalls++;
+            resolveSecond = resolve;
+          }),
       );
 
       const secondPreload = i18n.preload('fr');
@@ -596,12 +598,12 @@ describe('createI18n', () => {
     test('supports self-unsubscribe during dispatch', async () => {
       const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
       const calls: string[] = [];
-      let stop!: () => void;
 
-      stop = i18n.subscribe(() => {
+      const stop = i18n.subscribe(() => {
         calls.push('self');
         stop();
       });
+
       i18n.subscribe(() => calls.push('other'));
 
       await i18n.setLocale('fr');

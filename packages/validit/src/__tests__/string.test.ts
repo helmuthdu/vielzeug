@@ -43,7 +43,12 @@ describe('v.string()', () => {
     expect(v.string().url().parse('https://example.com')).toBe('https://example.com');
     expect(() => v.string().url().parse('not-a-url')).toThrow('Invalid URL');
     expect(() => v.string().url().parse('javascript:alert(1)')).toThrow('Invalid URL');
-    expect(v.string().url({ protocols: ['ftp'] }).parse('ftp://example.com')).toBe('ftp://example.com');
+    expect(
+      v
+        .string()
+        .url({ protocols: ['ftp'] })
+        .parse('ftp://example.com'),
+    ).toBe('ftp://example.com');
 
     const urlResult = v.string().url().safeParse('not-a-url');
 
@@ -96,14 +101,14 @@ describe('v.string()', () => {
     expect(() => v.string().isoDateTime().parse('T')).toThrow('Invalid datetime');
   });
 
-    it('isoDateTime() validates structural format precisely', () => {
-      expect(v.string().isoDateTime().parse('2024-01-15T10:30:00Z')).toBe('2024-01-15T10:30:00Z');
-      expect(v.string().isoDateTime().parse('2024-01-15T10:30:00.123Z')).toBe('2024-01-15T10:30:00.123Z');
-      expect(v.string().isoDateTime().parse('2024-01-15T10:30:00+05:30')).toBe('2024-01-15T10:30:00+05:30');
-      expect(v.string().isoDateTime().parse('2024-01-15T10:30')).toBe('2024-01-15T10:30');
-      expect(() => v.string().isoDateTime().parse('2024-01-15T:::Z')).toThrow('Invalid datetime');
-      expect(() => v.string().isoDateTime().parse('2024-01-15T10:30:00+99:99')).toThrow('Invalid datetime');
-    });
+  it('isoDateTime() validates structural format precisely', () => {
+    expect(v.string().isoDateTime().parse('2024-01-15T10:30:00Z')).toBe('2024-01-15T10:30:00Z');
+    expect(v.string().isoDateTime().parse('2024-01-15T10:30:00.123Z')).toBe('2024-01-15T10:30:00.123Z');
+    expect(v.string().isoDateTime().parse('2024-01-15T10:30:00+05:30')).toBe('2024-01-15T10:30:00+05:30');
+    expect(v.string().isoDateTime().parse('2024-01-15T10:30')).toBe('2024-01-15T10:30');
+    expect(() => v.string().isoDateTime().parse('2024-01-15T:::Z')).toThrow('Invalid datetime');
+    expect(() => v.string().isoDateTime().parse('2024-01-15T10:30:00+99:99')).toThrow('Invalid datetime');
+  });
 
   it('supports custom error messages', () => {
     expect(() => v.string().min(5, 'Too short!').parse('hi')).toThrow('Too short!');

@@ -136,7 +136,9 @@ function parseArgs(
 
   if (typeof msgOrCtx === 'string') {
     if (msg !== undefined) {
-      failInvalidArgs('string-first log calls accept only one argument. Use log.info({ ... }, \"message\") for structured context.');
+      failInvalidArgs(
+        'string-first log calls accept only one argument. Use log.info({ ... }, "message") for structured context.',
+      );
     }
 
     return { context: undefined, message: msgOrCtx };
@@ -387,19 +389,19 @@ export function createLogger(initial: LogitOptions | string = {}, initialBinding
       return cfg.remote ? { ...cfg, remote: { ...cfg.remote } } : { ...cfg };
     },
 
-    debug: (m?, s?) => emit('debug', m, s),
+    debug: (m?: string | Bindings | Error, s?: string) => emit('debug', m, s),
 
     enabled: (type: LogLevel): boolean => passes(type),
 
-    error: (m?, s?) => emit('error', m, s),
+    error: (m?: string | Bindings | Error, s?: string) => emit('error', m, s),
 
-    fatal: (m?, s?) => emit('fatal', m, s),
+    fatal: (m?: string | Bindings | Error, s?: string) => emit('fatal', m, s),
 
     group: (label, fn) => wrapGroup(false, label, fn),
 
     groupCollapsed: (label, fn) => wrapGroup(true, label, fn),
 
-    info: (m?, s?) => emit('info', m, s),
+    info: (m?: string | Bindings | Error, s?: string) => emit('info', m, s),
 
     scope: (name: string): Logger => logger.child({ namespace: cfg.namespace ? `${cfg.namespace}.${name}` : name }),
 
@@ -424,7 +426,7 @@ export function createLogger(initial: LogitOptions | string = {}, initialBinding
       }
     },
 
-    warn: (m?, s?) => emit('warn', m, s),
+    warn: (m?: string | Bindings | Error, s?: string) => emit('warn', m, s),
 
     withBindings: (bindings: Bindings): Logger => createLogger(cfg, { ...ownBindings, ...bindings }),
   };

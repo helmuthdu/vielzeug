@@ -33,15 +33,15 @@ describe('v.intersect()', () => {
     expect(schema.safeParse({ id: 1 }).success).toBe(false);
   });
 
-    it('deep-merges nested object fields from all branches', () => {
-      const A = v.object({ nested: v.object({ a: v.string() }).relaxed() }).relaxed();
-      const B = v.object({ nested: v.object({ b: v.number() }).relaxed() }).relaxed();
-      const schema = v.intersect(A, B);
-      const result = schema.parse({ nested: { a: 'hello', b: 42 } });
+  it('deep-merges nested object fields from all branches', () => {
+    const A = v.object({ nested: v.object({ a: v.string() }).relaxed() }).relaxed();
+    const B = v.object({ nested: v.object({ b: v.number() }).relaxed() }).relaxed();
+    const schema = v.intersect(A, B);
+    const result = schema.parse({ nested: { a: 'hello', b: 42 } });
 
-      expect((result as any).nested.a).toBe('hello');
-      expect((result as any).nested.b).toBe(42);
-    });
+    expect((result as any).nested.a).toBe('hello');
+    expect((result as any).nested.b).toBe(42);
+  });
 
   it('accepts raw literal values as shorthand for v.literal()', () => {
     const schema = v.intersect('hello', 'hello');

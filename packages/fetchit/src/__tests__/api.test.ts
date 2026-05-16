@@ -416,7 +416,10 @@ describe('HTTP Client', () => {
         () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
       );
 
-      await Promise.all([http.get('/users/1', { responseType: 'json' }), http.get('/users/1', { responseType: 'text' })]);
+      await Promise.all([
+        http.get('/users/1', { responseType: 'json' }),
+        http.get('/users/1', { responseType: 'text' }),
+      ]);
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });

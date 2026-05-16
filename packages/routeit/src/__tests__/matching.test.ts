@@ -253,14 +253,14 @@ describe('route table', () => {
     expect(() =>
       createRouter({
         routes: {
-          // top-level key 'a.b' collides with nested 'a' -> 'b'
-          'a.b': { path: '/ab' },
           a: {
             children: {
               b: { path: '/a/b' },
             },
             path: '/a',
           },
+          // top-level key 'a.b' collides with nested 'a' -> 'b'
+          'a.b': { path: '/ab' },
         },
       }),
     ).toThrow('Duplicate route name: "a.b"');

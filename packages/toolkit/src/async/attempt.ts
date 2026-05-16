@@ -20,9 +20,7 @@ function executeWithTimeout<T>(
   signal: AbortSignal | undefined,
   timeout: number,
 ): Promise<T> {
-  const abortSignal = signal
-    ? AbortSignal.any([AbortSignal.timeout(timeout), signal])
-    : AbortSignal.timeout(timeout);
+  const abortSignal = signal ? AbortSignal.any([AbortSignal.timeout(timeout), signal]) : AbortSignal.timeout(timeout);
 
   if (abortSignal.aborted) {
     return Promise.reject(abortSignal.reason);

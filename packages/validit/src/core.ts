@@ -428,9 +428,7 @@ export class Schema<Output = unknown, Input = Output> {
     const cloned = this._clone();
 
     cloned.state.defaultValue =
-      typeof defaultValue === 'function'
-        ? (defaultValue as () => Output)
-        : () => materializeValue(defaultValue);
+      typeof defaultValue === 'function' ? (defaultValue as () => Output) : () => materializeValue(defaultValue);
 
     return cloned;
   }
@@ -442,8 +440,7 @@ export class Schema<Output = unknown, Input = Output> {
   catch(fallback: Output | (() => Output)): this {
     const cloned = this._clone();
 
-    cloned.state.catch =
-      typeof fallback === 'function' ? (fallback as () => Output) : () => materializeValue(fallback);
+    cloned.state.catch = typeof fallback === 'function' ? (fallback as () => Output) : () => materializeValue(fallback);
 
     return cloned;
   }

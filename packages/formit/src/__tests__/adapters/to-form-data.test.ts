@@ -67,7 +67,9 @@ describe('toFormData adapter', () => {
       [index: number]: File;
       readonly length: number;
       constructor(...items: File[]) {
-        items.forEach((f, i) => { (this as unknown as Record<number, File>)[i] = f; });
+        items.forEach((f, i) => {
+          (this as unknown as Record<number, File>)[i] = f;
+        });
         this.length = items.length;
       }
     }

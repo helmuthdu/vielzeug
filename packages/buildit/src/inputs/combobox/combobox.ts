@@ -1,4 +1,4 @@
-import { computed, define, effect, html, inject, onCleanup, prop, signal, untrack } from '@vielzeug/craftit';
+import { computed, define, effect, html, inject, onCleanup, prop, signal } from '@vielzeug/craftit';
 import {
   createChoiceField,
   createPopupListControl,
@@ -493,8 +493,6 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
 
       if (newValue === query.value) return;
 
-      const previousQuery = query.value;
-
       query.value = newValue;
 
       if (!isMultiple()) {
@@ -667,8 +665,8 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     const shadowRoot = host.el.shadowRoot;
 
     if (shadowRoot) {
-      shadowRoot.addEventListener('pointermove', handleShadowOptionPointerMove);
-      shadowRoot.addEventListener('click', handleShadowOptionClick);
+      shadowRoot.addEventListener('pointermove', handleShadowOptionPointerMove as EventListener);
+      shadowRoot.addEventListener('click', handleShadowOptionClick as EventListener);
     }
 
     const handleDocumentCaptureClick = (event: Event): void => {
@@ -818,8 +816,8 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     });
 
     onCleanup(() => {
-      shadowRoot?.removeEventListener('pointermove', handleShadowOptionPointerMove);
-      shadowRoot?.removeEventListener('click', handleShadowOptionClick);
+      shadowRoot?.removeEventListener('pointermove', handleShadowOptionPointerMove as EventListener);
+      shadowRoot?.removeEventListener('click', handleShadowOptionClick as EventListener);
       document.removeEventListener('click', handleDocumentCaptureClick, { capture: true });
       stopListboxListeners?.();
       stopListboxListeners = null;

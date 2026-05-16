@@ -302,6 +302,7 @@ describe('Query Client', () => {
       const states: QueryState[] = [];
 
       qc.set(['manual', 1], { id: 1 });
+
       const unsub = qc.subscribe(['manual', 1], (s) => states.push({ ...s }));
 
       qc.invalidate(['manual', 1]);
@@ -358,6 +359,7 @@ describe('Query Client', () => {
       // entry.staleTime must still be 60_000 after the background refetch.
       // If it were 0, a follow-up query would trigger another fetch.
       const prevCalls = calls;
+
       await qc.query({ fn, key: ['users', 1], staleTime: 60_000 });
       expect(calls).toBe(prevCalls);
 
@@ -369,6 +371,7 @@ describe('Query Client', () => {
 
       // Prime with a known entry.
       await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], staleTime: 60_000 });
+
       const originalUpdatedAt = qc.getState(['users', 1])!.updatedAt!;
 
       expect(originalUpdatedAt).toBeGreaterThan(0);
@@ -394,6 +397,7 @@ describe('Query Client', () => {
 
       // Rollback must restore the original updatedAt — not 0.
       const state = qc.getState(['users', 1]);
+
       expect(state?.status).toBe('success');
       expect(state?.data).toEqual({ id: 1 });
       expect(state?.updatedAt).toBe(originalUpdatedAt);
@@ -428,7 +432,16 @@ describe('Query Client', () => {
 
       calls = 0;
       await expect(
-        qc.query({ attempts: 1, fn: async () => { calls++; throw new Error('fail'); }, key: ['err-recovery'], retryDelay: 0, staleTime: 0 }),
+        qc.query({
+          attempts: 1,
+          fn: async () => {
+            calls++;
+            throw new Error('fail');
+          },
+          key: ['err-recovery'],
+          retryDelay: 0,
+          staleTime: 0,
+        }),
       ).rejects.toThrow();
 
       expect(qc.getState(['err-recovery'])).toMatchObject({ data: { id: 1 }, status: 'error' });

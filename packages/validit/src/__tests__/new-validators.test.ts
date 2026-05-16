@@ -27,7 +27,7 @@ describe('StringSchema - new format validators', () => {
   test('base64() validates base64 strings', () => {
     expect(v.string().base64().safeParse('SGVsbG8=').success).toBe(true);
     expect(v.string().base64().safeParse('not!base64$$').success).toBe(false);
-      expect(v.string().base64().safeParse('').success).toBe(false);
+    expect(v.string().base64().safeParse('').success).toBe(false);
   });
 
   test('base64url() validates url-safe base64', () => {

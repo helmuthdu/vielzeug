@@ -592,9 +592,9 @@ describe('permit: predicate error propagation', () => {
       },
     ]);
 
-    expect(() =>
-      permit.checkAll({ id: 'u1', roles: ['editor'] }, [{ action: 'read', resource: 'posts' }]),
-    ).toThrow('predicate exploded');
+    expect(() => permit.checkAll({ id: 'u1', roles: ['editor'] }, [{ action: 'read', resource: 'posts' }])).toThrow(
+      'predicate exploded',
+    );
   });
 });
 

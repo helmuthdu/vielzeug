@@ -177,7 +177,11 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
    * their own validation are omitted, so the value is typed as `Partial<InferObject<T>>`.
    * Check `'key' in value` before accessing fields that may be missing.
    */
-  override check(fn: (value: Partial<InferObject<T>>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
-    return super.check(fn as unknown as (value: InferObject<T>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>);
+  override check(
+    fn: (value: Partial<InferObject<T>>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>,
+  ): this;
+  override check(fn: (value: InferObject<T>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this;
+  override check(fn: (value: any, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
+    return super.check(fn);
   }
 }

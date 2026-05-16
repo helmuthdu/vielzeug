@@ -19,7 +19,6 @@ export const mockHistory = {
   back: vi.fn(),
   forward: vi.fn(),
   go: vi.fn(),
-  state: null as unknown,
   // Simulate real browser behaviour: pushState/replaceState update the current URL and
   // history.state. Without URL updates, navigate() would re-read the old pathname and
   // recurse indefinitely when middleware calls router.navigate() without awaiting next().
@@ -31,6 +30,7 @@ export const mockHistory = {
     assignMockUrl(url);
     mockHistory.state = state;
   }),
+  state: null as unknown,
 };
 
 // Expose mocks on globalThis for simple cross-test access.

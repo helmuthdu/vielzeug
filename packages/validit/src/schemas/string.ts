@@ -184,7 +184,8 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     optionsOrMessage: MessageFn<{ value: string }> | UrlOptions = {},
     maybeMessage: MessageFn<{ value: string }> = () => _messages().string.url(),
   ): this {
-    const options = typeof optionsOrMessage === 'function' || typeof optionsOrMessage === 'string' ? {} : optionsOrMessage;
+    const options =
+      typeof optionsOrMessage === 'function' || typeof optionsOrMessage === 'string' ? {} : optionsOrMessage;
     const message =
       typeof optionsOrMessage === 'function' || typeof optionsOrMessage === 'string' ? optionsOrMessage : maybeMessage;
     const allowedProtocols = new Set((options.protocols ?? ['http', 'https']).map((p) => p.toLowerCase()));
