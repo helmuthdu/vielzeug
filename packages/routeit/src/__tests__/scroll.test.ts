@@ -91,4 +91,21 @@ describe('scroll restoration', () => {
     scrollToSpy.mockRestore();
     router.dispose();
   });
+
+  it('does not scroll when scroll returns preserve', async () => {
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: { home: { path: '/' }, page: { path: '/page' } },
+      scroll: () => 'preserve',
+    });
+
+    await settle();
+    await router.navigate({ path: '/page' });
+
+    expect(scrollToSpy).not.toHaveBeenCalled();
+    scrollToSpy.mockRestore();
+    router.dispose();
+  });
 });

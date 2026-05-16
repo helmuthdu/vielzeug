@@ -25,6 +25,6 @@ export const i18n = createI18n({
 
 await i18n.preload('fr');
 
-i18n.t('greeting', { name: 'Alice' });
-i18n.tp('inbox', 3);
+i18n.t('greeting', { vars: { name: 'Alice' } });
+i18n.t('inbox', { count: 3 });
 ```

@@ -25,7 +25,7 @@ export async function renderDocument(locale: string) {
     <html lang="${i18n.locale}">
       <body>
         <h1>${i18n.t('title')}</h1>
-        <p>${i18n.tp('notifications', 3)}</p>
+        <p>${i18n.t('notifications', { count: 3 })}</p>
       </body>
     </html>
   `;
