@@ -1,24 +1,77 @@
-import type {
-  CleanupFn,
-  ComputedSignal,
-  EffectCallback,
-  EffectOptions,
-  EqualityFn,
-  ReactiveOptions,
-  ReadonlySignal,
-  Signal,
-  Store,
-  Subscription,
-  WatchOptions,
-} from './types';
+// === TYPES ===
+export type CleanupFn = () => void;
+export type EffectCallback = () => CleanupFn | void;
+export type EqualityFn<T> = (a: T, b: T) => boolean;
+export type ReactiveOptions<T> = { equals?: EqualityFn<T> };
+
+export interface Subscription {
+  (): void;
+  dispose(): void;
+  [Symbol.dispose](): void;
+}
+
+export interface ReadonlySignal<T> {
+  peek(): T;
+  subscribe(onStoreChange: () => void): Subscription;
+  readonly value: T;
+}
+
+export interface Signal<T> extends ReadonlySignal<T> {
+  update(fn: (current: T) => T): void;
+  value: T;
+}
+
+export interface ComputedSignal<T> extends ReadonlySignal<T> {
+  dispose(): void;
+  [Symbol.dispose](): void;
+}
+
+export type WatchOptions<T> = {
+  equals?: EqualityFn<T>;
+  immediate?: boolean;
+};
+
+export interface ObservableObserver<T> {
+  complete?(): void;
+  error?(error: unknown): void;
+  next?(value: T): void;
+}
+
+export interface Store<T extends object> extends ReadonlySignal<T> {
+  patch(partial: Partial<T>): void;
+  update(fn: (state: T) => T): void;
+  reset(): void;
+}
+
+export interface Scope {
+  readonly run: <T>(fn: () => T) => T;
+  readonly dispose: () => void;
+  readonly [Symbol.dispose]: () => void;
+}
 
 // === CONSTANTS ===
-const UNINITIALIZED = Symbol('stateit.uninitialized');
 const DEFAULT_MAX_ITERATIONS = 100;
+const IS_SIGNAL = Symbol('stateit.is-signal');
+const OBSERVABLE_SYMBOL: unique symbol = ((Symbol as typeof Symbol & { observable?: symbol }).observable ??
+  Symbol.for('observable')) as never;
+
+export const observableSymbol = OBSERVABLE_SYMBOL;
+
+type EffectRunner = () => void;
+type Subscriber = () => void;
+
+export type ObservableLike<T> = {
+  [observableSymbol](): ObservableLike<T>;
+  subscribe(observer: ObservableObserver<T> | ((value: T) => void)): { unsubscribe(): void };
+};
 
 // === HELPERS ===
-const toSubscription = (dispose: () => void): Subscription =>
+export const toSubscription = (dispose: () => void): Subscription =>
   Object.assign(dispose, { dispose, [Symbol.dispose]: dispose }) as Subscription;
+
+const readonlyCache = new WeakMap<object, ReadonlySignal<unknown>>();
+
+const ensureError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
 const ensureObject = (value: unknown, message: string): void => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -26,15 +79,12 @@ const ensureObject = (value: unknown, message: string): void => {
   }
 };
 
-const clone = <T>(value: T): T => structuredClone(value);
-
-// === UNIFIED ERROR HANDLING ===
-const runCallbacks = (callbacks: CleanupFn[], context: string): void => {
+const runAll = (items: Iterable<() => void>, context: string): void => {
   const errors: unknown[] = [];
 
-  for (const callback of callbacks) {
+  for (const fn of items) {
     try {
-      callback();
+      fn();
     } catch (e) {
       errors.push(e);
     }
@@ -47,93 +97,250 @@ const runCallbacks = (callbacks: CleanupFn[], context: string): void => {
   }
 };
 
-const runSubscribers = (subscribers: Set<EffectCallback>): void => {
-  const errors: unknown[] = [];
+const rethrowWithCleanupErrors = (error: unknown, cleanupErrors: unknown[], context: string): never => {
+  const rootCause = ensureError(error);
 
-  for (const fn of [...subscribers]) {
-    try {
-      fn();
-    } catch (e) {
-      errors.push(e);
-    }
+  if (cleanupErrors.length === 0) {
+    throw rootCause;
   }
 
-  if (errors.length === 1) throw errors[0];
+  throw new AggregateError([rootCause, ...cleanupErrors.map(ensureError)], `[stateit] ${context}`, {
+    cause: rootCause,
+  });
+};
 
-  if (errors.length > 1) {
-    throw new AggregateError(errors, '[stateit] subscriber errors');
+const runCleanupAndCollectErrors = (items: Iterable<() => void>): unknown[] => {
+  try {
+    runAll(items, 'cleanup errors');
+
+    return [];
+  } catch (error) {
+    return error instanceof AggregateError ? error.errors : [error];
   }
 };
 
-// === GLOBAL REACTIVE GRAPH ===
-interface EffectScope {
-  effect: EffectCallback | null;
-  deps: Set<CleanupFn> | null;
-  cleanups: CleanupFn[] | null;
-}
+// === GLOBAL TRACKING STATE ===
+let currentEffect: EffectRunner | null = null;
+let currentComputed: ComputedImpl<any> | null = null;
+let currentDeps: Set<CleanupFn> | null = null;
+let currentCleanups: CleanupFn[] | null = null;
 
-let currentScope: EffectScope = {
-  cleanups: null,
-  deps: null,
-  effect: null,
-};
-
-const withScope = <T>(
-  effect: EffectCallback | null,
+const withTracking = <T>(
+  effect: EffectRunner | null,
+  computed: ComputedImpl<any> | null,
   deps: Set<CleanupFn> | null,
   cleanups: CleanupFn[] | null,
   fn: () => T,
 ): T => {
-  const prev = currentScope;
+  const prevEffect = currentEffect;
+  const prevComputed = currentComputed;
+  const prevDeps = currentDeps;
+  const prevCleanups = currentCleanups;
 
-  currentScope = { cleanups, deps, effect };
+  currentEffect = effect;
+  currentComputed = computed;
+  currentDeps = deps;
+  currentCleanups = cleanups;
 
   try {
     return fn();
   } finally {
-    currentScope = prev;
+    currentEffect = prevEffect;
+    currentComputed = prevComputed;
+    currentDeps = prevDeps;
+    currentCleanups = prevCleanups;
   }
 };
 
-// === BATCH QUEUE ===
+// === NOTIFICATION QUEUES ===
 let batchDepth = 0;
-const batchQueue = new Set<EffectCallback>();
+const pendingSubscribers = new Set<Subscriber>();
+const pendingDirtyComputeds = new Set<ComputedImpl<any>>();
 
-const flushBatch = (): void => {
-  while (batchQueue.size > 0) {
-    const pending = [...batchQueue];
+const toTopologicalOrder = (dirtyComputeds: readonly ComputedImpl<any>[]): ComputedImpl<any>[] => {
+  const pendingSet = new Set(dirtyComputeds);
+  const indegree = new Map<ComputedImpl<any>, number>();
 
-    batchQueue.clear();
+  for (const computed of dirtyComputeds) {
+    indegree.set(computed, 0);
+  }
 
-    runSubscribers(new Set(pending));
+  for (const computed of dirtyComputeds) {
+    for (const downstream of computed.computedSubscribers()) {
+      if (!pendingSet.has(downstream)) continue;
+
+      indegree.set(downstream, (indegree.get(downstream) ?? 0) + 1);
+    }
+  }
+
+  const queue: ComputedImpl<any>[] = [];
+
+  for (const computed of dirtyComputeds) {
+    if ((indegree.get(computed) ?? 0) === 0) {
+      queue.push(computed);
+    }
+  }
+
+  const ordered: ComputedImpl<any>[] = [];
+
+  while (queue.length > 0) {
+    const computed = queue.shift()!;
+
+    ordered.push(computed);
+
+    for (const downstream of computed.computedSubscribers()) {
+      if (!pendingSet.has(downstream)) continue;
+
+      const nextIndegree = (indegree.get(downstream) ?? 0) - 1;
+
+      indegree.set(downstream, nextIndegree);
+
+      if (nextIndegree === 0) {
+        queue.push(downstream);
+      }
+    }
+  }
+
+  if (ordered.length < dirtyComputeds.length) {
+    for (const computed of dirtyComputeds) {
+      if (!ordered.includes(computed)) {
+        ordered.push(computed);
+      }
+    }
+  }
+
+  return ordered;
+};
+
+const queueEffectsFromNode = (node: ReactiveNode): void => {
+  const dirtyComputeds: ComputedImpl<any>[] = [...node.computedSubscribers()];
+  const seenComputeds = new Set<ComputedImpl<any>>();
+
+  for (const subscriber of node.subscribers()) {
+    pendingSubscribers.add(subscriber);
+  }
+
+  while (dirtyComputeds.length > 0) {
+    const computed = dirtyComputeds.pop()!;
+
+    if (seenComputeds.has(computed)) continue;
+
+    seenComputeds.add(computed);
+
+    if (!computed.markDirty()) continue;
+
+    pendingDirtyComputeds.add(computed);
+
+    for (const downstream of computed.computedSubscribers()) {
+      dirtyComputeds.push(downstream);
+    }
+  }
+};
+
+const flushDirtyComputeds = (): void => {
+  while (pendingDirtyComputeds.size > 0) {
+    const dirtyComputeds = toTopologicalOrder([...pendingDirtyComputeds]);
+
+    pendingDirtyComputeds.clear();
+
+    for (const computed of dirtyComputeds) {
+      if (!computed.hasAnySubscribers()) continue;
+
+      const changed = computed.refreshIfDirty();
+
+      if (!changed) continue;
+
+      for (const subscriber of computed.subscribers()) {
+        pendingSubscribers.add(subscriber);
+      }
+
+      for (const downstream of computed.computedSubscribers()) {
+        if (downstream.markDirty()) {
+          pendingDirtyComputeds.add(downstream);
+        }
+      }
+    }
+  }
+};
+
+const flushEffects = (): void => {
+  let iterations = 0;
+
+  while (pendingSubscribers.size > 0 || pendingDirtyComputeds.size > 0) {
+    if (++iterations > DEFAULT_MAX_ITERATIONS) {
+      throw new Error(`[stateit] infinite flush loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
+    }
+
+    if (pendingDirtyComputeds.size > 0) {
+      flushDirtyComputeds();
+    }
+
+    if (pendingSubscribers.size === 0) continue;
+
+    const subscribersToRun = [...pendingSubscribers];
+
+    pendingSubscribers.clear();
+    runAll(subscribersToRun, 'subscriber errors');
+  }
+};
+
+const notifyNodeChange = (node: ReactiveNode): void => {
+  if (!node.hasAnySubscribers()) return;
+
+  queueEffectsFromNode(node);
+
+  if (batchDepth === 0) {
+    flushEffects();
   }
 };
 
 // === BASE REACTIVE NODE ===
 class ReactiveNode {
-  protected subscribers = new Set<EffectCallback>();
+  private computedSubs_ = new Set<ComputedImpl<any>>();
+  private subscribers_ = new Set<Subscriber>();
 
   protected track(): void {
-    if (!currentScope.effect || !currentScope.deps) return;
+    if (!currentDeps) return;
 
-    this.subscribers.add(currentScope.effect);
-    currentScope.deps.add(() => this.subscribers.delete(currentScope.effect!));
-  }
+    if (currentComputed !== null) {
+      const owner = currentComputed;
 
-  protected hasSubscribers(): boolean {
-    return this.subscribers.size > 0;
-  }
-
-  protected notify(): void {
-    if (this.subscribers.size === 0) return;
-
-    if (batchDepth > 0) {
-      for (const fn of this.subscribers) batchQueue.add(fn);
+      this.computedSubs_.add(owner);
+      currentDeps.add(() => this.computedSubs_.delete(owner));
 
       return;
     }
 
-    runSubscribers(this.subscribers);
+    if (currentEffect !== null) {
+      const owner = currentEffect;
+
+      this.subscribers_.add(owner);
+      currentDeps.add(() => this.subscribers_.delete(owner));
+    }
+  }
+
+  protected notify(): void {
+    notifyNodeChange(this);
+  }
+
+  hasAnySubscribers(): boolean {
+    return this.computedSubs_.size > 0 || this.subscribers_.size > 0;
+  }
+
+  computedSubscribers(): ReadonlySet<ComputedImpl<any>> {
+    return this.computedSubs_;
+  }
+
+  subscribers(): ReadonlySet<Subscriber> {
+    return this.subscribers_;
+  }
+
+  subscribe(subscriber: Subscriber): Subscription {
+    this.subscribers_.add(subscriber);
+
+    return toSubscription(() => {
+      this.subscribers_.delete(subscriber);
+    });
   }
 }
 
@@ -141,6 +348,7 @@ class ReactiveNode {
 class SignalImpl<T> extends ReactiveNode implements Signal<T> {
   private value_: T;
   private equals_: EqualityFn<T>;
+  [IS_SIGNAL] = true;
 
   constructor(initial: T, equals?: EqualityFn<T>) {
     super();
@@ -154,61 +362,88 @@ class SignalImpl<T> extends ReactiveNode implements Signal<T> {
     return this.value_;
   }
 
+  peek(): T {
+    return this.value_;
+  }
+
+  readonly subscribe = (onStoreChange: () => void): Subscription => {
+    return super.subscribe(onStoreChange);
+  };
+
+  update(fn: (current: T) => T): void {
+    this.value = fn(this.value_);
+  }
+
   set value(next: T) {
     if (this.equals_(this.value_, next)) return;
 
     this.value_ = next;
     this.notify();
   }
-
-  update(fn: (current: T) => T): void {
-    this.value = fn(this.value_);
-  }
 }
 
 // === COMPUTED IMPLEMENTATION ===
 class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
-  private value_: T | typeof UNINITIALIZED = UNINITIALIZED;
+  private hasValue_ = false;
+  private value_!: T;
   private dirty_ = true;
+  private computing_ = false;
   private disposed_ = false;
   private deps_ = new Set<CleanupFn>();
   private compute_: () => T;
   private equals_: EqualityFn<T>;
-
-  private readonly onDepChange: EffectCallback = () => {
-    if (this.disposed_) return;
-
-    if (this.subscribers.size === 0) {
-      this.dirty_ = true;
-
-      return;
-    }
-
-    if (this.recompute()) this.notify();
-  };
+  [IS_SIGNAL] = true;
 
   constructor(compute: () => T, equals?: EqualityFn<T>) {
     super();
     this.compute_ = compute;
     this.equals_ = equals ?? Object.is;
-    this.recompute();
+  }
+
+  markDirty(): boolean {
+    if (this.disposed_ || this.dirty_) return false;
+
+    this.dirty_ = true;
+
+    return true;
+  }
+
+  refreshIfDirty(): boolean {
+    return this.dirty_ ? this.recompute() : false;
   }
 
   private recompute(): boolean {
+    if (this.computing_) {
+      throw new Error('[stateit] computed cycle detected');
+    }
+
     for (const unsub of this.deps_) unsub();
     this.deps_.clear();
 
-    const next = withScope(this.onDepChange, this.deps_, null, this.compute_);
+    this.computing_ = true;
 
-    this.dirty_ = false;
+    try {
+      const next = withTracking(null, this, this.deps_, null, this.compute_);
 
-    if (this.value_ === UNINITIALIZED || !this.equals_(this.value_ as T, next)) {
-      this.value_ = next;
+      this.dirty_ = false;
 
-      return true;
+      if (!this.hasValue_ || !this.equals_(this.value_, next)) {
+        this.hasValue_ = true;
+        this.value_ = next;
+
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      const cleanupErrors = runCleanupAndCollectErrors(this.deps_);
+
+      this.deps_.clear();
+
+      return rethrowWithCleanupErrors(error, cleanupErrors, 'computed failed dependency cleanup errors');
+    } finally {
+      this.computing_ = false;
     }
-
-    return false;
   }
 
   get value(): T {
@@ -216,22 +451,40 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
       throw new Error('[stateit] Cannot read disposed computed signal');
     }
 
-    if (this.dirty_) this.recompute();
+    this.refreshIfDirty();
 
     this.track();
 
-    return this.value_ as T;
+    return this.value_;
   }
 
-  get stale(): boolean {
-    return this.dirty_;
+  peek(): T {
+    if (this.disposed_) {
+      throw new Error('[stateit] Cannot read disposed computed signal');
+    }
+
+    this.refreshIfDirty();
+
+    return this.value_;
   }
+
+  readonly subscribe = (onStoreChange: () => void): Subscription => {
+    if (this.disposed_) {
+      throw new Error('[stateit] Cannot subscribe to a disposed computed signal');
+    }
+
+    // Subscribing should be lazy in terms of callbacks, but computed dependencies
+    // must be established so upstream writes can mark this node dirty.
+    this.refreshIfDirty();
+
+    return super.subscribe(onStoreChange);
+  };
 
   dispose(): void {
     if (this.disposed_) return;
 
     this.disposed_ = true;
-    this.dirty_ = true;
+
     for (const unsub of this.deps_) unsub();
     this.deps_.clear();
   }
@@ -249,8 +502,7 @@ export const signal = <T>(initial: T, options?: ReactiveOptions<T>): Signal<T> =
 export const computed = <T>(compute: () => T, options?: ReactiveOptions<T>): ComputedSignal<T> => {
   const comp = new ComputedImpl(compute, options?.equals);
 
-  // Auto-dispose when created inside effect
-  if (currentScope.effect !== null && currentScope.cleanups !== null) {
+  if (currentCleanups !== null) {
     onCleanup(() => comp.dispose());
   }
 
@@ -258,43 +510,61 @@ export const computed = <T>(compute: () => T, options?: ReactiveOptions<T>): Com
 };
 
 export const batch = <T>(fn: () => T): T => {
+  // Batch coalesces notifications. Writes that happen before an error are not rolled back.
+  // Pending subscribers still flush, and caller-visible errors are aggregated.
   batchDepth++;
 
+  let result: T | undefined;
+  let bodyError: unknown;
+
   try {
-    const result = fn();
-
-    if (--batchDepth === 0) flushBatch();
-
-    return result;
+    result = fn();
   } catch (e) {
-    if (--batchDepth === 0) flushBatch();
-
-    throw e;
+    bodyError = e;
   }
+
+  batchDepth--;
+
+  if (batchDepth === 0) {
+    try {
+      flushEffects();
+    } catch (flushError) {
+      if (bodyError !== undefined) {
+        throw new AggregateError([bodyError, flushError], '[stateit] batch error with flush errors', {
+          cause: flushError,
+        });
+      }
+
+      throw ensureError(flushError);
+    }
+  }
+
+  if (bodyError !== undefined) {
+    throw ensureError(bodyError);
+  }
+
+  return result as T;
 };
 
-export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => {
+export const effect = (fn: EffectCallback): Subscription => {
   let cleanup: CleanupFn | undefined;
   const deps = new Set<CleanupFn>();
   let isRunning = false;
   let isDirty = false;
   let isDisposed = false;
-  const maxIterations = options?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
 
   const teardown = (): void => {
-    const callbacks: CleanupFn[] = [];
+    if (!cleanup && deps.size === 0) return;
 
-    if (cleanup) callbacks.push(cleanup);
+    const callbacks = cleanup ? [cleanup, ...deps] : [...deps];
 
     cleanup = undefined;
-
-    for (const unsub of deps) callbacks.push(unsub);
     deps.clear();
 
-    runCallbacks(callbacks, 'effect teardown errors');
+    runAll(callbacks, 'effect teardown errors');
   };
 
-  const run = (): void => {
+  const run: EffectRunner = (): void => {
     if (isDisposed) return;
 
     if (isRunning) {
@@ -309,23 +579,35 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
       let iterations = 0;
 
       do {
-        if (++iterations > maxIterations) {
-          throw new Error(`[stateit] infinite effect loop (> ${maxIterations} iterations)`);
+        if (++iterations > DEFAULT_MAX_ITERATIONS) {
+          throw new Error(`[stateit] infinite effect loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
         }
 
         isDirty = false;
         teardown();
 
         const localCleanups: CleanupFn[] = [];
-        const returnedCleanup = withScope(run, deps, localCleanups, fn);
+        let returnedCleanup: CleanupFn | void = undefined;
 
-        if (returnedCleanup) localCleanups.push(returnedCleanup);
+        try {
+          returnedCleanup = withTracking(run, null, deps, localCleanups, fn);
+        } catch (error) {
+          const cleanupErrors = [...runCleanupAndCollectErrors(deps), ...runCleanupAndCollectErrors(localCleanups)];
 
-        if (localCleanups.length > 0) {
-          cleanup = () => {
-            runCallbacks(localCleanups, 'effect cleanup errors');
-          };
+          deps.clear();
+          rethrowWithCleanupErrors(error, cleanupErrors, 'effect failure with cleanup errors');
         }
+
+        if (typeof returnedCleanup === 'function') {
+          localCleanups.push(returnedCleanup);
+        }
+
+        cleanup =
+          localCleanups.length > 0
+            ? () => {
+                runAll(localCleanups, 'effect cleanup errors');
+              }
+            : undefined;
       } while (isDirty && !isDisposed);
     } finally {
       isRunning = false;
@@ -342,42 +624,101 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
   });
 };
 
-export const untrack = <T>(fn: () => T): T => {
-  return withScope(null, null, null, fn);
+export const untrack = <T>(fn: () => T): T => withTracking(null, null, null, null, fn);
+
+export const readonly = <T>(source: ReadonlySignal<T>): ReadonlySignal<T> => {
+  const sourceObject = source as object;
+  const cached = readonlyCache.get(sourceObject);
+
+  if (cached) {
+    return cached as ReadonlySignal<T>;
+  }
+
+  const view: ReadonlySignal<T> = {
+    peek(): T {
+      return source.peek();
+    },
+    subscribe(onStoreChange: () => void): Subscription {
+      return source.subscribe(onStoreChange);
+    },
+    get value(): T {
+      return source.value;
+    },
+  };
+
+  readonlyCache.set(sourceObject, view as ReadonlySignal<unknown>);
+
+  return view;
+};
+
+export const toStore = <T>(source: ReadonlySignal<T>): { subscribe(run: (value: T) => void): Subscription } => ({
+  subscribe(run) {
+    run(source.value);
+
+    return source.subscribe(() => run(source.value));
+  },
+});
+
+export const toObservable = <T>(source: ReadonlySignal<T>): ObservableLike<T> => {
+  const subscribe = (observerOrNext: ObservableObserver<T> | ((value: T) => void)): { unsubscribe(): void } => {
+    const observer: ObservableObserver<T> =
+      typeof observerOrNext === 'function' ? { next: observerOrNext } : observerOrNext;
+
+    observer.next?.(source.value);
+
+    const subscription = source.subscribe(() => observer.next?.(source.value));
+
+    return {
+      unsubscribe(): void {
+        subscription();
+      },
+    };
+  };
+
+  const observable = {
+    [OBSERVABLE_SYMBOL](): ObservableLike<T> {
+      return observable;
+    },
+    subscribe,
+  };
+
+  return observable;
 };
 
 export const onCleanup = (fn: CleanupFn): void => {
-  if (currentScope.cleanups === null) {
-    throw new Error('[stateit] onCleanup() must be called from inside an active effect.');
+  if (currentCleanups === null) {
+    throw new Error('[stateit] onCleanup() must be called from within an active effect or scope.');
   }
 
-  currentScope.cleanups.push(fn);
+  currentCleanups.push(fn);
 };
 
-const watchBase = <T>(
-  source: ReadonlySignal<T>,
-  cb: (value: T, prev: T) => void,
-  watchOptions?: WatchOptions<T>,
-): Subscription => {
-  const equals = watchOptions?.equals ?? Object.is;
-  let prev = untrack(() => source.value);
+export const scope = (setup?: () => void): Scope => {
+  const cleanups: CleanupFn[] = [];
+  let disposed = false;
 
-  if (watchOptions?.immediate) cb(prev, prev);
+  const run = <T>(fn: () => T): T => {
+    if (disposed) throw new Error('[stateit] Cannot run inside a disposed scope.');
 
-  const stop = effect(() => {
-    const next = source.value;
+    return withTracking(null, null, null, cleanups, fn);
+  };
 
-    if (equals(prev, next)) return;
+  const dispose = (): void => {
+    if (disposed) return;
 
-    const old = prev;
+    disposed = true;
 
-    prev = next;
-    cb(next, old);
+    runAll([...cleanups].reverse(), 'scope cleanup errors');
+    cleanups.length = 0;
+  };
 
-    if (watchOptions?.once) stop();
-  });
+  const api: Scope = { dispose, run, [Symbol.dispose]: dispose };
 
-  return stop;
+  if (setup) {
+    run(setup);
+  }
+
+  return api;
 };
 
 function watch<T>(
@@ -385,90 +726,79 @@ function watch<T>(
   cb: (value: T, prev: T) => void,
   watchOptions?: WatchOptions<T>,
 ): Subscription;
-function watch<S, T>(
-  source: ReadonlySignal<S>,
-  selector: (value: S) => T,
+function watch<T>(source: () => T, cb: (value: T, prev: T) => void, watchOptions?: WatchOptions<T>): Subscription;
+function watch<T>(
+  source: ReadonlySignal<T> | (() => T),
   cb: (value: T, prev: T) => void,
   watchOptions?: WatchOptions<T>,
-): Subscription;
-function watch<S, T>(
-  source: ReadonlySignal<S>,
-  selectorOrCb: ((value: S) => T) | ((value: S, prev: S) => void),
-  maybeCb?: ((value: T, prev: T) => void) | WatchOptions<S>,
-  maybeOptions?: WatchOptions<T>,
 ): Subscription {
-  if (typeof maybeCb === 'function') {
-    const selector = selectorOrCb as (value: S) => T;
-    const cb = maybeCb as (value: T, prev: T) => void;
-    const selected = computed(() => selector(source.value));
-    const stop = watchBase(selected, cb, maybeOptions);
+  const get = typeof source === 'function' ? source : () => source.value;
+  const equals = watchOptions?.equals ?? Object.is;
+  let initialized = false;
+  let prev!: T;
 
-    return toSubscription(() => {
-      stop();
-      selected.dispose();
-    });
+  if (watchOptions?.immediate) {
+    prev = untrack(get);
+    initialized = true;
+    cb(prev, prev);
   }
 
-  const cb = selectorOrCb as (value: S, prev: S) => void;
+  return effect(() => {
+    const next = get();
 
-  return watchBase(source, cb, maybeCb as WatchOptions<S> | undefined);
+    if (!initialized) {
+      initialized = true;
+      prev = next;
+
+      return;
+    }
+
+    if (equals(prev, next)) return;
+
+    const old = prev;
+
+    prev = next;
+    cb(next, old);
+  });
 }
-
 export { watch };
 
-export const store = <T extends object>(initial: T, storeOptions?: ReactiveOptions<T>): Store<T> => {
+export const store = <T extends object>(initial: T): Store<T> => {
   ensureObject(initial, '[stateit] store() requires a plain object initial state.');
 
-  const initialSnapshot = clone(initial);
-  const state = signal(clone(initial), storeOptions);
-
-  return {
+  const initialSnapshot = structuredClone(initial);
+  const state = signal(structuredClone(initial));
+  const api: Store<T> & { [IS_SIGNAL]: true } = {
+    [IS_SIGNAL]: true,
     patch(partial: Partial<T>): void {
-      if (typeof partial !== 'object' || partial === null || Array.isArray(partial)) {
-        throw new TypeError('[stateit] store.patch() requires a plain object partial.');
-      }
+      ensureObject(partial, '[stateit] store.patch() requires a plain object partial.');
 
-      state.value = { ...state.value, ...partial };
+      const current = untrack(() => state.value);
+      const hasChange = (Object.keys(partial) as Array<keyof T>).some((k) => !Object.is(current[k], partial[k]));
+
+      if (hasChange) state.value = { ...current, ...partial };
+    },
+    peek(): T {
+      return state.peek();
     },
     reset(): void {
-      state.value = clone(initialSnapshot);
+      state.value = structuredClone(initialSnapshot);
+    },
+    subscribe(onStoreChange: () => void): Subscription {
+      return state.subscribe(onStoreChange);
     },
     update(fn: (current: T) => T): void {
-      const next = fn(state.value);
-
-      ensureObject(next, '[stateit] store.update() must return a plain object.');
-      state.value = next;
+      state.update(fn);
     },
     get value(): T {
       return state.value;
     },
-    set value(next: T) {
-      ensureObject(next, '[stateit] Store value must always be a plain object.');
-      state.value = next;
-    },
   };
+
+  return api;
 };
 
 // === TYPE HELPERS ===
 
-export const readonly = <T>(input: ReadonlySignal<T>): ReadonlySignal<T> => input;
-
-export const writable = <T>(input: Signal<T>): Signal<T> => input;
-
-export const isSignal = <T = unknown>(value: unknown): value is ReadonlySignal<T> => {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const candidate = value as Partial<ReadonlySignal<T>>;
-
-  return 'value' in candidate;
-};
-
-export const peekValue = <T>(input: T | ReadonlySignal<T>): T => (isSignal<T>(input) ? input.value : input);
-
-export const toValue = <T>(input: T | ReadonlySignal<T> | (() => T)): T => {
-  if (isSignal<T>(input)) return input.value;
-
-  if (typeof input === 'function') return (input as () => T)();
-
-  return input;
-};
+export const isSignal = <T = unknown>(value: unknown): value is ReadonlySignal<T> =>
+  typeof value === 'object' && value !== null && !!(value as Record<typeof IS_SIGNAL, unknown>)[IS_SIGNAL];

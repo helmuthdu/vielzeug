@@ -3,23 +3,21 @@ title: Timezone Conversion
 description: Converting times between different timezones with Timit.
 ---
 
-# Timezone Conversion
-
 Converting a time from one timezone to another while preserving the exact moment in time.
 
 ## Basic Conversion
 
 ```ts
-import { t } from '@vielzeug/timit';
+import { formatHuman, now, toZoned } from '@vielzeug/timit';
 
-const utc = '2026-03-21T10:15:30Z';
+const utc = Temporal.Instant.from('2026-03-21T10:15:30Z');
 
-const tokyo = t.toZoned(utc, { tz: 'Asia/Tokyo' });
-const london = t.toZoned(utc, { tz: 'Europe/London' });
-const newyork = t.toZoned(utc, { tz: 'America/New_York' });
+const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' });
+const london = toZoned(utc, { tz: 'Europe/London' });
+const newyork = toZoned(utc, { tz: 'America/New_York' });
 
-console.log(tokyo.hour);   // 19 (7:15 PM JST)
-console.log(london.hour);  // 10 (10:15 AM GMT)
+console.log(tokyo.hour); // 19 (7:15 PM JST)
+console.log(london.hour); // 10 (10:15 AM GMT)
 console.log(newyork.hour); // 5  (5:15 AM EDT)
 ```
 
@@ -28,18 +26,13 @@ All three represent the **exact same moment** in time, just displayed differentl
 ## Display in Multiple Timezones
 
 ```ts
-const event = '2026-04-15T14:00:00Z';
+const event = Temporal.Instant.from('2026-04-15T14:00:00Z');
 
-const timezones = [
-  'America/New_York',
-  'Europe/Berlin',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-];
+const timezones = ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo', 'Australia/Sydney'];
 
 for (const tz of timezones) {
-  const local = t.toZoned(event, { tz });
-  const formatted = t.formatHuman(local, { pattern: 'long', tz });
+  const local = toZoned(event, { tz });
+  const formatted = formatHuman(local, { pattern: 'long', tz });
   console.log(`${tz.padEnd(20)} ${formatted}`);
 }
 ```
@@ -47,11 +40,11 @@ for (const tz of timezones) {
 ## Getting Current Time in a Timezone
 
 ```ts
-const now = t.now();           // Current time in system timezone
-const londonNow = t.now('Europe/London');
-const tokyoNow = t.now('Asia/Tokyo');
+const current = now('UTC');
+const londonNow = now('Europe/London');
+const tokyoNow = now('Asia/Tokyo');
 
-console.log(t.formatHuman(now, { pattern: 'short' }));
-console.log(t.formatHuman(londonNow, { pattern: 'short' }));
-console.log(t.formatHuman(tokyoNow, { pattern: 'short' }));
+console.log(formatHuman(current, { pattern: 'short', tz: 'UTC' }));
+console.log(formatHuman(londonNow, { pattern: 'short', tz: 'Europe/London' }));
+console.log(formatHuman(tokyoNow, { pattern: 'short', tz: 'Asia/Tokyo' }));
 ```

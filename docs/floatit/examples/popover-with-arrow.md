@@ -5,29 +5,34 @@ description: 'Popover with Arrow examples for floatit.'
 
 ## Popover with Arrow
 
-## Problem
-
-Implement popover with arrow in a production-friendly way with `@vielzeug/floatit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/floatit` installed.
-
-Align an arrow element with the placement side by using `dataset.placement`.
+### Solution
 
 ```ts
-import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
+import { arrow, autoUpdate, flip, hide, offset, computePosition, shift } from '@vielzeug/floatit';
 
 const trigger = document.querySelector<HTMLElement>('#btn')!;
 const popover = document.querySelector<HTMLElement>('#popover')!;
+const arrowEl = popover.querySelector<HTMLElement>('.arrow')!;
 
 let cleanup: (() => void) | null = null;
 
 function update() {
-  popover.dataset.placement = positionFloat(trigger, popover, {
+  const result = computePosition(trigger, popover, {
     placement: 'top',
-    middleware: [offset(12), flip(), shift({ padding: 8 })],
+    middleware: [offset(12), flip(), shift({ padding: 8 }), arrow({ element: arrowEl, padding: 8 }), hide()],
   });
+
+  popover.style.left = `${result.x}px`;
+  popover.style.top = `${result.y}px`;
+
+  popover.dataset.placement = result.placement;
+
+  const arrowData = result.middlewareData.arrow as { x?: number; y?: number } | undefined;
+  arrowEl.style.left = arrowData?.x != null ? `${arrowData.x}px` : '';
+  arrowEl.style.top = arrowData?.y != null ? `${arrowData.y}px` : '';
+
+  const hideData = result.middlewareData.hide as { escaped?: boolean; referenceHidden?: boolean } | undefined;
+  popover.style.visibility = hideData?.referenceHidden ? 'hidden' : 'visible';
 }
 
 trigger.addEventListener('click', () => {
@@ -35,44 +40,32 @@ trigger.addEventListener('click', () => {
     popover.removeAttribute('data-open');
     cleanup?.();
     cleanup = null;
-  } else {
-    popover.setAttribute('data-open', '');
-    cleanup = autoUpdate(trigger, popover, update);
+    return;
   }
+
+  popover.setAttribute('data-open', '');
+  cleanup = autoUpdate(trigger, popover, update);
 });
 ```
 
 ```css
-/* Arrow pointing down (placement = top) */
-#popover[data-placement='top'] .arrow {
+#popover .arrow {
+  position: absolute;
+}
+
+#popover[data-placement^='top'] .arrow {
   bottom: -5px;
 }
-#popover[data-placement='bottom'] .arrow {
+
+#popover[data-placement^='bottom'] .arrow {
   top: -5px;
 }
-#popover[data-placement='left'] .arrow {
+
+#popover[data-placement^='left'] .arrow {
   right: -5px;
 }
-#popover[data-placement='right'] .arrow {
+
+#popover[data-placement^='right'] .arrow {
   left: -5px;
 }
 ```
-
----
-
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Context Menu](./context-menu.md)
-- [Custom Middleware](./custom-middleware.md)
-- [Dropdown / Select](./dropdown-select.md)

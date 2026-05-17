@@ -1,111 +1,205 @@
-import { retry } from '@vielzeug/toolkit';
-
 import type { RetryOptions } from './retry';
-import type { MutationState, QueryStatus, Unsubscribe } from './types';
+import type { MutationState, SyncStore, Unsubscribe } from './types';
 
-import { toError } from './errors';
-import { getRetryConfig } from './retry';
-import { dispatch, makeState } from './state';
+import { runWithRetry } from './retry';
 
-export type MutationOptions<TData = unknown, TVariables = unknown> = RetryOptions & {
-  onError?: (error: Error, variables: TVariables) => void;
-  onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void;
-  onSuccess?: (data: TData, variables: TVariables) => void;
+const IDLE_STATE: MutationState<unknown> = {
+  data: undefined,
+  error: null,
+  isFetching: false,
+  status: 'idle',
+  updatedAt: undefined,
 };
 
-export function createMutation<TData, TVariables = void>(
-  mutationFn: (variables: TVariables) => Promise<TData>,
-  mutOpts?: MutationOptions<TData, TVariables>,
-) {
-  let snap: { data: TData | undefined; error: Error | null; status: QueryStatus; updatedAt: number } = {
+function createPendingState<TData>(): MutationState<TData> {
+  return {
     data: undefined,
     error: null,
-    status: 'idle',
-    updatedAt: 0,
+    isFetching: true,
+    status: 'pending',
+    updatedAt: undefined,
   };
-  let currentAc: AbortController | null = null;
+}
+
+export type MutationOptions<TData = unknown> = RetryOptions & {
+  /** Called when a lifecycle callback throws. Does not affect mutate() result. Optional for development/debugging. */
+  onCallbackError?: (error: Error) => void;
+  /** Called after a failed run, before `mutate()` rejects. */
+  onError?: (error: Error) => void | Promise<void>;
+  /** Called after every run regardless of outcome. */
+  onSettled?: (data: TData | undefined, error: Error | null) => void | Promise<void>;
+  /** Called after a successful run, before `mutate()` resolves. */
+  onSuccess?: (data: TData) => void | Promise<void>;
+};
+
+export type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
+
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+export function createMutation<TData, TVariables = void>(
+  mutationFn: MutationFn<TData, TVariables>,
+  mutOpts?: MutationOptions<TData>,
+): Mutation<TData, TVariables> {
+  let snap: MutationState<TData> = IDLE_STATE as MutationState<TData>;
+  let currentRun = 0;
+  let activeRun: { controller: AbortController; promise: Promise<unknown> } | null = null;
   const observers = new Set<(state: MutationState<TData>) => void>();
+  let cachedStore: SyncStore<MutationState<TData>> | null = null;
 
   function notify() {
-    dispatch(observers, makeState(snap));
+    observers.forEach((l) => l(snap));
+  }
+
+  async function safeCall(fn: (() => void | Promise<void>) | undefined): Promise<void> {
+    try {
+      await fn?.();
+    } catch (err) {
+      if (mutOpts?.onCallbackError) {
+        try {
+          mutOpts.onCallbackError(toError(err));
+        } catch {
+          // Silently ignore errors in error handler itself.
+        }
+      }
+    }
+  }
+
+  async function fireSettled(data: TData | undefined, error: Error | null): Promise<void> {
+    await safeCall(() => mutOpts?.onSettled?.(data, error));
   }
 
   return {
-    cancel() {
-      if (snap.status !== 'pending') return;
+    async cancel(): Promise<void> {
+      const run = activeRun;
 
-      currentAc?.abort();
-      currentAc = null;
-      snap = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
-      notify();
+      if (!run) return;
+
+      run.controller.abort();
+      await run.promise.catch(() => {});
     },
 
     getState(): MutationState<TData> {
-      return makeState(snap);
+      return snap;
     },
 
-    async mutate(variables: TVariables, callOpts?: RetryOptions & { signal?: AbortSignal }): Promise<TData> {
-      if (snap.status === 'pending') {
-        throw new Error('[fetchit] mutation already in flight — await the previous call or call cancel() first');
-      }
+    async mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData> {
+      const localController = new AbortController();
 
-      const retryOpts = getRetryConfig(
-        callOpts?.retry ?? mutOpts?.retry ?? 0,
-        callOpts?.retryDelay ?? mutOpts?.retryDelay,
-        callOpts?.shouldRetry ?? mutOpts?.shouldRetry,
-      );
+      const signal = callOpts?.signal
+        ? AbortSignal.any([callOpts.signal, localController.signal])
+        : localController.signal;
+      const run = ++currentRun;
 
-      currentAc = new AbortController();
-
-      const signal = callOpts?.signal ? AbortSignal.any([currentAc.signal, callOpts.signal]) : currentAc.signal;
-
-      snap = { data: undefined, error: null, status: 'pending', updatedAt: 0 };
+      snap = createPendingState();
       notify();
 
-      try {
-        const data = await retry(() => mutationFn(variables), { ...retryOpts, signal });
+      const operation = (async () => {
+        try {
+          const data = await runWithRetry(
+            () => mutationFn(variables, signal),
+            mutOpts?.attempts ?? 1,
+            mutOpts?.retryDelay,
+            mutOpts?.shouldRetry,
+            signal,
+          );
 
-        currentAc = null;
-        snap = { data, error: null, status: 'success', updatedAt: Date.now() };
-        notify();
-        mutOpts?.onSuccess?.(data, variables);
-        mutOpts?.onSettled?.(data, null, variables);
+          if (run === currentRun) {
+            snap = { data, error: null, isFetching: false, status: 'success', updatedAt: Date.now() };
+            notify();
+          }
 
-        return data;
-      } catch (err) {
-        currentAc = null;
+          await safeCall(() => mutOpts?.onSuccess?.(data));
 
-        const error = toError(err);
-        const isAborted = error.name === 'AbortError';
+          await fireSettled(data, null);
 
-        // cancel() already transitioned state to 'idle' and notified — don't override it
-        if (isAborted && snap.status === 'idle') throw error;
+          return data;
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          const isAborted = signal.aborted || error.name === 'AbortError';
 
-        if (isAborted) {
-          snap = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
-        } else {
-          snap = { data: undefined, error, status: 'error', updatedAt: Date.now() };
-          mutOpts?.onError?.(error, variables);
-          mutOpts?.onSettled?.(undefined, error, variables);
+          if (run === currentRun) {
+            snap = isAborted
+              ? (IDLE_STATE as MutationState<TData>)
+              : { data: undefined, error, isFetching: false, status: 'error', updatedAt: Date.now() };
+            notify();
+          }
+
+          if (!isAborted) {
+            await safeCall(() => mutOpts?.onError?.(error));
+          }
+
+          await fireSettled(undefined, isAborted ? null : error);
+
+          throw error;
+        } finally {
+          if (activeRun?.controller === localController) {
+            activeRun = null;
+          }
         }
+      })();
 
-        notify();
-        throw error;
-      }
+      activeRun = { controller: localController, promise: operation };
+
+      return operation;
     },
 
     reset() {
-      snap = { data: undefined, error: null, status: 'idle', updatedAt: 0 };
+      snap = IDLE_STATE as MutationState<TData>;
       notify();
     },
 
     subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe {
       observers.add(listener);
-      listener(makeState(snap));
+      listener(snap);
 
       return () => observers.delete(listener);
+    },
+
+    toStore(): SyncStore<MutationState<TData>> {
+      if (cachedStore) return cachedStore;
+
+      let snapshot: MutationState<TData> = snap;
+
+      cachedStore = {
+        peek() {
+          return snapshot;
+        },
+
+        subscribe(onStoreChange) {
+          let isFirst = true;
+
+          const listener = (state: MutationState<TData>) => {
+            snapshot = state;
+
+            // React external stores should not notify during subscription setup.
+            if (isFirst) {
+              isFirst = false;
+
+              return;
+            }
+
+            onStoreChange();
+          };
+
+          observers.add(listener);
+          listener(snap);
+
+          return () => observers.delete(listener);
+        },
+      };
+
+      return cachedStore;
     },
   };
 }
 
-export type Mutation<TData, TVariables = void> = ReturnType<typeof createMutation<TData, TVariables>>;
+export interface Mutation<TData, TVariables = void> {
+  cancel(): Promise<void>;
+  getState(): MutationState<TData>;
+  mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData>;
+  reset(): void;
+  subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe;
+  toStore(): SyncStore<MutationState<TData>>;
+}

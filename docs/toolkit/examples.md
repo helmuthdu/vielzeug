@@ -1,17 +1,9 @@
 ---
 title: Toolkit — Examples
-description: Practical Toolkit examples organized by utility category.
+description: Practical Toolkit examples by category.
 ---
 
-# Toolkit Examples
-
-Use these example collections to find working snippets for the current Toolkit API.
-
-## How to Use These Examples
-
-1. Start with the category that matches your immediate task.
-2. Move to adjacent categories as your utility needs grow.
-3. Keep the API page open while adapting snippets to your project.
+Use these examples as copy/paste starting points for real applications.
 
 ## Categories
 
@@ -26,21 +18,16 @@ Use these example collections to find working snippets for the current Toolkit A
 - [String utilities](./examples/string.md)
 - [Typed utilities](./examples/typed.md)
 
-## Getting Started
+## Quick Example
 
 ```ts
-import { chunk, retry, currency, Scheduler } from '@vielzeug/toolkit';
+import { chunk, partial, queue, retry } from '@vielzeug/toolkit';
 
-const batches = chunk([1, 2, 3, 4], 2);
-const value = currency({ amount: 1299n, currency: 'USD' });
+const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
+const pages = chunk(doubleAll([1, 2, 3, 4, 5]), 2);
 
-await retry(async () => fetch('/api/health'), {
-  times: 3,
-  delay: 100,
-  shouldRetry: (err, attempt) => attempt < 2,
-});
+const q = queue({ concurrency: 2 });
+await q.add(() => retry(() => fetch('/api/a').then((r) => r.json()), { times: 2 }));
 
-// Background-priority task (won't delay user interactions)
-const scheduler = new Scheduler();
-void scheduler.postTask(() => cleanupOldData(), { delay: 60_000, priority: 'background' });
+console.log(pages);
 ```

@@ -1,7 +1,9 @@
 ---
 title: Toolkit — Utility library for TypeScript
-description: Tree-shakeable, zero-dependency utility library for arrays, objects, strings, async flows, dates, and math.
+description: Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, dates, money, random, and typed checks.
 ---
+
+<!-- markdownlint-disable MD025 MD033 MD060 -->
 
 <PackageBadges package="toolkit" />
 
@@ -9,9 +11,9 @@ description: Tree-shakeable, zero-dependency utility library for arrays, objects
 
 # Toolkit
 
-**Toolkit** is a comprehensive utility library with zero dependencies. It is tree-shakeable, so you only bundle what you import. It ships 75+ fully typed utilities for arrays, objects, strings, async flows, dates, math, money, random values, and runtime type checks.
+`@vielzeug/toolkit` is a compact utility package built for modern TypeScript projects. The API is intentionally small, composable, and fully tree-shakeable.
 
-<!-- Search keywords: utility library, helper functions, TypeScript utilities. -->
+<!-- Search keywords: utility functions, typed helpers, array object async utilities. -->
 
 ## Installation
 
@@ -34,88 +36,61 @@ yarn add @vielzeug/toolkit
 ## Quick Start
 
 ```ts
-import { chunk, group, keyBy, select, toggle, sort, debounce, retry, merge, is } from '@vielzeug/toolkit';
+import { chunk, pick, queue, retry, parseJSON, partial, filterMap, is } from '@vielzeug/toolkit';
 
-// Arrays
-chunk([1, 2, 3, 4, 5], 2); // [[1,2],[3,4],[5]]
-group([{ type: 'a' }, { type: 'b' }, { type: 'a' }], (x) => x.type);
-// { a: [...], b: [...] }
-keyBy(
-  [
-    { id: 1, name: 'Alice' },
-    { id: 2, name: 'Bob' },
-  ],
-  'id',
-);
-// { '1': {id:1,name:'Alice'}, '2': {id:2,name:'Bob'} }
+const pages = chunk([1, 2, 3, 4, 5], 2);
+const user = pick({ id: 1, name: 'Alice', role: 'admin' }, ['id', 'name']);
 
-// Sort with object selectors
-sort(
-  [
-    { age: 30, name: 'Bob' },
-    { age: 30, name: 'Alice' },
-    { age: 25, name: 'Chris' },
-  ],
-  { age: 'desc', name: 'asc' },
-);
+const q = queue({ concurrency: 2 });
+await q.add(() => fetch('/api/a'));
 
-// Functions
-const fn = debounce(() => console.log('typed'), 300);
+const health = await retry(() => fetch('/api/health').then((r) => r.json()), {
+  times: 3,
+  delay: 250,
+});
 
-// Async
-const result = await retry(() => fetchData(), { times: 3, delay: 1000 });
+const cfg = parseJSON('{"api":{"host":"localhost","port":3000}}', {
+  defaultValue: { api: { host: 'localhost', port: 3000 } },
+});
 
-// Objects
-const merged = merge('deep', { a: { x: 1 } }, { a: { y: 2 } });
-// { a: { x: 1, y: 2 } }
+const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
+const doubled = doubleAll([1, 2, 3]);
 
-// Type guards
-is.string('hello'); // true
-is.nil(null); // true
+if (is.object(cfg)) {
+  console.log(health, cfg, user);
+}
 ```
 
 ## Why Toolkit?
 
-Lodash ships ~70 kB even tree-shaken. Toolkit provides modern, tree-shakeable utilities with full TypeScript inference at a fraction of the size.
+Toolkit favors a curated, typed utility surface over an everything-and-the-kitchen-sink API, with zero dependencies and modern tree-shakeable exports.
 
-```ts
-// Before - verbose native JS
-let groupedByCategory = {} as Record<string, typeof items>;
+| Feature                     | Toolkit                                       | lodash-es | Remeda  |
+| --------------------------- | --------------------------------------------- | --------- | ------- |
+| Bundle size                 | <PackageInfo package="toolkit" type="size" /> | ~72 kB    | ~18 kB  |
+| TypeScript-first ergonomics | ✅                                            | Partial   | ✅      |
+| Deep utility coverage       | ✅                                            | ✅        | Partial |
+| Async control-flow helpers  | ✅                                            | Partial   | ❌      |
+| Typed predicate namespace   | ✅                                            | ❌        | Partial |
+| Tree-shakeable modules      | ✅                                            | ✅        | ✅      |
+| Zero dependencies           | ✅                                            | ✅        | ✅      |
 
-groupedByCategory = items.reduce((acc, item) => {
-  const key = item.category;
-  (acc[key] = acc[key] || []).push(item);
+**Use Toolkit when** you want one compact, typed utility layer that covers array/object/function/async/math/date/random use cases.
 
-  return acc;
-}, groupedByCategory);
-
-// After - Toolkit
-import { group } from '@vielzeug/toolkit';
-const grouped = group(items, (item) => item.category);
-```
-
-| Feature           | Toolkit                                       | Lodash        | Radash |
-| ----------------- | --------------------------------------------- | ------------- | ------ |
-| Bundle size       | <PackageInfo package="toolkit" type="size" /> | ~26 kB        | ~5 kB  |
-| Tree-shakeable    | ✅ Always                                     | ✅ lodash-es  | ✅     |
-| TypeScript        | ✅ First-class                                | ⚠️ Via @types | ✅     |
-| Async utilities   | ✅                                            | ⚠️ Limited    | ✅     |
-| Zero dependencies | ✅                                            | ✅            | ✅     |
-
-**Use Toolkit when** you want utility functions with strong TypeScript types and minimal bundle impact.
-
-**Consider Lodash or Radash** if your codebase already depends on them and migration effort outweighs the type and bundle-size gains.
+**Consider narrower alternatives when** you only need a small functional subset and prefer ultra-focused APIs.
 
 ## Features
 
-- **Arrays** — `chunk`, `group`, `keyBy`, `fold`, `select`, `toggle`, `replace`, `rotate`, `search`, `sort`, `contains`, `uniq`, `pick`, `list`, `remoteList`
-- **Async** — `retry`, `sleep`, `parallel`, `pool`, `queue`, `race`, `attempt`, `defer`, `waitFor`, `Scheduler`, `polyfillScheduler`
-- **Objects** — `merge`, `diff`, `get`, `seek`, `prune`, `proxy`, `stash`, `parseJSON`
-- **Strings** — `camelCase`, `kebabCase`, `pascalCase`, `snakeCase`, `truncate`, `similarity`
-- **Math** — `sum`, `average`, `median`, `min`, `max`, `clamp`, `round`, `range`, `percent`, `linspace`, `allocate`, `distribute`
-- **Dates** — `timeDiff`, `interval`, `expires`
-- **Functions** — `debounce`, `throttle`, `compose`, `pipe`, `curry`, `memo`, `once`, `compare`, `fp`
-- **Zero dependencies** — tree-shakeable; import only what you need
+- **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `sample`, `take/drop`, `union/intersection`, `zip/unzip`, and more
+- **Async**: `attempt`, `abortable`, `timeout`, `parallel`, `queue`, `Scheduler`, `retry`, `waitFor`
+- **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `entries`, `fromEntries`, `keys`, `values`, `deepClone`, `defaults`, `deepMerge`, `shallowMerge`, `parseJSON`, `get`, `seek`, `stash`
+- **Function**: `partial`, `negate`, `and/or/not`, `tap`, `identity`, `constant`, composition, memoization, and rate limiting
+- **Math**: `lerp`, `normalize`, `mod`, `gcd/lcm`, `variance`, `standardDeviation`, plus existing numeric helpers
+- **Date**: `expires`, `interval`, `timeDiff`
+- **Money**: `currency`, `exchange`
+- **Random**: `draw`, `random`, `shuffle`, `uuid`
+- **Typed Namespace**: `is.array`, `is.boolean`, `is.date`, `is.defined`, `is.empty`, `is.equal`, `is.fn`, `is.greaterThan`, `is.greaterThanOrEqual`, `is.lessThan`, `is.lessThanOrEqual`, `is.match`, `is.nil`, `is.number`, `is.object`, `is.primitive`, `is.promise`, `is.regex`, `is.string`, `is.typeOf`, `is.within`
+- **Typed Predicates**: standalone numeric helpers `isGreaterThan`, `isGreaterThanOrEqual`, `isLessThan`, `isLessThanOrEqual`, `isWithin`
 
 ## Compatibility
 
@@ -128,6 +103,11 @@ const grouped = group(items, (item) => item.category);
 
 ## See Also
 
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 - [Fetchit](/fetchit/)
 - [Stateit](/stateit/)
 - [Validit](/validit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

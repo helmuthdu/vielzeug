@@ -1,3 +1,5 @@
+import type { Fn } from '../types';
+
 /**
  * Curries a function, allowing it to be called with partial arguments.
  *
@@ -28,19 +30,16 @@ export type Curried<P extends readonly unknown[], R> = P extends readonly []
       ...args: A
     ) => P extends readonly [...A, ...infer Rest] ? (Rest extends readonly [] ? R : Curried<Rest, R>) : never;
 // Overloads to reflect default arity vs. a custom arity.
-export function curry<T extends (...args: any[]) => any>(fn: T): Curried<Parameters<T>, ReturnType<T>>;
-export function curry<T extends (...args: any[]) => any, N extends number>(
-  fn: T,
-  arity: N,
-): Curried<Take<N, Parameters<T>>, ReturnType<T>>;
+export function curry<T extends Fn>(fn: T): Curried<Parameters<T>, ReturnType<T>>;
+export function curry<T extends Fn, N extends number>(fn: T, arity: N): Curried<Take<N, Parameters<T>>, ReturnType<T>>;
 // Runtime implementation
-export function curry(fn: (...args: any[]) => any, arity = fn.length) {
-  const curried = (...args: any[]): any => {
+export function curry(fn: Fn, arity = fn.length) {
+  const curried = (...args: unknown[]) => {
     if (args.length >= arity) {
       return fn(...args);
     }
 
-    return (...rest: any[]) => curried(...args, ...rest);
+    return (...rest: unknown[]) => curried(...args, ...rest);
   };
 
   return curried as any;

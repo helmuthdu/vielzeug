@@ -324,6 +324,43 @@ describe('bit-textarea', () => {
       expect(counter?.textContent?.trim()).toBe('10/10');
       expect(counter?.className).toContain('at-limit');
     });
+
+    it('updates counter when typing with maxlength', async () => {
+      fixture = await mount('bit-textarea', {
+        attrs: {
+          maxlength: '10',
+        },
+      });
+
+      const ta = fixture.query<HTMLTextAreaElement>('textarea')!;
+      let counter = fixture.query<HTMLElement>('.counter')!;
+
+      expect(counter?.textContent?.trim()).toBe('0/10');
+      expect(counter?.className).not.toContain('near-limit');
+      expect(counter?.className).not.toContain('at-limit');
+
+      // Type 9 characters (90% of maxlength) - should trigger near-limit
+      await user.type(ta, '123456789');
+      await fixture.flush();
+
+      // Re-query the counter-element to get updated class
+      counter = fixture.query<HTMLElement>('.counter')!;
+
+      expect(ta.value).toBe('123456789');
+      expect(counter?.textContent?.trim()).toBe('9/10');
+      expect(counter?.className).toContain('near-limit');
+
+      // Type 1 more character to reach the limit
+      await user.type(ta, '0');
+      await fixture.flush();
+
+      // Re-query the counter-element again
+      counter = fixture.query<HTMLElement>('.counter')!;
+
+      expect(ta.value).toBe('1234567890');
+      expect(counter?.textContent?.trim()).toBe('10/10');
+      expect(counter?.className).toContain('at-limit');
+    });
   });
 });
 

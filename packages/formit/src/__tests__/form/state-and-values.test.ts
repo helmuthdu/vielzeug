@@ -1,0 +1,286 @@
+import { createForm } from '../../index';
+
+describe('form state and values', () => {
+  test('stores primitive values without coercion', () => {
+    const form = createForm({ defaultValues: { age: 25, flag: true, name: 'Alice' } });
+
+    expect(form.get('age')).toBe(25);
+    expect(form.get('flag')).toBe(true);
+    expect(form.get('name')).toBe('Alice');
+  });
+
+  test('flattens nested object defaults into dot-notation field keys', () => {
+    const form = createForm({ defaultValues: { user: { name: 'Alice', profile: { city: 'NYC' } } } });
+
+    expect(form.get('user')).toBeUndefined();
+    expect(form.get('user.name')).toBe('Alice');
+    expect(form.get('user.profile.city')).toBe('NYC');
+  });
+
+  test('values() returns nested object shape', () => {
+    const form = createForm({ defaultValues: { user: { name: 'Alice' } } });
+
+    form.set('user.name', 'Bob');
+
+    expect(form.values()).toEqual({ user: { name: 'Bob' } });
+  });
+
+  test('set with dirty:false keeps field clean', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    form.set('x', 2, { dirty: false });
+
+    expect(form.field('x').dirty).toBe(false);
+  });
+
+  test('set with touched:true marks the field touched', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    form.set('x', 2, { touched: true });
+
+    expect(form.field('x').touched).toBe(true);
+  });
+
+  test('dirty tracking clears when a field is set back to baseline', () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+
+    form.set('name', 'Bob');
+    expect(form.field('name').dirty).toBe(true);
+
+    form.set('name', 'Alice');
+    expect(form.field('name').dirty).toBe(false);
+  });
+
+  test('Date dirty tracking compares by timestamp', () => {
+    const form = createForm({ defaultValues: { dueAt: new Date('2024-01-01T00:00:00.000Z') } });
+
+    form.set('dueAt', new Date('2024-01-02T00:00:00.000Z'));
+    expect(form.field('dueAt').dirty).toBe(true);
+
+    form.set('dueAt', new Date('2024-01-01T00:00:00.000Z'));
+    expect(form.field('dueAt').dirty).toBe(false);
+  });
+
+  test('reset restores baseline values and clears meta state', () => {
+    const form = createForm({ defaultValues: { age: 25, name: 'Alice' } });
+
+    form.set('name', 'Bob');
+    form.touch('name');
+    form.setError('name', 'Too short');
+    form.reset();
+
+    expect(form.values()).toEqual({ age: 25, name: 'Alice' });
+    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'Alice' });
+  });
+
+  test('replace updates current values and baseline for future reset', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    form.replace({ x: 99 });
+    form.set('x', 100);
+    form.reset();
+
+    expect(form.values()).toEqual({ x: 99 });
+  });
+
+  test('reset aborts in-flight validation and prevents stale errors', async () => {
+    let startedResolve!: () => void;
+    const started = new Promise<void>((resolve) => {
+      startedResolve = resolve;
+    });
+
+    const form = createForm({
+      defaultValues: { name: 'ok' },
+      validators: {
+        name: async (_value: unknown, signal?: AbortSignal) => {
+          startedResolve();
+
+          await new Promise<never>((_, reject) => {
+            signal?.addEventListener(
+              'abort',
+              () => {
+                const abortError = new Error('Aborted');
+
+                abortError.name = 'AbortError';
+                reject(abortError);
+              },
+              { once: true },
+            );
+          });
+
+          return 'Invalid';
+        },
+      },
+    });
+
+    form.set('name', 'bad');
+
+    const pendingValidation = form.validateField('name');
+
+    await started;
+
+    form.reset();
+    await pendingValidation;
+
+    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'ok' });
+  });
+
+  test('replace aborts in-flight validation and prevents stale errors', async () => {
+    let startedResolve!: () => void;
+    const started = new Promise<void>((resolve) => {
+      startedResolve = resolve;
+    });
+
+    const form = createForm({
+      defaultValues: { name: 'ok' },
+      validators: {
+        name: async (_value: unknown, signal?: AbortSignal) => {
+          startedResolve();
+
+          await new Promise<never>((_, reject) => {
+            signal?.addEventListener(
+              'abort',
+              () => {
+                const abortError = new Error('Aborted');
+
+                abortError.name = 'AbortError';
+                reject(abortError);
+              },
+              { once: true },
+            );
+          });
+
+          return 'Invalid';
+        },
+      },
+    });
+
+    form.set('name', 'bad');
+
+    const pendingValidation = form.validateField('name');
+
+    await started;
+
+    form.replace({ name: 'replaced' });
+    await pendingValidation;
+
+    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'replaced' });
+  });
+
+  test('resetField only affects the targeted field', () => {
+    const form = createForm({ defaultValues: { age: 25, name: 'Alice' } });
+
+    form.set('age', 30);
+    form.set('name', 'Bob');
+    form.touch('name');
+    form.setError('name', 'Too long');
+    form.resetField('name');
+
+    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'Alice' });
+    expect(form.get('age')).toBe(30);
+  });
+
+  test('resetField aborts in-flight validation and prevents stale errors', async () => {
+    let startedResolve!: () => void;
+    const started = new Promise<void>((resolve) => {
+      startedResolve = resolve;
+    });
+
+    const form = createForm({
+      defaultValues: { name: 'ok' },
+      validators: {
+        name: async (_value: unknown, signal?: AbortSignal) => {
+          startedResolve();
+
+          await new Promise<never>((_, reject) => {
+            signal?.addEventListener(
+              'abort',
+              () => {
+                const abortError = new Error('Aborted');
+
+                abortError.name = 'AbortError';
+                reject(abortError);
+              },
+              { once: true },
+            );
+          });
+
+          return 'Invalid';
+        },
+      },
+    });
+
+    form.set('name', 'bad');
+
+    const pendingValidation = form.validateField('name');
+
+    await started;
+
+    form.resetField('name');
+    await pendingValidation;
+
+    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'ok' });
+  });
+
+  test('removeField removes value, baseline, and validator state', async () => {
+    let validatorCalls = 0;
+    const form = createForm({
+      defaultValues: { email: '', name: '' },
+      validators: {
+        name: (value: unknown) => {
+          validatorCalls++;
+
+          return value ? undefined : 'Required';
+        },
+      },
+    });
+
+    form.touch('name');
+    form.setError('name', 'Required');
+
+    form.removeField('name');
+    form.reset();
+
+    await expect(form.validateAll()).resolves.toEqual({ errors: {}, valid: true });
+
+    expect(form.get('name')).toBeUndefined();
+    expect(form.get('email')).toBe('');
+    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: undefined });
+    expect(validatorCalls).toBe(0);
+  });
+
+  test('error map can be replaced and omits undefined entries', () => {
+    const form = createForm<Record<string, unknown>>({});
+
+    form.resetErrors({ a: 'Err A', b: undefined as unknown as string, c: 'Err C' });
+
+    expect(form.state.errors).toEqual({ a: 'Err A', c: 'Err C' });
+  });
+
+  test('clearError removes only the targeted field error', () => {
+    const form = createForm<Record<string, unknown>>({});
+
+    form.setError('a', 'Err A');
+    form.setError('b', 'Err B');
+    form.clearError('a');
+
+    expect(form.state.errors).toEqual({ b: 'Err B' });
+  });
+
+  test('state and field snapshots are frozen and stable between mutations', () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+    const firstState = form.state;
+    const firstField = form.field('name');
+
+    expect(Object.isFrozen(firstState)).toBe(true);
+    expect(Object.isFrozen(firstState.errors)).toBe(true);
+    expect(Object.isFrozen(firstField)).toBe(true);
+    expect(form.state).toBe(firstState);
+    expect(form.field('name')).toBe(firstField);
+
+    form.set('name', 'Bob');
+
+    expect(form.state).not.toBe(firstState);
+    expect(form.field('name')).not.toBe(firstField);
+  });
+});

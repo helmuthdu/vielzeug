@@ -27,12 +27,15 @@ Distributes an amount proportionally according to given ratios. Handles rounding
 ```ts
 function allocate(amount: number, ratios: number[]): number[];
 function allocate(amount: bigint, ratios: number[]): bigint[];
+function allocate(amount: number, parts: number): number[];
+function allocate(amount: bigint, parts: number): bigint[];
 ```
 
 ### Parameters
 
 - `amount`: Total amount to allocate (number or bigint)
 - `ratios`: Array of ratios for distribution (e.g., `[1, 2, 3]`)
+- `parts`: Positive integer for equal distribution
 
 ### Returns
 
@@ -43,6 +46,7 @@ function allocate(amount: bigint, ratios: number[]): bigint[];
 - `Error`: If ratios array is empty
 - `Error`: If ratios contain negative values
 - `Error`: If total ratio is zero
+- `RangeError`: If parts is not a positive integer
 
 ## Examples
 
@@ -54,6 +58,15 @@ import { allocate } from '@vielzeug/toolkit';
 // Split $100 in ratio 1:2:3
 allocate(100, [1, 2, 3]);
 // [16, 33, 51] – sum is exactly 100
+```
+
+### Equal Distribution
+
+```ts
+import { allocate } from '@vielzeug/toolkit';
+
+allocate(100, 3);
+// [33, 33, 34]
 ```
 
 ### Split by Percentage
@@ -147,8 +160,8 @@ const [senior, junior] = allocate(bonus, [5, 3]);
 
 ## See Also
 
-- [distribute](./distribute.md): Distribute amount evenly among N parties
-- [distribute](./distribute.md): Distribute a total into equal parts.
+- [sum](./sum.md): Validate that allocations add up to the source amount.
+- [percent](./percent.md): Convert shares into percentage-based displays.
 
 <style>
 .badges {

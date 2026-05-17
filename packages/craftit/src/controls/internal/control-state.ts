@@ -13,39 +13,22 @@ export type ControlContextOptions = {
   validateOn?: ReadonlySignal<ControlValidationMode>;
 };
 
-const shouldReportValidity = (
-  validateOn: ReadonlySignal<ControlValidationMode> | undefined,
-  on: FormControlValidationTrigger,
-): boolean => {
-  return validateOn?.value === on;
+export type ControlStateOptions = {
+  context?: ControlContextOptions;
+  disabled?: ReadonlySignal<boolean | undefined>;
+  validateOn?: ReadonlySignal<ControlValidationMode>;
 };
 
-const triggerValidationForField = (
-  validateOn: ReadonlySignal<ControlValidationMode> | undefined,
-  field: ValidationReporter,
-  on: FormControlValidationTrigger,
-): void => {
-  if (shouldReportValidity(validateOn, on)) field.reportValidity();
-};
+export const createControlState = (options: ControlStateOptions) => {
+  const disabled = computed(() => Boolean(options.disabled?.value) || Boolean(options.context?.disabled?.value));
 
-export const createControlState = (options: ControlContextOptions) => {
-  const disabled = computed(() => Boolean(options.disabled?.value));
-
-  const validateOn = options.validateOn;
+  const validateOn = options.validateOn ?? options.context?.validateOn;
 
   return {
     disabled,
-    triggerValidation: (field: ValidationReporter, on: FormControlValidationTrigger): void =>
-      triggerValidationForField(validateOn, field, on),
+    triggerValidation: (field: ValidationReporter, on: FormControlValidationTrigger): void => {
+      if (validateOn?.value === on) field.reportValidity();
+    },
     validateOn,
-  };
-};
-
-export const createValidationControl = (
-  validateOn: ReadonlySignal<ControlValidationMode> | undefined,
-  field: ValidationReporter,
-) => {
-  return {
-    triggerValidation: (on: FormControlValidationTrigger): void => triggerValidationForField(validateOn, field, on),
   };
 };

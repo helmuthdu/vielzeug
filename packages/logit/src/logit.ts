@@ -1,373 +1,437 @@
 /* -------------------- Types -------------------- */
 
-export type LogType = 'debug' | 'trace' | 'info' | 'success' | 'warn' | 'error';
+export type LogType = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 export type LogLevel = LogType | 'off';
 export type Variant = 'text' | 'symbol' | 'icon';
+export type Bindings = Record<string, unknown>;
 
-export type RemoteHandler = (type: LogType, data: RemoteLogData) => void;
-
-export type RemoteOptions = { handler?: RemoteHandler; logLevel?: LogLevel };
+export type SerializedError = {
+  message: string;
+  name: string;
+  stack?: string;
+};
 
 export type RemoteLogData = {
-  args: unknown[];
+  context?: Bindings;
   env: 'production' | 'development';
+  level: LogType;
+  message?: string;
   namespace?: string;
   timestamp?: string;
 };
 
+export type RemoteHandler = (type: LogType, data: RemoteLogData) => void;
+
+export type RemoteOptions = {
+  handler?: RemoteHandler;
+  logLevel?: LogLevel;
+};
+
 export type LogitOptions = {
-  environment?: boolean;
   logLevel?: LogLevel;
   namespace?: string;
-  remote?: RemoteOptions;
+  remote?: RemoteOptions | null;
   timestamp?: boolean;
   variant?: Variant;
 };
 
-/** The shape of a fully resolved logger config (all fields present). */
-type ResolvedRemote = { handler?: RemoteHandler; logLevel: LogLevel };
-export type LogitConfig = Omit<Required<LogitOptions>, 'remote'> & { remote: ResolvedRemote };
-
-export type Logger = {
-  assert: (condition: boolean, ...args: unknown[]) => void;
-  child: (overrides?: LogitOptions) => Logger;
-  readonly config: Readonly<LogitConfig>;
-  debug: (...args: unknown[]) => void;
-  enabled: (type: LogLevel) => boolean;
-  error: (...args: unknown[]) => void;
-  group: <T>(label: string, fn: () => T, collapsed?: boolean) => T;
-  info: (...args: unknown[]) => void;
-  scope: (name: string) => Logger;
-  setConfig: (opts: LogitOptions) => Logger;
-  success: (...args: unknown[]) => void;
-  table: (data: unknown, properties?: string[]) => void;
-  time: <T>(label: string, fn: () => T) => T;
-  trace: (...args: unknown[]) => void;
-  warn: (...args: unknown[]) => void;
+export type LogitConfig = {
+  logLevel: LogLevel;
+  namespace: string;
+  remote?: {
+    handler: RemoteHandler;
+    logLevel: LogLevel;
+  };
+  timestamp: boolean;
+  variant: Variant;
 };
 
-/* -------------------- Priority -------------------- */
+type LogMethod = {
+  (): void;
+  (message: string): void;
+  (context: Bindings, message?: string): void;
+  (error: Error, message?: string): void;
+};
+
+export type Logger = {
+  readonly bindings: Readonly<Bindings>;
+  child: (overrides?: LogitOptions) => Logger;
+  readonly config: Readonly<LogitConfig>;
+  debug: LogMethod;
+  enabled: (type: LogLevel) => boolean;
+  error: LogMethod;
+  fatal: LogMethod;
+  group: <T>(label: string, fn: () => T) => T;
+  groupCollapsed: <T>(label: string, fn: () => T) => T;
+  info: LogMethod;
+  scope: (name: string) => Logger;
+  time: <T>(label: string, fn: () => T) => T;
+  warn: LogMethod;
+  withBindings: (bindings: Bindings) => Logger;
+};
+
+/* -------------------- Constants -------------------- */
 
 const PRIORITY: Record<LogLevel, number> = {
   debug: 0,
-  error: 5,
-  info: 2,
-  off: 6,
-  success: 3,
-  trace: 1,
-  warn: 4,
+  error: 3,
+  fatal: 4,
+  info: 1,
+  off: 5,
+  warn: 2,
 };
 
-/* -------------------- Theme -------------------- */
-
 type Theme = { bg: string; border: string; color: string; icon?: string; symbol?: string };
-
-const isDarkMode = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
 
 const THEME: Record<LogType | 'group' | 'ns', Theme> = {
   debug: { bg: '#616161', border: '#424242', color: '#fff', icon: '☕', symbol: '🅳' },
   error: { bg: '#d32f2f', border: '#c62828', color: '#fff', icon: '✘', symbol: '🅴' },
+  fatal: { bg: '#4a148c', border: '#38006b', color: '#fff', icon: '💀', symbol: '🅵' },
   group: { bg: '#546e7a', border: '#455a64', color: '#fff', icon: '⚭', symbol: '🅶' },
   info: { bg: '#1976d2', border: '#1565c0', color: '#fff', icon: 'ℹ', symbol: '🅸' },
-  ns: isDarkMode
-    ? { bg: '#fafafa', border: '#c7c7c7', color: '#000' }
-    : { bg: '#424242', border: '#212121', color: '#fff' },
-  success: { bg: '#689f38', border: '#558b2f', color: '#fff', icon: '✔', symbol: '🆂' },
-  trace: { bg: '#d81b60', border: '#c2185b', color: '#fff', icon: '⛢', symbol: '🆃' },
+  ns: { bg: '#424242', border: '#212121', color: '#fff' },
   warn: { bg: '#ffb300', border: '#ffa000', color: '#fff', icon: '⚠', symbol: '🆆' },
 };
 
 const NS_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter; padding: 0 4px;';
 
-/* -------------------- createLogger -------------------- */
-
 const IS_NODE = typeof window === 'undefined';
-const IS_PROD = IS_NODE
-  ? // @ts-expect-error - process is Node-only
-    (process as any).env?.NODE_ENV === 'production'
-  : (import.meta as any)?.env?.NODE_ENV === 'production';
+const NODE_PROCESS = (globalThis as typeof globalThis & { process?: { env?: { NODE_ENV?: string } } }).process;
+const IS_PROD = IS_NODE ? NODE_PROCESS?.env?.NODE_ENV === 'production' : (import.meta as ImportMeta).env.PROD;
 
-const ENV_BADGE = IS_PROD ? '🅿' : '🅳';
-
-const LOG_METHOD: Record<LogType, 'log' | 'info' | 'warn' | 'error' | 'trace'> = {
+const LOG_METHOD: Record<LogType, 'log' | 'info' | 'warn' | 'error'> = {
   debug: 'log',
   error: 'error',
+  fatal: 'error',
   info: 'info',
-  success: 'log',
-  trace: 'trace',
   warn: 'warn',
 };
 
-/**
- * Creates an independent logger instance with its own isolated configuration.
- *
- * @example
- * ```ts
- * const log = createLogger({ logLevel: 'info', namespace: 'App' });
- * log.info('Hello');
- *
- * const apiLog = log.scope('api');
- * apiLog.warn('slow request');
- * ```
- */
-export function createLogger(initial: LogitOptions | string = {}): Logger {
-  const opts: LogitOptions = typeof initial === 'string' ? { namespace: initial } : initial;
-  const cfg: LogitConfig = {
-    environment: true,
-    logLevel: 'debug',
-    namespace: '',
-    timestamp: true,
-    variant: 'symbol',
-    ...opts,
-    remote: { logLevel: 'debug', ...opts.remote }, // 'debug' default means a handler just works; set 'off' explicitly to disable
-  };
+/* -------------------- Pure Helpers -------------------- */
 
-  /* ---- helpers ---- */
+function serializeError(err: Error): SerializedError {
+  return { message: err.message, name: err.name, stack: err.stack };
+}
+
+function failInvalidArgs(message: string): never {
+  throw new TypeError(`[logit] ${message}`);
+}
+
+function parseArgs(
+  msgOrCtx: string | Bindings | Error | undefined,
+  msg: unknown,
+): { context: Bindings | undefined; message: string | undefined } {
+  if (msgOrCtx === undefined) return { context: undefined, message: undefined };
+
+  if (msgOrCtx instanceof Error) {
+    if (msg !== undefined && typeof msg !== 'string') {
+      failInvalidArgs('error override messages must be strings.');
+    }
+
+    return {
+      context: { err: serializeError(msgOrCtx) },
+      message: (msg as string | undefined) ?? msgOrCtx.message,
+    };
+  }
+
+  if (typeof msgOrCtx === 'string') {
+    if (msg !== undefined) {
+      failInvalidArgs(
+        'string-first log calls accept only one argument. Use log.info({ ... }, "message") for structured context.',
+      );
+    }
+
+    return { context: undefined, message: msgOrCtx };
+  }
+
+  if (msg !== undefined && typeof msg !== 'string') {
+    failInvalidArgs('context-first log calls require the optional second argument to be a string message.');
+  }
+
+  return { context: msgOrCtx as Bindings, message: msg as string | undefined };
+}
+
+function badge(type: LogType | 'group', variant: Variant): string {
+  const theme = THEME[type];
+
+  if (variant === 'text' || !theme[variant]) return type.toUpperCase();
+
+  return theme[variant]!;
+}
+
+function style(type: LogType | 'group' | 'ns', variant: Variant, extra = ''): string {
+  const { bg, border, color } = THEME[type];
+  const base = `border: 1px solid ${border}; border-radius: 4px`;
+
+  switch (variant) {
+    case 'icon':
+      return `color: ${bg}; ${base}; padding: 0 3px${extra}`;
+    case 'symbol':
+      return `color: ${bg}; ${base}; padding: 0 1px${extra}`;
+    default:
+      return `background: ${bg}; color: ${color}; ${base}; font-weight: bold; padding: 0 3px${extra}`;
+  }
+}
+
+function mergeContext(base: Bindings, callCtx: Bindings | undefined): Bindings | undefined {
+  const hasBase = Object.keys(base).length > 0;
+
+  if (!hasBase && !callCtx) return undefined;
+
+  return { ...base, ...callCtx };
+}
+
+function buildPayload(mergedContext: Bindings | undefined, message: string | undefined): unknown[] {
+  if (mergedContext && message !== undefined) return [mergedContext, message];
+
+  if (mergedContext) return [mergedContext];
+
+  if (message !== undefined) return [message];
+
+  return [];
+}
+
+function buildNodePrefix(type: LogType, namespace: string, timestamp: string, variant: Variant): string {
+  const meta = [badge(type, variant)];
+
+  if (namespace) meta.push(`[${namespace}]`);
+
+  if (timestamp) meta.push(timestamp);
+
+  return `${meta.join(' | ')} |`;
+}
+
+function buildBrowserPrefix(
+  type: LogType,
+  namespace: string,
+  timestamp: string,
+  variant: Variant,
+): { fmt: string; parts: string[] } {
+  let fmt = `%c${badge(type, variant)}%c`;
+  const parts: string[] = [style(type, variant), ''];
+
+  if (namespace) {
+    fmt += ` %c${namespace}%c`;
+    parts.push(style('ns', variant, `; ${NS_STYLE}`), '');
+  }
+
+  if (timestamp) {
+    fmt += ` %c${timestamp}%c`;
+    parts.push('color: gray', '');
+  }
+
+  return { fmt, parts };
+}
+
+function toTimeLabel(namespace: string, label: string): string {
+  return namespace ? `[${namespace}] ${label}` : label;
+}
+
+function resolveRemote(
+  remote: LogitOptions['remote'],
+  inherited?: LogitConfig['remote'],
+): LogitConfig['remote'] | undefined {
+  if (remote === undefined) return inherited ? { ...inherited } : undefined;
+
+  if (remote === null) return undefined;
+
+  const handler = remote.handler ?? inherited?.handler;
+
+  if (!handler) {
+    if (remote.logLevel !== undefined) {
+      throw new Error('[logit] remote.logLevel requires a remote.handler (or inherited handler via child())');
+    }
+
+    return undefined;
+  }
+
+  return {
+    handler,
+    logLevel: remote.logLevel ?? inherited?.logLevel ?? 'debug',
+  };
+}
+
+function resolveConfig(opts: LogitOptions): LogitConfig {
+  const namespace = opts.namespace ?? '';
+  const logLevel = opts.logLevel ?? 'debug';
+  const remote = resolveRemote(opts.remote);
+  const timestamp = opts.timestamp ?? true;
+  const variant = opts.variant ?? 'symbol';
+
+  return remote ? { logLevel, namespace, remote, timestamp, variant } : { logLevel, namespace, timestamp, variant };
+}
+
+/* -------------------- createLogger -------------------- */
+
+export function createLogger(initial: LogitOptions | string = {}, initialBindings: Bindings = {}): Logger {
+  const initialOpts: LogitOptions = typeof initial === 'string' ? { namespace: initial } : initial;
+  const cfg = resolveConfig(initialOpts);
+  const ownBindings: Bindings = { ...initialBindings };
 
   const passes = (type: LogLevel): boolean => PRIORITY[cfg.logLevel] <= PRIORITY[type];
 
   const ts = (): string => new Date().toISOString().slice(11, 23);
 
-  const badge = (type: LogType | 'group'): string => {
-    const theme = THEME[type];
-
-    if (cfg.variant === 'text' || !theme[cfg.variant]) return type.toUpperCase();
-
-    return theme[cfg.variant]!;
-  };
-
-  const style = (type: LogType | 'group' | 'ns', extra = ''): string => {
-    const { bg, border, color } = THEME[type];
-    const base = `border: 1px solid ${border}; border-radius: 4px`;
-
-    switch (cfg.variant) {
-      case 'icon':
-        return `color: ${bg}; ${base}; padding: 0 3px${extra}`;
-      case 'symbol':
-        return `color: ${bg}; ${base}; padding: 0 1px${extra}`;
-      default:
-        return `background: ${bg}; color: ${color}; ${base}; font-weight: bold; padding: 0 3px${extra}`;
-    }
-  };
-
-  const emitNode = (type: LogType, ns: string, stamp: string, args: unknown[]): void => {
-    const meta = [badge(type)];
-
-    if (cfg.environment) meta.push(ENV_BADGE);
-
-    if (ns) meta.push(`[${ns}]`);
-
-    if (stamp) meta.push(stamp);
-
-    const method = console[LOG_METHOD[type]] as (...a: unknown[]) => void;
-
-    method(`${meta.join(' | ')} |`, ...args);
-  };
-
-  const emitBrowser = (type: LogType, ns: string, stamp: string, args: unknown[]): void => {
-    let fmt = `%c${badge(type)}%c`;
-    const parts: string[] = [style(type), ''];
-
-    if (ns) {
-      fmt += ` %c${ns}%c`;
-      parts.push(style('ns', `; ${NS_STYLE}`), '');
-    }
-
-    if (cfg.environment) {
-      fmt += ` %c${ENV_BADGE}%c`;
-      parts.push('color: darkgray', '');
-    }
-
-    if (stamp) {
-      fmt += ` %c${stamp}%c`;
-      parts.push('color: gray', '');
-    }
-
-    const method = console[LOG_METHOD[type]] as (...a: unknown[]) => void;
-
-    method(fmt, ...parts, ...args);
-  };
-
-  const emit = (type: LogType, args: unknown[]): void => {
+  const emit = (type: LogType, msgOrCtx?: string | Bindings | Error, msg?: unknown): void => {
     if (!passes(type)) return;
 
-    const ns = cfg.namespace;
-    const stamp = cfg.timestamp ? ts() : '';
+    const { context, message } = parseArgs(msgOrCtx, msg);
 
-    if (IS_NODE) emitNode(type, ns, stamp, args);
-    else emitBrowser(type, ns, stamp, args);
+    if (context === undefined && message === undefined) return;
 
-    /* remote dispatch — snapshot data now, dispatch in microtask to avoid blocking caller */
-    const { handler, logLevel } = cfg.remote;
+    const namespace = cfg.namespace;
+    const timestamp = cfg.timestamp ? ts() : '';
+    const mergedContext = mergeContext(ownBindings, context);
+    const payload = buildPayload(mergedContext, message);
+    const method = console[LOG_METHOD[type]] as (...a: unknown[]) => void;
 
-    if (handler && PRIORITY[logLevel] <= PRIORITY[type]) {
-      const data: RemoteLogData = {
-        args,
-        env: IS_PROD ? 'production' : 'development',
-        namespace: ns || undefined,
-        timestamp: cfg.timestamp ? new Date().toISOString() : undefined,
-      };
+    if (IS_NODE) {
+      method(buildNodePrefix(type, namespace, timestamp, cfg.variant), ...payload);
+    } else {
+      const { fmt, parts } = buildBrowserPrefix(type, namespace, timestamp, cfg.variant);
 
-      Promise.resolve()
-        .then(() => handler(type, data))
-        .catch(() => {});
+      method(fmt, ...parts, ...payload);
     }
+
+    if (!cfg.remote) return;
+
+    if (PRIORITY[cfg.remote.logLevel] > PRIORITY[type]) return;
+
+    const data: RemoteLogData = {
+      context: mergedContext,
+      env: IS_PROD ? 'production' : 'development',
+      level: type,
+      message,
+      namespace: namespace || undefined,
+      timestamp: cfg.timestamp ? new Date().toISOString() : undefined,
+    };
+
+    Promise.resolve()
+      .then(() => cfg.remote!.handler(type, data))
+      .catch((err: unknown) => {
+        console.warn('[logit] remote handler error:', err);
+      });
   };
 
-  const timeLabel = (label: string): string => (cfg.namespace ? `[${cfg.namespace}] ${label}` : label);
-
-  /* ---- child factory ---- */
-  const makeChild = (overrides: LogitOptions = {}): Logger => {
-    const { remote: overrideRemote, ...overrideRest } = overrides;
-
-    return createLogger({ ...cfg, ...overrideRest, remote: { ...cfg.remote, ...overrideRemote } });
-  };
-
-  /* ---- group renderer ---- */
-
-  const renderGroupNode = (collapsed: boolean, label: string, ns: string, stamp: string): void => {
+  const renderGroup = (collapsed: boolean, label: string): void => {
+    const namespace = cfg.namespace;
+    const timestamp = cfg.timestamp ? ts() : '';
     const fn = collapsed ? console.groupCollapsed : console.group;
-    const meta = [badge('group')];
 
-    if (cfg.environment) meta.push(ENV_BADGE);
+    if (IS_NODE) {
+      const meta = [badge('group', cfg.variant), label];
 
-    meta.push(label);
+      if (namespace) meta.push(`[${namespace}]`);
 
-    if (ns) meta.push(`[${ns}]`);
+      if (timestamp) meta.push(timestamp);
 
-    if (stamp) meta.push(stamp);
+      fn(meta.join(' | '));
 
-    fn(meta.join(' | '));
-  };
+      return;
+    }
 
-  const renderGroupBrowser = (collapsed: boolean, label: string, ns: string, stamp: string): void => {
-    const fn = collapsed ? console.groupCollapsed : console.group;
     let fmt = `%c${label}%c`;
-    const parts: string[] = [style('group', '; margin-right: 6px; padding: 1px 3px 0'), ''];
+    const parts: string[] = [style('group', cfg.variant, '; margin-right: 6px; padding: 1px 3px 0'), ''];
 
-    if (ns) {
-      fmt += ` %c${ns}%c`;
-      parts.push(style('ns', `; ${NS_STYLE}; margin-right: 6px`), '');
+    if (namespace) {
+      fmt += ` %c${namespace}%c`;
+      parts.push(style('ns', cfg.variant, `; ${NS_STYLE}; margin-right: 6px`), '');
     }
 
-    if (cfg.environment) {
-      fmt += ` %c${ENV_BADGE}%c`;
-      parts.push('color: darkgray; margin-right: 6px', '');
-    }
-
-    if (stamp) {
-      fmt += ` %c${stamp}%c`;
+    if (timestamp) {
+      fmt += ` %c${timestamp}%c`;
       parts.push('color: gray; font-weight: lighter; margin-right: 6px', '');
     }
 
     fn(fmt, ...parts);
   };
 
-  const renderGroup = (collapsed: boolean, label: string): void => {
-    const ns = cfg.namespace;
-    const stamp = cfg.timestamp ? ts() : '';
+  const wrapGroup = <T>(collapsed: boolean, label: string, fn: () => T): T => {
+    if (cfg.logLevel === 'off') return fn();
 
-    if (IS_NODE) renderGroupNode(collapsed, label, ns, stamp);
-    else renderGroupBrowser(collapsed, label, ns, stamp);
+    renderGroup(collapsed, label);
+
+    try {
+      const result = fn();
+
+      if (result instanceof Promise) return result.finally(() => console.groupEnd()) as T;
+
+      console.groupEnd();
+
+      return result;
+    } catch (err) {
+      console.groupEnd();
+      throw err;
+    }
   };
 
-  /* ---- public API ---- */
-
   const logger: Logger = {
-    assert: (condition: boolean, ...args: unknown[]): void => {
-      if (passes('error')) console.assert(condition, ...args);
+    get bindings(): Readonly<Bindings> {
+      return { ...ownBindings };
     },
 
-    child: makeChild,
+    child: (overrides: LogitOptions = {}): Logger => {
+      const remote = resolveRemote(overrides.remote, cfg.remote);
+
+      return createLogger(
+        {
+          logLevel: overrides.logLevel ?? cfg.logLevel,
+          namespace: overrides.namespace ?? cfg.namespace,
+          remote,
+          timestamp: overrides.timestamp ?? cfg.timestamp,
+          variant: overrides.variant ?? cfg.variant,
+        },
+        ownBindings,
+      );
+    },
 
     get config(): Readonly<LogitConfig> {
-      return { ...cfg, remote: { ...cfg.remote } };
+      return cfg.remote ? { ...cfg, remote: { ...cfg.remote } } : { ...cfg };
     },
 
-    debug: (...a) => emit('debug', a),
+    debug: (m?: string | Bindings | Error, s?: string) => emit('debug', m, s),
 
     enabled: (type: LogLevel): boolean => passes(type),
-    error: (...a) => emit('error', a),
 
-    group: <T>(label: string, fn: () => T, collapsed = false): T => {
-      if (!passes('debug')) return fn();
+    error: (m?: string | Bindings | Error, s?: string) => emit('error', m, s),
 
-      renderGroup(collapsed, label);
+    fatal: (m?: string | Bindings | Error, s?: string) => emit('fatal', m, s),
 
-      try {
-        const result = fn();
+    group: (label, fn) => wrapGroup(false, label, fn),
 
-        if (result instanceof Promise) {
-          return result.finally(() => console.groupEnd()) as T;
-        }
+    groupCollapsed: (label, fn) => wrapGroup(true, label, fn),
 
-        console.groupEnd();
+    info: (m?: string | Bindings | Error, s?: string) => emit('info', m, s),
 
-        return result;
-      } catch (e) {
-        console.groupEnd();
-        throw e;
-      }
-    },
-
-    info: (...a) => emit('info', a),
-
-    scope: (name: string): Logger => makeChild({ namespace: cfg.namespace ? `${cfg.namespace}.${name}` : name }),
-
-    setConfig: (opts: LogitOptions): Logger => {
-      const { remote, ...rest } = opts;
-
-      if (remote !== undefined) Object.assign(cfg.remote, remote);
-
-      Object.assign(cfg, rest);
-
-      return logger;
-    },
-    success: (...a) => emit('success', a),
-
-    table: (data: unknown, properties?: string[]): void => {
-      if (passes('debug')) console.table(data, properties);
-    },
+    scope: (name: string): Logger => logger.child({ namespace: cfg.namespace ? `${cfg.namespace}.${name}` : name }),
 
     time: <T>(label: string, fn: () => T): T => {
-      if (!passes('debug')) return fn();
+      if (cfg.logLevel === 'off') return fn();
 
-      const tl = timeLabel(label);
+      const tl = toTimeLabel(cfg.namespace, label);
 
       console.time(tl);
 
       try {
         const result = fn();
 
-        if (result instanceof Promise) {
-          return result.finally(() => console.timeEnd(tl)) as T;
-        }
+        if (result instanceof Promise) return result.finally(() => console.timeEnd(tl)) as T;
 
         console.timeEnd(tl);
 
         return result;
-      } catch (e) {
+      } catch (err) {
         console.timeEnd(tl);
-        throw e;
+        throw err;
       }
     },
 
-    trace: (...a) => emit('trace', a),
-    warn: (...a) => emit('warn', a),
+    warn: (m?: string | Bindings | Error, s?: string) => emit('warn', m, s),
+
+    withBindings: (bindings: Bindings): Logger => createLogger(cfg, { ...ownBindings, ...bindings }),
   };
 
   return logger;
 }
 
-/* -------------------- Default instance -------------------- */
-
-/**
- * Shared default logger instance. For isolated configurations use `createLogger()`.
- *
- * @example
- * ```ts
- * import { Logit } from '@vielzeug/logit';
- * Logit.info('Hello');
- * ```
- */
 export const Logit = createLogger();

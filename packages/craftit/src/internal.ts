@@ -1,70 +1,10 @@
-/**
- * @internal — Binding type system, compiler/runtime helpers, and engine internals.
- *
- * These types and helpers define the contract between the template compiler, binding engine,
- * and component runtime.
- * They are NOT part of the public API and importing directly is an unstable contract.
- *
- * Selected author-facing exports (such as css(), CSSResult, EmitFn, HTMLResult, Directive,
- * ref(), and refs()) are re-exported from the main entry point.
- */
-
 import { signal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { fire } from './runtime';
-import { currentRuntime } from './runtime-core';
+import { CRAFTIT_ERRORS } from './errors';
+import { currentElementOrThrow } from './runtime';
 
-const HTML_RESULT_BRAND: unique symbol = Symbol('craftit.htmlResultBrand');
-
-let _idCounter = 0;
-
-/** @internal — resets the ID counter. Used by _resetCounters in test/test.ts. */
-export const _resetIdCounter = (): void => {
-  _idCounter = 0;
-};
-
-/**
- * Creates a unique, stable ID string — suitable for `aria-labelledby`, `aria-describedby`,
- * and similar accessibility linkages. Call once per component instance (at setup time or inside `onMount`).
- */
-export const createId = (prefix?: string): string => `${prefix ? `${prefix}-` : 'cft-'}${++_idCounter}`;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// REF TYPES
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * A reactive reference to a DOM element.
- *
- * Backed by a Signal — reactivity is built-in. Use with onElement()
- * for first-class element lifecycle management.
- *
- * @example
- * const inputRef = ref<HTMLInputElement>();
- *
- * onElement(inputRef, (input) => {
- *   input.focus();
- *   return () => { };  // cleanup
- * });
- *
- * // In template
- * <input ref=${inputRef} />
- */
 export type Ref<T extends Element> = Signal<T | null>;
 
-/**
- * Create a reactive element reference.
- *
- * Returns a Signal that tracks the mounted/unmounted state of a DOM element.
- * Automatically reactive — use directly in effects or with onElement().
- *
- * @see onElement for element lifecycle integration
- *
- * @example
- * const ref = ref<HTMLInputElement>();
- * // Type: Signal<HTMLInputElement | null>
- * // Automatically updates when element mounts/unmounts
- */
 export function ref<T extends Element>(): Ref<T> {
   return signal<T | null>(null);
 }
@@ -77,65 +17,6 @@ export function refs<T extends Element>(): Refs<T> {
 
 export type RefCallback<T extends Element> = (el: T | null) => void;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HTML RESULT
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface HTMLResult {
-  __bindings: Binding[];
-  __html: string;
-  toString(): string;
-}
-
-/** @internal — construct an HTMLResult from a pre-built html string and bindings. */
-export function htmlResult(html: string, bindings: Binding[] = []): HTMLResult {
-  const result = {
-    __bindings: bindings,
-    __html: html,
-    toString() {
-      return html;
-    },
-  };
-
-  Object.defineProperty(result, HTML_RESULT_BRAND, {
-    configurable: false,
-    enumerable: false,
-    value: true,
-    writable: false,
-  });
-
-  return result as HTMLResult;
-}
-
-/** @internal — strict HTMLResult runtime type guard. */
-export const isHtmlResult = (value: unknown): value is HTMLResult =>
-  typeof value === 'object' && !!value && (value as Record<symbol, unknown>)[HTML_RESULT_BRAND] === true;
-
-/** @internal — extract html and bindings from a string or HTMLResult. */
-export function extractResult(v: string | HTMLResult): { bindings: Binding[]; html: string } {
-  return typeof v === 'string' ? { bindings: [], html: v } : { bindings: v.__bindings, html: v.__html };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DIRECTIVES
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface DirectiveContext {
-  /** The cleanup registration function for the component. */
-  registerCleanup: (fn: () => void) => void;
-}
-
-export interface Directive {
-  /** Invoked when the element is mounted in the DOM. */
-  mount?(el: HTMLElement, context: DirectiveContext): void;
-  /** Invoked by the template engine to render content (interpolation directives). */
-  render?(): HTMLResult | string;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BINDING TYPES
-// ─────────────────────────────────────────────────────────────────────────────
-
 export type TextBinding = {
   signal: ReadonlySignal<unknown>;
   type: 'text';
@@ -143,6 +24,9 @@ export type TextBinding = {
 };
 
 export type AttrBinding = {
+  /** When true the binding uses live-write semantics: stale app-state writes are
+   * skipped if the DOM value has diverged from the last programmatic write. */
+  live?: true;
   mode: 'bool' | 'attr';
   name: string;
   signal?: ReadonlySignal<unknown>;
@@ -151,27 +35,10 @@ export type AttrBinding = {
   value?: unknown;
 };
 
-export type PropBinding = {
-  /** Optional writable source used for native two-way bridge (.value/.checked). */
-  model?: Signal<unknown>;
-  name: string;
-  signal?: ReadonlySignal<unknown>;
-  type: 'prop';
-  uid: string;
-  value?: unknown;
-};
-
 export type EventBinding = {
   handler: (e: Event) => void;
-  modifiers?: {
-    capture?: boolean;
-    once?: boolean;
-    passive?: boolean;
-    prevent?: boolean;
-    self?: boolean;
-    stop?: boolean;
-  };
   name: string;
+  options?: AddEventListenerOptions;
   type: 'event';
   uid: string;
 };
@@ -182,59 +49,99 @@ export type RefBinding = {
   uid: string;
 };
 
-export type CallbackBinding = {
-  apply: (el: HTMLElement, registerCleanup: (fn: () => void) => void) => void;
-  type: 'callback';
-  uid: string;
+export type HtmlBindingPayload = {
+  bindings: Binding[];
+  html: string;
 };
 
+export type RuntimeDirective = {
+  __craftitDirective: true;
+  mount: (anchor: Comment, registerCleanup: (fn: () => void) => void) => void;
+};
+
+export type DirectiveResult = RuntimeDirective;
+
+export const isDirectiveResult = (value: unknown): value is DirectiveResult =>
+  typeof value === 'object' &&
+  value !== null &&
+  (value as RuntimeDirective).__craftitDirective === true &&
+  typeof (value as RuntimeDirective).mount === 'function';
+
 export type HtmlBinding = {
-  keyed?: boolean;
-  signal: ReadonlySignal<{
-    bindings: Binding[];
-    html: string;
-    items?: Array<{ bindings: Binding[]; html: string }>;
-    keys?: (string | number)[];
-  }>;
+  signal: ReadonlySignal<HtmlBindingPayload>;
   type: 'html';
   uid: string;
 };
 
-export type Binding =
-  | TextBinding
-  | AttrBinding
-  | PropBinding
-  | EventBinding
-  | RefBinding
-  | CallbackBinding
-  | HtmlBinding;
+export type DirectiveBinding = {
+  directive: RuntimeDirective;
+  type: 'directive';
+  uid: string;
+};
+
+export type Binding = TextBinding | AttrBinding | EventBinding | RefBinding | HtmlBinding | DirectiveBinding;
+
+export interface HTMLResult {
+  __bindings: Binding[];
+  __craftitHtmlResult: true;
+  __html: string;
+  toString(): string;
+}
+
+export function htmlResult(html: string, bindings: Binding[] = []): HTMLResult {
+  return {
+    __bindings: bindings,
+    __craftitHtmlResult: true,
+    __html: html,
+    toString() {
+      return html;
+    },
+  };
+}
+
+export const isHtmlResult = (value: unknown): value is HTMLResult =>
+  typeof value === 'object' && value !== null && (value as HTMLResult).__craftitHtmlResult === true;
+
+export function extractResult(v: string | HTMLResult): { bindings: Binding[]; html: string } {
+  return typeof v === 'string' ? { bindings: [], html: v } : { bindings: v.__bindings, html: v.__html };
+}
+
+export type CSSResult = {
+  __craftitCssResult: true;
+  content: string;
+  toString(): string;
+};
+
+export const isCssResult = (value: unknown): value is CSSResult =>
+  typeof value === 'object' && !!value && (value as CSSResult).__craftitCssResult === true;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INTERNAL MARKERS & CONSTANTS
+// DOM UTILITIES
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** @internal — opaque marker for each() reactive results. */
-export const EACH_SIGNAL: unique symbol = Symbol('craftit.eachSignal');
+export const runAll = (fns: (() => void)[]): void => {
+  const errors: unknown[] = [];
 
-/** @internal — binding element identifier attribute. */
-export const CF_ID_ATTR = 'u';
+  for (let i = fns.length - 1; i >= 0; i--) {
+    try {
+      fns[i]();
+    } catch (err) {
+      errors.push(err);
+    }
+  }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// INTERNAL DOM & EVENT UTILITIES
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** @internal — Iterate an iterable and call every function in it. */
-export const runAll = (fns: Iterable<() => void>): void => {
-  const callbacks = [...fns];
-
-  for (let index = callbacks.length - 1; index >= 0; index--) {
-    callbacks[index]?.();
+  if (errors.length > 0) {
+    throw new AggregateError(errors, CRAFTIT_ERRORS.cleanupFailed);
   }
 };
 
-/** @internal — Set an attribute on an element, handling boolean and null values. */
+export const removeNodes = (nodes: Node[]): void => {
+  for (const node of nodes) {
+    (node as ChildNode).remove();
+  }
+};
+
 export const setAttr = (el: Element, name: string, val: unknown): void => {
-  // Avoid inline event-handler attributes (onclick, onerror, ...) to reduce injection risk.
   if (/^on/i.test(name)) {
     el.removeAttribute(name);
 
@@ -243,20 +150,19 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
 
   if (val == null || val === false) {
     el.removeAttribute(name);
-  } else if (val === true) {
-    el.setAttribute(name, name.startsWith('aria-') ? 'true' : '');
   } else {
-    el.setAttribute(name, String(val));
+    el.setAttribute(name, val === true ? 'true' : String(val));
   }
 };
 
-/** @internal — Attach an event listener with automatic cleanup. */
 export const listen = (
-  el: EventTarget,
+  el: EventTarget | null | undefined,
   name: string,
   handler: (e: any) => void,
   options?: AddEventListenerOptions,
 ): (() => void) => {
+  if (!el) return () => {};
+
   const listener: EventListener = handler as EventListener;
 
   el.addEventListener(name, listener, options);
@@ -264,19 +170,14 @@ export const listen = (
   return () => el.removeEventListener(name, listener, options);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// INTERNAL STRING UTILITIES
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const toKebab = (str: string): string => str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
 const ESC: Record<string, string> = { "'": '&#39;', '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' };
 
-/** @internal — Escape untrusted text for HTML text/attribute contexts. */
 export const escapeHtml = (value: unknown): string => String(value).replace(/[&<>"']/g, (c) => ESC[c]);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INTERNAL EMIT TYPES & HELPERS
+// EMIT UTILITIES
 // ─────────────────────────────────────────────────────────────────────────────
 
 type NoDetail = void | undefined | never;
@@ -284,14 +185,17 @@ type KeysWithoutDetail<T extends Record<string, unknown>> = {
   [P in keyof T]: [T[P]] extends [NoDetail] ? P : never;
 }[keyof T];
 
-export type EmitFn<T extends Record<string, unknown>> = {
+type StrictEmitFn<T extends Record<string, unknown>> = {
   <K extends KeysWithoutDetail<T>>(event: K): void;
   <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): void;
 };
 
-/** @internal — Create a type-safe custom event emitter for the current runtime host. */
+type LooseEmitFn = (event: string, detail?: unknown) => void;
+
+export type EmitFn<T extends Record<string, unknown>> = StrictEmitFn<T> & LooseEmitFn;
+
 export const createEmitFn = <T extends Record<string, unknown>>(): EmitFn<T> => {
-  const el = currentRuntime().el;
+  const el = currentElementOrThrow();
 
   return ((event: keyof T, ...rest: unknown[]) => {
     fire.custom(el, String(event), rest.length > 0 ? { detail: rest[0] } : undefined);
@@ -299,19 +203,99 @@ export const createEmitFn = <T extends Record<string, unknown>>(): EmitFn<T> => 
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INTERNAL CSS & STYLESHEET UTILITIES
+// FIRE UTILITIES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type CSSResult = {
-  content: string;
-  toString(): string;
+type FireDefaults = Pick<EventInit, 'bubbles' | 'cancelable' | 'composed'>;
+
+export type FireApi = {
+  custom<Detail = unknown>(target: EventTarget, type: string, options?: CustomEventInit<Detail>): boolean;
+  event(target: EventTarget, event: Event): boolean;
+  focus(target: EventTarget, type: string, options?: FocusEventInit): boolean;
+  keyboard(target: EventTarget, type: string, options?: KeyboardEventInit): boolean;
+  mouse(target: EventTarget, type: string, options?: MouseEventInit): boolean;
+  touch(target: EventTarget, type: string, options?: TouchEventInit): boolean;
 };
+
+const DEFAULT_FIRE_OPTIONS: FireDefaults = { bubbles: true, cancelable: true, composed: true };
+
+export const fire: FireApi = {
+  custom<Detail = unknown>(target: EventTarget, type: string, options: CustomEventInit<Detail> = {}) {
+    return target.dispatchEvent(new CustomEvent<Detail>(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+  },
+  event(target, event) {
+    return target.dispatchEvent(event);
+  },
+  focus(target, type, options = {}) {
+    return target.dispatchEvent(new FocusEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+  },
+  keyboard(target, type, options = {}) {
+    return target.dispatchEvent(new KeyboardEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+  },
+  mouse(target, type, options = {}) {
+    return target.dispatchEvent(new MouseEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+  },
+  touch(target, type, options = {}) {
+    if (typeof TouchEvent !== 'undefined') {
+      return target.dispatchEvent(new TouchEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+    }
+
+    return target.dispatchEvent(new CustomEvent(type, { ...DEFAULT_FIRE_OPTIONS, ...options }));
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ID UTILITIES
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _idCounter = 0;
+
+export const _resetIdCounter = (): void => {
+  _idCounter = 0;
+};
+
+export const createId = (prefix?: string): string => `${prefix ? `${prefix}-` : 'cft-'}${++_idCounter}`;
+
+export const CF_ID_ATTR = 'u';
+
+const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="([^"]+)"`, 'g');
+
+export const createMarkerIdFactory = (): (() => string) => {
+  let n = 0;
+
+  return () => String(n++);
+};
+
+export const rekeyHtmlResult = (result: HTMLResult, getNextId: () => string): { bindings: Binding[]; html: string } => {
+  const idMap = new Map<string, string>();
+  const getMappedId = (id: string): string => {
+    const mapped = idMap.get(id);
+
+    if (mapped) return mapped;
+
+    const next = getNextId();
+
+    idMap.set(id, next);
+
+    return next;
+  };
+
+  return {
+    bindings: result.__bindings.map((binding) => ({ ...binding, uid: getMappedId(binding.uid) }) as Binding),
+    html: result.__html
+      .replace(ATTR_ID_RE, (_, id: string) => `${CF_ID_ATTR}="${getMappedId(id)}"`)
+      .replace(/<!--(\d+)-->/g, (_, id: string) => `<!--${getMappedId(id)}-->`),
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CSS UTILITIES
+// ─────────────────────────────────────────────────────────────────────────────
 
 const cssResultToString = function (this: CSSResult): string {
   return this.content;
 };
 
-/** @internal — Compile CSS template strings into a CSSResult. */
 export const css = (strings: TemplateStringsArray, ...values: unknown[]): CSSResult => {
   let content = '';
 
@@ -321,16 +305,15 @@ export const css = (strings: TemplateStringsArray, ...values: unknown[]): CSSRes
     if (i < values.length) {
       const v = values[i];
 
-      content += v && typeof v === 'object' && 'content' in v ? (v as CSSResult).content : (v ?? '');
+      content += isCssResult(v) ? v.content : (v ?? '');
     }
   }
 
-  return { content: content.trim(), toString: cssResultToString };
+  return { __craftitCssResult: true as const, content: content.trim(), toString: cssResultToString };
 };
 
 const stylesheetStringCache = new Map<string, CSSStyleSheet>();
 
-/** @internal — Load a stylesheet string or CSSResult into an adoptedStyleSheet. */
 export const loadStylesheet = (style: string | CSSStyleSheet | CSSResult): CSSStyleSheet => {
   if (style instanceof CSSStyleSheet) return style;
 
@@ -343,10 +326,11 @@ export const loadStylesheet = (style: string | CSSStyleSheet | CSSResult): CSSSt
 
   try {
     sheet.replaceSync(cssText);
-    stylesheetStringCache.set(cssText, sheet);
   } catch (err) {
-    console.error(`[craftit:E2] style replace failed`, err);
+    console.error(CRAFTIT_ERRORS.styleReplaceFailed, err);
   }
+
+  stylesheetStringCache.set(cssText, sheet);
 
   return sheet;
 };

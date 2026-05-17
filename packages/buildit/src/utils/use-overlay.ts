@@ -15,7 +15,7 @@ export interface OverlayProps {
  * the focus-restore helper so that `bit-dialog` and `bit-drawer` don't repeat
  * this logic.
  *
- * Call at **setup scope** (outside `onMount`) so that the returned
+ * Call at **setup scope** so that the returned
  * `closeWithAnimation` is available before mount (e.g. to expose as an
  * imperative API or use inside `requestClose`).
  */

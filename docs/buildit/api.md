@@ -15,17 +15,17 @@ description: Entry points, import paths, and exported symbols for @vielzeug/buil
 
 ## Package Entry Points
 
-| Import                                    | Purpose                                                                |
-| ----------------------------------------- | ---------------------------------------------------------------------- |
-| `@vielzeug/buildit`                       | Registers all published components and re-exports shared symbols/types |
-| `@vielzeug/buildit/types`                 | Shared TypeScript types                                                |
-| `@vielzeug/buildit/styles`                | Global tokens and shared component styles                              |
-| `@vielzeug/buildit/styles/styles.css`     | Explicit base stylesheet path                                          |
-| `@vielzeug/buildit/styles/theme.css`      | Theme token stylesheet                                                 |
-| `@vielzeug/buildit/styles/animation.css`  | Animation helpers                                                      |
-| `@vielzeug/buildit/styles/layers.css`     | Cascade layer definitions                                              |
+| Import                                   | Purpose                                                                |
+| ---------------------------------------- | ---------------------------------------------------------------------- |
+| `@vielzeug/buildit`                      | Registers all published components and re-exports shared symbols/types |
+| `@vielzeug/buildit/types`                | Shared TypeScript types                                                |
+| `@vielzeug/buildit/styles`               | Global tokens and shared component styles                              |
+| `@vielzeug/buildit/styles/styles.css`    | Explicit base stylesheet path                                          |
+| `@vielzeug/buildit/styles/theme.css`     | Theme token stylesheet                                                 |
+| `@vielzeug/buildit/styles/animation.css` | Animation helpers                                                      |
+| `@vielzeug/buildit/styles/layers.css`    | Cascade layer definitions                                              |
 
-For headless controller primitives (`createTextFieldControl`, `createChoiceFieldControl`, `createCheckableFieldControl`, `createListControl`, `createOverlayControl`), use `@vielzeug/craftit/controls`.
+For headless controller primitives (`createTextField`, `createChoiceField`, `createCheckableFieldControl`, `createListControl`, `createOverlayControl`), use `@vielzeug/craftit/controls`.
 
 ## Runtime Registration Imports
 
@@ -72,9 +72,11 @@ import '@vielzeug/buildit/grid-item';
 import '@vielzeug/buildit/icon';
 import '@vielzeug/buildit/input';
 import '@vielzeug/buildit/menu';
+import '@vielzeug/buildit/navbar';
 import '@vielzeug/buildit/number-input';
 import '@vielzeug/buildit/otp-input';
 import '@vielzeug/buildit/pagination';
+import '@vielzeug/buildit/password-strength';
 import '@vielzeug/buildit/popover';
 import '@vielzeug/buildit/progress';
 import '@vielzeug/buildit/radio';
@@ -122,6 +124,7 @@ Use the following pages as the canonical per-component API source.
 - [Async (bit-async)](./components/async.md)
 - [Badge](./components/badge.md)
 - [Chip](./components/chip.md)
+- [Password Strength](./components/password-strength.md)
 - [Progress](./components/progress.md)
 - [Skeleton](./components/skeleton.md)
 - [Toast](./components/toast.md)
@@ -168,6 +171,7 @@ Use the following pages as the canonical per-component API source.
 
 - [Box](./components/box.md)
 - [Grid (+ Grid Item)](./components/grid.md)
+- [Navbar](./components/navbar.md)
 - [Sidebar](./components/sidebar.md)
 
 ## Notes

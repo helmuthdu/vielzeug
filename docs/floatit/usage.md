@@ -1,238 +1,341 @@
 ---
 title: Floatit — Usage Guide
-description: Middleware composition, placement, autoUpdate, and positioning patterns for Floatit.
+description: Placement, middleware composition, overflow handling, and lifecycle patterns for Floatit.
 ---
-
-# Floatit Usage Guide
-
-::: tip New to Floatit?
-Start with the [Overview](./index.md) for a quick introduction, then come back here for in-depth patterns.
-:::
 
 [[toc]]
 
-## Placement
+## Positioning APIs
 
-A `Placement` is a `Side` optionally combined with an `Alignment`:
+### `computePosition`
 
-```text
-Side:      'top' | 'bottom' | 'left' | 'right'
-Alignment: 'start' | 'end'
-
-Examples:  'top' | 'top-start' | 'top-end'
-           'bottom' | 'bottom-start' | 'bottom-end'
-           'left' | 'left-start' | 'left-end'
-           'right' | 'right-start' | 'right-end'
-```
-
-All positions use `getBoundingClientRect` coordinates, meaning they work correctly with `position: fixed` floating elements.
-
-## positionFloat
-
-`positionFloat` computes the position and immediately applies `left` / `top` inline styles to the floating element, returning the resolved `Placement` (which may differ from the requested one if `flip` was applied).
+Use `computePosition` when you want to render manually or consume `middlewareData` without DOM writes.
 
 ```ts
-const placement = positionFloat(reference, floating, {
-  placement: 'top',
+const result = computePosition(reference, floating, {
+  placement: 'bottom-start',
+  middleware: [offset(8), autoPlacement(), arrow({ element: arrowEl })],
+});
+
+floating.style.transform = `translate(${result.x}px, ${result.y}px)`;
+```
+
+### `float`
+
+`float` is the high-level API for the common case.
+
+By default it writes `left` and `top`. Use `apply` for custom rendering.
+
+```ts
+const cleanup = float(reference, floating, {
+  apply(result, { floating }) {
+    floating.style.transform = `translate(${result.x}px, ${result.y}px)`;
+    floating.dataset.placement = result.placement;
+  },
+  placement: 'bottom-start',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
-
-floatingEl.dataset.placement = placement; // react to flips
 ```
 
-The floating element must have `position: fixed` in your CSS for the applied `left`/`top` values to take effect.
+## Middleware Model
 
-## computePosition
-
-The low-level API. Returns `{ x, y, placement }` without touching the DOM — useful when you want to apply styles yourself or integrate with animation libraries.
+Middleware are pure functions that return partial updates.
 
 ```ts
-const { x, y, placement } = computePosition(reference, floating, {
-  placement: 'bottom-start',
-  middleware: [flip(), shift({ padding: 4 })],
-});
+import type { Middleware } from '@vielzeug/floatit';
 
-floating.style.transform = `translate(${x}px, ${y}px)`;
+const nudge =
+  (px: number): Middleware =>
+  () => ({ y: px });
 ```
 
-## Middleware
-
-Middleware are small functions that modify the computed position. They run in order, each receiving and returning a `MiddlewareState`.
-
-### offset
-
-Adds a gap (in pixels) between the reference and the floating element along the main axis.
+In practice you normally read from the current state:
 
 ```ts
-// 8px gap between reference and floating
-middleware: [offset(8)];
+const snap =
+  (grid: number): Middleware =>
+  ({ x, y }) => ({
+    data: { snap: { grid } },
+    x: Math.round(x / grid) * grid,
+    y: Math.round(y / grid) * grid,
+  });
 ```
 
-### flip
+Available return fields:
 
-Flips the floating element to the opposite side when it would overflow the viewport.
+- `x` and `y` to move the floating element
+- `placement` to change side or alignment
+- `data` to append to `middlewareData`
+- `reset` to restart the lifecycle with fresh coordinates or rects
+
+## Built-in Middleware
+
+### `offset`
+
+Adds a gap along the main axis.
 
 ```ts
-// Default: flip when any part overflows
-middleware: [flip()];
-
-// Keep 8px clearance before flipping
-middleware: [flip({ padding: 8 })];
+offset(8);
+offset({ mainAxis: 8, crossAxis: 4 });
+offset((state) => ({ mainAxis: state.placement.startsWith('top') ? 12 : 8 }));
 ```
 
-When `flip` changes the placement, `computePosition` restarts the middleware pipeline using the new placement so all subsequent middlewares (e.g. `shift`) receive the correct coordinates.
+### `flip`
 
-### shift
-
-Slides the floating element along its cross axis so it stays within the viewport.
+Preserves the preferred placement until it no longer fits, then tries a fallback placement.
 
 ```ts
-// Keep at least 6px from every viewport edge
-middleware: [shift({ padding: 6 })];
+middleware: [flip({ fallbackPlacements: ['right', 'left'] })];
 ```
 
-### size
+### `autoPlacement`
 
-Calls an `apply` callback with `{ availableWidth, availableHeight, elements }`. Use it to constrain or resize the floating element.
+Chooses the placement with the most usable space instead of preserving a preferred side.
+
+```ts
+middleware: [autoPlacement({ allowedPlacements: ['top', 'bottom'] })];
+```
+
+Do not combine `autoPlacement()` with `flip()`.
+
+### `shift`
+
+Keeps the floating element inside the boundary.
+
+```ts
+middleware: [shift({ padding: { top: 8, bottom: 16, left: 6, right: 6 } })];
+```
+
+### `size`
+
+Reports available space so the floating element can be constrained.
 
 ```ts
 middleware: [
   size({
     padding: 8,
-    apply({ availableWidth, elements }) {
-      // Match dropdown width to trigger
-      elements.floating.style.width = `${elements.reference.getBoundingClientRect().width}px`;
-      // or cap the max height
+    apply({ availableHeight, elements }) {
       elements.floating.style.maxHeight = `${availableHeight}px`;
     },
   }),
 ];
 ```
 
-### Middleware order matters
+### `arrow`
 
-Middlewares run sequentially. The recommended order is:
+Produces coordinates for an arrow element.
+
+```ts
+const result = computePosition(reference, floating, {
+  middleware: [arrow({ element: arrowEl, padding: 6 })],
+});
+
+const arrowData = result.middlewareData.arrow as { x?: number; y?: number } | undefined;
+if (arrowData?.x != null) arrowEl.style.left = `${arrowData.x}px`;
+if (arrowData?.y != null) arrowEl.style.top = `${arrowData.y}px`;
+```
+
+### `hide`
+
+Reports whether the reference is clipped or the floating element has escaped.
+
+```ts
+const result = computePosition(reference, floating, {
+  middleware: [hide()],
+});
+
+const hideData = result.middlewareData.hide as { escaped?: boolean; referenceHidden?: boolean } | undefined;
+floating.style.visibility = hideData?.referenceHidden ? 'hidden' : 'visible';
+```
+
+### `inline`
+
+Improves positioning for inline references spanning multiple lines.
+
+```ts
+middleware: [inline({ x: event.clientX, y: event.clientY })];
+```
+
+## Middleware Order
+
+Recommended default order:
 
 ```ts
 middleware: [
-  offset(8), // 1. push away from reference first
-  flip(), // 2. flip side if needed (triggers a pipeline restart)
-  shift({ padding: 6 }), // 3. nudge into viewport after final side is known
-  size({ apply: ({ availableHeight }) => console.log(availableHeight) }), // 4. resize with final available space
+  offset(8),
+  inline({ x: pointerX, y: pointerY }),
+  flip(),
+  autoPlacement(),
+  shift({ padding: 6 }),
+  size({ apply: ({ availableHeight }) => console.log(availableHeight) }),
+  arrow({ element: arrowEl }),
+  hide(),
 ];
 ```
 
-### Custom middleware
+Use either `flip()` or `autoPlacement()`, not both.
 
-You can write your own by returning a modified `MiddlewareState`:
+## Virtual References
+
+All main positioning functions accept virtual references, which is useful for cursor-based context menus and text selections.
 
 ```ts
-import type { Middleware } from '@vielzeug/floatit';
+const cursorReference = {
+  getBoundingClientRect: () => ({
+    x: event.clientX,
+    y: event.clientY,
+    width: 0,
+    height: 0,
+  }),
+};
 
-const nudge = (px: number): Middleware => ({
-  name: 'nudge',
-  fn: (state) => ({ ...state, y: state.y + px }),
+const result = computePosition(cursorReference, menu, {
+  middleware: [flip(), shift({ padding: 8 })],
 });
 
-middleware: [offset(8), nudge(4), flip()];
+menu.dataset.placement = result.placement;
 ```
 
 ## autoUpdate
 
-## float
-
-`float` is the primary API for dynamic positioning. It positions the floating element immediately and keeps it in sync as the viewport or elements change. It combines `positionFloat` and `autoUpdate` in a single call.
+`autoUpdate` is the lower-level primitive behind `float`.
 
 ```ts
-let cleanup: (() => void) | null = null;
+const cleanup = autoUpdate(
+  reference,
+  floating,
+  () => {
+    const result = computePosition(reference, floating, {
+      middleware: [offset(8), flip(), shift({ padding: 6 }), arrow({ element: arrowEl })],
+    });
 
-function show() {
-  cleanup = float(reference, floating, {
-    placement: 'top',
-    middleware: [offset(8), flip(), shift({ padding: 6 })],
-  });
-}
+    floating.style.left = `${result.x}px`;
+    floating.style.top = `${result.y}px`;
+    floating.dataset.placement = result.placement;
+  },
+  {
+    animationFrame: false,
+    observeFloating: true,
+  },
+);
+```
 
-function hide() {
-  cleanup?.();
-  cleanup = null;
+Use `animationFrame: true` when the reference itself animates between frames.
+
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useRef } from 'react';
+import { float, offset, flip, shift } from '@vielzeug/floatit';
+
+function Tooltip({ anchor, children }: { anchor: HTMLElement | null; children: React.ReactNode }) {
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!anchor || !tooltipRef.current) return;
+    const cleanup = float(anchor, tooltipRef.current, {
+      placement: 'bottom',
+      middleware: [offset(6), flip(), shift({ padding: 8 })],
+    });
+    return () => cleanup();
+  }, [anchor]);
+
+  return <div ref={tooltipRef} role="tooltip" style={{ position: 'absolute' }}>{children}</div>;
 }
 ```
 
-## autoUpdate
+```ts [Vue 3]
+import { ref, watchEffect, onScopeDispose } from 'vue';
+import { float, offset, flip, shift } from '@vielzeug/floatit';
 
-`autoUpdate` is the lower-level primitive behind `float`. Use it directly when you need to run custom logic (e.g. reading `placement` to update an arrow) on every reposition.
+function useFloat(referenceRef: { value: HTMLElement | null }, floatingRef: { value: HTMLElement | null }) {
+  watchEffect((onCleanup) => {
+    const reference = referenceRef.value;
+    const floating = floatingRef.value;
+    if (!reference || !floating) return;
+
+    const cleanup = float(reference, floating, {
+      placement: 'bottom',
+      middleware: [offset(6), flip(), shift({ padding: 8 })],
+    });
+    onCleanup(() => cleanup());
+  });
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { float, offset, flip, shift } from '@vielzeug/floatit';
+
+  export let anchor: HTMLElement;
+
+  let tooltipEl: HTMLDivElement;
+
+  onMount(() => {
+    const cleanup = float(anchor, tooltipEl, {
+      placement: 'bottom',
+      middleware: [offset(6), flip(), shift({ padding: 8 })],
+    });
+    return () => cleanup();
+  });
+</script>
+
+<div bind:this={tooltipEl} role="tooltip" style="position: absolute">
+  <slot />
+</div>
+```
+
+:::
+
+
+### Pitfalls
+
+- **React:** Passing `[open]` as the `useEffect` dependency re-runs `float()` every time visibility changes. This is correct — `float()` must be called after the tooltip is in the DOM.
+- **Vue 3:** When using `v-if` to conditionally render the floating element, always `await nextTick()` before calling `float()` — otherwise `ref.value` is still `null`.
+- **Svelte:** With `{#if}`, `bind:this` only resolves after the next microtask. Call `await tick()` before `float()` when toggling visibility.
+
+## Working with Other Vielzeug Libraries
+
+### With Craftit
+
+Use Floatit inside a Craftit component to position tooltips and popovers reactively.
 
 ```ts
-const cleanup = autoUpdate(reference, floating, () => {
-  const placement = positionFloat(reference, floating, {
-    placement: 'top',
-    middleware: [offset(8), flip(), shift({ padding: 6 })],
-  });
-  floating.dataset.placement = placement;
+import { define, html, onMounted, ref } from '@vielzeug/craftit';
+import { float, offset, flip, shift } from '@vielzeug/floatit';
+
+define('x-tooltip', {
+  setup() {
+    const triggerRef = ref<HTMLElement>();
+    const tooltipRef = ref<HTMLElement>();
+
+    onMounted(() => {
+      if (!triggerRef.value || !tooltipRef.value) return;
+      return float(triggerRef.value, tooltipRef.value, {
+        placement: 'bottom',
+        middleware: [offset(6), flip(), shift({ padding: 8 })],
+      });
+    });
+
+    return () => html`
+      <button ref=${triggerRef}><slot></slot></button>
+      <div ref=${tooltipRef} role="tooltip" style="position:absolute">
+        <slot name="content"></slot>
+      </div>
+    `;
+  },
 });
 ```
 
-`autoUpdate` calls the callback once immediately on registration, then listens to:
+## Best Practices
 
-- `scroll` on `window` (capturing, covers all scroll ancestors)
-- `resize` on `window`
-- `ResizeObserver` on the reference and (by default) the floating element
-- `window.visualViewport` (by default, covers pinch-zoom and virtual keyboard)
-
-If your floating element's size is fully controlled externally and observing it causes unnecessary update loops, disable floating observation:
-
-```ts
-const cleanup = autoUpdate(reference, floating, update, {
-  observeFloating: false,
-});
-```
-
-Always call the returned cleanup when the floating element is hidden to avoid unnecessary reflows.
-
-## Common Patterns
-
-### Tooltip
-
-```ts
-import { float, flip, offset, shift } from '@vielzeug/floatit';
-
-let cleanup: (() => void) | null = null;
-
-function showTooltip(trigger: Element, tooltip: HTMLElement) {
-  tooltip.showPopover?.() ?? tooltip.setAttribute('data-open', '');
-
-  cleanup = float(trigger, tooltip, {
-    placement: 'top',
-    middleware: [offset(8), flip(), shift({ padding: 6 })],
-  });
-}
-
-function hideTooltip(tooltip: HTMLElement) {
-  tooltip.hidePopover?.() ?? tooltip.removeAttribute('data-open');
-  cleanup?.();
-  cleanup = null;
-}
-```
-
-### Dropdown / Select
-
-```ts
-import { float, flip, shift, size } from '@vielzeug/floatit';
-
-function openDropdown(trigger: HTMLElement, panel: HTMLElement) {
-  return float(trigger, panel, {
-    placement: 'bottom-start',
-    middleware: [
-      flip({ padding: 6 }),
-      shift({ padding: 6 }),
-      size({
-        padding: 6,
-        apply({ elements }) {
-          elements.floating.style.width = `${(elements.reference as HTMLElement).offsetWidth}px`;
-        },
-      }),
-    ],
-  });
-}
-```
+- Use `float()` for the common tooltip/popover case; use `computePosition()` when you need raw coordinates or custom rendering.
+- Call the cleanup function returned by `float()` and `autoUpdate()` when the floating element is removed from the DOM.
+- Use either `flip()` or `autoPlacement()` — combining them has no effect and increases overhead.
+- Apply `offset()` before `flip()` or `autoPlacement()` in the middleware array so the flip logic accounts for the gap.
+- Use `shift({ padding })` to keep the floating element away from viewport edges.
+- Use virtual references for context menus and cursor-anchored popovers.
+- Set `animationFrame: true` on `autoUpdate` only when the reference itself animates — it increases CPU usage.

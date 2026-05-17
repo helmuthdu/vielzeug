@@ -1,10 +1,10 @@
-import { define, computed, html, inject } from '@vielzeug/craftit';
+import { computed, define, html, inject } from '@vielzeug/craftit';
 import { type CheckableChangePayload, createCheckableFieldControl } from '@vielzeug/craftit/controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { formControlMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, type PropBundle, sizableBundle, themableBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { SWITCH_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -24,17 +24,6 @@ export type BitSwitchProps = CheckableProps &
     helper?: string;
   };
 
-const switchProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  checked: false,
-  error: '',
-  helper: '',
-  name: '',
-  value: 'on',
-} satisfies PropBundle<BitSwitchProps>;
-
 /**
  * A toggle switch component for binary on/off states.
  *
@@ -49,7 +38,7 @@ const switchProps = {
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the switch
  *
- * @fires change - Emitted when switch is toggled. detail: { checked: boolean, fieldValue: string, originalEvent?: Event }
+ * @fires change - Emitted when switch is toggled. detail: { checked: boolean, value: string, originalEvent?: Event }
  *
  * @slot - Switch label text
  *
@@ -61,9 +50,18 @@ const switchProps = {
  */
 export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', {
   formAssociated: true,
-  props: switchProps,
-  setup({ emit, host, props }) {
-    const formCtx = inject(FORM_CTX, undefined);
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    checked: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
+    error: '',
+    helper: '',
+    name: '',
+    value: 'on',
+  },
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
 
     const checkable = createCheckableFieldControl({
       checked: props.checked,
@@ -71,9 +69,8 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
       disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)),
       error: props.error,
       helper: props.helper,
-      host: host.el,
       onToggle: (payload) => {
-        checkable.control.triggerValidation('change');
+        checkable.triggerValidation('change');
         emit('change', payload);
       },
       prefix: 'switch',
@@ -81,42 +78,33 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { a11y, control, press: pressControl } = checkable;
+    const { checked, disabled, handleClick, handleKeydown, helperId, labelId } = checkable;
 
     mountFormContextSync(host.el, formCtx, props);
 
-    host.bind('class', () => ({
-      'is-checked': control.checked.value,
-      'is-disabled': control.disabled.value,
-    }));
-
-    host.bind('attr', {
-      checked: () => control.checked.value,
-      tabindex: () => (control.disabled.value ? undefined : 0),
-    });
-    host.bind('on', {
-      click: (e) => {
-        pressControl.handleClick(e);
+    host.bind({
+      attr: {
+        checked,
+        tabindex: () => (disabled.value ? undefined : 0),
       },
-      keydown: (e) => {
-        pressControl.handleKeydown(e);
+      class: () => ({
+        'is-checked': checked.value,
+        'is-disabled': disabled.value,
+      }),
+      on: {
+        click: handleClick,
+        keydown: handleKeydown,
       },
     });
 
-    return html`
+    return () => html`
       <div class="switch-wrapper" part="switch">
         <div class="switch-track" part="track">
           <div class="switch-thumb" part="thumb"></div>
         </div>
       </div>
-      <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
-      <div
-        class="helper-text"
-        part="helper-text"
-        data-a11y-helper
-        id="${a11y.helperId}"
-        aria-live="polite"
-        hidden></div>
+      <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
+      <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
     `;
   },
   styles: [...formControlMixins, sizeVariantMixin(SWITCH_SIZE_PRESET), componentStyles],

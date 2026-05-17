@@ -5,13 +5,11 @@ description: 'Data Transformation Pipeline examples for workit.'
 
 ## Data Transformation Pipeline
 
-## Problem
+### Problem
 
-Implement data transformation pipeline in a production-friendly way with `@vielzeug/workit` while keeping setup and cleanup explicit.
+You need to apply a sequence of CPU-bound transforms to a large dataset — parsing, filtering, aggregating — without blocking the main thread and freezing the UI.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/workit` installed.
+### Solution
 
 Apply CPU-bound transforms to large datasets without blocking the UI:
 
@@ -30,26 +28,19 @@ const statsPool = createWorker<Row, Stats>(
   { concurrency: 'auto' },
 );
 
-// Process 10 000 rows concurrently
-const rows: Row[] = loadDataset();
-const stats = await Promise.all(rows.map((row) => statsPool.run(row)));
-
-statsPool.dispose();
+async function processDataset(rows: Row[]): Promise<Stats[]> {
+  try {
+    const stats = await Promise.all(rows.map((row) => statsPool.run(row)));
+    return stats;
+  } finally {
+    statsPool.dispose();
+  }
+}
 ```
 
-## Expected Output
+### Related
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Cancellable Batch](./cancellable-batch.md)
-- [Fibonacci with Pool and Timeout](./fibonacci-with-pool-and-timeout.md)
 - [Image Processing](./image-processing.md)
+- [Using Transferables](./using-transferables.md)
+- [Cancellable Batch](./cancellable-batch.md)
+- [Async Workflows (Stateit)](/stateit/examples/pattern-nextvalue-in-async-workflows)

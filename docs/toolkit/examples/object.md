@@ -3,9 +3,9 @@ title: 'Toolkit — Object Examples'
 description: 'Object utility examples for Toolkit.'
 ---
 
-# Object Utilities
+## Object Utilities
 
-Object utilities provide robust tools to manipulate, compare, and traverse objects in a type-safe, ergonomic way. Use these helpers for deep merging, diffing, nested path access, caching, and more.
+Object utilities provide robust tools to manipulate, compare, and traverse objects in a type-safe, ergonomic way. Use these helpers for cloning, diffing, nested path access, caching, and more.
 
 ## 📚 Quick Reference
 
@@ -17,40 +17,66 @@ Implement 📚 quick reference in a production-friendly way with `@vielzeug/tool
 
 The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
 
-| Method                               | Description                                                                  |
-| :----------------------------------- | :--------------------------------------------------------------------------- |
-| [`stash`](./object/stash.md)         | Key-value cache with automatic GC and observer support.                      |
-| [`diff`](./object/diff.md)           | Compare two objects and return the structural differences.                   |
-| [`merge`](./object/merge.md)         | Merge multiple objects with configurable strategies (deep, shallow, concat). |
-| [`parseJSON`](./object/parseJSON.md) | Safely parse JSON strings with optional fallback value.                      |
-| [`get`](./object/path.md)            | Safely access nested properties using dot-notation strings.                  |
-| [`proxy`](./object/proxy.md)         | Object proxy with get/set intercept hooks.                                   |
-| [`prune`](./object/prune.md)         | Recursively remove null/undefined/empty values.                              |
-| [`seek`](./object/seek.md)           | Recursively search nested values by similarity threshold.                    |
+- [`stash`](./object/stash.md): Key-value cache with automatic GC and observer support.
+- [`deepClone`](./object/deepClone.md): Deep clone nested values and common JS structures.
+- [`defaults`](./object/defaults.md): Apply fallback values for undefined keys.
+- [`diff`](./object/diff.md): Compare two objects and return the structural differences.
+- [`entries`](./object/entries.md): Typed wrapper for Object.entries.
+- [`filterValues`](./object/filterValues.md): Filter object keys by value predicate.
+- [`fromEntries`](./object/fromEntries.md): Typed wrapper for Object.fromEntries.
+- [`has`](./object/has.md): Type-safe key existence check.
+- [`invert`](./object/invert.md): Invert key-value pairs.
+- [`keys`](./object/keys.md): Typed wrapper for Object.keys.
+- [`mapKeys`](./object/mapKeys.md): Transform object keys.
+- [`mapValues`](./object/mapValues.md): Transform object values.
+- [`deepMerge` and `shallowMerge`](./object/merge.md): Merge multiple objects.
+- [`pick`](./object/pick.md): Create a new object with only selected keys.
+- [`omit`](./object/omit.md): Create a new object excluding selected keys.
+- [`parseJSON`](./object/parseJSON.md): Safely parse JSON strings with optional fallback value.
+- [`get`](./object/path.md): Safely access nested properties using dot-notation strings.
+- [`prune`](./object/prune.md): Recursively remove null/undefined/empty values.
+- [`seek`](./object/seek.md): Recursively search nested values by similarity threshold.
+- [`values`](./object/values.md): Typed wrapper for Object.values.
 
 ## 💡 Practical Examples
 
-### Deep Merging & Diffing
+### Cloning & Diffing
 
 ```ts
-import { merge, diff } from '@vielzeug/toolkit';
+import { deepClone, diff } from '@vielzeug/toolkit';
 
-const config = { api: { host: 'localhost', port: 8080 } };
-const overrides = { api: { port: 3000 } };
+const config = { api: { host: 'localhost', port: 8080 }, flags: { beta: false } };
+const finalConfig = deepClone(config);
 
-// Deep merge (config remains unchanged)
-const finalConfig = merge('deep', config, overrides);
-// { api: { host: 'localhost', port: 3000 } }
+finalConfig.api.port = 3000;
+finalConfig.flags.beta = true;
 
 // Find what changed
 const changes = diff(config, finalConfig);
-// { api: { port: { from: 8080, to: 3000 } } }
+// { api: { port: 3000 }, flags: { beta: true } }
+```
+
+### Deep vs Shallow Merge
+
+```ts
+import { deepMerge, shallowMerge } from '@vielzeug/toolkit';
+
+const base = { api: { host: 'localhost', port: 8080 }, tags: ['core'] };
+const override = { api: { port: 3000 }, tags: ['docs'] };
+
+const deep = deepMerge(base, override);
+// { api: { host: 'localhost', port: 3000 }, tags: ['core', 'docs'] }
+
+const shallow = shallowMerge(base, override);
+// { api: { port: 3000 }, tags: ['docs'] }
+
+console.log(deep, shallow);
 ```
 
 ### Accessing Nested Data
 
 ```ts
-import { get, seek } from '@vielzeug/toolkit';
+import { get, omit, pick, seek } from '@vielzeug/toolkit';
 
 const data = {
   user: {
@@ -65,6 +91,12 @@ const theme = get(data, 'user.profile.settings.theme'); // 'dark'
 
 // Search values anywhere in the object
 const hasDark = seek(data, 'dark'); // true
+
+const user = { id: 1, name: 'Alice', role: 'admin', password: 'secret' };
+const safe = pick(user, ['id', 'name', 'role']);
+const noSecret = omit(user, ['password']);
+
+console.log(theme, hasDark, safe, noSecret);
 ```
 
 ### Pruning & Cleaning
@@ -93,18 +125,26 @@ myCache.size(); // 1
 
 ## 🔗 All Object Utilities
 
-<div class="grid-links">
-
 - [stash](./object/stash.md)
+- [deepClone](./object/deepClone.md)
+- [defaults](./object/defaults.md)
 - [diff](./object/diff.md)
-- [merge](./object/merge.md)
+- [entries](./object/entries.md)
+- [filterValues](./object/filterValues.md)
+- [fromEntries](./object/fromEntries.md)
+- [has](./object/has.md)
+- [invert](./object/invert.md)
+- [keys](./object/keys.md)
+- [mapKeys](./object/mapKeys.md)
+- [mapValues](./object/mapValues.md)
+- [deepMerge and shallowMerge](./object/merge.md)
+- [pick](./object/pick.md)
+- [omit](./object/omit.md)
 - [parseJSON](./object/parseJSON.md)
 - [get](./object/path.md)
-- [proxy](./object/proxy.md)
 - [prune](./object/prune.md)
 - [seek](./object/seek.md)
-
-</div>
+- [values](./object/values.md)
 
 ## Expected Output
 

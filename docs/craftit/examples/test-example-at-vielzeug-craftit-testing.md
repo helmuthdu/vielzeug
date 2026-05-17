@@ -5,13 +5,11 @@ description: 'Test Example (`@vielzeug/craftit/testing`) for craftit.'
 
 ## Test Example (`@vielzeug/craftit/testing`)
 
-## Problem
+### Problem
 
-Implement test example (`@vielzeug/craftit/testing`) in a production-friendly way with `@vielzeug/craftit` while keeping setup and cleanup explicit.
+You want to write unit tests for a Craftit custom element — rendering it in a test environment, triggering events, and asserting on its DOM output without a real browser.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
+### Solution
 
 ```ts
 import { cleanup, mount, user, waitFor } from '@vielzeug/craftit/testing';
@@ -28,18 +26,14 @@ fixture.destroy();
 cleanup();
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Custom elements registered in one test can leak into subsequent tests. Use `TestBed.reset()` between tests to clear the registry.
+- `connectedCallback` (and therefore `onMounted`) does not run until the element is appended to the test container. Reactive state reads before connection return initial values.
+- Shadow DOM queries use `element.shadowRoot.querySelector`, not `document.querySelector`. Forgetting this silently returns `null`.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Context Provider and Consumer](./context-provider-and-consumer.md)
 - [Counter Component](./counter-component.md)

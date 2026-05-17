@@ -3,29 +3,23 @@ title: 'Validit Examples — API'
 description: 'API request and response validation examples with validit.'
 ---
 
-## API Validation Examples
+## API validation examples
 
-## Problem
+### Problem
 
-Implement api validation examples in a production-friendly way with `@vielzeug/validit` while keeping setup and cleanup explicit.
+Validate request bodies, query parameters, and outbound service responses at the application boundary without duplicating ad-hoc checks.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/validit` installed.
-
-### Request Body Validation
+### Runnable Example
 
 ```ts
 import { v } from '@vielzeug/validit';
 
-const CreateArticleSchema = v
-  .object({
-    title: v.string().min(5).max(200),
-    body: v.string().min(20),
-    tags: v.array(v.string()).max(10).default([]),
-    status: v.union('draft', 'published').default('draft'),
-  })
-  .strict();
+const CreateArticleSchema = v.object({
+  title: v.string().min(5).max(200),
+  body: v.string().min(20),
+  tags: v.array(v.string().trim().min(1)).max(10).unique().default([]),
+  status: v.union('draft', 'published').default('draft'),
+});
 
 app.post('/articles', (req, res) => {
   const result = CreateArticleSchema.safeParse(req.body);
@@ -42,11 +36,7 @@ app.post('/articles', (req, res) => {
 
   return res.status(201).json({ data: result.data });
 });
-```
 
-### Query Parameter Validation
-
-```ts
 const QuerySchema = v.object({
   page: v.coerce.number().int().min(1).default(1),
   limit: v.coerce.number().int().min(1).max(100).default(20),
@@ -54,33 +44,37 @@ const QuerySchema = v.object({
 });
 
 const query = QuerySchema.parse(req.query);
-```
 
-### Response Validation
-
-```ts
 const UserResponseSchema = v.object({
   id: v.number().int().positive(),
   email: v.string().email(),
-  createdAt: v.string().datetime(),
+  createdAt: v.string().isoDateTime(),
 });
 
 const payload = await service.getUser(id);
 const safePayload = UserResponseSchema.parse(payload);
+
+const WebhookSchema = v.variant('type', {
+  invoice_paid: v.object({ amount: v.number().positive(), invoiceId: v.string().uuid() }),
+  subscription_canceled: v.object({ reason: v.string(), subscriptionId: v.string().uuid() }),
+});
+
+const event = WebhookSchema.parse(req.body);
 ```
 
-## Expected Output
+### Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- `result.data` is fully parsed and defaulted before it enters your handler logic.
+- Query parameters like `?page=2&limit=50` become numbers.
+- Invalid responses from downstream services fail immediately instead of leaking inconsistent shapes into the rest of the app.
 
-## Common Pitfalls
+### Common Pitfalls
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Assuming unknown keys are accepted in object payloads.
+- Using `safeParse()` with async-only schemas containing async `check()`.
+- Returning raw `ValidationError` messages to clients without shaping response fields.
 
-## Related Recipes
+### Related
 
 - [Async](./async.md)
 - [Forms](./forms.md)

@@ -1,4 +1,4 @@
-import { define, html, watch } from '@vielzeug/craftit';
+import { define, prop, html } from '@vielzeug/craftit';
 
 import styles from './text.css?inline';
 
@@ -74,42 +74,29 @@ export const TEXT_TAG = define<BitTextProps>('bit-text', {
     align: undefined,
     as: undefined,
     color: undefined,
-    italic: false,
-    lines: { default: undefined as number | undefined, type: Number },
+    italic: prop.bool(),
+    lines: { default: undefined as number | undefined },
     size: undefined,
-    truncate: false,
+    truncate: prop.bool(),
     variant: undefined,
     weight: undefined,
   },
-  setup({ host, props }) {
-    // Single watcher drives both role + aria-level from `as`.
-    // h1–h6 → role="heading" + aria-level; everything else → remove both.
-    watch(
-      props.as,
-      (tag) => {
-        const match = /^h([1-6])$/.exec((tag as string | undefined) ?? '');
+  setup(props, { host }) {
+    host.bind({
+      attr: {
+        'aria-level': () => {
+          const match = /^h([1-6])$/.exec((props.as.value as string) ?? '');
 
-        if (match) {
-          host.el.setAttribute('role', 'heading');
-          host.el.setAttribute('aria-level', match[1]);
-        } else {
-          host.el.removeAttribute('role');
-          host.el.removeAttribute('aria-level');
-        }
+          return match ? match[1] : null;
+        },
+        role: () => (/^h([1-6])$/.test((props.as.value as string) ?? '') ? 'heading' : null),
       },
-      { immediate: true },
-    );
-    // Drive --_lines on the host so the CSS line-clamp rule works.
-    watch(
-      props.lines,
-      (n) => {
-        if (n != null) host.el.style.setProperty('--_lines', String(n));
-        else host.el.style.removeProperty('--_lines');
+      style: {
+        '--_lines': () => (props.lines.value != null ? String(props.lines.value) : null),
       },
-      { immediate: true },
-    );
+    });
 
-    return html`<slot></slot>`;
+    return () => html`<slot></slot>`;
   },
   styles: [styles],
 });

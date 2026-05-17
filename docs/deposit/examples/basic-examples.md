@@ -1,115 +1,120 @@
 ---
-title: 'Deposit Examples — Basic Examples'
-description: 'Basic LocalStorage and IndexedDB examples for Deposit.'
+title: Deposit Examples — Basic
+description: Core usage examples for localStorage, sessionStorage, IndexedDB, and memory adapters.
 ---
 
-## Basic Examples
-
-## Problem
-
-Implement basic examples in a production-friendly way with `@vielzeug/deposit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/deposit` installed.
-
-### User Store (LocalStorage)
-
-A simple typed store for user preferences persisted to `localStorage`.
+## Define a Schema with table()
 
 ```ts
-import { createLocalStorage, defineSchema } from '@vielzeug/deposit';
+import { table } from '@vielzeug/deposit';
 
-interface Preferences {
-  id: string;
-  theme: 'light' | 'dark';
-  language: string;
-  notifications: boolean;
-}
+type User = { id: number; name: string };
+type Post = { id: number; title: string; userId: number };
 
-const schema = defineSchema<{ preferences: Preferences }>({
-  preferences: { key: 'id' },
-});
-
-const db = createLocalStorage({ dbName: 'my-app', schema });
-
-// Save defaults on first load
-await db.getOrPut('preferences', 'user-1', () => ({
-  id: 'user-1',
-  theme: 'light',
-  language: 'en',
-  notifications: true,
-}));
-
-// Read
-const prefs = await db.get('preferences', 'user-1');
-
-// Partial update — returns the merged record immediately
-const updated = await db.patch('preferences', 'user-1', { theme: 'dark' });
-console.log(updated?.theme); // 'dark'
+const schema = {
+  users: table<User>('id'),
+  posts: table<Post>('id'),
+};
 ```
 
----
+No `Schema<{...}>` annotation needed. `typeof schema` carries full type information.
 
-### Product Catalogue (IndexedDB)
-
-A full CRUD example using IndexedDB with schema indexes and query builder.
+## LocalStorage
 
 ```ts
-import { createIndexedDB, defineSchema } from '@vielzeug/deposit';
+import { createLocalStorage, table } from '@vielzeug/deposit';
 
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  inStock: boolean;
-}
+type User = { id: number; name: string };
+const schema = { users: table<User>('id') };
 
-const schema = defineSchema<{ products: Product }>({
-  products: { key: 'id', indexes: ['category', 'price'] },
-});
+const db = createLocalStorage('demo', schema);
+await db.put('users', { id: 1, name: 'Alice' });
+console.log(await db.getAll('users'));
+```
 
-const db = createIndexedDB({ dbName: 'catalogue', version: 1, schema });
+## LocalStorage with TTL
 
-// Seed data
-await db.putMany('products', [
-  { id: 1, name: 'Keyboard', category: 'peripherals', price: 79, inStock: true },
-  { id: 2, name: 'Monitor', category: 'displays', price: 349, inStock: true },
-  { id: 3, name: 'Webcam', category: 'peripherals', price: 59, inStock: false },
+```ts
+import { createLocalStorage, table, ttl } from '@vielzeug/deposit';
+
+type Session = { id: string; userId: number };
+const schema = { sessions: table<Session>('id') };
+
+const db = createLocalStorage('demo-ttl', schema);
+await db.put('sessions', { id: 's1', userId: 1 }, ttl.minutes(30));
+```
+
+## SessionStorage
+
+```ts
+import { createSessionStorage, table } from '@vielzeug/deposit';
+
+type Draft = { id: string; body: string };
+const schema = { drafts: table<Draft>('id') };
+
+const db = createSessionStorage('editor', schema);
+await db.put('drafts', { id: 'd1', body: 'hello' });
+console.log(await db.get('drafts', 'd1'));
+```
+
+## IndexedDB
+
+```ts
+import { createIndexedDB, table } from '@vielzeug/deposit';
+
+type Product = { id: number; name: string; price: number };
+const schema = { products: table<Product>('id') };
+
+const db = createIndexedDB({ dbName: 'catalog', schemaVersion: 1, schema });
+await db.put('products', { id: 1, name: 'Keyboard', price: 99 });
+const pricey = await db.query('products').between('price', 50, 200).toArray();
+console.log(pricey);
+```
+
+## Memory Adapter
+
+```ts
+import { createMemory, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string };
+const schema = { users: table<User>('id') };
+
+const db = createMemory(schema);
+await db.put('users', { id: 1, name: 'Alice' });
+console.log(await db.getAll('users'));
+```
+
+No browser APIs required — ideal for tests and server environments.
+
+## Existence Check and Bulk Write
+
+```ts
+await db.putAll('users', [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
 ]);
 
-// Query peripherals under €100, sorted by price
-const affordable = await db
-  .from('products')
-  .equals('category', 'peripherals')
-  .between('price', 0, 100)
-  .orderBy('price', 'asc')
-  .toArray();
-
-// Full-text search
-const results = await db.from('products').search('key').toArray();
-const byPrefix = await db.from('products').startsWith('name', 'mo', { ignoreCase: true }).toArray();
-
-// Async iteration over all products
-for await (const product of db.from('products').orderBy('name')) {
-  console.log(`${product.name} — €${product.price}`);
-}
-
-db.close();
+console.log(await db.has('users', 1)); // true
+console.log(await db.has('users', 99)); // false
 ```
 
-## Expected Output
+## Query Composition
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+```ts
+const page = await db
+  .query('products')
+  .startsWith('name', 'k', { ignoreCase: true })
+  .orderBy('price', 'asc')
+  .limit(10)
+  .offset(0)
+  .toArray();
 
-## Common Pitfalls
+const total = await db.query('products').count();
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Advanced Examples](./advanced-examples.md)
+// Get the single cheapest matching product
+const cheapest = await db
+  .query('products')
+  .startsWith('name', 'k', { ignoreCase: true })
+  .orderBy('price', 'asc')
+  .first();
+```

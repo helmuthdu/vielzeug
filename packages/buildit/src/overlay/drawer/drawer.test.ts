@@ -67,6 +67,18 @@ describe('bit-drawer', () => {
       expect(fixture.query('.header-title')?.textContent?.trim()).toContain('Settings');
     });
 
+    it('renders label prop as header fallback text', async () => {
+      fixture = await mount('bit-drawer', { attrs: { label: 'Settings panel' } });
+
+      expect(fixture.query('.header-title')?.textContent?.trim()).toContain('Settings panel');
+    });
+
+    it('does not render undefined text in header when no label or title is provided', async () => {
+      fixture = await mount('bit-drawer');
+
+      expect(fixture.query('.header')?.textContent).not.toContain('undefined');
+    });
+
     it('renders footer slot content', async () => {
       fixture = await mount('bit-drawer', {
         html: '<button slot="footer">Save</button>',
@@ -110,6 +122,12 @@ describe('bit-drawer', () => {
 
       expect(fixture.element.getAttribute('backdrop')).toBe('transparent');
     });
+
+    it('reflects drag-handle-placement attribute on host', async () => {
+      fixture = await mount('bit-drawer', { attrs: { 'drag-handle-placement': 'inset' } });
+
+      expect(fixture.element.getAttribute('drag-handle-placement')).toBe('inset');
+    });
   });
 
   // ─── Open / Close ─────────────────────────────────────────────────────────
@@ -140,6 +158,53 @@ describe('bit-drawer', () => {
       }
 
       expect(fixture.query('dialog[open]')).toBeFalsy();
+    });
+
+    it('keeps outward drag position when swipe-close overshoots panel size', async () => {
+      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+
+      const panel = fixture.query<HTMLElement>('.panel');
+      const dragHandle = fixture.query<HTMLElement>('.drag-handle');
+
+      expect(panel).toBeTruthy();
+      expect(dragHandle).toBeTruthy();
+
+      Object.defineProperty(panel!, 'offsetWidth', {
+        configurable: true,
+        get: () => 200,
+      });
+
+      dragHandle!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
+      dragHandle!.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 300, pointerId: 1 }));
+      await fixture.flush();
+
+      expect(panel!.style.transform).toBe('translateX(300px)');
+      expect(panel!.style.opacity).toBe('0.2');
+    });
+
+    it('commits close on pointerup when release crosses swipe threshold', async () => {
+      fixture = await mount('bit-drawer', { attrs: { open: '' } });
+
+      const panel = fixture.query<HTMLElement>('.panel');
+      const dragHandle = fixture.query<HTMLElement>('.drag-handle');
+
+      expect(panel).toBeTruthy();
+      expect(dragHandle).toBeTruthy();
+
+      Object.defineProperty(panel!, 'offsetWidth', {
+        configurable: true,
+        get: () => 200,
+      });
+
+      dragHandle!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 7 }));
+      // Move stays below threshold so commit does not happen on pointermove.
+      dragHandle!.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 20, pointerId: 7 }));
+      // Release crosses threshold and should commit without snapping back.
+      dragHandle!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 90, pointerId: 7 }));
+      await fixture.flush();
+
+      expect(panel!.style.transform).toBe('translateX(200px)');
+      expect(panel!.style.opacity).toBe('0.2');
     });
   });
 

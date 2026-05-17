@@ -8,11 +8,22 @@
   ::slotted(bit-avatar) {
     --avatar-border: var(--border-2) solid var(--color-canvas);
 
-    margin-inline-start: calc(var(--avatar-group-overlap, -0.75rem));
+    margin-left: calc(var(--avatar-group-overlap, -0.75rem));
   }
 
   ::slotted(bit-avatar:first-child) {
-    margin-inline-start: 0;
+    margin-left: 0;
+  }
+
+  :host([dir='rtl']) ::slotted(bit-avatar),
+  :host(:dir(rtl)) ::slotted(bit-avatar) {
+    margin-right: calc(var(--avatar-group-overlap, -0.75rem));
+    margin-left: 0;
+  }
+
+  :host([dir='rtl']) ::slotted(bit-avatar:first-child),
+  :host(:dir(rtl)) ::slotted(bit-avatar:first-child) {
+    margin-right: 0;
   }
 
   ::slotted(bit-avatar[data-avatar-group-hidden]) {
@@ -29,7 +40,7 @@
     justify-content: center;
     width: var(--_size);
     height: var(--_size);
-    margin-inline-start: calc(var(--avatar-group-overlap, -0.75rem));
+    margin-left: calc(var(--avatar-group-overlap, -0.75rem));
     font-size: var(--text-xs);
     font-weight: var(--font-semibold);
     color: var(--color-contrast-700);
@@ -37,5 +48,11 @@
     background: var(--color-contrast-200);
     border: var(--border-2) solid var(--color-canvas);
     border-radius: var(--rounded-full);
+  }
+
+  :host([dir='rtl']) .overflow-badge,
+  :host(:dir(rtl)) .overflow-badge {
+    margin-right: calc(var(--avatar-group-overlap, -0.75rem));
+    margin-left: 0;
   }
 }

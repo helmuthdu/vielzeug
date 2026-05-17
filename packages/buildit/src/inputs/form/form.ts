@@ -1,69 +1,51 @@
-import { define, computed, html, provide } from '@vielzeug/craftit';
+import { computed, define, html, prop, provide } from '@vielzeug/craftit';
 
-import type { ComponentSize, VisualVariant } from '../../types';
-
-import { disablableBundle, sizableBundle, type PropBundle } from '../shared/bundles';
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './form.css?inline';
 
+/** Form component properties */
+export type BitFormProps = {
+  /** Disabled state */
+  disabled?: boolean;
+  /** No validate */
+  novalidate?: boolean;
+  /** Layout orientation for child fields */
+  orientation?: 'horizontal' | 'vertical';
+  /** Form size preset */
+  size?: string;
+  /** Validate on: 'submit' | 'change' | 'blur' | 'input' */
+  validateOn?: 'submit' | 'change' | 'blur' | 'input';
+  /** Form visual variant */
+  variant?: string;
+};
+
+/** Events emitted by the form component */
 export type BitFormEvents = {
+  /** Emitted when the form is reset */
   reset: { originalEvent: Event };
+  /** Emitted when the form is submitted */
   submit: { formData: FormData; originalEvent: SubmitEvent };
 };
 
-export type BitFormProps = {
-  /** Disable all child form fields */
-  disabled?: boolean;
-  /** Native form novalidate */
-  novalidate?: boolean;
-  /** Form layout orientation */
-  orientation?: 'vertical' | 'horizontal';
-  /** Default size for all child fields */
-  size?: ComponentSize;
-  /**
-   * When to validate child form controls.
-   * - `'submit'` (default): validate only when the form is submitted
-   * - `'blur'`: validate each field as it loses focus
-   * - `'change'`: validate on every value change (most immediate feedback)
-   */
-  validateOn?: 'submit' | 'blur' | 'change';
-  /** Default variant for all child fields */
-  variant?: Exclude<VisualVariant, 'glass' | 'frost' | 'text'>;
-};
-
-const formProps = {
-  ...sizableBundle,
-  ...disablableBundle,
-  novalidate: false,
-  orientation: 'vertical',
-  validateOn: undefined,
-  variant: undefined,
-} satisfies PropBundle<BitFormProps>;
-
 /**
- * `bit-form` — Native `<form>` wrapper that propagates `disabled`, `size`, and `variant`
- * context to all child `bit-*` form fields. Intercepts submit/reset events.
+ * A wrapper for standard HTML form that provides context to child bit-* form fields.
+ * Manages shared state like size, variant, and validation timing.
  *
  * @element bit-form
  *
- * @attr {boolean} disabled - Disable all child form fields
- * @attr {string} size - Default size: 'sm' | 'md' | 'lg'
- * @attr {string} variant - Default visual variant for child fields
- * @attr {string} orientation - Layout direction: 'vertical' | 'horizontal'
- * @attr {boolean} novalidate - Skip native browser validation
+ * @attr {boolean} disabled - Disable all child fields
+ * @attr {boolean} novalidate - Disable native browser validation
+ * @attr {string} validate-on - When to trigger validation: 'submit' | 'change' | 'blur' | 'input' (default: 'submit')
  *
- * @fires submit - Fired on form submit; detail contains `formData` and `originalEvent`
- * @fires reset  - Fired on form reset; detail contains `originalEvent`
- *
- * @slot - Form content (bit-input, bit-select, etc.)
- *
- * @cssprop --form-gap - Spacing between child form controls
+ * @fires submit - detail: { formData, originalEvent }
+ * @fires reset - detail: { originalEvent }
  *
  * @example
  * ```html
- * <bit-form id="my-form" size="sm" variant="flat">
- *   <bit-input name="email" label="Email" type="email"></bit-input>
+ * <bit-form @submit=${(e) => console.log(e.detail.formData)}>
+ *   <bit-input name="username" label="Username" required></bit-input>
  *   <bit-select name="role" label="Role">
+ *     <option value="user">User</option>
  *     <option value="admin">Admin</option>
  *   </bit-select>
  *   <bit-button type="submit">Submit</bit-button>
@@ -71,14 +53,25 @@ const formProps = {
  * ```
  */
 export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
-  props: formProps,
-  setup({ emit, props, shadowRoot }) {
+  props: {
+    disabled: false,
+    novalidate: false,
+    orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
+    size: undefined,
+    validateOn: prop.oneOf(['submit', 'change', 'blur', 'input'] as const, 'submit'),
+    variant: undefined,
+  },
+  setup(props, { emit, host }) {
+    const shadowRoot = host.el.shadowRoot;
+
+    // Reflect orientation to host so CSS and tests can read it
+    host.bind({ attr: { orientation: props.orientation } });
     // Provide context to all child bit-* form fields
     provide(FORM_CTX, {
       disabled: computed(() => Boolean(props.disabled.value)),
-      size: props.size,
-      validateOn: computed(() => props.validateOn.value ?? 'submit'),
-      variant: props.variant,
+      size: props.size as any,
+      validateOn: computed(() => props.validateOn.value ?? 'submit') as any,
+      variant: props.variant as any,
     });
 
     function handleSubmit(e: Event) {
@@ -98,10 +91,10 @@ export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
       emit('reset', { originalEvent: e });
     }
 
-    return html`
+    return () => html`
       <form
         part="form"
-        :novalidate="${() => props.novalidate.value || null}"
+        :novalidate="${props.novalidate}"
         :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
         @submit="${handleSubmit}"
         @reset="${handleReset}">

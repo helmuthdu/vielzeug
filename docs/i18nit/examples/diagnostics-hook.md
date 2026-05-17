@@ -1,47 +1,30 @@
 ---
-title: 'I18nit Examples — Diagnostics Hook'
-description: 'Diagnostics Hook examples for i18nit.'
+title: 'I18nit Examples — Error Handling'
+description: 'Handle preload/setLocale errors at the call site.'
 ---
 
-## Diagnostics Hook
-
-## Problem
-
-Implement diagnostics hook in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
+## Error Handling
 
 ```ts
-const i18nWithDiagnostics = createI18n({
+import { createI18n } from '@vielzeug/i18nit';
+
+const i18n = createI18n({
   locale: 'en',
-  loaders: {
+  catalogs: {
+    en: { title: 'Home' },
     fr: () => fetch('/api/locales/fr').then((r) => r.json()),
   },
-  onDiagnostic: (event) => {
-    if (event.kind === 'loader-error') {
-      console.warn('Loader failed:', event.locale, event.error);
-    } else {
-      console.error('Subscriber failed:', event.error);
-    }
-  },
 });
+
+try {
+  await i18n.preload('fr');
+  await i18n.setLocale('fr');
+} catch (error) {
+  console.error('Could not switch locale', error);
+}
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Async Loading and Reload](./async-loading-and-reload.md)
-- [Batched Catalog Updates](./batched-catalog-updates.md)
-- [Framework Integration](./framework-integration.md)
+- The runtime has no diagnostics bus by design.
+- `preload()` and `setLocale()` reject on loading errors.

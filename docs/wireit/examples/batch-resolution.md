@@ -1,56 +1,15 @@
 ---
-title: 'Wireit Examples — Batch Resolution'
-description: 'Batch Resolution examples for wireit.'
+title: Wireit Example - Batch Resolution
+description: Resolve several tokens in parallel.
 ---
 
-## Batch Resolution
-
-## Problem
-
-Implement batch resolution in a production-friendly way with `@vielzeug/wireit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/wireit` installed.
-
-### Resolve multiple dependencies at once
+# Batch Resolution
 
 ```ts
-const [db, config, logger] = container.getAll([DbToken, ConfigToken, LoggerToken]);
-// Types: [IDatabase, AppConfig, ILogger]
+const Logger = createToken<{ log(message: string): void }>('Logger');
+const Config = createToken<{ baseUrl: string }>('Config');
 
-// Async version
-const [db, cache] = await container.getAllAsync([DbToken, CacheToken]);
+const [logger, config] = await Promise.all([container.resolve(Logger), container.resolve(Config)]);
 ```
 
-### Bootstrap function
-
-```ts
-async function bootstrap() {
-  const container = createContainer();
-  // ... register all providers ...
-
-  const [db, cache, queue] = await container.getAllAsync([DbToken, CacheToken, QueueToken]);
-
-  await Promise.all([db.migrate(), cache.warm(), queue.start()]);
-
-  return container.get(AppToken);
-}
-```
-
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Aliases](./aliases.md)
-- [Async Providers](./async-providers.md)
-- [Basic Setup](./basic-setup.md)
+Use `Promise.all()` for unrelated tokens. Use `resolveMany()` only when one token has multiple providers.

@@ -26,6 +26,12 @@ describe('bit-grid-item', () => {
   });
 
   describe('Props', () => {
+    it('applies area', async () => {
+      fixture = await mount('bit-grid-item', { attrs: { area: 'sidebar' } });
+
+      expect(fixture.element.getAttribute('area')).toBe('sidebar');
+    });
+
     it('applies col-span', async () => {
       fixture = await mount('bit-grid-item', { attrs: { 'col-span': '3' } });
 

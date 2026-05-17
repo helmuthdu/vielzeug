@@ -5,15 +5,13 @@ description: 'Density Toggle (Compact / Comfortable) examples for virtualit.'
 
 ## Density Toggle (Compact / Comfortable)
 
-## Problem
+### Problem
 
-Implement density toggle (compact / comfortable) in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+Users can switch between compact and comfortable row heights at runtime. Changing `estimateSize` requires the virtualizer to rebuild its offset table without destroying and recreating the scroll container.
 
-## Runnable Example
+### Solution
 
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
-
-Use the `estimateSize` setter to switch between density modes. Measured heights from the previous mode are automatically cleared.
+Use `update({ estimateSize })` to switch between density modes. Measured heights from the previous mode are automatically cleared.
 
 ```ts
 import { createVirtualizer } from '@vielzeug/virtualit';
@@ -29,24 +27,20 @@ const virt = createVirtualizer(scrollEl, {
 
 document.getElementById('toggle-density')!.addEventListener('click', () => {
   mode = mode === 'compact' ? 'comfortable' : 'compact';
-  virt.estimateSize = DENSITY[mode];
+  virt.update({ estimateSize: DENSITY[mode] });
 });
 ```
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Calling `update({ estimateSize })` triggers a full layout recalculation. Toggling rapidly (e.g., bound to a slider) causes layout thrashing — debounce the update call.
+- Previously measured heights from `measure()` are discarded when `estimateSize` changes. If the user switches back to a previous density, all rows need to be re-measured.
+- The scroll position is preserved in pixels after `update()`. If the user was at item 500 and the row height changes, the visible items shift. Scroll to the same logical item index instead of trusting the pixel offset.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
 - [Explicit Resource Management (`using`)](./explicit-resource-management-using.md)

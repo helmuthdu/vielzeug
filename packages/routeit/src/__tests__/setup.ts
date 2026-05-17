@@ -4,24 +4,36 @@ export const mockLocation = {
   hash: '',
   pathname: '/',
   search: '',
+  state: null as unknown,
 };
+
+function assignMockUrl(url: string): void {
+  const parsed = new URL(url, 'https://routeit.test');
+
+  mockLocation.pathname = parsed.pathname;
+  mockLocation.search = parsed.search;
+  mockLocation.hash = parsed.hash;
+}
 
 export const mockHistory = {
   back: vi.fn(),
   forward: vi.fn(),
   go: vi.fn(),
-  // Simulate real browser behaviour: pushState/replaceState update the current URL.
-  // Without this, navigate() would re-read the old pathname from the mock and recurse
-  // indefinitely when a middleware calls router.navigate() without awaiting next().
-  pushState: vi.fn((_state: unknown, _title: string, url: string) => {
-    mockLocation.pathname = url;
+  // Simulate real browser behaviour: pushState/replaceState update the current URL and
+  // history.state. Without URL updates, navigate() would re-read the old pathname and
+  // recurse indefinitely when middleware calls router.navigate() without awaiting next().
+  pushState: vi.fn((state: unknown, _title: string, url: string) => {
+    assignMockUrl(url);
+    mockHistory.state = state;
   }),
-  replaceState: vi.fn((_state: unknown, _title: string, url: string) => {
-    mockLocation.pathname = url;
+  replaceState: vi.fn((state: unknown, _title: string, url: string) => {
+    assignMockUrl(url);
+    mockHistory.state = state;
   }),
+  state: null as unknown,
 };
 
-// Keep compatibility with older tests that access mocks via globalThis.
+// Expose mocks on globalThis for simple cross-test access.
 Object.assign(globalThis as Record<string, unknown>, {
   mockHistory,
   mockLocation,
@@ -35,7 +47,19 @@ let activeRouter: Router | undefined;
 /** Starts the router and waits for the initial route handling to complete. */
 export async function boot(router: Router): Promise<Router> {
   activeRouter = router;
-  router.start();
+
+  const stateLocation = router.state.location;
+  const stateHasQuery = Object.keys(stateLocation.query).length > 0;
+  const mockHasQuery = mockLocation.search.length > 1;
+  const needsSync =
+    stateLocation.pathname !== mockLocation.pathname ||
+    stateLocation.hash !== mockLocation.hash.replace(/^#/, '') ||
+    stateHasQuery !== mockHasQuery;
+
+  if (needsSync) {
+    window.dispatchEvent(new Event('popstate'));
+  }
+
   await new Promise<void>((r) => setTimeout(r, 10));
 
   return router;
@@ -51,4 +75,6 @@ export function resetMocks(): void {
   mockLocation.pathname = '/';
   mockLocation.search = '';
   mockLocation.hash = '';
+  mockLocation.state = null;
+  mockHistory.state = null;
 }

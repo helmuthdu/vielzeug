@@ -9,7 +9,7 @@ description: Practical lifecycle patterns for setup, cleanup, refs, and host wir
 
 ## Prefer Setup-Scope Reactivity
 
-Most component logic should live directly in `setup()` using `effect()` and `watch()`.
+Most component logic should live directly in `setup()` using signals and `effect()`.
 
 ```ts
 import { define, effect, html, signal } from '@vielzeug/craftit';
@@ -22,16 +22,43 @@ define('counter-title', {
       document.title = `Count: ${count.value}`;
     });
 
-    return html`<button @click=${() => count.value++}>${count}</button>`;
+    return () => html`<button @click=${() => count.value++}>${count}</button>`;
   },
 });
 ```
 
-Use `onMount()` only when you must wait for mount timing (for example platform observers or imperative third-party APIs).
+## Run DOM Initialization with `onMounted()`
+
+Use `onMounted(fn)` for DOM-dependent initialization. Multiple `onMounted()` calls are supported and run in registration order.
+
+```ts
+import { define, html, onMounted, ref, signal } from '@vielzeug/craftit';
+
+define('my-tabs', {
+  setup(_props, { slots }) {
+    const activeTab = signal(0);
+    const containerRef = ref<HTMLElement>();
+
+    onMounted(() => {
+      const panels = slots.elements('panels').value;
+      if (panels.length > 0 && activeTab.value >= panels.length) {
+        activeTab.value = 0;
+      }
+    });
+
+    return () => html`
+      <div ref=${containerRef}>
+        <div role="tablist"><slot name="tabs"></slot></div>
+        <div role="tabpanel"><slot name="panels"></slot></div>
+      </div>
+    `;
+  },
+});
+```
 
 ## Use `onElement()` for Ref-Driven Effects
 
-`onElement(ref, callback)` is the cleanest way to react when a `ref` resolves and to auto-clean per element lifecycle.
+`onElement(ref, callback)` is ideal for imperative DOM logic tied to a specific referenced element.
 
 ```ts
 import { define, html, onElement, ref } from '@vielzeug/craftit';
@@ -52,108 +79,43 @@ define('focus-input', {
       return () => input.removeEventListener('keydown', onKeydown);
     });
 
-    return html`<input ref=${inputRef} />`;
+    return () => html`<input ref=${inputRef} />`;
   },
 });
 ```
 
 ## Keep Host Wiring Explicit
 
-Use:
-
-- `host.bind({ attr: ... })`, `host.bind({ class: ... })`, and `host.bind({ on: ... })` for host wiring
-- `aria(config)` for ARIA/role host attributes
-- `handle(target, event, listener)` for external targets (`window`, `document`, arbitrary elements)
+Use one-liner host helpers for individual bindings and `host.bind(...)` for grouped bindings.
 
 ```ts
-import { aria, define, handle, html, signal } from '@vielzeug/craftit';
+import { computed, define, handle, html, signal } from '@vielzeug/craftit';
 
 define('toggle-host', {
-  setup({ host }) {
+  setup(_props, { host }) {
     const open = signal(false);
+    const expanded = computed(() => String(open.value));
 
-    host.bind('class', () => ({ 'is-open': open.value }));
-    host.bind('attr', { tabindex: 0 });
-    host.bind('on', {
-      click: () => {
-        open.value = !open.value;
-      },
+    host.bind({
+      attr: { 'aria-expanded': expanded, role: 'button', tabindex: 0 },
+      class: { 'is-open': open },
+      on: { click: () => (open.value = !open.value) },
     });
 
-    aria({
-      expanded: () => String(open.value),
-      role: 'button',
+    handle(window, 'keydown', (e) => {
+      if (e.key === 'Escape') open.value = false;
     });
 
-      onMount(() => {
-        handle(window, 'keydown', (e) => {
-          if (e.key === 'Escape') open.value = false;
-        });
-      });
+    // handle() auto-registers cleanup when called inside setup()/scope.run().
+    // If you call it elsewhere, keep the returned cleanup function and dispose it manually.
 
-      return html`<slot></slot>`;
-    },
+    return () => html`<slot></slot>`;
   },
-);
+});
 ```
 
 ## Pick the Right Cleanup Primitive
 
-- Use `onCleanup(fn)` for one-time teardown owned by the component.
-- Use `createCleanupSignal()` when a disposable resource is replaced over time.
-
-```ts
-import { createCleanupSignal, define, html, onMount, signal } from '@vielzeug/craftit';
-
-define(
-  'search-loader',
-  {
-    setup() {
-      const query = signal('');
-      const activeRequest = createCleanupSignal();
-
-      onMount(() => {
-        const runSearch = () => {
-          const controller = new AbortController();
-
-          activeRequest.set(() => controller.abort());
-          fetch(`/api/search?q=${encodeURIComponent(query.value)}`, { signal: controller.signal }).catch(() => {});
-        };
-
-        runSearch();
-      });
-
-      return html`<div>Searching…</div>`;
-    },
-  },
-);
-```
-
-## Error Handling Pattern
-
-Attach `onError()` once in setup to keep failures local to the component.
-
-```ts
-import { define, html, onError } from '@vielzeug/craftit';
-
-define(
-  'safe-widget',
-  {
-    setup() {
-      onError((err) => {
-        console.error('[my-widget]', err);
-      });
-
-      return html`<div>Safe widget</div>`;
-    },
-  },
-);
-```
-
-## Quick Checklist
-
-- Keep reactive state/effects in setup scope first.
-- Use `onElement()` for ref-based imperative logic.
-- Keep ARIA in `aria(...)`; keep host class/attrs/listeners in `host.bind(...)`.
-- Use `onMount()` only for mount-gated APIs.
-- Return/attach cleanups for every listener or disposable resource.
+- Use `onCleanup(fn)` for component-owned teardown.
+- Use `onElement()` for per-element teardown.
+- Return cleanup from `onMounted()` when cleanup belongs to mount-time setup.

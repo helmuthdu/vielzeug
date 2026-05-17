@@ -54,6 +54,39 @@ describe('allocate', () => {
     });
   });
 
+  describe('numeric parts shorthand', () => {
+    it('should distribute evenly among n parts', () => {
+      const result = allocate(100, 3);
+
+      expect(result).toEqual([33, 33, 34]);
+      expect(result.reduce((a, b) => a + b, 0)).toBe(100);
+    });
+
+    it('should handle bigint with n parts', () => {
+      const result = allocate(10000n, 4);
+
+      expect(result.reduce((a, b) => a + b, 0n)).toBe(10000n);
+      expect(result).toHaveLength(4);
+    });
+
+    it('should handle single part', () => {
+      expect(allocate(100, 1)).toEqual([100]);
+      expect(allocate(10000n, 1)).toEqual([10000n]);
+    });
+
+    it('should throw for non-integer parts', () => {
+      expect(() => allocate(100, 1.5)).toThrow(RangeError);
+    });
+
+    it('should throw for zero parts', () => {
+      expect(() => allocate(100, 0)).toThrow(RangeError);
+    });
+
+    it('should throw for negative parts', () => {
+      expect(() => allocate(100, -2)).toThrow(RangeError);
+    });
+  });
+
   describe('error handling', () => {
     it('should throw error for empty ratios', () => {
       expect(() => allocate(100, [])).toThrow('Ratios array cannot be empty');

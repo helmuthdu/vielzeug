@@ -4,8 +4,13 @@
  * ⚠️ Requires DOM environment (browser / jsdom / happy-dom)
  */
 
-import { define, type ComponentDefinition } from '../component';
-import { _resetIdCounter } from '../internal';
+import type { Signal } from '@vielzeug/stateit';
+
+import type { ComponentTemplate } from '../registration';
+
+import { _resetIdCounter, type HTMLResult } from '../internal';
+import { define, type ComponentDefinition, type SetupContextBag } from '../registration';
+import { fire as runtimeFire } from '../runtime';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -61,10 +66,17 @@ export interface MountOptions {
   componentOptions?: Omit<ComponentDefinition<any, any>, 'setup'>;
 }
 
-type TestComponentOptions<
+type TestSetup<
   Props extends Record<string, unknown> = Record<string, never>,
   Events extends Record<string, unknown> = Record<string, unknown>,
-> = Omit<ComponentDefinition<Props, Events>, 'setup'> & Pick<ComponentDefinition<Props, Events>, 'setup'>;
+> = (...args: Parameters<ComponentDefinition<Props, Events>['setup']>) => ComponentTemplate | HTMLResult;
+
+type MountProps = { readonly [x: string]: Signal<unknown> };
+
+// Bivariant callback type keeps inline test callbacks ergonomic across varying setup context specializations.
+export type MountSetup = {
+  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => ComponentTemplate | HTMLResult;
+}['bivarianceHack'];
 
 export interface WaitOptions {
   /** Maximum wait time in ms (default: 1000) */
@@ -86,6 +98,7 @@ let _componentTagCounter = 0;
  */
 export const _resetCounters = (): void => {
   _resetIdCounter();
+  _componentTagCounter = 0;
 };
 
 // ─── Core ────────────────────────────────────────────────────────────────────
@@ -178,41 +191,48 @@ const withWindowErrorCapture = async <T>(action: () => Promise<T>): Promise<T> =
  * const { query } = await mount('my-counter');
  */
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: string,
+  tagOrSetup: string,
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: TestComponentOptions['setup'],
+  tagOrSetup: MountSetup,
   options?: MountOptions,
 ): Promise<Fixture<T>>;
 export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: TestComponentOptions<any, any>,
-  options?: MountOptions,
-): Promise<Fixture<T>>;
-export async function mount<T extends HTMLElement = HTMLElement>(
-  tagOrSetupOrOptions: string | TestComponentOptions['setup'] | TestComponentOptions<any, any>,
+  tagOrSetup: string | MountSetup,
   options: MountOptions = {},
 ): Promise<Fixture<T>> {
   const { attrs = {}, componentOptions, container = document.body, html, props = {} } = options;
 
-  let tagName: string;
-  let inlineDefinition: TestComponentOptions<any, any> | undefined;
+  const normalizeSetup = <P extends Record<string, unknown>, E extends Record<string, unknown>>(
+    setup: TestSetup<P, E>,
+  ): ComponentDefinition<P, E>['setup'] => {
+    return (setupProps, setupCtx) => {
+      const result = setup(setupProps, setupCtx);
 
-  if (typeof tagOrSetupOrOptions === 'string') {
-    tagName = tagOrSetupOrOptions;
-  } else if (typeof tagOrSetupOrOptions === 'function') {
+      if (typeof result === 'function') {
+        return result;
+      }
+
+      return () => result;
+    };
+  };
+
+  let tagName: string;
+  let inlineDefinition: ComponentDefinition<any, any> | undefined;
+
+  if (typeof tagOrSetup === 'string') {
+    tagName = tagOrSetup;
+  } else {
     tagName = `trial-${++_componentTagCounter}`;
     inlineDefinition = {
       ...(componentOptions ?? {}),
-      setup: tagOrSetupOrOptions as TestComponentOptions<any, any>['setup'],
+      setup: normalizeSetup(tagOrSetup as TestSetup<any, any>),
     };
-  } else {
-    tagName = `trial-${++_componentTagCounter}`;
-    inlineDefinition = tagOrSetupOrOptions;
   }
 
   if (inlineDefinition) {
-    define(tagName, inlineDefinition as TestComponentOptions<any, any>);
+    define(tagName, inlineDefinition);
   }
 
   const element = document.createElement(tagName) as T;
@@ -345,29 +365,31 @@ const createPointerEvent = (type: string, init: PointerEventInit = {}): Event =>
  * fire.custom(el, 'value-change', 42);
  */
 export const fire = {
-  blur: (el: Element, opts?: FocusEventInit) => el.dispatchEvent(new FocusEvent('blur', { bubbles: true, ...opts })),
-  change: (el: Element, opts?: EventInit) => el.dispatchEvent(new Event('change', { bubbles: true, ...opts })),
+  blur: (el: Element, opts?: FocusEventInit) =>
+    runtimeFire.event(el, new FocusEvent('blur', { bubbles: true, ...opts })),
+  change: (el: Element, opts?: EventInit) => runtimeFire.event(el, new Event('change', { bubbles: true, ...opts })),
   click: (el: Element, opts?: PointerEventInit) =>
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...opts })),
+    runtimeFire.event(el, new MouseEvent('click', { bubbles: true, cancelable: true, ...opts })),
   custom<D = unknown>(el: Element, name: string, detail?: D, opts?: Omit<CustomEventInit<D>, 'detail'>): void {
-    el.dispatchEvent(new CustomEvent<D>(name, { bubbles: true, cancelable: true, detail, ...opts }));
+    runtimeFire.event(el, new CustomEvent<D>(name, { bubbles: true, cancelable: true, detail, ...opts }));
   },
-  focus: (el: Element, opts?: FocusEventInit) => el.dispatchEvent(new FocusEvent('focus', { bubbles: true, ...opts })),
-  input: (el: Element, opts?: EventInit) => el.dispatchEvent(new Event('input', { bubbles: true, ...opts })),
+  focus: (el: Element, opts?: FocusEventInit) =>
+    runtimeFire.event(el, new FocusEvent('focus', { bubbles: true, ...opts })),
+  input: (el: Element, opts?: EventInit) => runtimeFire.event(el, new Event('input', { bubbles: true, ...opts })),
   keyDown: (el: Element, opts?: KeyboardEventInit) =>
-    el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...opts })),
+    runtimeFire.event(el, new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...opts })),
   keyUp: (el: Element, opts?: KeyboardEventInit) =>
-    el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, ...opts })),
+    runtimeFire.event(el, new KeyboardEvent('keyup', { bubbles: true, cancelable: true, ...opts })),
   pointerDown: (el: Element, opts?: PointerEventInit) =>
-    el.dispatchEvent(createPointerEvent('pointerdown', { bubbles: true, cancelable: true, ...opts })),
+    runtimeFire.event(el, createPointerEvent('pointerdown', { bubbles: true, cancelable: true, ...opts })),
   pointerEnter: (el: Element, opts?: PointerEventInit) =>
-    el.dispatchEvent(createPointerEvent('pointerenter', { bubbles: false, ...opts })),
+    runtimeFire.event(el, createPointerEvent('pointerenter', { bubbles: false, ...opts })),
   pointerLeave: (el: Element, opts?: PointerEventInit) =>
-    el.dispatchEvent(createPointerEvent('pointerleave', { bubbles: false, ...opts })),
+    runtimeFire.event(el, createPointerEvent('pointerleave', { bubbles: false, ...opts })),
   pointerUp: (el: Element, opts?: PointerEventInit) =>
-    el.dispatchEvent(createPointerEvent('pointerup', { bubbles: true, cancelable: true, ...opts })),
+    runtimeFire.event(el, createPointerEvent('pointerup', { bubbles: true, cancelable: true, ...opts })),
   submit: (el: Element, opts?: EventInit) =>
-    el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true, ...opts })),
+    runtimeFire.event(el, new Event('submit', { bubbles: true, cancelable: true, ...opts })),
 } as const;
 
 // ─── User interactions ────────────────────────────────────────────────────────

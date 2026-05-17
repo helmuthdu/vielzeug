@@ -12,20 +12,17 @@ export type TestBus<T extends EventMap> = Bus<T> & {
 
 export function createTestBus<T extends EventMap>(options?: BusOptions<T>): TestBus<T> {
   const records = new Map<string, unknown[]>();
-  const userOnEmit = options?.onEmit;
+  const userOnDispatch = options?.onDispatch;
 
   const bus = createBus<T>({
     ...options,
-    onEmit(event, payload) {
-      let list = records.get(event);
+    onDispatch<K extends EventKey<T>>(event: K, payload: T[K]) {
+      const list = records.get(event);
 
-      if (!list) {
-        list = [];
-        records.set(event, list);
-      }
+      if (list) list.push(payload);
+      else records.set(event, [payload]);
 
-      list.push(payload);
-      userOnEmit?.(event, payload);
+      userOnDispatch?.(event, payload);
     },
   });
 

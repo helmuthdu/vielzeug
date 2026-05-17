@@ -5,58 +5,50 @@ description: 'Search List with Directives examples for craftit.'
 
 ## Search List with Directives
 
-## Problem
+### Problem
 
-Implement search list with directives in a production-friendly way with `@vielzeug/craftit` while keeping setup and cleanup explicit.
+You have a list that should filter as the user types into an input — binding the input value to a signal and conditionally rendering list items based on that signal.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
+### Solution
 
 ```ts
-import { component, computed, define, html, signal } from '@vielzeug/craftit';
-import { each, when } from '@vielzeug/craftit/directives';
+import { computed, define, each, html, signal } from '@vielzeug/craftit';
 
-define(
-  'search-list',
-  component({
-    setup() {
-      const query = signal('');
-      const items = signal(['Alice', 'Bob', 'Carol', 'Dave']);
-      const filtered = computed(() => items.value.filter((name) => name.toLowerCase().includes(query.value.toLowerCase())));
+define('search-list', {
+  setup() {
+    const query = signal('');
+    const items = signal(['Alice', 'Bob', 'Carol', 'Dave']);
+    const filtered = computed(() =>
+      items.value.filter((name) => name.toLowerCase().includes(query.value.toLowerCase())),
+    );
 
-      return html`
-        <input :value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
+    return () => html`
+      <input :value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
 
-        ${when({
-          condition: () => filtered.value.length > 0,
-          then: () =>
-            html`<ul>
+      ${() =>
+        filtered.value.length > 0
+          ? html`<ul>
               ${each(filtered, {
                 key: (_, i) => i,
                 render: (name) => html`<li>${name}</li>`,
               })}
-            </ul>`,
-          else: () => html`<p>No matches</p>`,
-        })}
-      `;
-    },
-  }),
-);
+            </ul>`
+          : html`<p>No matches</p>`}
+    `;
+  },
+});
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Directives re-run when the bound signal changes, not when an array is mutated in place. Calling `list.push(item)` without assigning a new array reference will not trigger a re-render.
+- An empty string is falsy in a conditional directive — `if=""` may hide items unexpectedly. Always coerce to boolean before binding.
+- Attaching an `@input` directive to a non-input element (e.g. a `<div>`) will never fire. Use `@change` or the correct event name for the target element type.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Signals (Stateit)](/stateit/examples/signals)
+- [Virtual List (Virtualit)](/virtualit/examples/basic-fixed-height-list)
 
 - [Context Provider and Consumer](./context-provider-and-consumer.md)
 - [Counter Component](./counter-component.md)

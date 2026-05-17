@@ -1,15 +1,13 @@
 ---
 title: Fetchit — Usage Guide
-description: HTTP client, query client, standalone mutations, interceptors, and error handling for Fetchit.
+description: HTTP client, cache, lean mutations, interceptors, and error handling for Fetchit.
 ---
 
-# Fetchit Usage Guide
+[[toc]]
 
 ::: tip New to Fetchit?
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-[[toc]]
 
 ## HTTP Client
 
@@ -24,9 +22,11 @@ const api = createApi({
   baseUrl: 'https://api.example.com',
   timeout: 30_000, // default: 30 000 ms
   headers: { Authorization: 'Bearer token' },
-  dedupe: false, // default: false — GET/HEAD/OPTIONS always dedupe regardless
-  logger: (level, msg, meta) => console.log(`[${level}] ${msg}`, meta),
+  fetch: globalThis.fetch, // optional
 });
+
+// Disable timeouts explicitly when needed
+const noTimeoutApi = createApi({ timeout: Infinity });
 ```
 
 ### HTTP Methods
@@ -91,18 +91,29 @@ api.headers({ Authorization: `Bearer ${newToken}` });
 api.headers({ Authorization: undefined });
 ```
 
+### Cancelling In-Flight Requests
+
+`cancelAll()` aborts every active request without disposing the client. The client stays usable for new requests immediately after.
+
+```ts
+// Route change — drop all pending background fetches
+api.cancelAll();
+
+// Client is still alive and ready
+const fresh = await api.get<Config>('/config');
+```
+
 ### Request Deduplication
 
-GET, HEAD, OPTIONS, and DELETE requests are **always** deduplicated — concurrent identical in-flight calls share one network request.
+GET, HEAD, OPTIONS, and DELETE requests are deduplicated automatically. Writes are never deduplicated unless you pass an explicit `dedupeKey`.
 
 ```ts
 // Only ONE network call is made
 const [a, b, c] = await Promise.all([api.get('/users/1'), api.get('/users/1'), api.get('/users/1')]);
 console.log(a === b); // true — same promise
 
-// To deduplicate POST/PUT/PATCH/DELETE, opt in per-client or per-request
-const api2 = createApi({ baseUrl: '...', dedupe: true });
-const result = await api.post('/data', { body: payload, dedupe: true });
+// Writes only dedupe when you give them a stable key
+const result = await api.post('/data', { body: payload, dedupeKey: ['save-draft', draftId] });
 ```
 
 ### Per-Request Options
@@ -114,8 +125,18 @@ const data = await api.get<Data>('/protected', {
   headers: { 'X-Custom': 'value' }, // per-request headers merged over globals
   signal: controller.signal, // AbortSignal for cancellation
   timeout: 5_000, // override client-level timeout
-  dedupe: false, // disable deduplication for this request
 });
+```
+
+### Query Param Arrays
+
+`query` supports scalars, arrays, and `null`.
+
+```ts
+await api.get('/users', {
+  query: { page: [1, 2], search: null, role: 'admin' },
+});
+// → /users?page=1&page=2&search=&role=admin
 ```
 
 ## Interceptors
@@ -147,7 +168,7 @@ An interceptor can short-circuit the chain by returning a `Response` without cal
 
 ## Query Client
 
-`createQuery()` provides stale-while-revalidate caching, request deduplication, prefix invalidation, and reactive subscriptions for any async data source.
+`createQuery()` provides cache-backed reads with request deduplication, prefix invalidation, and reactive subscriptions for any async data source.
 
 ### Creating a Query Client
 
@@ -160,6 +181,8 @@ const qc = createQuery({
   retry: 1, // default: 1 retry attempt
   retryDelay: undefined, // default: exponential backoff (1s → 2s → 4s → … up to 30s)
   shouldRetry: undefined, // default: undefined — retries all errors
+  refetchOnFocus: false, // default: false — revalidate stale entries when tab regains focus
+  refetchOnReconnect: false, // default: false — revalidate stale entries on network reconnect
 });
 ```
 
@@ -173,52 +196,93 @@ const user = await qc.query({
   fn: ({ key, signal }) => api.get<User>('/users/{id}', { params: { id: key[1] as number }, signal }),
   staleTime: 5_000,
   retry: 3,
+  shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```
 
-| Option        | Type                                  | Default     | Description                                                                |
-| ------------- | ------------------------------------- | ----------- | -------------------------------------------------------------------------- |
-| `key`         | `QueryKey`                            | required    | Cache identifier; serialized with stable key ordering                      |
-| `fn`          | `(ctx: QueryFnContext) => Promise<T>` | required    | Data-fetching function; receives `{ key, signal }`                         |
-| `staleTime`   | `number`                              | `0`         | ms served from cache before the next `query()` call refetches              |
-| `gcTime`      | `number`                              | `300000`    | ms before an unobserved entry is GC'd at background priority (paused while observed) |
-| `enabled`     | `boolean`                             | `true`      | Pass `false` to skip execution and return cached data if present           |
-| `retry`       | `number \| false`                     | `1`         | Number of retry attempts (`false` = no retries)                            |
-| `retryDelay`  | `number \| (attempt) => number`       | exponential | Delay between retries                                                      |
-| `shouldRetry` | `(error, attempt) => boolean`         | —           | Return `false` to skip retrying for a specific error (e.g. `4xx`)          |
-| `onSuccess`   | `(data: T) => void`                   | —           | Called after a successful fetch; not called on cache hits                  |
-| `onError`     | `(error: Error) => void`              | —           | Called after a failed fetch (not called when aborted)                      |
-| `onSettled`   | `(data, error) => void`               | —           | Called after a triggered fetch settles; not called on cache/inflight reuse |
+| Option            | Type                                  | Default              | Description                                                                     |
+| ----------------- | ------------------------------------- | -------------------- | ------------------------------------------------------------------------------- |
+| `key`             | `QueryKey`                            | required             | Cache identifier; serialized with stable key ordering                           |
+| `fn`              | `(ctx: QueryFnContext) => Promise<T>` | required             | Data-fetching function; receives `{ key, signal }`                              |
+| `staleTime`       | `number`                              | `0`                  | ms served from cache before the next `query()` call refetches                   |
+| `gcTime`          | `number`                              | `300000`             | ms before an unobserved entry is GC'd at background priority while unobserved   |
+| `retry`           | `number`                              | query-client default | Retry attempts for this specific query call                                     |
+| `retryDelay`      | `number \| (attempt) => number`       | query-client default | Delay strategy for this specific query call                                     |
+| `shouldRetry`     | `(error, attempt) => boolean`         | query-client default | Retry predicate for this specific query call                                    |
+| `enabled`         | `boolean`                             | `true`               | Skip the fetch when `false`; entry stays `'idle'` and existing data is returned |
+| `initialData`     | `T \| () => T \| undefined`           | —                    | Pre-seed the cache as a successful entry when no data exists                    |
+| `placeholderData` | `T \| () => T \| undefined`           | —                    | Shown as `data` to subscribers while the entry is fetching; not stored in cache |
+
+Per-query retry options override `createQuery()` defaults when provided.
 
 ::: tip Retry semantics
-`retry: 3` means **3 retries** (4 total attempts: 1 initial + 3 retries). `retry: false` means 1 attempt only.
+`retry: 3` means **3 retries** (4 total attempts: 1 initial + 3 retries). `retry: 0` means 1 attempt only.
 :::
 
-### Query Callbacks
+### Conditional Fetching
 
-`onSuccess`, `onError`, and `onSettled` are per-call callbacks. They fire only when the `query()` call **triggers a real fetch** — cache hits and inflight reuse skip them entirely. Only the triggering call's callbacks run; concurrent callers sharing the same inflight promise do not receive callbacks.
+Set `enabled: false` to skip the fetch. The entry stays `'idle'` and any cached data is returned. Useful for dependent queries or fields that should not load until the user interacts.
 
 ```ts
-await qc.query({
-  key: ['users', 1],
-  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
-  onSuccess: (data) => toast.success(`Loaded ${data.name}`),
-  onError: (err) => toast.error(err.message),
-  onSettled: (data, error) => analytics.track('users.load', { ok: !error }),
+// Only fetch posts once a userId is known
+const posts = await qc.query({
+  key: ['users', userId, 'posts'],
+  fn: ({ signal }) => api.get<Post[]>('/posts', { query: { userId }, signal }),
+  enabled: userId != null,
 });
 ```
 
-::: tip vs. `subscribe()`
-Use callbacks for **fire-and-forget side effects** (toasts, analytics) tied to a specific call. Use `subscribe()` for **reactive UI** that needs to track the full state lifecycle (loading spinners, error displays) and survives re-renders.
-:::
+### Seeding Cache Data
 
-### `prefetch(options)`
-
-Warms the cache without throwing. Accepts the same options as `query()`.
+`initialData` pre-populates the cache as a successful entry before the first fetch. If data already exists the value is ignored. Subject to normal `staleTime` checks.
 
 ```ts
-// Fire and forget — good for route transition pre-loading
-await qc.prefetch({ key: ['users', 2], fn: ({ signal }) => api.get('/users/2', { signal }) });
+// Seed a detail entry from an already-cached list
+const user = await qc.query({
+  key: ['users', id],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }),
+  staleTime: 30_000,
+  initialData: () => qc.get<User[]>(['users'])?.find((u) => u.id === id),
+});
+```
+
+`placeholderData` shows a temporary value to subscribers while the real fetch is in-flight. It is **not** written to the cache.
+
+```ts
+const user = await qc.query({
+  key: ['users', id],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }),
+  placeholderData: { id, name: 'Loading…' },
+});
+```
+
+### Prefetch
+
+Warms cache data ahead of use (for example, route hover or page transition preloads). It uses the same key/fn/staleness semantics as `query()` but resolves to `void`.
+
+```ts
+await qc.prefetch({
+  key: ['users', 1],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+  staleTime: 10_000,
+});
+
+// Next query can serve from warm cache
+const user = await qc.query({
+  key: ['users', 1],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+  staleTime: 10_000,
+});
+```
+
+By default `prefetch()` swallows errors after updating query state to `'error'`. Use `throwOnError: true` to rethrow.
+
+```ts
+await qc.prefetch({
+  key: ['config'],
+  fn: ({ signal }) => api.get('/config', { signal }),
+  throwOnError: true,
+});
 ```
 
 ### Cache Access
@@ -233,10 +297,10 @@ qc.set<User[]>(['users'], (old = []) => [...old, newUser]); // updater function
 
 // Full state snapshot
 const state = qc.getState<User>(['users', 1]);
-// → { data, error, status, updatedAt, isPending, isSuccess, isError, isIdle }
+// → { data, error, status, updatedAt }
 ```
 
-### `subscribe(key, listener)`
+### `subscribe(key, listener, opts?)`
 
 Subscribes to live `QueryState` updates for a key. Fires immediately with the current state. Returns an unsubscribe function.
 
@@ -245,17 +309,30 @@ const unsub = qc.subscribe<User>(['users', 1], (state) => {
   console.log(state.status); // 'idle' | 'pending' | 'success' | 'error'
   console.log(state.data); // T | undefined
   console.log(state.error); // Error | null
-  console.log(state.isPending, state.isSuccess, state.isError, state.isIdle);
 });
 
 unsub(); // stop listening
+```
+
+Pass a `select` function to transform data before the listener receives it. The listener is only called when the **selected value**, status, or error changes — redundant notifications are skipped.
+
+```ts
+// Only notified when the user's name changes, not on unrelated field updates
+const unsub = qc.subscribe<User, string>(['users', 1], (state) => renderName(state.data), {
+  select: (user) => user?.name,
+});
 ```
 
 Subscribing keeps the cache entry alive (cancels any pending GC timer). When the last subscriber leaves, `'idle'` entries are removed immediately; non-idle entries start a new `gcTime` countdown.
 
 ### `invalidate(key)`
 
-Cancels any in-flight request and removes the entry — or resets it to `'idle'` if it has active subscribers. Supports **prefix matching**: invalidating `['users']` purges `['users', 1]`, `['users', 2]`, etc.
+For entries **without active subscribers**, invalidation evicts the cache entry immediately. For entries **with active subscribers**:
+
+- If the entry has a stored query function (registered via `query()`), it is background-revalidated: the existing data stays visible while the refetch is in flight, then transitions to `success` or `error`.
+- If the entry was only ever populated via `set()` with no query function, it resets to `idle` so subscribers get a clean blank slate.
+
+Supports **prefix matching**: invalidating `['users']` purges `['users', 1]`, `['users', 2]`, etc.
 
 ```ts
 qc.invalidate(['users', 1]); // exact match
@@ -277,6 +354,20 @@ Clears every cache entry. Active subscribers are notified with an `'idle'` state
 ```ts
 qc.clear(); // good to call on logout
 ```
+
+### Background Revalidation
+
+Enable automatic revalidation of stale observed entries when the tab regains focus or the network reconnects.
+
+```ts
+const qc = createQuery({
+  staleTime: 30_000,
+  refetchOnFocus: true, // revalidate when document becomes visible
+  refetchOnReconnect: true, // revalidate when navigator comes online
+});
+```
+
+Only entries that are **observed** (have active subscribers) and whose data has become **stale** are refetched. Entries in `error` state that still hold stale cached data are also revalidated, so the app can recover automatically from transient failures. `qc.dispose()` removes the event listeners.
 
 ### Stable Key Serialization
 
@@ -312,32 +403,51 @@ api.dispose(); // clears in-flight dedup map and interceptors
 
 ## Standalone Mutation
 
-`createMutation()` creates an observable, reusable mutation handle. Unlike `createQuery`, it has no cache key and never deduplicates — each `mutate()` call runs the function.
+`createMutation()` creates an observable, reusable mutation handle. Each call receives `(input, signal)`. Cancellation can be done with `mutation.cancel()` or with a call-level `AbortSignal`.
+
+The returned mutation state is a discriminated union keyed by `status`: `idle` and `pending` carry `data: undefined`, `success` carries the resolved `data`, and `error` carries the failure on `error`.
 
 ```ts
 import { createMutation } from '@vielzeug/fetchit';
 
-const createUser = createMutation((data: NewUser) => api.post<User>('/users', { body: data }), {
-  retry: false, // default for mutations
-  onSuccess: (user, variables) => qc.set(['users', user.id], user),
-  onError: (error, variables) => console.error(error),
-  onSettled: (data, error, variables) => qc.invalidate(['users']),
-});
+const createUser = createMutation(
+  (input: NewUser, signal: AbortSignal) => api.post<User>('/users', { body: input, signal }),
+  {
+    onSuccess: (user) => {
+      qc.set(['users', user.id], user);
+      qc.invalidate(['users']);
+    },
+    onError: (err) => toast.error(err.message),
+    onSettled: () => hideSpinner(),
+  },
+);
 
 const user = await createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
 ```
 
-### `cancel()`
+### Lifecycle Callbacks
 
-Aborts the current in-flight mutation. State transitions to `'idle'` if it was pending, otherwise the state is unchanged. Useful for unmounting components without waiting for a slow mutation to finish.
+Callbacks are defined on the mutation, not the call site. They fire after each `mutate()` run.
+
+| Callback    | Signature                                 | Called when                           |
+| ----------- | ----------------------------------------- | ------------------------------------- |
+| `onSuccess` | `(data: TData) => void \| Promise<void>`  | The run succeeds                      |
+| `onError`   | `(error: Error) => void \| Promise<void>` | The run fails (not aborted)           |
+| `onSettled` | `(data, error) => void \| Promise<void>`  | After every run regardless of outcome |
+
+Callback errors (sync throws and async rejections) are swallowed and never affect the `mutate()` result.
+
+### Cancellation
 
 ```ts
-// Cancel programmatically
+createUser.mutate({ name: 'Alice', email: 'alice@example.com' });
 createUser.cancel();
+```
 
-// Or pass an AbortSignal for external control
+```ts
+// External cancellation signal
 const controller = new AbortController();
-createUser.mutate({ name: 'Alice' }, { signal: controller.signal });
+createUser.mutate({ name: 'Alice', email: 'alice@example.com' }, { signal: controller.signal });
 controller.abort();
 ```
 
@@ -372,7 +482,25 @@ HttpError.is(err, 401); // → true only for 401
 HttpError.is(err, 404); // → true only for 404
 ```
 
-When a query errors, the `QueryState` transitions to `'error'` with the error on `state.error`. Aborted queries transition to `'idle'` (not `'error'`) with `error: null`.
+`HttpError.kind` exposes a discriminated category: `'http' | 'network' | 'abort' | 'timeout'`.
+
+```ts
+if (HttpError.is(err)) {
+  if (err.kind === 'timeout') console.log('Timed out');
+  if (err.kind === 'abort') console.log('Cancelled');
+}
+```
+
+`HttpError.headers` gives direct access to response headers without optional-chaining through `err.response`.
+
+```ts
+if (HttpError.is(err)) {
+  const retryAfter = err.headers?.get('retry-after');
+  const requestId = err.headers?.get('x-request-id');
+}
+```
+
+When a query errors, the `QueryState` transitions to `'error'` with the error on `state.error`. Aborted queries fall back to `'idle'` when no previous data exists, or back to `'success'` when a stale value was already cached.
 
 ## Common Patterns
 
@@ -382,8 +510,8 @@ When a query errors, the `QueryState` transitions to `'error'` with the error on
 // Apply optimistic update
 qc.set<User>(['users', 1], (old) => ({ ...old!, name: 'New Name' }));
 
-const updateUser = createMutation((patch: Partial<User>) =>
-  api.put<User>('/users/{id}', { params: { id: 1 }, body: patch }),
+const updateUser = createMutation((input: Partial<User>, signal: AbortSignal) =>
+  api.put<User>('/users/{id}', { params: { id: 1 }, body: input, signal }),
 );
 
 try {
@@ -417,21 +545,183 @@ const user = await qc.query({
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: userId }, signal }),
 });
 
-const posts = await qc.query({
-  key: ['users', userId, 'posts'],
-  fn: ({ signal }) => api.get<Post[]>('/users/{id}/posts', { params: { id: userId }, signal }),
-  enabled: user !== undefined,
-});
+if (user) {
+  await qc.query({
+    key: ['users', userId, 'posts'],
+    fn: ({ signal }) => api.get<Post[]>('/users/{id}/posts', { params: { id: userId }, signal }),
+  });
+}
 ```
 
 ### Custom Retry Delay
 
+The built-in default uses **full jitter**: `Math.random() * Math.min(1000 * 2 ** attempt, 30_000)`. You can override this per query client or per individual query call.
+
 ```ts
-await qc.query({
-  key: ['data'],
-  fn: ({ signal }) => api.get('/data', { signal }),
+const retryingQc = createQuery({
   retry: 4,
+  // Deterministic capped exponential backoff — override the jittered default
   retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000), // 1s, 2s, 4s, 8s
   shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500, // skip 4xx
 });
+
+await retryingQc.query({
+  key: ['data'],
+  fn: ({ signal }) => api.get('/data', { signal }),
+});
 ```
+
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useState, useEffect, useCallback } from 'react';
+import { createApi, createQuery, HttpError } from '@vielzeug/fetchit';
+
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc = createQuery({ staleTime: 30_000 });
+
+type User = { id: number; name: string };
+
+function useUser(id: number) {
+  const [user, setUser] = useState<User | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    qc.query({ key: ['users', id], fn: ({ signal }) => api.get<User>(`/users/{id}`, { params: { id }, signal }) })
+      .then((data) => { if (!cancelled) setUser(data); })
+      .catch((err) => { if (!cancelled) setError(HttpError.is(err) ? `HTTP ${err.status}` : 'Unknown error'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  return { user, error, loading };
+}
+```
+
+```ts [Vue 3]
+import { ref, watchEffect } from 'vue';
+import { createApi, createQuery, HttpError } from '@vielzeug/fetchit';
+
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc = createQuery({ staleTime: 30_000 });
+
+type User = { id: number; name: string };
+
+function useUser(id: number) {
+  const user = ref<User | null>(null);
+  const error = ref<string | null>(null);
+  const loading = ref(false);
+
+  watchEffect(async (onCleanup) => {
+    let cancelled = false;
+    onCleanup(() => { cancelled = true; });
+    loading.value = true;
+    try {
+      const data = await qc.query({ key: ['users', id], fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }) });
+      if (!cancelled) user.value = data;
+    } catch (err) {
+      if (!cancelled) error.value = HttpError.is(err) ? `HTTP ${err.status}` : 'Unknown error';
+    } finally {
+      if (!cancelled) loading.value = false;
+    }
+  });
+
+  return { user, error, loading };
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { createApi, createQuery, HttpError } from '@vielzeug/fetchit';
+
+  export let userId: number;
+
+  const api = createApi({ baseUrl: 'https://api.example.com' });
+  const qc = createQuery({ staleTime: 30_000 });
+
+  type User = { id: number; name: string };
+  let user: User | null = null;
+  let error: string | null = null;
+  let loading = false;
+
+  const controller = new AbortController();
+  onDestroy(() => controller.abort());
+
+  loading = true;
+  qc.query({ key: ['users', userId], fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: userId }, signal: AbortSignal.any([signal, controller.signal]) }) })
+    .then((data) => { user = data; })
+    .catch((err) => { error = HttpError.is(err) ? `HTTP ${err.status}` : 'Unknown error'; })
+    .finally(() => { loading = false; });
+</script>
+
+{#if loading}<p>Loading…</p>{:else if error}<p>Error: {error}</p>{:else if user}<p>{user.name}</p>{/if}
+```
+
+:::
+
+
+### Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Working with Other Vielzeug Libraries
+
+### With Validit
+
+Validate response payloads at the API boundary before using them.
+
+```ts
+import { createApi } from '@vielzeug/fetchit';
+import { v } from '@vielzeug/validit';
+
+const api = createApi({ baseUrl: 'https://api.example.com' });
+
+const UserSchema = v.object({ id: v.number(), name: v.string().min(1) });
+
+async function getUser(id: number) {
+  const raw = await api.get<unknown>('/users/{id}', { params: { id } });
+  return UserSchema.parse(raw); // throws ValidationError on unexpected shape
+}
+```
+
+### With Stateit
+
+Use a Stateit store to hold the query result and drive reactive UI without framework-specific hooks.
+
+```ts
+import { createApi, createQuery } from '@vielzeug/fetchit';
+import { store, effect } from '@vielzeug/stateit';
+
+type User = { id: number; name: string };
+const api = createApi({ baseUrl: 'https://api.example.com' });
+const qc = createQuery({ staleTime: 30_000 });
+
+const userStore = store<{ user: User | null; loading: boolean }>({ user: null, loading: false });
+
+async function loadUser(id: number) {
+  userStore.patch({ loading: true });
+  const user = await qc.query({ key: ['users', id], fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }) });
+  userStore.patch({ user, loading: false });
+}
+
+effect(() => console.log('user:', userStore.value.user?.name));
+```
+
+## Best Practices
+
+- Create one `createApi` instance per base URL and reuse it across the app.
+- Set `staleTime` on `createQuery` to match your data's freshness requirements; default is `0` (always refetch).
+- Use `qc.invalidate([prefix])` to invalidate related queries after a mutation.
+- Always pass the `signal` from query/mutation `fn` parameters to the underlying request to support cancellation.
+- Use `HttpError.is(err)` to distinguish HTTP errors from network errors before reading `.status`.
+- Prefer `initialData` and `placeholderData` to avoid loading state flicker on navigation.
+- Use `createMutation` for write operations — it provides observable state and a built-in `cancel()`.
+- Dispose query clients in long-lived contexts (server-side, tests) to prevent background polling leaks.

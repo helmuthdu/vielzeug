@@ -1,65 +1,82 @@
 import { WILDCARD } from './constants';
 
-export type PermissionData = Record<string, unknown>;
-
-export type AnonymousPrincipal = {
-  kind: 'anonymous';
-};
-
 export type UserPrincipal = {
+  attributes?: Record<string, unknown>;
   id: string;
-  kind: 'user';
   roles: readonly string[];
 };
 
-export type PermitPrincipal = AnonymousPrincipal | UserPrincipal;
+export type Principal = UserPrincipal | null;
 
-export type PrincipalInput =
-  | PermitPrincipal
-  | {
-      id: string;
-      roles: readonly string[];
-    }
-  | null
-  | undefined;
-
-export type PermitEffect = 'allow' | 'deny';
-
-export type PredicateContext<TData extends PermissionData = PermissionData> = {
+export type RuleContext<TData = unknown> = {
   data?: TData;
   principal: UserPrincipal;
 };
 
-export type PermitPredicate<TData extends PermissionData = PermissionData> = (ctx: PredicateContext<TData>) => boolean;
+export type PermitPredicate<TData = unknown> = (ctx: RuleContext<TData>) => boolean;
 
-export type PermitRule<TAction extends string = string> = {
+export type PermitRule<TAction extends string = string, TData = unknown> = {
   action: TAction | typeof WILDCARD;
-  effect: PermitEffect;
+  effect: 'allow' | 'deny';
   priority?: number;
   resource: string;
   role: string;
-  when?: string;
+  when?: PermitPredicate<TData>;
 };
 
-export type PermitPolicy<TAction extends string = string> = {
-  rules: PermitRule<TAction>[];
+export type PermitDecision<TAction extends string = string, TData = unknown> =
+  | { allowed: true; rule: PermitRule<TAction, TData> }
+  | { allowed: false; reason: 'no-matching-rule' | 'explicit-deny'; rule?: PermitRule<TAction, TData> };
+
+export type PermitCheck<TAction extends string = string, TData = unknown> = {
+  action: TAction;
+  data?: TData;
+  resource: string;
 };
 
-export type PermitGuard<TAction extends string = string, TData extends PermissionData = PermissionData> = {
+export type Permit<TAction extends string = string, TData = unknown> = {
+  /**
+   * Returns allowed concrete actions for a principal on a resource.
+   *
+   * IMPORTANT: If only wildcard actions match, this returns an empty array
+   * unless `knownActions` is provided.
+   */
+  allowedActions(principal: Principal, resource: string, data?: TData, knownActions?: readonly TAction[]): TAction[];
+  can(principal: Principal, resource: string, action: TAction, data?: TData): boolean;
+  canAll(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean;
+  canAny(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean;
+  checkAll(principal: Principal, checks: readonly PermitCheck<TAction, TData>[]): PermitDecision<TAction, TData>[];
+  explain(principal: Principal, resource: string, action: TAction, data?: TData): PermitDecision<TAction, TData>;
+  forUser(principal: UserPrincipal): BoundPermit<TAction, TData>;
+  rulesInScope(principal: Principal, resource: string, data?: TData): PermitRule<TAction, TData>[];
+};
+
+export type BoundPermit<TAction extends string = string, TData = unknown> = {
+  /**
+   * Returns allowed concrete actions for the bound principal on a resource.
+   *
+   * IMPORTANT: If only wildcard actions match, this returns an empty array
+   * unless `knownActions` is provided.
+   */
+  allowedActions(resource: string, data?: TData, knownActions?: readonly TAction[]): TAction[];
   can(resource: string, action: TAction, data?: TData): boolean;
+  canAll(resource: string, actions: readonly TAction[], data?: TData): boolean;
+  canAny(resource: string, actions: readonly TAction[], data?: TData): boolean;
+  checkAll(checks: readonly PermitCheck<TAction, TData>[]): PermitDecision<TAction, TData>[];
+  explain(resource: string, action: TAction, data?: TData): PermitDecision<TAction, TData>;
+  forUser(principal: UserPrincipal): BoundPermit<TAction, TData>;
+  rulesInScope(resource: string, data?: TData): PermitRule<TAction, TData>[];
 };
 
-export type Permit<TAction extends string = string, TData extends PermissionData = PermissionData> = {
-  can(principal: PrincipalInput, resource: string, action: TAction, data?: TData): boolean;
-  clear(): Permit<TAction, TData>;
-  exportPolicy(): PermitPolicy<TAction>;
-  importPolicy(policy: PermitPolicy<TAction>): Permit<TAction, TData>;
-  set(rule: PermitRule<TAction>): Permit<TAction, TData>;
-  withUser(principal: PrincipalInput): PermitGuard<TAction, TData>;
+export type PermitLoggerContext<TAction extends string = string, TData = unknown> = {
+  action: TAction;
+  data?: TData;
+  decision: 'allow' | 'deny';
+  principal: Principal;
+  resource: string;
+  rule?: PermitRule<TAction, TData>;
 };
 
-export type PermitOptions<TAction extends string = string, TData extends PermissionData = PermissionData> = {
-  initial?: PermitPolicy<TAction>;
-  logger?: (result: PermitEffect, principal: PermitPrincipal, resource: string, action: string, data?: TData) => void;
-  predicates?: Record<string, PermitPredicate<TData>>;
+export type PermitOptions<TAction extends string = string, TData = unknown> = {
+  logger?: (context: PermitLoggerContext<TAction, TData>) => void;
 };

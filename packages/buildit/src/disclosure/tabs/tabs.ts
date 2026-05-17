@@ -1,21 +1,23 @@
 import {
-  define,
   computed,
   createContext,
+  define,
   html,
-  onMount,
+  prop,
   provide,
+  type ReadonlySignal,
   ref,
   signal,
-  type ReadonlySignal,
   watch,
+  onMounted,
 } from '@vielzeug/craftit';
-import { createListControl, createListKeyControl, createPressControl } from '@vielzeug/craftit/controls';
+import { createListControl, createPressControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { sizableBundle, themableBundle, type PropBundle } from '../../inputs/shared/bundles';
+import { sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin } from '../../styles';
+import styles from './tabs.css?inline';
 
 /** Context provided by bit-tabs to its bit-tab-item and bit-tab-panel children. */
 export type TabsContext = {
@@ -27,8 +29,6 @@ export type TabsContext = {
 };
 /** Injection key for the tabs context. */
 export const TABS_CTX = createContext<TabsContext>('TabsContext');
-
-import styles from './tabs.css?inline';
 
 export type BitTabsEvents = {
   change: { value: string };
@@ -54,16 +54,6 @@ export type BitTabsProps = {
   /** Visual style variant */
   variant?: VisualVariant;
 };
-
-const tabsProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  activation: 'auto',
-  label: undefined,
-  orientation: 'horizontal',
-  value: undefined,
-  variant: undefined,
-} satisfies PropBundle<BitTabsProps>;
 
 /**
  * Tabs container. Manages tab selection and syncs state to child tab items and panels.
@@ -93,17 +83,28 @@ const tabsProps = {
  * ```
  */
 export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
-  props: tabsProps,
-  setup({ emit, host, props, shadowRoot }) {
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    activation: prop.oneOf(['auto', 'manual'] as const, 'auto'),
+    label: undefined,
+    orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
+    value: { default: undefined as string | undefined, reflect: false }, // managed by host.bind (selectedValue derived state)
+    variant: undefined,
+  },
+  setup(props, { emit, host }) {
+    const shadowRoot = host.el.shadowRoot;
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();
     const selectedValue = signal<string | undefined>(props.value.value);
     const focusedIndex = signal(0);
-    const isManualActivation = computed(() => props.activation.value === 'manual');
-    const isVertical = computed(() => props.orientation.value === 'vertical');
+    const isManualActivation = () => props.activation.value === 'manual';
+    const isVertical = () => props.orientation.value === 'vertical';
 
-    host.bind('attr', {
-      value: () => selectedValue.value ?? null,
+    host.bind({
+      attr: {
+        value: () => selectedValue.value ?? null,
+      },
     });
 
     const getTabs = () => [...host.el.querySelectorAll<HTMLElement>(':scope > bit-tab-item[slot="tabs"]')];
@@ -156,6 +157,19 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       getIndex: () => focusedIndex.value,
       getItems: () => getEnabledTabs(),
       isItemDisabled: (tab: HTMLElement) => tab.hasAttribute('disabled'),
+      keys: () => {
+        if (isVertical()) {
+          return {
+            next: ['ArrowDown'],
+            prev: ['ArrowUp'],
+          };
+        }
+
+        return {
+          next: ['ArrowRight', 'ArrowDown'],
+          prev: ['ArrowLeft', 'ArrowUp'],
+        };
+      },
       loop: true,
       setIndex: (index) => {
         focusedIndex.value = index;
@@ -165,7 +179,7 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
 
         focusTab(nextTab);
 
-        if (!isManualActivation.value) {
+        if (!isManualActivation()) {
           const value = nextTab?.getAttribute('value');
 
           if (value) setSelection(value, true);
@@ -194,7 +208,7 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       const tabRect = activeTab.getBoundingClientRect();
       const listRect = tablist.getBoundingClientRect();
 
-      if (isVertical.value) {
+      if (isVertical()) {
         indicator.style.top = `${tabRect.top - listRect.top + tablist.scrollTop}px`;
         indicator.style.height = `${tabRect.height}px`;
         indicator.style.left = '0';
@@ -251,25 +265,8 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
     };
 
     const manualActivationPress = createPressControl({
-      disabled: () => !isManualActivation.value,
+      disabled: () => !isManualActivation(),
       onPress: activateFocusedTab,
-    });
-
-    const tabListKeys = createListKeyControl({
-      control: listControl,
-      keys: () => {
-        if (isVertical.value) {
-          return {
-            next: ['ArrowDown'],
-            prev: ['ArrowUp'],
-          };
-        }
-
-        return {
-          next: ['ArrowRight', 'ArrowDown'],
-          prev: ['ArrowLeft', 'ArrowUp'],
-        };
-      },
     });
 
     const handleKeydown = (e: KeyboardEvent) => {
@@ -286,21 +283,23 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
 
       if (focused >= 0) focusedIndex.value = focused;
 
-      if (tabListKeys.handleKeydown(e)) return;
+      if (listControl.handleKeydown(e)) return;
 
       manualActivationPress.handleKeydown(e);
     };
 
-    host.bind('on', {
-      click: handleTabClick,
-      keydown: handleKeydown,
+    host.bind({
+      on: {
+        click: handleTabClick,
+        keydown: handleKeydown,
+      },
     });
 
     // ────────────────────────────────────────────────────────────────
     // Lifecycle
     // ────────────────────────────────────────────────────────────────
 
-    onMount(() => {
+    onMounted(() => {
       const syncSelection = () => {
         ensureSelection();
         updateIndicator();
@@ -322,17 +321,17 @@ export const TABS_TAG = define<BitTabsProps, BitTabsEvents>('bit-tabs', {
       };
     });
 
-    return html`
+    return () => html`
       <div class="tablist-wrapper">
         <div
           role="tablist"
-          ref=${tablistRef}
+          ref="${tablistRef}"
           part="tablist"
-          :aria-orientation="${() => props.orientation.value}"
-          :aria-label="${() => props.label.value ?? null}">
+          aria-orientation="${props.orientation}"
+          aria-label="${props.label}">
           <slot name="tabs"></slot>
         </div>
-        <div class="indicator" ref=${indicatorRef} part="indicator"></div>
+        <div class="indicator" ref="${indicatorRef}" part="indicator"></div>
       </div>
       <div class="panels" part="panels">
         <slot></slot>

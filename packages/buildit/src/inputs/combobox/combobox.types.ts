@@ -25,20 +25,19 @@ export type ComboboxOptionItem = {
   value: string;
 };
 
-export type ComboboxSelectionItem = {
-  label: string;
-  value: string;
-};
-
-export type BitComboboxProps = SelectableFieldProps<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>> & {
-  clearable?: boolean;
+export type BitComboboxProps = Omit<
+  SelectableFieldProps<Exclude<VisualVariant, 'glass' | 'text' | 'frost'>>,
+  'label-placement' | 'value'
+> & {
   /** Allow typing a new value to create a new option */
   creatable?: boolean;
+  'label-placement'?: 'outside' | 'inset' | 'hidden';
   /** Show loading state in the dropdown */
   loading?: boolean;
   multiple?: boolean;
   'no-filter'?: boolean;
   options?: ComboboxOptionInput[];
+  value?: string | string[];
 };
 
 export type BitComboboxOptionProps = {

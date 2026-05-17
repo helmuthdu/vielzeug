@@ -1,5 +1,4 @@
-import { define, computed, defineField, fire, html, inject, syncContextProps } from '@vielzeug/craftit';
-import { when } from '@vielzeug/craftit/directives';
+import { define, prop, computed, defineField, effect, html, inject } from '@vielzeug/craftit';
 
 import type { ButtonType, DisablableProps, RoundedSize, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
@@ -12,15 +11,12 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { BUTTON_GROUP_CTX } from '../button-group/button-group';
-import {
-  disablableBundle,
-  loadableBundle,
-  type PropBundle,
-  roundableBundle,
-  sizableBundle,
-  themableBundle,
-} from '../shared/bundles';
+import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import componentStyles from './button.css?inline';
+
+const BUTTON_COLORS = ['primary', 'secondary', 'info', 'success', 'warning', 'error'] as const;
+const BUTTON_SIZES = ['sm', 'md', 'lg'] as const;
+const BUTTON_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
 
 /** Button component properties */
 export type BitButtonProps = ThemableProps &
@@ -95,7 +91,7 @@ export type BitButtonProps = ThemableProps &
  * <bit-button variant="frost" rainbow>Special Button</bit-button>
  * ```
  */
-export const BUTTON_TAG = define<BitButtonProps>('bit-button', {
+export const BUTTON_TAG = define<BitButtonProps, { click: MouseEvent }>('bit-button', {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -110,20 +106,40 @@ export const BUTTON_TAG = define<BitButtonProps>('bit-button', {
     rainbow: false,
     rel: undefined,
     target: undefined,
-    type: 'button',
-    variant: 'solid',
-  } satisfies PropBundle<BitButtonProps>,
-  setup({ host, props }) {
+    type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
+    variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
+  },
+  setup(props, { emit, host }) {
     // Reactively inherit size/variant/color from a parent bit-button-group when present.
-    syncContextProps(inject(BUTTON_GROUP_CTX, undefined), props, ['color', 'size', 'variant']);
+    const groupCtx = inject(BUTTON_GROUP_CTX);
+
+    if (groupCtx) {
+      effect(() => {
+        const color = groupCtx.color.value;
+        const size = groupCtx.size.value;
+        const variant = groupCtx.variant.value;
+
+        if (color !== undefined && BUTTON_COLORS.includes(color as (typeof BUTTON_COLORS)[number])) {
+          props.color.value = color as BitButtonProps['color'];
+        }
+
+        if (size !== undefined && BUTTON_SIZES.includes(size as (typeof BUTTON_SIZES)[number])) {
+          props.size.value = size as BitButtonProps['size'];
+        }
+
+        if (variant !== undefined && BUTTON_VARIANTS.includes(variant as (typeof BUTTON_VARIANTS)[number])) {
+          props.variant.value = variant as BitButtonProps['variant'];
+        }
+      });
+    }
 
     const isLink = computed(() => !!props.href.value);
-    const isDisabled = (): boolean => !!(props.disabled.value || props.loading.value);
+    const isDisabled = computed(() => !!(props.disabled.value || props.loading.value));
 
     // Form association: relay submit/reset clicks to the associated form.
     // The inner <button> always has type="button" so shadow DOM never drives native form actions.
     const formField = defineField({
-      disabled: computed(isDisabled),
+      disabled: isDisabled,
       toFormValue: () => null,
       value: computed(() => ''),
     });
@@ -131,7 +147,7 @@ export const BUTTON_TAG = define<BitButtonProps>('bit-button', {
     // Unified click handler for both links and buttons.
     // Forward only when native click didn't traverse to host (jsdom/shadow interop).
     const handleClick = (e: MouseEvent) => {
-      if (isDisabled()) {
+      if (isDisabled.value) {
         e.preventDefault();
         e.stopImmediatePropagation();
 
@@ -157,44 +173,47 @@ export const BUTTON_TAG = define<BitButtonProps>('bit-button', {
       const reachedHost = path.includes(host.el);
 
       if (!reachedHost) {
-        fire.mouse(host.el, e.type, e);
+        emit('click', e);
       }
     };
 
-    return html`
-      ${when({
-        condition: isLink,
-        else: () =>
-          html`<button
-            part="button"
-            type="button"
-            ?disabled=${() => isDisabled()}
-            :aria-label="${() => props.label.value ?? null}"
-            :aria-disabled="${() => (isDisabled() ? 'true' : null)}"
-            :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-            @click="${handleClick}">
-            <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-            <slot name="prefix"></slot>
-            <span class="content" part="content"><slot></slot></span>
-            <slot name="suffix"></slot>
-          </button>`,
-        then: () =>
-          html`<a
-            part="button"
-            :href="${() => props.href.value ?? null}"
-            :target="${() => props.target.value ?? null}"
-            :rel="${() => props.rel.value ?? null}"
-            :aria-label="${() => props.label.value ?? null}"
-            :aria-disabled="${() => (isDisabled() ? 'true' : null)}"
-            :aria-busy="${() => (props.loading.value ? 'true' : null)}"
-            role="button"
-            @click="${handleClick}">
-            <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-            <slot name="prefix"></slot>
-            <span class="content" part="content"><slot></slot></span>
-            <slot name="suffix"></slot>
-          </a>`,
-      })}
+    host.bind({
+      attr: {
+        'aria-busy': props.loading,
+        'aria-disabled': isDisabled,
+        'aria-label': props.label,
+      },
+    });
+
+    return () => html`
+      ${() =>
+        isLink.value
+          ? html`<a
+              part="button"
+              :href="${props.href}"
+              :target="${props.target}"
+              :rel="${props.rel}"
+              role="button"
+              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+              @click="${handleClick}">
+              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+              <slot name="prefix"></slot>
+              <span class="content" part="content"><slot></slot></span>
+              <slot name="suffix"></slot>
+            </a>`
+          : html`<button
+              part="button"
+              type="button"
+              ?disabled=${isDisabled}
+              :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+              @click="${handleClick}">
+              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+              <slot name="prefix"></slot>
+              <span class="content" part="content"><slot></slot></span>
+              <slot name="suffix"></slot>
+            </button>`}
     `;
   },
   shadow: { delegatesFocus: true },

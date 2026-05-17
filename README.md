@@ -49,7 +49,7 @@ npm install @vielzeug/buildit
 
 ### [@vielzeug/craftit](packages/craftit) – Web Components
 
-Lightweight, type-safe web component creation library with reactive state and automatic rendering.
+Lightweight, type-safe web component creation library with reactive state, typed props, directives, and automatic rendering.
 
 ```bash
 npm install @vielzeug/craftit
@@ -58,10 +58,10 @@ npm install @vielzeug/craftit
 **Key Features:**
 
 - Reactive state management with automatic re-rendering
-- Type-safe component definitions
+- Type-safe component definitions and prop helpers
 - Shadow DOM with automatic styling
 - Form-associated custom elements
-- Event handling and lifecycle hooks (5 KB gzipped)
+- Event handling, lifecycle hooks, and helpers like `live`, `when`, `styleMap`, and `until` (5 KB gzipped)
 
 [📖 Documentation](https://vielzeug.dev/craftit/) • [Examples](https://vielzeug.dev/craftit/examples)
 
@@ -69,7 +69,7 @@ npm install @vielzeug/craftit
 
 ### [@vielzeug/eventit](packages/eventit) – Typed Event Bus
 
-Lightweight, zero-dependency typed event bus with `on`, `once`, `emit`, and `clear`.
+Lightweight, zero-dependency typed event bus with `on`, `once`, `emit`, `wait`, and `waitAny`.
 
 ```bash
 npm install @vielzeug/eventit
@@ -79,8 +79,9 @@ npm install @vielzeug/eventit
 
 - Fully type-safe event maps — payload types inferred from the event key
 - `once()` for single-fire subscriptions
-- `onError` and `onEmit` hooks for logging and error handling
-- `dispose()` for clean teardown; `testBus()` helper for testing
+- unsubscribe handles from `on()`/`once()`, plus `removeAllListeners()` and `eventNames()` for listener management
+- `onError` and `onDispatch` hooks for logging and error handling
+- `dispose()` for clean teardown; `createTestBus()` helper for testing
 - Zero dependencies
 
 [📖 Documentation](https://vielzeug.dev/eventit/) • [Examples](https://vielzeug.dev/eventit/examples)
@@ -126,7 +127,7 @@ npm install @vielzeug/dragit
 
 ### [@vielzeug/fetchit](packages/fetchit) – HTTP Client & Query Management
 
-Modern, type-safe HTTP client with intelligent caching and query management.
+Modern, type-safe HTTP client with query caching, subscriptions, and standalone mutations.
 
 ```bash
 npm install @vielzeug/fetchit
@@ -137,6 +138,8 @@ npm install @vielzeug/fetchit
 - Separate HTTP and Query clients for flexibility
 - Smart caching with stale-while-revalidate
 - Request deduplication
+- Conditional fetching, subscription selectors, and background revalidation
+- Standalone mutations with cancellation, retry, and lifecycle callbacks
 - Automatic retry with exponential backoff (3.4 KB gzipped)
 
 [📖 Documentation](https://vielzeug.dev/fetchit/) • [Examples](https://vielzeug.dev/fetchit/examples)
@@ -234,8 +237,11 @@ npm install @vielzeug/permit
 **Key Features:**
 
 - Role-based access control (RBAC)
-- Dynamic rules with context
-- Wildcard support
+- Dynamic rules with context and user attributes (ABAC)
+- Multi-action checks (`canAll`, `canAny`) and action filtering (`allowedActions`)
+- Explainable deny diagnostics (`no-matching-rule`, `explicit-deny`)
+- User-bound permit API with optional decision caching
+- Wildcard support and ownership helper (`owns`)
 - Type-safe permission checks (2.0 KB gzipped)
 
 [📖 Documentation](https://vielzeug.dev/permit/) • [Examples](https://vielzeug.dev/permit/examples)
@@ -271,9 +277,8 @@ npm install @vielzeug/stateit
 
 **Key Features:**
 
-- Fine-grained signals with `computed()`, `effect()`, and `batch()`
-- `store()` for reactive objects with deep update tracking
-- `watch()` helper for side-effect-free subscriptions
+- Fine-grained signals with `computed()`, `effect()`, `batch()`, `watch()`, and `scope()`
+- `store()` for reactive objects with deep update tracking; stores are branded signals and work anywhere `ReadonlySignal<T>` is accepted
 - Zero dependencies
 
 - [📖 Documentation](https://vielzeug.dev/stateit/) • [Examples](https://vielzeug.dev/stateit/examples)
@@ -407,12 +412,8 @@ const api = createApi({
 
 // Create mutation for login
 const loginMutation = createMutation(
-  (values: { email: string; password: string }) =>
-    api.post('/auth/login', { body: values }).then((r) => r.json()),
-  {
-    onSuccess: (user) => Logit.success('Login successful!', user),
-    onError: (error) => Logit.error('Login failed:', error),
-  },
+  ({ input, signal }: { input: { email: string; password: string }; signal: AbortSignal }) =>
+    api.post('/auth/login', { body: input, signal }).then((r) => r.json()),
 );
 
 // Create form with validation
@@ -429,7 +430,14 @@ const form = createForm({
 });
 
 // Submit
-form.submit((values) => loginMutation.mutate(values));
+form.submit(async (values) => {
+  try {
+    const user = await loginMutation.mutate(values);
+    Logit.success('Login successful!', user);
+  } catch (error) {
+    Logit.error('Login failed:', error);
+  }
+});
 ```
 
 ## 🏗️ Development

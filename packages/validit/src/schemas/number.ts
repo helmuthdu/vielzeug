@@ -3,140 +3,180 @@ import type { MessageFn } from '../core';
 import { ErrorCode, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
-export class NumberSchema extends Schema<number> {
+export class NumberSchema<Input = number> extends Schema<number, Input> {
   constructor() {
     super([
       (value, path) =>
         typeof value === 'number' && !Number.isNaN(value)
           ? null
-          : [{ code: ErrorCode.invalid_type, message: _messages().number_type(), path }],
+          : [{ code: ErrorCode.invalid_type, message: _messages().number.type(), path }],
     ]);
   }
 
   min(
     minimum: number,
-    message: MessageFn<{ min: number; value: number }> = (ctx) => _messages().number_min(ctx),
+    message: MessageFn<{ min: number; value: number }> = (ctx) => _messages().number.min(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      (value as number) >= minimum
-        ? null
-        : [
-            {
-              code: ErrorCode.too_small,
-              message: resolveMessage(message, { min: minimum, value: value as number }),
-              params: { minimum },
-              path,
-            },
-          ],
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed >= minimum) return null;
+
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { min: minimum, value: typed }),
+          params: { minimum },
+          path,
+        },
+      ];
+    });
   }
 
   max(
     maximum: number,
-    message: MessageFn<{ max: number; value: number }> = (ctx) => _messages().number_max(ctx),
+    message: MessageFn<{ max: number; value: number }> = (ctx) => _messages().number.max(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      (value as number) <= maximum
-        ? null
-        : [
-            {
-              code: ErrorCode.too_big,
-              message: resolveMessage(message, { max: maximum, value: value as number }),
-              params: { maximum },
-              path,
-            },
-          ],
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed <= maximum) return null;
+
+      return [
+        {
+          code: ErrorCode.too_big,
+          message: resolveMessage(message, { max: maximum, value: typed }),
+          params: { maximum },
+          path,
+        },
+      ];
+    });
   }
 
-  int(message: MessageFn<{ value: number }> = () => _messages().number_int()): this {
-    return this._addValidator((value, path) =>
-      Number.isInteger(value as number)
-        ? null
-        : [{ code: ErrorCode.not_integer, message: resolveMessage(message, { value: value as number }), path }],
-    );
+  int(message: MessageFn<{ value: number }> = () => _messages().number.int()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (Number.isInteger(typed)) return null;
+
+      return [{ code: ErrorCode.invalid_integer, message: resolveMessage(message, { value: typed }), path }];
+    });
   }
 
-  positive(message: MessageFn<{ value: number }> = () => _messages().number_positive()): this {
-    return this._addValidator((value, path) =>
-      (value as number) > 0
-        ? null
-        : [
-            {
-              code: ErrorCode.too_small,
-              message: resolveMessage(message, { value: value as number }),
-              params: { exclusive: true, minimum: 0 },
-              path,
-            },
-          ],
-    );
+  positive(message: MessageFn<{ value: number }> = () => _messages().number.positive()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed > 0) return null;
+
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { value: typed }),
+          params: { exclusive: true, minimum: 0 },
+          path,
+        },
+      ];
+    });
   }
 
-  negative(message: MessageFn<{ value: number }> = () => _messages().number_negative()): this {
-    return this._addValidator((value, path) =>
-      (value as number) < 0
-        ? null
-        : [
-            {
-              code: ErrorCode.too_big,
-              message: resolveMessage(message, { value: value as number }),
-              params: { exclusive: true, maximum: 0 },
-              path,
-            },
-          ],
-    );
+  negative(message: MessageFn<{ value: number }> = () => _messages().number.negative()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed < 0) return null;
+
+      return [
+        {
+          code: ErrorCode.too_big,
+          message: resolveMessage(message, { value: typed }),
+          params: { exclusive: true, maximum: 0 },
+          path,
+        },
+      ];
+    });
   }
 
-  nonNegative(message: MessageFn<{ value: number }> = () => _messages().number_non_negative()): this {
-    return this._addValidator((value, path) =>
-      (value as number) >= 0
-        ? null
-        : [
-            {
-              code: ErrorCode.too_small,
-              message: resolveMessage(message, { value: value as number }),
-              params: { minimum: 0 },
-              path,
-            },
-          ],
-    );
+  nonNegative(message: MessageFn<{ value: number }> = () => _messages().number.nonNegative()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed >= 0) return null;
+
+      return [
+        { code: ErrorCode.too_small, message: resolveMessage(message, { value: typed }), params: { minimum: 0 }, path },
+      ];
+    });
   }
 
-  nonPositive(message: MessageFn<{ value: number }> = () => _messages().number_non_positive()): this {
-    return this._addValidator((value, path) =>
-      (value as number) <= 0
-        ? null
-        : [
-            {
-              code: ErrorCode.too_big,
-              message: resolveMessage(message, { value: value as number }),
-              params: { maximum: 0 },
-              path,
-            },
-          ],
-    );
+  nonPositive(message: MessageFn<{ value: number }> = () => _messages().number.nonPositive()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (typed <= 0) return null;
+
+      return [
+        { code: ErrorCode.too_big, message: resolveMessage(message, { value: typed }), params: { maximum: 0 }, path },
+      ];
+    });
   }
 
   multipleOf(
     step: number,
-    message: MessageFn<{ step: number; value: number }> = (ctx) => _messages().number_multiple_of(ctx),
+    message: MessageFn<{ step: number; value: number }> = (ctx) => _messages().number.multipleOf(ctx),
   ): this {
-    return this._addValidator((value, path) =>
-      Math.abs(Math.round((value as number) / step) - (value as number) / step) < 1e-9
-        ? null
-        : [
-            {
-              code: ErrorCode.not_multiple_of,
-              message: resolveMessage(message, { step, value: value as number }),
-              params: { step },
-              path,
-            },
-          ],
-    );
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (Math.abs(Math.round(typed / step) - typed / step) < 1e-9) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_multiple_of,
+          message: resolveMessage(message, { step, value: typed }),
+          params: { step },
+          path,
+        },
+      ];
+    });
   }
 
-  static coerce(): NumberSchema {
-    return new NumberSchema()._addPreprocessor((v) => {
+  safe(message: MessageFn<{ value: number }> = () => _messages().number.safe()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (Number.isSafeInteger(typed)) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_safe,
+          message: resolveMessage(message, { value: typed }),
+          params: { safe: true },
+          path,
+        },
+      ];
+    });
+  }
+
+  finite(message: MessageFn<{ value: number }> = () => _messages().number.finite()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as number;
+
+      if (Number.isFinite(typed)) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_finite,
+          message: resolveMessage(message, { value: typed }),
+          params: { finite: true },
+          path,
+        },
+      ];
+    });
+  }
+
+  static coerce(): NumberSchema<unknown> {
+    return new NumberSchema().preprocess((v: unknown) => {
       if (typeof v === 'number') return v;
 
       if (typeof v === 'string') {
@@ -149,6 +189,3 @@ export class NumberSchema extends Schema<number> {
     });
   }
 }
-
-export const number = (): NumberSchema => new NumberSchema();
-export const coerceNumber = (): NumberSchema => NumberSchema.coerce();

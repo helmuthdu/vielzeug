@@ -1,166 +1,135 @@
-import { QueryBuilder } from '../index';
+import { createMemory, table, type Adapter } from '../index';
 
-/* ==================== QueryBuilder ==================== */
+type Row = { age: number; city: string; id: number; name: string };
 
-describe('QueryBuilder', () => {
-  const rows = [
+const schema = { rows: table<Row>('id') };
+
+describe('QueryBuilder (via query)', () => {
+  const rowsData: Row[] = [
     { age: 25, city: 'Paris', id: 1, name: 'Alice' },
     { age: 30, city: 'Berlin', id: 2, name: 'Bob' },
     { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
   ];
 
-  const mock = { getAll: async (_: string) => rows };
-  let qb: QueryBuilder<(typeof rows)[0]>;
+  let db: Adapter<typeof schema>;
 
-  beforeEach(() => {
-    qb = new QueryBuilder(() => mock.getAll('users'));
+  beforeEach(async () => {
+    db = createMemory(schema);
+    await db.putAll('rows', rowsData);
   });
 
-  describe('Filtering', () => {
-    test('filter – custom predicate', async () => {
-      const r = await qb.filter((u) => (u.age ?? 0) > 25).toArray();
-
-      expect(r).toHaveLength(2);
+  describe('filters', () => {
+    test('filter applies predicate', async () => {
+      expect(
+        await db
+          .query('rows')
+          .filter((u) => u.age > 25)
+          .toArray(),
+      ).toEqual([rowsData[1], rowsData[2]]);
     });
 
-    test('equals', async () => {
-      expect(await qb.equals('city', 'Paris').toArray()).toHaveLength(2);
+    test('equals filters by exact field value', async () => {
+      expect(await db.query('rows').equals('city', 'Paris').toArray()).toEqual([rowsData[0], rowsData[2]]);
     });
 
-    test('between – inclusive bounds', async () => {
-      const ages = (await qb.between('age', 25, 30).toArray()).map((u) => u.age).sort();
-
-      expect(ages).toEqual([25, 30]);
+    test('between is inclusive', async () => {
+      expect(await db.query('rows').between('age', 25, 30).toArray()).toEqual([rowsData[0], rowsData[1]]);
     });
 
-    test('startsWith – case-sensitive', async () => {
-      expect(await qb.startsWith('name', 'A').toArray()).toEqual([rows[0]]);
-      expect(await qb.startsWith('name', 'a').toArray()).toEqual([]);
+    test('startsWith is case-sensitive by default', async () => {
+      expect(await db.query('rows').startsWith('name', 'A').toArray()).toEqual([rowsData[0]]);
+      expect(await db.query('rows').startsWith('name', 'a').toArray()).toEqual([]);
     });
 
-    test('startsWith – case-insensitive', async () => {
-      expect(await qb.startsWith('name', 'a', { ignoreCase: true }).toArray()).toEqual([rows[0]]);
+    test('startsWith supports case-insensitive matching', async () => {
+      expect(await db.query('rows').startsWith('name', 'a', { ignoreCase: true }).toArray()).toEqual([rowsData[0]]);
     });
 
-    test('and – all predicates must match', async () => {
-      const r = await qb
-        .and(
-          (u) => u.city === 'Paris',
-          (u) => (u.age ?? 0) > 30,
-        )
-        .toArray();
-
-      expect(r).toEqual([rows[2]]);
-    });
-
-    test('or – any predicate matches', async () => {
-      const r = await qb
-        .or(
-          (u) => u.city === 'Berlin',
-          (u) => u.age === 35,
-        )
-        .toArray();
-
-      expect(r).toHaveLength(2);
+    test('startsWith on non-string fields returns no matches', async () => {
+      expect(
+        await db
+          .query('rows')
+          .startsWith('age' as keyof Row, '2')
+          .toArray(),
+      ).toEqual([]);
     });
   });
 
-  describe('Sorting & Pagination', () => {
-    test('orderBy asc and desc', async () => {
-      expect((await qb.orderBy('age', 'asc').toArray()).map((u) => u.age)).toEqual([25, 30, 35]);
-      expect((await qb.orderBy('age', 'desc').toArray()).map((u) => u.age)).toEqual([35, 30, 25]);
+  describe('sorting and pagination', () => {
+    test('orderBy sorts ascending', async () => {
+      expect((await db.query('rows').orderBy('age', 'asc').toArray()).map((u) => u.id)).toEqual([1, 2, 3]);
     });
 
-    test('limit', async () => {
-      expect(await qb.limit(2).toArray()).toHaveLength(2);
+    test('orderBy sorts descending', async () => {
+      expect((await db.query('rows').orderBy('age', 'desc').toArray()).map((u) => u.id)).toEqual([3, 2, 1]);
     });
 
-    test('offset', async () => {
-      const r = await qb.offset(2).toArray();
-
-      expect(r).toHaveLength(1);
-      expect(r[0].id).toBe(3);
+    test('limit truncates result set', async () => {
+      expect(await db.query('rows').limit(2).toArray()).toEqual([rowsData[0], rowsData[1]]);
     });
 
-    test('page', async () => {
-      expect(await qb.page(1, 2).toArray()).toEqual([rows[0], rows[1]]);
-      expect(await qb.page(2, 2).toArray()).toEqual([rows[2]]);
+    test('offset skips first records', async () => {
+      expect(await db.query('rows').offset(1).toArray()).toEqual([rowsData[1], rowsData[2]]);
     });
 
-    test('reverse', async () => {
-      const r = await qb.reverse().toArray();
-
-      expect(r[0].id).toBe(3);
-      expect(r[2].id).toBe(1);
-    });
-  });
-
-  describe('Transformations', () => {
-    test('map', async () => {
-      const r = await qb.map((u) => ({ ...u, age: (u.age ?? 0) + 1 })).toArray();
-
-      expect(r.map((u) => u.age)).toEqual([26, 31, 36]);
+    test('limit accepts zero', async () => {
+      expect(await db.query('rows').limit(0).toArray()).toEqual([]);
     });
 
-    test('search', async () => {
-      expect(await qb.search('Alice', 1).toArray()).toEqual([rows[0]]);
+    test('offset beyond list length returns empty array', async () => {
+      expect(await db.query('rows').offset(99).toArray()).toEqual([]);
     });
 
-    test('contains – substring match on specific fields', async () => {
-      expect(await qb.contains('paris', ['name']).toArray()).toHaveLength(0);
-      expect(await qb.contains('alice', ['name']).toArray()).toHaveLength(1);
-      expect(await qb.contains('paris', ['city']).toArray()).toHaveLength(2);
+    test('limit rejects invalid values', async () => {
+      await expect(() => db.query('rows').limit(-1)).toThrow('query.limit must be a non-negative integer');
+      await expect(() => db.query('rows').limit(1.5)).toThrow('query.limit must be a non-negative integer');
     });
 
-    test('contains – no fields = all string fields', async () => {
-      expect(await qb.contains('paris').toArray()).toHaveLength(2);
-      expect(await qb.contains('ali').toArray()).toHaveLength(1);
+    test('offset rejects invalid values', async () => {
+      await expect(() => db.query('rows').offset(-1)).toThrow('query.offset must be a non-negative integer');
+      await expect(() => db.query('rows').offset(Number.NaN)).toThrow('query.offset must be a non-negative integer');
     });
   });
 
-  describe('Terminals', () => {
-    test('first / last', async () => {
-      expect(await qb.first()).toEqual(rows[0]);
-      expect(await qb.last()).toEqual(rows[2]);
+  describe('terminal operations', () => {
+    test('toArray returns full transformed set', async () => {
+      const r = await db.query('rows').equals('city', 'Paris').orderBy('age', 'desc').limit(1).toArray();
+
+      expect(r).toEqual([rowsData[2]]);
     });
 
-    test('count', async () => {
-      expect(await qb.equals('city', 'Paris').count()).toBe(2);
+    test('count returns number of filtered records', async () => {
+      expect(await db.query('rows').equals('city', 'Paris').count()).toBe(2);
     });
 
-    test('asyncIterator – yields all matching records', async () => {
-      const collected: (typeof rows)[0][] = [];
-
-      for await (const row of qb.equals('city', 'Paris')) {
-        collected.push(row);
-      }
-      expect(collected).toHaveLength(2);
+    test('count follows the same transformed pipeline as toArray', async () => {
+      expect(await db.query('rows').orderBy('age', 'asc').limit(1).count()).toBe(1);
     });
 
-    test('chaining – filter + sort + limit', async () => {
-      const r = await qb.equals('city', 'Paris').orderBy('age', 'desc').limit(1).toArray();
+    test('count preserves filter index semantics from transformed pipeline', async () => {
+      const toArrayCount = (
+        await db
+          .query('rows')
+          .orderBy('age', 'desc')
+          .filter((row, index) => row.id === index + 1)
+          .toArray()
+      ).length;
+      const count = await db
+        .query('rows')
+        .orderBy('age', 'desc')
+        .filter((row, index) => row.id === index + 1)
+        .count();
 
-      expect(r).toEqual([rows[2]]);
-    });
-  });
-
-  describe('Aggregations', () => {
-    test('reduce – sum', async () => {
-      const total = await qb.reduce((acc, u) => acc + (u.age ?? 0), 0);
-
-      expect(total).toBe(90);
-    });
-
-    test('reduce – collect names', async () => {
-      const names = await qb.reduce<string[]>((acc, u) => [...acc, u.name ?? ''], []);
-
-      expect(names).toEqual(['Alice', 'Bob', 'Charlie']);
+      expect(toArrayCount).toBe(1);
+      expect(count).toBe(1);
     });
 
-    test('reduce – after filter', async () => {
-      const total = await qb.equals('city', 'Paris').reduce((acc, u) => acc + (u.age ?? 0), 0);
+    test('first returns first transformed record', async () => {
+      expect(await db.query('rows').orderBy('age', 'asc').first()).toEqual(rowsData[0]);
+    });
 
-      expect(total).toBe(60); // Alice (25) + Charlie (35)
+    test('first returns undefined for empty result', async () => {
+      expect(await db.query('rows').equals('id', 99).first()).toBeUndefined();
     });
   });
 });

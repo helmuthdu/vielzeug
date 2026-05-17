@@ -1,457 +1,427 @@
 ---
 title: Deposit — Usage Guide
-description: How to use Deposit for schema-driven browser storage with IndexedDB and LocalStorage.
+description: Practical patterns for using Deposit with LocalStorage, SessionStorage, IndexedDB, and Memory.
 ---
-
-# Deposit Usage Guide
 
 [[toc]]
 
-## Defining a Schema
+::: tip New to Deposit?
+Start with the [Overview](./index.md) for installation and quick context, then use this page for end-to-end usage patterns.
+:::
 
-Use `defineSchema<S>(schema)` to create a fully-typed schema. The type parameter `S` maps table names to record types; the runtime value describes the primary key and optional indexes per table.
+## Define a Schema
+
+The `table<T>()` factory creates a typed schema entry. Pass the record type as a generic and the primary key field name as the argument.
 
 ```ts
-import { defineSchema } from '@vielzeug/deposit';
+import { table } from '@vielzeug/deposit';
 
-interface User {
-  id: number;
-  name: string;
-  age: number;
-  city?: string;
-}
-interface Post {
-  id: number;
-  title: string;
-  authorId: number;
-  publishedAt: number;
-}
-interface Comment {
-  id: number;
-  postId: number;
-  body: string;
-}
+type User = { id: number; name: string; age: number };
+type Post = { id: number; title: string; userId: number };
 
-const schema = defineSchema<{ users: User; posts: Post; comments: Comment }>({
-  users: { key: 'id', indexes: ['name', 'age'] },
-  posts: { key: 'id', indexes: ['authorId', 'publishedAt'] },
-  comments: { key: 'id', indexes: ['postId'] },
-});
+const schema = {
+  users: table<User>('id'),
+  posts: table<Post>('id'),
+};
 ```
 
-### Inline Schema
+Record and key types are inferred from `table<T>()`. `typeof schema` serves as the schema type wherever needed.
 
-No separate variable is necessary. Pass the schema inline with a type parameter directly to the factory:
+## Create an Adapter
+
+### LocalStorage
 
 ```ts
 import { createLocalStorage } from '@vielzeug/deposit';
 
-const db = createLocalStorage<{ users: { id: number; name: string } }>({
-  dbName: 'my-app',
-  schema: { users: { key: 'id' } },
+const local = createLocalStorage('app', schema);
+```
+
+Use this adapter for simple browser persistence where transactional behavior is not required.
+
+### SessionStorage
+
+```ts
+import { createSessionStorage } from '@vielzeug/deposit';
+
+const session = createSessionStorage('app', schema);
+```
+
+Use this adapter for tab-scoped persistence that resets when the tab or window closes.
+
+### Cookie
+
+```ts
+import { createCookie } from '@vielzeug/deposit';
+
+const cookie = createCookie('app', schema, {
+  path: '/',
+  sameSite: 'Strict',
 });
 ```
 
-::: tip Indexes in LocalStorage
-The `indexes` field is only used by the IndexedDB adapter. The LocalStorage adapter logs a warning and ignores them at runtime.
-:::
+Use this adapter for small browser state that should be available through cookies. It is browser-only, so it is a good fit when you want persistence without relying on Web Storage APIs.
 
-## Creating an Adapter
-
-Deposit provides two factory functions that return the same `Adapter<S>` interface.
-
-### `createLocalStorage(options)`
-
-Synchronous under the hood. Best for small datasets and short-lived browser state (~5–10 MB storage limit).
-
-```ts
-import { createLocalStorage } from '@vielzeug/deposit';
-
-const db = createLocalStorage({ dbName: 'my-app', schema });
-```
-
-::: warning Private Browsing / Sandboxed Iframes
-In Safari private mode and some sandboxed iframes, any access to `localStorage` throws a `SecurityError`. Deposit detects this on the first operation and throws a descriptive error. Use `createIndexedDB` as a fallback in environments where `localStorage` may be unavailable.
-:::
-**Options:**
-
-| Property  | Type        | Description                                         |
-| --------- | ----------- | --------------------------------------------------- |
-| `dbName`  | `string`    | Namespace prefix for all localStorage keys          |
-| `schema`  | `Schema<S>` | Schema created by `defineSchema()` or inline object |
-| `logger?` | `Logger`    | Custom logger; defaults to `console`                |
-
-### `createIndexedDB(options)`
-
-Async, quota-based storage (typically hundreds of MB). Connection is lazy — opened on the first operation. Call `db.close()` when done.
+### IndexedDB
 
 ```ts
 import { createIndexedDB } from '@vielzeug/deposit';
 
-const db = createIndexedDB({
-  dbName: 'my-app',
-  version: 1,
-  schema,
-  migrationFn: (db, oldVersion, newVersion, tx) => {
-    // runs inside onupgradeneeded
-  },
-});
-
-// Close the connection when the app shuts down
-db.close();
+const idb = createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
 ```
 
-**Options:**
+Use this adapter when you need atomic transactions or larger datasets.
 
-| Property       | Type          | Description                                                         |
-| -------------- | ------------- | ------------------------------------------------------------------- |
-| `dbName`       | `string`      | IDB database name                                                   |
-| `version`      | `number`      | Database version — **required**; increment to trigger `migrationFn` |
-| `schema`       | `Schema<S>`   | Schema created by `defineSchema()` or inline object                 |
-| `migrationFn?` | `MigrationFn` | Runs inside `onupgradeneeded` for schema migrations                 |
-| `logger?`      | `Logger`      | Custom logger; defaults to `console`                                |
-
-## CRUD Operations
-
-All methods are `async` on both adapters for a consistent API.
-
-### `put(table, value, ttl?)`
-
-Upserts a single record. An optional `ttl` (milliseconds) sets the expiry timestamp.
+### Memory
 
 ```ts
-await db.put('users', { id: 1, name: 'Alice', age: 30 });
-await db.put('users', { id: 1, name: 'Alice', age: 30 }, ttl.hours(1)); // expires in 1 hour
+import { createMemory } from '@vielzeug/deposit';
+
+const mem = createMemory(schema);
 ```
 
-### `putMany(table, values[], ttl?)`
+Use this adapter in tests, SSR environments, or wherever browser storage APIs are unavailable. Each `createMemory(schema)` call returns a fully isolated instance — no `dbName` is needed. The interface is identical to the browser adapters.
 
-Upserts multiple records in one call. The same optional `ttl` is applied to each record.
+## Basic CRUD
 
 ```ts
-await db.putMany('users', [user1, user2, user3]);
-await db.putMany('sessions', sessions, ttl.hours(1)); // TTL applied to all
+await idb.put('users', { id: 1, name: 'Alice', age: 30 });
+
+const one = await idb.get('users', 1);
+const all = await idb.getAll('users');
+
+await idb.delete('users', 1);
+await idb.deleteAll('users');
+
+const total = await idb.count('users');
 ```
 
-### `get(table, key)`
+`count()` reflects live records and excludes TTL-expired entries.
 
-Returns the record by primary key, or `undefined` when absent or expired.
+### Existence check
+
+`has()` returns `true` if a live record exists for the given key, without loading the full record.
 
 ```ts
-const user = await db.get('users', 1); // User | undefined
+const exists = await idb.has('users', 1); // true
+const missing = await idb.has('users', 99); // false
 ```
 
-### `getOr(table, key, defaultValue)`
+### Bulk writes
 
-Returns the record when present, or `defaultValue` when absent or expired. The return type is always `T` — never `undefined`.
+`putAll()` writes multiple records in a single operation. In IndexedDB this runs as one atomic transaction.
 
 ```ts
-const user = await db.getOr('users', 1, { id: 0, name: 'Guest', age: 0 }); // User
+await idb.putAll('users', [
+  { id: 1, name: 'Alice', age: 30 },
+  { id: 2, name: 'Bob', age: 25 },
+]);
+
+// With TTL
+await idb.putAll('sessions', sessions, ttl.hours(1));
 ```
 
-### `getAll(table)`
-
-Returns all live records. Expired entries are filtered out; the IndexedDB adapter also evicts them from the store asynchronously.
-
-```ts
-const users = await db.getAll('users'); // User[]
-```
-
-### `getMany(table, keys[])`
-
-Batch fetch by a list of primary keys. Missing or expired records are omitted from the result.
-
-```ts
-const users = await db.getMany('users', [1, 2, 5]); // User[]
-```
-
-### `patch(table, key, partial)`
-
-Merges the partial object into the existing record and returns the result. Returns `undefined` when the key is absent or expired. TTL is preserved.
-
-```ts
-const updated = await db.patch('users', 1, { age: 31 });
-// updated: { id: 1, name: 'Alice', age: 31 } | undefined
-```
-
-### `delete(table, key)`
-
-Removes a single record. Silently ignores missing keys.
-
-```ts
-await db.delete('users', 1);
-```
-
-### `deleteMany(table, keys[])`
-
-Removes multiple records in one call. Silently ignores missing keys.
-
-```ts
-await db.deleteMany('users', [1, 2, 3]);
-```
-
-### `deleteAll(table)`
-
-Removes all records in a table. Silently succeeds on an empty table.
-
-```ts
-await db.deleteAll('users');
-```
-
-### `has(table, key)`
-
-Returns `true` when a live (non-expired) record exists for the given key.
-
-```ts
-const exists = await db.has('users', 1); // boolean
-```
-
-### `count(table)`
-
-Counts records in the table, with adapter-specific semantics:
-
-- `createLocalStorage`: TTL-accurate live count (implemented via `getAll`) — O(n)
-- `createIndexedDB`: native `IDBObjectStore.count()` — O(1), may include TTL-expired records until eviction
-
-```ts
-const total = await db.count('users'); // number
-const liveTotal = await db.from('users').count(); // TTL-accurate on both adapters
-```
-
-### `getOrPut(table, key, factory, ttl?)`
-
-Returns the cached record if present; otherwise calls `factory()`, stores the result, and returns it.
-
-```ts
-const user = await db.getOrPut('users', 1, () => fetchUser(1), ttl.minutes(5));
-```
-
-## Query Builder
-
-`db.from(table)` returns a lazy `QueryBuilder<T>` — no query runs until a terminal is called.
-
-### Filtering
-
-```ts
-const qb = db.from('users');
-
-// Strict equality
-await qb.equals('city', 'Paris').toArray();
-
-// Inclusive range (numbers or strings)
-await qb.between('age', 18, 30).toArray();
-
-// Prefix match
-await qb.startsWith('name', 'Al').toArray();
-await qb.startsWith('name', 'al', { ignoreCase: true }).toArray();
-
-// Custom predicate
-await qb.filter((u) => u.age > 18 && (u.city ?? '').length > 0).toArray();
-
-// Logical AND / OR
-await qb
-  .and(
-    (u) => u.city === 'Paris',
-    (u) => u.age > 25,
-  )
-  .toArray();
-await qb
-  .or(
-    (u) => u.city === 'Paris',
-    (u) => u.city === 'Berlin',
-  )
-  .toArray();
-```
-
-### Sorting & Pagination
-
-```ts
-// Sort
-await qb.orderBy('age', 'asc').toArray();
-await qb.orderBy('name', 'desc').toArray();
-await qb.reverse().toArray();
-
-// Slice
-await qb.limit(10).toArray();
-await qb.offset(5).toArray();
-await qb.page(2, 20).toArray(); // page 2, 20 per page
-```
-
-### Search & Contains
-
-`search` performs a **fuzzy** match across all fields using the `@vielzeug/toolkit` search engine. `contains` performs a case-insensitive **substring** match.
-
-```ts
-// Fuzzy search — all fields
-await qb.search('alice').toArray();
-await qb.search('alice', 0.5).toArray(); // tone: 0 = most permissive, 1 = exact. Default: 0.25
-
-// Substring match — named fields
-await qb.contains('ali', ['name']).toArray();
-await qb.contains('paris', ['city', 'address']).toArray();
-
-// Substring match — all string fields
-await qb.contains('paris').toArray();
-```
-
-### Projection
-
-`map` transforms each record and returns a `ProjectedQuery<U>`. Unlike the other query methods, `U` is unconstrained, so projecting to a primitive type works correctly:
-
-```ts
-const ids = await db
-  .from('users')
-  .map((u) => u.id)
-  .toArray(); // number[]
-const names = await db
-  .from('users')
-  .map((u) => u.name)
-  .toArray(); // string[]
-const dtos = await db
-  .from('users')
-  .map((u) => ({ name: u.name }))
-  .toArray();
-```
-
-`ProjectedQuery<U>` supports the same terminal methods as `QueryBuilder` — `toArray`, `first`, `last`, `count`, and `for await...of` — but cannot be chained with further query operators.
-
-### Terminals
-
-```ts
-const all = await qb.toArray(); // T[]
-const first = await qb.first(); // T | undefined
-const last = await qb.last(); // T | undefined
-const count = await qb.count(); // number
-```
-
-### Aggregations
-
-```ts
-// count() and pagination
-const total = await qb.count();
-
-// reduce
-const totalAge = await db.from('users').reduce((sum, u) => sum + u.age, 0);
-const names = await db
-  .from('users')
-  .filter((u) => u.active)
-  .reduce<string[]>((acc, u) => [...acc, u.name], []);
-```
-
-::: tip count() and pagination
-`count()` returns the number of records **after** the full pipeline — including `limit`, `offset`, and `page`. Call `count()` before adding pagination operators if you need the total match count:
-
-```ts
-const total = await db.from('users').equals('city', 'Paris').count();
-const page = await db.from('users').equals('city', 'Paris').page(1, 20).toArray();
-```
-
-:::
-
-### Async Iteration
-
-`QueryBuilder` implements `AsyncIterator`. Use `for await...of` for streamed processing without calling `.toArray()` explicitly.
-
-```ts
-for await (const user of db.from('users').orderBy('name').limit(100)) {
-  console.log(user.name);
-}
-```
-
-## TTL
-
-Pass a TTL in milliseconds as the third argument to `put` or `putMany`, or the fourth argument to `getOrPut`.
-Use the `ttl` helper to express durations readably:
+## Use TTL
 
 ```ts
 import { ttl } from '@vielzeug/deposit';
 
-// named helpers
-await db.put('sessions', session, ttl.hours(1));
-await db.putMany('cache', entries, ttl.minutes(15));
-await db.getOrPut('users', id, fetchUser, ttl.seconds(30));
+await idb.put('users', { id: 1, name: 'Alice', age: 30 }, ttl.minutes(5));
 
-// raw ms also works
-await db.put('tokens', token, 60_000);
-
-// Returns undefined after expiry — and removes the entry from storage
-const session = await db.get('sessions', 's1');
-
-// patch preserves existing TTL
-const updated = await db.patch('sessions', 's1', { token: 'xyz' });
+await idb.put('users', { id: 2, name: 'Bob', age: 28 }, ttl.hours(1));
 ```
 
-**`ttl` helpers:**
+Available helpers: `ttl.ms`, `ttl.seconds`, `ttl.minutes`, `ttl.hours`, `ttl.days`.
 
-| Helper           | Returns                           |
-| ---------------- | --------------------------------- |
-| `ttl.ms(n)`      | `n` (identity — raw milliseconds) |
-| `ttl.seconds(n)` | `n * 1_000`                       |
-| `ttl.minutes(n)` | `n * 60_000`                      |
-| `ttl.hours(n)`   | `n * 3_600_000`                   |
-| `ttl.days(n)`    | `n * 86_400_000`                  |
-
-::: tip Lazy eviction
-Expired entries are removed lazily: the LocalStorage adapter evicts on read; the IndexedDB adapter evicts in a background write after `getAll()` returns.
-:::
-
-## Transactions
-
-Transactions are only available on the IndexedDB adapter (`IndexedDBHandle`). All writes in the callback are committed atomically — if the callback throws, nothing is persisted.
+## Query Data
 
 ```ts
-import { createIndexedDB } from '@vielzeug/deposit';
+const result = await local
+  .query('users')
+  .between('age', 18, 99)
+  .startsWith('name', 'a', { ignoreCase: true })
+  .orderBy('name', 'asc')
+  .limit(20)
+  .offset(0)
+  .toArray();
 
-const db = createIndexedDB({ dbName: 'my-app', version: 1, schema });
+const count = await local.query('users').equals('age', 30).count();
+```
 
-await db.transaction(['posts', 'comments'], async (tx) => {
-  // Reads
-  const post = await tx.get('posts', 1);
-  const all = await tx.getAll('posts');
-  const many = await tx.getMany('posts', [1, 2, 3]);
-  const safe = await tx.getOr('posts', 1, defaultPost);
-  const exists = await tx.has('posts', 1);
-  const total = await tx.count('posts'); // native IDB count — includes TTL-expired
-  const recent = await tx.from('posts').orderBy('publishedAt', 'desc').limit(5).toArray();
+Queries are composed lazily and run when `toArray()`, `count()`, or `first()` is called.
 
-  // Writes
-  await tx.put('posts', { id: 1, title: 'Hello', authorId: 1, publishedAt: Date.now() });
-  await tx.putMany('comments', [c1, c2, c3]);
-  await tx.patch('posts', 1, { title: 'Hello, World!' });
-  await tx.delete('posts', 99);
-  await tx.deleteMany('comments', [10, 11]);
-  await tx.deleteAll('drafts');
+### Get the first result
+
+`first()` resolves after applying all preceding operators, returning the first match or `undefined`.
+
+```ts
+const youngest = await local.query('users').orderBy('age', 'asc').first();
+```
+
+## Reactive Reads
+
+`observe(table, listener, options?)` emits the current snapshot immediately by default and then emits again after table mutations.
+
+```ts
+const stop = idb.observe('users', (rows) => {
+  console.log('users changed', rows);
+});
+
+await idb.put('users', { id: 1, name: 'Alice', age: 30 });
+stop();
+```
+
+IndexedDB observers propagate across tabs/windows via `BroadcastChannel` when available. LocalStorage observers also react to cross-tab writes via the browser `storage` event.
+
+## Update and Upsert-Like Helpers
+
+```ts
+await idb.update('users', 1, { age: 31 });
+
+const user = await idb.getOrPut('users', {
+  id: 2,
+  name: 'Bob',
+  age: 26,
+});
+
+const removed = await idb.deleteWhere('users', (value) => value.age < 21);
+
+await idb.forEach('users', (value) => {
+  console.log(value.name);
+});
+
+void user;
+void removed;
+```
+
+## Run IndexedDB Transactions
+
+```ts
+await idb.transaction(['users'], async (tx) => {
+  await tx.put('users', { id: 2, name: 'Bob', age: 28 });
+  await tx.delete('users', 1);
+
+  const current = await tx.getAll('users');
+  const n = await tx.count('users');
+
+  void current;
+  void n;
 });
 ```
 
-::: warning
-The `transaction()` method is only available on `IndexedDBHandle` (returned by `createIndexedDB()`), not on `Adapter`.
-:::
+If the callback throws, the transaction is aborted and changes are rolled back.
 
-## Schema Migrations
-
-Provide a `migrationFn` to `createIndexedDB` to migrate the database when `version` increases. The function runs inside the browser's `onupgradeneeded` event and receives the raw `IDBDatabase` and `IDBTransaction`.
-
-Deposit stores records inside an envelope `{ v: record, exp?: number }`, which means index key paths must reference `v.fieldName`. Use the exported `storeField()` helper to build these paths so that your migration code stays decoupled from deposit's internals:
+## Handle Schema Migrations
 
 ```ts
-import { type MigrationFn, storeField } from '@vielzeug/deposit';
+import { createIndexedDB, type MigrationFn } from '@vielzeug/deposit';
 
-const migrationFn: MigrationFn = (db, oldVersion, _newVersion, tx) => {
-  if (oldVersion < 2) {
-    // Add an index added in v2
-    const store = tx.objectStore('users');
-    store.createIndex('email', storeField('email'), { unique: true });
-  }
-  if (oldVersion < 3) {
-    // Create a new table in v3
-    db.createObjectStore('tags', { keyPath: storeField('id') });
+const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
+  if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
+    // Example: add an index during upgrade.
+    tx.objectStore('users').createIndex('name', 'name', { unique: false });
   }
 };
 
-const db = createIndexedDB({ dbName: 'my-app', version: 3, schema, migrationFn });
+const db = createIndexedDB({
+  dbName: 'app',
+  migrate,
+  schema,
+  schemaVersion: 2,
+});
 ```
 
-::: tip New indexes on existing tables
-When you add entries to `indexes` in your schema and bump `version`, deposit automatically creates the missing indexes on the existing object store during the upgrade — no manual `createIndex` call required for indexes declared in the schema.
+Increase `schemaVersion` to trigger `migrate` during `onupgradeneeded`.
+
+## Operational Notes
+
+- `count()` returns live records (TTL-expired records are excluded).
+- Query operations run in memory over records returned from the backend.
+- Keep transaction callbacks focused on DB operations for predictable atomicity.
+- Call `dispose()` on IndexedDB handles in long-lived contexts when shutting down.
+- `createMemory()` state is scoped to the instance; each call returns an isolated store.
+- `createSessionStorage()` is tab-scoped and clears when the tab/window is closed.
+- `observe()` emits an immediate snapshot first; unsubscribe when no longer needed.
+
+## Testing with the Memory Adapter
+
+Swap any adapter for `createMemory` in test setup to get a browser-free, zero-teardown store:
+
+```ts
+import { createMemory } from '@vielzeug/deposit';
+import { schema } from '../src/schema';
+
+// No localStorage mocks, no fake-indexeddb — just a plain Map under the hood.
+const db = createMemory(schema);
+
+beforeEach(async () => {
+  await db.deleteAll('users');
+});
+
+test('creates a user', async () => {
+  await db.put('users', { id: 1, name: 'Alice', age: 30 });
+  expect(await db.has('users', 1)).toBe(true);
+});
+```
+
+The memory adapter is TTL-accurate: records expire lazily on read, just like the other adapters.
+
+## Common Pattern: Swap Adapters by Environment
+
+```ts
+import {
+  createCookie,
+  createIndexedDB,
+  createLocalStorage,
+  createMemory,
+  createSessionStorage,
+  type Adapter,
+} from '@vielzeug/deposit';
+import { schema } from './schema';
+
+function createStorage(): Adapter<typeof schema> {
+  if (typeof indexedDB !== 'undefined') {
+    return createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
+  }
+
+  if (typeof localStorage !== 'undefined') {
+    return createLocalStorage('app', schema);
+  }
+
+  if (typeof sessionStorage !== 'undefined') {
+    return createSessionStorage('app', schema);
+  }
+
+  if (typeof document !== 'undefined') {
+    return createCookie('app', schema);
+  }
+
+  // SSR or test environment
+  return createMemory(schema);
+}
+```
+
+## Framework Integration
+
+Deposit is framework-agnostic. Use `observe()` with framework-specific subscriptions to bridge reactivity.
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useState } from 'react';
+import { createLocalStorage, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string; age: number };
+const schema = { users: table<User>('id') };
+const store = createLocalStorage('app', schema);
+
+function useUsers() {
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const stop = store.observe('users', setUsers);
+    return () => stop();
+  }, []);
+
+  return users;
+}
+```
+
+```ts [Vue 3]
+import { ref, onScopeDispose } from 'vue';
+import { createLocalStorage, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string; age: number };
+const schema = { users: table<User>('id') };
+const store = createLocalStorage('app', schema);
+
+function useUsers() {
+  const users = ref<User[]>([]);
+  const stop = store.observe('users', (rows) => { users.value = rows; });
+  onScopeDispose(() => stop());
+  return users;
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { createLocalStorage, table } from '@vielzeug/deposit';
+
+  type User = { id: number; name: string; age: number };
+  const schema = { users: table<User>('id') };
+  const store = createLocalStorage('app', schema);
+
+  let users: User[] = [];
+  const stop = store.observe('users', (rows) => { users = rows; });
+  onDestroy(() => stop());
+</script>
+
+{#each users as user}
+  <p>{user.name}</p>
+{/each}
+```
+
 :::
+
+### Pitfalls
+
+- **React:** Calling `openStore()` inside a render without `useRef` or `useMemo` creates a new store handle on every render — use `useRef` to hold the reference.
+- **Vue 3:** Reading stored values in `setup()` (synchronously) always returns `undefined` — always read inside `onMounted` since IndexedDB is async.
+- **Svelte:** Writing to a Svelte `writable` from within an async `onMount` after the component is destroyed will throw — check if the component is still mounted before updating.
+
+## Working with Other Vielzeug Libraries
+
+### With Validit
+
+Use Validit to validate data before writing it to storage.
+
+```ts
+import { createLocalStorage, table } from '@vielzeug/deposit';
+import { v } from '@vielzeug/validit';
+
+type User = { id: number; name: string; age: number };
+const schema = { users: table<User>('id') };
+const store = createLocalStorage('app', schema);
+
+const UserSchema = v.object({
+  id: v.number(),
+  name: v.string().min(1),
+  age: v.number().min(0).max(120),
+});
+
+async function saveUser(data: unknown) {
+  const result = UserSchema.safeParse(data);
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  await store.put('users', result.value);
+}
+```
+
+### With Stateit
+
+Bridge store observations to Stateit signals for reactive UI.
+
+```ts
+import { createLocalStorage, table } from '@vielzeug/deposit';
+import { signal, effect } from '@vielzeug/stateit';
+
+type User = { id: number; name: string; age: number };
+const schema = { users: table<User>('id') };
+const db = createLocalStorage('app', schema);
+
+const users = signal<User[]>([]);
+db.observe('users', (rows) => { users.value = rows; });
+
+effect(() => console.log('users updated:', users.value.length));
+```
+
+## Best Practices
+
+- Use `createMemory()` in tests — it is isolated, synchronous, and has no side effects.
+- Prefer `createIndexedDB()` for data sets larger than a few kilobytes or when you need atomic transactions.
+- Call `dispose()` on IndexedDB adapters during app teardown to release the database connection.
+- Unsubscribe `observe()` listeners when the component unmounts to prevent stale updates.
+- Use TTL for cache-like data; avoid TTL for user data that should persist indefinitely.
+- Run `putAll()` for bulk writes — it performs one transaction instead of one per record.
+- Keep `migrate()` callbacks forward-only; do not mutate data for versions already in production.
+- Use `createMemory()` in SSR environments where browser APIs are unavailable.

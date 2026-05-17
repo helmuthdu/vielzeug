@@ -1,24 +1,32 @@
 import {
-  define,
   computed,
   createContext,
   createId,
+  define,
   effect,
   html,
   inject,
   provide,
   type ReadonlySignal,
   signal,
+  when,
 } from '@vielzeug/craftit';
-import { createChoiceFieldControl } from '@vielzeug/craftit/controls';
+import { createChoiceField } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
-import { createChoiceChangeDetail, type ChoiceChangeDetail } from '../shared/utils';
+import {
+  type ChoiceChangeDetail,
+  createChoiceChangeDetail,
+  getChoiceLabel,
+  getSlottedByTag,
+  setBooleanAttribute,
+  setMaybeAttribute,
+} from '../shared/utils';
 import componentStyles from './checkbox-group.css?inline';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -62,19 +70,6 @@ export type BitCheckboxGroupEvents = {
   change: ChoiceChangeDetail;
 };
 
-const checkboxGroupProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  error: '',
-  helper: '',
-  label: '',
-  name: '',
-  orientation: 'vertical',
-  required: false,
-  values: '',
-} satisfies PropBundle<BitCheckboxGroupProps>;
-
 /**
  * A fieldset wrapper that groups `bit-checkbox` elements, provides shared
  * `color` and `size` via context, and manages multi-value selection state.
@@ -98,34 +93,37 @@ const checkboxGroupProps = {
  */
 export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroupEvents>('bit-checkbox-group', {
   formAssociated: true,
-  props: checkboxGroupProps,
-  setup({ emit, host, props, slots }) {
-    const formCtx = inject(FORM_CTX, undefined);
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    error: '',
+    helper: '',
+    label: '',
+    name: '',
+    orientation: { default: 'vertical' as const },
+    required: false,
+    values: '',
+  },
+  setup(props, { emit, host, slots }) {
+    const formCtx = inject(FORM_CTX);
 
     mountFormContextSync(host.el, formCtx, props);
 
-    const choice = createChoiceFieldControl<string>({
+    const choice = createChoiceField({
       context: formCtx,
       disabled: props.disabled,
       error: props.error,
-      getValue: (value) => value,
       helper: props.helper,
-      label: props.label,
-      mapControlledValue: (value) => value,
       multiple: signal(true),
       name: props.name,
       prefix: 'checkbox-group',
       value: props.values,
     });
-    const checkedValues = choice.selectedItems;
+    const checkedValues = choice.selectedValues;
 
-    const getCheckboxes = (): HTMLElement[] =>
-      Array.from(host.el.getElementsByTagName('bit-checkbox')) as HTMLElement[];
-    const getLabelForValue = (value: string): string => {
-      const checkbox = getCheckboxes().find((item) => (item.getAttribute('value') ?? '') === value);
-
-      return checkbox?.textContent?.replace(/\s+/g, ' ').trim() || value;
-    };
+    const getCheckboxes = (): HTMLElement[] => getSlottedByTag(host.el, 'bit-checkbox');
+    const getLabelForValue = (value: string): string => getChoiceLabel(getCheckboxes(), value);
     const emitChange = (originalEvent?: Event) => {
       const values = checkedValues.value;
 
@@ -133,7 +131,7 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     };
 
     const toggleCheckbox = (val: string, originalEvent?: Event) => {
-      choice.toggleItem(val);
+      choice.toggleValue(val);
       host.el.setAttribute('values', choice.formValue.value);
       choice.triggerValidation('change');
       emitChange(originalEvent);
@@ -153,22 +151,15 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
       const color = props.color.value;
       const size = props.size.value;
       const disabled = props.disabled.value;
-      const checkboxes = Array.from(host.el.getElementsByTagName('bit-checkbox')) as HTMLElement[];
+      const checkboxes = getCheckboxes();
 
       for (const checkbox of checkboxes) {
         const val = checkbox.getAttribute('value') ?? '';
 
-        if (values.includes(val)) checkbox.setAttribute('checked', '');
-        else checkbox.removeAttribute('checked');
-
-        if (color) checkbox.setAttribute('color', color);
-        else checkbox.removeAttribute('color');
-
-        if (size) checkbox.setAttribute('size', size);
-        else checkbox.removeAttribute('size');
-
-        if (disabled) checkbox.setAttribute('disabled', '');
-        else checkbox.removeAttribute('disabled');
+        setBooleanAttribute(checkbox, 'checked', values.includes(val));
+        setMaybeAttribute(checkbox, 'color', color);
+        setMaybeAttribute(checkbox, 'size', size);
+        setBooleanAttribute(checkbox, 'disabled', Boolean(disabled));
       }
     };
 
@@ -206,26 +197,27 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     const legendId = createId('checkbox-group-legend');
     const errorId = `${legendId}-error`;
     const helperId = `${legendId}-helper`;
-    const hasError = computed(() => Boolean(props.error.value));
-    const hasHelper = computed(() => Boolean(props.helper.value) && !hasError.value);
+    const hasError = () => Boolean(props.error.value);
+    const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
-    return html`
+    return () => html`
       <fieldset
         role="group"
         aria-required="${() => String(Boolean(props.required.value))}"
-        aria-invalid="${() => String(hasError.value)}"
-        aria-errormessage="${() => (hasError.value ? errorId : null)}"
-        aria-describedby="${() => (hasError.value ? errorId : hasHelper.value ? helperId : null)}">
+        aria-invalid="${() => String(hasError())}"
+        aria-errormessage="${() => (hasError() ? errorId : null)}"
+        aria-describedby="${() => (hasError() ? errorId : hasHelper() ? helperId : null)}">
         <legend id="${legendId}" ?hidden=${() => !props.label.value}>
-          ${() => props.label.value}${() => (props.required.value ? html`<span aria-hidden="true"> *</span>` : '')}
+          ${props.label}${when(
+            () => Boolean(props.required.value),
+            () => html`<span aria-hidden="true"> *</span>`,
+          )}
         </legend>
         <div class="checkbox-group-items" part="items">
           <slot></slot>
         </div>
-        <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError.value}>
-          ${() => props.error.value}
-        </div>
-        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper.value}>${() => props.helper.value}</div>
+        <div class="error-text" id="${errorId}" role="alert" ?hidden=${() => !hasError()}>${props.error}</div>
+        <div class="helper-text" id="${helperId}" ?hidden=${() => !hasHelper()}>${props.helper}</div>
       </fieldset>
     `;
   },

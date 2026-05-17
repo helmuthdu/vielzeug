@@ -1,9 +1,9 @@
 ---
-title: Craftit Controls - Headless Interaction APIs
-description: Stable headless controls and DOM composables for interactive widgets.
+title: Craftit Controls — Headless interaction APIs
+description: Stable headless controls from @vielzeug/craftit/controls for fields, lists, press handling, swipe gestures, overlays, popup lists, sliders, and spinners.
 ---
 
-This page documents the `@vielzeug/craftit/controls` entrypoint. These APIs are the stable headless interaction layer for advanced component logic such as overlays, list navigation, and field wiring.
+This page documents the `@vielzeug/craftit/controls` entry point.
 
 [[toc]]
 
@@ -12,280 +12,336 @@ This page documents the `@vielzeug/craftit/controls` entrypoint. These APIs are 
 ```ts
 import {
   createCheckableFieldControl,
-  createChoiceFieldControl,
+  createChoiceField,
   createListControl,
   createOverlayControl,
-  createTextFieldControl,
+  createPopupListControl,
+  createPressControl,
+  createSliderControl,
+  createSpinnerControl,
+  createSwipeControl,
+  createTextField,
+  type CheckableChangePayload,
+  type OverlayCloseDetail,
+  type OverlayCloseReason,
+  type OverlayOpenDetail,
+  type OverlayOpenReason,
+  type SwipeAxis,
 } from '@vielzeug/craftit/controls';
-
-import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';
 ```
 
 ## Overview
 
-- `createTextFieldControl` - text-field controller with stable ids, validation hooks, and integrated assistive state.
-- `createChoiceFieldControl` - single/multi-select controller for selects, comboboxes, and grouped checkboxes.
-- `createCheckableFieldControl` - high-level checkbox/radio/switch controller that bundles checkable state, a11y wiring, and press handling.
-- `createListControl` - keyboard/list focus navigation with rich result metadata.
-- `createOverlayControl` - open/close/toggle orchestration with typed open/close reasons.
+- `createTextField` — authoring helper for input-like string fields
+- `createChoiceField` — authoring helper for select-like single/multi choice fields
+- `createCheckableFieldControl` — authoring helper for checkbox, radio, and switch widgets
+- `createListControl` — enabled-item navigation plus keyboard dispatch
+- `createPressControl` — normalized pointer/keyboard press handling
+- `createSwipeControl` — pointer-axis swipe tracking with threshold-based commit/cancel
+- `createOverlayControl` — reason-aware open/close/toggle orchestration
+- `createPopupListControl` — popup list composition built from overlay + list + ARIA sync
+- `createSliderControl` — min/max/step math for slider-like widgets
+- `createSpinnerControl` — numeric increment/decrement and keyboard stepping
 
-Observer APIs (`resizeObserver`, `intersectionObserver`, `mediaObserver`) are documented under the `@vielzeug/craftit/observers` entrypoint.
+## Which control do I choose?
 
-## Which Control Do I Choose?
+Use the field helpers when the component is a form control:
 
-For normal field authoring, the intended public choice is now just three field controllers:
+- `createTextField(options)` for text inputs and textareas
+- `createChoiceField(options)` for select, combobox, multiselect, and grouped-choice fields
+- `createCheckableFieldControl(options)` for checkbox, radio, and switch widgets
 
-- Use `createTextFieldControl` for input-like fields with one string value: input, textarea, masked text inputs, and similar controls.
-- Use `createChoiceFieldControl` when the field owns a selected item list or CSV-style form value: select, combobox, multi-select, checkbox-group.
-- Use `createCheckableFieldControl` for single checkable widgets: checkbox, radio, switch.
+Use the interaction primitives everywhere else:
 
-Everything else in this entrypoint is either a generic non-field primitive (`createListControl`, `createOverlayControl`, `createPressControl`) or a lower-level escape hatch for advanced widgets (`createA11yControl`).
+- `createListControl` for roving focus and enabled-item navigation
+- `createPressControl` for Enter/Space + click activation
+- `createSwipeControl` for pointer-driven dismiss or pan gestures
+- `createOverlayControl` for popup open/close behavior
+- `createPopupListControl` when you need popup navigation + overlay behavior together
+- `createSliderControl` for range math
+- `createSpinnerControl` for number input stepping
 
-## `createListControl`
+## createListControl()
 
-Navigation methods return a `ListControlResult` object instead of a bare index.
+`createListControl()` owns both navigation methods and keyboard mapping.
 
 ```ts
-type ListControlResultReason = 'empty' | 'moved' | 'no-enabled-item' | 'unchanged';
+type ListKeyAction = 'first' | 'last' | 'next' | 'prev';
 
-type ListControlResult = {
-  index: number;
-  moved: boolean;
-  reason: ListControlResultReason;
-  wrapped: boolean;
-};
-
-type ListControl<T> = {
-  first: () => ListControlResult;
-  getActiveItem: () => T | undefined;
-  getEnabledIndex: (index: number) => ListControlResult;
-  last: () => ListControlResult;
-  next: () => ListControlResult;
-  prev: () => ListControlResult;
-  reset: () => void;
-  set: (index: number) => ListControlResult;
+type ListNavigationOptions<T> = {
+  disabled?: () => boolean;
+  getIndex: () => number;
+  getItems: () => T[];
+  isItemDisabled?: (item: T, index: number) => boolean;
+  keys?: Partial<Record<ListKeyAction, string[]>> | (() => Partial<Record<ListKeyAction, string[]>>);
+  loop?: boolean;
+  onInvoke?: (action: ListKeyAction, result: ListControlResult, event: KeyboardEvent) => void;
+  setIndex: (index: number) => void;
 };
 ```
 
-### Why this shape improves DX
-
-- You can branch on `reason` (`'empty'`, `'no-enabled-item'`, etc.) without manually inferring from `-1`.
-- `wrapped` is explicit for telemetry and UX decisions.
-- `moved` tells you if focus/selection actually changed.
-
-### Navigation Example
-
 ```ts
-const nav = createListControl({
+const list = createListControl({
   getIndex: () => focusedIndex.value,
   getItems: () => options.value,
   isItemDisabled: (item) => item.disabled,
+  keys: { next: ['ArrowDown'], prev: ['ArrowUp'] },
   loop: true,
+  onInvoke: (action, result) => {
+    if (result.moved) console.log(action, result.index);
+  },
   setIndex: (index) => {
     focusedIndex.value = index;
   },
 });
 
-const result = nav.next();
-
-if (result.reason === 'empty' || result.reason === 'no-enabled-item') {
-  focusedIndex.value = -1;
-}
+list.handleKeydown(event);
+const result = list.next();
 ```
 
-## `createOverlayControl`
+Navigation methods return a `ListControlResult`:
+
+```ts
+type ListControlResult = {
+  index: number;
+  moved: boolean;
+  reason: 'empty' | 'moved' | 'no-enabled-item' | 'unchanged';
+  wrapped: boolean;
+};
+```
+
+## createPressControl()
+
+Use `createPressControl()` when a widget should activate from both click and keyboard.
+
+```ts
+const press = createPressControl({
+  disabled: () => disabled.value,
+  keys: ['Enter', ' '],
+  onPress: (originalEvent, trigger) => {
+    console.log(trigger, originalEvent.type);
+    toggle();
+  },
+});
+
+host.on('click', press.handleClick);
+host.on('keydown', press.handleKeydown);
+```
+
+## createSwipeControl()
+
+`createSwipeControl()` owns pointer capture, axis distance, threshold progress, and commit vs cancel flow for swipe-like gestures.
+
+```ts
+const swipe = createSwipeControl({
+  axis: () => 'x',
+  disabled: () => closing.value,
+  onMove: ({ distance, threshold }) => {
+    const progress = Math.min(Math.abs(distance) / threshold, 1);
+    panel.style.transform = `translateX(${distance}px)`;
+    panel.style.opacity = String(1 - progress * 0.4);
+  },
+  onCancel: () => {
+    resetStyles();
+  },
+  onCommit: () => {
+    finishDismiss();
+  },
+  shouldCommit: ({ distance, threshold }) => distance >= threshold,
+  threshold: () => 64,
+});
+
+host.on('pointerdown', swipe.handlePointerDown);
+host.on('pointermove', swipe.handlePointerMove);
+host.on('pointerup', swipe.handlePointerUp);
+host.on('pointercancel', swipe.handlePointerCancel);
+```
+
+Type surface:
+
+```ts
+type SwipeAxis = 'x' | 'y';
+
+type SwipeControlDetail = {
+  axis: SwipeAxis;
+  current: number;
+  distance: number;
+  event: PointerEvent;
+  pointerId: number;
+  progress: number;
+  start: number;
+  threshold: number;
+};
+```
+
+## createOverlayControl()
 
 Overlay transitions are reason-aware.
 
 ```ts
-type OverlayOpenReason = 'programmatic' | 'trigger';
-type OverlayCloseReason = 'escape' | 'outside-click' | 'programmatic' | 'trigger';
-
-type OverlayChangeContext = {
-  reason: OverlayOpenReason | OverlayCloseReason;
-};
-
-type OverlayControlOptions = {
-  getBoundaryElement: () => HTMLElement | null;
-  getPanelElement?: () => HTMLElement | null;
-  getTriggerElement?: () => HTMLElement | null;
-  isDisabled?: () => boolean;
-  isOpen: () => boolean;
-  onClose?: (reason: OverlayCloseReason) => void;
-  onOpen?: (reason: OverlayOpenReason) => void;
-  positioner?: OverlayPositioner;
-  restoreFocus?: boolean | (() => boolean);
-  setOpen: (next: boolean, context: OverlayChangeContext) => void;
-};
-
-type OverlayControl = {
-  bindOutsideClick: (target?: Document | HTMLElement, capture?: boolean) => () => void;
-  close: (opts?: { reason?: OverlayCloseReason; restoreFocus?: boolean }) => void;
-  open: (opts?: { reason?: OverlayOpenReason }) => void;
-  toggle: () => void;
-};
-```
-
-### A11y Example
-
-```ts
 const overlay = createOverlayControl({
-  getBoundaryElement: () => host,
-  getPanelElement: () => panel,
-  getTriggerElement: () => trigger,
-  isOpen: () => isOpen.value,
+  getBoundaryElement: () => host.el,
+  getPanelElement: () => panelRef.value,
+  getTriggerElement: () => triggerRef.value,
+  isOpen: () => open.value,
+  onClose: (reason) => console.log('closed', reason),
+  onOpen: (reason) => console.log('opened', reason),
+  restoreFocus: true,
   setOpen: (next, context) => {
-    isOpen.value = next;
-    emit(next ? 'open' : 'close', { reason: context.reason });
-  },
-  onClose: (reason) => {
-    if (reason === 'escape') {
-      // Optional behavior for escape-specific close.
-    }
+    open.value = next;
+    lastReason.value = context.reason;
   },
 });
 
+const stopOutsideClick = overlay.bindOutsideClick();
 overlay.open({ reason: 'trigger' });
+overlay.close({ reason: 'escape' });
 ```
 
-## `createTextFieldControl`
+## createPopupListControl()
 
-`createTextFieldControl` is the base authoring helper for input-like fields. It owns stable ids, field state, validation triggering, and assistive state in one place.
+Use `createPopupListControl()` for popup widgets such as comboboxes, menus, and selects. ARIA attributes on the trigger are synced automatically on first bind.
 
 ```ts
-const field = createTextFieldControl({
-  context: formCtx,
-  error,
-  helper,
-  label,
-  labelPlacement,
-  maxLength,
-  name,
-  prefix: 'input',
-  value,
+const popupList = createPopupListControl({
+  ariaSync: { role: 'listbox' },
+  getBoundaryElement: () => host.el,
+  getIndex: () => focusedIndex.value,
+  getItems: () => items.value,
+  getPanelElement: () => panelRef.value,
+  getTriggerElement: () => triggerRef.value,
+  isOpen: () => open.value,
+  keyboardMapping: { next: ['ArrowDown'], prev: ['ArrowUp'] },
+  listId: listId.value,
+  onNavigate: (_action, index) => {
+    focusedIndex.value = index;
+  },
+  setIndex: (index) => {
+    focusedIndex.value = index;
+  },
+  setOpen: (next) => {
+    open.value = next;
+  },
 });
 
-const { assistive, fieldId, helperId, errorId, labelInsetId, labelOutsideId, value: inputValue } = field;
+popupList.handleListKeydown(event);
+popupList.syncTriggerAria(triggerRef.value!, {
+  /* custom ARIA if needed */
+});
 ```
 
-`assistive.value` includes:
+## createSliderControl()
 
-- `text` and `isError` for helper/error output
-- `hasCounter`, `counterText`, `counterNearLimit`, and `counterAtLimit` for maxlength UX
-- `showHelper`, `hasError`, and `hidden` so templates do not need to duplicate fallback logic
-
-## `createChoiceFieldControl`
-
-`createChoiceFieldControl` is the shared base for select-like components.
+`createSliderControl()` handles slider math only. You wire the DOM separately.
 
 ```ts
-const choice = createChoiceFieldControl({
-  context: formCtx,
-  error,
+const slider = createSliderControl({
+  min: () => props.min.value,
+  max: () => props.max.value,
+  step: () => props.step.value,
+});
+
+const next = slider.nextFromKey('ArrowRight', value.value);
+const snapped = slider.snap(13.4);
+const percent = slider.toPercent(value.value);
+const fromPointer = slider.fromClientX(clientX, rect);
+```
+
+## createSpinnerControl()
+
+Use `createSpinnerControl()` for number inputs and stepper UIs.
+
+```ts
+const spinner = createSpinnerControl({
+  commit: (next, originalEvent) => {
+    value.value = next == null ? '' : String(next);
+    emitChange(originalEvent);
+  },
+  disabled: () => props.disabled.value,
+  largeStep: () => 10,
+  max: () => props.max.value,
+  min: () => props.min.value,
+  parse: () => (value.value === '' ? null : Number(value.value)),
+  readonly: () => props.readonly.value,
+  step: () => props.step.value,
+});
+
+spinner.incrementBy(1, event);
+spinner.handleKeydown(event);
+spinner.atMin();
+spinner.atMax();
+```
+
+## createTextField()
+
+Use `createTextField()` for components that own a single text value.
+
+```ts
+const field = createTextField({
+  elementRef: inputRef,
+  error: props.error,
+  helper: props.helper,
+  label: props.label,
+  maxLength: props.maxLength,
+  prefix: 'input',
+  value: props.value,
+});
+
+field.value.value;
+field.assistive.value.text;
+field.clear();
+field.triggerValidation('change');
+```
+
+It bundles ids, disabled/readonly state, assistive text, validation triggers, and input lifecycle wiring.
+
+## createChoiceField()
+
+Use `createChoiceField()` for select-like controls.
+
+```ts
+const choice = createChoiceField({
   getValue: (item) => item.value,
-  helper,
-  label,
-  labelPlacement,
-  mapControlledValue: (value) => ({ label: '', value }),
-  multiple,
-  name,
-  prefix: 'combobox',
-  value,
+  helper: props.helper,
+  label: props.label,
+  multiple: props.multiple,
+  prefix: 'select',
+  value: props.value,
 });
 
 choice.selectedItems.value;
 choice.formValue.value;
-choice.assistive.value.text;
+choice.assistive.value.hidden;
 ```
 
-Use this when the UI needs to manage selected items, selected values, or CSV-backed form values.
+It keeps selected items, derived form value, ids, and assistive state together.
 
-## `createCheckableFieldControl`
+## createCheckableFieldControl()
 
-`createCheckableFieldControl` is the preferred authoring helper for checkbox, radio, and switch components. It wraps the raw checkable state, accessibility wiring, and press handling into one control.
+Use `createCheckableFieldControl()` for checkbox, radio, and switch widgets. ARIA attributes are automatically synced on the host element.
 
 ```ts
 const checkable = createCheckableFieldControl({
-  checked,
-  disabled,
-  error,
-  helper,
+  checked: props.checked,
+  disabled: props.disabled,
+  error: props.error,
+  helper: props.helper,
   host: host.el,
   onToggle: (payload) => emit('change', payload),
   prefix: 'switch',
   role: 'switch',
-  validateOn,
-  value,
+  value: props.value,
 });
 
-const { a11y, control, press } = checkable;
-```
-
-This keeps component code focused on rendering and any truly component-specific behavior.
-
-## `createA11yControl`
-
-`createA11yControl` remains available as a low-level primitive for advanced widgets that are not already covered by the higher-level field helpers.
-
-```ts
-type A11yTone = 'default' | 'error';
-
-type A11yControlConfig = {
-  checked?: () => 'true' | 'false' | 'mixed' | undefined;
-  helperId?: string;
-  helperText?: () => string | undefined;
-  helperTone?: () => A11yTone;
-  invalid?: () => boolean;
-  labelId?: string;
-  role: string;
-};
-
-type A11yControlHandle = {
-  helperId: string;
-  labelId: string;
-};
-```
-
-### Required template markers
-
-`createA11yControl` expects these markers in your template:
-
-- `[data-a11y-label]` for label wiring (`aria-labelledby`)
-- `[data-a11y-helper]` for helper/error wiring (`aria-describedby`)
-
-### Example
-
-```ts
-const a11y = createA11yControl(host, {
-  role: 'checkbox',
-  checked: () => (checked.value ? 'true' : 'false'),
-  invalid: () => Boolean(error.value),
-  helperText: () => error.value || helper.value,
-  helperTone: () => (error.value ? 'error' : 'default'),
-});
-
-return html`
-  <span data-a11y-label id=${a11y.labelId}><slot></slot></span>
-  <div data-a11y-helper id=${a11y.helperId} aria-live="polite" hidden></div>
-`;
-```
-
-## Exports from `@vielzeug/craftit/controls`
-
-```ts
-export {
-  createCheckableFieldControl,
-  createChoiceFieldControl,
-  createListControl,
-  createOverlayControl,
-  createTextFieldControl,
-} from '@vielzeug/craftit/controls';
-
-export { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';
+checkable.control.checked.value;
+checkable.control.triggerValidation('change');
+checkable.press.handleClick(event);
+checkable.labelId; // ARIA label element ID
+checkable.helperId; // ARIA helper element ID
 ```
 
 ## See also
 
 - [Craftit API](./api.md)
-- [Craftit Usage](./usage.md)
+- [Craftit Usage Guide](./usage.md)
 - [Buildit docs](/buildit/)

@@ -1,5 +1,4 @@
-import { define, computed, html, watch } from '@vielzeug/craftit';
-import { raw } from '@vielzeug/craftit/directives';
+import { define, prop, computed, html, raw } from '@vielzeug/craftit';
 import * as lucideModule from 'lucide';
 
 import styles from './icon.css?inline';
@@ -86,31 +85,21 @@ export type BitIconProps = {
  */
 export const ICON_TAG = define<BitIconProps>('bit-icon', {
   props: {
-    absoluteStrokeWidth: false,
+    absoluteStrokeWidth: prop.bool(),
     label: undefined,
     name: undefined,
     size: { default: DEFAULT_SIZE as number | string, parse: parseSize },
-    solid: false,
-    strokeWidth: { default: DEFAULT_STROKE_WIDTH, type: Number },
+    solid: prop.bool(),
+    strokeWidth: prop.number(DEFAULT_STROKE_WIDTH),
   },
-  setup({ host, props }) {
-    watch(
-      props.label,
-      (label) => {
-        const text = (label ?? '').trim();
-
-        if (text) {
-          host.el.setAttribute('aria-label', text);
-          host.el.setAttribute('role', 'img');
-          host.el.removeAttribute('aria-hidden');
-        } else {
-          host.el.setAttribute('aria-hidden', 'true');
-          host.el.removeAttribute('aria-label');
-          host.el.removeAttribute('role');
-        }
+  setup(props, { host }) {
+    host.bind({
+      attr: {
+        'aria-hidden': () => ((props.label.value ?? '').trim() ? null : 'true'),
+        'aria-label': () => (props.label.value ?? '').trim() || null,
+        role: () => ((props.label.value ?? '').trim() ? 'img' : null),
       },
-      { immediate: true },
-    );
+    });
 
     const markup = computed(() => {
       const name = (props.name.value ?? '').trim();
@@ -161,7 +150,7 @@ export const ICON_TAG = define<BitIconProps>('bit-icon', {
       return `<svg ${svgAttrs}>${nodes}</svg>`;
     });
 
-    return html`${() => raw(markup.value)}`;
+    return () => html`${() => raw(markup.value)}`;
   },
   styles: [styles],
 });

@@ -278,6 +278,52 @@ describe('bit-popover', () => {
       expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
     });
 
+    it('fires outside-click close reason when clicking outside', async () => {
+      fixture = await mount('bit-popover', {
+        html: '<button>Open</button>',
+      });
+
+      const handler = vi.fn();
+
+      fixture.element.addEventListener('close', handler);
+
+      const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
+      if (btn) fire.click(btn);
+
+      await fixture.flush();
+
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      await fixture.flush();
+
+      expect(handler).toHaveBeenCalled();
+      expect((handler.mock.calls.at(-1)?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('outside-click');
+    });
+
+    it('fires escape close reason when dismissed via Escape key', async () => {
+      fixture = await mount('bit-popover', {
+        html: '<button>Open</button>',
+      });
+
+      const handler = vi.fn();
+
+      fixture.element.addEventListener('close', handler);
+
+      const btn = fixture.element.querySelector<HTMLButtonElement>('button');
+
+      if (btn) fire.click(btn);
+
+      await fixture.flush();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+
+      await fixture.flush();
+
+      expect(handler).toHaveBeenCalled();
+      expect((handler.mock.calls.at(-1)?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('escape');
+    });
+
     it('does not fire open when disabled', async () => {
       fixture = await mount('bit-popover', {
         attrs: { disabled: '' },

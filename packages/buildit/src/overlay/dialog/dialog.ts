@@ -1,15 +1,13 @@
 import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, computed, handle, html, onMount, ref, signal, watch, fire } from '@vielzeug/craftit';
+import { define, on, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
 
 import type { PaddingSize, RoundedSize } from '../../types';
 
 import '../../content/icon/icon';
-import { type PropBundle } from '../../inputs/shared/bundles';
 import { coarsePointerMixin, elevationMixin, roundedVariantMixin } from '../../styles';
-import { lockBackground, unlockBackground } from '../../utils/background-lock';
-import { useOverlay } from '../../utils/use-overlay';
+import { lockBackground, unlockBackground, useOverlay } from '../../utils';
 import componentStyles from './dialog.css?inline';
 
 type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
@@ -111,29 +109,37 @@ export type BitDialogProps = {
  * ```
  */
 
-/** Event schema for bit-dialog. */
-const dialogProps = {
-  backdrop: undefined,
-  dismissible: false,
-  elevation: undefined,
-  'initial-focus': undefined,
-  label: '',
-  open: false,
-  padding: undefined,
-  persistent: false,
-  'return-focus': true,
-  rounded: undefined,
-  size: 'md',
-} satisfies PropBundle<BitDialogProps>;
-
 export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', {
-  props: dialogProps,
-  setup({ emit, host, props, slots }) {
+  props: {
+    backdrop: undefined,
+    dismissible: false,
+    elevation: undefined,
+    'initial-focus': undefined,
+    label: '',
+    open: false,
+    padding: undefined,
+    persistent: false,
+    'return-focus': true,
+    rounded: undefined,
+    size: prop.oneOf(['sm', 'md', 'lg', 'xl', 'full'] as const, 'md'),
+  },
+  setup(props, { emit, host, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
     const isOpen = signal(false);
-    const hasHeader = computed(() => slots.has('header').value || !!props.label.value || props.dismissible.value);
-    const hasFooter = computed(() => slots.has('footer').value);
+    const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
+    const hasFooter = () => slots.has('footer').value;
     let closeReason: OverlayCloseReason = 'programmatic';
+
+    const dispatchCloseRequest = (reason: Exclude<OverlayCloseReason, 'programmatic'>): boolean => {
+      return host.el.dispatchEvent(
+        new CustomEvent('close-request', {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          detail: { reason },
+        }),
+      );
+    };
 
     // ────────────────────────────────────────────────────────────────
     // Overlay State Management
@@ -147,13 +153,11 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
     );
 
     const overlay = createOverlayControl({
-      elements: {
-        boundary: host.el,
-        panel: dialogRef.value?.querySelector<HTMLElement>('.panel') ?? null,
-      },
-      isOpen,
+      getBoundaryElement: () => host.el,
+      getPanelElement: () => dialogRef.value?.querySelector<HTMLElement>('.panel') ?? null,
+      isOpen: () => isOpen.value,
       onOpen: (reason) => emit('open', { reason }),
-      setOpen: (next, reason) => {
+      setOpen: (next, { reason }) => {
         const dialog = dialogRef.value;
 
         if (!dialog) return;
@@ -185,7 +189,20 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
     // Lifecycle: Setup Native Dialog Integration
     // ────────────────────────────────────────────────────────────────
 
-    onMount(() => {
+    const handleDismiss = () => {
+      const dialog = dialogRef.value;
+
+      if (!dialog) return;
+
+      const closeAllowed = dispatchCloseRequest('trigger');
+
+      if (!closeAllowed) return;
+
+      closeReason = 'trigger';
+      overlay.close({ reason: 'trigger', restoreFocus: false });
+    };
+
+    onMounted(() => {
       const dialog = dialogRef.value;
 
       if (!dialog) return;
@@ -195,12 +212,12 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
         props.open,
         (open) => {
           if (open) {
-            overlay.open('programmatic');
+            overlay.open({ reason: 'programmatic' });
 
             return;
           }
 
-          overlay.close('programmatic', false);
+          overlay.close({ reason: 'programmatic', restoreFocus: false });
         },
         { immediate: true },
       );
@@ -219,15 +236,12 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
       };
 
       const requestClose = (reason: Exclude<OverlayCloseReason, 'programmatic'>) => {
-        const closeAllowed = fire.custom(host.el, 'close-request', {
-          cancelable: true,
-          detail: { reason },
-        });
+        const closeAllowed = dispatchCloseRequest(reason);
 
         if (!closeAllowed) return;
 
         closeReason = reason;
-        overlay.close(reason, false);
+        overlay.close({ reason, restoreFocus: false });
       };
 
       const handleKeydown = (e: KeyboardEvent) => {
@@ -246,9 +260,9 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
         }
       };
 
-      handle(dialog, 'close', handleNativeClose);
-      handle(dialog, 'click', handleBackdropClick);
-      handle(dialog, 'keydown', handleKeydown);
+      on(dialog, 'close', handleNativeClose);
+      on(dialog, 'click', handleBackdropClick);
+      on(dialog, 'keydown', handleKeydown);
 
       return () => {
         // Ensure the native dialog is closed on unmount to release top-layer
@@ -258,34 +272,13 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
       };
     });
 
-    const handleDismiss = () => {
-      const dialog = dialogRef.value;
-
-      if (!dialog) return;
-
-      const closeAllowed = fire.custom(host.el, 'close-request', {
-        cancelable: true,
-        detail: { reason: 'trigger' },
-      });
-
-      if (!closeAllowed) return;
-
-      closeReason = 'trigger';
-      overlay.close('trigger', false);
-    };
-
-    return html`
-      <dialog
-        ref=${dialogRef}
-        class="dialog"
-        part="dialog"
-        :aria-label="${() => props.label.value || null}"
-        aria-modal="true">
+    return () => html`
+      <dialog ref=${dialogRef} class="dialog" part="dialog" aria-label="${props.label}" aria-modal="true">
         <div class="overlay" part="overlay" aria-hidden="true"></div>
-        <div class="panel" part="panel" :data-size="${props.size.value}">
-          <div class="header" part="header" ?hidden=${() => !hasHeader.value}>
+        <div class="panel" part="panel" :data-size="${props.size}">
+          <div class="header" part="header" ?hidden=${() => !hasHeader()}>
             <slot name="header">
-              <span class="title" part="title">${() => props.label.value}</span>
+              <span class="title" part="title">${props.label}</span>
             </slot>
             <button
               class="close"
@@ -300,7 +293,7 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
           <div class="body" part="body">
             <slot></slot>
           </div>
-          <div class="footer" part="footer" ?hidden=${() => !hasFooter.value}>
+          <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
             <slot name="footer"></slot>
           </div>
         </div>

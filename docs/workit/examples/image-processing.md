@@ -5,13 +5,11 @@ description: 'Image Processing examples for workit.'
 
 ## Image Processing
 
-## Problem
+### Problem
 
-Implement image processing in a production-friendly way with `@vielzeug/workit` while keeping setup and cleanup explicit.
+Decoding, filtering, or resizing image data on the main thread causes frame drops. The binary buffer must be sent to a worker, processed, and the result returned — with the UI remaining responsive throughout.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/workit` installed.
+### Solution
 
 Process images off the main thread to avoid frame drops:
 
@@ -42,21 +40,7 @@ async function convertToGrayscale(imageData: ImageData): Promise<ImageData> {
   });
   return new ImageData(pixels, imageData.width, imageData.height);
 }
+
+// Don't forget to dispose when done:
+// imagePool.dispose();
 ```
-
-## Expected Output
-
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Cancellable Batch](./cancellable-batch.md)
-- [Data Transformation Pipeline](./data-transformation-pipeline.md)
-- [Fibonacci with Pool and Timeout](./fibonacci-with-pool-and-timeout.md)

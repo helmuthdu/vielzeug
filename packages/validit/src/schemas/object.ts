@@ -1,43 +1,83 @@
-import type { InferOutput, Issue, MessageFn } from '../core';
+import type { InferOutput, Issue } from '../core';
 
-import { ErrorCode, prependIssuePath, resolveMessage, Schema } from '../core';
+import { type CheckContext, type CheckFnResult, ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
-export type ObjectMode = 'strip' | 'passthrough' | 'strict';
 export type ObjectShape = Record<string, Schema<any>>;
 export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T[K]> };
 
 export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> {
   readonly shape: T;
-  private readonly _mode: ObjectMode;
-  private readonly _knownKeys: Set<string> | null;
+  private readonly _isRelaxed: boolean;
 
-  constructor(shape: T, mode: ObjectMode = 'strip') {
+  constructor(shape: T, isRelaxed = false) {
     super([]);
     this.shape = shape;
-    this._mode = mode;
-    this._knownKeys = mode === 'strict' ? new Set(Object.keys(shape)) : null;
+    this._isRelaxed = isRelaxed;
   }
 
-  private _strictKeyIssues(obj: Record<string, unknown>): Issue[] {
-    if (!this._knownKeys) return [];
+  private _unknownKeys(obj: Record<string, unknown>): string[] {
+    return Object.keys(obj).filter((k) => !Object.prototype.hasOwnProperty.call(this.shape, k));
+  }
 
-    const unknownKeys = Object.keys(obj).filter((k) => !this._knownKeys!.has(k));
+  private _strictUnknownKeyIssues(obj: Record<string, unknown>): Issue[] {
+    if (this._isRelaxed) return [];
 
-    if (!unknownKeys.length) return [];
+    const unknownKeys = this._unknownKeys(obj);
+
+    if (unknownKeys.length === 0) return [];
 
     return [
       {
-        code: ErrorCode.unrecognized_keys,
-        message: _messages().object_unrecognized_keys({ keys: unknownKeys }),
+        code: ErrorCode.invalid_keys,
+        message: _messages().object.invalidKeys({ keys: unknownKeys }),
         path: [],
       },
     ];
   }
 
-  private _parseObjectFields(obj: Record<string, unknown>): { issues: Issue[]; output: Record<string, unknown> } {
-    const issues: Issue[] = [];
-    const output: Record<string, unknown> = this._mode === 'passthrough' ? { ...obj } : {};
+  private _copyRelaxedUnknownKeys(obj: Record<string, unknown>, output: Record<string, unknown>): void {
+    if (!this._isRelaxed) return;
+
+    for (const key of this._unknownKeys(obj)) {
+      output[key] = obj[key];
+    }
+  }
+
+  private _guardObjectInput(
+    value: unknown,
+  ): { obj: Record<string, unknown>; ok: true } | { issues: Issue[]; ok: false } {
+    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+      return {
+        issues: [{ code: ErrorCode.invalid_type, message: _messages().object.type(), path: [] }],
+        ok: false,
+      };
+    }
+
+    return { obj: value as Record<string, unknown>, ok: true };
+  }
+
+  private _createObjectParseContext(obj: Record<string, unknown>): {
+    issues: Issue[];
+    output: Record<string, unknown>;
+  } {
+    return {
+      issues: [...this._strictUnknownKeyIssues(obj)],
+      output: {},
+    };
+  }
+
+  private _rebuildWith<U extends ObjectShape>(shape: U, isRelaxed = this._isRelaxed): ObjectSchema<U> {
+    return this._copyStateTo(new ObjectSchema(shape, isRelaxed));
+  }
+
+  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+    const guarded = this._guardObjectInput(value);
+
+    if (!guarded.ok) return { data: value, issues: guarded.issues };
+
+    const { obj } = guarded;
+    const { issues, output } = this._createObjectParseContext(obj);
 
     for (const key of Object.keys(this.shape)) {
       const result = this.shape[key].safeParse(obj[key]);
@@ -45,44 +85,26 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
       if (result.success) {
         output[key] = result.data;
       } else {
+        // Failed field keys are intentionally omitted from parsed output so
+        // object-level checks can branch on key presence.
         issues.push(...prependIssuePath(result.error.issues, key));
       }
     }
 
-    return { issues, output };
-  }
-
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().object_type(), path: [] }],
-      };
-    }
-
-    const obj = value as Record<string, unknown>;
-    const strictIssues = this._strictKeyIssues(obj);
-
-    if (strictIssues.length) return { data: value, issues: strictIssues };
-
-    const { issues, output } = this._parseObjectFields(obj);
+    this._copyRelaxedUnknownKeys(obj, output);
 
     return { data: output, issues };
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().object_type(), path: [] }],
-      };
-    }
+    const guarded = this._guardObjectInput(value);
 
-    const obj = value as Record<string, unknown>;
-    const strictIssues = this._strictKeyIssues(obj);
+    if (!guarded.ok) return { data: value, issues: guarded.issues };
 
-    if (strictIssues.length) return { data: value, issues: strictIssues };
+    const { obj } = guarded;
+    const { issues, output } = this._createObjectParseContext(obj);
 
+    // Async field parsing
     const keyResults = await Promise.all(
       Object.keys(this.shape).map((key) =>
         this.shape[key].safeParseAsync(obj[key]).then((result) => ({
@@ -93,13 +115,17 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
       ),
     );
 
-    const output: Record<string, unknown> = this._mode === 'passthrough' ? { ...obj } : {};
-
     for (const r of keyResults) {
-      if (r.issues.length === 0) output[r.key] = r.data;
+      if (r.issues.length === 0) {
+        output[r.key] = r.data;
+      }
+
+      issues.push(...r.issues);
     }
 
-    return { data: output, issues: keyResults.flatMap((r) => r.issues) };
+    this._copyRelaxedUnknownKeys(obj, output);
+
+    return { data: output, issues };
   }
 
   partial(): ObjectSchema<{ [K in keyof T]: Schema<InferOutput<T[K]> | undefined> }>;
@@ -109,68 +135,53 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   partial<K extends keyof T>(...keys: K[]): ObjectSchema<any> {
     const targetKeys = keys.length > 0 ? new Set(keys as string[]) : null;
 
-    return this._copyStateTo(
-      new ObjectSchema(
-        Object.fromEntries(
-          Object.entries(this.shape).map(([k, s]) => [k, targetKeys === null || targetKeys.has(k) ? s.optional() : s]),
-        ) as any,
-        this._mode,
-      ),
+    return this._rebuildWith(
+      Object.fromEntries(
+        Object.entries(this.shape).map(([k, s]) => [k, targetKeys === null || targetKeys.has(k) ? s.optional() : s]),
+      ) as any,
     );
   }
 
   required(): ObjectSchema<{ [K in keyof T]: Schema<Exclude<InferOutput<T[K]>, undefined>> }> {
-    return this._copyStateTo(
-      new ObjectSchema(
-        Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
-        this._mode,
-      ),
-    );
+    return this._rebuildWith(Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any);
   }
 
   extend<U extends ObjectShape>(extra: U): ObjectSchema<Omit<T, keyof U> & U> {
-    return this._copyStateTo(new ObjectSchema({ ...this.shape, ...extra } as any, this._mode));
+    return this._rebuildWith({ ...this.shape, ...extra } as any);
   }
 
   pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>> {
     const keySet = new Set(keys as string[]);
 
-    return this._copyStateTo(
-      new ObjectSchema(
-        Object.fromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any,
-        this._mode,
-      ),
-    );
+    return this._rebuildWith(Object.fromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any);
   }
 
   omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>> {
     const keySet = new Set(keys as string[]);
 
-    return this._copyStateTo(
-      new ObjectSchema(
-        Object.fromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any,
-        this._mode,
-      ),
-    );
+    return this._rebuildWith(Object.fromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any);
   }
 
-  strip(): ObjectSchema<T> {
-    return this._copyStateTo(new ObjectSchema(this.shape, 'strip'));
+  /**
+   * Allow additional unknown properties (relaxed mode).
+   * Default is strict mode (rejects unknown keys).
+   */
+  relaxed(): Schema<InferObject<T> & Record<string, unknown>> {
+    return this._rebuildWith(this.shape, true) as unknown as Schema<InferObject<T> & Record<string, unknown>>;
   }
 
-  passthrough(): Schema<InferObject<T> & Record<string, unknown>> {
-    return this._copyStateTo(new ObjectSchema(this.shape, 'passthrough')) as unknown as Schema<
-      InferObject<T> & Record<string, unknown>
-    >;
-  }
-
-  strict(): ObjectSchema<T> {
-    return this._copyStateTo(new ObjectSchema(this.shape, 'strict'));
+  /**
+   * Adds a cross-field validation step.
+   *
+   * The callback receives the best-effort parsed output. Fields that failed
+   * their own validation are omitted, so the value is typed as `Partial<InferObject<T>>`.
+   * Check `'key' in value` before accessing fields that may be missing.
+   */
+  override check(
+    fn: (value: Partial<InferObject<T>>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>,
+  ): this;
+  override check(fn: (value: InferObject<T>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this;
+  override check(fn: (value: any, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
+    return super.check(fn);
   }
 }
-
-// Suppress unused-import warning — MessageFn and resolveMessage are used in subclass method signatures
-// that TypeScript may not detect if tree-shaken. They're re-exported for convenience.
-export type { MessageFn, resolveMessage };
-
-export const object = <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape);

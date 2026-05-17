@@ -5,13 +5,11 @@ description: 'Tooltip examples for floatit.'
 
 ## Tooltip
 
-## Problem
+### Problem
 
-Implement tooltip in a production-friendly way with `@vielzeug/floatit` while keeping setup and cleanup explicit.
+A tooltip must appear near its trigger on hover, stay within the viewport by flipping or shifting, and be removed cleanly when the user leaves — without leaking `autoUpdate` listeners.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/floatit` installed.
+### Solution
 
 A popover-based tooltip that flips and shifts to stay visible.
 
@@ -53,18 +51,14 @@ trigger.addEventListener('focusout', hide);
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `autoUpdate` registers scroll and resize listeners globally. Not calling its returned cleanup function leaks these listeners even after the tooltip is hidden.
+- A tooltip that appears on `:focus` must also disappear on `blur`. Listening only to `mouseenter`/`mouseleave` leaves the tooltip open for keyboard users until they interact with something else.
+- The `shift` middleware prevents viewport overflow but does not flip. Combine with `flip` if you want the tooltip to move to the opposite side rather than shift along the same axis.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Context Menu](./context-menu.md)
 - [Custom Middleware](./custom-middleware.md)

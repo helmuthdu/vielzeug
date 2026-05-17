@@ -462,9 +462,20 @@ const handleRunCode = async () => {
     // Transform import statements to use global variables
     // Example: import { Deposit } from '@vielzeug/deposit' -> const { Deposit } = window.deposit || {}
     code = code.replace(/import\s+{([^}]+)}\s+from\s+['"]@vielzeug\/([^'"]+)['"]/g, (match, imports, libName) => {
-      // Clean up imports and create a destructuring assignment
-      const cleanImports = imports.trim();
-      return `const { ${cleanImports} } = window.${libName} || window || {}`;
+      // Keep only runtime imports (drop type-only specifiers) and map "a as b" to object destructuring alias "a: b".
+      const runtimeImports = imports
+        .split(',')
+        .map((entry: string) => entry.trim())
+        .filter((entry: string) => entry.length > 0)
+        .filter((entry: string) => !entry.startsWith('type '))
+        .map((entry: string) => entry.replace(/^type\s+/, ''))
+        .map((entry: string) => entry.replace(/\s+as\s+/g, ': '));
+
+      if (runtimeImports.length === 0) {
+        return '';
+      }
+
+      return `const { ${runtimeImports.join(', ')} } = window.${libName} || window || {}`;
     });
 
     // Also handle default imports: import Lib from '@vielzeug/lib' -> const Lib = window.lib

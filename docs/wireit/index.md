@@ -1,7 +1,9 @@
 ---
 title: Wireit — Typed dependency injection for TypeScript
-description: Zero-dependency IoC container with typed tokens, lifetimes, async resolution, child containers, and first-class test utilities.
+description: Typed dependency injection for TypeScript.
 ---
+
+<!-- markdownlint-disable MD025 MD033 MD060 -->
 
 <PackageBadges package="wireit" />
 
@@ -9,9 +11,9 @@ description: Zero-dependency IoC container with typed tokens, lifetimes, async r
 
 # Wireit
 
-**Wireit** is a zero-dependency inversion of control (IoC) container for TypeScript. Register dependencies with typed tokens, resolve them synchronously or asynchronously, and scope lifetimes to containers or request cycles with full type inference.
+`@vielzeug/wireit` is a compact dependency injection container built around typed symbol tokens, factory registration, and explicit container scopes.
 
-<!-- Search keywords: dependency injection container, DI container, service composition. -->
+<!-- Search keywords: dependency injection container, typed service registry, scoped providers. -->
 
 ## Installation
 
@@ -36,72 +38,47 @@ yarn add @vielzeug/wireit
 ```ts
 import { createContainer, createToken } from '@vielzeug/wireit';
 
-const DbToken = createToken<Database>('Database');
-const ServiceToken = createToken<UserService>('UserService');
+const Logger = createToken<{ log(message: string): void }>('Logger');
+const Service = createToken<{ run(): Promise<void> }>('Service');
 
 const container = createContainer();
 
-container
-  .factory(DbToken, () => new Database(process.env.DB_URL!))
-  .bind(ServiceToken, UserService, { deps: [DbToken] });
+container.value(Logger, console);
+container.factory(Service, (logger) => ({ run: async () => logger.log('Running service') }), {
+  deps: [Logger],
+});
 
-const service = container.get(ServiceToken);
+const service = await container.resolve(Service);
+await service.run();
+
+await container.dispose();
 ```
 
 ## Why Wireit?
 
-Manual dependency wiring gets hard to scale: constructors balloon, test setup repeats, and switching implementations requires touching many call sites.
+Manual dependency wiring often spreads across modules, making lifetimes and teardown behavior difficult to reason about in larger systems.
 
-```ts
-// Before — manual wiring
-const config = loadConfig();
-const db = new Database(config.dbUrl);
-const repo = new UserRepository(db);
-const serviceBefore = new UserService(repo);
+| Feature                     | Wireit                                       | tsyringe                | InversifyJS                      |
+| --------------------------- | -------------------------------------------- | ----------------------- | -------------------------------- |
+| Bundle size                 | <PackageInfo package="wireit" type="size" /> | ~6 kB                   | ~45 kB                           |
+| Typed token ergonomics      | ✅                                           | Partial                 | Partial                          |
+| Async-first resolution      | ✅                                           | Partial                 | Partial                          |
+| Child container scopes      | ✅                                           | ✅                      | ✅                               |
+| Explicit disposal lifecycle | ✅                                           | ❌                      | Partial                          |
+| Decorator-free usage        | ✅                                           | ❌ (decorator-oriented) | ⚠️ (commonly decorator-oriented) |
+| Zero dependencies           | ✅                                           | ✅                      | ❌                               |
 
-// After — Wireit
-const container = createContainer();
-container
-  .value(ConfigToken, loadConfig())
-  .factory(DbToken, (config) => new Database(config.dbUrl), { deps: [ConfigToken] })
-  .bind(RepoToken, UserRepository, { deps: [DbToken] })
-  .bind(SvcToken, UserService, { deps: [RepoToken] });
+**Use Wireit when** you need a compact typed container with explicit scopes and lifecycle control.
 
-const serviceAfter = container.get(SvcToken);
-```
-
-| Feature              | Wireit                                       | InversifyJS | tsyringe |
-| -------------------- | -------------------------------------------- | ----------- | -------- |
-| Bundle size          | <PackageInfo package="wireit" type="size" /> | ~11 kB      | ~6 kB    |
-| Decorators required  | ❌                                           | ✅          | ✅       |
-| `reflect-metadata`   | ❌                                           | ✅          | ✅       |
-| Typed tokens         | ✅ Explicit `createToken<T>()`               | Partial     | Partial  |
-| Async providers      | ✅                                           | ✅          | ✅       |
-| Child containers     | ✅                                           | ✅          | ✅       |
-| Snapshot and restore | ✅                                           | ❌          | ❌       |
-| Built-in mocking     | ✅ `container.mock()`                        | ❌          | ❌       |
-| Zero dependencies    | ✅                                           | ❌          | ❌       |
-
-**Use Wireit when** you want predictable, type-safe DI without decorators, metadata, or heavyweight framework conventions.
-
-**Consider alternatives when** you already rely on decorator-based DI and want to stay aligned with that ecosystem.
+**Consider decorator-heavy DI frameworks when** your project is already standardized around metadata/decorator injection patterns.
 
 ## Features
 
-- **Typed tokens** — `createToken<T>(description)` gives every dependency a compile-time type and a human-readable name
-- **Three registration styles** — `register()`, `factory()` shorthand, `bind()` shorthand, and `value()` for constants
-- **Lifetimes** — `singleton` (default), `transient`, and `scoped` per-child-container
-- **Async providers** — factories may return `Promise<T>`; resolve via `getAsync()` and `getAllAsync()`
-- **Dispose hooks** — per-provider `dispose(instance)` called on `container.dispose()`; `[Symbol.asyncDispose]` for `await using`
-- **Child containers** — `createChild()` inherits registrations; scoped instances are isolated per child
-- **Scoped execution** — `runInScope(fn)` creates and auto-disposes a child container
-- **Aliases** — `alias(token, source)` maps interfaces to implementations, resolved through the full parent chain
-- **Batch resolution** — `getAll` and `getAllAsync` return typed tuples
-- **Optional resolution** — `getOptional` and `getOptionalAsync` return `undefined` when missing
-- **Test utilities** — `createTestContainer()` and `container.mock()` for isolated unit tests
-- **Snapshot/Restore** — `snapshot()` / `restore()` for fine-grained test state control
-- **Debug** — `debug()` walks the full hierarchy and lists all tokens and aliases
-- **Zero dependencies** — <PackageInfo package="wireit" type="size" /> gzipped
+- Small core API
+- Typed dependency contracts
+- Async-first resolution
+- Child containers for scope boundaries
+- Explicit disposal
 
 ## Compatibility
 
@@ -112,8 +89,16 @@ const serviceAfter = container.get(SvcToken);
 | SSR         | ✅      |
 | Deno        | ✅      |
 
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
+
 ## See Also
 
-- [Permit](/permit/)
-- [Fetchit](/fetchit/)
-- [Workit](/workit/)
+- [Workit](../workit/index.md) for dependency-managed worker orchestration.
+- [Eventit](../eventit/index.md) for pub/sub coordination in container-managed modules.
+- [Permit](../permit/index.md) for injecting authorization services.
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

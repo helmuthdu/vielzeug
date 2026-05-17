@@ -12,8 +12,8 @@ describe('createListControl', () => {
       },
     });
 
-    expect(nav.first()).toEqual({ index: 1, moved: true });
-    expect(nav.last()).toEqual({ index: 2, moved: true });
+    expect(nav.first()).toBe(1);
+    expect(nav.last()).toBe(2);
   });
 
   it('next/prev skip disabled items', () => {
@@ -27,11 +27,11 @@ describe('createListControl', () => {
       },
     });
 
-    expect(nav.next()).toEqual({ index: 2, moved: true });
-    expect(nav.prev()).toEqual({ index: 0, moved: true });
+    expect(nav.next()).toBe(2);
+    expect(nav.prev()).toBe(0);
   });
 
-  it('wraps when loop=true', () => {
+  it('marks wrapped navigation when loop=true', () => {
     const items = [{ disabled: false }, { disabled: false }, { disabled: false }];
     let activeIndex = 2;
     const nav = createListControl({
@@ -43,8 +43,8 @@ describe('createListControl', () => {
       },
     });
 
-    expect(nav.next()).toEqual({ index: 0, moved: true });
-    expect(nav.prev()).toEqual({ index: 2, moved: true });
+    expect(nav.next()).toBe(0);
+    expect(nav.prev()).toBe(2);
   });
 
   it('stays unchanged at boundaries when loop=false', () => {
@@ -59,12 +59,12 @@ describe('createListControl', () => {
       },
     });
 
-    expect(nav.next()).toEqual({ index: 1, moved: false });
+    expect(nav.next()).toBe(1);
     activeIndex = 0;
-    expect(nav.prev()).toEqual({ index: 0, moved: false });
+    expect(nav.prev()).toBe(0);
   });
 
-  it('returns -1 when list has no enabled items', () => {
+  it('returns no-enabled-item when list has no enabled entries', () => {
     const items = [{ disabled: true }, { disabled: true }];
     let activeIndex = -1;
     const nav = createListControl({
@@ -75,11 +75,11 @@ describe('createListControl', () => {
       },
     });
 
-    expect(nav.first()).toEqual({ index: -1, moved: false });
-    expect(nav.last()).toEqual({ index: -1, moved: false });
+    expect(nav.first()).toBe(-1);
+    expect(nav.last()).toBe(-1);
   });
 
-  it('handles empty lists', () => {
+  it('returns empty reason for empty lists', () => {
     const items: Array<{ disabled: boolean }> = [];
     let activeIndex = -1;
     const nav = createListControl({
@@ -90,13 +90,28 @@ describe('createListControl', () => {
       },
     });
 
-    expect(nav.first()).toEqual({ index: -1, moved: false });
-    expect(nav.last()).toEqual({ index: -1, moved: false });
-    expect(nav.next()).toEqual({ index: -1, moved: false });
-    expect(nav.prev()).toEqual({ index: -1, moved: false });
+    expect(nav.first()).toBe(-1);
+    expect(nav.last()).toBe(-1);
+    expect(nav.next()).toBe(-1);
+    expect(nav.prev()).toBe(-1);
   });
 
-  it('supports custom isItemDisabled', () => {
+  it('set clamps into range and returns no-enabled-item when clamped index is disabled', () => {
+    const items = [{ disabled: false }, { disabled: true }, { disabled: false }];
+    let activeIndex = 0;
+    const nav = createListControl({
+      getIndex: () => activeIndex,
+      getItems: () => items,
+      setIndex: (index) => {
+        activeIndex = index;
+      },
+    });
+
+    expect(nav.set(99)).toBe(2);
+    expect(nav.set(1)).toBe(2);
+  });
+
+  it('supports custom isItemDisabled predicate', () => {
     const items = [{ status: 'enabled' }, { status: 'hidden' }, { status: 'enabled' }];
     let activeIndex = 0;
     const nav = createListControl({
@@ -108,7 +123,7 @@ describe('createListControl', () => {
       },
     });
 
-    expect(nav.next()).toEqual({ index: 2, moved: true });
+    expect(nav.next()).toBe(2);
   });
 
   it('getActiveItem and reset work as expected', () => {
@@ -126,7 +141,9 @@ describe('createListControl', () => {
     });
 
     expect(nav.getActiveItem()).toEqual({ disabled: false, id: 'a' });
+
     nav.reset();
+
     expect(activeIndex).toBe(-1);
     expect(nav.getActiveItem()).toBeUndefined();
   });

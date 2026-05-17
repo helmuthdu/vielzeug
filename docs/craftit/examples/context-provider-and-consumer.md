@@ -5,60 +5,49 @@ description: 'Context Provider and Consumer examples for craftit.'
 
 ## Context Provider and Consumer
 
-## Problem
+### Problem
 
-Implement context provider and consumer in a production-friendly way with `@vielzeug/craftit` while keeping setup and cleanup explicit.
+You have parent and child custom elements that need to share data without threading it through attributes on every intermediate element. Prop-drilling through N layers of markup becomes fragile as the tree grows.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
+### Solution
 
 ```ts
-import { component, createContext, define, html, inject, provide, signal } from '@vielzeug/craftit';
+import { createContext, define, html, inject, provide, signal } from '@vielzeug/craftit';
 
 const THEME_CTX = createContext<ReturnType<typeof signal<'light' | 'dark'>>>('theme');
 
-define(
-  'theme-provider',
-  component({
-    setup() {
-      const theme = signal<'light' | 'dark'>('light');
+define('theme-provider', {
+  setup() {
+    const theme = signal<'light' | 'dark'>('light');
 
-      provide(THEME_CTX, theme);
+    provide(THEME_CTX, theme);
 
-      return html`
-        <button @click=${() => (theme.value = theme.value === 'light' ? 'dark' : 'light')}>Toggle theme</button>
-        <slot></slot>
-      `;
-    },
-  }),
-);
+    return () => html`
+      <button @click=${() => (theme.value = theme.value === 'light' ? 'dark' : 'light')}>Toggle theme</button>
+      <slot></slot>
+    `;
+  },
+});
 
-define(
-  'theme-label',
-  component({
-    setup() {
-      const theme = inject(THEME_CTX, signal<'light' | 'dark'>('light'));
+define('theme-label', {
+  setup() {
+    const theme = inject(THEME_CTX, signal<'light' | 'dark'>('light'));
 
-      return html`<p>Theme: ${theme}</p>`;
-    },
-  }),
-);
+    return () => html`<p>Theme: ${theme}</p>`;
+  },
+});
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- The provider must be an ancestor in the custom element tree, not just the DOM tree. A child appended outside the provider's shadow root cannot find the context.
+- Context is resolved when the child connects. Setting context values after a child is already connected has no effect unless the child explicitly re-reads it.
+- Multiple providers with the same key cause the nearest ancestor to win. Use distinct, namespaced key strings to avoid accidental shadowing.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [DI Container (Wireit)](/wireit/)
 
 - [Counter Component](./counter-component.md)
 - [Form-Associated Rating Input](./form-associated-rating-input.md)
-- [Observers in `onMount`](./observers-in-onmount.md)
+- [Observers in mount()](./observers-in-onmount.md)

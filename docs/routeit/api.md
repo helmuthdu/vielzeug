@@ -1,150 +1,165 @@
 ---
 title: Routeit — API Reference
-description: Complete API reference for Routeit with type signatures and parameter documentation.
+description: Complete API reference for the declarative Routeit router.
 ---
-
-# Routeit API Reference
 
 [[toc]]
 
+## Package Entry Point
+
+| Import                | Purpose                |
+| --------------------- | ---------------------- |
+| `@vielzeug/routeit`   | Main exports and types |
+
 ## API At a Glance
 
-| Symbol              | Purpose                                 | Execution mode | Common gotcha                                        |
-| ------------------- | --------------------------------------- | -------------- | ---------------------------------------------------- |
-| `createRouter()`    | Create typed router with route handlers | Sync           | Call start() once after route registration           |
-| `router.navigate()` | Navigate programmatically               | Async          | Await navigation when middleware performs async work |
-| `router.url()`      | Build links from named routes/params    | Sync           | Provide all required params for typed route patterns |
+| Symbol                                 | Purpose                                          |
+| -------------------------------------- | ------------------------------------------------ |
+| `createRouter({ routes, ...options })` | Create a router from a route table               |
+| `createBrowserHistory()`               | Create the default browser history driver        |
+| `createMemoryHistory(initialPath?)`    | Create an in-memory history driver (SSR / tests) |
+| `redirectTo(target, options?)`         | Build redirect middleware for guard flows        |
+| `router.navigate({ name, ... })`       | Navigate by route name                           |
+| `router.navigate({ path })`            | Navigate by raw path target                      |
+| `router.url(name, params?, query?)`    | Build a URL for a named route                    |
+| `router.preload(name, params?)`        | Eagerly run data loaders without navigating      |
+| `router.beforeLeave(blocker)`          | Register a leave guard                           |
 
-## `createRouter(options?)`
-
-Factory function that creates a new `Router` instance.
+## `createRouter(options)`
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
 
-const router = createRouter();
-const router = createRouter({ base: '/app' });
+const router = createRouter({
+  base: '/app',
+  routes: {
+    home: { path: '/', handler: () => renderHome() },
+    dashboard: {
+      path: '/dashboard',
+      children: {
+        index: { index: true, handler: () => renderDashboardHome() },
+        settings: { path: 'settings', data: () => fetchSettings(), handler: ({ data }) => renderSettings(data) },
+      },
+    },
+    notFound: { path: '*', handler: () => renderNotFound() },
+  },
+});
 ```
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `options.base` | `string` | `'/'` | Base path prefix for all routes |
-| `options.onNotFound` | `RouteHandler` | — | Called when no route matches the current URL |
-| `options.onError` | `(error, ctx) => void` | — | Called when a handler or middleware throws |
-| `options.middleware` | `Middleware \| Middleware[]` | `[]` | Global middleware applied before every route |
-| `options.viewTransition` | `boolean` | `false` | Wrap navigations in the View Transition API when available |
-| `options.autoStart` | `boolean` | `false` | Start listening and handle the current URL immediately after construction |
+| Option           | Type                           | Default                  | Description                                                                                                                                      |
+| ---------------- | ------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `base`           | `string`                       | `'/'`                    | Base path prefix for all routes                                                                                                                  |
+| `history`        | `HistoryDriver`                | `createBrowserHistory()` | History source used for reading locations and writing navigations                                                                                |
+| `middleware`     | `Middleware[]`                 | `[]`                     | Global middleware prepended to every route                                                                                                       |
+| `onError`        | `(error, context) => void`     | —                        | Optional sink for non-awaited/background router errors (`initial-navigation`, `history-listener`, `preload`)                                     |
+| `routes`         | `RouteTable`                   | required                 | Declarative route table. Object key order defines match precedence.                                                                              |
+| `scroll`         | `(to, from) => ScrollDecision` | —                        | Called after each navigation. Return `'top'` to scroll to top, `'preserve'` to keep the current position, or `{ x, y }` for a specific position. |
+| `viewTransition` | `boolean`                      | `false`                  | Wrap navigations in the View Transition API when available                                                                                       |
 
 **Returns:** `Router`
 
-## `Router`
+## Route Table
 
-### Route Registration
-
-#### `router.on(path, handler, options?)`
-
-Register a route with a handler. Path params are typed from the path literal.
+Define routes as a plain object where keys become route names. TypeScript will infer route params from literal `path` strings.
 
 ```ts
-router.on('/users/:id', ({ params }) => renderUser(params.id));
-router.on('/users/:id', ({ params }) => renderUser(params.id), {
-  name: 'userDetail',
-  meta: { title: 'User' },
-  middleware: requireAuth,
-});
+const routes = {
+  home: { path: '/' },
+  userDetail: { path: '/users/:id' },
+  files: { path: '/files/:rest*' },
+};
 ```
 
-#### `router.on(path, options?)`
+Nested routes are declared with `children`, and child names become compound names with dot notation.
 
-Register a middleware-only route. The handler is omitted; middleware still runs when the path matches.
-
-```ts
-router.on('/checkout/*', { middleware: requireAuth });
-router.on('/api/*', { middleware: [rateLimit, logger] });
-```
-
-| Parameter            | Type                                   | Description                                                    |
-| -------------------- | -------------------------------------- | -------------------------------------------------------------- |
-| `path`               | `Path extends string`                  | Path pattern — supports `:param`, `:param*`, and `*` wildcards |
-| `handler`            | `RouteHandler<PathParams<Path>, Meta>` | Function called when the route matches                         |
-| `options.name`       | `string`                               | Route name for `navigate({ name })`, `url()`, and `isActive()` |
-| `options.meta`       | `Meta`                                 | Static metadata passed to `ctx.meta`                           |
-| `options.middleware` | `Middleware \| Middleware[]`           | Route-specific middleware                                      |
-
-**Returns:** `this` (chainable)
-
-#### `router.group(prefix, definer, options?)`
-
-Register a group of routes sharing a path prefix and optional middleware. The definer callback receives a `RouteGroup<Prefix>` whose `on()` overloads type-check path params against the combined `prefix + path` pattern.
+## Route Definition
 
 ```ts
-router.group(
-  '/admin',
-  (r) => {
-    r.on('/dashboard', () => renderDashboard());
-    r.on('/users/:id', ({ params }) => renderUser(params.id));
+const routes = {
+  home: {
+    path: '/',
+    handler: () => renderHome(),
   },
-  { middleware: requireAuth },
-);
-```
-
-Groups are nestable:
-
-```ts
-router.group('/admin', (r) => {
-  r.group('/reports', (inner) => {
-    inner.on('/monthly', () => renderMonthly());
-  });
+  dashboard: {
+    path: '/dashboard',
+    middleware: [requireAuth],
+    children: {
+      index: {
+        index: true,
+        handler: () => renderDashboard(),
+      },
+      settings: {
+        path: 'settings',
+        data: async () => fetchSettings(),
+        handler: ({ data }) => renderSettings(data),
+      },
+    },
+  },
+  userDetail: {
+    path: '/users/:id',
+    meta: { section: 'users' },
+    data: async ({ params }) => fetchUser(params.id),
+    handler: ({ data }) => renderUser(data),
+  },
+  notFound: {
+    path: '*',
+    handler: () => renderNotFound(),
+  },
 });
 ```
 
-Path params from the group prefix are typed inside the callback:
+Each route definition supports these fields:
+
+| Field          | Type                                        | Description                                                                                                               |
+| -------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `path`         | `string`                                    | Route pattern. Supports static paths, `:param`, `:param*`, and `*`. Child paths are relative unless they start with `/`.  |
+| `children`     | `Record<string, RouteDefinition>`           | Nested child routes. Child names are appended to the parent route name.                                                   |
+| `index`        | `boolean`                                   | Default child route that inherits the parent path.                                                                        |
+| `data`         | `DataFn`                                    | Optional route data function. Runs after middleware and before the handler.                                               |
+| `handler`      | `RouteHandler`                              | Optional terminal handler                                                                                                 |
+| `lazy`         | `() => Promise<{ handler?, data?, meta? }>` | Lazy-load the route module. Called once; result replaces `handler`, `data`, and `meta` in place.                          |
+| `middleware`   | `Middleware[]`                              | Optional route-specific middleware                                                                                        |
+| `meta`         | `unknown`                                   | Static metadata exposed on `router.state.matches.at(-1)?.meta`                                                            |
+| `redirect`     | `NavigationTarget`                          | Declarative redirect. Resolved before middleware runs; uses `replaceState` so the original URL is never added to history. |
+| `coerceSearch` | `(raw: QueryParams) => QueryParams`         | Coerce search params. Return value replaces `ctx.query`. Throwing leaves the raw query unchanged.                         |
+
+## `createBrowserHistory()`
 
 ```ts
-router.group('/projects/:projectId', (r) => {
-  r.on('/tasks/:taskId', ({ params }) => {
-    params.projectId; // ✓ typed — from the group prefix
-    params.taskId; // ✓ typed — from this on() path
-  });
+import { createBrowserHistory } from '@vielzeug/routeit';
+
+const history = createBrowserHistory();
+```
+
+Create the default `HistoryDriver` backed by the browser History API.
+
+## `createMemoryHistory(initialPath?)`
+
+```ts
+import { createMemoryHistory } from '@vielzeug/routeit';
+
+// Tests
+const router = createRouter({
+  history: createMemoryHistory('/dashboard'),
+  routes,
+});
+
+// SSR
+const router = createRouter({
+  history: createMemoryHistory(request.url),
+  routes,
 });
 ```
 
-| Parameter | Type                              | Description                                        |
-| --------- | --------------------------------- | -------------------------------------------------- |
-| `prefix`  | `Prefix extends string`           | Shared path prefix                                 |
-| `definer` | `(r: RouteGroup<Prefix>) => void` | Callback that receives a prefix-aware `RouteGroup` |
-| `options` | `GroupOptions`                    | Optional group-level middleware                    |
+Create an in-memory `HistoryDriver`. No browser globals required — suitable for SSR, unit tests, and non-browser runtimes (Electron, Capacitor). The optional `initialPath` defaults to `'/'`.
 
-**Returns:** `this` (chainable)
-
-#### `router.use(...middleware)`
-
-Add one or more global middleware after construction. Appended after any middleware registered via options.
-
-```ts
-router.use(logger);
-router.use(analytics, errorTracker);
-```
-
-**Returns:** `this` (chainable)
+## `Router`
 
 ### Lifecycle
 
-#### `router.start()`
-
-Attach the `popstate` event listener and handle the current URL. Idempotent — safe to call more than once.
-
-**Returns:** `this` (chainable)
-
-#### `router.stop()`
-
-Detach the event listener. Does not clear subscribers.
-
-**Returns:** `this` (chainable)
-
 #### `router.dispose()`
 
-Stop the router and clear all `subscribe()` listeners. Also called by `[Symbol.dispose]()` for `using` declarations.
+Remove listeners, clear subscribers, and reject future router interaction.
 
 **Returns:** `void`
 
@@ -152,218 +167,242 @@ Stop the router and clear all `subscribe()` listeners. Also called by `[Symbol.d
 
 #### `router.navigate(target, options?)`
 
-Navigate to a path string or a named route. Returns a `Promise` that resolves after the handler finishes.
-
 ```ts
-await router.navigate('/users/42');
-await router.navigate('/users/42', { replace: true });
 await router.navigate({ name: 'userDetail', params: { id: '42' } });
-await router.navigate({ name: 'user', query: { tab: 'posts' }, hash: 'activity' });
+await router.navigate({ name: 'userDetail', params: { id: '42' } }, { replace: true });
+await router.navigate({ name: 'search', query: { q: 'routeit' }, hash: 'results' });
 ```
 
-| Parameter                | Type               | Default | Description                                                            |
-| ------------------------ | ------------------ | ------- | ---------------------------------------------------------------------- |
-| `target`                 | `NavigationTarget` | —       | Path string or named-route descriptor                                  |
-| `options.replace`        | `boolean`          | `false` | Use `replaceState` instead of `pushState`                              |
-| `options.state`          | `unknown`          | —       | State stored with the history entry                                    |
-| `options.viewTransition` | `boolean`          | —       | Override the router-level `viewTransition` setting for this navigation |
-| `options.force`          | `boolean`          | `false` | Navigate even if the destination URL matches the current URL           |
+| Option           | Type      | Default | Description                                             |
+| ---------------- | --------- | ------- | ------------------------------------------------------- |
+| `replace`        | `boolean` | `false` | Use `replaceState` instead of `pushState`               |
+| `state`          | `unknown` | —       | History state payload                                   |
+| `viewTransition` | `boolean` | —       | Override the router-level setting for this navigation   |
+| `force`          | `boolean` | `false` | Re-run even when the destination URL is already current |
 
 **Returns:** `Promise<void>`
 
-**Throws** (as a rejected Promise) when a named route isn't found.
-
-### Utilities
-
-#### `router.url(nameOrPattern, params?, query?)`
-
-Generate a URL from a path pattern or named route. Prepends the base path.
+Named routes stay the primary API, but `navigate()` also accepts raw path targets.
 
 ```ts
-router.url('/users/:id', { id: '42' }); // '/users/42'
-router.url('userDetail', { id: '42' }); // '/app/users/42' (with base)
-router.url('/search', undefined, { q: 'ts' }); // '/search?q=ts'
-router.url('/docs/:rest*', { rest: 'guide/intro' }); // '/docs/guide/intro'
-router.url('/p', undefined, { tags: ['a', 'b'] }); // '/p?tags=a&tags=b'
+await router.navigate({ path: '/marketing?utm_source=campaign' });
+await router.navigate({ path: '/checkout#payment' }, { replace: true });
 ```
 
-| Parameter       | Type          | Description                                      |
-| --------------- | ------------- | ------------------------------------------------ |
-| `nameOrPattern` | `string`      | Path pattern (e.g. `'/users/:id'`) or route name |
-| `params`        | `RouteParams` | Params to substitute into the pattern            |
-| `query`         | `QueryParams` | Query params to append                           |
+### Route Helpers
+
+#### `router.url(name, params?, query?)`
+
+```ts
+router.url('userDetail', { id: '42' });
+router.url('userDetail', { id: '42' }, { tab: 'profile' });
+```
+
+Build a base-aware URL for a named route.
 
 **Returns:** `string`
 
-**Throws** when a route name is passed that isn't registered, or when a required param is missing.
-
-#### `router.isActive(nameOrPattern, exact?)`
-
-Check whether the current URL matches a path pattern or named route.
+#### `router.isActive(name, options?)`
 
 ```ts
-router.isActive('/users/:id'); // exact match (default)
-router.isActive('userDetail'); // by route name, exact
-router.isActive('/admin', false); // prefix match
-router.isActive('adminGroup', false); // named route prefix match
+router.isActive('userDetail');
+router.isActive('users');
+router.isActive('users', { exact: true });
 ```
 
-| Parameter       | Type      | Default | Description                                 |
-| --------------- | --------- | ------- | ------------------------------------------- |
-| `nameOrPattern` | `string`  | —       | Path pattern or route name                  |
-| `exact`         | `boolean` | `true`  | `true` = full match; `false` = prefix match |
+Check whether the current pathname matches a named route exactly or by prefix.
 
 **Returns:** `boolean`
 
 #### `router.resolve(pathname)`
 
-Synchronously resolve a pathname to its matching route without navigating, running handlers, or notifying subscribers. Strips the base path automatically.
-
 ```ts
-router.resolve('/users/42');
-// → { name: 'userDetail', params: { id: '42' }, meta: { title: 'User' } }
-
-router.resolve('/unknown');
-// → null
+router.resolve('/app/dashboard/settings');
+// => [
+//      { name: 'dashboard', ... },
+//      { name: 'dashboard.settings', ... },
+//    ]
 ```
 
-**Returns:** `ResolvedRoute | null`
+Resolve a pathname without running middleware, handlers, or subscribers. Returns the matched branch from root to leaf.
 
-#### `router.state` (getter)
+**Returns:** `RouteMatchBranch | null`
 
-Current route state as an immutable snapshot.
+#### `router.preload(name, params?)`
 
 ```ts
-const { pathname, params, query, hash, name, meta } = router.state;
+// Hover-prefetch
+anchor.addEventListener('mouseenter', () => {
+  router.preload('userDetail', { id: '42' });
+});
 ```
 
-**Returns:** `RouteState`
+Eagerly runs the data loaders for a named route without navigating. Useful for hover-prefetch. Concurrent calls for the same route+params are deduplicated. Results are discarded; a subsequent `navigate()` will run the loaders again with a fresh `AbortSignal`.
+
+**Returns:** `Promise<void>`
+
+#### `router.beforeLeave(blocker)`
+
+```ts
+// Guard unsaved-changes forms
+const remove = router.beforeLeave(async () => {
+  if (!form.isDirty) return true;
+  return confirm('Leave without saving?');
+});
+
+// Remove the guard when the form unmounts
+remove();
+```
+
+Register a leave guard called before user-triggered navigation attempts. Return `true` to allow, `false` to cancel. Multiple guards can be registered; navigation is blocked if any guard returns `false`. Internal declarative redirects bypass leave guards.
+
+**Returns:** `() => void`
+
+## `redirectTo(target, options?)`
+
+```ts
+import { redirectTo } from '@vielzeug/routeit';
+
+const requireAuth = redirectTo({ name: 'login' }, { replace: true });
+```
+
+Creates middleware that performs a redirect and short-circuits the chain.
+
+**Returns:** `Middleware`
+
+### State
+
+#### `router.state`
+
+Current immutable route snapshot.
+
+```ts
+const { location, matches, status, error } = router.state;
+
+location.pathname;
+location.query;
+location.hash;
+location.historyState; // value passed to navigate({ ... }, { state: ... })
+
+// When status === 'error':
+console.error(error);
+```
+
+`error` is only set when `status === 'error'`. It holds the exact value thrown by the failing `data()` function.
 
 #### `router.subscribe(listener)`
 
-Subscribe to route changes. The listener is called immediately with the current state, then after every navigation. Errors thrown by listeners are caught and logged.
-
 ```ts
 const unsubscribe = router.subscribe((state) => {
-  document.title = (state.meta as any)?.title ?? 'App';
+  const leaf = state.matches.at(-1);
+  document.title = (leaf?.meta as { title?: string } | undefined)?.title ?? 'App';
 });
-
-unsubscribe(); // stop listening
 ```
 
-**Returns:** `Unsubscribe` (`() => void`)
+The listener runs immediately with the current state, then after each successful navigation.
 
-## Types
+**Returns:** `() => void`
 
-### `RouteContext<Params, Meta>`
+## Core Types
+
+### `RouteContext<Params, TRoutes>`
 
 ```ts
-type RouteContext<Params extends RouteParams = RouteParams, Meta = unknown> = {
-  /** Route parameters extracted from the path pattern */
-  readonly params: Params;
-  /** Query parameters parsed from the URL search string */
-  readonly query: QueryParams;
-  /** Current pathname */
-  readonly pathname: string;
-  /** URL hash without '#' */
+type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = {
+  readonly data?: unknown;
   readonly hash: string;
-  /** Static metadata from the route definition */
-  readonly meta?: Meta;
-  /** Mutable bag for passing data between middleware */
+  /** State stored on the history entry that triggered this navigation. */
+  readonly historyState: unknown;
   locals: Record<string, unknown>;
-  /** Navigate programmatically from a handler or middleware */
-  navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
+  readonly matches: RouteMatchBranch;
+  readonly navigate: (
+    target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
+    options?: NavigateOptions,
+  ) => Promise<void>;
+  readonly params: Params;
+  readonly pathname: string;
+  readonly query: QueryParams;
 };
 ```
 
-### `RouteHandler<Params, Meta>`
+`ctx.data` is only populated for the final route handler.
+
+Read route metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
+
+### `DataFn<Params, TRoutes>`
 
 ```ts
-type RouteHandler<Params extends RouteParams = RouteParams, Meta = unknown> = (
-  context: RouteContext<Params, Meta>,
+type DataFn<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
+  context: DataContext<Params, TRoutes>,
+) => unknown | Promise<unknown>;
+```
+
+### `DataContext<Params, TRoutes>`
+
+```ts
+type DataContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = RouteContext<
+  Params,
+  TRoutes
+> & {
+  readonly signal: AbortSignal;
+};
+```
+
+### `RouteHandler<Params, TRoutes>`
+
+```ts
+type RouteHandler<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<Params, TRoutes>,
 ) => void | Promise<void>;
 ```
 
-Handlers may return a `Promise` — TypeScript's `void` return allows async functions and functions that return any value.
-
-### `Middleware<Meta>`
+### `Middleware<TRoutes>`
 
 ```ts
-type Middleware<Meta = unknown> = (
-  context: RouteContext<RouteParams, Meta>,
+type Middleware<TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<RouteParams, TRoutes>,
   next: () => Promise<void>,
 ) => void | Promise<void>;
 ```
 
-Middleware only receives `RouteParams` for `ctx.params`. Path-param typing is applied to `RouteHandler` and `on()` callbacks inside typed `RouteGroup<Prefix>` groups.
+Middleware ordering is simple: global middleware first, then route middleware, then the handler.
 
-### `RouteOptions<Meta>`
+If a route defines `data`, middleware still runs first. The effective order is global middleware, route middleware, data, then handler.
 
-Passed as the last argument to `on()`.
-
-```ts
-type RouteOptions<Meta = unknown> = {
-  name?: string;
-  meta?: Meta;
-  middleware?: Middleware<Meta> | Middleware<Meta>[];
-};
-```
-
-### `RouteGroup<Prefix>`
-
-The prefix-aware registration API provided to `group()` callbacks. `Prefix` propagates group path params into each nested `on()` handler's `ctx.params`.
+### `UntypedNamedNavigationTarget`
 
 ```ts
-type RouteGroup<Prefix extends string = ''> = {
-  on<Path extends string, Meta = unknown>(
-    path: Path,
-    handler: RouteHandler<PathParams<`${Prefix}/${Path}`>, Meta>,
-    options?: RouteOptions<Meta>,
-  ): RouteGroup<Prefix>;
-  on<Path extends string, Meta = unknown>(path: Path, options?: RouteOptions<Meta>): RouteGroup<Prefix>;
-  group<P extends string>(
-    prefix: P,
-    definer: (r: RouteGroup<`${Prefix}/${P}`>) => void,
-    options?: GroupOptions,
-  ): RouteGroup<Prefix>;
-};
-```
-
-### `GroupOptions`
-
-```ts
-type GroupOptions = {
-  middleware?: Middleware | Middleware[];
-};
-```
-
-### `RouterOptions`
-
-```ts
-type RouterOptions = {
-  base?: string;
-  onNotFound?: RouteHandler;
-  onError?: (error: unknown, context: RouteContext) => void;
-  middleware?: Middleware | Middleware[];
-  viewTransition?: boolean;
-  autoStart?: boolean;
+type UntypedNamedNavigationTarget = {
+  hash?: string;
+  name: string;
+  params?: RouteParams;
+  query?: QueryParams;
 };
 ```
 
 ### `NavigationTarget`
 
 ```ts
-type NavigationTarget = string | { name: string; params?: RouteParams; query?: QueryParams; hash?: string };
+type NavigationTarget =
+  | {
+      path: string;
+    }
+  | {
+      hash?: string;
+      name: string;
+      params?: RouteParams;
+      query?: QueryParams;
+    };
 ```
 
 ### `NavigateOptions`
 
 ```ts
 type NavigateOptions = {
+  force?: boolean;
   replace?: boolean;
   state?: unknown;
   viewTransition?: boolean;
-  force?: boolean;
 };
 ```
 
@@ -371,99 +410,66 @@ type NavigateOptions = {
 
 ```ts
 type RouteState = {
-  readonly pathname: string;
-  readonly params: RouteParams;
-  readonly query: QueryParams;
+  /** The value thrown by a `data()` function. Only set when `status === 'error'`. */
+  readonly error?: unknown;
+  readonly location: RouteLocation;
+  readonly matches: readonly RouteMatch[];
+  readonly status: 'idle' | 'loading' | 'error';
+};
+
+type RouteLocation = {
   readonly hash: string;
-  readonly name?: string;
-  readonly meta?: unknown;
+  /** State stored on the history entry that triggered this navigation. */
+  readonly historyState: unknown;
+  readonly pathname: string;
+  readonly query: QueryParams;
 };
 ```
 
-### `ResolvedRoute`
+### `RouteMatch`
 
 ```ts
-type ResolvedRoute = {
-  readonly name?: string;
+type RouteMatch = {
+  readonly data: unknown;
+  readonly meta: unknown;
+  readonly name: string;
   readonly params: RouteParams;
-  readonly meta?: unknown;
+  readonly pathname: string;
 };
 ```
 
-### `RouteParams`
+### `RouteMatchBranch`
 
 ```ts
-type RouteParams = Record<string, string>;
-```
-
-### `QueryParams`
-
-```ts
-type QueryParams = Record<string, string | string[]>;
+type RouteMatchBranch = readonly RouteMatch[];
 ```
 
 ### `PathParams<T>`
 
-Extracts typed path params from a path pattern literal at the type level.
-
 ```ts
 type UserParams = PathParams<'/users/:id'>;
-// → { readonly id: string }
+// => { readonly id: string }
 
-type PostParams = PathParams<'/users/:userId/posts/:postId'>;
-// → { readonly userId: string; readonly postId: string }
-
-type DocsParams = PathParams<'/docs/:rest*'>;
-// → { readonly rest: string }
-
-type StaticParams = PathParams<'/about'>;
-// → Record<string, string>  (no named params — falls back to the base type)
+type FileParams = PathParams<'/files/:rest*'>;
+// => { readonly rest: string }
 ```
 
-## Pattern Matching
+## Pattern Rules
 
-### Path Patterns
+| Pattern                        | Example             | Meaning                                     |
+| ------------------------------ | ------------------- | ------------------------------------------- |
+| `/about`                       | `/about`            | Exact static path                           |
+| `/users/:id`                   | `/users/42`         | Single named param                          |
+| `/users/:userId/posts/:postId` | `/users/1/posts/2`  | Multiple named params                       |
+| `/docs/*`                      | `/docs/guide/intro` | Wildcard suffix without a named capture     |
+| `/files/:rest*`                | `/files/a/b/c`      | Wildcard suffix captured as one named param |
+| `*`                            | anything            | Global catch-all                            |
 
-| Pattern                        | Example match       | Notes                                    |
-| ------------------------------ | ------------------- | ---------------------------------------- |
-| `/about`                       | `/about`            | Exact static path                        |
-| `/users/:id`                   | `/users/123`        | Single named param                       |
-| `/users/:userId/posts/:postId` | `/users/1/posts/42` | Multiple named params                    |
-| `/docs/*`                      | `/docs/guide/intro` | Unnamed wildcard — no captured param     |
-| `/files/:rest*`                | `/files/a/b/c`      | Named wildcard — `params.rest = 'a/b/c'` |
-| `*`                            | anything            | Global catch-all                         |
+## Design Notes
 
-### Middleware Execution Order
-
-```text
-Global middleware 1  (RouterOptions.middleware / router.use())
-  ↓
-Global middleware 2
-  ↓
-Group middleware  (group() options.middleware)
-  ↓
-Route middleware  (on() options.middleware)
-  ↓
-Route handler
-```
-
-## Error Handling
-
-### `onError`
-
-Receives the thrown value and the current `RouteContext`. `ctx.meta` reflects the matched route's metadata even if the error occurred before the handler ran.
-
-```ts
-const router = createRouter({
-  onError: (error, ctx) => {
-    console.error('Error at', ctx.pathname, ctx.meta, error);
-    ctx.navigate('/error');
-  },
-});
-```
-
-If no `onError` is provided, errors are logged to `console.error` and swallowed.
-
-### Listener errors
-
-Errors thrown inside `subscribe()` listeners are caught, logged to `console.error`, and do not prevent other listeners from running.
+- Routeit no longer exposes imperative registration methods like `on()`, `group()`, or `use()`.
+- Route names come from the route-table object keys.
+- Not-found handling is just another route, typically `path: '*'`.
+- Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.state.error`.
+- Declarative `redirect` on a route definition is distinct from the `redirectTo()` middleware helper. The former is for permanent alias redirects; the latter for conditional guards.
+- `lazy` factories are called at most once per `RouteRecord`. The loaded handler/data/meta are stored directly on the branch def.

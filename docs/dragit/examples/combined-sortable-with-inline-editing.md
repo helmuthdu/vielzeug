@@ -5,13 +5,11 @@ description: 'Combined: sortable with inline editing examples for dragit.'
 
 ## Combined: sortable with inline editing
 
-## Problem
+### Problem
 
-Implement combined: sortable with inline editing in a production-friendly way with `@vielzeug/dragit` while keeping setup and cleanup explicit.
+Your list items need to be both reorderable by drag and editable inline by click. The two interaction modes conflict: a click that starts an edit must not be interpreted as the beginning of a drag.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/dragit` installed.
+### Solution
 
 A list where items can be reordered by drag and inline-edited:
 
@@ -36,7 +34,7 @@ function render() {
     )
     .join('');
 
-  // MutationObserver keeps draggable/role in sync automatically
+  sortable.sync();
 }
 
 const sortable = createSortable({
@@ -51,19 +49,15 @@ const sortable = createSortable({
 render();
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- A `pointerdown` event starts a drag by default. Guard inline-edit activation behind an explicit handle element or a long-press delay so a short click doesn't trigger a drag.
+- Avoid calling `sortable.sync()` while a drag is in progress. Re-render after `onDragEnd` if your UI rebuilds the list.
+- Ensure the edit button calls `e.stopPropagation()` so a click on the button does not propagate to the item's drag listener.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [File upload drop zone](./file-upload-drop-zone.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)
 - [Sortable list](./sortable-list.md)

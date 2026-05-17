@@ -66,11 +66,10 @@ describe('currency', () => {
       expect(result).toContain('USD');
     });
 
-    it('should format with name style', () => {
+    it('should reject unsupported styles', () => {
       const money: Money = { amount: 100000n, currency: 'USD' };
-      const result = currency(money, { style: 'name' });
 
-      expect(result.toLowerCase()).toMatch(/dollar/);
+      expect(() => currency(money, { style: 'name' as never })).toThrow(RangeError);
     });
   });
 
@@ -120,6 +119,44 @@ describe('currency', () => {
       const result = currency(money, { maximumFractionDigits: 1, minimumFractionDigits: 0 });
 
       expect(result).toMatch(/100/);
+    });
+
+    it('should reject non-integer fraction digits', () => {
+      const money: Money = { amount: 10000n, currency: 'USD' };
+
+      expect(() => currency(money, { maximumFractionDigits: 1.5 })).toThrow(RangeError);
+      expect(() => currency(money, { minimumFractionDigits: 1.5 })).toThrow(RangeError);
+    });
+
+    it('should reject negative fraction digits', () => {
+      const money: Money = { amount: 10000n, currency: 'USD' };
+
+      expect(() => currency(money, { maximumFractionDigits: -1 })).toThrow(RangeError);
+      expect(() => currency(money, { minimumFractionDigits: -1 })).toThrow(RangeError);
+    });
+
+    it('should reject minimumFractionDigits greater than maximumFractionDigits', () => {
+      const money: Money = { amount: 10000n, currency: 'USD' };
+
+      expect(() => currency(money, { maximumFractionDigits: 1, minimumFractionDigits: 2 })).toThrow(RangeError);
+    });
+  });
+
+  describe('precision boundaries', () => {
+    it('formats large amounts exactly within typical financial ranges', () => {
+      // 99999999999999 cents = $999,999,999,999.99
+      const money: Money = { amount: 99999999999999n, currency: 'USD' };
+      const result = currency(money);
+
+      expect(result).toContain('999,999,999,999.99');
+    });
+
+    it('formats very large amounts exactly without float precision loss', () => {
+      // 123456789012345678 cents = $1,234,567,890,123,456.78
+      const money: Money = { amount: 123456789012345678n, currency: 'USD' };
+      const result = currency(money);
+
+      expect(result).toContain('1,234,567,890,123,456.78');
     });
   });
 });

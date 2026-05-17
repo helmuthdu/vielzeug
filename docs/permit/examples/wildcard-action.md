@@ -1,16 +1,21 @@
-# Wildcard Action
+---
+title: 'Permit Examples — Wildcard Action'
+description: 'Grant all actions for a role/resource pair using WILDCARD.'
+---
+
+## Wildcard Action
 
 ```ts
 import { WILDCARD, createPermit } from '@vielzeug/permit';
 
-const permit = createPermit();
-
-permit.set({
-  role: 'admin',
-  resource: 'posts',
-  action: WILDCARD,
-  effect: 'allow',
-});
+const permit = createPermit([
+  {
+    role: 'admin',
+    resource: 'posts',
+    action: WILDCARD,
+    effect: 'allow',
+  },
+]);
 
 permit.can({ id: 'u1', roles: ['admin'] }, 'posts', 'read');
 permit.can({ id: 'u1', roles: ['admin'] }, 'posts', 'delete');

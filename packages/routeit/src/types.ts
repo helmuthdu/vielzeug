@@ -18,38 +18,23 @@ export type PathParams<T extends string> = [ParseParams<T>] extends [never]
 export type RouteParams = Record<string, string>;
 export type QueryParams = Record<string, string | string[]>;
 export type MaybePromise<T> = T | Promise<T>;
-
-/** Handler may be sync or async — async return values are implicitly awaited by the router. */
-export type RouteHandler<Params extends RouteParams = RouteParams, Meta = unknown> = (
-  context: RouteContext<Params, Meta>,
-) => MaybePromise<void>;
-
-/** Middleware function. Call `next()` to continue the chain; return without calling it to block navigation. */
-export type Middleware<Meta = unknown> = (
-  context: RouteContext<RouteParams, Meta>,
-  next: () => Promise<void>,
-) => void | Promise<void>;
-
-export type RouteContext<Params extends RouteParams = RouteParams, Meta = unknown> = {
-  readonly hash: string;
-  /** Mutable bag for passing data between middlewares */
-  locals: Record<string, unknown>;
-  readonly meta?: Meta;
-  readonly navigate: (target: NavigationTarget, options?: NavigateOptions) => Promise<void>;
-  readonly params: Params;
-  readonly pathname: string;
-  readonly query: QueryParams;
+export type NavigationStatus = 'idle' | 'loading' | 'error';
+export type IsActiveOptions = {
+  /** Require an exact pathname match. Defaults to prefix matching. */
+  exact?: boolean;
+};
+export type ScrollPosition = { x: number; y: number };
+export type ScrollDecision = ScrollPosition | 'preserve' | 'top';
+export type RouterErrorSource = 'initial-navigation' | 'history-listener' | 'preload';
+export type RouterErrorContext = {
+  readonly source: RouterErrorSource;
 };
 
-/** Options for `on()` route registration. */
-export type RouteOptions<Meta = unknown> = {
-  /** Static metadata passed to the route context */
-  meta?: Meta;
-  /** Route-specific middleware executed before the handler */
-  middleware?: Middleware<Meta> | Middleware<Meta>[];
-  /** Optional name for programmatic navigation and url()/isActive() lookups */
-  name?: string;
-};
+/** Return value from a `coerceSearch` function. Return a normalized/coerced search object. */
+export type CoerceSearchFn<Q extends QueryParams = QueryParams> = (raw: QueryParams) => Q;
+
+/** Blocker callback for `beforeLeave`. Return `true` to allow the navigation, `false` to cancel it. */
+export type BeforeLeaveBlocker = () => MaybePromise<boolean>;
 
 export type NavigateOptions = {
   /** Navigate even if the destination URL matches the current URL */
@@ -62,80 +47,233 @@ export type NavigateOptions = {
   viewTransition?: boolean;
 };
 
-/**
- * Navigation target — a path string or a named-route descriptor.
- * @example
- * router.navigate('/users/123')
- * router.navigate({ name: 'userDetail', params: { id: '123' } })
- */
-export type NavigationTarget = string | { hash?: string; name: string; params?: RouteParams; query?: QueryParams };
-export type Unsubscribe = () => void;
-
-export type RouterOptions = {
-  /** Start listening and handle the current URL immediately after construction, without a separate start() call (default: false) */
-  autoStart?: boolean;
-  /** Base path for all routes (default: '/') */
-  base?: string;
-  /** Global middleware applied to every route */
-  middleware?: Middleware | Middleware[];
-  /** Called when a route handler or middleware throws an error */
-  onError?: (error: unknown, context: RouteContext) => void;
-  /** Called when no route matches the current URL */
-  onNotFound?: RouteHandler;
-  /**
-   * Wrap navigation in the View Transition API when available.
-   * Falls back to plain execution in unsupported environments. (default: false)
-   */
-  viewTransition?: boolean;
+export type RawNavigationTarget = {
+  path: string;
 };
 
-export type GroupOptions = { middleware?: Middleware | Middleware[] };
+/** Named-route navigation target. */
+export type UntypedNamedNavigationTarget = {
+  hash?: string;
+  name: string;
+  params?: RouteParams;
+  query?: QueryParams;
+};
 
-export type RouteState = {
+export type NavigationTarget = UntypedNamedNavigationTarget | RawNavigationTarget;
+
+export type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = {
+  /** Result from the route's `data()` function. Available in the handler; undefined in middleware. */
+  readonly data?: unknown;
   readonly hash: string;
-  readonly meta?: unknown;
-  readonly name?: string;
-  readonly params: RouteParams;
+  /** State stored on the history entry that triggered this navigation. */
+  readonly historyState: unknown;
+  /** Mutable bag for passing data between middlewares */
+  locals: Record<string, unknown>;
+  /** Matched branch for the current navigation. Leaf node is the active route. */
+  readonly matches: RouteMatchBranch;
+  readonly navigate: (
+    target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
+    options?: NavigateOptions,
+  ) => Promise<void>;
+  readonly params: Params;
   readonly pathname: string;
   readonly query: QueryParams;
 };
 
-export type ResolvedRoute = {
-  readonly meta?: unknown;
-  readonly name?: string;
-  readonly params: RouteParams;
+/**
+ * Context passed to `data()` functions. Extends RouteContext with an AbortSignal
+ * that is cancelled automatically when a newer navigation supersedes this one.
+ */
+export type DataContext<
+  Params extends RouteParams = RouteParams,
+  TRoutes extends RouteTable = RouteTable,
+> = RouteContext<Params, TRoutes> & {
+  readonly signal: AbortSignal;
 };
 
-/** Route registration interface provided to group() callbacks */
-export type RouteGroup<Prefix extends string = ''> = {
-  group<P extends string>(
-    prefix: P,
-    definer: (r: RouteGroup<`${Prefix}/${P}`>) => void,
-    options?: GroupOptions,
-  ): RouteGroup<Prefix>;
-  on<Path extends string, Meta = unknown>(
-    path: Path,
-    handler: RouteHandler<PathParams<`${Prefix}/${Path}`>, Meta>,
-    options?: RouteOptions<Meta>,
-  ): RouteGroup<Prefix>;
-  on<Path extends string, Meta = unknown>(path: Path, options?: RouteOptions<Meta>): RouteGroup<Prefix>;
-};
+/** Handler may be sync or async - async return values are implicitly awaited by the router. */
+export type RouteHandler<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<Params, TRoutes>,
+) => MaybePromise<void>;
 
-/** -------------------- Internal Types -------------------- **/
+/**
+ * Data loader for a route. Runs after all middleware allows navigation.
+ * Cannot redirect — use middleware for auth/guard logic.
+ * Receives an AbortSignal that cancels when a newer navigation starts.
+ */
+export type DataFn<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
+  context: DataContext<Params, TRoutes>,
+) => MaybePromise<unknown>;
 
-export type ViewTransitionDocument = Document & {
-  startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
-};
+/** Middleware function. Call `next()` to continue the chain; return without calling it to block navigation. */
+export type Middleware<TRoutes extends RouteTable = RouteTable> = (
+  context: RouteContext<RouteParams, TRoutes>,
+  next: () => Promise<void>,
+) => void | Promise<void>;
 
-export type RouteRecord = {
-  handler?: RouteHandler;
+type RouteCommon = {
+  /** Nested child routes. Keys become part of the compound route name (e.g. `dashboard.settings`). */
+  children?: RouteChildren;
   meta?: unknown;
-  middleware: Middleware[];
-  name?: string;
-  paramNames: string[];
-  path: string;
-  /** URLPattern instance used for prefix route matching in isActive(..., false). */
-  prefixUrlPattern: URLPattern;
-  /** URLPattern instance used for exact route matching. */
-  urlPattern: URLPattern;
+  /** Use `middleware` for auth guards, analytics, and error boundaries. */
+  middleware?: Middleware[];
+};
+
+type PathRouteShape<Path extends string = string> = {
+  index?: false;
+  /** Path segment. Absolute for top-level routes, relative for children. */
+  path: Path;
+};
+
+type IndexRouteShape = {
+  /** When true the route inherits the parent path (acts as the default child). */
+  index: true;
+  path?: never;
+};
+
+type RoutePathShape<Path extends string = string> = PathRouteShape<Path> | IndexRouteShape;
+
+type ContentRouteDefinition<Path extends string = string> = RouteCommon &
+  RoutePathShape<Path> & {
+    /** Normalize/coerce search params for this route. Throwing keeps the original search params unchanged. */
+    coerceSearch?: CoerceSearchFn;
+    /** Data loader. Runs after middleware; result is available as `ctx.data` in the handler. */
+    data?: DataFn<PathParams<Path>>;
+    handler?: RouteHandler<PathParams<Path>>;
+    /** Lazy-load the route module. The resolved export replaces handler/data/meta. */
+    lazy?: () => Promise<Pick<ContentRouteDefinition<Path>, 'data' | 'handler' | 'meta'>>;
+    redirect?: never;
+  };
+
+type RedirectRouteDefinition<Path extends string = string> = RouteCommon &
+  RoutePathShape<Path> & {
+    coerceSearch?: never;
+    data?: never;
+    handler?: never;
+    lazy?: never;
+    /** Declarative redirect. Resolved before middleware runs. */
+    redirect: UntypedNamedNavigationTarget | RawNavigationTarget;
+  };
+
+export type RouteChildren = Record<string, RouteDefinition<string>>;
+
+export type RouteDefinition<Path extends string = string> =
+  | ContentRouteDefinition<Path>
+  | RedirectRouteDefinition<Path>;
+
+type JoinPath<Parent extends string, Child extends string> = Child extends `/${string}`
+  ? Child
+  : Parent extends '/'
+    ? `/${Child}`
+    : `${Parent}/${Child}`;
+
+type BuildPath<Parent extends string, Def extends RouteDefinition<string>> = Def extends { index: true }
+  ? Parent
+  : Def extends { path: infer Path extends string }
+    ? JoinPath<Parent, Path>
+    : Parent;
+
+type RouteEntry<Name extends string, Path extends string> = {
+  name: Name;
+  path: Path;
+};
+
+type ChildEntries<Children extends RouteChildren, Prefix extends string, ParentPath extends string> = {
+  [ChildName in keyof Children & string]:
+    | RouteEntry<`${Prefix}.${ChildName}`, BuildPath<ParentPath, Children[ChildName]>>
+    | (Children[ChildName] extends { children: infer Nested extends RouteChildren }
+        ? ChildEntries<Nested, `${Prefix}.${ChildName}`, BuildPath<ParentPath, Children[ChildName]>>
+        : never);
+}[keyof Children & string];
+
+type RouteEntries<TRoutes extends RouteTable> = {
+  [Name in keyof TRoutes & string]:
+    | RouteEntry<Name, BuildPath<'/', TRoutes[Name]>>
+    | (TRoutes[Name] extends { children: infer Children extends RouteChildren }
+        ? ChildEntries<Children, Name, BuildPath<'/', TRoutes[Name]>>
+        : never);
+}[keyof TRoutes & string];
+
+export type RoutePathByName<TRoutes extends RouteTable, Name extends string> =
+  Extract<RouteEntries<TRoutes>, { name: Name }> extends {
+    path: infer Path extends string;
+  }
+    ? Path
+    : string;
+
+export type RouteTable = Record<string, RouteDefinition<string>>;
+
+export type RouteName<TRoutes extends RouteTable> = RouteEntries<TRoutes>['name'];
+
+export type NamedNavigationTarget<TRoutes extends RouteTable> = {
+  [Name in RouteName<TRoutes>]: {
+    hash?: string;
+    name: Name;
+    params?: PathParams<RoutePathByName<TRoutes, Name>>;
+    query?: QueryParams;
+  };
+}[RouteName<TRoutes>];
+
+export type Unsubscribe = () => void;
+
+/** Pluggable history driver. Use `createBrowserHistory()` for standard SPAs, `createMemoryHistory()` for SSR/tests. */
+export interface HistoryDriver {
+  readonly location: {
+    readonly hash: string;
+    readonly pathname: string;
+    readonly search: string;
+    readonly state: unknown;
+  };
+  push(url: string, state?: unknown): void;
+  replace(url: string, state?: unknown): void;
+  /** Subscribe to location changes (e.g. popstate). Returns an unsubscribe function. */
+  subscribe(listener: () => void): () => void;
+}
+
+/** A single node in the matched route branch (root → leaf). */
+export type RouteMatch = {
+  /** Result of the route's `data()` function, or `undefined` if none was defined. */
+  readonly data: unknown;
+  readonly meta: unknown;
+  readonly name: string;
+  readonly params: RouteParams;
+  readonly pathname: string;
+};
+
+/** Ordered array of matched route nodes from the root layout down to the active leaf. */
+export type RouteMatchBranch = readonly RouteMatch[];
+
+export type RouteLocation = {
+  readonly hash: string;
+  /** State object stored on the history entry (mirrors `history.state`). */
+  readonly historyState: unknown;
+  readonly pathname: string;
+  readonly query: QueryParams;
+};
+
+export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
+  /** Base path for all routes (default: '/') */
+  base?: string;
+  /** Custom history driver. Defaults to `createBrowserHistory()`. */
+  history?: HistoryDriver;
+  /** Global middleware applied to every route. Use this to implement authentication, analytics, and error boundaries. */
+  middleware?: Middleware<TRoutes>[];
+  /** Optional sink for non-awaited/background router errors (initial navigation, popstate, preload). */
+  onError?: (error: unknown, context: RouterErrorContext) => void;
+  /** Declarative route table. Object key order determines match precedence - place specific routes before wildcards. */
+  routes: TRoutes;
+  /** Called after every successful navigation. Return `top`, `preserve`, or explicit coordinates. */
+  scroll?: (to: RouteState, from: RouteState) => ScrollDecision;
+  /** Wrap navigation in the View Transition API when available. Falls back to plain execution in unsupported environments. */
+  viewTransition?: boolean;
+};
+
+export type RouteState = {
+  /** The error thrown by a `data()` function. Only set when `status === 'error'`. */
+  readonly error?: unknown;
+  readonly location: RouteLocation;
+  /** Matched route branch from root to leaf, including per-node data loader results. */
+  readonly matches: RouteMatchBranch;
+  /** `idle` after a successful navigation, `error` when a data loader threw. */
+  readonly status: NavigationStatus;
 };

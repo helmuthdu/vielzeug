@@ -1,16 +1,15 @@
-import { define, computed, html, inject } from '@vielzeug/craftit';
+import { computed, define, html, inject } from '@vielzeug/craftit';
 import {
+  type CheckableChangePayload,
   createCheckableFieldControl,
   createListControl,
-  createListKeyControl,
-  type CheckableChangePayload,
 } from '@vielzeug/craftit/controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../styles';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -32,17 +31,6 @@ export type BitRadioProps = CheckableProps &
     helper?: string;
   };
 
-const radioProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  checked: false,
-  error: '',
-  helper: '',
-  name: '',
-  value: '',
-} satisfies PropBundle<BitRadioProps>;
-
 /**
  * A customizable radio button component for mutually exclusive selections.
  *
@@ -57,7 +45,7 @@ const radioProps = {
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the radio
  *
- * @fires change - Emitted when radio is selected. detail: { checked: boolean, fieldValue: string, originalEvent?: Event }
+ * @fires change - Emitted when radio is selected. detail: { checked: boolean, value: string, originalEvent?: Event }
  *
  * @slot - Radio button label text
  *
@@ -68,10 +56,19 @@ const radioProps = {
  */
 export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
   formAssociated: true,
-  props: radioProps,
-  setup({ emit, host, props }) {
-    const groupCtx = inject(RADIO_GROUP_CTX, undefined);
-    const formCtx = inject(FORM_CTX, undefined);
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    checked: { default: false, reflect: false }, // managed by host.bind (form-control derived state)
+    error: '',
+    helper: '',
+    name: { default: '', reflect: false }, // managed by host.bind (effective name from radio-group)
+    value: '',
+  },
+  setup(props, { emit, host }) {
+    const groupCtx = inject(RADIO_GROUP_CTX);
+    const formCtx = inject(FORM_CTX);
 
     const effectiveName = computed(() => groupCtx?.name.value || props.name.value || '');
     const effectiveSize = computed(() => groupCtx?.size.value ?? props.size.value);
@@ -102,8 +99,26 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       radio.click();
     };
 
+    let activeIndex = -1;
+
+    const listControl = createListControl({
+      getIndex: () => activeIndex,
+      getItems: () => getRadioGroup(),
+      keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
+      loop: true,
+      onNavigate: (_action, _index, event) => {
+        const nextRadio = getRadioGroup()[activeIndex];
+
+        if (nextRadio) selectRadio(nextRadio, event);
+      },
+      setIndex: (index) => {
+        activeIndex = index;
+        getRadioGroup()[index]?.focus();
+      },
+    });
+
     const activateSelf = (originalEvent?: Event): void => {
-      if (control.checked.value) return;
+      if (checkable.checked.value) return;
 
       if (groupCtx) {
         groupCtx.select(props.value.value ?? '', originalEvent);
@@ -111,7 +126,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
         return;
       }
 
-      control.toggle(originalEvent ?? new Event('change'));
+      checkable.toggle(originalEvent ?? new Event('change'));
     };
 
     const checkable = createCheckableFieldControl({
@@ -121,7 +136,6 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       ),
       error: props.error,
       helper: props.helper,
-      host: host.el,
       onPress: (_control, originalEvent) => {
         activateSelf(originalEvent);
       },
@@ -133,97 +147,72 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { a11y, control, press: pressControl } = checkable;
+    const { checked, disabled, handleKeydown, helperId, labelId, toggle } = checkable;
 
     mountFormContextSync(host.el, formCtx, props);
 
-    host.bind('class', () => ({
-      'is-checked': control.checked.value,
-      'is-disabled': control.disabled.value,
-    }));
-    host.bind('attr', {
-      checked: () => control.checked.value,
-      color: () => effectiveColor.value,
-      disabled: () => (control.disabled.value ? true : undefined),
-      name: () => effectiveName.value || undefined,
-      size: () => effectiveSize.value,
-      tabindex: () => {
-        if (control.disabled.value) return undefined;
+    host.bind({
+      attr: {
+        checked,
+        color: effectiveColor,
+        disabled: () => (disabled.value ? true : undefined),
+        name: () => effectiveName.value || undefined,
+        size: effectiveSize,
+        tabindex: () => {
+          if (disabled.value) return undefined;
 
-        return control.checked.value ? 0 : -1;
+          return checked.value ? 0 : -1;
+        },
       },
-    });
+      class: () => ({
+        'is-checked': checked.value,
+        'is-disabled': disabled.value,
+      }),
+      on: {
+        click: (e: MouseEvent) => {
+          if (disabled.value) return;
 
-    host.bind('on', {
-      click: (e) => {
-        if (control.disabled.value) return;
+          if (groupCtx) {
+            groupCtx.select(props.value.value ?? '', e);
+          } else {
+            if (!effectiveName.value) return;
 
-        if (groupCtx) {
-          groupCtx.select(props.value.value ?? '', e);
-        } else {
-          if (!effectiveName.value) return;
+            if (!checked.value) {
+              const radioName = props.name.value;
+              const allRadios = document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`);
 
-          if (!control.checked.value) {
-            const radioName = props.name.value;
-            const allRadios = document.querySelectorAll<HTMLElement>(`bit-radio[name="${radioName}"]`);
+              allRadios.forEach((radio) => {
+                if (radio !== host.el) radio.removeAttribute('checked');
+              });
 
-            allRadios.forEach((radio) => {
-              if (radio !== host.el) radio.removeAttribute('checked');
-            });
-
-            control.toggle(e);
+              toggle(e);
+            }
           }
-        }
-      },
-      keydown: (e) => {
-        const radios = getRadioGroup();
+        },
+        keydown: (e: KeyboardEvent) => {
+          const radios = getRadioGroup();
 
-        if (radios.length === 0) return;
+          if (radios.length === 0) return;
 
-        let activeIndex = radios.indexOf(host.el);
+          activeIndex = radios.indexOf(host.el);
 
-        if (activeIndex === -1) return;
+          if (activeIndex === -1) return;
 
-        const listControl = createListControl({
-          getIndex: () => activeIndex,
-          getItems: () => radios,
-          loop: true,
-          setIndex: (index) => {
-            activeIndex = index;
-            radios[index]?.focus();
-          },
-        });
+          if (handleKeydown(e)) return;
 
-        if (pressControl.handleKeydown(e)) return;
-
-        const radioListKeys = createListKeyControl({
-          control: listControl,
-          keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
-          onInvoke: (_action, _result, event) => {
-            const nextRadio = radios[activeIndex];
-
-            if (nextRadio) selectRadio(nextRadio, event);
-          },
-        });
-
-        radioListKeys.handleKeydown(e);
+          listControl.handleKeydown(e);
+        },
       },
     });
 
-    return html`
+    return () => html`
       <div class="radio-wrapper" part="radio">
         <div class="circle" part="circle">
           <div class="dot" part="dot"></div>
         </div>
       </div>
-      <span class="label" part="label" data-a11y-label id="${a11y.labelId}"><slot></slot></span>
-      <div
-        class="helper-text"
-        part="helper-text"
-        data-a11y-helper
-        id="${a11y.helperId}"
-        aria-live="polite"
-        hidden></div>
+      <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
+      <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
     `;
   },
   styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],

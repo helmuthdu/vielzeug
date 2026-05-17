@@ -32,10 +32,10 @@ describe('v.array()', () => {
     expect(() => schema.parse([[1, 'x']])).toThrow(ValidationError);
   });
 
-  it('refine() on an array receives the parsed items, not the raw input', () => {
+  it('check() on an array receives the parsed items, not the raw input', () => {
     const schema = v
       .array(v.coerce.number())
-      .refine((items) => items.every((n) => typeof n === 'number'), 'Items should be numbers');
+      .check((items) => items.every((n) => typeof n === 'number') || 'Items should be numbers');
 
     expect(schema.parse(['1', '2', '3'])).toEqual([1, 2, 3]);
   });

@@ -5,13 +5,11 @@ description: 'Request scoping examples for eventit.'
 
 ## Request scoping
 
-## Problem
+### Problem
 
-Implement request scoping in a production-friendly way with `@vielzeug/eventit` while keeping setup and cleanup explicit.
+You need an event bus scoped to a single HTTP request or user action. Listeners from one request must not bleed into the next, and all subscriptions should be released when the request completes.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
+### Solution
 
 Scope a bus to a single request and dispose it on cleanup:
 
@@ -27,19 +25,16 @@ async function handleRequest(req: Request): Promise<Response> {
 } // requestBus.dispose() called automatically
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Reusing one bus and calling `removeAllListeners()` between requests is not safe — it can remove listeners registered by a concurrent request. Create a new bus per request instead.
+- Not calling `dispose()` at the end of the request handler leaks the bus. Ensure disposal runs in a `finally` block so it fires even when the handler throws.
+- Passing the scoped bus through function arguments is safer than storing it on a shared object where concurrent requests can accidentally share a reference.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Request Middleware (Logit)](/logit/examples/request-middleware)
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
 - [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)

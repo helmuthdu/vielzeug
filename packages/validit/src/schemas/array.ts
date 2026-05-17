@@ -11,41 +11,34 @@ export class ArraySchema<T> extends Schema<T[]> {
     this.itemSchema = itemSchema;
   }
 
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    if (!Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().array_type(), path: [] }],
-      };
-    }
+  private _invalidArray(value: unknown): { data: unknown; issues: Issue[] } {
+    return {
+      data: value,
+      issues: [{ code: ErrorCode.invalid_type, message: _messages().array.type(), path: [] }],
+    };
+  }
 
+  private _parseItemsSync(items: unknown[]): { data: T[]; issues: Issue[] } {
     const issues: Issue[] = [];
-    const items: T[] = [];
+    const parsed: T[] = [];
 
-    for (let i = 0; i < value.length; i++) {
-      const result = this.itemSchema.safeParse(value[i]);
+    for (let i = 0; i < items.length; i++) {
+      const result = this.itemSchema.safeParse(items[i]);
 
       if (result.success) {
-        items.push(result.data);
+        parsed.push(result.data);
       } else {
         issues.push(...prependIssuePath(result.error.issues, i));
-        items.push(value[i] as T);
+        parsed.push(items[i] as T);
       }
     }
 
-    return { data: items, issues };
+    return { data: parsed, issues };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    if (!Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().array_type(), path: [] }],
-      };
-    }
-
+  private async _parseItemsAsync(items: unknown[]): Promise<{ data: T[]; issues: Issue[] }> {
     const itemResults = await Promise.all(
-      value.map((item, i) =>
+      items.map((item, i) =>
         this.itemSchema.safeParseAsync(item).then((result) => ({
           data: result.success ? result.data : (item as T),
           issues: result.success ? [] : prependIssuePath(result.error.issues, i),
@@ -53,50 +46,110 @@ export class ArraySchema<T> extends Schema<T[]> {
       ),
     );
 
-    return { data: itemResults.map((r) => r.data), issues: itemResults.flatMap((r) => r.issues) };
+    return {
+      data: itemResults.map((r) => r.data),
+      issues: itemResults.flatMap((r) => r.issues),
+    };
   }
 
-  min(length: number, message: MessageFn<{ min: number }> = (ctx) => _messages().array_min(ctx)): this {
-    return this._addValidator((value, path) =>
-      (value as unknown[]).length >= length
-        ? null
-        : [
-            {
-              code: ErrorCode.too_small,
-              message: resolveMessage(message, { min: length }),
-              params: { minimum: length },
-              path,
-            },
-          ],
-    );
+  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
+    if (!Array.isArray(value)) {
+      return this._invalidArray(value);
+    }
+
+    const { data: items, issues } = this._parseItemsSync(value);
+
+    return { data: items, issues };
   }
 
-  max(length: number, message: MessageFn<{ max: number }> = (ctx) => _messages().array_max(ctx)): this {
-    return this._addValidator((value, path) =>
-      (value as unknown[]).length <= length
-        ? null
-        : [
-            {
-              code: ErrorCode.too_big,
-              message: resolveMessage(message, { max: length }),
-              params: { maximum: length },
-              path,
-            },
-          ],
-    );
+  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
+    if (!Array.isArray(value)) {
+      return this._invalidArray(value);
+    }
+
+    const { data: items, issues } = await this._parseItemsAsync(value);
+
+    return { data: items, issues };
   }
 
-  length(exact: number, message: MessageFn<{ exact: number }> = (ctx) => _messages().array_length(ctx)): this {
-    return this._addValidator((value, path) =>
-      (value as unknown[]).length === exact
-        ? null
-        : [{ code: ErrorCode.invalid_length, message: resolveMessage(message, { exact }), params: { exact }, path }],
-    );
+  min(
+    length: number,
+    message: MessageFn<{ min: number; value: unknown[] }> = (ctx) => _messages().array.min(ctx),
+  ): this {
+    return this._addValidator((value, path) => {
+      const typed = value as unknown[];
+
+      if (typed.length >= length) return null;
+
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { min: length, value: typed }),
+          params: { minimum: length },
+          path,
+        },
+      ];
+    });
   }
 
-  nonempty(message: MessageFn<{ min: number }> = () => _messages().array_nonempty()): this {
+  max(
+    length: number,
+    message: MessageFn<{ max: number; value: unknown[] }> = (ctx) => _messages().array.max(ctx),
+  ): this {
+    return this._addValidator((value, path) => {
+      const typed = value as unknown[];
+
+      if (typed.length <= length) return null;
+
+      return [
+        {
+          code: ErrorCode.too_big,
+          message: resolveMessage(message, { max: length, value: typed }),
+          params: { maximum: length },
+          path,
+        },
+      ];
+    });
+  }
+
+  length(
+    exact: number,
+    message: MessageFn<{ exact: number; value: unknown[] }> = (ctx) => _messages().array.length(ctx),
+  ): this {
+    return this._addValidator((value, path) => {
+      const typed = value as unknown[];
+
+      if (typed.length === exact) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_length,
+          message: resolveMessage(message, { exact, value: typed }),
+          params: { exact },
+          path,
+        },
+      ];
+    });
+  }
+
+  nonEmpty(message: MessageFn<{ min: number; value: unknown[] }> = () => _messages().array.nonEmpty()): this {
     return this.min(1, message);
   }
-}
 
-export const array = <T>(schema: Schema<T>): ArraySchema<T> => new ArraySchema(schema);
+  unique(message: MessageFn<{ value: unknown[] }> = () => _messages().array.unique()): this {
+    return this._addValidator((value, path) => {
+      const typed = value as unknown[];
+
+      if (new Set(typed).size === typed.length) return null;
+
+      return [
+        {
+          code: ErrorCode.invalid_unique,
+          message: resolveMessage(message, { value: typed }),
+          params: { unique: true },
+          path,
+        },
+      ];
+    });
+  }
+}

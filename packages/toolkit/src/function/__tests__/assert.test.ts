@@ -17,12 +17,6 @@ describe('assert', () => {
     expect(() => assert(false)).toThrowError('Assertion failed');
   });
 
-  it('should log a warning if bypass is true', () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    assert(false, 'Test warning', { bypass: true });
-    expect(console.warn).toHaveBeenCalledWith('Test warning');
-  });
-
   it('should include context in the error message', () => {
     const context = { value: 42 };
 

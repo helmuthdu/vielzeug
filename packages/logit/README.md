@@ -25,16 +25,23 @@ pnpm add @vielzeug/logit
 ```ts
 import { createLogger, Logit } from '@vielzeug/logit';
 
-Logit.info('Server started', { port: 3000 });
+Logit.info({ port: 3000 }, 'Server started');
 Logit.warn('High memory usage');
+Logit.error(new Error('connection lost')); // auto-serializes Error
+Logit.fatal('unrecoverable state');
 
 const api = Logit.scope('api');
-api.info('GET /users');
+api.info({ method: 'GET', path: '/users' }, 'incoming request');
+
+// pin fields to every call in a request context
+const reqLog = api.withBindings({ requestId: 'abc-123' });
+reqLog.info('processing');
+reqLog.warn('slow query');
 
 const log = createLogger({ logLevel: 'warn', namespace: 'Worker' });
 
 if (log.enabled('debug')) {
-  log.debug('Expensive diagnostics', buildDiagnostics());
+  log.debug({ diagnostics: buildDiagnostics() }, 'diagnostics');
 }
 
 await log.time('sync-task', async () => {
@@ -44,21 +51,23 @@ await log.time('sync-task', async () => {
 
 ## Features
 
-- Log levels: `debug`, `trace`, `info`, `success`, `warn`, `error`, `off`
+- Log levels: `debug`, `info`, `warn`, `error`, `fatal`, `off`
+- Structured call signature: `log.info('msg')`, `log.info({ key }, 'msg')`, `log.error(new Error())`
+- Auto-serializes `Error` objects into `{ message, name, stack }` — survives `JSON.stringify`
+- Pinned context bindings via `withBindings({ requestId })` — merged into every log call
 - `enabled(level)` guard for expensive payload computation
 - Scoped logger composition via `scope(name)`
 - Independent logger cloning via `child(overrides?)`
 - Browser badge variants: `symbol`, `icon`, `text`
-- Callback wrappers: `time(label, fn)` and `group(label, fn, collapsed?)`
-- Console passthrough helpers: `assert`, `table`
+- Callback wrappers: `time(label, fn)`, `group(label, fn)`, and `groupCollapsed(label, fn)`
+- Structured remote payload: `{ level, message, context, env, namespace?, timestamp? }`
 - Remote log forwarding with independent threshold (`remote.logLevel`)
 - Zero runtime dependencies
 
 ## Configuration
 
 ```ts
-Logit.setConfig({
-  environment: true,
+const Log = Logit.child({
   logLevel: 'warn',
   namespace: 'App',
   timestamp: true,
@@ -66,26 +75,31 @@ Logit.setConfig({
   remote: {
     logLevel: 'error',
     handler: (type, data) => {
+      // data: { level, message, context, env, namespace?, timestamp? }
       void fetch('/api/logs', {
-        body: JSON.stringify({ level: type, ...data }),
+        body: JSON.stringify(data),
         method: 'POST',
       });
     },
   },
 });
 
-const cfg = Logit.config; // snapshot copy
+const cfg = Log.config; // snapshot copy
 ```
 
 ## API At a Glance
 
 - `createLogger(initial?) => Logger`
 - `Logit` (default logger instance)
-- `logger.setConfig(opts) => Logger`
 - `logger.scope(name) => Logger`
 - `logger.child(overrides?) => Logger`
+- `logger.withBindings(bindings) => Logger`
+- `logger.bindings` (readonly snapshot)
 - `logger.time(label, fn)`
-- `logger.group(label, fn, collapsed?)`
+- `logger.group(label, fn)`
+- `logger.groupCollapsed(label, fn)`
+
+Structured context is always passed first: `logger.info({ userId: 42 }, 'signed in')`. String-first calls accept only a single message argument.
 
 ## Documentation
 

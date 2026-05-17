@@ -1,6 +1,17 @@
 import { compose } from '../compose';
 
 describe('compose', () => {
+  it('preserves parameter and return types', () => {
+    const parse = (value: string) => Number.parseInt(value, 10);
+    const double = (value: number) => value * 2;
+    const format = (value: number) => `${value}px`;
+
+    const composed = compose(format, double, parse);
+
+    expectTypeOf(composed).parameters.toEqualTypeOf<[string]>();
+    expectTypeOf(composed).returns.toEqualTypeOf<string>();
+  });
+
   it('should compose functions from right to left', () => {
     const add = (x: number) => x + 2;
     const multiply = (x: number) => x * 3;

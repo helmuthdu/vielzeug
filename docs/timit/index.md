@@ -3,13 +3,15 @@ title: Timit — Temporal date and time utilities
 description: Temporal-powered parsing, timezone conversion, arithmetic (DST-safe), and Intl formatting for modern TypeScript.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="timit" />
 
 <img src="/logo-timit.svg" alt="Timit logo" width="156" class="logo-highlight"/>
 
 # Timit
 
-`@vielzeug/timit` is a Temporal-first date/time library for TypeScript. It provides ergonomic helpers for parsing, timezone conversion, arithmetic through DST transitions, and Intl-based formatting—without the fragility of native `Date`.
+`@vielzeug/timit` is a Temporal-first date/time library for TypeScript. It provides explicit helpers for parsing local values, timezone conversion, DST-safe arithmetic, comparison, boundaries, and Intl-based formatting.
 
 <!-- Search keywords: Temporal API, timezone conversion, DST transitions, date arithmetic, time formatting -->
 
@@ -34,19 +36,19 @@ yarn add @vielzeug/timit
 ## Quick Start
 
 ```ts
-import { t } from '@vielzeug/timit';
+import { formatHuman, formatInstant, now, shift, toZoned } from '@vielzeug/timit';
 
 // Get current time in a timezone
-const meeting = t.toZoned(t.now(), { tz: 'America/New_York' });
+const meeting = toZoned(now('UTC'), { tz: 'America/New_York' });
 
-// Add time (DST-safe)
-const reminder = t.shift(meeting, { minutes: -15 });
+// Shift time (DST-safe)
+const reminder = shift(meeting, { minutes: -15 });
 
 // Format for humans
-const text = t.formatHuman(reminder, { pattern: 'short', locale: 'en-US' });
+const text = formatHuman(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' });
 
-// Format for APIs/logs
-const stable = t.formatISO(reminder);
+// Format for APIs/logs (instant string)
+const stable = formatInstant(reminder);
 ```
 
 ## Why Timit?
@@ -58,7 +60,7 @@ Manual date handling breaks at daylight-saving boundaries, timezone edges, and D
 const reminder = new Date(meeting.getTime() - 15 * 60_000);
 
 // After — DST-safe, handles transitions correctly
-const reminder = t.shift(meeting, { minutes: -15 });
+const reminder = shift(meeting, { minutes: -15 });
 ```
 
 | Feature        | Timit                                       | date-fns | Day.js  | Native Date |
@@ -67,7 +69,7 @@ const reminder = t.shift(meeting, { minutes: -15 });
 | DST-safe math  | ✅ (Temporal)                               | Manual   | Manual  | ❌          |
 | Timezone aware | ✅ Full support                             | ✅       | ✅      | Partial     |
 | Immutable      | ✅                                          | ✅       | ✅      | ❌          |
-| Format presets | ✅ (`'short'`, `'long'`, etc.)              | ❌       | ❌      | ❌          |
+| Format presets | ✅ (`'short'`, `'medium'`, `'long'`, etc.)  | ❌       | ❌      | ❌          |
 | Type inference | ✅ Full TypeScript                          | Partial  | Partial | ❌          |
 
 **Use Timit when** you need reliable timezone handling, DST-safe arithmetic, and clean Temporal-based APIs without heavy dependencies.
@@ -76,15 +78,15 @@ const reminder = t.shift(meeting, { minutes: -15 });
 
 ## Features
 
-- **`t` namespace** — grouped functions for IDE autocomplete
-- **Explicit parsing** — `t.parseLocal()` for plain local strings with required timezone
-- **DST-safe arithmetic** — `t.shift()` handles transitions correctly
-- **Timezone conversion** — `t.toZoned()`, `t.toInstant()` with full timezone support
-- **Formatting split by intent** — `t.formatHuman()` for UI, `t.formatISO()` for APIs/logs
-- **Range queries** — `t.within()` for inclusive time checks with normalized bounds
-- **Duration diffs** — `t.diff()` with granular control over units
+- **Explicit local parsing** — `parseLocal()` for wall-clock values; local inputs require `tz` when converting
+- **DST-safe arithmetic** — `shift()` handles transitions correctly
+- **Timezone conversion** — `toZoned()`, `toInstant()` with full timezone support
+- **Formatting split by intent** — `formatHuman()` for UI, `formatInstant()` for instant strings, `formatZoned()` for zoned strings
+- **Range + comparison helpers** — `within()`, `clamp()`, `isBefore()`, `isAfter()`, `isSame()`
+- **Boundary helpers** — `startOf()` and `endOf()` for day/week/month/year-style snapping
+- **Relative and duration formatting** — `formatRelative()` and `formatDuration()`
+- **Duration tools** — `difference()` plus `parseDuration()`
 - **Intl integration** — formatting respects locale & calendar systems
-- **Tree-shaking friendly** — import `d` or individual functions
 - **Polyfilled Temporal** — works in runtimes without native support via `@js-temporal/polyfill`
 - <PackageInfo package="timit" type="size" /> gzipped
 
@@ -97,10 +99,15 @@ const reminder = t.shift(meeting, { minutes: -15 });
 | SSR         | ✅      |
 | Deno        | ✅      |
 
-## See Also
+## Documentation
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+
+## See Also
+
 - [Validit](/validit/) — Schema validation (similar `v` namespace pattern)
 - [Logit](/logit/) — Structured logging
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

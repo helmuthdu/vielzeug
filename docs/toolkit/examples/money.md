@@ -78,7 +78,6 @@ exchange(usd, rate); // { amount: 85000n, currency: 'EUR' }
 For arithmetic operations on monetary amounts, see:
 
 - [allocate](./math/allocate.md) – Split proportionally
-- [distribute](./math/distribute.md) – Split evenly
 - [percent](./math/percent.md) – Calculate percentage
 
 <style>

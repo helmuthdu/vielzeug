@@ -5,21 +5,18 @@ description: 'Production Setup examples for logit.'
 
 ## Production Setup
 
-## Problem
+### Problem
 
-Implement production setup in a production-friendly way with `@vielzeug/logit` while keeping setup and cleanup explicit.
+In production you need structured JSON output for log aggregation, suppressed debug/info levels to reduce volume, and a set of global fields (service name, version, environment) on every entry.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/logit` installed.
+### Solution
 
 ```ts
 import { Logit } from '@vielzeug/logit';
 
 const isProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
 
-Logit.setConfig({
-  environment: true,
+export const appLog = Logit.child({
   logLevel: isProd ? 'warn' : 'debug',
   timestamp: true,
   variant: 'symbol',
@@ -27,28 +24,26 @@ Logit.setConfig({
     ? {
         logLevel: 'error',
         handler: async (type, data) => {
+          // data: { level, message, context, env, namespace?, timestamp? }
           await fetch('/api/logs', {
-            body: JSON.stringify({ level: type, ...data }),
+            body: JSON.stringify(data),
             method: 'POST',
           });
         },
       }
-    : {},
+    : undefined,
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- JSON transport output is machine-readable but not human-readable. Do not enable it in development — always branch on `process.env.NODE_ENV`.
+- Global bindings set with `withBindings()` at startup are fixed for that logger instance. Hot reload or version bumps do not update them — the stale values persist in log entries.
+- Setting `logLevel: 'error'` in production suppresses warnings. Warnings often indicate misconfiguration or operational drift worth catching in staging. `logLevel: 'warn'` is a safer default.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Error Handling Patterns (Fetchit)](/fetchit/examples/error-handling-patterns)
 
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)

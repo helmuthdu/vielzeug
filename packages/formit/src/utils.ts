@@ -1,20 +1,4 @@
-export function isSameValue(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-
-  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
-
-  if (a instanceof File && b instanceof File) return a.name === b.name && a.size === b.size;
-
-  if (a instanceof Blob && b instanceof Blob) return a.size === b.size;
-
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((v, i) => isSameValue(v, b[i]));
-  }
-
-  return false;
-}
-
-function isPlainObject(val: unknown): val is Record<string, unknown> {
+export function isPlainObject(val: unknown): val is Record<string, unknown> {
   return val !== null && typeof val === 'object' && Object.getPrototypeOf(val) === Object.prototype;
 }
 
@@ -50,26 +34,4 @@ export function unflattenValues(flat: Record<string, unknown>): Record<string, u
   }
 
   return result;
-}
-
-export function toFormData(values: Record<string, unknown>): FormData {
-  const fd = new FormData();
-
-  for (const [name, value] of Object.entries(flattenValues(values))) {
-    if (value === null || value === undefined) continue;
-
-    if (value instanceof File || value instanceof Blob) {
-      fd.append(name, value);
-    } else if (value instanceof FileList) {
-      for (let i = 0; i < value.length; i++) fd.append(name, value[i]);
-    } else if (Array.isArray(value)) {
-      for (const item of value) {
-        fd.append(name, item instanceof File || item instanceof Blob ? item : String(item));
-      }
-    } else {
-      fd.append(name, String(value));
-    }
-  }
-
-  return fd;
 }

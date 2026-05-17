@@ -1,4 +1,4 @@
-import { define, computed, effect, html, inject, signal } from '@vielzeug/craftit';
+import { define, prop, computed, effect, html, inject, signal, styleMap, when } from '@vielzeug/craftit';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
@@ -45,19 +45,21 @@ export type BitTabPanelProps = {
  */
 export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
   props: {
-    active: false,
+    active: { default: false, reflect: false },
     lazy: false,
-    padding: 'md',
+    padding: prop.oneOf(['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const, 'md'),
     value: '',
   },
-  setup({ host, props }) {
-    const tabsCtx = inject(TABS_CTX, undefined);
+  setup(props, { host }) {
+    const tabsCtx = inject(TABS_CTX);
     const isActive = computed(() =>
       tabsCtx ? !!tabsCtx.value.value && tabsCtx.value.value === props.value.value : props.active.value,
     );
 
-    host.bind('attr', {
-      active: () => (isActive.value ? true : undefined),
+    host.bind({
+      attr: {
+        active: () => (isActive.value ? true : undefined),
+      },
     });
 
     // Map padding prop to CSS variable
@@ -75,20 +77,21 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
 
     // shouldRender: true if not lazy OR has been active at least once
     const shouldRender = computed(() => !props.lazy.value || hasBeenActive.value);
-    const panelId = computed(() => `tabpanel-${props.value.value}`);
-    const labelledById = computed(() => `tab-${props.value.value}`);
+    const panelStyle = styleMap({ '--tab-panel-padding': paddingValue });
+    const panelId = () => `tabpanel-${props.value.value}`;
+    const labelledById = () => `tab-${props.value.value}`;
 
-    return html`
+    return () => html`
       <div
         class="panel"
         part="panel"
         role="tabpanel"
-        :id="${panelId}"
-        :aria-labelledby="${labelledById}"
-        :aria-hidden=${() => String(!isActive.value)}
-        :style="${() => `--tab-panel-padding: ${paddingValue.value}`}"
+        id="${() => panelId()}"
+        aria-labelledby="${() => labelledById()}"
+        aria-hidden="${() => String(!isActive.value)}"
+        :style="${panelStyle}"
         tabindex="0">
-        ${() => (shouldRender.value ? html`<slot></slot>` : '')}
+        ${when(shouldRender, () => html`<slot></slot>`)}
       </div>
     `;
   },

@@ -1,115 +1,202 @@
-import type { RouteParams, QueryParams, RouteRecord } from './types';
-/** -------------------- Path Utilities -------------------- **/
+import type { RouteMatcher, RouteRecord } from './router-internal';
+import type { QueryParams, RouteParams, RouteTable } from './types';
 
-const URL_PATTERN_BASE = 'http://localhost';
-
-function toMatchUrl(pathname: string): URL {
-  return new URL(normalizePath(pathname), URL_PATTERN_BASE);
-}
-
-export function extractParamNames(pattern: string): string[] {
-  const names: string[] = [];
-
-  pattern.replace(/:([\w]+)\*?/g, (_, name: string) => {
-    names.push(name);
-
-    return '';
-  });
-
-  return names;
-}
-
-/**
- * Convert a route pattern to URLPattern syntax.
- * Example: '/users/:id' -> '/users/:id(\d+)?'
- * URLPattern requires a protocol and hostname, so we use a placeholder base.
- */
-function patternToURLPattern(pattern: string): string {
-  // URLPattern requires named wildcards, so we normalize bare splats.
-  return pattern.replace(/\/\*/g, '/:__splat*');
-}
-
-/**
- * Create an exact URLPattern instance for a route.
- */
-export function createURLPattern(pattern: string): URLPattern {
-  return new URLPattern({ pathname: patternToURLPattern(pattern) }, URL_PATTERN_BASE);
-}
-
-/**
- * Create a prefix URLPattern instance for `isActive(..., false)` checks.
- */
-export function createPrefixURLPattern(pattern: string): URLPattern {
-  if (pattern.endsWith('*')) return createURLPattern(pattern);
-
-  return createURLPattern(pattern === '/' ? '/*' : `${pattern}/*`);
-}
-
+/** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {
-  if (!path) return '/';
-
-  const normalized = `/${path.trim()}`.replace(/\/+/g, '/');
+  const normalized = `/${path}`.replace(/\/+/g, '/');
 
   return normalized !== '/' && normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
 }
 
-export function matchRecordWithPattern(pathname: string, record: RouteRecord): RouteParams | null {
-  const match = record.urlPattern.exec(toMatchUrl(pathname));
+export function joinPaths(base: string, path: string): string {
+  return normalizePath(`${base}/${path}`);
+}
+
+function escapeRegex(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function compilePathMatcher(path: string): RouteMatcher {
+  const normalized = normalizePath(path);
+
+  if (normalized === '/') {
+    return {
+      paramNames: [],
+      pattern: /^\/$/,
+      prefixPattern: /^\/$/,
+    };
+  }
+
+  const paramNames: string[] = [];
+  const segments = normalized.slice(1).split('/');
+  const regexParts: string[] = ['^'];
+  const prefixParts: string[] = ['^'];
+
+  for (let i = 0; i < segments.length; i += 1) {
+    const segment = segments[i]!;
+
+    if (segment === '*') {
+      if (i !== segments.length - 1) {
+        throw new Error(`[routeit] Wildcard "*" must be the final segment in path: ${path}`);
+      }
+
+      regexParts.push('(?:/.*)?');
+      break;
+    }
+
+    if (segment.startsWith(':') && segment.endsWith('*')) {
+      if (i !== segments.length - 1) {
+        throw new Error(`[routeit] Wildcard param must be final segment in path: ${path}`);
+      }
+
+      const name = segment.slice(1, -1);
+
+      if (!/^\w+$/.test(name)) {
+        throw new Error(
+          `[routeit] Invalid param name ":${name}" in path "${path}". Param names must only contain word characters (a–z, A–Z, 0–9, _).`,
+        );
+      }
+
+      paramNames.push(name);
+      regexParts.push(i === segments.length - 1 ? '(?:/(.*))?' : '/(.*)');
+      prefixParts.push('/.*');
+      break;
+    }
+
+    if (segment.startsWith(':')) {
+      const name = segment.slice(1);
+
+      if (!/^\w+$/.test(name)) {
+        throw new Error(
+          `[routeit] Invalid param name ":${name}" in path "${path}". Param names must only contain word characters (a–z, A–Z, 0–9, _).`,
+        );
+      }
+
+      paramNames.push(name);
+      regexParts.push('/([^/]+)');
+      prefixParts.push('/[^/]+');
+      continue;
+    }
+
+    const escaped = escapeRegex(segment);
+
+    regexParts.push(`/${escaped}`);
+    prefixParts.push(`/${escaped}`);
+  }
+
+  regexParts.push('$');
+  prefixParts.push('(?:/.*)?$');
+
+  return {
+    paramNames,
+    pattern: new RegExp(regexParts.join('')),
+    prefixPattern: new RegExp(prefixParts.join('')),
+  };
+}
+
+export function matchRecord<TRoutes extends RouteTable = RouteTable>(
+  pathname: string,
+  record: RouteRecord<TRoutes>,
+): RouteParams | null {
+  const match = record.matcher.pattern.exec(pathname);
 
   if (!match) return null;
 
-  return Object.fromEntries(
-    record.paramNames.map((name) => [name, decodeURIComponent(match.pathname.groups[name] ?? '')]),
-  );
-}
+  const params: RouteParams = {};
 
-export function testRecordWithPattern(pathname: string, pattern: URLPattern): boolean {
-  return pattern.test(toMatchUrl(pathname));
-}
+  record.matcher.paramNames.forEach((name, index) => {
+    const value = match[index + 1];
 
-const E = '[routeit]';
-
-export function parseQuery(search: string): QueryParams {
-  const params: QueryParams = {};
-
-  for (const [key, value] of new URLSearchParams(search)) {
-    const existing = params[key];
-
-    if (existing === undefined) params[key] = value;
-    else if (Array.isArray(existing)) existing.push(value);
-    else params[key] = [existing, value];
-  }
+    params[name] = decodeURIComponent(value ?? '');
+  });
 
   return params;
 }
 
-export function joinPaths(base: string, path: string): string {
-  const a = normalizePath(base);
-  const b = normalizePath(path);
+export function matchRoute(
+  pathname: string,
+  records: readonly RouteRecord[],
+): { params: RouteParams; record?: RouteRecord } {
+  for (const record of records) {
+    const params = matchRecord(pathname, record);
 
-  return a === '/' ? b : b === '/' ? a : `${a}${b}`;
-}
-
-export function buildUrl(base: string, path: string, params?: RouteParams, query?: QueryParams): string {
-  const url = path.replace(/:(\w+)(\*)?/g, (_, k, star) => {
-    const value = params?.[k];
-
-    if (value === undefined) throw new Error(`${E} Missing URL param: "${k}"`);
-
-    // Wildcard params may contain '/' — don't encode them, and the trailing * is stripped implicitly
-    return star ? value : encodeURIComponent(value);
-  });
-
-  if (query && Object.keys(query).length > 0) {
-    const search = new URLSearchParams();
-
-    for (const [key, value] of Object.entries(query)) {
-      if (Array.isArray(value)) for (const v of value) search.append(key, v);
-      else search.set(key, value);
-    }
-
-    return joinPaths(base, `${url}?${search}`);
+    if (params) return { params, record };
   }
 
-  return joinPaths(base, url);
+  return { params: {} };
+}
+
+export function matchRouteFor<TRoutes extends RouteTable = RouteTable>(
+  pathname: string,
+  records: readonly RouteRecord<TRoutes>[],
+): { params: RouteParams; record?: RouteRecord<TRoutes> } {
+  for (const record of records) {
+    const params = matchRecord(pathname, record);
+
+    if (params) return { params, record };
+  }
+
+  return { params: {} };
+}
+
+export function matchesPrefix<TRoutes extends RouteTable = RouteTable>(
+  pathname: string,
+  record: RouteRecord<TRoutes>,
+): boolean {
+  return record.matcher.prefixPattern.test(pathname);
+}
+
+/** Parse `?foo=a&foo=b&bar=c` into `{ foo: ['a', 'b'], bar: 'c' }`. */
+export function parseQuery(queryString: string): QueryParams {
+  const search = new URLSearchParams(queryString);
+  const out: QueryParams = {};
+
+  for (const [key, value] of search.entries()) {
+    const existing = out[key];
+
+    if (existing === undefined) {
+      out[key] = value;
+      continue;
+    }
+
+    if (Array.isArray(existing)) {
+      existing.push(value);
+      continue;
+    }
+
+    out[key] = [existing, value];
+  }
+
+  return out;
+}
+
+/** Build a URL from a path pattern, params, and query, respecting the router base. */
+export function buildUrl(base: string, pattern: string, params: RouteParams = {}, query?: QueryParams): string {
+  let path = pattern.replace(/:(\w+)(\*)?/g, (_match, key: string, isWildcard: string) => {
+    const value = params[key];
+
+    if (value == null) throw new Error(`[routeit] Missing path param: ${key}`);
+
+    if (isWildcard) {
+      return value
+        .split('/')
+        .map((segment) => encodeURIComponent(segment))
+        .join('/');
+    }
+
+    return encodeURIComponent(value);
+  });
+
+  if (query && Object.keys(query).length) {
+    const search = new URLSearchParams();
+
+    Object.entries(query).forEach(([key, value]) => {
+      if (Array.isArray(value)) value.forEach((item) => search.append(key, item));
+      else search.set(key, value);
+    });
+
+    path += `?${search.toString()}`;
+  }
+
+  return joinPaths(base, path);
 }

@@ -2,8 +2,12 @@ import type { Fn } from '../types';
 
 import { assert } from './assert';
 
-type LastParameters<T> = T extends [...any, infer Last extends Fn] ? Parameters<Last> : never;
-type FirstReturnType<F> = F extends [infer First extends Fn, ...any] ? ReturnType<First> : never;
+type LastParameters<T extends readonly Fn[]> = T extends [...unknown[], infer Last extends Fn]
+  ? Parameters<Last>
+  : never;
+type FirstReturnType<T extends readonly Fn[]> = T extends [infer First extends Fn, ...unknown[]]
+  ? ReturnType<First>
+  : never;
 
 /**
  * Composes multiple functions into a single function. It starts from the rightmost function and proceeds to the left.
@@ -21,7 +25,9 @@ type FirstReturnType<F> = F extends [infer First extends Fn, ...any] ? ReturnTyp
  *
  * @returns A new function that is the composition of the input functions.
  */
-export function compose<T extends Fn[]>(...fns: T): (...args: LastParameters<T>) => FirstReturnType<T> {
+export function compose<T extends readonly [Fn, ...Fn[]]>(
+  ...fns: T
+): (...args: LastParameters<T>) => FirstReturnType<T> {
   assert(fns.length > 0, 'compose requires at least one function', { args: { fns } });
 
   const lastFn = fns[fns.length - 1];

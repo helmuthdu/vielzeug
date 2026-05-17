@@ -5,9 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vite';
 
 import { getConfig } from '../../vite.config';
+// @ts-expect-error - .mjs files don't have type declarations in this context
 import { getBuilditLibraryEntries } from './component-manifest.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const processEnv = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } })
+  .process?.env;
+const disablePluginTimings = processEnv?.CI === 'true' || processEnv?.RUSHSTACK_FILE_ERROR_BASE_FOLDER !== undefined;
 
 export default defineConfig(
   mergeConfig(
@@ -18,6 +22,9 @@ export default defineConfig(
     {
       build: {
         rolldownOptions: {
+          checks: {
+            pluginTimings: !disablePluginTimings,
+          },
           external: [
             '@vielzeug/craftit',
             '@vielzeug/dragit',

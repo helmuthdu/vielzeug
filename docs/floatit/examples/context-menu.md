@@ -5,18 +5,16 @@ description: 'Context Menu examples for floatit.'
 
 ## Context Menu
 
-## Problem
+### Problem
 
-Implement context menu in a production-friendly way with `@vielzeug/floatit` while keeping setup and cleanup explicit.
+A right-click anywhere on a surface should open a context menu pinned to the cursor position. The anchor is not a DOM element — it's a coordinate pair that changes with each click.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/floatit` installed.
+### Solution
 
 Right-click context menu pinned to the cursor position using a virtual reference element.
 
 ```ts
-import { flip, positionFloat, shift } from '@vielzeug/floatit';
+import { computePosition, flip, shift } from '@vielzeug/floatit';
 
 const menu = document.querySelector<HTMLElement>('#context-menu')!;
 
@@ -30,10 +28,13 @@ document.addEventListener('contextmenu', (e) => {
 
   menu.style.display = 'block';
 
-  positionFloat(virtualRef as Element, menu, {
+  const result = computePosition(virtualRef, menu, {
     placement: 'bottom-start',
     middleware: [flip(), shift({ padding: 8 })],
   });
+
+  menu.style.left = `${result.x}px`;
+  menu.style.top = `${result.y}px`;
 });
 
 document.addEventListener('click', () => {
@@ -43,18 +44,14 @@ document.addEventListener('click', () => {
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- The virtual reference element must be updated with the current cursor coordinates before calling `computePosition`. Passing a stale reference positions the menu at the previous click location.
+- Context menus triggered by keyboard (`Shift+F10`) have no cursor coordinates. Handle the keyboard case by positioning relative to the focused element using `getBoundingClientRect()`.
+- Outside-click detection must use `document.addEventListener('pointerdown', ..., { capture: true })` so it fires before the menu's own click handler.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Custom Middleware](./custom-middleware.md)
 - [Dropdown / Select](./dropdown-select.md)

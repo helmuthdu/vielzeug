@@ -9,14 +9,11 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
       (val, path) =>
         val === value
           ? null
-          : [{ code: ErrorCode.invalid_literal, message: _messages().literal_expected({ expected: value }), path }],
+          : [{ code: ErrorCode.invalid_literal, message: _messages().literal.expected({ expected: value }), path }],
     ]);
     this.value = value;
   }
 }
-
-export const literal = <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
-  new LiteralSchema(value);
 
 /* -------------------- Raw-or-schema helpers -------------------- */
 /* Used internally by union and intersect to accept raw literal values */

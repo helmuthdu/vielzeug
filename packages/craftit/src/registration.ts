@@ -1,19 +1,35 @@
-import { type CleanupFn, untrack } from '@vielzeug/stateit';
+import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@vielzeug/stateit';
 
-import { formCallbackRegistry } from './form';
-import { type CSSResult, type HTMLResult, htmlResult, loadStylesheet, runAll } from './internal';
-import { propRegistry } from './props';
-import { runtimeStack, type ComponentRuntime } from './runtime-core';
-import { applyBindingsInContainer, applyHtmlBinding } from './template';
-import { type RegisterCleanup } from './template-bindings';
-import { parseHTML } from './template-dom';
-import { type KeyedNode } from './template-html';
+import { CRAFTIT_ERRORS } from './errors';
+import { createHost, createSlots, type ComponentHost, type ComponentSlots } from './host';
+import {
+  createEmitFn,
+  type CSSResult,
+  type EmitFn,
+  extractResult,
+  type HTMLResult,
+  loadStylesheet,
+  toKebab,
+} from './internal';
+import {
+  createProps,
+  isReflecting,
+  normalizePropDefinition,
+  prop,
+  propRegistry,
+  type InferPropsFromDefs,
+  type InferPropsSignals,
+  type PropDef,
+  type PropInputDefs,
+  type PropOptions,
+  type PropsDef,
+} from './props';
+import { type OnMountedCallback, type RuntimeScope, withCurrentElement, withRuntimeScope } from './runtime';
+import { applyBindingsInContainer, applyHtmlBinding, parseHTML } from './template-bindings';
 
 export type ComponentRegistrationOptions = {
   /** Indicates if this should be a form-associated element */
   formAssociated?: boolean;
-  /** Custom options for a host element (e.g. for aria-*) */
-  host?: Record<string, string | boolean | number>;
   /** @internal — list of attribute names to observe via attributeChangedCallback */
   observedAttrs?: string[];
   /** Shadow root init options (mode is always 'open') — use e.g. `{ delegatesFocus: true }` for form controls */
@@ -22,22 +38,33 @@ export type ComponentRegistrationOptions = {
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
-type ComponentSetupResult = string | HTMLResult;
+export type ComponentTemplate = () => HTMLResult;
+
+type ComponentState = {
+  mountCallbacks: OnMountedCallback[];
+  mountedCallbacksRan: boolean;
+  mountToken: number;
+  scope: Scope;
+  setupDone: boolean;
+  styles?: (string | CSSStyleSheet | CSSResult)[];
+  templateMounted: boolean;
+  templateResult: HTMLResult | null;
+};
 
 class BaseElement extends HTMLElement {
+  // Lifecycle: setup() runs on first connect (initializes scope + calls user setup).
+  // _init() runs on every connect (applies initial attributes to reset prop state).
+  // disconnectedCallback() disposes scope to run effect cleanups, then recreates it.
+  // This means setup() re-runs on reconnect. Future optimization: track "mounted" state
+  // separately to avoid re-running setup() on reconnect while still running cleanups.
+  // On disconnect: cleanups run; on reconnect, styles and bindings are re-applied.
   static _options?: ComponentRegistrationOptions;
-  static _setup: () => ComponentSetupResult;
+  static _setup: () => ComponentTemplate;
   static formAssociated = false;
   static observedAttributes: string[] = [];
 
   shadow: ShadowRoot;
-  private _appliedHtmlBindings = new Set<string>();
-  private _keyedStates = new Map<string, Map<string | number, KeyedNode>>();
-  private _mountFns: (() => CleanupFn | undefined | void)[] = [];
-  private _runtime: ComponentRuntime;
-  private _rendered = false;
-  private _setupDone = false;
-  private _template: ComponentSetupResult | null = null;
+  private _component: ComponentState;
 
   constructor() {
     super();
@@ -45,18 +72,21 @@ class BaseElement extends HTMLElement {
     const options = (this.constructor as typeof BaseElement)._options;
 
     this.shadow = this.attachShadow({ mode: 'open', ...options?.shadow });
-    this._runtime = {
-      cleanups: [],
-      el: this,
-      errorHandlers: [],
-      onMount: [],
+    this._component = {
+      mountCallbacks: [],
+      mountedCallbacksRan: false,
+      mountToken: 0,
+      scope: _scope(),
+      setupDone: false,
       styles: options?.styles,
+      templateMounted: false,
+      templateResult: null,
     };
   }
 
   connectedCallback(): void {
     untrack(() => {
-      if (!this._setupDone) this._runSetup();
+      if (!this._component.setupDone) this._runSetup();
 
       this._init();
     });
@@ -64,6 +94,8 @@ class BaseElement extends HTMLElement {
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (oldValue === newValue) return;
+
+    if (isReflecting(this, name)) return;
 
     const propMeta = propRegistry.get(this)?.get(name);
 
@@ -82,134 +114,109 @@ class BaseElement extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    runAll(this._runtime.cleanups);
-    this._runtime.cleanups = [];
-    this._runtime.onMount = this._mountFns.slice();
-    this._appliedHtmlBindings.clear();
-    this._keyedStates.clear();
-    this._rendered = false;
-  }
-
-  formAssociatedCallback(form: HTMLFormElement | null): void {
-    formCallbackRegistry.get(this)?.onAssociated?.(form);
-  }
-
-  formDisabledCallback(disabled: boolean): void {
-    formCallbackRegistry.get(this)?.onDisabled?.(disabled);
-  }
-
-  formResetCallback(): void {
-    formCallbackRegistry.get(this)?.onReset?.();
-  }
-
-  formStateRestoreCallback(state: unknown, mode: 'autocomplete' | 'restore'): void {
-    formCallbackRegistry.get(this)?.onStateRestore?.(state, mode);
+    this._component.mountToken++;
+    // Dispose and recreate scope to run all effect cleanups
+    this._component.scope.dispose();
+    this._component.scope = _scope();
+    // Reset mount state for fresh mount callbacks on reconnect
+    this._component.mountCallbacks = [];
+    this._component.mountedCallbacksRan = false;
+    this._component.templateMounted = false;
+    this._component.templateResult = null;
+    // Reset setupDone to re-run setup() on reconnect, ensuring effects are re-registered
+    this._component.setupDone = false;
   }
 
   private _handleError(err: unknown): void {
-    if (this._runtime.errorHandlers.length > 0) {
-      for (const fn of this._runtime.errorHandlers) fn(err);
-    } else {
-      console.error(`[craftit:E3] <${this.localName}>`, err);
+    console.error(CRAFTIT_ERRORS.unhandledComponentError(this.localName), err);
 
-      throw err instanceof Error ? err : new Error(String(err));
-    }
+    throw err instanceof Error ? err : new Error(String(err));
   }
 
   private _runSetup(): void {
-    this._setupDone = true;
-    runtimeStack.push(this._runtime as any);
+    const setupScope: RuntimeScope = {
+      element: this,
+      mountCallbacks: [],
+    };
 
     try {
-      const options = (this.constructor as typeof BaseElement)._options;
-      const { host: hostOptions } = options ?? {};
+      this._component.scope.run(() => {
+        const template = withRuntimeScope(setupScope, () =>
+          withCurrentElement(this, () => (this.constructor as typeof BaseElement)._setup()),
+        );
 
-      if (hostOptions) {
-        for (const [name, value] of Object.entries(hostOptions)) {
-          if (typeof value === 'boolean') {
-            if (value) {
-              this.setAttribute(name, '');
-            } else {
-              this.removeAttribute(name);
-            }
-          } else {
-            this.setAttribute(name, String(value));
-          }
-        }
-      }
+        this._component.templateResult = withRuntimeScope(setupScope, () => withCurrentElement(this, () => template()));
+      });
 
-      const result = (this.constructor as typeof BaseElement)._setup();
-
-      if (typeof result === 'string' || (typeof result === 'object' && result !== null && '__html' in result)) {
-        this._template = result as ComponentSetupResult;
-      }
+      this._component.mountCallbacks.push(...setupScope.mountCallbacks);
+      this._component.setupDone = true;
     } catch (err) {
       this._handleError(err);
-    } finally {
-      runtimeStack.pop();
     }
   }
 
   private _init(): void {
-    const { styles } = this._runtime;
+    const { styles } = this._component;
 
     if (styles?.length) this.shadow.adoptedStyleSheets = styles.map(loadStylesheet);
 
-    if (this._template) {
-      const result: HTMLResult = typeof this._template === 'string' ? htmlResult(this._template) : this._template;
+    if (!this._component.templateMounted && this._component.templateResult != null) {
+      const { bindings, html: htmlString } = extractResult(this._component.templateResult);
 
-      if (!this._rendered) {
-        this.shadow.replaceChildren(parseHTML(result.__html));
-        this._rendered = true;
-      }
+      this.shadow.replaceChildren(parseHTML(htmlString));
+      this._component.templateMounted = true;
 
-      if (result.__bindings.length) {
-        const registerCleanup: RegisterCleanup = (fn) => this._runtime.cleanups.push(fn);
-
-        applyBindingsInContainer(this.shadow, result.__bindings, registerCleanup, {
-          onHtml: (binding) => {
-            if (!this._appliedHtmlBindings.has(binding.uid)) {
-              this._appliedHtmlBindings.add(binding.uid);
-              applyHtmlBinding(this.shadow, binding, registerCleanup, this._keyedStates);
-            }
-          },
+      if (bindings.length) {
+        this._component.scope.run(() => {
+          applyBindingsInContainer(this.shadow, bindings, _onCleanup, {
+            onHtml: (binding) => applyHtmlBinding(this.shadow, binding, _onCleanup),
+          });
         });
       }
     }
 
-    queueMicrotask(() => {
-      runtimeStack.push(this._runtime as any);
+    if (!this._component.mountedCallbacksRan && this._component.mountCallbacks.length > 0) {
+      this._component.mountedCallbacksRan = true;
 
-      try {
-        const mountFns = this._runtime.onMount;
+      const token = ++this._component.mountToken;
 
-        this._mountFns = mountFns.slice();
+      queueMicrotask(() => {
+        if (!this.isConnected || token !== this._component.mountToken) return;
 
-        for (const mountFn of mountFns) {
-          const cleanup = mountFn();
+        try {
+          for (const callback of this._component.mountCallbacks) {
+            this._component.scope.run(() => {
+              withRuntimeScope(
+                {
+                  element: this,
+                  mountCallbacks: [],
+                },
+                () =>
+                  withCurrentElement(this, () => {
+                    const cleanup = callback();
 
-          if (typeof cleanup === 'function') this._runtime.cleanups.push(cleanup);
+                    if (typeof cleanup === 'function') _onCleanup(cleanup);
+                  }),
+              );
+            });
+          }
+        } catch (err) {
+          this._handleError(err);
         }
-      } catch (err) {
-        this._handleError(err);
-      } finally {
-        runtimeStack.pop();
-        this._runtime.onMount = [];
-      }
-    });
+      });
+    }
   }
 }
 
-/** @internal — use define() instead. */
-export function registerComponent(
+const defineComponent = (
   tag: string,
-  setup: () => ComponentSetupResult,
+  setup: () => ComponentTemplate,
   options: ComponentRegistrationOptions = {},
-): string {
-  if (!tag) throw new Error('[craftit:E4] registerComponent(tag, ...) requires a tag name');
+): string => {
+  if (!tag) throw new Error(CRAFTIT_ERRORS.defineRequiresTag);
 
   if (customElements.get(tag)) {
-    return tag;
+    throw new Error(CRAFTIT_ERRORS.defineDuplicate(tag));
   }
 
   class Element extends BaseElement {
@@ -222,4 +229,79 @@ export function registerComponent(
   customElements.define(tag, Element);
 
   return tag;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUBLIC COMPONENT AUTHORING API (absorbed from component.ts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { prop };
+export type { InferPropsFromDefs, InferPropsSignals, PropDef, PropInputDefs, PropOptions, PropsDef };
+
+/**
+ * Setup context passed as the second argument to the component setup function.
+ */
+export type SetupContextBag<Emits extends Record<string, unknown> = Record<string, unknown>> = {
+  emit: EmitFn<Emits>;
+  host: ComponentHost;
+  slots: ComponentSlots;
+};
+
+export type ComponentDefinition<
+  Props extends Record<string, unknown> = Record<never, never>,
+  Emits extends Record<string, unknown> = Record<string, never>,
+> = {
+  /** Enable form association for the custom element */
+  formAssociated?: boolean;
+  /** Component properties and their metadata */
+  props?: PropsDef<Props>;
+  /** Main setup function. Props are the first positional parameter, context bag is second. Returns a template function. */
+  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits>) => ComponentTemplate;
+  /** Shadow DOM configuration (mode is always 'open') */
+  shadow?: Omit<ShadowRootInit, 'mode'>;
+  /** Component-specific styles */
+  styles?: (string | CSSStyleSheet | CSSResult)[];
+};
+
+const createSetupProps = <Props extends Record<string, unknown>>(
+  defs: PropsDef<Props> | undefined,
+): InferPropsSignals<Props> => {
+  if (!defs) return {} as InferPropsSignals<Props>;
+
+  return createProps(defs) as InferPropsSignals<Props>;
+};
+
+export function define<
+  Props extends Record<string, unknown> = Record<never, never>,
+  Emits extends Record<string, unknown> = Record<string, never>,
+>(tag: string, definition: ComponentDefinition<Props, Emits>): string {
+  const { formAssociated, props: propDefs, setup, shadow: shadowOptions, styles } = definition;
+
+  // Normalize props at define-time for early error feedback
+  const normalizedPropDefs: PropsDef<Props> | undefined = (() => {
+    if (!propDefs) return undefined;
+
+    const normalized: PropInputDefs = {};
+
+    for (const [key, def] of Object.entries(propDefs)) {
+      normalized[key] = normalizePropDefinition(def);
+    }
+
+    return normalized as PropsDef<Props>;
+  })();
+
+  const observedAttrs = normalizedPropDefs ? Object.keys(normalizedPropDefs).map(toKebab) : [];
+
+  return defineComponent(
+    tag,
+    () => {
+      const props = createSetupProps(normalizedPropDefs);
+      const host = createHost();
+      const emit = createEmitFn<Emits>();
+      const slots = createSlots();
+
+      return setup(props, { emit, host, slots });
+    },
+    { formAssociated, observedAttrs, shadow: shadowOptions, styles },
+  );
 }

@@ -152,17 +152,17 @@ Set `disabled` to suppress the tooltip entirely.
 
 ### Attributes
 
-| Attribute     | Type                                     | Default         | Description                                                                           |
-| ------------- | ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------- |
-| `content`     | `string`                                 | `''`            | Tooltip text                                                                          |
-| `placement`   | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges)                                  |
-| `trigger`     | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                                                      |
-| `delay`       | `number`                                 | `0`             | Show delay in milliseconds                                                            |
+| Attribute     | Type                                     | Default         | Description                                                                                         |
+| ------------- | ---------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------- |
+| `content`     | `string`                                 | `''`            | Tooltip text                                                                                        |
+| `placement`   | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges)                                                |
+| `trigger`     | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                                                                    |
+| `delay`       | `number`                                 | `0`             | Show delay in milliseconds                                                                          |
 | `close-delay` | `number`                                 | `0`             | Hide delay in milliseconds — useful to keep the tooltip open when moving between trigger and bubble |
-| `open`        | `boolean`                                | —               | Controlled open state; when set, trigger events are ignored                           |
-| `variant`     | `'dark' \| 'light'`                      | —               | Visual style (`dark` appearance is the unset default)                                 |
-| `size`        | `'sm' \| 'md' \| 'lg'`                   | —               | Tooltip bubble size (medium appearance is the unset default)                          |
-| `disabled`    | `boolean`                                | `false`         | Disable the tooltip entirely                                                          |
+| `open`        | `boolean`                                | —               | Controlled open state; when set, trigger events are ignored                                         |
+| `variant`     | `'dark' \| 'light'`                      | —               | Visual style (`dark` appearance is the unset default)                                               |
+| `size`        | `'sm' \| 'md' \| 'lg'`                   | —               | Tooltip bubble size (medium appearance is the unset default)                                        |
+| `disabled`    | `boolean`                                | `false`         | Disable the tooltip entirely                                                                        |
 
 ### Slots
 

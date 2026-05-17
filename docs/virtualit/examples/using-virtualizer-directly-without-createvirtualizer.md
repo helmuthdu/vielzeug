@@ -1,60 +1,57 @@
 ---
-title: 'Virtualit Examples — Using `Virtualizer` Directly (Without `createVirtualizer`)'
-description: 'Using `Virtualizer` Directly (Without `createVirtualizer`) examples for virtualit.'
+title: 'Virtualit Examples — Recreate on Remount'
+description: 'Recreate on remount examples for virtualit.'
 ---
 
-## Using `Virtualizer` Directly (Without `createVirtualizer`)
+## Recreate on Remount
 
-## Problem
+### Problem
 
-Implement using `virtualizer` directly (without `createvirtualizer`) in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+The scroll container is recreated at runtime — for example, when a dropdown reopens or a portal remounts. The virtualizer from the previous mount is stale and must be replaced with a fresh instance.
 
-## Runnable Example
+### Solution
 
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
-
-Useful in component frameworks where the scroll container is not available at construction time.
+Useful when a component recreates its scroll container (for example, dropdown reopen or portal remount).
 
 ```ts
-import { Virtualizer } from '@vielzeug/virtualit';
+import { createVirtualizer, type Virtualizer } from '@vielzeug/virtualit';
 
-// Build the instance when data is ready — no element needed yet
-const virt = new Virtualizer({
-  count: rows.length,
-  estimateSize: 36,
-  onChange: render,
-});
+let virt: Virtualizer | null = null;
 
 // Attach once the component mounts
 function onMount(scrollEl: HTMLElement) {
-  virt.attach(scrollEl);
+  virt = createVirtualizer(scrollEl, {
+    count: rows.length,
+    estimateSize: 36,
+    onChange: render,
+  });
 }
 
-// The virtualizer can be re-attached to a new container
+// Recreate for a new container
 function onReopen(newScrollEl: HTMLElement) {
-  virt.count = rows.length; // sync count before re-attaching
-  virt.attach(newScrollEl);
+  virt?.destroy();
+  virt = createVirtualizer(newScrollEl, {
+    count: rows.length,
+    estimateSize: 36,
+    onChange: render,
+  });
 }
 
 function onDestroy() {
-  virt.destroy();
+  virt?.destroy();
 }
 ```
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- The old virtualizer must be destroyed before creating a new one for the same container. Two concurrent instances both write `style.height` on the list element, causing a conflict.
+- Recreating inside a `ResizeObserver` fires on every size change. Guard with a destroyed flag so the observer does not recreate the virtualizer after explicit teardown.
+- The new instance's `scroll` listener must be registered on the fresh container element, not a stale reference captured before the container was recreated.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
 - [Density Toggle (Compact / Comfortable)](./density-toggle-compact-comfortable.md)

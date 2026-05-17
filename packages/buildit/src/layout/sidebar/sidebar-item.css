@@ -162,7 +162,7 @@
   :host([sidebar-collapsed]) .item-icon .group-badge,
   :host([sidebar-collapsed]) .item-icon ::slotted([slot='end']) {
     position: absolute;
-    inset-inline-end: 0;
+    right: 0;
     bottom: calc(var(--size-2) * -1);
     z-index: 2;
     display: flex;
@@ -175,12 +175,50 @@
     transform: translate(40%, -40%);
   }
 
+  :host([dir='rtl'][sidebar-collapsed]) .item-end,
+  :host([dir='rtl'][sidebar-collapsed]) .item-icon .group-badge,
+  :host([dir='rtl'][sidebar-collapsed]) .item-icon ::slotted([slot='end']),
+  :host(:dir(rtl)[sidebar-collapsed]) .item-end,
+  :host(:dir(rtl)[sidebar-collapsed]) .item-icon .group-badge,
+  :host(:dir(rtl)[sidebar-collapsed]) .item-icon ::slotted([slot='end']) {
+    right: auto;
+    left: 0;
+    transform: translate(-40%, -40%);
+  }
+
   :host([sidebar-collapsed]) .item-end .group-badge,
   :host([sidebar-collapsed]) .item-end ::slotted([slot='end']) {
     position: absolute;
-    inset-inline-end: var(--size-2);
     top: 50%;
+    right: var(--size-2);
     z-index: 1;
     transform: translateY(-50%);
+  }
+
+  :host([dir='rtl'][sidebar-collapsed]) .item-end .group-badge,
+  :host([dir='rtl'][sidebar-collapsed]) .item-end ::slotted([slot='end']),
+  :host(:dir(rtl)[sidebar-collapsed]) .item-end .group-badge,
+  :host(:dir(rtl)[sidebar-collapsed]) .item-end ::slotted([slot='end']) {
+    right: auto;
+    left: var(--size-2);
+  }
+
+  :host([sidebar-bottom-nav]) .item {
+    flex-direction: column;
+    gap: var(--size-0-5);
+    align-items: center;
+    justify-content: center;
+    min-height: unset;
+    padding: var(--size-1);
+    font-size: var(--text-xs);
+  }
+
+  :host([sidebar-bottom-nav]) .item-label {
+    width: 100%;
+    text-align: center;
+  }
+
+  :host([sidebar-bottom-nav]) .item-end {
+    display: none;
   }
 }

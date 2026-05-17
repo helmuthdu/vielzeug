@@ -3,6 +3,8 @@ title: Stateit — Reactive signals and state management
 description: Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="stateit" />
 
 <img src="/logo-stateit.svg" alt="Stateit logo" width="156" class="logo-highlight"/>
@@ -38,7 +40,7 @@ yarn add @vielzeug/stateit
 
 ## Quick Start
 
-### Signals
+### Signals API
 
 ```ts
 import { signal, computed, effect, watch, batch } from '@vielzeug/stateit';
@@ -68,10 +70,10 @@ stopWatch.dispose(); // unsubscribe watch
 doubled.dispose(); // dispose computed
 ```
 
-### Stores
+### Stores API
 
 ```ts
-import { store, watch, batch } from '@vielzeug/stateit';
+import { store, watch, batch, computed } from '@vielzeug/stateit';
 
 const counter = store({ count: 0 });
 
@@ -83,8 +85,8 @@ const stopWatch = watch(counter, (curr, prev) => {
   console.log(`${prev.count} → ${curr.count}`);
 });
 
-// Watch a selected slice — compose with store.select()
-const countSignal = counter.select((s) => s.count);
+// Watch a selected slice — use computed() for a derived slice
+const countSignal = computed(() => counter.value.count);
 watch(countSignal, (count, prev) => {
   console.log('count:', prev, '→', count);
 });
@@ -106,7 +108,7 @@ counter.reset();
 
 // Clean up
 stopWatch.dispose();
-counter.freeze();
+countSignal.dispose();
 ```
 
 ## Why Stateit?
@@ -145,36 +147,37 @@ count.value = 1; // notifies automatically
 
 ### Signals
 
-- **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`, `.update(fn)`, peek untracked with `.peek()`
-- **`computed(fn, options?)`** — lazy derived signal; recomputes when deps change; call `.dispose()` to stop tracking
-- **`effect(fn, options?)`** — side-effect that re-runs when any signal read inside it changes; returns a `Subscription`
+- **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`; use `untrack(fn)` for non-subscribing reads
+- **`computed(fn, options?)`** — lazy derived signal; glitch-free: effects always observe a consistent snapshot; call `.dispose()` to stop tracking
+- **`effect(fn)`** — side-effect that re-runs when any signal read inside it changes; returns a `Subscription`
 - **`watch(source, cb, options?)`** — explicit subscription that fires only when the value changes; returns a `Subscription`
-- **`derived(sources, fn)`** — multi-source derived signal combining multiple signals into one
-- **`nextValue(source, predicate?)`** — async helper that resolves with the next matching emission
-- **`untrack(fn)`** — read signals inside an effect without creating subscriptions
-- **`readonly(sig)`** — narrows a signal to a `ReadonlySignal<T>` view (identity, no proxy)
-- **`toValue(v)`** — unwrap a plain value or signal transparently
-- **`writable(get, set, options?)`** — bidirectional computed for form adapters and transformations
 - **`batch(fn)`** — flush all notifications once after bulk updates
-- **`onCleanup(fn)`** — register teardown from inside an effect without using the return value
-- **`isSignal(v)`** / **`isStore(v)`** — type guards
+- **`untrack(fn)`** — read signals inside an effect without creating subscriptions
+- **`onCleanup(fn)`** — register teardown from inside an effect or `scope` without using the return value
+- **`scope()`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release everything with `scope.dispose()`
+- **`isSignal(v)`** — type guard
 
 ### Stores
 
-- **`store(init, options?)`** — structured reactive object container extending `Signal<T>`
+- **`store(init)`** — structured reactive object container
 - **`.patch(partial)`** — shallow-merge a `Partial<T>` into state
 - **`.update(fn)`** — derive next state from current via an updater function
-- **`.select(selector, options?)`** — lazily derived `ComputedSignal<U>` from a state slice; compose with `watch()` to watch slices
 - **`.reset()`** — restore the initial state baseline
-- **`.freeze()`** — freeze the store; further writes are silently ignored
 - **Zero dependencies** — no supply chain risk; < 2 kB gzipped
 
 ### Ergonomics
 
 - **`Subscription`** — all dispose handles support `.dispose()`, direct call `()`, and `[Symbol.dispose]` (`using` declarations)
-- **`EffectOptions`** — per-effect `maxIterations` and `onError` callbacks
-- **`configureStateit()`** — global defaults (e.g. `maxEffectIterations`)
-- **`shallowEqual`** — exported equality helper (the default for stores)
+- **`Scope`** — all scope handles support `.dispose()` and `[Symbol.dispose]` (`using` declarations)
+- **Built-in loop guard** — internal protection against infinite reactive loops (100 iterations)
+
+### Reliability & Type Safety
+
+- **Strict signal detection** — `isSignal()` uses an internal symbol marker, not duck-typing
+- **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
+- **Consistent error handling** — all errors prefixed with `[stateit]` and aggregated when multiple occur
+- **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations)
+- **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect
 
 ## Compatibility
 
@@ -185,8 +188,16 @@ count.value = 1; // notifies automatically
 | SSR         | ✅      |
 | Deno        | ✅      |
 
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
+
 ## See Also
 
 - [Routeit](/routeit/)
 - [Formit](/formit/)
 - [Eventit](/eventit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

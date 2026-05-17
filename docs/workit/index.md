@@ -3,9 +3,13 @@ title: Workit — Web Workers made type-safe
 description: Thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, and cancellation.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="workit" />
 
 <img src="/logo-workit.svg" alt="Workit logo" width="156" class="logo-highlight"/>
+
+# Workit
 
 **Workit** wraps Web Workers in a clean, fully typed async API. Define a task function once and workit handles worker creation, queuing, timeouts, cancellation, and pooling.
 
@@ -100,14 +104,22 @@ typedWorker.dispose();
 - SSR: `createWorker()` is safe, but `run()` requires a compatible Worker implementation.
 - Deno: support depends on Worker compatibility.
 
-## Prerequisites
+### Prerequisites
 
 - Browser or compatible runtime with Web Worker support for off-main-thread execution.
 - Self-contained task functions (no closure over outer module state).
 - In non-browser runtimes, expect `run()` to reject with `WorkerError` unless a compatible Worker implementation exists.
+
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 
 - [Fetchit](/fetchit/)
 - [Stateit](/stateit/)
 - [Eventit](/eventit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

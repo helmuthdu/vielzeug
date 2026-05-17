@@ -1,124 +1,97 @@
 ---
-title: 'Toolkit — Function Examples'
-description: 'Function utility examples for Toolkit.'
+title: Toolkit — Function Examples
+description: Function utility examples for Toolkit.
 ---
 
-# Function Utilities
+## Function Utilities
 
-Function utilities provide a powerful set of tools to control execution, compose logic, and enhance function behavior in a type-safe way. Use these helpers for debouncing, throttling, memoization, retries, and more.
-
-## 📚 Quick Reference
-
-## Problem
-
-Implement 📚 quick reference in a production-friendly way with `@vielzeug/toolkit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/toolkit` installed.
-
-### Execution Control
-
-| Method                               | Description                                                                     |
-| :----------------------------------- | :------------------------------------------------------------------------------ |
-| [`debounce`](./function/debounce.md) | Delay function execution until a specified time has passed since the last call. |
-| [`throttle`](./function/throttle.md) | Ensure a function is called at most once in a specified time interval.          |
-| [`once`](./function/once.md)         | Ensure a function is only executed once.                                        |
-
-### Composition & Logic
-
-| Method                             | Description                                                                      |
-| :--------------------------------- | :------------------------------------------------------------------------------- |
-| [`pipe`](./function/pipe.md)       | Compose functions from left to right.                                            |
-| [`compose`](./function/compose.md) | Compose functions from right to left.                                            |
-| [`curry`](./function/curry.md)     | Transform a function that takes multiple arguments into a sequence of functions. |
-| [`memo`](./function/memo.md)       | Cache the results of a function based on its arguments.                          |
-
-### Validation & Concurrency
-
-| Method                                       | Description                                                       |
-| :------------------------------------------- | :---------------------------------------------------------------- |
-| [`assert`](./function/assert.md)             | Throw an error if a condition is not met (with advanced options). |
-| [`assertParams`](./function/assertParams.md) | Validate function parameters against expected types.              |
-
-## 💡 Practical Examples
-
-::: tip Async Utilities
-For async operations like `retry`, `parallel`, `attempt`, `delay`, `sleep`, and `predict`, see the [Async Utilities](./async.md).
-:::
-
-### Controlling Execution
-
-```ts
-import { debounce, throttle, once } from '@vielzeug/toolkit';
-
-// Handle window resize (debounce)
-const handleResize = debounce(() => {
-  console.log('Resize handled');
-}, 250);
-
-// Handle scroll (throttle)
-const handleScroll = throttle(() => {
-  console.log('Scroll handled');
-}, 100);
-
-// Ensure init runs only once
-const init = once(() => {
-  console.log('Initialized');
-});
-```
-
-### Functional Composition
-
-```ts
-import { pipe, memo } from '@vielzeug/toolkit';
-
-const add = (n: number) => n + 1;
-const double = (n: number) => n * 2;
-
-// Compose functions
-const addAndDouble = pipe(add, double);
-addAndDouble(2); // (2 + 1) * 2 = 6
-
-// Memoize heavy calculations
-const heavyCalc = memo((n: number) => {
-  // complex logic...
-  return n * n;
-});
-```
-
-## 🔗 All Function Utilities
-
-<div class="grid-links">
+## Quick Reference
 
 - [assert](./function/assert.md)
-- [assertParams](./function/assertParams.md)
 - [compare](./function/compare.md)
 - [compareBy](./function/compareBy.md)
 - [compose](./function/compose.md)
+- [partial](./function/configure.md)
+- [constant](./function/constant.md)
 - [curry](./function/curry.md)
 - [debounce](./function/debounce.md)
-- [fp](./function/fp.md)
+- [identity](./function/identity.md)
 - [memo](./function/memo.md)
+- [negate](./function/negate.md)
 - [once](./function/once.md)
 - [pipe](./function/pipe.md)
+- [tap](./function/tap.md)
 - [throttle](./function/throttle.md)
 
-</div>
+## Common Patterns
 
-## Expected Output
+```ts
+import {
+  assert,
+  compareBy,
+  compose,
+  constant,
+  curry,
+  debounce,
+  identity,
+  memo,
+  negate,
+  and,
+  once,
+  partial,
+  pipe,
+  tap,
+  throttle,
+} from '@vielzeug/toolkit';
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+assert(Array.isArray([1, 2, 3]), 'Expected array');
 
-## Common Pitfalls
+const sortUsers = compareBy<{ name: string; age: number }>({ age: 'desc', name: 'asc' });
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+const trimUpper = pipe(
+  (s: string) => s.trim(),
+  (s) => s.toUpperCase(),
+);
 
-## Related Recipes
+const trimUpperRtl = compose(
+  (s: string) => s.toUpperCase(),
+  (s: string) => s.trim(),
+);
 
-- [Array Examples](./array.md)
-- [Async Examples](./async.md)
-- [Date Examples](./date.md)
+const add = (a: number, b: number) => a + b;
+const curriedAdd = curry(add);
+
+const double = partial((value: number, factor: number) => value * factor, 2);
+const isWorkingAge = and<number>(
+  (age) => age >= 18,
+  (age) => age < 65,
+);
+
+const expensive = memo((n: number) => n * n);
+const identityValue = identity('ok');
+const alwaysFive = constant(5);
+const odds = [1, 2, 3, 4].filter(negate((n: number) => n % 2 === 0));
+const ratio = ((a: number, b: number) => a / b)(10, 2); // 5
+const observed = tap(42, (value) => console.log('tap', value));
+const initOnce = once(() => console.log('init'));
+const onInput = debounce((q: string) => console.log(q), 250);
+const onScroll = throttle(() => console.log('scroll'), 100);
+
+console.log(
+  sortUsers,
+  trimUpper('  alice  '),
+  trimUpperRtl('  alice  '),
+  curriedAdd(2)(3),
+  double(8),
+  expensive(4),
+  identityValue,
+  alwaysFive(),
+  odds,
+  ratio,
+  observed,
+  isWorkingAge(32, 0, [32]),
+  initOnce(),
+  onInput,
+  onScroll,
+);
+```

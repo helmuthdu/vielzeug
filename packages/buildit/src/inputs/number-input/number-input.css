@@ -15,6 +15,52 @@
     width: 100%;
   }
 
+  /* Align buttons to top and add margin when label is outside */
+  :host([label-placement='outside']) .wrapper {
+    align-items: flex-start;
+  }
+
+  :host([label-placement='outside']) button {
+    margin-top: var(--size-7);
+  }
+
+  /* Style the spin buttons */
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-10);
+    min-width: var(--size-10);
+    height: var(--size-10);
+    min-height: var(--size-10);
+    padding: 0;
+    color: var(--color-contrast-600);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-md);
+    transition: color var(--transition-fast);
+  }
+
+  button:hover:not(:disabled) {
+    color: var(--color-contrast-800);
+    background: var(--color-contrast-100);
+  }
+
+  button:active:not(:disabled) {
+    background: var(--color-contrast-200);
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+
   /* Style the inner <input> through bit-input's exported part */
   bit-input::part(input) {
     text-align: center;

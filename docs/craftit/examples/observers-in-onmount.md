@@ -1,56 +1,46 @@
 ---
-title: 'Craftit Examples — Observers in `onMount`'
-description: 'Observers in `onMount` examples for craftit.'
+title: 'Craftit Examples — Observers in onMounted()'
+description: 'Current Craftit observer example using onMounted() and explicit DOM refs.'
 ---
 
-## Observers in `onMount`
+## Observers in onMounted()
 
-## Problem
-
-Implement observers in `onmount` in a production-friendly way with `@vielzeug/craftit/observers` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
+Observer helpers from `@vielzeug/craftit/observers` require real DOM nodes, so call them in `onMounted()` after refs have resolved.
 
 ```ts
-import { component, define, effect, html, onMount, ref } from '@vielzeug/craftit';
+import { define, effect, html, onMounted, ref } from '@vielzeug/craftit';
 import { mediaObserver, resizeObserver } from '@vielzeug/craftit/observers';
 
-define(
-  'observed-panel',
-  component({
-    setup() {
-      const panel = ref<HTMLDivElement>();
+define('observed-panel', {
+  setup() {
+    const panel = ref<HTMLDivElement>();
 
-      onMount(() => {
-        const size = resizeObserver(panel.value!);
-        const dark = mediaObserver('(prefers-color-scheme: dark)');
+    onMounted(() => {
+      const element = panel.value;
 
-        effect(() => {
-          console.log('panel width', size.value.width, 'dark mode', dark.value);
-        });
+      if (!element) return;
+
+      const size = resizeObserver(element);
+      const dark = mediaObserver('(prefers-color-scheme: dark)');
+
+      effect(() => {
+        console.log('panel width', size.value.width, 'dark mode', dark.value);
       });
+    });
 
-      return html`<div ref=${panel}>Resize me</div>`;
-    },
-  }),
-);
+    return () => html`<div ref=${panel}>Resize me</div>`;
+  },
+});
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- Do not call these observer helpers before the target element exists.
+- `resizeObserver()` and `intersectionObserver()` need an actual element, not a nullable ref.
+- `mediaObserver()` is DOM-only as well because it uses `window.matchMedia`.
 
-## Common Pitfalls
+### Related
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Context Provider and Consumer](./context-provider-and-consumer.md)
-- [Counter Component](./counter-component.md)
-- [Form-Associated Rating Input](./form-associated-rating-input.md)
+- [Context provider and consumer](./context-provider-and-consumer.md)
+- [Counter component](./counter-component.md)
+- [Form-associated rating input](./form-associated-rating-input.md)

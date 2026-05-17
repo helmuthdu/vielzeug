@@ -5,6 +5,7 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
@@ -77,27 +78,24 @@
     }
   },
   "scripts": {
-    "build": "vite build && pnpm run build:core && pnpm run build:types",
+    "build": "pnpm run verify:exports && vite build && pnpm run build:core && pnpm run build:types",
     "build:core": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "pnpm run verify:exports && vitest",
+    "verify:exports": "node ./scripts/check-exports.mjs"
   },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "@vielzeug/logit": "workspace:*",
-    "typescript": "~6.0.2",
-    "vite": "^8.0.3",
-    "vitest": "^4.1.2"
-  },
-  "peerDependencies": {
-    "@vielzeug/logit": "workspace:*"
+    "@types/node": "^25.8.0",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.13",
+    "vitest": "^4.1.6"
   }
 }

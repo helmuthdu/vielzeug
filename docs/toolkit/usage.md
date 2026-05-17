@@ -1,42 +1,29 @@
 ---
 title: Toolkit — Usage Guide
-description: Array, async, object, string, math, and function utilities for Toolkit.
+description: Practical usage patterns for the current Toolkit API.
 ---
-
-# Toolkit Usage Guide
-
-::: tip New to Toolkit?
-Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
-:::
 
 [[toc]]
 
 ## Basic Usage
 
-### Import Patterns
-
-#### Named Imports (Recommended)
-
-Import only the utilities you need for optimal tree-shaking:
+### Named Imports (Recommended)
 
 ```ts
-import { chunk, group, debounce } from '@vielzeug/toolkit';
+import { chunk, groupBy, indexBy, pick, retry } from '@vielzeug/toolkit';
 
-const batches = chunk([1, 2, 3, 4, 5], 2);
-const byRole = group(users, (u) => u.role);
-const search = debounce((query) => fetchResults(query), 300);
+const pages = chunk([1, 2, 3, 4, 5], 2);
+const byRole = groupBy(users, (u) => u.role);
+const byId = indexBy(users, (u) => u.id);
+const user = pick({ id: 1, name: 'Alice', role: 'admin' }, ['id', 'name']);
+const result = await retry(() => fetch('/api').then((r) => r.json()), { times: 2 });
 ```
 
-### Namespace Imports (Not Recommended)
-
-⚠️ **Avoid** importing the entire library—this prevents tree-shaking:
+### Namespace Import (Avoid)
 
 ```ts
-// ❌ Don't do this – imports everything (~50KB)
+// Avoid: imports everything and weakens tree-shaking
 import * as toolkit from '@vielzeug/toolkit';
-
-// ✅ Do this instead – imports only what you need
-import { chunk, group } from '@vielzeug/toolkit';
 ```
 
 ## Common Patterns
@@ -44,407 +31,194 @@ import { chunk, group } from '@vielzeug/toolkit';
 ### Arrays
 
 ```ts
-import { select, group, chunk, toggle, uniq, keyBy, sort } from '@vielzeug/toolkit';
+import { filterMap, groupBy, indexBy, partition, sort, toggle, uniq, zip } from '@vielzeug/toolkit';
 
-const numbers = [1, 2, 3, 4, 5, 6];
+const values = [null, 1, 2, 3];
 
-// Filter nil elements from source, then map the rest
-const doubled = select([null, 2, null, 4], (n) => n * 2); // [4, 8]
+// filterMap maps values and skips undefined results
+const mapped = filterMap(values, (n) => (n == null ? 0 : n * 2)); // [0, 2, 4, 6]
 
-// Filter by predicate, then map
-const evenDoubled = select(
-  numbers,
-  (n) => n * 2,
-  (n) => n % 2 === 0,
-); // [4, 8, 12]
+// return undefined to filter an item out
+const filtered = filterMap(values, (n) => (n == null ? undefined : n)); // [1, 2, 3]
 
-// Group
-const byParity = group(numbers, (n) => (n % 2 === 0 ? 'even' : 'odd'));
-// { even: [2, 4, 6], odd: [1, 3, 5] }
+const sorted = sort(
+  [
+    { age: 30, name: 'Bob' },
+    { age: 30, name: 'Alice' },
+    { age: 25, name: 'Chris' },
+  ],
+  { age: 'desc', name: 'asc' },
+);
 
-// Chunk
-const batches = chunk(numbers, 2); // [[1, 2], [3, 4], [5, 6]]
+const tags = toggle(['ts', 'node'], 'ts'); // ['node']
+const deduped = uniq([1, 1, 2, 3]); // [1, 2, 3]
 
-// Sort by selector (ascending by default)
-const ascending = sort([{ value: 3 }, { value: 1 }], (item) => item.value);
-
-// Sort by multiple fields
-const users = [
-  { age: 30, name: 'Bob' },
-  { age: 30, name: 'Alice' },
-  { age: 25, name: 'Chris' },
-];
-const sortedUsers = sort(users, { age: 'desc', name: 'asc' });
-
-// Toggle item in/out
-const updated = toggle([1, 2, 3], 2); // [1, 3]
-
-// Remove duplicates
-const unique = uniq([1, 2, 2, 3]); // [1, 2, 3]
+// newer helpers
+const parts = partition([1, 2, 3, 4], (n) => n % 2 === 0); // [[2, 4], [1, 3]]
+const zipped = zip(['a', 'b'], [1, 2]); // [['a', 1], ['b', 2]]
+const byRole = groupBy([{ role: 'admin' }, { role: 'user' }], (item) => item.role);
+const byId = indexBy([{ id: 1 }, { id: 2 }], (item) => item.id);
 ```
 
 ### Objects
 
 ```ts
-import { merge, get, diff, seek, prune } from '@vielzeug/toolkit';
+import { deepClone, defaults, diff, get, prune, parseJSON, seek, pick, omit, mapValues } from '@vielzeug/toolkit';
 
-const config = { api: { host: 'localhost', port: 8080 } };
-const overrides = { api: { port: 3000 } };
+const prev = { api: { host: 'localhost', port: 3000 }, secure: undefined as boolean | undefined };
+const curr = deepClone(prev);
 
-// Deep merge
-const final = merge('deep', config, overrides);
-// { api: { host: 'localhost', port: 3000 } }
+curr.api.port = 4000;
 
-// Access nested properties safely
-const port = get(config, 'api.port'); // 8080
-const missing = get(config, 'api.timeout', 5000); // 5000 (default value)
-
-// Recursively search object values for a match
-seek(config, 'localhost', 1); // true (exact match)
-seek(config, 'local', 0.5); // true (fuzzy match)
-
-// Remove nulls/empty values
+const withDefaults = defaults(curr, { secure: true });
+const changes = diff(prev, curr); // { api: { port: 4000 } }
+const port = get(curr, 'api.port'); // 4000
 const clean = prune({ a: 1, b: null, c: '' }); // { a: 1 }
+const parsed = parseJSON('{"ok":true}', { defaultValue: { ok: false } });
+const found = seek(curr, 'localhost', 0.6);
 
-// Find differences
-const changes = diff(config, final);
+const publicUser = pick({ id: 1, name: 'Alice', password: 'secret' }, ['id', 'name']);
+const internalUser = omit({ id: 1, name: 'Alice', password: 'secret' }, ['password']);
+const renamed = mapValues({ a: 1, b: 2 }, (value) => value * 10);
+
+console.log(withDefaults, changes, port, clean, parsed, found, publicUser, internalUser, renamed);
 ```
 
-### Strings
+### Functions
 
 ```ts
-import { camelCase, snakeCase, truncate } from '@vielzeug/toolkit';
+import { compose, debounce, memo, once, partial, pipe, throttle, negate, tap } from '@vielzeug/toolkit';
 
-// Case conversion
-camelCase('hello-world'); // 'helloWorld'
-snakeCase('helloWorld'); // 'hello_world'
+const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
+const doubled = doubleAll([1, 2, 3]); // [2, 4, 6]
 
-// Truncate
-truncate('A very long string', 10); // 'A very lon...'
+const toUpperTrimmed = pipe(
+  (s: string) => s.trim(),
+  (s) => s.toUpperCase(),
+);
+
+const toUpperTrimmedRtl = compose(
+  (s: string) => s.toUpperCase(),
+  (s: string) => s.trim(),
+);
+
+const loadOnce = once(() => initApp());
+const expensive = memo((a: number, b: number) => a * b);
+const onInput = debounce((q: string) => console.log(q), 300);
+const onScroll = throttle(() => console.log(window.scrollY), 100);
+const odds = [1, 2, 3, 4, 5].filter(negate((n: number) => n % 2 === 0));
+const value = tap(42, (n) => console.log('debug', n));
 ```
 
-### Type Guards
+### Async
 
-All type checks live on the `is` namespace:
+```ts
+import { attempt, parallel, queue, retry, sleep, waitFor, timeout, memo } from '@vielzeug/toolkit';
+
+const attempted = await attempt(
+  async (signal) => {
+    const res = await fetch('/api/user', { signal });
+    return res.json();
+  },
+  { times: 2, timeout: 5_000 },
+);
+
+const values = await parallel([1, 2, 3, 4], async (n) => n * 2, { limit: 3 });
+
+const q = queue({ concurrency: 2 });
+const a = q.add(() => fetch('/a').then((r) => r.text()));
+const b = q.add(() => fetch('/b').then((r) => r.text()));
+await q.onIdle();
+
+await retry(() => fetch('/health').then((r) => r.json()), { times: 3, delay: 200 });
+await sleep(100);
+await waitFor(() => document.querySelector('#app') !== null, { timeout: 3_000 });
+
+const fetchJSON = memo((url: string) => fetch(url).then((r) => r.json()));
+const payload = await timeout(fetchJSON('/api/profile'), 3_000);
+
+await Promise.all([a, b]);
+```
+
+### Typed Namespace
 
 ```ts
 import { is } from '@vielzeug/toolkit';
 
-function processInput(input: unknown) {
-  if (is.string(input)) {
-    return input.toUpperCase(); // TypeScript knows input is string
-  }
-
-  if (is.array(input)) {
-    return input.length; // TypeScript knows input is array
-  }
-
-  if (is.object(input)) {
-    return Object.keys(input); // TypeScript knows input is object
-  }
+function normalize(input: unknown) {
+  if (is.string(input)) return input.trim();
+  if (is.number(input)) return String(input);
+  if (is.array(input)) return input.length;
+  if (is.nil(input)) return null;
+  return input;
 }
 
-// Deep equality, pattern matching, numeric checks
-is.equal([1, 2], [1, 2]); // true
-is.match(user, { role: 'admin' }); // true
-is.positive(5); // true
-is.within(3, 1, 5); // true
-is.ge(5, 5); // true  (a >= b)
-```
-
-### Money
-
-```ts
-import { currency, exchange } from '@vielzeug/toolkit';
-import type { Money } from '@vielzeug/toolkit';
-
-// Money amounts are stored as bigint (minor units) for precision
-const usd: Money = { amount: 123456n, currency: 'USD' }; // $1,234.56
-
-// Format for display
-currency(usd); // '$1,234.56'
-currency(usd, { locale: 'de-DE' }); // '1.234,56 $'
-currency(usd, { style: 'code' }); // 'USD 1,234.56'
-
-// Convert between currencies
-const rate = { from: 'USD', to: 'EUR', rate: 0.85 };
-const eur = exchange(usd, rate);
-// { amount: 104937n, currency: 'EUR' } (~€1,049.37)
-```
-
-### Dates
-
-```ts
-import { timeDiff, interval, expires } from '@vielzeug/toolkit';
-
-// Calculate the largest human-readable time unit between two dates
-const diff = timeDiff(new Date('2025-01-01'), new Date('2026-01-01'));
-// { value: 1, unit: 'year' }
-
-// Generate a date range
-const days = interval('2024-01-01', '2024-01-07', { interval: 'day' });
-// [Date(2024-01-01), Date(2024-01-02), ..., Date(2024-01-07)]
-
-// Check a date's expiry status
-expires('2024-01-01'); // 'EXPIRED'
-expires('2030-06-15'); // 'LATER'
-expires('2026-03-18'); // 'SOON' (within 7 days from today)
-expires('9999-12-31'); // 'NEVER'
-```
-
-### Random
-
-```ts
-import { uuid, random, draw, shuffle } from '@vielzeug/toolkit';
-
-// Cryptographically secure random values
-uuid(); // 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
-random(1, 10); // integer between 1 and 10 (inclusive)
-
-// Array sampling
-draw([1, 2, 3, 4, 5]); // random element, e.g. 3
-shuffle([1, 2, 3, 4, 5]); // new shuffled array, e.g. [3, 1, 5, 2, 4]
+is.equal({ a: 1 }, { a: 1 }); // true
+is.match({ a: 1, b: 2 }, { a: 1 }); // true
+is.typeOf(new Date()); // 'date'
 ```
 
 ## Advanced Usage
 
-### Async Operations
+### Scheduler + Queue
 
 ```ts
-import { parallel, retry, race, waitFor, Scheduler } from '@vielzeug/toolkit';
+import { Scheduler, queue } from '@vielzeug/toolkit';
 
-// Process with concurrency limit
-const users = await parallel(3, ids, async (id) => fetchUser(id));
-
-// Retry with exponential backoff
-const data = await retry(() => fetchData(), { times: 3, delay: 500, backoff: 2 });
-
-// Retry with per-attempt delay and selective predicate
-const data = await retry(() => fetchData(), {
-  times: 4,
-  retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
-  shouldRetry: (err) => !(err instanceof Response && err.status < 500),
-});
-
-// Ensure loading state shows for at least 300ms (prevents flicker)
-const result = await race(fetchQuickData(), 300);
-
-// Poll until ready
-await waitFor(() => document.querySelector('#app') !== null, { timeout: 5000 });
-
-// Schedule a low-priority background task (e.g. cache cleanup)
 const scheduler = new Scheduler();
-void scheduler.postTask(() => pruneStaleEntries(), {
-  delay: 5 * 60_000,
+const q = queue({ concurrency: 1 });
+
+void scheduler.postTask(() => q.add(() => fetch('/refresh')), {
+  delay: 10_000,
   priority: 'background',
 });
 ```
 
-### Composition
-
-Combine utilities for complex transformations:
+### Cache via stash
 
 ```ts
-import { select, group } from '@vielzeug/toolkit';
+import { stash } from '@vielzeug/toolkit';
 
-// Filter in-stock products and group by category
-const result = group(
-  select(products, (p) => (p.inStock ? p : null)),
-  (p) => p.category,
-);
-```
+const cache = stash<string>({
+  hash: (key) => JSON.stringify(key),
+});
 
-### Function Utilities
-
-```ts
-import { debounce, throttle, memo } from '@vielzeug/toolkit';
-
-// Debounce – delay execution
-const search = debounce((query) => {
-  console.log('Searching:', query);
-}, 300);
-
-// Throttle – limit rate
-const trackScroll = throttle(() => {
-  console.log('Scroll:', window.scrollY);
-}, 100);
-
-// Memoize – cache results
-const calculate = memo((n) => n * n);
+cache.set(['user', 1], 'Alice', { ttlMs: 5_000 });
+const value = cache.get(['user', 1]);
 ```
 
 ## Framework Integration
 
 ### React
 
-Use utilities with React hooks for optimal performance:
-
 ```tsx
-import { debounce, chunk } from '@vielzeug/toolkit';
-import { useState, useCallback, useMemo } from 'react';
+import { debounce, filterMap } from '@vielzeug/toolkit';
+import { useMemo } from 'react';
 
-function ProductList({ products }) {
-  const [search, setSearch] = useState('');
-
-  // Debounce search input
-  const handleSearch = useCallback(
-    debounce((query) => setSearch(query), 300),
-    [],
-  );
-
-  // Memoize expensive operations
-  const pages = useMemo(() => chunk(products, 20), [products]);
-
-  return null;
-}
+const visible = useMemo(() => filterMap(data, (item) => (item.hidden ? undefined : item)), [data]);
+const onSearch = useMemo(() => debounce((q: string) => console.log(q), 250), []);
 ```
 
-### Vue 3
-
-Use utilities with Vue composition API:
-
-```vue
-<script setup>
-import { computed, ref } from 'vue';
-import { group, select } from '@vielzeug/toolkit';
-
-const products = ref([]);
-const grouped = computed(() =>
-  group(
-    select(products.value, (p) => p),
-    (p) => p.category,
-  ),
-);
-</script>
-```
-
-### Node.js / Express
-
-Use utilities in server-side code:
+### Vue
 
 ```ts
-import { group } from '@vielzeug/toolkit';
+import { computed, ref } from 'vue';
+import { groupBy } from '@vielzeug/toolkit';
 
-app.get('/api/products', async (req, res) => {
-  const products = await fetchProducts();
-  const grouped = group(products, (p) => p.category);
-  res.json(grouped);
-});
-```
-
-> **💡 Tip**: See [Examples](./examples/array.md) for complete category examples.
-
-## TypeScript Configuration
-
-For optimal TypeScript support, configure your `tsconfig.json`:
-
-```jsonc
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-  },
-}
+const users = ref<User[]>([]);
+const byRole = computed(() => groupBy(users.value, (u) => u.role));
 ```
 
 ## Best Practices
 
-### 1. Use Named Imports
-
-✅ **Good**: Enables tree-shaking
-
-```ts
-import { chunk, group } from '@vielzeug/toolkit';
-```
-
-❌ **Bad**: Imports entire library
-
-```ts
-import * as toolkit from '@vielzeug/toolkit';
-```
-
-### 2. Leverage Type Inference
-
-✅ **Good**: Let TypeScript infer types
-
-```ts
-const names = select(users, (u) => u.name); // string[]
-```
-
-❌ **Bad**: Manual type assertions
-
-```ts
-const names = select(users, (u) => u.name) as string[];
-```
-
-### 3. Use Type Guards
-
-✅ **Good**: Type-safe runtime checks
-
-```ts
-if (is.string(value)) {
-  return value.toUpperCase();
-}
-```
-
-❌ **Bad**: Unsafe type assertions
-
-```ts
-return (value as string).toUpperCase();
-```
-
-### 4. Compose Utilities
-
-✅ **Good**: Readable transformations
-
-```ts
-const result = group(select(items, isValid), (item) => item.category);
-```
-
-❌ **Bad**: Nested callbacks
-
-```ts
-const result = items.reduce((acc, item) => {
-  if (isValid(item)) {
-    // ... complex logic
-  }
-  return acc;
-}, {});
-```
-
-### 5. Handle Async Operations
-
-✅ **Good**: Use `parallel` for concurrent fetching
-
-```ts
-const users = await parallel(5, ids, async (id) => fetchUser(id));
-```
-
-❌ **Bad**: Manual Promise.all
-
-```ts
-const promises = ids.map((id) => fetchUser(id));
-const users = await Promise.all(promises);
-```
+- Prefer named imports from `@vielzeug/toolkit`.
+- `pick` selects object properties only (`pick(obj, keys)`).
+- Use `partial` when adapting multi-arg APIs to unary composition flows.
+- For cancellation-aware async work, pass `AbortSignal` through your callback stack.
+- Use `createLocalSource` and `createRemoteSource` from `@vielzeug/sourceit` for reactive paginated sources.
 
 ## Performance Tips
 
-1. **Import only what you need**: Tree-shaking reduces bundle size
-2. **Use memoization**: Cache expensive computations with `memo()`
-3. **Debounce/throttle**: Reduce function call frequency
-4. **Chunk large arrays**: Process data in batches for better performance
-5. **Profile your code**: Use DevTools to identify bottlenecks
-
-## Browser Compatibility
-
-Toolkit requires modern JavaScript features (ES2020+):
-
-- **Modern browsers**: Chrome 80+, Firefox 75+, Safari 13.1+, Edge 80+
-- **Node.js**: v16.x or higher recommended
-
-For older browsers, use a transpiler like Babel or SWC.
+- Reuse debounced/throttled functions instead of recreating them per render.
+- Use `queue` for explicit concurrency and `parallel` for bounded fan-out processing.
+- Prefer `is.match` for partial checks over repeated ad-hoc deep traversals.

@@ -1,51 +1,71 @@
 ---
 title: Validit — API Reference
-description: Complete API reference for Validit schemas and methods.
+description: Complete reference for validit exports, v factories, schema methods, specialized schemas, messages, types, and errors.
 ---
-
-# Validit API Reference
 
 [[toc]]
 
+## Package Entry Point
+
+| Import                | Purpose                |
+| --------------------- | ---------------------- |
+| `@vielzeug/validit`   | Main exports and types |
+
 ## API At a Glance
 
-| Symbol             | Purpose                                 | Execution mode | Common gotcha                                         |
-| ------------------ | --------------------------------------- | -------------- | ----------------------------------------------------- |
-| `v.object()`       | Create typed object schema definitions  | Sync           | Use strict/passthrough intentionally for unknown keys |
-| `safeParse()`      | Validate unknown input without throwing | Sync           | Always branch on success before using parsed data     |
-| `safeParseAsync()` | Validate async refinement pipelines     | Async          | Await result to capture async validation issues       |
+| Symbol             | Purpose                                 | Execution mode | Common gotcha                                        |
+| ------------------ | --------------------------------------- | -------------- | ---------------------------------------------------- |
+| `v.object()`       | Create typed object schema definitions  | Sync           | Unknown keys are rejected by default                 |
+| `safeParse()`      | Validate unknown input without throwing | Sync           | Always branch on success before using parsed data    |
+| `safeParseAsync()` | Validate async check pipelines          | Async          | Await result to capture async validation issues      |
+| `configure()`      | Override global validation messages     | Sync           | Message keys are nested groups, not flat string keys |
+
+## Most Used First
+
+### External boundaries
+
+- Use `safeParse()` when validating request payloads, form input, query params, or external API responses.
+- Use `safeParseAsync()` when any part of the schema tree uses async `check()` validation.
+- Use `parse()` and `parseAsync()` when validation failure should be exceptional and you want a thrown `ValidationError`.
+
+### Common composition flow
+
+1. Start with a factory from `v`.
+2. Add built-in constraints like `.min()` or `.email()`.
+3. Add `preprocess()`, `default()`, `optional()`, or `nullable()` as needed.
+4. Add `.check()` for domain-specific rules.
+5. Add `transform()` only after type-specific validators are complete.
 
 ## Package Exports
 
 ```ts
 import {
   ErrorCode,
+  flattenFirstErrors,
   Schema,
   ValidationError,
-  any,
   configure,
-  nullable,
-  nullish,
-  optional,
-  preprocess,
-  resolveMessage,
-  unknown,
+  reset,
   v,
   type Infer,
-  type InferOutput,
+  type InferInput,
   type Issue,
   type MessageFn,
   type ParseResult,
+  type ValidateFn,
+  type AsyncValidateFn,
   type Messages,
 } from '@vielzeug/validit';
 ```
 
-`@vielzeug/validit` also exports flat schema factories and schema classes from `./schemas` (for example: `string`, `number`, `object`, `array`, `union`, `variant`, `enumOf`, `nativeEnum`, `instanceOf`, `coerceString`).
+`@vielzeug/validit` exports `v` as the canonical schema factory namespace.
 
-## v Factory
+## v Namespace
 
 ### Primitive Factories
 
+- `v.any()`
+- `v.unknown()`
 - `v.string()`
 - `v.number()`
 - `v.boolean()`
@@ -55,14 +75,14 @@ import {
 - `v.nativeEnum(enumObj)`
 - `v.null()`
 - `v.undefined()`
-- `v.any()`
-- `v.unknown()`
 - `v.never()`
 
 ### Composite Factories
 
 - `v.object(shape)`
 - `v.array(itemSchema)`
+- `v.set(itemSchema)`
+- `v.map(keySchema, valueSchema)`
 - `v.tuple(items)`
 - `v.record(keySchema, valueSchema)`
 - `v.union(a, b, ...rest)`
@@ -71,23 +91,21 @@ import {
 - `v.lazy(getter)`
 - `v.instanceof(ClassCtor)`
 
-### Wrapper/Utility Factories
-
-- `v.optional(schema)`
-- `v.nullable(schema)`
-- `v.nullish(schema)`
-- `v.preprocess(fn, schema)`
-
 ### Coercion Factories
 
 - `v.coerce.string()`
 - `v.coerce.number()`
 - `v.coerce.boolean()`
 - `v.coerce.date()`
+- `v.coerce.bigint()`
 
-## Schema Base Methods
+### Utility Factories
 
-All schemas inherit from `Schema<Output>`.
+- `v.bigint()`
+
+## Schema
+
+All schema classes inherit from `Schema<Output, Input>`.
 
 ### Validation
 
@@ -100,7 +118,12 @@ safeParseAsync(value: unknown): Promise<ParseResult<Output>>
 
 - `parse()` throws `ValidationError` on failure.
 - `safeParse()` never throws for validation failures.
-- If async validators exist, `parse()` throws and you must use `parseAsync()` / `safeParseAsync()`.
+- If async validators exist, `parse()` throws and you must use `parseAsync()` or `safeParseAsync()`.
+
+`parse()` can throw either:
+
+- `ValidationError` for validation failures
+- `Error` when called on schemas that contain async validators
 
 ### Modifiers
 
@@ -113,32 +136,37 @@ default(value: Output | (() => Output)): this
 catch(fallback: Output | (() => Output)): this
 ```
 
+- `default()` applies only when the input is `undefined`.
+- `catch()` returns a fallback only for `ValidationError` failures.
+
 ### Custom Validation
 
 ```ts
-refine(
-  check: (value: Output) => boolean,
-  message?: MessageFn<{ value: Output }>,
-): this
-
-refineAsync(
-  check: (value: Output) => Promise<boolean>,
+check(
+  check: (
+    value: Output,
+    ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
+  ) => boolean | Issue | Issue[] | null | undefined | Promise<boolean | Issue | Issue[] | null | undefined>,
   message?: MessageFn<{ value: Output }>,
 ): this
 ```
 
-- `refine()` is sync only.
-- `refineAsync()` stores async checks used by `parseAsync()` and `safeParseAsync()`.
+- `check()` supports sync and async validation.
+- Return `false` to use the default message, return an `Issue` or `Issue[]` for custom issues, or use `ctx.addIssue()` for explicit path control.
 
 ### Transform and Metadata
 
 ```ts
-transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput>
+transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input>
 preprocess(fn: (value: unknown) => unknown): this
 describe(description: string): this
-brand<Brand extends string>(): Schema<Output & { __brand: Brand }>
+readonly description: string | undefined
+brand<Brand extends string>(): Schema<Output & { __brand: Brand }, Input>
+readonly(): Schema<Readonly<Output>, Input>
 is(value: unknown): value is Output
 ```
+
+`preprocess()` steps run in declaration order.
 
 ## StringSchema
 
@@ -147,7 +175,7 @@ is(value: unknown): value is Output
 - `.min(length, message?)`
 - `.max(length, message?)`
 - `.length(exact, message?)`
-- `.nonempty(message?)`
+- `.nonEmpty(message?)`
 - `.startsWith(prefix, message?)`
 - `.endsWith(suffix, message?)`
 - `.includes(substr, message?)`
@@ -155,11 +183,32 @@ is(value: unknown): value is Output
 - `.email(message?)`
 - `.url(message?)`
 - `.uuid(message?)`
-- `.date(message?)`
-- `.datetime(message?)`
+- `.isoDate(message?)`
+- `.isoDateTime(message?)`
+- `.ip(message?)`
 - `.trim()`
 - `.lowercase()`
 - `.uppercase()`
+- `.cuid()`
+- `.cuid2()`
+- `.ulid()`
+- `.nanoid()`
+- `.base64()`
+- `.base64url()`
+- `.hex()`
+- `.hexColor()`
+- `.emoji()`
+- `.jwt()`
+- `.time()`
+- `.duration()`
+- `.semver()`
+- `.slug()`
+- `.numeric()`
+
+Notes:
+
+- `email()` uses a pragmatic syntax-focused regex, not full SMTP validation.
+- `ip()` accepts IPv4 and IPv6.
 
 ## NumberSchema
 
@@ -173,6 +222,10 @@ is(value: unknown): value is Output
 - `.nonNegative(message?)`
 - `.nonPositive(message?)`
 - `.multipleOf(step, message?)`
+- `.safe(message?)`
+- `.finite(message?)`
+
+`safe()` checks `Number.isSafeInteger(value)`.
 
 ## DateSchema
 
@@ -181,6 +234,8 @@ is(value: unknown): value is Output
 - `.min(date, message?)`
 - `.max(date, message?)`
 
+`v.coerce.date()` converts string or number inputs to `Date` before validation.
+
 ## ArraySchema
 
 `v.array(schema)` methods:
@@ -188,7 +243,10 @@ is(value: unknown): value is Output
 - `.min(length, message?)`
 - `.max(length, message?)`
 - `.length(exact, message?)`
-- `.nonempty(message?)`
+- `.nonEmpty(message?)`
+- `.unique(message?)`
+
+`unique()` uses JavaScript `Set` semantics.
 
 ## ObjectSchema
 
@@ -200,25 +258,43 @@ is(value: unknown): value is Output
 - `.extend(extraShape)`
 - `.pick(...keys)`
 - `.omit(...keys)`
+- `.relaxed()`
 - `.strip()`
-- `.passthrough()`
-- `.strict()`
 
 Properties:
 
 - `.shape` (readonly)
 
+Behavior notes:
+
+- `v.object(...)` rejects unknown keys by default.
+- `.relaxed()` allows unknown keys and preserves them in output.
+- `.strip()` ignores unknown keys in output.
+
 ## TupleSchema
 
 `v.tuple(items)` validates fixed-length arrays with per-index schemas.
+
+- Input must be an array.
+- Input length must match the tuple length exactly by default.
+- `.rest(schema)` allows variadic tail items validated by `schema`.
 
 ## RecordSchema
 
 `v.record(keySchema, valueSchema)` validates object keys and values.
 
-## Union and Intersection
+- The input must be a plain object.
+- Keys are parsed as strings through `keySchema`.
+- If the parsed key changes, the output uses the parsed key.
 
-### UnionSchema
+Example:
+
+```ts
+v.record(v.string().trim().lowercase(), v.string()).parse({ ' X-ID ': '1' });
+// => { 'x-id': '1' }
+```
+
+## UnionSchema
 
 `v.union(a, b, ...rest)`:
 
@@ -226,12 +302,13 @@ Properties:
 - returns the output of the first successful branch
 - exposes `.schemas` (readonly normalized branch schemas)
 
-### IntersectSchema
+## IntersectSchema
 
 `v.intersect(a, b, ...rest)`:
 
 - all branches must pass
 - aggregates issues from failing branches
+- merges object outputs from successful branches in order
 - exposes `.schemas` (readonly)
 
 ## VariantSchema
@@ -241,43 +318,58 @@ Properties:
 - requires `map` values to be object schemas
 - injects discriminator literals into each branch internally
 - validates in O(1) by discriminator lookup
+- inherits strict object behavior from each branch unless the branch schema uses `.relaxed()`
 
 ## Other Schemas
 
 - `v.lazy(getter)` for recursive schemas
 - `v.instanceof(Ctor)` for class instance checks
-- `v.enum(values)` for string tuple enums
+- `v.bigint()` for bigint values and constraints
+- `v.set(itemSchema)` for typed sets
+- `v.map(keySchema, valueSchema)` for typed maps
+- `v.enum(values)` for string or number tuples
 - `v.nativeEnum(enumObj)` for TS native enums
 - `v.literal(value)` for exact value match
 - `v.never()` always fails
 
-## Global Configuration
+## Global Messages
 
-### configure
+### `configure()`
 
 ```ts
 configure({
   messages: {
-    string_email: () => 'Invalid email',
-    number_min: ({ min }) => `Must be >= ${min}`,
+    number: {
+      min: ({ min }) => `Must be >= ${min}`,
+    },
+    string: {
+      email: () => 'Invalid email',
+      ip: () => 'Invalid IP address',
+    },
   },
 });
 ```
 
-### Messages
+### `reset()`
 
-`Messages` is the full message contract used internally. `configure({ messages })` accepts `Partial<Messages>`.
+```ts
+reset();
+```
+
+### `Messages`
+
+`Messages` is the full nested message contract used internally. `configure({ messages })` accepts a deep partial shape, so you can override only the keys you need.
 
 ## Types
 
-### Infer and InferOutput
+### Infer and InferInput
 
 ```ts
 type User = Infer<typeof UserSchema>;
-type UserOut = InferOutput<typeof UserSchema>;
+type UserIn = InferInput<typeof UserSchema>;
 ```
 
-Both extract schema output types.
+`InferInput<T>` extracts the accepted input type, while `Infer<T>` extracts output types.
 
 ### ParseResult
 
@@ -291,14 +383,6 @@ type ParseResult<T> = { success: true; data: T } | { success: false; error: Vali
 type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
 ```
 
-## Errors
-
-### ValidationError
-
-- `.issues: Issue[]`
-- `.flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] }`
-- `ValidationError.is(value): value is ValidationError`
-
 ### Issue
 
 ```ts
@@ -310,12 +394,26 @@ type Issue = {
 };
 ```
 
+## Errors
+
+### ValidationError
+
+- `.issues: Issue[]`
+- `.flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] }`
+- `.format(): { _errors: string[]; [key: string]: ... }`
+- `ValidationError.is(value): value is ValidationError`
+
+`flattenFirstErrors(error)` is exported as a utility to map field errors to a single first message per field.
+
 ### ErrorCode
 
 Built-in codes:
 
 - `custom`
+- `invalid_base64`
+- `invalid_bigint`
 - `invalid_date`
+- `invalid_duration`
 - `invalid_enum`
 - `invalid_length`
 - `invalid_literal`
@@ -324,8 +422,11 @@ Built-in codes:
 - `invalid_union`
 - `invalid_url`
 - `invalid_variant`
+- `not_finite`
 - `not_integer`
 - `not_multiple_of`
+- `not_safe`
+- `not_unique`
 - `too_big`
 - `too_small`
 - `unrecognized_keys`

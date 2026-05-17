@@ -1,15 +1,16 @@
 export { ANONYMOUS, WILDCARD } from './constants';
 export { createPermit } from './factory';
+export { owns } from './helpers';
 export type {
-  PermissionData,
-  PermitEffect,
-  PermitGuard,
-  PermitPolicy,
-  PermitPredicate,
-  PermitPrincipal,
-  PermitRule,
+  BoundPermit,
   Permit,
+  PermitCheck,
+  PermitDecision,
+  PermitLoggerContext,
   PermitOptions,
-  PrincipalInput,
+  PermitPredicate,
+  PermitRule,
+  Principal,
+  RuleContext,
   UserPrincipal,
 } from './types';

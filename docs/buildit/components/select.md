@@ -338,11 +338,11 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 
 ### Events
 
-| Event    | Detail                                | Description                               |
-| -------- | ------------------------------------- | ----------------------------------------- |
+| Event    | Detail                                                                         | Description                               |
+| -------- | ------------------------------------------------------------------------------ | ----------------------------------------- |
 | `change` | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when the selected value(s) change |
-| `open`   | `{ reason: 'trigger' \| 'programmatic' }` | Emitted when the dropdown opens |
-| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }` | Emitted when the dropdown closes |
+| `open`   | `{ reason: 'trigger' \| 'programmatic' }`                                      | Emitted when the dropdown opens           |
+| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }`       | Emitted when the dropdown closes          |
 
 ### CSS Custom Properties
 

@@ -5,13 +5,11 @@ description: 'Inspecting listener counts examples for eventit.'
 
 ## Inspecting listener counts
 
-## Problem
+### Problem
 
-Implement inspecting listener counts in a production-friendly way with `@vielzeug/eventit` while keeping setup and cleanup explicit.
+During debugging or in a test, you want to assert that exactly the right number of listeners are registered on the bus — detecting leaks from missing cleanup or verifying that setup ran correctly.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
+### Solution
 
 Useful for debugging, conditional logic, or test assertions:
 
@@ -33,19 +31,15 @@ bus.dispose();
 bus.listenerCount(); // 0
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `listenerCount(event)` only counts listeners for that exact event name. Listeners registered under a different casing or alias are not included.
+- The count is live. If you cache it, it becomes stale the moment a listener is added or removed.
+- `eventNames()` only returns names with at least one active listener. A name with no listeners does not appear, even if it was previously used.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
 - [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)

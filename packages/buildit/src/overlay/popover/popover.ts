@@ -1,12 +1,11 @@
 import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
 
-import { define, computed, createCleanupSignal, createId, html, onMount, signal, watch } from '@vielzeug/craftit';
+import { computed, createId, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
 import { createOverlayControl } from '@vielzeug/craftit/controls';
-import { flip, offset, positionFloat, shift, type Placement } from '@vielzeug/floatit';
+import { computePosition, flip, offset, type Placement, shift } from '@vielzeug/floatit';
 
-import { disablableBundle, type PropBundle } from '../../inputs/shared/bundles';
+import { disablableBundle } from '../../inputs/shared/bundles';
 import { reducedMotionMixin } from '../../styles';
-import { syncAria } from '../../utils/aria';
 import styles from './popover.css?inline';
 
 export type PopoverTrigger = 'click' | 'hover' | 'focus';
@@ -47,15 +46,6 @@ export type BitPopoverProps = {
   trigger?: string;
 };
 
-const popoverProps: PropBundle<BitPopoverProps> = {
-  ...disablableBundle,
-  label: undefined,
-  offset: PANEL_OFFSET,
-  open: undefined,
-  placement: 'bottom',
-  trigger: 'click',
-};
-
 /**
  * A floating informational or interactive panel anchored to a trigger element.
  * Unlike tooltips, popovers support arbitrary interactive content via slots.
@@ -88,11 +78,33 @@ const popoverProps: PropBundle<BitPopoverProps> = {
  * ```
  */
 export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popover', {
-  props: popoverProps,
-  setup({ emit, host, props, slots }) {
+  props: {
+    ...disablableBundle,
+    label: undefined,
+    offset: PANEL_OFFSET,
+    open: undefined,
+    placement: prop.oneOf(
+      [
+        'top',
+        'top-start',
+        'top-end',
+        'bottom',
+        'bottom-start',
+        'bottom-end',
+        'left',
+        'left-start',
+        'left-end',
+        'right',
+        'right-start',
+        'right-end',
+      ] as const,
+      'bottom',
+    ),
+    trigger: 'click',
+  },
+  setup(props, { emit, host, slots }) {
     const visible = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
-    const ariaDisabled = computed(() => String(isDisabled.value));
     const isControlled = computed(() => props.open.value !== undefined);
     const runIfUncontrolled = (action: () => void) => {
       if (isControlled.value) return;
@@ -104,13 +116,11 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     let currentTrigger: HTMLElement | null = null;
     const triggers = computed<PopoverTrigger[]>(() => normalizeTriggers(props.trigger.value));
     const overlay = createOverlayControl({
-      disabled: isDisabled,
-      elements: {
-        boundary: host.el,
-        panel: panelEl,
-        trigger: currentTrigger,
-      },
-      isOpen: visible,
+      getBoundaryElement: () => host.el,
+      getPanelElement: () => panelEl,
+      getTriggerElement: () => currentTrigger,
+      isDisabled: () => isDisabled.value,
+      isOpen: () => visible.value,
       onClose: (reason) => emit('close', { reason }),
       onOpen: (reason) => emit('open', { reason }),
       positioner: {
@@ -135,12 +145,14 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
     function updatePosition() {
       if (!panelEl || !currentTrigger) return;
 
-      const resolvedPlacement = positionFloat(currentTrigger, panelEl, {
+      const resolvedPlacement = computePosition(currentTrigger, panelEl, {
         middleware: [offset(props.offset.value ?? PANEL_OFFSET), flip(), shift({ padding: 8 })],
         placement: props.placement.value,
       });
 
-      if (panelEl) panelEl.dataset.placement = resolvedPlacement;
+      panelEl.style.left = `${resolvedPlacement.x}px`;
+      panelEl.style.top = `${resolvedPlacement.y}px`;
+      panelEl.dataset.placement = resolvedPlacement.placement;
     }
     /** Show the panel and start auto-updating its position. */
     function showFloat() {
@@ -157,10 +169,10 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
       if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
     }
     function open(reason: OverlayOpenDetail['reason'] = 'trigger') {
-      runIfUncontrolled(() => overlay.open(reason));
+      runIfUncontrolled(() => overlay.open({ reason }));
     }
     function close(reason: OverlayCloseDetail['reason'] = 'trigger') {
-      runIfUncontrolled(() => overlay.close(reason, false));
+      runIfUncontrolled(() => overlay.close({ reason, restoreFocus: false }));
     }
     function toggle() {
       runIfUncontrolled(() => overlay.toggle());
@@ -194,14 +206,16 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
 
       close('trigger');
     }
-    onMount(() => {
-      const triggerSlot = host.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-      const triggerBinding = createCleanupSignal();
+
+    onMounted(() => {
+      const triggerSlot = host.el.shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      let triggerBinding: (() => void) | null = null;
 
       if (!triggerSlot) return;
 
       const bindEvents = () => {
-        triggerBinding.clear();
+        triggerBinding?.();
+        triggerBinding = null;
 
         const el = triggerSlot.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
@@ -215,7 +229,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
 
         const removeAria = syncAria(el, {
           controls: () => panelId,
-          disabled: () => ariaDisabled.value,
+          disabled: () => String(isDisabled.value),
           expanded: () => String(visible.value),
           haspopup: 'dialog',
         });
@@ -258,13 +272,13 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
 
         add(document, 'keydown', handleKeydown as EventListener);
 
-        triggerBinding.set(() => {
+        triggerBinding = () => {
           removeAria();
 
           for (const cleanup of cleanups) cleanup();
 
           currentTrigger = null;
-        });
+        };
       };
 
       watch(slots.elements(), bindEvents, { immediate: true });
@@ -286,13 +300,14 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
       });
 
       return () => {
-        triggerBinding.clear();
+        triggerBinding?.();
+        triggerBinding = null;
 
         if (panelEl?.matches(':popover-open')) panelEl.hidePopover();
       };
     });
 
-    return html`
+    return () => html`
       <slot></slot>
       <div
         class="panel"
@@ -301,7 +316,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
         role="dialog"
         aria-modal="false"
         popover="manual"
-        :aria-label="${() => props.label.value ?? null}"
+        :aria-label="${props.label}"
         :aria-hidden="${() => String(!visible.value)}"
         ref=${(el: HTMLElement) => {
           panelEl = el;

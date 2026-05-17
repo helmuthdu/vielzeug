@@ -3,24 +3,23 @@ title: Eventit — API Reference
 description: Source-aligned API reference for @vielzeug/eventit and @vielzeug/eventit/test.
 ---
 
-# Eventit API Reference
-
 [[toc]]
 
 ## API At a Glance
 
-| Symbol            | Purpose                                 | Execution mode | Common gotcha                                 |
-| ----------------- | --------------------------------------- | -------------- | --------------------------------------------- |
-| `createBus()`     | Create a typed event bus instance       | Sync           | Use a strict event map to avoid payload drift |
-| `bus.wait()`      | Await a one-time event occurrence       | Async          | Handle timeout/cancellation for long waits    |
-| `createTestBus()` | Create deterministic test bus utilities | Sync           | Reset emitted events between test cases       |
+| Symbol             | Purpose                                 | Execution mode | Common gotcha                                 |
+| ------------------ | --------------------------------------- | -------------- | --------------------------------------------- |
+| `createBus()`      | Create a typed event bus instance       | Sync           | Use a strict event map to avoid payload drift |
+| `bus.wait()`       | Await a one-time event occurrence       | Async          | Handle timeout/cancellation for long waits    |
+| `bus.waitAny()`    | Await the first event from many         | Async          | Result is a discriminated union by event key  |
+| `bus.eventNames()` | Inspect events with active listeners    | Sync           | Snapshot reflects current subscriptions       |
+| `createTestBus()`  | Create deterministic test bus utilities | Sync           | Reset emitted events between test cases       |
 
 ## Package Entry Points
 
 | Import                   | Purpose                        |
 | ------------------------ | ------------------------------ |
 | `@vielzeug/eventit`      | Main runtime API and types     |
-| `@vielzeug/eventit/core` | Core bundle entry              |
 | `@vielzeug/eventit/test` | Test helpers (`createTestBus`) |
 
 ## Types
@@ -30,9 +29,10 @@ description: Source-aligned API reference for @vielzeug/eventit and @vielzeug/ev
 - `Listener<T>`: `(payload: T) => void`
 - `Unsubscribe`: `() => void`
 - `BusOptions<T>`:
-  - `onEmit(event, payload)` called before listeners run
+  - `onDispatch(event, payload)` called before listeners run
   - `onError(err, event, payload)` called for listener errors (instead of re-throw)
-- `Bus<T>`: typed runtime bus (`on`, `once`, `emit`, `wait`, `events`, `listenerCount`, `dispose`)
+- `WaitAnyResult<T, K>`: typed union result for `waitAny()` (`{ event, payload }`)
+- `Bus<T>`: typed runtime bus (`on`, `once`, `emit`, `wait`, `waitAny`, `events`, `listenerCount`, `eventNames`, `removeAllListeners`, `dispose`)
 - `TestBus<T>`: `Bus<T>` plus `emitted(event)` and `reset()`
 
 ### `BusDisposedError`
@@ -62,7 +62,7 @@ type AppEvents = {
 };
 
 const bus = createBus<AppEvents>({
-  onEmit: (event, payload) => console.debug('[bus]', event, payload),
+  onDispatch: (event, payload) => console.debug('[bus]', event, payload),
   onError: (err, event, payload) => console.error('[bus] error in', event, err, payload),
 });
 ```
@@ -160,16 +160,42 @@ const timedLogin = await bus.wait('user:login', AbortSignal.timeout(5_000));
 
 ---
 
+### `bus.waitAny()`
+
+Signature: `waitAny(events, signal?) => Promise<{ event, payload }>`
+
+Waits for the first emitted event among a list of event keys.
+
+| Parameter | Type           | Description           |
+| --------- | -------------- | --------------------- |
+| `events`  | `readonly K[]` | Event keys to race    |
+| `signal`  | `AbortSignal`  | Optional abort signal |
+
+**Returns:** `Promise<WaitAnyResult<T, K>>`
+
+**Rejects when:**
+
+- The bus is disposed before any listed event fires — rejects with `BusDisposedError`
+- The provided `signal` aborts — rejects with `signal.reason`
+
+```ts
+const winner = await bus.waitAny(['user:login', 'user:logout'] as const);
+
+if (winner.event === 'user:login') {
+  console.log(winner.payload.userId);
+}
+```
+
+---
+
 ### `bus.events()`
 
-Signature: `events(event, signal?) => AsyncGenerator<payload>`
+Signature: `events(event, options?) => AsyncGenerator<payload>`
 
 Returns an `AsyncGenerator` that yields payloads for every future emit of `event`. Pull-based — only proceeds when the `for await` loop body is ready.
 
-| Parameter | Type          | Description                       |
-| --------- | ------------- | --------------------------------- |
-| `event`   | `K`           | Event key to stream               |
-| `signal`  | `AbortSignal` | Optional early-termination signal |
+- `event: K` — event key to stream
+- `options?: { signal?: AbortSignal; maxBuffer?: number }` — optional early termination and buffering
 
 **Terminates when:**
 
@@ -184,7 +210,7 @@ for await (const payload of bus.events('cart:updated')) {
 
 // Stop early
 const ctl = new AbortController();
-for await (const payload of bus.events('data:loaded', ctl.signal)) {
+for await (const payload of bus.events('data:loaded', { signal: ctl.signal, maxBuffer: 50 })) {
   if (payload.count === 0) ctl.abort();
 }
 ```
@@ -267,6 +293,38 @@ bus.dispose();
 bus.listenerCount(); // 0
 ```
 
+---
+
+### `bus.eventNames()`
+
+Signature: `eventNames() => EventKey<T>[]`
+
+Returns a snapshot of event keys that currently have at least one active listener.
+
+```ts
+bus.on('user:login', handler1);
+bus.on('user:logout', handler2);
+
+bus.eventNames(); // ['user:login', 'user:logout']
+```
+
+---
+
+### `bus.removeAllListeners()`
+
+Signature: `removeAllListeners(event?) => void`
+
+Removes all listeners for one event, or all listeners for all events when called without arguments.
+
+| Parameter | Type                     | Description                                     |
+| --------- | ------------------------ | ----------------------------------------------- |
+| `event`   | `EventKey<T>` (optional) | Specific event key; omit to clear all listeners |
+
+```ts
+bus.removeAllListeners('user:login');
+bus.removeAllListeners(); // remove everything
+```
+
 ## Testing Utilities
 
 Import from `@vielzeug/eventit/test`.
@@ -283,7 +341,7 @@ Behavior:
 - `emitted(event)` returns a snapshot array
 - `reset()` clears records without removing listeners
 - `dispose()` clears listeners and records
-- Accepts full `BusOptions<T>` including `onEmit` and `onError`
+- Accepts full `BusOptions<T>` including `onDispatch` and `onError`
 
 | Parameter | Type            | Description                                     |
 | --------- | --------------- | ----------------------------------------------- |

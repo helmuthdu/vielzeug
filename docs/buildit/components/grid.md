@@ -12,7 +12,7 @@ A flexible CSS Grid layout component with element-width responsive columns, name
 - 🔄 **Flow Control**: Row, column, and dense packing modes
 - 📊 **7 Gap Sizes**: From `none` to `2xl` with separate row/column gap support
 - 🧲 **Alignment Control**: Align and justify items with CSS Grid properties
-- 🎨 **Grid Item Component**: Precise placement with `bit-grid-item` using spans or raw CSS grid shorthand
+- 🎨 **Grid Item Component**: Precise placement with `bit-grid-item` using named areas, spans, or raw CSS grid shorthand
 - 🔧 **Customizable**: CSS custom properties available as fallbacks
 
 ## Source Code
@@ -269,6 +269,36 @@ With `flow="row-dense"`, item B fills the gap after the first wide item, rather 
 
 Use `bit-grid-item` for precise placement and span control within a `bit-grid`.
 
+### Named Area Placement
+
+When your grid uses `areas`, assign children with the `area` attribute instead of inline CSS. This keeps shell and dashboard layouts declarative.
+
+<ComponentPreview center vertical>
+
+```html
+<bit-grid
+  cols="3"
+  rows="3"
+  areas="'header header header' 'nav main main' 'footer footer footer'"
+  gap="md"
+  style="width: 100%; min-height: 300px;">
+  <bit-grid-item area="header">
+    <bit-box padding="md" color="primary"><bit-text>Header</bit-text></bit-box>
+  </bit-grid-item>
+  <bit-grid-item area="nav">
+    <bit-box padding="md" color="secondary"><bit-text>Nav</bit-text></bit-box>
+  </bit-grid-item>
+  <bit-grid-item area="main">
+    <bit-box padding="md" color="success"><bit-text>Main</bit-text></bit-box>
+  </bit-grid-item>
+  <bit-grid-item area="footer">
+    <bit-box padding="md" color="warning"><bit-text>Footer</bit-text></bit-box>
+  </bit-grid-item>
+</bit-grid>
+```
+
+</ComponentPreview>
+
 ### Column and Row Spans
 
 `col-span` and `row-span` cover the common case of stretching an item across multiple tracks. Use `"full"` to span all columns or rows.
@@ -343,7 +373,7 @@ Use `align` and `justify` on `bit-grid-item` to override the grid's default alig
 
 ## Named Grid Areas
 
-Use `areas` (and its breakpoint variants `areas-sm`, `areas-md`, `areas-lg`, `areas-xl`, `areas-2xl`) to define named regions on the grid. The active value is resolved from the element's own width via `ResizeObserver`, identical to how `cols-*` breakpoints work. Children can be placed into regions with `style="grid-area: name"` or via the `col` / `row` attrs on `bit-grid-item`.
+Use `areas` (and its breakpoint variants `areas-sm`, `areas-md`, `areas-lg`, `areas-xl`, `areas-2xl`) to define named regions on the grid. The active value is resolved from the element's own width via `ResizeObserver`, identical to how `cols-*` breakpoints work. Children can be placed into regions with `area="name"` on `bit-grid-item`.
 
 ### Basic Areas
 
@@ -381,23 +411,31 @@ Provide different area templates at each breakpoint. The grid switches between t
 
 ```html
 <bit-grid
-  cols="1"
-  cols-md="3"
+  cols-sm="3"
   areas="'header' 'nav' 'main' 'footer'"
-  areas-md="'header header header' 'nav main main' 'footer footer footer'"
+  areas-sm="'header header header' 'nav main main' 'footer footer footer'"
   gap="md"
   style="width: 100%; min-height: 300px;">
-  <bit-box padding="md" color="primary" style="grid-area: header;">
-    <bit-text variant="heading" size="md">Header</bit-text>
-  </bit-box>
-  <bit-box padding="md" color="warning" style="grid-area: nav;">
-    <bit-text variant="heading" size="md">Nav</bit-text>
-  </bit-box>
-  <bit-box padding="md" style="grid-area: main;">
-    <bit-text variant="heading" size="md">Main</bit-text>
-  </bit-box>
-  <bit-box padding="md" color="secondary" style="grid-area: footer;">
-    <bit-text variant="heading" size="md">Footer</bit-text>
+  <bit-grid-item area="header">
+    <bit-box padding="md" color="primary">
+      <bit-text variant="heading" size="md">Header</bit-text>
+    </bit-box>
+  </bit-grid-item>
+  <bit-grid-item area="nav">
+    <bit-box padding="md" color="warning">
+      <bit-text variant="heading" size="md">Navigation</bit-text>
+    </bit-box>
+  </bit-grid-item>
+  <bit-grid-item area="main">
+    <bit-box padding="md" color="success">
+      <bit-text variant="heading" size="md">Main content</bit-text>
+    </bit-box>
+  </bit-grid-item>
+  <bit-grid-item area="footer">
+    <bit-box padding="md" color="secondary">
+      <bit-text variant="heading" size="md">Footer</bit-text>
+    </bit-box>
+  </bit-grid-item>
   </bit-box>
 </bit-grid>
 ```

@@ -5,18 +5,28 @@ description: 'Pattern: Batch for Complex Mutations examples for stateit.'
 
 ## Pattern: Batch for Complex Mutations
 
-## Problem
+### Problem
 
-Implement pattern: batch for complex mutations in a production-friendly way with `@vielzeug/stateit` while keeping setup and cleanup explicit.
+A domain operation touches multiple signals at once — for example, updating a loaded flag, a data array, and an error field together. Without batching, watchers and computed values recalculate after every individual write.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/stateit` installed.
+### Solution
 
 When a domain operation touches multiple fields at once, wrap in `batch()` so watchers see only the final state:
 
 ```ts
-import { batch } from '@vielzeug/stateit';
+import { batch, store } from '@vielzeug/stateit';
+
+type UserSettings = {
+  theme: 'light' | 'dark';
+  language: 'en' | 'de';
+  notifications: boolean;
+};
+
+const userStore = store<UserSettings>({
+  theme: 'light',
+  language: 'en',
+  notifications: true,
+});
 
 export function applySettings(settings: UserSettings) {
   batch(() => {
@@ -26,21 +36,19 @@ export function applySettings(settings: UserSettings) {
   });
   // → one notification for all three changes together
 }
+
+applySettings({ theme: 'dark', language: 'de', notifications: false });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Throwing inside a `batch()` callback does not roll back mutations made before the throw. All writes applied before the error are committed. Wrap in try/catch and manually revert if atomicity is required.
+- Nesting `batch()` inside another `batch()` is safe but the inner batch has no effect — the outer batch controls when watchers are notified.
+- `batch()` defers watchers, not computed values. A computed that reads two signals updated in a batch still recalculates once with the final consistent state.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+### Related
 
-## Related Recipes
-
-- [Framework Integration](./framework-integration.md)
-- [Pattern: `nextValue` in Async Workflows](./pattern-nextvalue-in-async-workflows.md)
+- [Usage Guide](../usage.md#framework-integration)
+- [Pattern: Async Workflows with watch](./pattern-nextvalue-in-async-workflows.md)
 - [Pattern: Shared Module Store](./pattern-shared-module-store.md)

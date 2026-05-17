@@ -1,6 +1,6 @@
 import { createDomVirtualList, type VirtualItem } from '@vielzeug/virtualit/dom';
 
-import type { ComboboxOptionItem, ComboboxSelectionItem } from './combobox.types';
+import type { ComboboxOptionItem } from './combobox.types';
 
 type ComboboxVirtualizerDeps = {
   checkIconHTML: string;
@@ -10,7 +10,7 @@ type ComboboxVirtualizerDeps = {
   getIsMultiple: () => boolean;
   getListboxElement: () => HTMLElement | null;
   getSelectedValue: () => string;
-  getSelectedValues: () => ComboboxSelectionItem[];
+  getSelectedValues: () => string[];
   onSelectOption: (opt: ComboboxOptionItem, event?: Event) => void;
   setFocusedIndex: (index: number) => void;
 };
@@ -20,13 +20,19 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
   let cachedListbox: HTMLElement | null = null;
 
   function isSelectedOption(option: ComboboxOptionItem): boolean {
-    if (deps.getIsMultiple()) return deps.getSelectedValues().some((selected) => selected.value === option.value);
+    if (deps.getIsMultiple()) return deps.getSelectedValues().includes(option.value);
 
     return option.value === deps.getSelectedValue();
   }
 
   function renderVirtualItems(virtualItems: VirtualItem[]) {
     if (!cachedListbox) return;
+
+    if (virtualItems.length === 0) {
+      for (const element of Array.from(cachedListbox.querySelectorAll('.option'))) element.remove();
+
+      return;
+    }
 
     for (const element of Array.from(cachedListbox.querySelectorAll('.option'))) element.remove();
 
@@ -43,12 +49,13 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
       optionElement.className = 'option';
       optionElement.setAttribute('role', 'option');
       optionElement.id = `${deps.comboId}-opt-${item.index}`;
+      optionElement.setAttribute('data-option-value', option.value);
       optionElement.setAttribute('aria-selected', String(isSelected));
-      optionElement.setAttribute('aria-disabled', String(!!option.disabled));
-      optionElement.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.top}px);`;
+      optionElement.setAttribute('aria-disabled', String(option.disabled));
+      optionElement.style.cssText = `position:absolute;top:0;left:0;right:0;transform:translateY(${item.start}px);`;
       optionElement.toggleAttribute('data-focused', focused === item.index);
       optionElement.toggleAttribute('data-selected', isSelected);
-      optionElement.toggleAttribute('data-disabled', !!option.disabled);
+      optionElement.toggleAttribute('data-disabled', option.disabled);
 
       if (option.iconEl) {
         const iconWrapper = document.createElement('span');
@@ -116,7 +123,7 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
     estimateSize: 36,
     getListElement: deps.getListboxElement,
     getScrollElement: deps.getDropdownElement,
-    overscan: 4,
+    overscan: { end: 4, start: 4 },
     render: ({ items, listEl, virtualItems }) => {
       currentOptions = items;
       cachedListbox = listEl;
@@ -126,8 +133,10 @@ export function createComboboxVirtualizer(deps: ComboboxVirtualizerDeps) {
 
   function setupVirtualizer(options: ComboboxOptionItem[], isOpen: boolean) {
     currentOptions = options;
+    cachedListbox = null;
     domVirtualList.setActive(isOpen);
-    domVirtualList.setItems(currentOptions);
+
+    if (isOpen) domVirtualList.setItems(currentOptions);
   }
 
   return { domVirtualList, setupVirtualizer, updateRenderedItemState };

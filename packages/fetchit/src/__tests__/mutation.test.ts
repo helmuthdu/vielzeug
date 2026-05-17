@@ -1,158 +1,329 @@
 import { createMutation, type MutationState } from '../index';
 
 describe('Mutation', () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    fetchMock = vi.fn();
-    globalThis.fetch = fetchMock as typeof fetch;
-  });
-
   afterEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
-  it('executes the mutationFn and returns the result', async () => {
-    fetchMock.mockResolvedValue({
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => ({ id: 1, name: 'Created' }),
-      ok: true,
-      status: 201,
+  describe('Execution', () => {
+    it('executes the mutation function and returns the result', async () => {
+      const addUser = createMutation(async (input: { name: string }) => ({
+        id: 1,
+        name: input.name,
+      }));
+
+      const result = await addUser.mutate({ name: 'Created' });
+
+      expect(result).toEqual({ id: 1, name: 'Created' });
     });
 
-    const addUser = createMutation((data: { name: string }) =>
-      fetch('/users', { body: JSON.stringify(data), method: 'POST' }).then((r) => r.json()),
-    );
+    it('forwards the caller AbortSignal to the mutation function', async () => {
+      let receivedSignal: AbortSignal | undefined;
+      const mutation = createMutation(async (_input: void, signal: AbortSignal) => {
+        receivedSignal = signal;
 
-    const result = await addUser.mutate({ name: 'Created' });
+        return 'ok';
+      });
 
-    expect(result).toEqual({ id: 1, name: 'Created' });
-  });
+      const ac = new AbortController();
 
-  it('reports idle -> pending -> success state lifecycle', async () => {
-    fetchMock.mockResolvedValue({
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => ({ id: 1 }),
-      ok: true,
-      status: 201,
+      await mutation.mutate(undefined, { signal: ac.signal });
+
+      expect(receivedSignal).toBeDefined();
+      expect(receivedSignal?.aborted).toBe(false);
     });
 
-    const addUser = createMutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
+    it('reports idle -> fetching -> success state lifecycle', async () => {
+      const addUser = createMutation(async () => ({ id: 1 }));
 
-    const states: MutationState[] = [];
-    const unsub = addUser.subscribe((s) => states.push({ ...s }));
+      const states: MutationState[] = [];
+      const unsub = addUser.subscribe((s) => states.push({ ...s }));
 
-    await addUser.mutate(undefined);
-    unsub();
+      await addUser.mutate(undefined);
+      unsub();
 
-    expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'success']);
-    expect(states[2].data).toEqual({ id: 1 });
-    expect(states[2].isSuccess).toBe(true);
-    expect(states[2].updatedAt).toBeGreaterThan(0);
-  });
-
-  it('reports idle -> pending -> error state lifecycle and rejects the caller', async () => {
-    fetchMock.mockRejectedValue(new Error('Server error'));
-
-    const fail = createMutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()));
-
-    const states: MutationState[] = [];
-
-    fail.subscribe((s) => states.push({ ...s }));
-
-    await expect(fail.mutate(undefined)).rejects.toThrow('Server error');
-
-    expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'error']);
-    expect(states[2].isError).toBe(true);
-    expect(states[2].error?.message).toContain('Server error');
-  });
-
-  it('reset() returns state to idle with no data or error', async () => {
-    fetchMock.mockResolvedValue({
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => ({ id: 1 }),
-      ok: true,
-      status: 200,
+      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'success']);
+      expect(states[0].isFetching).toBe(false);
+      expect(states[1].isFetching).toBe(true);
+      expect(states[2].isFetching).toBe(false);
+      expect(states[2].data).toEqual({ id: 1 });
     });
 
-    const mut = createMutation(() => fetch('/users', { method: 'POST' }).then((r) => r.json()));
+    it('reports idle -> fetching -> error state lifecycle and rejects the caller', async () => {
+      const fail = createMutation(async () => {
+        throw new Error('Server error');
+      });
 
-    await mut.mutate(undefined);
+      const states: MutationState[] = [];
 
-    expect(mut.getState().status).toBe('success');
-    mut.reset();
-    expect(mut.getState()).toMatchObject({ data: undefined, error: null, status: 'idle' });
+      fail.subscribe((s) => states.push({ ...s }));
+
+      await expect(fail.mutate(undefined)).rejects.toThrow('Server error');
+
+      expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'error']);
+      expect(states[1].isFetching).toBe(true);
+      expect(states[2].isFetching).toBe(false);
+      expect(states[2].error?.message).toContain('Server error');
+    });
   });
 
-  it('throws when mutate() is called while a previous mutation is already in flight', async () => {
-    let resolve!: () => void;
-    const slow = createMutation<void>(
-      () =>
-        new Promise<void>((r) => {
-          resolve = r;
-        }),
-    );
+  describe('Cancellation & Concurrency', () => {
+    it('uses the caller-provided abort signal', async () => {
+      const ac = new AbortController();
+      const slow = createMutation(
+        (_input: void, signal: AbortSignal) =>
+          new Promise<void>((resolve, reject) => {
+            const id = setTimeout(resolve, 10_000);
 
-    const first = slow.mutate(undefined);
+            signal.addEventListener('abort', () => {
+              clearTimeout(id);
+              reject(new DOMException('Aborted', 'AbortError'));
+            });
+          }),
+      );
 
-    await expect(slow.mutate(undefined)).rejects.toThrow('mutation already in flight');
-    resolve();
-    await first;
-  });
+      const promise = slow.mutate(undefined, { signal: ac.signal });
 
-  it('per-call signal aborts the mutation', async () => {
-    const ac = new AbortController();
-
-    const slow = createMutation(
-      () =>
-        new Promise<void>((resolve, reject) => {
-          const id = setTimeout(resolve, 10_000);
-
-          ac.signal.addEventListener('abort', () => {
-            clearTimeout(id);
-            reject(new DOMException('Aborted', 'AbortError'));
-          });
-        }),
-    );
-
-    const promise = slow.mutate(undefined, { signal: ac.signal });
-
-    ac.abort();
-    await expect(promise).rejects.toThrow();
-  });
-
-  it('calls onSuccess callback with result and variables', async () => {
-    fetchMock.mockResolvedValue({
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: async () => ({ id: 1 }),
-      ok: true,
-      status: 201,
+      ac.abort();
+      await expect(promise).rejects.toThrow('Aborted');
+      expect(slow.getState().status).toBe('idle');
     });
 
-    const onSuccess = vi.fn();
-    const addUser = createMutation((_name: string) => fetch('/users', { method: 'POST' }).then((r) => r.json()), {
-      onSuccess,
+    it('supports cancellation via mutation.cancel()', async () => {
+      const slow = createMutation(
+        (_input: void, signal: AbortSignal) =>
+          new Promise<void>((resolve, reject) => {
+            const id = setTimeout(resolve, 10_000);
+
+            signal.addEventListener('abort', () => {
+              clearTimeout(id);
+              reject(new DOMException('Aborted', 'AbortError'));
+            });
+          }),
+      );
+
+      const promise = slow.mutate(undefined);
+
+      await slow.cancel();
+      await expect(promise).rejects.toThrow('Aborted');
+      expect(slow.getState().status).toBe('idle');
     });
 
-    await addUser.mutate('Alice');
+    it('allows concurrent calls and keeps state from the latest run', async () => {
+      let resolveFirst!: (value: string) => void;
+      let resolveSecond!: (value: string) => void;
+      const mutation = createMutation(
+        (input: string) =>
+          new Promise<string>((resolve) => {
+            if (input === 'first') {
+              resolveFirst = resolve;
+            } else {
+              resolveSecond = resolve;
+            }
+          }),
+      );
 
-    expect(onSuccess).toHaveBeenCalledWith({ id: 1 }, 'Alice');
+      const first = mutation.mutate('first');
+      const second = mutation.mutate('second');
+
+      resolveFirst('first-result');
+      await expect(first).resolves.toBe('first-result');
+      expect(mutation.getState().status).toBe('pending');
+      expect(mutation.getState().isFetching).toBe(true);
+
+      resolveSecond('second-result');
+      await expect(second).resolves.toBe('second-result');
+      expect(mutation.getState()).toMatchObject({ data: 'second-result', status: 'success' });
+    });
+
+    it('reset() returns state to idle with no data or error', async () => {
+      const mutation = createMutation(async () => ({ id: 1 }));
+
+      await mutation.mutate(undefined);
+
+      mutation.reset();
+      expect(mutation.getState()).toMatchObject({ data: undefined, error: null, isFetching: false, status: 'idle' });
+    });
   });
 
-  it('calls onError and onSettled callbacks on failure', async () => {
-    fetchMock.mockRejectedValue(new Error('boom'));
+  describe('Lifecycle Callbacks', () => {
+    it('onSuccess is called with the resolved data', async () => {
+      let received: unknown;
+      const mutation = createMutation(async () => ({ id: 1 }), {
+        onSuccess: (data) => {
+          received = data;
+        },
+      });
 
-    const onError = vi.fn();
-    const onSettled = vi.fn();
-    const fail = createMutation(() => fetch('/fail', { method: 'POST' }).then((r) => r.json()), {
-      onError,
-      onSettled,
+      await mutation.mutate(undefined);
+      expect(received).toEqual({ id: 1 });
     });
 
-    await expect(fail.mutate(undefined)).rejects.toThrow('boom');
+    it('onError is called with the rejection error', async () => {
+      let received: Error | undefined;
+      const mutation = createMutation(
+        async () => {
+          throw new Error('boom');
+        },
+        {
+          onError: (err) => {
+            received = err;
+          },
+        },
+      );
 
-    expect(onError).toHaveBeenCalledWith(expect.any(Error), undefined);
-    expect(onSettled).toHaveBeenCalledWith(undefined, expect.any(Error), undefined);
+      await mutation.mutate(undefined).catch(() => {});
+      expect(received?.message).toBe('boom');
+    });
+
+    it('onSettled is called after success with data and null error', async () => {
+      const calls: Array<[unknown, Error | null]> = [];
+      const mutation = createMutation(async () => ({ id: 1 }), {
+        onSettled: (data, error) => {
+          calls.push([data, error]);
+        },
+      });
+
+      await mutation.mutate(undefined);
+      expect(calls).toEqual([[{ id: 1 }, null]]);
+    });
+
+    it('onSettled is called after failure with undefined data and the error', async () => {
+      const calls: Array<[unknown, Error | null]> = [];
+      const mutation = createMutation(
+        async () => {
+          throw new Error('fail');
+        },
+        {
+          onSettled: (data, error) => {
+            calls.push([data, error]);
+          },
+        },
+      );
+
+      await mutation.mutate(undefined).catch(() => {});
+      expect(calls[0]).toEqual([undefined, expect.objectContaining({ message: 'fail' })]);
+    });
+
+    it('onSettled is called after abort with undefined data and null error', async () => {
+      const calls: Array<[unknown, Error | null]> = [];
+      const mutation = createMutation(
+        (_input: void, signal: AbortSignal) =>
+          new Promise<void>((_resolve, reject) => {
+            signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+          }),
+        {
+          onSettled: (data, error) => {
+            calls.push([data, error]);
+          },
+        },
+      );
+
+      const running = mutation.mutate(undefined);
+
+      await mutation.cancel();
+
+      await expect(running).rejects.toThrow('Aborted');
+      expect(calls).toEqual([[undefined, null]]);
+    });
+
+    it('callback errors do not suppress the original result', async () => {
+      const mutation = createMutation(async () => ({ id: 1 }), {
+        onSuccess: () => {
+          throw new Error('callback error');
+        },
+      });
+
+      await expect(mutation.mutate(undefined)).resolves.toEqual({ id: 1 });
+    });
+
+    it('forwards lifecycle callback errors to onCallbackError', async () => {
+      const seen: string[] = [];
+      const mutation = createMutation(async () => ({ id: 1 }), {
+        onCallbackError: (error) => {
+          seen.push(error.message);
+        },
+        onSuccess: () => {
+          throw new Error('boom-success');
+        },
+      });
+
+      await mutation.mutate(undefined);
+
+      expect(seen).toEqual(['boom-success']);
+    });
+
+    it('normalizes non-Error callback throws before forwarding', async () => {
+      const seen: string[] = [];
+      const mutation = createMutation(async () => ({ id: 1 }), {
+        onCallbackError: (error) => {
+          seen.push(error.message);
+        },
+        onSuccess: () => {
+          throw 'string-failure';
+        },
+      });
+
+      await mutation.mutate(undefined);
+
+      expect(seen).toEqual(['string-failure']);
+    });
+  });
+
+  describe('External Store (toStore)', () => {
+    it('peek() returns idle state before subscribe()', () => {
+      const mutation = createMutation(async () => ({ id: 1 }));
+      const store = mutation.toStore();
+
+      expect(store.peek()).toEqual({
+        data: undefined,
+        error: null,
+        isFetching: false,
+        status: 'idle',
+        updatedAt: undefined,
+      });
+    });
+
+    it('returns the same store instance across repeated toStore() calls', () => {
+      const mutation = createMutation(async () => ({ id: 1 }));
+
+      expect(mutation.toStore()).toBe(mutation.toStore());
+    });
+
+    it('subscribe() + peek() track mutation lifecycle', async () => {
+      const mutation = createMutation(async () => ({ id: 1 }));
+      const store = mutation.toStore();
+      const snapshots: MutationState[] = [];
+
+      const unsub = store.subscribe(() => {
+        snapshots.push({ ...store.peek() });
+      });
+
+      await mutation.mutate(undefined);
+
+      expect(snapshots.map((s) => s.status)).toEqual(['pending', 'success']);
+      expect(snapshots[0].isFetching).toBe(true);
+      expect(snapshots[1].isFetching).toBe(false);
+      expect(store.peek()).toMatchObject({ data: { id: 1 }, status: 'success' });
+
+      unsub();
+    });
+
+    it('unsubscribe() stops store notifications', async () => {
+      const mutation = createMutation(async () => ({ id: 1 }));
+      const store = mutation.toStore();
+      let notifications = 0;
+
+      const unsub = store.subscribe(() => {
+        notifications++;
+      });
+
+      unsub();
+
+      await mutation.mutate(undefined);
+
+      expect(notifications).toBe(0);
+    });
   });
 });

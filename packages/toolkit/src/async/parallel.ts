@@ -6,81 +6,70 @@
  * @example
  * ```ts
  * // Process 3 items at a time
- * const results = await parallel(3, [1, 2, 3, 4, 5], async (n) => {
+ * const results = await parallel([1, 2, 3, 4, 5], async (n) => {
  *   await delay(100);
  *   return n * 2;
- * });
+ * }, { limit: 3 });
  * // [2, 4, 6, 8, 10]
  *
  * // With abort signal
  * const controller = new AbortController();
- * const results = await parallel(2, items, async (item) => {
+ * const results = await parallel(items, async (item) => {
  *   return processItem(item);
- * }, controller.signal);
+ * }, { limit: 2, signal: controller.signal });
  * ```
  *
- * @param limit - Maximum number of concurrent operations (must be >= 1)
  * @param array - Array of items to process
  * @param callback - Async function to process each item
- * @param signal - Optional AbortSignal to cancel processing
+ * @param options - Optional options for concurrency and cancellation
+ * @param [options.limit=Infinity] - Maximum number of concurrent operations (must be >= 1)
+ * @param [options.signal] - Optional AbortSignal to cancel processing
  * @returns Promise resolving to an ordered array of results
  * @throws {Error} If limit is less than 1
  * @throws {DOMException} If aborted via signal
  */
 export async function parallel<T, R>(
-  limit: number,
-  array: T[],
-  callback: (item: T, index: number, array: T[]) => Promise<R>,
-  signal?: AbortSignal,
+  array: readonly T[],
+  callback: (item: T, index: number, array: readonly T[]) => Promise<R> | R,
+  options: { limit?: number; signal?: AbortSignal } = {},
 ): Promise<R[]> {
+  const { limit = 4, signal } = options;
+
   if (limit < 1) {
     throw new Error('Limit must be at least 1');
   }
 
   if (signal?.aborted) {
-    throw new DOMException('Aborted', 'AbortError');
+    throw signal.reason ?? new DOMException('Aborted', 'AbortError');
+  }
+
+  if (array.length === 0) {
+    return [];
   }
 
   const results: R[] = new Array(array.length);
   let currentIndex = 0;
-  let hasError = false;
-  let error: unknown;
 
   const worker = async (): Promise<void> => {
-    while (currentIndex < array.length && !hasError) {
+    while (true) {
       if (signal?.aborted) {
-        hasError = true;
-        error = new DOMException('Aborted', 'AbortError');
-        break;
+        throw signal.reason ?? new DOMException('Aborted', 'AbortError');
+      }
+
+      if (currentIndex >= array.length) {
+        return;
       }
 
       const index = currentIndex++;
 
-      try {
-        results[index] = await callback(array[index], index, array);
-      } catch (err) {
-        hasError = true;
-        error = err;
-        break;
-      }
+      results[index] = await callback(array[index], index, array);
     }
   };
 
-  // Create workers up to the limit
-  const workers: Promise<void>[] = [];
   const workerCount = Math.min(limit, array.length);
+  const workers = Array.from({ length: workerCount }, () => worker());
 
-  for (let i = 0; i < workerCount; i++) {
-    workers.push(worker());
-  }
-
-  // Wait for all workers to complete
   await Promise.all(workers);
-
-  // If there was an error, throw it
-  if (hasError) {
-    throw error;
-  }
 
   return results;
 }

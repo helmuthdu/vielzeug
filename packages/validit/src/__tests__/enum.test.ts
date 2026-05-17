@@ -32,42 +32,15 @@ describe('v.enum()', () => {
     expect(schema.parse('low')).toBe('low');
     expect(() => schema.parse('extreme')).toThrow();
   });
-});
 
-describe('v.nativeEnum()', () => {
-  const Direction = { Down: 'DOWN', Up: 'UP' } as const;
-  const schema = v.nativeEnum(Direction);
-
-  it('accepts values in the enum', () => {
-    expect(schema.parse('UP')).toBe('UP');
-    expect(schema.parse('DOWN')).toBe('DOWN');
+  it('exposes .values on the schema', () => {
+    expect(Status.values).toEqual(['active', 'inactive', 'pending']);
   });
 
-  it('rejects values not in the enum', () => {
-    const result = schema.safeParse('LEFT');
+  it('accepts number values', () => {
+    const schema = v.enum([1, 2, 3] as const);
 
-    expect(result.success).toBe(false);
-
-    if (!result.success) expect(result.error.issues[0].code).toBe('invalid_enum');
-  });
-
-  it('infers the value union type', () => {
-    type T = Infer<typeof schema>;
-
-    const val: T = 'UP';
-
-    expect(schema.parse(val)).toBe('UP');
-  });
-
-  it('exposes the original enum object as .enum', () => {
-    expect(schema.enum).toBe(Direction);
-  });
-
-  it('works with numeric enums (reverse-mapping keys are excluded)', () => {
-    const Prio = { High: 2, Low: 0, Medium: 1 } as const;
-    const s = v.nativeEnum(Prio);
-
-    expect(s.parse(1)).toBe(1);
-    expect(() => s.parse(3)).toThrow();
+    expect(schema.parse(1)).toBe(1);
+    expect(() => schema.parse(4)).toThrow();
   });
 });

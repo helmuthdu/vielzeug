@@ -26,5 +26,3 @@ export class LazySchema<T> extends Schema<T> {
     return { data: value, issues: result.error.issues };
   }
 }
-
-export const lazy = <T>(getter: () => Schema<T>): LazySchema<T> => new LazySchema(getter);

@@ -3,7 +3,7 @@ import { createPressControl } from '@vielzeug/craftit/controls';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
-import { disablableBundle, loadableBundle, type PropBundle, themableBundle } from '../../inputs/shared/bundles';
+import { disablableBundle, loadableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
 import componentStyles from './card.css?inline';
 
@@ -97,12 +97,15 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
     orientation: undefined,
     padding: undefined,
     variant: undefined,
-  } satisfies PropBundle<BitCardProps>,
-  setup({ emit, host, props, slots }) {
-    host.bind('attr', {
-      ariaBusy: () => (props.loading.value ? 'true' : 'false'),
-      ariaDisabled: () => (props.interactive.value ? String(props.disabled.value) : null),
-      role: () => (props.interactive.value ? 'button' : null),
+  },
+
+  setup(props, { emit, host, slots }) {
+    host.bind({
+      attr: {
+        ariaBusy: () => (props.loading.value ? 'true' : 'false'),
+        ariaDisabled: () => (props.interactive.value ? String(props.disabled.value) : null),
+        role: () => (props.interactive.value ? 'button' : null),
+      },
     });
 
     effect(() => {
@@ -136,16 +139,18 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
       pressControl.handleKeydown(e);
     };
 
-    host.bind('on', {
-      click: (e) => handleClick(e),
-      keydown: (e) => handleKeydown(e),
+    host.bind({
+      on: {
+        click: (e: MouseEvent) => handleClick(e),
+        keydown: (e: KeyboardEvent) => handleKeydown(e),
+      },
     });
 
     // ────────────────────────────────────────────────────────────────
     // Template
     // ────────────────────────────────────────────────────────────────
 
-    return html`
+    return () => html`
       <div class="card" part="card">
         <div class="loading-bar" part="loading-bar"></div>
         <div class="card-media" part="media" ?hidden="${() => !slots.has('media').value}">
@@ -168,5 +173,6 @@ export const CARD_TAG = define<BitCardProps, BitCardEvents>('bit-card', {
       </div>
     `;
   },
+
   styles: [...surfaceMixins, frostVariantMixin('.card'), reducedMotionMixin, componentStyles],
 });

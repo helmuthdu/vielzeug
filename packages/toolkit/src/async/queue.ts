@@ -1,5 +1,4 @@
 import { assert } from '../function/assert';
-import { Scheduler } from './scheduler';
 
 /**
  * Creates a promise queue that processes promises sequentially with optional concurrency limit.
@@ -28,6 +27,7 @@ export function queue(options: { concurrency?: number } = {}) {
   });
 
   let activeCount = 0;
+  let isDraining = false;
   let idlePromise: Promise<void> | null = null;
   let idleResolve: (() => void) | null = null;
 
@@ -37,45 +37,38 @@ export function queue(options: { concurrency?: number } = {}) {
     resolve: (value: unknown) => void;
   }> = [];
 
-  let flushQueued = false;
-
-  const scheduleNext = (): void => {
-    if (flushQueued) return;
-
-    flushQueued = true;
-
-    const scheduler = new Scheduler();
-
-    void scheduler.postTask(
-      () => {
-        flushQueued = false;
-        next();
-      },
-      { priority: 'user-visible' },
-    );
+  const resolveIdle = (): void => {
+    if (activeCount === 0 && tasks.length === 0 && idleResolve) {
+      idleResolve();
+      idlePromise = null;
+      idleResolve = null;
+    }
   };
 
-  const next = (): void => {
-    if (activeCount < concurrency && tasks.length > 0) {
+  const drain = (): void => {
+    if (isDraining) {
+      return;
+    }
+
+    isDraining = true;
+
+    while (activeCount < concurrency && tasks.length > 0) {
       const task = tasks.shift()!;
 
       activeCount++;
 
-      task
-        .fn()
+      void Promise.resolve(task.fn())
         .then(task.resolve)
         .catch(task.reject)
         .finally(() => {
           activeCount--;
-          scheduleNext();
-
-          if (activeCount === 0 && tasks.length === 0 && idleResolve) {
-            idleResolve();
-            idlePromise = null;
-            idleResolve = null;
-          }
+          drain();
+          resolveIdle();
         });
     }
+
+    isDraining = false;
+    resolveIdle();
   };
 
   return {
@@ -90,16 +83,26 @@ export function queue(options: { concurrency?: number } = {}) {
         reject,
         resolve: resolve as (value: unknown) => void,
       });
-      scheduleNext();
+      drain();
 
       return promise;
     },
 
     /**
-     * Clears all pending tasks from the queue
+     * Clears all pending tasks from the queue and rejects them.
+     * Running tasks are not affected.
+     * @param reason - The error reason for the rejection (defaults to 'Queue cleared')
      */
-    clear: (): void => {
-      tasks.length = 0;
+    clear: (reason?: unknown): void => {
+      const clearReason = reason ?? new Error('Queue cleared');
+
+      // Reject all queued tasks
+      for (const task of tasks.splice(0)) {
+        task.reject(clearReason);
+      }
+
+      // If queue is now idle, resolve idlePromise
+      resolveIdle();
     },
 
     /**

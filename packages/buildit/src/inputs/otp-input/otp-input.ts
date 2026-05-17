@@ -1,10 +1,12 @@
-import { define, computed, html, onMount, signal, watch } from '@vielzeug/craftit';
-import { createListControl, createListKeyControl } from '@vielzeug/craftit/controls';
+import { computed, define, html, inject, prop, signal, watch, onMounted } from '@vielzeug/craftit';
+import { createListControl } from '@vielzeug/craftit/controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
-import { disablableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
+import { mountFormContextSync } from '../shared/dom-sync';
+import { FORM_CTX } from '../shared/form-context';
 import styles from './otp-input.css?inline';
 
 export type BitOtpInputEvents = {
@@ -37,20 +39,6 @@ export type BitOtpInputProps = {
   /** Visual variant */
   variant?: Exclude<VisualVariant, 'text' | 'frost' | 'glass'>;
 };
-
-const otpInputProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  label: 'One-time password',
-  length: 6,
-  masked: false,
-  name: undefined,
-  separator: undefined,
-  type: 'numeric',
-  value: '',
-  variant: undefined,
-} satisfies PropBundle<BitOtpInputProps>;
 
 /**
  * A segmented OTP (One-Time Password) input with N individual cells.
@@ -85,26 +73,44 @@ const otpInputProps = {
  * ```
  */
 export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-otp-input', {
-  props: otpInputProps,
-  setup({ emit, host, props }) {
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    label: 'One-time password',
+    length: 6,
+    masked: false,
+    name: undefined,
+    separator: undefined,
+    type: prop.oneOf(['numeric', 'alphanumeric'] as const, 'numeric'),
+    value: '',
+    variant: undefined,
+  },
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
     const lengthValue = computed(() => Number(props.length.value) || 6);
-    const isDisabled = computed(() => Boolean(props.disabled.value));
+    const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
     const cells = computed(() => Array.from({ length: lengthValue.value }, (_, i) => i));
     const focusedIndex = signal(0);
     const otpValue = signal(String(props.value.value || ''));
     const normalizedPropValue = () => String(props.value.value || '');
 
-    host.bind('attr', {
-      value: () => otpValue.value || null,
+    host.bind({
+      attr: {
+        value: () => otpValue.value || null,
+      },
     });
 
+    mountFormContextSync(host.el, formCtx, props);
+
     function getInputs(): HTMLInputElement[] {
-      return [...(host.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
+      return [...(host.el.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
     }
 
     const listControl = createListControl({
       getIndex: () => focusedIndex.value,
       getItems: () => getInputs(),
+      keys: { next: ['ArrowRight'], prev: ['ArrowLeft'] },
       loop: false,
       setIndex: (index) => {
         focusedIndex.value = index;
@@ -113,11 +119,6 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
 
         inputs[index]?.focus();
       },
-    });
-
-    const otpListKeys = createListKeyControl({
-      control: listControl,
-      keys: { next: ['ArrowRight'], prev: ['ArrowLeft'] },
     });
 
     function getValue(): string {
@@ -188,7 +189,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
         if (input.value) {
           input.value = '';
         } else if (index > 0) {
-          const prevIndex = listControl.prev().index;
+          const prevIndex = listControl.prev();
           const prevInput = allInputs[prevIndex];
 
           if (prevInput) {
@@ -200,7 +201,7 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
         emitOtpState(e, false);
         e.preventDefault();
       } else {
-        otpListKeys.handleKeydown(e);
+        listControl.handleKeydown(e);
       }
     }
     function handlePaste(e: ClipboardEvent) {
@@ -224,10 +225,6 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
 
       allInputs[focusIdx]?.focus();
     }
-    onMount(() => {
-      // Populate cells from value prop on mount
-      syncInputsFromValue(normalizedPropValue());
-    });
 
     watch(props.value, (value) => {
       syncInputsFromValue(String(value || ''));
@@ -244,8 +241,13 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
       return props.separator.value != null ? Math.floor(len / 2) : -1;
     });
 
-    return html`
-      <div class="otp-group" part="group" role="group" :aria-label="${() => props.label.value}">
+    onMounted(() => {
+      // Populate cells from value prop on mount
+      syncInputsFromValue(normalizedPropValue());
+    });
+
+    return () => html`
+      <div class="otp-group" part="group" role="group" :aria-label="${props.label}">
         ${() =>
           cells.value.map(
             (i) => html`

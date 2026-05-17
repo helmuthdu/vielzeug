@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const processEnv = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } })
+  .process?.env;
+const disablePluginTimings = processEnv?.CI === 'true' || processEnv?.RUSHSTACK_FILE_ERROR_BASE_FOLDER !== undefined;
 
 /**
  * Secondary build: bundles all buildit internals into a single buildit.{js,cjs}
@@ -21,6 +24,9 @@ export default defineConfig({
       name: 'buildit',
     },
     rolldownOptions: {
+      checks: {
+        pluginTimings: !disablePluginTimings,
+      },
       external: [
         '@vielzeug/craftit',
         '@vielzeug/dragit',

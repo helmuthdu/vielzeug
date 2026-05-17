@@ -4,11 +4,16 @@ export type Listener<T> = (payload: T) => void;
 export type Unsubscribe = () => void;
 
 export type BusOptions<T extends EventMap = EventMap> = {
-  /** Called on every emit before listeners run. Useful for logging/tracing. */
-  onEmit?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
+  /** Called on every emit, before listeners run. Useful for logging/tracing all dispatches. */
+  onDispatch?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
   /** If provided, listener errors are forwarded here instead of re-thrown. */
   onError?: <K extends EventKey<T>>(err: unknown, event: K, payload: T[K]) => void;
 };
+
+/** Discriminated-union result type for `waitAny`. */
+export type WaitAnyResult<T extends EventMap, K extends readonly EventKey<T>[]> = {
+  [I in keyof K]: K[I] extends EventKey<T> ? { event: K[I]; payload: T[K[I]] } : never;
+}[number];
 
 export type Bus<T extends EventMap> = {
   /** Alias for dispose() — enables the `using` keyword for automatic cleanup. */
@@ -19,14 +24,27 @@ export type Bus<T extends EventMap> = {
   readonly disposed: boolean;
   /** Emit an event, calling all registered listeners synchronously. */
   emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void;
-  /** Async-iterate over all future emits of an event. Terminates when the bus is disposed or signal aborts. */
-  events<K extends EventKey<T>>(event: K, signal?: AbortSignal): AsyncGenerator<T[K]>;
+  /** Returns the list of event names that currently have at least one active listener. */
+  eventNames(): EventKey<T>[];
+  /** Async-iterate over all future emits of an event. Terminates when the bus is disposed or signal aborts. Warning: internal buffer is unbounded; pass maxBuffer to control. */
+  events<K extends EventKey<T>>(event: K, options?: { maxBuffer?: number; signal?: AbortSignal }): AsyncGenerator<T[K]>;
   /** Number of active listeners for a given event, or total for all events if omitted. */
   listenerCount(event?: EventKey<T>): number;
   /** Subscribe to an event. Returns an unsubscribe function. Stops automatically when signal aborts. */
   on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
   /** Subscribe once — auto-unsubscribes after the first emit. Stops early when signal aborts. */
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal?: AbortSignal): Unsubscribe;
+  /** Remove all listeners for a specific event, or for all events if called without an argument. */
+  removeAllListeners(event?: EventKey<T>): void;
   /** Resolve on the next emit. Rejects if the bus is disposed or signal aborts. */
   wait<K extends EventKey<T>>(event: K, signal?: AbortSignal): Promise<T[K]>;
+  /**
+   * Resolve when any of the listed events (minimum 2) fires first.
+   * Returns a typed `{ event, payload }` discriminated union — the winning event name is narrowed to a literal.
+   * Rejects if the bus is disposed or signal aborts before any event fires.
+   */
+  waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
+    events: K,
+    signal?: AbortSignal,
+  ): Promise<WaitAnyResult<T, K>>;
 };

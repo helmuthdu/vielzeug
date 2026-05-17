@@ -5,13 +5,11 @@ description: 'Registration Form examples for formit.'
 
 ## Registration Form
 
-## Problem
+### Problem
 
-Implement registration form in a production-friendly way with `@vielzeug/formit` while keeping setup and cleanup explicit.
+A registration form needs a confirmed password field (both values must match) and an async email-uniqueness check that queries the server while the user is still typing.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/formit` installed.
+### Solution
 
 Registration form with async validation and password confirmation.
 
@@ -58,7 +56,7 @@ const registrationForm = createForm({
 
 // Submit
 async function handleRegistration() {
-  await registrationForm.submit(async (values) => {
+  const result = await registrationForm.submit(async (values) => {
     const response = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -66,21 +64,23 @@ async function handleRegistration() {
     });
     return response.json();
   });
+
+  if (!result.ok) {
+    console.log(result.errors);
+    return;
+  }
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Async validators run on every `validateField()` call, including on every blur. Debounce them to avoid an API request on each keystroke.
+- The password-confirmation validator must re-run when the original password field changes, not only when confirmation changes. Read `form.values.password` inside the confirmation validator.
+- `form.state.isSubmitting` stays `true` until the submit handler resolves or rejects. Unhandled rejections inside the handler leave the form stuck in the submitting state.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Schema Validation with Validit](/validit/)
 
 - [Best Practices](./best-practices.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)

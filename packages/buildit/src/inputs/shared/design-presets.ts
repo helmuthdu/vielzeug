@@ -94,6 +94,10 @@ export const FILE_INPUT_SIZE_PRESET = {
     '--_min-height': 'var(--size-40)',
     fontSize: 'var(--text-base)',
   },
+  md: {
+    '--_min-height': 'var(--size-32)',
+    fontSize: 'var(--text-sm)',
+  },
   sm: {
     '--_min-height': 'var(--size-28)',
     fontSize: 'var(--text-xs)',

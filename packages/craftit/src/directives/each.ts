@@ -1,51 +1,27 @@
-import { computed, isSignal, type ReadonlySignal } from '@vielzeug/stateit';
+import { batch, effect as _effect, untrack, type CleanupFn, type ReadonlySignal } from '@vielzeug/stateit';
 
+import { CRAFTIT_ERRORS } from '../errors';
 import {
-  CF_ID_ATTR,
-  EACH_SIGNAL,
+  createMarkerIdFactory,
   escapeHtml,
   extractResult,
   htmlResult,
   isHtmlResult,
+  removeNodes,
+  rekeyHtmlResult,
+  runAll,
   type Binding,
-  type Directive,
+  type DirectiveResult,
   type HTMLResult,
 } from '../internal';
+import { applyBindingsWithTargets, indexBindingTargets, parseHTML, type RegisterCleanup } from '../template-bindings';
+import { applyHtmlBinding } from '../template-bindings';
 
-const ATTR_ID_RE = new RegExp(`${CF_ID_ATTR}="(\\d+)"`, 'g');
-
-/* immutable — shared singleton for empty static lists */
-const EMPTY = htmlResult('');
-const NO_BINDINGS: Binding[] = [];
-
-const toResultEntry = (value: string | HTMLResult, c: { n: number }): { bindings: Binding[]; html: string } =>
-  isHtmlResult(value) ? renumber(value, c) : { bindings: NO_BINDINGS, html: escapeHtml(value) };
+const toResultEntry = (value: string | HTMLResult, getNextId: () => string): { bindings: Binding[]; html: string } =>
+  isHtmlResult(value) ? rekeyHtmlResult(value, getNextId) : { bindings: [], html: escapeHtml(value) };
 
 const toHtmlResult = (value: string | HTMLResult): HTMLResult =>
   isHtmlResult(value) ? value : htmlResult(escapeHtml(value));
-
-function renumber(res: HTMLResult, c: { n: number }): { bindings: Binding[]; html: string } {
-  const map = new Map<string, string>();
-  const nb: Binding[] = [];
-
-  for (const b of res.__bindings) {
-    const oldId = b.uid;
-    const newId = map.get(oldId) ?? String(c.n++);
-
-    if (!map.has(oldId)) map.set(oldId, newId);
-
-    nb.push({ ...b, uid: newId });
-  }
-
-  return {
-    bindings: nb,
-    html: res.__html
-      // Re-map element binding ids.
-      .replace(ATTR_ID_RE, (_, id) => `${CF_ID_ATTR}="${map.get(id) ?? id}"`)
-      // Re-map numeric comment markers used by text/html placeholders.
-      .replace(/<!--(\d+)-->/g, (_, id) => `<!--${map.get(id) ?? id}-->`),
-  };
-}
 
 /** Render loop used by the reactive path (keys + rendered metadata required for reconciliation). */
 function renderKeyed<T>(
@@ -63,19 +39,19 @@ function renderKeyed<T>(
   const keys: (string | number)[] = [];
   const seenKeys = new Set<string | number>();
   const rendered: Array<{ bindings: Binding[]; html: string }> = [];
-  const c = { n: 0 };
+  const getNextId = createMarkerIdFactory();
 
   for (let i = 0; i < items.length; i++) {
     const nextKey = keyFn(items[i], i);
 
     if (seenKeys.has(nextKey)) {
-      throw new Error(`[craftit:each] Duplicate key "${String(nextKey)}" at index ${i}.`);
+      throw new Error(CRAFTIT_ERRORS.eachDuplicateKey(String(nextKey), i));
     }
 
     seenKeys.add(nextKey);
     keys.push(nextKey);
 
-    const entry = toResultEntry(template(items[i], i), c);
+    const entry = toResultEntry(template(items[i], i), getNextId);
 
     html += entry.html;
     allBindings.push(...entry.bindings);
@@ -85,86 +61,23 @@ function renderKeyed<T>(
   return { bindings: allBindings, html, keys, rendered };
 }
 
-/** Render loop used by the static path — no key/reconciliation metadata needed. */
-function renderStatic<T>(
-  items: T[],
-  template: (item: T, index: number) => string | HTMLResult,
-): { bindings: Binding[]; html: string } {
-  let html = '';
-  const allBindings: Binding[] = [];
-  const c = { n: 0 };
-
-  for (let i = 0; i < items.length; i++) {
-    const entry = toResultEntry(template(items[i], i), c);
-
-    html += entry.html;
-    allBindings.push(...entry.bindings);
-  }
-
-  return { bindings: allBindings, html };
-}
-
-type ReactiveSource<T> = ReadonlySignal<T[]> | (() => T[]);
-type EachSignalResult = Directive & {
-  [EACH_SIGNAL]: ReadonlySignal<{
-    bindings: Binding[];
-    html: string;
-    items?: Array<{ bindings: Binding[]; html: string }>;
-    keys?: (string | number)[];
-  }>;
-};
-
 export interface EachOptions<T> {
   fallback?: () => string | HTMLResult;
-  key?: (item: T, index: number) => string | number;
+  key: (item: T, index: number) => string | number;
   render: (item: T, index: number) => string | HTMLResult;
-  /**
-   * Filter predicate. Receives the item and its original array index.
-   * Only items for which `select` returns `true` are rendered.
-   */
-  select?: (item: T, index: number) => boolean;
 }
-
-const isFunction = (value: unknown): value is (...args: any[]) => any => typeof value === 'function';
-
-const validateEachOptions = <T>(options: EachOptions<T>): void => {
-  if (!isFunction(options.render)) {
-    throw new Error('[craftit:each] options.render must be a function.');
-  }
-
-  if (options.key !== undefined && !isFunction(options.key)) {
-    throw new Error('[craftit:each] options.key must be a function when provided.');
-  }
-
-  if (options.select !== undefined && !isFunction(options.select)) {
-    throw new Error('[craftit:each] options.select must be a function when provided.');
-  }
-
-  if (options.fallback !== undefined && !isFunction(options.fallback)) {
-    throw new Error('[craftit:each] options.fallback must be a function when provided.');
-  }
-};
-
-const assertArrayResult = <T>(value: T[] | unknown): T[] => {
-  if (Array.isArray(value)) return value as T[];
-
-  throw new Error('[craftit:each] source must resolve to an array.');
-};
 
 /**
  * Renders a list with keyed DOM reconciliation for reactive sources.
  * Use inside `html` tagged templates.
  *
- * For reactive sources (Signal/getter), you must provide a stable `key` function.
+ * `each()` expects a reactive signal source and a stable `key` function.
  *
  * For dynamic lists with click handlers, prefer event delegation on a parent node
  * (`@click` + `closest(...)`) over per-item handlers inside `each()`.
  *
  * @example
- * import { each } from '@vielzeug/craftit/directives';
- *
- * // Static array (key optional):
- * html`${each([1, 2, 3], { render: (item) => html`<li>${item}</li>` })}`
+ * import { each } from '@vielzeug/craftit';
  *
  * // Reactive source (key required):
  * html`${each(items, { key: item => item.id, render: (item) => html`<li>${item.name}</li>` })}`
@@ -174,57 +87,137 @@ const assertArrayResult = <T>(value: T[] | unknown): T[] => {
  *   fallback: () => html`<p>No items</p>`,
  *   key: item => item.id,
  *   render: (item) => html`<li>${item.name}</li>`,
- *   select: item => item.active,
  * })}`
  */
-export function each<T>(source: T[], options: EachOptions<T>): HTMLResult;
-export function each<T>(
-  source: ReactiveSource<T>,
-  options: EachOptions<T> & { key: (item: T, index: number) => string | number },
-): EachSignalResult;
-export function each<T>(source: T[] | ReactiveSource<T>, options: EachOptions<T>): HTMLResult | EachSignalResult {
-  validateEachOptions(options);
+export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): DirectiveResult;
+export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): DirectiveResult {
+  const { fallback, key, render: renderItem } = options;
 
-  const { fallback, key, render, select } = options;
+  const mount = (anchor: Comment, registerCleanup: RegisterCleanup): void => {
+    type KeyedNode = {
+      cleanups: CleanupFn[];
+      html: string;
+      nodes: Node[];
+    };
 
-  if (Array.isArray(source)) {
-    const filtered = select ? source.filter(select) : source;
+    let keyedNodes = new Map<string | number, KeyedNode>();
+    let fallbackNodes: Node[] = [];
+    let fallbackCleanups: CleanupFn[] = [];
 
-    if (!filtered.length) {
-      if (fallback) {
-        const er = extractResult(toHtmlResult(fallback()));
+    const clearFallback = (): void => {
+      removeNodes(fallbackNodes);
+      fallbackNodes = [];
+      runAll(fallbackCleanups);
+      fallbackCleanups = [];
+    };
 
-        return htmlResult(er.html, er.bindings);
+    const clearKeyed = (): void => {
+      for (const [, node] of keyedNodes) {
+        removeNodes(node.nodes);
+        runAll(node.cleanups);
       }
 
-      return EMPTY;
-    }
+      keyedNodes.clear();
+    };
 
-    const { bindings, html } = renderStatic(filtered, render);
+    const stop = _effect(() => {
+      const parent = anchor.parentNode;
 
-    return htmlResult(html, bindings);
-  }
+      if (!parent) return;
 
-  if (!key) {
-    throw new Error('[craftit:each] Reactive each() requires options.key for stable reconciliation.');
-  }
+      batch(() => {
+        const raw = source.value;
 
-  const getItems = isSignal(source) ? () => (source as ReadonlySignal<T[]>).value : (source as () => T[]);
+        if (!raw.length) {
+          clearKeyed();
+          clearFallback();
 
-  return {
-    [EACH_SIGNAL]: computed(() => {
-      const raw = assertArrayResult<T>(getItems());
-      const filtered = select ? raw.filter(select) : raw;
+          if (!fallback) return;
 
-      if (!filtered.length) {
-        const er = fallback ? toHtmlResult(fallback()) : undefined;
+          const fallbackResult = extractResult(toHtmlResult(fallback()));
+          const parsed = parseHTML(fallbackResult.html);
 
-        return er ? { ...extractResult(er), items: [], keys: [] } : { bindings: [], html: '', items: [], keys: [] };
-      }
+          fallbackNodes = Array.from(parsed.childNodes);
+          anchor.after(parsed);
 
-      const { bindings, html, keys, rendered } = renderKeyed(filtered, render, key);
+          const addFallbackCleanup: RegisterCleanup = (fn) => fallbackCleanups.push(fn);
 
-      return { bindings, html, items: rendered, keys };
-    }),
+          applyBindingsWithTargets(fallbackResult.bindings, addFallbackCleanup, indexBindingTargets(fallbackNodes), {
+            onHtml: (binding) => applyHtmlBinding(parent as unknown as Node, binding, addFallbackCleanup),
+          });
+
+          return;
+        }
+
+        clearFallback();
+
+        const { keys, rendered } = renderKeyed(raw, renderItem, key);
+        const nextKeyed = new Map<string | number, KeyedNode>();
+        const ordered: Array<{ item: { bindings: Binding[]; html: string }; key: string | number; nodes: Node[] }> = [];
+
+        for (let i = 0; i < keys.length; i++) {
+          const nextKey = keys[i];
+          const item = rendered[i];
+          const existing = keyedNodes.get(nextKey);
+          let nodes: Node[];
+          const cleanups: CleanupFn[] = [];
+
+          if (existing && existing.html === item.html) {
+            nodes = existing.nodes;
+            runAll(existing.cleanups);
+          } else {
+            if (existing) {
+              removeNodes(existing.nodes);
+              runAll(existing.cleanups);
+            }
+
+            const parsed = parseHTML(item.html);
+
+            nodes = Array.from(parsed.childNodes);
+          }
+
+          ordered.push({ item, key: nextKey, nodes });
+          nextKeyed.set(nextKey, { cleanups, html: item.html, nodes });
+        }
+
+        for (const [oldKey, oldNode] of keyedNodes) {
+          if (!nextKeyed.has(oldKey)) {
+            removeNodes(oldNode.nodes);
+            runAll(oldNode.cleanups);
+          }
+        }
+
+        let cursor: Node = anchor;
+
+        for (const entry of ordered) {
+          for (const node of entry.nodes) {
+            parent.insertBefore(node, cursor.nextSibling);
+            cursor = node;
+          }
+
+          const targetNode = nextKeyed.get(entry.key);
+
+          if (!targetNode) continue;
+
+          const addItemCleanup: RegisterCleanup = (fn) => targetNode.cleanups.push(fn);
+
+          untrack(() => {
+            applyBindingsWithTargets(entry.item.bindings, addItemCleanup, indexBindingTargets(entry.nodes), {
+              onHtml: (binding) => applyHtmlBinding(parent as unknown as Node, binding, addItemCleanup),
+            });
+          });
+        }
+
+        keyedNodes = nextKeyed;
+      });
+    });
+
+    registerCleanup(stop);
+    registerCleanup(() => {
+      clearFallback();
+      clearKeyed();
+    });
   };
+
+  return { __craftitDirective: true, mount };
 }

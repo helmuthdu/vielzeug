@@ -1,39 +1,39 @@
 /**
  * Host utilities — component context injection, slot observation, and attribute/class reflection.
  *
- * - Context API (provide, inject, createContext, syncContextProps)
+ * - Context API (provide, inject, createContext)
  * - Slot observation and detection (setup slots)
  * - Host element binding (reflect) for attributes, classes, and host listeners
  */
 
-import { type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
+import { effect as rawEffect, type ReadonlySignal, type Signal, isSignal, signal } from '@vielzeug/stateit';
 
-import { listen, setAttr } from './internal';
-import { currentRuntime } from './runtime-core';
-import { effect, onCleanup, onMount, type HostEventListeners } from './runtime-lifecycle';
+import { CRAFTIT_ERRORS } from './errors';
+import { listen, setAttr, toKebab } from './internal';
+import { currentElementOrThrow, effect, onCleanup, onMounted, tryRegisterCleanup } from './runtime';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTEXT API
 // ─────────────────────────────────────────────────────────────────────────────
 
-const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown> | string | symbol, unknown>>();
+const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown>, unknown>>();
 
 export type InjectionKey<T> = symbol & {
   readonly __craftit_injection_key?: T;
 };
 
-export const provide = <T>(key: InjectionKey<T> | string | symbol, value: T): void => {
-  const el = currentRuntime().el;
+export const provide = <T>(key: InjectionKey<T>, value: T): void => {
+  const el = currentElementOrThrow();
 
   if (!contextRegistry.has(el)) contextRegistry.set(el, new Map());
 
   contextRegistry.get(el)!.set(key, value);
 };
 
-export function inject<T>(key: InjectionKey<T> | string | symbol): T | undefined;
-export function inject<T>(key: InjectionKey<T> | string | symbol, fallback: T): T;
-export function inject<T>(key: InjectionKey<T> | string | symbol, ...rest: [T?]): T | undefined {
-  let node: Node | null = currentRuntime().el;
+export function inject<T>(key: InjectionKey<T>): T | undefined;
+export function inject<T>(key: InjectionKey<T>, fallback: T): T;
+export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
+  let node: Node | null = currentElementOrThrow();
 
   while (node) {
     if (node instanceof HTMLElement) {
@@ -50,79 +50,95 @@ export function inject<T>(key: InjectionKey<T> | string | symbol, ...rest: [T?])
   return rest.length > 0 ? rest[0] : undefined;
 }
 
+export const injectStrict = <T>(key: InjectionKey<T>): T => {
+  const resolved = inject<T>(key);
+
+  if (resolved !== undefined) return resolved;
+
+  const host = currentElementOrThrow();
+
+  throw new Error(CRAFTIT_ERRORS.injectStrictFailed(String(key), host.localName));
+};
+
 export function createContext<T>(description?: string): InjectionKey<T> {
   return Symbol(description) as InjectionKey<T>;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ARIA SYNC
+// ─────────────────────────────────────────────────────────────────────────────
+
+type AriaValue = string | number | boolean | null | undefined | (() => string | number | boolean | null | undefined);
+
+type AriaConfig = Record<string, AriaValue>;
+
+type SyncAriaOptions = {
+  autoCleanup?: boolean;
+};
+
+const toAriaAttr = (key: string): string => {
+  if (key === 'role' || key.startsWith('aria-')) return key;
+
+  return key.startsWith('aria') ? `aria-${key.slice(4).toLowerCase()}` : `aria-${key}`;
+};
+
+const toHostAttr = (key: string): string => {
+  if (key === 'role' || key.startsWith('aria-')) return key;
+
+  return key.startsWith('aria') ? `aria-${key.slice(4).toLowerCase()}` : key;
+};
+
+const setA11yAttr = (target: Element, key: string, value: string | number | boolean | null | undefined): void => {
+  if (value == null || value === false) {
+    target.removeAttribute(key);
+
+    return;
+  }
+
+  target.setAttribute(key, value === true ? 'true' : String(value));
+};
+
 /**
- * Reactively inherits prop values from a context object provided by an ancestor component.
- * For each key, when the context value is not `undefined`, it is written into the matching prop signal.
- * The effect is automatically cleaned up when the component unmounts.
- *
- * Deferred to `onMount` so context values win over HTML attribute values set on the child.
+ * Reactively syncs ARIA attributes to a target element.
+ * Static values are set immediately; getter functions are tracked as effects.
+ * Returns a cleanup function that removes all reactive bindings.
  *
  * @example
- * syncContextProps(inject(BUTTON_GROUP_CTX), props, ['color', 'size', 'variant']);
+ * syncAria(element, {
+ *   role: 'button',
+ *   expanded: () => isOpen.value,
+ *   disabled: () => isDisabled.value,
+ * });
  */
-export const syncContextProps = <
-  K extends string,
-  Ctx extends Partial<Record<K, ReadonlySignal<unknown>>>,
-  Props extends Record<K, Signal<unknown>>,
->(
-  ctx: Ctx | undefined,
-  props: Props,
-  keys: K[],
-): void => {
-  if (!ctx) return;
+export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaOptions = {}): (() => void) => {
+  const { autoCleanup = true } = options;
+  const disposers: Array<() => void> = [];
 
-  onMount(() => {
-    effect(() => {
-      const target = props as Record<K, Signal<unknown>>;
+  for (const [rawKey, rawValue] of Object.entries(config)) {
+    const key = toAriaAttr(rawKey);
 
-      for (const k of keys) {
-        const v = ctx[k]?.value;
+    if (typeof rawValue === 'function') {
+      const getter = rawValue as () => string | number | boolean | null | undefined;
 
-        if (v !== undefined) target[k].value = v;
-      }
-    });
-  });
-};
+      disposers.push(
+        rawEffect(() => {
+          setA11yAttr(target, key, getter());
+        }),
+      );
 
-export type HostContextAttributeBridge = {
-  contextDisabled?: ReadonlySignal<boolean | undefined>;
-  contextSize?: ReadonlySignal<string | undefined>;
-  contextVariant?: ReadonlySignal<string | undefined>;
-  ownDisabled?: ReadonlySignal<boolean | undefined>;
-  ownSize?: ReadonlySignal<string | undefined>;
-  ownVariant?: ReadonlySignal<string | undefined>;
-};
-
-export const bridgeContextAttributes = (host: HTMLElement, options: HostContextAttributeBridge): void => {
-  let contextDisabledActive = false;
-
-  effect(() => {
-    const contextDisabled = Boolean(options.contextDisabled?.value);
-
-    if (contextDisabled && !contextDisabledActive) {
-      host.setAttribute('disabled', '');
-      contextDisabledActive = true;
-    } else if (!contextDisabled && contextDisabledActive && !options.ownDisabled?.value) {
-      host.removeAttribute('disabled');
-      contextDisabledActive = false;
+      continue;
     }
 
-    const contextSize = options.contextSize?.value;
-    const hasOwnSize = Boolean(options.ownSize?.value);
+    setA11yAttr(target, key, rawValue as string | number | boolean | null | undefined);
+  }
 
-    if (contextSize && !hasOwnSize) host.setAttribute('size', contextSize);
-    else if (!hasOwnSize) host.removeAttribute('size');
+  const cleanup = () => {
+    while (disposers.length > 0) disposers.pop()?.();
+  };
 
-    const contextVariant = options.contextVariant?.value;
-    const hasOwnVariant = Boolean(options.ownVariant?.value);
+  if (autoCleanup) tryRegisterCleanup(cleanup);
 
-    if (contextVariant && !hasOwnVariant) host.setAttribute('variant', contextVariant);
-    else if (!hasOwnVariant) host.removeAttribute('variant');
-  });
+  return cleanup;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -130,13 +146,7 @@ export const bridgeContextAttributes = (host: HTMLElement, options: HostContextA
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SLOT_DEFAULT = 'default';
-const normalizeSlotName = (slotName: string | null | undefined): string => {
-  if (!slotName || slotName === SLOT_DEFAULT) return SLOT_DEFAULT;
-
-  return slotName;
-};
-
-const slotsRegistry = new WeakMap<HTMLElement, ComponentSlots>();
+const normalizeSlotName = (slotName: string | null | undefined): string => slotName || SLOT_DEFAULT;
 
 export type ComponentSlots = {
   elements: (name?: string) => ReadonlySignal<Element[]>;
@@ -150,39 +160,39 @@ export type ComponentSlots = {
  * - `slots.elements(name?)`: assigned elements for a slot (flattened)
  */
 export const createSlots = (): ComponentSlots => {
-  const host = currentRuntime().el;
-  const cached = slotsRegistry.get(host);
+  const host = currentElementOrThrow();
 
-  if (cached) return cached;
-
-  const presenceSignals = new Map<string, Signal<boolean>>();
-  const elementSignals = new Map<string, Signal<Element[]>>();
-  const slotNodesByName = new Map<string, Set<HTMLSlotElement>>();
-  const slotCleanupMap = new Map<HTMLSlotElement, () => void>();
-  let isDisposing = false;
-
-  const ensurePresenceSignal = (name: string): Signal<boolean> => {
-    const normalized = normalizeSlotName(name);
-    let s = presenceSignals.get(normalized);
-
-    if (!s) {
-      s = signal(false);
-      presenceSignals.set(normalized, s);
-    }
-
-    return s;
+  type SlotEntry = {
+    elements: Signal<Element[]>;
+    presence: Signal<boolean>;
   };
 
-  const ensureElementSignal = (name: string): Signal<Element[]> => {
-    const normalized = normalizeSlotName(name);
-    let s = elementSignals.get(normalized);
+  const slotSignals = new Map<string, SlotEntry>();
+  const slotNodesByName = new Map<string, Set<HTMLSlotElement>>();
+  const slotCleanupMap = new Map<HTMLSlotElement, () => void>();
 
-    if (!s) {
-      s = signal<Element[]>([]);
-      elementSignals.set(normalized, s);
+  const ensureSlotEntry = (normalizedName: string): SlotEntry => {
+    let entry = slotSignals.get(normalizedName);
+
+    if (!entry) {
+      entry = {
+        elements: signal<Element[]>([]),
+        presence: signal(false),
+      };
+      slotSignals.set(normalizedName, entry);
     }
 
-    return s;
+    return entry;
+  };
+
+  const areElementsEqual = (prev: Element[], next: Element[]): boolean => {
+    if (prev.length !== next.length) return false;
+
+    for (let i = 0; i < prev.length; i++) {
+      if (prev[i] !== next[i]) return false;
+    }
+
+    return true;
   };
 
   const recomputeSlot = (name: string): void => {
@@ -196,8 +206,13 @@ export const createSlots = (): ComponentSlots => {
       }
     }
 
-    ensureElementSignal(normalized).value = assigned;
-    ensurePresenceSignal(normalized).value = assigned.length > 0;
+    const entry = ensureSlotEntry(normalized);
+
+    if (!areElementsEqual(entry.elements.value, assigned)) entry.elements.value = assigned;
+
+    const hasElements = assigned.length > 0;
+
+    if (entry.presence.value !== hasElements) entry.presence.value = hasElements;
   };
 
   const bindSlot = (slotEl: HTMLSlotElement): void => {
@@ -213,93 +228,42 @@ export const createSlots = (): ComponentSlots => {
 
     slotEl.addEventListener('slotchange', onChange);
 
-    const cleanup = () => {
+    slotCleanupMap.set(slotEl, () => {
       slotEl.removeEventListener('slotchange', onChange);
-      slotCleanupMap.delete(slotEl);
-
-      if (isDisposing) return;
-
-      const currentSet = slotNodesByName.get(name);
-
-      if (!currentSet) return;
-
-      currentSet.delete(slotEl);
-
-      if (currentSet.size === 0) {
-        slotNodesByName.delete(name);
-      }
-
-      recomputeSlot(name);
-    };
-
-    slotCleanupMap.set(slotEl, cleanup);
+    });
 
     recomputeSlot(name);
-  };
-
-  const unbindSlot = (slotEl: HTMLSlotElement): void => {
-    slotCleanupMap.get(slotEl)?.();
   };
 
   const bindAllSlots = (): void => {
     host.shadowRoot?.querySelectorAll('slot').forEach((slotEl) => bindSlot(slotEl));
   };
 
-  ensurePresenceSignal(SLOT_DEFAULT);
-  ensureElementSignal(SLOT_DEFAULT);
-
-  bindAllSlots();
-
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLSlotElement) {
-          bindSlot(node);
-
-          return;
-        }
-
-        if (node instanceof Element) {
-          node.querySelectorAll('slot').forEach((slotEl) => bindSlot(slotEl));
-        }
-      });
-
-      mutation.removedNodes.forEach((node) => {
-        if (node instanceof HTMLSlotElement) {
-          unbindSlot(node);
-
-          return;
-        }
-
-        if (node instanceof Element) {
-          node.querySelectorAll('slot').forEach((slotEl) => unbindSlot(slotEl));
-        }
-      });
+  const recomputeAllSlots = (): void => {
+    for (const name of slotNodesByName.keys()) {
+      recomputeSlot(name);
     }
+  };
+
+  // setup() runs before the template is rendered, so bind once now (if any slots
+  // already exist) and schedule another pass after first render.
+  bindAllSlots();
+  onMounted(() => {
+    bindAllSlots();
+    recomputeAllSlots();
   });
 
-  if (host.shadowRoot) {
-    observer.observe(host.shadowRoot, { childList: true, subtree: true });
-  }
-
   onCleanup(() => {
-    isDisposing = true;
-    observer.disconnect();
-
-    for (const cleanup of [...slotCleanupMap.values()]) cleanup();
+    for (const cleanup of slotCleanupMap.values()) cleanup();
 
     slotCleanupMap.clear();
     slotNodesByName.clear();
   });
 
-  const slots: ComponentSlots = {
-    elements: (name?: string) => ensureElementSignal(normalizeSlotName(name)),
-    has: (name?: string) => ensurePresenceSignal(normalizeSlotName(name)),
+  return {
+    elements: (name?: string) => ensureSlotEntry(normalizeSlotName(name)).elements,
+    has: (name?: string) => ensureSlotEntry(normalizeSlotName(name)).presence,
   };
-
-  slotsRegistry.set(host, slots);
-
-  return slots;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -310,8 +274,8 @@ export const createSlots = (): ComponentSlots => {
  * Describes a reactive or static host binding value.
  */
 export type HostBindingValue =
-  | (() => Record<string, boolean>)
   | (() => string | number | boolean | null | undefined)
+  | ReadonlySignal<string | number | boolean | null | undefined>
   | string
   | number
   | boolean
@@ -323,115 +287,179 @@ export type HostBindingValue =
  */
 export type ReflectConfig = Record<string, HostBindingValue>;
 
-export type HostBindConfig<CustomEvents extends Record<string, unknown> = Record<string, never>> =
-  | { attr: ReflectConfig }
-  | { class: () => Record<string, boolean> }
-  | { on: HostEventListeners<CustomEvents> };
+/**
+ * Describes a reactive property accessor binding on the host element.
+ * The getter is called lazily; the optional setter is used when external code
+ * assigns `element.propName = value`.
+ */
+export type HostPropDescriptor<T = unknown> = {
+  get: () => T;
+  set?: (value: T) => void;
+};
 
-export type HostBindTarget = 'attr' | 'class' | 'on';
+type HostClassBindingValue = ReadonlySignal<boolean> | (() => boolean) | boolean;
+type HostEventListener = (event: any) => void;
+
+export type HostBindConfig = {
+  attr?: ReflectConfig;
+  class?: (() => Record<string, boolean>) | Record<string, HostClassBindingValue>;
+  on?: Record<string, HostEventListener | undefined>;
+  prop?: Record<string, HostPropDescriptor>;
+  style?: Record<string, HostBindingValue>;
+};
 
 export type ComponentHost = {
-  bind: {
-    <CustomEvents extends Record<string, unknown> = Record<string, never>>(
-      config: HostBindConfig<CustomEvents>,
-      options?: AddEventListenerOptions,
-    ): () => void;
-    <CustomEvents extends Record<string, unknown> = Record<string, never>>(
-      target: 'attr',
-      config: ReflectConfig,
-    ): () => void;
-    (target: 'class', getter: () => Record<string, boolean>): () => void;
-    <CustomEvents extends Record<string, unknown> = Record<string, never>>(
-      target: 'on',
-      hostEvents: HostEventListeners<CustomEvents>,
-      options?: AddEventListenerOptions,
-    ): () => void;
-  };
+  bind: (config: HostBindConfig, options?: AddEventListenerOptions) => () => void;
   el: HTMLElement;
-  shadowRoot: ShadowRoot;
 };
 
 export const createHost = (): ComponentHost => {
-  const el = currentRuntime().el;
+  const el = currentElementOrThrow();
+
+  const bind = (config: HostBindConfig, options?: AddEventListenerOptions): (() => void) => {
+    const disposers: Array<() => void> = [];
+
+    if (config.attr) {
+      for (const [key, value] of Object.entries(config.attr)) {
+        const name = toHostAttr(key);
+        const dispose = applyAttribute(el, name, value);
+
+        if (dispose) disposers.push(dispose);
+      }
+    }
+
+    if (config.class) {
+      disposers.push(applyClassMap(el, config.class));
+    }
+
+    if (config.prop) {
+      for (const [key, descriptor] of Object.entries(config.prop)) {
+        const { get, set } = descriptor;
+
+        Object.defineProperty(el, key, {
+          configurable: true,
+          enumerable: true,
+          get,
+          ...(set ? { set } : {}),
+        });
+
+        disposers.push(() => {
+          const descriptor = Object.getOwnPropertyDescriptor(el, key);
+
+          if (!descriptor || descriptor.get !== get || descriptor.set !== set) return;
+
+          delete (el as unknown as Record<string, unknown>)[key];
+        });
+      }
+    }
+
+    if (config.on) {
+      for (const event of Object.keys(config.on) as Array<keyof typeof config.on>) {
+        const listener = config.on[event];
+
+        if (!listener) continue;
+
+        disposers.push(listen(el, event as string, listener as EventListener, options));
+      }
+    }
+
+    if (config.style) {
+      for (const [key, value] of Object.entries(config.style)) {
+        const dispose = applyStyle(el, key, value);
+
+        if (dispose) disposers.push(dispose);
+      }
+    }
+
+    const cleanup = () => {
+      while (disposers.length > 0) disposers.pop()?.();
+    };
+
+    onCleanup(cleanup);
+
+    return cleanup;
+  };
 
   return {
-    bind: (
-      targetOrConfig: HostBindTarget | HostBindConfig,
-      configOrOptions?: ReflectConfig | (() => Record<string, boolean>) | HostEventListeners | AddEventListenerOptions,
-      maybeOptions?: AddEventListenerOptions,
-    ) => {
-      const disposers: Array<() => void> = [];
-
-      const config =
-        typeof targetOrConfig === 'string'
-          ? ({ [targetOrConfig]: configOrOptions } as HostBindConfig)
-          : (targetOrConfig as HostBindConfig);
-      const options =
-        typeof targetOrConfig === 'string' && targetOrConfig === 'on'
-          ? (maybeOptions as AddEventListenerOptions | undefined)
-          : (configOrOptions as AddEventListenerOptions | undefined);
-
-      if ('attr' in config) {
-        for (const [key, value] of Object.entries(config.attr)) {
-          const name =
-            key.startsWith('aria-') || key === 'role'
-              ? key
-              : key.startsWith('aria')
-                ? `aria-${key.slice(4).toLowerCase()}`
-                : key;
-          const dispose = applyAttribute(el, name, value);
-
-          if (dispose) disposers.push(dispose);
-        }
-      }
-
-      if ('class' in config) {
-        disposers.push(applyClassMap(el, config.class));
-      }
-
-      if ('on' in config) {
-        for (const event of Object.keys(config.on) as Array<keyof typeof config.on>) {
-          const listener = config.on[event];
-
-          if (!listener) continue;
-
-          disposers.push(listen(el, event as string, listener as EventListener, options));
-        }
-      }
-
-      const cleanup = () => {
-        while (disposers.length > 0) disposers.pop()?.();
-      };
-
-      onCleanup(cleanup);
-
-      return cleanup;
-    },
+    bind,
     el,
-    shadowRoot: el.shadowRoot as ShadowRoot,
   };
 };
 
-function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
+const applyReactiveBinding = (
+  value: HostBindingValue,
+  updater: (next: string | number | boolean | null | undefined) => void,
+): (() => void) | void => {
   if (typeof value === 'function') {
-    return effect(() => setAttr(host, name, (value as () => HostBindingValue)()));
-  } else {
-    setAttr(host, name, value);
+    return effect(() => updater(value()));
   }
+
+  if (isSignal(value)) {
+    return effect(() => updater(value.value));
+  }
+
+  updater(value);
+};
+
+function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
+  return applyReactiveBinding(value, (next) => setAttr(host, name, next));
 }
 
-function applyClassMap(host: HTMLElement, getter: () => Record<string, boolean>): () => void {
+function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
+  // Normalize camelCase property names to kebab-case for CSS setProperty.
+  // CSS custom properties (--foo) are already kebab-case, so leave them as-is.
+  const cssName = name.startsWith('--') ? name : toKebab(name);
+
+  // Track whether this binding has ever written a value to the inline style.
+  // This prevents removeProperty() from wiping an external inline style that
+  // the component never set (e.g. user-authored style="grid-area: main;").
+  let owned = false;
+
+  const setStyle = (v: any) => {
+    if (v != null && v !== '') {
+      owned = true;
+      host.style.setProperty(cssName, String(v));
+    } else if (owned) {
+      host.style.removeProperty(cssName);
+    }
+  };
+
+  return applyReactiveBinding(value, setStyle);
+}
+
+function applyClassMap(
+  host: HTMLElement,
+  value: (() => Record<string, boolean>) | Record<string, HostClassBindingValue>,
+): () => void {
+  const getMap =
+    typeof value === 'function'
+      ? value
+      : (): Record<string, boolean> => {
+          const result: Record<string, boolean> = {};
+
+          for (const [cls, entry] of Object.entries(value)) {
+            result[cls] = typeof entry === 'function' ? entry() : isSignal(entry) ? entry.value : Boolean(entry);
+          }
+
+          return result;
+        };
+
   let prev = new Set<string>();
 
   return effect(() => {
-    const next = new Set(
-      Object.entries(getter())
-        .filter(([, active]) => active)
-        .map(([cls]) => cls),
-    );
+    const next = new Set<string>();
 
-    for (const cls of prev) if (!next.has(cls)) host.classList.remove(cls);
-    for (const cls of next) if (!prev.has(cls)) host.classList.add(cls);
+    for (const [cls, active] of Object.entries(getMap())) {
+      if (!active) continue;
+
+      next.add(cls);
+
+      if (!prev.has(cls)) host.classList.add(cls);
+    }
+
+    for (const cls of prev) {
+      if (!next.has(cls)) host.classList.remove(cls);
+    }
 
     prev = next;
   });

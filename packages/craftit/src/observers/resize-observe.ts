@@ -1,11 +1,11 @@
 import { signal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import { onCleanup } from '../runtime-lifecycle';
+import { onCleanup } from '../runtime';
 
 /**
  * Observes an element's content-box size via `ResizeObserver`.
  * Returns a `ReadonlySignal` that updates whenever the dimensions change.
- * Must be called inside an {@link onMount} callback.
+ * Must be called inside a `mount()` callback.
  */
 export const resizeObserver = (el: Element): ReadonlySignal<{ height: number; width: number }> => {
   const size = signal({ height: 0, width: 0 });

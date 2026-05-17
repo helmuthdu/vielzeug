@@ -1,10 +1,10 @@
 # @vielzeug/routeit
 
-> Fast, type-safe history API router with middleware, named routes, and a URL builder
+> Fast, type-safe client-side routing with a declarative route table
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/routeit)](https://www.npmjs.com/package/@vielzeug/routeit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Routeit** is a lightweight, framework-agnostic client-side router: register routes with `on()`, apply middleware, navigate programmatically, and build type-safe URLs — all with a minimal, chainable API.
+**Routeit** is a lightweight, framework-agnostic router built around one model: define a route table once, then navigate, resolve, load route data, and build URLs by route name.
 
 ## Installation
 
@@ -16,275 +16,292 @@ pnpm add @vielzeug/routeit
 
 ## Quick Start
 
-```typescript
+```ts
 import { createRouter } from '@vielzeug/routeit';
 
-const router = createRouter();
+const router = createRouter({
+  routes: {
+    home: {
+      path: '/',
+      handler: () => renderHome(),
+    },
+    dashboard: {
+      path: '/dashboard',
+      children: {
+        index: {
+          index: true,
+          handler: () => renderDashboardHome(),
+        },
+        settings: {
+          path: 'settings',
+          data: async () => fetchSettings(),
+          handler: ({ data }) => renderSettings(data),
+        },
+      },
+    },
+    notFound: {
+      path: '*',
+      handler: () => renderNotFound(),
+    },
+  },
+});
 
-router
-  .on('/', () => render('<Home />'))
-  .on('/users', () => render('<Users />'))
-  .on('/users/:id', ({ params }) => render(`<User id="${params.id}" />`))
-  .start();
+await router.navigate({ name: 'dashboard.settings' });
 ```
 
 ## Features
 
-- ✅ **History API routing** — modern browser navigation with base-path support
-- ✅ **Typed path params** — `PathParams<'/users/:id'>` inferred from the path literal at compile time
-- ✅ **Named wildcard params** — `/docs/:rest*` captures multi-segment paths as a single param
-- ✅ **Middleware** — global, per-group, and per-route; `ctx.locals` for passing data down the chain
-- ✅ **Route groups** — `group(prefix, definer, { middleware? })` with typed prefix params propagated to handlers
-- ✅ **Named routes** — navigate and build URLs by name, never hard-code paths
-- ✅ **URL builder** — `url(nameOrPattern, params?, query?)` with base-path awareness
-- ✅ **Async navigation** — `navigate()` returns a `Promise`; errors become rejections
-- ✅ **Same-URL deduplication** — skips redundant history pushes; `force: true` bypasses it
-- ✅ **Subscriptions** — `subscribe((state) => ...)` returns an unsubscribe function
-- ✅ **Resolve without navigating** — `resolve(pathname)` for prefetching and SSR
-- ✅ **Not-found & error hooks** — `onNotFound` and `onError` in router options
-- ✅ **View Transition API** — opt-in globally or per-navigation
-- ✅ **Disposable** — `[Symbol.dispose]()` for `using` declarations
-- ✅ **Framework-agnostic** — works with any UI library
+- Declarative route table only
+- Nested routes with `children` and `index`
+- Named-route-first `navigate()`, `url()`, and `isActive()`
+- Lazy-load route modules on first navigation
+- Declarative `redirect` field for permanent URL aliases
+- Search param validation and coercion via `coerceSearch`
+- Route-scoped `data()` loaders with `AbortSignal`
+- Hover-prefetch via `router.preload()`
+- Leave guards via `router.beforeLeave()`
+- Global and per-route middleware
+- History entry state readable as `ctx.historyState`
+- Error from failed data loaders exposed on `router.state.error`
+- Scroll restoration via the `scroll` option
+- Raw path targets via `navigate({ path })`
+- Typed path params via literal route paths
+- Resolvable matches via `router.resolve(pathname)`
+- Memory history for SSR, tests, and non-browser runtimes
+- Base-path support for subdirectory deployments
+- Optional View Transition API integration
+- Immutable route state snapshots via `router.state`
+- Zero dependencies
 
-## Usage
+## Route Definition
 
-### Defining Routes
-
-```typescript
-import { createRouter } from '@vielzeug/routeit';
-
-const router = createRouter({ base: '/app' });
-
-// Handler route
-router.on('/', () => renderHome());
-
-// Middleware-only route (no handler)
-router.on('/hook', { middleware: trackPageView });
-
-// With name and meta
-router.on('/users/:id', ({ params }) => renderUser(params.id), {
-  name: 'userDetail',
-  meta: { title: 'User' },
-});
-
-router.start();
-```
-
-### Route Groups
-
-Share a path prefix and optional middleware across multiple routes. Path params in the prefix are **typed through** to every `on()` handler in the group:
-
-```typescript
-// Simple prefix + middleware
-router.group(
-  '/admin',
-  (r) => {
-    r.on('/dashboard', () => renderDashboard());
-    r.on('/users', () => renderUsers());
-    r.on('/users/:id', ({ params }) => renderUser(params.id));
+```ts
+const routes = {
+  home: {
+    path: '/',
+    handler: () => renderHome(),
   },
-  { middleware: requireAuth },
-);
-
-// Prefix params are typed inside the callback
-router.group('/projects/:projectId', (r) => {
-  r.on('/tasks/:taskId', ({ params }) => {
-    params.projectId; // ✓ string — inferred from group prefix
-    params.taskId; // ✓ string — inferred from on() path
-  });
+  login: {
+    path: '/login',
+    handler: () => renderLogin(),
+  },
+  dashboard: {
+    path: '/dashboard',
+    middleware: [requireAuth],
+    children: {
+      index: {
+        index: true,
+        handler: () => renderDashboard(),
+      },
+      settings: {
+        path: 'settings',
+        data: async () => fetchSettings(),
+        handler: ({ data }) => renderSettings(data),
+      },
+    },
+  },
+  userDetail: {
+    path: '/users/:id',
+    data: async ({ params }) => fetchUser(params.id),
+    handler: ({ data }) => renderUser(data),
+    meta: { section: 'users' },
+  },
+  notFound: {
+    path: '*',
+    handler: () => renderNotFound(),
+  },
 });
-```
 
-### Route Context
-
-Every handler and middleware receives a `RouteContext`:
-
-```typescript
-router.on('/users/:id', (ctx) => {
-  ctx.params.id; // typed dynamic segment → e.g. '123'
-  ctx.query.page; // query param → e.g. '?page=2' → '2'
-  ctx.pathname; // current pathname string
-  ctx.hash; // URL hash without '#'
-  ctx.meta; // static metadata from the route definition
-  ctx.locals; // mutable bag — pass data between middleware
-  ctx.navigate; // navigate programmatically from the handler
-});
-```
-
-### Middleware
-
-```typescript
-// Global middleware via options
 const router = createRouter({
-  middleware: async (ctx, next) => {
-    if (!isLoggedIn() && ctx.pathname !== '/login') {
-      await ctx.navigate('/login');
-      return; // block the handler — don't call next()
-    }
-    await next();
-  },
+  base: '/app',
+  middleware: [logger],
+  onError: (error, context) => reportError(error, context.source),
+  routes,
+  viewTransition: true,
 });
-
-// Add global middleware after construction
-router.use(loggerMiddleware, analyticsMiddleware);
-
-// Route-level middleware
-router.on('/dashboard', renderDashboard, { middleware: requireAuth });
-
-// Middleware-only route (no handler)
-router.on('/api/*', { middleware: [requireAuth, rateLimit] });
 ```
 
-### Programmatic Navigation
+## Middleware
 
-```typescript
-// Path string
-await router.navigate('/users/42');
-await router.navigate('/users/42', { replace: true, state: { from: '/' } });
+```ts
+import { redirectTo } from '@vielzeug/routeit';
 
-// Named route
-await router.navigate({ name: 'userDetail', params: { id: '42' } });
-await router.navigate({ name: 'user', params: { id: '42' }, hash: 'activity' });
+// Redirect helper — short-circuits the middleware chain
+const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 
-// Force re-run on the current URL
-await router.navigate('/page', { force: true });
+// Manual middleware
+const loadUser = async (ctx, next) => {
+  ctx.locals.user = await fetchCurrentUser();
+  await next();
+};
+```
 
-// Errors throw as rejected Promises
-try {
-  await router.navigate({ name: 'nonExistent' });
-} catch (e) {
-  console.error(e); // '[routeit] Route "nonExistent" not found'
+`ctx.locals` is shared across the middleware chain and the final handler. If you want not-found handling or error boundaries, model them as routes and middleware instead of special router hooks.
+
+## Data
+
+```ts
+const routes = {
+  userDetail: {
+    path: '/users/:id',
+    data: async ({ params, signal }) => fetchUser(params.id, { signal }),
+    handler: ({ data }) => renderUser(data),
+  },
+};
+```
+
+## Lazy Routes
+
+```ts
+const routes = {
+  settings: {
+    path: '/settings',
+    lazy: () => import('./pages/Settings'),
+  },
+};
+```
+
+The factory is called at most once. The resolved `handler`, `data`, and `meta` replace the static definition.
+
+## Search Param Validation
+
+```ts
+const routes = {
+  search: {
+    path: '/search',
+    coerceSearch: (raw) => ({
+      q: String(raw.q ?? ''),
+      page: Math.max(1, Number(raw.page ?? 1)),
+    }),
+    handler: ({ query }) => renderSearch(query.q, query.page),
+  },
+};
+```
+
+## Leave Guards
+
+```ts
+const removeGuard = router.beforeLeave(async () => {
+  if (!form.isDirty) return true;
+  return confirm('Discard changes?');
+});
+
+// Remove when no longer needed:
+removeGuard();
+```
+
+Leave guards only apply to user-triggered `navigate()` calls. Internal declarative route redirects bypass guards.
+
+## Prefetching
+
+```ts
+anchor.addEventListener('mouseenter', () => {
+  router.preload('userDetail', { id: '42' });
+});
+```
+
+`data()` runs after middleware and before the final handler. Use middleware for redirects and access control, and keep `data()` focused on route-local fetching.
+
+## Route Context
+
+Handlers and middleware receive a context with routing and navigation helpers:
+
+```ts
+handler: (ctx) => {
+  ctx.data;         // result of this route's data()
+  ctx.pathname;
+  ctx.params;
+  ctx.query;        // validated + coerced when coerceSearch is set
+  ctx.hash;
+  ctx.historyState; // value from navigate({ ... }, { state: ... })
+  ctx.matches;
+  ctx.locals;
+
+  ctx.navigate({ name: 'home' });
+  ctx.navigate({ path: '/campaign?utm_source=email' });
 }
 ```
 
-### URL Builder
+Read active metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
 
-```typescript
-router.url('/users/:id', { id: '42' }); // '/users/42'
-router.url('userDetail', { id: '42' }); // '/app/users/42' (respects base)
-router.url('/search', undefined, { q: 'hello', page: '2' }); // '/search?q=hello&page=2'
-router.url('/docs/:rest*', { rest: 'guide/intro' }); // '/docs/guide/intro'
+## Navigation
+
+```ts
+await router.navigate({ name: 'userDetail', params: { id: '42' } });
+await router.navigate({ name: 'userDetail', params: { id: '42' } }, { replace: true });
+await router.navigate({ path: '/marketing?source=campaign' });
+await router.navigate({ path: '/checkout#payment' }, { replace: true });
+
+router.url('userDetail', { id: '42' }, { tab: 'profile' });
+router.isActive('userDetail');
+router.isActive('users');
+router.isActive('users', { exact: true });
+router.resolve('/app/dashboard/settings');
 ```
 
-### `isActive`
+## State
 
-```typescript
-router.isActive('/users/:id'); // exact match (default)
-router.isActive('userDetail'); // by route name
-router.isActive('/admin', false); // prefix match — true when inside /admin/*
-router.isActive('adminGroup', false); // named route prefix match
-```
-
-### Subscriptions & State
-
-```typescript
-const unsubscribe = router.subscribe((state) => {
-  state.pathname; // '/users/42'
-  state.params; // { id: '42' }
-  state.query; // { page: '2' }
-  state.name; // 'userDetail'
-  state.meta; // { title: 'User' }
+```ts
+router.subscribe((state) => {
+  const leaf = state.matches.at(-1);
+  document.title = (leaf?.meta as { title?: string } | undefined)?.title ?? 'App';
 });
 
-// Stop later
-unsubscribe();
-
-// Read current state directly
-const { pathname, params } = router.state;
+router.state.location.pathname;
+router.state.location.query;
+router.state.location.hash;
+router.state.location.historyState; // state from the current history entry
+router.state.matches;
+router.state.status;  // 'idle' | 'loading' | 'error'
+router.state.error;   // only set when status === 'error'
 ```
 
-### Resolve Without Navigating
+`router.state` is an immutable snapshot. Each successful navigation replaces it with a new snapshot.
 
-```typescript
-const match = router.resolve('/users/42');
-// → { name: 'userDetail', params: { id: '42' }, meta: { title: 'User' } }
-// → null when no route matches
+## Testing
+
+Use `createMemoryHistory` to test routers without a browser:
+
+```ts
+import { createMemoryHistory, createRouter } from '@vielzeug/routeit';
+
+const history = createMemoryHistory('/dashboard');
+const router = createRouter({ history, routes });
+
+await new Promise((r) => setTimeout(r, 0));
+assert(router.state.location.pathname === '/dashboard');
+
+router.dispose();
 ```
 
-### Lifecycle
+## API Summary
 
-```typescript
-const router = createRouter({ autoStart: true }); // starts immediately
-
-router.start(); // idempotent — safe to call twice
-router.stop(); // remove event listeners
-router.dispose(); // stop + clear all subscribers
-
-// Or with `using` (ES2022 Explicit Resource Management)
-using router = createRouter();
-```
-
-### Not Found & Error Handling
-
-```typescript
-const router = createRouter({
-  onNotFound: ({ pathname }) => renderNotFound(pathname),
-  onError: (error, ctx) => {
-    console.error('Error at', ctx.pathname, error);
-    ctx.navigate('/error');
-  },
-});
-```
-
-## API
-
-### `createRouter(options?)`
-
-| Option           | Type                         | Default     | Description                                         |
-| ---------------- | ---------------------------- | ----------- | --------------------------------------------------- |
-| `base`           | `string`                     | `'/'`       | Base path prefix for routing                        |
-| `onNotFound`     | `RouteHandler`               | —           | Handler for unmatched routes                        |
-| `onError`        | `(error, ctx) => void`       | —           | Handler for errors thrown in handlers or middleware |
-| `middleware`     | `Middleware \| Middleware[]` | `[]`        | Global middleware applied before every route        |
-| `viewTransition` | `boolean`                    | `false`     | Wrap navigations in the View Transition API         |
-| `autoStart`      | `boolean`                    | `false`     | Start immediately after construction                |
-
-### Router Methods
-
-| Method                                | Returns                 | Description                                                 |
-| ------------------------------------- | ----------------------- | ----------------------------------------------------------- |
-| `on(path, handler, opts?)`            | `this`                  | Register a route with a typed handler                       |
-| `on(path, opts?)`                     | `this`                  | Register a middleware-only route (no handler)               |
-| `group(prefix, definer, opts?)`       | `this`                  | Register routes under a shared prefix                       |
-| `use(...middleware)`                  | `this`                  | Add global middleware after construction                    |
-| `start()`                             | `this`                  | Start listening for navigation events                       |
-| `stop()`                              | `this`                  | Stop listening and remove event listeners                   |
-| `dispose()`                           | `void`                  | Stop and clear all subscribers                              |
-| `navigate(target, opts?)`             | `Promise<void>`         | Navigate to a path or named route                           |
-| `url(nameOrPattern, params?, query?)` | `string`                | Build a URL from a path pattern or named route              |
-| `isActive(nameOrPattern, exact?)`     | `boolean`               | Check if a pattern or name matches the current path         |
-| `resolve(pathname)`                   | `ResolvedRoute \| null` | Resolve a pathname without navigating                       |
-| `state`                               | `RouteState`            | Current route state (shallow copy)                          |
-| `subscribe(listener)`                 | `() => void`            | Subscribe to route changes; returns an unsubscribe function |
-
-### `RouteOptions<Meta>`
-
-Passed as the last argument to `on()`:
-
-| Option       | Type                         | Description                                                     |
-| ------------ | ---------------------------- | --------------------------------------------------------------- |
-| `name`       | `string`                     | Route name for programmatic navigation and `url()`/`isActive()` |
-| `meta`       | `Meta`                       | Static metadata attached to the route context                   |
-| `middleware` | `Middleware \| Middleware[]` | Route-specific middleware                                       |
-
-### `NavigateOptions`
-
-| Option           | Type      | Default | Description                                              |
-| ---------------- | --------- | ------- | -------------------------------------------------------- |
-| `replace`        | `boolean` | `false` | Replace the current history entry                        |
-| `state`          | `unknown` | —       | State stored with the history entry                      |
-| `viewTransition` | `boolean` | —       | Override the router-level setting for this navigation    |
-| `force`          | `boolean` | `false` | Navigate even if the destination URL matches the current |
+| Symbol | Purpose |
+| --- | --- |
+| `createRouter({ routes, ...options })` | Create a router from a declarative route table |
+| `createBrowserHistory()` | Create the default browser history driver |
+| `createMemoryHistory(initialPath?)` | Create an in-memory history driver (SSR / tests) |
+| `redirectTo(target, options?)` | Build redirect middleware for guard flows |
+| `router.navigate({ name, ... })` | Navigate by route name |
+| `router.navigate({ path })` | Navigate by raw path target |
+| `router.url(name, params?, query?)` | Build a URL for a named route |
+| `router.isActive(name, options?)` | Check whether the current route matches a named route |
+| `router.resolve(pathname)` | Resolve a pathname without running middleware or handlers |
+| `router.preload(name, params?)` | Eagerly run data loaders without navigating |
+| `router.beforeLeave(blocker)` | Register a leave guard |
+| `onError(error, context)` | Receive non-awaited/background router errors |
+| `router.subscribe(listener)` | Observe immutable route state snapshots |
+| `router.dispose()` | Remove listeners and prevent future router interaction |
 
 ## Documentation
 
 Full docs at **[vielzeug.dev/routeit](https://vielzeug.dev/routeit)**
 
-|                                                   |                                            |
-| ------------------------------------------------- | ------------------------------------------ |
-| [Usage Guide](https://vielzeug.dev/routeit/usage) | Routes, navigation, middleware, and groups |
-| [API Reference](https://vielzeug.dev/routeit/api) | Complete type signatures                   |
-| [Examples](https://vielzeug.dev/routeit/examples) | Real-world routing patterns                |
+| | |
+| --- | --- |
+| [Usage Guide](https://vielzeug.dev/routeit/usage) | Router setup, middleware, and navigation patterns |
+| [API Reference](https://vielzeug.dev/routeit/api) | Public types and method signatures |
+| [Examples](https://vielzeug.dev/routeit/examples) | Practical recipes for guards, base paths, and transitions |
 
 ## License
 

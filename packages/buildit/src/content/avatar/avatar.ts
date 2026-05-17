@@ -3,7 +3,7 @@ import { define, computed, effect, html, signal, watch } from '@vielzeug/craftit
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import '../icon/icon';
-import { type PropBundle, roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
+import { roundableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import groupStyles from './avatar-group.css?inline';
 import componentStyles from './avatar.css?inline';
@@ -75,8 +75,8 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
     initials: undefined,
     src: undefined,
     status: undefined,
-  } satisfies PropBundle<BitAvatarProps>,
-  setup({ props }) {
+  },
+  setup(props) {
     const imgFailed = signal(false);
 
     // Reset stale error state whenever src changes
@@ -111,8 +111,7 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
     const showImage = computed(() => !!props.src.value && !imgFailed.value);
     const showInitials = computed(() => !showImage.value && !!derivedInitials.value);
     const showFallback = computed(() => !showImage.value && !showInitials.value);
-    // Combines name and status into a single accessible label so AT announces them together
-    const avatarLabel = computed(() => {
+    const avatarLabel = () => {
       const name = (props.alt.value as string | undefined) || null;
       const statusKey = props.status.value as AvatarStatus | undefined;
       const status = statusKey ? STATUS_LABELS[statusKey] : null;
@@ -124,27 +123,24 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
       if (!status) return name;
 
       return `${name}, ${status}`;
-    });
+    };
+    const avatarRole = () => (avatarLabel() ? 'img' : null);
 
-    return html`
-      <span
-        class="avatar"
-        part="avatar"
-        :aria-label="${() => avatarLabel.value}"
-        :role="${() => (avatarLabel.value ? 'img' : null)}">
+    return () => html`
+      <span class="avatar" part="avatar" :aria-label="${avatarLabel}" :role="${avatarRole}">
         ${() =>
           props.src.value
             ? html`<img
-                ref=${attachImgListeners}
+                ref="${attachImgListeners}"
                 part="img"
-                :src="${() => props.src.value}"
-                :alt="${() => props.alt.value || ''}"
+                :src="${props.src}"
+                :alt="${props.alt}"
                 ?hidden="${() => !showImage.value}"
                 aria-hidden="true" />`
             : ''}
         ${() =>
           showInitials.value
-            ? html`<span class="initials" part="initials" aria-hidden="true">${() => derivedInitials.value}</span>`
+            ? html`<span class="initials" part="initials" aria-hidden="true">${derivedInitials}</span>`
             : ''}
         ${() =>
           showFallback.value
@@ -153,11 +149,7 @@ export const AVATAR_TAG = define<BitAvatarProps>('bit-avatar', {
       </span>
       ${() =>
         props.status.value
-          ? html`<span
-              class="status"
-              part="status"
-              :data-status="${() => props.status.value}"
-              aria-hidden="true"></span>`
+          ? html`<span class="status" part="status" :data-status="${props.status}" aria-hidden="true"></span>`
           : ''}
     `;
   },
@@ -207,12 +199,12 @@ export type BitAvatarGroupProps = {
  * </bit-avatar-group>
  * ```
  */
-export const AVATAR_GROUP_TAG = define<{ max?: number; total?: number }>('bit-avatar-group', {
+export const AVATAR_GROUP_TAG = define<BitAvatarGroupProps>('bit-avatar-group', {
   props: {
     max: 5,
     total: undefined,
   },
-  setup({ host, props, slots }) {
+  setup(props, { host, slots }) {
     const overflowCount = signal(0);
 
     const updateVisibility = () => {
@@ -232,13 +224,14 @@ export const AVATAR_GROUP_TAG = define<{ max?: number; total?: number }>('bit-av
       updateVisibility();
     });
 
-    return html`
+    const overflowLabel = () => `+${overflowCount.value} more`;
+    const overflowText = () => `+${overflowCount.value}`;
+
+    return () => html`
       <slot></slot>
       ${() =>
         overflowCount.value > 0
-          ? html`<span class="overflow-badge" part="overflow" aria-label="${() => `+${overflowCount.value} more`}">
-              +${() => overflowCount.value}
-            </span>`
+          ? html`<span class="overflow-badge" part="overflow" aria-label="${overflowLabel}"> ${overflowText} </span>`
           : ''}
     `;
   },

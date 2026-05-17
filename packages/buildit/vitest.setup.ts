@@ -44,7 +44,7 @@ if (typeof ElementInternals !== 'undefined') {
     const host = internalsHostMap.get(this);
 
     if (host) {
-      (host as Record<symbol, File | FormData | string | null>)[FORM_VALUE_SYMBOL] = value;
+      (host as unknown as Record<symbol, File | FormData | string | null>)[FORM_VALUE_SYMBOL] = value;
     }
 
     originalSetFormValue?.call(this, value);
@@ -90,8 +90,8 @@ const appendFormValue = (formData: FormData, name: string, value: File | FormDat
 };
 
 globalThis.FormData = class FormDataWithCustomElementSupport extends NativeFormData {
-  constructor(form?: HTMLFormElement, submitter?: HTMLElement) {
-    super(form as HTMLFormElement | undefined, submitter as HTMLElement | undefined);
+  constructor(form?: HTMLFormElement, submitter?: HTMLElement | null) {
+    super(form as HTMLFormElement | undefined, submitter as HTMLElement | null | undefined);
 
     if (!(form instanceof HTMLFormElement)) return;
 

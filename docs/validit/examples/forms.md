@@ -3,51 +3,84 @@ title: 'Validit Examples — Forms'
 description: 'Form validation examples with validit.'
 ---
 
-## Form Validation Examples
+## Form validation examples
 
-## Problem
+### Problem
 
-Implement form validation examples in a production-friendly way with `@vielzeug/validit` while keeping setup and cleanup explicit.
+Validate a registration form, normalize browser values, and expose errors in a shape that maps directly into field-level UI.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/validit` installed.
-
-### Registration Schema
+### Runnable Example
 
 ```ts
-import { v, type Infer } from '@vielzeug/validit';
+import { flattenFirstErrors, v, type Infer } from '@vielzeug/validit';
 
-export const RegistrationSchema = v
+const RegistrationSchema = v
   .object({
     name: v.string().min(1, 'Name is required'),
     email: v.string().trim().email('Invalid email address'),
     password: v
       .string()
       .min(8, 'Password must be at least 8 characters')
-      .refine((value) => /[A-Z]/.test(value), 'Add at least one uppercase letter')
-      .refine((value) => /\d/.test(value), 'Add at least one number'),
+      .check((value) => /[A-Z]/.test(value), 'Add at least one uppercase letter')
+      .check((value) => /\d/.test(value), 'Add at least one number'),
     confirmPassword: v.string(),
     newsletter: v.boolean().default(false),
   })
-  .refine((value) => value.password === value.confirmPassword, 'Passwords must match');
+  .check((value) => value.password === value.confirmPassword, 'Passwords must match');
 
 export type Registration = Infer<typeof RegistrationSchema>;
-```
 
-### Mapping Errors For UI
+const payload: unknown = {
+  confirmPassword: 'Secret123',
+  email: 'ada@example.com',
+  name: 'Ada',
+  newsletter: 'true',
+  password: 'Secret123',
+};
 
-```ts
-const result = RegistrationSchema.safeParse(formData);
+const FormInputSchema = RegistrationSchema.extend({
+  newsletter: v.coerce.boolean().default(false),
+});
 
-if (!result.success) {
-  const { fieldErrors, formErrors } = result.error.flatten();
-  // fieldErrors => { email: ['Invalid email'], password: ['...'] }
-  // formErrors => ['Passwords must match']
+const parsed = FormInputSchema.safeParse(payload);
+
+if (parsed.success) {
+  console.log(parsed.data);
+} else {
+  const { fieldErrors, formErrors } = flattenFirstErrors(parsed.error);
+
+  console.log(fieldErrors);
+  console.log(formErrors);
 }
 ```
 
-### Optional Profile Fields
+### Expected Output
+
+```ts
+{
+  confirmPassword: 'Secret123',
+  email: 'ada@example.com',
+  name: 'Ada',
+  newsletter: true,
+  password: 'Secret123'
+}
+```
+
+If the passwords do not match, `formErrors` contains `['Passwords must match']` because the object-level check has no field path.
+
+### Common Pitfalls
+
+- Validating raw form payloads with `v.boolean()` instead of `v.coerce.boolean()`.
+- Expecting cross-field object refinements to appear under a field key instead of `formErrors`.
+- Using `flatten()` when the UI only needs the first message per field.
+
+### Related
+
+- [API](./api.md)
+- [Async](./async.md)
+- [Unions](./unions.md)
+
+## Optional profile fields
 
 ```ts
 const ProfileSchema = v.object({
@@ -58,19 +91,10 @@ const ProfileSchema = v.object({
 });
 ```
 
-## Expected Output
+## Partial updates
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+```ts
+const ProfilePatchSchema = ProfileSchema.partial();
 
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [API](./api.md)
-- [Async](./async.md)
-- [Unions](./unions.md)
+ProfilePatchSchema.parse({ bio: 'Updated bio' });
+```

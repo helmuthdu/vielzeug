@@ -55,10 +55,10 @@ calculate(5); // (5 * 2) + 2 = 12
 ### Asynchronous Composition
 
 ```ts
-import { compose, delay } from '@vielzeug/toolkit';
+import { compose, sleep } from '@vielzeug/toolkit';
 
 const saveToDb = async (data: string) => {
-  await delay(10);
+  await sleep(10);
   return { success: true, data };
 };
 
@@ -79,4 +79,4 @@ await processAndSave('  hello  '); // { success: true, data: 'HELLO' }
 
 - [pipe](./pipe.md): Functional composition from left to right.
 - [curry](./curry.md): Transform a function into a sequence of unary functions.
-- [fp](./fp.md): Wrap functions for functional programming styles.
+- [configure](./configure.md): Preconfigure trailing arguments for unary composition.

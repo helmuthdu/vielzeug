@@ -45,6 +45,11 @@ export function chunk<T>(input: T[] | string, size = 2, options: ChunkOptions = 
 
   const { overlap = false, pad = ' ' } = options;
 
+  assert(!(overlap && !isString(input)), 'Overlap mode is only supported for string input.', {
+    args: { input, overlap },
+    type: TypeError,
+  });
+
   if (isString(input) && overlap) {
     const padded = pad + input + pad;
     const numChunks = padded.length - size + 1;

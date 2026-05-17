@@ -3,13 +3,11 @@ title: Logit — Usage Guide
 description: Configuration, scoped loggers, timers, groups, remote logging, and best practices for Logit.
 ---
 
-# Logit Usage Guide
+[[toc]]
 
 ::: tip New to Logit?
 Start with the [Overview](./index.md), then use this page for detailed usage patterns.
 :::
-
-[[toc]]
 
 ## Logger Instances
 
@@ -25,11 +23,10 @@ Each `createLogger()` call is independent.
 
 ## Configuration
 
-Use `setConfig()` for partial updates; unspecified fields remain unchanged.
+Use `child()` to derive immutable logger variants.
 
 ```ts
-Logit.setConfig({
-  environment: true,
+const AppLog = Logit.child({
   logLevel: 'warn',
   namespace: 'App',
   timestamp: true,
@@ -42,33 +39,70 @@ Logit.setConfig({
   },
 });
 
-const cfg: Readonly<LogitConfig> = Logit.config; // snapshot copy
+const cfg: Readonly<LogitConfig> = AppLog.config; // snapshot copy
 ```
 
 Level threshold order:
 
-- `debug` < `trace` < `info` < `success` < `warn` < `error` < `off`
+- `debug` < `info` < `warn` < `error` < `fatal` < `off`
+
+## Call Signature
+
+All log methods share a consistent overloaded signature:
+
+```ts
+log.info('message');
+log.info({ key: 'value' }, 'message'); // context object first, message second
+log.error(new Error('boom')); // Error auto-serialized into context.err
+log.error(new Error('boom'), 'override'); // message override, err still in context
+```
+
+The `context` object is merged with any pinned `withBindings()` context before emission.
+String-first calls accept only a single message argument. Structured data always goes in the first argument.
 
 ## Logging Methods
 
 ```ts
 Logit.debug('debug details');
-Logit.trace('trace details');
-Logit.info('server started', { port: 3000 });
-Logit.success('user created', { id: 42 });
+Logit.info({ port: 3000 }, 'server started');
 Logit.warn('cache stale');
-Logit.error('request failed', new Error('timeout'));
-
-Logit.assert(Boolean(process.env.API_URL), 'Missing API URL');
-Logit.table([{ id: 1, name: 'Alice' }], ['id', 'name']);
+Logit.error(new Error('timeout')); // auto-serialized
+Logit.fatal({ service: 'db' }, 'terminating'); // above error, use for unrecoverable state
 ```
 
 Use `enabled()` to avoid expensive debug payload creation:
 
 ```ts
 if (Logit.enabled('debug')) {
-  Logit.debug('diagnostics', buildLargePayload());
+  Logit.debug({ diagnostics: buildLargePayload() }, 'diagnostics');
 }
+```
+
+## Pinned Bindings
+
+`withBindings(fields)` returns a child logger where the given fields are merged into every log call. This is the idiomatic way to attach per-request or per-user context.
+
+```ts
+const api = Logit.scope('api');
+
+// typical use: per-request context in a server handler
+const reqLog = api.withBindings({ requestId: 'abc-123', userId: 42 });
+reqLog.info('GET /users'); // always includes requestId and userId
+reqLog.warn({ slow: true }, 'query took 2s'); // call-site fields merged in
+```
+
+The parent logger is not affected. Bindings stack additively through chained `withBindings()` calls:
+
+```ts
+const base = Logit.withBindings({ service: 'api' });
+const req = base.withBindings({ requestId: 'xyz' });
+// req emits both service and requestId on every call
+```
+
+`bindings` getter returns a snapshot of the currently pinned fields:
+
+```ts
+console.log(reqLog.bindings); // { requestId: 'abc-123', userId: 42 }
 ```
 
 ## Scoped Loggers
@@ -97,18 +131,24 @@ verbose.debug('child-only debug');
 
 Child and parent configs remain independent after creation.
 
+Remote inheritance behavior in `child()` is explicit:
+
+- Omit `remote` to inherit parent remote settings.
+- Pass `remote: null` to disable forwarding on the child.
+- Pass `remote: { logLevel }` to keep inherited handler but override threshold.
+
 ## Remote Logging
 
 Remote forwarding is asynchronous and non-blocking. Remote and console thresholds are independent.
 
 ```ts
-Logit.setConfig({
+const NetLog = Logit.child({
   logLevel: 'debug',
   remote: {
     logLevel: 'warn',
     handler: async (type, data: RemoteLogData) => {
       await fetch('/api/logs', {
-        body: JSON.stringify({ level: type, ...data }),
+        body: JSON.stringify(data),
         method: 'POST',
       });
     },
@@ -116,42 +156,156 @@ Logit.setConfig({
 });
 ```
 
-Remote payload:
+Remote payload shape (`RemoteLogData`):
 
-- `args`
-- `env` (`development` or `production`)
-- `namespace?`
-- `timestamp?`
+| Field       | Type                            | Description                                                    |
+| ----------- | ------------------------------- | -------------------------------------------------------------- |
+| `level`     | `LogType`                       | Log level string                                               |
+| `message`   | `string?`                       | Log message                                                    |
+| `context`   | `object?`                       | Merged bindings + per-call context (includes `err` for Errors) |
+| `env`       | `'development' \| 'production'` | Runtime environment                                            |
+| `namespace` | `string?`                       | Logger namespace                                               |
+| `timestamp` | `string?`                       | ISO timestamp when enabled                                     |
+
+If a handler throws, a `console.warn` is emitted — remote errors never propagate to the caller.
+
+## Framework Integration
+
+Logit is framework-agnostic and works as a module-level singleton or a context-injected instance.
+
+::: code-group
+
+```tsx [React]
+import { createContext, useContext } from 'react';
+import { createLogger } from '@vielzeug/logit';
+
+const LogContext = createContext(createLogger({ namespace: 'app' }));
+
+function useLogger() {
+  return useContext(LogContext);
+}
+
+function App() {
+  const requestLogger = createLogger({ namespace: 'app' }).withBindings({ userId: '42' });
+  return (
+    <LogContext.Provider value={requestLogger}>
+      <Dashboard />
+    </LogContext.Provider>
+  );
+}
+
+function Dashboard() {
+  const log = useLogger();
+  log.info('Dashboard mounted');
+  return <div>Dashboard</div>;
+}
+```
+
+```ts [Vue 3]
+import { provide, inject } from 'vue';
+import { createLogger, type Logger } from '@vielzeug/logit';
+
+const LoggerKey = Symbol('logger');
+
+function provideLogger(namespace: string) {
+  const logger = createLogger({ namespace });
+  provide(LoggerKey, logger);
+  return logger;
+}
+
+function useLogger(): Logger {
+  const logger = inject<Logger>(LoggerKey);
+  if (!logger) throw new Error('Logger not provided');
+  return logger;
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { setContext, getContext } from 'svelte';
+  import { createLogger } from '@vielzeug/logit';
+
+  // Parent component — provide logger
+  const logger = createLogger({ namespace: 'app' });
+  setContext('logger', logger);
+</script>
+
+<!-- Child component — consume logger -->
+<script lang="ts">
+  import { getContext } from 'svelte';
+  import type { Logger } from '@vielzeug/logit';
+
+  const logger = getContext<Logger>('logger');
+  logger.info('component mounted');
+</script>
+```
+
+:::
+
+### Pitfalls
+
+- **React:** Creating the logger inside the `LoggerProvider` component body without `useRef`/`useMemo` recreates it on every re-render. Use `useState(() => createLogger(...))` for stable initialization.
+- **Vue 3:** `inject()` returns `undefined` if called outside of `setup()` — always call it at the top level of a composable or component setup, not inside callbacks.
+- **Svelte:** `getContext()` must be called synchronously during component initialization — it cannot be called inside `onMount` or async functions.
+
+## Working with Other Vielzeug Libraries
+
+### With Fetchit
+
+Forward HTTP errors to a remote log endpoint.
+
+```ts
+import { createApi } from '@vielzeug/fetchit';
+import { createLogger } from '@vielzeug/logit';
+
+const log = createLogger({ namespace: 'fetchit' });
+const api = createApi({
+  baseUrl: 'https://api.example.com',
+  onError: (err) => log.error(err, 'request failed'),
+});
+```
+
+### With Eventit
+
+Log all event dispatches for debugging and audit trails.
+
+```ts
+import { createBus } from '@vielzeug/eventit';
+import { createLogger } from '@vielzeug/logit';
+
+const log = createLogger({ namespace: 'bus' });
+const bus = createBus<AppEvents>({
+  onDispatch: (event, payload) => log.debug({ event, payload }, 'dispatched'),
+  onError: (err, event) => log.error(err, `handler error in "${event}"`),
+});
+```
 
 ## Best Practices
 
 - Create one scoped logger per module boundary.
-- Set `logLevel` from environment (`debug` in dev, `warn/error` in prod).
+- Use `withBindings()` to pin request/session context instead of repeating fields on each call.
+- Set `logLevel` from environment (`debug` in dev, `warn`/`error` in prod).
 - Use `enabled()` before expensive payload construction.
 - Keep remote handlers resilient; network failures should not block app flow.
-- Prefer `child()` for temporary overrides (tests, one-off tasks).
+- Prefer `child()` for explicit logger variants (tests, one-off tasks, module scopes).
+- Use `fatal()` only for genuinely unrecoverable states; it maps to `console.error` and remote.
 
 ## Testing
 
 In tests, silence logs globally or per suite and spy only what you assert.
 
 ```ts
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
-beforeEach(() => {
-  Logit.setConfig({ logLevel: 'off' });
-});
+import { afterEach, expect, it, vi } from 'vitest';
 
 afterEach(() => {
-  Logit.setConfig({ logLevel: 'debug' });
   vi.restoreAllMocks();
 });
 
 it('logs errors when enabled', () => {
-  Logit.setConfig({ logLevel: 'error' });
+  const log = Logit.child({ logLevel: 'error' });
   const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-  Logit.error('boom');
+  log.error('boom');
 
   expect(spy).toHaveBeenCalled();
 });

@@ -42,6 +42,13 @@ describe('v.string()', () => {
 
     expect(v.string().url().parse('https://example.com')).toBe('https://example.com');
     expect(() => v.string().url().parse('not-a-url')).toThrow('Invalid URL');
+    expect(() => v.string().url().parse('javascript:alert(1)')).toThrow('Invalid URL');
+    expect(
+      v
+        .string()
+        .url({ protocols: ['ftp'] })
+        .parse('ftp://example.com'),
+    ).toBe('ftp://example.com');
 
     const urlResult = v.string().url().safeParse('not-a-url');
 
@@ -76,30 +83,39 @@ describe('v.string()', () => {
   });
 
   it('date() and datetime() validate ISO formats', () => {
-    expect(v.string().date().parse('2024-01-15')).toBe('2024-01-15');
-    expect(() => v.string().date().parse('not-a-date')).toThrow('Invalid date');
-    expect(() => v.string().date().parse('2024-01-15T10:00:00Z')).toThrow();
-    expect(v.string().datetime().parse('2024-01-15T10:00:00Z')).toBe('2024-01-15T10:00:00Z');
-    expect(() => v.string().datetime().parse('2024-01-15')).toThrow('Invalid datetime');
+    expect(v.string().isoDate().parse('2024-01-15')).toBe('2024-01-15');
+    expect(() => v.string().isoDate().parse('not-a-date')).toThrow('Invalid date');
+    expect(() => v.string().isoDate().parse('2024-01-15T10:00:00Z')).toThrow();
+    expect(v.string().isoDateTime().parse('2024-01-15T10:00:00Z')).toBe('2024-01-15T10:00:00Z');
+    expect(() => v.string().isoDateTime().parse('2024-01-15')).toThrow('Invalid datetime');
   });
 
   it('date() rejects non-existent calendar dates (roll-over guard)', () => {
-    expect(() => v.string().date().parse('2024-02-30')).toThrow('Invalid date');
-    expect(() => v.string().date().parse('2024-04-31')).toThrow('Invalid date');
-    expect(v.string().date().parse('2024-02-29')).toBe('2024-02-29');
+    expect(() => v.string().isoDate().parse('2024-02-30')).toThrow('Invalid date');
+    expect(() => v.string().isoDate().parse('2024-04-31')).toThrow('Invalid date');
+    expect(v.string().isoDate().parse('2024-02-29')).toBe('2024-02-29');
   });
 
-  it('datetime() rejects strings that merely contain T', () => {
-    expect(() => v.string().datetime().parse('abcTdef')).toThrow('Invalid datetime');
-    expect(() => v.string().datetime().parse('T')).toThrow('Invalid datetime');
+  it('isoDateTime() rejects strings that merely contain T', () => {
+    expect(() => v.string().isoDateTime().parse('abcTdef')).toThrow('Invalid datetime');
+    expect(() => v.string().isoDateTime().parse('T')).toThrow('Invalid datetime');
+  });
+
+  it('isoDateTime() validates structural format precisely', () => {
+    expect(v.string().isoDateTime().parse('2024-01-15T10:30:00Z')).toBe('2024-01-15T10:30:00Z');
+    expect(v.string().isoDateTime().parse('2024-01-15T10:30:00.123Z')).toBe('2024-01-15T10:30:00.123Z');
+    expect(v.string().isoDateTime().parse('2024-01-15T10:30:00+05:30')).toBe('2024-01-15T10:30:00+05:30');
+    expect(v.string().isoDateTime().parse('2024-01-15T10:30')).toBe('2024-01-15T10:30');
+    expect(() => v.string().isoDateTime().parse('2024-01-15T:::Z')).toThrow('Invalid datetime');
+    expect(() => v.string().isoDateTime().parse('2024-01-15T10:30:00+99:99')).toThrow('Invalid datetime');
   });
 
   it('supports custom error messages', () => {
     expect(() => v.string().min(5, 'Too short!').parse('hi')).toThrow('Too short!');
   });
 
-  it('nonempty() message function receives { min, value } context', () => {
-    const schema = v.string().nonempty(({ min, value }) => `Need at least ${min}, got "${value}"`);
+  it('nonEmpty() message function receives { min, value } context', () => {
+    const schema = v.string().nonEmpty(({ min, value }) => `Need at least ${min}, got "${value}"`);
 
     expect(() => schema.parse('')).toThrow('Need at least 1, got ""');
   });
@@ -160,23 +176,23 @@ describe('string format validators — params.format', () => {
     }
   });
 
-  it('date() includes params.format = "date"', () => {
-    const result = v.string().date().safeParse('not-a-date');
+  it('isoDate() includes params.format = "iso-date"', () => {
+    const result = v.string().isoDate().safeParse('not-a-date');
 
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues[0].params?.format).toBe('date');
+      expect(result.error.issues[0].params?.format).toBe('iso-date');
     }
   });
 
-  it('datetime() includes params.format = "datetime"', () => {
-    const result = v.string().datetime().safeParse('not-a-datetime');
+  it('isoDateTime() includes params.format = "iso-datetime"', () => {
+    const result = v.string().isoDateTime().safeParse('not-a-datetime');
 
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues[0].params?.format).toBe('datetime');
+      expect(result.error.issues[0].params?.format).toBe('iso-datetime');
     }
   });
 });

@@ -1,7 +1,9 @@
 ---
 title: Floatit — Lightweight floating element positioning
-description: Zero-dependency floating element positioning for tooltips, dropdowns, and popovers. Built for Vielzeug, works anywhere.
+description: Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 ---
+
+<!-- markdownlint-disable MD025 MD033 MD060 -->
 
 <PackageBadges package="floatit" />
 
@@ -9,9 +11,9 @@ description: Zero-dependency floating element positioning for tooltips, dropdown
 
 # Floatit
 
-**Floatit** is a lightweight, zero-dependency library for positioning floating elements — tooltips, dropdowns, menus, popovers — relative to a reference element. It is the positioning engine used internally by [@vielzeug/buildit](/buildit/) components.
+`@vielzeug/floatit` is a small DOM positioning engine for floating UI. It provides a direct API for computing positions, a high-level follow API, and middleware for collision handling, arrows, hiding, inline text anchors, and dynamic sizing.
 
-<!-- Search keywords: floating UI positioning, popover placement, tooltip alignment. -->
+<!-- Search keywords: tooltip positioning, popover placement, floating element middleware. -->
 
 ## Installation
 
@@ -34,85 +36,74 @@ yarn add @vielzeug/floatit
 ## Quick Start
 
 ```ts
-import { float, offset, flip, shift } from '@vielzeug/floatit';
+import { arrow, autoUpdate, flip, offset, shift, computePosition } from '@vielzeug/floatit';
 
-const reference = document.querySelector('#trigger')!;
-const floating = document.querySelector('#tooltip')!;
+const reference = document.querySelector<HTMLElement>('#trigger')!;
+const floating = document.querySelector<HTMLElement>('#tooltip')!;
+const arrowEl = floating.querySelector<HTMLElement>('.arrow')!;
 
-const cleanup = float(reference, floating, {
-  placement: 'top',
-  middleware: [offset(8), flip(), shift({ padding: 6 })],
+const cleanup = autoUpdate(reference, floating, () => {
+  const result = computePosition(reference, floating, {
+    placement: 'top',
+    middleware: [offset(8), flip(), shift({ padding: 6 }), arrow({ element: arrowEl, padding: 6 })],
+  });
+
+  floating.style.left = `${result.x}px`;
+  floating.style.top = `${result.y}px`;
+  floating.dataset.placement = result.placement;
 });
 
-// When done:
 cleanup();
 ```
 
 ## Why Floatit?
 
-Manual floating-element positioning with `getBoundingClientRect` breaks at viewport edges — there is no built-in overflow detection, flip logic, or automatic repositioning on scroll or resize.
+Positioning floating UI by hand quickly turns into repeated math for viewport boundaries, arrow offsets, and scroll/resize tracking.
 
-```ts
-// Before — manual positioning (no overflow handling)
-function position(ref: Element, float: HTMLElement) {
-  const rect = ref.getBoundingClientRect();
-  float.style.top = `${rect.bottom + 8}px`;
-  float.style.left = `${rect.left}px`;
-  // Clips at viewport edges, never flips, breaks on scroll
-}
+| Feature                  | Floatit                                       | Floating UI | Popper  |
+| ------------------------ | --------------------------------------------- | ----------- | ------- |
+| Bundle size              | <PackageInfo package="floatit" type="size" /> | ~10 kB      | ~6 kB   |
+| Middleware pipeline      | ✅                                            | ✅          | ✅      |
+| Direct compute API       | ✅                                            | ✅          | ✅      |
+| High-level follow API    | ✅                                            | ✅          | Partial |
+| Inline anchor middleware | ✅                                            | ✅          | ❌      |
+| Auto-update helpers      | ✅                                            | ✅          | ✅      |
+| Framework agnostic       | ✅                                            | ✅          | ✅      |
+| Zero dependencies        | ✅                                            | ✅          | ✅      |
 
-// After — Floatit
-import { float, offset, flip, shift } from '@vielzeug/floatit';
-const cleanup = float(reference, floating, {
-  placement: 'bottom',
-  middleware: [offset(8), flip(), shift({ padding: 6 })],
-});
-```
+**Use Floatit when** you want a lightweight, DOM-first positioning engine with direct control and no framework adapter requirements.
 
-| Feature           | Floatit                                       | Floating UI | Popper.js |
-| ----------------- | --------------------------------------------- | ----------- | --------- |
-| Bundle size       | <PackageInfo package="floatit" type="size" /> | ~8 kB       | ~8 kB     |
-| One-call API      | ✅ `float`                                    | ❌ Manual   | ❌ Manual |
-| Flip middleware   | ✅                                            | ✅          | ✅        |
-| Shift middleware  | ✅                                            | ✅          | ✅        |
-| Size middleware   | ✅                                            | ✅          | ✅        |
-| autoUpdate        | ✅                                            | ✅          | ✅        |
-| Zero dependencies | ✅                                            | ✅          | ✅        |
-
-**Use Floatit when** you need a lightweight positioning engine for tooltips, dropdowns, and popovers that integrates cleanly into the Vielzeug component system.
-
-**Consider Floating UI** if you need its framework adapters (React, Vue, Svelte) or virtual element reference support.
+**Consider larger alternatives when** you need their existing integration ecosystem or migration compatibility.
 
 ## Features
 
-- **`float`** — Positions and keeps in sync with a single call, returns a cleanup
-- **`positionFloat`** — Computes position and applies `left`/`top` inline styles in one call
-- **`computePosition`** — Low-level engine returning `{ x, y, placement }`
-- **`offset`** — Adds a gap between reference and floating element
-- **`flip`** — Flips to the opposite side when the preferred side would overflow the viewport
-- **`shift`** — Slides along the cross axis to stay inside the viewport
-- **`size`** — Provides available dimensions so the floating element can be resized
-- **`autoUpdate`** — Watches scroll, resize, and `ResizeObserver` to keep position current
-- **Zero dependencies** — Pure DOM APIs, no external packages
-- **Lightweight** — <PackageInfo package="floatit" type="size" /> gzipped
+- `computePosition()` returns `x`, `y`, `placement`, and `middlewareData`
+- `float()` covers the common position-and-follow case and applies `left`/`top` by default
+- `detectOverflow()` powers both built-in and custom overflow middleware
+- Built-in middleware: `offset`, `flip`, `autoPlacement`, `shift`, `size`, `arrow`, `hide`, and `inline`
+- Per-side padding support across overflow-aware middleware
+- `autoUpdate()` supports scroll, resize, ResizeObserver, visualViewport, and animation-frame tracking
+- Zero dependencies
 
 ## Compatibility
 
-| Environment | Support       |
-| ----------- | ------------- |
-| Browser     | ✅            |
-| Node.js     | ❌ (DOM only) |
-| SSR         | ❌ (DOM only) |
-| Deno        | ❌            |
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ❌      |
+| SSR         | ❌      |
+| Deno        | ❌      |
 
-## Prerequisites
+## Documentation
 
-- Browser environment with DOM layout APIs (`getBoundingClientRect`, `ResizeObserver`).
-- Reference and floating elements must exist before positioning calls.
-- Call `autoUpdate` cleanup when overlays close to avoid stale listeners.
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 
-- [Dragit](/dragit/)
 - [Buildit](/buildit/)
+- [Dragit](/dragit/)
 - [Craftit](/craftit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

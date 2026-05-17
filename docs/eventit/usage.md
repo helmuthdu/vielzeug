@@ -3,13 +3,11 @@ title: Eventit — Usage Guide
 description: Event maps, subscriptions, wait(), async event streams, hooks, cleanup, and testing for @vielzeug/eventit.
 ---
 
-# Eventit Usage Guide
+[[toc]]
 
 ::: tip New to Eventit?
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
-
-[[toc]]
 
 ## Event Maps
 
@@ -51,6 +49,26 @@ unsub();
 bus.once('user:logout', () => {
   redirectToLogin();
 });
+```
+
+### `removeAllListeners()` — Bulk unsubscribe
+
+Remove listeners for one event, or all listeners across the bus.
+
+```ts
+bus.removeAllListeners('user:login');
+bus.removeAllListeners(); // all events
+```
+
+### `eventNames()` — Introspect active subscriptions
+
+Get a snapshot of event keys that currently have listeners.
+
+```ts
+bus.on('user:login', handler);
+bus.on('user:logout', handler);
+
+console.log(bus.eventNames()); // ['user:login', 'user:logout']
 ```
 
 ### AbortSignal
@@ -97,6 +115,20 @@ const signal = AbortSignal.timeout(5_000);
 const { userId } = await bus.wait('user:login', signal);
 ```
 
+### `waitAny()`
+
+`waitAny()` resolves with the first event that fires from a list and returns both the winning event key and payload.
+
+```ts
+const result = await bus.waitAny(['user:login', 'user:logout'] as const);
+
+if (result.event === 'user:login') {
+  console.log(result.payload.userId);
+}
+```
+
+Like `wait()`, it rejects when the bus is disposed or when the provided signal aborts.
+
 ## Async Iteration
 
 `events()` returns an `AsyncGenerator` that yields every future emit of an event. It terminates when the bus is disposed or the provided signal aborts.
@@ -107,12 +139,12 @@ for await (const { items, total } of bus.events('cart:updated')) {
 }
 ```
 
-Use an `AbortSignal` to stop iterating early:
+Use the `options` object to stop iterating early or cap the internal buffer:
 
 ```ts
 const controller = new AbortController();
 
-for await (const payload of bus.events('data:loaded', controller.signal)) {
+for await (const payload of bus.events('data:loaded', { signal: controller.signal, maxBuffer: 100 })) {
   process(payload);
   if (isDone(payload)) controller.abort(); // exits the loop cleanly
 }
@@ -140,21 +172,20 @@ const bus = createBus<AppEvents>({
 - `event` — the event key that was being emitted
 - `payload` — the payload, typed to `T[K]` for the specific event
 
-### `onEmit` hook
+### `onDispatch` hook
 
-`onEmit` is called before any listeners run on every emission. Both `event` and `payload` are **fully typed** to the specific event that fired — no casts needed.
+`onDispatch` is called on every `emit()`, before listeners run. It is intentionally a runtime-oriented hook: `event` is a string and `payload` is unknown, which keeps logging and tracing hooks simple and honest about runtime behavior.
 
 ```ts
 const bus = createBus<AppEvents>({
-  onEmit: (event, payload) => {
-    // payload is typed to T[K] for the specific event
+  onDispatch: (event, payload) => {
     console.debug(`[bus emit] ${event}`, payload);
   },
 });
 ```
 
 ::: tip
-`createTestBus` composes your `onEmit` hook with its own recording behavior.
+`createTestBus` composes your `onDispatch` hook with its own recording behavior.
 :::
 
 ## Dispose & Cleanup
@@ -200,6 +231,8 @@ bus.listenerCount(); // 3 — total across all events
 
 This is useful for debugging, assertions in tests, or conditional emit optimizations.
 
+You can combine this with `eventNames()` when you need a quick snapshot of which channels are active.
+
 ### `using` keyword
 
 `Bus` implements `[Symbol.dispose]`, so it works with the `using` keyword (TypeScript 5.2+, `"lib": ["esnext"]`):
@@ -236,7 +269,7 @@ bus.reset(); // clear recorded payloads, keep listeners active
 bus.dispose(); // clear listeners and recorded payloads
 ```
 
-`createTestBus` accepts the full `BusOptions<T>` including `onEmit` — your hook is composed with the internal recording.
+`createTestBus` accepts the full `BusOptions<T>` including `onDispatch` — your hook is composed with the internal recording.
 
 Use `using` for automatic cleanup in test cases:
 
@@ -247,3 +280,132 @@ it('records emitted events', () => {
   expect(bus.emitted('user:logout')).toHaveLength(1);
 }); // bus disposed automatically
 ```
+
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useEffect } from 'react';
+import { createBus } from '@vielzeug/eventit';
+
+type AppEvents = {
+  'user:login': { userId: string; email: string };
+  'user:logout': void;
+};
+
+// Module-level bus shared across components
+const bus = createBus<AppEvents>();
+
+function useEvent<K extends keyof AppEvents>(
+  event: K,
+  handler: (payload: AppEvents[K]) => void,
+) {
+  useEffect(() => {
+    const controller = new AbortController();
+    bus.on(event as any, handler as any, controller.signal);
+    return () => controller.abort();
+  }, [event, handler]);
+}
+
+function LoginButton() {
+  useEvent('user:login', ({ userId }) => console.log('logged in:', userId));
+  return <button onClick={() => bus.emit('user:login', { userId: '1', email: 'a@x.com' })}>Login</button>;
+}
+```
+
+```ts [Vue 3]
+import { onScopeDispose } from 'vue';
+import { createBus } from '@vielzeug/eventit';
+
+type AppEvents = {
+  'user:login': { userId: string; email: string };
+  'user:logout': void;
+};
+
+const bus = createBus<AppEvents>();
+
+function useEvent<K extends keyof AppEvents>(event: K, handler: (payload: AppEvents[K]) => void) {
+  const controller = new AbortController();
+  bus.on(event as any, handler as any, controller.signal);
+  onScopeDispose(() => controller.abort());
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { createBus } from '@vielzeug/eventit';
+
+  type AppEvents = {
+    'user:login': { userId: string; email: string };
+    'user:logout': void;
+  };
+
+  const bus = createBus<AppEvents>();
+
+  // Listen to events with automatic cleanup on component destroy
+  const controller = new AbortController();
+  bus.on('user:login', ({ userId }) => console.log('logged in:', userId), controller.signal);
+  onDestroy(() => controller.abort());
+
+  function login() {
+    bus.emit('user:login', { userId: '1', email: 'alice@example.com' });
+  }
+</script>
+
+<button on:click={login}>Login</button>
+```
+
+:::
+
+### Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Working with Other Vielzeug Libraries
+
+### With Logit
+
+Use Logit to trace all event dispatches in development.
+
+```ts
+import { createBus } from '@vielzeug/eventit';
+import { createLogger } from '@vielzeug/logit';
+
+const logger = createLogger({ scope: 'eventit' });
+
+const bus = createBus<AppEvents>({
+  onDispatch: (event, payload) => logger.debug('dispatched', { event, payload }),
+  onError: (err, event) => logger.error('handler failed', { err, event }),
+});
+```
+
+### With Stateit
+
+Use Stateit signals to reflect the latest event payload as reactive state.
+
+```ts
+import { createBus } from '@vielzeug/eventit';
+import { signal } from '@vielzeug/stateit';
+
+type AppEvents = { 'user:login': { userId: string; email: string }; 'user:logout': void };
+const bus = createBus<AppEvents>();
+
+const currentUser = signal<{ userId: string; email: string } | null>(null);
+
+bus.on('user:login', (payload) => { currentUser.value = payload; });
+bus.on('user:logout', () => { currentUser.value = null; });
+```
+
+## Best Practices
+
+- Create one bus per logical domain (e.g., one bus per micro-frontend module) rather than a single global bus.
+- Pass `AbortSignal` to `on()` and `once()` for lifecycle-bound listeners — avoids manual `unsub()` tracking.
+- Use `wait()` for one-off async coordination; use `events()` for continuous processing pipelines.
+- Configure `onError` on the bus rather than wrapping each listener in try/catch.
+- Call `dispose()` when a bus is no longer needed — it rejects all pending `wait()` promises.
+- Prefer typed `EventMap` interfaces over generic string keys for full payload inference.
+- Use `createTestBus` from `@vielzeug/eventit/test` in unit tests rather than mocking the bus.

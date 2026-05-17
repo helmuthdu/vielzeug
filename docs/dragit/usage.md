@@ -1,27 +1,24 @@
 ---
 title: Dragit — Usage Guide
-description: Drop zones, sortable lists, accept patterns, MIME filtering, handles, dynamic lists, disabled state, and lifecycle management with Dragit.
+description: Drop zones, sortable lists, explicit connected scopes, keyboard sorting, and cleanup patterns with Dragit.
 ---
 
-# Dragit Usage Guide
+[[toc]]
 
 ::: tip New to Dragit?
 Start with the [Overview](./index.md) for a quick introduction and installation, then come back here for in-depth usage patterns.
 :::
 
-[[toc]]
-
 ## Drop Zone
 
-`createDropZone` attaches drag-and-drop behaviour to any DOM element. It handles the quirks of the HTML Drag & Drop API — most importantly, hover state is tracked with a counter so it never fires spuriously when the cursor moves over a child element.
+`createDropZone` attaches drag-and-drop behavior to any DOM element and keeps hover state stable with a counter.
 
 ### Basic usage
 
 ```ts
 const zone = createDropZone({
   element: document.getElementById('dropzone')!,
-  onDrop: (files, event) => {
-    // files is always a non-empty File[]
+  onDrop: (files) => {
     uploadFiles(files);
   },
 });
@@ -29,20 +26,12 @@ const zone = createDropZone({
 
 ### Accept filtering
 
-Pass an `accept` array to restrict which files are accepted. Patterns follow the format used by `<input type="file" accept="...">`:
-
-| Pattern       | Matches                           |
-| ------------- | --------------------------------- |
-| `'image/png'` | Exact MIME type                   |
-| `'image/*'`   | Any image MIME type               |
-| `'.pdf'`      | File extension (case-insensitive) |
-
 ```ts
 const zone = createDropZone({
   element: dropEl,
   accept: ['image/*', '.pdf', 'application/json'],
   onDrop: (files) => {
-    // Only accepted files arrive here
+    // accepted files only
   },
   onDropRejected: (files) => {
     showToast(`${files.length} file(s) not accepted`);
@@ -50,11 +39,16 @@ const zone = createDropZone({
 });
 ```
 
-Files are pre-validated during drag via `dataTransfer.items` (MIME types and wildcards) — the cursor shows a `none` drop effect before the user even releases. Extension patterns (`.pdf`) can only be confirmed at drop time since `DataTransferItem` does not expose filenames, so they receive optimistic hover treatment.
+For reactive apps, `accept` can be a getter:
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  accept: () => (isMediaMode.value ? ['image/*', 'video/*'] : ['application/pdf']),
+});
+```
 
 ### Hover state
-
-`onHoverChange` is the simplest way to react to drag-over state. It receives `true` when the drag enters the zone and `false` when it leaves or completes.
 
 ```ts
 const zone = createDropZone({
@@ -65,95 +59,51 @@ const zone = createDropZone({
 });
 ```
 
-For more control, use `onDragEnter` and `onDragLeave` directly:
+Read zone state imperatively:
 
 ```ts
-const zone = createDropZone({
-  element: dropEl,
-  onDragEnter: (event) => {
-    /* drag has entered */
-  },
-  onDragLeave: (event) => {
-    /* drag has left */
-  },
-  onDragOver: (event) => {
-    /* fires every frame while hovering */
-  },
-});
+console.log(zone.hovered);
+console.log(zone.files);
+console.log(zone.rejected);
 ```
 
-Reading the current state imperatively:
+### Drop effect
 
 ```ts
-console.log(zone.hovered); // boolean — true while dragging over
-```
-
-### dropEffect
-
-Control the cursor feedback shown to the user while dragging over the zone. Defaults to `'copy'`.
-
-```ts
-const zone = createDropZone({
+createDropZone({
   element: dropEl,
-  dropEffect: 'move', // 'copy' | 'move' | 'link' | 'none'
+  dropEffect: 'move',
   onDrop: (files) => {
-    /* ... */
+    // ...
   },
 });
 ```
 
-::: tip
-`onDragOver` can override `dropEffect` dynamically per-frame if you need conditional feedback (e.g. `'move'` when Alt is held, `'copy'` otherwise).
-:::
-
-### Disabled state
-
-Pass `disabled` as a boolean or a function. When truthy, all drag events are silently ignored and hover state will not change.
+### Sortable disabled state
 
 ```ts
-const zone = createDropZone({
+createDropZone({
   element: dropEl,
-  disabled: props.readOnly,      // static boolean
-  // disabled: () => props.readOnly, // or a function for reactive frameworks
-  onDrop: (files) => {
-    /* ... */
-  },
+  disabled: () => isReadOnly.value,
+  onDrop: handleFiles,
 });
 ```
 
-The function form lets reactive frameworks pass a derived or computed value:
-
-```ts
-// Vue 3 / signals-based frameworks
-disabled: () => isReadOnly.value;
-```
-
-### Cleanup
-
-Call `destroy()` to remove all event listeners and reset internal state:
+### Sortable cleanup
 
 ```ts
 zone.destroy();
-```
-
-Or use the `using` keyword (TypeScript 5.2+, requires `"lib": ["ESNext.Disposable"]`):
-
-```ts
-{
-  using zone = createDropZone({ element: dropEl, onDrop: handleFiles });
-  // zone is active here
-} // zone.destroy() is called automatically at block exit
+// or:
+using zone = createDropZone({ element: dropEl, onDrop: handleFiles });
 ```
 
 ---
 
 ## Sortable
 
-`createSortable` makes the direct children of a container element reorderable via drag. It uses event delegation — a single set of listeners on the container handles all children.
+`createSortable` makes direct children of a container reorderable via drag.
 
 ### Setup
-
-Every sortable item must carry a `data-sort-id` attribute (or a custom attribute via `itemAttribute`) with a unique, stable identifier:
 
 ```html
 <ul id="task-list">
@@ -166,111 +116,105 @@ Every sortable item must carry a `data-sort-id` attribute (or a custom attribute
 ```ts
 const sortable = createSortable({
   element: document.getElementById('task-list')!,
+  axis: 'vertical',
   onReorder: (ids) => {
-    // ids is the new ordered array of identity attribute values
-    // Only called when the order actually changed
-    saveTaskOrder(ids); // e.g. ['task-2', 'task-1', 'task-3']
+    saveTaskOrder(ids);
   },
 });
 ```
 
-`createSortable` automatically:
+Dragit automatically sets:
 
-- Sets `draggable="true"` on all `[data-sort-id]` children
-- Sets `role="listitem"` on each item and `role="list"` on the container
-- Removes both attributes on `destroy()`
+- `draggable="true"` on sortable nodes (or handles)
+- `role="listitem"` on each item
+- `role="list"` on the container
+- `tabindex="0"` on each item for keyboard reordering
 
 ### Drag handles
 
-By default the entire item is draggable. Pass a `handle` selector to restrict dragging to a specific child element:
-
-```html
-<ul id="task-list">
-  <li data-sort-id="task-1">
-    <span class="drag-handle">⠿</span>
-    Design
-  </li>
-  <li data-sort-id="task-2">
-    <span class="drag-handle">⠿</span>
-    Develop
-  </li>
-</ul>
-```
-
 ```ts
-const sortable = createSortable({
+createSortable({
   element: listEl,
   handle: '.drag-handle',
-  onReorder: (ids) => {
-    saveOrder(ids);
-  },
+  onReorder: saveOrder,
 });
 ```
 
-When a `handle` is set, `draggable="true"` is placed on the handle element itself rather than the list item, so dragging only activates from the handle.
+### Keyboard reordering
+
+Focus an item and use arrow keys to move it. `Home` and `End` move to boundaries.
+
+### Connected lists
+
+Create a shared scope when items should move between containers:
+
+```ts
+const boardScope = createSortableScope();
+
+createSortable({ element: todoEl, onReorder: saveTodoOrder, scope: boardScope });
+createSortable({ element: doneEl, onReorder: saveDoneOrder, scope: boardScope });
+```
+
+### Auto-scroll and drag preview
+
+```ts
+createSortable({
+  element: listEl,
+  autoScroll: { edgeThreshold: 40, speed: 24, viewport: true },
+  dragImage: (id, item) => item,
+});
+```
+
+Viewport scrolling is opt-in. Container scrolling stays enabled by default.
 
 ### Lifecycle hooks
 
 ```ts
-const sortable = createSortable({
+createSortable({
   element: listEl,
-  onDragStart: (id, event) => {
-    // id — the identity attribute value of the item being dragged
+  onDragStart: (id) => {
     listEl.classList.add('sorting');
   },
-  onDragEnd: (event) => {
+  onDragEnd: (id) => {
     listEl.classList.remove('sorting');
   },
-  onReorder: (ids) => {
-    saveOrder(ids);
-  },
+  onReorder: saveOrder,
 });
 ```
 
 ### Custom identity attribute
 
-If your markup already uses a different attribute for item identity, pass `itemAttribute` to avoid duplicating data:
-
 ```ts
-const sortable = createSortable({
+createSortable({
   element: listEl,
-  itemAttribute: 'data-id', // or 'data-key', 'data-item-id', etc.
-  onReorder: (ids) => {
-    saveOrder(ids);
-  },
+  itemAttribute: 'data-id',
+  onReorder: saveOrder,
 });
 ```
 
 ### Dynamic lists
 
-Items added to or removed from the container are automatically picked up — dragit uses a `MutationObserver` to keep `draggable` and `role` in sync. No manual refresh call required.
+Call `sortable.sync()` after adding, removing, or replacing sortable items.
 
 ```ts
-// Just mutate the DOM; dragit handles the rest
-const newItem = document.createElement('li');
-newItem.dataset.sortId = 'task-4';
-newItem.textContent = 'Deploy';
-listEl.appendChild(newItem);
+const item = document.createElement('li');
+item.dataset.sortId = 'task-4';
+item.textContent = 'Deploy';
+listEl.appendChild(item);
+sortable.sync();
 ```
 
 ### Disabled state
 
 ```ts
-const sortable = createSortable({
+createSortable({
   element: listEl,
-  disabled: isLocked,          // static boolean
-  // disabled: () => isLocked, // or a function for reactive frameworks
-  onReorder: (ids) => {
-    saveOrder(ids);
-  },
+  disabled: () => isLocked,
+  onReorder: saveOrder,
 });
 ```
 
-When disabled, `dragstart` is blocked. If the sortable becomes disabled while a drag is in progress, `onReorder` will not fire at drag end.
-
-### Styling the placeholder
-
-While an item is being dragged, dragit inserts a `<div class="dragit-placeholder">` in the list to indicate the drop position. Only `height` is set inline (mirroring the dragged item). All visual styling is left to your CSS:
+### Placeholder styling
 
 ```css
 .dragit-placeholder {
@@ -278,17 +222,31 @@ While an item is being dragged, dragit inserts a `<div class="dragit-placeholder
   border: 2px dashed var(--color-primary-300);
   border-radius: 4px;
   box-sizing: border-box;
-  transition: opacity 150ms;
+}
+
+[data-dragging] {
+  opacity: 0.35;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 ```
 
-The item being dragged has `opacity: 0` applied automatically while in flight (restored on drop or cancel). The `data-dragging` attribute is also set, which you can use for additional styling:
+### Mapping DOM order back to data
 
-```css
-[data-dragging] {
-  /* opacity is already 0 — use for other effects */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+```ts
+import { applyReorder, createSortable } from '@vielzeug/dragit';
+
+let items = [
+  { id: 'task-1', title: 'Design' },
+  { id: 'task-2', title: 'Develop' },
+  { id: 'task-3', title: 'Review' },
+];
+
+createSortable({
+  element: listEl,
+  onReorder: (orderedIds) => {
+    items = applyReorder(items, orderedIds, (item) => item.id);
+  },
+});
 ```
 
 ### Cleanup
@@ -299,4 +257,121 @@ sortable.destroy();
 using sortable = createSortable({ element: listEl, onReorder: saveOrder });
 ```
 
-`destroy()` removes all event listeners, strips `draggable`/`role` from all items, and cleans up any in-progress drag state (removes `data-dragging` attribute, removes the placeholder).
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useRef } from 'react';
+import { createSortable, applyReorder } from '@vielzeug/dragit';
+
+function SortableList({ initialItems }: { initialItems: { id: string; text: string }[] }) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const items = useRef(initialItems);
+
+  useEffect(() => {
+    const sortable = createSortable({
+      element: listRef.current!,
+      onReorder: (orderedIds) => {
+        items.current = applyReorder(items.current, orderedIds, (i) => i.id);
+      },
+    });
+    return () => sortable.destroy();
+  }, []);
+
+  return (
+    <ul ref={listRef}>
+      {initialItems.map((item) => (
+        <li key={item.id} data-sort-id={item.id}>{item.text}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+```ts [Vue 3]
+import { ref, onMounted, onUnmounted } from 'vue';
+import { createSortable, applyReorder, type Sortable } from '@vielzeug/dragit';
+
+function useSortable(items: { id: string; text: string }[]) {
+  const listRef = ref<HTMLElement | null>(null);
+  const orderedItems = ref(items);
+  let sortable: Sortable | null = null;
+
+  onMounted(() => {
+    sortable = createSortable({
+      element: listRef.value!,
+      onReorder: (ids) => {
+        orderedItems.value = applyReorder(orderedItems.value, ids, (i) => i.id);
+      },
+    });
+  });
+
+  onUnmounted(() => sortable?.destroy());
+  return { listRef, orderedItems };
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { createSortable, applyReorder } from '@vielzeug/dragit';
+
+  export let initialItems: { id: string; text: string }[] = [];
+  let items = initialItems;
+  let listEl: HTMLUListElement;
+
+  onMount(() => {
+    const sortable = createSortable({
+      element: listEl,
+      onReorder: (ids) => { items = applyReorder(items, ids, (i) => i.id); },
+    });
+    return () => sortable.destroy();
+  });
+</script>
+
+<ul bind:this={listEl}>
+  {#each items as item (item.id)}
+    <li data-sort-id={item.id}>{item.text}</li>
+  {/each}
+</ul>
+```
+
+:::
+
+### Pitfalls
+
+- Forgetting cleanup/dispose calls can leak listeners or stale state.
+- Skipping explicit typing can hide integration issues until runtime.
+- Not handling error branches makes examples harder to adapt safely.
+
+## Working with Other Vielzeug Libraries
+
+### With Craftit
+
+Use Dragit in custom web components by attaching behavior in component lifecycle hooks.
+
+```ts
+import { createSortable } from '@vielzeug/dragit';
+import { define, onMounted, html } from '@vielzeug/craftit';
+
+define('task-list', {
+  setup(_props, { host }) {
+    onMounted(() => {
+      const sortable = createSortable({ element: host.el, onReorder: (ids) => save(ids) });
+      return () => sortable.destroy();
+    });
+    return () => html`<slot></slot>`;
+  },
+});
+```
+
+## Best Practices
+
+- Attach `createDropZone` and `createSortable` after the container element is in the DOM — use `onMounted` in component frameworks.
+- Call `.destroy()` in the cleanup phase of your framework (useEffect return, onUnmounted, onDestroy) to prevent memory leaks.
+- Use `data-sort-id` attributes that match your data's identity field — do not use DOM index as an identifier.
+- Prefer `applyReorder()` over manual array splicing to keep your data array in sync with DOM order.
+- Use `createSortableScope()` only when items should genuinely move between containers.
+- Use drag handles (`.handle` selector) when the full item surface area conflicts with other interactions such as text selection.
+- Test keyboard reordering explicitly — Dragit sets `tabindex` on items and supports arrow keys by default.

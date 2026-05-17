@@ -73,20 +73,6 @@ describe('sort', () => {
     ]);
   });
 
-  it('should handle objects by stringifying them in ascending order', () => {
-    const data = [{ value: { b: 2 } }, { value: { a: 1 } }, { value: { c: 3 } }];
-    const result = sort(data, (item) => item.value);
-
-    expect(result).toEqual([{ value: { a: 1 } }, { value: { b: 2 } }, { value: { c: 3 } }]);
-  });
-
-  it('should handle objects by stringifying them in descending order', () => {
-    const data = [{ value: { b: 2 } }, { value: { a: 1 } }, { value: { c: 3 } }];
-    const result = sort(data, (item) => item.value, 'desc');
-
-    expect(result).toEqual([{ value: { c: 3 } }, { value: { b: 2 } }, { value: { a: 1 } }]);
-  });
-
   it('should sort by multiple fields using object selectors', () => {
     const data = [
       { age: 30, name: 'Alice' },

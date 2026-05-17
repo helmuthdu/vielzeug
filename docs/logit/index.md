@@ -3,6 +3,8 @@ title: Logit — Structured logging for TypeScript
 description: Browser/Node logger with levels, namespaces, timing helpers, and optional remote transport.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="logit" />
 
 <img src="/logo-logit.svg" alt="Logit logo" width="156" class="logo-highlight"/>
@@ -38,20 +40,21 @@ import { createLogger, Logit } from '@vielzeug/logit';
 
 Logit.info('Boot complete');
 Logit.warn('Cache stale');
+Logit.fatal(new Error('unrecoverable')); // auto-serializes Error
 
 const api = Logit.scope('api');
-api.info('GET /users');
+api.info({ method: 'GET', path: '/users' }, 'request');
+
+// pin fields to every call — ideal for per-request context
+const reqLog = api.withBindings({ requestId: 'abc-123' });
+reqLog.info('processing');
 
 const workerLog = createLogger({ logLevel: 'warn', namespace: 'worker' });
 
-await workerLog.group(
-  'Job',
-  async () => {
-    await workerLog.time('process', () => runJob());
-    workerLog.success('Done');
-  },
-  true,
-);
+await workerLog.groupCollapsed('Job', async () => {
+  await workerLog.time('process', () => runJob());
+  workerLog.info('Done');
+});
 ```
 
 ## Why Logit?
@@ -68,7 +71,7 @@ fetch('/api/logs', { method: 'POST', body: JSON.stringify({ level: 'error', msg 
 // After — Logit
 import { Logit } from '@vielzeug/logit';
 const api = Logit.scope('api');
-api.info('GET /users', data); // filtered by log level, styled, optionally remote
+api.info({ data }, 'GET /users'); // filtered by log level, styled, optionally remote
 ```
 
 | Feature           | Logit                                       | Winston       | Pino       | console |
@@ -86,12 +89,15 @@ api.info('GET /users', data); // filtered by log level, styled, optionally remot
 
 ## Features
 
-- Level filtering (`debug` to `off`) with `enabled()` checks
+- Level filtering (`debug` to `off`) with `enabled()` checks, including `fatal` above `error`
+- Structured call signature: `log.info('msg')`, `log.info({ key }, 'msg')`, `log.error(new Error())`
+- Auto-serializes `Error` objects into `{ message, name, stack }` — survives JSON.stringify
+- Pinned context bindings via `withBindings({ requestId })` — fields on every line
 - Namespace composition (`scope`) and isolated clones (`child`)
 - Styled browser output (`symbol`, `icon`, `text`)
-- `time()` and `group()` wrappers that auto-close on throw/reject
+- `time()`, `group()`, and `groupCollapsed()` wrappers that auto-close on throw/reject
+- Structured remote payload: `{ level, message, context, env, namespace?, timestamp? }`
 - Non-blocking remote forwarding with separate remote level threshold
-- `assert()` and `table()` passthrough helpers
 - Zero dependencies — <PackageInfo package="logit" type="size" /> gzipped
 
 ## Compatibility
@@ -103,8 +109,16 @@ api.info('GET /users', data); // filtered by log level, styled, optionally remot
 | SSR         | ✅      |
 | Deno        | ✅      |
 
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
+
 ## See Also
 
 - [Fetchit](/fetchit/)
 - [Eventit](/eventit/)
 - [Workit](/workit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

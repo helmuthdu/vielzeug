@@ -1,21 +1,54 @@
 export class HttpError extends Error {
   readonly name = 'HttpError';
+  readonly kind: 'abort' | 'http' | 'network' | 'timeout';
   readonly url: string;
   readonly method: string;
   readonly status?: number;
   readonly data?: unknown;
-  readonly response?: Response;
-  /** True when the request failed due to a timeout (`AbortSignal.timeout`). */
-  readonly isTimeout: boolean;
-  /** True when the request was cancelled via an `AbortSignal`. */
-  readonly isAborted: boolean;
+  readonly headers?: Headers;
+
+  private static classifyKind(opts: {
+    aborted?: boolean;
+    cause?: unknown;
+    signalReason?: unknown;
+    status?: number;
+  }): 'abort' | 'http' | 'network' | 'timeout' {
+    // Signal reason is authoritative: checked first so a custom transport that
+    // throws a generic Error on abort still yields 'timeout' when the signal
+    // itself carries a TimeoutError reason. We check .name rather than
+    // instanceof DOMException because AbortSignal.timeout() sets reason to the
+    // *native* Node.js DOMException which may differ from the environment's
+    // global DOMException (e.g. jsdom), causing instanceof checks to fail.
+    // DOMException extends Error per spec, so `instanceof Error` is intentionally
+    // broad — it catches both plain Errors and native DOMExceptions without
+    // relying on the environment's DOMException constructor identity.
+    if (opts.signalReason instanceof Error && opts.signalReason.name === 'TimeoutError') {
+      return 'timeout';
+    }
+
+    if (opts.cause instanceof DOMException) {
+      return opts.cause.name === 'TimeoutError' ? 'timeout' : 'abort';
+    }
+
+    if ((opts.cause instanceof Error && opts.cause.name === 'AbortError') || opts.aborted) {
+      return 'abort';
+    }
+
+    if (opts.status !== undefined) {
+      return 'http';
+    }
+
+    return 'network';
+  }
 
   constructor(opts: {
+    aborted?: boolean;
     cause?: unknown;
     data?: unknown;
+    headers?: Headers;
     message: string;
     method: string;
-    response?: Response;
+    signalReason?: unknown;
     status?: number;
     url: string;
   }) {
@@ -24,36 +57,43 @@ export class HttpError extends Error {
     this.method = opts.method;
     this.status = opts.status;
     this.data = opts.data;
-    this.response = opts.response;
+    this.headers = opts.headers;
+    this.kind = HttpError.classifyKind(opts);
+  }
 
-    const causeName = opts.cause instanceof Error ? opts.cause.name : undefined;
+  /** True when the request failed due to a timeout (`AbortSignal.timeout`). */
+  get isTimeout(): boolean {
+    return this.kind === 'timeout';
+  }
 
-    this.isTimeout = causeName === 'TimeoutError';
-    this.isAborted = causeName === 'AbortError';
+  /** True when the request was cancelled via an `AbortSignal`. */
+  get isAborted(): boolean {
+    return this.kind === 'abort';
   }
 
   static fromResponse(res: Response, data: unknown, method: string, url: string): HttpError {
     return new HttpError({
       data,
+      headers: res.headers,
       message: res.statusText || 'Non-OK response',
       method,
-      response: res,
       status: res.status,
       url,
     });
   }
 
-  static fromCause(cause: unknown, method: string, url: string): HttpError {
+  static fromCause(
+    cause: unknown,
+    method: string,
+    url: string,
+    opts?: { aborted?: boolean; signalReason?: unknown },
+  ): HttpError {
     const message = cause instanceof Error ? cause.message : String(cause);
 
-    return new HttpError({ cause, message, method, url });
+    return new HttpError({ aborted: opts?.aborted, cause, message, method, signalReason: opts?.signalReason, url });
   }
 
   static is(err: unknown, status?: number): err is HttpError {
     return err instanceof HttpError && (status === undefined || err.status === status);
   }
-}
-
-export function toError(e: unknown): Error {
-  return e instanceof Error ? e : new Error(String(e));
 }

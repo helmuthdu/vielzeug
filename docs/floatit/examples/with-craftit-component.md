@@ -5,63 +5,62 @@ description: 'With Craftit Component examples for floatit.'
 
 ## With Craftit Component
 
-## Problem
+### Problem
 
-Implement with craftit component in a production-friendly way with `@vielzeug/floatit` while keeping setup and cleanup explicit.
+You are adding a positioned tooltip or popover to a Craftit custom element. The float's `autoUpdate` cleanup must be tied to the component's own `disconnectedCallback` so it does not outlive the element.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/floatit` installed.
+### Solution
 
 Usage inside a [@vielzeug/craftit](/craftit/) component with automatic `autoUpdate` cleanup.
 
 ```ts
-import { autoUpdate, flip, offset, positionFloat, shift } from '@vielzeug/floatit';
-import { currentRuntime, define, onMount, signal } from '@vielzeug/craftit';
+import { autoUpdate, computePosition, flip, offset, shift } from '@vielzeug/floatit';
+import { define, onMount, signal } from '@vielzeug/craftit';
 
-define('my-tooltip', () => {
-  const host = currentRuntime().el;
-  const visible = signal(false);
-  let tooltipEl: HTMLElement | null = null;
-  let cleanup: (() => void) | null = null;
+define('my-tooltip', {
+  setup({ host }) {
+    const visible = signal(false);
+    let tooltipEl: HTMLElement | null = null;
+    let cleanup: (() => void) | null = null;
 
-  function update() {
-    if (!tooltipEl) return;
-    positionFloat(host, tooltipEl, {
-      placement: 'top',
-      middleware: [offset(8), flip(), shift({ padding: 6 })],
+    function update() {
+      if (!tooltipEl) return;
+      const result = computePosition(host.el, tooltipEl, {
+        placement: 'top',
+        middleware: [offset(8), flip(), shift({ padding: 6 })],
+      });
+
+      tooltipEl.style.left = `${result.x}px`;
+      tooltipEl.style.top = `${result.y}px`;
+    }
+
+    onMount(() => {
+      host.el.addEventListener('mouseenter', () => {
+        visible.value = true;
+        cleanup = autoUpdate(host.el, tooltipEl!, update);
+      });
+      host.el.addEventListener('mouseleave', () => {
+        visible.value = false;
+        cleanup?.();
+        cleanup = null;
+      });
+
+      // Cleanup is run automatically on unmount by craftit
+      return () => cleanup?.();
     });
-  }
-
-  onMount(() => {
-    host.addEventListener('mouseenter', () => {
-      visible.value = true;
-      cleanup = autoUpdate(host, tooltipEl!, update);
-    });
-    host.addEventListener('mouseleave', () => {
-      visible.value = false;
-      cleanup?.();
-      cleanup = null;
-    });
-
-    // Cleanup is run automatically on unmount by craftit
-    return () => cleanup?.();
-  });
+  },
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `autoUpdate` must be called after the Craftit element's shadow DOM is ready — inside `onMounted`, not the constructor. The floating element reference may not exist before that point.
+- Store the `autoUpdate` cleanup function in a component property and call it in `disconnectedCallback`. Returning it from `onMounted` is the cleanest pattern for Craftit.
+- The floating element must have `position: fixed` or `position: absolute`. Without explicit CSS positioning, the computed `top`/`left` values are applied but have no visual effect.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Web Component with Craftit (Dragit)](/dragit/examples/web-component-with-craftit)
 
 - [Context Menu](./context-menu.md)
 - [Custom Middleware](./custom-middleware.md)

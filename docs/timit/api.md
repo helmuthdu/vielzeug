@@ -1,242 +1,290 @@
 ---
-title: Timit — API Reference
+title: Timit - API Reference
 description: Complete API reference for @vielzeug/timit date/time functions.
 ---
 
-# Timit API Reference
-
 [[toc]]
 
-## Namespace Object
+## Package Entry Point
 
-### `t` — Date/time operations
-
-All functions are grouped under the `t` namespace for discoverability and autocomplete.
+| Import             | Purpose                |
+| ------------------ | ---------------------- |
+| `@vielzeug/timit`  | Main exports and types |
 
 ```ts
-import { t } from '@vielzeug/timit';
-
-t.now('UTC');
-t.parseLocal('2026-03-21T10:15:30', { tz: 'Europe/Berlin' });
-t.toInstant(input, { tz: 'Europe/Berlin' });
-t.toZoned(instant, { tz: 'America/New_York' });
-t.shift(time, { hours: 1 });
-t.diff(start, end);
-t.within(value, start, end);
-t.formatHuman(time, { pattern: 'short' });
-t.formatISO(time);
-t.formatRange(start, end, { pattern: 'short' });
+import {
+  clamp,
+  difference,
+  endOf,
+  formatDuration,
+  formatHuman,
+  formatInstant,
+  formatRange,
+  formatRelative,
+  formatZoned,
+  isAfter,
+  isBefore,
+  isSame,
+  now,
+  parseDuration,
+  parseLocal,
+  shift,
+  startOf,
+  toInstant,
+  toZoned,
+  within,
+} from '@vielzeug/timit';
 ```
 
-You can also import functions individually:
+## API At a Glance
+
+| Symbol                                | Purpose                                     | Execution mode | Common gotcha                                              |
+| ------------------------------------- | ------------------------------------------- | -------------- | ---------------------------------------------------------- |
+| `now(tz)`                             | Get current zoned date/time                 | Sync           | Requires a valid IANA timezone string                      |
+| `parseLocal(input)`                   | Parse a local date/time string              | Sync           | Returns `PlainDateTime` — no timezone attached             |
+| `toInstant(input, options?)`          | Convert any input to a UTC instant          | Sync           | Ambiguous local times require `disambiguation` option      |
+| `toZoned(input, options)`             | Convert to a specific timezone              | Sync           | Target timezone is required                                |
+| `shift(input, duration, options)`     | Add/subtract duration from a date           | Sync           | Use negative duration values to subtract                   |
+| `difference(start, end, options?)`    | Compute duration between two values         | Sync           | Requires a shared timezone or explicit `options.tz`        |
+| `within(value, start, end, options?)` | Check if a date falls within a range        | Sync           | Range is inclusive by default                              |
+| `isBefore/isAfter/isSame()`           | Compare two dates                           | Sync           | Comparison granularity set by `unit` option                |
+| `startOf/endOf()`                     | Get boundary of a calendar unit             | Sync           | Week boundaries depend on locale settings                  |
+| `formatHuman(input, options?)`        | Format as human-readable relative string    | Sync           | Output language depends on `locale` option                 |
+| `formatInstant/formatZoned()`         | Format using Intl.DateTimeFormat            | Sync           | Requires locale-aware options for consistency              |
+| `parseDuration()`                     | Parse ISO 8601 duration values              | Sync           | Duration strings must be valid ISO 8601 format             |
+| `formatDuration(input, options?)`     | Format a duration for display               | Sync           | Falls back to ISO string if `Intl.DurationFormat` unavailable |
+
+## Core Functions
+
+### `now(tz): Temporal.ZonedDateTime`
+
+Get current time in a target timezone.
 
 ```ts
-import { formatHuman, shift, toInstant } from '@vielzeug/timit';
+now('Europe/Berlin');
 ```
 
-## Functions
+### `parseLocal(input): Temporal.PlainDateTime`
 
-### Conversion Functions
-
-#### `t.parseLocal(input, options): Temporal.ZonedDateTime`
-
-Parse a plain local date/time string using an explicit timezone.
+Parse a local wall-clock string into a timezone-free `PlainDateTime`.
 
 ```ts
-t.parseLocal('2026-03-21T10:15:30', { tz: 'America/New_York' });
+parseLocal('2026-03-21');
+parseLocal('2026-03-21T10:15:30');
 ```
 
-Parameters:
-- `input: string` — Plain local date/time string without offset
-- `options: LocalTimeOptions` — Requires `tz`; optional `when` disambiguation
+### `toInstant(input, options?): Temporal.Instant`
 
-Returns: `Temporal.ZonedDateTime`
-
-#### `t.toInstant(input, options?): Temporal.Instant`
-
-Normalize any supported input to a canonical timeline value.
+Normalize supported inputs to a canonical timeline value.
 
 ```ts
-t.toInstant('2026-03-21T10:15:30Z');
-t.toInstant('2026-03-21T10:15:30', { tz: 'America/New_York' });
-t.toInstant(new Date());
-t.toInstant(1711011330000);
-```
-
-Parameters:
-- `input: TimeInput`
-- `options?: TimeOptions`
-
-Returns: `Temporal.Instant`
-
-Notes:
-- Plain local strings require `options.tz`.
-- Invalid strings throw a dedicated parse error.
-
-#### `t.toZoned(input, options?): Temporal.ZonedDateTime`
-
-View a time in a specific timezone.
-
-```ts
-t.toZoned('2026-03-21T10:15:30Z', { tz: 'Europe/Berlin' });
-```
-
-Parameters:
-- `input: TimeInput`
-- `options?: TimeOptions`
-
-Returns: `Temporal.ZonedDateTime`
-
-### Arithmetic Functions
-
-#### `t.shift(input, duration, options?): Temporal.ZonedDateTime`
-
-Add or subtract duration in one API.
-
-```ts
-t.shift('2026-03-21T10:00:00Z', { hours: 2 });
-t.shift('2026-03-21T10:00:00Z', { hours: -1 });
-```
-
-Parameters:
-- `input: TimeInput`
-- `duration: Temporal.DurationLike`
-- `options?: TimeOptions`
-
-Returns: `Temporal.ZonedDateTime`
-
-#### `t.diff(start, end, options?): Temporal.Duration`
-
-Compute duration between two times with optional rounding.
-
-```ts
-t.diff(start, end, { largestUnit: 'hour', smallestUnit: 'minute' });
-```
-
-Parameters:
-- `start: TimeInput`
-- `end: TimeInput`
-- `options?: DifferenceOptions`
-
-Returns: `Temporal.Duration`
-
-### Query Functions
-
-#### `t.now(tz?): Temporal.ZonedDateTime`
-
-Get the current time in the given timezone (or system timezone).
-
-```ts
-t.now();
-t.now('America/New_York');
-```
-
-#### `t.within(input, start, end, options?): boolean`
-
-Check whether `input` is within an inclusive range.
-
-```ts
-t.within('2026-03-21T11:00:00Z', '2026-03-21T10:00:00Z', '2026-03-21T12:00:00Z');
+toInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
+toInstant(parseLocal('2026-03-21T10:15:30'), { tz: 'America/New_York' });
 ```
 
 Notes:
-- Bounds are normalized automatically, so reversed `start`/`end` still work.
 
-### Formatting Functions
+- Plain local values require `options.tz`.
 
-#### `t.formatHuman(input, options?): string`
+### `toZoned(input, options): Temporal.ZonedDateTime`
 
-Format localized, user-facing output.
+Render a time in a specific timezone.
 
 ```ts
-t.formatHuman('2026-03-21T10:15:30Z', {
+toZoned(Temporal.Instant.from('2026-03-21T10:15:30Z'), { tz: 'Europe/Berlin' });
+```
+
+`options.tz` is required.
+
+### `shift(input, duration, options): Temporal.ZonedDateTime`
+
+DST-safe add/subtract helper.
+
+```ts
+shift(Temporal.Instant.from('2026-03-21T10:00:00Z'), { hours: -1 }, { tz: 'UTC' });
+shift(Temporal.ZonedDateTime.from('2026-03-21T10:00:00+01:00[Europe/Berlin]'), { hours: -1 });
+```
+
+Notes:
+
+- `options.tz` is optional for zoned inputs and inferred from input timezone.
+- `options.tz` is required for local/plain inputs.
+
+### `difference(start, end, options?): Temporal.Duration`
+
+Compute duration between two times.
+
+```ts
+difference(start, end, { largestUnit: 'hour', smallestUnit: 'minute' });
+difference(start, end, { tz: 'UTC', largestUnit: 'hour', smallestUnit: 'minute' });
+```
+
+`options.tz` is optional when both values provide a shared timezone through zoned input.
+
+## Query and Comparison
+
+### `within(value, start, end, options?): boolean`
+
+Inclusive range check with automatic bound normalization.
+
+When `options.unit` is set, comparison happens on unit-aligned values in the chosen timezone.
+
+### `clamp(value, start, end, options?): Temporal.Instant`
+
+Clamp input to range bounds. Returns `Temporal.Instant` — project to any timezone as needed.
+
+When `options.unit` is set, clamp is performed on unit-aligned instants (for example start-of-day), and the returned value is that aligned instant.
+
+```ts
+const clamped = clamp(value, start, end);
+clamped.toZonedDateTimeISO('UTC');
+
+const byDay = clamp(value, start, end, { unit: 'day', tz: 'America/New_York' });
+```
+
+### `isBefore(a, b, options?): boolean`
+
+Returns true when `a < b` on timeline.
+
+Set `options.unit` for calendar-unit comparison.
+
+### `isAfter(a, b, options?): boolean`
+
+Returns true when `a > b` on timeline.
+
+Set `options.unit` for calendar-unit comparison.
+
+### `isSame(a, b, options?): boolean`
+
+Compares two values either on the timeline (when `unit` is omitted) or at a specific calendar unit (`'minute' | 'hour' | 'day' | 'week' | 'month' | 'year'`).
+
+```ts
+isSame(a, b);
+isSame(a, b, { unit: 'day', tz: 'America/New_York' });
+isSame(a, b, { unit: 'month', tz: 'UTC' });
+```
+
+Timezone rules:
+
+- Uses `options.tz` when provided.
+- Otherwise infers from zoned inputs.
+- Throws when zoned inputs disagree and `options.tz` is omitted.
+
+## Boundary Helpers
+
+### `startOf(input, unit, options): Temporal.ZonedDateTime`
+
+Snap to start of a unit.
+
+```ts
+startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
+startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'week', { tz: 'UTC', weekStartsOn: 1 });
+startOf(Temporal.ZonedDateTime.from('2026-03-21T10:15:30-04:00[America/New_York]'), 'day');
+```
+
+### `endOf(input, unit, options): Temporal.ZonedDateTime`
+
+Snap to end of a unit (`startOf(nextUnit) - 1ns`).
+
+```ts
+endOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' });
+```
+
+For zoned inputs, `options.tz` is optional and inferred from input timezone.
+
+Supported units:
+
+- `'minute'`
+- `'hour'`
+- `'day'`
+- `'week'`
+- `'month'`
+- `'year'`
+
+## Formatting
+
+### `formatHuman(input, options?): string`
+
+Localized UI formatting with presets.
+
+```ts
+formatHuman(Temporal.Instant.from('2026-03-21T10:15:30Z'), {
   pattern: 'short',
-  locale: 'en-US',
-  tz: 'America/New_York',
+  locale: 'en-GB',
+  tz: 'UTC',
 });
 ```
 
-Pattern options:
+Patterns:
+
 - `'short'`
+- `'medium'` (default)
 - `'long'`
 - `'date-only'`
 - `'time-only'`
 
-#### `t.formatISO(input, options?): string`
+### `formatInstant(input, options?): string`
 
-Format canonical ISO-8601 output for logs and APIs.
+Produces a UTC ISO-8601 instant string.
 
 ```ts
-t.formatISO('2026-03-21T10:15:30Z');
-// => "2026-03-21T10:15:30Z"
+formatInstant(Temporal.Instant.from('2026-03-21T10:15:30Z'));
+// → '2026-03-21T10:15:30Z'
 ```
 
-#### `t.formatRange(start, end, options?): string`
+### `formatZoned(input, options?): string`
 
-Format a localized range using `Intl.DateTimeFormat.formatRange` when available.
+Produces a zoned ISO-8601 string. Infers timezone from `ZonedDateTime` inputs; requires `options.tz` otherwise.
 
 ```ts
-t.formatRange(start, end, { pattern: 'short', locale: 'en-US', tz: 'UTC' });
+formatZoned(Temporal.Instant.from('2026-03-21T10:15:30Z'), { tz: 'Europe/Berlin' });
+// → '2026-03-21T11:15:30+01:00[Europe/Berlin]'
+
+formatZoned(Temporal.ZonedDateTime.from('2026-03-21T10:15:30+01:00[Europe/Berlin]'));
+// → '2026-03-21T10:15:30+01:00[Europe/Berlin]'
+```
+
+### `formatRange(start, end, options?): string`
+
+Localized range formatting via `Intl.DateTimeFormat.formatRange`.
+
+### `formatRelative(input, options?): string`
+
+Relative text using `Intl.RelativeTimeFormat`.
+
+Accepted input types are `Temporal.Instant` and `Temporal.ZonedDateTime`.
+
+```ts
+formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), {
+  base: Temporal.Instant.from('2026-03-21T10:00:00Z'),
+  numeric: 'always',
+});
+// => "in 2 hours"
+```
+
+## Duration Helpers
+
+### `parseDuration(input): Temporal.Duration`
+
+Parse ISO or object input into `Temporal.Duration`.
+
+```ts
+parseDuration('PT2H30M');
+parseDuration({ hours: 2, minutes: 30 });
+```
+
+### `formatDuration(input, options?): string`
+
+Format a duration for display. Uses `Intl.DurationFormat` when available (with `locale`/`style`); falls back to the ISO string representation otherwise.
+
+```ts
+formatDuration('PT2H30M');
+formatDuration('PT2H30M', { locale: 'en-US', style: 'short' });
+formatDuration({ hours: 1, minutes: 30 }, { locale: 'de-DE' });
 ```
 
 ## Types
 
-### `TimeInput`
-
 ```ts
-type TimeInput =
-  | Date
-  | Temporal.Instant
-  | Temporal.PlainDateTime
-  | Temporal.ZonedDateTime
-  | number
-  | string;
+type TimeInput = Temporal.Instant | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
 ```
-
-### `TimeOptions`
-
-```ts
-interface TimeOptions {
-  tz?: string;
-  when?: DateTimeDisambiguation;
-}
-```
-
-### `LocalTimeOptions`
-
-```ts
-interface LocalTimeOptions {
-  tz: string;
-  when?: DateTimeDisambiguation;
-}
-```
-
-### `DifferenceOptions`
-
-```ts
-interface DifferenceOptions extends TimeOptions {
-  largestUnit?: Temporal.DateTimeUnit;
-  roundingIncrement?: number;
-  roundingMode?: Temporal.RoundingMode;
-  smallestUnit?: Temporal.DateTimeUnit;
-}
-```
-
-### `HumanFormatOptions`
-
-```ts
-interface HumanFormatOptions {
-  pattern?: 'short' | 'long' | 'date-only' | 'time-only';
-  locale?: Intl.LocalesArgument;
-  tz?: string;
-  intl?: Intl.DateTimeFormatOptions;
-}
-```
-
-## Temporal Export
-
-```ts
-import { Temporal } from '@vielzeug/timit';
-```
-
-`Temporal` is re-exported from `@js-temporal/polyfill` for advanced use cases.

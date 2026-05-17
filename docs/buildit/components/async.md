@@ -100,8 +100,7 @@ The default loading view renders a skeleton stack automatically. No slot require
   status="empty"
   empty-label="No results found"
   empty-description="Try adjusting your search or filters."
-  style="width: 100%; max-width: 24rem;"
-></bit-async>
+  style="width: 100%; max-width: 24rem;"></bit-async>
 
 <script type="module">
   import '@vielzeug/buildit/async';
@@ -116,7 +115,9 @@ The default loading view renders a skeleton stack automatically. No slot require
 
 ```html
 <bit-async status="empty" style="width: 100%; max-width: 24rem;">
-  <div slot="empty" style="display: flex; flex-direction: column; align-items: center; gap: var(--size-3); padding: var(--size-10) var(--size-6); text-align: center;">
+  <div
+    slot="empty"
+    style="display: flex; flex-direction: column; align-items: center; gap: var(--size-3); padding: var(--size-10) var(--size-6); text-align: center;">
     <bit-avatar size="xl" label="📭"></bit-avatar>
     <p style="font-size: var(--text-sm); color: var(--color-contrast-500);">Your inbox is empty</p>
     <bit-button variant="outline" size="sm">Compose message</bit-button>
@@ -142,8 +143,7 @@ The default loading view renders a skeleton stack automatically. No slot require
   error-label="Failed to load data"
   error-description="Check your connection and try again."
   retryable
-  style="width: 100%; max-width: 24rem;"
-></bit-async>
+  style="width: 100%; max-width: 24rem;"></bit-async>
 
 <script type="module">
   import '@vielzeug/buildit/async';
@@ -209,8 +209,7 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
   status="error"
   error-label="Could not load items"
   retryable
-  style="width: 100%; max-width: 24rem;"
-></bit-async>
+  style="width: 100%; max-width: 24rem;"></bit-async>
 
 <script type="module">
   import '@vielzeug/buildit/async';
@@ -233,8 +232,7 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
   <bit-async
     status="empty"
     empty-label="No orders yet"
-    empty-description="Orders will appear here once placed."
-  ></bit-async>
+    empty-description="Orders will appear here once placed."></bit-async>
 </bit-card>
 
 <script type="module">
@@ -281,14 +279,14 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
 
 ## Props
 
-| Attribute           | Type          | Default                  | Description                                         |
-| ------------------- | ------------- | ------------------------ | --------------------------------------------------- |
-| `status`            | `AsyncStatus` | `'success'`              | Current data-fetch status                           |
-| `empty-label`       | `string`      | `'No content yet'`       | Heading for the built-in empty state                |
-| `empty-description` | `string`      | —                        | Description below the empty-state heading           |
-| `error-label`       | `string`      | `'Something went wrong'` | Heading for the built-in error state                |
-| `error-description` | `string`      | —                        | Description below the error-state heading           |
-| `retryable`         | `boolean`     | `false`                  | Show retry button in the built-in error state       |
+| Attribute           | Type          | Default                  | Description                                   |
+| ------------------- | ------------- | ------------------------ | --------------------------------------------- |
+| `status`            | `AsyncStatus` | `'success'`              | Current data-fetch status                     |
+| `empty-label`       | `string`      | `'No content yet'`       | Heading for the built-in empty state          |
+| `empty-description` | `string`      | —                        | Description below the empty-state heading     |
+| `error-label`       | `string`      | `'Something went wrong'` | Heading for the built-in error state          |
+| `error-description` | `string`      | —                        | Description below the error-state heading     |
+| `retryable`         | `boolean`     | `false`                  | Show retry button in the built-in error state |
 
 ## Events
 
@@ -298,20 +296,20 @@ Add `retryable` to show a built-in retry button in the error state. Listen for t
 
 ## Slots
 
-| Slot        | Description                                          |
-| ----------- | ---------------------------------------------------- |
-| *(default)* | Rendered when `status="success"`                     |
-| `loading`   | Replaces the built-in skeleton stack during loading  |
-| `empty`     | Replaces the built-in empty state illustration       |
-| `error`     | Replaces the built-in error view                     |
+| Slot        | Description                                         |
+| ----------- | --------------------------------------------------- |
+| _(default)_ | Rendered when `status="success"`                    |
+| `loading`   | Replaces the built-in skeleton stack during loading |
+| `empty`     | Replaces the built-in empty state illustration      |
+| `error`     | Replaces the built-in error view                    |
 
 ## CSS Custom Properties
 
-| Property            | Default                | Description                                 |
-| ------------------- | ---------------------- | ------------------------------------------- |
-| `--async-color`     | `--color-contrast-500` | Icon/text color for built-in states         |
-| `--async-icon-size` | `var(--size-12)`       | Icon size in built-in empty/error views     |
-| `--async-gap`       | `var(--size-3)`        | Gap between elements in built-in views      |
+| Property            | Default                | Description                             |
+| ------------------- | ---------------------- | --------------------------------------- |
+| `--async-color`     | `--color-contrast-500` | Icon/text color for built-in states     |
+| `--async-icon-size` | `var(--size-12)`       | Icon size in built-in empty/error views |
+| `--async-gap`       | `var(--size-3)`        | Gap between elements in built-in views  |
 
 ## Accessibility
 

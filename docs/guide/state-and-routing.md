@@ -34,26 +34,34 @@ const pageTitle = computed(() => {
   return activeTab.value === 'overview' ? `User ${userId.value}` : `User ${userId.value} Settings`;
 });
 
-const router = createRouter();
-
-router
-  .on('/users', () => {
-    userId.value = null;
-    activeTab.value = 'overview';
-    document.title = pageTitle.value;
-  })
-  .on('/users/:id', ({ params }) => {
-    userId.value = params.id;
-    activeTab.value = 'overview';
-    document.title = pageTitle.value;
-  })
-  .on('/users/:id/settings', ({ params }) => {
-    userId.value = params.id;
-    activeTab.value = 'settings';
-    document.title = pageTitle.value;
-  });
-
-router.start();
+const router = createRouter({
+  routes: {
+    users: {
+      path: '/users',
+      handler: () => {
+        userId.value = null;
+        activeTab.value = 'overview';
+        document.title = pageTitle.value;
+      },
+    },
+    userDetail: {
+      path: '/users/:id',
+      handler: ({ params }) => {
+        userId.value = params.id;
+        activeTab.value = 'overview';
+        document.title = pageTitle.value;
+      },
+    },
+    userSettings: {
+      path: '/users/:id/settings',
+      handler: ({ params }) => {
+        userId.value = params.id;
+        activeTab.value = 'settings';
+        document.title = pageTitle.value;
+      },
+    },
+  },
+});
 ```
 
 ## Expected Output
@@ -65,7 +73,7 @@ router.start();
 ## Common Pitfalls
 
 - Updating UI state in multiple places instead of one route handler.
-- Forgetting to start the router after route registration.
+- Letting route params drift out of sync with signals — always write signals inside the handler, not in parallel subscriptions.
 - Using untyped route params without validation in critical paths.
 
 ## See Also

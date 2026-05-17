@@ -1,29 +1,11 @@
-import type { Middleware, RouteContext, RouteHandler } from './types';
+import type { Middleware, NavigateOptions, NamedNavigationTarget, RawNavigationTarget, RouteTable } from './types';
 
-/** -------------------- Middleware Execution -------------------- **/
-
-export async function runMiddleware(
-  context: RouteContext,
-  globalMiddleware: Middleware[],
-  routeMiddleware: Middleware[],
-  handler?: RouteHandler,
-): Promise<void> {
-  const stack = [...globalMiddleware, ...routeMiddleware];
-  let index = -1;
-
-  const dispatch = async (i: number): Promise<void> => {
-    if (i <= index) throw new Error('[routeit] next() called multiple times');
-
-    index = i;
-
-    if (i === stack.length) {
-      if (handler) await handler(context);
-
-      return;
-    }
-
-    await stack[i](context, () => dispatch(i + 1));
+/** Build redirect middleware for common guard flows. */
+export function redirectTo<TRoutes extends RouteTable = RouteTable>(
+  target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
+  options?: NavigateOptions,
+): Middleware<TRoutes> {
+  return async (context) => {
+    await context.navigate(target, options);
   };
-
-  await dispatch(0);
 }

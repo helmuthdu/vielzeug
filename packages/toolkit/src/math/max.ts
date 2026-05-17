@@ -1,5 +1,6 @@
-import { fold } from '../array/fold';
+import { assert } from '../function/assert';
 import { compare } from '../function/compare';
+import { IS_ARRAY_ERROR_MSG, isArray } from '../typed/isArray';
 
 /**
  * Finds the maximum item in an array.
@@ -23,7 +24,18 @@ import { compare } from '../function/compare';
  * @throws {TypeError} If the provided array is not an array.
  */
 export function max<T>(array: T[], callback?: (item: T) => string | number | Date): T | undefined {
-  const fn = callback ?? ((item: T) => item);
+  assert(isArray(array), IS_ARRAY_ERROR_MSG, { args: { array }, type: TypeError });
 
-  return fold(array, (a, b) => (compare(fn(a), fn(b)) > 0 ? a : b));
+  if (array.length === 0) return undefined;
+
+  const fn = callback ?? ((item: T) => item);
+  let current = array[0];
+
+  for (let i = 1; i < array.length; i++) {
+    if (compare(fn(array[i]), fn(current)) > 0) {
+      current = array[i];
+    }
+  }
+
+  return current;
 }

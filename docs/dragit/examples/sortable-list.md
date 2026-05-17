@@ -5,13 +5,11 @@ description: 'Sortable list examples for dragit.'
 
 ## Sortable list
 
-## Problem
+### Problem
 
-Implement sortable list in a production-friendly way with `@vielzeug/dragit` while keeping setup and cleanup explicit.
+You need a reorderable list where users drag items by an explicit handle. This is the baseline sortable pattern — a starting point before adding keyboard support or persistence.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/dragit` installed.
+### Solution
 
 A basic reorderable list with a visible drag handle and placeholder styling:
 
@@ -56,19 +54,16 @@ using sortable = createSortable({
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- If the list container has `touch-action: auto`, touch drags on mobile scroll the page instead of dragging. Set `touch-action: none` on drag handles.
+- Mutating the array directly (e.g., `splice`) without reading `sortend`'s `from` and `to` indices produces an out-of-sync UI. Always use the indices from the event payload.
+- Setting `animation: 0` disables the drop placeholder animation, making the insertion point visually ambiguous. Use a small non-zero value for clarity.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+### Related
 
-## Related Recipes
-
+- [Connected kanban with keyboard sorting](./connected-kanban-keyboard-sorting.md)
 - [Combined: sortable with inline editing](./combined-sortable-with-inline-editing.md)
 - [File upload drop zone](./file-upload-drop-zone.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)

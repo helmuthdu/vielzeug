@@ -5,13 +5,11 @@ description: 'Testing with `createTestBus` examples for eventit.'
 
 ## Testing with `createTestBus`
 
-## Problem
+### Problem
 
-Implement testing with `createtestbus` in a production-friendly way with `@vielzeug/eventit` while keeping setup and cleanup explicit.
+You want to write unit tests for code that uses an event bus — asserting that specific events were emitted, in the right order, with the right payloads, without real side effects.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
+### Solution
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -50,19 +48,15 @@ describe('cart module', () => {
 });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `createTestBus` delivers events synchronously. If your production code relies on microtask-level async delivery, the test may pass when the real code would fail. Verify the delivery timing matches production.
+- `testBus.emitted(event)` returns all payloads ever emitted under that name — not just the most recent. Assert on a specific index when emission order matters.
+- Calling `testBus.reset()` clears both emitted history and all active listeners. Re-register any listeners set up in `beforeEach` after calling `reset()`.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
 - [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)

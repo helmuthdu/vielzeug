@@ -1,58 +1,63 @@
 ---
 title: 'Craftit Examples — Form-Associated Rating Input'
-description: 'Form-Associated Rating Input examples for craftit.'
+description: 'Form-Associated Rating Input example using defineField with a writable signal.'
 ---
 
 ## Form-Associated Rating Input
 
-## Problem
+### Problem
 
-Implement form-associated rating input in a production-friendly way with `@vielzeug/craftit` while keeping setup and cleanup explicit.
+Implement a form-associated rating input using `defineField` with a `signal` for two-way form binding.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
+### Solution
 
 ```ts
-import { component, define, defineField, html, signal } from '@vielzeug/craftit';
+import { define, defineField, html, signal } from '@vielzeug/craftit';
 
-define(
-  'rating-input',
-  component({
-    formAssociated: true,
-    setup() {
-      const value = signal(0);
+define('rating-input', {
+  formAssociated: true,
+  setup() {
+    const value = signal(0);
 
-      defineField({
-        value,
-        toFormValue: (v) => String(v),
-      });
+    // Pass the writable signal directly — defineField accepts Signal<T> or ReadonlySignal<T>.
+    // A default toFormValue is applied: String(v) for primitives, null for null/undefined.
+    const field = defineField({ value });
 
-      return html`
-        <button @click=${() => (value.value = 1)}>1</button>
-        <button @click=${() => (value.value = 2)}>2</button>
-        <button @click=${() => (value.value = 3)}>3</button>
-        <p>Current: ${value}</p>
-      `;
-    },
-  }),
-);
+    return () => html`
+      <button @click=${() => (value.value = 1)}>1</button>
+      <button @click=${() => (value.value = 2)}>2</button>
+      <button @click=${() => (value.value = 3)}>3</button>
+      <button @click=${() => field.reportValidity()}>Validate</button>
+      <p>Current: ${value}</p>
+    `;
+  },
+});
 ```
 
-## Expected Output
+### With custom serialisation
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+```ts
+import { define, defineField, html, signal } from '@vielzeug/craftit';
 
-## Common Pitfalls
+define<{ disabled?: boolean }>('rating-input-v2', {
+  formAssociated: true,
+  props: { disabled: false },
+  setup(props) {
+    const value = signal<number[]>([]);
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-- Calling `defineField()` without `formAssociated: true` on `component(...)` throws at runtime.
+    const field = defineField({
+      disabled: props.disabled,
+      value,
+      toFormValue: (v) => v.join(','),
+    });
 
-## Related Recipes
-
-- [Context Provider and Consumer](./context-provider-and-consumer.md)
-- [Counter Component](./counter-component.md)
-- [Observers in `onMount`](./observers-in-onmount.md)
+    return () => html`
+      <button
+        ?disabled=${props.disabled}
+        @click=${() => field.setCustomValidity(value.value.length === 0 ? 'Please select a rating' : '')}>
+        Validate
+      </button>
+    `;
+  },
+});
+```

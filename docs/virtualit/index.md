@@ -3,13 +3,15 @@ title: Virtualit — Virtual list engine for TypeScript
 description: Lightweight, framework-agnostic virtual list engine with variable heights, smooth scrolling, and zero dependencies.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="virtualit" />
 
 <img src="/logo-virtualit.svg" alt="Virtualit logo" width="156" class="logo-highlight"/>
 
 # Virtualit
 
-**Virtualit** is a framework-agnostic virtual list engine. It renders only the items visible in the viewport plus a configurable overscan buffer, keeping the DOM small regardless of how many items are in your dataset.
+`@vielzeug/virtualit` is a framework-agnostic virtual list engine. It renders only the items visible in the viewport plus a configurable overscan buffer, keeping the DOM small regardless of how many items are in your dataset.
 
 <!-- Search keywords: virtual list, windowed rendering, large list performance. -->
 
@@ -50,7 +52,7 @@ const virt = createVirtualizer(scrollEl, {
 
     for (const item of virtualItems) {
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;`;
       el.textContent = `Row ${item.index}`;
       list.appendChild(el);
     }
@@ -61,9 +63,9 @@ const virt = createVirtualizer(scrollEl, {
 virt.destroy();
 ```
 
-## Entry Points
+### Entry Points
 
-- `@vielzeug/virtualit` — core `Virtualizer` and `createVirtualizer` primitives.
+- `@vielzeug/virtualit` — core `createVirtualizer` controller.
 - `@vielzeug/virtualit/dom` — `createDomVirtualList` helper for dropdown/listbox-style DOM integrations.
 
 ## Why Virtualit?
@@ -87,9 +89,9 @@ const virt = createVirtualizer(scrollEl, {
   onChange: (virtualItems, totalSize) => {
     list.style.height = `${totalSize}px`;
     list.innerHTML = '';
-    for (const { index, top } of virtualItems) {
+    for (const { index, start } of virtualItems) {
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;top:${top}px;height:36px;`;
+      el.style.cssText = `position:absolute;top:${start}px;height:36px;`;
       el.textContent = items[index].name;
       list.appendChild(el);
     }
@@ -108,16 +110,21 @@ const virt = createVirtualizer(scrollEl, {
 
 **Use Virtualit when** you need to render large lists in a framework-agnostic environment with precise control over item measurement and scroll position.
 
-**Consider TanStack Virtual** if you need its React/Vue/Solid adapters, horizontal virtualisation, or window-based (not container-based) virtualisation.
+**Consider TanStack Virtual** if you need its framework adapters and ecosystem integration.
 
 ## Features
 
 - **Framework-agnostic** — callback-based `onChange` connects to any rendering layer (React, Vue, Svelte, Lit, vanilla DOM)
-- **Fixed and variable heights** — pass a fixed number, a per-index estimator function, or call `measureElement()` after rendering for exact heights
-- **Batched measurements** — calling `measureElement()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
+- **Fixed and variable heights** — pass a fixed number, a per-index estimator function, or call `measure()` after rendering for exact heights
+- **Batched measurements** — calling `measure()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
+- **Stable-key reflow** — call `refresh()` after reorder/filter changes to rebuild offsets without discarding measured sizes
 - **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
 - **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; both support `behavior: 'smooth'`
-- **Reactive setters** — assigning `virt.count` or `virt.estimateSize` rebuilds and re-renders automatically
+- **Horizontal + window targets** — supports both element and `window` scrolling, in vertical or horizontal mode
+- **Keyed measurement stability** — use stable keys with `getItemKey` + `measure()`
+- **Asymmetric overscan + gap** — tune start/end overscan independently and add inter-item spacing
+- **Scroll-state hooks** — `onScrollingChange`, `onScrollEnd`, `isScrolling`, and configurable `scrollEndDelay`
+- **Atomic updates** — `virt.update(...)` lets you change count, estimator, overscan, and callback in one call
 - **Clamp-safe** — `scrollToIndex` silently clamps out-of-range indices rather than silently scrolling to the wrong position
 - **Disposable** — implements `[Symbol.dispose]` for `using` declarations
 - **Zero dependencies**
@@ -131,17 +138,17 @@ const virt = createVirtualizer(scrollEl, {
 | SSR         | ❌ (DOM only) |
 | Deno        | ❌            |
 
-## Prerequisites
+### Prerequisites
 
 - Browser DOM environment with scroll container measurement.
 - A fixed-height scroll container with `overflow: auto` and a positioned inner list layer.
 - Item renderer that applies absolute positioning from virtual item offsets.
 
-## How It Works
+### How It Works
 
 Virtualit maintains a `Float64Array` prefix-sum of item offsets. On every scroll event it runs two binary searches — one for the first visible index, one for the last — to determine the render window in O(log n) time. Only the items within that window (plus `overscan` on each side) are passed to `onChange`.
 
-```
+```text
 Items:    [0]  [1]  [2]  [3]  [4]  [5]  [6]  ...
 Offsets:   0   36   72  108  144  180  216  ...
 
@@ -149,10 +156,18 @@ scrollTop = 90, containerHeight = 120 → visible items 2–5
 With overscan=3: render items 0–8
 ```
 
-The offset array is rebuilt (O(n)) only when item heights change: on `measureElement()` flush, `count` change, `estimateSize` change, or `invalidate()`. Scroll and resize events recompute the visible window without rebuilding offsets.
+The offset array is rebuilt (O(n)) only when layout inputs change: on `measure()` flush, `refresh()`, `update({ count })`, `update({ estimateSize })`, or `invalidate()`. Scroll and resize events recompute the visible window without rebuilding offsets.
+
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 
 - [Buildit](/buildit/)
 - [Craftit](/craftit/)
 - [Dragit](/dragit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

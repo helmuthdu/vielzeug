@@ -5,18 +5,14 @@ description: 'Standalone entry examples for eventit.'
 
 ## Standalone entry
 
-## Problem
+### Problem
 
-Implement standalone entry in a production-friendly way with `@vielzeug/eventit` while keeping setup and cleanup explicit.
+You want the minimal setup to create a bus, emit a typed event, and receive it in a subscriber — the starting point before adding namespacing, disposal, or error handling.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
-
-When you need the standalone bundle export, import from `@vielzeug/eventit/core`:
+### Solution
 
 ```ts
-import { createBus } from '@vielzeug/eventit/core';
+import { createBus } from '@vielzeug/eventit';
 
 type WorkerEvents = {
   message: { id: string; body: string };
@@ -27,19 +23,15 @@ const bus = createBus<WorkerEvents>();
 bus.on('message', (payload) => console.log(payload.body));
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Calling `emit()` before any listener is registered silently discards the event. There is no event queue — register listeners before emitting.
+- `on()` returns an unsubscribe function. Ignoring the return value means the listener can only be removed with `removeAllListeners()`.
+- The type parameter on `createBus<T>()` is compile-time only. Emitting an event name not in `T` is a TypeScript error but has no runtime guard.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
 - [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)

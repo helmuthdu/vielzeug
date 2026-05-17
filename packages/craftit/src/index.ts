@@ -2,59 +2,58 @@ export {
   batch,
   computed,
   isSignal,
-  peekValue,
-  readonly,
+  scope,
   signal,
-  toValue,
   untrack,
-  writable,
+  watch,
   type ReadonlySignal,
+  type Scope,
   type Signal,
   type WatchOptions,
 } from '@vielzeug/stateit';
 
-export {
-  createCleanupSignal,
-  effect,
-  fire,
-  handle,
-  onCleanup,
-  onElement,
-  onError,
-  onMount,
-  watch,
-  type HostEventListeners,
-  type HostEventMap,
-} from './runtime';
-export { currentRuntime, type ComponentRuntime } from './runtime-core';
+export { effect, listen, on, onCleanup, onElement, onMounted } from './runtime';
 
 export {
   define,
   type ComponentDefinition,
-  type ComponentOptions,
-  type ComponentSetupContext,
+  type InferPropsFromDefs,
   type InferPropsSignals,
+  prop,
   type PropDef,
-  type PropsInput,
+  type PropInputDefs,
+  type PropsDef,
   type PropOptions,
-} from './component';
-export { defineField, type FormFieldCallbacks, type FormFieldHandle, type FormFieldOptions } from './form';
+  type SetupContextBag,
+} from './registration';
+
+export type { ComponentTemplate } from './registration';
+
+export { defineField, type FormFieldHandle, type FormFieldOptions } from './form';
 
 export {
   createContext,
   inject,
+  injectStrict,
   provide,
-  bridgeContextAttributes,
-  syncContextProps,
+  syncAria,
   type ComponentHost,
   type ComponentSlots,
   type HostBindingValue,
+  type HostPropDescriptor,
   type InjectionKey,
   type ReflectConfig,
-  type HostContextAttributeBridge,
 } from './host';
 
-export { html, type KeyedNode } from './template';
+export { html } from './template-compiler';
+export { each } from './directives/each';
+export { classMap } from './directives/classMap';
+export { styleMap } from './directives/styleMap';
+export { when } from './directives/when';
+export { guard } from './directives/guard';
+export { live } from './directives/live';
+export { resource, type ResourceState } from './directives/resource';
+export { raw } from './directives/raw';
 
 export {
   css,
@@ -62,7 +61,6 @@ export {
   ref,
   refs,
   type CSSResult,
-  type Directive,
   type EmitFn,
   type HTMLResult,
   type Ref,

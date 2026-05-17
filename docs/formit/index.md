@@ -1,7 +1,9 @@
 ---
 title: Formit — Form state management for TypeScript
-description: Framework-agnostic typed form state with validation, submission flow, subscriptions, and form-data helpers.
+description: Framework-agnostic typed form state with path-safe fields, unified validation API, deterministic submit flow, and browser-friendly helpers.
 ---
+
+<!-- markdownlint-disable MD025 MD033 MD060 -->
 
 <PackageBadges package="formit" />
 
@@ -9,9 +11,9 @@ description: Framework-agnostic typed form state with validation, submission flo
 
 # Formit
 
-`@vielzeug/formit` is a typed, framework-agnostic form controller for values, validation, dirty/touched state, and submission orchestration.
+`@vielzeug/formit` is a typed, framework-agnostic form controller for values, errors, dirty and touched state, validation, and submission.
 
-<!-- Search keywords: form state manager, field validation flow, controlled form logic. -->
+<!-- Search keywords: typed form state, validation, submit orchestration, form controller. -->
 
 ## Installation
 
@@ -34,105 +36,116 @@ yarn add @vielzeug/formit
 ## Quick Start
 
 ```ts
-import { createForm, FormValidationError } from '@vielzeug/formit';
+import { createForm } from '@vielzeug/formit';
 
 const form = createForm({
   defaultValues: { email: '', password: '' },
+  mode: 'onBlur', // validate automatically on blur
   validators: {
     email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
     password: (v) => (String(v).length < 8 ? 'Min 8 chars' : undefined),
   },
 });
 
-const { valid, errors } = await form.validate();
+const { valid, errors } = await form.validateAll();
 
-try {
-  await form.submit(async (values) => {
-    await fetch('/api/login', {
-      body: JSON.stringify(values),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-    });
+if (!valid) {
+  console.log(errors);
+}
+
+const submission = await form.submit(async (values) => {
+  await fetch('/api/login', {
+    body: JSON.stringify(values),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
   });
-} catch (error) {
-  if (error instanceof FormValidationError) {
-    console.log(error.errors);
+});
+
+if (!submission.ok) {
+  if (submission.type === 'validation') {
+    console.log(submission.errors);
   }
+}
+
+const second = await form.submit(async () => {});
+
+if (!second.ok && second.type === 'concurrent') {
+  console.log('Submission already in progress');
 }
 ```
 
 ## Why Formit?
 
-Rolling form state by hand means recreating the same `touched`, `dirty`, and `errors` tracking for every form. Most form libraries that handle this are tightly coupled to a specific framework.
+Native form handling quickly grows repetitive when you need typed values, deterministic submit behavior, and granular subscriptions.
 
 ```ts
-// Before — manual form state
-let values = { name: '', email: '' };
-let errors: Record<string, string> = {};
-let touched: Record<string, boolean> = {};
-async function validate() {
-  errors = {};
-  if (!values.name) errors.name = 'Required';
-  if (!values.email.includes('@')) errors.email = 'Invalid email';
-  return Object.keys(errors).length === 0;
+// Before: manual state and ad-hoc validation sequencing
+const errors: Record<string, string> = {};
+
+if (!email.includes('@')) errors.email = 'Invalid email';
+if (password.length < 8) errors.password = 'Too short';
+
+if (Object.keys(errors).length === 0) {
+  await submit({ email, password });
 }
 
-// After — Formit
-import { createForm } from '@vielzeug/formit';
-const form = createForm({
-  defaultValues: { name: '', email: '' },
-  validators: {
-    name: (v) => (!v ? 'Required' : undefined),
-    email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
-  },
-});
-const { valid, errors } = await form.validate();
+// After: one form controller with explicit transitions
+const form = createForm({ defaultValues: { email: '', password: '' }, validators: { email: isEmail, password: min8 } });
+await form.validateAll();
+await form.submit(submit);
 ```
 
-| Feature            | Formit                                       | React Hook Form | Formik     |
-| ------------------ | -------------------------------------------- | --------------- | ---------- |
-| Bundle size        | <PackageInfo package="formit" type="size" /> | ~15 kB          | ~17 kB     |
-| Framework agnostic | ✅                                           | React only      | React only |
-| Typed field values | ✅                                           | ❌ (strings)    | ❌         |
-| Async validators   | ✅                                           | ✅              | ✅         |
-| AbortSignal        | ✅                                           | ❌              | ❌         |
-| Field arrays       | ✅                                           | ✅              | ✅         |
-| Zero dependencies  | ✅                                           | ✅              | ❌         |
+| Feature                       | Formit                                       | React Hook Form | VeeValidate |
+| ----------------------------- | -------------------------------------------- | --------------- | ----------- |
+| Bundle size                   | <PackageInfo package="formit" type="size" /> | ~9 kB           | ~16 kB      |
+| Framework-agnostic            | ✅                                           | React only      | Vue only    |
+| Typed dot-path APIs           | ✅                                           | Partial         | Partial     |
+| Global validation mode        | ✅                                           | ✅              | ✅          |
+| Unified validation entrypoint | ✅                                           | ❌              | ❌          |
+| Result-based submit flow      | ✅                                           | ❌              | ❌          |
+| Live field observation        | ✅                                           | ✅              | ✅          |
+| Full array helpers            | ✅                                           | ✅              | ✅          |
+| Conditional field removal     | ✅                                           | ✅              | Partial     |
+| Form + field subscriptions    | ✅                                           | ✅              | ✅          |
+| Zero dependencies             | ✅                                           | ❌              | ❌          |
 
-**Use Formit when** you need framework-agnostic form state management with typed field values, async validation, and fine-grained subscriptions.
+**Use Formit when** you want one typed form controller that works across frameworks or in vanilla apps with explicit, predictable state transitions.
 
-**Consider React Hook Form** if you are in a React project and want its uncontrolled-component performance model and large plugin ecosystem.
+**Consider framework-specific alternatives when** you need deeply integrated framework bindings and are not sharing form logic across runtimes.
 
 ## Features
 
-- **Typed paths** with dot-notation inference (`user.profile.name`)
-- **Value store + baseline tracking** for reliable dirty state
-- **Field + form validators** with async support and abort signals
-- **Partial validation** without clobbering unrelated errors
-- **Submit flow** with `SubmitError` and `FormValidationError`
-- **Form and field subscriptions** (`subscribe`, `watch`)
-- **Memoized input bindings** (`bind`)
-- **Array helpers** for dynamic list fields
-- **FormData conversion** via instance and standalone helpers
-- **Zero dependencies** — <PackageInfo package="formit" type="size" /> gzipped
+- Typed field paths with compile-time value inference
+- Explicit validation API: `validateAll()`, `validateTouched()`, and `validateFields(fields)`
+- Single-field validation with `validateField(name)`
+- Global validation mode: `mode: 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched'`
+- `submit(handler)` — returns `{ ok: true, value }` or `{ ok: false, errors }`
+- Schema integration via `schemaValidator(schema)` for `safeParse`-compatible validators
+- `removeField(name)` — clean conditional field lifecycle
+- Full array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
+- Explicit synchronous subscriptions: `subscribe` and `subscribeField`
+- Stable frozen snapshots for `form.state` and `form.field(name)` (external-store friendly)
+- Explicit touched and error controls: `touch`, `untouch`, `touchAll`, `untouchAll`, `setError`, `resetErrors`
+- Mutation batching with `batch(fn)` and dynamic field validators via `setValidator(name, validator?)`
+- Baseline-safe reset/replace model
+- Browser-first utilities: vanilla-DOM `bind`, `toFormData`
 
 ## Compatibility
 
-| Environment | Support       |
-| ----------- | ------------- |
-| Browser     | ✅            |
-| Node.js     | ❌ (DOM only) |
-| SSR         | ❌ (DOM only) |
-| Deno        | ❌            |
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
 
-## Prerequisites
+## Documentation
 
-- Browser runtime for form element events and `FormData` workflows.
-- Define `defaultValues` with the same shape you submit to your API.
-- Pair with `@vielzeug/validit` (optional) when you need reusable schema-based validation.
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 
 - [Validit](/validit/)
 - [Fetchit](/fetchit/)
 - [Stateit](/stateit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

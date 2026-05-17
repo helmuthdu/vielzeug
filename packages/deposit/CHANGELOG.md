@@ -7,7 +7,7 @@ Sat, 04 Apr 2026 13:30:02 GMT
 
 ### Minor changes
 
-- General Improvements and Bugfixes
+- Greenfield deposit redesign: schema uses `table()`, storage adapters are `createMemory`, `createLocalStorage`, `createSessionStorage`, `createCookie`, and `createIndexedDB`, table access uses `query()`, all adapters expose `dispose()`, `deleteAll()` returns deleted record counts, transactions return callback results, and the public CRUD/query surface is reduced to the current minimal API.
 
 ## 2.0.0
 Tue, 24 Mar 2026 22:12:47 GMT
@@ -65,4 +65,3 @@ Wed, 22 Oct 2025 08:00:42 GMT
 ### Breaking changes
 
 - Initial release
-

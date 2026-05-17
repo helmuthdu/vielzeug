@@ -3,209 +3,165 @@ title: Floatit — API Reference
 description: Complete API reference for the Floatit floating positioning library.
 ---
 
-# Floatit API Reference
-
 [[toc]]
+
+## Package Entry Point
+
+| Import                | Purpose                |
+| --------------------- | ---------------------- |
+| `@vielzeug/floatit`   | Main exports and types |
 
 ## API At a Glance
 
-| Symbol              | Purpose                                           | Common gotcha                                          |
-| ------------------- | ------------------------------------------------- | ------------------------------------------------------ |
-| `float()`           | Position + auto-update in one call                | Call the returned cleanup when the floating UI unmounts |
-| `positionFloat()`   | Compute and apply position styles directly        | Use `float()` or `autoUpdate` in dynamic contexts      |
-| `computePosition()` | Compute coordinates without DOM writes            | Apply returned coordinates every reposition cycle      |
-| `autoUpdate()`      | Re-run a callback on viewport/layout changes      | Dispose the updater when the floating UI unmounts      |
+| Symbol                  | Purpose                                        | Execution mode | Common gotcha                                             |
+| ----------------------- | ---------------------------------------------- | -------------- | --------------------------------------------------------- |
+| `float()`               | Position a floating element and auto-update    | Sync           | Returns cleanup function — call it on teardown            |
+| `computePosition()`     | Compute position once without auto-update      | Async          | Does not watch for resize/scroll changes                  |
+| `autoUpdate()`          | Re-run position on scroll/resize               | Sync           | Returns cleanup — always call on unmount                  |
+| `offset()`              | Add space between reference and floating       | Middleware     | Value is in CSS pixels                                    |
+| `flip()`                | Flip to opposite side when clipped             | Middleware     | Combine with `shift` for best overflow handling           |
+| `shift()`               | Shift along axis to stay in view               | Middleware     | Does not change placement, only adjusts position          |
+| `autoPlacement()`       | Automatically pick best placement              | Middleware     | Cannot be combined with `flip`                            |
+| `arrow()`               | Position an arrow element pointing to origin   | Middleware     | Arrow element must be a child of the floating element     |
 
 ## Core Functions
 
 ### `float(reference, floating, options?)`
 
-The primary API. Positions the floating element immediately and keeps it in sync as the viewport or elements change. Returns a cleanup function.
+Positions the floating element immediately and keeps it in sync. Returns a cleanup function.
 
-**Parameters:**
-
-- `reference: Element` — The anchor element the floating element is positioned relative to
-- `floating: HTMLElement` — The element to be positioned
-- `options?: FloatOptions` — Optional configuration
-
-**Returns:** `() => void` — Cleanup function; call it when the floating element is hidden
-
-**Example:**
+By default it writes `left` and `top` styles. Pass `apply` to customize rendering.
 
 ```ts
 const cleanup = float(trigger, tooltip, {
+  apply(result, { floating }) {
+    floating.style.left = `${result.x}px`;
+    floating.style.top = `${result.y}px`;
+    floating.dataset.placement = result.placement;
+  },
   placement: 'top',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
-
-// When done:
-cleanup();
 ```
 
----
+### `computePosition(reference, floating, options?)`
 
-### `positionFloat(reference, floating, options?)`
-
-Computes the floating position and immediately applies `left` / `top` inline styles to the floating element. Use `float()` when you also need auto-update.
-
-**Parameters:**
-
-- `reference: Element` — The anchor element the floating element is positioned relative to
-- `floating: HTMLElement` — The element to be positioned
-- `options?: FloatOptions` — Optional configuration
-
-**Returns:** `Placement` — The resolved placement (which may differ from the requested one after `flip`)
-
-**Example:**
+Low-level positioning engine. Returns `x`, `y`, `placement`, and `middlewareData` without mutating the DOM.
 
 ```ts
-const placement = positionFloat(trigger, dropdown, {
-  placement: 'bottom-start',
-  middleware: [flip(), shift({ padding: 6 })],
+const { x, y, placement, middlewareData } = computePosition(trigger, panel, {
+  middleware: [offset(8), flip(), arrow({ element: arrowEl })],
 });
 ```
-
----
-
-### `computePosition(reference, floating, config?)`
-
-Low-level positioning engine. Computes `{ x, y, placement }` without touching the DOM.
-
-**Parameters:**
-
-- `reference: Element` — The anchor element
-- `floating: HTMLElement` — The floating element
-- `config?: ComputePositionConfig` — Optional configuration
-
-**Returns:** `ComputePositionResult`
-
-**Example:**
-
-```ts
-const { x, y, placement } = computePosition(trigger, panel, {
-  placement: 'top',
-  middleware: [offset(8), flip()],
-});
-panel.style.transform = `translate(${x}px, ${y}px)`;
-```
-
----
 
 ### `autoUpdate(reference, floating, update, options?)`
 
-Calls `update` once immediately, then re-calls it whenever the floating element's position may have changed.
+Calls `update` immediately, then re-runs it when layout conditions change.
 
-Listens to:
+Supported triggers:
 
-- `scroll` on `window` (capturing — covers all scroll ancestors)
+- `scroll` on `window` in capture phase
 - `resize` on `window`
-- `ResizeObserver` on `reference` and (by default) on `floating`
-- `window.visualViewport` resize/scroll (by default)
+- `ResizeObserver` on the reference and optionally the floating element
+- `visualViewport` resize and scroll events
+- `requestAnimationFrame` when `animationFrame: true`
 
-**Parameters:**
+### `detectOverflow(state, options?)`
 
-- `reference: Element` — The anchor element
-- `floating: HTMLElement` — The floating element
-- `update: () => void` — Callback to re-run positioning
-- `options?: AutoUpdateOptions`
-  - `observeFloating?: boolean` — Whether to observe size changes on the floating element itself (default: `true`)
-  - `observeVisualViewport?: boolean` — Whether to observe `visualViewport` changes for pinch-zoom / virtual keyboard (default: `true`)
+Returns per-side overflow offsets for the floating rect.
 
-**Returns:** `() => void` — Cleanup function; call it when the floating element is hidden
-
-**Example:**
+Positive numbers mean overflow. Negative numbers mean remaining available space.
 
 ```ts
-const cleanup = autoUpdate(trigger, tooltip, () => {
-  positionFloat(trigger, tooltip, { placement: 'top', middleware: [flip()] });
+const overflow = detectOverflow(state, {
+  padding: { top: 8, bottom: 8 },
 });
-
-// Later, when tooltip is hidden:
-cleanup();
 ```
 
----
-
-## Middlewares
+## Middleware
 
 ### `offset(value)`
 
-Adds a pixel gap between the reference element and the floating element along the main axis.
-
-**Parameters:**
-
-- `value: number` — Gap in pixels
-
-**Returns:** `Middleware`
+Adds distance along the main axis, cross axis, or both.
 
 ```ts
-offset(8); // 8px gap
+offset(8);
+offset({ mainAxis: 8, crossAxis: 4 });
+offset((state) => ({ mainAxis: state.placement.startsWith('top') ? 12 : 8 }));
 ```
-
----
 
 ### `flip(options?)`
 
-Flips to the opposite side when the preferred side would overflow the viewport.
+Changes placement when the current placement overflows.
 
-**Parameters:**
+Options:
 
-- `options?: FlipOptions`
-  - `padding?: number` — Minimum distance from viewport edges before flipping (default: `0`)
+- `padding?: Padding`
+- `boundary?: Element | Rect`
+- `fallbackPlacements?: Placement[]`
 
-**Returns:** `Middleware`
+### `autoPlacement(options?)`
 
-```ts
-flip(); // flip when overflow
-flip({ padding: 8 }); // flip when within 8px of viewport edge
-```
+Chooses the placement with the most usable space.
 
-::: info Pipeline restart
-When `flip` changes the placement, `computePosition` automatically restarts the middleware pipeline so that all subsequent middlewares (e.g. `shift`) receive the correct base coordinates for the new side.
-:::
+Options:
 
----
+- `padding?: Padding`
+- `boundary?: Element | Rect`
+- `allowedPlacements?: Placement[]`
+
+Do not combine `autoPlacement()` with `flip()`.
 
 ### `shift(options?)`
 
-Slides the floating element along its cross axis to keep it inside the viewport.
+Shifts the floating element inside the configured boundary.
 
-**Parameters:**
+Options:
 
-- `options?: ShiftOptions`
-  - `padding?: number` — Minimum distance to maintain from viewport edges (default: `0`)
-
-**Returns:** `Middleware`
-
-```ts
-shift(); // clamp to viewport
-shift({ padding: 6 }); // maintain 6px from edges
-```
-
----
+- `padding?: Padding`
+- `boundary?: Element | Rect`
 
 ### `size(options?)`
 
-Calls an `apply` callback with available dimensions so the floating element can be resized or constrained.
+Reports available space and lets you resize the floating element.
 
-**Parameters:**
+Options:
 
-- `options?: SizeOptions`
-  - `padding?: number` — Reduce reported available space by this amount on each side (default: `0`)
-  - `apply?: (args: SizeApplyArgs) => void` — Called synchronously with `{ availableWidth, availableHeight, elements }`
+- `padding?: Padding`
+- `boundary?: Element | Rect`
+- `apply?: (args: SizeApplyArgs) => void`
 
-**Returns:** `Middleware`
+### `arrow(options)`
+
+Provides arrow coordinates in `middlewareData.arrow`.
 
 ```ts
-size({
-  padding: 8,
-  apply({ availableHeight, elements }) {
-    elements.floating.style.maxHeight = `${availableHeight}px`;
-  },
+const result = computePosition(trigger, popover, {
+  middleware: [arrow({ element: arrowEl, padding: 6 })],
 });
+
+const arrowData = result.middlewareData.arrow as ArrowData | undefined;
 ```
 
----
+### `hide(options?)`
+
+Provides visibility metadata in `middlewareData.hide`.
+
+Options:
+
+- `strategy?: 'referenceHidden' | 'escaped' | 'both'` (default: `'both'`)
+- `padding?: Padding`
+- `boundary?: Element | Rect`
+
+### `inline(options?)`
+
+Chooses a more accurate client rect for inline references spanning multiple lines.
+
+Options:
+
+- `x?: number`
+- `y?: number`
+- `padding?: Padding`
 
 ## Types
 
@@ -215,34 +171,51 @@ size({
 type Side = 'top' | 'bottom' | 'left' | 'right';
 type Alignment = 'start' | 'end';
 type Placement = Side | `${Side}-${Alignment}`;
-// e.g. 'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | ...
 ```
 
-### `AutoUpdateOptions`
+### `Padding`
 
 ```ts
-interface AutoUpdateOptions {
-  observeFloating?: boolean;
-  observeVisualViewport?: boolean;
+type Padding =
+  | number
+  | Partial<{
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    }>;
+```
+
+### `MiddlewareState`
+
+```ts
+interface MiddlewareState {
+  x: number;
+  y: number;
+  initialPlacement: Placement;
+  placement: Placement;
+  rects: { reference: Rect; floating: Rect };
+  elements: { reference: ReferenceElement; floating: HTMLElement };
+  middlewareData: Record<string, unknown>;
 }
 ```
 
-### `FloatOptions`
+### `MiddlewareResult`
 
 ```ts
-interface FloatOptions {
+interface MiddlewareResult {
+  x?: number;
+  y?: number;
   placement?: Placement;
-  middleware?: Array<Middleware | null | undefined | false>;
+  data?: Record<string, unknown>;
+  reset?: { placement?: Placement; rects?: true | { reference: Rect; floating: Rect } };
 }
 ```
 
-### `ComputePositionConfig`
+### `Middleware`
 
 ```ts
-interface ComputePositionConfig {
-  placement?: Placement;
-  middleware?: Array<Middleware | null | undefined | false>;
-}
+type Middleware = (state: MiddlewareState) => MiddlewareResult | void;
 ```
 
 ### `ComputePositionResult`
@@ -252,74 +225,50 @@ interface ComputePositionResult {
   x: number;
   y: number;
   placement: Placement;
+  middlewareData: Record<string, unknown>;
 }
 ```
 
-### `Middleware`
+### `ReferenceElement`
 
 ```ts
-interface Middleware {
-  name: string;
-  fn: (state: MiddlewareState) => MiddlewareState;
+interface VirtualReference {
+  getBoundingClientRect: () => DOMRect | Rect;
+  getClientRects?: () => DOMRectList | DOMRect[];
+}
+
+type ReferenceElement = Element | VirtualReference;
+```
+
+`computePosition`, `float`, and `autoUpdate` all accept `ReferenceElement`.
+
+### `AutoUpdateOptions`
+
+```ts
+interface AutoUpdateOptions {
+  observeFloating?: boolean;
+  observeVisualViewport?: boolean;
+  animationFrame?: boolean;
 }
 ```
 
-### `MiddlewareState`
+### `ArrowData`
 
 ```ts
-interface MiddlewareState {
-  x: number;
-  y: number;
-  placement: Placement;
-  rects: {
-    reference: { x: number; y: number; width: number; height: number };
-    floating: { x: number; y: number; width: number; height: number };
-  };
-  elements: {
-    reference: Element;
-    floating: HTMLElement;
-  };
+interface ArrowData {
+  x?: number;
+  y?: number;
+  centerOffset: number;
 }
 ```
 
-### `FlipOptions`
+### `HideData`
 
 ```ts
-interface FlipOptions {
-  /** Minimum distance from the viewport edge before flipping (px). Default: 0 */
-  padding?: number;
-}
-```
-
-### `ShiftOptions`
-
-```ts
-interface ShiftOptions {
-  /** Minimum distance to maintain from viewport edges (px). Default: 0 */
-  padding?: number;
-}
-```
-
-### `SizeOptions`
-
-```ts
-interface SizeOptions {
-  /** Reduce available space by this amount on each side (px). Default: 0 */
-  padding?: number;
-  /** Called synchronously with available dimensions. */
-  apply?: (args: SizeApplyArgs) => void;
-}
-```
-
-### `SizeApplyArgs`
-
-```ts
-interface SizeApplyArgs {
-  availableWidth: number;
-  availableHeight: number;
-  elements: {
-    reference: Element;
-    floating: HTMLElement;
-  };
+interface HideData {
+  referenceHidden?: boolean;
+  referenceHiddenOffsets?: SideObject;
+  escaped?: boolean;
+  escapedOffsets?: SideObject;
 }
 ```

@@ -49,7 +49,7 @@ curriedAdd(1)(2)(3); // 6
 ### Partial Application
 
 ```ts
-import { curry, map } from '@vielzeug/toolkit';
+import { curry } from '@vielzeug/toolkit';
 
 const multiply = curry((a: number, b: number) => a * b);
 
@@ -57,7 +57,7 @@ const multiply = curry((a: number, b: number) => a * b);
 const double = multiply(2);
 
 double(10); // 20
-map([1, 2, 3], double); // [2, 4, 6]
+[1, 2, 3].map(double); // [2, 4, 6]
 ```
 
 ## Implementation Notes
@@ -70,4 +70,4 @@ map([1, 2, 3], double); // [2, 4, 6]
 
 - [compose](./compose.md): Functional composition from right to left.
 - [pipe](./pipe.md): Functional composition from left to right.
-- [fp](./fp.md): Wrap functions for functional programming styles.
+- [configure](./configure.md): Preconfigure trailing arguments for unary composition.

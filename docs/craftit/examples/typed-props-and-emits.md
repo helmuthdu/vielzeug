@@ -1,70 +1,64 @@
 ---
-title: 'Craftit Examples — Typed Props and Emits'
-description: 'Typed Props and Emits examples for craftit.'
+title: 'Craftit Examples — Typed props and emits'
+description: 'Current Craftit example for typed prop signals and typed setup-context emit.'
 ---
 
-## Typed Props and Emits
+## Typed props and emits
 
-## Problem
-
-Implement typed props and events in a production-friendly way with `@vielzeug/craftit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/craftit` installed.
+Combine direct prop definitions with the `Events` generic on `define<Props, Events>()` when you want both prop and event contracts checked together.
 
 ```ts
-import { component, define, html } from '@vielzeug/craftit';
+import { define, html, prop } from '@vielzeug/craftit';
 
 type AlertBoxProps = {
-  message?: string;
-  open?: boolean;
-  variant?: 'primary' | 'danger';
+  message: string;
+  open: boolean;
+  variant: 'primary' | 'danger';
 };
 
 type AlertBoxEvents = {
   close: void;
+  change: { open: boolean };
 };
 
-define(
-  'alert-box',
-  component<AlertBoxProps, AlertBoxEvents>({
-    props: {
-      message: 'Saved successfully',
-      open: true,
-      variant: 'primary',
-    },
-    setup({ emit, props }) {
-      return html`
-        ${() =>
-          props.open.value
-            ? html`
-                <div :data-variant=${props.variant}>
-                  <span>${props.message}</span>
-                  <button @click=${() => emit('close')}>Close</button>
-                </div>
-              `
-            : ''}
-      `;
-    },
-  }),
-);
+define<AlertBoxProps, AlertBoxEvents>('alert-box', {
+  props: {
+    message: prop.string('Saved successfully'),
+    open: prop.bool(true),
+    variant: prop.oneOf(['primary', 'danger'] as const, 'primary'),
+  },
+  setup(props, { emit }) {
+    const close = () => {
+      if (!props.open.value) return;
+
+      props.open.value = false;
+      emit('change', { open: props.open.value });
+      emit('close');
+    };
+
+    return () => html`
+      ${() =>
+        props.open.value
+          ? html`
+              <div :data-variant=${props.variant}>
+                <span>${props.message}</span>
+                <button @click=${close}>Close</button>
+              </div>
+            `
+          : ''}
+    `;
+  },
+});
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- For no-detail events, use `void` so `emit('close')` stays ergonomic.
+- `prop.oneOf(...)` should use `as const` or the type widens to `string`.
+- Prop values in `setup()` are writable signals, so updates like `props.open.value = false` are valid.
 
-## Common Pitfalls
+### Related
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-- For no-detail events, prefer `void` payload types so calls stay ergonomic (`emit('close')`).
-
-## Related Recipes
-
-- [Context Provider and Consumer](./context-provider-and-consumer.md)
-- [Counter Component](./counter-component.md)
-- [Form-Associated Rating Input](./form-associated-rating-input.md)
+- [Prop helpers and raw PropsDef](./propsof-builder-api.md)
+- [Counter component](./counter-component.md)
+- [Form-associated rating input](./form-associated-rating-input.md)

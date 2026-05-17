@@ -3,6 +3,8 @@ title: Buildit — Web component library
 description: Accessible, themeable web components built with Craftit for framework and vanilla DOM apps.
 ---
 
+<!-- markdownlint-disable MD025 MD033 MD060 -->
+
 <PackageBadges package="buildit" />
 
 <img src="/logo-buildit.svg" alt="Buildit logo" width="156" class="logo-highlight"/>
@@ -58,7 +60,7 @@ import '@vielzeug/buildit/styles';
 import '@vielzeug/buildit';
 ```
 
-## Package Entry Points
+### Package Entry Points
 
 | Import                     | Purpose                                   |
 | -------------------------- | ----------------------------------------- |
@@ -70,17 +72,17 @@ Component registration happens through side-effect imports such as `@vielzeug/bu
 
 For headless widget controllers (navigation/overlay/selection), use `@vielzeug/craftit/controls`.
 
-## Components
+### Components
 
 **Content:** `bit-avatar`, `bit-breadcrumb`, `bit-card`, `bit-pagination`, `bit-separator`, `bit-table`, `bit-text`
 
 **Disclosure:** `bit-accordion`, `bit-accordion-item`, `bit-tabs`, `bit-tab-item`, `bit-tab-panel`
 
-**Feedback:** `bit-alert`, `bit-async`, `bit-badge`, `bit-chip`, `bit-progress`, `bit-skeleton`, `bit-toast`
+**Feedback:** `bit-alert`, `bit-async`, `bit-badge`, `bit-chip`, `bit-password-strength`, `bit-progress`, `bit-skeleton`, `bit-toast`
 
 **Inputs:** `bit-button`, `bit-button-group`, `bit-checkbox`, `bit-checkbox-group`, `bit-combobox`, `bit-file-input`, `bit-form`, `bit-input`, `bit-number-input`, `bit-otp-input`, `bit-radio`, `bit-radio-group`, `bit-rating`, `bit-select`, `bit-slider`, `bit-switch`, `bit-textarea`
 
-**Layout:** `bit-box`, `bit-grid`, `bit-grid-item`, `bit-sidebar`
+**Layout:** `bit-box`, `bit-grid`, `bit-grid-item`, `bit-navbar`, `bit-sidebar`
 
 **Overlay:** `bit-dialog`, `bit-drawer`, `bit-menu`, `bit-popover`, `bit-tooltip`
 
@@ -128,7 +130,7 @@ Every project needs UI primitives. Buildit provides accessible web components th
 | SSR         | ❌ (DOM only) |
 | Deno        | ❌            |
 
-## Prerequisites
+### Prerequisites
 
 - Browser runtime with Custom Elements support.
 - Import `@vielzeug/buildit/styles` before rendering components.
@@ -136,6 +138,11 @@ Every project needs UI primitives. Buildit provides accessible web components th
 
 ## See Also
 
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 - [Craftit](/craftit/)
 - [Floatit](/floatit/)
 - [Formit](/formit/)
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

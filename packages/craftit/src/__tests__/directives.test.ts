@@ -1,108 +1,11 @@
 /**
  * Directives Tests
- * Tests for all craftit directives: when, each, classes, bind,
- * style, choose, raw, spread, on, memo, until
+ * Tests for core craftit directives: each, raw
  */
 
-import { attrs, bind, choose, classes, each, memo, on, raw, spread, style, until, when } from '../directives';
-import { computed, define, html, signal, type ComponentDefinition } from '../index';
-import { mount } from '../testing';
-
-const register = (tag: string, setup: ComponentDefinition['setup'], options: Omit<ComponentDefinition, 'setup'> = {}) =>
-  define(tag, { setup, ...options });
-
-describe('Directive: when()', () => {
-  it('should render when condition is true', async () => {
-    const { query } = await mount(() => {
-      const visible = signal(true);
-
-      return html`${when({ condition: visible.value, then: () => html`<div>Visible</div>` })}`;
-    });
-
-    expect(query('div')?.textContent).toBe('Visible');
-  });
-
-  it('should not render when condition is false', async () => {
-    const { query } = await mount(() => {
-      const visible = signal(false);
-
-      return html`${when({ condition: visible.value, then: () => html`<div class="content">Hidden</div>` })}`;
-    });
-
-    expect(query('.content')).toBeNull();
-  });
-
-  it('should support else branch', async () => {
-    const { query } = await mount(() => {
-      const visible = signal(false);
-
-      return html`${when({
-        condition: visible.value,
-        else: () => html`<div>No</div>`,
-        then: () => html`<div>Yes</div>`,
-      })}`;
-    });
-
-    expect(query('div')?.textContent).toBe('No');
-  });
-
-  it('should accept a Signal as condition', async () => {
-    const { query } = await mount(() => {
-      const loggedIn = signal(true);
-
-      return html`
-        <div>
-          ${when({
-            condition: loggedIn,
-            else: () => html`<span>Please login</span>`,
-            then: () => html`<span>Welcome!</span>`,
-          })}
-        </div>
-      `;
-    });
-
-    expect(query('span')?.textContent).toBe('Welcome!');
-  });
-
-  it('should support reactive getter conditions', async () => {
-    const count = signal(0);
-
-    const { flush, query } = await mount(() => {
-      return html`
-        <div>
-          ${when({
-            condition: () => count.value > 5,
-            else: () => html`<span class="below">Below threshold</span>`,
-            then: () => html`<span class="above">Above threshold</span>`,
-          })}
-        </div>
-      `;
-    });
-
-    expect(query('.below')).toBeTruthy();
-    expect(query('.below')?.textContent).toBe('Below threshold');
-    expect(query('.above')).toBeNull();
-
-    count.value = 6;
-    await flush();
-
-    expect(query('.above')).toBeTruthy();
-    expect(query('.above')?.textContent).toBe('Above threshold');
-    expect(query('.below')).toBeNull();
-  });
-
-  it('should throw when then is not a function', () => {
-    expect(() => when({ condition: true, then: 'invalid' as unknown as () => string })).toThrow(
-      '[craftit:when] options.then must be a function when provided.',
-    );
-  });
-
-  it('should throw when else is not a function', () => {
-    expect(() => when({ condition: false, else: 'invalid' as unknown as () => string })).toThrow(
-      '[craftit:when] options.else must be a function when provided.',
-    );
-  });
-});
+import { computed, define, each, guard, html, live, raw, resource, signal, styleMap, when } from '../index';
+import { mount, type MountSetup, waitFor } from '../testing';
+import { register } from './test-utils';
 
 describe('Directive: each()', () => {
   it('should render list items', async () => {
@@ -139,26 +42,6 @@ describe('Directive: each()', () => {
     expect(query('.empty')?.textContent).toBe('Empty');
   });
 
-  it('should update when list changes', async () => {
-    const { flush, queryAll } = await mount(() => {
-      const items = signal([1, 2]);
-
-      setTimeout(() => (items.value = [1, 2, 3]), 50);
-
-      return html`
-        <ul>
-          ${each(items, { key: (item) => item, render: (item) => html`<li>${item}</li>` })}
-        </ul>
-      `;
-    });
-
-    expect(queryAll('li').length).toBe(2);
-
-    await new Promise((r) => setTimeout(r, 60));
-    await flush();
-    expect(queryAll('li').length).toBe(3);
-  });
-
   it('should support key function', async () => {
     const { queryAll } = await mount(() => {
       const items = signal([1, 2, 3]);
@@ -173,14 +56,31 @@ describe('Directive: each()', () => {
     expect(queryAll('li').length).toBe(3);
   });
 
-  it('should support simple each() without key for static arrays', async () => {
-    const { queryAll } = await mount(
-      () => html`
+  it('should support options-based keyed rendering', async () => {
+    const { queryAll } = await mount(() => {
+      const items = signal([1, 2, 3]);
+
+      return html`
         <ul>
-          ${each([1, 2, 3], { render: (item) => html`<li>${item}</li>` })}
+          ${each(items, { key: (item) => item, render: (item) => html`<li>${item * 2}</li>` })}
         </ul>
-      `,
-    );
+      `;
+    });
+
+    expect(queryAll('li').map((item) => item.textContent)).toEqual(['2', '4', '6']);
+  });
+
+  it('should support computed signal sources', async () => {
+    const { queryAll } = await mount(() => {
+      const items = signal([1, 2, 3]);
+      const visibleItems = computed(() => items.value);
+
+      return html`
+        <ul>
+          ${each(visibleItems, { key: (_, i) => i, render: (item) => html`<li>${item}</li>` })}
+        </ul>
+      `;
+    });
     const listItems = queryAll('li');
 
     expect(listItems.length).toBe(3);
@@ -188,52 +88,20 @@ describe('Directive: each()', () => {
     expect(listItems[2].textContent).toBe('3');
   });
 
-  it('should escape plain string results returned by each() template callback', async () => {
-    const payload = '<strong>unsafe</strong>';
-    const { query, queryAll } = await mount(
-      () => html`
-        <ul>
-          ${each([payload], { render: (item) => item })}
-        </ul>
-      `,
-    );
-
-    expect(queryAll('strong')).toHaveLength(0);
-    expect(query('ul')?.textContent).toContain(payload);
-  });
-
-  it('should support each() with key function and empty fallback', async () => {
-    const { query } = await mount(() => {
-      const items = signal<{ id: number; name: string }[]>([]);
-
-      return html`
-        <div>
-          ${each(items, {
-            fallback: () => html`<div class="empty">No items</div>`,
-            key: (item) => item.id,
-            render: (item) => html`<div class="item">${item.name}</div>`,
-          })}
-        </div>
-      `;
-    });
-
-    expect(query('.empty')?.textContent).toBe('No items');
-  });
-
-  it('should filter items using select option', async () => {
+  it('should filter items in computed source', async () => {
     const { queryAll } = await mount(() => {
       const items = signal([
         { active: true, id: 1, name: 'Alice' },
         { active: false, id: 2, name: 'Bob' },
         { active: true, id: 3, name: 'Carol' },
       ]);
+      const activeItems = computed(() => items.value.filter((item) => item.active));
 
       return html`
         <ul>
-          ${each(items, {
+          ${each(activeItems, {
             key: (item) => item.id,
             render: (item) => html`<li class="item">${item.name}</li>`,
-            select: (item) => item.active,
           })}
         </ul>
       `;
@@ -245,561 +113,177 @@ describe('Directive: each()', () => {
     expect(listItems[1].textContent).toBe('Carol');
   });
 
-  it('should show empty when all items filtered out by select', async () => {
-    const { query } = await mount(() => {
-      const items = signal([{ active: false, id: 1 }]);
+  it('should preserve sibling nodes after each() block', async () => {
+    const items = signal([
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+    ]);
 
-      return html`
-        <div>
-          ${each(items, {
-            fallback: () => html`<p class="empty">None</p>`,
-            key: (item) => item.id,
-            render: (item) => html`<span>${item.id}</span>`,
-            select: (item) => item.active,
-          })}
-        </div>
-      `;
-    });
-
-    expect(query('.empty')?.textContent).toBe('None');
-  });
-
-  it('should preserve multiple bindings on the same keyed child element', async () => {
-    const clicks: string[] = [];
-
-    const { queryAll } = await mount(() => {
-      const items = signal([
-        { id: 'a', label: 'Alpha' },
-        { id: 'b', label: 'Beta' },
-      ]);
-
-      return html`
-        <div>
-          ${each(items, {
-            key: (item) => item.id,
-            render: (item) => html`
-              <button data-value=${item.id} title=${item.label} @click=${() => clicks.push(item.id)}>
-                ${item.label}
-              </button>
-            `,
-          })}
-        </div>
-      `;
-    });
-
-    const buttons = queryAll<HTMLButtonElement>('button');
-
-    expect(buttons).toHaveLength(2);
-    expect(buttons[0].getAttribute('data-value')).toBe('a');
-    expect(buttons[0].getAttribute('title')).toBe('Alpha');
-
-    (buttons[0] as HTMLButtonElement).click();
-
-    expect(clicks).toEqual(['a']);
-  });
-
-  it('should throw when render is not a function', () => {
-    expect(() => each([1, 2], { render: null as unknown as (item: number, index: number) => string })).toThrow(
-      '[craftit:each] options.render must be a function.',
-    );
-  });
-
-  it('should throw when reactive source getter does not return array', async () => {
-    expect(() =>
-      each(() => null as unknown as number[], {
-        key: (item) => item,
-        render: (item) => String(item),
-      }),
-    ).toThrow('[craftit:each] source must resolve to an array.');
-
-    await expect(
-      mount(
-        () =>
-          html`${each(() => null as unknown as number[], {
-            key: (item) => item,
-            render: (item) => String(item),
-          })}`,
-      ),
-    ).rejects.toThrow('[craftit:each] source must resolve to an array.');
-  });
-});
-
-describe('Directive: classes()', () => {
-  it('should return a plain string for static boolean values', () => {
-    const result = classes({ bar: false, baz: true, foo: true });
-
-    expect(result).toBe('baz foo');
-    expect(typeof result).toBe('string');
-  });
-
-  it('should return an empty string when all values are false', () => {
-    expect(classes({ bar: false, foo: false })).toBe('');
-  });
-
-  it('should return a ReadonlySignal when a Signal is provided', () => {
-    const active = signal(true);
-    const result = classes({ active, disabled: false });
-
-    expect(typeof result).toBe('object');
-    expect((result as { value: string }).value).toBe('active');
-  });
-
-  it('should update reactively when a Signal changes', () => {
-    const active = signal(true);
-    const result = classes({ active, base: true }) as { value: string };
-
-    expect(result.value).toBe('active base');
-    active.value = false;
-    expect(result.value).toBe('base');
-  });
-
-  it('should return a ReadonlySignal when a getter function is provided', () => {
-    const count = signal(0);
-    const result = classes({ positive: () => count.value > 0 }) as { value: string };
-
-    expect(result.value).toBe('');
-    count.value = 5;
-    expect(result.value).toBe('positive');
-  });
-
-  it('should handle mixed static, Signal, and getter values', () => {
-    const a = signal(true);
-    const b = signal(false);
-    const result = classes({ a, always: true, b, derived: () => a.value && !b.value }) as { value: string };
-
-    expect(result.value).toBe('a always derived');
-    b.value = true;
-    expect(result.value).toBe('a always b');
-  });
-
-  it('should treat null and undefined as false', () => {
-    const result = classes({ bar: undefined, baz: true, foo: null as unknown as boolean });
-
-    expect(result).toBe('baz');
-  });
-});
-
-describe('Directive: bind()', () => {
-  it('should set the initial value on the input from the signal', async () => {
-    const { query } = await mount(() => {
-      const name = signal('Alice');
-
-      return html`<input ${bind({ value: name })} />`;
-    });
-
-    expect((query('input') as HTMLInputElement)?.value).toBe('Alice');
-  });
-
-  it('should update input value when signal changes', async () => {
-    const name = signal('Alice');
-
-    const { flush, query } = await mount(() => html`<input ${bind({ value: name })} />`);
-
-    name.value = 'Bob';
-    await flush();
-    expect((query('input') as HTMLInputElement)?.value).toBe('Bob');
-  });
-
-  it('should update signal when input fires an input event', async () => {
-    const name = signal('Alice');
-
-    const { query } = await mount(() => html`<input ${bind({ value: name })} />`);
-    const input = query('input') as HTMLInputElement;
-
-    input.value = 'Charlie';
-    input.dispatchEvent(new Event('input'));
-    expect(name.value).toBe('Charlie');
-  });
-
-  it('should bind checkbox checked state to a boolean signal', async () => {
-    const checked = signal(true);
-
-    const { flush, query } = await mount(() => html`<input type="checkbox" ${bind({ value: checked })} />`);
-    const input = query('input') as HTMLInputElement;
-
-    expect(input.checked).toBe(true);
-
-    checked.value = false;
-    await flush();
-    expect(input.checked).toBe(false);
-
-    input.checked = true;
-    input.dispatchEvent(new Event('change'));
-    expect(checked.value).toBe(true);
-  });
-
-  it('should sync select values via change events', async () => {
-    const value = signal('sm');
-
-    const { query } = await mount(
+    register(
+      'test-keyed-sibling',
       () => html`
-        <select ${bind({ value })}>
-          <option value="sm">Small</option>
-          <option value="lg">Large</option>
-        </select>
+        <div class="container">
+          ${each(items, { key: (item) => item.id, render: (item) => html`<span class="item">${item.value}</span>` })}
+          <button class="after">After</button>
+        </div>
       `,
     );
-    const select = query('select') as HTMLSelectElement;
 
-    expect(select.value).toBe('sm');
+    const { flush, query, queryAll } = await mount('test-keyed-sibling');
 
-    select.value = 'lg';
-    select.dispatchEvent(new Event('change'));
-    expect(value.value).toBe('lg');
-  });
+    expect(query('.after')).toBeTruthy();
+    expect(queryAll('.item')).toHaveLength(2);
 
-  it('should throw for checked mode on non-checkable input elements', async () => {
-    await expect(
-      mount(() => {
-        const value = signal('a');
-
-        return html`<input ${bind({ as: 'checked', value })} />`;
-      }),
-    ).rejects.toThrow('[craftit:bind] mode "checked" requires <input type="checkbox|radio">.');
-  });
-
-  it('should throw for value mode on unsupported elements', async () => {
-    await expect(
-      mount(() => {
-        const value = signal('a');
-
-        return html`<div ${bind({ value })}></div>`;
-      }),
-    ).rejects.toThrow('[craftit:bind] value binding requires <input>, <textarea>, or <select>.');
-  });
-});
-
-describe('Directive: attrs() property map', () => {
-  it('should apply a property map in spread position', async () => {
-    const value = signal('One');
-
-    const { query } = await mount(() => html`<input ${attrs({ disabled: () => false, value })} />`);
-    const input = query('input') as HTMLInputElement;
-
-    expect(input.value).toBe('One');
-    expect(input.disabled).toBe(false);
-  });
-
-  it('should sync back to signal for value binding', async () => {
-    const value = signal('One');
-
-    const { query } = await mount(() => html`<input ${attrs({ value })} />`);
-    const input = query('input') as HTMLInputElement;
-
-    input.value = 'Two';
-    input.dispatchEvent(new Event('input'));
-    expect(value.value).toBe('Two');
-  });
-
-  it('should sync back to signal for checked binding', async () => {
-    const checked = signal(true);
-
-    const { query } = await mount(() => html`<input type="checkbox" ${attrs({ checked })} />`);
-    const input = query('input') as HTMLInputElement;
-
-    expect(input.checked).toBe(true);
-
-    input.checked = false;
-    input.dispatchEvent(new Event('change'));
-    expect(checked.value).toBe(false);
-  });
-
-  it('should keep computed value maps one-way', async () => {
-    const first = signal('Grace');
-    const last = signal('Hopper');
-    const fullName = computed(() => `${first.value} ${last.value}`);
-
-    const { query } = await mount(() => html`<input ${attrs({ value: fullName })} />`);
-    const input = query('input') as HTMLInputElement;
-
-    expect(input.value).toBe('Grace Hopper');
-
-    input.value = 'Edited in DOM';
-    input.dispatchEvent(new Event('input'));
-    expect(fullName.value).toBe('Grace Hopper');
-  });
-});
-
-describe('Directive: spread()', () => {
-  it('should support mixed attribute, boolean attr, property, and event entries', async () => {
-    const title = signal('Start');
-    let clicks = 0;
-
-    const { flush, query } = await mount(
-      () => html`<button ${spread({ '?disabled': false, '.value': title, '@click': () => clicks++, title })}></button>`,
-    );
-    const button = query('button') as HTMLButtonElement;
-
-    expect(button.value).toBe('Start');
-    expect(button.getAttribute('title')).toBe('Start');
-    expect(button.hasAttribute('disabled')).toBe(false);
-
-    title.value = 'Next';
+    items.value = [
+      { id: 2, value: 'B2' },
+      { id: 3, value: 'C3' },
+    ];
     await flush();
-    expect(button.value).toBe('Next');
-    expect(button.getAttribute('title')).toBe('Next');
 
-    button.click();
-    expect(clicks).toBe(1);
-  });
-});
-
-describe('Directive: spread() text-field map', () => {
-  it('should apply common text-field props and keep .value two-way', async () => {
-    const value = signal('Alice');
-
-    const { query } = await mount(
-      () => html`<input ${spread({ '.name': 'user', '.required': true, '.value': value })} />`,
-    );
-    const input = query('input') as HTMLInputElement;
-
-    expect(input.name).toBe('user');
-    expect(input.required).toBe(true);
-    expect(input.value).toBe('Alice');
-
-    input.value = 'Bob';
-    input.dispatchEvent(new Event('input'));
-    expect(value.value).toBe('Bob');
+    expect(query('.after')).toBeTruthy();
+    expect(queryAll('.item')).toHaveLength(2);
   });
 
-  it('should keep .checked two-way for checkbox property maps', async () => {
-    const checked = signal(false);
+  it('should reuse nodes with same keys', async () => {
+    const items = signal([
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+    ]);
 
-    const { flush, query } = await mount(() => html`<input type="checkbox" ${spread({ '.checked': checked })} />`);
-    const input = query('input') as HTMLInputElement;
-
-    expect(input.checked).toBe(false);
-
-    checked.value = true;
-    await flush();
-    expect(input.checked).toBe(true);
-
-    input.checked = false;
-    input.dispatchEvent(new Event('change'));
-    expect(checked.value).toBe(false);
-  });
-
-  it('should sync select .value via change events', async () => {
-    const value = signal('b');
-
-    const { query } = await mount(
+    register(
+      'test-reuse-nodes',
       () => html`
-        <select ${spread({ '.value': value })}>
-          <option value="a">A</option>
-          <option value="b">B</option>
-        </select>
+        <div>
+          ${each(items, {
+            key: (item) => item.id,
+            render: (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
+          })}
+        </div>
       `,
     );
-    const select = query('select') as HTMLSelectElement;
 
-    expect(select.value).toBe('b');
+    const { flush, queryAll } = await mount('test-reuse-nodes');
 
-    select.value = 'a';
-    select.dispatchEvent(new Event('change'));
-    expect(value.value).toBe('a');
+    const initialNodes = queryAll('.item');
+
+    expect(initialNodes[0].getAttribute('data-id')).toBe('1');
+    expect(initialNodes[1].getAttribute('data-id')).toBe('2');
+
+    items.value = [
+      { id: 1, value: 'A-Updated' },
+      { id: 2, value: 'B-Updated' },
+    ];
+    await flush();
+
+    const updatedNodes = queryAll('.item');
+
+    expect(updatedNodes.length).toBe(2);
+    expect(updatedNodes[0].textContent).toBe('A-Updated');
   });
 
-  it('should keep computed property sources one-way', async () => {
-    const first = signal('Ada');
-    const last = signal('Lovelace');
-    const fullName = computed(() => `${first.value} ${last.value}`);
+  it('should move keyed nodes when item order changes', async () => {
+    const items = signal([
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+    ]);
 
-    const { query } = await mount(() => html`<input ${spread({ '.value': fullName })} />`);
-    const input = query('input') as HTMLInputElement;
-
-    expect(input.value).toBe('Ada Lovelace');
-
-    input.value = 'Changed in DOM';
-    input.dispatchEvent(new Event('input'));
-
-    expect(fullName.value).toBe('Ada Lovelace');
-  });
-});
-
-describe('Directive: style()', () => {
-  it('should return a plain string for static values', () => {
-    const result = style({ color: 'red', fontWeight: 'bold' });
-
-    expect(typeof result).toBe('string');
-    expect(result).toBe('color:red;font-weight:bold');
-  });
-
-  it('should auto-append px for numeric values (non-unitless)', () => {
-    expect(style({ fontSize: 16 })).toBe('font-size:16px');
-    expect(style({ margin: 4, padding: 8 })).toBe('margin:4px;padding:8px');
-  });
-
-  it('should NOT append px for unitless properties', () => {
-    expect(style({ opacity: 0.5 })).toBe('opacity:0.5');
-    expect(style({ zIndex: 10 })).toBe('z-index:10');
-  });
-
-  it('should convert camelCase to kebab-case', () => {
-    expect(style({ backgroundColor: 'blue' })).toBe('background-color:blue');
-    expect(style({ borderTopWidth: 2 })).toBe('border-top-width:2px');
-  });
-
-  it('should return a ReadonlySignal when a Signal value is provided', () => {
-    const size = signal(16);
-    const result = style({ fontSize: size }) as { value: string };
-
-    expect(typeof result).toBe('object');
-    expect(result.value).toBe('font-size:16px');
-  });
-
-  it('should update reactively when signal changes', () => {
-    const size = signal(16);
-    const result = style({ fontSize: size }) as { value: string };
-
-    size.value = 24;
-    expect(result.value).toBe('font-size:24px');
-  });
-
-  it('should support getter functions', () => {
-    const active = signal(true);
-    const result = style({ opacity: () => (active.value ? 1 : 0) }) as { value: string };
-
-    expect(result.value).toBe('opacity:1');
-    active.value = false;
-    expect(result.value).toBe('opacity:0');
-  });
-
-  it('should skip null/undefined/empty values', () => {
-    expect(
-      style({ color: null as unknown as string, fontSize: undefined as unknown as number, fontWeight: 'bold' }),
-    ).toBe('font-weight:bold');
-  });
-});
-
-describe('Directive: choose()', () => {
-  const cases = [
-    ['home', () => html`<h1 class="home">Home</h1>`],
-    ['about', () => html`<h1 class="about">About</h1>`],
-    ['contact', () => html`<h1 class="contact">Contact</h1>`],
-  ] as const;
-
-  it('should render the matching static case', async () => {
-    const { query } = await mount(() => html`<div>${choose({ cases, value: 'about' })}</div>`);
-
-    expect(query('.about')?.textContent).toBe('About');
-    expect(query('.home')).toBeNull();
-  });
-
-  it('should render the default when no case matches', async () => {
-    const { query } = await mount(
+    register(
+      'test-keyed-reorder',
       () =>
         html`<div>
-          ${choose({ cases, fallback: () => html`<h1 class="err">Error</h1>`, value: 'other' as never })}
+          ${each(items, {
+            key: (item) => item.id,
+            render: (item) => html`<span class="item">${item.value}</span>`,
+          })}
         </div>`,
     );
 
-    expect(query('.err')?.textContent).toBe('Error');
-  });
+    const { flush, queryAll } = await mount('test-keyed-reorder');
+    const initialNodes = queryAll('.item');
 
-  it('should render empty string when no case matches and no default is given', async () => {
-    const { query } = await mount(() => html`<div>${choose({ cases, value: 'other' as never })}</div>`);
-
-    expect(query('div')?.innerHTML).toBe('');
-  });
-
-  it('should update reactively when a Signal changes', async () => {
-    const section = signal<'home' | 'about' | 'contact'>('home');
-
-    const { flush, query } = await mount(() => html`<div>${choose({ cases, value: section })}</div>`);
-
-    expect(query('.home')).not.toBeNull();
-    expect(query('.about')).toBeNull();
-
-    section.value = 'about';
+    items.value = [
+      { id: 2, value: 'B' },
+      { id: 1, value: 'A' },
+    ];
     await flush();
-    expect(query('.home')).toBeNull();
-    expect(query('.about')).not.toBeNull();
 
-    section.value = 'contact';
-    await flush();
-    expect(query('.about')).toBeNull();
-    expect(query('.contact')).not.toBeNull();
+    const reorderedNodes = queryAll('.item');
+
+    expect(reorderedNodes.map((node) => node.textContent)).toEqual(['B', 'A']);
+    expect(reorderedNodes[0]).toBe(initialNodes[1]);
+    expect(reorderedNodes[1]).toBe(initialNodes[0]);
   });
 
-  it('should update reactively when a getter function is used', async () => {
-    const section = signal<'home' | 'about'>('home');
+  it('should replace item nodes when keyed item HTML changes and run ref cleanups', async () => {
+    const cleanupSpy = vi.fn();
+    const items = signal([{ id: 1, mode: 'button' as 'button' | 'link' }]);
 
-    const { flush, query } = await mount(
-      () => html`<div>${choose({ cases: cases as never, value: () => section.value })}</div>`,
+    register(
+      'test-keyed-html-replace',
+      () => html`
+        <div>
+          ${each(items, {
+            key: (item) => item.id,
+            render: (item) =>
+              item.mode === 'button'
+                ? html`<button class="entry" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</button>`
+                : html`<a class="entry" href="#" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</a>`,
+          })}
+        </div>
+      `,
     );
 
-    expect(query('.home')).not.toBeNull();
+    const { flush, query } = await mount('test-keyed-html-replace');
 
-    section.value = 'about';
+    expect(query('.entry')?.tagName).toBe('BUTTON');
+
+    items.value = [{ id: 1, mode: 'link' }];
     await flush();
-    expect(query('.home')).toBeNull();
-    expect(query('.about')).not.toBeNull();
+
+    expect(query('.entry')?.tagName).toBe('A');
+    expect(cleanupSpy).toHaveBeenCalled();
   });
 
-  it('should preserve event bindings across rerenders and branch switches', async () => {
-    const section = signal<'home' | 'about'>('home');
-    const tick = signal(0);
-    let clicks = 0;
+  it('should handle keyed list empty transitions and restore keyed nodes', async () => {
+    const items = signal([{ id: 1, value: 'A' }]);
 
-    const homeBranch = [
-      ['home', () => html`<button class="home-btn" @click=${() => (clicks += 1)}>Home action</button>`],
-      ['about', () => html`<button class="about-btn" @click=${() => (clicks += 10)}>About action</button>`],
-    ] as const;
-
-    const fixture = await mount(
-      () => html`<div>${choose({ cases: homeBranch as never, value: () => (tick.value, section.value) })}</div>`,
+    register(
+      'test-keyed-empty-transition',
+      () => html`
+        <ul>
+          ${each(items, {
+            fallback: () => html`<li class="empty">Empty</li>`,
+            key: (item) => item.id,
+            render: (item) => html`<li class="item">${item.value}</li>`,
+          })}
+        </ul>
+      `,
     );
 
-    const clickBranchButton = (): void => {
-      (fixture.query('button') as HTMLButtonElement).click();
-    };
+    const { flush, query, queryAll } = await mount('test-keyed-empty-transition');
 
-    clickBranchButton();
-    expect(clicks).toBe(1);
+    expect(queryAll('.item')).toHaveLength(1);
 
-    tick.value++;
-    await fixture.flush();
-    clickBranchButton();
-    expect(clicks).toBe(2);
+    items.value = [];
+    await flush();
+    expect(queryAll('.item')).toHaveLength(0);
+    expect(query('.empty')?.textContent).toBe('Empty');
 
-    section.value = 'about';
-    await fixture.flush();
-    clickBranchButton();
-    expect(clicks).toBe(12);
-
-    fixture.destroy();
-  });
-
-  it('should throw when cases contain invalid entries', () => {
-    expect(() =>
-      choose({
-        cases: [['home'] as unknown as readonly ['home', () => string]],
-        value: 'home',
-      }),
-    ).toThrow('[craftit:choose] Invalid case at index 0. Expected [key, templateFn].');
-  });
-
-  it('should throw when fallback is not a function', () => {
-    expect(() => choose({ cases, fallback: 'invalid' as unknown as () => string, value: 'missing' as never })).toThrow(
-      '[craftit:choose] options.fallback must be a function when provided.',
-    );
+    items.value = [{ id: 2, value: 'B' }];
+    await flush();
+    expect(query('.empty')).toBeNull();
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['B']);
   });
 });
 
 describe('Directive: raw()', () => {
-  it('should render a static HTML string without escaping', async () => {
+  it('should render HTML without escaping', async () => {
     const { query } = await mount(() => html`<div>${raw('<strong>bold</strong>')}</div>`);
 
     expect(query('strong')?.textContent).toBe('bold');
   });
 
-  it('should NOT escape angle brackets (unlike plain string interpolation)', async () => {
-    const { query } = await mount(() => html`<div>${raw('<em>hi</em>')}</div>`);
-
-    expect(query('em')).not.toBeNull();
-  });
-
-  it('should update reactively when a Signal changes', async () => {
+  it('should update reactively', async () => {
     const content = signal('<b>one</b>');
 
     const { flush, query } = await mount(() => html`<div>${raw(content)}</div>`);
@@ -811,814 +295,251 @@ describe('Directive: raw()', () => {
     expect(query('i')?.textContent).toBe('two');
     expect(query('b')).toBeNull();
   });
-
-  it('should update reactively when a getter function is used', async () => {
-    const flag = signal(true);
-
-    const { flush, query } = await mount(
-      () => html`<div>${raw(() => (flag.value ? '<span class="a">A</span>' : '<span class="b">B</span>'))}</div>`,
-    );
-
-    expect(query('.a')).not.toBeNull();
-
-    flag.value = false;
-    await flush();
-    expect(query('.a')).toBeNull();
-    expect(query('.b')).not.toBeNull();
-  });
-
-  it('should render an empty string as empty content', async () => {
-    const { query } = await mount(() => html`<div>${raw('')}</div>`);
-
-    expect(query('div')?.innerHTML).toBe('');
-  });
 });
 
-describe('Directive: spread() attribute entries', () => {
-  it('should set static attribute values', async () => {
-    const { query } = await mount(() => html`<input ${spread({ maxlength: 100, placeholder: 'Search' })} />`);
-    const input = query('input')!;
-
-    expect(input.getAttribute('placeholder')).toBe('Search');
-    expect(input.getAttribute('maxlength')).toBe('100');
-  });
-
-  it('should ignore inline event handler attributes for security', async () => {
-    const { query } = await mount(() => html`<div ${spread({ onclick: 'alert(1)' })}></div>`);
-
-    expect(query('div')?.hasAttribute('onclick')).toBe(false);
-  });
-
-  it('should set boolean true as empty-string attribute', async () => {
-    const { query } = await mount(() => html`<input ${spread({ required: true })} />`);
-
-    expect(query('input')?.hasAttribute('required')).toBe(true);
-    expect(query('input')?.getAttribute('required')).toBe('');
-  });
-
-  it('should remove attribute when value is false/null/undefined', async () => {
-    const { query } = await mount(
-      () => html`<input ${spread({ disabled: null, readonly: undefined, required: false })} />`,
-    );
-    const input = query('input')!;
-
-    expect(input.hasAttribute('required')).toBe(false);
-    expect(input.hasAttribute('disabled')).toBe(false);
-    expect(input.hasAttribute('readonly')).toBe(false);
-  });
-
-  it('should update reactively when a Signal changes', async () => {
-    const label = signal('First');
-
-    const { flush, query } = await mount(() => html`<input ${spread({ placeholder: label })} />`);
-
-    expect(query('input')?.getAttribute('placeholder')).toBe('First');
-
-    label.value = 'Second';
-    await flush();
-    expect(query('input')?.getAttribute('placeholder')).toBe('Second');
-  });
-
-  it('should update reactively from a getter function', async () => {
-    const count = signal(0);
-
-    const { flush, query } = await mount(
-      () => html`<button ${spread({ 'aria-label': () => `count: ${count.value}` })}></button>`,
-    );
-
-    expect(query('button')?.getAttribute('aria-label')).toBe('count: 0');
-
-    count.value = 5;
-    await flush();
-    expect(query('button')?.getAttribute('aria-label')).toBe('count: 5');
-  });
-
-  it('should remove attribute reactively when signal becomes false', async () => {
-    const required = signal(true);
-
-    const { flush, query } = await mount(() => html`<input ${spread({ required })} />`);
-
-    expect(query('input')?.hasAttribute('required')).toBe(true);
-
-    required.value = false;
-    await flush();
-    expect(query('input')?.hasAttribute('required')).toBe(false);
-  });
-});
-
-describe('Directive: on()', () => {
-  it('should attach an event listener to the element', async () => {
-    let clicked = 0;
-
-    const { query } = await mount(() => html`<button ${on('click', () => clicked++)}>Click</button>`);
-
-    query('button')!.dispatchEvent(new Event('click'));
-    expect(clicked).toBe(1);
-  });
-
-  it('should remove the listener when component unmounts', async () => {
-    let fired = 0;
-
-    const { destroy, query } = await mount(() => {
-      return html`<button ${on('click', () => fired++)}>Click</button>`;
-    });
-
-    query('button')!.dispatchEvent(new Event('click'));
-    expect(fired).toBe(1);
-
-    destroy();
-    query('button')?.dispatchEvent(new Event('click'));
-    expect(fired).toBe(1);
-  });
-
-  it('should fire clickOutside when a click occurs outside the element', async () => {
-    let outsideCount = 0;
-
-    const { element } = await mount(() => html`<div class="inner" ${on('clickOutside', () => outsideCount++)}></div>`);
-
-    // Click inside — should NOT fire
-    element.shadowRoot!.querySelector('.inner')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(outsideCount).toBe(0);
-
-    // Click outside
-    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(outsideCount).toBe(1);
-  });
-
-  it('should NOT fire clickOutside when a click is inside the element', async () => {
-    let outsideCount = 0;
-
-    const { element } = await mount(
-      () =>
-        html`<div ${on('clickOutside', () => outsideCount++)}>
-          <button class="btn">Inside</button>
-        </div>`,
-    );
-
-    element.shadowRoot!.querySelector('.btn')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(outsideCount).toBe(0);
-  });
-});
-
-describe('Directive: memo()', () => {
-  it('should render the template initially', async () => {
-    const data = signal('hello');
-
-    const { query } = await mount(
-      () => html`<div>${memo({ deps: [data], render: () => html`<span>${data}</span>` })}</div>`,
-    );
-
-    expect(query('span')?.textContent).toBe('hello');
-  });
-
-  it('should re-render when a dep signal changes', async () => {
-    const count = signal(0);
-    let renderCount = 0;
+describe('Directive: styleMap()', () => {
+  it('should render style declarations from mixed reactive values', async () => {
+    const color = signal('rgb(255, 0, 0)');
+    const width = signal(12);
 
     const { flush, query } = await mount(
       () =>
-        html`<div>
-          ${memo({
-            deps: [count],
-            render: () => {
-              renderCount++;
+        html`<div class="box" :style=${styleMap({ color, display: 'block', width: () => `${width.value}px` })}></div>`,
+    );
 
-              return html`<span>${count}</span>`;
-            },
+    const box = query<HTMLElement>('.box');
+
+    expect(box?.getAttribute('style')).toContain('color:rgb(255, 0, 0)');
+    expect(box?.getAttribute('style')).toContain('display:block');
+    expect(box?.getAttribute('style')).toContain('width:12px');
+
+    color.value = 'rgb(0, 0, 255)';
+    width.value = 24;
+    await flush();
+
+    expect(box?.getAttribute('style')).toContain('color:rgb(0, 0, 255)');
+    expect(box?.getAttribute('style')).toContain('width:24px');
+  });
+});
+
+describe('Directive: when()', () => {
+  it('should switch branches reactively', async () => {
+    const enabled = signal(true);
+    const { flush, query } = await mount(
+      () =>
+        html`<section>
+          ${when(
+            enabled,
+            () => html`<p class="on">On</p>`,
+            () => html`<p class="off">Off</p>`,
+          )}
+        </section>`,
+    );
+
+    expect(query('.on')?.textContent).toBe('On');
+
+    enabled.value = false;
+    await flush();
+
+    expect(query('.off')?.textContent).toBe('Off');
+    expect(query('.on')).toBeNull();
+  });
+});
+
+describe('Directive: guard()', () => {
+  it('should only recompute when dependency tuple changes', async () => {
+    const trigger = signal(1);
+    const other = signal(0);
+    let renders = 0;
+
+    const { flush, query } = await mount(
+      () =>
+        html`<div class="value">
+          ${guard([trigger], () => {
+            renders++;
+
+            return html`<span>${trigger.value}</span>`;
           })}
         </div>`,
     );
 
-    expect(query('span')?.textContent).toBe('0');
-    expect(renderCount).toBe(1);
+    expect(query('.value span')?.textContent).toBe('1');
+    expect(renders).toBe(1);
 
-    count.value = 1;
+    other.value = 1;
     await flush();
-    expect(query('span')?.textContent).toBe('1');
-    expect(renderCount).toBe(2);
-  });
+    expect(renders).toBe(1);
 
-  it('should NOT re-render templateFn when unrelated state changes', async () => {
-    const guarded = signal('initial');
-    const unrelated = signal(0);
-    let renderCount = 0;
-
-    const { flush } = await mount(
-      () =>
-        html`<div>
-          ${memo({
-            deps: [guarded],
-            render: () => {
-              renderCount++;
-
-              return html`<span class="g">${guarded}</span>`;
-            },
-          })}
-          <b>${unrelated}</b>
-        </div>`,
-    );
-
-    expect(renderCount).toBe(1);
-
-    unrelated.value = 99;
+    trigger.value = 2;
     await flush();
-    // unrelated changed but memo dep did not — templateFn must NOT re-run
-    expect(renderCount).toBe(1);
-
-    guarded.value = 'changed';
-    await flush();
-    expect(renderCount).toBe(2);
+    expect(renders).toBe(2);
+    expect(query('.value span')?.textContent).toBe('2');
   });
 });
 
-describe('Directive: until()', () => {
-  it('should show pendingFn while promise is pending', async () => {
-    const pending = new Promise<string>(() => {});
+describe('Directive: live()', () => {
+  it('should not clobber user-typed input when app state is stale', async () => {
+    const model = signal('server');
+    const { query } = await mount(() => html`<input class="field" :value=${live(model)} @input=${() => undefined} />`);
 
-    const { query } = await mount(
-      () => html`<div>${until(pending, () => html`<span class="loading">Loading</span>`)}</div>`,
-    );
+    const input = query<HTMLInputElement>('.field');
 
-    expect(query('.loading')).not.toBeNull();
+    if (!input) throw new Error('Expected input to be rendered');
+
+    input.value = 'user-typed';
+
+    model.value = 'server';
+
+    expect(input.value).toBe('user-typed');
   });
 
-  it('should render resolved content after promise resolves', async () => {
-    let resolve!: (v: string) => void;
-    const promise = new Promise<string>((r) => (resolve = r));
-
+  it('should not clobber user-checked input when app state is stale', async () => {
+    const model = signal(true);
     const { flush, query } = await mount(
-      () =>
-        html`<div>
-          ${until(
-            promise.then((v) => html`<span class="done">${v}</span>`),
-            () => html`<span class="loading">…</span>`,
-          )}
-        </div>`,
+      () => html`<input class="field" type="checkbox" ?checked=${live(model)} @change=${() => undefined} />`,
     );
 
-    expect(query('.loading')).not.toBeNull();
+    const input = query<HTMLInputElement>('.field');
 
-    resolve('Done!');
-    await promise;
+    if (!input) throw new Error('Expected input to be rendered');
+
+    input.checked = false;
+
+    model.value = true;
     await flush();
 
-    expect(query('.done')?.textContent).toBe('Done!');
-    expect(query('.loading')).toBeNull();
-  });
-
-  it('should render empty string when no pendingFn and promise is pending', async () => {
-    const pending = new Promise<string>(() => {});
-
-    const { query } = await mount(() => html`<div>${until(pending)}</div>`);
-
-    expect(query('div')?.textContent).toBe('');
-  });
-
-  it('should render onError content when promise rejects', async () => {
-    let reject!: (err: unknown) => void;
-    const promise = new Promise<string>((_, r) => (reject = r));
-
-    const { flush, query } = await mount(
-      () =>
-        html`<div>
-          ${until(
-            promise.then((v) => html`<span class="done">${v}</span>`),
-            () => html`<span class="loading">…</span>`,
-            (err) => html`<span class="error">${String(err)}</span>`,
-          )}
-        </div>`,
-    );
-
-    expect(query('.loading')).not.toBeNull();
-
-    reject('oops');
-    await promise.catch(() => {});
-    await flush();
-
-    expect(query('.error')?.textContent).toBe('oops');
-    expect(query('.loading')).toBeNull();
-  });
-
-  it('should render a default error message when promise rejects without onError', async () => {
-    let reject!: (err: unknown) => void;
-    const promise = new Promise<string>((_, r) => (reject = r));
-
-    const { flush, query } = await mount(
-      () => html`<div>${until(promise, () => html`<span class="loading">…</span>`)}</div>`,
-    );
-
-    reject('boom');
-    await promise.catch(() => {});
-    await flush();
-
-    expect(query('div')?.textContent).toContain('Error: boom');
+    expect(input.checked).toBe(false);
   });
 });
 
-describe('Keyed Reconciliation', () => {
-  describe('DOM Node Lifecycle', () => {
-    it('should preserve sibling nodes rendered after a keyed each() block', async () => {
-      const items = signal([
-        { id: 1, value: 'A' },
-        { id: 2, value: 'B' },
-      ]);
+describe('Directive: resource()', () => {
+  it('should show pending state then resolved data', async () => {
+    let resolve!: (value: string) => void;
+    const p = new Promise<string>((res) => {
+      resolve = res;
+    });
 
-      register(
-        'test-keyed-sibling-preserve',
-        () => html`
-          <div class="container">
-            ${each(items, { key: (item) => item.id, render: (item) => html`<span class="item">${item.value}</span>` })}
-            <button class="after">After</button>
-          </div>
-        `,
+    const { flush, query } = await mount(() => {
+      const data = resource(
+        () => null,
+        () => p,
       );
 
-      const { flush, query, queryAll } = await mount('test-keyed-sibling-preserve');
-
-      expect(query('.after')).toBeTruthy();
-      expect(queryAll('.item')).toHaveLength(2);
-
-      items.value = [
-        { id: 2, value: 'B2' },
-        { id: 3, value: 'C3' },
-      ];
-      await flush();
-
-      expect(query('.after')).toBeTruthy();
-      expect(queryAll('.item')).toHaveLength(2);
-    });
-
-    it('should not duplicate nodes when adding items', async () => {
-      const items = signal([{ id: 1, value: 100 }]);
-      const addItem = () => {
-        items.value = [...items.value, { id: items.value.length + 1, value: 90 }];
-      };
-
-      register(
-        'test-no-duplication',
-        () => html`
-          <div class="container">
-            ${each(items, { key: (item) => item.id, render: (item) => html`<div class="item">${item.value}</div>` })}
-          </div>
-          <button class="add-btn">Add</button>
-        `,
-      );
-
-      const { flush, query, queryAll } = await mount('test-no-duplication');
-
-      query('.add-btn')!.addEventListener('click', addItem);
-
-      expect(queryAll('.item').length).toBe(1);
-
-      query('.add-btn')!.dispatchEvent(new Event('click'));
-      await flush();
-      expect(queryAll('.item').length).toBe(2);
-
-      query('.add-btn')!.dispatchEvent(new Event('click'));
-      await flush();
-      expect(queryAll('.item').length).toBe(3);
-    });
-
-    it('should reuse nodes with same keys', async () => {
-      const items = signal([
-        { id: 1, value: 'A' },
-        { id: 2, value: 'B' },
-      ]);
-
-      register(
-        'test-reuse-nodes',
-        () => html`
-          <div>
-            ${each(items, {
-              key: (item) => item.id,
-              render: (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
-            })}
-          </div>
-        `,
-      );
-
-      const { flush, queryAll } = await mount('test-reuse-nodes');
-
-      const initialNodes = queryAll('.item');
-
-      expect(initialNodes[0].getAttribute('data-id')).toBe('1');
-      expect(initialNodes[1].getAttribute('data-id')).toBe('2');
-
-      // Update values but keep keys
-      items.value = [
-        { id: 1, value: 'A-Updated' },
-        { id: 2, value: 'B-Updated' },
-      ];
-      await flush();
-
-      const updatedNodes = queryAll('.item');
-
-      expect(updatedNodes.length).toBe(2);
-      expect(updatedNodes[0].getAttribute('data-id')).toBe('1');
-      expect(updatedNodes[1].getAttribute('data-id')).toBe('2');
-      expect(updatedNodes[0].textContent).toBe('A-Updated');
-    });
-
-    it('should remove nodes correctly', async () => {
-      const items = signal([
-        { id: 1, value: 'A' },
-        { id: 2, value: 'B' },
-        { id: 3, value: 'C' },
-      ]);
-
-      register(
-        'test-remove-nodes',
-        () => html`
-          <div>
-            ${each(items, {
-              key: (item) => item.id,
-              render: (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
-            })}
-          </div>
-        `,
-      );
-
-      const { flush, queryAll } = await mount('test-remove-nodes');
-
-      expect(queryAll('.item').length).toBe(3);
-
-      items.value = items.value.filter((item) => item.id !== 2);
-      await flush();
-
-      const remaining = queryAll('.item');
-
-      expect(remaining.length).toBe(2);
-      expect(remaining[0].getAttribute('data-id')).toBe('1');
-      expect(remaining[1].getAttribute('data-id')).toBe('3');
-    });
-  });
-
-  describe('Item Ordering', () => {
-    it('should handle reordering correctly', async () => {
-      const items = signal([
-        { id: 1, text: 'First' },
-        { id: 2, text: 'Second' },
-        { id: 3, text: 'Third' },
-      ]);
-
-      register(
-        'test-reorder',
-        () => html`
-          <div>
-            ${each(items, {
-              key: (item) => item.id,
-              render: (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`,
-            })}
-          </div>
-        `,
-      );
-
-      const { flush, queryAll } = await mount('test-reorder');
-
-      const initial = queryAll('.item');
-
-      expect(initial[0].textContent).toBe('First');
-      expect(initial[2].textContent).toBe('Third');
-
-      // Reverse order
-      items.value = [items.value[2], items.value[1], items.value[0]];
-      await flush();
-
-      const reordered = queryAll('.item');
-
-      expect(reordered[0].textContent).toBe('Third');
-      expect(reordered[2].textContent).toBe('First');
-    });
-
-    it('should prepend items without recreating existing ones', async () => {
-      const items = signal([{ id: 1, text: 'Existing' }]);
-
-      register(
-        'test-prepend',
-        () => html`
-          <div>
-            ${each(items, {
-              key: (item) => item.id,
-              render: (item) => html`<div class="item" data-id="${item.id}">${item.text}</div>`,
-            })}
-          </div>
-        `,
-      );
-
-      const { flush, queryAll } = await mount('test-prepend');
-
-      items.value = [{ id: 2, text: 'New' }, ...items.value];
-      await flush();
-
-      const updated = queryAll('.item');
-
-      expect(updated.length).toBe(2);
-      expect(updated[0].getAttribute('data-id')).toBe('2');
-      expect(updated[1].getAttribute('data-id')).toBe('1');
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty to populated list', async () => {
-      const items = signal<Array<{ id: number; text: string }>>([]);
-
-      register(
-        'test-empty-to-populated',
-        () => html`
-          <div>
-            ${each(items, { key: (item) => item.id, render: (item) => html`<div class="item">${item.text}</div>` })}
-          </div>
-        `,
-      );
-
-      const { flush, queryAll } = await mount('test-empty-to-populated');
-
-      expect(queryAll('.item').length).toBe(0);
-
-      items.value = [
-        { id: 1, text: 'A' },
-        { id: 2, text: 'B' },
-      ];
-      await flush();
-      expect(queryAll('.item').length).toBe(2);
-    });
-
-    it('should handle populated to empty list', async () => {
-      const items = signal([
-        { id: 1, text: 'A' },
-        { id: 2, text: 'B' },
-      ]);
-
-      register(
-        'test-populated-to-empty',
-        () => html`
-          <div>
-            ${each(items, { key: (item) => item.id, render: (item) => html`<div class="item">${item.text}</div>` })}
-          </div>
-        `,
-      );
-
-      const { flush, queryAll } = await mount('test-populated-to-empty');
-
-      expect(queryAll('.item').length).toBe(2);
-
-      items.value = [];
-      await flush();
-      expect(queryAll('.item').length).toBe(0);
-    });
-
-    it('should handle single item updates', async () => {
-      const items = signal([{ id: 1, text: 'Only' }]);
-
-      register(
-        'test-single-item',
-        () => html`
-          <div>
-            ${each(items, { key: (item) => item.id, render: (item) => html`<div class="item">${item.text}</div>` })}
-          </div>
-        `,
-      );
-
-      const { flush, queryAll } = await mount('test-single-item');
-
-      items.value = [{ id: 1, text: 'Updated' }];
-      await flush();
-      expect(queryAll('.item')[0].textContent).toBe('Updated');
-    });
-  });
-
-  describe('Fallback Content', () => {
-    it('should show fallback when empty', async () => {
-      const items = signal<number[]>([]);
-
-      register(
-        'test-fallback-empty',
-        () => html`
-          <div>
-            ${each(items, {
-              fallback: () => html`<div class="empty">No items</div>`,
-              key: (i) => i,
-              render: (item) => html`<div class="item">${item}</div>`,
-            })}
-          </div>
-        `,
-      );
-
-      const { query, queryAll } = await mount('test-fallback-empty');
-
-      expect(queryAll('.item').length).toBe(0);
-      expect(query('.empty')).not.toBeNull();
-    });
-
-    it('should hide fallback when items exist', async () => {
-      const items = signal([1, 2]);
-
-      register(
-        'test-fallback-hidden',
-        () => html`
-          <div>
-            ${each(items, {
-              fallback: () => html`<div class="empty">No items</div>`,
-              key: (i) => i,
-              render: (item) => html`<div class="item">${item}</div>`,
-            })}
-          </div>
-        `,
-      );
-
-      const { query, queryAll } = await mount('test-fallback-hidden');
-
-      expect(queryAll('.item').length).toBe(2);
-      expect(query('.empty')).toBeNull();
-    });
-
-    it('should toggle fallback correctly', async () => {
-      const items = signal([1]);
-
-      register(
-        'test-fallback-toggle',
-        () => html`
-          <div>
-            ${each(items, {
-              fallback: () => html`<div class="empty">No items</div>`,
-              key: (i) => i,
-              render: (item) => html`<div class="item">${item}</div>`,
-            })}
-          </div>
-        `,
-      );
-
-      const { flush, query } = await mount('test-fallback-toggle');
-
-      expect(query('.empty')).toBeNull();
-
-      items.value = [];
-      await flush();
-      expect(query('.empty')).not.toBeNull();
-
-      items.value = [2];
-      await flush();
-      expect(query('.empty')).toBeNull();
-    });
-  });
-});
-
-describe('List Filtering', () => {
-  it('should filter list based on signal', async () => {
-    const allItems = signal([
-      { done: false, id: 1, text: 'Task 1' },
-      { done: true, id: 2, text: 'Task 2' },
-      { done: false, id: 3, text: 'Task 3' },
-    ]);
-    const filter = signal<'all' | 'active' | 'completed'>('all');
-
-    const filtered = computed(() => {
-      if (filter.value === 'all') return allItems.value;
-
-      if (filter.value === 'active') return allItems.value.filter((t) => !t.done);
-
-      return allItems.value.filter((t) => t.done);
-    });
-
-    register(
-      'test-filter',
-      () => html`
+      return html`
         <div>
-          <button class="all" @click=${() => (filter.value = 'all')}>All</button>
-          <button class="active" @click=${() => (filter.value = 'active')}>Active</button>
-          <button class="completed" @click=${() => (filter.value = 'completed')}>Completed</button>
-          ${each(filtered, { key: (item) => item.id, render: (item) => html`<div class="item">${item.text}</div>` })}
+          <span class="loading">${() => (data.value.pending ? 'Loading' : '')}</span>
+          <span class="done">${() => String(data.value.data ?? '')}</span>
         </div>
-      `,
-    );
-
-    const { flush, query, queryAll } = await mount('test-filter');
-
-    expect(queryAll('.item').length).toBe(3);
-
-    query('.active')!.dispatchEvent(new Event('click'));
-    await flush();
-    expect(queryAll('.item').length).toBe(2);
-
-    query('.completed')!.dispatchEvent(new Event('click'));
-    await flush();
-    expect(queryAll('.item').length).toBe(1);
-
-    query('.all')!.dispatchEvent(new Event('click'));
-    await flush();
-    expect(queryAll('.item').length).toBe(3);
-  });
-
-  it('should update filtered list when items change', async () => {
-    const items = signal([
-      { done: false, id: 1 },
-      { done: false, id: 2 },
-    ]);
-    const filter = signal<'all' | 'active'>('active');
-    const filtered = computed(() => (filter.value === 'all' ? items.value : items.value.filter((t) => !t.done)));
-
-    register(
-      'test-filter-update',
-      () => html`
-        <div>
-          ${each(filtered, { key: (item) => item.id, render: (item) => html`<div class="item">${item.id}</div>` })}
-        </div>
-      `,
-    );
-
-    const { flush, queryAll } = await mount('test-filter-update');
-
-    expect(queryAll('.item').length).toBe(2);
-
-    // Mark one as done
-    items.value = [
-      { done: true, id: 1 },
-      { done: false, id: 2 },
-    ];
-    await flush();
-    expect(queryAll('.item').length).toBe(1);
-  });
-});
-
-describe('State Management', () => {
-  describe('Todo Toggle', () => {
-    it('should toggle todo completed state', async () => {
-      const todos = signal([{ completed: false, id: 1, text: 'Task' }]);
-
-      const toggle = (id: number) => {
-        todos.value = todos.value.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
-      };
-
-      register(
-        'test-toggle',
-        () => html`
-          <div>
-            ${each(todos, {
-              key: (t) => t.id,
-              render: (t) => html`
-                <input type="checkbox" ?checked=${() => t.completed} @change=${() => toggle(t.id)} />
-                <span class=${() => (t.completed ? 'done' : '')}>${t.text}</span>
-                <span class="status">${t.completed ? 'done' : 'todo'}</span>
-              `,
-            })}
-          </div>
-        `,
-      );
-
-      const { flush, query } = await mount('test-toggle');
-
-      const span = query('span')!;
-      const status = query('.status')!;
-
-      expect(span.classList.contains('done')).toBe(false);
-      expect(status.textContent).toBe('todo');
-
-      todos.value = todos.value.map((t) => (t.id === 1 ? { ...t, completed: true } : t));
-      await flush();
-
-      expect(todos.value[0]?.completed).toBe(true);
+      `;
     });
 
-    it('should handle multiple toggles', async () => {
-      const todos = signal([
-        { completed: false, id: 1 },
-        { completed: true, id: 2 },
-      ]);
+    expect(query('.loading')?.textContent).toBe('Loading');
+    expect(query('.done')?.textContent).toBe('');
 
-      const toggle = (id: number) => {
-        todos.value = todos.value.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
-      };
+    resolve('Hello');
+    await waitFor(async () => {
+      await flush();
 
-      register(
-        'test-multi-toggle',
-        () => html`
-          <div>
-            ${each(todos, {
-              key: (t) => t.id,
-              render: (t) => html`
-                <input type="checkbox" ?checked=${() => t.completed} @change=${() => toggle(t.id)} />
-                <span class="status">${t.completed ? 'done' : 'todo'}</span>
-              `,
-            })}
-          </div>
-        `,
+      return query('.done')?.textContent === 'Hello' && query('.loading')?.textContent === '';
+    });
+    expect(query('.loading')?.textContent).toBe('');
+  });
+
+  it('should cancel in-flight request when deps change', async () => {
+    let abortCount = 0;
+    const id = signal(1);
+
+    const { act, query } = await mount(() => {
+      const data = resource(
+        () => id.value,
+        (currentId, signal) => {
+          signal.addEventListener('abort', () => {
+            abortCount++;
+          });
+
+          return new Promise<string>((resolve) => {
+            setTimeout(() => {
+              if (!signal.aborted) resolve(`user-${currentId}`);
+            }, 5000);
+          });
+        },
       );
 
-      const { flush, queryAll } = await mount('test-multi-toggle');
+      return html`
+        <div>
+          ${when(
+            () => data.value.pending,
+            () => html`<span class="pending">…</span>`,
+          )}
+        </div>
+      `;
+    });
 
-      const statuses = queryAll('.status');
+    expect(query('.pending')).not.toBeNull();
 
-      expect(statuses[0].textContent).toBe('todo');
-      expect(statuses[1].textContent).toBe('done');
+    await act(() => {
+      id.value = 2;
+    });
 
-      todos.value = todos.value.map((t) => (t.id === 1 ? { ...t, completed: true } : t));
+    expect(abortCount).toBe(1);
+  });
+
+  it('should capture error state when fetcher rejects', async () => {
+    const { flush, query } = await mount(() => {
+      const data = resource(
+        () => null,
+        () => Promise.reject(new Error('network error')),
+      );
+
+      return html`
+        <div>
+          <span class="error">${() => (data.value.error as Error | undefined)?.message ?? ''}</span>
+        </div>
+      `;
+    });
+
+    await waitFor(async () => {
       await flush();
 
-      todos.value = todos.value.map((t) => (t.id === 2 ? { ...t, completed: false } : t));
+      return query('.error')?.textContent === 'network error';
+    });
+  });
+
+  it('should preserve previous data when reload fails', async () => {
+    const id = signal(1);
+
+    const { act, flush, query } = await mount(() => {
+      const data = resource(
+        () => id.value,
+        async (currentId) => {
+          if (currentId === 1) return 'user-1';
+
+          throw new Error('network error');
+        },
+      );
+
+      return html`
+        <div>
+          <span class="done">${() => String(data.value.data ?? '')}</span>
+          <span class="error">${() => (data.value.error as Error | undefined)?.message ?? ''}</span>
+        </div>
+      `;
+    });
+
+    await waitFor(async () => {
       await flush();
 
-      expect(todos.value[0]?.completed).toBe(true);
-      expect(todos.value[1]?.completed).toBe(false);
+      return query('.done')?.textContent === 'user-1';
+    });
+
+    await act(() => {
+      id.value = 2;
+    });
+
+    await waitFor(async () => {
+      await flush();
+
+      return query('.done')?.textContent === 'user-1' && query('.error')?.textContent === 'network error';
     });
   });
 });

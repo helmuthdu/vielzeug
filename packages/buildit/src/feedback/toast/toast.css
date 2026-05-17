@@ -98,6 +98,7 @@
   .toast-wrapper {
     position: relative;
     pointer-events: auto;
+    touch-action: pan-y;
     transform-origin: center bottom;
     transition: var(
       --_motion-transition,

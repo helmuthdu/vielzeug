@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/virtualit)](https://www.npmjs.com/package/@vielzeug/virtualit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Virtualit** renders only the items visible in the viewport plus a configurable overscan buffer. It uses a `ResizeObserver` for automatic container remeasurement and a passive `scroll` listener to keep the visible window in sync — no framework required.
+**Virtualit** renders only the items visible in the viewport plus a configurable overscan buffer. It uses a `ResizeObserver` for container size changes and a passive `scroll` listener to keep the visible window in sync — no framework required.
 
 ## Installation
 
@@ -30,7 +30,7 @@ const virt = createVirtualizer(scrollEl, {
 
     for (const item of virtualItems) {
       const row = document.createElement('div');
-      row.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;height:${item.height}px;`;
+      row.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:${item.size}px;`;
       row.textContent = items[item.index].label;
       list.appendChild(row);
     }
@@ -44,11 +44,14 @@ virt.destroy();
 ## Features
 
 - ✅ **Framework-agnostic** — callback-based `onChange`; works with React, Vue, Svelte, Lit, or vanilla DOM
-- ✅ **Fixed and variable heights** — pass a number or a per-index estimator; call `measureElement()` for exact heights
-- ✅ **Batched measurements** — `measureElement()` calls within a single tick are coalesced into one rebuild via `queueMicrotask`
+- ✅ **Fixed and variable sizes** — pass a number or a per-index estimator; call `measure()` for exact size capture
+- ✅ **Batched measurements** — measurement calls within a single tick are coalesced into one rebuild via `queueMicrotask`
+- ✅ **Stable-key reflow** — `refresh()` rebuilds offsets after reorder/filter changes without discarding measured sizes
 - ✅ **Skipped re-renders** — `onChange` is not fired when a scroll event doesn't cross an item boundary
-- ✅ **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel-level control; both support `behavior: 'smooth'`
-- ✅ **Reactive count and density** — `count` and `estimateSize` setters rebuild and re-render automatically
+- ✅ **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel-level control; both support `behavior: 'smooth'`; variable-height lists use current estimates until rows are measured
+- ✅ **Atomic updates** — `update()` can change count, estimator, overscan, callbacks, and scroll behavior config together
+- ✅ **Horizontal and window targets** — supports horizontal virtualization and `window` as scroll target
+- ✅ **Asymmetric overscan and gaps** — control start/end overscan independently and set inter-item spacing
 - ✅ **Typed Float64Array offsets** — dense contiguous buffer for cache-friendly binary search
 - ✅ **Disposable** — implements `[Symbol.dispose]` for `using` declarations
 - ✅ **Zero dependencies**
@@ -67,14 +70,15 @@ const list = document.getElementById('list')!;
 const virt = createVirtualizer(scrollEl, {
   count: 10_000,
   estimateSize: 36,
-  overscan: 3,
+  overscan: { start: 3, end: 3 },
   onChange: (virtualItems, totalSize) => {
     spacer.style.height = `${totalSize}px`;
     list.innerHTML = '';
 
     for (const item of virtualItems) {
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;top:${item.top}px;`;
+      el.dataset.index = String(item.index);
+      el.style.cssText = `position:absolute;top:${item.start}px;`;
       el.textContent = `Row ${item.index}`;
       list.appendChild(el);
     }
@@ -94,7 +98,7 @@ const virt = createVirtualizer(scrollEl, {
     // After rendering, report the actual measured heights
     for (const item of virtualItems) {
       const el = list.querySelector(`[data-index="${item.index}"]`) as HTMLElement | null;
-      if (el) virt.measureElement(item.index, el.offsetHeight);
+      if (el) virt.measure(item.index, el.offsetHeight);
     }
   },
 });
@@ -113,14 +117,21 @@ virt.scrollToIndex(50, { align: 'start', behavior: 'smooth' });
 virt.scrollToOffset(1440, { behavior: 'smooth' });
 ```
 
+For variable-height lists, `scrollToIndex()` uses the current estimate/measured cache. If row sizes changed materially, call `invalidate()` and then scroll again.
+
+If the same logical rows were reordered or filtered while keeping stable keys, call `refresh()` to rebuild offsets without dropping measured sizes.
+
 ### Updating the List
 
 ```ts
-// Append more items — setter rebuilds and re-renders automatically
-virt.count = newItems.length;
+// Append more items
+virt.update({ count: newItems.length });
 
 // Switch row density (e.g. compact ↔ comfortable view)
-virt.estimateSize = isDense ? 32 : 48;
+virt.update({ estimateSize: isDense ? 32 : 48 });
+
+// Rebuild after reordering stable-key rows
+virt.refresh();
 
 // Recompute after a font swap or layout shift
 virt.invalidate();
@@ -140,47 +151,55 @@ virt.invalidate();
 ### Package Exports
 
 ```ts
-export { Virtualizer, createVirtualizer } from '@vielzeug/virtualit';
-export type { ScrollToIndexOptions, VirtualItem, VirtualizerOptions } from '@vielzeug/virtualit';
+export { createVirtualizer } from '@vielzeug/virtualit';
+export type {
+  Overscan,
+  ScrollToIndexOptions,
+  VirtualItem,
+  Virtualizer,
+  VirtualizerOptions,
+  VirtualizerUpdateOptions,
+} from '@vielzeug/virtualit';
 ```
 
 ### `createVirtualizer(el, options)`
 
 Creates and immediately attaches a `Virtualizer` to `el`.
 
-| Parameter              | Type                                                | Description                                            |
-| ---------------------- | --------------------------------------------------- | ------------------------------------------------------ |
-| `el`                   | `HTMLElement`                                       | The scroll container to observe                        |
-| `options.count`        | `number`                                            | Total number of items                                  |
-| `options.estimateSize` | `number \| (i: number) => number`                   | Row height estimate. Default: `36`                     |
-| `options.overscan`     | `number`                                            | Items to render beyond the viewport edge. Default: `3` |
-| `options.onChange`     | `(items: VirtualItem[], totalSize: number) => void` | Called whenever the visible range changes              |
+- `el`: `HTMLElement | Window` — the scroll target to observe.
+- `options.count`: `number` — total number of items.
+- `options.estimateSize`: `number | (i: number) => number` — row size estimate (default: `36`).
+- `options.gap`: `number` — gap in px inserted between items.
+- `options.overscan`: `{ start?: number; end?: number }` — items rendered beyond viewport edge (default: `{ start: 3, end: 3 }`).
+- `options.onChange`: `(items: VirtualItem[], totalSize: number) => void` — called whenever the visible range changes.
 
 Returns a `Virtualizer` instance.
 
 ### `Virtualizer`
 
-| Member                      | Type                                      | Description                                        |
-| --------------------------- | ----------------------------------------- | -------------------------------------------------- |
-| `count`                     | `get/set number`                          | Item count; setting rebuilds and re-renders        |
-| `estimateSize`              | `set number \| (i) => number`             | Update the size estimator; clears measured heights |
-| `attach(el)`                | `(el: HTMLElement) => void`               | Attach (or re-attach) to a scroll container        |
-| `destroy()`                 | `() => void`                              | Remove all listeners; idempotent                   |
-| `[Symbol.dispose]()`        | —                                         | Delegates to `destroy()`                           |
-| `getVirtualItems()`         | `() => VirtualItem[]`                     | Currently rendered items                           |
-| `getTotalSize()`            | `() => number`                            | Total scrollable height in px                      |
-| `measureElement(i, h)`      | `(index: number, height: number) => void` | Record an exact item height; batched per microtask |
-| `scrollToIndex(i, opts?)`   | `(index, ScrollToIndexOptions) => void`   | Scroll to an item                                  |
-| `scrollToOffset(px, opts?)` | `(offset, { behavior? }) => void`         | Scroll to a pixel offset                           |
-| `invalidate()`              | `() => void`                              | Clear all measured heights and re-render           |
+- `count`: `readonly number` — current item count.
+- `estimateSize`: `readonly number | (i) => number` — active estimator.
+- `update(next)`: `(next: VirtualizerUpdateOptions) => void` — atomically update options.
+- `destroy()`: `() => void` — remove all listeners; idempotent.
+- `[Symbol.dispose]()` — delegates to `destroy()`.
+- `items`: `readonly VirtualItem[]` — currently rendered items.
+- `totalSize`: `readonly number` — total scrollable size in px.
+- `scrollOffset`: `readonly number` — current scroll offset.
+- `isScrolling`: `readonly boolean` — true while in active scrolling window.
+- `measure(i, h)`: `(index: number, size: number) => void` — record exact item size; batched per microtask.
+- `refresh()`: `() => void` — rebuild offsets and re-render while keeping measured sizes.
+- `scrollToIndex(i, opts?)`: `(index, ScrollToIndexOptions) => void` — scroll to an item.
+- `scrollToOffset(px, opts?)`: `(offset, { behavior? }) => void` — scroll to a pixel offset.
+- `invalidate()`: `() => void` — clear measured sizes and re-render.
 
 ### `VirtualItem`
 
 ```ts
 interface VirtualItem {
-  index: number; // Position in the full list
-  top: number; // Pixel offset from the top of the scroll area
-  height: number; // Measured or estimated height
+  index: number;
+  start: number;
+  end: number;
+  size: number;
 }
 ```
 
@@ -188,11 +207,9 @@ interface VirtualItem {
 
 Full docs at **[vielzeug.dev/virtualit](https://vielzeug.dev/virtualit)**
 
-| | |
-|---|---|
-| [Usage Guide](https://vielzeug.dev/virtualit/usage) | Fixed/variable heights, overscan, scrolling |
-| [API Reference](https://vielzeug.dev/virtualit/api) | Complete type signatures |
-| [Examples](https://vielzeug.dev/virtualit/examples) | Real-world virtual list patterns |
+- [Usage Guide](https://vielzeug.dev/virtualit/usage) — fixed/variable heights, overscan, scrolling.
+- [API Reference](https://vielzeug.dev/virtualit/api) — complete type signatures.
+- [Examples](https://vielzeug.dev/virtualit/examples) — real-world virtual list patterns.
 
 ## License
 

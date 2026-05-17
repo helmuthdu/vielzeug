@@ -1,12 +1,12 @@
-import { define, html, inject, ref, signal } from '@vielzeug/craftit';
-import { createTextFieldControl } from '@vielzeug/craftit/controls';
+import { define, html, inject, live, prop, ref, signal } from '@vielzeug/craftit';
+import { createTextField } from '@vielzeug/craftit/controls';
 
 import type { InputType, VisualVariant } from '../../types';
 import type { TextFieldProps } from '../shared/base-props';
 
 import '../../content/icon/icon';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
-import { disablableBundle, roundableBundle, sizableBundle, themableBundle, type PropBundle } from '../shared/bundles';
+import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
 import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
@@ -54,31 +54,6 @@ const VALID_INPUT_TYPES = [
 const validateInputType = (type: string | null | undefined): string => {
   return VALID_INPUT_TYPES.includes(type as (typeof VALID_INPUT_TYPES)[number]) ? type! : 'text';
 };
-
-const inputProps = {
-  ...themableBundle,
-  ...sizableBundle,
-  ...disablableBundle,
-  ...roundableBundle,
-  autocomplete: undefined,
-  clearable: false,
-  error: { default: '' as string, omit: true },
-  fullwidth: false,
-  helper: '',
-  inputmode: undefined,
-  label: '',
-  'label-placement': 'inset',
-  maxlength: undefined,
-  minlength: undefined,
-  name: '',
-  pattern: undefined,
-  placeholder: '',
-  readonly: false,
-  required: false,
-  type: 'text',
-  value: '',
-  variant: undefined,
-} satisfies PropBundle<BitInputProps>;
 
 /**
  * A customizable text input component with multiple variants, label placements, and form features.
@@ -133,9 +108,32 @@ const inputProps = {
  */
 export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
   formAssociated: true,
-  props: inputProps,
-  setup({ emit, host, props }) {
-    const formCtx = inject(FORM_CTX, undefined);
+  props: {
+    ...themableBundle,
+    ...sizableBundle,
+    ...disablableBundle,
+    ...roundableBundle,
+    autocomplete: undefined,
+    clearable: false,
+    error: { default: '' as string, reflect: false },
+    fullwidth: false,
+    helper: '',
+    inputmode: undefined,
+    label: { default: '' },
+    'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
+    maxlength: undefined,
+    minlength: undefined,
+    name: '',
+    pattern: undefined,
+    placeholder: { default: '' },
+    readonly: false,
+    required: false,
+    type: prop.oneOf(VALID_INPUT_TYPES, 'text'),
+    value: '',
+    variant: undefined,
+  },
+  setup(props, { emit, host }) {
+    const formCtx = inject(FORM_CTX);
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 
@@ -146,28 +144,20 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
 
     const {
       assistive,
-      attrs: inputAttrs,
       clear,
       errorId,
       fieldId: inputId,
       helperId,
       labelInsetId,
-      labelInsetRef,
       labelOutsideId,
-      labelOutsideRef,
       value: fieldValue,
-    } = createTextFieldControl({
-      autocomplete: props.autocomplete,
+    } = createTextField({
       context: formCtx,
       disabled: props.disabled,
       elementRef: inputRef,
       error: props.error,
       helper: props.helper,
-      inputmode: props.inputmode,
-      label: props.label,
-      labelPlacement: props['label-placement'],
       maxLength: props.maxlength,
-      minLength: props.minlength,
       name: props.name,
       onChange: (event, value) => {
         emit('change', { originalEvent: event, value });
@@ -175,82 +165,104 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       onInput: (event, value) => {
         emit('input', { originalEvent: event, value });
       },
-      pattern: props.pattern,
-      placeholder: props.placeholder,
       prefix: 'input',
-      readOnly: props.readonly,
-      required: props.required,
-      type: resolvedInputType,
       value: props.value,
     });
 
-    host.bind('attr', {
-      'has-value': () => (fieldValue.value ? true : undefined),
+    host.bind({
+      attr: {
+        error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
+        'has-value': () => (fieldValue.value ? true : undefined),
+      },
     });
 
-    return html`
+    const ariaLabelledBy = () => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId);
+    const ariaDescribedBy = () => (assistive.value.errorText || assistive.value.helperText ? helperId : null);
+    const ariaErrorMessage = () => (assistive.value.errorText ? errorId : null);
+    const ariaInvalid = () => (assistive.value.errorText ? 'true' : null);
+    const passwordToggleLabel = () => (showPassword.value ? 'Hide password' : 'Show password');
+    const passwordTogglePressed = () => String(showPassword.value);
+    const passwordToggleIcon = () =>
+      showPassword.value
+        ? html`<bit-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`
+        : html`<bit-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`;
+    const helperHidden = () => !!assistive.value.errorText || !assistive.value.helperText;
+    const helperText = () => assistive.value.helperText;
+    const errorHidden = () => !assistive.value.errorText;
+    const errorText = () => assistive.value.errorText;
+    const outsideLabelHidden = () => !props.label.value || props['label-placement'].value !== 'outside';
+    const insetLabelHidden = () => !props.label.value || props['label-placement'].value !== 'inset';
+    const counterNearLimit = () => (assistive.value.counterNearLimit && !assistive.value.counterAtLimit ? '' : null);
+    const counterAtLimit = () => (assistive.value.counterAtLimit ? '' : null);
+    const counterHidden = () => !assistive.value.hasCounter;
+    const counterText = () => assistive.value.counterText;
+
+    const togglePassword = () => {
+      showPassword.value = !showPassword.value;
+      inputRef.value?.focus();
+    };
+
+    return () => html`
       <div class="input-wrapper" part="wrapper">
         <label
           class="label-outside"
           for="${inputId}"
           id="${labelOutsideId}"
           part="label"
-          ref=${labelOutsideRef}
-          hidden></label>
+          ?hidden="${outsideLabelHidden}"
+          >${props.label}</label
+        >
         <div class="field" part="field">
-          <label
-            class="label-inset"
-            for="${inputId}"
-            id="${labelInsetId}"
-            part="label"
-            ref=${labelInsetRef}
-            hidden></label>
+          <label class="label-inset" for="${inputId}" id="${labelInsetId}" part="label" ?hidden="${insetLabelHidden}"
+            >${props.label}</label
+          >
           <div class="input-row" part="input-row">
             <slot name="prefix"></slot>
             <input
               part="input"
               id="${inputId}"
-              ${inputAttrs}
-              :aria-labelledby="${() => (props['label-placement'].value === 'outside' ? labelOutsideId : labelInsetId)}"
-              :aria-describedby="${() => (assistive.value.hasError ? errorId : helperId)}"
-              :aria-errormessage="${() => (assistive.value.hasError ? errorId : null)}"
-              :aria-invalid="${() => String(assistive.value.hasError)}"
-              ref=${inputRef} />
+              :type="${resolvedInputType}"
+              :name="${props.name}"
+              :placeholder="${props.placeholder}"
+              :autocomplete="${props.autocomplete}"
+              :inputmode="${props.inputmode}"
+              :maxlength="${props.maxlength}"
+              :minlength="${props.minlength}"
+              :pattern="${props.pattern}"
+              ?disabled="${props.disabled}"
+              ?readonly="${props.readonly}"
+              ?required="${props.required}"
+              :value="${live(fieldValue)}"
+              :aria-labelledby="${ariaLabelledBy}"
+              :aria-describedby="${ariaDescribedBy}"
+              :aria-errormessage="${ariaErrorMessage}"
+              :aria-invalid="${ariaInvalid}"
+              ref="${inputRef}" />
             <slot name="suffix"></slot>
             <button
               class="pwd-toggle-btn"
               part="pwd-toggle"
               type="button"
-              :aria-label="${() => (showPassword.value ? 'Hide password' : 'Show password')}"
-              :aria-pressed="${() => String(showPassword.value)}"
+              :aria-label="${passwordToggleLabel}"
+              :aria-pressed="${passwordTogglePressed}"
               tabindex="-1"
-              @click="${() => {
-                showPassword.value = !showPassword.value;
-                inputRef.value?.focus();
-              }}">
-              ${() =>
-                showPassword.value
-                  ? html`<bit-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`
-                  : html`<bit-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></bit-icon>`}
+              @click="${togglePassword}">
+              ${passwordToggleIcon}
             </button>
-            <button aria-label="Clear" class="clear-btn" part="clear" tabindex="-1" type="button" @click=${clear}>
+            <button aria-label="Clear" class="clear-btn" part="clear" tabindex="-1" type="button" @click="${clear}">
               <bit-icon aria-hidden="true" name="x" size="12" stroke-width="2.5"></bit-icon>
             </button>
           </div>
         </div>
-        <div class="helper-text" id="${helperId}" part="helper" ?hidden=${() => !assistive.value.showHelper}>
-          ${() => assistive.value.helperText}
-        </div>
-        <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden=${() => !assistive.value.hasError}>
-          ${() => assistive.value.errorText}
-        </div>
+        <div class="helper-text" id="${helperId}" part="helper" ?hidden="${helperHidden}">${helperText}</div>
+        <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">${errorText}</div>
         <div
           class="char-counter"
           part="char-counter"
-          :data-near-limit="${() => (assistive.value.counterNearLimit && !assistive.value.counterAtLimit ? '' : null)}"
-          :data-at-limit="${() => (assistive.value.counterAtLimit ? '' : null)}"
-          ?hidden=${() => !assistive.value.hasCounter}>
-          ${() => assistive.value.counterText}
+          :data-near-limit="${counterNearLimit}"
+          :data-at-limit="${counterAtLimit}"
+          ?hidden="${counterHidden}">
+          ${counterText}
         </div>
       </div>
     `;

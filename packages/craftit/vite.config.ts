@@ -11,7 +11,6 @@ export default defineConfig(
     getConfig(__dirname, {
       entry: {
         controls: resolve(__dirname, 'src/controls/index.ts'),
-        directives: resolve(__dirname, 'src/directives/index.ts'),
         index: resolve(__dirname, 'src/index.ts'),
         observers: resolve(__dirname, 'src/observers/index.ts'),
         testing: resolve(__dirname, 'src/testing/index.ts'),

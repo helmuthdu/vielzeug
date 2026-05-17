@@ -1,4 +1,4 @@
-import { define, computed, html, inject, onMount, ref, syncContextProps } from '@vielzeug/craftit';
+import { define, effect, html, inject, ref, onMounted } from '@vielzeug/craftit';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -71,11 +71,21 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
     size: undefined,
     variant: undefined,
   },
-  setup({ emit, host, props }) {
-    // Inherit size/variant from a parent bit-accordion when present.
-    const accordionCtx = inject(ACCORDION_CTX, undefined);
 
-    syncContextProps(accordionCtx, props, ['size', 'variant']);
+  setup(props, { emit, host }) {
+    // Inherit size/variant from a parent bit-accordion when present.
+    const accordionCtx = inject(ACCORDION_CTX);
+
+    if (accordionCtx) {
+      effect(() => {
+        const size = accordionCtx.size.value;
+        const variant = accordionCtx.variant.value;
+
+        if (size !== undefined) props.size.value = size;
+
+        if (variant !== undefined) props.variant.value = variant;
+      });
+    }
 
     const titleId = 'accordion-item-title';
     const detailsRef = ref<HTMLDetailsElement>();
@@ -94,7 +104,7 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
       }
     };
 
-    onMount(() => {
+    onMounted(() => {
       const details = detailsRef.value;
       const summary = summaryRef.value;
 
@@ -158,30 +168,32 @@ export const ACCORDION_ITEM_TAG = define<BitAccordionItemProps, BitAccordionItem
       };
     });
 
-    const isExpanded = computed(() => Boolean(props.expanded.value));
-    const ariaExpanded = computed(() => String(isExpanded.value));
-    const ariaDisabled = computed(() => (props.disabled.value ? 'true' : 'false'));
-
-    return html` <details part="item" ?open=${isExpanded} ref=${detailsRef}>
-      <summary part="summary" :aria-expanded=${ariaExpanded} :aria-disabled=${ariaDisabled} ref=${summaryRef}>
-        <slot name="prefix"></slot>
-        <div class="header-content" part="header">
-          <span class="title" part="title" id="${titleId}">
-            <slot name="title"></slot>
-          </span>
-          <span class="subtitle" part="subtitle">
-            <slot name="subtitle"></slot>
-          </span>
+    return () =>
+      html` <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
+        <summary
+          part="summary"
+          :aria-expanded="${() => String(props.expanded.value)}"
+          :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
+          ref="${summaryRef}">
+          <slot name="prefix"></slot>
+          <div class="header-content" part="header">
+            <span class="title" part="title" id="${titleId}">
+              <slot name="title"></slot>
+            </span>
+            <span class="subtitle" part="subtitle">
+              <slot name="subtitle"></slot>
+            </span>
+          </div>
+          <slot name="suffix"></slot>
+          <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
+        </summary>
+        <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
+          <div class="content-inner">
+            <slot></slot>
+          </div>
         </div>
-        <slot name="suffix"></slot>
-        <bit-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></bit-icon>
-      </summary>
-      <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
-        <div class="content-inner">
-          <slot></slot>
-        </div>
-      </div>
-    </details>`;
+      </details>`;
   },
+
   styles: [coarsePointerMixin, styles],
 });

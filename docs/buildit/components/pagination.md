@@ -36,7 +36,7 @@ Listen for page changes:
 <script type="module">
   import '@vielzeug/buildit';
 
-  document.getElementById('pager').addEventListener('bit-change', (e) => {
+  document.getElementById('pager').addEventListener('change', (e) => {
     console.log('New page:', e.detail.page);
   });
 </script>
@@ -182,13 +182,13 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 | `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`                 | —              | Active page color                                     |
 | `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost' \| 'glass'` | `'ghost'`      | Visual style of nav buttons                           |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`         | Component size                                        |
-| `label`           | `string`                                                                                  | `'pagination'` | `aria-label` for the nav landmark                     |
+| `label`           | `string`                                                                                  | `'Pagination'` | `aria-label` for the nav landmark                     |
 
 ### Events
 
-| Event        | Detail             | Description                        |
-| ------------ | ------------------ | ---------------------------------- |
-| `bit-change` | `{ page: number }` | Fired when the user selects a page |
+| Event    | Detail             | Description                        |
+| -------- | ------------------ | ---------------------------------- |
+| `change` | `{ page: number }` | Fired when the user selects a page |
 
 ### CSS Custom Properties
 

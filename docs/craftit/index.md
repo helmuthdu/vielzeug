@@ -1,7 +1,9 @@
 ---
-title: Craftit — Web component framework for TypeScript
-description: Functional web component library with signals, typed props, template bindings, and lifecycle helpers.
+title: Craftit — Web component authoring with signals
+description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, controls, observers, and testing utilities.
 ---
+
+<!-- markdownlint-disable MD025 MD033 MD060 -->
 
 <PackageBadges package="craftit" />
 
@@ -9,9 +11,9 @@ description: Functional web component library with signals, typed props, templat
 
 # Craftit
 
-**Craftit** is a functional web component library built on top of `@vielzeug/stateit`. It combines signal-based reactivity with component-focused APIs for templates, lifecycle, props, typed emits, setup-context slots, context, form association, and observers.
+Craftit is a custom-element authoring library built on `@vielzeug/stateit`.
 
-<!-- Search keywords: custom elements framework, reactive templates, web component authoring. -->
+<!-- Search keywords: custom elements authoring, reactive web components, signal-based templates. -->
 
 ## Installation
 
@@ -34,112 +36,96 @@ yarn add @vielzeug/craftit
 ## Quick Start
 
 ```ts
-import { component, define, signal, computed, html, css } from '@vielzeug/craftit';
+import { computed, css, define, html, prop, signal } from '@vielzeug/craftit';
 
-define('my-counter', component({
-  setup() {
+define('my-counter', {
+  props: {
+    label: prop.string('Count'),
+    step: prop.number(1),
+  },
+  setup(props, { host }) {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
 
-    return html`
-      <button @click=${() => count.value++}>Count: ${count}</button>
+    host.class({ 'is-positive': () => count.value > 0 });
+
+    return () => html`
+      <button @click=${() => (count.value += props.step.value)}>${props.label}: ${count}</button>
       <p>Doubled: ${doubled}</p>
     `;
   },
   styles: [
     css`
-      button {
-        padding: 8px 16px;
-        font-size: 1rem;
+      :host {
+        display: inline-grid;
+        gap: 0.5rem;
       }
     `,
   ],
-}));
-```
-
-```html
-<!-- Use anywhere HTML is valid -->
-<my-counter></my-counter>
+});
 ```
 
 ## Why Craftit?
 
-Vanilla Web Components (Custom Elements API) require significant boilerplate for state management, event handling, and cleanup. Craftit adds signals-based reactivity with a minimal, functional API.
+Craftit keeps custom elements functional and signal-driven while still giving you direct control over templates, lifecycle hooks, host bindings, and form-associated behavior.
 
-```ts
-// Before — vanilla Custom Elements
-class MyCounter extends HTMLElement {
-  #count = 0;
-  connectedCallback() {
-    this.innerHTML = '<button>0</button>';
-    this.querySelector('button')?.addEventListener('click', () => {
-      this.#count++;
-      this.querySelector('button')!.textContent = String(this.#count);
-    });
-  }
-}
-customElements.define('my-counter', MyCounter);
+| Feature                    | Craftit                                       | Lit                           | Stencil           |
+| -------------------------- | --------------------------------------------- | ----------------------------- | ----------------- |
+| Bundle size                | <PackageInfo package="craftit" type="size" /> | ~12 kB                        | ~60 kB+ toolchain |
+| Signal-first runtime       | ✅                                            | ❌ (separate signals package) | ❌                |
+| Functional component setup | ✅                                            | Partial                       | ❌                |
+| Typed prop helpers         | ✅                                            | Partial                       | ✅                |
+| Host binding helpers       | ✅                                            | Partial                       | Partial           |
+| Form-associated helpers    | ✅                                            | Manual                        | Partial           |
+| Headless controls package  | ✅                                            | ❌                            | ❌                |
+| Zero dependencies          | ✅                                            | ✅                            | ❌                |
 
-// After — Craftit
-define('my-counter', component({
-  setup() {
-    const count = signal(0);
-    return html`<button @click=${() => count.value++}>${count}</button>`;
-  },
-}));
-```
+**Use Craftit when** you want typed, signal-driven custom elements with minimal runtime overhead and no framework lock-in.
 
-| Feature            | Craftit                                        | Lit          | Stencil           |
-| ------------------ | ---------------------------------------------- | ------------ | ----------------- |
-| Bundle size        | <PackageInfo package="craftit" type="size" /> | ~7 kB        | ~50 kB (compiler) |
-| Signals            | ✅ Built-in                                    | ✅ @lit-labs | ❌                |
-| SSR                | ❌                                             | ✅           | ✅                |
-| Form-associated    | ✅ Built-in                                    | ⚠️ Manual    | ⚠️ Limited        |
-| Context / DI       | ✅ Built-in                                    | ✅ @lit-labs | ✅ @stencil       |
-| Reactive observers | ✅ Core + Controls                             | ❌           | ❌                |
-
-**Use Craftit when** you want signals-based web components with stable core APIs and headless controls for interaction-heavy widgets — without decorators or a compiler step.
-
-**Consider Lit** if you need SSR, a larger community ecosystem, or React/Vue-style architecture with decorator-based components.
-
-**Consider Stencil** if you need a compiler-optimised output targeting multiple framework outputs (React wrappers, Angular wrappers) from a single codebase.
+**Consider Lit or Stencil when** you need their ecosystem-specific tooling, decorators, or compiler-first workflows.
 
 ## Features
 
-- **Fine-grained reactivity** — Re-exports all signals from `@vielzeug/stateit`: `signal()`, `computed()`, `effect()`, `watch()`, `batch()`, `untrack()`, and more
-- **Template literals** — `html\`...\`` for declarative, reactive DOM updates with `:attr`, `@event`, `ref=`, and `.prop` bindings
-- **Styling helper** — `css\`...\`` for component styles used via `component({ styles })`
-- **Lifecycle hooks** — `onMount()`, `onCleanup()`, `onError()`, `handle()`, `watch()`, `onElement()`, and `useOnce()` for component lifecycle control
-- **Props** — top-level `component({ props })`, plus `prop()` for low-level reactive attribute bindings
-- **Slots & Emits** — setup-context `slots` and setup-context `emit` with typed event schemas
-- **Refs** — `ref<T>()` and `refs<T>()` for DOM element references
-- **Form-associated** — `defineField()` for custom form controls with native `ElementInternals` validation
-- **Context / DI** — `provide()`, `inject()`, `createContext()`, and `syncContextProps()` for dependency injection across component trees
-- **Accessibility** — `aria()` for reactive ARIA attributes plus stable ID helpers such as `createId()` from core
-- **Observers** — `resizeObserver()`, `intersectionObserver()`, and `mediaObserver()` from `@vielzeug/craftit/observers`
-- **Directive subpath** — `@vielzeug/craftit/directives` for `when`, `each`, `choose`, `until`, `bind`, `attrs`, and more
-- **Testing subpath** — `@vielzeug/craftit/testing` for `mount`, `fire`, `user`, `waitFor`, and cleanup helpers
-- **Focused entrypoints** — use `@vielzeug/craftit` for stable APIs and focused subpaths (`/controls`, `/observers`, `/directives`, `/testing`) when you want narrower imports
-- **Framework-agnostic** — Pure web components that work in any framework or vanilla HTML
-- **Lightweight** — <PackageInfo package="craftit" type="size" /> gzipped
+- Signal-first runtime with `signal`, `computed`, `watch`, `batch`, and related stateit APIs
+- Functional component authoring via `define(tag, { props, setup, styles, formAssociated })`
+- Props via `prop.*` helpers or raw `PropDef` objects; shared bundles can type against `PropsDef<...>`
+- Setup returns a template function: `return () => html\`...\``
+- Lifecycle hooks: `onMounted()`, `onCleanup()`, `onElement()`, `effect()`
+- Directives: `each`, `classMap`, `styleMap`, `guard`, `when`, `live`, `until`, `raw`
+- Host bindings: `host.attr`, `host.class`, `host.style`, `host.prop`, `host.on`, `host.bind`
+- Form-associated helpers with `defineField()`
+- Headless controls (`@vielzeug/craftit/controls`)
+- Observers (`@vielzeug/craftit/observers`)
+- Testing utilities (`@vielzeug/craftit/testing`)
+
+### Package Entry Points
+
+| Import                        | Purpose                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| `@vielzeug/craftit`           | Core component API, directives, utilities, and stateit re-exports                |
+| `@vielzeug/craftit/controls`  | Headless controls for fields, navigation, overlays, press, sliders, and spinners |
+| `@vielzeug/craftit/observers` | `resizeObserver`, `intersectionObserver`, `mediaObserver`                        |
+| `@vielzeug/craftit/testing`   | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                       |
 
 ## Compatibility
 
-| Environment | Support       |
-| ----------- | ------------- |
-| Browser     | ✅            |
-| Node.js     | ❌ (DOM only) |
-| SSR         | ❌ (DOM only) |
-| Deno        | ❌            |
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅      |
+| Node.js     | ✅      |
+| SSR         | ✅      |
+| Deno        | ✅      |
 
-## Prerequisites
+## Documentation
 
-- Browser runtime with Custom Elements and Shadow DOM support.
-- Client-side rendering environment (Craftit components do not run during SSR).
-- Basic familiarity with signals from `@vielzeug/stateit` for reactive component logic.
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
 
 ## See Also
 
-- [Buildit](/buildit/)
-- [Stateit](/stateit/)
-- [Dragit](/dragit/)
+- [Buildit](../buildit/index.md) for prebuilt accessible components powered by Craftit.
+- [Stateit](../stateit/index.md) for reactive state used inside Craftit components.
+- [Formit](../formit/index.md) for typed form state that integrates with Craftit controls.
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

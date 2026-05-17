@@ -1,6 +1,6 @@
 import { intersectionObserver } from '..';
 // noinspection HtmlUnknownAttribute
-import { html, onMount, ref } from '../../index';
+import { html, onMounted, ref } from '../../index';
 import { mount } from '../../testing';
 
 describe('intersectionObserver()', () => {
@@ -10,11 +10,11 @@ describe('intersectionObserver()', () => {
     await mount(() => {
       const divRef = ref<HTMLDivElement>();
 
-      onMount(() => {
+      onMounted(() => {
         capturedEntry = intersectionObserver(divRef.value!);
       });
 
-      return html`<div ref=${divRef}></div>`;
+      return () => html`<div ref=${divRef}></div>`;
     });
 
     expect(capturedEntry.value).toBeNull();
@@ -38,11 +38,11 @@ describe('intersectionObserver()', () => {
       await mount(() => {
         const divRef = ref<HTMLDivElement>();
 
-        onMount(() => {
+        onMounted(() => {
           capturedEntry = intersectionObserver(divRef.value!);
         });
 
-        return html`<div ref=${divRef}></div>`;
+        return () => html`<div ref=${divRef}></div>`;
       });
 
       const fakeEntry = { intersectionRatio: 1, isIntersecting: true } as IntersectionObserverEntry;
@@ -72,11 +72,11 @@ describe('intersectionObserver()', () => {
       const { destroy } = await mount(() => {
         const divRef = ref<HTMLDivElement>();
 
-        onMount(() => {
+        onMounted(() => {
           intersectionObserver(divRef.value!);
         });
 
-        return html`<div ref=${divRef}></div>`;
+        return () => html`<div ref=${divRef}></div>`;
       });
 
       expect(disconnectSpy).not.toHaveBeenCalled();

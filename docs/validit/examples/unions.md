@@ -3,17 +3,13 @@ title: 'Validit Examples — Unions'
 description: 'Union, intersect, and variant examples with validit.'
 ---
 
-## Union and Variant Examples
+## Union and variant examples
 
-## Problem
+### Problem
 
-Implement union and variant examples in a production-friendly way with `@vielzeug/validit` while keeping setup and cleanup explicit.
+Model polymorphic payloads, IDs that can arrive in multiple formats, and discriminated events without losing runtime validation or output typing.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/validit` installed.
-
-### First-Match Union
+### Runnable Example
 
 ```ts
 import { v } from '@vielzeug/validit';
@@ -22,27 +18,15 @@ const IdSchema = v.union(v.coerce.number().int().positive(), v.string().uuid());
 
 IdSchema.parse('42');
 // => 42 (number) because the first branch succeeds
-```
 
-### Raw Literal Union
-
-```ts
 const RoleSchema = v.union('admin', 'editor', 'viewer');
 RoleSchema.parse('admin');
-```
 
-### Intersections
-
-```ts
 const WithId = v.object({ id: v.number().int().positive() });
 const WithAudit = v.object({ createdAt: v.date() });
 
 const EntitySchema = v.intersect(WithId, WithAudit);
-```
 
-### Discriminated Variant
-
-```ts
 const EventSchema = v.variant('type', {
   user_created: v.object({ userId: v.number().int().positive() }),
   user_deleted: v.object({ userId: v.number().int().positive(), reason: v.string() }),
@@ -50,11 +34,14 @@ const EventSchema = v.variant('type', {
 
 EventSchema.parse({ type: 'user_created', userId: 10 });
 EventSchema.parse({ type: 'user_deleted', userId: 10, reason: 'requested' });
-```
 
-### Native Enum
+const ActionSchema = v.variant('type', {
+  create: v.object({ name: v.string() }),
+  remove: v.object({ id: v.number().int().positive() }),
+});
 
-```ts
+ActionSchema.safeParse({ type: 'create', name: 'A', extra: true }); // fails (strict object mode)
+
 enum Status {
   Draft = 'draft',
   Published = 'published',
@@ -64,18 +51,19 @@ const StatusSchema = v.nativeEnum(Status);
 StatusSchema.parse(Status.Draft);
 ```
 
-## Expected Output
+### Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- `union()` returns the first successful branch result.
+- `intersect()` requires every branch to pass and merges object outputs from successful branches.
+- `variant()` chooses one object branch by discriminator instead of trying every branch.
 
-## Common Pitfalls
+### Common Pitfalls
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
+- Ordering permissive union branches before strict branches.
+- Assuming intersection merges incompatible values automatically.
+- Using `variant` maps where branch values are not object schemas.
 
-## Related Recipes
+### Related
 
 - [API](./api.md)
 - [Async](./async.md)

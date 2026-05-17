@@ -1,11 +1,12 @@
-<div class="badges">
-  <img src="https://img.shields.io/badge/version-1.0.4-blue" alt="Version">
-  <img src="https://img.shields.io/badge/size-4078_B-success" alt="Size">
-</div>
+---
+title: deepMerge / shallowMerge
+description: Deep and shallow object merge examples for Toolkit.
+---
 
-# merge
+Toolkit provides two merge helpers:
 
-The `merge` utility combines multiple objects into a single new object using a variety of configurable strategies.
+- `deepMerge(...items)`: recursively merges nested objects and concatenates arrays.
+- `shallowMerge(...items)`: `Object.assign`-style top-level merge.
 
 ## Source Code
 
@@ -13,86 +14,53 @@ The `merge` utility combines multiple objects into a single new object using a v
 <<< @/../packages/toolkit/src/object/merge.ts
 :::
 
-## Features
-
-- **Isomorphic**: Works in both Browser and Node.js.
-- **Immutable**: Never mutates the source objects; always returns a new object.
-- **Multiple Strategies**: Built-in support for deep, shallow, array-specific, and custom merging.
-- **Type-safe**: Properly merges types and handles multiple input objects.
-
-## API
-
-::: details Type Definitions
-<<< @/../packages/toolkit/src/object/merge.ts#MergeStrategy
-:::
-
-```ts
-function merge<T extends object[]>(strategy: MergeStrategy, ...items: T): any;
-```
-
-### Parameters
-
-- `strategy`: The merging algorithm to use:
-  - `'deep'`: Recursively merges nested objects and arrays (default-like behavior).
-  - `'shallow'`: Performs a shallow merge (similar to `Object.assign`).
-  - `'lastWins'`: Only the last object's value for a given key is kept.
-  - `'arrayConcat'`: Deep merge, but arrays are concatenated.
-  - `'arrayReplace'`: Deep merge, but arrays are replaced by the later value.
-  - `custom function`: A function `(target, source) => mergedValue` for fine-grained control.
-- `...items`: Two or more objects to merge.
-
-### Returns
-
-- A new object containing the merged results.
-
 ## Examples
 
-### Deep vs. Shallow Merge
+### Deep Merge
 
 ```ts
-import { merge } from '@vielzeug/toolkit';
+import { deepMerge } from '@vielzeug/toolkit';
 
-const obj1 = { a: 1, b: { x: 10 } };
-const obj2 = { b: { y: 20 } };
-
-merge('deep', obj1, obj2); // { a: 1, b: { x: 10, y: 20 } }
-merge('shallow', obj1, obj2); // { a: 1, b: { y: 20 } }
-```
-
-### Array Strategies
-
-```ts
-import { merge } from '@vielzeug/toolkit';
-
-const defaults = { tags: ['new'] };
-const overrides = { tags: ['featured'] };
-
-merge('arrayConcat', defaults, overrides); // { tags: ['new', 'featured'] }
-merge('arrayReplace', defaults, overrides); // { tags: ['featured'] }
-```
-
-### Custom Merge Strategy
-
-```ts
-import { merge } from '@vielzeug/toolkit';
-
-const custom = (target, source) => {
-  if (typeof target === 'number' && typeof source === 'number') {
-    return target + source; // Sum numbers instead of replacing
-  }
-  return source;
+const base = {
+  api: { host: 'localhost', port: 8080 },
+  features: ['auth'],
 };
 
-merge(custom, { val: 10 }, { val: 5 }); // { val: 15 }
+const override = {
+  api: { port: 3000 },
+  features: ['metrics'],
+};
+
+const merged = deepMerge(base, override);
+// {
+//   api: { host: 'localhost', port: 3000 },
+//   features: ['auth', 'metrics']
+// }
 ```
 
-## Implementation Notes
+### Shallow Merge
 
-- Throws `TypeError` if fewer than two objects are provided.
-- Circular references in source objects may cause a stack overflow during deep merge.
-- The `deep` strategy treats `Date`, `RegExp`, and other built-in objects as primitives (cloning them but not merging their internals).
+```ts
+import { shallowMerge } from '@vielzeug/toolkit';
+
+const base = {
+  api: { host: 'localhost', port: 8080 },
+  timeout: 1000,
+};
+
+const override = {
+  api: { port: 3000 },
+};
+
+const merged = shallowMerge(base, override);
+// {
+//   api: { port: 3000 },
+//   timeout: 1000
+// }
+```
 
 ## See Also
 
-- [diff](./diff.md): Find the differences between two objects.
-- [prune](./prune.md): Remove empty/null values after merging.
+- [diff](./diff.md): Compare object states.
+- [defaults](./defaults.md): Fill missing values.
+- [path/get](./path.md): Read merged nested values safely.

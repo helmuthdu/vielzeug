@@ -432,11 +432,7 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 
 ```html
 <bit-card elevation="2" padding="lg" style="max-width: 200px; text-align: center;">
-  <bit-text
-    color="primary"
-    variant="heading"
-    size="xl"
-    style="margin-bottom: var(--size-2); display: block;">
+  <bit-text color="primary" variant="heading" size="xl" style="margin-bottom: var(--size-2); display: block;">
     1,234
   </bit-text>
   <bit-text size="sm" color="secondary">Total Users</bit-text>

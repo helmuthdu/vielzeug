@@ -5,13 +5,11 @@ description: 'Explicit Resource Management (`using`) examples for virtualit.'
 
 ## Explicit Resource Management (`using`)
 
-## Problem
+### Problem
 
-Implement explicit resource management (`using`) in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+You create a virtualizer inside a function or block scope and want it destroyed automatically when the block exits — without a try/finally or a manual `destroy()` call.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
+### Solution
 
 ```ts
 import { createVirtualizer } from '@vielzeug/virtualit';
@@ -29,18 +27,14 @@ function renderList(scrollEl: HTMLElement, rows: string[]) {
 } // virt.destroy() is called automatically here
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `using` only triggers `[Symbol.dispose]` when the declared variable goes out of scope. If you pass the virtualizer through a function before the `using` block ends, cleanup still happens at scope exit — not at the call site.
+- TypeScript 5.2+ is required. Without it, the `using` keyword is a syntax error. Check `tsconfig.json` `target` and `lib` before using this pattern.
+- `[Symbol.dispose]` is called synchronously on scope exit. If `destroy()` cancels async scroll animations, those animations may still be running after the `using` block exits.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
 - [Density Toggle (Compact / Comfortable)](./density-toggle-compact-comfortable.md)

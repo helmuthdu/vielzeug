@@ -5,13 +5,11 @@ description: 'Dynamic Form Fields examples for formit.'
 
 ## Dynamic Form Fields
 
-## Problem
+### Problem
 
-Implement dynamic form fields in a production-friendly way with `@vielzeug/formit` while keeping setup and cleanup explicit.
+Users can add or remove repeating entries — such as multiple phone numbers or project links. The number of fields is not known at form creation time, so fields must be added and removed dynamically.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/formit` installed.
+### Solution
 
 Form with dynamically added/removed fields.
 
@@ -59,7 +57,7 @@ function updateMember(index: number, field: keyof TeamMember, value: string) {
 
 // Submit
 async function submitTeam() {
-  await dynamicForm.submit(async (values) => {
+  const result = await dynamicForm.submit(async (values) => {
     const response = await fetch('/api/teams', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -67,21 +65,21 @@ async function submitTeam() {
     });
     return response.json();
   });
+
+  if (!result.ok) {
+    return;
+  }
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Calling `removeField(name)` before reading the field value discards its data. Read the current value first if you need to process it before removal.
+- Generating field names from array indices (`phone_0`, `phone_1`) causes stale validation state when items are reordered. Use stable IDs (e.g., UUIDs) as field keys instead.
+- After `addField()`, the new field's `touched` state is `false`. Validators still run on submit for all fields, including ones the user has never touched — this is intentional but may show errors on fields the user has not seen yet.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Best Practices](./best-practices.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)

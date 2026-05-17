@@ -1,7 +1,9 @@
 ---
-title: I18nit — Internationalization for TypeScript
-description: Type-safe i18n for TypeScript with interpolation, pluralization, async loaders, and Intl formatting helpers.
+title: I18nit — Deterministic localization runtime for TypeScript
+description: Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
 ---
+
+<!-- markdownlint-disable MD025 MD033 MD060 -->
 
 <PackageBadges package="i18nit" />
 
@@ -9,9 +11,9 @@ description: Type-safe i18n for TypeScript with interpolation, pluralization, as
 
 # I18nit
 
-`@vielzeug/i18nit` is a zero-dependency internationalization library with typed keys, nested message trees, fallback chains, and async locale loading.
+`@vielzeug/i18nit` is a small localization runtime for typed translation keys, plural resolution, locale loading, and framework-friendly reactivity.
 
-<!-- Search keywords: localization runtime, translation catalog, i18n message formatting. -->
+<!-- Search keywords: i18n runtime, typed translations, locale fallback, pluralization. -->
 
 ## Installation
 
@@ -35,82 +37,78 @@ yarn add @vielzeug/i18nit
 
 ```ts
 import { createI18n } from '@vielzeug/i18nit';
+import { createFormatter } from '@vielzeug/i18nit/format';
 
 const i18n = createI18n({
-  fallback: 'en',
   locale: 'en',
-  messages: {
-    de: {
-      greeting: 'Hallo, {name}!',
-      inbox: { one: 'Eine Nachricht', other: '{count} Nachrichten' },
-    },
+  fallback: 'en',
+  catalogs: {
     en: {
       greeting: 'Hello, {name}!',
-      inbox: { zero: 'No messages', one: 'One message', other: '{count} messages' },
-      nav: { home: 'Home' },
+      inbox: {
+        zero: 'No messages',
+        one: 'One message',
+        other: '{count} messages',
+      },
     },
+    fr: () => import('./locales/fr.json').then((m) => m.default),
   },
 });
 
-i18n.t('greeting', { name: 'Alice' });
-i18n.t('inbox', { count: 0 });
-i18n.t('inbox', { count: 3 });
+await i18n.preload('fr');
+await i18n.setLocale('fr');
 
-await i18n.switchLocale('de');
-i18n.t('nav.home'); // falls back to en
+const greeting = i18n.t('greeting', { name: 'Alice' });
+const messages = i18n.tp('inbox', 3);
+const fmt = createFormatter(i18n);
+const price = fmt.currency(12.5, 'EUR');
+
+const snapshot = i18n.getSnapshot();
+const unsubscribe = i18n.subscribe(
+  (next) => {
+    console.log(next.locale, next.version);
+  },
+  { immediate: true },
+);
+
+unsubscribe();
+
+i18n.getSupportedLocales();
 ```
 
 ## Why I18nit?
 
-Rolling your own i18n means hard-coded string lookups, no pluralisation, no type safety on translation keys, and no lazy loading for large locale bundles.
+- Minimal API: `t`, `tp`, `preload`, `setLocale`, `register`, `getSnapshot`, `subscribe`, `has`, `getSupportedLocales`
+- Deterministic locale fallback chain resolution
+- Typed leaf and plural branch keys with explicit APIs (`t` and `tp`)
+- Explicit locale source model (static messages or async loaders)
+- Framework-agnostic store primitives for React, Vue, Svelte, Solid, and others
+- Zero dependencies
 
-```ts
-// Before — manual locale map (no type safety, no pluralisation)
-const messages = {
-  en: { greeting: 'Hello, {name}!', items: '{count} items' },
-  de: { greeting: 'Hallo, {name}!' },
-};
-let locale = 'en';
-function t(key: string, vars?: Record<string, unknown>) {
-  let msg = (messages as any)[locale]?.[key] ?? key; // no type safety
-  if (vars) msg = msg.replace(/{(\w+)}/g, (_: string, k: string) => String(vars[k] ?? k));
-  return msg;
-}
+| Feature                           | I18nit                                       | i18next | FormatJS |
+| --------------------------------- | -------------------------------------------- | ------- | -------- |
+| Bundle size                       | <PackageInfo package="i18nit" type="size" /> | ~24 kB  | ~16 kB   |
+| Typed key ergonomics              | ✅                                           | Partial | Partial  |
+| Deterministic fallback chain      | ✅                                           | ✅      | ✅       |
+| Async locale preload              | ✅                                           | ✅      | ✅       |
+| Runtime snapshots + subscriptions | ✅                                           | ❌      | ❌       |
+| External formatter bridge         | ✅ (`@vielzeug/i18nit/format`)               | Partial | ✅       |
+| Framework agnostic                | ✅                                           | ✅      | ✅       |
+| Zero dependencies                 | ✅                                           | ❌      | ❌       |
 
-// After — I18nit
-import { createI18n } from '@vielzeug/i18nit';
-const i18n = createI18n<typeof messages.en>({ locale: 'en', messages });
-i18n.t('greeting', { name: 'Alice' }); // typed key, typed vars
-i18n.t('items', { count: 3 }); // typed + pluralised
-```
+**Use I18nit when** you want a compact, typed runtime with deterministic fallback behavior and framework-agnostic reactive state.
 
-| Feature              | I18nit                                       | i18next    | typesafe-i18n |
-| -------------------- | -------------------------------------------- | ---------- | ------------- |
-| Bundle size          | <PackageInfo package="i18nit" type="size" /> | ~15 kB     | ~1 kB         |
-| Type-safe keys       | ✅                                           | ❌         | ✅            |
-| No code generation   | ✅                                           | ✅         | ❌            |
-| Pluralisation        | ✅ Intl.PluralRules                          | ✅         | ✅            |
-| Formatting helpers   | ✅ Intl-backed                               | ✅ Plugins | ❌            |
-| BCP47 locale cascade | ✅                                           | ✅         | ❌            |
-| Async loaders        | ✅                                           | ✅         | ✅            |
-| Zero dependencies    | ✅                                           | ❌         | ✅            |
-
-**Use I18nit when** you want type-safe translation keys with full TypeScript inference, pluralisation, and Intl-based formatting — without a code generation step.
-
-**Consider i18next** if you need its large plugin ecosystem (react-i18next, backend adapters) or are migrating an existing project.
+**Consider i18next or FormatJS when** you need larger ecosystem plugins, message extraction pipelines, or mature framework-specific integrations.
 
 ## Features
 
-- Type-safe translation keys and namespace scoping
-- Dot-notation lookups with fallback chains
-- Interpolation for nested vars and array tokens
-- Plural messages driven by `Intl.PluralRules`
-- Async loading (`ensureLocale`, `switchLocale`, `registerLoader`, `reload`)
-- Catalog updates (`add`, `replace`) and notification batching (`batch`)
-- Locale-bound and namespace-bound views (`withLocale`, `scope`)
-- Intl formatting helpers (`number`, `date`, `list`, `relative`, `currency`)
-- Diagnostics (`onDiagnostic`) and custom missing-key handling (`onMissing`)
-- Lightweight runtime — <PackageInfo package="i18nit" type="size" /> gzipped, zero dependencies
+- One runtime primitive: `createI18n(options)`
+- Explicit translation methods: `t(leafKey, vars?)` and `tp(branchKey, count, options?)`
+- Explicit locale lifecycle: `register`, `preload`, `setLocale`
+- Reactive model through snapshots: `getSnapshot`, `subscribe`
+- Deterministic fallback chain using active locale plus configured fallback locales
+- Unified missing handling through `onMissing(info)` for both key and interpolation misses
+- Formatting kept separate via `createFormatter(source)` from `@vielzeug/i18nit/format`
 
 ## Compatibility
 
@@ -121,8 +119,16 @@ i18n.t('items', { count: 3 }); // typed + pluralised
 | SSR         | ✅      |
 | Deno        | ✅      |
 
+## Documentation
+
+- [Usage Guide](./usage.md)
+- [API Reference](./api.md)
+- [Examples](./examples.md)
+
 ## See Also
 
-- [Stateit](/stateit/)
-- [Craftit](/craftit/)
-- [Routeit](/routeit/)
+- [Routeit](../routeit/index.md) for locale-aware routes and URL state.
+- [Stateit](../stateit/index.md) for reactive locale and translation state.
+- [Fetchit](../fetchit/index.md) for lazy loading translation catalogs.
+
+<!-- markdownlint-enable MD025 MD033 MD060 -->

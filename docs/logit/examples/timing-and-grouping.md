@@ -5,38 +5,30 @@ description: 'Timing and Grouping examples for logit.'
 
 ## Timing and Grouping
 
-## Problem
+### Problem
 
-Implement timing and grouping in a production-friendly way with `@vielzeug/logit` while keeping setup and cleanup explicit.
+You need to measure how long a code block takes and group the related log entries so they are easy to correlate in output — without sprinkling `Date.now()` calls across the codebase.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/logit` installed.
+### Solution
 
 ```ts
-const result = await Logit.group(
-  'Checkout',
-  async () => {
-    Logit.info('validating cart');
+import { Logit } from '@vielzeug/logit';
 
-    return Logit.time('process-order', () => processOrder(cart));
-  },
-  true,
-);
+const result = await Logit.groupCollapsed('Checkout', async () => {
+  Logit.info('validating cart');
+
+  return Logit.time('process-order', () => processOrder(cart));
+});
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- `console.time()`/`console.timeEnd()` share a global namespace. Two concurrent operations using the same label will interfere. Use unique labels (e.g., include a request ID) per measurement.
+- The timer measures wall-clock time, not CPU time. Event-loop blocking is indistinguishable from a long async wait. Use `performance.now()` for higher-precision measurements.
+- Log grouping is a transport concern. Plain text transports output group entries as flat lines with no visual nesting — only console-based or structured transports render groups.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)

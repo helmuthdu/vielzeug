@@ -161,7 +161,7 @@ describe('bit-checkbox', () => {
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
 
       expect(detail.checked).toBe(true);
-      expect(detail.fieldValue).toBe('on');
+      expect(detail.value).toBe('on');
       expect(detail.originalEvent).toBeDefined();
     });
 

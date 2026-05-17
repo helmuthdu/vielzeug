@@ -1,52 +1,138 @@
 import { type Signal, signal } from '@vielzeug/stateit';
 
 import { setAttr, toKebab } from './internal';
-import { currentRuntime } from './runtime-core';
-import { effect } from './runtime-lifecycle';
+import { currentElementOrThrow, effect } from './runtime';
 
 export type PropOptions<T> = {
-  /** When `true`, removes the host attribute instead of setting it to `""` when value is an empty string. */
-  omit?: boolean;
   parse?: (value: string | null) => T;
+  /** Whether to reflect prop changes to HTML attributes. Default: true.
+   * Set to false only when host.bind() manages the same attribute with derived/computed state. */
   reflect?: boolean;
-  type?: PropType<T>;
 };
 
-export type OptionalKeys<T extends Record<string, unknown>> = {
-  [K in keyof T]-?: Pick<T, K> extends Required<Pick<T, K>> ? never : K;
-}[keyof T];
-
-export type RequiredKeys<T extends Record<string, unknown>> = Exclude<keyof T, OptionalKeys<T>>;
-
-export type PropsInput<T extends Record<string, unknown>> = {
-  [K in RequiredKeys<T>]-?: T[K] | PropDef<T[K]>;
-} & {
-  [K in OptionalKeys<T>]-?: T[K] | PropDef<T[K] | undefined> | undefined;
+export type PropsDef<T extends Record<string, unknown>> = {
+  // Keep default authoring ergonomic: plain `undefined` is a valid default for any prop.
+  [K in keyof Required<T>]: T[K] | undefined | PropDef<T[K] | undefined>;
 };
 
-export type PropDef<T> = PropOptions<T> & { default: T };
+export type PropDef<T> = PropOptions<T> & { readonly default: T };
 export type PropInputDefs = Record<string, unknown | PropDef<unknown>>;
 
-type PropType<T> = T extends string
-  ? StringConstructor
-  : T extends number
-    ? NumberConstructor
-    : T extends boolean
-      ? BooleanConstructor
-      : T extends unknown[]
-        ? ArrayConstructor
-        : ObjectConstructor;
+export const prop = {
+  bool(defaultValue = false): PropDef<boolean> {
+    return {
+      default: defaultValue,
+      parse: (value) => value === '' || value === 'true',
+      reflect: true,
+    };
+  },
+  json<T>(defaultValue: T): PropDef<T> {
+    return {
+      default: defaultValue,
+      parse: (value) => {
+        if (value == null || value === '') return defaultValue;
 
-const PROP_DEF_KEYS = new Set(['default', 'omit', 'parse', 'reflect', 'type']);
-const warnedStructuredReflectProps = new Set<string>();
-
-const isPropDef = (value: unknown): value is PropDef<unknown> => {
-  if (typeof value !== 'object' || value === null || !('default' in value)) return false;
-
-  return Object.keys(value).every((key) => PROP_DEF_KEYS.has(key));
+        try {
+          return JSON.parse(value) as T;
+        } catch {
+          return defaultValue;
+        }
+      },
+      reflect: false,
+    };
+  },
+  number(defaultValue = 0): PropDef<number> {
+    return {
+      default: defaultValue,
+      parse: (value) => (value == null ? defaultValue : Number(value)),
+      reflect: true,
+    };
+  },
+  oneOf<T extends string>(allowed: readonly T[], defaultValue: T): PropDef<T> {
+    return {
+      default: defaultValue,
+      parse: (value) => (value != null && allowed.includes(value as T) ? (value as T) : defaultValue),
+      reflect: true,
+    };
+  },
+  string<T extends string>(defaultValue: T): PropDef<T> {
+    return {
+      default: defaultValue,
+      parse: (value) => (value == null ? defaultValue : (value as T)),
+      reflect: true,
+    };
+  },
 };
 
-export const propRegistry = new WeakMap<object, Map<string, PropMeta<unknown>>>();
+/**
+ * Explicit prop definition factory. Plain objects with `{ default: ... }` are duck-typed as PropDef.
+ * @example
+ * props: {
+ *   label: 'Default Label',
+ *   disabled: { default: false, reflect: true },
+ * }
+ */
+
+const isPropDef = (value: unknown): value is PropDef<unknown> =>
+  typeof value === 'object' && value !== null && 'default' in value;
+
+const isStructuredValue = (value: unknown): boolean =>
+  Array.isArray(value) || (typeof value === 'object' && value !== null);
+
+export function normalizePropDefinition<T>(value: T | PropDef<T>): PropDef<T> {
+  if (isPropDef(value)) {
+    const descriptor = value as PropDef<T>;
+    const reflect = descriptor.reflect ?? true;
+
+    if (reflect && isStructuredValue(descriptor.default)) {
+      throw new Error('Structured prop defaults cannot use reflect:true. Set reflect:false and sync explicitly.');
+    }
+
+    return {
+      ...descriptor,
+      reflect,
+    };
+  }
+
+  if (isStructuredValue(value)) {
+    return {
+      default: value as T,
+      reflect: false,
+    };
+  }
+
+  return {
+    default: value as T,
+    reflect: true,
+  };
+}
+
+export const propRegistry = new WeakMap<HTMLElement, Map<string, PropMeta<unknown>>>();
+
+const reflectingAttrs = new WeakMap<HTMLElement, Set<string>>();
+
+const markReflecting = (el: HTMLElement, name: string): void => {
+  let names = reflectingAttrs.get(el);
+
+  if (!names) {
+    names = new Set<string>();
+    reflectingAttrs.set(el, names);
+  }
+
+  names.add(name);
+};
+
+const unmarkReflecting = (el: HTMLElement, name: string): void => {
+  const names = reflectingAttrs.get(el);
+
+  if (!names) return;
+
+  names.delete(name);
+
+  if (names.size === 0) reflectingAttrs.delete(el);
+};
+
+export const isReflecting = (el: HTMLElement, name: string): boolean => reflectingAttrs.get(el)?.has(name) ?? false;
 
 type PropMeta<T = unknown> = {
   parse: (value: string | null) => T;
@@ -54,29 +140,39 @@ type PropMeta<T = unknown> = {
   signal: Signal<T>;
 };
 
-export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>): Signal<T> => {
-  const rt = currentRuntime();
-  const el = rt.el;
+const parseBoolean = <T>(value: string | null): T => (value === '' || value === 'true') as T;
+const parseNumber = <T>(value: string | null): T => Number(value) as T;
+const parseString = <T>(value: string | null): T => value as unknown as T;
+
+const PARSER_BY_TYPE: Record<string, <T>(value: string | null) => T> = {
+  boolean: parseBoolean,
+  number: parseNumber,
+  string: parseString,
+};
+
+/** Infer attribute parser from default value type. */
+const inferParserFromValue = <T>(defaultValue: T): ((value: string | null) => T) => {
+  return (value: string | null): T => {
+    if (value == null) return defaultValue;
+
+    const parser = PARSER_BY_TYPE[typeof defaultValue];
+
+    return parser ? (parser(value) as T) : (value as unknown as T);
+  };
+};
+
+/** @internal Runtime prop registration (called by createProps) */
+const registerProp = <T>(propName: string, attrName: string, defaultValue: T, options?: PropOptions<T>): Signal<T> => {
+  const el = currentElementOrThrow();
 
   if (!propRegistry.has(el)) propRegistry.set(el, new Map());
 
-  const parse =
-    options?.parse ??
-    ((v: string | null): T => {
-      if (options?.type === Boolean) return (v === '' || v === 'true') as T;
-
-      if (typeof defaultValue === 'boolean') return (v !== null && v !== 'false') as T;
-
-      if (v == null) return defaultValue;
-
-      if (options?.type === Number || typeof defaultValue === 'number') return Number(v) as T;
-
-      return v as unknown as T;
-    });
+  // Infer parser from default value type if not explicitly provided
+  const parse = options?.parse ?? inferParserFromValue<T>(defaultValue);
 
   const s = signal<T>(defaultValue);
-  const hasPreUpgradeProperty = Object.prototype.hasOwnProperty.call(el, name);
-  const preUpgradeValue = hasPreUpgradeProperty ? (el as unknown as Record<string, unknown>)[name] : undefined;
+  const hasPreUpgradeProperty = Object.prototype.hasOwnProperty.call(el, propName);
+  const preUpgradeValue = hasPreUpgradeProperty ? (el as unknown as Record<string, unknown>)[propName] : undefined;
 
   const meta = {
     parse,
@@ -85,15 +181,15 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
   };
 
   if (hasPreUpgradeProperty) {
-    delete (el as unknown as Record<string, unknown>)[name];
+    delete (el as unknown as Record<string, unknown>)[propName];
     s.value = preUpgradeValue as T;
-  } else if (el.hasAttribute(name)) {
-    s.value = parse(el.getAttribute(name)) as T;
+  } else if (el.hasAttribute(attrName)) {
+    s.value = parse(el.getAttribute(attrName)) as T;
   }
 
-  propRegistry.get(el)!.set(name, meta);
+  propRegistry.get(el)!.set(attrName, meta);
 
-  Object.defineProperty(el, name, {
+  Object.defineProperty(el, propName, {
     configurable: true,
     enumerable: true,
     get: () => s.value,
@@ -103,15 +199,21 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
   });
 
   if (options?.reflect ?? true) {
-    const omit = options?.omit ?? false;
-
     effect(() => {
       const v = s.value;
 
-      if (v == null || v === false || (omit && v === '')) {
-        el.removeAttribute(name);
-      } else {
-        setAttr(el, name, v);
+      markReflecting(el, attrName);
+
+      try {
+        if (v == null) {
+          el.removeAttribute(attrName);
+        } else if (typeof v === 'boolean') {
+          el.toggleAttribute(attrName, v);
+        } else {
+          setAttr(el, attrName, v);
+        }
+      } finally {
+        unmarkReflecting(el, attrName);
       }
     });
   }
@@ -119,84 +221,29 @@ export const prop = <T>(name: string, defaultValue: T, options?: PropOptions<T>)
   return s;
 };
 
-type InferPropValue<T> = T extends object
-  ? Exclude<keyof T, keyof PropDef<unknown>> extends never
-    ? T extends PropDef<infer U>
-      ? U
-      : T
-    : T
-  : T;
+export type InferPropValue<T> = T extends PropDef<infer U> ? U : T;
 
 export type InferPropsFromDefs<T extends PropInputDefs> = {
   [K in keyof T]: InferPropValue<T[K]>;
 };
 
-type RefineOptionalPropFromDefault<Value, Def> = undefined extends Value
-  ? undefined extends InferDefaultFromDef<Def>
-    ? Value
-    : Exclude<Value, undefined>
-  : Value;
-
-type InferPropSignalValue<Props extends Record<string, unknown>, Key extends PropertyKey, Def> = Key extends keyof Props
-  ? RefineOptionalPropFromDefault<Props[Key], Def>
-  : InferDefaultFromDef<Def>;
-
-type ResolvePropValue<
-  Props extends Record<string, unknown>,
-  PropDefs extends Record<string, unknown>,
-  Key extends PropertyKey,
-> = Key extends keyof PropDefs
-  ? InferPropSignalValue<Props, Key, PropDefs[Key]>
-  : Key extends keyof Props
-    ? Props[Key]
-    : never;
-
 export type InferPropsSignals<T extends Record<string, unknown>> = {
-  [K in keyof T]: Signal<T[K]>;
+  readonly [K in keyof T]-?: Signal<T[K]>;
 };
 
-export type ComponentProps<T extends Record<string, unknown>> = InferPropsSignals<T>;
-
-export function createProps<D extends PropInputDefs>(defs: D): ComponentProps<InferPropsFromDefs<D>> {
+export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals<InferPropsFromDefs<D>> {
   const props = {} as Record<string, Signal<unknown>>;
-  const tag = currentRuntime().el.localName;
 
   for (const [name, def] of Object.entries(defs)) {
-    const descriptor = isPropDef(def) ? (def as PropDef<unknown>) : { default: def };
-    const hasStructuredDefault =
-      (typeof descriptor.default === 'object' && descriptor.default !== null) || Array.isArray(descriptor.default);
+    // Ensure definition is normalized (should have been done at define-time, but this is a safety measure)
+    const descriptor =
+      typeof def === 'object' && def !== null && 'default' in def
+        ? (def as PropDef<unknown>)
+        : normalizePropDefinition(def);
+    const attrName = toKebab(name);
 
-    if (descriptor.reflect === true && hasStructuredDefault) {
-      const warningKey = `${tag}:${String(name)}`;
-
-      if (!warnedStructuredReflectProps.has(warningKey)) {
-        warnedStructuredReflectProps.add(warningKey);
-        console.warn(
-          `[craftit] props.${warningKey} requested reflect: true for a structured default; reflection is disabled.`,
-        );
-      }
-    }
-
-    const propDef: PropOptions<unknown> = { reflect: !hasStructuredDefault, ...descriptor };
-
-    const signalRef = prop(toKebab(name), descriptor.default, propDef);
-
-    props[name] = signalRef;
+    props[name] = registerProp(name, attrName, descriptor.default, descriptor);
   }
 
-  return props as ComponentProps<InferPropsFromDefs<D>>;
+  return props as InferPropsSignals<InferPropsFromDefs<D>>;
 }
-
-type InferDefaultFromDef<Def> = Def extends PropDef<infer U> ? U : InferPropValue<Def>;
-
-export type InferSignalsFromPropInputs<Props extends Record<string, unknown>, Defs extends Record<string, unknown>> = {
-  [K in keyof Defs]-?: Signal<InferPropSignalValue<Props, K, Defs[K]>>;
-};
-
-export type ResolveComponentProps<Props extends Record<string, unknown>, PropDefs extends PropInputDefs> = [
-  keyof Props,
-] extends [never]
-  ? InferPropsFromDefs<PropDefs>
-  : {
-      [K in keyof Props | keyof PropDefs]: ResolvePropValue<Props, PropDefs, K>;
-    };

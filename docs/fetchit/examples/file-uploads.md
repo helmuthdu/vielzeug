@@ -5,13 +5,11 @@ description: 'File Uploads examples for fetchit.'
 
 ## File Uploads
 
-## Problem
+### Problem
 
-Implement file uploads in a production-friendly way with `@vielzeug/fetchit` while keeping setup and cleanup explicit.
+You need to send one or more files to the server as `multipart/form-data` and report upload progress to the user in real time.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/fetchit` installed.
+### Solution
 
 ```ts
 const api = createApi({ baseUrl: 'https://api.example.com' });
@@ -29,18 +27,14 @@ for (const file of files) batch.append('files', file);
 await api.post('/upload/batch', { body: batch });
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Do not set `Content-Type` manually on a `FormData` request. The browser must include the multipart boundary in the header — setting it manually removes the boundary and breaks server parsing.
+- `e.dataTransfer.files` / `input.files` is a `FileList`, not an array. Always convert with `Array.from()` before iterating.
+- Upload progress events only fire if the server supports chunked reading. Proxies that buffer the full request body report 100% progress immediately, regardless of actual transfer speed.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Authentication](./authentication.md)
 - [CRUD Operations](./crud-operations.md)

@@ -1,4 +1,4 @@
-import { define, effect, html } from '@vielzeug/craftit';
+import { define, html, computed } from '@vielzeug/craftit';
 
 import styles from './grid-item.css?inline';
 
@@ -6,6 +6,8 @@ import styles from './grid-item.css?inline';
 export type BitGridItemProps = {
   /** Align self vertically within the grid cell */
   align?: 'start' | 'center' | 'end' | 'stretch';
+  /** Named grid area to place the item into. */
+  area?: string;
   /** Explicit grid-column value — overrides col-span (e.g. '2 / 5', 'span 3', '1 / -1'). */
   col?: string;
   /** Span N columns. Use 'full' to span all columns (1 / -1). */
@@ -27,6 +29,7 @@ export type BitGridItemProps = {
  *
  * @element bit-grid-item
  *
+ * @attr {string} area - CSS grid-area value for named-area placement
  * @attr {string} col-span - Columns to span: '1'–'12' | 'full'
  * @attr {string} row-span - Rows to span: '1'–'6' | 'full'
  * @attr {string} col - CSS grid-column value (overrides col-span)
@@ -45,49 +48,59 @@ export type BitGridItemProps = {
  * <bit-grid-item col-span="full">Banner</bit-grid-item>
  *
  * @example
+ * <!-- Named area placement -->
+ * <bit-grid-item area="sidebar">Nav</bit-grid-item>
+ *
+ * @example
  * <!-- Explicit placement -->
  * <bit-grid-item col="2 / 5" row="1 / 3">Placed</bit-grid-item>
  */
 export const GRID_ITEM_TAG = define<BitGridItemProps>('bit-grid-item', {
   props: {
     align: undefined,
+    area: '',
     col: '',
     colSpan: undefined,
     justify: undefined,
     row: '',
     rowSpan: undefined,
   },
-  setup({ host, props }) {
-    effect(() => {
+  setup(props, { host }) {
+    const gridColumn = computed(() => {
       const col = props.col.value;
       const span = props.colSpan.value;
 
-      if (col) {
-        host.el.style.setProperty('grid-column', col);
-      } else if (span === 'full') {
-        host.el.style.setProperty('grid-column', '1 / -1');
-      } else if (span) {
-        host.el.style.setProperty('grid-column', `span ${span}`);
-      } else {
-        host.el.style.removeProperty('grid-column');
-      }
+      if (col) return col;
+
+      if (span === 'full') return '1 / -1';
+
+      if (span) return `span ${span}`;
+
+      return '';
     });
-    effect(() => {
+
+    const gridRow = computed(() => {
       const row = props.row.value;
       const span = props.rowSpan.value;
 
-      if (row) {
-        host.el.style.setProperty('grid-row', row);
-      } else if (span === 'full') {
-        host.el.style.setProperty('grid-row', '1 / -1');
-      } else if (span) {
-        host.el.style.setProperty('grid-row', `span ${span}`);
-      } else {
-        host.el.style.removeProperty('grid-row');
-      }
+      if (row) return row;
+
+      if (span === 'full') return '1 / -1';
+
+      if (span) return `span ${span}`;
+
+      return '';
     });
 
-    return html`<slot></slot>`;
+    host.bind({
+      style: {
+        gridArea: props.area,
+        gridColumn,
+        gridRow,
+      },
+    });
+
+    return () => html`<slot></slot>`;
   },
   styles: [styles],
 });

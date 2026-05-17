@@ -71,6 +71,5 @@ function calculate(value: unknown) {
 
 - [isString](./isString.md): Check if value is a string
 - [isPrimitive](./isPrimitive.md): Check if value is a primitive type
-- [isPositive](./isPositive.md): Check if number is positive
-- [isNegative](./isNegative.md): Check if number is negative
+- [is](./is.md): Access grouped checks through `is.number` and related helpers
 - [typeOf](./typeOf.md): Get the type of any value

@@ -64,4 +64,4 @@ sum(orders, (order) => order.total + order.tax); // 330
 ## See Also
 
 - [average](./average.md): Calculate the average of numbers
-- [fold](../array/fold.md): Reduce an array to a single value with a custom combinator.
+- [allocate](./allocate.md): Split totals and verify exact numeric distribution.

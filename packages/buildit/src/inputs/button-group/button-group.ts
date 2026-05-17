@@ -1,55 +1,50 @@
 import { define, createContext, html, provide, type ReadonlySignal } from '@vielzeug/craftit';
 
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
-
-import { type PropBundle, sizableBundle, themableBundle } from '../shared/bundles';
+import { sizableBundle, themableBundle } from '../shared/bundles';
 import styles from './button-group.css?inline';
 
-/** Context provided by bit-button-group to its bit-button children. */
-export type ButtonGroupContext = {
-  color: ReadonlySignal<ThemeColor | undefined>;
-  size: ReadonlySignal<ComponentSize | undefined>;
-  variant: ReadonlySignal<Exclude<VisualVariant, 'glass'> | undefined>;
-};
-/** Injection key for the button-group context. */
-export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext>('ButtonGroupContext');
-
-/** Button group component properties */
+/** Button group properties */
 export type BitButtonGroupProps = {
-  /** Attach buttons together (no gap, rounded only on edges) */
+  /** Join buttons together into a single unit */
   attached?: boolean;
-  /** Button color for all children (propagated) */
-  color?: ThemeColor;
-  /** Make all buttons full width */
+  /** Theme color tint for all child buttons */
+  color?: string;
+  /** Group children span full width */
   fullwidth?: boolean;
-  /** Accessible group label */
+  /** Label for screen readers */
   label?: string;
-  /** Group orientation */
+  /** Layout direction */
   orientation?: 'horizontal' | 'vertical';
-  /** Button size for all children (propagated) */
-  size?: ComponentSize;
-  /** Button variant for all children (propagated) */
-  variant?: Exclude<VisualVariant, 'glass'>;
+  /** Shared size for all child buttons */
+  size?: string;
+  /** Shared visual variant for all child buttons */
+  variant?: string;
 };
 
-// -------------------- Component Definition --------------------
+/** Shared context for button groups */
+export type ButtonGroupContext = {
+  color: ReadonlySignal<string | undefined>;
+  size: ReadonlySignal<string | undefined>;
+  variant: ReadonlySignal<string | undefined>;
+};
+
+export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('BitButtonGroup');
+
 /**
- * A container for grouping buttons with coordinated styling and layout.
+ * A container for grouping related buttons.
+ * Child `bit-button` components automatically inherit the group's color, size, and variant.
  *
  * @element bit-button-group
  *
- * @attr {string} size - Button size: 'sm' | 'md' | 'lg'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost'
- * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} orientation - Group orientation: 'horizontal' | 'vertical'
- * @attr {boolean} attached - Attach buttons together (no gap, rounded only on edges)
- * @attr {boolean} fullwidth - Make all buttons full width
- * @attr {string} label - Accessible group label
+ * @attr {boolean} attached - Join buttons together into a unit
+ * @attr {string} color - Shared color tint
+ * @attr {boolean} fullwidth - Group spans full width
+ * @attr {string} label - Accessible label
+ * @attr {string} orientation - 'horizontal' | 'vertical'
+ * @attr {string} size - Shared size
+ * @attr {string} variant - Shared visual variant
  *
- * @slot - Button elements (bit-button)
- *
- * @cssprop --group-gap - Gap between buttons
- * @cssprop --group-radius - Border radius for edge buttons
+ * @slot - Place bit-button elements here
  *
  * @example
  * ```html
@@ -65,16 +60,16 @@ export const BUTTON_GROUP_TAG = define<BitButtonGroupProps>('bit-button-group', 
     label: undefined,
     orientation: undefined,
     variant: undefined,
-  } satisfies PropBundle<BitButtonGroupProps>,
-  setup({ props }) {
+  },
+  setup(props) {
     provide(BUTTON_GROUP_CTX, {
-      color: props.color,
-      size: props.size,
-      variant: props.variant,
+      color: props.color!,
+      size: props.size!,
+      variant: props.variant!,
     });
 
-    return html`
-      <div class="button-group" part="group" role="group" :aria-label="${() => props.label ?? null}">
+    return () => html`
+      <div class="button-group" part="group" role="group" :aria-label="${props.label}">
         <slot></slot>
       </div>
     `;

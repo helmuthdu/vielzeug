@@ -1,40 +1,29 @@
 ---
-title: 'I18nit Examples — Async Loading and Reload'
-description: 'Async Loading and Reload examples for i18nit.'
+title: 'I18nit Examples — Async Loading'
+description: 'Use dynamic locale sources with preload() and strict setLocale().'
 ---
 
-## Async Loading and Reload
-
-## Problem
-
-Implement async loading and reload in a production-friendly way with `@vielzeug/i18nit` while keeping setup and cleanup explicit.
-
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/i18nit` installed.
+## Async Loading
 
 ```ts
-i18n.registerLoader('ja', () => import('./locales/ja.json'));
+import { createI18n } from '@vielzeug/i18nit';
 
-await i18n.ensureLocale('ja'); // preload only
-await i18n.switchLocale('ja'); // switch after ensure
+const i18n = createI18n({
+  locale: 'en',
+  catalogs: {
+    en: { greeting: 'Hello!' },
+    ja: () => import('./locales/ja.json').then((m) => m.default),
+  },
+});
 
-await i18n.reload('ja'); // force refresh from loader
+await i18n.preload('ja');
+await i18n.setLocale('ja');
+
+i18n.register('ja', { greeting: 'こんにちは' });
 ```
 
-## Expected Output
+## Notes
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
-
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
-
-- [Batched Catalog Updates](./batched-catalog-updates.md)
-- [Diagnostics Hook](./diagnostics-hook.md)
-- [Framework Integration](./framework-integration.md)
+- `preload()` loads a locale without switching.
+- `setLocale()` loads if needed, then switches.
+- `register()` can replace a locale source at runtime.

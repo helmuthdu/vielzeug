@@ -1,3 +1,5 @@
+import type { TtlMs } from './types';
+
 /* -------------------- Duration helpers -------------------- */
 
 /**
@@ -9,36 +11,52 @@
  * ```
  */
 export const ttl = {
-  days: (n: number) => n * 86_400_000,
-  hours: (n: number) => n * 3_600_000,
-  minutes: (n: number) => n * 60_000,
-  ms: (n: number) => n,
-  seconds: (n: number) => n * 1000,
+  days: (n: number) => assertTtlMs(n, 'ttl.days') * 86_400_000,
+  hours: (n: number) => assertTtlMs(n, 'ttl.hours') * 3_600_000,
+  minutes: (n: number) => assertTtlMs(n, 'ttl.minutes') * 60_000,
+  ms: (n: number) => assertTtlMs(n, 'ttl.ms'),
+  seconds: (n: number) => assertTtlMs(n, 'ttl.seconds') * 1000,
 } as const;
 
-/* -------------------- TTL Envelope (storage-layer only) -------------------- */
+/* -------------------- Storage record helpers (storage-layer only) -------------------- */
 
-/** @internal */
-export type Envelope<T> = { __d: 1; exp?: number; v: T };
+/** @internal Envelope used by storage adapters. */
+export type StoredRecord<T> = {
+  e?: number;
+  v: T;
+};
 
-/** @internal */
-export function wrap<T>(value: T, ttl?: number): Envelope<T> {
-  return ttl ? { __d: 1, exp: Date.now() + ttl, v: value } : { __d: 1, v: value };
+function assertTtlMs(ttlMs: number, source: string): TtlMs {
+  if (!Number.isFinite(ttlMs) || ttlMs < 0) {
+    throw new Error(`deposit: ${source} expected a finite non-negative number, received ${String(ttlMs)}`);
+  }
+
+  return ttlMs as TtlMs;
 }
 
 /** @internal */
-export function unwrap<T>(env: Envelope<T>): T | undefined {
-  return env.exp !== undefined && Date.now() >= env.exp ? undefined : env.v;
+export function wrapStored<T>(value: T, ttlMs?: TtlMs): StoredRecord<T> {
+  if (ttlMs === undefined) return { v: value };
+
+  const safeTtlMs = assertTtlMs(ttlMs, 'ttl');
+
+  return { e: Date.now() + safeTtlMs, v: value };
 }
 
 /** @internal */
-export function isEnvelope(value: unknown): value is Envelope<unknown> {
-  return typeof value === 'object' && value !== null && (value as any).__d === 1 && 'v' in value;
+export function unwrapStored<T>(raw: StoredRecord<T>): T | undefined {
+  if (raw.e !== undefined && Date.now() >= raw.e) return undefined;
+
+  return raw.v;
 }
 
 /** @internal */
-export function readEnvelope<T>(raw: unknown): T | undefined {
-  if (!raw || !isEnvelope(raw)) return undefined;
+export function parseStored<T>(raw: unknown): StoredRecord<T> | undefined {
+  if (typeof raw !== 'object' || raw === null || !('v' in raw)) return undefined;
 
-  return unwrap(raw as Envelope<T>);
+  const record = raw as { e?: unknown; v: unknown };
+
+  if (record.e !== undefined && (typeof record.e !== 'number' || !Number.isFinite(record.e))) return undefined;
+
+  return record as StoredRecord<T>;
 }

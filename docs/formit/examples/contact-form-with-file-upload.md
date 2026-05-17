@@ -5,13 +5,11 @@ description: 'Contact Form with File Upload examples for formit.'
 
 ## Contact Form with File Upload
 
-## Problem
+### Problem
 
-Implement contact form with file upload in a production-friendly way with `@vielzeug/formit` while keeping setup and cleanup explicit.
+A contact form collects text fields and a file attachment. The file must be validated client-side (size, type) before being submitted alongside the other fields as `multipart/form-data`.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/formit` installed.
+### Solution
 
 Form with file upload and validation.
 
@@ -56,29 +54,31 @@ function handleFileChange(event: Event) {
 
 // Submit
 async function handleSubmit() {
-  await contactForm.submit(async (values) => {
+  const result = await contactForm.submit(async (values) => {
     // Use toFormData to include the file attachment
     const response = await fetch('/api/contact', {
       method: 'POST',
-      body: form.toFormData(),
+      body: toFormData(contactForm.values()),
     });
     return response.json();
   });
+
+  if (!result.ok) {
+    console.log(result.errors);
+  }
 }
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- Do not set `Content-Type` manually when building a `FormData` request. The browser must include the multipart boundary — overriding the header removes it and breaks server parsing.
+- `file.type` is derived from the file extension and can be spoofed. Client-side MIME validation is a UX aid only — always validate the file on the server.
+- `form.state.isSubmitting` is `false` before `submit()` is called. Checking it during the pre-submit validation phase always returns `false`.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [File Uploads (Fetchit)](/fetchit/examples/file-uploads)
+- [Schema Validation with Validit](/validit/)
 
 - [Best Practices](./best-practices.md)
 - [Dynamic Form Fields](./dynamic-form-fields.md)

@@ -5,13 +5,11 @@ description: 'Grouped List (Headers + Rows) examples for virtualit.'
 
 ## Grouped List (Headers + Rows)
 
-## Problem
+### Problem
 
-Implement grouped list (headers + rows) in a production-friendly way with `@vielzeug/virtualit` while keeping setup and cleanup explicit.
+Your data is organized into named groups, each with a header row followed by its items. The list must render headers and rows in a single virtualized pass, with different heights for each type.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/virtualit` installed.
+### Solution
 
 Flatten groups into a linear renderable list, then pass a per-index estimator to predict header vs. row heights.
 
@@ -39,7 +37,7 @@ const virt = createVirtualizer(scrollEl, {
       const row = flatList[item.index];
       const el = document.createElement('div');
 
-      el.style.cssText = `position:absolute;top:${item.top}px;left:0;right:0;`;
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;`;
 
       if (row.type === 'header') {
         el.className = 'group-header';
@@ -59,18 +57,14 @@ const virt = createVirtualizer(scrollEl, {
 
 ---
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- The `estimateSize` function is called during layout. Avoid expensive per-index lookups inside it — pre-compute header vs. row type into the flat index array during data preparation.
+- If a header renders at the same DOM height as rows but `estimateSize` returns a different value, the layout desynchronizes and rows drift from their expected positions.
+- Mutating the groups array in place without calling `update({ count })` leaves the virtualizer showing the previous item count. Always call `update` after data changes.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Basic Fixed-Height List](./basic-fixed-height-list.md)
 - [Density Toggle (Compact / Comfortable)](./density-toggle-compact-comfortable.md)

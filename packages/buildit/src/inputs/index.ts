@@ -6,8 +6,9 @@ export { CHECKBOX_GROUP_CTX, CHECKBOX_GROUP_TAG } from './checkbox-group/checkbo
 export type { BitCheckboxGroupEvents, BitCheckboxGroupProps } from './checkbox-group/checkbox-group';
 export { CHECKBOX_TAG } from './checkbox/checkbox';
 export type { BitCheckboxEvents, BitCheckboxProps } from './checkbox/checkbox';
-export { COMBOBOX_OPTION_TAG, COMBOBOX_TAG } from './combobox/combobox';
-export type { BitComboboxEvents, BitComboboxOptionProps, BitComboboxProps } from './combobox/combobox';
+export { COMBOBOX_TAG } from './combobox/combobox';
+export type { BitComboboxEvents, BitComboboxProps } from './combobox/combobox';
+export type { BitComboboxOptionProps } from './combobox/combobox.types';
 export { FILE_INPUT_TAG } from './file-input/file-input';
 export type { BitFileInputEvents, BitFileInputProps } from './file-input/file-input';
 export { FORM_TAG } from './form/form';

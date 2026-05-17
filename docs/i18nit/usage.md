@@ -1,178 +1,164 @@
 ---
 title: I18nit — Usage Guide
-description: Messages, interpolation, pluralization, loading, scoping, formatting, and subscriptions for i18nit.
+description: Practical usage patterns for @vielzeug/i18nit.
 ---
-
-# I18nit Usage Guide
-
-::: tip New to i18nit?
-Start with the [Overview](./index.md), then use this page for implementation-level behavior.
-:::
 
 [[toc]]
 
-## Basic Usage
+## Setup
 
 ```ts
 import { createI18n } from '@vielzeug/i18nit';
 
 const i18n = createI18n({
-  fallback: 'en',
   locale: 'en',
-  messages: {
+  fallback: 'en',
+  catalogs: {
     en: {
       greeting: 'Hello, {name}!',
-      nav: { home: 'Home' },
+      inbox: {
+        zero: 'No messages',
+        one: 'One message',
+        other: '{count} messages',
+      },
     },
+    de: () => import('./locales/de.json').then((m) => m.default),
   },
 });
+```
 
+## Translate
+
+```ts
 i18n.t('greeting', { name: 'Alice' });
-i18n.t('nav.home');
+i18n.tp('inbox', 3);
+i18n.tp('position', 2, { ordinal: true });
 ```
 
-## Variable Interpolation
-
-Interpolation supports nested object paths and array tokens.
+## Locale lifecycle
 
 ```ts
+await i18n.preload('de');
+await i18n.setLocale('de');
+
+i18n.register('fr', () => import('./locales/fr.json').then((m) => m.default));
+
+const locales = i18n.getSupportedLocales();
+```
+
+Locale lookup also expands subtags automatically. For example, if the active locale is `en-US`, i18nit checks
+`en-US` and then `en` before moving to explicit fallbacks.
+
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useSyncExternalStore } from 'react';
+import { createI18n } from '@vielzeug/i18nit';
+
 const i18n = createI18n({
   locale: 'en',
-  messages: {
-    en: {
-      count: '{items.length} items',
-      first: 'First: {items[0]}',
-      joinAnd: '{items|and}',
-      profile: 'User: {user.name}',
-      welcome: 'Hello, {name}!',
-    },
-  },
+  catalogs: { en: { greeting: 'Hello, {name}!' }, de: () => import('./de.json').then((m) => m.default) },
 });
 
-i18n.t('welcome', { name: 'Alice' });
-i18n.t('profile', { user: { name: 'Bob' } });
-i18n.t('first', { items: ['a', 'b'] });
-i18n.t('count', { items: ['a', 'b', 'c'] });
-i18n.t('joinAnd', { items: ['A', 'B', 'C'] });
+function useI18nSnapshot() {
+  return useSyncExternalStore(i18n.subscribe, i18n.getSnapshot, i18n.getSnapshot);
+}
+
+function Greeting({ name }: { name: string }) {
+  useI18nSnapshot();
+  return <p>{i18n.t('greeting', { name })}</p>;
+}
 ```
 
-## Pluralisation
+```ts [Vue 3]
+import { shallowRef, onScopeDispose } from 'vue';
+import { createI18n } from '@vielzeug/i18nit';
 
-Plural messages must include `other`; optional forms depend on locale.
-
-```ts
 const i18n = createI18n({
   locale: 'en',
-  messages: {
-    en: {
-      files: { zero: 'No files', one: 'One file', other: '{count} files' },
+  catalogs: { en: { greeting: 'Hello, {name}!' } },
+});
+
+function useI18n() {
+  const snapshot = shallowRef(i18n.getSnapshot());
+  const stop = i18n.subscribe(
+    (s) => {
+      snapshot.value = s;
     },
+    { immediate: true },
+  );
+  onScopeDispose(stop);
+  return snapshot;
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { createI18n } from '@vielzeug/i18nit';
+
+  const i18n = createI18n({
+    locale: 'en',
+    catalogs: { en: { greeting: 'Hello, {name}!' } },
+  });
+
+  let snapshot = i18n.getSnapshot();
+  const stop = i18n.subscribe(
+    (s) => {
+      snapshot = s;
+    },
+    { immediate: true },
+  );
+  onDestroy(() => stop());
+</script>
+
+<p>{i18n.t('greeting', { name: 'Alice' })}</p>
+```
+
+:::
+
+## Working with Other Vielzeug Libraries
+
+### With Routeit
+
+Use Routeit path params or query params as the source of truth for locale selection.
+
+```ts
+import { createI18n } from '@vielzeug/i18nit';
+import { createBrowserHistory, createRouter } from '@vielzeug/routeit';
+
+const i18n = createI18n({ locale: 'en', catalogs: { en: { title: 'Home' }, de: { title: 'Startseite' } } });
+const router = createRouter({ history: createBrowserHistory(), routes: [{ path: '/:locale/home', id: 'home' }] });
+
+router.subscribe(() => {
+  const locale = router.current.params.locale;
+  if (locale) i18n.setLocale(locale);
+});
+```
+
+## Missing handling
+
+```ts
+const strictI18n = createI18n({
+  onMissing(info) {
+    if (info.type === 'var') return `<missing:${info.varName}>`;
+
+    return `[missing:${info.key}]`;
   },
 });
-
-i18n.t('files', { count: 0 });
-i18n.t('files', { count: 1 });
-i18n.t('files', { count: 5 });
 ```
 
-If a plural key is used without `count`, runtime defaults to `0` (with a dev warning).
-
-## Async Loading
-
-Register loaders per locale and load on demand.
-
-```ts
-const i18n = createI18n({
-  locale: 'en',
-  messages: { en: { greeting: 'Hello!' } },
-  loaders: {
-    de: () => import('./locales/de.json'),
-    fr: () => import('./locales/fr.json'),
-  },
-});
-
-await i18n.ensureLocale('de'); // preloads, does not switch locale
-await i18n.switchLocale('de'); // ensures locale, then switches atomically
-
-i18n.registerLoader('ja', () => import('./locales/ja.json'));
-await i18n.switchLocale('ja');
-
-await i18n.reload('de'); // force refresh from loader if registered
-```
-
-Notes:
-
-- `ensureLocale()` is a no-op when the locale catalog is already loaded.
-- `switchLocale(locale)` is strict by default and rejects when no loader/catalog exists.
-- Use `'best-effort'` mode only when you intentionally allow untranslated states.
-- `reload(locale)` throws when no loader is registered.
-
-## Scoping
-
-`scope(ns)` prefixes keys; `withLocale(locale)` binds translation locale without changing active locale.
-
-```ts
-const i18n = createI18n({
-  locale: 'en',
-  messages: {
-    en: {
-      auth: { login: 'Log in', logout: 'Log out' },
-      greeting: 'Hello',
-    },
-    fr: {
-      auth: { login: 'Connexion', logout: 'Déconnexion' },
-      greeting: 'Bonjour',
-    },
-  },
-});
-
-const auth = i18n.scope('auth');
-auth.t('login');
-
-const fr = i18n.withLocale('fr');
-fr.t('greeting');
-fr.scope('auth').t('logout');
-```
-
-## Formatting Helpers
-
-Formatting helpers are locale-aware and backed by Intl APIs.
-
-```ts
-i18n.number(1234.56);
-i18n.currency(99.99, 'USD');
-i18n.date(new Date(), { dateStyle: 'long' });
-i18n.relative(-3, 'day');
-i18n.list(['Alice', 'Bob', 'Charlie']);
-i18n.list(['Alice', 'Bob'], 'or');
-```
-
-## Subscriptions
-
-`subscribe` notifies on locale switches and active-chain catalog updates.
-
-```ts
-const stop = i18n.subscribe(({ locale, reason }) => {
-  console.log(locale, reason); // reason: 'locale-change' | 'catalog-update'
-});
-
-const stopImmediate = i18n.subscribe(({ locale }) => {
-  initUI(locale);
-}, true);
-
-i18n.batch(() => {
-  i18n.add('en', { nav: { about: 'About' } });
-  i18n.add('en', { nav: { contact: 'Contact' } });
-});
-
-stop();
-stopImmediate();
-```
+Without `onMissing`, missing keys return the key string and missing interpolation variables keep their placeholder text.
 
 ## Best Practices
 
-- Type your primary locale and use `createI18n<T>()` for key autocomplete.
-- Use `switchLocale()` for user-triggered locale switches.
-- Use `batch()` around multiple `add()`/`replace()` operations to avoid extra re-renders.
-- Prefer `withLocale()` in SSR or multi-locale rendering pipelines.
-- Use `onDiagnostic` to route loader failures and subscriber errors to observability tooling.
+- Call `preload(locale)` before `setLocale(locale)` to avoid a render with missing translations.
+- Use lazy catalog functions (`() => import('./locales/de.json')`) for locales not needed at startup.
+- Keep translation keys flat or one level deep — deeply nested keys are harder to refactor.
+- Set `fallback` to a locale that has 100% coverage so missing keys degrade gracefully.
+- Register additional locales with `register()` at runtime rather than including them in the initial catalogs.
+- Use `tp()` for pluralizable branch keys and reserve `{count}` for automatic count injection.
+- Use `onMissing` in development to surface untranslated keys early; omit it in production.
+- Share one `i18n` instance per app entry point; avoid creating separate instances per component.

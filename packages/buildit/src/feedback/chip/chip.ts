@@ -149,29 +149,29 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
     checked: {
       default: undefined as BitChipComponentProps['checked'],
       parse: (value: string | null) => (value == null ? undefined : value !== 'false'),
+      reflect: false,
     },
-    color: undefined,
+    color: undefined as BitChipComponentProps['color'],
     'default-checked': false,
     disabled: false,
     label: undefined,
-    mode: 'static',
-    rounded: undefined,
-    size: undefined,
+    mode: 'static' as BitChipMode,
+    rounded: undefined as BitChipComponentProps['rounded'],
+    size: undefined as BitChipComponentProps['size'],
     value: undefined,
-    variant: undefined,
+    variant: undefined as BitChipComponentProps['variant'],
   },
-  setup({ emit, host, props }) {
-    const checkedProp = props.checked;
-    const labelProp = props.label;
+
+  setup(props, { emit, host }) {
     // ============================================
     // State Management
     // ============================================
     // Once a checked prop is provided, treat the chip as controlled for the rest of its lifecycle.
-    const isControlled = signal(checkedProp.value !== undefined);
+    const isControlled = signal(props.checked.value !== undefined);
     // Internal tracking for uncontrolled selectable chips; seeded from default-checked.
     const checkedState = signal(!isControlled.value && props['default-checked'].value);
 
-    watch(checkedProp, (value) => {
+    watch(props.checked, (value) => {
       if (value !== undefined) {
         isControlled.value = true;
       }
@@ -182,14 +182,16 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
       if (props.mode.value !== 'selectable') return false;
 
       if (isControlled.value) {
-        return checkedProp.value ?? false;
+        return props.checked.value ?? false;
       }
 
       return checkedState.value;
     });
 
-    host.bind('attr', {
-      checked: () => (props.mode.value === 'selectable' && isChecked.value ? true : undefined),
+    host.bind({
+      attr: {
+        checked: () => (props.mode.value === 'selectable' && isChecked.value ? true : undefined),
+      },
     });
     // ============================================
     // Event Handlers
@@ -227,22 +229,26 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
       <slot name="icon"></slot>
       <span class="label"><slot></slot></span>
     `;
+
+    const removeBtnLabel = () => {
+      const label = props.label.value || props.value.value;
+
+      return label ? `Remove ${label}` : 'Remove';
+    };
+
     const renderRemoveButton = () => html`
       <button
         class="remove-btn"
         part="remove-btn"
         type="button"
-        :aria-label="${() => {
-          const label = labelProp.value || props.value.value;
-
-          return label ? `Remove ${label}` : 'Remove';
-        }}"
+        :aria-label="${removeBtnLabel}"
         ?hidden="${() => props.mode.value !== 'removable'}"
-        :disabled="${() => props.disabled.value}"
+        :disabled="${props.disabled}"
         @click="${handleRemove}">
         <bit-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></bit-icon>
       </button>
     `;
+
     const renderSelectableChip = () => html`
       <button
         class="chip-btn"
@@ -250,24 +256,27 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
         type="button"
         role="checkbox"
         :aria-checked="${() => String(isChecked.value)}"
-        :aria-label="${() => labelProp.value}"
-        :disabled="${() => props.disabled.value}"
+        :aria-label="${props.label}"
+        :disabled="${props.disabled}"
         @click="${handleSelectableActivate}">
         <span class="chip" part="chip"> ${renderChipContent()} </span>
       </button>
     `;
+
     const renderActionChip = () => html`
       <button
         class="chip-btn"
         part="chip-btn"
         type="button"
-        :aria-label="${() => labelProp.value}"
-        :disabled="${() => props.disabled.value}"
+        :aria-label="${props.label}"
+        :disabled="${props.disabled}"
         @click="${handleActionClick}">
         <span class="chip" part="chip"> ${renderChipContent()} </span>
       </button>
     `;
+
     const renderStaticChip = () => html` <span class="chip" part="chip"> ${renderChipContent()} </span> `;
+
     const renderRemovableChip = () => html`
       <span class="chip" part="chip"> ${renderChipContent()} ${renderRemoveButton()} </span>
     `;
@@ -275,7 +284,7 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
     // ============================================
     // Render
     // ============================================
-    return html`
+    return () => html`
       ${() => {
         const mode = props.mode.value;
 
@@ -289,6 +298,7 @@ export const CHIP_TAG = define<BitChipComponentProps, BitChipEvents>('bit-chip',
       }}
     `;
   },
+  shadow: {},
   styles: [
     colorThemeMixin,
     disabledStateMixin(),

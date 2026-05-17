@@ -5,36 +5,35 @@ description: 'Child Logger Overrides examples for logit.'
 
 ## Child Logger Overrides
 
-## Problem
+### Problem
 
-Implement child logger overrides in a production-friendly way with `@vielzeug/logit` while keeping setup and cleanup explicit.
+A sub-module needs its own log level or namespace without losing the parent's configuration. Creating a child logger via `child()` or `withBindings()` scopes the override without affecting other callers.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/logit` installed.
+### Solution
 
 ```ts
 import { createLogger } from '@vielzeug/logit';
 
 const base = createLogger({ logLevel: 'info', namespace: 'app' });
-const verbose = base.child({ logLevel: 'debug' });
 
+// config override — change level for one path
+const verbose = base.child({ logLevel: 'debug' });
 base.info('base flow');
 verbose.debug('debug details for one path');
+
+// context binding — pin fields to every call
+const reqLog = base.withBindings({ requestId: 'abc-123', userId: 42 });
+reqLog.info('processing'); // emits requestId + userId on every line
+reqLog.warn({ slow: true }, 'query took 2s');
 ```
 
-## Expected Output
+### Pitfalls
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+- `withBindings()` returns a new logger instance — it does not mutate the parent. Subsequent calls on the parent use the original bindings.
+- Overriding the log level on a child via `child({ logLevel })` does not affect the parent. Remote forwarding still uses the child logger's own resolved remote threshold.
+- Passing a mutable object as a binding captures a reference. Subsequent mutations to that object appear in all future log entries from the child logger.
 
-## Common Pitfalls
-
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
 
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)

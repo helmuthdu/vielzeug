@@ -1,6 +1,17 @@
 import { pipe } from '../pipe';
 
 describe('pipe', () => {
+  it('preserves parameter and return types', () => {
+    const parse = (value: string) => Number.parseInt(value, 10);
+    const double = (value: number) => value * 2;
+    const format = (value: number) => `${value}px`;
+
+    const piped = pipe(parse, double, format);
+
+    expectTypeOf(piped).parameters.toEqualTypeOf<[string]>();
+    expectTypeOf(piped).returns.toEqualTypeOf<string>();
+  });
+
   it('should correctly pipe multiple functions', () => {
     const add = (x: number) => x + 2;
     const multiply = (x: number) => x * 3;

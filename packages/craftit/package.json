@@ -27,12 +27,6 @@
       "import": "./dist/observers.js",
       "require": "./dist/observers.cjs"
     },
-    "./directives": {
-      "source": "./src/directives/index.ts",
-      "types": "./dist/directives/index.d.ts",
-      "import": "./dist/directives/index.js",
-      "require": "./dist/directives/index.cjs"
-    },
     "./testing": {
       "source": "./src/testing/index.ts",
       "types": "./dist/testing/index.d.ts",
@@ -59,10 +53,10 @@
     "@vielzeug/stateit": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "jsdom": "^29.0.1",
-    "typescript": "~6.0.2",
-    "vite": "^8.0.3",
-    "vitest": "^4.1.2"
+    "@types/node": "^25.8.0",
+    "jsdom": "^29.1.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.13",
+    "vitest": "^4.1.6"
   }
 }

@@ -1,4 +1,4 @@
-import { flip, positionFloat, shift, size } from '@vielzeug/floatit';
+import { computePosition, flip, shift, size } from '@vielzeug/floatit';
 
 export function createDropdownPositioner(
   getReferenceEl: () => HTMLElement | null,
@@ -13,7 +13,7 @@ export function createDropdownPositioner(
 
     const referenceWidth = ref.getBoundingClientRect().width;
 
-    positionFloat(ref, floating, {
+    const result = computePosition(ref, floating, {
       middleware: [
         flip({ padding }),
         shift({ padding }),
@@ -26,12 +26,12 @@ export function createDropdownPositioner(
       ],
       placement: 'bottom-start',
     });
+
+    floating.style.left = `${result.x}px`;
+    floating.style.top = `${result.y}px`;
   }
 
   return {
-    destroy(): void {
-      // no-op: auto-update lifecycle is owned by createOverlayControl()
-    },
     updatePosition,
   };
 }

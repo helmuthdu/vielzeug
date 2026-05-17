@@ -1,58 +1,30 @@
-import { isSignal, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
+import { computed, isSignal, type ReadonlySignal } from '@vielzeug/stateit';
 
-import type { Directive, HTMLResult } from '../internal';
+import type { HTMLResult } from '../internal';
 
-type TemplateFn<V extends string | HTMLResult = string | HTMLResult> = () => V;
+type MaybeReactive<T> = T | (() => T) | ReadonlySignal<T>;
 
-export type WhenOptions<V extends string | HTMLResult = string | HTMLResult> = {
-  condition: Signal<unknown> | ReadonlySignal<unknown> | (() => unknown) | unknown;
-  else?: TemplateFn<V> | null;
-  then?: TemplateFn<V> | null;
-};
+type WhenRenderable = string | HTMLResult;
 
-const validateWhenOptions = <V extends string | HTMLResult>(options: WhenOptions<V>): void => {
-  if (options.then !== undefined && options.then !== null && typeof options.then !== 'function') {
-    throw new Error('[craftit:when] options.then must be a function when provided.');
-  }
+const resolve = <T>(value: MaybeReactive<T>): T => {
+  if (typeof value === 'function') return (value as () => T)();
 
-  if (options.else !== undefined && options.else !== null && typeof options.else !== 'function') {
-    throw new Error('[craftit:when] options.else must be a function when provided.');
-  }
+  if (isSignal(value)) return value.value;
+
+  return value;
 };
 
 /**
- * Conditionally renders one of two templates based on a condition.
- *
- * - **Signal or getter** — returns a reactive function the engine re-runs automatically.
- * - **Static value** — evaluated once at call time, returns the result directly.
- *
- * @example
- * import { when } from '@vielzeug/craftit/directives';
- *
- * html`${when({ condition: isLoggedIn, then: () => html`<user-panel>`, else: () => html`<login-form>` })}`
- * html`${when({ condition: () => count.value > 0, then: () => html`<span>${count}</span>` })}`
+ * Conditionally renders one of two branches.
  */
-export function when<V extends string | HTMLResult>(options: WhenOptions<V>): Directive | V | string {
-  validateWhenOptions(options);
+export function when(
+  condition: MaybeReactive<boolean>,
+  truthy: () => WhenRenderable,
+  falsy?: () => WhenRenderable,
+): ReadonlySignal<WhenRenderable> {
+  return computed(() => {
+    if (resolve(condition)) return truthy();
 
-  const { condition } = options;
-  const { else: resolvedElse, then: resolvedThen } = options;
-  const renderResolved = (): V | string =>
-    conditionValue(condition) ? (resolvedThen?.() ?? '') : (resolvedElse?.() ?? '');
-
-  if (isSignal(condition) || typeof condition === 'function') {
-    return {
-      render: renderResolved,
-    };
-  }
-
-  return renderResolved();
-}
-
-const conditionValue = (condition: WhenOptions['condition']): unknown => {
-  if (isSignal(condition)) return (condition as ReadonlySignal<unknown>).value;
-
-  if (typeof condition === 'function') return (condition as () => unknown)();
-
-  return condition;
-};
+    return falsy ? falsy() : '';
+  });
+} // Note: when returns HtmlResult (not DirectiveResult)

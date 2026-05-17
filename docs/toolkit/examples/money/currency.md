@@ -17,7 +17,7 @@ Formats a monetary amount as a currency string with proper locale and symbol. Ha
 
 - **Locale-Aware**: Formats according to user's locale preferences
 - **Currency Symbols**: Displays proper currency symbols ($, €, ¥, etc.)
-- **Multiple Styles**: Symbol, code, or name display
+- **Multiple Styles**: Symbol or code display
 - **Auto-Decimals**: Handles 0, 2, or 3 decimal currencies automatically
 - **Type-Safe**: Uses Money type for precision
 - **Isomorphic**: Works in both Browser and Node.js
@@ -39,9 +39,9 @@ function currency(money: Money, options?: CurrencyFormatOptions): string;
   - `currency`: ISO 4217 currency code (e.g., 'USD', 'EUR', 'JPY')
 - `options`: Optional formatting options
   - `locale`: BCP 47 language tag (default: 'en-US')
-  - `style`: Display style – 'symbol', 'code', or 'name' (default: 'symbol')
-  - `minimumFractionDigits`: Minimum decimal places
-  - `maximumFractionDigits`: Maximum decimal places
+  - `style`: Display style – 'symbol' or 'code' (default: 'symbol')
+  - `minimumFractionDigits`: Minimum decimal places (non-negative integer)
+  - `maximumFractionDigits`: Maximum decimal places (non-negative integer)
 
 ### Returns
 
@@ -94,10 +94,6 @@ currency(money, { style: 'symbol' });
 // Currency code
 currency(money, { style: 'code' });
 // 'USD 1,000.00'
-
-// Full name
-currency(money, { style: 'name' });
-// '1,000.00 US dollars'
 ```
 
 ### Zero-Decimal Currencies
@@ -213,7 +209,6 @@ currency(money, {
 ## See Also
 
 - [exchange](../money/exchange.md): Convert between currencies
-- [distribute](../math/distribute.md): Split amounts equally
 
 <style>
 .badges {

@@ -1,6 +1,5 @@
 import { mediaObserver } from '..';
-// noinspection HtmlUnknownAttribute
-import { html, onMount } from '../../index';
+import { onMounted } from '../../index';
 import { mount } from '../../testing';
 
 describe('mediaObserver()', () => {
@@ -13,11 +12,11 @@ describe('mediaObserver()', () => {
 
     try {
       await mount(() => {
-        onMount(() => {
+        onMounted(() => {
           capturedMatches = mediaObserver('(prefers-color-scheme: dark)');
         });
 
-        return html`<div></div>`;
+        return () => '';
       });
 
       expect(capturedMatches.value).toBe(true);
@@ -43,11 +42,11 @@ describe('mediaObserver()', () => {
 
     try {
       await mount(() => {
-        onMount(() => {
+        onMounted(() => {
           capturedMatches = mediaObserver('(max-width: 768px)');
         });
 
-        return html`<div></div>`;
+        return () => '';
       });
 
       expect(capturedMatches.value).toBe(false);
@@ -75,11 +74,11 @@ describe('mediaObserver()', () => {
 
     try {
       const { destroy } = await mount(() => {
-        onMount(() => {
+        onMounted(() => {
           mediaObserver('(prefers-reduced-motion: reduce)');
         });
 
-        return html`<div></div>`;
+        return () => '';
       });
 
       expect(removeEventListenerSpy).not.toHaveBeenCalled();

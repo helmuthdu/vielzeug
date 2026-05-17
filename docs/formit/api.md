@@ -1,525 +1,331 @@
 ---
-title: Formit — API Reference
-description: Complete API reference for the Formit form management library.
+title: Formit - API Reference
+description: Complete API reference for Formit form creation, validation, submission, subscriptions, and helpers.
 ---
-
-# Formit API Reference
 
 [[toc]]
 
 ## API At a Glance
 
-| Symbol          | Purpose                                           | Execution mode | Common gotcha                                           |
-| --------------- | ------------------------------------------------- | -------------- | ------------------------------------------------------- |
-| `createForm()`  | Create form state and field actions               | Sync           | Keep defaultValues shape aligned with submitted payload |
-| `form.submit()` | Run async submit handlers with status transitions | Async          | Return/await async work to preserve submit state        |
-| `form.bind()`   | Bind field state and handlers to inputs           | Sync           | Do not override generated handlers without forwarding   |
+| Symbol                                                                                                                                                                                | Purpose                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `createForm()`                                                                                                                                                                        | Create a typed form controller                                                     |
+| `form.get()` / `form.set()`                                                                                                                                                           | Read/write field values                                                            |
+| `form.field()` / `form.state`                                                                                                                                                         | Read field and form snapshots                                                      |
+| `form.validateAll()` / `form.validateTouched()` / `form.validateFields()` / `form.validateField()`                                                                                    | Run validation for all, touched, selected, or one field                            |
+| `form.submit()`                                                                                                                                                                       | Deterministic submit flow that returns a `SubmitResult`                            |
+| `form.bind()`                                                                                                                                                                         | Vanilla-DOM field binding with live getters and value-based `onChange`             |
+| `form.array()`                                                                                                                                                                        | Array helpers (`append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`) |
+| `form.subscribe()` / `form.subscribeField()`                                                                                                                                          | Synchronous subscriptions                                                          |
+| `form.batch()` / `form.touch()` / `form.untouch()` / `form.touchAll()` / `form.untouchAll()` / `form.setError()` / `form.clearError()` / `form.resetErrors()` / `form.setValidator()` | Explicit mutation and control APIs                                                 |
+| `form.reset()` / `form.replace()` / `form.resetField()` / `form.removeField()`                                                                                                        | Baseline and lifecycle operations                                                  |
+| `schemaValidator()`                                                                                                                                                                   | Adapt a `safeParse` schema into a form validator                                   |
+| `toFormData()`                                                                                                                                                                        | Serialize nested values to `FormData`                                              |
 
-## `createForm(init?)`
+## Package Entry Point
+
+| Entry              | Purpose                                                                 |
+| ------------------ | ----------------------------------------------------------------------- |
+| `@vielzeug/formit` | `createForm`, `schemaValidator`, `toFormData`, `FORM_ERROR`, and types  |
+
+## createForm()
 
 ```ts
 function createForm<TValues extends Record<string, unknown>>(init?: FormOptions<TValues>): Form<TValues>;
 ```
 
-Creates and returns a new form instance. All options are optional.
+Creates a typed form controller.
 
-### `FormOptions`
+### FormOptions
 
 ```ts
-interface FormOptions<TValues> {
-  /** Initial field values. Nested objects are auto-flattened to dot-notation keys. */
-  defaultValues?: Partial<TValues>;
-
-  /** Per-field validators. A field may have one or an array of validators (first failure wins). */
-  validators?: Record<string, FieldValidator | FieldValidator[]>;
-
-  /** Cross-field validator — runs on full validate() and submit() only. */
+interface FormOptions<TValues extends Record<string, unknown>> {
+  defaultValues?: TValues;
+  validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator>>;
   validator?: FormValidator<TValues>;
+  mode?: ValidationMode;
+  bindDefaults?: BindConfig;
 }
+```
+
+- `validators`: field-level validators keyed by typed dot-paths.
+- `validator`: full-form validator returning a string error map.
+- `mode`: default validation behavior used by `bind()`.
+- `bindDefaults`: explicit bind defaults (takes precedence over `mode`).
+
+### schemaValidator()
+
+```ts
+schemaValidator<TValues extends Record<string, unknown>>(schema: SafeParseSchema): FormValidator<TValues>
+```
+
+Use `schemaValidator(schema)` to adapt any `safeParse`-compatible schema and pass it via `validator`:
+
+```ts
+const form = createForm({
+  defaultValues: { email: '' },
+  validator: schemaValidator(mySchema),
+});
 ```
 
 ## Values
 
-### `get(name)`
+### form.get(name)
 
 ```ts
-get<K extends keyof TValues>(name: K): TValues[K]
-get(name: string): unknown
+get<K extends FlatKeyOf<TValues>>(name: K): TypeAtPath<TValues, K>
 ```
 
-Returns the current value for the given field.
+Returns the stored value for a field path. Missing paths return `undefined`. Parent object paths are not materialized as field keys.
 
-### `set(name, value, options?)`
+### form.set(name, value, options?)
 
 ```ts
-set<K extends keyof TValues>(name: K, value: TValues[K], options?: SetOptions): void
-set(name: string, value: unknown, options?: SetOptions): void
+set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void
 ```
-
-Sets the value of a single field.
 
 ```ts
-interface SetOptions {
-  /** If true, mark the field as touched when setting. Default: false */
-  touch?: boolean;
-}
+type SetOptions = {
+  dirty?: boolean; // default: true
+  touched?: boolean; // default: false
+};
 ```
 
-### `patch(entries, options?)`
+Use `dirty: false` to write without dirty tracking.
 
-```ts
-patch(entries: Partial<TValues>, options?: SetOptions): void
-```
-
-Deep partial merge — sets multiple fields at once. Nested objects are merged recursively; sibling keys not present in `entries` are left unchanged.
-
-### `values()`
+### form.values()
 
 ```ts
 values(): TValues
 ```
 
-Returns a snapshot of all current values, reconstructing any nested shape from flattened dot-notation keys.
+Returns the full nested values object.
 
-## Field State
+## State Access
 
-### `field(name)`
+### form.field(name)
 
 ```ts
-field(name: string): FieldState<unknown>
+field<K extends FlatKeyOf<TValues>>(name: K): FieldState<TypeAtPath<TValues, K>>
 ```
 
-Returns a live state snapshot for one field.
-
 ```ts
-interface FieldState<V = unknown> {
+type FieldState<V = unknown> = {
   value: V;
   error: string | undefined;
   touched: boolean;
   dirty: boolean;
-}
+};
 ```
 
-### `getError(name)`
+Returns a frozen snapshot for the field. The reference stays stable until that field changes.
 
-```ts
-getError(name: string): string | undefined
-```
-
-Returns the current error for a specific field without allocating a full `FieldState` snapshot.
-
-### `isFieldDirty(name)`
-
-```ts
-isFieldDirty(name: string): boolean
-```
-
-Returns `true` if the field's current value differs from its baseline value.
-
-### `isFieldTouched(name)`
-
-```ts
-isFieldTouched(name: string): boolean
-```
-
-Returns `true` if the field has been marked as touched.
-
-### `errors`
-
-```ts
-readonly errors: Record<string, string>
-```
-
-All current field errors as a plain object.
-
-### `setError(name, message?)`
-
-```ts
-setError(name: string, message?: string): void
-```
-
-Manually set or clear a single field's error. Omit `message` (or pass `undefined`) to clear.
-
-### `setErrors(nextErrors)`
-
-```ts
-setErrors(nextErrors: Record<string, string>): void
-```
-
-Replace all errors at once with the provided map.
-
-### `clearErrors()`
-
-```ts
-clearErrors(): void
-```
-
-Clears all field errors. Shorthand for `setErrors({})`.
-
-## Touch
-
-### `touch(first, ...rest)`
-
-```ts
-touch(first: string, ...rest: string[]): void
-```
-
-Mark one or more fields as touched.
-
-### `touchAll()`
-
-```ts
-touchAll(): void
-```
-
-Mark every field as touched. Useful before submit to surface all errors to the user.
-
-### `untouch(name)`
-
-```ts
-untouch(name: string): void
-```
-
-Remove the touched state from a single field. Useful in multi-step forms when moving between steps.
-
-### `untouchAll()`
-
-```ts
-untouchAll(): void
-```
-
-Remove the touched state from all fields.
-
-## Array Fields
-
-### `appendField(name, value)`
-
-```ts
-appendField(name: string, value: unknown): void
-```
-
-Appends an item to the end of an array field.
-
-### `removeField(name, index)`
-
-```ts
-removeField(name: string, index: number): void
-```
-
-Removes the item at `index` from an array field.
-
-### `moveField(name, from, to)`
-
-```ts
-moveField(name: string, from: number, to: number): void
-```
-
-Moves an array item from one index to another. Useful for drag-and-drop reordering.
-
-## Validation
-
-### `validateField(name, signal?)`
-
-```ts
-validateField(name: string, signal?: AbortSignal): Promise<string | undefined>
-```
-
-Runs all field-level validators for the given field. Sets `isValidating` while running and stores the result in the error map. Returns the resulting error string, or `undefined` if valid.
-
-### `validate(options?)`
-
-```ts
-validate(options?: ValidateOptions<TValues>): Promise<ValidateResult>
-```
-
-Validates the form and returns a `ValidateResult`.
-
-```ts
-/** Result returned by form.validate(). */
-interface ValidateResult {
-  /** Whether the entire error map is empty after this run. */
-  valid: boolean;
-  /** Full current error map (all fields, not only the ones validated in this run). */
-  errors: Record<string, string>;
-}
-```
-
-```ts
-interface ValidateOptions<TValues extends Record<string, unknown> = Record<string, unknown>> {
-  /** Cancel the validation run. */
-  signal?: AbortSignal;
-  /**
-   * Only validate fields the user has touched.
-   * @remarks Treated as a partial run — the form-level `validator` is NOT run.
-   */
-  onlyTouched?: boolean;
-  /**
-   * Restrict validation to these fields (partial validation).
-   * When supplied, the form-level `validator` is NOT run.
-   * Errors on other fields are left unchanged.
-   * Pass an empty array to validate nothing.
-   */
-  fields?: FlatKeyOf<TValues>[];
-}
-```
-
-| Mode    | `fields` supplied | Form-level validator | Other errors |
-| ------- | ----------------- | -------------------- | ------------ |
-| Full    | No                | Runs                 | Replaced     |
-| Partial | Yes               | Skipped              | Preserved    |
-
-## Submit
-
-### `submit(handler, options?)`
-
-```ts
-submit<R>(
-  handler: (values: TValues) => R | Promise<R>,
-  options?: SubmitOptions,
-): Promise<R>
-```
-
-Validates the form (unless `skipValidation` is set), then calls `handler` with the current values. Returns the handler's result.
-
-```ts
-interface SubmitOptions<TValues extends Record<string, unknown> = Record<string, unknown>> {
-  /** Restrict validation to these fields. */
-  fields?: FlatKeyOf<TValues>[];
-  /** Cancel the operation. */
-  signal?: AbortSignal;
-  /** Skip validation before calling the handler. */
-  skipValidation?: boolean;
-}
-```
-
-**Behaviour:**
-
-1. If `isSubmitting` is already `true`, throws `SubmitError` (double-submit guard).
-2. Sets `isSubmitting = true`, increments `submitCount`.
-3. If `skipValidation` is not set, runs `touchAll()` then validates. Throws `FormValidationError` on failure.
-4. Calls `handler(values)` and awaits the result.
-5. Resets `isSubmitting = false` when done (success or error).
-
-## Bind
-
-### `bind(name, config?)`
-
-```ts
-bind(name: string, config?: BindConfig): BindResult
-```
-
-Returns a memoized live descriptor for wiring a field to a DOM input or framework component. The `value`, `error`, `touched`, and `dirty` properties are getters — they read the current value fresh each time. Same arguments always return the same object.
-
-```ts
-interface BindResult<V = unknown, K extends string = string> {
-  readonly name: K;
-  onBlur(): void;
-  onChange(event: unknown): void;
-  readonly value: V;
-  readonly error: string | undefined;
-  readonly touched: boolean;
-  readonly dirty: boolean;
-}
-```
-
-```ts
-interface BindConfig {
-  /**
-   * Custom extractor for the value from a change event.
-   * Default: `(e) => (e.target as HTMLInputElement).value`
-   */
-  valueExtractor?: (event: unknown) => unknown;
-  /** Whether to call `touch(name)` on blur. Default: true */
-  touchOnBlur?: boolean;
-  /** Whether to call `validateField(name)` on blur. Default: false */
-  validateOnBlur?: boolean;
-  /** Whether to call `validateField(name)` on every change. Default: false */
-  validateOnChange?: boolean;
-}
-```
-
-## Reset
-
-### `reset(newValues?)`
-
-```ts
-reset(newValues?: Partial<TValues>): void
-```
-
-Resets the entire form. If `newValues` is supplied, it is deeply merged in as both the new current values and the new baseline for dirty tracking. If omitted, the form reverts to the original `defaultValues`.
-
-Clears all errors, touched flags, and dirty state.
-
-### `resetField(name)`
-
-```ts
-resetField(name: string): void
-```
-
-Resets a single field to its `defaultValues` value. Clears its error, touched flag, and dirty state without affecting the rest of the form.
-
-## State
-
-### `state`
+### form.state
 
 ```ts
 readonly state: FormState
 ```
 
-Returns a snapshot of the complete form state. A new snapshot object is created each time a field changes.
-
 ```ts
-interface FormState<TValues extends Record<string, unknown> = Record<string, unknown>> {
-  isValid: boolean;
-  isDirty: boolean;
-  isTouched: boolean;
-  isValidating: boolean;
-  isSubmitting: boolean;
-  submitCount: number;
+type FormState = {
   errors: Record<string, string>;
-  /** Flat dot-notation keys of all fields that currently differ from their baseline value. */
-  dirtyFields: FlatKeyOf<TValues>[];
-}
+  isDirty: boolean;
+  isSubmitting: boolean;
+  isTouched: boolean;
+  isValid: boolean;
+  isValidating: boolean;
+  submitCount: number;
+};
 ```
 
-### Individual getters
+Returns a frozen form snapshot. The reference stays stable between mutations and changes only when form state changes.
 
-| Getter         | Type                     | Description                                         |
-| -------------- | ------------------------ | --------------------------------------------------- |
-| `isValid`      | `boolean`                | No errors currently present                         |
-| `isDirty`      | `boolean`                | At least one field differs from its default         |
-| `isTouched`    | `boolean`                | At least one field has been touched                 |
-| `isValidating` | `boolean`                | A `validateField` or `validate` call is in progress |
-| `isSubmitting` | `boolean`                | A `submit` handler is running                       |
-| `submitCount`  | `number`                 | Number of times `submit` has been called            |
-| `errors`       | `Record<string, string>` | All current field errors                            |
-| `disposed`     | `boolean`                | Whether `dispose()` has been called                 |
+## Error and Touched Management
+
+```ts
+setError(name: ErrorKeyOf<TValues>, message: string): void
+clearError(name: ErrorKeyOf<TValues>): void
+resetErrors(errors?: Partial<Record<ErrorKeyOf<TValues>, string | undefined>>): void
+setValidator(name: FlatKeyOf<TValues>, validator?: FieldValidator): void
+touch(name: FlatKeyOf<TValues>): void
+untouch(name: FlatKeyOf<TValues>): void
+touchAll(): void
+untouchAll(): void
+```
+
+- `setError(name, message)` sets one field error (message is required).
+- `clearError(name)` removes one field error.
+- `resetErrors(...)` replaces the full error map.
+- `setValidator(name, validator)` adds, replaces, or removes a field validator.
+- `touch(name)` marks one field touched.
+- `untouch(name)` clears one field's touched state.
+- `touchAll()` marks all known fields touched.
+- `untouchAll()` clears touched state for all known fields.
+
+## Validation
+
+```ts
+validateAll(signal?: AbortSignal): Promise<ValidateResult>
+validateTouched(signal?: AbortSignal): Promise<ValidateResult>
+validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>
+validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>
+```
+
+```ts
+type ValidateResult = {
+  valid: boolean;
+  errors: Record<string, string>;
+};
+```
+
+Validation modes:
+
+- `validateAll()` runs full validation.
+- `validateTouched()` validates touched fields only.
+- `validateFields(['email', 'password'])` validates selected fields only.
+
+`errors` always reflects the current full error map after the validation run.
+
+## submit()
+
+```ts
+submit<R>(
+  handler: (values: TValues) => R | Promise<R>,
+): Promise<SubmitResult<R>>
+```
+
+Submit behavior:
+
+- marks all known fields touched
+- runs full validation
+- if invalid: returns `{ ok: false, type: 'validation', errors }`
+- if valid: returns `{ ok: true, value }`
+- if a submit is already in progress: returns `{ ok: false, type: 'concurrent' }`
 
 ## Subscriptions
 
-### `subscribe(listener, options?)`
-
 ```ts
-subscribe(listener: (state: FormState) => void, options?: { immediate?: boolean }): Unsubscribe
-```
-
-Registers a callback that fires with the latest `FormState` snapshot whenever any field changes. Returns an unsubscribe function. The callback fires immediately on registration unless `immediate: false` is set.
-
-```ts
-type Unsubscribe = () => void;
-```
-
-### `watch(name, listener, options?)`
-
-```ts
-watch(
-  name: string,
-  listener: (state: FieldState) => void,
-  options?: { immediate?: boolean },
+subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe
+subscribeField<K extends FlatKeyOf<TValues>>(
+  name: K,
+  listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
+  options?: SubscribeOptions,
 ): Unsubscribe
 ```
 
-Registers a callback that fires with the latest `FieldState` snapshot whenever **only that field** changes. More efficient than `subscribe` when you only care about one field. Fires immediately on registration unless `immediate: false` is set.
+```ts
+type SubscribeOptions = { sync?: boolean };
+type Unsubscribe = () => void;
+```
+
+Pass `{ sync: true }` for an immediate snapshot callback.
+
+Subscriptions otherwise fire synchronously when the form mutates.
+
+Because `state`/`field` snapshots are stable between mutations, these subscriptions integrate naturally with external-store/reactivity patterns such as React `useSyncExternalStore`, Vue `shallowRef`, and the Svelte store protocol.
+
+```ts
+bind<K extends FlatKeyOf<TValues>>(name: K, config?: BindConfig): BindResult<TypeAtPath<TValues, K>>
+```
+
+```ts
+type BindConfig = {
+  touchOnBlur?: boolean;
+  validateOnBlur?: boolean;
+  validateOnChange?: boolean;
+  validateOnTouch?: boolean;
+};
+
+type BindResult<V = unknown> = {
+  readonly value: V;
+  readonly error: string | undefined;
+  readonly touched: boolean;
+  readonly dirty: boolean;
+  onBlur(): void;
+  onChange(value: V): void;
+};
+```
+
+`bind()` is a convenience helper for vanilla DOM usage. In component frameworks, prefer `subscribe()` or `subscribeField()` plus explicit `get`, `field`, `set`, and `touch` calls so rendering stays reactive.
+
+## Arrays
+
+```ts
+array(name: FlatKeyOf<TValues>): ArrayField
+```
+
+```ts
+type ArrayField = {
+  append(value: unknown): void;
+  prepend(value: unknown): void;
+  insert(index: number, value: unknown): void;
+  remove(index: number): void;
+  move(from: number, to: number): void;
+  swap(a: number, b: number): void;
+  replace(index: number, value: unknown): void;
+};
+```
+
+## Reset, Replace, and Remove
+
+```ts
+reset(): void
+replace(newValues: TValues): void
+resetField(name: FlatKeyOf<TValues>): void
+removeField(name: FlatKeyOf<TValues>): void
+```
+
+## Validation Mode
+
+```ts
+type ValidationMode = 'onSubmit' | 'onBlur' | 'onChange' | 'onTouched';
+```
+
+| Mode                   | Validates on blur | Validates on change | Notes                                            |
+| ---------------------- | ----------------- | ------------------- | ------------------------------------------------ |
+| `'onSubmit'` (default) | no                | no                  | validates during submit/explicit validation only |
+| `'onBlur'`             | yes               | no                  | validates when a field blurs                     |
+| `'onChange'`           | no                | yes                 | validates after every change                     |
+| `'onTouched'`          | yes               | after touch         | validates on blur first, then on change          |
 
 ## Lifecycle
 
-### `dispose()`
-
 ```ts
 dispose(): void
+readonly disposed: boolean
 ```
 
-Aborts all in-flight validators, removes all subscribers, and marks the form as `disposed`. A disposed form will not accept further changes.
-
-## Error Classes
-
-### `FormValidationError`
-
-Thrown by `submit()` when validation fails.
-
-```ts
-class FormValidationError extends Error {
-  readonly type = 'validation';
-  /** All field errors at the time of failure */
-  readonly errors: Record<string, string>;
-}
-```
-
-### `SubmitError`
-
-Thrown by `submit()` when called while the form is already submitting.
-
-```ts
-class SubmitError extends Error {
-  readonly type = 'submit';
-}
-```
+After `dispose()`, mutating APIs throw.
 
 ## Standalone Utilities
 
-### `toFormData(values)`
-
 ```ts
-function toFormData(values: Record<string, unknown>): FormData;
+toFormData(values: Record<string, unknown>): FormData
 ```
 
-Converts a plain values object into a `FormData` instance. `File` and `Blob` values are appended as-is. `null` and `undefined` values are omitted. All other values are converted to strings via `.toString()`.
-
-The same functionality is available as an instance method (`form.toFormData()`) which uses the current `form.values()` snapshot.
-
-### `fromSchema(schema)`
+## SubmitResult
 
 ```ts
-function fromSchema<TValues>(schema: SafeParseSchema): Pick<FormOptions<TValues>, 'validator'>;
+type SubmitResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; type: 'validation'; errors: Record<string, string> }
+  | { ok: false; type: 'concurrent' };
 ```
 
-Adapts any `safeParse`-compatible schema (Zod, Valibot, or custom) as a form-level validator. Returns `{ validator: ... }` which you spread into `createForm()` options.
-
-```ts
-/** Structural type for any safeParse-compatible schema. */
-interface SafeParseSchema {
-  safeParse(
-    data: unknown,
-  ): { success: true } | { success: false; error: { issues: { path: (string | number)[]; message: string }[] } };
-}
-```
-
-```ts
-import { z } from 'zod';
-const schema = z.object({ email: z.string().email(), age: z.number().min(18) });
-
-const form = createForm({
-  defaultValues: { email: '', age: 0 },
-  ...fromSchema(schema),
-});
-```
+`submit()` always resolves — it never throws for validation failures or concurrent calls. Narrow the result with `ok` and `type`.
 
 ## Exported Types
 
-```ts
-// Instance
-export type { Form }; // Full form interface
-export type { FormOptions }; // createForm() init options
-export type { FormState }; // Snapshot from form.state / subscribe
+Common exported types:
 
-// Field
-export type { FieldState }; // Snapshot from form.field() / watch()
-export type { BindResult }; // Returned by form.bind()
-
-// Validators
-export type { FieldValidator }; // (value: V, signal: AbortSignal) => string | undefined | Promise<...>
-export type { FormValidator }; // (values: TValues, signal: AbortSignal) => Record<string, string> | Promise<...>
-export type { SafeParseSchema }; // Structural type for safeParse-compatible schemas
-
-// Operation results and options
-export type { ValidateResult };
-export type { ValidateOptions };
-export type { SetOptions };
-export type { SubmitOptions };
-export type { BindConfig };
-
-// Utility types
-export type { FlatKeyOf }; // Recursive dot-notation key union of a TValues shape
-export type { TypeAtPath }; // Value type at a dot-notation path
-export type { Unsubscribe }; // () => void
-```
+- `Form<TValues>`
+- `FormOptions<TValues>`
+- `FormState`
+- `FieldState<V>`
+- `BindConfig` and `BindResult<V>`
+- `ValidateResult`
+- `SubmitResult<T>`
+- `FORM_ERROR`
+- `ValidationMode`
+- `SetOptions`
+- `FlatKeyOf<TValues>` and `TypeAtPath<TValues, K>`

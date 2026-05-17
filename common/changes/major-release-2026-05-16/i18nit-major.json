@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/i18nit",
+      "comment": "Release a new major version with v2.2/v3 i18n API restructuring, improved message and pluralization handling, and breaking interface updates.",
+      "type": "major"
+    }
+  ],
+  "packageName": "@vielzeug/i18nit"
+}

@@ -5,7 +5,7 @@
 
 # assert
 
-The `assert` utility validates conditions during runtime. If a condition (or any condition in a list) is false, it throws a customizable error. It features advanced debugging options, support for various error types, and a "bypass" mode for soft warnings.
+The `assert` utility validates conditions during runtime. If a condition (or any condition in a list) is false, it throws a customizable error. It supports advanced debugging options and custom error types.
 
 ## Source Code
 
@@ -19,7 +19,6 @@ The `assert` utility validates conditions during runtime. If a condition (or any
 - **Multiple Conditions**: Pass a single boolean or an array of conditions.
 - **Customizable Errors**: Specify the error message and the Error class to throw (e.g., `TypeError`).
 - **Debugging Info**: Attach metadata to errors for easier troubleshooting.
-- **Soft Assertions**: Use `bypass` mode to log warnings instead of throwing.
 
 ## API
 
@@ -30,7 +29,6 @@ function assert(
   options?: {
     type?: ErrorConstructor;
     args?: Record<string, any>;
-    bypass?: boolean;
   },
 ): void;
 ```
@@ -42,7 +40,6 @@ function assert(
 - `options`: Optional configuration:
   - `type`: The constructor of the error to throw (defaults to `Error`).
   - `args`: An object containing variables or state to include in the error details.
-  - `bypass`: If `true`, logs a warning to the console instead of throwing an exception.
 
 ### Returns
 
@@ -72,23 +69,12 @@ function process(data: any) {
 }
 ```
 
-### Soft Assertion (Bypass)
-
-```ts
-import { assert } from '@vielzeug/toolkit';
-
-// Logs warning instead of crashing the app
-assert(isLoaded, 'Not loaded yet, continuing anyway...', { bypass: true });
-```
-
 ## Implementation Notes
 
 - If an array of conditions is provided, it returns `true` only if **every** item is truthy.
-- In `bypass` mode, it uses `console.warn` to log the failure.
 - Performance is optimized for minimal overhead when assertions pass.
 
 ## See Also
 
-- [assertParams](./assertParams.md): Validate function arguments against types.
-- [attempt](./attempt.md): Safely execute logic and ignore errors.
+- [attempt](../async/attempt.md): Execute async logic with retry + timeout semantics.
 - [isDefined](../typed/isDefined.md): Common check used within assertions.

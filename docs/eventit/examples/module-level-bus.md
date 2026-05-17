@@ -5,13 +5,11 @@ description: 'Module-level bus examples for eventit.'
 
 ## Module-level bus
 
-## Problem
+### Problem
 
-Implement module-level bus in a production-friendly way with `@vielzeug/eventit` while keeping setup and cleanup explicit.
+Multiple modules need to communicate through typed events without passing a bus instance through function arguments or a DI container. A module-level singleton gives every importer access to the same bus.
 
-## Runnable Example
-
-The snippet below is copy-paste runnable in a TypeScript project with `@vielzeug/eventit` installed.
+### Solution
 
 Define a shared bus as a module singleton. Any module can import it to publish or subscribe.
 
@@ -37,19 +35,16 @@ appBus.on('user:login', ({ userId }) => loadCart(userId));
 appBus.on('user:logout', clearCart);
 ```
 
-## Expected Output
 
-- The example runs without type errors in a standard TypeScript setup.
-- The main flow produces the behavior described in the recipe title.
+### Pitfalls
 
-## Common Pitfalls
+- A module-level bus is a singleton. Calling `dispose()` in a component's teardown disposes it for all modules that imported it. Only dispose when the application shuts down.
+- Circular imports between modules that both import the same bus can cause the bus to be `undefined` during initialization. Keep the bus in a leaf module with no dependencies on the importing modules.
+- The TypeScript event map is erased at runtime. Emitting a misspelled event name does not throw — it simply fires with no listeners. Use the type parameter to catch these at compile time.
 
-- Forgetting cleanup/dispose calls can leak listeners or stale state.
-- Skipping explicit typing can hide integration issues until runtime.
-- Not handling error branches makes examples harder to adapt safely.
-
-## Related Recipes
+### Related
+- [Shared Module Store (Stateit)](/stateit/examples/pattern-shared-module-store)
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
 - [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](./framework-integration.md)
+- [Framework Integration](../usage.md#framework-integration)

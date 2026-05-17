@@ -73,6 +73,122 @@ Add the `collapsible` attribute to show the collapse toggle button. Items will a
 
 </ComponentPreview>
 
+## Responsive App Shell (Desktop / Tablet / Mobile)
+
+Use two breakpoints to get the full three-state behavior:
+
+- Desktop: full sidebar
+- Tablet: compact/collapsed sidebar (`responsive`)
+- Mobile: bottom navigation + drawer (`bottom-nav-at`), usually opened from a navbar hamburger
+
+<ComponentPreview>
+
+```html
+<div class="sidebar-shell-preview">
+  <style>
+    .sidebar-shell-preview {
+      position: relative;
+      height: 460px;
+      overflow: hidden;
+      border: 1px solid var(--color-contrast-200);
+      border-radius: var(--rounded-lg);
+    }
+
+    .sidebar-shell-preview .shell-body {
+      position: relative;
+      height: calc(100% - var(--size-14));
+      overflow: hidden;
+    }
+
+    .sidebar-shell-preview .shell-grid {
+      height: 100%;
+      --grid-cols: auto minmax(0, 1fr);
+    }
+
+    .sidebar-shell-preview .shell-grid > bit-grid-item {
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .sidebar-shell-preview .shell-sidebar {
+      min-height: 0;
+    }
+
+    .sidebar-shell-preview .shell-content {
+      min-width: 0;
+      min-height: 0;
+      padding: var(--size-4);
+      overflow: auto;
+    }
+  </style>
+
+  <bit-navbar sticky breakpoint="(max-width: 640px)" mobile-sidebar="#docs-shell-sidebar" label="Workspace navigation">
+    <span slot="logo" style="font-weight: var(--font-semibold);">Workspace</span>
+    <bit-navbar-item slot="start" href="#" active>Dashboard</bit-navbar-item>
+    <bit-navbar-item href="#">Projects</bit-navbar-item>
+    <bit-navbar-item href="#">Reports</bit-navbar-item>
+    <bit-navbar-item slot="end" href="#">Account</bit-navbar-item>
+  </bit-navbar>
+
+  <div class="shell-body">
+    <bit-grid class="shell-grid" areas="'sidebar main'" fullwidth gap="none">
+      <bit-grid-item area="sidebar">
+        <bit-sidebar
+          id="docs-shell-sidebar"
+          class="shell-sidebar"
+          container-breakpoints
+          collapsible
+          label="Workspace sidebar"
+          responsive="(max-width: 1200px)"
+          bottom-nav-at="(max-width: 640px)">
+          <bit-icon slot="logo" name="rocket" size="20"></bit-icon>
+          <span slot="header">Workspace</span>
+
+          <bit-sidebar-item href="#" active>
+            <bit-icon slot="icon" name="layout-dashboard" size="18"></bit-icon>
+            Dashboard
+          </bit-sidebar-item>
+          <bit-sidebar-item href="#">
+            <bit-icon slot="icon" name="folder" size="18"></bit-icon>
+            Projects
+          </bit-sidebar-item>
+          <bit-sidebar-item href="#">
+            <bit-icon slot="icon" name="bar-chart-3" size="18"></bit-icon>
+            Reports
+          </bit-sidebar-item>
+
+          <bit-sidebar-group label="Admin" collapsible>
+            <bit-sidebar-item href="#">
+              <bit-icon slot="icon" name="users" size="18"></bit-icon>
+              Team
+            </bit-sidebar-item>
+            <bit-sidebar-item href="#">
+              <bit-icon slot="icon" name="settings" size="18"></bit-icon>
+              Settings
+            </bit-sidebar-item>
+          </bit-sidebar-group>
+        </bit-sidebar>
+      </bit-grid-item>
+
+      <bit-grid-item area="main" class="shell-content">
+        <bit-text>
+          Resize preview width: desktop uses full sidebar, tablet collapses, and mobile turns sidebar into bottom tabs.
+          The navbar hamburger opens the mobile drawer.
+        </bit-text>
+      </bit-grid-item>
+    </bit-grid>
+  </div>
+</div>
+```
+
+</ComponentPreview>
+
+### Integration Notes
+
+- Bottom navigation tabs are derived from direct `bit-sidebar-item` children only.
+- `bit-sidebar-group` content remains available in the drawer opened by `openMobile()` or a linked `bit-navbar mobile-sidebar` trigger.
+- Use `responsive` for tablet compact mode and `bottom-nav-at` for mobile bottom-nav mode.
+
 ## Groups
 
 Use `bit-sidebar-group` to organize items into labelled sections. Add the `collapsible` attribute to allow toggling the group open/closed.
@@ -113,7 +229,8 @@ Set `default-open="false"` for uncontrolled groups that start collapsed, or pass
     </bit-sidebar-group>
   </bit-sidebar>
   <main style="grid-area: main; padding: var(--size-4);">Content area</main>
-</bit-grid>
+  </bit-grid>
+  </div>
 ```
 
 </ComponentPreview>
@@ -307,6 +424,11 @@ const sidebar = document.querySelector('bit-sidebar');
 sidebar.setCollapsed(true); // collapse to icon-only
 sidebar.setCollapsed(false); // expand to full width
 sidebar.toggle(); // toggle between states
+
+// bottom-nav mode drawer controls
+sidebar.openMobile();
+sidebar.closeMobile();
+sidebar.toggleMobile();
 ```
 
 ## Events
@@ -318,12 +440,20 @@ sidebar.addEventListener('collapsed-change', (e) => {
   console.log('Collapsed:', e.detail.collapsed, 'source:', e.detail.source);
 });
 
+sidebar.addEventListener('mobile-open-change', (e) => {
+  console.log('Mobile drawer open:', e.detail.open, 'source:', e.detail.source);
+});
+
 const group = document.querySelector('bit-sidebar-group[collapsible]');
 
 group.addEventListener('toggle', (e) => {
   console.log('Group open:', e.detail.open);
 });
 ```
+
+## Related Components
+
+- [Navbar](./navbar.md)
 
 ## CSS Customization
 
@@ -353,13 +483,15 @@ bit-sidebar-item {
 
 ### `bit-sidebar` Attributes
 
-| Attribute     | Type      | Default                | Description                                              |
-| ------------- | --------- | ---------------------- | -------------------------------------------------------- |
-| `collapsed`   | `boolean` | —                      | Controlled collapsed state                               |
-| `default-collapsed` | `boolean` | `false`          | Initial collapsed state in uncontrolled mode             |
-| `collapsible` | `boolean` | `false`                | Shows the collapse/expand toggle button in the header    |
-| `variant`     | `string`  | —                      | Visual variant: `'floating'` \| `'inset'`               |
-| `label`       | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                    |
+| Attribute           | Type      | Default                | Description                                                  |
+| ------------------- | --------- | ---------------------- | ------------------------------------------------------------ |
+| `collapsed`         | `boolean` | —                      | Controlled collapsed state                                   |
+| `default-collapsed` | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                 |
+| `collapsible`       | `boolean` | `false`                | Shows the collapse/expand toggle button in the header        |
+| `responsive`        | `string`  | —                      | Media query that enables compact (collapsed) sidebar mode    |
+| `bottom-nav-at`     | `string`  | —                      | Media query that switches to mobile bottom-nav + drawer mode |
+| `variant`           | `string`  | —                      | Visual variant: `'floating'` \| `'inset'`                    |
+| `label`             | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                        |
 
 ### `bit-sidebar` Slots
 
@@ -372,16 +504,20 @@ bit-sidebar-item {
 
 ### `bit-sidebar` Events
 
-| Event      | Detail      | Description                      |
-| ---------- | ----------- | -------------------------------- |
-| `collapsed-change` | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested |
+| Event                | Detail                                                              | Description                                         |
+| -------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
+| `collapsed-change`   | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested     |
+| `mobile-open-change` | `{ open: boolean; source: 'toggle' \| 'responsive' \| 'api' }`      | Fired when the bottom-nav drawer open state changes |
 
 ### `bit-sidebar` Methods
 
-| Method       | Description                         |
-| ------------ | ----------------------------------- |
-| `setCollapsed(next)` | Set collapsed state             |
-| `toggle()`   | Toggle between collapsed / expanded |
+| Method               | Description                         |
+| -------------------- | ----------------------------------- |
+| `setCollapsed(next)` | Set collapsed state                 |
+| `toggle()`           | Toggle between collapsed / expanded |
+| `openMobile()`       | Open the bottom-nav drawer          |
+| `closeMobile()`      | Close the bottom-nav drawer         |
+| `toggleMobile()`     | Toggle the bottom-nav drawer        |
 
 ### `bit-sidebar` CSS Custom Properties
 
@@ -396,12 +532,12 @@ bit-sidebar-item {
 
 ### `bit-sidebar-group` Attributes
 
-| Attribute     | Type      | Default | Description                                                  |
-| ------------- | --------- | ------- | ------------------------------------------------------------ |
-| `label`       | `string`  | `''`    | Visible group label text                                     |
-| `collapsible` | `boolean` | `false` | Adds a toggle button to collapse/expand the group's items    |
-| `default-open` | `boolean` | `true` | Initial open state for uncontrolled collapsible groups       |
-| `open`        | `boolean` | —       | Controlled group open state                                  |
+| Attribute      | Type      | Default | Description                                               |
+| -------------- | --------- | ------- | --------------------------------------------------------- |
+| `label`        | `string`  | `''`    | Visible group label text                                  |
+| `collapsible`  | `boolean` | `false` | Adds a toggle button to collapse/expand the group's items |
+| `default-open` | `boolean` | `true`  | Initial open state for uncontrolled collapsible groups    |
+| `open`         | `boolean` | —       | Controlled group open state                               |
 
 ### `bit-sidebar-group` Slots
 
@@ -420,13 +556,13 @@ bit-sidebar-item {
 
 ### `bit-sidebar-item` Attributes
 
-| Attribute  | Type      | Default | Description                                                              |
-| ---------- | --------- | ------- | ------------------------------------------------------------------------ |
-| `href`     | `string`  | —       | URL — renders an `<a>` when set, otherwise a `<button>`                  |
-| `active`   | `boolean` | `false` | Marks the item as the current page (`aria-current="page"`)               |
-| `disabled` | `boolean` | `false` | Disables the item and forces button rendering |
-| `rel`      | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)                     |
-| `target`   | `string`  | —       | `target` attribute on the inner `<a>` (link items only)                  |
+| Attribute  | Type      | Default | Description                                                |
+| ---------- | --------- | ------- | ---------------------------------------------------------- |
+| `href`     | `string`  | —       | URL — renders an `<a>` when set, otherwise a `<button>`    |
+| `active`   | `boolean` | `false` | Marks the item as the current page (`aria-current="page"`) |
+| `disabled` | `boolean` | `false` | Disables the item and forces button rendering              |
+| `rel`      | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)       |
+| `target`   | `string`  | —       | `target` attribute on the inner `<a>` (link items only)    |
 
 ### `bit-sidebar-item` Slots
 

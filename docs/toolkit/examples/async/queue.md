@@ -110,5 +110,4 @@ for (const operation of operations) {
 
 ## Related
 
-- [pool](./pool.md) – Generic promise pooling
 - [parallel](./parallel.md) – Array processing with concurrency

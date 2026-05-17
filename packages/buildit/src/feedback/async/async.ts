@@ -1,5 +1,4 @@
-import { define, html, onMount, signal } from '@vielzeug/craftit';
-import { choose, when } from '@vielzeug/craftit/directives';
+import { define, prop, html, signal, type Signal, onMounted, when } from '@vielzeug/craftit';
 
 import '../../content/icon/icon';
 import { reducedMotionMixin } from '../../styles';
@@ -13,56 +12,38 @@ export type BitAsyncEvents = {
 };
 
 export type BitAsyncProps = {
-  /** Description shown below the empty label in the default empty state */
   'empty-description'?: string;
-  /** Descriptive label for the empty state, shown when no custom `empty` slot is provided */
   'empty-label'?: string;
-  /** Detailed error text shown below the error label in the default error state */
   'error-description'?: string;
-  /** Descriptive label for the error state, shown when no custom `error` slot is provided */
   'error-label'?: string;
-  /** Whether to show the retry button in the default error state */
   retryable?: boolean;
-  /**
-   * Current data-fetch status.
-   * - `idle`    — not yet started; renders nothing
-   * - `loading` — shows the `loading` slot (or a default skeleton stack)
-   * - `empty`   — shows the `empty` slot (or a built-in empty-state illustration)
-   * - `error`   — shows the `error` slot (or a built-in error state with optional retry)
-   * - `success` — shows the default slot (the actual content)
-   */
-  status: AsyncStatus;
+  status?: AsyncStatus;
 };
 
 /**
- * A composable wrapper that renders the correct UI for each async data-fetch status.
- * Drives `aria-live` and `aria-busy` automatically so screen readers stay informed.
+ * A container for handling asynchronous states (loading, empty, error, success).
+ * Simplifies data fetching UI by providing consistent fallbacks.
  *
  * @element bit-async
  *
- * @attr {string} status - Data status: 'idle' | 'loading' | 'empty' | 'error' | 'success'
- * @attr {string} empty-label - Heading for the default empty state
- * @attr {string} empty-description - Description for the default empty state
- * @attr {string} error-label - Heading for the default error state
- * @attr {string} error-description - Description for the default error state
- * @attr {boolean} retryable - Show a retry button in the default error state
+ * @attr {string} status - current state: 'idle' | 'loading' | 'empty' | 'error' | 'success' (default: 'success')
+ * @attr {boolean} retryable - show retry button in error state (default: false)
+ * @attr {string} empty-label - title for empty state (default: 'No content yet')
+ * @attr {string} empty-description - optional text for empty state
+ * @attr {string} error-label - title for error state (default: 'Something went wrong')
+ * @attr {string} error-description - optional text for error state
  *
- * @fires retry - Emitted when the retry button is clicked
+ * @slot - default content shown in 'success' state
+ * @slot loading - custom loading UI (overrides default skeletons)
+ * @slot empty - custom empty UI (overrides default icon/label)
+ * @slot error - custom error UI (overrides default icon/label)
  *
- * @slot - Shown when `status="success"` (default)
- * @slot loading - Shown when `status="loading"` (defaults to skeleton stack)
- * @slot empty - Shown when `status="empty"` (defaults to built-in illustration)
- * @slot error - Shown when `status="error"` (defaults to built-in error view)
- *
- * @cssprop --async-color - Icon/text color for default empty/error states
- * @cssprop --async-icon-size - Icon size in default states (default: var(--size-12))
- * @cssprop --async-gap - Gap between elements in default states (default: var(--size-3))
+ * @fires retry - when the retry button is clicked
  *
  * @example
  * ```html
- * <!-- Simple usage — let buildit handle empty and error UI -->
- * <bit-async status="loading" empty-label="No results" error-label="Failed to load" retryable>
- *   <my-data-table></my-data-table>
+ * <bit-async status=${status} @retry=${fetchData}>
+ *   <ul>...list items...</ul>
  * </bit-async>
  *
  * <!-- Custom empty slot -->
@@ -81,10 +62,9 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
     'error-description': undefined,
     'error-label': 'Something went wrong',
     retryable: false,
-    // Default to success so slotted content is visible without extra wiring.
-    status: 'success',
+    status: prop.oneOf(['idle', 'loading', 'empty', 'error', 'success'] as const, 'success'),
   },
-  setup({ emit, host, props }) {
+  setup(props, { emit, host }) {
     const hasLoadingSlot = signal(false);
     const hasEmptySlot = signal(false);
     const hasErrorSlot = signal(false);
@@ -99,7 +79,7 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
 
     updateNamedSlotPresence();
 
-    onMount(() => {
+    const mount = () => {
       updateNamedSlotPresence();
 
       const observer = new MutationObserver(() => updateNamedSlotPresence());
@@ -107,20 +87,19 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       observer.observe(host.el, { attributeFilter: ['slot'], attributes: true, childList: true, subtree: true });
 
       return () => observer.disconnect();
-    });
+    };
 
     // Keep host accessibility state in sync with async status.
-    host.bind('attr', {
-      ariaBusy: () => (props.status.value === 'loading' ? 'true' : 'false'),
-      ariaLabel: () => (props.status.value === 'loading' ? 'Loading…' : null),
-      ariaLive: () => (props.status.value === 'error' ? 'assertive' : 'polite'),
+    host.bind({
+      attr: {
+        ariaBusy: () => (props.status!.value === 'loading' ? 'true' : 'false'),
+        ariaLabel: () => (props.status!.value === 'loading' ? 'Loading…' : null),
+        ariaLive: () => (props.status!.value === 'error' ? 'assertive' : 'polite'),
+      },
     });
 
-    const renderText = (className: 'title' | 'description', text: { value: string | undefined }) =>
-      when({
-        condition: () => !!text.value,
-        then: () => html`<p class="${className}">${() => text.value}</p>`,
-      });
+    const renderText = (className: 'title' | 'description', text: Signal<string | undefined> | undefined) => () =>
+      text?.value ? html`<p class="${className}">${text}</p>` : '';
 
     const renderDefaultState = ({
       action,
@@ -131,9 +110,9 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       stateClass,
     }: {
       action?: () => unknown;
-      description: { value: string | undefined };
+      description: Signal<string | undefined> | undefined;
       icon: string;
-      label: { value: string | undefined };
+      label: Signal<string | undefined> | undefined;
       role: 'alert' | 'status';
       stateClass: 'empty-state' | 'error-state';
     }) => html`
@@ -159,78 +138,75 @@ export const ASYNC_TAG = define<BitAsyncProps, BitAsyncEvents>('bit-async', {
       </div>
     `;
 
-    return html`${choose({
-      cases: [
-        ['idle', () => html`<div class="region" role="presentation"></div>`],
+    const renderByStatus = () => {
+      const status = props.status!.value;
 
-        [
-          'loading',
-          () => html`
-            <div class="region" role="status">
-              ${when({
-                condition: () => hasLoadingSlot.value,
-                else: renderLoadingFallback,
-                then: () => html`<slot name="loading"></slot>`,
-              })}
-            </div>
-          `,
-        ],
+      if (status === 'idle') {
+        return html`<div class="region" role="presentation"></div>`;
+      }
 
-        [
-          'empty',
-          () => html`
-            <div class="region">
-              ${when({
-                condition: () => hasEmptySlot.value,
-                else: () =>
-                  renderDefaultState({
-                    description: props['empty-description'],
-                    icon: 'inbox',
-                    label: props['empty-label'],
-                    role: 'status',
-                    stateClass: 'empty-state',
-                  }),
-                then: () => html`<slot name="empty"></slot>`,
-              })}
-            </div>
-          `,
-        ],
+      if (status === 'loading') {
+        return html`
+          <div class="region" role="status">
+            ${when(hasLoadingSlot, () => html`<slot name="loading"></slot>`, renderLoadingFallback)}
+          </div>
+        `;
+      }
 
-        [
-          'error',
-          () => html`
-            <div class="region">
-              ${when({
-                condition: () => hasErrorSlot.value,
-                else: () =>
-                  renderDefaultState({
-                    action: () =>
-                      when({
-                        condition: () => props.retryable.value,
-                        then: () => html`
-                          <button class="retry-btn" type="button" @click=${() => emit('retry')}>
-                            <bit-icon name="refresh-cw" size="1em" stroke-width="2" aria-hidden="true"></bit-icon>
-                            Try again
-                          </button>
-                        `,
-                      }),
-                    description: props['error-description'],
-                    icon: 'triangle-alert',
-                    label: props['error-label'],
-                    role: 'alert',
-                    stateClass: 'error-state',
-                  }),
-                then: () => html`<slot name="error"></slot>`,
-              })}
-            </div>
-          `,
-        ],
+      if (status === 'empty') {
+        return html`
+          <div class="region">
+            ${when(
+              hasEmptySlot,
+              () => html`<slot name="empty"></slot>`,
+              () =>
+                renderDefaultState({
+                  description: props['empty-description'],
+                  icon: 'inbox',
+                  label: props['empty-label'],
+                  role: 'status',
+                  stateClass: 'empty-state',
+                }),
+            )}
+          </div>
+        `;
+      }
 
-        ['success', renderSuccess],
-      ],
-      fallback: renderSuccess,
-      value: props.status,
-    })}`;
+      if (status === 'error') {
+        return html`
+          <div class="region">
+            ${when(
+              hasErrorSlot,
+              () => html`<slot name="error"></slot>`,
+              () =>
+                renderDefaultState({
+                  action: () =>
+                    when(
+                      () => Boolean(props.retryable!.value),
+                      () => html`
+                        <button class="retry-btn" type="button" @click=${() => emit('retry')}>
+                          <bit-icon name="refresh-cw" size="1em" stroke-width="2" aria-hidden="true"></bit-icon>
+                          Try again
+                        </button>
+                      `,
+                    ),
+                  description: props['error-description'],
+                  icon: 'triangle-alert',
+                  label: props['error-label'],
+                  role: 'alert',
+                  stateClass: 'error-state',
+                }),
+            )}
+          </div>
+        `;
+      }
+
+      return renderSuccess();
+    };
+
+    onMounted(mount);
+
+    return () => html`${() => renderByStatus()}`;
   },
   styles: [reducedMotionMixin, componentStyles],
 });

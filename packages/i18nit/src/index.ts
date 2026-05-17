@@ -1,29 +1,22 @@
-/** @vielzeug/i18nit — Lightweight, type-safe i18n library. */
+/** @vielzeug/i18nit — Lightweight, type-safe i18n runtime. */
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 export type {
-  BoundI18n,
-  DeepPartialMessages,
-  DiagnosticEvent,
+  AnyKey,
   I18n,
   I18nOptions,
+  I18nSnapshot,
   Loader,
   Locale,
-  LocaleChangeEvent,
-  LocaleChangeListener,
-  LocaleChangeReason,
+  LocaleSource,
+  MessageBranchKeys,
+  MessageLeafKeys,
   Messages,
-  MessageValue,
-  NamespaceKeys,
-  PluralForm,
-  PluralKeys,
-  PluralMessages,
-  SwitchMode,
-  TranslationKey,
-  TranslationKeyParam,
+  MissingInfo,
+  PluralTranslateOptions,
+  SupportedLocalesOptions,
+  SubscribeOptions,
+  TranslateVars,
   Unsubscribe,
-  Vars,
 } from './types';
 
-// ─── Instance & factory ───────────────────────────────────────────────────────
 export { createI18n } from './i18n';

@@ -4,6 +4,8 @@ import { type Fixture, mount, user } from '@vielzeug/craftit/testing';
 describe('bit-combobox', () => {
   let fixture: Fixture<HTMLElement>;
 
+  type ComboboxHost = HTMLElement & { value?: string };
+
   beforeAll(async () => {
     await (() => import('./combobox'))();
   });
@@ -70,7 +72,7 @@ describe('bit-combobox', () => {
       expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('escape');
     });
 
-    it('emits programmatic open reason when Enter opens a closed combobox', async () => {
+    it('emits trigger open reason when Enter opens a closed combobox', async () => {
       fixture = await mount('bit-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
@@ -85,7 +87,7 @@ describe('bit-combobox', () => {
       await user.press(input, 'Enter');
       await fixture.flush();
 
-      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('programmatic');
+      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
     });
 
     it('emits outside-click close reason when clicking away from the popup', async () => {
@@ -187,9 +189,118 @@ describe('bit-combobox', () => {
 
       expect(options.length).toBe(3);
     });
+
+    it('keeps selected value and visible input text after reopen + escape close', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      await fixture.flush();
+
+      expect(input.value).toBe('United States');
+      expect((fixture.element as ComboboxHost).value).toBe('us');
+
+      await user.click(input);
+      await fixture.flush();
+      await user.press(input, 'Escape');
+      await fixture.flush();
+
+      expect((fixture.element as ComboboxHost).value).toBe('us');
+      expect(input.value).toBe('United States');
+    });
+
+    it('keeps selected value and visible input text after reopen + outside click close', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      await fixture.flush();
+
+      await user.click(input);
+      await fixture.flush();
+
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.flush();
+
+      expect((fixture.element as ComboboxHost).value).toBe('us');
+      expect(input.value).toBe('United States');
+    });
+
+    it('keeps previous selection when typing without committing a new option', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      await fixture.flush();
+
+      expect((fixture.element as ComboboxHost).value).toBe('us');
+
+      await user.click(input);
+      await fixture.flush();
+      await user.type(input, 'Ger');
+      await fixture.flush();
+
+      expect((fixture.element as ComboboxHost).value).toBe('us');
+
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await fixture.flush();
+
+      expect((fixture.element as ComboboxHost).value).toBe('us');
+      expect(input.value).toBe('United States');
+    });
   });
 
   describe('Accessibility', () => {
+    it('uses inset label placement by default', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+
+      const insetLabel = fixture.query<HTMLElement>('.label-inset');
+      const outsideLabel = fixture.query<HTMLElement>('.label-outside');
+
+      expect(insetLabel?.hidden).toBe(false);
+      expect(outsideLabel?.hidden).toBe(true);
+    });
+
+    it('shows outside label when label-placement is outside', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country', 'label-placement': 'outside' },
+        html: optionsHtml,
+      });
+
+      const insetLabel = fixture.query<HTMLElement>('.label-inset');
+      const outsideLabel = fixture.query<HTMLElement>('.label-outside');
+
+      expect(insetLabel?.hidden).toBe(true);
+      expect(outsideLabel?.hidden).toBe(false);
+    });
+
     it('uses proper combobox and listbox roles', async () => {
       fixture = await mount('bit-combobox', {
         attrs: { label: 'Country' },
@@ -298,6 +409,69 @@ describe('bit-combobox', () => {
 
       expect(optionTexts.some((text) => text.includes('Germany'))).toBe(true);
       expect(optionTexts.some((text) => text.includes('United States'))).toBe(false);
+    });
+
+    it('shrinks list height when search narrows results', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: `
+          <bit-combobox-option value="us">United States</bit-combobox-option>
+          <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
+          <bit-combobox-option value="de">Germany</bit-combobox-option>
+          <bit-combobox-option value="ca">Canada</bit-combobox-option>
+          <bit-combobox-option value="jp">Japan</bit-combobox-option>
+          <bit-combobox-option value="br">Brazil</bit-combobox-option>
+        `,
+      });
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const listbox = fixture.query<HTMLElement>('[role="listbox"]')!;
+      const initialHeight = Number.parseFloat(listbox.style.height || '0');
+
+      expect(initialHeight).toBeGreaterThan(0);
+
+      await user.type(input, 'ger');
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const filteredHeight = Number.parseFloat(listbox.style.height || '0');
+
+      expect(fixture.queryAll<HTMLElement>('.option').length).toBe(1);
+      expect(filteredHeight).toBeLessThan(initialHeight);
+      expect(filteredHeight).toBe(36);
+    });
+
+    it('repositions filtered results to the top when the match was originally later in the list', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: `
+          <bit-combobox-option value="us">United States</bit-combobox-option>
+          <bit-combobox-option value="gb">United Kingdom</bit-combobox-option>
+          <bit-combobox-option value="de">Germany</bit-combobox-option>
+          <bit-combobox-option value="ca">Canada</bit-combobox-option>
+        `,
+      });
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      await user.type(input, 'king');
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const options = fixture.queryAll<HTMLElement>('.option');
+
+      expect(options).toHaveLength(1);
+      expect(options[0]?.textContent).toContain('United Kingdom');
+      expect(options[0]?.style.transform).toContain('translateY(0px)');
     });
 
     it('continues searching in the docs multiselect flow after selecting the first item', async () => {
@@ -446,7 +620,8 @@ describe('bit-combobox', () => {
       await fixture.flush();
 
       const chip = fixture.query<HTMLElement>('bit-chip');
-      const removeBtn = chip?.shadowRoot?.querySelector<HTMLButtonElement>('.remove-btn');
+
+      const removeBtn = chip?.shadowRoot?.querySelector<HTMLButtonElement>('[part="remove-btn"]');
 
       expect(removeBtn).toBeTruthy();
 
@@ -479,7 +654,7 @@ describe('bit-combobox', () => {
       expect(detail.originalEvent).toBeDefined();
     });
 
-    it('updates option selected state immediately in multiple mode without reopening', async () => {
+    it('filters already-selected options from multiselect results without reopening', async () => {
       fixture = await mount('bit-combobox', {
         attrs: { label: 'Country', multiple: '' },
         html: optionsHtml,
@@ -507,21 +682,73 @@ describe('bit-combobox', () => {
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
-      expect(usOption.hasAttribute('data-selected')).toBe(true);
+      expect(fixture.queryAll<HTMLElement>('.option').some((opt) => opt.textContent?.includes('United States'))).toBe(
+        false,
+      );
+      expect(fixture.queryAll('.option')).toHaveLength(2);
 
-      await user.click(gbOption);
+      const updatedGbOption = fixture
+        .queryAll<HTMLElement>('.option')
+        .find((opt) => opt.textContent?.includes('United Kingdom')) as HTMLElement;
+
+      expect(updatedGbOption).toBeTruthy();
+
+      await user.click(updatedGbOption);
       await fixture.flush();
 
-      expect(usOption.hasAttribute('data-selected')).toBe(true);
-      expect(gbOption.hasAttribute('data-selected')).toBe(true);
-      expect(fixture.queryAll('.option[data-selected]').length).toBe(2);
+      const remainingOptionTexts = fixture.queryAll<HTMLElement>('.option').map((opt) => opt.textContent ?? '');
 
-      await user.click(usOption);
+      expect(remainingOptionTexts.some((text) => text.includes('United States'))).toBe(false);
+      expect(remainingOptionTexts.some((text) => text.includes('United Kingdom'))).toBe(false);
+      expect(remainingOptionTexts.some((text) => text.includes('Germany'))).toBe(true);
+      expect(fixture.queryAll('.option')).toHaveLength(1);
+    });
+
+    it('pre-focuses the selected option when reopening the dropdown in single-select mode', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country', value: 'gb' },
+        html: optionsHtml,
+      });
       await fixture.flush();
 
-      expect(usOption.hasAttribute('data-selected')).toBe(false);
-      expect(gbOption.hasAttribute('data-selected')).toBe(true);
-      expect(fixture.queryAll('.option[data-selected]').length).toBe(1);
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const focused = fixture.query<HTMLElement>('.option[data-focused]');
+
+      expect(focused).toBeTruthy();
+      expect(focused?.textContent).toContain('United Kingdom');
+    });
+
+    it('keeps the selected option visually marked when reopening in single-select mode', async () => {
+      fixture = await mount('bit-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+      });
+      await fixture.flush();
+
+      const input = fixture.query<HTMLInputElement>('input[role="combobox"]')!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await user.click(fixture.queryAll<HTMLElement>('.option')[1]!);
+      await fixture.flush();
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const selectedOption = fixture
+        .queryAll<HTMLElement>('.option')
+        .find((option) => option.textContent?.includes('United Kingdom'));
+
+      expect(selectedOption).toBeTruthy();
+      expect(selectedOption?.getAttribute('aria-selected')).toBe('true');
+      expect(selectedOption?.hasAttribute('data-selected')).toBe(true);
     });
 
     it('normalizes csv values in single mode to the first value', async () => {
@@ -537,14 +764,17 @@ describe('bit-combobox', () => {
     });
 
     it('uses array options prop from structured binding and updates reactively', async () => {
+      let optionsRef: ReturnType<typeof signal<Array<{ label: string; value: string }>>> | undefined;
+
       fixture = await mount(() => {
         const options = signal([
           { label: 'Alpha', value: 'a' },
           { label: 'Beta', value: 'b' },
         ]);
 
-        return html` <button @click=${() => (options.value = [{ label: 'Gamma', value: 'g' }])}>Update</button>
-          <bit-combobox options=${options}></bit-combobox>`;
+        optionsRef = options;
+
+        return html`<bit-combobox options=${options}></bit-combobox>`;
       });
 
       const combobox = fixture.query<HTMLElement>('bit-combobox')!;
@@ -559,7 +789,7 @@ describe('bit-combobox', () => {
         ),
       ).toEqual(['Alpha', 'Beta']);
 
-      await user.click(fixture.query<HTMLElement>('button')!);
+      optionsRef!.value = [{ label: 'Gamma', value: 'g' }];
       await fixture.flush();
       await user.click(input as HTMLInputElement);
       await fixture.flush();
