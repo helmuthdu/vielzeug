@@ -140,19 +140,26 @@ jobs:
       - name: Check for existing change files
         id: check-changes
         run: |
-          PACKAGE_SLUG=$(echo "${{ inputs.package }}" | cut -d'/' -f2)
-          CHANGE_DIR="common/changes/@vielzeug/${PACKAGE_SLUG}"
+          PACKAGE_CHANGE_FILES=""
 
-          # Check if there are any existing change files
-          if [ -d "${CHANGE_DIR}" ] && [ -n "$(ls -A ${CHANGE_DIR}/*.json 2>/dev/null)" ]; then
-            CHANGE_COUNT=$(ls -1 ${CHANGE_DIR}/*.json 2>/dev/null | wc -l)
+          while IFS= read -r file; do
+            if jq -e --arg pkg "${{ inputs.package }}" '.changes[]? | select(.packageName == $pkg)' "$file" >/dev/null; then
+              PACKAGE_CHANGE_FILES="${PACKAGE_CHANGE_FILES}${file}"
+              PACKAGE_CHANGE_FILES+=$'\n'
+            fi
+          done < <(find common/changes -type f -name "*.json")
+
+          if [ -n "$PACKAGE_CHANGE_FILES" ]; then
+            CHANGE_COUNT=$(printf '%s' "$PACKAGE_CHANGE_FILES" | sed '/^$/d' | wc -l | tr -d ' ')
             echo "has-changes=true" >> $GITHUB_OUTPUT
 
             # Detect the highest bump type from existing change files
             # Priority: major > minor > patch
             DETECTED_BUMP="patch"
 
-            for file in ${CHANGE_DIR}/*.json; do
+            while IFS= read -r file; do
+              [ -z "$file" ] && continue
+
               # Extract type from each change file
               TYPE=$(node -e "
                 try {
@@ -171,7 +178,7 @@ jobs:
               elif [ "$TYPE" = "minor" ] && [ "$DETECTED_BUMP" != "major" ]; then
                 DETECTED_BUMP="minor"
               fi
-            done
+            done <<< "$PACKAGE_CHANGE_FILES"
 
             echo "bump-type=$DETECTED_BUMP" >> $GITHUB_OUTPUT
             echo "✅ Found ${CHANGE_COUNT} existing change file(s) for ${{ inputs.package }}"
@@ -188,7 +195,7 @@ jobs:
         if: steps.check-changes.outputs.has-changes == 'false'
         run: |
           PACKAGE_SLUG=$(echo "${{ inputs.package }}" | cut -d'/' -f2)
-          CHANGE_DIR="common/changes/@vielzeug/${PACKAGE_SLUG}"
+          CHANGE_DIR="common/changes/auto-release-$(date +%Y-%m-%d)"
           mkdir -p "${CHANGE_DIR}"
 
           BUMP_TYPE="${{ steps.check-changes.outputs.bump-type }}"
@@ -228,7 +235,6 @@ jobs:
                 "type": "${BUMP_TYPE}"
               }
             ],
-            "packageName": "${{ inputs.package }}",
             "email": "github-actions[bot]@users.noreply.github.com"
           }
           EOF
@@ -238,28 +244,23 @@ jobs:
 
       - name: Verify only selected package will be released
         run: |
-          PACKAGE_SLUG=$(echo "${{ inputs.package }}" | cut -d'/' -f2)
-          CHANGE_DIR="common/changes/@vielzeug/${PACKAGE_SLUG}"
-
           echo "📋 Release Plan:"
           echo "  Package: ${{ inputs.package }}"
-          echo "  Change files directory: ${CHANGE_DIR}"
+          PACKAGE_CHANGE_COUNT=0
+          while IFS= read -r file; do
+            if jq -e --arg pkg "${{ inputs.package }}" '.changes[]? | select(.packageName == $pkg)' "$file" >/dev/null; then
+              PACKAGE_CHANGE_COUNT=$((PACKAGE_CHANGE_COUNT + 1))
+            fi
+          done < <(find common/changes -type f -name "*.json")
 
-          if [ -d "${CHANGE_DIR}" ] && [ -n "$(ls -A ${CHANGE_DIR}/*.json 2>/dev/null)" ]; then
-            echo "  Change files found: $(ls -1 ${CHANGE_DIR}/*.json 2>/dev/null | wc -l)"
-          else
-            echo "  Change files found: 0 (will create temporary change file)"
-          fi
+          echo "  Change files found: ${PACKAGE_CHANGE_COUNT}"
 
           # Check for other packages with changes
-          OTHER_CHANGES=""
-          for dir in common/changes/@vielzeug/*/; do
-            PKG_NAME=$(basename "$dir")
-            if [ "$PKG_NAME" != "$PACKAGE_SLUG" ] && [ -d "$dir" ] && [ -n "$(ls -A ${dir}*.json 2>/dev/null)" ]; then
-              COUNT=$(ls -1 ${dir}*.json 2>/dev/null | wc -l | tr -d ' ')
-              OTHER_CHANGES="${OTHER_CHANGES}@vielzeug/${PKG_NAME} (${COUNT} changes) "
-            fi
-          done
+          OTHER_CHANGES=$(find common/changes -type f -name "*.json" -print0 \
+            | xargs -0 -r -I{} jq -r '.changes[]?.packageName // empty' {} \
+            | sort -u \
+            | { grep -Fvx "${{ inputs.package }}" || true; } \
+            | tr '\n' ' ')
 
           if [ -n "$OTHER_CHANGES" ]; then
             echo "⚠️  Note: Other packages have pending changes but will NOT be released:"
@@ -271,11 +272,8 @@ jobs:
 
       - name: Commit change files
         run: |
-          PACKAGE_SLUG=$(echo "${{ inputs.package }}" | cut -d'/' -f2)
-          CHANGE_DIR="common/changes/@vielzeug/${PACKAGE_SLUG}"
-
-          # Add change files to git
-          git add "${CHANGE_DIR}/"
+          # Add new or modified change files to git
+          git add common/changes
 
           # Commit change files
           git commit -m "chore: add change files for ${{ inputs.package }}" || echo "No changes to commit"
