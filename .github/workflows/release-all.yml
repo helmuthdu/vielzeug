@@ -8,6 +8,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: release-main-${{ github.repository }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   packages: write

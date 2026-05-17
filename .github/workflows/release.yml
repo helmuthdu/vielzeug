@@ -38,6 +38,10 @@ on:
           - minor
           - major
 
+concurrency:
+  group: release-main-${{ github.repository }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   packages: write
@@ -278,9 +282,29 @@ jobs:
           # Add new or modified change files to git
           git add common/changes
 
-          # Commit change files
-          git commit -m "chore: add change files for ${{ inputs.package }}" || echo "No changes to commit"
-          git push origin main
+          # Commit change files when staged changes exist
+          if git diff --cached --quiet; then
+            echo "ℹ️  No change-file updates to commit"
+          else
+            git commit -m "chore: add change files for ${{ inputs.package }}"
+          fi
+
+          # Push with rebase/retry in case remote main advanced during this run
+          for attempt in 1 2 3; do
+            echo "🔄 Sync + push attempt ${attempt}/3"
+            git fetch origin main
+            git rebase origin/main
+
+            if git push origin HEAD:main; then
+              echo "✅ Pushed change files to main"
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "❌ Failed to push after 3 attempts. Remote main is changing too quickly."
+              exit 1
+            fi
+          done
 
           echo "✅ Committed change files"
 
