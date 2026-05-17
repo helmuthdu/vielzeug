@@ -31,7 +31,7 @@ importers:
         specifier: workspace:*
         version: link:../virtualit
       lucide:
-        specifier: ~1.16.0
+        specifier: ^1.16.0
         version: 1.16.0
     devDependencies:
       '@custom-elements-manifest/analyzer':
