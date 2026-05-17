@@ -339,7 +339,7 @@
     "@vielzeug/stateit": "workspace:*",
     "@vielzeug/toolkit": "workspace:*",
     "@vielzeug/virtualit": "workspace:*",
-    "lucide": "^1.14.0"
+    "lucide": "~1.15.0"
   },
   "devDependencies": {
     "@custom-elements-manifest/analyzer": "^0.11.0",
@@ -347,7 +347,7 @@
     "browserslist": "^4.28.2",
     "lightningcss": "^1.32.0",
     "typescript": "~6.0.3",
-    "vite": "^8.0.10",
-    "vitest": "^4.1.5"
+    "vite": "^8.0.13",
+    "vitest": "^4.1.6"
   }
 }
