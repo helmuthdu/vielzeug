@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/wireit",
+      "comment": "Patch release after version normalization to major 3.",
+      "type": "patch"
+    }
+  ],
+  "email": "github-actions[bot]@users.noreply.github.com"
+}
