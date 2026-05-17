@@ -1,6 +1,25 @@
 # Change Log - @vielzeug/buildit
 
-This log was last generated on Sun, 17 May 2026 05:10:17 GMT and should not be manually modified.
+This log was last generated on Sun, 17 May 2026 05:23:49 GMT and should not be manually modified.
+
+## 5.0.1
+Sun, 17 May 2026 05:23:49 GMT
+
+_Version update only_
+
+## 5.0.0
+Sun, 17 May 2026 05:22:46 GMT
+
+### Breaking changes
+
+- Release version 5.0.0 (major bump from 4.0.0)
+
+## 4.0.0
+Sun, 17 May 2026 05:16:47 GMT
+
+### Breaking changes
+
+- Release version 4.0.0 (major bump from 3.0.0)
 
 ## 3.0.0
 Sun, 17 May 2026 05:10:17 GMT

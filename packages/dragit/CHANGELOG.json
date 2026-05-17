@@ -2,6 +2,20 @@
   "name": "@vielzeug/dragit",
   "entries": [
     {
+      "version": "4.0.0",
+      "tag": "@vielzeug/dragit_v4.0.0",
+      "date": "Sun, 17 May 2026 05:23:49 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release version 4.0.0 (major bump from 3.0.0)",
+            "author": "github-actions[bot] <github-actions[bot]@users.noreply.github.com>",
+            "commit": "570aebd6368fafe38d85989c7d2a62fcce67dea2"
+          }
+        ]
+      }
+    },
+    {
       "version": "3.0.0",
       "tag": "@vielzeug/dragit_v3.0.0",
       "date": "Sun, 17 May 2026 05:10:17 GMT",

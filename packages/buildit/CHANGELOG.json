@@ -2,6 +2,46 @@
   "name": "@vielzeug/buildit",
   "entries": [
     {
+      "version": "5.0.1",
+      "tag": "@vielzeug/buildit_v5.0.1",
+      "date": "Sun, 17 May 2026 05:23:49 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/dragit\" to `4.0.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.0.0",
+      "tag": "@vielzeug/buildit_v5.0.0",
+      "date": "Sun, 17 May 2026 05:22:46 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release version 5.0.0 (major bump from 4.0.0)",
+            "author": "github-actions[bot] <github-actions[bot]@users.noreply.github.com>",
+            "commit": "79330a1475cd0c4c647381eacda0e1edd29dbd1a"
+          }
+        ]
+      }
+    },
+    {
+      "version": "4.0.0",
+      "tag": "@vielzeug/buildit_v4.0.0",
+      "date": "Sun, 17 May 2026 05:16:47 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release version 4.0.0 (major bump from 3.0.0)",
+            "author": "github-actions[bot] <github-actions[bot]@users.noreply.github.com>",
+            "commit": "fc632d173f1775e2487e26a4441f08f93edcbbc9"
+          }
+        ]
+      }
+    },
+    {
       "version": "3.0.0",
       "tag": "@vielzeug/buildit_v3.0.0",
       "date": "Sun, 17 May 2026 05:10:17 GMT",
