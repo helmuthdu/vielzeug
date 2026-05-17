@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/validit
 
-This log was last generated on Sun, 17 May 2026 05:41:44 GMT and should not be manually modified.
+This log was last generated on Sun, 17 May 2026 05:54:57 GMT and should not be manually modified.
+
+## 3.0.2
+Sun, 17 May 2026 05:54:57 GMT
+
+### Patches
+
+- Patch release after version normalization to major 3.
 
 ## 3.0.1
 Sun, 17 May 2026 05:41:44 GMT

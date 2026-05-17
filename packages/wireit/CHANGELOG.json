@@ -2,6 +2,20 @@
   "name": "@vielzeug/wireit",
   "entries": [
     {
+      "version": "3.0.2",
+      "tag": "@vielzeug/wireit_v3.0.2",
+      "date": "Sun, 17 May 2026 05:54:57 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Patch release after version normalization to major 3.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8ca85887b9d61474ba847a71fbe920f77fc78c1e"
+          }
+        ]
+      }
+    },
+    {
       "version": "3.0.1",
       "tag": "@vielzeug/wireit_v3.0.1",
       "date": "Sun, 17 May 2026 05:41:44 GMT",
