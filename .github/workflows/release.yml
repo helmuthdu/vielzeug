@@ -56,6 +56,7 @@ jobs:
           node-version: 22
           registry-url: 'https://registry.npmjs.org'
           scope: '@vielzeug'
+          always-auth: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -384,6 +385,35 @@ jobs:
           git push origin "$TAG_NAME"
           echo "✅ Tag created and pushed"
 
+      - name: Verify npm auth and @vielzeug access
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "❌ NPM_TOKEN is empty or missing. Configure repository secret NPM_TOKEN."
+            exit 1
+          fi
+
+          echo "🔐 Verifying npm authentication..."
+          NPM_USER=$(npm whoami 2>/dev/null || true)
+
+          if [ -z "$NPM_USER" ]; then
+            echo "❌ npm authentication failed for NPM_TOKEN (npm whoami returned nothing)."
+            echo "   Use an npm Automation token from an account with publish rights to @vielzeug."
+            exit 1
+          fi
+
+          echo "✅ Authenticated as npm user: $NPM_USER"
+
+          if ! npm org ls vielzeug >/dev/null 2>&1; then
+            echo "❌ Token is valid, but has no visible access to npm org @vielzeug."
+            echo "   This causes npm publish to fail with E404 for @vielzeug/* packages."
+            echo "   Ensure this npm user is in org @vielzeug with publish permissions and regenerate NPM_TOKEN."
+            exit 1
+          fi
+
+          echo "✅ npm org access looks valid. Proceeding to publish."
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish to npm
         working-directory: ${{ steps.package-info.outputs.folder }}
         run: |
@@ -400,7 +430,22 @@ jobs:
 
           # Publish the tarball
           echo "🚀 Publishing to npm..."
-          npm publish "${TARBALL}" --access public
+          set +e
+          PUBLISH_OUTPUT=$(npm publish "${TARBALL}" --access public 2>&1)
+          PUBLISH_EXIT=$?
+          set -e
+
+          echo "$PUBLISH_OUTPUT"
+
+          if [ $PUBLISH_EXIT -ne 0 ]; then
+            if echo "$PUBLISH_OUTPUT" | grep -q "E404"; then
+              echo "❌ npm returned E404 while publishing ${{ inputs.package }}@${{ steps.version.outputs.new-version }}."
+              echo "   This usually means NPM_TOKEN lacks publish rights for scope @vielzeug."
+              echo "   Verify org membership/permissions and rotate NPM_TOKEN from an authorized npm account."
+            fi
+
+            exit $PUBLISH_EXIT
+          fi
 
           # Clean up tarball
           rm -f "${TARBALL}"
