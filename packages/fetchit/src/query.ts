@@ -143,14 +143,21 @@ export function createQuery(opts?: QueryClientOptions) {
       const next = toObserverState(entry, typed);
       const prev = typed.previous;
 
-      if (
-        prev &&
+      const dataUnchanged = Object.is(prev?.data, next.data);
+      const metaUnchanged =
+        !!prev &&
         prev.status === next.status &&
         prev.isFetching === next.isFetching &&
-        prev.updatedAt === next.updatedAt &&
-        Object.is(prev.error, next.error) &&
-        Object.is(prev.data, next.data)
-      ) {
+        Object.is(prev.error, next.error);
+
+      // When a select transform is present, data deduplication is based solely on
+      // the projected value — updatedAt changes on every raw write but should not
+      // trigger a notification when the selected result is identical.
+      const shouldSkip = typed.select
+        ? metaUnchanged && dataUnchanged
+        : metaUnchanged && prev!.updatedAt === next.updatedAt && dataUnchanged;
+
+      if (shouldSkip) {
         continue;
       }
 

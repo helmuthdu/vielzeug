@@ -31,6 +31,16 @@ console.log(formatZoned(reminder));
 console.log(formatDuration({ hours: 1, minutes: 30 }, { locale: 'en-US', style: 'short' }));
 ```
 
+Since many function names (`now`, `shift`, `clamp`, `difference`, …) are common in application code, use a namespace import to avoid collisions while still getting full tree-shaking:
+
+```ts
+import * as timit from '@vielzeug/timit';
+
+timit.now('UTC');
+timit.difference(start, end, { largestUnit: 'day' });
+timit.formatHuman(meeting, { pattern: 'short', locale: 'en-US' });
+```
+
 ## API Quick Reference
 
 ### Conversion
