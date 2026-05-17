@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/formit",
+      "comment": "Patch release after npm E409 conflict resolution.",
+      "type": "patch"
+    }
+  ],
+  "email": "github-actions[bot]@users.noreply.github.com"
+}

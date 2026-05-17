@@ -235,6 +235,11 @@ jobs:
                   echo "   ❌ npm returned E404 while publishing ${pkg}@${NEW_VERSION}."
                   echo "   This usually means NPM_TOKEN lacks publish rights for scope @vielzeug."
                   echo "   Verify org membership/permissions and rotate NPM_TOKEN from an authorized npm account."
+                elif echo "$PUBLISH_OUTPUT" | grep -q "E409"; then
+                  echo "   ❌ npm returned E409 (Conflict) while publishing ${pkg}@${NEW_VERSION}."
+                  echo "   The npm registry is still processing the previous package."
+                  echo "   This usually happens when publishing multiple packages too quickly."
+                  echo "   Try again in a few minutes to allow npm registry to catch up."
                 fi
 
                 exit $PUBLISH_EXIT
@@ -246,6 +251,11 @@ jobs:
               cd - > /dev/null
 
               PUBLISHED_PACKAGES="${PUBLISHED_PACKAGES}${pkg}@${NEW_VERSION} "
+
+              # Wait before publishing next package to avoid E409 registry conflicts
+              # npm registry needs time to process each scoped package
+              echo "   ⏳ Waiting 15 seconds before next publish (allow npm registry to process)..."
+              sleep 15
 
               # Tag this release
               TAG_NAME="${pkg}@${NEW_VERSION}"
