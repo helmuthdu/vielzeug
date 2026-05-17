@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/timit",
-      "comment": "Release a new major version with timing utility refactors, normalized scheduling behavior, and breaking API updates for time-based helpers.",
-      "type": "major"
-    }
-  ]
-}

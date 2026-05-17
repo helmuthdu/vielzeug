@@ -2,6 +2,20 @@
   "name": "@vielzeug/floatit",
   "entries": [
     {
+      "version": "3.0.0",
+      "tag": "@vielzeug/floatit_v3.0.0",
+      "date": "Sun, 17 May 2026 05:10:17 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release a new major version with positioning engine refactors, updated placement behavior, and breaking API changes for floating UI configuration.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "cfc6909e8134a4da6b5279d211bc69609af68f54"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.1.0",
       "tag": "@vielzeug/floatit_v2.1.0",
       "date": "Sat, 04 Apr 2026 13:30:02 GMT",

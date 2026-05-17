@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/logit",
-      "comment": "Release a new major version with structured logging API cleanup, stronger typing for logger contracts, and breaking consistency updates across log pipelines.",
-      "type": "major"
-    }
-  ]
-}

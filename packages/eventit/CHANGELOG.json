@@ -2,6 +2,20 @@
   "name": "@vielzeug/eventit",
   "entries": [
     {
+      "version": "3.0.0",
+      "tag": "@vielzeug/eventit_v3.0.0",
+      "date": "Sun, 17 May 2026 05:10:17 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release a new major version with the v2.2 event-bus overhaul, improved typing and dispatch guarantees, and breaking API consistency fixes.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "cfc6909e8134a4da6b5279d211bc69609af68f54"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.1.0",
       "tag": "@vielzeug/eventit_v2.1.0",
       "date": "Sat, 04 Apr 2026 13:30:02 GMT",

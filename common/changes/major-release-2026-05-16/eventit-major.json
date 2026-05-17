@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/eventit",
-      "comment": "Release a new major version with the v2.2 event-bus overhaul, improved typing and dispatch guarantees, and breaking API consistency fixes.",
-      "type": "major"
-    }
-  ]
-}

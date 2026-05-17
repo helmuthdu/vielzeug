@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/deposit
 
-This log was last generated on Sat, 04 Apr 2026 13:30:02 GMT and should not be manually modified.
+This log was last generated on Sun, 17 May 2026 05:10:17 GMT and should not be manually modified.
+
+## 3.0.0
+Sun, 17 May 2026 05:10:17 GMT
+
+### Breaking changes
+
+- Release a new major version with a redesigned storage API, normalized persistence behavior, and breaking interface updates across IndexedDB and LocalStorage integration.
 
 ## 2.1.0
 Sat, 04 Apr 2026 13:30:02 GMT
@@ -65,3 +72,4 @@ Wed, 22 Oct 2025 08:00:42 GMT
 ### Breaking changes
 
 - Initial release
+

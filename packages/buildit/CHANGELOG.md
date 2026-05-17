@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/buildit
 
-This log was last generated on Sat, 04 Apr 2026 13:30:02 GMT and should not be manually modified.
+This log was last generated on Sun, 17 May 2026 05:10:17 GMT and should not be manually modified.
+
+## 3.0.0
+Sun, 17 May 2026 05:10:17 GMT
+
+### Breaking changes
+
+- Release a new major version with reactive component updates across disclosure, feedback, inputs, and overlay primitives, including breaking API and behavior refinements.
 
 ## 2.1.0
 Sat, 04 Apr 2026 13:30:02 GMT

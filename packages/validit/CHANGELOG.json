@@ -2,6 +2,20 @@
   "name": "@vielzeug/validit",
   "entries": [
     {
+      "version": "3.0.0",
+      "tag": "@vielzeug/validit_v3.0.0",
+      "date": "Sun, 17 May 2026 05:10:17 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release a new major version with schema and validation refactors, improved type inference behavior, and breaking API redesign across validator composition.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "cfc6909e8134a4da6b5279d211bc69609af68f54"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.1.0",
       "tag": "@vielzeug/validit_v2.1.0",
       "date": "Sat, 04 Apr 2026 13:30:02 GMT",

@@ -2,6 +2,40 @@
   "name": "@vielzeug/buildit",
   "entries": [
     {
+      "version": "3.0.0",
+      "tag": "@vielzeug/buildit_v3.0.0",
+      "date": "Sun, 17 May 2026 05:10:17 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release a new major version with reactive component updates across disclosure, feedback, inputs, and overlay primitives, including breaking API and behavior refinements.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "cfc6909e8134a4da6b5279d211bc69609af68f54"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/craftit\" to `3.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/dragit\" to `3.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/floatit\" to `3.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/stateit\" to `3.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/toolkit\" to `3.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/virtualit\" to `3.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.1.0",
       "tag": "@vielzeug/buildit_v2.1.0",
       "date": "Sat, 04 Apr 2026 13:30:02 GMT",

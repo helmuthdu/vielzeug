@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/virtualit",
-      "comment": "Release a new major version with virtual-list engine behavior changes, breaking API updates, and docs synchronized to the new contract.",
-      "type": "major"
-    }
-  ]
-}

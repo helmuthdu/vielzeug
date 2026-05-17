@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/validit",
-      "comment": "Release a new major version with schema and validation refactors, improved type inference behavior, and breaking API redesign across validator composition.",
-      "type": "major"
-    }
-  ]
-}

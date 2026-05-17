@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@vielzeug/wireit",
-      "comment": "Release a new major version with DI container refactors, lifecycle and resolution improvements, and breaking API streamlining.",
-      "type": "major"
-    }
-  ]
-}

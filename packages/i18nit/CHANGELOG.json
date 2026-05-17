@@ -2,6 +2,20 @@
   "name": "@vielzeug/i18nit",
   "entries": [
     {
+      "version": "3.0.0",
+      "tag": "@vielzeug/i18nit_v3.0.0",
+      "date": "Sun, 17 May 2026 05:10:17 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release a new major version with v2.2/v3 i18n API restructuring, improved message and pluralization handling, and breaking interface updates.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "cfc6909e8134a4da6b5279d211bc69609af68f54"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.1.0",
       "tag": "@vielzeug/i18nit_v2.1.0",
       "date": "Sat, 04 Apr 2026 13:30:02 GMT",

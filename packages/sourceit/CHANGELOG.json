@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/sourceit",
+  "entries": [
+    {
+      "version": "3.0.0",
+      "tag": "@vielzeug/sourceit_v3.0.0",
+      "date": "Sun, 17 May 2026 05:10:17 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release a new major version with source orchestration API cleanup, behavior normalization, and breaking updates for pipeline composition.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "cfc6909e8134a4da6b5279d211bc69609af68f54"
+          }
+        ]
+      }
+    }
+  ]
+}
