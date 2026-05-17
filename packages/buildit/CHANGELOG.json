@@ -2,6 +2,20 @@
   "name": "@vielzeug/buildit",
   "entries": [
     {
+      "version": "7.0.0",
+      "tag": "@vielzeug/buildit_v7.0.0",
+      "date": "Sun, 17 May 2026 05:33:58 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Release version 7.0.0 (major bump from 6.0.0)",
+            "author": "github-actions[bot] <github-actions[bot]@users.noreply.github.com>",
+            "commit": "4a901296d1c9d488d5ce41d6cfea0715444c08f7"
+          }
+        ]
+      }
+    },
+    {
       "version": "6.0.0",
       "tag": "@vielzeug/buildit_v6.0.0",
       "date": "Sun, 17 May 2026 05:28:18 GMT",
