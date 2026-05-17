@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/buildit",
+      "comment": "Release version 5.0.0 (major bump from 4.0.0)",
+      "type": "major"
+    }
+  ],
+  "email": "github-actions[bot]@users.noreply.github.com"
+}
