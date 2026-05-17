@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/sourceit",
+      "comment": "Dummy patch release to republish after npm token incident.",
+      "type": "patch"
+    }
+  ],
+  "email": "github-actions[bot]@users.noreply.github.com"
+}
