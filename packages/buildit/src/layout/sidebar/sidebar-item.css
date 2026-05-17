@@ -189,8 +189,8 @@
   :host([sidebar-collapsed]) .item-end .group-badge,
   :host([sidebar-collapsed]) .item-end ::slotted([slot='end']) {
     position: absolute;
-    right: var(--size-2);
     top: 50%;
+    right: var(--size-2);
     z-index: 1;
     transform: translateY(-50%);
   }
