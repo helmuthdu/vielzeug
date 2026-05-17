@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/buildit
 
-This log was last generated on Sun, 17 May 2026 05:33:58 GMT and should not be manually modified.
+This log was last generated on Sun, 17 May 2026 05:41:44 GMT and should not be manually modified.
+
+## 7.0.1
+Sun, 17 May 2026 05:41:44 GMT
+
+### Patches
+
+- Dummy patch release to republish after npm token incident.
 
 ## 7.0.0
 Sun, 17 May 2026 05:33:58 GMT

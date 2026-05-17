@@ -2,6 +2,40 @@
   "name": "@vielzeug/buildit",
   "entries": [
     {
+      "version": "7.0.1",
+      "tag": "@vielzeug/buildit_v7.0.1",
+      "date": "Sun, 17 May 2026 05:41:44 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Dummy patch release to republish after npm token incident.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "b3a8b07f73c662c33ffd4c7edaeb7b3737f3e6f6"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/craftit\" to `3.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/dragit\" to `4.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/floatit\" to `3.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/stateit\" to `3.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/toolkit\" to `3.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/virtualit\" to `3.0.1`"
+          }
+        ]
+      }
+    },
+    {
       "version": "7.0.0",
       "tag": "@vielzeug/buildit_v7.0.0",
       "date": "Sun, 17 May 2026 05:33:58 GMT",
