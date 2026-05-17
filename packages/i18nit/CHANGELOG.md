@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/i18nit
 
-This log was last generated on Sun, 17 May 2026 05:54:57 GMT and should not be manually modified.
+This log was last generated on Sun, 17 May 2026 06:08:37 GMT and should not be manually modified.
+
+## 3.0.3
+Sun, 17 May 2026 06:08:37 GMT
+
+### Patches
+
+- Patch release after npm E409 conflict resolution.
 
 ## 3.0.2
 Sun, 17 May 2026 05:54:57 GMT

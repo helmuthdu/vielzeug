@@ -2,6 +2,20 @@
   "name": "@vielzeug/permit",
   "entries": [
     {
+      "version": "3.0.3",
+      "tag": "@vielzeug/permit_v3.0.3",
+      "date": "Sun, 17 May 2026 06:08:37 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Patch release after npm E409 conflict resolution.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "33e5b5380a9d37b3586ab2e8dcfa07fbb33fda69"
+          }
+        ]
+      }
+    },
+    {
       "version": "3.0.2",
       "tag": "@vielzeug/permit_v3.0.2",
       "date": "Sun, 17 May 2026 05:54:57 GMT",
