@@ -5,6 +5,5 @@
       "comment": "Release a new major version with source orchestration API cleanup, behavior normalization, and breaking updates for pipeline composition.",
       "type": "major"
     }
-  ],
-  "packageName": "@vielzeug/sourceit"
+  ]
 }

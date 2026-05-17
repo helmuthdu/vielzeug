@@ -5,6 +5,5 @@
       "comment": "Release a new major version with positioning engine refactors, updated placement behavior, and breaking API changes for floating UI configuration.",
       "type": "major"
     }
-  ],
-  "packageName": "@vielzeug/floatit"
+  ]
 }

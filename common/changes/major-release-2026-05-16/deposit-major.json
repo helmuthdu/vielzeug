@@ -5,6 +5,5 @@
       "comment": "Release a new major version with a redesigned storage API, normalized persistence behavior, and breaking interface updates across IndexedDB and LocalStorage integration.",
       "type": "major"
     }
-  ],
-  "packageName": "@vielzeug/deposit"
+  ]
 }

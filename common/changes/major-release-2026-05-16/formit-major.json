@@ -5,6 +5,5 @@
       "comment": "Release a new major version with a redesigned form-state and validation model, refined typing, and breaking API changes across form flow composition.",
       "type": "major"
     }
-  ],
-  "packageName": "@vielzeug/formit"
+  ]
 }

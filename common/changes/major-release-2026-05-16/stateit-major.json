@@ -5,6 +5,5 @@
       "comment": "Release a new major version with v2.2 state-core refactors, improved computed/effect performance, and breaking API simplification.",
       "type": "major"
     }
-  ],
-  "packageName": "@vielzeug/stateit"
+  ]
 }

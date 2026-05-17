@@ -5,6 +5,5 @@
       "comment": "Release a new major version with worker-pool behavior and API refinements, stronger typing guarantees, and breaking contract updates.",
       "type": "major"
     }
-  ],
-  "packageName": "@vielzeug/workit"
+  ]
 }

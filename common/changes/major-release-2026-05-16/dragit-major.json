@@ -5,6 +5,5 @@
       "comment": "Release a new major version with greenfield drag-and-drop internals, improved event/state flow, and breaking API adjustments for interaction primitives.",
       "type": "major"
     }
-  ],
-  "packageName": "@vielzeug/dragit"
+  ]
 }

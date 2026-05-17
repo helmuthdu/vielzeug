@@ -5,6 +5,5 @@
       "comment": "Release a new major version with greenfield client refactors for requests, caching, and mutations, plus breaking API simplification and consistency updates.",
       "type": "major"
     }
-  ],
-  "packageName": "@vielzeug/fetchit"
+  ]
 }

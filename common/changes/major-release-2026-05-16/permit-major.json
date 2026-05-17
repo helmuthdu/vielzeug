@@ -5,6 +5,5 @@
       "comment": "Release a new major version with redesigned authorization primitives, refined role/permission modeling, and breaking API changes for policy evaluation.",
       "type": "major"
     }
-  ],
-  "packageName": "@vielzeug/permit"
+  ]
 }
