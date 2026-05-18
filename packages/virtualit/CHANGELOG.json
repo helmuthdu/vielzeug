@@ -2,6 +2,20 @@
   "name": "@vielzeug/virtualit",
   "entries": [
     {
+      "version": "3.0.4",
+      "tag": "@vielzeug/virtualit_v3.0.4",
+      "date": "Mon, 18 May 2026 19:59:57 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "update docs",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "bb806e1dbe5582ad8385b81a97150d59fc381590"
+          }
+        ]
+      }
+    },
+    {
       "version": "3.0.3",
       "tag": "@vielzeug/virtualit_v3.0.3",
       "date": "Sun, 17 May 2026 06:08:37 GMT",

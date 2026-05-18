@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/buildit",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "type": "module",
   "customElements": "dist/custom-elements.json",
   "files": [

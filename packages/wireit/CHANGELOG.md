@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/wireit
 
-This log was last generated on Sun, 17 May 2026 06:08:37 GMT and should not be manually modified.
+This log was last generated on Mon, 18 May 2026 19:59:57 GMT and should not be manually modified.
+
+## 3.0.4
+Mon, 18 May 2026 19:59:57 GMT
+
+### Patches
+
+- update docs
 
 ## 3.0.3
 Sun, 17 May 2026 06:08:37 GMT
