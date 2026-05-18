@@ -33,11 +33,44 @@ export type BitTableProps = {
 // browser features that only work on real table elements (colspan/rowspan,
 // position:sticky on <th>, table layout algorithm) all work correctly.
 
-if (!customElements.get('bit-tr')) customElements.define('bit-tr', class extends HTMLElement {});
+/**
+ * Light-DOM row marker consumed by `<bit-table>`.
+ *
+ * @element bit-tr
+ *
+ * @attr {boolean} head - Places the row in the generated `<thead>` section
+ * @attr {boolean} foot - Places the row in the generated `<tfoot>` section
+ */
+class BitTableRowElement extends HTMLElement {}
 
-if (!customElements.get('bit-th')) customElements.define('bit-th', class extends HTMLElement {});
+if (!customElements.get('bit-tr')) customElements.define('bit-tr', BitTableRowElement);
 
-if (!customElements.get('bit-td')) customElements.define('bit-td', class extends HTMLElement {});
+/**
+ * Light-DOM header cell marker consumed by `<bit-table>`.
+ *
+ * @element bit-th
+ *
+ * @attr {number} colspan - Mirrors to native `<th colspan>`
+ * @attr {number} rowspan - Mirrors to native `<th rowspan>`
+ * @attr {string} scope - Mirrors to native `<th scope>`
+ * @attr {string} headers - Mirrors to native `<th headers>`
+ */
+class BitTableHeaderCellElement extends HTMLElement {}
+
+if (!customElements.get('bit-th')) customElements.define('bit-th', BitTableHeaderCellElement);
+
+/**
+ * Light-DOM data cell marker consumed by `<bit-table>`.
+ *
+ * @element bit-td
+ *
+ * @attr {number} colspan - Mirrors to native `<td colspan>`
+ * @attr {number} rowspan - Mirrors to native `<td rowspan>`
+ * @attr {string} headers - Mirrors to native `<td headers>`
+ */
+class BitTableDataCellElement extends HTMLElement {}
+
+if (!customElements.get('bit-td')) customElements.define('bit-td', BitTableDataCellElement);
 
 export const TR_TAG = 'bit-tr';
 export const TH_TAG = 'bit-th';
@@ -134,6 +167,56 @@ function buildTable(
   };
 }
 
+/**
+ * Data table component that projects light-DOM row/cell markers into a native shadow table.
+ *
+ * @element bit-table
+ *
+ * @attr {boolean} bordered - Enables table border and clipped rounded corners
+ * @attr {string} caption - Caption text rendered above the table
+ * @attr {string} color - Theme color used by header tokens
+ * @attr {boolean} loading - Applies busy state and disables pointer interaction
+ * @attr {string} size - Cell density variant: `sm` | `md` | `lg`
+ * @attr {boolean} sticky - Enables sticky table header with vertical scrolling
+ * @attr {boolean} striped - Enables alternating row stripe backgrounds
+ *
+ * @slot - One or more `<bit-tr>` rows containing `<bit-th>`/`<bit-td>` markers
+ *
+ * @part scroll - Scroll container that hosts the generated native table
+ * @part table - Generated native `<table>` element
+ * @part head - Generated native `<thead>` section
+ * @part body - Generated native `<tbody>` section
+ * @part foot - Generated native `<tfoot>` section
+ *
+ * @cssprop --table-radius - Border radius of the table container
+ * @cssprop --table-shadow - Shadow applied to the table container
+ * @cssprop --table-border - Border used by bordered mode and cell separators
+ * @cssprop --table-bg - Background color of the generated native table
+ * @cssprop --table-cell-padding - Cell padding for body/header cells
+ * @cssprop --table-cell-font-size - Cell font size
+ * @cssprop --table-cell-color - Text color for body cells
+ * @cssprop --table-header-bg - Background for header and footer rows
+ * @cssprop --table-header-color - Text color for header and footer rows
+ * @cssprop --table-row-hover-bg - Hover background for body rows
+ * @cssprop --table-stripe-bg - Stripe background for alternating rows
+ * @cssprop --table-sticky-max-height - Max height used when `sticky` is enabled
+ * @cssprop --table-sticky-header-bg - Background of sticky header cells
+ * @cssprop --table-sticky-blur - Backdrop blur applied to sticky headers
+ *
+ * @example
+ * ```html
+ * <bit-table caption="Top repositories" striped bordered sticky>
+ *   <bit-tr head>
+ *     <bit-th>Repository</bit-th>
+ *     <bit-th>Stars</bit-th>
+ *   </bit-tr>
+ *   <bit-tr>
+ *     <bit-td>vielzeug/buildit</bit-td>
+ *     <bit-td>1200</bit-td>
+ *   </bit-tr>
+ * </bit-table>
+ * ```
+ */
 export const TABLE_TAG = define<BitTableProps>('bit-table', {
   props: {
     ...themableBundle,

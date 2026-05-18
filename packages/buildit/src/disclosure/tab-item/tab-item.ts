@@ -37,6 +37,19 @@ export type BitTabItemProps = {
  * @slot - Tab label
  * @slot suffix - Badge or count after the label
  *
+ * @cssprop --border-2 - Border token.
+ * @cssprop --color-canvas - Base surface background color.
+ * @cssprop --color-contrast - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-0 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-100 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-200 - Contrast color token for text and surfaces.
+ * @cssprop --color-secondary-contrast - Secondary accent color token.
+ * @cssprop --font-medium - Font-weight token.
+ * @cssprop --inset-shadow-xs - Component styling token.
+ * @cssprop --rounded-lg - Border radius token.
+ * @cssprop --shadow-xs - Shadow/elevation token.
+ * @cssprop --size-1 - Spacing/sizing token.
+ * @part tab - Tab trigger element.
  * @example
  * ```html
  * <bit-tab-item slot="tabs" value="overview">Overview</bit-tab-item>

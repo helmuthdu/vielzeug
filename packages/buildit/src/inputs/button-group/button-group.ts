@@ -46,6 +46,14 @@ export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('B
  *
  * @slot - Place bit-button elements here
  *
+ * @cssprop --button-border-start - Button styling token.
+ * @cssprop --button-border-top - Button styling token.
+ * @cssprop --button-radius - Button styling token.
+ * @cssprop --group-gap - Group layout/styling token.
+ * @cssprop --group-radius - Group layout/styling token.
+ * @cssprop --rounded-lg - Border radius token.
+ * @cssprop --size-2 - Spacing/sizing token.
+ * @part group - Group container.
  * @example
  * ```html
  * <bit-button-group><bit-button>First</bit-button><bit-button>Second</bit-button></bit-button-group>

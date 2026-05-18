@@ -40,6 +40,10 @@ export type BitFormEvents = {
  * @fires submit - detail: { formData, originalEvent }
  * @fires reset - detail: { originalEvent }
  *
+ * @slot - Form controls and content rendered inside the form element.
+ * @cssprop --form-gap - Form layout/styling token.
+ * @cssprop --size-4 - Spacing/sizing token.
+ * @part form - Form root element.
  * @example
  * ```html
  * <bit-form @submit=${(e) => console.log(e.detail.formData)}>

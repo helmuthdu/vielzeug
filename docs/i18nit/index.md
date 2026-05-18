@@ -1,6 +1,11 @@
 ---
 title: I18nit — Deterministic localization runtime for TypeScript
 description: Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
+package: i18nit
+category: i18n
+keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
+related: [stateit, routeit, fetchit]
+exports: [createI18n]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Minimal i18n runtime with typed keys, deterministic locale fallback
 
 # I18nit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/i18nit` &nbsp;·&nbsp; **Category:** I18n
+
+**Key exports:** `createI18n`
+
+**When to use:** Typed i18n with deterministic locale fallback, pluralization, async catalog loading, and reactive subscriptions.
+
+**Related:** [Stateit](/stateit/) · [Routeit](/routeit/) · [Fetchit](/fetchit/)
+
+</details>
+
 `@vielzeug/i18nit` is a small localization runtime for typed translation keys, plural resolution, locale loading, and framework-friendly reactivity.
 
-<!-- Search keywords: i18n runtime, typed translations, locale fallback, pluralization. -->
 
 ## Installation
 

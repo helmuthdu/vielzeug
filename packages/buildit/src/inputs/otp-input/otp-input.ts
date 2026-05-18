@@ -67,6 +67,8 @@ export type BitOtpInputProps = {
  * @cssprop --otp-cell-border-color - Default border color
  * @cssprop --otp-cell-focus-border - Focused border color
  *
+ * @part group - Group container.
+ * @part cell - Shadow part for the `cell` element.
  * @example
  * ```html
  * <bit-otp-input length="6" color="primary"></bit-otp-input>

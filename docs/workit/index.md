@@ -1,6 +1,11 @@
 ---
 title: Workit — Web Workers made type-safe
 description: Thin, type-safe abstraction over Web Workers with task queuing, pooling, timeouts, and cancellation.
+package: workit
+category: workers
+keywords: [web-workers, pool, concurrency, offload, background, threading, timeout]
+related: [toolkit, stateit, eventit]
+exports: [createWorker, createTestWorker]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Thin, type-safe abstraction over Web Workers with task queuing, poo
 
 # Workit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/workit` &nbsp;·&nbsp; **Category:** Workers
+
+**Key exports:** `createWorker`, `createTestWorker`
+
+**When to use:** Type-safe Web Worker abstraction with task queuing, pooling, timeouts, AbortSignal cancellation, and graceful main-thread fallback.
+
+**Related:** [Toolkit](/toolkit/) · [Stateit](/stateit/) · [Eventit](/eventit/)
+
+</details>
+
 **Workit** wraps Web Workers in a clean, fully typed async API. Define a task function once and workit handles worker creation, queuing, timeouts, cancellation, and pooling.
 
-<!-- Search keywords: worker pool, web worker wrapper, background task runner. -->
 
 ## Installation
 

@@ -1,4 +1,4 @@
-import type { InferOutput, Issue } from '../core';
+import type { AnySchema, InferOutput, Issue } from '../core';
 
 import { Schema, isPlainObject } from '../core';
 
@@ -23,7 +23,7 @@ function deepMerge(target: unknown, source: unknown): unknown {
 }
 
 /** All schemas must pass — intersection semantics. */
-export class IntersectSchema<T extends readonly Schema<any>[]> extends Schema<
+export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
   UnionToIntersection<InferOutput<T[number]>>
 > {
   readonly schemas: T;

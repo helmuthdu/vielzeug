@@ -34,6 +34,9 @@ export type KeyOf<S extends AnySchema, K extends keyof S> =
 
 /**
  * Creates a typed `SchemaEntry` for use in a schema definition.
+ *
+ * Each schema entry maps a table name to its record type and primary key field.
+ *
  * @example
  * ```ts
  * const schema = {

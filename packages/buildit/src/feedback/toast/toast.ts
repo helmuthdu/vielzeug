@@ -65,8 +65,8 @@ export interface ToastElement extends HTMLElement {
 }
 
 /**
- * A toast notification container with Time Machine-style stacking animation.
- * Stacks up to 3 notifications with a 3D effect. Hover to expand all toasts.
+ * An accessible toast stack with polite/assertive live regions and hover expansion.
+ * Stacks up to 3 notifications with a 3D effect.
  *
  * @element bit-toast
  *
@@ -76,7 +76,7 @@ export interface ToastElement extends HTMLElement {
  * @fires add - When a toast is added `{ id }`
  * @fires dismiss - When a toast is dismissed `{ id }`
  *
- * @slot - Manually placed bit-alert elements
+ * @slot - Manually placed `bit-alert` elements
  *
  * @cssprop --toast-position - Position type (default: fixed)
  * @cssprop --toast-inset-top - Top inset
@@ -99,7 +99,7 @@ export interface ToastElement extends HTMLElement {
  * </script>
  * ```
  */
-/** Renders the actions slot for a toast item */
+/** Renders the action buttons for a toast item. */
 function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
   if (!toast.actions?.length) return '';
 

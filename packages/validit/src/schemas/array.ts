@@ -1,12 +1,12 @@
-import type { Issue, MessageFn } from '../core';
+import type { ArrayConstraints, Issue, MessageFn } from '../core';
 
 import { ErrorCode, prependIssuePath, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
-export class ArraySchema<T> extends Schema<T[]> {
-  private readonly itemSchema: Schema<T>;
+export class ArraySchema<T> extends Schema<T[], T[], ArrayConstraints> {
+  readonly itemSchema: Schema<T, any, any, any>;
 
-  constructor(itemSchema: Schema<T>) {
+  constructor(itemSchema: Schema<T, any, any, any>) {
     super([]);
     this.itemSchema = itemSchema;
   }
@@ -76,60 +76,69 @@ export class ArraySchema<T> extends Schema<T[]> {
     length: number,
     message: MessageFn<{ min: number; value: unknown[] }> = (ctx) => _messages().array.min(ctx),
   ): this {
-    return this._addValidator((value, path) => {
-      const typed = value as unknown[];
+    return this._addValidatorWithConstraints(
+      (value, path) => {
+        const typed = value as unknown[];
 
-      if (typed.length >= length) return null;
+        if (typed.length >= length) return null;
 
-      return [
-        {
-          code: ErrorCode.too_small,
-          message: resolveMessage(message, { min: length, value: typed }),
-          params: { minimum: length },
-          path,
-        },
-      ];
-    });
+        return [
+          {
+            code: ErrorCode.too_small,
+            message: resolveMessage(message, { min: length, value: typed }),
+            params: { minimum: length },
+            path,
+          },
+        ];
+      },
+      { minItems: length },
+    );
   }
 
   max(
     length: number,
     message: MessageFn<{ max: number; value: unknown[] }> = (ctx) => _messages().array.max(ctx),
   ): this {
-    return this._addValidator((value, path) => {
-      const typed = value as unknown[];
+    return this._addValidatorWithConstraints(
+      (value, path) => {
+        const typed = value as unknown[];
 
-      if (typed.length <= length) return null;
+        if (typed.length <= length) return null;
 
-      return [
-        {
-          code: ErrorCode.too_big,
-          message: resolveMessage(message, { max: length, value: typed }),
-          params: { maximum: length },
-          path,
-        },
-      ];
-    });
+        return [
+          {
+            code: ErrorCode.too_big,
+            message: resolveMessage(message, { max: length, value: typed }),
+            params: { maximum: length },
+            path,
+          },
+        ];
+      },
+      { maxItems: length },
+    );
   }
 
   length(
     exact: number,
     message: MessageFn<{ exact: number; value: unknown[] }> = (ctx) => _messages().array.length(ctx),
   ): this {
-    return this._addValidator((value, path) => {
-      const typed = value as unknown[];
+    return this._addValidatorWithConstraints(
+      (value, path) => {
+        const typed = value as unknown[];
 
-      if (typed.length === exact) return null;
+        if (typed.length === exact) return null;
 
-      return [
-        {
-          code: ErrorCode.invalid_length,
-          message: resolveMessage(message, { exact, value: typed }),
-          params: { exact },
-          path,
-        },
-      ];
-    });
+        return [
+          {
+            code: ErrorCode.invalid_length,
+            message: resolveMessage(message, { exact, value: typed }),
+            params: { exact },
+            path,
+          },
+        ];
+      },
+      { maxItems: exact, minItems: exact },
+    );
   }
 
   nonEmpty(message: MessageFn<{ min: number; value: unknown[] }> = () => _messages().array.nonEmpty()): this {

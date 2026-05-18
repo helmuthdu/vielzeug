@@ -1,6 +1,11 @@
 ---
 title: Timit — Temporal date and time utilities
 description: Temporal-powered parsing, timezone conversion, arithmetic (DST-safe), and Intl formatting for modern TypeScript.
+package: timit
+category: date-time
+keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl, calendar]
+related: [toolkit]
+exports: [parse, convert, add, subtract, diff, format, isBefore, isAfter, isWithin, now]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Temporal-powered parsing, timezone conversion, arithmetic (DST-safe
 
 # Timit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/timit` &nbsp;·&nbsp; **Category:** Date Time
+
+**Key exports:** `parse`, `convert`, `add`, `subtract`, `diff`, `format`, `isBefore`, `isAfter`, `isWithin`, `now`
+
+**When to use:** Temporal-powered date parsing, DST-safe arithmetic, timezone conversion, and Intl formatting.
+
+**Related:** [Toolkit](/toolkit/)
+
+</details>
+
 `@vielzeug/timit` is a Temporal-first date/time library for TypeScript. It provides explicit helpers for parsing local values, timezone conversion, DST-safe arithmetic, comparison, boundaries, and Intl-based formatting.
 
-<!-- Search keywords: Temporal API, timezone conversion, DST transitions, date arithmetic, time formatting -->
 
 ## Installation
 

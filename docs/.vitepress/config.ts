@@ -1,5 +1,6 @@
 import browserslist from 'browserslist';
 import { browserslistToTargets } from 'lightningcss';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type DefaultTheme, type UserConfig } from 'vitepress';
@@ -35,8 +36,146 @@ const makePackageSidebarsCollapsible = (sidebar: DefaultTheme.SidebarMulti): Def
   ) as DefaultTheme.SidebarMulti;
 };
 
+// ---------------------------------------------------------------------------
+// llms.txt + llms-full.txt generator
+// ---------------------------------------------------------------------------
+
+interface RushProject {
+  packageName: string;
+  projectFolder: string;
+}
+
+type FrontmatterValue = string | string[];
+
+function parseFrontmatter(md: string): Record<string, FrontmatterValue> {
+  const match = md.match(/^---\n([\s\S]*?)\n---/);
+
+  if (!match) return {};
+
+  const out: Record<string, FrontmatterValue> = {};
+
+  for (const line of match[1].split('\n')) {
+    const colon = line.indexOf(':');
+
+    if (colon < 1) continue;
+
+    const key = line.slice(0, colon).trim();
+    const val = line.slice(colon + 1).trim();
+
+    if (val.startsWith('[') && val.endsWith(']')) {
+      out[key] = val
+        .slice(1, -1)
+        .split(',')
+        .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
+        .filter(Boolean);
+    } else {
+      out[key] = val.replace(/^['"]|['"]$/g, '');
+    }
+  }
+
+  return out;
+}
+
+function stripDocMarkup(md: string): string {
+  return md
+    .replace(/^---\n[\s\S]*?\n---\n?/, '') // frontmatter
+    .replace(/<!--[\s\S]*?-->/g, '') // HTML comments
+    .replace(/<[^>]+>/g, '') // HTML tags
+    .replace(/^\[\[toc]]\s*$/gm, '') // VitePress TOC directive
+    .replace(/^:::[\s\S]*?:::\s*$/gm, (m) => m.replace(/^:::[^\n]*\n?|^:::\s*$/gm, '')) // containers
+    .replace(/^\s*\n{2,}/gm, '\n\n') // normalise blank lines
+    .trim();
+}
+
+async function generateLlmsTxt(siteConfig: { outDir: string }): Promise<void> {
+  const root = resolve(__dirname, '../..');
+  const docsDir = resolve(__dirname, '..');
+  const outDir = siteConfig.outDir;
+
+  const rushJson = JSON.parse(readFileSync(resolve(root, 'rush.json'), 'utf8')) as { projects: RushProject[] };
+  const DOC_PAGES = ['index', 'api', 'usage', 'examples'] as const;
+
+  const packageLines: string[] = [];
+  const fullSections: string[] = [];
+
+  for (const project of rushJson.projects) {
+    const slug = project.projectFolder.replace('packages/', '');
+    const indexPath = resolve(docsDir, `${slug}/index.md`);
+
+    if (!existsSync(indexPath)) continue;
+
+    const indexContent = readFileSync(indexPath, 'utf8');
+    const fm = parseFrontmatter(indexContent);
+    const description = (fm['description'] as string) || '';
+    const category = (fm['category'] as string) || '';
+    const keywords = Array.isArray(fm['keywords']) ? fm['keywords'].join(', ') : '';
+
+    const availablePages = DOC_PAGES.filter((p) => existsSync(resolve(docsDir, `${slug}/${p}.md`)));
+
+    const pageLinks = availablePages
+      .filter((p) => p !== 'index')
+      .map((p) => `[${p}](/${slug}/${p})`)
+      .join(' · ');
+
+    let line = `- [${project.packageName}](/${slug}/): ${description}`;
+
+    if (pageLinks) line += ` → ${pageLinks}`;
+
+    packageLines.push(line);
+
+    // full section: index content only (stripped)
+    let section = `\n\n---\n\n## ${project.packageName}`;
+
+    section += `\n\n**Category:** ${category || 'general'}`;
+
+    if (keywords) section += `  \n**Keywords:** ${keywords}`;
+
+    section += `\n\n${stripDocMarkup(indexContent)}`;
+    fullSections.push(section);
+  }
+
+  const llmsTxt = [
+    '# Vielzeug',
+    '',
+    '> 20+ independent zero-dependency TypeScript utility packages. One tool per problem.',
+    '',
+    'Vielzeug is a monorepo of focused TypeScript packages — each solving one problem, all playing',
+    'nicely together. Every package ships ESM + CJS, targets ES2022, and has zero external dependencies.',
+    '',
+    'Install any package independently: `pnpm add @vielzeug/<name>`',
+    '',
+    '**MCP (AI agents):** `node packages/mcpit/dist/index.js` exposes 8 tools for package discovery,',
+    'doc lookup, API inspection, and component metadata.',
+    '',
+    '## Packages',
+    '',
+    ...packageLines,
+    '',
+    '## Integration guides',
+    '',
+    '- [Getting Started](/guide/): Installation and package overview',
+    '- [Building a Typed Form Flow](/guide/building-a-typed-form-flow): Validit + Formit + Fetchit',
+    '- [State and Routing](/guide/state-and-routing): Stateit + Routeit',
+  ].join('\n');
+
+  const llmsFullTxt = [
+    '# Vielzeug — Full documentation',
+    '',
+    '> Complete index documentation for all 20 Vielzeug packages.',
+    ...fullSections,
+  ].join('\n');
+
+  writeFileSync(resolve(outDir, 'llms.txt'), llmsTxt, 'utf8');
+  writeFileSync(resolve(outDir, 'llms-full.txt'), llmsFullTxt, 'utf8');
+}
+
+// ---------------------------------------------------------------------------
+
 export default defineConfig({
   base: '/',
+  async buildEnd(siteConfig) {
+    await generateLlmsTxt(siteConfig);
+  },
   description: 'Documentation for the Vielzeug monorepo',
   head: [
     // Favicons
@@ -64,7 +203,7 @@ export default defineConfig({
       return items.map((item) => {
         return {
           ...item,
-          url: `vielzeug/${item.url}`, // Fix sitemap URLs
+          url: `vielzeug/${item.url}`,
         };
       });
     },
@@ -107,6 +246,7 @@ export default defineConfig({
           },
           {
             items: [
+              { link: '/mcpit/', text: 'Mcpit' },
               { link: '/permit/', text: 'Permit' },
               { link: '/routeit/', text: 'Routeit' },
               { link: '/wireit/', text: 'Wireit' },
@@ -753,6 +893,51 @@ export default defineConfig({
             { link: '/logit/examples/timing-and-grouping', text: 'Timing and Grouping' },
           ],
           link: '/logit/examples',
+          text: 'Examples',
+        },
+      ],
+      '/mcpit/': [
+        { link: '/mcpit/', text: 'Overview' },
+        {
+          items: [
+            { link: '/mcpit/usage#quick-setup-from-a-monorepo-checkout', text: 'Setup' },
+            { link: '/mcpit/usage#transport-modes', text: 'Transport' },
+            { link: '/mcpit/usage#connecting-claude-desktop', text: 'Claude Desktop' },
+            { link: '/mcpit/usage#connecting-github-copilot-chat', text: 'Copilot Chat' },
+            { link: '/mcpit/usage#how-documentation-lookup-works', text: 'Docs Lookup' },
+          ],
+          link: '/mcpit/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/mcpit/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/mcpit/api#tools', text: 'Tools' },
+            { link: '/mcpit/api#list-packages', text: 'list-packages' },
+            { link: '/mcpit/api#search-packages', text: 'search-packages' },
+            { link: '/mcpit/api#get-ai-context', text: 'get-ai-context' },
+            { link: '/mcpit/api#list-docs-pages', text: 'list-docs-pages' },
+            { link: '/mcpit/api#get-docs', text: 'get-docs' },
+            { link: '/mcpit/api#get-package-api', text: 'get-package-api' },
+            { link: '/mcpit/api#list-components', text: 'list-components' },
+            { link: '/mcpit/api#get-component', text: 'get-component' },
+            { link: '/mcpit/api#resources', text: 'Resources' },
+            { link: '/mcpit/api#input-validation', text: 'Input Validation' },
+            { link: '/mcpit/api#error-handling', text: 'Error Handling' },
+          ],
+          link: '/mcpit/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/mcpit/examples/listing-packages', text: 'Listing Packages' },
+            { link: '/mcpit/examples/searching-packages', text: 'Searching Packages' },
+            { link: '/mcpit/examples/ai-context', text: 'AI Context' },
+            { link: '/mcpit/examples/looking-up-components', text: 'Looking Up Components' },
+            { link: '/mcpit/examples/reading-docs', text: 'Reading Docs' },
+            { link: '/mcpit/examples/inspector', text: 'Inspector' },
+          ],
+          link: '/mcpit/examples',
           text: 'Examples',
         },
       ],

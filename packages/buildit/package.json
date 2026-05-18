@@ -322,14 +322,14 @@
     }
   },
   "scripts": {
-    "analyze": "custom-elements-manifest analyze --config custom-elements-manifest.config.mjs",
+    "analyze": "custom-elements-manifest analyze --config buildit-manifest.mjs",
     "build": "pnpm run sync:exports && pnpm run check:manifest && vite build && pnpm run build:core && cp -r src/styles/*.css dist/styles && pnpm run build:types && pnpm run analyze",
     "build:core": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
-    "check:manifest": "node ./check-component-manifest.mjs",
+    "check:manifest": "node ./buildit-manifest.mjs check-exports",
     "dev": "vite",
     "preview": "vite preview",
-    "sync:exports": "node ./sync-package-exports.mjs",
+    "sync:exports": "node ./buildit-manifest.mjs sync-exports",
     "test": "vitest"
   },
   "dependencies": {

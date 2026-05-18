@@ -1,6 +1,11 @@
 ---
 title: Toolkit — Utility library for TypeScript
 description: Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, dates, money, random, and typed checks.
+package: toolkit
+category: utilities
+keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
+related: []
+exports: [chunk, debounce, throttle, group, clamp, isEqual, deepClone, currency, retry, sleep]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,19 @@ description: Tree-shakeable, zero-dependency utility library for arrays, async c
 
 # Toolkit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/toolkit` &nbsp;·&nbsp; **Category:** Utilities
+
+**Key exports:** `chunk`, `debounce`, `throttle`, `group`, `clamp`, `isEqual`, `deepClone`, `currency`, `retry`, `sleep`
+
+**When to use:** 75+ tree-shakeable utility functions for arrays, objects, strings, async control, math, and money. Import only what you use.
+
+</details>
+
 `@vielzeug/toolkit` is a compact utility package built for modern TypeScript projects. The API is intentionally small, composable, and fully tree-shakeable.
 
-<!-- Search keywords: utility functions, typed helpers, array object async utilities. -->
 
 ## Installation
 

@@ -1,18 +1,20 @@
-import type { InferOutput, Issue } from '../core';
+import type { AnySchema, InferOutput, Issue } from '../core';
 
 import { type CheckContext, type CheckFnResult, ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
-export type ObjectShape = Record<string, Schema<any>>;
+export type ObjectShape = Record<string, AnySchema>;
 export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T[K]> };
 
 export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> {
   readonly shape: T;
+  private readonly _forceRequired: boolean;
   private readonly _isRelaxed: boolean;
 
-  constructor(shape: T, isRelaxed = false) {
+  constructor(shape: T, isRelaxed = false, forceRequired = false) {
     super([]);
     this.shape = shape;
+    this._forceRequired = forceRequired;
     this._isRelaxed = isRelaxed;
   }
 
@@ -67,8 +69,12 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     };
   }
 
-  private _rebuildWith<U extends ObjectShape>(shape: U, isRelaxed = this._isRelaxed): ObjectSchema<U> {
-    return this._copyStateTo(new ObjectSchema(shape, isRelaxed));
+  private _rebuildWith<U extends ObjectShape>(
+    shape: U,
+    isRelaxed = this._isRelaxed,
+    forceRequired = this._forceRequired,
+  ): ObjectSchema<U> {
+    return this._copyStateTo(new ObjectSchema(shape, isRelaxed, forceRequired));
   }
 
   protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
@@ -80,7 +86,8 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     const { issues, output } = this._createObjectParseContext(obj);
 
     for (const key of Object.keys(this.shape)) {
-      const result = this.shape[key].safeParse(obj[key]);
+      const fieldSchema = this._forceRequired ? this.shape[key].required() : this.shape[key];
+      const result = fieldSchema.safeParse(obj[key]);
 
       if (result.success) {
         output[key] = result.data;
@@ -107,11 +114,13 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     // Async field parsing
     const keyResults = await Promise.all(
       Object.keys(this.shape).map((key) =>
-        this.shape[key].safeParseAsync(obj[key]).then((result) => ({
-          data: result.success ? result.data : obj[key],
-          issues: result.success ? [] : prependIssuePath(result.error.issues, key),
-          key,
-        })),
+        (this._forceRequired ? this.shape[key].required() : this.shape[key])
+          .safeParseAsync(obj[key])
+          .then((result) => ({
+            data: result.success ? result.data : obj[key],
+            issues: result.success ? [] : prependIssuePath(result.error.issues, key),
+            key,
+          })),
       ),
     );
 
@@ -139,11 +148,13 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
       Object.fromEntries(
         Object.entries(this.shape).map(([k, s]) => [k, targetKeys === null || targetKeys.has(k) ? s.optional() : s]),
       ) as any,
+      this._isRelaxed,
+      false,
     );
   }
 
-  required(): ObjectSchema<{ [K in keyof T]: Schema<Exclude<InferOutput<T[K]>, undefined>> }> {
-    return this._rebuildWith(Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any);
+  override required(): Schema<InferObject<T>, InferObject<T>> {
+    return this._rebuildWith(this.shape, this._isRelaxed, true);
   }
 
   extend<U extends ObjectShape>(extra: U): ObjectSchema<Omit<T, keyof U> & U> {
@@ -167,21 +178,18 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
    * Default is strict mode (rejects unknown keys).
    */
   relaxed(): Schema<InferObject<T> & Record<string, unknown>> {
-    return this._rebuildWith(this.shape, true) as unknown as Schema<InferObject<T> & Record<string, unknown>>;
+    return this._rebuildWith(this.shape, true, this._forceRequired) as unknown as Schema<
+      InferObject<T> & Record<string, unknown>
+    >;
   }
 
   /**
    * Adds a cross-field validation step.
    *
-   * The callback receives the best-effort parsed output. Fields that failed
-   * their own validation are omitted, so the value is typed as `Partial<InferObject<T>>`.
-   * Check `'key' in value` before accessing fields that may be missing.
+   * Failed fields are omitted internally while collecting issues, but callbacks
+   * keep the base `Schema.check` value type for subtype compatibility.
    */
-  override check(
-    fn: (value: Partial<InferObject<T>>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>,
-  ): this;
-  override check(fn: (value: InferObject<T>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this;
-  override check(fn: (value: any, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
+  override check(fn: (value: InferObject<T>, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
     return super.check(fn);
   }
 }

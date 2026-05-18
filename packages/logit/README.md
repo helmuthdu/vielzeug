@@ -1,24 +1,40 @@
+---
+description: Browser/Node logger with levels, namespaces, timing helpers, and optional remote transport.
+package: logit
+category: logging
+keywords: [logging, console, structured, scoped, remote-logging, levels, namespaces]
+related: [fetchit, eventit, workit]
+exports: [createLogger]
+---
+
 # @vielzeug/logit
 
-> Zero-dependency logger with levels, scoped namespaces, timing/group helpers, and optional remote transport.
+> Browser/Node logger with levels, namespaces, timing helpers, and optional remote transport.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/logit)](https://www.npmjs.com/package/@vielzeug/logit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`@vielzeug/logit` provides a browser/Node-friendly logger that wraps native console APIs with level filtering, namespacing, styled output, and non-blocking remote forwarding.
+<details>
+<summary>Quick Reference</summary>
+
+**Package:** `@vielzeug/logit` &nbsp;·&nbsp; **Category:** Logging
+
+**Key exports:** `createLogger`
+
+**When to use:** Browser/Node logger with levels, namespaces, timing helpers, and optional remote transport.
+
+**Related:** [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/eventit](https://vielzeug.dev/eventit/) · [@vielzeug/workit](https://vielzeug.dev/workit/)
+
+</details>
+
+`@vielzeug/logit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/logit
-# npm install @vielzeug/logit
-# yarn add @vielzeug/logit
+npm install @vielzeug/logit
+yarn add @vielzeug/logit
 ```
-
-## Entry Point
-
-| Entry | Purpose |
-| --- | --- |
-| `@vielzeug/logit` | `createLogger`, `Logit`, and logger types |
 
 ## Quick Start
 
@@ -48,58 +64,6 @@ await log.time('sync-task', async () => {
   await runTask();
 });
 ```
-
-## Features
-
-- Log levels: `debug`, `info`, `warn`, `error`, `fatal`, `off`
-- Structured call signature: `log.info('msg')`, `log.info({ key }, 'msg')`, `log.error(new Error())`
-- Auto-serializes `Error` objects into `{ message, name, stack }` — survives `JSON.stringify`
-- Pinned context bindings via `withBindings({ requestId })` — merged into every log call
-- `enabled(level)` guard for expensive payload computation
-- Scoped logger composition via `scope(name)`
-- Independent logger cloning via `child(overrides?)`
-- Browser badge variants: `symbol`, `icon`, `text`
-- Callback wrappers: `time(label, fn)`, `group(label, fn)`, and `groupCollapsed(label, fn)`
-- Structured remote payload: `{ level, message, context, env, namespace?, timestamp? }`
-- Remote log forwarding with independent threshold (`remote.logLevel`)
-- Zero runtime dependencies
-
-## Configuration
-
-```ts
-const Log = Logit.child({
-  logLevel: 'warn',
-  namespace: 'App',
-  timestamp: true,
-  variant: 'symbol',
-  remote: {
-    logLevel: 'error',
-    handler: (type, data) => {
-      // data: { level, message, context, env, namespace?, timestamp? }
-      void fetch('/api/logs', {
-        body: JSON.stringify(data),
-        method: 'POST',
-      });
-    },
-  },
-});
-
-const cfg = Log.config; // snapshot copy
-```
-
-## API At a Glance
-
-- `createLogger(initial?) => Logger`
-- `Logit` (default logger instance)
-- `logger.scope(name) => Logger`
-- `logger.child(overrides?) => Logger`
-- `logger.withBindings(bindings) => Logger`
-- `logger.bindings` (readonly snapshot)
-- `logger.time(label, fn)`
-- `logger.group(label, fn)`
-- `logger.groupCollapsed(label, fn)`
-
-Structured context is always passed first: `logger.info({ userId: 42 }, 'signed in')`. String-first calls accept only a single message argument.
 
 ## Documentation
 

@@ -3,11 +3,16 @@ import type { TtlMs } from './types';
 /* -------------------- Duration helpers -------------------- */
 
 /**
- * Convenience helpers for expressing TTL values as named durations.
+ * Convenience helpers for expressing TTL (time-to-live) values as named durations.
+ *
+ * Use with storage operations to set expiration times for records.
+ * Supports days, hours, minutes, seconds, and milliseconds.
+ *
  * @example
  * ```ts
  * db.put('sessions', session, ttl.minutes(30));
  * db.put('cache', data, ttl.hours(1));
+ * db.put('temp', tempData, ttl.days(7));
  * ```
  */
 export const ttl = {

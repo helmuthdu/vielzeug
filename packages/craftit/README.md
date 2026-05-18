@@ -1,17 +1,39 @@
+---
+description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, controls, observers, and testing utilities.
+package: craftit
+category: ui-primitives
+keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
+related: [stateit, buildit, floatit]
+exports: [define, html, css, signal, computed, effect, props, propsOf, on, ref, host, provide, inject]
+---
+
 # @vielzeug/craftit
 
-> Functional web components with signals, typed props, lifecycle hooks, and headless controls.
+> Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, controls, observers, and testing utilities.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/craftit)](https://www.npmjs.com/package/@vielzeug/craftit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Craftit is Vielzeug's custom-element authoring library built on `@vielzeug/stateit`.
+<details>
+<summary>Quick Reference</summary>
+
+**Package:** `@vielzeug/craftit` &nbsp;·&nbsp; **Category:** Ui-primitives
+
+**Key exports:** `define`, `html`, `css`, `signal`, `computed`, `effect`, `props`, `propsOf`, `on`, `ref`, `host`, `provide`, `inject`
+
+**When to use:** Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, controls, observers, and testing utilities.
+
+**Related:** [@vielzeug/stateit](https://vielzeug.dev/stateit/) · [@vielzeug/buildit](https://vielzeug.dev/buildit/) · [@vielzeug/floatit](https://vielzeug.dev/floatit/)
+
+</details>
+
+`@vielzeug/craftit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/craftit
-# npm install @vielzeug/craftit
-# yarn add @vielzeug/craftit
+npm install @vielzeug/craftit
+yarn add @vielzeug/craftit
 ```
 
 ## Quick Start
@@ -48,65 +70,13 @@ define('my-counter', {
 });
 ```
 
-## Authoring Model
-
-- `setup(props, ctx)` returns a template function: `() => html\`...\``
-- Use `onMounted()` for post-mount DOM initialization
-- Use `onCleanup()` for teardown
-- Use `onElement(ref, cb)` for ref-driven effects
-
-```ts
-import { define, html, onCleanup, onMounted, signal } from '@vielzeug/craftit';
-
-define('auto-save-field', {
-  setup() {
-    const value = signal('');
-
-    onMounted(() => {
-      console.log('ready for DOM interactions');
-    });
-
-    onCleanup(() => {
-      console.log('saving', value.value);
-    });
-
-    return () => html`
-      <textarea
-        @input=${(e: Event) => {
-          value.value = (e.target as HTMLTextAreaElement).value;
-        }}
-      ></textarea>
-    `;
-  },
-});
-```
-
-## Features
-
-- Signals included: `signal`, `computed`, `watch`, `batch`, `untrack`, `scope`, and related primitives from `@vielzeug/stateit`
-- Component authoring: `define(tag, { props, setup, styles, formAssociated })`
-- Props: `prop.*` helpers and raw `PropDef` objects; shared bundles can type against `PropsDef<...>`
-- Lifecycle hooks: `onMounted`, `onCleanup`, `onElement`, `effect`, `handle` (auto-cleans inside setup/scope; returns manual cleanup outside it)
-- Directives: `each`, `classMap`, `styleMap`, `guard`, `when`, `live`, `until`, `raw`
-- Host/slot APIs: `host.bind`, `syncAria`, `slots.has`, `slots.elements`
-- Form-associated elements: `defineField()`
-- Published subpaths: `@vielzeug/craftit/controls`, `@vielzeug/craftit/observers`, `@vielzeug/craftit/testing`
-
-## API Summary
-
-| Area | Exports |
-| --- | --- |
-| Component authoring | `define`, `prop`, `type ComponentDefinition`, `type SetupContextBag`, `type PropsDef`, `type PropDef` |
-| Runtime | `onMounted`, `effect`, `handle`, `onCleanup`, `onElement` |
-| Templates and directives | `html`, `css`, `each`, `classMap`, `styleMap`, `guard`, `when`, `live`, `until`, `raw` |
-| Element references | `ref`, `refs`, `createId` |
-| Context and slots | `createContext`, `provide`, `inject`, `injectStrict`, `syncAria` |
-| Form | `defineField`, `type FormFieldOptions`, `type FormFieldHandle` |
-
 ## Documentation
 
-Full docs at **[vielzeug.dev/craftit](https://vielzeug.dev/craftit)**
+- [Overview](https://vielzeug.dev/craftit/)
+- [Usage Guide](https://vielzeug.dev/craftit/usage)
+- [API Reference](https://vielzeug.dev/craftit/api)
+- [Examples](https://vielzeug.dev/craftit/examples)
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — Part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

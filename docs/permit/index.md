@@ -1,6 +1,11 @@
 ---
 title: Permit — Deterministic authorization for TypeScript
 description: Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
+package: permit
+category: auth
+keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
+related: [logit, routeit, wireit]
+exports: [createPermit, owns]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Minimal authorization engine with deterministic precedence, wildcar
 
 # Permit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/permit` &nbsp;·&nbsp; **Category:** Auth
+
+**Key exports:** `createPermit`, `owns`
+
+**When to use:** Minimal RBAC engine with deterministic precedence, wildcard rules, dynamic predicates, and audit logging.
+
+**Related:** [Logit](/logit/) · [Routeit](/routeit/) · [Wireit](/wireit/)
+
+</details>
+
 `@vielzeug/permit` is a small authorization engine for role/resource/action checks.
 
-<!-- Search keywords: RBAC rules engine, authorization checks, typed permissions. -->
 
 ## Installation
 

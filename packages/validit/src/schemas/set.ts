@@ -4,9 +4,9 @@ import { ErrorCode, prependIssuePath, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class SetSchema<T> extends Schema<Set<T>> {
-  private readonly itemSchema: BaseSchema<T>;
+  private readonly itemSchema: BaseSchema<T, any, any, any>;
 
-  constructor(itemSchema: BaseSchema<T>) {
+  constructor(itemSchema: BaseSchema<T, any, any, any>) {
     super([]);
     this.itemSchema = itemSchema;
   }

@@ -47,6 +47,9 @@ features:
   - title: '@vielzeug/logit'
     details: "<img src='/logo-logit.svg' class='logo-highlight-smaller' alt='Logit Logo' width='72'/>Beautiful console logging with styling and remote logging support."
     link: /logit/
+  - title: '@vielzeug/mcpit'
+    details: "<img src='/logo-mcpit.svg' class='logo-highlight-smaller' alt='Mcpit Logo' width='72'/>MCP server for exposing Vielzeug package docs, APIs, and metadata to AI clients."
+    link: /mcpit/
   - title: '@vielzeug/permit'
     details: "<img src='/logo-permit.svg' class='logo-highlight-smaller' alt='Permit Logo' width='72'/>Role-based access control (RBAC) system for permissions."
     link: /permit/

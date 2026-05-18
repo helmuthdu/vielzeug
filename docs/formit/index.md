@@ -1,6 +1,11 @@
 ---
 title: Formit — Form state management for TypeScript
 description: Framework-agnostic typed form state with path-safe fields, unified validation API, deterministic submit flow, and browser-friendly helpers.
+package: formit
+category: forms
+keywords: [form-state, validation, input, submission, dirty-tracking, controlled, field]
+related: [validit, stateit, fetchit]
+exports: [createForm]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Framework-agnostic typed form state with path-safe fields, unified 
 
 # Formit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/formit` &nbsp;·&nbsp; **Category:** Forms
+
+**Key exports:** `createForm`
+
+**When to use:** Typed form state with field validation, dirty tracking, submission handling, and file upload support. Works with any UI.
+
+**Related:** [Validit](/validit/) · [Stateit](/stateit/) · [Fetchit](/fetchit/)
+
+</details>
+
 `@vielzeug/formit` is a typed, framework-agnostic form controller for values, errors, dirty and touched state, validation, and submission.
 
-<!-- Search keywords: typed form state, validation, submit orchestration, form controller. -->
 
 ## Installation
 

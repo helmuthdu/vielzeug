@@ -3,9 +3,9 @@ import type { Issue } from '../core';
 import { Schema } from '../core';
 
 export class LazySchema<T> extends Schema<T> {
-  private readonly getter: () => Schema<T>;
+  private readonly getter: () => Schema<T, any, any, any>;
 
-  constructor(getter: () => Schema<T>) {
+  constructor(getter: () => Schema<T, any, any, any>) {
     super([]);
     this.getter = getter;
   }

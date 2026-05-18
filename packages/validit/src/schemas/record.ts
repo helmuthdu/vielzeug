@@ -4,10 +4,10 @@ import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
-  private readonly keySchema: Schema<K>;
-  private readonly valueSchema: Schema<V>;
+  readonly keySchema: Schema<K, any, any, any>;
+  readonly valueSchema: Schema<V, any, any, any>;
 
-  constructor(keySchema: Schema<K>, valueSchema: Schema<V>) {
+  constructor(keySchema: Schema<K, any, any, any>, valueSchema: Schema<V, any, any, any>) {
     super([]);
     this.keySchema = keySchema;
     this.valueSchema = valueSchema;

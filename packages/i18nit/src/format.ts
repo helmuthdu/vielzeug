@@ -2,6 +2,9 @@
  * @vielzeug/i18nit/format
  *
  * Standalone Intl formatter factory. Import from `@vielzeug/i18nit/format`.
+ * Creates formatters for numbers, dates, currencies, lists, durations, and relative time.
+ *
+ * Pass a static locale string, a reactive locale getter, or an i18n instance.
  *
  * @example
  * ```ts

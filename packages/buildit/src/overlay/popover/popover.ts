@@ -59,16 +59,17 @@ export type BitPopoverProps = {
  * @attr {boolean} disabled - Disables the popover
  * @attr {string} label - aria-label on the panel
  *
- * @slot - The trigger element
- * @slot content - Panel content
- *
  * @fires open - When the panel opens with detail: { reason }
  * @fires close - When the panel closes with detail: { reason }
+ *
+ * @slot - The trigger element
+ * @slot content - Panel content
  *
  * @cssprop --popover-min-width - Min width of the panel
  * @cssprop --popover-max-width - Max width of the panel
  * @cssprop --popover-max-height - Max height of the panel
  *
+ * @part panel - Panel container.
  * @example
  * ```html
  * <bit-popover>

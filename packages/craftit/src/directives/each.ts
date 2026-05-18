@@ -76,18 +76,22 @@ export interface EachOptions<T> {
  * For dynamic lists with click handlers, prefer event delegation on a parent node
  * (`@click` + `closest(...)`) over per-item handlers inside `each()`.
  *
+ * Supports fallback rendering when the list is empty.
+ *
  * @example
+ * ```ts
  * import { each } from '@vielzeug/craftit';
  *
  * // Reactive source (key required):
  * html`${each(items, { key: item => item.id, render: (item) => html`<li>${item.name}</li>` })}`
  *
- * // Full example:
+ * // Full example with fallback:
  * html`${each(items, {
  *   fallback: () => html`<p>No items</p>`,
  *   key: item => item.id,
  *   render: (item) => html`<li>${item.name}</li>`,
  * })}`
+ * ```
  */
 export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): DirectiveResult;
 export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): DirectiveResult {

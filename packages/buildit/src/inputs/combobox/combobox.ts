@@ -22,8 +22,7 @@ import componentStyles from './combobox.css?inline';
 export type { BitComboboxEvents, BitComboboxProps } from './combobox.types';
 
 /**
- * A search-enhanced select component with support for multiple selection, custom creation,
- * and virtualized lists for large datasets.
+ * A searchable select field with multiple selection, custom option creation, and large-list support.
  *
  * @element bit-combobox
  *
@@ -36,6 +35,27 @@ export type { BitComboboxEvents, BitComboboxProps } from './combobox.types';
  * @fires {CustomEvent} change - Emitted when selection changes. detail: { value: string | string[], values: string[], labels: string[] }
  * @fires {CustomEvent} search - Emitted when user types. detail: { query: string }
  *
+ * @slot - Slotted combobox options and option groups
+ * @cssprop --border - Border token for the combobox field and dropdown
+ * @cssprop --color-canvas - Surface background for the combobox and its menu
+ * @cssprop --color-contrast-100 - Hover background for option rows and field chrome
+ * @cssprop --color-contrast-200 - Divider and border contrast color
+ * @cssprop --color-contrast-300 - Subtle contrast tone for disabled or muted UI
+ * @cssprop --color-contrast-400 - Secondary text color inside the field
+ * @cssprop --color-contrast-50 - Soft background for the dropdown and inset label
+ * @cssprop --color-contrast-500 - Helper and placeholder text color
+ * @cssprop --color-contrast-600 - Stronger text color for selected values
+ * @cssprop --color-contrast-900 - Deep contrast color used for focus and emphasis
+ * @cssprop --color-error - Error accent color for invalid states
+ * @cssprop --color-error-focus-shadow - Error focus ring shadow for validation states
+ *
+ * @part wrapper - Root wrapper around the entire field
+ * @part label - Label element shown inside or outside the field
+ * @part field - Field container that holds the trigger input and clear button
+ * @part input - Search input used to filter and select options
+ * @part clear-btn - Button that clears the current selection/query
+ * @part dropdown - Popup list container for options
+ * @part helper-text - Helper text displayed below the field
  * @example
  * ```html
  * <bit-combobox label="Country" name="country">

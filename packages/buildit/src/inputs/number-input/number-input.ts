@@ -79,6 +79,10 @@ export type BitNumberInputProps = ThemableProps &
  * @cssprop --number-input-bg - Background
  * @cssprop --number-input-btn-bg - Spin button background
  *
+ * @part control - Control container.
+ * @part decrement-btn - Decrement stepper button.
+ * @part input - Input element.
+ * @part increment-btn - Increment stepper button.
  * @example
  * ```html
  * <bit-number-input label="Quantity" value="1" min="1" max="99" step="1"></bit-number-input>

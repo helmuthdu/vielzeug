@@ -1,6 +1,11 @@
 ---
 title: Eventit — Typed event bus for TypeScript
 description: Zero-dependency typed event bus with subscribe/emit, wait(), async streams, AbortSignal support, and test helpers.
+package: eventit
+category: events
+keywords: [event-bus, typed-events, pub-sub, reactive, decoupled, async-streams]
+related: [stateit, routeit, workit]
+exports: [createBus, createTestBus]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Zero-dependency typed event bus with subscribe/emit, wait(), async 
 
 # Eventit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/eventit` &nbsp;·&nbsp; **Category:** Events
+
+**Key exports:** `createBus`, `createTestBus`
+
+**When to use:** Decoupled inter-module communication via a typed event bus. Supports subscribe/emit, one-time await, async iteration, and AbortSignal.
+
+**Related:** [Stateit](/stateit/) · [Routeit](/routeit/) · [Workit](/workit/)
+
+</details>
+
 `@vielzeug/eventit` is a zero-dependency typed event bus. Define your event map once and get type-safe `emit`, `on`, `once`, `wait`, `waitAny`, and `events` APIs with payload inference.
 
-<!-- Search keywords: event bus, pub-sub, typed message dispatch. -->
 
 ## Installation
 

@@ -1,6 +1,11 @@
 ---
 title: Wireit — Typed dependency injection for TypeScript
 description: Typed dependency injection for TypeScript.
+package: wireit
+category: di
+keywords: [dependency-injection, ioc, container, singleton, transient, factory, scoped]
+related: [logit, eventit, permit]
+exports: [createContainer, createToken]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Typed dependency injection for TypeScript.
 
 # Wireit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/wireit` &nbsp;·&nbsp; **Category:** Di
+
+**Key exports:** `createContainer`, `createToken`
+
+**When to use:** Type-safe DI container with singleton/transient lifetimes, child scopes, async providers, and circular dependency detection.
+
+**Related:** [Logit](/logit/) · [Eventit](/eventit/) · [Permit](/permit/)
+
+</details>
+
 `@vielzeug/wireit` is a compact dependency injection container built around typed symbol tokens, factory registration, and explicit container scopes.
 
-<!-- Search keywords: dependency injection container, typed service registry, scoped providers. -->
 
 ## Installation
 

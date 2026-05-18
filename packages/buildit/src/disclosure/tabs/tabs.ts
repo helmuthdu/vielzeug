@@ -72,6 +72,21 @@ export type BitTabsProps = {
  * @slot tabs - Place `bit-tab-item` elements here
  * @slot - Place `bit-tab-panel` elements here
  *
+ * @cssprop --blur-lg - Backdrop blur for frosted tab variants
+ * @cssprop --border - Border token used by tablist and panel separators
+ * @cssprop --color-canvas - Base background color for tab surfaces
+ * @cssprop --color-contrast-100 - Hover background tone for tab items
+ * @cssprop --color-contrast-200 - Border/divider contrast tone
+ * @cssprop --color-contrast-300 - Muted contrast tone for inactive states
+ * @cssprop --color-secondary - Accent color for active tab highlights
+ * @cssprop --color-secondary-contrast - Text/icon color on active tab accents
+ * @cssprop --inset-shadow-xs - Inset shadow used by bordered tab variants
+ * @cssprop --rounded-full - Pill-style radius for rounded tab variants
+ * @cssprop --rounded-lg - Radius for tablist container and panels
+ * @cssprop --shadow-2xs - Subtle shadow for layered tab surfaces
+ * @part tablist - Container that holds the slotted tab items
+ * @part indicator - Active tab indicator element
+ * @part panels - Container that holds tab panel content
  * @example
  * ```html
  * <bit-tabs value="tab1" variant="underline">

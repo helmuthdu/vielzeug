@@ -1,6 +1,11 @@
 ---
 title: Logit — Structured logging for TypeScript
 description: Browser/Node logger with levels, namespaces, timing helpers, and optional remote transport.
+package: logit
+category: logging
+keywords: [logging, console, structured, scoped, remote-logging, levels, namespaces]
+related: [fetchit, eventit, workit]
+exports: [createLogger]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Browser/Node logger with levels, namespaces, timing helpers, and op
 
 # Logit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/logit` &nbsp;·&nbsp; **Category:** Logging
+
+**Key exports:** `createLogger`
+
+**When to use:** Structured browser/Node logging with log levels, namespaced scopes, timing helpers, and optional remote transport.
+
+**Related:** [Fetchit](/fetchit/) · [Eventit](/eventit/) · [Workit](/workit/)
+
+</details>
+
 `@vielzeug/logit` is a zero-dependency logger that augments the native console with level filtering, namespace scopes, styled badges, and optional remote forwarding.
 
-<!-- Search keywords: structured logging, logger namespaces, browser node logging. -->
 
 ## Installation
 

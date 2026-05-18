@@ -110,18 +110,24 @@ export type BitDrawerProps = {
  * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {boolean} persistent - Prevent backdrop-click from closing (default: false)
  *
+ * @fires open - When the drawer opens with detail: { placement, reason }
+ * @fires close - When the drawer closes with detail: { placement, reason }
+ *
  * @slot header - Drawer header content
  * @slot - Main body content
  * @slot footer - Drawer footer content
- *
- * @fires open - When the drawer opens with detail: { placement, reason }
- * @fires close - When the drawer closes with detail: { placement, reason }
  *
  * @cssprop --drawer-backdrop - Backdrop background
  * @cssprop --drawer-bg - Panel background color
  * @cssprop --drawer-size - Panel width (horizontal) or height (vertical)
  * @cssprop --drawer-shadow - Panel box-shadow
  *
+ * @part drag-handle - Drawer drag handle.
+ * @part panel - Panel container.
+ * @part header - Header container.
+ * @part close-btn - Close button.
+ * @part body - Body content container.
+ * @part footer - Footer container.
  * @example
  * ```html
  * <!-- With visible title -->

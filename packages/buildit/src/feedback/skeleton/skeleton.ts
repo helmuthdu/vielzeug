@@ -54,6 +54,8 @@ export type BitSkeletonProps = {
  * @cssprop --skeleton-duration    - Shimmer animation duration
  * @cssprop --skeleton-stripe-size  - Width of each diagonal stripe (default: 6px)
  *
+ * @part stack - Stack container.
+ * @part bone - Skeleton bone element.
  * @example
  * ```html
  * <!-- Paragraph lines -->

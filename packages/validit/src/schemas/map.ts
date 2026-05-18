@@ -4,10 +4,10 @@ import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class MapSchema<K, V> extends Schema<Map<K, V>> {
-  private readonly keySchema: BaseSchema<K>;
-  private readonly valueSchema: BaseSchema<V>;
+  private readonly keySchema: BaseSchema<K, any, any, any>;
+  private readonly valueSchema: BaseSchema<V, any, any, any>;
 
-  constructor(keySchema: BaseSchema<K>, valueSchema: BaseSchema<V>) {
+  constructor(keySchema: BaseSchema<K, any, any, any>, valueSchema: BaseSchema<V, any, any, any>) {
     super([]);
     this.keySchema = keySchema;
     this.valueSchema = valueSchema;

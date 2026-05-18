@@ -85,7 +85,7 @@ export type BitFileInputEvents = {
 };
 
 /**
- * A file upload component with drag and drop support.
+ * A file upload field with drag-and-drop support and built-in validation messaging.
  *
  * @element bit-file-input
  *
@@ -100,6 +100,24 @@ export type BitFileInputEvents = {
  * @fires change - detail: { files: File[], value: File[] }
  * @fires remove - detail: { file: File, files: File[] }
  *
+ * @cssprop --border - Border token for the file field and dropzone
+ * @cssprop --border-2 - Stronger border token used for hover and focus states
+ * @cssprop --color-canvas - Base background for the file input surface
+ * @cssprop --color-contrast-100 - Hover background for the dropzone and file list
+ * @cssprop --color-contrast-200 - Divider and border contrast color
+ * @cssprop --color-contrast-300 - Muted contrast tone for secondary details
+ * @cssprop --color-contrast-400 - Secondary text color for helper content
+ * @cssprop --color-contrast-50 - Soft background used for the dropzone surface
+ * @cssprop --color-contrast-500 - Primary body text color in the field
+ * @cssprop --color-contrast-700 - Strong text color for labels and filenames
+ * @cssprop --color-error - Error accent color for invalid and rejected states
+ * @cssprop --color-error-backdrop - Error tint used behind invalid dropzone states
+ * @part wrapper - Root wrapper around the file input field
+ * @part label - Visible label rendered above the dropzone
+ * @part dropzone - Interactive drag-and-drop target
+ * @part input - Native file input element
+ * @part helper - Helper text shown beneath the dropzone
+ * @part error - Error message shown beneath the field
  * @example
  * ```html
  * <bit-file-input label="Upload files" accept="image/*" multiple />

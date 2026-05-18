@@ -54,6 +54,8 @@ export type BitRatingProps = ThemableProps &
  * @cssprop --rating-color-filled - Filled star color
  * @cssprop --rating-gap - Gap between stars
  *
+ * @part stars - Stars container.
+ * @part star - Star item element.
  * @example
  * ```html
  * <bit-rating value="3" max="5" color="warning"></bit-rating>

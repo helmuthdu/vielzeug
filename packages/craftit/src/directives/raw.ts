@@ -11,6 +11,7 @@ import { htmlResult, type HTMLResult } from '../internal';
  * When reactive, the DOM is updated in-place whenever the value changes.
  *
  * @example
+ * ```ts
  * import { raw } from '@vielzeug/craftit';
  *
  * // Static
@@ -19,7 +20,7 @@ import { htmlResult, type HTMLResult } from '../internal';
  * // Reactive signal
  * const content = signal('<em>hello</em>');
  * html`<div>${raw(content)}</div>`
- *
+ * ```
  */
 export function raw(value: string | Signal<string> | ReadonlySignal<string>): HTMLResult | ReadonlySignal<HTMLResult> {
   if (isSignal(value)) {

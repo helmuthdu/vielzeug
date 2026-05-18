@@ -1,6 +1,11 @@
 ---
 title: Sourceit — Reactive Query Sources
 description: Typed local and remote data sources for pagination, filtering, sorting, and search.
+package: sourceit
+category: data
+keywords: [pagination, filtering, sorting, search, data-source, query, remote, local]
+related: [fetchit, stateit, routeit]
+exports: [createLocalSource, createRemoteSource]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Typed local and remote data sources for pagination, filtering, sort
 
 # Sourceit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/sourceit` &nbsp;·&nbsp; **Category:** Data
+
+**Key exports:** `createLocalSource`, `createRemoteSource`
+
+**When to use:** Reactive local and remote data sources with pagination, filtering, sorting, search, and URL query-param sync.
+
+**Related:** [Fetchit](/fetchit/) · [Stateit](/stateit/) · [Routeit](/routeit/)
+
+</details>
+
 `@vielzeug/sourceit` provides lightweight, typed source models for list-like UIs:
 
-<!-- Search keywords: reactive data source, pagination filtering sorting search model. -->
 
 - `createLocalSource()` for in-memory collections
 - `createRemoteSource()` for async server-backed collections

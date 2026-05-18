@@ -44,6 +44,18 @@ export type BitAccordionProps = {
  *
  * @slot - Accordion item elements (bit-accordion-item)
  *
+ * @cssprop --blur-lg - Backdrop blur for frosted accordion variants
+ * @cssprop --border - Border token used for accordion item outlines
+ * @cssprop --color-canvas - Base panel background color
+ * @cssprop --color-contrast - Primary text contrast color within items
+ * @cssprop --color-contrast-100 - Hover and active background contrast tone
+ * @cssprop --color-contrast-200 - Divider and border contrast color
+ * @cssprop --color-contrast-50 - Soft background for subtle variants
+ * @cssprop --color-secondary - Accent color for selected or emphasized states
+ * @cssprop --inset-shadow-xs - Inset shadow used for bordered/flat depth
+ * @cssprop --rounded-lg - Corner radius for accordion item containers
+ * @cssprop --shadow-md - Elevated shadow for prominent accordion styles
+ * @cssprop --shadow-xs - Subtle shadow for default accordion depth
  * @example
  * ```html
  * <bit-accordion selection-mode="single"><bit-accordion-item>...</bit-accordion-item></bit-accordion>

@@ -1,6 +1,11 @@
 ---
 title: Floatit — Lightweight floating element positioning
 description: Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
+package: floatit
+category: ui-positioning
+keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement]
+related: [craftit, buildit, dragit]
+exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Zero-dependency floating element positioning for tooltips, dropdown
 
 # Floatit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/floatit` &nbsp;·&nbsp; **Category:** Ui Positioning
+
+**Key exports:** `float`, `computePosition`, `autoUpdate`, `offset`, `flip`, `shift`, `arrow`, `size`
+
+**When to use:** Precise floating element positioning for tooltips, dropdowns, menus, and popovers with middleware pipeline.
+
+**Related:** [Craftit](/craftit/) · [Buildit](/buildit/) · [Dragit](/dragit/)
+
+</details>
+
 `@vielzeug/floatit` is a small DOM positioning engine for floating UI. It provides a direct API for computing positions, a high-level follow API, and middleware for collision handling, arrows, hiding, inline text anchors, and dynamic sizing.
 
-<!-- Search keywords: tooltip positioning, popover placement, floating element middleware. -->
 
 ## Installation
 

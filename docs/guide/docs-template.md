@@ -43,6 +43,11 @@ This is the landing page. A reader should understand what the library does, see 
 ---
 title: <PackageName> — <One-line description>
 description: <Sentence or two that would work as a tweet.>
+package: <pkg>
+category: <category>
+keywords: [keyword1, keyword2, keyword3]
+related: [related-pkg-1, related-pkg-2]
+exports: [export1, export2, export3]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -53,9 +58,21 @@ description: <Sentence or two that would work as a tweet.>
 
 # <PackageName>
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/<pkg>` &nbsp;·&nbsp; **Category:** <Category>
+
+**Key exports:** `export1`, `export2`, `export3`
+
+**When to use:** <One sentence explaining the concrete problem this solves.>
+
+**Related:** [Related Pkg 1](/related-pkg-1/) · [Related Pkg 2](/related-pkg-2/)
+
+</details>
+
 `@vielzeug/<pkg>` is a <short description in one sentence>.
 
-<!-- Search keywords: <comma-separated relevant search terms> -->
 
 ## Installation
 
@@ -124,6 +141,8 @@ yarn add @vielzeug/<pkg>
 ### Rules
 
 - The `## Documentation` section must use that exact heading. Do not merge it into `## See Also`.
+- **AI-agent friendly metadata** (new): Frontmatter must include `package`, `category`, `keywords`, `related`, `exports`.
+- **Quick Reference block** (new): Add a `<details>` block immediately after the `#` heading with key exports, category, and when to use.
 - The Before/After code block in "Why" must be a single fenced block with a `// Before` comment block followed by a `// After` comment block, not two separate blocks with prose between them.
 - Comparison table rows: always include bundle size, zero dependencies, and 2–3 differentiating feature rows. Use `✅`, `❌`, `⚠️` (for partial/nuanced), and short text like `Manual`, `React only`, `Partial`.
 - "Use when / Consider when" must both be present. They are italic-free, direct statements.
@@ -427,40 +446,72 @@ import { relevantExport } from '@vielzeug/<pkg>';
 | ------------- | ------------------------------------ | --------------------------- | ------------------------------ | -------------------------------------- | ------------------------------------------------------ |
 | `title`       | `PackageName — One-line description` | `PackageName — Usage Guide` | `PackageName — API Reference`  | `PackageName — Examples`               | `'PackageName Examples — Recipe Name'` (single-quoted) |
 | `description` | Tweet-length summary                 | What the guide teaches      | "Complete API reference for …" | "Practical examples and recipes for …" | "Recipe Name example for @vielzeug/pkg."               |
+| `package`     | `<pkg>` (always)                     | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
+| `category`    | one of the 12 categories (always)    | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
+| `keywords`    | `[keyword1, keyword2, …]` (always)   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
+| `related`     | `[pkg1, pkg2, …]` (always)           | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
+| `exports`     | top exports as `[name1, name2, …]`   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                       |
 
 Use em-dash (—) as the separator in titles, except for individual example files where the frontmatter title is wrapped in single quotes and uses an em-dash.
 
+### AI-Agent Friendly Metadata (in `index.md` frontmatter)
+
+These fields enable AI agents (via the MCpit MCP server) to discover and understand packages programmatically:
+
+- **`package`:** Package folder name without `@vielzeug/` prefix (e.g., `stateit`, `fetchit`). Always required.
+- **`category`:** One of the 12 canonical categories: `state`, `ui`, `forms`, `validation`, `http`, `storage`, `routing`, `auth`, `di`, `logging`, `i18n`, `events`, `workers`, `utilities`, `data`, `time`.
+- **`keywords`:** Searchable terms (e.g., `[signals, reactive, state-management]`). Used by MCpit's `search-packages` tool.
+- **`related`:** Related package slugs (e.g., `[validit, stateit]`). Must exist as real packages. Used in Quick Reference links.
+- **`exports`:** Primary exports as strings (e.g., `[createApi, createQuery, HttpError]`). Top 3–5 only. Used in Quick Reference and MCpit metadata.
+
 ---
 
-## Sidebar Navigation
+## AI-Agent Integration (MCpit)
 
-The sidebar entry for every library must follow this order:
+The **MCpit** MCP (Model Context Protocol) server reads the metadata from `index.md` to expose Vielzeug packages and their documentation to AI assistants. This enables agents to:
 
-```ts
+- **Discover packages** by category, keyword, or search query
+- **Get structured context** about each package (exports, related libraries, available doc pages, source availability)
+- **Read full documentation** (index, api, usage, examples pages)
+- **View source API** (`src/index.ts`)
+- **Find components** (Buildit only)
+
+### MCpit Tools That Use Your Metadata
+
+| Tool | Frontmatter fields used |
+|------|-------------------------|
+| `list-packages` | All fields (package, category, keywords, related, exports, description) |
+| `search-packages` | `package`, `category`, `keywords`, description, all doc pages |
+| `get-package` | All fields — returns complete structured metadata for one package |
+| `get-docs` | `package` — serves markdown content from docs files |
+| `get-source` | `package` — serves `src/index.ts` source |
+
+### How to Publish Your Docs
+
+Every time you build or test the monorepo, the MCpit package regenerates its bundled snapshot (`data/vielzeug-data.json`). This snapshot is automatically included when the package is published to npm.
+
+When you publish `@vielzeug/<pkg>`, ensure:
+
+1. **Frontmatter is complete** in `docs/<pkg>/index.md`
+2. **All four doc pages exist** (or are intentionally omitted with reason): `index.md`, `api.md`, `usage.md`, `examples.md`
+3. **Quick Reference block is present** in `index.md` after the `#` heading
+
+Example: When an AI agent runs MCpit's `get-package` tool with `packageSlug: "stateit"`, MCpit returns:
+
+```json
 {
-  text: 'PackageName',
-  collapsed: false,        // top-level group is always open
-  items: [
-    { text: 'Overview', link: '/pkg/' },
-    { text: 'Usage Guide', link: '/pkg/usage' },
-    {
-      text: 'API Reference',
-      collapsed: true,     // API is collapsed by default
-      link: '/pkg/api',
-    },
-    {
-      text: 'Examples',
-      collapsed: true,
-      link: '/pkg/examples',
-      items: [
-        // recipes ordered basic → advanced
-      ],
-    },
-  ],
+  "slug": "stateit",
+  "name": "@vielzeug/stateit",
+  "version": "3.0.1",
+  "category": "state",
+  "description": "Reactive signals, computed, effects, and stores...",
+  "keywords": ["signals", "reactive", "state-management", "effects"],
+  "exports": ["signal", "computed", "effect", "store"],
+  "related": ["craftit", "formit"],
+  "availableDocPages": ["index", "api", "usage", "examples"],
+  "hasSource": true
 }
 ```
-
-Recipes should be ordered by complexity: basic patterns first, advanced/integration patterns last.
 
 ---
 
@@ -471,9 +522,10 @@ Use this list when auditing or updating a library:
 ### `index.md`
 
 - [ ] Frontmatter has `title` and `description`
+- [ ] Frontmatter has `package`, `category`, `keywords`, `related`, `exports` (AI-agent friendly metadata)
 - [ ] `<PackageBadges>` and `<img>` logo present
+- [ ] Quick Reference `<details>` block present immediately after `#` heading with category, exports, when-to-use, and related links
 - [ ] One-sentence description immediately after the `#` heading
-- [ ] Search keywords HTML comment present
 - [ ] Installation code-group covers pnpm, npm, yarn
 - [ ] Quick Start is complete and runnable (not a toy)
 - [ ] Before/After code block in "Why" section
