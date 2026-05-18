@@ -207,11 +207,8 @@ importers:
   ../../packages/mcpit:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: ^1.12.0
+        specifier: ^1.29.0
         version: 1.29.0
-      '@vielzeug/validit':
-        specifier: workspace:*
-        version: link:../validit
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
@@ -219,6 +216,9 @@ importers:
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@types/node@25.8.0)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0))
 
   ../../packages/permit:
     devDependencies:

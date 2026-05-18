@@ -277,9 +277,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.4.3)
-      '@vielzeug/validit':
-        specifier: workspace:*
-        version: link:../validit
     devDependencies:
       '@types/node':
         specifier: ^25.8.0
