@@ -42,11 +42,28 @@ export type BitSwitchProps = CheckableProps &
  *
  * @slot - Switch label text
  *
+ * @cssprop --color-contrast - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-300 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-400 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
+ * @cssprop --color-error - Error state color token.
+ * @cssprop --leading-tight - Line-height token.
+ * @cssprop --rounded-full - Border radius token.
+ * @cssprop --shadow-sm - Shadow/elevation token.
+ * @cssprop --size-0-5 - Spacing/sizing token.
+ * @cssprop --size-10 - Spacing/sizing token.
+ * @cssprop --size-11 - Spacing/sizing token.
+ * @cssprop --size-2-5 - Spacing/sizing token.
  * @part switch - The switch wrapper element
  * @part track - The switch track element
  * @part thumb - The switch thumb element
  * @part label - The label element
  * @part helper-text - The helper/error text element
+ *
+ * @example
+ * ```html
+ * <bit-switch></bit-switch>
+ * ```
  */
 export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', {
   formAssociated: true,

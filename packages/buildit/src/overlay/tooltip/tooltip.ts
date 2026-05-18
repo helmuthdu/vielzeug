@@ -78,6 +78,7 @@ export type BitTooltipProps = {
  *
  * @cssprop --tooltip-max-width - Max width of the tooltip bubble
  *
+ * @part tooltip - Tooltip container.
  * @example
  * ```html
  * <bit-tooltip content="Copy to clipboard">

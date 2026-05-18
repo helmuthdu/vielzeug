@@ -77,6 +77,13 @@ function buildPageRange(
  * @cssprop --pagination-gap - Gap between items
  * @cssprop --pagination-radius - Border radius of items
  *
+ * @part page-btn - Page button.
+ * @part nav - Navigation container.
+ * @part list - List container.
+ * @part first-btn - First page button.
+ * @part prev-btn - Previous page button.
+ * @part next-btn - Next page button.
+ * @part last-btn - Last page button.
  * @example
  * ```html
  * <bit-pagination page="3" total-pages="10" color="primary"></bit-pagination>

@@ -88,6 +88,23 @@ export type BitRadioGroupEvents = {
  * @fires change - Emitted when a radio is selected. detail: { value: string, values: string[], labels: string[], originalEvent?: Event }
  *
  * @slot - Place `bit-radio` elements here
+ *
+ * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-600 - Contrast color token for text and surfaces.
+ * @cssprop --color-error - Error state color token.
+ * @cssprop --font-medium - Font-weight token.
+ * @cssprop --leading-tight - Line-height token.
+ * @cssprop --radio-group-direction - Radio control styling token.
+ * @cssprop --radio-group-gap - Radio control styling token.
+ * @cssprop --size-1-5 - Spacing/sizing token.
+ * @cssprop --size-2 - Spacing/sizing token.
+ * @cssprop --text-sm - Font-size token.
+ * @cssprop --text-xs - Font-size token.
+ * @part items - Items container.
+ * @example
+ * ```html
+ * <bit-radio-group></bit-radio-group>
+ * ```
  */
 export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('bit-radio-group', {
   props: {

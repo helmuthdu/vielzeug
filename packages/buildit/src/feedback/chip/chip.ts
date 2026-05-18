@@ -95,12 +95,12 @@ export type BitChipProps = ChipBaseProps &
  * @attr {boolean} checked   - Controlled checked state for selectable chips
  * @attr {boolean} default-checked - Initial checked state for uncontrolled selectable chips
  *
- * @slot         - Chip label text
- * @slot icon    - Leading icon or decoration
- *
  * @event remove - Fired when the remove button is clicked, with `detail.value` and `detail.originalEvent`
  * @event change - Fired when a selectable chip toggles, with `detail.checked`, `detail.value`, and `detail.originalEvent`
  * @event click  - Fired when an action chip is clicked, with `detail.value` and `detail.originalEvent`
+ *
+ * @slot         - Chip label text
+ * @slot icon    - Leading icon or decoration
  *
  * @cssprop --chip-bg           - Background color
  * @cssprop --chip-color        - Text color
@@ -112,6 +112,9 @@ export type BitChipProps = ChipBaseProps &
  * @cssprop --chip-padding-y    - Vertical padding
  * @cssprop --chip-gap          - Gap between icon, label and remove button
  *
+ * @part remove-btn - Remove action button.
+ * @part chip-btn - Shadow part for the `chip-btn` element.
+ * @part chip - Shadow part for the `chip` element.
  * @example
  * ```html
  * <!-- Static chip (read-only) -->

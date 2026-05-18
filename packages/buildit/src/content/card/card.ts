@@ -80,6 +80,14 @@ export type BitCardProps = {
  * @cssprop --card-shadow - Box shadow
  * @cssprop --card-hover-shadow - Shadow on hover
  *
+ * @part card - Card root container.
+ * @part loading-bar - Loading progress bar.
+ * @part media - Media slot container.
+ * @part body - Body content container.
+ * @part header - Header container.
+ * @part content - Content container.
+ * @part footer - Footer container.
+ * @part actions - Actions slot container.
  * @example
  * ```html
  * <bit-card elevation="2"><h3 slot="header">Title</h3><p>Content</p></bit-card>

@@ -1,6 +1,11 @@
 ---
 title: Dragit — Drag-and-drop primitives for the DOM
 description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.
+package: dragit
+category: ui-interaction
+keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
+related: [craftit, virtualit, buildit]
+exports: [createDropZone, createSortable]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, s
 
 # Dragit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/dragit` &nbsp;·&nbsp; **Category:** Ui Interaction
+
+**Key exports:** `createDropZone`, `createSortable`
+
+**When to use:** File drop zones with MIME filtering, or sortable lists with keyboard and mouse support. Zero dependencies.
+
+**Related:** [Craftit](/craftit/) · [Virtualit](/virtualit/) · [Buildit](/buildit/)
+
+</details>
+
 `@vielzeug/dragit` is a zero-dependency drag-and-drop library for the Document Object Model (DOM). It provides two focused primitives: a drop zone for file drag-and-drop with MIME type filtering and a sortable list for reordering elements. Both wrap the HTML Drag and Drop API with reliable hover state, full lifecycle management, and `using` keyword support.
 
-<!-- Search keywords: drag and drop helper, file drop zone, sortable list utility. -->
 
 ## Installation
 

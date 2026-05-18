@@ -1,4 +1,4 @@
-import { ErrorCode, Schema } from '../core';
+import { type AnySchema, ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class LiteralSchema<T extends string | number | boolean | null | undefined> extends Schema<T> {
@@ -19,8 +19,8 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
 /* Used internally by union and intersect to accept raw literal values */
 
 export type LiteralValue = string | number | boolean | null | undefined;
-export type RawOrSchema = Schema<any> | LiteralValue;
-export type NormalizeItem<T> = T extends Schema<any> ? T : T extends LiteralValue ? LiteralSchema<T> : never;
+export type RawOrSchema = AnySchema | LiteralValue;
+export type NormalizeItem<T> = T extends AnySchema ? T : T extends LiteralValue ? LiteralSchema<T> : never;
 export type NormalizeItems<T extends readonly RawOrSchema[]> = { readonly [K in keyof T]: NormalizeItem<T[K]> };
 
 export function normalizeToSchemas<T extends readonly RawOrSchema[]>(items: T): NormalizeItems<T> {

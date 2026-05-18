@@ -1,14 +1,40 @@
-# Wireit
+---
+description: Typed dependency injection for TypeScript.
+package: wireit
+category: di
+keywords: [dependency-injection, ioc, container, singleton, transient, factory, scoped]
+related: [logit, eventit, permit]
+exports: [createContainer, createToken]
+---
 
-Wireit is a small, typed dependency injection container for TypeScript.
+# @vielzeug/wireit
 
-## Features
+> Typed dependency injection for TypeScript.
 
-- Typed symbol tokens with `createToken<T>()`
-- Value and factory providers
-- `singleton`, `transient`, and `scoped` lifetimes
-- Hierarchical child containers
-- Async resolution and lifecycle cleanup
+[![npm version](https://img.shields.io/npm/v/@vielzeug/wireit)](https://www.npmjs.com/package/@vielzeug/wireit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<details>
+<summary>Quick Reference</summary>
+
+**Package:** `@vielzeug/wireit` &nbsp;·&nbsp; **Category:** Di
+
+**Key exports:** `createContainer`, `createToken`
+
+**When to use:** Typed dependency injection for TypeScript.
+
+**Related:** [@vielzeug/logit](https://vielzeug.dev/logit/) · [@vielzeug/eventit](https://vielzeug.dev/eventit/) · [@vielzeug/permit](https://vielzeug.dev/permit/)
+
+</details>
+
+`@vielzeug/wireit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+
+## Installation
+
+```sh
+pnpm add @vielzeug/wireit
+npm install @vielzeug/wireit
+yarn add @vielzeug/wireit
+```
 
 ## Quick Start
 
@@ -39,26 +65,13 @@ container.factory(Service, (logger) => {
 await container.resolve(Service);
 ```
 
-## Core API
-
-- `createToken(description)` creates a typed symbol token.
-- `createContainer()` creates a root container.
-- `container.value(token, value, opts?)` registers a constant provider.
-- `container.factory(token, fn, opts?)` registers a factory provider.
-- `container.resolve(token)` resolves a single provider.
-- `container.resolveMany(token)` resolves all providers for a token.
-- `container.resolveOptional(token)` returns `undefined` when a token is missing.
-- `container.createChild()` creates a child container.
-- `container.dispose()` disposes resolved instances and marks the container unusable.
-
-## Lifetimes
-
-- `singleton` caches one instance per container registration.
-- `transient` creates a new instance every time.
-- `scoped` caches one instance per child container and fails on the root container.
-
 ## Documentation
 
-- [Usage Guide](../../docs/wireit/usage.md)
-- [API Reference](../../docs/wireit/api.md)
-- [Examples](../../docs/wireit/examples.md)
+- [Overview](https://vielzeug.dev/wireit/)
+- [Usage Guide](https://vielzeug.dev/wireit/usage)
+- [API Reference](https://vielzeug.dev/wireit/api)
+- [Examples](https://vielzeug.dev/wireit/examples)
+
+## License
+
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

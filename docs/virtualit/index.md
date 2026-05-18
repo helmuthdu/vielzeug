@@ -1,6 +1,11 @@
 ---
 title: Virtualit — Virtual list engine for TypeScript
 description: Lightweight, framework-agnostic virtual list engine with variable heights, smooth scrolling, and zero dependencies.
+package: virtualit
+category: ui-performance
+keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
+related: [dragit, craftit, buildit]
+exports: [createVirtualizer, Virtualizer]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Lightweight, framework-agnostic virtual list engine with variable h
 
 # Virtualit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/virtualit` &nbsp;·&nbsp; **Category:** Ui Performance
+
+**Key exports:** `createVirtualizer`, `Virtualizer`
+
+**When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, programmatic scrolling, and framework integration.
+
+**Related:** [Dragit](/dragit/) · [Craftit](/craftit/) · [Buildit](/buildit/)
+
+</details>
+
 `@vielzeug/virtualit` is a framework-agnostic virtual list engine. It renders only the items visible in the viewport plus a configurable overscan buffer, keeping the DOM small regardless of how many items are in your dataset.
 
-<!-- Search keywords: virtual list, windowed rendering, large list performance. -->
 
 ## Installation
 

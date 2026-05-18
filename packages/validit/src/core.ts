@@ -31,6 +31,56 @@ export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
 
+/**
+ * Structured constraint metadata stored alongside validator closures.
+ * Populated by methods like `.min()`, `.max()`, `.regex()`, `.email()`, etc.
+ * Read by `toJsonSchema()` to emit accurate JSON Schema constraint keywords.
+ *
+ * @experimental Metadata contracts may evolve in minor versions while JSON Schema
+ * generation behavior remains stable.
+ */
+export type SchemaConstraints = {
+  contentEncoding?: string;
+  exclusiveMaximum?: number;
+  exclusiveMinimum?: number;
+  format?: string;
+  maximum?: number;
+  maxItems?: number;
+  maxLength?: number;
+  minimum?: number;
+  minItems?: number;
+  minLength?: number;
+  multipleOf?: number;
+  pattern?: string;
+};
+
+/** @experimental See `SchemaConstraints` stability note. */
+export type StringConstraints = Pick<
+  SchemaConstraints,
+  'contentEncoding' | 'format' | 'maxLength' | 'minLength' | 'pattern'
+>;
+
+/** @experimental See `SchemaConstraints` stability note. */
+export type NumberConstraints = Pick<
+  SchemaConstraints,
+  'exclusiveMaximum' | 'exclusiveMinimum' | 'maximum' | 'minimum' | 'multipleOf'
+>;
+
+/** @experimental See `SchemaConstraints` stability note. */
+export type ArrayConstraints = Pick<SchemaConstraints, 'maxItems' | 'minItems'>;
+
+/** @experimental See `SchemaConstraints` stability note. */
+export type SchemaTypeHint = 'integer';
+
+/**
+ * @experimental Metadata shape may evolve. Prefer `toJsonSchema()` for stable
+ * external integrations.
+ */
+export type SchemaMeta<TConstraints extends object = SchemaConstraints, TTypeHint = SchemaTypeHint> = {
+  constraints?: Partial<TConstraints>;
+  typeHint?: TTypeHint;
+};
+
 export type Issue = {
   code: ErrorCode | (string & {});
   message: string;
@@ -58,6 +108,8 @@ export type CheckContext = { addIssue: (issue: Omit<Issue, 'path'> & { path?: (s
  * Use `ctx.addIssue()` for structured errors with custom codes and params.
  */
 export type CheckFnResult = void | null | undefined | boolean | string;
+
+type ReadonlyOutput<T> = T extends object ? Readonly<T> : T;
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value == null || typeof value !== 'object') return false;
@@ -111,7 +163,7 @@ function materializeValue<T>(value: T): T {
   return value;
 }
 
-interface SchemaState<TOutput = unknown> {
+interface SchemaState<TOutput = unknown, TConstraints extends object = never, TTypeHint = never> {
   /**
    * Framework-defined validators passed to the constructor (type checks, coercions).
    * Always run first, sequentially, with early-exit on invalid_type.
@@ -128,22 +180,33 @@ interface SchemaState<TOutput = unknown> {
   isOptional: boolean;
   isNullable: boolean;
   description?: string;
+  /** Constraint/type metadata used by generators like toJsonSchema(). */
+  meta?: SchemaMeta<TConstraints, TTypeHint>;
+  /** Tracks chained conflicting regex constraints that JSON Schema cannot represent as one `pattern`. */
+  patternAmbiguous: boolean;
   defaultValue?: () => TOutput;
   catch?: () => TOutput;
 }
 
-function defaultState<TOutput>(): SchemaState<TOutput> {
+function defaultState<TOutput, TConstraints extends object, TTypeHint>(): SchemaState<
+  TOutput,
+  TConstraints,
+  TTypeHint
+> {
   return {
     coreValidators: [],
     isNullable: false,
     isOptional: false,
+    patternAmbiguous: false,
     postprocessors: [],
     preprocessors: [],
     validators: [],
   };
 }
 
-function cloneState<TOutput>(state: SchemaState<TOutput>): SchemaState<TOutput> {
+function cloneState<TOutput, TConstraints extends object, TTypeHint>(
+  state: SchemaState<TOutput, TConstraints, TTypeHint>,
+): SchemaState<TOutput, TConstraints, TTypeHint> {
   return {
     catch: state.catch,
     coreValidators: [...state.coreValidators],
@@ -151,10 +214,104 @@ function cloneState<TOutput>(state: SchemaState<TOutput>): SchemaState<TOutput> 
     description: state.description,
     isNullable: state.isNullable,
     isOptional: state.isOptional,
+    meta: state.meta
+      ? {
+          constraints: state.meta.constraints ? { ...state.meta.constraints } : undefined,
+          typeHint: state.meta.typeHint,
+        }
+      : undefined,
+    patternAmbiguous: state.patternAmbiguous,
     postprocessors: [...state.postprocessors],
     preprocessors: [...state.preprocessors],
     validators: [...state.validators],
   };
+}
+
+function mergeConstraints(
+  current: SchemaConstraints | undefined,
+  incoming: Partial<SchemaConstraints>,
+  patternAmbiguous: boolean,
+): { constraints: SchemaConstraints | undefined; patternAmbiguous: boolean } {
+  let changed = false;
+  const merged: SchemaConstraints = current ? { ...current } : {};
+  let nextPatternAmbiguous = patternAmbiguous;
+
+  const mergeTighterLowerBound = (
+    key: 'exclusiveMinimum' | 'minItems' | 'minLength' | 'minimum',
+    value: number | undefined,
+  ): void => {
+    if (value === undefined) return;
+
+    const previous = merged[key];
+    const next = previous === undefined ? value : Math.max(previous, value);
+
+    if (previous !== next) {
+      merged[key] = next;
+      changed = true;
+    }
+  };
+
+  const mergeTighterUpperBound = (
+    key: 'exclusiveMaximum' | 'maxItems' | 'maxLength' | 'maximum',
+    value: number | undefined,
+  ): void => {
+    if (value === undefined) return;
+
+    const previous = merged[key];
+    const next = previous === undefined ? value : Math.min(previous, value);
+
+    if (previous !== next) {
+      merged[key] = next;
+      changed = true;
+    }
+  };
+
+  const mergeDirect = <K extends keyof SchemaConstraints>(key: K, value: SchemaConstraints[K] | undefined): void => {
+    if (value === undefined) return;
+
+    const previous = merged[key];
+
+    if (previous !== value) {
+      merged[key] = value;
+      changed = true;
+    }
+  };
+
+  mergeTighterLowerBound('minimum', incoming.minimum);
+  mergeTighterLowerBound('exclusiveMinimum', incoming.exclusiveMinimum);
+  mergeTighterLowerBound('minLength', incoming.minLength);
+  mergeTighterLowerBound('minItems', incoming.minItems);
+
+  mergeTighterUpperBound('maximum', incoming.maximum);
+  mergeTighterUpperBound('exclusiveMaximum', incoming.exclusiveMaximum);
+  mergeTighterUpperBound('maxLength', incoming.maxLength);
+  mergeTighterUpperBound('maxItems', incoming.maxItems);
+
+  mergeDirect('contentEncoding', incoming.contentEncoding);
+  mergeDirect('format', incoming.format);
+  mergeDirect('multipleOf', incoming.multipleOf);
+
+  // Multiple chained regex constraints are enforced at runtime by separate validators,
+  // but JSON Schema's single `pattern` keyword cannot faithfully encode all of them.
+  // If multiple distinct patterns are seen, drop `pattern` metadata to avoid lying.
+  if (incoming.pattern !== undefined) {
+    if (nextPatternAmbiguous) {
+      // Keep metadata unset once ambiguity is detected.
+    } else if (merged.pattern === undefined) {
+      merged.pattern = incoming.pattern;
+      changed = true;
+    } else if (merged.pattern !== incoming.pattern) {
+      delete merged.pattern;
+      nextPatternAmbiguous = true;
+      changed = true;
+    }
+  }
+
+  if (!changed) {
+    return { constraints: current, patternAmbiguous: nextPatternAmbiguous };
+  }
+
+  return { constraints: merged, patternAmbiguous: nextPatternAmbiguous };
 }
 
 export function resolveMessage<Ctx extends Record<string, unknown>>(msg: MessageFn<Ctx>, ctx: Ctx): string {
@@ -276,12 +433,17 @@ export type FormattedErrors = {
 
 /* -------------------- Base Schema -------------------- */
 
-export class Schema<Output = unknown, Input = Output> {
-  protected state: SchemaState<Output>;
+export class Schema<
+  Output = unknown,
+  Input = Output,
+  TConstraints extends object = SchemaConstraints,
+  TTypeHint = SchemaTypeHint,
+> {
+  protected state: SchemaState<Output, TConstraints, TTypeHint>;
 
   constructor(coreValidators: ValidateFn[] = []) {
     this.state = {
-      ...defaultState<Output>(),
+      ...defaultState<Output, TConstraints, TTypeHint>(),
       coreValidators: [...coreValidators],
     };
   }
@@ -353,6 +515,7 @@ export class Schema<Output = unknown, Input = Output> {
    * but require `parseAsync()` / `safeParseAsync()`.
    *
    * @example
+   * ```ts
    * // Inline condition
    * v.string().check(s => s.startsWith('http') || 'Must start with http')
    *
@@ -361,6 +524,7 @@ export class Schema<Output = unknown, Input = Output> {
    *
    * // Structured error via ctx
    * v.string().check((s, ctx) => { ctx.addIssue({ code: 'custom', message: '...' }) })
+   * ```
    */
   check(fn: (value: Output, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
     const validator: ValidateFn = (value, path) => {
@@ -476,14 +640,34 @@ export class Schema<Output = unknown, Input = Output> {
     return this.state.description;
   }
 
+  /** Whether `undefined` is accepted (set by `.optional()`). */
+  get isOptional(): boolean {
+    return this.state.isOptional;
+  }
+
+  /** Whether `null` is accepted (set by `.nullable()`). */
+  get isNullable(): boolean {
+    return this.state.isNullable;
+  }
+
+  /**
+   * Structured schema metadata accumulated by constraint and type-hint methods.
+   * Read by `toJsonSchema()` to emit accurate JSON Schema output.
+   *
+   * @experimental Prefer `toJsonSchema()` for stable integration contracts.
+   */
+  get meta(): SchemaMeta<TConstraints, TTypeHint> | undefined {
+    return this.state.meta;
+  }
+
   /** Create a branded type (zero runtime cost). */
   brand<Brand extends string>(): Schema<Output & { __brand: Brand }, Input> {
     return this as unknown as Schema<Output & { __brand: Brand }, Input>;
   }
 
   /** Mark output as readonly at type level (no runtime cost). */
-  readonly(): Schema<Readonly<Output>, Input> {
-    return this as unknown as Schema<Readonly<Output>, Input>;
+  readonly(): Schema<ReadonlyOutput<Output>, Input> {
+    return this as unknown as Schema<ReadonlyOutput<Output>, Input>;
   }
 
   /** Type guard — narrows value to Output using safeParse. */
@@ -611,8 +795,51 @@ export class Schema<Output = unknown, Input = Output> {
     return cloned;
   }
 
-  protected _copyStateTo<T extends Schema<any>>(target: T): T {
-    target.state = cloneState(this.state) as SchemaState<any>;
+  /**
+   * Like `_addValidator`, but also merges constraint metadata into `state.meta`.
+   * Used by constraint methods (`.min()`, `.max()`, `.regex()`, etc.) so that
+   * `toJsonSchema()` can read structured constraint info without inspecting closures.
+   */
+  protected _addValidatorWithConstraints(validator: ValidateFn, constraints: Partial<TConstraints>): this {
+    const cloned = this._clone();
+
+    cloned.state.validators.push(validator);
+
+    const merged = mergeConstraints(
+      cloned.state.meta?.constraints as SchemaConstraints | undefined,
+      constraints as Partial<SchemaConstraints>,
+      cloned.state.patternAmbiguous,
+    );
+    const mergedConstraints = merged.constraints as Partial<TConstraints> | undefined;
+
+    cloned.state.patternAmbiguous = merged.patternAmbiguous;
+
+    if (mergedConstraints === undefined && cloned.state.meta?.typeHint === undefined) {
+      cloned.state.meta = undefined;
+    } else {
+      cloned.state.meta = {
+        constraints: mergedConstraints,
+        typeHint: cloned.state.meta?.typeHint,
+      };
+    }
+
+    return cloned;
+  }
+
+  protected _addValidatorWithTypeHint(validator: ValidateFn, typeHint: TTypeHint): this {
+    const cloned = this._clone();
+
+    cloned.state.validators.push(validator);
+    cloned.state.meta = {
+      constraints: cloned.state.meta?.constraints,
+      typeHint,
+    };
+
+    return cloned;
+  }
+
+  protected _copyStateTo<T extends Schema<any, any, any, any>>(target: T): T {
+    target.state = cloneState(this.state) as SchemaState<any, any, any>;
 
     return target;
   }
@@ -625,6 +852,9 @@ export class Schema<Output = unknown, Input = Output> {
 }
 
 /* -------------------- Type Inference -------------------- */
+
+/** Any validit schema instance, regardless of input/output/metadata generic parameters. */
+export type AnySchema = Schema<unknown, unknown, any, any>;
 
 export type InferOutput<T> = T extends Schema<infer O> ? O : never;
 

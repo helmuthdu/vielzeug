@@ -61,6 +61,7 @@ export type BitProgressProps = {
  * @cssprop --progress-circular-label-size  - Font size of the label inside the ring (default --text-xl)
  * @cssprop --progress-circular-title-size  - Font size of the title inside the ring (default --text-xs)
  *
+ * @part fill - Progress fill element.
  * @example
  * ```html
  * <bit-progress value="45"></bit-progress>

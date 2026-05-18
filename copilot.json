@@ -1,18 +1,33 @@
 {
-  "description": "Monorepo managed by Rush, using TypeScript and pnpm. Contains multiple packages under 'packages/'.",
-  "frameworks": [],
-  "languages": ["typescript", "javascript"],
+  "description": "Vielzeug (German for 'many tools') — 20 independent zero-dependency TypeScript packages in a Rush.js monorepo. Each package targets ES2022 and ships ESM + CJS via Vite library mode. Entry point: packages/<name>/src/index.ts. Tests use Vitest. Docs are VitePress at docs/. The MCP server at packages/mcpit/ exposes all docs and APIs to AI clients.",
+  "instructions": "./CLAUDE.md",
+  "frameworks": ["vitest", "vite", "vitepress", "rushjs"],
+  "languages": ["typescript"],
   "monorepoTool": "rush",
-  "nodeVersion": ">=20.14.0 <=22.14.0",
+  "nodeVersion": "22",
   "packageManager": "pnpm",
+  "projectType": "monorepo",
   "projects": [
-    "packages/toolkit",
+    "packages/buildit",
+    "packages/craftit",
     "packages/deposit",
+    "packages/dragit",
+    "packages/eventit",
     "packages/fetchit",
+    "packages/floatit",
     "packages/formit",
     "packages/i18nit",
     "packages/logit",
-    "packages/permit"
-  ],
-  "projectType": "monorepo"
+    "packages/mcpit",
+    "packages/permit",
+    "packages/routeit",
+    "packages/sourceit",
+    "packages/stateit",
+    "packages/timit",
+    "packages/toolkit",
+    "packages/validit",
+    "packages/virtualit",
+    "packages/wireit",
+    "packages/workit"
+  ]
 }

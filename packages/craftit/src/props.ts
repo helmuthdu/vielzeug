@@ -66,11 +66,18 @@ export const prop = {
 
 /**
  * Explicit prop definition factory. Plain objects with `{ default: ... }` are duck-typed as PropDef.
+ *
+ * Use to explicitly configure prop behavior with options like `reflect`, or when you need a parse function.
+ * Simple string/number/boolean defaults don't require this—just pass the value directly.
+ *
  * @example
+ * ```ts
  * props: {
  *   label: 'Default Label',
  *   disabled: { default: false, reflect: true },
+ *   count: { default: 0, reflect: true },
  * }
+ * ```
  */
 
 const isPropDef = (value: unknown): value is PropDef<unknown> =>

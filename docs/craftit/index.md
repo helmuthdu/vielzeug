@@ -1,6 +1,11 @@
 ---
 title: Craftit — Web component authoring with signals
 description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, controls, observers, and testing utilities.
+package: craftit
+category: ui-primitives
+keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
+related: [stateit, buildit, floatit]
+exports: [define, html, css, signal, computed, effect, props, propsOf, on, ref, host, provide, inject]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Functional custom-element authoring with typed props, reactive temp
 
 # Craftit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/craftit` &nbsp;·&nbsp; **Category:** Ui Primitives
+
+**Key exports:** `define`, `html`, `css`, `signal`, `computed`, `effect`, `props`, `propsOf`, `on`, `ref`, `host`, `provide`, `inject`
+
+**When to use:** Framework-agnostic UI components powered by reactive signals. Ideal when you need custom elements without a full UI framework.
+
+**Related:** [Stateit](/stateit/) · [Buildit](/buildit/) · [Floatit](/floatit/)
+
+</details>
+
 Craftit is a custom-element authoring library built on `@vielzeug/stateit`.
 
-<!-- Search keywords: custom elements authoring, reactive web components, signal-based templates. -->
 
 ## Installation
 

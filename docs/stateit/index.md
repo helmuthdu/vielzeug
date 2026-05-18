@@ -1,6 +1,11 @@
 ---
 title: Stateit — Reactive signals and state management
 description: Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
+package: stateit
+category: state
+keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope]
+related: [craftit, formit, eventit]
+exports: [signal, computed, effect, watch, batch, store, untrack, scope, writable, derived, isSignal]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,6 +16,19 @@ description: Tiny, type-safe reactive primitives — signals, effects, computed 
 
 # Stateit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/stateit` &nbsp;·&nbsp; **Category:** State
+
+**Key exports:** `signal`, `computed`, `effect`, `watch`, `batch`, `store`, `untrack`, `scope`, `writable`, `derived`, `isSignal`
+
+**When to use:** Fine-grained reactivity without a framework. Powers Craftit templates. Works in any TS/JS environment including Node, Deno, and SSR.
+
+**Related:** [Craftit](/craftit/) · [Formit](/formit/) · [Eventit](/eventit/)
+
+</details>
+
 **Stateit** is a tiny, zero-dependency reactive library that unifies two complementary primitives:
 
 - **Signals** — fine-grained reactive values (`signal`, `computed`, `effect`, `watch`)
@@ -18,7 +36,6 @@ description: Tiny, type-safe reactive primitives — signals, effects, computed 
 
 Both share the same `.value` access and `watch()` / `effect()` subscription model. A `Store<T>` **is** a `Signal<T>`, so every signal primitive works on stores too.
 
-<!-- Search keywords: reactive state, signals store, computed effects. -->
 
 ## Installation
 

@@ -142,17 +142,33 @@ export type BitSidebarProps = {
  * @attr {string} variant - Visual variant: 'floating' | 'inset'
  * @attr {string} label - Accessible aria-label for the nav landmark
  *
+ * @fires collapsed-change - Fired when collapsed state changes
+ *
  * @slot header - Branding or logo content above the nav
  * @slot - Navigation content (bit-sidebar-group / bit-sidebar-item)
  * @slot footer - Footer content below the nav (user info, settings, etc.)
- *
- * @fires collapsed-change - Fired when collapsed state changes
  *
  * @cssprop --sidebar-width - Expanded sidebar width (default: 16rem)
  * @cssprop --sidebar-collapsed-width - Collapsed sidebar width (default: 3.5rem)
  * @cssprop --sidebar-bg - Sidebar background color
  * @cssprop --sidebar-border-color - Border color
  *
+ * @part mobile-backdrop - Backdrop shown for mobile overlays.
+ * @part nav - Navigation container.
+ * @part header - Header container.
+ * @part toggle-btn - Shadow part for the `toggle-btn` element.
+ * @part content - Content container.
+ * @part footer - Footer container.
+ * @part bottom-bar - Bottom bar container.
+ * @part group - Group container.
+ * @part group-header - Group header container.
+ * @part group-icon - Group icon container.
+ * @part group-label - Group label container.
+ * @part group-items - Group items container.
+ * @part item-icon - Leading item icon container.
+ * @part item-label - Item label container.
+ * @part item-end - Trailing item content container.
+ * @part item - Item root element.
  * @example
  * ```html
  * <bit-sidebar collapsible label="App navigation">
@@ -643,10 +659,10 @@ export type BitSidebarGroupProps = {
  * @attr {boolean} open - Controlled expanded state
  * @attr {boolean} default-open - Initial expanded state in uncontrolled mode
  *
+ * @fires open-change - Fired when the group open state changes (collapsible groups only)
+ *
  * @slot - Navigation items (`bit-sidebar-item`)
  * @slot icon - Icon displayed before the label
- *
- * @fires open-change - Fired when the group open state changes (collapsible groups only)
  *
  * @example
  * ```html
@@ -770,17 +786,17 @@ export type BitSidebarItemProps = {
  * @slot icon - Leading icon
  * @slot end - Trailing content (badge, shortcut, arrow, etc.)
  *
- * @part item - The inner anchor or button element
- * @part item-icon - The icon wrapper
- * @part item-label - The label wrapper
- * @part item-end - The trailing content wrapper
- *
  * @cssprop --sidebar-item-color - Default text color
  * @cssprop --sidebar-item-hover-bg - Hover background
  * @cssprop --sidebar-item-hover-color - Hover text color
  * @cssprop --sidebar-item-active-bg - Active background
  * @cssprop --sidebar-item-active-color - Active text color
  * @cssprop --sidebar-item-indicator - Active indicator bar color
+ *
+ * @part item - The inner anchor or button element
+ * @part item-icon - The icon wrapper
+ * @part item-label - The label wrapper
+ * @part item-end - The trailing content wrapper
  *
  * @example
  * ```html

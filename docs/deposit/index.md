@@ -1,6 +1,11 @@
 ---
 title: Deposit — Minimal Typed Browser Storage
 description: Typed browser storage with a compact API for LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory.
+package: deposit
+category: storage
+keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, cookie, session]
+related: [fetchit, logit, toolkit]
+exports: [createLocalStorage, createSessionStorage, createCookie, createIndexedDB, createMemory, table]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,6 +16,19 @@ description: Typed browser storage with a compact API for LocalStorage, SessionS
 
 # Deposit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/deposit` &nbsp;·&nbsp; **Category:** Storage
+
+**Key exports:** `createLocalStorage`, `createSessionStorage`, `createCookie`, `createIndexedDB`, `createMemory`, `table`
+
+**When to use:** Structured, queryable browser storage with TTL and TypeScript types. Unified API across LocalStorage, IndexedDB, cookies, and in-memory.
+
+**Related:** [Fetchit](/fetchit/) · [Logit](/logit/) · [Toolkit](/toolkit/)
+
+</details>
+
 `@vielzeug/deposit` is a compact, typed browser storage library with five interchangeable adapters:
 
 - `createLocalStorage(dbName, schema)` for lightweight browser persistence
@@ -19,7 +37,6 @@ description: Typed browser storage with a compact API for LocalStorage, SessionS
 - `createIndexedDB()` for transactional storage
 - `createMemory(schema)` for tests and SSR environments
 
-<!-- Search keywords: browser storage library, IndexedDB wrapper, LocalStorage utility, in-memory storage. -->
 
 ## Installation
 

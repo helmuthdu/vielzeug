@@ -62,6 +62,7 @@ export type BitBadgeProps = {
  * @cssprop --badge-padding-y - Vertical padding
  * @cssprop --badge-gap - Gap between icon and label
  *
+ * @part badge - Shadow part for the `badge` element.
  * @example
  * ```html
  * <bit-badge color="primary">New</bit-badge>

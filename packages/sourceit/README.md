@@ -1,19 +1,39 @@
+---
+description: Typed local and remote data sources for pagination, filtering, sorting, and search.
+package: sourceit
+category: data
+keywords: [pagination, filtering, sorting, search, data-source, query, remote, local]
+related: [fetchit, stateit, routeit]
+exports: [createLocalSource, createRemoteSource]
+---
+
 # @vielzeug/sourceit
 
-![Sourceit Logo](../../docs/public/logo-sourceit.svg)
+> Typed local and remote data sources for pagination, filtering, sorting, and search.
 
-Reactive, typed local and remote query sources for list-like UIs.
+[![npm version](https://img.shields.io/npm/v/@vielzeug/sourceit)](https://www.npmjs.com/package/@vielzeug/sourceit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- Local in-memory sources via `createLocalSource`
-- Remote async sources via `createRemoteSource`
-- Shared pagination/filter/sort/search behavior
-- URL query param encode/decode helpers
-- Selector subscriptions via `subscribeSelector`
+<details>
+<summary>Quick Reference</summary>
+
+**Package:** `@vielzeug/sourceit` &nbsp;·&nbsp; **Category:** Data
+
+**Key exports:** `createLocalSource`, `createRemoteSource`
+
+**When to use:** Typed local and remote data sources for pagination, filtering, sorting, and search.
+
+**Related:** [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/stateit](https://vielzeug.dev/stateit/) · [@vielzeug/routeit](https://vielzeug.dev/routeit/)
+
+</details>
+
+`@vielzeug/sourceit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/sourceit
+npm install @vielzeug/sourceit
+yarn add @vielzeug/sourceit
 ```
 
 ## Quick Start
@@ -36,99 +56,13 @@ console.log(source.current);
 console.log(source.meta.pageNumber);
 ```
 
-## Core APIs
+## Documentation
 
-### `createLocalSource`
+- [Overview](https://vielzeug.dev/sourceit/)
+- [Usage Guide](https://vielzeug.dev/sourceit/usage)
+- [API Reference](https://vielzeug.dev/sourceit/api)
+- [Examples](https://vielzeug.dev/sourceit/examples)
 
-```ts
-createLocalSource<T>(
-  initialData: readonly T[],
-  cfg?: {
-    debounceMs?: number;
-    filter?: (value: T, index: number, array: readonly T[]) => boolean;
-    limit?: number;
-    searchFn?: (items: readonly T[], query: string) => readonly T[];
-    sort?: (a: T, b: T) => number;
-  },
-): LocalSource<T>
-```
+## License
 
-### `createRemoteSource`
-
-```ts
-createRemoteSource<T, TFilter = unknown, TSort = unknown>(
-  cfg: {
-    debounceMs?: number;
-    fetch: (q: {
-      filter?: TFilter;
-      limit: number;
-      page: number;
-      search?: string;
-      sort?: TSort;
-    }) => Promise<{ items: readonly T[]; total: number }>;
-    filter?: TFilter;
-    limit?: number;
-    sort?: TSort;
-  },
-): RemoteSource<T, TFilter, TSort>
-```
-
-## Shared Source Surface
-
-Both local and remote sources expose:
-
-- `current`
-- `meta`
-- `subscribe(listener)`
-- `toQuery()`
-- `fromQueryParams(params)`
-- `restore(state)`
-- `batch(mutator)`
-
-Pagination/search/filter/sort methods are also aligned (`goTo`, `goToLast`, `next`, `prev`, `setFilter`, `setSort`, `setLimit`, `search`, `searchNow`, `reset`, `commit`).
-
-Remote sources additionally provide:
-
-- `refresh()`
-- `ready(): Promise<void>`
-
-## URL Query Param Helpers
-
-```ts
-import {
-  decodeLocalQueryParams,
-  decodeRemoteQueryParams,
-  decodeRemoteQueryParamsStrict,
-  encodeLocalQueryParams,
-  encodeRemoteQueryParams,
-} from '@vielzeug/sourceit';
-```
-
-## Selector Subscriptions
-
-```ts
-import { subscribeSelector } from '@vielzeug/sourceit';
-
-const stop = subscribeSelector(
-  source,
-  (s) => s.meta.pageNumber,
-  (next, prev) => {
-    console.log('page changed', prev, '->', next);
-  },
-);
-
-stop();
-```
-
-## Development
-
-```sh
-pnpm --filter @vielzeug/sourceit test
-pnpm --filter @vielzeug/sourceit build
-```
-
-## Docs
-
-- Package docs: [vielzeug.dev/sourceit](https://vielzeug.dev/sourceit/)
-- Usage guide: [vielzeug.dev/sourceit/usage](https://vielzeug.dev/sourceit/usage)
-- API reference: [vielzeug.dev/sourceit/api](https://vielzeug.dev/sourceit/api)
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

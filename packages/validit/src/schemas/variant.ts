@@ -1,4 +1,4 @@
-import type { Issue } from '../core';
+import type { AnySchema, Issue } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
@@ -22,7 +22,7 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     for (const [tag, schema] of Object.entries(variantMap)) {
       const discriminatorShape = {
         [discriminator]: new LiteralSchema(tag),
-      } as unknown as Record<K, Schema<any>>;
+      } as unknown as Record<K, AnySchema>;
 
       map.set(tag, schema.extend(discriminatorShape));
     }
@@ -30,6 +30,16 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     super([]);
     this._discriminator = discriminator;
     this._map = map;
+  }
+
+  /** The discriminator field key used to select the matching variant. */
+  get discriminator(): K {
+    return this._discriminator;
+  }
+
+  /** Map from discriminator tag value to the extended ObjectSchema for that variant. */
+  get variantMap(): ReadonlyMap<string, ObjectSchema<any>> {
+    return this._map;
   }
 
   private _resolveVariant(

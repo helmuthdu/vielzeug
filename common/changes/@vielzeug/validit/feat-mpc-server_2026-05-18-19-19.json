@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/validit",
+      "comment": "update docs",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/validit"
+}

@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/timit",
+      "comment": "update docs",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/timit"
+}

@@ -1,25 +1,40 @@
+---
+description: Zero-dependency typed event bus with subscribe/emit, wait(), async streams, AbortSignal support, and test helpers.
+package: eventit
+category: events
+keywords: [event-bus, typed-events, pub-sub, reactive, decoupled, async-streams]
+related: [stateit, routeit, workit]
+exports: [createBus, createTestBus]
+---
+
 # @vielzeug/eventit
 
-> Typed event bus for synchronous pub/sub, async waiting, and event streams.
+> Zero-dependency typed event bus with subscribe/emit, wait(), async streams, AbortSignal support, and test helpers.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/eventit)](https://www.npmjs.com/package/@vielzeug/eventit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`@vielzeug/eventit` is a zero-dependency event bus for TypeScript. Define an event map once and get type-safe `emit`, `on`, `once`, `wait`, `waitAny`, and `events` APIs with proper payload inference.
+<details>
+<summary>Quick Reference</summary>
+
+**Package:** `@vielzeug/eventit` &nbsp;·&nbsp; **Category:** Events
+
+**Key exports:** `createBus`, `createTestBus`
+
+**When to use:** Zero-dependency typed event bus with subscribe/emit, wait(), async streams, AbortSignal support, and test helpers.
+
+**Related:** [@vielzeug/stateit](https://vielzeug.dev/stateit/) · [@vielzeug/routeit](https://vielzeug.dev/routeit/) · [@vielzeug/workit](https://vielzeug.dev/workit/)
+
+</details>
+
+`@vielzeug/eventit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/eventit
-# npm install @vielzeug/eventit
-# yarn add @vielzeug/eventit
+npm install @vielzeug/eventit
+yarn add @vielzeug/eventit
 ```
-
-## Entry Points
-
-| Entry | Purpose |
-| --- | --- |
-| `@vielzeug/eventit` | Main runtime (`createBus`, types, `BusDisposedError`) |
-| `@vielzeug/eventit/test` | Testing helper (`createTestBus`) |
 
 ## Quick Start
 
@@ -55,49 +70,6 @@ try {
   }
 }
 ```
-
-## Features
-
-- Typed event maps with strict payload checks
-- `void` events with no payload argument
-- Persistent (`on`) and one-shot (`once`) subscriptions
-- Listener management via unsubscribe handles, `removeAllListeners`, and `eventNames`
-- Promise-based waiting via `wait`
-- Multi-event waiting via `waitAny`
-- Async streaming via `events`
-- `AbortSignal` support for listeners and async waits
-- Optional `onDispatch` and `onError` hooks
-- `listenerCount` for per-event and total counts
-- `dispose` + `[Symbol.dispose]` for explicit or `using` cleanup
-
-## Testing
-
-```ts
-import { createTestBus } from '@vielzeug/eventit/test';
-
-type AppEvents = {
-  'user:login': { userId: string };
-  'user:logout': void;
-};
-
-const bus = createTestBus<AppEvents>();
-
-bus.emit('user:login', { userId: '1' });
-bus.emit('user:login', { userId: '2' });
-
-console.log(bus.emitted('user:login'));
-// [{ userId: '1' }, { userId: '2' }]
-
-bus.reset();
-bus.dispose();
-```
-
-## API At a Glance
-
-- `createBus<T>(options?: BusOptions<T>): Bus<T>`
-- `createTestBus<T>(options?: BusOptions<T>): TestBus<T>`
-- `BusDisposedError`
-- `type Bus<T>`, `BusOptions<T>`, `WaitAnyResult<T, K>`, `EventMap`, `EventKey<T>`, `Listener<T>`, `Unsubscribe`
 
 ## Documentation
 

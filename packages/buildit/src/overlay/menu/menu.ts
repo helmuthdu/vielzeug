@@ -76,6 +76,19 @@ const menuItemProps = {
   value: undefined,
 };
 
+/**
+ * A selectable action item used inside `<bit-menu>`.
+ *
+ * @element bit-menu-item
+ *
+ * @attr {boolean} checked - Checked state for `checkbox` and `radio` item types
+ * @attr {boolean} disabled - Disables selection and pointer interaction
+ * @attr {'checkbox'|'radio'} type - Optional checkable menu item mode
+ * @attr {string} value - Value emitted by parent menu on selection
+ *
+ * @slot - Item label/content
+ * @slot icon - Optional leading icon content
+ */
 export const MENU_ITEM_TAG = define<BitMenuItemProps>('bit-menu-item', {
   props: menuItemProps,
   setup(props) {
@@ -210,6 +223,11 @@ export const MENU_ITEM_TAG = define<BitMenuItemProps>('bit-menu-item', {
 // Menu Separator
 // ============================================
 
+/**
+ * Visual separator used to group menu items.
+ *
+ * @element bit-menu-separator
+ */
 export const SEPARATOR_TAG = define('bit-menu-separator', {
   setup() {
     return () =>
@@ -233,8 +251,30 @@ const isCheckableItemType = (value: string | null): value is BitMenuItemType =>
   value === 'checkbox' || value === 'radio';
 
 /**
- * `bit-menu` — Action dropdown menu triggered by a slotted trigger element.
- * Nest `<bit-menu-item>` elements inside for menu options.
+ * Action dropdown menu triggered by a slotted trigger element.
+ *
+ * @element bit-menu
+ *
+ * @attr {string} color - Theme color variant for menu styling
+ * @attr {boolean} disabled - Disables opening and keyboard interaction
+ * @attr {string} placement - Floating panel placement around the trigger
+ * @attr {string} size - Size variant propagated to menu styling tokens
+ *
+ * @fires open - Fired when the menu opens (`detail.reason` explains source)
+ * @fires close - Fired when the menu closes (`detail.reason` explains source)
+ * @fires select - Fired when an item is selected (`detail.value`, optional `detail.checked`)
+ *
+ * @slot trigger - Trigger element that toggles menu visibility
+ * @slot - Menu content (`<bit-menu-item>` and `<bit-menu-separator>`)
+ *
+ * @part panel - Floating menu panel container
+ *
+ * @cssprop --menu-panel-bg - Background of the floating panel
+ * @cssprop --menu-panel-border-color - Border color of the floating panel
+ * @cssprop --menu-panel-shadow - Box shadow of the floating panel
+ * @cssprop --menu-panel-blur - Backdrop blur amount for the floating panel
+ * @cssprop --menu-panel-min-width - Minimum width of the floating panel
+ * @cssprop --menu-panel-radius - Border radius of the floating panel
  *
  * @example
  * ```html
@@ -490,6 +530,7 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
       <slot name="trigger"></slot>
       <div
         class="menu-panel"
+        part="panel"
         id="${menuId}"
         role="menu"
         aria-orientation="vertical"

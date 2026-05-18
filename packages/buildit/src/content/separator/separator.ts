@@ -31,6 +31,9 @@ export type BitSeparatorProps = {
  * @cssprop --separator-size - Line thickness
  * @cssprop --separator-spacing - Vertical margin
  *
+ * @part wrapper - Root wrapper container.
+ * @part separator - Separator element.
+ * @part label - Label element.
  * @example
  * ```html
  * <bit-separator></bit-separator>

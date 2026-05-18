@@ -156,7 +156,7 @@ export type BitNavbarItemProps = {
 };
 
 /**
- * `bit-navbar` — Responsive site navigation with sticky/floating support.
+ * `bit-navbar` — Responsive navigation with sticky/floating modes and a mobile overflow panel.
  *
  * @element bit-navbar
  *
@@ -171,13 +171,42 @@ export type BitNavbarItemProps = {
  * @attr {string} rounded - Border radius token
  * @attr {string} elevation - Shadow elevation level
  *
- * @slot logo - Brand/logo content
- * @slot start - Left region content
- * @slot - Center region content
- * @slot end - Right region content
- * @slot mobile-menu - Content rendered in mobile panel
- *
  * @fires mobile-menu-change - Emitted when mobile menu open state changes
+ *
+ * @slot logo - Brand/logo content rendered at the leading edge
+ * @slot start - Content rendered in the left/start region
+ * @slot - Center navigation content rendered between the start and end regions
+ * @slot end - Content rendered in the right/end region
+ * @slot mobile-menu - Controls and links rendered inside the mobile overflow panel
+ *
+ * @cssprop --blur-lg - Blur strength for floating navbar backdrops
+ * @cssprop --blur-md - Blur strength for the mobile panel backdrop
+ * @cssprop --border - Border token used by the navbar surface and separators
+ * @cssprop --color-canvas - Base navbar and mobile panel background
+ * @cssprop --color-contrast-100 - Hover/active background for navbar chrome
+ * @cssprop --color-contrast-200 - Divider and border contrast color
+ * @cssprop --color-contrast-400 - Muted text color for secondary navbar content
+ * @cssprop --color-contrast-50 - Soft background for mobile and floating states
+ * @cssprop --color-contrast-500 - Secondary text color in the navbar chrome
+ * @cssprop --color-contrast-700 - Strong text color for navbar items
+ * @cssprop --color-contrast-900 - Deep contrast color used in navbar shadows
+ * @cssprop --color-primary - Accent color for active and highlighted navbar states
+ * @part nav - Outer navigation landmark
+ * @part bar - Main navbar row container
+ * @part logo - Logo slot container
+ * @part start - Leading action/content region
+ * @part center - Center content region
+ * @part end - Trailing action/content region
+ * @part mobile-toggle - Mobile menu toggle button
+ * @part mobile-menu - Mobile overflow panel
+ * @part item-icon - Leading icon inside navbar items
+ * @part item-label - Label text inside navbar items
+ * @part item-end - Trailing content inside navbar items
+ * @part item - Clickable navbar item root
+ * @example
+ * ```html
+ * <bit-navbar></bit-navbar>
+ * ```
  */
 export const NAVBAR_TAG = define<BitNavbarProps, BitNavbarEvents>('bit-navbar', {
   props: {

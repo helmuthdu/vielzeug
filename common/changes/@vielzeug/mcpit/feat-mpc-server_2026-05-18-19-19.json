@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/mcpit",
+      "comment": "new mcp server package",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/mcpit"
+}

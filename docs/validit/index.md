@@ -1,6 +1,11 @@
 ---
 title: Validit — Schema validation for TypeScript
 description: Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
+package: validit
+category: validation
+keywords: [schema, validation, type-safe, parsing, runtime-validation, zod-like, coercion]
+related: [formit, fetchit, deposit]
+exports: [v, toJsonSchema, ValidationError, configure]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Zero-dependency schema validation library with strict-by-default ob
 
 # Validit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/validit` &nbsp;·&nbsp; **Category:** Validation
+
+**Key exports:** `v`, `toJsonSchema`, `ValidationError`, `configure`
+
+**When to use:** Zero-dep schema validation with strict-by-default objects, async refinements, coercion, JSON Schema output, and full TypeScript inference.
+
+**Related:** [Formit](/formit/) · [Fetchit](/fetchit/) · [Deposit](/deposit/)
+
+</details>
+
 `@vielzeug/validit` is a zero-dependency schema validation library for TypeScript projects. It gives you a fluent schema API, runtime validation, and precise input/output typing with `InferInput<T>` and `Infer<T>`.
 
-<!-- Search keywords: validation schema, runtime validator, typed data parsing. -->
 
 ## Installation
 
@@ -36,7 +53,7 @@ yarn add @vielzeug/validit
 ## Quick Start
 
 ```ts
-import { flattenFirstErrors, v, type Infer } from '@vielzeug/validit';
+import { v, type Infer } from '@vielzeug/validit';
 
 const UserSchema = v.object({
   id: v.coerce.number().int().positive(),
@@ -58,7 +75,7 @@ if (result.success) {
   const user: User = result.data;
   console.log(user.id); // 42
 } else {
-  const { fieldErrors, formErrors } = flattenFirstErrors(result.error);
+  const { fieldErrors, formErrors } = result.error.flattenFirst();
   console.log(fieldErrors, formErrors);
 }
 ```
@@ -95,7 +112,7 @@ if (!result.success) {
 | Type inference    | ✅ `Infer<T>`                                 | ✅     | Partial |
 | Coercion API      | ✅ `v.coerce.*`                               | ✅     | ✅      |
 | Async validation  | ✅ `.check()`                                 | ✅     | ✅      |
-| Error flattening  | ✅ `flatten()` + `flattenFirstErrors(error)`  | ✅     | Partial |
+| Error flattening  | ✅ `flatten()` + `flattenFirst()`              | ✅     | Partial |
 | Zero dependencies | ✅                                            | ✅     | ❌      |
 
 **Use Validit when** you want a fluent schema API with strong TypeScript inference, structured errors, and zero dependencies.
@@ -110,7 +127,7 @@ if (!result.success) {
 - **Advanced validation hooks**: `ctx.addIssue()` for multi-issue/path-aware validation
 - **Preprocess and coerce**: `schema.preprocess(...)` plus `v.coerce.string()`, `number()`, `boolean()`, and `date()`
 - **Expanded schema coverage**: `v.bigint()`, `v.set()`, and `v.map()`
-- **Error ergonomics**: `ValidationError`, `Issue`, `ErrorCode`, `error.flatten()`, and `flattenFirstErrors(error)`
+- **Error ergonomics**: `ValidationError`, `Issue`, `ErrorCode`, `error.flatten()`, and `error.flattenFirst()`
 - **Object and tuple composition**: object `.strip()`/`.relaxed()` modes and tuple `.rest()`
 - **String and number format constraints**: validators like `.ulid()`, `.jwt()`, `.duration()`, and `.finite()`
 - **Strict by default objects**: unknown keys are rejected unless `.relaxed()` is used

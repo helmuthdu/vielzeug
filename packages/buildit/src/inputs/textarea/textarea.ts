@@ -60,6 +60,23 @@ export type BitTextareaProps = TextFieldProps<Exclude<VisualVariant, 'glass' | '
  * @fires change - Fired on blur with changed value
  *
  * @slot helper - Complex helper content
+ *
+ * @cssprop --border - Border token.
+ * @cssprop --color-canvas - Base surface background color.
+ * @cssprop --color-contrast-100 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-300 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-400 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-50 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
+ * @cssprop --color-error - Error state color token.
+ * @cssprop --color-error-focus-shadow - Focus ring shadow color.
+ * @cssprop --color-primary-focus-shadow - Focus ring shadow color.
+ * @cssprop --color-warning - Warning state color token.
+ * @cssprop --font-medium - Font-weight token.
+ * @example
+ * ```html
+ * <bit-textarea></bit-textarea>
+ * ```
  */
 export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-textarea', {
   formAssociated: true,

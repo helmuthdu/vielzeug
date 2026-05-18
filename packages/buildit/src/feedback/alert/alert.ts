@@ -60,6 +60,15 @@ export type BitAlertProps = {
  * @cssprop --alert-gap - Gap between icon, body, and close button
  * @cssprop --alert-font-size - Font size
  *
+ * @part alert - Alert root container.
+ * @part icon - Icon container.
+ * @part header - Header container.
+ * @part heading - Heading text element.
+ * @part meta - Meta text container.
+ * @part body - Body content container.
+ * @part content - Content container.
+ * @part actions - Actions slot container.
+ * @part close - Close action control.
  * @example
  * ```html
  * <bit-alert color="success">Your changes have been saved.</bit-alert>

@@ -14,6 +14,7 @@ export type ResourceState<T> = {
 
 /**
  * Reactive async resource. Re-fetches whenever the `deps` getter returns a new value.
+ *
  * Previous data is preserved during reloads so the UI can show stale-while-revalidate UX.
  * In-flight requests are cancelled via `AbortController` when deps change.
  *

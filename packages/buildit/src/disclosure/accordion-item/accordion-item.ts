@@ -57,6 +57,12 @@ export type BitAccordionItemProps = {
  * @cssprop --accordion-item-details-padding - Summary/header padding
  * @cssprop --accordion-item-summary-padding - Content padding
  *
+ * @part item - Item root element.
+ * @part summary - Summary trigger row.
+ * @part header - Header container.
+ * @part title - Title text element.
+ * @part subtitle - Subtitle text element.
+ * @part content - Content container.
  * @example
  * ```html
  * <bit-accordion-item><span slot="title">Click to expand</span><p>Content</p></bit-accordion-item>

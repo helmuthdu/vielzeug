@@ -1,17 +1,39 @@
+---
+description: Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
+package: validit
+category: validation
+keywords: [schema, validation, type-safe, parsing, runtime-validation, zod-like, coercion]
+related: [formit, fetchit, deposit]
+exports: [v, toJsonSchema, ValidationError, configure]
+---
+
 # @vielzeug/validit
 
-> Zero-dependency schema validation for TypeScript with strict objects, async refinements, coercion, and precise output inference.
+> Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/validit)](https://www.npmjs.com/package/@vielzeug/validit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`@vielzeug/validit` is a lightweight schema validation library for parsing unknown input into trusted application data. It combines a fluent runtime API with precise TypeScript output types.
+<details>
+<summary>Quick Reference</summary>
+
+**Package:** `@vielzeug/validit` &nbsp;·&nbsp; **Category:** Validation
+
+**Key exports:** `v`, `toJsonSchema`, `ValidationError`, `configure`
+
+**When to use:** Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
+
+**Related:** [@vielzeug/formit](https://vielzeug.dev/formit/) · [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/deposit](https://vielzeug.dev/deposit/)
+
+</details>
+
+`@vielzeug/validit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/validit
-# npm install @vielzeug/validit
-# yarn add @vielzeug/validit
+npm install @vielzeug/validit
+yarn add @vielzeug/validit
 ```
 
 ## Quick Start
@@ -39,164 +61,6 @@ if (result.success) {
 }
 ```
 
-## Features
-
-- Strict-by-default objects with `.relaxed()` for explicit passthrough behavior
-- Primitive, collection, union, intersection, enum, lazy, and variant schema factories
-- Input/output inference via `InferInput<T>` and `Infer<T>`
-- Unified custom rules with `.check()` for sync and async validation
-- Built-in coercion via `v.coerce.string()`, `v.coerce.number()`, `v.coerce.boolean()`, `v.coerce.date()`, and `v.coerce.bigint()`
-- Expanded schema coverage via `v.bigint()`, `v.set()`, and `v.map()`
-- Default, fallback, preprocess, transform, branding, and runtime type-guard helpers
-- Nested global message configuration via `configure({ messages })` plus `reset()`
-- Structured errors with `ValidationError`, `Issue`, `error.flatten()`, and `flattenFirstErrors(error)`
-- Zero dependencies
-
-## Core API
-
-### Factories
-
-- `v.any()`
-- `v.unknown()`
-- `v.string()`
-- `v.number()`
-- `v.boolean()`
-- `v.date()`
-- `v.bigint()`
-- `v.literal(value)`
-- `v.enum(values)`
-- `v.nativeEnum(enumObj)`
-- `v.object(shape)`
-- `v.array(itemSchema)`
-- `v.set(itemSchema)`
-- `v.map(keySchema, valueSchema)`
-- `v.tuple(items)`
-- `v.record(keySchema, valueSchema)`
-- `v.union(...branches)`
-- `v.intersect(...branches)`
-- `v.variant(discriminator, map)`
-- `v.lazy(getter)`
-- `v.instanceof(Ctor)`
-- `v.never()`, `v.null()`, `v.undefined()`
-
-### Validation flow
-
-- `parse(value)` throws `ValidationError` on failure
-- `safeParse(value)` returns `{ success, data | error }`
-- `parseAsync(value)` and `safeParseAsync(value)` run async refinements
-- Async `check()` functions require the async parse methods
-
-### Common modifiers
-
-- `optional()`, `nullable()`, `nullish()`, `required()`
-- `default(value)` applies when the input is `undefined`
-- `catch(value)` returns a fallback on validation failure
-- `preprocess(fn)` runs before validation
-- `transform(fn)` runs after successful parsing
-
-When multiple preprocessors are chained, they run in declaration order.
-
-## Message customization
-
-Validit uses nested message groups instead of flat keys.
-
-```ts
-import { configure, reset } from '@vielzeug/validit';
-
-configure({
-  messages: {
-    number: {
-      min: ({ min }) => `Value must be at least ${min}`,
-    },
-    string: {
-      email: () => 'Please enter a valid email address',
-      ip: () => 'Use a valid IPv4 or IPv6 address',
-    },
-  },
-});
-
-reset();
-```
-
-## Usage Highlights
-
-### Strict object parsing
-
-```ts
-const Payload = v.object({
-  id: v.number().int().positive(),
-  email: v.string().email(),
-});
-
-Payload.safeParse({ id: 1, email: 'a@b.com', extra: true });
-// => failure: unrecognized_keys
-
-Payload.relaxed().parse({ id: 1, email: 'a@b.com', extra: true });
-// => { id: 1, email: 'a@b.com', extra: true }
-```
-
-### `check()`
-
-```ts
-const PasswordSchema = v
-  .string()
-  .min(8)
-  .check((value) => /[A-Z]/.test(value), 'Must contain an uppercase letter');
-
-const UniqueEmailSchema = v
-  .string()
-  .email()
-  .check(async (value) => {
-    const exists = await db.users.exists({ email: value });
-
-    return !exists;
-  }, 'Email already in use');
-
-PasswordSchema.parse('Hello123');
-await UniqueEmailSchema.parseAsync('a@b.com');
-```
-
-### Error shaping for forms
-
-```ts
-const RegistrationSchema = v
-  .object({
-    password: v.string().min(8),
-    confirmPassword: v.string(),
-  })
-  .check(({ password, confirmPassword }) => password === confirmPassword, 'Passwords must match');
-
-const result = RegistrationSchema.safeParse(input);
-
-if (!result.success) {
-  const { fieldErrors, formErrors } = flattenFirstErrors(result.error);
-
-  console.log(fieldErrors);
-  console.log(formErrors);
-}
-```
-
-## API At A Glance
-
-- String methods: `min`, `max`, `length`, `nonEmpty`, `startsWith`, `endsWith`, `includes`, `regex`, `email`, `url`, `uuid`, `isoDate`, `isoDateTime`, `ip`, `cuid`, `cuid2`, `ulid`, `nanoid`, `base64`, `base64url`, `hex`, `hexColor`, `emoji`, `jwt`, `time`, `duration`, `semver`, `slug`, `numeric`, `trim`, `lowercase`, `uppercase`
-- Number methods: `min`, `max`, `int`, `positive`, `negative`, `nonNegative`, `nonPositive`, `multipleOf`, `safe`, `finite`
-- Array methods: `min`, `max`, `length`, `nonEmpty`, `unique`
-- Object helpers: `partial`, `required`, `extend`, `pick`, `omit`, `relaxed`, `strip`
-- Tuple helpers: `rest`
-- Errors and types: `ValidationError`, `ErrorCode`, `Issue`, `ParseResult<T>`, `Messages`, `InferInput<T>`, `Infer<T>`
-
-## Notes
-
-- `v.object(...)` is strict by default and rejects unknown keys.
-- Use `.relaxed()` when you want unknown keys to pass through.
-- `v.union(...)` and `v.intersect(...)` accept both schemas and raw literal branches.
-- `array.unique()` uses JavaScript `Set` semantics, so objects are compared by reference.
-- `array.unique()` emits `not_unique` issue codes.
-- `number.safe()` emits `not_safe` issue codes.
-- `number.finite()` emits `not_finite` issue codes.
-- `default()` only applies when the input is `undefined`, not on `null` or other invalid values.
-- `v.record(keySchema, valueSchema)` uses parsed keys in output (sync and async parsing).
-
 ## Documentation
 
 - [Overview](https://vielzeug.dev/validit/)
@@ -206,4 +70,4 @@ if (!result.success) {
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) - part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

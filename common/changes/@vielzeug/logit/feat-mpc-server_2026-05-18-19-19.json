@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/logit",
+      "comment": "update docs",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/logit"
+}

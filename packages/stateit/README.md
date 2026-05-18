@@ -1,107 +1,59 @@
+---
+description: Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
+package: stateit
+category: state
+keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope]
+related: [craftit, formit, eventit]
+exports: [signal, computed, effect, watch, batch, store, untrack, scope, writable, derived, isSignal]
+---
+
 # @vielzeug/stateit
 
-Tiny reactive state with direct singleton primitives.
+> Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
+
+[![npm version](https://img.shields.io/npm/v/@vielzeug/stateit)](https://www.npmjs.com/package/@vielzeug/stateit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<details>
+<summary>Quick Reference</summary>
+
+**Package:** `@vielzeug/stateit` &nbsp;·&nbsp; **Category:** State
+
+**Key exports:** `signal`, `computed`, `effect`, `watch`, `batch`, `store`, `untrack`, `scope`, `writable`, `derived`, `isSignal`
+
+**When to use:** Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
+
+**Related:** [@vielzeug/craftit](https://vielzeug.dev/craftit/) · [@vielzeug/formit](https://vielzeug.dev/formit/) · [@vielzeug/eventit](https://vielzeug.dev/eventit/)
+
+</details>
+
+`@vielzeug/stateit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/stateit
+npm install @vielzeug/stateit
+yarn add @vielzeug/stateit
 ```
 
-## Usage
-
-Stateit exports singleton primitives directly.
+## Quick Start
 
 ```ts
-import { batch, computed, effect, signal } from '@vielzeug/stateit';
+import { signal, computed, effect } from '@vielzeug/stateit';
 
-const count = signal(0);
-const doubled = computed(() => count.value * 2);
-
-const stop = effect(() => {
-  console.log(count.value, doubled.value);
-});
-
-batch(() => {
-  count.value = 1;
-  count.value = 2;
-});
-
-stop();
-doubled.dispose();
+// See the docs links below for complete usage patterns.
+void signal;
+void computed;
+void effect;
 ```
 
-## Store As Small Recipe
+## Documentation
 
-`store()` is a thin object helper over `signal()` with immutable-style updates. Stores expose the readable signal contract (`value`, `peek`, `subscribe`) plus object-focused mutation helpers.
+- [Overview](https://vielzeug.dev/stateit/)
+- [Usage Guide](https://vielzeug.dev/stateit/usage)
+- [API Reference](https://vielzeug.dev/stateit/api)
+- [Examples](https://vielzeug.dev/stateit/examples)
 
-```ts
-import { store } from '@vielzeug/stateit';
+## License
 
-const user = store({ profile: { name: 'Ada' }, count: 0 });
-
-user.patch({ count: 1 });
-user.update((state) => ({ ...state, count: state.count + 1 }));
-user.reset();
-```
-
-## Watching Derived Values
-
-Use `watch` with a getter function to watch any derived value directly:
-
-```ts
-import { store, watch } from '@vielzeug/stateit';
-
-const cart = store({ count: 0, label: 'x' });
-
-const stop = watch(() => cart.value.count, (next, prev) => {
-  console.log(prev, '->', next);
-});
-
-stop();
-```
-
-## Interop Helpers
-
-Stateit stays framework-agnostic, but the core exports are designed to plug directly into common reactive contracts.
-
-```ts
-import { computed, readonly, signal, toObservable, toStore } from '@vielzeug/stateit';
-
-const count = signal(0);
-const doubled = computed(() => count.value * 2);
-
-const publicCount = readonly(count);
-const svelteStore = toStore(doubled);
-const observable = toObservable(publicCount);
-```
-
-## Strict Runtime Rules
-
-- `onCleanup()` throws when called outside an active effect.
-- Reading a disposed computed signal throws.
-- Store constructor/patch misuse (non-object values) throws.
-
-## API
-
-```ts
-type ObservableObserver<T> = { next(value: T): void };
-type ObservableLike<T> = {
-  subscribe(observer: ObservableObserver<T> | ((value: T) => void)): { unsubscribe(): void };
-};
-
-signal<T>(initial: T, options?: { equals?: (a: T, b: T) => boolean }): Signal<T>;
-computed<T>(compute: () => T, options?: { equals?: (a: T, b: T) => boolean }): ComputedSignal<T>;
-effect(fn: () => void | (() => void)): Subscription;
-watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;
-watch<T>(source: () => T, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;
-batch<T>(fn: () => T): T;
-untrack<T>(fn: () => T): T;
-readonly<T>(source: ReadonlySignal<T>): ReadonlySignal<T>;
-toStore<T>(source: ReadonlySignal<T>): { subscribe(run: (value: T) => void): Subscription };
-toObservable<T>(source: ReadonlySignal<T>): ObservableLike<T>;
-onCleanup(fn: () => void): void;
-scope(setup?: () => void): Scope;
-store<T extends object>(initial: T): Store<T>;
-isSignal<T>(value: unknown): value is ReadonlySignal<T>;
-```
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

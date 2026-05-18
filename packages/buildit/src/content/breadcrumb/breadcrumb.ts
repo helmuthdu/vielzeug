@@ -14,7 +14,19 @@ export type BitBreadcrumbItemProps = {
 };
 
 /**
- * `bit-breadcrumb-item` — A single crumb within a `<bit-breadcrumb>` list.
+ * A single breadcrumb entry rendered inside `<bit-breadcrumb>`.
+ *
+ * @element bit-breadcrumb-item
+ *
+ * @attr {boolean} active - Marks this item as the current page (`aria-current="page"`)
+ * @attr {string} href - Link target for this breadcrumb item
+ * @attr {string} separator - Separator text shown before the item (except first item)
+ *
+ * @slot - Item label/content
+ * @slot icon - Optional leading icon for the crumb
+ *
+ * @part separator - Separator element before the item label
+ * @part link - The interactive anchor element
  *
  * @example
  * ```html
@@ -54,10 +66,19 @@ export const BREADCRUMB_ITEM_TAG = define<BitBreadcrumbItemProps>('bit-breadcrum
 import componentStyles from './breadcrumb.css?inline';
 
 /**
- * `bit-breadcrumb` — Accessible navigation breadcrumb.
+ * Accessible breadcrumb navigation container.
  *
- * Wrap `<bit-breadcrumb-item>` elements as children.
- * The last/current item should have `active` attribute.
+ * @element bit-breadcrumb
+ *
+ * @attr {string} label - Accessible label for the internal `<nav>` landmark
+ * @attr {string} separator - Separator text propagated to child `<bit-breadcrumb-item>` elements
+ *
+ * @slot - One or more `<bit-breadcrumb-item>` children
+ *
+ * @part nav - Internal navigation landmark element
+ * @part list - Internal ordered list container
+ *
+ * @cssprop --breadcrumb-separator - Optional custom separator text synced to child items
  *
  * @example
  * ```html

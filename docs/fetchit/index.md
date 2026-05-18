@@ -1,6 +1,11 @@
 ---
 title: Fetchit — HTTP client for TypeScript
 description: Type-safe HTTP client, cache, and lean mutation helper built on native fetch.
+package: fetchit
+category: http
+keywords: [http-client, fetch, caching, deduplication, mutations, query-cache, rest, interceptors]
+related: [validit, stateit, deposit]
+exports: [createApi, createQuery, createMutation, HttpError]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Type-safe HTTP client, cache, and lean mutation helper built on nat
 
 # Fetchit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/fetchit` &nbsp;·&nbsp; **Category:** Http
+
+**Key exports:** `createApi`, `createQuery`, `createMutation`, `HttpError`
+
+**When to use:** Typed HTTP client with a query cache, deduplication, and mutations built on native fetch. No heavy dependencies.
+
+**Related:** [Validit](/validit/) · [Stateit](/stateit/) · [Deposit](/deposit/)
+
+</details>
+
 `@vielzeug/fetchit` ships a small set of composable primitives built on native `fetch`: `createApi`, `createQuery`, and `createMutation`.
 
-<!-- Search keywords: HTTP client, query cache, API data fetching. -->
 
 ## Installation
 

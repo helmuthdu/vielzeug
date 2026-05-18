@@ -1,15 +1,39 @@
+---
+description: Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
+package: floatit
+category: ui-positioning
+keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement]
+related: [craftit, buildit, dragit]
+exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size]
+---
+
 # @vielzeug/floatit
 
-> Lightweight floating-element positioning for tooltips, dropdowns, popovers, and menus.
+> Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/floatit)](https://www.npmjs.com/package/@vielzeug/floatit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Floatit is a zero-dependency DOM positioning engine with composable middleware for overflow handling, sizing, arrows, hiding, and inline text anchors.
+<details>
+<summary>Quick Reference</summary>
+
+**Package:** `@vielzeug/floatit` &nbsp;·&nbsp; **Category:** Ui-positioning
+
+**Key exports:** `float`, `computePosition`, `autoUpdate`, `offset`, `flip`, `shift`, `arrow`, `size`
+
+**When to use:** Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
+
+**Related:** [@vielzeug/craftit](https://vielzeug.dev/craftit/) · [@vielzeug/buildit](https://vielzeug.dev/buildit/) · [@vielzeug/dragit](https://vielzeug.dev/dragit/)
+
+</details>
+
+`@vielzeug/floatit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/floatit
+npm install @vielzeug/floatit
+yarn add @vielzeug/floatit
 ```
 
 ## Quick Start
@@ -36,41 +60,13 @@ const cleanup = autoUpdate(reference, floating, () => {
 cleanup();
 ```
 
-## Features
-
-- `computePosition()` returns `x`, `y`, `placement`, and `middlewareData`
-- Main APIs accept both DOM elements and virtual references
-- `detectOverflow()` is available for custom middleware
-- Built-in middleware: `offset`, `flip`, `autoPlacement`, `shift`, `size`, `arrow`, `hide`, and `inline`
-- `float()` covers the common position-and-follow case and applies `left`/`top` by default
-- `autoUpdate()` supports resize, scroll, visualViewport, and `animationFrame`
-- Zero dependencies
-
-## API Summary
-
-| Export | Description |
-| --- | --- |
-| `computePosition(reference, floating, options?)` | Return `x`, `y`, `placement`, and `middlewareData` |
-| `float(reference, floating, options?)` | Position immediately and keep following with optional custom `apply` |
-| `autoUpdate(reference, floating, update, options?)` | Re-run positioning when layout conditions change |
-| `detectOverflow(state, options?)` | Return per-side overflow offsets |
-| `offset(value)` | Add distance between reference and floating element (main/cross axis) |
-| `flip(options?)` | Move to a fallback placement when the current one overflows |
-| `autoPlacement(options?)` | Choose the placement with the most space |
-| `shift(options?)` | Clamp the floating element inside a boundary |
-| `size(options?)` | Provide available dimensions and resize hooks |
-| `arrow(options)` | Provide arrow coordinates via `middlewareData.arrow` |
-| `hide(options?)` | Provide visibility metadata via `middlewareData.hide` |
-| `inline(options?)` | Improve placement for multi-line inline references |
-
-## Notes
-
-- Positions are viewport-relative; use `position: fixed` on the floating element unless you have a custom rendering strategy.
-- `reference` can be either a DOM element or a virtual reference object with `getBoundingClientRect()`.
-- Use either `flip()` or `autoPlacement()`, not both.
-- Middleware return partial updates rather than whole-state clones.
-- Call the cleanup returned by `autoUpdate()` when the floating UI closes.
-
 ## Documentation
 
-Full docs at [vielzeug.dev/floatit](https://vielzeug.dev/floatit)
+- [Overview](https://vielzeug.dev/floatit/)
+- [Usage Guide](https://vielzeug.dev/floatit/usage)
+- [API Reference](https://vielzeug.dev/floatit/api)
+- [Examples](https://vielzeug.dev/floatit/examples)
+
+## License
+
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

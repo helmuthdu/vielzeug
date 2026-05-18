@@ -49,10 +49,27 @@ export type BitRadioProps = CheckableProps &
  *
  * @slot - Radio button label text
  *
+ * @cssprop --border-2 - Border token.
+ * @cssprop --color-contrast - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-200 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-300 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
+ * @cssprop --color-error - Error state color token.
+ * @cssprop --leading-tight - Line-height token.
+ * @cssprop --radio-bg - Radio control styling token.
+ * @cssprop --radio-border-color - Radio control styling token.
+ * @cssprop --radio-checked-bg - Radio control styling token.
+ * @cssprop --radio-color - Radio control styling token.
+ * @cssprop --radio-font-size - Radio control styling token.
  * @part radio - The radio wrapper element
  * @part circle - The visual radio circle
  * @part label - The label element
  * @part helper-text - The helper/error text element
+ *
+ * @example
+ * ```html
+ * <bit-radio></bit-radio>
+ * ```
  */
 export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
   formAssociated: true,

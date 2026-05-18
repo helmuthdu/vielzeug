@@ -123,6 +123,9 @@ function itemsMatchAccept(items: DataTransferItemList, accept: string[]): boolea
 /**
  * Attach drag-and-drop behaviour to a DOM element.
  *
+ * Accepts files and provides hover state management with configurable MIME/extension filtering.
+ * Calls `onDrop` only for accepted files and `onDropRejected` for filtered files.
+ *
  * @example
  * ```ts
  * import { createDropZone } from '@vielzeug/dragit';
@@ -578,6 +581,7 @@ function applyKeyboardReorder(
  * `createSortable` sets `draggable="true"` on qualifying children automatically.
  *
  * Style the drop indicator by targeting `.dragit-placeholder` in your CSS.
+ * Supports keyboard reordering (arrow keys, Home/End) and auto-scrolling near edges.
  *
  * @example
  * ```ts

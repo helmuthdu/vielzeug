@@ -131,6 +131,12 @@
       "projectFolder": "packages/dragit",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/mcpit",
+      "projectFolder": "packages/mcpit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

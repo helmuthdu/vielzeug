@@ -1,9 +1,9 @@
-import type { InferOutput, Issue } from '../core';
+import type { AnySchema, InferOutput, Issue } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 
-export class UnionSchema<T extends readonly Schema<any>[]> extends Schema<InferOutput<T[number]>> {
+export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOutput<T[number]>> {
   readonly schemas: T;
 
   constructor(schemas: T) {

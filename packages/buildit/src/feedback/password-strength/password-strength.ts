@@ -54,6 +54,11 @@ export type BitPasswordStrengthProps = {
  * @cssprop --password-strength-fair-color   Fair state segment color
  * @cssprop --password-strength-good-color   Good state segment color
  * @cssprop --password-strength-strong-color Strong state segment color
+ *
+ * @example
+ * ```html
+ * <bit-password-strength></bit-password-strength>
+ * ```
  */
 export const PASSWORD_STRENGTH_TAG = define<BitPasswordStrengthProps>('bit-password-strength', {
   props: {

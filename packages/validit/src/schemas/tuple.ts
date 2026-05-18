@@ -1,17 +1,17 @@
-import type { Issue, ParseResult } from '../core';
+import type { AnySchema, Issue, ParseResult } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
-export type TupleSchemas = readonly [Schema<any>, ...Schema<any>[]];
-export type InferTuple<T extends TupleSchemas, R extends Schema<any> | null = null> =
+export type TupleSchemas = readonly [AnySchema, ...AnySchema[]];
+export type InferTuple<T extends TupleSchemas, R extends AnySchema | null = null> =
   R extends Schema<infer O>
     ? readonly [...{ [K in keyof T]: T[K] extends Schema<infer V> ? V : never }, ...O[]]
     : { readonly [K in keyof T]: T[K] extends Schema<infer V> ? V : never };
 
-export class TupleSchema<T extends TupleSchemas, R extends Schema<any> | null = null> extends Schema<InferTuple<T, R>> {
+export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = null> extends Schema<InferTuple<T, R>> {
   readonly items: T;
-  private readonly restSchema: R;
+  readonly restSchema: R;
 
   constructor(items: T, restSchema: R = null as R) {
     super([]);

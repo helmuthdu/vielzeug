@@ -1,6 +1,11 @@
 ---
 title: Routeit — Client-side router for TypeScript
 description: Lightweight, type-safe client-side router with nested routes, data loading, middleware, and named navigation.
+package: routeit
+category: routing
+keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
+related: [stateit, permit, eventit]
+exports: [createRouter, createBrowserHistory]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Lightweight, type-safe client-side router with nested routes, data 
 
 # Routeit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/routeit` &nbsp;·&nbsp; **Category:** Routing
+
+**Key exports:** `createRouter`, `createBrowserHistory`
+
+**When to use:** Client-side routing with typed params, async data loading, middleware, guards, and View Transitions API support.
+
+**Related:** [Stateit](/stateit/) · [Permit](/permit/) · [Eventit](/eventit/)
+
+</details>
+
 **Routeit** is a lightweight, framework-agnostic client-side router built around a declarative route table. Define routes once, then navigate, resolve, load route data, and build links by route name.
 
-<!-- Search keywords: client router, typed routes, single-page app navigation, SPA navigation. -->
 
 ## Installation
 

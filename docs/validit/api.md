@@ -40,20 +40,31 @@ description: Complete reference for validit exports, v factories, schema methods
 
 ```ts
 import {
+  configure,
   ErrorCode,
-  flattenFirstErrors,
+  resolveMessage,
+  prependIssuePath,
+  toJsonSchema,
   Schema,
   ValidationError,
-  configure,
   reset,
   v,
+  type CheckContext,
+  type CheckFnResult,
+  type JsonSchema,
   type Infer,
   type InferInput,
+  type InferOutput,
   type Issue,
   type MessageFn,
   type ParseResult,
+  type SchemaMeta,
+  type SchemaConstraints,
+  type SchemaTypeHint,
+  type StringConstraints,
+  type NumberConstraints,
+  type ArrayConstraints,
   type ValidateFn,
-  type AsyncValidateFn,
   type Messages,
 } from '@vielzeug/validit';
 ```
@@ -105,7 +116,7 @@ import {
 
 ## Schema
 
-All schema classes inherit from `Schema<Output, Input>`.
+All schema classes inherit from `Schema<Output, Input, Constraints, TypeHint>`.
 
 ### Validation
 
@@ -143,11 +154,10 @@ catch(fallback: Output | (() => Output)): this
 
 ```ts
 check(
-  check: (
+  fn: (
     value: Output,
-    ctx: { addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void },
-  ) => boolean | Issue | Issue[] | null | undefined | Promise<boolean | Issue | Issue[] | null | undefined>,
-  message?: MessageFn<{ value: Output }>,
+    ctx: CheckContext,
+  ) => CheckFnResult | Promise<CheckFnResult>,
 ): this
 ```
 
@@ -383,6 +393,21 @@ type ParseResult<T> = { success: true; data: T } | { success: false; error: Vali
 type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
 ```
 
+### Metadata Exports <Badge type="warning" text="beta" />
+
+Validit exposes low-level schema metadata for advanced tooling:
+
+- `SchemaMeta`
+- `SchemaConstraints`
+- `StringConstraints`
+- `NumberConstraints`
+- `ArrayConstraints`
+- `SchemaTypeHint`
+- `schema.meta`
+
+These metadata contracts are **experimental** and may evolve in minor versions.
+For stable integrations, prefer `toJsonSchema()` output.
+
 ### Issue
 
 ```ts
@@ -403,7 +428,7 @@ type Issue = {
 - `.format(): { _errors: string[]; [key: string]: ... }`
 - `ValidationError.is(value): value is ValidationError`
 
-`flattenFirstErrors(error)` is exported as a utility to map field errors to a single first message per field.
+Use `ValidationError.flattenFirst()` when you need one message per field.
 
 ### ErrorCode
 
@@ -415,18 +440,19 @@ Built-in codes:
 - `invalid_date`
 - `invalid_duration`
 - `invalid_enum`
+- `invalid_finite`
+- `invalid_integer`
+- `invalid_keys`
 - `invalid_length`
 - `invalid_literal`
+- `invalid_multiple_of`
+- `invalid_safe`
 - `invalid_string`
 - `invalid_type`
 - `invalid_union`
+- `invalid_unique`
 - `invalid_url`
 - `invalid_variant`
-- `not_finite`
-- `not_integer`
-- `not_multiple_of`
-- `not_safe`
-- `not_unique`
 - `too_big`
 - `too_small`
-- `unrecognized_keys`
+- `invalid_keys`

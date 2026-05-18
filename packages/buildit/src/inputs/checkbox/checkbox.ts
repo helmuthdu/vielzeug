@@ -47,10 +47,27 @@ export type BitCheckboxProps = CheckableProps &
  *
  * @slot - Checkbox label text
  *
+ * @cssprop --border-2 - Border token.
+ * @cssprop --checkbox-bg - Checkbox control styling token.
+ * @cssprop --checkbox-border-color - Checkbox control styling token.
+ * @cssprop --checkbox-checked-bg - Checkbox control styling token.
+ * @cssprop --checkbox-color - Checkbox control styling token.
+ * @cssprop --checkbox-font-size - Checkbox control styling token.
+ * @cssprop --checkbox-radius - Checkbox control styling token.
+ * @cssprop --checkbox-size - Checkbox control styling token.
+ * @cssprop --color-contrast - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-200 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-300 - Contrast color token for text and surfaces.
+ * @cssprop --color-contrast-500 - Contrast color token for text and surfaces.
  * @part checkbox - The checkbox wrapper element
  * @part box - The visual checkbox box
  * @part label - The label element
  * @part helper-text - The helper/error text element
+ *
+ * @example
+ * ```html
+ * <bit-checkbox></bit-checkbox>
+ * ```
  */
 export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-checkbox', {
   formAssociated: true,

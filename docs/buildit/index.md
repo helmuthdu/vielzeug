@@ -1,6 +1,11 @@
 ---
 title: Buildit — Web component library
 description: Accessible, themeable web components built with Craftit for framework and vanilla DOM apps.
+package: buildit
+category: ui-components
+keywords: [web-components, accessible, themeable, ui, components, design-system]
+related: [craftit, floatit, formit]
+exports: [bit-button, bit-input, bit-dialog, bit-select, bit-form]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -11,9 +16,21 @@ description: Accessible, themeable web components built with Craftit for framewo
 
 # Buildit
 
+<details>
+<summary>⚡ Quick Reference</summary>
+
+**Package:** `@vielzeug/buildit` &nbsp;·&nbsp; **Category:** Ui Components
+
+**Key exports:** `bit-button`, `bit-input`, `bit-dialog`, `bit-select`, `bit-form`
+
+**When to use:** Production-ready accessible UI components without building from scratch. Drop-in web components that work in any framework.
+
+**Related:** [Craftit](/craftit/) · [Floatit](/floatit/) · [Formit](/formit/)
+
+</details>
+
 **Buildit** is the Vielzeug component library: accessible, themeable web components built with [@vielzeug/craftit](/craftit/). It works with vanilla Document Object Model (DOM) code and framework apps through standards-based custom elements and tree-shakeable registration entry points.
 
-<!-- Search keywords: web component library, UI component kit, design system components. -->
 
 ## Installation
 

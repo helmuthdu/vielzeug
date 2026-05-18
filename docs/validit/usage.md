@@ -8,7 +8,7 @@ description: Schema composition, parsing flows, strict object behavior, async re
 ## Basic Usage
 
 ```ts
-import { flattenFirstErrors, v } from '@vielzeug/validit';
+import { v } from '@vielzeug/validit';
 
 const UserSchema = v.object({
   id: v.coerce.number().int().positive(),
@@ -22,7 +22,7 @@ const parsed = UserSchema.parse(input);
 
 const result = UserSchema.safeParse(input);
 if (!result.success) {
-  console.log(flattenFirstErrors(result.error));
+  console.log(result.error.flattenFirst());
 }
 ```
 
@@ -144,7 +144,7 @@ const RelaxedProfile = Profile.relaxed();
 const StrippedProfile = Profile.strip();
 ```
 
-`object()` is strict by default. Unknown keys produce an `unrecognized_keys` issue instead of being silently dropped.
+`object()` is strict by default. Unknown keys produce an `invalid_keys` issue instead of being silently dropped.
 
 Use `.strip()` when you want to ignore unknown keys, and `.relaxed()` when you want to preserve unknown keys.
 
@@ -232,8 +232,8 @@ const UniqueEmail = v
   .email()
   .check(async (value) => {
     const exists = await db.users.exists({ email: value });
-    return !exists;
-  }, 'Email already exists');
+    return !exists || 'Email already exists';
+  });
 
 await UniqueEmail.parseAsync('user@example.com');
 await UniqueEmail.safeParseAsync('user@example.com');
@@ -318,8 +318,8 @@ const UserId = v.number().int().positive().brand<'UserId'>().describe('Positive 
 const Password = v
   .string()
   .min(8)
-  .check((value) => /[A-Z]/.test(value), 'Must include uppercase')
-  .check((value) => /\d/.test(value), 'Must include a number');
+  .check((value) => /[A-Z]/.test(value) || 'Must include uppercase')
+  .check((value) => /\d/.test(value) || 'Must include a number');
 ```
 
 ### `check()` with async validation
@@ -328,13 +328,11 @@ const Password = v
 const Username = v
   .string()
   .min(3)
-  .check(
-    async (value) => {
-      const taken = await db.users.exists({ username: value });
-      return !taken;
-    },
-    ({ value }) => `${value} is not available`,
-  );
+  .check(async (value) => {
+    const taken = await db.users.exists({ username: value });
+
+    return !taken || `${value} is not available`;
+  });
 ```
 
 Sync and async checks both receive the parsed value after preprocessors, defaults, and core schema validation.
@@ -368,7 +366,7 @@ const RegistrationSchema = v
     password: v.string().min(8),
     confirmPassword: v.string(),
   })
-  .check(({ password, confirmPassword }) => password === confirmPassword, 'Passwords must match');
+  .check(({ password, confirmPassword }) => password === confirmPassword || 'Passwords must match');
 
 const result = RegistrationSchema.safeParse(input);
 
@@ -378,7 +376,7 @@ if (!result.success) {
   }
 
   const grouped = result.error.flatten();
-  const firstOnly = flattenFirstErrors(result.error);
+  const firstOnly = result.error.flattenFirst();
   const nested = result.error.format();
 
   console.log(grouped.fieldErrors, grouped.formErrors);
@@ -391,9 +389,9 @@ Cross-field object refinements usually land in `formErrors` because their issue 
 
 For machine handling, prefer checking `issue.code` and `issue.params` over matching human-readable messages.
 
-- `array.unique()` uses `not_unique`
-- `number.safe()` uses `not_safe`
-- `number.finite()` uses `not_finite`
+- `array.unique()` uses `invalid_unique`
+- `number.safe()` uses `invalid_safe`
+- `number.finite()` uses `invalid_finite`
 
 ## Message Customization
 
@@ -457,11 +455,11 @@ function LoginForm() {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.currentTarget));
     const result = LoginSchema.safeParse(data);
-    if (!result.ok) {
-      console.error(result.errors);
+    if (!result.success) {
+      console.error(result.error.issues);
       return;
     }
-    await login(result.value);
+    await login(result.data);
   }
   return <form onSubmit={handleSubmit}>...</form>;
 }
@@ -481,13 +479,13 @@ function useContactForm() {
 
   async function submit(values: unknown) {
     const result = ContactSchema.safeParse(values);
-    if (!result.ok) {
-      for (const issue of result.errors.issues ?? []) {
+    if (!result.success) {
+      for (const issue of result.error.issues) {
         errors[issue.path?.[0] ?? ''] = String(issue.message);
       }
       return;
     }
-    await sendContact(result.value);
+    await sendContact(result.data);
   }
 
   return { errors, submit };
@@ -505,12 +503,12 @@ function useContactForm() {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.target as HTMLFormElement));
     const result = FormSchema.safeParse(data);
-    if (!result.ok) {
+    if (!result.success) {
       errors = {};
       // map issues to field errors
       return;
     }
-    await send(result.value);
+    await send(result.data);
   }
 </script>
 

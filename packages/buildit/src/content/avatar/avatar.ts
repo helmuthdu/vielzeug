@@ -52,6 +52,7 @@ export type BitAvatarProps = {
  * @attr {string} rounded - Border radius
  * @attr {string} status - 'online' | 'offline' | 'busy' | 'away'
  *
+ * @slot - Fallback content shown when image and initials are unavailable.
  * @cssprop --avatar-size - Diameter of the avatar
  * @cssprop --avatar-bg - Background color
  * @cssprop --avatar-color - Text/icon color
@@ -59,6 +60,12 @@ export type BitAvatarProps = {
  * @cssprop --avatar-border - Border shorthand
  * @cssprop --avatar-border-color - Border color (also controls status dot border)
  *
+ * @part avatar - Avatar root container.
+ * @part img - Image element.
+ * @part initials - Initials fallback element.
+ * @part fallback - Shadow part for the `fallback` element.
+ * @part status - Status indicator element.
+ * @part overflow - Overflow indicator element.
  * @example
  * ```html
  * <bit-avatar src="/jane.jpg" alt="Jane Doe"></bit-avatar>

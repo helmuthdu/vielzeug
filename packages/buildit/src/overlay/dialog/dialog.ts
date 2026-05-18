@@ -86,6 +86,14 @@ export type BitDialogProps = {
  * @cssprop --dialog-backdrop - Backdrop overlay color
  * @cssprop --dialog-max-width - Maximum panel width (overridden by size prop)
  *
+ * @part dialog - Dialog root container.
+ * @part overlay - Overlay backdrop element.
+ * @part panel - Panel container.
+ * @part header - Header container.
+ * @part title - Title text element.
+ * @part close - Close action control.
+ * @part body - Body content container.
+ * @part footer - Footer container.
  * @example
  * ```html
  * <bit-dialog label="Confirm action" dismissible>
