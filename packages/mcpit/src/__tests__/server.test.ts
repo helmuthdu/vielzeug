@@ -1,5 +1,9 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import type { BundledData } from '../types.js';
@@ -12,8 +16,18 @@ type ToolCallResult = { content: TextContent[]; isError?: boolean };
 
 let data: BundledData;
 const activeClients: Client[] = [];
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const dataFile = resolve(__dirname, '../../data/vielzeug-data.json');
+const generateDataScript = resolve(__dirname, '../../scripts/generate-bundled-data.ts');
 
 beforeAll(() => {
+  if (!existsSync(dataFile)) {
+    execFileSync('node', ['--experimental-strip-types', generateDataScript], {
+      cwd: resolve(__dirname, '../..'),
+      stdio: 'inherit',
+    });
+  }
+
   data = loadData();
 });
 
