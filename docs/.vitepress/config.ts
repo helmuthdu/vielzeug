@@ -94,6 +94,7 @@ async function generateLlmsTxt(siteConfig: { outDir: string }): Promise<void> {
 
   const rushJson = JSON.parse(readFileSync(resolve(root, 'rush.json'), 'utf8')) as { projects: RushProject[] };
   const DOC_PAGES = ['index', 'api', 'usage', 'examples'] as const;
+  const totalPackages = rushJson.projects.length;
 
   const packageLines: string[] = [];
   const fullSections: string[] = [];
@@ -137,15 +138,16 @@ async function generateLlmsTxt(siteConfig: { outDir: string }): Promise<void> {
   const llmsTxt = [
     '# Vielzeug',
     '',
-    '> 20+ independent zero-dependency TypeScript utility packages. One tool per problem.',
+    `> ${totalPackages} focused TypeScript packages for state, UI, data, storage, routing, utilities, and AI tooling.`,
     '',
-    'Vielzeug is a monorepo of focused TypeScript packages — each solving one problem, all playing',
-    'nicely together. Every package ships ESM + CJS, targets ES2022, and has zero external dependencies.',
+    'Vielzeug is a monorepo of focused TypeScript packages — from low-level utilities to UI primitives,',
+    'routing, storage, validation, workers, and an MCP server for AI assistants. Packages are designed',
+    'to be independently consumable, ship ESM + CJS output, and target ES2022.',
     '',
     'Install any package independently: `pnpm add @vielzeug/<name>`',
     '',
-    '**MCP (AI agents):** `node packages/mcpit/dist/index.js` exposes 8 tools for package discovery,',
-    'doc lookup, API inspection, and component metadata.',
+    '**MCP (AI agents):** `npx -y @vielzeug/mcpit` runs the Vielzeug MCP server in standalone stdio mode with bundled data,',
+    'so no monorepo checkout is required. Use `npx -y @vielzeug/mcpit --port 3100` for Streamable HTTP with the same package discovery, docs lookup, source inspection, and Buildit component metadata tools.',
     '',
     '## Packages',
     '',
@@ -161,7 +163,7 @@ async function generateLlmsTxt(siteConfig: { outDir: string }): Promise<void> {
   const llmsFullTxt = [
     '# Vielzeug — Full documentation',
     '',
-    '> Complete index documentation for all 20 Vielzeug packages.',
+    `> Complete index documentation for all ${totalPackages} Vielzeug packages.`,
     ...fullSections,
   ].join('\n');
 
