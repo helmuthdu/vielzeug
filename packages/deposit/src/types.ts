@@ -1,19 +1,43 @@
-import type { QueryBuilder } from './query';
+import type { QueryBuilder, ReadQuery } from './query';
 
-/* -------------------- Core Types -------------------- */
+import { assertTtlMs, type TtlMs } from './ttl';
 
-/**
- * The definition for a single table within a schema.
- */
+/* -------------------- Re-export TtlMs for public API -------------------- */
+
+export type { TtlMs };
+
+/* -------------------- Schema types -------------------- */
+
 export type SchemaEntry<T extends Record<string, unknown>> = {
+  defaultTtl?: TtlMs;
   key: keyof T & string;
 };
 
-declare const ttlMsBrand: unique symbol;
+export type AnySchema = Record<string, SchemaEntry<Record<string, unknown>>>;
 
-export type TtlMs = number & { readonly [ttlMsBrand]: 'TtlMs' };
+/** Fluent builder returned by `table()` — satisfies `SchemaEntry` and adds `.ttl()` chaining. */
+type TableBuilder<T extends Record<string, unknown>> = SchemaEntry<T> & {
+  /** Set a default TTL (ms) applied to all `put`/`putAll` calls that don't specify one explicitly. */
+  ttl: (ms: TtlMs) => SchemaEntry<T>;
+};
 
-export type AnySchema = Record<string, { key: string }>;
+export function table<T extends Record<string, unknown>>(key: keyof T & string): TableBuilder<T> {
+  return {
+    key,
+    ttl: (ms: TtlMs): SchemaEntry<T> => {
+      assertTtlMs(ms, 'table.ttl');
+
+      return { defaultTtl: ms, key };
+    },
+  };
+}
+
+export type RecordOf<S extends AnySchema, K extends keyof S> = S[K] extends SchemaEntry<infer R> ? R : never;
+
+export type KeyOf<S extends AnySchema, K extends keyof S> =
+  S[K] extends SchemaEntry<infer R> ? (S[K]['key'] extends keyof R ? R[S[K]['key']] : never) : never;
+
+/* -------------------- Migration -------------------- */
 
 export type MigrationContext = {
   db: IDBDatabase;
@@ -23,74 +47,120 @@ export type MigrationContext = {
 };
 
 export type MigrationFn = (ctx: MigrationContext) => void;
+
+/* -------------------- Observer -------------------- */
+
 export type Observer<T> = (records: T[]) => void;
 
-/** Extract the record type for a given table from a schema. */
-export type RecordOf<S extends AnySchema, K extends keyof S> = S[K] extends SchemaEntry<infer R> ? R : never;
+/* -------------------- Metrics -------------------- */
 
-/** Extract the key type for a given table from a schema. */
-export type KeyOf<S extends AnySchema, K extends keyof S> =
-  S[K] extends SchemaEntry<infer R> ? (S[K]['key'] extends keyof R ? R[S[K]['key']] : never) : never;
+export type MetricsEvent = {
+  duration: number;
+  operation:
+    | 'batch'
+    | 'clear'
+    | 'count'
+    | 'delete'
+    | 'deleteAll'
+    | 'get'
+    | 'getAll'
+    | 'has'
+    | 'put'
+    | 'putAll'
+    | 'query'
+    | 'update'
+    | 'upsert';
+  table: string;
+};
 
-/**
- * Creates a typed `SchemaEntry` for use in a schema definition.
- *
- * Each schema entry maps a table name to its record type and primary key field.
- *
- * @example
- * ```ts
- * const schema = {
- *   users: table<User>('id'),
- *   posts: table<Post>('id'),
- * };
- * ```
- */
-export function table<T extends Record<string, unknown>>(key: keyof T & string): SchemaEntry<T> {
-  return { key };
-}
+/* -------------------- Debug info -------------------- */
 
-/* -------------------- Transaction context for IndexedDB -------------------- */
+export type DebugStats = {
+  /** Number of TTL-expired records still physically in the store (not yet lazily evicted). */
+  expiredCount: number;
+  /** Number of live (non-expired) records. */
+  recordCount: number;
+};
 
-type ScopedTableOps<S extends AnySchema, K extends keyof S> = {
+export type DebugInfo<S extends AnySchema> = {
+  tables: Array<{ name: keyof S & string } & DebugStats>;
+};
+
+/* -------------------- Transaction context -------------------- */
+
+/** Available inside `batch()` and (for IndexedDB) `transaction()` callbacks. */
+export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
+  clear<T extends K>(table: T): Promise<void>;
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  deleteAll<T extends K>(table: T): Promise<number>;
-  deleteWhere<T extends K>(table: T, predicate: (record: RecordOf<S, T>) => boolean): Promise<number>;
-  forEach<T extends K>(table: T, fn: (record: RecordOf<S, T>) => void | Promise<void>): Promise<void>;
+  deleteAll<T extends K>(table: T): Promise<void>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
-  getOrPut<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<RecordOf<S, T>>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
-  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
+  query<T extends K>(table: T): ReadQuery<RecordOf<S, T>>;
   update<T extends K>(
     table: T,
     key: KeyOf<S, T>,
     changes: Partial<RecordOf<S, T>>,
     ttl?: TtlMs,
   ): Promise<RecordOf<S, T> | undefined>;
+  upsert<T extends K>(
+    table: T,
+    key: KeyOf<S, T>,
+    fn: (existing: RecordOf<S, T> | undefined) => RecordOf<S, T>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, T>>;
 };
 
-/**
- * A subset of `Adapter` scoped to a single IDB transaction.
- * The transaction commits atomically when the async callback resolves, or rolls back if it throws.
- */
-export type TransactionContext<S extends AnySchema, K extends keyof S> = ScopedTableOps<S, K>;
+/* -------------------- Adapter interface -------------------- */
 
-/* -------------------- Adapter Interface -------------------- */
-
-export interface Adapter<S extends AnySchema> extends ScopedTableOps<S, keyof S> {
-  /** Disposes adapter resources such as observers and cross-tab channels. */
+export interface Adapter<S extends AnySchema> {
+  /**
+   * Execute multiple operations against a set of tables with deferred observer notifications.
+   *
+   * All observer callbacks fire once per dirty table after `fn` resolves, instead of after
+   * each individual write. For the IndexedDB adapter this is also a true atomic IDB transaction.
+   */
+  batch<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>): Promise<R>;
+  /** Removes all records from the table. Alias for `deleteAll(table)`. */
+  clear<K extends keyof S>(table: K): Promise<void>;
+  /** Returns live (non-expired) record count for a table. */
+  count<K extends keyof S>(table: K): Promise<number>;
+  /** Returns live record counts and expired-but-not-yet-evicted counts per table. */
+  debug(): Promise<DebugInfo<S>>;
+  delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
+  /** Removes all records from the table. */
+  deleteAll<K extends keyof S>(table: K): Promise<void>;
+  /** Releases all resources (observers, cross-tab channel, DB connection). */
   dispose(): void;
+  get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
+  getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
+  has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
   observe<K extends keyof S>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
-    options?: { immediate?: boolean },
+    options?: { initialEmit?: boolean },
   ): () => void;
-}
-
-export interface IndexedDBHandle<S extends AnySchema> extends Adapter<S> {
-  transaction<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>): Promise<R>;
+  put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
+  putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
+  query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
+  update<K extends keyof S>(
+    table: K,
+    key: KeyOf<S, K>,
+    changes: Partial<RecordOf<S, K>>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, K> | undefined>;
+  /**
+   * Insert-or-update a record atomically.
+   * `fn` receives the current record (or `undefined`) and must return the new record.
+   * The returned record's key field must match `key`.
+   */
+  upsert<K extends keyof S>(
+    table: K,
+    key: KeyOf<S, K>,
+    fn: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, K>>;
 }

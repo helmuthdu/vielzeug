@@ -1,7 +1,7 @@
 import { basicSetupExample } from './basic-setup';
 import { bulkOperationsExample } from './bulk-operations';
+import { cacheFirstExample } from './cache-first';
 import { crudOperationsExample } from './crud-operations';
-import { getOrPutExample } from './get-or-put';
 import { indexedDbExample } from './indexed-db';
 import { queryBuilderExample } from './query-builder';
 import { ttlExpirationExample } from './ttl-expiration';
@@ -9,8 +9,8 @@ import { ttlExpirationExample } from './ttl-expiration';
 export const depositExamples = {
   'basic-setup': basicSetupExample,
   'bulk-operations': bulkOperationsExample,
+  'cache-first': cacheFirstExample,
   'crud-operations': crudOperationsExample,
-  'get-or-put': getOrPutExample,
   'indexed-db': indexedDbExample,
   'query-builder': queryBuilderExample,
   'ttl-expiration': ttlExpirationExample,

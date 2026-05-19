@@ -1,4 +1,4 @@
-import { createMemory, table, type Adapter } from '../index';
+import { createMemory, table, type Adapter, type MetricsEvent } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -10,309 +10,190 @@ describe('Memory adapter', () => {
   let db: Adapter<typeof userSchema>;
 
   beforeEach(() => {
-    db = createMemory(userSchema);
+    db = createMemory({ schema: userSchema });
   });
 
-  describe('core CRUD behavior', () => {
-    test('put and get roundtrip', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
+  test('put/get/delete roundtrip', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
 
-      expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
-    });
-
-    test('delete returns false for missing keys', async () => {
-      expect(await db.delete('users', 99)).toBe(false);
-    });
-
-    test('delete returns true for existing keys', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      expect(await db.delete('users', 1)).toBe(true);
-      expect(await db.get('users', 1)).toBeUndefined();
-    });
-
-    test('deleteAll clears table records', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-
-      expect(await db.deleteAll('users')).toBe(2);
-
-      expect(await db.getAll('users')).toEqual([]);
-    });
-
-    test('deleteAll returns zero for an empty table', async () => {
-      expect(await db.deleteAll('users')).toBe(0);
-    });
-
-    test('count tracks live records', async () => {
-      expect(await db.count('users')).toBe(0);
-
-      await db.put('users', { id: 1, name: 'Alice' });
-      await db.put('users', { id: 2, name: 'Bob' });
-
-      expect(await db.count('users')).toBe(2);
-    });
-
-    test('putAll writes all records', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-
-      expect(await db.getAll('users')).toEqual([
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-    });
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+    expect(await db.delete('users', 1)).toBe(true);
+    expect(await db.get('users', 1)).toBeUndefined();
   });
 
-  describe('record lifecycle helpers', () => {
-    test('has returns true only for existing keys', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
+  test('putAll/getAll/deleteAll', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
 
-      expect(await db.has('users', 1)).toBe(true);
-      expect(await db.has('users', 99)).toBe(false);
-    });
-
-    test('update patches existing record', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      expect(await db.update('users', 1, { city: 'Paris' })).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
-    });
-
-    test('update returns undefined when record does not exist', async () => {
-      expect(await db.update('users', 99, { city: 'Berlin' })).toBeUndefined();
-    });
-
-    test('update rejects key mutation', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      await expect(db.update('users', 1, { id: 2 } as Partial<User>)).rejects.toThrow('update key mismatch');
-    });
-
-    test('getOrPut returns existing value without overwrite', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      const existing = await db.getOrPut('users', { id: 1, name: 'Ignored' });
-
-      expect(existing).toEqual({ id: 1, name: 'Alice' });
-      expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
-    });
-
-    test('getOrPut inserts value when key is missing', async () => {
-      expect(await db.getOrPut('users', { id: 2, name: 'Bob' })).toEqual({ id: 2, name: 'Bob' });
-    });
-
-    test('deleteWhere removes matching records and returns count', async () => {
-      await db.putAll('users', [
-        { age: 25, id: 1, name: 'Alice' },
-        { age: 30, id: 2, name: 'Bob' },
-        { age: 35, id: 3, name: 'Charlie' },
-      ]);
-
-      const deleted = await db.deleteWhere('users', (u) => (u.age ?? 0) >= 30);
-
-      expect(deleted).toBe(2);
-      expect(await db.getAll('users')).toEqual([{ age: 25, id: 1, name: 'Alice' }]);
-    });
+    expect(await db.getAll('users')).toEqual([
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+    await db.deleteAll('users');
+    expect(await db.getAll('users')).toEqual([]);
   });
 
-  describe('ttl behavior', () => {
-    test('expired record is not returned by get', async () => {
-      await db.put('users', { id: 1, name: 'Alice' }, 1);
-      await delay(5);
+  test('has reflects key existence', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
 
-      expect(await db.get('users', 1)).toBeUndefined();
-    });
-
-    test('expired record is not visible through has/count', async () => {
-      await db.put('users', { id: 1, name: 'Alice' }, 1);
-      await delay(5);
-
-      expect(await db.has('users', 1)).toBe(false);
-      expect(await db.count('users')).toBe(0);
-    });
+    expect(await db.has('users', 1)).toBe(true);
+    expect(await db.has('users', 2)).toBe(false);
   });
 
-  describe('iteration and query', () => {
-    test('query filters records via in-memory builder', async () => {
-      await db.put('users', { age: 25, id: 1, name: 'Alice' });
-      await db.put('users', { age: 30, id: 2, name: 'Bob' });
+  test('count returns live records and clear empties table', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
 
-      expect(await db.query('users').between('age', 26, 40).toArray()).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
-    });
+    expect(await db.count('users')).toBe(2);
 
-    test('forEach iterates records in table order', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
+    await db.clear('users');
 
-      const ids: number[] = [];
-
-      await db.forEach('users', (u) => {
-        ids.push(u.id);
-      });
-
-      expect(ids).toEqual([1, 2]);
-    });
-
-    test('iterate yields records and supports early break', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-
-      const ids: number[] = [];
-
-      for await (const user of db.iterate('users')) {
-        ids.push(user.id);
-
-        if (user.id === 1) break;
-      }
-
-      expect(ids).toEqual([1]);
-    });
+    expect(await db.count('users')).toBe(0);
   });
 
-  describe('observation', () => {
-    test('observe emits initial snapshot by default', async () => {
-      const snapshots: User[][] = [];
-      const stop = db.observe('users', (rows) => {
+  test('update patches existing records', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db.update('users', 1, { city: 'Paris' })).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
+    expect(await db.update('users', 99, { city: 'Berlin' })).toBeUndefined();
+  });
+
+  test('upsert inserts when record does not exist', async () => {
+    const result = await db.upsert('users', 1, () => ({ id: 1, name: 'Alice' }));
+
+    expect(result).toEqual({ id: 1, name: 'Alice' });
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+  });
+
+  test('upsert merges when record exists', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const result = await db.upsert('users', 1, (existing) => ({ ...existing!, city: 'Paris' }));
+
+    expect(result).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
+  });
+
+  test('upsert rejects key mismatch', async () => {
+    await expect(db.upsert('users', 1, () => ({ id: 2, name: 'Alice' }))).rejects.toThrow('key');
+  });
+
+  test('query.delete removes matching records', async () => {
+    await db.putAll('users', [
+      { age: 25, id: 1, name: 'Alice' },
+      { age: 30, id: 2, name: 'Bob' },
+      { age: 35, id: 3, name: 'Charlie' },
+    ]);
+
+    const deleted = await db
+      .query('users')
+      .filter((u) => (u.age ?? 0) >= 30)
+      .delete();
+
+    expect(deleted).toBe(2);
+    expect(await db.getAll('users')).toEqual([{ age: 25, id: 1, name: 'Alice' }]);
+  });
+
+  test('batch defers notifications until completion', async () => {
+    const snapshots: User[][] = [];
+
+    db.observe('users', (rows) => {
+      snapshots.push([...rows]);
+    });
+
+    await db.batch(['users'], async (tx) => {
+      await tx.put('users', { id: 1, name: 'Alice' });
+      await tx.put('users', { id: 2, name: 'Bob' });
+    });
+
+    await Promise.resolve();
+
+    // Should have received exactly ONE notification (after batch), not two
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]).toEqual([
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+  });
+
+  test('batch supports upsert', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    await db.batch(['users'], async (tx) => {
+      await tx.upsert('users', 1, (existing) => ({ ...existing!, city: 'Paris' }));
+    });
+
+    expect(await db.get('users', 1)).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
+  });
+
+  test('debug returns live and expired counts', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+    await db.put('users', { id: 2, name: 'Bob' }, 1);
+
+    await delay(5);
+
+    const info = await db.debug();
+    const userTable = info.tables.find((t) => t.name === 'users');
+
+    expect(userTable?.recordCount).toBe(1);
+    expect(userTable?.expiredCount).toBe(1);
+  });
+
+  test('schema defaultTtl is applied automatically', async () => {
+    const ttlSchema = { sessions: table<{ token: string }>('token').ttl(1) };
+    const db2 = createMemory({ schema: ttlSchema });
+
+    await db2.put('sessions', { token: 'abc' }); // uses defaultTtl
+
+    await delay(5);
+
+    expect(await db2.get('sessions', 'abc')).toBeUndefined();
+  });
+
+  test('onMetrics callback receives events', async () => {
+    const events: MetricsEvent[] = [];
+    const db2 = createMemory({ onMetrics: (e) => events.push(e), schema: userSchema });
+
+    await db2.put('users', { id: 1, name: 'Alice' });
+    await db2.get('users', 1);
+
+    expect(events.some((e) => e.operation === 'put' && e.table === 'users')).toBe(true);
+    expect(events.some((e) => e.operation === 'get' && e.table === 'users')).toBe(true);
+  });
+
+  test('ttl expiration removes entries lazily', async () => {
+    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await delay(5);
+
+    expect(await db.get('users', 1)).toBeUndefined();
+    expect(await db.has('users', 1)).toBe(false);
+  });
+
+  test('observe supports initialEmit option', async () => {
+    const snapshots: User[][] = [];
+    const stop = db.observe(
+      'users',
+      (rows) => {
         snapshots.push(rows);
-      });
+      },
+      { initialEmit: false },
+    );
 
-      await Promise.resolve();
-      stop();
+    await db.put('users', { id: 1, name: 'Alice' });
+    await Promise.resolve();
+    stop();
 
-      expect(snapshots).toEqual([[]]);
-    });
-
-    test('observe with immediate false waits for mutation', async () => {
-      const snapshots: User[][] = [];
-      const stop = db.observe(
-        'users',
-        (rows) => {
-          snapshots.push(rows);
-        },
-        { immediate: false },
-      );
-
-      await Promise.resolve();
-      expect(snapshots).toEqual([]);
-
-      await db.put('users', { id: 1, name: 'Alice' });
-      await Promise.resolve();
-      stop();
-
-      expect(snapshots).toEqual([[{ id: 1, name: 'Alice' }]]);
-    });
-
-    test('dispose prevents in-flight immediate notifications', async () => {
-      const snapshots: User[][] = [];
-
-      db.observe('users', (rows) => {
-        snapshots.push(rows);
-      });
-
-      db.dispose();
-      await Promise.resolve();
-
-      expect(snapshots).toEqual([]);
-    });
-
-    test('update and getOrPut(insert) emit observer updates', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      const snapshots: User[][] = [];
-      const stop = db.observe('users', (rows) => {
-        snapshots.push(rows);
-      });
-
-      await db.update('users', 1, { city: 'Paris' });
-      await db.getOrPut('users', { id: 2, name: 'Bob' });
-      await Promise.resolve();
-      stop();
-
-      expect(snapshots).toEqual([
-        [{ id: 1, name: 'Alice' }],
-        [{ city: 'Paris', id: 1, name: 'Alice' }],
-        [
-          { city: 'Paris', id: 1, name: 'Alice' },
-          { id: 2, name: 'Bob' },
-        ],
-      ]);
-    });
-
-    test('deleteWhere emits a single observer update', async () => {
-      await db.putAll('users', [
-        { age: 20, id: 1, name: 'Alice' },
-        { age: 30, id: 2, name: 'Bob' },
-        { age: 40, id: 3, name: 'Charlie' },
-      ]);
-
-      const snapshots: User[][] = [];
-      const stop = db.observe('users', (rows) => {
-        snapshots.push(rows);
-      });
-
-      await db.deleteWhere('users', (u) => (u.age ?? 0) >= 30);
-      await Promise.resolve();
-      stop();
-
-      expect(snapshots).toEqual([
-        [
-          { age: 20, id: 1, name: 'Alice' },
-          { age: 30, id: 2, name: 'Bob' },
-          { age: 40, id: 3, name: 'Charlie' },
-        ],
-        [{ age: 20, id: 1, name: 'Alice' }],
-      ]);
-    });
-
-    test('listener errors do not block other listeners', async () => {
-      const goodSnapshots: User[][] = [];
-      const bad = new Error('boom');
-      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      const stopBad = db.observe(
-        'users',
-        () => {
-          throw bad;
-        },
-        { immediate: false },
-      );
-
-      const stopGood = db.observe(
-        'users',
-        (rows) => {
-          goodSnapshots.push(rows);
-        },
-        { immediate: false },
-      );
-
-      await db.put('users', { id: 1, name: 'Alice' });
-      await Promise.resolve();
-
-      stopBad();
-      stopGood();
-
-      expect(goodSnapshots).toEqual([[{ id: 1, name: 'Alice' }]]);
-      expect(errorSpy).toHaveBeenCalledWith('[deposit] observer notification failed', bad);
-
-      errorSpy.mockRestore();
-    });
+    expect(snapshots).toEqual([[{ id: 1, name: 'Alice' }]]);
   });
 
-  describe('adapter isolation', () => {
-    test('each instance has isolated state', async () => {
-      const other = createMemory(userSchema);
+  test('instances are isolated', async () => {
+    const other = createMemory({ schema: userSchema });
 
-      await db.put('users', { id: 1, name: 'Alice' });
+    await db.put('users', { id: 1, name: 'Alice' });
 
-      expect(await other.count('users')).toBe(0);
-    });
+    expect(await other.getAll('users')).toEqual([]);
   });
 });

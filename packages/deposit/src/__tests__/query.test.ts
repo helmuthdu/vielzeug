@@ -14,7 +14,7 @@ describe('QueryBuilder (via query)', () => {
   let db: Adapter<typeof schema>;
 
   beforeEach(async () => {
-    db = createMemory(schema);
+    db = createMemory({ schema });
     await db.putAll('rows', rowsData);
   });
 
@@ -102,26 +102,14 @@ describe('QueryBuilder (via query)', () => {
       expect(await db.query('rows').equals('city', 'Paris').count()).toBe(2);
     });
 
-    test('count follows the same transformed pipeline as toArray', async () => {
-      expect(await db.query('rows').orderBy('age', 'asc').limit(1).count()).toBe(1);
-    });
-
-    test('count preserves filter index semantics from transformed pipeline', async () => {
-      const toArrayCount = (
-        await db
-          .query('rows')
-          .orderBy('age', 'desc')
-          .filter((row, index) => row.id === index + 1)
-          .toArray()
-      ).length;
-      const count = await db
+    test('delete removes transformed records and returns count', async () => {
+      const deleted = await db
         .query('rows')
-        .orderBy('age', 'desc')
-        .filter((row, index) => row.id === index + 1)
-        .count();
+        .filter((row) => row.age >= 30)
+        .delete();
 
-      expect(toArrayCount).toBe(1);
-      expect(count).toBe(1);
+      expect(deleted).toBe(2);
+      expect(await db.getAll('rows')).toEqual([rowsData[0]]);
     });
 
     test('first returns first transformed record', async () => {

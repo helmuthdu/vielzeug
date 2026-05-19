@@ -1,217 +1,331 @@
-import type { Adapter, AnySchema, KeyOf, RecordOf, TransactionContext, TtlMs } from './types';
+import type { Adapter, AnySchema, DebugInfo, KeyOf, MetricsEvent, RecordOf, TransactionContext, TtlMs } from './types';
 
-import { createObserverHub } from './internal';
-import { createQueryBuilder } from './query';
+import { createObserverHub, getRecordKey } from './internal';
+import { createQueryBuilder, createReadQuery } from './query';
 
-type SharedCore<S extends AnySchema, K extends keyof S = keyof S> = {
+/* -------------------- Internal core ops type (adapter → runtime bridge) -------------------- */
+
+export type CoreStorageOps<S extends AnySchema, K extends keyof S = keyof S> = {
+  count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  deleteAll<T extends K>(table: T): Promise<number>;
-  deleteWhere?<T extends K>(table: T, predicate: (record: RecordOf<S, T>) => boolean): Promise<number>;
-  dispose?(): void;
+  deleteAll<T extends K>(table: T): Promise<void>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
+  has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
 };
 
-function getRecordKey<S extends AnySchema, K extends keyof S>(schema: S, table: K, value: RecordOf<S, K>): KeyOf<S, K> {
-  const keyField = String(schema[table].key);
-  const keyValue = (value as Record<string, unknown>)[keyField];
+export type CoreRuntimeOps<S extends AnySchema, K extends keyof S = keyof S> = CoreStorageOps<S, K> & {
+  dispose?(): void;
+  /** Raw record count including TTL-expired entries. Used only for debug(). */
+  getRawCount?<T extends K>(table: T): Promise<number>;
+};
 
-  if (keyValue === undefined || keyValue === null) {
-    throw new Error(`deposit: missing required key field "${keyField}" in record for table "${String(table)}"`);
-  }
+/* -------------------- TTL resolution (explicit > schema default > none) -------------------- */
 
-  return keyValue as KeyOf<S, K>;
+function resolveTtl<S extends AnySchema, K extends keyof S>(schema: S, table: K, ttl?: TtlMs): TtlMs | undefined {
+  return ttl ?? (schema[table] as { defaultTtl?: TtlMs }).defaultTtl;
 }
 
-function assertRecordKey<S extends AnySchema, K extends keyof S>(
+/* -------------------- Key validation (used in update/upsert) -------------------- */
+
+function verifyKey<S extends AnySchema, K extends keyof S>(
   schema: S,
   table: K,
-  expectedKey: KeyOf<S, K>,
+  expected: KeyOf<S, K>,
   value: RecordOf<S, K>,
-  action: string,
+  op: string,
 ): void {
-  const actualKey = getRecordKey(schema, table, value);
+  const actual = getRecordKey(schema, table, value);
 
-  if (actualKey !== expectedKey) {
+  if (actual !== expected) {
     throw new Error(
-      `deposit: ${action} key mismatch for table "${String(table)}". Expected "${String(expectedKey)}", got "${String(actualKey)}"`,
+      `[deposit] ${op} returned a record with key "${String(actual)}" but expected "${String(expected)}" for table "${String(table)}"`,
     );
   }
 }
 
-function createMutationMethods<S extends AnySchema, K extends keyof S>(
+/* -------------------- buildTxContext: turns CoreStorageOps into a TransactionContext -------------------- */
+
+export function buildTxContext<S extends AnySchema, K extends keyof S>(
   schema: S,
-  core: Pick<SharedCore<S, K>, 'get' | 'put'>,
-  onMutation?: <T extends K>(table: T) => void,
-) {
+  core: CoreStorageOps<S, K>,
+  onMutate: (table: K) => void,
+): TransactionContext<S, K> {
   return {
-    async getOrPut<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<RecordOf<S, T>> {
-      const key = getRecordKey(schema, table, value);
-      const existing = await core.get(table, key);
-
-      if (existing) return existing;
-
-      await core.put(table, value, ttl);
-      onMutation?.(table);
-
-      return value;
+    async clear(table) {
+      await core.deleteAll(table);
+      onMutate(table);
     },
-    async update<T extends K>(
-      table: T,
-      key: KeyOf<S, T>,
-      changes: Partial<RecordOf<S, T>>,
-      ttl?: TtlMs,
-    ): Promise<RecordOf<S, T> | undefined> {
-      const current = await core.get(table, key);
-
-      if (!current) return undefined;
-
-      const merged = { ...current, ...changes } as RecordOf<S, T>;
-
-      assertRecordKey(schema, table, key, merged, 'update');
-      await core.put(table, merged, ttl);
-      onMutation?.(table);
-
-      return merged;
+    async count(table) {
+      return core.count(table);
     },
-  };
-}
-
-function createSharedMethods<S extends AnySchema, K extends keyof S>(schema: S, core: SharedCore<S, K>) {
-  async function* iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>> {
-    for (const record of await core.getAll(table)) {
-      yield record;
-    }
-  }
-
-  return {
-    count<T extends K>(table: T): Promise<number> {
-      return core.getAll(table).then((records) => records.length);
-    },
-    deleteWhere<T extends K>(table: T, predicate: (record: RecordOf<S, T>) => boolean): Promise<number> {
-      if (core.deleteWhere) return core.deleteWhere(table, predicate);
-
-      return core.getAll(table).then(async (records) => {
-        let deleted = 0;
-
-        for (const record of records) {
-          if (!predicate(record)) continue;
-
-          const key = getRecordKey(schema, table, record);
-
-          if (await core.delete(table, key)) deleted += 1;
-        }
-
-        return deleted;
-      });
-    },
-    async forEach<T extends K>(table: T, fn: (record: RecordOf<S, T>) => void | Promise<void>): Promise<void> {
-      for await (const record of iterate(table)) {
-        await fn(record);
-      }
-    },
-    has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean> {
-      return core.get(table, key).then((value) => value !== undefined);
-    },
-    iterate,
-    query<T extends K>(table: T) {
-      return createQueryBuilder<RecordOf<S, T>>(() => core.getAll(table));
-    },
-  };
-}
-
-export function createAdapterRuntime<S extends AnySchema>(
-  schema: S,
-  core: SharedCore<S>,
-  options?: { broadcast?: <K extends keyof S>(table: K) => void },
-) {
-  const observers = createObserverHub<S>((table) => core.getAll(table));
-  const shared = createSharedMethods(schema, core);
-  const notifyMutation = <K extends keyof S>(table: K): void => {
-    observers.notify(table);
-    options?.broadcast?.(table);
-  };
-  const mutation = createMutationMethods(schema, core, notifyMutation);
-
-  const adapter: Adapter<S> = {
-    count: shared.count,
     async delete(table, key) {
       const deleted = await core.delete(table, key);
 
-      if (deleted) notifyMutation(table);
+      if (deleted) onMutate(table);
 
       return deleted;
     },
     async deleteAll(table) {
-      const deleted = await core.deleteAll(table);
-
-      if (deleted > 0) notifyMutation(table);
-
-      return deleted;
+      await core.deleteAll(table);
+      onMutate(table);
     },
-    async deleteWhere(table, predicate) {
-      const deleted = await shared.deleteWhere(table, predicate);
-
-      if (deleted > 0) notifyMutation(table);
-
-      return deleted;
+    async get(table, key) {
+      return core.get(table, key);
     },
-    dispose() {
-      observers.dispose();
-      core.dispose?.();
+    async getAll(table) {
+      return core.getAll(table);
     },
-    forEach: shared.forEach,
-    get: core.get,
-    getAll: core.getAll,
-    getOrPut: mutation.getOrPut,
-    has: shared.has,
-    iterate: shared.iterate,
-    observe(table, listener, options) {
-      return observers.observe(table, listener, options);
+    async has(table, key) {
+      return core.has(table, key);
     },
     async put(table, value, ttl) {
-      await core.put(table, value, ttl);
-      notifyMutation(table);
+      await core.put(table, value, resolveTtl(schema, table, ttl));
+      onMutate(table);
     },
     async putAll(table, values, ttl) {
-      await core.putAll(table, values, ttl);
+      await core.putAll(table, values, resolveTtl(schema, table, ttl));
 
-      if (values.length > 0) notifyMutation(table);
+      if (values.length > 0) onMutate(table);
     },
-    query: shared.query,
-    update: mutation.update,
-  };
+    query(table) {
+      return createReadQuery({ source: () => core.getAll(table) });
+    },
+    async update(table, key, changes, ttl) {
+      const current = await core.get(table, key);
 
-  return {
-    adapter,
-    notify: observers.notify,
-    notifyMutation,
+      if (!current) return undefined;
+
+      const merged = { ...current, ...changes } as RecordOf<S, typeof table>;
+
+      verifyKey(schema, table, key, merged, 'update');
+      await core.put(table, merged, resolveTtl(schema, table, ttl));
+      onMutate(table);
+
+      return merged;
+    },
+    async upsert(table, key, fn, ttl) {
+      const existing = await core.get(table, key);
+      const value = fn(existing);
+
+      verifyKey(schema, table, key, value, 'upsert');
+      await core.put(table, value, resolveTtl(schema, table, ttl));
+      onMutate(table);
+
+      return value;
+    },
   };
 }
 
-export function createTransactionContext<S extends AnySchema, K extends keyof S>(
-  schema: S,
-  core: Omit<SharedCore<S, K>, 'dispose'>,
-): TransactionContext<S, K> {
-  const shared = createSharedMethods(schema, core);
-  const mutation = createMutationMethods(schema, core);
+/* -------------------- buildAdapterOps: the single flat factory -------------------- */
 
-  return {
-    count: shared.count,
-    delete: core.delete,
-    deleteAll: core.deleteAll,
-    deleteWhere: shared.deleteWhere,
-    forEach: shared.forEach,
-    get: core.get,
-    getAll: core.getAll,
-    getOrPut: mutation.getOrPut,
-    has: shared.has,
-    iterate: shared.iterate,
-    put: core.put,
-    putAll: core.putAll,
-    query: shared.query,
-    update: mutation.update,
+export function buildAdapterOps<S extends AnySchema>(
+  schema: S,
+  core: CoreRuntimeOps<S>,
+  options?: {
+    /** Adapter-provided batch override (e.g. real IDB transaction). Falls back to soft batch. */
+    batch?: <K extends keyof S, R>(
+      tables: readonly K[],
+      fn: (tx: TransactionContext<S, K>) => Promise<R>,
+      notifyMutation: (table: keyof S) => void,
+    ) => Promise<R>;
+    connectExternal?: (notify: (table: keyof S) => void) => (() => void) | void;
+    onMetrics?: (event: MetricsEvent) => void;
+    onMutation?: (table: keyof S) => void;
+  },
+): { adapter: Adapter<S>; notifyMutation: (table: keyof S) => void } {
+  const observers = createObserverHub<S>((table) => core.getAll(table));
+  const { onMetrics } = options ?? {};
+
+  const notifyMutation = (table: keyof S): void => {
+    observers.notify(table);
+    options?.onMutation?.(table);
   };
+
+  const disconnectExternal = options?.connectExternal?.(observers.notify) ?? undefined;
+
+  /* -- Metrics helper -- */
+  const timed = <T>(table: string, op: MetricsEvent['operation'], fn: () => Promise<T>): Promise<T> => {
+    if (!onMetrics) return fn();
+
+    const start = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const elapsed = () => (typeof performance !== 'undefined' ? performance.now() : Date.now()) - start;
+
+    return fn().then(
+      (result) => {
+        onMetrics({ duration: elapsed(), operation: op, table });
+
+        return result;
+      },
+      (err: unknown) => {
+        onMetrics({ duration: elapsed(), operation: op, table });
+
+        return Promise.reject(err);
+      },
+    );
+  };
+
+  /* -- Soft batch: defers notifications until fn resolves -- */
+  const softBatch = async <K extends keyof S, R>(
+    tables: readonly K[],
+    fn: (tx: TransactionContext<S, K>) => Promise<R>,
+    notify: (table: keyof S) => void,
+  ): Promise<R> => {
+    void tables;
+
+    const dirty = new Set<K>();
+    const txOps = buildTxContext<S, K>(schema, core, (t) => dirty.add(t));
+    const result = await fn(txOps);
+
+    for (const t of dirty) {
+      notify(t);
+    }
+
+    return result;
+  };
+
+  const batchFn = options?.batch ?? softBatch;
+
+  const adapter: Adapter<S> = {
+    async batch(tables, fn) {
+      return timed('*', 'batch', () => batchFn(tables, fn, notifyMutation));
+    },
+
+    async clear(table) {
+      return timed(String(table), 'clear', async () => {
+        await core.deleteAll(table);
+        notifyMutation(table);
+      });
+    },
+
+    async count(table) {
+      return timed(String(table), 'count', () => core.count(table));
+    },
+
+    async debug() {
+      const tableNames = Object.keys(schema) as Array<keyof S & string>;
+      const entries = await Promise.all(
+        tableNames.map(async (name) => {
+          // Raw count BEFORE getAll evicts expired records
+          const raw = core.getRawCount ? await core.getRawCount(name) : undefined;
+          const live = await core.getAll(name);
+          const expiredCount = raw !== undefined ? raw - live.length : 0;
+
+          return { expiredCount, name, recordCount: live.length };
+        }),
+      );
+
+      return { tables: entries } as DebugInfo<S>;
+    },
+
+    async delete(table, key) {
+      return timed(String(table), 'delete', async () => {
+        const deleted = await core.delete(table, key);
+
+        if (deleted) notifyMutation(table);
+
+        return deleted;
+      });
+    },
+
+    async deleteAll(table) {
+      return timed(String(table), 'deleteAll', async () => {
+        await core.deleteAll(table);
+        notifyMutation(table);
+      });
+    },
+
+    dispose() {
+      disconnectExternal?.();
+      observers.dispose();
+      core.dispose?.();
+    },
+
+    async get(table, key) {
+      return timed(String(table), 'get', () => core.get(table, key));
+    },
+
+    async getAll(table) {
+      return timed(String(table), 'getAll', () => core.getAll(table));
+    },
+
+    async has(table, key) {
+      return timed(String(table), 'has', () => core.has(table, key));
+    },
+
+    observe(table, listener, opts) {
+      return observers.observe(table, listener, opts);
+    },
+
+    async put(table, value, ttl) {
+      return timed(String(table), 'put', async () => {
+        await core.put(table, value, resolveTtl(schema, table, ttl));
+        notifyMutation(table);
+      });
+    },
+
+    async putAll(table, values, ttl) {
+      return timed(String(table), 'putAll', async () => {
+        await core.putAll(table, values, resolveTtl(schema, table, ttl));
+
+        if (values.length > 0) notifyMutation(table);
+      });
+    },
+
+    query(table) {
+      return createQueryBuilder({
+        async deleteMany(records) {
+          if (records.length === 0) return 0;
+
+          let deleted = 0;
+
+          for (const record of records) {
+            const key = getRecordKey(schema, table, record);
+
+            if (await core.delete(table, key)) {
+              deleted += 1;
+            }
+          }
+
+          if (deleted > 0) notifyMutation(table);
+
+          return deleted;
+        },
+        source: () => core.getAll(table),
+      });
+    },
+
+    async update(table, key, changes, ttl) {
+      return timed(String(table), 'update', async () => {
+        const current = await core.get(table, key);
+
+        if (!current) return undefined;
+
+        const merged = { ...current, ...changes } as RecordOf<S, typeof table>;
+
+        verifyKey(schema, table, key, merged, 'update');
+        await core.put(table, merged, resolveTtl(schema, table, ttl));
+        notifyMutation(table);
+
+        return merged;
+      });
+    },
+
+    async upsert(table, key, fn, ttl) {
+      return timed(String(table), 'upsert', async () => {
+        const existing = await core.get(table, key);
+        const value = fn(existing);
+
+        verifyKey(schema, table, key, value, 'upsert');
+        await core.put(table, value, resolveTtl(schema, table, ttl));
+        notifyMutation(table);
+
+        return value;
+      });
+    },
+  };
+
+  return { adapter, notifyMutation };
 }

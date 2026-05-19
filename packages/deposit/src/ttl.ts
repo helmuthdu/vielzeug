@@ -1,20 +1,9 @@
-import type { TtlMs } from './types';
+/* -------------------- TtlMs (owns here to avoid circular deps with types.ts) -------------------- */
+
+export type TtlMs = number;
 
 /* -------------------- Duration helpers -------------------- */
 
-/**
- * Convenience helpers for expressing TTL (time-to-live) values as named durations.
- *
- * Use with storage operations to set expiration times for records.
- * Supports days, hours, minutes, seconds, and milliseconds.
- *
- * @example
- * ```ts
- * db.put('sessions', session, ttl.minutes(30));
- * db.put('cache', data, ttl.hours(1));
- * db.put('temp', tempData, ttl.days(7));
- * ```
- */
 export const ttl = {
   days: (n: number) => assertTtlMs(n, 'ttl.days') * 86_400_000,
   hours: (n: number) => assertTtlMs(n, 'ttl.hours') * 3_600_000,
@@ -23,45 +12,44 @@ export const ttl = {
   seconds: (n: number) => assertTtlMs(n, 'ttl.seconds') * 1000,
 } as const;
 
-/* -------------------- Storage record helpers (storage-layer only) -------------------- */
+/* -------------------- Storage record (renamed fields for debuggability) -------------------- */
 
-/** @internal Envelope used by storage adapters. */
+/** Internal envelope used by all storage backends. `expiresAt` is an epoch timestamp in ms. */
 export type StoredRecord<T> = {
-  e?: number;
-  v: T;
+  expiresAt?: number;
+  value: T;
 };
 
-function assertTtlMs(ttlMs: number, source: string): TtlMs {
+export function assertTtlMs(ttlMs: number, source: string): TtlMs {
   if (!Number.isFinite(ttlMs) || ttlMs < 0) {
-    throw new Error(`deposit: ${source} expected a finite non-negative number, received ${String(ttlMs)}`);
+    throw new Error(`[deposit] ${source} expected a finite non-negative number, received ${String(ttlMs)}`);
   }
 
-  return ttlMs as TtlMs;
+  return ttlMs;
 }
 
-/** @internal */
 export function wrapStored<T>(value: T, ttlMs?: TtlMs): StoredRecord<T> {
-  if (ttlMs === undefined) return { v: value };
+  if (ttlMs === undefined) return { value };
 
-  const safeTtlMs = assertTtlMs(ttlMs, 'ttl');
+  assertTtlMs(ttlMs, 'ttl');
 
-  return { e: Date.now() + safeTtlMs, v: value };
+  return { expiresAt: Date.now() + ttlMs, value };
 }
 
-/** @internal */
 export function unwrapStored<T>(raw: StoredRecord<T>): T | undefined {
-  if (raw.e !== undefined && Date.now() >= raw.e) return undefined;
+  if (raw.expiresAt !== undefined && Date.now() >= raw.expiresAt) return undefined;
 
-  return raw.v;
+  return raw.value;
 }
 
-/** @internal */
 export function parseStored<T>(raw: unknown): StoredRecord<T> | undefined {
-  if (typeof raw !== 'object' || raw === null || !('v' in raw)) return undefined;
+  if (typeof raw !== 'object' || raw === null || !('value' in raw)) return undefined;
 
-  const record = raw as { e?: unknown; v: unknown };
+  const record = raw as { expiresAt?: unknown; value: unknown };
 
-  if (record.e !== undefined && (typeof record.e !== 'number' || !Number.isFinite(record.e))) return undefined;
+  if (record.expiresAt !== undefined && (typeof record.expiresAt !== 'number' || !Number.isFinite(record.expiresAt))) {
+    return undefined;
+  }
 
   return record as StoredRecord<T>;
 }

@@ -16,7 +16,7 @@ const schema = {
   posts: table<Post>('id'),
 };
 
-const db = createIndexedDB({ dbName: 'blog', schemaVersion: 1, schema });
+const db = createIndexedDB({ name: 'blog', version: 1, schema });
 
 await db.transaction(['users', 'posts'], async (tx) => {
   await tx.put('users', { id: 1, name: 'Alice' });
@@ -48,7 +48,7 @@ import { createIndexedDB, table, ttl } from '@vielzeug/deposit';
 type Session = { id: string; userId: number };
 const schema = { sessions: table<Session>('id') };
 
-const db = createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
+const db = createIndexedDB({ name: 'app', version: 1, schema });
 
 // All records written in one atomic transaction, all sharing the same TTL.
 await db.putAll(
@@ -71,7 +71,7 @@ import { createLocalStorage, table, ttl } from '@vielzeug/deposit';
 type CacheEntry = { id: string; value: string };
 const schema = { cache: table<CacheEntry>('id') };
 
-const db = createLocalStorage('cache', schema);
+const db = createLocalStorage({ name: 'cache', schema });
 await db.put('cache', { id: 'k1', value: 'payload' }, ttl.seconds(30));
 ```
 
@@ -90,10 +90,10 @@ const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
 };
 
 const db = createIndexedDB({
-  dbName: 'blog',
+  name: 'blog',
   migrate,
   schema,
-  schemaVersion: 2,
+  version: 2,
 });
 ```
 
@@ -110,7 +110,7 @@ describe('user repository', () => {
 
   beforeEach(() => {
     // A fresh isolated store for every test — no shared state.
-    db = createMemory(schema);
+    db = createMemory({ schema });
   });
 
   test('can check existence without fetching the full record', async () => {

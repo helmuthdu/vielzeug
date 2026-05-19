@@ -47,7 +47,7 @@ describe('ttl helpers', () => {
     test('can be used with put and causes expiration', async () => {
       window.localStorage.clear();
 
-      const db = createLocalStorage('TtlHelper', userSchema);
+      const db = createLocalStorage({ name: 'TtlHelper', schema: userSchema });
 
       await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
       await delay(5);
@@ -58,9 +58,9 @@ describe('ttl helpers', () => {
     test('put rejects invalid ttl values', async () => {
       window.localStorage.clear();
 
-      const db = createLocalStorage('TtlHelper', userSchema);
+      const db = createLocalStorage({ name: 'TtlHelper', schema: userSchema });
 
-      await expect(db.put('users', { id: 1, name: 'Alice' }, Number.NaN as any)).rejects.toThrow(
+      await expect(db.put('users', { id: 1, name: 'Alice' }, Number.NaN)).rejects.toThrow(
         'ttl expected a finite non-negative number',
       );
     });

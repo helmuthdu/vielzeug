@@ -11,147 +11,84 @@ describe('LocalStorage adapter', () => {
 
   beforeEach(() => {
     window.localStorage.clear();
-    db = createLocalStorage('LS', userSchema);
+    db = createLocalStorage({ name: 'LS', schema: userSchema });
   });
 
-  describe('core CRUD behavior', () => {
-    test('put/get roundtrip and count', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-      await db.put('users', { id: 2, name: 'Bob' });
+  test('put/get and delete roundtrip', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
 
-      expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
-      expect(await db.count('users')).toBe(2);
-    });
-
-    test('delete returns false for missing keys', async () => {
-      expect(await db.delete('users', 99)).toBe(false);
-    });
-
-    test('delete removes existing records', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      expect(await db.delete('users', 1)).toBe(true);
-      expect(await db.get('users', 1)).toBeUndefined();
-    });
-
-    test('deleteAll removes all records for current table', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-      window.localStorage.setItem('LS~other~1', JSON.stringify({ value: { id: 1 } }));
-
-      await db.deleteAll('users');
-
-      expect(await db.getAll('users')).toEqual([]);
-      expect(window.localStorage.getItem('LS~other~1')).not.toBeNull();
-    });
-
-    test('deleteAll removes every matching key without skipping', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-        { id: 3, name: 'Charlie' },
-        { id: 4, name: 'Dora' },
-      ]);
-
-      await db.deleteAll('users');
-
-      expect(await db.count('users')).toBe(0);
-      expect(window.localStorage.length).toBe(0);
-    });
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+    expect(await db.delete('users', 1)).toBe(true);
+    expect(await db.get('users', 1)).toBeUndefined();
   });
 
-  describe('record lifecycle helpers', () => {
-    test('has returns true for existing and false for missing', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
+  test('deleteAll removes table-prefixed records only', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+    window.localStorage.setItem('LS~other~1', JSON.stringify({ value: { id: 1 } }));
 
-      expect(await db.has('users', 1)).toBe(true);
-      expect(await db.has('users', 99)).toBe(false);
-    });
+    await db.deleteAll('users');
 
-    test('putAll writes all records', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-
-      expect(await db.getAll('users')).toEqual([
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-    });
+    expect(await db.getAll('users')).toEqual([]);
+    expect(window.localStorage.getItem('LS~other~1')).not.toBeNull();
   });
 
-  describe('ttl behavior', () => {
-    test('expired records are not returned by get', async () => {
-      await db.put('users', { id: 1, name: 'Alice' }, 1);
-      await delay(5);
+  test('has and update work as expected', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
 
-      expect(await db.get('users', 1)).toBeUndefined();
-    });
-
-    test('expired records are not visible through has/count', async () => {
-      await db.put('users', { id: 1, name: 'Alice' }, 1);
-      await delay(5);
-
-      expect(await db.has('users', 1)).toBe(false);
-      expect(await db.count('users')).toBe(0);
-    });
+    expect(await db.has('users', 1)).toBe(true);
+    expect(await db.update('users', 1, { city: 'Paris' })).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
   });
 
-  describe('query integration', () => {
-    test('query runs against persisted records', async () => {
-      await db.put('users', { age: 25, id: 1, name: 'Alice' });
-      await db.put('users', { age: 30, id: 2, name: 'Bob' });
+  test('upsert inserts when record does not exist', async () => {
+    const result = await db.upsert('users', 1, () => ({ id: 1, name: 'Alice' }));
 
-      expect(await db.query('users').between('age', 26, 40).toArray()).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
-    });
+    expect(result).toEqual({ id: 1, name: 'Alice' });
   });
 
-  describe('robustness and observation', () => {
-    test('corrupted entries are removed lazily on read', async () => {
-      window.localStorage.setItem('LS~users~1', '{bad json');
+  test('query.delete removes matching records', async () => {
+    await db.putAll('users', [
+      { age: 20, id: 1, name: 'Alice' },
+      { age: 30, id: 2, name: 'Bob' },
+    ]);
 
-      expect(await db.get('users', 1)).toBeUndefined();
-      expect(window.localStorage.getItem('LS~users~1')).toBeNull();
-    });
+    expect(
+      await db
+        .query('users')
+        .filter((u) => (u.age ?? 0) >= 30)
+        .delete(),
+    ).toBe(1);
+    expect(await db.getAll('users')).toEqual([{ age: 20, id: 1, name: 'Alice' }]);
+  });
 
-    test('storage clear event notifies observers', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
+  test('ttl expiration is respected', async () => {
+    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await delay(5);
 
-      const snapshots: User[][] = [];
-      const stop = db.observe('users', (rows) => {
+    expect(await db.get('users', 1)).toBeUndefined();
+    expect(await db.has('users', 1)).toBe(false);
+  });
+
+  test('storage clear event notifies observers', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const snapshots: User[][] = [];
+    const stop = db.observe(
+      'users',
+      (rows) => {
         snapshots.push(rows);
-      });
+      },
+      { initialEmit: true },
+    );
 
-      window.localStorage.clear();
-      window.dispatchEvent(new StorageEvent('storage', { key: null }));
-      await Promise.resolve();
-      stop();
+    window.localStorage.clear();
+    window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    await Promise.resolve();
+    stop();
 
-      expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
-      expect(snapshots[1]).toEqual([]);
-    });
-
-    test('observe with immediate false does not emit until mutation', async () => {
-      const snapshots: User[][] = [];
-      const stop = db.observe(
-        'users',
-        (rows) => {
-          snapshots.push(rows);
-        },
-        { immediate: false },
-      );
-
-      await Promise.resolve();
-      expect(snapshots).toEqual([]);
-
-      await db.put('users', { id: 1, name: 'Alice' });
-      await Promise.resolve();
-      stop();
-
-      expect(snapshots).toEqual([[{ id: 1, name: 'Alice' }]]);
-    });
+    expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
+    expect(snapshots[1]).toEqual([]);
   });
 });

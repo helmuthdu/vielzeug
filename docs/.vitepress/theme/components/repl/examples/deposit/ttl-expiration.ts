@@ -5,10 +5,11 @@ const schema = {
   cache: table('id'),
 }
 
-const db = createLocalStorage('cache-demo', schema)
+const db = createLocalStorage({ name: 'cache-demo', schema })
 
 await db.put('cache', { id: 'temp', data: 'Temporary data' }, ttl.seconds(1))
-console.log('Stored with 1s TTL')
+await db.put('cache', { id: 'numeric', data: 'Numeric TTL' }, 250)
+console.log('Stored records with helper + numeric TTL')
 console.log('Immediate read:', await db.get('cache', 'temp'))
 
 await new Promise((resolve) => setTimeout(resolve, 1500))

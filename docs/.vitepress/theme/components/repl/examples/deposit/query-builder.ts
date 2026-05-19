@@ -5,7 +5,7 @@ const schema = {
   products: table('id'),
 }
 
-const db = createLocalStorage('shop', schema)
+const db = createLocalStorage({ name: 'shop', schema })
 
 await db.putAll('products', [
   { id: 1, name: 'Laptop', price: 999, category: 'electronics', inStock: true },
@@ -23,7 +23,10 @@ const affordable = await db
   .orderBy('price', 'asc')
   .toArray()
 
+const removed = await db.query('products').filter((product) => !product.inStock).delete()
+
 console.log('Affordable electronics in stock:', affordable.map((product) => product.name))
+console.log('Removed out-of-stock products:', removed)
 console.log('Matching count:', await db.query('products').equals('category', 'electronics').count())`,
   name: 'Query Builder - Advanced Queries',
 };

@@ -1,7 +1,13 @@
-import type { Adapter, AnySchema, KeyOf, RecordOf, TtlMs } from '../types';
+import type { Adapter, AnySchema, KeyOf, MetricsEvent, RecordOf, TtlMs } from '../types';
 
-import { createAdapterRuntime } from '../adapter-core';
+import { buildAdapterOps, type CoreRuntimeOps } from '../adapter-core';
+import { getRecordKey } from '../internal';
 import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
+
+type MemoryOptions<S extends AnySchema> = {
+  onMetrics?: (event: MetricsEvent) => void;
+  schema: S;
+};
 
 function getTableStore(tables: Map<string, Map<string, StoredRecord<unknown>>>, table: string) {
   let store = tables.get(table);
@@ -14,31 +20,39 @@ function getTableStore(tables: Map<string, Map<string, StoredRecord<unknown>>>, 
   return store;
 }
 
-export function createMemory<S extends AnySchema>(schema: S): Adapter<S> {
+export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Adapter<S> {
+  const { onMetrics, schema } = options;
   const tables = new Map<string, Map<string, StoredRecord<unknown>>>();
-  const recordKey = <K extends keyof S>(table: K, value: RecordOf<S, K>): KeyOf<S, K> => {
-    const keyField = String(schema[table].key);
-    const keyValue = (value as Record<string, unknown>)[keyField];
 
-    if (keyValue === undefined || keyValue === null) {
-      throw new Error(`deposit: missing required key field "${keyField}" in record for table "${String(table)}"`);
-    }
+  const core: CoreRuntimeOps<S> = {
+    async count<K extends keyof S>(table: K): Promise<number> {
+      const store = getTableStore(tables, String(table));
+      let liveCount = 0;
+      const expiredKeys: string[] = [];
 
-    return keyValue as KeyOf<S, K>;
-  };
+      for (const [key, raw] of store) {
+        if (unwrapStored(raw as StoredRecord<RecordOf<S, K>>) === undefined) {
+          expiredKeys.push(key);
+        } else {
+          liveCount += 1;
+        }
+      }
 
-  return createAdapterRuntime(schema, {
+      for (const key of expiredKeys) {
+        store.delete(key);
+      }
+
+      return liveCount;
+    },
+
     async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
       return getTableStore(tables, String(table)).delete(String(key));
     },
-    async deleteAll<K extends keyof S>(table: K): Promise<number> {
-      const store = getTableStore(tables, String(table));
-      const deleted = store.size;
 
-      store.clear();
-
-      return deleted;
+    async deleteAll<K extends keyof S>(table: K): Promise<void> {
+      getTableStore(tables, String(table)).clear();
     },
+
     async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
       const store = getTableStore(tables, String(table));
       const raw = store.get(String(key));
@@ -53,6 +67,7 @@ export function createMemory<S extends AnySchema>(schema: S): Adapter<S> {
 
       return value;
     },
+
     async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
       const store = getTableStore(tables, String(table));
       const records: RecordOf<S, K>[] = [];
@@ -63,7 +78,6 @@ export function createMemory<S extends AnySchema>(schema: S): Adapter<S> {
 
         if (value === undefined) {
           expiredKeys.push(key);
-
           continue;
         }
 
@@ -76,15 +90,40 @@ export function createMemory<S extends AnySchema>(schema: S): Adapter<S> {
 
       return records;
     },
-    async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
-      getTableStore(tables, String(table)).set(String(recordKey(table, value)), wrapStored(value, ttl));
+
+    async getRawCount<K extends keyof S>(table: K): Promise<number> {
+      return getTableStore(tables, String(table)).size;
     },
+
+    async has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      const store = getTableStore(tables, String(table));
+      const raw = store.get(String(key));
+
+      if (!raw) return false;
+
+      if (unwrapStored(raw as StoredRecord<RecordOf<S, K>>) === undefined) {
+        store.delete(String(key));
+
+        return false;
+      }
+
+      return true;
+    },
+
+    async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
+      getTableStore(tables, String(table)).set(String(getRecordKey(schema, table, value)), wrapStored(value, ttl));
+    },
+
     async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
       const store = getTableStore(tables, String(table));
 
       for (const value of values) {
-        store.set(String(recordKey(table, value)), wrapStored(value, ttl));
+        store.set(String(getRecordKey(schema, table, value)), wrapStored(value, ttl));
       }
     },
-  }).adapter;
+  };
+
+  const { adapter } = buildAdapterOps(schema, core, { onMetrics });
+
+  return adapter;
 }

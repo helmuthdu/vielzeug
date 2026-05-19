@@ -1,21 +1,20 @@
 ---
 title: Deposit — API Reference
-description: Complete API reference for the Deposit browser storage adapters and query builder.
+description: Complete API reference for Deposit adapters, transactions, and query builder.
 ---
 
 [[toc]]
 
 ## API At a Glance
 
-| Symbol                                   | Purpose                               | Execution mode              | Common gotcha                                   |
-| ---------------------------------------- | ------------------------------------- | --------------------------- | ----------------------------------------------- |
-| `createLocalStorage(dbName, schema)`     | Local browser storage adapter         | Sync factory, async methods | Requires `localStorage` availability            |
-| `createSessionStorage(dbName, schema)`   | Tab-scoped browser storage adapter    | Sync factory, async methods | Requires `sessionStorage` availability          |
-| `createCookie(dbName, schema, options?)` | Cookie-backed browser storage adapter | Sync factory, async methods | Requires `document` and is browser-only         |
-| `createIndexedDB()`                      | IndexedDB adapter with transactions   | Sync factory, async methods | `schemaVersion` must increase to run migrations |
-| `createMemory(schema)`                   | In-memory adapter for tests and SSR   | Sync factory, async methods | State is scoped to the instance; not persisted  |
-| `table<T>(key)`                          | Creates a typed schema entry          | Sync                        | —                                               |
-| `query(table)`                           | Build chainable in-memory queries     | Async execution             | Filters run over fetched records                |
+| Symbol | Purpose |
+| --- | --- |
+| `createLocalStorage({ name, schema })` | Local browser storage adapter |
+| `createSessionStorage({ name, schema })` | Tab-scoped browser storage adapter |
+| `createIndexedDB({ name, schema, version, migrate? })` | IndexedDB adapter with transactions |
+| `createMemory({ schema })` | In-memory adapter for tests and SSR |
+| `table<T>(key)` | Creates a typed schema entry |
+| `query(table)` | Build chainable query pipelines |
 
 ## Package Entry Points
 
@@ -25,7 +24,6 @@ description: Complete API reference for the Deposit browser storage adapters and
 
 - `createLocalStorage`
 - `createSessionStorage`
-- `createCookie`
 - `createIndexedDB`
 - `createMemory`
 - `QueryBuilder`
@@ -33,16 +31,13 @@ description: Complete API reference for the Deposit browser storage adapters and
 - `ttl`
 - Types: `Adapter`, `IndexedDBHandle`, `TransactionContext`, `RecordOf`, `KeyOf`, `MigrationContext`, `MigrationFn`, `Observer`, `TtlMs`
 
-## Core Types
+## Schema Helper
 
-### RecordOf and KeyOf
+### `table`
 
 ```ts
-type RecordOf<S, K extends keyof S> = /* record type for table K */;
-type KeyOf<S, K extends keyof S> = /* key value type for table K */;
+table<T extends Record<string, unknown>>(key: keyof T & string)
 ```
-
-Example:
 
 ```ts
 type User = { id: number; name: string };
@@ -50,81 +45,29 @@ type User = { id: number; name: string };
 const schema = {
   users: table<User>('id'),
 };
-
-type UserRecord = RecordOf<typeof schema, 'users'>; // User
-type UserKey = KeyOf<typeof schema, 'users'>; // number
-```
-
-## Schema Helper
-
-### table
-
-```ts
-table<T extends Record<string, unknown>>(key: keyof T & string)
-```
-
-Creates a typed schema entry. The generic `T` carries the record type; `key` is the primary key field.
-
-```ts
-const schema = {
-  users: table<User>('id'),
-  posts: table<Post>('id'),
-};
-
-// typeof schema inferred — no Schema<{...}> annotation needed
-type UserRecord = RecordOf<typeof schema, 'users'>; // User
-type UserKey = KeyOf<typeof schema, 'users'>; // number
 ```
 
 ## Factories
 
-### createLocalStorage
+### `createLocalStorage`
 
 ```ts
-createLocalStorage<S>(dbName: string, schema: S): Adapter<S>
+createLocalStorage<S>(options: { name: string; schema: S }): Adapter<S>
 ```
 
-Creates a LocalStorage-backed adapter.
-
-### createSessionStorage
+### `createSessionStorage`
 
 ```ts
-createSessionStorage<S>(dbName: string, schema: S): Adapter<S>
+createSessionStorage<S>(options: { name: string; schema: S }): Adapter<S>
 ```
 
-Creates a SessionStorage-backed adapter.
-
-### createCookie
-
-```ts
-createCookie<S>(
-  dbName: string,
-  schema: S,
-  options?: {
-    path?: string;
-    sameSite?: 'Lax' | 'None' | 'Strict';
-    secure?: boolean;
-  },
-): Adapter<S>
-```
-
-Creates a cookie-backed adapter for browser environments.
-
-Records are stored under cookie names derived from the database, table, and record key. TTL is encoded in the stored payload and also mapped to cookie `Max-Age` when provided.
-
-Cookie options:
-
-- `path` defaults to `'/'`
-- `sameSite` defaults to `'Strict'`
-- `secure` defaults to `false`
-
-### createIndexedDB
+### `createIndexedDB`
 
 ```ts
 createIndexedDB<S>(options: {
-  dbName: string;
+  name: string;
   schema: S;
-  schemaVersion: number;
+  version: number;
   migrate?: (ctx: {
     db: IDBDatabase;
     oldVersion: number;
@@ -134,31 +77,10 @@ createIndexedDB<S>(options: {
 }): IndexedDBHandle<S>
 ```
 
-Creates an IndexedDB-backed adapter with transactions and migration support.
-
-`migrate` runs during IDB upgrade (`onupgradeneeded`) before deposit ensures declared object stores exist.
-
-### createMemory
+### `createMemory`
 
 ```ts
-createMemory<S>(schema: S): Adapter<S>
-```
-
-Creates an in-memory adapter backed by a `Map`. No `dbName` required; each call returns an isolated instance.
-
-The memory adapter fully implements `Adapter<S>` including TTL: expired records are removed lazily on read, identical to the other adapters. Use this in tests and server-side rendering environments.
-
-## Migration Types
-
-```ts
-type MigrationContext = {
-  db: IDBDatabase;
-  newVersion: number | null;
-  oldVersion: number;
-  tx: IDBTransaction;
-};
-
-type MigrationFn = (ctx: MigrationContext) => void;
+createMemory<S>(options: { schema: S }): Adapter<S>
 ```
 
 ## Adapter Interface
@@ -167,10 +89,7 @@ type MigrationFn = (ctx: MigrationContext) => void;
 interface Adapter<S> {
   get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
   getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
-  iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
-  forEach<K extends keyof S>(table: K, fn: (value: RecordOf<S, K>) => void | Promise<void>): Promise<void>;
   has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
-  getOrPut<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<RecordOf<S, K>>;
   put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
   putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
   update<K extends keyof S>(
@@ -180,20 +99,16 @@ interface Adapter<S> {
     ttl?: TtlMs,
   ): Promise<RecordOf<S, K> | undefined>;
   delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
-  deleteWhere<K extends keyof S>(table: K, predicate: (value: RecordOf<S, K>) => boolean): Promise<number>;
   deleteAll<K extends keyof S>(table: K): Promise<number>;
-  count<K extends keyof S>(table: K): Promise<number>;
   query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
-  dispose(): void;
   observe<K extends keyof S>(
     table: K,
     listener: (value: RecordOf<S, K>[]) => void,
-    options?: { immediate?: boolean },
+    options?: { initialEmit?: boolean },
   ): () => void;
+  dispose(): void;
 }
 ```
-
-The common adapter contract shared by all Deposit adapters.
 
 ## IndexedDBHandle
 
@@ -203,18 +118,13 @@ interface IndexedDBHandle<S> extends Adapter<S> {
 }
 ```
 
-Extends `Adapter` with transaction support. Cleanup is handled through the shared `dispose()` method.
-
 ## TransactionContext
 
 ```ts
 type TransactionContext<S, K extends keyof S> = {
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
-  iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
-  forEach<T extends K>(table: T, fn: (value: RecordOf<S, T>) => void | Promise<void>): Promise<void>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  getOrPut<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<RecordOf<S, T>>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
   update<T extends K>(
@@ -224,14 +134,10 @@ type TransactionContext<S, K extends keyof S> = {
     ttl?: TtlMs,
   ): Promise<RecordOf<S, T> | undefined>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  deleteWhere<T extends K>(table: T, predicate: (value: RecordOf<S, T>) => boolean): Promise<number>;
   deleteAll<T extends K>(table: T): Promise<number>;
-  count<T extends K>(table: T): Promise<number>;
   query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
 };
 ```
-
-This context mirrors adapter methods and is scoped to the current transaction.
 
 ## QueryBuilder
 
@@ -251,21 +157,16 @@ class QueryBuilder<T extends Record<string, unknown>> {
   toArray(): Promise<T[]>;
   count(): Promise<number>;
   first(): Promise<T | undefined>;
+  delete(): Promise<number>;
 }
 ```
 
-Query pipelines are lazy and execute only on `toArray()` / `count()` / `first()`.
-
-Validation rules:
-
-- `limit(n)` requires `n` to be a non-negative integer.
-- `offset(n)` requires `n` to be a non-negative integer.
-- `count()` returns the size of the fully transformed query result.
+Query pipelines are lazy and execute only on terminal methods (`toArray`, `count`, `first`, `delete`).
 
 ## TTL Helper
 
 ```ts
-type TtlMs = number & { readonly __brand: 'TtlMs' };
+type TtlMs = number;
 
 const ttl = {
   ms(n: number): TtlMs;
@@ -273,22 +174,11 @@ const ttl = {
   minutes(n: number): TtlMs;
   hours(n: number): TtlMs;
   days(n: number): TtlMs;
-}
+};
 ```
-
-Use TTL by passing one of these values as the third argument to `put(table, value, ttl)`.
 
 Validation rules:
 
 - All TTL helper inputs must be finite and non-negative.
 - Invalid TTL input throws synchronously from `ttl.*(...)`.
 - Passing an invalid `ttl` value directly to write methods also throws.
-
-Cookie observers are local to the current adapter instance. Cookie changes made in other tabs are not observable.
-
-## Error Behavior
-
-- `createLocalStorage` methods throw when browser storage is unavailable.
-- `createSessionStorage` methods throw when browser storage is unavailable.
-- LocalStorage/SessionStorage writes throw on quota exceed (`QuotaExceededError`) with a descriptive message.
-- IndexedDB open/transaction failures throw adapter-scoped errors with `cause` attached when available.

@@ -1,4 +1,4 @@
-import type { AnySchema, RecordOf } from './types';
+import type { AnySchema, KeyOf, RecordOf } from './types';
 
 type ObserverListener<T> = (records: T[]) => void;
 
@@ -70,10 +70,10 @@ export function createObserverHub<S extends AnySchema>(
   const observe = <K extends keyof S>(
     table: K,
     listener: (records: RecordOf<S, K>[]) => void,
-    { immediate = true }: { immediate?: boolean } = {},
+    { initialEmit = false }: { initialEmit?: boolean } = {},
   ): (() => void) => {
     if (disposed) {
-      throw new Error('deposit: observer hub is disposed');
+      throw new Error('[deposit] observer hub is disposed');
     }
 
     const key = String(table);
@@ -87,7 +87,7 @@ export function createObserverHub<S extends AnySchema>(
 
     listeners.add(wrapped);
 
-    if (immediate) notify(table);
+    if (initialEmit) notify(table);
 
     return () => {
       const current = observers.get(key);
@@ -106,4 +106,19 @@ export function createObserverHub<S extends AnySchema>(
   };
 
   return { dispose, notify, observe };
+}
+
+export function getRecordKey<S extends AnySchema, K extends keyof S>(
+  schema: S,
+  table: K,
+  value: RecordOf<S, K>,
+): KeyOf<S, K> {
+  const keyField = String(schema[table].key);
+  const keyValue = (value as Record<string, unknown>)[keyField];
+
+  if (keyValue === undefined || keyValue === null) {
+    throw new Error(`[deposit] missing required key field "${keyField}" in record for table "${String(table)}"`);
+  }
+
+  return keyValue as KeyOf<S, K>;
 }

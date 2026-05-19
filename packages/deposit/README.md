@@ -1,15 +1,15 @@
 ---
-description: Typed browser storage with a compact API for LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory.
+description: Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
 package: deposit
 category: storage
-keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, cookie, session]
+keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session]
 related: [fetchit, logit, toolkit]
-exports: [createLocalStorage, createSessionStorage, createCookie, createIndexedDB, createMemory, table]
+exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table]
 ---
 
 # @vielzeug/deposit
 
-> Typed browser storage with a compact API for LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory.
+> Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/deposit)](https://www.npmjs.com/package/@vielzeug/deposit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -18,9 +18,9 @@ exports: [createLocalStorage, createSessionStorage, createCookie, createIndexedD
 
 **Package:** `@vielzeug/deposit` &nbsp;·&nbsp; **Category:** Storage
 
-**Key exports:** `createLocalStorage`, `createSessionStorage`, `createCookie`, `createIndexedDB`, `createMemory`, `table`
+**Key exports:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`
 
-**When to use:** Typed browser storage with a compact API for LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory.
+**When to use:** Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
 
 **Related:** [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/logit](https://vielzeug.dev/logit/) · [@vielzeug/toolkit](https://vielzeug.dev/toolkit/)
 
@@ -47,7 +47,7 @@ const schema = {
   users: table<User>('id'),
 };
 
-const db = createIndexedDB({ dbName: 'my-app', schema, schemaVersion: 1 });
+const db = createIndexedDB({ name: 'my-app', schema, version: 1 });
 
 await db.putAll('users', [
   { id: 1, name: 'Alice', age: 30 },
@@ -56,6 +56,9 @@ await db.putAll('users', [
 
 const first = await db.query('users').between('age', 18, 99).orderBy('name').first();
 const exists = await db.has('users', 1);
+
+void first;
+void exists;
 ```
 
 ## Documentation

@@ -51,7 +51,7 @@
             </bit-grid-item>
             <bit-grid-item>
               <bit-tooltip :content="isExpanded ? 'Collapse' : 'Expand'" placement="bottom">
-                <bit-button icon-only variant="ghost" @click="emit('toggle-expand')">
+                <bit-button icon-only variant="ghost" @click="emit('toggle-expand')" size="md">
                   <svg
                     v-if="!isExpanded"
                     xmlns="http://www.w3.org/2000/svg"

@@ -1,18 +1,20 @@
-export { createCookie } from './adapters/cookie';
 export { createIndexedDB } from './adapters/indexeddb';
-export { createLocalStorage, createSessionStorage } from './adapters/webstorage';
 export { createMemory } from './adapters/memory';
-export type { QueryBuilder } from './query';
-export { table } from './types';
+export { createLocalStorage, createSessionStorage } from './adapters/webstorage';
+export type { QueryBuilder, ReadQuery } from './query';
 export { ttl } from './ttl';
+export { table } from './types';
 export type {
   Adapter,
-  IndexedDBHandle,
+  AnySchema,
+  DebugInfo,
+  DebugStats,
   KeyOf,
+  MetricsEvent,
   MigrationContext,
   MigrationFn,
   Observer,
   RecordOf,
-  TtlMs,
   TransactionContext,
+  TtlMs,
 } from './types';

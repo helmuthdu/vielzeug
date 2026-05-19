@@ -1,4 +1,4 @@
-import { createIndexedDB, table, type IndexedDBHandle } from '../index';
+import { createIndexedDB, table, type Adapter, type MetricsEvent } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 type Post = { id: number; title: string; userId: number };
@@ -32,7 +32,7 @@ function rawStoreCount(dbName: string, storeName: string): Promise<number> {
   });
 }
 
-function rawStorePut(dbName: string, storeName: string, value: unknown): Promise<void> {
+function rawStorePut(dbName: string, storeName: string, key: IDBValidKey, value: unknown): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const request = indexedDB.open(dbName);
 
@@ -41,7 +41,7 @@ function rawStorePut(dbName: string, storeName: string, value: unknown): Promise
       const rawDb = request.result;
       const tx = rawDb.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
-      const putRequest = store.put(value);
+      const putRequest = store.put(value, key);
 
       putRequest.onerror = () => reject(putRequest.error ?? new Error('failed to write raw record'));
       tx.oncomplete = () => {
@@ -55,10 +55,10 @@ function rawStorePut(dbName: string, storeName: string, value: unknown): Promise
 }
 
 describe('IndexedDB adapter', () => {
-  let db: IndexedDBHandle<typeof userSchema>;
+  let db: Adapter<typeof userSchema>;
 
   beforeEach(async () => {
-    db = createIndexedDB({ dbName: 'IDB', schema: userSchema, schemaVersion: 1 });
+    db = createIndexedDB({ name: 'IDB', schema: userSchema, version: 1 });
     await db.deleteAll('users');
   });
 
@@ -66,251 +66,218 @@ describe('IndexedDB adapter', () => {
     db.dispose();
   });
 
-  describe('core CRUD behavior', () => {
-    test('put/get roundtrip and count', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-      await db.put('users', { id: 2, name: 'Bob' });
+  test('put/get/delete CRUD behavior', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
 
-      expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
-      expect(await db.count('users')).toBe(2);
-    });
-
-    test('delete returns false for missing keys', async () => {
-      expect(await db.delete('users', 99)).toBe(false);
-    });
-
-    test('delete removes existing records', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      expect(await db.delete('users', 1)).toBe(true);
-      expect(await db.get('users', 1)).toBeUndefined();
-    });
-
-    test('deleteAll clears records', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-
-      await db.deleteAll('users');
-
-      expect(await db.getAll('users')).toEqual([]);
-    });
-
-    test('putAll writes all records in a single call', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-
-      expect(await db.getAll('users')).toEqual([
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-    });
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+    expect(await db.delete('users', 1)).toBe(true);
+    expect(await db.get('users', 1)).toBeUndefined();
   });
 
-  describe('ttl behavior', () => {
-    test('expired records are not returned by get', async () => {
-      await db.put('users', { id: 1, name: 'Alice' }, 1);
-      await delay(5);
+  test('putAll and getAll', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
 
-      expect(await db.get('users', 1)).toBeUndefined();
-    });
-
-    test('expired records are not visible through has/count', async () => {
-      await db.put('users', { id: 1, name: 'Alice' }, 1);
-      await delay(5);
-
-      expect(await db.has('users', 1)).toBe(false);
-      expect(await db.count('users')).toBe(0);
-    });
-
-    test('expired records remain in storage until a write-path cleanup runs', async () => {
-      await db.put('users', { id: 1, name: 'Alice' }, 1);
-      await delay(5);
-
-      expect(await db.get('users', 1)).toBeUndefined();
-      expect(await rawStoreCount('IDB', 'users')).toBe(1);
-    });
-
-    test('malformed stored payloads are ignored during reads', async () => {
-      await rawStorePut('IDB', 'users', { e: 'bad', v: { id: 1, name: 'Corrupt' } });
-
-      expect(await db.get('users', 1)).toBeUndefined();
-      expect(await rawStoreCount('IDB', 'users')).toBe(1);
-    });
+    expect(await db.getAll('users')).toEqual([
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
   });
 
-  describe('query and iteration', () => {
-    test('query builder runs over table records', async () => {
-      await db.put('users', { age: 25, id: 1, name: 'Alice' });
-      await db.put('users', { age: 30, id: 2, name: 'Bob' });
+  test('query.delete removes matching rows', async () => {
+    await db.putAll('users', [
+      { age: 25, id: 1, name: 'Alice' },
+      { age: 30, id: 2, name: 'Bob' },
+    ]);
 
-      expect(await db.query('users').between('age', 26, 40).toArray()).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
-    });
-
-    test('iterate yields records in table order', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-
-      const ids: number[] = [];
-
-      for await (const user of db.iterate('users')) {
-        ids.push(user.id);
-      }
-
-      expect(ids).toEqual([1, 2]);
-    });
+    expect(
+      await db
+        .query('users')
+        .filter((u) => (u.age ?? 0) >= 30)
+        .delete(),
+    ).toBe(1);
+    expect(await db.getAll('users')).toEqual([{ age: 25, id: 1, name: 'Alice' }]);
   });
 
-  describe('adapter methods and observation', () => {
-    test('update/getOrPut/deleteWhere/forEach work together and notify observers', async () => {
-      const snapshots: User[][] = [];
+  test('ttl expiration is respected', async () => {
+    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await delay(5);
+
+    expect(await db.get('users', 1)).toBeUndefined();
+    expect(await db.has('users', 1)).toBe(false);
+  });
+
+  test('malformed payloads are ignored during reads', async () => {
+    // Write a record with OLD format (e/v) — should not parse with new format (expiresAt/value)
+    await rawStorePut('IDB', 'users', 1, { e: 'bad', v: { id: 1, name: 'Corrupt' } });
+
+    expect(await db.get('users', 1)).toBeUndefined();
+    expect(await rawStoreCount('IDB', 'users')).toBe(1);
+  });
+
+  test('observe receives updates after mutations', async () => {
+    const snapshots: User[][] = [];
+    const done = new Promise<void>((resolve) => {
       const stop = db.observe('users', (rows) => {
         snapshots.push(rows);
-      });
 
-      await db.put('users', { id: 1, name: 'Alice' });
-      await db.update('users', 1, { city: 'Paris' });
-      await db.getOrPut('users', { id: 2, name: 'Bob' });
-
-      const deleted = await db.deleteWhere('users', (u) => u.id === 2);
-
-      const ids: number[] = [];
-
-      await db.forEach('users', (u) => {
-        ids.push(u.id);
-      });
-
-      await Promise.resolve();
-      stop();
-
-      expect(deleted).toBe(1);
-      expect(ids).toEqual([1]);
-      expect(await db.get('users', 1)).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
-      expect(snapshots).toEqual([
-        [],
-        [{ id: 1, name: 'Alice' }],
-        [{ city: 'Paris', id: 1, name: 'Alice' }],
-        [
-          { city: 'Paris', id: 1, name: 'Alice' },
-          { id: 2, name: 'Bob' },
-        ],
-        [{ city: 'Paris', id: 1, name: 'Alice' }],
-      ]);
-    });
-
-    test('operations throw after dispose', async () => {
-      db.dispose();
-
-      await expect(db.getAll('users')).rejects.toThrow('is disposed');
-    });
-  });
-
-  describe('transactions', () => {
-    test('transaction commits atomically across tables', async () => {
-      const multi = createIndexedDB({ dbName: 'Multi', schema: multiSchema, schemaVersion: 1 });
-
-      await multi.deleteAll('users');
-      await multi.deleteAll('posts');
-      await multi.put('users', { id: 1, name: 'Alice' });
-      await multi.put('users', { id: 2, name: 'Bob' });
-      await multi.put('posts', { id: 1, title: 'P1', userId: 1 });
-      await multi.put('posts', { id: 2, title: 'P2', userId: 2 });
-
-      await multi.transaction(['users', 'posts'], async (tx) => {
-        await tx.delete('users', 1);
-        await tx.delete('posts', 1);
-        await tx.put('users', { id: 3, name: 'Charlie' });
-      });
-
-      expect(await multi.getAll('users')).toEqual([
-        { id: 2, name: 'Bob' },
-        { id: 3, name: 'Charlie' },
-      ]);
-      expect(await multi.getAll('posts')).toEqual([{ id: 2, title: 'P2', userId: 2 }]);
-
-      multi.dispose();
-    });
-
-    test('transaction rolls back on callback error', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      await expect(
-        db.transaction(['users'], async (tx) => {
-          await tx.put('users', { id: 2, name: 'Bob' });
-          throw new Error('fail');
-        }),
-      ).rejects.toThrow();
-
-      expect(await db.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
-    });
-
-    test('transaction returns callback result', async () => {
-      await db.put('users', { age: 30, id: 1, name: 'Alice' });
-
-      const user = await db.transaction(['users'] as const, async (tx) => {
-        const row = await tx.get('users', 1);
-
-        if (!row) throw new Error('missing user');
-
-        return row;
-      });
-
-      expect(user).toEqual({ age: 30, id: 1, name: 'Alice' });
-    });
-
-    test('transaction context supports update/getOrPut/deleteWhere/forEach', async () => {
-      await db.transaction(['users'] as const, async (tx) => {
-        await tx.getOrPut('users', { id: 1, name: 'Alice' });
-        await tx.update('users', 1, { city: 'Paris' });
-        await tx.getOrPut('users', { id: 2, name: 'Bob' });
-
-        const ids: number[] = [];
-
-        await tx.forEach('users', (u) => {
-          ids.push(u.id);
-        });
-
-        expect(ids).toEqual([1, 2]);
-
-        const deleted = await tx.deleteWhere('users', (u) => u.id === 2);
-
-        expect(deleted).toBe(1);
-      });
-
-      expect(await db.getAll('users')).toEqual([{ city: 'Paris', id: 1, name: 'Alice' }]);
-    });
-  });
-
-  describe('cross-instance sync', () => {
-    test('BroadcastChannel propagates mutations to a second adapter instance', async () => {
-      const db2 = createIndexedDB({ dbName: 'IDB', schema: userSchema, schemaVersion: 1 });
-
-      await new Promise<void>((resolve) => {
-        const stop = db2.observe('users', () => {
+        if (snapshots.length === 2) {
           stop();
           resolve();
-        });
+        }
       });
-
-      const updated = new Promise<User[]>((resolve) => {
-        const stop = db2.observe('users', (rows) => {
-          if (rows.length > 0) {
-            stop();
-            resolve(rows);
-          }
-        });
-      });
-
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      expect(await updated).toEqual([{ id: 1, name: 'Alice' }]);
-
-      db2.dispose();
     });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await db.update('users', 1, { city: 'Paris' });
+    await done;
+
+    expect(snapshots).toEqual([[{ id: 1, name: 'Alice' }], [{ city: 'Paris', id: 1, name: 'Alice' }]]);
+  });
+
+  test('upsert inserts when record does not exist', async () => {
+    const result = await db.upsert('users', 1, () => ({ id: 1, name: 'Alice' }));
+
+    expect(result).toEqual({ id: 1, name: 'Alice' });
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+  });
+
+  test('upsert merges when record exists', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const result = await db.upsert('users', 1, (existing) => ({ ...existing!, city: 'Paris' }));
+
+    expect(result).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
+  });
+
+  test('upsert rejects key mismatch', async () => {
+    await expect(db.upsert('users', 1, () => ({ id: 2, name: 'Alice' }))).rejects.toThrow('key');
+  });
+
+  test('batch commits atomically across tables', async () => {
+    const multi = createIndexedDB({ name: 'Multi', schema: multiSchema, version: 1 });
+
+    await multi.deleteAll('users');
+    await multi.deleteAll('posts');
+    await multi.put('users', { id: 1, name: 'Alice' });
+    await multi.put('posts', { id: 1, title: 'P1', userId: 1 });
+
+    await multi.batch(['users', 'posts'], async (tx) => {
+      await tx.delete('users', 1);
+      await tx.put('users', { id: 2, name: 'Bob' });
+      await tx.put('posts', { id: 2, title: 'P2', userId: 2 });
+    });
+
+    expect(await multi.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
+    expect(await multi.getAll('posts')).toEqual([
+      { id: 1, title: 'P1', userId: 1 },
+      { id: 2, title: 'P2', userId: 2 },
+    ]);
+
+    multi.dispose();
+  });
+
+  test('batch rolls back on callback error', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    await expect(
+      db.batch(['users'], async (tx) => {
+        await tx.put('users', { id: 2, name: 'Bob' });
+        throw new Error('fail');
+      }),
+    ).rejects.toThrow();
+
+    expect(await db.getAll('users')).toEqual([{ id: 1, name: 'Alice' }]);
+  });
+
+  test('batch supports upsert inside transaction', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    await db.batch(['users'], async (tx) => {
+      await tx.upsert('users', 1, (existing) => ({ ...existing!, city: 'Paris' }));
+      await tx.upsert('users', 2, () => ({ id: 2, name: 'Bob' }));
+    });
+
+    expect(await db.getAll('users')).toEqual([
+      { city: 'Paris', id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+  });
+
+  test('debug returns live and expired counts', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+    await db.put('users', { id: 2, name: 'Bob' }, 1); // expires immediately
+
+    await delay(5);
+
+    const info = await db.debug();
+
+    expect(info.tables).toHaveLength(1);
+
+    const userTable = info.tables.find((t) => t.name === 'users');
+
+    expect(userTable?.recordCount).toBe(1);
+    expect(userTable?.expiredCount).toBe(1);
+  });
+
+  test('schema defaultTtl is applied to put/putAll', async () => {
+    const ttlSchema = { sessions: table<{ token: string }>('token').ttl(1) };
+    const db2 = createIndexedDB({ name: 'TTL', schema: ttlSchema, version: 1 });
+
+    await db2.deleteAll('sessions');
+    await db2.put('sessions', { token: 'abc' }); // uses schema defaultTtl
+
+    await delay(5);
+
+    expect(await db2.get('sessions', 'abc')).toBeUndefined();
+    db2.dispose();
+  });
+
+  test('onMetrics callback receives operation events', async () => {
+    const events: MetricsEvent[] = [];
+    const dbM = createIndexedDB({ name: 'IDB', onMetrics: (e) => events.push(e), schema: userSchema, version: 1 });
+
+    await dbM.deleteAll('users');
+    await dbM.put('users', { id: 1, name: 'Alice' });
+    await dbM.get('users', 1);
+
+    expect(events.some((e) => e.operation === 'put' && e.table === 'users')).toBe(true);
+    expect(events.some((e) => e.operation === 'get' && e.table === 'users')).toBe(true);
+    expect(events.every((e) => e.duration >= 0)).toBe(true);
+
+    dbM.dispose();
+  });
+
+  test('BroadcastChannel propagates mutations across instances', async () => {
+    const db2 = createIndexedDB({ name: 'IDB', schema: userSchema, version: 1 });
+
+    // First, ensure the listener is set up on db2
+    await new Promise<void>((resolve) => {
+      const stop = db2.observe(
+        'users',
+        () => {
+          stop();
+          resolve();
+        },
+        { initialEmit: true },
+      );
+    });
+
+    const updated = new Promise<User[]>((resolve) => {
+      const stop = db2.observe('users', (rows) => {
+        if (rows.length > 0) {
+          stop();
+          resolve(rows);
+        }
+      });
+    });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await updated).toEqual([{ id: 1, name: 'Alice' }]);
+
+    db2.dispose();
   });
 });

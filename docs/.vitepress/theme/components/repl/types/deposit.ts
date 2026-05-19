@@ -1,8 +1,6 @@
 export const depositTypes = `
 declare module '@vielzeug/deposit' {
-  declare const ttlMsBrand: unique symbol;
-
-  export type TtlMs = number & { readonly [ttlMsBrand]: 'TtlMs' };
+  export type TtlMs = number;
 
   export type SchemaEntry<T extends Record<string, unknown>> = {
     key: keyof T & string;
@@ -39,6 +37,7 @@ declare module '@vielzeug/deposit' {
       upper: Extract<NonNullable<T[K]>, number | string>,
     ): QueryBuilder<T>;
     count(): Promise<number>;
+    delete(): Promise<number>;
     equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
     filter(fn: (value: T, index: number, array: T[]) => boolean): QueryBuilder<T>;
     first(): Promise<T | undefined>;
@@ -50,16 +49,11 @@ declare module '@vielzeug/deposit' {
   }
 
   type ScopedTableOps<S extends AnySchema, K extends keyof S> = {
-    count<T extends K>(table: T): Promise<number>;
     delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-    deleteAll<T extends K>(table: T): Promise<void>;
-    deleteWhere<T extends K>(table: T, predicate: (record: RecordOf<S, T>) => boolean): Promise<number>;
-    forEach<T extends K>(table: T, fn: (record: RecordOf<S, T>) => void | Promise<void>): Promise<void>;
+    deleteAll<T extends K>(table: T): Promise<number>;
     get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
     getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
-    getOrPut<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<RecordOf<S, T>>;
     has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-    iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
     put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
     putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
     query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
@@ -76,7 +70,7 @@ declare module '@vielzeug/deposit' {
     observe<K extends keyof S>(
       table: K,
       listener: Observer<RecordOf<S, K>>,
-      options?: { immediate?: boolean },
+      options?: { initialEmit?: boolean },
     ): () => void;
   }
 
@@ -89,23 +83,16 @@ declare module '@vielzeug/deposit' {
     ): Promise<R>;
   }
 
-  export interface CookieOptions {
-    path?: string;
-    sameSite?: 'Lax' | 'None' | 'Strict';
-    secure?: boolean;
-  }
-
   export function table<T extends Record<string, unknown>>(key: keyof T & string): SchemaEntry<T>;
 
-  export function createLocalStorage<S extends AnySchema>(dbName: string, schema: S): Adapter<S>;
-  export function createSessionStorage<S extends AnySchema>(dbName: string, schema: S): Adapter<S>;
-  export function createCookie<S extends AnySchema>(dbName: string, schema: S, options?: CookieOptions): Adapter<S>;
-  export function createMemory<S extends AnySchema>(schema: S): Adapter<S>;
+  export function createLocalStorage<S extends AnySchema>(options: { name: string; schema: S }): Adapter<S>;
+  export function createSessionStorage<S extends AnySchema>(options: { name: string; schema: S }): Adapter<S>;
+  export function createMemory<S extends AnySchema>(options: { schema: S }): Adapter<S>;
   export function createIndexedDB<S extends AnySchema>(options: {
-    dbName: string;
+    name: string;
     migrate?: MigrationFn;
     schema: S;
-    schemaVersion: number;
+    version: number;
   }): IndexedDBHandle<S>;
 
   export const ttl: {

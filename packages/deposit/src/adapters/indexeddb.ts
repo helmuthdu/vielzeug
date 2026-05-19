@@ -1,13 +1,27 @@
-import type { AnySchema, IndexedDBHandle, KeyOf, MigrationFn, RecordOf, TtlMs, TransactionContext } from '../types';
+import type {
+  Adapter,
+  AnySchema,
+  KeyOf,
+  MetricsEvent,
+  MigrationFn,
+  RecordOf,
+  TransactionContext,
+  TtlMs,
+} from '../types';
 
-import { createAdapterRuntime, createTransactionContext } from '../adapter-core';
-import { parseStored, wrapStored, unwrapStored } from '../ttl';
+import { buildAdapterOps, buildTxContext, type CoreRuntimeOps, type CoreStorageOps } from '../adapter-core';
+import { getRecordKey } from '../internal';
+import { type StoredRecord, parseStored, unwrapStored, wrapStored } from '../ttl';
 
 function idbReq<R>(request: IDBRequest<R>): Promise<R> {
   return new Promise<R>((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error('deposit: IndexedDB request failed'));
+    request.onerror = () => reject(request.error ?? new Error('[deposit] IndexedDB request failed'));
   });
+}
+
+function wrapTxError(scope: string, message: string, cause: unknown): Error {
+  return new Error(`[deposit] ${message} on "${scope}"`, { cause });
 }
 
 function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>): Promise<T> {
@@ -32,125 +46,56 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
 
     tx.oncomplete = () => {
       if (callbackError) {
-        reject(new Error(`deposit: transaction on "${scope}" failed`, { cause: callbackError }));
+        reject(wrapTxError(scope, 'transaction failed', callbackError));
 
         return;
       }
 
       resolve(result as T);
     };
-    tx.onerror = () => reject(new Error(`deposit: transaction error on "${scope}"`, { cause: tx.error }));
-    tx.onabort = () =>
-      reject(new Error(`deposit: transaction on "${scope}" was aborted`, { cause: callbackError ?? tx.error }));
+    tx.onerror = () => reject(wrapTxError(scope, 'transaction error', tx.error));
+    tx.onabort = () => reject(wrapTxError(scope, 'transaction aborted', callbackError ?? tx.error));
   });
 }
 
-async function deleteWhereInStore<T extends Record<string, unknown>>(
-  store: IDBObjectStore,
-  predicate: (record: T) => boolean,
-): Promise<number> {
-  return new Promise<number>((resolve, reject) => {
-    let count = 0;
-    const request = store.openCursor();
+async function getAllFromStore<T extends Record<string, unknown>>(store: IDBObjectStore): Promise<T[]> {
+  const rawRecords = await idbReq<StoredRecord<T>[]>(store.getAll());
+  const records: T[] = [];
 
-    request.onerror = () => reject(request.error ?? new Error('deposit: IndexedDB cursor request failed'));
-    request.onsuccess = () => {
-      const cursor = request.result;
+  for (const raw of rawRecords) {
+    const parsed = parseStored<T>(raw as unknown);
 
-      if (!cursor) {
-        resolve(count);
+    if (!parsed) continue;
 
-        return;
-      }
+    const value = unwrapStored(parsed);
 
-      const parsed = parseStored<T>(cursor.value as unknown);
+    if (value !== undefined) {
+      records.push(value);
+    }
+  }
 
-      if (!parsed) {
-        const deleteRequest = cursor.delete();
-
-        deleteRequest.onerror = () =>
-          reject(deleteRequest.error ?? new Error('deposit: IndexedDB delete request failed'));
-        deleteRequest.onsuccess = () => {
-          cursor.continue();
-        };
-
-        return;
-      }
-
-      const value = unwrapStored(parsed);
-
-      if (value === undefined || predicate(value)) {
-        const deleteRequest = cursor.delete();
-
-        deleteRequest.onerror = () =>
-          reject(deleteRequest.error ?? new Error('deposit: IndexedDB delete request failed'));
-        deleteRequest.onsuccess = () => {
-          if (value !== undefined) count += 1;
-
-          cursor.continue();
-        };
-
-        return;
-      }
-
-      cursor.continue();
-    };
-  });
+  return records;
 }
 
-async function scanStoreWithCursor<T extends Record<string, unknown>>(store: IDBObjectStore): Promise<T[]> {
-  return new Promise<T[]>((resolve, reject) => {
-    const records: T[] = [];
-    const request = store.openCursor();
-
-    request.onerror = () => reject(request.error ?? new Error('deposit: IndexedDB cursor request failed'));
-    request.onsuccess = () => {
-      const cursor = request.result;
-
-      if (!cursor) {
-        resolve(records);
-
-        return;
-      }
-
-      const parsed = parseStored<T>(cursor.value as unknown);
-
-      if (!parsed) {
-        cursor.continue();
-
-        return;
-      }
-
-      const value = unwrapStored(parsed);
-
-      if (value !== undefined) {
-        records.push(value);
-        cursor.continue();
-
-        return;
-      }
-
-      cursor.continue();
-    };
-  });
-}
-
-export function createIndexedDB<S extends AnySchema>(options: {
-  dbName: string;
+type IndexedDbOptions<S extends AnySchema> = {
   migrate?: MigrationFn;
+  name: string;
+  onMetrics?: (event: MetricsEvent) => void;
   schema: S;
-  schemaVersion: number;
-}): IndexedDBHandle<S> {
-  const { dbName, migrate, schema, schemaVersion } = options;
-  const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`deposit:${dbName}`) : undefined;
+  version: number;
+};
+
+export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): Adapter<S> {
+  const { migrate, name, onMetrics, schema, version } = options;
+  const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`deposit:${name}`) : undefined;
   let db: IDBDatabase | null = null;
   let connectPromise: Promise<void> | null = null;
   let disposed = false;
 
   const createObjectStores = (target: IDBDatabase): void => {
-    for (const [name, definition] of Object.entries(schema)) {
-      if (!target.objectStoreNames.contains(name)) {
-        target.createObjectStore(name, { keyPath: `v.${definition.key}` });
+    for (const tableName of Object.keys(schema)) {
+      if (!target.objectStoreNames.contains(tableName)) {
+        target.createObjectStore(tableName);
       }
     }
   };
@@ -158,7 +103,7 @@ export function createIndexedDB<S extends AnySchema>(options: {
   const connect = async (): Promise<void> => {
     if (!connectPromise) {
       connectPromise = new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName, schemaVersion);
+        const request = indexedDB.open(name, version);
 
         request.onupgradeneeded = (event) => {
           const target = request.result;
@@ -179,7 +124,7 @@ export function createIndexedDB<S extends AnySchema>(options: {
                 /* ignore */
               }
 
-              reject(new Error(`deposit: migration failed for "${dbName}"`, { cause: error }));
+              reject(new Error(`[deposit] migration failed for "${name}"`, { cause: error }));
 
               return;
             }
@@ -201,7 +146,7 @@ export function createIndexedDB<S extends AnySchema>(options: {
         };
         request.onerror = () => {
           connectPromise = null;
-          reject(new Error(`deposit: failed to open "${dbName}"`, { cause: request.error }));
+          reject(new Error(`[deposit] failed to open "${name}"`, { cause: request.error }));
         };
       });
     }
@@ -214,205 +159,213 @@ export function createIndexedDB<S extends AnySchema>(options: {
     mode: 'readonly' | 'readwrite',
     fn: (store: IDBObjectStore) => Promise<T>,
   ): Promise<T> => {
-    if (disposed) throw new Error(`deposit: "${dbName}" is disposed`);
+    if (disposed) throw new Error(`[deposit] "${name}" is disposed`);
 
     if (!db) await connect();
 
-    if (!db) throw new Error(`deposit: "${dbName}" is disposed`);
+    if (!db) throw new Error(`[deposit] "${name}" is disposed`);
 
-    const name = String(table);
-    const tx = db.transaction(name, mode);
+    const tableName = String(table);
+    const tx = db.transaction(tableName, mode);
 
-    return runIdbTx(tx, `${dbName}/${name}`, () => fn(tx.objectStore(name)));
+    return runIdbTx(tx, `${name}/${tableName}`, () => fn(tx.objectStore(tableName)));
+  };
+
+  const requireDb = async (): Promise<IDBDatabase> => {
+    if (disposed) throw new Error(`[deposit] "${name}" is disposed`);
+
+    if (!db) await connect();
+
+    if (!db) throw new Error(`[deposit] "${name}" is disposed`);
+
+    return db;
   };
 
   const publish = <K extends keyof S>(table: K): void => {
     channel?.postMessage({ table: String(table) });
   };
 
-  const assertRecordKey = <K extends keyof S>(table: K, value: RecordOf<S, K>): void => {
-    const keyField = String(schema[table].key);
-    const keyValue = (value as Record<string, unknown>)[keyField];
+  const core: CoreRuntimeOps<S> = {
+    async count<K extends keyof S>(table: K): Promise<number> {
+      const records = await withStore(table, 'readonly', (store) => getAllFromStore<RecordOf<S, K>>(store));
 
-    if (keyValue === undefined || keyValue === null) {
-      throw new Error(`deposit: missing required key field "${keyField}" in record for table "${String(table)}"`);
-    }
-  };
+      return records.length;
+    },
 
-  const runtime = createAdapterRuntime(
-    schema,
-    {
-      async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-        const deleted = await withStore(table, 'readwrite', async (store) => {
-          const raw = await idbReq<unknown>(store.get(key as IDBValidKey));
+    async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      return withStore(table, 'readwrite', async (store) => {
+        const raw = await idbReq<unknown>(store.get(key as IDBValidKey));
 
-          if (raw == null) return false;
+        if (raw == null) return false;
 
-          await idbReq(store.delete(key as IDBValidKey));
+        await idbReq(store.delete(key as IDBValidKey));
 
-          return true;
-        });
+        return true;
+      });
+    },
 
-        return deleted;
-      },
-      async deleteAll<K extends keyof S>(table: K): Promise<number> {
-        return withStore(table, 'readwrite', async (store) => {
-          const deleted = await idbReq(store.count());
+    async deleteAll<K extends keyof S>(table: K): Promise<void> {
+      await withStore(table, 'readwrite', (store) => idbReq(store.clear()).then(() => undefined));
+    },
 
-          await idbReq(store.clear());
+    dispose() {
+      disposed = true;
+      db?.close();
+      db = null;
+      connectPromise = null;
+      channel?.close();
+    },
 
-          return deleted;
-        });
-      },
-      async deleteWhere<K extends keyof S>(table: K, predicate: (record: RecordOf<S, K>) => boolean): Promise<number> {
-        return withStore(table, 'readwrite', (store) => deleteWhereInStore<RecordOf<S, K>>(store, predicate));
-      },
-      dispose() {
-        disposed = true;
-        db?.close();
-        db = null;
-        connectPromise = null;
-        channel?.close();
-      },
-      async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-        const idbKey = key as IDBValidKey;
-        const raw = await withStore(table, 'readonly', (store) => idbReq<unknown>(store.get(idbKey)));
+    async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
+      const raw = await withStore(table, 'readonly', (store) => idbReq<unknown>(store.get(key as IDBValidKey)));
 
-        if (raw == null) return undefined;
+      if (raw == null) return undefined;
+
+      const parsed = parseStored<RecordOf<S, K>>(raw);
+
+      if (!parsed) return undefined;
+
+      return unwrapStored(parsed);
+    },
+
+    async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
+      return withStore(table, 'readonly', (store) => getAllFromStore<RecordOf<S, K>>(store));
+    },
+
+    async getRawCount<K extends keyof S>(table: K): Promise<number> {
+      return withStore(table, 'readonly', (store) => idbReq(store.count()));
+    },
+
+    async has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
+      return withStore(table, 'readonly', async (store) => {
+        const raw = await idbReq<unknown>(store.get(key as IDBValidKey));
+
+        if (raw == null) return false;
 
         const parsed = parseStored<RecordOf<S, K>>(raw);
 
-        if (!parsed) return undefined;
-
-        const value = unwrapStored(parsed);
-
-        return value;
-      },
-      async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
-        return withStore(table, 'readonly', (store) => scanStoreWithCursor<RecordOf<S, K>>(store));
-      },
-      async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
-        assertRecordKey(table, value);
-
-        await withStore(table, 'readwrite', (store) => idbReq(store.put(wrapStored(value, ttl))).then(() => undefined));
-      },
-      async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
-        await withStore(table, 'readwrite', async (store) => {
-          await Promise.all(
-            values.map((value) => {
-              assertRecordKey(table, value);
-
-              return idbReq(store.put(wrapStored(value, ttl)));
-            }),
-          );
-        });
-      },
+        return parsed ? unwrapStored(parsed) !== undefined : false;
+      });
     },
-    { broadcast: publish },
-  );
 
-  if (channel) {
-    channel.onmessage = (event: MessageEvent<{ table?: string }>) => {
-      const tableName = event.data?.table;
+    async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
+      const key = getRecordKey(schema, table, value) as IDBValidKey;
 
-      if (!tableName) return;
+      await withStore(table, 'readwrite', (store) =>
+        idbReq(store.put(wrapStored(value, ttl), key)).then(() => undefined),
+      );
+    },
 
-      runtime.notify(tableName as keyof S);
-    };
-  }
+    async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
+      await withStore(table, 'readwrite', async (store) => {
+        await Promise.all(
+          values.map((value) => {
+            const key = getRecordKey(schema, table, value) as IDBValidKey;
 
-  const handle: IndexedDBHandle<S> = {
-    ...runtime.adapter,
-    async transaction<K extends keyof S, R>(
-      tables: readonly K[],
-      fn: (tx: TransactionContext<S, K>) => Promise<R>,
-    ): Promise<R> {
-      if (disposed) throw new Error(`deposit: "${dbName}" is disposed`);
-
-      if (!db) await connect();
-
-      if (!db) throw new Error(`deposit: "${dbName}" is disposed`);
-
-      const idbTx = db.transaction(tables.map(String), 'readwrite');
-      const storeOf = <T extends K>(table: T) => idbTx.objectStore(String(table));
-      const dirtyTables = new Set<K>();
-      const markDirty = <T extends K>(table: T): void => {
-        dirtyTables.add(table);
-      };
-      const txCore = {
-        async delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean> {
-          const store = storeOf(table);
-          const raw = await idbReq<unknown>(store.get(key as IDBValidKey));
-
-          if (raw == null) return false;
-
-          await idbReq(store.delete(key as IDBValidKey));
-          markDirty(table);
-
-          return true;
-        },
-        async deleteAll<T extends K>(table: T): Promise<number> {
-          const store = storeOf(table);
-          const deleted = await idbReq(store.count());
-
-          await idbReq(store.clear());
-
-          if (deleted > 0) markDirty(table);
-
-          return deleted;
-        },
-        async deleteWhere<T extends K>(table: T, predicate: (record: RecordOf<S, T>) => boolean): Promise<number> {
-          const deleted = await deleteWhereInStore<RecordOf<S, T>>(storeOf(table), predicate);
-
-          if (deleted > 0) markDirty(table);
-
-          return deleted;
-        },
-        async get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined> {
-          const store = storeOf(table);
-          const raw = await idbReq<unknown>(store.get(key as IDBValidKey));
-
-          if (raw == null) return undefined;
-
-          const parsed = parseStored<RecordOf<S, T>>(raw);
-
-          if (!parsed) return undefined;
-
-          const value = unwrapStored(parsed);
-
-          return value;
-        },
-        async getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]> {
-          return scanStoreWithCursor<RecordOf<S, T>>(storeOf(table));
-        },
-        async put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void> {
-          assertRecordKey(table, value);
-
-          await idbReq(storeOf(table).put(wrapStored(value, ttl)));
-          markDirty(table);
-        },
-        async putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void> {
-          await Promise.all(
-            values.map((value) => {
-              assertRecordKey(table, value);
-
-              return idbReq(storeOf(table).put(wrapStored(value, ttl)));
-            }),
-          );
-
-          if (values.length > 0) markDirty(table);
-        },
-      };
-      const tx = createTransactionContext<S, K>(schema, txCore);
-      const result = await runIdbTx(idbTx, dbName, () => fn(tx));
-
-      for (const table of dirtyTables) {
-        runtime.notifyMutation(table);
-      }
-
-      return result;
+            return idbReq(store.put(wrapStored(value, ttl), key));
+          }),
+        );
+      });
     },
   };
 
-  return handle;
+  /* IDB-specific batch: runs inside a real IDB transaction (atomic) */
+  const idbBatch = async <K extends keyof S, R>(
+    tables: readonly K[],
+    fn: (tx: TransactionContext<S, K>) => Promise<R>,
+    notifyMutation: (table: keyof S) => void,
+  ): Promise<R> => {
+    const idb = await requireDb();
+    const idbTx = idb.transaction(tables.map(String), 'readwrite');
+    const storeOf = <T extends K>(table: T) => idbTx.objectStore(String(table));
+    const dirtyTables = new Set<K>();
+
+    const txCore: CoreStorageOps<S, K> = {
+      async count<T extends K>(table: T): Promise<number> {
+        const records = await getAllFromStore<RecordOf<S, T>>(storeOf(table));
+
+        return records.length;
+      },
+
+      async delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean> {
+        const raw = await idbReq<unknown>(storeOf(table).get(key as IDBValidKey));
+
+        if (raw == null) return false;
+
+        await idbReq(storeOf(table).delete(key as IDBValidKey));
+
+        return true;
+      },
+
+      async deleteAll<T extends K>(table: T): Promise<void> {
+        await idbReq(storeOf(table).clear());
+      },
+
+      async get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined> {
+        const raw = await idbReq<unknown>(storeOf(table).get(key as IDBValidKey));
+
+        if (raw == null) return undefined;
+
+        const parsed = parseStored<RecordOf<S, T>>(raw);
+
+        if (!parsed) return undefined;
+
+        return unwrapStored(parsed);
+      },
+
+      async getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]> {
+        return getAllFromStore<RecordOf<S, T>>(storeOf(table));
+      },
+
+      async put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void> {
+        const key = getRecordKey(schema, table, value) as IDBValidKey;
+
+        await idbReq(storeOf(table).put(wrapStored(value, ttl), key));
+      },
+
+      async putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void> {
+        await Promise.all(
+          values.map((value) => {
+            const key = getRecordKey(schema, table, value) as IDBValidKey;
+
+            return idbReq(storeOf(table).put(wrapStored(value, ttl), key));
+          }),
+        );
+      },
+    };
+
+    const txOps = buildTxContext<S, K>(schema, txCore, (t) => dirtyTables.add(t));
+    const result = await runIdbTx(idbTx, name, () => fn(txOps));
+
+    for (const table of dirtyTables) {
+      notifyMutation(table);
+    }
+
+    return result;
+  };
+
+  const { adapter } = buildAdapterOps(schema, core, {
+    batch: idbBatch,
+    connectExternal(notify) {
+      if (!channel) {
+        return undefined;
+      }
+
+      channel.onmessage = (event: MessageEvent<{ table?: string }>) => {
+        const tableName = event.data?.table;
+
+        if (!tableName) return;
+
+        notify(tableName as keyof S);
+      };
+
+      return () => {
+        channel.onmessage = null;
+      };
+    },
+    onMetrics,
+    onMutation: publish,
+  });
+
+  return adapter;
 }
