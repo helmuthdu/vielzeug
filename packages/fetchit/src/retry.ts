@@ -2,8 +2,8 @@
 export const NO_RETRY = 1;
 
 export type RetryOptions = {
-  /** Total attempts. `1` means no retries. Defaults to `1`. */
-  attempts?: number;
+  /** Maximum number of attempts. `1` means a single try with no retries. Defaults to `1`. */
+  maxAttempts?: number;
   /**
    * Delay between retry attempts in ms, or a zero-based function where
    * `attempt` is the number of failures so far (0 = waiting before the 2nd try).

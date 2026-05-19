@@ -2,7 +2,7 @@ import type { Params } from './url';
 
 import { HttpError } from './errors';
 import { sleepWithAbort, toError } from './retry';
-import { isBodyInit } from './serialize';
+import { buildRequestInit } from './serialize';
 import {
   buildTimeoutSignal,
   createTransportCore,
@@ -27,7 +27,7 @@ export type StreamRequestConfig<P extends string = string> = {
 
 export type ReconnectOptions = {
   /** Total reconnect attempts after the first failure. Defaults to `5`. */
-  attempts?: number;
+  maxAttempts?: number;
   /**
    * Delay between reconnect attempts in ms, or a zero-based function where
    * `attempt` is the number of failures so far (0 = waiting before the 2nd try).
@@ -84,36 +84,7 @@ function parseEventData(raw: string): unknown {
 
 export function createStream(opts?: TransportOptions, sharedTransport?: TransportCore) {
   const ownTransport = !sharedTransport;
-  // SSE connections are long-lived — default timeout to Infinity.
-  const transport =
-    sharedTransport ?? createTransportCore({ ...opts, timeout: opts?.timeout ?? Number.POSITIVE_INFINITY });
-
-  /** Build RequestInit without mutating the headers argument. */
-  function buildInit(
-    method: string,
-    headers: Record<string, string>,
-    body: unknown,
-    signal: AbortSignal | undefined,
-    rest: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>,
-  ): RequestInit {
-    if (body !== undefined && !isBodyInit(body)) {
-      return {
-        ...rest,
-        body: JSON.stringify(body),
-        headers: { ...headers, 'content-type': 'application/json' },
-        method: method.toUpperCase(),
-        signal,
-      };
-    }
-
-    return {
-      ...rest,
-      ...(body !== undefined && { body: body as BodyInit }),
-      headers,
-      method: method.toUpperCase(),
-      signal,
-    };
-  }
+  const transport = sharedTransport ?? createTransportCore(opts);
 
   /**
    * Opens a Server-Sent Events connection and returns a typed source.
@@ -165,8 +136,9 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     let closed = false;
     let lastEventId = '';
 
-    const reconnectOpts: ReconnectOptions = reconnect === true ? {} : reconnect === false ? { attempts: 0 } : reconnect;
-    const maxReconnects = reconnectOpts.attempts ?? (reconnect ? 5 : 0);
+    const reconnectOpts: ReconnectOptions =
+      reconnect === true ? {} : reconnect === false ? { maxAttempts: 0 } : reconnect;
+    const maxReconnects = reconnectOpts.maxAttempts ?? (reconnect ? 5 : 0);
     const reconnectDelay = reconnectOpts.retryDelay ?? defaultReconnectDelay;
 
     function dispatchEvent(event: string, rawData: string): void {
@@ -182,7 +154,9 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     async function connect(): Promise<void> {
       const full = buildUrl(transport.baseUrl, url, params as Params | undefined, query);
       const combined = extSignal ? AbortSignal.any([extSignal, ac.signal]) : ac.signal;
-      const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, combined);
+      // SSE connections are long-lived — default timeout to Infinity so the
+      // transport's REST default (30s) does not cut off streams prematurely.
+      const signal = buildTimeoutSignal(cfgTimeout ?? Number.POSITIVE_INFINITY, combined);
 
       const requestHeaders = transport.mergeHeaders(perRequestHeaders as Record<string, string> | undefined, {
         accept: 'text/event-stream',
@@ -190,7 +164,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
         ...(lastEventId ? { 'last-event-id': lastEventId } : {}),
       });
 
-      const init = buildInit(method, requestHeaders, body, signal, rest);
+      const init = buildRequestInit(method, requestHeaders, body, signal, rest);
 
       let res: Response;
 
@@ -270,7 +244,11 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
 
           try {
             await connect();
-            // Clean server-side close — falls through to reconnect logic below
+            // Clean server-side close — falls through to reconnect logic below.
+            // The attempt counter is intentionally NOT reset here: maxAttempts
+            // bounds total reconnects regardless of whether the close was clean or an
+            // error, preventing infinite reconnection against servers that always close
+            // after a response window (e.g. SSE keepalive patterns).
           } catch (err) {
             if (closed || transport.disposed || ac.signal.aborted) break;
 
@@ -382,75 +360,73 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     const full = buildUrl(transport.baseUrl, url, params as Params | undefined, query);
     const ac = new AbortController();
     const combined = extSignal ? AbortSignal.any([extSignal, ac.signal]) : ac.signal;
-    const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, combined);
+    // Readable streams are long-lived — default timeout to Infinity (same as SSE).
+    const signal = buildTimeoutSignal(cfgTimeout ?? Number.POSITIVE_INFINITY, combined);
 
     const requestHeaders = transport.mergeHeaders(perRequestHeaders as Record<string, string> | undefined);
-    const init = buildInit(method, requestHeaders, body, signal, rest);
+    const init = buildRequestInit(method, requestHeaders, body, signal, rest);
     const untrack = transport.track(ac);
 
-    let res: Response;
-
     try {
-      res = await transport.dispatch({ init, url: full });
-    } catch (err) {
-      untrack();
-      throw HttpError.fromCause(err, method.toUpperCase(), full, ac.signal);
-    }
+      let res: Response;
 
-    if (!res.ok) {
-      untrack();
+      try {
+        res = await transport.dispatch({ init, url: full });
+      } catch (err) {
+        throw HttpError.fromCause(err, method.toUpperCase(), full, ac.signal);
+      }
 
-      const text = await res.text().catch(() => '');
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
 
-      throw HttpError.fromResponse(res, text, method.toUpperCase(), full);
-    }
+        throw HttpError.fromResponse(res, text, method.toUpperCase(), full);
+      }
 
-    if (!res.body) {
-      untrack();
-      throw new Error('[fetchit] Response has no body');
-    }
+      if (!res.body) throw new Error('[fetchit] Response has no body');
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
 
-    try {
-      if (parse === 'ndjson') {
-        let buffer = '';
+      try {
+        if (parse === 'ndjson') {
+          let buffer = '';
 
-        while (true) {
-          const { done, value } = await reader.read();
+          while (true) {
+            const { done, value } = await reader.read();
 
-          if (done) {
-            const remaining = buffer.trim();
+            if (done) {
+              const remaining = buffer.trim();
 
-            if (remaining) yield JSON.parse(remaining) as T;
+              if (remaining) yield JSON.parse(remaining) as T;
 
-            break;
+              break;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+
+            let nlIdx: number;
+
+            while ((nlIdx = buffer.indexOf('\n')) !== -1) {
+              const line = buffer.slice(0, nlIdx).trim();
+
+              buffer = buffer.slice(nlIdx + 1);
+
+              if (line) yield JSON.parse(line) as T;
+            }
           }
+        } else {
+          while (true) {
+            const { done, value } = await reader.read();
 
-          buffer += decoder.decode(value, { stream: true });
+            if (done) break;
 
-          let nlIdx: number;
-
-          while ((nlIdx = buffer.indexOf('\n')) !== -1) {
-            const line = buffer.slice(0, nlIdx).trim();
-
-            buffer = buffer.slice(nlIdx + 1);
-
-            if (line) yield JSON.parse(line) as T;
+            yield decoder.decode(value, { stream: true }) as unknown as T;
           }
         }
-      } else {
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) break;
-
-          yield decoder.decode(value, { stream: true }) as unknown as T;
-        }
+      } finally {
+        reader.releaseLock();
       }
     } finally {
-      reader.releaseLock();
       untrack();
     }
   }

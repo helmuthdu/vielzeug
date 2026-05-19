@@ -2,7 +2,7 @@ import type { HttpRequestConfig, Params } from './url';
 
 import { HttpError } from './errors';
 import { parseResponse } from './response';
-import { isBodyInit, stableStringify } from './serialize';
+import { buildRequestInit, stableStringify } from './serialize';
 import {
   buildTimeoutSignal,
   createTransportCore,
@@ -119,20 +119,7 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     const combinedExt = extSignal ? AbortSignal.any([extSignal, requestAc.signal]) : requestAc.signal;
     const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, combinedExt);
 
-    const init: RequestInit = {
-      ...rest,
-      headers: mergedHeaders,
-      method: m,
-      signal,
-    };
-
-    if (body !== undefined && !isBodyInit(body)) {
-      init.body = JSON.stringify(body);
-      init.headers = { 'content-type': 'application/json', ...(init.headers as Record<string, string>) };
-    } else if (body !== undefined) {
-      init.body = body as BodyInit;
-    }
-
+    const init = buildRequestInit(m, mergedHeaders, body, signal, rest);
     const p = execute<T>(init, full, m, responseType);
 
     if (requestDedupeKey) inFlight.set(requestDedupeKey, p);

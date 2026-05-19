@@ -52,7 +52,6 @@ type QueryObserver<T, S> = {
 };
 
 type CacheEntry<T = unknown> = {
-  attempts: number;
   data: T | undefined;
   error: Error | null;
   fn: ((ctx: QueryFnContext) => Promise<T>) | undefined;
@@ -61,6 +60,7 @@ type CacheEntry<T = unknown> = {
   inflight: { controller: AbortController; promise: Promise<T> } | null;
   isFetching: boolean;
   key: QueryKey;
+  maxAttempts: number;
   observers: Set<QueryObserver<T, unknown>>;
   retryDelay: RetryOptions['retryDelay'];
   shouldRetry: RetryOptions['shouldRetry'];
@@ -83,7 +83,7 @@ function resolveValue<T>(v: T | (() => T | undefined) | undefined): T | undefine
 export function createQuery(opts?: QueryClientOptions) {
   const staleTimeDefault = opts?.staleTime ?? 0;
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
-  const attemptsDefault = opts?.attempts ?? NO_RETRY;
+  const maxAttemptsDefault = opts?.maxAttempts ?? NO_RETRY;
   const retryDelayDefault = opts?.retryDelay;
   const shouldRetryDefault = opts?.shouldRetry;
 
@@ -208,7 +208,6 @@ export function createQuery(opts?: QueryClientOptions) {
 
     if (!entry) {
       entry = {
-        attempts: attemptsDefault,
         data: undefined,
         error: null,
         fn: undefined,
@@ -217,6 +216,7 @@ export function createQuery(opts?: QueryClientOptions) {
         inflight: null,
         isFetching: false,
         key,
+        maxAttempts: maxAttemptsDefault,
         observers: new Set(),
         retryDelay: retryDelayDefault,
         shouldRetry: shouldRetryDefault,
@@ -297,12 +297,12 @@ export function createQuery(opts?: QueryClientOptions) {
   // paths (invalidate, focus, reconnect) without corrupting user-visible metadata.
   function startFetch<T>(entry: CacheEntry<T>): Promise<T> {
     // Guard against re-entrant calls (e.g. a synchronous observer callback that
-    // calls qc.query() for the same key during markFetching's notify round).
+    // calls qc.fetch() for the same key during markFetching's notify round).
     if (entry.inflight) return entry.inflight.promise;
 
     const queryFn = entry.fn as (ctx: QueryFnContext) => Promise<T>;
     const queryKey = entry.key;
-    const { attempts, retryDelay, shouldRetry } = entry;
+    const { maxAttempts, retryDelay, shouldRetry } = entry;
     const controller = new AbortController();
     const prev: EntrySnapshot<T> = {
       data: entry.data,
@@ -317,7 +317,7 @@ export function createQuery(opts?: QueryClientOptions) {
       try {
         const data = await runWithRetry(
           () => queryFn({ key: queryKey, signal: controller.signal }),
-          attempts,
+          maxAttempts,
           retryDelay,
           shouldRetry,
           controller.signal,
@@ -349,12 +349,12 @@ export function createQuery(opts?: QueryClientOptions) {
     if (disposed) throw new Error('[fetchit] QueryClient has been disposed');
 
     const {
-      attempts = attemptsDefault,
       enabled = true,
       fn: queryFn,
       gcTime = gcTimeDefault,
       initialData,
       key: queryKey,
+      maxAttempts = maxAttemptsDefault,
       retryDelay = retryDelayDefault,
       shouldRetry = shouldRetryDefault,
       staleTime = staleTimeDefault,
@@ -392,7 +392,7 @@ export function createQuery(opts?: QueryClientOptions) {
 
     if (entry.inflight) return entry.inflight.promise;
 
-    entry.attempts = attempts;
+    entry.maxAttempts = maxAttempts;
     entry.retryDelay = retryDelay;
     entry.shouldRetry = shouldRetry;
 
@@ -512,27 +512,13 @@ export function createQuery(opts?: QueryClientOptions) {
     key: QueryKey,
     opts?: { placeholderData?: S | (() => S | undefined); select?: (data: T | undefined) => S | undefined },
   ): SyncStore<QueryState<S>> {
-    // Stable observer object shared across peek() and subscribe() — avoids
-    // allocating a new object on every computeSnapshot() call.
-    const watchObserver: QueryObserver<T, S> = {
-      listener: () => {},
-      placeholderData: opts?.placeholderData,
-      select: opts?.select,
-    };
-
-    function computeSnapshot(): QueryState<S> {
-      const entry = entries.get(stableStringify(key)) as CacheEntry<T> | undefined;
-
-      if (!entry) {
-        return IDLE_STATE as QueryState<S>;
-      }
-
-      return toObserverState(entry, watchObserver);
-    }
-
     return {
       peek(): QueryState<S> {
-        return computeSnapshot();
+        const entry = entries.get(stableStringify(key)) as CacheEntry<T> | undefined;
+
+        if (!entry) return IDLE_STATE as QueryState<S>;
+
+        return toObserverState(entry, { listener: () => {}, ...opts });
       },
 
       subscribe(onStoreChange: () => void): Unsubscribe {
@@ -540,17 +526,13 @@ export function createQuery(opts?: QueryClientOptions) {
 
         cancelGc(entry.hash);
 
-        // Register the observer with a listener that notifies on changes only.
-        // peek() provides the initial snapshot, so onStoreChange is not called during setup.
-        // This is the correct contract for React's useSyncExternalStore and equivalent APIs.
+        // Single observer per subscription — peek() provides the initial snapshot
+        // so onStoreChange is only fired on subsequent state changes.
+        // This satisfies the useSyncExternalStore contract (and equivalents in Vue/Svelte).
         const observer: QueryObserver<T, S> = {
-          listener: () => {
-            watchObserver.previous = toObserverState(entry, watchObserver);
-            onStoreChange();
-          },
-          placeholderData: opts?.placeholderData,
-          previous: toObserverState(entry, watchObserver),
-          select: opts?.select,
+          ...opts,
+          listener: () => onStoreChange(),
+          previous: toObserverState(entry, { listener: () => {}, ...opts }),
         };
 
         entry.observers.add(observer as QueryObserver<T, unknown>);
@@ -654,11 +636,11 @@ export function createQuery(opts?: QueryClientOptions) {
     get disposed() {
       return disposed;
     },
+    fetch: fetchQuery,
     get,
     getState,
     invalidate,
     prefetch: prefetchQuery,
-    query: fetchQuery,
     set,
     subscribe,
     [Symbol.dispose](): void {

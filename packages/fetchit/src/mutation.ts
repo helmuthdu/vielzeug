@@ -34,10 +34,6 @@ export type MutationOptions<TData = unknown> = RetryOptions & {
 
 export type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 
-function toError(err: unknown): Error {
-  return err instanceof Error ? err : new Error(String(err));
-}
-
 export function createMutation<TData, TVariables = void>(
   mutationFn: MutationFn<TData, TVariables>,
   mutOpts?: MutationOptions<TData>,
@@ -99,7 +95,7 @@ export function createMutation<TData, TVariables = void>(
         try {
           const data = await runWithRetry(
             () => mutationFn(variables, signal),
-            mutOpts?.attempts ?? 1,
+            mutOpts?.maxAttempts ?? 1,
             mutOpts?.retryDelay,
             mutOpts?.shouldRetry,
             signal,

@@ -9,7 +9,7 @@ describe('createFetchit', () => {
   it('applies shared mutation defaults to created mutations', async () => {
     const client = createFetchit({
       mutationDefaults: {
-        attempts: 2,
+        maxAttempts: 2,
       },
     });
 
@@ -29,7 +29,7 @@ describe('createFetchit', () => {
   it('allows per-mutation options to override defaults', async () => {
     const client = createFetchit({
       mutationDefaults: {
-        attempts: 3,
+        maxAttempts: 3,
       },
     });
 
@@ -40,7 +40,7 @@ describe('createFetchit', () => {
         throw new Error('fail');
       },
       {
-        attempts: 1,
+        maxAttempts: 1,
       },
     );
 
@@ -107,8 +107,8 @@ describe('createFetchit', () => {
     let calls = 0;
     const fn = async () => ({ id: ++calls });
 
-    await client.query.query({ fn, key: ['users', 1] });
-    await client.query.query({ fn, key: ['users', 1] });
+    await client.query.fetch({ fn, key: ['users', 1] });
+    await client.query.fetch({ fn, key: ['users', 1] });
 
     // staleTime prevents re-fetching the same key
     expect(calls).toBe(1);

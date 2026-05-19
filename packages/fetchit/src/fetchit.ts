@@ -65,13 +65,9 @@ export function createFetchit(opts?: FetchitOptions): Fetchit {
 
   // Single shared transport — interceptors, headers, and cancellation are
   // unified across the api and stream sub-clients.
-  const transport = createTransportCore({
-    ...transportOpts,
-    // Stream connections are long-lived; default timeout to Infinity so SSE
-    // connections don't time out while the API client keeps its 30 s default.
-    // Individual clients can still override per-request via config.timeout.
-    timeout: transportOpts.timeout ?? Number.POSITIVE_INFINITY,
-  });
+  // REST requests use DEFAULT_TIMEOUT (30s); SSE/readable streams default to
+  // Infinity individually inside createStream, so the two concerns stay separate.
+  const transport = createTransportCore(transportOpts);
 
   const api = createApi(undefined, transport);
   const stream = createStream(undefined, transport);
