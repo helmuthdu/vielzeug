@@ -82,15 +82,17 @@ export class HttpError extends Error {
     });
   }
 
-  static fromCause(
-    cause: unknown,
-    method: string,
-    url: string,
-    opts?: { aborted?: boolean; signalReason?: unknown },
-  ): HttpError {
+  static fromCause(cause: unknown, method: string, url: string, signal?: AbortSignal): HttpError {
     const message = cause instanceof Error ? cause.message : String(cause);
 
-    return new HttpError({ aborted: opts?.aborted, cause, message, method, signalReason: opts?.signalReason, url });
+    return new HttpError({
+      aborted: signal?.aborted,
+      cause,
+      message,
+      method,
+      signalReason: signal?.reason,
+      url,
+    });
   }
 
   static is(err: unknown, status?: number): err is HttpError {

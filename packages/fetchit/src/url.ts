@@ -11,13 +11,18 @@ type ExtractPathParams<P extends string> = P extends `${string}{${infer K}}${inf
   ? K | ExtractPathParams<R>
   : never;
 
-type PathConfig<P extends string> = [ExtractPathParams<P>] extends [never]
+export type PathConfig<P extends string> = [ExtractPathParams<P>] extends [never]
   ? { params?: never }
   : { params: Record<ExtractPathParams<P>, string | number | boolean> };
 
 export type FetchitRequestConfig<P extends string = string> = PathConfig<P> & {
   /** Request body. Plain objects → JSON. BodyInit values passed as-is. */
   body?: unknown;
+  /**
+   * Set to `false` to bypass in-flight deduplication for this request.
+   * Idempotent methods (GET, HEAD, OPTIONS, DELETE) are deduplicated by default.
+   */
+  dedupe?: boolean;
   /** Explicit deduplication key for non-idempotent requests. */
   dedupeKey?: StableValue;
   /** Query string parameters. */
@@ -29,7 +34,9 @@ export type FetchitRequestConfig<P extends string = string> = PathConfig<P> & {
 };
 
 export type HttpRequestConfig<P extends string = string> = FetchitRequestConfig<P> &
-  Omit<RequestInit, 'body' | 'method' | 'signal'> & {
+  Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'> & {
+    /** Per-request headers merged with (and overriding) global client headers. */
+    headers?: Record<string, string>;
     /** External abort signal merged with internal cancellation. */
     signal?: AbortSignal;
   };

@@ -13,8 +13,8 @@ describe('Query Client', () => {
 
       const fn = async () => ({ id: ++calls });
 
-      await qc.query({ fn, key: ['users', 1] });
-      await qc.query({ fn, key: ['users', 1] });
+      await qc.fetch({ fn, key: ['users', 1] });
+      await qc.fetch({ fn, key: ['users', 1] });
 
       expect(calls).toBe(2);
     });
@@ -25,8 +25,8 @@ describe('Query Client', () => {
 
       const fn = async () => ({ id: ++calls });
 
-      await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
-      await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+      await qc.fetch({ fn, key: ['users', 1], staleTime: 10_000 });
+      await qc.fetch({ fn, key: ['users', 1], staleTime: 10_000 });
 
       expect(calls).toBe(1);
     });
@@ -37,9 +37,9 @@ describe('Query Client', () => {
       const fn = () => new Promise<{ id: number }>((resolve) => setTimeout(() => resolve({ id: ++calls }), 50));
 
       const [r1, r2, r3] = await Promise.all([
-        qc.query({ fn, key: ['users', 1] }),
-        qc.query({ fn, key: ['users', 1] }),
-        qc.query({ fn, key: ['users', 1] }),
+        qc.fetch({ fn, key: ['users', 1] }),
+        qc.fetch({ fn, key: ['users', 1] }),
+        qc.fetch({ fn, key: ['users', 1] }),
       ]);
 
       expect(r1).toEqual({ id: 1 });
@@ -52,7 +52,7 @@ describe('Query Client', () => {
       const qc = createQuery();
       let ctx: { key: readonly unknown[]; signal: AbortSignal } | undefined;
 
-      await qc.query({
+      await qc.fetch({
         fn: async (nextCtx) => {
           ctx = nextCtx;
 
@@ -75,7 +75,7 @@ describe('Query Client', () => {
 
       expect(qc.get(['users', 1])).toEqual({ id: 1 });
 
-      const data = await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+      const data = await qc.fetch({ fn, key: ['users', 1], staleTime: 10_000 });
 
       expect(data).toEqual({ id: 1 });
       expect(calls).toBe(1);
@@ -114,10 +114,10 @@ describe('Query Client', () => {
 
   describe('Retry', () => {
     it('retries the fn up to the specified count before succeeding', async () => {
-      const qc = createQuery({ attempts: 3 });
+      const qc = createQuery({ maxAttempts: 3 });
       let attempts = 0;
 
-      await qc.query({
+      await qc.fetch({
         fn: async () => {
           if (++attempts < 3) throw new Error('transient');
 
@@ -130,12 +130,12 @@ describe('Query Client', () => {
       expect(attempts).toBe(3);
     });
 
-    it('attempts:1 makes exactly one attempt then rejects', async () => {
-      const qc = createQuery({ attempts: 1 });
+    it('maxAttempts:1 makes exactly one attempt then rejects', async () => {
+      const qc = createQuery({ maxAttempts: 1 });
       let attempts = 0;
 
       await expect(
-        qc.query({
+        qc.fetch({
           fn: async () => {
             attempts++;
             throw new Error('fail');
@@ -164,9 +164,9 @@ describe('Query Client', () => {
       let calls = 0;
       const fn = async () => ({ id: ++calls });
 
-      await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+      await qc.fetch({ fn, key: ['users', 1], staleTime: 10_000 });
       qc.invalidate(['users', 1]);
-      await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+      await qc.fetch({ fn, key: ['users', 1], staleTime: 10_000 });
 
       expect(calls).toBe(2);
     });
@@ -174,7 +174,7 @@ describe('Query Client', () => {
     it('gcTime:0 evicts the entry immediately after fetch', async () => {
       const qc = createQuery({ gcTime: 0 });
 
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['x'] });
+      await qc.fetch({ fn: async () => ({ id: 1 }), key: ['x'] });
 
       expect(qc.get(['x'])).toBeUndefined();
     });
@@ -197,7 +197,7 @@ describe('Query Client', () => {
 
       expect(qc.getState(['never'])).toBeNull();
 
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
+      await qc.fetch({ fn: async () => ({ id: 1 }), key: ['users', 1] });
 
       expect(qc.getState(['users', 1])).toMatchObject({
         data: { id: 1 },
@@ -213,7 +213,7 @@ describe('Query Client', () => {
 
       const unsub = qc.subscribe(['users', 1], (s) => states.push({ ...s }));
 
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
+      await qc.fetch({ fn: async () => ({ id: 1 }), key: ['users', 1] });
       unsub();
 
       expect(states.map((s) => s.status)).toEqual(['idle', 'pending', 'success']);
@@ -228,7 +228,7 @@ describe('Query Client', () => {
 
       qc.subscribe(['fail'], (s) => states.push({ ...s }));
       await qc
-        .query({
+        .fetch({
           fn: async () => {
             throw new Error('boom');
           },
@@ -246,7 +246,7 @@ describe('Query Client', () => {
 
       const qc = createQuery({ gcTime: 1_000 });
 
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['x'] });
+      await qc.fetch({ fn: async () => ({ id: 1 }), key: ['x'] });
       qc.subscribe(['x'], () => {});
       vi.advanceTimersByTime(2_000);
 
@@ -292,7 +292,7 @@ describe('Query Client', () => {
         select: (data: { id: number; name: string } | undefined) => (data ? { id: data.id } : undefined),
       });
 
-      await qc.query({ fn: async () => ({ id: 1, name: 'Alice' }), key: ['users', 1] });
+      await qc.fetch({ fn: async () => ({ id: 1, name: 'Alice' }), key: ['users', 1] });
 
       expect(shapes[shapes.length - 1]).toEqual({ id: 1 });
     });
@@ -320,7 +320,7 @@ describe('Query Client', () => {
 
       const fn = async () => ({ id: ++calls });
 
-      await qc.query({ fn, key: ['users', 1], staleTime: 10_000 });
+      await qc.fetch({ fn, key: ['users', 1], staleTime: 10_000 });
 
       const states: QueryState[] = [];
       const unsub = qc.subscribe(['users', 1], (s) => states.push({ ...s }));
@@ -345,7 +345,7 @@ describe('Query Client', () => {
       const fn = async () => ({ id: ++calls });
 
       // Prime with staleTime: 60_000 — entry should stay fresh for one minute.
-      await qc.query({ fn, key: ['users', 1], staleTime: 60_000 });
+      await qc.fetch({ fn, key: ['users', 1], staleTime: 60_000 });
 
       // Subscribe so invalidate triggers background revalidation, not eviction.
       const unsub2 = qc.subscribe(['users', 1], () => {});
@@ -360,7 +360,7 @@ describe('Query Client', () => {
       // If it were 0, a follow-up query would trigger another fetch.
       const prevCalls = calls;
 
-      await qc.query({ fn, key: ['users', 1], staleTime: 60_000 });
+      await qc.fetch({ fn, key: ['users', 1], staleTime: 60_000 });
       expect(calls).toBe(prevCalls);
 
       unsub2();
@@ -370,7 +370,7 @@ describe('Query Client', () => {
       const qc = createQuery();
 
       // Prime with a known entry.
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1], staleTime: 60_000 });
+      await qc.fetch({ fn: async () => ({ id: 1 }), key: ['users', 1], staleTime: 60_000 });
 
       const originalUpdatedAt = qc.getState(['users', 1])!.updatedAt!;
 
@@ -385,7 +385,7 @@ describe('Query Client', () => {
           signal.addEventListener('abort', () => rej(new DOMException('Aborted', 'AbortError')));
         });
 
-      await qc.query({ fn: blockingFn, key: ['users', 1], staleTime: 60_000 });
+      await qc.fetch({ fn: blockingFn, key: ['users', 1], staleTime: 60_000 });
 
       // Subscribe so invalidate does background revalidation.
       const unsub3 = qc.subscribe(['users', 1], () => {});
@@ -416,8 +416,7 @@ describe('Query Client', () => {
       qc.set(['err-recovery'], { id: 1 });
 
       // Simulate a failed refetch that preserves previous data
-      await qc.query({
-        attempts: 1,
+      await qc.fetch({
         fn: async () => {
           calls++;
 
@@ -426,19 +425,20 @@ describe('Query Client', () => {
           throw new Error('transient');
         },
         key: ['err-recovery'],
+        maxAttempts: 1,
         retryDelay: 0,
         staleTime: 0,
       });
 
       calls = 0;
       await expect(
-        qc.query({
-          attempts: 1,
+        qc.fetch({
           fn: async () => {
             calls++;
             throw new Error('fail');
           },
           key: ['err-recovery'],
+          maxAttempts: 1,
           retryDelay: 0,
           staleTime: 0,
         }),
@@ -477,7 +477,7 @@ describe('Query Client', () => {
         reject = nextReject;
       });
 
-      const queryPromise = qc.query({
+      const queryPromise = qc.fetch({
         fn: async ({ signal }) => {
           signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
 
@@ -500,7 +500,7 @@ describe('Query Client', () => {
       const qc = createQuery();
       let calls = 0;
 
-      const result = await qc.query({ enabled: false, fn: async () => ({ id: ++calls }), key: ['x'] });
+      const result = await qc.fetch({ enabled: false, fn: async () => ({ id: ++calls }), key: ['x'] });
 
       expect(calls).toBe(0);
       expect(result).toBeUndefined();
@@ -512,7 +512,7 @@ describe('Query Client', () => {
 
       qc.set(['x'], { id: 99 });
 
-      const data = await qc.query({ enabled: false, fn: async () => ({ id: 1 }), key: ['x'] });
+      const data = await qc.fetch({ enabled: false, fn: async () => ({ id: 1 }), key: ['x'] });
 
       expect(data).toEqual({ id: 99 });
     });
@@ -521,7 +521,7 @@ describe('Query Client', () => {
       const qc = createQuery();
       let calls = 0;
 
-      const data = await qc.query({
+      const data = await qc.fetch({
         fn: async () => ({ id: ++calls }),
         initialData: { id: 42 },
         key: ['user', 1],
@@ -537,7 +537,7 @@ describe('Query Client', () => {
       const qc = createQuery();
       let factoryCalls = 0;
 
-      await qc.query({
+      await qc.fetch({
         fn: async () => ({ id: 1 }),
         initialData: () => {
           factoryCalls++;
@@ -556,7 +556,7 @@ describe('Query Client', () => {
       const qc = createQuery();
 
       qc.set(['user', 3], { id: 1 });
-      await qc.query({
+      await qc.fetch({
         fn: async () => ({ id: 2 }),
         initialData: { id: 99 },
         key: ['user', 3],
@@ -580,7 +580,7 @@ describe('Query Client', () => {
         placeholderData: { id: 0 },
       });
 
-      const queryPromise = qc.query({
+      const queryPromise = qc.fetch({
         fn: () => pending,
         key: ['user', 4],
       });
@@ -652,7 +652,7 @@ describe('Query Client', () => {
 
       qc.subscribe<{ id: number }, { id: number }>(['user', 1], (s) => statuses.push(s.status), { select: (d) => d });
 
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['user', 1] }).catch(() => {});
+      await qc.fetch({ fn: async () => ({ id: 1 }), key: ['user', 1] }).catch(() => {});
 
       expect(statuses).toContain('idle');
       expect(statuses).toContain('success');
@@ -686,7 +686,7 @@ describe('Query Client', () => {
         notifications++;
       });
 
-      const pending = qc.query({
+      const pending = qc.fetch({
         fn: async () => ({ id: 1 }),
         key: ['users', 1],
       });
@@ -714,7 +714,7 @@ describe('Query Client', () => {
 
       const unsub = store.subscribe(() => {});
 
-      await qc.query({ fn: async () => ({ id: 1, name: 'Alice' }), key: ['users', 1] });
+      await qc.fetch({ fn: async () => ({ id: 1, name: 'Alice' }), key: ['users', 1] });
 
       expect(store.peek()).toMatchObject({ data: { id: 1 }, status: 'success' });
       unsub();
@@ -756,7 +756,7 @@ describe('Query Client', () => {
 
       unsub();
 
-      await qc.query({ fn: async () => ({ id: 1 }), key: ['users', 1] });
+      await qc.fetch({ fn: async () => ({ id: 1 }), key: ['users', 1] });
 
       expect(notifications).toBe(0);
     });

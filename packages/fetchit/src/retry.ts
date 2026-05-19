@@ -1,8 +1,9 @@
-export const DEFAULT_ATTEMPTS = 1;
+/** A single attempt with no retries — use as the default `attempts` value. */
+export const NO_RETRY = 1;
 
 export type RetryOptions = {
-  /** Total attempts. `1` means no retries. Defaults to `1`. */
-  attempts?: number;
+  /** Maximum number of attempts. `1` means a single try with no retries. Defaults to `1`. */
+  maxAttempts?: number;
   /**
    * Delay between retry attempts in ms, or a zero-based function where
    * `attempt` is the number of failures so far (0 = waiting before the 2nd try).
@@ -19,7 +20,7 @@ export type RetryOptions = {
 
 const DEFAULT_MAX_DELAY = 30_000;
 
-function toError(err: unknown): Error {
+export function toError(err: unknown): Error {
   return err instanceof Error ? err : new Error(String(err));
 }
 
@@ -45,7 +46,7 @@ function getRetryDelay(attempt: number, userDelay?: number | ((attempt: number) 
   return getDefaultRetryDelay(attempt);
 }
 
-async function sleepWithAbort(delayMs: number, signal?: AbortSignal): Promise<void> {
+export async function sleepWithAbort(delayMs: number, signal?: AbortSignal): Promise<void> {
   if (!signal) {
     await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 

@@ -17,7 +17,7 @@ const qc = createQuery({ staleTime: 0 }); // always stale so each call hits the 
 function startPolling<T>(key: QueryKey, fn: QueryOptions<T>['fn'], intervalMs: number) {
   const tick = async () => {
     qc.invalidate(key);
-    await qc.query({ key, fn }).catch(() => {});
+    await qc.fetch({ key, fn }).catch(() => {});
   };
   tick();
   const id = setInterval(tick, intervalMs);
@@ -41,7 +41,7 @@ qc.subscribe<Job>(['job', jobId], (state) => {
 
 - Polling continues even when the browser tab is hidden, wasting bandwidth. Pause on `document.visibilitychange` and resume when the tab becomes visible again.
 - The interval is measured from the start of each request, not from completion. If a request takes longer than the interval, the next fetch starts immediately with no idle gap.
-- Failing to stop polling on component teardown causes fetch callbacks to fire on unmounted state. Always call `query.stopPolling()` in the cleanup function.
+- Failing to stop polling on component teardown causes fetch callbacks to fire on unmounted state. Always call the disposer returned by `startPolling()` in your cleanup function.
 
 ### Related
 - [Signals (Stateit)](/stateit/examples/signals)

@@ -15,18 +15,23 @@ export type {
   Unsubscribe,
 } from './types';
 
-// Retry options
+// Retry
+export { NO_RETRY, runWithRetry, sleepWithAbort, toError } from './retry';
 export type { RetryOptions } from './retry';
 
 // URL / request config
-export type { FetchitRequestConfig, HttpRequestConfig, ParamValue, Params } from './url';
+export type { FetchitRequestConfig, HttpRequestConfig, ParamValue, Params, PathConfig } from './url';
 
 // Response parsing
 export type { ResponseType } from './response';
 
+// Transport (interceptor pipeline, shared by api + stream)
+export { createTransportCore } from './transport';
+export type { FetchContext, Interceptor, TransportCore, TransportOptions } from './transport';
+
 // API client
 export { createApi } from './api';
-export type { ApiClient, ApiClientOptions, FetchContext, Interceptor } from './api';
+export type { ApiClient } from './api';
 
 // Query client
 export { createQuery } from './query';
@@ -35,6 +40,10 @@ export type { PrefetchOptions, QueryClient, QueryClientOptions, QueryFnContext, 
 // Mutation
 export { createMutation } from './mutation';
 export type { Mutation, MutationFn, MutationOptions } from './mutation';
+
+// Stream client (SSE + ReadableStream)
+export { createStream } from './stream';
+export type { ReconnectOptions, SseOptions, SseSource, StreamClient, StreamRequestConfig } from './stream';
 
 // Root factory
 export { createFetchit } from './fetchit';
