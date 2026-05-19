@@ -89,7 +89,9 @@ describe('nested routes', () => {
         parent: {
           children: {
             child: {
-              handler: () => calls.push('handler'),
+              handler: () => {
+                calls.push('handler');
+              },
               middleware: [
                 async (_ctx, next) => {
                   calls.push('child-mw');

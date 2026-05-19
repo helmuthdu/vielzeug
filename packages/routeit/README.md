@@ -4,7 +4,7 @@ package: routeit
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
 related: [stateit, permit, eventit]
-exports: [createRouter, createBrowserHistory]
+exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
 ---
 
 # @vielzeug/routeit
@@ -18,7 +18,7 @@ exports: [createRouter, createBrowserHistory]
 
 **Package:** `@vielzeug/routeit` &nbsp;·&nbsp; **Category:** Routing
 
-**Key exports:** `createRouter`, `createBrowserHistory`
+**Key exports:** `createRouter`, `createBrowserHistory`, `createMemoryHistory`, `redirectTo`
 
 **When to use:** Lightweight, type-safe client-side router with nested routes, data loading, middleware, and named navigation.
 
@@ -27,6 +27,15 @@ exports: [createRouter, createBrowserHistory]
 </details>
 
 `@vielzeug/routeit` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+
+## What You Get
+
+- Declarative route tables with nested names (`dashboard.settings`)
+- Named and raw-path navigation through one `navigate()` API
+- Route middleware, data loaders, and lazy route modules
+- `component` + `meta` payloads on matched branch state
+- Browser and memory history drivers
+- Guard helpers via `redirectTo()`
 
 ## Installation
 
@@ -77,6 +86,9 @@ await router.navigate({ name: 'dashboard.settings' });
 - [Usage Guide](https://vielzeug.dev/routeit/usage)
 - [API Reference](https://vielzeug.dev/routeit/api)
 - [Examples](https://vielzeug.dev/routeit/examples)
+- [React Integration Example](https://vielzeug.dev/routeit/examples/react-integration)
+- [Vue Integration Example](https://vielzeug.dev/routeit/examples/vue-integration)
+- [Svelte Integration Example](https://vielzeug.dev/routeit/examples/svelte-integration)
 
 ## License
 

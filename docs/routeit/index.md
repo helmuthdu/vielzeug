@@ -5,7 +5,7 @@ package: routeit
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
 related: [stateit, permit, eventit]
-exports: [createRouter, createBrowserHistory]
+exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,7 +21,7 @@ exports: [createRouter, createBrowserHistory]
 
 **Package:** `@vielzeug/routeit` &nbsp;·&nbsp; **Category:** Routing
 
-**Key exports:** `createRouter`, `createBrowserHistory`
+**Key exports:** `createRouter`, `createBrowserHistory`, `createMemoryHistory`, `redirectTo`
 
 **When to use:** Client-side routing with typed params, async data loading, middleware, guards, and View Transitions API support.
 
@@ -109,7 +109,7 @@ const router = createRouter({ routes });
 | ----------------------------- | --------------------------------------------- | ------- | ------- |
 | Bundle size                   | <PackageInfo package="routeit" type="size" /> | ~1 kB   | ~5 kB   |
 | History mode                  | ✅                                            | ✅      | ✅      |
-| Memory history (SSR / tests)  | ✅                                            | ❌      | ❌      |
+| Memory history (tests / non-browser) | ✅                                            | ❌      | ❌      |
 | Typed path params             | ✅                                            | ❌      | ❌      |
 | Named navigation              | ✅                                            | ❌      | Partial |
 | Middleware                    | ✅                                            | ✅      | ✅      |
@@ -139,7 +139,7 @@ const router = createRouter({ routes });
 - Scroll restoration via the `scroll` option
 - History entry state readable as `ctx.historyState`
 - Errors from data loaders exposed on `router.state.error`
-- Memory history for SSR and tests — no browser globals required
+- Memory history for tests and controlled non-browser environments
 - Named-route-first `navigate()`, `url()`, and `isActive()`
 - Route-scoped `data()` loaders for leaf and layout data
 - Wildcard routes handle not-found cases
@@ -181,6 +181,9 @@ const router = createRouter({ routes });
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [React Integration](./examples/react-integration.md)
+- [Vue Integration](./examples/vue-integration.md)
+- [Svelte Integration](./examples/svelte-integration.md)
 
 ## See Also
 

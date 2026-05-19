@@ -1,6 +1,6 @@
 import { createMemoryHistory, createRouter } from '../router';
 import { boot, disposeRouter, mockHistory, mockLocation, resetMocks } from './setup';
-import { settle } from './test-utils';
+import { createDeferred, settle } from './test-utils';
 
 const routes = {
   about: { path: '/about' },
@@ -347,6 +347,7 @@ describe('Navigation', () => {
 
       expect(router.resolve('/app/dashboard/settings')).toEqual([
         {
+          component: undefined,
           data: undefined,
           meta: undefined,
           name: 'dashboard',
@@ -354,6 +355,7 @@ describe('Navigation', () => {
           pathname: '/dashboard/settings',
         },
         {
+          component: undefined,
           data: undefined,
           meta: { section: 'settings' },
           name: 'dashboard.settings',
@@ -375,6 +377,7 @@ describe('Navigation', () => {
       expect(router.resolve('/legacy')).toBeNull();
       expect(router.resolve('/current')).toEqual([
         {
+          component: undefined,
           data: undefined,
           meta: undefined,
           name: 'current',
@@ -427,10 +430,7 @@ describe('Navigation', () => {
 
     it('aborts data loader signal when a navigation is superseded', async () => {
       let firstSignal: AbortSignal | undefined;
-      let releaseSlow: (() => void) | null = null;
-      const slowGate = new Promise<void>((resolve) => {
-        releaseSlow = resolve;
-      });
+      const { promise: slowGate, resolve: releaseSlow } = createDeferred<void>();
       const history = createMemoryHistory('/');
       const router = createRouter({
         history,
@@ -455,7 +455,7 @@ describe('Navigation', () => {
       await settle();
       await router.navigate({ path: '/fast' });
 
-      releaseSlow?.();
+      releaseSlow();
       await slowNav;
 
       expect(firstSignal?.aborted).toBe(true);

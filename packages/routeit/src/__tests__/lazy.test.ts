@@ -1,5 +1,5 @@
 import { createMemoryHistory, createRouter } from '../router';
-import { settle } from './test-utils';
+import { createDeferred, settle } from './test-utils';
 
 describe('lazy routes', () => {
   it('loads handler from lazy module on first navigation', async () => {
@@ -77,11 +77,26 @@ describe('lazy routes', () => {
     router.dispose();
   });
 
-  it('keeps lazy hydration consistent across overlapping navigations', async () => {
-    let resolveLazy: (() => void) | null = null;
-    const lazyReady = new Promise<void>((resolve) => {
-      resolveLazy = resolve;
+  it('lazy component is picked up in router.state.matches', async () => {
+    const pageComponent = Symbol('lazy-page-component');
+    const history = createMemoryHistory('/page');
+    const router = createRouter({
+      history,
+      routes: {
+        page: {
+          lazy: async () => ({ component: pageComponent }),
+          path: '/page',
+        },
+      },
     });
+
+    await settle();
+    expect(router.state.matches.at(-1)?.component).toBe(pageComponent);
+    router.dispose();
+  });
+
+  it('keeps lazy hydration consistent across overlapping navigations', async () => {
+    const { promise: lazyReady, resolve: resolveLazy } = createDeferred<void>();
     const dataFn = vi.fn(async () => ({ loaded: true }));
     const handler = vi.fn();
     const history = createMemoryHistory('/');
@@ -105,7 +120,7 @@ describe('lazy routes', () => {
     const first = router.navigate({ path: '/page/a' });
     const second = router.navigate({ path: '/page/b' });
 
-    resolveLazy?.();
+    resolveLazy();
 
     await Promise.all([first, second]);
 

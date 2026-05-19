@@ -97,7 +97,9 @@ describe('middleware pipeline', () => {
       ],
       routes: {
         home: {
-          handler: () => calls.push('handler'),
+          handler: () => {
+            calls.push('handler');
+          },
           middleware: [
             async (_ctx, next) => {
               calls.push('route');

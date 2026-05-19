@@ -24,7 +24,7 @@ await router.navigate({ name: 'about' }); // pushes /my-app/about
 const href = router.url('userDetail', { id: '7' }); // /my-app/users/7
 const match = router.resolve('/my-app/users/7');
 // [
-//   { name: 'userDetail', params: { id: '7' }, pathname: '/users/7', data: undefined, meta: undefined },
+//   { component: undefined, name: 'userDetail', params: { id: '7' }, pathname: '/users/7', data: undefined, meta: undefined },
 // ]
 ```
 

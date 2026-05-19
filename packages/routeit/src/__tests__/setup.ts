@@ -1,4 +1,5 @@
 import type { Router } from '../router';
+import type { RouteTable } from '../types';
 
 export const mockLocation = {
   hash: '',
@@ -42,10 +43,10 @@ Object.assign(globalThis as Record<string, unknown>, {
 Object.defineProperty(window, 'location', { value: mockLocation, writable: true });
 Object.defineProperty(window, 'history', { value: mockHistory, writable: true });
 
-let activeRouter: Router | undefined;
+let activeRouter: { dispose: () => void } | undefined;
 
 /** Starts the router and waits for the initial route handling to complete. */
-export async function boot(router: Router): Promise<Router> {
+export async function boot<TRoutes extends RouteTable>(router: Router<TRoutes>): Promise<Router<TRoutes>> {
   activeRouter = router;
 
   const stateLocation = router.state.location;

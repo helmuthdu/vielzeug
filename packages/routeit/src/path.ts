@@ -1,5 +1,5 @@
 import type { RouteMatcher, RouteRecord } from './router-internal';
-import type { QueryParams, RouteParams, RouteTable } from './types';
+import type { QueryParams, ResolvedQueryParams, RouteParams, RouteTable } from './types';
 
 /** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {
@@ -171,7 +171,7 @@ export function parseQuery(queryString: string): QueryParams {
 }
 
 /** Build a URL from a path pattern, params, and query, respecting the router base. */
-export function buildUrl(base: string, pattern: string, params: RouteParams = {}, query?: QueryParams): string {
+export function buildUrl(base: string, pattern: string, params: RouteParams = {}, query?: ResolvedQueryParams): string {
   let path = pattern.replace(/:(\w+)(\*)?/g, (_match, key: string, isWildcard: string) => {
     const value = params[key];
 
@@ -191,8 +191,8 @@ export function buildUrl(base: string, pattern: string, params: RouteParams = {}
     const search = new URLSearchParams();
 
     Object.entries(query).forEach(([key, value]) => {
-      if (Array.isArray(value)) value.forEach((item) => search.append(key, item));
-      else search.set(key, value);
+      if (Array.isArray(value)) value.forEach((item) => search.append(key, String(item)));
+      else search.set(key, String(value));
     });
 
     path += `?${search.toString()}`;
