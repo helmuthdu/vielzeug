@@ -3,39 +3,22 @@ import type { HttpRequestConfig, Params } from './url';
 import { HttpError } from './errors';
 import { parseResponse } from './response';
 import { isBodyInit, stableStringify } from './serialize';
+import {
+  buildTimeoutSignal,
+  createTransportCore,
+  validateTimeout,
+  type FetchContext,
+  type Interceptor,
+  type TransportOptions,
+} from './transport';
 import { buildUrl } from './url';
 
-export type FetchContext = { init: RequestInit; url: string };
+export type { FetchContext, Interceptor };
+export type ApiClientOptions = TransportOptions;
 
-export type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
-
-export type ApiClientOptions = {
-  baseUrl?: string;
-  fetch?: typeof globalThis.fetch;
-  headers?: Record<string, string>;
-  timeout?: number;
-};
-
-const DEFAULT_TIMEOUT = 30_000;
 // DELETE is HTTP-idempotent (repeating it produces the same server state), so it
 // is included in auto-dedup by default.
 const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'DELETE']);
-
-function validateTimeout(timeoutMs: number): void {
-  if ((timeoutMs <= 0 || !Number.isFinite(timeoutMs)) && timeoutMs !== Number.POSITIVE_INFINITY) {
-    throw new TypeError('[fetchit] timeout must be a positive number or Infinity');
-  }
-}
-
-function timeoutSignal(timeoutMs: number, external?: AbortSignal | null): AbortSignal | undefined {
-  if (timeoutMs === Number.POSITIVE_INFINITY) {
-    return external ?? undefined;
-  }
-
-  const t = AbortSignal.timeout(timeoutMs);
-
-  return external ? AbortSignal.any([t, external]) : t;
-}
 
 function getDedupeKey(
   method: string,
@@ -59,53 +42,8 @@ function getDedupeKey(
 }
 
 export function createApi(opts: ApiClientOptions = {}) {
-  const {
-    baseUrl = '',
-    fetch: fetchFn = globalThis.fetch,
-    headers: initialHeaders = {},
-    timeout = DEFAULT_TIMEOUT,
-  } = opts;
-
-  validateTimeout(timeout);
-
-  const globalHeaders: Record<string, string> = Object.fromEntries(
-    Object.entries(initialHeaders).map(([k, v]) => [k.toLowerCase(), v]),
-  );
+  const transport = createTransportCore(opts);
   const inFlight = new Map<string, Promise<unknown>>();
-  const activeControllers = new Set<AbortController>();
-  const interceptors: Interceptor[] = [];
-  let disposed = false;
-  let cachedPipeline: ((ctx: FetchContext) => Promise<Response>) | null = null;
-
-  function use(interceptor: Interceptor): () => void {
-    interceptors.push(interceptor);
-    cachedPipeline = null;
-
-    return () => {
-      const i = interceptors.indexOf(interceptor);
-
-      if (i !== -1) {
-        interceptors.splice(i, 1);
-        cachedPipeline = null;
-      }
-    };
-  }
-
-  function getPipeline(): (ctx: FetchContext) => Promise<Response> {
-    const base: (ctx: FetchContext) => Promise<Response> = (ctx) => fetchFn(ctx.url, ctx.init);
-
-    if (cachedPipeline) return cachedPipeline;
-
-    cachedPipeline =
-      interceptors.length === 0
-        ? base
-        : interceptors.reduceRight<(ctx: FetchContext) => Promise<Response>>(
-            (next, interceptor) => (ctx) => interceptor(ctx, next),
-            base,
-          );
-
-    return cachedPipeline;
-  }
 
   async function execute<T>(
     init: RequestInit,
@@ -114,7 +52,7 @@ export function createApi(opts: ApiClientOptions = {}) {
     responseType: HttpRequestConfig['responseType'],
   ): Promise<T> {
     try {
-      const res = await getPipeline()({ init, url: full });
+      const res = await transport.dispatch({ init, url: full });
       const parsed = await parseResponse(res, responseType ?? 'auto', { throwOnUnknownContentType: res.ok });
 
       if (!res.ok) {
@@ -134,9 +72,9 @@ export function createApi(opts: ApiClientOptions = {}) {
     url: P,
     config: HttpRequestConfig<P> = {} as HttpRequestConfig<P>,
   ) {
-    if (disposed) throw new Error('[fetchit] ApiClient has been disposed');
+    if (transport.disposed) throw new Error('[fetchit] ApiClient has been disposed');
 
-    const full = buildUrl(baseUrl, url, config.params as Params | undefined, config.query);
+    const full = buildUrl(transport.baseUrl, url, config.params as Params | undefined, config.query);
     const m = method.toUpperCase();
     const {
       body,
@@ -155,7 +93,7 @@ export function createApi(opts: ApiClientOptions = {}) {
     const perRequestHeaders = headers
       ? Object.fromEntries(Object.entries(headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v]))
       : undefined;
-    const mergedHeaders = { ...globalHeaders, ...perRequestHeaders };
+    const mergedHeaders = { ...transport.globalHeaders, ...perRequestHeaders };
     const requestDedupeKey = getDedupeKey(m, full, mergedHeaders, responseType ?? 'auto', dedupeKey);
 
     if (requestDedupeKey) {
@@ -165,11 +103,9 @@ export function createApi(opts: ApiClientOptions = {}) {
     }
 
     const requestAc = new AbortController();
-
-    activeControllers.add(requestAc);
-
+    const untrack = transport.track(requestAc);
     const combinedExt = extSignal ? AbortSignal.any([extSignal, requestAc.signal]) : requestAc.signal;
-    const signal = timeoutSignal(cfgTimeout ?? timeout, combinedExt);
+    const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, combinedExt);
 
     const init: RequestInit = {
       ...rest,
@@ -194,7 +130,7 @@ export function createApi(opts: ApiClientOptions = {}) {
     } finally {
       if (requestDedupeKey) inFlight.delete(requestDedupeKey);
 
-      activeControllers.delete(requestAc);
+      untrack();
     }
   }
 
@@ -203,31 +139,19 @@ export function createApi(opts: ApiClientOptions = {}) {
       // Note: narrow race — a request that starts after the abort signals fire but before
       // their in-flight promise settles may see an empty inFlight map and issue a redundant
       // request. This is an accepted trade-off for the simplicity of a synchronous clear.
-      for (const ac of [...activeControllers]) ac.abort();
-      activeControllers.clear();
+      transport.cancelAll();
       inFlight.clear();
     },
     delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
     dispose(): void {
-      disposed = true;
-      for (const ac of activeControllers) ac.abort();
-      activeControllers.clear();
+      transport.dispose();
       inFlight.clear();
-      interceptors.length = 0;
-      cachedPipeline = null;
     },
     get disposed() {
-      return disposed;
+      return transport.disposed;
     },
     get: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('GET', url, cfg),
-    headers(updates: Record<string, string | undefined>) {
-      for (const [key, value] of Object.entries(updates)) {
-        const k = key.toLowerCase();
-
-        if (value === undefined) delete globalHeaders[k];
-        else globalHeaders[k] = value;
-      }
-    },
+    headers: transport.headers,
     patch: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PATCH', url, cfg),
     post: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('POST', url, cfg),
     put: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PUT', url, cfg),
@@ -235,7 +159,7 @@ export function createApi(opts: ApiClientOptions = {}) {
     [Symbol.dispose](): void {
       this.dispose();
     },
-    use,
+    use: transport.use,
   };
 }
 

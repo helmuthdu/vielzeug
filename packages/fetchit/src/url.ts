@@ -11,7 +11,7 @@ type ExtractPathParams<P extends string> = P extends `${string}{${infer K}}${inf
   ? K | ExtractPathParams<R>
   : never;
 
-type PathConfig<P extends string> = [ExtractPathParams<P>] extends [never]
+export type PathConfig<P extends string> = [ExtractPathParams<P>] extends [never]
   ? { params?: never }
   : { params: Record<ExtractPathParams<P>, string | number | boolean> };
 

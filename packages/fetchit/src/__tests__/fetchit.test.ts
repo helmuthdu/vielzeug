@@ -48,6 +48,36 @@ describe('createFetchit', () => {
     expect(calls).toBe(1);
   });
 
+  it('exposes a stream client with correct options', async () => {
+    const localFetch = vi.fn().mockResolvedValue(
+      new Response(
+        new ReadableStream({
+          start(c) {
+            c.enqueue(new TextEncoder().encode('data: hello\n\n'));
+            c.close();
+          },
+        }),
+        { headers: { 'content-type': 'text/event-stream' }, status: 200 },
+      ),
+    );
+
+    const client = createFetchit({
+      stream: { baseUrl: 'https://stream.example.com', fetch: localFetch as typeof fetch },
+    });
+
+    const messages: string[] = [];
+    const source = client.stream.sse('/events');
+
+    source.on('message', (d: string) => messages.push(d));
+
+    await new Promise((r) => setTimeout(r, 100));
+    source.close();
+
+    expect(localFetch).toHaveBeenCalledTimes(1);
+    expect(localFetch.mock.calls[0][0]).toBe('https://stream.example.com/events');
+    expect(messages).toEqual(['hello']);
+  });
+
   it('routes api options only to createApi', async () => {
     const localFetch = vi.fn().mockResolvedValue({
       headers: new Headers({ 'content-type': 'application/json' }),
