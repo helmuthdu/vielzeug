@@ -1,7 +1,8 @@
+import type { DepositLogger, TableValidators } from './plugins';
 import type { Adapter, AnySchema, DebugInfo, KeyOf, MetricsEvent, RecordOf, TransactionContext, TtlMs } from './types';
 
 import { createObserverHub, getRecordKey } from './internal';
-import { createQueryBuilder, createReadQuery } from './query';
+import { createQueryBuilder, type QueryContext } from './query';
 
 /* -------------------- Internal core ops type (adapter → runtime bridge) -------------------- */
 
@@ -46,18 +47,40 @@ function verifyKey<S extends AnySchema, K extends keyof S>(
   }
 }
 
+/* -------------------- Shared deleteMany builder (used in both tx and adapter query) -------------------- */
+
+function makeDeleteMany<S extends AnySchema, K extends keyof S>(
+  core: Pick<CoreStorageOps<S, K>, 'delete'>,
+  schema: S,
+  table: K,
+  onMutate: (table: K) => void,
+): QueryContext<RecordOf<S, K>>['deleteMany'] {
+  return async (records) => {
+    if (records.length === 0) return 0;
+
+    let deleted = 0;
+
+    for (const record of records) {
+      const key = getRecordKey(schema, table, record);
+
+      if (await core.delete(table, key)) deleted += 1;
+    }
+
+    if (deleted > 0) onMutate(table);
+
+    return deleted;
+  };
+}
+
 /* -------------------- buildTxContext: turns CoreStorageOps into a TransactionContext -------------------- */
 
 export function buildTxContext<S extends AnySchema, K extends keyof S>(
   schema: S,
   core: CoreStorageOps<S, K>,
   onMutate: (table: K) => void,
+  validate?: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
 ): TransactionContext<S, K> {
   return {
-    async clear(table) {
-      await core.deleteAll(table);
-      onMutate(table);
-    },
     async count(table) {
       return core.count(table);
     },
@@ -81,17 +104,27 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
     async has(table, key) {
       return core.has(table, key);
     },
+    async *iterate(table) {
+      for (const record of await core.getAll(table)) {
+        yield record;
+      }
+    },
     async put(table, value, ttl) {
-      await core.put(table, value, resolveTtl(schema, table, ttl));
+      await core.put(table, validate ? validate(table, value) : value, resolveTtl(schema, table, ttl));
       onMutate(table);
     },
     async putAll(table, values, ttl) {
-      await core.putAll(table, values, resolveTtl(schema, table, ttl));
+      const toWrite = validate ? values.map((v) => validate(table, v)) : values;
+
+      await core.putAll(table, toWrite, resolveTtl(schema, table, ttl));
 
       if (values.length > 0) onMutate(table);
     },
     query(table) {
-      return createReadQuery({ source: () => core.getAll(table) });
+      return createQueryBuilder({
+        deleteMany: makeDeleteMany(core, schema, table, onMutate),
+        source: () => core.getAll(table),
+      });
     },
     async update(table, key, changes, ttl) {
       const current = await core.get(table, key);
@@ -101,7 +134,7 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
       const merged = { ...current, ...changes } as RecordOf<S, typeof table>;
 
       verifyKey(schema, table, key, merged, 'update');
-      await core.put(table, merged, resolveTtl(schema, table, ttl));
+      await core.put(table, validate ? validate(table, merged) : merged, resolveTtl(schema, table, ttl));
       onMutate(table);
 
       return merged;
@@ -111,7 +144,7 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
       const value = fn(existing);
 
       verifyKey(schema, table, key, value, 'upsert');
-      await core.put(table, value, resolveTtl(schema, table, ttl));
+      await core.put(table, validate ? validate(table, value) : value, resolveTtl(schema, table, ttl));
       onMutate(table);
 
       return value;
@@ -130,14 +163,26 @@ export function buildAdapterOps<S extends AnySchema>(
       tables: readonly K[],
       fn: (tx: TransactionContext<S, K>) => Promise<R>,
       notifyMutation: (table: keyof S) => void,
+      validate: <T extends keyof S>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
     ) => Promise<R>;
     connectExternal?: (notify: (table: keyof S) => void) => (() => void) | void;
+    /** Structured logger. A @vielzeug/logit Logger satisfies DepositLogger directly. */
+    logger?: DepositLogger;
     onMetrics?: (event: MetricsEvent) => void;
     onMutation?: (table: keyof S) => void;
+    /** Per-table record parsers. A @vielzeug/validit Schema satisfies RecordParser directly. */
+    validators?: TableValidators<S>;
   },
 ): { adapter: Adapter<S>; notifyMutation: (table: keyof S) => void } {
-  const observers = createObserverHub<S>((table) => core.getAll(table));
-  const { onMetrics } = options ?? {};
+  const { logger, onMetrics, validators } = options ?? {};
+
+  const observers = createObserverHub<S>(
+    (table) => core.getAll(table),
+    logger
+      ? (err) =>
+          logger.error(err instanceof Error ? err : new Error(String(err)), '[deposit] observer notification failed')
+      : undefined,
+  );
 
   const notifyMutation = (table: keyof S): void => {
     observers.notify(table);
@@ -145,6 +190,15 @@ export function buildAdapterOps<S extends AnySchema>(
   };
 
   const disconnectExternal = options?.connectExternal?.(observers.notify) ?? undefined;
+
+  /* -- Validation helper: no-op when no parser registered for the table -- */
+  const validate = <K extends keyof S>(table: K, value: RecordOf<S, K>): RecordOf<S, K> => {
+    const parser = validators?.[table];
+
+    if (!parser) return value;
+
+    return parser.parseSync(value) as RecordOf<S, K>;
+  };
 
   /* -- Metrics helper -- */
   const timed = <T>(table: string, op: MetricsEvent['operation'], fn: () => Promise<T>): Promise<T> => {
@@ -169,14 +223,19 @@ export function buildAdapterOps<S extends AnySchema>(
 
   /* -- Soft batch: defers notifications until fn resolves -- */
   const softBatch = async <K extends keyof S, R>(
-    tables: readonly K[],
+    /* tables is typed but not structurally enforced at runtime — TypeScript types provide the guarantee */
+    _tables: readonly K[],
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
     notify: (table: keyof S) => void,
+    validateFn: <T extends keyof S>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
   ): Promise<R> => {
-    void tables;
-
     const dirty = new Set<K>();
-    const txOps = buildTxContext<S, K>(schema, core, (t) => dirty.add(t));
+    const txOps = buildTxContext<S, K>(
+      schema,
+      core,
+      (t) => dirty.add(t),
+      validateFn as <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
+    );
     const result = await fn(txOps);
 
     for (const t of dirty) {
@@ -188,20 +247,16 @@ export function buildAdapterOps<S extends AnySchema>(
 
   const batchFn = options?.batch ?? softBatch;
 
+  /* -- Single tx context for delegation (keyof S scope, notifyMutation, validate) -- */
+  const txCtx = buildTxContext<S, keyof S>(schema, core, notifyMutation, validate);
+
   const adapter: Adapter<S> = {
     async batch(tables, fn) {
-      return timed('*', 'batch', () => batchFn(tables, fn, notifyMutation));
-    },
-
-    async clear(table) {
-      return timed(String(table), 'clear', async () => {
-        await core.deleteAll(table);
-        notifyMutation(table);
-      });
+      return timed('*', 'batch', () => batchFn(tables, fn, notifyMutation, validate));
     },
 
     async count(table) {
-      return timed(String(table), 'count', () => core.count(table));
+      return timed(String(table), 'count', () => txCtx.count(table));
     },
 
     async debug() {
@@ -221,20 +276,11 @@ export function buildAdapterOps<S extends AnySchema>(
     },
 
     async delete(table, key) {
-      return timed(String(table), 'delete', async () => {
-        const deleted = await core.delete(table, key);
-
-        if (deleted) notifyMutation(table);
-
-        return deleted;
-      });
+      return timed(String(table), 'delete', () => txCtx.delete(table, key));
     },
 
     async deleteAll(table) {
-      return timed(String(table), 'deleteAll', async () => {
-        await core.deleteAll(table);
-        notifyMutation(table);
-      });
+      return timed(String(table), 'deleteAll', () => txCtx.deleteAll(table));
     },
 
     dispose() {
@@ -244,86 +290,45 @@ export function buildAdapterOps<S extends AnySchema>(
     },
 
     async get(table, key) {
-      return timed(String(table), 'get', () => core.get(table, key));
+      return timed(String(table), 'get', () => txCtx.get(table, key));
     },
 
     async getAll(table) {
-      return timed(String(table), 'getAll', () => core.getAll(table));
+      return timed(String(table), 'getAll', () => txCtx.getAll(table));
     },
 
     async has(table, key) {
-      return timed(String(table), 'has', () => core.has(table, key));
+      return timed(String(table), 'has', () => txCtx.has(table, key));
     },
+
+    iterate: (table) => txCtx.iterate(table),
 
     observe(table, listener, opts) {
       return observers.observe(table, listener, opts);
     },
 
     async put(table, value, ttl) {
-      return timed(String(table), 'put', async () => {
-        await core.put(table, value, resolveTtl(schema, table, ttl));
-        notifyMutation(table);
-      });
+      return timed(String(table), 'put', () => txCtx.put(table, value, ttl));
     },
 
     async putAll(table, values, ttl) {
-      return timed(String(table), 'putAll', async () => {
-        await core.putAll(table, values, resolveTtl(schema, table, ttl));
-
-        if (values.length > 0) notifyMutation(table);
-      });
+      return timed(String(table), 'putAll', () => txCtx.putAll(table, values, ttl));
     },
 
+    /* query uses a timed source so query terminal ops emit 'query' metrics events */
     query(table) {
       return createQueryBuilder({
-        async deleteMany(records) {
-          if (records.length === 0) return 0;
-
-          let deleted = 0;
-
-          for (const record of records) {
-            const key = getRecordKey(schema, table, record);
-
-            if (await core.delete(table, key)) {
-              deleted += 1;
-            }
-          }
-
-          if (deleted > 0) notifyMutation(table);
-
-          return deleted;
-        },
-        source: () => core.getAll(table),
+        deleteMany: makeDeleteMany(core, schema, table, notifyMutation),
+        source: () => timed(String(table), 'query', () => core.getAll(table)),
       });
     },
 
     async update(table, key, changes, ttl) {
-      return timed(String(table), 'update', async () => {
-        const current = await core.get(table, key);
-
-        if (!current) return undefined;
-
-        const merged = { ...current, ...changes } as RecordOf<S, typeof table>;
-
-        verifyKey(schema, table, key, merged, 'update');
-        await core.put(table, merged, resolveTtl(schema, table, ttl));
-        notifyMutation(table);
-
-        return merged;
-      });
+      return timed(String(table), 'update', () => txCtx.update(table, key, changes, ttl));
     },
 
     async upsert(table, key, fn, ttl) {
-      return timed(String(table), 'upsert', async () => {
-        const existing = await core.get(table, key);
-        const value = fn(existing);
-
-        verifyKey(schema, table, key, value, 'upsert');
-        await core.put(table, value, resolveTtl(schema, table, ttl));
-        notifyMutation(table);
-
-        return value;
-      });
+      return timed(String(table), 'upsert', () => txCtx.upsert(table, key, fn, ttl));
     },
   };
 

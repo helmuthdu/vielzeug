@@ -31,12 +31,15 @@ export function decodeStorageTableFromKey(dbName: string, storageKey: string | n
 
 export function createObserverHub<S extends AnySchema>(
   getAll: <K extends keyof S>(table: K) => Promise<RecordOf<S, K>[]>,
+  onError?: (error: unknown) => void,
 ) {
   const observers = new Map<string, Set<ObserverListener<unknown>>>();
   let disposed = false;
 
   const reportObserverError = (error: unknown): void => {
-    if (typeof console !== 'undefined' && typeof console.error === 'function') {
+    if (onError) {
+      onError(error);
+    } else if (typeof console !== 'undefined' && typeof console.error === 'function') {
       console.error('[deposit] observer notification failed', error);
     }
   };
@@ -70,7 +73,7 @@ export function createObserverHub<S extends AnySchema>(
   const observe = <K extends keyof S>(
     table: K,
     listener: (records: RecordOf<S, K>[]) => void,
-    { initialEmit = false }: { initialEmit?: boolean } = {},
+    { initialEmit = true }: { initialEmit?: boolean } = {},
   ): (() => void) => {
     if (disposed) {
       throw new Error('[deposit] observer hub is disposed');

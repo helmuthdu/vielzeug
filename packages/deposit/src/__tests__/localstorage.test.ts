@@ -75,13 +75,9 @@ describe('LocalStorage adapter', () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
     const snapshots: User[][] = [];
-    const stop = db.observe(
-      'users',
-      (rows) => {
-        snapshots.push(rows);
-      },
-      { initialEmit: true },
-    );
+    const stop = db.observe('users', (rows) => {
+      snapshots.push(rows);
+    });
 
     window.localStorage.clear();
     window.dispatchEvent(new StorageEvent('storage', { key: null }));
@@ -90,5 +86,13 @@ describe('LocalStorage adapter', () => {
 
     expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
     expect(snapshots[1]).toEqual([]);
+  });
+
+  test('corrupted entries are removed lazily on read', async () => {
+    // Write an entry with corrupted JSON directly — bypasses the adapter
+    window.localStorage.setItem('LS~users~99', 'not valid json {{{');
+
+    expect(await db.getAll('users')).toEqual([]);
+    expect(window.localStorage.getItem('LS~users~99')).toBeNull();
   });
 });

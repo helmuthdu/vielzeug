@@ -1,3 +1,4 @@
+import type { DepositLogger, TableValidators } from '../plugins';
 import type {
   Adapter,
   AnySchema,
@@ -78,15 +79,17 @@ async function getAllFromStore<T extends Record<string, unknown>>(store: IDBObje
 }
 
 type IndexedDbOptions<S extends AnySchema> = {
+  logger?: DepositLogger;
   migrate?: MigrationFn;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
   schema: S;
+  validators?: TableValidators<S>;
   version: number;
 };
 
 export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): Adapter<S> {
-  const { migrate, name, onMetrics, schema, version } = options;
+  const { logger, migrate, name, onMetrics, schema, validators, version } = options;
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`deposit:${name}`) : undefined;
   let db: IDBDatabase | null = null;
   let connectPromise: Promise<void> | null = null;
@@ -274,6 +277,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     tables: readonly K[],
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
     notifyMutation: (table: keyof S) => void,
+    validateFn: <T extends keyof S>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
   ): Promise<R> => {
     const idb = await requireDb();
     const idbTx = idb.transaction(tables.map(String), 'readwrite');
@@ -317,6 +321,16 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         return getAllFromStore<RecordOf<S, T>>(storeOf(table));
       },
 
+      async has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean> {
+        const raw = await idbReq<unknown>(storeOf(table).get(key as IDBValidKey));
+
+        if (raw == null) return false;
+
+        const parsed = parseStored<RecordOf<S, T>>(raw);
+
+        return parsed ? unwrapStored(parsed) !== undefined : false;
+      },
+
       async put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void> {
         const key = getRecordKey(schema, table, value) as IDBValidKey;
 
@@ -334,7 +348,12 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       },
     };
 
-    const txOps = buildTxContext<S, K>(schema, txCore, (t) => dirtyTables.add(t));
+    const txOps = buildTxContext<S, K>(
+      schema,
+      txCore,
+      (t) => dirtyTables.add(t),
+      validateFn as <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
+    );
     const result = await runIdbTx(idbTx, name, () => fn(txOps));
 
     for (const table of dirtyTables) {
@@ -363,8 +382,10 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         channel.onmessage = null;
       };
     },
+    logger,
     onMetrics,
     onMutation: publish,
+    validators,
   });
 
   return adapter;

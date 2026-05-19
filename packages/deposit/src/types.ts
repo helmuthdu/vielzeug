@@ -1,4 +1,4 @@
-import type { QueryBuilder, ReadQuery } from './query';
+import type { QueryBuilder } from './query';
 
 import { assertTtlMs, type TtlMs } from './ttl';
 
@@ -58,7 +58,6 @@ export type MetricsEvent = {
   duration: number;
   operation:
     | 'batch'
-    | 'clear'
     | 'count'
     | 'delete'
     | 'deleteAll'
@@ -88,18 +87,18 @@ export type DebugInfo<S extends AnySchema> = {
 
 /* -------------------- Transaction context -------------------- */
 
-/** Available inside `batch()` and (for IndexedDB) `transaction()` callbacks. */
+/** Available inside `batch()` callbacks. For IndexedDB, operations run in a real atomic IDB transaction. */
 export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
-  clear<T extends K>(table: T): Promise<void>;
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   deleteAll<T extends K>(table: T): Promise<void>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
-  query<T extends K>(table: T): ReadQuery<RecordOf<S, T>>;
+  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
   update<T extends K>(
     table: T,
     key: KeyOf<S, T>,
@@ -124,8 +123,6 @@ export interface Adapter<S extends AnySchema> {
    * each individual write. For the IndexedDB adapter this is also a true atomic IDB transaction.
    */
   batch<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>): Promise<R>;
-  /** Removes all records from the table. Alias for `deleteAll(table)`. */
-  clear<K extends keyof S>(table: K): Promise<void>;
   /** Returns live (non-expired) record count for a table. */
   count<K extends keyof S>(table: K): Promise<number>;
   /** Returns live record counts and expired-but-not-yet-evicted counts per table. */
@@ -138,6 +135,8 @@ export interface Adapter<S extends AnySchema> {
   get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
   getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
   has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
+  /** Lazily iterate over all live records in a table. Useful for large datasets. */
+  iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
   observe<K extends keyof S>(
     table: K,
     listener: Observer<RecordOf<S, K>>,

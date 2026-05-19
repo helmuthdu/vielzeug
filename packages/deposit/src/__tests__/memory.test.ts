@@ -42,7 +42,7 @@ describe('Memory adapter', () => {
     expect(await db.has('users', 2)).toBe(false);
   });
 
-  test('count returns live records and clear empties table', async () => {
+  test('count returns live records and deleteAll empties table', async () => {
     await db.putAll('users', [
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
@@ -50,9 +50,15 @@ describe('Memory adapter', () => {
 
     expect(await db.count('users')).toBe(2);
 
-    await db.clear('users');
+    await db.deleteAll('users');
 
     expect(await db.count('users')).toBe(0);
+  });
+
+  test('update rejects key mutation attempt', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    await expect(db.update('users', 1, { id: 2 } as Partial<User>)).rejects.toThrow('key');
   });
 
   test('update patches existing records', async () => {
@@ -100,9 +106,13 @@ describe('Memory adapter', () => {
   test('batch defers notifications until completion', async () => {
     const snapshots: User[][] = [];
 
-    db.observe('users', (rows) => {
-      snapshots.push([...rows]);
-    });
+    db.observe(
+      'users',
+      (rows) => {
+        snapshots.push([...rows]);
+      },
+      { initialEmit: false },
+    );
 
     await db.batch(['users'], async (tx) => {
       await tx.put('users', { id: 1, name: 'Alice' });
@@ -172,6 +182,21 @@ describe('Memory adapter', () => {
     expect(await db.has('users', 1)).toBe(false);
   });
 
+  test('observe emits initial snapshot by default', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const snapshots: User[][] = [];
+    const stop = db.observe('users', (rows) => {
+      snapshots.push(rows);
+    });
+
+    await Promise.resolve();
+    stop();
+
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
+  });
+
   test('observe supports initialEmit option', async () => {
     const snapshots: User[][] = [];
     const stop = db.observe(
@@ -195,5 +220,36 @@ describe('Memory adapter', () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
     expect(await other.getAll('users')).toEqual([]);
+  });
+
+  test('listener errors do not block other observers', async () => {
+    const received: User[][] = [];
+
+    db.observe(
+      'users',
+      () => {
+        throw new Error('bad listener');
+      },
+      { initialEmit: false },
+    );
+    db.observe(
+      'users',
+      (rows) => {
+        received.push(rows);
+      },
+      { initialEmit: false },
+    );
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await Promise.resolve();
+
+    expect(received).toHaveLength(1);
+    expect(received[0]).toEqual([{ id: 1, name: 'Alice' }]);
+  });
+
+  test('dispose prevents further observations', async () => {
+    db.dispose();
+
+    expect(() => db.observe('users', () => {})).toThrow('disposed');
   });
 });

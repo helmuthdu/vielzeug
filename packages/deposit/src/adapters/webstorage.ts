@@ -1,3 +1,4 @@
+import type { DepositLogger, TableValidators } from '../plugins';
 import type { Adapter, AnySchema, KeyOf, MetricsEvent, RecordOf, TtlMs } from '../types';
 
 import { buildAdapterOps, type CoreRuntimeOps } from '../adapter-core';
@@ -5,19 +6,23 @@ import { decodeStorageTableFromKey, encodeStorageKey, encodeStorageTablePrefix, 
 import { parseStored, unwrapStored, wrapStored } from '../ttl';
 
 type WebStorageOptions<S extends AnySchema> = {
+  logger?: DepositLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
   schema: S;
+  validators?: TableValidators<S>;
 };
 
 function createWebStorageAdapter<S extends AnySchema>(options: {
   getStorage: () => Storage;
+  logger?: DepositLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
   schema: S;
   storageLabel: string;
+  validators?: TableValidators<S>;
 }): Adapter<S> {
-  const { getStorage, name, onMetrics, schema, storageLabel } = options;
+  const { getStorage, logger, name, onMetrics, schema, storageLabel, validators } = options;
   let storageListener: ((event: StorageEvent) => void) | undefined;
 
   const storage = (): Storage => {
@@ -249,25 +254,30 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       };
     },
     onMetrics,
+    validators,
   }).adapter;
 }
 
 export function createLocalStorage<S extends AnySchema>(options: WebStorageOptions<S>): Adapter<S> {
   return createWebStorageAdapter({
     getStorage: () => (typeof window !== 'undefined' ? window.localStorage : localStorage),
+    logger: options.logger,
     name: options.name,
     onMetrics: options.onMetrics,
     schema: options.schema,
     storageLabel: 'localStorage',
+    validators: options.validators,
   });
 }
 
 export function createSessionStorage<S extends AnySchema>(options: WebStorageOptions<S>): Adapter<S> {
   return createWebStorageAdapter({
     getStorage: () => (typeof window !== 'undefined' ? window.sessionStorage : sessionStorage),
+    logger: options.logger,
     name: options.name,
     onMetrics: options.onMetrics,
     schema: options.schema,
     storageLabel: 'sessionStorage',
+    validators: options.validators,
   });
 }

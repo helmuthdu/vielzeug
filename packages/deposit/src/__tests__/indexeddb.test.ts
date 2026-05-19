@@ -120,14 +120,18 @@ describe('IndexedDB adapter', () => {
   test('observe receives updates after mutations', async () => {
     const snapshots: User[][] = [];
     const done = new Promise<void>((resolve) => {
-      const stop = db.observe('users', (rows) => {
-        snapshots.push(rows);
+      const stop = db.observe(
+        'users',
+        (rows) => {
+          snapshots.push(rows);
 
-        if (snapshots.length === 2) {
-          stop();
-          resolve();
-        }
-      });
+          if (snapshots.length === 2) {
+            stop();
+            resolve();
+          }
+        },
+        { initialEmit: false },
+      );
     });
 
     await db.put('users', { id: 1, name: 'Alice' });
@@ -255,14 +259,10 @@ describe('IndexedDB adapter', () => {
 
     // First, ensure the listener is set up on db2
     await new Promise<void>((resolve) => {
-      const stop = db2.observe(
-        'users',
-        () => {
-          stop();
-          resolve();
-        },
-        { initialEmit: true },
-      );
+      const stop = db2.observe('users', () => {
+        stop();
+        resolve();
+      });
     });
 
     const updated = new Promise<User[]>((resolve) => {
@@ -279,5 +279,12 @@ describe('IndexedDB adapter', () => {
     expect(await updated).toEqual([{ id: 1, name: 'Alice' }]);
 
     db2.dispose();
+  });
+
+  test('operations throw after dispose', async () => {
+    db.dispose();
+
+    await expect(db.get('users', 1)).rejects.toThrow('disposed');
+    await expect(db.put('users', { id: 1, name: 'Alice' })).rejects.toThrow('disposed');
   });
 });

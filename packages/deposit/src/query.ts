@@ -4,7 +4,7 @@ type ComparableFieldKeys<T extends Record<string, unknown>> = {
   [K in keyof T]-?: Extract<NonNullable<T[K]>, number | string> extends never ? never : K;
 }[keyof T];
 
-type QueryContext<T extends Record<string, unknown>> = {
+export type QueryContext<T extends Record<string, unknown>> = {
   deleteMany?: (records: T[]) => Promise<number>;
   source: () => Promise<T[]>;
 };
@@ -28,8 +28,19 @@ export interface ReadQuery<T extends Record<string, unknown>> {
   toArray(): Promise<T[]>;
 }
 
-/** Extends ReadQuery with delete(). Only available on Adapter.query(), not inside transactions. */
+/** Extends ReadQuery with delete(). Available on both Adapter.query() and inside batch() callbacks. */
 export interface QueryBuilder<T extends Record<string, unknown>> extends ReadQuery<T> {
+  between<K extends ComparableFieldKeys<T>>(
+    field: K,
+    lower: Extract<NonNullable<T[K]>, number | string>,
+    upper: Extract<NonNullable<T[K]>, number | string>,
+  ): QueryBuilder<T>;
+  equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
+  filter(fn: Predicate<T>): QueryBuilder<T>;
+  limit(n: number): QueryBuilder<T>;
+  offset(n: number): QueryBuilder<T>;
+  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
+  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T>;
   delete(): Promise<number>;
 }
 
@@ -56,21 +67,20 @@ function assertNonNegativeInteger(value: number, name: string): number {
   return value;
 }
 
-/* -------------------- Single shared builder implementation (no duplication) -------------------- */
+/* -------------------- Factory -------------------- */
 
-function buildQueryOps<T extends Record<string, unknown>, Q>(
+export function createQueryBuilder<T extends Record<string, unknown>>(
   ctx: QueryContext<T>,
-  ops: readonly QueryOp<T>[],
-  rebuild: (ops: readonly QueryOp<T>[]) => Q,
-) {
-  const append = (op: QueryOp<T>): Q => rebuild([...ops, op]);
+  ops: readonly QueryOp<T>[] = [],
+): QueryBuilder<T> {
+  function rebuild(newOps: readonly QueryOp<T>[]): QueryBuilder<T> {
+    return createQueryBuilder(ctx, newOps);
+  }
+
+  const append = (op: QueryOp<T>): QueryBuilder<T> => rebuild([...ops, op]);
 
   return {
-    between<K extends ComparableFieldKeys<T>>(
-      field: K,
-      lower: Extract<NonNullable<T[K]>, number | string>,
-      upper: Extract<NonNullable<T[K]>, number | string>,
-    ): Q {
+    between(field, lower, upper) {
       return append({
         apply: (data) =>
           data.filter((r) => {
@@ -83,26 +93,35 @@ function buildQueryOps<T extends Record<string, unknown>, Q>(
     count(): Promise<number> {
       return applyOps(ctx, ops).then((r) => r.length);
     },
-    equals<K extends keyof T>(field: K, value: T[K]): Q {
+    async delete(): Promise<number> {
+      if (!ctx.deleteMany) {
+        throw new Error('[deposit] query.delete is not available for this adapter context');
+      }
+
+      const records = await applyOps(ctx, ops);
+
+      return ctx.deleteMany(records);
+    },
+    equals(field, value) {
       return append({ apply: (data) => data.filter((r) => r[field] === value) });
     },
-    filter(fn: Predicate<T>): Q {
+    filter(fn) {
       return append({ apply: (data) => data.filter(fn) });
     },
     first(): Promise<T | undefined> {
       return applyOps(ctx, ops).then((r) => r[0]);
     },
-    limit(n: number): Q {
+    limit(n) {
       const safeN = assertNonNegativeInteger(n, 'query.limit');
 
       return append({ apply: (data) => data.slice(0, safeN) });
     },
-    offset(n: number): Q {
+    offset(n) {
       const safeN = assertNonNegativeInteger(n, 'query.offset');
 
       return append({ apply: (data) => data.slice(safeN) });
     },
-    orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): Q {
+    orderBy(field, direction = 'asc') {
       return append({
         apply: (data) => {
           const sign = direction === 'asc' ? 1 : -1;
@@ -118,7 +137,7 @@ function buildQueryOps<T extends Record<string, unknown>, Q>(
         },
       });
     },
-    startsWith<K extends keyof T>(field: K, prefix: string, { ignoreCase = false }: { ignoreCase?: boolean } = {}): Q {
+    startsWith(field, prefix, { ignoreCase = false } = {}) {
       const needle = ignoreCase ? prefix.toLowerCase() : prefix;
 
       return append({
@@ -138,41 +157,4 @@ function buildQueryOps<T extends Record<string, unknown>, Q>(
       return applyOps(ctx, ops);
     },
   };
-}
-
-/* -------------------- Factory functions -------------------- */
-
-export function createQueryBuilder<T extends Record<string, unknown>>(
-  ctx: QueryContext<T>,
-  ops: readonly QueryOp<T>[] = [],
-): QueryBuilder<T> {
-  function rebuild(newOps: readonly QueryOp<T>[]): QueryBuilder<T> {
-    return createQueryBuilder(ctx, newOps);
-  }
-
-  const base = buildQueryOps(ctx, ops, rebuild);
-
-  return {
-    ...base,
-    async delete(): Promise<number> {
-      if (!ctx.deleteMany) {
-        throw new Error('[deposit] query.delete is not available for this adapter context');
-      }
-
-      const records = await applyOps(ctx, ops);
-
-      return ctx.deleteMany(records);
-    },
-  };
-}
-
-export function createReadQuery<T extends Record<string, unknown>>(
-  ctx: Pick<QueryContext<T>, 'source'>,
-  ops: readonly QueryOp<T>[] = [],
-): ReadQuery<T> {
-  function rebuild(newOps: readonly QueryOp<T>[]): ReadQuery<T> {
-    return createReadQuery(ctx, newOps);
-  }
-
-  return buildQueryOps(ctx as QueryContext<T>, ops, rebuild) as ReadQuery<T>;
 }
