@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/routeit
 
-This log was last generated on Mon, 18 May 2026 19:59:57 GMT and should not be manually modified.
+This log was last generated on Tue, 19 May 2026 05:45:13 GMT and should not be manually modified.
+
+## 3.0.5
+Tue, 19 May 2026 05:45:13 GMT
+
+### Patches
+
+- add integration examples for React, Vue, and Svelte
 
 ## 3.0.4
 Mon, 18 May 2026 19:59:57 GMT

@@ -2,6 +2,20 @@
   "name": "@vielzeug/routeit",
   "entries": [
     {
+      "version": "3.0.5",
+      "tag": "@vielzeug/routeit_v3.0.5",
+      "date": "Tue, 19 May 2026 05:45:13 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "add integration examples for React, Vue, and Svelte",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "30a1fce6b6e40293695ea7db64d917489af83762"
+          }
+        ]
+      }
+    },
+    {
       "version": "3.0.4",
       "tag": "@vielzeug/routeit_v3.0.4",
       "date": "Mon, 18 May 2026 19:59:57 GMT",
