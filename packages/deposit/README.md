@@ -4,7 +4,7 @@ package: deposit
 category: storage
 keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session]
 related: [fetchit, logit, toolkit]
-exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table]
+exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl]
 ---
 
 # @vielzeug/deposit
@@ -18,9 +18,9 @@ exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemor
 
 **Package:** `@vielzeug/deposit` &nbsp;·&nbsp; **Category:** Storage
 
-**Key exports:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`
+**Key exports:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`
 
-**When to use:** Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
+**When to use:** Structured, queryable browser storage with TTL, reactivity, and TypeScript types.
 
 **Related:** [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/logit](https://vielzeug.dev/logit/) · [@vielzeug/toolkit](https://vielzeug.dev/toolkit/)
 
@@ -39,7 +39,7 @@ yarn add @vielzeug/deposit
 ## Quick Start
 
 ```ts
-import { createIndexedDB, table } from '@vielzeug/deposit';
+import { createIndexedDB, table, ttl } from '@vielzeug/deposit';
 
 type User = { id: number; name: string; age: number };
 
@@ -53,6 +53,9 @@ await db.putAll('users', [
   { id: 1, name: 'Alice', age: 30 },
   { id: 2, name: 'Bob', age: 25 },
 ]);
+
+// TTL — always use the ttl.* helpers
+await db.put('users', { id: 3, name: 'Carol', age: 28 }, ttl.hours(1));
 
 const first = await db.query('users').between('age', 18, 99).orderBy('name').first();
 const exists = await db.has('users', 1);
