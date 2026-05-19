@@ -23,7 +23,7 @@ const stop = qc.subscribe<User>(['users', userId], (state) => {
   if (state.status === 'success') renderUser(state.data!);
 });
 
-await qc.query({
+await qc.fetch({
   key: ['users', userId],
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: userId }, signal }),
 });
@@ -33,10 +33,10 @@ stop();
 // Retry policy can be set per query call
 const retryingQc = createQuery();
 
-await retryingQc.query({
+await retryingQc.fetch({
   key: ['config'],
   fn: ({ signal }) => api.get('/config', { signal }),
-  attempts: 3,
+  maxAttempts: 3,
   shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```
@@ -44,7 +44,7 @@ await retryingQc.query({
 
 ### Pitfalls
 
-- The `onData` callback fires on every successful response, including background revalidations. Avoid one-time side effects (analytics events, success toasts) inside it without a `hasNotified` guard.
+- The subscription callback fires on every successful response, including background revalidations. Avoid one-time side effects (analytics events, success toasts) inside it without a `hasNotified` guard.
 - Subscribing in a render cycle without returning an unsubscribe function leaks the listener. Always clean up in `useEffect`'s return function or `onUnmounted`.
 - The callback is not debounced. Rapid successive state changes (e.g., polling + manual refresh) fire the callback for each — guard with a ref if only the latest value matters.
 

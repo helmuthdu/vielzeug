@@ -18,13 +18,13 @@ const api = createApi({ baseUrl: 'https://api.example.com' });
 const qc = createQuery({ staleTime: 5_000 });
 
 // READ — cached
-const users = await qc.query({
+const users = await qc.fetch({
   key: ['users'],
   fn: ({ signal }) => api.get<User[]>('/users', { signal }),
 });
 
 // READ one
-const user = await qc.query({
+const user = await qc.fetch({
   key: ['users', 1],
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
 });
@@ -60,7 +60,7 @@ qc.invalidate(['users']);
 ### Pitfalls
 
 - Query keys must be stable across renders. Building them with `Date.now()` or random values bypasses the cache and triggers a fresh fetch on every call.
-- `mutation.run()` does not automatically invalidate related queries. Call `query.invalidate()` or `query.refresh()` after a successful mutation to reflect the server change.
+- `mutation.mutate()` does not automatically invalidate related queries. Call `qc.invalidate()` after a successful mutation to reflect the server change.
 - `DELETE` responses often return 204 with no body. Attempting to parse an empty body as JSON throws. Handle the no-content case explicitly before parsing.
 
 ### Related
