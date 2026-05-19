@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/routeit",
+      "comment": "add integration examples for React, Vue, and Svelte",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/routeit"
+}

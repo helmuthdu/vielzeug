@@ -8,9 +8,15 @@ export type RouteMatcher = {
 
 /** Static per-node definition stored on a compiled RouteRecord (root -> leaf). */
 export type RouteBranchDef = {
+  component?: unknown;
   dataFn?: DataFn;
   handler?: RouteHandler;
-  lazy?: () => Promise<Pick<{ data?: DataFn; handler?: RouteHandler; meta?: unknown }, 'data' | 'handler' | 'meta'>>;
+  lazy?: () => Promise<
+    Pick<
+      { component?: unknown; data?: DataFn; handler?: RouteHandler; meta?: unknown },
+      'component' | 'data' | 'handler' | 'meta'
+    >
+  >;
   meta?: unknown;
   name: string;
 };

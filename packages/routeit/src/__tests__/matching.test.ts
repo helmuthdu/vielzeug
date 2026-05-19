@@ -172,6 +172,19 @@ describe('route table', () => {
     router.dispose();
   });
 
+  it('stores route component on the matched branch node', async () => {
+    const pageComponent = Symbol('page-component');
+    const router = createRouter({
+      history: createMemoryHistory('/page'),
+      routes: { page: { component: pageComponent, path: '/page' } },
+    });
+
+    await settle();
+
+    expect(router.state.matches.at(-1)?.component).toBe(pageComponent);
+    router.dispose();
+  });
+
   it('uses wildcard routes as not-found fallbacks', async () => {
     const fallback = vi.fn();
     const router = createRouter({

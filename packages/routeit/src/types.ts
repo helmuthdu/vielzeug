@@ -16,7 +16,11 @@ export type PathParams<T extends string> = [ParseParams<T>] extends [never]
 /** -------------------- Core Types -------------------- **/
 
 export type RouteParams = Record<string, string>;
+/** Raw URL query object parsed from the location/search string. */
 export type QueryParams = Record<string, string | string[]>;
+/** Query object after optional route-level coercion (e.g. numbers/booleans). */
+export type ResolvedQueryValue = boolean | number | string;
+export type ResolvedQueryParams = Record<string, ResolvedQueryValue | ResolvedQueryValue[]>;
 export type MaybePromise<T> = T | Promise<T>;
 export type NavigationStatus = 'idle' | 'loading' | 'error';
 export type IsActiveOptions = {
@@ -31,7 +35,7 @@ export type RouterErrorContext = {
 };
 
 /** Return value from a `coerceSearch` function. Return a normalized/coerced search object. */
-export type CoerceSearchFn<Q extends QueryParams = QueryParams> = (raw: QueryParams) => Q;
+export type CoerceSearchFn<Q extends ResolvedQueryParams = ResolvedQueryParams> = (raw: ResolvedQueryParams) => Q;
 
 /** Blocker callback for `beforeLeave`. Return `true` to allow the navigation, `false` to cancel it. */
 export type BeforeLeaveBlocker = () => MaybePromise<boolean>;
@@ -56,7 +60,7 @@ export type UntypedNamedNavigationTarget = {
   hash?: string;
   name: string;
   params?: RouteParams;
-  query?: QueryParams;
+  query?: ResolvedQueryParams;
 };
 
 export type NavigationTarget = UntypedNamedNavigationTarget | RawNavigationTarget;
@@ -77,7 +81,7 @@ export type RouteContext<Params extends RouteParams = RouteParams, TRoutes exten
   ) => Promise<void>;
   readonly params: Params;
   readonly pathname: string;
-  readonly query: QueryParams;
+  readonly query: ResolvedQueryParams;
 };
 
 /**
@@ -114,6 +118,8 @@ export type Middleware<TRoutes extends RouteTable = RouteTable> = (
 type RouteCommon = {
   /** Nested child routes. Keys become part of the compound route name (e.g. `dashboard.settings`). */
   children?: RouteChildren;
+  /** Optional view payload for framework-level RouterView rendering. */
+  component?: unknown;
   meta?: unknown;
   /** Use `middleware` for auth guards, analytics, and error boundaries. */
   middleware?: Middleware[];
@@ -140,8 +146,8 @@ type ContentRouteDefinition<Path extends string = string> = RouteCommon &
     /** Data loader. Runs after middleware; result is available as `ctx.data` in the handler. */
     data?: DataFn<PathParams<Path>>;
     handler?: RouteHandler<PathParams<Path>>;
-    /** Lazy-load the route module. The resolved export replaces handler/data/meta. */
-    lazy?: () => Promise<Pick<ContentRouteDefinition<Path>, 'data' | 'handler' | 'meta'>>;
+    /** Lazy-load the route module. The resolved export replaces handler/data/component/meta. */
+    lazy?: () => Promise<Pick<ContentRouteDefinition<Path>, 'component' | 'data' | 'handler' | 'meta'>>;
     redirect?: never;
   };
 
@@ -210,7 +216,7 @@ export type NamedNavigationTarget<TRoutes extends RouteTable> = {
     hash?: string;
     name: Name;
     params?: PathParams<RoutePathByName<TRoutes, Name>>;
-    query?: QueryParams;
+    query?: ResolvedQueryParams;
   };
 }[RouteName<TRoutes>];
 
@@ -232,6 +238,8 @@ export interface HistoryDriver {
 
 /** A single node in the matched route branch (root → leaf). */
 export type RouteMatch = {
+  /** Optional view payload copied from route `component` or lazy module output. */
+  readonly component: unknown;
   /** Result of the route's `data()` function, or `undefined` if none was defined. */
   readonly data: unknown;
   readonly meta: unknown;
@@ -248,7 +256,7 @@ export type RouteLocation = {
   /** State object stored on the history entry (mirrors `history.state`). */
   readonly historyState: unknown;
   readonly pathname: string;
-  readonly query: QueryParams;
+  readonly query: ResolvedQueryParams;
 };
 
 export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {

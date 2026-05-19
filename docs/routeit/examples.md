@@ -8,6 +8,9 @@ description: Practical examples and recipes for routeit.
 ## Examples
 
 - [Route Table Basics](./examples/route-table-basics.md)
+- [React Integration](./examples/react-integration.md)
+- [Vue Integration](./examples/vue-integration.md)
+- [Svelte Integration](./examples/svelte-integration.md)
 - [Page Titles From Meta](./examples/page-titles-from-meta.md)
 - [Not Found And Error Boundary](./examples/not-found-and-error-boundary.md)
 - [Auth And Guards](./examples/auth-and-guards.md)

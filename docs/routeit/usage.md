@@ -70,9 +70,10 @@ Each route can provide these fields:
 | `path`         | Match pattern                                                              |
 | `children`     | Nested child routes                                                        |
 | `index`        | Default child route that inherits the parent path                          |
+| `component`    | Optional view payload exposed on `router.state.matches.at(-1)?.component`  |
 | `data`         | Abortable route data function that runs after middleware                   |
 | `handler`      | Final route handler                                                        |
-| `lazy`         | Lazy-load the module. Called once; result fills `handler`, `data`, `meta`. |
+| `lazy`         | Lazy-load the module. Called once; result fills `handler`, `data`, `component`, `meta`. |
 | `meta`         | Static data exposed on `router.state.matches.at(-1)?.meta`                 |
 | `middleware`   | Route-specific middleware                                                  |
 | `redirect`     | Declarative permanent redirect. Resolved before middleware runs.           |
@@ -196,11 +197,11 @@ const routes = {
 };
 ```
 
-The resolved object may contain `handler`, `data`, and/or `meta`. Any present field overwrites the static definition.
+The resolved object may contain `handler`, `data`, `component`, and/or `meta`. Any present field overwrites the static definition.
 
 ### Search Param Validation
 
-Validate and coerce `ctx.query` per route. Throw to leave the raw query unchanged.
+Validate and coerce `ctx.query` per route. Throw to leave the parsed query unchanged.
 
 ```ts
 const routes = {
@@ -410,100 +411,23 @@ Remove listeners, clear subscribers, and prevent future router usage.
 
 ## Framework Integration
 
-::: code-group
+Routeit stays framework-agnostic. For complete, maintained integration patterns, use the dedicated examples:
 
-```tsx [React]
-import { useSyncExternalStore } from 'react';
-import { createRouter, createBrowserHistory } from '@vielzeug/routeit';
+- [React Integration](./examples/react-integration.md)
+- [Vue Integration](./examples/vue-integration.md)
+- [Svelte Integration](./examples/svelte-integration.md)
 
-const router = createRouter({
-  history: createBrowserHistory(),
-  routes: {
-    home: { path: '/', handler: () => null },
-    about: { path: '/about', handler: () => null },
-  },
-});
+The current recommended pattern is:
 
-function useRouterState() {
-  return useSyncExternalStore(
-    (notify) => router.subscribe(() => notify()),
-    () => router.state,
-  );
-}
-
-function App() {
-  const { location, matches } = useRouterState();
-  const current = matches.at(-1);
-  return (
-    <div>
-      <nav>
-        <a href="/" onClick={(e) => { e.preventDefault(); router.navigate({ name: 'home' }); }}>Home</a>
-        <a href="/about" onClick={(e) => { e.preventDefault(); router.navigate({ name: 'about' }); }}>About</a>
-      </nav>
-      <main>{current?.route.name}</main>
-    </div>
-  );
-}
-```
-
-```ts [Vue 3]
-import { shallowRef, onScopeDispose } from 'vue';
-import { createRouter, createBrowserHistory } from '@vielzeug/routeit';
-
-const router = createRouter({
-  history: createBrowserHistory(),
-  routes: {
-    home: { path: '/', handler: () => null },
-    about: { path: '/about', handler: () => null },
-  },
-});
-
-function useRouter() {
-  const state = shallowRef(router.state);
-  const stop = router.subscribe(() => { state.value = router.state; });
-  onScopeDispose(() => stop());
-  return { state, navigate: router.navigate.bind(router) };
-}
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { onDestroy } from 'svelte';
-  import { createRouter, createBrowserHistory } from '@vielzeug/routeit';
-
-  const router = createRouter({
-    history: createBrowserHistory(),
-    routes: {
-      home: { path: '/', handler: () => null },
-      about: { path: '/about', handler: () => null },
-    },
-  });
-
-  let state = router.state;
-  const stop = router.subscribe(() => { state = router.state; });
-  onDestroy(() => { stop(); router.dispose(); });
-</script>
-
-<nav>
-  <a href="/" on:click|preventDefault={() => router.navigate({ name: 'home' })}>Home</a>
-</nav>
-<main>{state.matches.at(-1)?.route.name}</main>
-```
-
-:::
-
-
-### Pitfalls
-
-- **React:** Returning `router.currentRoute()` directly as the snapshot function works correctly because Routeit always returns the same object reference for the current route — but ensure the function is stable (defined outside the component).
-- **Vue 3:** Use `shallowRef` not `ref` for the route object — deep reactivity on a route object is unnecessary and adds overhead.
-- **Svelte:** Not calling `unsub()` in `onDestroy` causes the router to retain a reference to a destroyed component's callback, leading to errors when the route changes after unmount.
+- **React:** one `useRouter()` hook that returns `{ state, navigate, url, isActive }`
+- **Vue:** one `useRouter()` composable with the same shape
+- **Svelte:** use the `router` store directly as `$router`
 
 ## Working with Other Vielzeug Libraries
 
 ### With Permit
 
-Use permit inside Routeit middleware to guard protected routes.
+Use Permit inside Routeit middleware to guard protected routes.
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
@@ -511,46 +435,44 @@ import { createPermit } from '@vielzeug/permit';
 
 type User = { id: string; roles: string[] };
 
-const permit = createPermit([
-  { role: 'admin', resource: 'settings', action: 'view', effect: 'allow' },
-]);
+const permit = createPermit([{ role: 'admin', resource: 'settings', action: 'view', effect: 'allow' }]);
 
 const router = createRouter({
+  middleware: [
+    (ctx, next) => {
+      const user: User = getSessionUser();
+      if (!permit.can(user, 'settings', 'view')) return ctx.navigate({ path: '/login' }, { replace: true });
+      return next();
+    },
+  ],
   routes: {
-    settings: { path: '/settings', handler: () => renderSettings() },
+    settings: { handler: () => renderSettings(), path: '/settings' },
   },
-  middleware: [(ctx, next) => {
-    const user: User = getSessionUser();
-    if (!permit.can(user, 'settings', 'view')) {
-      return ctx.navigate({ path: '/login', replace: true });
-    }
-    return next();
-  }],
 });
 ```
 
 ### With Stateit
 
-Sync router state to a Stateit signal for reactive UI outside the router's subscription.
+Sync router state to a Stateit signal for reactive UI outside route handlers.
 
 ```ts
 import { createRouter } from '@vielzeug/routeit';
 import { signal } from '@vielzeug/stateit';
 
 const router = createRouter({ /* ... */ });
-const currentRoute = signal(router.state.matches.at(-1)?.route.name ?? '');
+const currentRoute = signal(router.state.matches.at(-1)?.name ?? '');
 
 router.subscribe(() => {
-  currentRoute.value = router.state.matches.at(-1)?.route.name ?? '';
+  currentRoute.value = router.state.matches.at(-1)?.name ?? '';
 });
 ```
 
 ## Best Practices
 
-- Define the route table once at app startup and import it where needed — avoid building route tables at runtime.
-- Use named navigation (`router.navigate({ name: 'settings' })`) over raw paths to detect broken links at compile time.
-- Put auth and permission guards in middleware, not in route handlers.
-- Use `data()` loaders for per-route data fetching with AbortSignal — avoid fetching inside handlers.
-- Call `router.dispose()` when unmounting the app (tests, SSR responses) to prevent background listeners.
-- Use `createMemoryHistory()` for server-side rendering and tests; never reference `window.history` directly.
-- Use `router.preload()` on hover for navigation that is likely to be followed immediately.
+- Define the route table once at app startup and import it where needed.
+- Prefer named navigation (`router.navigate({ name: 'settings' })`) over raw paths.
+- Put auth and permission checks in middleware, not in route handlers.
+- Use `data()` loaders for route data and honor the provided `AbortSignal`.
+- Call `router.dispose()` when tearing down apps/tests to release listeners.
+- Use `createMemoryHistory()` for tests and non-browser runtimes; avoid touching `window.history` directly.
+- Use `router.preload()` on hover for routes likely to be visited next.

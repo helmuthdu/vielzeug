@@ -17,13 +17,14 @@ description: Complete API reference for the declarative Routeit router.
 | -------------------------------------- | ------------------------------------------------ |
 | `createRouter({ routes, ...options })` | Create a router from a route table               |
 | `createBrowserHistory()`               | Create the default browser history driver        |
-| `createMemoryHistory(initialPath?)`    | Create an in-memory history driver (SSR / tests) |
+| `createMemoryHistory(initialPath?)`    | Create an in-memory history driver (tests / non-browser) |
 | `redirectTo(target, options?)`         | Build redirect middleware for guard flows        |
 | `router.navigate({ name, ... })`       | Navigate by route name                           |
 | `router.navigate({ path })`            | Navigate by raw path target                      |
 | `router.url(name, params?, query?)`    | Build a URL for a named route                    |
 | `router.preload(name, params?)`        | Eagerly run data loaders without navigating      |
 | `router.beforeLeave(blocker)`          | Register a leave guard                           |
+| `router.toStore()`                     | React-style external store bridge                |
 
 ## `createRouter(options)`
 
@@ -115,13 +116,14 @@ Each route definition supports these fields:
 | `path`         | `string`                                    | Route pattern. Supports static paths, `:param`, `:param*`, and `*`. Child paths are relative unless they start with `/`.  |
 | `children`     | `Record<string, RouteDefinition>`           | Nested child routes. Child names are appended to the parent route name.                                                   |
 | `index`        | `boolean`                                   | Default child route that inherits the parent path.                                                                        |
+| `component`    | `unknown`                                   | Optional framework view payload exposed on `router.state.matches.at(-1)?.component`.                                      |
 | `data`         | `DataFn`                                    | Optional route data function. Runs after middleware and before the handler.                                               |
 | `handler`      | `RouteHandler`                              | Optional terminal handler                                                                                                 |
-| `lazy`         | `() => Promise<{ handler?, data?, meta? }>` | Lazy-load the route module. Called once; result replaces `handler`, `data`, and `meta` in place.                          |
+| `lazy`         | `() => Promise<{ handler?, data?, component?, meta? }>` | Lazy-load the route module. Called once; result replaces `handler`, `data`, `component`, and `meta` in place.             |
 | `middleware`   | `Middleware[]`                              | Optional route-specific middleware                                                                                        |
 | `meta`         | `unknown`                                   | Static metadata exposed on `router.state.matches.at(-1)?.meta`                                                            |
 | `redirect`     | `NavigationTarget`                          | Declarative redirect. Resolved before middleware runs; uses `replaceState` so the original URL is never added to history. |
-| `coerceSearch` | `(raw: QueryParams) => QueryParams`         | Coerce search params. Return value replaces `ctx.query`. Throwing leaves the raw query unchanged.                         |
+| `coerceSearch` | `(raw: ResolvedQueryParams) => ResolvedQueryParams` | Coerce search params. Return value replaces `ctx.query`. Throwing leaves the parsed query unchanged.                     |
 
 ## `createBrowserHistory()`
 
@@ -144,14 +146,14 @@ const router = createRouter({
   routes,
 });
 
-// SSR
+// Controlled non-browser runtime
 const router = createRouter({
-  history: createMemoryHistory(request.url),
+  history: createMemoryHistory('/request-path'),
   routes,
 });
 ```
 
-Create an in-memory `HistoryDriver`. No browser globals required — suitable for SSR, unit tests, and non-browser runtimes (Electron, Capacitor). The optional `initialPath` defaults to `'/'`.
+Create an in-memory `HistoryDriver`. No browser history globals required — suitable for unit tests and controlled non-browser runtimes. The optional `initialPath` defaults to `'/'`.
 
 ## `Router`
 
@@ -303,6 +305,19 @@ The listener runs immediately with the current state, then after each successful
 
 **Returns:** `() => void`
 
+#### `router.toStore()`
+
+```ts
+const { subscribe, getSnapshot } = router.toStore();
+```
+
+Returns an external-store bridge for React's `useSyncExternalStore`:
+
+- `getSnapshot()` returns `router.state`
+- `subscribe(onStoreChange)` notifies on subsequent state changes (no immediate first-call emission)
+
+**Returns:** `{ getSnapshot: () => RouteState; subscribe: (onStoreChange: () => void) => () => void }`
+
 ## Core Types
 
 ### `RouteContext<Params, TRoutes>`
@@ -321,7 +336,7 @@ type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends Rout
   ) => Promise<void>;
   readonly params: Params;
   readonly pathname: string;
-  readonly query: QueryParams;
+  readonly query: ResolvedQueryParams;
 };
 ```
 
@@ -376,7 +391,7 @@ type UntypedNamedNavigationTarget = {
   hash?: string;
   name: string;
   params?: RouteParams;
-  query?: QueryParams;
+  query?: ResolvedQueryParams;
 };
 ```
 
@@ -391,7 +406,7 @@ type NavigationTarget =
       hash?: string;
       name: string;
       params?: RouteParams;
-      query?: QueryParams;
+      query?: ResolvedQueryParams;
     };
 ```
 
@@ -422,7 +437,7 @@ type RouteLocation = {
   /** State stored on the history entry that triggered this navigation. */
   readonly historyState: unknown;
   readonly pathname: string;
-  readonly query: QueryParams;
+  readonly query: ResolvedQueryParams;
 };
 ```
 
@@ -430,6 +445,7 @@ type RouteLocation = {
 
 ```ts
 type RouteMatch = {
+  readonly component: unknown;
   readonly data: unknown;
   readonly meta: unknown;
   readonly name: string;
@@ -454,6 +470,23 @@ type FileParams = PathParams<'/files/:rest*'>;
 // => { readonly rest: string }
 ```
 
+### `QueryParams`
+
+```ts
+type QueryParams = Record<string, string | string[]>;
+```
+
+Represents parsed URL query values before route-level coercion.
+
+### `ResolvedQueryParams`
+
+```ts
+type ResolvedQueryValue = string | number | boolean;
+type ResolvedQueryParams = Record<string, ResolvedQueryValue | ResolvedQueryValue[]>;
+```
+
+Represents the query object after optional `coerceSearch` normalization.
+
 ## Pattern Rules
 
 | Pattern                        | Example             | Meaning                                     |
@@ -472,4 +505,4 @@ type FileParams = PathParams<'/files/:rest*'>;
 - Not-found handling is just another route, typically `path: '*'`.
 - Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.state.error`.
 - Declarative `redirect` on a route definition is distinct from the `redirectTo()` middleware helper. The former is for permanent alias redirects; the latter for conditional guards.
-- `lazy` factories are called at most once per `RouteRecord`. The loaded handler/data/meta are stored directly on the branch def.
+- `lazy` factories are called at most once per `RouteRecord`. The loaded handler/data/component/meta are stored directly on the branch def.

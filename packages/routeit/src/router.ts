@@ -86,6 +86,7 @@ function buildMatchBranch(
 ): RouteMatchBranch {
   return branchDefs.map(
     (def, i): RouteMatch => ({
+      component: def.component,
       data: dataResults[i],
       meta: def.meta,
       name: def.name,
@@ -198,6 +199,7 @@ function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoute
     const branchDefs: RouteBranchDef[] = [
       ...ancestorBranchDefs,
       {
+        component: route.component,
         dataFn: route.data,
         handler: route.handler,
         lazy: route.lazy,
@@ -480,6 +482,8 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
         if (mod.handler !== undefined) def.handler = mod.handler;
 
         if (mod.data !== undefined) def.dataFn = mod.data;
+
+        if (mod.component !== undefined) def.component = mod.component;
 
         if (mod.meta !== undefined) def.meta = mod.meta;
       }
@@ -882,6 +886,34 @@ export class Router<TRoutes extends RouteTable = RouteTable> {
 
     return () => {
       this.#listeners.delete(listener);
+    };
+  }
+
+  /**
+   * Returns `{ subscribe, getSnapshot }` for React's `useSyncExternalStore`.
+   *
+   * Unlike `router.subscribe`, the returned `subscribe` only sends change notifications.
+   * React reads the initial value from `getSnapshot`.
+   */
+  toStore(): {
+    getSnapshot: () => RouteState;
+    subscribe: (onStoreChange: () => void) => Unsubscribe;
+  } {
+    return {
+      getSnapshot: () => this.state,
+      subscribe: (onStoreChange) => {
+        let isInitialCall = true;
+
+        return this.subscribe(() => {
+          if (isInitialCall) {
+            isInitialCall = false;
+
+            return;
+          }
+
+          onStoreChange();
+        });
+      },
     };
   }
 

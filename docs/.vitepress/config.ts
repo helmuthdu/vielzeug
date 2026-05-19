@@ -1028,6 +1028,9 @@ export default defineConfig({
         {
           items: [
             { link: '/routeit/examples/route-table-basics', text: 'Route Table Basics' },
+            { link: '/routeit/examples/react-integration', text: 'React Integration' },
+            { link: '/routeit/examples/vue-integration', text: 'Vue Integration' },
+            { link: '/routeit/examples/svelte-integration', text: 'Svelte Integration' },
             { link: '/routeit/examples/auth-and-guards', text: 'Auth and Guards' },
             { link: '/routeit/examples/not-found-and-error-boundary', text: 'Not Found and Error Boundary' },
             { link: '/routeit/examples/base-path-deployment', text: 'Base Path Deployment' },
