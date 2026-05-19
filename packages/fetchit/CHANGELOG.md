@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/fetchit
 
-This log was last generated on Mon, 18 May 2026 19:59:57 GMT and should not be manually modified.
+This log was last generated on Tue, 19 May 2026 15:15:34 GMT and should not be manually modified.
+
+## 3.1.0
+Tue, 19 May 2026 15:15:34 GMT
+
+### Minor changes
+
+- Stream request support on fetchit
 
 ## 3.0.4
 Mon, 18 May 2026 19:59:57 GMT

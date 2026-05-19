@@ -2,6 +2,20 @@
   "name": "@vielzeug/fetchit",
   "entries": [
     {
+      "version": "3.1.0",
+      "tag": "@vielzeug/fetchit_v3.1.0",
+      "date": "Tue, 19 May 2026 15:15:34 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Stream request support on fetchit",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "036fa9aa411710025e7b6ee2c4bc3c9ed76a7533"
+          }
+        ]
+      }
+    },
+    {
       "version": "3.0.4",
       "tag": "@vielzeug/fetchit_v3.0.4",
       "date": "Mon, 18 May 2026 19:59:57 GMT",
