@@ -52,8 +52,24 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       return getTableStore(tables, String(table)).delete(String(key));
     },
 
-    async deleteAll<K extends keyof S>(table: K): Promise<void> {
-      getTableStore(tables, String(table)).clear();
+    async deleteAll<K extends keyof S>(table: K): Promise<number> {
+      const store = getTableStore(tables, String(table));
+      const count = store.size;
+
+      store.clear();
+
+      return count;
+    },
+
+    async deleteByKeys<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
+      const store = getTableStore(tables, String(table));
+      let deleted = 0;
+
+      for (const key of keys) {
+        if (store.delete(String(key))) deleted += 1;
+      }
+
+      return deleted;
     },
 
     async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {

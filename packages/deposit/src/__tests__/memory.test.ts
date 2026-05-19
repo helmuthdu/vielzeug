@@ -1,4 +1,4 @@
-import { createMemory, table, type Adapter, type MetricsEvent } from '../index';
+import { createMemory, table, ttl, type Adapter, type MetricsEvent } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -141,7 +141,7 @@ describe('Memory adapter', () => {
 
   test('debug returns live and expired counts', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
-    await db.put('users', { id: 2, name: 'Bob' }, 1);
+    await db.put('users', { id: 2, name: 'Bob' }, ttl.ms(1));
 
     await delay(5);
 
@@ -153,7 +153,7 @@ describe('Memory adapter', () => {
   });
 
   test('schema defaultTtl is applied automatically', async () => {
-    const ttlSchema = { sessions: table<{ token: string }>('token').ttl(1) };
+    const ttlSchema = { sessions: table<{ token: string }>('token').ttl(ttl.ms(1)) };
     const db2 = createMemory({ schema: ttlSchema });
 
     await db2.put('sessions', { token: 'abc' }); // uses defaultTtl
@@ -174,8 +174,54 @@ describe('Memory adapter', () => {
     expect(events.some((e) => e.operation === 'get' && e.table === 'users')).toBe(true);
   });
 
+  test('onMetrics emits iterate event after full iteration', async () => {
+    const events: MetricsEvent[] = [];
+    const db2 = createMemory({ onMetrics: (e) => events.push(e), schema: userSchema });
+
+    await db2.put('users', { id: 1, name: 'Alice' });
+    await db2.put('users', { id: 2, name: 'Bob' });
+
+    const results: User[] = [];
+
+    for await (const r of db2.iterate('users')) {
+      results.push(r);
+    }
+
+    expect(results).toHaveLength(2);
+    expect(events.some((e) => e.operation === 'iterate' && e.table === 'users')).toBe(true);
+  });
+
+  test('onMetrics emits query and queryDelete events for query().delete()', async () => {
+    const events: MetricsEvent[] = [];
+    const db2 = createMemory({ onMetrics: (e) => events.push(e), schema: userSchema });
+
+    await db2.put('users', { id: 1, name: 'Alice' });
+    await db2.put('users', { id: 2, name: 'Bob' });
+
+    const deleted = await db2
+      .query('users')
+      .filter((u) => u.id === 1)
+      .delete();
+
+    expect(deleted).toBe(1);
+    expect(events.some((e) => e.operation === 'query' && e.table === 'users')).toBe(true);
+    expect(events.some((e) => e.operation === 'queryDelete' && e.table === 'users')).toBe(true);
+  });
+
+  test('deleteAll on empty table does not trigger observers', async () => {
+    const snapshots: User[][] = [];
+    const stop = db.observe('users', (rows) => snapshots.push(rows), { initialEmit: false });
+
+    await db.deleteAll('users'); // table is already empty
+
+    await Promise.resolve();
+    stop();
+
+    expect(snapshots).toHaveLength(0);
+  });
+
   test('ttl expiration removes entries lazily', async () => {
-    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
     await delay(5);
 
     expect(await db.get('users', 1)).toBeUndefined();

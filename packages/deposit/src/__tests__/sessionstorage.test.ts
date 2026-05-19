@@ -1,4 +1,4 @@
-import { createSessionStorage, table, type Adapter } from '../index';
+import { createSessionStorage, table, ttl, type Adapter } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -50,7 +50,7 @@ describe('SessionStorage adapter', () => {
   });
 
   test('ttl expiration removes records lazily', async () => {
-    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
     await delay(5);
 
     expect(await db.get('users', 1)).toBeUndefined();

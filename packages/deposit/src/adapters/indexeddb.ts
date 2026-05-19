@@ -207,8 +207,33 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       });
     },
 
-    async deleteAll<K extends keyof S>(table: K): Promise<void> {
-      await withStore(table, 'readwrite', (store) => idbReq(store.clear()).then(() => undefined));
+    async deleteAll<K extends keyof S>(table: K): Promise<number> {
+      return withStore(table, 'readwrite', async (store) => {
+        const count = await idbReq(store.count());
+
+        if (count > 0) await idbReq(store.clear());
+
+        return count;
+      });
+    },
+
+    async deleteByKeys<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
+      if (keys.length === 0) return 0;
+
+      return withStore(table, 'readwrite', async (store) => {
+        let deleted = 0;
+
+        for (const key of keys) {
+          const raw = await idbReq<unknown>(store.get(key as IDBValidKey));
+
+          if (raw != null) {
+            await idbReq(store.delete(key as IDBValidKey));
+            deleted += 1;
+          }
+        }
+
+        return deleted;
+      });
     },
 
     dispose() {
@@ -301,8 +326,27 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         return true;
       },
 
-      async deleteAll<T extends K>(table: T): Promise<void> {
-        await idbReq(storeOf(table).clear());
+      async deleteAll<T extends K>(table: T): Promise<number> {
+        const count = await idbReq(storeOf(table).count());
+
+        if (count > 0) await idbReq(storeOf(table).clear());
+
+        return count;
+      },
+
+      async deleteByKeys<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number> {
+        let deleted = 0;
+
+        for (const key of keys) {
+          const raw = await idbReq<unknown>(storeOf(table).get(key as IDBValidKey));
+
+          if (raw != null) {
+            await idbReq(storeOf(table).delete(key as IDBValidKey));
+            deleted += 1;
+          }
+        }
+
+        return deleted;
       },
 
       async get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined> {

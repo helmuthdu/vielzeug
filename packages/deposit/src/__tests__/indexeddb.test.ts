@@ -1,4 +1,4 @@
-import { createIndexedDB, table, type Adapter, type MetricsEvent } from '../index';
+import { createIndexedDB, table, ttl, type Adapter, type MetricsEvent } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 type Post = { id: number; title: string; userId: number };
@@ -102,7 +102,7 @@ describe('IndexedDB adapter', () => {
   });
 
   test('ttl expiration is respected', async () => {
-    await db.put('users', { id: 1, name: 'Alice' }, 1);
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
     await delay(5);
 
     expect(await db.get('users', 1)).toBeUndefined();
@@ -212,7 +212,7 @@ describe('IndexedDB adapter', () => {
 
   test('debug returns live and expired counts', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
-    await db.put('users', { id: 2, name: 'Bob' }, 1); // expires immediately
+    await db.put('users', { id: 2, name: 'Bob' }, ttl.ms(1)); // expires immediately
 
     await delay(5);
 
@@ -227,7 +227,7 @@ describe('IndexedDB adapter', () => {
   });
 
   test('schema defaultTtl is applied to put/putAll', async () => {
-    const ttlSchema = { sessions: table<{ token: string }>('token').ttl(1) };
+    const ttlSchema = { sessions: table<{ token: string }>('token').ttl(ttl.ms(1)) };
     const db2 = createIndexedDB({ name: 'TTL', schema: ttlSchema, version: 1 });
 
     await db2.deleteAll('sessions');

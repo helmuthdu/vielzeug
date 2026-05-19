@@ -9,7 +9,10 @@ import { createQueryBuilder, type QueryContext } from './query';
 export type CoreStorageOps<S extends AnySchema, K extends keyof S = keyof S> = {
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  deleteAll<T extends K>(table: T): Promise<void>;
+  /** Clear all records. Returns the physical count of records that were present before clearing. */
+  deleteAll<T extends K>(table: T): Promise<number>;
+  /** Delete multiple records by key in a single operation. Returns the number physically removed. */
+  deleteByKeys<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
@@ -50,7 +53,7 @@ function verifyKey<S extends AnySchema, K extends keyof S>(
 /* -------------------- Shared deleteMany builder (used in both tx and adapter query) -------------------- */
 
 function makeDeleteMany<S extends AnySchema, K extends keyof S>(
-  core: Pick<CoreStorageOps<S, K>, 'delete'>,
+  core: Pick<CoreStorageOps<S, K>, 'deleteByKeys'>,
   schema: S,
   table: K,
   onMutate: (table: K) => void,
@@ -58,13 +61,8 @@ function makeDeleteMany<S extends AnySchema, K extends keyof S>(
   return async (records) => {
     if (records.length === 0) return 0;
 
-    let deleted = 0;
-
-    for (const record of records) {
-      const key = getRecordKey(schema, table, record);
-
-      if (await core.delete(table, key)) deleted += 1;
-    }
+    const keys = records.map((r) => getRecordKey(schema, table, r));
+    const deleted = await core.deleteByKeys(table, keys);
 
     if (deleted > 0) onMutate(table);
 
@@ -92,8 +90,9 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
       return deleted;
     },
     async deleteAll(table) {
-      await core.deleteAll(table);
-      onMutate(table);
+      const deleted = await core.deleteAll(table);
+
+      if (deleted > 0) onMutate(table);
     },
     async get(table, key) {
       return core.get(table, key);
@@ -263,7 +262,8 @@ export function buildAdapterOps<S extends AnySchema>(
       const tableNames = Object.keys(schema) as Array<keyof S & string>;
       const entries = await Promise.all(
         tableNames.map(async (name) => {
-          // Raw count BEFORE getAll evicts expired records
+          // getRawCount and getAll are separate calls — a write between them can make
+          // expiredCount slightly inaccurate. Acceptable for a diagnostic function.
           const raw = core.getRawCount ? await core.getRawCount(name) : undefined;
           const live = await core.getAll(name);
           const expiredCount = raw !== undefined ? raw - live.length : 0;
@@ -301,7 +301,24 @@ export function buildAdapterOps<S extends AnySchema>(
       return timed(String(table), 'has', () => txCtx.has(table, key));
     },
 
-    iterate: (table) => txCtx.iterate(table),
+    iterate(table) {
+      if (!onMetrics) return txCtx.iterate(table);
+
+      const start = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const tableStr = String(table);
+
+      return (async function* () {
+        try {
+          for await (const record of txCtx.iterate(table)) {
+            yield record;
+          }
+        } finally {
+          const duration = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - start;
+
+          onMetrics({ duration, operation: 'iterate', table: tableStr });
+        }
+      })();
+    },
 
     observe(table, listener, opts) {
       return observers.observe(table, listener, opts);
@@ -315,10 +332,15 @@ export function buildAdapterOps<S extends AnySchema>(
       return timed(String(table), 'putAll', () => txCtx.putAll(table, values, ttl));
     },
 
-    /* query uses a timed source so query terminal ops emit 'query' metrics events */
+    /* query uses a timed source so query terminal ops emit 'query' metrics events.
+       query().delete() also emits a separate 'queryDelete' event for the mutation step. */
     query(table) {
+      const deleteMany = makeDeleteMany(core, schema, table, notifyMutation);
+
       return createQueryBuilder({
-        deleteMany: makeDeleteMany(core, schema, table, notifyMutation),
+        deleteMany: onMetrics
+          ? (records) => timed(String(table), 'queryDelete', () => deleteMany(records))
+          : deleteMany,
         source: () => timed(String(table), 'query', () => core.getAll(table)),
       });
     },

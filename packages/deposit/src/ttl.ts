@@ -1,6 +1,8 @@
 /* -------------------- TtlMs (owns here to avoid circular deps with types.ts) -------------------- */
 
-export type TtlMs = number;
+declare const ttlMsBrand: unique symbol;
+/** A duration in milliseconds, produced by the `ttl.*` helpers. Branded to prevent accidental raw numbers. */
+export type TtlMs = number & { readonly [ttlMsBrand]: never };
 
 /* -------------------- Duration helpers -------------------- */
 

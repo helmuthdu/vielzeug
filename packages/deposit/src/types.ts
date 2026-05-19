@@ -64,9 +64,11 @@ export type MetricsEvent = {
     | 'get'
     | 'getAll'
     | 'has'
+    | 'iterate'
     | 'put'
     | 'putAll'
     | 'query'
+    | 'queryDelete'
     | 'update'
     | 'upsert';
   table: string;

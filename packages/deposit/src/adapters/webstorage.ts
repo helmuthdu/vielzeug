@@ -145,16 +145,37 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       return exists;
     },
 
-    async deleteAll<K extends keyof S>(table: K): Promise<void> {
+    async deleteAll<K extends keyof S>(table: K): Promise<number> {
       const target = storage();
       const prefix = getPrefix(String(table));
+      const toRemove: string[] = [];
 
-      // Walk backwards because Storage is a live indexed collection
-      for (let i = target.length - 1; i >= 0; i -= 1) {
-        const key = target.key(i);
-
-        if (key && key.startsWith(prefix)) target.removeItem(key);
+      // Collect first to avoid mutating a live indexed collection during iteration
+      for (const key of storageKeys()) {
+        if (key.startsWith(prefix)) toRemove.push(key);
       }
+
+      for (const key of toRemove) {
+        target.removeItem(key);
+      }
+
+      return toRemove.length;
+    },
+
+    async deleteByKeys<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
+      const target = storage();
+      let deleted = 0;
+
+      for (const key of keys) {
+        const storageKey = encodeStorageKey(name, String(table), String(key));
+
+        if (target.getItem(storageKey) !== null) {
+          target.removeItem(storageKey);
+          deleted += 1;
+        }
+      }
+
+      return deleted;
     },
 
     async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
