@@ -1,28 +1,29 @@
-import type { Params, PathConfig } from './url';
+import type { Params } from './url';
 
 import { HttpError } from './errors';
+import { sleepWithAbort, toError } from './retry';
 import { isBodyInit } from './serialize';
 import {
   buildTimeoutSignal,
   createTransportCore,
   validateTimeout,
   type Interceptor,
+  type TransportCore,
   type TransportOptions,
 } from './transport';
 import { buildUrl } from './url';
 
-export type StreamClientOptions = TransportOptions;
-
-export type StreamRequestConfig<P extends string = string> = PathConfig<P> & {
+export type StreamRequestConfig<P extends string = string> = {
   body?: unknown;
   headers?: Record<string, string>;
   method?: string;
+  params?: P extends string ? Record<string, string | number | boolean> : never;
   query?: Params;
   /** External abort signal. Merged with internal cancellation. */
   signal?: AbortSignal;
   /** Request timeout in ms. Overrides client default (which is `Infinity` for streaming). */
   timeout?: number;
-};
+} & Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
 
 export type ReconnectOptions = {
   /** Total reconnect attempts after the first failure. Defaults to `5`. */
@@ -32,7 +33,7 @@ export type ReconnectOptions = {
    * `attempt` is the number of failures so far (0 = waiting before the 2nd try).
    * Defaults to full-jitter exponential backoff: `[0, min(1s × 2ⁿ, 30s)]`.
    */
-  delay?: number | ((attempt: number) => number);
+  retryDelay?: number | ((attempt: number) => number);
 };
 
 export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
@@ -72,23 +73,6 @@ function defaultReconnectDelay(attempt: number): number {
   return Math.random() * cap;
 }
 
-async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  if (signal?.aborted) return;
-
-  await new Promise<void>((resolve, reject) => {
-    const id = setTimeout(resolve, ms);
-
-    signal?.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(id);
-        reject(new DOMException('Aborted', 'AbortError'));
-      },
-      { once: true },
-    );
-  });
-}
-
 /** Parse a raw SSE data string: try JSON, fall back to raw string. */
 function parseEventData(raw: string): unknown {
   try {
@@ -98,17 +82,11 @@ function parseEventData(raw: string): unknown {
   }
 }
 
-export function createStream(opts: StreamClientOptions = {}) {
+export function createStream(opts?: TransportOptions, sharedTransport?: TransportCore) {
+  const ownTransport = !sharedTransport;
   // SSE connections are long-lived — default timeout to Infinity.
-  const transport = createTransportCore({ ...opts, timeout: opts.timeout ?? Number.POSITIVE_INFINITY });
-
-  function mergeHeaders(perRequest?: Record<string, string>, extra?: Record<string, string>): Record<string, string> {
-    const normalized = perRequest
-      ? Object.fromEntries(Object.entries(perRequest).map(([k, v]) => [k.toLowerCase(), v]))
-      : undefined;
-
-    return { ...transport.globalHeaders, ...normalized, ...extra };
-  }
+  const transport =
+    sharedTransport ?? createTransportCore({ ...opts, timeout: opts?.timeout ?? Number.POSITIVE_INFINITY });
 
   /** Build RequestInit without mutating the headers argument. */
   function buildInit(
@@ -116,9 +94,11 @@ export function createStream(opts: StreamClientOptions = {}) {
     headers: Record<string, string>,
     body: unknown,
     signal: AbortSignal | undefined,
+    rest: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>,
   ): RequestInit {
     if (body !== undefined && !isBodyInit(body)) {
       return {
+        ...rest,
         body: JSON.stringify(body),
         headers: { ...headers, 'content-type': 'application/json' },
         method: method.toUpperCase(),
@@ -127,6 +107,7 @@ export function createStream(opts: StreamClientOptions = {}) {
     }
 
     return {
+      ...rest,
       ...(body !== undefined && { body: body as BodyInit }),
       headers,
       method: method.toUpperCase(),
@@ -171,6 +152,7 @@ export function createStream(opts: StreamClientOptions = {}) {
       reconnect = false,
       signal: extSignal,
       timeout: cfgTimeout,
+      ...rest
     } = config as SseOptions;
 
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
@@ -185,7 +167,7 @@ export function createStream(opts: StreamClientOptions = {}) {
 
     const reconnectOpts: ReconnectOptions = reconnect === true ? {} : reconnect === false ? { attempts: 0 } : reconnect;
     const maxReconnects = reconnectOpts.attempts ?? (reconnect ? 5 : 0);
-    const reconnectDelay = reconnectOpts.delay ?? defaultReconnectDelay;
+    const reconnectDelay = reconnectOpts.retryDelay ?? defaultReconnectDelay;
 
     function dispatchEvent(event: string, rawData: string): void {
       const handlers = listeners.get(event);
@@ -202,23 +184,20 @@ export function createStream(opts: StreamClientOptions = {}) {
       const combined = extSignal ? AbortSignal.any([extSignal, ac.signal]) : ac.signal;
       const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, combined);
 
-      const requestHeaders = mergeHeaders(perRequestHeaders as Record<string, string> | undefined, {
+      const requestHeaders = transport.mergeHeaders(perRequestHeaders as Record<string, string> | undefined, {
         accept: 'text/event-stream',
         'cache-control': 'no-cache',
         ...(lastEventId ? { 'last-event-id': lastEventId } : {}),
       });
 
-      const init = buildInit(method, requestHeaders, body, signal);
+      const init = buildInit(method, requestHeaders, body, signal, rest);
 
       let res: Response;
 
       try {
         res = await transport.dispatch({ init, url: full });
       } catch (err) {
-        throw HttpError.fromCause(err, method.toUpperCase(), full, {
-          aborted: ac.signal.aborted,
-          signalReason: ac.signal.reason,
-        });
+        throw HttpError.fromCause(err, method.toUpperCase(), full, ac.signal);
       }
 
       if (!res.ok) {
@@ -295,7 +274,7 @@ export function createStream(opts: StreamClientOptions = {}) {
           } catch (err) {
             if (closed || transport.disposed || ac.signal.aborted) break;
 
-            connectError = err instanceof Error ? err : new Error(String(err));
+            connectError = toError(err);
           }
 
           if (closed || transport.disposed || ac.signal.aborted) break;
@@ -318,10 +297,9 @@ export function createStream(opts: StreamClientOptions = {}) {
           const delay = typeof reconnectDelay === 'function' ? reconnectDelay(attempt) : reconnectDelay;
 
           attempt++;
-          await sleep(delay, ac.signal).catch(() => {});
+          await sleepWithAbort(delay, ac.signal).catch(() => {});
         }
       } finally {
-        // Always untrack when the loop exits for any reason
         untrack();
       }
     }
@@ -329,7 +307,7 @@ export function createStream(opts: StreamClientOptions = {}) {
     // Surface unexpected programming errors (not network failures) via onError
     run().catch((err) => {
       if (!closed && !transport.disposed) {
-        onError?.(err instanceof Error ? err : new Error(String(err)));
+        onError?.(toError(err));
       }
     });
 
@@ -396,6 +374,7 @@ export function createStream(opts: StreamClientOptions = {}) {
       query,
       signal: extSignal,
       timeout: cfgTimeout,
+      ...rest
     } = config as StreamRequestConfig & { parse?: 'ndjson' | 'text' };
 
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
@@ -405,8 +384,8 @@ export function createStream(opts: StreamClientOptions = {}) {
     const combined = extSignal ? AbortSignal.any([extSignal, ac.signal]) : ac.signal;
     const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, combined);
 
-    const requestHeaders = mergeHeaders(perRequestHeaders as Record<string, string> | undefined);
-    const init = buildInit(method, requestHeaders, body, signal);
+    const requestHeaders = transport.mergeHeaders(perRequestHeaders as Record<string, string> | undefined);
+    const init = buildInit(method, requestHeaders, body, signal, rest);
     const untrack = transport.track(ac);
 
     let res: Response;
@@ -415,10 +394,7 @@ export function createStream(opts: StreamClientOptions = {}) {
       res = await transport.dispatch({ init, url: full });
     } catch (err) {
       untrack();
-      throw HttpError.fromCause(err, method.toUpperCase(), full, {
-        aborted: ac.signal.aborted,
-        signalReason: ac.signal.reason,
-      });
+      throw HttpError.fromCause(err, method.toUpperCase(), full, ac.signal);
     }
 
     if (!res.ok) {
@@ -484,11 +460,12 @@ export function createStream(opts: StreamClientOptions = {}) {
       transport.cancelAll();
     },
     dispose(): void {
-      transport.dispose();
+      if (ownTransport) transport.dispose();
     },
     get disposed() {
       return transport.disposed;
     },
+    getHeaders: transport.getHeaders,
     headers: transport.headers,
     readable,
     sse,

@@ -215,7 +215,7 @@ describe('createStream — sse()', () => {
       );
     });
 
-    const source = stream.sse('/events', { reconnect: { attempts: 1, delay: 0 } });
+    const source = stream.sse('/events', { reconnect: { attempts: 1, retryDelay: 0 } });
     const messages = collect<string>(source);
 
     await waitFor(() => messages.length >= 2);
@@ -311,7 +311,7 @@ describe('createStream — sse()', () => {
     const errors: Error[] = [];
     const source = stream.sse('/events', {
       onError: (e) => errors.push(e),
-      reconnect: { attempts: 2, delay: 0 },
+      reconnect: { attempts: 2, retryDelay: 0 },
     });
 
     await waitFor(() => errors.length > 0);
@@ -413,7 +413,7 @@ describe('createStream — sse()', () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
     const source = stream.sse('/events', {
-      reconnect: { attempts: 10, delay: 200 },
+      reconnect: { attempts: 10, retryDelay: 200 },
     });
 
     // Wait for the first attempt to fail and enter sleep
@@ -437,7 +437,7 @@ describe('createStream — sse()', () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
     const source = stream.sse('/events', {
-      reconnect: { attempts: 10, delay: 200 },
+      reconnect: { attempts: 10, retryDelay: 200 },
     });
 
     await waitFor(() => fetchMock.mock.calls.length >= 1);

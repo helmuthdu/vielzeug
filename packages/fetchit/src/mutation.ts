@@ -1,7 +1,7 @@
 import type { RetryOptions } from './retry';
 import type { MutationState, SyncStore, Unsubscribe } from './types';
 
-import { runWithRetry } from './retry';
+import { runWithRetry, toError } from './retry';
 
 const IDLE_STATE: MutationState<unknown> = {
   data: undefined,
@@ -45,11 +45,11 @@ export function createMutation<TData, TVariables = void>(
   let snap: MutationState<TData> = IDLE_STATE as MutationState<TData>;
   let currentRun = 0;
   let activeRun: { controller: AbortController; promise: Promise<unknown> } | null = null;
-  const observers = new Set<(state: MutationState<TData>) => void>();
+  const observers = new Set<() => void>();
   let cachedStore: SyncStore<MutationState<TData>> | null = null;
 
   function notify() {
-    observers.forEach((l) => l(snap));
+    observers.forEach((l) => l());
   }
 
   async function safeCall(fn: (() => void | Promise<void>) | undefined): Promise<void> {
@@ -151,40 +151,33 @@ export function createMutation<TData, TVariables = void>(
     },
 
     subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe {
-      observers.add(listener);
+      const wrapped = () => listener(snap);
+
+      observers.add(wrapped);
       listener(snap);
 
-      return () => observers.delete(listener);
+      return () => observers.delete(wrapped);
     },
 
     toStore(): SyncStore<MutationState<TData>> {
       if (cachedStore) return cachedStore;
 
-      let snapshot: MutationState<TData> = snap;
-
       cachedStore = {
+        // peek() always returns the live snap — no caching needed since snap is
+        // updated synchronously before any observer is notified.
         peek() {
-          return snapshot;
+          return snap;
         },
 
         subscribe(onStoreChange) {
-          let isFirst = true;
-
-          const listener = (state: MutationState<TData>) => {
-            snapshot = state;
-
-            // React external stores should not notify during subscription setup.
-            if (isFirst) {
-              isFirst = false;
-
-              return;
-            }
-
+          // Add directly to observers (bypasses the immediate-call in mutation.subscribe).
+          // React's useSyncExternalStore calls peek() for the initial snapshot, so
+          // onStoreChange must only fire on subsequent state changes.
+          const listener = () => {
             onStoreChange();
           };
 
           observers.add(listener);
-          listener(snap);
 
           return () => observers.delete(listener);
         },

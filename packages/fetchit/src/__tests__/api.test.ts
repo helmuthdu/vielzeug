@@ -424,22 +424,9 @@ describe('HTTP Client', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
-    it('does not deduplicate concurrent reads when per-request headers differ', async () => {
-      const http = createApi();
-
-      fetchMock.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
-      );
-
-      await Promise.all([
-        http.get('/users/1', { headers: { 'accept-language': 'en' } }),
-        http.get('/users/1', { headers: { 'accept-language': 'de' } }),
-      ]);
-
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-    });
-
-    it('deduplicates concurrent reads when headers and responseType are identical', async () => {
+    it('deduplicates concurrent reads regardless of per-request headers', async () => {
+      // Headers are excluded from the dedup key within a single client instance
+      // (headers are uniform; a token refresh changes globalHeaders atomically).
       const http = createApi();
 
       fetchMock.mockImplementation(
@@ -447,8 +434,38 @@ describe('HTTP Client', () => {
       );
 
       const [r1, r2] = await Promise.all([
-        http.get('/users/1', { headers: { 'x-trace': 'abc' }, responseType: 'json' }),
-        http.get('/users/1', { headers: { 'x-trace': 'abc' }, responseType: 'json' }),
+        http.get('/users/1', { headers: { 'accept-language': 'en' } }),
+        http.get('/users/1', { headers: { 'accept-language': 'de' } }),
+      ]);
+
+      expect(r1).toEqual({ id: 1 });
+      expect(r2).toEqual({ id: 1 });
+      // Both requests share the same in-flight promise — only one fetch is made
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips deduplication when dedupe: false', async () => {
+      const http = createApi();
+
+      fetchMock.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
+      );
+
+      await Promise.all([http.get('/users/1', { dedupe: false }), http.get('/users/1', { dedupe: false })]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('deduplicates concurrent reads when responseType is identical', async () => {
+      const http = createApi();
+
+      fetchMock.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(jsonResponse({ id: 1 })), 50)),
+      );
+
+      const [r1, r2] = await Promise.all([
+        http.get('/users/1', { responseType: 'json' }),
+        http.get('/users/1', { responseType: 'json' }),
       ]);
 
       expect(r1).toEqual({ id: 1 });

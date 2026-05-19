@@ -9,12 +9,12 @@ import {
   validateTimeout,
   type FetchContext,
   type Interceptor,
+  type TransportCore,
   type TransportOptions,
 } from './transport';
 import { buildUrl } from './url';
 
 export type { FetchContext, Interceptor };
-export type ApiClientOptions = TransportOptions;
 
 // DELETE is HTTP-idempotent (repeating it produces the same server state), so it
 // is included in auto-dedup by default.
@@ -23,15 +23,14 @@ const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'DELETE']);
 function getDedupeKey(
   method: string,
   url: string,
-  mergedHeaders: Record<string, string>,
   responseType: string,
   dedupeKey: HttpRequestConfig['dedupeKey'],
 ): string | undefined {
   if (IDEMPOTENT_METHODS.has(method)) {
-    // Include merged headers and responseType so requests with different effective
-    // response shapes (e.g. different Accept, Authorization, or responseType) are
-    // never collapsed into a shared in-flight promise.
-    return `${method}:${url}:${stableStringify(mergedHeaders)}:${responseType}`;
+    // Key on method + URL + responseType only. Headers are uniform within a
+    // single client instance and should not prevent deduplication when a token
+    // refresh updates globalHeaders mid-flight.
+    return `${method}:${url}:${responseType}`;
   }
 
   if (dedupeKey === undefined) {
@@ -41,8 +40,9 @@ function getDedupeKey(
   return `${method}:${url}:${stableStringify(dedupeKey)}`;
 }
 
-export function createApi(opts: ApiClientOptions = {}) {
-  const transport = createTransportCore(opts);
+export function createApi(opts?: TransportOptions, sharedTransport?: TransportCore) {
+  const ownTransport = !sharedTransport;
+  const transport = sharedTransport ?? createTransportCore(opts);
   const inFlight = new Map<string, Promise<unknown>>();
 
   async function execute<T>(
@@ -51,19 +51,33 @@ export function createApi(opts: ApiClientOptions = {}) {
     m: string,
     responseType: HttpRequestConfig['responseType'],
   ): Promise<T> {
-    try {
-      const res = await transport.dispatch({ init, url: full });
-      const parsed = await parseResponse(res, responseType ?? 'auto', { throwOnUnknownContentType: res.ok });
+    const signal = init.signal as AbortSignal | undefined;
+    let res: Response;
 
-      if (!res.ok) {
-        throw HttpError.fromResponse(res, parsed, m, full);
+    try {
+      res = await transport.dispatch({ init, url: full });
+    } catch (err) {
+      throw HttpError.fromCause(err, m, full, signal);
+    }
+
+    if (!res.ok) {
+      // For error responses: parse body using normal content-type detection,
+      // fall back to text for unknown content-types (better than blob for debugging).
+      let body: unknown;
+
+      try {
+        body = await parseResponse(res, responseType ?? 'auto');
+      } catch {
+        body = await res.text().catch(() => '');
       }
 
-      return parsed as T;
-    } catch (err) {
-      if (err instanceof HttpError) throw err;
+      throw HttpError.fromResponse(res, body, m, full);
+    }
 
-      throw HttpError.fromCause(err, m, full, { aborted: init.signal?.aborted, signalReason: init.signal?.reason });
+    try {
+      return (await parseResponse(res, responseType ?? 'auto')) as T;
+    } catch (err) {
+      throw HttpError.fromCause(err, m, full, signal);
     }
   }
 
@@ -78,10 +92,11 @@ export function createApi(opts: ApiClientOptions = {}) {
     const m = method.toUpperCase();
     const {
       body,
+      dedupe = true,
       dedupeKey,
       headers,
-      params, // excluded from ...rest — already consumed by buildUrl above
-      query, // excluded from ...rest — already consumed by buildUrl above
+      params, // consumed by buildUrl
+      query, // consumed by buildUrl
       responseType,
       signal: extSignal,
       timeout: cfgTimeout,
@@ -90,11 +105,8 @@ export function createApi(opts: ApiClientOptions = {}) {
 
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
 
-    const perRequestHeaders = headers
-      ? Object.fromEntries(Object.entries(headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v]))
-      : undefined;
-    const mergedHeaders = { ...transport.globalHeaders, ...perRequestHeaders };
-    const requestDedupeKey = getDedupeKey(m, full, mergedHeaders, responseType ?? 'auto', dedupeKey);
+    const mergedHeaders = transport.mergeHeaders(headers);
+    const requestDedupeKey = dedupe ? getDedupeKey(m, full, responseType ?? 'auto', dedupeKey) : undefined;
 
     if (requestDedupeKey) {
       const existing = inFlight.get(requestDedupeKey);
@@ -144,13 +156,15 @@ export function createApi(opts: ApiClientOptions = {}) {
     },
     delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
     dispose(): void {
-      transport.dispose();
       inFlight.clear();
+
+      if (ownTransport) transport.dispose();
     },
     get disposed() {
       return transport.disposed;
     },
     get: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('GET', url, cfg),
+    getHeaders: transport.getHeaders,
     headers: transport.headers,
     patch: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PATCH', url, cfg),
     post: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('POST', url, cfg),

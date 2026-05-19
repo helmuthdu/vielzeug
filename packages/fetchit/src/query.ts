@@ -1,7 +1,7 @@
 import type { RetryOptions } from './retry';
 import type { AsyncStatus, QueryKey, QueryState, SyncStore, Unsubscribe } from './types';
 
-import { DEFAULT_ATTEMPTS, runWithRetry } from './retry';
+import { NO_RETRY, runWithRetry } from './retry';
 import { stableStringify } from './serialize';
 
 const DEFAULT_GC = 5 * 60_000;
@@ -83,7 +83,7 @@ function resolveValue<T>(v: T | (() => T | undefined) | undefined): T | undefine
 export function createQuery(opts?: QueryClientOptions) {
   const staleTimeDefault = opts?.staleTime ?? 0;
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
-  const attemptsDefault = opts?.attempts ?? DEFAULT_ATTEMPTS;
+  const attemptsDefault = opts?.attempts ?? NO_RETRY;
   const retryDelayDefault = opts?.retryDelay;
   const shouldRetryDefault = opts?.shouldRetry;
 
@@ -512,9 +512,8 @@ export function createQuery(opts?: QueryClientOptions) {
     key: QueryKey,
     opts?: { placeholderData?: S | (() => S | undefined); select?: (data: T | undefined) => S | undefined },
   ): SyncStore<QueryState<S>> {
-    let snapshot: QueryState<S> | undefined;
-
-    // Stable observer object — avoids allocating a new object on every peek()/computeSnapshot() call.
+    // Stable observer object shared across peek() and subscribe() — avoids
+    // allocating a new object on every computeSnapshot() call.
     const watchObserver: QueryObserver<T, S> = {
       listener: () => {},
       placeholderData: opts?.placeholderData,
@@ -533,32 +532,36 @@ export function createQuery(opts?: QueryClientOptions) {
 
     return {
       peek(): QueryState<S> {
-        if (!snapshot) {
-          snapshot = computeSnapshot();
-        }
-
-        return snapshot;
+        return computeSnapshot();
       },
 
       subscribe(onStoreChange: () => void): Unsubscribe {
-        let isFirst = true;
+        const entry = ensureEntry<T>(key);
 
-        return subscribe<T, S>(
-          key,
-          () => {
-            snapshot = computeSnapshot();
+        cancelGc(entry.hash);
 
-            // React external stores should not notify during subscription setup.
-            if (isFirst) {
-              isFirst = false;
-
-              return;
-            }
-
+        // Register the observer with a listener that notifies on changes only.
+        // peek() provides the initial snapshot, so onStoreChange is not called during setup.
+        // This is the correct contract for React's useSyncExternalStore and equivalent APIs.
+        const observer: QueryObserver<T, S> = {
+          listener: () => {
+            watchObserver.previous = toObserverState(entry, watchObserver);
             onStoreChange();
           },
-          opts,
-        );
+          placeholderData: opts?.placeholderData,
+          previous: toObserverState(entry, watchObserver),
+          select: opts?.select,
+        };
+
+        entry.observers.add(observer as QueryObserver<T, unknown>);
+
+        return () => {
+          entry.observers.delete(observer as QueryObserver<T, unknown>);
+
+          if (entry.observers.size === 0) {
+            scheduleGc(entry);
+          }
+        };
       },
     };
   }

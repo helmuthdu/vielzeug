@@ -49,11 +49,12 @@ describe('createFetchit', () => {
   });
 
   it('exposes a stream client with correct options', async () => {
+    const encoder = new TextEncoder();
     const localFetch = vi.fn().mockResolvedValue(
       new Response(
         new ReadableStream({
           start(c) {
-            c.enqueue(new TextEncoder().encode('data: hello\n\n'));
+            c.enqueue(encoder.encode('data: hello\n\n'));
             c.close();
           },
         }),
@@ -61,8 +62,10 @@ describe('createFetchit', () => {
       ),
     );
 
+    // With the shared transport design, both api and stream use the same fetch/baseUrl.
     const client = createFetchit({
-      stream: { baseUrl: 'https://stream.example.com', fetch: localFetch as typeof fetch },
+      baseUrl: 'https://stream.example.com',
+      fetch: localFetch as typeof fetch,
     });
 
     const messages: string[] = [];
@@ -78,7 +81,7 @@ describe('createFetchit', () => {
     expect(messages).toEqual(['hello']);
   });
 
-  it('routes api options only to createApi', async () => {
+  it('api and stream share the same baseUrl and fetch', async () => {
     const localFetch = vi.fn().mockResolvedValue({
       headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({ ok: true }),
@@ -87,13 +90,19 @@ describe('createFetchit', () => {
     });
 
     const client = createFetchit({
-      api: { baseUrl: 'https://api.example.com', fetch: localFetch as typeof fetch },
-      query: { staleTime: 60_000 },
+      baseUrl: 'https://api.example.com',
+      fetch: localFetch as typeof fetch,
     });
 
     await client.api.get('/users/1');
     expect(localFetch).toHaveBeenCalledTimes(1);
     expect(localFetch.mock.calls[0][0]).toBe('https://api.example.com/users/1');
+  });
+
+  it('query has isolated configuration', async () => {
+    const client = createFetchit({
+      query: { staleTime: 60_000 },
+    });
 
     let calls = 0;
     const fn = async () => ({ id: ++calls });
@@ -101,7 +110,49 @@ describe('createFetchit', () => {
     await client.query.query({ fn, key: ['users', 1] });
     await client.query.query({ fn, key: ['users', 1] });
 
-    // Query options remain isolated and active (staleTime from query config)
+    // staleTime prevents re-fetching the same key
     expect(calls).toBe(1);
+  });
+
+  it('interceptors registered via use() apply to both api and stream', async () => {
+    const log: string[] = [];
+    const encoder = new TextEncoder();
+
+    const localFetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ ok: true }),
+        ok: true,
+        status: 200,
+      })
+      .mockResolvedValueOnce(
+        new Response(
+          new ReadableStream({
+            start(c) {
+              c.enqueue(encoder.encode('data: hi\n\n'));
+              c.close();
+            },
+          }),
+          { headers: { 'content-type': 'text/event-stream' }, status: 200 },
+        ),
+      );
+
+    const client = createFetchit({ fetch: localFetch as typeof fetch });
+
+    client.use(async (ctx, next) => {
+      log.push('intercepted');
+
+      return next(ctx);
+    });
+
+    await client.api.get('/test');
+
+    const src = client.stream.sse('/events');
+
+    await new Promise((r) => setTimeout(r, 50));
+    src.close();
+
+    expect(log).toEqual(['intercepted', 'intercepted']);
   });
 });

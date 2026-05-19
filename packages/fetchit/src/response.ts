@@ -1,11 +1,7 @@
 /** Response parsing strategy. 'raw' returns the Response object directly. */
 export type ResponseType = 'auto' | 'json' | 'text' | 'blob' | 'arrayBuffer' | 'raw';
 
-export async function parseResponse(
-  res: Response,
-  responseType: ResponseType = 'auto',
-  opts?: { throwOnUnknownContentType?: boolean },
-): Promise<unknown> {
+export async function parseResponse(res: Response, responseType: ResponseType = 'auto'): Promise<unknown> {
   if (responseType === 'raw') return res;
 
   if (res.status === 204 || res.status === 205 || res.status === 304) return;
@@ -24,9 +20,9 @@ export async function parseResponse(
 
   if (contentType.startsWith('text/')) return res.text();
 
-  if (opts?.throwOnUnknownContentType ?? true) {
-    throw new TypeError(`[fetchit] Unsupported response content-type '${contentType || 'unknown'}'`);
+  if (contentType.startsWith('image/') || contentType.startsWith('audio/') || contentType.startsWith('video/')) {
+    return res.blob();
   }
 
-  return res.blob();
+  throw new TypeError(`[fetchit] Unsupported response content-type '${contentType || 'unknown'}'`);
 }
