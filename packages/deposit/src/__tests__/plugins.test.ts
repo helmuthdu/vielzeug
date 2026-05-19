@@ -203,7 +203,7 @@ describe('RecordParser (validators) plugin', () => {
     };
 
     // This should compile without error — logitLike satisfies DepositLogger
-    const _db = createMemory({ logger: logitLike as unknown as DepositLogger, schema });
+    createMemory({ logger: logitLike as unknown as DepositLogger, schema });
 
     expect(true).toBe(true);
   });

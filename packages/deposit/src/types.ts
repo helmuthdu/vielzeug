@@ -8,23 +8,36 @@ export type { TtlMs };
 
 /* -------------------- Schema types -------------------- */
 
-export type SchemaEntry<T extends Record<string, unknown>> = {
+/**
+ * Schema entry for a single table.
+ * `T` is the record type; `Key` is the primary key field name.
+ *
+ * `_record` is a phantom field that holds `T` in a directly inferable position so TypeScript
+ * can recover `T` in `RecordOf` conditional types. It is never set at runtime.
+ */
+export type SchemaEntry<T extends Record<string, unknown>, Key extends keyof T & string = keyof T & string> = {
+  /** @internal Phantom field — enables TypeScript to infer T. Never has a runtime value. */
+  readonly _record?: T;
   defaultTtl?: TtlMs;
-  key: keyof T & string;
+  key: Key;
 };
 
-export type AnySchema = Record<string, SchemaEntry<Record<string, unknown>>>;
+/** A schema is any record of `SchemaEntry`-compatible values. Checked structurally so that
+ *  concrete `SchemaEntry<T, Key>` values satisfy it without covariance constraints. */
+export type AnySchema = Record<string, { defaultTtl?: TtlMs; key: string }>;
 
 /** Fluent builder returned by `table()` — satisfies `SchemaEntry` and adds `.ttl()` chaining. */
-type TableBuilder<T extends Record<string, unknown>> = SchemaEntry<T> & {
+type TableBuilder<T extends Record<string, unknown>, Key extends keyof T & string> = SchemaEntry<T, Key> & {
   /** Set a default TTL (ms) applied to all `put`/`putAll` calls that don't specify one explicitly. */
-  ttl: (ms: TtlMs) => SchemaEntry<T>;
+  ttl: (ms: TtlMs) => SchemaEntry<T, Key>;
 };
 
-export function table<T extends Record<string, unknown>>(key: keyof T & string): TableBuilder<T> {
+export function table<T extends Record<string, unknown>, Key extends keyof T & string = keyof T & string>(
+  key: Key,
+): TableBuilder<T, Key> {
   return {
     key,
-    ttl: (ms: TtlMs): SchemaEntry<T> => {
+    ttl: (ms: TtlMs): SchemaEntry<T, Key> => {
       assertTtlMs(ms, 'table.ttl');
 
       return { defaultTtl: ms, key };
@@ -32,10 +45,13 @@ export function table<T extends Record<string, unknown>>(key: keyof T & string):
   };
 }
 
-export type RecordOf<S extends AnySchema, K extends keyof S> = S[K] extends SchemaEntry<infer R> ? R : never;
+/** Extracts the record type from a schema table entry. */
+export type RecordOf<S extends AnySchema, K extends keyof S> =
+  S[K] extends SchemaEntry<infer R, infer _Key> ? R : never;
 
+/** Extracts the primary key value type from a schema table entry. */
 export type KeyOf<S extends AnySchema, K extends keyof S> =
-  S[K] extends SchemaEntry<infer R> ? (S[K]['key'] extends keyof R ? R[S[K]['key']] : never) : never;
+  S[K] extends SchemaEntry<infer R, infer Key> ? R[Key] : never;
 
 /* -------------------- Migration -------------------- */
 

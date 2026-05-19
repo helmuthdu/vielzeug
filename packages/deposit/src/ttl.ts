@@ -7,11 +7,11 @@ export type TtlMs = number & { readonly [ttlMsBrand]: never };
 /* -------------------- Duration helpers -------------------- */
 
 export const ttl = {
-  days: (n: number) => assertTtlMs(n, 'ttl.days') * 86_400_000,
-  hours: (n: number) => assertTtlMs(n, 'ttl.hours') * 3_600_000,
-  minutes: (n: number) => assertTtlMs(n, 'ttl.minutes') * 60_000,
+  days: (n: number) => (assertTtlMs(n, 'ttl.days') * 86_400_000) as TtlMs,
+  hours: (n: number) => (assertTtlMs(n, 'ttl.hours') * 3_600_000) as TtlMs,
+  minutes: (n: number) => (assertTtlMs(n, 'ttl.minutes') * 60_000) as TtlMs,
   ms: (n: number) => assertTtlMs(n, 'ttl.ms'),
-  seconds: (n: number) => assertTtlMs(n, 'ttl.seconds') * 1000,
+  seconds: (n: number) => (assertTtlMs(n, 'ttl.seconds') * 1000) as TtlMs,
 } as const;
 
 /* -------------------- Storage record (renamed fields for debuggability) -------------------- */
@@ -27,13 +27,11 @@ export function assertTtlMs(ttlMs: number, source: string): TtlMs {
     throw new Error(`[deposit] ${source} expected a finite non-negative number, received ${String(ttlMs)}`);
   }
 
-  return ttlMs;
+  return ttlMs as TtlMs;
 }
 
 export function wrapStored<T>(value: T, ttlMs?: TtlMs): StoredRecord<T> {
   if (ttlMs === undefined) return { value };
-
-  assertTtlMs(ttlMs, 'ttl');
 
   return { expiresAt: Date.now() + ttlMs, value };
 }

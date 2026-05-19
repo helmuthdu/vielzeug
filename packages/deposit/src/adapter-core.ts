@@ -2,7 +2,8 @@ import type { DepositLogger, TableValidators } from './plugins';
 import type { Adapter, AnySchema, DebugInfo, KeyOf, MetricsEvent, RecordOf, TransactionContext, TtlMs } from './types';
 
 import { createObserverHub, getRecordKey } from './internal';
-import { createQueryBuilder, type QueryContext } from './query';
+import { createQueryBuilder } from './query';
+import { assertTtlMs } from './ttl';
 
 /* -------------------- Internal core ops type (adapter → runtime bridge) -------------------- */
 
@@ -29,7 +30,9 @@ export type CoreRuntimeOps<S extends AnySchema, K extends keyof S = keyof S> = C
 /* -------------------- TTL resolution (explicit > schema default > none) -------------------- */
 
 function resolveTtl<S extends AnySchema, K extends keyof S>(schema: S, table: K, ttl?: TtlMs): TtlMs | undefined {
-  return ttl ?? (schema[table] as { defaultTtl?: TtlMs }).defaultTtl;
+  if (ttl !== undefined) assertTtlMs(ttl, 'put/putAll');
+
+  return ttl ?? schema[table].defaultTtl;
 }
 
 /* -------------------- Key validation (used in update/upsert) -------------------- */
@@ -57,7 +60,7 @@ function makeDeleteMany<S extends AnySchema, K extends keyof S>(
   schema: S,
   table: K,
   onMutate: (table: K) => void,
-): QueryContext<RecordOf<S, K>>['deleteMany'] {
+): (records: RecordOf<S, K>[]) => Promise<number> {
   return async (records) => {
     if (records.length === 0) return 0;
 

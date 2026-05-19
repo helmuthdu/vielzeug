@@ -274,6 +274,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
         }
       };
     },
+    logger,
     onMetrics,
     validators,
   }).adapter;
