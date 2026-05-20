@@ -7,16 +7,18 @@ const schema = {
 
 const db = createLocalStorage({ name: 'cache-demo', schema })
 
-await db.put('cache', { id: 'temp', data: 'Temporary data' }, ttl.seconds(1))
-await db.put('cache', { id: 'numeric', data: 'Numeric TTL' }, 250)
-console.log('Stored records with helper + numeric TTL')
-console.log('Immediate read:', await db.get('cache', 'temp'))
+// ttl helpers produce a branded TtlMs value — raw numbers are rejected by the type system
+await db.put('cache', { id: 'short', data: 'Expires in 1 second' }, ttl.seconds(1))
+await db.put('cache', { id: 'long', data: 'Expires in 5 minutes' }, ttl.minutes(5))
+console.log('Stored records with TTL')
+console.log('Immediate read:', await db.get('cache', 'short'))
 
 await new Promise((resolve) => setTimeout(resolve, 1500))
-console.log('After 1.5s:', await db.get('cache', 'temp'))
+console.log('After 1.5s:', await db.get('cache', 'short')) // expired — undefined
+console.log('Long-lived still here:', await db.get('cache', 'long'))
 
 console.log('ttl helpers:', {
-  '250ms': ttl.ms(250),
+  '100ms': ttl.ms(100),
   '5 minutes': ttl.minutes(5),
   '2 hours': ttl.hours(2),
   '7 days': ttl.days(7),

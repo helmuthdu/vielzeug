@@ -64,6 +64,86 @@ export type MigrationContext = {
 
 export type MigrationFn = (ctx: MigrationContext) => void;
 
+/* -------------------- Plugin / integration types -------------------- */
+
+/**
+ * Minimal logger interface satisfied structurally by `@vielzeug/logit` Logger.
+ * Pass a logit Logger instance directly — no adapter needed:
+ *
+ * ```ts
+ * import { createLogger } from '@vielzeug/logit';
+ * const db = createMemory({ schema, logger: createLogger('db') });
+ * ```
+ *
+ * Deposit only emits error-level logs, so a single logit-compatible `error`
+ * method is enough.
+ */
+export interface DepositLogger {
+  error(messageOrContext?: Record<string, unknown> | Error | string, message?: string): void;
+}
+
+/**
+ * Minimal synchronous validator interface satisfied structurally by
+ * `@vielzeug/validit` Schema.
+ * Pass a validit schema directly — no adapter needed:
+ *
+ * ```ts
+ * import { v } from '@vielzeug/validit';
+ * const db = createMemory({
+ *   schema: { users: table<User>('id') },
+ *   validators: { users: v.object({ id: v.number(), name: v.string() }) },
+ * });
+ * ```
+ *
+ * Deposit requires synchronous validation because writes may execute inside a
+ * live IndexedDB transaction. Any object with a `parse(value: unknown): T`
+ * method works.
+ */
+export interface RecordValidator<T> {
+  parse(value: unknown): T;
+}
+
+/**
+ * Per-table record parsers. Keys match your deposit schema table names.
+ * Validators run before every `put`, `putAll`, and inside `update`/`upsert`.
+ */
+export type TableValidators<S extends AnySchema> = {
+  [K in keyof S]?: RecordValidator<RecordOf<S, K>>;
+};
+
+/**
+ * Minimal writable-signal interface satisfied structurally by
+ * `@vielzeug/stateit` `Signal<T>` and `Store<T>`.
+ * Pass a stateit signal directly — no adapter needed:
+ *
+ * ```ts
+ * import { signal } from '@vielzeug/stateit';
+ * const usersSignal = signal<User[]>([]);
+ *
+ * const db = createMemory({
+ *   schema: { users: table<User>('id') },
+ *   signals: { users: usersSignal },
+ * });
+ *
+ * // usersSignal.value is now always in sync with the users table.
+ * ```
+ *
+ * Any object with an `update(fn: (current: T) => T): void` method satisfies
+ * this interface. Deposit calls `signal.update(() => snapshot)` on each change.
+ */
+export interface ReactiveSignal<T> {
+  update(fn: (current: T) => T): void;
+}
+
+/**
+ * Per-table reactive signals. Keys match your deposit schema table names.
+ * Each signal is automatically kept in sync with the table via `observe()`.
+ * Signals are wired at construction time and cleaned up on `dispose()`.
+ */
+export type TableSignals<S extends AnySchema> = {
+  [K in keyof S]?: ReactiveSignal<RecordOf<S, K>[]>;
+};
+
 /* -------------------- Observer -------------------- */
 
 export type Observer<T> = (records: T[]) => void;
@@ -90,6 +170,10 @@ export type MetricsEvent = {
     | 'queryDelete'
     | 'update'
     | 'upsert';
+  /**
+   * The table name. For `batch` operations this is `'*'` because a batch may
+   * span multiple tables and there is no single canonical table name.
+   */
   table: string;
 };
 
@@ -122,6 +206,11 @@ export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S>
   /**
    * Read-or-insert: returns the existing record if present, otherwise calls `defaultFn()`,
    * writes the result, and returns it. Equivalent to an `upsert` that never overwrites.
+   *
+   * **Not atomic for memory and WebStorage adapters.** Two concurrent calls may both observe
+   * a missing record and both invoke `defaultFn()`, writing twice. If `defaultFn` has side
+   * effects (API calls, counters), wrap in `batch(['table'], fn)` — for the IndexedDB adapter
+   * this executes inside a real atomic IDB transaction.
    */
   getOrDefault<T extends K>(
     table: T,
@@ -161,10 +250,11 @@ export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S>
 /* -------------------- Adapter interface -------------------- */
 
 /**
- * Full client API. Extends TransactionContext<S> with batch, observe/watch, disposal,
+ * Full client API. Extends TransactionContext<S> (minus `getOrDefault`, which is only
+ * available inside `batch()` callbacks) with batch, observe/watch, disposal,
  * debug tooling, and explicit TTL pruning.
  */
-export interface Adapter<S extends AnySchema> extends TransactionContext<S> {
+export interface Adapter<S extends AnySchema> extends Omit<TransactionContext<S>, 'getOrDefault'> {
   /**
    * Execute multiple operations against a set of tables with deferred observer notifications.
    *
@@ -183,11 +273,31 @@ export interface Adapter<S extends AnySchema> extends TransactionContext<S> {
     options?: { immediate?: boolean },
   ): () => void;
   /**
+   * Observe multiple tables simultaneously. The listener receives a combined snapshot
+   * `{ [tableName]: RecordOf<S, T>[] }` and fires once after all tables have delivered
+   * their first snapshot. Subsequent firings are coalesced per microtask, so a batch
+   * that writes to multiple observed tables triggers exactly one combined callback.
+   *
+   * @param tables - The tables to observe. Must be non-empty.
+   * @param listener - Called with a snapshot map keyed by table name.
+   * @param options - `immediate: true` fires the listener with the current state immediately.
+   * @returns An unsubscribe function that stops all underlying observers.
+   */
+  observeMany<K extends keyof S>(
+    tables: readonly K[],
+    listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
+    options?: { immediate?: boolean },
+  ): () => void;
+  /**
    * Explicitly delete all TTL-expired records from every table.
    * Returns the number of records pruned per table.
    *
    * Useful as a scheduled maintenance task for write-heavy tables that are rarely
    * read (lazy eviction would not reclaim storage otherwise).
+   *
+   * **Does not trigger observer callbacks.** TTL-expired records are already logically
+   * absent, so their physical removal does not change observable state. If you need
+   * observers to reflect post-prune counts, call `getAll` and update manually.
    */
   pruneExpired(): Promise<{ [K in keyof S & string]: number }>;
   /**

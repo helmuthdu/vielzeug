@@ -1,8 +1,24 @@
-import type { DepositLogger, TableSignals, TableValidators } from '../plugins';
-import type { Adapter, AnySchema, KeyOf, MetricsEvent, RecordOf, TtlMs } from '../types';
+import type {
+  Adapter,
+  AnySchema,
+  DepositLogger,
+  KeyOf,
+  MetricsEvent,
+  RecordOf,
+  TableSignals,
+  TableValidators,
+  TtlMs,
+} from '../types';
 
-import { buildAdapterOps, type AdapterBackend } from '../adapter-core';
-import { decodeStorageTableFromKey, encodeStorageKey, encodeStorageTablePrefix, getRecordKey } from '../internal';
+import { buildAdapterOps, type StorageBackend } from '../adapter-core';
+import { DepositQuotaError } from '../errors';
+import {
+  decodeStorageTableFromKey,
+  encodeDbPrefix,
+  encodeStorageKey,
+  encodeStorageTablePrefix,
+  getRecordKey,
+} from '../internal';
 import { parseStored, unwrapStored, wrapStored } from '../ttl';
 
 // Firefox historically threw 'NS_ERROR_DOM_QUOTA_REACHED'; modern browsers use the standard name.
@@ -16,7 +32,7 @@ type WebStorageOptions<S extends AnySchema> = {
    * Called when localStorage/sessionStorage quota is exceeded on a write.
    * Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow the error.
    */
-  onQuotaExceeded?: (table: keyof S, error: Error) => 'ignore' | 'throw';
+  onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
   schema: S;
   signals?: TableSignals<S>;
   validators?: TableValidators<S>;
@@ -27,7 +43,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
   logger?: DepositLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
-  onQuotaExceeded?: (table: keyof S, error: Error) => 'ignore' | 'throw';
+  onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
   schema: S;
   signals?: TableSignals<S>;
   storageLabel: string;
@@ -68,7 +84,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       storage().setItem(storageKey, JSON.stringify(value));
     } catch (error) {
       if (error instanceof DOMException && QUOTA_ERROR_NAMES.has(error.name)) {
-        const wrappedError = new Error(`[deposit] ${storageLabel} quota exceeded while writing record`, {
+        const wrappedError = new DepositQuotaError(`${storageLabel} quota exceeded while writing record`, {
           cause: error,
         });
 
@@ -92,7 +108,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
 
     if (!target) return;
 
-    const dbPrefix = `${encodeURIComponent(name)}~`;
+    const dbPrefix = encodeDbPrefix(name);
 
     for (let i = 0; i < target.length; i++) {
       const key = target.key(i);
@@ -104,7 +120,10 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
   initOwnedKeys();
 
   /** Reads, parses, and optionally cleans up expired/corrupt entries on miss. */
-  const readEntry = <T extends Record<string, unknown>>(storageKey: string, { remove = true }: { remove?: boolean } = {}): T | undefined => {
+  const readEntry = <T extends Record<string, unknown>>(
+    storageKey: string,
+    { remove = true }: { remove?: boolean } = {},
+  ): T | undefined => {
     const raw = storage().getItem(storageKey);
 
     if (!raw) return undefined;
@@ -139,7 +158,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
     }
   };
 
-  const core: AdapterBackend<S> = {
+  const core: StorageBackend<S> = {
     async clear<K extends keyof S>(table: K): Promise<void> {
       const target = storage();
       const prefix = getPrefix(String(table));
@@ -198,14 +217,14 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
     },
 
     async deleteMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
-      const target = storage();
       let deleted = 0;
 
       for (const key of keys) {
         const storageKey = encodeStorageKey(name, String(table), String(key));
+        const value = readEntry<RecordOf<S, K>>(storageKey);
 
-        if (target.getItem(storageKey) !== null) {
-          target.removeItem(storageKey);
+        if (value !== undefined) {
+          storage().removeItem(storageKey);
           ownedKeys.delete(storageKey);
           deleted += 1;
         }
@@ -313,7 +332,8 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
   };
 
   return buildAdapterOps(schema, core, {
-    connectExternal(notify) {
+    logger,
+    onCrossTabMessage(notify) {
       if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
         return undefined;
       }
@@ -336,8 +356,9 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
 
         const tableName = decodeStorageTableFromKey(name, event.key);
 
-        if (tableName) {
-          // Keep ownedKeys in sync with cross-tab writes and deletes
+        if (tableName && tableName in schema) {
+          // Keep ownedKeys in sync with cross-tab writes and deletes.
+          // Only accept keys for tables that exist in our schema to prevent unbounded growth.
           if (event.newValue === null) {
             ownedKeys.delete(event.key);
           } else {
@@ -352,7 +373,6 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
 
       return () => window.removeEventListener('storage', listener);
     },
-    logger,
     onMetrics,
     signals,
     validators,

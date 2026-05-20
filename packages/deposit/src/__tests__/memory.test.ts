@@ -1,4 +1,4 @@
-import { createMemory, table, ttl, type Adapter, type MetricsEvent } from '../index';
+import { DepositScopeError, createMemory, table, ttl, type Adapter, type MetricsEvent } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 type Post = { id: number; title: string; userId: number };
@@ -361,21 +361,27 @@ describe('Memory adapter', () => {
   test('getOrDefault returns existing record when present', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
-    const result = await db.getOrDefault('users', 1, () => ({ id: 1, name: 'Fallback' }));
+    const result = await db.batch(['users'], async (tx) =>
+      tx.getOrDefault('users', 1, () => ({ id: 1, name: 'Fallback' })),
+    );
 
     expect(result).toEqual({ id: 1, name: 'Alice' });
     expect(await db.count('users')).toBe(1);
   });
 
   test('getOrDefault inserts and returns default when absent', async () => {
-    const result = await db.getOrDefault('users', 42, () => ({ id: 42, name: 'NewUser' }));
+    const result = await db.batch(['users'], async (tx) =>
+      tx.getOrDefault('users', 42, () => ({ id: 42, name: 'NewUser' })),
+    );
 
     expect(result).toEqual({ id: 42, name: 'NewUser' });
     expect(await db.get('users', 42)).toEqual({ id: 42, name: 'NewUser' });
   });
 
   test('getOrDefault rejects default whose key mismatches the lookup key', async () => {
-    await expect(db.getOrDefault('users', 1, () => ({ id: 999, name: 'Mismatch' }))).rejects.toThrow('key');
+    await expect(
+      db.batch(['users'], (tx) => tx.getOrDefault('users', 1, () => ({ id: 999, name: 'Mismatch' }))),
+    ).rejects.toThrow('key');
   });
 
   test('deleteMany removes multiple records and returns deletion count', async () => {
@@ -471,5 +477,245 @@ describe('Memory adapter', () => {
       db1.dispose();
       db2.dispose();
     }
+  });
+
+  describe('BroadcastChannel security', () => {
+    test('malformed message is silently discarded', async () => {
+      const db1 = createMemory({ name: 'sec-malformed', schema: userSchema });
+      const db2 = createMemory({ name: 'sec-malformed', schema: userSchema });
+
+      try {
+        const spy = vi.fn();
+
+        db2.observe('users', spy);
+
+        // Inject a completely malformed message on the shared channel
+        const attacker = new BroadcastChannel('deposit-memory:sec-malformed');
+
+        attacker.postMessage('not an object');
+        attacker.postMessage(null);
+        attacker.postMessage({ type: 'put' }); // missing table and key
+        attacker.postMessage({ table: 'users', type: 'unknown-type' });
+        attacker.close();
+
+        await Promise.resolve();
+
+        expect(spy).not.toHaveBeenCalled();
+        expect(await db2.count('users')).toBe(0);
+      } finally {
+        db1.dispose();
+        db2.dispose();
+      }
+    });
+
+    test('put message with invalid stored envelope is discarded', async () => {
+      const db1 = createMemory({ name: 'sec-bad-envelope', schema: userSchema });
+      const db2 = createMemory({ name: 'sec-bad-envelope', schema: userSchema });
+
+      try {
+        const attacker = new BroadcastChannel('deposit-memory:sec-bad-envelope');
+
+        // stored has no value field — fails parseStored validation
+        attacker.postMessage({ key: '1', stored: { notValue: 'injection' }, table: 'users', type: 'put' });
+        attacker.close();
+
+        await Promise.resolve();
+
+        expect(await db2.count('users')).toBe(0);
+      } finally {
+        db1.dispose();
+        db2.dispose();
+      }
+    });
+
+    test('put message for an unknown table is discarded', async () => {
+      const db1 = createMemory({ name: 'sec-unknown-table', schema: userSchema });
+      const db2 = createMemory({ name: 'sec-unknown-table', schema: userSchema });
+
+      try {
+        const attacker = new BroadcastChannel('deposit-memory:sec-unknown-table');
+
+        attacker.postMessage({ key: '1', stored: { value: { id: 1, name: 'Evil' } }, table: 'phantom', type: 'put' });
+        attacker.close();
+
+        await Promise.resolve();
+
+        // phantom table not in schema — store is undefined, message dropped
+        expect(await db2.count('users')).toBe(0);
+      } finally {
+        db1.dispose();
+        db2.dispose();
+      }
+    });
+
+    test('put message with valid envelope but failing validator is discarded', async () => {
+      const strictSchema = { users: table<User>('id') };
+      const strictValidator = {
+        parse: (v: unknown): User => {
+          const u = v as User;
+
+          if (typeof u.name !== 'string') throw new Error('name must be a string');
+
+          return u;
+        },
+      };
+
+      const db1 = createMemory({ name: 'sec-validator', schema: strictSchema, validators: { users: strictValidator } });
+      const db2 = createMemory({ name: 'sec-validator', schema: strictSchema, validators: { users: strictValidator } });
+
+      try {
+        const attacker = new BroadcastChannel('deposit-memory:sec-validator');
+
+        // Valid envelope, but value fails validator (name is a number)
+        attacker.postMessage({ key: '1', stored: { value: { id: 1, name: 42 } }, table: 'users', type: 'put' });
+        attacker.close();
+
+        await Promise.resolve();
+
+        expect(await db2.count('users')).toBe(0);
+      } finally {
+        db1.dispose();
+        db2.dispose();
+      }
+    });
+
+    test('valid put message with validator passes and is applied', async () => {
+      const strictValidator = { parse: (v: unknown): User => v as User };
+
+      const db1 = createMemory({ name: 'sec-valid', schema: userSchema, validators: { users: strictValidator } });
+      const db2 = createMemory({ name: 'sec-valid', schema: userSchema, validators: { users: strictValidator } });
+
+      try {
+        // Use an observer to await the BroadcastChannel message delivery (macrotask)
+        const received = new Promise<User>((resolve) => {
+          const stop = db2.observe(
+            'users',
+            (rows) => {
+              const found = rows.find((r) => r.id === 99);
+
+              if (found) {
+                stop();
+                resolve(found);
+              }
+            },
+            { immediate: false },
+          );
+        });
+
+        await db1.put('users', { id: 99, name: 'Legit' });
+
+        expect(await received).toEqual({ id: 99, name: 'Legit' });
+      } finally {
+        db1.dispose();
+        db2.dispose();
+      }
+    });
+  });
+
+  describe('observeMany', () => {
+    type Post = { authorId: number; id: number; title: string };
+
+    const multiSchema = {
+      posts: table<Post>('id'),
+      users: table<User>('id'),
+    };
+
+    let multiDb: Adapter<typeof multiSchema>;
+
+    beforeEach(() => {
+      multiDb = createMemory({ name: 'multi', schema: multiSchema });
+    });
+
+    afterEach(() => {
+      multiDb.dispose();
+    });
+
+    test('fires combined snapshot after all tables deliver initial state', async () => {
+      await multiDb.put('users', { id: 1, name: 'Alice' });
+      await multiDb.put('posts', { authorId: 1, id: 1, title: 'Hello' });
+
+      const snapshots: { posts: Post[]; users: User[] }[] = [];
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: true });
+
+      await new Promise<void>((r) => setTimeout(r, 0));
+      stop();
+
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].users).toEqual([{ id: 1, name: 'Alice' }]);
+      expect(snapshots[0].posts).toEqual([{ authorId: 1, id: 1, title: 'Hello' }]);
+    });
+
+    test('coalesces batch writes across multiple tables into one callback', async () => {
+      const snapshots: { posts: Post[]; users: User[] }[] = [];
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+
+      // Wait for the initial prefetch to complete before triggering writes.
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      await multiDb.batch(['users', 'posts'], async (tx) => {
+        await tx.put('users', { id: 1, name: 'Alice' });
+        await tx.put('posts', { authorId: 1, id: 1, title: 'Hello' });
+      });
+
+      await new Promise<void>((r) => setTimeout(r, 0));
+      stop();
+
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].users).toHaveLength(1);
+      expect(snapshots[0].posts).toHaveLength(1);
+    });
+
+    test('throws DepositScopeError when tables array is empty', () => {
+      expect(() => multiDb.observeMany([], () => {})).toThrow(DepositScopeError);
+    });
+
+    test('stop unsubscribes all underlying observers', async () => {
+      const snapshots: { posts: Post[]; users: User[] }[] = [];
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+
+      stop();
+
+      await multiDb.put('users', { id: 1, name: 'Alice' });
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      expect(snapshots).toHaveLength(0);
+    });
+
+    test('fires after single-table change when other observed table has never changed (immediate: false)', async () => {
+      // Regression: before the prefetch fix, writing only to users would never trigger
+      // the listener because posts had never delivered a snapshot.
+      const snapshots: { posts: Post[]; users: User[] }[] = [];
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+
+      // Wait for initial prefetch of both tables to complete.
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      // Write only to users — posts is never touched.
+      await multiDb.put('users', { id: 1, name: 'Alice' });
+      await new Promise<void>((r) => setTimeout(r, 0));
+      stop();
+
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].users).toEqual([{ id: 1, name: 'Alice' }]);
+      expect(snapshots[0].posts).toEqual([]);
+    });
+
+    test('deduplicates tables — fires listener exactly once per microtask even with duplicate entries', async () => {
+      const snapshots: { users: User[] }[] = [];
+      // Pass 'users' twice — should register only one observer and fire only once per change.
+      const stop = (multiDb as Adapter<{ users: (typeof multiSchema)['users'] }>).observeMany(
+        ['users', 'users'] as const,
+        (s) => snapshots.push(s as { users: User[] }),
+        { immediate: false },
+      );
+
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      await multiDb.put('users', { id: 1, name: 'Alice' });
+      await new Promise<void>((r) => setTimeout(r, 0));
+      stop();
+
+      expect(snapshots).toHaveLength(1);
+    });
   });
 });

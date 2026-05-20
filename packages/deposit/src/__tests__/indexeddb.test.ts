@@ -1,4 +1,4 @@
-import { createIndexedDB, table, ttl, type Adapter, type MetricsEvent } from '../index';
+import { DepositScopeError, createIndexedDB, table, ttl, type Adapter, type MetricsEvent } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 type Post = { id: number; title: string; userId: number };
@@ -233,12 +233,19 @@ describe('IndexedDB adapter', () => {
     await multi.clear('users');
     await multi.clear('posts');
 
-    await expect(
-      multi.batch(['users'], async (tx) => {
-        await tx.put('posts' as any, { id: 1, title: 'Hello', userId: 1 });
-      }),
-    ).rejects.toThrow('batch scope');
+    let caughtError: unknown;
 
+    try {
+      await multi.batch(['users'], async (tx) => {
+        await tx.put('posts' as any, { id: 1, title: 'Hello', userId: 1 });
+      });
+    } catch (e) {
+      caughtError = e;
+    }
+
+    // DepositScopeError must be catchable as its specific type — not wrapped in a plain Error.
+    expect(caughtError).toBeInstanceOf(DepositScopeError);
+    expect((caughtError as DepositScopeError).message).toContain('batch scope');
     expect(await multi.getAll('posts')).toEqual([]);
     multi.dispose();
   });
@@ -398,5 +405,32 @@ describe('IndexedDB adapter', () => {
     expect(await dbP.get('users', 3)).toEqual({ id: 3, name: 'Charlie' });
 
     dbP.dispose();
+  });
+});
+
+describe('createIndexedDB input validation', () => {
+  test('throws RangeError for version = 0', () => {
+    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: 0 })).toThrow(RangeError);
+    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: 0 })).toThrow('positive integer');
+  });
+
+  test('throws RangeError for negative version', () => {
+    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: -1 })).toThrow(RangeError);
+  });
+
+  test('throws RangeError for non-integer version', () => {
+    expect(() => createIndexedDB({ name: 'bad-version', schema: userSchema, version: 1.5 })).toThrow(RangeError);
+  });
+
+  test('accepts version = 1 (default)', () => {
+    const adapter = createIndexedDB({ name: 'good-version', schema: userSchema, version: 1 });
+
+    adapter.dispose();
+  });
+
+  test('accepts version = 2', () => {
+    const adapter = createIndexedDB({ name: 'good-version-2', schema: userSchema, version: 2 });
+
+    adapter.dispose();
   });
 });

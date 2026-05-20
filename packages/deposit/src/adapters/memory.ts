@@ -1,9 +1,58 @@
-import type { DepositLogger, TableSignals, TableValidators } from '../plugins';
-import type { Adapter, AnySchema, KeyOf, MetricsEvent, RecordOf, TtlMs } from '../types';
+import type {
+  Adapter,
+  AnySchema,
+  DepositLogger,
+  KeyOf,
+  MetricsEvent,
+  RecordOf,
+  TableSignals,
+  TableValidators,
+  TtlMs,
+} from '../types';
 
-import { buildAdapterOps, type AdapterBackend } from '../adapter-core';
+import { buildAdapterOps, type StorageBackend } from '../adapter-core';
 import { getRecordKey } from '../internal';
-import { type StoredRecord, unwrapStored, wrapStored } from '../ttl';
+import { type StoredRecord, parseStored, unwrapStored, wrapStored } from '../ttl';
+
+type MemoryBroadcastMsg =
+  | { table: string; type: 'clear' }
+  | { key: string; table: string; type: 'delete' }
+  | { keys: string[]; table: string; type: 'deleteMany' }
+  | { key: string; stored: StoredRecord<unknown>; table: string; type: 'put' }
+  | { entries: Array<{ key: string; stored: StoredRecord<unknown> }>; table: string; type: 'putAll' };
+
+/** Runtime type guard — rejects malformed or unknown BroadcastChannel messages. */
+function isBroadcastMsg(data: unknown): data is MemoryBroadcastMsg {
+  if (typeof data !== 'object' || data === null) return false;
+
+  const d = data as Record<string, unknown>;
+
+  if (typeof d['table'] !== 'string' || typeof d['type'] !== 'string') return false;
+
+  switch (d['type']) {
+    case 'clear':
+      return true;
+    case 'delete':
+      return typeof d['key'] === 'string';
+    case 'deleteMany':
+      return Array.isArray(d['keys']) && (d['keys'] as unknown[]).every((k) => typeof k === 'string');
+    case 'put':
+      return typeof d['key'] === 'string' && parseStored(d['stored']) !== undefined;
+    case 'putAll':
+      return (
+        Array.isArray(d['entries']) &&
+        (d['entries'] as unknown[]).every(
+          (e) =>
+            typeof e === 'object' &&
+            e !== null &&
+            typeof (e as Record<string, unknown>)['key'] === 'string' &&
+            parseStored((e as Record<string, unknown>)['stored']) !== undefined,
+        )
+      );
+    default:
+      return false;
+  }
+}
 
 type MemoryOptions<S extends AnySchema> = {
   logger?: DepositLogger;
@@ -28,19 +77,13 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
   // BroadcastChannel for cross-tab state sync (only when name is provided).
   // On each mutation the mutating tab broadcasts the raw StoredRecord so receiving tabs
   // can replicate the exact same data (including TTL) without re-serialising.
-  type BroadcastMsg =
-    | { table: string; type: 'clear' }
-    | { key: string; table: string; type: 'delete' }
-    | { keys: string[]; table: string; type: 'deleteMany' }
-    | { key: string; stored: StoredRecord<unknown>; table: string; type: 'put' }
-    | { entries: Array<{ key: string; stored: StoredRecord<unknown> }>; table: string; type: 'putAll' };
 
   const channel =
     name !== undefined && typeof BroadcastChannel !== 'undefined'
       ? new BroadcastChannel(`deposit-memory:${name}`)
       : undefined;
 
-  const core: AdapterBackend<S> = {
+  const core: StorageBackend<S> = {
     async clear<K extends keyof S>(table: K): Promise<void> {
       getTableStore(String(table)).clear();
       channel?.postMessage({ table: String(table), type: 'clear' });
@@ -203,13 +246,44 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
   };
 
   return buildAdapterOps(schema, core, {
-    connectExternal: channel
+    logger,
+    onCrossTabMessage: channel
       ? (notify) => {
-          channel.onmessage = (event: MessageEvent<BroadcastMsg>) => {
+          channel.onmessage = (event: MessageEvent<unknown>) => {
+            if (!isBroadcastMsg(event.data)) return;
+
             const msg = event.data;
             const store = tables.get(msg.table);
 
             if (!store) return;
+
+            const validator = validators?.[msg.table as keyof S];
+
+            const applyStoredWithValidation = (key: string, stored: StoredRecord<unknown>): boolean => {
+              if (!validator) {
+                store.set(key, stored);
+
+                return true;
+              }
+
+              try {
+                const parsed = parseStored(stored as unknown);
+
+                if (!parsed) return false;
+
+                const validatedValue = validator.parse(parsed.value);
+                const validated: StoredRecord<unknown> =
+                  parsed.expiresAt !== undefined
+                    ? { expiresAt: parsed.expiresAt, value: validatedValue }
+                    : { value: validatedValue };
+
+                store.set(key, validated);
+
+                return true;
+              } catch {
+                return false; // discard invalid record
+              }
+            };
 
             switch (msg.type) {
               case 'clear':
@@ -222,10 +296,10 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
                 for (const key of msg.keys) store.delete(key);
                 break;
               case 'put':
-                store.set(msg.key, msg.stored);
+                applyStoredWithValidation(msg.key, msg.stored);
                 break;
               case 'putAll':
-                for (const { key, stored } of msg.entries) store.set(key, stored);
+                for (const { key, stored } of msg.entries) applyStoredWithValidation(key, stored);
                 break;
             }
 
@@ -237,7 +311,6 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
           };
         }
       : undefined,
-    logger,
     onMetrics,
     signals,
     validators,

@@ -1,24 +1,38 @@
 import type { AnySchema, KeyOf, RecordOf } from './types';
 
+import { DepositDisposedError, DepositError } from './errors';
+
 type ObserverListener<T> = (records: T[]) => void;
 
+/**
+ * Separator used between encoded key segments. The null byte (\x00) is chosen
+ * because encodeURIComponent always encodes it as %00, so it can never appear
+ * inside an encoded component — eliminating the key-collision risk of using an
+ * unreserved character like `~`.
+ */
+const SEP = '\x00';
+
+export function encodeDbPrefix(dbName: string): string {
+  return `${encodeURIComponent(dbName)}${SEP}`;
+}
+
 export function encodeStorageKey(dbName: string, table: string, key: string): string {
-  return `${encodeURIComponent(dbName)}~${encodeURIComponent(table)}~${encodeURIComponent(key)}`;
+  return `${encodeURIComponent(dbName)}${SEP}${encodeURIComponent(table)}${SEP}${encodeURIComponent(key)}`;
 }
 
 export function encodeStorageTablePrefix(dbName: string, table: string): string {
-  return `${encodeURIComponent(dbName)}~${encodeURIComponent(table)}~`;
+  return `${encodeURIComponent(dbName)}${SEP}${encodeURIComponent(table)}${SEP}`;
 }
 
 export function decodeStorageTableFromKey(dbName: string, storageKey: string | null): string | undefined {
   if (!storageKey) return undefined;
 
-  const prefix = `${encodeURIComponent(dbName)}~`;
+  const prefix = encodeDbPrefix(dbName);
 
   if (!storageKey.startsWith(prefix)) return undefined;
 
   const tail = storageKey.slice(prefix.length);
-  const end = tail.indexOf('~');
+  const end = tail.indexOf(SEP);
 
   if (end === -1) return undefined;
 
@@ -76,7 +90,7 @@ export function createObserverHub<S extends AnySchema>(
     { immediate = false }: { immediate?: boolean } = {},
   ): (() => void) => {
     if (disposed) {
-      throw new Error('[deposit] observer hub is disposed');
+      throw new DepositDisposedError('observer hub is disposed');
     }
 
     const key = String(table);
@@ -198,7 +212,7 @@ export function getRecordKey<S extends AnySchema, K extends keyof S>(
   const keyValue = (value as Record<string, unknown>)[keyField];
 
   if (keyValue === undefined || keyValue === null) {
-    throw new Error(`[deposit] missing required key field "${keyField}" in record for table "${String(table)}"`);
+    throw new DepositError(`missing required key field "${keyField}" in record for table "${String(table)}"`);
   }
 
   return keyValue as KeyOf<S, K>;

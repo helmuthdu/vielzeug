@@ -23,7 +23,7 @@ description: Complete API reference for Deposit adapters, schema helpers, query 
 
 ## Exports
 
-**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`
+**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`, `DepositError`, `DepositDisposedError`, `DepositMigrationError`, `DepositQuotaError`, `DepositScopeError`
 
 **Types:** `Adapter`, `AnySchema`, `DebugInfo`, `DebugStats`, `DepositLogger`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `ReadQuery`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`
 
@@ -114,7 +114,7 @@ createLocalStorage<S extends AnySchema>(options: {
   logger?: DepositLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
-  onQuotaExceeded?: (table: keyof S, error: Error) => 'ignore' | 'throw';
+  onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
   schema: S;
   signals?: TableSignals<S>;
   validators?: TableValidators<S>;
@@ -130,7 +130,7 @@ createSessionStorage<S extends AnySchema>(options: {
   logger?: DepositLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
-  onQuotaExceeded?: (table: keyof S, error: Error) => 'ignore' | 'throw';
+  onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
   schema: S;
   signals?: TableSignals<S>;
   validators?: TableValidators<S>;
@@ -159,12 +159,15 @@ The IDB adapter opens the database lazily on first operation. `migrate` is calle
 ```ts
 createMemory<S extends AnySchema>(options: {
   logger?: DepositLogger;
+  name?: string;
   onMetrics?: (event: MetricsEvent) => void;
   schema: S;
   signals?: TableSignals<S>;
   validators?: TableValidators<S>;
 }): Adapter<S>
 ```
+
+When `name` is provided and `BroadcastChannel` is available, all `createMemory` instances with the same `name` in the same origin replicate mutations to each other (cross-tab synchronisation). If `BroadcastChannel` is not available, the option is silently ignored.
 
 ---
 
@@ -189,6 +192,9 @@ interface Adapter<S extends AnySchema> {
 
   delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
 
+  /** Delete multiple records by key in a single operation. Returns the count of deleted records. */
+  deleteMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number>;
+
   /** Remove all records from the table. */
   clear<K extends keyof S>(table: K): Promise<void>;
 
@@ -210,12 +216,25 @@ interface Adapter<S extends AnySchema> {
   iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
 
   /**
-   * Subscribe to table changes. Fires an initial snapshot by default.
+   * Subscribe to table changes. Does **not** fire an initial snapshot by default.
+   * Pass `{ immediate: true }` to also receive the current table state on registration.
    * Returns an unsubscribe function — call it on teardown.
    */
   observe<K extends keyof S>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
+    options?: { immediate?: boolean },
+  ): () => void;
+
+  /**
+   * Subscribe to multiple tables at once. Fires a combined snapshot `{ [tableName]: records[] }`
+   * whenever any observed table changes. All tables are eagerly prefetched on registration.
+   * Throws `DepositScopeError` when `tables` is empty.
+   * Returns an unsubscribe function — call it on teardown.
+   */
+  observeMany<K extends keyof S>(
+    tables: readonly K[],
+    listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
     options?: { immediate?: boolean },
   ): () => void;
 
@@ -256,9 +275,15 @@ interface Adapter<S extends AnySchema> {
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `immediate` | `boolean` | `true` | Fire the listener immediately with the current table contents |
+| `immediate` | `boolean` | `false` | Fire the listener immediately with the current table contents |
 
 Returns an unsubscribe function. Call it on teardown to prevent memory leaks.
+
+### `observeMany` options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `immediate` | `boolean` | `false` | Fire the listener once all tables have been prefetched (current state) |
 
 ---
 
@@ -271,10 +296,22 @@ type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
   clear<T extends K>(table: T): Promise<void>;
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  /** Delete multiple records by key. Returns the count of deleted records. */
+  deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   /** Fetch multiple records by key. Preserves key order; missing keys yield `undefined`. */
   getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+  /**
+   * Return the existing record if found, otherwise call `defaultFn()`, write it, and return it.
+   * On IndexedDB the check and insert are atomic (same IDB transaction).
+   */
+  getOrDefault<T extends K>(
+    table: T,
+    key: KeyOf<S, T>,
+    defaultFn: () => RecordOf<S, T>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, T>>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
@@ -296,6 +333,8 @@ type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
 ```
 
 `batch()` is scoped to the tables listed in the first argument. The table list must not be empty, and operations on unlisted tables are rejected at both type level and runtime.
+
+> `getOrDefault` is only available inside `batch()` callbacks — it is not on the top-level `Adapter`.
 
 ---
 
@@ -416,12 +455,37 @@ A `@vielzeug/validit` schema satisfies `RecordValidator` directly. Any object wi
 type MetricsEvent = {
   duration: number;
   operation:
-    | 'batch' | 'count' | 'delete' | 'clear' | 'get' | 'getAll' | 'getMany'
-    | 'has' | 'iterate' | 'put' | 'putAll' | 'query' | 'queryDelete'
+    | 'batch' | 'count' | 'delete' | 'deleteMany' | 'clear' | 'get' | 'getAll' | 'getMany'
+    | 'getOrDefault' | 'has' | 'iterate' | 'put' | 'putAll' | 'query' | 'queryDelete'
     | 'update' | 'upsert';
+  /** Table name. For `batch` operations this is `'*'` because a batch may span multiple tables. */
   table: string;
 };
 ```
+
+---
+
+## Error Classes
+
+All errors thrown by `@vielzeug/deposit` extend `DepositError`. You can catch the base class to handle any deposit error, or catch specific subclasses for fine-grained handling.
+
+```ts
+import {
+  DepositDisposedError,
+  DepositError,
+  DepositMigrationError,
+  DepositQuotaError,
+  DepositScopeError,
+} from '@vielzeug/deposit';
+```
+
+| Class | Extends | Thrown when |
+| --- | --- | --- |
+| `DepositError` | `Error` | Base class — catch-all for any deposit error |
+| `DepositDisposedError` | `DepositError` | Any operation after `dispose()` has been called |
+| `DepositScopeError` | `DepositError` | `batch()` accesses a table outside its declared scope; empty array passed to `observeMany` |
+| `DepositQuotaError` | `DepositError` | A LocalStorage / SessionStorage write exceeds the storage quota |
+| `DepositMigrationError` | `DepositError` | IndexedDB `onupgradeneeded` migration callback threw |
 
 ---
 

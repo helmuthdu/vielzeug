@@ -1,7 +1,18 @@
-import type { DepositLogger, TableSignals, TableValidators } from '../plugins';
-import type { Adapter, AnySchema, MetricsEvent, MigrationFn, RecordOf, TransactionContext, TtlMs } from '../types';
+import type {
+  Adapter,
+  AnySchema,
+  DepositLogger,
+  MetricsEvent,
+  MigrationFn,
+  RecordOf,
+  TableSignals,
+  TableValidators,
+  TransactionContext,
+  TtlMs,
+} from '../types';
 
-import { buildAdapterOps, buildTxContext, withScope, type AdapterBackend, type AdapterStorageOps } from '../adapter-core';
+import { buildAdapterOps, buildTxContext, type StorageBackend, type StorageCore } from '../adapter-core';
+import { DepositDisposedError, DepositError, DepositMigrationError } from '../errors';
 import { getRecordKey } from '../internal';
 import { type NativeRange } from '../query';
 import { type StoredRecord, parseStored, unwrapStored, wrapStored } from '../ttl';
@@ -41,6 +52,13 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
 
     tx.oncomplete = () => {
       if (callbackError) {
+        // Preserve DepositError subtype identity — re-throwing keeps instanceof checks intact.
+        if (callbackError instanceof DepositError) {
+          reject(callbackError);
+
+          return;
+        }
+
         reject(wrapTxError(scope, 'transaction failed', callbackError));
 
         return;
@@ -49,7 +67,16 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
       resolve(result as T);
     };
     tx.onerror = () => reject(wrapTxError(scope, 'transaction error', tx.error));
-    tx.onabort = () => reject(wrapTxError(scope, 'transaction aborted', callbackError ?? tx.error));
+    tx.onabort = () => {
+      // Preserve DepositError subtype identity — re-throwing keeps instanceof checks intact.
+      if (callbackError instanceof DepositError) {
+        reject(callbackError);
+
+        return;
+      }
+
+      reject(wrapTxError(scope, 'transaction aborted', callbackError ?? tx.error));
+    };
   });
 }
 
@@ -135,10 +162,6 @@ function countLiveRecordsInStore<T extends Record<string, unknown>>(store: IDBOb
   });
 }
 
-async function storeHasKey(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
-  return (await idbReq(store.getKey(key))) !== undefined;
-}
-
 /** Clear all records from a store unconditionally. */
 async function storeClear(store: IDBObjectStore): Promise<void> {
   await idbReq(store.clear());
@@ -185,14 +208,11 @@ async function storeDelete(store: IDBObjectStore, key: IDBValidKey): Promise<boo
 async function storeDeleteMany(store: IDBObjectStore, keys: IDBValidKey[]): Promise<number> {
   if (keys.length === 0) return 0;
 
-  // Parallel existence checks, then parallel deletes for keys that exist.
-  // IDB transactions queue requests in order, so firing them concurrently is safe.
-  const existsResults = await Promise.all(keys.map((k) => storeHasKey(store, k)));
-  const toDelete = keys.filter((_, i) => existsResults[i]);
+  // Use storeDelete (TTL-aware) for each key so that expired records do not inflate the count.
+  // storeDelete also cleans up the physical IDB entry for expired records.
+  const results = await Promise.all(keys.map((k) => storeDelete(store, k)));
 
-  await Promise.all(toDelete.map((k) => idbReq(store.delete(k))));
-
-  return toDelete.length;
+  return results.filter(Boolean).length;
 }
 
 async function storePutAt<T>(store: IDBObjectStore, key: IDBValidKey, value: T, ttl?: TtlMs): Promise<void> {
@@ -238,12 +258,17 @@ type IndexedDbOptions<S extends AnySchema> = {
   schema: S;
   signals?: TableSignals<S>;
   validators?: TableValidators<S>;
-  /** Schema version. Increment when adding tables or changing the schema, then provide `migrate`. Defaults to 1. */
+  /** Schema version. Must be a positive integer. Increment when adding tables or changing the schema, then provide `migrate`. Defaults to 1. */
   version?: number;
 };
 
 export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): Adapter<S> {
   const { logger, migrate, name, onMetrics, schema, signals, validators, version = 1 } = options;
+
+  if (!Number.isInteger(version) || version < 1) {
+    throw new RangeError(`[deposit] createIndexedDB version must be a positive integer, got ${String(version)}`);
+  }
+
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`deposit:${name}`) : undefined;
 
   if (!channel && logger) {
@@ -286,7 +311,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
                 /* ignore */
               }
 
-              reject(new Error(`[deposit] migration failed for "${name}"`, { cause: error }));
+              reject(new DepositMigrationError(`migration failed for "${name}"`, { cause: error }));
 
               return;
             }
@@ -332,11 +357,11 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     mode: 'readonly' | 'readwrite',
     fn: (store: IDBObjectStore) => Promise<T>,
   ): Promise<T> => {
-    if (disposed) throw new Error(`[deposit] "${name}" is disposed`);
+    if (disposed) throw new DepositDisposedError(`"${name}" is disposed`);
 
     if (!db) await connect();
 
-    if (!db) throw new Error(`[deposit] "${name}" is disposed`);
+    if (!db) throw new DepositDisposedError(`"${name}" is disposed`);
 
     const tableName = String(table);
     const tx = db.transaction(tableName, mode);
@@ -345,11 +370,11 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   };
 
   const requireDb = async (): Promise<IDBDatabase> => {
-    if (disposed) throw new Error(`[deposit] "${name}" is disposed`);
+    if (disposed) throw new DepositDisposedError(`"${name}" is disposed`);
 
     if (!db) await connect();
 
-    if (!db) throw new Error(`[deposit] "${name}" is disposed`);
+    if (!db) throw new DepositDisposedError(`"${name}" is disposed`);
 
     return db;
   };
@@ -358,7 +383,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     channel?.postMessage({ table: String(table) });
   };
 
-  const core: AdapterBackend<S> = {
+  const core: StorageBackend<S> = {
     // clear returns void — the count/notify decision happens in buildTxContext.clear via core.count()
     clear: (table) => withStore(table, 'readwrite', storeClear),
 
@@ -441,7 +466,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     const storeOf = <T extends K>(table: T) => idbTx.objectStore(String(table));
     const dirtyTables = new Set<K>();
 
-    const txCore: AdapterStorageOps<S, K> = {
+    const txCore: StorageCore<S, K> = {
       // clear returns void — count/notify decision is handled by buildTxContext.clear
       clear: async (table) => {
         await idbReq(storeOf(table).clear());
@@ -467,9 +492,8 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     };
 
     const scope = new Set(tables.map(String));
-    const tx = buildTxContext<S, K>(schema, txCore, (t) => dirtyTables.add(t), validateFn);
-    const txOps = withScope(tx, scope);
-    const result = await runIdbTx(idbTx, name, () => fn(txOps));
+    const tx = buildTxContext<S, K>(schema, txCore, (t) => dirtyTables.add(t), validateFn, scope);
+    const result = await runIdbTx(idbTx, name, () => fn(tx));
 
     for (const table of dirtyTables) {
       notifyMutation(table);
@@ -479,10 +503,12 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   };
 
   return buildAdapterOps(schema, core, {
-    batch: ({ notifyMutation, validate: validateFn }) =>
+    buildBatch:
+      ({ notifyMutation, validate: validateFn }) =>
       (tables, fn) =>
         idbBatch(tables, fn, notifyMutation, validateFn),
-    connectExternal(notify) {
+    logger,
+    onCrossTabMessage(notify) {
       if (!channel) {
         return undefined;
       }
@@ -499,7 +525,6 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         channel.onmessage = null;
       };
     },
-    logger,
     onMetrics,
     onMutation: publish,
     signals,

@@ -4,6 +4,7 @@ import { cacheFirstExample } from './cache-first';
 import { crudOperationsExample } from './crud-operations';
 import { indexedDbExample } from './indexed-db';
 import { queryBuilderExample } from './query-builder';
+import { reactiveObserveExample } from './reactive-observe';
 import { ttlExpirationExample } from './ttl-expiration';
 
 export const depositExamples = {
@@ -13,5 +14,6 @@ export const depositExamples = {
   'crud-operations': crudOperationsExample,
   'indexed-db': indexedDbExample,
   'query-builder': queryBuilderExample,
+  'reactive-observe': reactiveObserveExample,
   'ttl-expiration': ttlExpirationExample,
 };

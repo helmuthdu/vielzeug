@@ -2,9 +2,9 @@
 description: Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
 package: deposit
 category: storage
-keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session]
-related: [fetchit, logit, toolkit]
-exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl]
+keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
+related: [fetchit, logit, stateit, validit, toolkit]
+exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune, DepositError, DepositDisposedError, DepositMigrationError, DepositQuotaError, DepositScopeError]
 ---
 
 # @vielzeug/deposit
@@ -18,11 +18,11 @@ exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemor
 
 **Package:** `@vielzeug/deposit` &nbsp;·&nbsp; **Category:** Storage
 
-**Key exports:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`
+**Key exports:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`
 
 **When to use:** Structured, queryable browser storage with TTL, reactivity, and TypeScript types.
 
-**Related:** [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/logit](https://vielzeug.dev/logit/) · [@vielzeug/toolkit](https://vielzeug.dev/toolkit/)
+**Related:** [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/logit](https://vielzeug.dev/logit/) · [@vielzeug/stateit](https://vielzeug.dev/stateit/) · [@vielzeug/validit](https://vielzeug.dev/validit/) · [@vielzeug/toolkit](https://vielzeug.dev/toolkit/)
 
 </details>
 

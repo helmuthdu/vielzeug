@@ -7,21 +7,24 @@ const schema = {
 
 const db = createLocalStorage({ name: 'cache-demo', schema })
 
-async function getOrCreateConfig() {
-  const existing = await db.get('cache', 'config')
-
-  if (existing) {
-    return { source: 'cache', value: existing }
-  }
-
-  const fresh = { id: 'config', data: 'computed value', fetched: Date.now() }
-  await db.put('cache', fresh, ttl.minutes(5))
-
-  return { source: 'computed', value: fresh }
+// getOrDefault is available inside batch() callbacks.
+// On IndexedDB the check and insert are atomic; here on LocalStorage it is a
+// logical read-then-write within the deferred-notification batch.
+async function getOrComputeConfig() {
+  return db.batch(['cache'], (tx) =>
+    tx.getOrDefault('cache', 'config', () => ({
+      id: 'config',
+      data: 'computed value',
+      fetchedAt: Date.now(),
+    }), ttl.minutes(5)),
+  )
 }
 
-console.log(await getOrCreateConfig())
-console.log(await getOrCreateConfig())
-console.log('Stored record:', await db.get('cache', 'config'))`,
-  name: 'Cache-First Pattern',
+const first = await getOrComputeConfig()  // inserts
+const second = await getOrComputeConfig() // returns cached
+
+console.log('First call (source: computed):', first.data)
+console.log('Second call (same record):', second.fetchedAt === first.fetchedAt)
+console.log('Stored:', await db.get('cache', 'config'))`,
+  name: 'Cache-First with getOrDefault',
 };

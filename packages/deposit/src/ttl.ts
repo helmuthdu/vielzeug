@@ -1,3 +1,5 @@
+import { DepositError } from './errors';
+
 /* -------------------- TtlMs (owns here to avoid circular deps with types.ts) -------------------- */
 
 declare const ttlMsBrand: unique symbol;
@@ -24,7 +26,7 @@ export type StoredRecord<T> = {
 
 export function assertTtlMs(ttlMs: number, source: string): TtlMs {
   if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
-    throw new Error(`[deposit] ${source} expected a finite positive number, received ${String(ttlMs)}`);
+    throw new DepositError(`${source} expected a finite positive number, received ${String(ttlMs)}`);
   }
 
   return ttlMs as TtlMs;

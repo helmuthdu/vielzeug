@@ -129,10 +129,13 @@ const updated = await db.update('users', 1, { name: 'Alicia' });
 // delete single record — returns true if it existed
 const deleted = await db.delete('users', 1);
 
+// delete multiple records — returns count of deleted records
+const count = await db.deleteMany('users', [2, 3, 99]);
+
 // delete all records in a table
 await db.clear('users');
 
-void updated, deleted;
+void updated, deleted, count;
 ```
 
 ## Query Composition
@@ -160,15 +163,16 @@ void page, total, cheapest;
 ## Reactive Reads
 
 ```ts
+// future changes only (default — no initial snapshot)
 const stop = db.observe('users', (rows) => {
   console.log('users:', rows.length);
 });
 
-// opt out of the initial snapshot
-const stopSilent = db.observe('users', handleChange, { immediate: false });
+// fire immediately with current state, then on every change
+const stopImmediate = db.observe('users', handleChange, { immediate: true });
 
 await db.put('users', { id: 1, name: 'Alice' }); // triggers both
 
 stop();
-stopSilent();
+stopImmediate();
 ```

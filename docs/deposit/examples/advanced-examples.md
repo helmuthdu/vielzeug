@@ -1,6 +1,6 @@
 ---
 title: Deposit Examples — Advanced
-description: Batch writes, transactions, reactive signals, watch, getMany, TTL pruning, migration, lazy iteration, upsert, plugins, and testing patterns.
+description: Batch writes, transactions, reactive signals, watch, observeMany, getMany, deleteMany, TTL pruning, migration, lazy iteration, upsert, plugins, error handling, and testing patterns.
 ---
 
 ## Atomic Batch (IndexedDB)
@@ -94,7 +94,7 @@ await db.batch(['users', 'posts'], async (tx) => {
 
 ## Reactive Tables with `watch`
 
-`watch(table)` returns an `AsyncIterable` that yields a fresh snapshot on every change, starting immediately. The observer is cleaned up when the loop exits.
+`watch(table)` returns an `AsyncIterable` that yields a fresh snapshot on every change, **always starting with an immediate snapshot**. The observer is cleaned up when the loop exits.
 
 ```ts
 // Run this in a background task or component effect
@@ -113,6 +113,48 @@ for await (const users of db.watch('users')) {
   if (shouldStop) break;
 }
 ```
+
+## Multi-Table Reactivity with `observeMany`
+
+`observeMany(tables, listener)` fires a combined snapshot whenever **any** of the observed tables changes. All tables are eagerly prefetched on registration, so the first callback always has a complete picture.
+
+```ts
+import { createMemory, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string };
+type Post = { id: number; title: string; userId: number };
+
+const schema = {
+  users: table<User>('id'),
+  posts: table<Post>('id'),
+};
+
+const db = createMemory({ schema });
+
+const stop = db.observeMany(['users', 'posts'], ({ users, posts }) => {
+  console.log(`dashboard: ${users.length} users, ${posts.length} posts`);
+});
+
+// Both tables change inside a single batch — the listener fires exactly once.
+await db.batch(['users', 'posts'], async (tx) => {
+  await tx.put('users', { id: 1, name: 'Alice' });
+  await tx.put('posts', { id: 10, title: 'Hello', userId: 1 });
+});
+
+stop();
+```
+
+Pass `{ immediate: true }` to receive the combined state immediately on registration:
+
+```ts
+const stop = db.observeMany(
+  ['users', 'posts'],
+  ({ users, posts }) => renderDashboard(users, posts),
+  { immediate: true },
+);
+```
+
+> Passing an empty `tables` array throws `DepositScopeError`.
 
 ## Reactive Signals (`signals` plugin)
 
@@ -191,6 +233,98 @@ console.log(await db.has('sessions', 's1')); // true
 ```
 
 All records share the same TTL. For IDB, `putAll` runs in a single atomic IDB transaction.
+
+## Read-or-Insert with `getOrDefault` (inside batch)
+
+`getOrDefault` is available inside `batch()` callbacks. It returns the existing record if found, otherwise inserts and returns the result of `defaultFn()`.
+
+On IndexedDB the check and insert happen inside the same IDB transaction — safe for concurrent writes.
+
+```ts
+await db.batch(['users'], async (tx) => {
+  // Returns Alice if id 1 already exists; inserts Guest otherwise.
+  const user = await tx.getOrDefault('users', 1, () => ({ id: 1, name: 'Guest' }));
+  console.log(user.name);
+});
+```
+
+With a TTL:
+
+```ts
+import { ttl } from '@vielzeug/deposit';
+
+await db.batch(['sessions'], async (tx) => {
+  const session = await tx.getOrDefault(
+    'sessions',
+    'tok-abc',
+    () => ({ id: 'tok-abc', userId: 42 }),
+    ttl.hours(1),
+  );
+  console.log(session.userId);
+});
+```
+
+## Bulk Delete with `deleteMany`
+
+`deleteMany(table, keys)` removes multiple records in a single call and returns the count of records that were deleted.
+
+```ts
+await db.putAll('users', [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+  { id: 3, name: 'Carol' },
+]);
+
+const deleted = await db.deleteMany('users', [1, 3, 99]);
+console.log(deleted); // 2 (id 99 did not exist)
+```
+
+`deleteMany` is also available inside `batch()` callbacks:
+
+```ts
+await db.batch(['users', 'posts'], async (tx) => {
+  const staleUserIds = [1, 2];
+  await tx.deleteMany('users', staleUserIds);
+  await tx.deleteMany('posts', [10, 20]);
+});
+```
+
+## Error Handling
+
+All `@vielzeug/deposit` errors extend `DepositError`. Catch the base class for a catch-all, or catch specific subclasses:
+
+```ts
+import {
+  DepositDisposedError,
+  DepositError,
+  DepositMigrationError,
+  DepositQuotaError,
+  DepositScopeError,
+} from '@vielzeug/deposit';
+
+try {
+  await db.put('users', { id: 1, name: 'Alice' });
+} catch (err) {
+  if (err instanceof DepositDisposedError) {
+    // adapter was disposed before this call
+    console.error('DB is disposed');
+  } else if (err instanceof DepositScopeError) {
+    // batch accessed an out-of-scope table, or observeMany received an empty array
+    console.error('Scope violation:', err.message);
+  } else if (err instanceof DepositQuotaError) {
+    // WebStorage quota exceeded (if onQuotaExceeded returned 'throw' or is not configured)
+    console.error('Storage full:', err.message);
+  } else if (err instanceof DepositMigrationError) {
+    // IndexedDB onupgradeneeded migration threw
+    console.error('Migration failed:', err.message);
+  } else if (err instanceof DepositError) {
+    // any other deposit error
+    console.error('Deposit error:', err.message);
+  } else {
+    throw err;
+  }
+}
+```
 
 ## Upsert
 
@@ -297,17 +431,17 @@ const db = createMemory({
 
 ## Quota Exceeded Hook (LocalStorage / SessionStorage)
 
-Gracefully handle storage quota errors instead of propagating exceptions.
+Gracefully handle storage quota errors instead of propagating exceptions. The callback receives a `DepositQuotaError`.
 
 ```ts
-import { createLocalStorage } from '@vielzeug/deposit';
+import { createLocalStorage, type DepositQuotaError } from '@vielzeug/deposit';
 
 const db = createLocalStorage({
   name: 'app',
   schema,
-  onQuotaExceeded: (table, error) => {
+  onQuotaExceeded: (table, error: DepositQuotaError) => {
     // log or evict stale data here
-    console.warn(`[${String(table)}] quota exceeded — dropping write`, error);
+    console.warn(`[${String(table)}] quota exceeded — dropping write`, error.message);
     return 'ignore'; // silently skip the write
   },
 });

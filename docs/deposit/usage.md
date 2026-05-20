@@ -70,6 +70,14 @@ const db = createMemory({ schema });
 
 No browser APIs required. Use this in unit tests and SSR environments.
 
+Pass an optional `name` to enable cross-tab (or cross-window) synchronisation via `BroadcastChannel`. All `createMemory` instances with the same `name` in the same origin replicate mutations to each other.
+
+```ts
+const db = createMemory({ name: 'shared-state', schema });
+```
+
+If `BroadcastChannel` is not available in the environment, the option is silently ignored.
+
 ## Basic CRUD
 
 ```ts
@@ -205,27 +213,28 @@ Expired records are skipped automatically.
 
 ### `observe`
 
-`observe(table, listener)` fires the listener whenever the table changes. It emits an initial snapshot by default.
+`observe(table, listener)` fires the listener whenever the table changes. By default it does **not** fire an initial snapshot — only future mutations trigger the callback. Pass `{ immediate: true }` to also receive the current table state immediately on registration.
 
 ```ts
+// future changes only (default)
 const stop = db.observe('users', (rows) => {
   console.log('users updated:', rows.length);
 });
 
-// suppress the initial snapshot when you only need future changes
-const stopSilent = db.observe('users', handleChange, { immediate: false });
+// fire immediately with current state, then on every change
+const stopImmediate = db.observe('users', handleChange, { immediate: true });
 
 await db.put('users', { id: 1, name: 'Alice', age: 30 }); // triggers both listeners
 
 stop();
-stopSilent();
+stopImmediate();
 ```
 
 Always call the returned unsubscribe function on teardown to prevent memory leaks.
 
 ### `watch` — AsyncIterable Stream
 
-`watch(table)` returns an `AsyncIterable` that yields a fresh snapshot on every change, including an immediate one. It is the `for await` companion to `observe`.
+`watch(table)` returns an `AsyncIterable` that yields a fresh snapshot on every change, **always starting with an immediate snapshot**. It is the `for await` companion to `observe`.
 
 ```ts
 for await (const users of db.watch('users')) {
@@ -234,6 +243,32 @@ for await (const users of db.watch('users')) {
 ```
 
 The observer is cleaned up automatically when the loop exits via `break`, `return`, or an unhandled error. No explicit unsubscribe is needed.
+
+### `observeMany` — Combined Multi-Table Snapshot
+
+`observeMany(tables, listener)` subscribes to multiple tables at once and delivers a single combined snapshot `{ [tableName]: RecordOf<S, T>[] }` whenever any observed table changes.
+
+The listener fires once after all tables have been prefetched, ensuring the snapshot is always complete regardless of which table triggers it.
+
+```ts
+const stop = db.observeMany(['users', 'posts'], ({ users, posts }) => {
+  renderDashboard(users, posts);
+});
+
+// fire immediately with current state of all tables
+const stopImmediate = db.observeMany(
+  ['users', 'posts'],
+  ({ users, posts }) => renderDashboard(users, posts),
+  { immediate: true },
+);
+
+stop();
+stopImmediate();
+```
+
+Writes to multiple tables inside a single `batch()` call coalesce into one callback — observers fire exactly once per microtask, not once per dirty table.
+
+> `tables` must be non-empty. Passing an empty array throws `DepositScopeError`.
 
 ## Batch Writes
 
@@ -252,7 +287,18 @@ await db.batch(['users', 'posts'], async (tx) => {
 `batch()` is table-scoped at runtime and type level:
 
 - the table list must not be empty
-- inside `tx`, operations on tables not included in `tables` throw
+- inside `tx`, operations on tables not included in `tables` throw `DepositScopeError`
+
+`getOrDefault` is also available inside `batch()` callbacks — it is a read-or-insert: returns the existing record if present, otherwise calls `defaultFn()`, writes and returns the result.
+
+```ts
+await db.batch(['users'], async (tx) => {
+  const user = await tx.getOrDefault('users', 42, () => ({ id: 42, name: 'Guest' }));
+  // user is either the existing record or the newly inserted default
+});
+```
+
+For **IndexedDB**, `getOrDefault` inside `batch()` is atomic — the check and insert happen inside the same IDB transaction. For Memory and WebStorage adapters, it is a logical read-then-write but not physically atomic.
 
 If the callback throws on **IndexedDB**, the IDB transaction is rolled back automatically. On other adapters the callback's side effects are not rolled back, but no observer notifications are fired.
 
@@ -358,20 +404,22 @@ const db = createMemory({
 });
 ```
 
-Tracked operations: `get`, `getAll`, `getMany`, `has`, `put`, `putAll`, `count`, `delete`, `clear`, `update`, `upsert`, `batch`, `query`, `queryDelete`, `iterate`.
+Tracked operations: `get`, `getAll`, `getMany`, `has`, `put`, `putAll`, `deleteMany`, `count`, `delete`, `clear`, `update`, `upsert`, `getOrDefault`, `batch`, `query`, `queryDelete`, `iterate`.
+
+For `batch` operations, `event.table` is `'*'` because a batch may span multiple tables.
 
 ### Quota Exceeded Hook (`onQuotaExceeded`) — LocalStorage / SessionStorage
 
-Called when a write exceeds the storage quota. Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow.
+Called when a write exceeds the storage quota. The callback receives a `DepositQuotaError`. Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow.
 
 ```ts
-import { createLocalStorage } from '@vielzeug/deposit';
+import { createLocalStorage, type DepositQuotaError } from '@vielzeug/deposit';
 
 const db = createLocalStorage({
   name: 'app',
   schema,
-  onQuotaExceeded: (table, error) => {
-    console.warn(`[${String(table)}] quota exceeded — dropping write`, error);
+  onQuotaExceeded: (table, error: DepositQuotaError) => {
+    console.warn(`[${String(table)}] quota exceeded — dropping write`, error.message);
     return 'ignore';
   },
 });
@@ -409,6 +457,44 @@ Call `dispose()` when the adapter is no longer needed. This disconnects observer
 ```ts
 db.dispose();
 ```
+
+## Error Handling
+
+All errors thrown by `@vielzeug/deposit` are instances of `DepositError`. Catch the base class to handle any deposit-originated error, or catch specific subclasses for fine-grained handling.
+
+```ts
+import {
+  DepositDisposedError,
+  DepositError,
+  DepositMigrationError,
+  DepositQuotaError,
+  DepositScopeError,
+} from '@vielzeug/deposit';
+
+try {
+  await db.put('users', { id: 1, name: 'Alice', age: 30 });
+} catch (err) {
+  if (err instanceof DepositDisposedError) {
+    // operation on a disposed adapter
+  } else if (err instanceof DepositScopeError) {
+    // table not in batch() scope, or empty tables array passed to observeMany
+  } else if (err instanceof DepositQuotaError) {
+    // WebStorage quota exceeded (also sent to onQuotaExceeded if configured)
+  } else if (err instanceof DepositMigrationError) {
+    // IndexedDB onupgradeneeded migration threw
+  } else if (err instanceof DepositError) {
+    // any other deposit error
+  }
+}
+```
+
+| Class | Thrown when |
+| --- | --- |
+| `DepositError` | Base class — catch all deposit errors |
+| `DepositDisposedError` | Any operation after `dispose()` |
+| `DepositScopeError` | `batch()` accesses a table outside its declared scope; empty array passed to `observeMany` |
+| `DepositQuotaError` | A LocalStorage / SessionStorage write exceeds the storage quota |
+| `DepositMigrationError` | IndexedDB `onupgradeneeded` migration callback threw |
 
 ## Best Practices
 

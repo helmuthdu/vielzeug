@@ -5,7 +5,7 @@ package: deposit
 category: storage
 keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
 related: [fetchit, logit, stateit, validit, toolkit]
-exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune]
+exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune, DepositError, DepositDisposedError, DepositMigrationError, DepositQuotaError, DepositScopeError]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -101,12 +101,16 @@ Native browser storage APIs are powerful but inconsistent and repetitive to use 
 | **Lazy iteration** | `iterate(table)` yields records one at a time |
 | **Reactive stream** | `watch(table)` — async iterator that yields a snapshot on every change |
 | **Bulk lookup** | `getMany(table, keys)` — fetch multiple records by key in one call |
+| **Bulk delete** | `deleteMany(table, keys)` — delete multiple records by key in one call |
 | **TTL** | `ttl.ms/seconds/minutes/hours/days` — branded, validated at write time |
 | **TTL pruning** | `pruneExpired()` · `scheduleExpiredPrune(db, { interval })` |
-| **Reactivity** | `observe(table, fn, { immediate? })` |
+| **Reactivity** | `observe(table, fn, { immediate? })` — subscribe to table changes |
+| **Multi-table reactivity** | `observeMany(tables, fn, { immediate? })` — combined snapshot across tables |
 | **Batch** | `batch(tables, tx => ...)` — deferred notifications on all adapters; atomic on IDB |
 | **Upsert** | `upsert(table, key, fn)` — read-modify-write in one call |
+| **Read-or-insert** | `getOrDefault(table, key, defaultFn)` — inside `batch()` only |
 | **Debug** | `debug()` — live vs expired record counts per table |
+| **Typed errors** | `DepositError`, `DepositScopeError`, `DepositDisposedError`, `DepositQuotaError`, `DepositMigrationError` |
 | **Plugins** | `signals`, `logger`, `validators`, `onMetrics`, `onQuotaExceeded` |
 
 ## Compatibility

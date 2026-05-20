@@ -1,8 +1,9 @@
 export const depositTypes = `
 declare module '@vielzeug/deposit' {
-  export type TtlMs = number;
+  export type TtlMs = number & { readonly __ttl: unique symbol };
 
   export type SchemaEntry<T extends Record<string, unknown>> = {
+    defaultTtl?: TtlMs;
     key: keyof T & string;
   };
 
@@ -31,11 +32,7 @@ declare module '@vielzeug/deposit' {
   }[keyof T];
 
   export interface QueryBuilder<T extends Record<string, unknown>> {
-    between<K extends ComparableFieldKeys<T>>(
-      field: K,
-      lower: Extract<NonNullable<T[K]>, number | string>,
-      upper: Extract<NonNullable<T[K]>, number | string>,
-    ): QueryBuilder<T>;
+    between<K extends ComparableFieldKeys<T>>(field: K, lower: T[K], upper: T[K]): QueryBuilder<T>;
     count(): Promise<number>;
     delete(): Promise<number>;
     equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
@@ -48,12 +45,22 @@ declare module '@vielzeug/deposit' {
     toArray(): Promise<T[]>;
   }
 
-  type ScopedTableOps<S extends AnySchema, K extends keyof S> = {
+  export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
+    clear<T extends K>(table: T): Promise<void>;
+    count<T extends K>(table: T): Promise<number>;
     delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-    clear<T extends K>(table: T): Promise<number>;
+    deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
     get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
     getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
+    getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+    getOrDefault<T extends K>(
+      table: T,
+      key: KeyOf<S, T>,
+      defaultFn: () => RecordOf<S, T>,
+      ttl?: TtlMs,
+    ): Promise<RecordOf<S, T>>;
     has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+    iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
     put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
     putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
     query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
@@ -63,37 +70,76 @@ declare module '@vielzeug/deposit' {
       changes: Partial<RecordOf<S, T>>,
       ttl?: TtlMs,
     ): Promise<RecordOf<S, T> | undefined>;
+    upsert<T extends K>(
+      table: T,
+      key: KeyOf<S, T>,
+      fn: (existing: RecordOf<S, T> | undefined) => RecordOf<S, T>,
+      ttl?: TtlMs,
+    ): Promise<RecordOf<S, T>>;
   };
 
-  export interface Adapter<S extends AnySchema> extends ScopedTableOps<S, keyof S> {
+  export type DebugStats = { expiredCount: number; recordCount: number };
+  export type DebugInfo<S extends AnySchema> = {
+    tables: Array<{ name: keyof S & string } & DebugStats>;
+  };
+
+  export interface Adapter<S extends AnySchema> extends Omit<TransactionContext<S>, 'getOrDefault'> {
+    batch<K extends keyof S, R>(
+      tables: readonly K[],
+      fn: (tx: TransactionContext<S, K>) => Promise<R>,
+    ): Promise<R>;
+    debug(): Promise<DebugInfo<S>>;
     dispose(): void;
     observe<K extends keyof S>(
       table: K,
       listener: Observer<RecordOf<S, K>>,
       options?: { immediate?: boolean },
     ): () => void;
-  }
-
-  export type TransactionContext<S extends AnySchema, K extends keyof S> = ScopedTableOps<S, K>;
-
-  export interface IndexedDBHandle<S extends AnySchema> extends Adapter<S> {
-    transaction<K extends keyof S, R>(
+    observeMany<K extends keyof S>(
       tables: readonly K[],
-      fn: (tx: TransactionContext<S, K>) => Promise<R>,
-    ): Promise<R>;
+      listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
+      options?: { immediate?: boolean },
+    ): () => void;
+    pruneExpired(): Promise<{ [K in keyof S & string]: number }>;
+    watch<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>[]>;
   }
+
+  export class DepositError extends Error {}
+  export class DepositDisposedError extends DepositError {}
+  export class DepositScopeError extends DepositError {}
+  export class DepositQuotaError extends DepositError {}
+  export class DepositMigrationError extends DepositError {}
 
   export function table<T extends Record<string, unknown>>(key: keyof T & string): SchemaEntry<T>;
 
-  export function createLocalStorage<S extends AnySchema>(options: { name: string; schema: S }): Adapter<S>;
-  export function createSessionStorage<S extends AnySchema>(options: { name: string; schema: S }): Adapter<S>;
-  export function createMemory<S extends AnySchema>(options: { schema: S }): Adapter<S>;
-  export function createIndexedDB<S extends AnySchema>(options: {
+  export function createLocalStorage<S extends AnySchema>(options: {
     name: string;
+    onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
+    schema: S;
+  }): Adapter<S>;
+
+  export function createSessionStorage<S extends AnySchema>(options: {
+    name: string;
+    onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
+    schema: S;
+  }): Adapter<S>;
+
+  export function createMemory<S extends AnySchema>(options: {
+    name?: string;
+    schema: S;
+  }): Adapter<S>;
+
+  export function createIndexedDB<S extends AnySchema>(options: {
     migrate?: MigrationFn;
+    name: string;
     schema: S;
     version: number;
-  }): IndexedDBHandle<S>;
+  }): Adapter<S>;
+
+  export function scheduleExpiredPrune<S extends AnySchema>(
+    adapter: Pick<Adapter<S>, 'pruneExpired'>,
+    options: { interval: number },
+  ): () => void;
 
   export const ttl: {
     ms(n: number): TtlMs;
