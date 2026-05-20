@@ -210,6 +210,22 @@ describe('IndexedDB adapter', () => {
     ]);
   });
 
+  test('batch rejects access to tables outside its declared scope', async () => {
+    const multi = createIndexedDB({ name: 'ScopedBatch', schema: multiSchema, version: 1 });
+
+    await multi.clear('users');
+    await multi.clear('posts');
+
+    await expect(
+      multi.batch(['users'], async (tx) => {
+        await tx.put('posts' as any, { id: 1, title: 'Hello', userId: 1 });
+      }),
+    ).rejects.toThrow('batch scope');
+
+    expect(await multi.getAll('posts')).toEqual([]);
+    multi.dispose();
+  });
+
   test('debug returns live and expired counts', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
     await db.put('users', { id: 2, name: 'Bob' }, ttl.ms(1)); // expires immediately

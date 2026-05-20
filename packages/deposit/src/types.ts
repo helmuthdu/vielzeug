@@ -138,7 +138,8 @@ export interface Adapter<S extends AnySchema> {
    * Execute multiple operations against a set of tables with deferred observer notifications.
    *
    * All observer callbacks fire once per dirty table after `fn` resolves, instead of after
-   * each individual write. For the IndexedDB adapter this is also a true atomic IDB transaction.
+   * each individual write. Inside `fn`, only the tables declared in `tables` may be accessed.
+   * For the IndexedDB adapter this is also a true atomic IDB transaction.
    */
   batch<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>): Promise<R>;
   /** Returns live (non-expired) record count for a table. */

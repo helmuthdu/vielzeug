@@ -1,7 +1,7 @@
 import type { AnySchema, RecordOf } from './types';
 
 /**
- * Narrow logger interface satisfied structurally by `@vielzeug/logit` Logger.
+ * Minimal logger interface satisfied structurally by `@vielzeug/logit` Logger.
  * Pass a logit Logger instance directly — no adapter needed:
  *
  * ```ts
@@ -9,16 +9,16 @@ import type { AnySchema, RecordOf } from './types';
  * const db = createMemory({ schema, logger: createLogger('db') });
  * ```
  *
- * Any structured logger exposing `debug`, `warn`, and `error` also works.
+ * Deposit only emits error-level logs, so a single logit-compatible `error`
+ * method is enough.
  */
 export interface DepositLogger {
-  debug(msgOrCtx: Record<string, unknown> | string, message?: string): void;
-  error(msgOrCtxOrErr: Record<string, unknown> | Error | string, message?: string): void;
-  warn(msgOrCtx: Record<string, unknown> | string, message?: string): void;
+  error(messageOrContext?: Record<string, unknown> | Error | string, message?: string): void;
 }
 
 /**
- * Minimal parser interface satisfied structurally by `@vielzeug/validit` Schema.
+ * Minimal synchronous validator interface satisfied structurally by
+ * `@vielzeug/validit` Schema.
  * Pass a validit schema directly — no adapter needed:
  *
  * ```ts
@@ -29,11 +29,12 @@ export interface DepositLogger {
  * });
  * ```
  *
- * Any object with a `parseSync(value: unknown): T` method works — including
- * Zod schemas adapted through a thin shim.
+ * Deposit requires synchronous validation because writes may execute inside a
+ * live IndexedDB transaction. Any object with a `parse(value: unknown): T`
+ * method works.
  */
-export interface RecordParser<T> {
-  parseSync(value: unknown): T;
+export interface RecordValidator<T> {
+  parse(value: unknown): T;
 }
 
 /**
@@ -41,5 +42,5 @@ export interface RecordParser<T> {
  * Validators run before every `put`, `putAll`, and inside `update`/`upsert`.
  */
 export type TableValidators<S extends AnySchema> = {
-  [K in keyof S]?: RecordParser<RecordOf<S, K>>;
+  [K in keyof S]?: RecordValidator<RecordOf<S, K>>;
 };

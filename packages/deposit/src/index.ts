@@ -4,7 +4,7 @@ export { createLocalStorage, createSessionStorage } from './adapters/webstorage'
 export type { QueryBuilder, ReadQuery } from './query';
 export { ttl } from './ttl';
 export { table } from './types';
-export type { DepositLogger, RecordParser, TableValidators } from './plugins';
+export type { DepositLogger, RecordValidator, TableValidators } from './plugins';
 export type {
   Adapter,
   AnySchema,

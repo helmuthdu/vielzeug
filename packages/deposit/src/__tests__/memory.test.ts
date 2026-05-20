@@ -1,8 +1,13 @@
 import { createMemory, table, ttl, type Adapter, type MetricsEvent } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
+type Post = { id: number; title: string; userId: number };
 
 const userSchema = { users: table<User>('id') };
+const multiSchema = {
+  posts: table<Post>('id'),
+  users: table<User>('id'),
+};
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -137,6 +142,23 @@ describe('Memory adapter', () => {
     });
 
     expect(await db.get('users', 1)).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
+  });
+
+  test('batch rejects access to tables outside its declared scope', async () => {
+    const multi = createMemory({ schema: multiSchema });
+
+    await expect(
+      multi.batch(['users'], async (tx) => {
+        await tx.put('posts' as any, { id: 1, title: 'Hello', userId: 1 });
+      }),
+    ).rejects.toThrow('batch scope');
+
+    expect(await multi.getAll('posts')).toEqual([]);
+    multi.dispose();
+  });
+
+  test('batch requires at least one table', async () => {
+    await expect(db.batch([], async () => undefined)).rejects.toThrow('at least one table');
   });
 
   test('debug returns live and expired counts', async () => {

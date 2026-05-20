@@ -202,6 +202,11 @@ await db.batch(['users', 'posts'], async (tx) => {
 });
 ```
 
+`batch()` is table-scoped at runtime and type level:
+
+- the table list must not be empty
+- inside `tx`, operations on tables not included in `tables` throw
+
 If the callback throws on **IndexedDB**, the IDB transaction is rolled back automatically. On other adapters the callback's side effects are not rolled back, but no observer notifications are fired.
 
 ## Debug
@@ -243,7 +248,7 @@ All four adapters accept the same optional plugin options.
 
 ### Logger
 
-Pass a `@vielzeug/logit` logger or any object with `debug`, `warn`, and `error` methods. Observer notification errors are routed to `logger.error`.
+Pass a `@vielzeug/logit` logger or any object with an `error(...)` method. Observer notification errors are routed to `logger.error`.
 
 ```ts
 import { createLogger } from '@vielzeug/logit';
@@ -257,7 +262,7 @@ const db = createMemory({
 
 ### Record Validation
 
-Pass a `@vielzeug/validit` schema or any object with `parseSync(value): T`. Validators run before every `put`, `putAll`, `update`, and `upsert`.
+Pass a `@vielzeug/validit` schema or any object with `parse(value): T`. Validators run before every `put`, `putAll`, `update`, and `upsert`.
 
 ```ts
 import { v } from '@vielzeug/validit';
@@ -271,7 +276,7 @@ const db = createMemory({
 });
 ```
 
-Any value that fails `parseSync` causes the write to throw before touching storage.
+Any value that fails `parse` causes the write to throw before touching storage.
 
 ### Metrics
 

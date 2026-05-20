@@ -1,4 +1,4 @@
-import type { DepositLogger, RecordParser } from '../index';
+import type { DepositLogger, RecordValidator } from '../index';
 
 import { createMemory, table } from '../index';
 
@@ -10,9 +10,7 @@ describe('DepositLogger plugin', () => {
   test('routes observer errors to logger.error instead of console.error', async () => {
     const errorCalls: unknown[][] = [];
     const logger: DepositLogger = {
-      debug: () => {},
       error: (...args) => errorCalls.push(args),
-      warn: () => {},
     };
 
     const db = createMemory({ logger, schema });
@@ -59,17 +57,17 @@ describe('DepositLogger plugin', () => {
   });
 });
 
-describe('RecordParser (validators) plugin', () => {
+describe('RecordValidator (validators) plugin', () => {
   test('validator transforms value before storage', async () => {
-    const userParser: RecordParser<User> = {
-      parseSync(value) {
+    const userValidator: RecordValidator<User> = {
+      parse(value) {
         const r = value as Record<string, unknown>;
 
         return { id: r['id'] as number, name: (r['name'] as string).trim() };
       },
     };
 
-    const db = createMemory({ schema, validators: { users: userParser } });
+    const db = createMemory({ schema, validators: { users: userValidator } });
 
     await db.put('users', { id: 1, name: '  Alice  ' } as unknown as User);
 
@@ -80,8 +78,8 @@ describe('RecordParser (validators) plugin', () => {
   });
 
   test('validator throwing rejects the put and nothing is stored', async () => {
-    const strictParser: RecordParser<User> = {
-      parseSync(value) {
+    const strictValidator: RecordValidator<User> = {
+      parse(value) {
         const r = value as Record<string, unknown>;
 
         if (typeof r['id'] !== 'number') throw new Error('id must be a number');
@@ -90,7 +88,7 @@ describe('RecordParser (validators) plugin', () => {
       },
     };
 
-    const db = createMemory({ schema, validators: { users: strictParser } });
+    const db = createMemory({ schema, validators: { users: strictValidator } });
 
     await expect(db.put('users', { id: 'bad' as unknown as number, name: 'Alice' })).rejects.toThrow(
       'id must be a number',
@@ -101,15 +99,15 @@ describe('RecordParser (validators) plugin', () => {
 
   test('validator runs on putAll for every record', async () => {
     const parsed: unknown[] = [];
-    const userParser: RecordParser<User> = {
-      parseSync(value) {
+    const userValidator: RecordValidator<User> = {
+      parse(value) {
         parsed.push(value);
 
         return value as User;
       },
     };
 
-    const db = createMemory({ schema, validators: { users: userParser } });
+    const db = createMemory({ schema, validators: { users: userValidator } });
 
     await db.putAll('users', [
       { id: 1, name: 'Alice' },
@@ -123,15 +121,15 @@ describe('RecordParser (validators) plugin', () => {
 
   test('validator runs inside batch transactions', async () => {
     const parsed: unknown[] = [];
-    const userParser: RecordParser<User> = {
-      parseSync(value) {
+    const userValidator: RecordValidator<User> = {
+      parse(value) {
         parsed.push(value);
 
         return value as User;
       },
     };
 
-    const db = createMemory({ schema, validators: { users: userParser } });
+    const db = createMemory({ schema, validators: { users: userValidator } });
 
     await db.batch(['users'], async (tx) => {
       await tx.put('users', { id: 1, name: 'Alice' });
@@ -144,15 +142,15 @@ describe('RecordParser (validators) plugin', () => {
 
   test('validator runs on upsert and update result', async () => {
     const parsed: unknown[] = [];
-    const userParser: RecordParser<User> = {
-      parseSync(value) {
+    const userValidator: RecordValidator<User> = {
+      parse(value) {
         parsed.push(value);
 
         return value as User;
       },
     };
 
-    const db = createMemory({ schema, validators: { users: userParser } });
+    const db = createMemory({ schema, validators: { users: userValidator } });
 
     await db.upsert('users', 1, () => ({ id: 1, name: 'Alice' }));
     await db.update('users', 1, { name: 'Alice Updated' });
@@ -166,20 +164,38 @@ describe('RecordParser (validators) plugin', () => {
 
     const ms = { posts: table<Post>('id'), users: table<User>('id') };
     const parsed: unknown[] = [];
-    const userParser: RecordParser<User> = {
-      parseSync(value) {
+    const userValidator: RecordValidator<User> = {
+      parse(value) {
         parsed.push(value);
 
         return value as User;
       },
     };
 
-    const db = createMemory({ schema: ms, validators: { users: userParser } });
+    const db = createMemory({ schema: ms, validators: { users: userValidator } });
 
     await db.put('posts', { authorId: 1, id: 10, title: 'Hello' });
     await db.put('users', { id: 1, name: 'Alice' });
 
     expect(parsed).toHaveLength(1);
+    db.dispose();
+  });
+
+  test('a validit-shaped schema satisfies RecordValidator structurally', async () => {
+    const validitLike = {
+      parse(value: unknown) {
+        const r = value as Record<string, unknown>;
+
+        if (typeof r['id'] !== 'number') throw new Error('id must be a number');
+
+        return { id: r['id'] as number, name: String(r['name'] ?? '').trim() };
+      },
+    };
+    const db = createMemory({ schema, validators: { users: validitLike } });
+
+    await db.put('users', { id: 1, name: ' Alice ' } as User);
+
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
     db.dispose();
   });
 
@@ -202,8 +218,13 @@ describe('RecordParser (validators) plugin', () => {
       withBindings: () => logitLike,
     };
 
-    // This should compile without error — logitLike satisfies DepositLogger
-    createMemory({ logger: logitLike as unknown as DepositLogger, schema });
+    createMemory({ logger: logitLike, schema });
+
+    expect(true).toBe(true);
+  });
+
+  test('a minimal error-only logger satisfies DepositLogger', () => {
+    createMemory({ logger: { error: () => {} }, schema });
 
     expect(true).toBe(true);
   });

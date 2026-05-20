@@ -26,6 +26,8 @@ await db.batch(['users', 'posts'], async (tx) => {
 });
 ```
 
+`batch()` is strict: only tables listed in the first argument can be accessed inside the callback.
+
 ## Rollback on Error (IndexedDB)
 
 If the `batch` callback throws, the IDB transaction is aborted and all writes are rolled back.
@@ -145,7 +147,7 @@ void db;
 
 ## Logger Plugin
 
-Pass a `@vielzeug/logit` logger (or any object with `debug`, `warn`, `error`). Observer notification errors are routed to `logger.error`.
+Pass a `@vielzeug/logit` logger (or any object with `error(...)`). Observer notification errors are routed to `logger.error`.
 
 ```ts
 import { createLogger } from '@vielzeug/logit';
@@ -161,7 +163,7 @@ const db = createIndexedDB({
 
 ## Validation Plugin
 
-Pass a `@vielzeug/validit` schema per table. `parseSync` runs before every `put`, `putAll`, `update`, and `upsert`.
+Pass a `@vielzeug/validit` schema per table. `parse` runs before every `put`, `putAll`, `update`, and `upsert`.
 
 ```ts
 import { v } from '@vielzeug/validit';

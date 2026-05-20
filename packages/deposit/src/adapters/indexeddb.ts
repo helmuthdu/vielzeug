@@ -22,7 +22,9 @@ function idbReq<R>(request: IDBRequest<R>): Promise<R> {
 }
 
 function wrapTxError(scope: string, message: string, cause: unknown): Error {
-  return new Error(`[deposit] ${message} on "${scope}"`, { cause });
+  const causeMessage = cause instanceof Error && cause.message ? `: ${cause.message}` : '';
+
+  return new Error(`[deposit] ${message} on "${scope}"${causeMessage}`, { cause });
 }
 
 function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>): Promise<T> {
@@ -76,6 +78,36 @@ async function getAllFromStore<T extends Record<string, unknown>>(store: IDBObje
   }
 
   return records;
+}
+
+function countLiveRecordsInStore<T extends Record<string, unknown>>(store: IDBObjectStore): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    let count = 0;
+    const request = store.openCursor();
+
+    request.onerror = () => reject(request.error ?? new Error('[deposit] IndexedDB cursor failed'));
+    request.onsuccess = () => {
+      const cursor = request.result;
+
+      if (!cursor) {
+        resolve(count);
+
+        return;
+      }
+
+      const parsed = parseStored<T>(cursor.value as unknown);
+
+      if (parsed && unwrapStored(parsed) !== undefined) {
+        count += 1;
+      }
+
+      cursor.continue();
+    };
+  });
+}
+
+async function storeHasKey(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
+  return (await idbReq(store.getKey(key))) !== undefined;
 }
 
 type IndexedDbOptions<S extends AnySchema> = {
@@ -200,16 +232,14 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     },
 
     async count<K extends keyof S>(table: K): Promise<number> {
-      const records = await withStore(table, 'readonly', (store) => getAllFromStore<RecordOf<S, K>>(store));
-
-      return records.length;
+      return withStore(table, 'readonly', (store) => countLiveRecordsInStore<RecordOf<S, K>>(store));
     },
 
     async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
       return withStore(table, 'readwrite', async (store) => {
-        const raw = await idbReq<unknown>(store.get(key as IDBValidKey));
+        const exists = await storeHasKey(store, key as IDBValidKey);
 
-        if (raw == null) return false;
+        if (!exists) return false;
 
         await idbReq(store.delete(key as IDBValidKey));
 
@@ -224,9 +254,9 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         let deleted = 0;
 
         for (const key of keys) {
-          const raw = await idbReq<unknown>(store.get(key as IDBValidKey));
+          const exists = await storeHasKey(store, key as IDBValidKey);
 
-          if (raw != null) {
+          if (exists) {
             await idbReq(store.delete(key as IDBValidKey));
             deleted += 1;
           }
@@ -301,8 +331,8 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   const idbBatch = async <K extends keyof S, R>(
     tables: readonly K[],
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
-    notifyMutation: (table: keyof S) => void,
-    validateFn: <T extends keyof S>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
+    notifyMutation: (table: K) => void,
+    validateFn: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
   ): Promise<R> => {
     const idb = await requireDb();
     const idbTx = idb.transaction(tables.map(String), 'readwrite');
@@ -319,15 +349,13 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       },
 
       async count<T extends K>(table: T): Promise<number> {
-        const records = await getAllFromStore<RecordOf<S, T>>(storeOf(table));
-
-        return records.length;
+        return countLiveRecordsInStore<RecordOf<S, T>>(storeOf(table));
       },
 
       async delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean> {
-        const raw = await idbReq<unknown>(storeOf(table).get(key as IDBValidKey));
+        const exists = await storeHasKey(storeOf(table), key as IDBValidKey);
 
-        if (raw == null) return false;
+        if (!exists) return false;
 
         await idbReq(storeOf(table).delete(key as IDBValidKey));
 
@@ -338,9 +366,9 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         let deleted = 0;
 
         for (const key of keys) {
-          const raw = await idbReq<unknown>(storeOf(table).get(key as IDBValidKey));
+          const exists = await storeHasKey(storeOf(table), key as IDBValidKey);
 
-          if (raw != null) {
+          if (exists) {
             await idbReq(storeOf(table).delete(key as IDBValidKey));
             deleted += 1;
           }
@@ -392,12 +420,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       },
     };
 
-    const txOps = buildTxContext<S, K>(
-      schema,
-      txCore,
-      (t) => dirtyTables.add(t),
-      validateFn as <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
-    );
+    const txOps = buildTxContext<S, K>(schema, txCore, (t) => dirtyTables.add(t), validateFn);
     const result = await runIdbTx(idbTx, name, () => fn(txOps));
 
     for (const table of dirtyTables) {

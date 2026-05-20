@@ -24,7 +24,7 @@ description: Complete API reference for Deposit adapters, schema helpers, query 
 
 **Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`
 
-**Types:** `Adapter`, `AnySchema`, `DebugInfo`, `DebugStats`, `DepositLogger`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `Observer`, `QueryBuilder`, `ReadQuery`, `RecordOf`, `RecordParser`, `TableValidators`, `TransactionContext`, `TtlMs`
+**Types:** `Adapter`, `AnySchema`, `DebugInfo`, `DebugStats`, `DepositLogger`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `Observer`, `QueryBuilder`, `ReadQuery`, `RecordOf`, `RecordValidator`, `TableValidators`, `TransactionContext`, `TtlMs`
 
 ---
 
@@ -141,7 +141,10 @@ createMemory<S extends AnySchema>(options: {
 
 ```ts
 interface Adapter<S extends AnySchema> {
-  /** Multi-table write with deferred notifications. Atomic on IndexedDB. */
+  /**
+   * Multi-table write with deferred notifications. Atomic on IndexedDB.
+   * Only tables listed in `tables` can be accessed inside the callback.
+   */
   batch<K extends keyof S, R>(
     tables: readonly K[],
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
@@ -236,7 +239,7 @@ type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
 };
 ```
 
-`batch()` is scoped to the tables listed in the first argument. Operations on unlisted tables are rejected by the type system.
+`batch()` is scoped to the tables listed in the first argument. The table list must not be empty, and operations on unlisted tables are rejected at both type level and runtime.
 
 ---
 
@@ -303,31 +306,29 @@ type DebugInfo<S extends AnySchema> = {
 
 ### `DepositLogger`
 
-A narrow logger interface satisfied structurally by `@vielzeug/logit` Logger.
+A minimal logger interface satisfied structurally by `@vielzeug/logit` Logger.
 
 ```ts
 interface DepositLogger {
-  debug(msgOrCtx: Record<string, unknown> | string, message?: string): void;
-  error(msgOrCtxOrErr: Record<string, unknown> | Error | string, message?: string): void;
-  warn(msgOrCtx: Record<string, unknown> | string, message?: string): void;
+  error(messageOrContext?: Record<string, unknown> | Error | string, message?: string): void;
 }
 ```
 
 Pass a logit Logger instance directly — no adapter needed.
 
-### `RecordParser` / `TableValidators`
+### `RecordValidator` / `TableValidators`
 
 ```ts
-interface RecordParser<T> {
-  parseSync(value: unknown): T;
+interface RecordValidator<T> {
+  parse(value: unknown): T;
 }
 
 type TableValidators<S extends AnySchema> = {
-  [K in keyof S]?: RecordParser<RecordOf<S, K>>;
+  [K in keyof S]?: RecordValidator<RecordOf<S, K>>;
 };
 ```
 
-A `@vielzeug/validit` schema satisfies `RecordParser` directly. Any object with `parseSync` works, including a thin Zod shim. Validators run before every `put`, `putAll`, `update`, and `upsert`.
+A `@vielzeug/validit` schema satisfies `RecordValidator` directly. Any object with `parse` works. Validators run before every `put`, `putAll`, `update`, and `upsert`.
 
 ### `MetricsEvent`
 

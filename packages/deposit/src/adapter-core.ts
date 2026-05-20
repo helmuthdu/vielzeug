@@ -73,6 +73,84 @@ function makeDeleteMany<S extends AnySchema, K extends keyof S>(
   };
 }
 
+function createBatchScope<K extends PropertyKey>(tables: readonly K[]): ReadonlySet<string> {
+  if (tables.length === 0) {
+    throw new Error('[deposit] batch requires at least one table');
+  }
+
+  return new Set(tables.map(String));
+}
+
+function assertTableInBatchScope(scope: ReadonlySet<string>, table: PropertyKey): void {
+  if (!scope.has(String(table))) {
+    throw new Error(`[deposit] table "${String(table)}" is not part of this batch scope`);
+  }
+}
+
+function createScopedCore<S extends AnySchema, AllK extends keyof S, K extends AllK>(
+  core: CoreStorageOps<S, AllK>,
+  scope: ReadonlySet<string>,
+): CoreStorageOps<S, K> {
+  return {
+    async clear(table) {
+      assertTableInBatchScope(scope, table);
+
+      return core.clear(table);
+    },
+    async count(table) {
+      assertTableInBatchScope(scope, table);
+
+      return core.count(table);
+    },
+    async delete(table, key) {
+      assertTableInBatchScope(scope, table);
+
+      return core.delete(table, key);
+    },
+    async deleteMany(table, keys) {
+      assertTableInBatchScope(scope, table);
+
+      return core.deleteMany(table, keys);
+    },
+    async get(table, key) {
+      assertTableInBatchScope(scope, table);
+
+      return core.get(table, key);
+    },
+    async getAll(table) {
+      assertTableInBatchScope(scope, table);
+
+      return core.getAll(table);
+    },
+    async has(table, key) {
+      assertTableInBatchScope(scope, table);
+
+      return core.has(table, key);
+    },
+    async put(table, value, ttl) {
+      assertTableInBatchScope(scope, table);
+
+      return core.put(table, value, ttl);
+    },
+    async putAll(table, values, ttl) {
+      assertTableInBatchScope(scope, table);
+
+      return core.putAll(table, values, ttl);
+    },
+  };
+}
+
+function createScopedValidator<S extends AnySchema, K extends keyof S>(
+  validate: <T extends keyof S>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
+  scope: ReadonlySet<string>,
+): <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T> {
+  return (table, value) => {
+    assertTableInBatchScope(scope, table);
+
+    return validate(table, value);
+  };
+}
+
 /* -------------------- buildTxContext: turns CoreStorageOps into a TransactionContext -------------------- */
 
 export function buildTxContext<S extends AnySchema, K extends keyof S>(
@@ -164,15 +242,15 @@ export function buildAdapterOps<S extends AnySchema>(
     batch?: <K extends keyof S, R>(
       tables: readonly K[],
       fn: (tx: TransactionContext<S, K>) => Promise<R>,
-      notifyMutation: (table: keyof S) => void,
-      validate: <T extends keyof S>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
+      notifyMutation: (table: K) => void,
+      validate: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
     ) => Promise<R>;
     connectExternal?: (notify: (table: keyof S) => void) => (() => void) | void;
     /** Structured logger. A @vielzeug/logit Logger satisfies DepositLogger directly. */
     logger?: DepositLogger;
     onMetrics?: (event: MetricsEvent) => void;
     onMutation?: (table: keyof S) => void;
-    /** Per-table record parsers. A @vielzeug/validit Schema satisfies RecordParser directly. */
+    /** Per-table validators. A @vielzeug/validit Schema satisfies this directly via `parse()`. */
     validators?: TableValidators<S>;
   },
 ): { adapter: Adapter<S>; notifyMutation: (table: keyof S) => void } {
@@ -193,13 +271,13 @@ export function buildAdapterOps<S extends AnySchema>(
 
   const disconnectExternal = options?.connectExternal?.(observers.notify) ?? undefined;
 
-  /* -- Validation helper: no-op when no parser registered for the table -- */
+  /* -- Validation helper: no-op when no validator registered for the table -- */
   const validate = <K extends keyof S>(table: K, value: RecordOf<S, K>): RecordOf<S, K> => {
-    const parser = validators?.[table];
+    const validator = validators?.[table];
 
-    if (!parser) return value;
+    if (!validator) return value;
 
-    return parser.parseSync(value) as RecordOf<S, K>;
+    return validator.parse(value) as RecordOf<S, K>;
   };
 
   /* -- Metrics helper -- */
@@ -225,18 +303,18 @@ export function buildAdapterOps<S extends AnySchema>(
 
   /* -- Soft batch: defers notifications until fn resolves -- */
   const softBatch = async <K extends keyof S, R>(
-    /* tables is typed but not structurally enforced at runtime — TypeScript types provide the guarantee */
-    _tables: readonly K[],
+    tables: readonly K[],
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
-    notify: (table: keyof S) => void,
-    validateFn: <T extends keyof S>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
+    notify: (table: K) => void,
+    validateFn: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
   ): Promise<R> => {
+    const scope = createBatchScope(tables);
     const dirty = new Set<K>();
     const txOps = buildTxContext<S, K>(
       schema,
-      core,
+      createScopedCore<S, keyof S, K>(core, scope),
       (t) => dirty.add(t),
-      validateFn as <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
+      validateFn,
     );
     const result = await fn(txOps);
 
@@ -253,8 +331,20 @@ export function buildAdapterOps<S extends AnySchema>(
   const txCtx = buildTxContext<S, keyof S>(schema, core, notifyMutation, validate);
 
   const adapter: Adapter<S> = {
-    async batch(tables, fn) {
-      return timed('*', 'batch', () => batchFn(tables, fn, notifyMutation, validate));
+    async batch<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>) {
+      return timed('*', 'batch', () => {
+        const scope = createBatchScope(tables);
+
+        return batchFn(
+          tables,
+          fn,
+          (table) => {
+            assertTableInBatchScope(scope, table);
+            notifyMutation(table);
+          },
+          createScopedValidator<S, K>(validate, scope),
+        );
+      });
     },
 
     async clear(table) {
