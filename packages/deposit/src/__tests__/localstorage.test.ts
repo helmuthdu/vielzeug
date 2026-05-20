@@ -22,14 +22,14 @@ describe('LocalStorage adapter', () => {
     expect(await db.get('users', 1)).toBeUndefined();
   });
 
-  test('deleteAll removes table-prefixed records only', async () => {
+  test('clear removes table-prefixed records only', async () => {
     await db.putAll('users', [
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
     ]);
     window.localStorage.setItem('LS~other~1', JSON.stringify({ value: { id: 1 } }));
 
-    await db.deleteAll('users');
+    await db.clear('users');
 
     expect(await db.getAll('users')).toEqual([]);
     expect(window.localStorage.getItem('LS~other~1')).not.toBeNull();

@@ -189,6 +189,16 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   };
 
   const core: CoreRuntimeOps<S> = {
+    async clear<K extends keyof S>(table: K): Promise<number> {
+      return withStore(table, 'readwrite', async (store) => {
+        const count = await idbReq(store.count());
+
+        if (count > 0) await idbReq(store.clear());
+
+        return count;
+      });
+    },
+
     async count<K extends keyof S>(table: K): Promise<number> {
       const records = await withStore(table, 'readonly', (store) => getAllFromStore<RecordOf<S, K>>(store));
 
@@ -207,17 +217,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       });
     },
 
-    async deleteAll<K extends keyof S>(table: K): Promise<number> {
-      return withStore(table, 'readwrite', async (store) => {
-        const count = await idbReq(store.count());
-
-        if (count > 0) await idbReq(store.clear());
-
-        return count;
-      });
-    },
-
-    async deleteByKeys<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
+    async deleteMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
       if (keys.length === 0) return 0;
 
       return withStore(table, 'readwrite', async (store) => {
@@ -310,6 +310,14 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     const dirtyTables = new Set<K>();
 
     const txCore: CoreStorageOps<S, K> = {
+      async clear<T extends K>(table: T): Promise<number> {
+        const count = await idbReq(storeOf(table).count());
+
+        if (count > 0) await idbReq(storeOf(table).clear());
+
+        return count;
+      },
+
       async count<T extends K>(table: T): Promise<number> {
         const records = await getAllFromStore<RecordOf<S, T>>(storeOf(table));
 
@@ -326,15 +334,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         return true;
       },
 
-      async deleteAll<T extends K>(table: T): Promise<number> {
-        const count = await idbReq(storeOf(table).count());
-
-        if (count > 0) await idbReq(storeOf(table).clear());
-
-        return count;
-      },
-
-      async deleteByKeys<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number> {
+      async deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number> {
         let deleted = 0;
 
         for (const key of keys) {

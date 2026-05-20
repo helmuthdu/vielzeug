@@ -121,7 +121,7 @@ const updated = await db.update('users', 1, { name: 'Alicia' });
 const deleted = await db.delete('users', 1);
 
 // delete all records in a table
-await db.deleteAll('users');
+await db.clear('users');
 
 void updated, deleted;
 ```
@@ -156,7 +156,7 @@ const stop = db.observe('users', (rows) => {
 });
 
 // opt out of the initial snapshot
-const stopSilent = db.observe('users', handleChange, { initialEmit: false });
+const stopSilent = db.observe('users', handleChange, { immediate: false });
 
 await db.put('users', { id: 1, name: 'Alice' }); // triggers both
 

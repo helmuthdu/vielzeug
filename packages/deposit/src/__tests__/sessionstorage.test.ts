@@ -21,14 +21,14 @@ describe('SessionStorage adapter', () => {
     expect(await db.delete('users', 1)).toBe(true);
   });
 
-  test('deleteAll clears only the current table namespace', async () => {
+  test('clear clears only the current table namespace', async () => {
     await db.putAll('users', [
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
     ]);
     sessionStorage.setItem('SS~other~1', JSON.stringify({ value: { id: 1 } }));
 
-    await db.deleteAll('users');
+    await db.clear('users');
 
     expect(await db.getAll('users')).toEqual([]);
     expect(sessionStorage.getItem('SS~other~1')).not.toBeNull();

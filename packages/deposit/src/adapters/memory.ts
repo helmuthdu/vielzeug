@@ -28,6 +28,15 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
   const tables = new Map<string, Map<string, StoredRecord<unknown>>>();
 
   const core: CoreRuntimeOps<S> = {
+    async clear<K extends keyof S>(table: K): Promise<number> {
+      const store = getTableStore(tables, String(table));
+      const count = store.size;
+
+      store.clear();
+
+      return count;
+    },
+
     async count<K extends keyof S>(table: K): Promise<number> {
       const store = getTableStore(tables, String(table));
       let liveCount = 0;
@@ -52,16 +61,7 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       return getTableStore(tables, String(table)).delete(String(key));
     },
 
-    async deleteAll<K extends keyof S>(table: K): Promise<number> {
-      const store = getTableStore(tables, String(table));
-      const count = store.size;
-
-      store.clear();
-
-      return count;
-    },
-
-    async deleteByKeys<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
+    async deleteMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
       const store = getTableStore(tables, String(table));
       let deleted = 0;
 

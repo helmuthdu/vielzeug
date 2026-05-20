@@ -21,7 +21,7 @@ describe('Memory adapter', () => {
     expect(await db.get('users', 1)).toBeUndefined();
   });
 
-  test('putAll/getAll/deleteAll', async () => {
+  test('putAll/getAll/clear', async () => {
     await db.putAll('users', [
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
@@ -31,7 +31,7 @@ describe('Memory adapter', () => {
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
     ]);
-    await db.deleteAll('users');
+    await db.clear('users');
     expect(await db.getAll('users')).toEqual([]);
   });
 
@@ -42,7 +42,7 @@ describe('Memory adapter', () => {
     expect(await db.has('users', 2)).toBe(false);
   });
 
-  test('count returns live records and deleteAll empties table', async () => {
+  test('count returns live records and clear empties table', async () => {
     await db.putAll('users', [
       { id: 1, name: 'Alice' },
       { id: 2, name: 'Bob' },
@@ -50,7 +50,7 @@ describe('Memory adapter', () => {
 
     expect(await db.count('users')).toBe(2);
 
-    await db.deleteAll('users');
+    await db.clear('users');
 
     expect(await db.count('users')).toBe(0);
   });
@@ -111,7 +111,7 @@ describe('Memory adapter', () => {
       (rows) => {
         snapshots.push([...rows]);
       },
-      { initialEmit: false },
+      { immediate: false },
     );
 
     await db.batch(['users'], async (tx) => {
@@ -208,11 +208,11 @@ describe('Memory adapter', () => {
     expect(events.some((e) => e.operation === 'queryDelete' && e.table === 'users')).toBe(true);
   });
 
-  test('deleteAll on empty table does not trigger observers', async () => {
+  test('clear on empty table does not trigger observers', async () => {
     const snapshots: User[][] = [];
-    const stop = db.observe('users', (rows) => snapshots.push(rows), { initialEmit: false });
+    const stop = db.observe('users', (rows) => snapshots.push(rows), { immediate: false });
 
-    await db.deleteAll('users'); // table is already empty
+    await db.clear('users'); // table is already empty
 
     await Promise.resolve();
     stop();
@@ -243,14 +243,14 @@ describe('Memory adapter', () => {
     expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
   });
 
-  test('observe supports initialEmit option', async () => {
+  test('observe supports immediate option', async () => {
     const snapshots: User[][] = [];
     const stop = db.observe(
       'users',
       (rows) => {
         snapshots.push(rows);
       },
-      { initialEmit: false },
+      { immediate: false },
     );
 
     await db.put('users', { id: 1, name: 'Alice' });
@@ -276,14 +276,14 @@ describe('Memory adapter', () => {
       () => {
         throw new Error('bad listener');
       },
-      { initialEmit: false },
+      { immediate: false },
     );
     db.observe(
       'users',
       (rows) => {
         received.push(rows);
       },
-      { initialEmit: false },
+      { immediate: false },
     );
 
     await db.put('users', { id: 1, name: 'Alice' });

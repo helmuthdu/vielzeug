@@ -23,7 +23,7 @@ describe('DepositLogger plugin', () => {
       () => {
         throw new Error('observer boom');
       },
-      { initialEmit: false },
+      { immediate: false },
     );
 
     await db.put('users', { id: 1, name: 'Alice' });
@@ -46,7 +46,7 @@ describe('DepositLogger plugin', () => {
       () => {
         throw new Error('observer boom');
       },
-      { initialEmit: false },
+      { immediate: false },
     );
 
     await db.put('users', { id: 1, name: 'Alice' });

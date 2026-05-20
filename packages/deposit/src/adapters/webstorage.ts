@@ -110,6 +110,23 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
   };
 
   const core: CoreRuntimeOps<S> = {
+    async clear<K extends keyof S>(table: K): Promise<number> {
+      const target = storage();
+      const prefix = getPrefix(String(table));
+      const toRemove: string[] = [];
+
+      // Collect first to avoid mutating a live indexed collection during iteration
+      for (const key of storageKeys()) {
+        if (key.startsWith(prefix)) toRemove.push(key);
+      }
+
+      for (const key of toRemove) {
+        target.removeItem(key);
+      }
+
+      return toRemove.length;
+    },
+
     async count<K extends keyof S>(table: K): Promise<number> {
       const target = storage();
       const prefix = getPrefix(String(table));
@@ -145,24 +162,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       return exists;
     },
 
-    async deleteAll<K extends keyof S>(table: K): Promise<number> {
-      const target = storage();
-      const prefix = getPrefix(String(table));
-      const toRemove: string[] = [];
-
-      // Collect first to avoid mutating a live indexed collection during iteration
-      for (const key of storageKeys()) {
-        if (key.startsWith(prefix)) toRemove.push(key);
-      }
-
-      for (const key of toRemove) {
-        target.removeItem(key);
-      }
-
-      return toRemove.length;
-    },
-
-    async deleteByKeys<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
+    async deleteMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
       const target = storage();
       let deleted = 0;
 

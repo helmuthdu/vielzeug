@@ -91,7 +91,7 @@ const updated = await db.update('users', 1, { age: 31 });
 
 // delete
 await db.delete('users', 1);
-await db.deleteAll('users');
+await db.clear('users');
 
 void alice, all, total, exists, updated;
 ```
@@ -178,7 +178,7 @@ const stop = db.observe('users', (rows) => {
 });
 
 // suppress the initial snapshot when you only need future changes
-const stopSilent = db.observe('users', handleChange, { initialEmit: false });
+const stopSilent = db.observe('users', handleChange, { immediate: false });
 
 await db.put('users', { id: 1, name: 'Alice', age: 30 }); // triggers both listeners
 
@@ -286,7 +286,7 @@ const db = createMemory({
 });
 ```
 
-Tracked operations: `get`, `getAll`, `has`, `put`, `putAll`, `count`, `delete`, `deleteAll`, `update`, `upsert`, `batch`, `query`, `queryDelete`, `iterate`.
+Tracked operations: `get`, `getAll`, `has`, `put`, `putAll`, `count`, `delete`, `clear`, `update`, `upsert`, `batch`, `query`, `queryDelete`, `iterate`.
 
 ## Environment-Based Adapter Selection
 

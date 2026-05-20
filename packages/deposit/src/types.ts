@@ -76,7 +76,7 @@ export type MetricsEvent = {
     | 'batch'
     | 'count'
     | 'delete'
-    | 'deleteAll'
+    | 'clear'
     | 'get'
     | 'getAll'
     | 'has'
@@ -107,9 +107,9 @@ export type DebugInfo<S extends AnySchema> = {
 
 /** Available inside `batch()` callbacks. For IndexedDB, operations run in a real atomic IDB transaction. */
 export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
+  clear<T extends K>(table: T): Promise<void>;
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  deleteAll<T extends K>(table: T): Promise<void>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
@@ -147,7 +147,7 @@ export interface Adapter<S extends AnySchema> {
   debug(): Promise<DebugInfo<S>>;
   delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
   /** Removes all records from the table. */
-  deleteAll<K extends keyof S>(table: K): Promise<void>;
+  clear<K extends keyof S>(table: K): Promise<void>;
   /** Releases all resources (observers, cross-tab channel, DB connection). */
   dispose(): void;
   get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
@@ -158,7 +158,7 @@ export interface Adapter<S extends AnySchema> {
   observe<K extends keyof S>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
-    options?: { initialEmit?: boolean },
+    options?: { immediate?: boolean },
   ): () => void;
   put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
   putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;

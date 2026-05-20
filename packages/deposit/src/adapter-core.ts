@@ -8,12 +8,12 @@ import { assertTtlMs } from './ttl';
 /* -------------------- Internal core ops type (adapter → runtime bridge) -------------------- */
 
 export type CoreStorageOps<S extends AnySchema, K extends keyof S = keyof S> = {
+  /** Clear all records. Returns the physical count of records that were present before clearing. */
+  clear<T extends K>(table: T): Promise<number>;
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  /** Clear all records. Returns the physical count of records that were present before clearing. */
-  deleteAll<T extends K>(table: T): Promise<number>;
   /** Delete multiple records by key in a single operation. Returns the number physically removed. */
-  deleteByKeys<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
+  deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
@@ -56,7 +56,7 @@ function verifyKey<S extends AnySchema, K extends keyof S>(
 /* -------------------- Shared deleteMany builder (used in both tx and adapter query) -------------------- */
 
 function makeDeleteMany<S extends AnySchema, K extends keyof S>(
-  core: Pick<CoreStorageOps<S, K>, 'deleteByKeys'>,
+  core: Pick<CoreStorageOps<S, K>, 'deleteMany'>,
   schema: S,
   table: K,
   onMutate: (table: K) => void,
@@ -65,7 +65,7 @@ function makeDeleteMany<S extends AnySchema, K extends keyof S>(
     if (records.length === 0) return 0;
 
     const keys = records.map((r) => getRecordKey(schema, table, r));
-    const deleted = await core.deleteByKeys(table, keys);
+    const deleted = await core.deleteMany(table, keys);
 
     if (deleted > 0) onMutate(table);
 
@@ -82,6 +82,11 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
   validate?: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
 ): TransactionContext<S, K> {
   return {
+    async clear(table) {
+      const deleted = await core.clear(table);
+
+      if (deleted > 0) onMutate(table);
+    },
     async count(table) {
       return core.count(table);
     },
@@ -91,11 +96,6 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
       if (deleted) onMutate(table);
 
       return deleted;
-    },
-    async deleteAll(table) {
-      const deleted = await core.deleteAll(table);
-
-      if (deleted > 0) onMutate(table);
     },
     async get(table, key) {
       return core.get(table, key);
@@ -257,6 +257,10 @@ export function buildAdapterOps<S extends AnySchema>(
       return timed('*', 'batch', () => batchFn(tables, fn, notifyMutation, validate));
     },
 
+    async clear(table) {
+      return timed(String(table), 'clear', () => txCtx.clear(table));
+    },
+
     async count(table) {
       return timed(String(table), 'count', () => txCtx.count(table));
     },
@@ -280,10 +284,6 @@ export function buildAdapterOps<S extends AnySchema>(
 
     async delete(table, key) {
       return timed(String(table), 'delete', () => txCtx.delete(table, key));
-    },
-
-    async deleteAll(table) {
-      return timed(String(table), 'deleteAll', () => txCtx.deleteAll(table));
     },
 
     dispose() {

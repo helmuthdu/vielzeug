@@ -59,7 +59,7 @@ describe('IndexedDB adapter', () => {
 
   beforeEach(async () => {
     db = createIndexedDB({ name: 'IDB', schema: userSchema, version: 1 });
-    await db.deleteAll('users');
+    await db.clear('users');
   });
 
   afterEach(() => {
@@ -130,7 +130,7 @@ describe('IndexedDB adapter', () => {
             resolve();
           }
         },
-        { initialEmit: false },
+        { immediate: false },
       );
     });
 
@@ -163,8 +163,8 @@ describe('IndexedDB adapter', () => {
   test('batch commits atomically across tables', async () => {
     const multi = createIndexedDB({ name: 'Multi', schema: multiSchema, version: 1 });
 
-    await multi.deleteAll('users');
-    await multi.deleteAll('posts');
+    await multi.clear('users');
+    await multi.clear('posts');
     await multi.put('users', { id: 1, name: 'Alice' });
     await multi.put('posts', { id: 1, title: 'P1', userId: 1 });
 
@@ -230,7 +230,7 @@ describe('IndexedDB adapter', () => {
     const ttlSchema = { sessions: table<{ token: string }>('token').ttl(ttl.ms(1)) };
     const db2 = createIndexedDB({ name: 'TTL', schema: ttlSchema, version: 1 });
 
-    await db2.deleteAll('sessions');
+    await db2.clear('sessions');
     await db2.put('sessions', { token: 'abc' }); // uses schema defaultTtl
 
     await delay(5);
@@ -243,7 +243,7 @@ describe('IndexedDB adapter', () => {
     const events: MetricsEvent[] = [];
     const dbM = createIndexedDB({ name: 'IDB', onMetrics: (e) => events.push(e), schema: userSchema, version: 1 });
 
-    await dbM.deleteAll('users');
+    await dbM.clear('users');
     await dbM.put('users', { id: 1, name: 'Alice' });
     await dbM.get('users', 1);
 

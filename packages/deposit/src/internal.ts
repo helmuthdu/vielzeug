@@ -73,7 +73,7 @@ export function createObserverHub<S extends AnySchema>(
   const observe = <K extends keyof S>(
     table: K,
     listener: (records: RecordOf<S, K>[]) => void,
-    { initialEmit = true }: { initialEmit?: boolean } = {},
+    { immediate = true }: { immediate?: boolean } = {},
   ): (() => void) => {
     if (disposed) {
       throw new Error('[deposit] observer hub is disposed');
@@ -90,7 +90,7 @@ export function createObserverHub<S extends AnySchema>(
 
     listeners.add(wrapped);
 
-    if (initialEmit) notify(table);
+    if (immediate) notify(table);
 
     return () => {
       const current = observers.get(key);

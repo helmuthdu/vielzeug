@@ -50,7 +50,7 @@ declare module '@vielzeug/deposit' {
 
   type ScopedTableOps<S extends AnySchema, K extends keyof S> = {
     delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-    deleteAll<T extends K>(table: T): Promise<number>;
+    clear<T extends K>(table: T): Promise<number>;
     get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
     getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
     has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
@@ -70,7 +70,7 @@ declare module '@vielzeug/deposit' {
     observe<K extends keyof S>(
       table: K,
       listener: Observer<RecordOf<S, K>>,
-      options?: { initialEmit?: boolean },
+      options?: { immediate?: boolean },
     ): () => void;
   }
 

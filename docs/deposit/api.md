@@ -156,7 +156,7 @@ interface Adapter<S extends AnySchema> {
   delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
 
   /** Remove all records. */
-  deleteAll<K extends keyof S>(table: K): Promise<void>;
+  clear<K extends keyof S>(table: K): Promise<void>;
 
   /** Release all resources (observers, channel, DB connection). */
   dispose(): void;
@@ -171,7 +171,7 @@ interface Adapter<S extends AnySchema> {
   observe<K extends keyof S>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
-    options?: { initialEmit?: boolean },
+    options?: { immediate?: boolean },
   ): () => void;
 
   put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
@@ -199,7 +199,7 @@ interface Adapter<S extends AnySchema> {
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `initialEmit` | `boolean` | `true` | Fire the listener immediately with the current table contents |
+| `immediate` | `boolean` | `true` | Fire the listener immediately with the current table contents |
 
 Returns an unsubscribe function. Call it on teardown to prevent memory leaks.
 
@@ -213,7 +213,7 @@ Available inside `batch()` callbacks.
 type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  deleteAll<T extends K>(table: T): Promise<void>;
+  clear<T extends K>(table: T): Promise<void>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
@@ -335,7 +335,7 @@ A `@vielzeug/validit` schema satisfies `RecordParser` directly. Any object with 
 type MetricsEvent = {
   duration: number;
   operation:
-    | 'batch' | 'count' | 'delete' | 'deleteAll' | 'get' | 'getAll'
+    | 'batch' | 'count' | 'delete' | 'clear' | 'get' | 'getAll'
     | 'has' | 'iterate' | 'put' | 'putAll' | 'query' | 'queryDelete'
     | 'update' | 'upsert';
   table: string;

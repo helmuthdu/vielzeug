@@ -99,7 +99,7 @@ Native browser storage APIs are powerful but inconsistent and repetitive to use 
 | **Terminal actions** | `toArray()`, `count()`, `first()`, `delete()` |
 | **Lazy iteration** | `iterate(table)` yields records one at a time |
 | **TTL** | `ttl.ms/seconds/minutes/hours/days` — branded, validated at write time |
-| **Reactivity** | `observe(table, fn, { initialEmit? })` |
+| **Reactivity** | `observe(table, fn, { immediate? })` |
 | **Batch** | `batch(tables, tx => ...)` — deferred notifications on all adapters; atomic on IDB |
 | **Upsert** | `upsert(table, key, fn)` — read-modify-write in one call |
 | **Debug** | `debug()` — live vs expired record counts per table |
