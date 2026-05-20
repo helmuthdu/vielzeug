@@ -1,4 +1,4 @@
-import type { DepositLogger, TableValidators } from './plugins';
+import type { DepositLogger, TableSignals, TableValidators } from './plugins';
 import type { Adapter, AnySchema, DebugInfo, KeyOf, MetricsEvent, RecordOf, TransactionContext, TtlMs } from './types';
 
 import { createObserverHub, getRecordKey } from './internal';
@@ -23,8 +23,15 @@ export type CoreStorageOps<S extends AnySchema, K extends keyof S = keyof S> = {
 
 export type CoreRuntimeOps<S extends AnySchema, K extends keyof S = keyof S> = CoreStorageOps<S, K> & {
   dispose?(): void;
-  /** Raw record count including TTL-expired entries. Used only for debug(). */
+  /** Raw record count including TTL-expired entries. Used only for debug() and pruneExpired(). */
   getRawCount?<T extends K>(table: T): Promise<number>;
+  /**
+   * Explicitly prune expired records from the table.
+   * Returns the number of records deleted.
+   * If absent, pruneExpired() falls back to calling getAll() (which evicts lazily as a side-effect)
+   * and computing the before/after diff via getRawCount.
+   */
+  pruneExpiredInTable?<T extends K>(table: T): Promise<number>;
 };
 
 /* -------------------- TTL resolution (explicit > schema default > none) -------------------- */
@@ -140,6 +147,10 @@ function createScopedCore<S extends AnySchema, AllK extends keyof S, K extends A
   };
 }
 
+/**
+ * Wraps the validate function so a clear "[deposit] batch scope" error fires for
+ * any out-of-scope table access — even before IDB gets involved.
+ */
 function createScopedValidator<S extends AnySchema, K extends keyof S>(
   validate: <T extends keyof S>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
   scope: ReadonlySet<string>,
@@ -180,6 +191,9 @@ export function buildTxContext<S extends AnySchema, K extends keyof S>(
     },
     async getAll(table) {
       return core.getAll(table);
+    },
+    async getMany(table, keys) {
+      return Promise.all(keys.map((k) => core.get(table, k)));
     },
     async has(table, key) {
       return core.has(table, key);
@@ -250,11 +264,16 @@ export function buildAdapterOps<S extends AnySchema>(
     logger?: DepositLogger;
     onMetrics?: (event: MetricsEvent) => void;
     onMutation?: (table: keyof S) => void;
+    /**
+     * Per-table reactive signals. A @vielzeug/stateit Signal<T[]> satisfies ReactiveSignal directly.
+     * Each signal is kept in sync with its table automatically via observe().
+     */
+    signals?: TableSignals<S>;
     /** Per-table validators. A @vielzeug/validit Schema satisfies this directly via `parse()`. */
     validators?: TableValidators<S>;
   },
 ): { adapter: Adapter<S>; notifyMutation: (table: keyof S) => void } {
-  const { logger, onMetrics, validators } = options ?? {};
+  const { logger, onMetrics, signals, validators } = options ?? {};
 
   const observers = createObserverHub<S>(
     (table) => core.getAll(table),
@@ -270,6 +289,17 @@ export function buildAdapterOps<S extends AnySchema>(
   };
 
   const disconnectExternal = options?.connectExternal?.(observers.notify) ?? undefined;
+
+  /* -- Wire per-table reactive signals: each fires signal.update(() => snapshot) on change -- */
+  if (signals) {
+    for (const [tableName, signal] of Object.entries(signals)) {
+      if (signal) {
+        observers.observe(tableName as keyof S, (records) => {
+          signal.update(() => records as RecordOf<S, keyof S>[]);
+        });
+      }
+    }
+  }
 
   /* -- Validation helper: no-op when no validator registered for the table -- */
   const validate = <K extends keyof S>(table: K, value: RecordOf<S, K>): RecordOf<S, K> => {
@@ -307,8 +337,10 @@ export function buildAdapterOps<S extends AnySchema>(
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
     notify: (table: K) => void,
     validateFn: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
+    /* Accept a pre-built scope from batch() to avoid creating the same Set twice */
+    prebuiltScope?: ReadonlySet<string>,
   ): Promise<R> => {
-    const scope = createBatchScope(tables);
+    const scope = prebuiltScope ?? createBatchScope(tables);
     const dirty = new Set<K>();
     const txOps = buildTxContext<S, K>(
       schema,
@@ -325,26 +357,24 @@ export function buildAdapterOps<S extends AnySchema>(
     return result;
   };
 
-  const batchFn = options?.batch ?? softBatch;
+  const externalBatch = options?.batch;
 
   /* -- Single tx context for delegation (keyof S scope, notifyMutation, validate) -- */
   const txCtx = buildTxContext<S, keyof S>(schema, core, notifyMutation, validate);
 
   const adapter: Adapter<S> = {
     async batch<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>) {
-      return timed('*', 'batch', () => {
-        const scope = createBatchScope(tables);
+      // createBatchScope enforces the non-empty constraint and builds the scope set once.
+      // createScopedValidator ensures clear "[deposit] batch scope" errors fire before IDB gets involved.
+      // Scope enforcement for reads is handled by createScopedCore (softBatch) or the IDB transaction (idbBatch).
+      const scope = createBatchScope(tables);
+      const scopedValidate = createScopedValidator<S, K>(validate, scope);
 
-        return batchFn(
-          tables,
-          fn,
-          (table) => {
-            assertTableInBatchScope(scope, table);
-            notifyMutation(table);
-          },
-          createScopedValidator<S, K>(validate, scope),
-        );
-      });
+      return timed('*', 'batch', () =>
+        externalBatch
+          ? externalBatch(tables, fn, notifyMutation, scopedValidate)
+          : softBatch(tables, fn, notifyMutation, scopedValidate, scope),
+      );
     },
 
     async clear(table) {
@@ -390,6 +420,10 @@ export function buildAdapterOps<S extends AnySchema>(
       return timed(String(table), 'getAll', () => txCtx.getAll(table));
     },
 
+    async getMany(table, keys) {
+      return timed(String(table), 'getMany', () => txCtx.getMany(table, keys));
+    },
+
     async has(table, key) {
       return timed(String(table), 'has', () => txCtx.has(table, key));
     },
@@ -415,6 +449,33 @@ export function buildAdapterOps<S extends AnySchema>(
 
     observe(table, listener, opts) {
       return observers.observe(table, listener, opts);
+    },
+
+    async pruneExpired() {
+      const tableNames = Object.keys(schema) as Array<keyof S & string>;
+      const pairs = await Promise.all(
+        tableNames.map(async (name) => {
+          let pruned: number;
+
+          if (core.pruneExpiredInTable) {
+            pruned = await core.pruneExpiredInTable(name);
+          } else {
+            // Fallback: getAll() has lazy eviction as a side-effect for memory/webstorage adapters.
+            // Compute deleted count via raw count diff; falls back to 0 if getRawCount is unavailable.
+            const rawBefore = core.getRawCount ? await core.getRawCount(name) : undefined;
+
+            await core.getAll(name);
+
+            const rawAfter = core.getRawCount ? await core.getRawCount(name) : undefined;
+
+            pruned = rawBefore !== undefined && rawAfter !== undefined ? rawBefore - rawAfter : 0;
+          }
+
+          return [name, pruned] as const;
+        }),
+      );
+
+      return Object.fromEntries(pairs) as { [K in keyof S & string]: number };
     },
 
     async put(table, value, ttl) {
@@ -445,7 +506,76 @@ export function buildAdapterOps<S extends AnySchema>(
     async upsert(table, key, fn, ttl) {
       return timed(String(table), 'upsert', () => txCtx.upsert(table, key, fn, ttl));
     },
+
+    watch(table) {
+      return {
+        [Symbol.asyncIterator]() {
+          const queue: RecordOf<S, keyof S>[][] = [];
+          let waiting: ((value: IteratorResult<RecordOf<S, keyof S>[]>) => void) | null = null;
+          let done = false;
+
+          const unobserve = observers.observe(table as keyof S, (records) => {
+            if (waiting) {
+              const resolve = waiting;
+
+              waiting = null;
+              resolve({ done: false, value: records as RecordOf<S, keyof S>[] });
+            } else {
+              queue.push(records as RecordOf<S, keyof S>[]);
+            }
+          });
+
+          return {
+            async next(): Promise<IteratorResult<RecordOf<S, keyof S>[]>> {
+              if (queue.length > 0) {
+                return { done: false, value: queue.shift()! };
+              }
+
+              if (done) return { done: true, value: undefined };
+
+              return new Promise<IteratorResult<RecordOf<S, keyof S>[]>>((resolve) => {
+                waiting = resolve;
+              });
+            },
+            async return(): Promise<IteratorResult<RecordOf<S, keyof S>[]>> {
+              done = true;
+              unobserve();
+
+              if (waiting) {
+                waiting({ done: true, value: undefined });
+                waiting = null;
+              }
+
+              return { done: true, value: undefined };
+            },
+          };
+        },
+      } as AsyncIterable<RecordOf<S, keyof S>[]>;
+    },
   };
 
   return { adapter, notifyMutation };
+}
+
+/* -------------------- scheduleExpiredPrune: periodic TTL cleanup helper -------------------- */
+
+/**
+ * Schedules periodic calls to `adapter.pruneExpired()` using `setInterval`.
+ * Returns a `stop` function to cancel the schedule.
+ *
+ * ```ts
+ * const stopPrune = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
+ * // later...
+ * stopPrune();
+ * ```
+ */
+export function scheduleExpiredPrune<S extends AnySchema>(
+  adapter: Pick<Adapter<S>, 'pruneExpired'>,
+  options: { interval: number },
+): () => void {
+  const id = setInterval(() => {
+    void adapter.pruneExpired();
+  }, options.interval);
+
+  return () => clearInterval(id);
 }

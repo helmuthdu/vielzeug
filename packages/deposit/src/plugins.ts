@@ -44,3 +44,36 @@ export interface RecordValidator<T> {
 export type TableValidators<S extends AnySchema> = {
   [K in keyof S]?: RecordValidator<RecordOf<S, K>>;
 };
+
+/**
+ * Minimal writable-signal interface satisfied structurally by
+ * `@vielzeug/stateit` `Signal<T>` and `Store<T>`.
+ * Pass a stateit signal directly — no adapter needed:
+ *
+ * ```ts
+ * import { signal } from '@vielzeug/stateit';
+ * const usersSignal = signal<User[]>([]);
+ *
+ * const db = createMemory({
+ *   schema: { users: table<User>('id') },
+ *   signals: { users: usersSignal },
+ * });
+ *
+ * // usersSignal.value is now always in sync with the users table.
+ * ```
+ *
+ * Any object with an `update(fn: (current: T) => T): void` method satisfies
+ * this interface. Deposit calls `signal.update(() => snapshot)` on each change.
+ */
+export interface ReactiveSignal<T> {
+  update(fn: (current: T) => T): void;
+}
+
+/**
+ * Per-table reactive signals. Keys match your deposit schema table names.
+ * Each signal is automatically kept in sync with the table via `observe()`.
+ * Signals are wired at construction time and cleaned up on `dispose()`.
+ */
+export type TableSignals<S extends AnySchema> = {
+  [K in keyof S]?: ReactiveSignal<RecordOf<S, K>[]>;
+};

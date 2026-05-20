@@ -1,6 +1,6 @@
 ---
 title: Deposit Examples — Advanced
-description: Batch writes, transactions, migration, lazy iteration, upsert, plugins, and testing patterns.
+description: Batch writes, transactions, reactive signals, watch, getMany, TTL pruning, migration, lazy iteration, upsert, plugins, and testing patterns.
 ---
 
 ## Atomic Batch (IndexedDB)
@@ -63,6 +63,110 @@ await db.batch(['users'], async (tx) => {
   await tx.put('users', { id: 2, name: 'Bob' });
 });
 ```
+
+## Bulk Key Lookup with `getMany`
+
+`getMany` fetches multiple records by key in a single call. The result array preserves input key order; missing keys yield `undefined`.
+
+```ts
+await db.putAll('users', [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+  { id: 3, name: 'Carol' },
+]);
+
+const [alice, unknown, carol] = await db.getMany('users', [1, 99, 3]);
+// → [User, undefined, User]
+```
+
+`getMany` is also available inside `batch()` callbacks, scoped to the declared tables:
+
+```ts
+await db.batch(['users', 'posts'], async (tx) => {
+  const [user1, user2] = await tx.getMany('users', [1, 2]);
+  const enriched = (await tx.getAll('posts')).map((p) => ({
+    ...p,
+    authorName: p.userId === 1 ? user1?.name : user2?.name,
+  }));
+  await tx.putAll('posts', enriched);
+});
+```
+
+## Reactive Tables with `watch`
+
+`watch(table)` returns an `AsyncIterable` that yields a fresh snapshot on every change, starting immediately. The observer is cleaned up when the loop exits.
+
+```ts
+// Run this in a background task or component effect
+for await (const users of db.watch('users')) {
+  renderUserList(users);
+}
+// → loop exits on break/return, observer automatically unsubscribed
+```
+
+Use `break` to stop watching:
+
+```ts
+for await (const users of db.watch('users')) {
+  renderUserList(users);
+
+  if (shouldStop) break;
+}
+```
+
+## Reactive Signals (`signals` plugin)
+
+Wire `@vielzeug/stateit` signals at construction time. The signal is kept in sync with the table automatically — no `observe()` boilerplate needed.
+
+```ts
+import { signal } from '@vielzeug/stateit';
+import { createIndexedDB, table } from '@vielzeug/deposit';
+
+type User = { id: number; name: string };
+const schema = { users: table<User>('id') };
+
+const usersSignal = signal<User[]>([]);
+
+const db = createIndexedDB({
+  name: 'app',
+  schema,
+  signals: { users: usersSignal },
+  version: 1,
+});
+
+// usersSignal.value is always in sync with the users table.
+// In a craftit/buildit component or effect:
+// effect(() => renderList(usersSignal.value));
+```
+
+The signal is updated via `signal.update(() => snapshot)` on every table change. Any object with `update(fn)` satisfies the `ReactiveSignal<T>` interface structurally — no import of `@vielzeug/stateit` is needed in the deposit layer.
+
+Signals are wired immediately on construction and cleaned up on `dispose()`.
+
+## TTL Pruning
+
+For write-heavy tables that are rarely read, call `pruneExpired()` to sweep all tables and reclaim storage. Returns the count of records deleted per table.
+
+```ts
+const pruned = await db.pruneExpired();
+console.log('pruned:', pruned);
+// { users: 42, sessions: 17 }
+```
+
+For continuous maintenance, use `scheduleExpiredPrune`:
+
+```ts
+import { scheduleExpiredPrune, ttl } from '@vielzeug/deposit';
+
+// Prune every hour
+const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
+
+// On app teardown
+stop();
+db.dispose();
+```
+
+On **IndexedDB**, pruning is cursor-based — expired records are deleted without loading values into memory. On **LocalStorage / SessionStorage** and **Memory**, expired records are detected per-key during the scan.
 
 ## Bulk Write with putAll
 
@@ -191,6 +295,26 @@ const db = createMemory({
 });
 ```
 
+## Quota Exceeded Hook (LocalStorage / SessionStorage)
+
+Gracefully handle storage quota errors instead of propagating exceptions.
+
+```ts
+import { createLocalStorage } from '@vielzeug/deposit';
+
+const db = createLocalStorage({
+  name: 'app',
+  schema,
+  onQuotaExceeded: (table, error) => {
+    // log or evict stale data here
+    console.warn(`[${String(table)}] quota exceeded — dropping write`, error);
+    return 'ignore'; // silently skip the write
+  },
+});
+```
+
+Return `'throw'` (the default) to propagate the error as before.
+
 ## Testing with the Memory Adapter
 
 Swap any adapter for `createMemory` in test setup — no browser APIs, no cleanup boilerplate, TTL-accurate.
@@ -216,11 +340,25 @@ describe('user repository', () => {
   test('expired records are invisible', async () => {
     await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
 
-    // wait for TTL to expire
     await new Promise((r) => setTimeout(r, 10));
 
     expect(await db.get('users', 1)).toBeUndefined();
     expect(await db.count('users')).toBe(0);
+  });
+
+  test('getMany returns ordered results with undefined for missing keys', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 3, name: 'Carol' },
+    ]);
+
+    const result = await db.getMany('users', [3, 99, 1]);
+
+    expect(result).toEqual([
+      { id: 3, name: 'Carol' },
+      undefined,
+      { id: 1, name: 'Alice' },
+    ]);
   });
 
   test('putAll seeds fixtures in one call', async () => {

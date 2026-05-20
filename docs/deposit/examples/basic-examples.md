@@ -111,6 +111,15 @@ console.log(await db.has('users', 99)); // false
 console.log(await db.count('users'));   // 2
 ```
 
+## Bulk Key Lookup
+
+`getMany` fetches multiple records by key in one call. Missing keys return `undefined`. The result preserves input key order.
+
+```ts
+const [alice, unknown, bob] = await db.getMany('users', [1, 99, 2]);
+// → [{ id: 1, name: 'Alice' }, undefined, { id: 2, name: 'Bob' }]
+```
+
 ## Update and Delete
 
 ```ts

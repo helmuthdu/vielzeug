@@ -81,10 +81,10 @@ await db.putAll('users', [
 ]);
 
 // read
-const alice = await db.get('users', 1);         // User | undefined
-const all   = await db.getAll('users');          // User[]
-const total = await db.count('users');           // number (live records only)
-const exists = await db.has('users', 1);         // boolean
+const alice  = await db.get('users', 1);         // User | undefined
+const all    = await db.getAll('users');          // User[]
+const total  = await db.count('users');           // number (live records only)
+const exists = await db.has('users', 1);          // boolean
 
 // update — merges fields, keeps the original key
 const updated = await db.update('users', 1, { age: 31 });
@@ -97,6 +97,17 @@ void alice, all, total, exists, updated;
 ```
 
 `update` returns the merged record, or `undefined` when the key is not found.
+
+## Bulk Key Lookup
+
+`getMany(table, keys)` fetches multiple records in a single call. Missing keys return `undefined`. The result array preserves the input key order.
+
+```ts
+const [alice, missing, carol] = await db.getMany('users', [1, 99, 3]);
+// → [User, undefined, User]
+```
+
+`getMany` is also available inside `batch()` callbacks.
 
 ## Use TTL
 
@@ -112,6 +123,28 @@ await db.put('users', { id: 4, name: 'Dave', age: 22 }, ttl.ms(500));
 ```
 
 Expired records are evicted lazily on the next read. `count()` and `getAll()` exclude them.
+
+### Prune Expired Records
+
+For write-heavy tables that are rarely read, expired records accumulate without lazy eviction. `pruneExpired()` sweeps all tables explicitly and returns the count deleted per table.
+
+```ts
+const pruned = await db.pruneExpired();
+// { users: 42, sessions: 10 }
+```
+
+Schedule periodic pruning with `scheduleExpiredPrune`:
+
+```ts
+import { scheduleExpiredPrune, ttl } from '@vielzeug/deposit';
+
+const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
+
+// on teardown
+stop();
+```
+
+On **IndexedDB**, pruning uses a cursor-based pass — expired records are deleted without loading them into memory. On **LocalStorage / SessionStorage** and **Memory**, expired records are detected and removed during the scan.
 
 ## Upsert
 
@@ -170,6 +203,8 @@ Expired records are skipped automatically.
 
 ## Reactive Reads
 
+### `observe`
+
 `observe(table, listener)` fires the listener whenever the table changes. It emits an initial snapshot by default.
 
 ```ts
@@ -187,6 +222,18 @@ stopSilent();
 ```
 
 Always call the returned unsubscribe function on teardown to prevent memory leaks.
+
+### `watch` — AsyncIterable Stream
+
+`watch(table)` returns an `AsyncIterable` that yields a fresh snapshot on every change, including an immediate one. It is the `for await` companion to `observe`.
+
+```ts
+for await (const users of db.watch('users')) {
+  renderTable(users);
+}
+```
+
+The observer is cleaned up automatically when the loop exits via `break`, `return`, or an unhandled error. No explicit unsubscribe is needed.
 
 ## Batch Writes
 
@@ -244,9 +291,29 @@ void db;
 
 ## Plugins
 
-All four adapters accept the same optional plugin options.
+All four adapters accept the same optional plugin options at construction time. Each plugin uses a structural interface — pass the real package object directly, no adapter or wrapper needed.
 
-### Logger
+### Reactive Signals (`signals`)
+
+Wire `@vielzeug/stateit` signals directly. Each signal is automatically kept in sync with its table via `observe()` and cleaned up on `dispose()`.
+
+```ts
+import { signal } from '@vielzeug/stateit';
+import { createMemory } from '@vielzeug/deposit';
+
+const usersSignal = signal<User[]>([]);
+
+const db = createMemory({
+  schema,
+  signals: { users: usersSignal },
+});
+
+// usersSignal.value is now always in sync with the users table
+```
+
+Any object with an `update(fn: (current: T) => T): void` method satisfies `ReactiveSignal<T>` structurally. `@vielzeug/stateit` `Signal<T>` and `Store<T>` both satisfy this directly.
+
+### Logger (`logger`)
 
 Pass a `@vielzeug/logit` logger or any object with an `error(...)` method. Observer notification errors are routed to `logger.error`.
 
@@ -260,7 +327,7 @@ const db = createMemory({
 });
 ```
 
-### Record Validation
+### Record Validation (`validators`)
 
 Pass a `@vielzeug/validit` schema or any object with `parse(value): T`. Validators run before every `put`, `putAll`, `update`, and `upsert`.
 
@@ -278,7 +345,7 @@ const db = createMemory({
 
 Any value that fails `parse` causes the write to throw before touching storage.
 
-### Metrics
+### Metrics (`onMetrics`)
 
 `onMetrics` is called after every operation with timing and table name. Use it for performance monitoring.
 
@@ -291,7 +358,24 @@ const db = createMemory({
 });
 ```
 
-Tracked operations: `get`, `getAll`, `has`, `put`, `putAll`, `count`, `delete`, `clear`, `update`, `upsert`, `batch`, `query`, `queryDelete`, `iterate`.
+Tracked operations: `get`, `getAll`, `getMany`, `has`, `put`, `putAll`, `count`, `delete`, `clear`, `update`, `upsert`, `batch`, `query`, `queryDelete`, `iterate`.
+
+### Quota Exceeded Hook (`onQuotaExceeded`) — LocalStorage / SessionStorage
+
+Called when a write exceeds the storage quota. Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow.
+
+```ts
+import { createLocalStorage } from '@vielzeug/deposit';
+
+const db = createLocalStorage({
+  name: 'app',
+  schema,
+  onQuotaExceeded: (table, error) => {
+    console.warn(`[${String(table)}] quota exceeded — dropping write`, error);
+    return 'ignore';
+  },
+});
+```
 
 ## Environment-Based Adapter Selection
 
@@ -320,7 +404,7 @@ function createStorage(): Adapter<typeof schema> {
 
 ## Lifecycle
 
-Call `dispose()` when the adapter is no longer needed. This disconnects observers, closes the BroadcastChannel (IDB), and releases the IDB connection.
+Call `dispose()` when the adapter is no longer needed. This disconnects observers, signal subscriptions, the BroadcastChannel (IDB), and the IDB connection.
 
 ```ts
 db.dispose();
@@ -330,7 +414,8 @@ db.dispose();
 
 - Prefer `createIndexedDB` for large datasets or flows that require atomicity.
 - Use `createMemory` in tests — no cleanup, no browser API requirements.
-- Always call the `observe()` unsubscribe function on component teardown.
+- Always call the `observe()` unsubscribe function on component teardown (or use `watch()` which auto-unsubscribes on loop exit).
 - Use `batch()` when writing to multiple tables to batch observer notifications.
 - Use `ttl.*` helpers — raw millisecond numbers are rejected by the type system.
 - Keep `batch()` callbacks focused on storage operations; avoid arbitrary async side effects.
+- Schedule `scheduleExpiredPrune` for write-heavy tables with TTL to reclaim storage proactively.

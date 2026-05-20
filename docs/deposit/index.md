@@ -3,9 +3,9 @@ title: Deposit — Minimal Typed Browser Storage
 description: Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
 package: deposit
 category: storage
-keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session]
-related: [fetchit, logit, toolkit]
-exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl]
+keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
+related: [fetchit, logit, stateit, validit, toolkit]
+exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,11 +21,11 @@ exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemor
 
 **Package:** `@vielzeug/deposit` &nbsp;·&nbsp; **Category:** Storage
 
-**Key exports:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`
+**Key exports:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`
 
 **When to use:** Structured, queryable browser storage with TTL, reactivity, and TypeScript types.
 
-**Related:** [Fetchit](/fetchit/) · [Logit](/logit/) · [Toolkit](/toolkit/)
+**Related:** [Fetchit](/fetchit/) · [Logit](/logit/) · [Stateit](/stateit/) · [Validit](/validit/) · [Toolkit](/toolkit/)
 
 </details>
 
@@ -85,9 +85,10 @@ Native browser storage APIs are powerful but inconsistent and repetitive to use 
 - One `Adapter<S>` interface across all four backends
 - Chainable query builder for filtering, sorting, pagination, and predicate deletes
 - TTL on any write — enforced via the branded `TtlMs` type; use `ttl.*` helpers
-- Reactive reads via `observe(table, listener)`
+- Reactive reads via `observe(table, listener)` and `watch(table)` async iterator
 - Deferred-notification `batch()` for multi-table writes; atomic IDB transactions for IndexedDB
-- Optional validation, structured logging, and metrics hooks
+- Signal plugin: wire any `@vielzeug/stateit` signal directly — no glue code
+- Validation, structured logging, and metrics hooks — all zero-dependency structural interfaces
 
 ## Features
 
@@ -98,12 +99,15 @@ Native browser storage APIs are powerful but inconsistent and repetitive to use 
 | **Queries** | `filter`, `equals`, `between`, `startsWith`, `orderBy`, `limit`, `offset` |
 | **Terminal actions** | `toArray()`, `count()`, `first()`, `delete()` |
 | **Lazy iteration** | `iterate(table)` yields records one at a time |
+| **Reactive stream** | `watch(table)` — async iterator that yields a snapshot on every change |
+| **Bulk lookup** | `getMany(table, keys)` — fetch multiple records by key in one call |
 | **TTL** | `ttl.ms/seconds/minutes/hours/days` — branded, validated at write time |
+| **TTL pruning** | `pruneExpired()` · `scheduleExpiredPrune(db, { interval })` |
 | **Reactivity** | `observe(table, fn, { immediate? })` |
 | **Batch** | `batch(tables, tx => ...)` — deferred notifications on all adapters; atomic on IDB |
 | **Upsert** | `upsert(table, key, fn)` — read-modify-write in one call |
 | **Debug** | `debug()` — live vs expired record counts per table |
-| **Plugins** | `logger`, `validators`, `onMetrics` on every adapter |
+| **Plugins** | `signals`, `logger`, `validators`, `onMetrics`, `onQuotaExceeded` |
 
 ## Compatibility
 
@@ -121,6 +125,7 @@ Native browser storage APIs are powerful but inconsistent and repetitive to use 
 
 ## See Also
 
+- [Stateit](/stateit/)
 - [Fetchit](/fetchit/)
 - [Logit](/logit/)
 - [Validit](/validit/)

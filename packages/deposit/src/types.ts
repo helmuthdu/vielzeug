@@ -79,6 +79,7 @@ export type MetricsEvent = {
     | 'clear'
     | 'get'
     | 'getAll'
+    | 'getMany'
     | 'has'
     | 'iterate'
     | 'put'
@@ -111,7 +112,9 @@ export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S>
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
+  /** Fetch multiple records by key in a single operation. Preserves key order; missing keys yield `undefined`. */
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
+  getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
@@ -153,6 +156,8 @@ export interface Adapter<S extends AnySchema> {
   dispose(): void;
   get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
   getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
+  /** Fetch multiple records by key. Preserves key order; missing keys yield `undefined`. */
+  getMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<Array<RecordOf<S, K> | undefined>>;
   has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
   /** Lazily iterate over all live records in a table. Useful for large datasets. */
   iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
@@ -161,6 +166,14 @@ export interface Adapter<S extends AnySchema> {
     listener: Observer<RecordOf<S, K>>,
     options?: { immediate?: boolean },
   ): () => void;
+  /**
+   * Explicitly delete all TTL-expired records from every table.
+   * Returns the number of records pruned per table.
+   *
+   * Useful as a scheduled maintenance task for write-heavy tables that are rarely
+   * read (lazy eviction would not reclaim storage otherwise).
+   */
+  pruneExpired(): Promise<{ [K in keyof S & string]: number }>;
   put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
   putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
   query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
@@ -181,4 +194,18 @@ export interface Adapter<S extends AnySchema> {
     fn: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>,
     ttl?: TtlMs,
   ): Promise<RecordOf<S, K>>;
+  /**
+   * An AsyncIterable that yields a fresh snapshot of the table on every change.
+   * The first value is emitted immediately (equivalent to `{ immediate: true }`).
+   *
+   * ```ts
+   * for await (const users of db.watch('users')) {
+   *   render(users);
+   * }
+   * ```
+   *
+   * The iteration auto-cleans up its observer when the `for await` loop exits
+   * (via `return()` or `break`).
+   */
+  watch<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>[]>;
 }

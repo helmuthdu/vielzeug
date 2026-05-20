@@ -1,14 +1,5 @@
-import type { DepositLogger, TableValidators } from '../plugins';
-import type {
-  Adapter,
-  AnySchema,
-  KeyOf,
-  MetricsEvent,
-  MigrationFn,
-  RecordOf,
-  TransactionContext,
-  TtlMs,
-} from '../types';
+import type { DepositLogger, TableSignals, TableValidators } from '../plugins';
+import type { Adapter, AnySchema, MetricsEvent, MigrationFn, RecordOf, TransactionContext, TtlMs } from '../types';
 
 import { buildAdapterOps, buildTxContext, type CoreRuntimeOps, type CoreStorageOps } from '../adapter-core';
 import { getRecordKey } from '../internal';
@@ -110,18 +101,115 @@ async function storeHasKey(store: IDBObjectStore, key: IDBValidKey): Promise<boo
   return (await idbReq(store.getKey(key))) !== undefined;
 }
 
+/* -------------------- Per-store primitive helpers -------------------- */
+/* Shared between single-table withStore() callbacks and multi-table idbBatch txCore.
+   Keeping them here enables one code path for bug fixes rather than two separate copies. */
+
+async function storeGet<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  key: IDBValidKey,
+): Promise<T | undefined> {
+  const raw = await idbReq<unknown>(store.get(key));
+
+  if (raw == null) return undefined;
+
+  const parsed = parseStored<T>(raw);
+
+  if (!parsed) return undefined;
+
+  return unwrapStored(parsed);
+}
+
+/** TTL-aware existence check — returns false for expired records (consistent with get). */
+async function storeHas<T extends Record<string, unknown>>(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
+  const raw = await idbReq<unknown>(store.get(key));
+
+  if (raw == null) return false;
+
+  const parsed = parseStored<T>(raw);
+
+  return parsed ? unwrapStored(parsed) !== undefined : false;
+}
+
+async function storeClear(store: IDBObjectStore): Promise<number> {
+  const count = await idbReq(store.count());
+
+  if (count > 0) await idbReq(store.clear());
+
+  return count;
+}
+
+async function storeDelete(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
+  const exists = await storeHasKey(store, key);
+
+  if (!exists) return false;
+
+  await idbReq(store.delete(key));
+
+  return true;
+}
+
+async function storeDeleteMany(store: IDBObjectStore, keys: IDBValidKey[]): Promise<number> {
+  let deleted = 0;
+
+  for (const key of keys) {
+    if (await storeHasKey(store, key)) {
+      await idbReq(store.delete(key));
+      deleted += 1;
+    }
+  }
+
+  return deleted;
+}
+
+async function storePutAt<T>(store: IDBObjectStore, key: IDBValidKey, value: T, ttl?: TtlMs): Promise<void> {
+  await idbReq(store.put(wrapStored(value, ttl), key));
+}
+
+/**
+ * Cursor-based pruning: deletes every TTL-expired record in a single readwrite transaction.
+ * Unlike getAll(), this does not materialise records into memory.
+ */
+function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    let deleted = 0;
+    const request = store.openCursor();
+
+    request.onerror = () => reject(request.error ?? new Error('[deposit] IndexedDB cursor failed during prune'));
+    request.onsuccess = () => {
+      const cursor = request.result;
+
+      if (!cursor) {
+        resolve(deleted);
+
+        return;
+      }
+
+      const parsed = parseStored(cursor.value as unknown);
+
+      if (!parsed || unwrapStored(parsed) === undefined) {
+        cursor.delete();
+        deleted += 1;
+      }
+
+      cursor.continue();
+    };
+  });
+}
+
 type IndexedDbOptions<S extends AnySchema> = {
   logger?: DepositLogger;
   migrate?: MigrationFn;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
   schema: S;
+  signals?: TableSignals<S>;
   validators?: TableValidators<S>;
   version: number;
 };
 
 export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): Adapter<S> {
-  const { logger, migrate, name, onMetrics, schema, validators, version } = options;
+  const { logger, migrate, name, onMetrics, schema, signals, validators, version } = options;
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`deposit:${name}`) : undefined;
   let db: IDBDatabase | null = null;
   let connectPromise: Promise<void> | null = null;
@@ -221,50 +309,16 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   };
 
   const core: CoreRuntimeOps<S> = {
-    async clear<K extends keyof S>(table: K): Promise<number> {
-      return withStore(table, 'readwrite', async (store) => {
-        const count = await idbReq(store.count());
+    clear: (table) => withStore(table, 'readwrite', storeClear),
 
-        if (count > 0) await idbReq(store.clear());
+    count: (table) => withStore(table, 'readonly', (s) => countLiveRecordsInStore<RecordOf<S, typeof table>>(s)),
 
-        return count;
-      });
-    },
+    delete: (table, key) => withStore(table, 'readwrite', (s) => storeDelete(s, key as IDBValidKey)),
 
-    async count<K extends keyof S>(table: K): Promise<number> {
-      return withStore(table, 'readonly', (store) => countLiveRecordsInStore<RecordOf<S, K>>(store));
-    },
-
-    async delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      return withStore(table, 'readwrite', async (store) => {
-        const exists = await storeHasKey(store, key as IDBValidKey);
-
-        if (!exists) return false;
-
-        await idbReq(store.delete(key as IDBValidKey));
-
-        return true;
-      });
-    },
-
-    async deleteMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
-      if (keys.length === 0) return 0;
-
-      return withStore(table, 'readwrite', async (store) => {
-        let deleted = 0;
-
-        for (const key of keys) {
-          const exists = await storeHasKey(store, key as IDBValidKey);
-
-          if (exists) {
-            await idbReq(store.delete(key as IDBValidKey));
-            deleted += 1;
-          }
-        }
-
-        return deleted;
-      });
-    },
+    deleteMany: (table, keys) =>
+      keys.length === 0
+        ? Promise.resolve(0)
+        : withStore(table, 'readwrite', (s) => storeDeleteMany(s, keys as IDBValidKey[])),
 
     dispose() {
       disposed = true;
@@ -274,56 +328,30 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       channel?.close();
     },
 
-    async get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-      const raw = await withStore(table, 'readonly', (store) => idbReq<unknown>(store.get(key as IDBValidKey)));
+    get: (table, key) =>
+      withStore(table, 'readonly', (s) => storeGet<RecordOf<S, typeof table>>(s, key as IDBValidKey)),
 
-      if (raw == null) return undefined;
+    getAll: (table) => withStore(table, 'readonly', (s) => getAllFromStore<RecordOf<S, typeof table>>(s)),
 
-      const parsed = parseStored<RecordOf<S, K>>(raw);
+    getRawCount: (table) => withStore(table, 'readonly', (s) => idbReq(s.count())),
 
-      if (!parsed) return undefined;
+    has: (table, key) =>
+      withStore(table, 'readonly', (s) => storeHas<RecordOf<S, typeof table>>(s, key as IDBValidKey)),
 
-      return unwrapStored(parsed);
-    },
+    pruneExpiredInTable: (table) => withStore(table, 'readwrite', pruneExpiredInStore),
 
-    async getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]> {
-      return withStore(table, 'readonly', (store) => getAllFromStore<RecordOf<S, K>>(store));
-    },
-
-    async getRawCount<K extends keyof S>(table: K): Promise<number> {
-      return withStore(table, 'readonly', (store) => idbReq(store.count()));
-    },
-
-    async has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      return withStore(table, 'readonly', async (store) => {
-        const raw = await idbReq<unknown>(store.get(key as IDBValidKey));
-
-        if (raw == null) return false;
-
-        const parsed = parseStored<RecordOf<S, K>>(raw);
-
-        return parsed ? unwrapStored(parsed) !== undefined : false;
-      });
-    },
-
-    async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
+    put(table, value, ttl) {
       const key = getRecordKey(schema, table, value) as IDBValidKey;
 
-      await withStore(table, 'readwrite', (store) =>
-        idbReq(store.put(wrapStored(value, ttl), key)).then(() => undefined),
-      );
+      return withStore(table, 'readwrite', (s) => storePutAt(s, key, value, ttl));
     },
 
-    async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
-      await withStore(table, 'readwrite', async (store) => {
-        await Promise.all(
-          values.map((value) => {
-            const key = getRecordKey(schema, table, value) as IDBValidKey;
-
-            return idbReq(store.put(wrapStored(value, ttl), key));
-          }),
-        );
-      });
+    putAll(table, values, ttl) {
+      return withStore(table, 'readwrite', (s) =>
+        Promise.all(values.map((v) => storePutAt(s, getRecordKey(schema, table, v) as IDBValidKey, v, ttl))).then(
+          () => undefined,
+        ),
+      );
     },
   };
 
@@ -340,83 +368,20 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     const dirtyTables = new Set<K>();
 
     const txCore: CoreStorageOps<S, K> = {
-      async clear<T extends K>(table: T): Promise<number> {
-        const count = await idbReq(storeOf(table).count());
-
-        if (count > 0) await idbReq(storeOf(table).clear());
-
-        return count;
+      clear: (table) => storeClear(storeOf(table)),
+      count: (table) => countLiveRecordsInStore<RecordOf<S, typeof table>>(storeOf(table)),
+      delete: (table, key) => storeDelete(storeOf(table), key as IDBValidKey),
+      deleteMany: (table, keys) => storeDeleteMany(storeOf(table), keys as IDBValidKey[]),
+      get: (table, key) => storeGet<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey),
+      getAll: (table) => getAllFromStore<RecordOf<S, typeof table>>(storeOf(table)),
+      has: (table, key) => storeHas<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey),
+      put(table, value, ttl) {
+        return storePutAt(storeOf(table), getRecordKey(schema, table, value) as IDBValidKey, value, ttl);
       },
-
-      async count<T extends K>(table: T): Promise<number> {
-        return countLiveRecordsInStore<RecordOf<S, T>>(storeOf(table));
-      },
-
-      async delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean> {
-        const exists = await storeHasKey(storeOf(table), key as IDBValidKey);
-
-        if (!exists) return false;
-
-        await idbReq(storeOf(table).delete(key as IDBValidKey));
-
-        return true;
-      },
-
-      async deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number> {
-        let deleted = 0;
-
-        for (const key of keys) {
-          const exists = await storeHasKey(storeOf(table), key as IDBValidKey);
-
-          if (exists) {
-            await idbReq(storeOf(table).delete(key as IDBValidKey));
-            deleted += 1;
-          }
-        }
-
-        return deleted;
-      },
-
-      async get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined> {
-        const raw = await idbReq<unknown>(storeOf(table).get(key as IDBValidKey));
-
-        if (raw == null) return undefined;
-
-        const parsed = parseStored<RecordOf<S, T>>(raw);
-
-        if (!parsed) return undefined;
-
-        return unwrapStored(parsed);
-      },
-
-      async getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]> {
-        return getAllFromStore<RecordOf<S, T>>(storeOf(table));
-      },
-
-      async has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean> {
-        const raw = await idbReq<unknown>(storeOf(table).get(key as IDBValidKey));
-
-        if (raw == null) return false;
-
-        const parsed = parseStored<RecordOf<S, T>>(raw);
-
-        return parsed ? unwrapStored(parsed) !== undefined : false;
-      },
-
-      async put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void> {
-        const key = getRecordKey(schema, table, value) as IDBValidKey;
-
-        await idbReq(storeOf(table).put(wrapStored(value, ttl), key));
-      },
-
-      async putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void> {
-        await Promise.all(
-          values.map((value) => {
-            const key = getRecordKey(schema, table, value) as IDBValidKey;
-
-            return idbReq(storeOf(table).put(wrapStored(value, ttl), key));
-          }),
-        );
+      putAll(table, values, ttl) {
+        return Promise.all(
+          values.map((v) => storePutAt(storeOf(table), getRecordKey(schema, table, v) as IDBValidKey, v, ttl)),
+        ).then(() => undefined);
       },
     };
 
@@ -452,6 +417,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     logger,
     onMetrics,
     onMutation: publish,
+    signals,
     validators,
   });
 

@@ -1,4 +1,4 @@
-import type { DepositLogger, TableValidators } from '../plugins';
+import type { DepositLogger, TableSignals, TableValidators } from '../plugins';
 import type { Adapter, AnySchema, KeyOf, MetricsEvent, RecordOf, TtlMs } from '../types';
 
 import { buildAdapterOps, type CoreRuntimeOps } from '../adapter-core';
@@ -9,6 +9,7 @@ type MemoryOptions<S extends AnySchema> = {
   logger?: DepositLogger;
   onMetrics?: (event: MetricsEvent) => void;
   schema: S;
+  signals?: TableSignals<S>;
   validators?: TableValidators<S>;
 };
 
@@ -24,7 +25,7 @@ function getTableStore(tables: Map<string, Map<string, StoredRecord<unknown>>>, 
 }
 
 export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Adapter<S> {
-  const { logger, onMetrics, schema, validators } = options;
+  const { logger, onMetrics, schema, signals, validators } = options;
   const tables = new Map<string, Map<string, StoredRecord<unknown>>>();
 
   const core: CoreRuntimeOps<S> = {
@@ -142,7 +143,7 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
     },
   };
 
-  const { adapter } = buildAdapterOps(schema, core, { logger, onMetrics, validators });
+  const { adapter } = buildAdapterOps(schema, core, { logger, onMetrics, signals, validators });
 
   return adapter;
 }

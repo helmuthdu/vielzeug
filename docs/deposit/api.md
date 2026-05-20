@@ -15,6 +15,7 @@ description: Complete API reference for Deposit adapters, schema helpers, query 
 | `createSessionStorage(opts)` | SessionStorage adapter |
 | `createIndexedDB(opts)` | IndexedDB adapter with atomic batch |
 | `createMemory(opts)` | In-memory adapter for tests and SSR |
+| `scheduleExpiredPrune(adapter, opts)` | Schedule periodic TTL pruning |
 
 ## Package Entry Points
 
@@ -22,9 +23,9 @@ description: Complete API reference for Deposit adapters, schema helpers, query 
 
 ## Exports
 
-**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`
+**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`
 
-**Types:** `Adapter`, `AnySchema`, `DebugInfo`, `DebugStats`, `DepositLogger`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `Observer`, `QueryBuilder`, `ReadQuery`, `RecordOf`, `RecordValidator`, `TableValidators`, `TransactionContext`, `TtlMs`
+**Types:** `Adapter`, `AnySchema`, `DebugInfo`, `DebugStats`, `DepositLogger`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `ReadQuery`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`
 
 ---
 
@@ -80,6 +81,28 @@ All helpers throw synchronously if `n` is not a finite non-negative number. Pass
 
 ---
 
+## `scheduleExpiredPrune`
+
+```ts
+function scheduleExpiredPrune<S extends AnySchema>(
+  adapter: Pick<Adapter<S>, 'pruneExpired'>,
+  options: { interval: number },
+): () => void
+```
+
+Calls `adapter.pruneExpired()` on a repeating interval. Returns a `stop` function that cancels the schedule.
+
+```ts
+import { scheduleExpiredPrune, ttl } from '@vielzeug/deposit';
+
+const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
+
+// cancel on teardown
+stop();
+```
+
+---
+
 ## Factories
 
 All four factories accept the same optional plugin options and return `Adapter<S>`.
@@ -91,10 +114,14 @@ createLocalStorage<S extends AnySchema>(options: {
   logger?: DepositLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
+  onQuotaExceeded?: (table: keyof S, error: Error) => 'ignore' | 'throw';
   schema: S;
+  signals?: TableSignals<S>;
   validators?: TableValidators<S>;
 }): Adapter<S>
 ```
+
+`onQuotaExceeded` is called when a `setItem` throws a `QuotaExceededError`. Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow.
 
 ### `createSessionStorage`
 
@@ -103,7 +130,9 @@ createSessionStorage<S extends AnySchema>(options: {
   logger?: DepositLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
+  onQuotaExceeded?: (table: keyof S, error: Error) => 'ignore' | 'throw';
   schema: S;
+  signals?: TableSignals<S>;
   validators?: TableValidators<S>;
 }): Adapter<S>
 ```
@@ -117,6 +146,7 @@ createIndexedDB<S extends AnySchema>(options: {
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
   schema: S;
+  signals?: TableSignals<S>;
   validators?: TableValidators<S>;
   version: number;
 }): Adapter<S>
@@ -131,6 +161,7 @@ createMemory<S extends AnySchema>(options: {
   logger?: DepositLogger;
   onMetrics?: (event: MetricsEvent) => void;
   schema: S;
+  signals?: TableSignals<S>;
   validators?: TableValidators<S>;
 }): Adapter<S>
 ```
@@ -158,24 +189,41 @@ interface Adapter<S extends AnySchema> {
 
   delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
 
-  /** Remove all records. */
+  /** Remove all records from the table. */
   clear<K extends keyof S>(table: K): Promise<void>;
 
-  /** Release all resources (observers, channel, DB connection). */
+  /** Release all resources (observers, signal subscriptions, channel, DB connection). */
   dispose(): void;
 
   get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
   getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
+
+  /**
+   * Fetch multiple records by key in a single operation.
+   * Preserves input key order. Missing keys yield `undefined`.
+   */
+  getMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<Array<RecordOf<S, K> | undefined>>;
+
   has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
 
   /** Lazy async iteration over all live records. */
   iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
 
+  /**
+   * Subscribe to table changes. Fires an initial snapshot by default.
+   * Returns an unsubscribe function — call it on teardown.
+   */
   observe<K extends keyof S>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
     options?: { immediate?: boolean },
   ): () => void;
+
+  /**
+   * Explicitly delete all TTL-expired records from every table.
+   * Returns the number of records pruned per table.
+   */
+  pruneExpired(): Promise<{ [K in keyof S & string]: number }>;
 
   put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
   putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
@@ -195,6 +243,12 @@ interface Adapter<S extends AnySchema> {
     fn: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>,
     ttl?: TtlMs,
   ): Promise<RecordOf<S, K>>;
+
+  /**
+   * Async iterator that yields a fresh snapshot on every table change,
+   * starting with an immediate snapshot. Auto-cleans up its observer on exit.
+   */
+  watch<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>[]>;
 }
 ```
 
@@ -214,11 +268,13 @@ Available inside `batch()` callbacks.
 
 ```ts
 type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
+  clear<T extends K>(table: T): Promise<void>;
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  clear<T extends K>(table: T): Promise<void>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
+  /** Fetch multiple records by key. Preserves key order; missing keys yield `undefined`. */
+  getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
@@ -304,6 +360,8 @@ type DebugInfo<S extends AnySchema> = {
 
 ## Plugin Types
 
+All plugins use structural interfaces. Pass the actual library object directly — no adapter or wrapper needed.
+
 ### `DepositLogger`
 
 A minimal logger interface satisfied structurally by `@vielzeug/logit` Logger.
@@ -315,6 +373,28 @@ interface DepositLogger {
 ```
 
 Pass a logit Logger instance directly — no adapter needed.
+
+### `ReactiveSignal` / `TableSignals`
+
+```ts
+interface ReactiveSignal<T> {
+  update(fn: (current: T) => T): void;
+}
+
+type TableSignals<S extends AnySchema> = {
+  [K in keyof S]?: ReactiveSignal<RecordOf<S, K>[]>;
+};
+```
+
+`@vielzeug/stateit` `Signal<T>` and `Store<T>` both satisfy `ReactiveSignal<T>` structurally. Signals are wired at construction time and cleaned up on `dispose()`.
+
+```ts
+import { signal } from '@vielzeug/stateit';
+
+const usersSignal = signal<User[]>([]);
+
+const db = createMemory({ schema, signals: { users: usersSignal } });
+```
 
 ### `RecordValidator` / `TableValidators`
 
@@ -336,7 +416,7 @@ A `@vielzeug/validit` schema satisfies `RecordValidator` directly. Any object wi
 type MetricsEvent = {
   duration: number;
   operation:
-    | 'batch' | 'count' | 'delete' | 'clear' | 'get' | 'getAll'
+    | 'batch' | 'count' | 'delete' | 'clear' | 'get' | 'getAll' | 'getMany'
     | 'has' | 'iterate' | 'put' | 'putAll' | 'query' | 'queryDelete'
     | 'update' | 'upsert';
   table: string;
@@ -353,6 +433,12 @@ type RecordOf<S extends AnySchema, K extends keyof S> = ...;
 
 /** Extract the primary-key value type for a given table. */
 type KeyOf<S extends AnySchema, K extends keyof S> = ...;
+
+/** The shape of a single schema entry (from `table<T>(key)`). */
+type SchemaEntry<T extends Record<string, unknown>, Key extends keyof T & string> = {
+  defaultTtl?: TtlMs;
+  key: Key;
+};
 
 /** Observer callback type. */
 type Observer<T> = (records: T[]) => void;

@@ -1,4 +1,4 @@
-import type { DepositLogger, TableValidators } from '../plugins';
+import type { DepositLogger, TableSignals, TableValidators } from '../plugins';
 import type { Adapter, AnySchema, KeyOf, MetricsEvent, RecordOf, TtlMs } from '../types';
 
 import { buildAdapterOps, type CoreRuntimeOps } from '../adapter-core';
@@ -9,7 +9,13 @@ type WebStorageOptions<S extends AnySchema> = {
   logger?: DepositLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
+  /**
+   * Called when localStorage/sessionStorage quota is exceeded on a write.
+   * Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow the error.
+   */
+  onQuotaExceeded?: (table: keyof S, error: Error) => 'ignore' | 'throw';
   schema: S;
+  signals?: TableSignals<S>;
   validators?: TableValidators<S>;
 };
 
@@ -18,11 +24,13 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
   logger?: DepositLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
+  onQuotaExceeded?: (table: keyof S, error: Error) => 'ignore' | 'throw';
   schema: S;
+  signals?: TableSignals<S>;
   storageLabel: string;
   validators?: TableValidators<S>;
 }): Adapter<S> {
-  const { getStorage, logger, name, onMetrics, schema, storageLabel, validators } = options;
+  const { getStorage, logger, name, onMetrics, onQuotaExceeded, schema, signals, storageLabel, validators } = options;
   let storageListener: ((event: StorageEvent) => void) | undefined;
 
   const storage = (): Storage => {
@@ -53,12 +61,18 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
     return cached;
   };
 
-  const writeItem = (storageKey: string, value: unknown): void => {
+  const writeItem = (table: keyof S, storageKey: string, value: unknown): void => {
     try {
       storage().setItem(storageKey, JSON.stringify(value));
     } catch (error) {
       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        throw new Error(`[deposit] ${storageLabel} quota exceeded while writing record`, { cause: error });
+        const wrappedError = new Error(`[deposit] ${storageLabel} quota exceeded while writing record`, {
+          cause: error,
+        });
+
+        if (onQuotaExceeded?.(table, wrappedError) === 'ignore') return;
+
+        throw wrappedError;
       }
 
       throw error;
@@ -223,8 +237,39 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
       return readEntry<RecordOf<S, K>>(encodeStorageKey(name, String(table), String(key)), true) !== undefined;
     },
 
+    async pruneExpiredInTable<K extends keyof S>(table: K): Promise<number> {
+      const target = storage();
+      const prefix = getPrefix(String(table));
+      const expiredKeys: string[] = [];
+
+      for (const storageKey of storageKeys()) {
+        if (!storageKey.startsWith(prefix)) continue;
+
+        const raw = target.getItem(storageKey);
+
+        if (raw === null) continue;
+
+        try {
+          const parsed = parseStored(JSON.parse(raw) as unknown);
+
+          if (!parsed || unwrapStored(parsed) === undefined) {
+            expiredKeys.push(storageKey);
+          }
+        } catch {
+          expiredKeys.push(storageKey);
+        }
+      }
+
+      for (const storageKey of expiredKeys) {
+        target.removeItem(storageKey);
+      }
+
+      return expiredKeys.length;
+    },
+
     async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
       writeItem(
+        table,
         encodeStorageKey(name, String(table), String(getRecordKey(schema, table, value))),
         wrapStored(value, ttl),
       );
@@ -233,6 +278,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
     async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
       for (const value of values) {
         writeItem(
+          table,
           encodeStorageKey(name, String(table), String(getRecordKey(schema, table, value))),
           wrapStored(value, ttl),
         );
@@ -276,6 +322,7 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
     },
     logger,
     onMetrics,
+    signals,
     validators,
   }).adapter;
 }
@@ -286,7 +333,9 @@ export function createLocalStorage<S extends AnySchema>(options: WebStorageOptio
     logger: options.logger,
     name: options.name,
     onMetrics: options.onMetrics,
+    onQuotaExceeded: options.onQuotaExceeded,
     schema: options.schema,
+    signals: options.signals,
     storageLabel: 'localStorage',
     validators: options.validators,
   });
@@ -298,7 +347,9 @@ export function createSessionStorage<S extends AnySchema>(options: WebStorageOpt
     logger: options.logger,
     name: options.name,
     onMetrics: options.onMetrics,
+    onQuotaExceeded: options.onQuotaExceeded,
     schema: options.schema,
+    signals: options.signals,
     storageLabel: 'sessionStorage',
     validators: options.validators,
   });
