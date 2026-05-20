@@ -102,6 +102,13 @@ describe('QueryBuilder (via query)', () => {
       expect(await db.query('rows').equals('city', 'Paris').count()).toBe(2);
     });
 
+    test('count ignores limit and offset — returns full filtered set size', async () => {
+      // Enables paginated total-count queries without a second query
+      expect(await db.query('rows').limit(1).count()).toBe(3);
+      expect(await db.query('rows').offset(2).count()).toBe(3);
+      expect(await db.query('rows').equals('city', 'Paris').limit(1).count()).toBe(2);
+    });
+
     test('delete removes transformed records and returns count', async () => {
       const deleted = await db
         .query('rows')

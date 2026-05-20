@@ -23,8 +23,8 @@ export type StoredRecord<T> = {
 };
 
 export function assertTtlMs(ttlMs: number, source: string): TtlMs {
-  if (!Number.isFinite(ttlMs) || ttlMs < 0) {
-    throw new Error(`[deposit] ${source} expected a finite non-negative number, received ${String(ttlMs)}`);
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
+    throw new Error(`[deposit] ${source} expected a finite positive number, received ${String(ttlMs)}`);
   }
 
   return ttlMs as TtlMs;

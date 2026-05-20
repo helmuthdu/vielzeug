@@ -73,7 +73,7 @@ export function createObserverHub<S extends AnySchema>(
   const observe = <K extends keyof S>(
     table: K,
     listener: (records: RecordOf<S, K>[]) => void,
-    { immediate = true }: { immediate?: boolean } = {},
+    { immediate = false }: { immediate?: boolean } = {},
   ): (() => void) => {
     if (disposed) {
       throw new Error('[deposit] observer hub is disposed');
@@ -109,6 +109,84 @@ export function createObserverHub<S extends AnySchema>(
   };
 
   return { dispose, notify, observe };
+}
+
+/**
+ * Creates an AsyncIterable that yields a snapshot on every call to `subscribe`'s listener.
+ * The first snapshot is emitted on the first `next()` call (lazy registration).
+ * Only the latest pending snapshot is retained — slow consumers receive current state, not stale history.
+ */
+export function createWatchIterable<T>(
+  subscribe: (listener: (snapshot: T[]) => void) => () => void,
+): AsyncIterable<T[]> {
+  return {
+    [Symbol.asyncIterator]() {
+      let pending: T[] | null = null;
+      let waiting: ((value: IteratorResult<T[]>) => void) | null = null;
+      let done = false;
+      let unobserve: (() => void) | null = null;
+
+      const finish = (): void => {
+        done = true;
+        unobserve?.();
+        unobserve = null;
+
+        if (waiting) {
+          waiting({ done: true, value: undefined });
+          waiting = null;
+        }
+      };
+
+      /** Registers the observer on first use. Safe to call multiple times. */
+      const ensureObserving = (): void => {
+        if (unobserve || done) return;
+
+        unobserve = subscribe((snapshot) => {
+          if (waiting) {
+            const resolve = waiting;
+
+            waiting = null;
+            resolve({ done: false, value: snapshot });
+          } else {
+            pending = snapshot; // overwrite: only the latest state matters
+          }
+        });
+      };
+
+      return {
+        async next(): Promise<IteratorResult<T[]>> {
+          // Lazy registration: observer is only wired when the consumer calls next().
+          ensureObserving();
+
+          if (pending !== null) {
+            const value = pending;
+
+            pending = null;
+
+            return { done: false, value };
+          }
+
+          if (done) return { done: true, value: undefined };
+
+          return new Promise<IteratorResult<T[]>>((resolve) => {
+            waiting = resolve;
+          });
+        },
+
+        async return(): Promise<IteratorResult<T[]>> {
+          finish();
+
+          return { done: true, value: undefined };
+        },
+
+        async throw(err?: unknown): Promise<IteratorResult<T[]>> {
+          finish();
+
+          return Promise.reject(err);
+        },
+      };
+    },
+  };
 }
 
 export function getRecordKey<S extends AnySchema, K extends keyof S>(

@@ -1,8 +1,9 @@
 import type { DepositLogger, TableSignals, TableValidators } from '../plugins';
 import type { Adapter, AnySchema, MetricsEvent, MigrationFn, RecordOf, TransactionContext, TtlMs } from '../types';
 
-import { buildAdapterOps, buildTxContext, type CoreRuntimeOps, type CoreStorageOps } from '../adapter-core';
+import { buildAdapterOps, buildTxContext, withScope, type AdapterBackend, type AdapterStorageOps } from '../adapter-core';
 import { getRecordKey } from '../internal';
+import { type NativeRange } from '../query';
 import { type StoredRecord, parseStored, unwrapStored, wrapStored } from '../ttl';
 
 function idbReq<R>(request: IDBRequest<R>): Promise<R> {
@@ -71,6 +72,43 @@ async function getAllFromStore<T extends Record<string, unknown>>(store: IDBObje
   return records;
 }
 
+/**
+ * Fetches records matching a primary-key range without a full table scan.
+ * For `eq`, uses a single `store.get` instead of `store.getAll`. For `between` and `starts`,
+ * uses an IDBKeyRange to let the storage engine do the filtering.
+ */
+async function getAllFromStoreWithRange<T extends Record<string, unknown>>(
+  store: IDBObjectStore,
+  range: NativeRange,
+): Promise<T[]> {
+  if (range.type === 'eq') {
+    const record = await storeGet<T>(store, range.value as IDBValidKey);
+
+    return record !== undefined ? [record] : [];
+  }
+
+  const idbRange =
+    range.type === 'between'
+      ? IDBKeyRange.bound(range.lower as IDBValidKey, range.upper as IDBValidKey)
+      : // 'starts': bound from prefix to prefix\uffff (covers all BMP strings starting with prefix)
+        IDBKeyRange.bound(range.prefix, range.prefix + '\uffff');
+
+  const rawRecords = await idbReq<StoredRecord<T>[]>(store.getAll(idbRange));
+  const records: T[] = [];
+
+  for (const raw of rawRecords) {
+    const parsed = parseStored<T>(raw as unknown);
+
+    if (!parsed) continue;
+
+    const value = unwrapStored(parsed);
+
+    if (value !== undefined) records.push(value);
+  }
+
+  return records;
+}
+
 function countLiveRecordsInStore<T extends Record<string, unknown>>(store: IDBObjectStore): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     let count = 0;
@@ -99,6 +137,11 @@ function countLiveRecordsInStore<T extends Record<string, unknown>>(store: IDBOb
 
 async function storeHasKey(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
   return (await idbReq(store.getKey(key))) !== undefined;
+}
+
+/** Clear all records from a store unconditionally. */
+async function storeClear(store: IDBObjectStore): Promise<void> {
+  await idbReq(store.clear());
 }
 
 /* -------------------- Per-store primitive helpers -------------------- */
@@ -131,35 +174,25 @@ async function storeHas<T extends Record<string, unknown>>(store: IDBObjectStore
   return parsed ? unwrapStored(parsed) !== undefined : false;
 }
 
-async function storeClear(store: IDBObjectStore): Promise<number> {
-  const count = await idbReq(store.count());
-
-  if (count > 0) await idbReq(store.clear());
-
-  return count;
-}
-
 async function storeDelete(store: IDBObjectStore, key: IDBValidKey): Promise<boolean> {
-  const exists = await storeHasKey(store, key);
+  const live = await storeHas(store, key); // TTL-aware: returns false for expired records
 
-  if (!exists) return false;
+  await idbReq(store.delete(key)); // always clean up the physical entry (no-op if missing)
 
-  await idbReq(store.delete(key));
-
-  return true;
+  return live;
 }
 
 async function storeDeleteMany(store: IDBObjectStore, keys: IDBValidKey[]): Promise<number> {
-  let deleted = 0;
+  if (keys.length === 0) return 0;
 
-  for (const key of keys) {
-    if (await storeHasKey(store, key)) {
-      await idbReq(store.delete(key));
-      deleted += 1;
-    }
-  }
+  // Parallel existence checks, then parallel deletes for keys that exist.
+  // IDB transactions queue requests in order, so firing them concurrently is safe.
+  const existsResults = await Promise.all(keys.map((k) => storeHasKey(store, k)));
+  const toDelete = keys.filter((_, i) => existsResults[i]);
 
-  return deleted;
+  await Promise.all(toDelete.map((k) => idbReq(store.delete(k))));
+
+  return toDelete.length;
 }
 
 async function storePutAt<T>(store: IDBObjectStore, key: IDBValidKey, value: T, ttl?: TtlMs): Promise<void> {
@@ -205,12 +238,18 @@ type IndexedDbOptions<S extends AnySchema> = {
   schema: S;
   signals?: TableSignals<S>;
   validators?: TableValidators<S>;
-  version: number;
+  /** Schema version. Increment when adding tables or changing the schema, then provide `migrate`. Defaults to 1. */
+  version?: number;
 };
 
 export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): Adapter<S> {
-  const { logger, migrate, name, onMetrics, schema, signals, validators, version } = options;
+  const { logger, migrate, name, onMetrics, schema, signals, validators, version = 1 } = options;
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`deposit:${name}`) : undefined;
+
+  if (!channel && logger) {
+    logger.error(`[deposit] BroadcastChannel unavailable — cross-tab sync disabled for "${name}"`);
+  }
+
   let db: IDBDatabase | null = null;
   let connectPromise: Promise<void> | null = null;
   let disposed = false;
@@ -264,7 +303,18 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
             return;
           }
 
-          db = request.result;
+          const connection = request.result;
+
+          // Handle versionchange so an upgrading tab in another window is not blocked.
+          // When another tab opens this DB at a higher version, IDB fires `versionchange` here.
+          // Closing the connection allows the upgrade to proceed; the next operation will reconnect.
+          connection.onversionchange = () => {
+            connection.close();
+            db = null;
+            connectPromise = null;
+          };
+
+          db = connection;
           resolve();
         };
         request.onerror = () => {
@@ -308,7 +358,8 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     channel?.postMessage({ table: String(table) });
   };
 
-  const core: CoreRuntimeOps<S> = {
+  const core: AdapterBackend<S> = {
+    // clear returns void — the count/notify decision happens in buildTxContext.clear via core.count()
     clear: (table) => withStore(table, 'readwrite', storeClear),
 
     count: (table) => withStore(table, 'readonly', (s) => countLiveRecordsInStore<RecordOf<S, typeof table>>(s)),
@@ -333,10 +384,33 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
     getAll: (table) => withStore(table, 'readonly', (s) => getAllFromStore<RecordOf<S, typeof table>>(s)),
 
+    getByKeyRange: (table, range) =>
+      withStore(table, 'readonly', (s) => getAllFromStoreWithRange<RecordOf<S, typeof table>>(s, range)),
+
+    // getMany opens ONE readonly transaction and fires all key lookups in parallel within it,
+    // avoiding the N-transaction overhead of the N-individual-get fallback.
+    getMany: (table, keys) =>
+      keys.length === 0
+        ? Promise.resolve([])
+        : withStore(table, 'readonly', (s) =>
+            Promise.all(keys.map((k) => storeGet<RecordOf<S, typeof table>>(s, k as IDBValidKey))),
+          ),
+
     getRawCount: (table) => withStore(table, 'readonly', (s) => idbReq(s.count())),
 
     has: (table, key) =>
       withStore(table, 'readonly', (s) => storeHas<RecordOf<S, typeof table>>(s, key as IDBValidKey)),
+
+    async pruneAllExpired() {
+      const idb = await requireDb();
+      const tableNames = Object.keys(schema);
+      const tx = idb.transaction(tableNames, 'readwrite');
+      const results = await runIdbTx(tx, `${name}/pruneAll`, () =>
+        Promise.all(tableNames.map(async (t) => [t, await pruneExpiredInStore(tx.objectStore(t))] as const)),
+      );
+
+      return Object.fromEntries(results);
+    },
 
     pruneExpiredInTable: (table) => withStore(table, 'readwrite', pruneExpiredInStore),
 
@@ -367,13 +441,20 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     const storeOf = <T extends K>(table: T) => idbTx.objectStore(String(table));
     const dirtyTables = new Set<K>();
 
-    const txCore: CoreStorageOps<S, K> = {
-      clear: (table) => storeClear(storeOf(table)),
+    const txCore: AdapterStorageOps<S, K> = {
+      // clear returns void — count/notify decision is handled by buildTxContext.clear
+      clear: async (table) => {
+        await idbReq(storeOf(table).clear());
+      },
       count: (table) => countLiveRecordsInStore<RecordOf<S, typeof table>>(storeOf(table)),
       delete: (table, key) => storeDelete(storeOf(table), key as IDBValidKey),
       deleteMany: (table, keys) => storeDeleteMany(storeOf(table), keys as IDBValidKey[]),
       get: (table, key) => storeGet<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey),
       getAll: (table) => getAllFromStore<RecordOf<S, typeof table>>(storeOf(table)),
+      // Within a batch all storeGet calls share the same IDB transaction — no extra cost.
+      getByKeyRange: (table, range) => getAllFromStoreWithRange<RecordOf<S, typeof table>>(storeOf(table), range),
+      getMany: (table, keys) =>
+        Promise.all(keys.map((k) => storeGet<RecordOf<S, typeof table>>(storeOf(table), k as IDBValidKey))),
       has: (table, key) => storeHas<RecordOf<S, typeof table>>(storeOf(table), key as IDBValidKey),
       put(table, value, ttl) {
         return storePutAt(storeOf(table), getRecordKey(schema, table, value) as IDBValidKey, value, ttl);
@@ -385,7 +466,9 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       },
     };
 
-    const txOps = buildTxContext<S, K>(schema, txCore, (t) => dirtyTables.add(t), validateFn);
+    const scope = new Set(tables.map(String));
+    const tx = buildTxContext<S, K>(schema, txCore, (t) => dirtyTables.add(t), validateFn);
+    const txOps = withScope(tx, scope);
     const result = await runIdbTx(idbTx, name, () => fn(txOps));
 
     for (const table of dirtyTables) {
@@ -395,8 +478,10 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     return result;
   };
 
-  const { adapter } = buildAdapterOps(schema, core, {
-    batch: idbBatch,
+  return buildAdapterOps(schema, core, {
+    batch: ({ notifyMutation, validate: validateFn }) =>
+      (tables, fn) =>
+        idbBatch(tables, fn, notifyMutation, validateFn),
     connectExternal(notify) {
       if (!channel) {
         return undefined;
@@ -420,6 +505,4 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     signals,
     validators,
   });
-
-  return adapter;
 }

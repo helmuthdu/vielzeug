@@ -2,7 +2,7 @@ export { createIndexedDB } from './adapters/indexeddb';
 export { createMemory } from './adapters/memory';
 export { createLocalStorage, createSessionStorage } from './adapters/webstorage';
 export type { QueryBuilder, ReadQuery } from './query';
-export { scheduleExpiredPrune } from './adapter-core';
+export { scheduleExpiredPrune } from './prune';
 export { ttl } from './ttl';
 export { table } from './types';
 export type { DepositLogger, ReactiveSignal, RecordValidator, TableSignals, TableValidators } from './plugins';

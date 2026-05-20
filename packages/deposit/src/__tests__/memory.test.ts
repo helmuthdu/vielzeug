@@ -242,6 +242,41 @@ describe('Memory adapter', () => {
     expect(snapshots).toHaveLength(0);
   });
 
+  test('clear does not notify observers when all records are TTL-expired', async () => {
+    vi.useFakeTimers();
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    vi.advanceTimersByTime(2000); // all records are now logically expired
+
+    const snapshots: User[][] = [];
+    const stop = db.observe('users', (rows) => snapshots.push(rows), { immediate: false });
+
+    await db.clear('users');
+    await Promise.resolve();
+    stop();
+
+    // core.count() returns 0 (all expired), so clear() skips the notify call entirely
+    expect(snapshots).toHaveLength(0);
+
+    vi.useRealTimers();
+  });
+
+  test('delete returns false for TTL-expired records', async () => {
+    vi.useFakeTimers();
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(100));
+    vi.advanceTimersByTime(200); // record is now expired
+
+    // has() returns false for expired records
+    expect(await db.has('users', 1)).toBe(false);
+    // delete() is now consistent: returns false for expired records (not true)
+    expect(await db.delete('users', 1)).toBe(false);
+    // physical entry was cleaned up
+    expect(await db.get('users', 1)).toBeUndefined();
+
+    vi.useRealTimers();
+  });
+
   test('ttl expiration removes entries lazily', async () => {
     await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
     await delay(5);
@@ -250,7 +285,26 @@ describe('Memory adapter', () => {
     expect(await db.has('users', 1)).toBe(false);
   });
 
-  test('observe emits initial snapshot by default', async () => {
+  test('observe emits initial snapshot when immediate:true is passed', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const snapshots: User[][] = [];
+    const stop = db.observe(
+      'users',
+      (rows) => {
+        snapshots.push(rows);
+      },
+      { immediate: true },
+    );
+
+    await Promise.resolve();
+    stop();
+
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
+  });
+
+  test('observe does not emit initial snapshot by default', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
     const snapshots: User[][] = [];
@@ -261,25 +315,8 @@ describe('Memory adapter', () => {
     await Promise.resolve();
     stop();
 
-    expect(snapshots).toHaveLength(1);
-    expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
-  });
-
-  test('observe supports immediate option', async () => {
-    const snapshots: User[][] = [];
-    const stop = db.observe(
-      'users',
-      (rows) => {
-        snapshots.push(rows);
-      },
-      { immediate: false },
-    );
-
-    await db.put('users', { id: 1, name: 'Alice' });
-    await Promise.resolve();
-    stop();
-
-    expect(snapshots).toEqual([[{ id: 1, name: 'Alice' }]]);
+    // No immediate snapshot — only future mutations will fire
+    expect(snapshots).toHaveLength(0);
   });
 
   test('instances are isolated', async () => {
@@ -319,5 +356,120 @@ describe('Memory adapter', () => {
     db.dispose();
 
     expect(() => db.observe('users', () => {})).toThrow('disposed');
+  });
+
+  test('getOrDefault returns existing record when present', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const result = await db.getOrDefault('users', 1, () => ({ id: 1, name: 'Fallback' }));
+
+    expect(result).toEqual({ id: 1, name: 'Alice' });
+    expect(await db.count('users')).toBe(1);
+  });
+
+  test('getOrDefault inserts and returns default when absent', async () => {
+    const result = await db.getOrDefault('users', 42, () => ({ id: 42, name: 'NewUser' }));
+
+    expect(result).toEqual({ id: 42, name: 'NewUser' });
+    expect(await db.get('users', 42)).toEqual({ id: 42, name: 'NewUser' });
+  });
+
+  test('getOrDefault rejects default whose key mismatches the lookup key', async () => {
+    await expect(db.getOrDefault('users', 1, () => ({ id: 999, name: 'Mismatch' }))).rejects.toThrow('key');
+  });
+
+  test('deleteMany removes multiple records and returns deletion count', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+    ]);
+
+    const deleted = await db.deleteMany('users', [1, 3]);
+
+    expect(deleted).toBe(2);
+    expect(await db.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
+  });
+
+  test('deleteMany returns 0 when no keys match', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db.deleteMany('users', [99, 100])).toBe(0);
+    expect(await db.count('users')).toBe(1);
+  });
+
+  test('batch supports deleteMany within scope', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+    ]);
+
+    const deleted = await db.batch(['users'], async (tx) => tx.deleteMany('users', [1, 2]));
+
+    expect(deleted).toBe(2);
+    expect(await db.getAll('users')).toEqual([{ id: 3, name: 'Charlie' }]);
+  });
+
+  test('cross-tab BroadcastChannel sync: put on one instance notifies the other', async () => {
+    const db1 = createMemory({ name: 'sync-test', schema: userSchema });
+    const db2 = createMemory({ name: 'sync-test', schema: userSchema });
+
+    try {
+      const received = new Promise<User[]>((resolve) => {
+        const stop = db2.observe(
+          'users',
+          (rows) => {
+            if (rows.length > 0) {
+              stop();
+              resolve(rows);
+            }
+          },
+          { immediate: false },
+        );
+      });
+
+      await db1.put('users', { id: 7, name: 'Remote' });
+      // BroadcastChannel is synchronous in the jsdom test environment
+      await Promise.resolve();
+
+      expect(await received).toEqual([{ id: 7, name: 'Remote' }]);
+    } finally {
+      db1.dispose();
+      db2.dispose();
+    }
+  });
+
+  test('cross-tab BroadcastChannel sync: clear propagates to the other instance', async () => {
+    const db1 = createMemory({ name: 'sync-clear', schema: userSchema });
+    const db2 = createMemory({ name: 'sync-clear', schema: userSchema });
+
+    try {
+      await db1.put('users', { id: 1, name: 'Alice' });
+      await Promise.resolve(); // let db2 receive the put
+
+      await db1.clear('users');
+      await Promise.resolve();
+
+      expect(await db2.count('users')).toBe(0);
+    } finally {
+      db1.dispose();
+      db2.dispose();
+    }
+  });
+
+  test('unnamed createMemory instances are not synced via BroadcastChannel', async () => {
+    const db1 = createMemory({ schema: userSchema });
+    const db2 = createMemory({ schema: userSchema });
+
+    try {
+      await db1.put('users', { id: 1, name: 'Alice' });
+      await Promise.resolve();
+
+      expect(await db2.count('users')).toBe(0);
+    } finally {
+      db1.dispose();
+      db2.dispose();
+    }
   });
 });

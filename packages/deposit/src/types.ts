@@ -76,10 +76,12 @@ export type MetricsEvent = {
     | 'batch'
     | 'count'
     | 'delete'
+    | 'deleteMany'
     | 'clear'
     | 'get'
     | 'getAll'
     | 'getMany'
+    | 'getOrDefault'
     | 'has'
     | 'iterate'
     | 'put'
@@ -111,11 +113,33 @@ export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S>
   clear<T extends K>(table: T): Promise<void>;
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  /** Delete multiple records by key in a single operation. Returns the number of records removed. */
+  deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   /** Fetch multiple records by key in a single operation. Preserves key order; missing keys yield `undefined`. */
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
   getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+  /**
+   * Read-or-insert: returns the existing record if present, otherwise calls `defaultFn()`,
+   * writes the result, and returns it. Equivalent to an `upsert` that never overwrites.
+   */
+  getOrDefault<T extends K>(
+    table: T,
+    key: KeyOf<S, T>,
+    defaultFn: () => RecordOf<S, T>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, T>>;
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  /**
+   * Iterate over all live records in a table using `for await…of`.
+   *
+   * **All records are loaded into memory before iteration begins** — every adapter
+   * materializes the full table first. Breaking out of the loop skips processing
+   * the remaining slice, but does not reduce peak memory usage.
+   *
+   * Prefer `query().filter(…).toArray()` or `query().first()` when you only need a
+   * filtered subset, and `query().delete()` for bulk removals.
+   */
   iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
@@ -136,7 +160,11 @@ export type TransactionContext<S extends AnySchema, K extends keyof S = keyof S>
 
 /* -------------------- Adapter interface -------------------- */
 
-export interface Adapter<S extends AnySchema> {
+/**
+ * Full client API. Extends TransactionContext<S> with batch, observe/watch, disposal,
+ * debug tooling, and explicit TTL pruning.
+ */
+export interface Adapter<S extends AnySchema> extends TransactionContext<S> {
   /**
    * Execute multiple operations against a set of tables with deferred observer notifications.
    *
@@ -145,22 +173,10 @@ export interface Adapter<S extends AnySchema> {
    * For the IndexedDB adapter this is also a true atomic IDB transaction.
    */
   batch<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>): Promise<R>;
-  /** Returns live (non-expired) record count for a table. */
-  count<K extends keyof S>(table: K): Promise<number>;
   /** Returns live record counts and expired-but-not-yet-evicted counts per table. */
   debug(): Promise<DebugInfo<S>>;
-  delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
-  /** Removes all records from the table. */
-  clear<K extends keyof S>(table: K): Promise<void>;
   /** Releases all resources (observers, cross-tab channel, DB connection). */
   dispose(): void;
-  get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
-  getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
-  /** Fetch multiple records by key. Preserves key order; missing keys yield `undefined`. */
-  getMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<Array<RecordOf<S, K> | undefined>>;
-  has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
-  /** Lazily iterate over all live records in a table. Useful for large datasets. */
-  iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
   observe<K extends keyof S>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
@@ -174,26 +190,6 @@ export interface Adapter<S extends AnySchema> {
    * read (lazy eviction would not reclaim storage otherwise).
    */
   pruneExpired(): Promise<{ [K in keyof S & string]: number }>;
-  put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
-  putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
-  query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
-  update<K extends keyof S>(
-    table: K,
-    key: KeyOf<S, K>,
-    changes: Partial<RecordOf<S, K>>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, K> | undefined>;
-  /**
-   * Insert-or-update a record atomically.
-   * `fn` receives the current record (or `undefined`) and must return the new record.
-   * The returned record's key field must match `key`.
-   */
-  upsert<K extends keyof S>(
-    table: K,
-    key: KeyOf<S, K>,
-    fn: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, K>>;
   /**
    * An AsyncIterable that yields a fresh snapshot of the table on every change.
    * The first value is emitted immediately (equivalent to `{ immediate: true }`).

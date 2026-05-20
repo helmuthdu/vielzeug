@@ -109,6 +109,23 @@ describe('IndexedDB adapter', () => {
     expect(await db.has('users', 1)).toBe(false);
   });
 
+  test('delete returns false for TTL-expired records', async () => {
+    // Only fake Date.now — faking all timers blocks IDB async operations in the test environment.
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    vi.advanceTimersByTime(2000); // record is now expired
+
+    // has() returns false for expired records
+    expect(await db.has('users', 1)).toBe(false);
+    // delete() is now consistent with has(): returns false for expired records
+    expect(await db.delete('users', 1)).toBe(false);
+    // physical entry was cleaned up
+    expect(await rawStoreCount('IDB', 'users')).toBe(0);
+
+    vi.useRealTimers();
+  });
+
   test('malformed payloads are ignored during reads', async () => {
     // Write a record with OLD format (e/v) — should not parse with new format (expiresAt/value)
     await rawStorePut('IDB', 'users', 1, { e: 'bad', v: { id: 1, name: 'Corrupt' } });
@@ -273,14 +290,6 @@ describe('IndexedDB adapter', () => {
   test('BroadcastChannel propagates mutations across instances', async () => {
     const db2 = createIndexedDB({ name: 'IDB', schema: userSchema, version: 1 });
 
-    // First, ensure the listener is set up on db2
-    await new Promise<void>((resolve) => {
-      const stop = db2.observe('users', () => {
-        stop();
-        resolve();
-      });
-    });
-
     const updated = new Promise<User[]>((resolve) => {
       const stop = db2.observe('users', (rows) => {
         if (rows.length > 0) {
@@ -302,5 +311,92 @@ describe('IndexedDB adapter', () => {
 
     await expect(db.get('users', 1)).rejects.toThrow('disposed');
     await expect(db.put('users', { id: 1, name: 'Alice' })).rejects.toThrow('disposed');
+  });
+
+  test('query.equals on primary key uses native IDB range (single record)', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+    ]);
+
+    const results = await db.query('users').equals('id', 2).toArray();
+
+    expect(results).toEqual([{ id: 2, name: 'Bob' }]);
+  });
+
+  test('query.between on primary key uses native IDB range', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+      { id: 4, name: 'Dave' },
+    ]);
+
+    const results = await db.query('users').between('id', 2, 3).toArray();
+
+    expect(results).toEqual([
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+    ]);
+  });
+
+  test('query.startsWith on string primary key uses native IDB range', async () => {
+    type Tag = { label: string };
+
+    const tagSchema = { tags: table<Tag>('label') };
+    const dbT = createIndexedDB({ name: 'IDB-tags', schema: tagSchema, version: 1 });
+
+    try {
+      await dbT.putAll('tags', [{ label: 'alpha' }, { label: 'beta' }, { label: 'almond' }, { label: 'gamma' }]);
+
+      const results = await dbT.query('tags').startsWith('label', 'al').toArray();
+
+      // IDB key order is lexicographic: 'almond' < 'alpha' (m < p at position 2)
+      expect(results).toEqual([{ label: 'almond' }, { label: 'alpha' }]);
+    } finally {
+      dbT.dispose();
+    }
+  });
+
+  test('batch supports deleteMany within scope', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+    ]);
+
+    const deleted = await db.batch(['users'], async (tx) => tx.deleteMany('users', [1, 3]));
+
+    expect(deleted).toBe(2);
+    expect(await db.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
+  });
+
+  test('pruneExpired deletes TTL-expired records via cursor and returns correct count', async () => {
+    // Only fake Date.now — faking all timers blocks IDB async operations in the test environment.
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    const dbP = createIndexedDB({ name: 'IDB-prune', schema: userSchema, version: 1 });
+
+    await dbP.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    await dbP.put('users', { id: 2, name: 'Bob' }, ttl.ms(1000));
+    await dbP.put('users', { id: 3, name: 'Charlie' }); // no TTL
+
+    // Verify 3 physical records exist before prune
+    expect(await rawStoreCount('IDB-prune', 'users')).toBe(3);
+
+    vi.advanceTimersByTime(2000);
+
+    const result = await dbP.pruneExpired();
+
+    vi.useRealTimers();
+
+    expect(result.users).toBe(2);
+
+    // Physical records reduced: only Charlie remains
+    expect(await rawStoreCount('IDB-prune', 'users')).toBe(1);
+    expect(await dbP.get('users', 3)).toEqual({ id: 3, name: 'Charlie' });
+
+    dbP.dispose();
   });
 });

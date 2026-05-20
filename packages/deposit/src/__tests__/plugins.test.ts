@@ -25,7 +25,7 @@ describe('DepositLogger plugin', () => {
     );
 
     await db.put('users', { id: 1, name: 'Alice' });
-    await new Promise<void>((r) => setTimeout(r, 20));
+    await Promise.resolve();
 
     expect(consoleSpy).not.toHaveBeenCalled();
     expect(errorCalls).toHaveLength(1);
@@ -48,7 +48,7 @@ describe('DepositLogger plugin', () => {
     );
 
     await db.put('users', { id: 1, name: 'Alice' });
-    await new Promise<void>((r) => setTimeout(r, 20));
+    await Promise.resolve();
 
     expect(consoleSpy).toHaveBeenCalledOnce();
 

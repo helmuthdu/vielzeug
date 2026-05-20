@@ -31,15 +31,23 @@ describe('ttl helpers', () => {
 
   describe('validation', () => {
     test('rejects negative input', () => {
-      expect(() => ttl.ms(-1)).toThrow('ttl.ms expected a finite non-negative number');
+      expect(() => ttl.ms(-1)).toThrow('ttl.ms expected a finite positive number');
+    });
+
+    test('rejects zero input (would create an immediately-expired record)', () => {
+      expect(() => ttl.ms(0)).toThrow('ttl.ms expected a finite positive number');
     });
 
     test('rejects NaN input', () => {
-      expect(() => ttl.seconds(Number.NaN)).toThrow('ttl.seconds expected a finite non-negative number');
+      expect(() => ttl.seconds(Number.NaN)).toThrow('ttl.seconds expected a finite positive number');
     });
 
     test('rejects infinite input', () => {
-      expect(() => ttl.minutes(Number.POSITIVE_INFINITY)).toThrow('ttl.minutes expected a finite non-negative number');
+      expect(() => ttl.minutes(Number.POSITIVE_INFINITY)).toThrow('ttl.minutes expected a finite positive number');
+    });
+
+    test('rejects zero for compound helpers (ttl.seconds(0))', () => {
+      expect(() => ttl.seconds(0)).toThrow('ttl.seconds expected a finite positive number');
     });
   });
 
@@ -61,7 +69,7 @@ describe('ttl helpers', () => {
       const db = createLocalStorage({ name: 'TtlHelper', schema: userSchema });
 
       await expect(db.put('users', { id: 1, name: 'Alice' }, Number.NaN as unknown as TtlMs)).rejects.toThrow(
-        'expected a finite non-negative number',
+        'expected a finite positive number',
       );
     });
   });

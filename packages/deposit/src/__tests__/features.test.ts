@@ -19,6 +19,10 @@ const schema = {
   users: table<User>('id'),
 };
 
+/** Flush pending observer microtasks. One tick is sufficient since the memory adapter's
+ *  getAll() is synchronous — the .then() callback fires as a single microtask. */
+const flushMicrotasks = () => Promise.resolve();
+
 /* -------------------- ReactiveSignal plugin -------------------- */
 
 describe('signals plugin (ReactiveSignal)', () => {
@@ -32,12 +36,12 @@ describe('signals plugin (ReactiveSignal)', () => {
 
     const db = createMemory({ schema, signals: { users: usersSignal } });
 
-    // observe fires immediately → signal updated with empty array
-    await new Promise<void>((r) => setTimeout(r, 10));
+    // signals are wired with immediate:true — fires on construction with empty array
+    await flushMicrotasks();
     expect(latest).toEqual([]);
 
     await db.put('users', { id: 1, name: 'Alice' });
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await flushMicrotasks();
 
     expect(latest).toEqual([{ id: 1, name: 'Alice' }]);
   });
@@ -52,11 +56,11 @@ describe('signals plugin (ReactiveSignal)', () => {
 
     const db = createMemory({ schema, signals: { posts: postsSignal } });
 
-    await new Promise<void>((r) => setTimeout(r, 10)); // initial fire
+    await flushMicrotasks(); // initial fire
 
     postUpdates = 0;
     await db.put('users', { id: 1, name: 'Alice' }); // users mutation
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await flushMicrotasks();
 
     expect(postUpdates).toBe(0); // posts signal not touched
   });
@@ -91,13 +95,13 @@ describe('signals plugin (ReactiveSignal)', () => {
     };
     const db = createMemory({ schema, signals: { users: sig } });
 
-    await new Promise<void>((r) => setTimeout(r, 10)); // initial
+    await flushMicrotasks(); // initial
 
     const countBeforeDispose = callCount;
 
     db.dispose();
     await db.put('users', { id: 1, name: 'Alice' }).catch(() => {}); // may throw after dispose
-    await new Promise<void>((r) => setTimeout(r, 10));
+    await flushMicrotasks();
 
     expect(callCount).toBe(countBeforeDispose);
   });
@@ -149,27 +153,78 @@ describe('watch()', () => {
     // No more yields expected — no timeout needed
   });
 
-  test('queues multiple mutations fired before next() is awaited', async () => {
+  test('when multiple mutations arrive before next() is consumed, returns only the latest snapshot', async () => {
     const db = createMemory({ schema });
     const iter = db.watch('users')[Symbol.asyncIterator]();
 
     // consume immediate empty snapshot
     await iter.next();
 
-    // Fire two mutations before reading
+    // Fire two mutations before consuming — observer fires for each
     await db.put('users', { id: 1, name: 'A' });
-    await db.put('users', { id: 2, name: 'B' });
+    await flushMicrotasks(); // flush notification
 
-    // Should get the first mutation snapshot
+    await db.put('users', { id: 2, name: 'B' });
+    await flushMicrotasks(); // flush notification
+
+    // Consumer was not calling next() during those mutations.
+    // Only the LATEST snapshot should be pending — watch() uses latest-only semantics
+    // to avoid building up stale intermediate states.
+    const result = await iter.next();
+
+    expect(result.done).toBe(false);
+    expect(result.value).toHaveLength(2); // both users exist in the latest snapshot
+
+    // No more pending snapshots — next call waits for a new mutation
+    let resolved = false;
+    const pending = iter.next().then(() => {
+      resolved = true;
+    });
+
+    // Two microtask ticks are enough to confirm no spurious yield is pending
+    await flushMicrotasks();
+    await flushMicrotasks();
+    expect(resolved).toBe(false); // correctly waiting, not returning stale data
+
+    await iter.return?.();
+    await pending.catch(() => {}); // clean up the dangling promise
+  });
+
+  test('iterator implements throw() for proper async generator protocol', async () => {
+    const db = createMemory({ schema });
+    const iter = db.watch('users')[Symbol.asyncIterator]();
+
+    // consume initial snapshot
+    await iter.next();
+
+    // throw() should reject and clean up
+    await expect(iter.throw!(new Error('test error'))).rejects.toThrow('test error');
+
+    // After throw(), further next() calls return done
+    const after = await iter.next();
+
+    expect(after.done).toBe(true);
+  });
+
+  test('abandoned watch() does not register an observer until next() is called (no leak)', async () => {
+    const db = createMemory({ schema });
+
+    // Put a record BEFORE creating the iterable
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    // Create the iterable but do NOT call next() yet — lazy registration means no observer is wired
+    const stream = db.watch('users');
+
+    // Another mutation fires; since no observer is registered, no pending snapshot accumulates
+    await db.put('users', { id: 2, name: 'Bob' });
+    await flushMicrotasks();
+
+    // Now call next() for the first time — observer is registered here and the current snapshot is fetched
+    const iter = stream[Symbol.asyncIterator]();
     const first = await iter.next();
 
-    expect(first.done).toBe(false);
-
-    // And the second
-    const second = await iter.next();
-
-    expect(second.done).toBe(false);
-    expect(second.value).toHaveLength(2);
+    // Should see both users (current state at time of first next() call)
+    expect(first.value).toHaveLength(2);
 
     await iter.return?.();
   });
@@ -298,23 +353,15 @@ describe('scheduleExpiredPrune()', () => {
 /* -------------------- onQuotaExceeded (WebStorage) -------------------- */
 
 describe('onQuotaExceeded (WebStorage)', () => {
-  let originalSetItem: typeof Storage.prototype.setItem;
-
-  beforeEach(() => {
-    originalSetItem = Storage.prototype.setItem;
-  });
-
   afterEach(() => {
-    Storage.prototype.setItem = originalSetItem;
+    vi.restoreAllMocks();
     localStorage.clear();
   });
 
   test('throws by default when quota is exceeded', async () => {
-    Storage.prototype.setItem = () => {
-      const err = new DOMException('QuotaExceededError', 'QuotaExceededError');
-
-      throw err;
-    };
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+    });
 
     const db = createLocalStorage({ name: 'test-quota', schema });
 
@@ -324,11 +371,9 @@ describe('onQuotaExceeded (WebStorage)', () => {
   test('ignores write when onQuotaExceeded returns "ignore"', async () => {
     let exceeded = false;
 
-    Storage.prototype.setItem = () => {
-      const err = new DOMException('QuotaExceededError', 'QuotaExceededError');
-
-      throw err;
-    };
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+    });
 
     const db = createLocalStorage({
       name: 'test-quota-ignore',

@@ -84,15 +84,65 @@ describe('LocalStorage adapter', () => {
     await Promise.resolve();
     stop();
 
-    expect(snapshots[0]).toEqual([{ id: 1, name: 'Alice' }]);
-    expect(snapshots[1]).toEqual([]);
+    // observe() defaults to immediate:false — only the clear event notification fires
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]).toEqual([]);
   });
 
   test('corrupted entries are removed lazily on read', async () => {
-    // Write an entry with corrupted JSON directly — bypasses the adapter
+    // Simulate a corrupted entry from a *previous session* by writing it
+    // before creating a fresh adapter — initOwnedKeys() will see it on startup.
     window.localStorage.setItem('LS~users~99', 'not valid json {{{');
+    db = createLocalStorage({ name: 'LS', schema: userSchema });
 
     expect(await db.getAll('users')).toEqual([]);
     expect(window.localStorage.getItem('LS~users~99')).toBeNull();
+  });
+
+  test('pruneExpired removes expired records from localStorage and returns count', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    await db.put('users', { id: 2, name: 'Bob' }, ttl.ms(1000));
+    await db.put('users', { id: 3, name: 'Charlie' }); // no TTL
+
+    vi.advanceTimersByTime(2000);
+
+    const result = await db.pruneExpired();
+
+    vi.useRealTimers();
+
+    expect(result.users).toBe(2);
+
+    // Physical localStorage keys for expired records should be gone
+    expect(window.localStorage.getItem('LS~users~1')).toBeNull();
+    expect(window.localStorage.getItem('LS~users~2')).toBeNull();
+
+    // Live record still present
+    expect(await db.get('users', 3)).toEqual({ id: 3, name: 'Charlie' });
+  });
+
+  test('ownedKeys: foreign-prefixed keys in localStorage are invisible to the adapter', async () => {
+    // Keys from a different app or adapter name must not appear in count/getAll
+    window.localStorage.setItem('OTHER~users~1', JSON.stringify({ value: { id: 1, name: 'Ghost' } }));
+    window.localStorage.setItem('raw-unrelated-key', 'noise');
+
+    await db.put('users', { id: 2, name: 'Alice' });
+
+    expect(await db.count('users')).toBe(1);
+    expect(await db.getAll('users')).toEqual([{ id: 2, name: 'Alice' }]);
+  });
+
+  test('deleteMany removes multiple records and returns deletion count', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Charlie' },
+    ]);
+
+    const deleted = await db.deleteMany('users', [1, 3]);
+
+    expect(deleted).toBe(2);
+    expect(await db.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
   });
 });
