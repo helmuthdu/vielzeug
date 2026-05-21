@@ -31,9 +31,7 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
     for (const schema of this.schemas) {
       const result = schema.safeParse(value);
 
-      if (result.success) {
-        return { data: result.data, issues: [] };
-      }
+      if (result.success) return { data: result.data, issues: [] };
 
       branchErrors.push(result.error.issues);
     }
@@ -42,16 +40,48 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    const branchErrors: Issue[][] = [];
+    // Run all branches in parallel; return the first success (Promise.any semantics).
+    // If all branches fail, collect all branch errors for the invalid_union issue.
+    try {
+      const data = await Promise.any(
+        this.schemas.map((schema) =>
+          schema.safeParseAsync(value).then((result) => {
+            if (result.success) return result.data;
 
-    for (const schema of this.schemas) {
-      const result = await schema.safeParseAsync(value);
+            throw result.error;
+          }),
+        ),
+      );
 
-      if (result.success) return { data: result.data, issues: [] };
+      return { data, issues: [] };
+    } catch (aggregateError) {
+      const branchErrors = (aggregateError as AggregateError).errors.map((e: { issues: Issue[] }) => e.issues);
 
-      branchErrors.push(result.error.issues);
+      return this._invalidUnionResult(value, branchErrors);
     }
+  }
 
-    return this._invalidUnionResult(value, branchErrors);
+  protected override _toSchemaBase(): Record<string, unknown> {
+    return { anyOf: this.schemas.map((s) => s.schema()) };
+  }
+
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+    const branches = this.schemas.map((s) => s.walk(visitor));
+
+    if (visitor.union) return visitor.union(this, branches);
+
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    if (!(other instanceof UnionSchema)) return false;
+    if (this.schemas.length !== other.schemas.length) return false;
+    return this.schemas.every((s, i) => s.equals(other.schemas[i]));
+  }
+
+  protected override _construct(state: import('../core').SchemaState<any, any>): this {
+    const next = new UnionSchema(this.schemas) as this;
+    next.state = state as any;
+    return next;
   }
 }

@@ -1,29 +1,37 @@
 export {
   ErrorCode,
+  NullableSchema,
+  NullishSchema,
+  OptionalSchema,
   Schema,
   ValidationError,
+  errorsAt,
+  type AnySchema,
+  type ArrayConstraints,
   type CheckContext,
   type CheckFnResult,
+  type FlatError,
+  type FlatErrorFirst,
   type FormattedErrors,
-  type ArrayConstraints,
   type Infer,
   type InferInput,
   type InferOutput,
   type Issue,
+  type JsonSchema,
   type MessageFn,
   type NumberConstraints,
   type ParseResult,
   type SchemaMeta,
   type SchemaConstraints,
-  type SchemaTypeHint,
+  type SchemaWalker,
   type StringConstraints,
   type ValidateFn,
   prependIssuePath,
   resolveMessage,
 } from './core';
 
-export { type JsonSchema, toJsonSchema } from './schemas/json';
+export { schema } from './schemas/json';
 
-export { configure, reset, type Messages } from './messages';
+export { configure, reset, withMessages, type Messages } from './messages';
 
 export { v } from './v';

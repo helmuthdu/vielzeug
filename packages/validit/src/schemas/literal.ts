@@ -1,4 +1,4 @@
-import { type AnySchema, ErrorCode, Schema } from '../core';
+import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class LiteralSchema<T extends string | number | boolean | null | undefined> extends Schema<T> {
@@ -6,17 +6,40 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
 
   constructor(value: T) {
     super([
-      (val, path) =>
+      (val) =>
         val === value
           ? null
-          : [{ code: ErrorCode.invalid_literal, message: _messages().literal.expected({ expected: value }), path }],
+          : [{ code: ErrorCode.invalid_literal, message: _messages().literal.expected({ expected: value }), params: { expected: value }, path: [] }],
     ]);
     this.value = value;
   }
+
+  protected override _toSchemaBase(): Record<string, unknown> {
+    if (this.value === null) return { type: 'null' };
+    if (this.value === undefined) return {};
+    return { const: this.value };
+  }
+
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+    if (visitor.literal) return visitor.literal(this);
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    if (!(other instanceof LiteralSchema)) return false;
+    return this.value === other.value;
+  }
+
+  protected override _construct(state: import('../core').SchemaState<any, any>): this {
+    const next = new LiteralSchema(this.value) as this;
+    next.state = state as any;
+    return next;
+  }
 }
 
-/* -------------------- Raw-or-schema helpers -------------------- */
-/* Used internally by union and intersect to accept raw literal values */
+/* -------------------- Raw-or-schema helpers (internal only) -------------------- */
+
+import type { AnySchema } from '../core';
 
 export type LiteralValue = string | number | boolean | null | undefined;
 export type RawOrSchema = AnySchema | LiteralValue;

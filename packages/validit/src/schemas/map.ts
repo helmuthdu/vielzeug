@@ -4,10 +4,10 @@ import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class MapSchema<K, V> extends Schema<Map<K, V>> {
-  private readonly keySchema: BaseSchema<K, any, any, any>;
-  private readonly valueSchema: BaseSchema<V, any, any, any>;
+  readonly keySchema: BaseSchema<K, any, any>;
+  readonly valueSchema: BaseSchema<V, any, any>;
 
-  constructor(keySchema: BaseSchema<K, any, any, any>, valueSchema: BaseSchema<V, any, any, any>) {
+  constructor(keySchema: BaseSchema<K, any, any>, valueSchema: BaseSchema<V, any, any>) {
     super([]);
     this.keySchema = keySchema;
     this.valueSchema = valueSchema;
@@ -73,5 +73,25 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     }
 
     return { data: out, issues };
+  }
+
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+    const key = this.keySchema.walk(visitor);
+    const value = this.valueSchema.walk(visitor);
+
+    if (visitor.map) return visitor.map(this, key, value);
+
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    if (!(other instanceof MapSchema)) return false;
+    return this.keySchema.equals(other.keySchema) && this.valueSchema.equals(other.valueSchema);
+  }
+
+  protected override _construct(state: import('../core').SchemaState<any, any>): this {
+    const next = new MapSchema(this.keySchema, this.valueSchema) as this;
+    next.state = state as any;
+    return next;
   }
 }

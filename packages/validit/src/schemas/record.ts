@@ -4,10 +4,10 @@ import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
-  readonly keySchema: Schema<K, any, any, any>;
-  readonly valueSchema: Schema<V, any, any, any>;
+  readonly keySchema: Schema<K, any, any>;
+  readonly valueSchema: Schema<V, any, any>;
 
-  constructor(keySchema: Schema<K, any, any, any>, valueSchema: Schema<V, any, any, any>) {
+  constructor(keySchema: Schema<K, any, any>, valueSchema: Schema<V, any, any>) {
     super([]);
     this.keySchema = keySchema;
     this.valueSchema = valueSchema;
@@ -90,5 +90,29 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     }
 
     return { data: output, issues };
+  }
+
+  protected override _toSchemaBase(): Record<string, unknown> {
+    return { additionalProperties: this.valueSchema.schema(), type: 'object' };
+  }
+
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+    const key = this.keySchema.walk(visitor);
+    const value = this.valueSchema.walk(visitor);
+
+    if (visitor.record) return visitor.record(this, key, value);
+
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    if (!(other instanceof RecordSchema)) return false;
+    return this.keySchema.equals(other.keySchema) && this.valueSchema.equals(other.valueSchema);
+  }
+
+  protected override _construct(state: import('../core').SchemaState<any, any>): this {
+    const next = new RecordSchema(this.keySchema, this.valueSchema) as this;
+    next.state = state as any;
+    return next;
   }
 }

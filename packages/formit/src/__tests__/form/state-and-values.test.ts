@@ -284,3 +284,41 @@ describe('form state and values', () => {
     expect(form.field('name')).not.toBe(firstField);
   });
 });
+
+describe('form patch', () => {
+  test('patch updates specified fields and marks them clean without affecting others', () => {
+    const form = createForm({ defaultValues: { city: 'Portland', name: 'Alice' } });
+
+    form.set('name', 'Bob');
+
+    expect(form.field('name').dirty).toBe(true);
+
+    form.patch({ name: 'Charlie' });
+
+    expect(form.get('name')).toBe('Charlie');
+    expect(form.field('name').dirty).toBe(false);
+    expect(form.get('city')).toBe('Portland');
+    expect(form.field('city').dirty).toBe(false);
+  });
+
+  test('patched fields have an updated baseline so reset restores the new value', () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+
+    form.patch({ name: 'Server' });
+    form.set('name', 'Changed');
+    form.reset();
+
+    expect(form.get('name')).toBe('Server');
+  });
+
+  test('patch with nested values updates dot-path fields without touching siblings', () => {
+    const form = createForm({ defaultValues: { user: { age: 30, name: 'Alice' } } });
+
+    form.patch({ user: { name: 'Bob' } });
+
+    expect(form.get('user.name')).toBe('Bob');
+    expect(form.get('user.age')).toBe(30);
+    expect(form.field('user.name').dirty).toBe(false);
+    expect(form.field('user.age').dirty).toBe(false);
+  });
+});

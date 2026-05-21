@@ -23,7 +23,7 @@ describe('v.union()', () => {
       expect(result.error.issues[0].code).toBe('invalid_union');
       expect(result.error.issues[0].message).toContain('match');
 
-      const errors = result.error.issues[0].params?.errors as unknown[][];
+      const errors = (result.error.issues[0] as any).params?.errors as unknown[][];
 
       expect(Array.isArray(errors)).toBe(true);
       expect(errors.length).toBe(2);
@@ -118,7 +118,7 @@ describe('v.union() — async', () => {
     expect(result).toBe('fallback');
   });
 
-  it('does not execute later branches when an earlier branch succeeds', async () => {
+  it('runs all branches in parallel and returns the first success', async () => {
     const calls: string[] = [];
     const schema = v.union(
       v.string().check(async (value) => {
@@ -136,7 +136,8 @@ describe('v.union() — async', () => {
     const result = await schema.parseAsync('ok');
 
     expect(result).toBe('ok');
-    expect(calls).toEqual(['first']);
+    // All branches run in parallel (Promise.any semantics); both are started.
+    expect(calls.sort()).toEqual(['first', 'second']);
   });
 });
 

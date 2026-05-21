@@ -1,7 +1,8 @@
 import {
   type ArrayField,
-  type BindConfig,
-  type BindResult,
+  type DeepPartial,
+  type WireConfig,
+  type WireResult,
   type ErrorKeyOf,
   type FieldState,
   type FieldValidator,
@@ -17,16 +18,8 @@ import {
   type TypeAtPath,
   type Unsubscribe,
   type ValidateResult,
-  type ValidationMode,
 } from './types';
-import { flattenValues, unflattenValues } from './utils';
-
-const MODE_BIND_DEFAULTS: Record<ValidationMode, BindConfig> = {
-  onBlur: { touchOnBlur: true, validateOnBlur: true },
-  onChange: { touchOnBlur: true, validateOnChange: true },
-  onSubmit: { touchOnBlur: true },
-  onTouched: { touchOnBlur: true, validateOnBlur: true, validateOnTouch: true },
-};
+import { flattenValues, isSafeKey, unflattenValues } from './utils';
 
 function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === 'AbortError';
@@ -46,12 +39,15 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   const validators = new Map<string, FieldValidator<unknown>>();
 
   for (const [name, validator] of Object.entries(init.validators ?? {})) {
+    if (!isSafeKey(name)) {
+      throw new Error(`[formit] Unsafe key '${name}' in validators: segments __proto__, constructor, and prototype are reserved.`);
+    }
+
     validators.set(name, validator as FieldValidator<unknown>);
   }
 
   const formValidator: FormValidator<TValues> | undefined = init.validator;
-  const mode: ValidationMode = init.mode ?? 'onSubmit';
-  const bindDefaults: BindConfig = init.bindDefaults ?? MODE_BIND_DEFAULTS[mode];
+  const wireDefaults: WireConfig = init.validate ?? {};
 
   const baseline = new Map<string, unknown>(Object.entries(flattenValues(init.defaultValues ?? {})));
   const store = new Map<string, unknown>(baseline);
@@ -59,7 +55,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   const touched = new Set<string>();
   const dirty = new Set<string>();
 
-  let validatingCount = 0;
+  const validatingFieldCounts = new Map<string, number>();
+  const runCtrls = new Set<AbortController>();
+  let cachedValues: TValues | null = null;
   let isSubmitting = false;
   let submitCount = 0;
   let disposed = false;
@@ -72,19 +70,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   type LocalListener = (state: FormState) => void;
   type AnyFieldListener = (payload: FieldState<unknown>) => void;
+  type PendingScope = 'all' | 'none' | 'state' | Set<string>;
 
   const listeners = new Set<LocalListener>();
   const fieldListeners = new Map<string, Set<AnyFieldListener>>();
-  const pendingFields = new Set<string>();
-  let pendingFullNotify = false;
-  let pendingStateNotify = false;
+  let pending: PendingScope = 'none';
 
   function ensureNotDisposed(): void {
     if (disposed) throw new Error('Cannot modify a disposed form');
-  }
-
-  function allKnownFields(): string[] {
-    return [...new Set([...store.keys(), ...validators.keys()])];
   }
 
   function computeState(): FormState {
@@ -94,8 +87,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       isSubmitting,
       isTouched: touched.size > 0,
       isValid: fieldErrors.size === 0,
-      isValidating: validatingCount > 0,
+      isValidating: validatingFieldCounts.size > 0,
       submitCount,
+      validatingFields: Object.freeze([...validatingFieldCounts.keys()]) as readonly string[],
     }) as unknown as FormState;
   }
 
@@ -105,6 +99,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function invalidateState(): void {
     cachedState = null;
+    cachedValues = null;
   }
 
   function buildFieldState(name: string): FieldState<unknown> {
@@ -139,7 +134,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   }
 
   function flushNotifications(): void {
-    if (!pendingStateNotify && !pendingFullNotify && pendingFields.size === 0) return;
+    if (pending === 'none') return;
 
     if (listeners.size > 0) {
       const state = getStateSnapshot();
@@ -147,26 +142,30 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       for (const listener of listeners) listener(state);
     }
 
-    if (pendingFullNotify) {
+    if (pending === 'all') {
       for (const name of fieldListeners.keys()) notifyField(name);
-    } else {
-      for (const name of pendingFields) notifyField(name);
+    } else if (pending instanceof Set) {
+      for (const name of pending) notifyField(name);
     }
 
-    pendingFields.clear();
-    pendingFullNotify = false;
-    pendingStateNotify = false;
+    pending = 'none';
   }
 
   function requestNotify(field?: string): void {
     invalidateState();
 
     if (field === undefined) {
-      pendingFullNotify = true;
+      pending = 'all';
       fieldStateCache.clear();
     } else {
-      pendingFields.add(field);
       fieldStateCache.delete(field);
+
+      if (pending === 'none' || pending === 'state') {
+        pending = new Set([field]);
+      } else if (pending instanceof Set) {
+        pending.add(field);
+      }
+      // pending === 'all': already covers everything
     }
 
     if (batchDepth === 0) flushNotifications();
@@ -174,23 +173,28 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function requestStateNotify(): void {
     invalidateState();
-    pendingStateNotify = true;
+
+    if (pending === 'none') pending = 'state';
 
     if (batchDepth === 0) flushNotifications();
   }
 
   function requestNotifyFields(fields: Iterable<string>): void {
-    let changed = false;
+    if (pending === 'all') return;
 
-    for (const field of fields) {
-      pendingFields.add(field);
-      fieldStateCache.delete(field);
-      changed = true;
-    }
+    const arr = [...fields];
 
-    if (!changed) return;
+    if (arr.length === 0) return;
 
     invalidateState();
+
+    for (const field of arr) fieldStateCache.delete(field);
+
+    if (pending === 'none' || pending === 'state') {
+      pending = new Set(arr);
+    } else if (pending instanceof Set) {
+      for (const field of arr) pending.add(field);
+    }
 
     if (batchDepth === 0) flushNotifications();
   }
@@ -199,12 +203,17 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     ensureNotDisposed();
     batchDepth++;
 
+    let threw = false;
+
     try {
       fn();
+    } catch (e) {
+      threw = true;
+      throw e;
     } finally {
       batchDepth--;
 
-      if (batchDepth === 0) flushNotifications();
+      if (batchDepth === 0 && !threw) flushNotifications();
     }
   }
 
@@ -213,7 +222,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   }
 
   function values(): TValues {
-    return unflattenValues(Object.fromEntries(store)) as TValues;
+    return (cachedValues ??= unflattenValues(Object.fromEntries(store)) as TValues);
   }
 
   function trackDirty(name: string, value: unknown): void {
@@ -236,6 +245,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     const key = name as string;
 
+    if (!isSafeKey(key)) {
+      throw new Error(`[formit] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
+    }
+
     store.set(key, value);
 
     if (options.dirty ?? true) trackDirty(key, value);
@@ -252,14 +265,20 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function setError(name: ErrorKeyOf<TValues>, message: string): void {
     ensureNotDisposed();
-    fieldErrors.set(name as string, message);
-    requestNotify(name as string);
+
+    const key = name as string;
+
+    if (!isSafeKey(key)) {
+      throw new Error(`[formit] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
+    }
+
+    fieldErrors.set(key, message);
+    requestNotify(key);
   }
 
   function clearError(name: ErrorKeyOf<TValues>): void {
     ensureNotDisposed();
-    fieldErrors.delete(name as string);
-    requestNotify(name as string);
+    if (fieldErrors.delete(name as string)) requestNotify(name as string);
   }
 
   function resetErrors(nextErrors: Partial<Record<ErrorKeyOf<TValues>, string | undefined>> = {}): void {
@@ -279,11 +298,28 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     const key = name as string;
 
+    if (!isSafeKey(key)) {
+      throw new Error(`[formit] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
+    }
+
+    if (import.meta.env.DEV && /\.\d+(\.|$)/.test(key) && !store.has(key)) {
+      const displayKey = key.replace(/\p{C}/gu, '?').slice(0, 80);
+
+      console.warn(
+        `[formit] setValidator('${displayKey}'): path looks like an array item key. ` +
+          `Array items are stored as whole arrays — register the validator on the parent key instead.`,
+      );
+    }
+
     fieldCtrls.get(key)?.abort();
     fieldCtrls.delete(key);
 
-    if (validator) validators.set(key, validator);
-    else validators.delete(key);
+    if (validator) {
+      validators.set(key, validator);
+    } else {
+      validators.delete(key);
+      if (fieldErrors.delete(key)) requestNotify(key);
+    }
   }
 
   function touch(name: FlatKeyOf<TValues>): void {
@@ -294,14 +330,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function untouch(name: FlatKeyOf<TValues>): void {
     ensureNotDisposed();
-    touched.delete(name as string);
-    requestNotify(name as string);
+    if (touched.delete(name as string)) requestNotify(name as string);
   }
 
   function touchAll(): void {
     ensureNotDisposed();
 
-    for (const name of allKnownFields()) touched.add(name);
+    for (const name of store.keys()) touched.add(name);
+    for (const name of validators.keys()) touched.add(name);
 
     requestNotify();
   }
@@ -345,6 +381,42 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     return errors;
   }
 
+  function applyFieldErrors(
+    fieldSet: Set<string>,
+    nextErrors: Record<string, string>,
+    formErrors: Record<string, string>,
+    scope: 'full' | 'partial',
+  ): void {
+    if (scope === 'full') {
+      fieldErrors.clear();
+
+      for (const [key, message] of Object.entries(formErrors)) {
+        if (nextErrors[key] === undefined) nextErrors[key] = message;
+      }
+
+      for (const [key, message] of Object.entries(nextErrors)) fieldErrors.set(key, message);
+
+      requestNotify();
+    } else {
+      const changedFields = new Set<string>();
+
+      for (const name of fieldSet) {
+        const next = nextErrors[name];
+        const previous = fieldErrors.get(name);
+
+        if (next !== undefined) {
+          fieldErrors.set(name, next);
+
+          if (previous !== next) changedFields.add(name);
+        } else if (fieldErrors.delete(name)) {
+          changedFields.add(name);
+        }
+      }
+
+      requestNotifyFields(changedFields);
+    }
+  }
+
   async function runValidationCore(
     fields: string[],
     scope: 'full' | 'partial',
@@ -362,9 +434,15 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       fieldRunCtrls.set(name, ctrl);
     }
 
-    const runSignal = composeSignal(signal, disposeController.signal);
+    const runCtrl = new AbortController();
+    const runSignal = composeSignal(runCtrl.signal, signal, disposeController.signal);
 
-    validatingCount++;
+    runCtrls.add(runCtrl);
+
+    for (const name of fieldSet) {
+      validatingFieldCounts.set(name, (validatingFieldCounts.get(name) ?? 0) + 1);
+    }
+
     requestStateNotify();
 
     try {
@@ -377,42 +455,20 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         }),
       );
 
+      // Guard against applying stale results if the run was aborted mid-flight (e.g. by reset/replace).
+      if (runSignal.aborted) {
+        return { aborted: true, errors: Object.fromEntries(fieldErrors), valid: fieldErrors.size === 0 };
+      }
+
       const nextErrors: Record<string, string> = {};
 
       for (const [name, message] of results) {
         if (message !== undefined) nextErrors[name] = message;
       }
 
-      if (scope === 'full') {
-        const formErrors = await runFormValidator(runSignal);
+      const formErrors = scope === 'full' ? await runFormValidator(runSignal) : {};
 
-        fieldErrors.clear();
-
-        for (const [key, message] of Object.entries(formErrors)) {
-          if (nextErrors[key] === undefined) nextErrors[key] = message;
-        }
-
-        for (const [key, message] of Object.entries(nextErrors)) fieldErrors.set(key, message);
-
-        requestNotify();
-      } else {
-        const changedFields = new Set<string>();
-
-        for (const name of fieldSet) {
-          const next = nextErrors[name];
-          const previous = fieldErrors.get(name);
-
-          if (next !== undefined) {
-            fieldErrors.set(name, next);
-
-            if (previous !== next) changedFields.add(name);
-          } else if (fieldErrors.delete(name)) {
-            changedFields.add(name);
-          }
-        }
-
-        requestNotifyFields(changedFields);
-      }
+      applyFieldErrors(fieldSet, nextErrors, formErrors, scope);
 
       return { aborted: false, errors: Object.fromEntries(fieldErrors), valid: fieldErrors.size === 0 };
     } catch (error) {
@@ -422,7 +478,15 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
       throw error;
     } finally {
-      validatingCount--;
+      runCtrls.delete(runCtrl);
+
+      for (const name of fieldSet) {
+        const n = validatingFieldCounts.get(name) ?? 0;
+
+        if (n <= 1) validatingFieldCounts.delete(name);
+        else validatingFieldCounts.set(name, n - 1);
+      }
+
       requestStateNotify();
 
       for (const [name, ctrl] of fieldRunCtrls) {
@@ -466,7 +530,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   ): Promise<SubmitResult<TResult>> {
     ensureNotDisposed();
 
-    if (isSubmitting) return { ok: false, type: 'concurrent' };
+    if (isSubmitting) throw new Error('submit() called while a submission is already in progress');
 
     batch(() => {
       submitCount++;
@@ -522,14 +586,28 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     };
   }
 
-  function bind<K extends FlatKeyOf<TValues>>(name: K, config?: BindConfig): BindResult<TypeAtPath<TValues, K>> {
+  function wire<K extends FlatKeyOf<TValues>>(name: K, config?: WireConfig): WireResult<TypeAtPath<TValues, K>> {
     ensureNotDisposed();
 
     const key = name as string;
-    const touchOnBlur = config?.touchOnBlur ?? bindDefaults.touchOnBlur ?? true;
-    const validateOnBlur = config?.validateOnBlur ?? bindDefaults.validateOnBlur ?? false;
-    const validateOnChange = config?.validateOnChange ?? bindDefaults.validateOnChange ?? false;
-    const validateOnTouch = config?.validateOnTouch ?? bindDefaults.validateOnTouch ?? false;
+    const touchOnBlur = config?.touchOnBlur ?? wireDefaults.touchOnBlur ?? true;
+    const validateOnBlur = config?.validateOnBlur ?? wireDefaults.validateOnBlur ?? false;
+    const validateOnChange = config?.validateOnChange ?? wireDefaults.validateOnChange ?? false;
+    const validateOnTouch = config?.validateOnTouch ?? wireDefaults.validateOnTouch ?? false;
+    const debounceMs = config?.debounce ?? wireDefaults.debounce ?? 0;
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+    function scheduleValidation(): void {
+      clearTimeout(debounceTimer);
+
+      if (debounceMs > 0) {
+        debounceTimer = setTimeout(() => {
+          void validateField(name).catch((err) => { if (!isAbortError(err)) throw err; });
+        }, debounceMs);
+      } else {
+        void validateField(name).catch((err) => { if (!isAbortError(err)) throw err; });
+      }
+    }
 
     return {
       get dirty() {
@@ -541,14 +619,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       onBlur: () => {
         if (touchOnBlur) touch(name);
 
-        if (validateOnBlur) void validateField(name).catch(() => undefined);
+        if (validateOnBlur) scheduleValidation();
       },
       onChange: (value: TypeAtPath<TValues, K>) => {
         set(name, value);
 
         const shouldValidate = validateOnChange || (validateOnTouch && touched.has(key));
 
-        if (shouldValidate) void validateField(name).catch(() => undefined);
+        if (shouldValidate) scheduleValidation();
       },
       get touched() {
         return touched.has(key);
@@ -659,6 +737,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   function reset(): void {
     ensureNotDisposed();
 
+    for (const ctrl of runCtrls) ctrl.abort();
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
 
     fieldCtrls.clear();
@@ -675,6 +754,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   function replace(newValues: TValues): void {
     ensureNotDisposed();
 
+    for (const ctrl of runCtrls) ctrl.abort();
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
 
     fieldCtrls.clear();
@@ -702,17 +782,30 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     for (const ctrl of fieldCtrls.values()) ctrl.abort();
 
     fieldCtrls.clear();
-    pendingFields.clear();
-    pendingFullNotify = false;
-    pendingStateNotify = false;
+    runCtrls.clear();
+    pending = 'none';
     listeners.clear();
     fieldListeners.clear();
+  }
+
+  function patch(partial: DeepPartial<TValues>): void {
+    ensureNotDisposed();
+
+    const flat = flattenValues(partial as Record<string, unknown>);
+
+    batch(() => {
+      for (const [key, value] of Object.entries(flat)) {
+        baseline.set(key, value);
+        store.set(key, value);
+        dirty.delete(key);
+        requestNotify(key);
+      }
+    });
   }
 
   return {
     array,
     batch,
-    bind,
     clearError,
     dispose,
     get disposed() {
@@ -720,6 +813,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     },
     field,
     get,
+    patch,
     removeField,
     replace,
     reset,
@@ -743,5 +837,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     validateFields,
     validateTouched,
     values,
+    wire,
   };
 }

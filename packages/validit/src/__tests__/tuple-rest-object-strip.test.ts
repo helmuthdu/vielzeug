@@ -34,7 +34,7 @@ describe('TupleSchema.rest()', () => {
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues[0].params).toEqual({ minimum: 2 });
+      expect(result.error.issues[0].params).toEqual({ min: 2 });
       expect(result.error.issues[0].message).toContain('at least 2');
     }
   });

@@ -271,3 +271,18 @@ export function reset(): void {
 export function _messages(): Messages {
   return _activeMessages;
 }
+
+/**
+ * Run `fn` with a scoped message override. The original messages are restored
+ * after `fn` returns (or throws).
+ */
+export function withMessages<T>(patch: DeepPartial<Messages>, fn: () => T): T {
+  const saved = _activeMessages;
+  _activeMessages = mergeMessages(_defaultMessages, patch);
+
+  try {
+    return fn();
+  } finally {
+    _activeMessages = saved;
+  }
+}

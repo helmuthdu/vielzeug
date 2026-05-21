@@ -127,7 +127,7 @@ describe('form validation', () => {
     expect(form.field('name').error).toBe('Required');
 
     form.setValidator('name', undefined);
-    expect(form.field('name').error).toBe('Required');
+    expect(form.field('name').error).toBeUndefined();
 
     await form.validateField('name');
     expect(form.field('name').error).toBeUndefined();
@@ -216,21 +216,61 @@ describe('form validation', () => {
     expect(form.field('name').error).toBeUndefined();
   });
 
-  test('isValidating toggles during async validation', async () => {
+  test('isValidating toggles during async validation and validatingFields tracks the field name', async () => {
     const form = createForm({
       validators: {
         slow: () => new Promise<string | undefined>((resolve) => setTimeout(() => resolve(undefined), 10)),
       },
     });
     let sawValidating = false;
+    let sawValidatingField = false;
 
     form.subscribe((state) => {
-      if (state.isValidating) sawValidating = true;
+      if (state.isValidating) {
+        sawValidating = true;
+        if (state.validatingFields.includes('slow')) sawValidatingField = true;
+      }
     });
 
     await form.validateField('slow');
 
     expect(sawValidating).toBe(true);
+    expect(sawValidatingField).toBe(true);
+    expect(form.state.isValidating).toBe(false);
+    expect(form.state.validatingFields).toHaveLength(0);
+  });
+
+  test('reset() aborts an in-flight validateAll run and leaves the form clean', async () => {
+    const started = deferred<void>();
+
+    const form = createForm({
+      defaultValues: { name: '' },
+      validators: {
+        name: (_value: unknown, signal: AbortSignal | undefined) =>
+          new Promise<string | undefined>((_, reject) => {
+            started.resolve();
+            signal?.addEventListener(
+              'abort',
+              () => {
+                const err = new Error('aborted');
+                err.name = 'AbortError';
+                reject(err);
+              },
+              { once: true },
+            );
+          }),
+      },
+    });
+
+    const validation = form.validateAll();
+
+    await started.promise;
+
+    form.reset();
+
+    await validation;
+
+    expect(form.field('name').error).toBeUndefined();
     expect(form.state.isValidating).toBe(false);
   });
 });
@@ -264,15 +304,15 @@ describe('form submit', () => {
     expect(form.field('name').touched).toBe(true);
   });
 
-  test('submit blocks concurrent submissions', async () => {
+  test('submit throws when called while already submitting', async () => {
     const form = createForm({ defaultValues: { x: 1 } });
     const inFlight = form.submit(() => new Promise<void>((resolve) => setTimeout(resolve, 20)));
 
-    const second = await form.submit(async () => undefined);
+    await expect(form.submit(async () => undefined)).rejects.toThrow(
+      'submit() called while a submission is already in progress',
+    );
 
     await inFlight;
-
-    expect(second).toEqual({ ok: false, type: 'concurrent' });
   });
 
   test('submit increments submitCount for each attempt', async () => {

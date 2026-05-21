@@ -16,6 +16,15 @@ describe('createFormatter', () => {
 
       expect(result).toContain('%');
     });
+
+    test('does not throw when options contain a circular reference', () => {
+      // cacheKey falls back to locale-only when JSON.stringify fails,
+      // so the formatter is created uncached rather than throwing.
+      const opts = { style: 'decimal' } as Intl.NumberFormatOptions & { self?: unknown };
+
+      opts.self = opts;
+      expect(() => createFormatter('en').number(42, opts as Intl.NumberFormatOptions)).not.toThrow();
+    });
   });
 
   // ─── currency() ───────────────────────────────────────────────────────────
@@ -59,6 +68,33 @@ describe('createFormatter', () => {
 
     test('returns an empty string for an empty array', () => {
       expect(createFormatter('en').list([])).toBe('');
+    });
+
+    test('stringifies numbers in the list', () => {
+      expect(createFormatter('en').list([1, 2, 3])).toBe('1, 2, and 3');
+    });
+  });
+
+  // ─── clear() ──────────────────────────────────────────────────────────────
+
+  describe('clear()', () => {
+    test('resets all internal caches without breaking subsequent calls', () => {
+      const fmt = createFormatter('en');
+
+      // Prime the caches.
+      fmt.number(1_234);
+      fmt.currency(9.99, 'USD');
+      fmt.date(new Date('2024-01-15'));
+      fmt.relative(-1, 'day');
+      fmt.list(['A', 'B']);
+
+      // clear() must not throw.
+      expect(() => fmt.clear()).not.toThrow();
+
+      // All methods must still work correctly after clearing.
+      expect(fmt.number(1_234)).toContain('1,234');
+      expect(fmt.currency(9.99, 'USD')).toContain('$');
+      expect(fmt.list(['A', 'B', 'C'])).toBe('A, B, and C');
     });
   });
 

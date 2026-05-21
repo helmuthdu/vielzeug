@@ -57,10 +57,23 @@ export type ListFormatOptions = {
 };
 
 export type Formatter = {
+  /** Clears all cached formatter instances. Useful for long-running SSR servers. */
+  clear(): void;
   currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>): string;
   date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
   duration(value: DurationValue, options?: DurationFormatOptions): string;
-  list(value: unknown[], options?: ListFormatOptions): string;
+  list(value: Array<string | number | boolean>, options?: ListFormatOptions): string;
+  /**
+   * Formats a number with the current locale.
+   *
+   * **Performance tip:** pass a stable (referentially equal) `options` object across calls so the
+   * underlying `Intl.NumberFormat` instance is retrieved from cache in O(1) without re-serializing
+   * the options on every call.
+   *
+   * @example
+   * const opts = { style: 'percent', maximumFractionDigits: 1 } as const;
+   * effect(() => label.textContent = fmt.number(ratio.value, opts));
+   */
   number(value: number, options?: Intl.NumberFormatOptions): string;
   relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
 };
@@ -107,18 +120,19 @@ function cacheKey(locale: string, options?: object): string {
     sorted[key] = (options as Record<string, unknown>)[key];
   }
 
-  return `${locale}:${JSON.stringify(sorted)}`;
+  try {
+    return `${locale}:${JSON.stringify(sorted)}`;
+  } catch {
+    // Circular references or BigInt values — fall back to locale key only.
+    // The Intl formatter is created without caching, preventing DoS via malformed options.
+    return locale;
+  }
 }
 
 function getOrCreate<F>(cache: Map<string, F>, key: string, build: () => F): F {
-  let f = cache.get(key);
+  if (!cache.has(key)) cache.set(key, build());
 
-  if (!f) {
-    f = build();
-    cache.set(key, f);
-  }
-
-  return f;
+  return cache.get(key) as F;
 }
 
 function pad2(value: number): string {
@@ -184,6 +198,14 @@ export function createFormatter(source: string | (() => string) | { readonly loc
     typeof source === 'string' ? () => source : typeof source === 'function' ? source : () => source.locale;
 
   return {
+    clear() {
+      numberCache.clear();
+      dateCache.clear();
+      relativeCache.clear();
+      listCache.clear();
+      durationCache.clear();
+    },
+
     currency(value, currency, options) {
       const locale = getLocale();
       const opts: Intl.NumberFormatOptions = { ...options, currency, style: 'currency' };
@@ -193,10 +215,9 @@ export function createFormatter(source: string | (() => string) | { readonly loc
 
     date(value, options) {
       const locale = getLocale();
-      const date = typeof value === 'number' ? new Date(value) : value;
 
       return getOrCreate(dateCache, cacheKey(locale, options), () => new Intl.DateTimeFormat(locale, options)).format(
-        date,
+        value,
       );
     },
 
@@ -216,9 +237,6 @@ export function createFormatter(source: string | (() => string) | { readonly loc
     list(value, options) {
       const locale = getLocale();
       const items = value.map(String);
-
-      if (items.length === 0) return '';
-
       const style = options?.style ?? 'long';
       const type = options?.type === 'or' ? 'disjunction' : 'conjunction';
 

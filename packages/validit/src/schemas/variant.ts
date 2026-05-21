@@ -66,6 +66,7 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
               discriminator: this._discriminator,
               expected,
             }),
+            params: { discriminator: this._discriminator, expected },
             path: [],
           },
         ],
@@ -93,5 +94,33 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     const result = await resolved.matched.safeParseAsync(value);
 
     return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
+  }
+
+  protected override _toSchemaBase(): Record<string, unknown> {
+    const oneOf = [...this._map.values()].map((s) => s.schema());
+    return { discriminator: { propertyName: this._discriminator }, oneOf };
+  }
+
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+    const branches = Object.fromEntries([...this._map.entries()].map(([k, s]) => [k, s.walk(visitor)]));
+
+    if (visitor.variant) return visitor.variant(this, branches);
+
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    if (!(other instanceof VariantSchema)) return false;
+    if (this._discriminator !== other._discriminator) return false;
+    if (this._map.size !== other._map.size) return false;
+    for (const [tag, schema] of this._map) {
+      const otherSchema = other._map.get(tag);
+      if (!otherSchema || !schema.equals(otherSchema)) return false;
+    }
+    return true;
+  }
+
+  protected override _construct(state: import('../core').SchemaState<any, any>): this {
+    return Object.assign(Object.create(Object.getPrototypeOf(this)), this, { state }) as this;
   }
 }

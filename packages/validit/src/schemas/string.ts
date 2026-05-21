@@ -1,13 +1,21 @@
 import type { MessageFn, StringConstraints } from '../core';
 
-import { ErrorCode, resolveMessage, Schema } from '../core';
+import { ErrorCode, Schema, resolveMessage } from '../core';
 import { _messages } from '../messages';
 
 type UrlOptions = {
+  message?: MessageFn<{ value: string }>;
   protocols?: readonly string[];
 };
 
 export class StringSchema<Input = string> extends Schema<string, Input, StringConstraints> {
+  constructor() {
+    super([
+      (value) =>
+        typeof value === 'string' ? null : [{ code: ErrorCode.invalid_type, message: _messages().string.type(), path: [] }],
+    ]);
+  }
+
   private _format(
     format: string,
     check: (value: string) => boolean,
@@ -15,14 +23,11 @@ export class StringSchema<Input = string> extends Schema<string, Input, StringCo
     code: ErrorCode = ErrorCode.invalid_string,
     constraints?: Partial<StringConstraints>,
   ): this {
-    const validator = (value: unknown, path: (string | number)[]) => {
+    const validator = (value: unknown) => {
       const typed = value as string;
-
       if (check(typed)) return null;
-
-      return [{ code, message: resolveMessage(message, { value: typed }), params: { format }, path }];
+      return [{ code, message: resolveMessage(message, { value: typed }), params: { format }, path: [] }];
     };
-
     return constraints && Object.keys(constraints).length > 0
       ? this._addValidatorWithConstraints(validator, constraints)
       : this._addValidator(validator);
@@ -38,28 +43,12 @@ export class StringSchema<Input = string> extends Schema<string, Input, StringCo
     return this._format(format, (value) => pattern.test(value), message, code, constraints);
   }
 
-  constructor() {
-    super([
-      (value, path) =>
-        typeof value === 'string' ? null : [{ code: ErrorCode.invalid_type, message: _messages().string.type(), path }],
-    ]);
-  }
-
   min(length: number, message: MessageFn<{ min: number; value: string }> = (ctx) => _messages().string.min(ctx)): this {
     return this._addValidatorWithConstraints(
-      (value, path) => {
+      (value) => {
         const typed = value as string;
-
         if (typed.length >= length) return null;
-
-        return [
-          {
-            code: ErrorCode.too_small,
-            message: resolveMessage(message, { min: length, value: typed }),
-            params: { minimum: length },
-            path,
-          },
-        ];
+        return [{ code: ErrorCode.too_small, message: resolveMessage(message, { min: length, value: typed }), params: { min: length }, path: [] }];
       },
       { minLength: length },
     );
@@ -67,19 +56,10 @@ export class StringSchema<Input = string> extends Schema<string, Input, StringCo
 
   max(length: number, message: MessageFn<{ max: number; value: string }> = (ctx) => _messages().string.max(ctx)): this {
     return this._addValidatorWithConstraints(
-      (value, path) => {
+      (value) => {
         const typed = value as string;
-
         if (typed.length <= length) return null;
-
-        return [
-          {
-            code: ErrorCode.too_big,
-            message: resolveMessage(message, { max: length, value: typed }),
-            params: { maximum: length },
-            path,
-          },
-        ];
+        return [{ code: ErrorCode.too_big, message: resolveMessage(message, { max: length, value: typed }), params: { max: length }, path: [] }];
       },
       { maxLength: length },
     );
@@ -90,45 +70,34 @@ export class StringSchema<Input = string> extends Schema<string, Input, StringCo
     message: MessageFn<{ exact: number; value: string }> = (ctx) => _messages().string.length(ctx),
   ): this {
     return this._addValidatorWithConstraints(
-      (value, path) => {
+      (value) => {
         const typed = value as string;
-
         if (typed.length === exact) return null;
-
-        return [
-          {
-            code: ErrorCode.invalid_length,
-            message: resolveMessage(message, { exact, value: typed }),
-            params: { exact },
-            path,
-          },
-        ];
+        return [{ code: ErrorCode.invalid_length, message: resolveMessage(message, { exact, value: typed }), params: { exact }, path: [] }];
       },
       { maxLength: exact, minLength: exact },
     );
   }
 
   nonEmpty(message: MessageFn<{ min: number; value: string }> = () => _messages().string.nonEmpty()): this {
-    return this.min(1, message);
+    return this._addValidatorWithConstraints(
+      (value) => {
+        const typed = value as string;
+        if (typed.length > 0) return null;
+        return [{ code: ErrorCode.too_small, message: resolveMessage(message, { min: 1, value: typed }), params: { min: 1 }, path: [] }];
+      },
+      { minLength: 1 },
+    );
   }
 
   startsWith(
     prefix: string,
     message: MessageFn<{ prefix: string; value: string }> = (ctx) => _messages().string.startsWith(ctx),
   ): this {
-    return this._addValidator((value, path) => {
+    return this._addValidator((value) => {
       const typed = value as string;
-
       if (typed.startsWith(prefix)) return null;
-
-      return [
-        {
-          code: ErrorCode.invalid_string,
-          message: resolveMessage(message, { prefix, value: typed }),
-          params: { prefix },
-          path,
-        },
-      ];
+      return [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { prefix, value: typed }), params: { prefix }, path: [] }];
     });
   }
 
@@ -136,19 +105,10 @@ export class StringSchema<Input = string> extends Schema<string, Input, StringCo
     suffix: string,
     message: MessageFn<{ suffix: string; value: string }> = (ctx) => _messages().string.endsWith(ctx),
   ): this {
-    return this._addValidator((value, path) => {
+    return this._addValidator((value) => {
       const typed = value as string;
-
       if (typed.endsWith(suffix)) return null;
-
-      return [
-        {
-          code: ErrorCode.invalid_string,
-          message: resolveMessage(message, { suffix, value: typed }),
-          params: { suffix },
-          path,
-        },
-      ];
+      return [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { suffix, value: typed }), params: { suffix }, path: [] }];
     });
   }
 
@@ -156,76 +116,37 @@ export class StringSchema<Input = string> extends Schema<string, Input, StringCo
     substr: string,
     message: MessageFn<{ substr: string; value: string }> = (ctx) => _messages().string.includes(ctx),
   ): this {
-    return this._addValidator((value, path) => {
+    return this._addValidator((value) => {
       const typed = value as string;
-
       if (typed.includes(substr)) return null;
-
-      return [
-        {
-          code: ErrorCode.invalid_string,
-          message: resolveMessage(message, { substr, value: typed }),
-          params: { includes: substr },
-          path,
-        },
-      ];
+      return [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { substr, value: typed }), params: { includes: substr }, path: [] }];
     });
   }
 
   regex(pattern: RegExp, message: MessageFn<{ value: string }> = (ctx) => _messages().string.regex(ctx)): this {
     return this._addValidatorWithConstraints(
-      (value, path) => {
+      (value) => {
         const typed = value as string;
-
         if (pattern.test(typed)) return null;
-
-        return [
-          {
-            code: ErrorCode.invalid_string,
-            message: resolveMessage(message, { value: typed }),
-            params: { pattern: pattern.source },
-            path,
-          },
-        ];
+        return [{ code: ErrorCode.invalid_string, message: resolveMessage(message, { value: typed }), params: { pattern: pattern.source }, path: [] }];
       },
       { pattern: pattern.source },
     );
   }
 
   email(message: MessageFn<{ value: string }> = () => _messages().string.email()): this {
-    return this._formatRegex(
-      'email',
-      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-      message,
-      ErrorCode.invalid_string,
-      {
-        format: 'email',
-      },
-    );
+    return this._formatRegex('email', /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, message, ErrorCode.invalid_string, { format: 'email' });
   }
 
-  url(message?: MessageFn<{ value: string }>): this;
-  url(options: UrlOptions, message?: MessageFn<{ value: string }>): this;
-  url(
-    optionsOrMessage: MessageFn<{ value: string }> | UrlOptions = {},
-    maybeMessage: MessageFn<{ value: string }> = () => _messages().string.url(),
-  ): this {
-    const options =
-      typeof optionsOrMessage === 'function' || typeof optionsOrMessage === 'string' ? {} : optionsOrMessage;
-    const message =
-      typeof optionsOrMessage === 'function' || typeof optionsOrMessage === 'string' ? optionsOrMessage : maybeMessage;
-    const allowedProtocols = new Set((options.protocols ?? ['http', 'https']).map((p) => p.toLowerCase()));
-
+  url(options: UrlOptions = {}): this {
+    const { message = () => _messages().string.url(), protocols = ['http', 'https'] } = options;
+    const allowedProtocols = new Set(protocols.map((p) => p.toLowerCase()));
     return this._format(
       'url',
       (value) => {
         try {
           const parsed = new URL(value);
-          const protocol = parsed.protocol.replace(':', '').toLowerCase();
-
-          if (!allowedProtocols.has(protocol)) return false;
-
-          return true;
+          return allowedProtocols.has(parsed.protocol.replace(':', '').toLowerCase());
         } catch {
           return false;
         }
@@ -237,27 +158,15 @@ export class StringSchema<Input = string> extends Schema<string, Input, StringCo
   }
 
   uuid(message: MessageFn<{ value: string }> = () => _messages().string.uuid()): this {
-    return this._formatRegex(
-      'uuid',
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-      message,
-      ErrorCode.invalid_string,
-      {
-        format: 'uuid',
-      },
-    );
+    return this._formatRegex('uuid', /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, message, ErrorCode.invalid_string, { format: 'uuid' });
   }
 
   isoDate(message: MessageFn<{ value: string }> = () => _messages().string.date()): this {
     return this._format(
       'iso-date',
       (value) => {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-          return false;
-        }
-
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
         const d = new Date(value);
-
         return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(value);
       },
       message,
@@ -291,30 +200,12 @@ export class StringSchema<Input = string> extends Schema<string, Input, StringCo
   }
 
   ip(message: MessageFn<{ value: string }> = () => _messages().string.ip()): this {
-    return this._format(
-      'ip',
-      (value) => {
-        // IPv4: validate octet ranges
-        if (/^(\d{1,3}\.){3}\d{1,3}$/.test(value)) {
-          return value.split('.').every((octet) => {
-            const n = parseInt(octet, 10);
-
-            return n >= 0 && n <= 255;
-          });
-        }
-
-        // IPv6: delegate to URL parser which handles all valid forms including
-        // compressed notation (::1, 2001:db8::1) and edge cases
-        try {
-          new URL(`http://[${value}]/`);
-
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      message,
-    );
+    return this._format('ip', (value) => {
+      if (/^(\d{1,3}\.){3}\d{1,3}$/.test(value)) {
+        return value.split('.').every((octet) => { const n = parseInt(octet, 10); return n >= 0 && n <= 255; });
+      }
+      try { new URL(`http://[${value}]/`); return true; } catch { return false; }
+    }, message);
   }
 
   cuid(message: MessageFn<{ value: string }> = () => _messages().string.cuid()): this {
@@ -391,6 +282,35 @@ export class StringSchema<Input = string> extends Schema<string, Input, StringCo
 
   numeric(message: MessageFn<{ value: string }> = () => _messages().string.numeric()): this {
     return this._formatRegex('numeric', /^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i, message);
+  }
+
+  protected override _toSchemaBase(): Record<string, unknown> {
+    const base: Record<string, unknown> = { type: 'string' };
+    const constraints = this.state.meta?.constraints;
+    if (constraints) {
+      if (constraints.minLength !== undefined) base['minLength'] = constraints.minLength;
+      if (constraints.maxLength !== undefined) base['maxLength'] = constraints.maxLength;
+      if (constraints.pattern !== undefined) base['pattern'] = constraints.pattern;
+      if (constraints.format !== undefined) base['format'] = constraints.format;
+      if (constraints.contentEncoding !== undefined) base['contentEncoding'] = constraints.contentEncoding;
+    }
+    return base;
+  }
+
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+    if (visitor.string) return visitor.string(this);
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    if (!(other instanceof StringSchema)) return false;
+    return super._equalsImpl(other);
+  }
+
+  protected override _construct(state: import('../core').SchemaState<any, any>): this {
+    const next = new StringSchema() as this;
+    next.state = state as any;
+    return next;
   }
 
   static coerce(): StringSchema<unknown> {

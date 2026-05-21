@@ -64,9 +64,9 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
       return {
         issues: [
           {
-            code: ErrorCode.invalid_length,
+            code: ErrorCode.too_small,
             message: _messages().tuple.min({ min: this.items.length }),
-            params: { minimum: this.items.length },
+            params: { min: this.items.length },
             path: [],
           },
         ],
@@ -136,5 +136,41 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     }
 
     return { data: output, issues };
+  }
+
+  protected override _toSchemaBase(): Record<string, unknown> {
+    const prefixItems = this.items.map((s) => s.schema());
+    const base: Record<string, unknown> = { prefixItems, type: 'array' };
+    if (this.restSchema !== null) base['items'] = this.restSchema.schema();
+    else base['items'] = false;
+    return base;
+  }
+
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+    const items = this.items.map((s) => s.walk(visitor));
+    const rest = this.restSchema !== null ? this.restSchema.walk(visitor) : null;
+
+    if (visitor.tuple) return visitor.tuple(this, items, rest);
+
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    if (!(other instanceof TupleSchema)) return false;
+    if (this.items.length !== other.items.length) return false;
+    for (let i = 0; i < this.items.length; i++) {
+      if (!this.items[i].equals(other.items[i])) return false;
+    }
+    const rs = this.restSchema;
+    const ors = other.restSchema;
+    if ((rs === null) !== (ors === null)) return false;
+    if (rs !== null && ors !== null && !rs.equals(ors)) return false;
+    return true;
+  }
+
+  protected override _construct(state: import('../core').SchemaState<any, any>): this {
+    const next = new TupleSchema(this.items, this.restSchema) as this;
+    next.state = state as any;
+    return next;
   }
 }

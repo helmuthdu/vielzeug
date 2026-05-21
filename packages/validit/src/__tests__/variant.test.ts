@@ -46,7 +46,7 @@ describe('v.variant() — async', () => {
   it('refine() runs in parseAsync', async () => {
     const schema = v
       .variant('type', { ok: v.object({ msg: v.string() }) })
-      .check((v) => v.msg !== 'forbidden', 'Forbidden');
+      .check((v) => v.msg !== 'forbidden' || 'Forbidden');
     const result = await schema.safeParseAsync({ msg: 'forbidden', type: 'ok' });
 
     expect(result.success).toBe(false);

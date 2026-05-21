@@ -15,7 +15,7 @@ export function schemaValidator<TValues extends Record<string, unknown>>(
 
     if (result.success) return undefined;
 
-    const errors: Record<string, string> = {};
+    const errors: Record<string, string> = Object.create(null) as Record<string, string>;
 
     for (const issue of result.error.issues) {
       const key = issue.path.join('.') || FORM_ERROR;

@@ -241,7 +241,7 @@ describe('ObjectSchema shape-transform methods preserve metadata', () => {
   });
 
   it('omit() preserves nullable — parse(null) returns null', () => {
-    const schema = (v.object({ a: v.string(), b: v.number() }) as any).nullable().omit('a');
+    const schema = v.object({ a: v.string(), b: v.number() }).omit('a').nullable();
 
     expect(schema.parse(null)).toBeNull();
   });

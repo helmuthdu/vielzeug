@@ -15,6 +15,24 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./svelte": {
+      "source": "./src/adapters/svelte.ts",
+      "types": "./dist/adapters/svelte.d.ts",
+      "import": "./dist/adapters/svelte.js",
+      "require": "./dist/adapters/svelte.cjs"
+    },
+    "./react": {
+      "source": "./src/adapters/react.ts",
+      "types": "./dist/adapters/react.d.ts",
+      "import": "./dist/adapters/react.js",
+      "require": "./dist/adapters/react.cjs"
+    },
+    "./vue": {
+      "source": "./src/adapters/vue.ts",
+      "types": "./dist/adapters/vue.d.ts",
+      "import": "./dist/adapters/vue.js",
+      "require": "./dist/adapters/vue.cjs"
     }
   },
   "scripts": {

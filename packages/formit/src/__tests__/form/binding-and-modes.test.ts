@@ -1,11 +1,11 @@
 import { vi } from 'vitest';
 
-import { createForm } from '../../index';
+import { createForm, ValidationModes } from '../../index';
 
-describe('form bind behavior', () => {
-  test('binding getters reflect live field value and meta state', () => {
+describe('form wire behavior', () => {
+  test('wire getters reflect live field value and meta state', () => {
     const form = createForm({ defaultValues: { name: '' } });
-    const binding = form.bind('name');
+    const binding = form.wire('name');
 
     expect(binding.value).toBe('');
     expect(binding.touched).toBe(false);
@@ -22,18 +22,18 @@ describe('form bind behavior', () => {
   test('touchOnBlur:false keeps field untouched on blur', () => {
     const form = createForm({ defaultValues: { name: '' } });
 
-    form.bind('name', { touchOnBlur: false }).onBlur();
+    form.wire('name', { touchOnBlur: false }).onBlur();
 
     expect(form.field('name').touched).toBe(false);
   });
 
-  test('validateOnChange triggers validation from bind.onChange', async () => {
+  test('validateOnChange triggers validation from wire.onChange', async () => {
     const form = createForm({
       defaultValues: { name: '' },
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
-    form.bind('name', { validateOnChange: true }).onChange('');
+    form.wire('name', { validateOnChange: true }).onChange('');
 
     await vi.waitFor(() => expect(form.field('name').error).toBe('Required'));
   });
@@ -43,7 +43,7 @@ describe('form bind behavior', () => {
       defaultValues: { name: '' },
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
-    const binding = form.bind('name', { touchOnBlur: true, validateOnTouch: true });
+    const binding = form.wire('name', { touchOnBlur: true, validateOnTouch: true });
 
     binding.onChange('');
     expect(form.field('name').error).toBeUndefined();
@@ -54,14 +54,14 @@ describe('form bind behavior', () => {
     await vi.waitFor(() => expect(form.field('name').error).toBe('Required'));
   });
 
-  test('per-bind config overrides bindDefaults', async () => {
+  test('per-wire config overrides validate defaults', async () => {
     const form = createForm({
-      bindDefaults: { touchOnBlur: false, validateOnChange: false },
+      validate: { touchOnBlur: false, validateOnChange: false },
       defaultValues: { name: '' },
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
-    const binding = form.bind('name', { touchOnBlur: true, validateOnChange: true });
+    const binding = form.wire('name', { touchOnBlur: true, validateOnChange: true });
 
     binding.onBlur();
     binding.onChange('');
@@ -71,14 +71,13 @@ describe('form bind behavior', () => {
   });
 });
 
-describe('validation mode defaults', () => {
-  test("mode 'onSubmit' does not validate on blur or change", async () => {
+describe('validate preset defaults', () => {
+  test('no validate option does not validate on blur or change', async () => {
     const form = createForm({
       defaultValues: { name: '' },
-      mode: 'onSubmit',
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
-    const binding = form.bind('name');
+    const binding = form.wire('name');
 
     binding.onBlur();
     binding.onChange('');
@@ -86,37 +85,37 @@ describe('validation mode defaults', () => {
     expect(form.field('name').error).toBeUndefined();
   });
 
-  test("mode 'onBlur' validates when field blurs", async () => {
+  test('ValidationModes.onBlur validates when field blurs', async () => {
     const form = createForm({
       defaultValues: { name: '' },
-      mode: 'onBlur',
+      validate: ValidationModes.onBlur,
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
-    form.bind('name').onBlur();
+    form.wire('name').onBlur();
 
     await vi.waitFor(() => expect(form.field('name').error).toBe('Required'));
   });
 
-  test("mode 'onChange' validates on every change", async () => {
+  test('ValidationModes.onChange validates on every change', async () => {
     const form = createForm({
       defaultValues: { name: '' },
-      mode: 'onChange',
+      validate: ValidationModes.onChange,
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
-    form.bind('name').onChange('');
+    form.wire('name').onChange('');
 
     await vi.waitFor(() => expect(form.field('name').error).toBe('Required'));
   });
 
-  test("mode 'onTouched' validates on blur, then on subsequent changes", async () => {
+  test('ValidationModes.onTouched validates on blur, then on subsequent changes', async () => {
     const form = createForm({
       defaultValues: { name: '' },
-      mode: 'onTouched',
+      validate: ValidationModes.onTouched,
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
-    const binding = form.bind('name');
+    const binding = form.wire('name');
 
     binding.onChange('');
     expect(form.field('name').error).toBeUndefined();
@@ -128,16 +127,37 @@ describe('validation mode defaults', () => {
     await vi.waitFor(() => expect(form.field('name').error).toBeUndefined());
   });
 
-  test('explicit bindDefaults takes precedence over mode defaults', async () => {
+  test('inline validate config overrides preset', async () => {
     const form = createForm({
-      bindDefaults: { validateOnBlur: false, validateOnChange: false },
+      validate: { validateOnBlur: false, validateOnChange: false },
       defaultValues: { name: '' },
-      mode: 'onChange',
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
-    form.bind('name').onChange('');
+    form.wire('name').onChange('');
 
     expect(form.field('name').error).toBeUndefined();
+  });
+
+  test('debounce delays auto-validation trigger', async () => {
+    vi.useFakeTimers();
+
+    const form = createForm({
+      defaultValues: { name: '' },
+      validate: { debounce: 300, validateOnChange: true },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+    const binding = form.wire('name');
+
+    binding.onChange('');
+
+    // Error should not appear yet — debounce is pending.
+    expect(form.field('name').error).toBeUndefined();
+
+    await vi.runAllTimersAsync();
+
+    expect(form.field('name').error).toBe('Required');
+
+    vi.useRealTimers();
   });
 });

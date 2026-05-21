@@ -23,8 +23,8 @@ import { VariantSchema } from './schemas/variant';
  * The `v` namespace bundles all schema factories for convenience.
  */
 export const v = {
-  any: (): Schema<any, any, any, any> => new Schema(),
-  array: <T>(schema: Schema<T, any, any, any>): ArraySchema<T> => new ArraySchema(schema),
+  any: (): Schema<any, any, any> => new Schema(),
+  array: <T>(schema: Schema<T, any, any>): ArraySchema<T> => new ArraySchema(schema),
   bigint: (): BigIntSchema => new BigIntSchema(),
   boolean: (): BooleanSchema => new BooleanSchema(),
   coerce: {
@@ -41,20 +41,20 @@ export const v = {
     ...items: T
   ): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>
     new IntersectSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]),
-  lazy: <T>(getter: () => Schema<T, any, any, any>): LazySchema<T> => new LazySchema(getter),
+  lazy: <T>(getter: () => Schema<T, any, any>): LazySchema<T> => new LazySchema(getter),
   literal: <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
     new LiteralSchema(value),
-  map: <K, V>(keySchema: Schema<K, any, any, any>, valueSchema: Schema<V, any, any, any>): MapSchema<K, V> =>
+  map: <K, V>(keySchema: Schema<K, any, any>, valueSchema: Schema<V, any, any>): MapSchema<K, V> =>
     new MapSchema(keySchema, valueSchema),
   never: (): NeverSchema => new NeverSchema(),
   null: (): LiteralSchema<null> => new LiteralSchema(null),
   number: (): NumberSchema => new NumberSchema(),
   object: <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape),
   record: <K extends string, V>(
-    keySchema: Schema<K, any, any, any>,
-    valueSchema: Schema<V, any, any, any>,
+    keySchema: Schema<K, any, any>,
+    valueSchema: Schema<V, any, any>,
   ): RecordSchema<K, V> => new RecordSchema(keySchema, valueSchema),
-  set: <T>(schema: Schema<T, any, any, any>): SetSchema<T> => new SetSchema(schema),
+  set: <T>(schema: Schema<T, any, any>): SetSchema<T> => new SetSchema(schema),
   string: (): StringSchema => new StringSchema(),
   tuple: <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items),
   undefined: (): LiteralSchema<undefined> => new LiteralSchema(undefined),
@@ -62,7 +62,7 @@ export const v = {
     ...items: T
   ): UnionSchema<NormalizeItems<T> & readonly AnySchema[]> =>
     new UnionSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]),
-  unknown: (): Schema<unknown, unknown, any, any> => new Schema(),
+  unknown: (): Schema<unknown, unknown, any> => new Schema(),
   variant: <K extends string, M extends Record<string, ObjectSchema<any>>>(
     discriminator: K,
     map: M,

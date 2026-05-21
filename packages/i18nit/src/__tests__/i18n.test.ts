@@ -196,6 +196,12 @@ describe('createI18n', () => {
 
       expect(i18n.t('hello')).toBe('Hello');
     });
+
+    test('falls back to "en" for a string that Intl.getCanonicalLocales rejects', () => {
+      // Strings with spaces or illegal characters are invalid BCP 47 tags.
+      // canon() returns 'en' rather than storing arbitrary strings as locale keys.
+      expect(createI18n({ locale: 'not a valid locale' }).locale).toBe('en');
+    });
   });
 
   // ─── register() ───────────────────────────────────────────────────────────
@@ -213,6 +219,16 @@ describe('createI18n', () => {
 
       i18n.register('en', { hello: 'Hi' });
       expect(i18n.t('hello')).toBe('Hi');
+    });
+
+    test('does not notify subscribers when re-registering the same source reference', () => {
+      const catalog = { hello: 'Hello' };
+      const i18n = createI18n({ catalogs: { en: catalog } });
+      const listener = vi.fn();
+
+      i18n.subscribe(listener);
+      i18n.register('en', catalog);
+      expect(listener).not.toHaveBeenCalled();
     });
 
     test('notifies subscribers when the registered locale is in the active chain', () => {
@@ -324,7 +340,7 @@ describe('createI18n', () => {
         catalogs: {
           en: { hello: 'Hello' },
           fr: () =>
-            new Promise((resolve) => {
+            new Promise<{ hello: string }>((resolve) => {
               resolveLoader = resolve;
             }),
         },
@@ -349,7 +365,7 @@ describe('createI18n', () => {
         catalogs: {
           en: { hello: 'Hello' },
           fr: () =>
-            new Promise((resolve) => {
+            new Promise<{ hello: string }>((resolve) => {
               resolveFirst = resolve;
             }),
         },
@@ -363,7 +379,7 @@ describe('createI18n', () => {
       i18n.register(
         'fr',
         () =>
-          new Promise((resolve) => {
+          new Promise<{ hello: string }>((resolve) => {
             resolveSecond = resolve;
           }),
       );
@@ -388,7 +404,7 @@ describe('createI18n', () => {
         catalogs: {
           en: { hello: 'Hello' },
           fr: () =>
-            new Promise((resolve) => {
+            new Promise<{ hello: string }>((resolve) => {
               resolveFirst = resolve;
             }),
         },
@@ -401,7 +417,7 @@ describe('createI18n', () => {
       i18n.register(
         'fr',
         () =>
-          new Promise((resolve) => {
+          new Promise<{ hello: string }>((resolve) => {
             secondCalls++;
             resolveSecond = resolve;
           }),
@@ -464,7 +480,7 @@ describe('createI18n', () => {
       i18n.register(
         'fr',
         () =>
-          new Promise((resolve) => {
+          new Promise<{ hello: string }>((resolve) => {
             resolveFirst = resolve;
           }),
       );
@@ -567,6 +583,7 @@ describe('createI18n', () => {
       const i18n = createI18n({
         catalogs: { en: { hello: 'Hello' }, fr: { hello: 'Bonjour' } },
         locale: 'en',
+        onSubscriberError: () => {},
       });
       const bad = vi.fn(() => {
         throw new Error('boom');
@@ -577,6 +594,19 @@ describe('createI18n', () => {
       i18n.subscribe(good);
       await i18n.setLocale('fr');
       expect(good).toHaveBeenCalledOnce();
+    });
+
+    test('default onSubscriberError logs to console.error', async () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const error = new Error('boom');
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+
+      i18n.subscribe(() => {
+        throw error;
+      });
+      await i18n.setLocale('fr');
+      expect(spy).toHaveBeenCalledWith('[i18nit] subscriber error', error);
+      spy.mockRestore();
     });
 
     test('reports listener failures through onSubscriberError', async () => {
@@ -685,6 +715,136 @@ describe('createI18n', () => {
 
       // Code-point sort: '-' (0x2D) < uppercase letters < lowercase, so 'de' < 'en-US' < 'zh-Hant'.
       expect(i18n.getSupportedLocales({ sorted: true })).toEqual(['de', 'en-US', 'zh-Hant']);
+    });
+  });
+
+  // ─── scope() ───────────────────────────────────────────────────────────────
+
+  describe('scope()', () => {
+    const catalogs = {
+      en: {
+        nav: { home: 'Home', about: 'About' },
+        messages: {
+          inbox: { one: 'One message', other: '{count} messages', zero: 'No messages' },
+        },
+      },
+      fr: {
+        nav: { home: 'Accueil', about: 'À propos' },
+        messages: {
+          inbox: { one: 'Un message', other: '{count} messages', zero: 'Aucun message' },
+        },
+      },
+    };
+
+    test('has() checks existence within the scope', () => {
+      const i18n = createI18n({ catalogs });
+      const nav = i18n.scope('nav');
+
+      expect(nav.has('home')).toBe(true);
+      expect(nav.has('missing')).toBe(false);
+    });
+
+    test('has() resolves through the fallback chain', () => {
+      const i18n = createI18n({
+        catalogs: { en: { nav: { home: 'Home' } }, fr: { nav: {} } },
+        fallback: 'en',
+        locale: 'fr',
+      });
+      const nav = i18n.scope('nav');
+
+      expect(nav.has('home')).toBe(true);
+    });
+
+    test('t() prefixes the key with the given scope', () => {
+      const i18n = createI18n({ catalogs });
+      const nav = i18n.scope('nav');
+
+      expect(nav.t('home')).toBe('Home');
+      expect(nav.t('about')).toBe('About');
+    });
+
+    test('tp() prefixes the key with the given scope', () => {
+      const i18n = createI18n({ catalogs });
+      const msgs = i18n.scope('messages');
+
+      expect(msgs.tp('inbox', 0)).toBe('No messages');
+      expect(msgs.tp('inbox', 1)).toBe('One message');
+      expect(msgs.tp('inbox', 3)).toBe('3 messages');
+    });
+
+    test('t() passes vars through correctly', () => {
+      const i18n = createI18n({ catalogs: { en: { user: { greeting: 'Hello, {name}!' } } } });
+      const user = i18n.scope('user');
+
+      expect(user.t('greeting', { name: 'Alice' })).toBe('Hello, Alice!');
+    });
+
+    test('t() returns onMissing value for unknown scoped key', () => {
+      const i18n = createI18n({ catalogs, onMissing: (info) => `[${info.key}]` });
+      const nav = i18n.scope('nav');
+
+      expect(nav.t('missing')).toBe('[nav.missing]');
+    });
+
+    test('follows active locale changes', async () => {
+      const i18n = createI18n({ catalogs, locale: 'en' });
+      const nav = i18n.scope('nav');
+
+      expect(nav.t('home')).toBe('Home');
+      await i18n.setLocale('fr');
+      expect(nav.t('home')).toBe('Accueil');
+    });
+
+    test('multiple independent scopes on the same instance', () => {
+      const i18n = createI18n({ catalogs });
+      const nav = i18n.scope('nav');
+      const msgs = i18n.scope('messages');
+
+      expect(nav.t('home')).toBe('Home');
+      expect(msgs.tp('inbox', 1)).toBe('One message');
+    });
+
+    test('returns the same object reference for repeated calls with the same prefix', () => {
+      const i18n = createI18n({ catalogs });
+
+      expect(i18n.scope('nav')).toBe(i18n.scope('nav'));
+      expect(i18n.scope('messages')).toBe(i18n.scope('messages'));
+    });
+  });
+
+  // ─── fmt ──────────────────────────────────────────────────────────────────
+
+  describe('fmt', () => {
+    test('formats numbers with the current locale', () => {
+      const i18n = createI18n({ locale: 'en' });
+
+      expect(i18n.fmt.number(1_234.56)).toContain('1,234');
+    });
+
+    test('returns the same formatter instance on repeated accesses', () => {
+      const i18n = createI18n({ locale: 'en' });
+
+      expect(i18n.fmt).toBe(i18n.fmt);
+    });
+
+    test('follows locale changes reactively', async () => {
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+      const enResult = i18n.fmt.number(1_234.56);
+
+      await i18n.setLocale('fr');
+
+      const frResult = i18n.fmt.number(1_234.56);
+
+      expect(enResult).toContain('1,234');
+      expect(frResult).not.toContain('1,234');
+    });
+
+    test('supports all Intl methods (currency, date, list)', () => {
+      const i18n = createI18n({ locale: 'en' });
+
+      expect(i18n.fmt.currency(9.99, 'USD')).toContain('$');
+      expect(i18n.fmt.date(new Date('2024-01-15'))).toContain('2024');
+      expect(i18n.fmt.list(['A', 'B', 'C'])).toBe('A, B, and C');
     });
   });
 });

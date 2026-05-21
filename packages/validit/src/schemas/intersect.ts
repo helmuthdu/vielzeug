@@ -67,4 +67,28 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
 
     return { data: state.output, issues: state.issues };
   }
+
+  protected override _toSchemaBase(): Record<string, unknown> {
+    return { allOf: this.schemas.map((s) => s.schema()) };
+  }
+
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+    const branches = this.schemas.map((s) => s.walk(visitor));
+
+    if (visitor.intersect) return visitor.intersect(this, branches);
+
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    if (!(other instanceof IntersectSchema)) return false;
+    if (this.schemas.length !== other.schemas.length) return false;
+    return this.schemas.every((s, i) => s.equals(other.schemas[i]));
+  }
+
+  protected override _construct(state: import('../core').SchemaState<any, any>): this {
+    const next = new IntersectSchema(this.schemas) as this;
+    next.state = state as any;
+    return next;
+  }
 }

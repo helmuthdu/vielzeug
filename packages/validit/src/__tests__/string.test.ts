@@ -152,7 +152,7 @@ describe('string format validators — params.format', () => {
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues[0].params?.format).toBe('email');
+      expect((result.error.issues[0] as any).params?.format).toBe('email');
     }
   });
 
@@ -162,7 +162,7 @@ describe('string format validators — params.format', () => {
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues[0].params?.format).toBe('url');
+      expect((result.error.issues[0] as any).params?.format).toBe('url');
     }
   });
 
@@ -172,7 +172,7 @@ describe('string format validators — params.format', () => {
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues[0].params?.format).toBe('uuid');
+      expect((result.error.issues[0] as any).params?.format).toBe('uuid');
     }
   });
 
@@ -182,7 +182,7 @@ describe('string format validators — params.format', () => {
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues[0].params?.format).toBe('iso-date');
+      expect((result.error.issues[0] as any).params?.format).toBe('iso-date');
     }
   });
 
@@ -192,7 +192,7 @@ describe('string format validators — params.format', () => {
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error.issues[0].params?.format).toBe('iso-datetime');
+      expect((result.error.issues[0] as any).params?.format).toBe('iso-datetime');
     }
   });
 });

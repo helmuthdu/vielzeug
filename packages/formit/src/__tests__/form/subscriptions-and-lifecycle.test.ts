@@ -111,7 +111,7 @@ describe('form lifecycle', () => {
     form.dispose();
 
     expect(() => form.set('x', 2)).toThrow('Cannot modify a disposed form');
-    expect(() => form.bind('x')).toThrow('Cannot modify a disposed form');
+    expect(() => form.wire('x')).toThrow('Cannot modify a disposed form');
   });
 
   test('subscribe and subscribeField become no-ops after dispose', () => {

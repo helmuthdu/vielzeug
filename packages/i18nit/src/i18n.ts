@@ -11,59 +11,55 @@ import type {
   Messages,
   MissingInfo,
   PluralTranslateOptions,
+  ScopedI18n,
   SubscribeOptions,
   TranslateVars,
   Unsubscribe,
 } from './types';
 
+import { type Formatter, createFormatter } from './format';
+
 type PluralRuleSelector = { select: (count: number) => string };
 type PluralCaches = Map<string, PluralRuleSelector>;
 type LocaleRecord<M extends Messages> =
-  | { kind: 'dynamic'; loader: Loader<M>; messages?: M }
+  | { kind: 'dynamic'; loader: Loader<M>; loadingTask?: Promise<void> }
   | { kind: 'static'; messages: M };
-type LoadingRecord<M extends Messages> = {
-  entry: Extract<LocaleRecord<M>, { kind: 'dynamic' }>;
-  task: Promise<void>;
-};
 
-const INTERPOLATION_PATTERN = /\{([\p{ID_Continue}\-.]+)\}/gu;
+function makeRecord<M extends Messages>(source: LocaleSource<M>): LocaleRecord<M> {
+  return typeof source === 'function'
+    ? { kind: 'dynamic', loader: source as Loader<M> }
+    : { kind: 'static', messages: source as M };
+}
+
+const INTERPOLATION_PATTERN = /\{([\p{ID_Continue}\-]+)\}/gu;
+
+// Prevents unbounded memory growth when scope() is called with many unique prefixes
+// (e.g., user-influenced input in an SSR context).
+const MAX_SCOPE_CACHE = 256;
 
 function canon(locale: string): string {
   try {
-    return Intl.getCanonicalLocales(locale)[0] ?? locale;
+    return Intl.getCanonicalLocales(locale)[0] ?? 'en';
   } catch {
-    return locale;
+    // Invalid BCP 47 tag — reject rather than store arbitrary strings as locale keys.
+    return 'en';
   }
 }
 
-function resolvePath(obj: Record<string, unknown>, path: string): unknown {
-  let value: unknown = obj;
-
-  for (const part of path.split('.')) {
-    if (value == null || typeof value !== 'object') return undefined;
-
-    if (!Object.hasOwn(value as object, part)) return undefined;
-
-    value = (value as Record<string, unknown>)[part];
-  }
-
-  return value;
-}
-
-function buildLocaleChain(locale: Locale, fallback: Locale[]): Locale[] {
-  const seen = new Set<Locale>();
+function buildLocaleChain(locale: Locale, fallback: Locale[]): { chain: Locale[]; set: Set<Locale> } {
+  const set = new Set<Locale>();
 
   for (const value of [locale, ...fallback]) {
-    seen.add(value);
+    set.add(value);
 
     const parts = value.split('-');
 
     for (let i = parts.length - 1; i > 0; i--) {
-      seen.add(parts.slice(0, i).join('-'));
+      set.add(parts.slice(0, i).join('-'));
     }
   }
 
-  return [...seen];
+  return { chain: [...set], set };
 }
 
 function selectPluralForm(cache: PluralCaches, locale: Locale, count: number, ordinal: boolean): string {
@@ -93,7 +89,7 @@ function interpolate(
   if (!template.includes('{')) return template;
 
   return template.replace(INTERPOLATION_PATTERN, (_match, varName: string) => {
-    const value = vars != null ? resolvePath(vars, varName) : undefined;
+    const value = vars?.[varName];
 
     if (value == null) {
       return onMissing({ key, locale, type: 'var', varName });
@@ -113,7 +109,6 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
   const fallback = Array.isArray(cfg.fallback) ? cfg.fallback.map(canon) : cfg.fallback ? [canon(cfg.fallback)] : [];
 
   const registry = new Map<Locale, LocaleRecord<M>>();
-  const loading = new Map<Locale, LoadingRecord<M>>();
   const subscribers = new Set<(snapshot: I18nSnapshot) => void>();
   const pluralCache: PluralCaches = new Map();
   const onMissing =
@@ -123,12 +118,15 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
       return `{${info.varName}}`;
     });
-  const onSubscriberError = cfg.onSubscriberError ?? (() => {});
+  const onSubscriberError =
+    cfg.onSubscriberError ?? ((error: unknown) => console.error('[i18nit] subscriber error', error));
 
   let version = 0;
   let snapshot: I18nSnapshot = { locale, version };
-  let activeChain = buildLocaleChain(locale, fallback);
+  let { chain: activeChain, set: activeChainSet } = buildLocaleChain(locale, fallback);
   let switchId = 0;
+  let _fmt: Formatter | undefined;
+  const scopeCache = new Map<string, ScopedI18n>();
 
   const bump = (): void => {
     version++;
@@ -145,27 +143,29 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     }
   };
 
-  const addListener = (callback: (snapshot: I18nSnapshot) => void, immediate = false): Unsubscribe => {
-    subscribers.add(callback);
-
-    if (immediate) {
-      try {
-        callback(snapshot);
-      } catch (error) {
-        onSubscriberError(error);
-      }
-    }
-
-    return () => subscribers.delete(callback);
-  };
-
   const findMessage = (key: string): string | undefined => {
+    const parts = key.split('.');
+
     for (const candidate of activeChain) {
-      const messages = registry.get(candidate)?.messages;
+      const entry = registry.get(candidate);
 
-      if (!messages) continue;
+      if (entry?.kind !== 'static') continue;
 
-      const value = resolvePath(messages, key);
+      let value: unknown = entry.messages;
+
+      for (const part of parts) {
+        if (value == null || typeof value !== 'object') {
+          value = undefined;
+          break;
+        }
+
+        if (!Object.hasOwn(value as object, part)) {
+          value = undefined;
+          break;
+        }
+
+        value = (value as Record<string, unknown>)[part];
+      }
 
       if (typeof value === 'string') return value;
     }
@@ -173,72 +173,58 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     return undefined;
   };
 
-  const setLocaleSource = (normalized: Locale, source: LocaleSource<M>): void => {
-    if (typeof source === 'function') {
-      registry.set(normalized, { kind: 'dynamic', loader: source as Loader<M> });
+  const register = (loc: Locale, source: LocaleSource<M>): void => {
+    const normalized = canon(loc);
+    const existing = registry.get(normalized);
 
+    // Skip if the source reference hasn't changed — avoids spurious subscriber notifications.
+    if (
+      (existing?.kind === 'static' && source === existing.messages) ||
+      (existing?.kind === 'dynamic' && source === existing.loader)
+    ) {
       return;
     }
 
-    registry.set(normalized, { kind: 'static', messages: source as M });
-  };
+    registry.set(normalized, makeRecord(source));
 
-  const register = (loc: Locale, source: LocaleSource<M>): void => {
-    const normalized = canon(loc);
-
-    setLocaleSource(normalized, source);
-
-    if (activeChain.includes(normalized)) bump();
+    if (activeChainSet.has(normalized)) bump();
   };
 
   if (cfg.catalogs) {
     for (const [loc, source] of Object.entries(cfg.catalogs)) {
-      setLocaleSource(canon(loc), source as LocaleSource<M>);
+      registry.set(canon(loc), makeRecord(source as LocaleSource<M>));
     }
   }
 
-  const preload = async (loc: Locale): Promise<void> => {
+  const preload = (loc: Locale): Promise<void> => {
     const normalized = canon(loc);
     const entry = registry.get(normalized);
 
-    if (!entry) {
-      throw new Error(`Missing locale source for "${normalized}".`);
-    }
+    if (!entry) return Promise.reject(new Error(`[i18nit/E001] Missing locale source for "${normalized}".`));
 
-    if (entry.kind === 'static') return;
+    if (entry.kind === 'static') return Promise.resolve();
 
-    if (entry.messages) return;
+    if (entry.loadingTask) return entry.loadingTask;
 
-    const active = loading.get(normalized);
+    // Assign the task synchronously so concurrent calls deduplicate against this entry.
+    entry.loadingTask = entry.loader().then(
+      (messages) => {
+        // Discard if the entry was replaced by a concurrent register() call.
+        if (registry.get(normalized) !== entry) return;
 
-    if (active?.entry === entry) {
-      await active.task;
+        registry.set(normalized, { kind: 'static', messages });
 
-      return;
-    }
+        if (activeChainSet.has(normalized)) bump();
+      },
+      (error: unknown) => {
+        // Clear so the next preload() call can retry after a loader failure.
+        if (registry.get(normalized) === entry) entry.loadingTask = undefined;
 
-    const task = (async () => {
-      const messages = await entry.loader(normalized);
+        throw error;
+      },
+    );
 
-      // Only apply if the registry entry is still the exact object we started
-      // loading from. Any call to register() replaces the entry with a new
-      // object, so a stale loader result from a superseded source is discarded.
-      if (registry.get(normalized) !== entry) return;
-
-      entry.messages = messages;
-
-      if (activeChain.includes(normalized)) bump();
-    })();
-
-    loading.set(normalized, { entry, task });
-
-    try {
-      await task;
-    } finally {
-      if (loading.get(normalized)?.task === task) {
-        loading.delete(normalized);
-      }
-    }
+    return entry.loadingTask;
   };
 
   function translate(key: MessageLeafKeys<M> | AnyKey, vars?: TranslateVars): string {
@@ -273,10 +259,16 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       return onMissing({ key: base, locale, type: 'key' });
     }
 
-    return interpolate(message, { ...(options?.vars ?? {}), count }, base, locale, onMissing);
+    return interpolate(message, options?.vars ? { ...options.vars, count } : { count }, base, locale, onMissing);
   }
 
   return {
+    get fmt() {
+      _fmt ??= createFormatter(() => locale);
+
+      return _fmt;
+    },
+
     getSnapshot() {
       return snapshot;
     },
@@ -300,6 +292,24 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
     register,
 
+    scope(prefix: MessageBranchKeys<M> | AnyKey): ScopedI18n {
+      const pre = String(prefix);
+      let cached = scopeCache.get(pre);
+
+      if (!cached) {
+        if (scopeCache.size >= MAX_SCOPE_CACHE) scopeCache.clear();
+
+        cached = {
+          has: (key) => findMessage(`${pre}.${key}`) !== undefined,
+          t: (key, vars?) => translate(`${pre}.${key}`, vars),
+          tp: (key, count, options?) => translatePlural(`${pre}.${key}`, count, options),
+        };
+        scopeCache.set(pre, cached);
+      }
+
+      return cached;
+    },
+
     async setLocale(next: Locale): Promise<void> {
       const normalized = canon(next);
 
@@ -312,12 +322,23 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       if (id !== switchId) return;
 
       locale = normalized;
-      activeChain = buildLocaleChain(locale, fallback);
+      ({ chain: activeChain, set: activeChainSet } = buildLocaleChain(locale, fallback));
+      _fmt?.clear();
       bump();
     },
 
     subscribe(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions): Unsubscribe {
-      return addListener(callback, options?.immediate === true);
+      subscribers.add(callback);
+
+      if (options?.immediate === true) {
+        try {
+          callback(snapshot);
+        } catch (error) {
+          onSubscriberError(error);
+        }
+      }
+
+      return () => subscribers.delete(callback);
     },
 
     t: translate,

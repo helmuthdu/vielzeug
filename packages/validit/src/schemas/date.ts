@@ -1,44 +1,57 @@
 import type { MessageFn } from '../core';
 
-import { ErrorCode, resolveMessage, Schema } from '../core';
+import { ErrorCode, Schema, resolveMessage } from '../core';
 import { _messages } from '../messages';
 
 export class DateSchema<Input = Date> extends Schema<Date, Input> {
   constructor() {
     super([
-      (value, path) =>
+      (value) =>
         value instanceof Date && !Number.isNaN(value.getTime())
           ? null
-          : [{ code: ErrorCode.invalid_date, message: _messages().date.type(), path }],
+          : [{ code: ErrorCode.invalid_date, message: _messages().date.type(), path: [] }],
     ]);
   }
 
   min(date: Date, message: MessageFn<{ min: Date; value: Date }> = (ctx) => _messages().date.min(ctx)): this {
-    return this._addValidator((value, path) => {
+    return this._addValidator((value) => {
       const typed = value as Date;
-
       if (typed >= date) return null;
-
-      return [{ code: ErrorCode.too_small, message: resolveMessage(message, { min: date, value: typed }), path }];
+      return [{ code: ErrorCode.too_small, message: resolveMessage(message, { min: date, value: typed }), params: { min: date }, path: [] }];
     });
   }
 
   max(date: Date, message: MessageFn<{ max: Date; value: Date }> = (ctx) => _messages().date.max(ctx)): this {
-    return this._addValidator((value, path) => {
+    return this._addValidator((value) => {
       const typed = value as Date;
-
       if (typed <= date) return null;
-
-      return [{ code: ErrorCode.too_big, message: resolveMessage(message, { max: date, value: typed }), path }];
+      return [{ code: ErrorCode.too_big, message: resolveMessage(message, { max: date, value: typed }), params: { max: date }, path: [] }];
     });
+  }
+
+  protected override _toSchemaBase(): Record<string, unknown> {
+    return { $comment: 'Date objects are not representable in JSON Schema. Validate as a string with a date format in JSON contexts.' };
+  }
+
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+    if (visitor.date) return visitor.date(this);
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
+    return other instanceof DateSchema;
+  }
+
+  protected override _construct(state: import('../core').SchemaState<any, any>): this {
+    const next = new DateSchema() as this;
+    next.state = state as any;
+    return next;
   }
 
   static coerce(): DateSchema<unknown> {
     return new DateSchema().preprocess((v: unknown) => {
       if (v instanceof Date) return v;
-
       if (typeof v === 'string' || typeof v === 'number') return new Date(v);
-
       return v;
     });
   }

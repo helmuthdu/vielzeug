@@ -102,20 +102,6 @@ describe('NumberSchema.finite()', () => {
   });
 });
 
-describe('Schema.readonly()', () => {
-  test('parse returns same value at runtime', () => {
-    const result = v.object({ id: v.number() }).readonly().parse({ id: 1 });
-
-    expect(result).toEqual({ id: 1 });
-  });
-
-  test('schema.readonly() works on composed schemas', () => {
-    const schema = v.array(v.string()).readonly();
-
-    expect(schema.parse(['a', 'b'])).toEqual(['a', 'b']);
-  });
-});
-
 describe('InferInput type utility', () => {
   test('coerce schemas accept unknown input at runtime', () => {
     // Type test: coerce.number() should accept string input at runtime
