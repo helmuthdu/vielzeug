@@ -1,21 +1,21 @@
 ---
 title: Deposit — API Reference
-description: Complete API reference for the Deposit browser storage adapters and query builder.
+description: Complete API reference for Deposit adapters, schema helpers, query builder, and plugin types.
 ---
 
 [[toc]]
 
 ## API At a Glance
 
-| Symbol                                   | Purpose                               | Execution mode              | Common gotcha                                   |
-| ---------------------------------------- | ------------------------------------- | --------------------------- | ----------------------------------------------- |
-| `createLocalStorage(dbName, schema)`     | Local browser storage adapter         | Sync factory, async methods | Requires `localStorage` availability            |
-| `createSessionStorage(dbName, schema)`   | Tab-scoped browser storage adapter    | Sync factory, async methods | Requires `sessionStorage` availability          |
-| `createCookie(dbName, schema, options?)` | Cookie-backed browser storage adapter | Sync factory, async methods | Requires `document` and is browser-only         |
-| `createIndexedDB()`                      | IndexedDB adapter with transactions   | Sync factory, async methods | `schemaVersion` must increase to run migrations |
-| `createMemory(schema)`                   | In-memory adapter for tests and SSR   | Sync factory, async methods | State is scoped to the instance; not persisted  |
-| `table<T>(key)`                          | Creates a typed schema entry          | Sync                        | —                                               |
-| `query(table)`                           | Build chainable in-memory queries     | Async execution             | Filters run over fetched records                |
+| Symbol | Purpose |
+| --- | --- |
+| `table<T>(key)` | Create a typed schema entry |
+| `ttl` | Duration helpers for TTL values |
+| `createLocalStorage(opts)` | LocalStorage adapter |
+| `createSessionStorage(opts)` | SessionStorage adapter |
+| `createIndexedDB(opts)` | IndexedDB adapter with atomic batch |
+| `createMemory(opts)` | In-memory adapter for tests and SSR |
+| `scheduleExpiredPrune(adapter, opts)` | Schedule periodic TTL pruning |
 
 ## Package Entry Points
 
@@ -23,26 +23,23 @@ description: Complete API reference for the Deposit browser storage adapters and
 
 ## Exports
 
-- `createLocalStorage`
-- `createSessionStorage`
-- `createCookie`
-- `createIndexedDB`
-- `createMemory`
-- `QueryBuilder`
-- `table`
-- `ttl`
-- Types: `Adapter`, `IndexedDBHandle`, `TransactionContext`, `RecordOf`, `KeyOf`, `MigrationContext`, `MigrationFn`, `Observer`, `TtlMs`
+**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`, `DepositError`, `DepositDisposedError`, `DepositMigrationError`, `DepositQuotaError`, `DepositScopeError`
 
-## Core Types
+**Types:** `Adapter`, `AnySchema`, `DebugInfo`, `DebugStats`, `DepositLogger`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `ReadQuery`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`
 
-### RecordOf and KeyOf
+---
+
+## Schema Helper
+
+### `table`
 
 ```ts
-type RecordOf<S, K extends keyof S> = /* record type for table K */;
-type KeyOf<S, K extends keyof S> = /* key value type for table K */;
+function table<T extends Record<string, unknown>, Key extends keyof T & string = keyof T & string>(
+  key: Key,
+): TableBuilder<T, Key>
 ```
 
-Example:
+Creates a typed schema entry. The primary-key field `key` must be a field of `T`.
 
 ```ts
 type User = { id: number; name: string };
@@ -50,105 +47,327 @@ type User = { id: number; name: string };
 const schema = {
   users: table<User>('id'),
 };
-
-type UserRecord = RecordOf<typeof schema, 'users'>; // User
-type UserKey = KeyOf<typeof schema, 'users'>; // number
 ```
 
-## Schema Helper
-
-### table
+Chain `.ttl(ms)` to apply a default TTL to all writes on the table:
 
 ```ts
-table<T extends Record<string, unknown>>(key: keyof T & string)
-```
+import { table, ttl } from '@vielzeug/deposit';
 
-Creates a typed schema entry. The generic `T` carries the record type; `key` is the primary key field.
-
-```ts
 const schema = {
-  users: table<User>('id'),
-  posts: table<Post>('id'),
+  sessions: table<Session>('id').ttl(ttl.minutes(30)),
 };
-
-// typeof schema inferred — no Schema<{...}> annotation needed
-type UserRecord = RecordOf<typeof schema, 'users'>; // User
-type UserKey = KeyOf<typeof schema, 'users'>; // number
 ```
+
+The TypeScript compiler will reject keys that do not exist on `T`, and downstream operations (`get`, `delete`, `has`, `upsert`) accept only the correct key type.
+
+---
+
+## TTL Helper
+
+```ts
+import { ttl, type TtlMs } from '@vielzeug/deposit';
+
+ttl.ms(n: number): TtlMs
+ttl.seconds(n: number): TtlMs
+ttl.minutes(n: number): TtlMs
+ttl.hours(n: number): TtlMs
+ttl.days(n: number): TtlMs
+```
+
+`TtlMs` is a branded `number` type. Raw numeric literals are rejected by the type checker — always use these helpers.
+
+All helpers throw synchronously if `n` is not a finite non-negative number. Passing an invalid `TtlMs` value directly to a write method also throws.
+
+---
+
+## `scheduleExpiredPrune`
+
+```ts
+function scheduleExpiredPrune<S extends AnySchema>(
+  adapter: Pick<Adapter<S>, 'pruneExpired'>,
+  options: { interval: number },
+): () => void
+```
+
+Calls `adapter.pruneExpired()` on a repeating interval. Returns a `stop` function that cancels the schedule.
+
+```ts
+import { scheduleExpiredPrune, ttl } from '@vielzeug/deposit';
+
+const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
+
+// cancel on teardown
+stop();
+```
+
+---
 
 ## Factories
 
-### createLocalStorage
+All four factories accept the same optional plugin options and return `Adapter<S>`.
+
+### `createLocalStorage`
 
 ```ts
-createLocalStorage<S>(dbName: string, schema: S): Adapter<S>
-```
-
-Creates a LocalStorage-backed adapter.
-
-### createSessionStorage
-
-```ts
-createSessionStorage<S>(dbName: string, schema: S): Adapter<S>
-```
-
-Creates a SessionStorage-backed adapter.
-
-### createCookie
-
-```ts
-createCookie<S>(
-  dbName: string,
-  schema: S,
-  options?: {
-    path?: string;
-    sameSite?: 'Lax' | 'None' | 'Strict';
-    secure?: boolean;
-  },
-): Adapter<S>
-```
-
-Creates a cookie-backed adapter for browser environments.
-
-Records are stored under cookie names derived from the database, table, and record key. TTL is encoded in the stored payload and also mapped to cookie `Max-Age` when provided.
-
-Cookie options:
-
-- `path` defaults to `'/'`
-- `sameSite` defaults to `'Strict'`
-- `secure` defaults to `false`
-
-### createIndexedDB
-
-```ts
-createIndexedDB<S>(options: {
-  dbName: string;
+createLocalStorage<S extends AnySchema>(options: {
+  logger?: DepositLogger;
+  name: string;
+  onMetrics?: (event: MetricsEvent) => void;
+  onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
   schema: S;
-  schemaVersion: number;
-  migrate?: (ctx: {
-    db: IDBDatabase;
-    oldVersion: number;
-    newVersion: number | null;
-    tx: IDBTransaction;
-  }) => void;
-}): IndexedDBHandle<S>
+  signals?: TableSignals<S>;
+  validators?: TableValidators<S>;
+}): Adapter<S>
 ```
 
-Creates an IndexedDB-backed adapter with transactions and migration support.
+`onQuotaExceeded` is called when a `setItem` throws a `QuotaExceededError`. Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow.
 
-`migrate` runs during IDB upgrade (`onupgradeneeded`) before deposit ensures declared object stores exist.
-
-### createMemory
+### `createSessionStorage`
 
 ```ts
-createMemory<S>(schema: S): Adapter<S>
+createSessionStorage<S extends AnySchema>(options: {
+  logger?: DepositLogger;
+  name: string;
+  onMetrics?: (event: MetricsEvent) => void;
+  onQuotaExceeded?: (table: keyof S, error: DepositQuotaError) => 'ignore' | 'throw';
+  schema: S;
+  signals?: TableSignals<S>;
+  validators?: TableValidators<S>;
+}): Adapter<S>
 ```
 
-Creates an in-memory adapter backed by a `Map`. No `dbName` required; each call returns an isolated instance.
+### `createIndexedDB`
 
-The memory adapter fully implements `Adapter<S>` including TTL: expired records are removed lazily on read, identical to the other adapters. Use this in tests and server-side rendering environments.
+```ts
+createIndexedDB<S extends AnySchema>(options: {
+  logger?: DepositLogger;
+  migrate?: MigrationFn;
+  name: string;
+  onMetrics?: (event: MetricsEvent) => void;
+  schema: S;
+  signals?: TableSignals<S>;
+  validators?: TableValidators<S>;
+  version: number;
+}): Adapter<S>
+```
 
-## Migration Types
+The IDB adapter opens the database lazily on first operation. `migrate` is called during `onupgradeneeded` when `version` is higher than the stored version. The adapter also opens a `BroadcastChannel` (when available) so observer notifications propagate across tabs.
+
+### `createMemory`
+
+```ts
+createMemory<S extends AnySchema>(options: {
+  logger?: DepositLogger;
+  name?: string;
+  onMetrics?: (event: MetricsEvent) => void;
+  schema: S;
+  signals?: TableSignals<S>;
+  validators?: TableValidators<S>;
+}): Adapter<S>
+```
+
+When `name` is provided and `BroadcastChannel` is available, all `createMemory` instances with the same `name` in the same origin replicate mutations to each other (cross-tab synchronisation). If `BroadcastChannel` is not available, the option is silently ignored.
+
+---
+
+## Adapter Interface
+
+```ts
+interface Adapter<S extends AnySchema> {
+  /**
+   * Multi-table write with deferred notifications. Atomic on IndexedDB.
+   * Only tables listed in `tables` can be accessed inside the callback.
+   */
+  batch<K extends keyof S, R>(
+    tables: readonly K[],
+    fn: (tx: TransactionContext<S, K>) => Promise<R>,
+  ): Promise<R>;
+
+  /** Count of live (non-expired) records. */
+  count<K extends keyof S>(table: K): Promise<number>;
+
+  /** Live vs expired record counts per table. For development use. */
+  debug(): Promise<DebugInfo<S>>;
+
+  delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
+
+  /** Delete multiple records by key in a single operation. Returns the count of deleted records. */
+  deleteMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<number>;
+
+  /** Remove all records from the table. */
+  clear<K extends keyof S>(table: K): Promise<void>;
+
+  /** Release all resources (observers, signal subscriptions, channel, DB connection). */
+  dispose(): void;
+
+  get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
+  getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
+
+  /**
+   * Fetch multiple records by key in a single operation.
+   * Preserves input key order. Missing keys yield `undefined`.
+   */
+  getMany<K extends keyof S>(table: K, keys: KeyOf<S, K>[]): Promise<Array<RecordOf<S, K> | undefined>>;
+
+  has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
+
+  /** Lazy async iteration over all live records. */
+  iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
+
+  /**
+   * Subscribe to table changes. Does **not** fire an initial snapshot by default.
+   * Pass `{ immediate: true }` to also receive the current table state on registration.
+   * Returns an unsubscribe function — call it on teardown.
+   */
+  observe<K extends keyof S>(
+    table: K,
+    listener: Observer<RecordOf<S, K>>,
+    options?: { immediate?: boolean },
+  ): () => void;
+
+  /**
+   * Subscribe to multiple tables at once. Fires a combined snapshot `{ [tableName]: records[] }`
+   * whenever any observed table changes. All tables are eagerly prefetched on registration.
+   * Throws `DepositScopeError` when `tables` is empty.
+   * Returns an unsubscribe function — call it on teardown.
+   */
+  observeMany<K extends keyof S>(
+    tables: readonly K[],
+    listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
+    options?: { immediate?: boolean },
+  ): () => void;
+
+  /**
+   * Explicitly delete all TTL-expired records from every table.
+   * Returns the number of records pruned per table.
+   */
+  pruneExpired(): Promise<{ [K in keyof S & string]: number }>;
+
+  put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
+  putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
+  query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
+
+  update<K extends keyof S>(
+    table: K,
+    key: KeyOf<S, K>,
+    changes: Partial<RecordOf<S, K>>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, K> | undefined>;
+
+  /** Read-modify-write. `fn` receives the current record (or undefined) and returns the new record. */
+  upsert<K extends keyof S>(
+    table: K,
+    key: KeyOf<S, K>,
+    fn: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, K>>;
+
+  /**
+   * Async iterator that yields a fresh snapshot on every table change,
+   * starting with an immediate snapshot. Auto-cleans up its observer on exit.
+   */
+  watch<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>[]>;
+}
+```
+
+### `observe` options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `immediate` | `boolean` | `false` | Fire the listener immediately with the current table contents |
+
+Returns an unsubscribe function. Call it on teardown to prevent memory leaks.
+
+### `observeMany` options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `immediate` | `boolean` | `false` | Fire the listener once all tables have been prefetched (current state) |
+
+---
+
+## TransactionContext
+
+Available inside `batch()` callbacks.
+
+```ts
+type TransactionContext<S extends AnySchema, K extends keyof S = keyof S> = {
+  clear<T extends K>(table: T): Promise<void>;
+  count<T extends K>(table: T): Promise<number>;
+  delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  /** Delete multiple records by key. Returns the count of deleted records. */
+  deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
+  get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
+  getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
+  /** Fetch multiple records by key. Preserves key order; missing keys yield `undefined`. */
+  getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+  /**
+   * Return the existing record if found, otherwise call `defaultFn()`, write it, and return it.
+   * On IndexedDB the check and insert are atomic (same IDB transaction).
+   */
+  getOrDefault<T extends K>(
+    table: T,
+    key: KeyOf<S, T>,
+    defaultFn: () => RecordOf<S, T>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, T>>;
+  has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
+  put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
+  putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
+  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
+  update<T extends K>(
+    table: T,
+    key: KeyOf<S, T>,
+    changes: Partial<RecordOf<S, T>>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, T> | undefined>;
+  upsert<T extends K>(
+    table: T,
+    key: KeyOf<S, T>,
+    fn: (existing: RecordOf<S, T> | undefined) => RecordOf<S, T>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, T>>;
+};
+```
+
+`batch()` is scoped to the tables listed in the first argument. The table list must not be empty, and operations on unlisted tables are rejected at both type level and runtime.
+
+> `getOrDefault` is only available inside `batch()` callbacks — it is not on the top-level `Adapter`.
+
+---
+
+## QueryBuilder
+
+Queries are lazy pipelines. Operations accumulate until a terminal method is called.
+
+```ts
+interface QueryBuilder<T extends Record<string, unknown>> {
+  // filter operators (chainable)
+  filter(fn: (value: T, index: number, array: T[]) => boolean): QueryBuilder<T>;
+  equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
+  between<K extends ComparableFieldKeys<T>>(field: K, lower: T[K], upper: T[K]): QueryBuilder<T>;
+  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T>;
+  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
+  limit(n: number): QueryBuilder<T>;
+  offset(n: number): QueryBuilder<T>;
+
+  // terminal methods
+  toArray(): Promise<T[]>;
+  count(): Promise<number>;
+  first(): Promise<T | undefined>;
+  delete(): Promise<number>;
+}
+```
+
+`delete()` returns the number of records removed. `between` and `orderBy` accept `number | string` fields.
+
+`ReadQuery<T>` is the same interface without `delete()`. Both are exported.
+
+---
+
+## Migration
 
 ```ts
 type MigrationContext = {
@@ -161,134 +380,130 @@ type MigrationContext = {
 type MigrationFn = (ctx: MigrationContext) => void;
 ```
 
-## Adapter Interface
+---
+
+## Debug
 
 ```ts
-interface Adapter<S> {
-  get<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
-  getAll<K extends keyof S>(table: K): Promise<RecordOf<S, K>[]>;
-  iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
-  forEach<K extends keyof S>(table: K, fn: (value: RecordOf<S, K>) => void | Promise<void>): Promise<void>;
-  has<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
-  getOrPut<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<RecordOf<S, K>>;
-  put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
-  putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
-  update<K extends keyof S>(
-    table: K,
-    key: KeyOf<S, K>,
-    changes: Partial<RecordOf<S, K>>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, K> | undefined>;
-  delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
-  deleteWhere<K extends keyof S>(table: K, predicate: (value: RecordOf<S, K>) => boolean): Promise<number>;
-  deleteAll<K extends keyof S>(table: K): Promise<number>;
-  count<K extends keyof S>(table: K): Promise<number>;
-  query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
-  dispose(): void;
-  observe<K extends keyof S>(
-    table: K,
-    listener: (value: RecordOf<S, K>[]) => void,
-    options?: { immediate?: boolean },
-  ): () => void;
-}
-```
+type DebugStats = {
+  expiredCount: number; // TTL-expired records not yet evicted
+  recordCount: number;  // live (non-expired) records
+};
 
-The common adapter contract shared by all Deposit adapters.
-
-## IndexedDBHandle
-
-```ts
-interface IndexedDBHandle<S> extends Adapter<S> {
-  transaction<K extends keyof S, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>): Promise<R>;
-}
-```
-
-Extends `Adapter` with transaction support. Cleanup is handled through the shared `dispose()` method.
-
-## TransactionContext
-
-```ts
-type TransactionContext<S, K extends keyof S> = {
-  get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
-  getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
-  iterate<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
-  forEach<T extends K>(table: T, fn: (value: RecordOf<S, T>) => void | Promise<void>): Promise<void>;
-  has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  getOrPut<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<RecordOf<S, T>>;
-  put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
-  putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
-  update<T extends K>(
-    table: T,
-    key: KeyOf<S, T>,
-    changes: Partial<RecordOf<S, T>>,
-    ttl?: TtlMs,
-  ): Promise<RecordOf<S, T> | undefined>;
-  delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  deleteWhere<T extends K>(table: T, predicate: (value: RecordOf<S, T>) => boolean): Promise<number>;
-  deleteAll<T extends K>(table: T): Promise<number>;
-  count<T extends K>(table: T): Promise<number>;
-  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
+type DebugInfo<S extends AnySchema> = {
+  tables: Array<{ name: keyof S & string } & DebugStats>;
 };
 ```
 
-This context mirrors adapter methods and is scoped to the current transaction.
+---
 
-## QueryBuilder
+## Plugin Types
+
+All plugins use structural interfaces. Pass the actual library object directly — no adapter or wrapper needed.
+
+### `DepositLogger`
+
+A minimal logger interface satisfied structurally by `@vielzeug/logit` Logger.
 
 ```ts
-class QueryBuilder<T extends Record<string, unknown>> {
-  filter(fn: (value: T, index: number, array: T[]) => boolean): QueryBuilder<T>;
-  equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
-  between<K extends keyof T>(
-    field: K,
-    lower: Extract<NonNullable<T[K]>, number | string>,
-    upper: Extract<NonNullable<T[K]>, number | string>,
-  ): QueryBuilder<T>;
-  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T>;
-  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
-  limit(n: number): QueryBuilder<T>;
-  offset(n: number): QueryBuilder<T>;
-  toArray(): Promise<T[]>;
-  count(): Promise<number>;
-  first(): Promise<T | undefined>;
+interface DepositLogger {
+  error(messageOrContext?: Record<string, unknown> | Error | string, message?: string): void;
 }
 ```
 
-Query pipelines are lazy and execute only on `toArray()` / `count()` / `first()`.
+Pass a logit Logger instance directly — no adapter needed.
 
-Validation rules:
-
-- `limit(n)` requires `n` to be a non-negative integer.
-- `offset(n)` requires `n` to be a non-negative integer.
-- `count()` returns the size of the fully transformed query result.
-
-## TTL Helper
+### `ReactiveSignal` / `TableSignals`
 
 ```ts
-type TtlMs = number & { readonly __brand: 'TtlMs' };
-
-const ttl = {
-  ms(n: number): TtlMs;
-  seconds(n: number): TtlMs;
-  minutes(n: number): TtlMs;
-  hours(n: number): TtlMs;
-  days(n: number): TtlMs;
+interface ReactiveSignal<T> {
+  update(fn: (current: T) => T): void;
 }
+
+type TableSignals<S extends AnySchema> = {
+  [K in keyof S]?: ReactiveSignal<RecordOf<S, K>[]>;
+};
 ```
 
-Use TTL by passing one of these values as the third argument to `put(table, value, ttl)`.
+`@vielzeug/stateit` `Signal<T>` and `Store<T>` both satisfy `ReactiveSignal<T>` structurally. Signals are wired at construction time and cleaned up on `dispose()`.
 
-Validation rules:
+```ts
+import { signal } from '@vielzeug/stateit';
 
-- All TTL helper inputs must be finite and non-negative.
-- Invalid TTL input throws synchronously from `ttl.*(...)`.
-- Passing an invalid `ttl` value directly to write methods also throws.
+const usersSignal = signal<User[]>([]);
 
-Cookie observers are local to the current adapter instance. Cookie changes made in other tabs are not observable.
+const db = createMemory({ schema, signals: { users: usersSignal } });
+```
 
-## Error Behavior
+### `RecordValidator` / `TableValidators`
 
-- `createLocalStorage` methods throw when browser storage is unavailable.
-- `createSessionStorage` methods throw when browser storage is unavailable.
-- LocalStorage/SessionStorage writes throw on quota exceed (`QuotaExceededError`) with a descriptive message.
-- IndexedDB open/transaction failures throw adapter-scoped errors with `cause` attached when available.
+```ts
+interface RecordValidator<T> {
+  parse(value: unknown): T;
+}
+
+type TableValidators<S extends AnySchema> = {
+  [K in keyof S]?: RecordValidator<RecordOf<S, K>>;
+};
+```
+
+A `@vielzeug/validit` schema satisfies `RecordValidator` directly. Any object with `parse` works. Validators run before every `put`, `putAll`, `update`, and `upsert`.
+
+### `MetricsEvent`
+
+```ts
+type MetricsEvent = {
+  duration: number;
+  operation:
+    | 'batch' | 'count' | 'delete' | 'deleteMany' | 'clear' | 'get' | 'getAll' | 'getMany'
+    | 'getOrDefault' | 'has' | 'iterate' | 'put' | 'putAll' | 'query' | 'queryDelete'
+    | 'update' | 'upsert';
+  /** Table name. For `batch` operations this is `'*'` because a batch may span multiple tables. */
+  table: string;
+};
+```
+
+---
+
+## Error Classes
+
+All errors thrown by `@vielzeug/deposit` extend `DepositError`. You can catch the base class to handle any deposit error, or catch specific subclasses for fine-grained handling.
+
+```ts
+import {
+  DepositDisposedError,
+  DepositError,
+  DepositMigrationError,
+  DepositQuotaError,
+  DepositScopeError,
+} from '@vielzeug/deposit';
+```
+
+| Class | Extends | Thrown when |
+| --- | --- | --- |
+| `DepositError` | `Error` | Base class — catch-all for any deposit error |
+| `DepositDisposedError` | `DepositError` | Any operation after `dispose()` has been called |
+| `DepositScopeError` | `DepositError` | `batch()` accesses a table outside its declared scope; empty array passed to `observeMany` |
+| `DepositQuotaError` | `DepositError` | A LocalStorage / SessionStorage write exceeds the storage quota |
+| `DepositMigrationError` | `DepositError` | IndexedDB `onupgradeneeded` migration callback threw |
+
+---
+
+## Utility Types
+
+```ts
+/** Extract the record type for a given table. */
+type RecordOf<S extends AnySchema, K extends keyof S> = ...;
+
+/** Extract the primary-key value type for a given table. */
+type KeyOf<S extends AnySchema, K extends keyof S> = ...;
+
+/** The shape of a single schema entry (from `table<T>(key)`). */
+type SchemaEntry<T extends Record<string, unknown>, Key extends keyof T & string> = {
+  defaultTtl?: TtlMs;
+  key: Key;
+};
+
+/** Observer callback type. */
+type Observer<T> = (records: T[]) => void;
+```

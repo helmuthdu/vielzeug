@@ -1,15 +1,15 @@
 ---
-description: Typed browser storage with a compact API for LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory.
+description: Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
 package: deposit
 category: storage
-keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, cookie, session]
-related: [fetchit, logit, toolkit]
-exports: [createLocalStorage, createSessionStorage, createCookie, createIndexedDB, createMemory, table]
+keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
+related: [fetchit, logit, stateit, validit, toolkit]
+exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune, DepositError, DepositDisposedError, DepositMigrationError, DepositQuotaError, DepositScopeError]
 ---
 
 # @vielzeug/deposit
 
-> Typed browser storage with a compact API for LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory.
+> Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/deposit)](https://www.npmjs.com/package/@vielzeug/deposit) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -18,11 +18,11 @@ exports: [createLocalStorage, createSessionStorage, createCookie, createIndexedD
 
 **Package:** `@vielzeug/deposit` &nbsp;·&nbsp; **Category:** Storage
 
-**Key exports:** `createLocalStorage`, `createSessionStorage`, `createCookie`, `createIndexedDB`, `createMemory`, `table`
+**Key exports:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`
 
-**When to use:** Typed browser storage with a compact API for LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory.
+**When to use:** Structured, queryable browser storage with TTL, reactivity, and TypeScript types.
 
-**Related:** [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/logit](https://vielzeug.dev/logit/) · [@vielzeug/toolkit](https://vielzeug.dev/toolkit/)
+**Related:** [@vielzeug/fetchit](https://vielzeug.dev/fetchit/) · [@vielzeug/logit](https://vielzeug.dev/logit/) · [@vielzeug/stateit](https://vielzeug.dev/stateit/) · [@vielzeug/validit](https://vielzeug.dev/validit/) · [@vielzeug/toolkit](https://vielzeug.dev/toolkit/)
 
 </details>
 
@@ -39,7 +39,7 @@ yarn add @vielzeug/deposit
 ## Quick Start
 
 ```ts
-import { createIndexedDB, table } from '@vielzeug/deposit';
+import { createIndexedDB, table, ttl } from '@vielzeug/deposit';
 
 type User = { id: number; name: string; age: number };
 
@@ -47,15 +47,21 @@ const schema = {
   users: table<User>('id'),
 };
 
-const db = createIndexedDB({ dbName: 'my-app', schema, schemaVersion: 1 });
+const db = createIndexedDB({ name: 'my-app', schema, version: 1 });
 
 await db.putAll('users', [
   { id: 1, name: 'Alice', age: 30 },
   { id: 2, name: 'Bob', age: 25 },
 ]);
 
+// TTL — always use the ttl.* helpers
+await db.put('users', { id: 3, name: 'Carol', age: 28 }, ttl.hours(1));
+
 const first = await db.query('users').between('age', 18, 99).orderBy('name').first();
 const exists = await db.has('users', 1);
+
+void first;
+void exists;
 ```
 
 ## Documentation

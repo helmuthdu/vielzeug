@@ -1,11 +1,11 @@
 ---
 title: Deposit — Minimal Typed Browser Storage
-description: Typed browser storage with a compact API for LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory.
+description: Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
 package: deposit
 category: storage
-keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, cookie, session]
-related: [fetchit, logit, toolkit]
-exports: [createLocalStorage, createSessionStorage, createCookie, createIndexedDB, createMemory, table]
+keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
+related: [fetchit, logit, stateit, validit, toolkit]
+exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune, DepositError, DepositDisposedError, DepositMigrationError, DepositQuotaError, DepositScopeError]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -21,22 +21,22 @@ exports: [createLocalStorage, createSessionStorage, createCookie, createIndexedD
 
 **Package:** `@vielzeug/deposit` &nbsp;·&nbsp; **Category:** Storage
 
-**Key exports:** `createLocalStorage`, `createSessionStorage`, `createCookie`, `createIndexedDB`, `createMemory`, `table`
+**Key exports:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`
 
-**When to use:** Structured, queryable browser storage with TTL and TypeScript types. Unified API across LocalStorage, IndexedDB, cookies, and in-memory.
+**When to use:** Structured, queryable browser storage with TTL, reactivity, and TypeScript types.
 
-**Related:** [Fetchit](/fetchit/) · [Logit](/logit/) · [Toolkit](/toolkit/)
+**Related:** [Fetchit](/fetchit/) · [Logit](/logit/) · [Stateit](/stateit/) · [Validit](/validit/) · [Toolkit](/toolkit/)
 
 </details>
 
-`@vielzeug/deposit` is a compact, typed browser storage library with five interchangeable adapters:
+`@vielzeug/deposit` is a compact, typed storage layer with four adapters:
 
-- `createLocalStorage(dbName, schema)` for lightweight browser persistence
-- `createSessionStorage(dbName, schema)` for tab-scoped persistence
-- `createCookie(dbName, schema, options?)` for small browser state that should ride with requests
-- `createIndexedDB()` for transactional storage
-- `createMemory(schema)` for tests and SSR environments
+- `createLocalStorage({ name, schema })` — lightweight browser persistence
+- `createSessionStorage({ name, schema })` — tab-scoped persistence
+- `createIndexedDB({ name, schema, version })` — transactional, atomic storage
+- `createMemory({ schema })` — in-process store for tests and SSR
 
+All four adapters share the same `Adapter<S>` interface, so you can swap backends without touching application code.
 
 ## Installation
 
@@ -59,7 +59,7 @@ yarn add @vielzeug/deposit
 ## Quick Start
 
 ```ts
-import { createIndexedDB, table } from '@vielzeug/deposit';
+import { createIndexedDB, table, ttl } from '@vielzeug/deposit';
 
 type User = { id: number; name: string; age: number };
 
@@ -67,78 +67,59 @@ const schema = {
   users: table<User>('id'),
 };
 
-const db = createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
+const db = createIndexedDB({ name: 'app', schema, version: 1 });
 
 await db.put('users', { id: 1, name: 'Alice', age: 30 });
-const first = await db.query('users').between('age', 18, 99).first();
+await db.put('users', { id: 2, name: 'Bob', age: 25 }, ttl.hours(1));
+
+const adults = await db.query('users').between('age', 18, 99).orderBy('name').toArray();
+
+void adults;
 ```
 
 ## Why Deposit?
 
 Native browser storage APIs are powerful but inconsistent and repetitive to use directly.
 
-- Typed table schemas via `table<T>()`
-- Five backends behind one interface (`createLocalStorage`, `createSessionStorage`, `createCookie`, `createIndexedDB`, `createMemory`)
-- Compact query builder for common read patterns
-- TTL on writes
-- Atomic multi-table transactions and cross-tab updates (IndexedDB)
-
-```ts
-import { createLocalStorage, table } from '@vielzeug/deposit';
-
-// Before: direct browser API and manual serialization
-localStorage.setItem('users:1', JSON.stringify({ id: 1, name: 'Alice' }));
-
-// After: typed schema + consistent adapter API
-const schema = { users: table<User>('id') };
-const local = createLocalStorage('app', schema);
-await local.put('users', { id: 1, name: 'Alice', age: 30 });
-```
-
-| Feature                                                                   | Deposit                                       | Dexie.js            | Native APIs        |
-| ------------------------------------------------------------------------- | --------------------------------------------- | ------------------- | ------------------ |
-| Bundle size                                                               | <PackageInfo package="deposit" type="size" /> | ~29 kB              | 0 kB               |
-| Typed schema ergonomics                                                   | ✅ (`table<T>()`)                             | ✅                  | ❌                 |
-| LocalStorage + SessionStorage + Cookie + IndexedDB + Memory under one API | ✅                                            | ❌ (IndexedDB only) | ❌                 |
-| Built-in TTL on writes                                                    | ✅                                            | ❌                  | ❌                 |
-| Chainable query helpers                                                   | ✅                                            | ✅                  | ❌                 |
-| Atomic transactions                                                       | ✅ (IndexedDB adapter)                        | ✅                  | ⚠️ (manual wiring) |
-
-**Use Deposit when** you want a lightweight typed API that can target multiple browser storage backends with built-in TTL.
-
-**Use Dexie.js when** you want a feature-rich IndexedDB-first toolkit and don't need LocalStorage parity in the same abstraction.
-
-**Use native APIs directly when** you need the absolute minimum abstraction and are comfortable handling serialization, keying, migrations, and transaction plumbing yourself.
+- Typed table schemas via `table<T>(key)`
+- One `Adapter<S>` interface across all four backends
+- Chainable query builder for filtering, sorting, pagination, and predicate deletes
+- TTL on any write — enforced via the branded `TtlMs` type; use `ttl.*` helpers
+- Reactive reads via `observe(table, listener)` and `watch(table)` async iterator
+- Deferred-notification `batch()` for multi-table writes; atomic IDB transactions for IndexedDB
+- Signal plugin: wire any `@vielzeug/stateit` signal directly — no glue code
+- Validation, structured logging, and metrics hooks — all zero-dependency structural interfaces
 
 ## Features
 
-- **Typed schemas** — `table<T>(key)` factory, full type inference, no annotation boilerplate
-- **Adapter parity** — same `Adapter` surface for LocalStorage, SessionStorage, Cookie, IndexedDB, and Memory
-- **Chainable queries** — `equals`, `between`, `startsWith`, `orderBy`, `limit`, `offset`, `first`
-- **TTL support** — auto-expire records via `ttl.ms/seconds/minutes/hours/days`
-- **Bulk writes** — `putAll()` for atomic batch inserts
-- **Existence check** — `has()` without loading the full record
-- **Record utilities** — `forEach`, `getOrPut`, `update`, `deleteWhere`
-- **Reactivity** — `observe(table, listener, options?)` with immediate snapshot and unsubscribe
-- **Transactional writes** — `transaction()` with rollback on callback failure
-- **In-memory adapter** — browser-free, zero-setup; ideal for tests and SSR
-- **Zero dependencies** — small and easy to audit
+| Feature | Details |
+| --- | --- |
+| **Typed schemas** | `table<T>(key)` infers record and primary-key types |
+| **Adapter parity** | `LocalStorage`, `SessionStorage`, `IndexedDB`, `Memory` all implement `Adapter<S>` |
+| **Queries** | `filter`, `equals`, `between`, `startsWith`, `orderBy`, `limit`, `offset` |
+| **Terminal actions** | `toArray()`, `count()`, `first()`, `delete()` |
+| **Lazy iteration** | `iterate(table)` yields records one at a time |
+| **Reactive stream** | `watch(table)` — async iterator that yields a snapshot on every change |
+| **Bulk lookup** | `getMany(table, keys)` — fetch multiple records by key in one call |
+| **Bulk delete** | `deleteMany(table, keys)` — delete multiple records by key in one call |
+| **TTL** | `ttl.ms/seconds/minutes/hours/days` — branded, validated at write time |
+| **TTL pruning** | `pruneExpired()` · `scheduleExpiredPrune(db, { interval })` |
+| **Reactivity** | `observe(table, fn, { immediate? })` — subscribe to table changes |
+| **Multi-table reactivity** | `observeMany(tables, fn, { immediate? })` — combined snapshot across tables |
+| **Batch** | `batch(tables, tx => ...)` — deferred notifications on all adapters; atomic on IDB |
+| **Upsert** | `upsert(table, key, fn)` — read-modify-write in one call |
+| **Read-or-insert** | `getOrDefault(table, key, defaultFn)` — inside `batch()` only |
+| **Debug** | `debug()` — live vs expired record counts per table |
+| **Typed errors** | `DepositError`, `DepositScopeError`, `DepositDisposedError`, `DepositQuotaError`, `DepositMigrationError` |
+| **Plugins** | `signals`, `logger`, `validators`, `onMetrics`, `onQuotaExceeded` |
 
 ## Compatibility
 
-| Environment | Support                                                                |
-| ----------- | ---------------------------------------------------------------------- |
-| Browser     | ✅                                                                     |
-| Node.js     | ⚠️ (`createMemory` works; browser adapters require web APIs)           |
+| Environment | Support |
+| ----------- | ------- |
+| Browser     | ✅ |
+| Node.js     | ⚠️ (`createMemory` works; browser adapters require web APIs) |
 | SSR         | ⚠️ (`createMemory` works directly; browser adapters require polyfills) |
-
-Notes:
-
-- `createLocalStorage` requires `localStorage`.
-- `createSessionStorage` requires `sessionStorage`.
-- `createCookie` requires `document` and is browser-only.
-- `createIndexedDB` requires `indexedDB`.
-- `createMemory` has no environment requirements.
 
 ## Documentation
 
@@ -149,7 +130,8 @@ Notes:
 ## See Also
 
 - [Stateit](/stateit/)
-- [Formit](/formit/)
+- [Fetchit](/fetchit/)
+- [Logit](/logit/)
 - [Validit](/validit/)
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

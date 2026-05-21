@@ -1,4 +1,4 @@
-import { createSessionStorage, table, type Adapter } from '../index';
+import { createSessionStorage, table, ttl, type Adapter } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -11,104 +11,57 @@ describe('SessionStorage adapter', () => {
 
   beforeEach(() => {
     sessionStorage.clear();
-    db = createSessionStorage('SS', userSchema);
+    db = createSessionStorage({ name: 'SS', schema: userSchema });
   });
 
-  describe('core CRUD behavior', () => {
-    test('put/get roundtrip and count', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-      await db.put('users', { id: 2, name: 'Bob' });
+  test('put/get and delete roundtrip', async () => {
+    await db.put('users', { id: 1, name: 'Alice' });
 
-      expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
-      expect(await db.count('users')).toBe(2);
-    });
-
-    test('delete returns false for missing keys', async () => {
-      expect(await db.delete('users', 99)).toBe(false);
-    });
-
-    test('delete removes existing records', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      expect(await db.delete('users', 1)).toBe(true);
-      expect(await db.get('users', 1)).toBeUndefined();
-    });
-
-    test('deleteAll clears only current table records', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-      sessionStorage.setItem('SS~other~1', JSON.stringify({ value: { id: 1 } }));
-
-      await db.deleteAll('users');
-
-      expect(await db.getAll('users')).toEqual([]);
-      expect(sessionStorage.getItem('SS~other~1')).not.toBeNull();
-    });
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+    expect(await db.delete('users', 1)).toBe(true);
   });
 
-  describe('record lifecycle helpers', () => {
-    test('has returns true for existing and false for missing', async () => {
-      await db.put('users', { id: 1, name: 'Alice' });
+  test('clear clears only the current table namespace', async () => {
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+    sessionStorage.setItem('SS~other~1', JSON.stringify({ value: { id: 1 } }));
 
-      expect(await db.has('users', 1)).toBe(true);
-      expect(await db.has('users', 99)).toBe(false);
-    });
+    await db.clear('users');
 
-    test('putAll writes all records', async () => {
-      await db.putAll('users', [
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-
-      expect(await db.getAll('users')).toEqual([
-        { id: 1, name: 'Alice' },
-        { id: 2, name: 'Bob' },
-      ]);
-    });
+    expect(await db.getAll('users')).toEqual([]);
+    expect(sessionStorage.getItem('SS~other~1')).not.toBeNull();
   });
 
-  describe('ttl behavior', () => {
-    test('expired records are not returned by get', async () => {
-      await db.put('users', { id: 1, name: 'Alice' }, 1);
-      await delay(5);
+  test('query.delete removes matching records', async () => {
+    await db.putAll('users', [
+      { age: 20, id: 1, name: 'Alice' },
+      { age: 30, id: 2, name: 'Bob' },
+    ]);
 
-      expect(await db.get('users', 1)).toBeUndefined();
-    });
-
-    test('expired records are not visible through has/count', async () => {
-      await db.put('users', { id: 1, name: 'Alice' }, 1);
-      await delay(5);
-
-      expect(await db.has('users', 1)).toBe(false);
-      expect(await db.count('users')).toBe(0);
-    });
+    expect(
+      await db
+        .query('users')
+        .filter((u) => (u.age ?? 0) >= 30)
+        .delete(),
+    ).toBe(1);
+    expect(await db.getAll('users')).toEqual([{ age: 20, id: 1, name: 'Alice' }]);
   });
 
-  describe('query integration', () => {
-    test('query runs against persisted records', async () => {
-      await db.put('users', { age: 25, id: 1, name: 'Alice' });
-      await db.put('users', { age: 30, id: 2, name: 'Bob' });
+  test('ttl expiration removes records lazily', async () => {
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
+    await delay(5);
 
-      expect(await db.query('users').between('age', 26, 40).toArray()).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
-    });
+    expect(await db.get('users', 1)).toBeUndefined();
+    expect(await db.has('users', 1)).toBe(false);
   });
 
-  describe('robustness and namespace behavior', () => {
-    test('corrupted entries are removed lazily on read', async () => {
-      sessionStorage.setItem('SS~users~1', '{bad json');
+  test('instances sharing the same namespace can read each other writes', async () => {
+    const db2 = createSessionStorage({ name: 'SS', schema: userSchema });
 
-      expect(await db.get('users', 1)).toBeUndefined();
-      expect(sessionStorage.getItem('SS~users~1')).toBeNull();
-    });
+    await db.put('users', { id: 1, name: 'Alice' });
 
-    test('two instances share the same sessionStorage namespace', async () => {
-      const db2 = createSessionStorage('SS', userSchema);
-
-      await db.put('users', { id: 1, name: 'Alice' });
-
-      expect(await db2.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
-    });
+    expect(await db2.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
   });
 });

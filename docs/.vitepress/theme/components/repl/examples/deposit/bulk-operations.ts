@@ -5,7 +5,7 @@ const schema = {
   items: table('id'),
 }
 
-const db = createLocalStorage('bulk-demo', schema)
+const db = createLocalStorage({ name: 'bulk-demo', schema })
 
 const items = Array.from({ length: 10 }, (_, index) => ({
   id: index + 1,
@@ -15,9 +15,19 @@ const items = Array.from({ length: 10 }, (_, index) => ({
 await db.putAll('items', items)
 console.log('Inserted', items.length, 'items')
 
-const deleted = await db.deleteWhere('items', (item) => item.id <= 3)
-console.log('Deleted items:', deleted)
-console.log('Remaining count:', await db.count('items'))
+// getMany — fetch multiple by key in one call (missing keys return undefined)
+const [first, missing, third] = await db.getMany('items', [1, 99, 3])
+console.log('getMany [1, 99, 3]:', first?.id, missing, third?.id)
+
+// deleteMany — remove multiple by key, returns count deleted
+const deleted = await db.deleteMany('items', [1, 2, 3, 99])
+console.log('deleteMany [1,2,3,99] deleted:', deleted) // 3 (99 did not exist)
+
+// query-based delete for filter-driven removal
+const queryDeleted = await db.query('items').filter((item) => item.id <= 6).delete()
+console.log('Query-deleted items with id ≤ 6:', queryDeleted)
+
+console.log('Remaining count:', await db.query('items').count())
 console.log('First remaining item:', await db.query('items').orderBy('id', 'asc').first())`,
   name: 'Bulk Operations',
 };

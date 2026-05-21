@@ -5,7 +5,7 @@ const schema = {
   users: table('id'),
 }
 
-const db = createLocalStorage('demo', schema)
+const db = createLocalStorage({ name: 'demo', schema })
 
 await db.put('users', { id: 1, name: 'Alice', email: 'alice@example.com', age: 25 })
 await db.put('users', { id: 2, name: 'Bob', email: 'bob@example.com', age: 30 })

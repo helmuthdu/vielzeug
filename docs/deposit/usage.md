@@ -5,13 +5,7 @@ description: Practical patterns for using Deposit with LocalStorage, SessionStor
 
 [[toc]]
 
-::: tip New to Deposit?
-Start with the [Overview](./index.md) for installation and quick context, then use this page for end-to-end usage patterns.
-:::
-
 ## Define a Schema
-
-The `table<T>()` factory creates a typed schema entry. Pass the record type as a generic and the primary key field name as the argument.
 
 ```ts
 import { table } from '@vielzeug/deposit';
@@ -25,118 +19,160 @@ const schema = {
 };
 ```
 
-Record and key types are inferred from `table<T>()`. `typeof schema` serves as the schema type wherever needed.
+`table<T>(key)` captures both the record type and the primary-key field name. The TypeScript compiler enforces that `key` is a valid field of `T`, and downstream operations — `get`, `delete`, `has`, `upsert` — accept only the correct key type.
+
+You can set a per-table default TTL with `.ttl()`:
+
+```ts
+import { table, ttl } from '@vielzeug/deposit';
+
+const schema = {
+  // every write to sessions uses a 30-minute TTL unless overridden at the call site
+  sessions: table<Session>('id').ttl(ttl.minutes(30)),
+};
+```
 
 ## Create an Adapter
+
+All four factories return the same `Adapter<S>` interface and accept the same optional plugin options.
 
 ### LocalStorage
 
 ```ts
 import { createLocalStorage } from '@vielzeug/deposit';
 
-const local = createLocalStorage('app', schema);
+const db = createLocalStorage({ name: 'app', schema });
 ```
-
-Use this adapter for simple browser persistence where transactional behavior is not required.
 
 ### SessionStorage
 
 ```ts
 import { createSessionStorage } from '@vielzeug/deposit';
 
-const session = createSessionStorage('app', schema);
+const db = createSessionStorage({ name: 'app', schema });
 ```
-
-Use this adapter for tab-scoped persistence that resets when the tab or window closes.
-
-### Cookie
-
-```ts
-import { createCookie } from '@vielzeug/deposit';
-
-const cookie = createCookie('app', schema, {
-  path: '/',
-  sameSite: 'Strict',
-});
-```
-
-Use this adapter for small browser state that should be available through cookies. It is browser-only, so it is a good fit when you want persistence without relying on Web Storage APIs.
 
 ### IndexedDB
 
 ```ts
 import { createIndexedDB } from '@vielzeug/deposit';
 
-const idb = createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
+const db = createIndexedDB({ name: 'app', schema, version: 1 });
 ```
-
-Use this adapter when you need atomic transactions or larger datasets.
 
 ### Memory
 
 ```ts
 import { createMemory } from '@vielzeug/deposit';
 
-const mem = createMemory(schema);
+const db = createMemory({ schema });
 ```
 
-Use this adapter in tests, SSR environments, or wherever browser storage APIs are unavailable. Each `createMemory(schema)` call returns a fully isolated instance — no `dbName` is needed. The interface is identical to the browser adapters.
+No browser APIs required. Use this in unit tests and SSR environments.
+
+Pass an optional `name` to enable cross-tab (or cross-window) synchronisation via `BroadcastChannel`. All `createMemory` instances with the same `name` in the same origin replicate mutations to each other.
+
+```ts
+const db = createMemory({ name: 'shared-state', schema });
+```
+
+If `BroadcastChannel` is not available in the environment, the option is silently ignored.
 
 ## Basic CRUD
 
 ```ts
-await idb.put('users', { id: 1, name: 'Alice', age: 30 });
-
-const one = await idb.get('users', 1);
-const all = await idb.getAll('users');
-
-await idb.delete('users', 1);
-await idb.deleteAll('users');
-
-const total = await idb.count('users');
-```
-
-`count()` reflects live records and excludes TTL-expired entries.
-
-### Existence check
-
-`has()` returns `true` if a live record exists for the given key, without loading the full record.
-
-```ts
-const exists = await idb.has('users', 1); // true
-const missing = await idb.has('users', 99); // false
-```
-
-### Bulk writes
-
-`putAll()` writes multiple records in a single operation. In IndexedDB this runs as one atomic transaction.
-
-```ts
-await idb.putAll('users', [
-  { id: 1, name: 'Alice', age: 30 },
+// write
+await db.put('users', { id: 1, name: 'Alice', age: 30 });
+await db.putAll('users', [
   { id: 2, name: 'Bob', age: 25 },
+  { id: 3, name: 'Carol', age: 28 },
 ]);
 
-// With TTL
-await idb.putAll('sessions', sessions, ttl.hours(1));
+// read
+const alice  = await db.get('users', 1);         // User | undefined
+const all    = await db.getAll('users');          // User[]
+const total  = await db.count('users');           // number (live records only)
+const exists = await db.has('users', 1);          // boolean
+
+// update — merges fields, keeps the original key
+const updated = await db.update('users', 1, { age: 31 });
+
+// delete
+await db.delete('users', 1);
+await db.clear('users');
+
+void alice, all, total, exists, updated;
 ```
 
+`update` returns the merged record, or `undefined` when the key is not found.
+
+## Bulk Key Lookup
+
+`getMany(table, keys)` fetches multiple records in a single call. Missing keys return `undefined`. The result array preserves the input key order.
+
+```ts
+const [alice, missing, carol] = await db.getMany('users', [1, 99, 3]);
+// → [User, undefined, User]
+```
+
+`getMany` is also available inside `batch()` callbacks.
+
 ## Use TTL
+
+TTL must always be specified via the `ttl` helper. Raw numbers are rejected at the type level.
 
 ```ts
 import { ttl } from '@vielzeug/deposit';
 
-await idb.put('users', { id: 1, name: 'Alice', age: 30 }, ttl.minutes(5));
-
-await idb.put('users', { id: 2, name: 'Bob', age: 28 }, ttl.hours(1));
+await db.put('users', { id: 1, name: 'Alice', age: 30 }, ttl.minutes(5));
+await db.put('users', { id: 2, name: 'Bob', age: 25 }, ttl.hours(24));
+await db.put('users', { id: 3, name: 'Carol', age: 28 }, ttl.days(7));
+await db.put('users', { id: 4, name: 'Dave', age: 22 }, ttl.ms(500));
 ```
 
-Available helpers: `ttl.ms`, `ttl.seconds`, `ttl.minutes`, `ttl.hours`, `ttl.days`.
+Expired records are evicted lazily on the next read. `count()` and `getAll()` exclude them.
+
+### Prune Expired Records
+
+For write-heavy tables that are rarely read, expired records accumulate without lazy eviction. `pruneExpired()` sweeps all tables explicitly and returns the count deleted per table.
+
+```ts
+const pruned = await db.pruneExpired();
+// { users: 42, sessions: 10 }
+```
+
+Schedule periodic pruning with `scheduleExpiredPrune`:
+
+```ts
+import { scheduleExpiredPrune, ttl } from '@vielzeug/deposit';
+
+const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
+
+// on teardown
+stop();
+```
+
+On **IndexedDB**, pruning uses a cursor-based pass — expired records are deleted without loading them into memory. On **LocalStorage / SessionStorage** and **Memory**, expired records are detected and removed during the scan.
+
+## Upsert
+
+`upsert` performs a read-modify-write atomically. The callback receives the current record (or `undefined`) and must return the new record.
+
+```ts
+// increment a counter even if the record doesn't yet exist
+await db.upsert('users', 42, (existing) => ({
+  id: 42,
+  name: existing?.name ?? 'Unknown',
+  age: (existing?.age ?? 0) + 1,
+}));
+```
 
 ## Query Data
 
+Queries are lazy pipelines that execute on the terminal call.
+
 ```ts
-const result = await local
+const page = await db
   .query('users')
   .between('age', 18, 99)
   .startsWith('name', 'a', { ignoreCase: true })
@@ -145,283 +181,327 @@ const result = await local
   .offset(0)
   .toArray();
 
-const count = await local.query('users').equals('age', 30).count();
+const first = await db.query('users').orderBy('age', 'asc').first();
+const count = await db.query('users').equals('age', 30).count();
+
+void page, first, count;
 ```
 
-Queries are composed lazily and run when `toArray()`, `count()`, or `first()` is called.
-
-### Get the first result
-
-`first()` resolves after applying all preceding operators, returning the first match or `undefined`.
+### Delete via Query
 
 ```ts
-const youngest = await local.query('users').orderBy('age', 'asc').first();
+const deleted = await db.query('users').filter((u) => u.age < 18).delete();
 ```
+
+Returns the number of deleted records.
+
+## Lazy Iteration
+
+`iterate(table)` returns an `AsyncIterable` — useful for processing large tables without loading all records into memory at once.
+
+```ts
+for await (const user of db.iterate('users')) {
+  if (user.age >= 18) {
+    await processUser(user);
+  }
+}
+```
+
+Expired records are skipped automatically.
 
 ## Reactive Reads
 
-`observe(table, listener, options?)` emits the current snapshot immediately by default and then emits again after table mutations.
+### `observe`
+
+`observe(table, listener)` fires the listener whenever the table changes. By default it does **not** fire an initial snapshot — only future mutations trigger the callback. Pass `{ immediate: true }` to also receive the current table state immediately on registration.
 
 ```ts
-const stop = idb.observe('users', (rows) => {
-  console.log('users changed', rows);
+// future changes only (default)
+const stop = db.observe('users', (rows) => {
+  console.log('users updated:', rows.length);
 });
 
-await idb.put('users', { id: 1, name: 'Alice', age: 30 });
+// fire immediately with current state, then on every change
+const stopImmediate = db.observe('users', handleChange, { immediate: true });
+
+await db.put('users', { id: 1, name: 'Alice', age: 30 }); // triggers both listeners
+
 stop();
+stopImmediate();
 ```
 
-IndexedDB observers propagate across tabs/windows via `BroadcastChannel` when available. LocalStorage observers also react to cross-tab writes via the browser `storage` event.
+Always call the returned unsubscribe function on teardown to prevent memory leaks.
 
-## Update and Upsert-Like Helpers
+### `watch` — AsyncIterable Stream
+
+`watch(table)` returns an `AsyncIterable` that yields a fresh snapshot on every change, **always starting with an immediate snapshot**. It is the `for await` companion to `observe`.
 
 ```ts
-await idb.update('users', 1, { age: 31 });
-
-const user = await idb.getOrPut('users', {
-  id: 2,
-  name: 'Bob',
-  age: 26,
-});
-
-const removed = await idb.deleteWhere('users', (value) => value.age < 21);
-
-await idb.forEach('users', (value) => {
-  console.log(value.name);
-});
-
-void user;
-void removed;
+for await (const users of db.watch('users')) {
+  renderTable(users);
+}
 ```
 
-## Run IndexedDB Transactions
+The observer is cleaned up automatically when the loop exits via `break`, `return`, or an unhandled error. No explicit unsubscribe is needed.
+
+### `observeMany` — Combined Multi-Table Snapshot
+
+`observeMany(tables, listener)` subscribes to multiple tables at once and delivers a single combined snapshot `{ [tableName]: RecordOf<S, T>[] }` whenever any observed table changes.
+
+The listener fires once after all tables have been prefetched, ensuring the snapshot is always complete regardless of which table triggers it.
 
 ```ts
-await idb.transaction(['users'], async (tx) => {
-  await tx.put('users', { id: 2, name: 'Bob', age: 28 });
-  await tx.delete('users', 1);
+const stop = db.observeMany(['users', 'posts'], ({ users, posts }) => {
+  renderDashboard(users, posts);
+});
 
-  const current = await tx.getAll('users');
-  const n = await tx.count('users');
+// fire immediately with current state of all tables
+const stopImmediate = db.observeMany(
+  ['users', 'posts'],
+  ({ users, posts }) => renderDashboard(users, posts),
+  { immediate: true },
+);
 
-  void current;
-  void n;
+stop();
+stopImmediate();
+```
+
+Writes to multiple tables inside a single `batch()` call coalesce into one callback — observers fire exactly once per microtask, not once per dirty table.
+
+> `tables` must be non-empty. Passing an empty array throws `DepositScopeError`.
+
+## Batch Writes
+
+`batch(tables, tx => ...)` defers all observer notifications until the callback resolves. On IndexedDB it also runs inside a real atomic IDB transaction.
+
+```ts
+await db.batch(['users', 'posts'], async (tx) => {
+  await tx.put('users', { id: 1, name: 'Alice', age: 30 });
+  await tx.put('posts', { id: 10, title: 'Hello', userId: 1 });
+
+  // query and delete are also available inside the callback
+  await tx.query('posts').filter((p) => p.title.startsWith('H')).delete();
 });
 ```
 
-If the callback throws, the transaction is aborted and changes are rolled back.
+`batch()` is table-scoped at runtime and type level:
 
-## Handle Schema Migrations
+- the table list must not be empty
+- inside `tx`, operations on tables not included in `tables` throw `DepositScopeError`
+
+`getOrDefault` is also available inside `batch()` callbacks — it is a read-or-insert: returns the existing record if present, otherwise calls `defaultFn()`, writes and returns the result.
+
+```ts
+await db.batch(['users'], async (tx) => {
+  const user = await tx.getOrDefault('users', 42, () => ({ id: 42, name: 'Guest' }));
+  // user is either the existing record or the newly inserted default
+});
+```
+
+For **IndexedDB**, `getOrDefault` inside `batch()` is atomic — the check and insert happen inside the same IDB transaction. For Memory and WebStorage adapters, it is a logical read-then-write but not physically atomic.
+
+If the callback throws on **IndexedDB**, the IDB transaction is rolled back automatically. On other adapters the callback's side effects are not rolled back, but no observer notifications are fired.
+
+## Debug
+
+`debug()` returns live vs expired record counts per table. Useful during development.
+
+```ts
+const info = await db.debug();
+
+for (const table of info.tables) {
+  console.log(table.name, '— live:', table.recordCount, 'expired:', table.expiredCount);
+}
+```
+
+## Handle Schema Migrations (IndexedDB)
 
 ```ts
 import { createIndexedDB, type MigrationFn } from '@vielzeug/deposit';
 
 const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
-    // Example: add an index during upgrade.
     tx.objectStore('users').createIndex('name', 'name', { unique: false });
   }
 };
 
 const db = createIndexedDB({
-  dbName: 'app',
+  name: 'app',
   migrate,
   schema,
-  schemaVersion: 2,
+  version: 2,
 });
+
+void db;
 ```
 
-Increase `schemaVersion` to trigger `migrate` during `onupgradeneeded`.
+## Plugins
 
-## Operational Notes
+All four adapters accept the same optional plugin options at construction time. Each plugin uses a structural interface — pass the real package object directly, no adapter or wrapper needed.
 
-- `count()` returns live records (TTL-expired records are excluded).
-- Query operations run in memory over records returned from the backend.
-- Keep transaction callbacks focused on DB operations for predictable atomicity.
-- Call `dispose()` on IndexedDB handles in long-lived contexts when shutting down.
-- `createMemory()` state is scoped to the instance; each call returns an isolated store.
-- `createSessionStorage()` is tab-scoped and clears when the tab/window is closed.
-- `observe()` emits an immediate snapshot first; unsubscribe when no longer needed.
+### Reactive Signals (`signals`)
 
-## Testing with the Memory Adapter
-
-Swap any adapter for `createMemory` in test setup to get a browser-free, zero-teardown store:
+Wire `@vielzeug/stateit` signals directly. Each signal is automatically kept in sync with its table via `observe()` and cleaned up on `dispose()`.
 
 ```ts
+import { signal } from '@vielzeug/stateit';
 import { createMemory } from '@vielzeug/deposit';
-import { schema } from '../src/schema';
 
-// No localStorage mocks, no fake-indexeddb — just a plain Map under the hood.
-const db = createMemory(schema);
+const usersSignal = signal<User[]>([]);
 
-beforeEach(async () => {
-  await db.deleteAll('users');
+const db = createMemory({
+  schema,
+  signals: { users: usersSignal },
 });
 
-test('creates a user', async () => {
-  await db.put('users', { id: 1, name: 'Alice', age: 30 });
-  expect(await db.has('users', 1)).toBe(true);
+// usersSignal.value is now always in sync with the users table
+```
+
+Any object with an `update(fn: (current: T) => T): void` method satisfies `ReactiveSignal<T>` structurally. `@vielzeug/stateit` `Signal<T>` and `Store<T>` both satisfy this directly.
+
+### Logger (`logger`)
+
+Pass a `@vielzeug/logit` logger or any object with an `error(...)` method. Observer notification errors are routed to `logger.error`.
+
+```ts
+import { createLogger } from '@vielzeug/logit';
+import { createMemory } from '@vielzeug/deposit';
+
+const db = createMemory({
+  schema,
+  logger: createLogger('db'),
 });
 ```
 
-The memory adapter is TTL-accurate: records expire lazily on read, just like the other adapters.
+### Record Validation (`validators`)
 
-## Common Pattern: Swap Adapters by Environment
+Pass a `@vielzeug/validit` schema or any object with `parse(value): T`. Validators run before every `put`, `putAll`, `update`, and `upsert`.
+
+```ts
+import { v } from '@vielzeug/validit';
+import { createMemory } from '@vielzeug/deposit';
+
+const db = createMemory({
+  schema,
+  validators: {
+    users: v.object({ id: v.number(), name: v.string(), age: v.number() }),
+  },
+});
+```
+
+Any value that fails `parse` causes the write to throw before touching storage.
+
+### Metrics (`onMetrics`)
+
+`onMetrics` is called after every operation with timing and table name. Use it for performance monitoring.
+
+```ts
+const db = createMemory({
+  schema,
+  onMetrics: (event) => {
+    console.log(`[${event.table}] ${event.operation} — ${event.duration}ms`);
+  },
+});
+```
+
+Tracked operations: `get`, `getAll`, `getMany`, `has`, `put`, `putAll`, `deleteMany`, `count`, `delete`, `clear`, `update`, `upsert`, `getOrDefault`, `batch`, `query`, `queryDelete`, `iterate`.
+
+For `batch` operations, `event.table` is `'*'` because a batch may span multiple tables.
+
+### Quota Exceeded Hook (`onQuotaExceeded`) — LocalStorage / SessionStorage
+
+Called when a write exceeds the storage quota. The callback receives a `DepositQuotaError`. Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow.
+
+```ts
+import { createLocalStorage, type DepositQuotaError } from '@vielzeug/deposit';
+
+const db = createLocalStorage({
+  name: 'app',
+  schema,
+  onQuotaExceeded: (table, error: DepositQuotaError) => {
+    console.warn(`[${String(table)}] quota exceeded — dropping write`, error.message);
+    return 'ignore';
+  },
+});
+```
+
+## Environment-Based Adapter Selection
+
+All factories return the same `Adapter<S>` type, making it straightforward to select a backend at runtime.
 
 ```ts
 import {
-  createCookie,
   createIndexedDB,
   createLocalStorage,
   createMemory,
-  createSessionStorage,
   type Adapter,
 } from '@vielzeug/deposit';
-import { schema } from './schema';
 
 function createStorage(): Adapter<typeof schema> {
   if (typeof indexedDB !== 'undefined') {
-    return createIndexedDB({ dbName: 'app', schemaVersion: 1, schema });
+    return createIndexedDB({ name: 'app', schema, version: 1 });
   }
 
   if (typeof localStorage !== 'undefined') {
-    return createLocalStorage('app', schema);
+    return createLocalStorage({ name: 'app', schema });
   }
 
-  if (typeof sessionStorage !== 'undefined') {
-    return createSessionStorage('app', schema);
-  }
-
-  if (typeof document !== 'undefined') {
-    return createCookie('app', schema);
-  }
-
-  // SSR or test environment
-  return createMemory(schema);
+  return createMemory({ schema });
 }
 ```
 
-## Framework Integration
+## Lifecycle
 
-Deposit is framework-agnostic. Use `observe()` with framework-specific subscriptions to bridge reactivity.
-
-::: code-group
-
-```tsx [React]
-import { useEffect, useState } from 'react';
-import { createLocalStorage, table } from '@vielzeug/deposit';
-
-type User = { id: number; name: string; age: number };
-const schema = { users: table<User>('id') };
-const store = createLocalStorage('app', schema);
-
-function useUsers() {
-  const [users, setUsers] = useState<User[]>([]);
-
-  useEffect(() => {
-    const stop = store.observe('users', setUsers);
-    return () => stop();
-  }, []);
-
-  return users;
-}
-```
-
-```ts [Vue 3]
-import { ref, onScopeDispose } from 'vue';
-import { createLocalStorage, table } from '@vielzeug/deposit';
-
-type User = { id: number; name: string; age: number };
-const schema = { users: table<User>('id') };
-const store = createLocalStorage('app', schema);
-
-function useUsers() {
-  const users = ref<User[]>([]);
-  const stop = store.observe('users', (rows) => { users.value = rows; });
-  onScopeDispose(() => stop());
-  return users;
-}
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { onDestroy } from 'svelte';
-  import { createLocalStorage, table } from '@vielzeug/deposit';
-
-  type User = { id: number; name: string; age: number };
-  const schema = { users: table<User>('id') };
-  const store = createLocalStorage('app', schema);
-
-  let users: User[] = [];
-  const stop = store.observe('users', (rows) => { users = rows; });
-  onDestroy(() => stop());
-</script>
-
-{#each users as user}
-  <p>{user.name}</p>
-{/each}
-```
-
-:::
-
-### Pitfalls
-
-- **React:** Calling `openStore()` inside a render without `useRef` or `useMemo` creates a new store handle on every render — use `useRef` to hold the reference.
-- **Vue 3:** Reading stored values in `setup()` (synchronously) always returns `undefined` — always read inside `onMounted` since IndexedDB is async.
-- **Svelte:** Writing to a Svelte `writable` from within an async `onMount` after the component is destroyed will throw — check if the component is still mounted before updating.
-
-## Working with Other Vielzeug Libraries
-
-### With Validit
-
-Use Validit to validate data before writing it to storage.
+Call `dispose()` when the adapter is no longer needed. This disconnects observers, signal subscriptions, the BroadcastChannel (IDB), and the IDB connection.
 
 ```ts
-import { createLocalStorage, table } from '@vielzeug/deposit';
-import { v } from '@vielzeug/validit';
+db.dispose();
+```
 
-type User = { id: number; name: string; age: number };
-const schema = { users: table<User>('id') };
-const store = createLocalStorage('app', schema);
+## Error Handling
 
-const UserSchema = v.object({
-  id: v.number(),
-  name: v.string().min(1),
-  age: v.number().min(0).max(120),
-});
+All errors thrown by `@vielzeug/deposit` are instances of `DepositError`. Catch the base class to handle any deposit-originated error, or catch specific subclasses for fine-grained handling.
 
-async function saveUser(data: unknown) {
-  const result = UserSchema.safeParse(data);
-  if (!result.ok) throw new Error(JSON.stringify(result.errors));
-  await store.put('users', result.value);
+```ts
+import {
+  DepositDisposedError,
+  DepositError,
+  DepositMigrationError,
+  DepositQuotaError,
+  DepositScopeError,
+} from '@vielzeug/deposit';
+
+try {
+  await db.put('users', { id: 1, name: 'Alice', age: 30 });
+} catch (err) {
+  if (err instanceof DepositDisposedError) {
+    // operation on a disposed adapter
+  } else if (err instanceof DepositScopeError) {
+    // table not in batch() scope, or empty tables array passed to observeMany
+  } else if (err instanceof DepositQuotaError) {
+    // WebStorage quota exceeded (also sent to onQuotaExceeded if configured)
+  } else if (err instanceof DepositMigrationError) {
+    // IndexedDB onupgradeneeded migration threw
+  } else if (err instanceof DepositError) {
+    // any other deposit error
+  }
 }
 ```
 
-### With Stateit
-
-Bridge store observations to Stateit signals for reactive UI.
-
-```ts
-import { createLocalStorage, table } from '@vielzeug/deposit';
-import { signal, effect } from '@vielzeug/stateit';
-
-type User = { id: number; name: string; age: number };
-const schema = { users: table<User>('id') };
-const db = createLocalStorage('app', schema);
-
-const users = signal<User[]>([]);
-db.observe('users', (rows) => { users.value = rows; });
-
-effect(() => console.log('users updated:', users.value.length));
-```
+| Class | Thrown when |
+| --- | --- |
+| `DepositError` | Base class — catch all deposit errors |
+| `DepositDisposedError` | Any operation after `dispose()` |
+| `DepositScopeError` | `batch()` accesses a table outside its declared scope; empty array passed to `observeMany` |
+| `DepositQuotaError` | A LocalStorage / SessionStorage write exceeds the storage quota |
+| `DepositMigrationError` | IndexedDB `onupgradeneeded` migration callback threw |
 
 ## Best Practices
 
-- Use `createMemory()` in tests — it is isolated, synchronous, and has no side effects.
-- Prefer `createIndexedDB()` for data sets larger than a few kilobytes or when you need atomic transactions.
-- Call `dispose()` on IndexedDB adapters during app teardown to release the database connection.
-- Unsubscribe `observe()` listeners when the component unmounts to prevent stale updates.
-- Use TTL for cache-like data; avoid TTL for user data that should persist indefinitely.
-- Run `putAll()` for bulk writes — it performs one transaction instead of one per record.
-- Keep `migrate()` callbacks forward-only; do not mutate data for versions already in production.
-- Use `createMemory()` in SSR environments where browser APIs are unavailable.
+- Prefer `createIndexedDB` for large datasets or flows that require atomicity.
+- Use `createMemory` in tests — no cleanup, no browser API requirements.
+- Always call the `observe()` unsubscribe function on component teardown (or use `watch()` which auto-unsubscribes on loop exit).
+- Use `batch()` when writing to multiple tables to batch observer notifications.
+- Use `ttl.*` helpers — raw millisecond numbers are rejected by the type system.
+- Keep `batch()` callbacks focused on storage operations; avoid arbitrary async side effects.
+- Schedule `scheduleExpiredPrune` for write-heavy tables with TTL to reclaim storage proactively.

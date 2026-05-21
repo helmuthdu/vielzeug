@@ -1,18 +1,34 @@
-export { createCookie } from './adapters/cookie';
 export { createIndexedDB } from './adapters/indexeddb';
-export { createLocalStorage, createSessionStorage } from './adapters/webstorage';
 export { createMemory } from './adapters/memory';
-export type { QueryBuilder } from './query';
-export { table } from './types';
+export { createLocalStorage, createSessionStorage } from './adapters/webstorage';
+export {
+  DepositDisposedError,
+  DepositError,
+  DepositMigrationError,
+  DepositQuotaError,
+  DepositScopeError,
+} from './errors';
+export type { QueryBuilder, ReadQuery } from './query';
+export { scheduleExpiredPrune } from './prune';
 export { ttl } from './ttl';
+export { table } from './types';
 export type {
   Adapter,
-  IndexedDBHandle,
+  AnySchema,
+  DebugInfo,
+  DebugStats,
+  DepositLogger,
   KeyOf,
+  MetricsEvent,
   MigrationContext,
   MigrationFn,
   Observer,
+  ReactiveSignal,
   RecordOf,
-  TtlMs,
+  RecordValidator,
+  SchemaEntry,
+  TableSignals,
+  TableValidators,
   TransactionContext,
+  TtlMs,
 } from './types';

@@ -1,36 +1,73 @@
 type Predicate<T> = (value: T, index: number, array: T[]) => boolean;
-type QueryOp<T> = {
-  apply: (data: T[]) => T[];
-};
+type QueryOp<T> = { apply: (data: T[]) => T[]; isPagination?: boolean };
 type ComparableFieldKeys<T extends Record<string, unknown>> = {
   [K in keyof T]-?: Extract<NonNullable<T[K]>, number | string> extends never ? never : K;
 }[keyof T];
 
-/* -------------------- QueryBuilder -------------------- */
+/**
+ * A primary-key range hint that can be pushed down to native storage backends (e.g. IndexedDB).
+ * When `QueryContext.getRange` and `keyField` are present, a matching first filter op replaces
+ * the full-table `source()` scan with a targeted range fetch.
+ */
+export type NativeRange =
+  | { type: 'eq'; value: unknown }
+  | { lower: unknown; type: 'between'; upper: unknown }
+  | { prefix: string; type: 'starts' };
 
-export interface QueryBuilder<T extends Record<string, unknown>> {
+export type QueryContext<T extends Record<string, unknown>> = {
+  deleteMany?: (records: T[]) => Promise<number>;
+  /**
+   * When present alongside `keyField`, replaces `source()` for primary-key filter ops.
+   * Only activated when the first op is an `equals`, `between`, or case-sensitive `startsWith`
+   * on `keyField`. All remaining ops still run in-memory against the range result.
+   */
+  getRange?: (range: NativeRange) => Promise<T[]>;
+  /** Primary key field name — used to detect when a filter op can be pushed to `getRange`. */
+  keyField?: string;
+  source: () => Promise<T[]>;
+};
+
+/* -------------------- Public interfaces -------------------- */
+
+/** Shared query methods. `Self` is the concrete return type for chaining methods. */
+type ChainedQuery<T extends Record<string, unknown>, Self> = {
   between<K extends ComparableFieldKeys<T>>(
     field: K,
     lower: Extract<NonNullable<T[K]>, number | string>,
     upper: Extract<NonNullable<T[K]>, number | string>,
-  ): QueryBuilder<T>;
-  /** Counts records after all chained query operations. */
+  ): Self;
+  /**
+   * Returns the number of records matching the applied filter predicates.
+   * Pagination ops (`limit`, `offset`) are intentionally ignored — this always
+   * counts the full filtered set, making paginated total-count queries possible
+   * without a second query.
+   */
   count(): Promise<number>;
-  equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
-  filter(fn: Predicate<T>): QueryBuilder<T>;
+  equals<K extends keyof T>(field: K, value: T[K]): Self;
+  filter(fn: Predicate<T>): Self;
   first(): Promise<T | undefined>;
-  limit(n: number): QueryBuilder<T>;
-  offset(n: number): QueryBuilder<T>;
-  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
-  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T>;
+  limit(n: number): Self;
+  offset(n: number): Self;
+  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): Self;
+  startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): Self;
   toArray(): Promise<T[]>;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ReadQuery<T extends Record<string, unknown>> extends ChainedQuery<T, ReadQuery<T>> {}
+
+/** Extends ReadQuery with delete(). Available on both Adapter.query() and inside batch() callbacks. */
+export interface QueryBuilder<T extends Record<string, unknown>> extends ChainedQuery<T, QueryBuilder<T>> {
+  delete(): Promise<number>;
 }
 
+/* -------------------- Helpers -------------------- */
+
 async function applyOps<T extends Record<string, unknown>>(
-  source: () => Promise<T[]>,
-  ops: ReadonlyArray<QueryOp<T>>,
+  ctx: QueryContext<T>,
+  ops: readonly QueryOp<T>[],
 ): Promise<T[]> {
-  let data = await source();
+  let data = await ctx.source();
 
   for (const op of ops) {
     data = op.apply(data);
@@ -41,100 +78,145 @@ async function applyOps<T extends Record<string, unknown>>(
 
 function assertNonNegativeInteger(value: number, name: string): number {
   if (!Number.isInteger(value) || value < 0) {
-    throw new Error(`deposit: ${name} must be a non-negative integer`);
+    throw new Error(`[deposit] ${name} must be a non-negative integer`);
   }
 
   return value;
 }
 
-function createClone<T extends Record<string, unknown>>(
-  source: () => Promise<T[]>,
-  ops: ReadonlyArray<QueryOp<T>>,
+/* -------------------- Factory -------------------- */
+
+export function createQueryBuilder<T extends Record<string, unknown>>(
+  ctx: QueryContext<T>,
+  ops: readonly QueryOp<T>[] = [],
 ): QueryBuilder<T> {
-  const clone = (op: QueryOp<T>): QueryBuilder<T> => createQueryBuilder(source, [...ops, op]);
+  function rebuild(newOps: readonly QueryOp<T>[]): QueryBuilder<T> {
+    return createQueryBuilder(ctx, newOps);
+  }
+
+  const append = (op: QueryOp<T>): QueryBuilder<T> => rebuild([...ops, op]);
 
   return {
-    between<K extends ComparableFieldKeys<T>>(
-      field: K,
-      lower: Extract<NonNullable<T[K]>, number | string>,
-      upper: Extract<NonNullable<T[K]>, number | string>,
-    ): QueryBuilder<T> {
-      return clone({
-        apply: (data) =>
-          data.filter((record) => {
-            const value = record[field] as number | string;
+    between(field, lower, upper) {
+      if (ops.length === 0 && ctx.getRange && ctx.keyField !== undefined && String(field) === ctx.keyField) {
+        const rangeSource = ctx.getRange;
+        const newCtx: QueryContext<T> = {
+          deleteMany: ctx.deleteMany,
+          keyField: ctx.keyField,
+          source: () => rangeSource({ lower, type: 'between', upper }),
+        };
 
-            return value >= lower && value <= upper;
+        return createQueryBuilder(newCtx, ops);
+      }
+
+      return append({
+        apply: (data) =>
+          data.filter((r) => {
+            const v = r[field] as number | string;
+
+            return v >= lower && v <= upper;
           }),
       });
     },
     count(): Promise<number> {
-      return applyOps(source, ops).then((records) => records.length);
+      // Pagination ops (limit/offset) are excluded — count reflects the full filtered set.
+      const filterOps = ops.filter((op) => !op.isPagination);
+
+      return applyOps(ctx, filterOps).then((r) => r.length);
     },
-    equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T> {
-      return clone({ apply: (data) => data.filter((record) => record[field] === value) });
+    async delete(): Promise<number> {
+      if (!ctx.deleteMany) {
+        throw new Error('[deposit] query.delete is not available for this adapter context');
+      }
+
+      const records = await applyOps(ctx, ops);
+
+      return ctx.deleteMany(records);
     },
-    filter(fn: Predicate<T>): QueryBuilder<T> {
-      return clone({ apply: (data) => data.filter(fn) });
+    equals(field, value) {
+      if (ops.length === 0 && ctx.getRange && ctx.keyField !== undefined && String(field) === ctx.keyField) {
+        const rangeSource = ctx.getRange;
+        const newCtx: QueryContext<T> = {
+          deleteMany: ctx.deleteMany,
+          keyField: ctx.keyField,
+          source: () => rangeSource({ type: 'eq', value }),
+        };
+
+        return createQueryBuilder(newCtx, ops);
+      }
+
+      return append({ apply: (data) => data.filter((r) => r[field] === value) });
+    },
+    filter(fn) {
+      return append({ apply: (data) => data.filter(fn) });
     },
     first(): Promise<T | undefined> {
-      return applyOps(source, ops).then((records) => records[0]);
+      return applyOps(ctx, ops).then((r) => r[0]);
     },
-    limit(n: number): QueryBuilder<T> {
+    limit(n) {
       const safeN = assertNonNegativeInteger(n, 'query.limit');
 
-      return clone({ apply: (data) => data.slice(0, safeN) });
+      return append({ apply: (data) => data.slice(0, safeN), isPagination: true });
     },
-    offset(n: number): QueryBuilder<T> {
+    offset(n) {
       const safeN = assertNonNegativeInteger(n, 'query.offset');
 
-      return clone({ apply: (data) => data.slice(safeN) });
+      return append({ apply: (data) => data.slice(safeN), isPagination: true });
     },
-    orderBy<K extends keyof T>(field: K, direction: 'asc' | 'desc' = 'asc'): QueryBuilder<T> {
-      return clone({
+    orderBy(field, direction = 'asc') {
+      return append({
         apply: (data) => {
           const sign = direction === 'asc' ? 1 : -1;
 
-          return [...data].sort((left, right) => {
-            const a = left[field] as number | string;
-            const b = right[field] as number | string;
+          return [...data].sort((a, b) => {
+            const av = a[field] as number | string;
+            const bv = b[field] as number | string;
 
-            if (a === b) return 0;
+            if (av === bv) return 0;
 
-            return a > b ? sign : -sign;
+            return av > bv ? sign : -sign;
           });
         },
       });
     },
-    startsWith<K extends keyof T>(
-      field: K,
-      prefix: string,
-      { ignoreCase = false }: { ignoreCase?: boolean } = {},
-    ): QueryBuilder<T> {
+    startsWith(field, prefix, { ignoreCase = false } = {}) {
+      // Range push-down: only for case-sensitive, non-empty prefix on the primary key.
+      // An empty prefix matches everything — fall through to in-memory (equivalent to source()).
+      if (
+        !ignoreCase &&
+        prefix.length > 0 &&
+        ops.length === 0 &&
+        ctx.getRange &&
+        ctx.keyField !== undefined &&
+        String(field) === ctx.keyField
+      ) {
+        const rangeSource = ctx.getRange;
+        const newCtx: QueryContext<T> = {
+          deleteMany: ctx.deleteMany,
+          keyField: ctx.keyField,
+          source: () => rangeSource({ prefix, type: 'starts' }),
+        };
+
+        return createQueryBuilder(newCtx, ops);
+      }
+
       const needle = ignoreCase ? prefix.toLowerCase() : prefix;
 
-      return clone({
+      return append({
         apply: (data) =>
-          data.filter((record) => {
-            const value = record[field];
+          data.filter((r) => {
+            const v = r[field];
 
-            if (typeof value !== 'string') return false;
+            if (typeof v !== 'string') return false;
 
-            const haystack = ignoreCase ? value.toLowerCase() : value;
+            const haystack = ignoreCase ? v.toLowerCase() : v;
 
             return haystack.startsWith(needle);
           }),
       });
     },
     toArray(): Promise<T[]> {
-      return applyOps(source, ops);
+      return applyOps(ctx, ops);
     },
   };
-}
-
-export function createQueryBuilder<T extends Record<string, unknown>>(
-  source: () => Promise<T[]>,
-  ops: ReadonlyArray<QueryOp<T>> = [],
-): QueryBuilder<T> {
-  return createClone(source, ops);
 }

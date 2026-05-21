@@ -6,9 +6,9 @@ const schema = {
 }
 
 const db = createIndexedDB({
-  dbName: 'app-logs',
+  name: 'app-logs',
   schema,
-  schemaVersion: 1,
+  version: 1,
 })
 
 await db.putAll('logs', [
@@ -18,13 +18,20 @@ await db.putAll('logs', [
   { id: 4, level: 'info', message: 'Request succeeded', ts: Date.now() },
 ])
 
-await db.transaction(['logs'] as const, async (tx) => {
-  await tx.put('logs', { id: 5, level: 'info', message: 'IndexedDB transaction committed', ts: Date.now() })
+// batch() is atomic on IndexedDB — either all writes commit or none do
+await db.batch(['logs'], async (tx) => {
+  await tx.put('logs', { id: 5, level: 'info', message: 'Batch committed', ts: Date.now() })
+  await tx.deleteMany('logs', [1, 2]) // bulk-delete old entries inside the same transaction
 })
 
 const errors = await db.query('logs').equals('level', 'error').toArray()
 console.log('Errors:', errors.map((entry) => entry.message))
-console.log('Total logs:', await db.count('logs'))
+console.log('Total logs:', await db.query('logs').count())
+
+const info = await db.debug()
+for (const t of info.tables) {
+  console.log(t.name + ':', t.recordCount, 'live,', t.expiredCount, 'expired')
+}
 
 db.dispose()`,
   name: 'IndexedDB Adapter',

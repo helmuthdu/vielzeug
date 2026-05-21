@@ -22,5 +22,6 @@ export default defineConfig({
     globals: true,
     name: 'deposit',
     setupFiles: [resolve(__dirname, './vitest.setup.ts'), 'fake-indexeddb/auto'],
+    watch: false,
   },
 });
