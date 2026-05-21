@@ -50,17 +50,20 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
         }
       });
 
+    // Shared helper: preserves original Error instances (including DepositError subtypes)
+    // so callers retain instanceof checks, stack traces, and custom properties.
+    // Falls back to wrapTxError for non-Error thrown values (rare but possible).
+    const rejectWithCallbackError = (fallbackCause: unknown): void => {
+      if (callbackError instanceof Error) {
+        reject(callbackError);
+      } else {
+        reject(wrapTxError(scope, 'transaction failed', callbackError ?? fallbackCause));
+      }
+    };
+
     tx.oncomplete = () => {
       if (callbackError) {
-        // Preserve all Error instances — including DepositError subtypes — so callers
-        // retain instanceof checks, stack traces, and custom properties.
-        if (callbackError instanceof Error) {
-          reject(callbackError);
-
-          return;
-        }
-
-        reject(wrapTxError(scope, 'transaction failed', callbackError));
+        rejectWithCallbackError(undefined);
 
         return;
       }
@@ -68,16 +71,7 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
       resolve(result as T);
     };
     tx.onerror = () => reject(wrapTxError(scope, 'transaction error', tx.error));
-    tx.onabort = () => {
-      // Preserve all Error instances on abort as well.
-      if (callbackError instanceof Error) {
-        reject(callbackError);
-
-        return;
-      }
-
-      reject(wrapTxError(scope, 'transaction aborted', callbackError ?? tx.error));
-    };
+    tx.onabort = () => rejectWithCallbackError(tx.error);
   });
 }
 

@@ -533,15 +533,19 @@ export function buildAdapterOps<S extends AnySchema>(
         });
       };
 
-      // stops is populated asynchronously after prefetch completes. The unsubscribe
-      // closure below is safe to call at any time: if prefetch hasn't finished yet,
-      // `stopped = true` prevents observer registration; if already registered,
-      // each stop() is called in the loop.
-      const stops: Array<() => void> = [];
+      // Set by the prefetch .then() once observers are registered.
+      // `stop()` calls this if prefetch has already completed; otherwise, `stopped = true`
+      // prevents registration in the .then() and the double-check after assignment
+      // ensures no window where registered observers escape cleanup.
+      let cleanupObservers: (() => void) | null = null;
 
       // Eagerly prefetch the current state of every distinct table. Observers are registered
       // only AFTER all prefetches resolve, preventing a prefetch result from overwriting a
       // mutation that arrived mid-flight through an already-wired observer.
+      //
+      // Per-table failures insert an empty-array fallback so snapshotMap always reaches
+      // distinctTables.length — without this, a single prefetch failure permanently silences
+      // the entire subscription (scheduleFlush guards on snapshotMap.size).
       void Promise.all(
         distinctTables.map((t) =>
           core
@@ -556,23 +560,38 @@ export function buildAdapterOps<S extends AnySchema>(
                 err instanceof Error ? err : new Error(String(err)),
                 '[deposit] observeMany prefetch failed',
               );
+
+              // Keep subscription live: treat a failed table as having an empty snapshot
+              // so snapshotMap.size reaches distinctTables.length and future mutations
+              // can still trigger the listener.
+              if (!stopped) snapshotMap.set(String(t), []);
             }),
         ),
       ).then(() => {
         if (stopped) return;
 
         // Register change observers now that the snapshot map is fully populated.
-        for (const t of distinctTables) {
-          stops.push(
-            observers.observe(
-              t,
-              (records) => {
-                snapshotMap.set(String(t), records as RecordOf<S, keyof S>[]);
-                scheduleFlush();
-              },
-              { immediate: false },
-            ),
-          );
+        const stopFns = distinctTables.map((t) =>
+          observers.observe(
+            t,
+            (records) => {
+              snapshotMap.set(String(t), records as RecordOf<S, keyof S>[]);
+              scheduleFlush();
+            },
+            { immediate: false },
+          ),
+        );
+
+        cleanupObservers = () => {
+          for (const s of stopFns) s();
+        };
+
+        // Double-check: if stop() was called between the `if (stopped)` guard above
+        // and this assignment, clean up the just-registered observers immediately.
+        if (stopped) {
+          cleanupObservers();
+
+          return;
         }
 
         if (opts?.immediate) scheduleFlush();
@@ -580,8 +599,7 @@ export function buildAdapterOps<S extends AnySchema>(
 
       return () => {
         stopped = true;
-
-        for (const stop of stops) stop();
+        cleanupObservers?.();
       };
     },
 

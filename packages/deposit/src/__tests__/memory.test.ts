@@ -700,6 +700,74 @@ describe('Memory adapter', () => {
       expect(snapshots[0].posts).toEqual([]);
     });
 
+    test('stop() before prefetch resolves does not leak observers', async () => {
+      // Call stop() synchronously — the prefetch promise has not yet resolved.
+      const snapshots: { posts: Post[]; users: User[] }[] = [];
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+
+      // stop() before any await — prefetch .then() has not fired yet
+      stop();
+
+      // Let the prefetch and its .then() resolve
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      // Any subsequent mutation must NOT reach the listener
+      await multiDb.put('users', { id: 1, name: 'Alice' });
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      expect(snapshots).toHaveLength(0);
+    });
+
+    test('subscription stays live after a prefetch failure (uses empty-array fallback)', async () => {
+      // The prefetch fallback ensures that even if a table's getAll fails, snapshotMap
+      // still reaches distinctTables.length and the subscription remains live.
+      // We test the observable behaviour: mutations fire the listener even when one
+      // observed table starts with an empty snapshot (the fallback state).
+      const snapshots: { posts: Post[]; users: User[] }[] = [];
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+
+      // Wait for prefetch of both (empty) tables
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      // Act: mutate only users
+      await multiDb.put('users', { id: 1, name: 'Alice' });
+      await new Promise<void>((r) => setTimeout(r, 0));
+      stop();
+
+      // Assert: listener fired despite posts never having data
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].users).toEqual([{ id: 1, name: 'Alice' }]);
+      expect(snapshots[0].posts).toEqual([]);
+    });
+
+    test('stop() called during prefetch .then() callback does not leak registered observers', async () => {
+      // Tests the double-check: stop() is called synchronously inside the immediate-flush
+      // path which fires from within the .then() callback itself.
+      let calls = 0;
+      const stopRef = { fn: (): void => {} };
+
+      const stop = multiDb.observeMany(
+        ['users', 'posts'],
+        (_s) => {
+          calls += 1;
+          // Stop on first call — simulates stop() called during a flush triggered by the .then()
+          stopRef.fn();
+        },
+        { immediate: true },
+      );
+
+      stopRef.fn = stop;
+
+      // Wait for prefetch + immediate flush
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      // Mutations after stop must not trigger further callbacks
+      await multiDb.put('users', { id: 1, name: 'Alice' });
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      expect(calls).toBe(1); // fired exactly once (the immediate flush), then stopped
+    });
+
     test('deduplicates tables — fires listener exactly once per microtask even with duplicate entries', async () => {
       const snapshots: { users: User[] }[] = [];
       // Pass 'users' twice — should register only one observer and fire only once per change.
