@@ -359,7 +359,9 @@ describe('onQuotaExceeded (WebStorage)', () => {
   });
 
   test('throws by default when quota is exceeded', async () => {
-    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+    // jsdom's localStorage is a Proxy — spy on Storage.prototype so the intercept
+    // applies to the underlying method lookup rather than the proxy's own property.
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('QuotaExceededError', 'QuotaExceededError');
     });
 
@@ -371,7 +373,7 @@ describe('onQuotaExceeded (WebStorage)', () => {
   test('ignores write when onQuotaExceeded returns "ignore"', async () => {
     let exceeded = false;
 
-    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('QuotaExceededError', 'QuotaExceededError');
     });
 

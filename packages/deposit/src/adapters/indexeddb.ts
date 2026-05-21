@@ -12,7 +12,7 @@ import type {
 } from '../types';
 
 import { buildAdapterOps, buildTxContext, type StorageBackend, type StorageCore } from '../adapter-core';
-import { DepositDisposedError, DepositError, DepositMigrationError } from '../errors';
+import { DepositDisposedError, DepositMigrationError } from '../errors';
 import { getRecordKey } from '../internal';
 import { type NativeRange } from '../query';
 import { type StoredRecord, parseStored, unwrapStored, wrapStored } from '../ttl';
@@ -52,8 +52,9 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
 
     tx.oncomplete = () => {
       if (callbackError) {
-        // Preserve DepositError subtype identity — re-throwing keeps instanceof checks intact.
-        if (callbackError instanceof DepositError) {
+        // Preserve all Error instances — including DepositError subtypes — so callers
+        // retain instanceof checks, stack traces, and custom properties.
+        if (callbackError instanceof Error) {
           reject(callbackError);
 
           return;
@@ -68,8 +69,8 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
     };
     tx.onerror = () => reject(wrapTxError(scope, 'transaction error', tx.error));
     tx.onabort = () => {
-      // Preserve DepositError subtype identity — re-throwing keeps instanceof checks intact.
-      if (callbackError instanceof DepositError) {
+      // Preserve all Error instances on abort as well.
+      if (callbackError instanceof Error) {
         reject(callbackError);
 
         return;

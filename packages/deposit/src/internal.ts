@@ -5,10 +5,10 @@ import { DepositDisposedError, DepositError } from './errors';
 type ObserverListener<T> = (records: T[]) => void;
 
 /**
- * Separator used between encoded key segments. The null byte (\x00) is chosen
- * because encodeURIComponent always encodes it as %00, so it can never appear
- * inside an encoded component — eliminating the key-collision risk of using an
- * unreserved character like `~`.
+ * Separator used between encoded key segments. The null byte (\x00) is safe
+ * because `encodeURIComponent` always percent-encodes it to `%00` (a 3-character
+ * string), so the raw `\x00` byte can never appear inside an encoded segment —
+ * eliminating key-collision risk that a URL-safe character like `~` would carry.
  */
 const SEP = '\x00';
 
@@ -212,7 +212,9 @@ export function getRecordKey<S extends AnySchema, K extends keyof S>(
   const keyValue = (value as Record<string, unknown>)[keyField];
 
   if (keyValue === undefined || keyValue === null) {
-    throw new DepositError(`missing required key field "${keyField}" in record for table "${String(table)}"`);
+    throw new DepositError(
+      `key field "${keyField}" in table "${String(table)}" must be a non-null value, got ${String(keyValue)}`,
+    );
   }
 
   return keyValue as KeyOf<S, K>;

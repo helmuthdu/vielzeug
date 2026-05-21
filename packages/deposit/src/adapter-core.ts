@@ -533,9 +533,15 @@ export function buildAdapterOps<S extends AnySchema>(
         });
       };
 
-      // Eagerly prefetch the current state of every distinct table so that snapshotMap is
-      // fully populated before any change fires. This ensures a single-table change triggers
-      // a combined notification without waiting for every other table to also change.
+      // stops is populated asynchronously after prefetch completes. The unsubscribe
+      // closure below is safe to call at any time: if prefetch hasn't finished yet,
+      // `stopped = true` prevents observer registration; if already registered,
+      // each stop() is called in the loop.
+      const stops: Array<() => void> = [];
+
+      // Eagerly prefetch the current state of every distinct table. Observers are registered
+      // only AFTER all prefetches resolve, preventing a prefetch result from overwriting a
+      // mutation that arrived mid-flight through an already-wired observer.
       void Promise.all(
         distinctTables.map((t) =>
           core
@@ -543,8 +549,6 @@ export function buildAdapterOps<S extends AnySchema>(
             .then((records) => {
               if (!stopped) {
                 snapshotMap.set(String(t), records as RecordOf<S, keyof S>[]);
-
-                if (opts?.immediate) scheduleFlush();
               }
             })
             .catch((err: unknown) => {
@@ -554,19 +558,25 @@ export function buildAdapterOps<S extends AnySchema>(
               );
             }),
         ),
-      );
+      ).then(() => {
+        if (stopped) return;
 
-      // Register change observers (immediate handled via prefetch above).
-      const stops = distinctTables.map((t) =>
-        observers.observe(
-          t,
-          (records) => {
-            snapshotMap.set(String(t), records as RecordOf<S, keyof S>[]);
-            scheduleFlush();
-          },
-          { immediate: false },
-        ),
-      );
+        // Register change observers now that the snapshot map is fully populated.
+        for (const t of distinctTables) {
+          stops.push(
+            observers.observe(
+              t,
+              (records) => {
+                snapshotMap.set(String(t), records as RecordOf<S, keyof S>[]);
+                scheduleFlush();
+              },
+              { immediate: false },
+            ),
+          );
+        }
+
+        if (opts?.immediate) scheduleFlush();
+      });
 
       return () => {
         stopped = true;

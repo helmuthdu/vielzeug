@@ -317,16 +317,20 @@ function createWebStorageAdapter<S extends AnySchema>(options: {
     async put<K extends keyof S>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
       const storageKey = encodeStorageKey(name, String(table), String(getRecordKey(schema, table, value)));
 
-      ownedKeys.add(storageKey);
+      // writeItem first: if it throws (quota exceeded), ownedKeys must not be polluted
+      // with a key that was never physically written.
       writeItem(table, storageKey, wrapStored(value, ttl));
+      ownedKeys.add(storageKey);
     },
 
     async putAll<K extends keyof S>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
       for (const value of values) {
         const storageKey = encodeStorageKey(name, String(table), String(getRecordKey(schema, table, value)));
 
-        ownedKeys.add(storageKey);
+        // writeItem first: if it throws mid-batch (quota), we stop here and only
+        // the keys that were successfully written remain in ownedKeys.
         writeItem(table, storageKey, wrapStored(value, ttl));
+        ownedKeys.add(storageKey);
       }
     },
   };

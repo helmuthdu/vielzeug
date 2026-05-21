@@ -46,8 +46,7 @@ export function table<T extends Record<string, unknown>, Key extends keyof T & s
 }
 
 /** Extracts the record type from a schema table entry. */
-export type RecordOf<S extends AnySchema, K extends keyof S> =
-  S[K] extends SchemaEntry<infer R, infer _Key> ? R : never;
+export type RecordOf<S extends AnySchema, K extends keyof S> = S[K] extends SchemaEntry<infer R, string> ? R : never;
 
 /** Extracts the primary key value type from a schema table entry. */
 export type KeyOf<S extends AnySchema, K extends keyof S> =
