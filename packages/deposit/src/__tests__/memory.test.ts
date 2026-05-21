@@ -718,26 +718,43 @@ describe('Memory adapter', () => {
       expect(snapshots).toHaveLength(0);
     });
 
-    test('subscription stays live after a prefetch failure (uses empty-array fallback)', async () => {
-      // The prefetch fallback ensures that even if a table's getAll fails, snapshotMap
-      // still reaches distinctTables.length and the subscription remains live.
-      // We test the observable behaviour: mutations fire the listener even when one
-      // observed table starts with an empty snapshot (the fallback state).
+    test('fires listener when observed tables start empty', async () => {
+      // Normal operation: both tables prefetch successfully with empty arrays and
+      // mutations subsequently trigger the listener.
       const snapshots: { posts: Post[]; users: User[] }[] = [];
       const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
 
-      // Wait for prefetch of both (empty) tables
       await new Promise<void>((r) => setTimeout(r, 0));
 
-      // Act: mutate only users
       await multiDb.put('users', { id: 1, name: 'Alice' });
       await new Promise<void>((r) => setTimeout(r, 0));
       stop();
 
-      // Assert: listener fired despite posts never having data
       expect(snapshots).toHaveLength(1);
       expect(snapshots[0].users).toEqual([{ id: 1, name: 'Alice' }]);
       expect(snapshots[0].posts).toEqual([]);
+    });
+
+    test('subscription stays live when a prefetch getAll() throws (empty-array fallback)', async () => {
+      // Regression: before the fix, a single failing prefetch left snapshotMap.size <
+      // distinctTables.length permanently, making scheduleFlush a no-op forever.
+      // The fix inserts an empty-array fallback in the .catch() handler so the guard
+      // is satisfied and subsequent mutations still reach the listener.
+      vi.spyOn(multiDb, 'getAll').mockRejectedValueOnce(new Error('simulated prefetch failure'));
+
+      const snapshots: { posts: Post[]; users: User[] }[] = [];
+      const stop = multiDb.observeMany(['users', 'posts'], (s) => snapshots.push(s), { immediate: false });
+
+      // Wait for both prefetch promises (one of which throws) to settle.
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      // Mutation must still reach the listener despite the earlier prefetch failure.
+      await multiDb.put('users', { id: 1, name: 'Alice' });
+      await new Promise<void>((r) => setTimeout(r, 0));
+      stop();
+
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].users).toEqual([{ id: 1, name: 'Alice' }]);
     });
 
     test('stop() called during prefetch .then() callback does not leak registered observers', async () => {
