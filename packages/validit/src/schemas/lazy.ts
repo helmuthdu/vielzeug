@@ -3,15 +3,15 @@ import type { Issue, SchemaState } from '../core';
 import { Schema } from '../core';
 
 export class LazySchema<T> extends Schema<T> {
-  private readonly _getter: () => Schema<T, any, any>;
-  private _resolved?: Schema<T, any, any>;
+  private readonly _getter: () => Schema<T, any>;
+  private _resolved?: Schema<T, any>;
 
-  constructor(getter: () => Schema<T, any, any>) {
-    super([]);
+  constructor(getter: () => Schema<T, any>) {
+    super();
     this._getter = getter;
   }
 
-  private _resolve(): Schema<T, any, any> {
+  private _resolve(): Schema<T, any> {
     return (this._resolved ??= this._getter());
   }
 
@@ -33,16 +33,18 @@ export class LazySchema<T> extends Schema<T> {
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
     if (visitor.lazy) return visitor.lazy(this);
+
     return super._walk(visitor);
   }
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     // Lazy schemas are equal only if they reference the same getter function.
     if (!(other instanceof LazySchema)) return false;
+
     return this._getter === other._getter;
   }
 
-  protected override _construct(state: SchemaState<any, any>): this {
+  protected override _construct(state: SchemaState<any>): this {
     // Do not copy _resolved — each clone re-resolves from the getter on first use.
     const next = new LazySchema(this._getter) as this;
 

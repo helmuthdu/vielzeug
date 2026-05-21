@@ -94,7 +94,9 @@ describe('stateit', () => {
     it('dispose drops existing subscribers', () => {
       const n = signal(1);
       const listener = vi.fn();
-      const stop = effect(() => { listener(n.value); });
+      const stop = effect(() => {
+        listener(n.value);
+      });
 
       expect(listener).toHaveBeenCalledTimes(1);
 
@@ -109,7 +111,12 @@ describe('stateit', () => {
     it('supports using declaration via Symbol.dispose', () => {
       let disposed = false;
       const n = signal(0);
-      const stop = effect(() => { void n.value; onCleanup(() => { disposed = true; }); });
+      const stop = effect(() => {
+        void n.value;
+        onCleanup(() => {
+          disposed = true;
+        });
+      });
 
       stop();
       expect(disposed).toBe(true);
@@ -141,7 +148,12 @@ describe('stateit', () => {
       c.dispose();
 
       let caught: unknown;
-      try { void c.value; } catch (e) { caught = e; }
+
+      try {
+        void c.value;
+      } catch (e) {
+        caught = e;
+      }
 
       expect(caught).toBeInstanceOf(StateError);
       expect((caught as StateError).code).toBe('DISPOSED_READ');
@@ -154,7 +166,12 @@ describe('stateit', () => {
       c.dispose();
 
       let caught: unknown;
-      try { c.subscribe(() => {}); } catch (e) { caught = e; }
+
+      try {
+        c.subscribe(() => {});
+      } catch (e) {
+        caught = e;
+      }
 
       expect(caught).toBeInstanceOf(StateError);
       expect((caught as StateError).code).toBe('DISPOSED_READ');
@@ -191,7 +208,12 @@ describe('stateit', () => {
       proxy.fn = () => b.value;
 
       let caught: unknown;
-      try { a.value; } catch (e) { caught = e; }
+
+      try {
+        a.value;
+      } catch (e) {
+        caught = e;
+      }
 
       expect(caught).toBeInstanceOf(StateError);
       expect((caught as StateError).code).toBe('COMPUTED_CYCLE');
@@ -318,7 +340,12 @@ describe('stateit', () => {
 
     it('throws StateError when onCleanup is called outside an active context', () => {
       let caught: unknown;
-      try { onCleanup(() => {}); } catch (e) { caught = e; }
+
+      try {
+        onCleanup(() => {});
+      } catch (e) {
+        caught = e;
+      }
 
       expect(caught).toBeInstanceOf(StateError);
       expect((caught as StateError).code).toBe('INVALID_CLEANUP');
@@ -359,6 +386,7 @@ describe('stateit', () => {
       const n = signal(0);
 
       let caught: unknown;
+
       try {
         effect(() => {
           if (n.value < 200) n.value++;
@@ -484,10 +512,13 @@ describe('stateit', () => {
     it('calls onError for unhandled async errors', async () => {
       const errors: unknown[] = [];
 
-      const stop = effectAsync(async () => {
-        await Promise.resolve();
-        throw new Error('async-boom');
-      }, { onError: (e) => errors.push(e) });
+      const stop = effectAsync(
+        async () => {
+          await Promise.resolve();
+          throw new Error('async-boom');
+        },
+        { onError: (e) => errors.push(e) },
+      );
 
       await Promise.resolve();
       await Promise.resolve();
@@ -643,7 +674,11 @@ describe('stateit', () => {
       s.value = 3;
       stop();
 
-      expect(calls).toEqual([[1, undefined], [2, 1], [3, 2]]);
+      expect(calls).toEqual([
+        [1, undefined],
+        [2, 1],
+        [3, 2],
+      ]);
     });
   });
 
@@ -755,7 +790,11 @@ describe('stateit', () => {
     });
 
     it('does not swallow throw undefined', () => {
-      expect(() => batch(() => { throw undefined; })).toThrow();
+      expect(() =>
+        batch(() => {
+          throw undefined;
+        }),
+      ).toThrow();
     });
   });
 
@@ -944,7 +983,11 @@ describe('stateit', () => {
     it('throws StateError when created or patched with non-object values', () => {
       let caught: unknown;
 
-      try { store(42 as unknown as { count: number }); } catch (e) { caught = e; }
+      try {
+        store(42 as unknown as { count: number });
+      } catch (e) {
+        caught = e;
+      }
 
       expect(caught).toBeInstanceOf(StateError);
       expect((caught as StateError).code).toBe('INVALID_STORE');
@@ -953,7 +996,11 @@ describe('stateit', () => {
 
       let patchCaught: unknown;
 
-      try { ok.patch(null as unknown as Partial<{ count: number }>); } catch (e) { patchCaught = e; }
+      try {
+        ok.patch(null as unknown as Partial<{ count: number }>);
+      } catch (e) {
+        patchCaught = e;
+      }
 
       expect(patchCaught).toBeInstanceOf(StateError);
       expect((patchCaught as StateError).code).toBe('INVALID_STORE');
@@ -963,6 +1010,7 @@ describe('stateit', () => {
       const s = store({ count: 0 });
 
       let caught: unknown;
+
       try {
         s.update((state) => {
           state.count++; // mutates in place
@@ -1044,8 +1092,12 @@ describe('stateit', () => {
       const aSeen: number[] = [];
       const bSeen: number[] = [];
 
-      const stopA = effect(() => { aSeen.push(state.a); });
-      const stopB = effect(() => { bSeen.push(state.b); });
+      const stopA = effect(() => {
+        aSeen.push(state.a);
+      });
+      const stopB = effect(() => {
+        bSeen.push(state.b);
+      });
 
       state.a = 10;
       state.b = 20;
@@ -1061,7 +1113,9 @@ describe('stateit', () => {
       const state = reactive({ x: 0, y: 0 });
       const xRuns: number[] = [];
 
-      const stop = effect(() => { xRuns.push(state.x); });
+      const stop = effect(() => {
+        xRuns.push(state.x);
+      });
 
       state.y = 99; // y changed — x effect should NOT re-run
 
@@ -1074,27 +1128,31 @@ describe('stateit', () => {
     });
 
     it('handles nested object property tracking', () => {
-      const state = reactive({ user: { name: 'Alice', age: 30 } });
+      const state = reactive({ user: { age: 30, name: 'Alice' } });
       const nameLog: string[] = [];
 
-      const stop = effect(() => { nameLog.push(state.user.name); });
+      const stop = effect(() => {
+        nameLog.push(state.user.name);
+      });
 
-      state.user.age = 31;  // name not changed — effect must NOT re-run
+      state.user.age = 31; // name not changed — effect must NOT re-run
       expect(nameLog).toEqual(['Alice']);
 
-      state.user.name = 'Bob';  // effect re-runs
+      state.user.name = 'Bob'; // effect re-runs
       expect(nameLog).toEqual(['Alice', 'Bob']);
 
       stop();
     });
 
     it('re-runs effects when a nested object is replaced wholesale', () => {
-      const state = reactive({ user: { name: 'Alice', age: 30 } });
+      const state = reactive({ user: { age: 30, name: 'Alice' } });
       const nameLog: string[] = [];
 
-      const stop = effect(() => { nameLog.push(state.user.name); });
+      const stop = effect(() => {
+        nameLog.push(state.user.name);
+      });
 
-      state.user = { name: 'Carol', age: 25 };
+      state.user = { age: 25, name: 'Carol' };
       expect(nameLog).toEqual(['Alice', 'Carol']);
 
       stop();
@@ -1120,7 +1178,12 @@ describe('stateit', () => {
 
     it('throws StateError when called with a non-plain-object', () => {
       let caught: unknown;
-      try { reactive([] as unknown as object); } catch (e) { caught = e; }
+
+      try {
+        reactive([] as unknown as object);
+      } catch (e) {
+        caught = e;
+      }
 
       expect(caught).toBeInstanceOf(StateError);
       expect((caught as StateError).code).toBe('INVALID_REACTIVE');
@@ -1250,40 +1313,80 @@ describe('stateit', () => {
       const proxy = { fn: (): number => 0 };
       const a = computed(() => proxy.fn() + 1);
       const b = computed(() => a.value + 1);
+
       proxy.fn = () => b.value;
+
       let caught: unknown;
-      try { a.value; } catch (e) { caught = e; }
+
+      try {
+        a.value;
+      } catch (e) {
+        caught = e;
+      }
+
       expect((caught as StateError).code).toBe('COMPUTED_CYCLE');
       a.dispose();
       b.dispose();
 
       // DISPOSED_READ
       const c = computed(() => 1);
+
       c.dispose();
       caught = undefined;
-      try { void c.value; } catch (e) { caught = e; }
+
+      try {
+        void c.value;
+      } catch (e) {
+        caught = e;
+      }
+
       expect((caught as StateError).code).toBe('DISPOSED_READ');
 
       // DISPOSED_SCOPE
       const s = scope();
+
       s.dispose();
       caught = undefined;
-      try { s.run(() => {}); } catch (e) { caught = e; }
+
+      try {
+        s.run(() => {});
+      } catch (e) {
+        caught = e;
+      }
+
       expect((caught as StateError).code).toBe('DISPOSED_SCOPE');
 
       // INVALID_CLEANUP
       caught = undefined;
-      try { onCleanup(() => {}); } catch (e) { caught = e; }
+
+      try {
+        onCleanup(() => {});
+      } catch (e) {
+        caught = e;
+      }
+
       expect((caught as StateError).code).toBe('INVALID_CLEANUP');
 
       // INVALID_STORE
       caught = undefined;
-      try { store([] as unknown as object); } catch (e) { caught = e; }
+
+      try {
+        store([] as unknown as object);
+      } catch (e) {
+        caught = e;
+      }
+
       expect((caught as StateError).code).toBe('INVALID_STORE');
 
       // INVALID_REACTIVE
       caught = undefined;
-      try { reactive([] as unknown as object); } catch (e) { caught = e; }
+
+      try {
+        reactive([] as unknown as object);
+      } catch (e) {
+        caught = e;
+      }
+
       expect((caught as StateError).code).toBe('INVALID_REACTIVE');
     });
   });
@@ -1296,6 +1399,7 @@ describe('stateit', () => {
         get: () => stored,
         run: (ctx, fn) => {
           const prev = stored;
+
           stored = ctx;
 
           try {
@@ -1311,7 +1415,10 @@ describe('stateit', () => {
       try {
         const n = signal(0);
         const log: number[] = [];
-        const stop = effect(() => { log.push(n.value); });
+        const stop = effect(() => {
+          log.push(n.value);
+        });
+
         n.value = 1;
         expect(log).toEqual([0, 1]);
         stop();
@@ -1329,8 +1436,14 @@ describe('stateit', () => {
         get: () => stored,
         run: (ctx, fn) => {
           const prev = stored;
+
           stored = ctx;
-          try { return fn(); } finally { stored = prev; }
+
+          try {
+            return fn();
+          } finally {
+            stored = prev;
+          }
         },
       };
 
@@ -1338,9 +1451,13 @@ describe('stateit', () => {
 
       try {
         const log: number[] = [];
+
         runWithProvider(provider, () => {
           const n = signal(0);
-          effect(() => { log.push(n.value); });
+
+          effect(() => {
+            log.push(n.value);
+          });
           n.value = 1;
         });
         expect(log).toEqual([0, 1]);
@@ -1361,6 +1478,7 @@ describe('stateit', () => {
 
       const c = computed(() => {
         outerEvals++;
+
         return withReactiveContext(() => n.value);
       });
 
@@ -1376,7 +1494,9 @@ describe('stateit', () => {
       const log: number[] = [];
 
       withReactiveContext(() => {
-        effect(() => { log.push(n.value); });
+        effect(() => {
+          log.push(n.value);
+        });
       });
 
       n.value = 1;
@@ -1392,8 +1512,14 @@ describe('stateit', () => {
         getStore: () => stored,
         run: <T>(value: unknown, fn: () => T): T => {
           const prev = stored;
+
           stored = value;
-          try { return fn(); } finally { stored = prev; }
+
+          try {
+            return fn();
+          } finally {
+            stored = prev;
+          }
         },
       };
 
@@ -1402,7 +1528,10 @@ describe('stateit', () => {
       try {
         const n = signal(0);
         const log: number[] = [];
-        const stop = effect(() => { log.push(n.value); });
+        const stop = effect(() => {
+          log.push(n.value);
+        });
+
         n.value = 1;
         expect(log).toEqual([0, 1]);
         stop();
@@ -1418,6 +1547,7 @@ describe('stateit', () => {
       };
 
       const provider = createAsyncProvider(fakeAls);
+
       expect(provider.get()).toBeNull();
     });
   });
@@ -1465,7 +1595,12 @@ describe('stateit', () => {
       s.dispose();
 
       let caught: unknown;
-      try { s.run(() => {}); } catch (e) { caught = e; }
+
+      try {
+        s.run(() => {});
+      } catch (e) {
+        caught = e;
+      }
 
       expect(caught).toBeInstanceOf(StateError);
       expect((caught as StateError).code).toBe('DISPOSED_SCOPE');

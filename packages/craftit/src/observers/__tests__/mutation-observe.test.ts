@@ -15,7 +15,7 @@ describe('mutationObserver()', () => {
         observed = mutationObserver(hostRef.value, { childList: true });
       });
 
-      return () => html`<div class="root" ref=${hostRef}></div>`;
+      return html`<div class="root" ref=${hostRef}></div>`;
     });
 
     const root = query<HTMLElement>('.root');
@@ -54,7 +54,7 @@ describe('mutationObserver()', () => {
           mutationObserver(hostRef.value);
         });
 
-        return () => html`<div ref=${hostRef}></div>`;
+        return html`<div ref=${hostRef}></div>`;
       });
 
       expect(disconnect).not.toHaveBeenCalled();

@@ -3,6 +3,7 @@ import {
   computed,
   effect as rawEffect,
   isSignal,
+  StateError,
   type CleanupFn,
   type ReadonlySignal,
   untrack,
@@ -347,7 +348,10 @@ export const applyHtmlBinding = (root: Node, b: HtmlBinding, registerCleanup: Re
       try {
         data = b.signal.value;
       } catch (error) {
-        if (error instanceof Error && error.message.includes('[stateit] Cannot read disposed computed signal')) return;
+        // Silently skip reads from disposed computed signals (happens during scope teardown
+        // when effects briefly outlive their source computeds). Use the typed error code
+        // rather than string-matching on the message to avoid brittle cross-package coupling.
+        if (error instanceof StateError && error.code === 'DISPOSED_READ') return;
 
         throw error;
       }

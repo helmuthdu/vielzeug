@@ -2,6 +2,7 @@ export {
   batch,
   computed,
   isSignal,
+  memo,
   scope,
   signal,
   untrack,
@@ -12,13 +13,15 @@ export {
   type WatchOptions,
 } from '@vielzeug/stateit';
 
-export { effect, listen, on, onCleanup, onElement, onMounted } from './runtime';
+export { effect, getCurrentElement, listen, onCleanup, onElement, onEvent, onMounted } from './runtime';
 
 export {
   define,
+  LIFECYCLE_EVENTS,
   type ComponentDefinition,
   type InferPropsFromDefs,
   type InferPropsSignals,
+  type LifecycleEventName,
   prop,
   type PropDef,
   type PropInputDefs,
@@ -26,8 +29,6 @@ export {
   type PropOptions,
   type SetupContextBag,
 } from './registration';
-
-export type { ComponentTemplate } from './registration';
 
 export { defineField, type FormFieldHandle, type FormFieldOptions } from './form';
 
@@ -39,10 +40,12 @@ export {
   syncAria,
   type ComponentHost,
   type ComponentSlots,
+  type HostBindConfig,
   type HostBindingValue,
   type HostPropDescriptor,
   type InjectionKey,
   type ReflectConfig,
+  type SyncAriaOptions,
 } from './host';
 
 export { html } from './template-compiler';
@@ -50,10 +53,8 @@ export { each } from './directives/each';
 export { classMap } from './directives/classMap';
 export { styleMap } from './directives/styleMap';
 export { when } from './directives/when';
-export { guard } from './directives/guard';
 export { live } from './directives/live';
-export { resource, type ResourceState } from './directives/resource';
-export { raw } from './directives/raw';
+export { raw, setRawSanitizer } from './directives/raw';
 
 export {
   css,
@@ -67,3 +68,5 @@ export {
   type RefCallback,
   type Refs,
 } from './internal';
+
+export { intersectionObserver, mediaObserver, mutationObserver, resizeObserver } from './observers';

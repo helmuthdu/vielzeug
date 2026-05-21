@@ -17,6 +17,8 @@ export type OverlayControlOptions = {
   getTriggerElement?: () => HTMLElement | null;
   isDisabled?: () => boolean;
   isOpen: () => boolean;
+  /** Pass craftit's `onCleanup` to register teardown within a component setup context. */
+  onCleanup?: (fn: () => void) => void;
   onClose?: (reason: OverlayCloseReason) => void;
   onOpen?: (reason: OverlayOpenReason) => void;
   positioner?: OverlayPositioner;
@@ -30,32 +32,19 @@ export type OverlayControl = {
   toggle(): void;
 };
 
-// Module-level document click listener management for outside-click dismissal
+// Module-level document click listener management for outside-click dismissal.
+// Using a Set of per-instance handlers so only one capture listener exists on
+// the document regardless of how many overlays are open simultaneously.
 const activeOverlayListeners = new Set<(event: Event) => void>();
 let documentClickUnsubscribe: (() => void) | null = null;
 
-const isDisposedComputedSignalError = (error: unknown): boolean =>
-  error instanceof Error && error.message.includes('[stateit] Cannot read disposed computed signal');
-
 const ensureDocumentClickListener = (): void => {
-  if (documentClickUnsubscribe) return; // Already attached
+  if (documentClickUnsubscribe) return;
 
   const handler = (event: Event) => {
-    for (const listener of [...activeOverlayListeners]) {
-      try {
-        listener(event);
-      } catch (error) {
-        if (isDisposedComputedSignalError(error)) {
-          activeOverlayListeners.delete(listener);
+    for (const listener of [...activeOverlayListeners]) listener(event);
 
-          continue;
-        }
-
-        throw error;
-      }
-    }
-
-    removeDocumentClickListener();
+    if (activeOverlayListeners.size === 0) removeDocumentClickListener();
   };
 
   document.addEventListener('click', handler, { capture: true });
@@ -66,9 +55,7 @@ const ensureDocumentClickListener = (): void => {
 };
 
 const removeDocumentClickListener = (): void => {
-  if (activeOverlayListeners.size === 0 && documentClickUnsubscribe) {
-    documentClickUnsubscribe();
-  }
+  if (activeOverlayListeners.size === 0 && documentClickUnsubscribe) documentClickUnsubscribe();
 };
 
 export const createOverlayControl = (options: OverlayControlOptions): OverlayControl => {
@@ -81,25 +68,13 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     return options.restoreFocus ?? true;
   };
 
-  // Local wrapper — handles click-listener registration without mutating options.
-  const commitOpen = (next: boolean, context: { reason: OverlayOpenReason | OverlayCloseReason }): void => {
-    try {
-      options.setOpen(next, context);
-    } catch (error) {
-      if (isDisposedComputedSignalError(error) && clickListener) {
-        activeOverlayListeners.delete(clickListener);
-        removeDocumentClickListener();
+  const registerClickListener = (active: boolean): void => {
+    if (!clickListener) return;
 
-        return;
-      }
-
-      throw error;
-    }
-
-    if (next && clickListener) {
+    if (active) {
       activeOverlayListeners.add(clickListener);
       ensureDocumentClickListener();
-    } else if (!next && clickListener) {
+    } else {
       activeOverlayListeners.delete(clickListener);
       removeDocumentClickListener();
     }
@@ -110,7 +85,8 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
     if (options.isDisabled?.() || options.isOpen()) return;
 
-    commitOpen(true, { reason });
+    options.setOpen(true, { reason });
+    registerClickListener(true);
 
     if (options.positioner) {
       const reference = options.positioner.reference();
@@ -131,7 +107,8 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
     if (!options.isOpen()) return;
 
-    commitOpen(false, { reason });
+    options.setOpen(false, { reason });
+    registerClickListener(false);
 
     if (positionerCleanup) {
       positionerCleanup();
@@ -148,11 +125,9 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
   const toggle = (): void => {
     if (options.isOpen()) {
       close({ reason: 'trigger' });
-
-      return;
+    } else {
+      open({ reason: 'trigger' });
     }
-
-    open({ reason: 'trigger' });
   };
 
   clickListener = (event: Event) => {
@@ -168,14 +143,24 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     const insideByContainment = nodeTarget
       ? (boundary?.contains(nodeTarget) ?? false) || (panel?.contains(nodeTarget) ?? false)
       : false;
-    const inside = insideByPath || insideByContainment;
 
-    if (!inside) close({ reason: 'outside-click' });
+    if (!insideByPath && !insideByContainment) close({ reason: 'outside-click' });
   };
 
-  return {
-    close,
-    open,
-    toggle,
-  };
+  // Ensure the click listener is removed when the component is torn down,
+  // regardless of whether the overlay is open at that point.
+  options.onCleanup?.(() => {
+    if (clickListener) {
+      activeOverlayListeners.delete(clickListener);
+      removeDocumentClickListener();
+      clickListener = null;
+    }
+
+    if (positionerCleanup) {
+      positionerCleanup();
+      positionerCleanup = null;
+    }
+  });
+
+  return { close, open, toggle };
 };

@@ -12,8 +12,9 @@ export type FormContext = {
    * - `'submit'` (default): only on form submit
    * - `'blur'`: validate each field when it loses focus
    * - `'change'`: validate on every value change
+   * - `'input'`: validate on every input event
    */
-  validateOn: ReadonlySignal<'submit' | 'blur' | 'change'>;
+  validateOn: ReadonlySignal<'submit' | 'blur' | 'change' | 'input'>;
   /** Default variant propagated to all child form fields */
   variant: ReadonlySignal<Exclude<VisualVariant, 'glass' | 'frost' | 'text'> | undefined>;
 };

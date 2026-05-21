@@ -1,11 +1,30 @@
-import { computed, signal, watch } from '@vielzeug/stateit';
+import { type ReadonlySignal, computed, signal, watch } from '@vielzeug/stateit';
 
 import {
   createAssistiveState,
   createFieldControlBase,
-  type ChoiceFieldHandle,
-  type ChoiceFieldOptions,
+  type AssistiveState,
+  type FieldBaseOptions,
+  type FieldControlBaseHandle,
+  type FormControlValidationTrigger,
 } from './field-control';
+
+export type ChoiceFieldOptions = FieldBaseOptions & {
+  multiple?: ReadonlySignal<boolean | undefined>;
+  value: ReadonlySignal<string | undefined>;
+};
+
+export type ChoiceFieldHandle = FieldControlBaseHandle & {
+  assistive: ReadonlySignal<AssistiveState>;
+  clear: () => void;
+  formValue: ReadonlySignal<string>;
+  removeValue: (value: string) => void;
+  selectedValues: ReadonlySignal<string[]>;
+  selectValue: (value: string) => void;
+  setValues: (values: string[]) => void;
+  toggleValue: (value: string) => void;
+  triggerValidation: (on: FormControlValidationTrigger) => void;
+};
 
 const parseChoiceFieldValues = (value: string | undefined): string[] => {
   if (!value) return [];
@@ -70,19 +89,10 @@ export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandl
   };
 
   const syncControlledValue = (nextValue: unknown): void => {
-    const values = parseChoiceFieldValues(typeof nextValue === 'string' ? nextValue : String(nextValue ?? ''));
-
-    if (
-      values.length === selectedValues.value.length &&
-      values.every((value, index) => value === selectedValues.value[index])
-    ) {
-      return;
-    }
-
-    setValues(values);
+    setValues(parseChoiceFieldValues(typeof nextValue === 'string' ? nextValue : String(nextValue ?? '')));
   };
 
-  const { base, triggerValidation } = createFieldControlBase(options, { value: formValue });
+  const { triggerValidation, ...base } = createFieldControlBase(options, { value: formValue });
 
   const assistive = createAssistiveState({
     error: options.error,

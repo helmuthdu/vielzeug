@@ -1,7 +1,16 @@
-import { batch, effect as _effect, untrack, type CleanupFn, type ReadonlySignal } from '@vielzeug/stateit';
+import {
+  batch,
+  computed,
+  effect as _effect,
+  isSignal,
+  untrack,
+  type CleanupFn,
+  type ReadonlySignal,
+} from '@vielzeug/stateit';
 
 import { CRAFTIT_ERRORS } from '../errors';
 import {
+  createDirectiveResult,
   createMarkerIdFactory,
   escapeHtml,
   extractResult,
@@ -61,41 +70,62 @@ function renderKeyed<T>(
   return { bindings: allBindings, html, keys, rendered };
 }
 
-export interface EachOptions<T> {
-  fallback?: () => string | HTMLResult;
-  key: (item: T, index: number) => string | number;
-  render: (item: T, index: number) => string | HTMLResult;
-}
+/** Signal, getter function, or plain array. */
+type MaybeReactiveArray<T> = ReadonlySignal<T[]> | (() => T[]) | T[];
 
 /**
  * Renders a list with keyed DOM reconciliation for reactive sources.
  * Use inside `html` tagged templates.
  *
- * `each()` expects a reactive signal source and a stable `key` function.
+ * **Note:** `each()` returns a `DirectiveResult` — a mountable directive that manages its own
+ * DOM anchor. This is architecturally different from `when()` and `memo()`, which return
+ * `ReadonlySignal` values. The distinction exists because keyed reconciliation requires
+ * anchor-based in-place DOM patching to preserve element identity, focus, and scroll
+ * state across list updates.
  *
+ * Accepts a signal, getter function, or plain array as the source.
  * For dynamic lists with click handlers, prefer event delegation on a parent node
  * (`@click` + `closest(...)`) over per-item handlers inside `each()`.
  *
- * Supports fallback rendering when the list is empty.
+ * @param source - Signal, getter function, or plain array of items.
+ * @param key    - Returns a stable unique key for each item.
+ * @param render - Returns the HTML template for each item.
+ * @param fallback - Optional: rendered when the list is empty.
  *
  * @example
  * ```ts
  * import { each } from '@vielzeug/craftit';
  *
- * // Reactive source (key required):
- * html`${each(items, { key: item => item.id, render: (item) => html`<li>${item.name}</li>` })}`
+ * // Signal source:
+ * html`${each(items, (item) => item.id, (item) => html`<li>${item.name}</li>`)}`
  *
- * // Full example with fallback:
- * html`${each(items, {
- *   fallback: () => html`<p>No items</p>`,
- *   key: item => item.id,
- *   render: (item) => html`<li>${item.name}</li>`,
- * })}`
+ * // Getter source:
+ * html`${each(() => items.value.filter(i => i.active), (i) => i.id, (i) => html`<li>${i.name}</li>`)}`
+ *
+ * // With fallback:
+ * html`${each(items,
+ *   (item) => item.id,
+ *   (item) => html`<li>${item.name}</li>`,
+ *   () => html`<p>No items</p>`,
+ * )}`
  * ```
  */
-export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): DirectiveResult;
-export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): DirectiveResult {
-  const { fallback, key, render: renderItem } = options;
+export function each<T>(
+  source: MaybeReactiveArray<T>,
+  key: (item: T, index: number) => string | number,
+  render: (item: T, index: number) => string | HTMLResult,
+  fallback?: () => string | HTMLResult,
+): DirectiveResult {
+  // Normalize to a ReadonlySignal regardless of input shape.
+  const normalized: ReadonlySignal<T[]> = Array.isArray(source)
+    ? ({
+        get value() {
+          return source as T[];
+        },
+      } as ReadonlySignal<T[]>)
+    : isSignal(source)
+      ? source
+      : computed(source as () => T[]);
 
   const mount = (anchor: Comment, registerCleanup: RegisterCleanup): void => {
     type KeyedNode = {
@@ -130,7 +160,7 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): D
       if (!parent) return;
 
       batch(() => {
-        const raw = source.value;
+        const raw = normalized.value;
 
         if (!raw.length) {
           clearKeyed();
@@ -155,7 +185,7 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): D
 
         clearFallback();
 
-        const { keys, rendered } = renderKeyed(raw, renderItem, key);
+        const { keys, rendered } = renderKeyed(raw, render, key);
         const nextKeyed = new Map<string | number, KeyedNode>();
         const ordered: Array<{ item: { bindings: Binding[]; html: string }; key: string | number; nodes: Node[] }> = [];
 
@@ -166,6 +196,9 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): D
           let nodes: Node[];
           const cleanups: CleanupFn[] = [];
 
+          // R4 fix: always re-apply bindings even when HTML is equal.
+          // Reusing nodes (skip innerHTML re-parse) only when HTML is identical,
+          // but bindings are always re-applied so reactive handlers stay fresh.
           if (existing && existing.html === item.html) {
             nodes = existing.nodes;
             runAll(existing.cleanups);
@@ -223,5 +256,5 @@ export function each<T>(source: ReadonlySignal<T[]>, options: EachOptions<T>): D
     });
   };
 
-  return { __craftitDirective: true, mount };
+  return createDirectiveResult(mount);
 }

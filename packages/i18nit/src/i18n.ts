@@ -33,9 +33,7 @@ function makeRecord<M extends Messages>(source: LocaleSource<M>): LocaleRecord<M
 
 const INTERPOLATION_PATTERN = /\{([\p{ID_Continue}\-]+)\}/gu;
 
-// Prevents unbounded memory growth when scope() is called with many unique prefixes
-// (e.g., user-influenced input in an SSR context).
-const MAX_SCOPE_CACHE = 256;
+const CARDINAL_FALLBACK: PluralRuleSelector = { select: (n) => (n === 1 ? 'one' : 'other') };
 
 function canon(locale: string): string {
   try {
@@ -70,7 +68,7 @@ function selectPluralForm(cache: PluralCaches, locale: Locale, count: number, or
     try {
       rules = new Intl.PluralRules(locale, { type: ordinal ? 'ordinal' : 'cardinal' });
     } catch {
-      rules = { select: (value: number) => (value === 1 ? 'one' : 'other') };
+      rules = CARDINAL_FALLBACK;
     }
 
     cache.set(key, rules);
@@ -227,26 +225,26 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     return entry.loadingTask;
   };
 
-  function translate(key: MessageLeafKeys<M> | AnyKey, vars?: TranslateVars): string {
+  const translate = (key: MessageLeafKeys<M> | AnyKey, vars?: TranslateVars): string => {
     const base = String(key);
     const message = findMessage(base);
 
     return message === undefined
       ? onMissing({ key: base, locale, type: 'key' })
       : interpolate(message, vars, base, locale, onMissing);
-  }
+  };
 
-  function translatePlural(
+  const translatePlural = (
     key: MessageBranchKeys<M> | AnyKey,
     count: number,
     options?: PluralTranslateOptions,
-  ): string {
+  ): string => {
     if (!Number.isFinite(count)) {
-      throw new TypeError('`count` must be a finite number.');
+      throw new TypeError('[i18nit/E002] `count` must be a finite number.');
     }
 
     if (options?.vars && Object.hasOwn(options.vars, 'count')) {
-      throw new Error('`tp` does not allow `vars.count`; `count` is injected automatically.');
+      throw new Error('[i18nit/E003] `tp` does not allow `vars.count`; `count` is injected automatically.');
     }
 
     const base = String(key);
@@ -260,7 +258,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     }
 
     return interpolate(message, options?.vars ? { ...options.vars, count } : { count }, base, locale, onMissing);
-  }
+  };
 
   return {
     get fmt() {
@@ -297,8 +295,6 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       let cached = scopeCache.get(pre);
 
       if (!cached) {
-        if (scopeCache.size >= MAX_SCOPE_CACHE) scopeCache.clear();
-
         cached = {
           has: (key) => findMessage(`${pre}.${key}`) !== undefined,
           t: (key, vars?) => translate(`${pre}.${key}`, vars),

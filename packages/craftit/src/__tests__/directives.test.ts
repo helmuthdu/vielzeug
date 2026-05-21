@@ -3,7 +3,20 @@
  * Tests for core craftit directives: each, raw
  */
 
-import { computed, define, each, guard, html, live, raw, resource, signal, styleMap, when } from '../index';
+import {
+  classMap,
+  computed,
+  define,
+  each,
+  html,
+  live,
+  memo,
+  raw,
+  setRawSanitizer,
+  signal,
+  styleMap,
+  when,
+} from '../index';
 import { mount, type MountSetup, waitFor } from '../testing';
 import { register } from './test-utils';
 
@@ -14,7 +27,11 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(items, { key: (item) => item, render: (item) => html`<li>${item}</li>` })}
+          ${each(
+            items,
+            (item) => item,
+            (item) => html`<li>${item}</li>`,
+          )}
         </ul>
       `;
     });
@@ -30,11 +47,12 @@ describe('Directive: each()', () => {
 
       return html`
         <div class="container">
-          ${each(items, {
-            fallback: () => html`<div class="empty">Empty</div>`,
-            key: (_, i) => i,
-            render: (item) => html`<li>${item}</li>`,
-          })}
+          ${each(
+            items,
+            (_, i) => i,
+            (item) => html`<li>${item}</li>`,
+            () => html`<div class="empty">Empty</div>`,
+          )}
         </div>
       `;
     });
@@ -48,12 +66,36 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(items, { key: (item) => item, render: (item) => html`<li>${item}</li>` })}
+          ${each(
+            items,
+            (item) => item,
+            (item) => html`<li>${item}</li>`,
+          )}
         </ul>
       `;
     });
 
     expect(queryAll('li').length).toBe(3);
+  });
+
+  it('should accept a getter function as source', async () => {
+    const all = signal([1, 2, 3, 4]);
+    const { flush, queryAll } = await mount(
+      () =>
+        html`<ul>
+          ${each(
+            () => all.value.filter((n) => n % 2 === 0),
+            (n) => n,
+            (n) => html`<li>${n}</li>`,
+          )}
+        </ul>`,
+    );
+
+    expect(queryAll('li').map((el) => el.textContent)).toEqual(['2', '4']);
+
+    all.value = [1, 2, 3, 4, 6];
+    await flush();
+    expect(queryAll('li').map((el) => el.textContent)).toEqual(['2', '4', '6']);
   });
 
   it('should support options-based keyed rendering', async () => {
@@ -62,7 +104,11 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(items, { key: (item) => item, render: (item) => html`<li>${item * 2}</li>` })}
+          ${each(
+            items,
+            (item) => item,
+            (item) => html`<li>${item * 2}</li>`,
+          )}
         </ul>
       `;
     });
@@ -77,7 +123,11 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(visibleItems, { key: (_, i) => i, render: (item) => html`<li>${item}</li>` })}
+          ${each(
+            visibleItems,
+            (_, i) => i,
+            (item) => html`<li>${item}</li>`,
+          )}
         </ul>
       `;
     });
@@ -99,10 +149,11 @@ describe('Directive: each()', () => {
 
       return html`
         <ul>
-          ${each(activeItems, {
-            key: (item) => item.id,
-            render: (item) => html`<li class="item">${item.name}</li>`,
-          })}
+          ${each(
+            activeItems,
+            (item) => item.id,
+            (item) => html`<li class="item">${item.name}</li>`,
+          )}
         </ul>
       `;
     });
@@ -123,7 +174,11 @@ describe('Directive: each()', () => {
       'test-keyed-sibling',
       () => html`
         <div class="container">
-          ${each(items, { key: (item) => item.id, render: (item) => html`<span class="item">${item.value}</span>` })}
+          ${each(
+            items,
+            (item) => item.id,
+            (item) => html`<span class="item">${item.value}</span>`,
+          )}
           <button class="after">After</button>
         </div>
       `,
@@ -154,10 +209,11 @@ describe('Directive: each()', () => {
       'test-reuse-nodes',
       () => html`
         <div>
-          ${each(items, {
-            key: (item) => item.id,
-            render: (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
-          })}
+          ${each(
+            items,
+            (item) => item.id,
+            (item) => html`<div class="item" data-id="${item.id}">${item.value}</div>`,
+          )}
         </div>
       `,
     );
@@ -191,10 +247,11 @@ describe('Directive: each()', () => {
       'test-keyed-reorder',
       () =>
         html`<div>
-          ${each(items, {
-            key: (item) => item.id,
-            render: (item) => html`<span class="item">${item.value}</span>`,
-          })}
+          ${each(
+            items,
+            (item) => item.id,
+            (item) => html`<span class="item">${item.value}</span>`,
+          )}
         </div>`,
     );
 
@@ -222,13 +279,14 @@ describe('Directive: each()', () => {
       'test-keyed-html-replace',
       () => html`
         <div>
-          ${each(items, {
-            key: (item) => item.id,
-            render: (item) =>
+          ${each(
+            items,
+            (item) => item.id,
+            (item) =>
               item.mode === 'button'
                 ? html`<button class="entry" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</button>`
                 : html`<a class="entry" href="#" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</a>`,
-          })}
+          )}
         </div>
       `,
     );
@@ -251,11 +309,12 @@ describe('Directive: each()', () => {
       'test-keyed-empty-transition',
       () => html`
         <ul>
-          ${each(items, {
-            fallback: () => html`<li class="empty">Empty</li>`,
-            key: (item) => item.id,
-            render: (item) => html`<li class="item">${item.value}</li>`,
-          })}
+          ${each(
+            items,
+            (item) => item.id,
+            (item) => html`<li class="item">${item.value}</li>`,
+            () => html`<li class="empty">Empty</li>`,
+          )}
         </ul>
       `,
     );
@@ -277,13 +336,22 @@ describe('Directive: each()', () => {
 });
 
 describe('Directive: raw()', () => {
+  afterEach(() => {
+    // Reset sanitizer after each test so tests are isolated
+    setRawSanitizer(null);
+  });
+
   it('should render HTML without escaping', async () => {
+    setRawSanitizer((s) => s);
+
     const { query } = await mount(() => html`<div>${raw('<strong>bold</strong>')}</div>`);
 
     expect(query('strong')?.textContent).toBe('bold');
   });
 
   it('should update reactively', async () => {
+    setRawSanitizer((s) => s);
+
     const content = signal('<b>one</b>');
 
     const { flush, query } = await mount(() => html`<div>${raw(content)}</div>`);
@@ -294,6 +362,68 @@ describe('Directive: raw()', () => {
     await flush();
     expect(query('i')?.textContent).toBe('two');
     expect(query('b')).toBeNull();
+  });
+
+  it('should pass content through the registered sanitizer', async () => {
+    const sanitized: string[] = [];
+
+    setRawSanitizer((html) => {
+      sanitized.push(html);
+
+      // Strip script tags as a minimal sanitizer
+      return html.replace(/<script[^>]*>.*?<\/script>/gi, '');
+    });
+
+    const { query } = await mount(() => html`<div>${raw('<b>safe</b><script>alert(1)</script>')}</div>`);
+
+    expect(sanitized).toHaveLength(1);
+    expect(query('b')?.textContent).toBe('safe');
+    // Script tag removed by sanitizer
+    expect(query('script')).toBeNull();
+  });
+
+  it('should pass reactive values through the sanitizer on each update', async () => {
+    const calls: string[] = [];
+
+    setRawSanitizer((html) => {
+      calls.push(html);
+
+      return html;
+    });
+
+    const content = signal('<b>first</b>');
+    const { flush } = await mount(() => html`<div>${raw(content)}</div>`);
+
+    expect(calls).toHaveLength(1);
+
+    content.value = '<i>second</i>';
+    await flush();
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toBe('<i>second</i>');
+  });
+
+  it('should warn in DEV mode when no sanitizer is registered', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await mount(() => html`<div>${raw('<b>content</b>')}</div>`);
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('setRawSanitizer'));
+    warn.mockRestore();
+  });
+
+  it('should warn in all environments (not only DEV) when no sanitizer is registered', async () => {
+    // The warning is unconditional (no import.meta.env.DEV guard) to surface
+    // sanitizer-omission mistakes in production builds as well.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Empty string does NOT warn (no content to inject)
+    await mount(() => html`<div>${raw('')}</div>`);
+    expect(warn).not.toHaveBeenCalled();
+
+    // Non-empty string DOES warn regardless of environment flag
+    await mount(() => html`<div>${raw('<em>text</em>')}</div>`);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('setRawSanitizer'));
+    warn.mockRestore();
   });
 });
 
@@ -319,6 +449,77 @@ describe('Directive: styleMap()', () => {
 
     expect(box?.getAttribute('style')).toContain('color:rgb(0, 0, 255)');
     expect(box?.getAttribute('style')).toContain('width:24px');
+  });
+
+  it('should strip semicolons from values to prevent CSS declaration injection', async () => {
+    const { query } = await mount(
+      () => html`<div class="box" :style=${styleMap({ color: 'red; display:none' })}></div>`,
+    );
+
+    const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
+
+    // Semicolons stripped — injection neutralised
+    expect(style).not.toContain(';display:none');
+    expect(style).toContain('color:red display:none');
+  });
+
+  it('should strip braces from values', async () => {
+    const { query } = await mount(
+      () => html`<div class="box" :style=${styleMap({ color: 'red} body{display:none' })}></div>`,
+    );
+
+    const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
+
+    expect(style).not.toContain('}');
+    expect(style).not.toContain('{');
+  });
+
+  it('should strip semicolons from property name keys to prevent declaration injection', async () => {
+    const { query } = await mount(
+      () => html`<div class="box" :style=${styleMap({ 'color; background': 'red' })}></div>`,
+    );
+
+    const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
+
+    // Key has semicolons stripped — only valid CSS property remains
+    expect(style).not.toContain('; background');
+    expect(style).toContain('color background:red');
+  });
+
+  it('should drop entries with empty property names after sanitization', async () => {
+    const { query } = await mount(() => html`<div class="box" :style=${styleMap({ ';{}': 'red' })}></div>`);
+
+    const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
+
+    // All chars stripped from key → entry dropped entirely
+    expect(style).toBe('');
+  });
+});
+
+describe('Directive: classMap()', () => {
+  it('should join truthy class names', async () => {
+    const active = signal(true);
+    const hidden = signal(false);
+    const { flush, query } = await mount(() => html`<div :class=${classMap({ active, hidden, static: true })}></div>`);
+
+    expect(query('div')?.getAttribute('class')).toContain('active');
+    expect(query('div')?.getAttribute('class')).toContain('static');
+    expect(query('div')?.getAttribute('class')).not.toContain('hidden');
+
+    active.value = false;
+    hidden.value = true;
+    await flush();
+    expect(query('div')?.getAttribute('class')).not.toContain('active');
+    expect(query('div')?.getAttribute('class')).toContain('hidden');
+  });
+
+  it('should strip whitespace from class name keys to prevent token injection', async () => {
+    const { query } = await mount(() => html`<div :class=${classMap({ 'foo bar': true })}></div>`);
+
+    const cls = query('div')?.getAttribute('class') ?? '';
+
+    // Spaces stripped — no extra token injected
+    expect(cls).toBe('foobar');
   });
 });
 
@@ -346,7 +547,7 @@ describe('Directive: when()', () => {
   });
 });
 
-describe('Directive: guard()', () => {
+describe('Directive: memo() (replaces guard)', () => {
   it('should only recompute when dependency tuple changes', async () => {
     const trigger = signal(1);
     const other = signal(0);
@@ -355,11 +556,14 @@ describe('Directive: guard()', () => {
     const { flush, query } = await mount(
       () =>
         html`<div class="value">
-          ${guard([trigger], () => {
-            renders++;
+          ${memo(
+            () => [trigger.value],
+            () => {
+              renders++;
 
-            return html`<span>${trigger.value}</span>`;
-          })}
+              return html`<span>${trigger.value}</span>`;
+            },
+          )}
         </div>`,
     );
 
@@ -412,7 +616,8 @@ describe('Directive: live()', () => {
   });
 });
 
-describe('Directive: resource()', () => {
+// resource() has been removed from craftit. See @vielzeug/fetchit for async data fetching.
+describe.skip('Directive: resource() — REMOVED', () => {
   it('should show pending state then resolved data', async () => {
     let resolve!: (value: string) => void;
     const p = new Promise<string>((res) => {

@@ -1,5 +1,5 @@
 import { mediaObserver } from '..';
-import { onMounted } from '../../index';
+import { html, onMounted } from '../../index';
 import { mount } from '../../testing';
 
 describe('mediaObserver()', () => {
@@ -16,7 +16,7 @@ describe('mediaObserver()', () => {
           capturedMatches = mediaObserver('(prefers-color-scheme: dark)');
         });
 
-        return () => '';
+        return html``;
       });
 
       expect(capturedMatches.value).toBe(true);
@@ -46,7 +46,7 @@ describe('mediaObserver()', () => {
           capturedMatches = mediaObserver('(max-width: 768px)');
         });
 
-        return () => '';
+        return html``;
       });
 
       expect(capturedMatches.value).toBe(false);
@@ -78,7 +78,7 @@ describe('mediaObserver()', () => {
           mediaObserver('(prefers-reduced-motion: reduce)');
         });
 
-        return () => '';
+        return html``;
       });
 
       expect(removeEventListenerSpy).not.toHaveBeenCalled();

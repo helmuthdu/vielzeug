@@ -4,10 +4,10 @@ import { ErrorCode, prependIssuePath, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class SetSchema<T> extends Schema<Set<T>> {
-  readonly itemSchema: BaseSchema<T, any, any>;
+  readonly itemSchema: BaseSchema<T, any>;
 
-  constructor(itemSchema: BaseSchema<T, any, any>) {
-    super([]);
+  constructor(itemSchema: BaseSchema<T, any>) {
+    super();
     this.itemSchema = itemSchema;
   }
 
@@ -72,7 +72,14 @@ export class SetSchema<T> extends Schema<Set<T>> {
 
       if (typed.size >= size) return null;
 
-      return [{ code: ErrorCode.too_small, message: resolveMessage(message, { min: size, value: typed }), params: { min: size }, path: [] }];
+      return [
+        {
+          code: ErrorCode.too_small,
+          message: resolveMessage(message, { min: size, value: typed }),
+          params: { min: size },
+          path: [],
+        },
+      ];
     });
   }
 
@@ -85,7 +92,14 @@ export class SetSchema<T> extends Schema<Set<T>> {
 
       if (typed.size <= size) return null;
 
-      return [{ code: ErrorCode.too_big, message: resolveMessage(message, { max: size, value: typed }), params: { max: size }, path: [] }];
+      return [
+        {
+          code: ErrorCode.too_big,
+          message: resolveMessage(message, { max: size, value: typed }),
+          params: { max: size },
+          path: [],
+        },
+      ];
     });
   }
 
@@ -98,7 +112,14 @@ export class SetSchema<T> extends Schema<Set<T>> {
 
       if (typed.size === exact) return null;
 
-      return [{ code: ErrorCode.invalid_length, message: resolveMessage(message, { exact, value: typed }), params: { exact }, path: [] }];
+      return [
+        {
+          code: ErrorCode.invalid_length,
+          message: resolveMessage(message, { exact, value: typed }),
+          params: { exact },
+          path: [],
+        },
+      ];
     });
   }
 
@@ -108,7 +129,9 @@ export class SetSchema<T> extends Schema<Set<T>> {
 
       if (typed.size > 0) return null;
 
-      return [{ code: ErrorCode.too_small, message: resolveMessage(message, { min: 1 }), params: { min: 1 }, path: [] }];
+      return [
+        { code: ErrorCode.too_small, message: resolveMessage(message, { min: 1 }), params: { min: 1 }, path: [] },
+      ];
     });
   }
 
@@ -124,13 +147,5 @@ export class SetSchema<T> extends Schema<Set<T>> {
     if (!(other instanceof SetSchema)) return false;
 
     return this.itemSchema.equals(other.itemSchema) && super._equalsImpl(other);
-  }
-
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    const next = new SetSchema(this.itemSchema) as this;
-
-    next.state = state as any;
-
-    return next;
   }
 }

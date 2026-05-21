@@ -1,7 +1,7 @@
-import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
+import type { OverlayCloseDetail, OverlayOpenDetail } from '../../controls';
 
-import { computed, createId, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
-import { createOverlayControl } from '@vielzeug/craftit/controls';
+import { computed, createId, define, html, onCleanup, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
+import { createOverlayControl } from '../../controls';
 import { computePosition, flip, offset, type Placement, shift } from '@vielzeug/floatit';
 
 import { disablableBundle } from '../../inputs/shared/bundles';
@@ -122,6 +122,7 @@ export const POPOVER_TAG = define<BitPopoverProps, BitPopoverEvents>('bit-popove
       getTriggerElement: () => currentTrigger,
       isDisabled: () => isDisabled.value,
       isOpen: () => visible.value,
+      onCleanup,
       onClose: (reason) => emit('close', { reason }),
       onOpen: (reason) => emit('open', { reason }),
       positioner: {

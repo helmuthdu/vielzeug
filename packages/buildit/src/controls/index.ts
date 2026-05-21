@@ -1,6 +1,4 @@
-export { createCheckableFieldControl } from './checkable-control';
-
-export { type CheckableChangePayload } from './field-control';
+export { createCheckableFieldControl, type CheckableChangePayload } from './checkable-control';
 export { createTextField } from './text-field-control';
 export { createChoiceField } from './choice-field-control';
 

@@ -16,9 +16,10 @@ import {
   createPressControl,
   type OverlayCloseDetail,
   type OverlayOpenDetail,
-} from '@vielzeug/craftit/controls';
-import { computePosition, flip, offset, shift } from '@vielzeug/floatit';
+} from '../../controls';
+import { createDropdownPositioner } from '../../inputs/shared/dom-sync';
 
+import type { Placement } from '@vielzeug/floatit';
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { disablableBundle, sizableBundle, themableBundle } from '../../inputs/shared/bundles';
@@ -61,7 +62,7 @@ export type BitMenuProps = {
 
 const themeStyles = /* css */ css`
   ${colorThemeMixin}
-  ${sizeVariantMixin}
+  ${sizeVariantMixin()}
   ${forcedColorsMixin}
 `;
 
@@ -326,49 +327,53 @@ export const MENU_TAG = define<BitMenuProps, BitMenuEvents>('bit-menu', {
 
     let focusedIndex = -1;
 
-    function updatePosition() {
-      if (!panelEl || !triggerEl) return;
-
-      const result = computePosition(triggerEl, panelEl, {
-        middleware: [offset(4), flip({ padding: 6 }), shift({ padding: 6 })],
-        placement: props.placement.value,
-      });
-
-      panelEl.style.left = `${result.x}px`;
-      panelEl.style.top = `${result.y}px`;
-    }
+    const menuPositioner = createDropdownPositioner(
+      () => triggerEl,
+      () => panelEl,
+      { matchWidth: false, offsetPx: 4, padding: 6, getPlacement: () => (props.placement.value ?? 'bottom-start') as Placement },
+    );
 
     const triggerRef = { value: null as HTMLElement | null };
 
     const popupList = createPopupListControl({
-      ariaSync: { role: 'menu' },
-      getBoundaryElement: () => host.el,
-      getIndex: () => focusedIndex,
-      getItems: getItems,
-      getPanelElement: () => panelEl,
-      getTriggerElement: () => triggerEl,
-      isDisabled: () => isDisabled.value,
-      isItemDisabled: (item) => item.hasAttribute('disabled'),
-      isOpen: () => isOpenSignal.value,
-      listId: menuId,
-      onClose: (reason) => emit('close', { reason }),
-      onOpen: (reason) => emit('open', { reason }),
+      aria: {
+        ariaSync: { role: 'menu' },
+        listId: menuId,
+      },
+      behavior: {
+        isDisabled: () => isDisabled.value,
+        isItemDisabled: (item) => item.hasAttribute('disabled'),
+      },
+      elements: {
+        getBoundaryElement: () => host.el,
+        getPanelElement: () => panelEl,
+        getTriggerElement: () => triggerEl,
+        triggerRef,
+      },
+      on: {
+        onClose: (reason) => emit('close', { reason }),
+        onOpen: (reason) => emit('open', { reason }),
+      },
       positioner: {
         floating: () => panelEl,
         reference: () => triggerEl,
-        update: updatePosition,
+        update: menuPositioner.updatePosition,
       },
-      setIndex: (index) => {
-        focusedIndex = index;
+      state: {
+        getIndex: () => focusedIndex,
+        getItems: getItems,
+        isOpen: () => isOpenSignal.value,
+        setIndex: (index) => {
+          focusedIndex = index;
 
-        const nextItem = getItems()[index];
+          const nextItem = getItems()[index];
 
-        getItemFocusable(nextItem)?.focus();
+          getItemFocusable(nextItem)?.focus();
+        },
+        setOpen: (next) => {
+          isOpenSignal.value = next;
+        },
       },
-      setOpen: (next) => {
-        isOpenSignal.value = next;
-      },
-      triggerRef,
     });
 
     const activateItem = (item: HTMLElement): void => {

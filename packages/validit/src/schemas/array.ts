@@ -1,21 +1,18 @@
-import type { ArrayConstraints, Issue, MessageFn } from '../core';
+import type { Issue, MessageFn } from '../core';
 
-import { ErrorCode, Schema, prependIssuePath, resolveMessage } from '../core';
+import { ErrorCode, Schema, fail, prependIssuePath, resolveMessage } from '../core';
 import { _messages } from '../messages';
 
-export class ArraySchema<T> extends Schema<T[], T[], ArrayConstraints> {
-  readonly itemSchema: Schema<T, any, any>;
+export class ArraySchema<T> extends Schema<T[]> {
+  readonly itemSchema: Schema<T, any>;
+  /** @internal JSON Schema annotation — populated by min()/length()/nonEmpty() */
+  _minItems?: number;
+  /** @internal JSON Schema annotation — populated by max()/length() */
+  _maxItems?: number;
 
-  constructor(itemSchema: Schema<T, any, any>) {
-    super([]);
+  constructor(itemSchema: Schema<T, any>) {
+    super();
     this.itemSchema = itemSchema;
-  }
-
-  private _invalidArray(value: unknown): { data: unknown; issues: Issue[] } {
-    return {
-      data: value,
-      issues: [{ code: ErrorCode.invalid_type, message: _messages().array.type(), path: [] }],
-    };
   }
 
   private _parseItemsSync(items: unknown[]): { data: T[]; issues: Issue[] } {
@@ -54,7 +51,7 @@ export class ArraySchema<T> extends Schema<T[], T[], ArrayConstraints> {
 
   protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
     if (!Array.isArray(value)) {
-      return this._invalidArray(value);
+      return { data: value, issues: fail(ErrorCode.invalid_type, _messages().array.type()) };
     }
 
     const { data: items, issues } = this._parseItemsSync(value);
@@ -64,7 +61,7 @@ export class ArraySchema<T> extends Schema<T[], T[], ArrayConstraints> {
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
     if (!Array.isArray(value)) {
-      return this._invalidArray(value);
+      return { data: value, issues: fail(ErrorCode.invalid_type, _messages().array.type()) };
     }
 
     const { data: items, issues } = await this._parseItemsAsync(value);
@@ -76,48 +73,50 @@ export class ArraySchema<T> extends Schema<T[], T[], ArrayConstraints> {
     length: number,
     message: MessageFn<{ min: number; value: unknown[] }> = (ctx) => _messages().array.min(ctx),
   ): this {
-    return this._addValidatorWithConstraints(
-      (value) => {
-        const typed = value as unknown[];
+    const next = this._addValidator((value) => {
+      if ((value as unknown[]).length >= length) return null;
 
-        if (typed.length >= length) return null;
+      return fail(ErrorCode.too_small, resolveMessage(message, { min: length, value: value as unknown[] }), {
+        min: length,
+      });
+    }) as ArraySchema<any>;
 
-        return [{ code: ErrorCode.too_small, message: resolveMessage(message, { min: length, value: typed }), params: { min: length }, path: [] }];
-      },
-      { minItems: length },
-    );
+    next._minItems = next._minItems === undefined ? length : Math.max(next._minItems, length);
+
+    return next as this;
   }
 
   max(
     length: number,
     message: MessageFn<{ max: number; value: unknown[] }> = (ctx) => _messages().array.max(ctx),
   ): this {
-    return this._addValidatorWithConstraints(
-      (value) => {
-        const typed = value as unknown[];
+    const next = this._addValidator((value) => {
+      if ((value as unknown[]).length <= length) return null;
 
-        if (typed.length <= length) return null;
+      return fail(ErrorCode.too_big, resolveMessage(message, { max: length, value: value as unknown[] }), {
+        max: length,
+      });
+    }) as ArraySchema<any>;
 
-        return [{ code: ErrorCode.too_big, message: resolveMessage(message, { max: length, value: typed }), params: { max: length }, path: [] }];
-      },
-      { maxItems: length },
-    );
+    next._maxItems = next._maxItems === undefined ? length : Math.min(next._maxItems, length);
+
+    return next as this;
   }
 
   length(
     exact: number,
     message: MessageFn<{ exact: number; value: unknown[] }> = (ctx) => _messages().array.length(ctx),
   ): this {
-    return this._addValidatorWithConstraints(
-      (value) => {
-        const typed = value as unknown[];
+    const next = this._addValidator((value) => {
+      if ((value as unknown[]).length === exact) return null;
 
-        if (typed.length === exact) return null;
+      return fail(ErrorCode.invalid_length, resolveMessage(message, { exact, value: value as unknown[] }), { exact });
+    }) as ArraySchema<any>;
 
-        return [{ code: ErrorCode.invalid_length, message: resolveMessage(message, { exact, value: typed }), params: { exact }, path: [] }];
-      },
-      { maxItems: exact, minItems: exact },
-    );
+    next._minItems = exact;
+    next._maxItems = exact;
+
+    return next as this;
   }
 
   nonEmpty(message: MessageFn<{ min: number; value: unknown[] }> = () => _messages().array.nonEmpty()): this {
@@ -130,18 +129,16 @@ export class ArraySchema<T> extends Schema<T[], T[], ArrayConstraints> {
 
       if (new Set(typed).size === typed.length) return null;
 
-      return [{ code: ErrorCode.invalid_unique, message: resolveMessage(message, { value: typed }), params: { unique: true }, path: [] }];
+      return fail(ErrorCode.invalid_unique, resolveMessage(message, { value: typed }), { unique: true });
     });
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
     const base: Record<string, unknown> = { items: this.itemSchema.schema(), type: 'array' };
-    const constraints = this.state.meta?.constraints;
 
-    if (constraints) {
-      if (constraints.minItems !== undefined) base['minItems'] = constraints.minItems;
-      if (constraints.maxItems !== undefined) base['maxItems'] = constraints.maxItems;
-    }
+    if (this._minItems !== undefined) base['minItems'] = this._minItems;
+
+    if (this._maxItems !== undefined) base['maxItems'] = this._maxItems;
 
     return base;
   }
@@ -157,14 +154,12 @@ export class ArraySchema<T> extends Schema<T[], T[], ArrayConstraints> {
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof ArraySchema)) return false;
 
-    return this.itemSchema.equals(other.itemSchema as import('../core').AnySchema) && super._equalsImpl(other);
-  }
+    const o = other as ArraySchema<any>;
 
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    const next = new ArraySchema(this.itemSchema) as this;
-
-    next.state = state as any;
-
-    return next;
+    return (
+      this.itemSchema.equals(o.itemSchema as import('../core').AnySchema) &&
+      this._minItems === o._minItems &&
+      this._maxItems === o._maxItems
+    );
   }
 }

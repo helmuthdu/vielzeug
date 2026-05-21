@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/stateit';
 
-import { createOverlayControl } from '../../controls';
+import { createOverlayControl } from '../index';
 
 describe('createOverlayControl', () => {
   it('opens with programmatic reason by default', () => {

@@ -23,7 +23,7 @@ describe('component slots and emit', () => {
           triggerAssigned = slots.has('trigger').value;
         });
 
-        return () => html`<slot name="trigger"></slot><slot></slot>`;
+        return html`<slot name="trigger"></slot><slot></slot>`;
       },
       { html: '<button slot="trigger">Open</button><span>Body</span>' },
     );
@@ -71,7 +71,7 @@ describe('component slots and emit', () => {
           emit('retry');
         };
 
-        return () => html`<button @click=${fire}>Emit</button>`;
+        return html`<button @click=${fire}>Emit</button>`;
       },
     });
 
@@ -88,18 +88,18 @@ describe('component slots and emit', () => {
     expect(retrySpy).toHaveBeenCalledTimes(1);
   });
 
-  it('dispatches composed bubbling custom events from setup emit', async () => {
+  it('dispatches bubbling (non-composed) custom events from setup emit', async () => {
     const { element } = await mount(((_props, { emit }) => {
       setTimeout(() => emit('ping', { ok: true }), 30);
 
-      return () => html`<div></div>`;
+      return html`<div></div>`;
     }) as import('../index').ComponentDefinition['setup']);
 
     const event = await waitForEvent<CustomEvent<{ ok: boolean }>>(element, 'ping');
 
     expect(event.detail.ok).toBe(true);
     expect(event.bubbles).toBe(true);
-    expect(event.composed).toBe(true);
+    expect(event.composed).toBe(false);
   });
 
   it('infers emit and prop signals from schema + raw defaults', async () => {
@@ -115,8 +115,7 @@ describe('component slots and emit', () => {
         expectType<import('@vielzeug/stateit').Signal<boolean | undefined>>(props.checked);
         expectType<import('@vielzeug/stateit').Signal<string | undefined>>(props.label);
 
-        return () =>
-          html`<button @click=${() => emit('toggle', { checked: !props.checked.value })}>${props.label}</button>`;
+        return html`<button @click=${() => emit('toggle', { checked: !props.checked.value })}>${props.label}</button>`;
       },
     });
 

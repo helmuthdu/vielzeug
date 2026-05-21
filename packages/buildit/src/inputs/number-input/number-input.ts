@@ -1,14 +1,12 @@
-import { computed, define, defineField, html, inject, prop, signal } from '@vielzeug/craftit';
-import { createSpinnerControl } from '@vielzeug/craftit/controls';
+import { computed, define, defineField, html, inject, prop, signal, watch } from '@vielzeug/craftit';
+import { createSpinnerControl } from '../../controls';
 
 import type { DisablableProps, SizableProps, ThemableProps, VisualVariant } from '../../types';
 
 import '../../content/icon/icon';
 import { disabledStateMixin } from '../../styles';
 import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
-import { syncSignalFromProp } from '../shared/utils';
 // Ensure child components are registered
 import '../button/button';
 import '../input/input';
@@ -123,24 +121,25 @@ export const NUMBER_INPUT_TAG = define<BitNumberInputProps, BitNumberInputEvents
 
     host.bind({
       attr: {
+        size: () => props.size?.value ?? formCtx?.size.value,
         value: () => committedValue.value || null,
+        variant: () => props.variant?.value ?? formCtx?.variant?.value,
       },
     });
 
-    mountFormContextSync(host.el, formCtx, props);
 
     defineField({
       disabled: isDisabled,
       value: computed(() => (inputValue.value !== '' ? inputValue.value : null)),
     });
-    syncSignalFromProp(props.value, {
-      get value() {
-        return props.value.value;
-      },
-      set value(v) {
+
+    watch(
+      props.value,
+      (v) => {
         syncValueState(normalizeValue(v));
       },
-    });
+      { immediate: true },
+    );
     function clamp(n: number): number {
       const min = props.min.value;
       const max = props.max.value;

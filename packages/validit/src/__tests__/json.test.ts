@@ -436,7 +436,7 @@ describe('schema()', () => {
     });
 
     it('int stores type hint instead of constraint key', () => {
-      expect(v.number().int().meta).toMatchObject({ typeHint: 'integer' });
+      expect(v.number().int()._typeHint).toBe('integer');
     });
 
     it('int does not leak integer into constraints', () => {
@@ -448,7 +448,10 @@ describe('schema()', () => {
     });
 
     it('int + min keeps both hint and constraints in metadata', () => {
-      expect(v.number().int().min(1).meta).toMatchObject({ constraints: { minimum: 1 }, typeHint: 'integer' });
+      const s = v.number().int().min(1);
+
+      expect(s._typeHint).toBe('integer');
+      expect(s._minimum).toBe(1);
     });
 
     it('repeated max keeps the most restrictive bound', () => {

@@ -1,13 +1,12 @@
 export {
   ErrorCode,
-  NullableSchema,
-  NullishSchema,
-  OptionalSchema,
+  PipeSchema,
   Schema,
   ValidationError,
+  WrapperSchema,
   errorsAt,
+  fail,
   type AnySchema,
-  type ArrayConstraints,
   type CheckContext,
   type CheckFnResult,
   type FlatError,
@@ -19,19 +18,45 @@ export {
   type Issue,
   type JsonSchema,
   type MessageFn,
-  type NumberConstraints,
+  type NullableSchema,
+  type NullishSchema,
+  type OptionalSchema,
   type ParseResult,
-  type SchemaMeta,
-  type SchemaConstraints,
   type SchemaWalker,
-  type StringConstraints,
   type ValidateFn,
+  type WrapperMode,
   prependIssuePath,
   resolveMessage,
 } from './core';
 
 export { schema } from './schemas/json';
 
-export { configure, reset, withMessages, type Messages } from './messages';
+export { configure, reset, withMessages, withMessagesAsync, type Logger, type Messages } from './messages';
 
-export { v } from './v';
+export {
+  v,
+  vAny,
+  vArray,
+  vBigint,
+  vBoolean,
+  vCoerce,
+  vDate,
+  vEnum,
+  vInstanceof,
+  vIntersect,
+  vLazy,
+  vLiteral,
+  vMap,
+  vNever,
+  vNull,
+  vNumber,
+  vObject,
+  vRecord,
+  vSet,
+  vString,
+  vTuple,
+  vUndefined,
+  vUnion,
+  vUnknown,
+  vVariant,
+} from './v';

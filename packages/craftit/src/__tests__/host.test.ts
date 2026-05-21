@@ -33,7 +33,7 @@ describe('core/host.ts', () => {
           },
         });
 
-        return () => html`<button>Open</button>`;
+        return html`<button>Open</button>`;
       });
 
       expect(element.getAttribute('role')).toBe('button');
@@ -63,7 +63,7 @@ describe('core/host.ts', () => {
         open.value = true;
         active.value = false;
 
-        return () => html`<div></div>`;
+        return html`<div></div>`;
       });
 
       await flush();
@@ -88,7 +88,7 @@ describe('core/host.ts', () => {
           },
         });
 
-        return () => html`<div>${internalValue}</div>`;
+        return html`<div>${internalValue}</div>`;
       });
 
       expect((element as HTMLElement & { value: string }).value).toBe('initial');
@@ -115,7 +115,7 @@ describe('core/host.ts', () => {
           style: { color },
         });
 
-        return () => html`<div></div>`;
+        return html`<div></div>`;
       });
 
       expect((element as HTMLElement & { value: string }).value).toBe('rgb(255, 0, 0)');
@@ -137,7 +137,7 @@ describe('core/host.ts', () => {
           },
         });
 
-        return () => html`<div></div>`;
+        return html`<div></div>`;
       });
 
       expect((element as HTMLElement & { value?: string }).value).toBe('alive');
@@ -196,7 +196,7 @@ describe('core/host.ts', () => {
           { once: true },
         );
 
-        return () => html`<div>Host listener</div>`;
+        return html`<div>Host listener</div>`;
       });
 
       element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -216,7 +216,7 @@ describe('core/host.ts', () => {
           provide(ThemeKey, 'dark');
           received = inject(ThemeKey);
 
-          return () => html`<div></div>`;
+          return html`<div></div>`;
         });
 
         expect(received).toBe('dark');
@@ -228,7 +228,7 @@ describe('core/host.ts', () => {
         const { query } = await mount(() => {
           const value = inject(AbsentKey, 'fallback');
 
-          return () => html`<div>${value}</div>`;
+          return html`<div>${value}</div>`;
         });
 
         expect(query('div')?.textContent).toBe('fallback');
@@ -241,7 +241,7 @@ describe('core/host.ts', () => {
         await mount(() => {
           received = inject(MissingKey);
 
-          return () => html`<div></div>`;
+          return html`<div></div>`;
         });
 
         expect(received).toBeUndefined();
@@ -292,7 +292,7 @@ describe('core/host.ts', () => {
           provide(ThemeKey, 'dark');
           received = injectStrict(ThemeKey);
 
-          return () => html`<div></div>`;
+          return html`<div></div>`;
         });
 
         expect(received).toBe('dark');
@@ -309,7 +309,7 @@ describe('core/host.ts', () => {
             captured = err;
           }
 
-          return () => html`<div></div>`;
+          return html`<div></div>`;
         });
 
         expect(captured).toBeInstanceOf(Error);
@@ -338,7 +338,7 @@ describe('core/host.ts', () => {
         const { element, flush } = await mount(() => {
           provide(UserCtx, { name: 'Alice', role: 'admin' });
 
-          return () => html`<${childTag}></${childTag}>`;
+          return html`<${childTag}></${childTag}>`;
         });
 
         await flush();
@@ -361,7 +361,7 @@ describe('core/host.ts', () => {
           headerAssigned = slots.has('header');
           defaultAssigned = slots.has();
 
-          return () => html`<slot name="header"></slot><slot></slot>`;
+          return html`<slot name="header"></slot><slot></slot>`;
         },
         { html: '<span slot="header">Title</span><span>Default content</span>' },
       );
@@ -379,7 +379,7 @@ describe('core/host.ts', () => {
         (_props, { slots }) => {
           triggerElements = slots.elements('trigger');
 
-          return () => html`<slot name="trigger"></slot>`;
+          return html`<slot name="trigger"></slot>`;
         },
         { html: '<button slot="trigger">Open</button>' },
       );
@@ -398,7 +398,7 @@ describe('core/host.ts', () => {
           callback(slots.elements('nonexistent').value);
         });
 
-        return () => html`<div>No slots here</div>`;
+        return html`<div>No slots here</div>`;
       });
 
       await flush();
@@ -412,7 +412,7 @@ describe('core/host.ts', () => {
       const { element, flush } = await mount((_props, { slots }) => {
         defaultElements = slots.elements();
 
-        return () => html`<slot></slot>`;
+        return html`<slot></slot>`;
       });
 
       await flush();
@@ -452,7 +452,7 @@ describe('mount slot timing', () => {
         expect(assigned?.length).toBeGreaterThanOrEqual(1);
       });
 
-      return () => html`<slot></slot>`;
+      return html`<slot></slot>`;
     });
 
     const el = document.createElement('test-slot-timing-element');
@@ -478,7 +478,7 @@ describe('mount slot timing', () => {
         slotFn(slots.elements().value.length);
       });
 
-      return () => html`<slot></slot>`;
+      return html`<slot></slot>`;
     });
 
     const el = document.createElement('test-slot-change-element');

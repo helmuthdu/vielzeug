@@ -2,7 +2,7 @@ import { watch } from '@vielzeug/stateit';
 
 import type { OverlayCloseReason, OverlayOpenReason } from './overlay-control';
 
-import { syncAria } from '../host';
+import { onCleanup, syncAria } from '@vielzeug/craftit';
 import { createListControl } from './list-control';
 import { createOverlayControl } from './overlay-control';
 
@@ -53,67 +53,63 @@ export type PopupListPositioner = {
  * Main options for createPopupListControl.
  */
 export type PopupListControlOptions<T> = {
-  // ARIA
-  /** Configuration for ARIA attributes */
-  ariaSync?: PopupListAriaSyncConfig;
-  // Overlay
-  /** Get the boundary element (for click-outside detection) */
-  getBoundaryElement: () => HTMLElement | null;
-
-  // List state
-  /** Get the current focused index (-1 if none focused) */
-  getIndex: () => number;
-  /** Get all items in the list */
-  getItems: () => T[];
-  /** Get the panel element */
-  getPanelElement: () => HTMLElement | null;
-
-  /** Get the trigger element */
-  getTriggerElement: () => HTMLElement | null;
-  // Overlay state
-  /** Check if disabled */
-  isDisabled?: () => boolean;
-
-  // List navigation
-  /** Check if an item is disabled */
-  isItemDisabled?: (item: T, index: number) => boolean;
-
-  /** Whether the popup is open */
-  isOpen: () => boolean;
-  /** Custom keyboard mappings for list navigation. Defaults to arrow keys. */
-  keyboardMapping?:
-    | (() => Partial<Record<'first' | 'last' | 'next' | 'prev', string[]>>)
-    | Partial<Record<'first' | 'last' | 'next' | 'prev', string[]>>;
-
-  /** The ID of the list element (for aria-controls/aria-owns) */
-  listId?: string;
-
-  /** Whether list navigation should loop (wrap around). @default true */
-  loop?: boolean;
-
-  /** Called when popup closes */
-  onClose?: (reason: OverlayCloseReason) => void;
-
-  /** Called when keyboard navigation is invoked */
-  onNavigate?: (action: 'first' | 'last' | 'next' | 'prev', index: number, event: KeyboardEvent) => void;
-
-  /** Called when popup opens */
-  onOpen?: (reason: OverlayOpenReason) => void;
-
-  /** Positioner for floating/positioning library integration */
+  /** DOM element getters for the popup structure. */
+  elements: {
+    /** Get the boundary element for outside-click detection (usually the host). */
+    getBoundaryElement: () => HTMLElement | null;
+    /** Get the floating panel element. */
+    getPanelElement: () => HTMLElement | null;
+    /** Get the trigger element that opens the popup. */
+    getTriggerElement: () => HTMLElement | null;
+    /** Ref-like trigger for ARIA syncing when the trigger element changes. */
+    triggerRef?: { value: HTMLElement | null };
+  };
+  /** Reactive list/overlay state bindings. */
+  state: {
+    /** Get the current focused item index (-1 if none). */
+    getIndex: () => number;
+    /** Get all items in the list. */
+    getItems: () => T[];
+    /** Whether the popup is open. */
+    isOpen: () => boolean;
+    /** Set the focused item index. */
+    setIndex: (index: number) => void;
+    /** Set the open state with reason context. */
+    setOpen: (next: boolean, context: { reason: OverlayCloseReason | OverlayOpenReason }) => void;
+  };
+  /** ARIA configuration. */
+  aria?: {
+    /** Configuration for ARIA attributes synced to the trigger. */
+    ariaSync?: PopupListAriaSyncConfig;
+    /** ID of the list element for aria-controls/aria-owns. */
+    listId?: string;
+  };
+  /** Behavioral options. */
+  behavior?: {
+    /** Whether the entire control is disabled. */
+    isDisabled?: () => boolean;
+    /** Whether a specific item is disabled. */
+    isItemDisabled?: (item: T, index: number) => boolean;
+    /** Custom keyboard key mappings for list navigation. */
+    keyboardMapping?:
+      | (() => Partial<Record<'first' | 'last' | 'next' | 'prev', string[]>>)
+      | Partial<Record<'first' | 'last' | 'next' | 'prev', string[]>>;
+    /** Whether list navigation wraps around. @default true */
+    loop?: boolean;
+    /** Whether to restore focus to trigger on close. @default true */
+    restoreFocus?: boolean | (() => boolean);
+  };
+  /** Event callbacks. */
+  on?: {
+    /** Called when the popup closes. */
+    onClose?: (reason: OverlayCloseReason) => void;
+    /** Called when keyboard navigation moves to a new item. */
+    onNavigate?: (action: 'first' | 'last' | 'next' | 'prev', index: number, event: KeyboardEvent) => void;
+    /** Called when the popup opens. */
+    onOpen?: (reason: OverlayOpenReason) => void;
+  };
+  /** Positioner for floating placement via a positioning library. */
   positioner?: PopupListPositioner;
-
-  /** Whether to restore focus to trigger when closing. @default true */
-  restoreFocus?: boolean | (() => boolean);
-
-  /** Set the focused index */
-  setIndex: (index: number) => void;
-
-  /** Set open state */
-  setOpen: (next: boolean, context: { reason: OverlayCloseReason | OverlayOpenReason }) => void;
-
-  /** Ref-like trigger element used for internal ARIA syncing. */
-  triggerRef?: { value: HTMLElement | null };
 };
 
 /**
@@ -208,34 +204,37 @@ export type PopupListControl<T> = {
  * ```
  */
 export const createPopupListControl = <T>(options: PopupListControlOptions<T>): PopupListControl<T> => {
+  const { elements, state, aria, behavior, on } = options;
+
   // Create underlying list control
   const list = createListControl<T>({
-    disabled: () => !options.isOpen(),
-    getIndex: options.getIndex,
-    getItems: options.getItems,
-    isItemDisabled: options.isItemDisabled,
-    keys: options.keyboardMapping,
-    loop: options.loop ?? true,
+    disabled: () => !state.isOpen(),
+    getIndex: state.getIndex,
+    getItems: state.getItems,
+    isItemDisabled: behavior?.isItemDisabled,
+    keys: behavior?.keyboardMapping,
+    loop: behavior?.loop ?? true,
     onNavigate: (action, index, event) => {
       if (index >= 0) {
-        options.onNavigate?.(action, index, event);
+        on?.onNavigate?.(action, index, event);
       }
     },
-    setIndex: options.setIndex,
+    setIndex: state.setIndex,
   });
 
   // Create underlying overlay control
   const overlay = createOverlayControl({
-    getBoundaryElement: options.getBoundaryElement,
-    getPanelElement: options.getPanelElement,
-    getTriggerElement: options.getTriggerElement,
-    isDisabled: options.isDisabled,
-    isOpen: options.isOpen,
-    onClose: options.onClose,
-    onOpen: options.onOpen,
+    getBoundaryElement: elements.getBoundaryElement,
+    getPanelElement: elements.getPanelElement,
+    getTriggerElement: elements.getTriggerElement,
+    isDisabled: behavior?.isDisabled,
+    isOpen: state.isOpen,
+    onCleanup,
+    onClose: on?.onClose,
+    onOpen: on?.onOpen,
     positioner: options.positioner,
-    restoreFocus: options.restoreFocus,
-    setOpen: options.setOpen,
+    restoreFocus: behavior?.restoreFocus,
+    setOpen: state.setOpen,
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -246,7 +245,7 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
     if (role === 'menu') {
       return {
         defaultTriggerAttributes: {
-          controls: () => options.listId,
+          controls: () => aria?.listId,
           haspopup: 'menu' as const,
         },
         defaultTriggerRole: 'button' as const,
@@ -255,7 +254,7 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
 
     return {
       defaultTriggerAttributes: {
-        controls: () => options.listId,
+        controls: () => aria?.listId,
         haspopup: 'listbox' as const,
       },
       defaultTriggerRole: 'combobox' as const,
@@ -263,26 +262,26 @@ export const createPopupListControl = <T>(options: PopupListControlOptions<T>): 
   };
 
   const syncTriggerAria = (trigger: Element, config?: PopupListAriaSyncConfig): (() => void) => {
-    const role = config?.role ?? options.ariaSync?.role ?? 'listbox';
+    const role = config?.role ?? aria?.ariaSync?.role ?? 'listbox';
     const roleConfig = getRoleConfig(role);
 
     return syncAria(trigger, {
       ...roleConfig.defaultTriggerAttributes,
       ...config?.additional,
-      ...options.ariaSync?.additional,
-      disabled: () => options.isDisabled?.() ?? false,
-      expanded: () => (options.isOpen() ? 'true' : 'false'),
+      ...aria?.ariaSync?.additional,
+      disabled: () => behavior?.isDisabled?.() ?? false,
+      expanded: () => (state.isOpen() ? 'true' : 'false'),
       role: roleConfig.defaultTriggerRole,
     });
   };
 
-  if (options.triggerRef) {
+  if (elements.triggerRef) {
     watch(
-      () => options.triggerRef?.value,
+      () => elements.triggerRef?.value,
       (trigger) => {
         if (!trigger) return;
 
-        return syncTriggerAria(trigger, options.ariaSync);
+        return syncTriggerAria(trigger, aria?.ariaSync);
       },
     );
   }

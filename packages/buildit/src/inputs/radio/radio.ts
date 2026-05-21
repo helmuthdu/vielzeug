@@ -3,7 +3,7 @@ import {
   type CheckableChangePayload,
   createCheckableFieldControl,
   createListControl,
-} from '@vielzeug/craftit/controls';
+} from '../../controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
@@ -11,7 +11,6 @@ import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../s
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
 import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './radio.css?inline';
 
@@ -88,7 +87,7 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
     const formCtx = inject(FORM_CTX);
 
     const effectiveName = computed(() => groupCtx?.name.value || props.name.value || '');
-    const effectiveSize = computed(() => groupCtx?.size.value ?? props.size.value);
+    const effectiveSize = computed(() => groupCtx?.size.value ?? props.size.value ?? formCtx?.size.value);
     const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);
     const checkedFromState = computed(() => {
       if (groupCtx) return groupCtx.value.value === props.value.value;
@@ -146,12 +145,17 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
       checkable.toggle(originalEvent ?? new Event('change'));
     };
 
+    let labelRef: HTMLElement | null = null;
+    let helperRef: HTMLElement | null = null;
+
     const checkable = createCheckableFieldControl({
       checked: checkedFromState,
       disabled: computed(
         () => Boolean(props.disabled.value) || Boolean(groupCtx?.disabled.value) || Boolean(formCtx?.disabled.value),
       ),
       error: props.error,
+      getHelperEl: () => helperRef,
+      getLabelEl: () => labelRef,
       helper: props.helper,
       onPress: (_control, originalEvent) => {
         activateSelf(originalEvent);
@@ -166,7 +170,6 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
     });
     const { checked, disabled, handleKeydown, helperId, labelId, toggle } = checkable;
 
-    mountFormContextSync(host.el, formCtx, props);
 
     host.bind({
       attr: {
@@ -228,8 +231,8 @@ export const RADIO_TAG = define<BitRadioProps, BitRadioEvents>('bit-radio', {
           <div class="dot" part="dot"></div>
         </div>
       </div>
-      <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
-      <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
+      <span class="label" part="label" ref=${(el: HTMLElement | null) => { labelRef = el; }} id="${labelId}"><slot></slot></span>
+      <div class="helper-text" part="helper-text" ref=${(el: HTMLElement | null) => { helperRef = el; }} id="${helperId}" aria-live="polite" hidden></div>
     `;
   },
   styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],

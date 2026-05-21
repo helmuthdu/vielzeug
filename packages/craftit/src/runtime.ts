@@ -12,49 +12,50 @@ import { fire, listen as listenInternal } from './internal';
 
 export { fire };
 
-let currentElement: HTMLElement | null = null;
-let currentScope: RuntimeScope | null = null;
+// ─── Runtime context ─────────────────────────────────────────────────────────
+// A single context object replaces the previous two parallel globals
+// (currentElement + currentScope). They were always set together; merging them
+// removes the double-wrap pattern and the hidden invariant between them.
 
 export type OnMountedCallback = () => CleanupFn | void;
 
-export type RuntimeScope = {
+export type RuntimeContext = {
   element: HTMLElement;
   mountCallbacks: OnMountedCallback[];
 };
 
-export const withCurrentElement = <T>(el: HTMLElement, fn: () => T): T => {
-  const previous = currentElement;
+let currentContext: RuntimeContext | null = null;
 
-  currentElement = el;
+/** @internal */
+export const withRuntimeContext = <T>(ctx: RuntimeContext, fn: () => T): T => {
+  const prev = currentContext;
+
+  currentContext = ctx;
 
   try {
     return fn();
   } finally {
-    currentElement = previous;
+    currentContext = prev;
   }
 };
 
-export const currentElementOrThrow = (): HTMLElement => {
-  if (currentElement) return currentElement;
+/**
+ * Returns the current component's host element.
+ * Must be called synchronously during component `setup()`.
+ *
+ * Useful for composables and controls that need direct access to the host element.
+ */
+export const getCurrentElement = (): HTMLElement => {
+  if (currentContext) return currentContext.element;
 
   throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
 };
 
-/** @internal */
-export const withRuntimeScope = <T>(runtimeScope: RuntimeScope, fn: () => T): T => {
-  const prev = currentScope;
-
-  currentScope = runtimeScope;
-
-  try {
-    return fn();
-  } finally {
-    currentScope = prev;
-  }
-};
+/** @internal — alias for internal callers that predate the rename */
+export const currentElementOrThrow = getCurrentElement;
 
 export const tryRegisterCleanup = (fn: CleanupFn): boolean => {
-  if (!currentScope) return false;
+  if (!currentContext) return false;
 
   _onCleanup(fn);
 
@@ -72,9 +73,9 @@ export const onCleanup = _onCleanup;
  * Multiple callbacks are supported and run in registration order.
  */
 export const onMounted = (fn: OnMountedCallback): void => {
-  if (!currentScope) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
+  if (!currentContext) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
 
-  currentScope.mountCallbacks.push(fn);
+  currentContext.mountCallbacks.push(fn);
 };
 
 export const effect = (fn: EffectCallback): Subscription => {
@@ -87,19 +88,19 @@ export const effect = (fn: EffectCallback): Subscription => {
   return dispose;
 };
 
-export function on<K extends keyof HTMLElementEventMap>(
+export function onEvent<K extends keyof HTMLElementEventMap>(
   target: EventTarget | null | undefined,
   event: K,
   listener: (e: HTMLElementEventMap[K]) => void,
   options?: AddEventListenerOptions,
 ): void;
-export function on(
+export function onEvent(
   target: EventTarget | null | undefined,
   event: string,
   listener: EventListener,
   options?: AddEventListenerOptions,
 ): void {
-  if (!currentScope) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
+  if (!currentContext) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
 
   if (!target) return;
 

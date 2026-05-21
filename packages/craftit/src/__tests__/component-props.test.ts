@@ -71,7 +71,7 @@ describe('component props', () => {
         },
       },
       setup: (props) => {
-        return () => html`<div class="size">${() => String(props.size.value)}</div>`;
+        return html`<div class="size">${() => String(props.size.value)}</div>`;
       },
     });
 
@@ -79,7 +79,7 @@ describe('component props', () => {
       setup: () => {
         const size = signal('3');
 
-        return () => html`<${childTag} size=${size}></${childTag}>`;
+        return html`<${childTag} size=${size}></${childTag}>`;
       },
     });
 
@@ -97,10 +97,9 @@ describe('component props', () => {
     define<{ items: string[] }>(childTag, {
       props: { items: [] as string[] },
       setup: (props) => {
-        return () =>
-          html`<div class="items">
-            ${() => (Array.isArray(props.items.value) ? props.items.value.join('|') : String(props.items.value ?? ''))}
-          </div>`;
+        return html`<div class="items">
+          ${() => (Array.isArray(props.items.value) ? props.items.value.join('|') : String(props.items.value ?? ''))}
+        </div>`;
       },
     });
 
@@ -108,7 +107,7 @@ describe('component props', () => {
       setup: () => {
         const items = signal<string[]>(['alpha', 'beta']);
 
-        return () => html`
+        return html`
           <div>
             <button @click=${() => (items.value = ['gamma', 'delta'])}>Update</button>
             <${childTag} items=${items}></${childTag}>
@@ -138,7 +137,7 @@ describe('component props', () => {
       setup: (props) => {
         expectType<import('@vielzeug/stateit').Signal<string | undefined>>(props.value);
 
-        return () => html`<div class="value">${() => props.value.value ?? ''}</div>`;
+        return html`<div class="value">${() => props.value.value ?? ''}</div>`;
       },
     });
 
@@ -156,7 +155,7 @@ describe('component props', () => {
         props: {
           data: { default: { a: '1' } as Record<string, string>, reflect: true },
         },
-        setup: () => () => html`<div>invalid</div>`,
+        setup: () => html`<div>invalid</div>`,
       });
     }).toThrow();
 
@@ -165,7 +164,7 @@ describe('component props', () => {
         props: {
           items: { default: ['x'] as string[], reflect: true },
         },
-        setup: () => () => html`<div>invalid</div>`,
+        setup: () => html`<div>invalid</div>`,
       });
     }).toThrow();
   });

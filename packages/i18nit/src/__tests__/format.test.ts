@@ -207,9 +207,9 @@ describe('createFormatter', () => {
       expect(frResult).not.toContain('1,234');
     });
 
-    test('accepts an i18n instance and reads the current locale reactively', async () => {
+    test('follows locale changes when given a getter function', async () => {
       const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
-      const fmt = createFormatter(i18n);
+      const fmt = createFormatter(() => i18n.locale);
       const enResult = fmt.number(1_234.56);
 
       await i18n.setLocale('fr');

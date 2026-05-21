@@ -665,14 +665,16 @@ class ComputedImpl<T> extends ReactiveNode implements ComputedSignal<T> {
   private disposed_ = false;
   private subscriptions_ = new Set<CleanupFn>();
   private compute_: () => T;
-  private equals_: EqualityFn<T>;
+  // Stored as (unknown, unknown) => boolean so ComputedImpl<T> is covariant in T,
+  // enabling assignment to ComputedImpl<unknown> in the tracking-context collections.
+  private equals_: (a: unknown, b: unknown) => boolean;
   [IS_SIGNAL] = true;
   [IS_COMPUTED] = true;
 
   constructor(compute: () => T, equals?: EqualityFn<T>) {
     super();
     this.compute_ = compute;
-    this.equals_ = equals ?? Object.is;
+    this.equals_ = equals !== undefined ? (a, b) => equals(a as T, b as T) : Object.is;
   }
 
   markDirty(): boolean {
@@ -1367,4 +1369,44 @@ export const reactiveArray = <T>(initial: readonly T[] = []): T[] => {
 
 /** Returns `true` when `value` is a {@link reactiveArray} proxy. */
 export const isReactiveArray = (value: unknown): value is unknown[] =>
-  Array.isArray(value) && !!(value as Record<symbol, unknown>)[IS_REACTIVE_ARRAY];
+  Array.isArray(value) && !!(value as unknown as Record<symbol, unknown>)[IS_REACTIVE_ARRAY];
+
+// === MEMO ===
+
+/**
+ * Creates a memoized derived value. `fn` is re-evaluated only when the array returned by
+ * `deps` changes (each element compared with `Object.is`). Signals read _inside_ `fn` do
+ * **not** invalidate the memo — only changes to `deps` trigger re-evaluation.
+ *
+ * Use inside templates or expensive computations where you want to skip re-rendering when
+ * a specific subset of reactive state changes:
+ *
+ * @example
+ * ```ts
+ * const itemView = memo(() => [item.id, item.name], () => expensiveRender(item));
+ *
+ * // Inside a craftit template — skips re-rendering when only unrelated signals change:
+ * html`<li>${memo(() => [item.id], () => html`<span>${item.name}</span>`)}</li>`
+ * ```
+ */
+export const memo = <T>(deps: () => readonly unknown[], fn: () => T): ReadonlySignal<T> => {
+  let previousDeps: readonly unknown[] = [];
+  let cached: T | undefined;
+  let initialized = false;
+
+  return computed(() => {
+    const currentDeps = deps();
+    const changed =
+      !initialized ||
+      currentDeps.length !== previousDeps.length ||
+      currentDeps.some((d, i) => !Object.is(d, previousDeps[i]));
+
+    if (changed) {
+      cached = untrack(fn);
+      previousDeps = currentDeps;
+      initialized = true;
+    }
+
+    return cached as T;
+  });
+};

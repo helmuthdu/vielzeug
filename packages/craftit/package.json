@@ -15,12 +15,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./controls": {
-      "source": "./src/controls/index.ts",
-      "types": "./dist/controls/index.d.ts",
-      "import": "./dist/controls.js",
-      "require": "./dist/controls.cjs"
-    },
     "./observers": {
       "source": "./src/observers/index.ts",
       "types": "./dist/observers/index.d.ts",

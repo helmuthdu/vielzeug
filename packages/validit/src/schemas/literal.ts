@@ -5,35 +5,39 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
   readonly value: T;
 
   constructor(value: T) {
-    super([
-      (val) =>
-        val === value
-          ? null
-          : [{ code: ErrorCode.invalid_literal, message: _messages().literal.expected({ expected: value }), params: { expected: value }, path: [] }],
-    ]);
+    super((val) =>
+      val === value
+        ? null
+        : [
+            {
+              code: ErrorCode.invalid_literal,
+              message: _messages().literal.expected({ expected: value }),
+              params: { expected: value },
+              path: [],
+            },
+          ],
+    );
     this.value = value;
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
     if (this.value === null) return { type: 'null' };
+
     if (this.value === undefined) return {};
+
     return { const: this.value };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
     if (visitor.literal) return visitor.literal(this);
+
     return super._walk(visitor);
   }
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof LiteralSchema)) return false;
-    return this.value === other.value;
-  }
 
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    const next = new LiteralSchema(this.value) as this;
-    next.state = state as any;
-    return next;
+    return this.value === other.value;
   }
 }
 

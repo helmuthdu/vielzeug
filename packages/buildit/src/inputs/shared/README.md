@@ -2,16 +2,16 @@
 
 # Form Shared Modules
 
-This folder follows a single organization pattern by concern:
+This folder organizes shared logic used across form input components by concern:
 
-- `composables/` - stateful `use*` APIs used by form components
-- `dom-sync/` - host/DOM synchronization helpers (`mount*` APIs)
-- `utils/` - pure stateless helpers for value parsing and assistive state
-- `validation/` - validation trigger contracts and field-level wrappers
+- `bundles/` — reusable prop/style bundles (e.g., `disablableBundle`, `sizableBundle`, `themableBundle`)
+- `composables/` — stateful `use*` APIs used by form components
+- `dom-sync/` — DOM synchronization helpers (currently: `createDropdownPositioner`)
+- `utils/` — pure stateless helpers for value parsing and choice state
 
 ## Conventions
 
 - `use-*` files expose composables only.
-- `mount-*` and DOM effects live under `dom-sync/`.
+- DOM helpers live under `dom-sync/`.
 - Pure helpers and derived state calculators live under `utils/`.
-- Validation policy helpers live under `validation/`.
+- Form context (`FORM_CTX`) is provided by `bit-form` and injected directly in each component — no separate sync layer needed.

@@ -1,7 +1,7 @@
-import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
+import type { OverlayCloseDetail, OverlayOpenDetail } from '../../controls';
 
 import { computed, define, html, inject, prop, signal, watch, onMounted } from '@vielzeug/craftit';
-import { createChoiceField, createPopupListControl } from '@vielzeug/craftit/controls';
+import { createChoiceField, createPopupListControl } from '../../controls';
 
 import type { VisualVariant } from '../../types';
 
@@ -12,7 +12,7 @@ import type { SelectableFieldProps } from '../shared/base-props';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
-import { createDropdownPositioner, mountFormContextSync } from '../shared/dom-sync';
+import { createDropdownPositioner } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import { type ChoiceChangeDetail, createChoiceChangeDetail } from '../shared/utils';
 import componentStyles from './select.css?inline';
@@ -176,7 +176,6 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     });
     const formCtx = inject(FORM_CTX);
 
-    mountFormContextSync(host.el, formCtx, props);
 
     const choice = createChoiceField({
       context: formCtx,
@@ -202,6 +201,8 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
       attr: {
         'has-error': () => (props.error.value ? true : undefined),
         open: () => (isOpen.value ? true : undefined),
+        size: () => props.size?.value ?? formCtx?.size.value,
+        variant: () => props.variant?.value ?? formCtx?.variant?.value,
       },
     });
 
@@ -330,40 +331,50 @@ export const SELECT_TAG = define<BitSelectProps, BitSelectEvents>('bit-select', 
     );
 
     const popupList = createPopupListControl({
-      ariaSync: {
-        additional: {
-          invalid: () => !!props.error.value,
-          labelledby: () => (hasLabel.value ? `${labelOutsideId} ${labelInsetId}` : null),
+      aria: {
+        ariaSync: {
+          additional: {
+            invalid: () => !!props.error.value,
+            labelledby: () => (hasLabel.value ? `${labelOutsideId} ${labelInsetId}` : null),
+          },
+          role: 'listbox',
         },
-        role: 'listbox',
+        listId: `${selectId}-listbox`,
       },
-      getBoundaryElement: () => host.el,
-      getIndex: () => focusedIndex.value,
-      getItems: () => options.value,
-      getPanelElement: () => dropdownEl,
-      getTriggerElement: () => triggerEl,
-      isDisabled: () => isDisabled.value,
-      isItemDisabled: (option) => option.disabled,
-      isOpen: () => isOpen.value,
-      listId: `${selectId}-listbox`,
-      onClose: (reason) => {
-        emit('close', { reason });
-        triggerValidation('blur');
+      behavior: {
+        isDisabled: () => isDisabled.value,
+        isItemDisabled: (option) => option.disabled,
       },
-      onOpen: (reason) => emit('open', { reason }),
+      elements: {
+        getBoundaryElement: () => host.el,
+        getPanelElement: () => dropdownEl,
+        getTriggerElement: () => triggerEl,
+        triggerRef,
+      },
+      on: {
+        onClose: (reason) => {
+          emit('close', { reason });
+          triggerValidation('blur');
+        },
+        onOpen: (reason) => emit('open', { reason }),
+      },
       positioner: {
         floating: () => dropdownEl,
         reference: () => triggerEl,
         update: () => positioner.updatePosition(),
       },
-      setIndex: (index) => {
-        focusedIndex.value = index;
-        scrollFocusedIntoView();
+      state: {
+        getIndex: () => focusedIndex.value,
+        getItems: () => options.value,
+        isOpen: () => isOpen.value,
+        setIndex: (index) => {
+          focusedIndex.value = index;
+          scrollFocusedIntoView();
+        },
+        setOpen: (next) => {
+          isOpen.value = next;
+        },
       },
-      setOpen: (next) => {
-        isOpen.value = next;
-      },
-      triggerRef,
     });
 
     function openPopup(reason: 'programmatic' | 'trigger' = 'programmatic') {

@@ -1,4 +1,4 @@
-import { _messages } from './messages';
+import { _messages, _warn } from './messages';
 
 /* -------------------- Error Codes -------------------- */
 
@@ -31,38 +31,6 @@ export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
 
-export type SchemaConstraints = {
-  contentEncoding?: string;
-  exclusiveMaximum?: number;
-  exclusiveMinimum?: number;
-  format?: string;
-  maximum?: number;
-  maxItems?: number;
-  maxLength?: number;
-  minimum?: number;
-  minItems?: number;
-  minLength?: number;
-  multipleOf?: number;
-  pattern?: string;
-};
-
-export type StringConstraints = Pick<
-  SchemaConstraints,
-  'contentEncoding' | 'format' | 'maxLength' | 'minLength' | 'pattern'
->;
-
-export type NumberConstraints = Pick<
-  SchemaConstraints,
-  'exclusiveMaximum' | 'exclusiveMinimum' | 'maximum' | 'minimum' | 'multipleOf'
->;
-
-export type ArrayConstraints = Pick<SchemaConstraints, 'maxItems' | 'minItems'>;
-
-export type SchemaMeta<TConstraints extends object = SchemaConstraints> = {
-  constraints?: Partial<TConstraints>;
-  typeHint?: 'integer';
-};
-
 /** Plain JSON Schema object (targeting JSON Schema 2020-12). */
 export type JsonSchema = Record<string, unknown>;
 
@@ -89,14 +57,34 @@ export type Issue =
   | { code: 'invalid_literal'; message: string; params: { expected: unknown }; path: (string | number)[] }
   | { code: 'invalid_multiple_of'; message: string; params: { step: number | bigint }; path: (string | number)[] }
   | { code: 'invalid_safe'; message: string; params?: undefined; path: (string | number)[] }
-  | { code: 'invalid_string'; message: string; params: { format?: string; includes?: string; pattern?: string; prefix?: string; suffix?: string }; path: (string | number)[] }
+  | {
+      code: 'invalid_string';
+      message: string;
+      params: { format?: string; includes?: string; pattern?: string; prefix?: string; suffix?: string };
+      path: (string | number)[];
+    }
   | { code: 'invalid_type'; message: string; params?: undefined; path: (string | number)[] }
   | { code: 'invalid_union'; message: string; params: { errors: Issue[][] }; path: (string | number)[] }
   | { code: 'invalid_unique'; message: string; params: { unique: true }; path: (string | number)[] }
   | { code: 'invalid_url'; message: string; params: { format: string }; path: (string | number)[] }
-  | { code: 'invalid_variant'; message: string; params: { discriminator: string; expected: string[] }; path: (string | number)[] }
-  | { code: 'too_big'; message: string; params: { exclusive?: boolean; max: number | bigint | Date }; path: (string | number)[] }
-  | { code: 'too_small'; message: string; params: { exclusive?: boolean; min: number | bigint | Date }; path: (string | number)[] }
+  | {
+      code: 'invalid_variant';
+      message: string;
+      params: { discriminator: string; expected: string[] };
+      path: (string | number)[];
+    }
+  | {
+      code: 'too_big';
+      message: string;
+      params: { exclusive?: boolean; max: number | bigint | Date };
+      path: (string | number)[];
+    }
+  | {
+      code: 'too_small';
+      message: string;
+      params: { exclusive?: boolean; min: number | bigint | Date };
+      path: (string | number)[];
+    }
   | { code: string & {}; message: string; params?: Record<string, unknown>; path: (string | number)[] };
 
 /**
@@ -112,7 +100,12 @@ type Postprocessor = (value: unknown) => unknown;
 type PreparedInput = { skip: true; value: null | undefined } | { skip: false; value: unknown };
 
 export type CheckContext = {
-  addIssue: (issue: { code: string; message: string; params?: Record<string, unknown>; path?: (string | number)[] }) => void;
+  addIssue: (issue: {
+    code: string;
+    message: string;
+    params?: Record<string, unknown>;
+    path?: (string | number)[];
+  }) => void;
 };
 
 export type CheckFnResult = void | null | undefined | boolean | string;
@@ -125,7 +118,6 @@ export type FlatErrorFirst = { message: string; path: (string | number)[] };
  * Provide `unknown` as a catch-all fallback for unrecognised schema kinds.
  */
 export type SchemaWalker<R> = {
-  any?: (schema: AnySchema) => R;
   array?: (schema: AnySchema, item: R) => R;
   bigint?: (schema: AnySchema) => R;
   boolean?: (schema: AnySchema) => R;
@@ -142,6 +134,7 @@ export type SchemaWalker<R> = {
   number?: (schema: AnySchema) => R;
   object?: (schema: AnySchema, fields: Record<string, R>) => R;
   optional?: (schema: AnySchema, inner: R) => R;
+  pipe?: (schema: AnySchema, from: R, to: R) => R;
   record?: (schema: AnySchema, key: R, value: R) => R;
   set?: (schema: AnySchema, item: R) => R;
   string?: (schema: AnySchema) => R;
@@ -153,136 +146,79 @@ export type SchemaWalker<R> = {
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value == null || typeof value !== 'object') return false;
+
   const prototype = Object.getPrototypeOf(value);
+
   return prototype === Object.prototype || prototype === null;
 }
 
 function materializeValue<T>(value: T): T {
   if (value == null || typeof value !== 'object') return value;
+
   if (Array.isArray(value)) return value.map((item) => materializeValue(item)) as T;
+
   if (value instanceof Date) return new Date(value.getTime()) as T;
+
   if (value instanceof Map) {
     const out = new Map<unknown, unknown>();
+
     for (const [key, mapValue] of value.entries()) out.set(materializeValue(key), materializeValue(mapValue));
+
     return out as T;
   }
+
   if (value instanceof Set) return new Set([...value.values()].map((item) => materializeValue(item))) as T;
+
   if (isPlainObject(value)) {
     const out: Record<string, unknown> = {};
+
     for (const [key, entry] of Object.entries(value)) out[key] = materializeValue(entry);
+
     return out as T;
   }
+
   return value;
 }
 
-export interface SchemaState<TOutput = unknown, TConstraints extends object = never> {
-  coreValidators: ValidateFn[];
+export interface SchemaState<Output = unknown> {
   validators: ValidateFn[];
   postprocessors: Postprocessor[];
   preprocessors: Preprocessor[];
   isOptional: boolean;
   isNullable: boolean;
   description?: string;
-  meta?: SchemaMeta<TConstraints>;
-  patternAmbiguous: boolean;
-  defaultValue?: () => TOutput;
-  catch?: () => TOutput;
+  defaultValue?: () => Output;
+  catch?: () => Output;
 }
 
-function defaultState<TOutput, TConstraints extends object>(): SchemaState<TOutput, TConstraints> {
+function defaultState<Output>(): SchemaState<Output> {
   return {
-    coreValidators: [],
     isNullable: false,
     isOptional: false,
-    patternAmbiguous: false,
     postprocessors: [],
     preprocessors: [],
     validators: [],
   };
 }
 
-function cloneState<TOutput, TConstraints extends object>(
-  state: SchemaState<TOutput, TConstraints>,
-): SchemaState<TOutput, TConstraints> {
+function cloneState<Output>(state: SchemaState<Output>): SchemaState<Output> {
   return {
     catch: state.catch,
-    coreValidators: [...state.coreValidators],
     defaultValue: state.defaultValue,
     description: state.description,
     isNullable: state.isNullable,
     isOptional: state.isOptional,
-    meta: state.meta
-      ? {
-          constraints: state.meta.constraints ? { ...state.meta.constraints } : undefined,
-          typeHint: state.meta.typeHint,
-        }
-      : undefined,
-    patternAmbiguous: state.patternAmbiguous,
     postprocessors: [...state.postprocessors],
     preprocessors: [...state.preprocessors],
     validators: [...state.validators],
   };
 }
 
-/* R4: Table-driven mergeConstraints */
-const LOWER_BOUNDS = ['minimum', 'exclusiveMinimum', 'minLength', 'minItems'] as const;
-const UPPER_BOUNDS = ['maximum', 'exclusiveMaximum', 'maxLength', 'maxItems'] as const;
-const DIRECT_KEYS = ['contentEncoding', 'format', 'multipleOf'] as const;
-
-function mergeConstraints(
-  current: SchemaConstraints | undefined,
-  incoming: Partial<SchemaConstraints>,
-  patternAmbiguous: boolean,
-): { constraints: SchemaConstraints | undefined; patternAmbiguous: boolean } {
-  let changed = false;
-  const merged: SchemaConstraints = current ? { ...current } : {};
-  let nextPatternAmbiguous = patternAmbiguous;
-
-  for (const key of LOWER_BOUNDS) {
-    const value = incoming[key];
-    if (value !== undefined) {
-      const prev = merged[key];
-      const next = prev === undefined ? value : Math.max(prev, value);
-      if (prev !== next) { merged[key] = next; changed = true; }
-    }
-  }
-
-  for (const key of UPPER_BOUNDS) {
-    const value = incoming[key];
-    if (value !== undefined) {
-      const prev = merged[key];
-      const next = prev === undefined ? value : Math.min(prev, value);
-      if (prev !== next) { merged[key] = next; changed = true; }
-    }
-  }
-
-  for (const key of DIRECT_KEYS) {
-    const value = incoming[key];
-    if (value !== undefined && merged[key] !== value) {
-      (merged as Record<string, unknown>)[key] = value;
-      changed = true;
-    }
-  }
-
-  if (incoming.pattern !== undefined) {
-    if (nextPatternAmbiguous) {
-      // keep unset once ambiguity detected
-    } else if (merged.pattern === undefined) {
-      merged.pattern = incoming.pattern;
-      changed = true;
-    } else if (merged.pattern !== incoming.pattern) {
-      delete merged.pattern;
-      nextPatternAmbiguous = true;
-      changed = true;
-      console.warn(
-        '[validit] Multiple .regex() constraints detected on a single string schema. ' +
-          'JSON Schema `pattern` cannot represent multiple patterns and will be omitted from schema() output.',
-      );
-    }
-  }
-
-  if (!changed) return { constraints: current, patternAmbiguous: nextPatternAmbiguous };
-  return { constraints: merged, patternAmbiguous: nextPatternAmbiguous };
+/**
+ * Creates a single-issue failure array. Use in validator functions instead of building the array manually.
+ */
+export function fail(code: string, message: string, params?: Record<string, unknown>): Issue[] {
+  return [{ code, message, params, path: [] } as Issue];
 }
 
 export function resolveMessage<Ctx extends Record<string, unknown>>(msg: MessageFn<Ctx>, ctx: Ctx): string {
@@ -297,6 +233,7 @@ function formatIssues(issues: Issue[]): string {
   return issues
     .map(({ code, message, path }) => {
       const pathStr = path.length ? path.join('.') : 'value';
+
       return `${pathStr}: ${message} [${code}]`;
     })
     .join('\n');
@@ -305,8 +242,10 @@ function formatIssues(issues: Issue[]): string {
 /* R2: no path param — always uses path: [] */
 function normalizeCheckResult(result: CheckFnResult, ctxIssues: Issue[]): Issue[] | null {
   const issues = [...ctxIssues];
+
   if (result === false) issues.push({ code: ErrorCode.custom, message: _messages().check.default(), path: [] });
   else if (typeof result === 'string') issues.push({ code: ErrorCode.custom, message: result, path: [] });
+
   return issues.length ? issues : null;
 }
 
@@ -334,6 +273,7 @@ export class ValidationError extends Error {
       } else {
         const key = JSON.stringify(issue.path);
         const existing = pathMap.get(key);
+
         if (existing !== undefined) {
           fieldErrors[existing].messages.push(issue.message);
         } else {
@@ -348,6 +288,7 @@ export class ValidationError extends Error {
 
   flattenFirst(): { fieldErrors: FlatErrorFirst[]; formErrors: string[] } {
     const { fieldErrors, formErrors } = this.flatten();
+
     return {
       fieldErrors: fieldErrors.map((fe) => ({ message: fe.messages[0]!, path: fe.path })),
       formErrors,
@@ -367,7 +308,9 @@ export class ValidationError extends Error {
 
       for (const segment of issue.path) {
         const key = String(segment);
+
         if (!node[key]) node[key] = { _errors: [] };
+
         node = node[key] as FormattedErrors;
       }
 
@@ -383,6 +326,7 @@ export function errorsAt(formatted: FormattedErrors, ...path: (string | number)[
 
   for (const key of path) {
     if (Array.isArray(node)) return [];
+
     node = (node as FormattedErrors)[String(key)] ?? { _errors: [] };
   }
 
@@ -398,26 +342,31 @@ export type FormattedErrors = {
 
 /* -------------------- Base Schema -------------------- */
 
-export class Schema<Output = unknown, Input = Output, TConstraints extends object = SchemaConstraints> {
-  protected state: SchemaState<Output, TConstraints>;
+/** Module-level WeakMap for memoizing schema() JSON Schema output. */
+const _schemaCache = new WeakMap<object, JsonSchema>();
 
-  constructor(coreValidators: ValidateFn[] = []) {
-    this.state = {
-      ...defaultState<Output, TConstraints>(),
-      coreValidators: [...coreValidators],
-    };
+export class Schema<Output = unknown, Input = Output> {
+  protected state: SchemaState<Output>;
+
+  constructor(typeValidator?: ValidateFn) {
+    this.state = defaultState<Output>();
+
+    if (typeValidator) this.state.validators.push(typeValidator);
   }
 
   parse(value: unknown): Output {
     return this._withCatch(() => {
       const prepared = this._prepareInput(value);
+
       if (prepared.skip) return prepared.value as Output;
 
       const core = this._parseValueSync(prepared.value);
       const hasInvalidType = core.issues.some((i) => i.code === ErrorCode.invalid_type && i.path.length === 0);
       const validationIssues = !hasInvalidType ? this._runSyncValidators(core.data) : [];
       const allIssues = [...core.issues, ...validationIssues];
+
       if (allIssues.length) throw new ValidationError(allIssues);
+
       return this._runPostprocessors(core.data) as Output;
     });
   }
@@ -427,6 +376,7 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
       return { data: this.parse(value), success: true };
     } catch (error) {
       if (ValidationError.is(error)) return { error, success: false };
+
       throw error;
     }
   }
@@ -434,13 +384,16 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
   async parseAsync(value: unknown): Promise<Output> {
     return this._withCatchAsync(async () => {
       const prepared = this._prepareInput(value);
+
       if (prepared.skip) return prepared.value as Output;
 
       const core = await this._parseValueAsync(prepared.value);
       const hasInvalidType = core.issues.some((i) => i.code === ErrorCode.invalid_type && i.path.length === 0);
       const validationIssues = !hasInvalidType ? await this._runAllValidators(core.data) : [];
       const allIssues = [...core.issues, ...validationIssues];
+
       if (allIssues.length) throw new ValidationError(allIssues);
+
       return this._runPostprocessors(core.data) as Output;
     });
   }
@@ -450,6 +403,7 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
       return { data: await this.parseAsync(value), success: true };
     } catch (error) {
       if (ValidationError.is(error)) return { error, success: false };
+
       throw error;
     }
   }
@@ -463,14 +417,6 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
   }
 
   check(fn: (value: Output, ctx: CheckContext) => CheckFnResult | Promise<CheckFnResult>): this {
-    /* F5: dev-mode warning for async check functions used with sync parse */
-    if (fn.constructor?.name === 'AsyncFunction') {
-      console.warn(
-        '[validit] An async function was passed to check(). Calls to .parse() or .safeParse() will throw at runtime. ' +
-          'Use parseAsync() or safeParseAsync() for schemas with async validators.',
-      );
-    }
-
     /* R2: validator receives only value, no path */
     const validator: ValidateFn = (value) => {
       const ctxIssues: Issue[] = [];
@@ -480,72 +426,109 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
         },
       };
       const result = fn(value as Output, ctx);
+
       if (result instanceof Promise) return result.then((r) => normalizeCheckResult(r, ctxIssues));
+
       return normalizeCheckResult(result, ctxIssues);
     };
 
     return this._addValidator(validator);
   }
 
+  /**
+   * Adds a synchronous predicate validator. A simpler alternative to `check()` for pure boolean checks.
+   *
+   * @example
+   * ```ts
+   * v.string().refine(s => s.startsWith('http'), 'Must start with http');
+   * ```
+   */
+  refine(
+    predicate: (value: Output) => boolean,
+    message: MessageFn<{ value: Output }> = () => _messages().check.default(),
+  ): this {
+    return this._addValidator((value) => {
+      if (predicate(value as Output)) return null;
+
+      return fail(ErrorCode.custom, resolveMessage(message, { value: value as Output }));
+    });
+  }
+
   /* F2: optional/nullable/nullish return typed wrapper schemas preserving subtype */
-  optional(): OptionalSchema<this> {
-    return new OptionalSchema(this);
+  optional(): WrapperSchema<this, 'optional'> {
+    return new WrapperSchema(this, 'optional');
   }
 
-  nullable(): NullableSchema<this> {
-    return new NullableSchema(this);
+  nullable(): WrapperSchema<this, 'nullable'> {
+    return new WrapperSchema(this, 'nullable');
   }
 
-  nullish(): NullishSchema<this> {
-    return new NullishSchema(this);
+  nullish(): WrapperSchema<this, 'nullish'> {
+    return new WrapperSchema(this, 'nullish');
   }
 
   required(): Schema<Exclude<Output, undefined>, Exclude<Input, undefined>> {
     const cloned = this._clone() as unknown as Schema<Exclude<Output, undefined>, Exclude<Input, undefined>>;
+
     cloned.state.isOptional = false;
+
     return cloned;
   }
 
   default(defaultValue: Output | (() => Output)): this {
     const cloned = this._clone();
+
     cloned.state.defaultValue =
       typeof defaultValue === 'function' ? (defaultValue as () => Output) : () => materializeValue(defaultValue);
+
     return cloned;
   }
 
   catch(fallback: Output | (() => Output)): this {
     const cloned = this._clone();
-    cloned.state.catch =
-      typeof fallback === 'function' ? (fallback as () => Output) : () => materializeValue(fallback);
+
+    cloned.state.catch = typeof fallback === 'function' ? (fallback as () => Output) : () => materializeValue(fallback);
+
     return cloned;
   }
 
   transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input> {
     const next = this._clone() as unknown as Schema<NewOutput, Input>;
+
     next.state.postprocessors.push(fn as (v: unknown) => unknown);
+
     return next;
   }
 
   preprocess(fn: (value: unknown) => unknown): this {
     const cloned = this._clone();
+
     cloned.state.preprocessors.push(fn);
+
     return cloned;
   }
 
-  pipe<B>(next: Schema<B, NoInfer<Output>, any>): Schema<B, Input> {
+  pipe<B>(next: Schema<B, NoInfer<Output>>): Schema<B, Input> {
     return new PipeSchema<B, Input>(this, next);
   }
 
   describe(description: string): this {
     const cloned = this._clone();
+
     cloned.state.description = description;
+
     return cloned;
   }
 
-  get description(): string | undefined { return this.state.description; }
-  get isOptional(): boolean { return this.state.isOptional; }
-  get isNullable(): boolean { return this.state.isNullable; }
-  get meta(): SchemaMeta<TConstraints> | undefined { return this.state.meta; }
+  get description(): string | undefined {
+    return this.state.description;
+  }
+  get isOptional(): boolean {
+    return this.state.isOptional;
+  }
+  get isNullable(): boolean {
+    return this.state.isNullable;
+  }
 
   brand<Brand extends string>(): Schema<Output & { __brand: Brand }, Input> {
     return this as unknown as Schema<Output & { __brand: Brand }, Input>;
@@ -558,13 +541,24 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
   /**
    * Returns a JSON Schema (2020-12) representation of this schema.
    * Unrepresentable schemas (Date, Map, Set, instanceof, lazy) emit `{ $comment: '...' }`.
+   * Result is memoized — each distinct schema instance caches its output.
    */
   schema(): JsonSchema {
-    const base = this._toSchemaBase();
-    let result = base;
-    if (this.state.isNullable) result = { anyOf: [base, { type: 'null' }] };
-    if (this.state.description) result = { ...result, description: this.state.description };
-    return result;
+    let cached = _schemaCache.get(this);
+
+    if (cached === undefined) {
+      const base = this._toSchemaBase();
+      let result: JsonSchema = base;
+
+      if (this.state.isNullable) result = { anyOf: [base, { type: 'null' }] };
+
+      if (this.state.description) result = { ...result, description: this.state.description };
+
+      _schemaCache.set(this, result);
+      cached = result;
+    }
+
+    return cached;
   }
 
   /**
@@ -589,30 +583,39 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
    */
   equals(other: AnySchema): boolean {
     if (other === this) return true;
+
     if (Object.getPrototypeOf(other) !== Object.getPrototypeOf(this)) return false;
+
     if (other.isOptional !== this.isOptional) return false;
+
     if (other.isNullable !== this.isNullable) return false;
+
     if (other.description !== this.description) return false;
+
     return this._equalsImpl(other);
   }
 
   /* R5: private — not accessible from subclasses */
   private _withCatch<T>(fn: () => T): T {
     if (!this.state.catch) return fn();
+
     try {
       return fn();
     } catch (error) {
       if (ValidationError.is(error)) return this.state.catch() as unknown as T;
+
       throw error;
     }
   }
 
   private async _withCatchAsync<T>(fn: () => Promise<T>): Promise<T> {
     if (!this.state.catch) return fn();
+
     try {
       return await fn();
     } catch (error) {
       if (ValidationError.is(error)) return this.state.catch() as unknown as T;
+
       throw error;
     }
   }
@@ -620,51 +623,47 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
   private _prepareInput(value: unknown): PreparedInput {
     const processed = this._runPreprocessors(value);
     const withDefault = processed === undefined && this.state.defaultValue ? this.state.defaultValue() : processed;
+
     if ((this.state.isOptional && withDefault === undefined) || (this.state.isNullable && withDefault === null)) {
       return { skip: true, value: withDefault };
     }
+
     return { skip: false, value: withDefault };
   }
 
   protected _runPreprocessors(value: unknown): unknown {
     let current = value;
+
     for (const preprocess of this.state.preprocessors) current = preprocess(current);
+
     return current;
   }
 
   protected _runPostprocessors(value: unknown): unknown {
     let current = value;
+
     for (const postprocess of this.state.postprocessors) current = postprocess(current);
+
     return current;
   }
 
-  /* R2: validate(value) — no path arg */
+  /* R2: validate(value) — single validator array, short-circuit on invalid_type */
   private _runSyncValidators(value: unknown): Issue[] {
     const issues: Issue[] = [];
 
-    for (const validate of this.state.coreValidators) {
-      const result = validate(value);
-      if (result instanceof Promise) {
-        throw new Error(
-          'A check() callback returned a Promise in a sync parse context. Use parseAsync() or safeParseAsync() for async validation.',
-        );
-      }
-      if (result) {
-        issues.push(...result);
-        if (result.some((i: Issue) => i.code === ErrorCode.invalid_type)) return issues;
-      }
-    }
-
     for (const validate of this.state.validators) {
       const result = validate(value);
+
       if (result instanceof Promise) {
         throw new Error(
           'A check() callback returned a Promise in a sync parse context. Use parseAsync() or safeParseAsync() for async validation.',
         );
       }
+
       if (result) {
         issues.push(...result);
-        if (result.some((i: Issue) => i.code === ErrorCode.invalid_type)) break;
+
+        if (result.some((i: Issue) => i.code === ErrorCode.invalid_type)) return issues;
       }
     }
 
@@ -674,18 +673,13 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
   protected async _runAllValidators(value: unknown): Promise<Issue[]> {
     const issues: Issue[] = [];
 
-    for (const validate of this.state.coreValidators) {
+    for (const validate of this.state.validators) {
       const result = await validate(value);
+
       if (result) {
         issues.push(...result);
-        if (result.some((i: Issue) => i.code === ErrorCode.invalid_type)) return issues;
-      }
-    }
 
-    if (this.state.validators.length > 0) {
-      const results = await Promise.all(this.state.validators.map((fn) => fn(value)));
-      for (const result of results) {
-        if (result) issues.push(...result);
+        if (result.some((i: Issue) => i.code === ErrorCode.invalid_type)) return issues;
       }
     }
 
@@ -702,48 +696,25 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
 
   protected _addValidator(validator: ValidateFn): this {
     const cloned = this._clone();
+
     cloned.state.validators.push(validator);
-    return cloned;
-  }
-
-  /* R3: typeHint merged in as optional param — _addValidatorWithTypeHint removed */
-  protected _addValidatorWithConstraints(
-    validator: ValidateFn,
-    constraints: Partial<TConstraints>,
-    typeHint?: 'integer',
-  ): this {
-    const cloned = this._clone();
-    cloned.state.validators.push(validator);
-
-    const merged = mergeConstraints(
-      cloned.state.meta?.constraints as SchemaConstraints | undefined,
-      constraints as Partial<SchemaConstraints>,
-      cloned.state.patternAmbiguous,
-    );
-    const mergedConstraints = merged.constraints as Partial<TConstraints> | undefined;
-    cloned.state.patternAmbiguous = merged.patternAmbiguous;
-
-    const nextTypeHint = typeHint ?? cloned.state.meta?.typeHint;
-    if (mergedConstraints === undefined && nextTypeHint === undefined) {
-      cloned.state.meta = undefined;
-    } else {
-      cloned.state.meta = { constraints: mergedConstraints, typeHint: nextTypeHint };
-    }
 
     return cloned;
   }
 
-  protected _copyStateTo<T extends Schema<any, any, any>>(target: T): T {
-    target.state = cloneState(this.state) as SchemaState<any, any>;
-    return target;
-  }
-
-  protected _construct(state: SchemaState<any, any>): this {
+  protected _construct(state: SchemaState<any>): this {
     return Object.assign(Object.create(Object.getPrototypeOf(this)), this, { state }) as this;
   }
 
   protected _clone(): this {
     return this._construct(cloneState(this.state));
+  }
+
+  /** Copy this schema's validators/processors/modifiers onto an already-created target instance. */
+  protected _copyStateTo<T extends Schema<any, any>>(target: T): T {
+    target.state = cloneState(this.state);
+
+    return target;
   }
 
   /** Override in concrete schemas to return kind-specific JSON Schema. */
@@ -753,215 +724,172 @@ export class Schema<Output = unknown, Input = Output, TConstraints extends objec
 
   /** Override in concrete schemas for walk() dispatch. */
   protected _walk<R>(visitor: SchemaWalker<R>): R {
-    const fallback = visitor.unknown ?? visitor.any;
-    if (fallback) return fallback(this);
+    if (visitor.unknown) return visitor.unknown(this);
+
     throw new Error('[validit] walk(): no handler matched and no `unknown` fallback provided.');
   }
 
   /**
    * Override in concrete schemas for structural equality beyond base checks.
-   * The default compares constraint metadata only. custom check() validators are NOT compared.
+   * Returns true by default — subclasses with constraint fields override this.
+   * Custom check() validators are NOT compared.
    */
-  protected _equalsImpl(other: AnySchema): boolean {
-    return (
-      JSON.stringify(this.state.meta?.constraints) === JSON.stringify(other.state.meta?.constraints) &&
-      this.state.meta?.typeHint === other.state.meta?.typeHint
-    );
+  protected _equalsImpl(_other: AnySchema): boolean {
+    return true;
   }
 }
 
 /* -------------------- Type Inference -------------------- */
 
-export type AnySchema = Schema<unknown, unknown, any>;
+export type AnySchema = Schema<unknown, unknown>;
 export type InferOutput<T> = T extends Schema<infer O> ? O : never;
 export type InferInput<T> = T extends Schema<any, infer I> ? I : never;
 export type Infer<T> = InferOutput<T>;
 
-/* -------------------- Optional / Nullable Wrappers (F2) -------------------- */
+/* -------------------- Wrapper Schemas (optional / nullable / nullish) -------------------- */
+
+export type WrapperMode = 'nullable' | 'nullish' | 'optional';
+
+type WrapperOutput<T extends AnySchema, Mode extends WrapperMode> = Mode extends 'optional'
+  ? InferOutput<T> | undefined
+  : Mode extends 'nullable'
+    ? InferOutput<T> | null
+    : InferOutput<T> | null | undefined;
+
+type WrapperInput<T extends AnySchema, Mode extends WrapperMode> = Mode extends 'optional'
+  ? InferInput<T> | undefined
+  : Mode extends 'nullable'
+    ? InferInput<T> | null
+    : InferInput<T> | null | undefined;
 
 /**
- * Preserves the inner schema type through optional wrapping.
- * Created by `schema.optional()`. Unwrap with `.required()`.
+ * Single wrapper class replacing the three separate Optional/Nullable/NullishSchema classes.
+ * The `mode` field declares which nullability the wrapper adds.
  *
  * @example
  * ```ts
- * const s = v.string().min(3).optional();
- * // s: OptionalSchema<StringSchema> — inner StringSchema accessible for introspection
- * s.required(); // StringSchema (no new allocation)
+ * const s = v.string().optional(); // WrapperSchema<StringSchema, 'optional'>
+ * s.inner; // StringSchema
+ * s.mode;  // 'optional'
+ * s.required(); // StringSchema
  * ```
  */
-export class OptionalSchema<T extends AnySchema> extends Schema<InferOutput<T> | undefined, InferInput<T> | undefined> {
-  readonly inner: T;
-
-  constructor(inner: T) {
-    super([]);
-    this.inner = inner;
-    this.state.isOptional = true;
-  }
-
-  // Returns inner so the OptionalSchema wrapper is removed.
-  // Cast is safe: inner's output/input types are a subtype of the base required() signature.
-  override required(): Schema<Exclude<InferOutput<T> | undefined, undefined>, Exclude<InferInput<T> | undefined, undefined>> {
-    return this.inner as unknown as Schema<Exclude<InferOutput<T> | undefined, undefined>, Exclude<InferInput<T> | undefined, undefined>>;
-  }
-
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    const result = this.inner.safeParse(value);
-    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
-  }
-
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    const result = await this.inner.safeParseAsync(value);
-    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
-  }
-
-  protected override _toSchemaBase(): JsonSchema {
-    return (this.inner as unknown as OptionalSchema<T>)._toSchemaBase();
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R {
-    if (visitor.optional) return visitor.optional(this, this.inner.walk(visitor));
-    return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: AnySchema): boolean {
-    if (!(other instanceof OptionalSchema)) return false;
-    return this.inner.equals(other.inner);
-  }
-
-  protected override _construct(state: SchemaState<any, any>): this {
-    const next = new OptionalSchema(this.inner) as this;
-    next.state = state as any;
-    return next;
-  }
-}
-
-/** Preserves the inner schema type through nullable wrapping. Created by `schema.nullable()`. */
-export class NullableSchema<T extends AnySchema> extends Schema<InferOutput<T> | null, InferInput<T> | null> {
-  readonly inner: T;
-
-  constructor(inner: T) {
-    super([]);
-    this.inner = inner;
-    this.state.isNullable = true;
-  }
-
-  // Returns inner so the NullableSchema wrapper is removed.
-  override required(): Schema<Exclude<InferOutput<T> | null, undefined>, Exclude<InferInput<T> | null, undefined>> {
-    return this.inner as unknown as Schema<Exclude<InferOutput<T> | null, undefined>, Exclude<InferInput<T> | null, undefined>>;
-  }
-
-  protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    const result = this.inner.safeParse(value);
-    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
-  }
-
-  protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    const result = await this.inner.safeParseAsync(value);
-    return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
-  }
-
-  protected override _toSchemaBase(): JsonSchema {
-    return (this.inner as unknown as NullableSchema<T>)._toSchemaBase();
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R {
-    if (visitor.nullable) return visitor.nullable(this, this.inner.walk(visitor));
-    return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: AnySchema): boolean {
-    if (!(other instanceof NullableSchema)) return false;
-    return this.inner.equals(other.inner);
-  }
-
-  protected override _construct(state: SchemaState<any, any>): this {
-    const next = new NullableSchema(this.inner) as this;
-    next.state = state as any;
-    return next;
-  }
-}
-
-/** Preserves the inner schema type through nullish wrapping. Created by `schema.nullish()`. */
-export class NullishSchema<T extends AnySchema> extends Schema<
-  InferOutput<T> | null | undefined,
-  InferInput<T> | null | undefined
+export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extends Schema<
+  WrapperOutput<T, Mode>,
+  WrapperInput<T, Mode>
 > {
   readonly inner: T;
+  readonly mode: Mode;
 
-  constructor(inner: T) {
-    super([]);
+  constructor(inner: T, mode: Mode) {
+    super();
     this.inner = inner;
-    this.state.isOptional = true;
-    this.state.isNullable = true;
+    this.mode = mode;
+    this.state.isOptional = mode === 'optional' || mode === 'nullish';
+    this.state.isNullable = mode === 'nullable' || mode === 'nullish';
   }
 
-  override required(): Schema<Exclude<InferOutput<T> | null | undefined, undefined>, Exclude<InferInput<T> | null | undefined, undefined>> {
-    return this.inner as unknown as Schema<Exclude<InferOutput<T> | null | undefined, undefined>, Exclude<InferInput<T> | null | undefined, undefined>>;
+  override required(): Schema<Exclude<WrapperOutput<T, Mode>, undefined>, Exclude<WrapperInput<T, Mode>, undefined>> {
+    // T is the inner schema that already excludes the optional/nullable wrapper.
+    // The cast is safe: T extends Schema<InferOutput<T>, InferInput<T>>, and Exclude strips
+    // exactly the undefined/null that the WrapperSchema added.
+    return this.inner as Schema<Exclude<WrapperOutput<T, Mode>, undefined>, Exclude<WrapperInput<T, Mode>, undefined>>;
   }
 
   protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
     const result = this.inner.safeParse(value);
+
     return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
     const result = await this.inner.safeParseAsync(value);
+
     return result.success ? { data: result.data, issues: [] } : { data: value, issues: result.error.issues };
   }
 
   protected override _toSchemaBase(): JsonSchema {
-    return (this.inner as unknown as NullishSchema<T>)._toSchemaBase();
+    // Delegate to inner.schema() so chained wrappers (e.g. .nullable().optional())
+    // inherit the inner’s nullable JSON Schema wrapping correctly.
+    return this.inner.schema();
   }
 
   protected override _walk<R>(visitor: SchemaWalker<R>): R {
-    if (visitor.nullish) return visitor.nullish(this, this.inner.walk(visitor));
+    const innerR = this.inner.walk(visitor);
+
+    if (this.mode === 'optional' && visitor.optional) return visitor.optional(this, innerR);
+
+    if (this.mode === 'nullable' && visitor.nullable) return visitor.nullable(this, innerR);
+
+    if (this.mode === 'nullish' && visitor.nullish) return visitor.nullish(this, innerR);
+
     return super._walk(visitor);
   }
 
   protected override _equalsImpl(other: AnySchema): boolean {
-    if (!(other instanceof NullishSchema)) return false;
-    return this.inner.equals(other.inner);
-  }
+    if (!(other instanceof WrapperSchema)) return false;
 
-  protected override _construct(state: SchemaState<any, any>): this {
-    const next = new NullishSchema(this.inner) as this;
-    next.state = state as any;
-    return next;
+    return this.mode === other.mode && this.inner.equals(other.inner);
   }
 }
+
+/** Type alias — no runtime cost. */
+export type OptionalSchema<T extends AnySchema> = WrapperSchema<T, 'optional'>;
+/** Type alias — no runtime cost. */
+export type NullableSchema<T extends AnySchema> = WrapperSchema<T, 'nullable'>;
+/** Type alias — no runtime cost. */
+export type NullishSchema<T extends AnySchema> = WrapperSchema<T, 'nullish'>;
 
 /* -------------------- Pipe Schema -------------------- */
 
-class PipeSchema<Output, Input> extends Schema<Output, Input> {
-  private readonly _from: AnySchema;
-  private readonly _to: AnySchema;
+/** Schema produced by `.pipe()`. Parses with `from`, then feeds the result into `to`. */
+export class PipeSchema<Output, Input> extends Schema<Output, Input> {
+  readonly from: AnySchema;
+  readonly to: AnySchema;
 
   constructor(from: AnySchema, to: AnySchema) {
-    super([]);
-    this._from = from;
-    this._to = to;
+    super();
+    this.from = from;
+    this.to = to;
   }
 
   protected override _parseValueSync(value: unknown): { data: unknown; issues: Issue[] } {
-    const r1 = this._from.safeParse(value);
+    const r1 = this.from.safeParse(value);
+
     if (!r1.success) return { data: value, issues: r1.error.issues };
-    const r2 = this._to.safeParse(r1.data as unknown);
+
+    const r2 = this.to.safeParse(r1.data as unknown);
+
     if (!r2.success) return { data: value, issues: r2.error.issues };
+
     return { data: r2.data, issues: [] };
   }
 
   protected override async _parseValueAsync(value: unknown): Promise<{ data: unknown; issues: Issue[] }> {
-    const r1 = await this._from.safeParseAsync(value);
+    const r1 = await this.from.safeParseAsync(value);
+
     if (!r1.success) return { data: value, issues: r1.error.issues };
-    const r2 = await this._to.safeParseAsync(r1.data as unknown);
+
+    const r2 = await this.to.safeParseAsync(r1.data as unknown);
+
     if (!r2.success) return { data: value, issues: r2.error.issues };
+
     return { data: r2.data, issues: [] };
   }
 
-  protected override _construct(state: SchemaState<any, any>): this {
-    const next = new PipeSchema<Output, Input>(this._from, this._to) as this;
-    next.state = state as SchemaState<Output, SchemaConstraints>;
-    return next;
+  protected override _toSchemaBase(): JsonSchema {
+    return { allOf: [this.from.schema(), this.to.schema()] };
+  }
+
+  protected override _walk<R>(visitor: SchemaWalker<R>): R {
+    if (visitor.pipe) return visitor.pipe(this, this.from.walk(visitor), this.to.walk(visitor));
+
+    return super._walk(visitor);
+  }
+
+  protected override _equalsImpl(other: AnySchema): boolean {
+    if (!(other instanceof PipeSchema)) return false;
+
+    return this.from.equals(other.from) && this.to.equals(other.to);
   }
 }

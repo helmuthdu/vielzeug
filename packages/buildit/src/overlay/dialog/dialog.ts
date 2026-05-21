@@ -1,7 +1,7 @@
-import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '@vielzeug/craftit/controls';
+import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail } from '../../controls';
 
-import { define, on, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
-import { createOverlayControl } from '@vielzeug/craftit/controls';
+import { define, onCleanup, onEvent, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
+import { createOverlayControl } from '../../controls';
 
 import type { PaddingSize, RoundedSize } from '../../types';
 
@@ -164,6 +164,7 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
       getBoundaryElement: () => host.el,
       getPanelElement: () => dialogRef.value?.querySelector<HTMLElement>('.panel') ?? null,
       isOpen: () => isOpen.value,
+      onCleanup,
       onOpen: (reason) => emit('open', { reason }),
       setOpen: (next, { reason }) => {
         const dialog = dialogRef.value;
@@ -268,9 +269,9 @@ export const DIALOG_TAG = define<BitDialogProps, BitDialogEvents>('bit-dialog', 
         }
       };
 
-      on(dialog, 'close', handleNativeClose);
-      on(dialog, 'click', handleBackdropClick);
-      on(dialog, 'keydown', handleKeydown);
+      onEvent(dialog, 'close', handleNativeClose);
+      onEvent(dialog, 'click', handleBackdropClick);
+      onEvent(dialog, 'keydown', handleKeydown);
 
       return () => {
         // Ensure the native dialog is closed on unmount to release top-layer

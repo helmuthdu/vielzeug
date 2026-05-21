@@ -4,11 +4,11 @@ import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
-  readonly keySchema: Schema<K, any, any>;
-  readonly valueSchema: Schema<V, any, any>;
+  readonly keySchema: Schema<K, any>;
+  readonly valueSchema: Schema<V, any>;
 
-  constructor(keySchema: Schema<K, any, any>, valueSchema: Schema<V, any, any>) {
-    super([]);
+  constructor(keySchema: Schema<K, any>, valueSchema: Schema<V, any>) {
+    super();
     this.keySchema = keySchema;
     this.valueSchema = valueSchema;
   }
@@ -38,10 +38,21 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
         continue;
       }
 
+      const parsedKey = keyResult.data as string;
+
+      // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
+      // prototype mutation on the output object.
+      if (parsedKey === '__proto__' || parsedKey === 'constructor' || parsedKey === 'prototype') continue;
+
       const valResult = this.valueSchema.safeParse(obj[key]);
 
       if (valResult.success) {
-        output[keyResult.data] = valResult.data;
+        Object.defineProperty(output, parsedKey, {
+          configurable: true,
+          enumerable: true,
+          value: valResult.data,
+          writable: true,
+        });
       } else {
         issues.push(...prependIssuePath(valResult.error.issues, key));
       }
@@ -86,7 +97,20 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     for (const r of entryResults) {
       issues.push(...r.keyIssues, ...r.valIssues);
 
-      if (r.keyIssues.length === 0 && r.valIssues.length === 0) output[r.parsedKey as string] = r.parsedVal;
+      if (r.keyIssues.length === 0 && r.valIssues.length === 0) {
+        const parsedKey = r.parsedKey as string;
+
+        // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
+        // prototype mutation on the output object.
+        if (parsedKey === '__proto__' || parsedKey === 'constructor' || parsedKey === 'prototype') continue;
+
+        Object.defineProperty(output, parsedKey, {
+          configurable: true,
+          enumerable: true,
+          value: r.parsedVal,
+          writable: true,
+        });
+      }
     }
 
     return { data: output, issues };
@@ -107,12 +131,7 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof RecordSchema)) return false;
-    return this.keySchema.equals(other.keySchema) && this.valueSchema.equals(other.valueSchema);
-  }
 
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    const next = new RecordSchema(this.keySchema, this.valueSchema) as this;
-    next.state = state as any;
-    return next;
+    return this.keySchema.equals(other.keySchema) && this.valueSchema.equals(other.valueSchema);
   }
 }

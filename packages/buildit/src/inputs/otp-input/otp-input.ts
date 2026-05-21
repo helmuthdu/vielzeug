@@ -1,11 +1,10 @@
 import { computed, define, html, inject, prop, signal, watch, onMounted } from '@vielzeug/craftit';
-import { createListControl } from '@vielzeug/craftit/controls';
+import { createListControl } from '../../controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import styles from './otp-input.css?inline';
 
@@ -99,11 +98,12 @@ export const OTP_INPUT_TAG = define<BitOtpInputProps, BitOtpInputEvents>('bit-ot
 
     host.bind({
       attr: {
+        size: () => props.size?.value ?? formCtx?.size.value,
         value: () => otpValue.value || null,
+        variant: () => props.variant?.value ?? formCtx?.variant?.value,
       },
     });
 
-    mountFormContextSync(host.el, formCtx, props);
 
     function getInputs(): HTMLInputElement[] {
       return [...(host.el.shadowRoot?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];

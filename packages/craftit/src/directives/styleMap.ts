@@ -14,8 +14,16 @@ const toStyleValue = (value: StyleInput): string => {
 
   if (resolved == null || resolved === false) return '';
 
-  return String(resolved);
+  // Strip characters that can break out of a CSS declaration in inline styles.
+  // Semicolons end the current declaration; braces are meaningful in stylesheets
+  // but not inline style values and signal injection attempts.
+  return String(resolved).replace(/[;{}]/g, '');
 };
+
+// Strip characters that can break out of a CSS declaration in inline styles.
+// This is applied to both property names and values: semicolons end declarations
+// and braces are meaningful in stylesheet rules (but not inline style values).
+const UNSAFE_CSS_CHARS = /[;{}]/g;
 
 const toKebabCase = (name: string): string => name.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
 
@@ -48,7 +56,11 @@ export const styleMap = (record: Record<string, StyleInput>): ReadonlySignal<str
 
       if (!value) continue;
 
-      declarations.push(`${toKebabCase(name)}:${value}`);
+      const safeName = toKebabCase(name).replace(UNSAFE_CSS_CHARS, '');
+
+      if (!safeName) continue;
+
+      declarations.push(`${safeName}:${value}`);
     }
 
     return declarations.join(';');

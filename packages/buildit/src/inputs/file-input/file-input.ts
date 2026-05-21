@@ -5,18 +5,17 @@ import {
   defineField,
   html,
   inject,
-  on,
+  onEvent,
   onCleanup,
   ref,
   signal,
   onMounted,
 } from '@vielzeug/craftit';
-import { createPressControl } from '@vielzeug/craftit/controls';
+import { createPressControl } from '../../controls';
 import { createDropZone } from '@vielzeug/dragit';
 
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { FILE_INPUT_SIZE_PRESET } from '../shared/design-presets';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './file-input.css?inline';
 
@@ -179,10 +178,10 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
       attr: {
         'drag-over': () => (isDragging.value ? true : undefined),
         invalid: () => (isInvalid.value ? true : undefined),
+        size: () => props.size?.value ?? formCtx?.size.value,
       },
     });
 
-    mountFormContextSync(host.el, formCtx, props);
 
     // ============================================
     // IDs
@@ -271,7 +270,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
       });
 
       // Native input → add files
-      on(inp, 'change', (e: Event) => {
+      onEvent(inp, 'change', (e: Event) => {
         const input = e.target as HTMLInputElement;
 
         if (input.files?.length) addFiles(Array.from(input.files), e);
@@ -279,7 +278,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
         input.value = ''; // reset so the same file triggers change again
       });
       // Click dropzone → open file picker
-      on(dz, 'click', (e: MouseEvent) => {
+      onEvent(dz, 'click', (e: MouseEvent) => {
         if (e.target === inp) return;
 
         if (skipNextClick) {
@@ -291,7 +290,7 @@ export const FILE_INPUT_TAG = define<BitFileInputProps, BitFileInputEvents>('bit
         if (!isDisabled.value) inp.click();
       });
       // Keyboard: Enter / Space → open picker
-      on(dz, 'keydown', (e: KeyboardEvent) => {
+      onEvent(dz, 'keydown', (e: KeyboardEvent) => {
         skipNextClick = pressControl.handleKeydown(e) && e.key === 'Enter';
       });
 

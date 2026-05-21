@@ -1,4 +1,4 @@
-import { createListControl } from '../../controls';
+import { createListControl } from '../index';
 
 describe('createListControl', () => {
   it('moves to first and last enabled items', () => {

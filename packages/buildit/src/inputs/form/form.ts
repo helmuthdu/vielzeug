@@ -1,5 +1,6 @@
 import { computed, define, html, prop, provide } from '@vielzeug/craftit';
 
+import type { ComponentSize, VisualVariant } from '../../types';
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './form.css?inline';
 
@@ -12,11 +13,11 @@ export type BitFormProps = {
   /** Layout orientation for child fields */
   orientation?: 'horizontal' | 'vertical';
   /** Form size preset */
-  size?: string;
+  size?: ComponentSize;
   /** Validate on: 'submit' | 'change' | 'blur' | 'input' */
   validateOn?: 'submit' | 'change' | 'blur' | 'input';
   /** Form visual variant */
-  variant?: string;
+  variant?: Exclude<VisualVariant, 'glass' | 'frost' | 'text'>;
 };
 
 /** Events emitted by the form component */
@@ -73,9 +74,9 @@ export const FORM_TAG = define<BitFormProps, BitFormEvents>('bit-form', {
     // Provide context to all child bit-* form fields
     provide(FORM_CTX, {
       disabled: computed(() => Boolean(props.disabled.value)),
-      size: props.size as any,
-      validateOn: computed(() => props.validateOn.value ?? 'submit') as any,
-      variant: props.variant as any,
+      size: props.size,
+      validateOn: computed(() => props.validateOn.value ?? 'submit'),
+      variant: props.variant,
     });
 
     function handleSubmit(e: Event) {

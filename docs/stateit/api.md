@@ -13,17 +13,21 @@ description: Complete type signatures, parameter docs, and return values for eve
 
 ## API At a Glance
 
-| Symbol       | Purpose                                  | Execution mode | Common gotcha                                                      |
-| ------------ | ---------------------------------------- | -------------- | ------------------------------------------------------------------ |
-| `signal()`   | Create reactive primitive values         | Sync           | Write signals inside batch/effect-safe flows                       |
-| `computed()` | Derive memoized values from dependencies | Sync           | Avoid side effects inside computed callbacks                       |
-| `effect()`   | Run and re-run side effects              | Sync           | Dispose when no longer needed to prevent memory leaks              |
-| `watch()`    | Subscribe to value changes               | Sync           | Does not fire immediately unlike `effect()`                        |
-| `batch()`    | Coalesce multiple writes                 | Sync           | Nested batches merge into the outermost                            |
-| `untrack()`  | Read without subscribing                 | Sync           | Only suppresses dependency registration, value is still read       |
-| `toStore()`  | Adapt a signal to Svelte's store shape   | Sync           | Calls the subscriber immediately with the current value            |
-| `scope()`    | Isolated cleanup context                 | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO           |
-| `store()`    | Create object-like state container       | Sync           | Store is a branded signal; use `.patch()`, `.update()`, `.reset()` |
+| Symbol                 | Purpose                                       | Execution mode | Common gotcha                                                      |
+| ---------------------- | --------------------------------------------- | -------------- | ------------------------------------------------------------------ |
+| `signal()`             | Create reactive primitive values              | Sync           | Write signals inside batch/effect-safe flows                       |
+| `computed()`           | Derive memoized values from dependencies      | Sync           | Avoid side effects inside computed callbacks                       |
+| `effect()`             | Run and re-run sync side effects              | Sync           | Dispose when no longer needed to prevent memory leaks              |
+| `effectAsync()`        | Run async side effects with AbortSignal       | Async          | Read reactive deps synchronously before the first `await`          |
+| `watch()`              | Subscribe to value changes                    | Sync           | Does not fire immediately unlike `effect()`                        |
+| `batch()`              | Coalesce multiple writes                      | Sync           | Nested batches merge into the outermost                            |
+| `untrack()`            | Read without subscribing                      | Sync           | Only suppresses dependency registration, value is still read       |
+| `toStore()`            | Adapt a signal to Svelte's store shape        | Sync           | Calls the subscriber immediately with the current value            |
+| `scope()`              | Isolated cleanup context                      | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO           |
+| `store()`              | Create object-like state container            | Sync           | Store is a branded signal; use `.patch()`, `.update()`, `.reset()` |
+| `selectFrom()`         | Select a slice from a store                   | Sync           | Downstream effects only fire when the selected value changes       |
+| `configure()`          | Adjust global runtime settings                | Sync           | Call once at app startup before any reactive primitives are used   |
+| `setTrackingProvider()`| Override context provider for SSR             | Sync           | Returns previous provider for restore; advanced usage only         |
 
 ## Signal Primitives
 
@@ -38,7 +42,7 @@ Creates a reactive atom. Read `.value` inside an `effect` or `computed` to subsc
 Signals also expose:
 
 - `peek(): T` — read the current value without registering a dependency
-- `subscribe(onStoreChange): () => void` — subscribe to future changes without an initial callback, suitable for `useSyncExternalStore()`
+- `subscribe(onStoreChange): Subscription` — subscribe to future changes without an initial callback, suitable for `useSyncExternalStore()`
 
 ```ts
 const count = signal(0);
@@ -112,8 +116,8 @@ const sub = effect(() => {
 
 count.value = 5; // effect re-runs (cleanup called first)
 sub.dispose(); // cleanup called, effect removed
-sub.dispose(); // no-op — second call is safe
-// or: sub()     — direct call also disposes
+// or: sub() — direct call also disposes
+// or: using sub = effect(...) — TC39 using declaration
 ```
 
 **Parameters**
@@ -126,14 +130,59 @@ sub.dispose(); // no-op — second call is safe
 
 ---
 
+### `effectAsync`
+
+```ts
+function effectAsync(fn: AsyncEffectCallback, options?: { onError?: (error: unknown) => void }): Subscription;
+```
+
+Like `effect()`, but the callback is async and receives an `AbortSignal` that fires when the effect re-runs or is disposed. Read reactive dependencies **synchronously** before the first `await` to register them as tracked.
+
+When the reactive dependencies change:
+1. The current in-flight operation's `AbortSignal` is aborted.
+2. Any cleanup returned by the previous run is called.
+3. A new run starts.
+
+Errors from runs where `signal.aborted` is `true` are silently discarded. Other unhandled async errors are passed to `options.onError` (defaults to surfacing as an unhandled promise rejection).
+
+```ts
+const userId = signal('u1');
+
+const stop = effectAsync(async (signal) => {
+  const id = userId.value; // sync dep — tracked
+  const data = await fetchUser(id, { signal }); // automatically aborted if id changes
+
+  renderUser(data);
+
+  return () => cleanup(); // optional cleanup
+});
+
+userId.value = 'u2'; // aborts in-flight fetch, starts a new one
+stop(); // aborts current fetch, calls cleanup
+```
+
+**Parameters**
+
+| Parameter        | Type                  | Description                                                               |
+| ---------------- | --------------------- | ------------------------------------------------------------------------- |
+| `fn`             | `AsyncEffectCallback` | Async callback receiving an `AbortSignal`; may return async cleanup       |
+| `options.onError`| `(err) => void`       | Handler for non-aborted errors. Default: unhandled promise rejection      |
+
+**Returns** — `Subscription`
+
+---
+
 ### `watch`
 
 ```ts
-function watch<T>(source: ReadonlySignal<T>, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;
-function watch<T>(source: () => T, cb: (value: T, prev: T) => void, options?: WatchOptions<T>): Subscription;
+function watch<T>(
+  source: ReadonlySignal<T> | (() => T),
+  cb: (value: T, prev: T) => void,
+  options?: WatchOptions<T>,
+): Subscription;
 ```
 
-Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). For derived slices, pass a getter function or wrap the slice with `computed()`.
+Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). For derived slices, pass a getter function or use `selectFrom()`.
 
 ```ts
 // Plain watch
@@ -147,12 +196,12 @@ watch(() => userStore.value.name, (name) => console.log('name:', name));
 
 **Parameters**
 
-| Parameter           | Type                    | Description                                               |
-| ------------------- | ----------------------- | --------------------------------------------------------- |
-| `source`            | `ReadonlySignal<T>`     | The signal or store to watch                              |
-| `cb`                | `(value, prev) => void` | Called on each change with new and previous values        |
-| `options.immediate` | `boolean`               | Fire once immediately on subscription. Default `false`    |
-| `options.equals`    | `EqualityFn<T>`         | Custom equality for change detection. Default `Object.is` |
+| Parameter           | Type                                  | Description                                               |
+| ------------------- | ------------------------------------- | --------------------------------------------------------- |
+| `source`            | `ReadonlySignal<T>` or `() => T`      | The signal, store, or getter to watch                     |
+| `cb`                | `(value: T, prev: T) => void`         | Called on each change with new and previous values        |
+| `options.immediate` | `boolean`                             | Fire once immediately on subscription. Default `false`    |
+| `options.equals`    | `EqualityFn<T>`                       | Custom equality for change detection. Default `Object.is` |
 
 **Returns** — `Subscription`
 
@@ -204,7 +253,7 @@ effect(() => {
 function readonly<T>(source: ReadonlySignal<T>): ReadonlySignal<T>;
 ```
 
-Returns a cached read-only facade over `source`. The returned object exposes only `value`, `peek()`, and `subscribe()`, so mutator methods from writable sources are hidden at runtime.
+Returns a read-only facade over `source`. Exposes only `value`, `peek()`, and `subscribe()`, hiding mutator methods at the type level.
 
 ```ts
 const count = signal(0);
@@ -213,8 +262,6 @@ const ro = readonly(count);
 console.log(ro.value); // 0
 count.value = 1;
 console.log(ro.value); // 1
-
-// no writable API exposed on the facade
 ```
 
 **Parameters**
@@ -239,19 +286,10 @@ Adapts any signal or computed to the Svelte store contract. The subscriber is ca
 const count = signal(0);
 const countStore = toStore(count);
 
-const unsubscribe = countStore.subscribe((value) => {
-  console.log(value);
-});
-
+const unsubscribe = countStore.subscribe((value) => console.log(value));
 count.value = 1;
 unsubscribe();
 ```
-
-**Parameters**
-
-| Parameter | Type                | Description                    |
-| --------- | ------------------- | ------------------------------ |
-| `source`  | `ReadonlySignal<T>` | The signal or computed to wrap |
 
 **Returns** — An object with a Svelte-compatible `subscribe(run)` method
 
@@ -263,24 +301,13 @@ unsubscribe();
 function onCleanup(fn: CleanupFn): void;
 ```
 
-Registers a cleanup function within the currently active effect **or** `scope`. When called inside an `effect`, the cleanup runs before the next re-execution and when the effect is disposed. When called inside `scope.run()`, the cleanup runs when `scope.dispose()` is called.
+Registers a cleanup function within the currently active `effect()` or `scope.run()` context. Throws `StateError('INVALID_CLEANUP', ...)` when called outside either context.
 
 ```ts
-function useInterval(ms: number) {
-  const id = setInterval(() => console.log('tick'), ms);
-  onCleanup(() => clearInterval(id)); // works in both effect and scope contexts
-}
-
-// Inside an effect:
 effect(() => {
-  useInterval(1000);
+  const id = setInterval(() => tick(), 1000);
+  onCleanup(() => clearInterval(id));
 });
-
-// Inside a scope:
-const s = scope();
-s.run(() => {
-  useInterval(5000);
-}); // cleanup runs on s.dispose()
 ```
 
 ---
@@ -291,13 +318,13 @@ s.run(() => {
 function isSignal<T = unknown>(value: unknown): value is ReadonlySignal<T>;
 ```
 
-Type guard that returns `true` for values created by `signal()`, `computed()`, or `store()`. Uses an internal symbol marker, so arbitrary objects with a `value` property will not pass.
+Type guard returning `true` for values created by `signal()`, `computed()`, or `store()`. Uses an internal symbol marker.
 
 ```ts
-isSignal(signal(42)); // true
+isSignal(signal(42));       // true
 isSignal(computed(() => 1)); // true
-isSignal(store({ value: 42 })); // true
-isSignal({ value: 42 }); // false — not a real signal
+isSignal(store({ n: 0 }));  // true
+isSignal({ value: 42 });     // false — not a real signal
 ```
 
 ---
@@ -310,23 +337,151 @@ isSignal({ value: 42 }); // false — not a real signal
 function store<T extends object>(initial: T): Store<T>;
 ```
 
-Creates a reactive store for the given object state. `Store<T>` is a branded signal, so `effect()`, `computed()`, `watch()`, and all other signal primitives that accept `ReadonlySignal<T>` work with stores directly.
+Creates a reactive store for the given object state. `Store<T>` is a branded signal, so `effect()`, `computed()`, `watch()`, `selectFrom()`, and all other primitives that accept `ReadonlySignal<T>` work with stores directly. `initial` is deep-cloned; external mutations after construction do not affect the store or its `reset()` baseline.
 
 **Parameters**
 
-| Parameter | Type | Description                                                                         |
-| --------- | ---- | ----------------------------------------------------------------------------------- |
-| `initial` | `T`  | The starting state (defensively copied; external mutations do not affect `reset()`) |
+| Parameter | Type | Description                                                       |
+| --------- | ---- | ----------------------------------------------------------------- |
+| `initial` | `T`  | Starting state; must be a plain object (not an array or primitive)|
 
 **Returns** — `Store<T>`
+
+---
+
+### `selectFrom`
+
+```ts
+function selectFrom<T extends object, U>(
+  source: Store<T> | ReadonlySignal<T>,
+  selector: (state: T) => U,
+  options?: ReactiveOptions<U>,
+): ComputedSignal<U>;
+```
+
+Creates a derived computed signal that selects a slice from a store or signal. Downstream effects and subscribers are only notified when the *selected value* changes, even when other parts of the store change.
+
+This is functionally equivalent to `computed(() => selector(source.value), options)`, but more declarative at the call site.
+
+```ts
+const cart = store({ count: 0, label: 'empty' });
+
+const count = selectFrom(cart, (s) => s.count);
+const label = selectFrom(cart, (s) => s.label);
+
+effect(() => console.log('count:', count.value)); // only fires when count changes
+effect(() => console.log('label:', label.value)); // only fires when label changes
+
+cart.patch({ count: 1 }); // only "count" effect fires
+cart.patch({ label: 'full' }); // only "label" effect fires
+```
+
+**Parameters**
+
+| Parameter        | Type                              | Description                                                   |
+| ---------------- | --------------------------------- | ------------------------------------------------------------- |
+| `source`         | `Store<T>` or `ReadonlySignal<T>` | The store or signal to derive from                            |
+| `selector`       | `(state: T) => U`                 | Pure function that extracts the slice                         |
+| `options.equals` | `EqualityFn<U>`                   | Custom equality for the selected value. Default: `Object.is`  |
+
+**Returns** — `ComputedSignal<U>` (call `.dispose()` when no longer needed)
+
+---
+
+## Configuration
+
+### `configure`
+
+```ts
+function configure(options: { maxIterations?: number }): void;
+```
+
+Adjusts global runtime settings. Call once at app startup, before any reactive primitives are used. All parameters are optional.
+
+| Option           | Default | Description                                                                                  |
+| ---------------- | ------- | -------------------------------------------------------------------------------------------- |
+| `maxIterations`  | `100`   | Maximum flush or effect loop iterations before throwing `StateError('INFINITE_LOOP', ...)`.  |
+
+```ts
+import { configure } from '@vielzeug/stateit';
+
+// Increase the limit for apps with complex cascade graphs
+configure({ maxIterations: 500 });
+```
+
+---
+
+### `setTrackingProvider`
+
+```ts
+function setTrackingProvider(provider: TrackingProvider): TrackingProvider;
+```
+
+Replaces the reactive tracking context provider. Returns the previous provider so it can be restored. The default implementation uses a module-level variable, which is safe for browsers and synchronous Node.js SSR.
+
+For async Node.js environments (e.g., when `effectAsync` work interleaves across requests), install an `AsyncLocalStorage`-backed provider:
+
+```ts
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { setTrackingProvider } from '@vielzeug/stateit';
+
+const als = new AsyncLocalStorage();
+const prev = setTrackingProvider({
+  get: () => als.getStore() ?? null,
+  run: (ctx, fn) => als.run(ctx, fn),
+});
+```
+
+Treat the `TrackingContextRef` values as opaque tokens — do not inspect or construct them.
+
+**Returns** — The previous `TrackingProvider`
+
+---
+
+## Error Handling
+
+### `StateError`
+
+All errors thrown by stateit are instances of `StateError`, which extends `Error` with a machine-readable `code` field.
+
+```ts
+class StateError extends Error {
+  readonly code: StateErrorCode;
+}
+```
+
+This allows consumers to catch and distinguish specific error types programmatically:
+
+```ts
+import { StateError } from '@vielzeug/stateit';
+
+try {
+  computed.value;
+} catch (e) {
+  if (e instanceof StateError && e.code === 'DISPOSED_READ') {
+    // handle disposed computed
+  }
+}
+```
+
+**Error codes**
+
+| Code             | Thrown when                                                         |
+| ---------------- | ------------------------------------------------------------------- |
+| `COMPUTED_CYCLE` | A computed function reads another computed that depends on it       |
+| `DISPOSED_READ`  | `.value`, `.peek()`, or `.subscribe()` is called on a disposed computed |
+| `DISPOSED_SCOPE` | `scope.run()` is called after `scope.dispose()`                     |
+| `INFINITE_LOOP`  | Flush or effect loop exceeds `config.maxIterations`                 |
+| `INVALID_CLEANUP`| `onCleanup()` is called outside an active effect or scope           |
+| `INVALID_STORE`  | `store()` is called with a non-object, or `patch()` receives a non-object |
+
+Errors from multiple subscribers or cleanup functions in the same flush are aggregated into a standard `AggregateError` with each original error as an element.
 
 ---
 
 ## Signal Types
 
 ### `Signal<T>`
-
-The base readable/writable reactive primitive.
 
 ```ts
 interface Signal<T> extends ReadonlySignal<T> {
@@ -343,9 +498,9 @@ interface Signal<T> extends ReadonlySignal<T> {
 
 ```ts
 interface ReadonlySignal<T> {
-  peek(): T; // non-tracked read
-  subscribe(onStoreChange: () => void): Subscription; // future-only subscription
-  readonly value: T; // tracked getter
+  peek(): T;
+  subscribe(onStoreChange: () => void): Subscription;
+  readonly value: T;
 }
 ```
 
@@ -366,111 +521,9 @@ interface ComputedSignal<T> extends ReadonlySignal<T> {
 }
 ```
 
-Returned by `computed()`. A read-only signal with an explicit dispose method.
-
-```ts
-const doubled = computed(() => count.value * 2);
-doubled.value; // read
-doubled.dispose(); // stop tracking
-// or: using doubled = computed(...)
-```
+Returned by `computed()` and `selectFrom()`. A read-only signal with an explicit dispose method.
 
 ---
-
-### `Scope`
-
-```ts
-interface Scope {
-  readonly run: <T>(fn: () => T) => T;
-  readonly dispose: () => void;
-  readonly [Symbol.dispose]: () => void;
-}
-```
-
-Returned by `scope()`. `run(fn)` activates the scope so that `onCleanup()` calls inside `fn` register on this scope. `dispose()` runs all registered cleanups in **LIFO order** and is idempotent.
-
----
-
-### `Subscription`
-
-```ts
-interface Subscription {
-  (): void; // direct call — disposes the subscription
-  dispose(): void; // explicit method — equivalent to calling directly
-  [Symbol.dispose](): void; // TC39 using declarations
-}
-```
-
-Returned by `effect()` and `watch()`. All three forms are equivalent and idempotent.
-
-```ts
-const sub = effect(() => ...);
-sub();           // dispose
-sub.dispose();   // dispose (same effect)
-// or: using sub = effect(...) — TC39 using declaration
-```
-
----
-
-### `CleanupFn`
-
-```ts
-type CleanupFn = () => void;
-```
-
-A zero-argument void function. Used for teardown returned from `EffectCallback`.
-
----
-
-### `EffectCallback`
-
-```ts
-type EffectCallback = () => CleanupFn | void;
-```
-
-The callback passed to `effect()`. May optionally return a `CleanupFn` that fires before each re-run and on final dispose.
-
----
-
-### `EqualityFn<T>`
-
-```ts
-type EqualityFn<T> = (a: T, b: T) => boolean;
-```
-
-A comparator that returns `true` when `a` and `b` should be considered equal (notification suppressed).
-
----
-
-### `ReactiveOptions<T>`
-
-```ts
-type ReactiveOptions<T> = {
-  equals?: EqualityFn<T>;
-};
-```
-
-Accepted by `signal()` and `computed()`.
-
----
-
-### `WatchOptions<T>`
-
-```ts
-type WatchOptions<T> = {
-  immediate?: boolean;
-  equals?: EqualityFn<T>;
-};
-```
-
-| Property    | Type            | Default     | Description                                                                          |
-| ----------- | --------------- | ----------- | ------------------------------------------------------------------------------------ |
-| `immediate` | `boolean`       | `false`     | Fire once immediately on subscription; both `value` and `prev` are the current value |
-| `equals`    | `EqualityFn<T>` | `Object.is` | Custom equality for change detection                                                 |
-
----
-
-## Store Types
 
 ### `Store<T>`
 
@@ -488,7 +541,64 @@ interface Store<T extends object> extends ReadonlySignal<T> {
 | `.value` (get)    | Read current state; tracked inside `effect`/`computed`; store is a signal too |
 | `.patch(partial)` | Shallow-merge when any provided key changes (`Object.is` comparison)          |
 | `.update(fn)`     | Receive current state; return value replaces it                               |
-| `.reset()`        | Restore the original `initial` state                                          |
+| `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline)        |
+
+---
+
+### `Scope`
+
+```ts
+interface Scope {
+  readonly run: <T>(fn: () => T) => T;
+  readonly dispose: () => void;
+  readonly [Symbol.dispose]: () => void;
+}
+```
+
+Returned by `scope()`. `run(fn)` activates the scope for `onCleanup()` calls. `dispose()` runs all registered cleanups in **LIFO order** and is idempotent.
+
+---
+
+### `Subscription`
+
+```ts
+interface Subscription {
+  (): void;           // direct call — disposes the subscription
+  dispose(): void;    // explicit method — equivalent to calling directly
+  [Symbol.dispose](): void; // TC39 using declarations
+}
+```
+
+Returned by `effect()`, `effectAsync()`, and `watch()`. All three forms are equivalent and idempotent.
+
+```ts
+const sub = effect(() => ...);
+sub();           // dispose
+sub.dispose();   // dispose (same effect, idempotent)
+// or: using sub = effect(...) — TC39 using declaration
+```
+
+---
+
+### `AsyncEffectCallback`
+
+```ts
+type AsyncEffectCallback = (signal: AbortSignal) => Promise<CleanupFn | void>;
+```
+
+The callback passed to `effectAsync()`. Receives an `AbortSignal` that fires when the effect re-runs or is disposed. May return an async cleanup function.
+
+---
+
+### `CleanupFn` / `EffectCallback` / `EqualityFn<T>` / `ReactiveOptions<T>` / `WatchOptions<T>`
+
+```ts
+type CleanupFn = () => void;
+type EffectCallback = () => CleanupFn | void;
+type EqualityFn<T> = (a: T, b: T) => boolean;
+type ReactiveOptions<T> = { equals?: EqualityFn<T> };
+type WatchOptions<T> = { immediate?: boolean; equals?: EqualityFn<T> };
+```
 
 ---
 
@@ -503,11 +613,9 @@ s.patch({ count: 1 });
 // 'changed: 1' has already been logged here
 ```
 
-To coalesce multiple writes into a single notification, use the top-level `batch()`:
+To coalesce multiple writes into a single notification, use `batch()`:
 
 ```ts
-import { batch } from '@vielzeug/stateit';
-
 batch(() => {
   s.patch({ count: 1 });
   s.patch({ count: 2 });

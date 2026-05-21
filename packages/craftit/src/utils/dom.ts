@@ -1,0 +1,107 @@
+/**
+ * Low-level DOM utilities used throughout the runtime and binding layers.
+ */
+
+export const runAll = (fns: (() => void)[]): void => {
+  const errors: unknown[] = [];
+
+  for (let i = fns.length - 1; i >= 0; i--) {
+    try {
+      fns[i]();
+    } catch (err) {
+      errors.push(err);
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new AggregateError(errors, 'One or more cleanup callbacks failed during dispose');
+  }
+};
+
+export const removeNodes = (nodes: Node[]): void => {
+  for (const node of nodes) {
+    (node as ChildNode).remove();
+  }
+};
+
+/**
+ * HTML attributes that accept URLs. Values bound to these attributes are
+ * checked for dangerous schemes before being set.
+ */
+const URL_ATTRS = new Set([
+  'action',
+  'cite',
+  'codebase',
+  'data',
+  'formaction',
+  'href',
+  'manifest',
+  'ping',
+  'poster',
+  'src',
+  'srcdoc',
+  'xlink:href',
+]);
+
+/**
+ * Schemes that execute JavaScript or can embed arbitrary HTML when placed in a
+ * URL attribute. Blocked unconditionally — no DEV-only guard.
+ */
+const DANGEROUS_SCHEME_RE = /^\s*(?:javascript|vbscript|data):/i;
+
+export const setAttr = (el: Element, name: string, val: unknown): void => {
+  if (/^on/i.test(name)) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[craftit] Blocked setAttribute("${name}", ...) — inline event handler attributes are not supported. Use @${name.slice(2)} binding syntax instead.`,
+      );
+    }
+
+    el.removeAttribute(name);
+
+    return;
+  }
+
+  if (val == null || val === false) {
+    el.removeAttribute(name);
+
+    return;
+  }
+
+  const strVal = val === true ? 'true' : String(val);
+
+  if (URL_ATTRS.has(name.toLowerCase()) && DANGEROUS_SCHEME_RE.test(strVal)) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[craftit] Blocked dangerous URL scheme in attribute "${name}". Only safe URLs are permitted in URL-accepting attributes.`,
+      );
+    }
+
+    el.removeAttribute(name);
+
+    return;
+  }
+
+  el.setAttribute(name, strVal);
+};
+
+export const listen = (
+  el: EventTarget | null | undefined,
+  name: string,
+  handler: (e: any) => void,
+  options?: AddEventListenerOptions,
+): (() => void) => {
+  if (!el) return () => {};
+
+  const listener: EventListener = handler as EventListener;
+
+  el.addEventListener(name, listener, options);
+
+  return () => el.removeEventListener(name, listener, options);
+};
+
+export const toKebab = (str: string): string => str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+
+const ESC: Record<string, string> = { "'": '&#39;', '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+
+export const escapeHtml = (value: unknown): string => String(value).replace(/[&<>"']/g, (c) => ESC[c]);

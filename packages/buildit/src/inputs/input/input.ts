@@ -1,5 +1,5 @@
 import { define, html, inject, live, prop, ref, signal } from '@vielzeug/craftit';
-import { createTextField } from '@vielzeug/craftit/controls';
+import { createTextField } from '../../controls';
 
 import type { InputType, VisualVariant } from '../../types';
 import type { TextFieldProps } from '../shared/base-props';
@@ -8,7 +8,6 @@ import '../../content/icon/icon';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './input.css?inline';
 
@@ -137,7 +136,6 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 
-    mountFormContextSync(host.el, formCtx, props);
 
     const resolvedInputType = (): string =>
       props.type.value === 'password' && showPassword.value ? 'text' : validateInputType(props.type.value);
@@ -173,6 +171,8 @@ export const INPUT_TAG = define<BitInputProps, BitInputEvents>('bit-input', {
       attr: {
         error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
         'has-value': () => (fieldValue.value ? true : undefined),
+        size: () => props.size?.value ?? formCtx?.size.value,
+        variant: () => props.variant?.value ?? formCtx?.variant?.value,
       },
     });
 

@@ -1,69 +1,41 @@
 /**
  * Waits for a CSS exit animation or transition to finish, then calls `onDone`.
  *
- * When the element has no animation/transition running (e.g. reduced-motion or
- * overridden styles), `onDone` is called synchronously on the next microtask so
- * callers can safely set exit state before this call.
+ * Uses the Web Animations API (`element.getAnimations()`) when available for
+ * precise, synchronous detection. Falls back to a single microtask + immediate
+ * call when no relevant animations are running (e.g. `prefers-reduced-motion`
+ * or overridden styles).
  *
- * @param el      - The element whose animation/transition to observe.
- * @param onDone  - Callback invoked exactly once when the animation ends.
- * @param type    - `'animation'` (default) or `'transition'`.
+ * @param el   - The element whose animations/transitions to observe.
+ * @param onDone - Callback invoked exactly once when all animations end.
+ * @param type - `'animation'` (default) or `'transition'`.
  */
-/** Safety buffer added to the computed CSS duration before the fallback timer fires. */
-const ANIMATION_FALLBACK_BUFFER_MS = 50;
-
 export function awaitExit(el: Element, onDone: () => void, type: 'animation' | 'transition' = 'animation'): void {
-  let finished = false;
-  let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const finish = () => {
-    if (finished) return;
-
-    finished = true;
-
-    if (fallbackTimer !== null) {
-      clearTimeout(fallbackTimer);
-      fallbackTimer = null;
-    }
-
-    onDone();
-  };
-
   queueMicrotask(() => {
-    const styles = getComputedStyle(el);
+    const getAnimations = typeof el.getAnimations === 'function' ? () => el.getAnimations() : () => [];
+    const relevant = getAnimations().filter((a) => {
+      if (type === 'animation') return a instanceof CSSAnimation;
 
-    if (type === 'animation') {
-      const names = styles.animationName.split(',').map((v) => v.trim());
-      const durations = styles.animationDuration.split(',').map((v) => {
-        if (v.endsWith('ms')) return Number.parseFloat(v);
+      if (type === 'transition') return a instanceof CSSTransition;
 
-        if (v.endsWith('s')) return Number.parseFloat(v) * 1000;
+      return false;
+    });
 
-        return 0;
-      });
+    if (relevant.length === 0) {
+      onDone();
 
-      const hasAnimation = names.some((n) => n && n !== 'none');
-      const maxDuration = Math.max(0, ...durations);
-
-      if (!hasAnimation || maxDuration <= 0) {
-        finish();
-
-        return;
-      }
-
-      el.addEventListener('animationend', finish, { once: true });
-      fallbackTimer = setTimeout(finish, maxDuration + ANIMATION_FALLBACK_BUFFER_MS);
-    } else {
-      const duration = Number.parseFloat(styles.transitionDuration);
-
-      if (!duration || duration <= 0) {
-        finish();
-
-        return;
-      }
-
-      el.addEventListener('transitionend', finish, { once: true });
-      fallbackTimer = setTimeout(finish, duration * 1000 + ANIMATION_FALLBACK_BUFFER_MS);
+      return;
     }
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+
+      done = true;
+      onDone();
+    };
+
+    // Resolve when ALL relevant animations are finished or cancelled.
+    Promise.allSettled(relevant.map((a) => a.finished)).then(finish);
   });
 }

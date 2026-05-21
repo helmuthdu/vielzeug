@@ -1,4 +1,4 @@
-import type { OverlayCloseDetail, OverlayOpenDetail } from '@vielzeug/craftit/controls';
+import type { OverlayCloseDetail, OverlayOpenDetail } from '../../controls';
 
 import type { VisualVariant } from '../../types';
 import type { SelectableFieldProps } from '../shared/base-props';

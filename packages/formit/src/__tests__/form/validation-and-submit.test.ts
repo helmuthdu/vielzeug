@@ -228,6 +228,7 @@ describe('form validation', () => {
     form.subscribe((state) => {
       if (state.isValidating) {
         sawValidating = true;
+
         if (state.validatingFields.includes('slow')) sawValidatingField = true;
       }
     });
@@ -253,6 +254,7 @@ describe('form validation', () => {
               'abort',
               () => {
                 const err = new Error('aborted');
+
                 err.name = 'AbortError';
                 reject(err);
               },

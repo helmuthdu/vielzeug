@@ -1,15 +1,17 @@
-import { createId } from '../internal';
-import { currentElementOrThrow, effect, onCleanup, onMounted } from '../runtime';
+import { createId } from '@vielzeug/craftit';
+import { getCurrentElement, effect, onCleanup, onMounted } from '@vielzeug/craftit';
 
 export type A11yTone = 'default' | 'error';
 
 export type A11yControlConfig = {
   checked?: () => 'true' | 'false' | 'mixed' | undefined;
-  helperId?: string;
+  /** Getter for the helper/error text element in the component's shadow DOM. */
+  getHelperEl: () => HTMLElement | null;
+  /** Getter for the label element in the component's shadow DOM. */
+  getLabelEl: () => HTMLElement | null;
   helperText?: () => string | undefined;
   helperTone?: () => A11yTone;
   invalid?: () => boolean;
-  labelId?: string;
   role: string;
 };
 
@@ -29,9 +31,9 @@ const hasLabelContent = (labelElement: HTMLElement): boolean => {
 };
 
 export function createA11yControl(config: A11yControlConfig): A11yControlHandle {
-  const host = currentElementOrThrow();
-  const labelId = config.labelId || createId('a11y-label');
-  const helperId = config.helperId || createId('a11y-helper');
+  const host = getCurrentElement();
+  const labelId = createId('a11y-label');
+  const helperId = createId('a11y-helper');
 
   const setAttr = (element: Element, name: string, value: string): void => {
     if (element.getAttribute(name) !== value) element.setAttribute(name, value);
@@ -43,48 +45,9 @@ export function createA11yControl(config: A11yControlConfig): A11yControlHandle 
 
   setAttr(host, 'role', config.role);
 
-  let labelEl: HTMLElement | null = null;
-  let helperEl: HTMLDivElement | null = null;
-
-  const slotCleanupByElement = new Map<HTMLSlotElement, () => void>();
-
-  const syncSlotListeners = (labelElement: HTMLElement | null, helperElement: HTMLDivElement | null): void => {
-    const nextSlots = new Set<HTMLSlotElement>();
-
-    for (const container of [labelElement, helperElement]) {
-      if (!container) continue;
-
-      for (const slot of Array.from(container.querySelectorAll('slot'))) {
-        if (slot instanceof HTMLSlotElement) nextSlots.add(slot);
-      }
-    }
-
-    for (const [slot, cleanup] of slotCleanupByElement) {
-      if (nextSlots.has(slot)) continue;
-
-      cleanup();
-      slotCleanupByElement.delete(slot);
-    }
-
-    for (const slot of nextSlots) {
-      if (slotCleanupByElement.has(slot)) continue;
-
-      const slotHandler = () => sync();
-
-      slot.addEventListener('slotchange', slotHandler);
-      slotCleanupByElement.set(slot, () => slot.removeEventListener('slotchange', slotHandler));
-    }
-  };
-
   const sync = (): void => {
-    const shadow = host.shadowRoot;
-
-    if (!shadow) return;
-
-    const labelElement = labelEl;
-    const helperElement = helperEl;
-
-    syncSlotListeners(labelElement, helperElement);
+    const labelElement = config.getLabelEl();
+    const helperElement = config.getHelperEl();
 
     const checked = config.checked?.();
     const invalid = config.invalid?.();
@@ -139,16 +102,14 @@ export function createA11yControl(config: A11yControlConfig): A11yControlHandle 
     sync();
   });
 
-  // Query shadow DOM refs once after first render, then sync.
+  // Sync once after first render, then watch slot changes.
   onMounted(() => {
-    labelEl = (host.shadowRoot?.querySelector('[data-a11y-label]') ?? null) as HTMLElement | null;
-    helperEl = (host.shadowRoot?.querySelector('[data-a11y-helper]') ?? null) as HTMLDivElement | null;
+    host.shadowRoot?.addEventListener('slotchange', sync);
     sync();
   });
 
   onCleanup(() => {
-    for (const cleanup of slotCleanupByElement.values()) cleanup();
-    slotCleanupByElement.clear();
+    host.shadowRoot?.removeEventListener('slotchange', sync);
   });
 
   return { helperId, labelId };

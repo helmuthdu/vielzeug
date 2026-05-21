@@ -1,5 +1,5 @@
 import { define, effect, html, inject, live, onElement, prop, ref } from '@vielzeug/craftit';
-import { createTextField } from '@vielzeug/craftit/controls';
+import { createTextField } from '../../controls';
 
 import type { VisualVariant } from '../../types';
 import type { TextFieldProps } from '../shared/base-props';
@@ -7,7 +7,6 @@ import type { TextFieldProps } from '../shared/base-props';
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { TEXTAREA_SIZE_PRESET } from '../shared/design-presets';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './textarea.css?inline';
 
@@ -105,7 +104,6 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
 
-    mountFormContextSync(host.el, formCtx, props);
 
     const textareaRef = ref<HTMLTextAreaElement>();
 
@@ -154,6 +152,8 @@ export const TEXTAREA_TAG = define<BitTextareaProps, BitTextareaEvents>('bit-tex
     host.bind({
       attr: {
         error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
+        size: () => props.size?.value ?? formCtx?.size.value,
+        variant: () => props.variant?.value ?? formCtx?.variant?.value,
       },
     });
 

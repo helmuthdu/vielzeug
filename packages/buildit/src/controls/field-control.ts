@@ -1,58 +1,28 @@
 import { computed, type ReadonlySignal, type Signal } from '@vielzeug/stateit';
 
-import { defineField, type FormFieldOptions } from '../form';
-import { createId } from '../internal';
-import { listen } from '../runtime';
-import {
-  createControlState,
-  type ControlContextOptions,
-  type ControlValidationMode,
-  type FormControlValidationTrigger,
-} from './internal/control-state';
+import { createId, defineField, listen, type FormFieldOptions } from '@vielzeug/craftit';
 
-export type { FormControlValidationTrigger } from './internal/control-state';
-export type { ValidationReporter } from './internal/control-state';
+// ── Validation / context types ────────────────────────────────────────────────
 
-export type TextFieldControlContext = ControlContextOptions;
+export type FormControlValidationTrigger = 'blur' | 'change';
+export type ControlValidationMode = 'blur' | 'change' | 'submit' | 'input' | undefined;
+export type ValidationReporter = { reportValidity: () => void };
+
+export type ControlContextOptions = {
+  disabled?: ReadonlySignal<boolean | undefined>;
+  validateOn?: ReadonlySignal<ControlValidationMode>;
+};
+
+// ── Field base options / handle ───────────────────────────────────────────────
 
 export type FieldBaseOptions = {
-  context?: TextFieldControlContext;
+  context?: ControlContextOptions;
   disabled?: ReadonlySignal<boolean | undefined>;
   error?: ReadonlySignal<string | undefined>;
   helper?: ReadonlySignal<string | undefined>;
   name?: ReadonlySignal<string | undefined>;
   prefix: string;
   validateOn?: ReadonlySignal<ControlValidationMode>;
-};
-
-export type TextFieldOptions = FieldBaseOptions & {
-  elementRef?: { value: HTMLInputElement | HTMLTextAreaElement | null };
-  maxLength?: ReadonlySignal<number | undefined>;
-  onBlur?: (event: FocusEvent) => void;
-  onChange?: (event: Event, value: string) => void;
-  onInput?: (event: Event, value: string) => void;
-  onInputExtra?: (event: Event) => void;
-  value: ReadonlySignal<string | undefined>;
-};
-
-export type ChoiceFieldOptions = FieldBaseOptions & {
-  multiple?: ReadonlySignal<boolean | undefined>;
-  value: ReadonlySignal<string | undefined>;
-};
-
-export type CheckableStateOptions = FieldBaseOptions & {
-  checked: ReadonlySignal<boolean | undefined>;
-  clearIndeterminateFirst?: boolean;
-  group?: { toggle: (value: string, originalEvent?: Event) => void };
-  indeterminate?: ReadonlySignal<boolean | undefined>;
-  onToggle?: (payload: CheckableChangePayload) => void;
-  value: ReadonlySignal<string | undefined>;
-};
-
-export type CheckableChangePayload = {
-  checked: boolean;
-  originalEvent?: Event;
-  value: string;
 };
 
 export type FieldControlBaseHandle = {
@@ -65,11 +35,7 @@ export type FieldControlBaseHandle = {
   triggerValidation: (on: FormControlValidationTrigger) => void;
 };
 
-export type TextFieldHandle = FieldControlBaseHandle & {
-  assistive: ReadonlySignal<AssistiveState>;
-  clear: (event?: Event) => void;
-  value: Signal<string>;
-};
+// ── Assistive state ───────────────────────────────────────────────────────────
 
 export type AssistiveState = {
   counterAtLimit: boolean;
@@ -87,7 +53,9 @@ export type AssistiveOptions = {
   value?: ReadonlySignal<string | undefined>;
 };
 
-export type TextFieldLifecycleOptions = {
+// ── Text field DOM listener options ──────────────────────────────────────────
+
+export type TextFieldListenerOptions = {
   element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
   onBlur?: (event: FocusEvent) => void;
   onChange?: (event: Event, value: string) => void;
@@ -95,29 +63,8 @@ export type TextFieldLifecycleOptions = {
   triggerValidation?: (on: FormControlValidationTrigger) => void;
 };
 
-export type CheckableStateHandle = FieldControlBaseHandle & {
-  assistive: ReadonlySignal<AssistiveState>;
-  checked: Signal<boolean>;
-  indeterminate: Signal<boolean>;
-  toggle: (event: Event) => void;
-  value: Signal<string>;
-};
+// ── Internal: stable ID generation ───────────────────────────────────────────
 
-export type ChoiceFieldHandle = FieldControlBaseHandle & {
-  assistive: ReadonlySignal<AssistiveState>;
-  clear: () => void;
-  formValue: ReadonlySignal<string>;
-  removeValue: (value: string) => void;
-  selectedValues: ReadonlySignal<string[]>;
-  selectValue: (value: string) => void;
-  setValues: (values: string[]) => void;
-  toggleValue: (value: string) => void;
-};
-
-/**
- * Generates a stable set of ARIA-related IDs for a field control.
- * Snapshot `name` at call time — IDs are stable strings, not reactive.
- */
 const createFieldIds = (prefix: string, name?: string | null) => {
   const normalizedName = name && name.trim() ? name.trim() : createId().replace(/^cft-/, '');
   const fieldId = `${prefix}-${normalizedName}`;
@@ -132,41 +79,37 @@ const createFieldIds = (prefix: string, name?: string | null) => {
   };
 };
 
+// ── Core field factory ────────────────────────────────────────────────────────
+
 export const createFieldControlBase = <T = unknown>(
-  options: {
-    context?: TextFieldControlContext;
-    name?: ReadonlySignal<string | undefined>;
-    prefix: string;
-  } & ControlContextOptions,
-  fieldOptions: Omit<FormFieldOptions<T>, 'disabled'> & {
-    disabled?: FormFieldOptions<T>['disabled'];
-  },
-): {
-  base: Omit<FieldControlBaseHandle, 'triggerValidation'>;
-  triggerValidation: (on: FormControlValidationTrigger) => void;
-} => {
-  const controlState = createControlState(options);
+  options: Pick<FieldBaseOptions, 'context' | 'disabled' | 'name' | 'prefix' | 'validateOn'>,
+  fieldOptions: Omit<FormFieldOptions<T>, 'disabled'> & { disabled?: FormFieldOptions<T>['disabled'] },
+): FieldControlBaseHandle => {
+  const disabled = computed(
+    () => Boolean(options.disabled?.value) || Boolean(options.context?.disabled?.value),
+  );
+  const validateOn = options.validateOn ?? options.context?.validateOn;
   const ids = createFieldIds(options.prefix, options.name?.value);
 
-  const base: Omit<FieldControlBaseHandle, 'triggerValidation'> = {
-    disabled: controlState.disabled,
+  const field = defineField<T>({
+    ...fieldOptions,
+    disabled: fieldOptions.disabled ?? disabled,
+  });
+
+  return {
+    disabled,
     errorId: ids.errorId,
     fieldId: ids.fieldId,
     helperId: ids.helperId,
     labelInsetId: ids.labelInsetId,
     labelOutsideId: ids.labelOutsideId,
-  };
-
-  const field = defineField<T>({
-    ...fieldOptions,
-    disabled: fieldOptions.disabled ?? base.disabled,
-  });
-
-  return {
-    base,
-    triggerValidation: (on) => controlState.triggerValidation(field, on),
+    triggerValidation: (on) => {
+      if (validateOn?.value === on) field.reportValidity();
+    },
   };
 };
+
+// ── Assistive state factory ───────────────────────────────────────────────────
 
 export const createAssistiveState = (options: AssistiveOptions) => {
   return computed<AssistiveState>(() => {
@@ -191,8 +134,9 @@ export const createAssistiveState = (options: AssistiveOptions) => {
   });
 };
 
-/** @internal */
-export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): (() => void) => {
+// ── Text field DOM listeners ──────────────────────────────────────────────────
+
+export const attachTextFieldListeners = (options: TextFieldListenerOptions): (() => void) => {
   const { element, onBlur, onChange, onInput, triggerValidation } = options;
   const disposers: Array<() => void> = [];
 
@@ -228,3 +172,6 @@ export const mountTextFieldLifecycle = (options: TextFieldLifecycleOptions): (()
     for (const dispose of disposers) dispose();
   };
 };
+
+// Keep Signal in scope for re-export use by sub-modules
+export type { Signal };

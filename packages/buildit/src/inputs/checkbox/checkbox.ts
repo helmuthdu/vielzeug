@@ -1,5 +1,5 @@
 import { computed, define, html, inject } from '@vielzeug/craftit';
-import { type CheckableChangePayload, createCheckableFieldControl } from '@vielzeug/craftit/controls';
+import { type CheckableChangePayload, createCheckableFieldControl } from '../../controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
@@ -8,7 +8,6 @@ import { coarsePointerMixin, formControlMixins, sizeVariantMixin } from '../../s
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
 import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { CONTROL_SIZE_PRESET } from '../shared/design-presets';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './checkbox.css?inline';
 
@@ -86,6 +85,9 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
     const formCtx = inject(FORM_CTX);
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
 
+    let labelRef: HTMLElement | null = null;
+    let helperRef: HTMLElement | null = null;
+
     const checkable = createCheckableFieldControl({
       checked: props.checked,
       clearIndeterminateFirst: true,
@@ -93,6 +95,8 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
         () => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value) || Boolean(groupCtx?.disabled.value),
       ),
       error: props.error,
+      getHelperEl: () => helperRef,
+      getLabelEl: () => labelRef,
       group: groupCtx,
       helper: props.helper,
       indeterminate: props.indeterminate,
@@ -112,12 +116,12 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
     });
     const { checked, disabled, handleClick, handleKeydown, helperId, indeterminate, labelId } = checkable;
 
-    mountFormContextSync(host.el, formCtx, props);
 
     host.bind({
       attr: {
         checked,
         indeterminate,
+        size: () => props.size?.value ?? formCtx?.size.value,
         tabindex: () => (disabled.value ? undefined : 0),
       },
       class: () => ({
@@ -138,8 +142,8 @@ export const CHECKBOX_TAG = define<BitCheckboxProps, BitCheckboxEvents>('bit-che
           <bit-icon class="dash" name="minus" size="14" stroke-width="2" aria-hidden="true"></bit-icon>
         </div>
       </div>
-      <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
-      <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
+      <span class="label" part="label" ref=${(el: HTMLElement | null) => { labelRef = el; }} id="${labelId}"><slot></slot></span>
+      <div class="helper-text" part="helper-text" ref=${(el: HTMLElement | null) => { helperRef = el; }} id="${helperId}" aria-live="polite" hidden></div>
     `;
   },
   styles: [...formControlMixins, coarsePointerMixin, sizeVariantMixin(CONTROL_SIZE_PRESET), componentStyles],

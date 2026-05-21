@@ -27,7 +27,7 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
       map.set(tag, schema.extend(discriminatorShape));
     }
 
-    super([]);
+    super();
     this._discriminator = discriminator;
     this._map = map;
   }
@@ -98,6 +98,7 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
 
   protected override _toSchemaBase(): Record<string, unknown> {
     const oneOf = [...this._map.values()].map((s) => s.schema());
+
     return { discriminator: { propertyName: this._discriminator }, oneOf };
   }
 
@@ -111,16 +112,17 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof VariantSchema)) return false;
+
     if (this._discriminator !== other._discriminator) return false;
+
     if (this._map.size !== other._map.size) return false;
+
     for (const [tag, schema] of this._map) {
       const otherSchema = other._map.get(tag);
+
       if (!otherSchema || !schema.equals(otherSchema)) return false;
     }
-    return true;
-  }
 
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    return Object.assign(Object.create(Object.getPrototypeOf(this)), this, { state }) as this;
+    return true;
   }
 }

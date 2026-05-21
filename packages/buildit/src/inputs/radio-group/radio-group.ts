@@ -8,13 +8,14 @@ import {
   inject,
   prop,
   provide,
+  type ReadonlySignal,
   signal,
+  watch,
   when,
 } from '@vielzeug/craftit';
-import { createListControl } from '@vielzeug/craftit/controls';
+import { createListControl } from '../../controls';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import {
   createChoiceChangeDetail,
@@ -22,7 +23,6 @@ import {
   getSlottedByTag,
   setBooleanAttribute,
   setMaybeAttribute,
-  syncSignalFromProp,
 } from '../shared/utils';
 import componentStyles from './radio-group.css?inline';
 
@@ -52,12 +52,12 @@ export type BitRadioGroupProps = {
 
 /** Shared context for radio groups */
 export type RadioGroupContext = {
-  color: { value: string | undefined };
-  disabled: { value: boolean };
-  name: { value: string | undefined };
+  color: ReadonlySignal<string | undefined>;
+  disabled: ReadonlySignal<boolean>;
+  name: ReadonlySignal<string | undefined>;
   select: (value: string, originalEvent?: Event) => void;
-  size: { value: string | undefined };
-  value: { value: string };
+  size: ReadonlySignal<string | undefined>;
+  value: ReadonlySignal<string>;
 };
 
 export const RADIO_GROUP_CTX = createContext<RadioGroupContext | undefined>('BitRadioGroup');
@@ -125,18 +125,18 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
 
     host.bind({
       attr: {
+        size: () => props.size?.value ?? formCtx?.size.value,
         value: () => selectedValue.value || null,
       },
     });
 
-    syncSignalFromProp(props.value, {
-      get value() {
-        return selectedValue.value;
-      },
-      set value(v) {
+    watch(
+      props.value,
+      (v) => {
         selectedValue.value = (v as string | undefined) ?? '';
       },
-    });
+      { immediate: true },
+    );
 
     const getSlottedRadios = (): HTMLElement[] => getSlottedByTag(host.el, 'bit-radio');
 
@@ -156,7 +156,6 @@ export const RADIO_GROUP_TAG = define<BitRadioGroupProps, BitRadioGroupEvents>('
 
     const formCtx = inject(FORM_CTX);
 
-    mountFormContextSync(host.el, formCtx, props);
 
     provide(RADIO_GROUP_CTX, {
       color: props.color,

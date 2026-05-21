@@ -11,13 +11,12 @@ import {
   signal,
   when,
 } from '@vielzeug/craftit';
-import { createChoiceField } from '@vielzeug/craftit/controls';
+import { createChoiceField } from '../../controls';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
 import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import {
   type ChoiceChangeDetail,
@@ -125,7 +124,6 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
   setup(props, { emit, host, slots }) {
     const formCtx = inject(FORM_CTX);
 
-    mountFormContextSync(host.el, formCtx, props);
 
     const choice = createChoiceField({
       context: formCtx,
@@ -216,6 +214,8 @@ export const CHECKBOX_GROUP_TAG = define<BitCheckboxGroupProps, BitCheckboxGroup
     const helperId = `${legendId}-helper`;
     const hasError = () => Boolean(props.error.value);
     const hasHelper = () => Boolean(props.helper.value) && !hasError();
+
+    host.bind({ attr: { size: () => props.size?.value ?? formCtx?.size.value } });
 
     return () => html`
       <fieldset

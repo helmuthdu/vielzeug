@@ -4,11 +4,11 @@ import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
 
 export class MapSchema<K, V> extends Schema<Map<K, V>> {
-  readonly keySchema: BaseSchema<K, any, any>;
-  readonly valueSchema: BaseSchema<V, any, any>;
+  readonly keySchema: BaseSchema<K, any>;
+  readonly valueSchema: BaseSchema<V, any>;
 
-  constructor(keySchema: BaseSchema<K, any, any>, valueSchema: BaseSchema<V, any, any>) {
-    super([]);
+  constructor(keySchema: BaseSchema<K, any>, valueSchema: BaseSchema<V, any>) {
+    super();
     this.keySchema = keySchema;
     this.valueSchema = valueSchema;
   }
@@ -86,12 +86,7 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof MapSchema)) return false;
-    return this.keySchema.equals(other.keySchema) && this.valueSchema.equals(other.valueSchema);
-  }
 
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    const next = new MapSchema(this.keySchema, this.valueSchema) as this;
-    next.state = state as any;
-    return next;
+    return this.keySchema.equals(other.keySchema) && this.valueSchema.equals(other.valueSchema);
   }
 }

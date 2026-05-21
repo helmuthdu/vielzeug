@@ -2,7 +2,7 @@
  * Runtime lifecycle tests
  */
 
-import { on, html, onCleanup, onMounted, signal } from '../index';
+import { onEvent, html, onCleanup, onMounted, signal } from '../index';
 import { mount } from '../testing';
 
 describe('runtime lifecycle: onMounted', () => {
@@ -12,7 +12,7 @@ describe('runtime lifecycle: onMounted', () => {
     await mount(() => {
       onMounted(spy);
 
-      return () => html`<div>Test</div>`;
+      return html`<div>Test</div>`;
     });
     expect(spy).toHaveBeenCalledTimes(1);
   });
@@ -25,7 +25,7 @@ describe('runtime lifecycle: onMounted', () => {
         hasElement = true;
       });
 
-      return () => html`<div>Test</div>`;
+      return html`<div>Test</div>`;
     });
     expect(hasElement).toBe(true);
   });
@@ -36,7 +36,7 @@ describe('runtime lifecycle: onMounted', () => {
     const { destroy } = await mount(() => {
       onMounted(() => spy);
 
-      return () => html`<div>Test</div>`;
+      return html`<div>Test</div>`;
     });
 
     expect(spy).not.toHaveBeenCalled();
@@ -57,7 +57,7 @@ describe('runtime lifecycle: execution order', () => {
         return () => order.push('unmount');
       });
 
-      return () => html`<div>Test</div>`;
+      return html`<div>Test</div>`;
     });
 
     destroy();
@@ -71,7 +71,7 @@ describe('runtime lifecycle: onCleanup', () => {
     const { destroy } = await mount(() => {
       onCleanup(spy);
 
-      return () => html`<div>Test</div>`;
+      return html`<div>Test</div>`;
     });
 
     expect(spy).not.toHaveBeenCalled();
@@ -86,7 +86,7 @@ describe('runtime lifecycle: onCleanup', () => {
         cleaned = true;
       });
 
-      return () => html`<div>Test</div>`;
+      return html`<div>Test</div>`;
     });
 
     destroy();
@@ -99,7 +99,7 @@ describe('runtime lifecycle: onCleanup', () => {
       onCleanup(() => calls.push(1));
       onCleanup(() => calls.push(2));
 
-      return () => html`<div>Test</div>`;
+      return html`<div>Test</div>`;
     });
 
     destroy();
@@ -122,7 +122,7 @@ describe('runtime lifecycle: mount + cleanup integration', () => {
         return () => clearInterval(interval);
       });
 
-      return () => html`<div>${count}</div>`;
+      return html`<div>${count}</div>`;
     });
 
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -135,7 +135,7 @@ describe('runtime lifecycle: mount + cleanup integration', () => {
   });
 });
 
-describe('on()', () => {
+describe('onEvent()', () => {
   it('attaches listener and cleans it up on unmount', async () => {
     let clickCount = 0;
     let btn!: HTMLButtonElement;
@@ -144,14 +144,14 @@ describe('on()', () => {
       onMounted(() => {
         btn = document.createElement('button');
         document.body.appendChild(btn);
-        on(btn, 'click', () => {
+        onEvent(btn, 'click', () => {
           clickCount++;
         });
 
         return () => btn.remove();
       });
 
-      return () => html`<div></div>`;
+      return html`<div></div>`;
     });
 
     btn.dispatchEvent(new Event('click'));
@@ -191,7 +191,7 @@ describe('imperative cleanup pattern', () => {
         });
       });
 
-      return () => html`<div></div>`;
+      return html`<div></div>`;
     });
 
     // Replacing cleanup disposes the previous one.

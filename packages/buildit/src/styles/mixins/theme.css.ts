@@ -2,29 +2,30 @@ import { css } from '@vielzeug/craftit';
 
 // ── Color Theme ───────────────────────────────────────────────────────────────
 
-/**
- * Color Theme Mixin
- *
- * Provides theme color CSS custom properties for components.
- * Sets up --_theme-* variables that map to semantic color tokens.
- *
- * @example
- * ```ts
- * import { colorThemeMixin } from '../../styles';
- *
- * return {
- *   styles: [colorThemeMixin, componentStyles],
- *   template: html`...`
- * };
- * ```
- */
-export const colorThemeMixin = css`
-  /* ========================================
-     Color Themes (Default: Neutral)
-     ======================================== */
+const THEME_COLORS = ['primary', 'secondary', 'info', 'success', 'warning', 'error'] as const;
 
+type ThemeColorName = (typeof THEME_COLORS)[number];
+
+// Standard token suffix for each --_theme-* variable. The 'shadow' slot maps
+// to --color-*-focus-shadow (not --color-*-shadow) and 'halo' maps to --halo-shadow-*.
+const TOKEN_SUFFIX: Record<string, (color: ThemeColorName) => string> = {
+  backdrop: (c) => `var(--color-${c}-backdrop)`,
+  base: (c) => `var(--color-${c})`,
+  border: (c) => `var(--color-${c}-border)`,
+  content: (c) => `var(--color-${c}-content)`,
+  contrast: (c) => `var(--color-${c}-contrast)`,
+  focus: (c) => `var(--color-${c}-focus)`,
+  halo: (c) => `var(--halo-shadow-${c})`,
+  shadow: (c) => `var(--color-${c}-focus-shadow)`,
+};
+
+const colorBlock = (color: ThemeColorName): string =>
+  `:host([color='${color}']) {\n${Object.entries(TOKEN_SUFFIX)
+    .map(([slot, fn]) => `  --_theme-${slot}: ${fn(color)};`)
+    .join('\n')}\n}`;
+
+export const colorThemeMixin = css`
   :host {
-    /* Default to neutral when no color is specified */
     --_theme-base: var(--color-neutral);
     --_theme-content: var(--color-neutral-content);
     --_theme-contrast: var(--color-neutral-contrast);
@@ -35,71 +36,7 @@ export const colorThemeMixin = css`
     --_theme-halo: var(--halo-shadow-neutral);
   }
 
-  :host([color='primary']) {
-    --_theme-base: var(--color-primary);
-    --_theme-content: var(--color-primary-content);
-    --_theme-contrast: var(--color-primary-contrast);
-    --_theme-focus: var(--color-primary-focus);
-    --_theme-backdrop: var(--color-primary-backdrop);
-    --_theme-border: var(--color-primary-border);
-    --_theme-shadow: var(--color-primary-focus-shadow);
-    --_theme-halo: var(--halo-shadow-primary);
-  }
-
-  :host([color='secondary']) {
-    --_theme-base: var(--color-secondary);
-    --_theme-content: var(--color-secondary-content);
-    --_theme-contrast: var(--color-secondary-contrast);
-    --_theme-focus: var(--color-secondary-focus);
-    --_theme-backdrop: var(--color-secondary-backdrop);
-    --_theme-border: var(--color-secondary-border);
-    --_theme-shadow: var(--color-secondary-focus-shadow);
-    --_theme-halo: var(--halo-shadow-secondary);
-  }
-
-  :host([color='info']) {
-    --_theme-base: var(--color-info);
-    --_theme-content: var(--color-info-content);
-    --_theme-contrast: var(--color-info-contrast);
-    --_theme-focus: var(--color-info-focus);
-    --_theme-backdrop: var(--color-info-backdrop);
-    --_theme-border: var(--color-info-border);
-    --_theme-shadow: var(--color-info-focus-shadow);
-    --_theme-halo: var(--halo-shadow-info);
-  }
-
-  :host([color='success']) {
-    --_theme-base: var(--color-success);
-    --_theme-content: var(--color-success-content);
-    --_theme-contrast: var(--color-success-contrast);
-    --_theme-focus: var(--color-success-focus);
-    --_theme-backdrop: var(--color-success-backdrop);
-    --_theme-border: var(--color-success-border);
-    --_theme-shadow: var(--color-success-focus-shadow);
-    --_theme-halo: var(--halo-shadow-success);
-  }
-
-  :host([color='warning']) {
-    --_theme-base: var(--color-warning);
-    --_theme-content: var(--color-warning-content);
-    --_theme-contrast: var(--color-warning-contrast);
-    --_theme-focus: var(--color-warning-focus);
-    --_theme-backdrop: var(--color-warning-backdrop);
-    --_theme-border: var(--color-warning-border);
-    --_theme-shadow: var(--color-warning-focus-shadow);
-    --_theme-halo: var(--halo-shadow-warning);
-  }
-
-  :host([color='error']) {
-    --_theme-base: var(--color-error);
-    --_theme-content: var(--color-error-content);
-    --_theme-contrast: var(--color-error-contrast);
-    --_theme-focus: var(--color-error-focus);
-    --_theme-backdrop: var(--color-error-backdrop);
-    --_theme-border: var(--color-error-border);
-    --_theme-shadow: var(--color-error-focus-shadow);
-    --_theme-halo: var(--halo-shadow-error);
-  }
+  ${THEME_COLORS.map(colorBlock).join('\n\n  ')}
 `;
 
 // ── Elevation ─────────────────────────────────────────────────────────────────

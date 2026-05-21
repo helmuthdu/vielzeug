@@ -1,3 +1,5 @@
+export * from '../index.js';
+
 import type { ReadonlySignal } from '../index.js';
 
 /**
@@ -8,31 +10,30 @@ export type SvelteReadable<T> = {
 };
 
 /**
- * Adapts any stateit {@link ReadonlySignal} to Svelte's readable store protocol.
+ * Adapts any stateit {@link ReadonlySignal} to a Svelte readable store.
  *
  * The subscriber is called **immediately** with the current value, then on each change.
  * This matches Svelte's contract for stores used with the `$`-prefix syntax.
  *
- * The method name `adapt` is consistent across all `@vielzeug/stateit/*` adapters,
- * making it trivial to swap frameworks without learning a new API.
+ * Works with signals, computed signals, and stores — anything that implements
+ * {@link ReadonlySignal}.
  *
  * @example
  * ```svelte
  * <script>
- *   import { signal, computed } from '@vielzeug/stateit';
- *   import { adapt } from '@vielzeug/stateit/svelte';
+ *   import { signal, computed, useSignal } from '@vielzeug/stateit/svelte';
  *
  *   const count = signal(0);
  *   const doubled = computed(() => count.value * 2);
  *
- *   const $count = adapt(count);
- *   const $doubled = adapt(doubled);
+ *   const $count = useSignal(count);
+ *   const $doubled = useSignal(doubled);
  * </script>
  *
  * <button on:click={() => count.value++}>{$count} × 2 = {$doubled}</button>
  * ```
  */
-export const adapt = <T>(source: ReadonlySignal<T>): SvelteReadable<T> => ({
+export const useSignal = <T>(source: ReadonlySignal<T>): SvelteReadable<T> => ({
   subscribe(run) {
     run(source.value);
 

@@ -1,16 +1,45 @@
-import { computed, signal, watch } from '@vielzeug/stateit';
+import { type ReadonlySignal, type Signal, computed, signal, watch } from '@vielzeug/stateit';
 
 import { createA11yControl } from './a11y-control';
 import {
   createAssistiveState,
   createFieldControlBase,
-  type CheckableChangePayload,
-  type CheckableStateHandle,
-  type CheckableStateOptions,
+  type AssistiveState,
+  type FieldBaseOptions,
+  type FieldControlBaseHandle,
+  type FormControlValidationTrigger,
 } from './field-control';
 import { createPressControl } from './press-control';
 
+export type CheckableChangePayload = {
+  checked: boolean;
+  originalEvent?: Event;
+  value: string;
+};
+
+export type CheckableStateOptions = FieldBaseOptions & {
+  checked: ReadonlySignal<boolean | undefined>;
+  clearIndeterminateFirst?: boolean;
+  group?: { toggle: (value: string, originalEvent?: Event) => void };
+  indeterminate?: ReadonlySignal<boolean | undefined>;
+  onToggle?: (payload: CheckableChangePayload) => void;
+  value: ReadonlySignal<string | undefined>;
+};
+
+export type CheckableStateHandle = FieldControlBaseHandle & {
+  assistive: ReadonlySignal<AssistiveState>;
+  checked: Signal<boolean>;
+  indeterminate: Signal<boolean>;
+  toggle: (event: Event) => void;
+  triggerValidation: (on: FormControlValidationTrigger) => void;
+  value: Signal<string>;
+};
+
 export type CheckableFieldControlOptions = CheckableStateOptions & {
+  /** Getter for the label element used by the a11y control. */
+  getLabelEl: () => HTMLElement | null;
+  /** Getter for the helper/error element used by the a11y control. */
+  getHelperEl: () => HTMLElement | null;
   onPress?: (control: CheckableStateHandle, originalEvent: Event) => void;
   role: 'checkbox' | 'radio' | 'switch';
 };
@@ -22,8 +51,7 @@ export type CheckableFieldControlHandle = CheckableStateHandle & {
   labelId: string;
 };
 
-/** @internal */
-export const createCheckableState = (options: CheckableStateOptions): CheckableStateHandle => {
+export const createCheckableFieldControl = (options: CheckableFieldControlOptions): CheckableFieldControlHandle => {
   const value = signal('');
   const checked = signal(Boolean(options.checked.value));
   const indeterminate = signal(Boolean(options.indeterminate?.value));
@@ -47,7 +75,7 @@ export const createCheckableState = (options: CheckableStateOptions): CheckableS
     );
   }
 
-  const { base, triggerValidation } = createFieldControlBase(options, {
+  const { triggerValidation, ...base } = createFieldControlBase(options, {
     toFormValue: (nextValue: string | null) => nextValue,
     value: computed(() => {
       if (indeterminate.value) return null;
@@ -91,7 +119,7 @@ export const createCheckableState = (options: CheckableStateOptions): CheckableS
     options.onToggle?.(createPayload(event));
   };
 
-  return {
+  const control: CheckableStateHandle = {
     ...base,
     assistive,
     checked,
@@ -100,13 +128,12 @@ export const createCheckableState = (options: CheckableStateOptions): CheckableS
     triggerValidation,
     value,
   };
-};
 
-export const createCheckableFieldControl = (options: CheckableFieldControlOptions): CheckableFieldControlHandle => {
-  const control = createCheckableState(options);
   const a11y = createA11yControl({
     checked: () =>
       options.role === 'checkbox' && control.indeterminate.value ? 'mixed' : control.checked.value ? 'true' : 'false',
+    getHelperEl: options.getHelperEl,
+    getLabelEl: options.getLabelEl,
     helperText: () => control.assistive.value.errorText || control.assistive.value.helperText,
     helperTone: () => (control.assistive.value.errorText ? 'error' : 'default'),
     invalid: () => Boolean(control.assistive.value.errorText),

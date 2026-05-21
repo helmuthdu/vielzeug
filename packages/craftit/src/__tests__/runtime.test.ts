@@ -19,7 +19,43 @@ describe('Runtime: fire', () => {
     expect(event.type).toBe('custom-event');
     expect(event.detail).toEqual({ ok: true });
     expect(event.bubbles).toBe(true);
-    expect(event.composed).toBe(true);
+    expect(event.composed).toBe(false);
+  });
+
+  it('should allow composed: true to be passed explicitly for cross-boundary events', () => {
+    const parent = document.createElement('div');
+    const shadow = parent.attachShadow({ mode: 'open' });
+    const inner = document.createElement('span');
+
+    shadow.appendChild(inner);
+    document.body.appendChild(parent);
+
+    const handler = vi.fn();
+
+    parent.addEventListener('cross-boundary', handler);
+    fire.custom(inner, 'cross-boundary', { composed: true });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    parent.remove();
+  });
+
+  it('should NOT cross shadow boundaries by default (composed: false)', () => {
+    const parent = document.createElement('div');
+    const shadow = parent.attachShadow({ mode: 'open' });
+    const inner = document.createElement('span');
+
+    shadow.appendChild(inner);
+    document.body.appendChild(parent);
+
+    const handler = vi.fn();
+
+    parent.addEventListener('contained-event', handler);
+    fire.custom(inner, 'contained-event');
+
+    expect(handler).toHaveBeenCalledTimes(0);
+
+    parent.remove();
   });
 
   it('should dispatch a MouseEvent for mouse events', () => {

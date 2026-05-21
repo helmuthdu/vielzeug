@@ -1,4 +1,4 @@
-import { type Signal, signal } from '@vielzeug/stateit';
+import { type ReadonlySignal, type Signal, signal } from '@vielzeug/stateit';
 
 import { setAttr, toKebab } from './internal';
 import { currentElementOrThrow, effect } from './runtime';
@@ -235,7 +235,7 @@ export type InferPropsFromDefs<T extends PropInputDefs> = {
 };
 
 export type InferPropsSignals<T extends Record<string, unknown>> = {
-  readonly [K in keyof T]-?: Signal<T[K]>;
+  readonly [K in keyof T]-?: ReadonlySignal<T[K]>;
 };
 
 export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals<InferPropsFromDefs<D>> {
@@ -252,5 +252,5 @@ export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals
     props[name] = registerProp(name, attrName, descriptor.default, descriptor);
   }
 
-  return props as InferPropsSignals<InferPropsFromDefs<D>>;
+  return props as unknown as InferPropsSignals<InferPropsFromDefs<D>>;
 }

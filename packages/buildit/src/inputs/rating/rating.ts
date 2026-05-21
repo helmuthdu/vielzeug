@@ -1,12 +1,11 @@
 import { computed, define, defineField, html, inject, signal } from '@vielzeug/craftit';
-import { createSliderControl } from '@vielzeug/craftit/controls';
+import { createSliderControl } from '../../controls';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
 import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import styles from './rating.css?inline';
 
@@ -78,7 +77,6 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
 
-    mountFormContextSync(host.el, formCtx, props);
 
     const normalizedValue = computed(() => {
       const max = Math.max(1, Number(props.max!.value) || 5);
@@ -175,6 +173,8 @@ export const RATING_TAG = define<BitRatingProps, BitRatingEvents>('bit-rating', 
 
       return Array.from({ length: max }, (_, i) => i + 1);
     });
+
+    host.bind({ attr: { size: () => props.size?.value ?? formCtx?.size.value } });
 
     return () => html`
       <div class="stars" part="stars" role="radiogroup" :aria-label="${props.label}" :aria-required="${() => null}">

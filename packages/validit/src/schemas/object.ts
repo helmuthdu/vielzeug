@@ -11,7 +11,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   private readonly _isRelaxed: boolean;
 
   constructor(shape: T, isRelaxed = false) {
-    super([]);
+    super();
     this.shape = shape;
     this._isRelaxed = isRelaxed;
   }
@@ -41,7 +41,16 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     if (!this._isRelaxed) return;
 
     for (const key of this._unknownKeys(obj)) {
-      output[key] = obj[key];
+      // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
+      // prototype mutation on the output object.
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+
+      Object.defineProperty(output, key, {
+        configurable: true,
+        enumerable: true,
+        value: obj[key],
+        writable: true,
+      });
     }
   }
 
@@ -68,10 +77,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     };
   }
 
-  private _rebuildWith<U extends ObjectShape>(
-    shape: U,
-    isRelaxed = this._isRelaxed,
-  ): ObjectSchema<U> {
+  private _rebuildWith<U extends ObjectShape>(shape: U, isRelaxed = this._isRelaxed): ObjectSchema<U> {
     return this._copyStateTo(new ObjectSchema(shape, isRelaxed));
   }
 
@@ -112,13 +118,11 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     // Async field parsing
     const keyResults = await Promise.all(
       Object.keys(this.shape).map((key) =>
-        this.shape[key]
-          .safeParseAsync(obj[key])
-          .then((result) => ({
-            data: result.success ? result.data : obj[key],
-            issues: result.success ? [] : prependIssuePath(result.error.issues, key),
-            key,
-          })),
+        this.shape[key].safeParseAsync(obj[key]).then((result) => ({
+          data: result.success ? result.data : obj[key],
+          issues: result.success ? [] : prependIssuePath(result.error.issues, key),
+          key,
+        })),
       ),
     );
 
@@ -152,9 +156,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
   override required(): Schema<InferObject<T>> {
     return this._rebuildWith(
-      Object.fromEntries(
-        Object.entries(this.shape).map(([k, s]) => [k, s.required()]),
-      ) as any,
+      Object.fromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
       this._isRelaxed,
     ) as unknown as Schema<InferObject<T>>;
   }
@@ -180,9 +182,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
    * Default is strict mode (rejects unknown keys).
    */
   relaxed(): Schema<InferObject<T> & Record<string, unknown>> {
-    return this._rebuildWith(this.shape, true) as unknown as Schema<
-      InferObject<T> & Record<string, unknown>
-    >;
+    return this._rebuildWith(this.shape, true) as unknown as Schema<InferObject<T> & Record<string, unknown>>;
   }
 
   protected override _toSchemaBase(): Record<string, unknown> {
@@ -191,12 +191,14 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
     for (const [key, schema] of Object.entries(this.shape)) {
       properties[key] = schema.schema();
+
       if (!schema.isOptional) required.push(key);
     }
 
     const base: Record<string, unknown> = { properties, type: 'object' };
 
     if (required.length > 0) base['required'] = required;
+
     if (!this._isRelaxed) base['additionalProperties'] = false;
 
     return base;
@@ -212,20 +214,17 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof ObjectSchema)) return false;
+
     if (this._isRelaxed !== other._isRelaxed) return false;
+
     const keys = Object.keys(this.shape);
+
     if (keys.length !== Object.keys(other.shape).length) return false;
+
     for (const k of keys) {
       if (!this.shape[k].equals(other.shape[k])) return false;
     }
+
     return true;
-  }
-
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    const next = new ObjectSchema(this.shape, this._isRelaxed) as this;
-
-    next.state = state as any;
-
-    return next;
   }
 }

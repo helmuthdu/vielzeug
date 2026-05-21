@@ -120,14 +120,14 @@ describe('createI18n', () => {
     test('throws when count is not finite', () => {
       const i18n = createI18n({ catalogs: { en: { items: { other: '{count}' } } } });
 
-      expect(() => i18n.tp('items', Number.NaN)).toThrow('`count` must be a finite number.');
+      expect(() => i18n.tp('items', Number.NaN)).toThrow('[i18nit/E002] `count` must be a finite number.');
     });
 
     test('throws when vars.count is provided', () => {
       const i18n = createI18n({ catalogs: { en: { items: { other: '{count}' } } } });
 
       expect(() => i18n.tp('items', 2, { vars: { count: 'custom' } })).toThrow(
-        '`tp` does not allow `vars.count`; `count` is injected automatically.',
+        '[i18nit/E003] `tp` does not allow `vars.count`; `count` is injected automatically.',
       );
     });
   });
@@ -299,7 +299,9 @@ describe('createI18n', () => {
     });
 
     test('throws when the locale has no registered source', async () => {
-      await expect(createI18n({ locale: 'en' }).preload('de')).rejects.toThrow('Missing locale source for "de".');
+      await expect(createI18n({ locale: 'en' }).preload('de')).rejects.toThrow(
+        '[i18nit/E001] Missing locale source for "de".',
+      );
     });
 
     test('notifies subscribers when a fallback locale finishes loading', async () => {
@@ -495,13 +497,15 @@ describe('createI18n', () => {
     });
 
     test('throws when the locale has no registered source', async () => {
-      await expect(createI18n({ locale: 'en' }).setLocale('de')).rejects.toThrow('Missing locale source for "de".');
+      await expect(createI18n({ locale: 'en' }).setLocale('de')).rejects.toThrow(
+        '[i18nit/E001] Missing locale source for "de".',
+      );
     });
 
     test('keeps current locale unchanged when setLocale throws', async () => {
       const i18n = createI18n({ locale: 'en' });
 
-      await expect(i18n.setLocale('de')).rejects.toThrow('Missing locale source for "de".');
+      await expect(i18n.setLocale('de')).rejects.toThrow('[i18nit/E001] Missing locale source for "de".');
       expect(i18n.locale).toBe('en');
       expect(i18n.getSnapshot()).toEqual({ locale: 'en', version: 0 });
     });
@@ -723,16 +727,16 @@ describe('createI18n', () => {
   describe('scope()', () => {
     const catalogs = {
       en: {
-        nav: { home: 'Home', about: 'About' },
         messages: {
           inbox: { one: 'One message', other: '{count} messages', zero: 'No messages' },
         },
+        nav: { about: 'About', home: 'Home' },
       },
       fr: {
-        nav: { home: 'Accueil', about: 'À propos' },
         messages: {
           inbox: { one: 'Un message', other: '{count} messages', zero: 'Aucun message' },
         },
+        nav: { about: 'À propos', home: 'Accueil' },
       },
     };
 

@@ -40,7 +40,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   for (const [name, validator] of Object.entries(init.validators ?? {})) {
     if (!isSafeKey(name)) {
-      throw new Error(`[formit] Unsafe key '${name}' in validators: segments __proto__, constructor, and prototype are reserved.`);
+      throw new Error(
+        `[formit] Unsafe key '${name}' in validators: segments __proto__, constructor, and prototype are reserved.`,
+      );
     }
 
     validators.set(name, validator as FieldValidator<unknown>);
@@ -278,6 +280,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function clearError(name: ErrorKeyOf<TValues>): void {
     ensureNotDisposed();
+
     if (fieldErrors.delete(name as string)) requestNotify(name as string);
   }
 
@@ -318,6 +321,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       validators.set(key, validator);
     } else {
       validators.delete(key);
+
       if (fieldErrors.delete(key)) requestNotify(key);
     }
   }
@@ -330,6 +334,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function untouch(name: FlatKeyOf<TValues>): void {
     ensureNotDisposed();
+
     if (touched.delete(name as string)) requestNotify(name as string);
   }
 
@@ -602,10 +607,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
       if (debounceMs > 0) {
         debounceTimer = setTimeout(() => {
-          void validateField(name).catch((err) => { if (!isAbortError(err)) throw err; });
+          void validateField(name).catch((err) => {
+            if (!isAbortError(err)) throw err;
+          });
         }, debounceMs);
       } else {
-        void validateField(name).catch((err) => { if (!isAbortError(err)) throw err; });
+        void validateField(name).catch((err) => {
+          if (!isAbortError(err)) throw err;
+        });
       }
     }
 

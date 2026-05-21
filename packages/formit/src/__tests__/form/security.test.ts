@@ -40,9 +40,9 @@ describe('prototype chain safety', () => {
   });
 
   test('createForm throws when an initial validator uses an unsafe key', () => {
-    expect(() =>
-      createForm({ validators: { ['__proto__' as never]: () => undefined } }),
-    ).toThrow('[formit] Unsafe key');
+    expect(() => createForm({ validators: { ['__proto__' as never]: () => undefined } })).toThrow(
+      '[formit] Unsafe key',
+    );
   });
 
   test('patch() silently drops __proto__ keys from JSON-parsed input and preserves safe keys', () => {

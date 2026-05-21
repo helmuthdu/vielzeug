@@ -1,12 +1,11 @@
 import { computed, define, html, inject } from '@vielzeug/craftit';
-import { type CheckableChangePayload, createCheckableFieldControl } from '@vielzeug/craftit/controls';
+import { type CheckableChangePayload, createCheckableFieldControl } from '../../controls';
 
 import type { CheckableProps, DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { formControlMixins, sizeVariantMixin } from '../../styles';
 import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { SWITCH_SIZE_PRESET } from '../shared/design-presets';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './switch.css?inline';
 
@@ -80,11 +79,16 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
   setup(props, { emit, host }) {
     const formCtx = inject(FORM_CTX);
 
+    let labelRef: HTMLElement | null = null;
+    let helperRef: HTMLElement | null = null;
+
     const checkable = createCheckableFieldControl({
       checked: props.checked,
       clearIndeterminateFirst: false,
       disabled: computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value)),
       error: props.error,
+      getHelperEl: () => helperRef,
+      getLabelEl: () => labelRef,
       helper: props.helper,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
@@ -97,11 +101,11 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
     });
     const { checked, disabled, handleClick, handleKeydown, helperId, labelId } = checkable;
 
-    mountFormContextSync(host.el, formCtx, props);
 
     host.bind({
       attr: {
         checked,
+        size: () => props.size?.value ?? formCtx?.size.value,
         tabindex: () => (disabled.value ? undefined : 0),
       },
       class: () => ({
@@ -120,8 +124,8 @@ export const SWITCH_TAG = define<BitSwitchProps, BitSwitchEvents>('bit-switch', 
           <div class="switch-thumb" part="thumb"></div>
         </div>
       </div>
-      <span class="label" part="label" data-a11y-label id="${labelId}"><slot></slot></span>
-      <div class="helper-text" part="helper-text" data-a11y-helper id="${helperId}" aria-live="polite" hidden></div>
+      <span class="label" part="label" ref=${(el: HTMLElement | null) => { labelRef = el; }} id="${labelId}"><slot></slot></span>
+      <div class="helper-text" part="helper-text" ref=${(el: HTMLElement | null) => { helperRef = el; }} id="${helperId}" aria-live="polite" hidden></div>
     `;
   },
   styles: [...formControlMixins, sizeVariantMixin(SWITCH_SIZE_PRESET), componentStyles],

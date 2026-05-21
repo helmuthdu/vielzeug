@@ -1,7 +1,7 @@
 import type { Placement } from '@vielzeug/floatit';
 
-import { computed, createId, define, html, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
-import { createOverlayControl } from '@vielzeug/craftit/controls';
+import { computed, createId, define, html, onCleanup, prop, signal, syncAria, watch, onMounted } from '@vielzeug/craftit';
+import { createOverlayControl } from '../../controls';
 import { computePosition, flip, offset, shift } from '@vielzeug/floatit';
 
 import type { ComponentSize } from '../../types';
@@ -162,6 +162,7 @@ export const TOOLTIP_TAG = define<BitTooltipProps>('bit-tooltip', {
       getTriggerElement: getTriggerEl,
       isDisabled: () => isDisabled.value,
       isOpen: () => visible.value,
+      onCleanup,
       positioner: {
         floating: () => tooltipEl,
         reference: getTriggerEl,

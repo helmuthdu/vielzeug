@@ -4,13 +4,13 @@
  * ⚠️ Requires DOM environment (browser / jsdom / happy-dom)
  */
 
-import type { Signal } from '@vielzeug/stateit';
+import type { ReadonlySignal } from '@vielzeug/stateit';
 
-import type { ComponentTemplate } from '../registration';
-
-import { _resetIdCounter, type HTMLResult } from '../internal';
+import { _resetRawSanitizer } from '../directives/raw';
+import { type HTMLResult } from '../internal';
 import { define, type ComponentDefinition, type SetupContextBag } from '../registration';
 import { fire as runtimeFire } from '../runtime';
+import { _resetIdCounter } from '../utils/id';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -66,16 +66,11 @@ export interface MountOptions {
   componentOptions?: Omit<ComponentDefinition<any, any>, 'setup'>;
 }
 
-type TestSetup<
-  Props extends Record<string, unknown> = Record<string, never>,
-  Events extends Record<string, unknown> = Record<string, unknown>,
-> = (...args: Parameters<ComponentDefinition<Props, Events>['setup']>) => ComponentTemplate | HTMLResult;
-
-type MountProps = { readonly [x: string]: Signal<unknown> };
+type MountProps = { readonly [x: string]: ReadonlySignal<unknown> };
 
 // Bivariant callback type keeps inline test callbacks ergonomic across varying setup context specializations.
 export type MountSetup = {
-  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => ComponentTemplate | HTMLResult;
+  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => HTMLResult;
 }['bivarianceHack'];
 
 export interface WaitOptions {
@@ -107,8 +102,16 @@ export const _resetCounters = (): void => {
  * Flush pending reactive updates.
  * Drains several microtask turns, then yields one animation frame and
  * one final microtask pass for rAF-scheduled work.
+ *
+ * The drain count (12) covers the worst-case reactive propagation depth in
+ * craftit components: effect → queueMicrotask (onMounted) → nested reactive
+ * updates, with buffer for computed chains and batched writes.
  */
 export async function flush(): Promise<void> {
+  // Two alternating Promise.resolve() + queueMicrotask() per turn ensures both
+  // microtask queue variants are drained.
+  const DRAIN_TURNS = 12;
+
   const drainMicrotasks = async (turns: number): Promise<void> => {
     for (let i = 0; i < turns; i++) {
       await Promise.resolve();
@@ -116,7 +119,7 @@ export async function flush(): Promise<void> {
     }
   };
 
-  await drainMicrotasks(12);
+  await drainMicrotasks(DRAIN_TURNS);
 
   await new Promise<void>((resolve) =>
     typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame(() => resolve()) : resolve(),
@@ -204,20 +207,6 @@ export async function mount<T extends HTMLElement = HTMLElement>(
 ): Promise<Fixture<T>> {
   const { attrs = {}, componentOptions, container = document.body, html, props = {} } = options;
 
-  const normalizeSetup = <P extends Record<string, unknown>, E extends Record<string, unknown>>(
-    setup: TestSetup<P, E>,
-  ): ComponentDefinition<P, E>['setup'] => {
-    return (setupProps, setupCtx) => {
-      const result = setup(setupProps, setupCtx);
-
-      if (typeof result === 'function') {
-        return result;
-      }
-
-      return () => result;
-    };
-  };
-
   let tagName: string;
   let inlineDefinition: ComponentDefinition<any, any> | undefined;
 
@@ -227,7 +216,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     tagName = `trial-${++_componentTagCounter}`;
     inlineDefinition = {
       ...(componentOptions ?? {}),
-      setup: normalizeSetup(tagOrSetup as TestSetup<any, any>),
+      setup: tagOrSetup as ComponentDefinition<any, any>['setup'],
     };
   }
 
@@ -588,4 +577,5 @@ export function mock(tagName: string, template = ''): void {
 export function cleanup(): void {
   for (const el of _mountedElements) el.remove();
   _mountedElements.length = 0;
+  _resetRawSanitizer();
 }

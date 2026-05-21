@@ -235,6 +235,19 @@ const _defaultMessages: Messages = {
 
 let _activeMessages: Messages = _defaultMessages;
 
+/** A function that receives internal warning messages from validit. */
+export type Logger = (message: string) => void;
+
+let _logger: Logger = (msg) => console.warn(msg);
+
+/**
+ * Emit an internal warning. Routes through the configured logger.
+ * @internal
+ */
+export function _warn(message: string): void {
+  _logger(message);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -257,14 +270,20 @@ function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPa
   return out as T;
 }
 
-/** Override any subset of default validation messages globally. */
-export function configure(opts: { messages?: DeepPartial<Messages> }): void {
+/**
+ * Override any subset of default validation messages and/or the warning logger globally.
+ * Pass `logger: null` to silence all internal warnings.
+ */
+export function configure(opts: { logger?: Logger | null; messages?: DeepPartial<Messages> }): void {
   if (opts.messages) _activeMessages = mergeMessages(_defaultMessages, opts.messages);
+
+  if ('logger' in opts) _logger = opts.logger ?? (() => {});
 }
 
-/** Reset all messages to defaults. */
+/** Reset all messages and the logger to defaults. */
 export function reset(): void {
   _activeMessages = _defaultMessages;
+  _logger = (msg) => console.warn(msg);
 }
 
 /** @internal — for use by schema files only. */
@@ -275,13 +294,35 @@ export function _messages(): Messages {
 /**
  * Run `fn` with a scoped message override. The original messages are restored
  * after `fn` returns (or throws).
+ *
+ * Note: this function is synchronous. Custom messages apply only to validators
+ * that run synchronously within `fn`. Async validators (via `parseAsync`) that
+ * start inside `fn` but resolve after it returns will use the restored messages.
+ * Use `withMessagesAsync` when you need message scoping across async validators.
  */
 export function withMessages<T>(patch: DeepPartial<Messages>, fn: () => T): T {
   const saved = _activeMessages;
+
   _activeMessages = mergeMessages(_defaultMessages, patch);
 
   try {
     return fn();
+  } finally {
+    _activeMessages = saved;
+  }
+}
+
+/**
+ * Async variant of `withMessages`. Awaits `fn` before restoring the original
+ * messages, ensuring custom messages apply to all async validators within `fn`.
+ */
+export async function withMessagesAsync<T>(patch: DeepPartial<Messages>, fn: () => Promise<T>): Promise<T> {
+  const saved = _activeMessages;
+
+  _activeMessages = mergeMessages(_defaultMessages, patch);
+
+  try {
+    return await fn();
   } finally {
     _activeMessages = saved;
   }

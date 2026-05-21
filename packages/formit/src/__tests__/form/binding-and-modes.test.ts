@@ -56,8 +56,8 @@ describe('form wire behavior', () => {
 
   test('per-wire config overrides validate defaults', async () => {
     const form = createForm({
-      validate: { touchOnBlur: false, validateOnChange: false },
       defaultValues: { name: '' },
+      validate: { touchOnBlur: false, validateOnChange: false },
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
@@ -129,8 +129,8 @@ describe('validate preset defaults', () => {
 
   test('inline validate config overrides preset', async () => {
     const form = createForm({
-      validate: { validateOnBlur: false, validateOnChange: false },
       defaultValues: { name: '' },
+      validate: { validateOnBlur: false, validateOnChange: false },
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 

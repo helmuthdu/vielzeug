@@ -23,8 +23,8 @@ import { VariantSchema } from './schemas/variant';
  * The `v` namespace bundles all schema factories for convenience.
  */
 export const v = {
-  any: (): Schema<any, any, any> => new Schema(),
-  array: <T>(schema: Schema<T, any, any>): ArraySchema<T> => new ArraySchema(schema),
+  any: (): Schema<any> => new Schema(),
+  array: <T>(schema: Schema<T, any>): ArraySchema<T> => new ArraySchema(schema),
   bigint: (): BigIntSchema => new BigIntSchema(),
   boolean: (): BooleanSchema => new BooleanSchema(),
   coerce: {
@@ -41,20 +41,18 @@ export const v = {
     ...items: T
   ): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>
     new IntersectSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]),
-  lazy: <T>(getter: () => Schema<T, any, any>): LazySchema<T> => new LazySchema(getter),
+  lazy: <T>(getter: () => Schema<T, any>): LazySchema<T> => new LazySchema(getter),
   literal: <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
     new LiteralSchema(value),
-  map: <K, V>(keySchema: Schema<K, any, any>, valueSchema: Schema<V, any, any>): MapSchema<K, V> =>
+  map: <K, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): MapSchema<K, V> =>
     new MapSchema(keySchema, valueSchema),
   never: (): NeverSchema => new NeverSchema(),
   null: (): LiteralSchema<null> => new LiteralSchema(null),
   number: (): NumberSchema => new NumberSchema(),
   object: <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape),
-  record: <K extends string, V>(
-    keySchema: Schema<K, any, any>,
-    valueSchema: Schema<V, any, any>,
-  ): RecordSchema<K, V> => new RecordSchema(keySchema, valueSchema),
-  set: <T>(schema: Schema<T, any, any>): SetSchema<T> => new SetSchema(schema),
+  record: <K extends string, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): RecordSchema<K, V> =>
+    new RecordSchema(keySchema, valueSchema),
+  set: <T>(schema: Schema<T, any>): SetSchema<T> => new SetSchema(schema),
   string: (): StringSchema => new StringSchema(),
   tuple: <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items),
   undefined: (): LiteralSchema<undefined> => new LiteralSchema(undefined),
@@ -62,9 +60,55 @@ export const v = {
     ...items: T
   ): UnionSchema<NormalizeItems<T> & readonly AnySchema[]> =>
     new UnionSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]),
-  unknown: (): Schema<unknown, unknown, any> => new Schema(),
+  unknown: (): Schema<unknown> => new Schema(),
   variant: <K extends string, M extends Record<string, ObjectSchema<any>>>(
     discriminator: K,
     map: M,
   ): VariantSchema<K, M> => new VariantSchema(discriminator, map),
+};
+
+// Individual tree-shakeable factory exports (R9)
+export const vAny = (): Schema<any> => new Schema();
+export const vArray = <T>(schema: Schema<T, any>): ArraySchema<T> => new ArraySchema(schema);
+export const vBigint = (): BigIntSchema => new BigIntSchema();
+export const vBoolean = (): BooleanSchema => new BooleanSchema();
+export const vDate = (): DateSchema => new DateSchema();
+export const vEnum = <const T extends EnumValues>(values: T): EnumSchema<T> => new EnumSchema(values);
+export const vInstanceof = <T>(cls: new (...args: any[]) => T): InstanceOfSchema<T> => new InstanceOfSchema(cls);
+export const vIntersect = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
+  ...items: T
+): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>
+  new IntersectSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
+export const vLazy = <T>(getter: () => Schema<T, any>): LazySchema<T> => new LazySchema(getter);
+export const vLiteral = <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
+  new LiteralSchema(value);
+export const vMap = <K, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): MapSchema<K, V> =>
+  new MapSchema(keySchema, valueSchema);
+export const vNever = (): NeverSchema => new NeverSchema();
+export const vNull = (): LiteralSchema<null> => new LiteralSchema(null);
+export const vNumber = (): NumberSchema => new NumberSchema();
+export const vObject = <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape);
+export const vRecord = <K extends string, V>(
+  keySchema: Schema<K, any>,
+  valueSchema: Schema<V, any>,
+): RecordSchema<K, V> => new RecordSchema(keySchema, valueSchema);
+export const vSet = <T>(schema: Schema<T, any>): SetSchema<T> => new SetSchema(schema);
+export const vString = (): StringSchema => new StringSchema();
+export const vTuple = <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items);
+export const vUndefined = (): LiteralSchema<undefined> => new LiteralSchema(undefined);
+export const vUnion = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
+  ...items: T
+): UnionSchema<NormalizeItems<T> & readonly AnySchema[]> =>
+  new UnionSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
+export const vUnknown = (): Schema<unknown> => new Schema();
+export const vVariant = <K extends string, M extends Record<string, ObjectSchema<any>>>(
+  discriminator: K,
+  map: M,
+): VariantSchema<K, M> => new VariantSchema(discriminator, map);
+export const vCoerce = {
+  bigint: (): BigIntSchema => BigIntSchema.coerce(),
+  boolean: (): BooleanSchema => BooleanSchema.coerce(),
+  date: (): DateSchema => DateSchema.coerce(),
+  number: (): NumberSchema => NumberSchema.coerce(),
+  string: (): StringSchema => StringSchema.coerce(),
 };

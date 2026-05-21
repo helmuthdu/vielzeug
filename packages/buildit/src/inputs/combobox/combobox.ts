@@ -5,14 +5,14 @@ import {
   createPressControl,
   type OverlayCloseReason,
   type OverlayOpenReason,
-} from '@vielzeug/craftit/controls';
+} from '../../controls';
 
 import type { AddEventListeners } from '../../types';
 import type { BitComboboxEvents, BitComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
 
 import { disabledLoadingMixin, forcedColorsFocusMixin, formFieldMixins, sizeVariantMixin } from '../../styles';
 import { FIELD_SIZE_PRESET } from '../shared/design-presets';
-import { createDropdownPositioner, mountFormContextSync } from '../shared/dom-sync';
+import { createDropdownPositioner } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import { createChoiceChangeDetail } from '../shared/utils';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
@@ -113,7 +113,6 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
       triggerValidation,
     } = choice;
 
-    mountFormContextSync(host.el, formCtx, props);
 
     // ── State ────────────────────────────────────────────────────────────────
     const isMultiple = () => Boolean(props.multiple.value);
@@ -126,24 +125,28 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     host.bind({
       attr: {
         open: () => (isOpen.value ? true : undefined),
+        size: () => props.size?.value ?? formCtx?.size.value,
+        variant: () => props.variant?.value ?? formCtx?.variant?.value,
       },
       prop: {
         value: {
           get: () => (isMultiple() ? selectedValues.value : selectedValue.value),
-          set: (val: any) => {
-            if (Array.isArray(val)) {
-              choice.setValues(val.map((entry) => String(entry ?? '')));
+          set: (val: unknown) => {
+            const v = val as string | string[] | null | undefined;
+
+            if (Array.isArray(v)) {
+              choice.setValues(v.map((entry) => String(entry ?? '')));
 
               return;
             }
 
-            if (val == null || val === '') {
+            if (v == null || v === '') {
               choice.clear();
 
               return;
             }
 
-            choice.setValues([String(val)]);
+            choice.setValues([String(v)]);
           },
         },
       },
@@ -161,24 +164,8 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     let dropdownEl: HTMLElement | null = null;
     let listboxEl: HTMLElement | null = null;
 
-    function syncPopupElements() {
-      const root = host.el.shadowRoot;
-
-      fieldEl = root?.querySelector<HTMLElement>('.field') ?? null;
-      dropdownEl = root?.querySelector<HTMLElement>('.dropdown') ?? null;
-      listboxEl = root?.querySelector<HTMLElement>('[role="listbox"]') ?? null;
-    }
-
-    function getLiveInput(): HTMLInputElement | null {
-      const liveInput = host.el.shadowRoot?.querySelector<HTMLInputElement>('input[role="combobox"]') ?? null;
-
-      if (liveInput) inputEl = liveInput;
-
-      return liveInput ?? inputEl;
-    }
-
     function focusLiveInput() {
-      getLiveInput()?.focus();
+      inputEl?.focus();
     }
 
     // ── Options ──────────────────────────────────────────────────────────────
@@ -274,62 +261,62 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
 
     // ── Positioning (shared positioner) ──────────────────────────────────────
     const positioner = createDropdownPositioner(
-      () => {
-        syncPopupElements();
-
-        return fieldEl;
-      },
-      () => {
-        syncPopupElements();
-
-        return dropdownEl;
-      },
+      () => fieldEl,
+      () => dropdownEl,
     );
 
     const popupList = createPopupListControl({
-      ariaSync: {
-        additional: {
-          autocomplete: 'list',
-          describedby: () => (props.error.value || props.helper.value ? helperId : null),
-          invalid: () => !!props.error.value,
-          labelledby: () => (hasLabel() ? `${labelOutsideId} ${labelInsetId}` : null),
+      aria: {
+        ariaSync: {
+          additional: {
+            autocomplete: 'list',
+            describedby: () => (props.error.value || props.helper.value ? helperId : null),
+            invalid: () => !!props.error.value,
+            labelledby: () => (hasLabel() ? `${labelOutsideId} ${labelInsetId}` : null),
+          },
+          role: 'listbox',
         },
-        role: 'listbox',
+        listId: `${comboId}-listbox`,
       },
-      getBoundaryElement: () => host.el,
-      getIndex: () => focusedIndex.value,
-      getItems: () => filteredOptions.value,
-      getPanelElement: () => dropdownEl ?? host.el.shadowRoot?.querySelector<HTMLElement>('.dropdown') ?? null,
-      getTriggerElement: () => getLiveInput(),
-      isDisabled: () => isDisabled.value,
-      isItemDisabled: (option) => option.disabled,
-      isOpen: () => isOpen.value,
-      listId: `${comboId}-listbox`,
-      onClose: (reason) => {
-        emit('close', { reason });
-        restoreQueryFromSelection();
-        triggerValidation('blur');
+      behavior: {
+        isDisabled: () => isDisabled.value,
+        isItemDisabled: (option) => option.disabled,
+        restoreFocus: false,
       },
-      onOpen: (reason) => emit('open', { reason }),
+      elements: {
+        getBoundaryElement: () => host.el,
+        getPanelElement: () => dropdownEl,
+        getTriggerElement: () => inputEl,
+        triggerRef,
+      },
+      on: {
+        onClose: (reason) => {
+          emit('close', { reason });
+          restoreQueryFromSelection();
+          triggerValidation('blur');
+        },
+        onOpen: (reason) => emit('open', { reason }),
+      },
       positioner: {
         floating: () => dropdownEl,
         reference: () => fieldEl,
         update: () => positioner.updatePosition(),
       },
-      restoreFocus: false,
-      setIndex: (index: number) => {
-        focusedIndex.value = index;
-        scrollFocusedIntoView();
+      state: {
+        getIndex: () => focusedIndex.value,
+        getItems: () => filteredOptions.value,
+        isOpen: () => isOpen.value,
+        setIndex: (index: number) => {
+          focusedIndex.value = index;
+          scrollFocusedIntoView();
+        },
+        setOpen: (next) => {
+          isOpen.value = next;
+        },
       },
-      setOpen: (next) => {
-        isOpen.value = next;
-      },
-      triggerRef,
     });
 
     function syncRenderedOptionState(): void {
-      syncPopupElements();
-
       if (!listboxEl) return;
 
       for (const optionEl of Array.from(listboxEl.querySelectorAll<HTMLElement>('.option'))) {
@@ -415,7 +402,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     const enterPress = createPressControl({
       disabled: () => isDisabled.value,
       keys: ['Enter'],
-      onPress: (originalEvent: any) => {
+      onPress: (originalEvent: Event) => {
         const opts = filteredOptions.value;
 
         if (isOpen.value && focusedIndex.value >= 0 && focusedIndex.value < opts.length) {
@@ -501,7 +488,7 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
       triggerValidation('change');
       focusLiveInput();
     }
-    function handleInput(e: any) {
+    function handleInput(e: InputEvent) {
       const target = e.target as HTMLInputElement;
       const newValue = target.value;
 
@@ -597,8 +584,6 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
       }
     }
     function scrollFocusedIntoView() {
-      syncPopupElements();
-
       if (!listboxEl) return;
 
       const focusedEl = listboxEl.querySelector<HTMLElement>('[data-focused]');
@@ -814,8 +799,6 @@ export const COMBOBOX_TAG = define<BitComboboxProps, BitComboboxEvents>('bit-com
     };
 
     const ensureListboxListeners = (): void => {
-      syncPopupElements();
-
       if (!listboxEl) return;
 
       if (listboxListenersTarget === listboxEl && stopListboxListeners) return;

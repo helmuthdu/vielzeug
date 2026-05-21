@@ -1,11 +1,11 @@
 import { signal } from '@vielzeug/stateit';
 import { describe, expect, it, vi } from 'vitest';
 
-import { html, onElement, ref } from '../../index';
-import { mount } from '../../testing';
-import { createCheckableState } from '../checkable-control';
+import { html, onElement, ref } from '@vielzeug/craftit';
+import { mount } from '@vielzeug/craftit/testing';
+import { createCheckableFieldControl } from '../checkable-control';
 import { createChoiceField } from '../choice-field-control';
-import { createAssistiveState, mountTextFieldLifecycle } from '../field-control';
+import { createAssistiveState, attachTextFieldListeners } from '../field-control';
 import { createTextField } from '../text-field-control';
 
 describe('field controls', () => {
@@ -261,7 +261,7 @@ describe('field controls', () => {
     });
   });
 
-  describe('mountTextFieldLifecycle()', () => {
+  describe('attachTextFieldListeners()', () => {
     it('wires input/change/blur and validation triggers in one call', async () => {
       const inputSpy = vi.fn();
       const changeSpy = vi.fn();
@@ -272,7 +272,7 @@ describe('field controls', () => {
         const inputRef = ref<HTMLInputElement>();
 
         onElement(inputRef, (el) => {
-          mountTextFieldLifecycle({
+          attachTextFieldListeners({
             element: el,
             onBlur: blurSpy,
             onChange: changeSpy,
@@ -299,9 +299,9 @@ describe('field controls', () => {
     });
   });
 
-  describe('createCheckableState()', () => {
+  describe('createCheckableFieldControl()', () => {
     it('syncs checked and indeterminate state from source signals', async () => {
-      let handle!: ReturnType<typeof createCheckableState>;
+      let handle!: ReturnType<typeof createCheckableFieldControl>;
       let checked!: ReturnType<typeof signal<boolean>>;
       let indeterminate!: ReturnType<typeof signal<boolean>>;
 
@@ -309,11 +309,14 @@ describe('field controls', () => {
         () => {
           checked = signal(true);
           indeterminate = signal(true);
-          handle = createCheckableState({
+          handle = createCheckableFieldControl({
             checked,
+            getLabelEl: () => null,
+            getHelperEl: () => null,
             helper: signal<string | undefined>('Check helper'),
             indeterminate,
             prefix: 'test',
+            role: 'checkbox',
             value: signal('opt'),
           });
 
@@ -333,13 +336,16 @@ describe('field controls', () => {
     });
 
     it('toggles checked state for standalone controls', async () => {
-      let handle!: ReturnType<typeof createCheckableState>;
+      let handle!: ReturnType<typeof createCheckableFieldControl>;
 
       await mount(
         () => {
-          handle = createCheckableState({
+          handle = createCheckableFieldControl({
             checked: signal(false),
+            getLabelEl: () => null,
+            getHelperEl: () => null,
             prefix: 'test',
+            role: 'checkbox',
             value: signal('opt'),
           });
 
@@ -356,15 +362,18 @@ describe('field controls', () => {
     });
 
     it('clears indeterminate before toggling when configured', async () => {
-      let handle!: ReturnType<typeof createCheckableState>;
+      let handle!: ReturnType<typeof createCheckableFieldControl>;
 
       await mount(
         () => {
-          handle = createCheckableState({
+          handle = createCheckableFieldControl({
             checked: signal(false),
             clearIndeterminateFirst: true,
+            getLabelEl: () => null,
+            getHelperEl: () => null,
             indeterminate: signal(true),
             prefix: 'test',
+            role: 'checkbox',
             value: signal('opt'),
           });
 
@@ -379,14 +388,17 @@ describe('field controls', () => {
     });
 
     it('does not toggle when disabled', async () => {
-      let handle!: ReturnType<typeof createCheckableState>;
+      let handle!: ReturnType<typeof createCheckableFieldControl>;
 
       await mount(
         () => {
-          handle = createCheckableState({
+          handle = createCheckableFieldControl({
             checked: signal(false),
             disabled: signal(true),
+            getLabelEl: () => null,
+            getHelperEl: () => null,
             prefix: 'test',
+            role: 'checkbox',
             value: signal('opt'),
           });
 
@@ -400,18 +412,21 @@ describe('field controls', () => {
     });
 
     it('delegates group toggles and forwards the toggle payload', async () => {
-      let handle!: ReturnType<typeof createCheckableState>;
+      let handle!: ReturnType<typeof createCheckableFieldControl>;
       const toggle = vi.fn();
       const onToggle = vi.fn();
 
       await mount(
         () => {
-          handle = createCheckableState({
+          handle = createCheckableFieldControl({
             checked: signal(false),
+            getLabelEl: () => null,
+            getHelperEl: () => null,
             group: { toggle },
             indeterminate: signal(true),
             onToggle,
             prefix: 'test',
+            role: 'checkbox',
             value: signal('val'),
           });
 

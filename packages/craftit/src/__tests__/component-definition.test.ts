@@ -41,7 +41,7 @@ describe('component definition and rendering', () => {
       const { act, query } = await mount(() => {
         count = signal(0);
 
-        return () => html`<div>${count}</div>`;
+        return html`<div>${count}</div>`;
       });
 
       expect(query('div')?.textContent).toBe('0');
@@ -57,7 +57,7 @@ describe('component definition and rendering', () => {
       const setup = () => {
         const count = signal(0);
 
-        return () => html`<div>${count}</div>`;
+        return html`<div>${count}</div>`;
       };
 
       const { query: query1 } = await mount(setup);
@@ -96,7 +96,7 @@ describe('component definition and rendering', () => {
     });
 
     it('handles empty html results', async () => {
-      const { shadow } = await mount(() => () => html``);
+      const { shadow } = await mount(() => html``);
 
       expect(shadow).not.toBeNull();
     });

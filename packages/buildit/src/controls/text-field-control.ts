@@ -1,12 +1,31 @@
-import { signal, watch } from '@vielzeug/stateit';
+import { type ReadonlySignal, type Signal, signal, watch } from '@vielzeug/stateit';
 
 import {
+  attachTextFieldListeners,
   createAssistiveState,
   createFieldControlBase,
-  mountTextFieldLifecycle,
-  type TextFieldHandle,
-  type TextFieldOptions,
+  type AssistiveState,
+  type FieldBaseOptions,
+  type FieldControlBaseHandle,
+  type FormControlValidationTrigger,
 } from './field-control';
+
+export type TextFieldOptions = FieldBaseOptions & {
+  elementRef?: { value: HTMLInputElement | HTMLTextAreaElement | null };
+  maxLength?: ReadonlySignal<number | undefined>;
+  onBlur?: (event: FocusEvent) => void;
+  onChange?: (event: Event, value: string) => void;
+  onInput?: (event: Event, value: string) => void;
+  onInputExtra?: (event: Event) => void;
+  value: ReadonlySignal<string | undefined>;
+};
+
+export type TextFieldHandle = FieldControlBaseHandle & {
+  assistive: ReadonlySignal<AssistiveState>;
+  clear: (event?: Event) => void;
+  triggerValidation: (on: FormControlValidationTrigger) => void;
+  value: Signal<string>;
+};
 
 export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
   const value = signal('');
@@ -19,7 +38,7 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     { immediate: true },
   );
 
-  const { base, triggerValidation } = createFieldControlBase(options, { value });
+  const { triggerValidation, ...base } = createFieldControlBase(options, { value });
 
   const assistive = createAssistiveState({
     error: options.error,
@@ -44,7 +63,7 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
       (element) => {
         if (!element) return;
 
-        return mountTextFieldLifecycle({
+        return attachTextFieldListeners({
           element,
           onBlur: options.onBlur,
           onChange: (event, nextValue) => {

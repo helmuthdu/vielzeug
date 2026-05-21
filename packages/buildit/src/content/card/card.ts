@@ -1,5 +1,5 @@
 import { define, effect, html } from '@vielzeug/craftit';
-import { createPressControl } from '@vielzeug/craftit/controls';
+import { createPressControl } from '../../controls';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 

@@ -14,7 +14,7 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
   readonly restSchema: R;
 
   constructor(items: T, restSchema: R = null as R) {
-    super([]);
+    super();
     this.items = items;
     this.restSchema = restSchema;
   }
@@ -141,8 +141,10 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
   protected override _toSchemaBase(): Record<string, unknown> {
     const prefixItems = this.items.map((s) => s.schema());
     const base: Record<string, unknown> = { prefixItems, type: 'array' };
+
     if (this.restSchema !== null) base['items'] = this.restSchema.schema();
     else base['items'] = false;
+
     return base;
   }
 
@@ -157,20 +159,20 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof TupleSchema)) return false;
+
     if (this.items.length !== other.items.length) return false;
+
     for (let i = 0; i < this.items.length; i++) {
       if (!this.items[i].equals(other.items[i])) return false;
     }
+
     const rs = this.restSchema;
     const ors = other.restSchema;
-    if ((rs === null) !== (ors === null)) return false;
-    if (rs !== null && ors !== null && !rs.equals(ors)) return false;
-    return true;
-  }
 
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    const next = new TupleSchema(this.items, this.restSchema) as this;
-    next.state = state as any;
-    return next;
+    if ((rs === null) !== (ors === null)) return false;
+
+    if (rs !== null && ors !== null && !rs.equals(ors)) return false;
+
+    return true;
   }
 }

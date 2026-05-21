@@ -1,7 +1,7 @@
-import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail, SwipeAxis } from '@vielzeug/craftit/controls';
+import type { OverlayCloseDetail, OverlayCloseReason, OverlayOpenDetail, SwipeAxis } from '../../controls';
 
-import { createId, define, on, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
-import { createOverlayControl, createSwipeControl } from '@vielzeug/craftit/controls';
+import { createId, define, onCleanup, onEvent, html, prop, ref, signal, watch, onMounted } from '@vielzeug/craftit';
+import { createOverlayControl, createSwipeControl } from '../../controls';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
@@ -360,6 +360,7 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       getBoundaryElement: () => host.el,
       getPanelElement: () => panelRef.value,
       isOpen: () => isOpen.value,
+      onCleanup,
       onOpen: (reason) => emit('open', { placement: props.placement.value ?? 'right', reason }),
       setOpen: (next, { reason }) => {
         const dialog = dialogRef.value;
@@ -472,9 +473,9 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
         { immediate: true },
       );
 
-      on(dialog, 'close', handleNativeClose);
-      on(dialog, 'cancel', handleCancel);
-      on(dialog, 'click', handleBackdropClick);
+      onEvent(dialog, 'close', handleNativeClose);
+      onEvent(dialog, 'cancel', handleCancel);
+      onEvent(dialog, 'click', handleBackdropClick);
 
       // Drag-to-close handlers — scoped to the handle element only so interactions
       // with panel content don't accidentally start a drag.
@@ -482,10 +483,10 @@ export const DRAWER_TAG = define<BitDrawerProps, BitDrawerEvents>('bit-drawer', 
       const dragHandleEl = panel?.querySelector<HTMLElement>('[part="drag-handle"]');
 
       if (dragHandleEl) {
-        on(dragHandleEl, 'pointerdown', swipe.handlePointerDown);
-        on(dragHandleEl, 'pointermove', swipe.handlePointerMove);
-        on(dragHandleEl, 'pointerup', swipe.handlePointerUp);
-        on(dragHandleEl, 'pointercancel', swipe.handlePointerCancel);
+        onEvent(dragHandleEl, 'pointerdown', swipe.handlePointerDown);
+        onEvent(dragHandleEl, 'pointermove', swipe.handlePointerMove);
+        onEvent(dragHandleEl, 'pointerup', swipe.handlePointerUp);
+        onEvent(dragHandleEl, 'pointercancel', swipe.handlePointerCancel);
       }
 
       return () => {

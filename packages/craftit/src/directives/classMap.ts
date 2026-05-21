@@ -22,7 +22,9 @@ export const classMap = (
   return computed(() =>
     Object.entries(map)
       .filter(([, v]) => (typeof v === 'function' ? v() : isSignal(v) ? v.value : v))
-      .map(([k]) => k)
+      // Strip whitespace from each key — spaces would inject extra class tokens.
+      .map(([k]) => k.replace(/\s+/g, ''))
+      .filter(Boolean)
       .join(' '),
   );
 };

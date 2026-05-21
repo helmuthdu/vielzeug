@@ -4,7 +4,7 @@
  * Standalone Intl formatter factory. Import from `@vielzeug/i18nit/format`.
  * Creates formatters for numbers, dates, currencies, lists, durations, and relative time.
  *
- * Pass a static locale string, a reactive locale getter, or an i18n instance.
+ * Pass a static locale string or a reactive locale getter.
  *
  * @example
  * ```ts
@@ -111,24 +111,6 @@ type DurationFormatterCtor = new (
   options?: DurationFormatOptions,
 ) => { format(value: DurationValue): string };
 
-function cacheKey(locale: string, options?: object): string {
-  if (!options) return locale;
-
-  const sorted: Record<string, unknown> = {};
-
-  for (const key of Object.keys(options as Record<string, unknown>).sort()) {
-    sorted[key] = (options as Record<string, unknown>)[key];
-  }
-
-  try {
-    return `${locale}:${JSON.stringify(sorted)}`;
-  } catch {
-    // Circular references or BigInt values — fall back to locale key only.
-    // The Intl formatter is created without caching, preventing DoS via malformed options.
-    return locale;
-  }
-}
-
 function getOrCreate<F>(cache: Map<string, F>, key: string, build: () => F): F {
   if (!cache.has(key)) cache.set(key, build());
 
@@ -183,19 +165,44 @@ function durationFallback(value: DurationValue, options?: DurationFormatOptions)
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 /**
- * Creates a formatter bound to a locale. Pass a string for a static locale,
- * a getter function (() => string), or an object with a `locale` property
- * (e.g. an `I18n` instance) for reactive binding.
+ * Creates a formatter bound to a locale. Pass a static locale string or a
+ * reactive getter function `() => string` (e.g. `() => i18n.locale`).
  */
-export function createFormatter(source: string | (() => string) | { readonly locale: string }): Formatter {
+export function createFormatter(source: string | (() => string)): Formatter {
   const numberCache = new Map<string, Intl.NumberFormat>();
   const dateCache = new Map<string, Intl.DateTimeFormat>();
   const relativeCache = new Map<string, Intl.RelativeTimeFormat>();
   const listCache = new Map<string, Intl.ListFormat>();
   const durationCache = new Map<string, { format(value: DurationValue): string }>();
+  const optionsKeyCache = new WeakMap<object, string>();
 
-  const getLocale =
-    typeof source === 'string' ? () => source : typeof source === 'function' ? source : () => source.locale;
+  const getLocale = typeof source === 'string' ? () => source : source;
+
+  function cachedKey(locale: string, options?: object): string {
+    if (!options) return locale;
+
+    const existing = optionsKeyCache.get(options);
+
+    if (existing?.startsWith(`${locale}:`)) return existing;
+
+    const sorted: Record<string, unknown> = {};
+
+    for (const key of Object.keys(options as Record<string, unknown>).sort()) {
+      sorted[key] = (options as Record<string, unknown>)[key];
+    }
+
+    try {
+      const result = `${locale}:${JSON.stringify(sorted)}`;
+
+      optionsKeyCache.set(options, result);
+
+      return result;
+    } catch {
+      // Circular references or BigInt values — fall back to locale key only.
+      // The Intl formatter is created without caching, preventing DoS via malformed options.
+      return locale;
+    }
+  }
 
   return {
     clear() {
@@ -210,13 +217,13 @@ export function createFormatter(source: string | (() => string) | { readonly loc
       const locale = getLocale();
       const opts: Intl.NumberFormatOptions = { ...options, currency, style: 'currency' };
 
-      return getOrCreate(numberCache, cacheKey(locale, opts), () => new Intl.NumberFormat(locale, opts)).format(value);
+      return getOrCreate(numberCache, cachedKey(locale, opts), () => new Intl.NumberFormat(locale, opts)).format(value);
     },
 
     date(value, options) {
       const locale = getLocale();
 
-      return getOrCreate(dateCache, cacheKey(locale, options), () => new Intl.DateTimeFormat(locale, options)).format(
+      return getOrCreate(dateCache, cachedKey(locale, options), () => new Intl.DateTimeFormat(locale, options)).format(
         value,
       );
     },
@@ -229,7 +236,7 @@ export function createFormatter(source: string | (() => string) | { readonly loc
 
       return getOrCreate(
         durationCache,
-        cacheKey(locale, options),
+        cachedKey(locale, options),
         () => new IntlExt.DurationFormat!(locale, options),
       ).format(value);
     },
@@ -250,7 +257,7 @@ export function createFormatter(source: string | (() => string) | { readonly loc
     number(value, options) {
       const locale = getLocale();
 
-      return getOrCreate(numberCache, cacheKey(locale, options), () => new Intl.NumberFormat(locale, options)).format(
+      return getOrCreate(numberCache, cachedKey(locale, options), () => new Intl.NumberFormat(locale, options)).format(
         value,
       );
     },
@@ -260,7 +267,7 @@ export function createFormatter(source: string | (() => string) | { readonly loc
 
       return getOrCreate(
         relativeCache,
-        cacheKey(locale, options),
+        cachedKey(locale, options),
         () => new Intl.RelativeTimeFormat(locale, options),
       ).format(value, unit);
     },

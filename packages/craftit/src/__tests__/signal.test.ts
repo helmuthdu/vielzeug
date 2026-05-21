@@ -163,9 +163,9 @@ describe('Core: Signal System', () => {
       const count = signal(0);
       const parity = computed(() => count.value % 2);
       const values: number[] = [];
-      let stop!: () => void;
+      // No-op until the watch() assignment completes (immediate run fires synchronously before assignment).
+      let stop: () => void = () => {};
 
-      // eslint-disable-next-line prefer-const
       stop = watch(
         parity,
         (val, prev) => {

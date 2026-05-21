@@ -1,77 +1,74 @@
-import type { ReadonlySignal } from '../index.js';
+export * from '../index.js';
 
-/**
- * React external store shape — consumed by `useSyncExternalStore`.
- */
-export type ReactExternalStore<T> = {
-  getSnapshot(): T;
-  subscribe(onStoreChange: () => void): () => void;
-};
+import type { ReadonlySignal } from '../index.js';
 
 /**
  * `useSyncExternalStore` signature — typed locally so this adapter has no hard
  * dependency on the `react` package.
  */
-export type UseSyncExternalStore = <T>(subscribe: (onStoreChange: () => void) => () => void, getSnapshot: () => T) => T;
+export type UseSyncExternalStoreFn = <T>(
+  subscribe: (onStoreChange: () => void) => () => void,
+  getSnapshot: () => T,
+) => T;
+
+let _useSyncExternalStore: UseSyncExternalStoreFn | undefined;
 
 /**
- * Adapts any stateit {@link ReadonlySignal} to React's external store protocol.
- * Pass the returned object to `useSyncExternalStore`.
+ * Registers React's `useSyncExternalStore` with this adapter.
+ * Call once at your app's entry point before any component uses {@link useSignal}.
  *
- * Create the store object **outside** your component (or memoize it) so that the
- * `subscribe` reference is stable across renders — `useSyncExternalStore` will
- * resubscribe whenever `subscribe` changes identity.
+ * @example
+ * ```ts
+ * // main.tsx
+ * import { useSyncExternalStore } from 'react';
+ * import { init } from '@vielzeug/stateit/react';
  *
- * The method name `adapt` is consistent across all `@vielzeug/stateit/*` adapters,
- * making it trivial to swap frameworks without learning a new API.
+ * init(useSyncExternalStore);
+ * ```
+ */
+export const init = (useSyncExternalStore: UseSyncExternalStoreFn): void => {
+  _useSyncExternalStore = useSyncExternalStore;
+};
+
+/**
+ * React hook — subscribes the current component to a stateit signal, computed, or store
+ * and returns its current value. Re-renders whenever the value changes.
+ *
+ * Works with any {@link ReadonlySignal}: `signal()`, `computed()`, `store()`, `readonly()`.
+ *
+ * Requires {@link init} to be called once before use.
  *
  * @example
  * ```tsx
+ * // main.tsx — once, at app entry
  * import { useSyncExternalStore } from 'react';
- * import { adapt } from '@vielzeug/stateit/react';
- * import { signal } from '@vielzeug/stateit';
+ * import { init } from '@vielzeug/stateit/react';
+ * init(useSyncExternalStore);
+ *
+ * // Counter.tsx
+ * import { signal, computed, useSignal } from '@vielzeug/stateit/react';
  *
  * const count = signal(0);
- * const countStore = adapt(count); // stable — created at module level
+ * const doubled = computed(() => count.value * 2);
  *
  * function Counter() {
- *   const value = useSyncExternalStore(countStore.subscribe, countStore.getSnapshot);
- *   return <button onClick={() => count.value++}>{value}</button>;
+ *   const value = useSignal(count);    // re-renders when count changes
+ *   const dbl   = useSignal(doubled);  // re-renders when doubled changes
+ *   return <button onClick={() => count.value++}>{value} (×2 = {dbl})</button>;
  * }
  * ```
  */
-export const adapt = <T>(source: ReadonlySignal<T>): ReactExternalStore<T> => ({
-  getSnapshot: () => source.value,
-  subscribe: (onStoreChange) => {
-    const sub = source.subscribe(onStoreChange);
+export const useSignal = <T>(source: ReadonlySignal<T>): T => {
+  if (!_useSyncExternalStore) {
+    throw new Error('[stateit/react] Call init(useSyncExternalStore) once at your app entry before using useSignal().');
+  }
 
-    return () => sub();
-  },
-});
+  return _useSyncExternalStore(
+    (onStoreChange) => {
+      const sub = source.subscribe(onStoreChange);
 
-/**
- * Creates a `useSignal` hook bound to React's `useSyncExternalStore`.
- * Call once at module level with React's hook, then use the result inside components.
- *
- * @example
- * ```tsx
- * import { useSyncExternalStore } from 'react';
- * import { createUseSignal } from '@vielzeug/stateit/react';
- *
- * const useSignal = createUseSignal(useSyncExternalStore);
- *
- * const count = signal(0);
- *
- * function Counter() {
- *   const value = useSignal(count);
- *   return <button onClick={() => count.value++}>{value}</button>;
- * }
- * ```
- */
-export const createUseSignal =
-  (useSyncExternalStore: UseSyncExternalStore) =>
-  <T>(source: ReadonlySignal<T>): T => {
-    const store = adapt(source);
-
-    return useSyncExternalStore(store.subscribe, store.getSnapshot);
-  };
+      return () => sub();
+    },
+    () => source.value,
+  );
+};

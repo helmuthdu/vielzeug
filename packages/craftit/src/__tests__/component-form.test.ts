@@ -10,7 +10,7 @@ describe('component form integration', () => {
         () => {
           handle = defineField({ value: signal('initial') });
 
-          return () => html`<div></div>`;
+          return html`<div></div>`;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -27,7 +27,7 @@ describe('component form integration', () => {
         () => {
           handle = defineField({ value: signal('') });
 
-          return () => html`<div></div>`;
+          return html`<div></div>`;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -50,7 +50,7 @@ describe('component form integration', () => {
             value: signal(42),
           });
 
-          return () => html`<div></div>`;
+          return html`<div></div>`;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -63,7 +63,7 @@ describe('component form integration', () => {
         mount(() => {
           defineField({ value: signal('test') });
 
-          return () => html`<div></div>`;
+          return html`<div></div>`;
         }),
       ).rejects.toThrow(/formAssociated: true/);
     });

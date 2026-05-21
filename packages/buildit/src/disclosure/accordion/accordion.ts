@@ -1,5 +1,5 @@
 import { define, computed, createContext, html, provide, signal, type ReadonlySignal } from '@vielzeug/craftit';
-import { createListControl } from '@vielzeug/craftit/controls';
+import { createListControl } from '../../controls';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 

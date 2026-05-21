@@ -11,7 +11,7 @@ import {
   watch,
   onMounted,
 } from '@vielzeug/craftit';
-import { createListControl, createPressControl } from '@vielzeug/craftit/controls';
+import { createListControl, createPressControl } from '../../controls';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 

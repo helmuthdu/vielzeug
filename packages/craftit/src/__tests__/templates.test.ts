@@ -202,6 +202,76 @@ describe('Template: HTML System', () => {
     });
   });
 
+  describe('URL attribute security', () => {
+    it('should block javascript: scheme in href', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { query } = await mount(() => html`<a href=${'javascript:alert(1)'}>link</a>`);
+
+      expect(query('a')?.hasAttribute('href')).toBe(false);
+      warn.mockRestore();
+    });
+
+    it('should block vbscript: scheme in href', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { query } = await mount(() => html`<a href=${'vbscript:MsgBox(1)'}>link</a>`);
+
+      expect(query('a')?.hasAttribute('href')).toBe(false);
+      warn.mockRestore();
+    });
+
+    it('should block data: scheme in src', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { query } = await mount(() => html`<img src=${'data:text/html,<script>evil()</script>'} />`);
+
+      expect(query('img')?.hasAttribute('src')).toBe(false);
+      warn.mockRestore();
+    });
+
+    it('should block javascript: in action attribute', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { query } = await mount(() => html`<form action=${'javascript:submit()'}></form>`);
+
+      expect(query('form')?.hasAttribute('action')).toBe(false);
+      warn.mockRestore();
+    });
+
+    it('should block javascript: with leading whitespace', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { query } = await mount(() => html`<a href=${'\t javascript:alert(1)'}>link</a>`);
+
+      expect(query('a')?.hasAttribute('href')).toBe(false);
+      warn.mockRestore();
+    });
+
+    it('should allow safe https: URLs in href', async () => {
+      const { query } = await mount(() => html`<a href=${'https://example.com'}>link</a>`);
+
+      expect(query('a')?.getAttribute('href')).toBe('https://example.com');
+    });
+
+    it('should allow relative URLs in href', async () => {
+      const { query } = await mount(() => html`<a href=${'/page'}>link</a>`);
+
+      expect(query('a')?.getAttribute('href')).toBe('/page');
+    });
+
+    it('should warn in DEV mode when a dangerous URL scheme is blocked', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await mount(() => html`<a href=${'javascript:evil()'}>link</a>`);
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('dangerous URL scheme'));
+      warn.mockRestore();
+    });
+
+    it('should not block javascript: in non-URL attributes', async () => {
+      // "title" is not a URL attribute — the value should be set as-is
+      const { query } = await mount(() => html`<span title=${'javascript:note'}>text</span>`);
+
+      expect(query('span')?.getAttribute('title')).toBe('javascript:note');
+    });
+  });
+
   describe('Event Handlers', () => {
     it('should bind click events', async () => {
       let clicked = false;

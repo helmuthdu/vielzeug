@@ -11,11 +11,5 @@ export const uniqueTag = (prefix: string): string => `${prefix}-${Math.random().
 export const register = (tag: string, setup: MountSetup, options: Omit<ComponentDefinition, 'setup'> = {}): string =>
   define(tag, {
     ...options,
-    setup: (props, ctx) => {
-      const result = setup(props, ctx);
-
-      if (typeof result === 'function') return result;
-
-      return () => result;
-    },
+    setup,
   });

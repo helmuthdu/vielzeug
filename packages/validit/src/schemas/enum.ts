@@ -19,7 +19,7 @@ export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
   readonly values: T;
 
   constructor(values: T) {
-    super([buildEnumValidator(values)]);
+    super(buildEnumValidator(values));
     this.values = values;
   }
 
@@ -29,17 +29,13 @@ export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
     if (visitor.enum) return visitor.enum(this);
+
     return super._walk(visitor);
   }
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof EnumSchema)) return false;
-    return JSON.stringify(this.values) === JSON.stringify(other.values);
-  }
 
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    const next = new EnumSchema(this.values) as this;
-    next.state = state as any;
-    return next;
+    return JSON.stringify(this.values) === JSON.stringify(other.values);
   }
 }

@@ -1,7 +1,7 @@
-import type { SwipeControl } from '@vielzeug/craftit/controls';
+import type { SwipeControl } from '../../controls';
 
 import { computed, define, prop, html, ref, signal, onMounted } from '@vielzeug/craftit';
-import { createSwipeControl } from '@vielzeug/craftit/controls';
+import { createSwipeControl } from '../../controls';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 

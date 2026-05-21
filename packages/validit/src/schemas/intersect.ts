@@ -29,7 +29,7 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
   readonly schemas: T;
 
   constructor(schemas: T) {
-    super([]);
+    super();
     this.schemas = schemas;
   }
 
@@ -82,13 +82,9 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
 
   protected override _equalsImpl(other: import('../core').AnySchema): boolean {
     if (!(other instanceof IntersectSchema)) return false;
-    if (this.schemas.length !== other.schemas.length) return false;
-    return this.schemas.every((s, i) => s.equals(other.schemas[i]));
-  }
 
-  protected override _construct(state: import('../core').SchemaState<any, any>): this {
-    const next = new IntersectSchema(this.schemas) as this;
-    next.state = state as any;
-    return next;
+    if (this.schemas.length !== other.schemas.length) return false;
+
+    return this.schemas.every((s, i) => s.equals(other.schemas[i]));
   }
 }

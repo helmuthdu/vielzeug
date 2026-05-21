@@ -1,18 +1,9 @@
 import { define, prop, computed, effect, html, inject, signal, styleMap, when } from '@vielzeug/craftit';
 
 import { reducedMotionMixin } from '../../styles';
+import { TAB_PANEL_PADDING_PRESET } from '../../inputs/shared/design-presets';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-panel.css?inline';
-
-const TAB_PANEL_PADDING_MAP: Record<string, string> = {
-  '2xl': 'var(--size-12)',
-  lg: 'var(--size-6)',
-  md: 'var(--size-4)',
-  none: '0',
-  sm: 'var(--size-2)',
-  xl: 'var(--size-8)',
-  xs: 'var(--size-1)',
-};
 
 export type BitTabPanelProps = {
   /** Active state (managed by bit-tabs) */
@@ -74,7 +65,7 @@ export const TAB_PANEL_TAG = define<BitTabPanelProps>('bit-tab-panel', {
     const paddingValue = computed(() => {
       const key = props.padding.value ?? 'md';
 
-      return TAB_PANEL_PADDING_MAP[key] ?? TAB_PANEL_PADDING_MAP.md;
+      return TAB_PANEL_PADDING_PRESET[key] ?? TAB_PANEL_PADDING_PRESET.md;
     });
     // Track whether the panel has ever been active (for lazy rendering)
     const hasBeenActive = signal(false);

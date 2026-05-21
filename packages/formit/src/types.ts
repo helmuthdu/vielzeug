@@ -88,9 +88,7 @@ export type TypeAtPath<T, K extends string> = K extends `${infer Head}.${infer T
  * Recursively makes all properties of T optional, including nested objects.
  * Useful for partial server response merges via `form.patch()`.
  */
-export type DeepPartial<T> = T extends Record<string, unknown>
-  ? { [K in keyof T]?: DeepPartial<T[K]> }
-  : T;
+export type DeepPartial<T> = T extends Record<string, unknown> ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
 /** Field error keys include field paths plus reserved `_form` for root-level/form-level issues. */
 export type ErrorKeyOf<TValues extends Record<string, unknown>> = FlatKeyOf<TValues> | typeof FORM_ERROR;
@@ -131,10 +129,6 @@ export type FieldState<V = unknown> = {
 
 export type FormOptions<TValues extends Record<string, unknown> = Record<string, unknown>> = {
   defaultValues?: TValues;
-  /** Form-level validator. Use `schemaValidator(schema)` to adapt a safeParse-compatible schema. */
-  validator?: FormValidator<TValues>;
-  /** Field-level validators keyed by field name or dot-notation path. */
-  validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator>>;
   /**
    * Default wire behavior applied when `wire(name, config)` omits specific options.
    * Use `ValidationModes` presets for common strategies:
@@ -144,6 +138,10 @@ export type FormOptions<TValues extends Record<string, unknown> = Record<string,
    * - `ValidationModes.onTouched` — validates on blur first, then on every change once touched
    */
   validate?: WireConfig;
+  /** Form-level validator. Use `schemaValidator(schema)` to adapt a safeParse-compatible schema. */
+  validator?: FormValidator<TValues>;
+  /** Field-level validators keyed by field name or dot-notation path. */
+  validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator>>;
 };
 
 export type WireConfig = {

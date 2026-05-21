@@ -3,7 +3,7 @@ import {
   createId,
   define,
   defineField,
-  on,
+  onEvent,
   html,
   inject,
   ref,
@@ -12,14 +12,13 @@ import {
   watch,
   onMounted,
 } from '@vielzeug/craftit';
-import { createSliderControl } from '@vielzeug/craftit/controls';
+import { createSliderControl } from '../../controls';
 
 import type { DisablableProps, SizableProps, ThemableProps } from '../../types';
 
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { disablableBundle, sizableBundle, themableBundle } from '../shared/bundles';
 import { SLIDER_SIZE_PRESET } from '../shared/design-presets';
-import { mountFormContextSync } from '../shared/dom-sync';
 import { FORM_CTX } from '../shared/form-context';
 import componentStyles from './slider.css?inline';
 
@@ -138,11 +137,11 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
     const isDisabled = computed(() => Boolean(props.disabled.value) || Boolean(formCtx?.disabled.value));
     const labelledById = signal<string | undefined>(undefined);
 
-    mountFormContextSync(host.el, formCtx, props);
 
     host.bind({
       attr: {
         'data-dragging': () => (isDragging.value ? true : undefined),
+        size: () => props.size?.value ?? formCtx?.size.value,
       },
     });
 
@@ -272,7 +271,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
         triggerValidation('change');
       };
 
-      on(
+      onEvent(
         container,
         'pointerdown',
         guard(
@@ -288,7 +287,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      on(
+      onEvent(
         container,
         'pointermove',
         guard(
@@ -302,7 +301,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      on(
+      onEvent(
         container,
         'pointerup',
         guard(
@@ -338,7 +337,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       const thumbEndEl = thumbEndRef.value;
 
       if (thumbStartEl) {
-        on(
+        onEvent(
           thumbStartEl,
           'keydown',
           makeThumbKeydown(
@@ -358,7 +357,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       }
 
       if (thumbEndEl) {
-        on(
+        onEvent(
           thumbEndEl,
           'keydown',
           makeThumbKeydown(
@@ -396,7 +395,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
       };
       let isPointerDragging = false;
 
-      on(
+      onEvent(
         container,
         'pointerdown',
         guard(
@@ -409,7 +408,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      on(
+      onEvent(
         container,
         'pointermove',
         guard(
@@ -423,7 +422,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      on(
+      onEvent(
         container,
         'pointerup',
         guard(
@@ -436,7 +435,7 @@ export const SLIDER_TAG = define<BitSliderProps, BitSliderEvents>('bit-slider', 
           },
         ),
       );
-      on(
+      onEvent(
         host.el,
         'keydown',
         guard(

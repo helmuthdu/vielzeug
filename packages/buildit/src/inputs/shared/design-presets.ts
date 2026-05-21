@@ -103,3 +103,14 @@ export const FILE_INPUT_SIZE_PRESET = {
     fontSize: 'var(--text-xs)',
   },
 } as const;
+
+/** Shared padding preset for tab-panel content area. */
+export const TAB_PANEL_PADDING_PRESET: Record<string, string> = {
+  '2xl': 'var(--size-12)',
+  lg: 'var(--size-6)',
+  md: 'var(--size-4)',
+  none: '0',
+  sm: 'var(--size-2)',
+  xl: 'var(--size-8)',
+  xs: 'var(--size-1)',
+};

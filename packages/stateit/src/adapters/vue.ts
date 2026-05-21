@@ -1,3 +1,5 @@
+export * from '../index.js';
+
 import type { ReadonlySignal } from '../index.js';
 
 /**
@@ -8,68 +10,79 @@ export type ShallowRefFn = <T>(value: T) => { value: T };
 
 /**
  * Minimal `onScopeDispose` signature — matches `onScopeDispose` from `vue`.
- * Must be called within an active Vue effect scope (inside `setup()` or a composable).
+ * Must be called from within an active Vue effect scope (inside `setup()` or a composable).
  */
 export type OnScopeDisposeFn = (fn: () => void, failSilently?: boolean) => void;
 
-/**
- * A Vue-compatible readonly ref — a plain object with a reactive `.value`.
- */
+/** A Vue-compatible readonly ref — a plain object with a reactive `.value`. */
 export type VueReadonlyRef<T> = { readonly value: T };
 
-/**
- * Options accepted by {@link createAdapter}.
- */
-export type VueAdapterOptions = {
-  onScopeDispose: OnScopeDisposeFn;
-  shallowRef: ShallowRefFn;
-};
+let _shallowRef: ShallowRefFn | undefined;
+let _onScopeDispose: OnScopeDisposeFn | undefined;
 
 /**
- * Creates an `adapt` function pre-bound to Vue's `shallowRef` and `onScopeDispose`.
- *
- * Call once at app/plugin level (or at the top of a composable file) and import
- * the returned `adapt` wherever you need to bridge a stateit signal into Vue.
- *
- * The method name `adapt` is consistent across all `@vielzeug/stateit/*` adapters,
- * making it trivial to swap frameworks without learning a new API.
+ * Registers Vue's `shallowRef` and `onScopeDispose` with this adapter.
+ * Call once at your app or plugin entry point before any composable uses {@link useSignal}.
  *
  * @example
  * ```ts
- * // adapters.ts — create once, re-export everywhere
+ * // main.ts
  * import { onScopeDispose, shallowRef } from 'vue';
- * import { createAdapter } from '@vielzeug/stateit/vue';
+ * import { init } from '@vielzeug/stateit/vue';
  *
- * export const { adapt } = createAdapter({ shallowRef, onScopeDispose });
+ * init({ shallowRef, onScopeDispose });
+ * ```
+ */
+export const init = (options: { onScopeDispose: OnScopeDisposeFn; shallowRef: ShallowRefFn }): void => {
+  _shallowRef = options.shallowRef;
+  _onScopeDispose = options.onScopeDispose;
+};
+
+/**
+ * Vue composable — wraps a stateit signal, computed, or store in a Vue `shallowRef`
+ * that stays in sync with the source. The ref's `.value` is reactive in templates,
+ * `computed()`, and `watch()`.
  *
- * // In a component or composable:
- * import { adapt } from './adapters';
- * import { signal } from '@vielzeug/stateit';
+ * The underlying stateit subscription is automatically disposed when the enclosing
+ * Vue scope is torn down (component unmount, `effectScope().stop()`, etc.).
+ *
+ * Works with any {@link ReadonlySignal}: `signal()`, `computed()`, `store()`, `readonly()`.
+ *
+ * Requires {@link init} to be called once before use.
+ *
+ * @example
+ * ```ts
+ * // main.ts — once, at app entry
+ * import { onScopeDispose, shallowRef } from 'vue';
+ * import { init } from '@vielzeug/stateit/vue';
+ * init({ shallowRef, onScopeDispose });
+ *
+ * // useCounter.ts
+ * import { signal, computed, useSignal } from '@vielzeug/stateit/vue';
  *
  * const count = signal(0);
+ * const doubled = computed(() => count.value * 2);
  *
- * export function useCount() {
- *   const countRef = adapt(count); // reactive Vue shallowRef, auto-disposed
- *   return { countRef };
+ * export function useCounter() {
+ *   const countRef   = useSignal(count);   // reactive shallowRef
+ *   const doubledRef = useSignal(doubled); // reactive shallowRef
+ *   return { countRef, doubledRef };
  * }
  * ```
  */
-export const createAdapter = ({ shallowRef, onScopeDispose }: VueAdapterOptions) => ({
-  /**
-   * Wraps a stateit {@link ReadonlySignal} in a Vue `shallowRef` that stays in sync.
-   * The Vue ref is readonly — write to the original signal to trigger updates.
-   *
-   * The underlying stateit subscription is automatically disposed when the enclosing
-   * Vue effect scope is torn down (component unmount, `effectScope().stop()`, etc.).
-   */
-  adapt: <T>(source: ReadonlySignal<T>): VueReadonlyRef<T> => {
-    const ref = shallowRef(source.value);
-    const unsubscribe = source.subscribe(() => {
-      ref.value = source.value;
-    });
+export const useSignal = <T>(source: ReadonlySignal<T>): VueReadonlyRef<T> => {
+  if (!_shallowRef || !_onScopeDispose) {
+    throw new Error(
+      '[stateit/vue] Call init({ shallowRef, onScopeDispose }) once at your app entry before using useSignal().',
+    );
+  }
 
-    onScopeDispose(unsubscribe, /* failSilently */ true);
+  const ref = _shallowRef(source.value);
+  const unsubscribe = source.subscribe(() => {
+    ref.value = source.value;
+  });
 
-    return Object.freeze(ref) as VueReadonlyRef<T>;
-  },
-});
+  _onScopeDispose(unsubscribe, /* failSilently */ true);
+
+  return Object.freeze(ref) as VueReadonlyRef<T>;
+};

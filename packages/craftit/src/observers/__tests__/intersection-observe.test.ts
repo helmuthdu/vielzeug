@@ -14,7 +14,7 @@ describe('intersectionObserver()', () => {
         capturedEntry = intersectionObserver(divRef.value!);
       });
 
-      return () => html`<div ref=${divRef}></div>`;
+      return html`<div ref=${divRef}></div>`;
     });
 
     expect(capturedEntry.value).toBeNull();
@@ -42,7 +42,7 @@ describe('intersectionObserver()', () => {
           capturedEntry = intersectionObserver(divRef.value!);
         });
 
-        return () => html`<div ref=${divRef}></div>`;
+        return html`<div ref=${divRef}></div>`;
       });
 
       const fakeEntry = { intersectionRatio: 1, isIntersecting: true } as IntersectionObserverEntry;
@@ -76,7 +76,7 @@ describe('intersectionObserver()', () => {
           intersectionObserver(divRef.value!);
         });
 
-        return () => html`<div ref=${divRef}></div>`;
+        return html`<div ref=${divRef}></div>`;
       });
 
       expect(disconnectSpy).not.toHaveBeenCalled();
